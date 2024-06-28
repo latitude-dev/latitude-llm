@@ -1,0 +1,27 @@
+{
+  "name": "@latitude-llm/web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --turbo",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "tc": "tsc --noEmit",
+    "prettier": "prettier --write \"**/*.{ts,tsx,md}\""
+  },
+  "dependencies": {
+    "react": "19.0.0-rc-f994737d14-20240522",
+    "react-dom": "19.0.0-rc-f994737d14-20240522",
+    "next": "15.0.0-rc.0"
+  },
+  "devDependencies": {
+    "@latitude-llm/typescript": "workspace:*",
+    "eslint": "^8",
+    "eslint-config-next": "15.0.0-rc.0",
+    "typescript": "^5",
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18"
+  }
+}
