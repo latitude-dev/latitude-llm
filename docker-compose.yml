@@ -4,7 +4,7 @@ services:
       context: .
       dockerfile: apps/web/docker/Dockerfile
     ports:
-      - "3000:3000"
+      - '3000:3000'
     volumes:
       - ./apps/web:/app/apps/web
       - /app/apps/web/node_modules
@@ -14,6 +14,12 @@ services:
       - apps/web/.env
     command: pnpm run dev
 
+  elastic:
+    image: elasticsearch:8.14.1
+    environment:
+      - 'discovery.type=single-node'
+      - 'ELASTIC_USERNAME=latitude'
+      - 'ELASTIC_PASSWORD=papapa55'
   db:
     image: postgres
     environment:
