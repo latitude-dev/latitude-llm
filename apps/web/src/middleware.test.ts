@@ -7,7 +7,7 @@ describe('handler', () => {
   const req = new NextRequest(new Request('http://acme.com'))
 
   it('succeeds', async () => {
-    req.headers.set('Authorization', `Bearer ${process.env.API_KEY}`)
+    req.headers.set('Authorization', `Bearer ${process.env.LATITUDE_API_KEY}`)
     const res = middleware(req)
 
     expect(res.status).toBe(200)

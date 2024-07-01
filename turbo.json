@@ -1,17 +1,24 @@
 {
+  "globalEnv": [
+    "NODE_ENV",
+    "LATITUDE_API_KEY",
+    "DATABASE_URL",
+    "TEST_DATABASE_URL",
+    "ELASTIC_URL",
+    "ELASTIC_USERNAME",
+    "ELASTIC_PASSWORD"
+  ],
   "$schema": "https://turbo.build/schema.json",
+  "globalDependencies": ["**/.env.*local"],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
       "outputs": [".next/**", "!.next/cache/**"]
     },
-    "lint": {
-      "dependsOn": ["^lint"]
-    },
-    "tc": {
-      "dependsOn": ["^tc"]
-    },
+    "lint": { "dependsOn": ["^lint"] },
+    "tc": { "dependsOn": ["^tc"] },
+    "test": {},
     "dev": {
       "cache": false,
       "persistent": true

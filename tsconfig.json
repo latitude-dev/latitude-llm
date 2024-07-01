@@ -1,0 +1,3 @@
+{
+  "extends": "@latitude-data/typescript-config/base.json"
+}

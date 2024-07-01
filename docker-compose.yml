@@ -4,7 +4,8 @@ services:
       context: .
       dockerfile: apps/web/docker/Dockerfile
     ports:
-      - '3000:3000'
+      - "3000:3000"
+      - "4983:4983"
     volumes:
       - ./apps/web:/app/apps/web
       - /app/apps/web/node_modules
@@ -20,6 +21,7 @@ services:
       - 'discovery.type=single-node'
       - 'ELASTIC_USERNAME=latitude'
       - 'ELASTIC_PASSWORD=secret'
+
   db:
     image: postgres
     environment:
