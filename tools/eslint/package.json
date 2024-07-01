@@ -1,5 +1,5 @@
 {
-  "name": "@latitude-llm/eslint",
+  "name": "@latitude-data/eslint-config",
   "version": "0.0.0",
   "private": true,
   "files": [

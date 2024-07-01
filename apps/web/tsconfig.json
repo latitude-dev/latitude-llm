@@ -1,10 +1,16 @@
 {
-  "extends": "@latitude-llm/typescript/base.json",
+  "extends": "@latitude-data/typescript-config/base.json",
   "compilerOptions": {
     "plugins": [{"name": "next" }],
     "module": "ESNext",
     "moduleResolution": "Bundler",
-    "jsx": "preserve"
+    "jsx": "preserve",
+    "typeRoots": [
+      "./node_modules/@types"
+    ],
+    "paths": {
+      "$/*": ["./src/*"]
+    }
   },
   "include": [
     "next-env.d.ts",

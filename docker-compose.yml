@@ -1,0 +1,26 @@
+services:
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/docker/Dockerfile
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./apps/web:/app/apps/web
+      - /app/apps/web/node_modules
+    depends_on:
+      - db
+    env_file:
+      - apps/web/.env
+    command: pnpm run dev
+
+  db:
+    image: postgres
+    environment:
+      POSTGRES_USER: 'latitude'
+      POSTGRES_PASSWORD: 'secret'
+    ports:
+      - '5432:5432'
+    volumes:
+      - ./docker/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
+      - ./docker/pgdata:/var/lib/postgresql/data
