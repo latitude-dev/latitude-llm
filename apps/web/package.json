@@ -22,6 +22,7 @@
     "node": ">=20.0.0"
   },
   "dependencies": {
+    "@elastic/elasticsearch": "^8.14.0",
     "@t3-oss/env-nextjs": "^0.10.1",
     "drizzle-orm": "^0.31.2",
     "next": "15.0.0-rc.0",
