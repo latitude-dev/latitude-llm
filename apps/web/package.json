@@ -8,6 +8,8 @@
     "start": "next start",
     "lint": "next lint",
     "tc": "tsc --noEmit",
+    "test": "vitest --run",
+    "test:watch": "vitest",
     "prettier": "prettier --write \"**/*.{ts,tsx,md}\"",
     "db:generate": "drizzle-kit generate",
     "db:generate:custom": "pnpm run db:generate --custom",
@@ -29,6 +31,7 @@
     "pg": "^8.12.0",
     "react": "19.0.0-rc-f994737d14-20240522",
     "react-dom": "19.0.0-rc-f994737d14-20240522",
+    "vitest": "^1.6.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
@@ -37,6 +40,7 @@
     "@types/pg": "^8.11.6",
     "@types/react": "^18",
     "@types/react-dom": "^18",
+    "dotenv": "^16.4.5",
     "drizzle-kit": "^0.22.8",
     "eslint": "^8",
     "eslint-config-next": "15.0.0-rc.0",

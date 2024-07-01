@@ -19,12 +19,12 @@ services:
     environment:
       - 'discovery.type=single-node'
       - 'ELASTIC_USERNAME=latitude'
-      - 'ELASTIC_PASSWORD=papapa55'
+      - 'ELASTIC_PASSWORD=secret'
   db:
     image: postgres
     environment:
-      POSTGRES_USER: 'latitude'
-      POSTGRES_PASSWORD: 'secret'
+      - 'POSTGRES_USER=latitude'
+      - 'POSTGRES_PASSWORD=secret'
     ports:
       - '5432:5432'
     volumes:
