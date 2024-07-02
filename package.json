@@ -8,7 +8,7 @@
     "tc": "turbo tc",
     "prettier": "prettier --write \"**/*.{ts,tsx,md}\"",
     "prettier:check": "prettier --check \"**/*.{ts,tsx,md}\"",
-    "test": "echo \"Not yet baby\" && exit 0"
+    "test": "turbo test"
   },
   "devDependencies": {
     "@latitude-data/eslint-config": "workspace:*",

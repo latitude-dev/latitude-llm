@@ -1,0 +1,13 @@
+{
+  "extends": "@latitude-data/typescript-config/base.json",
+  "compilerOptions": {
+    "module": "NodeNext",
+    "outDir": "dist",
+    "baseUrl": "./",
+    "paths": {
+      "@src/*": ["src/*"]
+    },
+    "useUnknownInCatchVariables": false
+  },
+  "include": ["src/**/*.ts", "test/**/*.ts"]
+}

@@ -1,0 +1,58 @@
+{
+  "name": "@latitude-data/api",
+  "version": "0.0.1",
+  "scripts": {
+    "build": "tsc --build tsconfig.prod.json --verbose",
+    "dev": "tsx watch src/index.ts",
+    "lint": "eslint --ext .ts src/",
+    "prettier": "prettier --write \"**/*.{ts,tsx,md}\"",
+    "start": "node -r module-alias/register ./dist --env=production",
+    "tc": "tsc --noEmit",
+    "test": "vitest --run",
+    "test:watch": "vitest "
+  },
+  "packageManager": "pnpm@8.6.3",
+  "_moduleAliases": {
+    "@src": "dist"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2",
+    "express-async-errors": "^3.1.1",
+    "helmet": "^7.1.0",
+    "inserturlparams": "^1.1.2",
+    "module-alias": "^2.2.3",
+    "morgan": "^1.10.0",
+    "ts-command-line-args": "^2.5.1",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@latitude-data/eslint-config": "^0.1.0",
+    "@latitude-data/typescript-config": "workspace:^",
+    "@types/cookie-parser": "^1.4.7",
+    "@types/express": "^4.17.21",
+    "@types/find": "^0.2.4",
+    "@types/fs-extra": "^11.0.4",
+    "@types/jsonfile": "^6.1.4",
+    "@types/morgan": "^1.9.9",
+    "@types/node": "^20.14.9",
+    "@types/supertest": "^6.0.2",
+    "@typescript-eslint/eslint-plugin": "^7.15.0",
+    "@typescript-eslint/parser": "^7.15.0",
+    "eslint": "^8.57.0",
+    "eslint-plugin-node": "^11.1.0",
+    "find": "^0.3.0",
+    "fs-extra": "^11.2.0",
+    "jet-paths": "^1.0.6",
+    "prettier": "^3.2.5",
+    "supertest": "^7.0.0",
+    "tsconfig-paths": "^4.2.0",
+    "tsx": "^4.16.0",
+    "typescript": "^5.5.3",
+    "vite-tsconfig-paths": "^4.3.2",
+    "vitest": "^1.6.0"
+  }
+}
