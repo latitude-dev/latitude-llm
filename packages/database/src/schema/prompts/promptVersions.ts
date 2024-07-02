@@ -1,8 +1,7 @@
+import { latitudeSchema } from '$db/schema/db-schema'
+import { timestamps } from '$db/schema/schemaHelpers'
 import { InferSelectModel } from 'drizzle-orm'
 import { bigserial, text, timestamp, uuid, varchar } from 'drizzle-orm/pg-core'
-
-import { latitudeSchema } from '../db-schema'
-import { timestamps } from '../schemaHelpers'
 
 export const promptVersions = latitudeSchema.table('prompt_versions', {
   id: bigserial('id', { mode: 'bigint' }).notNull().primaryKey(),

@@ -8,6 +8,7 @@ services:
       - '4983:4983'
     volumes:
       - ./apps/web:/app/apps/web
+      - ./packages/database:/app/packages/database
       - /app/apps/web/node_modules
     depends_on:
       - db

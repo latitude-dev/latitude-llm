@@ -1,0 +1,22 @@
+{
+  "name": "@latitude-data/database",
+  "version": "0.0.1",
+  "description": "Latitude database from Latitude llm",
+  "main": "src/index.ts",
+  "scripts": {
+    "lint": "eslint . --max-warnings 0 --ext .ts src",
+    "tc": "tsc --noEmit",
+    "test:watch": "vitest",
+    "prettier": "prettier --write src/**/*.ts"
+  },
+  "dependencies": {
+    "drizzle-orm": "^0.31.2",
+    "pg": "^8.12.0"
+  },
+  "devDependencies": {
+    "@latitude-data/eslint-config": "workspace:*",
+    "@latitude-data/typescript-config": "workspace:*",
+    "@types/node": "^20",
+    "@types/pg": "^8.11.6"
+  }
+}

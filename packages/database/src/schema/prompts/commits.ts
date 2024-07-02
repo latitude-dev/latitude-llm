@@ -1,3 +1,5 @@
+import { latitudeSchema } from '$db/schema/db-schema'
+import { timestamps } from '$db/schema/schemaHelpers'
 import { InferSelectModel, relations, sql } from 'drizzle-orm'
 import {
   AnyPgColumn,
@@ -9,8 +11,6 @@ import {
 } from 'drizzle-orm/pg-core'
 
 import { PromptSnapshot, promptSnapshots } from '..'
-import { latitudeSchema } from '../db-schema'
-import { timestamps } from '../schemaHelpers'
 
 export const commits = latitudeSchema.table('commits', {
   id: bigserial('id', { mode: 'bigint' }).notNull().primaryKey(),
