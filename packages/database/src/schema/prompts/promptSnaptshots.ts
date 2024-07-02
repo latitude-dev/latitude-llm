@@ -1,3 +1,4 @@
+import { timestamps } from '$db/schema/schemaHelpers'
 import { InferSelectModel, relations } from 'drizzle-orm'
 import { AnyPgColumn, bigint, bigserial, index } from 'drizzle-orm/pg-core'
 
@@ -8,7 +9,6 @@ import {
   PromptVersion,
   promptVersions,
 } from '..'
-import { timestamps } from '../schemaHelpers'
 
 export const promptSnapshots = latitudeSchema.table(
   'prompt_snapshots',
