@@ -4,8 +4,8 @@ services:
       context: .
       dockerfile: apps/web/docker/Dockerfile
     ports:
-      - "3000:3000"
-      - "4983:4983"
+      - '3000:3000'
+      - '4983:4983'
     volumes:
       - ./apps/web:/app/apps/web
       - /app/apps/web/node_modules
@@ -13,6 +13,19 @@ services:
       - db
     env_file:
       - apps/web/.env
+    command: pnpm run dev
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/docker/Dockerfile
+    ports:
+      - '3001:3001'
+    volumes:
+      - ./apps/api/src:/app/apps/api/src
+      - ./apps/api/package.json:/app/apps/api/package.json
+    depends_on:
+      - db
     command: pnpm run dev
 
   elastic:
