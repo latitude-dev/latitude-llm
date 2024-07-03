@@ -1,5 +1,8 @@
 FROM latitudedata/base AS installer
 
+WORKDIR /app
+COPY . .
+
 ARG NODE_ENV=development
 
 RUN turbo prune @latitude-data/core --docker

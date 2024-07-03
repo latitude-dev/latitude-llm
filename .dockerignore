@@ -1,3 +1,6 @@
 node_modules
 npm-debug.log
+.pnpm-store
 out
+dist
+*.md

@@ -9,6 +9,7 @@ services:
   web:
     build:
       context: .
+      target: dev-runner
       dockerfile: apps/web/docker/Dockerfile
     ports:
       - '3000:3000'

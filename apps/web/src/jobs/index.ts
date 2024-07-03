@@ -1,6 +1,5 @@
 import { setupJobs } from '@latitude-data/jobs'
-
-import env from '../env'
+import env from '$/env'
 
 export default setupJobs({
   connectionParams: {

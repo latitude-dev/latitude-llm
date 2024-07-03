@@ -5,7 +5,7 @@
   "main": "./src/index.ts",
   "scripts": {
     "dev": "tsx watch ./src/server.ts",
-    "build:prod": "rollup -c",
+    "build:server": "rollup -c",
     "start": "node ./dist/server.js",
     "lint": "eslint src",
     "tc": "tsc --noEmit",
