@@ -3,6 +3,8 @@ import { ReactNode } from 'react'
 import type { Metadata } from 'next'
 import localFont from 'next/font/local'
 
+import '@latitude-data/web-ui/styles.css'
+
 const fontSans = localFont({
   src: './fonts/GeistVF.woff',
   variable: '--font-geist-sans',

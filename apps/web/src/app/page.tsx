@@ -1,4 +1,5 @@
 import { Commit, listCommits } from '@latitude-data/core'
+import { Button } from '@latitude-data/web-ui'
 import { exampleEnqueue } from '$/actions/example-enqueu'
 import database from '$/db/database'
 
@@ -11,7 +12,7 @@ export default async function Home() {
     <div>
       <h1>List of commits</h1>
       <form action={exampleEnqueue}>
-        <button type='submit'>Enqueue example job</button>
+        <Button>Enqueue Job</Button>
       </form>
       <ul>
         {commits.map((c: Partial<Commit>) => (

@@ -9,13 +9,17 @@
     "paths": {
       "$/*": ["./src/*"],
       "$core/*": ["../../packages/core/src/*"],
-      "$jobs/*": ["../../packages/jobs/src/*"]
+      "$jobs/*": ["../../packages/jobs/src/*"],
+      "$ui/*": ["../../packages/web-ui/src/*"]
     }
   },
   "include": [
     "./src/**/*.ts",
     "./src/**/*.tsx",
     ".next/types/**/*.ts",
+    "../../packages/web-ui/src",
+    "../../packages/core/src",
+    "../../packages/jobs/src",
     "next-env.d.ts",
     "next.config.js"
   ],
