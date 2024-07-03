@@ -18,6 +18,19 @@ export interface Text extends BaseNode {
   data: string
 }
 
+export interface Attribute extends BaseNode {
+  type: 'Attribute'
+  name: string
+  value: TemplateNode[] | true
+}
+
+export interface ContentTag extends BaseNode {
+  type: 'ContentTag'
+  name: string
+  attributes: Attribute[]
+  children: TemplateNode[]
+}
+
 export interface MustacheTag extends BaseNode {
   type: 'MustacheTag'
   expression: Node

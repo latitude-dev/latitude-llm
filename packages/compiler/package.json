@@ -7,6 +7,8 @@
   "scripts": {
     "dev": "rollup -c -w",
     "build": "rollup -c",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "prettier": "prettier --write src/**/*.ts"
   },
   "devDependencies": {
