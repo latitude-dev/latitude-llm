@@ -69,6 +69,7 @@ jobs:
       - name: Run Server migrations
         env:
           NODE_ENV: test
+          DATABASE_URL: postgres://latitude:secret@localhost:5432/latitude_test
         run: cd packages/core && pnpm db:migrate:test
 
       - name: Test

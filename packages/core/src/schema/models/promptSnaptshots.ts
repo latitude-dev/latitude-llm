@@ -36,6 +36,7 @@ export const promptSnapshotsRelations = relations(
   promptSnapshots,
   ({ one }) => ({
     commit: one(commits, {
+      relationName: 'snapshots',
       fields: [promptSnapshots.commitId],
       references: [commits.id],
     }),
