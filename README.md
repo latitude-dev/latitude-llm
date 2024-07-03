@@ -1,7 +1,5 @@
 # Latitude LLM
 
-Define README
-
 ## Drizzle Studio
 
 You can open a DB UI with the following command:
