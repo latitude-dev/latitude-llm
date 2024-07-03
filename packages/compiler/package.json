@@ -1,0 +1,31 @@
+{
+  "name": "@latitude-data/compiler",
+  "version": "0.0.1",
+  "license": "LGPL",
+  "description": "Compiler for Latitude's custom conversation language",
+  "type": "module",
+  "scripts": {
+    "dev": "rollup -c -w",
+    "build": "rollup -c",
+    "prettier": "prettier --write src/**/*.ts"
+  },
+  "devDependencies": {
+    "@latitude-data/eslint-config": "workspace:*",
+    "@latitude-data/typescript-config": "workspace:*",
+    "@rollup/plugin-typescript": "^11.1.6",
+    "@types/estree": "^1.0.1",
+    "@types/node": "^20.12.12",
+    "rollup": "^4.10.0",
+    "typescript": "^5.2.2",
+    "vitest": "^1.2.2"
+  },
+  "dependencies": {
+    "acorn": "^8.9.0",
+    "code-red": "^1.0.3",
+    "locate-character": "^3.0.0",
+    "yaml": "^2.4.5"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "author": "Latitude Data"
+}
