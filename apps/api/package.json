@@ -9,7 +9,7 @@
     "start": "node -r module-alias/register ./dist --env=production",
     "tc": "tsc --noEmit",
     "test": "vitest --run",
-    "test:watch": "vitest "
+    "test:watch": "vitest"
   },
   "packageManager": "pnpm@8.6.3",
   "_moduleAliases": {
@@ -19,6 +19,7 @@
     "node": ">=20.0.0"
   },
   "dependencies": {
+    "@latitude-data/env": "workspace:^",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "express-async-errors": "^3.1.1",

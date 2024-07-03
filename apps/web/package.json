@@ -8,24 +8,17 @@
     "start": "next start",
     "lint": "next lint",
     "tc": "tsc --noEmit",
-    "prettier": "prettier --write \"**/*.{ts,tsx,md}\"",
-    "db:generate": "drizzle-kit generate",
-    "db:generate:custom": "pnpm run db:generate --custom",
-    "db:migrate": "drizzle-kit migrate --config=./drizzle.config.ts",
-    "db:migrate:test": "NODE_ENV=test pnpm run db:migrate",
-    "db:drop": "drizzle-kit drop",
-    "db:check": "drizzle-kit check",
-    "db:studio": "drizzle-kit studio --host 0.0.0.0"
+    "prettier": "prettier --write \"**/*.{ts,tsx,md}\""
   },
   "packageManager": "pnpm@8.6.3",
   "engines": {
     "node": ">=20.0.0"
   },
   "dependencies": {
-    "@latitude-data/database": "workspace:*",
     "@elastic/elasticsearch": "^8.14.0",
+    "@latitude-data/core": "workspace:*",
+    "@latitude-data/env": "workspace:^",
     "@t3-oss/env-nextjs": "^0.10.1",
-    "dotenv": "^16.4.5",
     "next": "15.0.0-rc.0",
     "react": "19.0.0-rc-f994737d14-20240522",
     "react-dom": "19.0.0-rc-f994737d14-20240522",
@@ -37,7 +30,6 @@
     "@types/node": "^20",
     "@types/react": "^18",
     "@types/react-dom": "^18",
-    "drizzle-kit": "^0.22.8",
     "eslint": "^8",
     "typescript": "^5"
   }

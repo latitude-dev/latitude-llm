@@ -11,6 +11,14 @@ CREATE TABLE IF NOT EXISTS "latitude"."commits" (
 	CONSTRAINT "commits_uuid_unique" UNIQUE("uuid")
 );
 --> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "latitude"."convos" (
+	"id" bigserial PRIMARY KEY NOT NULL,
+	"uuid" uuid DEFAULT gen_random_uuid() NOT NULL,
+	"content" jsonb,
+	"prompt_version_id" bigint NOT NULL,
+	CONSTRAINT "convos_uuid_unique" UNIQUE("uuid")
+);
+--> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "latitude"."prompt_snapshots" (
 	"id" bigserial PRIMARY KEY NOT NULL,
 	"commit_id" bigint NOT NULL,
@@ -34,6 +42,12 @@ CREATE TABLE IF NOT EXISTS "latitude"."prompt_versions" (
 --> statement-breakpoint
 DO $$ BEGIN
  ALTER TABLE "latitude"."commits" ADD CONSTRAINT "commits_next_commit_id_commits_id_fk" FOREIGN KEY ("next_commit_id") REFERENCES "latitude"."commits"("id") ON DELETE restrict ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "latitude"."convos" ADD CONSTRAINT "convos_prompt_version_id_prompt_versions_id_fk" FOREIGN KEY ("prompt_version_id") REFERENCES "latitude"."prompt_versions"("id") ON DELETE cascade ON UPDATE no action;
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;

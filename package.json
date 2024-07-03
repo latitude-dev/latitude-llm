@@ -11,7 +11,7 @@
     "test": "turbo test"
   },
   "devDependencies": {
-    "@latitude-data/database": "workspace:*",
+    "@latitude-data/core": "workspace:*",
     "@latitude-data/eslint-config": "workspace:*",
     "@latitude-data/typescript-config": "workspace:*",
     "prettier": "^3.2.5",

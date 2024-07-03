@@ -8,7 +8,6 @@ services:
       - '4983:4983'
     volumes:
       - ./apps/web:/app/apps/web
-      - ./packages/database:/app/packages/database
       - /app/apps/web/node_modules
     depends_on:
       - db
@@ -36,6 +35,14 @@ services:
       - 'ELASTIC_USERNAME=latitude'
       - 'ELASTIC_PASSWORD=secret'
 
+  core:
+    build:
+      context: .
+      dockerfile: packages/core/docker/Dockerfile
+    volumes:
+      - ./packages/core/src:/app/packages/core/src
+    depends_on:
+      - db
   db:
     image: postgres
     environment:
