@@ -1,5 +1,5 @@
 {
-  "id": "215a3ab4-ac13-4f1e-abd0-b96cbad91a9b",
+  "id": "1e9ace2e-5a92-4622-adaa-7debf3db366c",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "version": "7",
   "dialect": "postgresql",
@@ -75,6 +75,64 @@
       "uniqueConstraints": {
         "commits_uuid_unique": {
           "name": "commits_uuid_unique",
+          "nullsNotDistinct": false,
+          "columns": [
+            "uuid"
+          ]
+        }
+      }
+    },
+    "latitude.convos": {
+      "name": "convos",
+      "schema": "latitude",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "bigserial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "uuid": {
+          "name": "uuid",
+          "type": "uuid",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "gen_random_uuid()"
+        },
+        "content": {
+          "name": "content",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "prompt_version_id": {
+          "name": "prompt_version_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": true
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "convos_prompt_version_id_prompt_versions_id_fk": {
+          "name": "convos_prompt_version_id_prompt_versions_id_fk",
+          "tableFrom": "convos",
+          "tableTo": "prompt_versions",
+          "schemaTo": "latitude",
+          "columnsFrom": [
+            "prompt_version_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {
+        "convos_uuid_unique": {
+          "name": "convos_uuid_unique",
           "nullsNotDistinct": false,
           "columns": [
             "uuid"

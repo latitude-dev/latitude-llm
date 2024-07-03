@@ -1,24 +1,22 @@
 {
   "extends": "@latitude-data/typescript-config/base.json",
   "compilerOptions": {
-    "plugins": [{"name": "next" }],
+    "plugins": [{ "name": "next" }],
     "module": "ESNext",
     "moduleResolution": "Bundler",
     "jsx": "preserve",
-    "typeRoots": [
-      "./node_modules/@types"
-    ],
+    "typeRoots": ["./node_modules/@types"],
     "paths": {
       "$/*": ["./src/*"],
-      "$db/*": ["../../packages/database/src/*"]
+      "$core/*": ["../../packages/core/src/*"]
     }
   },
   "include": [
+    "./src/**/*.ts",
+    "./src/**/*.tsx",
+    ".next/types/**/*.ts",
     "next-env.d.ts",
-    "next.config.js",
-    "**/*.ts",
-    "**/*.tsx",
-    ".next/types/**/*.ts"
+    "next.config.js"
   ],
   "exclude": ["node_modules"]
 }

@@ -1,4 +1,4 @@
-import { listCommits } from '@latitude-data/database'
+import { listCommits } from '@latitude-data/core'
 import database from '$/db/database'
 
 export default async function Home() {

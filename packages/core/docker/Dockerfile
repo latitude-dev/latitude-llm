@@ -1,5 +1,6 @@
 FROM node:20-alpine AS base
 
+ARG DATABASE_URL
 ARG NODE_ENV=development
 
 # Check https://github.com/nodejs/docker-node/tree/b4117f9333da4138b03a546ec926ef50a31506c3#nodealpine to understand why libc6-compat might be needed.
@@ -20,7 +21,7 @@ WORKDIR /app
 
 COPY . .
 
-RUN turbo prune @latitude-data/web --docker
+RUN turbo prune @latitude-data/core --docker
 
 FROM base AS installer
 
@@ -46,12 +47,20 @@ WORKDIR /app
 
 COPY --from=builder /app/out/full .
 COPY --from=installer /app/node_modules ./node_modules
-COPY --from=installer /app/apps/web/node_modules ./apps/web/node_modules
+COPY --from=installer /app/packages/core/node_modules ./packages/core/node_modules
 
-WORKDIR /app/apps/web
+WORKDIR /app/packages/core
 
 ENV NODE_ENV $NODE_ENV
 
+# Declare DATABASE_URL env var if it has been passed as a build argument.
+# Required for production use case.
+RUN if [ "$DATABASE_URL" ]; then \
+    export DATABASE_URL; \
+  else \
+    unset DATABASE_URL; \
+  fi
+
 EXPOSE 3000
 
-CMD pnpm start
+CMD pnpm db:migrate

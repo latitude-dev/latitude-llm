@@ -8,9 +8,9 @@ importers:
 
   .:
     devDependencies:
-      '@latitude-data/database':
+      '@latitude-data/core':
         specifier: workspace:*
-        version: link:packages/database
+        version: link:packages/core
       '@latitude-data/eslint-config':
         specifier: workspace:*
         version: link:tools/eslint
@@ -29,6 +29,9 @@ importers:
 
   apps/api:
     dependencies:
+      '@latitude-data/env':
+        specifier: workspace:^
+        version: link:../../tools/env
       dotenv:
         specifier: ^16.4.5
         version: 16.4.5
@@ -135,15 +138,15 @@ importers:
       '@elastic/elasticsearch':
         specifier: ^8.14.0
         version: 8.14.0
-      '@latitude-data/database':
+      '@latitude-data/core':
         specifier: workspace:*
-        version: link:../../packages/database
+        version: link:../../packages/core
+      '@latitude-data/env':
+        specifier: workspace:^
+        version: link:../../tools/env
       '@t3-oss/env-nextjs':
         specifier: ^0.10.1
         version: 0.10.1(typescript@5.3.3)(zod@3.23.8)
-      dotenv:
-        specifier: ^16.4.5
-        version: 16.4.5
       next:
         specifier: 15.0.0-rc.0
         version: 15.0.0-rc.0(react-dom@19.0.0-rc-f994737d14-20240522)(react@19.0.0-rc-f994737d14-20240522)
@@ -172,9 +175,6 @@ importers:
       '@types/react-dom':
         specifier: ^18
         version: 18.2.19
-      drizzle-kit:
-        specifier: ^0.22.8
-        version: 0.22.8
       eslint:
         specifier: ^8
         version: 8.57.0
@@ -182,14 +182,20 @@ importers:
         specifier: ^5
         version: 5.3.3
 
-  packages/database:
+  packages/core:
     dependencies:
+      '@latitude-data/env':
+        specifier: workspace:^
+        version: link:../../tools/env
       drizzle-orm:
         specifier: ^0.31.2
         version: 0.31.2(@types/pg@8.11.6)(pg@8.12.0)
       pg:
         specifier: ^8.12.0
         version: 8.12.0
+      zod:
+        specifier: ^3.23.8
+        version: 3.23.8
     devDependencies:
       '@latitude-data/eslint-config':
         specifier: workspace:*
@@ -199,10 +205,19 @@ importers:
         version: link:../../tools/typescript
       '@types/node':
         specifier: ^20
-        version: 20.11.24
+        version: 20.14.9
       '@types/pg':
         specifier: ^8.11.6
         version: 8.11.6
+      drizzle-kit:
+        specifier: ^0.22.8
+        version: 0.22.8
+
+  tools/env:
+    dependencies:
+      dotenv:
+        specifier: ^16.4.5
+        version: 16.4.5
 
   tools/eslint:
     devDependencies:

@@ -1,4 +1,4 @@
-import './pre-start' // Must be the first import
+import '@latitude-data/env'
 
 import EnvVars from '@src/common/EnvVars'
 

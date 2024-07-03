@@ -1,5 +1,5 @@
-import { Database } from '$db/client'
-import { commits } from '$db/schema'
+import { Database } from '$core/client'
+import { commits } from '$core/schema'
 
 export async function listCommits({ db }: { db: Database }) {
   return db

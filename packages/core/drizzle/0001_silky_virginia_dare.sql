@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS "prompt_version_idx" ON "latitude"."convos" USING btree ("prompt_version_id");

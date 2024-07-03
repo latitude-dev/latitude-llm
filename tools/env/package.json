@@ -1,0 +1,14 @@
+{
+  "name": "@latitude-data/env",
+  "version": "0.0.1",
+  "description": "Common envvars for latitude llm",
+  "main": "index.ts",
+  "exports": {
+    ".": "./index.ts"
+  },
+  "author": "Latitude Data <hello@latitude.so>",
+  "license": "LGPL-3.0",
+  "dependencies": {
+    "dotenv": "^16.4.5"
+  }
+}

@@ -19,9 +19,9 @@ jobs:
       postgres:
         image: postgres
         env:
-          POSTGRES_USER: latitude
-          POSTGRES_PASSWORD: secret
           POSTGRES_DB: latitude_test
+          POSTGRES_PASSWORD: secret
+          POSTGRES_USER: latitude
         ports:
           - 5432:5432
         options: >-
@@ -35,9 +35,6 @@ jobs:
         uses: actions/checkout@v3
         with:
           fetch-depth: 2 # Checkout HEAD^
-
-      - name: Copy env file
-        run: cp apps/web/env.example apps/web/.env
 
       - name: Setup Node.js
         uses: actions/setup-node@v3
@@ -70,7 +67,11 @@ jobs:
         run: until pg_isready -h localhost -p 5432; do sleep 1; done
 
       - name: Run Server migrations
-        run: cd apps/web && pnpm db:migrate:test
+        env:
+          NODE_ENV: test
+        run: cd packages/core && pnpm db:migrate:test
 
       - name: Test
+        env:
+          NODE_ENV: test
         run: pnpm test --filter=[HEAD^1]
