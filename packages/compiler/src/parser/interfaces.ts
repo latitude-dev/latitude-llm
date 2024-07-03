@@ -13,6 +13,11 @@ export interface Fragment extends BaseNode {
   children: TemplateNode[]
 }
 
+export interface Config extends BaseNode {
+  type: 'Config'
+  value: Record<string, any>
+}
+
 export interface Text extends BaseNode {
   type: 'Text'
   data: string

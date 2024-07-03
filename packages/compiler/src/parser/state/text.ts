@@ -2,7 +2,7 @@ import { type Parser } from '..'
 import { CUSTOM_TAG_START } from '../constants'
 
 const ENDS_WITH_ESCAPE_REGEX = /(?<!\\)(\\\\)*\\$/
-const RESERVED_DELIMITERS = [CUSTOM_TAG_START, '/*', '<', '---']
+const RESERVED_DELIMITERS = [CUSTOM_TAG_START, '/*', '<']
 
 export function text(parser: Parser) {
   const start = parser.index
@@ -11,6 +11,12 @@ export function text(parser: Parser) {
   while (parser.index < parser.template.length) {
     const isEscaping = ENDS_WITH_ESCAPE_REGEX.test(data)
     if (isEscaping) data = data.slice(0, -1) // Remove the escape character
+
+    if (!isEscaping && parser.match('---')) {
+      // Only parse config if it's the first thing in the file
+      const isFirst = parser.template.slice(0, parser.index).trim() === '' // Ignore any whitespace
+      if (isFirst) break
+    }
 
     if (
       !isEscaping &&
