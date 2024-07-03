@@ -1,6 +1,6 @@
 import { type Parser } from '..'
+import { CUSTOM_TAG_END, CUSTOM_TAG_START } from '../../constants'
 import PARSER_ERRORS from '../../error/errors'
-import { CUSTOM_TAG_END, CUSTOM_TAG_START } from '../constants'
 import { type TemplateNode } from '../interfaces'
 import readContext from '../read/context'
 import readExpression from '../read/expression'
@@ -131,7 +131,7 @@ export function mustache(parser: Parser) {
       parser.allowWhitespace()
       if (parser.eat(',')) {
         parser.allowWhitespace()
-        block.index = parser.readIdentifier()
+        block.index = readExpression(parser)
         if (!block.index) parser.error(PARSER_ERRORS.expectedName)
         parser.allowWhitespace()
       }

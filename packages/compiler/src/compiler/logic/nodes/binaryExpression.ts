@@ -1,10 +1,9 @@
 import type { BinaryExpression, LogicalExpression } from 'estree'
 
-import { getLogicNodeMetadata, resolveLogicNode } from '..'
+import { resolveLogicNode } from '..'
 import errors from '../../../error/errors'
-import { mergeMetadata } from '../../utils'
 import { BINARY_OPERATOR_METHODS } from '../operators'
-import type { ReadNodeMetadataProps, ResolveNodeProps } from '../types'
+import type { ResolveNodeProps } from '../types'
 
 /**
  * ### BinaryExpression
@@ -33,20 +32,4 @@ export async function resolve({
   })
 
   return BINARY_OPERATOR_METHODS[binaryOperator]?.(leftOperand, rightOperand)
-}
-
-export async function readMetadata({
-  node,
-  ...props
-}: ReadNodeMetadataProps<BinaryExpression | LogicalExpression>) {
-  return mergeMetadata(
-    await getLogicNodeMetadata({
-      node: node.left,
-      ...props,
-    }),
-    await getLogicNodeMetadata({
-      node: node.right,
-      ...props,
-    }),
-  )
 }

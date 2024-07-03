@@ -5,7 +5,7 @@ export default class Scope {
    * scopes to share the same variable values and be able to modify them.
    *
    * For example:
-   * ```sql
+   * ```md
    * {var1 = 1}
    * {#if <condition>}
    *  {var1 = 2}
@@ -15,65 +15,55 @@ export default class Scope {
    * In this case, there are two scopes: root and if. Both scopes share the same variable `var1`,
    * and modifying it in the if scope should also modify it in the root scope. But `var2` is only
    * defined in the if scope and should not be accessible in the root scope.
+   *
+   * Local pointers
+   * Every scope has its own local pointers that contains the indexes of the variables in the global stash.
    */
-  private static stash: unknown[] = [] // Stash of every variable value in every scope
-  private static readFromStash(index: number): unknown {
-    return Scope.stash[index]
-  }
-  private static addToStash(value: unknown): number {
-    Scope.stash.push(value)
-    return Scope.stash.length - 1
-  }
+  private globalStash: unknown[] = [] // Stash of every variable value in the global scope
+  private localPointers: Record<string, number> = {} // Index of every variable in the stash in the current scope
 
-  private static modifyStash(index: number, value: unknown): void {
-    Scope.stash[index] = value
+  constructor(globalScope: Record<string, unknown> = {}) {
+    for (const [key, value] of Object.entries(globalScope)) {
+      this.localPointers[key] = this.addToStash(value)
+    }
   }
 
-  /**
-   * Local scope
-   * Every scope has its own local stash that contains the indexes of the variables and constants
-   * in the global stash.
-   */
-  private consts: Record<string, number> = {} // Index of every constant in the stash in the current scope
-  private vars: Record<string, number> = {} // Index of every variable in the stash in the current scope
+  private readFromStash(index: number): unknown {
+    return this.globalStash[index]
+  }
+  private addToStash(value: unknown): number {
+    this.globalStash.push(value)
+    return this.globalStash.length - 1
+  }
 
-  constructor() {}
+  private modifyStash(index: number, value: unknown): void {
+    this.globalStash[index] = value
+  }
 
   exists(name: string): boolean {
-    return name in this.consts || name in this.vars
-  }
-
-  isConst(name: string): boolean {
-    return name in this.consts
+    return name in this.localPointers
   }
 
   get(name: string): unknown {
-    const index = this.consts[name] ?? this.vars[name] ?? undefined
+    const index = this.localPointers[name] ?? undefined
     if (index === undefined)
       throw new Error(`Variable '${name}' does not exist`)
-    return Scope.readFromStash(index)
-  }
-
-  defineConst(name: string, value: unknown): void {
-    if (this.exists(name)) throw new Error(`Variable '${name}' already exists`)
-    this.consts[name] = Scope.addToStash(value)
+    return this.readFromStash(index)
   }
 
   set(name: string, value: unknown): void {
-    if (this.isConst(name))
-      throw new Error(`Constant '${name}' cannot be modified`)
     if (!this.exists(name)) {
-      this.vars[name] = Scope.addToStash(value)
+      this.localPointers[name] = this.addToStash(value)
       return
     }
-    const index = this.vars[name]!
-    Scope.modifyStash(index, value)
+    const index = this.localPointers[name]!
+    this.modifyStash(index, value)
   }
 
   copy(): Scope {
     const scope = new Scope()
-    scope.consts = { ...this.consts }
-    scope.vars = { ...this.vars }
+    scope.globalStash = this.globalStash
+    scope.localPointers = { ...this.localPointers }
     return scope
   }
 }

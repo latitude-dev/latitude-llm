@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
 
 import parse from '.'
+import { CUSTOM_TAG_END, CUSTOM_TAG_START } from '../constants'
 import CompileError from '../error/error'
-import { CUSTOM_TAG_END, CUSTOM_TAG_START } from './constants'
 import { TemplateNode } from './interfaces'
 
 const getExpectedError = <T>(
@@ -292,7 +292,7 @@ describe('Tags', () => {
     expect(fragment.children.length).toBe(1)
 
     const tag = fragment.children[0]!
-    expect(tag.type).toBe('ContentTag')
+    expect(tag.type).toBe('ElementTag')
     expect(tag.name).toBe('custom-tag')
   })
 
@@ -301,7 +301,7 @@ describe('Tags', () => {
     expect(fragment.children.length).toBe(1)
 
     const tag = fragment.children[0]!
-    expect(tag.type).toBe('ContentTag')
+    expect(tag.type).toBe('ElementTag')
     expect(tag.name).toBe('custom-tag')
   })
 
@@ -331,12 +331,12 @@ describe('Tags', () => {
     expect(fragment.children.length).toBe(1)
 
     const parent = fragment.children[0]!
-    expect(parent.type).toBe('ContentTag')
+    expect(parent.type).toBe('ElementTag')
     expect(parent.name).toBe('parent')
     expect(parent.children?.length).toBe(1)
 
     const child = parent.children![0]!
-    expect(child.type).toBe('ContentTag')
+    expect(child.type).toBe('ElementTag')
     expect(child.name).toBe('child')
   })
 
@@ -347,7 +347,7 @@ describe('Tags', () => {
     expect(fragment.children.length).toBe(1)
 
     const tag = fragment.children[0]!
-    expect(tag.type).toBe('ContentTag')
+    expect(tag.type).toBe('ElementTag')
     expect(tag.name).toBe('custom-tag')
     expect(tag.attributes.length).toBe(2)
 
@@ -375,7 +375,7 @@ describe('Tags', () => {
     expect(fragment.children.length).toBe(1)
 
     const tag = fragment.children[0]!
-    expect(tag.type).toBe('ContentTag')
+    expect(tag.type).toBe('ElementTag')
     expect(tag.name).toBe('custom-tag')
     expect(tag.attributes.length).toBe(1)
 
@@ -393,7 +393,7 @@ describe('Tags', () => {
     expect(fragment.children.length).toBe(1)
 
     const tag = fragment.children[0]!
-    expect(tag.type).toBe('ContentTag')
+    expect(tag.type).toBe('ElementTag')
     expect(tag.name).toBe('custom-tag')
     expect(tag.attributes.length).toBe(1)
 

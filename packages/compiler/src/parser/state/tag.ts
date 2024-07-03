@@ -1,8 +1,8 @@
 import { type Parser } from '..'
+import { CUSTOM_TAG_END, CUSTOM_TAG_START } from '../../constants'
 import CompileError from '../../error/error'
 import PARSER_ERRORS from '../../error/errors'
-import { CUSTOM_TAG_END, CUSTOM_TAG_START } from '../constants'
-import { Attribute, ContentTag, TemplateNode, Text } from '../interfaces'
+import { Attribute, ElementTag, TemplateNode, Text } from '../interfaces'
 import read_expression from '../read/expression'
 import { decode_character_references } from '../utils/html'
 
@@ -30,11 +30,11 @@ export function tag(parser: Parser) {
   const isClosingTag = parser.eat('/')
   const name = readTagName(parser)
 
-  const element: ContentTag = {
+  const element: ElementTag = {
     start,
     end: null,
-    type: 'ContentTag',
-    name,
+    type: 'ElementTag',
+    name: name as ElementTag['name'],
     attributes: [],
     children: [],
   }

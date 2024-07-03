@@ -1,8 +1,7 @@
 import type { SequenceExpression } from 'estree'
 
-import { getLogicNodeMetadata, resolveLogicNode } from '..'
-import { mergeMetadata } from '../../utils'
-import type { ReadNodeMetadataProps, ResolveNodeProps } from '../types'
+import { resolveLogicNode } from '..'
+import type { ResolveNodeProps } from '../types'
 
 /**
  * ### SequenceExpression
@@ -17,16 +16,4 @@ export async function resolve({
       resolveLogicNode({ node: expression, ...props }),
     ),
   )
-}
-
-export async function readMetadata({
-  node,
-  ...props
-}: ReadNodeMetadataProps<SequenceExpression>) {
-  const childrenMetadata = await Promise.all(
-    node.expressions.map(async (expression) =>
-      getLogicNodeMetadata({ node: expression, ...props }),
-    ),
-  )
-  return mergeMetadata(...childrenMetadata)
 }

@@ -1,4 +1,4 @@
-import { CUSTOM_TAG_END, CUSTOM_TAG_START } from '../parser/constants'
+import { CUSTOM_TAG_END, CUSTOM_TAG_START } from '../constants'
 
 function getKlassName(error: unknown): string {
   const errorKlass = error as Error
@@ -185,7 +185,7 @@ export default {
   }),
   notAFunction: (objectType: string) => ({
     code: 'not-a-function',
-    message: `Object '${objectType}' is not callable`,
+    message: `'${objectType}' is not a function`,
   }),
   functionCallError: (err: unknown) => {
     const error = err as Error
@@ -211,4 +211,44 @@ export default {
     code: 'invalid-function-result-interpolation',
     message: 'Functions called for interpolation must return a string',
   },
+  invalidTagPlacement: (name: string, parent: string) => ({
+    code: 'invalid-tag-placement',
+    message: `Cannot have a ${name} tag inside of a ${parent} tag`,
+  }),
+  messageTagInsideMessage: {
+    code: 'message-tag-inside-message',
+    message: 'Message tags cannot be inside of another message',
+  },
+  invalidMessageRole: (name: string) => ({
+    code: 'invalid-message-role',
+    message: `Invalid message role: ${name}`,
+  }),
+  messageTagWithoutRole: {
+    code: 'message-tag-without-role',
+    message: 'Message tags must have a role attribute',
+  },
+  referenceTagWithoutPrompt: {
+    code: 'reference-tag-without-prompt',
+    message: 'Reference tags must have a prompt attribute',
+  },
+  missingReferenceFunction: {
+    code: 'missing-reference-function',
+    message: 'A reference function was not provided',
+  },
+  referenceError: (err: unknown) => {
+    const error = err as Error
+    const errorKlassName = getKlassName(error)
+    return {
+      code: 'reference-error',
+      message: `There was an error referencing the prompt: \n${errorKlassName} ${error.message}`,
+    }
+  },
+  invalidContentType: (name: string) => ({
+    code: 'invalid-content-type',
+    message: `Invalid content type: ${name}`,
+  }),
+  invalidStaticAttribute: (name: string) => ({
+    code: 'invalid-static-attribute',
+    message: `The attribute '${name}' must only contain literal values`,
+  }),
 }

@@ -1,10 +1,8 @@
 import { type Identifier, type ObjectExpression } from 'estree'
 
-import { getLogicNodeMetadata, resolveLogicNode } from '..'
+import { resolveLogicNode } from '..'
 import errors from '../../../error/errors'
-import { QueryMetadata } from '../../types'
-import { mergeMetadata } from '../../utils'
-import { ReadNodeMetadataProps, type ResolveNodeProps } from '../types'
+import { type ResolveNodeProps } from '../types'
 
 /**
  * ### ObjectExpression
@@ -47,36 +45,4 @@ export async function resolve({
     throw raiseError(errors.invalidObjectKey, prop)
   }
   return resolvedObject
-}
-
-export async function readMetadata({
-  node,
-  ...props
-}: ReadNodeMetadataProps<ObjectExpression>) {
-  const propertiesMetadata = await Promise.all(
-    node.properties
-      .map((prop) => {
-        if (prop.type === 'SpreadElement') {
-          return getLogicNodeMetadata({
-            node: prop.argument,
-            ...props,
-          })
-        }
-        if (prop.type === 'Property') {
-          return Promise.all([
-            getLogicNodeMetadata({
-              node: prop.key,
-              ...props,
-            }),
-            getLogicNodeMetadata({
-              node: prop.value,
-              ...props,
-            }),
-          ])
-        }
-      })
-      .filter((p) => p !== undefined),
-  )
-
-  return mergeMetadata(...(propertiesMetadata.flat() as QueryMetadata[]))
 }
