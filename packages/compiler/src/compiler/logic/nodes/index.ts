@@ -1,59 +1,21 @@
 import { Node } from 'estree'
 
-import { QueryMetadata } from '../../types'
-import { emptyMetadata } from '../../utils'
-import { NodeType, ReadNodeMetadataProps, ResolveNodeProps } from '../types'
-import {
-  readMetadata as readArrayMetadata,
-  resolve as resolveArrayExpression,
-} from './arrayExpression'
-import {
-  readMetadata as readAssignmentMetadata,
-  resolve as resolveAssignmentExpression,
-} from './assignmentExpression'
-import {
-  readMetadata as readBinaryMetadata,
-  resolve as resolveBinaryExpression,
-} from './binaryExpression'
-import {
-  readMetadata as readCallMetadata,
-  resolve as resolveCallExpression,
-} from './callExpression'
-import {
-  readMetadata as readChainMetadata,
-  resolve as resolveChainExpression,
-} from './chainExpression'
-import {
-  readMetadata as readConditionalMetadata,
-  resolve as resolveConditionalExpression,
-} from './conditionalExpression'
+import { NodeType, ResolveNodeProps } from '../types'
+import { resolve as resolveArrayExpression } from './arrayExpression'
+import { resolve as resolveAssignmentExpression } from './assignmentExpression'
+import { resolve as resolveBinaryExpression } from './binaryExpression'
+import { resolve as resolveCallExpression } from './callExpression'
+import { resolve as resolveChainExpression } from './chainExpression'
+import { resolve as resolveConditionalExpression } from './conditionalExpression'
 import { resolve as resolveIdentifier } from './identifier'
 import { resolve as resolveLiteral } from './literal'
-import {
-  readMetadata as readMemberMetadata,
-  resolve as resolveMemberExpression,
-} from './memberExpression'
-import {
-  readMetadata as readObjectMetadata,
-  resolve as resolveObjectExpression,
-} from './objectExpression'
-import {
-  readMetadata as readSequenceMetadata,
-  resolve as resolveSequenceExpression,
-} from './sequenceExpression'
-import {
-  readMetadata as readUnaryMetadata,
-  resolve as resolveUnaryExpression,
-} from './unaryExpression'
-import {
-  readMetadata as readUpdateMetadata,
-  resolve as resolveUpdateExpression,
-} from './updateExpression'
+import { resolve as resolveMemberExpression } from './memberExpression'
+import { resolve as resolveObjectExpression } from './objectExpression'
+import { resolve as resolveSequenceExpression } from './sequenceExpression'
+import { resolve as resolveUnaryExpression } from './unaryExpression'
+import { resolve as resolveUpdateExpression } from './updateExpression'
 
 type ResolveNodeFn = (props: ResolveNodeProps<Node>) => Promise<unknown>
-type ReadNodeMetadataFn = (
-  props: ReadNodeMetadataProps<Node>,
-) => Promise<QueryMetadata>
 
 export const nodeResolvers: Record<NodeType, ResolveNodeFn> = {
   [NodeType.ArrayExpression]: resolveArrayExpression as ResolveNodeFn,
@@ -71,23 +33,4 @@ export const nodeResolvers: Record<NodeType, ResolveNodeFn> = {
   [NodeType.SequenceExpression]: resolveSequenceExpression as ResolveNodeFn,
   [NodeType.UnaryExpression]: resolveUnaryExpression as ResolveNodeFn,
   [NodeType.UpdateExpression]: resolveUpdateExpression as ResolveNodeFn,
-}
-
-export const nodeMetadataReader: Record<NodeType, ReadNodeMetadataFn> = {
-  [NodeType.Identifier]: async () => emptyMetadata(), // No metadata to read
-  [NodeType.Literal]: async () => emptyMetadata(), // No metadata to read
-
-  [NodeType.ArrayExpression]: readArrayMetadata as ReadNodeMetadataFn,
-  [NodeType.AssignmentExpression]: readAssignmentMetadata as ReadNodeMetadataFn,
-  [NodeType.BinaryExpression]: readBinaryMetadata as ReadNodeMetadataFn,
-  [NodeType.CallExpression]: readCallMetadata as ReadNodeMetadataFn,
-  [NodeType.ChainExpression]: readChainMetadata as ReadNodeMetadataFn,
-  [NodeType.ConditionalExpression]:
-    readConditionalMetadata as ReadNodeMetadataFn,
-  [NodeType.LogicalExpression]: readBinaryMetadata as ReadNodeMetadataFn,
-  [NodeType.ObjectExpression]: readObjectMetadata as ReadNodeMetadataFn,
-  [NodeType.MemberExpression]: readMemberMetadata as ReadNodeMetadataFn,
-  [NodeType.SequenceExpression]: readSequenceMetadata as ReadNodeMetadataFn,
-  [NodeType.UnaryExpression]: readUnaryMetadata as ReadNodeMetadataFn,
-  [NodeType.UpdateExpression]: readUpdateMetadata as ReadNodeMetadataFn,
 }

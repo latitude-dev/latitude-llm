@@ -5,11 +5,10 @@ import type {
   MemberExpression,
 } from 'estree'
 
-import { getLogicNodeMetadata, resolveLogicNode } from '..'
+import { resolveLogicNode } from '..'
 import errors from '../../../error/errors'
-import { mergeMetadata } from '../../utils'
 import { ASSIGNMENT_OPERATOR_METHODS } from '../operators'
-import type { ReadNodeMetadataProps, ResolveNodeProps } from '../types'
+import type { ResolveNodeProps } from '../types'
 
 /**
  * ### AssignmentExpression
@@ -38,7 +37,7 @@ export async function resolve({
   })
 
   if (node.left.type === 'Identifier') {
-    return await assignToVariable({
+    await assignToVariable({
       assignmentOperator,
       assignmentMethod,
       assignmentValue,
@@ -47,10 +46,11 @@ export async function resolve({
       raiseError,
       ...props,
     })
+    return
   }
 
   if (node.left.type === 'MemberExpression') {
-    return await assignToProperty({
+    await assignToProperty({
       assignmentOperator,
       assignmentMethod,
       assignmentValue,
@@ -59,6 +59,7 @@ export async function resolve({
       raiseError,
       ...props,
     })
+    return
   }
 
   raiseError(errors.invalidAssignment, node)
@@ -77,9 +78,6 @@ async function assignToVariable({
   assignmentValue: unknown
 }) {
   const assignedVariableName = node.name
-  if (scope.isConst(assignedVariableName)) {
-    raiseError(errors.constantReassignment, node)
-  }
 
   if (assignmentOperator != '=' && !scope.exists(assignedVariableName)) {
     raiseError(errors.variableNotDeclared(assignedVariableName), node)
@@ -130,14 +128,4 @@ async function assignToProperty({
   const updatedValue = assignmentMethod(originalValue, assignmentValue)
   object[property] = updatedValue
   return updatedValue
-}
-
-export async function readMetadata({
-  node,
-  ...props
-}: ReadNodeMetadataProps<AssignmentExpression>) {
-  return mergeMetadata(
-    await getLogicNodeMetadata({ node: node.right, ...props }),
-    await getLogicNodeMetadata({ node: node.left, ...props }),
-  )
 }

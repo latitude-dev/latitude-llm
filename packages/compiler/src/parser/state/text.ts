@@ -1,5 +1,5 @@
 import { type Parser } from '..'
-import { CUSTOM_TAG_START } from '../constants'
+import { CUSTOM_TAG_START } from '../../constants'
 
 const ENDS_WITH_ESCAPE_REGEX = /(?<!\\)(\\\\)*\\$/
 const RESERVED_DELIMITERS = [CUSTOM_TAG_START, '/*', '<']

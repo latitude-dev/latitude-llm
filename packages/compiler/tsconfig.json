@@ -4,6 +4,7 @@
     "rootDir": "src",
     "outDir": "dist",
     "moduleResolution": "node",
+    "typeRoots": ["node_modules/@types", "node_modules/@latitude-data/typescript-config/types"],
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]

@@ -1,8 +1,8 @@
 import type { AssignmentExpression, UpdateExpression } from 'estree'
 
-import { getLogicNodeMetadata, resolveLogicNode } from '..'
+import { resolveLogicNode } from '..'
 import errors from '../../../error/errors'
-import type { ReadNodeMetadataProps, ResolveNodeProps } from '../types'
+import type { ResolveNodeProps } from '../types'
 
 /**
  * ### UpdateExpression
@@ -53,22 +53,19 @@ export async function resolve({
   } as AssignmentExpression
 
   // Perform the assignment
-  const updatedValue = await resolveLogicNode({
+  await resolveLogicNode({
     node: assignmentNode,
     scope,
     raiseError,
     ...props,
   })
 
-  return node.prefix ? updatedValue : originalValue
-}
-
-export async function readMetadata({
-  node,
-  ...props
-}: ReadNodeMetadataProps<UpdateExpression>) {
-  return await getLogicNodeMetadata({
+  const updatedValue = await resolveLogicNode({
     node: node.argument,
+    scope,
+    raiseError,
     ...props,
   })
+
+  return node.prefix ? updatedValue : originalValue
 }

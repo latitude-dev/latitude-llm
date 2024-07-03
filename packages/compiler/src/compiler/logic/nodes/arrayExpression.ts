@@ -1,9 +1,9 @@
 import type { ArrayExpression } from 'estree'
 
-import { getLogicNodeMetadata, resolveLogicNode } from '..'
+import { resolveLogicNode } from '..'
 import errors from '../../../error/errors'
-import { emptyMetadata, isIterable, mergeMetadata } from '../../utils'
-import type { ReadNodeMetadataProps, ResolveNodeProps } from '../types'
+import { isIterable } from '../../utils'
+import type { ResolveNodeProps } from '../types'
 
 /**
  * ### ArrayExpression
@@ -42,20 +42,4 @@ export async function resolve({
   }
 
   return resolvedArray
-}
-
-export async function readMetadata({
-  node,
-  ...props
-}: ReadNodeMetadataProps<ArrayExpression>) {
-  const childrenMetadata = await Promise.all(
-    node.elements.map(async (element) => {
-      if (!element) return emptyMetadata()
-      if (element.type === 'SpreadElement') {
-        return await getLogicNodeMetadata({ node: element.argument, ...props })
-      }
-      return await getLogicNodeMetadata({ node: element, ...props })
-    }),
-  )
-  return mergeMetadata(...childrenMetadata)
 }

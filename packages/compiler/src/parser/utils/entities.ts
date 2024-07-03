@@ -2231,4 +2231,4 @@ export default {
   LT: 60,
   gt: 62,
   lt: 60,
-}
+} as Record<string, number>

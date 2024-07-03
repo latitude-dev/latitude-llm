@@ -1,4 +1,6 @@
-import { type Node } from 'estree'
+import { Identifier, type Node } from 'estree'
+
+import { ContentType, MessageRole } from '../types'
 
 export interface BaseNode {
   start: number | null
@@ -29,12 +31,22 @@ export interface Attribute extends BaseNode {
   value: TemplateNode[] | true
 }
 
-export interface ContentTag extends BaseNode {
-  type: 'ContentTag'
+interface IElementTag extends BaseNode {
+  type: 'ElementTag'
   name: string
   attributes: Attribute[]
   children: TemplateNode[]
 }
+
+export type ContentTag = IElementTag & {
+  name: ContentType
+}
+
+export type MessageTag = IElementTag & {
+  name: MessageRole
+}
+
+export type ElementTag = ContentTag | MessageTag
 
 export interface MustacheTag extends BaseNode {
   type: 'MustacheTag'
@@ -59,8 +71,16 @@ export interface ElseBlock extends BaseNode {
 export interface EachBlock extends BaseNode {
   type: 'EachBlock'
   expression: Node
-  context: Node
-  index: Node
+  context: Identifier
+  index: Identifier | null
 }
 
-export type TemplateNode = BaseNode | Text | MustacheTag | Comment
+export type TemplateNode =
+  | BaseNode
+  | Text
+  | MustacheTag
+  | Comment
+  | ElementTag
+  | IfBlock
+  | ElseBlock
+  | EachBlock
