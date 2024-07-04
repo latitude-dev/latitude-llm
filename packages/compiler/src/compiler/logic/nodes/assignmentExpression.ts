@@ -5,10 +5,10 @@ import type {
   MemberExpression,
 } from 'estree'
 
-import { resolveLogicNode } from '..'
+import { resolveLogicNode, updateScopeContextForNode } from '..'
 import errors from '../../../error/errors'
 import { ASSIGNMENT_OPERATOR_METHODS } from '../operators'
-import type { ResolveNodeProps } from '../types'
+import type { ResolveNodeProps, UpdateScopeContextProps } from '../types'
 
 /**
  * ### AssignmentExpression
@@ -128,4 +128,37 @@ async function assignToProperty({
   const updatedValue = assignmentMethod(originalValue, assignmentValue)
   object[property] = updatedValue
   return updatedValue
+}
+
+export function updateScopeContext({
+  node,
+  scopeContext,
+  raiseError,
+}: UpdateScopeContextProps<AssignmentExpression>) {
+  const assignmentOperator = node.operator
+  if (!(assignmentOperator in ASSIGNMENT_OPERATOR_METHODS)) {
+    raiseError(errors.unsupportedOperator(assignmentOperator), node)
+  }
+
+  updateScopeContextForNode({ node: node.right, scopeContext, raiseError })
+
+  if (node.left.type === 'Identifier') {
+    // Variable assignment
+    const assignedVariableName = (node.left as Identifier).name
+    if (assignmentOperator != '=') {
+      // Update an existing variable
+      if (!scopeContext.definedVariables.has(assignedVariableName)) {
+        scopeContext.usedUndefinedVariables.add(assignedVariableName)
+      }
+    }
+    scopeContext.definedVariables.add(assignedVariableName)
+    return
+  }
+
+  if (node.left.type === 'MemberExpression') {
+    updateScopeContextForNode({ node: node.left, scopeContext, raiseError })
+    return
+  }
+
+  raiseError(errors.invalidAssignment, node)
 }

@@ -1,8 +1,8 @@
 import type { AssignmentExpression, UpdateExpression } from 'estree'
 
-import { resolveLogicNode } from '..'
+import { resolveLogicNode, updateScopeContextForNode } from '..'
 import errors from '../../../error/errors'
-import type { ResolveNodeProps } from '../types'
+import type { ResolveNodeProps, UpdateScopeContextProps } from '../types'
 
 /**
  * ### UpdateExpression
@@ -68,4 +68,16 @@ export async function resolve({
   })
 
   return node.prefix ? updatedValue : originalValue
+}
+
+export function updateScopeContext({
+  node,
+  ...props
+}: UpdateScopeContextProps<UpdateExpression>) {
+  const updateOperator = node.operator
+  if (!['++', '--'].includes(updateOperator)) {
+    props.raiseError(errors.unsupportedOperator(updateOperator), node)
+  }
+
+  updateScopeContextForNode({ node: node.argument, ...props })
 }

@@ -1,9 +1,9 @@
 import type { BinaryExpression, LogicalExpression } from 'estree'
 
-import { resolveLogicNode } from '..'
+import { resolveLogicNode, updateScopeContextForNode } from '..'
 import errors from '../../../error/errors'
 import { BINARY_OPERATOR_METHODS } from '../operators'
-import type { ResolveNodeProps } from '../types'
+import type { ResolveNodeProps, UpdateScopeContextProps } from '../types'
 
 /**
  * ### BinaryExpression
@@ -32,4 +32,17 @@ export async function resolve({
   })
 
   return BINARY_OPERATOR_METHODS[binaryOperator]?.(leftOperand, rightOperand)
+}
+
+export function updateScopeContext({
+  node,
+  ...props
+}: UpdateScopeContextProps<BinaryExpression | LogicalExpression>) {
+  const binaryOperator = node.operator
+  if (!(binaryOperator in BINARY_OPERATOR_METHODS)) {
+    props.raiseError(errors.unsupportedOperator(binaryOperator), node)
+  }
+
+  updateScopeContextForNode({ node: node.left, ...props })
+  updateScopeContextForNode({ node: node.right, ...props })
 }

@@ -1,7 +1,7 @@
 import type { ConditionalExpression } from 'estree'
 
-import { resolveLogicNode } from '..'
-import type { ResolveNodeProps } from '../types'
+import { resolveLogicNode, updateScopeContextForNode } from '..'
+import type { ResolveNodeProps, UpdateScopeContextProps } from '../types'
 
 /**
  * ### ConditionalExpression
@@ -18,4 +18,13 @@ export async function resolve({
     node: condition ? node.consequent : node.alternate,
     ...props,
   })
+}
+
+export function updateScopeContext({
+  node,
+  ...props
+}: UpdateScopeContextProps<ConditionalExpression>) {
+  updateScopeContextForNode({ node: node.test, ...props })
+  updateScopeContextForNode({ node: node.consequent, ...props })
+  updateScopeContextForNode({ node: node.alternate, ...props })
 }

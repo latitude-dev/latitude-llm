@@ -1,9 +1,9 @@
 import type { UnaryExpression } from 'estree'
 
-import { resolveLogicNode } from '..'
+import { resolveLogicNode, updateScopeContextForNode } from '..'
 import errors from '../../../error/errors'
 import { UNARY_OPERATOR_METHODS } from '../operators'
-import type { ResolveNodeProps } from '../types'
+import type { ResolveNodeProps, UpdateScopeContextProps } from '../types'
 
 /**
  * ### UnaryExpression
@@ -28,4 +28,17 @@ export async function resolve({
   })
   const unaryPrefix = node.prefix
   return UNARY_OPERATOR_METHODS[unaryOperator]?.(unaryArgument, unaryPrefix)
+}
+
+export function updateScopeContext({
+  node,
+  scopeContext,
+  ...props
+}: UpdateScopeContextProps<UnaryExpression>) {
+  const unaryOperator = node.operator
+  if (!(unaryOperator in UNARY_OPERATOR_METHODS)) {
+    props.raiseError(errors.unsupportedOperator(unaryOperator), node)
+  }
+
+  updateScopeContextForNode({ node: node.argument, scopeContext, ...props })
 }

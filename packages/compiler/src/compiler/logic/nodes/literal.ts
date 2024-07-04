@@ -9,3 +9,7 @@ import { type ResolveNodeProps } from '../types'
 export async function resolve({ node }: ResolveNodeProps<Literal>) {
   return node.value
 }
+
+export function updateScopeContext() {
+  // Do nothing
+}

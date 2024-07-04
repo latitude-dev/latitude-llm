@@ -1,6 +1,6 @@
 import { Node } from 'estree'
 
-import Scope from '../scope'
+import Scope, { ScopeContext } from '../scope'
 
 export enum NodeType {
   Literal = 'Literal',
@@ -19,11 +19,19 @@ export enum NodeType {
   ChainExpression = 'ChainExpression',
 }
 
+type RaiseErrorFn = (
+  { code, message }: { code: string; message: string },
+  node: Node,
+) => never
+
 export type ResolveNodeProps<N extends Node> = {
   node: N
   scope: Scope
-  raiseError: (
-    { code, message }: { code: string; message: string },
-    node: Node,
-  ) => never
+  raiseError: RaiseErrorFn
+}
+
+export type UpdateScopeContextProps<N extends Node> = {
+  node: N
+  scopeContext: ScopeContext
+  raiseError: RaiseErrorFn
 }

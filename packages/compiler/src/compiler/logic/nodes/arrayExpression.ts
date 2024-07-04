@@ -1,9 +1,9 @@
 import type { ArrayExpression } from 'estree'
 
-import { resolveLogicNode } from '..'
+import { resolveLogicNode, updateScopeContextForNode } from '..'
 import errors from '../../../error/errors'
 import { isIterable } from '../../utils'
-import type { ResolveNodeProps } from '../types'
+import type { ResolveNodeProps, UpdateScopeContextProps } from '../types'
 
 /**
  * ### ArrayExpression
@@ -42,4 +42,18 @@ export async function resolve({
   }
 
   return resolvedArray
+}
+
+export function updateScopeContext({
+  node,
+  ...props
+}: UpdateScopeContextProps<ArrayExpression>) {
+  for (const element of node.elements) {
+    if (!element) continue
+
+    updateScopeContextForNode({
+      node: element.type === 'SpreadElement' ? element.argument : element,
+      ...props,
+    })
+  }
 }
