@@ -20,9 +20,6 @@ FROM base AS builder
 WORKDIR /app
 
 COPY . .
-COPY packages/core/docker/entrypoint.sh /entrypoint.sh
-RUN chmod +x /entrypoint.sh
-
 RUN turbo prune @latitude-data/core --docker
 
 FROM base AS installer
@@ -47,7 +44,6 @@ ARG NODE_ENV
 
 WORKDIR /app
 
-COPY --from=builder /entrypoint.sh /entrypoint.sh
 COPY --from=builder /app/out/full .
 COPY --from=installer /app/node_modules ./node_modules
 COPY --from=installer /app/packages/core/node_modules ./packages/core/node_modules
@@ -67,5 +63,5 @@ RUN if [ "$DATABASE_URL" ]; then \
 # This is for Drizzle studio
 EXPOSE 3002
 
-ENTRYPOINT ["/entrypoint.sh"]
+CMD pnpm db:migrate
 

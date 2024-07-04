@@ -41,14 +41,12 @@ services:
     ports:
       # Used to run Drizzle studio in development
       - '3002:3002'
-    environment:
-      # Used in entrypoint.sh to set NODE_ENV
-      - 'NODE_ENV=development'
     volumes:
       - ./packages/core:/app/packages/core
       - ./packages/env:/app/packages/env
     depends_on:
       - db
+    command: pnpm db:studio
   db:
     image: postgres
     environment:
