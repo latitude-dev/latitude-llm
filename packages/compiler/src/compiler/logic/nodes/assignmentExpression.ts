@@ -1,3 +1,9 @@
+import { ASSIGNMENT_OPERATOR_METHODS } from '$/compiler/logic/operators'
+import type {
+  ResolveNodeProps,
+  UpdateScopeContextProps,
+} from '$/compiler/logic/types'
+import errors from '$/error/errors'
 import type {
   AssignmentExpression,
   AssignmentOperator,
@@ -6,9 +12,6 @@ import type {
 } from 'estree'
 
 import { resolveLogicNode, updateScopeContextForNode } from '..'
-import errors from '../../../error/errors'
-import { ASSIGNMENT_OPERATOR_METHODS } from '../operators'
-import type { ResolveNodeProps, UpdateScopeContextProps } from '../types'
 
 /**
  * ### AssignmentExpression

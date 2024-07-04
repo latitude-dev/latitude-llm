@@ -1,7 +1,7 @@
-import { Parser } from '..'
-import CompileError from '../../error/error'
-import PARSER_ERRORS from '../../error/errors'
-import { parseExpressionAt } from '../utils/acorn'
+import CompileError from '$/error/error'
+import PARSER_ERRORS from '$/error/errors'
+import { Parser } from '$/parser'
+import { parseExpressionAt } from '$/parser/utils/acorn'
 
 export default function readExpression(parser: Parser) {
   try {

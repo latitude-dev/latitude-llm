@@ -1,4 +1,4 @@
-import { CUSTOM_TAG_END, CUSTOM_TAG_START } from '../constants'
+import { CUSTOM_TAG_END, CUSTOM_TAG_START } from '$/constants'
 
 function getKlassName(error: unknown): string {
   const errorKlass = error as Error
@@ -91,52 +91,15 @@ export default {
     code: 'invalid-config',
     message: `Invalid config: ${message}`,
   }),
-  invalidConfigPosition: {
-    code: 'invalid-config-position',
-    message: 'Configs must be defined on the first line of the file',
-  },
   unexpectedTagClose: (name: string) => ({
     code: 'unexpected-tag-close',
     message: `Unexpected closing tag for ${name}`,
   }),
 
   // Compiler errors:
-  queryNotFound: (name: string) => ({
-    code: 'query-not-found',
-    message: `Query '${name}' not found`,
-  }),
   unsupportedBaseNodeType: (type: string) => ({
     code: 'unsupported-base-node-type',
     message: `Unsupported base node type: ${type}`,
-  }),
-  unsupportedExpressionType: (type: string) => ({
-    code: 'unsupported-expression-type',
-    message: `Unsupported expression type: ${type}`,
-  }),
-  invalidConstantDefinition: {
-    code: 'invalid-constant-definition',
-    message: 'Constant definitions must assign a value to a variable',
-  },
-  invalidConfigDefinition: {
-    code: 'invalid-config-definition',
-    message: 'Config definitions must assign a value to an option',
-  },
-  invalidConfigValue: {
-    code: 'invalid-config-value',
-    message:
-      'Config values must be literals. Cannot use variables or expressions',
-  },
-  configInsideBlock: {
-    code: 'config-inside-block',
-    message: 'Cannot must be defined at root level. Cannot be inside a block',
-  },
-  configDefinitionFailed: (name: string, message: string) => ({
-    code: 'config-definition-failed',
-    message: `Config definition for '${name}' failed: ${message}`,
-  }),
-  configAlreadyDefined: (name: string) => ({
-    code: 'config-already-defined',
-    message: `Config definition for '${name}' failed: Option already configured`,
   }),
   variableAlreadyDeclared: (name: string) => ({
     code: 'variable-already-declared',
@@ -162,10 +125,6 @@ export default {
     code: 'unsupported-operator',
     message: `Unsupported operator: ${operator}`,
   }),
-  constantReassignment: {
-    code: 'constant-reassignment',
-    message: 'Cannot reassign a constant',
-  },
   invalidAssignment: {
     code: 'invalid-assignment',
     message: 'Invalid assignment',
@@ -174,14 +133,9 @@ export default {
     code: 'invalid-update',
     message: `Cannot use ${operation} operation on ${type}`,
   }),
-
   propertyNotExists: (property: string) => ({
     code: 'property-not-exists',
     message: `Property '${property}' does not exist on object`,
-  }),
-  unknownFunction: (name: string) => ({
-    code: 'unknown-function',
-    message: `Unknown function: ${name}`,
   }),
   notAFunction: (objectType: string) => ({
     code: 'not-a-function',
@@ -195,22 +149,6 @@ export default {
       message: `Error calling function: \n${errorKlassName} ${error.message}`,
     }
   },
-  functionRequiresStaticArguments: (name: string) => ({
-    code: 'function-requires-static-arguments',
-    message: `Function '${name}' can only receive literal values as arguments`,
-  }),
-  functionRequiresInterpolation: (name: string) => ({
-    code: 'function-requires-interpolation',
-    message: `Function '${name}' cannot be used inside a logic block. It must be directly interpolated into the query`,
-  }),
-  functionDisallowsInterpolation: (name: string) => ({
-    code: 'function-disallows-interpolation',
-    message: `Function '${name}' cannot be directly interpolated into the query`,
-  }),
-  invalidFunctionResultInterpolation: {
-    code: 'invalid-function-result-interpolation',
-    message: 'Functions called for interpolation must return a string',
-  },
   invalidTagPlacement: (name: string, parent: string) => ({
     code: 'invalid-tag-placement',
     message: `Cannot have a ${name} tag inside of a ${parent} tag`,
@@ -221,7 +159,27 @@ export default {
   },
   contentTagInsideContent: {
     code: 'content-tag-inside-content',
-    message: 'Content tags cannot be inside of another content',
+    message: 'Content tags must be directly inside message tags',
+  },
+  toolCallTagInsideContent: {
+    code: 'tool-call-tag-inside-content',
+    message: 'Tool calls must be directly inside message tags',
+  },
+  toolCallTagWithoutId: {
+    code: 'tool-call-tag-without-id',
+    message: 'Tool call tags must have an id attribute',
+  },
+  toolMessageWithoutId: {
+    code: 'tool-message-without-id',
+    message: 'Tool messages must have an id attribute',
+  },
+  toolCallWithoutName: {
+    code: 'tool-call-without-name',
+    message: 'Tool calls must have a name attribute',
+  },
+  invalidToolCallArguments: {
+    code: 'invalid-tool-call-arguments',
+    message: 'Tool calls must contain a valid JSON object as arguments',
   },
   invalidMessageRole: (name: string) => ({
     code: 'invalid-message-role',
@@ -230,6 +188,10 @@ export default {
   messageTagWithoutRole: {
     code: 'message-tag-without-role',
     message: 'Message tags must have a role attribute',
+  },
+  invalidReferencePromptPlacement: {
+    code: 'invalid-reference-prompt-placement',
+    message: 'Reference tags must not be inside of other tags',
   },
   referenceTagWithoutPrompt: {
     code: 'reference-tag-without-prompt',

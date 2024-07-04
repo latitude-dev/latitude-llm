@@ -1,8 +1,12 @@
+import {
+  CUSTOM_MESSAGE_TAG,
+  REFERENCE_PROMPT_TAG,
+  TOOL_CALL_TAG,
+} from '$/constants'
+import { ContentType, MessageRole } from '$/types'
 import { Identifier, type Node as LogicalExpression } from 'estree'
 
-import { ContentType, MessageRole } from '../types'
-
-export interface BaseNode {
+export type BaseNode = {
   start: number | null
   end: number | null
   type: string
@@ -10,66 +14,67 @@ export interface BaseNode {
   [propName: string]: any
 }
 
-export interface Fragment extends BaseNode {
+export type Fragment = BaseNode & {
   type: 'Fragment'
   children: TemplateNode[]
 }
 
-export interface Config extends BaseNode {
+export type Config = BaseNode & {
   type: 'Config'
   value: Record<string, any>
 }
 
-export interface Text extends BaseNode {
+export type Text = BaseNode & {
   type: 'Text'
   data: string
 }
 
-export interface Attribute extends BaseNode {
+export type Attribute = BaseNode & {
   type: 'Attribute'
   name: string
   value: TemplateNode[] | true
 }
 
-interface IElementTag extends BaseNode {
+type IElementTag<T extends string> = BaseNode & {
   type: 'ElementTag'
-  name: string
+  name: T
   attributes: Attribute[]
   children: TemplateNode[]
 }
 
-export type ContentTag = IElementTag & {
-  name: ContentType
-}
+export type ContentTag = IElementTag<ContentType>
+export type MessageTag =
+  | IElementTag<MessageRole>
+  | IElementTag<typeof CUSTOM_MESSAGE_TAG>
+export type ReferenceTag = IElementTag<typeof REFERENCE_PROMPT_TAG>
+export type ToolCallTag = IElementTag<typeof TOOL_CALL_TAG>
+export type ElementTag =
+  | ContentTag
+  | MessageTag
+  | ReferenceTag
+  | IElementTag<string>
 
-export type MessageTag = IElementTag & {
-  name: MessageRole
-}
-
-export type ElementTag = ContentTag | MessageTag | IElementTag
-
-export interface MustacheTag extends BaseNode {
+export type MustacheTag = BaseNode & {
   type: 'MustacheTag'
   expression: LogicalExpression
 }
 
-export interface Comment extends BaseNode {
+export type Comment = BaseNode & {
   type: 'Comment'
   data: string
-  ignores: string[]
 }
 
-export interface ElseBlock extends BaseNode {
+export type ElseBlock = BaseNode & {
   type: 'ElseBlock'
 }
 
-export interface IfBlock extends BaseNode {
+export type IfBlock = BaseNode & {
   type: 'IfBlock'
   expression: LogicalExpression
   else: ElseBlock | null
 }
 
-export interface EachBlock extends BaseNode {
+export type EachBlock = BaseNode & {
   type: 'EachBlock'
   expression: LogicalExpression
   context: Identifier

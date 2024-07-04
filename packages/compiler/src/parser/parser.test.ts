@@ -1,8 +1,8 @@
+import { CUSTOM_TAG_END, CUSTOM_TAG_START } from '$/constants'
+import CompileError from '$/error/error'
 import { describe, expect, it } from 'vitest'
 
 import parse from '.'
-import { CUSTOM_TAG_END, CUSTOM_TAG_START } from '../constants'
-import CompileError from '../error/error'
 import { TemplateNode } from './interfaces'
 
 const getExpectedError = <T>(

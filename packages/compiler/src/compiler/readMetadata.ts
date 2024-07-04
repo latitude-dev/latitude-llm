@@ -1,17 +1,17 @@
 import { createHash } from 'crypto'
 
-import { Node as LogicalExpression } from 'estree'
-
 import {
   CUSTOM_MESSAGE_TAG,
   REFERENCE_PROMPT_ATTR,
   REFERENCE_PROMPT_TAG,
-} from '../constants'
-import CompileError, { error } from '../error/error'
-import errors from '../error/errors'
-import parse from '../parser/index'
-import type { Attribute, BaseNode } from '../parser/interfaces'
-import { ContentType, ConversationMetadata, MessageRole } from '../types'
+} from '$/constants'
+import CompileError, { error } from '$/error/error'
+import errors from '$/error/errors'
+import parse from '$/parser/index'
+import type { Attribute, BaseNode } from '$/parser/interfaces'
+import { ContentType, ConversationMetadata, MessageRole } from '$/types'
+import { Node as LogicalExpression } from 'estree'
+
 import { ReferencePromptFn } from './compile'
 import { readConfig, validateConfig } from './config'
 import { updateScopeContextForNode } from './logic'

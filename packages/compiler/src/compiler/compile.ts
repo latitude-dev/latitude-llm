@@ -1,28 +1,28 @@
-import type { Node as LogicalExpression } from 'estree'
-
 import {
   CUSTOM_MESSAGE_ROLE_ATTR,
   CUSTOM_MESSAGE_TAG,
   REFERENCE_PROMPT_ATTR,
   REFERENCE_PROMPT_TAG,
-} from '../constants'
-import CompileError, { error } from '../error/error'
-import errors from '../error/errors'
-import parse from '../parser/index'
-import type {
-  BaseNode,
-  EachBlock,
-  ElementTag,
-  IfBlock,
-  TemplateNode,
-} from '../parser/interfaces'
+  TOOL_CALL_TAG,
+} from '$/constants'
+import CompileError, { error } from '$/error/error'
+import errors from '$/error/errors'
+import parse from '$/parser/index'
+import type { BaseNode, ElementTag } from '$/parser/interfaces'
 import {
+  AssistantMessage,
   ContentType,
   Conversation,
   Message,
   MessageContent,
   MessageRole,
-} from '../types'
+  SystemMessage,
+  ToolCall,
+  ToolMessage,
+  UserMessage,
+} from '$/types'
+import type { Node as LogicalExpression } from 'estree'
+
 import { readConfig } from './config'
 import { resolveLogicNode } from './logic'
 import Scope from './scope'
@@ -32,8 +32,15 @@ export type ReferencePromptFn = (prompt: string) => Promise<string>
 
 export class Compile {
   private rawText: string
-  private parameters: Record<string, unknown>
   private referenceFn?: ReferencePromptFn
+
+  private initialScope: Scope
+
+  // state management
+  private messages: Message[] = []
+  private accumulatedText: string = ''
+  private accumulatedContent: MessageContent[] = []
+  private accumulatedToolCalls: ToolCall[] = []
 
   constructor({
     prompt,
@@ -45,8 +52,8 @@ export class Compile {
     referenceFn?: ReferencePromptFn
   }) {
     this.rawText = prompt
-    this.parameters = parameters
     this.referenceFn = referenceFn
+    this.initialScope = new Scope(parameters)
   }
 
   /**
@@ -56,16 +63,28 @@ export class Compile {
    * functions that need to be resolved at runtime.
    */
   async run(): Promise<Conversation> {
+    const conversation = await this.runWithoutGrouping()
+    this.groupAccumulatedContentAsMessage()
+
+    return {
+      config: conversation.config,
+      messages: this.messages,
+    }
+  }
+
+  private async runWithoutGrouping(): Promise<Conversation> {
     const fragment = parse(this.rawText)
     const config = readConfig(fragment) as Record<string, unknown>
-    const messages = await this.extractMessages({
-      nodes: fragment.children,
-      scope: new Scope(this.parameters),
+    await this.resolveBaseNode({
+      node: fragment,
+      scope: this.initialScope,
+      isInMessageTag: false,
+      isInContentTag: false,
     })
 
     return {
       config,
-      messages,
+      messages: this.messages,
     }
   }
 
@@ -78,155 +97,6 @@ export class Compile {
       scope,
       raiseError: this.expressionError.bind(this),
     })
-  }
-
-  private async resolveIfBlock({
-    node,
-    scope,
-    onTrue,
-    onFalse,
-  }: {
-    node: IfBlock
-    scope: Scope
-    onTrue: () => Promise<void>
-    onFalse: () => Promise<void>
-  }) {
-    const condition = await this.resolveExpression(node.expression, scope)
-    if (condition) {
-      await onTrue()
-    } else {
-      await onFalse()
-    }
-  }
-
-  private async resolveEachBlock({
-    node,
-    scope,
-    onEach,
-    onEmpty,
-  }: {
-    node: EachBlock
-    scope: Scope
-    onEach: (localScope: Scope) => Promise<void>
-    onEmpty: () => Promise<void>
-  }) {
-    const iterableElement = await this.resolveExpression(node.expression, scope)
-    if (!isIterable(iterableElement) || !(await hasContent(iterableElement))) {
-      await onEmpty()
-      return
-    }
-
-    const contextVarName = node.context.name
-    const indexVarName = node.index?.name
-    if (scope.exists(contextVarName)) {
-      throw this.expressionError(
-        errors.variableAlreadyDeclared(contextVarName),
-        node.context,
-      )
-    }
-    if (indexVarName && scope.exists(indexVarName)) {
-      throw this.expressionError(
-        errors.variableAlreadyDeclared(indexVarName),
-        node.index!,
-      )
-    }
-
-    let i = 0
-    for await (const element of iterableElement) {
-      const localScope = scope.copy()
-      localScope.set(contextVarName, element)
-      if (indexVarName) {
-        let indexValue: unknown = i
-        if (node.key) {
-          indexValue = await this.resolveExpression(node.key, localScope)
-        }
-        localScope.set(indexVarName, indexValue)
-      }
-      await onEach(localScope)
-      i++
-    }
-  }
-
-  /**
-   * Obtains the text content from inside a ContentTag or an Attribute
-   */
-  private async extractTextContent({
-    nodes,
-    scope,
-  }: {
-    nodes: TemplateNode[]
-    scope: Scope
-  }): Promise<string> {
-    let text: string = ''
-
-    for await (const node of nodes) {
-      if (node.type === 'Config' || node.type === 'Comment') {
-        /* do nothing */
-        continue
-      }
-
-      if (node.type === 'Text') {
-        text += node.data
-        continue
-      }
-
-      if (node.type === 'MustacheTag') {
-        const expression = node.expression
-        const value = await this.resolveExpression(expression, scope)
-        if (value === undefined) continue
-        text += String(value)
-        continue
-      }
-
-      if (node.type === 'IfBlock') {
-        await this.resolveIfBlock({
-          node: node as IfBlock,
-          scope,
-          onTrue: async () => {
-            text += await this.extractTextContent({
-              nodes: node.children ?? [],
-              scope: scope.copy(),
-            })
-          },
-          onFalse: async () => {
-            text += await this.extractTextContent({
-              nodes: node.else?.children ?? [],
-              scope: scope.copy(),
-            })
-          },
-        })
-        continue
-      }
-
-      if (node.type === 'EachBlock') {
-        await this.resolveEachBlock({
-          node: node as EachBlock,
-          scope,
-          onEach: async (localScope) => {
-            text += await this.extractTextContent({
-              nodes: node.children ?? [],
-              scope: localScope,
-            })
-          },
-          onEmpty: async () => {
-            text += await this.extractTextContent({
-              nodes: node.else?.children ?? [],
-              scope: scope.copy(),
-            })
-          },
-        })
-        continue
-      }
-
-      if (node.type === 'ElementTag') {
-        const tagName = node.name
-        this.baseNodeError(errors.invalidTagPlacement(tagName, 'content'), node)
-      }
-
-      this.baseNodeError(errors.unsupportedBaseNodeType(node.type), node)
-    }
-
-    return text
   }
 
   private async resolveTagAttributes({
@@ -258,346 +128,423 @@ export class Compile {
         }
       }
 
-      const resolvedValue = await this.extractTextContent({
-        nodes: value,
-        scope: scope,
-      })
+      let totalValue: string = ''
+      for await (const node of value) {
+        if (node.type === 'Text') {
+          totalValue += node.data
+          continue
+        }
 
-      attributes[name] = resolvedValue
+        if (node.type === 'MustacheTag') {
+          const expression = node.expression
+          const resolvedValue = await this.resolveExpression(expression, scope)
+          if (resolvedValue === undefined) continue
+          totalValue += String(resolvedValue)
+          continue
+        }
+      }
+
+      attributes[name] = totalValue
     }
 
     return attributes
   }
 
-  /**
-   * Obtains a list of contents from inside a MessageTag.
-   */
-  private async extractMessageContent({
-    nodes,
-    scope,
-    strayText = { accumulatedValue: null },
-  }: {
-    nodes: TemplateNode[]
-    scope: Scope
-    strayText?: { accumulatedValue: string | null } // Textable nodes that are inside the message but are not inside a ContentTag
-  }): Promise<MessageContent[]> {
-    const messageContent: MessageContent[] = []
-
-    const addStrayText = (text: string) => {
-      if (strayText.accumulatedValue === null) strayText.accumulatedValue = ''
-      strayText.accumulatedValue += text
-    }
-    const storeStrayText = () => {
-      if (strayText.accumulatedValue === null) return
-      if (strayText.accumulatedValue.trim() !== '') {
-        messageContent.push({
-          type: ContentType.text,
-          value: removeCommonIndent(strayText.accumulatedValue),
-        })
-      }
-      strayText.accumulatedValue = null
-    }
-
-    for await (const node of nodes) {
-      if (node.type === 'Config' || node.type === 'Comment') {
-        /* do nothing */
-        continue
-      }
-
-      if (node.type === 'Text') {
-        addStrayText(node.data)
-        continue
-      }
-
-      if (node.type === 'MustacheTag') {
-        const expression = node.expression
-        const value = await this.resolveExpression(expression, scope)
-        if (value === undefined) continue
-        addStrayText(String(value))
-        continue
-      }
-
-      if (node.type === 'IfBlock') {
-        await this.resolveIfBlock({
-          node: node as IfBlock,
-          scope,
-          onTrue: async () => {
-            const childMessageContent = await this.extractMessageContent({
-              nodes: node.children ?? [],
-              scope: scope.copy(),
-              strayText: strayText,
-            })
-            messageContent.push(...childMessageContent)
-          },
-          onFalse: async () => {
-            const childMessageContent = await this.extractMessageContent({
-              nodes: node.else?.children ?? [],
-              scope: scope.copy(),
-              strayText: strayText,
-            })
-            messageContent.push(...childMessageContent)
-          },
-        })
-        continue
-      }
-
-      if (node.type === 'EachBlock') {
-        await this.resolveEachBlock({
-          node: node as EachBlock,
-          scope,
-          onEach: async (localScope) => {
-            const childMessageContent = await this.extractMessageContent({
-              nodes: node.children ?? [],
-              scope: localScope,
-              strayText: strayText,
-            })
-            messageContent.push(...childMessageContent)
-          },
-          onEmpty: async () => {
-            const childMessageContent = await this.extractMessageContent({
-              nodes: node.else?.children ?? [],
-              scope: scope.copy(),
-              strayText: strayText,
-            })
-            messageContent.push(...childMessageContent)
-          },
-        })
-        continue
-      }
-
-      if (node.type === 'ElementTag') {
-        if (Object.values(MessageRole).includes(node.name as MessageRole)) {
-          this.baseNodeError(errors.messageTagInsideMessage, node)
-        }
-        if (!Object.values(ContentType).includes(node.name as ContentType)) {
-          this.baseNodeError(errors.invalidContentType(node.name), node)
-        }
-
-        storeStrayText()
-
-        const contentType = node.name as ContentType
-        const content = await this.extractTextContent({
-          nodes: node.children ?? [],
-          scope,
-        })
-        messageContent.push({
-          type: contentType,
-          value: removeCommonIndent(content),
-        })
-        continue
-      }
-
-      this.baseNodeError(errors.unsupportedBaseNodeType(node.type), node)
-    }
-
-    storeStrayText()
-    return messageContent
+  private addText(text: string) {
+    this.accumulatedText += text
   }
 
-  /**
-   * Obtains a list of messages from the root nodes.
-   */
-  private async extractMessages({
-    nodes,
-    scope,
-    strayNodes = { messageContents: [], text: null },
-  }: {
-    nodes: TemplateNode[]
-    scope: Scope
-    strayNodes?: { messageContents: MessageContent[]; text: string | null } // Nodes that do have content but are not inside a MessageTag
-  }): Promise<Message[]> {
-    const messages: Message[] = []
-
-    const addStrayText = (text: string) => {
-      if (strayNodes.text === null) strayNodes.text = ''
-      strayNodes.text += text
-    }
-    const storeStrayTextAsStrayMessageContent = () => {
-      if (strayNodes.text === null) return
-      if (strayNodes.text.trim() !== '') {
-        strayNodes.messageContents.push({
-          type: ContentType.text,
-          value: removeCommonIndent(strayNodes.text),
-        })
-      }
-      strayNodes.text = null
-    }
-    const addStrayMessageContent = (messageContent: MessageContent) => {
-      storeStrayTextAsStrayMessageContent()
-      strayNodes.messageContents.push(messageContent)
-    }
-    const storeStrayContentAsMessage = async () => {
-      storeStrayTextAsStrayMessageContent()
-      if (strayNodes.messageContents.length === 0) return
-      messages.push({
-        role: MessageRole.system,
-        content: strayNodes.messageContents,
+  private groupAccumulatedTextAsContent(): void {
+    if (this.accumulatedText.trim() !== '') {
+      this.accumulatedContent.push({
+        type: ContentType.text,
+        value: removeCommonIndent(this.accumulatedText).trim(),
       })
-      strayNodes.messageContents = []
+    }
+    this.accumulatedText = ''
+  }
+
+  private addToolCall(toolCall: ToolCall): void {
+    this.groupAccumulatedTextAsContent()
+    this.accumulatedToolCalls.push(toolCall)
+  }
+
+  private addContent(content: MessageContent): void {
+    this.groupAccumulatedTextAsContent()
+    this.accumulatedContent.push(content)
+  }
+
+  private groupAccumulatedContentAsMessage(): void {
+    this.groupAccumulatedTextAsContent()
+
+    if (this.accumulatedContent.length > 0) {
+      this.messages.push({
+        role: MessageRole.system,
+        content: this.accumulatedContent,
+      })
     }
 
-    for (const node of nodes) {
-      if (node.type === 'Config' || node.type === 'Comment') {
-        /* do nothing */
-        continue
+    this.accumulatedContent = []
+    this.accumulatedToolCalls = []
+  }
+
+  private async resolveBaseNode({
+    node,
+    scope,
+    isInMessageTag,
+    isInContentTag,
+  }: {
+    node: BaseNode
+    scope: Scope
+    isInMessageTag: boolean
+    isInContentTag: boolean
+  }): Promise<void> {
+    if (node.type === 'Fragment') {
+      for await (const childNode of node.children ?? []) {
+        await this.resolveBaseNode({
+          node: childNode,
+          scope,
+          isInMessageTag,
+          isInContentTag,
+        })
       }
+      return
+    }
 
-      if (node.type === 'Text') {
-        addStrayText(node.data)
-        continue
+    if (node.type === 'Config' || node.type === 'Comment') {
+      /* do nothing */
+      return
+    }
+
+    if (node.type === 'Text') {
+      this.addText(node.data)
+      return
+    }
+
+    if (node.type === 'MustacheTag') {
+      const expression = node.expression
+      const value = await this.resolveExpression(expression, scope)
+      if (value === undefined) return
+      this.addText(String(value))
+      return
+    }
+
+    if (node.type === 'IfBlock') {
+      const condition = await this.resolveExpression(node.expression, scope)
+      const children = (condition ? node.children : node.else?.children) ?? []
+      const childScope = scope.copy()
+      for await (const childNode of children ?? []) {
+        await this.resolveBaseNode({
+          node: childNode,
+          scope: childScope,
+          isInMessageTag,
+          isInContentTag,
+        })
       }
+      return
+    }
 
-      if (node.type === 'MustacheTag') {
-        const expression = node.expression
-        const value = await this.resolveExpression(expression, scope)
-        if (value === undefined) continue
-        addStrayText(String(value))
-        continue
-      }
-
-      if (node.type === 'ElementTag') {
-        let tagName = node.name
-
-        if (Object.values(ContentType).includes(tagName as ContentType)) {
-          const textContent = await this.extractTextContent({
-            nodes: node.children ?? [],
-            scope,
+    if (node.type === 'EachBlock') {
+      const iterableElement = await this.resolveExpression(
+        node.expression,
+        scope,
+      )
+      if (
+        !isIterable(iterableElement) ||
+        !(await hasContent(iterableElement))
+      ) {
+        const childScope = scope.copy()
+        for await (const childNode of node.else?.children ?? []) {
+          await this.resolveBaseNode({
+            node: childNode,
+            scope: childScope,
+            isInMessageTag,
+            isInContentTag,
           })
-          const messageContent: MessageContent = {
-            type: tagName as ContentType,
-            value: textContent,
+        }
+        return
+      }
+
+      const contextVarName = node.context.name
+      const indexVarName = node.index?.name
+      if (scope.exists(contextVarName)) {
+        throw this.expressionError(
+          errors.variableAlreadyDeclared(contextVarName),
+          node.context,
+        )
+      }
+      if (indexVarName && scope.exists(indexVarName)) {
+        throw this.expressionError(
+          errors.variableAlreadyDeclared(indexVarName),
+          node.index!,
+        )
+      }
+
+      let i = 0
+      for await (const element of iterableElement) {
+        const localScope = scope.copy()
+        localScope.set(contextVarName, element)
+        if (indexVarName) {
+          let indexValue: unknown = i
+          if (node.key) {
+            indexValue = await this.resolveExpression(node.key, localScope)
           }
-          addStrayMessageContent(messageContent)
-          continue
+          localScope.set(indexVarName, indexValue)
+        }
+        for await (const childNode of node.children ?? []) {
+          await this.resolveBaseNode({
+            node: childNode,
+            scope: localScope,
+            isInMessageTag,
+            isInContentTag,
+          })
+        }
+        i++
+      }
+      return
+    }
+
+    if (node.type === 'ElementTag') {
+      this.groupAccumulatedTextAsContent()
+
+      // ToolCall <tool_call id="123" name="foo">{ arguments }</tool_call>
+      if (node.name === TOOL_CALL_TAG) {
+        if (isInContentTag) {
+          this.baseNodeError(errors.toolCallTagInsideContent, node)
         }
 
-        if (tagName === (REFERENCE_PROMPT_TAG as MessageRole)) {
-          const attributes = await this.resolveTagAttributes({
-            tagNode: node as ElementTag,
+        const attributes = await this.resolveTagAttributes({
+          tagNode: node as ElementTag,
+          scope,
+        })
+
+        if (attributes['id'] === undefined) {
+          this.baseNodeError(errors.toolCallTagWithoutId, node)
+        }
+
+        if (attributes['name'] === undefined) {
+          this.baseNodeError(errors.toolCallWithoutName, node)
+        }
+
+        for await (const childNode of node.children ?? []) {
+          await this.resolveBaseNode({
+            node: childNode,
             scope,
-            literalAttributes: [REFERENCE_PROMPT_ATTR],
+            isInMessageTag,
+            isInContentTag: true,
           })
+        }
 
-          if (typeof attributes[REFERENCE_PROMPT_ATTR] !== 'string') {
-            this.baseNodeError(errors.referenceTagWithoutPrompt, node)
-          }
+        const textContent = this.accumulatedText
+        this.accumulatedText = ''
 
-          if (!this.referenceFn) {
-            this.baseNodeError(errors.missingReferenceFunction, node)
-          }
-
-          if (node.children.length > 0) {
-            this.baseNodeError(errors.referenceTagHasContent, node)
-          }
-
-          storeStrayContentAsMessage()
-
-          const refPromptPath = attributes[REFERENCE_PROMPT_ATTR]
+        let jsonContent: Record<string, unknown> = {}
+        if (textContent) {
           try {
-            const refPrompt = await this.referenceFn(refPromptPath)
-            const refPromptConversation = await new Compile({
-              prompt: refPrompt,
-              parameters: this.parameters,
-            }).run()
-            messages.push(...refPromptConversation.messages)
+            jsonContent = JSON.parse(textContent)
           } catch (error: unknown) {
-            if (error instanceof CompileError) throw error
-            this.baseNodeError(errors.referenceError(error), node)
-          }
-          continue
-        }
-
-        if (
-          tagName === (CUSTOM_MESSAGE_TAG as MessageRole) ||
-          Object.values(MessageRole).includes(tagName as MessageRole)
-        ) {
-          const attributes = await this.resolveTagAttributes({
-            tagNode: node as ElementTag,
-            scope,
-          })
-
-          let role = tagName
-          if (tagName === (CUSTOM_MESSAGE_TAG as MessageRole)) {
-            if (attributes[CUSTOM_MESSAGE_ROLE_ATTR] === undefined) {
-              this.baseNodeError(errors.messageTagWithoutRole, node)
-            }
-            role = attributes[CUSTOM_MESSAGE_ROLE_ATTR] as MessageRole
-            delete attributes[CUSTOM_MESSAGE_ROLE_ATTR]
-
-            if (!Object.values(MessageRole).includes(role)) {
-              this.baseNodeError(errors.invalidMessageRole(role), node)
+            if (error instanceof SyntaxError) {
+              this.baseNodeError(errors.invalidToolCallArguments, node)
             }
           }
-
-          const messageContent = await this.extractMessageContent({
-            nodes: node.children ?? [],
-            scope,
-          })
-
-          storeStrayContentAsMessage()
-          messages.push({
-            role: role as MessageRole,
-            content: messageContent,
-          })
-          continue
         }
 
-        this.baseNodeError(errors.invalidMessageRole(tagName), node)
-      }
-
-      if (node.type === 'IfBlock') {
-        await this.resolveIfBlock({
-          node: node as IfBlock,
-          scope,
-          onTrue: async () => {
-            const childMessages = await this.extractMessages({
-              nodes: node.children ?? [],
-              scope: scope.copy(),
-              strayNodes,
-            })
-            messages.push(...childMessages)
-          },
-          onFalse: async () => {
-            const childMessages = await this.extractMessages({
-              nodes: node.else?.children ?? [],
-              scope: scope.copy(),
-              strayNodes,
-            })
-            messages.push(...childMessages)
-          },
+        this.addToolCall({
+          id: String(attributes['id']),
+          name: String(attributes['name']),
+          arguments: jsonContent,
         })
-        continue
+        return
       }
 
-      if (node.type === 'EachBlock') {
-        await this.resolveEachBlock({
-          node: node as EachBlock,
-          scope,
-          onEach: async (localScope) => {
-            const childMessages = await this.extractMessages({
-              nodes: node.children ?? [],
-              scope: localScope,
-              strayNodes,
-            })
-            messages.push(...childMessages)
-          },
-          onEmpty: async () => {
-            const elseMessages = await this.extractMessages({
-              nodes: node.else?.children ?? [],
-              scope: scope.copy(),
-              strayNodes,
-            })
-            messages.push(...elseMessages)
-          },
+      // MessageContent <text> or <image>
+      if (Object.values(ContentType).includes(node.name as ContentType)) {
+        if (isInContentTag) {
+          this.baseNodeError(errors.contentTagInsideContent, node)
+        }
+
+        this.groupAccumulatedTextAsContent()
+        for await (const childNode of node.children ?? []) {
+          await this.resolveBaseNode({
+            node: childNode,
+            scope,
+            isInMessageTag,
+            isInContentTag: true,
+          })
+        }
+        const textContent = this.accumulatedText
+        this.accumulatedText = ''
+
+        this.addContent({
+          type: node.name as ContentType,
+          value: textContent,
         })
-        continue
+        return
       }
 
-      this.baseNodeError(errors.unsupportedBaseNodeType(node.type), node)
+      // MessageRole <user>, <assistant>, <system>, <tool> or <message role="…">
+      if (
+        Object.values(MessageRole).includes(node.name as MessageRole) ||
+        node.name === CUSTOM_MESSAGE_TAG
+      ) {
+        if (isInContentTag || isInMessageTag) {
+          this.baseNodeError(errors.messageTagInsideMessage, node)
+        }
+
+        this.groupAccumulatedContentAsMessage()
+
+        const attributes = await this.resolveTagAttributes({
+          tagNode: node as ElementTag,
+          scope,
+        })
+
+        let role = node.name as MessageRole
+        if (node.name === CUSTOM_MESSAGE_TAG) {
+          if (attributes[CUSTOM_MESSAGE_ROLE_ATTR] === undefined) {
+            this.baseNodeError(errors.messageTagWithoutRole, node)
+          }
+          role = attributes[CUSTOM_MESSAGE_ROLE_ATTR] as MessageRole
+          delete attributes[CUSTOM_MESSAGE_ROLE_ATTR]
+        }
+
+        for await (const childNode of node.children ?? []) {
+          await this.resolveBaseNode({
+            node: childNode,
+            scope,
+            isInMessageTag: true,
+            isInContentTag,
+          })
+        }
+
+        this.groupAccumulatedTextAsContent()
+        const messageContent = this.accumulatedContent
+        const toolCalls = this.accumulatedToolCalls
+
+        this.accumulatedContent = []
+        this.accumulatedToolCalls = []
+
+        const message = this.buildMessage({
+          node: node as ElementTag,
+          role,
+          attributes,
+          content: messageContent,
+          toolCalls,
+        })
+        this.messages.push(message)
+        return
+      }
+
+      // Ref <ref prompt="…">
+      if (node.name === REFERENCE_PROMPT_TAG) {
+        if (isInMessageTag || isInContentTag) {
+          this.baseNodeError(errors.invalidReferencePromptPlacement, node)
+        }
+
+        if (node.children?.length ?? 0 > 0) {
+          this.baseNodeError(errors.referenceTagHasContent, node)
+        }
+
+        const attributes = await this.resolveTagAttributes({
+          tagNode: node as ElementTag,
+          scope,
+          literalAttributes: [REFERENCE_PROMPT_ATTR],
+        })
+
+        if (typeof attributes[REFERENCE_PROMPT_ATTR] !== 'string') {
+          this.baseNodeError(errors.referenceTagWithoutPrompt, node)
+        }
+
+        if (!this.referenceFn) {
+          this.baseNodeError(errors.missingReferenceFunction, node)
+        }
+
+        const refPromptPath = attributes[REFERENCE_PROMPT_ATTR]
+        try {
+          const refPrompt = await this.referenceFn(refPromptPath)
+          const refPromptCompile = new Compile({
+            prompt: refPrompt,
+            parameters: {},
+            referenceFn: this.referenceFn,
+          })
+          refPromptCompile.initialScope = scope // This will let the ref prompt modify variables from this one
+          refPromptCompile.accumulatedText = this.accumulatedText
+          refPromptCompile.accumulatedContent = this.accumulatedContent
+          refPromptCompile.accumulatedToolCalls = this.accumulatedToolCalls
+
+          const refConversation = await refPromptCompile.runWithoutGrouping()
+          this.messages.push(...refConversation.messages)
+          this.accumulatedText = refPromptCompile.accumulatedText
+          this.accumulatedContent = refPromptCompile.accumulatedContent
+          this.accumulatedToolCalls = refPromptCompile.accumulatedToolCalls
+        } catch (error: unknown) {
+          if (error instanceof CompileError) throw error
+          this.baseNodeError(errors.referenceError(error), node)
+        }
+        return
+      }
+
+      if (isInMessageTag) {
+        this.baseNodeError(errors.invalidContentType(node.name), node)
+      }
+      this.baseNodeError(errors.invalidMessageRole(node.name), node)
     }
 
-    storeStrayContentAsMessage()
-    return messages
+    this.baseNodeError(errors.unsupportedBaseNodeType(node.type), node)
+  }
+
+  private buildMessage({
+    node,
+    role,
+    attributes,
+    content,
+    toolCalls,
+  }: {
+    node: ElementTag
+    role: MessageRole
+    attributes: Record<string, unknown>
+    content: MessageContent[]
+    toolCalls: ToolCall[]
+  }): Message {
+    if (toolCalls.length > 0 && role !== MessageRole.assistant) {
+      this.baseNodeError(errors.invalidTagPlacement(TOOL_CALL_TAG, role), node)
+    }
+
+    if (role === MessageRole.system) {
+      return {
+        role,
+        content,
+      } as SystemMessage
+    }
+
+    if (role === MessageRole.user) {
+      return {
+        role,
+        name: attributes.name ? String(attributes.name) : undefined,
+        content,
+      } as UserMessage
+    }
+
+    if (role === MessageRole.assistant) {
+      return {
+        role,
+        toolCalls,
+        content,
+      } as AssistantMessage
+    }
+
+    if (role === MessageRole.tool) {
+      if (attributes.id === undefined) {
+        this.baseNodeError(errors.toolMessageWithoutId, node)
+      }
+
+      return {
+        role,
+        id: String(attributes.id),
+        content,
+      } as ToolMessage
+    }
+
+    this.baseNodeError(errors.invalidMessageRole(role), node)
   }
 
   private baseNodeError(

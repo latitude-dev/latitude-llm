@@ -1,6 +1,5 @@
+import Scope, { ScopeContext } from '$/compiler/scope'
 import { Node } from 'estree'
-
-import Scope, { ScopeContext } from '../scope'
 
 export enum NodeType {
   Literal = 'Literal',

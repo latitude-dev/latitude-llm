@@ -224,6 +224,9 @@ importers:
       typescript:
         specifier: ^5.2.2
         version: 5.5.3
+      vite-tsconfig-paths:
+        specifier: ^4.3.2
+        version: 4.3.2(typescript@5.5.3)
       vitest:
         specifier: ^1.2.2
         version: 1.6.0(@types/node@20.14.9)

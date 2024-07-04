@@ -1,9 +1,9 @@
+import { CUSTOM_TAG_END, CUSTOM_TAG_START } from '$/constants'
+import CompileError from '$/error/error'
+import { Message } from '$/types'
 import { describe, expect, it, vi } from 'vitest'
 
 import { compile } from '.'
-import { CUSTOM_TAG_END, CUSTOM_TAG_START } from '../constants'
-import CompileError from '../error/error'
-import { Message } from '../types'
 import { removeCommonIndent } from './utils'
 
 const getExpectedError = async <T>(
@@ -123,7 +123,7 @@ describe('messages', async () => {
       <system>system message</system>
       <user>user message</user>
       <assistant>assistant message</assistant>
-      <tool>tool message</tool>
+      <tool id="123">tool message</tool>
     `
     const result = await compile({
       prompt: removeCommonIndent(propmt),

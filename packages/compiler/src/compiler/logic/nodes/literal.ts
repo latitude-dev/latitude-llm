@@ -1,6 +1,5 @@
+import { type ResolveNodeProps } from '$/compiler/logic/types'
 import { type Literal } from 'estree'
-
-import { type ResolveNodeProps } from '../types'
 
 /**
  * ### Literal

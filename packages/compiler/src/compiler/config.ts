@@ -1,7 +1,6 @@
+import { Fragment } from '$/parser/interfaces'
 import Ajv from 'ajv'
 import type { ErrorObject, JTDDataType } from 'ajv/dist/core'
-
-import { Fragment } from '../parser/interfaces'
 
 export function readConfig<ConfigSchema>(
   fragment: Fragment,
