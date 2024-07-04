@@ -18,11 +18,9 @@ export function compile({
 export function readMetadata({
   prompt,
   referenceFn,
-  configSchema,
 }: {
   prompt: string
   referenceFn?: ReferencePromptFn
-  configSchema?: object
-}): Promise<ConversationMetadata<typeof configSchema>> {
-  return new ReadMetadata({ prompt, referenceFn, configSchema }).run()
+}): Promise<ConversationMetadata> {
+  return new ReadMetadata({ prompt, referenceFn }).run()
 }
