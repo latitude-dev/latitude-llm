@@ -27,7 +27,10 @@ export const convos = latitudeSchema.table(
 )
 
 export const convoRelations = relations(convos, ({ one }) => ({
-  promptVersion: one(promptVersions),
+  promptVersion: one(promptVersions, {
+    fields: [convos.promptVersionId],
+    references: [promptVersions.id],
+  }),
 }))
 
 export type Convo = InferSelectModel<typeof convos> & {

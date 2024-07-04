@@ -5,14 +5,12 @@ services:
       dockerfile: apps/web/docker/Dockerfile
     ports:
       - '3000:3000'
-      - '4983:4983'
     volumes:
+      - ./packages/env:/app/packages/env
+      - ./packages/core:/app/packages/core
       - ./apps/web:/app/apps/web
-      - /app/apps/web/node_modules
     depends_on:
       - db
-    env_file:
-      - apps/web/.env
     command: pnpm run dev
 
   api:
@@ -22,8 +20,9 @@ services:
     ports:
       - '3001:3001'
     volumes:
-      - ./apps/api/src:/app/apps/api/src
-      - ./apps/api/package.json:/app/apps/api/package.json
+      - ./packages/env:/app/packages/env
+      - ./packages/core:/app/packages/core
+      - ./apps/api:/app/apps/api
     depends_on:
       - db
     command: pnpm run dev
@@ -39,8 +38,15 @@ services:
     build:
       context: .
       dockerfile: packages/core/docker/Dockerfile
+    ports:
+      # Used to run Drizzle studio in development
+      - '3002:3002'
+    environment:
+      # Used in entrypoint.sh to set NODE_ENV
+      - 'NODE_ENV=development'
     volumes:
-      - ./packages/core/src:/app/packages/core/src
+      - ./packages/core:/app/packages/core
+      - ./packages/env:/app/packages/env
     depends_on:
       - db
   db:

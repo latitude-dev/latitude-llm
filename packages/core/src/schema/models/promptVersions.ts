@@ -26,8 +26,11 @@ export const promptVersions = latitudeSchema.table('prompt_versions', {
   ...timestamps(),
 })
 
-export const promptVersionRelations = relations(commits, ({ one }) => ({
-  commit: one(commits),
+export const promptVersionRelations = relations(promptVersions, ({ one }) => ({
+  commit: one(commits, {
+    fields: [promptVersions.commitId],
+    references: [commits.id],
+  }),
 }))
 
 export type PromptVersion = InferSelectModel<typeof promptVersions>

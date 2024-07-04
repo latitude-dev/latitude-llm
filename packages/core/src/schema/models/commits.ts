@@ -34,7 +34,7 @@ export const commits = latitudeSchema.table(
 )
 
 export const commitRelations = relations(commits, ({ many }) => ({
-  snapshots: many(promptSnapshots),
+  snapshots: many(promptSnapshots, { relationName: 'snapshots' }),
 }))
 
 export type Commit = InferSelectModel<typeof commits> & {
