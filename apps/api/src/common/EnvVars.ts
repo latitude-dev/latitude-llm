@@ -1,4 +1,13 @@
+import path from 'path'
+
+import dotenv from 'dotenv'
 import z from 'zod'
+
+if (process.env.NODE_ENV !== 'production') {
+  dotenv.config({
+    path: path.join(__dirname, `../../env/${process.env.NODE_ENV}.env`),
+  })
+}
 
 const envvars = z.object({
   NODE_ENV: z.string(),

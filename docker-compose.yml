@@ -1,4 +1,11 @@
 services:
+  base:
+    image: latitudedata/base
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.base
+    restart: 'none'
+
   web:
     build:
       context: .
@@ -10,6 +17,7 @@ services:
       - ./packages/core:/app/packages/core
       - ./apps/web:/app/apps/web
     depends_on:
+      - base
       - db
     command: pnpm run dev
 
@@ -24,15 +32,9 @@ services:
       - ./packages/core:/app/packages/core
       - ./apps/api:/app/apps/api
     depends_on:
+      - base
       - db
     command: pnpm run dev
-
-  elastic:
-    image: elasticsearch:8.14.1
-    environment:
-      - 'discovery.type=single-node'
-      - 'ELASTIC_USERNAME=latitude'
-      - 'ELASTIC_PASSWORD=secret'
 
   core:
     build:
@@ -45,8 +47,17 @@ services:
       - ./packages/core:/app/packages/core
       - ./packages/env:/app/packages/env
     depends_on:
+      - base
       - db
     command: pnpm db:studio
+
+  elastic:
+    image: elasticsearch:8.14.1
+    environment:
+      - 'discovery.type=single-node'
+      - 'ELASTIC_USERNAME=latitude'
+      - 'ELASTIC_PASSWORD=secret'
+
   db:
     image: postgres
     environment:
