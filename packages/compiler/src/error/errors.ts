@@ -219,6 +219,10 @@ export default {
     code: 'message-tag-inside-message',
     message: 'Message tags cannot be inside of another message',
   },
+  contentTagInsideContent: {
+    code: 'content-tag-inside-content',
+    message: 'Content tags cannot be inside of another content',
+  },
   invalidMessageRole: (name: string) => ({
     code: 'invalid-message-role',
     message: `Invalid message role: ${name}`,
@@ -242,6 +246,10 @@ export default {
       code: 'reference-error',
       message: `There was an error referencing the prompt: \n${errorKlassName} ${error.message}`,
     }
+  },
+  referenceTagHasContent: {
+    code: 'reference-tag-has-content',
+    message: 'Reference tags cannot have content',
   },
   invalidContentType: (name: string) => ({
     code: 'invalid-content-type',

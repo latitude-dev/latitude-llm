@@ -1,7 +1,7 @@
 import type { Identifier } from 'estree'
 
 import errors from '../../../error/errors'
-import type { ResolveNodeProps } from '../types'
+import type { ResolveNodeProps, UpdateScopeContextProps } from '../types'
 
 /**
  * ### Identifier
@@ -16,4 +16,13 @@ export async function resolve({
     raiseError(errors.variableNotDeclared(node.name), node)
   }
   return scope.get(node.name)
+}
+
+export function updateScopeContext({
+  node,
+  scopeContext,
+}: UpdateScopeContextProps<Identifier>) {
+  if (!scopeContext.definedVariables.has(node.name)) {
+    scopeContext.usedUndefinedVariables.add(node.name)
+  }
 }

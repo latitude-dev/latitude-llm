@@ -1,8 +1,8 @@
 import type { Identifier, MemberExpression } from 'estree'
 
-import { resolveLogicNode } from '..'
+import { resolveLogicNode, updateScopeContextForNode } from '..'
 import { MEMBER_EXPRESSION_METHOD } from '../operators'
-import type { ResolveNodeProps } from '../types'
+import type { ResolveNodeProps, UpdateScopeContextProps } from '../types'
 
 /**
  * ### MemberExpression
@@ -28,4 +28,14 @@ export async function resolve({
     : (node.property as Identifier).name
 
   return MEMBER_EXPRESSION_METHOD(object, property)
+}
+
+export function updateScopeContext({
+  node,
+  ...props
+}: UpdateScopeContextProps<MemberExpression>) {
+  updateScopeContextForNode({ node: node.object, ...props })
+  if (node.computed) {
+    updateScopeContextForNode({ node: node.property, ...props })
+  }
 }

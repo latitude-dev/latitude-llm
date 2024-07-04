@@ -1,4 +1,4 @@
-import type { Node } from 'estree'
+import type { Node as LogicalExpression } from 'estree'
 
 import {
   CUSTOM_MESSAGE_ROLE_ATTR,
@@ -57,7 +57,7 @@ export class Compile {
    */
   async run(): Promise<Conversation> {
     const fragment = parse(this.rawText)
-    const config = readConfig(fragment)
+    const config = readConfig(fragment) as Record<string, unknown>
     const messages = await this.extractMessages({
       nodes: fragment.children,
       scope: new Scope(this.parameters),
@@ -70,7 +70,7 @@ export class Compile {
   }
 
   private async resolveExpression(
-    expression: Node,
+    expression: LogicalExpression,
     scope: Scope,
   ): Promise<unknown> {
     return await resolveLogicNode({
@@ -134,10 +134,14 @@ export class Compile {
     let i = 0
     for await (const element of iterableElement) {
       const localScope = scope.copy()
-      if (indexVarName) {
-        localScope.set(indexVarName, i)
-      }
       localScope.set(contextVarName, element)
+      if (indexVarName) {
+        let indexValue: unknown = i
+        if (node.key) {
+          indexValue = await this.resolveExpression(node.key, localScope)
+        }
+        localScope.set(indexVarName, indexValue)
+      }
       await onEach(localScope)
       i++
     }
@@ -362,10 +366,10 @@ export class Compile {
       }
 
       if (node.type === 'ElementTag') {
-        if (Object.values(MessageRole).includes(node.name)) {
+        if (Object.values(MessageRole).includes(node.name as MessageRole)) {
           this.baseNodeError(errors.messageTagInsideMessage, node)
         }
-        if (!Object.values(ContentType).includes(node.name)) {
+        if (!Object.values(ContentType).includes(node.name as ContentType)) {
           this.baseNodeError(errors.invalidContentType(node.name), node)
         }
 
@@ -374,7 +378,7 @@ export class Compile {
         const contentType = node.name as ContentType
         const content = await this.extractTextContent({
           nodes: node.children ?? [],
-          scope: scope.copy(),
+          scope,
         })
         messageContent.push({
           type: contentType,
@@ -454,20 +458,20 @@ export class Compile {
       if (node.type === 'ElementTag') {
         let tagName = node.name
 
-        if (Object.values(ContentType).includes(tagName)) {
+        if (Object.values(ContentType).includes(tagName as ContentType)) {
           const textContent = await this.extractTextContent({
             nodes: node.children ?? [],
-            scope: scope.copy(),
+            scope,
           })
           const messageContent: MessageContent = {
-            type: tagName,
+            type: tagName as ContentType,
             value: textContent,
           }
           addStrayMessageContent(messageContent)
           continue
         }
 
-        if (tagName === REFERENCE_PROMPT_TAG) {
+        if (tagName === (REFERENCE_PROMPT_TAG as MessageRole)) {
           const attributes = await this.resolveTagAttributes({
             tagNode: node as ElementTag,
             scope,
@@ -480,6 +484,10 @@ export class Compile {
 
           if (!this.referenceFn) {
             this.baseNodeError(errors.missingReferenceFunction, node)
+          }
+
+          if (node.children.length > 0) {
+            this.baseNodeError(errors.referenceTagHasContent, node)
           }
 
           storeStrayContentAsMessage()
@@ -500,8 +508,8 @@ export class Compile {
         }
 
         if (
-          tagName === CUSTOM_MESSAGE_TAG ||
-          Object.values(MessageRole).includes(tagName)
+          tagName === (CUSTOM_MESSAGE_TAG as MessageRole) ||
+          Object.values(MessageRole).includes(tagName as MessageRole)
         ) {
           const attributes = await this.resolveTagAttributes({
             tagNode: node as ElementTag,
@@ -509,11 +517,11 @@ export class Compile {
           })
 
           let role = tagName
-          if (tagName === CUSTOM_MESSAGE_TAG) {
+          if (tagName === (CUSTOM_MESSAGE_TAG as MessageRole)) {
             if (attributes[CUSTOM_MESSAGE_ROLE_ATTR] === undefined) {
               this.baseNodeError(errors.messageTagWithoutRole, node)
             }
-            role = attributes[CUSTOM_MESSAGE_ROLE_ATTR]
+            role = attributes[CUSTOM_MESSAGE_ROLE_ATTR] as MessageRole
             delete attributes[CUSTOM_MESSAGE_ROLE_ATTR]
 
             if (!Object.values(MessageRole).includes(role)) {
@@ -523,12 +531,12 @@ export class Compile {
 
           const messageContent = await this.extractMessageContent({
             nodes: node.children ?? [],
-            scope: scope.copy(),
+            scope,
           })
 
           storeStrayContentAsMessage()
           messages.push({
-            role,
+            role: role as MessageRole,
             content: messageContent,
           })
           continue
@@ -607,7 +615,7 @@ export class Compile {
 
   private expressionError(
     { code, message }: { code: string; message: string },
-    node: Node,
+    node: LogicalExpression,
   ): never {
     const source = (node.loc?.source ?? this.rawText)!.split('\n')
     const start =

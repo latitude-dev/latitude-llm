@@ -1,8 +1,8 @@
 import { type Identifier, type ObjectExpression } from 'estree'
 
-import { resolveLogicNode } from '..'
+import { resolveLogicNode, updateScopeContextForNode } from '..'
 import errors from '../../../error/errors'
-import { type ResolveNodeProps } from '../types'
+import { UpdateScopeContextProps, type ResolveNodeProps } from '../types'
 
 /**
  * ### ObjectExpression
@@ -45,4 +45,21 @@ export async function resolve({
     throw raiseError(errors.invalidObjectKey, prop)
   }
   return resolvedObject
+}
+
+export function updateScopeContext({
+  node,
+  ...props
+}: UpdateScopeContextProps<ObjectExpression>) {
+  for (const prop of node.properties) {
+    if (prop.type === 'SpreadElement') {
+      updateScopeContextForNode({ node: prop.argument, ...props })
+      continue
+    }
+    if (prop.type === 'Property') {
+      updateScopeContextForNode({ node: prop.value, ...props })
+      continue
+    }
+    props.raiseError(errors.invalidObjectKey, prop)
+  }
 }

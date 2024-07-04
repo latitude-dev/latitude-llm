@@ -1,4 +1,4 @@
-import { Identifier, type Node } from 'estree'
+import { Identifier, type Node as LogicalExpression } from 'estree'
 
 import { ContentType, MessageRole } from '../types'
 
@@ -46,11 +46,11 @@ export type MessageTag = IElementTag & {
   name: MessageRole
 }
 
-export type ElementTag = ContentTag | MessageTag
+export type ElementTag = ContentTag | MessageTag | IElementTag
 
 export interface MustacheTag extends BaseNode {
   type: 'MustacheTag'
-  expression: Node
+  expression: LogicalExpression
 }
 
 export interface Comment extends BaseNode {
@@ -59,28 +59,31 @@ export interface Comment extends BaseNode {
   ignores: string[]
 }
 
-export interface IfBlock extends BaseNode {
-  type: 'IfBlock'
-  condition: Node
-}
-
 export interface ElseBlock extends BaseNode {
   type: 'ElseBlock'
 }
 
+export interface IfBlock extends BaseNode {
+  type: 'IfBlock'
+  expression: LogicalExpression
+  else: ElseBlock | null
+}
+
 export interface EachBlock extends BaseNode {
   type: 'EachBlock'
-  expression: Node
+  expression: LogicalExpression
   context: Identifier
   index: Identifier | null
+  key: LogicalExpression
+  else: ElseBlock | null
 }
 
 export type TemplateNode =
-  | BaseNode
+  | Fragment
+  | Config
   | Text
+  | ElementTag
   | MustacheTag
   | Comment
-  | ElementTag
   | IfBlock
-  | ElseBlock
   | EachBlock

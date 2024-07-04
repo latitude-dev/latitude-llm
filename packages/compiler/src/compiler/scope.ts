@@ -67,3 +67,8 @@ export default class Scope {
     return scope
   }
 }
+
+export type ScopeContext = {
+  usedUndefinedVariables: Set<string> // Variables that are not in current scope but have been used
+  definedVariables: Set<string> // Variables that are in current scope
+}

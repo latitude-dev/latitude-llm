@@ -1,5 +1,6 @@
-import { Conversation } from '../types'
+import { Conversation, ConversationMetadata } from '../types'
 import { Compile, type ReferencePromptFn } from './compile'
+import { ReadMetadata } from './readMetadata'
 
 export function compile({
   prompt,
@@ -11,4 +12,16 @@ export function compile({
   referenceFn?: ReferencePromptFn
 }): Promise<Conversation> {
   return new Compile({ prompt, parameters, referenceFn }).run()
+}
+
+export function readMetadata({
+  prompt,
+  referenceFn,
+  configSchema,
+}: {
+  prompt: string
+  referenceFn?: ReferencePromptFn
+  configSchema?: object
+}): Promise<ConversationMetadata<typeof configSchema>> {
+  return new ReadMetadata({ prompt, referenceFn, configSchema }).run()
 }

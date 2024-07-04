@@ -1,7 +1,7 @@
 import type { ChainExpression } from 'estree'
 
-import { resolveLogicNode } from '..'
-import type { ResolveNodeProps } from '../types'
+import { resolveLogicNode, updateScopeContextForNode } from '..'
+import type { ResolveNodeProps, UpdateScopeContextProps } from '../types'
 
 /**
  * ### Chain Expression
@@ -15,4 +15,11 @@ export async function resolve({
     node: node.expression,
     ...props,
   })
+}
+
+export function updateScopeContext({
+  node,
+  ...props
+}: UpdateScopeContextProps<ChainExpression>) {
+  updateScopeContextForNode({ node: node.expression, ...props })
 }

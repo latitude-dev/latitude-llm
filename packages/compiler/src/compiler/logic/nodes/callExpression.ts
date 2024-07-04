@@ -1,9 +1,9 @@
 import type { SimpleCallExpression } from 'estree'
 
-import { resolveLogicNode } from '..'
+import { resolveLogicNode, updateScopeContextForNode } from '..'
 import CompileError from '../../../error/error'
 import errors from '../../../error/errors'
-import type { ResolveNodeProps } from '../types'
+import type { ResolveNodeProps, UpdateScopeContextProps } from '../types'
 
 /**
  * ### CallExpression
@@ -54,5 +54,15 @@ async function runMethod({
   } catch (error: unknown) {
     if (error instanceof CompileError) throw error
     raiseError(errors.functionCallError(error), node)
+  }
+}
+
+export function updateScopeContext({
+  node,
+  ...props
+}: UpdateScopeContextProps<SimpleCallExpression>) {
+  updateScopeContextForNode({ node: node.callee, ...props })
+  for (const arg of node.arguments) {
+    updateScopeContextForNode({ node: arg, ...props })
   }
 }

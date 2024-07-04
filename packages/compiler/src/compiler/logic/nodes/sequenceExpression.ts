@@ -1,7 +1,7 @@
 import type { SequenceExpression } from 'estree'
 
-import { resolveLogicNode } from '..'
-import type { ResolveNodeProps } from '../types'
+import { resolveLogicNode, updateScopeContextForNode } from '..'
+import type { ResolveNodeProps, UpdateScopeContextProps } from '../types'
 
 /**
  * ### SequenceExpression
@@ -16,4 +16,13 @@ export async function resolve({
       resolveLogicNode({ node: expression, ...props }),
     ),
   )
+}
+
+export function updateScopeContext({
+  node,
+  ...props
+}: UpdateScopeContextProps<SequenceExpression>) {
+  for (const expression of node.expressions) {
+    updateScopeContextForNode({ node: expression, ...props })
+  }
 }
