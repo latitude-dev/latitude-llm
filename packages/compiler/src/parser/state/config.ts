@@ -8,7 +8,7 @@ export function config(parser: Parser) {
   parser.eat('---')
 
   // Read until there is a line break followed by a triple dash
-  const data = parser.readUntil(/\n\s*\-\-\-\s*/)
+  const data = parser.readUntil(/\n\s*---\s*/)
 
   parser.allowWhitespace()
   parser.eat('---', true)

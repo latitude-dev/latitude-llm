@@ -9,7 +9,9 @@
     "build": "rollup -c",
     "test": "vitest run",
     "test:watch": "vitest",
-    "prettier": "prettier --write src/**/*.ts"
+    "prettier": "prettier --write src/**/*.ts",
+    "lint": "eslint . --max-warnings 0 --ext .ts src",
+    "tc": "tsc --noEmit"
   },
   "devDependencies": {
     "@latitude-data/eslint-config": "workspace:*",
