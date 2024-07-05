@@ -75,14 +75,14 @@ describe('config section', async () => {
 
 describe('comments', async () => {
   it('does not add comments to the output', async () => {
-    const propmt = `
+    const prompt = `
       anna
       bob
       /* comment */
       charlie
     `
     const result = await compile({
-      prompt: removeCommonIndent(propmt),
+      prompt: removeCommonIndent(prompt),
       parameters: {},
     })
 
@@ -97,14 +97,14 @@ describe('comments', async () => {
   })
 
   it('also allows using tag comments', async () => {
-    const propmt = `
+    const prompt = `
       <system>
         <!-- comment -->
         Test message
       </system>
     `
     const result = await compile({
-      prompt: removeCommonIndent(propmt),
+      prompt: removeCommonIndent(prompt),
       parameters: {},
     })
 
@@ -119,14 +119,14 @@ describe('comments', async () => {
 
 describe('messages', async () => {
   it('allows creating system, user, assistant and tool messages', async () => {
-    const propmt = `
+    const prompt = `
       <system>system message</system>
       <user>user message</user>
       <assistant>assistant message</assistant>
       <tool id="123">tool message</tool>
     `
     const result = await compile({
-      prompt: removeCommonIndent(propmt),
+      prompt: removeCommonIndent(prompt),
       parameters: {},
     })
 
@@ -149,31 +149,31 @@ describe('messages', async () => {
     expect(toolMessage.content[0]!.value).toBe('tool message')
   })
 
-  it('fails when using an invalid message role', async () => {
-    const propmt = `
+  it('fails when using an unknown tag', async () => {
+    const prompt = `
       <foo>message</foo>
     `
     const action = () =>
       compile({
-        prompt: removeCommonIndent(propmt),
+        prompt: removeCommonIndent(prompt),
         parameters: {},
       })
     const error = await getExpectedError(action, CompileError)
-    expect(error.code).toBe('invalid-message-role')
+    expect(error.code).toBe('unknown-tag')
   })
 
   it('can create messages with the common message tag', async () => {
-    const propmt = `
+    const prompt = `
       <message role=${CUSTOM_TAG_START}role${CUSTOM_TAG_END}>message</message>
     `
     const result1 = await compile({
-      prompt: removeCommonIndent(propmt),
+      prompt: removeCommonIndent(prompt),
       parameters: {
         role: 'system',
       },
     })
     const result2 = await compile({
-      prompt: removeCommonIndent(propmt),
+      prompt: removeCommonIndent(prompt),
       parameters: {
         role: 'user',
       },
@@ -191,37 +191,27 @@ describe('messages', async () => {
   })
 
   it('raises an error when using an invalid message role', async () => {
-    const propmt1 = `
-      <foo>message</foo>
-    `
-    const propmt2 = `
+    const prompt = `
       <message role="foo">message</message>
     `
-    const action1 = () =>
+    const action = () =>
       compile({
-        prompt: removeCommonIndent(propmt1),
+        prompt: removeCommonIndent(prompt),
         parameters: {},
       })
-    const action2 = () =>
-      compile({
-        prompt: removeCommonIndent(propmt2),
-        parameters: {},
-      })
-    const error1 = await getExpectedError(action1, CompileError)
-    const error2 = await getExpectedError(action2, CompileError)
-    expect(error1.code).toBe('invalid-message-role')
-    expect(error2.code).toBe('invalid-message-role')
+    const error = await getExpectedError(action, CompileError)
+    expect(error.code).toBe('invalid-message-role')
   })
 
   it('throws an error when a message tag is inside another message', async () => {
-    const propmt = `
+    const prompt = `
       <system>
         <user>user message</user>
       </system>
     `
     const action = () =>
       compile({
-        prompt: removeCommonIndent(propmt),
+        prompt: removeCommonIndent(prompt),
         parameters: {},
       })
     const error = await getExpectedError(action, CompileError)
@@ -229,12 +219,12 @@ describe('messages', async () => {
   })
 
   it('creates a system message when no message tag is present', async () => {
-    const propmt = `
+    const prompt = `
       Test message
       <user>user message</user>
     `
     const result = await compile({
-      prompt: removeCommonIndent(propmt),
+      prompt: removeCommonIndent(prompt),
       parameters: {},
     })
 
@@ -252,7 +242,7 @@ describe('messages', async () => {
 
 describe('message contents', async () => {
   it('all messages can have multiple content tags', async () => {
-    const propmt = `
+    const prompt = `
       <system>
         <text>text content</text>
         <image>image content</image>
@@ -260,7 +250,7 @@ describe('message contents', async () => {
       </system>
     `
     const result = await compile({
-      prompt: removeCommonIndent(propmt),
+      prompt: removeCommonIndent(prompt),
       parameters: {},
     })
 
@@ -279,28 +269,28 @@ describe('message contents', async () => {
   })
 
   it('fails when using an invalid content type', async () => {
-    const propmt = `
+    const prompt = `
       <system>
         <foo>text content</foo>
       </system>
     `
     const action = () =>
       compile({
-        prompt: removeCommonIndent(propmt),
+        prompt: removeCommonIndent(prompt),
         parameters: {},
       })
     const error = await getExpectedError(action, CompileError)
-    expect(error.code).toBe('invalid-content-type')
+    expect(error.code).toBe('unknown-tag')
   })
 
   it('creates a text content when no content tag is present', async () => {
-    const propmt = `
+    const prompt = `
       <system>
         Test message
       </system>
     `
     const result = await compile({
-      prompt: removeCommonIndent(propmt),
+      prompt: removeCommonIndent(prompt),
       parameters: {},
     })
 
@@ -662,10 +652,10 @@ describe('conditional expressions', async () => {
 
 describe('each loops', async () => {
   it('iterates over any iterable object', async () => {
-    const propmt1 = `${CUSTOM_TAG_START}#each [1, 2, 3] as element${CUSTOM_TAG_END} ${CUSTOM_TAG_START}element${CUSTOM_TAG_END} ${CUSTOM_TAG_START}/each${CUSTOM_TAG_END}`
+    const prompt1 = `${CUSTOM_TAG_START}#each [1, 2, 3] as element${CUSTOM_TAG_END} ${CUSTOM_TAG_START}element${CUSTOM_TAG_END} ${CUSTOM_TAG_START}/each${CUSTOM_TAG_END}`
     const prompt2 = `${CUSTOM_TAG_START}#each "foo" as element${CUSTOM_TAG_END} ${CUSTOM_TAG_START}element${CUSTOM_TAG_END} ${CUSTOM_TAG_START}/each${CUSTOM_TAG_END}`
 
-    const result1 = await getCompiledText(propmt1)
+    const result1 = await getCompiledText(prompt1)
     const result2 = await getCompiledText(prompt2)
 
     expect(result1).toBe('123')
@@ -695,8 +685,8 @@ describe('each loops', async () => {
   })
 
   it('gives access to the index of the element', async () => {
-    const propmt = `${CUSTOM_TAG_START}#each ['a', 'b', 'c'] as element, index${CUSTOM_TAG_END} ${CUSTOM_TAG_START}index${CUSTOM_TAG_END} ${CUSTOM_TAG_START}/each${CUSTOM_TAG_END}`
-    const result = await getCompiledText(propmt)
+    const prompt = `${CUSTOM_TAG_START}#each ['a', 'b', 'c'] as element, index${CUSTOM_TAG_END} ${CUSTOM_TAG_START}index${CUSTOM_TAG_END} ${CUSTOM_TAG_START}/each${CUSTOM_TAG_END}`
+    const result = await getCompiledText(prompt)
     expect(result).toBe('012')
   })
 

@@ -2,13 +2,17 @@ import {
   CUSTOM_MESSAGE_ROLE_ATTR,
   CUSTOM_MESSAGE_TAG,
   REFERENCE_PROMPT_ATTR,
-  REFERENCE_PROMPT_TAG,
-  TOOL_CALL_TAG,
 } from '$/constants'
 import CompileError, { error } from '$/error/error'
 import errors from '$/error/errors'
 import parse from '$/parser/index'
-import type { BaseNode, ElementTag } from '$/parser/interfaces'
+import type {
+  BaseNode,
+  ElementTag,
+  MessageTag,
+  TemplateNode,
+  ToolCallTag,
+} from '$/parser/interfaces'
 import {
   AssistantMessage,
   ContentType,
@@ -26,9 +30,18 @@ import type { Node as LogicalExpression } from 'estree'
 import { readConfig } from './config'
 import { resolveLogicNode } from './logic'
 import Scope from './scope'
-import { hasContent, isIterable, removeCommonIndent } from './utils'
+import {
+  hasContent,
+  isContentTag,
+  isIterable,
+  isMessageTag,
+  isRefTag,
+  isToolCallTag,
+  removeCommonIndent,
+} from './utils'
 
 export type ReferencePromptFn = (prompt: string) => Promise<string>
+type ToolCallReference = { node: ToolCallTag; value: ToolCall }
 
 export class Compile {
   private rawText: string
@@ -36,11 +49,10 @@ export class Compile {
 
   private initialScope: Scope
 
-  // state management
   private messages: Message[] = []
   private accumulatedText: string = ''
   private accumulatedContent: MessageContent[] = []
-  private accumulatedToolCalls: ToolCall[] = []
+  private accumulatedToolCalls: ToolCallReference[] = []
 
   constructor({
     prompt,
@@ -72,8 +84,8 @@ export class Compile {
     await this.resolveBaseNode({
       node: fragment,
       scope: this.initialScope,
-      isInMessageTag: false,
-      isInContentTag: false,
+      isInsideMessageTag: false,
+      isInsideContentTag: false,
     })
 
     return {
@@ -158,9 +170,9 @@ export class Compile {
     this.accumulatedText = ''
   }
 
-  private addToolCall(toolCall: ToolCall): void {
+  private addToolCall(toolCallTag: ToolCallTag, toolCall: ToolCall): void {
     this.groupAccumulatedTextAsContent()
-    this.accumulatedToolCalls.push(toolCall)
+    this.accumulatedToolCalls.push({ node: toolCallTag, value: toolCall })
   }
 
   private addContent(content: MessageContent): void {
@@ -172,10 +184,13 @@ export class Compile {
     this.groupAccumulatedTextAsContent()
 
     if (this.accumulatedContent.length > 0) {
-      this.messages.push({
+      const message = this.buildMessage({
         role: MessageRole.system,
+        attributes: {},
         content: this.accumulatedContent,
+        toolCalls: this.accumulatedToolCalls,
       })
+      this.messages.push(message)
     }
 
     this.accumulatedContent = []
@@ -185,21 +200,21 @@ export class Compile {
   private async resolveBaseNode({
     node,
     scope,
-    isInMessageTag,
-    isInContentTag,
+    isInsideMessageTag,
+    isInsideContentTag,
   }: {
-    node: BaseNode
+    node: TemplateNode
     scope: Scope
-    isInMessageTag: boolean
-    isInContentTag: boolean
+    isInsideMessageTag: boolean
+    isInsideContentTag: boolean
   }): Promise<void> {
     if (node.type === 'Fragment') {
       for await (const childNode of node.children ?? []) {
         await this.resolveBaseNode({
           node: childNode,
           scope,
-          isInMessageTag,
-          isInContentTag,
+          isInsideMessageTag,
+          isInsideContentTag,
         })
       }
       return
@@ -231,8 +246,8 @@ export class Compile {
         await this.resolveBaseNode({
           node: childNode,
           scope: childScope,
-          isInMessageTag,
-          isInContentTag,
+          isInsideMessageTag,
+          isInsideContentTag,
         })
       }
       return
@@ -252,8 +267,8 @@ export class Compile {
           await this.resolveBaseNode({
             node: childNode,
             scope: childScope,
-            isInMessageTag,
-            isInContentTag,
+            isInsideMessageTag,
+            isInsideContentTag,
           })
         }
         return
@@ -289,8 +304,8 @@ export class Compile {
           await this.resolveBaseNode({
             node: childNode,
             scope: localScope,
-            isInMessageTag,
-            isInContentTag,
+            isInsideMessageTag,
+            isInsideContentTag,
           })
         }
         i++
@@ -301,14 +316,13 @@ export class Compile {
     if (node.type === 'ElementTag') {
       this.groupAccumulatedTextAsContent()
 
-      // ToolCall <tool_call id="123" name="foo">{ arguments }</tool_call>
-      if (node.name === TOOL_CALL_TAG) {
-        if (isInContentTag) {
+      if (isToolCallTag(node)) {
+        if (isInsideContentTag) {
           this.baseNodeError(errors.toolCallTagInsideContent, node)
         }
 
         const attributes = await this.resolveTagAttributes({
-          tagNode: node as ElementTag,
+          tagNode: node,
           scope,
         })
 
@@ -324,8 +338,8 @@ export class Compile {
           await this.resolveBaseNode({
             node: childNode,
             scope,
-            isInMessageTag,
-            isInContentTag: true,
+            isInsideMessageTag,
+            isInsideContentTag: true,
           })
         }
 
@@ -343,7 +357,7 @@ export class Compile {
           }
         }
 
-        this.addToolCall({
+        this.addToolCall(node as ToolCallTag, {
           id: String(attributes['id']),
           name: String(attributes['name']),
           arguments: jsonContent,
@@ -351,9 +365,8 @@ export class Compile {
         return
       }
 
-      // MessageContent <text> or <image>
-      if (Object.values(ContentType).includes(node.name as ContentType)) {
-        if (isInContentTag) {
+      if (isContentTag(node)) {
+        if (isInsideContentTag) {
           this.baseNodeError(errors.contentTagInsideContent, node)
         }
 
@@ -362,8 +375,8 @@ export class Compile {
           await this.resolveBaseNode({
             node: childNode,
             scope,
-            isInMessageTag,
-            isInContentTag: true,
+            isInsideMessageTag,
+            isInsideContentTag: true,
           })
         }
         const textContent = this.accumulatedText
@@ -376,19 +389,15 @@ export class Compile {
         return
       }
 
-      // MessageRole <user>, <assistant>, <system>, <tool> or <message role="…">
-      if (
-        Object.values(MessageRole).includes(node.name as MessageRole) ||
-        node.name === CUSTOM_MESSAGE_TAG
-      ) {
-        if (isInContentTag || isInMessageTag) {
+      if (isMessageTag(node)) {
+        if (isInsideContentTag || isInsideMessageTag) {
           this.baseNodeError(errors.messageTagInsideMessage, node)
         }
 
         this.groupAccumulatedContentAsMessage()
 
         const attributes = await this.resolveTagAttributes({
-          tagNode: node as ElementTag,
+          tagNode: node,
           scope,
         })
 
@@ -405,8 +414,8 @@ export class Compile {
           await this.resolveBaseNode({
             node: childNode,
             scope,
-            isInMessageTag: true,
-            isInContentTag,
+            isInsideMessageTag: true,
+            isInsideContentTag,
           })
         }
 
@@ -418,7 +427,7 @@ export class Compile {
         this.accumulatedToolCalls = []
 
         const message = this.buildMessage({
-          node: node as ElementTag,
+          node: node as MessageTag,
           role,
           attributes,
           content: messageContent,
@@ -428,9 +437,8 @@ export class Compile {
         return
       }
 
-      // Ref <ref prompt="…">
-      if (node.name === REFERENCE_PROMPT_TAG) {
-        if (isInMessageTag || isInContentTag) {
+      if (isRefTag(node)) {
+        if (isInsideMessageTag || isInsideContentTag) {
           this.baseNodeError(errors.invalidReferencePromptPlacement, node)
         }
 
@@ -439,7 +447,7 @@ export class Compile {
         }
 
         const attributes = await this.resolveTagAttributes({
-          tagNode: node as ElementTag,
+          tagNode: node,
           scope,
           literalAttributes: [REFERENCE_PROMPT_ATTR],
         })
@@ -477,12 +485,10 @@ export class Compile {
         return
       }
 
-      if (isInMessageTag) {
-        this.baseNodeError(errors.invalidContentType(node.name), node)
-      }
-      this.baseNodeError(errors.invalidMessageRole(node.name), node)
+      this.baseNodeError(errors.unknownTag(node.name), node)
     }
 
+    //@ts-ignore - Linter knows this should be unreachable. That's what this error is for.
     this.baseNodeError(errors.unsupportedBaseNodeType(node.type), node)
   }
 
@@ -493,14 +499,16 @@ export class Compile {
     content,
     toolCalls,
   }: {
-    node: ElementTag
+    node?: MessageTag
     role: MessageRole
     attributes: Record<string, unknown>
     content: MessageContent[]
-    toolCalls: ToolCall[]
+    toolCalls: ToolCallReference[]
   }): Message {
-    if (toolCalls.length > 0 && role !== MessageRole.assistant) {
-      this.baseNodeError(errors.invalidTagPlacement(TOOL_CALL_TAG, role), node)
+    if (role !== MessageRole.assistant) {
+      toolCalls.forEach(({ node: toolNode }) => {
+        this.baseNodeError(errors.invalidToolCallPlacement, toolNode)
+      })
     }
 
     if (role === MessageRole.system) {
@@ -521,14 +529,14 @@ export class Compile {
     if (role === MessageRole.assistant) {
       return {
         role,
-        toolCalls,
+        toolCalls: toolCalls.map(({ value }) => value),
         content,
       } as AssistantMessage
     }
 
     if (role === MessageRole.tool) {
       if (attributes.id === undefined) {
-        this.baseNodeError(errors.toolMessageWithoutId, node)
+        this.baseNodeError(errors.toolMessageWithoutId, node!)
       }
 
       return {
@@ -538,7 +546,7 @@ export class Compile {
       } as ToolMessage
     }
 
-    this.baseNodeError(errors.invalidMessageRole(role), node)
+    this.baseNodeError(errors.invalidMessageRole(role), node!)
   }
 
   private baseNodeError(

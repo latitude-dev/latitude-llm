@@ -1,21 +1,28 @@
 import { createHash } from 'crypto'
 
 import {
+  CUSTOM_MESSAGE_ROLE_ATTR,
   CUSTOM_MESSAGE_TAG,
   REFERENCE_PROMPT_ATTR,
-  REFERENCE_PROMPT_TAG,
 } from '$/constants'
 import CompileError, { error } from '$/error/error'
 import errors from '$/error/errors'
 import parse from '$/parser/index'
-import type { Attribute, BaseNode } from '$/parser/interfaces'
-import { ContentType, ConversationMetadata, MessageRole } from '$/types'
+import type {
+  Attribute,
+  BaseNode,
+  ElementTag,
+  TemplateNode,
+  ToolCallTag,
+} from '$/parser/interfaces'
+import { ConversationMetadata, MessageRole } from '$/types'
 import { Node as LogicalExpression } from 'estree'
 
 import { ReferencePromptFn } from './compile'
 import { readConfig } from './config'
 import { updateScopeContextForNode } from './logic'
 import { ScopeContext } from './scope'
+import { isContentTag, isMessageTag, isRefTag, isToolCallTag } from './utils'
 
 function copyScopeContext(scopeContext: ScopeContext): ScopeContext {
   return {
@@ -28,7 +35,8 @@ export class ReadMetadata {
   private rawText: string
   private referenceFn?: ReferencePromptFn
 
-  private referencedPrompts: Record<string, string> = {} // Prompt path -> Prompt hash
+  private referencedPrompts: Record<string, string> = {}
+  private accumulatedToolCalls: ToolCallTag[] = []
 
   constructor({
     prompt,
@@ -52,8 +60,8 @@ export class ReadMetadata {
     await this.readBaseMetadata({
       node: fragment,
       scopeContext,
-      isInMessageTag: false,
-      isInContentTag: false,
+      isInsideMessageTag: false,
+      isInsideContentTag: false,
     })
 
     const hash = createHash('sha256')
@@ -85,24 +93,66 @@ export class ReadMetadata {
     })
   }
 
+  private async listTagAttributes({
+    tagNode,
+    scopeContext,
+    literalAttributes = [], // Tags that don't allow Mustache expressions
+  }: {
+    tagNode: ElementTag
+    scopeContext: ScopeContext
+    literalAttributes?: string[]
+  }): Promise<Set<string>> {
+    const attributeNodes = tagNode.attributes
+    if (attributeNodes.length === 0) return new Set()
+
+    const attributes: Set<string> = new Set()
+    for (const attributeNode of attributeNodes) {
+      const { name, value } = attributeNode
+      if (value === true) {
+        attributes.add(name)
+        continue
+      }
+
+      if (literalAttributes.includes(name)) {
+        if (value.some((node) => node.type === 'MustacheTag')) {
+          this.baseNodeError(
+            errors.invalidStaticAttribute(name),
+            value.find((node) => node.type === 'MustacheTag')!,
+          )
+        }
+      }
+
+      for await (const node of value) {
+        if (node.type === 'MustacheTag') {
+          const expression = node.expression
+          await this.updateScopeContext({ node: expression, scopeContext })
+        }
+      }
+
+      attributes.add(name)
+    }
+
+    return attributes
+  }
+
   private async readBaseMetadata({
     node,
     scopeContext,
-    isInMessageTag,
-    isInContentTag,
+    isInsideMessageTag,
+    isInsideContentTag,
   }: {
-    node: BaseNode
+    node: TemplateNode
     scopeContext: ScopeContext
-    isInMessageTag: boolean
-    isInContentTag: boolean
+    isInsideMessageTag: boolean
+    isInsideContentTag: boolean
   }): Promise<void> {
     if (node.type === 'Fragment') {
       for await (const childNode of node.children ?? []) {
         await this.readBaseMetadata({
           node: childNode,
           scopeContext,
-          isInMessageTag,
-          isInContentTag,
+          isInsideMessageTag,
+          isInsideContentTag,
         })
       }
       return
@@ -118,134 +168,205 @@ export class ReadMetadata {
     }
 
     if (node.type === 'MustacheTag') {
-      await this.updateScopeContext({ node: node.expression, scopeContext })
+      const expression = node.expression
+      await this.updateScopeContext({ node: expression, scopeContext })
+      return
     }
 
     if (node.type === 'IfBlock') {
-      await this.updateScopeContext({ node: node.expression, scopeContext })
-
+      const ifScope = copyScopeContext(scopeContext)
+      const elseScope = copyScopeContext(scopeContext)
       for await (const childNode of node.children ?? []) {
         await this.readBaseMetadata({
           node: childNode,
-          scopeContext: copyScopeContext(scopeContext),
-          isInMessageTag,
-          isInContentTag,
+          scopeContext: ifScope,
+          isInsideMessageTag,
+          isInsideContentTag,
         })
       }
-      if (node.else) {
-        for await (const childNode of node.else.children ?? []) {
-          await this.readBaseMetadata({
-            node: childNode,
-            scopeContext: copyScopeContext(scopeContext),
-            isInMessageTag,
-            isInContentTag,
-          })
-        }
+      for await (const childNode of node.else?.children ?? []) {
+        await this.readBaseMetadata({
+          node: childNode,
+          scopeContext: elseScope,
+          isInsideMessageTag,
+          isInsideContentTag,
+        })
       }
       return
     }
 
     if (node.type === 'EachBlock') {
-      await this.updateScopeContext({ node: node.expression, scopeContext })
-      await this.updateScopeContext({ node: node.context, scopeContext })
-      const contextVarName = node.context.name
-      const indexVarName = node.index === null ? null : node.index.name
-
-      if (node.index) {
-        await this.updateScopeContext({ node: node.index, scopeContext })
-      }
-      if (node.key) {
-        const keyScopeContext = copyScopeContext(scopeContext)
-        keyScopeContext.definedVariables.add(contextVarName)
-        await this.updateScopeContext({ node: node.key, scopeContext })
-      }
-
-      for await (const childNode of node.children ?? []) {
-        const childScopeContext = copyScopeContext(scopeContext)
-        childScopeContext.definedVariables.add(contextVarName)
-        if (indexVarName) childScopeContext.definedVariables.add(indexVarName)
-
+      const elseScope = copyScopeContext(scopeContext)
+      for await (const childNode of node.else?.children ?? []) {
         await this.readBaseMetadata({
           node: childNode,
-          scopeContext: copyScopeContext(scopeContext),
-          isInMessageTag,
-          isInContentTag,
+          scopeContext: elseScope,
+          isInsideMessageTag,
+          isInsideContentTag,
         })
       }
-      if (node.else) {
-        for await (const childNode of node.else.children ?? []) {
-          await this.readBaseMetadata({
-            node: childNode,
-            scopeContext: copyScopeContext(scopeContext),
-            isInMessageTag,
-            isInContentTag,
-          })
-        }
+
+      const contextVarName = node.context.name
+      const indexVarName = node.index?.name
+      if (scopeContext.definedVariables.has(contextVarName)) {
+        throw this.expressionError(
+          errors.variableAlreadyDeclared(contextVarName),
+          node.context,
+        )
       }
+      if (indexVarName && scopeContext.definedVariables.has(indexVarName)) {
+        throw this.expressionError(
+          errors.variableAlreadyDeclared(indexVarName),
+          node.index!,
+        )
+      }
+
+      const iterableScope = copyScopeContext(scopeContext)
+      iterableScope.definedVariables.add(contextVarName)
+      if (indexVarName) {
+        iterableScope.definedVariables.add(indexVarName)
+      }
+      for await (const childNode of node.children ?? []) {
+        await this.readBaseMetadata({
+          node: childNode,
+          scopeContext: iterableScope,
+          isInsideMessageTag,
+          isInsideContentTag,
+        })
+      }
+      return
     }
 
     if (node.type === 'ElementTag') {
-      if (
-        node.name === CUSTOM_MESSAGE_TAG ||
-        Object.values(MessageRole).includes(node.name as MessageRole)
-      ) {
-        /* Message tag */
-        if (isInMessageTag) {
-          this.baseNodeError(errors.messageTagInsideMessage, node)
+      if (isToolCallTag(node)) {
+        if (isInsideContentTag) {
+          this.baseNodeError(errors.toolCallTagInsideContent, node)
         }
-      } else if (
-        Object.values(ContentType).includes(node.name as ContentType)
-      ) {
-        /* Content tag */
-        if (isInContentTag) {
+
+        const attributes = await this.listTagAttributes({
+          tagNode: node,
+          scopeContext,
+        })
+
+        if (!attributes.has('id')) {
+          this.baseNodeError(errors.toolCallTagWithoutId, node)
+        }
+
+        if (!attributes.has('name')) {
+          this.baseNodeError(errors.toolCallWithoutName, node)
+        }
+
+        for await (const childNode of node.children ?? []) {
+          await this.readBaseMetadata({
+            node: childNode,
+            scopeContext,
+            isInsideMessageTag,
+            isInsideContentTag: true,
+          })
+        }
+
+        this.accumulatedToolCalls.push(node as ToolCallTag)
+        return
+      }
+
+      if (isContentTag(node)) {
+        if (isInsideContentTag) {
           this.baseNodeError(errors.contentTagInsideContent, node)
         }
-      } else if (node.name === REFERENCE_PROMPT_TAG) {
-        /* Reference tag */
-        if (isInMessageTag) {
-          this.baseNodeError(
-            errors.invalidTagPlacement(node.name, 'message'),
-            node,
-          )
+
+        for await (const childNode of node.children ?? []) {
+          await this.readBaseMetadata({
+            node: childNode,
+            scopeContext,
+            isInsideMessageTag,
+            isInsideContentTag: true,
+          })
         }
-        if (isInContentTag) {
-          this.baseNodeError(
-            errors.invalidTagPlacement(node.name, 'content'),
-            node,
-          )
+        return
+      }
+
+      if (isMessageTag(node)) {
+        if (isInsideContentTag || isInsideMessageTag) {
+          this.baseNodeError(errors.messageTagInsideMessage, node)
+        }
+
+        const attributes = await this.listTagAttributes({
+          tagNode: node,
+          scopeContext,
+        })
+
+        const role = node.name as MessageRole
+        if (node.name === CUSTOM_MESSAGE_TAG) {
+          if (!attributes.has(CUSTOM_MESSAGE_ROLE_ATTR)) {
+            this.baseNodeError(errors.messageTagWithoutRole, node)
+          }
+          attributes.delete(CUSTOM_MESSAGE_ROLE_ATTR)
+        }
+
+        if (role === MessageRole.tool && !attributes.has('id')) {
+          this.baseNodeError(errors.toolMessageWithoutId, node)
+        }
+
+        if (this.accumulatedToolCalls.length > 0) {
+          this.accumulatedToolCalls.forEach((toolCallNode) => {
+            this.baseNodeError(errors.invalidToolCallPlacement, toolCallNode)
+          })
+        }
+        this.accumulatedToolCalls = []
+
+        for await (const childNode of node.children ?? []) {
+          await this.readBaseMetadata({
+            node: childNode,
+            scopeContext,
+            isInsideMessageTag: true,
+            isInsideContentTag,
+          })
+        }
+
+        if (
+          role !== MessageRole.assistant &&
+          this.accumulatedToolCalls.length > 0
+        ) {
+          this.accumulatedToolCalls.forEach((toolCallNode) => {
+            this.baseNodeError(errors.invalidToolCallPlacement, toolCallNode)
+          })
+        }
+        this.accumulatedToolCalls = []
+        return
+      }
+
+      if (isRefTag(node)) {
+        if (isInsideMessageTag || isInsideContentTag) {
+          this.baseNodeError(errors.invalidReferencePromptPlacement, node)
         }
 
         if (node.children?.length ?? 0 > 0) {
           this.baseNodeError(errors.referenceTagHasContent, node)
         }
 
-        const refPromptAttribute = node.attributes.find(
-          (attribute: Attribute) => attribute.name === REFERENCE_PROMPT_ATTR,
-        ) as Attribute | undefined
-        if (!refPromptAttribute) {
+        const attributes = await this.listTagAttributes({
+          tagNode: node,
+          scopeContext,
+          literalAttributes: [REFERENCE_PROMPT_ATTR],
+        })
+
+        if (!attributes.has(REFERENCE_PROMPT_ATTR)) {
           this.baseNodeError(errors.referenceTagWithoutPrompt, node)
         }
 
-        if (
-          refPromptAttribute.value === true ||
-          refPromptAttribute.value.some((node) => node.type === 'MustacheTag')
-        ) {
-          this.baseNodeError(
-            errors.invalidStaticAttribute(REFERENCE_PROMPT_ATTR),
-            refPromptAttribute,
-          )
-        }
-
-        // Obtain the referenced prompt
         if (!this.referenceFn) {
           this.baseNodeError(errors.missingReferenceFunction, node)
         }
 
-        const refPromptPath = refPromptAttribute.value
+        const refPromptAttribute = node.attributes.find(
+          (attribute: Attribute) => attribute.name === REFERENCE_PROMPT_ATTR,
+        ) as Attribute
+
+        const refPromptPath = (refPromptAttribute.value as TemplateNode[])
           .map((node) => node.data)
           .join('')
-        if (this.referencedPrompts[refPromptPath]) return
 
+        if (this.referencedPrompts[refPromptPath]) return
         try {
           const refPrompt = await this.referenceFn(refPromptPath)
 
@@ -254,6 +375,7 @@ export class ReadMetadata {
             referenceFn: this.referenceFn,
           })
           refReadMetadata.referencedPrompts = this.referencedPrompts
+          refReadMetadata.accumulatedToolCalls = this.accumulatedToolCalls
 
           const refPromptMetadata = await refReadMetadata.run()
           refPromptMetadata.parameters.forEach((param: string) => {
@@ -261,19 +383,21 @@ export class ReadMetadata {
               scopeContext.usedUndefinedVariables.add(param)
             }
           })
+          this.accumulatedToolCalls = refReadMetadata.accumulatedToolCalls
 
           this.referencedPrompts[refPromptPath] = refPromptMetadata.hash
         } catch (error: unknown) {
           if (error instanceof CompileError) throw error
           this.baseNodeError(errors.referenceError(error), node)
         }
-
         return
       }
 
-      /* Unknown tag */
-      this.baseNodeError(errors.invalidMessageRole(node.name), node)
+      this.baseNodeError(errors.unknownTag(node.name), node)
     }
+
+    //@ts-ignore - Linter knows this should be unreachable. That's what this error is for.
+    this.baseNodeError(errors.unsupportedBaseNodeType(node.type), node)
   }
 
   private baseNodeError(

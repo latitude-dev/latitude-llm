@@ -6,6 +6,7 @@ function getKlassName(error: unknown): string {
 }
 
 export default {
+  /* PARSER ERRORS */
   unexpectedEof: {
     code: 'unexpected-eof',
     message: 'Unexpected end of input',
@@ -96,7 +97,7 @@ export default {
     message: `Unexpected closing tag for ${name}`,
   }),
 
-  // Compiler errors:
+  /* COMPILER ERRORS */
   unsupportedBaseNodeType: (type: string) => ({
     code: 'unsupported-base-node-type',
     message: `Unsupported base node type: ${type}`,
@@ -105,22 +106,10 @@ export default {
     code: 'variable-already-declared',
     message: `Variable '${name}' is already declared`,
   }),
-  variableNotDeclared: (name: string) => ({
-    code: 'variable-not-declared',
-    message: `Variable '${name}' is not declared`,
-  }),
   invalidObjectKey: {
     code: 'invalid-object-key',
     message: 'Invalid object key',
   },
-  invalidSpreadInObject: (property: string) => ({
-    code: 'invalid-spread-in-object',
-    message: `Property '${property}' is not valid for spreading`,
-  }),
-  invalidSpreadInArray: (element: string) => ({
-    code: 'invalid-spread-in-array',
-    message: `Element '${element}' is not iterable`,
-  }),
   unsupportedOperator: (operator: string) => ({
     code: 'unsupported-operator',
     message: `Unsupported operator: ${operator}`,
@@ -129,30 +118,14 @@ export default {
     code: 'invalid-assignment',
     message: 'Invalid assignment',
   },
-  invalidUpdate: (operation: string, type: string) => ({
-    code: 'invalid-update',
-    message: `Cannot use ${operation} operation on ${type}`,
+  unknownTag: (name: string) => ({
+    code: 'unknown-tag',
+    message: `Unknown tag: '${name}'`,
   }),
-  propertyNotExists: (property: string) => ({
-    code: 'property-not-exists',
-    message: `Property '${property}' does not exist on object`,
-  }),
-  notAFunction: (objectType: string) => ({
-    code: 'not-a-function',
-    message: `'${objectType}' is not a function`,
-  }),
-  functionCallError: (err: unknown) => {
-    const error = err as Error
-    const errorKlassName = getKlassName(error)
-    return {
-      code: 'function-call-error',
-      message: `Error calling function: \n${errorKlassName} ${error.message}`,
-    }
+  invalidToolCallPlacement: {
+    code: 'invalid-tool-call-placement',
+    message: 'All tool calls must be inside of an assistant message',
   },
-  invalidTagPlacement: (name: string, parent: string) => ({
-    code: 'invalid-tag-placement',
-    message: `Cannot have a ${name} tag inside of a ${parent} tag`,
-  }),
   messageTagInsideMessage: {
     code: 'message-tag-inside-message',
     message: 'Message tags cannot be inside of another message',
@@ -181,10 +154,6 @@ export default {
     code: 'invalid-tool-call-arguments',
     message: 'Tool calls must contain a valid JSON object as arguments',
   },
-  invalidMessageRole: (name: string) => ({
-    code: 'invalid-message-role',
-    message: `Invalid message role: ${name}`,
-  }),
   messageTagWithoutRole: {
     code: 'message-tag-without-role',
     message: 'Message tags must have a role attribute',
@@ -213,12 +182,46 @@ export default {
     code: 'reference-tag-has-content',
     message: 'Reference tags cannot have content',
   },
-  invalidContentType: (name: string) => ({
-    code: 'invalid-content-type',
-    message: `Invalid content type: ${name}`,
-  }),
   invalidStaticAttribute: (name: string) => ({
     code: 'invalid-static-attribute',
     message: `The attribute '${name}' must only contain literal values`,
   }),
+
+  /* Value resolution errors */
+  invalidMessageRole: (name: string) => ({
+    code: 'invalid-message-role',
+    message: `Invalid message role: ${name}`,
+  }),
+  variableNotDeclared: (name: string) => ({
+    code: 'variable-not-declared',
+    message: `Variable '${name}' is not declared`,
+  }),
+  invalidSpreadInArray: (element: string) => ({
+    code: 'invalid-spread-in-array',
+    message: `Element '${element}' is not iterable`,
+  }),
+  invalidSpreadInObject: (property: string) => ({
+    code: 'invalid-spread-in-object',
+    message: `Property '${property}' is not valid for spreading`,
+  }),
+  invalidUpdate: (operation: string, type: string) => ({
+    code: 'invalid-update',
+    message: `Cannot use ${operation} operation on ${type}`,
+  }),
+  propertyNotExists: (property: string) => ({
+    code: 'property-not-exists',
+    message: `Property '${property}' does not exist on object`,
+  }),
+  notAFunction: (objectType: string) => ({
+    code: 'not-a-function',
+    message: `'${objectType}' is not a function`,
+  }),
+  functionCallError: (err: unknown) => {
+    const error = err as Error
+    const errorKlassName = getKlassName(error)
+    return {
+      code: 'function-call-error',
+      message: `Error calling function: \n${errorKlassName} ${error.message}`,
+    }
+  },
 }
