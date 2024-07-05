@@ -13,7 +13,7 @@ import { ContentType, ConversationMetadata, MessageRole } from '$/types'
 import { Node as LogicalExpression } from 'estree'
 
 import { ReferencePromptFn } from './compile'
-import { readConfig, validateConfig } from './config'
+import { readConfig } from './config'
 import { updateScopeContextForNode } from './logic'
 import { ScopeContext } from './scope'
 
@@ -27,14 +27,12 @@ function copyScopeContext(scopeContext: ScopeContext): ScopeContext {
 export class ReadMetadata {
   private rawText: string
   private referenceFn?: ReferencePromptFn
-  private configSchema?: object
 
   private referencedPrompts: Record<string, string> = {} // Prompt path -> Prompt hash
 
   constructor({
     prompt,
     referenceFn,
-    configSchema,
   }: {
     prompt: string
     referenceFn?: ReferencePromptFn
@@ -42,18 +40,11 @@ export class ReadMetadata {
   }) {
     this.rawText = prompt
     this.referenceFn = referenceFn
-    this.configSchema = configSchema
   }
 
-  /**
-   * Resolves every block, expression, and function inside the SQL and returns the final query.
-   *
-   * Note: Compiling a query may take time in some cases, as some queries may contain expensive
-   * functions that need to be resolved at runtime.
-   */
-  async run(): Promise<ConversationMetadata<typeof this.configSchema>> {
+  async run(): Promise<ConversationMetadata> {
     const fragment = parse(this.rawText)
-    const config = readConfig<typeof this.configSchema>(fragment)
+    const config = readConfig(fragment)
     const scopeContext = {
       usedUndefinedVariables: new Set<string>(),
       definedVariables: new Set<string>(),
@@ -76,9 +67,6 @@ export class ReadMetadata {
       hash: hashValue,
       parameters: scopeContext.usedUndefinedVariables,
       referencedPrompts: new Set(Object.keys(this.referencedPrompts)),
-      schemaValidation: this.configSchema
-        ? validateConfig(config as object, this.configSchema as object)
-        : undefined,
       config,
     }
   }

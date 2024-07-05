@@ -56,12 +56,6 @@ export class Compile {
     this.initialScope = new Scope(parameters)
   }
 
-  /**
-   * Resolves every block, expression, and function inside the SQL and returns the final query.
-   *
-   * Note: Compiling a query may take time in some cases, as some queries may contain expensive
-   * functions that need to be resolved at runtime.
-   */
   async run(): Promise<Conversation> {
     const conversation = await this.runWithoutGrouping()
     this.groupAccumulatedContentAsMessage()

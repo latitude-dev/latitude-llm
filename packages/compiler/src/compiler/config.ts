@@ -1,27 +1,11 @@
-import { Fragment } from '$/parser/interfaces'
-import Ajv from 'ajv'
-import type { ErrorObject, JTDDataType } from 'ajv/dist/core'
+import type { Fragment } from '$/parser/interfaces'
+import type { Config } from '$/types'
 
-export function readConfig<ConfigSchema>(
-  fragment: Fragment,
-): JTDDataType<ConfigSchema> {
+export function readConfig(fragment: Fragment): Config {
   for (const node of fragment.children) {
     if (node.type === 'Config') {
-      return node.value as JTDDataType<ConfigSchema>
+      return node.value
     }
   }
-  return {} as JTDDataType<ConfigSchema>
-}
-
-export function validateConfig(
-  config: object,
-  schema: object,
-): true | ErrorObject[] {
-  const ajv = new Ajv()
-  type Config = JTDDataType<typeof schema>
-
-  const validate = ajv.compile<Config>(schema)
-  const valid = validate(config)
-  if (valid) return true
-  return validate.errors!
+  return {}
 }
