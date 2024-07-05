@@ -1,9 +1,12 @@
+import { UNARY_OPERATOR_METHODS } from '$/compiler/logic/operators'
+import type {
+  ResolveNodeProps,
+  UpdateScopeContextProps,
+} from '$/compiler/logic/types'
+import errors from '$/error/errors'
 import type { UnaryExpression } from 'estree'
 
 import { resolveLogicNode, updateScopeContextForNode } from '..'
-import errors from '../../../error/errors'
-import { UNARY_OPERATOR_METHODS } from '../operators'
-import type { ResolveNodeProps, UpdateScopeContextProps } from '../types'
 
 /**
  * ### UnaryExpression

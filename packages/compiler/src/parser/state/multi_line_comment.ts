@@ -1,5 +1,7 @@
+import PARSER_ERRORS from '$/error/errors'
+import type { Comment } from '$/parser/interfaces'
+
 import { Parser } from '..'
-import PARSER_ERRORS from '../../error/errors'
 
 export function multiLineComment(parser: Parser) {
   if (parser.match('*/')) {
@@ -24,7 +26,7 @@ export function multiLineComment(parser: Parser) {
     type: 'Comment',
     raw: data,
     data: data.substring(2, data.length - 2),
-  }
+  } as Comment
 
   parser.current().children!.push(node)
 }

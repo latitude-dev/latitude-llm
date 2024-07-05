@@ -1,7 +1,7 @@
+import PARSER_ERRORS from '$/error/errors'
+import { Parser } from '$/parser'
+import type { Config } from '$/parser/interfaces'
 import yaml from 'yaml'
-
-import { Parser } from '..'
-import PARSER_ERRORS from '../../error/errors'
 
 export function config(parser: Parser) {
   const start = parser.index
@@ -26,7 +26,7 @@ export function config(parser: Parser) {
     type: 'Config',
     raw: data,
     value: parsedData,
-  }
+  } as Config
 
   parser.current().children!.push(node)
 }

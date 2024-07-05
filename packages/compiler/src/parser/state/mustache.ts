@@ -1,9 +1,14 @@
-import { type Parser } from '..'
-import { CUSTOM_TAG_END, CUSTOM_TAG_START } from '../../constants'
-import PARSER_ERRORS from '../../error/errors'
-import { type TemplateNode } from '../interfaces'
-import readContext from '../read/context'
-import readExpression from '../read/expression'
+import { CUSTOM_TAG_END, CUSTOM_TAG_START } from '$/constants'
+import PARSER_ERRORS from '$/error/errors'
+import { type Parser } from '$/parser'
+import type {
+  BaseNode,
+  EachBlock,
+  ElseBlock,
+  IfBlock,
+} from '$/parser/interfaces'
+import readContext from '$/parser/read/context'
+import readExpression from '$/parser/read/expression'
 
 export function mustache(parser: Parser) {
   if (parser.match(CUSTOM_TAG_END)) {
@@ -14,7 +19,7 @@ export function mustache(parser: Parser) {
   parser.allowWhitespace()
   // {{/if}}, {{/each}}, {{/await}} or {{/key}}
   if (parser.eat('/')) {
-    let block = parser.current()
+    let block = parser.current() as BaseNode
     let expected: string
     if (block.type === 'ElseBlock') {
       block.end = start
@@ -80,9 +85,9 @@ export function mustache(parser: Parser) {
             expression,
             children: [],
           },
-        ],
-      }
-      parser.stack.push(block.else.children[0])
+        ] as BaseNode[],
+      } as ElseBlock
+      parser.stack.push(block.else.children![0])
     } else {
       // :else
       const block = parser.current()
@@ -115,7 +120,7 @@ export function mustache(parser: Parser) {
     const type = isIf ? 'IfBlock' : 'EachBlock'
     parser.requireWhitespace()
     const expression = readExpression(parser)
-    const block: TemplateNode = {
+    const block: BaseNode = {
       start,
       end: start,
       type,
@@ -144,7 +149,7 @@ export function mustache(parser: Parser) {
       }
     }
     parser.eat(CUSTOM_TAG_END, true)
-    parser.current().children!.push(block)
+    parser.current().children!.push(block as EachBlock | IfBlock)
     parser.stack.push(block)
   } else {
     const expression = readExpression(parser)
@@ -160,7 +165,7 @@ export function mustache(parser: Parser) {
 }
 
 function trimWhitespace(
-  block: TemplateNode,
+  block: BaseNode,
   trimBefore: boolean = false,
   trimAfter: boolean = false,
 ) {
@@ -183,7 +188,7 @@ function trimWhitespace(
   }
 }
 
-function toString(node: TemplateNode) {
+function toString(node: BaseNode) {
   switch (node.type) {
     case 'IfBlock':
       return `${CUSTOM_TAG_START}#if${CUSTOM_TAG_END} block`

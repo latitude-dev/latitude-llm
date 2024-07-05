@@ -28,7 +28,8 @@ export type MessageContent = TextContent | ImageContent
 
 export type ToolCall = {
   id: string
-  data: Record<string, unknown>
+  name: string
+  arguments: Record<string, unknown>
 }
 
 interface IMessage {

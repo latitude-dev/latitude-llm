@@ -1,8 +1,8 @@
-import { describe, expect, it, vi } from 'vitest'
+import { CUSTOM_TAG_END, CUSTOM_TAG_START } from '$/constants'
+import CompileError from '$/error/error'
+import { describe, expect, it } from 'vitest'
 
 import { readMetadata } from '.'
-import { CUSTOM_TAG_END, CUSTOM_TAG_START } from '../constants'
-import CompileError from '../error/error'
 import { removeCommonIndent } from './utils'
 
 const getExpectedError = async <T>(

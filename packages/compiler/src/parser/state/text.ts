@@ -1,5 +1,6 @@
-import { type Parser } from '..'
-import { CUSTOM_TAG_START } from '../../constants'
+import { CUSTOM_TAG_START } from '$/constants'
+import { type Parser } from '$/parser'
+import type { Text } from '$/parser/interfaces'
 
 const ENDS_WITH_ESCAPE_REGEX = /(?<!\\)(\\\\)*\\$/
 const RESERVED_DELIMITERS = [CUSTOM_TAG_START, '/*', '<']
@@ -33,7 +34,7 @@ export function text(parser: Parser) {
     type: 'Text',
     raw: data,
     data: data.replace(/(?<!\\)\\{{/g, '{{').replace(/(?<!\\)\\}}/g, '}}'),
-  }
+  } as Text
 
   parser.current().children!.push(node)
 }

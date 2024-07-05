@@ -22,8 +22,8 @@ export default class Scope {
   private globalStash: unknown[] = [] // Stash of every variable value in the global scope
   private localPointers: Record<string, number> = {} // Index of every variable in the stash in the current scope
 
-  constructor(globalScope: Record<string, unknown> = {}) {
-    for (const [key, value] of Object.entries(globalScope)) {
+  constructor(initialState: Record<string, unknown> = {}) {
+    for (const [key, value] of Object.entries(initialState)) {
       this.localPointers[key] = this.addToStash(value)
     }
   }

@@ -1,7 +1,9 @@
+import { resolveLogicNode, updateScopeContextForNode } from '$/compiler/logic'
+import type {
+  ResolveNodeProps,
+  UpdateScopeContextProps,
+} from '$/compiler/logic/types'
 import type { SequenceExpression } from 'estree'
-
-import { resolveLogicNode, updateScopeContextForNode } from '..'
-import type { ResolveNodeProps, UpdateScopeContextProps } from '../types'
 
 /**
  * ### SequenceExpression

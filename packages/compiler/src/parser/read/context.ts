@@ -1,17 +1,17 @@
-import { isIdentifierStart } from 'acorn'
-import { Pattern } from 'estree'
-
-import { Parser } from '..'
-import type CompileError from '../../error/error'
-import PARSER_ERRORS from '../../error/errors'
-import { parseExpressionAt } from '../utils/acorn'
+import type CompileError from '$/error/error'
+import PARSER_ERRORS from '$/error/errors'
+import { parseExpressionAt } from '$/parser/utils/acorn'
 import {
   getBracketClose,
   isBracketClose,
   isBracketOpen,
   isBracketPair,
-} from '../utils/bracket'
-import fullCharCodeAt from '../utils/full_char_code_at'
+} from '$/parser/utils/bracket'
+import fullCharCodeAt from '$/parser/utils/full_char_code_at'
+import { isIdentifierStart } from 'acorn'
+import { Pattern } from 'estree'
+
+import { Parser } from '..'
 
 export default function readContext(
   parser: Parser,

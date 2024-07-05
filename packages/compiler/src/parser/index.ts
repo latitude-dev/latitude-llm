@@ -1,10 +1,10 @@
+import type CompileError from '$/error/error'
+import { error } from '$/error/error'
+import PARSER_ERRORS from '$/error/errors'
+import { reserved } from '$/utils/names'
 import { isIdentifierChar, isIdentifierStart } from 'acorn'
 
-import type CompileError from '../error/error'
-import { error } from '../error/error'
-import PARSER_ERRORS from '../error/errors'
-import { reserved } from '../utils/names'
-import { type Fragment, type TemplateNode } from './interfaces'
+import type { BaseNode, Fragment } from './interfaces'
 import fragment from './state/fragment'
 import fullCharCodeAt from './utils/full_char_code_at'
 
@@ -17,7 +17,7 @@ type AutoClosedTag = { tag: string; reason: string; depth: number }
 
 export class Parser {
   index: number = 0
-  stack: TemplateNode[] = []
+  stack: BaseNode[] = []
   lastAutoClosedTag: AutoClosedTag | null = null
 
   constructor(public template: string) {}
@@ -65,7 +65,7 @@ export class Parser {
     return template
   }
 
-  current(): TemplateNode {
+  current(): BaseNode {
     return this.stack[this.stack.length - 1]!
   }
 

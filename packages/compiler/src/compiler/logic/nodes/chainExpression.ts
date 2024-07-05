@@ -1,7 +1,10 @@
+import type {
+  ResolveNodeProps,
+  UpdateScopeContextProps,
+} from '$/compiler/logic/types'
 import type { ChainExpression } from 'estree'
 
 import { resolveLogicNode, updateScopeContextForNode } from '..'
-import type { ResolveNodeProps, UpdateScopeContextProps } from '../types'
 
 /**
  * ### Chain Expression

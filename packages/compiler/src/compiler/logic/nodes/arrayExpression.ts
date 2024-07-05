@@ -1,9 +1,11 @@
+import { resolveLogicNode, updateScopeContextForNode } from '$/compiler/logic'
+import type {
+  ResolveNodeProps,
+  UpdateScopeContextProps,
+} from '$/compiler/logic/types'
+import { isIterable } from '$/compiler/utils'
+import errors from '$/error/errors'
 import type { ArrayExpression } from 'estree'
-
-import { resolveLogicNode, updateScopeContextForNode } from '..'
-import errors from '../../../error/errors'
-import { isIterable } from '../../utils'
-import type { ResolveNodeProps, UpdateScopeContextProps } from '../types'
 
 /**
  * ### ArrayExpression

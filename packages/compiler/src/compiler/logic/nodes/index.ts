@@ -1,6 +1,10 @@
+import {
+  NodeType,
+  ResolveNodeProps,
+  UpdateScopeContextProps,
+} from '$/compiler/logic/types'
 import { Node } from 'estree'
 
-import { NodeType, ResolveNodeProps, UpdateScopeContextProps } from '../types'
 import {
   resolve as resolveArrayExpression,
   updateScopeContext as updateArrayScopeContext,

@@ -1,10 +1,10 @@
-import { type Parser } from '..'
-import { CUSTOM_TAG_END, CUSTOM_TAG_START } from '../../constants'
-import CompileError from '../../error/error'
-import PARSER_ERRORS from '../../error/errors'
-import { Attribute, ElementTag, TemplateNode, Text } from '../interfaces'
-import read_expression from '../read/expression'
-import { decode_character_references } from '../utils/html'
+import { CUSTOM_TAG_END, CUSTOM_TAG_START } from '$/constants'
+import CompileError from '$/error/error'
+import PARSER_ERRORS from '$/error/errors'
+import { type Parser } from '$/parser'
+import { Attribute, ElementTag, TemplateNode, Text } from '$/parser/interfaces'
+import read_expression from '$/parser/read/expression'
+import { decode_character_references } from '$/parser/utils/html'
 
 const validTagName = /^\!?[a-zA-Z]{1,}:?[a-zA-Z0-9\-]*/
 

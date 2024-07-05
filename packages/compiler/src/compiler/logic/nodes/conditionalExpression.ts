@@ -1,7 +1,10 @@
+import type {
+  ResolveNodeProps,
+  UpdateScopeContextProps,
+} from '$/compiler/logic/types'
 import type { ConditionalExpression } from 'estree'
 
 import { resolveLogicNode, updateScopeContextForNode } from '..'
-import type { ResolveNodeProps, UpdateScopeContextProps } from '../types'
 
 /**
  * ### ConditionalExpression
