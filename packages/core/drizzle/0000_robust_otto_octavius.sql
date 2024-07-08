@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS "latitude"."accounts" (
 	"userId" text NOT NULL,
 	"type" text NOT NULL,
 	"provider" text NOT NULL,
-	"providerAccountId" text NOT NULL,
+	"provider_account_id" text NOT NULL,
 	"refresh_token" text,
 	"access_token" text,
 	"expires_at" integer,
@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS "latitude"."accounts" (
 	"session_state" text,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
-	CONSTRAINT "accounts_provider_providerAccountId_pk" PRIMARY KEY("provider","providerAccountId")
+	CONSTRAINT "accounts_provider_provider_account_id_pk" PRIMARY KEY("provider","provider_account_id")
 );
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "latitude"."api_keys" (
@@ -74,7 +74,7 @@ CREATE TABLE IF NOT EXISTS "latitude"."prompt_versions" (
 );
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "latitude"."sessions" (
-	"sessionToken" text PRIMARY KEY NOT NULL,
+	"session_token" text PRIMARY KEY NOT NULL,
 	"userId" text NOT NULL,
 	"expires" timestamp NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
@@ -85,10 +85,12 @@ CREATE TABLE IF NOT EXISTS "latitude"."users" (
 	"id" text PRIMARY KEY NOT NULL,
 	"name" text,
 	"email" text NOT NULL,
-	"emailVerified" timestamp,
+	"email_verified" timestamp,
 	"image" text,
+	"encrypted_password" text NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
-	"updated_at" timestamp DEFAULT now() NOT NULL
+	"updated_at" timestamp DEFAULT now() NOT NULL,
+	CONSTRAINT "users_email_unique" UNIQUE("email")
 );
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "latitude"."workspaces" (

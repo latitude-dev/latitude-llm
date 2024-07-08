@@ -9,9 +9,10 @@ export const users = latitudeSchema.table('users', {
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
   name: text('name'),
-  email: text('email').notNull(),
-  emailVerified: timestamp('emailVerified', { mode: 'date' }),
+  email: text('email').notNull().unique(),
+  emailVerified: timestamp('email_verified', { mode: 'date' }),
   image: text('image'),
+  encryptedPassword: text('encrypted_password').notNull(),
   ...timestamps(),
 })
 
