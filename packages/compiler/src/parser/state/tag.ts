@@ -6,7 +6,7 @@ import { Attribute, ElementTag, TemplateNode, Text } from '$/parser/interfaces'
 import read_expression from '$/parser/read/expression'
 import { decode_character_references } from '$/parser/utils/html'
 
-const validTagName = /^\!?[a-zA-Z]{1,}:?[a-zA-Z0-9\-]*/
+const validTagName = /^!?[a-zA-Z]{1,}:?[a-zA-Z0-9-]*/
 
 /** Invalid attribute characters if the attribute is not surrounded by quotes */
 const regexStartsWithInvalidAttrValue = /^(\/>|[\s"'=<>`])/

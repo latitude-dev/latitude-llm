@@ -10,7 +10,8 @@
     ],
     "baseUrl": "./",
     "paths": {
-      "$/*": ["src/*"]
+      "$/*": ["src/*"],
+      "acorn": ["node_modules/@latitude-data/typescript-config/types/acorn"]
     }
   },
   "include": ["src/**/*"],
