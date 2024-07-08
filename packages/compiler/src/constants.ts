@@ -10,4 +10,4 @@ export const REFERENCE_PROMPT_TAG = 'ref' as const
 export const REFERENCE_PROMPT_ATTR = 'prompt' as const
 
 // <tool_call id="…" name="…">{ content }</tool_call>
-export const TOOL_CALL_TAG = 'tool_call' as const
+export const TOOL_CALL_TAG = 'tool-call' as const
