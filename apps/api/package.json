@@ -31,8 +31,8 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
-    "@latitude-data/eslint-config": "^0.1.0",
-    "@latitude-data/typescript-config": "workspace:^",
+    "@latitude-data/eslint-config": "workspace:*",
+    "@latitude-data/typescript-config": "workspace:*",
     "@types/cookie-parser": "^1.4.7",
     "@types/express": "^4.17.21",
     "@types/find": "^0.2.4",

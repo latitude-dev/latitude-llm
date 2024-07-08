@@ -1,6 +1,7 @@
 {
   "name": "@latitude-data/compiler",
   "version": "0.0.1",
+  "author": "Latitude Data",
   "license": "LGPL",
   "description": "Compiler for Latitude's custom conversation language",
   "type": "module",
@@ -13,6 +14,21 @@
     "lint": "eslint . --max-warnings 0 --ext .ts src",
     "tc": "tsc --noEmit"
   },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "dependencies": {
+    "acorn": "^8.9.0",
+    "code-red": "^1.0.3",
+    "locate-character": "^3.0.0",
+    "yaml": "^2.4.5"
+  },
+  "dependencies": {
+    "acorn": "^8.9.0",
+    "ajv": "^8.16.0",
+    "code-red": "^1.0.3",
+    "locate-character": "^3.0.0",
+    "yaml": "^2.4.5"
+  },
   "devDependencies": {
     "@latitude-data/eslint-config": "workspace:*",
     "@latitude-data/typescript-config": "workspace:*",
@@ -23,15 +39,5 @@
     "typescript": "^5.2.2",
     "vite-tsconfig-paths": "^4.3.2",
     "vitest": "^1.2.2"
-  },
-  "dependencies": {
-    "acorn": "^8.9.0",
-    "ajv": "^8.16.0",
-    "code-red": "^1.0.3",
-    "locate-character": "^3.0.0",
-    "yaml": "^2.4.5"
-  },
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
-  "author": "Latitude Data"
+  }
 }

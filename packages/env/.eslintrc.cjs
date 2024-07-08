@@ -4,9 +4,4 @@ module.exports = {
   env: {
     node: true,
   },
-  plugins: ['drizzle'],
-  rules: {
-    'drizzle/enforce-delete-with-where': 'error',
-    'drizzle/enforce-update-with-where': 'error',
-  },
 }

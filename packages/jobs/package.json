@@ -1,0 +1,32 @@
+{
+  "name": "@latitude-data/jobs",
+  "version": "0.0.1",
+  "description": "Latitude jobs from Latitude llm",
+  "main": "./src/index.ts",
+  "scripts": {
+    "dev": "tsx watch ./src/server.ts",
+    "build:prod": "rollup -c",
+    "start": "node ./dist/server.js",
+    "lint": "eslint . --max-warnings 0 --ext .ts src",
+    "tc": "tsc --noEmit",
+    "prettier": "prettier --write src/**/*.ts"
+  },
+  "dependencies": {
+    "@latitude-data/env": "workspace:*",
+    "bullmq": "^5.8.3",
+    "ioredis": "^5.4.1",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@latitude-data/eslint-config": "workspace:*",
+    "@latitude-data/typescript-config": "workspace:*",
+    "@rollup/plugin-alias": "^5.1.0",
+    "@rollup/plugin-commonjs": "^25.0.7",
+    "@rollup/plugin-typescript": "^11.1.6",
+    "@types/node": "^20",
+    "prettier": "^3.2.5",
+    "rollup": "^4.18.0",
+    "rollup-plugin-dts": "^6.1.0",
+    "tsx": "^4.16.0"
+  }
+}

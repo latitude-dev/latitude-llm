@@ -13,7 +13,7 @@
     "lib": ["es2022", "DOM", "DOM.Iterable", "esnext.asynciterable"],
     "moduleDetection": "force",
     "module": "ESNext",
-    "moduleResolution": "NodeNext",
+    "moduleResolution": "node",
     "noUncheckedIndexedAccess": true,
     "noFallthroughCasesInSwitch": true,
     "resolveJsonModule": true,

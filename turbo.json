@@ -1,11 +1,15 @@
 {
   "globalEnv": [
     "NODE_ENV",
+    "BUILDING_CONTAINER",
     "LATITUDE_API_KEY",
     "DATABASE_URL",
     "ELASTIC_URL",
     "ELASTIC_USERNAME",
-    "ELASTIC_PASSWORD"
+    "ELASTIC_PASSWORD",
+    "REDIS_HOST",
+    "REDIS_PORT",
+    "REDIS_PASSWORD"
   ],
   "$schema": "https://turbo.build/schema.json",
   "globalDependencies": ["**/.env.*local"],

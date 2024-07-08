@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": "NODE_ENV='production' next build",
     "start": "next start",
     "lint": "next lint",
     "tc": "tsc --noEmit",
@@ -18,10 +18,11 @@
     "@elastic/elasticsearch": "^8.14.0",
     "@latitude-data/core": "workspace:*",
     "@latitude-data/env": "workspace:^",
+    "@latitude-data/jobs": "workspace:*",
     "@t3-oss/env-nextjs": "^0.10.1",
-    "next": "15.0.0-rc.0",
-    "react": "19.0.0-rc-f994737d14-20240522",
-    "react-dom": "19.0.0-rc-f994737d14-20240522",
+    "next": "^14.2.4",
+    "react": "18.3.0",
+    "react-dom": "18.3.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
@@ -29,8 +30,8 @@
     "@latitude-data/typescript-config": "workspace:*",
     "@next/eslint-plugin-next": "^14.2.4",
     "@types/node": "^20",
-    "@types/react": "^18",
-    "@types/react-dom": "^18",
+    "@types/react": "18.3.0",
+    "@types/react-dom": "18.3.0",
     "eslint": "^8",
     "typescript": "^5"
   }
