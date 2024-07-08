@@ -6,9 +6,11 @@
     "moduleResolution": "Bundler",
     "jsx": "preserve",
     "typeRoots": ["./node_modules/@types"],
+    "baseUrl": ".",
     "paths": {
       "$/*": ["./src/*"],
-      "$core/*": ["../../packages/core/src/*"]
+      "$core/*": ["../../packages/core/src/*"],
+      "$jobs/*": ["../../packages/jobs/src/*"]
     }
   },
   "include": [

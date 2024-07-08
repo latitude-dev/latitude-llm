@@ -1,14 +1,25 @@
 {
   "name": "@latitude-data/env",
+  "author": "Latitude Data <hello@latitude.so>",
+  "license": "LGPL-3.0",
   "version": "0.0.1",
   "description": "Common envvars for latitude llm",
   "main": "index.ts",
-  "exports": {
-    ".": "./index.ts"
+  "scripts": {
+    "lint": "eslint . --max-warnings 0 --ext .ts src",
+    "tc": "tsc --noEmit",
+    "prettier": "prettier --write src/**/*.ts"
   },
-  "author": "Latitude Data <hello@latitude.so>",
-  "license": "LGPL-3.0",
+  "exports": {
+    ".": "./src/index.ts"
+  },
   "dependencies": {
     "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "@latitude-data/eslint-config": "workspace:*",
+    "@latitude-data/typescript-config": "workspace:*",
+    "prettier": "^3.2.5",
+    "typescript": "^5.2.2"
   }
 }

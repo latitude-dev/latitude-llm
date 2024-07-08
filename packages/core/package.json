@@ -7,17 +7,17 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "lint": "eslint . --max-warnings 0 --ext .ts src",
-    "tc": "tsc --noEmit",
-    "test:watch": "vitest",
-    "prettier": "prettier --write src/**/*.ts",
     "db:generate": "drizzle-kit generate",
     "db:generate:custom": "pnpm run db:generate --custom",
     "db:migrate": "drizzle-kit migrate --config=./drizzle.config.ts",
     "db:migrate:test": "NODE_ENV=test pnpm run db:migrate",
     "db:drop": "drizzle-kit drop",
     "db:check": "drizzle-kit check",
-    "db:studio": "drizzle-kit studio --host 0.0.0.0 --port 3002"
+    "db:studio": "drizzle-kit studio --host 0.0.0.0 --port 3002",
+    "lint": "eslint . --max-warnings 0 --ext .ts src",
+    "tc": "tsc --noEmit",
+    "test:watch": "vitest",
+    "prettier": "prettier --write src/**/*.ts"
   },
   "dependencies": {
     "@latitude-data/env": "workspace:^",
@@ -30,6 +30,7 @@
     "@latitude-data/typescript-config": "workspace:*",
     "@types/node": "^20",
     "@types/pg": "^8.11.6",
-    "drizzle-kit": "^0.22.8"
+    "drizzle-kit": "^0.22.8",
+    "eslint-plugin-drizzle": "^0.2.3"
   }
 }

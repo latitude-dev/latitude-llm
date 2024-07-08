@@ -15,6 +15,7 @@ services:
     volumes:
       - ./packages/env:/app/packages/env
       - ./packages/core:/app/packages/core
+      - ./packages/jobs:/app/packages/jobs
       - ./apps/web:/app/apps/web
     depends_on:
       - base
@@ -30,6 +31,7 @@ services:
     volumes:
       - ./packages/env:/app/packages/env
       - ./packages/core:/app/packages/core
+      - ./packages/jobs:/app/packages/jobs
       - ./apps/api:/app/apps/api
     depends_on:
       - base
@@ -68,3 +70,21 @@ services:
     volumes:
       - ./docker/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
       - ./docker/pgdata:/var/lib/postgresql/data
+
+  jobs:
+    build:
+      context: .
+      dockerfile: packages/jobs/docker/Dockerfile
+    volumes:
+      - ./packages/env:/app/packages/env
+      - ./packages/core:/app/packages/core
+      - ./packages/jobs:/app/packages/jobs
+    depends_on:
+      - db
+      - redis
+    command: pnpm dev
+
+  redis:
+    image: redis
+    ports:
+      - '6379:6379'
