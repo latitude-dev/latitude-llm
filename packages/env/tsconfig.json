@@ -1,8 +1,6 @@
 {
   "extends": "@latitude-data/typescript-config/base.json",
   "compilerOptions": {
-    "module": "ESNext",
-    "moduleResolution": "node",
     "rootDir": "./src"
   },
   "include": ["src/**/*"],

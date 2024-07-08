@@ -1,10 +1,11 @@
 {
   "name": "@latitude-data/api",
   "version": "0.0.1",
+  "type": "module",
   "scripts": {
     "build": "tsc --build tsconfig.prod.json --verbose",
-    "dev": "tsx watch src/index.ts",
-    "lint": "eslint --ext .ts src/",
+    "dev": "tsx watch src",
+    "lint": "eslint src/",
     "prettier": "prettier --write \"**/*.{ts,tsx,md}\"",
     "start": "node -r module-alias/register ./dist --env=production",
     "tc": "tsc --noEmit",
@@ -19,6 +20,7 @@
     "node": ">=20.0.0"
   },
   "dependencies": {
+    "@elastic/elasticsearch": "^8.14.0",
     "@latitude-data/env": "workspace:^",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
@@ -31,6 +33,8 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@eslint/eslintrc": "^3.1.0",
+    "@eslint/js": "^9.6.0",
     "@latitude-data/eslint-config": "workspace:*",
     "@latitude-data/typescript-config": "workspace:*",
     "@types/cookie-parser": "^1.4.7",
@@ -39,19 +43,18 @@
     "@types/fs-extra": "^11.0.4",
     "@types/jsonfile": "^6.1.4",
     "@types/morgan": "^1.9.9",
-    "@types/node": "^20.14.9",
+    "@types/node": "^20.14.10",
     "@types/supertest": "^6.0.2",
-    "@typescript-eslint/eslint-plugin": "^7.15.0",
-    "@typescript-eslint/parser": "^7.15.0",
-    "eslint": "^8.57.0",
+    "eslint": "^9.6.0",
     "eslint-plugin-node": "^11.1.0",
     "find": "^0.3.0",
     "fs-extra": "^11.2.0",
+    "globals": "^15.8.0",
     "jet-paths": "^1.0.6",
-    "prettier": "^3.2.5",
+    "prettier": "^3.3.2",
     "supertest": "^7.0.0",
     "tsconfig-paths": "^4.2.0",
-    "tsx": "^4.16.0",
+    "tsx": "^4.16.2",
     "typescript": "^5.5.3",
     "vite-tsconfig-paths": "^4.3.2",
     "vitest": "^1.6.0"

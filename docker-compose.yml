@@ -26,6 +26,7 @@ services:
     build:
       context: .
       dockerfile: apps/api/docker/Dockerfile
+      target: development
     ports:
       - '3001:3001'
     volumes:

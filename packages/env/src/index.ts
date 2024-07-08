@@ -7,8 +7,8 @@ const DIRNAME = path.dirname(fileURLToPath(import.meta.url))
 
 const env = process.env.NODE_ENV || 'development'
 
+// Don't write production .env files!
 if (env !== 'production') {
-  // Don't write production .env files!
   const url = path.join(DIRNAME, `./env/${env}.env`)
   const result = dotenv.config({
     path: url,
