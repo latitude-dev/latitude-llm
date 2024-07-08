@@ -11,6 +11,8 @@ import {
 
 import { latitudeSchema, PromptSnapshot, promptSnapshots } from '..'
 import { timestamps } from '../schemaHelpers'
+import { users } from './users'
+import { workspaces } from './workspaces'
 
 export const commits = latitudeSchema.table(
   'commits',
@@ -26,6 +28,12 @@ export const commits = latitudeSchema.table(
     ),
     title: varchar('title', { length: 256 }).notNull(),
     description: text('description'),
+    authorId: text('author_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    workspaceId: bigserial('workspace_id', { mode: 'bigint' })
+      .notNull()
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
     ...timestamps(),
   },
   (table) => ({
