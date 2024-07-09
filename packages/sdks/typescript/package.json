@@ -17,7 +17,6 @@
   "devDependencies": {
     "@latitude-data/typescript-config": "workspace:^",
     "@rollup/plugin-typescript": "^11.1.6",
-    "eslint": "^9.6.0",
     "openai": "^4.52.3",
     "prettier": "^3.2.5",
     "rollup": "^4.10.0",

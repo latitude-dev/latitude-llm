@@ -28,15 +28,11 @@
     "@latitude-data/env": "workspace:^"
   },
   "devDependencies": {
-    "@eslint/eslintrc": "^3.1.0",
-    "@eslint/js": "^9.6.0",
     "@latitude-data/eslint-config": "workspace:*",
     "@latitude-data/typescript-config": "workspace:*",
     "@types/node": "^20.14.10",
     "@types/pg": "^8.11.6",
     "drizzle-kit": "^0.22.8",
-    "eslint": "^9.6.0",
-    "eslint-plugin-drizzle": "^0.2.3",
-    "globals": "^15.8.0"
+    "eslint-plugin-drizzle": "^0.2.3"
   }
 }

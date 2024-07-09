@@ -33,8 +33,6 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
-    "@eslint/eslintrc": "^3.1.0",
-    "@eslint/js": "^9.6.0",
     "@latitude-data/eslint-config": "workspace:*",
     "@latitude-data/typescript-config": "workspace:*",
     "@types/cookie-parser": "^1.4.7",
@@ -45,11 +43,9 @@
     "@types/morgan": "^1.9.9",
     "@types/node": "^20.14.10",
     "@types/supertest": "^6.0.2",
-    "eslint": "^9.6.0",
     "eslint-plugin-node": "^11.1.0",
     "find": "^0.3.0",
     "fs-extra": "^11.2.0",
-    "globals": "^15.8.0",
     "jet-paths": "^1.0.6",
     "prettier": "^3.3.2",
     "supertest": "^7.0.0",

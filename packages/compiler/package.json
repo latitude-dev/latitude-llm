@@ -23,15 +23,11 @@
     "yaml": "^2.4.5"
   },
   "devDependencies": {
-    "@eslint/eslintrc": "^3.1.0",
-    "@eslint/js": "^9.6.0",
     "@latitude-data/eslint-config": "workspace:*",
     "@latitude-data/typescript-config": "workspace:*",
     "@rollup/plugin-typescript": "^11.1.6",
     "@types/estree": "^1.0.1",
     "@types/node": "^20.12.12",
-    "eslint": "^9.6.0",
-    "globals": "^15.8.0",
     "rollup": "^4.10.0",
     "typescript": "^5.2.2",
     "vite-tsconfig-paths": "^4.3.2",
