@@ -1,0 +1,39 @@
+{
+  "name": "@latitude-data/web-ui",
+  "version": "0.0.1",
+  "description": "Latitude web ui elements",
+  "private": true,
+  "scripts": {
+    "lint": "eslint ./src",
+    "tc": "tsc --noEmit",
+    "prettier": "prettier --write src/**/*.ts"
+  },
+  "main": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./styles.css": "./styles.css",
+    "./tailwind.config.js": "./tailwind.config.js"
+  },
+  "files": ["src", "styles.css", "tailwind.config.js"],
+  "dependencies": {
+    "@radix-ui/react-slot": "^1.1.0",
+    "class-variance-authority": "^0.7.0",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.403.0",
+    "tailwind-merge": "^2.4.0",
+    "tailwindcss-animate": "^1.0.7"
+  },
+  "peerDependencies": {
+    "react": "18.3.0",
+    "react-dom": "18.3.0"
+  },
+  "devDependencies": {
+    "@latitude-data/eslint-config": "workspace:*",
+    "@latitude-data/typescript-config": "workspace:*",
+    "@types/react": "18.3.0",
+    "@types/react-dom": "18.3.0",
+    "autoprefixer": "^10.4.19",
+    "postcss": "^8.4.39",
+    "tailwindcss": "^3.4.4"
+  }
+}

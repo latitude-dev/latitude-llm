@@ -17,6 +17,7 @@ services:
       - ./packages/env:/app/packages/env
       - ./packages/core:/app/packages/core
       - ./packages/jobs:/app/packages/jobs
+      - ./packages/web-ui:/app/packages/web-ui
       - ./apps/web:/app/apps/web
     depends_on:
       - base

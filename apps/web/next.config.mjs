@@ -5,7 +5,7 @@ const currentFileURL = import.meta.url
 const __filename = fileURLToPath(currentFileURL)
 const __dirname = path.dirname(__filename)
 
-const PACKAGES = ['env', 'core', 'jobs']
+const PACKAGES = ['env', 'core', 'jobs', 'web-ui']
 const PACKAGE_NAMES = PACKAGES.map((pkg) => `@latitude-data/${pkg}`)
 const EXTERNAL_PACKAGES = [
   'zod',
