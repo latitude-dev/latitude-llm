@@ -7,6 +7,7 @@ export type ConnectionParams = {
 }
 export function buildConnection({ host, port, password }: ConnectionParams) {
   console.log('🔥 Connecting to Redis', host, port)
+
   return new IORedis(port, host, {
     password: password ? password : undefined,
     enableOfflineQueue: false,

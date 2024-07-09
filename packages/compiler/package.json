@@ -18,7 +18,6 @@
   "types": "dist/index.d.ts",
   "dependencies": {
     "acorn": "^8.9.0",
-    "ajv": "^8.16.0",
     "code-red": "^1.0.3",
     "locate-character": "^3.0.0",
     "yaml": "^2.4.5"

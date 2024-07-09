@@ -4,6 +4,7 @@ import { Job, Processor } from 'bullmq'
 
 type ExampleResult = { job: Job; patata: string }
 const processor: Processor<ExampleJobData, ExampleResult> = async (job) => {
+  console.log('JOB received', job.id, job.data)
   const { patata } = job.data
 
   await new Promise((resolve) => setTimeout(resolve, 5000))
