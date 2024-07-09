@@ -1,0 +1,26 @@
+{
+  "name": "latitude-sdk",
+  "version": "0.0.1",
+  "description": "Latitude SDK for Typescript",
+  "main": "src/index.ts",
+  "exports": {
+    ".": "dist/index.js"
+  },
+  "author": "Latitude Data SL",
+  "license": "LGPL-3.0",
+  "scripts": {
+    "tc": "tsc --noEmit",
+    "lint": "eslint --ext .ts src/",
+    "prettier": "prettier --write \"**/*.{ts,tsx,md}\"",
+    "build": "rollup -c ./rollup.config.mjs"
+  },
+  "devDependencies": {
+    "@latitude-data/typescript-config": "workspace:^",
+    "@rollup/plugin-typescript": "^11.1.6",
+    "eslint": "^9.6.0",
+    "openai": "^4.52.3",
+    "prettier": "^3.2.5",
+    "rollup": "^4.10.0",
+    "rollup-plugin-dts": "^6.1.1"
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "extends": "@latitude-data/typescript-config/base",
+  "compilerOptions": {
+    "module": "NodeNext"
+  }
+}

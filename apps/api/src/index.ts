@@ -1,5 +1,3 @@
-import '@latitude-data/env'
-
 import EnvVars from '@src/common/EnvVars'
 
 import server from './server'

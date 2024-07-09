@@ -6,7 +6,7 @@
   "description": "Common envvars for latitude llm",
   "main": "index.ts",
   "scripts": {
-    "lint": "eslint . --max-warnings 0 --ext .ts src",
+    "lint": "eslint src",
     "tc": "tsc --noEmit",
     "prettier": "prettier --write src/**/*.ts"
   },
@@ -17,9 +17,13 @@
     "dotenv": "^16.4.5"
   },
   "devDependencies": {
+    "@eslint/eslintrc": "^3.1.0",
+    "@eslint/js": "^9.6.0",
     "@latitude-data/eslint-config": "workspace:*",
     "@latitude-data/typescript-config": "workspace:*",
-    "prettier": "^3.2.5",
+    "eslint": "^9.6.0",
+    "globals": "^15.8.0",
+    "prettier": "^3.3.2",
     "typescript": "^5.2.2"
   }
 }

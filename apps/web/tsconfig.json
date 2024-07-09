@@ -2,7 +2,6 @@
   "extends": "@latitude-data/typescript-config/base.json",
   "compilerOptions": {
     "plugins": [{ "name": "next" }],
-    "module": "ESNext",
     "moduleResolution": "Bundler",
     "jsx": "preserve",
     "typeRoots": ["./node_modules/@types"],

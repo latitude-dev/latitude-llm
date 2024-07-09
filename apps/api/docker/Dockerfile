@@ -1,29 +1,29 @@
 FROM latitudedata/base AS installer
 
-ARG NODE_ENV=development
-
 RUN turbo prune @latitude-data/api --docker
 
-FROM installer AS runner
+FROM installer AS builder
 
 COPY .gitignore .gitignore
 COPY --from=installer /app/out/full .
 
 WORKDIR /app/apps/api
 
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    if [ "$NODE_ENV" = "production" ]; then \
-        pnpm install --prod --frozen-lockfile; \
-    else \
-        pnpm install; \
-    fi
+FROM builder AS production
 
-RUN if [ "$NODE_ENV" = "production" ]; then \
-        pnpm build; \
-    fi
+ENV NODE_ENV production
 
-ENV NODE_ENV $NODE_ENV
+RUN  pnpm install --prod --frozen-lockfile
+RUN pnpm build
+
+CMD pnpm start
+
+FROM builder AS development
+
+ENV NODE_ENV development
+
+RUN pnpm install
 
 EXPOSE 3000
 
-CMD pnpm start
+CMD pnpm dev
