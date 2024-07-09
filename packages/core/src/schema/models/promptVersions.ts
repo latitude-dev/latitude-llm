@@ -1,4 +1,3 @@
-import { InferSelectModel, relations } from 'drizzle-orm'
 import {
   bigint,
   bigserial,
@@ -25,12 +24,3 @@ export const promptVersions = latitudeSchema.table('prompt_versions', {
     .references(() => commits.id),
   ...timestamps(),
 })
-
-export const promptVersionRelations = relations(promptVersions, ({ one }) => ({
-  commit: one(commits, {
-    fields: [promptVersions.commitId],
-    references: [commits.id],
-  }),
-}))
-
-export type PromptVersion = InferSelectModel<typeof promptVersions>

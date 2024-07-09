@@ -1,14 +1,9 @@
-import { InferSelectModel, relations } from 'drizzle-orm'
 import { AnyPgColumn, bigint, bigserial, index } from 'drizzle-orm/pg-core'
 
-import {
-  Commit,
-  commits,
-  latitudeSchema,
-  PromptVersion,
-  promptVersions,
-} from '..'
+import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
+import { commits } from './commits'
+import { promptVersions } from './promptVersions'
 
 export const promptSnapshots = latitudeSchema.table(
   'prompt_snapshots',
@@ -31,23 +26,3 @@ export const promptSnapshots = latitudeSchema.table(
     ),
   }),
 )
-
-export const promptSnapshotsRelations = relations(
-  promptSnapshots,
-  ({ one }) => ({
-    commit: one(commits, {
-      relationName: 'snapshots',
-      fields: [promptSnapshots.commitId],
-      references: [commits.id],
-    }),
-    version: one(promptVersions, {
-      fields: [promptSnapshots.promptVersionId],
-      references: [promptVersions.id],
-    }),
-  }),
-)
-
-export type PromptSnapshot = InferSelectModel<typeof promptSnapshots> & {
-  commit: Commit
-  version: PromptVersion
-}

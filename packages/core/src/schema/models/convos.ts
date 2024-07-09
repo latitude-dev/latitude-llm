@@ -3,7 +3,8 @@ import { bigint, bigserial, index, jsonb, uuid } from 'drizzle-orm/pg-core'
 
 import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
-import { PromptVersion, promptVersions } from './promptVersions'
+import { promptVersions } from './promptVersions'
+import { PromptVersion } from './types'
 
 export const convos = latitudeSchema.table(
   'convos',

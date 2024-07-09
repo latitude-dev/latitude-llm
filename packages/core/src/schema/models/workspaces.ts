@@ -1,7 +1,7 @@
 import { InferSelectModel, relations } from 'drizzle-orm'
 import { bigserial, text, varchar } from 'drizzle-orm/pg-core'
 
-import { latitudeSchema } from '..'
+import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
 import { users, type User } from './users'
 

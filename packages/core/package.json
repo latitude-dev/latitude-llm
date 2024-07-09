@@ -15,24 +15,30 @@
     "db:drop": "drizzle-kit drop",
     "db:check": "drizzle-kit check",
     "db:studio": "drizzle-kit studio --host 0.0.0.0 --port 3002",
+    "build": "rollup -c",
     "lint": "eslint src",
     "tc": "tsc --noEmit",
     "test:watch": "vitest",
     "prettier": "prettier --write src/**/*.ts"
   },
   "dependencies": {
-    "zod": "^3.23.8",
+    "@latitude-data/env": "workspace:^",
     "drizzle-orm": "^0.31.2",
     "next-auth": "5.0.0-beta.19",
     "pg": "^8.12.0",
-    "@latitude-data/env": "workspace:^"
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@latitude-data/eslint-config": "workspace:*",
     "@latitude-data/typescript-config": "workspace:*",
+    "@rollup/plugin-alias": "^5.1.0",
+    "@rollup/plugin-commonjs": "^25.0.8",
+    "@rollup/plugin-typescript": "^11.1.6",
     "@types/node": "^20.14.10",
     "@types/pg": "^8.11.6",
     "drizzle-kit": "^0.22.8",
-    "eslint-plugin-drizzle": "^0.2.3"
+    "eslint-plugin-drizzle": "^0.2.3",
+    "rollup": "^4.18.1",
+    "rollup-plugin-dts": "^6.1.0"
   }
 }

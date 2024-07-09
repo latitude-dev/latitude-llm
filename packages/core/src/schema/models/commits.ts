@@ -1,4 +1,4 @@
-import { InferSelectModel, relations, sql } from 'drizzle-orm'
+import { sql } from 'drizzle-orm'
 import {
   AnyPgColumn,
   bigint,
@@ -9,7 +9,7 @@ import {
   varchar,
 } from 'drizzle-orm/pg-core'
 
-import { latitudeSchema, PromptSnapshot, promptSnapshots } from '..'
+import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
 import { users } from './users'
 import { workspaces } from './workspaces'
@@ -40,11 +40,3 @@ export const commits = latitudeSchema.table(
     nextCommitIdx: index('commit_next_commit_idx').on(table.nextCommitId),
   }),
 )
-
-export const commitRelations = relations(commits, ({ many }) => ({
-  snapshots: many(promptSnapshots, { relationName: 'snapshots' }),
-}))
-
-export type Commit = InferSelectModel<typeof commits> & {
-  snapshots: PromptSnapshot[]
-}

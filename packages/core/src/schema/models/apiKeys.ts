@@ -8,7 +8,7 @@ import {
   varchar,
 } from 'drizzle-orm/pg-core'
 
-import { latitudeSchema } from '..'
+import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
 import { workspaces } from './workspaces'
 

@@ -1,10 +1,12 @@
 import { InferSelectModel } from 'drizzle-orm'
 import { integer, primaryKey, text } from 'drizzle-orm/pg-core'
-import type { AdapterAccountType } from 'next-auth/adapters'
 
-import { latitudeSchema } from '..'
+import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
 import { users } from './users'
+
+// NOTE: next-auth/adapters does not export AdapterAccountType
+enum AdapterAccountType {}
 
 export const accounts = latitudeSchema.table(
   'accounts',
