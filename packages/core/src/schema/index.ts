@@ -8,7 +8,7 @@ export {
   promptSnapshots,
   promptSnapshotsRelations,
   type PromptSnapshot,
-} from './models/promptSnaptshots'
+} from './models/promptSnapshots'
 export { commits, commitRelations, type Commit } from './models/commits'
 export { convos, convoRelations, type Convo } from './models/convos'
 export { users, type User } from './models/users'

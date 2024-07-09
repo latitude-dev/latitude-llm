@@ -9,14 +9,14 @@ FROM installer AS runner
 COPY .gitignore .gitignore
 COPY --from=installer /app/out/full .
 
+WORKDIR /app/apps/api
+
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     if [ "$NODE_ENV" = "production" ]; then \
         pnpm install --prod --frozen-lockfile; \
     else \
         pnpm install; \
     fi
-
-WORKDIR /app/apps/api
 
 RUN if [ "$NODE_ENV" = "production" ]; then \
         pnpm build; \

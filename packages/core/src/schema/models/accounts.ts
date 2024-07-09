@@ -14,7 +14,7 @@ export const accounts = latitudeSchema.table(
       .references(() => users.id, { onDelete: 'cascade' }),
     type: text('type').$type<AdapterAccountType>().notNull(),
     provider: text('provider').notNull(),
-    providerAccountId: text('providerAccountId').notNull(),
+    providerAccountId: text('provider_account_id').notNull(),
     refresh_token: text('refresh_token'),
     access_token: text('access_token'),
     expires_at: integer('expires_at'),

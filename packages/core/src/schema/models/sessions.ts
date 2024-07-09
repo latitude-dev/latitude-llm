@@ -6,7 +6,7 @@ import { timestamps } from '../schemaHelpers'
 import { users } from './users'
 
 export const sessions = latitudeSchema.table('sessions', {
-  sessionToken: text('sessionToken').primaryKey(),
+  sessionToken: text('session_token').primaryKey(),
   userId: text('userId')
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
