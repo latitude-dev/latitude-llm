@@ -1,5 +1,6 @@
-import { lucia } from '$/lib/auth'
 import type { Session, User } from 'lucia'
+
+import { lucia } from '.'
 
 export async function getSession(): Promise<
   { user: User; session: Session } | { user: null; session: null }

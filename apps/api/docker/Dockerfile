@@ -1,13 +1,14 @@
-FROM latitudedata/base AS installer
+FROM latitudedata/base AS base
 
+WORKDIR /app
 COPY . . 
 
 RUN turbo prune @latitude-data/api --docker
 
-FROM installer AS builder
+FROM base AS builder
 
 COPY .gitignore .gitignore
-COPY --from=installer /app/out/full .
+COPY --from=base /app/out/full .
 
 WORKDIR /app/apps/api
 

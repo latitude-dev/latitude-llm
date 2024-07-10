@@ -1,10 +1,11 @@
-import { Database } from '$core/client'
-import { ConflictError } from '$core/lib/errors'
-import { ErrorResult, Result, TypedResult } from '$core/lib/Result'
+import { database, Database } from '$core/client'
 import * as schema from '$core/schema'
 import type { ExtractTablesWithRelations } from 'drizzle-orm'
 import { PgQueryResultHKT, PgTransaction } from 'drizzle-orm/pg-core'
 import { DatabaseError } from 'pg'
+
+import { ConflictError } from './errors'
+import { ErrorResult, Result, TypedResult } from './Result'
 
 export type DBSchema = typeof schema
 export type ITransaction<T extends DBSchema = DBSchema> = PgTransaction<
@@ -21,15 +22,15 @@ const DB_ERROR_CODES = {
 
 export default class Transaction {
   public static async call<ResultType>(
-    db: Database,
     callback: (trx: Database) => PromisedResult<ResultType>,
+    db = database,
   ): PromisedResult<ResultType> {
-    return new Transaction().call(db, callback)
+    return new Transaction().call(callback, db)
   }
 
   public async call<ResultType>(
-    db: Database,
     callback: (trx: Database) => PromisedResult<ResultType>,
+    db = database,
   ): PromisedResult<ResultType> {
     try {
       let result: TypedResult<ResultType, Error>

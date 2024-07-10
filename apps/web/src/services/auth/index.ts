@@ -1,9 +1,8 @@
-import { sessions, users } from '@latitude-data/core'
+import { database, sessions, users } from '@latitude-data/core'
 import { DrizzlePostgreSQLAdapter } from '@lucia-auth/adapter-drizzle'
-import db from '$/db/database'
 import { Lucia } from 'lucia'
 
-const adapter = new DrizzlePostgreSQLAdapter(db, sessions, users)
+const adapter = new DrizzlePostgreSQLAdapter(database, sessions, users)
 
 interface DatabaseUserAttributes {
   email: string

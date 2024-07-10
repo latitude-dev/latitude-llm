@@ -9,29 +9,30 @@ import {
   varchar,
 } from 'drizzle-orm/pg-core'
 
-import { latitudeSchema, PromptSnapshot, promptSnapshots } from '..'
+import {
+  DocumentSnapshot,
+  documentSnapshots,
+  latitudeSchema,
+  Workspace,
+  workspaces,
+} from '..'
 import { timestamps } from '../schemaHelpers'
-import { users } from './users'
-import { workspaces } from './workspaces'
 
 export const commits = latitudeSchema.table(
   'commits',
   {
-    id: bigserial('id', { mode: 'bigint' }).notNull().primaryKey(),
+    id: bigserial('id', { mode: 'number' }).notNull().primaryKey(),
     uuid: uuid('uuid')
       .notNull()
       .unique()
       .default(sql`gen_random_uuid()`),
-    nextCommitId: bigint('next_commit_id', { mode: 'bigint' }).references(
+    nextCommitId: bigint('next_commit_id', { mode: 'number' }).references(
       (): AnyPgColumn => commits.id,
       { onDelete: 'restrict' },
     ),
-    title: varchar('title', { length: 256 }).notNull(),
+    title: varchar('title', { length: 256 }),
     description: text('description'),
-    authorId: text('author_id')
-      .notNull()
-      .references(() => users.id, { onDelete: 'cascade' }),
-    workspaceId: bigserial('workspace_id', { mode: 'bigint' })
+    workspaceId: bigint('workspace_id', { mode: 'number' })
       .notNull()
       .references(() => workspaces.id, { onDelete: 'cascade' }),
     ...timestamps(),
@@ -41,10 +42,12 @@ export const commits = latitudeSchema.table(
   }),
 )
 
-export const commitRelations = relations(commits, ({ many }) => ({
-  snapshots: many(promptSnapshots, { relationName: 'snapshots' }),
+export const commitRelations = relations(commits, ({ one, many }) => ({
+  snapshots: many(documentSnapshots, { relationName: 'snapshots' }),
+  workspace: one(workspaces),
 }))
 
 export type Commit = InferSelectModel<typeof commits> & {
-  snapshots: PromptSnapshot[]
+  snapshots: DocumentSnapshot[]
+  workspace: Workspace
 }

@@ -27,15 +27,16 @@
     "bullmq": "^5.8.5",
     "ioredis": "^5.4.1",
     "lucia": "^3.2.0",
-    "bcrypt": "^5.1.1",
     "next": "^14.3.0-canary.87",
     "react": "19.0.0-rc-378b305958-20240710",
     "react-dom": "19.0.0-rc-378b305958-20240710",
+    "swr": "^2.2.5",
     "zod": "^3.23.8",
     "zsa": "^0.5.0",
     "zsa-react": "^0.2.2"
   },
   "devDependencies": {
+    "@faker-js/faker": "^8.4.1",
     "@latitude-data/eslint-config": "workspace:*",
     "@latitude-data/typescript-config": "workspace:*",
     "@next/eslint-plugin-next": "^14.2.4",

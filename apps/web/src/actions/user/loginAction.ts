@@ -1,9 +1,8 @@
 'use server'
 
 import { getUserFromCredentials } from '$/data-access'
-import db from '$/db/database'
-import { setSession } from '$/lib/auth/setSession'
-import { ROUTES } from '$/lib/routes'
+import { setSession } from '$/services/auth/setSession'
+import { ROUTES } from '$/services/routes'
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
 import { createServerAction } from 'zsa'
@@ -17,7 +16,7 @@ export const loginAction = createServerAction()
     { type: 'formData' },
   )
   .handler(async ({ input }) => {
-    const result = await getUserFromCredentials(input, { db })
+    const result = await getUserFromCredentials(input)
     const sessionData = result.unwrap()
 
     setSession({ sessionData })

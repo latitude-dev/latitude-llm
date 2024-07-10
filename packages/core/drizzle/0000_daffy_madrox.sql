@@ -1,5 +1,11 @@
 CREATE SCHEMA "latitude";
 --> statement-breakpoint
+DO $$ BEGIN
+ CREATE TYPE "public"."document_type" AS ENUM('document', 'folder');
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "latitude"."api_keys" (
 	"id" bigserial PRIMARY KEY NOT NULL,
 	"uuid" uuid NOT NULL,
@@ -15,23 +21,43 @@ CREATE TABLE IF NOT EXISTS "latitude"."commits" (
 	"id" bigserial PRIMARY KEY NOT NULL,
 	"uuid" uuid DEFAULT gen_random_uuid() NOT NULL,
 	"next_commit_id" bigint,
-	"title" varchar(256) NOT NULL,
+	"title" varchar(256),
 	"description" text,
-	"author_id" text NOT NULL,
-	"workspace_id" bigserial NOT NULL,
+	"workspace_id" bigint NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "commits_uuid_unique" UNIQUE("uuid")
 );
 --> statement-breakpoint
-CREATE TABLE IF NOT EXISTS "latitude"."convos" (
+CREATE TABLE IF NOT EXISTS "latitude"."document_hierarchies" (
 	"id" bigserial PRIMARY KEY NOT NULL,
-	"uuid" uuid DEFAULT gen_random_uuid() NOT NULL,
-	"content" jsonb,
-	"prompt_version_id" bigint NOT NULL,
+	"parent_id" bigint,
+	"depth" integer NOT NULL,
+	"child_id" bigint NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL,
-	"updated_at" timestamp DEFAULT now() NOT NULL,
-	CONSTRAINT "convos_uuid_unique" UNIQUE("uuid")
+	"updated_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "latitude"."document_snapshots" (
+	"id" bigserial PRIMARY KEY NOT NULL,
+	"commit_id" bigint NOT NULL,
+	"document_version_id" bigint NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
+);
+--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS "latitude"."document_versions" (
+	"id" bigserial PRIMARY KEY NOT NULL,
+	"name" varchar NOT NULL,
+	"document_type" "document_type" DEFAULT 'document' NOT NULL,
+	"content" text,
+	"hash" varchar,
+	"deleted_at" timestamp,
+	"document_uuid" uuid DEFAULT gen_random_uuid() NOT NULL,
+	"parent_id" bigint,
+	"commit_id" bigint NOT NULL,
+	"created_at" timestamp DEFAULT now() NOT NULL,
+	"updated_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "latitude"."memberships" (
@@ -40,28 +66,6 @@ CREATE TABLE IF NOT EXISTS "latitude"."memberships" (
 	"created_at" timestamp DEFAULT now() NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
 	CONSTRAINT "memberships_workspace_id_user_id_pk" PRIMARY KEY("workspace_id","user_id")
-);
---> statement-breakpoint
-CREATE TABLE IF NOT EXISTS "latitude"."prompt_snapshots" (
-	"id" bigserial PRIMARY KEY NOT NULL,
-	"commit_id" bigint NOT NULL,
-	"prompt_version_id" bigint NOT NULL,
-	"created_at" timestamp DEFAULT now() NOT NULL,
-	"updated_at" timestamp DEFAULT now() NOT NULL
-);
---> statement-breakpoint
-CREATE TABLE IF NOT EXISTS "latitude"."prompt_versions" (
-	"id" bigserial PRIMARY KEY NOT NULL,
-	"prompt_uuid" uuid NOT NULL,
-	"name" varchar NOT NULL,
-	"path" varchar NOT NULL,
-	"content" text NOT NULL,
-	"hash" varchar NOT NULL,
-	"deleted_at" timestamp,
-	"commit_id" bigint NOT NULL,
-	"created_at" timestamp DEFAULT now() NOT NULL,
-	"updated_at" timestamp DEFAULT now() NOT NULL,
-	CONSTRAINT "prompt_versions_path_unique" UNIQUE("path")
 );
 --> statement-breakpoint
 CREATE TABLE IF NOT EXISTS "latitude"."sessions" (
@@ -103,19 +107,31 @@ EXCEPTION
 END $$;
 --> statement-breakpoint
 DO $$ BEGIN
- ALTER TABLE "latitude"."commits" ADD CONSTRAINT "commits_author_id_users_id_fk" FOREIGN KEY ("author_id") REFERENCES "latitude"."users"("id") ON DELETE cascade ON UPDATE no action;
-EXCEPTION
- WHEN duplicate_object THEN null;
-END $$;
---> statement-breakpoint
-DO $$ BEGIN
  ALTER TABLE "latitude"."commits" ADD CONSTRAINT "commits_workspace_id_workspaces_id_fk" FOREIGN KEY ("workspace_id") REFERENCES "latitude"."workspaces"("id") ON DELETE cascade ON UPDATE no action;
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
 --> statement-breakpoint
 DO $$ BEGIN
- ALTER TABLE "latitude"."convos" ADD CONSTRAINT "convos_prompt_version_id_prompt_versions_id_fk" FOREIGN KEY ("prompt_version_id") REFERENCES "latitude"."prompt_versions"("id") ON DELETE cascade ON UPDATE no action;
+ ALTER TABLE "latitude"."document_snapshots" ADD CONSTRAINT "document_snapshots_commit_id_commits_id_fk" FOREIGN KEY ("commit_id") REFERENCES "latitude"."commits"("id") ON DELETE restrict ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "latitude"."document_snapshots" ADD CONSTRAINT "document_snapshots_document_version_id_document_versions_id_fk" FOREIGN KEY ("document_version_id") REFERENCES "latitude"."document_versions"("id") ON DELETE restrict ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "latitude"."document_versions" ADD CONSTRAINT "document_versions_parent_id_document_versions_id_fk" FOREIGN KEY ("parent_id") REFERENCES "latitude"."document_versions"("id") ON DELETE cascade ON UPDATE no action;
+EXCEPTION
+ WHEN duplicate_object THEN null;
+END $$;
+--> statement-breakpoint
+DO $$ BEGIN
+ ALTER TABLE "latitude"."document_versions" ADD CONSTRAINT "document_versions_commit_id_commits_id_fk" FOREIGN KEY ("commit_id") REFERENCES "latitude"."commits"("id") ON DELETE no action ON UPDATE no action;
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
@@ -133,25 +149,7 @@ EXCEPTION
 END $$;
 --> statement-breakpoint
 DO $$ BEGIN
- ALTER TABLE "latitude"."prompt_snapshots" ADD CONSTRAINT "prompt_snapshots_commit_id_commits_id_fk" FOREIGN KEY ("commit_id") REFERENCES "latitude"."commits"("id") ON DELETE restrict ON UPDATE no action;
-EXCEPTION
- WHEN duplicate_object THEN null;
-END $$;
---> statement-breakpoint
-DO $$ BEGIN
- ALTER TABLE "latitude"."prompt_snapshots" ADD CONSTRAINT "prompt_snapshots_prompt_version_id_prompt_versions_id_fk" FOREIGN KEY ("prompt_version_id") REFERENCES "latitude"."prompt_versions"("id") ON DELETE restrict ON UPDATE no action;
-EXCEPTION
- WHEN duplicate_object THEN null;
-END $$;
---> statement-breakpoint
-DO $$ BEGIN
- ALTER TABLE "latitude"."prompt_versions" ADD CONSTRAINT "prompt_versions_commit_id_commits_id_fk" FOREIGN KEY ("commit_id") REFERENCES "latitude"."commits"("id") ON DELETE no action ON UPDATE no action;
-EXCEPTION
- WHEN duplicate_object THEN null;
-END $$;
---> statement-breakpoint
-DO $$ BEGIN
- ALTER TABLE "latitude"."sessions" ADD CONSTRAINT "sessions_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "latitude"."users"("id") ON DELETE no action ON UPDATE no action;
+ ALTER TABLE "latitude"."sessions" ADD CONSTRAINT "sessions_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "latitude"."users"("id") ON DELETE cascade ON UPDATE no action;
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;
@@ -164,6 +162,5 @@ END $$;
 --> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "workspace_id_idx" ON "latitude"."api_keys" USING btree ("workspace_id");--> statement-breakpoint
 CREATE INDEX IF NOT EXISTS "commit_next_commit_idx" ON "latitude"."commits" USING btree ("next_commit_id");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "convo_prompt_version_idx" ON "latitude"."convos" USING btree ("prompt_version_id");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "prompt_commit_idx" ON "latitude"."prompt_snapshots" USING btree ("commit_id");--> statement-breakpoint
-CREATE INDEX IF NOT EXISTS "prompt_snapshot_prompt_version_idx" ON "latitude"."prompt_snapshots" USING btree ("prompt_version_id");
+CREATE INDEX IF NOT EXISTS "prompt_commit_idx" ON "latitude"."document_snapshots" USING btree ("commit_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "document_snapshot_document_version_idx" ON "latitude"."document_snapshots" USING btree ("document_version_id");
