@@ -16,6 +16,7 @@
     "@latitude-data/core": "workspace:*",
     "@latitude-data/eslint-config": "workspace:*",
     "@latitude-data/typescript-config": "workspace:*",
+    "@types/pg": "8.11.6",
     "eslint": "^9.6.0",
     "globals": "^15.8.0",
     "prettier": "^3.3.2",
@@ -25,5 +26,9 @@
   "packageManager": "pnpm@8.15.6",
   "engines": {
     "node": ">=20"
+  },
+  "dependencies": {
+    "drizzle-orm": "0.31.4",
+    "pg": "8.12.0"
   }
 }

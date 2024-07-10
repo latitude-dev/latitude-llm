@@ -1,4 +1,6 @@
-export { buildDatabaseClient } from './client'
+export * from './client'
 export * from './data-access'
 export * from './constants'
 export * from './schema'
+export * from './services'
+export * from './lib'

@@ -23,6 +23,7 @@ FROM installer AS dev-runner
 
 WORKDIR /app/apps/web
 ENV NODE_ENV=development
+ENV NEXT_TELEMETRY_DISABLED=1
 CMD pnpm dev
 
 # PRODUCTION stage
@@ -56,6 +57,7 @@ COPY --from=prod-builder --chown=nextjs:nodejs /app/apps/web/public ./apps/web/p
 ARG PORT=3000
 ENV PORT $PORT
 ENV NODE_ENV=production
+ENV NEXT_TELEMETRY_DISABLED=1
 EXPOSE 3000
 
 CMD HOSTNAME="0.0.0.0" node apps/web/server.js -p $PORT

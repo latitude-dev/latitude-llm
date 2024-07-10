@@ -1,7 +1,7 @@
-import { InferSelectModel } from 'drizzle-orm'
-import { text, timestamp } from 'drizzle-orm/pg-core'
+import { InferSelectModel, relations } from 'drizzle-orm'
+import { text } from 'drizzle-orm/pg-core'
 
-import { latitudeSchema } from '..'
+import { latitudeSchema, memberships, sessions } from '../index'
 import { timestamps } from '../schemaHelpers'
 
 export const users = latitudeSchema.table('users', {
@@ -10,10 +10,15 @@ export const users = latitudeSchema.table('users', {
     .$defaultFn(() => crypto.randomUUID()),
   name: text('name'),
   email: text('email').notNull().unique(),
-  emailVerified: timestamp('email_verified', { mode: 'date' }),
-  image: text('image'),
   encryptedPassword: text('encrypted_password').notNull(),
   ...timestamps(),
 })
 
 export type User = InferSelectModel<typeof users>
+
+export const userRelations = relations(users, ({ many }) => ({
+  sessions: many(sessions),
+  memberships: many(memberships),
+}))
+
+export type SafeUser = Pick<User, 'id' | 'name' | 'email'>

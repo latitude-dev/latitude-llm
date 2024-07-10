@@ -36,7 +36,7 @@ export class ErrorResult<E extends Error> {
 
 export type TypedResult<V, E extends Error> = Ok<V> | ErrorResult<E>
 
-export default class Result {
+export class Result {
   private constructor() {}
 
   public static ok<V>(value: V): Ok<V> {

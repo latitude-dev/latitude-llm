@@ -1,23 +1,20 @@
 import { InferSelectModel, relations } from 'drizzle-orm'
 import { bigserial, text, varchar } from 'drizzle-orm/pg-core'
 
-import { latitudeSchema } from '..'
+import { latitudeSchema, memberships, users } from '..'
 import { timestamps } from '../schemaHelpers'
-import { users, type User } from './users'
 
 export const workspaces = latitudeSchema.table('workspaces', {
   id: bigserial('id', { mode: 'bigint' }).notNull().primaryKey(),
   name: varchar('name', { length: 256 }).notNull(),
-  creatorId: text('creator_id')
-    .notNull()
-    .references(() => users.id, { onDelete: 'restrict' }),
+  creatorId: text('creator_id').references(() => users.id, {
+    onDelete: 'set null',
+  }),
   ...timestamps(),
 })
 
-export const members = relations(workspaces, ({ many }) => ({
-  members: many(users, { relationName: 'members' }),
+export const workspaceRelations = relations(workspaces, ({ many }) => ({
+  memberships: many(memberships),
 }))
 
-export type Workspace = InferSelectModel<typeof workspaces> & {
-  members: User[]
-}
+export type Workspace = InferSelectModel<typeof workspaces>

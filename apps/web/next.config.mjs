@@ -7,12 +7,13 @@ const __dirname = path.dirname(__filename)
 
 const PACKAGES = ['env', 'core', 'jobs', 'web-ui']
 const PACKAGE_NAMES = PACKAGES.map((pkg) => `@latitude-data/${pkg}`)
+const INTERNAL_PACKAGES = Object.values(PACKAGE_NAMES)
 const EXTERNAL_PACKAGES = [
   'zod',
   'drizzle-orm',
-  'next-auth',
   'pg',
   'bullmq',
+  'bcrypt',
   'ioredis',
 ]
 
@@ -26,7 +27,7 @@ function buildAlias({ localPackages }) {
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
-  transpilePackages: Object.values(PACKAGE_NAMES),
+  transpilePackages: INTERNAL_PACKAGES,
   experimental: {
     outputFileTracingRoot: path.join(__filename, '../../'),
   },
@@ -43,10 +44,7 @@ const nextConfig = {
       ...buildAlias({ localPackages: PACKAGES }),
     }
 
-    config.externals = [
-      ...config.externals,
-      ...EXTERNAL_PACKAGES
-    ]
+    config.externals = [...config.externals, ...EXTERNAL_PACKAGES]
 
     return config
   },

@@ -10,7 +10,7 @@ export function buildDatabaseClient({
   connectionString,
 }: {
   connectionString: string
-}): Database {
+}) {
   const pool = new Pool({ connectionString })
   return drizzle(pool, { schema })
 }

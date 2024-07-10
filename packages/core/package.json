@@ -21,17 +21,16 @@
     "prettier": "prettier --write src/**/*.ts"
   },
   "dependencies": {
-    "next-auth": "5.0.0-beta.19",
-    "zod": "^3.23.8",
-    "drizzle-orm": "^0.31.2",
-    "pg": "^8.12.0",
-    "@latitude-data/env": "workspace:^"
+    "drizzle-orm": "0.31.4",
+    "@latitude-data/env": "workspace:^",
+    "bcrypt": "^5.1.1",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@latitude-data/eslint-config": "workspace:*",
     "@latitude-data/typescript-config": "workspace:*",
+    "@types/bcrypt": "^5.0.2",
     "@types/node": "^20.14.10",
-    "@types/pg": "^8.11.6",
     "drizzle-kit": "^0.22.8",
     "eslint-plugin-drizzle": "^0.2.3"
   }

@@ -51,6 +51,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
     size,
     fullWidth = false,
     asChild = false,
+    isLoading,
     children,
     ...props
   },
@@ -59,6 +60,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
   const Comp = asChild ? Slot : 'button'
   return (
     <Comp
+      disabled={isLoading}
       className={cn(buttonVariants({ variant, size, className }), {
         'w-full': fullWidth,
       })}

@@ -69,7 +69,7 @@ export type FormFieldProps = Omit<
   children: ReactNode
   label?: string
   description?: string | ReactNode
-  errors?: string[] | null
+  errors?: string[] | null | undefined
 }
 function FormField({
   children,

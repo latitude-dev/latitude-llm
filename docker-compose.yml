@@ -13,6 +13,10 @@ services:
       dockerfile: apps/web/docker/Dockerfile
     ports:
       - '3000:3000'
+
+        # Expose the Node.js debug port to the host.
+      - '9229:9229'
+      - '9230:9230'
     volumes:
       - ./packages/env:/app/packages/env
       - ./packages/core:/app/packages/core
