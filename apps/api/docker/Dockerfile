@@ -1,5 +1,7 @@
 FROM latitudedata/base AS installer
 
+COPY . . 
+
 RUN turbo prune @latitude-data/api --docker
 
 FROM installer AS builder
