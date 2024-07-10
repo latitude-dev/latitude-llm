@@ -1,5 +1,5 @@
 export class Ok<V> {
-  public readonly error = undefined
+  public readonly error: undefined = undefined
 
   constructor(public readonly value: V) {}
 
@@ -17,7 +17,7 @@ export class Ok<V> {
 }
 
 export class ErrorResult<E extends Error> {
-  public readonly value = undefined
+  public readonly value: undefined = undefined
 
   constructor(public readonly error: E) {}
 

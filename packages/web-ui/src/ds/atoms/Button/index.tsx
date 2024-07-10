@@ -5,7 +5,12 @@ import { Slot, Slottable } from '@radix-ui/react-slot'
 import { cn } from '$ui/lib/utils'
 
 const buttonVariants = cva(
-  'inline-flex items-center justify-center rounded-md text-sm font-sans font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background',
+  cn(
+    'inline-flex items-center justify-center rounded-md text-sm font-sans font-medium transition-colors',
+    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
+    'disabled:opacity-50 disabled:pointer-events-none ring-offset-background shadow-sm',
+    'shadow-[inset_0px_2px_2px_rgba(255,255,255,0.25),inset_0px_-1px_4px_rgba(0,0,0,0.04)]',
+  ),
   {
     variants: {
       variant: {
@@ -20,9 +25,7 @@ const buttonVariants = cva(
         link: 'underline-offset-4 hover:underline text-primary',
       },
       size: {
-        default: 'py-2 px-4',
-        sm: 'px-3 rounded-md',
-        lg: 'px-8 rounded-md',
+        default: 'py-1.5 px-3',
       },
     },
     defaultVariants: {

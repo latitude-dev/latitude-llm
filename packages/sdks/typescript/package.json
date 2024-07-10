@@ -10,11 +10,12 @@
   "license": "LGPL-3.0",
   "scripts": {
     "tc": "tsc --noEmit",
-    "lint": "eslint --ext .ts src/",
+    "lint": "eslint src",
     "prettier": "prettier --write \"**/*.{ts,tsx,md}\"",
     "build": "rollup -c ./rollup.config.mjs"
   },
   "devDependencies": {
+    "@latitude-data/eslint-config": "workspace:*",
     "@latitude-data/typescript-config": "workspace:^",
     "@rollup/plugin-typescript": "^11.1.6",
     "openai": "^4.52.3",
