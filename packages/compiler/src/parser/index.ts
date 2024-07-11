@@ -1,5 +1,4 @@
-import type CompileError from '$/error/error'
-import { error } from '$/error/error'
+import CompileError, { error } from '$/error/error'
 import PARSER_ERRORS from '$/error/errors'
 import { reserved } from '$/utils/names'
 import { isIdentifierChar, isIdentifierStart } from 'acorn'
@@ -19,17 +18,33 @@ export class Parser {
   index: number = 0
   stack: BaseNode[] = []
   lastAutoClosedTag: AutoClosedTag | null = null
+  fragment: Fragment
 
-  constructor(public template: string) {}
-
-  parse(): Fragment {
-    const template: Fragment = {
+  constructor(public template: string) {
+    this.fragment = {
       start: 0,
       end: this.template.length,
       type: 'Fragment',
       children: [],
     }
-    this.stack.push(template)
+  }
+
+  parse(): Fragment {
+    try {
+      return this._parse()
+    } catch (err) {
+      if (err instanceof CompileError) {
+        throw err
+      }
+      this.error({
+        code: 'parse-error',
+        message: 'Syntax error',
+      })
+    }
+  }
+
+  _parse(): Fragment {
+    this.stack.push(this.fragment)
 
     let state: ParserState = fragment
     while (this.index < this.template.length) {
@@ -51,18 +66,18 @@ export class Parser {
         message: `Unexpected end of input`,
       })
     }
-    if (template.children.length) {
-      let start = template.children[0]!.start!
-      while (/\s/.test(template[start])) start += 1
-      let end = template.children[template.children.length - 1]!.end!
-      while (/\s/.test(template[end - 1])) end -= 1
-      template.start = start
-      template.end = end
+    if (this.fragment.children.length) {
+      let start = this.fragment.children[0]!.start!
+      while (/\s/.test(this.fragment[start])) start += 1
+      let end = this.fragment.children[this.fragment.children.length - 1]!.end!
+      while (/\s/.test(this.fragment[end - 1])) end -= 1
+      this.fragment.start = start
+      this.fragment.end = end
     } else {
-      template.start = template.end = null
+      this.fragment.start = this.fragment.end = null
     }
 
-    return template
+    return this.fragment
   }
 
   current(): BaseNode {
@@ -121,6 +136,8 @@ export class Parser {
       code,
       source: this.template,
       start: index - 1,
+      end: this.template.length,
+      fragment: this.fragment,
     })
   }
 

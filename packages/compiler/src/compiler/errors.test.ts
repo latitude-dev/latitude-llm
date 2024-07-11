@@ -33,15 +33,19 @@ const expectBothErrors = async ({
       referenceFn,
     })
   }, `Expected compile to throw '${code}'`)
-  const metadataError = await getExpectedError(async () => {
-    await readMetadata({
-      prompt: removeCommonIndent(prompt),
-      referenceFn,
-    })
-  }, `Expected readMetadata to throw '${code}'`)
-
-  expect(compileError.code).toBe(metadataError.code)
   expect(compileError.code).toBe(code)
+
+  const metadata = await readMetadata({
+    prompt: removeCommonIndent(prompt),
+    referenceFn,
+  })
+  if (metadata.errors.length === 0) {
+    throw new Error(`Expected readMetadata to throw '${code}'`)
+  }
+  const metadataError = metadata.errors[0]!
+
+  expect(metadataError.code).toBe(code)
+  expect(compileError.code).toBe(metadataError.code)
 }
 
 describe(`all compilation errors that don't require value resolution are caught both in compile and readMetadata`, () => {

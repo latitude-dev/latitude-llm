@@ -1,3 +1,4 @@
+import { Fragment } from '$/parser/interfaces'
 import { locate } from 'locate-character'
 
 export interface Position {
@@ -11,6 +12,7 @@ type CompileErrorProps = {
   source: string
   start: number
   end?: number
+  fragment?: Fragment
 }
 
 export default class CompileError extends Error {
@@ -19,6 +21,7 @@ export default class CompileError extends Error {
   end?: Position
   pos?: number
   frame?: string
+  fragment?: Fragment
 
   toString() {
     if (!this.start) return this.message
@@ -74,5 +77,6 @@ export function error(message: string, props: CompileErrorProps): never {
     start?.column ?? 0,
     end?.column,
   )
+  error.fragment = props.fragment
   throw error
 }

@@ -5,19 +5,6 @@ import { describe, expect, it } from 'vitest'
 import { readMetadata } from '.'
 import { removeCommonIndent } from './utils'
 
-const getExpectedError = async <T>(
-  action: () => Promise<unknown>,
-  errorClass: new () => T,
-): Promise<T> => {
-  try {
-    await action()
-  } catch (err) {
-    expect(err).toBeInstanceOf(errorClass)
-    return err as T
-  }
-  throw new Error('Expected an error to be thrown')
-}
-
 describe('hash', async () => {
   it('always returns the same hash for the same prompt', async () => {
     const prompt = `
@@ -211,7 +198,7 @@ describe('referenced prompts', async () => {
 })
 
 describe('syntax errors', async () => {
-  it('throws CompileErrors when the prompt syntax is invalid', async () => {
+  it('returns CompileErrors when the prompt syntax is invalid', async () => {
     const prompt = `
       <user>
         <user>
@@ -219,13 +206,11 @@ describe('syntax errors', async () => {
       </user>
     `
 
-    const action = async () => {
-      await readMetadata({
-        prompt,
-      })
-    }
+    const metadata = await readMetadata({
+      prompt,
+    })
 
-    const error = await getExpectedError(action, CompileError)
-    expect(error).toBeTruthy()
+    expect(metadata.errors.length).toBe(1)
+    expect(metadata.errors[0]).toBeInstanceOf(CompileError)
   })
 })
