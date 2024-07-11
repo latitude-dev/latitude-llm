@@ -2,7 +2,7 @@ import {
   NodeType,
   ResolveNodeProps,
   UpdateScopeContextProps,
-} from '$/compiler/logic/types'
+} from '$compiler/compiler/logic/types'
 import { Node } from 'estree'
 
 import {

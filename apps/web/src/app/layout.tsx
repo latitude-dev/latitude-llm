@@ -1,19 +1,25 @@
 import { ReactNode } from 'react'
 
 import type { Metadata } from 'next'
-import localFont from 'next/font/local'
+import { IBM_Plex_Mono } from 'next/font/google'
 
 import '@latitude-data/web-ui/styles.css'
 
 import { ToastProvider } from '@latitude-data/web-ui'
 
-const fontSans = localFont({
-  src: '../assets/fonts/GeistVF.woff',
-  variable: '--font-geist-sans',
+const fontSans = IBM_Plex_Mono({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  style: ['normal'],
+  display: 'swap',
+  variable: '--font-sans',
 })
-const fontMono = localFont({
-  src: '../assets/fonts/GeistMonoVF.woff',
-  variable: '--font-geist-mono',
+const fontMono = IBM_Plex_Mono({
+  subsets: ['latin'],
+  weight: ['400', '500', '600', '700'],
+  style: ['normal'],
+  display: 'swap',
+  variable: '--font-mono',
 })
 
 export const metadata: Metadata = {
@@ -33,7 +39,7 @@ export default function RootLayout({
         <meta name='viewport' content='width=device-width, initial-scale=1' />
         <link rel='icon' href='/favicon.svg' />
       </head>
-      <body className={`${fontSans.variable} ${fontMono.variable}`}>
+      <body className={`${fontSans.variable} ${fontMono.variable} font-sans`}>
         {children}
         <ToastProvider duration={2500} />
       </body>

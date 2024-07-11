@@ -9,7 +9,8 @@
     "ELASTIC_PASSWORD",
     "REDIS_HOST",
     "REDIS_PORT",
-    "REDIS_PASSWORD"
+    "REDIS_PASSWORD",
+    "USE_LOCALHOST"
   ],
   "$schema": "https://turbo.build/schema.json",
   "globalDependencies": ["**/.env.*local"],

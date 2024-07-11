@@ -1,6 +1,6 @@
-import PARSER_ERRORS from '$/error/errors'
-import { Parser } from '$/parser'
-import type { Config } from '$/parser/interfaces'
+import PARSER_ERRORS from '$compiler/error/errors'
+import { Parser } from '$compiler/parser'
+import type { Config } from '$compiler/parser/interfaces'
 import yaml from 'yaml'
 
 export function config(parser: Parser) {

@@ -1,6 +1,6 @@
-import { CUSTOM_TAG_START } from '$/constants'
-import { type Parser } from '$/parser'
-import type { Text } from '$/parser/interfaces'
+import { CUSTOM_TAG_START } from '$compiler/constants'
+import { type Parser } from '$compiler/parser'
+import type { Text } from '$compiler/parser/interfaces'
 
 const ENDS_WITH_ESCAPE_REGEX = /(?<!\\)(\\\\)*\\$/
 const RESERVED_DELIMITERS = [CUSTOM_TAG_START, '/*', '<']

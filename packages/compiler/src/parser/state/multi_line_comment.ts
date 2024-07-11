@@ -1,5 +1,5 @@
-import PARSER_ERRORS from '$/error/errors'
-import type { Comment } from '$/parser/interfaces'
+import PARSER_ERRORS from '$compiler/error/errors'
+import type { Comment } from '$compiler/parser/interfaces'
 
 import { Parser } from '..'
 

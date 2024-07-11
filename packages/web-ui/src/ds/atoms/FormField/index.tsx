@@ -86,7 +86,7 @@ function FormField({
 
   return (
     <div
-      className={cn('space-y-2', className)}
+      className={cn('space-y-2 w-full', className)}
       aria-describedby={
         !error
           ? `${formDescriptionId}`

@@ -2,17 +2,17 @@ import {
   CUSTOM_MESSAGE_ROLE_ATTR,
   CUSTOM_MESSAGE_TAG,
   REFERENCE_PROMPT_ATTR,
-} from '$/constants'
-import CompileError, { error } from '$/error/error'
-import errors from '$/error/errors'
-import parse from '$/parser/index'
+} from '$compiler/constants'
+import CompileError, { error } from '$compiler/error/error'
+import errors from '$compiler/error/errors'
+import parse from '$compiler/parser/index'
 import type {
   BaseNode,
   ElementTag,
   MessageTag,
   TemplateNode,
   ToolCallTag,
-} from '$/parser/interfaces'
+} from '$compiler/parser/interfaces'
 import {
   AssistantMessage,
   ContentType,
@@ -24,7 +24,7 @@ import {
   ToolCall,
   ToolMessage,
   UserMessage,
-} from '$/types'
+} from '$compiler/types'
 import type { Node as LogicalExpression } from 'estree'
 
 import { readConfig } from './config'

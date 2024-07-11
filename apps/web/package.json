@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "dev:local": "USE_LOCALHOST=true pnpm run dev",
     "dev": "next dev",
     "dev:debug": "NODE_OPTIONS='--inspect=0.0.0.0:9229' ./node_modules/.bin/next dev",
     "build": "NODE_ENV='production' next build",
@@ -13,11 +14,14 @@
   },
   "dependencies": {
     "@elastic/elasticsearch": "^8.14.0",
+    "@latitude-data/compiler": "workspace:^",
     "@latitude-data/core": "workspace:*",
     "@latitude-data/env": "workspace:^",
     "@latitude-data/jobs": "workspace:*",
     "@latitude-data/web-ui": "workspace:*",
     "@lucia-auth/adapter-drizzle": "^1.0.7",
+    "@monaco-editor/react": "^4.6.0",
+    "monaco-editor": "^0.50.0",
     "@t3-oss/env-nextjs": "^0.10.1",
     "bcrypt": "^5.1.1",
     "bullmq": "^5.8.5",
