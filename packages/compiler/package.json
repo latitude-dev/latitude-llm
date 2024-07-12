@@ -25,10 +25,12 @@
   "devDependencies": {
     "@latitude-data/eslint-config": "workspace:*",
     "@latitude-data/typescript-config": "workspace:*",
+    "@rollup/plugin-alias": "^5.1.0",
     "@rollup/plugin-typescript": "^11.1.6",
     "@types/estree": "^1.0.1",
     "@types/node": "^20.12.12",
     "rollup": "^4.10.0",
+    "rollup-plugin-dts": "^6.1.1",
     "typescript": "^5.2.2",
     "vite-tsconfig-paths": "^4.3.2",
     "vitest": "^1.2.2"

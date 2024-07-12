@@ -18,19 +18,19 @@ export enum NodeType {
   ChainExpression = 'ChainExpression',
 }
 
-type RaiseErrorFn = (
+type RaiseErrorFn<T = void | never> = (
   { code, message }: { code: string; message: string },
   node: Node,
-) => never
+) => T
 
 export type ResolveNodeProps<N extends Node> = {
   node: N
   scope: Scope
-  raiseError: RaiseErrorFn
+  raiseError: RaiseErrorFn<never>
 }
 
 export type UpdateScopeContextProps<N extends Node> = {
   node: N
   scopeContext: ScopeContext
-  raiseError: RaiseErrorFn
+  raiseError: RaiseErrorFn<void>
 }

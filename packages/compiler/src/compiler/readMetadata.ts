@@ -12,10 +12,11 @@ import type {
   Attribute,
   BaseNode,
   ElementTag,
+  Fragment,
   TemplateNode,
   ToolCallTag,
 } from '$/parser/interfaces'
-import { ConversationMetadata, MessageRole } from '$/types'
+import { Config, ConversationMetadata, MessageRole } from '$/types'
 import { Node as LogicalExpression } from 'estree'
 
 import { ReferencePromptFn } from './compile'
@@ -37,6 +38,7 @@ export class ReadMetadata {
 
   private referencedPrompts: Record<string, string> = {}
   private accumulatedToolCalls: ToolCallTag[] = []
+  private errors: CompileError[] = []
 
   constructor({
     prompt,
@@ -51,18 +53,34 @@ export class ReadMetadata {
   }
 
   async run(): Promise<ConversationMetadata> {
-    const fragment = parse(this.rawText)
-    const config = readConfig(fragment)
     const scopeContext = {
       usedUndefinedVariables: new Set<string>(),
       definedVariables: new Set<string>(),
     }
+
+    let fragment: Fragment
+    let config: Config = {}
+
+    try {
+      fragment = parse(this.rawText)
+    } catch (e) {
+      const parseError = e as CompileError
+      if (parseError instanceof CompileError) {
+        this.errors.push(parseError)
+        fragment = parseError.fragment!
+      } else {
+        throw parseError
+      }
+    }
+
     await this.readBaseMetadata({
       node: fragment,
       scopeContext,
       isInsideMessageTag: false,
       isInsideContentTag: false,
     })
+
+    config = readConfig(fragment)
 
     const hash = createHash('sha256')
     hash.update(this.rawText)
@@ -76,6 +94,7 @@ export class ReadMetadata {
       parameters: scopeContext.usedUndefinedVariables,
       referencedPrompts: new Set(Object.keys(this.referencedPrompts)),
       config,
+      errors: this.errors,
     }
   }
 
@@ -119,6 +138,7 @@ export class ReadMetadata {
             errors.invalidStaticAttribute(name),
             value.find((node) => node.type === 'MustacheTag')!,
           )
+          continue
         }
       }
 
@@ -209,16 +229,18 @@ export class ReadMetadata {
       const contextVarName = node.context.name
       const indexVarName = node.index?.name
       if (scopeContext.definedVariables.has(contextVarName)) {
-        throw this.expressionError(
+        this.expressionError(
           errors.variableAlreadyDeclared(contextVarName),
           node.context,
         )
+        return
       }
       if (indexVarName && scopeContext.definedVariables.has(indexVarName)) {
-        throw this.expressionError(
+        this.expressionError(
           errors.variableAlreadyDeclared(indexVarName),
           node.index!,
         )
+        return
       }
 
       const iterableScope = copyScopeContext(scopeContext)
@@ -241,6 +263,7 @@ export class ReadMetadata {
       if (isToolCallTag(node)) {
         if (isInsideContentTag) {
           this.baseNodeError(errors.toolCallTagInsideContent, node)
+          return
         }
 
         const attributes = await this.listTagAttributes({
@@ -250,10 +273,12 @@ export class ReadMetadata {
 
         if (!attributes.has('id')) {
           this.baseNodeError(errors.toolCallTagWithoutId, node)
+          return
         }
 
         if (!attributes.has('name')) {
           this.baseNodeError(errors.toolCallWithoutName, node)
+          return
         }
 
         for await (const childNode of node.children ?? []) {
@@ -272,6 +297,7 @@ export class ReadMetadata {
       if (isContentTag(node)) {
         if (isInsideContentTag) {
           this.baseNodeError(errors.contentTagInsideContent, node)
+          return
         }
 
         for await (const childNode of node.children ?? []) {
@@ -288,6 +314,7 @@ export class ReadMetadata {
       if (isMessageTag(node)) {
         if (isInsideContentTag || isInsideMessageTag) {
           this.baseNodeError(errors.messageTagInsideMessage, node)
+          return
         }
 
         const attributes = await this.listTagAttributes({
@@ -299,17 +326,20 @@ export class ReadMetadata {
         if (node.name === CUSTOM_MESSAGE_TAG) {
           if (!attributes.has(CUSTOM_MESSAGE_ROLE_ATTR)) {
             this.baseNodeError(errors.messageTagWithoutRole, node)
+            return
           }
           attributes.delete(CUSTOM_MESSAGE_ROLE_ATTR)
         }
 
         if (role === MessageRole.tool && !attributes.has('id')) {
           this.baseNodeError(errors.toolMessageWithoutId, node)
+          return
         }
 
         if (this.accumulatedToolCalls.length > 0) {
           this.accumulatedToolCalls.forEach((toolCallNode) => {
             this.baseNodeError(errors.invalidToolCallPlacement, toolCallNode)
+            return
           })
         }
         this.accumulatedToolCalls = []
@@ -329,6 +359,7 @@ export class ReadMetadata {
         ) {
           this.accumulatedToolCalls.forEach((toolCallNode) => {
             this.baseNodeError(errors.invalidToolCallPlacement, toolCallNode)
+            return
           })
         }
         this.accumulatedToolCalls = []
@@ -338,10 +369,12 @@ export class ReadMetadata {
       if (isRefTag(node)) {
         if (isInsideMessageTag || isInsideContentTag) {
           this.baseNodeError(errors.invalidReferencePromptPlacement, node)
+          return
         }
 
         if (node.children?.length ?? 0 > 0) {
           this.baseNodeError(errors.referenceTagHasContent, node)
+          return
         }
 
         const attributes = await this.listTagAttributes({
@@ -352,10 +385,12 @@ export class ReadMetadata {
 
         if (!attributes.has(REFERENCE_PROMPT_ATTR)) {
           this.baseNodeError(errors.referenceTagWithoutPrompt, node)
+          return
         }
 
         if (!this.referenceFn) {
           this.baseNodeError(errors.missingReferenceFunction, node)
+          return
         }
 
         const refPromptAttribute = node.attributes.find(
@@ -387,13 +422,15 @@ export class ReadMetadata {
 
           this.referencedPrompts[refPromptPath] = refPromptMetadata.hash
         } catch (error: unknown) {
-          if (error instanceof CompileError) throw error
+          if (error instanceof CompileError) return
           this.baseNodeError(errors.referenceError(error), node)
+          return
         }
         return
       }
 
       this.baseNodeError(errors.unknownTag(node.name), node)
+      return
     }
 
     //@ts-ignore - Linter knows this should be unreachable. That's what this error is for.
@@ -403,20 +440,24 @@ export class ReadMetadata {
   private baseNodeError(
     { code, message }: { code: string; message: string },
     node: BaseNode,
-  ): never {
-    error(message, {
-      name: 'CompileError',
-      code,
-      source: this.rawText || '',
-      start: node.start || 0,
-      end: node.end || undefined,
-    })
+  ): void {
+    try {
+      error(message, {
+        name: 'CompileError',
+        code,
+        source: this.rawText || '',
+        start: node.start || 0,
+        end: node.end || undefined,
+      })
+    } catch (error) {
+      this.errors.push(error as CompileError)
+    }
   }
 
   private expressionError(
     { code, message }: { code: string; message: string },
     node: LogicalExpression,
-  ): never {
+  ): void {
     const source = (node.loc?.source ?? this.rawText)!.split('\n')
     const start =
       source
@@ -428,12 +469,16 @@ export class ReadMetadata {
         .slice(0, node.loc?.end.line! - 1)
         .reduce((acc, line) => acc + line.length + 1, 0) + node.loc?.end.column!
 
-    error(message, {
-      name: 'CompileError',
-      code,
-      source: this.rawText || '',
-      start,
-      end,
-    })
+    try {
+      error(message, {
+        name: 'CompileError',
+        code,
+        source: this.rawText || '',
+        start,
+        end,
+      })
+    } catch (error) {
+      this.errors.push(error as CompileError)
+    }
   }
 }
