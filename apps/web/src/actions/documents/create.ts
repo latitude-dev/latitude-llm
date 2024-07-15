@@ -3,22 +3,20 @@
 import { createDocumentVersion, DocumentType } from '@latitude-data/core'
 import { z } from 'zod'
 
-import { authProcedure } from '../procedures'
+import { withProject } from '../procedures'
 
-export const createDocumentVersionAction = authProcedure
+export const createDocumentVersionAction = withProject
   .createServerAction()
   .input(
     z.object({
-      commitUuid: z.string(),
-      documentType: z
-        .enum([
-          'folder' as DocumentType.Folder,
-          'document' as DocumentType.Document,
-        ])
-        .optional(),
       name: z.string(),
+      commitUuid: z.string(),
       parentId: z.number().optional(),
+      documentType: z.nativeEnum(DocumentType).optional(),
     }),
     { type: 'json' },
   )
-  .handler(async ({ input }) => createDocumentVersion(input))
+  .handler(async ({ input }) => {
+    const result = await createDocumentVersion(input)
+    return result.unwrap()
+  })

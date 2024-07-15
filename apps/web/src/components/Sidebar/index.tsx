@@ -3,7 +3,7 @@ import { HEAD_COMMIT, materializeDocumentsAtCommit } from '@latitude-data/core'
 import DocumentTree, { CreateNode } from './DocumentTree'
 
 export default async function Sidebar() {
-  const nodes = await materializeDocumentsAtCommit({
+  const documents = await materializeDocumentsAtCommit({
     commitUuid: HEAD_COMMIT,
     staged: true,
   })
@@ -16,7 +16,7 @@ export default async function Sidebar() {
           <CreateNode />
         </div>
       </div>
-      <DocumentTree nodes={nodes} />
+      <DocumentTree documents={documents} />
     </div>
   )
 }

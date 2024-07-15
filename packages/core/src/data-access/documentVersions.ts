@@ -23,6 +23,7 @@ export async function getDocumentsAtCommit(commitUuid: string) {
     .select({ id: commits.id })
     .from(commits)
     .where(eq(commits.uuid, commitUuid))
+
   if (referenceCommitId.length === 0) return []
 
   const commitIdsBeforeReferenceCommit = await database

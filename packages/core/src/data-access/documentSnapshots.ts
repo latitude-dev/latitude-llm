@@ -11,7 +11,7 @@ export async function listdocumentSnapshots() {
     .from(documentSnapshots)
     .innerJoin(
       documentVersions,
-      eq(documentSnapshots.DocumentVersionId, documentVersions.id),
+      eq(documentSnapshots.documentVersionId, documentVersions.id),
     )
 
   return documents

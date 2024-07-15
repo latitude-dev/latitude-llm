@@ -9,13 +9,7 @@ import {
   varchar,
 } from 'drizzle-orm/pg-core'
 
-import {
-  DocumentSnapshot,
-  documentSnapshots,
-  latitudeSchema,
-  Workspace,
-  workspaces,
-} from '..'
+import { documentSnapshots, latitudeSchema, projects, workspaces } from '..'
 import { timestamps } from '../schemaHelpers'
 
 export const commits = latitudeSchema.table(
@@ -32,7 +26,7 @@ export const commits = latitudeSchema.table(
     ),
     title: varchar('title', { length: 256 }),
     description: text('description'),
-    workspaceId: bigint('workspace_id', { mode: 'number' })
+    projectId: bigint('project_id', { mode: 'number' })
       .notNull()
       .references(() => workspaces.id, { onDelete: 'cascade' }),
     ...timestamps(),
@@ -44,10 +38,10 @@ export const commits = latitudeSchema.table(
 
 export const commitRelations = relations(commits, ({ one, many }) => ({
   snapshots: many(documentSnapshots, { relationName: 'snapshots' }),
-  workspace: one(workspaces),
+  project: one(projects, {
+    fields: [commits.projectId],
+    references: [projects.id],
+  }),
 }))
 
-export type Commit = InferSelectModel<typeof commits> & {
-  snapshots: DocumentSnapshot[]
-  workspace: Workspace
-}
+export type Commit = InferSelectModel<typeof commits>

@@ -5,7 +5,8 @@
   "main": "src/index.ts",
   "type": "module",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./browser": "./src/browser.ts"
   },
   "scripts": {
     "db:generate": "drizzle-kit generate",

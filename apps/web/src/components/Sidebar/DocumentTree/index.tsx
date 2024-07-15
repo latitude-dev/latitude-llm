@@ -4,7 +4,7 @@ import { faker } from '@faker-js/faker'
 import type { DocumentType, DocumentVersion } from '@latitude-data/core'
 import useDocumentVersions from '$/stores/documentVersions'
 
-import toTree, { Node } from '../toTree'
+import { Node, useTree } from '../toTree'
 
 function generateName() {
   return faker.science.chemicalElement().name
@@ -61,20 +61,24 @@ function TreeNode({ node, level = 0 }: { node: Node; level?: number }) {
             )}
           </div>
         )}
-        {node.children.map((node) => (
-          <TreeNode node={node} level={level + 1} />
+        {node.children.map((node, idx) => (
+          <TreeNode key={idx} node={node} level={level + 1} />
         ))}
       </div>
     </div>
   )
 }
 
-export default function DocumentTree({ nodes }: { nodes: DocumentVersion[] }) {
-  const { data } = useDocumentVersions(
+export default function DocumentTree({
+  documents: serverDocuments,
+}: {
+  documents: DocumentVersion[]
+}) {
+  const { documents } = useDocumentVersions(
     { staged: true },
-    { fallbackData: nodes },
+    { fallbackData: serverDocuments },
   )
-  const rootNode = toTree(data)
+  const rootNode = useTree({ documents })
 
   return <TreeNode node={rootNode} />
 }
