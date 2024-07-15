@@ -7,7 +7,7 @@ import { timestamps } from '../schemaHelpers'
 export const memberships = latitudeSchema.table(
   'memberships',
   {
-    workspaceId: bigint('workspace_id', { mode: 'bigint' })
+    workspaceId: bigint('workspace_id', { mode: 'number' })
       .notNull()
       .references(() => workspaces.id, { onDelete: 'cascade' }),
     userId: text('user_id')

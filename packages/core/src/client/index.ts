@@ -1,3 +1,4 @@
+import env from '$core/env'
 import { drizzle, NodePgDatabase } from 'drizzle-orm/node-postgres'
 import pg from 'pg'
 
@@ -6,11 +7,6 @@ import * as schema from '../schema'
 const { Pool } = pg
 
 export type Database = NodePgDatabase<typeof schema>
-export function buildDatabaseClient({
-  connectionString,
-}: {
-  connectionString: string
-}) {
-  const pool = new Pool({ connectionString })
-  return drizzle(pool, { schema })
-}
+
+const pool = new Pool({ connectionString: env.DATABASE_URL })
+export const database = drizzle(pool, { schema })

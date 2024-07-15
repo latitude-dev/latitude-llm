@@ -5,7 +5,7 @@ import { latitudeSchema, memberships, users } from '..'
 import { timestamps } from '../schemaHelpers'
 
 export const workspaces = latitudeSchema.table('workspaces', {
-  id: bigserial('id', { mode: 'bigint' }).notNull().primaryKey(),
+  id: bigserial('id', { mode: 'number' }).notNull().primaryKey(),
   name: varchar('name', { length: 256 }).notNull(),
   creatorId: text('creator_id').references(() => users.id, {
     onDelete: 'set null',

@@ -1,6 +1,8 @@
-import { Database } from '$core/client'
+import { Database } from '@latitude-data/core'
 
-export * from './users'
 export * from './commits'
+export * from './documentSnapshots'
+export * from './documentVersions'
+export * from './users'
 
 export type AppContext = { db: Database }

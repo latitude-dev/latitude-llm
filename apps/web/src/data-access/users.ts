@@ -1,20 +1,24 @@
 import {
+  database,
+  getUser,
   Result,
   UserNotFoundError,
   users,
   verifyPassword,
-  type AppContext,
   type PromisedResult,
   type SessionData,
 } from '@latitude-data/core'
 import { getWorkspace } from '$/data-access/workspaces'
 import { eq } from 'drizzle-orm'
 
-export async function getUserFromCredentials(
-  { email, password }: { email: string; password: string },
-  { db }: AppContext,
-): PromisedResult<SessionData> {
-  const user = await db.query.users.findFirst({
+export async function getUserFromCredentials({
+  email,
+  password,
+}: {
+  email: string
+  password: string
+}): PromisedResult<SessionData> {
+  const user = await database.query.users.findFirst({
     columns: {
       id: true,
       name: true,
@@ -33,7 +37,7 @@ export async function getUserFromCredentials(
   if (!validPassword) {
     Result.error(new UserNotFoundError())
   }
-  const wpResult = await getWorkspace({ userId: user.id }, { db })
+  const wpResult = await getWorkspace({ userId: user.id })
 
   if (wpResult.error) {
     return Result.error(wpResult.error)
@@ -50,19 +54,17 @@ export async function getUserFromCredentials(
   })
 }
 
-export async function getCurrentUserFromDB(
-  { userId }: { userId: string | undefined },
-  { db }: AppContext,
-): PromisedResult<SessionData> {
-  const user = await db.query.users.findFirst({
-    where: eq(users.id, userId ?? ''),
-  })
-
+export async function getCurrentUserFromDB({
+  userId,
+}: {
+  userId: string | undefined
+}): PromisedResult<SessionData> {
+  const user = await getUser(userId)
   if (!user) {
     return Result.error(new UserNotFoundError())
   }
 
-  const wpResult = await getWorkspace({ userId: user.id }, { db })
+  const wpResult = await getWorkspace({ userId: user.id })
   if (wpResult.error) {
     return Result.error(wpResult.error)
   }

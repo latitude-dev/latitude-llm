@@ -1,12 +1,11 @@
 import {
   createUser,
   createWorkspace,
+  PromisedResult,
   Result,
   SessionData,
   Transaction,
 } from '@latitude-data/core'
-import db from '$/db/database'
-import { PromisedResult } from '$core/lib/Transaction'
 
 export default function setupService({
   email,
@@ -19,16 +18,18 @@ export default function setupService({
   name: string
   companyName: string
 }): PromisedResult<SessionData> {
-  return Transaction.call(db, async (trx) => {
-    const userResult = await createUser({ db: trx, email, password, name })
+  return Transaction.call(async (tx) => {
+    const userResult = await createUser({ email, password, name }, tx)
 
     if (userResult.error) return userResult
 
-    const result = await createWorkspace({
-      db: trx,
-      name: companyName,
-      creatorId: userResult.value.id,
-    })
+    const result = await createWorkspace(
+      {
+        name: companyName,
+        creatorId: userResult.value.id,
+      },
+      tx,
+    )
 
     if (result.error) return result
 

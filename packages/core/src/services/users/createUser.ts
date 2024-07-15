@@ -1,22 +1,26 @@
-import { Database } from '$core/client'
-import { hashPassword } from '$core/lib'
-import { Result } from '$core/lib/Result'
-import Transaction from '$core/lib/Transaction'
-import { SafeUser, users } from '$core/schema'
+import {
+  database,
+  hashPassword,
+  Result,
+  SafeUser,
+  Transaction,
+  users,
+} from '@latitude-data/core'
 
-export async function createUser({
-  db,
-  email,
-  password,
-  name,
-}: {
-  db: Database
-  email: string
-  password: string
-  name: string
-}) {
+export async function createUser(
+  {
+    email,
+    password,
+    name,
+  }: {
+    email: string
+    password: string
+    name: string
+  },
+  db = database,
+) {
   const encryptedPassword = await hashPassword(password)
-  return Transaction.call<SafeUser>(db, async (trx) => {
+  return Transaction.call<SafeUser>(async (trx) => {
     const inserts = await trx
       .insert(users)
       .values({
@@ -31,5 +35,5 @@ export async function createUser({
       })
     const user = inserts[0]!
     return Result.ok(user)
-  })
+  }, db)
 }

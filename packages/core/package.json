@@ -21,15 +21,17 @@
     "prettier": "prettier --write src/**/*.ts"
   },
   "dependencies": {
-    "drizzle-orm": "0.31.4",
     "@latitude-data/env": "workspace:^",
     "bcrypt": "^5.1.1",
+    "drizzle-orm": "0.31.4",
+    "lodash-es": "^4.17.21",
     "zod": "^3.23.8"
   },
   "devDependencies": {
     "@latitude-data/eslint-config": "workspace:*",
     "@latitude-data/typescript-config": "workspace:*",
     "@types/bcrypt": "^5.0.2",
+    "@types/lodash-es": "^4.17.12",
     "@types/node": "^20.14.10",
     "drizzle-kit": "^0.22.8",
     "eslint-plugin-drizzle": "^0.2.3"

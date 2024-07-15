@@ -1,5 +1,6 @@
-import { lucia } from '$/lib/auth'
 import { Session } from 'lucia'
+
+import { lucia } from '.'
 
 export async function removeSession({ session }: { session: Session }) {
   // NOTE: We dynamically import the cookies function to make Nextjs happy

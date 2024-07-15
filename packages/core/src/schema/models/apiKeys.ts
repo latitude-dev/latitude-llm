@@ -15,12 +15,12 @@ import { workspaces } from './workspaces'
 export const apiKeys = latitudeSchema.table(
   'api_keys',
   {
-    id: bigserial('id', { mode: 'bigint' }).notNull().primaryKey(),
+    id: bigserial('id', { mode: 'number' }).notNull().primaryKey(),
     uuid: uuid('uuid')
       .notNull()
       .unique()
       .$defaultFn(() => crypto.randomUUID()),
-    workspaceId: bigint('workspace_id', { mode: 'bigint' })
+    workspaceId: bigint('workspace_id', { mode: 'number' })
       .notNull()
       .references(() => workspaces.id),
     name: varchar('name', { length: 256 }),

@@ -1,8 +1,8 @@
 'use server'
 
 import { authProcedure } from '$/actions/procedures'
-import { removeSession } from '$/lib/auth/removeSession'
-import { ROUTES } from '$/lib/routes'
+import { removeSession } from '$/services/auth/removeSession'
+import { ROUTES } from '$/services/routes'
 import { redirect } from 'next/navigation'
 
 export const logoutAction = authProcedure

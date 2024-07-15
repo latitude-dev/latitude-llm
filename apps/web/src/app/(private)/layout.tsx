@@ -1,7 +1,8 @@
 import { ReactNode } from 'react'
 
-import { getSession } from '$/lib/auth/getSession'
-import { ROUTES } from '$/lib/routes'
+import Sidebar from '$/components/Sidebar'
+import { getSession } from '$/services/auth/getSession'
+import { ROUTES } from '$/services/routes'
 import { redirect } from 'next/navigation'
 
 export default async function PrivateLayout({
@@ -13,5 +14,12 @@ export default async function PrivateLayout({
   if (!data.session) {
     return redirect(ROUTES.auth.login)
   }
-  return <>{children}</>
+  return (
+    <main className='flex flex-row w-full'>
+      <div className='w-[280px]'>
+        <Sidebar />
+      </div>
+      <div className='flex-1'>{children}</div>
+    </main>
+  )
 }

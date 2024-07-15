@@ -1,6 +1,7 @@
 import { SessionData } from '@latitude-data/core'
-import { lucia } from '$/lib/auth'
 import { cookies } from 'next/headers'
+
+import { lucia } from '.'
 
 export async function setSession({
   sessionData: { workspace, user },

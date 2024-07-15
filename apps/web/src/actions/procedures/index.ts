@@ -1,4 +1,4 @@
-import { getCurrentUser } from '$/lib/auth/getCurrentUser'
+import { getCurrentUser } from '$/services/auth/getCurrentUser'
 import { createServerActionProcedure } from 'zsa'
 
 /**

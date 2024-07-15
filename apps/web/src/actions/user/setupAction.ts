@@ -1,9 +1,8 @@
 'use server'
 
 import { isWorkspaceCreated } from '$/data-access'
-import db from '$/db/database'
-import { setSession } from '$/lib/auth/setSession'
-import { ROUTES } from '$/lib/routes'
+import { setSession } from '$/services/auth/setSession'
+import { ROUTES } from '$/services/routes'
 import setupService from '$/services/user/setupService'
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
@@ -24,7 +23,7 @@ export const setupAction = createServerAction()
     { type: 'formData' },
   )
   .handler(async ({ input }) => {
-    const itWasAlreadySetup = await isWorkspaceCreated({ db })
+    const itWasAlreadySetup = await isWorkspaceCreated()
 
     if (itWasAlreadySetup) {
       throw new Error('Workspace already created')
