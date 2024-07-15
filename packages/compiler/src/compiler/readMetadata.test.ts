@@ -1,5 +1,5 @@
-import { CUSTOM_TAG_END, CUSTOM_TAG_START } from '$/constants'
-import CompileError from '$/error/error'
+import { CUSTOM_TAG_END, CUSTOM_TAG_START } from '$compiler/constants'
+import CompileError from '$compiler/error/error'
 import { describe, expect, it } from 'vitest'
 
 import { readMetadata } from '.'

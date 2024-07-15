@@ -2,15 +2,15 @@ import {
   CUSTOM_MESSAGE_TAG,
   REFERENCE_PROMPT_TAG,
   TOOL_CALL_TAG,
-} from '$/constants'
+} from '$compiler/constants'
 import {
   ContentTag,
   ElementTag,
   MessageTag,
   ReferenceTag,
   ToolCallTag,
-} from '$/parser/interfaces'
-import { ContentType, MessageRole } from '$/types'
+} from '$compiler/parser/interfaces'
+import { ContentType, MessageRole } from '$compiler/types'
 
 export function isIterable(obj: unknown): obj is Iterable<unknown> {
   return (obj as Iterable<unknown>)?.[Symbol.iterator] !== undefined

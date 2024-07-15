@@ -1,4 +1,4 @@
-import { CUSTOM_TAG_END, CUSTOM_TAG_START } from '$/constants'
+import { CUSTOM_TAG_END, CUSTOM_TAG_START } from '$compiler/constants'
 
 function getKlassName(error: unknown): string {
   const errorKlass = error as Error

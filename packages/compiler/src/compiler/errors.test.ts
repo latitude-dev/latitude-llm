@@ -1,4 +1,4 @@
-import CompileError from '$/error/error'
+import CompileError from '$compiler/error/error'
 import { describe, expect, it } from 'vitest'
 
 import { compile, readMetadata } from '.'

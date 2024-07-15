@@ -1,5 +1,5 @@
-import { TOOL_CALL_TAG } from '$/constants'
-import { Conversation, MessageRole } from '$/types'
+import { TOOL_CALL_TAG } from '$compiler/constants'
+import { Conversation, MessageRole } from '$compiler/types'
 import yaml from 'yaml'
 
 function addIndent(text: string, indent: number): string {

@@ -1,13 +1,13 @@
-import type CompileError from '$/error/error'
-import PARSER_ERRORS from '$/error/errors'
-import { parseExpressionAt } from '$/parser/utils/acorn'
+import type CompileError from '$compiler/error/error'
+import PARSER_ERRORS from '$compiler/error/errors'
+import { parseExpressionAt } from '$compiler/parser/utils/acorn'
 import {
   getBracketClose,
   isBracketClose,
   isBracketOpen,
   isBracketPair,
-} from '$/parser/utils/bracket'
-import fullCharCodeAt from '$/parser/utils/full_char_code_at'
+} from '$compiler/parser/utils/bracket'
+import fullCharCodeAt from '$compiler/parser/utils/full_char_code_at'
 import { isIdentifierStart } from 'acorn'
 import { Pattern } from 'estree'
 

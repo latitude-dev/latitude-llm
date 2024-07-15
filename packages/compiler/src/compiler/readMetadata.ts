@@ -4,10 +4,10 @@ import {
   CUSTOM_MESSAGE_ROLE_ATTR,
   CUSTOM_MESSAGE_TAG,
   REFERENCE_PROMPT_ATTR,
-} from '$/constants'
-import CompileError, { error } from '$/error/error'
-import errors from '$/error/errors'
-import parse from '$/parser/index'
+} from '$compiler/constants'
+import CompileError, { error } from '$compiler/error/error'
+import errors from '$compiler/error/errors'
+import parse from '$compiler/parser/index'
 import type {
   Attribute,
   BaseNode,
@@ -15,8 +15,8 @@ import type {
   Fragment,
   TemplateNode,
   ToolCallTag,
-} from '$/parser/interfaces'
-import { Config, ConversationMetadata, MessageRole } from '$/types'
+} from '$compiler/parser/interfaces'
+import { Config, ConversationMetadata, MessageRole } from '$compiler/types'
 import { Node as LogicalExpression } from 'estree'
 
 import { ReferencePromptFn } from './compile'

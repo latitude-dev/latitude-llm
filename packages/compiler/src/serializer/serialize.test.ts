@@ -1,5 +1,5 @@
-import { compile } from '$/compiler'
-import { removeCommonIndent } from '$/compiler/utils'
+import { compile } from '$compiler/compiler'
+import { removeCommonIndent } from '$compiler/compiler/utils'
 import { describe, expect, it } from 'vitest'
 
 import { serialize } from '.'

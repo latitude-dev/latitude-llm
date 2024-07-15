@@ -1,6 +1,6 @@
-import { CUSTOM_TAG_END, CUSTOM_TAG_START } from '$/constants'
-import CompileError from '$/error/error'
-import { Message } from '$/types'
+import { CUSTOM_TAG_END, CUSTOM_TAG_START } from '$compiler/constants'
+import CompileError from '$compiler/error/error'
+import { Message } from '$compiler/types'
 import { describe, expect, it, vi } from 'vitest'
 
 import { compile } from '.'

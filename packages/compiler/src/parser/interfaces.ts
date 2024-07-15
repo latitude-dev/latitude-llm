@@ -2,8 +2,8 @@ import {
   CUSTOM_MESSAGE_TAG,
   REFERENCE_PROMPT_TAG,
   TOOL_CALL_TAG,
-} from '$/constants'
-import { ContentType, MessageRole } from '$/types'
+} from '$compiler/constants'
+import { ContentType, MessageRole } from '$compiler/types'
 import { Identifier, type Node as LogicalExpression } from 'estree'
 
 export type BaseNode = {

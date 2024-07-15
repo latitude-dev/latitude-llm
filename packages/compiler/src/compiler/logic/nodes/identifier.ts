@@ -1,8 +1,8 @@
 import type {
   ResolveNodeProps,
   UpdateScopeContextProps,
-} from '$/compiler/logic/types'
-import errors from '$/error/errors'
+} from '$compiler/compiler/logic/types'
+import errors from '$compiler/error/errors'
 import type { Identifier } from 'estree'
 
 /**

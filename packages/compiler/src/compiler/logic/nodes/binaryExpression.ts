@@ -1,9 +1,9 @@
-import { BINARY_OPERATOR_METHODS } from '$/compiler/logic/operators'
+import { BINARY_OPERATOR_METHODS } from '$compiler/compiler/logic/operators'
 import type {
   ResolveNodeProps,
   UpdateScopeContextProps,
-} from '$/compiler/logic/types'
-import errors from '$/error/errors'
+} from '$compiler/compiler/logic/types'
+import errors from '$compiler/error/errors'
 import type { BinaryExpression, LogicalExpression } from 'estree'
 
 import { resolveLogicNode, updateScopeContextForNode } from '..'

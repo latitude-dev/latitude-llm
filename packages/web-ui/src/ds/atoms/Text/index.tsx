@@ -40,6 +40,7 @@ export type Common = {
   lineThrough?: boolean
   weight?: FontWeight
   asChild?: boolean
+  monospace?: boolean
 }
 
 export type TextProps = {
@@ -74,6 +75,7 @@ const TextAtom = forwardRef<HTMLElement, AllTextProps>(function Text(
     underline = false,
     lineThrough = false,
     asChild = false,
+    monospace = false,
   },
   ref,
 ) {
@@ -89,7 +91,6 @@ const TextAtom = forwardRef<HTMLElement, AllTextProps>(function Text(
       ref={ref}
       title={ellipsis && typeof children === 'string' ? children : ''}
       className={cn(
-        font.family.sans,
         sizeClass,
         weightClass,
         spacingClass,
@@ -107,6 +108,8 @@ const TextAtom = forwardRef<HTMLElement, AllTextProps>(function Text(
           'whitespace-nowrap': noWrap,
           underline: underline,
           'line-through': lineThrough,
+          [font.family.mono]: monospace,
+          [font.family.sans]: !monospace,
         },
       )}
     >
@@ -253,8 +256,8 @@ namespace Text {
   )
 
   export type MonoProps = {
-    color: TextColor
     children: ReactNode
+    color?: TextColor
     weight?: ExtendsUnion<FontWeight, 'normal' | 'semibold' | 'bold'>
     userSelect?: boolean
     overflow?: Overflow
@@ -269,8 +272,8 @@ namespace Text {
 
   export const Mono = forwardRef<HTMLSpanElement, MonoProps>(function MonoFont(
     {
-      color,
       children,
+      color = 'foreground',
       overflow = 'auto',
       whiteSpace = 'normal',
       underline = false,

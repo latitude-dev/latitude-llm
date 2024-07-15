@@ -1,9 +1,12 @@
-import { resolveLogicNode, updateScopeContextForNode } from '$/compiler/logic'
+import {
+  resolveLogicNode,
+  updateScopeContextForNode,
+} from '$compiler/compiler/logic'
 import {
   UpdateScopeContextProps,
   type ResolveNodeProps,
-} from '$/compiler/logic/types'
-import errors from '$/error/errors'
+} from '$compiler/compiler/logic/types'
+import errors from '$compiler/error/errors'
 import { type Identifier, type ObjectExpression } from 'estree'
 
 /**

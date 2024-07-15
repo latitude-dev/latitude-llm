@@ -1,5 +1,5 @@
-import type { Fragment } from '$/parser/interfaces'
-import type { Config } from '$/types'
+import type { Fragment } from '$compiler/parser/interfaces'
+import type { Config } from '$compiler/types'
 
 export function readConfig(fragment: Fragment): Config {
   for (const node of fragment.children) {

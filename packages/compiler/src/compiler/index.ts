@@ -1,4 +1,4 @@
-import { Conversation, ConversationMetadata } from '$/types'
+import { Conversation, ConversationMetadata } from '$compiler/types'
 
 import { Compile, type ReferencePromptFn } from './compile'
 import { ReadMetadata } from './readMetadata'
