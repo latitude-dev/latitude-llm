@@ -4,7 +4,7 @@ import type { Metadata } from 'next'
 
 import '@latitude-data/web-ui/styles.css'
 
-import { ToastProvider } from '@latitude-data/web-ui'
+import { ToastProvider, TooltipProvider } from '@latitude-data/web-ui'
 import localFont from 'next/font/local'
 
 const fontSans = localFont({
@@ -157,7 +157,7 @@ export default function RootLayout({
         <link rel='icon' href='/favicon.svg' />
       </head>
       <body className={`${fontSans.variable} ${fontMono.variable} font-sans`}>
-        {children}
+        <TooltipProvider>{children}</TooltipProvider>
         <ToastProvider duration={2500} />
       </body>
     </html>

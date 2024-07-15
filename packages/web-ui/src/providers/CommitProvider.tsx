@@ -2,26 +2,31 @@
 
 import { createContext, ReactNode, useContext } from 'react'
 
-import { HEAD_COMMIT } from '@latitude-data/core/browser'
-
-interface CommitContextType {
-  commitUuid: string | typeof HEAD_COMMIT
-  isDraft: boolean
+interface ICommitContextType {
+  commit: {
+    id: number
+    title: string | null
+    mergedAt: Date | null
+    uuid: string
+  }
+  isHead: boolean
 }
 
-const CommitContext = createContext<CommitContextType>({
-  commitUuid: HEAD_COMMIT,
-  isDraft: false,
-})
+const CommitContext = createContext<ICommitContextType>(
+  {} as ICommitContextType,
+)
 
 const CommitProvider = ({
   children,
-  ...context
+  commit,
+  isHead,
 }: {
   children: ReactNode
-} & CommitContextType) => {
+} & ICommitContextType) => {
   return (
-    <CommitContext.Provider value={context}>{children}</CommitContext.Provider>
+    <CommitContext.Provider value={{ commit, isHead }}>
+      {children}
+    </CommitContext.Provider>
   )
 }
 

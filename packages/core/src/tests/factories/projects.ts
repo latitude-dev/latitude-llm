@@ -1,30 +1,9 @@
 import { faker } from '@faker-js/faker'
-import { database as db } from '$core/client'
 import { getUser } from '$core/data-access'
-import { Result, Transaction } from '$core/lib'
-import { Project, projects, Workspace, type SafeUser } from '$core/schema'
+import { Workspace, type SafeUser } from '$core/schema'
+import { createProject as createProjectFn } from '$core/services/projects'
 
 import { createWorkspace, type ICreateWorkspace } from './workspaces'
-
-// TODO: Replace with actual service
-const createProjectFn = ({
-  name,
-  workspaceId,
-}: {
-  name: string
-  workspaceId: number
-}) => {
-  return Transaction.call<Project>(async (tx) => {
-    const insertedProjects = await tx
-      .insert(projects)
-      .values({ name, workspaceId })
-      .returning()
-
-    const newProject = insertedProjects[0]!
-
-    return Result.ok(newProject)
-  }, db)
-}
 
 export type ICreateProject = {
   name?: string

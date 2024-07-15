@@ -1,9 +1,5 @@
-import {
-  Card,
-  CardContent,
-  FocusHeader,
-  FocusLayout,
-} from '@latitude-data/web-ui'
+import { Card, CardContent, FocusHeader } from '@latitude-data/web-ui'
+import { FocusLayout } from '@latitude-data/web-ui/browser'
 import AuthFooter from '$/app/(public)/_components/Footer'
 
 import SetupForm from './SetupForm'

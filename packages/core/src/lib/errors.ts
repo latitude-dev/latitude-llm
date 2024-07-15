@@ -13,6 +13,7 @@ export class LatitudeError extends Error {
   constructor(message: string, details: ErrorType = {}) {
     super(message)
     this.details = details
+    this.name = this.constructor.name
   }
 }
 
@@ -24,6 +25,7 @@ export class ConflictError extends LatitudeError {
 export class UnprocessableEntityError extends LatitudeError {
   public statusCode = 422
   public name = 'UnprocessableEntityError'
+
   constructor(message: string, details: ErrorType) {
     super(message, details)
   }

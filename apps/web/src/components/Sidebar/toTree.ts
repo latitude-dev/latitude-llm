@@ -21,20 +21,11 @@ export class Node {
 export function useTree({ documents }: { documents: DocumentVersion[] }) {
   return useMemo(() => {
     function iterate(node: Node) {
-      let children
-      if (node.isRoot) {
-        children = Object.values(documents)
-          .filter((doc) => !doc.parentId)
-          .map((doc) => new Node(doc))
-      } else {
-        children = documents
-          .filter((doc) => doc.parentId === node.doc!.id)
-          .map((doc) => new Node(doc))
-      }
+      node.children = documents
+        .filter((doc) => doc.parentId === (node.isRoot ? null : node.doc?.id))
+        .map((doc) => new Node(doc))
 
-      node.children = children
       node.children.forEach(iterate)
-
       return node
     }
 

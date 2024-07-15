@@ -1,8 +1,8 @@
 import {
   database,
   getUser,
+  NotFoundError,
   Result,
-  UserNotFoundError,
   users,
   verifyPassword,
   type PromisedResult,
@@ -11,13 +11,17 @@ import {
 import { getWorkspace } from '$/data-access/workspaces'
 import { eq } from 'drizzle-orm'
 
+function notFound() {
+  return Result.error(new NotFoundError('Not found user'))
+}
+
 export async function getUserFromCredentials({
   email,
   password,
 }: {
   email: string
   password: string
-}): PromisedResult<SessionData> {
+}): PromisedResult<SessionData, NotFoundError> {
   const user = await database.query.users.findFirst({
     columns: {
       id: true,
@@ -28,22 +32,19 @@ export async function getUserFromCredentials({
     where: eq(users.email, email),
   })
 
-  if (!user) {
-    return Result.error(new UserNotFoundError())
-  }
+  if (!user) return notFound()
 
   const validPassword = await verifyPassword(password, user.encryptedPassword)
 
-  if (!validPassword) {
-    Result.error(new UserNotFoundError())
-  }
+  if (!validPassword) notFound()
+
   const wpResult = await getWorkspace({ userId: user.id })
 
   if (wpResult.error) {
     return Result.error(wpResult.error)
   }
 
-  const workspace = wpResult.value
+  const workspace = wpResult.value!
   return Result.ok({
     user: {
       id: user.id,
@@ -58,18 +59,15 @@ export async function getCurrentUserFromDB({
   userId,
 }: {
   userId: string | undefined
-}): PromisedResult<SessionData> {
+}): PromisedResult<SessionData, NotFoundError> {
   const user = await getUser(userId)
-  if (!user) {
-    return Result.error(new UserNotFoundError())
-  }
+  if (!user) return notFound()
 
   const wpResult = await getWorkspace({ userId: user.id })
-  if (wpResult.error) {
-    return Result.error(wpResult.error)
-  }
 
-  const workspace = wpResult.value
+  if (wpResult.error) return wpResult
+
+  const workspace = wpResult.value!
   return Result.ok({
     user: {
       id: user.id,

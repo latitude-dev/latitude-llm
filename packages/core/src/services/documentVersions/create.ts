@@ -57,8 +57,11 @@ export async function createDocumentVersion({
   parentId?: number
   content?: string
 }) {
-  const commitResult = await findCommit({ commitUuid, projectId })
-  const commit = commitResult.unwrap()
+  const resultFindCommit = await findCommit({ uuid: commitUuid, projectId })
+
+  if (resultFindCommit.error) return resultFindCommit
+
+  const commit = resultFindCommit.value
 
   if (commit.mergedAt !== null) {
     return Result.error(

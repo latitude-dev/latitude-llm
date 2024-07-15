@@ -9,7 +9,7 @@ import { createServerActionProcedure } from 'zsa'
  * Docs: https://zsa.vercel.app/docs/procedures
  */
 export const authProcedure = createServerActionProcedure().handler(async () => {
-  const data = (await getCurrentUser()).unwrap()
+  const data = await getCurrentUser()
   return { session: data.session!, workspace: data.workspace, user: data.user }
 })
 

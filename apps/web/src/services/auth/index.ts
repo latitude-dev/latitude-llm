@@ -12,6 +12,14 @@ interface DatabaseSessionAttributes {
   currentWorkspaceId: number
 }
 
+declare module 'lucia' {
+  interface Register {
+    Lucia: typeof lucia
+    DatabaseUserAttributes: DatabaseUserAttributes
+    DatabaseSessionAttributes: DatabaseSessionAttributes
+  }
+}
+
 export const lucia = new Lucia(adapter, {
   sessionCookie: {
     expires: false,
@@ -24,12 +32,9 @@ export const lucia = new Lucia(adapter, {
       email: attributes.email,
     }
   },
+  getSessionAttributes: (attributes) => {
+    return {
+      currentWorkspaceId: attributes.currentWorkspaceId,
+    }
+  },
 })
-
-declare module 'lucia' {
-  interface Register {
-    Lucia: typeof lucia
-    DatabaseUserAttributes: DatabaseUserAttributes
-    DatabaseSessionAttributes: DatabaseSessionAttributes
-  }
-}

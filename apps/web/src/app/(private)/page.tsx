@@ -1,21 +1,29 @@
-import { FocusHeader, FocusLayout } from '@latitude-data/web-ui'
-import DummyLogoutButton from '$/app/(private)/_components/DummyLogoutButton'
+import { HEAD_COMMIT, NotFoundError, Project } from '@latitude-data/core'
+import { findCommit, getFirstProject } from '$/app/(private)/_data-access'
+import { getCurrentUser, SessionData } from '$/services/auth/getCurrentUser'
+import { ROUTES } from '$/services/routes'
+import { notFound, redirect } from 'next/navigation'
 
 export const dynamic = 'force-dynamic'
+const PROJECT_ROUTE = ROUTES.projects.detail
 
-export default async function Home() {
-  return (
-    <FocusLayout
-      header={
-        <FocusHeader
-          title='Inside the APP 💪'
-          description="Your're in let's kick those random AI's butts!"
-        />
-      }
-    >
-      <div className='flex items-center justify-center'>
-        <DummyLogoutButton />
-      </div>
-    </FocusLayout>
-  )
+export default async function AppRoot() {
+  let session: SessionData
+  let project: Project
+  let url
+
+  try {
+    session = await getCurrentUser()
+    project = await getFirstProject({ workspaceId: session.workspace.id })
+    await findCommit({ uuid: HEAD_COMMIT, projectId: project.id })
+    url = PROJECT_ROUTE({ id: project.id }).commits.latest
+  } catch (error) {
+    if (error instanceof NotFoundError) {
+      return notFound()
+    }
+
+    throw error
+  }
+
+  return redirect(url)
 }

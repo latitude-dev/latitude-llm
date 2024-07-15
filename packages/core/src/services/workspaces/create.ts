@@ -6,6 +6,7 @@ import {
   workspaces,
   type Workspace,
 } from '@latitude-data/core'
+import { createProject } from '$core/services/projects'
 
 export async function createWorkspace(
   {
@@ -27,6 +28,7 @@ export async function createWorkspace(
     await tx
       .insert(memberships)
       .values({ workspaceId: newWorkspace.id, userId: creatorId })
+    await createProject({ workspaceId: newWorkspace.id }, tx)
 
     return Result.ok(newWorkspace)
   }, db)
