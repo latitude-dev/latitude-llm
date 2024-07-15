@@ -5,12 +5,14 @@ import localFont from 'next/font/local'
 
 import '@latitude-data/web-ui/styles.css'
 
+import { ToastProvider } from '@latitude-data/web-ui'
+
 const fontSans = localFont({
-  src: './fonts/GeistVF.woff',
+  src: '../assets/fonts/GeistVF.woff',
   variable: '--font-geist-sans',
 })
 const fontMono = localFont({
-  src: './fonts/GeistMonoVF.woff',
+  src: '../assets/fonts/GeistMonoVF.woff',
   variable: '--font-geist-mono',
 })
 
@@ -33,6 +35,7 @@ export default function RootLayout({
       </head>
       <body className={`${fontSans.variable} ${fontMono.variable}`}>
         {children}
+        <ToastProvider duration={2500} />
       </body>
     </html>
   )

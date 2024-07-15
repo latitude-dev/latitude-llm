@@ -1,0 +1,23 @@
+import { Result, workspaces, type AppContext } from '@latitude-data/core'
+import { eq } from 'drizzle-orm'
+
+export async function getWorkspace(
+  { userId }: { userId: string },
+  { db }: AppContext,
+) {
+  const workspace = await db.query.workspaces.findFirst({
+    where: eq(workspaces.creatorId, userId),
+  })
+
+  if (!workspace) {
+    return Result.error(new Error('Workspace not found'))
+  }
+
+  return Result.ok(workspace)
+}
+
+export async function isWorkspaceCreated({ db }: AppContext) {
+  const workspace = await db.query.workspaces.findFirst()
+
+  return workspace !== undefined
+}

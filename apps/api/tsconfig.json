@@ -4,7 +4,8 @@
     "outDir": "dist",
     "baseUrl": "./",
     "paths": {
-      "@src/*": ["src/*"]
+      "@src/*": ["src/*"],
+      "$core/*": ["../../packages/core/src/*"]
     },
     "useUnknownInCatchVariables": false
   },

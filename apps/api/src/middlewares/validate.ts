@@ -1,5 +1,5 @@
+import { Result } from '@latitude-data/core'
 import { UnprocessableEntityError } from '@src/common/errors'
-import Result from '@src/services/result'
 import { NextFunction, Request, Response } from 'express'
 import { ZodError, ZodSchema } from 'zod'
 
