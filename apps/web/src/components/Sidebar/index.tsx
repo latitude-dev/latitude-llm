@@ -1,29 +1,14 @@
-import { materializeDocumentsAtCommit } from '@latitude-data/core'
+import { listCommits, materializeDocumentsAtCommit } from '@latitude-data/core'
 
-import DocumentTree, { CreateNode } from './DocumentTree'
+import DocumentTree from './DocumentTree'
 
-export default async function Sidebar({
-  commitUuid,
-  projectId,
-}: {
-  commitUuid: string
-  projectId: number
-}) {
-  const documentsResult = await materializeDocumentsAtCommit({
-    projectId,
+export default async function Sidebar({ commitUuid }: { commitUuid: string }) {
+  const docsResult = await materializeDocumentsAtCommit({
     commitUuid,
   })
-  const documents = documentsResult.unwrap()
 
-  return (
-    <div className='flex flex-col gap-4 p-4'>
-      <div className='flex flex-row align-items justify-between'>
-        <h2>Prompts</h2>
-        <div className='flex flex-row gap-2 align-items'>
-          <CreateNode />
-        </div>
-      </div>
-      <DocumentTree documents={documents} />
-    </div>
-  )
+  // TODO: wrap data-access reads in transaction blocks and make use of result
+  const commits = await listCommits()
+
+  return <DocumentTree commits={commits} documents={docsResult.unwrap()} />
 }

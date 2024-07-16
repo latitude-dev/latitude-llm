@@ -8,10 +8,10 @@ import morgan from 'morgan'
 
 import 'express-async-errors'
 
-import EnvVars from '@src/common/EnvVars'
-import HttpStatusCodes from '@src/common/HttpStatusCodes'
-import { NodeEnvs } from '@src/common/misc'
-import BaseRouter from '@src/routes'
+import EnvVars from '$src/common/EnvVars'
+import HttpStatusCodes from '$src/common/HttpStatusCodes'
+import { NodeEnvs } from '$src/common/misc'
+import BaseRouter from '$src/routes'
 
 import { LatitudeError, UnprocessableEntityError } from './common/errors'
 
@@ -35,10 +35,6 @@ app.use('/', BaseRouter)
 
 // Add error handler
 app.use((err: Error, _: Request, res: Response, __: NextFunction) => {
-  if (EnvVars.NODE_ENV !== NodeEnvs.Test.valueOf()) {
-    console.error(err.message, true)
-  }
-
   if (err instanceof UnprocessableEntityError) {
     return res.status(err.statusCode).json({
       name: err.name,

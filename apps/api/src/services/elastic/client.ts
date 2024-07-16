@@ -1,5 +1,5 @@
 import { Client } from '@elastic/elasticsearch'
-import EnvVars from '@src/common/EnvVars'
+import EnvVars from '$src/common/EnvVars'
 
 export default new Client({
   node: EnvVars.ELASTIC_URL,

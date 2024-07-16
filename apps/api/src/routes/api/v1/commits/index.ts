@@ -1,10 +1,10 @@
 import Paths from '$src/common/Paths'
 import { Router } from 'express'
 
-import commitsRouter from './commits'
+import { promptRoute } from './routes'
 
 const router = Router()
 
-router.use(Paths.Api.V1.Commits.Base, commitsRouter)
+router.get(Paths.Api.V1.Commits.Prompt, promptRoute)
 
 export default router

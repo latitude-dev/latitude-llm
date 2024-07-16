@@ -9,7 +9,7 @@ import {
   varchar,
 } from 'drizzle-orm/pg-core'
 
-import { documentSnapshots, latitudeSchema, projects } from '..'
+import { latitudeSchema, projects } from '..'
 import { timestamps } from '../schemaHelpers'
 
 export const commits = latitudeSchema.table(
@@ -22,10 +22,10 @@ export const commits = latitudeSchema.table(
       .default(sql`gen_random_uuid()`),
     title: varchar('title', { length: 256 }),
     description: text('description'),
+    mergedAt: timestamp('merged_at'),
     projectId: bigint('project_id', { mode: 'number' })
       .notNull()
       .references(() => projects.id, { onDelete: 'cascade' }),
-    mergedAt: timestamp('merged_at'),
     ...timestamps(),
   },
   (table) => ({
@@ -36,8 +36,7 @@ export const commits = latitudeSchema.table(
   }),
 )
 
-export const commitRelations = relations(commits, ({ one, many }) => ({
-  snapshots: many(documentSnapshots, { relationName: 'snapshots' }),
+export const commitRelations = relations(commits, ({ one }) => ({
   project: one(projects, {
     fields: [commits.projectId],
     references: [projects.id],

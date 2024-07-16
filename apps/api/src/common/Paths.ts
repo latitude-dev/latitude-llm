@@ -8,9 +8,9 @@ export default {
     Base: '/api',
     V1: {
       Base: '/v1',
-      Chat: {
-        Base: '/chat',
-        Completions: '/completions',
+      Commits: {
+        Base: '/commits',
+        Prompt: '/:commitUuid/*',
       },
     },
   },

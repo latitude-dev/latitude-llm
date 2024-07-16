@@ -5,12 +5,12 @@ import { useCallback } from 'react'
 import { DocumentVersion } from '@latitude-data/core'
 import { HEAD_COMMIT, type DocumentType } from '@latitude-data/core/browser'
 import { createDocumentVersionAction } from '$/actions/documents/create'
+import { getDocumentsAtCommitAction } from '$/actions/documents/fetch'
 import useSWR, { SWRConfiguration } from 'swr'
-import { useServerAction } from 'zsa-react'
 
 export default function useDocumentVersions(
   {
-    commitUuid,
+    commitUuid = HEAD_COMMIT,
     projectId,
   }: {
     commitUuid?: string
@@ -20,35 +20,55 @@ export default function useDocumentVersions(
 ) {
   const key = `/api/projects/${projectId}/commits/${commitUuid ?? HEAD_COMMIT}/documents`
 
-  const { mutate, data, ...rest } = useSWR<DocumentVersion[]>(
+  const {
+    mutate,
+    data = [],
+    ...rest
+  } = useSWR<DocumentVersion[]>(
     key,
-    (url: string) => fetch(url).then((res) => res.json()),
+    async () => {
+      const [data, err] = await getDocumentsAtCommitAction({
+        projectId,
+        commitUuid,
+      })
+
+      if (err) {
+        console.error(err)
+
+        return []
+      }
+
+      return data!
+    },
     opts,
   )
-  const documents = data ?? []
-  const { execute } = useServerAction(createDocumentVersionAction)
   const create = useCallback(
     async (payload: {
       name: string
       documentType?: DocumentType
       parentId?: number
     }) => {
-      const [document] = await execute({
+      const [document, err] = await createDocumentVersionAction({
         ...payload,
         projectId,
         name: payload.name!,
         commitUuid: commitUuid || HEAD_COMMIT,
       })
-      const prev = documents ?? []
+
+      if (err) {
+        console.error(err)
+
+        return
+      }
 
       if (document) {
-        mutate([...prev, document])
+        mutate([...data, document])
       }
 
       return document
     },
-    [execute, mutate, documents],
+    [mutate, data],
   )
 
-  return { ...rest, key, documents, create, mutate }
+  return { ...rest, key, data, create, mutate }
 }

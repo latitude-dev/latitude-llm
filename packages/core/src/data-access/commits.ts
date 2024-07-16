@@ -26,13 +26,14 @@ export async function findHeadCommit(
 
 export type FindCommitProps = {
   uuid: string
-  projectId: number
+  projectId?: number
 }
 export async function findCommit(
   { projectId, uuid }: FindCommitProps,
   tx = database,
 ): Promise<TypedResult<Commit, LatitudeError>> {
-  if (uuid === HEAD_COMMIT) return findHeadCommit({ projectId }, tx)
+  if (uuid === HEAD_COMMIT && projectId)
+    return findHeadCommit({ projectId }, tx)
 
   const commit = await tx.query.commits.findFirst({
     where: eq(commits.uuid, uuid),

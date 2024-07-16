@@ -16,11 +16,12 @@ export const authProcedure = createServerActionProcedure().handler(async () => {
 export const withProject = createServerActionProcedure(authProcedure)
   .input(z.object({ projectId: z.number() }))
   .handler(async ({ input, ctx }) => {
-    const project = (
-      await findProject({
-        projectId: input.projectId,
-        workspaceId: ctx.workspace.id,
-      })
-    ).unwrap()
+    const res = await findProject({
+      projectId: input.projectId,
+      workspaceId: ctx.workspace.id,
+    })
+
+    const project = res.unwrap()
+
     return { ...ctx, project }
   })

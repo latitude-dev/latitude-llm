@@ -1,6 +1,6 @@
 {
-  "id": "eedd6d42-c764-44b7-9e9e-2428f529d3dc",
-  "prevId": "cf3e829e-52c2-47fb-89f4-5dd28e3c3d43",
+  "id": "017fe841-6f7b-4c38-9132-6b16cb643384",
+  "prevId": "c94e53b5-fe51-4bbb-8a09-949b6c2f0052",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -101,10 +101,10 @@
       "uniqueConstraints": {
         "users_email_unique": {
           "name": "users_email_unique",
+          "nullsNotDistinct": false,
           "columns": [
             "email"
-          ],
-          "nullsNotDistinct": false
+          ]
         }
       }
     },
@@ -150,16 +150,16 @@
         "sessions_user_id_users_id_fk": {
           "name": "sessions_user_id_users_id_fk",
           "tableFrom": "sessions",
+          "tableTo": "users",
+          "schemaTo": "latitude",
           "columnsFrom": [
             "user_id"
           ],
-          "tableTo": "users",
-          "schemaTo": "latitude",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -207,16 +207,16 @@
         "workspaces_creator_id_users_id_fk": {
           "name": "workspaces_creator_id_users_id_fk",
           "tableFrom": "workspaces",
+          "tableTo": "users",
+          "schemaTo": "latitude",
           "columnsFrom": [
             "creator_id"
           ],
-          "tableTo": "users",
-          "schemaTo": "latitude",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "set null"
+          "onDelete": "set null",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -258,30 +258,30 @@
         "memberships_workspace_id_workspaces_id_fk": {
           "name": "memberships_workspace_id_workspaces_id_fk",
           "tableFrom": "memberships",
+          "tableTo": "workspaces",
+          "schemaTo": "latitude",
           "columnsFrom": [
             "workspace_id"
           ],
-          "tableTo": "workspaces",
-          "schemaTo": "latitude",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         },
         "memberships_user_id_users_id_fk": {
           "name": "memberships_user_id_users_id_fk",
           "tableFrom": "memberships",
+          "tableTo": "users",
+          "schemaTo": "latitude",
           "columnsFrom": [
             "user_id"
           ],
-          "tableTo": "users",
-          "schemaTo": "latitude",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {
@@ -356,35 +356,35 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {
         "api_keys_workspace_id_workspaces_id_fk": {
           "name": "api_keys_workspace_id_workspaces_id_fk",
           "tableFrom": "api_keys",
+          "tableTo": "workspaces",
+          "schemaTo": "latitude",
           "columnsFrom": [
             "workspace_id"
           ],
-          "tableTo": "workspaces",
-          "schemaTo": "latitude",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "no action"
+          "onDelete": "no action",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
         "api_keys_uuid_unique": {
           "name": "api_keys_uuid_unique",
+          "nullsNotDistinct": false,
           "columns": [
             "uuid"
-          ],
-          "nullsNotDistinct": false
+          ]
         }
       }
     },
@@ -437,25 +437,25 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {
         "projects_workspace_id_workspaces_id_fk": {
           "name": "projects_workspace_id_workspaces_id_fk",
           "tableFrom": "projects",
+          "tableTo": "workspaces",
+          "schemaTo": "latitude",
           "columnsFrom": [
             "workspace_id"
           ],
-          "tableTo": "workspaces",
-          "schemaTo": "latitude",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -484,15 +484,9 @@
           "primaryKey": false,
           "notNull": false
         },
-        "title": {
-          "name": "title",
-          "type": "varchar(256)",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "description": {
-          "name": "description",
-          "type": "text",
+        "merged_at": {
+          "name": "merged_at",
+          "type": "timestamp",
           "primaryKey": false,
           "notNull": false
         },
@@ -529,49 +523,49 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {
         "commits_next_commit_id_commits_id_fk": {
           "name": "commits_next_commit_id_commits_id_fk",
           "tableFrom": "commits",
+          "tableTo": "commits",
+          "schemaTo": "latitude",
           "columnsFrom": [
             "next_commit_id"
           ],
-          "tableTo": "commits",
-          "schemaTo": "latitude",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         },
         "commits_project_id_workspaces_id_fk": {
           "name": "commits_project_id_workspaces_id_fk",
           "tableFrom": "commits",
+          "tableTo": "workspaces",
+          "schemaTo": "latitude",
           "columnsFrom": [
             "project_id"
           ],
-          "tableTo": "workspaces",
-          "schemaTo": "latitude",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {
         "commits_uuid_unique": {
           "name": "commits_uuid_unique",
+          "nullsNotDistinct": false,
           "columns": [
             "uuid"
-          ],
-          "nullsNotDistinct": false
+          ]
         }
       }
     },
@@ -624,9 +618,9 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         },
         "document_snapshot_document_version_idx": {
           "name": "document_snapshot_document_version_idx",
@@ -639,39 +633,39 @@
             }
           ],
           "isUnique": false,
-          "with": {},
+          "concurrently": false,
           "method": "btree",
-          "concurrently": false
+          "with": {}
         }
       },
       "foreignKeys": {
         "document_snapshots_commit_id_commits_id_fk": {
           "name": "document_snapshots_commit_id_commits_id_fk",
           "tableFrom": "document_snapshots",
+          "tableTo": "commits",
+          "schemaTo": "latitude",
           "columnsFrom": [
             "commit_id"
           ],
-          "tableTo": "commits",
-          "schemaTo": "latitude",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         },
         "document_snapshots_document_version_id_document_versions_id_fk": {
           "name": "document_snapshots_document_version_id_document_versions_id_fk",
           "tableFrom": "document_snapshots",
+          "tableTo": "document_versions",
+          "schemaTo": "latitude",
           "columnsFrom": [
             "document_version_id"
           ],
-          "tableTo": "document_versions",
-          "schemaTo": "latitude",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "restrict"
+          "onDelete": "restrict",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -758,30 +752,30 @@
         "document_versions_parent_id_document_versions_id_fk": {
           "name": "document_versions_parent_id_document_versions_id_fk",
           "tableFrom": "document_versions",
+          "tableTo": "document_versions",
+          "schemaTo": "latitude",
           "columnsFrom": [
             "parent_id"
           ],
-          "tableTo": "document_versions",
-          "schemaTo": "latitude",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         },
         "document_versions_commit_id_commits_id_fk": {
           "name": "document_versions_commit_id_commits_id_fk",
           "tableFrom": "document_versions",
+          "tableTo": "commits",
+          "schemaTo": "latitude",
           "columnsFrom": [
             "commit_id"
           ],
-          "tableTo": "commits",
-          "schemaTo": "latitude",
           "columnsTo": [
             "id"
           ],
-          "onUpdate": "no action",
-          "onDelete": "no action"
+          "onDelete": "no action",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},

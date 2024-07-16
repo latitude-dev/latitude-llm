@@ -1,6 +1,6 @@
 {
-  "id": "cf3e829e-52c2-47fb-89f4-5dd28e3c3d43",
-  "prevId": "cdf027b2-ec77-4802-8085-bfdcde91f089",
+  "id": "c94e53b5-fe51-4bbb-8a09-949b6c2f0052",
+  "prevId": "606e730c-c777-43ae-a4a7-9f6ac099fd16",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -729,6 +729,12 @@
         "parent_id": {
           "name": "parent_id",
           "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "merged_at": {
+          "name": "merged_at",
+          "type": "timestamp",
           "primaryKey": false,
           "notNull": false
         },

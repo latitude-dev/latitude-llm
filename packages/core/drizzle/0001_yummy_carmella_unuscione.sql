@@ -75,3 +75,4 @@ CREATE OR REPLACE TRIGGER after_document_versions_update
 AFTER UPDATE ON "latitude"."document_versions"
 FOR EACH ROW
   EXECUTE FUNCTION document_versions_update_trigger();
+

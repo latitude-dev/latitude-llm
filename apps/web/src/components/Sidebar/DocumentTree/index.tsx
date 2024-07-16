@@ -1,11 +1,17 @@
 'use client'
 
 import { faker } from '@faker-js/faker'
-import type { DocumentType, DocumentVersion } from '@latitude-data/core'
+import type {
+  Commit,
+  DocumentType,
+  DocumentVersion,
+  Node,
+} from '@latitude-data/core'
 import { useCurrentCommit, useCurrentProject } from '@latitude-data/web-ui'
+import useCommits from '$/stores/commits'
 import useDocumentVersions from '$/stores/documentVersions'
 
-import { Node, useTree } from '../toTree'
+import { useTree } from './useTree'
 
 function generateName() {
   return faker.science.chemicalElement().name
@@ -91,17 +97,37 @@ function TreeNode({ node, level = 0 }: { node: Node; level?: number }) {
 }
 
 export default function DocumentTree({
+  commits: serverCommits,
   documents: serverDocuments,
 }: {
+  commits: Commit[]
   documents: DocumentVersion[]
 }) {
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
-  const { documents } = useDocumentVersions(
+  const { data: documents } = useDocumentVersions(
     { commitUuid: commit.uuid, projectId: project.id },
     { fallbackData: serverDocuments },
   )
+  const { create } = useCommits(
+    { projectId: project.id },
+    {
+      fallbackData: serverCommits,
+    },
+  )
+
   const rootNode = useTree({ documents })
 
-  return <TreeNode node={rootNode} />
+  return (
+    <div className='flex flex-col gap-12 pt-4 pl-4'>
+      <button onClick={() => create()}>Create commit</button>
+      <div className='flex flex-col gap-4'>
+        <div className='flex flex-row align-items justify-between'>
+          <h2 className='font-bold'>Create document</h2>
+          <CreateNode />
+        </div>
+        <TreeNode node={rootNode} />
+      </div>
+    </div>
+  )
 }

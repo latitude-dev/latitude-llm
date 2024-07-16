@@ -1,19 +1,15 @@
 import {
   Commit,
   commits,
-  Database,
   database,
   Result,
   Transaction,
 } from '@latitude-data/core'
 
-export default async function createCommit({
-  commit,
+export async function createCommit(
+  commit: Omit<Partial<Commit>, 'id'>,
   db = database,
-}: {
-  commit: Omit<Partial<Commit>, 'id'>
-  db?: Database
-}) {
+) {
   return Transaction.call<Commit>(async (tx) => {
     const result = await tx
       .insert(commits)

@@ -1,0 +1,1 @@
+ALTER TABLE "latitude"."document_versions" ADD COLUMN "merged_at" timestamp;

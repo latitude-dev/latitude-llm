@@ -1,4 +1,4 @@
-import Paths from '@src/common/Paths'
+import Paths from '$src/common/Paths'
 import { Router } from 'express'
 
 import v1Router from './v1'
