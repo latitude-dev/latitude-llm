@@ -5,12 +5,14 @@ services:
       context: .
       dockerfile: docker/Dockerfile.base
     restart: 'none'
+
   elastic:
     image: elasticsearch:8.14.1
     environment:
       - 'discovery.type=single-node'
       - 'ELASTIC_USERNAME=latitude'
       - 'ELASTIC_PASSWORD=secret'
+
   db:
     image: postgres
     environment:
@@ -21,7 +23,26 @@ services:
     volumes:
       - ./docker/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
       - ./docker/pgdata:/var/lib/postgresql/data
+
   redis:
     image: redis
     ports:
       - '6379:6379'
+
+  web:
+    build:
+      context: .
+      target: production
+      dockerfile: apps/web/docker/Dockerfile
+    # This enables to have this service for testing production build
+    # It will not run when doing docker compose up
+    profiles: [building]
+    volumes:
+      - ./packages/env:/app/packages/env
+      - ./packages/core:/app/packages/core
+      - ./packages/jobs:/app/packages/jobs
+      - ./packages/web-ui:/app/packages/web-ui
+      - ./apps/web:/app/apps/web
+    depends_on:
+      - base
+      - db

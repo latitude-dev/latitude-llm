@@ -1,6 +1,12 @@
+Dockerfile
+.dockerignore
 node_modules
 npm-debug.log
 .pnpm-store
 out
 dist
 *.md
+.git
+.next
+!.next/static
+!.next/standalone

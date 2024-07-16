@@ -1,16 +1,13 @@
+import { createEnv } from '@t3-oss/env-core'
 import z from 'zod'
 
 import '@latitude-data/env'
 
-const envvars = z.object({
-  NODE_ENV: z.string(),
-  DATABASE_URL: z.string(),
+export default createEnv({
+  skipValidation: process.env.BUILDING_CONTAINER == 'true',
+  server: {
+    NODE_ENV: z.string(),
+    DATABASE_URL: z.string().url(),
+  },
+  runtimeEnv: process.env,
 })
-
-export default envvars.parse(process.env)
-
-declare global {
-  namespace NodeJS {
-    interface ProcessEnv extends z.infer<typeof envvars> {}
-  }
-}

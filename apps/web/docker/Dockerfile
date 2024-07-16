@@ -5,9 +5,11 @@ COPY . .
 
 RUN turbo prune @latitude-data/web --docker
 
-# COMMON stage (installer)
+# BUILDER stage
 # ------------------------------------------------------
-FROM base AS installer
+FROM base AS builder
+WORKDIR /app
+
 COPY --from=base /app/out/json/ .
 COPY --from=base /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
 COPY --from=base /app/out/pnpm-workspace.yaml ./pnpm-workspace.yaml
@@ -17,38 +19,48 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install \
   --frozen-lockfile \
   --filter "@latitude-data/web..."
 
-# PRODUCTION stage
-# ------------------------------------------------------
-FROM installer AS builder
-
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
   BUILDING_CONTAINER=true \
   pnpm turbo build --filter='@latitude-data/web...'
 
-FROM base AS runner
+FROM base as prod-deps
+WORKDIR /app
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install \
+  --prod \
+  --frozen-lockfile \
+  --filter "@latitude-data/web..."
 
+# PRODUCTION
+FROM base AS production
 WORKDIR /app-prod
 
-# Don't run production as root
+# Public files doesn't have the unpriviledged user
+COPY --from=base /app/apps/web/public ./apps/web/public
+
+# Unpriviledged user
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 USER nextjs
 
-COPY --from=installer /app/apps/web/next.config.mjs .
-COPY --from=installer /app/apps/web/package.json .
-COPY --from=installer /app/node_modules ./node_modules
-COPY --from=installer /app/apps/web/package.json ./apps/web/package.json
+COPY --from=builder /app/apps/web/next.config.mjs .
+COPY --from=builder /app/apps/web/package.json .
+COPY --from=prod-deps /app/node_modules ./node_modules
 
 # Automatically leverage output traces to reduce image size
 # https://nextjs.org/docs/advanced-features/output-file-tracing
-COPY --from=prod-builder --chown=nextjs:nodejs /app/apps/web/.next/standalone ./apps
-COPY --from=prod-builder --chown=nextjs:nodejs /app/apps/web/.next/static ./apps/web/.next/static
-COPY --from=prod-builder --chown=nextjs:nodejs /app/apps/web/public ./apps/web/public
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/standalone ./apps
+COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./apps/web/.next/static
 
 ARG PORT=3000
 ENV PORT $PORT
+
+# Configure host name. Important for setting the domain.
+ARG HOSTNAME="0.0.0.0"
+ENV HOSTNAME $HOSTNAME
+
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
+
 EXPOSE 3000
 
-CMD HOSTNAME="0.0.0.0" node apps/web/server.js -p $PORT
+CMD node apps/web/server.js -p $PORT
