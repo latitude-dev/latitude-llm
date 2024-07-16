@@ -14,7 +14,7 @@
     "db:migrate:test": "NODE_ENV=test pnpm run db:migrate",
     "db:drop": "drizzle-kit drop",
     "db:check": "drizzle-kit check",
-    "db:studio": "drizzle-kit studio --host 0.0.0.0 --port 3002",
+    "db:studio": "drizzle-kit studio --port 3002",
     "lint": "eslint src",
     "tc": "tsc --noEmit",
     "test:watch": "vitest",
