@@ -7,18 +7,20 @@ import {
   type DocumentType,
 } from '@latitude-data/core'
 
-import createCommit from '../commits/create'
-
 function createDocument({
   name,
   commitId,
   parentId,
   documentType,
+  documentUuid,
+  content,
 }: {
   name: string
   commitId: number
   parentId?: number
   documentType?: DocumentType
+  documentUuid?: string
+  content?: string
 }) {
   return Transaction.call<DocumentVersion>(async (tx) => {
     const result = await tx
@@ -28,6 +30,8 @@ function createDocument({
         commitId,
         parentId,
         documentType,
+        documentUuid,
+        content,
       })
       .returning()
     const documentVersion = result[0]
@@ -36,32 +40,31 @@ function createDocument({
 }
 
 export async function createDocumentVersion({
+  documentUuid,
   projectId,
   name,
   commitUuid,
   documentType,
   parentId,
+  content,
 }: {
+  documentUuid?: string
   projectId: number
   name: string
   commitUuid: string
   documentType?: DocumentType
   parentId?: number
+  content?: string
 }) {
-  let commit = await findCommit({ uuid: commitUuid })
-  return Transaction.call<DocumentVersion>(async (tx) => {
-    if (!commit) {
-      const resultCommit = await createCommit({ projectId, db: tx })
-      if (resultCommit.error) return resultCommit
+  const res = await findCommit({ commitUuid, projectId })
+  let commitId = res.unwrap()
 
-      commit = resultCommit.value
-    }
-
-    return createDocument({
-      name,
-      commitId: commit.id,
-      parentId,
-      documentType,
-    })
+  return createDocument({
+    documentUuid,
+    name,
+    commitId: commitId,
+    parentId,
+    documentType,
+    content,
   })
 }

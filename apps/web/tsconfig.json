@@ -31,6 +31,6 @@
     "../../packages/jobs/src",
     "next-env.d.ts",
     "next.config.js"
-  ],
+, "../../packages/core/src/tests", "../../packages/core/src/tests/vitest.d.ts"  ],
   "exclude": ["node_modules"]
 }

@@ -10,6 +10,7 @@ export type DocumentTextEditorProps = {
   value: string
   metadata?: ConversationMetadata
   onChange?: (value: string) => void
+  disabled?: boolean
 }
 
 const DocumentTextEditor = lazy(() =>

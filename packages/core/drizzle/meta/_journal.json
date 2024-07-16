@@ -29,6 +29,20 @@
       "when": 1721124762014,
       "tag": "0003_cold_spirit",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1721144118986,
+      "tag": "0004_steep_blob",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1721222719839,
+      "tag": "0005_optimal_stepford_cuckoos",
+      "breakpoints": true
     }
   ]
 }

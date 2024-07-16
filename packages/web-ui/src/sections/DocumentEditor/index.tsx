@@ -8,6 +8,7 @@ import {
   DocumentTextEditor,
   DocumentTextEditorFallback,
 } from '$ui/ds/molecules'
+import { useCurrentCommit } from '$ui/providers/CommitProvider'
 
 function Header({ title, children }: { title: string; children?: ReactNode }) {
   return (
@@ -18,8 +19,9 @@ function Header({ title, children }: { title: string; children?: ReactNode }) {
   )
 }
 
-export function DocumentEditor({ document }: { document: string }) {
-  const [value, setValue] = useState(document)
+export function DocumentEditor({ content }: { content: string }) {
+  const { isDraft } = useCurrentCommit()
+  const [value, setValue] = useState(content)
   const [metadata, setMetadata] = useState<ConversationMetadata>()
   useEffect(() => {
     readMetadata({ prompt: value }).then(setMetadata)
@@ -38,6 +40,7 @@ export function DocumentEditor({ document }: { document: string }) {
             value={value}
             metadata={metadata}
             onChange={setValue}
+            disabled={!isDraft}
           />
         </Suspense>
       </div>

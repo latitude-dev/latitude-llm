@@ -21,6 +21,7 @@ export function DocumentTextEditor({
   value,
   metadata,
   onChange,
+  disabled,
 }: DocumentTextEditorProps) {
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null)
   const monacoRef = useRef<Monaco | null>(null)
@@ -94,6 +95,10 @@ export function DocumentTextEditor({
         onChange={handleValueChange}
         options={{
           lineNumbers: 'off',
+          readOnly: disabled,
+          readOnlyMessage: {
+            value: 'Create a new draft to edit this document',
+          },
           minimap: {
             enabled: false,
           },
