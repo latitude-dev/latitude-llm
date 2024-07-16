@@ -1,26 +1,20 @@
-import { commits, database, HEAD_COMMIT } from '@latitude-data/core'
+import { database } from '$core/client'
+import { HEAD_COMMIT } from '$core/constants'
+import { commits } from '$core/schema'
 import { desc, eq, isNull } from 'drizzle-orm'
 
+const selectCondition = (uuid?: Exclude<string, 'HEAD'>) => {
+  if (!uuid) return isNull(commits.nextCommitId)
+
+  return eq(commits.uuid, uuid)
+}
+
 export async function findCommit({ uuid }: { uuid?: string }, tx = database) {
-  const selectCondition = (uuid?: Exclude<string, 'HEAD'>) => {
-    if (!uuid) return isNull(commits.nextCommitId)
-
-    return eq(commits.uuid, uuid)
-  }
-
   if (uuid === HEAD_COMMIT) {
-    return (
-      await tx.select().from(commits).orderBy(desc(commits.id)).limit(1)
-    )[0]
+    return tx.query.commits.findFirst({ orderBy: desc(commits.id) })
   }
 
-  return (
-    await tx
-      .select({ id: commits.id })
-      .from(commits)
-      .where(selectCondition(uuid))
-      .limit(1)
-  )[0]
+  return tx.query.commits.findFirst({ where: selectCondition(uuid) })
 }
 
 export async function listCommits() {

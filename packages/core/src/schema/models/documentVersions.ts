@@ -1,9 +1,9 @@
+import { DocumentType } from '$core/constants'
 import { InferSelectModel, relations } from 'drizzle-orm'
 import {
   AnyPgColumn,
   bigint,
   bigserial,
-  pgEnum,
   text,
   timestamp,
   uuid,
@@ -14,9 +14,8 @@ import { z } from 'zod'
 import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
 import { commits } from './commits'
-import { DocumentType } from './types'
 
-export const documentTypeEnum = pgEnum('document_type', [
+export const documentTypeEnum = latitudeSchema.enum('document_type', [
   DocumentType.Document,
   DocumentType.Folder,
 ])

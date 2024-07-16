@@ -7,9 +7,9 @@ export async function GET(
 ) {
   try {
     const staged = Boolean(req.nextUrl.searchParams.get('staged') || false)
-    const nodes = await materializeDocumentsAtCommit({ commitUuid, staged })
+    const documents = await materializeDocumentsAtCommit({ commitUuid, staged })
 
-    return NextResponse.json(nodes)
+    return NextResponse.json(documents)
   } catch (err: unknown) {
     const error = err as Error
     return NextResponse.json({ error: error.message }, { status: 500 })

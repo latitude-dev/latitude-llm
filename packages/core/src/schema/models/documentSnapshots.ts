@@ -17,7 +17,7 @@ export const documentSnapshots = latitudeSchema.table(
     commitId: bigint('commit_id', { mode: 'number' })
       .references((): AnyPgColumn => commits.id, { onDelete: 'restrict' })
       .notNull(),
-    DocumentVersionId: bigint('document_version_id', { mode: 'number' })
+    documentVersionId: bigint('document_version_id', { mode: 'number' })
       .references((): AnyPgColumn => documentVersions.id, {
         onDelete: 'restrict',
       })
@@ -26,8 +26,8 @@ export const documentSnapshots = latitudeSchema.table(
   },
   (doc) => ({
     commitIdx: index('prompt_commit_idx').on(doc.commitId),
-    DocumentVersionIdx: index('document_snapshot_document_version_idx').on(
-      doc.DocumentVersionId,
+    documentVersionIdx: index('document_snapshot_document_version_idx').on(
+      doc.documentVersionId,
     ),
   }),
 )
@@ -41,7 +41,7 @@ export const documentSnapshotRelations = relations(
       references: [commits.id],
     }),
     version: one(documentVersions, {
-      fields: [documentSnapshots.DocumentVersionId],
+      fields: [documentSnapshots.documentVersionId],
       references: [documentVersions.id],
     }),
   }),

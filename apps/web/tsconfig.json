@@ -12,6 +12,9 @@
     "baseUrl": ".",
     "paths": {
       "$/*": ["./src/*"],
+      "@latitude-data/core": ["../../packages/core/src/*"],
+      "@latitude-data/jobs": ["../../packages/jobs/src/*"],
+      "@latitude-data/web-ui": ["../../packages/web-ui/src/*"],
       "$core/*": ["../../packages/core/src/*"],
       "$jobs/*": ["../../packages/jobs/src/*"],
       "$ui/*": ["../../packages/web-ui/src/*"],

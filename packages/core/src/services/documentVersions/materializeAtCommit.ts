@@ -1,12 +1,11 @@
 import { uniqBy } from 'lodash-es'
 
+import { HEAD_COMMIT } from '$core/constants'
 import {
   getDocumentsAtCommit,
   listdocumentSnapshots,
   listStagedDocuments,
-} from '@latitude-data/core'
-
-export const HEAD_COMMIT = 'HEAD'
+} from '$core/data-access'
 
 export async function materializeDocumentsAtCommit({
   commitUuid = HEAD_COMMIT,

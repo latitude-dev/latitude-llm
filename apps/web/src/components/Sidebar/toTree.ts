@@ -1,3 +1,5 @@
+import { useMemo } from 'react'
+
 import { DocumentVersion } from '@latitude-data/core'
 
 export class Node {
@@ -16,24 +18,26 @@ export class Node {
   }
 }
 
-export default function toTree(docs: DocumentVersion[]) {
-  function iterate(node: Node) {
-    let children
-    if (node.isRoot) {
-      children = Object.values(docs)
-        .filter((doc) => !doc.parentId)
-        .map((doc) => new Node(doc))
-    } else {
-      children = docs
-        .filter((doc) => doc.parentId === node.doc!.id)
-        .map((doc) => new Node(doc))
+export function useTree({ documents }: { documents: DocumentVersion[] }) {
+  return useMemo(() => {
+    function iterate(node: Node) {
+      let children
+      if (node.isRoot) {
+        children = Object.values(documents)
+          .filter((doc) => !doc.parentId)
+          .map((doc) => new Node(doc))
+      } else {
+        children = documents
+          .filter((doc) => doc.parentId === node.doc!.id)
+          .map((doc) => new Node(doc))
+      }
+
+      node.children = children
+      node.children.forEach(iterate)
+
+      return node
     }
 
-    node.children = children
-    node.children.forEach(iterate)
-
-    return node
-  }
-
-  return iterate(new Node(undefined, [], true))
+    return iterate(new Node(undefined, [], true))
+  }, [documents])
 }
