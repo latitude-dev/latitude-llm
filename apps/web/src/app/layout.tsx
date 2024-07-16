@@ -1,24 +1,141 @@
 import { ReactNode } from 'react'
 
 import type { Metadata } from 'next'
-import { IBM_Plex_Mono } from 'next/font/google'
 
 import '@latitude-data/web-ui/styles.css'
 
 import { ToastProvider } from '@latitude-data/web-ui'
+import localFont from 'next/font/local'
 
-const fontSans = IBM_Plex_Mono({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
-  style: ['normal'],
-  display: 'swap',
+const fontSans = localFont({
+  src: [
+    {
+      path: '../assets/fonts/IBMPlexMono-ExtraLight.ttf',
+      weight: '200',
+      style: 'normal',
+    },
+    {
+      path: '../assets/fonts/IBMPlexMono-ExtraLightItalic.ttf',
+      weight: '200',
+      style: 'italic',
+    },
+    {
+      path: '../assets/fonts/IBMPlexMono-Light.ttf',
+      weight: '300',
+      style: 'normal',
+    },
+    {
+      path: '../assets/fonts/IBMPlexMono-LightItalic.ttf',
+      weight: '300',
+      style: 'italic',
+    },
+    {
+      path: '../assets/fonts/IBMPlexMono-Regular.ttf',
+      weight: '400',
+      style: 'normal',
+    },
+    {
+      path: '../assets/fonts/IBMPlexMono-Italic.ttf',
+      weight: '400',
+      style: 'italic',
+    },
+    {
+      path: '../assets/fonts/IBMPlexMono-Medium.ttf',
+      weight: '500',
+      style: 'normal',
+    },
+    {
+      path: '../assets/fonts/IBMPlexMono-MediumItalic.ttf',
+      weight: '500',
+      style: 'italic',
+    },
+    {
+      path: '../assets/fonts/IBMPlexMono-SemiBold.ttf',
+      weight: '600',
+      style: 'normal',
+    },
+    {
+      path: '../assets/fonts/IBMPlexMono-SemiBoldItalic.ttf',
+      weight: '600',
+      style: 'italic',
+    },
+    {
+      path: '../assets/fonts/IBMPlexMono-Bold.ttf',
+      weight: '700',
+      style: 'normal',
+    },
+    {
+      path: '../assets/fonts/IBMPlexMono-BoldItalic.ttf',
+      weight: '700',
+      style: 'italic',
+    },
+  ],
   variable: '--font-sans',
 })
-const fontMono = IBM_Plex_Mono({
-  subsets: ['latin'],
-  weight: ['400', '500', '600', '700'],
-  style: ['normal'],
-  display: 'swap',
+
+const fontMono = localFont({
+  src: [
+    {
+      path: '../assets/fonts/IBMPlexMono-ExtraLight.ttf',
+      weight: '200',
+      style: 'normal',
+    },
+    {
+      path: '../assets/fonts/IBMPlexMono-ExtraLightItalic.ttf',
+      weight: '200',
+      style: 'italic',
+    },
+    {
+      path: '../assets/fonts/IBMPlexMono-Light.ttf',
+      weight: '300',
+      style: 'normal',
+    },
+    {
+      path: '../assets/fonts/IBMPlexMono-LightItalic.ttf',
+      weight: '300',
+      style: 'italic',
+    },
+    {
+      path: '../assets/fonts/IBMPlexMono-Regular.ttf',
+      weight: '400',
+      style: 'normal',
+    },
+    {
+      path: '../assets/fonts/IBMPlexMono-Italic.ttf',
+      weight: '400',
+      style: 'italic',
+    },
+    {
+      path: '../assets/fonts/IBMPlexMono-Medium.ttf',
+      weight: '500',
+      style: 'normal',
+    },
+    {
+      path: '../assets/fonts/IBMPlexMono-MediumItalic.ttf',
+      weight: '500',
+      style: 'italic',
+    },
+    {
+      path: '../assets/fonts/IBMPlexMono-SemiBold.ttf',
+      weight: '600',
+      style: 'normal',
+    },
+    {
+      path: '../assets/fonts/IBMPlexMono-SemiBoldItalic.ttf',
+      weight: '600',
+      style: 'italic',
+    },
+    {
+      path: '../assets/fonts/IBMPlexMono-Bold.ttf',
+      weight: '700',
+      style: 'normal',
+    },
+    {
+      path: '../assets/fonts/IBMPlexMono-BoldItalic.ttf',
+      weight: '700',
+      style: 'italic',
+    },
+  ],
   variable: '--font-mono',
 })
 
