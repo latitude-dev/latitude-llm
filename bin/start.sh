@@ -20,6 +20,13 @@ else
     exit 1
 fi
 
+# Check if docker is present and exit if not
+if ! command -v docker &> /dev/null
+then
+    echo "Docker is not installed. Please install Docker."
+    exit 1
+fi
+
 # Install pnpm
 if ! command -v pnpm &> /dev/null
 then
