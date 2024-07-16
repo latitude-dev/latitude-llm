@@ -17,24 +17,15 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install \
   --frozen-lockfile \
   --filter "@latitude-data/web..."
 
-# DEVELOPMENT stage
-# ------------------------------------------------------
-FROM installer AS dev-runner
-
-WORKDIR /app/apps/web
-ENV NODE_ENV=development
-ENV NEXT_TELEMETRY_DISABLED=1
-CMD pnpm dev
-
 # PRODUCTION stage
 # ------------------------------------------------------
-FROM installer AS prod-builder
+FROM installer AS builder
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
   BUILDING_CONTAINER=true \
   pnpm turbo build --filter='@latitude-data/web...'
 
-FROM base AS prod-runner
+FROM base AS runner
 
 WORKDIR /app-prod
 

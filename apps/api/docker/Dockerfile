@@ -12,7 +12,7 @@ COPY --from=base /app/out/full .
 
 WORKDIR /app/apps/api
 
-FROM builder AS production
+FROM builder AS runner
 
 ENV NODE_ENV production
 
@@ -21,12 +21,3 @@ RUN pnpm build
 
 CMD pnpm start
 
-FROM builder AS development
-
-ENV NODE_ENV development
-
-RUN pnpm install
-
-EXPOSE 3000
-
-CMD pnpm dev
