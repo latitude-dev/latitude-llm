@@ -5,68 +5,12 @@ services:
       context: .
       dockerfile: docker/Dockerfile.base
     restart: 'none'
-
-  web:
-    build:
-      context: .
-      target: dev-runner
-      dockerfile: apps/web/docker/Dockerfile
-    ports:
-      - '3000:3000'
-
-        # Expose the Node.js debug port to the host.
-      - '9229:9229'
-      - '9230:9230'
-    volumes:
-      - ./packages/env:/app/packages/env
-      - ./packages/core:/app/packages/core
-      - ./packages/jobs:/app/packages/jobs
-      - ./packages/web-ui:/app/packages/web-ui
-      - ./apps/web:/app/apps/web
-    depends_on:
-      - base
-      - db
-    command: pnpm run dev
-
-  api:
-    build:
-      context: .
-      dockerfile: apps/api/docker/Dockerfile
-      target: development
-    ports:
-      - '3001:3001'
-    volumes:
-      - ./packages/env:/app/packages/env
-      - ./packages/core:/app/packages/core
-      - ./packages/jobs:/app/packages/jobs
-      - ./apps/api:/app/apps/api
-    depends_on:
-      - base
-      - db
-    command: pnpm run dev
-
-  core:
-    build:
-      context: .
-      dockerfile: packages/core/docker/Dockerfile
-    ports:
-      # Used to run Drizzle studio in development
-      - '3002:3002'
-    volumes:
-      - ./packages/core:/app/packages/core
-      - ./packages/env:/app/packages/env
-    depends_on:
-      - base
-      - db
-    command: pnpm db:studio
-
   elastic:
     image: elasticsearch:8.14.1
     environment:
       - 'discovery.type=single-node'
       - 'ELASTIC_USERNAME=latitude'
       - 'ELASTIC_PASSWORD=secret'
-
   db:
     image: postgres
     environment:
@@ -77,20 +21,6 @@ services:
     volumes:
       - ./docker/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
       - ./docker/pgdata:/var/lib/postgresql/data
-
-  jobs:
-    build:
-      context: .
-      dockerfile: packages/jobs/docker/Dockerfile
-    volumes:
-      - ./packages/env:/app/packages/env
-      - ./packages/core:/app/packages/core
-      - ./packages/jobs:/app/packages/jobs
-    depends_on:
-      - db
-      - redis
-    command: pnpm dev
-
   redis:
     image: redis
     ports:
