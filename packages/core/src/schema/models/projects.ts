@@ -15,7 +15,7 @@ export const projects = latitudeSchema.table(
     ...timestamps(),
   },
   (table) => ({
-    nextCommitIdx: index('workspace_idx').on(table.workspaceId),
+    projectWorkspaceIdx: index('workspace_idx').on(table.workspaceId),
   }),
 )
 

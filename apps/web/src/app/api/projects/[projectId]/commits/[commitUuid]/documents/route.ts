@@ -2,12 +2,14 @@ import { materializeDocumentsAtCommit } from '@latitude-data/core'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(
-  req: NextRequest,
-  { commitUuid }: { commitUuid: string },
+  _: NextRequest,
+  { commitUuid, projectId }: { commitUuid: string; projectId: number },
 ) {
   try {
-    const staged = Boolean(req.nextUrl.searchParams.get('staged') || false)
-    const documents = await materializeDocumentsAtCommit({ commitUuid, staged })
+    const documents = await materializeDocumentsAtCommit({
+      commitUuid,
+      projectId,
+    })
 
     return NextResponse.json(documents)
   } catch (err: unknown) {

@@ -8,22 +8,17 @@ import { createDocumentVersionAction } from '$/actions/documents/create'
 import useSWR, { SWRConfiguration } from 'swr'
 import { useServerAction } from 'zsa-react'
 
-const FIXME_HARDCODED_PROJECT_ID = 1
 export default function useDocumentVersions(
   {
-    commitUuid = HEAD_COMMIT,
-    staged = false,
+    commitUuid,
+    projectId,
   }: {
     commitUuid?: string
-    staged?: boolean
+    projectId: number
   },
   opts?: SWRConfiguration,
 ) {
-  const key =
-    `/api/commits/${commitUuid}/documents?` +
-    new URLSearchParams({
-      staged: String(staged),
-    }).toString()
+  const key = `/api/projects/${projectId}/commits/${commitUuid ?? HEAD_COMMIT}/documents`
 
   const { mutate, data, ...rest } = useSWR<DocumentVersion[]>(
     key,
@@ -34,16 +29,15 @@ export default function useDocumentVersions(
   const { execute } = useServerAction(createDocumentVersionAction)
   const create = useCallback(
     async (payload: {
-      commitUuid?: string
       name: string
       documentType?: DocumentType
       parentId?: number
     }) => {
       const [document] = await execute({
         ...payload,
-        projectId: FIXME_HARDCODED_PROJECT_ID,
+        projectId,
         name: payload.name!,
-        commitUuid: payload.commitUuid || HEAD_COMMIT,
+        commitUuid: commitUuid || HEAD_COMMIT,
       })
       const prev = documents ?? []
 
