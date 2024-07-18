@@ -21,9 +21,13 @@ export function CreateNode({ parentId }: { parentId?: number }) {
 }
 
 function CreateFolder({ parentId }: { parentId?: number }) {
-  const { commitUuid, isDraft } = useCurrentCommit()
-  const { projectId } = useCurrentProject()
-  const { create } = useDocumentVersions({ projectId, commitUuid })
+  const { commit } = useCurrentCommit()
+  const isDraft = !commit.mergedAt
+  const { project } = useCurrentProject()
+  const { create } = useDocumentVersions({
+    projectId: project.id,
+    commitUuid: commit.uuid,
+  })
   return (
     <button
       disabled={!isDraft}
@@ -42,9 +46,13 @@ function CreateFolder({ parentId }: { parentId?: number }) {
 }
 
 function CreateDocument({ parentId }: { parentId?: number }) {
-  const { commitUuid, isDraft } = useCurrentCommit()
-  const { projectId } = useCurrentProject()
-  const { create } = useDocumentVersions({ projectId, commitUuid })
+  const { commit } = useCurrentCommit()
+  const isDraft = !commit.mergedAt
+  const { project } = useCurrentProject()
+  const { create } = useDocumentVersions({
+    projectId: project.id,
+    commitUuid: commit.uuid,
+  })
   return (
     <button
       disabled={!isDraft}
@@ -87,10 +95,10 @@ export default function DocumentTree({
 }: {
   documents: DocumentVersion[]
 }) {
-  const { commitUuid } = useCurrentCommit()
-  const { projectId } = useCurrentProject()
+  const { commit } = useCurrentCommit()
+  const { project } = useCurrentProject()
   const { documents } = useDocumentVersions(
-    { commitUuid, projectId },
+    { commitUuid: commit.uuid, projectId: project.id },
     { fallbackData: serverDocuments },
   )
   const rootNode = useTree({ documents })

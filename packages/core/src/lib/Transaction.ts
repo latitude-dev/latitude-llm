@@ -4,7 +4,7 @@ import type { ExtractTablesWithRelations } from 'drizzle-orm'
 import { PgQueryResultHKT, PgTransaction } from 'drizzle-orm/pg-core'
 import { DatabaseError } from 'pg'
 
-import { ConflictError } from './errors'
+import { ConflictError, UnprocessableEntityError } from './errors'
 import { ErrorResult, Result, TypedResult } from './Result'
 
 export type DBSchema = typeof schema
@@ -13,10 +13,13 @@ export type ITransaction<T extends DBSchema = DBSchema> = PgTransaction<
   T,
   ExtractTablesWithRelations<typeof schema>
 >
-export type PromisedResult<F> = Promise<TypedResult<F, Error>>
+export type PromisedResult<F, E extends Error = Error> = Promise<
+  TypedResult<F, E>
+>
 
 const DB_ERROR_CODES = {
   UNIQUE_VIOLATION: '23505',
+  INPUT_SYTAXT_ERROR: '22P02',
   TRANSACTION_ABORTED: '25P02',
 }
 
@@ -38,7 +41,7 @@ export default class Transaction {
 
       return result!
     } catch (error) {
-      return this.toResultError(error)
+      return Transaction.toResultError(error)
     }
   }
 
@@ -46,11 +49,13 @@ export default class Transaction {
    * Refer to the errors list at
    * https://github.com/rails/rails/blob/main/activerecord/lib/active_record/connection_adapters/postgresql_adapter.rb#L769.
    */
-  private toResultError(error: unknown): ErrorResult<Error> {
+  static toResultError(error: unknown): ErrorResult<Error> {
     const code = (error as DatabaseError)?.code
     switch (code) {
       case DB_ERROR_CODES.UNIQUE_VIOLATION:
         return Result.error(new ConflictError('Database conflict'))
+      case DB_ERROR_CODES.INPUT_SYTAXT_ERROR:
+        return Result.error(new UnprocessableEntityError('Invalid input', {}))
       default:
         return Result.error(error as Error)
     }

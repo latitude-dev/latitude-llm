@@ -2,22 +2,22 @@
 
 import { createContext, ReactNode, useContext } from 'react'
 
-interface ProjectContextType {
-  projectId: number
+type IProjectContextType = {
+  project: { id: number; name: string }
 }
 
-const ProjectContext = createContext<ProjectContextType>({
-  projectId: 0,
-})
+const ProjectContext = createContext<IProjectContextType>(
+  {} as IProjectContextType,
+)
 
 const ProjectProvider = ({
   children,
-  ...context
+  project,
 }: {
   children: ReactNode
-} & ProjectContextType) => {
+} & IProjectContextType) => {
   return (
-    <ProjectContext.Provider value={context}>
+    <ProjectContext.Provider value={{ project }}>
       {children}
     </ProjectContext.Provider>
   )

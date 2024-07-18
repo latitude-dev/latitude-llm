@@ -69,7 +69,7 @@ export async function getDocumentsAtCommit(
     return Result.ok(documentsAtPreviousMergedCommits)
   }
 
-  const commitResult = await findCommit({ projectId, commitUuid })
+  const commitResult = await findCommit({ projectId, uuid: commitUuid })
   if (commitResult.error) return commitResult
 
   const commit = commitResult.unwrap()
@@ -101,7 +101,7 @@ export async function getDocument({
   commitUuid: string
   documentId: number
 }): Promise<TypedResult<{ content: string }, LatitudeError>> {
-  const commitResult = await findCommit({ commitUuid, projectId })
+  const commitResult = await findCommit({ uuid: commitUuid, projectId })
   if (commitResult.error) return commitResult
   const commit = commitResult.unwrap()
 

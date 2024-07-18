@@ -3,7 +3,7 @@
 import { ReactNode, Suspense, useEffect, useMemo, useState } from 'react'
 
 import { ConversationMetadata, readMetadata } from '@latitude-data/compiler'
-import { Input, Text } from '$ui/ds/atoms'
+import { Badge, Input, Text } from '$ui/ds/atoms'
 import {
   DocumentTextEditor,
   DocumentTextEditorFallback,
@@ -49,11 +49,9 @@ export function DocumentEditor({ document }: { document: string }) {
             {inputs.length > 0 ? (
               inputs.map((param) => (
                 <div className='flex flex-row gap-4 w-full items-center'>
-                  <div className='flex py-0.5 px-1.5 bg-accent rounded-md'>
-                    <Text.H6M color='accentForeground'>
-                      &#123;&#123;{param}&#125;&#125;
-                    </Text.H6M>
-                  </div>
+                  <Badge variant='accent'>
+                    &#123;&#123;{param}&#125;&#125;
+                  </Badge>
                   <Input />
                 </div>
               ))

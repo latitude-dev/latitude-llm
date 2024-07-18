@@ -6,6 +6,7 @@ import {
 } from 'react'
 import { Slot } from '@radix-ui/react-slot'
 
+import { ExtendsUnion } from '@latitude-data/core'
 import {
   colors,
   font,
@@ -20,7 +21,6 @@ import {
   type WhiteSpace,
   type WordBreak,
 } from '$ui/ds/tokens'
-import { ExtendsUnion } from '$ui/lib/commonTypes'
 import { cn } from '$ui/lib/utils'
 
 type Display = 'inline' | 'inline-block' | 'block'

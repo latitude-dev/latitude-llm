@@ -1,3 +1,5 @@
 export * from './password'
 export { default as Transaction, type PromisedResult } from './Transaction'
 export * from './Result'
+export * from './errors'
+export * from './commonTypes'

@@ -24,17 +24,22 @@ export async function findHeadCommit(
   return Result.ok(headCommit)
 }
 
+export type FindCommitProps = {
+  uuid: string
+  projectId: number
+}
 export async function findCommit(
-  { projectId, commitUuid }: { projectId: number; commitUuid: string },
+  { projectId, uuid }: FindCommitProps,
   tx = database,
 ): Promise<TypedResult<Commit, LatitudeError>> {
-  if (commitUuid === HEAD_COMMIT) return findHeadCommit({ projectId }, tx)
+  if (uuid === HEAD_COMMIT) return findHeadCommit({ projectId }, tx)
 
   const commit = await tx.query.commits.findFirst({
-    where: eq(commits.uuid, commitUuid),
+    where: eq(commits.uuid, uuid),
   })
 
   if (!commit) return Result.error(new NotFoundError('Commit not found'))
+
   return Result.ok(commit)
 }
 

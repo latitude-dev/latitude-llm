@@ -1,4 +1,9 @@
-import { database, Result, workspaces } from '@latitude-data/core'
+import {
+  database,
+  NotFoundError,
+  Result,
+  workspaces,
+} from '@latitude-data/core'
 import { eq } from 'drizzle-orm'
 
 export async function getWorkspace({ userId }: { userId: string }) {
@@ -7,7 +12,7 @@ export async function getWorkspace({ userId }: { userId: string }) {
   })
 
   if (!workspace) {
-    return Result.error(new Error('Workspace not found'))
+    return Result.error(new NotFoundError('Workspace not found'))
   }
 
   return Result.ok(workspace)
