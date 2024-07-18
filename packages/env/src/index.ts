@@ -6,7 +6,7 @@ const env = process.env.NODE_ENV || 'development'
 if (env !== 'production') {
   dotenv.populate(process.env as DotenvPopulateInput, {
     NODE_ENV: env,
-    DATABASE_URL: `postgres://latitude:secret@localhost:5432/latitude_development`,
+    DATABASE_URL: `postgres://latitude:secret@localhost:5432/latitude_${env}`,
     ELASTIC_URL: 'https://elastic:9200',
     ELASTIC_USERNAME: 'latitude',
     ELASTIC_PASSWORD: 'secret',
