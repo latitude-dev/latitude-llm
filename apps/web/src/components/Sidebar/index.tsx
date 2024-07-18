@@ -1,12 +1,19 @@
-import { HEAD_COMMIT, materializeDocumentsAtCommit } from '@latitude-data/core'
+import { materializeDocumentsAtCommit } from '@latitude-data/core'
 
 import DocumentTree, { CreateNode } from './DocumentTree'
 
-export default async function Sidebar() {
-  const documents = await materializeDocumentsAtCommit({
-    commitUuid: HEAD_COMMIT,
-    staged: true,
+export default async function Sidebar({
+  commitUuid,
+  projectId,
+}: {
+  commitUuid: string
+  projectId: number
+}) {
+  const documentsResult = await materializeDocumentsAtCommit({
+    projectId,
+    commitUuid,
   })
+  const documents = documentsResult.unwrap()
 
   return (
     <div className='flex flex-col gap-4 p-4'>

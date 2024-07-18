@@ -2,6 +2,7 @@
 
 import { faker } from '@faker-js/faker'
 import type { DocumentType, DocumentVersion } from '@latitude-data/core'
+import { useCurrentCommit, useCurrentProject } from '@latitude-data/web-ui'
 import useDocumentVersions from '$/stores/documentVersions'
 
 import { Node, useTree } from '../toTree'
@@ -20,16 +21,20 @@ export function CreateNode({ parentId }: { parentId?: number }) {
 }
 
 function CreateFolder({ parentId }: { parentId?: number }) {
-  const { create } = useDocumentVersions({ staged: true })
+  const { commitUuid, isDraft } = useCurrentCommit()
+  const { projectId } = useCurrentProject()
+  const { create } = useDocumentVersions({ projectId, commitUuid })
   return (
     <button
-      onClick={() =>
+      disabled={!isDraft}
+      onClick={() => {
+        if (!isDraft) return
         create({
           parentId,
           documentType: 'folder' as DocumentType.Folder,
           name: generateName(),
         })
-      }
+      }}
     >
       +F
     </button>
@@ -37,9 +42,17 @@ function CreateFolder({ parentId }: { parentId?: number }) {
 }
 
 function CreateDocument({ parentId }: { parentId?: number }) {
-  const { create } = useDocumentVersions({ staged: true })
+  const { commitUuid, isDraft } = useCurrentCommit()
+  const { projectId } = useCurrentProject()
+  const { create } = useDocumentVersions({ projectId, commitUuid })
   return (
-    <button onClick={() => create({ parentId, name: generateName() })}>
+    <button
+      disabled={!isDraft}
+      onClick={() => {
+        if (!isDraft) return
+        create({ parentId, name: generateName() })
+      }}
+    >
       +D
     </button>
   )
@@ -74,8 +87,10 @@ export default function DocumentTree({
 }: {
   documents: DocumentVersion[]
 }) {
+  const { commitUuid } = useCurrentCommit()
+  const { projectId } = useCurrentProject()
   const { documents } = useDocumentVersions(
-    { staged: true },
+    { commitUuid, projectId },
     { fallbackData: serverDocuments },
   )
   const rootNode = useTree({ documents })

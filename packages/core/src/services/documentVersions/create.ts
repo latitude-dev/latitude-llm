@@ -6,19 +6,22 @@ import {
   Transaction,
   type DocumentType,
 } from '@latitude-data/core'
-
-import createCommit from '../commits/create'
+import { ForbiddenError } from '$core/lib/errors'
 
 function createDocument({
   name,
   commitId,
   parentId,
   documentType,
+  documentUuid,
+  content,
 }: {
   name: string
   commitId: number
   parentId?: number
   documentType?: DocumentType
+  documentUuid?: string
+  content?: string
 }) {
   return Transaction.call<DocumentVersion>(async (tx) => {
     const result = await tx
@@ -28,6 +31,8 @@ function createDocument({
         commitId,
         parentId,
         documentType,
+        documentUuid,
+        content,
       })
       .returning()
     const documentVersion = result[0]
@@ -36,32 +41,37 @@ function createDocument({
 }
 
 export async function createDocumentVersion({
+  documentUuid,
   projectId,
   name,
   commitUuid,
   documentType,
   parentId,
+  content,
 }: {
+  documentUuid?: string
   projectId: number
   name: string
   commitUuid: string
   documentType?: DocumentType
   parentId?: number
+  content?: string
 }) {
-  let commit = await findCommit({ uuid: commitUuid })
-  return Transaction.call<DocumentVersion>(async (tx) => {
-    if (!commit) {
-      const resultCommit = await createCommit({ projectId, db: tx })
-      if (resultCommit.error) return resultCommit
+  const commitResult = await findCommit({ commitUuid, projectId })
+  const commit = commitResult.unwrap()
 
-      commit = resultCommit.value
-    }
+  if (commit.mergedAt !== null) {
+    return Result.error(
+      new ForbiddenError('Cannot create a document version in a merged commit'),
+    )
+  }
 
-    return createDocument({
-      name,
-      commitId: commit.id,
-      parentId,
-      documentType,
-    })
+  return createDocument({
+    documentUuid,
+    name,
+    commitId: commit.id,
+    parentId,
+    documentType,
+    content,
   })
 }
