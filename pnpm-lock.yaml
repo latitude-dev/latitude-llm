@@ -187,6 +187,9 @@ importers:
       ioredis:
         specifier: ^5.4.1
         version: 5.4.1
+      lodash-es:
+        specifier: ^4.17.21
+        version: 4.17.21
       lucia:
         specifier: ^3.2.0
         version: 3.2.0
@@ -205,6 +208,9 @@ importers:
       swr:
         specifier: ^2.2.5
         version: 2.2.5(react@19.0.0-rc-378b305958-20240710)
+      use-debounce:
+        specifier: ^10.0.1
+        version: 10.0.1(react@19.0.0-rc-378b305958-20240710)
       zod:
         specifier: ^3.23.8
         version: 3.23.8
@@ -306,6 +312,9 @@ importers:
 
   packages/core:
     dependencies:
+      '@latitude-data/compiler':
+        specifier: workspace:^
+        version: link:../compiler
       '@latitude-data/env':
         specifier: workspace:^
         version: link:../env
@@ -9065,6 +9074,15 @@ packages:
       '@types/react': 18.3.0
       react: 18.3.0
       tslib: 2.6.3
+    dev: false
+
+  /use-debounce@10.0.1(react@19.0.0-rc-378b305958-20240710):
+    resolution: {integrity: sha512-0uUXjOfm44e6z4LZ/woZvkM8FwV1wiuoB6xnrrOmeAEjRDDzTLQNRFtYHvqUsJdrz1X37j0rVGIVp144GLHGKg==}
+    engines: {node: '>= 16.0.0'}
+    peerDependencies:
+      react: '>=16.8.0 || 19.x'
+    dependencies:
+      react: 19.0.0-rc-378b305958-20240710
     dev: false
 
   /use-sidecar@1.1.2(@types/react@18.3.0)(react@18.3.0):

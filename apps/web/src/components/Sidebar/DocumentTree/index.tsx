@@ -33,7 +33,7 @@ function CreateFolder({ parentId }: { parentId?: number }) {
         })
       }}
     >
-      +F
+      <span className={isDraft ? '' : 'opacity-50'}>+F</span>
     </button>
   )
 }
@@ -56,12 +56,14 @@ function CreateDocument({ parentId }: { parentId?: number }) {
         }) // TODO: This makes no sense, it's just so the linter doesn't complain
       }}
     >
-      +D
+      <span className={isDraft ? '' : 'opacity-50'}>+D</span>
     </button>
   )
 }
 
 function TreeNode({ node, level = 0 }: { node: Node; level?: number }) {
+  const { commit, isHead } = useCurrentCommit()
+  const { project } = useCurrentProject()
   return (
     <div key={node.doc?.id || 'root'}>
       <div className='flex flex-col gap-2' style={{ paddingLeft: level * 2 }}>

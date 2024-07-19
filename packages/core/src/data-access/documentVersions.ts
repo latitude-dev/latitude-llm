@@ -3,21 +3,39 @@ import {
   database,
   DocumentVersion,
   documentVersions,
-  findCommit,
-  getCommitMergedAt,
+  findCommitById,
   Result,
   TypedResult,
 } from '@latitude-data/core'
 import { LatitudeError, NotFoundError } from '$core/lib/errors'
 import { and, eq, isNotNull, lte, max } from 'drizzle-orm'
 
+async function getCommitMergedAt({
+  commitId,
+}: {
+  commitId: number
+}): Promise<TypedResult<Date | null, LatitudeError>> {
+  const commitResult = await findCommitById({ id: commitId })
+  if (commitResult.error) return commitResult
+
+  return Result.ok(commitResult.value.mergedAt)
+}
+
 export async function getDocumentsAtCommit(
-  { commitUuid, projectId }: { commitUuid: string; projectId: number },
+  {
+    commitId,
+    commitMergedAt,
+  }: { commitId: number; commitMergedAt?: Date | null },
   tx = database,
 ): Promise<TypedResult<DocumentVersion[], LatitudeError>> {
-  const maxMergedAtResult = await getCommitMergedAt({ commitUuid, projectId })
-  if (maxMergedAtResult.error) return maxMergedAtResult
-  const maxMergedAt = maxMergedAtResult.unwrap()
+  let maxMergedAt: Date | null
+  if (commitMergedAt !== undefined) {
+    maxMergedAt = commitMergedAt
+  } else {
+    const maxMergedAtResult = await getCommitMergedAt({ commitId })
+    if (maxMergedAtResult.error) return maxMergedAtResult
+    maxMergedAt = maxMergedAtResult.value!
+  }
 
   const whereStatement = () => {
     const mergedAtNotNull = isNotNull(commits.mergedAt)
@@ -64,28 +82,25 @@ export async function getDocumentsAtCommit(
   const documentsAtPreviousMergedCommits =
     documentsAtPreviousMergedCommitsResult.map((d) => d.document_versions)
 
-  if (maxMergedAt) {
+  if (maxMergedAt !== null) {
     // Referenced commit is merged. No additional documents to return.
     return Result.ok(documentsAtPreviousMergedCommits)
   }
-
-  const commitResult = await findCommit({ projectId, uuid: commitUuid })
-  if (commitResult.error) return commitResult
-
-  const commit = commitResult.unwrap()
 
   const documentsAtDraftResult = await tx
     .select()
     .from(documentVersions)
     .innerJoin(commits, eq(commits.id, documentVersions.commitId))
-    .where(eq(commits.id, commit.id))
+    .where(eq(commits.id, commitId))
 
   const documentsAtDraft = documentsAtDraftResult.map(
     (d) => d.document_versions,
   )
   const totalDocuments = documentsAtPreviousMergedCommits
-    .filter((d) =>
-      documentsAtDraft.find((d2) => d2.documentUuid !== d.documentUuid),
+    .filter(
+      (d) =>
+        documentsAtDraft.find((d2) => d2.documentUuid === d.documentUuid) ===
+        undefined,
     )
     .concat(documentsAtDraft)
 
@@ -93,15 +108,13 @@ export async function getDocumentsAtCommit(
 }
 
 export async function getDocument({
-  projectId,
-  commitUuid,
+  commitId,
   documentId,
 }: {
-  projectId: number
-  commitUuid: string
+  commitId: number
   documentId: number
 }): Promise<TypedResult<{ content: string }, LatitudeError>> {
-  const commitResult = await findCommit({ uuid: commitUuid, projectId })
+  const commitResult = await findCommitById({ id: commitId })
   if (commitResult.error) return commitResult
   const commit = commitResult.unwrap()
 
@@ -121,4 +134,15 @@ export async function getDocument({
 
   const documentVersion = result[0]!
   return Result.ok({ content: documentVersion.content ?? '' })
+}
+
+export async function listCommitChanges(
+  { commitId }: { commitId: number },
+  tx = database,
+) {
+  const changedDocuments = await tx.query.documentVersions.findMany({
+    where: eq(documentVersions.commitId, commitId),
+  })
+
+  return Result.ok(changedDocuments)
 }

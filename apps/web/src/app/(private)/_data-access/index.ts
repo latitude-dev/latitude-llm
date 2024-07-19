@@ -1,10 +1,10 @@
 import { cache } from 'react'
 
 import {
-  findCommit as originalfindCommit,
+  findCommitByUuid as originalfindCommit,
   findProject as originalFindProject,
   getFirstProject as originalGetFirstProject,
-  type FindCommitProps,
+  type FindCommitByUuidProps,
   type FindProjectProps,
 } from '@latitude-data/core'
 
@@ -27,7 +27,7 @@ export const findProject = cache(
 )
 
 export const findCommit = cache(
-  async ({ uuid, projectId }: FindCommitProps) => {
+  async ({ uuid, projectId }: FindCommitByUuidProps) => {
     const result = await originalfindCommit({ uuid, projectId })
     const commit = result.unwrap()
 

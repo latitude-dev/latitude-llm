@@ -8,7 +8,10 @@ const filename = fileURLToPath(import.meta.url)
 const root = dirname(filename)
 
 export default defineConfig({
-  plugins: [tsconfigPaths({ root })],
+  plugins: [tsconfigPaths({
+    root,
+    projects: [`${root}/tsconfig.json`, `${root}/../compiler/tsconfig.json`], 
+  })],
   test: {
     globals: true,
     testTimeout: 5000,

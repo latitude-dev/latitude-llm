@@ -18,8 +18,16 @@ function Header({ title, children }: { title: string; children?: ReactNode }) {
   )
 }
 
-export function DocumentEditor({ document }: { document: string }) {
-  const [value, setValue] = useState(document)
+export function DocumentEditor({
+  content,
+  disabled,
+  onChange,
+}: {
+  content: string
+  disabled?: boolean
+  onChange?: (value: string) => void
+}) {
+  const [value, setValue] = useState(content)
   const [metadata, setMetadata] = useState<ConversationMetadata>()
   useEffect(() => {
     readMetadata({ prompt: value }).then(setMetadata)
@@ -29,6 +37,11 @@ export function DocumentEditor({ document }: { document: string }) {
     return Array.from(metadata.parameters)
   }, [metadata])
 
+  function handleChange(value: string) {
+    setValue(value)
+    onChange?.(value)
+  }
+
   return (
     <div className='flex flex-row w-full h-full gap-8'>
       <div className='flex flex-col flex-1 flex-grow flex-shrink gap-2 min-w-0'>
@@ -37,7 +50,8 @@ export function DocumentEditor({ document }: { document: string }) {
           <DocumentTextEditor
             value={value}
             metadata={metadata}
-            onChange={setValue}
+            onChange={handleChange}
+            disabled={disabled}
           />
         </Suspense>
       </div>

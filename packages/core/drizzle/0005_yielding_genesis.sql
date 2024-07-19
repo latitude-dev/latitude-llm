@@ -1,0 +1,1 @@
+ALTER TABLE "latitude"."document_versions" ADD CONSTRAINT "unique_document_uuid_commit_id" UNIQUE("document_uuid","commit_id");

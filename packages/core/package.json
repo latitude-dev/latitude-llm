@@ -23,6 +23,7 @@
     "prettier": "prettier --write src/**/*.ts"
   },
   "dependencies": {
+    "@latitude-data/compiler": "workspace:^",
     "@latitude-data/env": "workspace:^",
     "bcrypt": "^5.1.1",
     "drizzle-orm": "0.31.4",

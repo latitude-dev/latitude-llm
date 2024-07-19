@@ -1,4 +1,7 @@
-import { getDocumentsAtCommit } from '@latitude-data/core'
+import {
+  findCommitByUuid,
+  getDocumentsAtCommit,
+} from '@latitude-data/core'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(
@@ -8,9 +11,12 @@ export async function GET(
   }: { params: { commitUuid: string; projectId: number } },
 ) {
   try {
-    const documents = await getDocumentsAtCommit({
-      commitUuid,
+    const commit = await findCommitByUuid({
       projectId: Number(projectId),
+      uuid: commitUuid,
+    })
+    const documents = await getDocumentsAtCommit({
+      commitId: commit.unwrap().id,
     })
 
     return NextResponse.json(documents.unwrap())
