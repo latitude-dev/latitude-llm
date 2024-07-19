@@ -1,4 +1,4 @@
-import { materializeDocumentsAtCommit } from '@latitude-data/core'
+import { getDocumentsAtCommit } from '@latitude-data/core'
 
 import DocumentTree, { CreateNode } from './DocumentTree'
 
@@ -9,7 +9,7 @@ export default async function Sidebar({
   commitUuid: string
   projectId: number
 }) {
-  const documentsResult = await materializeDocumentsAtCommit({
+  const documentsResult = await getDocumentsAtCommit({
     projectId,
     commitUuid,
   })

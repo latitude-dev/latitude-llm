@@ -10,5 +10,4 @@ export * from './models/apiKeys'
 // Document tables
 export * from './models/projects'
 export * from './models/commits'
-export * from './models/documentSnapshots'
 export * from './models/documentVersions'

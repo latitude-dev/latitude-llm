@@ -43,6 +43,13 @@
       "when": 1721394470350,
       "tag": "0005_right_magik",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1721396158426,
+      "tag": "0006_strong_norman_osborn",
+      "breakpoints": true
     }
   ]
 }

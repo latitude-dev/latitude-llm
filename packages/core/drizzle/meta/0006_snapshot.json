@@ -1,6 +1,6 @@
 {
-  "id": "95e08da6-8793-4095-b035-f2873c82f634",
-  "prevId": "d9cf6cd2-f6a9-41e1-8acc-984d00e7afcd",
+  "id": "147b5696-593a-4fbb-a871-4e9038ee7635",
+  "prevId": "95e08da6-8793-4095-b035-f2873c82f634",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -518,108 +518,6 @@
           ]
         }
       }
-    },
-    "latitude.document_snapshots": {
-      "name": "document_snapshots",
-      "schema": "latitude",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "bigserial",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "commit_id": {
-          "name": "commit_id",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "document_version_id": {
-          "name": "document_version_id",
-          "type": "bigint",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "prompt_commit_idx": {
-          "name": "prompt_commit_idx",
-          "columns": [
-            {
-              "expression": "commit_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "document_snapshot_document_version_idx": {
-          "name": "document_snapshot_document_version_idx",
-          "columns": [
-            {
-              "expression": "document_version_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "document_snapshots_commit_id_commits_id_fk": {
-          "name": "document_snapshots_commit_id_commits_id_fk",
-          "tableFrom": "document_snapshots",
-          "tableTo": "commits",
-          "schemaTo": "latitude",
-          "columnsFrom": [
-            "commit_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
-        },
-        "document_snapshots_document_version_id_document_versions_id_fk": {
-          "name": "document_snapshots_document_version_id_document_versions_id_fk",
-          "tableFrom": "document_snapshots",
-          "tableTo": "document_versions",
-          "schemaTo": "latitude",
-          "columnsFrom": [
-            "document_version_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "restrict",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {}
     },
     "latitude.document_versions": {
       "name": "document_versions",
