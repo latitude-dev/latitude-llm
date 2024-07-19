@@ -11,7 +11,6 @@ import { AppLayout, BreadcrumpBadge } from '@latitude-data/web-ui/browser'
 import { findCommit, findProject } from '$/app/(private)/_data-access'
 import { NAV_LINKS } from '$/app/(private)/_lib/constants'
 import { ProjectPageParams } from '$/app/(private)/projects/[projectId]/page'
-import Sidebar from '$/components/Sidebar'
 import { getCurrentUser, SessionData } from '$/services/auth/getCurrentUser'
 import { notFound } from 'next/navigation'
 
@@ -67,7 +66,8 @@ export default async function CommitLayout({
         >
           <main className='flex flex-row w-full'>
             <div className='w-[280px]'>
-              <Sidebar commitUuid={commit.uuid} projectId={project.id} />
+              {/* TODO: commented out until fixed toTree methods to new path schema */}
+              {/* <Sidebar commitUuid={commit.uuid} projectId={project.id} /> */}
             </div>
             <div className='flex-1'>{children}</div>
           </main>

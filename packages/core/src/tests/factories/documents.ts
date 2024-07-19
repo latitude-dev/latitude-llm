@@ -1,21 +1,18 @@
 import { faker } from '@faker-js/faker'
-import { DocumentType } from '$core/constants'
-import type { Commit, DocumentVersion } from '$core/schema'
+import type { Commit } from '$core/schema'
 import { createDocumentVersion as createDocumentVersionFn } from '$core/services/documentVersions/create'
 
 export type IDocumentVersionData = {
   commit: Commit
+  path?: string
   documentUuid?: string
-  name?: string
   content?: string
-  parentFolder?: DocumentVersion
-  type?: DocumentType
 }
 
 function makeRandomDocumentVersionData() {
   return {
-    name: faker.commerce.department(),
-    content: faker.lorem.paragraphs(),
+    path: faker.commerce.productName().replace(/\s/g, '_').toLowerCase(),
+    content: faker.lorem.paragraphs().toLowerCase(),
   }
 }
 
@@ -26,20 +23,14 @@ export async function createDocumentVersion(
 
   const data = {
     ...randomData,
-    type: DocumentType.Document,
-    content:
-      documentData.type === DocumentType.Folder
-        ? undefined
-        : randomData.content,
+    content: randomData.content,
     ...documentData,
   }
 
   const result = await createDocumentVersionFn({
     projectId: data.commit.projectId,
-    name: data.name,
+    path: data.path,
     commitUuid: data.commit.uuid,
-    documentType: data.type,
-    parentId: data.parentFolder?.id,
     documentUuid: data.documentUuid,
     content: data.content,
   })

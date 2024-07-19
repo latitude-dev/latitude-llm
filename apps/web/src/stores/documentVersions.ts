@@ -3,7 +3,7 @@
 import { useCallback } from 'react'
 
 import { DocumentVersion } from '@latitude-data/core'
-import { HEAD_COMMIT, type DocumentType } from '@latitude-data/core/browser'
+import { HEAD_COMMIT } from '@latitude-data/core/browser'
 import { createDocumentVersionAction } from '$/actions/documents/create'
 import useSWR, { SWRConfiguration } from 'swr'
 import { useServerAction } from 'zsa-react'
@@ -28,15 +28,11 @@ export default function useDocumentVersions(
   const documents = data ?? []
   const { execute } = useServerAction(createDocumentVersionAction)
   const create = useCallback(
-    async (payload: {
-      name: string
-      documentType?: DocumentType
-      parentId?: number
-    }) => {
+    async (payload: { path: string }) => {
       const [document] = await execute({
         ...payload,
         projectId,
-        name: payload.name!,
+        path: payload.path,
         commitUuid: commitUuid || HEAD_COMMIT,
       })
       const prev = documents ?? []
