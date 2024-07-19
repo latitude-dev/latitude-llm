@@ -24,12 +24,12 @@ export async function findHeadCommit(
   return Result.ok(headCommit)
 }
 
-export type FindCommitProps = {
+export type FindCommitByUuidProps = {
   uuid: string
   projectId?: number
 }
-export async function findCommit(
-  { projectId, uuid }: FindCommitProps,
+export async function findCommitByUuid(
+  { projectId, uuid }: FindCommitByUuidProps,
   tx = database,
 ): Promise<TypedResult<Commit, LatitudeError>> {
   if (uuid === HEAD_COMMIT) {
@@ -49,34 +49,19 @@ export async function findCommit(
   return Result.ok(commit)
 }
 
-export async function listCommits() {
-  return database.select().from(commits)
-}
-
-export async function getCommitMergedAt(
-  { projectId, commitUuid }: { projectId: number; commitUuid: string },
+export async function findCommitById(
+  { id }: { id: number },
   tx = database,
-): Promise<TypedResult<Date | null, LatitudeError>> {
-  if (commitUuid === HEAD_COMMIT) {
-    const result = await tx
-      .select({ mergedAt: commits.mergedAt })
-      .from(commits)
-      .where(and(eq(commits.projectId, projectId), isNotNull(commits.mergedAt)))
-      .orderBy(desc(commits.mergedAt))
-      .limit(1)
-
-    if (!result.length) {
-      return Result.error(new NotFoundError('No head commit found'))
-    }
-    const headCommit = result[0]!
-    return Result.ok(headCommit.mergedAt!)
-  }
-
+): Promise<TypedResult<Commit, LatitudeError>> {
   const commit = await tx.query.commits.findFirst({
-    where: eq(commits.uuid, commitUuid),
+    where: eq(commits.id, id),
   })
 
   if (!commit) return Result.error(new NotFoundError('Commit not found'))
 
-  return Result.ok(commit.mergedAt)
+  return Result.ok(commit)
+}
+
+export async function listCommits() {
+  return database.select().from(commits)
 }

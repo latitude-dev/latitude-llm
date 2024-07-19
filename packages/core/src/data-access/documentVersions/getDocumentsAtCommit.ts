@@ -3,27 +3,26 @@ import {
   database,
   DocumentVersion,
   documentVersions,
-  findCommit,
-  getCommitMergedAt,
+  findCommitById,
   Result,
   TypedResult,
 } from '@latitude-data/core'
 import { LatitudeError } from '$core/lib/errors'
-import { and, eq, isNotNull, lte, max } from 'drizzle-orm'
+import { and, eq, getTableColumns, isNotNull, lte, max } from 'drizzle-orm'
 
-export async function getDocumentsAtCommit(
-  { commitUuid, projectId }: { commitUuid: string; projectId: number },
+async function fetchDocumentsFromMergedCommits(
+  {
+    projectId,
+    maxMergedAt,
+  }: {
+    projectId: number
+    maxMergedAt: Date | null
+  },
   tx = database,
-): Promise<TypedResult<DocumentVersion[], LatitudeError>> {
-  const maxMergedAtResult = await getCommitMergedAt({ commitUuid, projectId })
-  if (maxMergedAtResult.error) return maxMergedAtResult
-  const maxMergedAt = maxMergedAtResult.unwrap()
-
-  const whereStatement = () => {
+): Promise<DocumentVersion[]> {
+  const filterByMaxMergedAt = () => {
     const mergedAtNotNull = isNotNull(commits.mergedAt)
-    if (!maxMergedAt) {
-      return mergedAtNotNull
-    }
+    if (maxMergedAt === null) return mergedAtNotNull
     return and(mergedAtNotNull, lte(commits.mergedAt, maxMergedAt))
   }
 
@@ -35,13 +34,13 @@ export async function getDocumentsAtCommit(
       })
       .from(documentVersions)
       .innerJoin(commits, eq(commits.id, documentVersions.commitId))
-      .where(whereStatement())
+      .where(and(filterByMaxMergedAt(), eq(commits.projectId, projectId)))
       .groupBy(documentVersions.documentUuid),
   )
 
-  const documentsAtPreviousMergedCommitsResult = await tx
+  const documentsFromMergedCommits = await tx
     .with(lastVersionOfEachDocument)
-    .select()
+    .select(getTableColumns(documentVersions))
     .from(documentVersions)
     .innerJoin(
       commits,
@@ -61,33 +60,60 @@ export async function getDocumentsAtCommit(
       ),
     )
 
-  const documentsAtPreviousMergedCommits =
-    documentsAtPreviousMergedCommitsResult.map((d) => d.document_versions)
+  return documentsFromMergedCommits
+}
 
-  if (maxMergedAt) {
+function mergeDocuments(
+  ...documentsArr: DocumentVersion[][]
+): DocumentVersion[] {
+  return documentsArr.reduce((acc, documents) => {
+    return acc
+      .filter((d) => {
+        return !documents.find((d2) => d2.documentUuid === d.documentUuid)
+      })
+      .concat(documents)
+  }, [])
+}
+
+export async function getDocumentsAtCommit(
+  { commitId }: { commitId: number },
+  tx = database,
+): Promise<TypedResult<DocumentVersion[], LatitudeError>> {
+  const commitResult = await findCommitById({ id: commitId })
+  if (commitResult.error) return commitResult
+  const commit = commitResult.value!
+
+  const documentsFromMergedCommits = await fetchDocumentsFromMergedCommits({
+    projectId: commit.projectId,
+    maxMergedAt: commit.mergedAt,
+  })
+
+  if (commit.mergedAt !== null) {
     // Referenced commit is merged. No additional documents to return.
-    return Result.ok(documentsAtPreviousMergedCommits)
+    return Result.ok(documentsFromMergedCommits)
   }
 
-  const commitResult = await findCommit({ projectId, uuid: commitUuid })
-  if (commitResult.error) return commitResult
-
-  const commit = commitResult.unwrap()
-
-  const documentsAtDraftResult = await tx
-    .select()
+  const documentsFromDraft = await tx
+    .select(getTableColumns(documentVersions))
     .from(documentVersions)
     .innerJoin(commits, eq(commits.id, documentVersions.commitId))
-    .where(eq(commits.id, commit.id))
+    .where(eq(commits.id, commitId))
 
-  const documentsAtDraft = documentsAtDraftResult.map(
-    (d) => d.document_versions,
+  const totalDocuments = mergeDocuments(
+    documentsFromMergedCommits,
+    documentsFromDraft,
   )
-  const totalDocuments = documentsAtPreviousMergedCommits
-    .filter((d) =>
-      documentsAtDraft.find((d2) => d2.documentUuid !== d.documentUuid),
-    )
-    .concat(documentsAtDraft)
 
   return Result.ok(totalDocuments)
+}
+
+export async function listCommitChanges(
+  { commitId }: { commitId: number },
+  tx = database,
+) {
+  const changedDocuments = await tx.query.documentVersions.findMany({
+    where: eq(documentVersions.commitId, commitId),
+  })
+
+  return Result.ok(changedDocuments)
 }

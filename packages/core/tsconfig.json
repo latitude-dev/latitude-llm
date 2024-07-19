@@ -3,12 +3,13 @@
   "compilerOptions": {
     "moduleResolution": "Bundler",
     "baseUrl": ".",
-    "rootDir": "./src",
-    "outDir": "./dist",
     "paths": {
-      "$core/*": ["./src/*"]
+      "@latitude-data/compiler": ["../compiler/src/*"],
+      "$compiler/*": ["../compiler/src/*"],
+      "$core/*": ["src/*"],
+      "acorn": ["node_modules/@latitude-data/typescript-config/types/acorn"]
     }
   },
-  "include": ["src/**/*"],
+  "include": ["src"],
   "exclude": ["node_modules", "dist"]
 }

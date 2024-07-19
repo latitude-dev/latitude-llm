@@ -2,13 +2,17 @@
 import { fileURLToPath } from 'url'
 import { dirname } from 'path'
 import { defineConfig } from 'vitest/config'
-import tsconfigPaths from 'vite-tsconfig-paths'
 
 const filename = fileURLToPath(import.meta.url)
 const root = dirname(filename)
 
 export default defineConfig({
-  plugins: [tsconfigPaths({ root })],
+  resolve: {
+    alias: {
+      "$compiler": `${root}/../compiler/src`, 
+      "$core": `${root}/src`,
+    }
+  },
   test: {
     globals: true,
     testTimeout: 5000,

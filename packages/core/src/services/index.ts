@@ -1,5 +1,5 @@
 export * from './users'
 export * from './workspaces'
-export * from './documentVersions'
+export * from './documents'
 export * from './commits'
 export * from './projects'
