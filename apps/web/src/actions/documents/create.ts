@@ -1,6 +1,6 @@
 'use server'
 
-import { createDocumentVersion, DocumentType } from '@latitude-data/core'
+import { createDocumentVersion } from '@latitude-data/core'
 import { z } from 'zod'
 
 import { withProject } from '../procedures'
@@ -9,10 +9,8 @@ export const createDocumentVersionAction = withProject
   .createServerAction()
   .input(
     z.object({
-      name: z.string(),
+      path: z.string(),
       commitUuid: z.string(),
-      parentId: z.number().optional(),
-      documentType: z.nativeEnum(DocumentType).optional(),
     }),
     { type: 'json' },
   )

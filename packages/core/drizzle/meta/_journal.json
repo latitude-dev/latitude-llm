@@ -36,6 +36,13 @@
       "when": 1721290010434,
       "tag": "0004_cold_ben_parker",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1721394470350,
+      "tag": "0005_right_magik",
+      "breakpoints": true
     }
   ]
 }

@@ -4,33 +4,26 @@ import {
   findCommit,
   Result,
   Transaction,
-  type DocumentType,
 } from '@latitude-data/core'
 import { ForbiddenError } from '$core/lib/errors'
 
 function createDocument({
-  name,
+  path,
   commitId,
-  parentId,
-  documentType,
   documentUuid,
   content,
 }: {
-  name: string
+  path: string
   commitId: number
-  parentId?: number
-  documentType?: DocumentType
+  content: string
   documentUuid?: string
-  content?: string
 }) {
   return Transaction.call<DocumentVersion>(async (tx) => {
     const result = await tx
       .insert(documentVersions)
       .values({
-        name,
+        path,
         commitId,
-        parentId,
-        documentType,
         documentUuid,
         content,
       })
@@ -43,18 +36,14 @@ function createDocument({
 export async function createDocumentVersion({
   documentUuid,
   projectId,
-  name,
+  path,
   commitUuid,
-  documentType,
-  parentId,
   content,
 }: {
   documentUuid?: string
   projectId: number
-  name: string
+  path: string
   commitUuid: string
-  documentType?: DocumentType
-  parentId?: number
   content?: string
 }) {
   const resultFindCommit = await findCommit({ uuid: commitUuid, projectId })
@@ -71,10 +60,8 @@ export async function createDocumentVersion({
 
   return createDocument({
     documentUuid,
-    name,
+    path,
     commitId: commit.id,
-    parentId,
-    documentType,
-    content,
+    content: content ?? '',
   })
 }
