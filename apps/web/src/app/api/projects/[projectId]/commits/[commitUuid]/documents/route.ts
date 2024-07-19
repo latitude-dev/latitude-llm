@@ -1,4 +1,4 @@
-import { materializeDocumentsAtCommit } from '@latitude-data/core'
+import { getDocumentsAtCommit } from '@latitude-data/core'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function GET(
@@ -8,7 +8,7 @@ export async function GET(
   }: { params: { commitUuid: string; projectId: number } },
 ) {
   try {
-    const documents = await materializeDocumentsAtCommit({
+    const documents = await getDocumentsAtCommit({
       commitUuid,
       projectId: Number(projectId),
     })
