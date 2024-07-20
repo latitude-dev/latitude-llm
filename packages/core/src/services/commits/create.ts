@@ -7,7 +7,7 @@ import {
   Transaction,
 } from '@latitude-data/core'
 
-export default async function createCommit({
+export async function createCommit({
   commit,
   db = database,
 }: {

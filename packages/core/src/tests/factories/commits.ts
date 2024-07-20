@@ -1,6 +1,6 @@
 import { hasOwnProperty } from '$core/lib'
 import { Project } from '$core/schema'
-import createCommitFn from '$core/services/commits/create'
+import { createCommit as createCommitFn } from '$core/services/commits/create'
 
 import { createProject, ICreateProject } from './projects'
 

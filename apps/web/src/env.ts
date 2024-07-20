@@ -13,6 +13,7 @@ export default createEnv({
     ELASTIC_URL: z.string(),
     ELASTIC_USERNAME: z.string(),
     ELASTIC_PASSWORD: z.string(),
+    LATITUDE_API_KEY: z.string(),
   },
   runtimeEnv: {
     DATABASE_URL: process.env.DATABASE_URL,
@@ -22,5 +23,6 @@ export default createEnv({
     ELASTIC_URL: process.env.ELASTIC_URL,
     ELASTIC_USERNAME: process.env.ELASTIC_USERNAME,
     ELASTIC_PASSWORD: process.env.ELASTIC_PASSWORD,
+    LATITUDE_API_KEY: process.env.LATITUDE_API_KEY,
   },
 })
