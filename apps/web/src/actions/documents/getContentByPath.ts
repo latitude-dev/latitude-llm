@@ -1,5 +1,6 @@
 'use server'
 
+import { CommitsRepository } from '@latitude-data/core'
 import { getDocumentByPath } from '$/app/(private)/_data-access'
 import { z } from 'zod'
 
@@ -14,9 +15,13 @@ export const getDocumentContentByPathAction = withProject
     }),
     { type: 'json' },
   )
-  .handler(async ({ input }) => {
+  .handler(async ({ input, ctx }) => {
+    const commitsScope = new CommitsRepository(ctx.project.workspaceId)
+    const commit = await commitsScope
+      .getCommitById(input.commitId)
+      .then((r) => r.unwrap())
     const document = await getDocumentByPath({
-      commitId: input.commitId,
+      commit,
       path: input.path,
     })
     return document.content

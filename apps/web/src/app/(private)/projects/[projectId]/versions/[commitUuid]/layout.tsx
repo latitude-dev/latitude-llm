@@ -2,13 +2,14 @@ import { ReactNode } from 'react'
 
 import {
   Commit,
+  CommitsRepository,
   HEAD_COMMIT,
   NotFoundError,
   Project,
+  ProjectsRepository,
 } from '@latitude-data/core'
 import { CommitProvider, ProjectProvider } from '@latitude-data/web-ui'
 import { AppLayout, BreadcrumpBadge } from '@latitude-data/web-ui/browser'
-import { findCommit, findProject } from '$/app/(private)/_data-access'
 import { NAV_LINKS } from '$/app/(private)/_lib/constants'
 import { ProjectPageParams } from '$/app/(private)/projects/[projectId]/page'
 import { getCurrentUser, SessionData } from '$/services/auth/getCurrentUser'
@@ -29,18 +30,17 @@ export default async function CommitLayout({
   let commit: Commit
   try {
     session = await getCurrentUser()
-    project = await findProject({
-      projectId: params.projectId,
-      workspaceId: session.workspace.id,
-    })
-    commit = await findCommit({
-      uuid: params.commitUuid,
-      projectId: project.id,
-    })
+    const projectsRepo = new ProjectsRepository(session.workspace.id)
+    const commitsRepo = new CommitsRepository(session.workspace.id)
+    project = (
+      await projectsRepo.getProjectById(Number(params.projectId))
+    ).unwrap()
+    commit = (
+      await commitsRepo.getCommitByUuid({ uuid: params.commitUuid, project })
+    ).unwrap()
   } catch (error) {
-    if (error instanceof NotFoundError) {
-      return notFound()
-    }
+    if (error instanceof NotFoundError) return notFound()
+
     throw error
   }
 

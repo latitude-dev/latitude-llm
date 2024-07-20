@@ -1,9 +1,8 @@
 import type { CompileError } from '@latitude-data/compiler'
 import { database } from '$core/client'
-import { findCommitById } from '$core/data-access'
 import { Result, TypedResult } from '$core/lib'
 import { BadRequestError } from '$core/lib/errors'
-import { DocumentVersion } from '$core/schema'
+import { Commit, DocumentVersion } from '$core/schema'
 
 import {
   getMergedAndDraftDocuments,
@@ -17,15 +16,10 @@ type RecomputedChanges = {
 }
 
 export async function recomputeChanges(
-  {
-    commitId,
-  }: {
-    commitId: number
-  },
+  draft: Commit,
   tx = database,
 ): Promise<TypedResult<RecomputedChanges, Error>> {
   try {
-    const draft = (await findCommitById({ id: commitId }, tx)).unwrap()
     if (draft.mergedAt !== null) {
       return Result.error(
         new BadRequestError('Cannot recompute changes in a merged commit'),
@@ -50,7 +44,7 @@ export async function recomputeChanges(
     const newDraftDocuments = (
       await replaceCommitChanges(
         {
-          commitId,
+          commitId: draft.id,
           documentChanges: documentsToUpdate,
         },
         tx,

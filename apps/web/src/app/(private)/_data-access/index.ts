@@ -1,20 +1,19 @@
 import { cache } from 'react'
 
 import {
-  getDocumentAtCommit,
+  Commit,
+  CommitsRepository,
+  DocumentVersionsRepository,
+  findWorkspaceFromCommit,
   NotFoundError,
-  findCommitByUuid as originalfindCommit,
-  findProject as originalFindProject,
-  getDocumentsAtCommit as originalGetDocumentsAtCommit,
-  getFirstProject as originalGetFirstProject,
-  type FindCommitByUuidProps,
-  type FindProjectProps,
-  type GetDocumentAtCommitProps,
+  Project,
+  ProjectsRepository,
 } from '@latitude-data/core'
 
 export const getFirstProject = cache(
   async ({ workspaceId }: { workspaceId: number }) => {
-    const result = await originalGetFirstProject({ workspaceId })
+    const projectsScope = new ProjectsRepository(workspaceId)
+    const result = await projectsScope.getFirstProject()
     const project = result.unwrap()
 
     return project
@@ -22,8 +21,15 @@ export const getFirstProject = cache(
 )
 
 export const findProject = cache(
-  async ({ projectId, workspaceId }: FindProjectProps) => {
-    const result = await originalFindProject({ projectId, workspaceId })
+  async ({
+    projectId,
+    workspaceId,
+  }: {
+    projectId: number
+    workspaceId: number
+  }) => {
+    const projectsScope = new ProjectsRepository(workspaceId)
+    const result = await projectsScope.getProjectById(projectId)
     const project = result.unwrap()
 
     return project
@@ -31,8 +37,9 @@ export const findProject = cache(
 )
 
 export const findCommit = cache(
-  async ({ uuid, projectId }: FindCommitByUuidProps) => {
-    const result = await originalfindCommit({ uuid, projectId })
+  async ({ uuid, project }: { uuid: string; project: Project }) => {
+    const commitsScope = new CommitsRepository(project.workspaceId)
+    const result = await commitsScope.getCommitByUuid({ project, uuid })
     const commit = result.unwrap()
 
     return commit
@@ -40,23 +47,32 @@ export const findCommit = cache(
 )
 
 export const getDocumentByUuid = cache(
-  async ({ documentUuid, commitId }: GetDocumentAtCommitProps) => {
-    const result = await getDocumentAtCommit({ documentUuid, commitId })
-    const document = result.unwrap()
+  async ({
+    documentUuid,
+    commit,
+  }: {
+    documentUuid: string
+    commit: Commit
+  }) => {
+    const workspace = await findWorkspaceFromCommit(commit)
+    const scope = new DocumentVersionsRepository(workspace!.id)
+    const result = await scope.getDocumentAtCommit({ documentUuid, commit })
 
-    return document
+    return result.unwrap()
   },
 )
 
 export const getDocumentByPath = cache(
-  async ({ commitId, path }: { commitId: number; path: string }) => {
-    const documents = (
-      await originalGetDocumentsAtCommit({ commitId })
-    ).unwrap()
+  async ({ commit, path }: { commit: Commit; path: string }) => {
+    const workspace = await findWorkspaceFromCommit(commit)
+    const docsScope = new DocumentVersionsRepository(workspace!.id)
+    const documents = await docsScope
+      .getDocumentsAtCommit(commit)
+      .then((r) => r.unwrap())
+
     const document = documents.find((d) => d.path === path)
-    if (!document) {
-      throw new NotFoundError('Document not found')
-    }
+    if (!document) throw new NotFoundError('Document not found')
+
     return document
   },
 )

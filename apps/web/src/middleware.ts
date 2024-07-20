@@ -1,4 +1,4 @@
-import { getApiKey } from '@latitude-data/core'
+import { unsafelyGetApiKey } from '@latitude-data/core'
 import { NextRequest, NextResponse } from 'next/server'
 
 import env from './env'
@@ -15,7 +15,7 @@ export async function middleware(request: LatitudeRequest) {
     return apiUnauthorized()
   }
 
-  const result = await getApiKey({ uuid: token })
+  const result = await unsafelyGetApiKey({ uuid: token })
   if (result.error) return apiUnauthorized()
 
   request.workspaceId = result.value.workspaceId

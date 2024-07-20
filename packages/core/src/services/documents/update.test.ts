@@ -1,8 +1,7 @@
 import {
-  findHeadCommit,
-  getDocumentsAtCommit,
-  listCommitChanges,
-} from '$core/data-access'
+  CommitsRepository,
+  DocumentVersionsRepository,
+} from '$core/repositories'
 import { describe, expect, it } from 'vitest'
 
 import { recomputeChanges } from './recomputeChanges'
@@ -16,19 +15,20 @@ describe('updateDocument', () => {
       },
     })
 
+    const docsScope = new DocumentVersionsRepository(project.workspaceId)
     const { commit } = await ctx.factories.createDraft({ project })
 
     await updateDocument({
-      commitId: commit.id,
-      documentUuid: documents[0]!.documentUuid,
+      commit,
+      document: documents[0]!,
       content: 'Doc 1 commit 2',
     }).then((r) => r.unwrap())
 
-    await recomputeChanges({ commitId: commit.id })
+    await recomputeChanges(commit)
 
-    const changedDocuments = await listCommitChanges({
-      commitId: commit.id,
-    }).then((r) => r.unwrap())
+    const changedDocuments = await docsScope
+      .listCommitChanges(commit)
+      .then((r) => r.unwrap())
 
     expect(changedDocuments.length).toBe(1)
     expect(changedDocuments[0]!.path).toBe('doc1')
@@ -37,6 +37,7 @@ describe('updateDocument', () => {
 
   it('modifies a document that was created in the same commit', async (ctx) => {
     const { project } = await ctx.factories.createProject()
+    const docsScope = new DocumentVersionsRepository(project.workspaceId)
     const { commit } = await ctx.factories.createDraft({ project })
     const { documentVersion: doc } = await ctx.factories.createDocumentVersion({
       commit: commit,
@@ -45,16 +46,16 @@ describe('updateDocument', () => {
     })
 
     await updateDocument({
-      commitId: commit.id,
-      documentUuid: doc.documentUuid,
+      commit,
+      document: doc,
       content: 'Doc 1 v2',
     }).then((r) => r.unwrap())
 
-    await recomputeChanges({ commitId: commit.id })
+    await recomputeChanges(commit)
 
-    const changedDocuments = await listCommitChanges({
-      commitId: commit.id,
-    }).then((r) => r.unwrap())
+    const changedDocuments = await docsScope
+      .listCommitChanges(commit)
+      .then((r) => r.unwrap())
 
     expect(changedDocuments.length).toBe(1)
     expect(changedDocuments[0]!.path).toBe('doc1')
@@ -71,20 +72,21 @@ describe('updateDocument', () => {
       },
     })
 
+    const docsScope = new DocumentVersionsRepository(project.workspaceId)
     const referencedDoc = documents.find((d) => d.path === 'referenced/doc')!
     const { commit } = await ctx.factories.createDraft({ project })
 
     await updateDocument({
-      commitId: commit.id,
-      documentUuid: referencedDoc.documentUuid,
+      commit,
+      document: referencedDoc,
       content: 'The document that is being referenced v2',
     }).then((r) => r.unwrap())
 
-    await recomputeChanges({ commitId: commit.id })
+    await recomputeChanges(commit)
 
-    const changedDocuments = await listCommitChanges({
-      commitId: commit.id,
-    }).then((r) => r.unwrap())
+    const changedDocuments = await docsScope
+      .listCommitChanges(commit)
+      .then((r) => r.unwrap())
 
     expect(changedDocuments.length).toBe(2)
     expect(
@@ -102,21 +104,22 @@ describe('updateDocument', () => {
         main: '<ref prompt="referenced/doc" />',
       },
     })
+    const docsScope = new DocumentVersionsRepository(project.workspaceId)
     const refDoc = documents.find((d) => d.path === 'referenced/doc')!
 
     const { commit } = await ctx.factories.createDraft({ project })
 
     await updateDocument({
-      commitId: commit.id,
-      documentUuid: refDoc.documentUuid,
+      commit,
+      document: refDoc,
       path: 'referenced/doc2',
     }).then((r) => r.unwrap())
 
-    await recomputeChanges({ commitId: commit.id })
+    await recomputeChanges(commit)
 
-    const changedDocuments = await listCommitChanges({
-      commitId: commit.id,
-    }).then((r) => r.unwrap())
+    const changedDocuments = await docsScope
+      .listCommitChanges(commit)
+      .then((r) => r.unwrap())
 
     expect(changedDocuments.length).toBe(2)
     expect(
@@ -134,21 +137,22 @@ describe('updateDocument', () => {
         unmodified: '<ref prompt="referenced/doc" />',
       },
     })
+    const docsScope = new DocumentVersionsRepository(project.workspaceId)
     const referencedDoc = documents.find((d) => d.path === 'referenced/doc')!
 
     const { commit } = await ctx.factories.createDraft({ project })
 
     await updateDocument({
-      commitId: commit.id,
-      documentUuid: referencedDoc.documentUuid,
+      commit,
+      document: referencedDoc,
       content: 'The document that is being referenced v2',
     }).then((r) => r.unwrap())
 
-    await recomputeChanges({ commitId: commit.id })
+    await recomputeChanges(commit)
 
-    const changedDocuments = await listCommitChanges({
-      commitId: commit.id,
-    }).then((r) => r.unwrap())
+    const changedDocuments = await docsScope
+      .listCommitChanges(commit)
+      .then((r) => r.unwrap())
 
     expect(changedDocuments.length).toBe(2)
     expect(
@@ -157,16 +161,16 @@ describe('updateDocument', () => {
     expect(changedDocuments.find((d) => d.path === 'unmodified')).toBeDefined()
 
     await updateDocument({
-      commitId: commit.id,
-      documentUuid: referencedDoc.documentUuid,
+      commit,
+      document: referencedDoc,
       content: referencedDoc.content, // Undo the change
     }).then((r) => r.unwrap())
 
-    await recomputeChanges({ commitId: commit.id })
+    await recomputeChanges(commit)
 
-    const changedDocuments2 = await listCommitChanges({
-      commitId: commit.id,
-    }).then((r) => r.unwrap())
+    const changedDocuments2 = await docsScope
+      .listCommitChanges(commit)
+      .then((r) => r.unwrap())
 
     expect(changedDocuments2.length).toBe(0)
   })
@@ -183,8 +187,8 @@ describe('updateDocument', () => {
     const doc1 = documents.find((d) => d.path === 'doc1')!
 
     const updateResult = await updateDocument({
-      commitId: commit.id,
-      documentUuid: doc1.documentUuid,
+      commit,
+      document: doc1,
       path: 'doc2',
     })
 
@@ -200,15 +204,16 @@ describe('updateDocument', () => {
         foo: 'foo',
       },
     })
+    const commitsScope = new CommitsRepository(project.workspaceId)
 
-    const commit = await findHeadCommit({ projectId: project.id }).then((r) =>
-      r.unwrap(),
-    )
+    const commit = await commitsScope
+      .getHeadCommit(project)
+      .then((r) => r.unwrap())
     const fooDoc = documents.find((d) => d.path === 'foo')!
 
     const result = await updateDocument({
-      commitId: commit.id,
-      documentUuid: fooDoc.documentUuid,
+      commit,
+      document: fooDoc,
       content: 'bar',
     })
 
@@ -223,28 +228,29 @@ describe('updateDocument', () => {
         doc2: 'Doc 2',
       },
     })
+    const docsScope = new DocumentVersionsRepository(project.workspaceId)
 
     const { commit } = await ctx.factories.createDraft({ project })
     const doc1 = documents.find((d) => d.path === 'doc1')!
     const doc2 = documents.find((d) => d.path === 'doc2')!
 
     await updateDocument({
-      commitId: commit.id,
-      documentUuid: doc1.documentUuid,
+      commit,
+      document: doc1,
       content: 'Doc 1 v2',
     }).then((r) => r.unwrap())
 
-    await recomputeChanges({ commitId: commit.id })
+    await recomputeChanges(commit)
 
     await updateDocument({
-      commitId: commit.id,
-      documentUuid: doc2.documentUuid,
+      commit,
+      document: doc2,
       content: 'Doc 2 v2',
     })
 
-    const commitDocs = await getDocumentsAtCommit({ commitId: commit.id }).then(
-      (r) => r.unwrap(),
-    )
+    const commitDocs = await docsScope
+      .getDocumentsAtCommit(commit)
+      .then((r) => r.unwrap())
 
     expect(commitDocs.find((d) => d.path === 'doc1')!.resolvedContent).toBe(
       null,

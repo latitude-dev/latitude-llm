@@ -20,7 +20,6 @@ export async function createDocumentVersion(
   documentData: IDocumentVersionData,
 ) {
   const randomData = makeRandomDocumentVersionData()
-
   const data = {
     ...randomData,
     content: randomData.content,
@@ -28,18 +27,19 @@ export async function createDocumentVersion(
   }
 
   let result = await createNewDocument({
-    commitId: data.commit.id,
+    commit: data.commit,
     path: data.path,
   })
 
   if (data.content) {
     result = await updateDocument({
-      commitId: data.commit.id,
-      documentUuid: result.unwrap().documentUuid,
+      commit: data.commit,
+      document: result.unwrap(),
       content: data.content,
     })
   }
 
   const documentVersion = result.unwrap()
+
   return { documentVersion }
 }

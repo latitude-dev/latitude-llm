@@ -4,7 +4,8 @@ import { createEnv } from '@t3-oss/env-nextjs'
 import { z } from 'zod'
 
 export default createEnv({
-  skipValidation: process.env.BUILDING_CONTAINER == 'true',
+  skipValidation:
+    process.env.BUILDING_CONTAINER == 'true' || process.env.NODE_ENV === 'test',
   server: {
     DATABASE_URL: z.string(),
     REDIS_HOST: z.string(),

@@ -1,7 +1,6 @@
 'use server'
 
-import { createNewDocument } from '@latitude-data/core'
-import { findCommit } from '$/app/(private)/_data-access'
+import { CommitsRepository, createNewDocument } from '@latitude-data/core'
 import { z } from 'zod'
 
 import { withProject } from '../procedures'
@@ -15,14 +14,15 @@ export const createDocumentVersionAction = withProject
     }),
     { type: 'json' },
   )
-  .handler(async ({ input }) => {
-    const commit = await findCommit({
-      projectId: input.projectId,
-      uuid: input.commitUuid,
-    })
+  .handler(async ({ input, ctx }) => {
+    const commit = await new CommitsRepository(ctx.project.workspaceId)
+      .getCommitByUuid({ uuid: input.commitUuid, project: ctx.project })
+      .then((r) => r.unwrap())
+
     const result = await createNewDocument({
-      commitId: commit.id,
+      commit,
       path: input.path,
     })
+
     return result.unwrap()
   })

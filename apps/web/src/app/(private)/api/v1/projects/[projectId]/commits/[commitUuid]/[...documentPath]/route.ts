@@ -1,9 +1,13 @@
-import { getDocumentByPath } from '@latitude-data/core'
+import {
+  CommitsRepository,
+  DocumentVersionsRepository,
+  ProjectsRepository,
+} from '@latitude-data/core'
 import apiRoute from '$/helpers/api/route'
-import { NextRequest } from 'next/server'
+import { LatitudeRequest } from '$/middleware'
 
 export async function GET(
-  _: NextRequest,
+  req: LatitudeRequest,
   {
     params,
   }: {
@@ -15,11 +19,19 @@ export async function GET(
   },
 ) {
   return apiRoute(async () => {
-    const { projectId, commitUuid, documentPath } = params
+    const workspaceId = req.workspaceId!
+    const { commitUuid, projectId, documentPath } = params
+    const commitsScope = new CommitsRepository(workspaceId)
+    const projectsScope = new ProjectsRepository(workspaceId)
+    const projectResult = await projectsScope.getProjectById(projectId)
+    if (projectResult.error) return projectResult
 
-    const result = await getDocumentByPath({
-      projectId: Number(projectId),
-      commitUuid,
+    const commit = await commitsScope
+      .getCommitByUuid({ uuid: commitUuid, project: projectResult.value! })
+      .then((r) => r.unwrap())
+    const documentVersionsScope = new DocumentVersionsRepository(workspaceId)
+    const result = await documentVersionsScope.getDocumentByPath({
+      commit,
       path: documentPath.join('/'),
     })
     const document = result.unwrap()

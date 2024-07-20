@@ -18,10 +18,10 @@ export default async function ProjectPage({ params }: ProjectPageParams) {
   try {
     session = await getCurrentUser()
     project = await findProject({
-      projectId: params.projectId,
+      projectId: Number(params.projectId),
       workspaceId: session.workspace.id,
     })
-    await findCommit({ uuid: HEAD_COMMIT, projectId: project.id })
+    await findCommit({ uuid: HEAD_COMMIT, project })
     url = PROJECT_ROUTE({ id: +project.id }).commits.latest
   } catch (error) {
     if (error instanceof NotFoundError) {

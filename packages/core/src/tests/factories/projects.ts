@@ -1,5 +1,5 @@
 import { faker } from '@faker-js/faker'
-import { getUser } from '$core/data-access'
+import { unsafelyGetUser } from '$core/data-access'
 import { DocumentVersion, Workspace, type SafeUser } from '$core/schema'
 import { createNewDocument, mergeCommit, updateDocument } from '$core/services'
 import { createProject as createProjectFn } from '$core/services/projects'
@@ -45,7 +45,7 @@ export async function createProject(projectData: Partial<ICreateProject> = {}) {
   let workspace: Workspace
 
   if ('id' in workspaceData) {
-    user = (await getUser(workspaceData.creatorId!)) as SafeUser
+    user = (await unsafelyGetUser(workspaceData.creatorId!)) as SafeUser
     workspace = workspaceData as Workspace
   } else {
     const newWorkspace = await createWorkspace(workspaceData)
@@ -70,17 +70,17 @@ export async function createProject(projectData: Partial<ICreateProject> = {}) {
     })
     const { commit: draft } = await createDraft({ project })
     for await (const { path, content } of documentsToCreate) {
-      const newDoc = await createNewDocument({ commitId: draft.id, path }).then(
+      const newDoc = await createNewDocument({ commit: draft, path }).then(
         (r) => r.unwrap(),
       )
       const updatedDoc = await updateDocument({
-        commitId: draft.id,
-        documentUuid: newDoc.documentUuid,
+        commit: draft,
+        document: newDoc,
         content,
       })
       documents.push(updatedDoc.unwrap())
     }
-    await mergeCommit({ commitId: draft.id }).then((r) => r.unwrap())
+    await mergeCommit(draft).then((r) => r.unwrap())
   }
 
   return { project, user, workspace, documents }

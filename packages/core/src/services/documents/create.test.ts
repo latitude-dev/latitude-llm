@@ -1,4 +1,4 @@
-import { listCommitChanges } from '$core/data-access'
+import { DocumentVersionsRepository } from '$core/repositories'
 import { describe, expect, it } from 'vitest'
 
 import { mergeCommit } from '../commits/merge'
@@ -10,14 +10,15 @@ describe('createNewDocument', () => {
     const { commit } = await ctx.factories.createDraft({ project })
 
     const documentResult = await createNewDocument({
-      commitId: commit.id,
+      commit,
       path: 'foo',
     })
 
     const document = documentResult.unwrap()
     expect(document.path).toBe('foo')
 
-    const commitChanges = await listCommitChanges({ commitId: commit.id })
+    const scope = new DocumentVersionsRepository(project.workspaceId)
+    const commitChanges = await scope.listCommitChanges(commit)
     expect(commitChanges.value.length).toBe(1)
     expect(commitChanges.value[0]!.documentUuid).toBe(document.documentUuid)
     expect(commitChanges.value[0]!.path).toBe(document.path)
@@ -28,12 +29,12 @@ describe('createNewDocument', () => {
     const { commit } = await ctx.factories.createDraft({ project })
 
     await createNewDocument({
-      commitId: commit.id,
+      commit,
       path: 'foo',
     })
 
     const result = await createNewDocument({
-      commitId: commit.id,
+      commit,
       path: 'foo',
     })
 
@@ -45,11 +46,11 @@ describe('createNewDocument', () => {
 
   it('fails when trying to create a document in a merged commit', async (ctx) => {
     const { project } = await ctx.factories.createProject()
-    const { commit } = await ctx.factories.createDraft({ project })
-    await mergeCommit({ commitId: commit.id })
+    let { commit } = await ctx.factories.createDraft({ project })
+    commit = await mergeCommit(commit).then((r) => r.unwrap())
 
     const result = await createNewDocument({
-      commitId: commit.id,
+      commit,
       path: 'foo',
     })
 
@@ -59,11 +60,11 @@ describe('createNewDocument', () => {
 
   it('fails when trying to create a document in a merged commit', async (ctx) => {
     const { project } = await ctx.factories.createProject()
-    const { commit } = await ctx.factories.createDraft({ project })
-    await mergeCommit({ commitId: commit.id })
+    let { commit } = await ctx.factories.createDraft({ project })
+    commit = await mergeCommit(commit).then((r) => r.unwrap())
 
     const result = await createNewDocument({
-      commitId: commit.id,
+      commit,
       path: 'foo',
     })
 
