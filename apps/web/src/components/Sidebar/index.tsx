@@ -1,4 +1,5 @@
 import { getDocumentsAtCommit } from '@latitude-data/core'
+import { findCommit } from '$/app/(private)/_data-access'
 
 import DocumentTree, { CreateNode } from './DocumentTree'
 
@@ -9,9 +10,9 @@ export default async function Sidebar({
   commitUuid: string
   projectId: number
 }) {
+  const commit = await findCommit({ projectId, uuid: commitUuid })
   const documentsResult = await getDocumentsAtCommit({
-    projectId,
-    commitUuid,
+    commitId: commit.id,
   })
   const documents = documentsResult.unwrap()
 

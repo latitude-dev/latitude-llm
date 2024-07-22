@@ -19,6 +19,7 @@ export default defineConfig({
     alias: {
       $: `${root}/src`,
       $core: `${root}/../../packages/core/src`,
+      $compiler: `${root}/../../packages/compiler/src`,
     },
   },
 })

@@ -23,6 +23,7 @@
     "prettier": "prettier --write src/**/*.ts"
   },
   "dependencies": {
+    "@latitude-data/compiler": "workspace:^",
     "@latitude-data/env": "workspace:^",
     "@t3-oss/env-core": "^0.10.1",
     "bcrypt": "^5.1.1",
@@ -41,7 +42,6 @@
     "eslint-plugin-drizzle": "^0.2.3",
     "pg-transactional-tests": "^1.0.9",
     "supertest": "^7.0.0",
-    "vite-tsconfig-paths": "^4.3.2",
     "vitest": "^2.0.3"
   }
 }

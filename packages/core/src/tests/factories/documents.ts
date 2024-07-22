@@ -1,11 +1,11 @@
 import { faker } from '@faker-js/faker'
 import type { Commit } from '$core/schema'
-import { createDocumentVersion as createDocumentVersionFn } from '$core/services/documentVersions/create'
+import { createNewDocument } from '$core/services/documents/create'
+import { updateDocument } from '$core/services/documents/update'
 
 export type IDocumentVersionData = {
   commit: Commit
   path?: string
-  documentUuid?: string
   content?: string
 }
 
@@ -27,13 +27,18 @@ export async function createDocumentVersion(
     ...documentData,
   }
 
-  const result = await createDocumentVersionFn({
-    projectId: data.commit.projectId,
+  let result = await createNewDocument({
+    commitId: data.commit.id,
     path: data.path,
-    commitUuid: data.commit.uuid,
-    documentUuid: data.documentUuid,
-    content: data.content,
   })
+
+  if (data.content) {
+    result = await updateDocument({
+      commitId: data.commit.id,
+      documentUuid: result.unwrap().documentUuid,
+      content: data.content,
+    })
+  }
 
   const documentVersion = result.unwrap()
   return { documentVersion }
