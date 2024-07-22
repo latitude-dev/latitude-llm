@@ -8,7 +8,7 @@ import {
 import { LatitudeError, NotFoundError } from '$core/lib/errors'
 import { and, eq } from 'drizzle-orm'
 
-export default async function mergeCommit(
+export async function mergeCommit(
   { commitId }: { commitId: number },
   db = database,
 ) {

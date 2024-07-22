@@ -5,8 +5,8 @@ import {
   Transaction,
   type Project,
 } from '@latitude-data/core'
-import createCommit from '$core/services/commits/create'
-import mergeCommit from '$core/services/commits/merge'
+import { createCommit } from '$core/services/commits/create'
+import { mergeCommit } from '$core/services/commits/merge'
 
 export async function createProject(
   {

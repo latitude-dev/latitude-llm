@@ -10,7 +10,9 @@
     "start": "next start",
     "lint": "next lint",
     "tc": "tsc --noEmit",
-    "prettier": "prettier --write \"**/*.{ts,tsx,md}\""
+    "prettier": "prettier --write \"**/*.{ts,tsx,md}\"",
+    "test": "vitest --run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@elastic/elasticsearch": "^8.14.0",
@@ -21,12 +23,12 @@
     "@latitude-data/web-ui": "workspace:*",
     "@lucia-auth/adapter-drizzle": "^1.0.7",
     "@monaco-editor/react": "^4.6.0",
-    "monaco-editor": "^0.50.0",
     "@t3-oss/env-nextjs": "^0.10.1",
     "bcrypt": "^5.1.1",
     "bullmq": "^5.8.5",
     "ioredis": "^5.4.1",
     "lucia": "^3.2.0",
+    "monaco-editor": "^0.50.0",
     "next": "^14.3.0-canary.87",
     "react": "19.0.0-rc-378b305958-20240710",
     "react-dom": "19.0.0-rc-378b305958-20240710",
@@ -46,8 +48,11 @@
     "autoprefixer": "^10.4.19",
     "drizzle-kit": "^0.22.8",
     "eslint": "^8.57.0",
+    "node-mocks-http": "^1.15.0",
     "postcss": "^8.4.39",
     "tailwindcss": "^3.4.4",
-    "typescript": "^5.5.3"
+    "typescript": "^5.5.3",
+    "vite-tsconfig-paths": "^4.3.2",
+    "vitest": "^2.0.3"
   }
 }
