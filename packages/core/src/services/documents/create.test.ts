@@ -58,4 +58,26 @@ describe('createNewDocument', () => {
       'Cannot create a document version in a merged commit',
     )
   })
+
+  it('modifies other documents if it is referenced by another document', async (ctx) => {
+    const { project } = await ctx.factories.createProject({
+      documents: {
+        main: '<ref prompt="referenced/doc" />',
+      },
+    })
+
+    const { commit } = await ctx.factories.createDraft({ project })
+    await createNewDocument({
+      commitId: commit.id,
+      path: 'referenced/doc',
+    })
+
+    const changes = await listCommitChanges({ commitId: commit.id }).then((r) =>
+      r.unwrap(),
+    )
+    expect(changes.length).toBe(2)
+    const changedDocsPahts = changes.map((c) => c.path)
+    expect(changedDocsPahts).toContain('main')
+    expect(changedDocsPahts).toContain('referenced/doc')
+  })
 })

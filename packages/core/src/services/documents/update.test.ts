@@ -1,4 +1,4 @@
-import { listCommitChanges } from '$core/data-access'
+import { getDocumentsAtCommit, listCommitChanges } from '$core/data-access'
 import { describe, expect, it } from 'vitest'
 
 import { mergeCommit } from '../commits/merge'
@@ -92,6 +92,39 @@ describe('updateDocument', () => {
   })
 
   it('renaming a document creates a change to all other documents that reference it', async (ctx) => {
+    const { project } = await ctx.factories.createProject({
+      documents: {
+        referenced: {
+          doc: 'The document that is being referenced',
+        },
+        main: '<ref prompt="referenced/doc" />',
+      },
+    })
+
+    const { commit } = await ctx.factories.createDraft({ project })
+    const documents = await getDocumentsAtCommit({ commitId: commit.id }).then(
+      (r) => r.unwrap(),
+    )
+    const refDoc = documents.find((d) => d.path === 'referenced/doc')!
+
+    await updateDocument({
+      commitId: commit.id,
+      documentUuid: refDoc.documentUuid,
+      path: 'referenced/doc2',
+    }).then((r) => r.unwrap())
+
+    const changedDocuments = await listCommitChanges({
+      commitId: commit.id,
+    }).then((r) => r.unwrap())
+
+    expect(changedDocuments.length).toBe(2)
+    expect(
+      changedDocuments.find((d) => d.path === 'referenced/doc2'),
+    ).toBeDefined()
+    expect(changedDocuments.find((d) => d.path === 'main')).toBeDefined()
+  })
+
+  it('undoing a change to a document removes it from the list of changed documents', async (ctx) => {
     const { project } = await ctx.factories.createProject()
     const { commit: commit1 } = await ctx.factories.createDraft({ project })
     const { documentVersion: referencedDoc } =
@@ -112,7 +145,7 @@ describe('updateDocument', () => {
     await updateDocument({
       commitId: commit2.id,
       documentUuid: referencedDoc.documentUuid,
-      path: 'referenced/doc2',
+      content: 'The document that is being referenced v2',
     }).then((r) => r.unwrap())
 
     const changedDocuments = await listCommitChanges({
@@ -121,8 +154,20 @@ describe('updateDocument', () => {
 
     expect(changedDocuments.length).toBe(2)
     expect(
-      changedDocuments.find((d) => d.path === 'referenced/doc2'),
+      changedDocuments.find((d) => d.path === 'referenced/doc'),
     ).toBeDefined()
     expect(changedDocuments.find((d) => d.path === 'unmodified')).toBeDefined()
+
+    await updateDocument({
+      commitId: commit2.id,
+      documentUuid: referencedDoc.documentUuid,
+      content: referencedDoc.content, // Undo the change
+    }).then((r) => r.unwrap())
+
+    const changedDocuments2 = await listCommitChanges({
+      commitId: commit2.id,
+    }).then((r) => r.unwrap())
+
+    expect(changedDocuments2.length).toBe(0)
   })
 })

@@ -1,16 +1,12 @@
-import {
-  DocumentVersion,
-  documentVersions,
-  getDocumentsAtCommit,
-  Result,
-  Transaction,
-} from '@latitude-data/core'
+import { DocumentVersion, Result } from '@latitude-data/core'
 import { BadRequestError } from '$core/lib/errors'
 
 import {
-  assertCommitIsEditable,
-  existsAnotherDocumentWithSamePath,
-} from './utils'
+  getDraft,
+  getMergedAndDraftDocuments,
+  replaceCommitChanges,
+  resolveDocumentChanges,
+} from './shared'
 
 export async function createNewDocument({
   commitId,
@@ -19,34 +15,40 @@ export async function createNewDocument({
   commitId: number
   path: string
 }) {
-  const commitResult = await assertCommitIsEditable(commitId)
-  if (commitResult.error) return commitResult
+  try {
+    const draft = (await getDraft(commitId)).unwrap()
 
-  const currentDocuments = await getDocumentsAtCommit({
-    commitId,
-  })
-  if (currentDocuments.error) return currentDocuments
-
-  if (
-    existsAnotherDocumentWithSamePath({
-      documents: currentDocuments.value,
-      path,
-    })
-  ) {
-    return Result.error(
-      new BadRequestError('A document with the same path already exists'),
-    )
-  }
-
-  return Transaction.call<DocumentVersion>(async (tx) => {
-    const result = await tx
-      .insert(documentVersions)
-      .values({
-        commitId,
-        path,
+    const [mergedDocuments, draftDocuments] = (
+      await getMergedAndDraftDocuments({
+        draft,
       })
-      .returning()
-    const documentVersion = result[0]
-    return Result.ok(documentVersion!)
-  })
+    ).unwrap()
+
+    if (path && draftDocuments.find((d) => d.path === path)) {
+      return Result.error(
+        new BadRequestError('A document with the same path already exists'),
+      )
+    }
+
+    draftDocuments.push({
+      path,
+      content: '',
+    } as DocumentVersion)
+
+    const documentsToUpdate = await resolveDocumentChanges({
+      originalDocuments: mergedDocuments,
+      newDocuments: draftDocuments,
+    })
+
+    const newDraftDocuments = (
+      await replaceCommitChanges({
+        commitId,
+        documentChanges: documentsToUpdate,
+      })
+    ).unwrap()
+
+    return Result.ok(newDraftDocuments.find((d) => d.path === path)!)
+  } catch (error) {
+    return Result.error(error as Error)
+  }
 }
