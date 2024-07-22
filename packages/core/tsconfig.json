@@ -1,6 +1,7 @@
 {
   "extends": "@latitude-data/typescript-config/base.json",
   "compilerOptions": {
+    "moduleResolution": "Bundler",
     "baseUrl": ".",
     "rootDir": "./src",
     "outDir": "./dist",

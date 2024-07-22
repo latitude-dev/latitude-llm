@@ -24,6 +24,7 @@
   },
   "dependencies": {
     "@latitude-data/env": "workspace:^",
+    "@t3-oss/env-core": "^0.10.1",
     "bcrypt": "^5.1.1",
     "drizzle-orm": "0.31.4",
     "lodash-es": "^4.17.21",

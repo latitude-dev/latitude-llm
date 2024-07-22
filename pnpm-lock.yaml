@@ -215,6 +215,9 @@ importers:
       '@latitude-data/env':
         specifier: workspace:^
         version: link:../env
+      '@t3-oss/env-core':
+        specifier: ^0.10.1
+        version: 0.10.1(typescript@5.5.3)(zod@3.23.8)
       bcrypt:
         specifier: ^5.1.1
         version: 5.1.1
