@@ -1,4 +1,4 @@
-import { HEAD_COMMIT } from '@latitude-data/core'
+import { HEAD_COMMIT } from '@latitude-data/core/browser'
 
 const ROOT_PATH = '/'
 const PROJECTS_PATH = `${ROOT_PATH}projects`
@@ -15,7 +15,22 @@ export const ROUTES = {
         commits: {
           root: rootCommits,
           latest: `${rootCommits}/${HEAD_COMMIT}`,
-          detail: ({ id }: { id: number }) => `${rootCommits}/${id}`,
+          detail: ({ uuid }: { uuid: string }) => {
+            const root = `${rootCommits}/${uuid}`
+            const rootDocuments = `${root}/documents`
+            return {
+              root,
+              documents: {
+                root: rootDocuments,
+                detail: ({ uuid }: { uuid: string }) => {
+                  const root = `${rootDocuments}/${uuid}`
+                  return {
+                    root,
+                  }
+                },
+              },
+            }
+          },
         },
       }
     },

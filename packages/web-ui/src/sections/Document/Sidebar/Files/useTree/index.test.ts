@@ -23,13 +23,13 @@ function nodeToJson(node: Node): object {
 }
 
 let list = [
-  { path: 'a_thing/doc1', doumentUuid: '1' },
-  { path: 'a_thing/doc2', doumentUuid: '2' },
-  { path: 'a_thing/other-things/doc3', doumentUuid: '3' },
-  { path: 'z_thing/doc5', doumentUuid: '5' },
-  { path: 'b_thing/doc4', doumentUuid: '4' },
-  { path: 'b_doc_6', doumentUuid: '6' },
-  { path: 'a_doc_7', doumentUuid: '7' },
+  { path: 'a_thing/doc1', documentUuid: '1' },
+  { path: 'a_thing/doc2', documentUuid: '2' },
+  { path: 'a_thing/other-things/doc3', documentUuid: '3' },
+  { path: 'z_thing/doc5', documentUuid: '5' },
+  { path: 'b_thing/doc4', documentUuid: '4' },
+  { path: 'b_doc_6', documentUuid: '6' },
+  { path: 'a_doc_7', documentUuid: '7' },
 ]
 
 describe('useTree', () => {
