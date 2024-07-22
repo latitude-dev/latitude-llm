@@ -31,16 +31,6 @@ export class Node {
     this.children = children
     this.doc = doc
   }
-
-  toJSON(): object {
-    return {
-      id: this.id,
-      name: this.name,
-      isRoot: this.isRoot,
-      children: this.children.map((child) => child.toJSON()),
-      doc: this.doc,
-    }
-  }
 }
 
 function sortByPathDepth(a: SidebarDocument, b: SidebarDocument) {
@@ -53,6 +43,23 @@ export function defaultGenerateNodeUuid({ uuid }: { uuid?: string } = {}) {
   if (uuid) return uuid
 
   return Math.random().toString(36).substring(2, 15)
+}
+
+/**
+ * Find the index of a child node in a list of nodes
+ * If node is a folder it goes before the file nodes
+ * if both are folders it's ordered by name
+ */
+function findChildrenIndex(node: Node, children: Node[]) {
+  const isFolder = !node.doc
+
+  return children.findIndex((child) => {
+    if (isFolder && child.doc) return true
+    if (!isFolder && !child.doc) return false
+
+    // Compare alphabetically
+    return child.name > node.name
+  })
 }
 
 function buildTree({
@@ -90,7 +97,12 @@ function buildTree({
         // We pre-sorted documents by path depth, so we know
         // that the parent node exists
         const parent = nodeMap.get(parentPath)!
-        parent.children.push(node)
+        const index = findChildrenIndex(node, parent.children)
+        if (index === -1) {
+          parent.children.push(node)
+        } else {
+          parent.children.splice(index, 0, node)
+        }
       }
     })
   })
