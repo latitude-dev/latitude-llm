@@ -9,17 +9,24 @@ export class Node {
   public id: string
   public name: string
   public isRoot: boolean = false
+  public isFile: boolean = false
+  public depth: number = 0
+  public containsSelected: boolean = false
+  public selected: boolean = false
   public children: Node[] = []
   public doc?: SidebarDocument
+  public parent?: Node
 
   constructor({
     id,
     doc,
     children = [],
+    selected = false,
     isRoot = false,
     name = '',
   }: {
     id: string
+    selected: boolean
     doc?: SidebarDocument
     children?: Node[]
     isRoot?: boolean
@@ -27,9 +34,19 @@ export class Node {
   }) {
     this.id = id
     this.name = isRoot ? 'root' : name
+    this.selected = selected
     this.isRoot = isRoot
+    this.isFile = !!doc
     this.children = children
     this.doc = doc
+  }
+
+  recursiveSelectParents() {
+    this.containsSelected = true
+
+    if (this.parent) {
+      this.parent.recursiveSelectParents()
+    }
   }
 }
 
@@ -64,11 +81,13 @@ function findChildrenIndex(node: Node, children: Node[]) {
 
 function buildTree({
   root,
+  currentDocumentUuid,
   nodeMap,
   documents,
   generateNodeId,
 }: {
   root: Node
+  currentDocumentUuid?: string
   nodeMap: Map<string, Node>
   documents: SidebarDocument[]
   generateNodeId: typeof defaultGenerateNodeUuid
@@ -84,9 +103,11 @@ function buildTree({
       if (!nodeMap.has(path)) {
         const file = isFile ? doc : undefined
         const uuid = isFile ? doc.doumentUuid : undefined
+        const selected = isFile && uuid === currentDocumentUuid
         const node = new Node({
           id: generateNodeId({ uuid }),
           doc: file,
+          selected: selected,
           name: segment,
         })
         nodeMap.set(path, node)
@@ -97,11 +118,20 @@ function buildTree({
         // We pre-sorted documents by path depth, so we know
         // that the parent node exists
         const parent = nodeMap.get(parentPath)!
+
+        node.depth = parent.depth + 1
+
         const index = findChildrenIndex(node, parent.children)
         if (index === -1) {
           parent.children.push(node)
         } else {
           parent.children.splice(index, 0, node)
+        }
+
+        node.parent = parent
+
+        if (selected) {
+          node.parent.recursiveSelectParents()
         }
       }
     })
@@ -112,18 +142,31 @@ function buildTree({
 
 export function useTree({
   documents,
+  currentDocumentUuid,
   generateNodeId = defaultGenerateNodeUuid,
 }: {
   documents: SidebarDocument[]
+  currentDocumentUuid: string | undefined
   generateNodeId?: typeof defaultGenerateNodeUuid
 }) {
   return useMemo(() => {
-    const root = new Node({ id: generateNodeId(), children: [], isRoot: true })
+    const root = new Node({
+      id: generateNodeId(),
+      children: [],
+      isRoot: true,
+      selected: false,
+    })
     const nodeMap = new Map<string, Node>()
     nodeMap.set('', root)
     const sorted = documents.slice().sort(sortByPathDepth)
 
-    const tree = buildTree({ root, nodeMap, documents: sorted, generateNodeId })
+    const tree = buildTree({
+      root,
+      currentDocumentUuid,
+      nodeMap,
+      documents: sorted,
+      generateNodeId,
+    })
     return tree
-  }, [documents])
+  }, [documents, currentDocumentUuid])
 }

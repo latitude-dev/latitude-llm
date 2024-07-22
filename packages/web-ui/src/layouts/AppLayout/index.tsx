@@ -20,7 +20,7 @@ export default function AppLayout({
         navigationLinks={navigationLinks}
         currentUser={currentUser}
       />
-      {children}
+      <main className='flex flex-row w-full h-full'>{children}</main>
     </div>
   )
 }

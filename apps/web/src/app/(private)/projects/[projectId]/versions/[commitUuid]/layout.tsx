@@ -64,13 +64,7 @@ export default async function CommitLayout({
             },
           ]}
         >
-          <main className='flex flex-row w-full'>
-            <div className='w-[280px]'>
-              {/* TODO: commented out until fixed toTree methods to new path schema */}
-              {/* <Sidebar commitUuid={commit.uuid} projectId={project.id} /> */}
-            </div>
-            <div className='flex-1'>{children}</div>
-          </main>
+          {children}
         </AppLayout>
       </CommitProvider>
     </ProjectProvider>
