@@ -1,6 +1,6 @@
 'use client'
 
-import { ReactNode, useState } from 'react'
+import { ReactNode, useRef, useState } from 'react'
 
 import { Icons } from '$ui/ds/atoms/Icons'
 import Text from '$ui/ds/atoms/Text'
@@ -8,6 +8,7 @@ import { ReactStateDispatch } from '$ui/lib/commonTypes'
 import { cn } from '$ui/lib/utils'
 
 import { Node, SidebarDocument, useTree } from './useTree'
+import { useTreeNavigation } from '$ui/sections/Document/Sidebar/Files/useTreeNavigation'
 
 const ICON_CLASS = 'w-6 h-6 text-muted-foreground'
 
@@ -44,20 +45,27 @@ function IndentationBar({
 }
 
 function NodeHeaderWrapper({
+  isFirstFromRoot,
   open,
   node,
   children,
   indentation,
 }: {
   open: boolean
+  isFirstFromRoot: boolean
   children: ReactNode
   node: Node
   indentation: IndentType[]
 }) {
+  const { onKeyDown } = useTreeNavigation()
   return (
     <div
+      aria-expanded={open}
+      onKeyDown={onKeyDown}
+      tabIndex={isFirstFromRoot ? 0 : -1}
+      role='treeitem'
       className={cn('flex flex-row my-0.5 cursor-pointer', {
-        'hover:bg-muted': !node.selected,
+        'hover:bg-muted focus:bg-active': !node.selected,
         'bg-accent': node.selected,
       })}
     >
@@ -68,11 +76,13 @@ function NodeHeaderWrapper({
 }
 
 function FolderHeader({
+  isFirstFromRoot,
   node,
   open,
   onClick,
   indentation,
 }: {
+  isFirstFromRoot: boolean
   isLast: boolean
   node: Node
   open: boolean
@@ -82,7 +92,12 @@ function FolderHeader({
   const FolderIcon = open ? Icons.folderOpen : Icons.folderClose
   const ChevronIcon = open ? Icons.chevronDown : Icons.chevronRight
   return (
-    <NodeHeaderWrapper open={open} node={node} indentation={indentation}>
+    <NodeHeaderWrapper
+      isFirstFromRoot={isFirstFromRoot}
+      open={open}
+      node={node}
+      indentation={indentation}
+    >
       <div
         onClick={() => onClick(!open)}
         className='flex flex-row items-center gap-x-1'
@@ -98,16 +113,23 @@ function FolderHeader({
 }
 
 function FileHeader({
+  isFirstFromRoot,
   open,
   node,
   indentation,
 }: {
+  isFirstFromRoot: boolean
   open: boolean
   node: Node
   indentation: IndentType[]
 }) {
   return (
-    <NodeHeaderWrapper open={open} node={node} indentation={indentation}>
+    <NodeHeaderWrapper
+      isFirstFromRoot={isFirstFromRoot}
+      open={open}
+      node={node}
+      indentation={indentation}
+    >
       <div className='flex flex-row items-center gap-x-1 py-0.5'>
         <Icons.file
           className={cn(ICON_CLASS, {
@@ -129,23 +151,33 @@ function NodeHeader({
   isLast,
   node,
   open,
+  isFirstFromRoot,
   onClick,
   indentation,
 }: {
   isLast: boolean
   node: Node
   open: boolean
+  isFirstFromRoot: boolean
   onClick: ReactStateDispatch<boolean>
   indentation: IndentType[]
 }) {
   if (node.isRoot) return null
   if (node.isFile) {
-    return <FileHeader open={open} node={node} indentation={indentation} />
+    return (
+      <FileHeader
+        isFirstFromRoot={isFirstFromRoot}
+        open={open}
+        node={node}
+        indentation={indentation}
+      />
+    )
   }
 
   return (
     <FolderHeader
       isLast={isLast}
+      isFirstFromRoot={isFirstFromRoot}
       node={node}
       open={open}
       onClick={onClick}
@@ -156,27 +188,33 @@ function NodeHeader({
 
 function FileNode({
   isLast = false,
+  isFirstFromRoot = false,
   node,
   indentation = [],
 }: {
   node: Node
+  isFirstFromRoot: boolean
   isLast?: boolean
   indentation?: IndentType[]
 }) {
   const [open, setOpen] = useState(node.containsSelected)
   const lastIdx = node.children.length - 1
   return (
-    <div className='w-full'>
-      <NodeHeader
-        isLast={isLast}
-        indentation={indentation}
-        node={node}
-        open={open}
-        onClick={setOpen}
-      />
+    <ul className='w-full' role='tree'>
+      <li role='none'>
+        <NodeHeader
+          isLast={isLast}
+          isFirstFromRoot={isFirstFromRoot}
+          indentation={indentation}
+          node={node}
+          open={open}
+          onClick={setOpen}
+        />
+      </li>
 
-      {node.isFile ? null : (
+      {!node.isFile ? (
         <ul
+          role='group'
           className={cn('flex flex-col', {
             hidden: !open && !node.isRoot,
           })}
@@ -186,13 +224,14 @@ function FileNode({
               <FileNode
                 indentation={[...indentation, { isLast: idx === lastIdx }]}
                 node={node}
+                isFirstFromRoot={node.parent?.isRoot && idx === 0}
                 isLast={idx === lastIdx}
               />
             </li>
           ))}
         </ul>
-      )}
-    </div>
+      ) : null}
+    </ul>
   )
 }
 
