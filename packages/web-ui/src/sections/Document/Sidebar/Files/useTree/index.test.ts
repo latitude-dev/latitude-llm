@@ -13,11 +13,10 @@ function fakeRandomId({ uuid }: { uuid?: string } = {}) {
 
 function nodeToJson(node: Node): object {
   return {
-    name: node.name,
     id: node.id,
+    name: node.name,
+    path: node.path,
     depth: node.depth,
-    containsSelected: node.containsSelected,
-    selected: node.selected,
     children: node.children.map(nodeToJson),
   }
 }
@@ -37,7 +36,6 @@ describe('useTree', () => {
     const { result } = renderHook(() =>
       useTree({
         documents: list,
-        currentDocumentUuid: '4',
         generateNodeId: fakeRandomId,
       }),
     )
@@ -53,53 +51,46 @@ describe('useTree', () => {
     const { result } = renderHook(() =>
       useTree({
         documents: list,
-        currentDocumentUuid: '4',
         generateNodeId: fakeRandomId,
       }),
     )
     expect(nodeToJson(result.current)).toEqual({
       id: FAKE_RANDOM_ID,
       name: 'root',
+      path: '',
       depth: 0,
-      selected: false,
-      containsSelected: true,
       children: [
         {
           id: FAKE_RANDOM_ID,
           name: 'a_thing',
+          path: 'a_thing',
           depth: 1,
-          selected: false,
-          containsSelected: false,
           children: [
             {
-              name: 'other-things',
               id: FAKE_RANDOM_ID,
+              name: 'other-things',
+              path: 'a_thing/other-things',
               depth: 2,
-              selected: false,
-              containsSelected: false,
               children: [
                 {
                   id: '3',
-                  selected: false,
-                  containsSelected: false,
-                  depth: 3,
                   name: 'doc3',
+                  path: 'a_thing/other-things/doc3',
+                  depth: 3,
                   children: [],
                 },
               ],
             },
             {
               id: '1',
-              selected: false,
-              containsSelected: false,
-              depth: 2,
               name: 'doc1',
+              path: 'a_thing/doc1',
+              depth: 2,
               children: [],
             },
             {
               id: '2',
-              selected: false,
-              containsSelected: false,
+              path: 'a_thing/doc2',
               depth: 2,
               name: 'doc2',
               children: [],
@@ -107,18 +98,16 @@ describe('useTree', () => {
           ],
         },
         {
-          name: 'b_thing',
           id: FAKE_RANDOM_ID,
+          name: 'b_thing',
+          path: 'b_thing',
           depth: 1,
-          selected: false,
-          containsSelected: true,
           children: [
             {
               id: '4',
-              selected: true,
-              containsSelected: false,
-              depth: 2,
               name: 'doc4',
+              path: 'b_thing/doc4',
+              depth: 2,
               children: [],
             },
           ],
@@ -126,34 +115,30 @@ describe('useTree', () => {
         {
           id: FAKE_RANDOM_ID,
           name: 'z_thing',
+          path: 'z_thing',
           depth: 1,
-          selected: false,
-          containsSelected: false,
           children: [
             {
               id: '5',
-              selected: false,
-              containsSelected: false,
-              depth: 2,
               name: 'doc5',
+              path: 'z_thing/doc5',
+              depth: 2,
               children: [],
             },
           ],
         },
         {
           id: '7',
-          selected: false,
-          containsSelected: false,
-          depth: 1,
           name: 'a_doc_7',
+          path: 'a_doc_7',
+          depth: 1,
           children: [],
         },
         {
           id: '6',
-          selected: false,
-          containsSelected: false,
-          depth: 1,
           name: 'b_doc_6',
+          path: 'b_doc_6',
+          depth: 1,
           children: [],
         },
       ],

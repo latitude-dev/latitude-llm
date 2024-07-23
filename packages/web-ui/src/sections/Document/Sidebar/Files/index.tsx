@@ -1,12 +1,12 @@
 'use client'
 
-import { ReactNode, useCallback, useState } from 'react'
+import { ReactNode, useCallback, useEffect, useState } from 'react'
 
 import { Icons } from '$ui/ds/atoms/Icons'
 import Text from '$ui/ds/atoms/Text'
-import { ReactStateDispatch } from '$ui/lib/commonTypes'
 import { cn } from '$ui/lib/utils'
 
+import { useOpenPaths } from './useOpenPaths'
 import { Node, SidebarDocument, useTree } from './useTree'
 
 const ICON_CLASS = 'w-6 h-6 text-muted-foreground'
@@ -45,20 +45,20 @@ function IndentationBar({
 
 function NodeHeaderWrapper({
   open,
-  node,
+  selected = false,
   children,
   indentation,
 }: {
   open: boolean
+  selected?: boolean
   children: ReactNode
-  node: Node
   indentation: IndentType[]
 }) {
   return (
     <div
       className={cn('flex flex-row my-0.5 cursor-pointer', {
-        'hover:bg-muted': !node.selected,
-        'bg-accent': node.selected,
+        'hover:bg-muted': !selected,
+        'bg-accent': selected,
       })}
     >
       <IndentationBar indentation={indentation} open={open} />
@@ -70,21 +70,23 @@ function NodeHeaderWrapper({
 function FolderHeader({
   node,
   open,
-  onClick,
   indentation,
 }: {
   isLast: boolean
   node: Node
   open: boolean
-  onClick: ReactStateDispatch<boolean>
   indentation: IndentType[]
 }) {
+  const togglePath = useOpenPaths((state) => state.togglePath)
   const FolderIcon = open ? Icons.folderOpen : Icons.folderClose
   const ChevronIcon = open ? Icons.chevronDown : Icons.chevronRight
+  const onTooglePath = useCallback(() => {
+    togglePath(node.path)
+  }, [togglePath, node.path])
   return (
-    <NodeHeaderWrapper open={open} node={node} indentation={indentation}>
+    <NodeHeaderWrapper open={open} indentation={indentation}>
       <div
-        onClick={() => onClick(!open)}
+        onClick={onTooglePath}
         className='flex flex-row items-center gap-x-1'
       >
         <div className='w-6 flex justify-center'>
@@ -99,32 +101,40 @@ function FolderHeader({
 
 function FileHeader({
   open,
+  selected,
   node,
   indentation,
   navigateToDocument,
 }: {
   open: boolean
+  selected: boolean
   node: Node
   indentation: IndentType[]
   navigateToDocument: (documentUuid: string) => void
 }) {
   const handleClick = useCallback(() => {
+    if (selected) return
+
     navigateToDocument(node.doc!.documentUuid)
-  }, [node.doc])
+  }, [node.doc!.documentUuid, selected])
   return (
-    <NodeHeaderWrapper open={open} node={node} indentation={indentation}>
+    <NodeHeaderWrapper
+      open={open}
+      selected={selected}
+      indentation={indentation}
+    >
       <div
         className='flex flex-row items-center gap-x-1 py-0.5'
         onClick={handleClick}
       >
         <Icons.file
           className={cn(ICON_CLASS, {
-            'text-accent-foreground': node.selected,
+            'text-accent-foreground': selected,
           })}
         />
         <Text.H5M
           userSelect={false}
-          color={node.selected ? 'accentForeground' : 'foreground'}
+          color={selected ? 'accentForeground' : 'foreground'}
         >
           {node.name}
         </Text.H5M>
@@ -135,16 +145,16 @@ function FileHeader({
 
 function NodeHeader({
   isLast,
+  selected,
   node,
   open,
-  onClick,
   indentation,
   navigateToDocument,
 }: {
   isLast: boolean
+  selected: boolean
   node: Node
   open: boolean
-  onClick: ReactStateDispatch<boolean>
   indentation: IndentType[]
   navigateToDocument: (documentUuid: string) => void
 }) {
@@ -153,6 +163,7 @@ function NodeHeader({
     return (
       <FileHeader
         open={open}
+        selected={selected}
         node={node}
         indentation={indentation}
         navigateToDocument={navigateToDocument}
@@ -165,7 +176,6 @@ function NodeHeader({
       isLast={isLast}
       node={node}
       open={open}
-      onClick={onClick}
       indentation={indentation}
     />
   )
@@ -174,24 +184,31 @@ function NodeHeader({
 function FileNode({
   isLast = false,
   node,
+  currentPath,
   indentation = [],
   navigateToDocument,
 }: {
   node: Node
+  currentPath: string | undefined
   isLast?: boolean
   indentation?: IndentType[]
   navigateToDocument: (documentUuid: string) => void
 }) {
-  const [open, setOpen] = useState(node.containsSelected)
+  const [selected, setSelected] = useState(currentPath === node.path)
+  const openPaths = useOpenPaths((state) => state.openPaths)
+  const open = node.isRoot || openPaths.includes(node.path)
   const lastIdx = node.children.length - 1
+  useEffect(() => {
+    setSelected(currentPath === node.path)
+  }, [currentPath])
   return (
     <div className='w-full'>
       <NodeHeader
         isLast={isLast}
         indentation={indentation}
         node={node}
+        selected={selected}
         open={open}
-        onClick={setOpen}
         navigateToDocument={navigateToDocument}
       />
 
@@ -204,6 +221,7 @@ function FileNode({
           {node.children.map((node, idx) => (
             <li key={node.id}>
               <FileNode
+                currentPath={currentPath}
                 indentation={[...indentation, { isLast: idx === lastIdx }]}
                 node={node}
                 isLast={idx === lastIdx}
@@ -218,14 +236,28 @@ function FileNode({
 }
 
 export function FilesTree({
+  currentPath,
   documents,
-  currentDocumentUuid,
   navigateToDocument,
 }: {
   documents: SidebarDocument[]
-  currentDocumentUuid: string | undefined
+  currentPath: string | undefined
   navigateToDocument: (documentUuid: string) => void
 }) {
-  const rootNode = useTree({ documents, currentDocumentUuid })
-  return <FileNode node={rootNode} navigateToDocument={navigateToDocument} />
+  const togglePath = useOpenPaths((state) => state.togglePath)
+  const rootNode = useTree({ documents })
+
+  useEffect(() => {
+    if (currentPath) {
+      togglePath(currentPath)
+    }
+  }, [currentPath, togglePath])
+
+  return (
+    <FileNode
+      currentPath={currentPath}
+      node={rootNode}
+      navigateToDocument={navigateToDocument}
+    />
+  )
 }

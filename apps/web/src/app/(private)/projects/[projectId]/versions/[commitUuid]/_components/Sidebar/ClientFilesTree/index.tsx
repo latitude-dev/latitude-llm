@@ -14,9 +14,10 @@ import { useRouter } from 'next/navigation'
 
 export default function ClientFilesTree({
   documents,
-  documentUuid,
+  documentPath,
 }: {
   documents: SidebarDocument[]
+  documentPath: string | undefined
   documentUuid: string | undefined
 }) {
   const router = useRouter()
@@ -35,7 +36,7 @@ export default function ClientFilesTree({
   return (
     <FilesTree
       documents={documents}
-      currentDocumentUuid={documentUuid}
+      currentPath={documentPath}
       navigateToDocument={navigateToDocument}
     />
   )
