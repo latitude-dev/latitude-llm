@@ -2,7 +2,7 @@ import { useMemo } from 'react'
 
 export type SidebarDocument = {
   path: string
-  doumentUuid: string
+  documentUuid: string
 }
 
 export class Node {
@@ -102,7 +102,7 @@ function buildTree({
 
       if (!nodeMap.has(path)) {
         const file = isFile ? doc : undefined
-        const uuid = isFile ? doc.doumentUuid : undefined
+        const uuid = isFile ? doc.documentUuid : undefined
         const selected = isFile && uuid === currentDocumentUuid
         const node = new Node({
           id: generateNodeId({ uuid }),

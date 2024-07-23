@@ -1,6 +1,6 @@
 'use client'
 
-import { ReactNode, useState } from 'react'
+import { ReactNode, useCallback, useState } from 'react'
 
 import { Icons } from '$ui/ds/atoms/Icons'
 import Text from '$ui/ds/atoms/Text'
@@ -101,14 +101,22 @@ function FileHeader({
   open,
   node,
   indentation,
+  navigateToDocument,
 }: {
   open: boolean
   node: Node
   indentation: IndentType[]
+  navigateToDocument: (documentUuid: string) => void
 }) {
+  const handleClick = useCallback(() => {
+    navigateToDocument(node.doc!.documentUuid)
+  }, [node.doc])
   return (
     <NodeHeaderWrapper open={open} node={node} indentation={indentation}>
-      <div className='flex flex-row items-center gap-x-1 py-0.5'>
+      <div
+        className='flex flex-row items-center gap-x-1 py-0.5'
+        onClick={handleClick}
+      >
         <Icons.file
           className={cn(ICON_CLASS, {
             'text-accent-foreground': node.selected,
@@ -131,16 +139,25 @@ function NodeHeader({
   open,
   onClick,
   indentation,
+  navigateToDocument,
 }: {
   isLast: boolean
   node: Node
   open: boolean
   onClick: ReactStateDispatch<boolean>
   indentation: IndentType[]
+  navigateToDocument: (documentUuid: string) => void
 }) {
   if (node.isRoot) return null
   if (node.isFile) {
-    return <FileHeader open={open} node={node} indentation={indentation} />
+    return (
+      <FileHeader
+        open={open}
+        node={node}
+        indentation={indentation}
+        navigateToDocument={navigateToDocument}
+      />
+    )
   }
 
   return (
@@ -158,10 +175,12 @@ function FileNode({
   isLast = false,
   node,
   indentation = [],
+  navigateToDocument,
 }: {
   node: Node
   isLast?: boolean
   indentation?: IndentType[]
+  navigateToDocument: (documentUuid: string) => void
 }) {
   const [open, setOpen] = useState(node.containsSelected)
   const lastIdx = node.children.length - 1
@@ -173,6 +192,7 @@ function FileNode({
         node={node}
         open={open}
         onClick={setOpen}
+        navigateToDocument={navigateToDocument}
       />
 
       {node.isFile ? null : (
@@ -187,6 +207,7 @@ function FileNode({
                 indentation={[...indentation, { isLast: idx === lastIdx }]}
                 node={node}
                 isLast={idx === lastIdx}
+                navigateToDocument={navigateToDocument}
               />
             </li>
           ))}
@@ -199,11 +220,12 @@ function FileNode({
 export function FilesTree({
   documents,
   currentDocumentUuid,
+  navigateToDocument,
 }: {
   documents: SidebarDocument[]
   currentDocumentUuid: string | undefined
+  navigateToDocument: (documentUuid: string) => void
 }) {
   const rootNode = useTree({ documents, currentDocumentUuid })
-
-  return <FileNode node={rootNode} />
+  return <FileNode node={rootNode} navigateToDocument={navigateToDocument} />
 }
