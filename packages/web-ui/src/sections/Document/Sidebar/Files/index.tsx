@@ -46,16 +46,19 @@ function IndentationBar({
 function NodeHeaderWrapper({
   open,
   selected = false,
+  onClick,
   children,
   indentation,
 }: {
   open: boolean
   selected?: boolean
+  onClick?: () => void
   children: ReactNode
   indentation: IndentType[]
 }) {
   return (
     <div
+      onClick={onClick}
       className={cn('flex flex-row my-0.5 cursor-pointer', {
         'hover:bg-muted': !selected,
         'bg-accent': selected,
@@ -87,7 +90,7 @@ function FolderHeader({
     <NodeHeaderWrapper open={open} indentation={indentation}>
       <div
         onClick={onTooglePath}
-        className='flex flex-row items-center gap-x-1'
+        className='flex-1 flex flex-row items-center gap-x-1'
       >
         <div className='w-6 flex justify-center'>
           <ChevronIcon className={cn(ICON_CLASS, 'h-4 w-4')} />
@@ -122,11 +125,9 @@ function FileHeader({
       open={open}
       selected={selected}
       indentation={indentation}
+      onClick={handleClick}
     >
-      <div
-        className='flex flex-row items-center gap-x-1 py-0.5'
-        onClick={handleClick}
-      >
+      <div className='flex flex-row items-center gap-x-1 py-0.5'>
         <Icons.file
           className={cn(ICON_CLASS, {
             'text-accent-foreground': selected,
