@@ -9,6 +9,8 @@ import {
 import { Slot } from '@radix-ui/react-slot'
 
 import { Label } from '$ui/ds/atoms/Label'
+import Text from '$ui/ds/atoms/Text'
+import { Tooltip } from '$ui/ds/atoms/Tooltip'
 import { cn } from '$ui/lib/utils'
 
 function FormDescription({
@@ -28,7 +30,19 @@ function FormDescription({
   )
 }
 
-function FormMessage({ error, id }: { id: string; error: string | undefined }) {
+function TooltipMessage({ error }: { error: string | undefined }) {
+  if (!error) return null
+
+  return <Text.H6B color='white'>{error}</Text.H6B>
+}
+
+function InlineFormMessage({
+  error,
+  id,
+}: {
+  id: string
+  error: string | undefined
+}) {
   if (!error) return null
 
   return (
@@ -70,6 +84,7 @@ export type FormFieldProps = Omit<
   label?: string
   description?: string | ReactNode
   errors?: string[] | null | undefined
+  errorStyle?: 'inline' | 'tooltip'
 }
 function FormField({
   children,
@@ -77,6 +92,7 @@ function FormField({
   description,
   className,
   errors,
+  errorStyle = 'inline',
 }: FormFieldProps) {
   const error = errors?.[0]
   const id = useId()
@@ -85,35 +101,51 @@ function FormField({
   const formMessageId = `${id}-form-item-message`
 
   return (
-    <div
-      className={cn('space-y-2 w-full', className)}
-      aria-describedby={
-        !error
-          ? `${formDescriptionId}`
-          : `${formDescriptionId} ${formMessageId}`
+    <Tooltip
+      side='bottom'
+      align='start'
+      open={!!error && errorStyle === 'tooltip'}
+      trigger={
+        <div
+          className={cn('space-y-2 w-full', className)}
+          aria-describedby={
+            !error
+              ? `${formDescriptionId}`
+              : `${formDescriptionId} ${formMessageId}`
+          }
+          aria-invalid={!!error}
+        >
+          {label ? (
+            <Label
+              variant={error ? 'destructive' : 'default'}
+              htmlFor={formItemId}
+            >
+              {label}
+            </Label>
+          ) : null}
+          <FormControl
+            error={error}
+            formItemId={formItemId}
+            formDescriptionId={formDescriptionId}
+            formMessageId={formMessageId}
+          >
+            {children}
+          </FormControl>
+
+          {description && (
+            <FormDescription id={formDescriptionId}>
+              {description}
+            </FormDescription>
+          )}
+
+          {errorStyle === 'inline' ? (
+            <InlineFormMessage error={error} id={formMessageId} />
+          ) : null}
+        </div>
       }
-      aria-invalid={!!error}
     >
-      {label ? (
-        <Label variant={error ? 'destructive' : 'default'} htmlFor={formItemId}>
-          {label}
-        </Label>
-      ) : null}
-      <FormControl
-        error={error}
-        formItemId={formItemId}
-        formDescriptionId={formDescriptionId}
-        formMessageId={formMessageId}
-      >
-        {children}
-      </FormControl>
-
-      {description && (
-        <FormDescription id={formDescriptionId}>{description}</FormDescription>
-      )}
-
-      <FormMessage error={error} id={formMessageId} />
-    </div>
+      <TooltipMessage error={error} />
+    </Tooltip>
   )
 }
 

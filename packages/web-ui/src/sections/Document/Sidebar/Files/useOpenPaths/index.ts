@@ -1,38 +1,41 @@
 import { create } from 'zustand'
 
 type OpenPathsState = {
-  openPaths: string[]
+  openPaths: { [key: string]: boolean }
   togglePath: (path: string) => void
-}
-
-function checkIsPathOrDescendant(basePath: string, path: string) {
-  if (basePath === '' && path !== '') return true
-
-  return path.startsWith(`${basePath}/`) || path === basePath
+  reset: () => void
 }
 
 export const useOpenPaths = create<OpenPathsState>((set) => ({
-  openPaths: [''],
+  openPaths: {},
+  reset: () => {
+    set({ openPaths: {} })
+  },
   togglePath: (path: string) => {
     set((state) => {
-      const isPathOpen = state.openPaths.includes(path)
+      const paths = state.openPaths
+      const isPathOpen = paths[path]
+
       if (!isPathOpen) {
         const segments = path.split('/')
-        const newPaths = segments.map((_, idx) =>
-          segments.slice(0, idx + 1).join('/'),
+        const newPaths = segments.reduce(
+          (acc, _, idx) => {
+            const newPath = segments.slice(0, idx + 1).join('/')
+            return { ...acc, [newPath]: true }
+          },
+          {} as { [key: string]: boolean },
         )
 
         return {
-          openPaths: [...state.openPaths, ...newPaths],
+          openPaths: { ...paths, ...newPaths },
         }
-      } else {
-        const filteredPaths = state.openPaths.filter(
-          (p) => !checkIsPathOrDescendant(path, p),
-        )
+      }
 
-        return {
-          openPaths: filteredPaths,
-        }
+      return {
+        openPaths: {
+          ...state.openPaths,
+          [path]: false,
+        },
       }
     })
   },
