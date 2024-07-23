@@ -1,19 +1,16 @@
 import { omit } from 'lodash-es'
 
-import { readMetadata } from '@latitude-data/compiler'
+import { readMetadata, type CompileError } from '@latitude-data/compiler'
+import { database } from '$core/client'
 import {
-  Commit,
-  DocumentVersion,
-  documentVersions,
   findCommitById,
   findHeadCommit,
   getDocumentsAtCommit,
   listCommitChanges,
-  Result,
-  Transaction,
-  TypedResult,
-} from '@latitude-data/core'
+} from '$core/data-access'
+import { Result, Transaction, TypedResult } from '$core/lib'
 import { ForbiddenError, LatitudeError } from '$core/lib/errors'
+import { Commit, DocumentVersion, documentVersions } from '$core/schema'
 import { eq } from 'drizzle-orm'
 
 export async function getDraft(
@@ -30,29 +27,39 @@ export async function getDraft(
   return Result.ok(commit.value!)
 }
 
-export async function getMergedAndDraftDocuments({
-  draft,
-}: {
-  draft: Commit
-}): Promise<TypedResult<[DocumentVersion[], DocumentVersion[]], Error>> {
-  const headCommit = await findHeadCommit({ projectId: draft.projectId })
-  if (headCommit.error) return headCommit
+export async function getMergedAndDraftDocuments(
+  {
+    draft,
+  }: {
+    draft: Commit
+  },
+  tx = database,
+): Promise<TypedResult<[DocumentVersion[], DocumentVersion[]], Error>> {
+  const mergedDocuments: DocumentVersion[] = []
 
-  const mergedDocuments = await getDocumentsAtCommit({
-    commitId: headCommit.value.id,
-  })
-  if (mergedDocuments.error) return mergedDocuments
+  const headCommit = await findHeadCommit({ projectId: draft.projectId }, tx)
+  if (headCommit.ok) {
+    // "Head commit" may not exist if the project is empty
+    const headDocuments = await getDocumentsAtCommit(
+      {
+        commitId: headCommit.value!.id,
+      },
+      tx,
+    )
+    if (headDocuments.error) return headDocuments
+    mergedDocuments.push(...headDocuments.value)
+  }
 
-  const draftChanges = await listCommitChanges({ commitId: draft.id })
+  const draftChanges = await listCommitChanges({ commitId: draft.id }, tx)
   if (draftChanges.error) return Result.error(draftChanges.error)
 
-  const draftDocuments = mergedDocuments.value
+  const draftDocuments = mergedDocuments
     .filter(
       (d) => !draftChanges.value.find((c) => c.documentUuid === d.documentUuid),
     )
     .concat(draftChanges.value)
 
-  return Result.ok([mergedDocuments.value, structuredClone(draftDocuments)])
+  return Result.ok([mergedDocuments, structuredClone(draftDocuments)])
 }
 
 export function existsAnotherDocumentWithSamePath({
@@ -71,7 +78,12 @@ export async function resolveDocumentChanges({
 }: {
   originalDocuments: DocumentVersion[]
   newDocuments: DocumentVersion[]
-}): Promise<DocumentVersion[]> {
+}): Promise<{
+  documents: DocumentVersion[]
+  errors: Record<string, CompileError[]>
+}> {
+  const errors: Record<string, CompileError[]> = {}
+
   const getDocumentContent = async (path: string): Promise<string> => {
     const document = newDocuments.find((d) => d.path === path)
     if (!document) {
@@ -81,16 +93,23 @@ export async function resolveDocumentChanges({
   }
 
   const newDocumentsWithUpdatedHash = await Promise.all(
-    newDocuments.map(async (d) => ({
-      ...d,
-      hash: await readMetadata({
+    newDocuments.map(async (d) => {
+      const metadata = await readMetadata({
         prompt: d.content ?? '',
         referenceFn: getDocumentContent,
-      }).then((m) => m.hash),
-    })),
+      })
+      if (metadata.errors.length > 0) {
+        errors[d.documentUuid] = metadata.errors
+      }
+
+      return {
+        ...d,
+        hash: metadata.hash,
+      }
+    }),
   )
 
-  return newDocumentsWithUpdatedHash.filter(
+  const changedDocuments = newDocumentsWithUpdatedHash.filter(
     (newDoc) =>
       !originalDocuments.find(
         (oldDoc) =>
@@ -99,23 +118,28 @@ export async function resolveDocumentChanges({
           oldDoc.path === newDoc.path,
       ),
   )
+
+  return { documents: changedDocuments, errors }
 }
 
-export async function replaceCommitChanges({
-  commitId,
-  documentChanges,
-}: {
-  commitId: number
-  documentChanges: DocumentVersion[]
-}): Promise<TypedResult<DocumentVersion[], Error>> {
-  return Transaction.call<DocumentVersion[]>(async (tx) => {
-    await tx
+export async function replaceCommitChanges(
+  {
+    commitId,
+    documentChanges,
+  }: {
+    commitId: number
+    documentChanges: DocumentVersion[]
+  },
+  tx = database,
+): Promise<TypedResult<DocumentVersion[], Error>> {
+  return Transaction.call<DocumentVersion[]>(async (trx) => {
+    await trx
       .delete(documentVersions)
       .where(eq(documentVersions.commitId, commitId))
 
     if (documentChanges.length === 0) return Result.ok([])
 
-    const insertedDocuments = await tx
+    const insertedDocuments = await trx
       .insert(documentVersions)
       .values(
         documentChanges.map((d) => ({
@@ -126,5 +150,5 @@ export async function replaceCommitChanges({
       .returning()
 
     return Result.ok(insertedDocuments)
-  })
+  }, tx)
 }

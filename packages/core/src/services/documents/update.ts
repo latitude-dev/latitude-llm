@@ -1,13 +1,9 @@
-import { Result, TypedResult } from '$core/lib'
-import { BadRequestError, NotFoundError } from '$core/lib/errors'
-import { DocumentVersion } from '$core/schema'
+import { omit } from 'lodash-es'
 
-import {
-  getDraft,
-  getMergedAndDraftDocuments,
-  replaceCommitChanges,
-  resolveDocumentChanges,
-} from './shared'
+import { findCommitById, getDocumentsAtCommit } from '$core/data-access'
+import { Result, Transaction, TypedResult } from '$core/lib'
+import { BadRequestError, NotFoundError } from '$core/lib/errors'
+import { DocumentVersion, documentVersions } from '$core/schema'
 
 export async function updateDocument({
   commitId,
@@ -22,58 +18,57 @@ export async function updateDocument({
   content?: string | null
   deletedAt?: Date | null
 }): Promise<TypedResult<DocumentVersion, Error>> {
-  try {
-    const draft = (await getDraft(commitId)).unwrap()
+  const updatedDocData = Object.fromEntries(
+    Object.entries({ path, content, deletedAt }).filter(
+      ([_, v]) => v !== undefined,
+    ),
+  )
 
-    const [mergedDocuments, draftDocuments] = (
-      await getMergedAndDraftDocuments({
-        draft,
-      })
-    ).unwrap()
+  return await Transaction.call(async (tx) => {
+    const commit = (await findCommitById({ id: commitId }, tx)).unwrap()
+    if (commit.mergedAt !== null) {
+      return Result.error(new BadRequestError('Cannot modify a merged commit'))
+    }
+    const currentDocs = (await getDocumentsAtCommit({ commitId }, tx)).unwrap()
+    const currentDoc = currentDocs.find((d) => d.documentUuid === documentUuid)
 
-    const updatedDocData = Object.fromEntries(
-      Object.entries({ documentUuid, path, content, deletedAt }).filter(
-        ([_, v]) => v !== undefined,
-      ),
-    )
-
-    const originalDoc = draftDocuments.find(
-      (d) => d.documentUuid === documentUuid!,
-    )
-
-    if (!originalDoc) {
+    if (!currentDoc) {
       return Result.error(new NotFoundError('Document does not exist'))
     }
 
-    Object.assign(originalDoc, updatedDocData)
-
-    if (
-      path &&
-      draftDocuments.find(
-        (d) => d.documentUuid !== documentUuid && d.path === path,
-      )
-    ) {
-      return Result.error(
-        new BadRequestError('A document with the same path already exists'),
-      )
+    if (path !== undefined) {
+      if (
+        currentDocs.find(
+          (d) => d.path === path && d.documentUuid !== documentUuid,
+        )
+      ) {
+        return Result.error(
+          new BadRequestError('A document with the same path already exists'),
+        )
+      }
     }
 
-    const documentsToUpdate = await resolveDocumentChanges({
-      originalDocuments: mergedDocuments,
-      newDocuments: draftDocuments,
-    })
+    const oldVersion = omit(currentDoc, ['id', 'commitId', 'updatedAt'])
 
-    const newDraftDocuments = (
-      await replaceCommitChanges({
-        commitId,
-        documentChanges: documentsToUpdate,
+    const newVersion = {
+      ...oldVersion,
+      ...updatedDocData,
+      commitId,
+    }
+
+    const updatedDocs = await tx
+      .insert(documentVersions)
+      .values(newVersion)
+      .onConflictDoUpdate({
+        target: [documentVersions.documentUuid, documentVersions.commitId],
+        set: newVersion,
       })
-    ).unwrap()
+      .returning()
 
-    return Result.ok(
-      newDraftDocuments.find((d) => d.documentUuid === documentUuid)!,
-    )
-  } catch (error) {
-    return Result.error(error as Error)
-  }
+    if (updatedDocs.length === 0) {
+      return Result.error(new NotFoundError('Document does not exist'))
+    }
+
+    return Result.ok(updatedDocs[0]!)
+  })
 }

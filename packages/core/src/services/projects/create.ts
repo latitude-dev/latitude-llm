@@ -6,7 +6,6 @@ import {
   type Project,
 } from '@latitude-data/core'
 import { createCommit } from '$core/services/commits/create'
-import { mergeCommit } from '$core/services/commits/merge'
 
 export async function createProject(
   {
@@ -23,15 +22,15 @@ export async function createProject(
       await tx.insert(projects).values({ workspaceId, name }).returning()
     )[0]!
     const commit = await createCommit({
-      commit: { projectId: project.id, title: 'Initial version' },
+      commit: {
+        projectId: project.id,
+        title: 'Initial version',
+        mergedAt: new Date(),
+      },
       db: tx,
     })
 
     if (commit.error) return commit
-
-    const resultMerge = await mergeCommit({ commitId: commit.value.id }, tx)
-
-    if (resultMerge.error) return resultMerge
 
     return Result.ok(project)
   }, db)

@@ -1,6 +1,6 @@
 import { faker } from '@faker-js/faker'
 import { getUser } from '$core/data-access'
-import { Workspace, type SafeUser } from '$core/schema'
+import { DocumentVersion, Workspace, type SafeUser } from '$core/schema'
 import { createNewDocument, mergeCommit, updateDocument } from '$core/services'
 import { createProject as createProjectFn } from '$core/services/projects'
 
@@ -62,23 +62,26 @@ export async function createProject(projectData: Partial<ICreateProject> = {}) {
   })
   const project = result.unwrap()
 
+  const documents: DocumentVersion[] = []
+
   if (projectData.documents) {
-    const documents = await flattenDocumentStructure({
+    const documentsToCreate = await flattenDocumentStructure({
       documents: projectData.documents,
     })
     const { commit: draft } = await createDraft({ project })
-    for await (const { path, content } of documents) {
+    for await (const { path, content } of documentsToCreate) {
       const newDoc = await createNewDocument({ commitId: draft.id, path }).then(
         (r) => r.unwrap(),
       )
-      await updateDocument({
+      const updatedDoc = await updateDocument({
         commitId: draft.id,
         documentUuid: newDoc.documentUuid,
         content,
       })
+      documents.push(updatedDoc.unwrap())
     }
-    await mergeCommit({ commitId: draft.id })
+    await mergeCommit({ commitId: draft.id }).then((r) => r.unwrap())
   }
 
-  return { project, user, workspace }
+  return { project, user, workspace, documents }
 }

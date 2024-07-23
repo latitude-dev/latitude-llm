@@ -54,30 +54,20 @@ describe('createNewDocument', () => {
     })
 
     expect(result.ok).toBe(false)
-    expect(result.error!.message).toBe(
-      'Cannot create a document version in a merged commit',
-    )
+    expect(result.error!.message).toBe('Cannot modify a merged commit')
   })
 
-  it('modifies other documents if it is referenced by another document', async (ctx) => {
-    const { project } = await ctx.factories.createProject({
-      documents: {
-        main: '<ref prompt="referenced/doc" />',
-      },
-    })
-
+  it('fails when trying to create a document in a merged commit', async (ctx) => {
+    const { project } = await ctx.factories.createProject()
     const { commit } = await ctx.factories.createDraft({ project })
-    await createNewDocument({
+    await mergeCommit({ commitId: commit.id })
+
+    const result = await createNewDocument({
       commitId: commit.id,
-      path: 'referenced/doc',
+      path: 'foo',
     })
 
-    const changes = await listCommitChanges({ commitId: commit.id }).then((r) =>
-      r.unwrap(),
-    )
-    expect(changes.length).toBe(2)
-    const changedDocsPahts = changes.map((c) => c.path)
-    expect(changedDocsPahts).toContain('main')
-    expect(changedDocsPahts).toContain('referenced/doc')
+    expect(result.ok).toBe(false)
+    expect(result.error!.message).toBe('Cannot modify a merged commit')
   })
 })
