@@ -1,7 +1,7 @@
 import React from 'react'
 
 import { DocumentDetailWrapper } from '@latitude-data/web-ui'
-import { findCommit } from '$/app/(private)/_data-access'
+import { findCommit, getDocumentByUuid } from '$/app/(private)/_data-access'
 
 import Sidebar from '../../_components/Sidebar'
 
@@ -16,9 +16,17 @@ export default async function DocumentLayout({
     projectId: Number(params.projectId),
     uuid: params.commitUuid,
   })
+  const document = await getDocumentByUuid({
+    documentUuid: params.documentUuid,
+    commitId: commit.id,
+  })
   return (
     <DocumentDetailWrapper>
-      <Sidebar commit={commit} documentUuid={params.documentUuid} />
+      <Sidebar
+        commit={commit}
+        documentUuid={params.documentUuid}
+        documentPath={document.path}
+      />
       <div className='p-32'>{children}</div>
     </DocumentDetailWrapper>
   )

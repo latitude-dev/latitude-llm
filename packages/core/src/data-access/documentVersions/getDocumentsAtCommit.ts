@@ -107,6 +107,34 @@ export async function getDocumentsAtCommit(
   return Result.ok(totalDocuments)
 }
 
+export type GetDocumentAtCommitProps = {
+  commitId: number
+  documentUuid: string
+}
+export async function getDocumentAtCommit(
+  { commitId, documentUuid }: GetDocumentAtCommitProps,
+  tx = database,
+): Promise<TypedResult<DocumentVersion, LatitudeError>> {
+  const documentInCommit = await tx.query.documentVersions.findFirst({
+    where: and(
+      eq(documentVersions.commitId, commitId),
+      eq(documentVersions.documentUuid, documentUuid),
+    ),
+  })
+  if (documentInCommit !== undefined) return Result.ok(documentInCommit)
+
+  const documentsAtCommit = await getDocumentsAtCommit({ commitId }, tx)
+  if (documentsAtCommit.error) return Result.error(documentsAtCommit.error)
+
+  const document = documentsAtCommit.value.find(
+    (d) => d.documentUuid === documentUuid,
+  )
+
+  if (!document) return Result.error(new LatitudeError('Document not found'))
+
+  return Result.ok(document)
+}
+
 export async function listCommitChanges(
   { commitId }: { commitId: number },
   tx = database,

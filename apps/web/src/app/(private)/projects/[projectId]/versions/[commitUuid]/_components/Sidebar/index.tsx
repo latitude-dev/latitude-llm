@@ -8,8 +8,10 @@ import ClientFilesTree from './ClientFilesTree'
 export default async function Sidebar({
   commit,
   documentUuid,
+  documentPath,
 }: {
   commit: Commit
+  documentPath?: string
   documentUuid?: string
 }) {
   const documents = await getDocumentsAtCommit({ commitId: commit.id })
@@ -17,6 +19,7 @@ export default async function Sidebar({
     <Suspense fallback={<div>Loading...</div>}>
       <DocumentSidebar>
         <ClientFilesTree
+          documentPath={documentPath}
           documents={documents.unwrap()}
           documentUuid={documentUuid}
         />

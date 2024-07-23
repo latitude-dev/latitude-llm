@@ -8,45 +8,35 @@ export type SidebarDocument = {
 export class Node {
   public id: string
   public name: string
+  public path: string
   public isRoot: boolean = false
   public isFile: boolean = false
   public depth: number = 0
-  public containsSelected: boolean = false
-  public selected: boolean = false
   public children: Node[] = []
   public doc?: SidebarDocument
-  public parent?: Node
 
   constructor({
     id,
     doc,
     children = [],
-    selected = false,
     isRoot = false,
+    path,
     name = '',
   }: {
     id: string
-    selected: boolean
+    path: string
     doc?: SidebarDocument
     children?: Node[]
     isRoot?: boolean
     name?: string
   }) {
     this.id = id
+    this.path = path
     this.name = isRoot ? 'root' : name
-    this.selected = selected
     this.isRoot = isRoot
     this.isFile = !!doc
     this.children = children
     this.doc = doc
-  }
-
-  recursiveSelectParents() {
-    this.containsSelected = true
-
-    if (this.parent) {
-      this.parent.recursiveSelectParents()
-    }
   }
 }
 
@@ -81,13 +71,11 @@ function findChildrenIndex(node: Node, children: Node[]) {
 
 function buildTree({
   root,
-  currentDocumentUuid,
   nodeMap,
   documents,
   generateNodeId,
 }: {
   root: Node
-  currentDocumentUuid?: string
   nodeMap: Map<string, Node>
   documents: SidebarDocument[]
   generateNodeId: typeof defaultGenerateNodeUuid
@@ -103,12 +91,11 @@ function buildTree({
       if (!nodeMap.has(path)) {
         const file = isFile ? doc : undefined
         const uuid = isFile ? doc.documentUuid : undefined
-        const selected = isFile && uuid === currentDocumentUuid
         const node = new Node({
           id: generateNodeId({ uuid }),
-          doc: file,
-          selected: selected,
           name: segment,
+          path,
+          doc: file,
         })
         nodeMap.set(path, node)
 
@@ -127,12 +114,6 @@ function buildTree({
         } else {
           parent.children.splice(index, 0, node)
         }
-
-        node.parent = parent
-
-        if (selected) {
-          node.parent.recursiveSelectParents()
-        }
       }
     })
   })
@@ -142,19 +123,17 @@ function buildTree({
 
 export function useTree({
   documents,
-  currentDocumentUuid,
   generateNodeId = defaultGenerateNodeUuid,
 }: {
   documents: SidebarDocument[]
-  currentDocumentUuid: string | undefined
   generateNodeId?: typeof defaultGenerateNodeUuid
 }) {
   return useMemo(() => {
     const root = new Node({
       id: generateNodeId(),
+      path: '',
       children: [],
       isRoot: true,
-      selected: false,
     })
     const nodeMap = new Map<string, Node>()
     nodeMap.set('', root)
@@ -162,11 +141,10 @@ export function useTree({
 
     const tree = buildTree({
       root,
-      currentDocumentUuid,
       nodeMap,
       documents: sorted,
       generateNodeId,
     })
     return tree
-  }, [documents, currentDocumentUuid])
+  }, [documents])
 }
