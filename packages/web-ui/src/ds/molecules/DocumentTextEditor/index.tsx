@@ -1,6 +1,6 @@
 'use client'
 
-import React, { lazy } from 'react'
+import React, { lazy, useEffect, useState } from 'react'
 
 import type { ConversationMetadata } from '@latitude-data/compiler'
 
@@ -10,6 +10,7 @@ export type DocumentTextEditorProps = {
   value: string
   metadata?: ConversationMetadata
   onChange?: (value: string) => void
+  readOnlyMessage?: string
 }
 
 const DocumentTextEditor = lazy(() =>
@@ -25,7 +26,15 @@ function EditorWrapper(props: DocumentTextEditorProps) {
   // When imported, Monaco automatically tries to use the window object.
   // Since this is not available when rendering on the server, we only
   // render the fallback component for SSR.
-  if (typeof window === 'undefined') return <DocumentTextEditorFallback />
+  const [isBrowser, setIsBrowser] = useState(false)
+
+  useEffect(() => {
+    setIsBrowser(typeof window !== 'undefined')
+  }, [])
+
+  if (!isBrowser) {
+    return <DocumentTextEditorFallback />
+  }
   return <DocumentTextEditor {...props} />
 }
 

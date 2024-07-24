@@ -1,6 +1,13 @@
 'use client'
 
-import { ReactNode, Suspense, useEffect, useMemo, useState } from 'react'
+import {
+  ReactNode,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react'
 
 import { ConversationMetadata, readMetadata } from '@latitude-data/compiler'
 import { Badge, Input, Text } from '$ui/ds/atoms'
@@ -8,6 +15,8 @@ import {
   DocumentTextEditor,
   DocumentTextEditorFallback,
 } from '$ui/ds/molecules'
+import { useCurrentCommit } from '$ui/providers'
+import { useDebouncedCallback } from 'use-debounce'
 
 function Header({ title, children }: { title: string; children?: ReactNode }) {
   return (
@@ -18,26 +27,51 @@ function Header({ title, children }: { title: string; children?: ReactNode }) {
   )
 }
 
-export function DocumentEditor({ document }: { document: string }) {
+export default function DocumentEditor({
+  document,
+  saveDocumentContent,
+  readDocument,
+}: {
+  document: string
+  saveDocumentContent: (content: string) => void
+  readDocument?: (uuid: string) => Promise<string>
+}) {
   const [value, setValue] = useState(document)
   const [metadata, setMetadata] = useState<ConversationMetadata>()
+
+  const { commit } = useCurrentCommit()
+
+  const debouncedSave = useDebouncedCallback(saveDocumentContent, 2_000)
+
+  const onChange = useCallback((value: string) => {
+    setValue(value)
+    debouncedSave(value)
+  }, [])
+
   useEffect(() => {
-    readMetadata({ prompt: value }).then(setMetadata)
-  }, [value])
+    readMetadata({
+      prompt: value,
+      referenceFn: readDocument,
+    }).then(setMetadata)
+  }, [value, readDocument])
+
   const inputs = useMemo(() => {
     if (!metadata) return []
     return Array.from(metadata.parameters)
   }, [metadata])
 
   return (
-    <div className='flex flex-row w-full h-full gap-8'>
+    <div className='flex flex-row w-full h-full gap-8 p-6'>
       <div className='flex flex-col flex-1 flex-grow flex-shrink gap-2 min-w-0'>
         <Header title='Prompt editor' />
         <Suspense fallback={<DocumentTextEditorFallback />}>
           <DocumentTextEditor
             value={value}
             metadata={metadata}
-            onChange={setValue}
+            onChange={onChange}
+            readOnlyMessage={
+              commit.mergedAt ? 'Create a draft to edit documents' : undefined
+            }
           />
         </Suspense>
       </div>

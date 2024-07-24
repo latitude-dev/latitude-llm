@@ -21,12 +21,14 @@ export function DocumentTextEditor({
   value,
   metadata,
   onChange,
+  readOnlyMessage,
 }: DocumentTextEditorProps) {
+  const [defaultValue, _] = useState(value)
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null)
   const monacoRef = useRef<Monaco | null>(null)
   const [isEditorMounted, setIsEditorMounted] = useState(false) // to avoid race conditions
 
-  function handleEditorWillMount(monaco: Monaco) {
+  const handleEditorWillMount = useCallback((monaco: Monaco) => {
     const style = getComputedStyle(document.body)
 
     monaco.languages.register({ id: 'document' })
@@ -39,16 +41,16 @@ export function DocumentTextEditor({
         'editor.background': style.getPropertyValue('--secondary'),
       },
     })
-  }
+  }, [])
 
-  function handleEditorDidMount(
-    editor: editor.IStandaloneCodeEditor,
-    monaco: Monaco,
-  ) {
-    editorRef.current = editor
-    monacoRef.current = monaco
-    setIsEditorMounted(true)
-  }
+  const handleEditorDidMount = useCallback(
+    (editor: editor.IStandaloneCodeEditor, monaco: Monaco) => {
+      editorRef.current = editor
+      monacoRef.current = monaco
+      setIsEditorMounted(true)
+    },
+    [],
+  )
 
   const updateMarkers = useCallback(() => {
     if (!metadata) return
@@ -77,28 +79,49 @@ export function DocumentTextEditor({
     updateMarkers()
   }, [metadata, isEditorMounted])
 
-  function handleValueChange(value: string | undefined) {
-    if (value) onChange?.(value)
-  }
+  const handleValueChange = useCallback(
+    (value: string | undefined) => {
+      onChange?.(value ?? '')
+    },
+    [onChange],
+  )
 
   return (
-    <div className='flex flex-col relative h-full w-full rounded-lg border border-border overflow-hidden'>
-      <Editor
-        height='100%'
-        width='100%'
-        theme='latitude'
-        language='document'
-        defaultValue={value}
-        beforeMount={handleEditorWillMount}
-        onMount={handleEditorDidMount}
-        onChange={handleValueChange}
-        options={{
-          lineNumbers: 'off',
-          minimap: {
-            enabled: false,
-          },
-        }}
-      />
+    <div className='relative h-full rounded-lg border border-border overflow-hidden'>
+      <div className='absolute top-0 left-0 right-0 bottom-0'>
+        <Editor
+          height='100%'
+          width='100%'
+          theme='latitude'
+          language='document'
+          defaultValue={defaultValue}
+          beforeMount={handleEditorWillMount}
+          onMount={handleEditorDidMount}
+          onChange={handleValueChange}
+          options={{
+            fixedOverflowWidgets: true,
+            lineDecorationsWidth: 0,
+            padding: {
+              top: 16,
+              bottom: 16,
+            },
+            lineNumbers: 'off',
+            minimap: {
+              enabled: false,
+            },
+            copyWithSyntaxHighlighting: false,
+            cursorSmoothCaretAnimation: 'on',
+            occurrencesHighlight: 'off',
+            renderLineHighlight: 'none',
+            tabSize: 2,
+            wordWrap: 'on',
+            readOnly: !!readOnlyMessage,
+            readOnlyMessage: readOnlyMessage
+              ? { value: readOnlyMessage, supportHtml: true }
+              : undefined,
+          }}
+        />
+      </div>
     </div>
   )
 }
