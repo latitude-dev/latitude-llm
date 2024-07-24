@@ -1,4 +1,8 @@
-import { findHeadCommit, listCommitChanges } from '$core/data-access'
+import {
+  findHeadCommit,
+  getDocumentsAtCommit,
+  listCommitChanges,
+} from '$core/data-access'
 import { describe, expect, it } from 'vitest'
 
 import { recomputeChanges } from './recomputeChanges'
@@ -210,5 +214,43 @@ describe('updateDocument', () => {
 
     expect(result.ok).toBe(false)
     expect(result.error!.message).toBe('Cannot modify a merged commit')
+  })
+
+  it('invalidates the resolvedContent for all documents in the commit', async (ctx) => {
+    const { project, documents } = await ctx.factories.createProject({
+      documents: {
+        doc1: 'Doc 1',
+        doc2: 'Doc 2',
+      },
+    })
+
+    const { commit } = await ctx.factories.createDraft({ project })
+    const doc1 = documents.find((d) => d.path === 'doc1')!
+    const doc2 = documents.find((d) => d.path === 'doc2')!
+
+    await updateDocument({
+      commitId: commit.id,
+      documentUuid: doc1.documentUuid,
+      content: 'Doc 1 v2',
+    }).then((r) => r.unwrap())
+
+    await recomputeChanges({ commitId: commit.id })
+
+    await updateDocument({
+      commitId: commit.id,
+      documentUuid: doc2.documentUuid,
+      content: 'Doc 2 v2',
+    })
+
+    const commitDocs = await getDocumentsAtCommit({ commitId: commit.id }).then(
+      (r) => r.unwrap(),
+    )
+
+    expect(commitDocs.find((d) => d.path === 'doc1')!.resolvedContent).toBe(
+      null,
+    )
+    expect(commitDocs.find((d) => d.path === 'doc2')!.resolvedContent).toBe(
+      null,
+    )
   })
 })

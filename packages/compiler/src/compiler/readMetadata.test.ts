@@ -5,43 +5,239 @@ import { describe, expect, it } from 'vitest'
 import { readMetadata } from '.'
 import { removeCommonIndent } from './utils'
 
-describe('hash', async () => {
-  it('always returns the same hash for the same prompt', async () => {
-    const prompt = `
-      foo
-      bar
-    `
+describe('resolvedPrompt', async () => {
+  it('replaces reference tags with the referenced prompt', async () => {
+    const prompts = {
+      parent: removeCommonIndent(`
+        This is the parent prompt.
+        <ref prompt="child" />
+        The end.
+      `),
+      child: removeCommonIndent('Lorem ipsum'),
+    } as Record<string, string>
 
-    const metadata1 = await readMetadata({
-      prompt: removeCommonIndent(prompt),
+    const cleanParentMetadata = await readMetadata({
+      prompt: prompts['parent']!,
+      referenceFn: async (promptPath: string): Promise<string> => {
+        return prompts[promptPath]!
+      },
     })
 
-    const metadata2 = await readMetadata({
-      prompt: removeCommonIndent(prompt),
-    })
-
-    expect(metadata1.hash).toBe(metadata2.hash)
+    expect(cleanParentMetadata.resolvedPrompt).toBe(
+      removeCommonIndent(`
+      This is the parent prompt.
+      Lorem ipsum
+      The end.
+    `),
+    )
   })
 
-  it('always returns different hashes for different prompts', async () => {
-    const prompt1 = `
-      foo
-      bar
-    `
-    const prompt2 = `
-      foo
-      baz
-    `
+  it('ignores any other tag and logic', async () => {
+    const prompts = {
+      parent: removeCommonIndent(`
+        This is the parent prompt.
+        {{ unknownVariable }}
+        <user name={{ username }}>
+          Test
+        </user>
+        <ref prompt="child" />
+        <foo>
+          This tag does not even exist
+        </foo>
+        The end.
+      `),
+      child: removeCommonIndent(`
+        foo!
+      `),
+    } as Record<string, string>
 
-    const metadata1 = await readMetadata({
-      prompt: removeCommonIndent(prompt1),
+    const referenceFn = async (promptPath: string): Promise<string> => {
+      return prompts[promptPath]!
+    }
+
+    const cleanParentMetadata = await readMetadata({
+      prompt: prompts['parent']!,
+      referenceFn,
     })
 
-    const metadata2 = await readMetadata({
-      prompt: removeCommonIndent(prompt2),
+    expect(cleanParentMetadata.resolvedPrompt).toBe(
+      removeCommonIndent(`
+        This is the parent prompt.
+        {{ unknownVariable }}
+        <user name={{ username }}>
+          Test
+        </user>
+        foo!
+        <foo>
+          This tag does not even exist
+        </foo>
+        The end.
+    `),
+    )
+  })
+
+  it('works with multiple levels of nesting', async () => {
+    const prompts = {
+      parent: removeCommonIndent(`
+        Parent:
+        <ref prompt="child" />
+      `),
+      child: removeCommonIndent(`
+        Child:
+        <ref prompt="grandchild" />
+      `),
+      grandchild: removeCommonIndent(`
+        Grandchild.
+      `),
+    } as Record<string, string>
+
+    const cleanParentMetadata = await readMetadata({
+      prompt: prompts['parent']!,
+      referenceFn: async (promptPath: string): Promise<string> => {
+        return prompts[promptPath]!
+      },
     })
 
-    expect(metadata1.hash).not.toBe(metadata2.hash)
+    expect(cleanParentMetadata.resolvedPrompt).toBe(
+      removeCommonIndent(`
+      Parent:
+      Child:
+      Grandchild.
+    `),
+    )
+  })
+
+  it('workes with nested tags', async () => {
+    const prompts = {
+      parent: removeCommonIndent(`
+        {{#if foo}}
+          <ref prompt="child1" />
+        {{:else}}
+          <ref prompt="child2" />
+        {{/if}}
+      `),
+      child1: removeCommonIndent(`
+        foo!
+      `),
+      child2: removeCommonIndent(`
+        bar!
+      `),
+    } as Record<string, string>
+
+    const cleanParentMetadata = await readMetadata({
+      prompt: prompts['parent']!,
+      referenceFn: async (promptPath: string): Promise<string> => {
+        return prompts[promptPath]!
+      },
+    })
+
+    expect(cleanParentMetadata.resolvedPrompt).toBe(
+      removeCommonIndent(`
+      {{#if foo}}
+        foo!
+      {{:else}}
+        bar!
+      {{/if}}
+    `),
+    )
+  })
+
+  it('failed references are replaced with a comment', async () => {
+    const prompts = {
+      parent: removeCommonIndent(`
+        This is the parent prompt.
+        <ref prompt="child" />
+        The end.
+      `),
+    } as Record<string, string>
+
+    const referenceFn = async (promptPath: string): Promise<string> => {
+      if (!(promptPath in prompts)) throw new Error('Not found')
+      return prompts[promptPath]!
+    }
+
+    const cleanParentMetadata = await readMetadata({
+      prompt: prompts['parent']!,
+      referenceFn,
+    })
+
+    expect(cleanParentMetadata.resolvedPrompt).toBe(
+      removeCommonIndent(`
+      This is the parent prompt.
+      /* <ref prompt="child" /> */
+      The end.
+    `),
+    )
+  })
+
+  it('returns only the parent config', async () => {
+    const prompts = {
+      parent: removeCommonIndent(`
+        ---
+        config: parent
+        ---
+        Parent.
+        <ref prompt="child" />
+      `),
+      child: removeCommonIndent(`
+        ---
+        config: child
+        foo: bar
+        ---
+        Child.
+      `),
+    } as Record<string, string>
+
+    const referenceFn = async (promptPath: string): Promise<string> => {
+      return prompts[promptPath]!
+    }
+
+    const cleanParentMetadata = await readMetadata({
+      prompt: prompts['parent']!,
+      referenceFn,
+    })
+
+    expect(cleanParentMetadata.resolvedPrompt).toBe(
+      removeCommonIndent(`
+      ---
+      config: parent
+      ---
+      Parent.
+      Child.
+    `),
+    )
+  })
+
+  it('removes comments', async () => {
+    const prompts = {
+      parent: removeCommonIndent(`
+        Parent. /* This is the parent document */
+        <ref prompt="child" />
+        The end.
+      `),
+      child: removeCommonIndent(`
+        /* This is the child document */
+        Child.
+      `),
+    } as Record<string, string>
+
+    const referenceFn = async (promptPath: string): Promise<string> => {
+      return prompts[promptPath]!
+    }
+
+    const cleanParentMetadata = await readMetadata({
+      prompt: prompts['parent']!,
+      referenceFn,
+    })
+
+    expect(cleanParentMetadata.resolvedPrompt).toBe(
+      removeCommonIndent(`
+      Parent. 
+
+      Child.
+      The end.
+    `),
+    )
   })
 })
 
@@ -112,7 +308,7 @@ describe('parameters', async () => {
 })
 
 describe('referenced prompts', async () => {
-  it('changes the parent hash with the referenced prompt has changed', async () => {
+  it('changes the parent resolvedPrompt with the referenced prompt has changed', async () => {
     const prompts = {
       parent: removeCommonIndent(`
         This is the parent prompt.
@@ -138,34 +334,7 @@ describe('referenced prompts', async () => {
       referenceFn,
     })
 
-    expect(metadata1.hash).not.toBe(metadata2.hash)
-  })
-
-  it('returns a list of all referenced prompts', async () => {
-    const prompts = {
-      parent: removeCommonIndent(`
-        This is the parent prompt.
-        <ref prompt="child1" />
-        <ref prompt="child2" />
-        The end.
-      `),
-      child1: removeCommonIndent('Lorem ipsum'),
-      child2: removeCommonIndent('<ref prompt="grandchild" />'),
-      grandchild: removeCommonIndent('Foo bar'),
-    } as Record<string, string>
-
-    const referenceFn = async (promptPath: string): Promise<string> => {
-      return prompts[promptPath]!
-    }
-
-    const metadata = await readMetadata({
-      prompt: prompts['parent']!,
-      referenceFn,
-    })
-
-    expect(metadata.referencedPrompts).toEqual(
-      new Set(['child1', 'child2', 'grandchild']),
-    )
+    expect(metadata1.resolvedPrompt).not.toBe(metadata2.resolvedPrompt)
   })
 
   it('includes parameters from referenced prompts', async () => {

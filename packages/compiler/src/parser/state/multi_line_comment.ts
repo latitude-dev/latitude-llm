@@ -22,7 +22,7 @@ export function multiLineComment(parser: Parser) {
 
   const node = {
     start,
-    end: parser.index + 1,
+    end: parser.index,
     type: 'Comment',
     raw: data,
     data: data.substring(2, data.length - 2),
