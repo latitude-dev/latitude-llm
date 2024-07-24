@@ -21,7 +21,7 @@ describe('getDocumentsAtCommit', () => {
     const documents = result.unwrap()
 
     expect(documents.length).toBe(1)
-    expect(documents[0]!.id).toBe(doc.id)
+    expect(documents[0]!.documentUuid).toBe(doc.documentUuid)
   })
 
   it('returns the right document version for each commit', async (ctx) => {

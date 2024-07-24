@@ -7,7 +7,7 @@ import {
   Result,
   TypedResult,
 } from '@latitude-data/core'
-import { LatitudeError } from '$core/lib/errors'
+import { LatitudeError, NotFoundError } from '$core/lib/errors'
 import { and, eq, getTableColumns, isNotNull, lte, max } from 'drizzle-orm'
 
 async function fetchDocumentsFromMergedCommits(
@@ -79,14 +79,17 @@ export async function getDocumentsAtCommit(
   { commitId }: { commitId: number },
   tx = database,
 ): Promise<TypedResult<DocumentVersion[], LatitudeError>> {
-  const commitResult = await findCommitById({ id: commitId })
+  const commitResult = await findCommitById({ id: commitId }, tx)
   if (commitResult.error) return commitResult
   const commit = commitResult.value!
 
-  const documentsFromMergedCommits = await fetchDocumentsFromMergedCommits({
-    projectId: commit.projectId,
-    maxMergedAt: commit.mergedAt,
-  })
+  const documentsFromMergedCommits = await fetchDocumentsFromMergedCommits(
+    {
+      projectId: commit.projectId,
+      maxMergedAt: commit.mergedAt,
+    },
+    tx,
+  )
 
   if (commit.mergedAt !== null) {
     // Referenced commit is merged. No additional documents to return.
@@ -130,7 +133,7 @@ export async function getDocumentAtCommit(
     (d) => d.documentUuid === documentUuid,
   )
 
-  if (!document) return Result.error(new LatitudeError('Document not found'))
+  if (!document) return Result.error(new NotFoundError('Document not found'))
 
   return Result.ok(document)
 }

@@ -54,8 +54,20 @@ describe('createNewDocument', () => {
     })
 
     expect(result.ok).toBe(false)
-    expect(result.error!.message).toBe(
-      'Cannot create a document version in a merged commit',
-    )
+    expect(result.error!.message).toBe('Cannot modify a merged commit')
+  })
+
+  it('fails when trying to create a document in a merged commit', async (ctx) => {
+    const { project } = await ctx.factories.createProject()
+    const { commit } = await ctx.factories.createDraft({ project })
+    await mergeCommit({ commitId: commit.id })
+
+    const result = await createNewDocument({
+      commitId: commit.id,
+      path: 'foo',
+    })
+
+    expect(result.ok).toBe(false)
+    expect(result.error!.message).toBe('Cannot modify a merged commit')
   })
 })

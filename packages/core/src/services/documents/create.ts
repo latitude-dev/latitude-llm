@@ -1,52 +1,39 @@
-import {
-  DocumentVersion,
-  documentVersions,
-  getDocumentsAtCommit,
-  Result,
-  Transaction,
-} from '@latitude-data/core'
+import { findCommitById, getDocumentsAtCommit } from '$core/data-access'
+import { Result, Transaction, TypedResult } from '$core/lib'
 import { BadRequestError } from '$core/lib/errors'
-
-import {
-  assertCommitIsEditable,
-  existsAnotherDocumentWithSamePath,
-} from './utils'
+import { DocumentVersion, documentVersions } from '$core/schema'
 
 export async function createNewDocument({
   commitId,
   path,
+  content,
 }: {
   commitId: number
   path: string
-}) {
-  const commitResult = await assertCommitIsEditable(commitId)
-  if (commitResult.error) return commitResult
+  content?: string
+}): Promise<TypedResult<DocumentVersion, Error>> {
+  return await Transaction.call(async (tx) => {
+    const commit = (await findCommitById({ id: commitId }, tx)).unwrap()
+    if (commit.mergedAt !== null) {
+      return Result.error(new BadRequestError('Cannot modify a merged commit'))
+    }
 
-  const currentDocuments = await getDocumentsAtCommit({
-    commitId,
-  })
-  if (currentDocuments.error) return currentDocuments
+    const currentDocs = (await getDocumentsAtCommit({ commitId }, tx)).unwrap()
+    if (currentDocs.find((d) => d.path === path)) {
+      return Result.error(
+        new BadRequestError('A document with the same path already exists'),
+      )
+    }
 
-  if (
-    existsAnotherDocumentWithSamePath({
-      documents: currentDocuments.value,
-      path,
-    })
-  ) {
-    return Result.error(
-      new BadRequestError('A document with the same path already exists'),
-    )
-  }
-
-  return Transaction.call<DocumentVersion>(async (tx) => {
-    const result = await tx
+    const newDoc = await tx
       .insert(documentVersions)
       .values({
         commitId,
         path,
+        content: content ?? '',
       })
       .returning()
-    const documentVersion = result[0]
-    return Result.ok(documentVersion!)
+
+    return Result.ok(newDoc[0]!)
   })
 }

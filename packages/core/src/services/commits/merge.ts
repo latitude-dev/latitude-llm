@@ -2,6 +2,7 @@ import {
   Commit,
   commits,
   database,
+  recomputeChanges,
   Result,
   Transaction,
 } from '@latitude-data/core'
@@ -32,6 +33,16 @@ export async function mergeCommit(
     if (otherCommits.length > 0) {
       return Result.error(
         new LatitudeError('Commit merge time conflict, try again'),
+      )
+    }
+
+    const recomputedResults = await recomputeChanges({ commitId }, tx)
+    if (recomputedResults.error) return recomputedResults
+    if (Object.keys(recomputedResults.value.errors).length > 0) {
+      return Result.error(
+        new LatitudeError(
+          'There are errors in the updated documents in this commit',
+        ),
       )
     }
 
