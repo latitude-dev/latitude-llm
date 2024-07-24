@@ -27,7 +27,7 @@ export default async function DocumentLayout({
         documentUuid={params.documentUuid}
         documentPath={document.path}
       />
-      <div className='p-32'>{children}</div>
+      {children}
     </DocumentDetailWrapper>
   )
 }

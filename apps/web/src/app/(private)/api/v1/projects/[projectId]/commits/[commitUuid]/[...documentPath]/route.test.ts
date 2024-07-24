@@ -31,7 +31,9 @@ describe('GET documentVersion', () => {
     )
 
     expect(response.status).toBe(200)
-    expect((await response.json()).id).toEqual(doc.id)
+    const responseDoc = await response.json()
+    expect(responseDoc.documentUuid).toEqual(doc.documentUuid)
+    expect(responseDoc.commitId).toEqual(doc.commitId)
   })
 
   test('returns the document in main branch if commitUuid is HEAD', async (ctx) => {
@@ -57,7 +59,9 @@ describe('GET documentVersion', () => {
     )
 
     expect(response.status).toBe(200)
-    expect((await response.json()).id).toEqual(doc.id)
+    const responseDoc = await response.json()
+    expect(responseDoc.documentUuid).toEqual(doc.documentUuid)
+    expect(responseDoc.commitId).toEqual(doc.commitId)
   })
 
   test('returns 404 if document is not found', async (ctx) => {
@@ -103,6 +107,8 @@ describe('GET documentVersion', () => {
     )
 
     expect(response.status).toBe(200)
-    expect((await response.json()).id).toEqual(doc.id)
+    const responseDoc = await response.json()
+    expect(responseDoc.documentUuid).toEqual(doc.documentUuid)
+    expect(responseDoc.commitId).toEqual(doc.commitId)
   })
 })
