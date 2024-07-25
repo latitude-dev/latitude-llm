@@ -104,7 +104,7 @@ export async function resolveDocumentChanges({
 
       return {
         ...d,
-        hash: metadata.hash,
+        resolvedContent: metadata.resolvedPrompt,
       }
     }),
   )
@@ -114,7 +114,7 @@ export async function resolveDocumentChanges({
       !originalDocuments.find(
         (oldDoc) =>
           oldDoc.documentUuid === newDoc.documentUuid &&
-          oldDoc.hash === newDoc.hash &&
+          oldDoc.resolvedContent === newDoc.resolvedContent &&
           oldDoc.path === newDoc.path,
       ),
   )

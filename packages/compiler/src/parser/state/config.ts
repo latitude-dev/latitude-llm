@@ -12,6 +12,7 @@ export function config(parser: Parser) {
 
   parser.allowWhitespace()
   parser.eat('---', true)
+  parser.eat('\n')
 
   let parsedData
   try {

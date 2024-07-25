@@ -170,6 +170,11 @@ export default {
     code: 'missing-reference-function',
     message: 'A reference function was not provided',
   },
+  didNotResolveReferences: {
+    code: 'did-not-resolve-references',
+    message:
+      'Cannot compile reference tags. Make sure you have resolved the references before compiling.',
+  },
   referenceError: (err: unknown) => {
     const error = err as Error
     const errorKlassName = getKlassName(error)

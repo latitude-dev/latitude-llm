@@ -1,9 +1,8 @@
-import { createHash } from 'crypto'
-
 import {
   CUSTOM_MESSAGE_ROLE_ATTR,
   CUSTOM_MESSAGE_TAG,
   REFERENCE_PROMPT_ATTR,
+  REFERENCE_PROMPT_TAG,
 } from '$compiler/constants'
 import CompileError, { error } from '$compiler/error/error'
 import errors from '$compiler/error/errors'
@@ -18,6 +17,7 @@ import type {
 } from '$compiler/parser/interfaces'
 import { Config, ConversationMetadata, MessageRole } from '$compiler/types'
 import { Node as LogicalExpression } from 'estree'
+import yaml from 'yaml'
 
 import { ReferencePromptFn } from './compile'
 import { readConfig } from './config'
@@ -36,7 +36,9 @@ export class ReadMetadata {
   private rawText: string
   private referenceFn?: ReferencePromptFn
 
-  private referencedPrompts: Record<string, string> = {}
+  private resolvedPrompt: string
+  private resolvedPromptOffset: number = 0
+
   private accumulatedToolCalls: ToolCallTag[] = []
   private errors: CompileError[] = []
 
@@ -50,6 +52,8 @@ export class ReadMetadata {
   }) {
     this.rawText = prompt
     this.referenceFn = referenceFn
+
+    this.resolvedPrompt = prompt
   }
 
   async run(): Promise<ConversationMetadata> {
@@ -81,18 +85,15 @@ export class ReadMetadata {
     })
 
     config = readConfig(fragment)
-
-    const hash = createHash('sha256')
-    hash.update(this.rawText)
-    Object.values(this.referencedPrompts).forEach((refHash: string) => {
-      hash.update(refHash)
-    })
-    const hashValue = hash.digest('hex')
+    let resolvedPrompt = this.resolvedPrompt
+    if (Object.keys(config).length > 0) {
+      const configYaml = yaml.stringify(config)
+      resolvedPrompt = `---\n${configYaml}---\n${this.resolvedPrompt}`
+    }
 
     return {
-      hash: hashValue,
       parameters: scopeContext.usedUndefinedVariables,
-      referencedPrompts: new Set(Object.keys(this.referencedPrompts)),
+      resolvedPrompt,
       config,
       errors: this.errors,
     }
@@ -178,11 +179,17 @@ export class ReadMetadata {
       return
     }
 
-    if (
-      node.type === 'Config' ||
-      node.type === 'Comment' ||
-      node.type === 'Text'
-    ) {
+    if (node.type === 'Config' || node.type === 'Comment') {
+      /* Remove from the resolved prompt */
+      const start = node.start! + this.resolvedPromptOffset
+      const end = node.end! + this.resolvedPromptOffset
+      this.resolvedPrompt =
+        this.resolvedPrompt.slice(0, start) + this.resolvedPrompt.slice(end)
+      this.resolvedPromptOffset -= end - start
+      return
+    }
+
+    if (node.type === 'Text') {
       /* do nothing */
       return
     }
@@ -401,7 +408,7 @@ export class ReadMetadata {
           .map((node) => node.data)
           .join('')
 
-        if (this.referencedPrompts[refPromptPath]) return
+        let resolvedRefPrompt: string
         try {
           const refPrompt = await this.referenceFn(refPromptPath)
 
@@ -409,7 +416,6 @@ export class ReadMetadata {
             prompt: refPrompt,
             referenceFn: this.referenceFn,
           })
-          refReadMetadata.referencedPrompts = this.referencedPrompts
           refReadMetadata.accumulatedToolCalls = this.accumulatedToolCalls
 
           const refPromptMetadata = await refReadMetadata.run()
@@ -419,13 +425,20 @@ export class ReadMetadata {
             }
           })
           this.accumulatedToolCalls = refReadMetadata.accumulatedToolCalls
-
-          this.referencedPrompts[refPromptPath] = refPromptMetadata.hash
+          resolvedRefPrompt = refReadMetadata.resolvedPrompt
         } catch (error: unknown) {
-          if (error instanceof CompileError) return
           this.baseNodeError(errors.referenceError(error), node)
-          return
+          resolvedRefPrompt = `/* <${REFERENCE_PROMPT_TAG} ${REFERENCE_PROMPT_ATTR}="${refPromptPath}" /> */`
         }
+
+        /* Replace the reference tag with the actual referenced prompt */
+        const start = node.start! + this.resolvedPromptOffset
+        const end = node.end! + this.resolvedPromptOffset
+        const pretext = this.resolvedPrompt.slice(0, start)
+        const posttext = this.resolvedPrompt.slice(end)
+        this.resolvedPrompt = pretext + resolvedRefPrompt + posttext
+        this.resolvedPromptOffset += resolvedRefPrompt.length - (end - start)
+
         return
       }
 

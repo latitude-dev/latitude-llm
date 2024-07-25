@@ -2,6 +2,7 @@ import { findCommitById, getDocumentsAtCommit } from '$core/data-access'
 import { Result, Transaction, TypedResult } from '$core/lib'
 import { BadRequestError } from '$core/lib/errors'
 import { DocumentVersion, documentVersions } from '$core/schema'
+import { eq } from 'drizzle-orm'
 
 export async function createNewDocument({
   commitId,
@@ -33,6 +34,12 @@ export async function createNewDocument({
         content: content ?? '',
       })
       .returning()
+
+    // Invalidate all resolvedContent for this commit
+    await tx
+      .update(documentVersions)
+      .set({ resolvedContent: null })
+      .where(eq(documentVersions.commitId, commitId))
 
     return Result.ok(newDoc[0]!)
   })

@@ -4,6 +4,7 @@ import { findCommitById, getDocumentsAtCommit } from '$core/data-access'
 import { Result, Transaction, TypedResult } from '$core/lib'
 import { BadRequestError, NotFoundError } from '$core/lib/errors'
 import { DocumentVersion, documentVersions } from '$core/schema'
+import { eq } from 'drizzle-orm'
 
 export async function updateDocument({
   commitId,
@@ -68,6 +69,12 @@ export async function updateDocument({
     if (updatedDocs.length === 0) {
       return Result.error(new NotFoundError('Document does not exist'))
     }
+
+    // Invalidate all resolvedContent for this commit
+    await tx
+      .update(documentVersions)
+      .set({ resolvedContent: null })
+      .where(eq(documentVersions.commitId, commitId))
 
     return Result.ok(updatedDocs[0]!)
   })

@@ -21,7 +21,7 @@ export const documentVersions = latitudeSchema.table(
     documentUuid: uuid('document_uuid').notNull().defaultRandom(),
     path: varchar('path').notNull(),
     content: text('content').notNull().default(''),
-    hash: varchar('hash'),
+    resolvedContent: text('resolved_content'),
     commitId: bigint('commit_id', { mode: 'number' })
       .notNull()
       .references(() => commits.id),

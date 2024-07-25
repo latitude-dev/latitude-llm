@@ -10,11 +10,10 @@ export type Conversation = {
 }
 
 export type ConversationMetadata = {
-  hash: string // Unique string identifying the conversation
+  resolvedPrompt: string
   config: Config
   errors: CompileError[]
   parameters: Set<string> // Variables used in the prompt that have not been defined in runtime
-  referencedPrompts: Set<string>
 }
 
 export * from './message'
