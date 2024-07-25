@@ -1,4 +1,5 @@
 import {
+  isChainStepTag,
   isContentTag,
   isMessageTag,
   isRefTag,
@@ -6,6 +7,7 @@ import {
 } from '$compiler/compiler/utils'
 import errors from '$compiler/error/errors'
 import {
+  ChainStepTag,
   ContentTag,
   ElementTag,
   MessageTag,
@@ -14,6 +16,7 @@ import {
 } from '$compiler/parser/interfaces'
 
 import { CompileNodeContext } from '../types'
+import { compile as resolveChainStep } from './tags/chainStep'
 import { compile as resolveContent } from './tags/content'
 import { compile as resolveMessage } from './tags/message'
 import { compile as resolveRef } from './tags/ref'
@@ -91,8 +94,18 @@ export async function compile(props: CompileNodeContext<ElementTag>) {
     return
   }
 
+  if (isChainStepTag(node)) {
+    await resolveChainStep(
+      props as CompileNodeContext<ChainStepTag>,
+      attributes,
+    )
+    return
+  }
+
+  //@ts-ignore - Linter knows there *should* not be another type of tag.
   baseNodeError(errors.unknownTag(node.name), node)
 
+  //@ts-ignore - ditto
   for await (const childNode of node.children ?? []) {
     await resolveBaseNode({
       node: childNode,

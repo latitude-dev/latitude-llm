@@ -3,7 +3,7 @@ import CompileError from '$compiler/error/error'
 import { Message } from '$compiler/types'
 import { describe, expect, it, vi } from 'vitest'
 
-import { compile } from '.'
+import { render } from '.'
 import { removeCommonIndent } from './utils'
 
 const getExpectedError = async <T>(
@@ -23,7 +23,7 @@ async function getCompiledText(
   prompt: string,
   parameters: Record<string, any> = {},
 ) {
-  const result = await compile({
+  const result = await render({
     prompt: removeCommonIndent(prompt),
     parameters,
   })
@@ -43,7 +43,7 @@ describe('config section', async () => {
        - quux
       ---
     `
-    const result = await compile({
+    const result = await render({
       prompt: removeCommonIndent(prompt),
       parameters: {},
     })
@@ -64,7 +64,7 @@ describe('config section', async () => {
        - quux
       ---
     `
-    const result = await compile({
+    const result = await render({
       prompt: removeCommonIndent(prompt),
       parameters: {},
     })
@@ -81,7 +81,7 @@ describe('comments', async () => {
       /* comment */
       charlie
     `
-    const result = await compile({
+    const result = await render({
       prompt: removeCommonIndent(prompt),
       parameters: {},
     })
@@ -103,7 +103,7 @@ describe('comments', async () => {
         Test message
       </system>
     `
-    const result = await compile({
+    const result = await render({
       prompt: removeCommonIndent(prompt),
       parameters: {},
     })
@@ -125,7 +125,7 @@ describe('messages', async () => {
       <assistant>assistant message</assistant>
       <tool id="123">tool message</tool>
     `
-    const result = await compile({
+    const result = await render({
       prompt: removeCommonIndent(prompt),
       parameters: {},
     })
@@ -154,7 +154,7 @@ describe('messages', async () => {
       <foo>message</foo>
     `
     const action = () =>
-      compile({
+      render({
         prompt: removeCommonIndent(prompt),
         parameters: {},
       })
@@ -166,13 +166,13 @@ describe('messages', async () => {
     const prompt = `
       <message role=${CUSTOM_TAG_START}role${CUSTOM_TAG_END}>message</message>
     `
-    const result1 = await compile({
+    const result1 = await render({
       prompt: removeCommonIndent(prompt),
       parameters: {
         role: 'system',
       },
     })
-    const result2 = await compile({
+    const result2 = await render({
       prompt: removeCommonIndent(prompt),
       parameters: {
         role: 'user',
@@ -195,7 +195,7 @@ describe('messages', async () => {
       <message role="foo">message</message>
     `
     const action = () =>
-      compile({
+      render({
         prompt: removeCommonIndent(prompt),
         parameters: {},
       })
@@ -210,7 +210,7 @@ describe('messages', async () => {
       </system>
     `
     const action = () =>
-      compile({
+      render({
         prompt: removeCommonIndent(prompt),
         parameters: {},
       })
@@ -223,7 +223,7 @@ describe('messages', async () => {
       Test message
       <user>user message</user>
     `
-    const result = await compile({
+    const result = await render({
       prompt: removeCommonIndent(prompt),
       parameters: {},
     })
@@ -249,7 +249,7 @@ describe('message contents', async () => {
         <text>another text content</text>
       </system>
     `
-    const result = await compile({
+    const result = await render({
       prompt: removeCommonIndent(prompt),
       parameters: {},
     })
@@ -275,7 +275,7 @@ describe('message contents', async () => {
       </system>
     `
     const action = () =>
-      compile({
+      render({
         prompt: removeCommonIndent(prompt),
         parameters: {},
       })
@@ -289,7 +289,7 @@ describe('message contents', async () => {
         Test message
       </system>
     `
-    const result = await compile({
+    const result = await render({
       prompt: removeCommonIndent(prompt),
       parameters: {},
     })
@@ -322,7 +322,7 @@ describe('reference tags', async () => {
     } as Record<string, string>
 
     const action = () =>
-      compile({
+      render({
         prompt: prompts['main']!,
         parameters: {},
       })
@@ -346,7 +346,7 @@ describe('variable assignment', async () => {
       ${CUSTOM_TAG_START}foo${CUSTOM_TAG_END}
     `
     const action = () =>
-      compile({
+      render({
         prompt: removeCommonIndent(prompt),
         parameters: {},
       })
@@ -378,7 +378,7 @@ describe('variable assignment', async () => {
       ${CUSTOM_TAG_START}foo += 2${CUSTOM_TAG_END}
     `
     const action = () =>
-      compile({
+      render({
         prompt: removeCommonIndent(prompt),
         parameters: {},
       })
@@ -394,7 +394,7 @@ describe('variable assignment', async () => {
       ${CUSTOM_TAG_START}foo${CUSTOM_TAG_END}
     `
     const action = () =>
-      compile({
+      render({
         prompt: removeCommonIndent(prompt),
         parameters: {},
       })
@@ -432,7 +432,7 @@ describe('variable assignment', async () => {
       ${CUSTOM_TAG_START}foo.c${CUSTOM_TAG_END}
     `
     const action = () =>
-      compile({
+      render({
         prompt: removeCommonIndent(prompt),
         parameters: {},
       })
@@ -446,7 +446,7 @@ describe('variable assignment', async () => {
       ${CUSTOM_TAG_START}foo?.a = 2${CUSTOM_TAG_END}
     `
     const action = () =>
-      compile({
+      render({
         prompt: removeCommonIndent(prompt),
         parameters: {},
       })
@@ -483,7 +483,7 @@ describe('variable assignment', async () => {
       ${CUSTOM_TAG_START}++foo${CUSTOM_TAG_END}
     `
     const action = () =>
-      compile({
+      render({
         prompt: removeCommonIndent(prompt),
         parameters: {},
       })
@@ -504,7 +504,7 @@ describe('conditional expressions', async () => {
     const whenTrue = vi.fn()
     const whenFalse = vi.fn()
 
-    await compile({
+    await render({
       prompt: removeCommonIndent(prompt),
       parameters: {
         foo: true,
@@ -519,7 +519,7 @@ describe('conditional expressions', async () => {
     whenTrue.mockClear()
     whenFalse.mockClear()
 
-    await compile({
+    await render({
       prompt: removeCommonIndent(prompt),
       parameters: {
         foo: false,
@@ -540,13 +540,13 @@ describe('conditional expressions', async () => {
         <assistant>Bar!</assistant>
       ${CUSTOM_TAG_START}/if${CUSTOM_TAG_END}
     `
-    const result1 = await compile({
+    const result1 = await render({
       prompt: removeCommonIndent(prompt),
       parameters: {
         foo: true,
       },
     })
-    const result2 = await compile({
+    const result2 = await render({
       prompt: removeCommonIndent(prompt),
       parameters: {
         foo: false,
@@ -621,7 +621,7 @@ describe('each loops', async () => {
 
   it('does not do anything when the iterable object is not iterable and there is no else block', async () => {
     const prompt = `${CUSTOM_TAG_START}#each 5 as element${CUSTOM_TAG_END} ${CUSTOM_TAG_START}element${CUSTOM_TAG_END} ${CUSTOM_TAG_START}/each${CUSTOM_TAG_END}`
-    expect(compile({ prompt, parameters: {} })).resolves
+    expect(render({ prompt, parameters: {} })).resolves
   })
 
   it('gives access to the index of the element', async () => {
@@ -634,7 +634,7 @@ describe('each loops', async () => {
     const prompt1 = `${CUSTOM_TAG_START}#each ['a', 'b', 'c'] as element${CUSTOM_TAG_END} ${CUSTOM_TAG_START}foo = 5${CUSTOM_TAG_END} ${CUSTOM_TAG_START}/each${CUSTOM_TAG_END} ${CUSTOM_TAG_START}foo${CUSTOM_TAG_END}`
     const prompt2 = `${CUSTOM_TAG_START}foo = 5${CUSTOM_TAG_END} ${CUSTOM_TAG_START}#each ['a', 'b', 'c'] as element${CUSTOM_TAG_END} ${CUSTOM_TAG_START}foo = 7${CUSTOM_TAG_END} ${CUSTOM_TAG_START}/each${CUSTOM_TAG_END} ${CUSTOM_TAG_START}foo${CUSTOM_TAG_END}`
     const prompt3 = `${CUSTOM_TAG_START}foo = 5${CUSTOM_TAG_END} ${CUSTOM_TAG_START}#each [1, 2, 3] as element${CUSTOM_TAG_END} ${CUSTOM_TAG_START}foo += element${CUSTOM_TAG_END} ${CUSTOM_TAG_START}/each${CUSTOM_TAG_END} ${CUSTOM_TAG_START}foo${CUSTOM_TAG_END}`
-    const action1 = () => compile({ prompt: prompt1, parameters: {} })
+    const action1 = () => render({ prompt: prompt1, parameters: {} })
     const error1 = await getExpectedError(action1, CompileError)
     const result2 = await getCompiledText(prompt2)
     const result3 = await getCompiledText(prompt3)

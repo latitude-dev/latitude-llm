@@ -2,7 +2,13 @@ import { hasContent, isIterable } from '$compiler/compiler/utils'
 import errors from '$compiler/error/errors'
 import { EachBlock } from '$compiler/parser/interfaces'
 
-import { CompileNodeContext } from '../types'
+import { CompileNodeContext, TemplateNodeWithStatus } from '../types'
+
+type EachNodeWithStatus = TemplateNodeWithStatus & {
+  status: TemplateNodeWithStatus['status'] & {
+    loopIterationIndex: number
+  }
+}
 
 export async function compile({
   node,
@@ -13,6 +19,12 @@ export async function compile({
   resolveExpression,
   expressionError,
 }: CompileNodeContext<EachBlock>) {
+  const nodeWithStatus = node as EachNodeWithStatus
+  nodeWithStatus.status = {
+    ...nodeWithStatus.status,
+    scopePointers: scope.getPointers(),
+  }
+
   const iterableElement = await resolveExpression(node.expression, scope)
   if (!isIterable(iterableElement) || !(await hasContent(iterableElement))) {
     const childScope = scope.copy()
@@ -44,7 +56,14 @@ export async function compile({
   }
 
   let i = 0
+
   for await (const element of iterableElement) {
+    if (i < (nodeWithStatus.status.loopIterationIndex ?? 0)) {
+      i++
+      continue
+    }
+    nodeWithStatus.status.loopIterationIndex = i
+
     const localScope = scope.copy()
     localScope.set(contextVarName, element)
     if (indexVarName) {
@@ -54,14 +73,22 @@ export async function compile({
       }
       localScope.set(indexVarName, indexValue)
     }
+
     for await (const childNode of node.children ?? []) {
       await resolveBaseNode({
         node: childNode,
         scope: localScope,
         isInsideMessageTag,
         isInsideContentTag,
+        completedValue: `step_${i}`,
       })
     }
+
     i++
+  }
+
+  nodeWithStatus.status = {
+    ...nodeWithStatus.status,
+    loopIterationIndex: 0,
   }
 }

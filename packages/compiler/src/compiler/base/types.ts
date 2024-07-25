@@ -1,6 +1,11 @@
-import Scope from '$compiler/compiler/scope'
+import Scope, { ScopePointers } from '$compiler/compiler/scope'
 import { TemplateNode } from '$compiler/parser/interfaces'
-import { Message, MessageContent } from '$compiler/types'
+import {
+  AssistantMessage,
+  Config,
+  Message,
+  MessageContent,
+} from '$compiler/types'
 import type { Node as LogicalExpression } from 'estree'
 
 import { ResolveBaseNodeProps, ToolCallReference } from '../types'
@@ -27,6 +32,16 @@ type RaiseErrorFn<T = void | never, N = TemplateNode | LogicalExpression> = (
   node: N,
 ) => T
 
+type NodeStatus = {
+  completedAs?: unknown
+  scopePointers?: ScopePointers | undefined
+  eachIterationIndex?: number
+}
+
+export type TemplateNodeWithStatus = TemplateNode & {
+  status?: NodeStatus
+}
+
 export type CompileNodeContext<N extends TemplateNode> = {
   node: N
   scope: Scope
@@ -41,6 +56,7 @@ export type CompileNodeContext<N extends TemplateNode> = {
   isInsideMessageTag: boolean
   isInsideContentTag: boolean
 
+  setConfig: (config: Config) => void
   addMessage: (message: Message) => void
   addStrayText: (text: string) => void
   popStrayText: () => string
@@ -50,4 +66,7 @@ export type CompileNodeContext<N extends TemplateNode> = {
   groupContent: () => void
   addToolCall: (toolCallRef: ToolCallReference) => void
   popToolCalls: () => ToolCallReference[]
+  popStepResponse: () => AssistantMessage | undefined
+
+  stop: (config?: Config) => void
 }

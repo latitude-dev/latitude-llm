@@ -1,4 +1,5 @@
 import {
+  CHAIN_STEP_TAG,
   CUSTOM_MESSAGE_TAG,
   REFERENCE_PROMPT_TAG,
   TOOL_CALL_TAG,
@@ -47,6 +48,7 @@ export type MessageTag =
   | IElementTag<MessageRole>
   | IElementTag<typeof CUSTOM_MESSAGE_TAG>
 export type ReferenceTag = IElementTag<typeof REFERENCE_PROMPT_TAG>
+export type ChainStepTag = IElementTag<typeof CHAIN_STEP_TAG>
 export type ToolCallTag = IElementTag<typeof TOOL_CALL_TAG>
 export type ElementTag =
   | ContentTag

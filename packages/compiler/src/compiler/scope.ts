@@ -1,3 +1,6 @@
+export type ScopePointers = { [key: string]: number }
+export type ScopeStash = unknown[]
+
 export default class Scope {
   /**
    * Global stash
@@ -19,8 +22,8 @@ export default class Scope {
    * Local pointers
    * Every scope has its own local pointers that contains the indexes of the variables in the global stash.
    */
-  private globalStash: unknown[] = [] // Stash of every variable value in the global scope
-  private localPointers: Record<string, number> = {} // Index of every variable in the stash in the current scope
+  private globalStash: ScopeStash = [] // Stash of every variable value in the global scope
+  private localPointers: ScopePointers = {} // Index of every variable in the stash in the current scope
 
   constructor(initialState: Record<string, unknown> = {}) {
     for (const [key, value] of Object.entries(initialState)) {
@@ -28,9 +31,16 @@ export default class Scope {
     }
   }
 
+  static withStash(stash: ScopeStash): Scope {
+    const scope = new Scope()
+    scope.globalStash = stash
+    return scope
+  }
+
   private readFromStash(index: number): unknown {
     return this.globalStash[index]
   }
+
   private addToStash(value: unknown): number {
     this.globalStash.push(value)
     return this.globalStash.length - 1
@@ -60,11 +70,23 @@ export default class Scope {
     this.modifyStash(index, value)
   }
 
-  copy(): Scope {
+  copy(localPointers?: ScopePointers): Scope {
     const scope = new Scope()
     scope.globalStash = this.globalStash
-    scope.localPointers = { ...this.localPointers }
+    scope.localPointers = { ...(localPointers ?? this.localPointers) }
     return scope
+  }
+
+  getStash(): ScopeStash {
+    return this.globalStash
+  }
+
+  getPointers(): ScopePointers {
+    return this.localPointers
+  }
+
+  setPointers(pointers: ScopePointers): void {
+    this.localPointers = pointers
   }
 }
 

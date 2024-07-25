@@ -1,7 +1,7 @@
 import CompileError from '$compiler/error/error'
 import { describe, expect, it } from 'vitest'
 
-import { compile, readMetadata } from '.'
+import { readMetadata, render } from '.'
 import { removeCommonIndent } from './utils'
 
 const getExpectedError = async (
@@ -25,7 +25,7 @@ const expectBothErrors = async ({
   prompt: string
 }) => {
   const compileError = await getExpectedError(async () => {
-    await compile({
+    await render({
       prompt: removeCommonIndent(prompt),
       parameters: {},
     })
