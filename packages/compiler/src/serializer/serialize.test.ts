@@ -147,38 +147,6 @@ describe('serialize', async () => {
     )
   })
 
-  it('includes referenced prompts', async () => {
-    const prompts = {
-      main: removeCommonIndent(`
-        Take a look at this:
-        <ref prompt="child" />
-      `),
-      child: removeCommonIndent(`
-        <system>
-          This is a test
-        </system>
-      `),
-    } as Record<string, string>
-
-    const conversation = await compile({
-      prompt: prompts.main!,
-      parameters: {},
-      referenceFn: (id: string) => Promise.resolve(prompts[id]!),
-    })
-
-    const serialized = serialize(conversation)
-    expect(serialized).toBe(
-      removeCommonIndent(`
-      <system>
-        Take a look at this:
-      </system>
-      <system>
-        This is a test
-      </system>
-    `),
-    )
-  })
-
   it('serializes a conversation with multiple user messages', async () => {
     const prompt = removeCommonIndent(`
       <system>

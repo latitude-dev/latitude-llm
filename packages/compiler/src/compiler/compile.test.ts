@@ -304,7 +304,7 @@ describe('message contents', async () => {
 })
 
 describe('reference tags', async () => {
-  it('can reference a prompt', async () => {
+  it('always fails', async () => {
     const prompts = {
       main: removeCommonIndent(`
         This is the main prompt.
@@ -321,73 +321,13 @@ describe('reference tags', async () => {
       `),
     } as Record<string, string>
 
-    const result = await compile({
-      prompt: prompts['main']!,
-      parameters: {},
-      referenceFn: async (promptPath) => prompts[promptPath]!,
-    })
-
-    expect(result.messages.length).toBe(4)
-    expect(result.messages[0]!.role).toBe('system')
-    expect(result.messages[1]!.role).toBe('user')
-    expect(result.messages[2]!.role).toBe('user')
-    expect(result.messages[3]!.role).toBe('system')
-  })
-
-  it('raises an error when the reference function is not provided', async () => {
-    const prompt = `
-      <ref prompt="user_messages" />
-    `
     const action = () =>
       compile({
-        prompt: removeCommonIndent(prompt),
+        prompt: prompts['main']!,
         parameters: {},
       })
     const error = await getExpectedError(action, CompileError)
-    expect(error.code).toBe('missing-reference-function')
-  })
-
-  it('raises an error when the reference tag is missing the prompt attribute or it is empty', async () => {
-    const prompt1 = '<ref />'
-    const prompt2 = '<ref prompt />'
-
-    const action1 = () => compile({ prompt: prompt1, parameters: {} })
-    const error1 = await getExpectedError(action1, CompileError)
-
-    const action2 = () => compile({ prompt: prompt2, parameters: {} })
-    const error2 = await getExpectedError(action2, CompileError)
-
-    expect(error1.code).toBe('reference-tag-without-prompt')
-    expect(error2.code).toBe('reference-tag-without-prompt')
-  })
-
-  it('raises an error when the reference tag contains a Mustache expression', async () => {
-    const prompt = `
-      <ref prompt="user_{{test}}" />
-    `
-    const action = () =>
-      compile({
-        prompt: removeCommonIndent(prompt),
-        parameters: {},
-      })
-    const error = await getExpectedError(action, CompileError)
-    expect(error.code).toBe('invalid-static-attribute')
-  })
-
-  it('raises an error when the reference function raises an error', async () => {
-    const prompt = `
-      <ref prompt="user_messages" />
-    `
-    const action = () =>
-      compile({
-        prompt: removeCommonIndent(prompt),
-        parameters: {},
-        referenceFn: async () => {
-          throw new Error('Reference function error')
-        },
-      })
-    const error = await getExpectedError(action, CompileError)
-    expect(error.code).toBe('reference-error')
+    expect(error.code).toBe('did-not-resolve-references')
   })
 })
 

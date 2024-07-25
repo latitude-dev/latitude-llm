@@ -6,13 +6,11 @@ import { ReadMetadata } from './readMetadata'
 export function compile({
   prompt,
   parameters,
-  referenceFn,
 }: {
   prompt: string
   parameters: Record<string, unknown>
-  referenceFn?: ReferencePromptFn
 }): Promise<Conversation> {
-  return new Compile({ prompt, parameters, referenceFn }).run()
+  return new Compile({ prompt, parameters }).run()
 }
 
 export function readMetadata({
