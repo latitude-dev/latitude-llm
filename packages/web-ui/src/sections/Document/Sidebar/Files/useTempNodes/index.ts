@@ -4,7 +4,11 @@ import { defaultGenerateNodeUuid, Node } from '../useTree'
 
 type TmpFoldersState = {
   tmpFolders: Record<string, Node[]>
-  addFolder: (args: { parentPath: string; parentId: string }) => void
+  addFolder: (args: {
+    parentPath: string
+    parentId: string
+    isFile: boolean
+  }) => void
   updateFolder: (args: { id: string; path: string }) => void
   deleteTmpFolder: (args: { id: string }) => void
   reset: () => void
@@ -23,16 +27,21 @@ function allTmpNodes(tmpFolders: TmpFoldersState['tmpFolders']) {
 function createEmptyNode({
   parentPath,
   parent,
+  isFile,
 }: {
   parentPath: string
+  isFile: boolean
   parent: Node | undefined
 }) {
   const emptyName = ' '
+  const path = `${parentPath}/${emptyName}`
   return new Node({
     id: defaultGenerateNodeUuid(),
     name: emptyName,
-    path: `${parentPath}/${emptyName}`,
+    path,
     isPersisted: false,
+    doc: isFile ? { path, documentUuid: defaultGenerateNodeUuid() } : undefined,
+    isFile,
     parent,
   })
 }
@@ -57,6 +66,7 @@ function cloneNode(node: Node) {
     name: node.name,
     path: node.path,
     parent: node.parent,
+    isFile: node.isFile,
     isPersisted: node.isPersisted,
   })
   return clonedNode
@@ -84,7 +94,7 @@ export const useTempNodes = create<TmpFoldersState>((set) => ({
       tmpFolders: {},
     })
   },
-  addFolder: ({ parentPath, parentId }) => {
+  addFolder: ({ parentPath, parentId, isFile }) => {
     set((state) => {
       const allNodes = allTmpNodes(state.tmpFolders)
       const parentNode = allNodes.find((node) => node.id === parentId)
@@ -92,6 +102,7 @@ export const useTempNodes = create<TmpFoldersState>((set) => ({
       const node = createEmptyNode({
         parentPath: parentNode ? parentNode.path : parentPath,
         parent: parentNode,
+        isFile,
       })
 
       // When adding to an existing tmp node we

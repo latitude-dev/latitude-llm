@@ -24,11 +24,13 @@ export class Node {
     isPersisted,
     children = [],
     isRoot = false,
+    isFile,
     path,
     name = '',
   }: {
     id: string
     path: string
+    isFile: boolean
     parent?: Node
     isPersisted: boolean
     doc?: SidebarDocument
@@ -42,7 +44,7 @@ export class Node {
     this.isPersisted = isPersisted
     this.name = isRoot ? 'root' : name
     this.isRoot = isRoot
-    this.isFile = !!doc
+    this.isFile = isFile
     this.children = children
     this.doc = doc
   }
@@ -102,6 +104,7 @@ function buildTree({
         const node = new Node({
           id: generateNodeId({ uuid }),
           isPersisted: true,
+          isFile,
           name: segment,
           path,
           doc: file,
@@ -146,6 +149,7 @@ export function useTree({
       path: '',
       children: [],
       isRoot: true,
+      isFile: false,
     })
     const nodeMap = new Map<string, Node>()
     nodeMap.set('', root)

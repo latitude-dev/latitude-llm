@@ -3,7 +3,11 @@
 import { Suspense, useCallback, useRef } from 'react'
 
 import { Commit, DocumentVersion } from '@latitude-data/core'
-import { DocumentEditor, useToast } from '@latitude-data/web-ui'
+import {
+  DocumentEditor,
+  DocumentTextEditorFallback,
+  useToast,
+} from '@latitude-data/web-ui'
 import { getDocumentContentByPathAction } from '$/actions/documents/getContentByPath'
 import { updateDocumentContentAction } from '$/actions/documents/updateContent'
 import { useServerAction } from 'zsa-react'
@@ -69,7 +73,7 @@ export default function ClientDocumentEditor({
   )
 
   return (
-    <Suspense fallback={<div>Loading...</div>}>
+    <Suspense fallback={<DocumentTextEditorFallback />}>
       <DocumentEditor
         document={document.content}
         saveDocumentContent={saveDocumentContent}

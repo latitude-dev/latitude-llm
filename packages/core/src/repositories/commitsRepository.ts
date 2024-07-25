@@ -77,6 +77,21 @@ export class CommitsRepository extends Repository {
     return this.db.select().from(this.scope)
   }
 
+  async getFirstCommitForProject(project: Project) {
+    const result = await this.db
+      .select()
+      .from(this.scope)
+      .where(eq(this.scope.projectId, project.id))
+      .orderBy(this.scope.createdAt)
+      .limit(1)
+
+    if (result.length < 1) {
+      return Result.error(new NotFoundError('No commits found'))
+    }
+
+    return Result.ok(result[0]!)
+  }
+
   async getCommitMergedAt({
     project,
     uuid,

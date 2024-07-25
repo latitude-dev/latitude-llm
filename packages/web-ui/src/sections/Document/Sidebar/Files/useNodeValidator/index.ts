@@ -56,7 +56,6 @@ export function useNodeValidator({
   saveValue: (args: { path: string }) => Promise<void>
   leaveWithoutSave?: () => void
 }) {
-  const [value, setValue] = useState(node.name?.trim() ?? '')
   const [isEditing, setIsEditing] = useState(node.name === ' ')
   const [validationError, setError] = useState<string>()
   const onInputChange: ChangeEventHandler<HTMLInputElement> = useCallback(
@@ -77,7 +76,6 @@ export function useNodeValidator({
   const onClickOutside = useCallback(async () => {
     const val = inputRef.current?.value ?? ''
     const value = val.trim()
-    setValue(value)
 
     if (!value) {
       leaveWithoutSave?.()
@@ -118,6 +116,5 @@ export function useNodeValidator({
     onInputChange,
     onInputKeyDown,
     error: validationError,
-    keepFocused: !value,
   }
 }

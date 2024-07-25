@@ -8,19 +8,23 @@ import {
 } from '@latitude-data/core'
 
 export async function createCommit({
-  commit,
+  commit: { projectId, title, mergedAt },
   db = database,
 }: {
-  commit: Omit<Partial<Commit>, 'id'>
+  commit: {
+    projectId: number
+    title?: string
+    mergedAt?: Date
+  }
   db?: Database
 }) {
   return Transaction.call<Commit>(async (tx) => {
     const result = await tx
       .insert(commits)
       .values({
-        projectId: commit.projectId!,
-        title: commit.title,
-        mergedAt: commit.mergedAt,
+        projectId,
+        title,
+        mergedAt,
       })
       .returning()
     const createdCommit = result[0]

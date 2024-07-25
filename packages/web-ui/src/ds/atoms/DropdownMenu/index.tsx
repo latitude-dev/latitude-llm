@@ -18,7 +18,7 @@ import {
 export type TriggerButtonProps = Omit<ButtonProps, 'children'> & {
   label?: string
 }
-const TriggerButton = ({
+export const TriggerButton = ({
   label,
   variant = 'ghost',
   icon = { name: 'ellipsisVertical', props: { color: 'foregroundMuted' } },

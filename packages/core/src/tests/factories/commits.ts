@@ -12,7 +12,7 @@ export async function createDraft({ project }: Partial<ICreateDraft> = {}) {
     ? project.id
     : (await createProject(project)).project.id
 
-  const result = await createCommitFn({ commit: { projectId } })
+  const result = await createCommitFn({ commit: { projectId: projectId! } })
   const commit = result.unwrap()
 
   return { commit }

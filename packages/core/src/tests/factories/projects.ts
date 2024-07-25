@@ -1,5 +1,6 @@
 import { faker } from '@faker-js/faker'
 import { unsafelyGetUser } from '$core/data-access'
+import { CommitsRepository } from '$core/repositories'
 import { DocumentVersion, Workspace, type SafeUser } from '$core/schema'
 import { createNewDocument, mergeCommit, updateDocument } from '$core/services'
 import { createProject as createProjectFn } from '$core/services/projects'
@@ -61,6 +62,8 @@ export async function createProject(projectData: Partial<ICreateProject> = {}) {
     workspaceId: workspace.id,
   })
   const project = result.unwrap()
+  const commitsScope = new CommitsRepository(workspace.id)
+  let commit = (await commitsScope.getFirstCommitForProject(project)).unwrap()
 
   const documents: DocumentVersion[] = []
 
@@ -80,8 +83,8 @@ export async function createProject(projectData: Partial<ICreateProject> = {}) {
       })
       documents.push(updatedDoc.unwrap())
     }
-    await mergeCommit(draft).then((r) => r.unwrap())
+    commit = await mergeCommit(draft).then((r) => r.unwrap())
   }
 
-  return { project, user, workspace, documents }
+  return { project, user, workspace, documents, commit: commit! }
 }

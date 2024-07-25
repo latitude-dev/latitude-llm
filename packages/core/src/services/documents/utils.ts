@@ -4,6 +4,7 @@ import { readMetadata, type CompileError } from '@latitude-data/compiler'
 import { database } from '$core/client'
 import { findWorkspaceFromCommit } from '$core/data-access'
 import { Result, Transaction, TypedResult } from '$core/lib'
+import { BadRequestError } from '$core/lib/errors'
 import {
   CommitsRepository,
   DocumentVersionsRepository,
@@ -34,9 +35,9 @@ export async function getMergedAndDraftDocuments(
   )
   if (headCommitResult.error) return headCommitResult
 
-  const headDocumentsResult = await docsScope.getDocumentsAtCommit(
-    headCommitResult.value,
-  )
+  const headDocumentsResult = await docsScope.getDocumentsAtCommit({
+    commit: headCommitResult.value,
+  })
   if (headDocumentsResult.error) return Result.error(headDocumentsResult.error)
 
   mergedDocuments.push(...headDocumentsResult.value)
@@ -64,6 +65,13 @@ export function existsAnotherDocumentWithSamePath({
   path: string
 }) {
   return documents.find((d) => d.path === path) !== undefined
+}
+
+export function assertCommitIsDraft(commit: Commit) {
+  if (commit.mergedAt !== null) {
+    return Result.error(new BadRequestError('Cannot modify a merged commit'))
+  }
+  return Result.ok(true)
 }
 
 export async function resolveDocumentChanges({

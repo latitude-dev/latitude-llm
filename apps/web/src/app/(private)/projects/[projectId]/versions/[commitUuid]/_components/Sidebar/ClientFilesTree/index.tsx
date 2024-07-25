@@ -10,20 +10,20 @@ import {
   type SidebarDocument,
 } from '@latitude-data/web-ui'
 import { ROUTES } from '$/services/routes'
+import useDocumentVersions from '$/stores/documentVersions'
 import { useRouter } from 'next/navigation'
 
 export default function ClientFilesTree({
-  documents,
-  documentPath,
+  documents: serverDocuments,
+  currentDocument,
 }: {
   documents: SidebarDocument[]
-  documentPath: string | undefined
-  documentUuid: string | undefined
+  currentDocument: SidebarDocument | undefined
 }) {
   const router = useRouter()
   const { commit, isHead } = useCurrentCommit()
   const { project } = useCurrentProject()
-
+  const documentPath = currentDocument?.path
   const navigateToDocument = useCallback((documentUuid: string) => {
     router.push(
       ROUTES.projects
@@ -32,12 +32,17 @@ export default function ClientFilesTree({
         .documents.detail({ uuid: documentUuid }).root,
     )
   }, [])
-
+  const { createFile, destroyFile, documents } = useDocumentVersions(
+    { currentDocument },
+    { fallbackData: serverDocuments },
+  )
   return (
     <FilesTree
       documents={documents}
       currentPath={documentPath}
       navigateToDocument={navigateToDocument}
+      createFile={createFile}
+      destroyFile={destroyFile}
     />
   )
 }
