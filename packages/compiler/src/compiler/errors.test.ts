@@ -20,24 +20,20 @@ const getExpectedError = async (
 const expectBothErrors = async ({
   code,
   prompt,
-  referenceFn,
 }: {
   code: string
   prompt: string
-  referenceFn?: (promptPath: string) => Promise<string>
 }) => {
   const compileError = await getExpectedError(async () => {
     await compile({
       prompt: removeCommonIndent(prompt),
       parameters: {},
-      referenceFn,
     })
   }, `Expected compile to throw '${code}'`)
   expect(compileError.code).toBe(code)
 
   const metadata = await readMetadata({
     prompt: removeCommonIndent(prompt),
-    referenceFn,
   })
   if (metadata.errors.length === 0) {
     throw new Error(`Expected readMetadata to throw '${code}'`)
@@ -218,80 +214,6 @@ describe(`all compilation errors that don't require value resolution are caught 
 
     await expectBothErrors({
       code: 'message-tag-without-role',
-      prompt,
-    })
-  })
-
-  it('invalid-reference-prompt-placement', async () => {
-    const prompt = `
-      <user>
-        <ref prompt="foo" />
-      </user>
-    `
-
-    await expectBothErrors({
-      code: 'invalid-reference-prompt-placement',
-      prompt,
-      referenceFn: () => Promise.resolve('bar'),
-    })
-  })
-
-  it('reference-tag-without-prompt', async () => {
-    const prompt = `
-      <ref />
-    `
-
-    await expectBothErrors({
-      code: 'reference-tag-without-prompt',
-      prompt,
-      referenceFn: () => Promise.resolve('bar'),
-    })
-  })
-
-  it('missing-reference-function', async () => {
-    const prompt = `
-      <ref prompt="foo" />
-    `
-
-    await expectBothErrors({
-      code: 'missing-reference-function',
-      prompt,
-    })
-  })
-
-  it('reference-error', async () => {
-    const prompt = `
-      <ref prompt="foo" />
-    `
-
-    await expectBothErrors({
-      code: 'reference-error',
-      prompt,
-      referenceFn: () => Promise.reject(new Error('foo')),
-    })
-  })
-
-  it('reference-tag-has-content', async () => {
-    const prompt = `
-      <ref prompt="foo">
-        Foo
-      </ref>
-    `
-
-    await expectBothErrors({
-      code: 'reference-tag-has-content',
-      prompt,
-      referenceFn: () => Promise.resolve('bar'),
-    })
-  })
-
-  it('invalid-static-attribute', async () => {
-    const prompt = `
-      <ref prompt={{foo}} />
-    `
-
-    await expectBothErrors({
-      code: 'invalid-static-attribute',
       prompt,
     })
   })
