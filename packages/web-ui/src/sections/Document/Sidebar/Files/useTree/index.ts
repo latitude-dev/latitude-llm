@@ -9,15 +9,19 @@ export class Node {
   public id: string
   public name: string
   public path: string
+  public isPersisted: boolean
   public isRoot: boolean = false
   public isFile: boolean = false
   public depth: number = 0
   public children: Node[] = []
+  public parent?: Node
   public doc?: SidebarDocument
 
   constructor({
     id,
     doc,
+    parent,
+    isPersisted,
     children = [],
     isRoot = false,
     path,
@@ -25,6 +29,8 @@ export class Node {
   }: {
     id: string
     path: string
+    parent?: Node
+    isPersisted: boolean
     doc?: SidebarDocument
     children?: Node[]
     isRoot?: boolean
@@ -32,6 +38,8 @@ export class Node {
   }) {
     this.id = id
     this.path = path
+    this.parent = parent
+    this.isPersisted = isPersisted
     this.name = isRoot ? 'root' : name
     this.isRoot = isRoot
     this.isFile = !!doc
@@ -93,6 +101,7 @@ function buildTree({
         const uuid = isFile ? doc.documentUuid : undefined
         const node = new Node({
           id: generateNodeId({ uuid }),
+          isPersisted: true,
           name: segment,
           path,
           doc: file,
@@ -114,6 +123,8 @@ function buildTree({
         } else {
           parent.children.splice(index, 0, node)
         }
+
+        node.parent = parent
       }
     })
   })
@@ -131,12 +142,14 @@ export function useTree({
   return useMemo(() => {
     const root = new Node({
       id: generateNodeId(),
+      isPersisted: true,
       path: '',
       children: [],
       isRoot: true,
     })
     const nodeMap = new Map<string, Node>()
     nodeMap.set('', root)
+
     const sorted = documents.slice().sort(sortByPathDepth)
 
     const tree = buildTree({

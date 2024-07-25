@@ -7,6 +7,8 @@ export const colors = {
     foreground: 'text-foreground',
     foregroundMuted: 'text-muted-foreground',
     accent: 'text-accent',
+    destructive: 'text-destructive',
+    destructiveForeground: 'text-destructive-foreground',
     accentForeground: 'text-accent-foreground',
   },
   borderColors: {

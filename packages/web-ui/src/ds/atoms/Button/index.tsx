@@ -2,6 +2,8 @@ import { ButtonHTMLAttributes, forwardRef, ReactNode } from 'react'
 import { cva, type VariantProps } from 'class-variance-authority'
 import { Slot, Slottable } from '@radix-ui/react-slot'
 
+import { IconProps, Icons } from '$ui/ds/atoms/Icons'
+import { colors } from '$ui/ds/tokens'
 import { cn } from '$ui/lib/utils'
 
 const buttonVariants = cva(
@@ -21,11 +23,12 @@ const buttonVariants = cva(
           'border border-input hover:bg-accent hover:text-accent-foreground',
         secondary:
           'bg-secondary text-secondary-foreground hover:bg-secondary/80',
-        ghost: 'hover:bg-accent hover:text-accent-foreground',
+        ghost: 'shadow-none bg-transparent',
         link: 'underline-offset-4 hover:underline text-primary',
       },
       size: {
         default: 'py-1.5 px-3',
+        small: 'py-1 px-1.5',
       },
     },
     defaultVariants: {
@@ -35,20 +38,24 @@ const buttonVariants = cva(
   },
 )
 
-export interface ButtonProps
-  extends ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof buttonVariants> {
-  children: ReactNode
-  fullWidth?: boolean
-  asChild?: boolean
-  isLoading?: boolean
-}
+export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> &
+  VariantProps<typeof buttonVariants> & {
+    children: ReactNode
+    icon?: {
+      name: keyof typeof Icons
+      props?: IconProps
+    }
+    fullWidth?: boolean
+    asChild?: boolean
+    isLoading?: boolean
+  }
 
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
   {
     className,
     variant,
     size,
+    icon,
     fullWidth = false,
     asChild = false,
     isLoading,
@@ -58,6 +65,8 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
   ref,
 ) {
   const Comp = asChild ? Slot : 'button'
+  const ButtonIcon = icon ? Icons[icon.name] : null
+  const iconProps = icon?.props ?? {}
   return (
     <Comp
       disabled={isLoading}
@@ -67,7 +76,20 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
       ref={ref}
       {...props}
     >
-      <Slottable>{children}</Slottable>
+      <Slottable>
+        <div className='flex flex-row items-center gap-x-1'>
+          {ButtonIcon ? (
+            <ButtonIcon
+              className={cn({
+                [colors.textColors[iconProps.color!]]: iconProps.color,
+                'w-4': !iconProps.widthClass,
+                'h-4': !iconProps.heightClass,
+              })}
+            />
+          ) : null}
+          {children}
+        </div>
+      </Slottable>
     </Comp>
   )
 })
