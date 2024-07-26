@@ -10,7 +10,7 @@ export default function WorkspaceName({
   update,
 }: {
   workspace: SessionWorkspace
-  update: (payload: { name: string }) => Promise<Workspace>
+  update: (payload: { name: string }) => Promise<Workspace | undefined>
 }) {
   const onChange = async (ev: React.ChangeEvent<HTMLInputElement>) => {
     const name = ev.target.value

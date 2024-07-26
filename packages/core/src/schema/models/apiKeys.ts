@@ -16,7 +16,7 @@ export const apiKeys = latitudeSchema.table(
   'api_keys',
   {
     id: bigserial('id', { mode: 'number' }).notNull().primaryKey(),
-    uuid: uuid('uuid')
+    token: uuid('token')
       .notNull()
       .unique()
       .$defaultFn(() => crypto.randomUUID()),
@@ -24,8 +24,8 @@ export const apiKeys = latitudeSchema.table(
       .notNull()
       .references(() => workspaces.id),
     name: varchar('name', { length: 256 }),
-    ...timestamps(),
     deletedAt: timestamp('deleted_at'),
+    ...timestamps(),
   },
   (table) => ({
     workspaceIdIdx: index('workspace_id_idx').on(table.workspaceId),

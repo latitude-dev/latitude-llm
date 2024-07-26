@@ -57,6 +57,41 @@
       "when": 1721831263108,
       "tag": "0007_secret_may_parker",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1722009396473,
+      "tag": "0008_mean_wallop",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1722012262737,
+      "tag": "0009_cheerful_sir_ram",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1722012528513,
+      "tag": "0010_flippant_ma_gnuci",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1722012608957,
+      "tag": "0011_nosy_mystique",
+      "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1722013988045,
+      "tag": "0012_common_fat_cobra",
+      "breakpoints": true
     }
   ]
 }

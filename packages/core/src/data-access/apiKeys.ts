@@ -4,11 +4,11 @@ import { apiKeys } from '$core/schema'
 import { eq } from 'drizzle-orm'
 
 export async function unsafelyGetApiKey(
-  { uuid }: { uuid: string },
+  { token }: { token: string },
   db = database,
 ) {
   const apiKey = await db.query.apiKeys.findFirst({
-    where: eq(apiKeys.uuid, uuid),
+    where: eq(apiKeys.token, token),
   })
   if (!apiKey) return Result.error(new NotFoundError('API key not found'))
 

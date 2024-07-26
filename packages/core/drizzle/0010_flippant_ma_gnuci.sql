@@ -1,0 +1,1 @@
+ALTER TABLE "latitude"."providerApiKeys" ADD COLUMN "name" varchar NOT NULL;

@@ -11,3 +11,5 @@ export * from './models/apiKeys'
 export * from './models/projects'
 export * from './models/commits'
 export * from './models/documentVersions'
+
+export * from './models/providerApiKeys'

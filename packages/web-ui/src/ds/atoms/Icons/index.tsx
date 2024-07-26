@@ -6,6 +6,7 @@ import {
   File,
   FolderClosed,
   FolderOpen,
+  Trash,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -30,4 +31,5 @@ export const Icons = {
   folderOpen: FolderOpen,
   clipboard: Copy,
   ellipsisVertical: EllipsisVertical,
+  trash: Trash,
 }
