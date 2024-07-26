@@ -2,30 +2,15 @@ import { omit } from 'lodash-es'
 
 import { readMetadata, type CompileError } from '@latitude-data/compiler'
 import { database } from '$core/client'
-import {
-  findCommitById,
-  findHeadCommit,
-  getDocumentsAtCommit,
-  listCommitChanges,
-} from '$core/data-access'
+import { findWorkspaceFromCommit } from '$core/data-access'
 import { Result, Transaction, TypedResult } from '$core/lib'
-import { ForbiddenError, LatitudeError } from '$core/lib/errors'
+import {
+  CommitsRepository,
+  DocumentVersionsRepository,
+  ProjectsRepository,
+} from '$core/repositories'
 import { Commit, DocumentVersion, documentVersions } from '$core/schema'
 import { eq } from 'drizzle-orm'
-
-export async function getDraft(
-  commitId: number,
-): Promise<TypedResult<Commit, LatitudeError>> {
-  const commit = await findCommitById({ id: commitId })
-
-  if (commit.value?.mergedAt !== null) {
-    return Result.error(
-      new ForbiddenError('Cannot create a document version in a merged commit'),
-    )
-  }
-
-  return Result.ok(commit.value!)
-}
 
 export async function getMergedAndDraftDocuments(
   {
@@ -37,27 +22,36 @@ export async function getMergedAndDraftDocuments(
 ): Promise<TypedResult<[DocumentVersion[], DocumentVersion[]], Error>> {
   const mergedDocuments: DocumentVersion[] = []
 
-  const headCommit = await findHeadCommit({ projectId: draft.projectId }, tx)
-  if (headCommit.ok) {
-    // "Head commit" may not exist if the project is empty
-    const headDocuments = await getDocumentsAtCommit(
-      {
-        commitId: headCommit.value!.id,
-      },
-      tx,
-    )
-    if (headDocuments.error) return headDocuments
-    mergedDocuments.push(...headDocuments.value)
-  }
+  const workspace = await findWorkspaceFromCommit(draft, tx)
+  const commitsScope = new CommitsRepository(workspace!.id, tx)
+  const docsScope = new DocumentVersionsRepository(workspace!.id, tx)
+  const projectsScope = new ProjectsRepository(workspace!.id, tx)
+  const projectResult = await projectsScope.getProjectById(draft.projectId)
+  if (projectResult.error) return projectResult
 
-  const draftChanges = await listCommitChanges({ commitId: draft.id }, tx)
-  if (draftChanges.error) return Result.error(draftChanges.error)
+  const headCommitResult = await commitsScope.getHeadCommit(
+    projectResult.value!,
+  )
+  if (headCommitResult.error) return headCommitResult
+
+  const headDocumentsResult = await docsScope.getDocumentsAtCommit(
+    headCommitResult.value,
+  )
+  if (headDocumentsResult.error) return Result.error(headDocumentsResult.error)
+
+  mergedDocuments.push(...headDocumentsResult.value)
+
+  const draftChangesResult = await docsScope.listCommitChanges(draft)
+  if (draftChangesResult.error) return Result.error(draftChangesResult.error)
 
   const draftDocuments = mergedDocuments
     .filter(
-      (d) => !draftChanges.value.find((c) => c.documentUuid === d.documentUuid),
+      (d) =>
+        !draftChangesResult.value.find(
+          (c) => c.documentUuid === d.documentUuid,
+        ),
     )
-    .concat(draftChanges.value)
+    .concat(draftChangesResult.value)
 
   return Result.ok([mergedDocuments, structuredClone(draftDocuments)])
 }
@@ -122,6 +116,7 @@ export async function resolveDocumentChanges({
   return { documents: changedDocuments, errors }
 }
 
+// TODO: replace commitId param with commit object
 export async function replaceCommitChanges(
   {
     commitId,

@@ -1,5 +1,6 @@
 import { DocumentDetailWrapper } from '@latitude-data/web-ui'
-import { findCommit } from '$/app/(private)/_data-access'
+import { findCommit, findProject } from '$/app/(private)/_data-access'
+import { getCurrentUser } from '$/services/auth/getCurrentUser'
 
 import Sidebar from './_components/Sidebar'
 
@@ -10,8 +11,13 @@ export default async function CommitRoot({
 }: {
   params: { projectId: string; commitUuid: string }
 }) {
-  const commit = await findCommit({
+  const session = await getCurrentUser()
+  const project = await findProject({
     projectId: Number(params.projectId),
+    workspaceId: session.workspace.id,
+  })
+  const commit = await findCommit({
+    project,
     uuid: params.commitUuid,
   })
   return (

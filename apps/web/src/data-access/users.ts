@@ -1,8 +1,8 @@
 import {
   database,
-  getUser,
   NotFoundError,
   Result,
+  unsafelyGetUser,
   users,
   verifyPassword,
   type PromisedResult,
@@ -31,15 +31,12 @@ export async function getUserFromCredentials({
     },
     where: eq(users.email, email),
   })
-
   if (!user) return notFound()
 
   const validPassword = await verifyPassword(password, user.encryptedPassword)
-
   if (!validPassword) notFound()
 
   const wpResult = await getWorkspace({ userId: user.id })
-
   if (wpResult.error) {
     return Result.error(wpResult.error)
   }
@@ -60,7 +57,7 @@ export async function getCurrentUserFromDB({
 }: {
   userId: string | undefined
 }): PromisedResult<SessionData, NotFoundError> {
-  const user = await getUser(userId)
+  const user = await unsafelyGetUser(userId)
   if (!user) return notFound()
 
   const wpResult = await getWorkspace({ userId: user.id })

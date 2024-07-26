@@ -15,7 +15,9 @@ export default async function AppRoot() {
   try {
     session = await getCurrentUser()
     project = await getFirstProject({ workspaceId: session.workspace.id })
-    await findCommit({ uuid: HEAD_COMMIT, projectId: project.id })
+
+    await findCommit({ uuid: HEAD_COMMIT, project })
+
     url = PROJECT_ROUTE({ id: project.id }).commits.latest
   } catch (error) {
     if (error instanceof NotFoundError) {

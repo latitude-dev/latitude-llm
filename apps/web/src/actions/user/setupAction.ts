@@ -24,7 +24,6 @@ export const setupAction = createServerAction()
   )
   .handler(async ({ input }) => {
     const itWasAlreadySetup = await isWorkspaceCreated()
-
     if (itWasAlreadySetup) {
       throw new Error('Workspace already created')
     }

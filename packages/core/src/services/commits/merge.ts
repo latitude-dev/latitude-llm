@@ -6,37 +6,28 @@ import {
   Result,
   Transaction,
 } from '@latitude-data/core'
-import { LatitudeError, NotFoundError } from '$core/lib/errors'
+import { LatitudeError } from '$core/lib/errors'
 import { and, eq } from 'drizzle-orm'
 
-export async function mergeCommit(
-  { commitId }: { commitId: number },
-  db = database,
-) {
+export async function mergeCommit(commit: Commit, db = database) {
   return Transaction.call<Commit>(async (tx) => {
     const mergedAt = new Date()
-
-    const commit = await tx.query.commits.findFirst({
-      where: eq(commits.id, commitId),
-    })
-
-    if (!commit) return Result.error(new NotFoundError('Commit not found'))
-
-    // Check that there is no other commit with same mergeAt in the same project
-    const otherCommits = await tx.query.commits.findMany({
-      where: and(
-        eq(commits.projectId, commit.projectId),
-        eq(commits.mergedAt, mergedAt),
-      ),
-    })
-
+    const otherCommits = await tx
+      .select()
+      .from(commits)
+      .where(
+        and(
+          eq(commits.projectId, commit.projectId),
+          eq(commits.mergedAt, mergedAt),
+        ),
+      )
     if (otherCommits.length > 0) {
       return Result.error(
         new LatitudeError('Commit merge time conflict, try again'),
       )
     }
 
-    const recomputedResults = await recomputeChanges({ commitId }, tx)
+    const recomputedResults = await recomputeChanges(commit, tx)
     if (recomputedResults.error) return recomputedResults
     if (Object.keys(recomputedResults.value.errors).length > 0) {
       return Result.error(
@@ -49,7 +40,7 @@ export async function mergeCommit(
     const result = await tx
       .update(commits)
       .set({ mergedAt })
-      .where(eq(commits.id, commitId))
+      .where(eq(commits.id, commit.id))
       .returning()
     const updatedCommit = result[0]!
 

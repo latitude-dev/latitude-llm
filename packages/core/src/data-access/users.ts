@@ -6,7 +6,7 @@ export type SessionData = {
   workspace: { id: number; name: string }
 }
 
-export function getUser(id?: string) {
+export function unsafelyGetUser(id?: string) {
   return database.query.users.findFirst({
     where: eq(users.id, id ?? ''),
   })

@@ -1,5 +1,3 @@
-export * from './users'
-export * from './projects'
-export * from './commits'
-export * from './documentVersions'
 export * from './apiKeys'
+export * from './users'
+export * from './workspaces'

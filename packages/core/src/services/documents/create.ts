@@ -1,25 +1,30 @@
-import { findCommitById, getDocumentsAtCommit } from '$core/data-access'
+import { findWorkspaceFromCommit } from '$core/data-access'
 import { Result, Transaction, TypedResult } from '$core/lib'
 import { BadRequestError } from '$core/lib/errors'
-import { DocumentVersion, documentVersions } from '$core/schema'
+import { DocumentVersionsRepository } from '$core/repositories'
+import { Commit, DocumentVersion, documentVersions } from '$core/schema'
 import { eq } from 'drizzle-orm'
 
 export async function createNewDocument({
-  commitId,
+  commit,
   path,
   content,
 }: {
-  commitId: number
+  commit: Commit
   path: string
   content?: string
 }): Promise<TypedResult<DocumentVersion, Error>> {
   return await Transaction.call(async (tx) => {
-    const commit = (await findCommitById({ id: commitId }, tx)).unwrap()
     if (commit.mergedAt !== null) {
       return Result.error(new BadRequestError('Cannot modify a merged commit'))
     }
 
-    const currentDocs = (await getDocumentsAtCommit({ commitId }, tx)).unwrap()
+    const workspace = await findWorkspaceFromCommit(commit, tx)
+    const docsScope = new DocumentVersionsRepository(workspace!.id, tx)
+
+    const currentDocs = await docsScope
+      .getDocumentsAtCommit(commit)
+      .then((r) => r.unwrap())
     if (currentDocs.find((d) => d.path === path)) {
       return Result.error(
         new BadRequestError('A document with the same path already exists'),
@@ -29,7 +34,7 @@ export async function createNewDocument({
     const newDoc = await tx
       .insert(documentVersions)
       .values({
-        commitId,
+        commitId: commit.id,
         path,
         content: content ?? '',
       })
@@ -39,7 +44,7 @@ export async function createNewDocument({
     await tx
       .update(documentVersions)
       .set({ resolvedContent: null })
-      .where(eq(documentVersions.commitId, commitId))
+      .where(eq(documentVersions.commitId, commit.id))
 
     return Result.ok(newDoc[0]!)
   })

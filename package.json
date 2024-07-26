@@ -34,12 +34,9 @@
   "pnpm": {
     "peerDependencyRules": {
       "allowedVersions": {
-        "react": "18.x",
-        "react-dom": "18.x",
-        "react": "19.x",
-        "react-dom": "19.x",
-        "eslint": "8.x",
-        "eslint": "9.x"
+        "react": ">=18.x",
+        "react-dom": ">=18.x",
+        "eslint": ">=8.x"
       }
     }
   }

@@ -1,4 +1,4 @@
-import { findProject } from '@latitude-data/core'
+import { ProjectsRepository } from '@latitude-data/core'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
 import { z } from 'zod'
 import { createServerActionProcedure } from 'zsa'
@@ -16,11 +16,11 @@ export const authProcedure = createServerActionProcedure().handler(async () => {
 export const withProject = createServerActionProcedure(authProcedure)
   .input(z.object({ projectId: z.number() }))
   .handler(async ({ input, ctx }) => {
+    const { workspace } = ctx
+    const projectScope = new ProjectsRepository(workspace.id)
     const project = (
-      await findProject({
-        projectId: input.projectId,
-        workspaceId: ctx.workspace.id,
-      })
+      await projectScope.getProjectById(input.projectId)
     ).unwrap()
+
     return { ...ctx, project }
   })

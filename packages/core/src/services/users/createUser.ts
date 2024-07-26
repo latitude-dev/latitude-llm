@@ -33,6 +33,7 @@ export async function createUser(
         email: users.email,
         name: users.name,
       })
+
     const user = inserts[0]!
     return Result.ok(user)
   }, db)
