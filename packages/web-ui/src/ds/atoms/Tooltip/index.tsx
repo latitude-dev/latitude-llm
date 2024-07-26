@@ -85,7 +85,7 @@ function Tooltip({
       delayDuration={delayDuration}
       disableHoverableContent={disableHoverableContent}
     >
-      <TooltipTrigger onClick={(e) => e.preventDefault()}>
+      <TooltipTrigger asChild onClick={(e) => e.preventDefault()}>
         {trigger}
       </TooltipTrigger>
       <TooltipPrimitive.Portal>

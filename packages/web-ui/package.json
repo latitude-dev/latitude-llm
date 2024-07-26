@@ -19,11 +19,7 @@
     "./styles.css": "./styles.css",
     "./tailwind.config.js": "./tailwind.config.js"
   },
-  "files": [
-    "src",
-    "styles.css",
-    "tailwind.config.js"
-  ],
+  "files": ["src", "styles.css", "tailwind.config.js"],
   "dependencies": {
     "@latitude-data/compiler": "workspace:^",
     "@latitude-data/core": "workspace:^",
