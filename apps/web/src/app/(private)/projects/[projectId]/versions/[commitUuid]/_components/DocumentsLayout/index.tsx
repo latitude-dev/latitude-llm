@@ -28,8 +28,9 @@ export default async function DocumentsLayout({
     uuid: commitUuid,
   })
   return (
-    <DocumentDetailWrapper>
-      <Sidebar commit={commit} currentDocument={document} />
+    <DocumentDetailWrapper
+      sidebar={<Sidebar commit={commit} currentDocument={document} />}
+    >
       {children}
     </DocumentDetailWrapper>
   )
