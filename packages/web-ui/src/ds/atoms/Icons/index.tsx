@@ -1,6 +1,7 @@
 import {
   ChevronDown,
   ChevronRight,
+  CircleAlert,
   Copy,
   EllipsisVertical,
   File,
@@ -32,4 +33,5 @@ export const Icons = {
   clipboard: Copy,
   ellipsisVertical: EllipsisVertical,
   trash: Trash,
+  alert: CircleAlert,
 }

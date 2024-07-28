@@ -1,4 +1,5 @@
 export * from './create'
 export * from './update'
 export * from './destroyDocument'
+export * from './destroyFolder'
 export * from './recomputeChanges'
