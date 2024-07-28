@@ -47,11 +47,13 @@ export function useNodeValidator({
   nodeRef,
   leaveWithoutSave,
   saveValue,
+  saveAndAddOther,
 }: {
   name: string | undefined
   inputRef: RefObject<HTMLInputElement>
   nodeRef: RefObject<HTMLDivElement>
   saveValue: (args: { path: string }) => Promise<void>
+  saveAndAddOther?: (args: { path: string }) => void
   leaveWithoutSave?: () => void
 }) {
   const [isEditing, setIsEditing] = useState(name === ' ')
@@ -98,9 +100,16 @@ export function useNodeValidator({
       const val = inputRef.current?.value ?? ''
       const value = val.trim()
       const isValid = PATH_REGEXP.test(value)
+      const key = event.key
 
-      if (event.key === 'Escape') {
+      if (key === 'Escape') {
         leaveWithoutSave?.()
+      } else if (key === 'Tab') {
+        event.preventDefault()
+        if (!isValid) return
+
+        saveAndAddOther?.({ path: value })
+        setIsEditing(false)
       } else if (event.key === 'Enter' && isValid) {
         await saveValue({ path: value })
         setIsEditing(false)

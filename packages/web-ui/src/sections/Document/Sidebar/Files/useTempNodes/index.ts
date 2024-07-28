@@ -10,6 +10,11 @@ type TmpFoldersState = {
     isFile: boolean
   }) => void
   updateFolder: (args: { id: string; path: string }) => void
+  updateFolderAndAddOther: (args: {
+    id: string
+    path: string
+    onNodeUpdated: (path: string) => void
+  }) => void
   deleteTmpFolder: (args: { id: string }) => void
   reset: () => void
 }
@@ -87,7 +92,7 @@ function findAndReplaceParentNodeInRootNode(
   return rootNode
 }
 
-export const useTempNodes = create<TmpFoldersState>((set) => ({
+export const useTempNodes = create<TmpFoldersState>((set, get) => ({
   tmpFolders: {},
   reset: () => {
     set({
@@ -157,6 +162,23 @@ export const useTempNodes = create<TmpFoldersState>((set) => ({
       node.path = `${parentPath}/${path}`
 
       return state
+    })
+  },
+  updateFolderAndAddOther: ({ id, path, onNodeUpdated }) => {
+    set((state) => {
+      state.updateFolder({ id, path })
+      const allNodes = allTmpNodes(state.tmpFolders)
+      const parentNode = allNodes.find((node) => node.id === id)
+
+      onNodeUpdated(parentNode!.path)
+
+      state.addFolder({
+        parentPath: path,
+        parentId: id,
+        isFile: false,
+      })
+
+      return get()
     })
   },
   deleteTmpFolder: ({ id }) => {

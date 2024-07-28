@@ -1,18 +1,12 @@
-import {
-  forwardRef,
-  ReactNode,
-  useEffect,
-  useRef,
-  useState,
-} from 'react'
+import { forwardRef, ReactNode, useEffect, useRef, useState } from 'react'
 
 import { DropdownMenu, MenuOption } from '$ui/ds/atoms/DropdownMenu'
 import { Input } from '$ui/ds/atoms/Input'
 import Text from '$ui/ds/atoms/Text'
 import { cn } from '$ui/lib/utils'
+import { useNodeValidator } from '$ui/sections/Document/Sidebar/Files/NodeHeaderWrapper/useNodeValidator'
 
 import { Node } from '../useTree'
-import { useNodeValidator } from '$ui/sections/Document/Sidebar/Files/NodeHeaderWrapper/useNodeValidator'
 
 export const ICON_CLASS = 'min-w-6 h-6 text-muted-foreground'
 export type IndentType = { isLast: boolean }
@@ -56,7 +50,8 @@ type Props = {
   actions: MenuOption[]
   icons: ReactNode
   indentation: IndentType[]
-  onSaveValue: (args: { path: string, id: string }) => void
+  onSaveValue: (args: { path: string; id: string }) => void
+  onSaveValueAndTab?: (args: { path: string; id: string }) => void
   onLeaveWithoutSave?: (args: { id: string }) => void
 }
 const NodeHeaderWrapper = forwardRef<HTMLDivElement, Props>(function Foo(
@@ -64,6 +59,7 @@ const NodeHeaderWrapper = forwardRef<HTMLDivElement, Props>(function Foo(
     node,
     open,
     onSaveValue,
+    onSaveValueAndTab,
     onLeaveWithoutSave,
     selected = false,
     onClick,
@@ -81,6 +77,9 @@ const NodeHeaderWrapper = forwardRef<HTMLDivElement, Props>(function Foo(
     inputRef,
     saveValue: async ({ path }: { path: string }) => {
       return onSaveValue({ path, id: node.id })
+    },
+    saveAndAddOther: ({ path }) => {
+      onSaveValueAndTab?.({ path, id: node.id })
     },
     leaveWithoutSave: () => {
       onLeaveWithoutSave?.({ id: node.id })
@@ -131,6 +130,13 @@ const NodeHeaderWrapper = forwardRef<HTMLDivElement, Props>(function Foo(
               onKeyDown={onInputKeyDown}
               onChange={onInputChange}
               errors={error ? [error] : undefined}
+              placeholder={
+                onSaveValueAndTab
+                  ? 'Tab to create another folder'
+                  : node.isFile
+                    ? 'File name'
+                    : 'Folder name'
+              }
               name='name'
               type='text'
               size='small'

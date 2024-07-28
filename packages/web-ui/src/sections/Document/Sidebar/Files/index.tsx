@@ -31,13 +31,26 @@ function FolderHeader({
     togglePath: state.togglePath,
     openPaths: state.openPaths,
   }))
-  const { addFolder, updateFolder, deleteTmpFolder } = useTempNodes(
-    (state) => ({
+  const { addFolder, updateFolder, updateFolderAndAddOther, deleteTmpFolder } =
+    useTempNodes((state) => ({
       addFolder: state.addFolder,
       updateFolder: state.updateFolder,
+      updateFolderAndAddOther: state.updateFolderAndAddOther,
       deleteTmpFolder: state.deleteTmpFolder,
-    }),
+    }))
+  const onUpdateFolderAndAddOther = useCallback(
+    ({ path, id }: { path: string; id: string }) => {
+      updateFolderAndAddOther({
+        id,
+        path,
+        onNodeUpdated: (updatedPath) => {
+          togglePath(updatedPath)
+        },
+      })
+    },
+    [updateFolderAndAddOther, togglePath],
   )
+
   const onAddNode = useCallback(
     ({ isFile }: { isFile: boolean }) =>
       () => {
@@ -80,6 +93,7 @@ function FolderHeader({
     <NodeHeaderWrapper
       onClick={onToggleOpen}
       onSaveValue={updateFolder}
+      onSaveValueAndTab={onUpdateFolderAndAddOther}
       onLeaveWithoutSave={deleteTmpFolder}
       node={node}
       open={open}
@@ -114,12 +128,14 @@ function FileHeader({
     reset: state.reset,
     deleteTmpFolder: state.deleteTmpFolder,
   }))
-  const onSaveValue = useCallback(async ({ path }: { path: string }) => {
-    const parentPath = node.path.split('/').slice(0, -1).join('/')
-    await onCreateFile(`${parentPath}/${path}`)
-    reset()
-
-  }, [reset, onCreateFile, node.path])
+  const onSaveValue = useCallback(
+    async ({ path }: { path: string }) => {
+      const parentPath = node.path.split('/').slice(0, -1).join('/')
+      await onCreateFile(`${parentPath}/${path}`)
+      reset()
+    },
+    [reset, onCreateFile, node.path],
+  )
   const handleClick = useCallback(() => {
     if (selected) return
     if (!node.isPersisted) return
