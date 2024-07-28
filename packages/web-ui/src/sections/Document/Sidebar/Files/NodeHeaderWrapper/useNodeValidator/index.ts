@@ -7,8 +7,6 @@ import {
   useState,
 } from 'react'
 
-import { Node as SidebarNode } from '$ui/sections/Document/Sidebar/Files/useTree'
-
 function useOnClickOutside<E extends HTMLElement>({
   enabled,
   ref,
@@ -44,19 +42,19 @@ const PATH_REGEXP = /^([\w-]+\/)*([\w-.])+$/
 const INVALID_MSG =
   "Invalid path, no spaces. Only letters, numbers, '-' and '_'"
 export function useNodeValidator({
-  node,
+  name,
   inputRef,
   nodeRef,
   leaveWithoutSave,
   saveValue,
 }: {
-  node: SidebarNode
+  name: string | undefined
   inputRef: RefObject<HTMLInputElement>
   nodeRef: RefObject<HTMLDivElement>
   saveValue: (args: { path: string }) => Promise<void>
   leaveWithoutSave?: () => void
 }) {
-  const [isEditing, setIsEditing] = useState(node.name === ' ')
+  const [isEditing, setIsEditing] = useState(name === ' ')
   const [validationError, setError] = useState<string>()
   const onInputChange: ChangeEventHandler<HTMLInputElement> = useCallback(
     (event) => {

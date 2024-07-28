@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { MenuOption } from '$ui/ds/atoms/DropdownMenu'
 import { Icons } from '$ui/ds/atoms/Icons'
@@ -11,7 +11,6 @@ import NodeHeaderWrapper, {
   ICON_CLASS,
   type IndentType,
 } from './NodeHeaderWrapper'
-import { useNodeValidator } from './useNodeValidator'
 import { useOpenPaths } from './useOpenPaths'
 import { useTempNodes } from './useTempNodes'
 import { Node, SidebarDocument, useTree } from './useTree'
@@ -28,19 +27,6 @@ function FolderHeader({
   onToggleOpen: () => void
 }) {
   const { onDeleteFolder } = useFileTreeContext()
-  const inputRef = useRef<HTMLInputElement>(null)
-  const nodeRef = useRef<HTMLDivElement>(null)
-  const { isEditing, error, onInputChange, onInputKeyDown } = useNodeValidator({
-    node,
-    nodeRef,
-    inputRef,
-    saveValue: async ({ path }: { path: string }) => {
-      return updateFolder({ path, id: node.id })
-    },
-    leaveWithoutSave: () => {
-      deleteTmpFolder({ id: node.id })
-    },
-  })
   const { openPaths, togglePath } = useOpenPaths((state) => ({
     togglePath: state.togglePath,
     openPaths: state.openPaths,
@@ -92,17 +78,13 @@ function FolderHeader({
   )
   return (
     <NodeHeaderWrapper
-      ref={nodeRef}
-      inputRef={inputRef}
-      isEditing={isEditing}
       onClick={onToggleOpen}
+      onSaveValue={updateFolder}
+      onLeaveWithoutSave={deleteTmpFolder}
       node={node}
       open={open}
       actions={actions}
       indentation={indentation}
-      error={error}
-      onChangeInput={onInputChange}
-      onKeyDownInput={onInputKeyDown}
       icons={
         <>
           <div className='min-w-6 h-6 flex items-center justify-center'>
@@ -132,21 +114,12 @@ function FileHeader({
     reset: state.reset,
     deleteTmpFolder: state.deleteTmpFolder,
   }))
-  const nodeRef = useRef<HTMLDivElement>(null)
-  const inputRef = useRef<HTMLInputElement>(null)
-  const { isEditing, error, onInputChange, onInputKeyDown } = useNodeValidator({
-    node,
-    nodeRef,
-    inputRef,
-    saveValue: async ({ path }: { path: string }) => {
-      const parentPath = node.path.split('/').slice(0, -1).join('/')
-      await onCreateFile(`${parentPath}/${path}`)
-      reset()
-    },
-    leaveWithoutSave: () => {
-      deleteTmpFolder({ id: node.id })
-    },
-  })
+  const onSaveValue = useCallback(async ({ path }: { path: string }) => {
+    const parentPath = node.path.split('/').slice(0, -1).join('/')
+    await onCreateFile(`${parentPath}/${path}`)
+    reset()
+
+  }, [reset, onCreateFile, node.path])
   const handleClick = useCallback(() => {
     if (selected) return
     if (!node.isPersisted) return
@@ -167,18 +140,14 @@ function FileHeader({
   )
   return (
     <NodeHeaderWrapper
-      inputRef={inputRef}
-      ref={nodeRef}
       open={open}
       node={node}
       actions={actions}
       selected={selected}
       indentation={indentation}
       onClick={handleClick}
-      onKeyDownInput={onInputKeyDown}
-      onChangeInput={onInputChange}
-      isEditing={isEditing}
-      error={error}
+      onSaveValue={onSaveValue}
+      onLeaveWithoutSave={deleteTmpFolder}
       icons={
         <Icons.file
           className={cn(ICON_CLASS, {
