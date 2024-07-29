@@ -1,9 +1,11 @@
 import {
+  CHAIN_STEP_TAG,
   CUSTOM_MESSAGE_TAG,
   REFERENCE_PROMPT_TAG,
   TOOL_CALL_TAG,
 } from '$compiler/constants'
 import {
+  ChainStepTag,
   ContentTag,
   ElementTag,
   MessageTag,
@@ -53,6 +55,17 @@ export function isRefTag(tag: ElementTag): tag is ReferenceTag {
   return tag.name === REFERENCE_PROMPT_TAG
 }
 
+export function isChainStepTag(tag: ElementTag): tag is ChainStepTag {
+  return tag.name === CHAIN_STEP_TAG
+}
+
 export function isToolCallTag(tag: ElementTag): tag is ToolCallTag {
   return tag.name === TOOL_CALL_TAG
+}
+
+export function tagAttributeIsLiteral(tag: ElementTag, name: string): boolean {
+  const attr = tag.attributes.find((attr) => attr.name === name)
+  if (!attr) return false
+  if (attr.value === true) return true
+  return attr.value.every((v) => v.type === 'Text')
 }

@@ -1,10 +1,14 @@
 import { error } from '$compiler/error/error'
 import errors from '$compiler/error/errors'
-import parse from '$compiler/parser/index'
-import type { BaseNode, TemplateNode } from '$compiler/parser/interfaces'
+import type {
+  BaseNode,
+  Fragment,
+  TemplateNode,
+} from '$compiler/parser/interfaces'
 import {
+  AssistantMessage,
+  Config,
   ContentType,
-  Conversation,
   Message,
   MessageContent,
   MessageRole,
@@ -20,66 +24,104 @@ import { compile as resolveIfBlock } from './base/nodes/if'
 import { compile as resolveMustache } from './base/nodes/mustache'
 import { compile as resolveElementTag } from './base/nodes/tag'
 import { compile as resolveText } from './base/nodes/text'
-import { CompileNodeContext } from './base/types'
-import { readConfig } from './config'
+import { CompileNodeContext, TemplateNodeWithStatus } from './base/types'
 import { resolveLogicNode } from './logic'
-import Scope from './scope'
+import Scope, { ScopeStash } from './scope'
 import type { ResolveBaseNodeProps, ToolCallReference } from './types'
 import { removeCommonIndent } from './utils'
+
+export type CompilationStatus = {
+  completed: boolean
+  scopeStash: ScopeStash
+  ast: Fragment
+  messages: Message[]
+  stepConfig: Config | undefined
+  globalConfig: Config | undefined
+}
+
+class StopIteration extends Error {
+  public readonly config: Config | undefined
+  constructor(config: Config | undefined) {
+    super('StopIteration')
+    this.config = config
+  }
+}
 
 export type ReferencePromptFn = (prompt: string) => Promise<string>
 
 export class Compile {
+  private ast: Fragment
   private rawText: string
-
-  private initialScope: Scope
+  private globalScope: Scope
 
   private messages: Message[] = []
+  private config: Config | undefined
+  private stepResponse: AssistantMessage | undefined
+
   private accumulatedText: string = ''
   private accumulatedContent: MessageContent[] = []
   private accumulatedToolCalls: ToolCallReference[] = []
 
   constructor({
-    prompt,
-    parameters,
+    ast,
+    rawText,
+    globalScope,
+    stepResponse,
   }: {
-    prompt: string
-    parameters: Record<string, unknown>
+    rawText: string
+    globalScope: Scope
+    ast: Fragment
+    stepResponse?: AssistantMessage
   }) {
-    this.rawText = prompt
-    this.initialScope = new Scope(parameters)
+    this.rawText = rawText
+    this.globalScope = globalScope
+    this.ast = ast
+    this.stepResponse = stepResponse
   }
 
-  async run(): Promise<Conversation> {
-    const fragment = parse(this.rawText)
-    const config = readConfig(fragment) as Record<string, unknown>
-    await this.resolveBaseNode({
-      node: fragment,
-      scope: this.initialScope,
-      isInsideMessageTag: false,
-      isInsideContentTag: false,
-    })
+  async run(): Promise<CompilationStatus> {
+    let completed = true
+    let stepConfig: Config | undefined = undefined
+
+    try {
+      await this.resolveBaseNode({
+        node: this.ast,
+        scope: this.globalScope,
+        isInsideMessageTag: false,
+        isInsideContentTag: false,
+      })
+    } catch (e) {
+      if (e instanceof StopIteration) {
+        completed = false
+        stepConfig = e.config
+      } else {
+        throw e
+      }
+    }
+
     this.groupContent()
 
     return {
-      config,
+      ast: this.ast,
+      scopeStash: this.globalScope.getStash(),
       messages: this.messages,
+      globalConfig: this.config,
+      stepConfig,
+      completed,
     }
   }
 
-  private async resolveExpression(
-    expression: LogicalExpression,
-    scope: Scope,
-  ): Promise<unknown> {
-    return await resolveLogicNode({
-      node: expression,
-      scope,
-      raiseError: this.expressionError.bind(this),
-    })
+  private stop(config: Config | undefined): void {
+    throw new StopIteration(config)
   }
 
   private addMessage(message: Message): void {
     this.messages.push(message)
+  }
+
+  private setConfig(config: Config): void {
+    if (this.config !== undefined) return
+    this.config = config
   }
 
   private addStrayText(text: string) {
@@ -143,21 +185,61 @@ export class Compile {
     return toolCalls
   }
 
+  private popStepResponse(): AssistantMessage | undefined {
+    const response = this.stepResponse
+    this.stepResponse = undefined
+    return response
+  }
+
+  private async resolveExpression(
+    expression: LogicalExpression,
+    scope: Scope,
+  ): Promise<unknown> {
+    return await resolveLogicNode({
+      node: expression,
+      scope,
+      raiseError: this.expressionError.bind(this),
+    })
+  }
+
   private async resolveBaseNode({
     node,
     scope,
     isInsideMessageTag,
     isInsideContentTag,
+    completedValue = true,
   }: ResolveBaseNodeProps<TemplateNode>): Promise<void> {
+    const nodeWithStatus = node as TemplateNodeWithStatus
+    const compileStatus = nodeWithStatus.status
+
+    // Skip node if it has been marked as completed
+    if (compileStatus?.completedAs === completedValue) {
+      return
+    }
+
+    // Restore scope saved in the node status
+    if (compileStatus?.scopePointers) {
+      scope.setPointers(compileStatus.scopePointers)
+    }
+
+    const resolveBaseNodeFn = (props: ResolveBaseNodeProps<TemplateNode>) => {
+      const completedValueProp = props.completedValue ?? completedValue
+      return this.resolveBaseNode({
+        ...props,
+        completedValue: completedValueProp,
+      })
+    }
+
     const context: CompileNodeContext<TemplateNode> = {
       node,
       scope,
       isInsideMessageTag,
       isInsideContentTag,
-      resolveBaseNode: this.resolveBaseNode.bind(this),
+      resolveBaseNode: resolveBaseNodeFn.bind(this),
       resolveExpression: this.resolveExpression.bind(this),
       baseNodeError: this.baseNodeError.bind(this),
       expressionError: this.expressionError.bind(this),
+      setConfig: this.setConfig.bind(this),
       addMessage: this.addMessage.bind(this),
       addStrayText: this.addStrayText.bind(this),
       popStrayText: this.popStrayText.bind(this),
@@ -167,6 +249,8 @@ export class Compile {
       groupContent: this.groupContent.bind(this),
       addToolCall: this.addToolCall.bind(this),
       popToolCalls: this.popToolCalls.bind(this),
+      popStepResponse: this.popStepResponse.bind(this),
+      stop: this.stop.bind(this),
     }
 
     const nodeResolver = {
@@ -184,10 +268,29 @@ export class Compile {
       this.baseNodeError(errors.unsupportedBaseNodeType(node.type), node)
     }
 
-    const resolverFn = nodeResolver[node.type] as (
-      context: CompileNodeContext<TemplateNode>,
-    ) => Promise<void>
-    await resolverFn(context)
+    try {
+      const resolverFn = nodeResolver[node.type] as (
+        context: CompileNodeContext<TemplateNode>,
+      ) => Promise<void>
+      await resolverFn(context)
+    } catch (e) {
+      if (e instanceof StopIteration) {
+        // If the node has stopped unexpectedly, save the current pointers for future recovery
+        nodeWithStatus.status = {
+          ...(nodeWithStatus.status ?? {}),
+          scopePointers: scope.getPointers(),
+        }
+      }
+
+      throw e
+    }
+
+    // Mark node as completed
+    nodeWithStatus.status = {
+      ...(nodeWithStatus.status ?? {}),
+      scopePointers: undefined,
+      completedAs: completedValue,
+    }
   }
 
   private baseNodeError(

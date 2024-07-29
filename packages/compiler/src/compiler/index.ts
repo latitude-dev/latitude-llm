@@ -1,16 +1,22 @@
 import { Conversation, ConversationMetadata } from '$compiler/types'
 
-import { Compile, type ReferencePromptFn } from './compile'
+import { Chain } from './chain'
+import { type ReferencePromptFn } from './compile'
 import { ReadMetadata } from './readMetadata'
 
-export function compile({
+export async function render({
   prompt,
   parameters,
 }: {
   prompt: string
   parameters: Record<string, unknown>
 }): Promise<Conversation> {
-  return new Compile({ prompt, parameters }).run()
+  const iterator = new Chain({ prompt, parameters })
+  const { conversation, completed } = await iterator.step()
+  if (!completed) {
+    throw new Error('Use a Chain to render prompts with multiple steps')
+  }
+  return conversation
 }
 
 export function readMetadata({

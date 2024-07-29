@@ -229,4 +229,8 @@ export default {
       message: `Error calling function: \n${errorKlassName} ${error.message}`,
     }
   },
+  invalidStepConfig: {
+    code: 'invalid-step-config',
+    message: 'Step config must be an object',
+  },
 }

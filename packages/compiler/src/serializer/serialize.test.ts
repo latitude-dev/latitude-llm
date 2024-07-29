@@ -1,4 +1,4 @@
-import { compile } from '$compiler/compiler'
+import { render } from '$compiler/compiler'
 import { removeCommonIndent } from '$compiler/compiler/utils'
 import { describe, expect, it } from 'vitest'
 
@@ -12,7 +12,7 @@ describe('serialize', async () => {
       </system>
     `)
 
-    const conversation = await compile({
+    const conversation = await render({
       prompt,
       parameters: {},
     })
@@ -40,7 +40,7 @@ describe('serialize', async () => {
       </system>
     `)
 
-    const conversation = await compile({
+    const conversation = await render({
       prompt,
       parameters: {},
     })
@@ -80,7 +80,7 @@ describe('serialize', async () => {
       </assistant>
     `)
 
-    const conversation = await compile({
+    const conversation = await render({
       prompt,
       parameters: {},
     })
@@ -123,7 +123,7 @@ describe('serialize', async () => {
       </tool>
     `)
 
-    const conversation = await compile({
+    const conversation = await render({
       prompt,
       parameters: {},
     })
@@ -163,7 +163,7 @@ describe('serialize', async () => {
       </assistant>
     `)
 
-    const conversation = await compile({
+    const conversation = await render({
       prompt,
       parameters: {},
     })
@@ -197,7 +197,7 @@ describe('serialize', async () => {
       </user>
     `)
 
-    const conversation = await compile({
+    const conversation = await render({
       prompt,
       parameters: { param: 'value' },
     })

@@ -8,6 +8,7 @@ export type ResolveBaseNodeProps<N extends TemplateNode> = {
   scope: Scope
   isInsideMessageTag: boolean
   isInsideContentTag: boolean
+  completedValue?: unknown
 }
 
 export type ToolCallReference = { node: ToolCallTag; value: ToolCall }
