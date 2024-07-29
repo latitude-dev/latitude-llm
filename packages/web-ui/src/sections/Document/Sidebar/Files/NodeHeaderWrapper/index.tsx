@@ -1,17 +1,10 @@
-import {
-  forwardRef,
-  KeyboardEventHandler,
-  ReactNode,
-  RefObject,
-  useEffect,
-  useState,
-  type ChangeEventHandler,
-} from 'react'
+import { forwardRef, ReactNode, useEffect, useRef, useState } from 'react'
 
 import { DropdownMenu, MenuOption } from '$ui/ds/atoms/DropdownMenu'
 import { Input } from '$ui/ds/atoms/Input'
 import Text from '$ui/ds/atoms/Text'
 import { cn } from '$ui/lib/utils'
+import { useNodeValidator } from '$ui/sections/Document/Sidebar/Files/NodeHeaderWrapper/useNodeValidator'
 
 import { Node } from '../useTree'
 
@@ -32,11 +25,11 @@ function IndentationBar({
     return (
       <div key={index} className='h-6 min-w-6'>
         {index > 0 ? (
-          <div className='-ml-[3px] relative w-6 h-full flex justify-center'>
+          <div className='relative w-6 h-full flex justify-center'>
             {hasChildren || !showBorder ? (
-              <div className='bg-border w-px h-8 -mt-1' />
+              <div className='-ml-px bg-border w-px h-8 -mt-1' />
             ) : (
-              <div className='relative -mt-1'>
+              <div className='-ml-px relative -mt-1'>
                 <div className='border-l h-2.5' />
                 <div className='absolute top-2.5 border-l border-b h-2 w-2 rounded-bl-sm' />
               </div>
@@ -57,21 +50,18 @@ type Props = {
   actions: MenuOption[]
   icons: ReactNode
   indentation: IndentType[]
-  inputRef: RefObject<HTMLInputElement>
-  error?: string
-  onChangeInput: ChangeEventHandler<HTMLInputElement>
-  onKeyDownInput: KeyboardEventHandler<HTMLInputElement>
+  onSaveValue: (args: { path: string; id: string }) => void
+  onSaveValueAndTab?: (args: { path: string; id: string }) => void
+  onLeaveWithoutSave?: (args: { id: string }) => void
 }
 const NodeHeaderWrapper = forwardRef<HTMLDivElement, Props>(function Foo(
   {
     node,
-    inputRef,
     open,
+    onSaveValue,
+    onSaveValueAndTab,
+    onLeaveWithoutSave,
     selected = false,
-    isEditing = false,
-    error,
-    onChangeInput,
-    onKeyDownInput,
     onClick,
     icons,
     indentation,
@@ -79,6 +69,22 @@ const NodeHeaderWrapper = forwardRef<HTMLDivElement, Props>(function Foo(
   },
   ref,
 ) {
+  const inputRef = useRef<HTMLInputElement>(null)
+  const nodeRef = useRef<HTMLDivElement>(null)
+  const { isEditing, error, onInputChange, onInputKeyDown } = useNodeValidator({
+    name: node.name,
+    nodeRef,
+    inputRef,
+    saveValue: async ({ path }: { path: string }) => {
+      return onSaveValue({ path, id: node.id })
+    },
+    saveAndAddOther: ({ path }) => {
+      onSaveValueAndTab?.({ path, id: node.id })
+    },
+    leaveWithoutSave: () => {
+      onLeaveWithoutSave?.({ id: node.id })
+    },
+  })
   const [actionsOpen, setActionsOpen] = useState(false)
 
   // Litle trick to focus the input after the component is mounted
@@ -108,22 +114,29 @@ const NodeHeaderWrapper = forwardRef<HTMLDivElement, Props>(function Foo(
     >
       <div
         onClick={onClick}
-        className='min-w-0 flex-grow flex flex-row items-center justify-between gap-x-1 py-0.5'
+        className='min-w-0 flex-grow flex flex-row items-center justify-between py-0.5'
       >
         <IndentationBar
           indentation={indentation}
           hasChildren={open && node.children.length > 0}
         />
-        <div className='flex flex-row items-center gap-x-1'>{icons}</div>
+        <div className='flex flex-row items-center gap-x-1 mr-1'>{icons}</div>
         {isEditing ? (
           <div className='pr-1 flex items-center'>
             <Input
               tabIndex={0}
               ref={inputRef}
               autoFocus
-              onKeyDown={onKeyDownInput}
-              onChange={onChangeInput}
+              onKeyDown={onInputKeyDown}
+              onChange={onInputChange}
               errors={error ? [error] : undefined}
+              placeholder={
+                onSaveValueAndTab
+                  ? 'Tab to create another folder'
+                  : node.isFile
+                    ? 'File name'
+                    : 'Folder name'
+              }
               name='name'
               type='text'
               size='small'

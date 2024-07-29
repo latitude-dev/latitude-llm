@@ -7,8 +7,6 @@ import {
   useState,
 } from 'react'
 
-import { Node as SidebarNode } from '$ui/sections/Document/Sidebar/Files/useTree'
-
 function useOnClickOutside<E extends HTMLElement>({
   enabled,
   ref,
@@ -44,19 +42,21 @@ const PATH_REGEXP = /^([\w-]+\/)*([\w-.])+$/
 const INVALID_MSG =
   "Invalid path, no spaces. Only letters, numbers, '-' and '_'"
 export function useNodeValidator({
-  node,
+  name,
   inputRef,
   nodeRef,
   leaveWithoutSave,
   saveValue,
+  saveAndAddOther,
 }: {
-  node: SidebarNode
+  name: string | undefined
   inputRef: RefObject<HTMLInputElement>
   nodeRef: RefObject<HTMLDivElement>
   saveValue: (args: { path: string }) => Promise<void>
+  saveAndAddOther?: (args: { path: string }) => void
   leaveWithoutSave?: () => void
 }) {
-  const [isEditing, setIsEditing] = useState(node.name === ' ')
+  const [isEditing, setIsEditing] = useState(name === ' ')
   const [validationError, setError] = useState<string>()
   const onInputChange: ChangeEventHandler<HTMLInputElement> = useCallback(
     (event) => {
@@ -100,9 +100,16 @@ export function useNodeValidator({
       const val = inputRef.current?.value ?? ''
       const value = val.trim()
       const isValid = PATH_REGEXP.test(value)
+      const key = event.key
 
-      if (event.key === 'Escape') {
+      if (key === 'Escape') {
         leaveWithoutSave?.()
+      } else if (key === 'Tab') {
+        event.preventDefault()
+        if (!isValid) return
+
+        saveAndAddOther?.({ path: value })
+        setIsEditing(false)
       } else if (event.key === 'Enter' && isValid) {
         await saveValue({ path: value })
         setIsEditing(false)

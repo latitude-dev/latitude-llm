@@ -35,15 +35,16 @@ describe('getDocumentsAtCommit', () => {
     expect(documents[0]!.documentUuid).toBe(allDocs[0]!.documentUuid)
   })
 
-  it('get docs from HEAD', async (ctx) => {
-    const { project, documents } = await ctx.factories.createProject({
+  it('get docs from HEAD without soft deleted', async (ctx) => {
+    const { commit, project, documents } = await ctx.factories.createProject({
       documents: { doc1: 'Doc 1', doc2: 'Doc 2' },
     })
     const documentsScope = new DocumentVersionsRepository(project.workspaceId)
     const { commit: draft } = await factories.createDraft({ project })
-    await factories.markAsSoftDelete(
-      documents.find((d) => d.path === 'doc2')!.documentUuid,
-    )
+    await factories.markAsSoftDelete({
+      documentUuid: documents.find((d) => d.path === 'doc2')!.documentUuid,
+      commitId: commit.id,
+    })
     const filteredDocs = await documentsScope
       .getDocumentsAtCommit({ commit: draft })
       .then((r) => r.unwrap())

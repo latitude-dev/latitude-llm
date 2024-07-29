@@ -1,6 +1,6 @@
 import { act, renderHook } from '@testing-library/react'
 import { Node } from '$ui/sections/Document/Sidebar/Files/useTree'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { useTempNodes } from './index'
 
@@ -165,5 +165,79 @@ describe('useTempNodes', () => {
     expect(result.current.tmpFolders).toEqual({
       'some-folder': [rootTmpNode],
     })
+  })
+
+  it('should add a grand child folder after updating a node', async () => {
+    const { result } = renderHook(() => useTempNodes((state) => state))
+    act(() =>
+      result.current.addFolder({
+        parentPath: 'some-folder',
+        parentId: 'fake-id',
+        isFile: false,
+      }),
+    )
+    const id = result?.current?.tmpFolders?.['some-folder']?.[0]?.id
+    act(() =>
+      result.current.updateFolder({ id: id!, path: 'parent-tmp-folder' }),
+    )
+
+    act(() =>
+      result.current.addFolder({
+        parentPath: 'some-folder/parent-tmp-folder',
+        parentId: id!,
+        isFile: false,
+      }),
+    )
+
+    const childId =
+      result?.current?.tmpFolders?.['some-folder']?.[0]?.children?.[0]?.id
+
+    const spyFn = vi.fn()
+    act(() =>
+      result.current.updateFolderAndAddOther({
+        id: childId!,
+        path: 'child-tmp-folder',
+        onNodeUpdated: spyFn,
+      }),
+    )
+
+    const grandChild = new Node({
+      id: expect.any(String),
+      path: 'some-folder/parent-tmp-folder/child-tmp-folder/ ',
+      name: ' ',
+      isPersisted: false,
+      isFile: false,
+      isRoot: false,
+    })
+    const child = new Node({
+      id: expect.any(String),
+      path: 'some-folder/parent-tmp-folder/child-tmp-folder',
+      name: 'child-tmp-folder',
+      isPersisted: false,
+      isFile: false,
+      isRoot: false,
+      children: [grandChild],
+    })
+    const rootTmpNode = new Node({
+      id: expect.any(String),
+      path: 'some-folder/parent-tmp-folder',
+      name: 'parent-tmp-folder',
+      isPersisted: false,
+      isFile: false,
+      children: [child],
+    })
+
+    child.parent = rootTmpNode
+    grandChild.parent = child
+    rootTmpNode.children[0]!.parent = rootTmpNode
+    child.children[0]!.parent = child
+
+    const grandChildInTmpFolders =
+      result.current.tmpFolders['some-folder']?.[0]?.children?.[0]
+        ?.children?.[0]
+    expect(grandChildInTmpFolders).toEqual(grandChild)
+    expect(spyFn).toHaveBeenCalledWith(
+      'some-folder/parent-tmp-folder/child-tmp-folder',
+    )
   })
 })
