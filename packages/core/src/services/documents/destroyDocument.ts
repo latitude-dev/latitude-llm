@@ -21,9 +21,7 @@ export async function destroyDocument({
     assertResult.unwrap()
 
     const docsScope = new DocumentVersionsRepository(workspaceId)
-    const documents = (
-      await docsScope.getDocumentsAtCommit({ commit })
-    ).unwrap()
+    const documents = (await docsScope.getDocumentsAtCommit(commit)).unwrap()
     const doc = documents.find((d) => d.documentUuid === document.documentUuid)
 
     if (!doc) {

@@ -77,7 +77,7 @@ export class DocumentVersionsRepository extends Repository {
 
   async getDocumentByPath({ commit, path }: { commit: Commit; path: string }) {
     try {
-      const result = await this.getDocumentsAtCommit({ commit })
+      const result = await this.getDocumentsAtCommit(commit)
       const documents = result.unwrap()
       const document = documents.find((doc) => doc.path === path)
       if (!document) {
@@ -97,7 +97,7 @@ export class DocumentVersionsRepository extends Repository {
   /**
    * NOTE: By default we don't include deleted documents
    */
-  async getDocumentsAtCommit({ commit }: { commit: Commit }) {
+  async getDocumentsAtCommit(commit: Commit) {
     const result = await this.getAllDocumentsAtCommit({ commit })
 
     if (result.error) return result
@@ -123,7 +123,7 @@ export class DocumentVersionsRepository extends Repository {
 
     if (documentInCommit !== undefined) return Result.ok(documentInCommit)
 
-    const documentsAtCommit = await this.getDocumentsAtCommit({ commit })
+    const documentsAtCommit = await this.getDocumentsAtCommit(commit)
     if (documentsAtCommit.error) return Result.error(documentsAtCommit.error)
 
     const document = documentsAtCommit.value.find(

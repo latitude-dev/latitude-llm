@@ -35,9 +35,9 @@ export async function getMergedAndDraftDocuments(
   )
   if (headCommitResult.error) return headCommitResult
 
-  const headDocumentsResult = await docsScope.getDocumentsAtCommit({
-    commit: headCommitResult.value,
-  })
+  const headDocumentsResult = await docsScope.getDocumentsAtCommit(
+    headCommitResult.value,
+  )
   if (headDocumentsResult.error) return Result.error(headDocumentsResult.error)
 
   mergedDocuments.push(...headDocumentsResult.value)
