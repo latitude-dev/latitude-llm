@@ -1,3 +1,5 @@
+'use client'
+
 import { Providers } from '@latitude-data/core/browser'
 import useProviderApiKeys from '$/stores/providerApiKeys'
 import useUsers from '$/stores/users'

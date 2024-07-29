@@ -1,10 +1,15 @@
+'use client'
+
 import { ReactNode } from 'react'
 
+import { cn } from '@latitude-data/web-ui'
 import { Avatar } from '$ui/ds/atoms/Avatar'
 import { Icons } from '$ui/ds/atoms/Icons'
 import Text from '$ui/ds/atoms/Text'
 import getUserInfoFromSession from '$ui/lib/getUserInfo'
 import { SessionUser } from '$ui/providers'
+import Link from 'next/link'
+import { usePathname } from 'next/navigation'
 import { Fragment } from 'react/jsx-runtime'
 
 function BreadcrumpSeparator() {
@@ -26,6 +31,7 @@ function BreadcrumpSeparator() {
 }
 
 type IBreadCrumb = { name: string | ReactNode }
+
 function Breadcrump({ breadcrumbs }: { breadcrumbs: IBreadCrumb[] }) {
   return (
     <ul className='flex flex-row items-center gap-x-4'>
@@ -80,30 +86,59 @@ export type AppHeaderProps = {
   navigationLinks: INavigationLink[]
   currentUser: SessionUser | undefined
   breadcrumbs?: IBreadCrumb[]
+  sectionLinks?: INavigationLink[]
 }
 export default function AppHeader({
   breadcrumbs = [],
   navigationLinks,
   currentUser,
+  sectionLinks,
 }: AppHeaderProps) {
   const info = currentUser ? getUserInfoFromSession(currentUser) : null
   return (
-    <header className='sticky top-0 px-6 py-3 flex flex-row items-center justify-between border-b border-b-border'>
-      <Breadcrump breadcrumbs={breadcrumbs} />
-      <div className='flex flex-row items-center gap-x-6'>
-        <nav className='flex flex-row gap-x-2'>
-          {navigationLinks.map((link, idx) => (
-            <NavLink key={idx} {...link} />
-          ))}
-        </nav>
-        {info ? (
-          <Avatar
-            alt={info.name}
-            fallback={info.fallback}
-            className='w-6 h-6'
-          />
-        ) : null}
+    <header className='sticky top-0 flex flex-col border-b border-b-border'>
+      <div className='px-6 py-3 flex flex-row items-center justify-between '>
+        <Breadcrump breadcrumbs={breadcrumbs} />
+        <div className='flex flex-row items-center gap-x-6'>
+          <nav className='flex flex-row gap-x-2'>
+            {navigationLinks.map((link, idx) => (
+              <NavLink key={idx} {...link} />
+            ))}
+          </nav>
+          {info ? (
+            <Avatar
+              alt={info.name}
+              fallback={info.fallback}
+              className='w-6 h-6'
+            />
+          ) : null}
+        </div>
       </div>
+      {!!sectionLinks?.length && (
+        <div className='flex flex-row px-6 bg-background'>
+          {sectionLinks.map((link, idx) => (
+            <SectionLink key={idx} link={link} />
+          ))}
+        </div>
+      )}
     </header>
+  )
+}
+
+const SectionLink = ({ link }: { link: INavigationLink }) => {
+  const rootPath = usePathname().split('/')[1]
+  const selected = rootPath === link.href!.split('/')[1]
+  const classes = cn('px-4 py-2', {
+    'border-b-2 border-accent-foreground': selected,
+  })
+
+  return (
+    <div className={classes}>
+      <Link href={link.href!}>
+        <Text.H5M color={selected ? 'accentForeground' : 'foreground'}>
+          {link.label}
+        </Text.H5M>
+      </Link>
+    </div>
   )
 }

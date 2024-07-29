@@ -1,6 +1,6 @@
 import { Card, CardContent, FocusHeader } from '@latitude-data/web-ui'
-import { FocusLayout } from '@latitude-data/web-ui/browser'
 import AuthFooter from '$/app/(public)/_components/Footer'
+import { FocusLayout } from '$/components/layouts'
 import { isWorkspaceCreated } from '$/data-access'
 import { ROUTES } from '$/services/routes'
 import { redirect } from 'next/navigation'
