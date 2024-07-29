@@ -25,7 +25,15 @@ export default function useCurrentWorkspace(opts?: SWRConfiguration) {
         workspaceId: data!.id,
         name: payload.name,
       })
-      if (error) throw error
+      if (error) {
+        toast({
+          title: 'Failed to update workspace name',
+          description: error.message,
+          variant: 'destructive',
+        })
+
+        return
+      }
 
       toast({
         title: 'Name updated to ' + payload.name,

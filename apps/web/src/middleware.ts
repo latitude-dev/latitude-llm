@@ -15,7 +15,7 @@ export async function middleware(request: LatitudeRequest) {
     return apiUnauthorized()
   }
 
-  const result = await unsafelyGetApiKey({ uuid: token })
+  const result = await unsafelyGetApiKey({ token })
   if (result.error) return apiUnauthorized()
 
   request.workspaceId = result.value.workspaceId

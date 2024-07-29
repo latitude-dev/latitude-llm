@@ -21,7 +21,7 @@ export class WorkspacesRepository {
       .as('workspacesScope')
   }
 
-  async getWorkspaceById(workspaceId: number) {
+  async find(workspaceId: number) {
     const result = await this.db
       .select()
       .from(this.scope)

@@ -17,7 +17,7 @@ export const updateWorkspaceAction = authProcedure
     const userId = ctx.session.userId
     const workspacesScope = new WorkspacesRepository(userId)
     const workspace = await workspacesScope
-      .getWorkspaceById(input.workspaceId)
+      .find(input.workspaceId)
       .then((r) => r.unwrap())
 
     const updatedWorkspace = await updateWorkspace({
