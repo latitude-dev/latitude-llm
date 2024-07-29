@@ -2,12 +2,9 @@
 
 import { useEffect } from 'react'
 
-import {
-  AppLayout,
-  ErrorComponent,
-  useSession,
-} from '@latitude-data/web-ui/browser'
+import { ErrorComponent, useSession } from '@latitude-data/web-ui/browser'
 import { NAV_LINKS } from '$/app/(private)/_lib/constants'
+import { AppLayout } from '$/components/layouts'
 
 export default function Error({
   error,

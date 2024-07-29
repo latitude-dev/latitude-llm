@@ -5,6 +5,9 @@ const PROJECTS_PATH = `${ROOT_PATH}projects`
 
 export const ROUTES = {
   root: ROOT_PATH,
+  settings: {
+    root: '/settings',
+  },
   projects: {
     root: PROJECTS_PATH,
     detail: ({ id }: { id: number }) => {

@@ -1,7 +1,5 @@
-'use client'
-
-import ProviderApiKeys from './ProviderApiKeys'
-import WorkspaceName from './WorkspaceName'
+import ProviderApiKeys from './_components/ProviderApiKeys'
+import WorkspaceName from './_components/WorkspaceName'
 
 export default function SettingsPage() {
   return (

@@ -24,6 +24,7 @@ export function BreadcrumpBadge({
       <Tooltip
         side='right'
         align='center'
+        delayDuration={250}
         trigger={
           <div
             onClick={onCopy}

@@ -1,6 +1,6 @@
 import { ReactNode } from 'react'
 
-import { AppLayout } from '@latitude-data/web-ui/browser'
+import { AppLayout } from '$/components/layouts'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
 
 import { NAV_LINKS } from '../_lib/constants'

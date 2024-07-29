@@ -1,5 +1,6 @@
-import { AppLayout, ErrorComponent } from '@latitude-data/web-ui/browser'
+import { ErrorComponent } from '@latitude-data/web-ui/browser'
 import { NAV_LINKS } from '$/app/(private)/_lib/constants'
+import { AppLayout } from '$/components/layouts'
 import { getSafeCurrentUser } from '$/services/auth/getCurrentUser'
 
 export default async function GlobalNoFound() {

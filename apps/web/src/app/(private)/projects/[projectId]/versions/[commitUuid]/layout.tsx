@@ -9,9 +9,10 @@ import {
   ProjectsRepository,
 } from '@latitude-data/core'
 import { CommitProvider, ProjectProvider } from '@latitude-data/web-ui'
-import { AppLayout, BreadcrumpBadge } from '@latitude-data/web-ui/browser'
+import { BreadcrumpBadge } from '@latitude-data/web-ui/browser'
 import { NAV_LINKS } from '$/app/(private)/_lib/constants'
 import { ProjectPageParams } from '$/app/(private)/projects/[projectId]/page'
+import { AppLayout } from '$/components/layouts'
 import { getCurrentUser, SessionData } from '$/services/auth/getCurrentUser'
 import { notFound } from 'next/navigation'
 
