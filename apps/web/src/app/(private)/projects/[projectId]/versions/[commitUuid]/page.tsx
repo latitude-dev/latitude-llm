@@ -21,8 +21,7 @@ export default async function CommitRoot({
     uuid: params.commitUuid,
   })
   return (
-    <DocumentDetailWrapper>
-      <Sidebar commit={commit} />
+    <DocumentDetailWrapper sidebar={<Sidebar commit={commit} />}>
       <div className='p-32'>Main content. Remove Tailwind Styles from here</div>
     </DocumentDetailWrapper>
   )
