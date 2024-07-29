@@ -2,8 +2,7 @@ import { ButtonHTMLAttributes, forwardRef, ReactNode } from 'react'
 import { cva, type VariantProps } from 'class-variance-authority'
 import { Slot, Slottable } from '@radix-ui/react-slot'
 
-import { IconProps, Icons } from '$ui/ds/atoms/Icons'
-import { colors } from '$ui/ds/tokens'
+import { Icon, IconProps } from '$ui/ds/atoms/Icons'
 import { cn } from '$ui/lib/utils'
 
 const buttonVariants = cva(
@@ -43,10 +42,7 @@ const buttonVariants = cva(
 export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> &
   VariantProps<typeof buttonVariants> & {
     children: ReactNode
-    icon?: {
-      name: keyof typeof Icons
-      props?: IconProps
-    }
+    iconProps?: IconProps
     fullWidth?: boolean
     asChild?: boolean
     isLoading?: boolean
@@ -57,7 +53,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
     className,
     variant,
     size,
-    icon,
+    iconProps,
     fullWidth = false,
     asChild = false,
     isLoading,
@@ -67,8 +63,6 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
   ref,
 ) {
   const Comp = asChild ? Slot : 'button'
-  const ButtonIcon = icon ? Icons[icon.name] : null
-  const iconProps = icon?.props ?? {}
   return (
     <Comp
       disabled={isLoading}
@@ -80,15 +74,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
     >
       <Slottable>
         <div className='flex flex-row items-center gap-x-1'>
-          {ButtonIcon ? (
-            <ButtonIcon
-              className={cn({
-                [colors.textColors[iconProps.color!]]: iconProps.color,
-                'w-4': !iconProps.widthClass,
-                'h-4': !iconProps.heightClass,
-              })}
-            />
-          ) : null}
+          {iconProps ? <Icon {...iconProps} /> : null}
           {children}
         </div>
       </Slottable>

@@ -23,7 +23,13 @@ import { ReferencePromptFn } from './compile'
 import { readConfig } from './config'
 import { updateScopeContextForNode } from './logic'
 import { ScopeContext } from './scope'
-import { isContentTag, isMessageTag, isRefTag, isToolCallTag } from './utils'
+import {
+  isChainStepTag,
+  isContentTag,
+  isMessageTag,
+  isRefTag,
+  isToolCallTag,
+} from './utils'
 
 function copyScopeContext(scopeContext: ScopeContext): ScopeContext {
   return {
@@ -223,6 +229,8 @@ export class ReadMetadata {
     }
 
     if (node.type === 'EachBlock') {
+      await this.updateScopeContext({ node: node.expression, scopeContext })
+
       const elseScope = copyScopeContext(scopeContext)
       for await (const childNode of node.else?.children ?? []) {
         await this.readBaseMetadata({
@@ -438,6 +446,25 @@ export class ReadMetadata {
         const posttext = this.resolvedPrompt.slice(end)
         this.resolvedPrompt = pretext + resolvedRefPrompt + posttext
         this.resolvedPromptOffset += resolvedRefPrompt.length - (end - start)
+
+        return
+      }
+
+      if (isChainStepTag(node)) {
+        const attributes = await this.listTagAttributes({
+          tagNode: node,
+          scopeContext,
+          literalAttributes: ['as'],
+        })
+
+        if (attributes.has('as')) {
+          const asAttribute = node.attributes.find((a) => a.name === 'as')!
+          const asValue = (asAttribute.value as TemplateNode[])
+            .map((n) => n.value)
+            .join('')
+
+          scopeContext.definedVariables.add(asValue)
+        }
 
         return
       }

@@ -56,7 +56,7 @@ export class Compile {
 
   private messages: Message[] = []
   private config: Config | undefined
-  private stepResponse: AssistantMessage | undefined
+  private stepResponse: string | undefined
 
   private accumulatedText: string = ''
   private accumulatedContent: MessageContent[] = []
@@ -71,7 +71,7 @@ export class Compile {
     rawText: string
     globalScope: Scope
     ast: Fragment
-    stepResponse?: AssistantMessage
+    stepResponse?: string
   }) {
     this.rawText = rawText
     this.globalScope = globalScope
@@ -186,7 +186,16 @@ export class Compile {
   }
 
   private popStepResponse(): AssistantMessage | undefined {
-    const response = this.stepResponse
+    if (this.stepResponse === undefined) return undefined
+    const response = {
+      role: MessageRole.assistant,
+      content: [
+        {
+          type: ContentType.text,
+          value: this.stepResponse,
+        },
+      ],
+    } as AssistantMessage
     this.stepResponse = undefined
     return response
   }

@@ -1,11 +1,6 @@
 import { CHAIN_STEP_TAG } from '$compiler/constants'
 import CompileError from '$compiler/error/error'
-import {
-  AssistantMessage,
-  ContentType,
-  Conversation,
-  MessageRole,
-} from '$compiler/types'
+import { Conversation, MessageRole } from '$compiler/types'
 import { describe, expect, it, vi } from 'vitest'
 
 import { Chain } from './chain'
@@ -24,19 +19,8 @@ const getExpectedError = async <T>(
   throw new Error('Expected an error to be thrown')
 }
 
-const assistantMessage = (content?: string): AssistantMessage => ({
-  role: MessageRole.assistant,
-  content: [
-    {
-      type: ContentType.text,
-      value: content ?? '',
-    },
-  ],
-  toolCalls: [],
-})
-
-async function defaultCallback(): Promise<AssistantMessage> {
-  return assistantMessage('')
+async function defaultCallback(): Promise<string> {
+  return ''
 }
 
 async function complete({
@@ -45,11 +29,11 @@ async function complete({
   maxSteps = 50,
 }: {
   chain: Chain
-  callback?: (convo: Conversation) => Promise<AssistantMessage | undefined>
+  callback?: (convo: Conversation) => Promise<string>
   maxSteps?: number
 }): Promise<Conversation> {
   let steps = 0
-  let response: AssistantMessage | undefined = undefined
+  let response: string | undefined = undefined
   while (true) {
     const { completed, conversation } = await chain.step(response)
     if (completed) return conversation
@@ -152,7 +136,7 @@ describe('chain', async () => {
     expect(conversation1.messages[0]!.content[0]!.value).toBe('Message 1')
 
     const { completed: completed2, conversation: conversation2 } =
-      await chain.step(assistantMessage('response'))
+      await chain.step('response')
 
     expect(completed2).toBe(true)
     expect(conversation2.messages.length).toBe(3)
@@ -191,7 +175,7 @@ describe('chain', async () => {
       parameters: {},
     })
 
-    const action = () => chain.step(assistantMessage())
+    const action = () => chain.step('')
     const error = await getExpectedError(action, Error)
     expect(error.message).toBe(
       'A response is not allowed before the chain has started',
@@ -213,7 +197,7 @@ describe('chain', async () => {
 
     let { completed: stop } = await chain.step()
     while (!stop) {
-      const { completed } = await chain.step(assistantMessage())
+      const { completed } = await chain.step('')
       stop = completed
     }
 
@@ -432,18 +416,8 @@ describe('chain', async () => {
       parameters: {},
     })
 
-    const response = {
-      role: MessageRole.assistant,
-      content: [
-        {
-          type: ContentType.text,
-          value: 'foo',
-        },
-      ],
-    } as AssistantMessage
-
     await chain.step()
-    const { conversation } = await chain.step(response)
+    const { conversation } = await chain.step('foo')
 
     expect(conversation.messages.length).toBe(2)
     expect(conversation.messages[0]!.content[0]!.value).toBe('foo')
@@ -470,16 +444,15 @@ describe('chain', async () => {
     expect(step1.config.model).toBe('foo-1')
     expect(step1.config.temperature).toBe(0.5)
 
-    const { conversation: step2 } = await chain.step(assistantMessage())
+    const { conversation: step2 } = await chain.step('')
     expect(step2.config.model).toBe('foo-2')
     expect(step2.config.temperature).toBe(0.5)
 
-    const { conversation: step3 } = await chain.step(assistantMessage())
+    const { conversation: step3 } = await chain.step('')
     expect(step3.config.model).toBe('foo-1')
     expect(step3.config.temperature).toBe('1')
 
-    const { conversation: finalConversation } =
-      await chain.step(assistantMessage())
+    const { conversation: finalConversation } = await chain.step('')
     expect(finalConversation.config.model).toBe('foo-1')
     expect(finalConversation.config.temperature).toBe(0.5)
   })

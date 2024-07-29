@@ -19,6 +19,16 @@ export async function render({
   return conversation
 }
 
+export function createChain({
+  prompt,
+  parameters,
+}: {
+  prompt: string
+  parameters: Record<string, unknown>
+}): Chain {
+  return new Chain({ prompt, parameters })
+}
+
 export function readMetadata({
   prompt,
   referenceFn,
@@ -28,3 +38,5 @@ export function readMetadata({
 }): Promise<ConversationMetadata> {
   return new ReadMetadata({ prompt, referenceFn }).run()
 }
+
+export { Chain }
