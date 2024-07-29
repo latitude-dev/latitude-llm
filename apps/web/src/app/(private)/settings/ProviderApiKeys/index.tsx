@@ -1,23 +1,13 @@
-import { ProviderApiKey, User } from '@latitude-data/core'
 import { Providers } from '@latitude-data/core/browser'
+import useProviderApiKeys from '$/stores/providerApiKeys'
+import useUsers from '$/stores/users'
 import { Button, Icons, Text } from '$ui/ds/atoms'
 import { defaultGenerateNodeUuid } from '$ui/sections/Document/Sidebar/Files/useTree'
 
-export default function ProviderApiKeys({
-  apiKeys,
-  users,
-  createApiKey,
-  destroyApiKey,
-}: {
-  apiKeys: ProviderApiKey[]
-  users: User[]
-  createApiKey: (payload: {
-    provider: Providers
-    token: string
-    name: string
-  }) => Promise<ProviderApiKey | undefined>
-  destroyApiKey: (id: number) => Promise<ProviderApiKey | undefined>
-}) {
+export default function ProviderApiKeys() {
+  const { data: users } = useUsers()
+  const { data: providerApiKeys, create, destroy } = useProviderApiKeys()
+
   const findUser = (id: string) => users.find((u) => u.id === id)
   return (
     <div className='flex flex-col gap-4'>
@@ -26,7 +16,7 @@ export default function ProviderApiKeys({
         <Button
           variant='outline'
           onClick={() =>
-            createApiKey({
+            create({
               provider: Providers.OpenAI,
               token: defaultGenerateNodeUuid(),
               name: defaultGenerateNodeUuid(),
@@ -39,7 +29,7 @@ export default function ProviderApiKeys({
       <div className='flex flex-col gap-2'>
         <table>
           <tbody>
-            {apiKeys.map((apiKey) => (
+            {providerApiKeys.map((apiKey) => (
               <tr key={apiKey.id}>
                 <td>
                   <Text.H4>{apiKey.name}</Text.H4>
@@ -65,7 +55,7 @@ export default function ProviderApiKeys({
                   <Button
                     size='small'
                     variant='destructive'
-                    onClick={() => destroyApiKey(apiKey.id)}
+                    onClick={() => destroy(apiKey.id)}
                   >
                     <Icons.trash />
                   </Button>
