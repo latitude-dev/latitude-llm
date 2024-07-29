@@ -1,7 +1,9 @@
 import { faker } from '@faker-js/faker'
-import type { Commit } from '$core/schema'
+import { database } from '$core/client'
+import { documentVersions, type Commit } from '$core/schema'
 import { createNewDocument } from '$core/services/documents/create'
 import { updateDocument } from '$core/services/documents/update'
+import { eq } from 'drizzle-orm'
 
 export type IDocumentVersionData = {
   commit: Commit
@@ -14,6 +16,13 @@ function makeRandomDocumentVersionData() {
     path: faker.commerce.productName().replace(/\s/g, '_').toLowerCase(),
     content: faker.lorem.paragraphs().toLowerCase(),
   }
+}
+
+export async function markAsSoftDelete(documentUuid: string, tx = database) {
+  return tx
+    .update(documentVersions)
+    .set({ deletedAt: new Date() })
+    .where(eq(documentVersions.documentUuid, documentUuid))
 }
 
 export async function createDocumentVersion(

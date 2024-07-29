@@ -4,11 +4,12 @@ import {
   Commit,
   CommitsRepository,
   DocumentVersionsRepository,
-  findWorkspaceFromCommit,
   NotFoundError,
   Project,
   ProjectsRepository,
 } from '@latitude-data/core'
+import { getCurrentUser } from '$/services/auth/getCurrentUser'
+import { notFound } from 'next/navigation'
 
 export const getFirstProject = cache(
   async ({ workspaceId }: { workspaceId: number }) => {
@@ -54,9 +55,17 @@ export const getDocumentByUuid = cache(
     documentUuid: string
     commit: Commit
   }) => {
-    const workspace = await findWorkspaceFromCommit(commit)
-    const scope = new DocumentVersionsRepository(workspace!.id)
+    const { workspace } = await getCurrentUser()
+    const scope = new DocumentVersionsRepository(workspace.id)
     const result = await scope.getDocumentAtCommit({ documentUuid, commit })
+    if (result.error) {
+      const error = result.error
+      if (error instanceof NotFoundError) {
+        return notFound()
+      }
+
+      throw error
+    }
 
     return result.unwrap()
   },
@@ -64,10 +73,10 @@ export const getDocumentByUuid = cache(
 
 export const getDocumentByPath = cache(
   async ({ commit, path }: { commit: Commit; path: string }) => {
-    const workspace = await findWorkspaceFromCommit(commit)
+    const { workspace } = await getCurrentUser()
     const docsScope = new DocumentVersionsRepository(workspace!.id)
     const documents = await docsScope
-      .getDocumentsAtCommit(commit)
+      .getDocumentsAtCommit({ commit })
       .then((r) => r.unwrap())
 
     const document = documents.find((d) => d.path === path)

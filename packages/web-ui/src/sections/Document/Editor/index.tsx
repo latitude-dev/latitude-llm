@@ -81,8 +81,11 @@ export default function DocumentEditor({
           <div className='flex flex-col gap-3'>
             <Text.H6M>Inputs</Text.H6M>
             {inputs.length > 0 ? (
-              inputs.map((param) => (
-                <div className='flex flex-row gap-4 w-full items-center'>
+              inputs.map((param, idx) => (
+                <div
+                  key={idx}
+                  className='flex flex-row gap-4 w-full items-center'
+                >
                   <Badge variant='accent'>
                     &#123;&#123;{param}&#125;&#125;
                   </Badge>

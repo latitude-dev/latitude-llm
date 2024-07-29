@@ -1,32 +1,36 @@
 import { omit } from 'lodash-es'
 
+import { database } from '$core/client'
 import { findWorkspaceFromCommit } from '$core/data-access'
 import { Result, Transaction, TypedResult } from '$core/lib'
 import { BadRequestError, NotFoundError } from '$core/lib/errors'
 import { DocumentVersionsRepository } from '$core/repositories'
 import { Commit, DocumentVersion, documentVersions } from '$core/schema'
+import { assertCommitIsDraft } from '$core/services/documents/utils'
 import { eq } from 'drizzle-orm'
 
 // TODO: refactor, can be simplified
-export async function updateDocument({
-  commit,
-  document,
-  path,
-  content,
-  deletedAt,
-}: {
-  commit: Commit
-  document: DocumentVersion
-  path?: string
-  content?: string | null
-  deletedAt?: Date | null
-}): Promise<TypedResult<DocumentVersion, Error>> {
+export async function updateDocument(
+  {
+    commit,
+    document,
+    path,
+    content,
+  }: {
+    commit: Commit
+    document: DocumentVersion
+    path?: string
+    content?: string | null
+  },
+  trx = database,
+): Promise<TypedResult<DocumentVersion, Error>> {
   return await Transaction.call(async (tx) => {
     const updatedDocData = Object.fromEntries(
-      Object.entries({ path, content, deletedAt }).filter(
-        ([_, v]) => v !== undefined,
-      ),
+      Object.entries({ path, content }).filter(([_, v]) => v !== undefined),
     )
+
+    const asertResult = assertCommitIsDraft(commit)
+    asertResult.unwrap()
 
     if (commit.mergedAt !== null) {
       return Result.error(new BadRequestError('Cannot modify a merged commit'))
@@ -34,18 +38,19 @@ export async function updateDocument({
 
     const workspace = await findWorkspaceFromCommit(commit, tx)
     const docsScope = new DocumentVersionsRepository(workspace!.id, tx)
-    const currentDocs = (await docsScope.getDocumentsAtCommit(commit)).unwrap()
-    const currentDoc = currentDocs.find(
-      (d) => d.documentUuid === document.documentUuid,
-    )
-    if (!currentDoc) {
+    const documents = (
+      await docsScope.getDocumentsAtCommit({ commit })
+    ).unwrap()
+    const doc = documents.find((d) => d.documentUuid === document.documentUuid)
+
+    if (!doc) {
       return Result.error(new NotFoundError('Document does not exist'))
     }
 
     if (path !== undefined) {
       if (
-        currentDocs.find(
-          (d) => d.path === path && d.documentUuid !== document.documentUuid,
+        documents.find(
+          (d) => d.path === path && d.documentUuid !== doc.documentUuid,
         )
       ) {
         return Result.error(
@@ -54,7 +59,8 @@ export async function updateDocument({
       }
     }
 
-    const oldVersion = omit(currentDoc, ['id', 'commitId', 'updatedAt'])
+    const oldVersion = omit(document, ['id', 'commitId', 'updatedAt'])
+
     const newVersion = {
       ...oldVersion,
       ...updatedDocData,
@@ -80,5 +86,5 @@ export async function updateDocument({
       .where(eq(documentVersions.commitId, commit.id))
 
     return Result.ok(updatedDocs[0]!)
-  })
+  }, trx)
 }

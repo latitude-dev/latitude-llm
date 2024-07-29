@@ -8,7 +8,19 @@ import {
 } from '$core/schema'
 import { and, eq, getTableColumns, isNotNull, lte, max } from 'drizzle-orm'
 
-import Repository from './repository'
+import Repository from '../repository'
+
+function mergeDocuments(
+  ...documentsArr: DocumentVersion[][]
+): DocumentVersion[] {
+  return documentsArr.reduce((acc, documents) => {
+    return acc
+      .filter((d) => {
+        return !documents.find((d2) => d2.documentUuid === d.documentUuid)
+      })
+      .concat(documents)
+  }, [])
+}
 
 export type GetDocumentAtCommitProps = {
   commit: Commit
@@ -51,8 +63,8 @@ export class DocumentVersionsRepository extends Repository {
       .from(this.scope)
       .where(
         and(
-          eq(documentVersions.commitId, commit.id),
-          eq(documentVersions.documentUuid, documentUuid),
+          eq(this.scope.commitId, commit.id),
+          eq(this.scope.documentUuid, documentUuid),
         ),
       )
       .limit(1)
@@ -65,7 +77,7 @@ export class DocumentVersionsRepository extends Repository {
 
   async getDocumentByPath({ commit, path }: { commit: Commit; path: string }) {
     try {
-      const result = await this.getDocumentsAtCommit(commit)
+      const result = await this.getDocumentsAtCommit({ commit })
       const documents = result.unwrap()
       const document = documents.find((doc) => doc.path === path)
       if (!document) {
@@ -82,7 +94,57 @@ export class DocumentVersionsRepository extends Repository {
     }
   }
 
-  async getDocumentsAtCommit(commit: Commit) {
+  /**
+   * NOTE: By default we don't include deleted documents
+   */
+  async getDocumentsAtCommit({ commit }: { commit: Commit }) {
+    const result = await this.getAllDocumentsAtCommit({ commit })
+
+    if (result.error) return result
+
+    return Result.ok(result.value.filter((d) => d.deletedAt === null))
+  }
+
+  async getDocumentAtCommit({
+    commit,
+    documentUuid,
+  }: GetDocumentAtCommitProps) {
+    const documentInCommit = await this.db
+      .select()
+      .from(this.scope)
+      .where(
+        and(
+          eq(this.scope.commitId, commit.id),
+          eq(this.scope.documentUuid, documentUuid),
+        ),
+      )
+      .limit(1)
+      .then((docs) => docs[0])
+
+    if (documentInCommit !== undefined) return Result.ok(documentInCommit)
+
+    const documentsAtCommit = await this.getDocumentsAtCommit({ commit })
+    if (documentsAtCommit.error) return Result.error(documentsAtCommit.error)
+
+    const document = documentsAtCommit.value.find(
+      (d) => d.documentUuid === documentUuid,
+    )
+
+    if (!document) return Result.error(new NotFoundError('Document not found'))
+
+    return Result.ok(document)
+  }
+
+  async listCommitChanges(commit: Commit) {
+    const changedDocuments = await this.db
+      .select()
+      .from(this.scope)
+      .where(eq(this.scope.commitId, commit.id))
+
+    return Result.ok(changedDocuments)
+  }
+
+  private async getAllDocumentsAtCommit({ commit }: { commit: Commit }) {
     const documentsFromMergedCommits =
       await this.fetchDocumentsFromMergedCommits({
         projectId: commit.projectId,
@@ -108,43 +170,6 @@ export class DocumentVersionsRepository extends Repository {
     return Result.ok(totalDocuments)
   }
 
-  async getDocumentAtCommit({
-    commit,
-    documentUuid,
-  }: GetDocumentAtCommitProps) {
-    const documentInCommit = await this.db
-      .select()
-      .from(this.scope)
-      .where(
-        and(
-          eq(documentVersions.commitId, commit.id),
-          eq(documentVersions.documentUuid, documentUuid),
-        ),
-      )
-      .limit(1)
-      .then((docs) => docs[0])
-    if (documentInCommit !== undefined) return Result.ok(documentInCommit)
-
-    const documentsAtCommit = await this.getDocumentsAtCommit(commit)
-    if (documentsAtCommit.error) return Result.error(documentsAtCommit.error)
-
-    const document = documentsAtCommit.value.find(
-      (d) => d.documentUuid === documentUuid,
-    )
-    if (!document) return Result.error(new NotFoundError('Document not found'))
-
-    return Result.ok(document)
-  }
-
-  async listCommitChanges(commit: Commit) {
-    const changedDocuments = await this.db
-      .select()
-      .from(this.scope)
-      .where(eq(this.scope.commitId, commit.id))
-
-    return Result.ok(changedDocuments)
-  }
-
   private async fetchDocumentsFromMergedCommits({
     projectId,
     maxMergedAt,
@@ -166,6 +191,7 @@ export class DocumentVersionsRepository extends Repository {
             documentUuid: documentVersions.documentUuid,
             mergedAt: max(commits.mergedAt).as('maxMergedAt'),
           })
+          // FIXME: This is not using the scope
           .from(documentVersions)
           .innerJoin(commits, eq(commits.id, documentVersions.commitId))
           .where(and(filterByMaxMergedAt(), eq(commits.projectId, projectId)))
@@ -175,6 +201,7 @@ export class DocumentVersionsRepository extends Repository {
     const documentsFromMergedCommits = await this.db
       .with(lastVersionOfEachDocument)
       .select(getTableColumns(documentVersions))
+      // FIXME: This is not using the scope
       .from(documentVersions)
       .innerJoin(
         commits,
@@ -196,16 +223,4 @@ export class DocumentVersionsRepository extends Repository {
 
     return documentsFromMergedCommits
   }
-}
-
-function mergeDocuments(
-  ...documentsArr: DocumentVersion[][]
-): DocumentVersion[] {
-  return documentsArr.reduce((acc, documents) => {
-    return acc
-      .filter((d) => {
-        return !documents.find((d2) => d2.documentUuid === d.documentUuid)
-      })
-      .concat(documents)
-  }, [])
 }

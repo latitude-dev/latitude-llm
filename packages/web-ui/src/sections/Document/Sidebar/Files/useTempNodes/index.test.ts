@@ -15,6 +15,7 @@ describe('useTempNodes', () => {
       result.current.addFolder({
         parentPath: 'some-folder',
         parentId: 'fake-id',
+        isFile: false,
       }),
     )
 
@@ -24,6 +25,7 @@ describe('useTempNodes', () => {
           id: expect.any(String),
           path: 'some-folder/ ',
           name: ' ',
+          isFile: false,
           isPersisted: false,
         }),
       ],
@@ -35,6 +37,7 @@ describe('useTempNodes', () => {
     act(() =>
       result.current.addFolder({
         parentPath: 'some-folder',
+        isFile: false,
         parentId: 'fake-id',
       }),
     )
@@ -47,6 +50,7 @@ describe('useTempNodes', () => {
           id: expect.any(String),
           path: 'some-folder/new-name',
           name: 'new-name',
+          isFile: false,
           isPersisted: false,
         }),
       ],
@@ -59,6 +63,7 @@ describe('useTempNodes', () => {
       result.current.addFolder({
         parentPath: 'some-folder',
         parentId: 'fake-id',
+        isFile: false,
       }),
     )
     const id = result?.current?.tmpFolders?.['some-folder']?.[0]?.id
@@ -73,6 +78,7 @@ describe('useTempNodes', () => {
       result.current.addFolder({
         parentPath: 'some-folder',
         parentId: 'fake-id',
+        isFile: false,
       }),
     )
     const id = result?.current?.tmpFolders?.['some-folder']?.[0]?.id
@@ -84,6 +90,7 @@ describe('useTempNodes', () => {
       result.current.addFolder({
         parentPath: 'some-folder/parent-tmp-folder',
         parentId: id!,
+        isFile: false,
       }),
     )
 
@@ -101,6 +108,7 @@ describe('useTempNodes', () => {
           path: 'some-folder/parent-tmp-folder',
           name: 'parent-tmp-folder',
           isPersisted: false,
+          isFile: false,
           children: [],
         }),
       ],
@@ -113,6 +121,7 @@ describe('useTempNodes', () => {
       result.current.addFolder({
         parentPath: 'some-folder',
         parentId: 'fake-id',
+        isFile: false,
       }),
     )
     const id = result?.current?.tmpFolders?.['some-folder']?.[0]?.id
@@ -124,6 +133,7 @@ describe('useTempNodes', () => {
       result.current.addFolder({
         parentPath: 'some-folder/parent-tmp-folder',
         parentId: id!,
+        isFile: false,
       }),
     )
 
@@ -139,6 +149,7 @@ describe('useTempNodes', () => {
       path: 'some-folder/parent-tmp-folder/child-tmp-folder',
       name: 'child-tmp-folder',
       isPersisted: false,
+      isFile: false,
       isRoot: false,
     })
     const rootTmpNode = new Node({
@@ -146,6 +157,7 @@ describe('useTempNodes', () => {
       path: 'some-folder/parent-tmp-folder',
       name: 'parent-tmp-folder',
       isPersisted: false,
+      isFile: false,
       children: [child],
     })
     child.parent = rootTmpNode

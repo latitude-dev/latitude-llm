@@ -249,7 +249,7 @@ describe('updateDocument', () => {
     })
 
     const commitDocs = await docsScope
-      .getDocumentsAtCommit(commit)
+      .getDocumentsAtCommit({ commit })
       .then((r) => r.unwrap())
 
     expect(commitDocs.find((d) => d.path === 'doc1')!.resolvedContent).toBe(
