@@ -23,7 +23,7 @@ export async function createNewDocument({
     const docsScope = new DocumentVersionsRepository(workspace!.id, tx)
 
     const currentDocs = await docsScope
-      .getDocumentsAtCommit({ commit })
+      .getDocumentsAtCommit(commit)
       .then((r) => r.unwrap())
     if (currentDocs.find((d) => d.path === path)) {
       return Result.error(

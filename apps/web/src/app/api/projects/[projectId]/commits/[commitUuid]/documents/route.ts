@@ -23,7 +23,7 @@ export async function GET(
     const commit = await commitsScope
       .getCommitByUuid({ uuid: commitUuid, project })
       .then((r) => r.unwrap())
-    const documents = await scope.getDocumentsAtCommit({ commit })
+    const documents = await scope.getDocumentsAtCommit(commit)
 
     return NextResponse.json(documents.unwrap())
   } catch (err: unknown) {

@@ -16,9 +16,7 @@ export const getDocumentsAtCommitAction = withProject
       .getCommitById(input.commitId)
       .then((r) => r.unwrap())
     const docsScope = new DocumentVersionsRepository(ctx.project.workspaceId)
-    const result = await docsScope.getDocumentsAtCommit({
-      commit,
-    })
+    const result = await docsScope.getDocumentsAtCommit(commit)
 
     return result.unwrap()
   })

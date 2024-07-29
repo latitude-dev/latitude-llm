@@ -38,9 +38,7 @@ export async function updateDocument(
 
     const workspace = await findWorkspaceFromCommit(commit, tx)
     const docsScope = new DocumentVersionsRepository(workspace!.id, tx)
-    const documents = (
-      await docsScope.getDocumentsAtCommit({ commit })
-    ).unwrap()
+    const documents = (await docsScope.getDocumentsAtCommit(commit)).unwrap()
     const doc = documents.find((d) => d.documentUuid === document.documentUuid)
 
     if (!doc) {

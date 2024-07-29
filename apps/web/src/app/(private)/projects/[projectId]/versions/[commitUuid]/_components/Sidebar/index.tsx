@@ -17,7 +17,7 @@ export default async function Sidebar({
 }) {
   const { workspace } = await getCurrentUser()
   const docsScope = new DocumentVersionsRepository(workspace.id)
-  const documents = await docsScope.getDocumentsAtCommit({ commit })
+  const documents = await docsScope.getDocumentsAtCommit(commit)
   return (
     <DocumentSidebar>
       <ClientFilesTree

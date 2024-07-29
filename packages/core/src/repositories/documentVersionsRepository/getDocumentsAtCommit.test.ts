@@ -28,7 +28,7 @@ describe('getDocumentsAtCommit', () => {
     })
 
     const documentsScope = new DocumentVersionsRepository(project.workspaceId)
-    const result = await documentsScope.getDocumentsAtCommit({ commit })
+    const result = await documentsScope.getDocumentsAtCommit(commit)
     const documents = result.unwrap()
 
     expect(documents.length).toBe(1)
@@ -46,7 +46,7 @@ describe('getDocumentsAtCommit', () => {
       commitId: commit.id,
     })
     const filteredDocs = await documentsScope
-      .getDocumentsAtCommit({ commit: draft })
+      .getDocumentsAtCommit(draft)
       .then((r) => r.unwrap())
     const contents = filteredDocs.map((d) => d.content)
     expect(contents).toEqual(['Doc 1'])
@@ -98,7 +98,7 @@ describe('getDocumentsAtCommit', () => {
       const { project, commit } = documentsByContent.VERSION_1!
       const documentsScope = new DocumentVersionsRepository(project.workspaceId)
       const documents = await documentsScope
-        .getDocumentsAtCommit({ commit })
+        .getDocumentsAtCommit(commit)
         .then((r) => r.unwrap())
 
       expect(documents.length).toBe(1)
@@ -109,7 +109,7 @@ describe('getDocumentsAtCommit', () => {
       const { project, commit } = documentsByContent.VERSION_2!
       const documentsScope = new DocumentVersionsRepository(project.workspaceId)
       const documents = await documentsScope
-        .getDocumentsAtCommit({ commit })
+        .getDocumentsAtCommit(commit)
         .then((r) => r.unwrap())
 
       expect(documents.length).toBe(1)
@@ -120,7 +120,7 @@ describe('getDocumentsAtCommit', () => {
       const { project, commit } = documentsByContent.VERSION_3_draft!
       const documentsScope = new DocumentVersionsRepository(project.workspaceId)
       const documents = await documentsScope
-        .getDocumentsAtCommit({ commit })
+        .getDocumentsAtCommit(commit)
         .then((r) => r.unwrap())
 
       expect(documents.length).toBe(1)
@@ -138,7 +138,7 @@ describe('getDocumentsAtCommit', () => {
         })
         .then((r) => r.unwrap())
       const documents = await documentsScope
-        .getDocumentsAtCommit({ commit })
+        .getDocumentsAtCommit(commit)
         .then((r) => r.unwrap())
 
       expect(documents.length).toBe(1)
@@ -195,7 +195,7 @@ describe('getDocumentsAtCommit', () => {
     it('get docs from commit 1', async () => {
       const { commit, documentsScope } = documentsByContent.commit1!
       const documents = await documentsScope
-        .getDocumentsAtCommit({ commit })
+        .getDocumentsAtCommit(commit)
         .then((r) => r.unwrap())
 
       const contents = documents.map((d) => d.content)
@@ -205,7 +205,7 @@ describe('getDocumentsAtCommit', () => {
     it('get docs from commit 2', async () => {
       const { documentsScope, commit } = documentsByContent.commit2!
       const documents = await documentsScope
-        .getDocumentsAtCommit({ commit })
+        .getDocumentsAtCommit(commit)
         .then((r) => r.unwrap())
 
       const contents = documents.map((d) => d.content).sort()
@@ -215,7 +215,7 @@ describe('getDocumentsAtCommit', () => {
     it('get docs from commit 3', async () => {
       const { documentsScope, commit } = documentsByContent.commit3!
       const documents = await documentsScope
-        .getDocumentsAtCommit({ commit })
+        .getDocumentsAtCommit(commit)
         .then((r) => r.unwrap())
 
       const contents = documents.map((d) => d.content).sort()
@@ -232,7 +232,7 @@ describe('getDocumentsAtCommit', () => {
         })
         .then((r) => r.unwrap())
       const documents = await documentsScope
-        .getDocumentsAtCommit({ commit })
+        .getDocumentsAtCommit(commit)
         .then((r) => r.unwrap())
 
       const contents = documents.map((d) => d.content).sort()

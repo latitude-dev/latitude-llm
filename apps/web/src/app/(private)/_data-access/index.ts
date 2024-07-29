@@ -76,7 +76,7 @@ export const getDocumentByPath = cache(
     const { workspace } = await getCurrentUser()
     const docsScope = new DocumentVersionsRepository(workspace!.id)
     const documents = await docsScope
-      .getDocumentsAtCommit({ commit })
+      .getDocumentsAtCommit(commit)
       .then((r) => r.unwrap())
 
     const document = documents.find((d) => d.path === path)
