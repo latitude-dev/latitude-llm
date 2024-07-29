@@ -28,11 +28,7 @@ export async function createUser(
         name,
         encryptedPassword,
       })
-      .returning({
-        id: users.id,
-        email: users.email,
-        name: users.name,
-      })
+      .returning()
 
     const user = inserts[0]!
     return Result.ok(user)

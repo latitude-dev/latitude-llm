@@ -9,7 +9,6 @@ export async function getSession(): Promise<
   // Info: https://github.com/vercel/next.js/issues/49757
   const { cookies } = await import('next/headers')
   const sessionId = cookies().get(lucia.sessionCookieName)?.value ?? null
-
   if (!sessionId) {
     return {
       user: null,

@@ -56,21 +56,25 @@ export async function getCurrentUserFromDB({
   userId,
 }: {
   userId: string | undefined
-}): PromisedResult<SessionData, NotFoundError> {
-  const user = await unsafelyGetUser(userId)
-  if (!user) return notFound()
+}): PromisedResult<SessionData, Error> {
+  try {
+    const user = await unsafelyGetUser(userId)
+    if (!user) return notFound()
 
-  const wpResult = await getWorkspace({ userId: user.id })
+    const wpResult = await getWorkspace({ userId: user.id })
+    if (wpResult.error) return wpResult
 
-  if (wpResult.error) return wpResult
+    const workspace = wpResult.value!
 
-  const workspace = wpResult.value!
-  return Result.ok({
-    user: {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-    },
-    workspace: { id: Number(workspace.id), name: workspace.name },
-  })
+    return Result.ok({
+      user: {
+        id: user.id,
+        name: user.name,
+        email: user.email,
+      },
+      workspace: { id: Number(workspace.id), name: workspace.name },
+    })
+  } catch (err) {
+    return Result.error(err as Error)
+  }
 }

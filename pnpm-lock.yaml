@@ -87,6 +87,9 @@ importers:
       ioredis:
         specifier: ^5.4.1
         version: 5.4.1
+      lodash-es:
+        specifier: ^4.17.21
+        version: 4.17.21
       lucia:
         specifier: ^3.2.0
         version: 3.2.0
@@ -130,6 +133,9 @@ importers:
       '@next/eslint-plugin-next':
         specifier: ^14.2.4
         version: 14.2.4
+      '@types/lodash-es':
+        specifier: ^4.17.12
+        version: 4.17.12
       '@types/node':
         specifier: ^20.14.10
         version: 20.14.10
