@@ -4,6 +4,7 @@ import {
   destroyProviderApiKey,
   ProviderApiKeysRepository,
 } from '@latitude-data/core'
+import providerApiKeyPresenter from '$/presenters/providerApiKeyPresenter'
 import { z } from 'zod'
 
 import { authProcedure } from '../procedures'
@@ -23,5 +24,7 @@ export const destroyProviderApiKeyAction = authProcedure
       .find(input.id)
       .then((r) => r.unwrap())
 
-    return await destroyProviderApiKey(apiKeyProvider).then((r) => r.unwrap())
+    return await destroyProviderApiKey(apiKeyProvider)
+      .then((r) => r.unwrap()!)
+      .then(providerApiKeyPresenter)
   })

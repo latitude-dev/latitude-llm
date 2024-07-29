@@ -1,4 +1,4 @@
-import { ProjectsRepository } from '@latitude-data/core'
+import { ProjectsRepository, UnauthorizedError } from '@latitude-data/core'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
 import { z } from 'zod'
 import { createServerActionProcedure } from 'zsa'
@@ -9,8 +9,17 @@ import { createServerActionProcedure } from 'zsa'
  * Docs: https://zsa.vercel.app/docs/procedures
  */
 export const authProcedure = createServerActionProcedure().handler(async () => {
-  const data = await getCurrentUser()
-  return { session: data.session!, workspace: data.workspace, user: data.user }
+  try {
+    const data = await getCurrentUser()
+
+    return {
+      session: data.session!,
+      workspace: data.workspace,
+      user: data.user,
+    }
+  } catch (err) {
+    throw new UnauthorizedError((err as Error).message)
+  }
 })
 
 export const withProject = createServerActionProcedure(authProcedure)

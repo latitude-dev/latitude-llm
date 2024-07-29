@@ -21,7 +21,11 @@ export default function useUsers(opts?: SWRConfiguration) {
     return data
   }
 
-  const { data = [], ...rest } = useSWR<User[]>('api/users', fetcher, opts)
+  const { data = [], ...rest } = useSWR<Omit<User, 'encryptedPassword'>[]>(
+    'api/users',
+    fetcher,
+    opts,
+  )
 
   return { data, ...rest }
 }

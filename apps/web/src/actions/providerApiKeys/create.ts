@@ -2,6 +2,7 @@
 
 import { createProviderApiKey } from '@latitude-data/core'
 import { Providers } from '@latitude-data/core/browser'
+import providerApiKeyPresenter from '$/presenters/providerApiKeyPresenter'
 import { z } from 'zod'
 
 import { authProcedure } from '../procedures'
@@ -22,5 +23,7 @@ export const createProviderApiKeyAction = authProcedure
       token: input.token,
       name: input.name,
       authorId: ctx.user.id,
-    }).then((r) => r.unwrap())
+    })
+      .then((r) => r.unwrap())
+      .then(providerApiKeyPresenter)
   })
