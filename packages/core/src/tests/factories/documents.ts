@@ -3,7 +3,7 @@ import { database } from '$core/client'
 import { documentVersions, type Commit } from '$core/schema'
 import { createNewDocument } from '$core/services/documents/create'
 import { updateDocument } from '$core/services/documents/update'
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 
 export type IDocumentVersionData = {
   commit: Commit
@@ -18,11 +18,19 @@ function makeRandomDocumentVersionData() {
   }
 }
 
-export async function markAsSoftDelete(documentUuid: string, tx = database) {
+export async function markAsSoftDelete(
+  { commitId, documentUuid }: { commitId: number; documentUuid: string },
+  tx = database,
+) {
   return tx
     .update(documentVersions)
     .set({ deletedAt: new Date() })
-    .where(eq(documentVersions.documentUuid, documentUuid))
+    .where(
+      and(
+        eq(documentVersions.documentUuid, documentUuid),
+        eq(documentVersions.commitId, commitId),
+      ),
+    )
 }
 
 export async function createDocumentVersion(

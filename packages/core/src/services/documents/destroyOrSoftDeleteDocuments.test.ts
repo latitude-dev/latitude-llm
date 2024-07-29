@@ -8,7 +8,7 @@ import { describe, expect, it } from 'vitest'
 import { destroyOrSoftDeleteDocuments } from './destroyOrSoftDeleteDocuments'
 
 describe('destroyOrSoftDeleteDocuments', () => {
-  it('hardDestroyDocuments', async () => {
+  it('remove documents that were not present in merged commits', async () => {
     const { project } = await factories.createProject()
     const { commit: draft } = await factories.createDraft({ project })
     const { documentVersion: draftDocument } =
@@ -29,7 +29,7 @@ describe('destroyOrSoftDeleteDocuments', () => {
     expect(documents.length).toBe(0)
   })
 
-  it('createDocumentsAsSoftDeleted', async () => {
+  it('mark as deleted documents that were present in merged commits and not in the draft commit', async () => {
     const { project, documents: allDocs } = await factories.createProject({
       documents: { doc1: 'Doc 1' },
     })
@@ -50,7 +50,7 @@ describe('destroyOrSoftDeleteDocuments', () => {
     expect(drafDocument!.deletedAt).not.toBe(null)
   })
 
-  it('updateDocumetsAsSoftDeleted', async () => {
+  it('mark as deleted documents present in the draft commit', async () => {
     const { project, documents: allDocs } = await factories.createProject({
       documents: { doc1: 'Doc 1' },
     })
@@ -66,7 +66,7 @@ describe('destroyOrSoftDeleteDocuments', () => {
     await database
       .update(documentVersions)
       .set({
-        resolvedContent: '[CHACHED] Doc 1 (version 1)',
+        resolvedContent: '[CACHED] Doc 1 (version 1)',
       })
       .where(eq(documentVersions.commitId, draft.id))
 

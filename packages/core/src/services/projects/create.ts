@@ -24,8 +24,8 @@ export async function createProject(
     )[0]!
 
     const result = await createCommit({
-      commit: {
-        projectId: project.id,
+      project,
+      data: {
         title: 'Initial version',
         mergedAt: new Date(),
       },

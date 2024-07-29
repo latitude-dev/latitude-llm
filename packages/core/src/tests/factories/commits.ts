@@ -8,11 +8,11 @@ export type ICreateDraft = {
   project?: Project | ICreateProject
 }
 export async function createDraft({ project }: Partial<ICreateDraft> = {}) {
-  let projectId = hasOwnProperty<number, object, string>(project, 'id')
-    ? project.id
-    : (await createProject(project)).project.id
+  let projectModel = hasOwnProperty<number, object, string>(project, 'id')
+    ? (project as unknown as Project)
+    : (await createProject(project)).project
 
-  const result = await createCommitFn({ commit: { projectId: projectId! } })
+  const result = await createCommitFn({ project: projectModel, data: {} })
   const commit = result.unwrap()
 
   return { commit }

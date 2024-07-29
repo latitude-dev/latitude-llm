@@ -61,16 +61,14 @@ async function hardDestroyDocuments({
 }
 
 async function createDocumentsAsSoftDeleted({
-  toBeSoftDeleted,
+  toBeCreated,
   commitId,
   tx,
 }: {
-  toBeSoftDeleted: DocumentVersion[]
+  toBeCreated: DocumentVersion[]
   commitId: number
   tx: typeof database
 }) {
-  const toBeCreated = toBeSoftDeleted.filter((d) => d.commitId !== commitId)
-
   if (!toBeCreated.length) return
 
   return tx.insert(documentVersions).values(
@@ -83,18 +81,15 @@ async function createDocumentsAsSoftDeleted({
 }
 
 async function updateDocumetsAsSoftDeleted({
-  toBeSoftDeleted,
+  toBeUpdated,
   commitId,
   tx,
 }: {
-  toBeSoftDeleted: DocumentVersion[]
+  toBeUpdated: DocumentVersion[]
   commitId: number
   tx: typeof database
 }) {
-  const uuids = toBeSoftDeleted
-    .filter((d) => d.commitId === commitId)
-    .map((d) => d.documentUuid)
-
+  const uuids = toBeUpdated.map((d) => d.documentUuid)
   if (!uuids.length) return
 
   return tx
@@ -123,7 +118,7 @@ async function invalidateDocumentsCacheInCommit(
  * A document can:
  *
  * 1. Not exists in previous commits. In this case, it will be hard deleted
- * 1. Exists in previous commits and in the commit. It will be updated the `deletedAt` field
+ * 2. Exists in previous commits and in the commit. It will be updated the `deletedAt` field
  * 3. Exists in previous commits but not in the commit. It will be created as soft deleted
  */
 export async function destroyOrSoftDeleteDocuments({
@@ -143,11 +138,13 @@ export async function destroyOrSoftDeleteDocuments({
       commitId,
     })
     const toBeSoftDeleted = getToBeSoftDeleted({ documents, existingUuids })
+    const toBeCreated = toBeSoftDeleted.filter((d) => d.commitId !== commitId)
+    const toBeUpdated = toBeSoftDeleted.filter((d) => d.commitId === commitId)
 
     await Promise.all([
       hardDestroyDocuments({ documents, existingUuids, tx }),
-      createDocumentsAsSoftDeleted({ toBeSoftDeleted, commitId, tx }),
-      updateDocumetsAsSoftDeleted({ toBeSoftDeleted, commitId, tx }),
+      createDocumentsAsSoftDeleted({ toBeCreated, commitId, tx }),
+      updateDocumetsAsSoftDeleted({ toBeUpdated, commitId, tx }),
       invalidateDocumentsCacheInCommit(commitId, tx),
     ])
 
