@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
+import { ConfirmModal } from '$ui/ds/atoms'
 import { MenuOption } from '$ui/ds/atoms/DropdownMenu'
 import { Icons } from '$ui/ds/atoms/Icons'
 import { cn } from '$ui/lib/utils'
@@ -72,7 +73,7 @@ function FolderHeader({
         type: 'destructive',
         onClick: () => {
           if (node.isPersisted) {
-            onDeleteFolder(node.path)
+            onDeleteFolder({ node, path: node.path })
           } else {
             deleteTmpFolder({ id: node.id })
           }
@@ -148,7 +149,7 @@ function FileHeader({
         label: 'Delete file',
         type: 'destructive',
         onClick: () => {
-          onDeleteFile(node.doc!.documentUuid)
+          onDeleteFile({ node, documentUuid: node.doc!.documentUuid })
         },
       },
     ],
@@ -276,41 +277,107 @@ function FileNode({
   )
 }
 
+enum DeletableType {
+  File = 'file',
+  Folder = 'folder',
+}
+type DeletableElement<T extends DeletableType> = T extends DeletableType.File
+  ? {
+      type: T
+      documentUuid: string
+      name: string
+    }
+  : {
+      type: T
+      path: string
+      name: string
+    }
+
 export function FilesTree({
   currentPath,
   documents,
   navigateToDocument,
   createFile,
   destroyFile,
+  destroyFolder,
+  isDestroying,
 }: {
   createFile: (args: { path: string }) => Promise<void>
   destroyFile: (documentUuid: string) => Promise<void>
+  destroyFolder: (path: string) => Promise<void>
   documents: SidebarDocument[]
   currentPath: string | undefined
   navigateToDocument: (documentUuid: string) => void
+  isDestroying: boolean
 }) {
   const togglePath = useOpenPaths((state) => state.togglePath)
   const rootNode = useTree({ documents })
+  const [deletableNode, setDeletable] =
+    useState<DeletableElement<DeletableType> | null>(null)
 
   useEffect(() => {
     if (currentPath) {
       togglePath(currentPath)
     }
   }, [currentPath, togglePath])
+  const onConfirmDelete = useCallback(
+    async <T extends DeletableType>(deletable: DeletableElement<T>) => {
+      if (deletable.type === DeletableType.File) {
+        await destroyFile(deletable.documentUuid)
+      } else if (deletable.type === DeletableType.Folder) {
+        await destroyFolder(deletable.path)
+      }
 
+      setDeletable(null)
+    },
+    [destroyFile, destroyFolder, deletableNode, setDeletable],
+  )
+
+  const deletingFolder = deletableNode?.type === 'folder'
   return (
-    <FileTreeProvider
-      currentPath={currentPath}
-      onNavigateToDocument={navigateToDocument}
-      onCreateFile={async (path) => {
-        createFile({ path })
-      }}
-      onDeleteFile={destroyFile}
-      onDeleteFolder={async (path) => {
-        console.log('onDeleteFolder', path)
-      }}
-    >
-      <FileNode node={rootNode} />
-    </FileTreeProvider>
+    <>
+      <FileTreeProvider
+        currentPath={currentPath}
+        onNavigateToDocument={navigateToDocument}
+        onCreateFile={async (path) => {
+          createFile({ path })
+        }}
+        onDeleteFile={({ node, documentUuid }) => {
+          setDeletable({
+            type: DeletableType.File,
+            documentUuid,
+            name: node.name,
+          })
+        }}
+        onDeleteFolder={async ({ node, path }) => {
+          setDeletable({ type: DeletableType.Folder, path, name: node.name })
+        }}
+      >
+        <FileNode node={rootNode} />
+      </FileTreeProvider>
+      {deletableNode ? (
+        <ConfirmModal
+          type='destructive'
+          open
+          onConfirm={() => onConfirmDelete(deletableNode)}
+          onOpenChange={(open) => {
+            if (!open) {
+              setDeletable(null)
+            }
+          }}
+          title='Are you sure?'
+          description={
+            deletingFolder
+              ? `You're deleting ${deletableNode?.name} folder`
+              : `You're deleting ${deletableNode?.name} prompt`
+          }
+          confirm={{
+            isConfirming: isDestroying,
+            label: deletingFolder ? 'Delete folder' : 'Delete prompt',
+            description: `Deleting this ${deletingFolder ? 'folder' : 'prompt'} will also delete all the prompts it contains. This action cannot be undone.`,
+          }}
+        />
+      ) : null}
+    </>
   )
 }

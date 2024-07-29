@@ -11,6 +11,7 @@ import {
 } from '@latitude-data/web-ui'
 import { createDocumentVersionAction } from '$/actions/documents/create'
 import { destroyDocumentAction } from '$/actions/documents/destroyDocumentAction'
+import { destroyFolderAction } from '$/actions/documents/destroyFolderAction'
 import { getDocumentsAtCommitAction } from '$/actions/documents/getDocumentsAtCommitAction'
 import { ROUTES } from '$/services/routes'
 import { useRouter } from 'next/navigation'
@@ -25,7 +26,20 @@ export default function useDocumentVersions(
   const router = useRouter()
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
-  const { mutate, data, ...rest } = useSWR<DocumentVersion[]>(
+  const { execute: executeCreateDocument } = useServerAction(
+    createDocumentVersionAction,
+  )
+  const { execute: executeDestroyDocument, isPending: isDestroyingFile } =
+    useServerAction(destroyDocumentAction)
+  const { execute: executeDestroyFolder, isPending: isDestroyingFolder } =
+    useServerAction(destroyFolderAction)
+  const {
+    mutate,
+    data,
+    isValidating,
+    isLoading,
+    error: swrError,
+  } = useSWR<DocumentVersion[]>(
     ['documentVersions', project.id, commit.id],
     async () => {
       const [fetchedDocuments, errorFetchingDocuments] =
@@ -36,7 +50,7 @@ export default function useDocumentVersions(
 
       if (errorFetchingDocuments) {
         toast({
-          title: 'Creating file failed',
+          title: 'Error fetching sidebar documents',
           description:
             errorFetchingDocuments.formErrors?.[0] ||
             errorFetchingDocuments.message,
@@ -49,12 +63,6 @@ export default function useDocumentVersions(
     },
     opts,
   )
-  const { execute: executeCreateDocument } = useServerAction(
-    createDocumentVersionAction,
-  )
-  const { execute: executeDestroyDocument } = useServerAction(
-    destroyDocumentAction,
-  )
   const createFile = useCallback(
     async ({ path }: { path: string }) => {
       const [document, error] = await executeCreateDocument({
@@ -65,7 +73,7 @@ export default function useDocumentVersions(
 
       if (error) {
         toast({
-          title: 'Creating document failed',
+          title: 'Error creating document',
           description: error.formErrors?.[0] || error.message,
           variant: 'destructive',
         })
@@ -95,7 +103,7 @@ export default function useDocumentVersions(
       })
       if (error) {
         toast({
-          title: 'Deleting document failed',
+          title: 'Error deleting document',
           description: error.formErrors?.[0] || error.message,
           variant: 'destructive',
         })
@@ -111,8 +119,46 @@ export default function useDocumentVersions(
         }
       }
     },
-    [executeDestroyDocument, mutate, data],
+    [executeDestroyDocument, mutate, data, currentDocument?.documentUuid],
   )
 
-  return { ...rest, documents: data ?? [], createFile, destroyFile, mutate }
+  const destroyFolder = useCallback(
+    async (path: string) => {
+      const [_, error] = await executeDestroyFolder({
+        projectId: project.id,
+        commitId: commit.id,
+        path,
+      })
+
+      if (error) {
+        toast({
+          title: 'Error deleting folder',
+          description: error.formErrors?.[0] || error.message,
+          variant: 'destructive',
+        })
+      } else {
+        await mutate()
+
+        if (currentDocument?.path?.startsWith?.(`${path}/`)) {
+          router.push(
+            ROUTES.projects
+              .detail({ id: project.id })
+              .commits.detail({ uuid: commit.uuid }).documents.root,
+          )
+        }
+      }
+    },
+    [executeDestroyDocument, mutate, data, currentDocument?.path],
+  )
+
+  return {
+    isValidating: isValidating,
+    isLoading: isLoading,
+    error: swrError,
+    documents: data ?? [],
+    createFile,
+    destroyFile,
+    destroyFolder,
+    isDestroying: isDestroyingFile || isDestroyingFolder,
+  }
 }

@@ -33,9 +33,10 @@ export const documentVersions = latitudeSchema.table(
       table.documentUuid,
       table.commitId,
     ),
-    uniquePathCommitId: unique('unique_path_commit_id').on(
+    uniquePathCommitId: unique('unique_path_commit_id_deleted_at').on(
       table.path,
       table.commitId,
+      table.deletedAt,
     ),
     documentUuidCommitIdIdx: index('document_uuid_commit_id_idx').on(
       table.documentUuid,
