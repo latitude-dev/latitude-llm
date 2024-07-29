@@ -3,178 +3,15 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { ConfirmModal } from '$ui/ds/atoms'
-import { MenuOption } from '$ui/ds/atoms/DropdownMenu'
-import { Icons } from '$ui/ds/atoms/Icons'
 import { cn } from '$ui/lib/utils'
+import DocumentHeader from '$ui/sections/Document/Sidebar/Files/DocumentHeader'
+import FolderHeader from '$ui/sections/Document/Sidebar/Files/FolderHeader'
 
 import { FileTreeProvider, useFileTreeContext } from './FilesProvider'
-import NodeHeaderWrapper, {
-  ICON_CLASS,
-  type IndentType,
-} from './NodeHeaderWrapper'
+import { type IndentType } from './NodeHeaderWrapper'
 import { useOpenPaths } from './useOpenPaths'
 import { useTempNodes } from './useTempNodes'
 import { Node, SidebarDocument, useTree } from './useTree'
-
-function FolderHeader({
-  node,
-  open,
-  indentation,
-  onToggleOpen,
-}: {
-  node: Node
-  open: boolean
-  indentation: IndentType[]
-  onToggleOpen: () => void
-}) {
-  const { onDeleteFolder } = useFileTreeContext()
-  const { openPaths, togglePath } = useOpenPaths((state) => ({
-    togglePath: state.togglePath,
-    openPaths: state.openPaths,
-  }))
-  const { addFolder, updateFolder, updateFolderAndAddOther, deleteTmpFolder } =
-    useTempNodes((state) => ({
-      addFolder: state.addFolder,
-      updateFolder: state.updateFolder,
-      updateFolderAndAddOther: state.updateFolderAndAddOther,
-      deleteTmpFolder: state.deleteTmpFolder,
-    }))
-  const onUpdateFolderAndAddOther = useCallback(
-    ({ path, id }: { path: string; id: string }) => {
-      updateFolderAndAddOther({
-        id,
-        path,
-        onNodeUpdated: (updatedPath) => {
-          togglePath(updatedPath)
-        },
-      })
-    },
-    [updateFolderAndAddOther, togglePath],
-  )
-
-  const onAddNode = useCallback(
-    ({ isFile }: { isFile: boolean }) =>
-      () => {
-        if (!open) {
-          togglePath(node.path)
-        }
-        addFolder({ parentPath: node.path, parentId: node.id, isFile })
-      },
-    [node.path, togglePath, open],
-  )
-  const FolderIcon = open ? Icons.folderOpen : Icons.folderClose
-  const ChevronIcon = open ? Icons.chevronDown : Icons.chevronRight
-  const actions = useMemo<MenuOption[]>(
-    () => [
-      { label: 'New folder', onClick: onAddNode({ isFile: false }) },
-      { label: 'New Prompt', onClick: onAddNode({ isFile: true }) },
-      {
-        label: 'Delete folder',
-        type: 'destructive',
-        onClick: () => {
-          if (node.isPersisted) {
-            onDeleteFolder({ node, path: node.path })
-          } else {
-            deleteTmpFolder({ id: node.id })
-          }
-        },
-      },
-    ],
-    [
-      addFolder,
-      onDeleteFolder,
-      deleteTmpFolder,
-      node.path,
-      node.isPersisted,
-      openPaths,
-      togglePath,
-    ],
-  )
-  return (
-    <NodeHeaderWrapper
-      onClick={onToggleOpen}
-      onSaveValue={updateFolder}
-      onSaveValueAndTab={onUpdateFolderAndAddOther}
-      onLeaveWithoutSave={deleteTmpFolder}
-      node={node}
-      open={open}
-      actions={actions}
-      indentation={indentation}
-      icons={
-        <>
-          <div className='min-w-6 h-6 flex items-center justify-center'>
-            <ChevronIcon className={cn(ICON_CLASS, 'h-4 w-4')} />
-          </div>
-          <FolderIcon className={ICON_CLASS} />
-        </>
-      }
-    />
-  )
-}
-
-function FileHeader({
-  open,
-  selected,
-  node,
-  indentation,
-}: {
-  open: boolean
-  selected: boolean
-  node: Node
-  indentation: IndentType[]
-}) {
-  const { onNavigateToDocument, onDeleteFile, onCreateFile } =
-    useFileTreeContext()
-  const { deleteTmpFolder, reset } = useTempNodes((state) => ({
-    reset: state.reset,
-    deleteTmpFolder: state.deleteTmpFolder,
-  }))
-  const onSaveValue = useCallback(
-    async ({ path }: { path: string }) => {
-      const parentPath = node.path.split('/').slice(0, -1).join('/')
-      await onCreateFile(`${parentPath}/${path}`)
-      reset()
-    },
-    [reset, onCreateFile, node.path],
-  )
-  const handleClick = useCallback(() => {
-    if (selected) return
-    if (!node.isPersisted) return
-
-    onNavigateToDocument(node.doc!.documentUuid)
-  }, [node.doc!.documentUuid, selected, node.isPersisted])
-  const actions = useMemo<MenuOption[]>(
-    () => [
-      {
-        label: 'Delete file',
-        type: 'destructive',
-        onClick: () => {
-          onDeleteFile({ node, documentUuid: node.doc!.documentUuid })
-        },
-      },
-    ],
-    [node.doc!.documentUuid, onDeleteFile],
-  )
-  return (
-    <NodeHeaderWrapper
-      open={open}
-      node={node}
-      actions={actions}
-      selected={selected}
-      indentation={indentation}
-      onClick={handleClick}
-      onSaveValue={onSaveValue}
-      onLeaveWithoutSave={deleteTmpFolder}
-      icons={
-        <Icons.file
-          className={cn(ICON_CLASS, {
-            'text-accent-foreground': selected,
-          })}
-        />
-      }
-    />
-  )
-}
 
 function NodeHeader({
   selected,
@@ -193,7 +30,7 @@ function NodeHeader({
 
   if (node.isFile) {
     return (
-      <FileHeader
+      <DocumentHeader
         open={open}
         selected={selected}
         node={node}

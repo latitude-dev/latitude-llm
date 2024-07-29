@@ -91,43 +91,47 @@ function buildTree({
   generateNodeId: typeof defaultGenerateNodeUuid
 }) {
   documents.forEach((doc) => {
+    let currentNode = root
+    let cumulativePath = ''
     const segments = doc.path.split('/')
-    let path = ''
 
     segments.forEach((segment, index) => {
       const isFile = index === segments.length - 1
-      path = path ? `${path}/${segment}` : segment
+      cumulativePath = cumulativePath ? `${cumulativePath}/${segment}` : segment
+      const nodeKey = isFile ? `${cumulativePath}_file` : cumulativePath
+      const uuid = isFile ? doc.documentUuid : undefined
+      const file = isFile ? doc : undefined
 
-      if (!nodeMap.has(path)) {
-        const file = isFile ? doc : undefined
-        const uuid = isFile ? doc.documentUuid : undefined
+      if (!nodeMap.has(nodeKey)) {
         const node = new Node({
           id: generateNodeId({ uuid }),
           isPersisted: true,
           isFile,
           name: segment,
-          path,
+          path: cumulativePath,
           doc: file,
         })
-        nodeMap.set(path, node)
 
-        const parentPath = path.split('/').slice(0, -1).join('/')
+        node.depth = currentNode.depth + 1
 
-        // We force TypeScript to check that the parentPath is not empty
-        // We pre-sorted documents by path depth, so we know
-        // that the parent node exists
-        const parent = nodeMap.get(parentPath)!
+        const childrenIndex = findChildrenIndex(node, currentNode.children)
 
-        node.depth = parent.depth + 1
-
-        const index = findChildrenIndex(node, parent.children)
-        if (index === -1) {
-          parent.children.push(node)
+        if (childrenIndex === -1) {
+          currentNode.children.push(node)
         } else {
-          parent.children.splice(index, 0, node)
+          currentNode.children.splice(childrenIndex, 0, node)
         }
 
-        node.parent = parent
+        nodeMap.set(nodeKey, node)
+      } else if (isFile) {
+        const existingNode = nodeMap.get(nodeKey)!
+        existingNode.id = doc.documentUuid
+        existingNode.doc = doc
+        existingNode.isFile = true
+      }
+
+      if (!isFile) {
+        currentNode = nodeMap.get(nodeKey)!
       }
     })
   })

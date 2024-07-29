@@ -47,6 +47,49 @@ describe('useTree', () => {
     expect(root.children).toHaveLength(5)
   })
 
+  it('renders folder with same name as file in the same level', async () => {
+    const { result } = renderHook(() =>
+      useTree({
+        documents: [
+          { path: 'a', documentUuid: '1' },
+          { path: 'a/b', documentUuid: '2' },
+        ],
+        generateNodeId: fakeRandomId,
+      }),
+    )
+
+    expect(nodeToJson(result.current)).toEqual({
+      id: FAKE_RANDOM_ID,
+      name: 'root',
+      path: '',
+      depth: 0,
+      children: [
+        {
+          id: FAKE_RANDOM_ID,
+          name: 'a',
+          path: 'a',
+          depth: 1,
+          children: [
+            {
+              id: '2',
+              name: 'b',
+              path: 'a/b',
+              depth: 2,
+              children: [],
+            },
+          ],
+        },
+        {
+          id: '1',
+          name: 'a',
+          path: 'a',
+          depth: 1,
+          children: [],
+        },
+      ],
+    })
+  })
+
   it('should return a tree with children', async () => {
     const { result } = renderHook(() =>
       useTree({

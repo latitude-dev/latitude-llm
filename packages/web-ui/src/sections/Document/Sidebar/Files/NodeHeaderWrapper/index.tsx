@@ -114,7 +114,7 @@ const NodeHeaderWrapper = forwardRef<HTMLDivElement, Props>(function Foo(
     >
       <div
         onClick={onClick}
-        className='min-w-0 flex-grow flex flex-row items-center justify-between py-0.5'
+        className='min-w-0 flex-grow flex flex-row items-center py-0.5'
       >
         <IndentationBar
           indentation={indentation}
