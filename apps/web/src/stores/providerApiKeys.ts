@@ -23,7 +23,7 @@ export default function useProviderApiKeys(opts?: SWRConfiguration) {
       return []
     }
 
-    return data
+    return data || []
   }
   const {
     data = [],

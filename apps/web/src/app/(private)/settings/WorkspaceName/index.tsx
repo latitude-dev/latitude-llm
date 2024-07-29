@@ -1,17 +1,12 @@
 import React from 'react'
 
-import { Workspace } from '@latitude-data/core'
+import useCurrentWorkspace from '$/stores/currentWorkspace'
 import { Input, Text } from '$ui/ds/atoms'
-import { SessionWorkspace } from '$ui/providers'
 import { useDebouncedCallback } from 'use-debounce'
 
-export default function WorkspaceName({
-  workspace,
-  update,
-}: {
-  workspace: SessionWorkspace
-  update: (payload: { name: string }) => Promise<Workspace | undefined>
-}) {
+export default function WorkspaceName() {
+  const { data: workspace, update } = useCurrentWorkspace()
+
   const onChange = async (ev: React.ChangeEvent<HTMLInputElement>) => {
     const name = ev.target.value
     if (!name) return
