@@ -2,10 +2,13 @@
 
 import { ReactNode } from 'react'
 
-import { cn } from '@latitude-data/web-ui'
-import { Avatar } from '$ui/ds/atoms/Avatar'
-import { Icons } from '$ui/ds/atoms/Icons'
-import Text from '$ui/ds/atoms/Text'
+import {
+  Avatar,
+  Icons,
+  NavTabGroup,
+  NavTabItem,
+  Text,
+} from '@latitude-data/web-ui'
 import getUserInfoFromSession from '$ui/lib/getUserInfo'
 import { SessionUser } from '$ui/providers'
 import Link from 'next/link'
@@ -90,10 +93,11 @@ export type AppHeaderProps = {
 }
 export default function AppHeader({
   breadcrumbs = [],
+  sectionLinks = [],
   navigationLinks,
   currentUser,
-  sectionLinks,
 }: AppHeaderProps) {
+  const pathname = usePathname()
   const info = currentUser ? getUserInfoFromSession(currentUser) : null
   return (
     <header className='sticky top-0 flex flex-col border-b border-b-border'>
@@ -114,31 +118,22 @@ export default function AppHeader({
           ) : null}
         </div>
       </div>
-      {!!sectionLinks?.length && (
-        <div className='flex flex-row px-6 bg-background'>
-          {sectionLinks.map((link, idx) => (
-            <SectionLink key={idx} link={link} />
-          ))}
-        </div>
-      )}
+      {sectionLinks.length > 0 ? (
+        <NavTabGroup>
+          {sectionLinks.map((link, idx) => {
+            const href = link.href
+            const selected = href ? pathname.startsWith(href) : false
+
+            if (!href) return null
+
+            return (
+              <Link href={href} key={idx}>
+                <NavTabItem label={link.label} selected={selected} />
+              </Link>
+            )
+          })}
+        </NavTabGroup>
+      ) : null}
     </header>
-  )
-}
-
-const SectionLink = ({ link }: { link: INavigationLink }) => {
-  const rootPath = usePathname().split('/')[1]
-  const selected = rootPath === link.href!.split('/')[1]
-  const classes = cn('px-4 py-2', {
-    'border-b-2 border-accent-foreground': selected,
-  })
-
-  return (
-    <div className={classes}>
-      <Link href={link.href!}>
-        <Text.H5M color={selected ? 'accentForeground' : 'foreground'}>
-          {link.label}
-        </Text.H5M>
-      </Link>
-    </div>
   )
 }
