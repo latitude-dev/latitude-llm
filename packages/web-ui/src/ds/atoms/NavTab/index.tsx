@@ -3,6 +3,8 @@ import { Slot } from '@radix-ui/react-slot'
 
 import { cn } from '$ui/lib/utils'
 
+import Text from '../Text'
+
 type INavTabItem = {
   label: string
   selected?: boolean
@@ -25,13 +27,17 @@ function NavTabItem({
         'border-b-2 border-accent-foreground': selected,
       })}
     >
-      {label}
+      <Text.H5M color={selected ? 'accentForeground' : 'foregroundMuted'}>
+        {label}
+      </Text.H5M>
     </Comp>
   )
 }
 
 function NavTabGroup({ children }: { children: ReactNode }) {
-  return <nav className='flex flex-row px-6 bg-background'>{children}</nav>
+  return (
+    <nav className='flex flex-row px-6 gap-2 bg-background'>{children}</nav>
+  )
 }
 
 function NavTab({ tabs }: { tabs: INavTabItem[] }) {
