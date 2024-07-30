@@ -1,6 +1,7 @@
 'use client'
 
-import { Providers } from '@latitude-data/core/browser'
+import { useState } from 'react'
+
 import useProviderApiKeys from '$/stores/providerApiKeys'
 import useUsers from '$/stores/users'
 import {
@@ -14,27 +15,22 @@ import {
   TableRow,
   Text,
 } from '$ui/ds/atoms'
-import { defaultGenerateNodeUuid } from '$ui/sections/Document/Sidebar/Files/useTree'
+
+import NewApiKey from './New'
 
 export default function ProviderApiKeys() {
   const { data: users } = useUsers()
-  const { data: providerApiKeys, create, destroy } = useProviderApiKeys()
+  const { data: providerApiKeys, destroy } = useProviderApiKeys()
+  const [open, setOpen] = useState(false)
 
   const findUser = (id: string) => users.find((u) => u.id === id)
+
   return (
     <div className='flex flex-col gap-4'>
+      <NewApiKey open={open} setOpen={setOpen} />
       <div className='flex flex-row items-center justify-between'>
         <Text.H4B>LLM API Keys</Text.H4B>
-        <Button
-          variant='outline'
-          onClick={() =>
-            create({
-              provider: Providers.OpenAI,
-              token: defaultGenerateNodeUuid(),
-              name: defaultGenerateNodeUuid(),
-            })
-          }
-        >
+        <Button variant='outline' onClick={() => setOpen(true)}>
           Add new API Key
         </Button>
       </div>
@@ -82,7 +78,7 @@ export default function ProviderApiKeys() {
                   <Button
                     size='small'
                     variant='linkDestructive'
-                    onClick={() => destroy(apiKey.id)}
+                    onClick={() => destroy({ id: apiKey.id })}
                   >
                     <Icons.trash />
                   </Button>

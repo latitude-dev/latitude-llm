@@ -94,7 +94,7 @@ const DialogTitle = forwardRef<
   DialogTitleProps
 >(({ children, ...props }, ref) => (
   <DialogPrimitive.Title ref={ref} {...props}>
-    <Text.H4>{children}</Text.H4>
+    <Text.H4M>{children}</Text.H4M>
   </DialogPrimitive.Title>
 ))
 DialogTitle.displayName = DialogPrimitive.Title.displayName
@@ -112,7 +112,7 @@ const DialogDescription = forwardRef<
     className='text-sm text-muted-foreground'
     {...props}
   >
-    <Text.H4>{children}</Text.H4>
+    <Text.H5 color='foregroundMuted'>{children}</Text.H5>
   </DialogPrimitive.Description>
 ))
 

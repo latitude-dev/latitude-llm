@@ -41,6 +41,8 @@ type SelectProps = Omit<FormFieldProps, 'children'> & {
   defaultValue?: string
   value?: string
   placeholder?: string
+  disabled?: boolean
+  required?: boolean
 }
 export function Select({
   name,
@@ -52,12 +54,16 @@ export function Select({
   options,
   defaultValue,
   value,
+  disabled = false,
+  required = false,
 }: SelectProps) {
   const [selectedValue, setSelected] = useState(value ?? defaultValue)
   return (
     <FormField label={label} description={description} errors={errors}>
       <div className='w-full'>
         <SelectRoot
+          required={required}
+          disabled={disabled}
           name={name}
           value={value}
           defaultValue={defaultValue}
