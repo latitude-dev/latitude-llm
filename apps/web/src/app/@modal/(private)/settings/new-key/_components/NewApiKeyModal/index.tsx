@@ -1,3 +1,7 @@
+'use client'
+
+import { useCallback } from 'react'
+
 import { Providers } from '@latitude-data/core/browser'
 import {
   Button,
@@ -8,26 +12,27 @@ import {
   Select,
 } from '@latitude-data/web-ui'
 import { useFormAction } from '$/hooks/useFormAction'
+import { ROUTES } from '$/services/routes'
 import useProviderApiKeys from '$/stores/providerApiKeys'
+import { useRouter } from 'next/navigation'
 
-export default function NewApiKey({
-  open,
-  setOpen,
-}: {
-  open: boolean
-  setOpen: (open: boolean) => void
-}) {
+export default function NewApiKeyModal() {
+  const router = useRouter()
+  const goToSettings = useCallback(
+    () => router.push(ROUTES.settings.root),
+    [router],
+  )
   const { create } = useProviderApiKeys()
   const { data, action } = useFormAction(create, {
-    onSuccess: () => setOpen(false),
+    onSuccess: goToSettings,
   })
 
   // TODO: remove the hidden input when the select component has more than one
   // option and is not disabled anymore
   return (
     <Modal
-      open={open}
-      onOpenChange={setOpen}
+      defaultOpen
+      onOpenChange={goToSettings}
       title='Add new API Key'
       description='API keys allow you to work with a specific LLM model in your prompts and evaluations.'
       footer={

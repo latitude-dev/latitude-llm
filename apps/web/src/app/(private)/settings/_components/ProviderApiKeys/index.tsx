@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useCallback } from 'react'
 
 import { ProviderApiKey } from '@latitude-data/core'
+import { ROUTES } from '$/services/routes'
 import useProviderApiKeys from '$/stores/providerApiKeys'
 import useUsers from '$/stores/users'
 import {
@@ -16,19 +17,21 @@ import {
   TableRow,
   Text,
 } from '$ui/ds/atoms'
-
-import NewApiKey from './New'
+import { useRouter } from 'next/navigation'
 
 export default function ProviderApiKeys() {
+  const router = useRouter()
   const { data: providerApiKeys, destroy } = useProviderApiKeys()
-  const [open, setOpen] = useState(false)
+  const openNewApiKeyModal = useCallback(
+    () => router.push(ROUTES.settings.newApiKey),
+    [router],
+  )
 
   return (
     <div className='flex flex-col gap-4'>
-      <NewApiKey open={open} setOpen={setOpen} />
       <div className='flex flex-row items-center justify-between'>
         <Text.H4B>LLM API Keys</Text.H4B>
-        <Button variant='outline' onClick={() => setOpen(true)}>
+        <Button variant='outline' onClick={openNewApiKeyModal}>
           Add new API Key
         </Button>
       </div>
@@ -47,7 +50,7 @@ export default function ProviderApiKeys() {
                 prompts.
               </Text.H5>
             </div>
-            <Button onClick={() => setOpen(true)}>Create one</Button>
+            <Button onClick={openNewApiKeyModal}>Create one</Button>
           </div>
         )}
       </div>

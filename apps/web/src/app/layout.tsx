@@ -146,8 +146,10 @@ export const metadata: Metadata = {
 
 export default function RootLayout({
   children,
+  modal,
 }: Readonly<{
   children: ReactNode
+  modal: ReactNode
 }>) {
   return (
     <html lang='en'>
@@ -157,7 +159,11 @@ export default function RootLayout({
         <link rel='icon' href='/favicon.svg' />
       </head>
       <body className={`${fontSans.variable} ${fontMono.variable} font-sans`}>
-        <TooltipProvider>{children}</TooltipProvider>
+        <NextTopLoader />
+        <TooltipProvider>
+          {children}
+          {modal}
+        </TooltipProvider>
         <ToastProvider duration={2500} />
       </body>
     </html>

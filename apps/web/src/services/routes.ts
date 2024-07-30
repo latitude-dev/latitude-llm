@@ -2,11 +2,13 @@ import { HEAD_COMMIT } from '@latitude-data/core/browser'
 
 const ROOT_PATH = '/'
 const PROJECTS_PATH = `${ROOT_PATH}projects`
+const SETTINGS_PATH = `${ROOT_PATH}settings`
 
 export const ROUTES = {
   root: ROOT_PATH,
   settings: {
-    root: '/settings',
+    root: SETTINGS_PATH,
+    newApiKey: `${SETTINGS_PATH}/new-key`,
   },
   projects: {
     root: PROJECTS_PATH,
