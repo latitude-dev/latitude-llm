@@ -6,6 +6,7 @@ import '@latitude-data/web-ui/styles.css'
 
 import { ToastProvider, TooltipProvider } from '@latitude-data/web-ui'
 import localFont from 'next/font/local'
+import NextTopLoader from 'nextjs-toploader'
 
 const fontSans = localFont({
   src: [
