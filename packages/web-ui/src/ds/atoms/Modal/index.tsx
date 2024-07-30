@@ -18,7 +18,7 @@ import {
 
 export const ModalTrigger = DialogTrigger
 
-type ModalProps = {
+export type ModalProps = {
   title?: string
   defaultOpen?: boolean
   onOpenChange?: (open: boolean) => void
@@ -39,14 +39,14 @@ export function Modal({
   return (
     <Dialog open={open} defaultOpen={defaultOpen} onOpenChange={onOpenChange}>
       <DialogContent className='sm:max-w-modal'>
-        {title || description ? (
+        {(title || description) && (
           <DialogHeader>
-            {title ? <DialogTitle>{title}</DialogTitle> : null}
-            {description ? (
+            {title && <DialogTitle>{title}</DialogTitle>}
+            {description && (
               <DialogDescription>{description}</DialogDescription>
-            ) : null}
+            )}
           </DialogHeader>
-        ) : null}
+        )}
 
         {children}
 
@@ -109,4 +109,10 @@ export function ConfirmModal({
       )}
     </Modal>
   )
+}
+
+export const CloseTrigger = ({
+  children = <Button variant='outline'>Close</Button>,
+}) => {
+  return <DialogClose asChild>{children}</DialogClose>
 }
