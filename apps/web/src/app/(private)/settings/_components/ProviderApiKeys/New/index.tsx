@@ -7,6 +7,7 @@ import {
   Modal,
   Select,
 } from '@latitude-data/web-ui'
+import { useFormAction } from '$/hooks/useFormAction'
 import useProviderApiKeys from '$/stores/providerApiKeys'
 
 export default function NewApiKey({
@@ -16,12 +17,10 @@ export default function NewApiKey({
   open: boolean
   setOpen: (open: boolean) => void
 }) {
-  const { createFormAction } = useProviderApiKeys()
-  const createAction = async (formData: FormData) => {
-    await createFormAction(formData)
-
-    setOpen(false)
-  }
+  const { create } = useProviderApiKeys()
+  const { data, action } = useFormAction(create, {
+    onSuccess: () => setOpen(false),
+  })
 
   // TODO: remove the hidden input when the select component has more than one
   // option and is not disabled anymore
@@ -40,7 +39,7 @@ export default function NewApiKey({
         </>
       }
     >
-      <form id='createApiKeyForm' action={createAction}>
+      <form id='createApiKeyForm' action={action}>
         <FormWrapper>
           <Input type='hidden' name='provider' value={Providers.OpenAI} />
           <Select
@@ -57,6 +56,7 @@ export default function NewApiKey({
             type='text'
             label='Name'
             name='name'
+            defaultValue={data?.name}
             placeholder='My API Key'
           />
           <Input
@@ -64,6 +64,7 @@ export default function NewApiKey({
             label='Token'
             type='text'
             name='token'
+            defaultValue={data?.token}
             placeholder='sk-0dfdsn23bm4m23n4MfB'
           />
         </FormWrapper>

@@ -3,17 +3,10 @@ import { useCallback } from 'react'
 import { useToast } from '@latitude-data/web-ui'
 import {
   inferServerActionError,
+  inferServerActionInput,
   inferServerActionReturnData,
   TAnyZodSafeFunctionHandler,
 } from 'zsa'
-
-function formDataToJson(data: FormData) {
-  const json: { [key: string]: unknown } = {}
-  data.forEach((value, key) => {
-    json[key] = value
-  })
-  return json
-}
 
 export default function useLatitudeAction<
   const TServerAction extends TAnyZodSafeFunctionHandler,
@@ -28,8 +21,6 @@ export default function useLatitudeAction<
   } = {},
 ) {
   const { toast } = useToast()
-
-  // default callbacks
   const successCb = useCallback(onSuccess || (() => {}), [onSuccess])
   const errorCb = useCallback(
     onError ||
@@ -44,19 +35,24 @@ export default function useLatitudeAction<
   )
 
   const execute = useCallback(
-    async (data: { [key: string]: unknown }) => {
-      const [payload, error] = await action(data)
-      if (error) return errorCb(error)
+    async (
+      data: inferServerActionInput<TServerAction>,
+    ): Promise<
+      | [inferServerActionReturnData<TServerAction>, null]
+      | [null, inferServerActionError<TServerAction>]
+    > => {
+      const result = await action(data)
+      const [payload, error] = result
+      if (error) {
+        errorCb(error)
+      } else {
+        successCb(payload)
+      }
 
-      return successCb(payload)
+      return result
     },
     [action, successCb, errorCb],
   )
 
-  const executeFormAction = useCallback(
-    async (data: FormData) => execute(formDataToJson(data)),
-    [action, execute],
-  )
-
-  return { execute, executeFormAction }
+  return { execute }
 }
