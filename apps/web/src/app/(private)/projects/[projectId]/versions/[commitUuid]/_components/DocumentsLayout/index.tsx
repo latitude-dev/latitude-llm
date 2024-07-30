@@ -2,6 +2,10 @@ import { ReactNode } from 'react'
 
 import { DocumentVersion } from '@latitude-data/core'
 import { DocumentDetailWrapper } from '@latitude-data/web-ui'
+import {
+  getResizablePanelGroupData,
+  ResizableGroups,
+} from '$/app/_lib/getResizablePanelGroupData'
 import { findCommit, findProject } from '$/app/(private)/_data-access'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
 
@@ -27,8 +31,12 @@ export default async function DocumentsLayout({
     project,
     uuid: commitUuid,
   })
+  const resizableId = ResizableGroups.DocumentSidebar
+  const layoutData = getResizablePanelGroupData({ group: resizableId })
   return (
     <DocumentDetailWrapper
+      resizableId={resizableId}
+      resizableSizes={layoutData}
       sidebar={<Sidebar commit={commit} currentDocument={document} />}
     >
       {children}
