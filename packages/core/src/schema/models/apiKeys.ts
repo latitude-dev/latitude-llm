@@ -1,4 +1,4 @@
-import { InferSelectModel } from 'drizzle-orm'
+import { InferSelectModel, relations, sql } from 'drizzle-orm'
 import {
   bigint,
   bigserial,
@@ -19,7 +19,7 @@ export const apiKeys = latitudeSchema.table(
     token: uuid('token')
       .notNull()
       .unique()
-      .$defaultFn(() => crypto.randomUUID()),
+      .default(sql`gen_random_uuid()`),
     workspaceId: bigint('workspace_id', { mode: 'number' })
       .notNull()
       .references(() => workspaces.id),
@@ -31,5 +31,12 @@ export const apiKeys = latitudeSchema.table(
     workspaceIdIdx: index('workspace_id_idx').on(table.workspaceId),
   }),
 )
+
+export const apiKeyRelations = relations(apiKeys, ({ one }) => ({
+  workspace: one(workspaces, {
+    fields: [apiKeys.workspaceId],
+    references: [workspaces.id],
+  }),
+}))
 
 export type ApiKey = InferSelectModel<typeof apiKeys>

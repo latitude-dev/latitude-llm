@@ -1,0 +1,29 @@
+{
+  "name": "@latitude-data/gateway",
+  "type": "module",
+  "scripts": {
+    "build": "tsc --build tsconfig.prod.json --verbose",
+    "dev": "tsx watch src",
+    "lint": "eslint src/",
+    "prettier": "prettier --write \"**/*.{ts,tsx,md}\"",
+    "start": "node -r module-alias/register ./dist --env=production",
+    "tc": "tsc --noEmit",
+    "test": "vitest --run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.12.0",
+    "@latitude-data/core": "workspace:^",
+    "@latitude-data/env": "workspace:^",
+    "hono": "^4.5.3"
+  },
+  "devDependencies": {
+    "@latitude-data/eslint-config": "workspace:^",
+    "@latitude-data/typescript-config": "workspace:^",
+    "eslint": "8",
+    "jet-paths": "^1.0.6",
+    "tsx": "^4.16.2",
+    "typescript": "^5.5.4",
+    "vitest": "^2.0.4"
+  }
+}

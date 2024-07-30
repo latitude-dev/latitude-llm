@@ -2,7 +2,6 @@ import { createProviderApiKey } from '@latitude-data/core'
 import { Providers } from '@latitude-data/core/browser'
 import { getSession } from '$/services/auth/getSession'
 import { createWorkspace } from '$core/tests/factories/workspaces'
-import useTestDatabase from '$core/tests/useTestDatabase'
 import { beforeEach, describe, expect, it, Mock, vi } from 'vitest'
 
 import { getProviderApiKeyAction } from './fetch'
@@ -14,8 +13,6 @@ vi.mock('$/services/auth/getSession', () => ({
 let session
 
 describe('getProviderApiKeyAction', async () => {
-  useTestDatabase()
-
   describe('unauthorized', () => {
     beforeEach(() => {
       ;(getSession as Mock).mockReturnValue(null)

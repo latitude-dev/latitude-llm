@@ -88,7 +88,7 @@ export class DocumentVersionsRepository extends Repository {
         )
       }
 
-      return Result.ok(document)
+      return Result.ok(document!)
     } catch (err) {
       return Result.error(err as Error)
     }

@@ -1,14 +1,8 @@
 {
   "extends": "@latitude-data/typescript-config/base.json",
   "compilerOptions": {
-    "plugins": [
-      {
-        "name": "next"
-      }
-    ],
     "moduleResolution": "Bundler",
-    "jsx": "preserve",
-    "typeRoots": ["./node_modules/@types"],
+    "outDir": "./dist",
     "baseUrl": ".",
     "paths": {
       "$/*": ["./src/*"],
@@ -22,15 +16,6 @@
       "acorn": ["node_modules/@latitude-data/typescript-config/types/acorn"]
     }
   },
-  "include": [
-    "./src/**/*.ts",
-    "./src/**/*.tsx",
-    ".next/types/**/*.ts",
-    "../../packages/web-ui/src",
-    "../../packages/core/src",
-    "../../packages/jobs/src",
-    "next-env.d.ts",
-    "next.config.js"
-  ],
+  "include": ["src/**/*.ts", "test/**/*.ts"],
   "exclude": ["node_modules"]
 }

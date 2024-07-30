@@ -8,6 +8,8 @@ import {
 } from '@latitude-data/core'
 import { createProject } from '$core/services/projects'
 
+import { createApiKey } from '../apiKeys/create'
+
 export async function createWorkspace(
   {
     name,
@@ -28,7 +30,9 @@ export async function createWorkspace(
     await tx
       .insert(memberships)
       .values({ workspaceId: newWorkspace.id, userId: creatorId })
+
     await createProject({ workspaceId: newWorkspace.id }, tx)
+    await createApiKey({ workspace: newWorkspace }, tx)
 
     return Result.ok(newWorkspace)
   }, db)
