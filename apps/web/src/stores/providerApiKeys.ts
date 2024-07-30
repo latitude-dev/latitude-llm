@@ -28,34 +28,30 @@ export default function useProviderApiKeys(opts?: SWRConfiguration) {
     mutate,
     ...rest
   } = useSWR<ProviderApiKey[]>(key, fetcher, opts)
-  const { execute: create, executeFormAction: createFormAction } =
-    useLatitudeAction(createProviderApiKeyAction, {
-      onSuccess: async (apikey) => {
-        mutate([...data, apikey])
-        toast({
-          title: 'Success',
-          description: 'API Key ' + apikey.name + ' created',
-        })
-      },
-    })
+  const { execute: create } = useLatitudeAction(createProviderApiKeyAction, {
+    onSuccess: async (apikey) => {
+      mutate([...data, apikey])
+      toast({
+        title: 'Success',
+        description: 'API Key ' + apikey.name + ' created',
+      })
+    },
+  })
 
-  const { execute: destroy, executeFormAction: destroyFormAction } =
-    useLatitudeAction(destroyProviderApiKeyAction, {
-      onSuccess: async (apikey) => {
-        mutate(data.filter((item) => item.id !== apikey.id))
-        toast({
-          title: 'Success',
-          description: 'API Key ' + apikey.name + ' deleted',
-        })
-      },
-    })
+  const { execute: destroy } = useLatitudeAction(destroyProviderApiKeyAction, {
+    onSuccess: async (apikey) => {
+      mutate(data.filter((item) => item.id !== apikey.id))
+      toast({
+        title: 'Success',
+        description: 'API Key ' + apikey.name + ' deleted',
+      })
+    },
+  })
 
   return {
     data,
     create,
-    createFormAction,
     destroy,
-    destroyFormAction,
     mutate,
     ...rest,
   }

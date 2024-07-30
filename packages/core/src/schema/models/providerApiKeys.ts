@@ -7,6 +7,7 @@ import {
   pgEnum,
   text,
   timestamp,
+  unique,
   varchar,
 } from 'drizzle-orm/pg-core'
 
@@ -41,6 +42,10 @@ export const providerApiKeys = latitudeSchema.table(
       table.workspaceId,
     ),
     userIdIdx: index('provider_apikeys_user_id_idx').on(table.authorId),
+    uniqueTokenByProvider: unique('provider_apikeys_token_provider_unique').on(
+      table.token,
+      table.provider,
+    ),
   }),
 )
 
