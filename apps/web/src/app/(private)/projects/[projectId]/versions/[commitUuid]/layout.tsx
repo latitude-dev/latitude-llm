@@ -14,6 +14,7 @@ import { NAV_LINKS } from '$/app/(private)/_lib/constants'
 import { ProjectPageParams } from '$/app/(private)/projects/[projectId]/page'
 import { AppLayout } from '$/components/layouts'
 import { getCurrentUser, SessionData } from '$/services/auth/getCurrentUser'
+import { ROUTES } from '$/services/routes'
 import { notFound } from 'next/navigation'
 
 export type CommitPageParams = {
@@ -45,6 +46,12 @@ export default async function CommitLayout({
     throw error
   }
 
+  const url = ROUTES.projects.detail({ id: project.id }).commits.latest
+  const sectionLinks = [
+    { label: 'Projects', href: url },
+    { label: 'Settings', href: ROUTES.settings.root },
+  ]
+
   return (
     <ProjectProvider project={project}>
       <CommitProvider commit={commit} isHead={isHead}>
@@ -64,6 +71,7 @@ export default async function CommitLayout({
               ),
             },
           ]}
+          sectionLinks={sectionLinks}
         >
           {children}
         </AppLayout>

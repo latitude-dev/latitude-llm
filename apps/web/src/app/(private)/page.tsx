@@ -1,5 +1,5 @@
-import { HEAD_COMMIT, NotFoundError, Project } from '@latitude-data/core'
-import { findCommit, getFirstProject } from '$/app/(private)/_data-access'
+import { NotFoundError, Project } from '@latitude-data/core'
+import { getFirstProject } from '$/app/(private)/_data-access'
 import { getCurrentUser, SessionData } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
 import { notFound, redirect } from 'next/navigation'
@@ -17,13 +17,9 @@ export default async function AppRoot() {
     session = await getCurrentUser()
     project = await getFirstProject({ workspaceId: session.workspace.id })
 
-    await findCommit({ uuid: HEAD_COMMIT, project })
-
     url = PROJECT_ROUTE({ id: project.id }).commits.latest
   } catch (error) {
-    if (error instanceof NotFoundError) {
-      return notFound()
-    }
+    if (error instanceof NotFoundError) return notFound()
 
     throw error
   }

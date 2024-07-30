@@ -1,6 +1,5 @@
 import { ReactNode } from 'react'
 
-import { ROUTES } from '$/services/routes'
 import { SessionUser } from '$ui/providers'
 
 import AppHeader, { AppHeaderProps } from './Header'
@@ -15,10 +14,7 @@ export default function AppLayout({
   currentUser,
   breadcrumbs,
   navigationLinks,
-  sectionLinks = [
-    { label: 'Projects', href: ROUTES.projects.root },
-    { label: 'Settings', href: ROUTES.settings.root },
-  ],
+  sectionLinks,
 }: AppLayoutProps) {
   return (
     <div className='flex flex-col h-screen'>
