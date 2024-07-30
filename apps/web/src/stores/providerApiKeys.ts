@@ -37,13 +37,6 @@ export default function useProviderApiKeys(opts?: SWRConfiguration) {
           description: 'API Key ' + apikey.name + ' created',
         })
       },
-      onError: (error) => {
-        toast({
-          title: 'Error',
-          description: error.message,
-          variant: 'destructive',
-        })
-      },
     })
 
   const { execute: destroy, executeFormAction: destroyFormAction } =
@@ -53,13 +46,6 @@ export default function useProviderApiKeys(opts?: SWRConfiguration) {
         toast({
           title: 'Success',
           description: 'API Key ' + apikey.name + ' deleted',
-        })
-      },
-      onError: (error) => {
-        toast({
-          title: 'Error',
-          description: error.message,
-          variant: 'destructive',
         })
       },
     })

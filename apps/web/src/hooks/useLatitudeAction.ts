@@ -1,5 +1,6 @@
 import { useCallback } from 'react'
 
+import { useToast } from '@latitude-data/web-ui'
 import {
   inferServerActionError,
   inferServerActionReturnData,
@@ -22,32 +23,39 @@ export default function useLatitudeAction<
     onSuccess,
     onError,
   }: {
-    onSuccess: (payload: inferServerActionReturnData<TServerAction>) => void
-    onError: (error: inferServerActionError<TServerAction>) => void
-  } = { onSuccess: () => {}, onError: () => {} },
+    onSuccess?: (payload: inferServerActionReturnData<TServerAction>) => void
+    onError?: (error: inferServerActionError<TServerAction>) => void
+  } = {},
 ) {
+  const { toast } = useToast()
+
+  // default callbacks
+  const successCb = useCallback(onSuccess || (() => {}), [onSuccess])
+  const errorCb = useCallback(
+    onError ||
+      ((error: Error) => {
+        toast({
+          title: 'Error',
+          description: error.message,
+          variant: 'destructive',
+        })
+      }),
+    [onError],
+  )
+
   const execute = useCallback(
     async (data: { [key: string]: unknown }) => {
       const [payload, error] = await action(data)
+      if (error) return errorCb(error)
 
-      if (error) {
-        return onError(error)
-      }
-      return onSuccess(payload)
+      return successCb(payload)
     },
-    [action, onSuccess, onError],
+    [action, successCb, errorCb],
   )
 
   const executeFormAction = useCallback(
-    async (data: FormData) => {
-      const [payload, error] = await action(formDataToJson(data))
-
-      if (error) {
-        return onError(error)
-      }
-      return onSuccess(payload)
-    },
-    [action, onSuccess, onError],
+    async (data: FormData) => execute(formDataToJson(data)),
+    [action, execute],
   )
 
   return { execute, executeFormAction }
