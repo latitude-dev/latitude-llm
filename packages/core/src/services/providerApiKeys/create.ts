@@ -1,7 +1,7 @@
-import { Providers } from '$core/browser'
+import { Providers, Workspace } from '$core/browser'
 import { database } from '$core/client'
 import { Result, Transaction } from '$core/lib'
-import { providerApiKeys, Workspace } from '$core/schema'
+import { providerApiKeys } from '$core/schema'
 
 export function createProviderApiKey(
   {

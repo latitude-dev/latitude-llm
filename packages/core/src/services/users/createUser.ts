@@ -2,10 +2,10 @@ import {
   database,
   hashPassword,
   Result,
-  SafeUser,
   Transaction,
   users,
 } from '@latitude-data/core'
+import { SafeUser } from '$core/browser'
 
 export async function createUser(
   {

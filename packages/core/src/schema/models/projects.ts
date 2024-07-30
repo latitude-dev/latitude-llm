@@ -1,4 +1,4 @@
-import { InferSelectModel, relations } from 'drizzle-orm'
+import { relations } from 'drizzle-orm'
 import { bigint, bigserial, index, varchar } from 'drizzle-orm/pg-core'
 
 import { latitudeSchema, workspaces } from '..'
@@ -25,5 +25,3 @@ export const projectRelations = relations(projects, ({ one }) => ({
     references: [workspaces.id],
   }),
 }))
-
-export type Project = InferSelectModel<typeof projects>

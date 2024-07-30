@@ -1,6 +1,7 @@
+import type { Workspace } from '$core/browser'
 import { database } from '$core/client'
 import { Result, Transaction } from '$core/lib'
-import { apiKeys, Workspace } from '$core/schema'
+import { apiKeys } from '$core/schema'
 
 export function createApiKey(
   { workspace }: { workspace: Workspace },

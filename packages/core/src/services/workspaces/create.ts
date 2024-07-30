@@ -4,8 +4,8 @@ import {
   Result,
   Transaction,
   workspaces,
-  type Workspace,
 } from '@latitude-data/core'
+import { SafeUser, Workspace } from '$core/browser'
 import { createProject } from '$core/services/projects'
 
 import { createApiKey } from '../apiKeys/create'
@@ -13,27 +13,26 @@ import { createApiKey } from '../apiKeys/create'
 export async function createWorkspace(
   {
     name,
-    creatorId,
+    user,
   }: {
     name: string
-    creatorId: string
+    user: SafeUser
   },
   db = database,
 ) {
   return Transaction.call<Workspace>(async (tx) => {
     const insertedWorkspaces = await tx
       .insert(workspaces)
-      .values({ name, creatorId })
+      .values({ name, creatorId: user.id })
       .returning()
 
-    const newWorkspace = insertedWorkspaces[0]!
+    const workspace = insertedWorkspaces[0]!
     await tx
       .insert(memberships)
-      .values({ workspaceId: newWorkspace.id, userId: creatorId })
+      .values({ workspaceId: workspace.id, userId: user.id })
+    await createProject({ workspace, user }, tx)
+    await createApiKey({ workspace }, tx)
 
-    await createProject({ workspaceId: newWorkspace.id }, tx)
-    await createApiKey({ workspace: newWorkspace }, tx)
-
-    return Result.ok(newWorkspace)
+    return Result.ok(workspace)
   }, db)
 }

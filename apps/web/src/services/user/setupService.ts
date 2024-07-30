@@ -23,10 +23,11 @@ export default function setupService({
 
     if (userResult.error) return userResult
 
+    const user = userResult.value
     const result = await createWorkspace(
       {
         name: companyName,
-        creatorId: userResult.value.id,
+        user,
       },
       tx,
     )
@@ -36,7 +37,7 @@ export default function setupService({
     const workspace = result.value
 
     return Result.ok({
-      user: userResult.value,
+      user,
       workspace: { id: Number(workspace.id), name: workspace.name },
     })
   })

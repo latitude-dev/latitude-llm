@@ -1,6 +1,6 @@
 import { ReactNode } from 'react'
 
-import { DocumentVersion } from '@latitude-data/core'
+import type { DocumentVersion } from '@latitude-data/core/browser'
 import { DocumentDetailWrapper } from '@latitude-data/web-ui'
 import {
   getResizablePanelGroupData,
@@ -37,7 +37,9 @@ export default async function DocumentsLayout({
     <DocumentDetailWrapper
       resizableId={resizableId}
       resizableSizes={layoutData}
-      sidebar={<Sidebar commit={commit} currentDocument={document} />}
+      sidebar={
+        <Sidebar project={project} commit={commit} currentDocument={document} />
+      }
     >
       {children}
     </DocumentDetailWrapper>

@@ -1,8 +1,8 @@
 import {
   unsafelyFindWorkspace,
   unsafelyGetApiKeyByToken,
-  Workspace,
 } from '@latitude-data/core'
+import type { Workspace } from '@latitude-data/core/browser'
 import { Context } from 'hono'
 import { bearerAuth } from 'hono/bearer-auth'
 

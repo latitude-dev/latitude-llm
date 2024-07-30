@@ -1,4 +1,4 @@
-import { InferSelectModel, relations, sql } from 'drizzle-orm'
+import { relations, sql } from 'drizzle-orm'
 import {
   bigint,
   bigserial,
@@ -9,7 +9,7 @@ import {
   varchar,
 } from 'drizzle-orm/pg-core'
 
-import { latitudeSchema, projects } from '..'
+import { latitudeSchema, projects, users } from '..'
 import { timestamps } from '../schemaHelpers'
 
 export const commits = latitudeSchema.table(
@@ -25,6 +25,9 @@ export const commits = latitudeSchema.table(
     projectId: bigint('project_id', { mode: 'number' })
       .notNull()
       .references(() => projects.id, { onDelete: 'cascade' }),
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'set null' }),
     mergedAt: timestamp('merged_at'),
     ...timestamps(),
   },
@@ -41,6 +44,8 @@ export const commitRelations = relations(commits, ({ one }) => ({
     fields: [commits.projectId],
     references: [projects.id],
   }),
+  user: one(users, {
+    fields: [commits.userId],
+    references: [users.id],
+  }),
 }))
-
-export type Commit = InferSelectModel<typeof commits>

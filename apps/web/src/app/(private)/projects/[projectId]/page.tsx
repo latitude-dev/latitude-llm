@@ -1,4 +1,5 @@
-import { HEAD_COMMIT, NotFoundError, Project } from '@latitude-data/core'
+import { HEAD_COMMIT, NotFoundError } from '@latitude-data/core'
+import type { Project } from '@latitude-data/core/browser'
 import { findCommit, findProject } from '$/app/(private)/_data-access'
 import { getCurrentUser, SessionData } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'

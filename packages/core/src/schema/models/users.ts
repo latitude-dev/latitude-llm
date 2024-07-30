@@ -1,4 +1,4 @@
-import { InferSelectModel, relations } from 'drizzle-orm'
+import { relations } from 'drizzle-orm'
 import { text } from 'drizzle-orm/pg-core'
 
 import { latitudeSchema, memberships, sessions } from '../index'
@@ -14,11 +14,7 @@ export const users = latitudeSchema.table('users', {
   ...timestamps(),
 })
 
-export type User = InferSelectModel<typeof users>
-
 export const userRelations = relations(users, ({ many }) => ({
   sessions: many(sessions),
   memberships: many(memberships),
 }))
-
-export type SafeUser = Pick<User, 'id' | 'name' | 'email'>

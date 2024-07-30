@@ -1,11 +1,12 @@
 import { omit } from 'lodash-es'
 
+import { Commit, DocumentVersion } from '$core/browser'
 import { database } from '$core/client'
 import { findWorkspaceFromCommit } from '$core/data-access'
 import { Result, Transaction, TypedResult } from '$core/lib'
 import { BadRequestError, NotFoundError } from '$core/lib/errors'
 import { DocumentVersionsRepository } from '$core/repositories'
-import { Commit, DocumentVersion, documentVersions } from '$core/schema'
+import { documentVersions } from '$core/schema'
 import { assertCommitIsDraft } from '$core/services/documents/utils'
 import { eq } from 'drizzle-orm'
 

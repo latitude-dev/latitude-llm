@@ -1,8 +1,8 @@
 import type { CompileError } from '@latitude-data/compiler'
+import { Commit, DocumentVersion } from '$core/browser'
 import { database } from '$core/client'
 import { Result, TypedResult } from '$core/lib'
 import { BadRequestError } from '$core/lib/errors'
-import { Commit, DocumentVersion } from '$core/schema'
 
 import {
   getMergedAndDraftDocuments,

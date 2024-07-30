@@ -1,7 +1,7 @@
 import { faker } from '@faker-js/faker'
+import type { DocumentVersion, SafeUser, Workspace } from '$core/browser'
 import { unsafelyGetUser } from '$core/data-access'
 import { CommitsRepository } from '$core/repositories'
-import { DocumentVersion, Workspace, type SafeUser } from '$core/schema'
 import { createNewDocument, mergeCommit, updateDocument } from '$core/services'
 import { createProject as createProjectFn } from '$core/services/projects'
 
@@ -59,7 +59,8 @@ export async function createProject(projectData: Partial<ICreateProject> = {}) {
 
   const result = await createProjectFn({
     name: name ?? randomName,
-    workspaceId: workspace.id,
+    workspace,
+    user,
   })
   const project = result.unwrap()
   const commitsScope = new CommitsRepository(workspace.id)
@@ -71,7 +72,7 @@ export async function createProject(projectData: Partial<ICreateProject> = {}) {
     const documentsToCreate = await flattenDocumentStructure({
       documents: projectData.documents,
     })
-    const { commit: draft } = await createDraft({ project })
+    const { commit: draft } = await createDraft({ project, user })
     for await (const { path, content } of documentsToCreate) {
       const newDoc = await createNewDocument({ commit: draft, path }).then(
         (r) => r.unwrap(),

@@ -26,7 +26,7 @@ const SelectGroup = SelectPrimitive.Group
 
 const SelectValuePrimitive = SelectPrimitive.Value
 
-function ValueWithIcon({
+function SelectValueWithIcon({
   icon,
   children,
 }: {
@@ -75,7 +75,9 @@ const SelectValue = ({
 
   if (!option) return <SelectValuePrimitive placeholder={placeholder} />
 
-  return <ValueWithIcon icon={option.icon}>{option.label}</ValueWithIcon>
+  return (
+    <SelectValueWithIcon icon={option.icon}>{option.label}</SelectValueWithIcon>
+  )
 }
 
 type TriggerProps = ComponentPropsWithoutRef<typeof SelectPrimitive.Trigger> & {
@@ -206,9 +208,9 @@ const SelectItem = forwardRef<
       </SelectPrimitive.ItemIndicator>
     </span>
 
-    <ValueWithIcon icon={icon}>
+    <SelectValueWithIcon icon={icon}>
       <SelectPrimitive.ItemText>{children}</SelectPrimitive.ItemText>
-    </ValueWithIcon>
+    </SelectValueWithIcon>
   </SelectPrimitive.Item>
 ))
 SelectItem.displayName = SelectPrimitive.Item.displayName
@@ -226,6 +228,7 @@ const SelectSeparator = forwardRef<
 SelectSeparator.displayName = SelectPrimitive.Separator.displayName
 
 export {
+  SelectValueWithIcon,
   SelectRoot,
   SelectGroup,
   SelectValue,

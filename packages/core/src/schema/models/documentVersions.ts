@@ -1,4 +1,4 @@
-import { InferSelectModel, relations } from 'drizzle-orm'
+import { relations } from 'drizzle-orm'
 import {
   bigint,
   bigserial,
@@ -54,5 +54,3 @@ export const documentVersionRelations = relations(
     }),
   }),
 )
-
-export type DocumentVersion = InferSelectModel<typeof documentVersions>

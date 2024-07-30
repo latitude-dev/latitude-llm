@@ -1,34 +1,34 @@
-import {
-  database,
-  projects,
-  Result,
-  Transaction,
-  type Project,
-} from '@latitude-data/core'
+import { database, projects, Result, Transaction } from '@latitude-data/core'
+import { Project, SafeUser, Workspace } from '$core/browser'
 import { createCommit } from '$core/services/commits/create'
 
-// TODO: pass a workspace instead of workspaceId
 export async function createProject(
   {
-    workspaceId,
+    workspace,
+    user,
     name = 'First Project',
   }: {
-    workspaceId: number
     name?: string
+    workspace: Workspace
+    user: SafeUser
   },
   db = database,
 ) {
   return Transaction.call<Project>(async (tx) => {
     const project = (
-      await tx.insert(projects).values({ workspaceId, name }).returning()
+      await tx
+        .insert(projects)
+        .values({ workspaceId: workspace.id, name })
+        .returning()
     )[0]!
 
     const result = await createCommit({
-      project,
       data: {
         title: 'Initial version',
         mergedAt: new Date(),
       },
+      project,
+      user,
       db: tx,
     })
     if (result.error) return result

@@ -1,7 +1,7 @@
+import type { Commit } from '$core/browser'
 import { database, Database } from '$core/client'
 import { NotFoundError, Result, Transaction } from '$core/lib'
 import { DocumentVersionsRepository } from '$core/repositories'
-import { Commit } from '$core/schema'
 import { destroyOrSoftDeleteDocuments } from '$core/services/documents/destroyOrSoftDeleteDocuments'
 import { assertCommitIsDraft } from '$core/services/documents/utils'
 

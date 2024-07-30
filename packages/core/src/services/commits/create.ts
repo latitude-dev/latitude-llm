@@ -1,21 +1,23 @@
 import {
-  Commit,
   commits,
   Database,
   database,
-  Project,
   Result,
   Transaction,
 } from '@latitude-data/core'
+import { Commit, Project, SafeUser } from '$core/browser'
 
 export async function createCommit({
   project,
-  data: { title, mergedAt },
+  user,
+  data: { title, description, mergedAt },
   db = database,
 }: {
   project: Project
+  user: SafeUser
   data: {
     title?: string
+    description?: string
     mergedAt?: Date
   }
   db?: Database
@@ -25,7 +27,9 @@ export async function createCommit({
       .insert(commits)
       .values({
         projectId: project.id,
+        userId: user.id,
         title,
+        description,
         mergedAt,
       })
       .returning()

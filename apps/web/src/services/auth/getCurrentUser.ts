@@ -1,6 +1,6 @@
 import { cache } from 'react'
 
-import { SafeUser } from '@latitude-data/core'
+import type { SafeUser } from '@latitude-data/core/browser'
 import { getCurrentUserFromDB } from '$/data-access'
 import { Session } from 'lucia'
 
