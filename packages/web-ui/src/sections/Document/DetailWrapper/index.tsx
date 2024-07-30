@@ -1,12 +1,13 @@
 'use client'
 
-import { ReactNode, useCallback, useLayoutEffect, useState } from 'react'
+import { ReactNode, useLayoutEffect, useState } from 'react'
 
 import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
 } from '$ui/ds/atoms'
+import { useDebouncedCallback } from 'use-debounce'
 
 export function buildResizableCookie({
   key,
@@ -70,17 +71,22 @@ export default function DocumentDetailWrapper({
       observer.disconnect()
     }
   }, [])
-  const onLayout = useCallback((newSizes: number[]) => {
-    document.cookie = buildResizableCookie({
-      key: resizableId,
-      sizes: newSizes,
-    })
-  }, [])
+  const debouncedLayoutUpdate = useDebouncedCallback(
+    (newSizes: number[]) => {
+      document.cookie = buildResizableCookie({
+        key: resizableId,
+        sizes: newSizes.map((value) => Math.round(value)),
+      })
+    },
+    250,
+    { trailing: true },
+  )
+
   return (
     <ResizablePanelGroup
       id={resizableId}
       direction='horizontal'
-      onLayout={onLayout}
+      onLayout={debouncedLayoutUpdate}
     >
       <ResizablePanel
         className='w-72'
