@@ -23,7 +23,7 @@ export default function ProviderApiKeys() {
   const findUser = (id: string) => users.find((u) => u.id === id)
   return (
     <div className='flex flex-col gap-4'>
-      <div className='flex flex-row justify-between'>
+      <div className='flex flex-row items-center justify-between'>
         <Text.H4B>LLM API Keys</Text.H4B>
         <Button
           variant='outline'
