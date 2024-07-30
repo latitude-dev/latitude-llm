@@ -1,6 +1,8 @@
 import { ReactNode, useCallback, useState } from 'react'
+import { Check } from 'lucide-react'
 
 import { Button, type ButtonProps } from '$ui/ds/atoms/Button'
+import { Icon, type IconProps } from '$ui/ds/atoms/Icons'
 import Text from '$ui/ds/atoms/Text'
 
 import {
@@ -20,20 +22,21 @@ export type TriggerButtonProps = Omit<ButtonProps, 'children'> & {
 }
 export const TriggerButton = ({
   label,
-  variant = 'ghost',
-  icon = { name: 'ellipsisVertical', props: { color: 'foregroundMuted' } },
+  variant = 'outline',
+  iconProps = { name: 'ellipsis', color: 'foregroundMuted' },
+  className = 'w-8 px-1',
   ...buttonProps
 }: TriggerButtonProps) => {
   return (
     <DropdownMenuTrigger asChild className='flex focus:outline-none'>
       <Button
         asChild
-        size='small'
+        className={className}
         variant={variant}
-        icon={icon}
+        iconProps={iconProps}
         {...buttonProps}
       >
-        <div>{label ? label : null}</div>
+        {label && <div>{label}</div>}
       </Button>
     </DropdownMenuTrigger>
   )
@@ -43,29 +46,42 @@ export type MenuOption = {
   label: string
   onClick: () => void
   type?: 'normal' | 'destructive'
-  icon?: ReactNode
+  iconProps?: IconProps
   disabled?: boolean
   shortcut?: string
+  checked?: boolean | undefined
 }
 function DropdownItem({
-  icon,
+  iconProps,
   onClick,
   type = 'normal',
   label,
   shortcut,
   disabled,
+  checked,
 }: MenuOption) {
   const onSelect = useCallback(() => {
     if (disabled) return
     onClick()
   }, [disabled, onClick])
   return (
-    <DropdownMenuItem onSelect={onSelect} disabled={disabled}>
-      {icon}
-      <Text.H5M color={type === 'destructive' ? 'destructive' : 'foreground'}>
-        {label}
-      </Text.H5M>
+    <DropdownMenuItem
+      onSelect={onSelect}
+      disabled={disabled}
+      className='gap-2 items-start'
+    >
+      {iconProps ? <Icon {...iconProps} /> : null}
+      <div className='w-full'>
+        <Text.H5 color={type === 'destructive' ? 'destructive' : 'foreground'}>
+          {label}
+        </Text.H5>
+      </div>
       {shortcut && <DropdownMenuShortcut>{shortcut}</DropdownMenuShortcut>}
+      {checked !== undefined && (
+        <div className='flex align-items w-5 h-5'>
+          {checked ? <Check className='h-5 w-5' strokeWidth={1.25} /> : null}
+        </div>
+      )}
     </DropdownMenuItem>
   )
 }

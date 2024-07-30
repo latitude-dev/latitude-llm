@@ -45,6 +45,7 @@
     "react": "18.3.0",
     "react-dom": "18.3.0",
     "react-resizable-panels": "^2.0.22",
+    "react-textarea-autosize": "^8.5.3",
     "tailwind-merge": "^2.4.0",
     "tailwindcss-animate": "^1.0.7",
     "use-debounce": "^10.0.1",
@@ -52,6 +53,7 @@
     "zustand": "^4.5.4"
   },
   "devDependencies": {
+    "@faker-js/faker": "^8.4.1",
     "@latitude-data/eslint-config": "workspace:*",
     "@latitude-data/typescript-config": "workspace:*",
     "@testing-library/dom": "^10.3.2",

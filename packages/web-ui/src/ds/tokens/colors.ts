@@ -10,6 +10,7 @@ export const colors = {
     destructive: 'text-destructive',
     destructiveForeground: 'text-destructive-foreground',
     accentForeground: 'text-accent-foreground',
+    secondaryForeground: 'text-secondary-foreground',
   },
   borderColors: {
     transparent: 'border-transparent',

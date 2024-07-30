@@ -275,7 +275,7 @@ namespace Text {
       children,
       color = 'foreground',
       overflow = 'auto',
-      whiteSpace = 'normal',
+      whiteSpace = 'pre',
       underline = false,
       lineThrough = false,
       size = 'h6',

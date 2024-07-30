@@ -168,6 +168,14 @@ const NodeHeaderWrapper = forwardRef<HTMLDivElement, Props>(function Foo(
             controlledOpen={actionsOpen}
             onOpenChange={setActionsOpen}
             options={actions}
+            triggerButtonProps={{
+              size: 'small',
+              variant: 'ghost',
+              iconProps: {
+                name: 'ellipsisVertical',
+                color: 'foregroundMuted',
+              },
+            }}
             side='bottom'
             align='end'
           />

@@ -305,6 +305,21 @@ describe('parameters', async () => {
 
     expect(metadata.parameters).toEqual(new Set())
   })
+
+  it('adds the correct parameters to the scope context', async () => {
+    const prompt = `
+      ${CUSTOM_TAG_START}foo${CUSTOM_TAG_END}
+      ${CUSTOM_TAG_START}bar${CUSTOM_TAG_END}
+      ${CUSTOM_TAG_START}#each arr as val${CUSTOM_TAG_END}
+      ${CUSTOM_TAG_START}/each${CUSTOM_TAG_END}
+    `
+
+    const metadata = await readMetadata({
+      prompt: removeCommonIndent(prompt),
+    })
+
+    expect(metadata.parameters).toEqual(new Set(['foo', 'bar', 'arr']))
+  })
 })
 
 describe('referenced prompts', async () => {

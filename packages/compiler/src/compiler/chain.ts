@@ -1,11 +1,6 @@
 import parse from '$compiler/parser'
 import { Fragment } from '$compiler/parser/interfaces'
-import {
-  AssistantMessage,
-  Config,
-  Conversation,
-  Message,
-} from '$compiler/types'
+import { Config, Conversation, Message } from '$compiler/types'
 
 import { Compile } from './compile'
 import Scope from './scope'
@@ -20,7 +15,7 @@ export class Chain {
   private ast: Fragment
   private scope: Scope
   private didStart: boolean = false
-  private completed: boolean = false
+  private _completed: boolean = false
 
   private messages: Message[] = []
   private config: Config | undefined
@@ -37,8 +32,8 @@ export class Chain {
     this.scope = new Scope(parameters)
   }
 
-  async step(response?: AssistantMessage): Promise<ChainStep> {
-    if (this.completed) {
+  async step(response?: string): Promise<ChainStep> {
+    if (this._completed) {
       throw new Error('The chain has already completed')
     }
     if (!this.didStart && response !== undefined) {
@@ -63,7 +58,7 @@ export class Chain {
     this.ast = ast
     this.messages.push(...messages)
     this.config = globalConfig ?? this.config
-    this.completed = completed || this.completed
+    this._completed = completed || this._completed
 
     const config = {
       ...this.config,
@@ -75,7 +70,11 @@ export class Chain {
         messages: this.messages,
         config,
       },
-      completed: this.completed,
+      completed: this._completed,
     }
+  }
+
+  get completed(): boolean {
+    return this._completed
   }
 }

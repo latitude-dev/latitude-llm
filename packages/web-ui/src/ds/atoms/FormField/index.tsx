@@ -104,6 +104,7 @@ function FormField({
     <Tooltip
       side='bottom'
       align='start'
+      asChild
       open={!!error && errorStyle === 'tooltip'}
       trigger={
         <div

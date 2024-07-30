@@ -1,37 +1,68 @@
 import {
+  CheckCircle2,
   ChevronDown,
   ChevronRight,
   CircleAlert,
   Copy,
+  Ellipsis,
   EllipsisVertical,
   File,
   FolderClosed,
   FolderOpen,
+  ListOrdered,
+  LoaderCircle,
   Trash,
-  type LucideIcon,
 } from 'lucide-react'
 
-import { type TextColor } from '$ui/ds/tokens'
+import { colors, type TextColor } from '$ui/ds/tokens'
+import { cn } from '$ui/lib/utils'
 
 import { LatitudeLogo, LatitudeLogoMonochrome } from './custom-icons'
 
-export type Icon = LucideIcon
+export const Icons = {
+  alert: CircleAlert,
+  check: CheckCircle2,
+  chevronDown: ChevronDown,
+  chevronRight: ChevronRight,
+  clipboard: Copy,
+  ellipsis: Ellipsis,
+  ellipsisVertical: EllipsisVertical,
+  file: File,
+  folderClose: FolderClosed,
+  folderOpen: FolderOpen,
+  listOrdered: ListOrdered,
+  loader: LoaderCircle,
+  logo: LatitudeLogo,
+  logoMonochrome: LatitudeLogoMonochrome,
+  trash: Trash,
+}
+
+export type IconName = keyof typeof Icons
+
 export type IconProps = {
+  name: IconName
   color?: TextColor
+  spin?: boolean
   widthClass?: string
   heightClass?: string
 }
 
-export const Icons = {
-  logo: LatitudeLogo,
-  logoMonochrome: LatitudeLogoMonochrome,
-  chevronDown: ChevronDown,
-  chevronRight: ChevronRight,
-  folderClose: FolderClosed,
-  file: File,
-  folderOpen: FolderOpen,
-  clipboard: Copy,
-  ellipsisVertical: EllipsisVertical,
-  trash: Trash,
-  alert: CircleAlert,
+export function Icon({
+  name,
+  color,
+  spin,
+  widthClass,
+  heightClass,
+}: IconProps) {
+  const IconClass = Icons[name]!
+  return (
+    <IconClass
+      className={cn(widthClass, heightClass, {
+        [colors.textColors[color!]]: color,
+        'w-4': !widthClass,
+        'h-4': !heightClass,
+        'animate-spin': spin,
+      })}
+    />
+  )
 }
