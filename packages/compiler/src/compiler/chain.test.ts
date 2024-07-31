@@ -1,6 +1,12 @@
 import { CHAIN_STEP_TAG } from '$compiler/constants'
 import CompileError from '$compiler/error/error'
-import { Conversation, MessageRole } from '$compiler/types'
+import {
+  AssistantMessage,
+  Conversation,
+  MessageContent,
+  MessageRole,
+  UserMessage,
+} from '$compiler/types'
 import { describe, expect, it, vi } from 'vitest'
 
 import { Chain } from './chain'
@@ -48,7 +54,7 @@ describe('chain', async () => {
   it('computes in a single iteration when there is no step tag', async () => {
     const prompt = removeCommonIndent(`
       {{ foo = 'foo' }}
-      System messate
+      System message
 
       {{#each [1, 2, 3] as element}}
         <user>
@@ -95,21 +101,21 @@ describe('chain', async () => {
 
     const systemMessage = conversation.messages[0]!
     expect(systemMessage.role).toBe('system')
-    expect(systemMessage.content[0]!.value).toBe('System message')
+    expect(systemMessage.content).toBe('System message')
 
-    const userMessage = conversation.messages[1]!
+    const userMessage = conversation.messages[1]! as UserMessage
     expect(userMessage.role).toBe('user')
     expect(userMessage.content[0]!.value).toBe('User message: 1')
 
-    const userMessage2 = conversation.messages[2]!
+    const userMessage2 = conversation.messages[2]! as UserMessage
     expect(userMessage2.role).toBe('user')
     expect(userMessage2.content[0]!.value).toBe('User message: 2')
 
-    const userMessage3 = conversation.messages[3]!
+    const userMessage3 = conversation.messages[3]! as UserMessage
     expect(userMessage3.role).toBe('user')
     expect(userMessage3.content[0]!.value).toBe('User message: 3')
 
-    const assistantMessage = conversation.messages[4]!
+    const assistantMessage = conversation.messages[4]! as AssistantMessage
     expect(assistantMessage.role).toBe('assistant')
     expect(assistantMessage.content[0]!.value).toBe('Assistant message: foo')
   })
@@ -133,16 +139,18 @@ describe('chain', async () => {
 
     expect(completed1).toBe(false)
     expect(conversation1.messages.length).toBe(1)
-    expect(conversation1.messages[0]!.content[0]!.value).toBe('Message 1')
+    expect(conversation1.messages[0]!.content).toBe('Message 1')
 
     const { completed: completed2, conversation: conversation2 } =
       await chain.step('response')
 
     expect(completed2).toBe(true)
     expect(conversation2.messages.length).toBe(3)
-    expect(conversation2.messages[0]!.content[0]!.value).toBe('Message 1')
-    expect(conversation2.messages[1]!.content[0]!.value).toBe('response')
-    expect(conversation2.messages[2]!.content[0]!.value).toBe('Message 2')
+    expect(conversation2.messages[0]!.content).toBe('Message 1')
+    expect(
+      (conversation2.messages[1]!.content[0]! as MessageContent).value,
+    ).toBe('response')
+    expect(conversation2.messages[2]!.content).toBe('Message 2')
   })
 
   it('fails when an assistant message is not provided in followup steps', async () => {
@@ -227,9 +235,11 @@ describe('chain', async () => {
     })
 
     const conversation = await complete({ chain })
-    expect(conversation.messages[0]!.content[0]!.value).toBe('1')
-    expect(conversation.messages[1]!.content[0]!.value).toBe('')
-    expect(conversation.messages[2]!.content[0]!.value).toBe('2')
+    expect(conversation.messages[0]!.content).toBe('1')
+    expect(
+      (conversation.messages[1]!.content[0]! as MessageContent).value,
+    ).toBe('')
+    expect(conversation.messages[2]!.content).toBe('2')
     expect(func1).toHaveBeenCalledTimes(1)
     expect(func2).toHaveBeenCalledTimes(1)
   })
@@ -254,8 +264,7 @@ describe('chain', async () => {
 
     const conversation = await complete({ chain })
     expect(
-      conversation.messages[conversation.messages.length - 1]!.content[0]!
-        .value,
+      conversation.messages[conversation.messages.length - 1]!.content,
     ).toBe('6')
   })
 
@@ -289,8 +298,7 @@ describe('chain', async () => {
 
     const conversation = await complete({ chain: correctChain })
     expect(
-      conversation.messages[conversation.messages.length - 1]!.content[0]!
-        .value,
+      conversation.messages[conversation.messages.length - 1]!.content,
     ).toBe('6')
 
     const incorrectChain = new Chain({
@@ -327,10 +335,16 @@ describe('chain', async () => {
 
     const conversation = await complete({ chain, maxSteps: 5 })
     expect(conversation.messages.length).toBe(7)
-    expect(conversation.messages[0]!.content[0]!.value).toBe('0')
-    expect(conversation.messages[2]!.content[0]!.value).toBe('1')
-    expect(conversation.messages[4]!.content[0]!.value).toBe('2')
-    expect(conversation.messages[6]!.content[0]!.value).toBe('3')
+    expect(
+      (conversation.messages[0]!.content[0]! as MessageContent).value,
+    ).toBe('0')
+    expect(
+      (conversation.messages[2]!.content[0]! as MessageContent).value,
+    ).toBe('1')
+    expect(
+      (conversation.messages[4]!.content[0]! as MessageContent).value,
+    ).toBe('2')
+    expect(conversation.messages[6]!.content).toBe('3')
   })
 
   it('cannot access variables created in a loop outside its scope', async () => {
@@ -399,8 +413,7 @@ describe('chain', async () => {
     `),
     )
     expect(
-      conversation.messages[conversation.messages.length - 1]!.content[0]!
-        .value,
+      conversation.messages[conversation.messages.length - 1]!.content,
     ).toBe('9')
   })
 
@@ -420,8 +433,10 @@ describe('chain', async () => {
     const { conversation } = await chain.step('foo')
 
     expect(conversation.messages.length).toBe(2)
-    expect(conversation.messages[0]!.content[0]!.value).toBe('foo')
-    expect(conversation.messages[1]!.content[0]!.value).toBe('foo')
+    expect(
+      (conversation.messages[0]!.content[0]! as MessageContent).value,
+    ).toBe('foo')
+    expect(conversation.messages[1]!.content).toBe('foo')
   })
 
   it('returns the correct configuration in all steps', async () => {

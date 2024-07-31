@@ -95,7 +95,7 @@ function buildMessage(
   if (role === MessageRole.system) {
     return {
       role,
-      content,
+      content: content[0]?.value,
     } as SystemMessage
   }
 

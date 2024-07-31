@@ -29,7 +29,7 @@ const MessageVariants = {
 
 export type MessageProps = {
   role: string
-  content: MessageContent[]
+  content: MessageContent[] | string
   className?: string
   variant?: keyof typeof MessageVariants
   animatePulse?: boolean
@@ -54,18 +54,35 @@ export function Message({
         </Badge>
       </div>
       <div className='flex flex-col gap-1'>
-        {content.map((c, contentIndex) =>
-          c.value.split('\n').map((line, lineIndex) => (
-            <Text.H5
+        {typeof content === 'string' ? (
+          <ContentValue value={content} color={textColor} />
+        ) : (
+          content.map((c, idx) => (
+            <ContentValue
+              key={idx}
+              index={idx}
               color={textColor}
-              whiteSpace='preWrap'
-              key={`${contentIndex}-${lineIndex}`}
-            >
-              {line}
-            </Text.H5>
-          )),
+              value={c.value}
+            />
+          ))
         )}
       </div>
     </div>
   )
+}
+
+const ContentValue = ({
+  index = 0,
+  color,
+  value,
+}: {
+  index?: number
+  color: TextColor
+  value: string
+}) => {
+  return value.split('\n').map((line, lineIndex) => (
+    <Text.H5 color={color} whiteSpace='preWrap' key={`${index}-${lineIndex}`}>
+      {line}
+    </Text.H5>
+  ))
 }

@@ -7,6 +7,7 @@ const ROUTES = {
       Documents: {
         Base: '/projects/:projectId/commits/:commitUuid/documents',
         Get: '/:documentPath{.+}',
+        Run: '/run',
       },
     },
   },

@@ -9,10 +9,10 @@ import {
 
 export async function render({
   prompt,
-  parameters,
+  parameters = {},
 }: {
   prompt: string
-  parameters: Record<string, unknown>
+  parameters?: Record<string, unknown>
 }): Promise<Conversation> {
   const iterator = new Chain({ prompt, parameters })
   const { conversation, completed } = await iterator.step()
