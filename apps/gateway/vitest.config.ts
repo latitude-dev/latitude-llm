@@ -1,4 +1,3 @@
-/// <reference types="vitest" />
 import { dirname } from 'path'
 import { fileURLToPath } from 'url'
 
@@ -9,11 +8,7 @@ const root = dirname(filename)
 
 export default defineConfig({
   test: {
-    globals: true,
-    testTimeout: 5000,
-    environment: 'node',
-    setupFiles: ['./src/tests/setup.ts'],
-    include: ['./src/**/*.test.ts'],
+    setupFiles: ['./test/setup.ts'],
   },
   resolve: {
     alias: {

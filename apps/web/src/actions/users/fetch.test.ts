@@ -1,6 +1,5 @@
 import { getSession } from '$/services/auth/getSession'
 import { createWorkspace } from '$core/tests/factories/workspaces'
-import useTestDatabase from '$core/tests/useTestDatabase'
 import { beforeEach, describe, expect, it, Mock, vi } from 'vitest'
 
 import { getUsersActions } from './fetch'
@@ -10,8 +9,6 @@ vi.mock('$/services/auth/getSession', () => ({
 }))
 
 describe('getUsersAction', () => {
-  useTestDatabase()
-
   describe('unauthorized', () => {
     it('errors when the user is not authenticated', async () => {
       const [_, error] = await getUsersActions()
