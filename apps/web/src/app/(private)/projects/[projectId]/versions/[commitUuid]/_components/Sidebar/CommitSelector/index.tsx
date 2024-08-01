@@ -103,7 +103,9 @@ export default function CommitSelector({
         <SelectValueWithIcon
           icon={<BadgeCommit badgeType={selected.badgeType} />}
         >
-          <Text.H5M>{selected.title}</Text.H5M>
+          <Text.H5M ellipsis noWrap userSelect={false}>
+            {selected.title}
+          </Text.H5M>
         </SelectValueWithIcon>
       </SelectTrigger>
       <SelectContent>
