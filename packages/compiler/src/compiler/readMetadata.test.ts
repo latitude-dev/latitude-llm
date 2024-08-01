@@ -1,4 +1,8 @@
-import { CUSTOM_TAG_END, CUSTOM_TAG_START } from '$compiler/constants'
+import {
+  CHAIN_STEP_TAG,
+  CUSTOM_TAG_END,
+  CUSTOM_TAG_START,
+} from '$compiler/constants'
 import CompileError from '$compiler/error/error'
 import { describe, expect, it } from 'vitest'
 
@@ -114,7 +118,7 @@ describe('resolvedPrompt', async () => {
     )
   })
 
-  it('workes with nested tags', async () => {
+  it('works with nested tags', async () => {
     const prompts = {
       parent: removeCommonIndent(`
         {{#if foo}}
@@ -362,6 +366,35 @@ describe('referenced prompts', async () => {
 
     // parentDefinedVar should not be included as parameter
     expect(metadata.parameters).toEqual(new Set(['parentParam', 'childParam']))
+  })
+})
+
+describe('step tags', async () => {
+  it('adds a variable to the scope context when it contains the as attribute', async () => {
+    const prompt = `
+      <${CHAIN_STEP_TAG} as="foo" />
+      ${CUSTOM_TAG_START}foo${CUSTOM_TAG_END}
+    `
+
+    const metadata = await readMetadata({
+      prompt: removeCommonIndent(prompt),
+    })
+
+    expect(metadata.parameters.size).toBe(0)
+  })
+
+  it('fails when the as attribute is not a literal', async () => {
+    const prompt = `
+      <${CHAIN_STEP_TAG} as={{ foo }} />
+    `
+
+    const metadata = await readMetadata({
+      prompt: removeCommonIndent(prompt),
+    })
+
+    expect(metadata.errors.length).toBe(1)
+    expect(metadata.errors[0]).toBeInstanceOf(CompileError)
+    expect(metadata.errors[0]!.code).toBe('invalid-static-attribute')
   })
 })
 

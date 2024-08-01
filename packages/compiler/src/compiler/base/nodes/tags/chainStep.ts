@@ -23,6 +23,7 @@ export async function compile(
   }: CompileNodeContext<ChainStepTag>,
   attributes: Record<string, unknown>,
 ) {
+  groupContent()
   const stepResponse = popStepResponse()
 
   const { as: varName, ...config } = attributes
@@ -46,8 +47,7 @@ export async function compile(
       .join(' ')
 
     scope.set(String(varName), responseText)
+  } else {
+    addMessage(stepResponse!)
   }
-
-  groupContent()
-  addMessage(stepResponse!)
 }

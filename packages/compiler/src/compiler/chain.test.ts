@@ -407,8 +407,26 @@ describe('chain', async () => {
   it('saves the response in a variable', async () => {
     const prompt = removeCommonIndent(`
       <${CHAIN_STEP_TAG} as="response" />
-      
-      {{response}}
+      <user>{{response}}</user>
+    `)
+
+    const chain = new Chain({
+      prompt,
+      parameters: {},
+    })
+
+    await chain.step()
+    const { conversation } = await chain.step('foo')
+
+    expect(conversation.messages.length).toBe(1)
+    expect(conversation.messages[0]!.content[0]!.value).toBe('foo')
+  })
+
+  it('does not add messages using the as attribute', async () => {
+    const prompt = removeCommonIndent(`
+      <user>msg1</user>
+      <${CHAIN_STEP_TAG} as="response" />
+      <user>msg2</user>
     `)
 
     const chain = new Chain({
@@ -420,8 +438,8 @@ describe('chain', async () => {
     const { conversation } = await chain.step('foo')
 
     expect(conversation.messages.length).toBe(2)
-    expect(conversation.messages[0]!.content[0]!.value).toBe('foo')
-    expect(conversation.messages[1]!.content[0]!.value).toBe('foo')
+    expect(conversation.messages[0]!.content[0]!.value).toBe('msg1')
+    expect(conversation.messages[1]!.content[0]!.value).toBe('msg2')
   })
 
   it('returns the correct configuration in all steps', async () => {
