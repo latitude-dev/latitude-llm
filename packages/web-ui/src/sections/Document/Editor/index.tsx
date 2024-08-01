@@ -1,8 +1,13 @@
 'use client'
 
-import { Suspense, useCallback, useEffect, useState } from 'react'
+import path from 'path'
+import { Suspense, useCallback, useEffect, useRef, useState } from 'react'
 
-import { ConversationMetadata, readMetadata } from '@latitude-data/compiler'
+import {
+  ConversationMetadata,
+  readMetadata,
+  Document as RefDocument,
+} from '@latitude-data/compiler'
 import { DropdownMenu } from '$ui/ds/atoms/DropdownMenu'
 import {
   DocumentTextEditor,
@@ -17,12 +22,14 @@ import Playground from './Playground'
 
 export default function DocumentEditor({
   document,
+  path: documentPath,
   saveDocumentContent,
-  readDocument,
+  readDocumentContent,
 }: {
   document: string
+  path?: string
   saveDocumentContent: (content: string) => void
-  readDocument?: (uuid: string) => Promise<string>
+  readDocumentContent: (path: string) => Promise<string | undefined>
 }) {
   const [value, setValue] = useState(document)
   const [isSaved, setIsSaved] = useState(true)
@@ -55,9 +62,53 @@ export default function DocumentEditor({
     debouncedSave(value)
   }, [])
 
+  const documentsByPathRef = useRef<{ [path: string]: string | undefined }>({})
+
+  const readDocument = useCallback(
+    async (
+      refPath: string,
+      from?: string,
+    ): Promise<RefDocument | undefined> => {
+      const fullPath = path
+        .resolve(path.dirname(`/${from ?? ''}`), refPath)
+        .replace(/^\//, '')
+
+      if (fullPath === documentPath) {
+        return {
+          path: fullPath,
+          content: value,
+        }
+      }
+
+      if (fullPath in documentsByPathRef.current) {
+        if (documentsByPathRef.current[fullPath] === undefined) return undefined
+        return {
+          path: fullPath,
+          content: documentsByPathRef.current[fullPath],
+        }
+      }
+
+      documentsByPathRef.current = {
+        ...documentsByPathRef.current,
+        [fullPath]: await readDocumentContent(fullPath),
+      }
+
+      if (documentsByPathRef.current[fullPath] === undefined) {
+        return undefined
+      }
+
+      return {
+        path: fullPath,
+        content: documentsByPathRef.current[fullPath],
+      }
+    },
+    [readDocumentContent, commit.id],
+  )
+
   useEffect(() => {
     readMetadata({
       prompt: value,
+      fullPath: documentPath,
       referenceFn: readDocument,
     }).then(setMetadata)
   }, [value, readDocument])

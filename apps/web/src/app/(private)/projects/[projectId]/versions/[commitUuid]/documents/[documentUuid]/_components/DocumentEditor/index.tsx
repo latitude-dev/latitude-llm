@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useCallback, useRef } from 'react'
+import { Suspense, useCallback } from 'react'
 
 import type { Commit, DocumentVersion } from '@latitude-data/core/browser'
 import {
@@ -25,31 +25,18 @@ export default function ClientDocumentEditor({
   )
   const { toast } = useToast()
 
-  const documentsByPathRef = useRef<{ [path: string]: string | undefined }>({})
-
-  const readDocument = useCallback(
+  const readDocumentContent = useCallback(
     async (path: string) => {
-      const documentsByPath = documentsByPathRef.current
-      if (!(path in documentsByPath)) {
-        const [content, error] = await readDocumentContentAction.execute({
-          projectId: commit.projectId,
-          commitId: commit.id,
-          path,
-        })
-        documentsByPathRef.current = {
-          ...documentsByPath,
-          [path]: error ? undefined : content,
-        }
-      }
+      const [content, error] = await readDocumentContentAction.execute({
+        projectId: commit.projectId,
+        commitId: commit.id,
+        path,
+      })
 
-      const documentContent = documentsByPath[path]
-      if (documentContent === undefined) {
-        throw new Error('Document not found')
-      }
-
-      return documentContent
+      if (error) return undefined
+      return content
     },
-    [readDocumentContentAction.status, commit.id],
+    [commit.id, readDocumentContentAction.status],
   )
 
   const saveDocumentContent = useCallback(
@@ -76,8 +63,9 @@ export default function ClientDocumentEditor({
     <Suspense fallback={<DocumentTextEditorFallback />}>
       <DocumentEditor
         document={document.content}
+        path={document.path}
         saveDocumentContent={saveDocumentContent}
-        readDocument={readDocument}
+        readDocumentContent={readDocumentContent}
       />
     </Suspense>
   )

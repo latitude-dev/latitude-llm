@@ -47,8 +47,6 @@ class StopIteration extends Error {
   }
 }
 
-export type ReferencePromptFn = (prompt: string) => Promise<string>
-
 export class Compile {
   private ast: Fragment
   private rawText: string

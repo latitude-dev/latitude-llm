@@ -1,6 +1,7 @@
 import {
   CUSTOM_MESSAGE_ROLE_ATTR,
   CUSTOM_MESSAGE_TAG,
+  REFERENCE_DEPTH_LIMIT,
   REFERENCE_PROMPT_ATTR,
   REFERENCE_PROMPT_TAG,
 } from '$compiler/constants'
@@ -19,7 +20,6 @@ import { Config, ConversationMetadata, MessageRole } from '$compiler/types'
 import { Node as LogicalExpression } from 'estree'
 import yaml from 'yaml'
 
-import { ReferencePromptFn } from './compile'
 import { readConfig } from './config'
 import { updateScopeContextForNode } from './logic'
 import { ScopeContext } from './scope'
@@ -38,9 +38,19 @@ function copyScopeContext(scopeContext: ScopeContext): ScopeContext {
   }
 }
 
+export type Document = {
+  path: string
+  content: string
+}
+export type ReferencePromptFn = (
+  path: string,
+  from?: string,
+) => Promise<Document | undefined>
+
 export class ReadMetadata {
   private rawText: string
   private referenceFn?: ReferencePromptFn
+  private fullPath: string
 
   private resolvedPrompt: string
   private resolvedPromptOffset: number = 0
@@ -48,18 +58,22 @@ export class ReadMetadata {
   private accumulatedToolCalls: ToolCallTag[] = []
   private errors: CompileError[] = []
 
+  private references: { [from: string]: string[] } = {}
+  private referenceDepth: number = 0
+
   constructor({
-    prompt,
+    document,
     referenceFn,
   }: {
-    prompt: string
+    document: Document
     referenceFn?: ReferencePromptFn
     configSchema?: object
   }) {
-    this.rawText = prompt
+    this.rawText = document.content
     this.referenceFn = referenceFn
+    this.fullPath = document.path
 
-    this.resolvedPrompt = prompt
+    this.resolvedPrompt = document.content
   }
 
   async run(): Promise<ConversationMetadata> {
@@ -382,11 +396,6 @@ export class ReadMetadata {
       }
 
       if (isRefTag(node)) {
-        if (isInsideMessageTag || isInsideContentTag) {
-          this.baseNodeError(errors.invalidReferencePromptPlacement, node)
-          return
-        }
-
         if (node.children?.length ?? 0 > 0) {
           this.baseNodeError(errors.referenceTagHasContent, node)
           return
@@ -408,6 +417,11 @@ export class ReadMetadata {
           return
         }
 
+        if (this.referenceDepth > REFERENCE_DEPTH_LIMIT) {
+          this.baseNodeError(errors.referenceDepthLimit, node)
+          return
+        }
+
         const refPromptAttribute = node.attributes.find(
           (attribute: Attribute) => attribute.name === REFERENCE_PROMPT_ATTR,
         ) as Attribute
@@ -416,15 +430,40 @@ export class ReadMetadata {
           .map((node) => node.data)
           .join('')
 
-        let resolvedRefPrompt: string
-        try {
-          const refPrompt = await this.referenceFn(refPromptPath)
+        let resolvedRefPrompt = `/* <${REFERENCE_PROMPT_TAG} ${REFERENCE_PROMPT_ATTR}="${refPromptPath}" /> */`
+        const currentReferences = this.references[this.fullPath] ?? []
+
+        const resolveRef = async () => {
+          if (!this.referenceFn) {
+            this.baseNodeError(errors.missingReferenceFunction, node)
+            return
+          }
+
+          if (currentReferences.includes(refPromptPath)) {
+            this.baseNodeError(errors.circularReference, node)
+            return
+          }
+
+          const refDocument = await this.referenceFn(
+            refPromptPath,
+            this.fullPath,
+          )
+
+          if (!refDocument) {
+            this.baseNodeError(errors.referenceNotFound, node)
+            return
+          }
 
           const refReadMetadata = new ReadMetadata({
-            prompt: refPrompt,
+            document: refDocument,
             referenceFn: this.referenceFn,
           })
           refReadMetadata.accumulatedToolCalls = this.accumulatedToolCalls
+          refReadMetadata.references = {
+            ...this.references,
+            [this.fullPath]: [...currentReferences, refPromptPath],
+          }
+          refReadMetadata.referenceDepth = this.referenceDepth + 1
 
           const refPromptMetadata = await refReadMetadata.run()
           refPromptMetadata.parameters.forEach((param: string) => {
@@ -432,11 +471,27 @@ export class ReadMetadata {
               scopeContext.usedUndefinedVariables.add(param)
             }
           })
+          refPromptMetadata.errors.forEach((error: CompileError) => {
+            if (
+              error.code === 'reference-error' ||
+              error.code === 'circular-reference'
+            ) {
+              this.baseNodeError(
+                { code: error.code, message: error.message },
+                node,
+              )
+              return
+            }
+            this.baseNodeError(errors.referenceError(error), node)
+          })
           this.accumulatedToolCalls = refReadMetadata.accumulatedToolCalls
           resolvedRefPrompt = refReadMetadata.resolvedPrompt
+        }
+
+        try {
+          await resolveRef()
         } catch (error: unknown) {
           this.baseNodeError(errors.referenceError(error), node)
-          resolvedRefPrompt = `/* <${REFERENCE_PROMPT_TAG} ${REFERENCE_PROMPT_ATTR}="${refPromptPath}" /> */`
         }
 
         /* Replace the reference tag with the actual referenced prompt */
