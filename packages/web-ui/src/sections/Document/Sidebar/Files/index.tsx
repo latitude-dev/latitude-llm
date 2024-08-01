@@ -6,6 +6,7 @@ import { ConfirmModal } from '$ui/ds/atoms'
 import { cn } from '$ui/lib/utils'
 import DocumentHeader from '$ui/sections/Document/Sidebar/Files/DocumentHeader'
 import FolderHeader from '$ui/sections/Document/Sidebar/Files/FolderHeader'
+import { TreeToolbar } from '$ui/sections/Document/Sidebar/Files/TreeToolbar'
 
 import { FileTreeProvider, useFileTreeContext } from './FilesProvider'
 import { type IndentType } from './NodeHeaderWrapper'
@@ -83,7 +84,7 @@ function FileNode({
   }, [currentPath])
 
   return (
-    <div className='w-full'>
+    <div className='flex-1 w-full custom-scroll max-h-full'>
       <NodeHeader
         indentation={indentation}
         node={node}
@@ -190,12 +191,14 @@ export function FilesTree({
           setDeletable({ type: DeletableType.Folder, path, name: node.name })
         }}
       >
+        <TreeToolbar />
         <FileNode node={rootNode} />
       </FileTreeProvider>
+
       {deletableNode ? (
         <ConfirmModal
           type='destructive'
-          open
+          open={!!deletableNode}
           onConfirm={() => onConfirmDelete(deletableNode)}
           onOpenChange={(open) => {
             if (!open) {

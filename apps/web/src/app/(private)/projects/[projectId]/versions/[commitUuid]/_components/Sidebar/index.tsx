@@ -40,7 +40,7 @@ export default async function Sidebar({
     <DocumentSidebar
       header={
         <CommitSelector
-          headCommitId={headCommit.id}
+          headCommit={headCommit}
           currentCommit={commit}
           draftCommits={draftCommits}
         />

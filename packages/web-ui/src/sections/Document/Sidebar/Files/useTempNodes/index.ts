@@ -4,6 +4,7 @@ import { defaultGenerateNodeUuid, Node } from '../useTree'
 
 type TmpFoldersState = {
   tmpFolders: Record<string, Node[]>
+  addToRootFolder: (args: { path: string }) => void
   addFolder: (args: {
     parentPath: string
     parentId: string
@@ -30,22 +31,26 @@ function allTmpNodes(tmpFolders: TmpFoldersState['tmpFolders']) {
 }
 
 function createEmptyNode({
+  name,
   parentPath,
   parent,
   isFile,
 }: {
-  parentPath: string
+  name?: string
+  parentPath?: string
   isFile: boolean
   parent: Node | undefined
 }) {
   const emptyName = ' '
-  const path = `${parentPath}/${emptyName}`
+  const nodePath = name ? name : `${parentPath}/${emptyName}`
   return new Node({
     id: defaultGenerateNodeUuid(),
-    name: emptyName,
-    path,
+    name: name ?? emptyName,
+    path: nodePath,
     isPersisted: false,
-    doc: isFile ? { path, documentUuid: defaultGenerateNodeUuid() } : undefined,
+    doc: isFile
+      ? { path: nodePath, documentUuid: defaultGenerateNodeUuid() }
+      : undefined,
     isFile,
     parent,
   })
@@ -97,6 +102,22 @@ export const useTempNodes = create<TmpFoldersState>((set, get) => ({
   reset: () => {
     set({
       tmpFolders: {},
+    })
+  },
+  addToRootFolder: ({ path }) => {
+    set((state) => {
+      const existingNodes = state.tmpFolders[path]
+      const node = createEmptyNode({
+        name: path,
+        parent: undefined,
+        isFile: false,
+      })
+      return {
+        tmpFolders: {
+          ...state.tmpFolders,
+          ['']: existingNodes ? [node, ...existingNodes] : [node],
+        },
+      }
     })
   },
   addFolder: ({ parentPath, parentId, isFile }) => {

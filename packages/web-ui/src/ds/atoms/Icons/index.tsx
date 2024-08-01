@@ -7,8 +7,10 @@ import {
   Ellipsis,
   EllipsisVertical,
   File,
+  FilePlus,
   FolderClosed,
   FolderOpen,
+  FolderPlus,
   ListOrdered,
   LoaderCircle,
   Trash,
@@ -28,8 +30,10 @@ export const Icons = {
   ellipsis: Ellipsis,
   ellipsisVertical: EllipsisVertical,
   file: File,
+  filePlus: FilePlus,
   folderClose: FolderClosed,
   folderOpen: FolderOpen,
+  folderPlus: FolderPlus,
   listOrdered: ListOrdered,
   loader: LoaderCircle,
   logo: LatitudeLogo,
@@ -43,6 +47,7 @@ export type IconProps = {
   name: IconName
   color?: TextColor
   spin?: boolean
+  size?: string | number
   widthClass?: string
   heightClass?: string
 }

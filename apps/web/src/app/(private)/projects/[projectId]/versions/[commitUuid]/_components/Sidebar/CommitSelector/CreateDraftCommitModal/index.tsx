@@ -13,7 +13,7 @@ import useCommits from '$/stores/commitsStore'
 import { useRouter } from 'next/navigation'
 import { useServerAction } from 'zsa-react'
 
-export default function NewDraftCommitModal({
+export default function DraftCommitModal({
   open,
   setOpen,
 }: {

@@ -16,7 +16,7 @@ export async function createCommit({
   project: Project
   user: SafeUser
   data: {
-    title?: string
+    title: string
     description?: string
     mergedAt?: Date
   }

@@ -9,6 +9,24 @@ describe('useTempNodes', () => {
     useTempNodes.getState().reset()
   })
 
+  it('add a root folder', async () => {
+    const { result } = renderHook(() => useTempNodes((state) => state))
+
+    act(() => result.current.addToRootFolder({ path: 'some-folder' }))
+
+    expect(result.current.tmpFolders).toEqual({
+      '': [
+        new Node({
+          id: expect.any(String),
+          path: 'some-folder',
+          name: 'some-folder',
+          isFile: false,
+          isPersisted: false,
+        }),
+      ],
+    })
+  })
+
   it('should add a folder', async () => {
     const { result } = renderHook(() => useTempNodes((state) => state))
     act(() =>

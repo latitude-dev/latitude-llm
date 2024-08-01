@@ -20,7 +20,7 @@ export const commits = latitudeSchema.table(
       .notNull()
       .unique()
       .default(sql`gen_random_uuid()`),
-    title: varchar('title', { length: 256 }),
+    title: varchar('title', { length: 256 }).notNull(),
     description: text('description'),
     projectId: bigint('project_id', { mode: 'number' })
       .notNull()
