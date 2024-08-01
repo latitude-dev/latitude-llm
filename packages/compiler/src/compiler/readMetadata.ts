@@ -221,6 +221,7 @@ export class ReadMetadata {
     }
 
     if (node.type === 'IfBlock') {
+      await this.updateScopeContext({ node: node.expression, scopeContext })
       const ifScope = copyScopeContext(scopeContext)
       const elseScope = copyScopeContext(scopeContext)
       for await (const childNode of node.children ?? []) {
