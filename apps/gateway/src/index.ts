@@ -28,7 +28,7 @@ serve(
   {
     fetch: app.fetch,
     overrideGlobalObjects: undefined,
-    port: parseInt(process.env.GATEWAY_PORT || '4000', 10),
+    port: parseInt(process.env.GATEWAY_PORT || '8787', 10),
     hostname: process.env.GATEWAY_HOSTNAME || 'localhost',
   },
   (info) => {

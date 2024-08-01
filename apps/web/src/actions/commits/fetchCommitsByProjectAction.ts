@@ -1,7 +1,6 @@
 'use server'
 
 import { CommitsRepository, CommitStatus } from '@latitude-data/core'
-import commitPresenter from '$/presenters/commitPresenter'
 import { z } from 'zod'
 
 import { withProject } from '../procedures'
@@ -20,7 +19,7 @@ export const fetchCommitsByProjectAction = withProject
     { type: 'json' },
   )
   .handler(async ({ input, ctx }) => {
-    const commits = await new CommitsRepository(ctx.workspace.id)
+    return new CommitsRepository(ctx.workspace.id)
       .getCommitsByProject({
         project: ctx.project,
         filterByStatus: input.status,
@@ -28,7 +27,4 @@ export const fetchCommitsByProjectAction = withProject
         pageSize: input.pageSize ?? ULTRA_LARGE_PAGE_SIZE,
       })
       .then((r) => r.unwrap())
-      .then((r) => r.map(commitPresenter))
-
-    return commits
   })

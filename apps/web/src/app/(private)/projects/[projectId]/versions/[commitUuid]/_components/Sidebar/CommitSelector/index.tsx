@@ -23,6 +23,26 @@ enum BadgeType {
   Merged = 'merged',
 }
 
+function useObserveSelectWidth(ref: React.RefObject<HTMLButtonElement>) {
+  const [width, setWidth] = useState(MIN_WIDTH_SELECTOR_PX)
+  useEffect(() => {
+    const resizeObserver = new ResizeObserver((entries) => {
+      const { width: triggerWidth } = entries[0]?.contentRect ?? { width: 0 }
+      setWidth(
+        Math.max(triggerWidth + TRIGGER_X_PADDING_PX, MIN_WIDTH_SELECTOR_PX),
+      )
+    })
+    if (ref.current) {
+      resizeObserver.observe(ref.current)
+    }
+    return () => {
+      resizeObserver.disconnect()
+    }
+  }, [ref])
+
+  return width
+}
+
 function CommitSelectorHeader() {
   const [open, setOpen] = useState(false)
   return (
@@ -66,7 +86,7 @@ export default function CommitSelector({
   draftCommits: Commit[]
 }) {
   const ref = useRef<HTMLButtonElement>(null)
-  const [width, setWidth] = useState(MIN_WIDTH_SELECTOR_PX)
+  const width = useObserveSelectWidth(ref)
   const { data: commits } = useCommits({ fallbackData: draftCommits })
   const selected = useMemo(() => {
     const foundCommit = commits.find((commit) => commit.id === currentCommit.id)
@@ -82,20 +102,6 @@ export default function CommitSelector({
             : BadgeType.Merged,
     }
   }, [commits, currentCommit.id, headCommitId])
-  useEffect(() => {
-    const resizeObserver = new ResizeObserver((entries) => {
-      const { width: triggerWidth } = entries[0]?.contentRect ?? { width: 0 }
-      setWidth(
-        Math.max(triggerWidth + TRIGGER_X_PADDING_PX, MIN_WIDTH_SELECTOR_PX),
-      )
-    })
-    if (ref.current) {
-      resizeObserver.observe(ref.current)
-    }
-    return () => {
-      resizeObserver.disconnect()
-    }
-  }, [ref])
 
   return (
     <SelectRoot value={String(currentCommit.id)}>
