@@ -67,8 +67,19 @@ const useLocalStorageStore = create<LocalStorageStore>(
       },
     }),
     {
-      name: 'local-storage-store', // name of the item in the storage
-      getStorage: () => localStorage, // (optional) by default, 'localStorage' is used
+      name: 'local-storage-store',
+      storage: {
+        getItem: (name) => {
+          const value = localStorage.getItem(name)
+          return value ? JSON.parse(value) : null
+        },
+        setItem: (name, value) => {
+          localStorage.setItem(name, JSON.stringify(value))
+        },
+        removeItem: (name) => {
+          localStorage.removeItem(name)
+        },
+      },
     },
   ),
 )
