@@ -1,4 +1,4 @@
-import { InferSelectModel, relations } from 'drizzle-orm'
+import { relations } from 'drizzle-orm'
 import { bigserial, text, varchar } from 'drizzle-orm/pg-core'
 
 import { latitudeSchema, memberships, users } from '..'
@@ -16,5 +16,3 @@ export const workspaces = latitudeSchema.table('workspaces', {
 export const workspaceRelations = relations(workspaces, ({ many }) => ({
   memberships: many(memberships),
 }))
-
-export type Workspace = InferSelectModel<typeof workspaces>

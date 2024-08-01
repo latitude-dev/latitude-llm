@@ -10,7 +10,9 @@
     "REDIS_HOST",
     "REDIS_PORT",
     "REDIS_PASSWORD",
-    "USE_LOCALHOST"
+    "USE_LOCALHOST",
+    "GATEWAY_PORT",
+    "GATEWAY_HOSTNAME"
   ],
   "$schema": "https://turbo.build/schema.json",
   "globalDependencies": ["**/.env.*local"],

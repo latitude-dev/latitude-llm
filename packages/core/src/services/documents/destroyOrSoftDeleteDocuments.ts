@@ -1,8 +1,9 @@
 import { omit } from 'lodash-es'
 
+import { Commit, DocumentVersion } from '$core/browser'
 import { database } from '$core/client'
 import { Result, Transaction, TypedResult } from '$core/lib'
-import { Commit, DocumentVersion, documentVersions } from '$core/schema'
+import { documentVersions } from '$core/schema'
 import { and, eq, inArray, ne } from 'drizzle-orm'
 
 async function findUuidsInOtherCommits({

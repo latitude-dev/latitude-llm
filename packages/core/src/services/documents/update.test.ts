@@ -9,14 +9,14 @@ import { updateDocument } from './update'
 
 describe('updateDocument', () => {
   it('modifies a document that was created in a previous commit', async (ctx) => {
-    const { project, documents } = await ctx.factories.createProject({
+    const { project, user, documents } = await ctx.factories.createProject({
       documents: {
         doc1: 'Doc 1 commit 1',
       },
     })
 
     const docsScope = new DocumentVersionsRepository(project.workspaceId)
-    const { commit } = await ctx.factories.createDraft({ project })
+    const { commit } = await ctx.factories.createDraft({ project, user })
 
     await updateDocument({
       commit,
@@ -36,9 +36,9 @@ describe('updateDocument', () => {
   })
 
   it('modifies a document that was created in the same commit', async (ctx) => {
-    const { project } = await ctx.factories.createProject()
+    const { project, user } = await ctx.factories.createProject()
     const docsScope = new DocumentVersionsRepository(project.workspaceId)
-    const { commit } = await ctx.factories.createDraft({ project })
+    const { commit } = await ctx.factories.createDraft({ project, user })
     const { documentVersion: doc } = await ctx.factories.createDocumentVersion({
       commit: commit,
       path: 'doc1',
@@ -63,7 +63,7 @@ describe('updateDocument', () => {
   })
 
   it('modifying a document creates a change to all other documents that reference it', async (ctx) => {
-    const { project, documents } = await ctx.factories.createProject({
+    const { project, user, documents } = await ctx.factories.createProject({
       documents: {
         referenced: {
           doc: 'The document that is being referenced',
@@ -74,7 +74,7 @@ describe('updateDocument', () => {
 
     const docsScope = new DocumentVersionsRepository(project.workspaceId)
     const referencedDoc = documents.find((d) => d.path === 'referenced/doc')!
-    const { commit } = await ctx.factories.createDraft({ project })
+    const { commit } = await ctx.factories.createDraft({ project, user })
 
     await updateDocument({
       commit,
@@ -96,7 +96,7 @@ describe('updateDocument', () => {
   })
 
   it('renaming a document creates a change to all other documents that reference it', async (ctx) => {
-    const { project, documents } = await ctx.factories.createProject({
+    const { project, user, documents } = await ctx.factories.createProject({
       documents: {
         referenced: {
           doc: 'The document that is being referenced',
@@ -107,7 +107,7 @@ describe('updateDocument', () => {
     const docsScope = new DocumentVersionsRepository(project.workspaceId)
     const refDoc = documents.find((d) => d.path === 'referenced/doc')!
 
-    const { commit } = await ctx.factories.createDraft({ project })
+    const { commit } = await ctx.factories.createDraft({ project, user })
 
     await updateDocument({
       commit,
@@ -129,7 +129,7 @@ describe('updateDocument', () => {
   })
 
   it('undoing a change to a document removes it from the list of changed documents', async (ctx) => {
-    const { project, documents } = await ctx.factories.createProject({
+    const { project, user, documents } = await ctx.factories.createProject({
       documents: {
         referenced: {
           doc: 'The document that is being referenced',
@@ -140,7 +140,7 @@ describe('updateDocument', () => {
     const docsScope = new DocumentVersionsRepository(project.workspaceId)
     const referencedDoc = documents.find((d) => d.path === 'referenced/doc')!
 
-    const { commit } = await ctx.factories.createDraft({ project })
+    const { commit } = await ctx.factories.createDraft({ project, user })
 
     await updateDocument({
       commit,
@@ -176,14 +176,14 @@ describe('updateDocument', () => {
   })
 
   it('fails when renaming a document with a path that already exists', async (ctx) => {
-    const { project, documents } = await ctx.factories.createProject({
+    const { project, user, documents } = await ctx.factories.createProject({
       documents: {
         doc1: 'Doc 1',
         doc2: 'Doc 2',
       },
     })
 
-    const { commit } = await ctx.factories.createDraft({ project })
+    const { commit } = await ctx.factories.createDraft({ project, user })
     const doc1 = documents.find((d) => d.path === 'doc1')!
 
     const updateResult = await updateDocument({
@@ -222,7 +222,7 @@ describe('updateDocument', () => {
   })
 
   it('invalidates the resolvedContent for all documents in the commit', async (ctx) => {
-    const { project, documents } = await ctx.factories.createProject({
+    const { project, user, documents } = await ctx.factories.createProject({
       documents: {
         doc1: 'Doc 1',
         doc2: 'Doc 2',
@@ -230,7 +230,7 @@ describe('updateDocument', () => {
     })
     const docsScope = new DocumentVersionsRepository(project.workspaceId)
 
-    const { commit } = await ctx.factories.createDraft({ project })
+    const { commit } = await ctx.factories.createDraft({ project, user })
     const doc1 = documents.find((d) => d.path === 'doc1')!
     const doc2 = documents.find((d) => d.path === 'doc2')!
 

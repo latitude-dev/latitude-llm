@@ -2,7 +2,7 @@
 
 import { useCallback } from 'react'
 
-import { DocumentVersion } from '@latitude-data/core'
+import type { DocumentVersion } from '@latitude-data/core/browser'
 import {
   SidebarDocument,
   useCurrentCommit,

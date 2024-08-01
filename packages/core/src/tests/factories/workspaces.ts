@@ -1,5 +1,5 @@
 import { faker } from '@faker-js/faker'
-import { type SafeUser } from '$core/schema'
+import { type SafeUser } from '$core/browser'
 import { createWorkspace as createWorkspaceFn } from '$core/services/workspaces/create'
 
 import { createUser, type ICreateUser } from './users'
@@ -20,7 +20,7 @@ export async function createWorkspace(
   const { name } = workspaceData
   const result = await createWorkspaceFn({
     name: name ?? randomName,
-    creatorId: userData.id,
+    user: userData,
   })
   const workspace = result.unwrap()
 

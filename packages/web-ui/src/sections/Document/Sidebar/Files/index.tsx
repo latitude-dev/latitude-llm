@@ -211,7 +211,9 @@ export function FilesTree({
           confirm={{
             isConfirming: isDestroying,
             label: deletingFolder ? 'Delete folder' : 'Delete prompt',
-            description: `Deleting this ${deletingFolder ? 'folder' : 'prompt'} will also delete all the prompts it contains. This action cannot be undone.`,
+            description: deletingFolder
+              ? 'Deleting this folder will also delete all the prompts it contains. This action cannot be undone.'
+              : 'Deleting this prompt might affect your production app and other prompts referencing it. This action cannot be undone.',
           }}
         />
       ) : null}

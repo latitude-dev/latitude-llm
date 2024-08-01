@@ -1,6 +1,7 @@
+import { ProviderApiKey } from '$core/browser'
 import { database } from '$core/client'
 import { Result, Transaction } from '$core/lib'
-import { ProviderApiKey, providerApiKeys } from '$core/schema'
+import { providerApiKeys } from '$core/schema'
 import { eq } from 'drizzle-orm'
 
 export function destroyProviderApiKey(

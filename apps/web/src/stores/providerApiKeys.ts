@@ -1,4 +1,4 @@
-import { ProviderApiKey } from '@latitude-data/core'
+import type { ProviderApiKey } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui'
 import { createProviderApiKeyAction } from '$/actions/providerApiKeys/create'
 import { destroyProviderApiKeyAction } from '$/actions/providerApiKeys/destroy'

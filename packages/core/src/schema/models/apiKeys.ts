@@ -1,4 +1,4 @@
-import { InferSelectModel, relations, sql } from 'drizzle-orm'
+import { relations, sql } from 'drizzle-orm'
 import {
   bigint,
   bigserial,
@@ -38,5 +38,3 @@ export const apiKeyRelations = relations(apiKeys, ({ one }) => ({
     references: [workspaces.id],
   }),
 }))
-
-export type ApiKey = InferSelectModel<typeof apiKeys>

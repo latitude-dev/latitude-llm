@@ -1,5 +1,5 @@
+import type { Commit, DocumentVersion, Project } from '$core/browser'
 import { HEAD_COMMIT } from '$core/constants'
-import { Commit, DocumentVersion, Project } from '$core/schema'
 import { mergeCommit, updateDocument } from '$core/services'
 import * as factories from '$core/tests/factories'
 import { beforeAll, describe, expect, it } from 'vitest'
@@ -36,11 +36,12 @@ describe('getDocumentsAtCommit', () => {
   })
 
   it('get docs from HEAD without soft deleted', async (ctx) => {
-    const { commit, project, documents } = await ctx.factories.createProject({
-      documents: { doc1: 'Doc 1', doc2: 'Doc 2' },
-    })
+    const { commit, project, documents, user } =
+      await ctx.factories.createProject({
+        documents: { doc1: 'Doc 1', doc2: 'Doc 2' },
+      })
     const documentsScope = new DocumentVersionsRepository(project.workspaceId)
-    const { commit: draft } = await factories.createDraft({ project })
+    const { commit: draft } = await factories.createDraft({ project, user })
     await factories.markAsSoftDelete({
       documentUuid: documents.find((d) => d.path === 'doc2')!.documentUuid,
       commitId: commit.id,
@@ -54,11 +55,11 @@ describe('getDocumentsAtCommit', () => {
 
   describe('documents for each commit', () => {
     beforeAll(async () => {
-      const { project } = await factories.createProject()
+      const { project, user } = await factories.createProject()
       const documentsScope = new DocumentVersionsRepository(project.workspaceId)
-      const { commit: commit1 } = await factories.createDraft({ project })
-      const { commit: commit2 } = await factories.createDraft({ project })
-      const { commit: commit3 } = await factories.createDraft({ project })
+      const { commit: commit1 } = await factories.createDraft({ project, user })
+      const { commit: commit2 } = await factories.createDraft({ project, user })
+      const { commit: commit3 } = await factories.createDraft({ project, user })
 
       // Initial document
       const { documentVersion: doc1 } = await factories.createDocumentVersion({
@@ -148,11 +149,11 @@ describe('getDocumentsAtCommit', () => {
 
   describe('documents from previous commits', () => {
     beforeAll(async () => {
-      const { project } = await factories.createProject()
+      const { project, user } = await factories.createProject()
       const documentsScope = new DocumentVersionsRepository(project.workspaceId)
 
       // Doc 1
-      const { commit: commit1 } = await factories.createDraft({ project })
+      const { commit: commit1 } = await factories.createDraft({ project, user })
       const { documentVersion: doc1 } = await factories.createDocumentVersion({
         commit: commit1,
         content: 'Doc_1_commit_1',
@@ -160,7 +161,7 @@ describe('getDocumentsAtCommit', () => {
       const mergedCommit1 = await mergeCommit(commit1).then((r) => r.unwrap())
 
       // Doc 2
-      const { commit: commit2 } = await factories.createDraft({ project })
+      const { commit: commit2 } = await factories.createDraft({ project, user })
       const { documentVersion: doc2 } = await factories.createDocumentVersion({
         commit: commit2,
         content: 'Doc_2_commit_2',
@@ -168,7 +169,7 @@ describe('getDocumentsAtCommit', () => {
       const mergedCommit2 = await mergeCommit(commit2).then((r) => r.unwrap())
 
       // Doc 3
-      const { commit: commit3 } = await factories.createDraft({ project })
+      const { commit: commit3 } = await factories.createDraft({ project, user })
       const doc3 = await updateDocument({
         commit: commit3,
         document: doc2,

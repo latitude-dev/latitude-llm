@@ -1,9 +1,35 @@
-import { HEAD_COMMIT } from '$core/constants'
+import { Project } from '$core/browser'
+import { CommitStatus, HEAD_COMMIT } from '$core/constants'
 import { NotFoundError, Result } from '$core/lib'
-import { commits, Project, projects } from '$core/schema'
-import { and, desc, eq, getTableColumns, isNotNull } from 'drizzle-orm'
+import { commits, projects } from '$core/schema'
+import {
+  and,
+  desc,
+  eq,
+  getTableColumns,
+  isNotNull,
+  isNull,
+  or,
+} from 'drizzle-orm'
 
-import Repository from './repository'
+import Repository, { PaginationArgs } from '../repository'
+
+function filterByStatusQuery({
+  scope,
+  status,
+}: {
+  status: CommitStatus
+  scope: typeof CommitsRepository.prototype.scope
+}) {
+  switch (status) {
+    case CommitStatus.Draft:
+      return isNull(scope.mergedAt)
+    case CommitStatus.Merged:
+      return isNotNull(scope.mergedAt)
+    default:
+      return or(isNotNull(scope.mergedAt), isNull(scope.mergedAt))
+  }
+}
 
 export class CommitsRepository extends Repository {
   get scope() {
@@ -92,40 +118,36 @@ export class CommitsRepository extends Repository {
     return Result.ok(result[0]!)
   }
 
-  async getCommitMergedAt({
+  async getCommitsByProject({
     project,
-    uuid,
-  }: {
-    project: Project
-    uuid: string
-  }) {
-    if (uuid === HEAD_COMMIT) {
-      const result = await this.db
-        .select({ mergedAt: this.scope.mergedAt })
-        .from(this.scope)
-        .where(
-          and(
-            eq(this.scope.projectId, project.id),
-            isNotNull(this.scope.mergedAt),
-          ),
-        )
-        .orderBy(desc(this.scope.mergedAt))
-        .limit(1)
-
-      if (!result.length) {
-        return Result.error(new NotFoundError('No head commit found'))
-      }
-      const headCommit = result[0]!
-      return Result.ok(headCommit.mergedAt!)
-    }
-
-    const result = await this.db
-      .select()
+    page = 1,
+    filterByStatus = CommitStatus.All,
+    pageSize = 20,
+  }: { project: Project; filterByStatus?: CommitStatus } & PaginationArgs) {
+    const filter = filterByStatusQuery({
+      scope: this.scope,
+      status: filterByStatus,
+    })
+    const query = this.db
+      .select({
+        id: this.scope.id,
+        uuid: this.scope.uuid,
+        title: this.scope.title,
+        description: this.scope.description,
+        projectId: this.scope.projectId,
+        userId: this.scope.userId,
+        mergedAt: this.scope.mergedAt,
+        createdAt: this.scope.createdAt,
+        updatedAt: this.scope.updatedAt,
+      })
       .from(this.scope)
-      .where(eq(this.scope.uuid, uuid))
-    const commit = result[0]
-    if (!commit) return Result.error(new NotFoundError('Commit not found'))
+      .where(and(eq(this.scope.projectId, project.id), filter))
 
-    return Result.ok(commit.mergedAt)
+    const result = await Repository.paginateQuery({
+      query: query.$dynamic(),
+      page,
+      pageSize,
+    })
+    return Result.ok(result)
   }
 }

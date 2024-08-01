@@ -6,8 +6,8 @@ import { createNewDocument } from './create'
 
 describe('createNewDocument', () => {
   it('creates a new document version in the commit', async (ctx) => {
-    const { project } = await ctx.factories.createProject()
-    const { commit } = await ctx.factories.createDraft({ project })
+    const { project, user } = await ctx.factories.createProject()
+    const { commit } = await ctx.factories.createDraft({ project, user })
 
     const documentResult = await createNewDocument({
       commit,
@@ -25,8 +25,8 @@ describe('createNewDocument', () => {
   })
 
   it('fails if there is another document with the same path', async (ctx) => {
-    const { project } = await ctx.factories.createProject()
-    const { commit } = await ctx.factories.createDraft({ project })
+    const { project, user } = await ctx.factories.createProject()
+    const { commit } = await ctx.factories.createDraft({ project, user })
 
     await createNewDocument({
       commit,
@@ -45,8 +45,8 @@ describe('createNewDocument', () => {
   })
 
   it('fails when trying to create a document in a merged commit', async (ctx) => {
-    const { project } = await ctx.factories.createProject()
-    let { commit } = await ctx.factories.createDraft({ project })
+    const { project, user } = await ctx.factories.createProject()
+    let { commit } = await ctx.factories.createDraft({ project, user })
     commit = await mergeCommit(commit).then((r) => r.unwrap())
 
     const result = await createNewDocument({
@@ -59,8 +59,8 @@ describe('createNewDocument', () => {
   })
 
   it('fails when trying to create a document in a merged commit', async (ctx) => {
-    const { project } = await ctx.factories.createProject()
-    let { commit } = await ctx.factories.createDraft({ project })
+    const { project, user } = await ctx.factories.createProject()
+    let { commit } = await ctx.factories.createDraft({ project, user })
     commit = await mergeCommit(commit).then((r) => r.unwrap())
 
     const result = await createNewDocument({

@@ -30,7 +30,7 @@ export default async function CommitRoot({
     <DocumentDetailWrapper
       resizableId={resizableId}
       resizableSizes={layoutData}
-      sidebar={<Sidebar commit={commit} />}
+      sidebar={<Sidebar project={project} commit={commit} />}
     >
       <div className='p-32'>Main content. Remove Tailwind Styles from here</div>
     </DocumentDetailWrapper>

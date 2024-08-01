@@ -11,8 +11,8 @@ import { destroyFolder } from './destroyFolder'
 
 describe('removing folders', () => {
   it('throws error if folder does not exist', async () => {
-    const { project } = await factories.createProject()
-    const { commit: draft } = await factories.createDraft({ project })
+    const { project, user } = await factories.createProject()
+    const { commit: draft } = await factories.createDraft({ project, user })
 
     const result = await destroyFolder({
       path: 'some-folder',
@@ -23,8 +23,8 @@ describe('removing folders', () => {
   })
 
   it('throws error if commit is merged', async () => {
-    const { project } = await factories.createProject()
-    const { commit: draft } = await factories.createDraft({ project })
+    const { project, user } = await factories.createProject()
+    const { commit: draft } = await factories.createDraft({ project, user })
     const mergedCommit = await mergeCommit(draft).then((r) => r.unwrap())
 
     const result = await destroyFolder({
@@ -37,8 +37,8 @@ describe('removing folders', () => {
   })
 
   it('destroy folder that were in draft document but not in previous merged commits', async () => {
-    const { project } = await factories.createProject()
-    const { commit: draft } = await factories.createDraft({ project })
+    const { project, user } = await factories.createProject()
+    const { commit: draft } = await factories.createDraft({ project, user })
     await factories.createDocumentVersion({
       commit: draft,
       path: 'root-folder/some-folder/doc1',
@@ -84,7 +84,7 @@ describe('removing folders', () => {
   })
 
   it('create soft deleted documents that were present in merged commits and were deleted in this draft commit', async () => {
-    const { project } = await factories.createProject({
+    const { project, user } = await factories.createProject({
       documents: {
         'some-folder': {
           doc2: 'Doc 2',
@@ -92,7 +92,7 @@ describe('removing folders', () => {
         },
       },
     })
-    const { commit: draft } = await factories.createDraft({ project })
+    const { commit: draft } = await factories.createDraft({ project, user })
 
     await destroyFolder({
       path: 'some-folder',
@@ -113,7 +113,7 @@ describe('removing folders', () => {
   })
 
   it('existing documents in this commit draft are marked as deleted', async () => {
-    const { project, documents } = await factories.createProject({
+    const { project, user, documents } = await factories.createProject({
       documents: {
         'some-folder': {
           doc2: 'Doc 2',
@@ -121,7 +121,7 @@ describe('removing folders', () => {
         },
       },
     })
-    const { commit: draft } = await factories.createDraft({ project })
+    const { commit: draft } = await factories.createDraft({ project, user })
     await Promise.all(
       documents.map((d) =>
         updateDocument({

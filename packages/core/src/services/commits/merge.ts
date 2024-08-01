@@ -1,11 +1,11 @@
 import {
-  Commit,
   commits,
   database,
   recomputeChanges,
   Result,
   Transaction,
 } from '@latitude-data/core'
+import { Commit } from '$core/browser'
 import { LatitudeError } from '$core/lib/errors'
 import { and, eq } from 'drizzle-orm'
 

@@ -1,6 +1,7 @@
 import { omit } from 'lodash-es'
 
 import { readMetadata, type CompileError } from '@latitude-data/compiler'
+import { Commit, DocumentVersion } from '$core/browser'
 import { database } from '$core/client'
 import { findWorkspaceFromCommit } from '$core/data-access'
 import { Result, Transaction, TypedResult } from '$core/lib'
@@ -10,7 +11,7 @@ import {
   DocumentVersionsRepository,
   ProjectsRepository,
 } from '$core/repositories'
-import { Commit, DocumentVersion, documentVersions } from '$core/schema'
+import { documentVersions } from '$core/schema'
 import { eq } from 'drizzle-orm'
 
 export async function getMergedAndDraftDocuments(

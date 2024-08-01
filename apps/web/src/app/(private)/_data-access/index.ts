@@ -1,13 +1,12 @@
 import { cache } from 'react'
 
 import {
-  Commit,
   CommitsRepository,
   DocumentVersionsRepository,
   NotFoundError,
-  Project,
   ProjectsRepository,
 } from '@latitude-data/core'
+import type { Commit, Project } from '@latitude-data/core/browser'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
 import { notFound } from 'next/navigation'
 

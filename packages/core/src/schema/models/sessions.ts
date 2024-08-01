@@ -1,9 +1,9 @@
-import { InferSelectModel, relations } from 'drizzle-orm'
+import { relations } from 'drizzle-orm'
 import { text, timestamp } from 'drizzle-orm/pg-core'
 
 import { latitudeSchema } from '..'
 import { timestamps } from '../schemaHelpers'
-import { User, users } from './users'
+import { users } from './users'
 
 export const sessions = latitudeSchema.table('sessions', {
   id: text('id').primaryKey(),
@@ -23,7 +23,3 @@ export const sessionRelations = relations(sessions, ({ one }) => ({
     references: [users.id],
   }),
 }))
-
-export type Session = InferSelectModel<typeof sessions> & {
-  user: User
-}

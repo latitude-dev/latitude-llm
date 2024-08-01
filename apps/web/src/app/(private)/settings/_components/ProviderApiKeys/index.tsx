@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 
-import { ProviderApiKey } from '@latitude-data/core'
+import { type ProviderApiKey } from '@latitude-data/core/browser'
 import useProviderApiKeys from '$/stores/providerApiKeys'
 import useUsers from '$/stores/users'
 import {

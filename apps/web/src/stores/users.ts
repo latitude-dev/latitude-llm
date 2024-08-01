@@ -1,4 +1,4 @@
-import { User } from '@latitude-data/core'
+import type { User } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui'
 import { getUsersActions } from '$/actions/users/fetch'
 import useSWR, { SWRConfiguration } from 'swr'

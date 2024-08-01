@@ -2,7 +2,7 @@
 
 import { Suspense, useCallback, useRef } from 'react'
 
-import { Commit, DocumentVersion } from '@latitude-data/core'
+import type { Commit, DocumentVersion } from '@latitude-data/core/browser'
 import {
   DocumentEditor,
   DocumentTextEditorFallback,

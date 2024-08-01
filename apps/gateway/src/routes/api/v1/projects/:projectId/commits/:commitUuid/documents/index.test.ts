@@ -1,11 +1,11 @@
+import {
+  apiKeys,
+  database,
+  DocumentVersionsRepository,
+  factories,
+  mergeCommit,
+} from '@latitude-data/core'
 import app from '$/index'
-import { database } from '$core/client'
-import { DocumentVersionsRepository } from '$core/repositories'
-import { apiKeys, projects } from '$core/schema'
-import { mergeCommit } from '$core/services'
-import { createDraft } from '$core/tests/factories/commits'
-import { createDocumentVersion } from '$core/tests/factories/documents'
-import { createWorkspace } from '$core/tests/factories/workspaces'
 import { eq } from 'drizzle-orm'
 import { describe, expect, it } from 'vitest'
 
@@ -22,22 +22,22 @@ describe('GET documents', () => {
 
   describe('authorized', () => {
     it('succeeds', async () => {
-      const session = await createWorkspace()
-      const project = await database.query.projects.findFirst({
-        where: eq(projects.workspaceId, session.workspace.id),
-      })
+      const { workspace, user, project } = await factories.createProject()
       const apikey = await database.query.apiKeys.findFirst({
-        where: eq(apiKeys.workspaceId, session.workspace.id),
+        where: eq(apiKeys.workspaceId, workspace.id),
       })
       const path = '/path/to/document'
-      const { commit } = await createDraft({ project })
-      const document = await createDocumentVersion({ commit: commit!, path })
+      const { commit } = await factories.createDraft({
+        project,
+        user,
+      })
+      const document = await factories.createDocumentVersion({ commit, path })
 
       await mergeCommit(commit).then((r) => r.unwrap())
 
       // TODO: We refetch the document because merging a commit actually replaces the
       // draft document with a new one. Review this behavior.
-      const docsScope = new DocumentVersionsRepository(session.workspace.id)
+      const docsScope = new DocumentVersionsRepository(workspace.id)
       const documentVersion = await docsScope
         .getDocumentByPath({ commit, path })
         .then((r) => r.unwrap())

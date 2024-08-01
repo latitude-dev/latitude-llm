@@ -30,7 +30,7 @@ export function BreadcrumpBadge({
             onClick={onCopy}
             className='cursor-pointer flex flex-row items-center gap-x-1'
           >
-            <Badge variant={isHead ? 'accent' : 'secondary'}>{uuid}</Badge>
+            <Badge variant={isHead ? 'accent' : 'muted'}>{uuid}</Badge>
             <Icons.clipboard className='w-4 h-4 text-muted-foreground' />
           </div>
         }

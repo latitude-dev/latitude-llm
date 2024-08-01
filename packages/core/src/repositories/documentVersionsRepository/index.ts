@@ -1,11 +1,6 @@
+import { Commit, DocumentVersion } from '$core/browser'
 import { NotFoundError, Result } from '$core/lib'
-import {
-  Commit,
-  commits,
-  DocumentVersion,
-  documentVersions,
-  projects,
-} from '$core/schema'
+import { commits, documentVersions, projects } from '$core/schema'
 import { and, eq, getTableColumns, isNotNull, lte, max } from 'drizzle-orm'
 
 import Repository from '../repository'

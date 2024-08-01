@@ -9,8 +9,8 @@ import { destroyOrSoftDeleteDocuments } from './destroyOrSoftDeleteDocuments'
 
 describe('destroyOrSoftDeleteDocuments', () => {
   it('remove documents that were not present in merged commits', async () => {
-    const { project } = await factories.createProject()
-    const { commit: draft } = await factories.createDraft({ project })
+    const { project, user } = await factories.createProject()
+    const { commit: draft } = await factories.createDraft({ project, user })
     const { documentVersion: draftDocument } =
       await factories.createDocumentVersion({
         commit: draft,
@@ -30,11 +30,15 @@ describe('destroyOrSoftDeleteDocuments', () => {
   })
 
   it('mark as deleted documents that were present in merged commits and not in the draft commit', async () => {
-    const { project, documents: allDocs } = await factories.createProject({
+    const {
+      project,
+      user,
+      documents: allDocs,
+    } = await factories.createProject({
       documents: { doc1: 'Doc 1' },
     })
     const document = allDocs[0]!
-    const { commit: draft } = await factories.createDraft({ project })
+    const { commit: draft } = await factories.createDraft({ project, user })
 
     await destroyOrSoftDeleteDocuments({
       commit: draft,
@@ -51,11 +55,15 @@ describe('destroyOrSoftDeleteDocuments', () => {
   })
 
   it('mark as deleted documents present in the draft commit', async () => {
-    const { project, documents: allDocs } = await factories.createProject({
+    const {
+      project,
+      user,
+      documents: allDocs,
+    } = await factories.createProject({
       documents: { doc1: 'Doc 1' },
     })
     const document = allDocs[0]!
-    const { commit: draft } = await factories.createDraft({ project })
+    const { commit: draft } = await factories.createDraft({ project, user })
     const draftDocument = await updateDocument({
       commit: draft,
       document,

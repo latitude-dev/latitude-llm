@@ -1,11 +1,15 @@
-import { getSession } from '$/services/auth/getSession'
-import { createWorkspace } from '$core/tests/factories/workspaces'
-import { beforeEach, describe, expect, it, Mock, vi } from 'vitest'
+import { factories } from '@latitude-data/core'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { getUsersActions } from './fetch'
 
+const mocks = vi.hoisted(() => {
+  return {
+    getSession: vi.fn(),
+  }
+})
 vi.mock('$/services/auth/getSession', () => ({
-  getSession: vi.fn(),
+  getSession: mocks.getSession,
 }))
 
 describe('getUsersAction', () => {
@@ -19,9 +23,12 @@ describe('getUsersAction', () => {
 
   describe('authorized', () => {
     beforeEach(async () => {
-      const session = await createWorkspace()
-      ;(getSession as Mock).mockReturnValue({
-        user: session.userData,
+      const { workspace, userData } = await factories.createWorkspace({
+        name: 'test',
+      })
+      mocks.getSession.mockReturnValue({
+        user: userData,
+        workspace: { id: workspace.id, name: workspace.name },
       })
     })
 

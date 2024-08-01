@@ -1,6 +1,7 @@
+import { type Commit, type Workspace } from '$core/browser'
 import { database } from '$core/client'
 import { NotFoundError, Result, TypedResult } from '$core/lib'
-import { Commit, commits, projects, Workspace, workspaces } from '$core/schema'
+import { commits, projects, workspaces } from '$core/schema'
 import { eq, getTableColumns } from 'drizzle-orm'
 
 export async function unsafelyFindWorkspace(
