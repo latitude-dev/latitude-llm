@@ -26,7 +26,7 @@ export const updateDocumentContentAction = withProject
       .then((r) => r.unwrap())
     const docsScope = new DocumentVersionsRepository(ctx.project.workspaceId)
     const document = await docsScope
-      .getDocumentByUuid({
+      .getDocumentAtCommit({
         commit,
         documentUuid: input.documentUuid,
       })

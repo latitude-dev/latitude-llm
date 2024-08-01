@@ -1,6 +1,11 @@
+import path from 'path'
 import { omit } from 'lodash-es'
 
-import { readMetadata, type CompileError } from '@latitude-data/compiler'
+import {
+  readMetadata,
+  Document as RefDocument,
+  type CompileError,
+} from '@latitude-data/compiler'
 import { Commit, DocumentVersion } from '$core/browser'
 import { database } from '$core/client'
 import { findWorkspaceFromCommit } from '$core/data-access'
@@ -87,18 +92,26 @@ export async function resolveDocumentChanges({
 }> {
   const errors: Record<string, CompileError[]> = {}
 
-  const getDocumentContent = async (path: string): Promise<string> => {
-    const document = newDocuments.find((d) => d.path === path)
-    if (!document) {
-      throw new Error(`Document not found`)
+  const getDocumentContent = async (
+    refPath: string,
+    from?: string,
+  ): Promise<RefDocument | undefined> => {
+    const fullPath = path
+      .resolve(path.dirname(`/${from ?? ''}`), refPath)
+      .replace(/^\//, '')
+    const document = newDocuments.find((d) => d.path === fullPath)
+    if (!document) return undefined
+    return {
+      path: document.path,
+      content: document.content,
     }
-    return document.content
   }
 
   const newDocumentsWithUpdatedHash = await Promise.all(
     newDocuments.map(async (d) => {
       const metadata = await readMetadata({
         prompt: d.content ?? '',
+        fullPath: d.path,
         referenceFn: getDocumentContent,
       })
       if (metadata.errors.length > 0) {

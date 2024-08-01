@@ -74,18 +74,18 @@ describe('updateDocument', () => {
 
     const docsScope = new DocumentVersionsRepository(project.workspaceId)
     const referencedDoc = documents.find((d) => d.path === 'referenced/doc')!
-    const { commit } = await ctx.factories.createDraft({ project, user })
+    const { commit: draft } = await ctx.factories.createDraft({ project, user })
 
     await updateDocument({
-      commit,
+      commit: draft,
       document: referencedDoc,
       content: 'The document that is being referenced v2',
     }).then((r) => r.unwrap())
 
-    await recomputeChanges(commit)
+    await recomputeChanges(draft)
 
     const changedDocuments = await docsScope
-      .listCommitChanges(commit)
+      .listCommitChanges(draft)
       .then((r) => r.unwrap())
 
     expect(changedDocuments.length).toBe(2)

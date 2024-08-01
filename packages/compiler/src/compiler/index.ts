@@ -1,8 +1,11 @@
 import { Conversation, ConversationMetadata } from '$compiler/types'
 
 import { Chain } from './chain'
-import { type ReferencePromptFn } from './compile'
-import { ReadMetadata } from './readMetadata'
+import {
+  ReadMetadata,
+  type Document,
+  type ReferencePromptFn,
+} from './readMetadata'
 
 export async function render({
   prompt,
@@ -31,12 +34,17 @@ export function createChain({
 
 export function readMetadata({
   prompt,
+  fullPath,
   referenceFn,
 }: {
   prompt: string
+  fullPath?: string
   referenceFn?: ReferencePromptFn
 }): Promise<ConversationMetadata> {
-  return new ReadMetadata({ prompt, referenceFn }).run()
+  return new ReadMetadata({
+    document: { path: fullPath ?? '', content: prompt },
+    referenceFn,
+  }).run()
 }
 
-export { Chain }
+export { Chain, type Document, type ReferencePromptFn }

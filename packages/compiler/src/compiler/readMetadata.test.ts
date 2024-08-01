@@ -3,7 +3,22 @@ import CompileError from '$compiler/error/error'
 import { describe, expect, it } from 'vitest'
 
 import { readMetadata } from '.'
+import { Document } from './readMetadata'
 import { removeCommonIndent } from './utils'
+
+type PromptTree = {
+  [path: string]: string | PromptTree
+}
+
+const referenceFn = (prompts: PromptTree) => {
+  return async (promptPath: string): Promise<Document | undefined> => {
+    if (!(promptPath in prompts)) return undefined
+    return {
+      path: promptPath,
+      content: prompts[promptPath]!,
+    } as Document
+  }
+}
 
 describe('resolvedPrompt', async () => {
   it('replaces reference tags with the referenced prompt', async () => {
@@ -14,13 +29,11 @@ describe('resolvedPrompt', async () => {
         The end.
       `),
       child: removeCommonIndent('Lorem ipsum'),
-    } as Record<string, string>
+    }
 
     const cleanParentMetadata = await readMetadata({
       prompt: prompts['parent']!,
-      referenceFn: async (promptPath: string): Promise<string> => {
-        return prompts[promptPath]!
-      },
+      referenceFn: referenceFn(prompts),
     })
 
     expect(cleanParentMetadata.resolvedPrompt).toBe(
@@ -49,15 +62,11 @@ describe('resolvedPrompt', async () => {
       child: removeCommonIndent(`
         foo!
       `),
-    } as Record<string, string>
-
-    const referenceFn = async (promptPath: string): Promise<string> => {
-      return prompts[promptPath]!
     }
 
     const cleanParentMetadata = await readMetadata({
       prompt: prompts['parent']!,
-      referenceFn,
+      referenceFn: referenceFn(prompts),
     })
 
     expect(cleanParentMetadata.resolvedPrompt).toBe(
@@ -89,13 +98,11 @@ describe('resolvedPrompt', async () => {
       grandchild: removeCommonIndent(`
         Grandchild.
       `),
-    } as Record<string, string>
+    }
 
     const cleanParentMetadata = await readMetadata({
       prompt: prompts['parent']!,
-      referenceFn: async (promptPath: string): Promise<string> => {
-        return prompts[promptPath]!
-      },
+      referenceFn: referenceFn(prompts),
     })
 
     expect(cleanParentMetadata.resolvedPrompt).toBe(
@@ -122,13 +129,11 @@ describe('resolvedPrompt', async () => {
       child2: removeCommonIndent(`
         bar!
       `),
-    } as Record<string, string>
+    }
 
     const cleanParentMetadata = await readMetadata({
       prompt: prompts['parent']!,
-      referenceFn: async (promptPath: string): Promise<string> => {
-        return prompts[promptPath]!
-      },
+      referenceFn: referenceFn(prompts),
     })
 
     expect(cleanParentMetadata.resolvedPrompt).toBe(
@@ -149,16 +154,11 @@ describe('resolvedPrompt', async () => {
         <ref prompt="child" />
         The end.
       `),
-    } as Record<string, string>
-
-    const referenceFn = async (promptPath: string): Promise<string> => {
-      if (!(promptPath in prompts)) throw new Error('Not found')
-      return prompts[promptPath]!
     }
 
     const cleanParentMetadata = await readMetadata({
       prompt: prompts['parent']!,
-      referenceFn,
+      referenceFn: referenceFn(prompts),
     })
 
     expect(cleanParentMetadata.resolvedPrompt).toBe(
@@ -186,15 +186,11 @@ describe('resolvedPrompt', async () => {
         ---
         Child.
       `),
-    } as Record<string, string>
-
-    const referenceFn = async (promptPath: string): Promise<string> => {
-      return prompts[promptPath]!
     }
 
     const cleanParentMetadata = await readMetadata({
       prompt: prompts['parent']!,
-      referenceFn,
+      referenceFn: referenceFn(prompts),
     })
 
     expect(cleanParentMetadata.resolvedPrompt).toBe(
@@ -219,15 +215,11 @@ describe('resolvedPrompt', async () => {
         /* This is the child document */
         Child.
       `),
-    } as Record<string, string>
-
-    const referenceFn = async (promptPath: string): Promise<string> => {
-      return prompts[promptPath]!
     }
 
     const cleanParentMetadata = await readMetadata({
       prompt: prompts['parent']!,
-      referenceFn,
+      referenceFn: referenceFn(prompts),
     })
 
     expect(cleanParentMetadata.resolvedPrompt).toBe(
@@ -331,22 +323,18 @@ describe('referenced prompts', async () => {
         The end.
       `),
       child: removeCommonIndent('Lorem ipsum'),
-    } as Record<string, string>
-
-    const referenceFn = async (promptPath: string): Promise<string> => {
-      return prompts[promptPath]!
     }
 
     const metadata1 = await readMetadata({
       prompt: prompts['parent']!,
-      referenceFn,
+      referenceFn: referenceFn(prompts),
     })
 
     prompts['child'] = 'Latitude Rocks' // Modify child prompt
 
     const metadata2 = await readMetadata({
       prompt: prompts['parent']!,
-      referenceFn,
+      referenceFn: referenceFn(prompts),
     })
 
     expect(metadata1.resolvedPrompt).not.toBe(metadata2.resolvedPrompt)
@@ -365,15 +353,11 @@ describe('referenced prompts', async () => {
         ${CUSTOM_TAG_START}childParam${CUSTOM_TAG_END}
         ${CUSTOM_TAG_START}parentDefinedVar${CUSTOM_TAG_END}
       `),
-    } as Record<string, string>
-
-    const referenceFn = async (promptPath: string): Promise<string> => {
-      return prompts[promptPath]!
     }
 
     const metadata = await readMetadata({
       prompt: prompts['parent']!,
-      referenceFn,
+      referenceFn: referenceFn(prompts),
     })
 
     // parentDefinedVar should not be included as parameter
@@ -396,5 +380,56 @@ describe('syntax errors', async () => {
 
     expect(metadata.errors.length).toBe(1)
     expect(metadata.errors[0]).toBeInstanceOf(CompileError)
+  })
+
+  it('finds circular references', async () => {
+    const prompts = {
+      parent: removeCommonIndent(`
+        This is the parent prompt.
+        <ref prompt="child" />
+        The end.
+      `),
+      child: removeCommonIndent(`
+        This is the child prompt.
+        <ref prompt="parent" />
+      `),
+    }
+
+    const metadata = await readMetadata({
+      prompt: prompts['parent']!,
+      referenceFn: referenceFn(prompts),
+    })
+
+    expect(metadata.errors.length).toBe(1)
+    expect(metadata.errors[0]).toBeInstanceOf(CompileError)
+    expect(metadata.errors[0]!.code).toBe('circular-reference')
+  })
+
+  it('shows errors from referenced prompts as errors in the parent', async () => {
+    const prompts = {
+      parent: removeCommonIndent(`
+        This is the parent prompt.
+        <ref prompt="child" />
+        The end.
+      `),
+      child: removeCommonIndent(`
+        This is the child prompt.
+        Error:
+        <unknownTag />
+      `),
+    }
+
+    const metadata = await readMetadata({
+      prompt: prompts['parent']!,
+      referenceFn: referenceFn(prompts),
+    })
+
+    expect(metadata.errors.length).toBe(1)
+    expect(metadata.errors[0]).toBeInstanceOf(CompileError)
+    expect(metadata.errors[0]!.code).toBe('reference-error')
+    expect(metadata.errors[0]!.message).contains(
+      'The referenced prompt contains an error:',
+    )
+    expect(metadata.errors[0]!.message).contains(`Unknown tag: 'unknownTag'`)
   })
 })

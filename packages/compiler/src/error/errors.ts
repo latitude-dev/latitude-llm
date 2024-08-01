@@ -1,5 +1,7 @@
 import { CUSTOM_TAG_END, CUSTOM_TAG_START } from '$compiler/constants'
 
+import CompileError from './error'
+
 function getKlassName(error: unknown): string {
   const errorKlass = error as Error
   return errorKlass.constructor ? errorKlass.constructor.name : 'Error'
@@ -158,10 +160,6 @@ export default {
     code: 'message-tag-without-role',
     message: 'Message tags must have a role attribute',
   },
-  invalidReferencePromptPlacement: {
-    code: 'invalid-reference-prompt-placement',
-    message: 'Reference tags must not be inside of other tags',
-  },
   referenceTagWithoutPrompt: {
     code: 'reference-tag-without-prompt',
     message: 'Reference tags must have a prompt attribute',
@@ -170,17 +168,32 @@ export default {
     code: 'missing-reference-function',
     message: 'A reference function was not provided',
   },
+  circularReference: {
+    code: 'circular-reference',
+    message: 'There is a circular reference',
+  },
   didNotResolveReferences: {
     code: 'did-not-resolve-references',
     message:
       'Cannot compile reference tags. Make sure you have resolved the references before compiling.',
+  },
+  referenceNotFound: {
+    code: 'reference-not-found',
+    message: 'The referenced document does not exist',
+  },
+  referenceDepthLimit: {
+    code: 'reference-depth-limit',
+    message: 'The reference depth limit has been reached',
   },
   referenceError: (err: unknown) => {
     const error = err as Error
     const errorKlassName = getKlassName(error)
     return {
       code: 'reference-error',
-      message: `There was an error referencing the prompt: \n${errorKlassName} ${error.message}`,
+      message:
+        error instanceof CompileError
+          ? `The referenced prompt contains an error: \n${error.message}`
+          : `There was an error referencing the prompt: \n${errorKlassName}: ${error.message}`,
     }
   },
   referenceTagHasContent: {
