@@ -84,11 +84,12 @@ export function ConfirmModal({
       footer={
         <div className='flex justify-end space-x-2'>
           <DialogClose asChild>
-            <Button variant='outline' onClick={onCancel}>
+            <Button fancy variant='outline' onClick={onCancel}>
               {cancel?.label ?? 'Cancel'}
             </Button>
           </DialogClose>
           <Button
+            fancy
             isLoading={confirm.isConfirming}
             variant={type === 'primary' ? 'default' : type}
             onClick={onConfirm}

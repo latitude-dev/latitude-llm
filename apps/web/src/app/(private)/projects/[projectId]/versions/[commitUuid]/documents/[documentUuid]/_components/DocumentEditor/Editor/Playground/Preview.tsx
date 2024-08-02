@@ -80,11 +80,20 @@ export default function Preview({
 
       <div className='flex flex-row w-full items-center justify-center'>
         {error || (metadata?.errors.length ?? 0) > 0 ? (
-          <Tooltip side='bottom' trigger={<Button disabled>Run prompt</Button>}>
+          <Tooltip
+            side='bottom'
+            trigger={
+              <Button fancy disabled>
+                Run prompt
+              </Button>
+            }
+          >
             There are errors in your prompt. Please fix them before running.
           </Tooltip>
         ) : (
-          <Button onClick={runPrompt}>Run prompt</Button>
+          <Button fancy onClick={runPrompt}>
+            Run prompt
+          </Button>
         )}
       </div>
     </div>

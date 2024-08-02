@@ -62,7 +62,7 @@ export default function Playground({
     <>
       <Header title='Playground'>
         {mode === 'chat' && (
-          <Button onClick={() => setMode('preview')} variant='outline'>
+          <Button fancy onClick={() => setMode('preview')} variant='outline'>
             Clear chat
           </Button>
         )}
