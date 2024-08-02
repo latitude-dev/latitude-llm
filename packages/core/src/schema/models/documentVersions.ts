@@ -2,7 +2,6 @@ import { relations } from 'drizzle-orm'
 import {
   bigint,
   bigserial,
-  index,
   text,
   timestamp,
   unique,
@@ -37,10 +36,6 @@ export const documentVersions = latitudeSchema.table(
       table.path,
       table.commitId,
       table.deletedAt,
-    ),
-    documentUuidCommitIdIdx: index('document_uuid_commit_id_idx').on(
-      table.documentUuid,
-      table.commitId,
     ),
   }),
 )

@@ -51,10 +51,14 @@ export default function DocumentEditor({
 
   const { commit } = useCurrentCommit()
 
-  const debouncedSave = useDebouncedCallback((val: string) => {
-    saveDocumentContent(val)
-    setIsSaved(true)
-  }, 2_000)
+  const debouncedSave = useDebouncedCallback(
+    (val: string) => {
+      saveDocumentContent(val)
+      setIsSaved(true)
+    },
+    500,
+    { trailing: true },
+  )
 
   const onChange = useCallback((value: string) => {
     setIsSaved(false)

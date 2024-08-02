@@ -12,7 +12,6 @@ export const createDraftCommitAction = withProject
       title: z.string().min(1, { message: 'Title is required' }),
       description: z.string().optional().default(''),
     }),
-    { type: 'formData' },
   )
   .handler(async ({ input, ctx }) => {
     const result = await createCommit({

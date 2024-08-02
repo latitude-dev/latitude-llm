@@ -134,6 +134,13 @@
       "when": 1722510508496,
       "tag": "0018_wealthy_dragon_man",
       "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1722603061801,
+      "tag": "0019_overjoyed_excalibur",
+      "breakpoints": true
     }
   ]
 }

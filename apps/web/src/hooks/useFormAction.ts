@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useState, useTransition } from 'react'
 
 import {
   inferServerActionError,
@@ -38,27 +38,32 @@ export function useFormAction<
     | inferServerActionInput<TServerAction>
     | inferServerActionReturnData<TServerAction>
   >()
-  const [error, setError] = useState()
+  const [_, startTransition] = useTransition()
+  const [error, setError] = useState<Record<string, unknown> | undefined>()
+  const _action = useCallback(
+    async (json: inferServerActionInput<TServerAction>) => {
+      const result = await exec(json)
+      const [payload, error] = result
+
+      if (error) {
+        setError(error)
+      } else {
+        setData(payload!)
+      }
+    },
+    [exec, setError, setData],
+  )
 
   const action = useCallback(
     async (formData: FormData) => {
       const json = formDataToJson(
         formData,
       ) as inferServerActionInput<TServerAction>
-      setData(json)
 
-      const result = await exec(json)
-      const [payload, error] = result
-
-      if (error) {
-        if (onError) onError(error)
-        setError(error)
-      } else {
-        if (onSuccess) onSuccess(payload!)
-        setData(payload!)
-      }
-
-      return result
+      startTransition(() => {
+        setData(json)
+        _action(json)
+      })
     },
     [exec, onSuccess, onError],
   )
