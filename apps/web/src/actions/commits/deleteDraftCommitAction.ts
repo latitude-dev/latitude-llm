@@ -18,5 +18,6 @@ export const deleteDraftCommitAction = withProject
     const commit = await commitScope
       .getCommitById(input.id)
       .then((r) => r.unwrap())
+
     return deleteCommitDraft(commit).then((r) => r.unwrap())
   })

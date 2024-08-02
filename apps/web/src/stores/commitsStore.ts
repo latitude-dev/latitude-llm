@@ -7,11 +7,18 @@ import {
   useToast,
 } from '@latitude-data/web-ui'
 import { createDraftCommitAction } from '$/actions/commits/create'
+import { deleteDraftCommitAction } from '$/actions/commits/deleteDraftCommitAction'
 import { fetchCommitsByProjectAction } from '$/actions/commits/fetchCommitsByProjectAction'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import useSWR, { SWRConfiguration } from 'swr'
 
-export default function useCommits(opts?: SWRConfiguration) {
+export default function useCommits(
+  opts: SWRConfiguration & {
+    onSuccessCreate?: (commit: Commit) => void
+    onSuccessDestroy?: (commit: Commit) => void
+  } = {},
+) {
+  const { onSuccessCreate, onSuccessDestroy } = opts
   const { project } = useCurrentProject()
   useCurrentCommit
   const { toast } = useToast()
@@ -43,16 +50,42 @@ export default function useCommits(opts?: SWRConfiguration) {
     fetcher,
     opts,
   )
-  const { execute: createDraft } = useLatitudeAction(createDraftCommitAction, {
-    onSuccess: async ({ data: draft }) => {
-      mutate([...data, draft])
+  const { execute: createDraft, isPending: isCreating } = useLatitudeAction(
+    createDraftCommitAction,
+    {
+      onSuccess: async ({ data: draft }) => {
+        mutate([...data, draft])
+        onSuccessCreate?.(draft)
 
-      toast({
-        title: 'Success',
-        description: 'New Draft version ' + draft.title + ' created',
-      })
+        toast({
+          title: 'Success',
+          description: 'New Draft version ' + draft.title + ' created',
+        })
+      },
     },
-  })
+  )
+  const { execute: destroyDraft, isPending: isDestroying } = useLatitudeAction(
+    deleteDraftCommitAction,
+    {
+      onSuccess: async ({ data: deletedDraft }) => {
+        mutate(data.filter((item) => item.id !== deletedDraft.id))
 
-  return { data: data ?? [], mutate, ...rest, createDraft }
+        onSuccessDestroy?.(deletedDraft)
+        toast({
+          title: 'Success',
+          description: 'Draft version ' + deletedDraft.title + ' deleted',
+        })
+      },
+    },
+  )
+
+  return {
+    data: data ?? [],
+    mutate,
+    ...rest,
+    createDraft,
+    isCreating,
+    destroyDraft,
+    isDestroying,
+  }
 }

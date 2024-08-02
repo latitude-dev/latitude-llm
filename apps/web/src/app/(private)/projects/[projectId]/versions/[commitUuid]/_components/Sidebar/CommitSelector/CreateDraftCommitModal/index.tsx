@@ -7,11 +7,10 @@ import {
   TextArea,
   useCurrentProject,
 } from '@latitude-data/web-ui'
-import { createDraftCommitAction } from '$/actions/commits/create'
+import { useFormAction } from '$/hooks/useFormAction'
 import { ROUTES } from '$/services/routes'
 import useCommits from '$/stores/commitsStore'
 import { useRouter } from 'next/navigation'
-import { useServerAction } from 'zsa-react'
 
 export default function DraftCommitModal({
   open,
@@ -20,31 +19,21 @@ export default function DraftCommitModal({
   open: boolean
   setOpen: (open: boolean) => void
 }) {
-  const { data, mutate } = useCommits()
+  const { createDraft, isCreating } = useCommits({
+    onSuccessCreate: (draft) => {
+      router.push(
+        ROUTES.projects
+          .detail({ id: project.id })
+          .commits.detail({ uuid: draft.uuid }).root,
+      )
+      setOpen(false)
+    },
+  })
+  const { error, data: input, action } = useFormAction(createDraft)
   const { project } = useCurrentProject()
   const router = useRouter()
-  // NOTE: `input` in this hook does not work atm because this PR is not merged yet:
-  // https://github.com/IdoPesok/zsa/pull/155
-  // But I tried and it works nicely.
-  const input = { title: '', description: '' } // Fake until the PR is merged
-  const { error, executeFormAction, isPending } = useServerAction(
-    createDraftCommitAction,
-    {
-      persistErrorWhilePending: true,
-      persistDataWhilePending: true,
-      onSuccess: (result) => {
-        const draft = result.data
-        mutate([...data, draft])
-        router.push(
-          ROUTES.projects
-            .detail({ id: project.id })
-            .commits.detail({ uuid: draft.uuid }).root,
-        )
-        setOpen(false)
-      },
-    },
-  )
-  const formattedErrors = error?.fieldErrors
+  const formattedErrors = error?.fieldErrors as Record<string, string[]>
+
   return (
     <Modal
       open={open}
@@ -57,14 +46,14 @@ export default function DraftCommitModal({
           <Button
             form='createDraftCommitForm'
             type='submit'
-            disabled={isPending}
+            disabled={isCreating}
           >
             Create version
           </Button>
         </>
       }
     >
-      <form id='createDraftCommitForm' action={executeFormAction}>
+      <form id='createDraftCommitForm' action={action}>
         <FormWrapper>
           <input type='hidden' name='projectId' value={project.id} />
           <Input
