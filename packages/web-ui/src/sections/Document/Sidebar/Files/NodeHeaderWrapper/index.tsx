@@ -163,6 +163,7 @@ function NodeHeaderWrapper({
               key={index}
               variant='ghost'
               size='none'
+              lookDisabled={action.disabled}
               onClick={action.onClick}
               iconProps={{
                 color: selected ? 'accentForeground' : 'foregroundMuted',

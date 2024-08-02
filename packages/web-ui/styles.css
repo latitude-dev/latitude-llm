@@ -60,6 +60,8 @@
 
     --muted: 243 244 246;
     --muted-foreground: 102 114 127;
+    --warning-muted-foreground: 180 83 9;
+    --destructive-muted-foreground: 185 28 28;
 
     --accent: 239 247 255;
     --accent-foreground: 3 86 176;

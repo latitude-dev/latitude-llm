@@ -154,6 +154,9 @@ importers:
       nextjs-toploader:
         specifier: ^1.6.12
         version: 1.6.12(next@14.3.0-canary.87)(react-dom@19.0.0-rc-378b305958-20240710)(react@19.0.0-rc-378b305958-20240710)
+      nprogress:
+        specifier: ^0.2.0
+        version: 0.2.0
       react:
         specifier: 19.0.0-rc-378b305958-20240710
         version: 19.0.0-rc-378b305958-20240710
@@ -194,6 +197,9 @@ importers:
       '@types/node':
         specifier: ^20.14.10
         version: 20.14.10
+      '@types/nprogress':
+        specifier: ^0.2.3
+        version: 0.2.3
       '@types/react':
         specifier: 18.3.0
         version: 18.3.0
@@ -3816,6 +3822,10 @@ packages:
 
   /@types/normalize-package-data@2.4.4:
     resolution: {integrity: sha512-37i+OaWTh9qeK4LSHPsyRC7NahnGotNuZvjLSgcPzblpHB3rrCJxAOgI5gCdKm7coonsaX1Of0ILiTcnZjbfxA==}
+    dev: true
+
+  /@types/nprogress@0.2.3:
+    resolution: {integrity: sha512-k7kRA033QNtC+gLc4VPlfnue58CM1iQLgn1IMAU8VPHGOj7oIHPp9UlhedEnD/Gl8evoCjwkZjlBORtZ3JByUA==}
     dev: true
 
   /@types/pg@8.11.6:

@@ -6,7 +6,7 @@ import {
   Transaction,
 } from '@latitude-data/core'
 import { Commit } from '$core/browser'
-import { LatitudeError } from '$core/lib/errors'
+import { LatitudeError, UnprocessableEntityError } from '$core/lib/errors'
 import { and, desc, eq, isNotNull } from 'drizzle-orm'
 
 export async function mergeCommit(commit: Commit, db = database) {
@@ -23,22 +23,35 @@ export async function mergeCommit(commit: Commit, db = database) {
       )
     if (otherCommits.length > 0) {
       return Result.error(
-        new LatitudeError('Commit merge time conflict, try again'),
+        new LatitudeError(
+          'Commit publish the version time conflict, try again',
+        ),
       )
     }
 
     const recomputedResults = await recomputeChanges(commit, tx)
+
     if (recomputedResults.error) return recomputedResults
     if (Object.keys(recomputedResults.value.errors).length > 0) {
       return Result.error(
-        new LatitudeError(
-          'There are errors in the updated documents in this commit',
+        new UnprocessableEntityError(
+          'There are errors in the updated documents in this version',
+          {
+            [commit.id]: [
+              'There are errors in the updated documents in this version',
+            ],
+          },
         ),
       )
     }
-    if (Object.keys(recomputedResults.value.documents).length === 0) {
+    if (Object.keys(recomputedResults.value.changedDocuments).length === 0) {
       return Result.error(
-        new LatitudeError('Cannot merge a commit with no changes.'),
+        new UnprocessableEntityError(
+          'Cannot publish a version with no changes.',
+          {
+            [commit.id]: ['Cannot publish a version with no changes.'],
+          },
+        ),
       )
     }
 

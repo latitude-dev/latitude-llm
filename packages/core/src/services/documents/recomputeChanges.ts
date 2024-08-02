@@ -2,16 +2,17 @@ import type { CompileError } from '@latitude-data/compiler'
 import { Commit, DocumentVersion } from '$core/browser'
 import { database } from '$core/client'
 import { Result, TypedResult } from '$core/lib'
-import { BadRequestError } from '$core/lib/errors'
 
 import {
+  assertCommitIsDraft,
   getMergedAndDraftDocuments,
   replaceCommitChanges,
   resolveDocumentChanges,
 } from './utils'
 
-type RecomputedChanges = {
-  documents: DocumentVersion[]
+export type RecomputedChanges = {
+  changedDocuments: DocumentVersion[]
+  headDocuments: DocumentVersion[]
   errors: { [documentUuid: string]: CompileError[] }
 }
 
@@ -20,11 +21,7 @@ export async function recomputeChanges(
   tx = database,
 ): Promise<TypedResult<RecomputedChanges, Error>> {
   try {
-    if (draft.mergedAt !== null) {
-      return Result.error(
-        new BadRequestError('Cannot recompute changes in a merged commit'),
-      )
-    }
+    assertCommitIsDraft(draft).unwrap()
 
     const [mergedDocuments, draftDocuments] = (
       await getMergedAndDraftDocuments(
@@ -51,7 +48,11 @@ export async function recomputeChanges(
       )
     ).unwrap()
 
-    return Result.ok({ documents: newDraftDocuments, errors })
+    return Result.ok({
+      headDocuments: mergedDocuments,
+      changedDocuments: newDraftDocuments,
+      errors,
+    })
   } catch (error) {
     return Result.error(error as Error)
   }

@@ -5,9 +5,8 @@ import {
   destroyDocument,
   DocumentVersionsRepository,
 } from '@latitude-data/core'
+import { withProject } from '$/actions/procedures'
 import { z } from 'zod'
-
-import { withProject } from '../procedures'
 
 export const destroyDocumentAction = withProject
   .createServerAction()
@@ -21,17 +20,12 @@ export const destroyDocumentAction = withProject
       .then((r) => r.unwrap())
     const docsScope = new DocumentVersionsRepository(ctx.project.workspaceId)
     const document = await docsScope
-      .getDocumentByUuid({
+      .getDocumentAtCommit({
         commit,
         documentUuid: input.documentUuid,
       })
       .then((r) => r.unwrap())
-
-    await destroyDocument({
-      document,
-      commit,
-      workspaceId: ctx.project.workspaceId,
-    }).then((r) => r.unwrap())
+    await destroyDocument({ document, commit }).then((r) => r.unwrap())
 
     return document
   })

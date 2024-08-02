@@ -152,14 +152,14 @@ export default function RootLayout({
   children: ReactNode
 }>) {
   return (
-    <html lang='en'>
+    <html lang='en' suppressHydrationWarning>
       <head>
         <meta charSet='utf-8' />
         <meta name='viewport' content='width=device-width, initial-scale=1' />
         <link rel='icon' href='/favicon.svg' />
       </head>
       <body className={`${fontSans.variable} ${fontMono.variable} font-sans`}>
-        <NextTopLoader />
+        <NextTopLoader showSpinner={false} />
         <ThemeProvider
           attribute='class'
           defaultTheme='system'

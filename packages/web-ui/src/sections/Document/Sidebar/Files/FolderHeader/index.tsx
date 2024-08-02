@@ -37,7 +37,7 @@ export default function FolderHeader({
   indentation: IndentType[]
   onToggleOpen: () => void
 }) {
-  const { onDeleteFolder } = useFileTreeContext()
+  const { isMerged, onMergeCommitClick, onDeleteFolder } = useFileTreeContext()
   const { openPaths, togglePath } = useOpenPaths((state) => ({
     togglePath: state.togglePath,
     openPaths: state.openPaths,
@@ -65,30 +65,43 @@ export default function FolderHeader({
   const onAddNode = useCallback(
     ({ isFile }: { isFile: boolean }) =>
       () => {
+        if (isMerged) {
+          onMergeCommitClick()
+          return
+        }
+
         if (!open) {
           togglePath(node.path)
         }
         addFolder({ parentPath: node.path, parentId: node.id, isFile })
       },
-    [node.path, togglePath, open],
+    [node.path, togglePath, open, isMerged, onMergeCommitClick, addFolder],
   )
   const actions = useMemo<MenuOption[]>(
     () => [
       {
         label: 'New folder',
+        disabled: isMerged,
         iconProps: { name: 'folderPlus' },
         onClick: onAddNode({ isFile: false }),
       },
       {
         label: 'New Prompt',
+        disabled: isMerged,
         iconProps: { name: 'filePlus' },
         onClick: onAddNode({ isFile: true }),
       },
       {
         label: 'Delete folder',
         type: 'destructive',
+        disabled: isMerged,
         iconProps: { name: 'trash' },
         onClick: () => {
+          if (isMerged) {
+            onMergeCommitClick()
+            return
+          }
+
           if (node.isPersisted) {
             onDeleteFolder({ node, path: node.path })
           } else {
@@ -98,6 +111,8 @@ export default function FolderHeader({
       },
     ],
     [
+      isMerged,
+      onMergeCommitClick,
       addFolder,
       onDeleteFolder,
       deleteTmpFolder,

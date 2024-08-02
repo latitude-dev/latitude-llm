@@ -57,10 +57,11 @@ export function Modal({
 }
 
 type ConfirmModalProps = Omit<ModalProps, 'footer' | 'children'> & {
-  type?: 'default' | 'primary' | 'destructive'
+  type?: 'default' | 'destructive'
   confirm: {
     label: string
     title?: string
+    disabled?: boolean
     description?: string
     isConfirming?: boolean
   }
@@ -90,8 +91,9 @@ export function ConfirmModal({
           </DialogClose>
           <Button
             fancy
+            disabled={confirm.disabled}
             isLoading={confirm.isConfirming}
-            variant={type === 'primary' ? 'default' : type}
+            variant={type === 'default' ? 'default' : type}
             onClick={onConfirm}
           >
             {confirm.label}
@@ -99,21 +101,24 @@ export function ConfirmModal({
         </div>
       }
     >
+      {children}
       {confirm.description || confirm.title ? (
         <Alert
           variant={type}
           title={confirm.title}
           description={confirm.description}
         />
-      ) : (
-        children
-      )}
+      ) : null}
     </Modal>
   )
 }
 
 export const CloseTrigger = ({
-  children = <Button variant='outline'>Close</Button>,
+  children = (
+    <Button fancy variant='outline'>
+      Close
+    </Button>
+  ),
 }) => {
   return <DialogClose asChild>{children}</DialogClose>
 }

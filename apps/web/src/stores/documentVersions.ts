@@ -112,6 +112,10 @@ export default function useDocumentVersions(
       } else {
         const prevDocuments = data || []
         mutate(prevDocuments.filter((d) => d.documentUuid !== documentUuid))
+        toast({
+          title: 'Success',
+          description: 'Document deleted',
+        })
         if (currentDocument?.documentUuid === documentUuid) {
           router.push(
             ROUTES.projects
@@ -141,6 +145,10 @@ export default function useDocumentVersions(
       } else {
         await mutate()
 
+        toast({
+          title: 'Success',
+          description: 'Folder deleted',
+        })
         if (currentDocument?.path?.startsWith?.(`${path}/`)) {
           router.push(
             ROUTES.projects

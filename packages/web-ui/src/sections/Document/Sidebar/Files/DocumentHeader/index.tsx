@@ -35,8 +35,13 @@ export default function DocumentHeader({
   node: Node
   indentation: IndentType[]
 }) {
-  const { onNavigateToDocument, onDeleteFile, onCreateFile } =
-    useFileTreeContext()
+  const {
+    isMerged,
+    onMergeCommitClick,
+    onNavigateToDocument,
+    onDeleteFile,
+    onCreateFile,
+  } = useFileTreeContext()
   const { deleteTmpFolder, reset } = useTempNodes((state) => ({
     reset: state.reset,
     deleteTmpFolder: state.deleteTmpFolder,
@@ -60,13 +65,18 @@ export default function DocumentHeader({
       {
         label: 'Delete file',
         type: 'destructive',
+        disabled: isMerged,
         iconProps: { name: 'trash' },
         onClick: () => {
-          onDeleteFile({ node, documentUuid: node.doc!.documentUuid })
+          if (isMerged) {
+            onMergeCommitClick()
+          } else {
+            onDeleteFile({ node, documentUuid: node.doc!.documentUuid })
+          }
         },
       },
     ],
-    [node.doc!.documentUuid, onDeleteFile],
+    [node.doc!.documentUuid, onDeleteFile, isMerged, onMergeCommitClick],
   )
   return (
     <NodeHeaderWrapper

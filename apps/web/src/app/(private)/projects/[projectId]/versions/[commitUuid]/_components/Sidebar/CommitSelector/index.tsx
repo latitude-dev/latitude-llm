@@ -19,13 +19,13 @@ import {
   Text,
   useCurrentProject,
 } from '@latitude-data/web-ui'
-import PublishDraftCommitModal from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/_components/Sidebar/PublishDraftCommitModal'
+import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
 import useCommits from '$/stores/commitsStore'
 import useUsers from '$/stores/users'
-import { useRouter } from 'next/navigation'
 
-import CreateDraftCommitModal from './CreateDraftCommitModal'
+import CreateDraftCommitModal from '../CreateDraftCommitModal'
+import PublishDraftCommitModal from '../PublishDraftCommitModal'
 import DeleteDraftCommitModal from './DeleteDraftCommitModal'
 
 const MIN_WIDTH_SELECTOR_PX = 380
@@ -109,7 +109,7 @@ function CommitItem({
   const isHead = commit.id === headCommitId
   const isDraft = !commit.mergedAt
   const { project } = useCurrentProject()
-  const router = useRouter()
+  const router = useNavigate()
   const badgeType =
     commit.id === headCommitId ? BadgeType.Head : BadgeType.Draft
   const commitPath = ROUTES.projects
@@ -196,8 +196,10 @@ export default function CommitSelector({
   }, [commits, currentCommit.id, headCommit.id])
   const [publishCommit, setPublishCommit] = useState<number | null>(null)
   const [deleteCommit, setDeleteCommit] = useState<number | null>(null)
+  const canPublish = currentCommit.id !== headCommit.id
+  const isHead = currentCommit.id === headCommit.id
   return (
-    <>
+    <div className='flex flex-col gap-y-2'>
       <SelectRoot value={String(currentCommit.id)}>
         <SelectTrigger ref={ref}>
           <SelectValueWithIcon
@@ -236,6 +238,20 @@ export default function CommitSelector({
           </div>
         </SelectContent>
       </SelectRoot>
+      {canPublish ? (
+        <Button
+          fancy
+          fullWidth
+          onClick={() => setPublishCommit(currentCommit.id)}
+        >
+          Publish
+        </Button>
+      ) : null}
+      {isHead ? (
+        <Button variant='outline' fullWidth onClick={() => setOpen(true)}>
+          New version
+        </Button>
+      ) : null}
       <CreateDraftCommitModal open={open} setOpen={setOpen} />
       <DeleteDraftCommitModal
         commitId={deleteCommit}
@@ -245,6 +261,6 @@ export default function CommitSelector({
         commitId={publishCommit}
         onClose={setPublishCommit}
       />
-    </>
+    </div>
   )
 }

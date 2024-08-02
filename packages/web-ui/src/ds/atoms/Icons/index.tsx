@@ -14,6 +14,9 @@ import {
   ListOrdered,
   LoaderCircle,
   Moon,
+  SquareDot,
+  SquareMinus,
+  SquarePlus,
   Sun,
   Trash,
 } from 'lucide-react'
@@ -43,6 +46,9 @@ export const Icons = {
   trash: Trash,
   sun: Sun,
   moon: Moon,
+  addition: SquarePlus,
+  deletion: SquareMinus,
+  modification: SquareDot,
 }
 
 export type IconName = keyof typeof Icons
