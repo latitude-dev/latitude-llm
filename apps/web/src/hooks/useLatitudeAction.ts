@@ -3,10 +3,10 @@ import { useCallback } from 'react'
 import { useToast } from '@latitude-data/web-ui'
 import {
   inferServerActionError,
-  inferServerActionInput,
   inferServerActionReturnData,
   TAnyZodSafeFunctionHandler,
 } from 'zsa'
+import { useServerAction } from 'zsa-react'
 
 export default function useLatitudeAction<
   const TServerAction extends TAnyZodSafeFunctionHandler,
@@ -16,15 +16,17 @@ export default function useLatitudeAction<
     onSuccess,
     onError,
   }: {
-    onSuccess?: (payload: inferServerActionReturnData<TServerAction>) => void
-    onError?: (error: inferServerActionError<TServerAction>) => void
+    onSuccess?: (args: {
+      data: inferServerActionReturnData<TServerAction>
+    }) => void
+    onError?: (args: { err: inferServerActionError<TServerAction> }) => void
   } = {},
 ) {
   const { toast } = useToast()
   const successCb = useCallback(onSuccess || (() => {}), [onSuccess])
   const errorCb = useCallback(
     onError ||
-      ((error: Error) => {
+      ((error: inferServerActionError<TServerAction>) => {
         toast({
           title: 'Error',
           description: error.message,
@@ -34,25 +36,8 @@ export default function useLatitudeAction<
     [onError],
   )
 
-  const execute = useCallback(
-    async (
-      data: inferServerActionInput<TServerAction>,
-    ): Promise<
-      | [inferServerActionReturnData<TServerAction>, null]
-      | [null, inferServerActionError<TServerAction>]
-    > => {
-      const result = await action(data)
-      const [payload, error] = result
-      if (error) {
-        errorCb(error)
-      } else {
-        successCb(payload)
-      }
-
-      return result
-    },
-    [action, successCb, errorCb],
-  )
-
-  return { execute }
+  return useServerAction(action, {
+    onSuccess: successCb,
+    onError: errorCb,
+  })
 }

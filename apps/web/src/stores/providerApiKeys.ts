@@ -29,7 +29,7 @@ export default function useProviderApiKeys(opts?: SWRConfiguration) {
     ...rest
   } = useSWR<ProviderApiKey[]>(key, fetcher, opts)
   const { execute: create } = useLatitudeAction(createProviderApiKeyAction, {
-    onSuccess: async (apikey) => {
+    onSuccess: async ({ data: apikey }) => {
       mutate([...data, apikey])
       toast({
         title: 'Success',
@@ -39,7 +39,7 @@ export default function useProviderApiKeys(opts?: SWRConfiguration) {
   })
 
   const { execute: destroy } = useLatitudeAction(destroyProviderApiKeyAction, {
-    onSuccess: async (apikey) => {
+    onSuccess: async ({ data: apikey }) => {
       mutate(data.filter((item) => item.id !== apikey.id))
       toast({
         title: 'Success',

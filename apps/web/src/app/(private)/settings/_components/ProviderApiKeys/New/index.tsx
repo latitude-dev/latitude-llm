@@ -22,8 +22,6 @@ export default function NewApiKey({
     onSuccess: () => setOpen(false),
   })
 
-  // TODO: remove the hidden input when the select component has more than one
-  // option and is not disabled anymore
   return (
     <Modal
       open={open}

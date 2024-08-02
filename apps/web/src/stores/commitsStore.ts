@@ -44,8 +44,9 @@ export default function useCommits(opts?: SWRConfiguration) {
     opts,
   )
   const { execute: createDraft } = useLatitudeAction(createDraftCommitAction, {
-    onSuccess: async (draft) => {
+    onSuccess: async ({ data: draft }) => {
       mutate([...data, draft])
+
       toast({
         title: 'Success',
         description: 'New Draft version ' + draft.title + ' created',
