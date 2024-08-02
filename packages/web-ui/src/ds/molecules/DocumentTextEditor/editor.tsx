@@ -9,7 +9,7 @@ import { Button, Text } from '$ui/ds/atoms'
 import { AppLocalStorage, useLocalStorage } from '$ui/lib/hooks/useLocalStorage'
 import { MarkerSeverity, type editor } from 'monaco-editor'
 
-import type { DocumentTextEditorProps } from '.'
+import { DocumentTextEditorFallback, type DocumentTextEditorProps } from '.'
 import { registerActions } from './actions'
 import { themeRules, tokenizer } from './language'
 
@@ -127,6 +127,7 @@ export function DocumentTextEditor({
             width='100%'
             theme='latitude'
             language='document'
+            loading={<DocumentTextEditorFallback />}
             defaultValue={defaultValue}
             beforeMount={handleEditorWillMount}
             onMount={handleEditorDidMount}
