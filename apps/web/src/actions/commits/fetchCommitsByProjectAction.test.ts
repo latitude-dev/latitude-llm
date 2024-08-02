@@ -1,6 +1,5 @@
 import { CommitStatus, factories } from '@latitude-data/core'
 import type { Workspace } from '@latitude-data/core/browser'
-import useTestDatabase from '$core/tests/useTestDatabase'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { fetchCommitsByProjectAction } from './fetchCommitsByProjectAction'
@@ -16,8 +15,6 @@ vi.mock('$/services/auth/getSession', () => ({
 
 let workspace: Workspace
 describe('getUsersAction', () => {
-  useTestDatabase()
-
   describe('unauthorized', () => {
     it('errors when the user is not authenticated', async () => {
       const [_, error] = await fetchCommitsByProjectAction({

@@ -2,7 +2,7 @@ import type { Commit, DocumentVersion, Project } from '$core/browser'
 import { HEAD_COMMIT } from '$core/constants'
 import { mergeCommit, updateDocument } from '$core/services'
 import * as factories from '$core/tests/factories'
-import { beforeAll, describe, expect, it } from 'vitest'
+import { beforeEach, describe, expect, it } from 'vitest'
 
 import { CommitsRepository } from '../commitsRepository'
 import { DocumentVersionsRepository } from './index'
@@ -54,7 +54,7 @@ describe('getDocumentsAtCommit', () => {
   })
 
   describe('documents for each commit', () => {
-    beforeAll(async () => {
+    beforeEach(async () => {
       const { project, user } = await factories.createProject()
       const documentsScope = new DocumentVersionsRepository(project.workspaceId)
       const { commit: commit1 } = await factories.createDraft({ project, user })
@@ -148,7 +148,7 @@ describe('getDocumentsAtCommit', () => {
   })
 
   describe('documents from previous commits', () => {
-    beforeAll(async () => {
+    beforeEach(async () => {
       const { project, user } = await factories.createProject()
       const documentsScope = new DocumentVersionsRepository(project.workspaceId)
 

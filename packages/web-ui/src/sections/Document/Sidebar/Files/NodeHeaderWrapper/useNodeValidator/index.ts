@@ -52,7 +52,7 @@ export function useNodeValidator({
   name: string | undefined
   inputRef: RefObject<HTMLInputElement>
   nodeRef: RefObject<HTMLDivElement>
-  saveValue: (args: { path: string }) => Promise<void>
+  saveValue: (args: { path: string }) => Promise<void> | void
   saveAndAddOther?: (args: { path: string }) => void
   leaveWithoutSave?: () => void
 }) {

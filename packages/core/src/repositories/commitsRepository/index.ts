@@ -142,6 +142,7 @@ export class CommitsRepository extends Repository {
       })
       .from(this.scope)
       .where(and(eq(this.scope.projectId, project.id), filter))
+      .orderBy(desc(this.scope.createdAt))
 
     const result = await Repository.paginateQuery({
       query: query.$dynamic(),

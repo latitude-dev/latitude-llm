@@ -57,12 +57,12 @@ export function Modal({
 }
 
 type ConfirmModalProps = Omit<ModalProps, 'footer' | 'children'> & {
-  type?: 'default' | 'destructive'
+  type?: 'default' | 'primary' | 'destructive'
   confirm: {
     label: string
     title?: string
-    isConfirming?: boolean
     description?: string
+    isConfirming?: boolean
   }
   cancel?: { label?: string }
   onConfirm: () => void
@@ -90,7 +90,7 @@ export function ConfirmModal({
           </DialogClose>
           <Button
             isLoading={confirm.isConfirming}
-            variant={type}
+            variant={type === 'primary' ? 'default' : type}
             onClick={onConfirm}
           >
             {confirm.label}

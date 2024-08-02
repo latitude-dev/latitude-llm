@@ -13,6 +13,19 @@ import { useTempNodes } from '$ui/sections/Document/Sidebar/Files/useTempNodes'
 
 import { Node } from '../useTree'
 
+export function FolderIcons({ open }: { open: boolean }) {
+  const FolderIcon = open ? Icons.folderOpen : Icons.folderClose
+  const ChevronIcon = open ? Icons.chevronDown : Icons.chevronRight
+  return (
+    <>
+      <div className='min-w-6 h-6 flex items-center justify-center'>
+        <ChevronIcon className={cn(ICON_CLASS, 'h-4 w-4')} />
+      </div>
+      <FolderIcon className={ICON_CLASS} />
+    </>
+  )
+}
+
 export default function FolderHeader({
   node,
   open,
@@ -59,15 +72,22 @@ export default function FolderHeader({
       },
     [node.path, togglePath, open],
   )
-  const FolderIcon = open ? Icons.folderOpen : Icons.folderClose
-  const ChevronIcon = open ? Icons.chevronDown : Icons.chevronRight
   const actions = useMemo<MenuOption[]>(
     () => [
-      { label: 'New folder', onClick: onAddNode({ isFile: false }) },
-      { label: 'New Prompt', onClick: onAddNode({ isFile: true }) },
+      {
+        label: 'New folder',
+        iconProps: { name: 'folderPlus' },
+        onClick: onAddNode({ isFile: false }),
+      },
+      {
+        label: 'New Prompt',
+        iconProps: { name: 'filePlus' },
+        onClick: onAddNode({ isFile: true }),
+      },
       {
         label: 'Delete folder',
         type: 'destructive',
+        iconProps: { name: 'trash' },
         onClick: () => {
           if (node.isPersisted) {
             onDeleteFolder({ node, path: node.path })
@@ -89,22 +109,18 @@ export default function FolderHeader({
   )
   return (
     <NodeHeaderWrapper
+      name={node.name}
+      hasChildren={node.children.length > 0}
       onClick={onToggleOpen}
-      onSaveValue={updateFolder}
-      onSaveValueAndTab={onUpdateFolderAndAddOther}
-      onLeaveWithoutSave={deleteTmpFolder}
-      node={node}
+      onSaveValue={({ path }) => updateFolder({ id: node.id, path })}
+      onSaveValueAndTab={({ path }) =>
+        onUpdateFolderAndAddOther({ id: node.id, path })
+      }
+      onLeaveWithoutSave={() => deleteTmpFolder({ id: node.id })}
       open={open}
       actions={actions}
       indentation={indentation}
-      icons={
-        <>
-          <div className='min-w-6 h-6 flex items-center justify-center'>
-            <ChevronIcon className={cn(ICON_CLASS, 'h-4 w-4')} />
-          </div>
-          <FolderIcon className={ICON_CLASS} />
-        </>
-      }
+      icons={<FolderIcons open={open} />}
     />
   )
 }

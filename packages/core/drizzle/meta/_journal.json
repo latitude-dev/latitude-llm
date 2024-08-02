@@ -120,6 +120,20 @@
       "when": 1722439006092,
       "tag": "0016_nifty_the_phantom",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1722498737906,
+      "tag": "0017_blushing_radioactive_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1722510508496,
+      "tag": "0018_wealthy_dragon_man",
+      "breakpoints": true
     }
   ]
 }

@@ -1,12 +1,11 @@
-import { forwardRef, ReactNode, useEffect, useRef, useState } from 'react'
+import { ReactNode, useEffect, useRef, useState } from 'react'
 
-import { DropdownMenu, MenuOption } from '$ui/ds/atoms/DropdownMenu'
+import { Button } from '$ui/ds/atoms'
+import { MenuOption } from '$ui/ds/atoms/DropdownMenu'
 import { Input } from '$ui/ds/atoms/Input'
 import Text from '$ui/ds/atoms/Text'
 import { cn } from '$ui/lib/utils'
 import { useNodeValidator } from '$ui/sections/Document/Sidebar/Files/NodeHeaderWrapper/useNodeValidator'
-
-import { Node } from '../useTree'
 
 export const ICON_CLASS = 'min-w-6 h-6 text-muted-foreground'
 export type IndentType = { isLast: boolean }
@@ -43,50 +42,47 @@ function IndentationBar({
 
 type Props = {
   open: boolean
-  node: Node
+  name: string | undefined
+  hasChildren?: boolean
+  isFile?: boolean
   selected?: boolean
-  isEditing?: boolean
   onClick?: () => void
-  actions: MenuOption[]
+  actions?: MenuOption[]
   icons: ReactNode
   indentation: IndentType[]
-  onSaveValue: (args: { path: string; id: string }) => void
-  onSaveValueAndTab?: (args: { path: string; id: string }) => void
-  onLeaveWithoutSave?: (args: { id: string }) => void
+  onSaveValue: (args: { path: string }) => void
+  onSaveValueAndTab?: (args: { path: string }) => void
+  onLeaveWithoutSave?: () => void
 }
-const NodeHeaderWrapper = forwardRef<HTMLDivElement, Props>(function Foo(
-  {
-    node,
-    open,
-    onSaveValue,
-    onSaveValueAndTab,
-    onLeaveWithoutSave,
-    selected = false,
-    onClick,
-    icons,
-    indentation,
-    actions,
-  },
-  ref,
-) {
+
+function NodeHeaderWrapper({
+  name,
+  open,
+  hasChildren = false,
+  isFile = false,
+  onSaveValue,
+  onSaveValueAndTab,
+  onLeaveWithoutSave,
+  selected = false,
+  onClick,
+  icons,
+  indentation,
+  actions,
+}: Props) {
+  const [tmpName, setTmpName] = useState(name)
   const inputRef = useRef<HTMLInputElement>(null)
   const nodeRef = useRef<HTMLDivElement>(null)
   const { isEditing, error, onInputChange, onInputKeyDown } = useNodeValidator({
-    name: node.name,
+    name,
     nodeRef,
     inputRef,
-    saveValue: async ({ path }: { path: string }) => {
-      return onSaveValue({ path, id: node.id })
+    saveValue: ({ path }) => {
+      setTmpName(path)
+      onSaveValue({ path })
     },
-    saveAndAddOther: ({ path }) => {
-      onSaveValueAndTab?.({ path, id: node.id })
-    },
-    leaveWithoutSave: () => {
-      onLeaveWithoutSave?.({ id: node.id })
-    },
+    saveAndAddOther: onSaveValueAndTab,
+    leaveWithoutSave: onLeaveWithoutSave,
   })
-  const [actionsOpen, setActionsOpen] = useState(false)
-
   // Litle trick to focus the input after the component is mounted
   // We wait some time to focus the input to avoid the focus being stolen
   // by the click event in the menu item that created this node.
@@ -99,11 +95,11 @@ const NodeHeaderWrapper = forwardRef<HTMLDivElement, Props>(function Foo(
       clearTimeout(timeout)
     }
   }, [inputRef])
-
+  const showActions = !isEditing && actions && actions.length > 0
   return (
     <div
       tabIndex={0}
-      ref={ref}
+      ref={nodeRef}
       className={cn(
         'max-w-full group/row flex flex-row my-0.5 cursor-pointer',
         {
@@ -118,7 +114,7 @@ const NodeHeaderWrapper = forwardRef<HTMLDivElement, Props>(function Foo(
       >
         <IndentationBar
           indentation={indentation}
-          hasChildren={open && node.children.length > 0}
+          hasChildren={open && hasChildren}
         />
         <div className='flex flex-row items-center gap-x-1 mr-1'>{icons}</div>
         {isEditing ? (
@@ -133,7 +129,7 @@ const NodeHeaderWrapper = forwardRef<HTMLDivElement, Props>(function Foo(
               placeholder={
                 onSaveValueAndTab
                   ? 'Tab to create another folder'
-                  : node.isFile
+                  : isFile
                     ? 'File name'
                     : 'Folder name'
               }
@@ -151,38 +147,36 @@ const NodeHeaderWrapper = forwardRef<HTMLDivElement, Props>(function Foo(
               userSelect={false}
               color={selected ? 'accentForeground' : 'foreground'}
             >
-              {node.name}
+              {name && name !== ' ' ? name : tmpName}
             </Text.H5M>
           </div>
         )}
       </div>
-      {!isEditing ? (
+      {showActions ? (
         <div
           className={cn(
-            'flex items-center opacity-0 group-hover/row:opacity-100',
-            { 'opacity-100': actionsOpen },
+            'flex items-center gap-x-2 pr-4 opacity-0 group-hover/row:opacity-100',
           )}
         >
-          <DropdownMenu
-            tabIndex={0}
-            controlledOpen={actionsOpen}
-            onOpenChange={setActionsOpen}
-            options={actions}
-            triggerButtonProps={{
-              size: 'small',
-              variant: 'ghost',
-              iconProps: {
-                name: 'ellipsisVertical',
-                color: 'foregroundMuted',
-              },
-            }}
-            side='bottom'
-            align='end'
-          />
+          {actions.map((action, index) => (
+            <Button
+              key={index}
+              variant='ghost'
+              size='none'
+              onClick={action.onClick}
+              iconProps={{
+                color: selected ? 'accentForeground' : 'foregroundMuted',
+                name: action.iconProps?.name!,
+                size: 16,
+                widthClass: 'w-4',
+                heightClass: 'h-4',
+              }}
+            />
+          ))}
         </div>
       ) : null}
     </div>
   )
-})
+}
 
 export default NodeHeaderWrapper

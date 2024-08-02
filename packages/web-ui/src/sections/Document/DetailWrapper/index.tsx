@@ -50,13 +50,20 @@ export default function DocumentDetailWrapper({
     if (!panelGroup || !resizeHandles.length) return
 
     const observer = new ResizeObserver(() => {
-      let width = panelGroup.offsetWidth
+      const totalResizeHandlesWidth = Array.from(resizeHandles).reduce(
+        (sum, handle) => sum + handle.offsetWidth,
+        0,
+      )
+      const availableWidthAfterHandles =
+        panelGroup.offsetWidth - totalResizeHandlesWidth
 
-      resizeHandles.forEach((resizeHandle) => {
-        width -= resizeHandle.offsetWidth
-      })
-
-      setMinSize((MIN_SIDEBAR_WIDTH_PX / width) * 100)
+      const otherPanelsMinWidth = Math.max(
+        panelGroup.offsetWidth - MIN_SIDEBAR_WIDTH_PX,
+        0,
+      )
+      if (otherPanelsMinWidth > MIN_SIDEBAR_WIDTH_PX) {
+        setMinSize((MIN_SIDEBAR_WIDTH_PX / availableWidthAfterHandles) * 100)
+      }
     })
     observer.observe(panelGroup)
     resizeHandles.forEach((resizeHandle) => {
@@ -89,7 +96,7 @@ export default function DocumentDetailWrapper({
       onLayout={debouncedLayoutUpdate}
     >
       <ResizablePanel
-        className='w-72'
+        style={{ minWidth: MIN_SIDEBAR_WIDTH_PX }}
         defaultSize={resizableSizes?.[0] ?? DEFAULT_SIDEBAR_PERCENTAGE}
         minSize={minSize}
         maxSize={40}

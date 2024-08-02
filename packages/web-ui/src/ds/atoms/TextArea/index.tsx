@@ -19,6 +19,7 @@ const inputVariants = cva(cn(INPUT_BASE_CLASSES), {
     size: 'normal',
   },
 })
+
 export type TextAreaProps = TextareaAutosizeProps &
   Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, 'height'> &
   VariantProps<typeof inputVariants> &

@@ -12,6 +12,18 @@ import { useTempNodes } from '$ui/sections/Document/Sidebar/Files/useTempNodes'
 
 import { Node } from '../useTree'
 
+export function DocumentIcon(
+  { selected }: { selected?: boolean } = { selected: false },
+) {
+  return (
+    <Icons.file
+      className={cn(ICON_CLASS, {
+        'text-accent-foreground': selected,
+      })}
+    />
+  )
+}
+
 export default function DocumentHeader({
   open,
   selected,
@@ -48,6 +60,7 @@ export default function DocumentHeader({
       {
         label: 'Delete file',
         type: 'destructive',
+        iconProps: { name: 'trash' },
         onClick: () => {
           onDeleteFile({ node, documentUuid: node.doc!.documentUuid })
         },
@@ -57,21 +70,17 @@ export default function DocumentHeader({
   )
   return (
     <NodeHeaderWrapper
+      isFile
       open={open}
-      node={node}
+      name={node.name}
+      hasChildren={false}
       actions={actions}
       selected={selected}
       indentation={indentation}
       onClick={handleClick}
       onSaveValue={onSaveValue}
-      onLeaveWithoutSave={deleteTmpFolder}
-      icons={
-        <Icons.file
-          className={cn(ICON_CLASS, {
-            'text-accent-foreground': selected,
-          })}
-        />
-      }
+      onLeaveWithoutSave={() => deleteTmpFolder({ id: node.id })}
+      icons={<DocumentIcon selected={selected} />}
     />
   )
 }

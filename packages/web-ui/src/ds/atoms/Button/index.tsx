@@ -22,7 +22,7 @@ const buttonVariants = cva(
           'border border-input hover:bg-accent hover:text-accent-foreground',
         secondary:
           'bg-secondary text-secondary-foreground hover:bg-secondary/80',
-        ghost: 'shadow-none bg-transparent',
+        ghost: 'shadow-none bg-transparent text-muted-foreground',
         link: 'shadow-none underline-offset-4 hover:underline text-primary',
         linkDestructive:
           'shadow-none underline-offset-4 hover:underline text-destructive',
@@ -30,6 +30,7 @@ const buttonVariants = cva(
       size: {
         default: 'py-1.5 px-3',
         small: 'py-1 px-1.5',
+        none: 'py-0 px-0',
       },
     },
     defaultVariants: {
@@ -41,7 +42,7 @@ const buttonVariants = cva(
 
 export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> &
   VariantProps<typeof buttonVariants> & {
-    children: ReactNode
+    children?: ReactNode
     iconProps?: IconProps
     fullWidth?: boolean
     asChild?: boolean
@@ -63,6 +64,11 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
   ref,
 ) {
   const Comp = asChild ? Slot : 'button'
+
+  if (!children && !iconProps) {
+    throw new Error('Button must have children or iconProps')
+  }
+
   return (
     <Comp
       disabled={isLoading}
