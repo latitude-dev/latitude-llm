@@ -7,6 +7,7 @@ import * as factories from '$core/tests/factories'
 import { and, eq } from 'drizzle-orm'
 import { describe, expect, it } from 'vitest'
 
+import { createNewDocument } from './create'
 import { destroyFolder } from './destroyFolder'
 
 describe('removing folders', () => {
@@ -25,6 +26,11 @@ describe('removing folders', () => {
   it('throws error if commit is merged', async () => {
     const { project, user } = await factories.createProject()
     const { commit: draft } = await factories.createDraft({ project, user })
+    await createNewDocument({
+      commit: draft,
+      path: 'foo',
+      content: 'foo',
+    })
     const mergedCommit = await mergeCommit(draft).then((r) => r.unwrap())
 
     const result = await destroyFolder({

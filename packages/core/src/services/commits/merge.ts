@@ -7,7 +7,7 @@ import {
 } from '@latitude-data/core'
 import { Commit } from '$core/browser'
 import { LatitudeError } from '$core/lib/errors'
-import { and, eq } from 'drizzle-orm'
+import { and, desc, eq, isNotNull } from 'drizzle-orm'
 
 export async function mergeCommit(commit: Commit, db = database) {
   return Transaction.call<Commit>(async (tx) => {
@@ -36,10 +36,24 @@ export async function mergeCommit(commit: Commit, db = database) {
         ),
       )
     }
+    if (Object.keys(recomputedResults.value.documents).length === 0) {
+      return Result.error(
+        new LatitudeError('Cannot merge a commit with no changes.'),
+      )
+    }
+
+    const lastMergedCommit = await tx.query.commits.findFirst({
+      where: and(
+        isNotNull(commits.version),
+        eq(commits.projectId, commit.projectId),
+      ),
+      orderBy: desc(commits.version),
+    })
+    const version = (lastMergedCommit?.version ?? 0) + 1
 
     const result = await tx
       .update(commits)
-      .set({ mergedAt })
+      .set({ mergedAt, version })
       .where(eq(commits.id, commit.id))
       .returning()
     const updatedCommit = result[0]!

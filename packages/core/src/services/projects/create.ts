@@ -26,6 +26,7 @@ export async function createProject(
       data: {
         title: 'Initial version',
         mergedAt: new Date(),
+        version: 0,
       },
       project,
       user,

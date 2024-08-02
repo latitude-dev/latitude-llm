@@ -5,6 +5,7 @@ import {
   index,
   text,
   timestamp,
+  unique,
   uuid,
   varchar,
 } from 'drizzle-orm/pg-core'
@@ -25,6 +26,7 @@ export const commits = latitudeSchema.table(
     projectId: bigint('project_id', { mode: 'number' })
       .notNull()
       .references(() => projects.id, { onDelete: 'cascade' }),
+    version: bigint('version', { mode: 'number' }),
     userId: text('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'set null' }),
@@ -34,6 +36,10 @@ export const commits = latitudeSchema.table(
   (table) => ({
     projectCommitOrderIdx: index('project_commit_order_idx').on(
       table.mergedAt,
+      table.projectId,
+    ),
+    uniqueCommitVersion: unique('unique_commit_version').on(
+      table.version,
       table.projectId,
     ),
   }),
