@@ -37,7 +37,8 @@
     "use-debounce": "^10.0.1",
     "zod": "^3.23.8",
     "zsa": "^0.5.1",
-    "zsa-react": "^0.2.2"
+    "zsa-react": "^0.2.2",
+     "nextjs-toploader": "^1.6.12"
   },
   "devDependencies": {
     "@faker-js/faker": "^8.4.1",

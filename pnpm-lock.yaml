@@ -145,6 +145,9 @@ importers:
       next:
         specifier: ^14.3.0-canary.87
         version: 14.3.0-canary.87(react-dom@19.0.0-rc-378b305958-20240710)(react@19.0.0-rc-378b305958-20240710)
+      nextjs-toploader:
+        specifier: ^1.6.12
+        version: 1.6.12(next@14.3.0-canary.87)(react-dom@19.0.0-rc-378b305958-20240710)(react@19.0.0-rc-378b305958-20240710)
       react:
         specifier: 19.0.0-rc-378b305958-20240710
         version: 19.0.0-rc-378b305958-20240710
@@ -1698,6 +1701,9 @@ packages:
     peerDependencies:
       react: '>=16.8.0 || >=18.x'
       react-dom: '>=16.8.0 || >=18.x'
+    peerDependenciesMeta:
+      react:
+        optional: true
     dependencies:
       '@floating-ui/dom': 1.6.7
       react: 18.3.0
@@ -2059,6 +2065,9 @@ packages:
       monaco-editor: '>= 0.25.0 < 1'
       react: ^16.8.0 || ^17.0.0 || ^18.0.0 || >=18.x
       react-dom: ^16.8.0 || ^17.0.0 || ^18.0.0 || >=18.x
+    peerDependenciesMeta:
+      react:
+        optional: true
     dependencies:
       '@monaco-editor/loader': 1.4.0(monaco-editor@0.50.0)
       monaco-editor: 0.50.0
@@ -2072,6 +2081,9 @@ packages:
       monaco-editor: '>= 0.25.0 < 1'
       react: ^16.8.0 || ^17.0.0 || ^18.0.0 || >=18.x
       react-dom: ^16.8.0 || ^17.0.0 || ^18.0.0 || >=18.x
+    peerDependenciesMeta:
+      react:
+        optional: true
     dependencies:
       '@monaco-editor/loader': 1.4.0(monaco-editor@0.50.0)
       monaco-editor: 0.50.0
@@ -2578,6 +2590,8 @@ packages:
         optional: true
       '@types/react-dom':
         optional: true
+      react:
+        optional: true
     dependencies:
       '@radix-ui/react-primitive': 2.0.0(@types/react-dom@18.3.0)(@types/react@18.3.0)(react-dom@18.3.0)(react@18.3.0)
       '@types/react': 18.3.0
@@ -2597,6 +2611,8 @@ packages:
       '@types/react':
         optional: true
       '@types/react-dom':
+        optional: true
+      react:
         optional: true
     dependencies:
       '@radix-ui/react-context': 1.1.0(@types/react@18.3.0)(react@18.3.0)
@@ -2621,6 +2637,8 @@ packages:
         optional: true
       '@types/react-dom':
         optional: true
+      react:
+        optional: true
     dependencies:
       '@radix-ui/react-compose-refs': 1.1.0(@types/react@18.3.0)(react@18.3.0)
       '@radix-ui/react-context': 1.1.0(@types/react@18.3.0)(react@18.3.0)
@@ -2640,6 +2658,8 @@ packages:
     peerDependenciesMeta:
       '@types/react':
         optional: true
+      react:
+        optional: true
     dependencies:
       '@types/react': 18.3.0
       react: 18.3.0
@@ -2652,6 +2672,8 @@ packages:
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc || >=18.x
     peerDependenciesMeta:
       '@types/react':
+        optional: true
+      react:
         optional: true
     dependencies:
       '@types/react': 18.3.0
@@ -2669,6 +2691,8 @@ packages:
       '@types/react':
         optional: true
       '@types/react-dom':
+        optional: true
+      react:
         optional: true
     dependencies:
       '@radix-ui/primitive': 1.1.0
@@ -2699,6 +2723,8 @@ packages:
     peerDependenciesMeta:
       '@types/react':
         optional: true
+      react:
+        optional: true
     dependencies:
       '@types/react': 18.3.0
       react: 18.3.0
@@ -2715,6 +2741,8 @@ packages:
       '@types/react':
         optional: true
       '@types/react-dom':
+        optional: true
+      react:
         optional: true
     dependencies:
       '@radix-ui/primitive': 1.1.0
@@ -2740,6 +2768,8 @@ packages:
         optional: true
       '@types/react-dom':
         optional: true
+      react:
+        optional: true
     dependencies:
       '@radix-ui/primitive': 1.1.0
       '@radix-ui/react-compose-refs': 1.1.0(@types/react@18.3.0)(react@18.3.0)
@@ -2762,6 +2792,8 @@ packages:
     peerDependenciesMeta:
       '@types/react':
         optional: true
+      react:
+        optional: true
     dependencies:
       '@types/react': 18.3.0
       react: 18.3.0
@@ -2779,6 +2811,8 @@ packages:
         optional: true
       '@types/react-dom':
         optional: true
+      react:
+        optional: true
     dependencies:
       '@radix-ui/react-compose-refs': 1.1.0(@types/react@18.3.0)(react@18.3.0)
       '@radix-ui/react-primitive': 2.0.0(@types/react-dom@18.3.0)(@types/react@18.3.0)(react-dom@18.3.0)(react@18.3.0)
@@ -2793,6 +2827,9 @@ packages:
     resolution: {integrity: sha512-jQxj/0LKgp+j9BiTXz3O3sgs26RNet2iLWmsPyRz2SIcR4q/4SbazXfnYwbAr+vLYKSfc7qxzyGQA1HLlYiuNw==}
     peerDependencies:
       react: ^16.x || ^17.x || ^18.x || >=18.x
+    peerDependenciesMeta:
+      react:
+        optional: true
     dependencies:
       react: 18.3.0
     dev: false
@@ -2804,6 +2841,8 @@ packages:
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc || >=18.x
     peerDependenciesMeta:
       '@types/react':
+        optional: true
+      react:
         optional: true
     dependencies:
       '@radix-ui/react-use-layout-effect': 1.1.0(@types/react@18.3.0)(react@18.3.0)
@@ -2822,6 +2861,8 @@ packages:
       '@types/react':
         optional: true
       '@types/react-dom':
+        optional: true
+      react:
         optional: true
     dependencies:
       '@radix-ui/react-primitive': 2.0.0(@types/react-dom@18.3.0)(@types/react@18.3.0)(react-dom@18.3.0)(react@18.3.0)
@@ -2842,6 +2883,8 @@ packages:
       '@types/react':
         optional: true
       '@types/react-dom':
+        optional: true
+      react:
         optional: true
     dependencies:
       '@radix-ui/primitive': 1.1.0
@@ -2880,6 +2923,8 @@ packages:
         optional: true
       '@types/react-dom':
         optional: true
+      react:
+        optional: true
     dependencies:
       '@radix-ui/primitive': 1.1.0
       '@radix-ui/react-compose-refs': 1.1.0(@types/react@18.3.0)(react@18.3.0)
@@ -2914,6 +2959,8 @@ packages:
         optional: true
       '@types/react-dom':
         optional: true
+      react:
+        optional: true
     dependencies:
       '@floating-ui/react-dom': 2.1.1(react-dom@18.3.0)(react@18.3.0)
       '@radix-ui/react-arrow': 1.1.0(@types/react-dom@18.3.0)(@types/react@18.3.0)(react-dom@18.3.0)(react@18.3.0)
@@ -2943,6 +2990,8 @@ packages:
         optional: true
       '@types/react-dom':
         optional: true
+      react:
+        optional: true
     dependencies:
       '@radix-ui/react-primitive': 2.0.0(@types/react-dom@18.3.0)(@types/react@18.3.0)(react-dom@18.3.0)(react@18.3.0)
       '@radix-ui/react-use-layout-effect': 1.1.0(@types/react@18.3.0)(react@18.3.0)
@@ -2963,6 +3012,8 @@ packages:
       '@types/react':
         optional: true
       '@types/react-dom':
+        optional: true
+      react:
         optional: true
     dependencies:
       '@radix-ui/react-compose-refs': 1.1.0(@types/react@18.3.0)(react@18.3.0)
@@ -2985,6 +3036,8 @@ packages:
         optional: true
       '@types/react-dom':
         optional: true
+      react:
+        optional: true
     dependencies:
       '@radix-ui/react-slot': 1.1.0(@types/react@18.3.0)(react@18.3.0)
       '@types/react': 18.3.0
@@ -3004,6 +3057,8 @@ packages:
       '@types/react':
         optional: true
       '@types/react-dom':
+        optional: true
+      react:
         optional: true
     dependencies:
       '@radix-ui/primitive': 1.1.0
@@ -3032,6 +3087,8 @@ packages:
       '@types/react':
         optional: true
       '@types/react-dom':
+        optional: true
+      react:
         optional: true
     dependencies:
       '@radix-ui/number': 1.1.0
@@ -3069,6 +3126,8 @@ packages:
     peerDependenciesMeta:
       '@types/react':
         optional: true
+      react:
+        optional: true
     dependencies:
       '@radix-ui/react-compose-refs': 1.1.0(@types/react@18.3.0)(react@18.3.0)
       '@types/react': 18.3.0
@@ -3086,6 +3145,8 @@ packages:
       '@types/react':
         optional: true
       '@types/react-dom':
+        optional: true
+      react:
         optional: true
     dependencies:
       '@radix-ui/primitive': 1.1.0
@@ -3118,6 +3179,8 @@ packages:
         optional: true
       '@types/react-dom':
         optional: true
+      react:
+        optional: true
     dependencies:
       '@radix-ui/primitive': 1.1.0
       '@radix-ui/react-compose-refs': 1.1.0(@types/react@18.3.0)(react@18.3.0)
@@ -3145,6 +3208,8 @@ packages:
     peerDependenciesMeta:
       '@types/react':
         optional: true
+      react:
+        optional: true
     dependencies:
       '@types/react': 18.3.0
       react: 18.3.0
@@ -3157,6 +3222,8 @@ packages:
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc || >=18.x
     peerDependenciesMeta:
       '@types/react':
+        optional: true
+      react:
         optional: true
     dependencies:
       '@radix-ui/react-use-callback-ref': 1.1.0(@types/react@18.3.0)(react@18.3.0)
@@ -3172,6 +3239,8 @@ packages:
     peerDependenciesMeta:
       '@types/react':
         optional: true
+      react:
+        optional: true
     dependencies:
       '@radix-ui/react-use-callback-ref': 1.1.0(@types/react@18.3.0)(react@18.3.0)
       '@types/react': 18.3.0
@@ -3186,6 +3255,8 @@ packages:
     peerDependenciesMeta:
       '@types/react':
         optional: true
+      react:
+        optional: true
     dependencies:
       '@types/react': 18.3.0
       react: 18.3.0
@@ -3198,6 +3269,8 @@ packages:
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc || >=18.x
     peerDependenciesMeta:
       '@types/react':
+        optional: true
+      react:
         optional: true
     dependencies:
       '@types/react': 18.3.0
@@ -3212,6 +3285,8 @@ packages:
     peerDependenciesMeta:
       '@types/react':
         optional: true
+      react:
+        optional: true
     dependencies:
       '@radix-ui/rect': 1.1.0
       '@types/react': 18.3.0
@@ -3225,6 +3300,8 @@ packages:
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc || >=18.x
     peerDependenciesMeta:
       '@types/react':
+        optional: true
+      react:
         optional: true
     dependencies:
       '@radix-ui/react-use-layout-effect': 1.1.0(@types/react@18.3.0)(react@18.3.0)
@@ -3243,6 +3320,8 @@ packages:
       '@types/react':
         optional: true
       '@types/react-dom':
+        optional: true
+      react:
         optional: true
     dependencies:
       '@radix-ui/react-primitive': 2.0.0(@types/react-dom@18.3.0)(@types/react@18.3.0)(react-dom@18.3.0)(react@18.3.0)
@@ -3528,6 +3607,8 @@ packages:
     peerDependenciesMeta:
       '@types/react':
         optional: true
+      react:
+        optional: true
       react-dom:
         optional: true
       react-test-renderer:
@@ -3553,6 +3634,8 @@ packages:
       '@types/react':
         optional: true
       '@types/react-dom':
+        optional: true
+      react:
         optional: true
     dependencies:
       '@babel/runtime': 7.24.8
@@ -7133,6 +7216,9 @@ packages:
     resolution: {integrity: sha512-ldD3NT444k4Mi+n+43xC8XaHr88MNdhOIApIE15r7O+PcVYEBXNOOFo904cBC6Hsja+zHc1lqw0mqUgBECeisw==}
     peerDependencies:
       react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0 || >=18.x
+    peerDependenciesMeta:
+      react:
+        optional: true
     dependencies:
       react: 18.3.0
     dev: false
@@ -7385,6 +7471,8 @@ packages:
         optional: true
       babel-plugin-react-compiler:
         optional: true
+      react:
+        optional: true
       sass:
         optional: true
     dependencies:
@@ -7411,6 +7499,23 @@ packages:
     transitivePeerDependencies:
       - '@babel/core'
       - babel-plugin-macros
+    dev: false
+
+  /nextjs-toploader@1.6.12(next@14.3.0-canary.87)(react-dom@19.0.0-rc-378b305958-20240710)(react@19.0.0-rc-378b305958-20240710):
+    resolution: {integrity: sha512-nbun5lvVjlKnxLQlahzZ55nELVEduqoEXT03KCHnsEYJnFpI/3BaIzpMyq/v8C7UGU2NfxQmjq6ldZ310rsDqA==}
+    peerDependencies:
+      next: '>= 6.0.0'
+      react: '>= 16.0.0 || >=18.x'
+      react-dom: '>= 16.0.0 || >=18.x'
+    peerDependenciesMeta:
+      react:
+        optional: true
+    dependencies:
+      next: 14.3.0-canary.87(react-dom@19.0.0-rc-378b305958-20240710)(react@19.0.0-rc-378b305958-20240710)
+      nprogress: 0.2.0
+      prop-types: 15.8.1
+      react: 19.0.0-rc-378b305958-20240710
+      react-dom: 19.0.0-rc-378b305958-20240710(react@19.0.0-rc-378b305958-20240710)
     dev: false
 
   /node-abort-controller@3.1.1:
@@ -7509,6 +7614,10 @@ packages:
       console-control-strings: 1.1.0
       gauge: 3.0.2
       set-blocking: 2.0.0
+    dev: false
+
+  /nprogress@0.2.0:
+    resolution: {integrity: sha512-I19aIingLgR1fmhftnbWWO3dXc0hSxqHQHQb3H8m+K3TnEn/iSeTZZOyvKXWqQESMwuUVnatlCnZdLBZZt2VSA==}
     dev: false
 
   /nwsapi@2.2.12:
@@ -8039,7 +8148,6 @@ packages:
       loose-envify: 1.4.0
       object-assign: 4.1.1
       react-is: 16.13.1
-    dev: true
 
   /psl@1.9.0:
     resolution: {integrity: sha512-E/ZsdU4HLs/68gYzgGTkMicWTLPdAftJLfJFlLUAAKZGkStNU72sZjT66SnMDVOfOWY/YAoiD7Jxa9iHvngcag==}
@@ -8073,6 +8181,9 @@ packages:
     resolution: {integrity: sha512-zaKdLBftQJnvb7FtDIpZtsAIb2MZU087RM8bRDZU8LVCCFYjPTsDZJNFUWPcVz3HFSN1n/caxi0ca4B/aaVQGQ==}
     peerDependencies:
       react: ^18.3.0 || >=18.x
+    peerDependenciesMeta:
+      react:
+        optional: true
     dependencies:
       loose-envify: 1.4.0
       react: 18.3.0
@@ -8082,6 +8193,9 @@ packages:
     resolution: {integrity: sha512-WpE0+4pnFMyuC9WxJGj7+XysxNChbwnCcFS7INR428/uUoECSTRmlQt05hTGFIyfpYBO1zGlXfMBAkrFmqh3wg==}
     peerDependencies:
       react: 19.0.0-rc-378b305958-20240710 || >=18.x
+    peerDependenciesMeta:
+      react:
+        optional: true
     dependencies:
       react: 19.0.0-rc-378b305958-20240710
       scheduler: 0.25.0-rc-378b305958-20240710
@@ -8092,6 +8206,9 @@ packages:
     engines: {node: '>=10', npm: '>=6'}
     peerDependencies:
       react: '>=16.13.1 || >=18.x'
+    peerDependenciesMeta:
+      react:
+        optional: true
     dependencies:
       '@babel/runtime': 7.24.8
       react: 18.3.0
@@ -8099,7 +8216,6 @@ packages:
 
   /react-is@16.13.1:
     resolution: {integrity: sha512-24e6ynE2H+OKt4kqsOvNd8kBpV65zoxbA4BVsEOB3ARVWQki/DHzaUoC5KuON/BiccDaCCTZBuOcfZs70kR8bQ==}
-    dev: true
 
   /react-is@17.0.2:
     resolution: {integrity: sha512-w2GsyukL62IJnlaff/nRegPQR94C/XXamvMWmSHRJ4y7Ts/4ocGRmTHvOs8PSE6pB3dWOrD/nueuU5sduBsQ4w==}
@@ -8118,6 +8234,8 @@ packages:
     peerDependenciesMeta:
       '@types/react':
         optional: true
+      react:
+        optional: true
     dependencies:
       '@types/react': 18.3.0
       react: 18.3.0
@@ -8134,6 +8252,8 @@ packages:
     peerDependenciesMeta:
       '@types/react':
         optional: true
+      react:
+        optional: true
     dependencies:
       '@types/react': 18.3.0
       react: 18.3.0
@@ -8149,6 +8269,9 @@ packages:
     peerDependencies:
       react: ^16.14.0 || ^17.0.0 || ^18.0.0 || >=18.x
       react-dom: ^16.14.0 || ^17.0.0 || ^18.0.0 || >=18.x
+    peerDependenciesMeta:
+      react:
+        optional: true
     dependencies:
       react: 18.3.0
       react-dom: 18.3.0(react@18.3.0)
@@ -8163,6 +8286,8 @@ packages:
     peerDependenciesMeta:
       '@types/react':
         optional: true
+      react:
+        optional: true
     dependencies:
       '@types/react': 18.3.0
       get-nonce: 1.0.1
@@ -8176,6 +8301,9 @@ packages:
     engines: {node: '>=10'}
     peerDependencies:
       react: ^16.8.0 || ^17.0.0 || ^18.0.0 || >=18.x
+    peerDependenciesMeta:
+      react:
+        optional: true
     dependencies:
       '@babel/runtime': 7.24.8
       react: 18.3.0
@@ -8617,6 +8745,9 @@ packages:
     resolution: {integrity: sha512-Cqc355SYlTAaUt8iDPaC/4DPPXK925PePLMxyBKuWd5kKc5mwsG3nT9+Mq2tyguL5s7b4Jg+IRMpTRsNTAfpSQ==}
     peerDependencies:
       svelte: ^4.0.0 || ^5.0.0-next.0
+    peerDependenciesMeta:
+      svelte:
+        optional: true
     dependencies:
       swrev: 4.0.0
     dev: false
@@ -8775,6 +8906,8 @@ packages:
         optional: true
       babel-plugin-macros:
         optional: true
+      react:
+        optional: true
     dependencies:
       client-only: 0.0.1
       react: 19.0.0-rc-378b305958-20240710
@@ -8843,6 +8976,9 @@ packages:
     resolution: {integrity: sha512-QtxqyclFeAsxEUeZIYmsaQ0UjimSq1RZ9Un7I68/0ClKK/U3LoyQunwkQfJZr2fc22DfIXLNDc2wFyTEikCUpg==}
     peerDependencies:
       react: ^16.11.0 || ^17.0.0 || ^18.0.0 || >=18.x
+    peerDependenciesMeta:
+      react:
+        optional: true
     dependencies:
       client-only: 0.0.1
       use-sync-external-store: 1.2.2
@@ -8852,6 +8988,9 @@ packages:
     resolution: {integrity: sha512-QtxqyclFeAsxEUeZIYmsaQ0UjimSq1RZ9Un7I68/0ClKK/U3LoyQunwkQfJZr2fc22DfIXLNDc2wFyTEikCUpg==}
     peerDependencies:
       react: ^16.11.0 || ^17.0.0 || ^18.0.0 || >=18.x
+    peerDependenciesMeta:
+      react:
+        optional: true
     dependencies:
       client-only: 0.0.1
       react: 19.0.0-rc-378b305958-20240710
@@ -8866,6 +9005,9 @@ packages:
     resolution: {integrity: sha512-zjEkcP8Ywmj+xOJW3lIT65ciY/4AL4e/Or7Gj0MzU3zBJNMdJiT8geVZhINavnlHRMMCcJLHhraLTAiDOTmQ9g==}
     peerDependencies:
       vue: '>=3.2.26 < 4'
+    peerDependenciesMeta:
+      vue:
+        optional: true
     dev: false
 
   /symbol-tree@3.2.4:
@@ -9271,6 +9413,8 @@ packages:
     peerDependenciesMeta:
       '@types/react':
         optional: true
+      react:
+        optional: true
     dependencies:
       '@types/react': 18.3.0
       react: 18.3.0
@@ -9281,6 +9425,9 @@ packages:
     resolution: {integrity: sha512-GLMG0Jc/jiKov/3Ulid1wbv3r54K9HlMW29IWcDFPEqFkSO2nS0MuefWgMJpeHQ9YJeXDL3ZUF+P3jdXlZX/cQ==}
     peerDependencies:
       react: ^16.8.0 || ^17.0.0 || ^18.0.0 || >=18.x
+    peerDependenciesMeta:
+      react:
+        optional: true
     dependencies:
       react: 18.3.0
     dev: false
@@ -9290,6 +9437,9 @@ packages:
     engines: {node: '>= 16.0.0'}
     peerDependencies:
       react: '>=16.8.0 || >=18.x'
+    peerDependenciesMeta:
+      react:
+        optional: true
     dependencies:
       react: 18.3.0
     dev: false
@@ -9299,6 +9449,9 @@ packages:
     engines: {node: '>= 16.0.0'}
     peerDependencies:
       react: '>=16.8.0 || >=18.x'
+    peerDependenciesMeta:
+      react:
+        optional: true
     dependencies:
       react: 19.0.0-rc-378b305958-20240710
     dev: false
@@ -9310,6 +9463,8 @@ packages:
       react: ^16.8.0 || ^17.0.0 || ^18.0.0 || >=18.x
     peerDependenciesMeta:
       '@types/react':
+        optional: true
+      react:
         optional: true
     dependencies:
       '@types/react': 18.3.0
@@ -9323,6 +9478,8 @@ packages:
       react: ^16.8.0 || ^17.0.0 || ^18.0.0 || >=18.x
     peerDependenciesMeta:
       '@types/react':
+        optional: true
+      react:
         optional: true
     dependencies:
       '@types/react': 18.3.0
@@ -9339,6 +9496,8 @@ packages:
     peerDependenciesMeta:
       '@types/react':
         optional: true
+      react:
+        optional: true
     dependencies:
       '@types/react': 18.3.0
       detect-node-es: 1.1.0
@@ -9350,6 +9509,9 @@ packages:
     resolution: {integrity: sha512-eEgnFxGQ1Ife9bzYs6VLi8/4X6CObHMw9Qr9tPY43iKwsPw8xE8+EFsf/2cFZ5S3esXgpWgtSCtLNS41F+sKPA==}
     peerDependencies:
       react: ^16.8.0 || ^17.0.0 || ^18.0.0 || >=18.x
+    peerDependenciesMeta:
+      react:
+        optional: true
     dependencies:
       react: 18.3.0
     dev: false
@@ -9358,12 +9520,18 @@ packages:
     resolution: {integrity: sha512-PElTlVMwpblvbNqQ82d2n6RjStvdSoNe9FG28kNfz3WiXilJm4DdNkEzRhCZuIDwY8U08WVihhGR5iRqAwfDiw==}
     peerDependencies:
       react: ^16.8.0 || ^17.0.0 || ^18.0.0 || >=18.x
+    peerDependenciesMeta:
+      react:
+        optional: true
     dev: false
 
   /use-sync-external-store@1.2.2(react@19.0.0-rc-378b305958-20240710):
     resolution: {integrity: sha512-PElTlVMwpblvbNqQ82d2n6RjStvdSoNe9FG28kNfz3WiXilJm4DdNkEzRhCZuIDwY8U08WVihhGR5iRqAwfDiw==}
     peerDependencies:
       react: ^16.8.0 || ^17.0.0 || ^18.0.0 || >=18.x
+    peerDependenciesMeta:
+      react:
+        optional: true
     dependencies:
       react: 19.0.0-rc-378b305958-20240710
     dev: false
@@ -9970,6 +10138,9 @@ packages:
     peerDependencies:
       react: ^18.0.0 || ^19.0.0 || >=18.x
       zod: ^3.23.5
+    peerDependenciesMeta:
+      react:
+        optional: true
     dependencies:
       react: 19.0.0-rc-378b305958-20240710
       zod: 3.23.8

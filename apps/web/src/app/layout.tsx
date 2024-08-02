@@ -1,6 +1,7 @@
 import { ReactNode } from 'react'
 
 import type { Metadata } from 'next'
+import NextTopLoader from 'nextjs-toploader'
 
 import '@latitude-data/web-ui/styles.css'
 
@@ -157,6 +158,7 @@ export default function RootLayout({
         <link rel='icon' href='/favicon.svg' />
       </head>
       <body className={`${fontSans.variable} ${fontMono.variable} font-sans`}>
+        <NextTopLoader />
         <TooltipProvider>{children}</TooltipProvider>
         <ToastProvider duration={2500} />
       </body>

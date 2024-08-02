@@ -33,6 +33,15 @@
   },
   "pnpm": {
     "peerDependencyRules": {
+      "ignoreMissing": [
+        "@ai-sdk/react",
+        "drizzle-orm",
+        "react",
+        "vue",
+        "@ai-sdk/vue",
+        "svelte",
+        "@ai-sdk/svelte"
+      ],
       "allowedVersions": {
         "react": ">=18.x",
         "react-dom": ">=18.x",
