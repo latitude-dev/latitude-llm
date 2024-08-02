@@ -8,8 +8,8 @@ import {
   DocumentTextEditorFallback,
   useToast,
 } from '@latitude-data/web-ui'
-import { getDocumentContentByPathAction } from '$/actions/documents/getContentByPath'
 import { updateDocumentContentAction } from '$/actions/documents/updateContent'
+import useDocumentVersions from '$/stores/documentVersions'
 import { useServerAction } from 'zsa-react'
 
 export default function ClientDocumentEditor({
@@ -20,23 +20,14 @@ export default function ClientDocumentEditor({
   document: DocumentVersion
 }) {
   const updateDocumentAction = useServerAction(updateDocumentContentAction)
-  const readDocumentContentAction = useServerAction(
-    getDocumentContentByPathAction,
-  )
+  const { documents } = useDocumentVersions({ currentDocument: document })
   const { toast } = useToast()
 
   const readDocumentContent = useCallback(
     async (path: string) => {
-      const [content, error] = await readDocumentContentAction.execute({
-        projectId: commit.projectId,
-        commitId: commit.id,
-        path,
-      })
-
-      if (error) return undefined
-      return content
+      return documents.find((d) => d.path === path)?.content
     },
-    [commit.id, readDocumentContentAction.status],
+    [documents],
   )
 
   const saveDocumentContent = useCallback(

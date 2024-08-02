@@ -1,7 +1,7 @@
 'use client'
 
 import path from 'path'
-import { Suspense, useCallback, useEffect, useRef, useState } from 'react'
+import { Suspense, useCallback, useEffect, useState } from 'react'
 
 import {
   ConversationMetadata,
@@ -62,8 +62,6 @@ export default function DocumentEditor({
     debouncedSave(value)
   }, [])
 
-  const documentsByPathRef = useRef<{ [path: string]: string | undefined }>({})
-
   const readDocument = useCallback(
     async (
       refPath: string,
@@ -80,29 +78,15 @@ export default function DocumentEditor({
         }
       }
 
-      if (fullPath in documentsByPathRef.current) {
-        if (documentsByPathRef.current[fullPath] === undefined) return undefined
-        return {
-          path: fullPath,
-          content: documentsByPathRef.current[fullPath],
-        }
-      }
-
-      documentsByPathRef.current = {
-        ...documentsByPathRef.current,
-        [fullPath]: await readDocumentContent(fullPath),
-      }
-
-      if (documentsByPathRef.current[fullPath] === undefined) {
-        return undefined
-      }
+      const content = await readDocumentContent(fullPath)
+      if (content === undefined) return undefined
 
       return {
         path: fullPath,
-        content: documentsByPathRef.current[fullPath],
+        content,
       }
     },
-    [readDocumentContent, commit.id],
+    [readDocumentContent, value],
   )
 
   useEffect(() => {
@@ -111,7 +95,7 @@ export default function DocumentEditor({
       fullPath: documentPath,
       referenceFn: readDocument,
     }).then(setMetadata)
-  }, [value, readDocument])
+  }, [readDocument])
 
   return (
     <div className='flex flex-row w-full h-full gap-8 p-6'>
