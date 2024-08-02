@@ -47,6 +47,11 @@ describe('createNewDocument', () => {
   it('fails when trying to create a document in a merged commit', async (ctx) => {
     const { project, user } = await ctx.factories.createProject()
     let { commit } = await ctx.factories.createDraft({ project, user })
+    await createNewDocument({
+      commit,
+      path: 'foo',
+      content: 'foo',
+    })
     commit = await mergeCommit(commit).then((r) => r.unwrap())
 
     const result = await createNewDocument({
@@ -61,6 +66,11 @@ describe('createNewDocument', () => {
   it('fails when trying to create a document in a merged commit', async (ctx) => {
     const { project, user } = await ctx.factories.createProject()
     let { commit } = await ctx.factories.createDraft({ project, user })
+    await createNewDocument({
+      commit,
+      path: 'foo',
+      content: 'foo',
+    })
     commit = await mergeCommit(commit).then((r) => r.unwrap())
 
     const result = await createNewDocument({

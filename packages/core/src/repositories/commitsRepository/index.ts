@@ -133,6 +133,7 @@ export class CommitsRepository extends Repository {
         id: this.scope.id,
         uuid: this.scope.uuid,
         title: this.scope.title,
+        version: this.scope.version,
         description: this.scope.description,
         projectId: this.scope.projectId,
         userId: this.scope.userId,

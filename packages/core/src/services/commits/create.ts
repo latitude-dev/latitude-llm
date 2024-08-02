@@ -10,7 +10,7 @@ import { Commit, Project, SafeUser } from '$core/browser'
 export async function createCommit({
   project,
   user,
-  data: { title, description, mergedAt },
+  data: { title, description, mergedAt, version },
   db = database,
 }: {
   project: Project
@@ -18,6 +18,7 @@ export async function createCommit({
   data: {
     title: string
     description?: string
+    version?: number
     mergedAt?: Date
   }
   db?: Database
@@ -30,6 +31,7 @@ export async function createCommit({
         userId: user.id,
         title,
         description,
+        version,
         mergedAt,
       })
       .returning()
