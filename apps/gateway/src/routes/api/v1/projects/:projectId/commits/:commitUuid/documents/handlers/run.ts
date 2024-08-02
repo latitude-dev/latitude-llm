@@ -1,5 +1,5 @@
 import { zValidator } from '@hono/zod-validator'
-import { streamText } from '@latitude-data/core'
+import { runDocumentVersion } from '@latitude-data/core'
 import { Factory } from 'hono/factory'
 import { SSEStreamingApi, streamSSE } from 'hono/streaming'
 import { z } from 'zod'
@@ -29,7 +29,7 @@ export const runHandler = factory.createHandlers(
         documentPath: documentPath!,
       })
 
-      const result = await streamText({
+      const result = await runDocumentVersion({
         document,
         parameters,
       }).then((r) => r.unwrap())

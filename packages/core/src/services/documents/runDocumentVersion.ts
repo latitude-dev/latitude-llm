@@ -1,31 +1,21 @@
-import { Chain, Config, createChain, Message } from '@latitude-data/compiler'
-import ai from '$core/ai'
-import { DocumentVersion, ProviderApiKey } from '$core/browser'
+import { Chain, createChain } from '@latitude-data/compiler'
+import {
+  ChainEvent,
+  ChainEventTypes,
+  DocumentVersion,
+  LATITUDE_EVENT,
+  PROVIDER_EVENT,
+  ProviderApiKey,
+} from '$core/browser'
 import { findWorkspaceFromDocument } from '$core/data-access'
 import { Result } from '$core/lib'
+import { streamToGenerator } from '$core/lib/streamToGenerator'
 import { ProviderApiKeysRepository } from '$core/repositories'
-import { CompletionTokenUsage } from 'ai'
 import { z } from 'zod'
 
-export const PROVIDER_EVENT = 'provider-event'
-export const LATITUDE_EVENT = 'latitude-event'
+import { ai } from '../ai'
 
-export enum ChainEventTypes {
-  Step = 'chain-step',
-  Complete = 'chain-complete',
-}
-
-type ChainEvent = {
-  data: {
-    type: ChainEventTypes
-    config: Config
-    messages: Message[]
-    response?: { text: string; usage: CompletionTokenUsage }
-  }
-  event: typeof LATITUDE_EVENT
-}
-
-export async function streamText({
+export async function runDocumentVersion({
   document,
   parameters,
 }: {
@@ -59,37 +49,40 @@ export async function streamText({
 
 async function iterate({
   chain,
-  apiKey,
+  previousApiKey,
   scope,
   controller,
-  sentCount = 0,
-  lastResponse,
+  previousCount = 0,
+  previousResponse,
 }: {
   chain: Chain
   scope: ProviderApiKeysRepository
   controller: ReadableStreamDefaultController
-  sentCount?: number
-  apiKey?: ProviderApiKey
-  lastResponse?: {
+  previousCount?: number
+  previousApiKey?: ProviderApiKey
+  previousResponse?: {
     text: string
     usage: Record<string, unknown>
   }
 }) {
   try {
-    const { completed, conversation } = await chain.step(lastResponse?.text)
-    const config = validateConfig(conversation.config)
-    if (!apiKey || apiKey?.name !== conversation.config.apikey) {
-      apiKey = await findApiKey({ scope, name: config.apiKey })
-    }
-
-    const msgs = conversation.messages.slice(sentCount)
-    sentCount += msgs.length
+    const { conversation, completed, config, apiKey, sentCount } =
+      await doSomeCommonOperations({
+        chain,
+        previousResponse,
+        scope,
+        apiKey: previousApiKey,
+        sentCount: previousCount,
+      })
 
     controller.enqueue({
       data: {
         type: ChainEventTypes.Step,
-        config: conversation.config,
-        messages: msgs,
+        config: {
+          provider: apiKey.provider,
+        },
+        ...conversation.config,
+        messages: conversation.messages,
       },
       event: LATITUDE_EVENT,
     })
@@ -101,14 +94,10 @@ async function iterate({
       model: config.model,
     })
 
-    const reader = result.fullStream.getReader()
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) break
-
+    for await (const value of streamToGenerator(result.fullStream)) {
       controller.enqueue({
-        data: value,
         event: PROVIDER_EVENT,
+        data: value,
       })
     }
 
@@ -116,12 +105,20 @@ async function iterate({
       text: await result.text,
       usage: await result.usage,
     }
+
     if (completed) {
       controller.enqueue({
         event: LATITUDE_EVENT,
         data: {
           type: ChainEventTypes.Complete,
-          response,
+          config: conversation.config,
+          messages: [
+            {
+              role: 'assistant',
+              content: response.text,
+            },
+          ],
+          usage: response.usage,
         },
       })
 
@@ -133,23 +130,19 @@ async function iterate({
         chain,
         scope,
         controller,
-        apiKey,
-        sentCount,
-        lastResponse: response,
+        previousApiKey: apiKey,
+        previousCount: sentCount,
+        previousResponse: response,
       })
     }
   } catch (error) {
     controller.error(error)
-    controller.close()
 
-    return {
-      text: `ERROR: ${(error as Error).message}`,
-      usage: {},
-    }
+    throw error
   }
 }
 
-function validateConfig(config: Record<string, unknown>) {
+export function validateConfig(config: Record<string, unknown>) {
   const configSchema = z.object({
     model: z.string(),
     apiKey: z.string(),
@@ -169,4 +162,32 @@ async function findApiKey({
   if (apiKeyResult.error) throw apiKeyResult.error
 
   return apiKeyResult.value!
+}
+
+/**
+ *  Performs some common operations needed for processing an iteration step
+ **/
+async function doSomeCommonOperations({
+  chain,
+  previousResponse,
+  scope,
+  apiKey,
+  sentCount,
+}: {
+  chain: Chain
+  previousResponse?: { text: string; usage: Record<string, unknown> }
+  scope: ProviderApiKeysRepository
+  apiKey?: ProviderApiKey
+  sentCount: number
+}) {
+  const { completed, conversation } = await chain.step(previousResponse?.text)
+  const config = validateConfig(conversation.config)
+  if (!apiKey || apiKey?.name !== conversation.config.apikey) {
+    apiKey = await findApiKey({ scope, name: config.apiKey })
+  }
+
+  const msgs = conversation.messages.slice(sentCount)
+  sentCount += msgs.length
+
+  return { sentCount, apiKey, conversation, completed, config }
 }

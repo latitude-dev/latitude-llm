@@ -2,9 +2,11 @@ import { CUSTOM_TAG_END, CUSTOM_TAG_START } from '$compiler/constants'
 import CompileError from '$compiler/error/error'
 import {
   AssistantMessage,
+  ImageContent,
   Message,
   MessageContent,
   SystemMessage,
+  TextContent,
   ToolMessage,
   UserMessage,
 } from '$compiler/types'
@@ -39,7 +41,9 @@ async function getCompiledText(
     const content =
       typeof message.content === 'string'
         ? message.content
-        : (message.content as MessageContent[]).map((c) => c.value).join('')
+        : (message.content as MessageContent[])
+            .map((c) => (c as TextContent).text)
+            .join('')
 
     return acc + content
   }, '')
@@ -147,13 +151,15 @@ describe('messages', async () => {
     expect(systemMessage.content).toBe('system message')
 
     expect(userMessage.role).toBe('user')
-    expect(userMessage.content[0]!.value).toBe('user message')
+    expect((userMessage.content[0]! as TextContent).text).toBe('user message')
 
     expect(assistantMessage.role).toBe('assistant')
-    expect(assistantMessage.content[0]!.value).toBe('assistant message')
+    expect((assistantMessage.content[0]! as TextContent).text).toBe(
+      'assistant message',
+    )
 
     expect(toolMessage.role).toBe('tool')
-    expect(toolMessage.content[0]!.value).toBe('tool message')
+    expect((toolMessage.content[0]! as TextContent).text).toBe('tool message')
   })
 
   it('fails when using an unknown tag', async () => {
@@ -194,7 +200,7 @@ describe('messages', async () => {
     expect(result2.messages.length).toBe(1)
     const message2 = result2.messages[0]!
     expect(message2.role).toBe('user')
-    expect((message2.content[0] as MessageContent)!.value).toBe('message')
+    expect((message2.content[0] as TextContent)!.text).toBe('message')
   })
 
   it('raises an error when using an invalid message role', async () => {
@@ -243,7 +249,7 @@ describe('messages', async () => {
     expect(systemMessage.content).toBe('Test message')
 
     expect(userMessage.role).toBe('user')
-    expect(userMessage.content[0]!.value).toBe('user message')
+    expect((userMessage.content[0]! as TextContent).text).toBe('user message')
   })
 })
 
@@ -266,13 +272,15 @@ describe('message contents', async () => {
     expect(message.content.length).toBe(3)
 
     expect(message.content[0]!.type).toBe('text')
-    expect(message.content[0]!.value).toBe('text content')
+    expect((message.content[0]! as TextContent).text).toBe('text content')
 
     expect(message.content[1]!.type).toBe('image')
-    expect(message.content[1]!.value).toBe('image content')
+    expect((message.content[1]! as ImageContent).image).toBe('image content')
 
     expect(message.content[2]!.type).toBe('text')
-    expect(message.content[2]!.value).toBe('another text content')
+    expect((message.content[2]! as TextContent).text).toBe(
+      'another text content',
+    )
   })
 
   it('fails when using an invalid content type', async () => {
@@ -563,14 +571,14 @@ describe('conditional expressions', async () => {
     expect(message1.role).toBe('user')
     expect(message1.content.length).toBe(1)
     expect(message1.content[0]!.type).toBe('text')
-    expect(message1.content[0]!.value).toBe('Foo!')
+    expect((message1.content[0]! as TextContent).text).toBe('Foo!')
 
     expect(result2.messages.length).toBe(1)
     const message2 = result2.messages[0]! as AssistantMessage
     expect(message2.role).toBe('assistant')
     expect(message2.content.length).toBe(1)
     expect(message2.content[0]!.type).toBe('text')
-    expect(message2.content[0]!.value).toBe('Bar!')
+    expect((message2.content[0]! as TextContent).text).toBe('Bar!')
   })
 
   it('adds message contents conditionally', async () => {

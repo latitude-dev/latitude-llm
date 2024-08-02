@@ -1,9 +1,12 @@
 import { useMemo } from 'react'
 
-import { ConfirmModal, useCurrentProject } from '@latitude-data/web-ui'
+import {
+  ConfirmModal,
+  ReactStateDispatch,
+  useCurrentProject,
+} from '@latitude-data/web-ui'
 import { ROUTES } from '$/services/routes'
 import useCommits from '$/stores/commitsStore'
-import { ReactStateDispatch } from '$ui/lib/commonTypes'
 import { useRouter } from 'next/navigation'
 
 export default function DeleteDraftCommitModal({

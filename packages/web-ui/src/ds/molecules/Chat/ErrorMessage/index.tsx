@@ -8,7 +8,7 @@ export function ErrorMessage({ error }: { error: Error }) {
     <div className='flex flex-col gap-2'>
       <Message
         role='Error'
-        content={[{ type: ContentType.text, value: error.message }]}
+        content={[{ type: ContentType.text, text: error.message }]}
         variant='destructive'
       />
       {error instanceof CompileError && (

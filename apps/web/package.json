@@ -24,6 +24,7 @@
     "@lucia-auth/adapter-drizzle": "^1.0.7",
     "@monaco-editor/react": "^4.6.0",
     "@t3-oss/env-nextjs": "^0.10.1",
+    "ai": "^3.2.42",
     "bcrypt": "^5.1.1",
     "bullmq": "^5.8.5",
     "ioredis": "^5.4.1",
@@ -31,14 +32,15 @@
     "lucia": "^3.2.0",
     "monaco-editor": "^0.50.0",
     "next": "^14.3.0-canary.87",
+    "next-themes": "^0.3.0",
+    "nextjs-toploader": "^1.6.12",
     "react": "19.0.0-rc-378b305958-20240710",
     "react-dom": "19.0.0-rc-378b305958-20240710",
     "swr": "^2.2.5",
     "use-debounce": "^10.0.1",
     "zod": "^3.23.8",
     "zsa": "^0.5.1",
-    "zsa-react": "^0.2.2",
-    "nextjs-toploader": "^1.6.12"
+    "zsa-react": "^0.2.2"
   },
   "devDependencies": {
     "@faker-js/faker": "^8.4.1",

@@ -1,3 +1,6 @@
+import { createAnthropic } from '@ai-sdk/anthropic'
+import { createAzure } from '@ai-sdk/azure'
+import { createMistral } from '@ai-sdk/mistral'
 import { createOpenAI } from '@ai-sdk/openai'
 import { OpenAICompletionModelId } from '@ai-sdk/openai/internal'
 import { Message } from '@latitude-data/compiler'
@@ -31,16 +34,46 @@ type FinishCallbackEvent = {
 
 type FinishCallback = (event: FinishCallbackEvent) => void
 
-function getProvider(provider: Providers) {
+function createProvider({
+  provider,
+  apiKey,
+}: {
+  provider: Providers
+  apiKey: string
+}) {
   switch (provider) {
     case Providers.OpenAI:
-      return createOpenAI
+      return createOpenAI({
+        apiKey,
+        compatibility: 'strict', // needed for OpenAI to return token usage
+      })
+    case Providers.Groq:
+      return createOpenAI({
+        apiKey,
+        compatibility: 'compatible',
+        baseURL: 'https://api.groq.com/openai/v1',
+      })
+    case Providers.Anthropic:
+      return createAnthropic({
+        apiKey,
+      })
+    case Providers.Mistral:
+      return createMistral({
+        apiKey,
+      })
+    case Providers.Azure:
+      return createAzure({
+        apiKey,
+        // TODO: replace with real resource name that users can write in the
+        // document configuration
+        resourceName: 'fake-resource-name',
+      })
     default:
       throw new Error(`Provider ${provider} not supported`)
   }
 }
 
-export default async function ai(
+export async function ai(
   {
     prompt,
     messages,
@@ -60,8 +93,7 @@ export default async function ai(
     onFinish?: FinishCallback
   } = {},
 ) {
-  const p = getProvider(provider)({ apiKey })
-  const m = p(model)
+  const m = createProvider({ provider, apiKey })(model)
 
   return await streamText({
     model: m,

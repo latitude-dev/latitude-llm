@@ -106,7 +106,7 @@ export class ReadMetadata {
 
     config = readConfig(fragment)
     let resolvedPrompt = this.resolvedPrompt
-    if (Object.keys(config).length > 0) {
+    if (config && Object.keys(config).length > 0) {
       const configYaml = yaml.stringify(config)
       resolvedPrompt = `---\n${configYaml}---\n${this.resolvedPrompt}`
     }

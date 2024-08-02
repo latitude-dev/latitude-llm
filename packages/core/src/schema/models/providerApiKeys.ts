@@ -4,7 +4,6 @@ import {
   bigint,
   bigserial,
   index,
-  pgEnum,
   text,
   timestamp,
   unique,
@@ -16,9 +15,12 @@ import { timestamps } from '../schemaHelpers'
 import { users } from './users'
 import { workspaces } from './workspaces'
 
-export const providersEnum = pgEnum('provider', [
+export const providersEnum = latitudeSchema.enum('provider', [
   Providers.OpenAI,
   Providers.Anthropic,
+  Providers.Groq,
+  Providers.Mistral,
+  Providers.Azure,
 ])
 
 export const providerApiKeys = latitudeSchema.table(

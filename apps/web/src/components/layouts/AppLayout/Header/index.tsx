@@ -4,14 +4,14 @@ import { ReactNode } from 'react'
 
 import {
   Avatar,
+  getUserInfoFromSession,
   Icons,
   NavTabGroup,
   NavTabItem,
+  SessionUser,
   Text,
 } from '@latitude-data/web-ui'
 import { ThemeButton } from '$/components/ThemeButton'
-import getUserInfoFromSession from '$ui/lib/getUserInfo'
-import { SessionUser } from '$ui/providers'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Fragment } from 'react/jsx-runtime'

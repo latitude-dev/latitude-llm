@@ -13,6 +13,7 @@ import {
   MessageContent,
   MessageRole,
   SystemMessage,
+  TextContent,
 } from '$compiler/types'
 import type { Node as LogicalExpression } from 'estree'
 
@@ -130,7 +131,7 @@ export class Compile {
     if (this.accumulatedText.trim() !== '') {
       this.accumulatedContent.push({
         type: ContentType.text,
-        value: removeCommonIndent(this.accumulatedText).trim(),
+        text: removeCommonIndent(this.accumulatedText).trim(),
       })
     }
     this.accumulatedText = ''
@@ -159,7 +160,7 @@ export class Compile {
     if (content.length > 0) {
       const message = {
         role: MessageRole.system,
-        content: content[0]!.value,
+        content: (content[0] as TextContent).text,
       } as SystemMessage
 
       this.addMessage(message)
@@ -190,11 +191,13 @@ export class Compile {
       content: [
         {
           type: ContentType.text,
-          value: this.stepResponse,
+          text: this.stepResponse,
         },
       ],
     } as AssistantMessage
+
     this.stepResponse = undefined
+
     return response
   }
 
@@ -282,7 +285,8 @@ export class Compile {
       await resolverFn(context)
     } catch (e) {
       if (e instanceof StopIteration) {
-        // If the node has stopped unexpectedly, save the current pointers for future recovery
+        // If the node has stopped unexpectedly, save the current pointers for
+        // future recovery
         nodeWithStatus.status = {
           ...(nodeWithStatus.status ?? {}),
           scopePointers: scope.getPointers(),

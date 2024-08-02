@@ -1,18 +1,17 @@
 import {
   apiKeys,
-  ChainEventTypes,
   database,
   factories,
-  LATITUDE_EVENT,
   mergeCommit,
   Result,
 } from '@latitude-data/core'
+import { ChainEventTypes, LATITUDE_EVENT } from '@latitude-data/core/browser'
 import app from '$/index'
 import { eq } from 'drizzle-orm'
 import { describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
-  streamText: vi.fn(),
+  runDocumentVersion: vi.fn(),
 }))
 
 vi.mock('@latitude-data/core', async (importOriginal) => {
@@ -20,7 +19,7 @@ vi.mock('@latitude-data/core', async (importOriginal) => {
 
   return {
     ...original,
-    streamText: mocks.streamText,
+    runDocumentVersion: mocks.runDocumentVersion,
   }
 })
 
@@ -64,7 +63,7 @@ describe('POST /run', () => {
         resolve({ text: 'Hello', usage: {} })
       })
 
-      mocks.streamText.mockReturnValue(
+      mocks.runDocumentVersion.mockReturnValue(
         new Promise((resolve) => {
           resolve(
             Result.ok({

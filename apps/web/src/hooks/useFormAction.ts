@@ -46,8 +46,10 @@ export function useFormAction<
       const [payload, error] = result
 
       if (error) {
+        onError?.(error)
         setError(error)
       } else {
+        onSuccess(payload!)
         setData(payload!)
       }
     },
@@ -65,7 +67,7 @@ export function useFormAction<
         _action(json)
       })
     },
-    [exec, onSuccess, onError],
+    [exec],
   )
 
   return { data, error, action }

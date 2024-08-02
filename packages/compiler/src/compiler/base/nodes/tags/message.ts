@@ -11,6 +11,7 @@ import {
   MessageContent,
   MessageRole,
   SystemMessage,
+  TextContent,
   ToolMessage,
   UserMessage,
 } from '$compiler/types'
@@ -95,7 +96,7 @@ function buildMessage(
   if (role === MessageRole.system) {
     return {
       role,
-      content: content[0]?.value,
+      content: (content[0]! as TextContent).text,
     } as SystemMessage
   }
 

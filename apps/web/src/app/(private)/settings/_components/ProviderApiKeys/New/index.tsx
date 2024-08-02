@@ -41,13 +41,14 @@ export default function NewApiKey({
         <FormWrapper>
           <Input type='hidden' name='provider' value={Providers.OpenAI} />
           <Select
-            aria-disabled
-            disabled
             required
             label='Provider'
             name='provider'
-            value={Providers.OpenAI}
-            options={[{ value: Providers.OpenAI, label: Providers.OpenAI }]}
+            value={data?.provider}
+            options={Object.entries(Providers).map(([key, value]) => ({
+              value,
+              label: key,
+            }))}
           />
           <Input
             required

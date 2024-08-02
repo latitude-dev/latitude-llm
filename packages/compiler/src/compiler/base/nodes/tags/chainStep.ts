@@ -42,7 +42,7 @@ export async function compile(
 
     const responseText = stepResponse?.content
       .filter((c) => c.type === ContentType.text)
-      .map((c) => c.value)
+      .map((c) => c.text)
       .join(' ')
 
     scope.set(String(varName), responseText)

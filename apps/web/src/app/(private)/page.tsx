@@ -1,6 +1,6 @@
 import { NotFoundError } from '@latitude-data/core'
 import { type Project } from '@latitude-data/core/browser'
-import { getFirstProject } from '$/app/(private)/_data-access'
+import { getFirstProjectCached } from '$/app/(private)/_data-access'
 import { getCurrentUser, SessionData } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
 import { notFound, redirect } from 'next/navigation'
@@ -16,7 +16,7 @@ export default async function AppRoot() {
 
   try {
     session = await getCurrentUser()
-    project = await getFirstProject({ workspaceId: session.workspace.id })
+    project = await getFirstProjectCached({ workspaceId: session.workspace.id })
 
     url = PROJECT_ROUTE({ id: project.id }).commits.latest
   } catch (error) {

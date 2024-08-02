@@ -1,6 +1,6 @@
 import { ReactNode } from 'react'
 
-import { SessionUser } from '$ui/providers'
+import { SessionUser } from '@latitude-data/web-ui'
 
 import AppHeader, { AppHeaderProps } from './Header'
 

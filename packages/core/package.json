@@ -23,6 +23,9 @@
     "prettier": "prettier --write src/**/*.ts"
   },
   "dependencies": {
+    "@ai-sdk/anthropic": "^0.0.35",
+    "@ai-sdk/azure": "^0.0.17",
+    "@ai-sdk/mistral": "^0.0.26",
     "@ai-sdk/openai": "^0.0.40",
     "@latitude-data/compiler": "workspace:^",
     "@latitude-data/env": "workspace:^",
