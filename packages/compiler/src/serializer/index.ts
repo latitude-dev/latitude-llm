@@ -37,15 +37,19 @@ export function serialize(conversation: Conversation): string {
     }
     output += '>\n'
 
-    for (const content of message.content) {
-      if (content.type === 'text') {
-        output += addIndent(content.value, 2) + '\n'
-        continue
-      }
+    if (typeof message.content === 'string') {
+      output += addIndent(message.content, 2) + '\n'
+    } else {
+      for (const content of message.content) {
+        if (content.type === 'text') {
+          output += addIndent(content.value, 2) + '\n'
+          continue
+        }
 
-      output += addIndent(`<${content.type}>`, 2) + '\n'
-      output += addIndent(content.value, 4) + '\n'
-      output += addIndent(`</${content.type}>`, 2) + '\n'
+        output += addIndent(`<${content.type}>`, 2) + '\n'
+        output += addIndent(content.value, 4) + '\n'
+        output += addIndent(`</${content.type}>`, 2) + '\n'
+      }
     }
 
     if (message.role === MessageRole.assistant) {

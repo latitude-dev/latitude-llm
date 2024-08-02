@@ -53,7 +53,7 @@ export default class Transaction {
     const code = (error as DatabaseError)?.code
     switch (code) {
       case DB_ERROR_CODES.UNIQUE_VIOLATION:
-        return Result.error(new ConflictError('Database conflict'))
+        return Result.error(new ConflictError((error as DatabaseError).message))
       case DB_ERROR_CODES.INPUT_SYTAXT_ERROR:
         return Result.error(new UnprocessableEntityError('Invalid input', {}))
       default:

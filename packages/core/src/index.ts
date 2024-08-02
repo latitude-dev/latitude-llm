@@ -7,5 +7,6 @@ export * from './lib'
 export * from './schema'
 export * from './services'
 export * from './repositories'
+export * from './ai'
 
 export { factories }

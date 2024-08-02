@@ -3,7 +3,6 @@ import {
   unsafelyGetApiKeyByToken,
 } from '@latitude-data/core'
 import type { Workspace } from '@latitude-data/core/browser'
-import { Context } from 'hono'
 import { bearerAuth } from 'hono/bearer-auth'
 
 declare module 'hono' {
@@ -14,7 +13,7 @@ declare module 'hono' {
 
 const authMiddleware = () =>
   bearerAuth({
-    verifyToken: async (token: string, c: Context) => {
+    verifyToken: async (token: string, c) => {
       const apiKeyResult = await unsafelyGetApiKeyByToken({ token })
       if (apiKeyResult.error) return false
 

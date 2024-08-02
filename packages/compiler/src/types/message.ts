@@ -37,7 +37,10 @@ interface IMessage {
   content: MessageContent[]
 }
 
-export type SystemMessage = IMessage & { role: MessageRole.system }
+export type SystemMessage = {
+  role: MessageRole.system
+  content: string
+}
 
 export type UserMessage = IMessage & {
   role: MessageRole.user

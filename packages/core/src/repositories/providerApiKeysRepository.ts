@@ -29,4 +29,17 @@ export class ProviderApiKeysRepository extends Repository {
     const result = await this.db.select().from(this.scope)
     return Result.ok(result)
   }
+
+  async findByName(name: string) {
+    const result = await this.db
+      .select()
+      .from(this.scope)
+      .where(eq(this.scope.name, name))
+
+    if (!result.length) {
+      return Result.error(new NotFoundError('ProviderApiKey not found'))
+    }
+
+    return Result.ok(result[0]!)
+  }
 }

@@ -1,6 +1,13 @@
 import { CUSTOM_TAG_END, CUSTOM_TAG_START } from '$compiler/constants'
 import CompileError from '$compiler/error/error'
-import { Message } from '$compiler/types'
+import {
+  AssistantMessage,
+  Message,
+  MessageContent,
+  SystemMessage,
+  ToolMessage,
+  UserMessage,
+} from '$compiler/types'
 import { describe, expect, it, vi } from 'vitest'
 
 import { render } from '.'
@@ -29,7 +36,12 @@ async function getCompiledText(
   })
 
   return result.messages.reduce((acc: string, message: Message) => {
-    return acc + message.content.map((c) => c.value).join('')
+    const content =
+      typeof message.content === 'string'
+        ? message.content
+        : (message.content as MessageContent[]).map((c) => c.value).join('')
+
+    return acc + content
   }, '')
 }
 
@@ -89,10 +101,7 @@ describe('comments', async () => {
     expect(result.messages.length).toBe(1)
     const message = result.messages[0]!
 
-    expect(message.content.length).toBe(1)
-    expect(message.content[0]!.type).toBe('text')
-
-    const text = message.content[0]!.value
+    const text = message.content
     expect(text).toBe('anna\nbob\n\ncharlie')
   })
 
@@ -109,11 +118,9 @@ describe('comments', async () => {
     })
 
     expect(result.messages.length).toBe(1)
-    const message = result.messages[0]!
-    expect(message.content.length).toBe(1)
 
-    expect(message.content[0]!.type).toBe('text')
-    expect(message.content[0]!.value).toBe('Test message')
+    const message = result.messages[0]!
+    expect(message.content).toBe('Test message')
   })
 })
 
@@ -132,12 +139,12 @@ describe('messages', async () => {
 
     expect(result.messages.length).toBe(4)
     const systemMessage = result.messages[0]!
-    const userMessage = result.messages[1]!
-    const assistantMessage = result.messages[2]!
-    const toolMessage = result.messages[3]!
+    const userMessage = result.messages[1]! as UserMessage
+    const assistantMessage = result.messages[2]! as AssistantMessage
+    const toolMessage = result.messages[3]! as ToolMessage
 
     expect(systemMessage.role).toBe('system')
-    expect(systemMessage.content[0]!.value).toBe('system message')
+    expect(systemMessage.content).toBe('system message')
 
     expect(userMessage.role).toBe('user')
     expect(userMessage.content[0]!.value).toBe('user message')
@@ -182,12 +189,12 @@ describe('messages', async () => {
     expect(result1.messages.length).toBe(1)
     const message1 = result1.messages[0]!
     expect(message1.role).toBe('system')
-    expect(message1.content[0]!.value).toBe('message')
+    expect(message1.content).toBe('message')
 
     expect(result2.messages.length).toBe(1)
     const message2 = result2.messages[0]!
     expect(message2.role).toBe('user')
-    expect(message2.content[0]!.value).toBe('message')
+    expect((message2.content[0] as MessageContent)!.value).toBe('message')
   })
 
   it('raises an error when using an invalid message role', async () => {
@@ -229,11 +236,11 @@ describe('messages', async () => {
     })
 
     expect(result.messages.length).toBe(2)
-    const systemMessage = result.messages[0]!
-    const userMessage = result.messages[1]!
+    const systemMessage = result.messages[0]! as SystemMessage
+    const userMessage = result.messages[1]! as UserMessage
 
     expect(systemMessage.role).toBe('system')
-    expect(systemMessage.content[0]!.value).toBe('Test message')
+    expect(systemMessage.content).toBe('Test message')
 
     expect(userMessage.role).toBe('user')
     expect(userMessage.content[0]!.value).toBe('user message')
@@ -243,11 +250,11 @@ describe('messages', async () => {
 describe('message contents', async () => {
   it('all messages can have multiple content tags', async () => {
     const prompt = `
-      <system>
+      <user>
         <text>text content</text>
         <image>image content</image>
         <text>another text content</text>
-      </system>
+      </user>
     `
     const result = await render({
       prompt: removeCommonIndent(prompt),
@@ -255,7 +262,7 @@ describe('message contents', async () => {
     })
 
     expect(result.messages.length).toBe(1)
-    const message = result.messages[0]!
+    const message = result.messages[0]! as UserMessage
     expect(message.content.length).toBe(3)
 
     expect(message.content[0]!.type).toBe('text')
@@ -296,10 +303,8 @@ describe('message contents', async () => {
 
     expect(result.messages.length).toBe(1)
     const message = result.messages[0]!
-    expect(message.content.length).toBe(1)
 
-    expect(message.content[0]!.type).toBe('text')
-    expect(message.content[0]!.value).toBe('Test message')
+    expect(message.content).toBe('Test message')
   })
 })
 
@@ -554,14 +559,14 @@ describe('conditional expressions', async () => {
     })
 
     expect(result1.messages.length).toBe(1)
-    const message1 = result1.messages[0]!
+    const message1 = result1.messages[0]! as UserMessage
     expect(message1.role).toBe('user')
     expect(message1.content.length).toBe(1)
     expect(message1.content[0]!.type).toBe('text')
     expect(message1.content[0]!.value).toBe('Foo!')
 
     expect(result2.messages.length).toBe(1)
-    const message2 = result2.messages[0]!
+    const message2 = result2.messages[0]! as AssistantMessage
     expect(message2.role).toBe('assistant')
     expect(message2.content.length).toBe(1)
     expect(message2.content[0]!.type).toBe('text')

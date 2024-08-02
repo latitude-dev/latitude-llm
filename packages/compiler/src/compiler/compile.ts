@@ -159,7 +159,7 @@ export class Compile {
     if (content.length > 0) {
       const message = {
         role: MessageRole.system,
-        content,
+        content: content[0]!.value,
       } as SystemMessage
 
       this.addMessage(message)
