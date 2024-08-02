@@ -1,3 +1,5 @@
+'use client'
+
 import { ReactNode, useCallback, useState } from 'react'
 import { Check } from 'lucide-react'
 
@@ -10,10 +12,10 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuPortal,
+  DropdownMenu as DropdownMenuRoot,
   DropdownMenuSeparator,
   DropdownMenuShortcut,
   DropdownMenuTrigger,
-  DropdownMenu as Root,
   type ContentProps,
 } from './Primitives'
 
@@ -111,7 +113,7 @@ export function DropdownMenu({
   const [open, setOpen] = useState(false)
   const isFn = typeof triggerButtonProps === 'function'
   return (
-    <Root
+    <DropdownMenuRoot
       onOpenChange={(newOpen: boolean) => {
         onOpenChange?.(newOpen)
         setOpen(newOpen)
@@ -146,6 +148,17 @@ export function DropdownMenu({
           ))}
         </DropdownMenuContent>
       </DropdownMenuPortal>
-    </Root>
+    </DropdownMenuRoot>
   )
+}
+
+export {
+  DropdownMenuRoot,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuPortal,
+  DropdownMenuSeparator,
+  DropdownMenuShortcut,
+  DropdownMenuTrigger,
 }

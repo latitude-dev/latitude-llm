@@ -13,6 +13,8 @@ import {
   FolderPlus,
   ListOrdered,
   LoaderCircle,
+  Moon,
+  Sun,
   Trash,
 } from 'lucide-react'
 
@@ -39,6 +41,8 @@ export const Icons = {
   logo: LatitudeLogo,
   logoMonochrome: LatitudeLogoMonochrome,
   trash: Trash,
+  sun: Sun,
+  moon: Moon,
 }
 
 export type IconName = keyof typeof Icons

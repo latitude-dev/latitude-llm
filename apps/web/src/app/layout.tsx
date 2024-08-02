@@ -6,6 +6,7 @@ import NextTopLoader from 'nextjs-toploader'
 import '@latitude-data/web-ui/styles.css'
 
 import { ToastProvider, TooltipProvider } from '@latitude-data/web-ui'
+import { ThemeProvider } from '$/components/Providers/ThemeProvider'
 import localFont from 'next/font/local'
 
 const fontSans = localFont({
@@ -159,7 +160,14 @@ export default function RootLayout({
       </head>
       <body className={`${fontSans.variable} ${fontMono.variable} font-sans`}>
         <NextTopLoader />
-        <TooltipProvider>{children}</TooltipProvider>
+        <ThemeProvider
+          attribute='class'
+          defaultTheme='system'
+          enableSystem
+          disableTransitionOnChange
+        >
+          <TooltipProvider>{children}</TooltipProvider>
+        </ThemeProvider>
         <ToastProvider duration={2500} />
       </body>
     </html>

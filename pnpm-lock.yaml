@@ -145,6 +145,9 @@ importers:
       next:
         specifier: ^14.3.0-canary.87
         version: 14.3.0-canary.87(react-dom@19.0.0-rc-378b305958-20240710)(react@19.0.0-rc-378b305958-20240710)
+      next-themes:
+        specifier: ^0.3.0
+        version: 0.3.0(react-dom@19.0.0-rc-378b305958-20240710)(react@19.0.0-rc-378b305958-20240710)
       nextjs-toploader:
         specifier: ^1.6.12
         version: 1.6.12(next@14.3.0-canary.87)(react-dom@19.0.0-rc-378b305958-20240710)(react@19.0.0-rc-378b305958-20240710)
@@ -7452,6 +7455,19 @@ packages:
     resolution: {integrity: sha512-+EUsqGPLsM+j/zdChZjsnX51g4XrHFOIXwfnCVPGlQk/k5giakcKsuxCObBRu6DSm9opw/O6slWbJdghQM4bBg==}
     engines: {node: '>= 0.6'}
     dev: true
+
+  /next-themes@0.3.0(react-dom@19.0.0-rc-378b305958-20240710)(react@19.0.0-rc-378b305958-20240710):
+    resolution: {integrity: sha512-/QHIrsYpd6Kfk7xakK4svpDI5mmXP0gfvCoJdGpZQ2TOrQZmsW0QxjaiLn8wbIKjtm4BTSqLoix4lxYYOnLJ/w==}
+    peerDependencies:
+      react: ^16.8 || ^17 || ^18 || >=18.x
+      react-dom: ^16.8 || ^17 || ^18 || >=18.x
+    peerDependenciesMeta:
+      react:
+        optional: true
+    dependencies:
+      react: 19.0.0-rc-378b305958-20240710
+      react-dom: 19.0.0-rc-378b305958-20240710(react@19.0.0-rc-378b305958-20240710)
+    dev: false
 
   /next@14.3.0-canary.87(react-dom@19.0.0-rc-378b305958-20240710)(react@19.0.0-rc-378b305958-20240710):
     resolution: {integrity: sha512-ce2cdsa7tZJ+Tv7y0zQaKXkTQSe/r6ZTXvcsSne2mfo2iE6AYKljMHFRMM/cv2qfM6QIiaANG8z4A+uxVXIevg==}

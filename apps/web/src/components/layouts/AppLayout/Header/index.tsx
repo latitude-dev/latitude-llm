@@ -9,6 +9,7 @@ import {
   NavTabItem,
   Text,
 } from '@latitude-data/web-ui'
+import { ThemeButton } from '$/components/ThemeButton'
 import getUserInfoFromSession from '$ui/lib/getUserInfo'
 import { SessionUser } from '$ui/providers'
 import Link from 'next/link'
@@ -116,6 +117,7 @@ export default function AppHeader({
               className='w-6 h-6'
             />
           ) : null}
+          <ThemeButton />
         </div>
       </div>
       {sectionLinks.length > 0 ? (
