@@ -515,11 +515,10 @@ export class ReadMetadata {
 
         if (attributes.has('as')) {
           const asAttribute = node.attributes.find((a) => a.name === 'as')!
-          const asValue = (asAttribute.value as TemplateNode[])
-            .map((n) => n.value)
-            .join('')
-
-          scopeContext.definedVariables.add(asValue)
+          if (asAttribute.value !== true) {
+            const asValue = asAttribute.value.map((n) => n.data).join('')
+            scopeContext.definedVariables.add(asValue)
+          }
         }
 
         return
