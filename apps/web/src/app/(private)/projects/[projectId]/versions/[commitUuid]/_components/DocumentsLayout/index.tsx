@@ -4,6 +4,7 @@ import type { DocumentVersion } from '@latitude-data/core/browser'
 import { DocumentDetailWrapper } from '@latitude-data/web-ui'
 import {
   getResizablePanelGroupData,
+  MIN_SIDEBAR_WIDTH_PX,
   ResizableGroups,
 } from '$/app/_lib/getResizablePanelGroupData'
 import {
@@ -35,11 +36,13 @@ export default async function DocumentsLayout({
     uuid: commitUuid,
   })
   const resizableId = ResizableGroups.DocumentSidebar
-  const layoutData = getResizablePanelGroupData({ group: resizableId })
+  const sidebarWidth =
+    getResizablePanelGroupData({ group: resizableId }) ?? MIN_SIDEBAR_WIDTH_PX
   return (
     <DocumentDetailWrapper
       resizableId={resizableId}
-      resizableSizes={layoutData}
+      sidebarWidth={sidebarWidth}
+      minSidebarWidth={MIN_SIDEBAR_WIDTH_PX}
       sidebar={
         <Sidebar project={project} commit={commit} currentDocument={document} />
       }

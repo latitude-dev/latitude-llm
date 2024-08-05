@@ -84,7 +84,7 @@ function FileNode({
   }, [currentPath])
 
   return (
-    <div className='flex-1 w-full custom-scroll max-h-full'>
+    <div className='flex-1 w-full'>
       <NodeHeader
         indentation={indentation}
         node={node}

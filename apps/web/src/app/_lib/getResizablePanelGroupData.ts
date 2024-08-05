@@ -3,6 +3,8 @@ import { cookies } from 'next/headers'
 export enum ResizableGroups {
   DocumentSidebar = 'document-sidebar',
 }
+export const MIN_SIDEBAR_WIDTH_PX = 280
+
 /**
  * This method is meant to be used in a nextjs page with access to the cookies object.
  */
@@ -10,7 +12,7 @@ export function getResizablePanelGroupData({
   group,
 }: {
   group: ResizableGroups
-}): number[] | undefined {
+}): number | undefined {
   const layout = cookies().get(`react-resizable-panels:${group}`)
   let layoutData = undefined
 
