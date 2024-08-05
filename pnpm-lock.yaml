@@ -498,9 +498,9 @@ importers:
       react-dom:
         specifier: 18.3.0
         version: 18.3.0(react@18.3.0)
-      react-resizable-panels:
-        specifier: ^2.0.22
-        version: 2.0.22(react-dom@18.3.0)(react@18.3.0)
+      react-resizable:
+        specifier: ^3.0.5
+        version: 3.0.5(react-dom@18.3.0)(react@18.3.0)
       react-textarea-autosize:
         specifier: ^8.5.3
         version: 8.5.3(@types/react@18.3.0)(react@18.3.0)
@@ -544,6 +544,9 @@ importers:
       '@types/react-dom':
         specifier: 18.3.0
         version: 18.3.0
+      '@types/react-resizable':
+        specifier: ^3.0.8
+        version: 3.0.8
       autoprefixer:
         specifier: ^10.4.19
         version: 10.4.19(postcss@8.4.39)
@@ -3851,6 +3854,12 @@ packages:
     dependencies:
       '@types/react': 18.3.0
 
+  /@types/react-resizable@3.0.8:
+    resolution: {integrity: sha512-Pcvt2eGA7KNXldt1hkhVhAgZ8hK41m0mp89mFgQi7LAAEZiaLgm4fHJ5zbJZ/4m2LVaAyYrrRRv1LHDcrGQanA==}
+    dependencies:
+      '@types/react': 18.3.0
+    dev: true
+
   /@types/react@18.3.0:
     resolution: {integrity: sha512-DiUcKjzE6soLyln8NNZmyhcQjVv+WsUIFSqetMN0p8927OztKT4VTfFTqsbAi5oAGIcgOmOajlfBqyptDDjZRw==}
     dependencies:
@@ -4987,6 +4996,11 @@ packages:
 
   /client-only@0.0.1:
     resolution: {integrity: sha512-IV3Ou0jSMzZrd3pZ48nLkT9DA7Ag1pnPzaiQhpW7c3RbcqqzvzzVu+L8gfqMp/8IM2MQtSiqaCxrrcfu8I8rMA==}
+    dev: false
+
+  /clsx@1.2.1:
+    resolution: {integrity: sha512-EcR6r5a8bj6pu3ycsa/E/cKVGuTgZJZdsyUYHOksG/UHIiKfjxzRxYJpyVBwYaQeOvghal9fcc4PidlgzugAQg==}
+    engines: {node: '>=6'}
     dev: false
 
   /clsx@2.0.0:
@@ -8334,6 +8348,21 @@ packages:
       scheduler: 0.25.0-rc-378b305958-20240710
     dev: false
 
+  /react-draggable@4.4.6(react-dom@18.3.0)(react@18.3.0):
+    resolution: {integrity: sha512-LtY5Xw1zTPqHkVmtM3X8MUOxNDOUhv/khTgBgrUvwaS064bwVvxT+q5El0uUFNx5IEPKXuRejr7UqLwBIg5pdw==}
+    peerDependencies:
+      react: '>= 16.3.0 || >=18.x'
+      react-dom: '>= 16.3.0 || >=18.x'
+    peerDependenciesMeta:
+      react:
+        optional: true
+    dependencies:
+      clsx: 1.2.1
+      prop-types: 15.8.1
+      react: 18.3.0
+      react-dom: 18.3.0(react@18.3.0)
+    dev: false
+
   /react-error-boundary@3.1.4(react@18.3.0):
     resolution: {integrity: sha512-uM9uPzZJTF6wRQORmSrvOIgt4lJ9MC1sNgEOj2XGsDTRE4kmpWxg7ENK9EWNKJRMAOY9z0MuF4yIfl6gp4sotA==}
     engines: {node: '>=10', npm: '>=6'}
@@ -8397,17 +8426,19 @@ packages:
       use-sidecar: 1.1.2(@types/react@18.3.0)(react@18.3.0)
     dev: false
 
-  /react-resizable-panels@2.0.22(react-dom@18.3.0)(react@18.3.0):
-    resolution: {integrity: sha512-G8x8o7wjQxCG+iF4x4ngKVBpe0CY+DAZ/SaiDoqBEt0yuKJe9OE/VVYMBMMugQ3GyQ65NnSJt23tujlaZZe75A==}
+  /react-resizable@3.0.5(react-dom@18.3.0)(react@18.3.0):
+    resolution: {integrity: sha512-vKpeHhI5OZvYn82kXOs1bC8aOXktGU5AmKAgaZS4F5JPburCtbmDPqE7Pzp+1kN4+Wb81LlF33VpGwWwtXem+w==}
     peerDependencies:
-      react: ^16.14.0 || ^17.0.0 || ^18.0.0 || >=18.x
-      react-dom: ^16.14.0 || ^17.0.0 || ^18.0.0 || >=18.x
+      react: '>= 16.3 || >=18.x'
     peerDependenciesMeta:
       react:
         optional: true
     dependencies:
+      prop-types: 15.8.1
       react: 18.3.0
-      react-dom: 18.3.0(react@18.3.0)
+      react-draggable: 4.4.6(react-dom@18.3.0)(react@18.3.0)
+    transitivePeerDependencies:
+      - react-dom
     dev: false
 
   /react-style-singleton@2.2.1(@types/react@18.3.0)(react@18.3.0):

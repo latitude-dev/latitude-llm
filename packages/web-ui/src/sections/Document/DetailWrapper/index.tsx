@@ -1,116 +1,51 @@
 'use client'
 
-import { ReactNode, useLayoutEffect, useState } from 'react'
+import { ReactNode, useCallback } from 'react'
 
-import {
-  ResizableHandle,
-  ResizablePanel,
-  ResizablePanelGroup,
-} from '$ui/ds/atoms'
-import { useDebouncedCallback } from 'use-debounce'
+import { SplitPane } from '$ui/ds/atoms'
 
 export function buildResizableCookie({
   key,
-  sizes,
+  width,
 }: {
   key: string
-  sizes?: number[]
+  width: number
 }): string {
   const base = 'react-resizable-panels'
   const keyName = `${base}:${key}`
 
-  if (!sizes) return keyName
-
-  return `${keyName}=${JSON.stringify(sizes)}`
+  return `${keyName}=${width}`
 }
 
-const MIN_SIDEBAR_WIDTH_PX = 280
-const DEFAULT_SIDEBAR_PERCENTAGE = 18
-const DEFAULT_MAIN_PERCENTAGE = 82
 export default function DocumentDetailWrapper({
   resizableId,
-  resizableSizes,
   children,
   sidebar,
+  sidebarWidth,
+  minSidebarWidth,
 }: {
+  resizableId: string
   children: ReactNode
   sidebar: ReactNode
-  resizableId: string
-  resizableSizes: number[] | undefined
+  sidebarWidth: number
+  minSidebarWidth: number
 }) {
-  const [minSize, setMinSize] = useState(10)
-
-  useLayoutEffect(() => {
-    const panelGroup = document.querySelector<HTMLDivElement>(
-      `[data-panel-group-id="${resizableId}"]`,
-    )
-    const resizeHandles = document.querySelectorAll<HTMLDivElement>(
-      '[data-panel-resize-handle-id]',
-    )
-    if (!panelGroup || !resizeHandles.length) return
-
-    const observer = new ResizeObserver(() => {
-      const totalResizeHandlesWidth = Array.from(resizeHandles).reduce(
-        (sum, handle) => sum + handle.offsetWidth,
-        0,
-      )
-      const availableWidthAfterHandles =
-        panelGroup.offsetWidth - totalResizeHandlesWidth
-
-      const otherPanelsMinWidth = Math.max(
-        panelGroup.offsetWidth - MIN_SIDEBAR_WIDTH_PX,
-        0,
-      )
-      if (otherPanelsMinWidth > MIN_SIDEBAR_WIDTH_PX) {
-        setMinSize((MIN_SIDEBAR_WIDTH_PX / availableWidthAfterHandles) * 100)
-      }
-    })
-    observer.observe(panelGroup)
-    resizeHandles.forEach((resizeHandle) => {
-      observer.observe(resizeHandle)
-    })
-
-    return () => {
-      observer.unobserve(panelGroup)
-      resizeHandles.forEach((resizeHandle) => {
-        observer.unobserve(resizeHandle)
-      })
-      observer.disconnect()
-    }
-  }, [])
-  const debouncedLayoutUpdate = useDebouncedCallback(
-    (newSizes: number[]) => {
+  const onResizeStop = useCallback(
+    (width: number) => {
       document.cookie = buildResizableCookie({
         key: resizableId,
-        sizes: newSizes.map((value) => Math.round(value)),
+        width,
       })
     },
-    250,
-    { trailing: true },
+    [resizableId],
   )
-
   return (
-    <ResizablePanelGroup
-      id={resizableId}
-      direction='horizontal'
-      onLayout={debouncedLayoutUpdate}
-    >
-      <ResizablePanel
-        style={{ minWidth: MIN_SIDEBAR_WIDTH_PX }}
-        defaultSize={resizableSizes?.[0] ?? DEFAULT_SIDEBAR_PERCENTAGE}
-        minSize={minSize}
-        maxSize={40}
-        order={1}
-      >
-        {sidebar}
-      </ResizablePanel>
-      <ResizableHandle />
-      <ResizablePanel
-        order={2}
-        defaultSize={resizableSizes?.[1] ?? DEFAULT_MAIN_PERCENTAGE}
-      >
-        {children}
-      </ResizablePanel>
-    </ResizablePanelGroup>
+    <SplitPane
+      initialWidth={sidebarWidth ?? minSidebarWidth}
+      minWidth={minSidebarWidth}
+      onResizeStop={onResizeStop}
+      leftPane={<SplitPane.Pane>{sidebar}</SplitPane.Pane>}
+      rightPane={<SplitPane.Pane>{children}</SplitPane.Pane>}
+    />
   )
 }

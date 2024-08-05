@@ -1,6 +1,8 @@
+'use client'
+
 import { ReactNode } from 'react'
 
-import { SessionUser } from '@latitude-data/web-ui'
+import { AppLayoutProvider, SessionUser } from '@latitude-data/web-ui'
 
 import AppHeader, { AppHeaderProps } from './Header'
 
@@ -17,14 +19,17 @@ export default function AppLayout({
   sectionLinks,
 }: AppLayoutProps) {
   return (
-    <div className='flex flex-col h-screen'>
-      <AppHeader
-        sectionLinks={sectionLinks}
-        breadcrumbs={breadcrumbs}
-        navigationLinks={navigationLinks}
-        currentUser={currentUser}
-      />
-      <main className='flex flex-row w-full h-full'>{children}</main>
-    </div>
+    <AppLayoutProvider
+      appHeader={
+        <AppHeader
+          sectionLinks={sectionLinks}
+          breadcrumbs={breadcrumbs}
+          navigationLinks={navigationLinks}
+          currentUser={currentUser}
+        />
+      }
+    >
+      {children}
+    </AppLayoutProvider>
   )
 }

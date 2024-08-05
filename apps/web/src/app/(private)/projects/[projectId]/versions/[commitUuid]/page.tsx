@@ -1,6 +1,7 @@
 import { DocumentDetailWrapper } from '@latitude-data/web-ui'
 import {
   getResizablePanelGroupData,
+  MIN_SIDEBAR_WIDTH_PX,
   ResizableGroups,
 } from '$/app/_lib/getResizablePanelGroupData'
 import {
@@ -28,11 +29,13 @@ export default async function CommitRoot({
     uuid: params.commitUuid,
   })
   const resizableId = ResizableGroups.DocumentSidebar
-  const layoutData = getResizablePanelGroupData({ group: resizableId })
+  const sidebarWidth =
+    getResizablePanelGroupData({ group: resizableId }) ?? MIN_SIDEBAR_WIDTH_PX
   return (
     <DocumentDetailWrapper
       resizableId={resizableId}
-      resizableSizes={layoutData}
+      sidebarWidth={sidebarWidth}
+      minSidebarWidth={MIN_SIDEBAR_WIDTH_PX}
       sidebar={<Sidebar project={project} commit={commit} />}
     >
       <div className='p-32'>Main content. Remove Tailwind Styles from here</div>
