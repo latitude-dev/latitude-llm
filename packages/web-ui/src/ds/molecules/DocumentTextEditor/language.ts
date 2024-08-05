@@ -2,6 +2,15 @@ import type { languages } from 'monaco-editor'
 
 const style = getComputedStyle(document.body)
 
+export const colorFromProperty = (property: string): string => {
+  const rgb = style.getPropertyValue(property)
+  const [r, g, b] = rgb.split(' ').map(Number)
+  const hr = (r ?? 0).toString(16).padStart(2, '0')
+  const hg = (g ?? 0).toString(16).padStart(2, '0')
+  const hb = (b ?? 0).toString(16).padStart(2, '0')
+  return `#${hr}${hg}${hb}`
+}
+
 export const tokenizer = {
   root: [
     // Escaped sequences
@@ -124,49 +133,49 @@ export const tokenizer = {
 } as { [key: string]: languages.IMonarchLanguageRule[] }
 
 export const themeRules = [
-  { token: 'yaml-delimiter', foreground: style.getPropertyValue('--primary') },
-  { token: 'yaml', foreground: style.getPropertyValue('--primary') },
+  { token: 'yaml-delimiter', foreground: colorFromProperty('--primary') },
+  { token: 'yaml', foreground: colorFromProperty('--primary') },
 
-  { token: 'header', foreground: style.getPropertyValue('--primary') },
+  { token: 'header', foreground: colorFromProperty('--primary') },
   {
     token: 'bold',
     fontStyle: 'bold',
-    foreground: style.getPropertyValue('--foreground'),
+    foreground: colorFromProperty('--foreground'),
   },
   {
     token: 'italic',
     fontStyle: 'italic',
-    foreground: style.getPropertyValue('--foreground'),
+    foreground: colorFromProperty('--foreground'),
   },
   {
     token: 'link',
-    foreground: style.getPropertyValue('--primary'),
+    foreground: colorFromProperty('--primary'),
     fontStyle: 'underline',
   },
   {
     token: 'tag-open',
-    foreground: style.getPropertyValue('--accent-foreground'),
+    foreground: colorFromProperty('--accent-foreground'),
   },
   {
     token: 'tag-close',
-    foreground: style.getPropertyValue('--accent-foreground'),
+    foreground: colorFromProperty('--accent-foreground'),
   },
   {
     token: 'attribute.name',
-    foreground: style.getPropertyValue('--destructive'),
+    foreground: colorFromProperty('--destructive'),
   },
   {
     token: 'js-open',
-    foreground: style.getPropertyValue('--accent-foreground'),
+    foreground: colorFromProperty('--accent-foreground'),
   },
   {
     token: 'js-close',
-    foreground: style.getPropertyValue('--accent-foreground'),
+    foreground: colorFromProperty('--accent-foreground'),
   },
-  { token: 'js', foreground: style.getPropertyValue('--primary') },
+  { token: 'js', foreground: colorFromProperty('--primary') },
   {
     token: 'comment',
     fontStyle: 'italic',
-    foreground: style.getPropertyValue('--muted-foreground'),
+    foreground: colorFromProperty('--muted-foreground'),
   },
 ]

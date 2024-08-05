@@ -11,7 +11,7 @@ import { MarkerSeverity, type editor } from 'monaco-editor'
 
 import { DocumentTextEditorFallback, type DocumentTextEditorProps } from '.'
 import { registerActions } from './actions'
-import { themeRules, tokenizer } from './language'
+import { colorFromProperty, themeRules, tokenizer } from './language'
 
 export type DocumentError = {
   startLineNumber: number
@@ -53,8 +53,6 @@ export function DocumentTextEditor({
   }, [])
 
   const handleEditorWillMount = useCallback((monaco: Monaco) => {
-    const style = getComputedStyle(document.body)
-
     monaco.languages.register({ id: 'document' })
     monaco.languages.setMonarchTokensProvider('document', { tokenizer })
     monaco.languages.setLanguageConfiguration('document', {
@@ -67,7 +65,7 @@ export function DocumentTextEditor({
       inherit: true,
       rules: themeRules,
       colors: {
-        'editor.background': style.getPropertyValue('--secondary'),
+        'editor.background': colorFromProperty('--secondary'),
       },
     })
   }, [])
@@ -157,39 +155,41 @@ export function DocumentTextEditor({
           />
         </div>
       </div>
-      <div className='flex flex-row w-full items-center justify-between bg-muted'>
-        <div className='flex flex-row items-center gap-2 px-2 py-1'>
-          <Text.H5 color='foregroundMuted'>{editorLines} lines</Text.H5>
-        </div>
-        <div className='flex flex-row items-center gap-2 px-2'>
-          {(metadata?.errors.length ?? 0) > 0 && (
-            <Button
-              variant='ghost'
-              onClick={focusNextError}
-              className='flex flex-row items-center gap-2'
-            >
-              <Text.H5 color='destructive'>
-                {metadata!.errors.length} errors
-              </Text.H5>
-              <AlertCircle className='h-4 w-4 text-destructive' />
-            </Button>
-          )}
-
-          <div className='flex flex-row items-center gap-2'>
-            {isSaved ? (
-              <>
-                <Text.H5 color='foregroundMuted'>Saved</Text.H5>
-                <CheckCircle2 className='h-4 w-4 text-muted-foreground' />
-              </>
-            ) : (
-              <>
-                <Text.H5 color='foregroundMuted'>Saving...</Text.H5>
-                <LoaderCircle className='h-4 w-4 text-muted-foreground animate-spin' />
-              </>
+      {!readOnlyMessage && (
+        <div className='flex flex-row w-full items-center justify-between bg-muted'>
+          <div className='flex flex-row items-center gap-2 px-2 py-1'>
+            <Text.H6 color='foregroundMuted'>{editorLines} lines</Text.H6>
+          </div>
+          <div className='flex flex-row items-center gap-2 px-2'>
+            {(metadata?.errors.length ?? 0) > 0 && (
+              <Button
+                variant='ghost'
+                onClick={focusNextError}
+                className='flex flex-row items-center gap-2'
+              >
+                <Text.H6 color='destructive'>
+                  {metadata!.errors.length} errors
+                </Text.H6>
+                <AlertCircle className='h-4 w-4 text-destructive' />
+              </Button>
             )}
+
+            <div className='flex flex-row items-center gap-2'>
+              {isSaved ? (
+                <>
+                  <Text.H6 color='foregroundMuted'>Saved</Text.H6>
+                  <CheckCircle2 className='h-4 w-4 text-muted-foreground' />
+                </>
+              ) : (
+                <>
+                  <Text.H6 color='foregroundMuted'>Saving...</Text.H6>
+                  <LoaderCircle className='h-4 w-4 text-muted-foreground animate-spin' />
+                </>
+              )}
+            </div>
           </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }
