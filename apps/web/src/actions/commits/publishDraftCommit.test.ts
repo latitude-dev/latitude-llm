@@ -62,7 +62,7 @@ describe('publishDraftCommitAction', () => {
 
     it('returns error when project is not found', async () => {
       const [_, error] = await publishDraftCommitAction({
-        projectId: 33,
+        projectId: 999992,
         id: commit.id,
       })
 
