@@ -169,6 +169,13 @@
       "when": 1722808609375,
       "tag": "0023_blue_chat",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1722872479164,
+      "tag": "0024_slimy_dust",
+      "breakpoints": true
     }
   ]
 }
