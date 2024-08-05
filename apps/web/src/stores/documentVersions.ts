@@ -35,6 +35,7 @@ export default function useDocumentVersions(
     useServerAction(destroyDocumentAction)
   const { execute: executeDestroyFolder, isPending: isDestroyingFolder } =
     useServerAction(destroyFolderAction)
+
   const {
     mutate,
     data = [],
@@ -70,7 +71,7 @@ export default function useDocumentVersions(
       const [document, error] = await executeCreateDocument({
         path,
         projectId: project.id,
-        commitUuid: commit.uuid,
+        commitId: commit.id,
       })
 
       if (error) {
@@ -93,7 +94,7 @@ export default function useDocumentVersions(
         }
       }
     },
-    [executeCreateDocument, mutate, data],
+    [executeCreateDocument, mutate, data, commit.id],
   )
 
   const destroyFile = useCallback(
@@ -125,7 +126,13 @@ export default function useDocumentVersions(
         }
       }
     },
-    [executeDestroyDocument, mutate, data, currentDocument?.documentUuid],
+    [
+      executeDestroyDocument,
+      mutate,
+      data,
+      currentDocument?.documentUuid,
+      commit.id,
+    ],
   )
 
   const destroyFolder = useCallback(
@@ -158,11 +165,36 @@ export default function useDocumentVersions(
         }
       }
     },
-    [executeDestroyFolder, mutate, currentDocument?.path],
+    [executeDestroyFolder, mutate, currentDocument?.path, commit.id],
   )
 
-  const { execute: updateContent } = useLatitudeAction(
-    updateDocumentContentAction,
+  const updateContent = useCallback(
+    async ({
+      documentUuid,
+      content,
+    }: {
+      documentUuid: string
+      content: string
+    }) => {
+      const { execute } = useLatitudeAction(updateDocumentContentAction, {
+        onSuccess: () => {
+          const prevDocuments = data || []
+          mutate(
+            prevDocuments.map((d) =>
+              d.documentUuid === documentUuid ? { ...d, content } : d,
+            ),
+          )
+        },
+      })
+
+      await execute({
+        documentUuid,
+        content,
+        projectId: project.id,
+        commitId: commit.id,
+      })
+    },
+    [commit.id, data],
   )
 
   return {
