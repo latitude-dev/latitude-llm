@@ -1,12 +1,15 @@
+import { runAction } from '$/actions/documents/runAction'
+import { streamTextAction } from '$/actions/documents/streamTextAction'
 import {
-  findCommit,
-  findProject,
-  getDocumentByUuid,
+  findCommitCached,
+  findProjectCached,
+  getDocumentByUuidCached,
+  getDocumentsAtCommitCached,
 } from '$/app/(private)/_data-access'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
 
 import DocumentsLayout from '../../_components/DocumentsLayout'
-import ClientDocumentEditor from './_components/DocumentEditor'
+import DocumentEditor from './_components/DocumentEditor/Editor'
 
 export default async function DocumentPage({
   params,
@@ -16,15 +19,16 @@ export default async function DocumentPage({
   const session = await getCurrentUser()
   const projectId = Number(params.projectId)
   const commintUuid = params.commitUuid
-  const project = await findProject({
+  const project = await findProjectCached({
     projectId,
     workspaceId: session.workspace.id,
   })
-  const commit = await findCommit({ project, uuid: commintUuid })
-  const document = await getDocumentByUuid({
+  const commit = await findCommitCached({ project, uuid: commintUuid })
+  const document = await getDocumentByUuidCached({
     documentUuid: params.documentUuid,
     commit,
   })
+  const documents = await getDocumentsAtCommitCached({ commit })
 
   return (
     <DocumentsLayout
@@ -32,7 +36,12 @@ export default async function DocumentPage({
       commitUuid={commintUuid}
       document={document}
     >
-      <ClientDocumentEditor commit={commit} document={document} />
+      <DocumentEditor
+        runAction={runAction}
+        streamTextAction={streamTextAction}
+        documents={documents}
+        document={document}
+      />
     </DocumentsLayout>
   )
 }

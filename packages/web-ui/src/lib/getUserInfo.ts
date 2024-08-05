@@ -29,7 +29,7 @@ function getFallback(name: string | null | undefined) {
   return { initials, bgColorClass }
 }
 
-export default function getUserInfoFromSession({ name }: SessionUser) {
+export function getUserInfoFromSession({ name }: SessionUser) {
   if (!name) {
     return {
       name: 'Unknown',

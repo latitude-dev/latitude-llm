@@ -1,6 +1,6 @@
 import { ReactNode } from 'react'
 
-import { Text } from '$ui/ds/atoms'
+import { Text } from '@latitude-data/web-ui'
 
 export function Header({
   title,

@@ -1,11 +1,8 @@
-import {
-  CommitsRepository,
-  CommitStatus,
-  DocumentVersionsRepository,
-} from '@latitude-data/core'
+import { CommitsRepository, CommitStatus } from '@latitude-data/core'
 import { Commit, DocumentVersion, Project } from '@latitude-data/core/browser'
 import { DocumentSidebar } from '@latitude-data/web-ui'
 import { fetchCommitsByProjectAction } from '$/actions/commits/fetchCommitsByProjectAction'
+import { getDocumentsAtCommitCached } from '$/app/(private)/_data-access'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
 
 import ClientFilesTree from './ClientFilesTree'
@@ -21,8 +18,7 @@ export default async function Sidebar({
   currentDocument?: DocumentVersion
 }) {
   const { workspace } = await getCurrentUser()
-  const docsScope = new DocumentVersionsRepository(workspace.id)
-  const documents = await docsScope.getDocumentsAtCommit(commit)
+  const documents = await getDocumentsAtCommitCached({ commit })
   const [draftCommits, fetchCommitsError] = await fetchCommitsByProjectAction({
     projectId: project.id,
     status: CommitStatus.Draft,
@@ -48,7 +44,7 @@ export default async function Sidebar({
       tree={
         <ClientFilesTree
           currentDocument={currentDocument}
-          documents={documents.unwrap()}
+          documents={documents}
         />
       }
     />

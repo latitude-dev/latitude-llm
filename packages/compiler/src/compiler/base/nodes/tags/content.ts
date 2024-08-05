@@ -31,8 +31,17 @@ export async function compile(
   }
   const textContent = popStrayText()
 
-  addContent({
-    type: node.name as ContentType,
-    value: textContent,
-  })
+  // TODO: This if else is probably not required but the types enforce it.
+  // Improve types.
+  if (node.name === 'text') {
+    addContent({
+      type: ContentType.text,
+      text: textContent,
+    })
+  } else {
+    addContent({
+      type: ContentType.image,
+      image: textContent,
+    })
+  }
 }

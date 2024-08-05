@@ -1,4 +1,8 @@
-import { MessageContent } from '@latitude-data/compiler'
+import {
+  ImageContent,
+  MessageContent,
+  TextContent,
+} from '@latitude-data/compiler'
 import { Badge, BadgeProps, Text } from '$ui/ds/atoms'
 import { TextColor } from '$ui/ds/tokens'
 import { cn } from '$ui/lib/utils'
@@ -62,7 +66,7 @@ export function Message({
               key={idx}
               index={idx}
               color={textColor}
-              value={c.value}
+              value={(c as TextContent)?.text || (c as ImageContent)?.image}
             />
           ))
         )}
@@ -78,9 +82,12 @@ const ContentValue = ({
 }: {
   index?: number
   color: TextColor
-  value: string
+  value: string | Uint8Array | Buffer | ArrayBuffer | URL
 }) => {
-  return value.split('\n').map((line, lineIndex) => (
+  // TODO: Handle the rest of types
+  if (typeof value !== 'string') return
+
+  return value?.split('\n')?.map((line, lineIndex) => (
     <Text.H5 color={color} whiteSpace='preWrap' key={`${index}-${lineIndex}`}>
       {line}
     </Text.H5>

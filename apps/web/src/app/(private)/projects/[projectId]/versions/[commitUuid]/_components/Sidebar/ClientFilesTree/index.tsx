@@ -32,11 +32,11 @@ export default function ClientFilesTree({
         .documents.detail({ uuid: documentUuid }).root,
     )
   }, [])
-  const { createFile, destroyFile, destroyFolder, isDestroying, documents } =
+  const { createFile, destroyFile, destroyFolder, isDestroying, data } =
     useDocumentVersions({ currentDocument }, { fallbackData: serverDocuments })
   return (
     <FilesTree
-      documents={documents}
+      documents={data}
       currentPath={documentPath}
       navigateToDocument={navigateToDocument}
       createFile={createFile}

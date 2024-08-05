@@ -42,12 +42,15 @@ export function serialize(conversation: Conversation): string {
     } else {
       for (const content of message.content) {
         if (content.type === 'text') {
-          output += addIndent(content.value, 2) + '\n'
+          output += addIndent(content.text, 2) + '\n'
           continue
         }
 
         output += addIndent(`<${content.type}>`, 2) + '\n'
-        output += addIndent(content.value, 4) + '\n'
+        // TODO: image content can be more things than just a string. Need to
+        // handle that. Possible types: string | Uint8Array | Buffer |
+        // ArrayBuffer | URL
+        output += addIndent(content.image as string, 4) + '\n'
         output += addIndent(`</${content.type}>`, 2) + '\n'
       }
     }

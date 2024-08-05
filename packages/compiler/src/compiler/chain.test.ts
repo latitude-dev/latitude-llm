@@ -3,8 +3,8 @@ import CompileError from '$compiler/error/error'
 import {
   AssistantMessage,
   Conversation,
-  MessageContent,
   MessageRole,
+  TextContent,
   UserMessage,
 } from '$compiler/types'
 import { describe, expect, it, vi } from 'vitest'
@@ -105,19 +105,27 @@ describe('chain', async () => {
 
     const userMessage = conversation.messages[1]! as UserMessage
     expect(userMessage.role).toBe('user')
-    expect(userMessage.content[0]!.value).toBe('User message: 1')
+    expect((userMessage.content[0]! as TextContent).text).toBe(
+      'User message: 1',
+    )
 
     const userMessage2 = conversation.messages[2]! as UserMessage
     expect(userMessage2.role).toBe('user')
-    expect(userMessage2.content[0]!.value).toBe('User message: 2')
+    expect((userMessage2.content[0]! as TextContent).text).toBe(
+      'User message: 2',
+    )
 
     const userMessage3 = conversation.messages[3]! as UserMessage
     expect(userMessage3.role).toBe('user')
-    expect(userMessage3.content[0]!.value).toBe('User message: 3')
+    expect((userMessage3.content[0]! as TextContent).text).toBe(
+      'User message: 3',
+    )
 
     const assistantMessage = conversation.messages[4]! as AssistantMessage
     expect(assistantMessage.role).toBe('assistant')
-    expect(assistantMessage.content[0]!.value).toBe('Assistant message: foo')
+    expect((assistantMessage.content[0]! as TextContent).text).toBe(
+      'Assistant message: foo',
+    )
   })
 
   it('stops at a step tag', async () => {
@@ -147,9 +155,9 @@ describe('chain', async () => {
     expect(completed2).toBe(true)
     expect(conversation2.messages.length).toBe(3)
     expect(conversation2.messages[0]!.content).toBe('Message 1')
-    expect(
-      (conversation2.messages[1]!.content[0]! as MessageContent).value,
-    ).toBe('response')
+    expect((conversation2.messages[1]!.content[0]! as TextContent).text).toBe(
+      'response',
+    )
     expect(conversation2.messages[2]!.content).toBe('Message 2')
   })
 
@@ -236,9 +244,7 @@ describe('chain', async () => {
 
     const conversation = await complete({ chain })
     expect(conversation.messages[0]!.content).toBe('1')
-    expect(
-      (conversation.messages[1]!.content[0]! as MessageContent).value,
-    ).toBe('')
+    expect((conversation.messages[1]!.content[0]! as TextContent).text).toBe('')
     expect(conversation.messages[2]!.content).toBe('2')
     expect(func1).toHaveBeenCalledTimes(1)
     expect(func2).toHaveBeenCalledTimes(1)
@@ -335,15 +341,15 @@ describe('chain', async () => {
 
     const conversation = await complete({ chain, maxSteps: 5 })
     expect(conversation.messages.length).toBe(7)
-    expect(
-      (conversation.messages[0]!.content[0]! as MessageContent).value,
-    ).toBe('0')
-    expect(
-      (conversation.messages[2]!.content[0]! as MessageContent).value,
-    ).toBe('1')
-    expect(
-      (conversation.messages[4]!.content[0]! as MessageContent).value,
-    ).toBe('2')
+    expect((conversation.messages[0]!.content[0]! as TextContent).text).toBe(
+      '0',
+    )
+    expect((conversation.messages[2]!.content[0]! as TextContent).text).toBe(
+      '1',
+    )
+    expect((conversation.messages[4]!.content[0]! as TextContent).text).toBe(
+      '2',
+    )
     expect(conversation.messages[6]!.content).toBe('3')
   })
 
@@ -397,7 +403,7 @@ describe('chain', async () => {
       (m) => m.role === MessageRole.user,
     )
     const userMessageText = userMessages
-      .map((m) => m.content.map((c) => c.value).join(' '))
+      .map((m) => m.content.map((c) => (c as TextContent).text).join(' '))
       .join('\n')
     expect(userMessageText).toBe(
       removeCommonIndent(`
@@ -433,9 +439,9 @@ describe('chain', async () => {
     const { conversation } = await chain.step('foo')
 
     expect(conversation.messages.length).toBe(2)
-    expect(
-      (conversation.messages[0]!.content[0]! as MessageContent).value,
-    ).toBe('foo')
+    expect((conversation.messages[0]!.content[0]! as TextContent).text).toBe(
+      'foo',
+    )
     expect(conversation.messages[1]!.content).toBe('foo')
   })
 

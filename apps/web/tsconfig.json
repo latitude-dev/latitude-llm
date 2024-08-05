@@ -10,15 +10,17 @@
     "jsx": "preserve",
     "typeRoots": ["./node_modules/@types"],
     "baseUrl": ".",
+    // NOTE: order matters!
     "paths": {
       "$/*": ["./src/*"],
+      "@latitude-data/core": ["../../packages/core/src/*"],
+      "@latitude-data/compiler": ["../../packages/compiler/src/*"],
+      "@latitude-data/jobs": ["../../packages/jobs/src/*"],
+      "@latitude-data/web-ui": ["../../packages/web-ui/src/*"],
       "$compiler/*": ["../../packages/compiler/src/*"],
       "$core/*": ["../../packages/core/src/*"],
       "$jobs/*": ["../../packages/jobs/src/*"],
       "$ui/*": ["../../packages/web-ui/src/*"],
-      "@latitude-data/core": ["../../packages/core/src/*"],
-      "@latitude-data/jobs": ["../../packages/jobs/src/*"],
-      "@latitude-data/web-ui": ["../../packages/web-ui/src/*"],
       "acorn": ["node_modules/@latitude-data/typescript-config/types/acorn"]
     }
   },

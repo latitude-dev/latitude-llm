@@ -7,6 +7,7 @@ export * from './lib'
 export * from './schema'
 export * from './services'
 export * from './repositories'
-export * from './ai'
+
+export * from './lib/streamToGenerator'
 
 export { factories }

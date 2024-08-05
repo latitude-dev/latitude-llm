@@ -16,12 +16,12 @@ interface IMessageContent {
 
 export type TextContent = IMessageContent & {
   type: ContentType.text
-  value: string
+  text: string
 }
 
 export type ImageContent = IMessageContent & {
   type: ContentType.image
-  value: string
+  image: string | Uint8Array | Buffer | ArrayBuffer | URL
 }
 
 export type MessageContent = TextContent | ImageContent

@@ -10,7 +10,7 @@ import type { Commit, Project } from '@latitude-data/core/browser'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
 import { notFound } from 'next/navigation'
 
-export const getFirstProject = cache(
+export const getFirstProjectCached = cache(
   async ({ workspaceId }: { workspaceId: number }) => {
     const projectsScope = new ProjectsRepository(workspaceId)
     const result = await projectsScope.getFirstProject()
@@ -20,7 +20,7 @@ export const getFirstProject = cache(
   },
 )
 
-export const findProject = cache(
+export const findProjectCached = cache(
   async ({
     projectId,
     workspaceId,
@@ -36,7 +36,7 @@ export const findProject = cache(
   },
 )
 
-export const findCommit = cache(
+export const findCommitCached = cache(
   async ({ uuid, project }: { uuid: string; project: Project }) => {
     const commitsScope = new CommitsRepository(project.workspaceId)
     const result = await commitsScope.getCommitByUuid({ project, uuid })
@@ -46,7 +46,7 @@ export const findCommit = cache(
   },
 )
 
-export const getDocumentByUuid = cache(
+export const getDocumentByUuidCached = cache(
   async ({
     documentUuid,
     commit,
@@ -70,7 +70,7 @@ export const getDocumentByUuid = cache(
   },
 )
 
-export const getDocumentByPath = cache(
+export const getDocumentByPathCached = cache(
   async ({ commit, path }: { commit: Commit; path: string }) => {
     const { workspace } = await getCurrentUser()
     const docsScope = new DocumentVersionsRepository(workspace!.id)
@@ -84,3 +84,23 @@ export const getDocumentByPath = cache(
     return document
   },
 )
+
+export const getDocumentsAtCommitCached = cache(
+  async ({ commit }: { commit: Commit }) => {
+    const { workspace } = await getCurrentUser()
+    const docsScope = new DocumentVersionsRepository(workspace.id)
+    const result = await docsScope.getDocumentsAtCommit(commit)
+    const documents = result.unwrap()
+
+    return documents
+  },
+)
+
+export const getDocumentByIdCached = cache(async (id: number) => {
+  const { workspace } = await getCurrentUser()
+  const docsScope = new DocumentVersionsRepository(workspace.id)
+  const result = await docsScope.getDocumentById(id)
+  const document = result.unwrap()
+
+  return document
+})

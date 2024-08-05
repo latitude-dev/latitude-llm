@@ -2,8 +2,8 @@
 
 import React from 'react'
 
+import { Input, Text } from '@latitude-data/web-ui'
 import useCurrentWorkspace from '$/stores/currentWorkspace'
-import { Input, Text } from '$ui/ds/atoms'
 import { useDebouncedCallback } from 'use-debounce'
 
 export default function WorkspaceName() {

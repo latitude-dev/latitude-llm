@@ -3,7 +3,8 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { ConversationMetadata } from '@latitude-data/compiler'
-import { Badge, Button, Input, Text } from '$ui/ds/atoms'
+import { DocumentVersion } from '@latitude-data/core/browser'
+import { Badge, Button, Input, Text } from '@latitude-data/web-ui'
 
 import { Header } from '../Header'
 import Chat from './Chat'
@@ -25,9 +26,11 @@ function convertParams(
 }
 
 export default function Playground({
+  document,
   metadata,
 }: {
-  metadata: ConversationMetadata | undefined
+  document: DocumentVersion
+  metadata: ConversationMetadata
 }) {
   const [mode, setMode] = useState<'preview' | 'chat'>('preview')
   const [inputs, setInputs] = useState<Record<string, string>>({})
@@ -95,7 +98,11 @@ export default function Playground({
                   runPrompt={() => setMode('chat')}
                 />
               ) : (
-                <Chat metadata={metadata!} parameters={parameters} />
+                <Chat
+                  document={document}
+                  metadata={metadata!}
+                  parameters={parameters}
+                />
               )}
             </div>
           </div>

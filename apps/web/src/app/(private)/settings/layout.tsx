@@ -4,12 +4,14 @@ import { AppLayout } from '$/components/layouts'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
 
-import { getFirstProject } from '../_data-access'
+import { getFirstProjectCached } from '../_data-access'
 import { NAV_LINKS } from '../_lib/constants'
 
 export default async function Layout({ children }: { children: ReactNode }) {
   const session = await getCurrentUser()
-  const project = await getFirstProject({ workspaceId: session.workspace.id })
+  const project = await getFirstProjectCached({
+    workspaceId: session.workspace.id,
+  })
   const url = ROUTES.projects.detail({ id: project.id }).commits.latest
   const sectionLinks = [
     { label: 'Projects', href: url },

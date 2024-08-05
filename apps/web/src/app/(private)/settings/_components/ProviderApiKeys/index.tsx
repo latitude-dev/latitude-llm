@@ -3,8 +3,6 @@
 import { useState } from 'react'
 
 import { type ProviderApiKey } from '@latitude-data/core/browser'
-import useProviderApiKeys from '$/stores/providerApiKeys'
-import useUsers from '$/stores/users'
 import {
   Button,
   Icons,
@@ -15,7 +13,9 @@ import {
   TableHeader,
   TableRow,
   Text,
-} from '$ui/ds/atoms'
+} from '@latitude-data/web-ui'
+import useProviderApiKeys from '$/stores/providerApiKeys'
+import useUsers from '$/stores/users'
 
 import NewApiKey from './New'
 

@@ -19,7 +19,7 @@ export const createProviderApiKeyAction = authProcedure
   .handler(async ({ input, ctx }) => {
     return await createProviderApiKey({
       workspace: ctx.workspace,
-      provider: input.provider as Providers,
+      provider: input.provider,
       token: input.token,
       name: input.name,
       authorId: ctx.user.id,

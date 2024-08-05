@@ -26,10 +26,12 @@ export const destroyDocumentAction = withProject
         documentUuid: input.documentUuid,
       })
       .then((r) => r.unwrap())
-    const result = await destroyDocument({
+
+    await destroyDocument({
       document,
       commit,
       workspaceId: ctx.project.workspaceId,
-    })
-    return result.unwrap()
+    }).then((r) => r.unwrap())
+
+    return document
   })

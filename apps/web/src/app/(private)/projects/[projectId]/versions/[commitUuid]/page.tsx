@@ -3,7 +3,10 @@ import {
   getResizablePanelGroupData,
   ResizableGroups,
 } from '$/app/_lib/getResizablePanelGroupData'
-import { findCommit, findProject } from '$/app/(private)/_data-access'
+import {
+  findCommitCached,
+  findProjectCached,
+} from '$/app/(private)/_data-access'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
 
 import Sidebar from './_components/Sidebar'
@@ -16,11 +19,11 @@ export default async function CommitRoot({
   params: { projectId: string; commitUuid: string }
 }) {
   const session = await getCurrentUser()
-  const project = await findProject({
+  const project = await findProjectCached({
     projectId: Number(params.projectId),
     workspaceId: session.workspace.id,
   })
-  const commit = await findCommit({
+  const commit = await findCommitCached({
     project,
     uuid: params.commitUuid,
   })

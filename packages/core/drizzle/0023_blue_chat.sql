@@ -1,0 +1,1 @@
+ALTER TYPE "latitude"."provider" ADD VALUE 'azure';

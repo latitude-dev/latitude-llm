@@ -13,13 +13,15 @@ import { createDocumentVersionAction } from '$/actions/documents/create'
 import { destroyDocumentAction } from '$/actions/documents/destroyDocumentAction'
 import { destroyFolderAction } from '$/actions/documents/destroyFolderAction'
 import { getDocumentsAtCommitAction } from '$/actions/documents/getDocumentsAtCommitAction'
+import { updateDocumentContentAction } from '$/actions/documents/updateContent'
+import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
 import { useRouter } from 'next/navigation'
 import useSWR, { SWRConfiguration } from 'swr'
 import { useServerAction } from 'zsa-react'
 
 export default function useDocumentVersions(
-  { currentDocument }: { currentDocument: SidebarDocument | undefined },
+  { currentDocument }: { currentDocument?: SidebarDocument | undefined } = {},
   opts?: SWRConfiguration,
 ) {
   const { toast } = useToast()
@@ -35,7 +37,7 @@ export default function useDocumentVersions(
     useServerAction(destroyFolderAction)
   const {
     mutate,
-    data,
+    data = [],
     isValidating,
     isLoading,
     error: swrError,
@@ -148,17 +150,22 @@ export default function useDocumentVersions(
         }
       }
     },
-    [executeDestroyDocument, mutate, data, currentDocument?.path],
+    [executeDestroyFolder, mutate, currentDocument?.path],
+  )
+
+  const { execute: updateContent } = useLatitudeAction(
+    updateDocumentContentAction,
   )
 
   return {
+    data,
     isValidating: isValidating,
     isLoading: isLoading,
     error: swrError,
-    documents: data ?? [],
     createFile,
     destroyFile,
     destroyFolder,
+    updateContent,
     isDestroying: isDestroyingFile || isDestroyingFolder,
   }
 }

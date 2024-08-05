@@ -6,9 +6,14 @@ import {
   Conversation,
   ConversationMetadata,
 } from '@latitude-data/compiler'
-import { Button, Text, Tooltip } from '$ui/ds/atoms'
-import { ErrorMessage, Message } from '$ui/ds/molecules'
-import { useAutoScroll } from '$ui/lib/hooks/useAutoScroll'
+import {
+  Button,
+  ErrorMessage,
+  Message,
+  Text,
+  Tooltip,
+  useAutoScroll,
+} from '@latitude-data/web-ui'
 
 export default function Preview({
   metadata,

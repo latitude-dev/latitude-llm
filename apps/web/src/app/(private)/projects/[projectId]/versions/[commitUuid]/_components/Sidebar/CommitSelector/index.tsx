@@ -11,6 +11,7 @@ import {
 import {
   Badge,
   Button,
+  ReactStateDispatch,
   SelectContent,
   SelectRoot,
   SelectTrigger,
@@ -22,7 +23,6 @@ import PublishDraftCommitModal from '$/app/(private)/projects/[projectId]/versio
 import { ROUTES } from '$/services/routes'
 import useCommits from '$/stores/commitsStore'
 import useUsers from '$/stores/users'
-import { ReactStateDispatch } from '$ui/lib/commonTypes'
 import { useRouter } from 'next/navigation'
 
 import CreateDraftCommitModal from './CreateDraftCommitModal'

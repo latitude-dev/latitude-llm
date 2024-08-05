@@ -2,13 +2,13 @@ import { useMemo } from 'react'
 
 import {
   ConfirmModal,
+  ReactStateDispatch,
   useCurrentProject,
   useToast,
 } from '@latitude-data/web-ui'
 import { deleteDraftCommitAction } from '$/actions/commits/deleteDraftCommitAction'
 import { ROUTES } from '$/services/routes'
 import useCommits from '$/stores/commitsStore'
-import { ReactStateDispatch } from '$ui/lib/commonTypes'
 import { useRouter } from 'next/navigation'
 import { useServerAction } from 'zsa-react'
 
