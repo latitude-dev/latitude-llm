@@ -118,12 +118,10 @@ export class DocumentVersionsRepository extends Repository {
 
     if (documentInCommit !== undefined) return Result.ok(documentInCommit)
 
-    const documentsAtCommit = await this.getDocumentsAtCommit(commit)
-    if (documentsAtCommit.error) return Result.error(documentsAtCommit.error)
-
-    const document = documentsAtCommit.value.find(
-      (d) => d.documentUuid === documentUuid,
+    const documents = await this.getDocumentsAtCommit(commit).then((r) =>
+      r.unwrap(),
     )
+    const document = documents.find((d) => d.documentUuid === documentUuid)
 
     if (!document) return Result.error(new NotFoundError('Document not found'))
 

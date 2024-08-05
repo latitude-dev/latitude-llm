@@ -7,6 +7,7 @@ import {
 import { Slot } from '@radix-ui/react-slot'
 
 import { ExtendsUnion } from '@latitude-data/core'
+import { CurrentTheme } from '$ui/constants'
 import {
   colors,
   font,
@@ -26,7 +27,9 @@ import { cn } from '$ui/lib/utils'
 type Display = 'inline' | 'inline-block' | 'block'
 export type Common = {
   children: ReactNode
+  theme?: CurrentTheme
   color?: TextColor
+  darkColor?: TextColor
   centered?: boolean
   capitalize?: boolean
   uppercase?: boolean
@@ -61,6 +64,8 @@ const TextAtom = forwardRef<HTMLElement, AllTextProps>(function Text(
     children,
     size = 'h4',
     color = 'foreground',
+    darkColor,
+    theme,
     spacing = 'normal',
     weight = 'normal',
     display = 'inline',
@@ -79,7 +84,8 @@ const TextAtom = forwardRef<HTMLElement, AllTextProps>(function Text(
   },
   ref,
 ) {
-  const colorClass = colors.textColors[color]
+  const isDark = theme === CurrentTheme.Dark
+  const colorClass = colors.textColors[isDark && darkColor ? darkColor : color]
   const sizeClass = font.size[size]
   const weightClass = font.weight[weight]
   const spacingClass = font.spacing[spacing]

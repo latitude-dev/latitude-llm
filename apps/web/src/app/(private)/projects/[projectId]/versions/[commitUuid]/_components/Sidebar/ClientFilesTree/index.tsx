@@ -1,27 +1,36 @@
 'use client'
 
-import { useCallback } from 'react'
+import { useCallback, useState } from 'react'
 
-import { HEAD_COMMIT } from '@latitude-data/core/browser'
+import { Commit, HEAD_COMMIT } from '@latitude-data/core/browser'
 import {
   FilesTree,
   useCurrentCommit,
   useCurrentProject,
   type SidebarDocument,
 } from '@latitude-data/web-ui'
+import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
 import useDocumentVersions from '$/stores/documentVersions'
-import { useRouter } from 'next/navigation'
+
+import CreateDraftCommitModal from '../CreateDraftCommitModal'
+import MergedCommitWarningModal from '../MergedCommitWarningModal'
 
 export default function ClientFilesTree({
+  headCommit,
   documents: serverDocuments,
   currentDocument,
 }: {
+  headCommit: Commit
   documents: SidebarDocument[]
   currentDocument: SidebarDocument | undefined
 }) {
-  const router = useRouter()
-  const { commit, isHead } = useCurrentCommit()
+  const router = useNavigate()
+  const [createDraftCommitModalOpen, setDraftCommitModalOpen] = useState(false)
+  const [warningOpen, setWarningOpen] = useState(false)
+  const { commit } = useCurrentCommit()
+  const isMerged = !!commit.mergedAt
+  const isHead = commit.id === headCommit.id
   const { project } = useCurrentProject()
   const documentPath = currentDocument?.path
   const navigateToDocument = useCallback((documentUuid: string) => {
@@ -34,15 +43,31 @@ export default function ClientFilesTree({
   }, [])
   const { createFile, destroyFile, destroyFolder, isDestroying, data } =
     useDocumentVersions({ currentDocument }, { fallbackData: serverDocuments })
+  const onMergeCommitClick = useCallback(() => {
+    setWarningOpen(true)
+  }, [setWarningOpen])
   return (
-    <FilesTree
-      documents={data}
-      currentPath={documentPath}
-      navigateToDocument={navigateToDocument}
-      createFile={createFile}
-      destroyFile={destroyFile}
-      destroyFolder={destroyFolder}
-      isDestroying={isDestroying}
-    />
+    <>
+      <FilesTree
+        isMerged={isMerged}
+        documents={data}
+        currentPath={documentPath}
+        navigateToDocument={navigateToDocument}
+        onMergeCommitClick={onMergeCommitClick}
+        createFile={createFile}
+        destroyFile={destroyFile}
+        destroyFolder={destroyFolder}
+        isDestroying={isDestroying}
+      />
+      <CreateDraftCommitModal
+        open={createDraftCommitModalOpen}
+        setOpen={setDraftCommitModalOpen}
+      />
+      <MergedCommitWarningModal
+        open={warningOpen}
+        setOpen={setWarningOpen}
+        onConfirm={() => setDraftCommitModalOpen(true)}
+      />
+    </>
   )
 }

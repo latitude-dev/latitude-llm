@@ -9,6 +9,7 @@ import {
 import { createDraftCommitAction } from '$/actions/commits/create'
 import { deleteDraftCommitAction } from '$/actions/commits/deleteDraftCommitAction'
 import { fetchCommitsByProjectAction } from '$/actions/commits/fetchCommitsByProjectAction'
+import { publishDraftCommitAction } from '$/actions/commits/publishDraftCommitAction'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import useSWR, { SWRConfiguration } from 'swr'
 
@@ -16,9 +17,10 @@ export default function useCommits(
   opts: SWRConfiguration & {
     onSuccessCreate?: (commit: Commit) => void
     onSuccessDestroy?: (commit: Commit) => void
+    onSuccessPublish?: (commit: Commit) => void
   } = {},
 ) {
-  const { onSuccessCreate, onSuccessDestroy } = opts
+  const { onSuccessCreate, onSuccessDestroy, onSuccessPublish } = opts
   const { project } = useCurrentProject()
   useCurrentCommit
   const { toast } = useToast()
@@ -79,6 +81,25 @@ export default function useCommits(
     },
   )
 
+  const { execute: publishDraft, isPending: isPublishing } = useLatitudeAction(
+    publishDraftCommitAction,
+    {
+      onSuccess: async ({ data: publishedCommit }) => {
+        mutate(
+          data.map((item) =>
+            item.id === publishedCommit.id ? publishedCommit : item,
+          ),
+        )
+        onSuccessPublish?.(publishedCommit)
+
+        toast({
+          title: 'Success',
+          description: `Commit ${publishedCommit.title} published to production`,
+        })
+      },
+    },
+  )
+
   return {
     data: data ?? [],
     mutate,
@@ -87,5 +108,7 @@ export default function useCommits(
     isCreating,
     destroyDraft,
     isDestroying,
+    publishDraft,
+    isPublishing,
   }
 }

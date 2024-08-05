@@ -131,7 +131,8 @@ export async function resolveDocumentChanges({
         (oldDoc) =>
           oldDoc.documentUuid === newDoc.documentUuid &&
           oldDoc.resolvedContent === newDoc.resolvedContent &&
-          oldDoc.path === newDoc.path,
+          oldDoc.path === newDoc.path &&
+          oldDoc.deletedAt === newDoc.deletedAt,
       ),
   )
 

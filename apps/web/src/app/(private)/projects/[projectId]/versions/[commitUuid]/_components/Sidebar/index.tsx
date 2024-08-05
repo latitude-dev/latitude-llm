@@ -44,6 +44,7 @@ export default async function Sidebar({
       tree={
         <ClientFilesTree
           currentDocument={currentDocument}
+          headCommit={headCommit}
           documents={documents}
         />
       }

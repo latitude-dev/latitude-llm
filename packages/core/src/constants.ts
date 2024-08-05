@@ -14,6 +14,12 @@ export enum CommitStatus {
   Draft = 'draft',
 }
 
+export enum ModifiedDocumentType {
+  Created = 'created',
+  Updated = 'updated',
+  Deleted = 'deleted',
+}
+
 export const HELP_CENTER = {
   commitVersions: `${LATITUDE_DOCS_URL}/not-found`,
 }

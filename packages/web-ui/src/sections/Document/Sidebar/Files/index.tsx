@@ -101,7 +101,7 @@ function FileNode({
         >
           {allNodes.map((node, idx) => {
             return (
-              <li key={node.id}>
+              <li key={node.id} className='cursor-pointer'>
                 <FileNode
                   indentation={[...indentation, { isLast: idx === lastIdx }]}
                   node={node}
@@ -132,16 +132,20 @@ type DeletableElement<T extends DeletableType> = T extends DeletableType.File
     }
 
 export function FilesTree({
+  isMerged,
   currentPath,
   documents,
+  onMergeCommitClick,
   navigateToDocument,
   createFile,
   destroyFile,
   destroyFolder,
   isDestroying,
 }: {
+  isMerged: boolean
   createFile: (args: { path: string }) => Promise<void>
   destroyFile: (documentUuid: string) => Promise<void>
+  onMergeCommitClick: () => void
   destroyFolder: (path: string) => Promise<void>
   documents: SidebarDocument[]
   currentPath: string | undefined
@@ -175,6 +179,8 @@ export function FilesTree({
   return (
     <>
       <FileTreeProvider
+        isMerged={isMerged}
+        onMergeCommitClick={onMergeCommitClick}
         currentPath={currentPath}
         onNavigateToDocument={navigateToDocument}
         onCreateFile={async (path) => {

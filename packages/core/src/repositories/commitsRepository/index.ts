@@ -1,7 +1,13 @@
-import { Project } from '$core/browser'
-import { CommitStatus, HEAD_COMMIT } from '$core/constants'
+import { DocumentVersion, Project } from '$core/browser'
+import {
+  CommitStatus,
+  HEAD_COMMIT,
+  ModifiedDocumentType,
+} from '$core/constants'
 import { NotFoundError, Result } from '$core/lib'
 import { commits, projects } from '$core/schema'
+import { recomputeChanges, RecomputedChanges } from '$core/services'
+import { assertCommitIsDraft } from '$core/services/documents/utils'
 import {
   and,
   desc,
@@ -14,6 +20,19 @@ import {
 
 import Repository, { PaginationArgs } from '../repository'
 
+const byErrors =
+  (c: RecomputedChanges) => (a: DocumentVersion, b: DocumentVersion) => {
+    const aErrors = c.errors[a.documentUuid]?.length ?? 0
+    const bErrors = c.errors[b.documentUuid]?.length ?? 0
+    return bErrors - aErrors
+  }
+
+export type ChangedDocument = {
+  documentUuid: string
+  path: string
+  errors: number
+  changeType: ModifiedDocumentType
+}
 function filterByStatusQuery({
   scope,
   status,
@@ -151,5 +170,43 @@ export class CommitsRepository extends Repository {
       pageSize,
     })
     return Result.ok(result)
+  }
+
+  async getChanges(id: number) {
+    const commitResult = await this.getCommitById(id)
+    if (commitResult.error) return commitResult
+
+    const commit = commitResult.value
+    const isDraft = assertCommitIsDraft(commit)
+    if (isDraft.error) return isDraft
+
+    const result = await recomputeChanges(commit)
+    if (result.error) return result
+
+    const changes = result.value
+    const head = changes.headDocuments.reduce(
+      (acc, doc) => {
+        acc[doc.documentUuid] = doc
+        return acc
+      },
+      {} as Record<string, DocumentVersion>,
+    )
+
+    return Result.ok(
+      changes.changedDocuments.sort(byErrors(changes)).map((changedDoc) => {
+        const changeType = head[changedDoc.documentUuid]
+          ? changedDoc.deletedAt
+            ? ModifiedDocumentType.Deleted
+            : ModifiedDocumentType.Updated
+          : ModifiedDocumentType.Created
+
+        return {
+          documentUuid: changedDoc.documentUuid,
+          path: changedDoc.path,
+          errors: changes.errors[changedDoc.documentUuid]?.length ?? 0,
+          changeType,
+        }
+      }),
+    )
   }
 }

@@ -44,6 +44,7 @@ export default function DraftCommitModal({
         <>
           <CloseTrigger />
           <Button
+            fancy
             form='createDraftCommitForm'
             type='submit'
             disabled={isCreating}

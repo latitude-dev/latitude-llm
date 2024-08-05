@@ -109,6 +109,7 @@ export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> &
     asChild?: boolean
     isLoading?: boolean
     fancy?: boolean
+    lookDisabled?: boolean
   }
 
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
@@ -122,6 +123,8 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
     asChild = false,
     isLoading,
     children,
+    disabled,
+    lookDisabled,
     ...props
   },
   ref,
@@ -136,9 +139,10 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
 
   return (
     <Comp
-      disabled={isLoading}
+      disabled={disabled || isLoading}
       className={cn('group', buttonContainerVariants({ fanciness, variant }), {
         'w-full': fullWidth,
+        'opacity-50': lookDisabled,
       })}
       ref={ref}
       {...props}

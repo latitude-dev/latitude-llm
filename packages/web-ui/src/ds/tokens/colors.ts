@@ -9,8 +9,10 @@ export const colors = {
     accent: 'text-accent',
     destructive: 'text-destructive',
     destructiveForeground: 'text-destructive-foreground',
+    destructiveMutedForeground: 'text-destructive-muted-foreground',
     accentForeground: 'text-accent-foreground',
     secondaryForeground: 'text-secondary-foreground',
+    warningMutedForeground: 'text-warning-muted-foreground',
   },
   borderColors: {
     transparent: 'border-transparent',
