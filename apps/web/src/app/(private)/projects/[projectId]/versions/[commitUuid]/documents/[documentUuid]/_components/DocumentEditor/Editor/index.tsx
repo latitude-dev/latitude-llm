@@ -21,6 +21,7 @@ import {
   DocumentTextEditorFallback,
   DropdownMenu,
   useCurrentCommit,
+  useCurrentProject,
   useLocalStorage,
 } from '@latitude-data/web-ui'
 import useDocumentVersions from '$/stores/documentVersions'
@@ -66,10 +67,13 @@ export default function DocumentEditor({
   })
 
   const { commit } = useCurrentCommit()
+  const { project } = useCurrentProject()
 
   const debouncedSave = useDebouncedCallback(
     (val: string) => {
       updateContent({
+        commitId: commit.id,
+        projectId: project.id,
         documentUuid: document.documentUuid,
         content: val,
       })

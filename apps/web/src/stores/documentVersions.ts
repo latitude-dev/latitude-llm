@@ -168,33 +168,18 @@ export default function useDocumentVersions(
     [executeDestroyFolder, mutate, currentDocument?.path, commit.id],
   )
 
-  const updateContent = useCallback(
-    async ({
-      documentUuid,
-      content,
-    }: {
-      documentUuid: string
-      content: string
-    }) => {
-      const { execute } = useLatitudeAction(updateDocumentContentAction, {
-        onSuccess: () => {
-          const prevDocuments = data || []
-          mutate(
-            prevDocuments.map((d) =>
-              d.documentUuid === documentUuid ? { ...d, content } : d,
-            ),
-          )
-        },
-      })
-
-      await execute({
-        documentUuid,
-        content,
-        projectId: project.id,
-        commitId: commit.id,
-      })
+  const { execute: updateContent } = useLatitudeAction(
+    updateDocumentContentAction,
+    {
+      onSuccess: ({ data: document }) => {
+        const prevDocuments = data || []
+        mutate(
+          prevDocuments.map((d) =>
+            d.documentUuid === document.documentUuid ? document : d,
+          ),
+        )
+      },
     },
-    [commit.id, data],
   )
 
   return {
