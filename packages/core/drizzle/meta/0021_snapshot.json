@@ -1,5 +1,5 @@
 {
-  "id": "c5750b34-01fc-485a-b73d-1b2e7421ac24",
+  "id": "fb21dbf1-0b41-4c0b-95cf-ff7de7b707dd",
   "prevId": "6c941e43-0a62-497f-b67c-3c702d0dda09",
   "version": "7",
   "dialect": "postgresql",
@@ -800,7 +800,8 @@
         "openai",
         "anthropic",
         "groq",
-        "mistal"
+        "mistral",
+        "azure"
       ]
     }
   },

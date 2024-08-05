@@ -1,5 +1,5 @@
 DO $$ BEGIN
- CREATE TYPE "public"."provider" AS ENUM('openai', 'anthropic');
+ CREATE TYPE "latitude"."provider" AS ENUM('openai', 'anthropic');
 EXCEPTION
  WHEN duplicate_object THEN null;
 END $$;

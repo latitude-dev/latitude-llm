@@ -152,22 +152,8 @@
     {
       "idx": 21,
       "version": "7",
-      "when": 1722783319063,
-      "tag": "0021_fancy_scourge",
-      "breakpoints": true
-    },
-    {
-      "idx": 22,
-      "version": "7",
-      "when": 1722804426556,
-      "tag": "0022_calm_dagger",
-      "breakpoints": true
-    },
-    {
-      "idx": 23,
-      "version": "7",
-      "when": 1722808609375,
-      "tag": "0023_blue_chat",
+      "when": 1722868369746,
+      "tag": "0021_panoramic_cannonball",
       "breakpoints": true
     }
   ]
