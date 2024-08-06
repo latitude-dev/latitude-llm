@@ -2,7 +2,6 @@ import CompileError from '$compiler/error/error'
 
 import { Message } from './message'
 
-// TODO: Improve this type
 export type Config = Record<string, unknown>
 
 export type Conversation = {

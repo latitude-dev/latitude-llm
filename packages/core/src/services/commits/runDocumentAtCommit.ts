@@ -1,11 +1,4 @@
-import path from 'path'
-
-import {
-  Chain,
-  createChain,
-  readMetadata,
-  Document as RefDocument,
-} from '@latitude-data/compiler'
+import { Chain } from '@latitude-data/compiler'
 import {
   ChainEvent,
   ChainEventTypes,
@@ -17,15 +10,12 @@ import {
 import { findWorkspaceFromCommit } from '$core/data-access'
 import { NotFoundError, Result } from '$core/lib'
 import { streamToGenerator } from '$core/lib/streamToGenerator'
-import {
-  DocumentVersionsRepository,
-  ProviderApiKeysRepository,
-} from '$core/repositories'
-import { z } from 'zod'
+import { ProviderApiKeysRepository } from '$core/repositories'
 
-import { ai } from '../ai'
+import { ai, validateConfig } from '../ai'
+import { createChainAtCommit } from './createChainAtCommit'
 
-export async function runDocumentVersion({
+export async function runDocumentAtCommit({
   documentUuid,
   commit,
   parameters,
@@ -35,46 +25,18 @@ export async function runDocumentVersion({
   parameters: Record<string, unknown>
 }) {
   const workspace = await findWorkspaceFromCommit(commit)
-  if (!workspace) throw new Error('Workspace not found')
+  if (!workspace) throw Result.error(new NotFoundError('Workspace not found'))
 
+  const result = await createChainAtCommit({
+    documentUuid,
+    commit,
+    parameters,
+    workspace,
+  })
+  if (result.error) return result
+
+  const chain = result.value
   const scope = new ProviderApiKeysRepository(workspace.id)
-  const documentScope = new DocumentVersionsRepository(workspace.id)
-  const docs = await documentScope.getDocumentsAtCommit(commit)
-  if (docs.error) return Result.error(docs.error)
-
-  const document = docs.value.find((d) => d.documentUuid === documentUuid)
-  if (!document) return Result.error(new NotFoundError('Document not found'))
-
-  let resolvedContent: string = document.resolvedContent!
-
-  if (document.resolvedContent === undefined || commit.mergedAt === null) {
-    const referenceFn = async (
-      refPath: string,
-      from?: string,
-    ): Promise<RefDocument | undefined> => {
-      const fullPath = path
-        .resolve(path.dirname(`/${from ?? ''}`), refPath)
-        .replace(/^\//, '')
-
-      const document = docs.value.find((d) => d.path === fullPath)
-      if (!document) return undefined
-
-      return {
-        path: fullPath,
-        content: document.content,
-      }
-    }
-
-    const metadata = await readMetadata({
-      prompt: document.content,
-      fullPath: document.path,
-      referenceFn,
-    })
-
-    resolvedContent = metadata.resolvedPrompt
-  }
-
-  const chain = createChain({ prompt: resolvedContent, parameters })
 
   let stream: ReadableStream
   let response: Promise<{ text: string; usage: Record<string, unknown> }>
@@ -190,28 +152,6 @@ async function iterate({
   }
 }
 
-export function validateConfig(config: Record<string, unknown>) {
-  const configSchema = z.object({
-    model: z.string(),
-    provider: z.string(),
-  })
-
-  return configSchema.parse(config)
-}
-
-async function findApiKey({
-  scope,
-  name,
-}: {
-  scope: ProviderApiKeysRepository
-  name: string
-}) {
-  const apiKeyResult = await scope.findByName(name)
-  if (apiKeyResult.error) throw apiKeyResult.error
-
-  return apiKeyResult.value!
-}
-
 /**
  *  Performs some common operations needed for processing an iteration step
  **/
@@ -238,4 +178,17 @@ async function doSomeCommonOperations({
   sentCount += msgs.length
 
   return { sentCount, apiKey, conversation, completed, config }
+}
+
+async function findApiKey({
+  scope,
+  name,
+}: {
+  scope: ProviderApiKeysRepository
+  name: string
+}) {
+  const apiKeyResult = await scope.findByName(name)
+  if (apiKeyResult.error) throw apiKeyResult.error
+
+  return apiKeyResult.value!
 }

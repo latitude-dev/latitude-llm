@@ -9,11 +9,13 @@ import { ROUTES } from '$/services/routes'
 import { notFound, redirect } from 'next/navigation'
 
 export const dynamic = 'force-dynamic'
+
 const PROJECT_ROUTE = ROUTES.projects.detail
 
 export type ProjectPageParams = {
   params: { projectId: string }
 }
+
 export default async function ProjectPage({ params }: ProjectPageParams) {
   let session: SessionData
   let project: Project

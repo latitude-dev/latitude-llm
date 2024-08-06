@@ -122,8 +122,6 @@ export default function Chat({
         }
       }
 
-      setResponseStream(undefined)
-
       addMessage({
         role: MessageRole.assistant,
         content: [
@@ -136,9 +134,10 @@ export default function Chat({
       })
 
       return response
-    } catch (error) {
+    } catch (_) {
+      // do nothing
+    } finally {
       setResponseStream(undefined)
-      throw error
     }
   }, [])
 
@@ -224,7 +223,7 @@ export default function Chat({
         />
         <ChatTextArea
           placeholder='Enter followup message...'
-          disabled={responseStream !== undefined || !!error}
+          disabled={responseStream !== undefined}
           onSubmit={submitUserMessage}
         />
       </div>

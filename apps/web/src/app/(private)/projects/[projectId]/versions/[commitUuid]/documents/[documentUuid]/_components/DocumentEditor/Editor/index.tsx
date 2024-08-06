@@ -33,20 +33,17 @@ import Playground from './Playground'
 
 export const DocumentEditorContext = createContext<
   | {
-      runAction: Function
       streamTextAction: StreamTextOutputAction
     }
   | undefined
 >(undefined)
 
 export default function DocumentEditor({
-  runAction,
   streamTextAction,
   document,
   documents,
 }: {
-  runAction: Function
-  streamTextAction: StreamTextOutputAction
+  streamTextAction: Function
   document: DocumentVersion
   documents: DocumentVersion[]
 }) {
@@ -137,7 +134,9 @@ export default function DocumentEditor({
   }, [readDocument])
 
   return (
-    <DocumentEditorContext.Provider value={{ runAction, streamTextAction }}>
+    <DocumentEditorContext.Provider
+      value={{ streamTextAction: streamTextAction as StreamTextOutputAction }}
+    >
       <div className='flex flex-row w-full h-full gap-8 p-6'>
         <div className='flex flex-col flex-1 flex-grow flex-shrink gap-2 min-w-0'>
           <Header title='Prompt editor'>

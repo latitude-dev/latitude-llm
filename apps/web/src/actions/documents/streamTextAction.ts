@@ -26,7 +26,7 @@ export async function streamTextAction({
   messages,
 }: StreamTextActionProps): StreamTextActionResponse {
   const { workspace } = await getCurrentUser()
-  const { provider, model } = validateConfig(config)
+  const { provider, model, ...rest } = validateConfig(config)
   const providerApiKeysScope = new ProviderApiKeysRepository(workspace.id)
   const apiKey = await providerApiKeysScope
     .findByName(provider)
@@ -40,6 +40,7 @@ export async function streamTextAction({
         provider: apiKey.provider,
         model,
         messages,
+        config: rest,
       })
 
       for await (const value of streamToGenerator(result.fullStream)) {
