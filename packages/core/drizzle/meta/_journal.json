@@ -176,6 +176,13 @@
       "when": 1722872479164,
       "tag": "0024_slimy_dust",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1722928026330,
+      "tag": "0025_illegal_stark_industries",
+      "breakpoints": true
     }
   ]
 }

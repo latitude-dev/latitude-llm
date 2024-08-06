@@ -27,9 +27,9 @@ export default function ProviderApiKeys() {
     <div className='flex flex-col gap-4'>
       <NewApiKey open={open} setOpen={setOpen} />
       <div className='flex flex-row items-center justify-between'>
-        <Text.H4B>LLM API Keys</Text.H4B>
+        <Text.H4B>Providers</Text.H4B>
         <Button variant='outline' onClick={() => setOpen(true)}>
-          Add new API Key
+          Create Provider
         </Button>
       </div>
       <div className='flex flex-col gap-2'>
@@ -43,8 +43,8 @@ export default function ProviderApiKeys() {
           <div className='rounded-lg w-full py-12 flex flex-col gap-4 items-center justify-center bg-secondary'>
             <div className='max-w-[50%]'>
               <Text.H5 centered display='block' color='foregroundMuted'>
-                There are no API Keys yet. Create one to start working with your
-                prompts.
+                There are no providers yet. Create one to start working with
+                your prompts.
               </Text.H5>
             </div>
             <Button onClick={() => setOpen(true)}>Create one</Button>
@@ -69,7 +69,7 @@ const ProviderApiKeysTable = ({
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>Name</TableHead>
+          <TableHead>ID</TableHead>
           <TableHead>Provider</TableHead>
           <TableHead>Token</TableHead>
           <TableHead>Created at</TableHead>

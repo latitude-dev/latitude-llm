@@ -26,13 +26,13 @@ export default function NewApiKey({
     <Modal
       open={open}
       onOpenChange={setOpen}
-      title='Add new API Key'
-      description='API keys allow you to work with a specific LLM model in your prompts and evaluations.'
+      title='Add new Provider'
+      description='Providers allow you to work with a specific LLM models in your prompts and evaluations.'
       footer={
         <>
           <CloseTrigger />
           <Button form='createApiKeyForm' type='submit'>
-            Create API Key
+            Create Provider
           </Button>
         </>
       }
@@ -53,7 +53,7 @@ export default function NewApiKey({
           <Input
             required
             type='text'
-            label='Name'
+            label='ID'
             name='name'
             defaultValue={data?.name}
             placeholder='My API Key'
