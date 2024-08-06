@@ -12,6 +12,7 @@ import { describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
   runDocumentAtCommit: vi.fn(),
+  queues: { jobs: { enqueueUpdateApiKeyProviderJob: vi.fn() } },
 }))
 
 vi.mock('@latitude-data/core', async (importOriginal) => {
@@ -22,6 +23,10 @@ vi.mock('@latitude-data/core', async (importOriginal) => {
     runDocumentAtCommit: mocks.runDocumentAtCommit,
   }
 })
+
+vi.mock('$/jobs', () => ({
+  queues: mocks.queues,
+}))
 
 describe('POST /run', () => {
   describe('unauthorized', () => {
@@ -112,6 +117,7 @@ describe('POST /run', () => {
         },
       })
 
+      expect(mocks.queues)
       expect(res.status).toBe(200)
       expect(res.body).toBeInstanceOf(ReadableStream)
 

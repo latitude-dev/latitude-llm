@@ -7,7 +7,11 @@ import {
 } from '@latitude-data/core'
 import app from '$/index'
 import { eq } from 'drizzle-orm'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+
+vi.mock('$/jobs', () => ({
+  queues: { jobs: { enqueueUpdateApiKeyProviderJob: vi.fn() } },
+}))
 
 describe('GET documents', () => {
   describe('unauthorized', () => {
@@ -26,7 +30,7 @@ describe('GET documents', () => {
       const apikey = await database.query.apiKeys.findFirst({
         where: eq(apiKeys.workspaceId, workspace.id),
       })
-      const path = '/path/to/document'
+      const path = 'path/to/document'
       const { commit } = await factories.createDraft({
         project,
         user,
@@ -42,7 +46,7 @@ describe('GET documents', () => {
         .getDocumentByPath({ commit, path })
         .then((r) => r.unwrap())
 
-      const route = `/api/v1/projects/${project!.id}/commits/${commit!.uuid}/documents/${document.documentVersion.path.slice(1)}`
+      const route = `/api/v1/projects/${project!.id}/commits/${commit!.uuid}/documents/${document.documentVersion.path}`
       const res = await app.request(route, {
         headers: {
           Authorization: `Bearer ${apikey!.token}`,

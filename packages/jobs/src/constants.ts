@@ -1,7 +1,7 @@
 export enum Queues {
-  exampleQueue = 'exampleQueue',
+  defaultQueue = 'defaultQueue',
 }
 
 export enum Jobs {
-  exampleJob = 'exampleJob',
+  createProviderLogJob = 'createProviderLogJob',
 }

@@ -1,9 +1,9 @@
 import { Jobs, Queues } from '$jobs/constants'
 
-export type ExampleJobData = { patata: string }
+import { CreateProviderLogJobData } from './providerLogs/createJob'
 
-type JobData<J extends Jobs> = J extends Jobs.exampleJob
-  ? ExampleJobData
+type JobData<J extends Jobs> = J extends Jobs.createProviderLogJob
+  ? CreateProviderLogJobData
   : never
 
 type JobSpec<J extends Jobs = Jobs> = {
@@ -12,7 +12,7 @@ type JobSpec<J extends Jobs = Jobs> = {
 }
 
 export type JobDefinition = {
-  [Queues.exampleQueue]: {
-    [Jobs.exampleJob]: JobSpec<Jobs.exampleJob>
+  [Queues.defaultQueue]: {
+    [Jobs.createProviderLogJob]: JobSpec<Jobs.createProviderLogJob>
   }
 }

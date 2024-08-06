@@ -183,6 +183,13 @@
       "when": 1722928026330,
       "tag": "0025_illegal_stark_industries",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1723110315363,
+      "tag": "0026_latitude_rocks",
+      "breakpoints": true
     }
   ]
 }

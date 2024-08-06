@@ -7,7 +7,8 @@ import {
   streamToGenerator,
   validateConfig,
 } from '@latitude-data/core'
-import { PROVIDER_EVENT } from '@latitude-data/core/browser'
+import { LogSources, PROVIDER_EVENT } from '@latitude-data/core/browser'
+import { queues } from '$/jobs'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
 import { createStreamableValue, StreamableValue } from 'ai/rsc'
 
@@ -26,7 +27,7 @@ export async function streamTextAction({
   messages,
 }: StreamTextActionProps): StreamTextActionResponse {
   const { workspace } = await getCurrentUser()
-  const { provider, model, ...rest } = validateConfig(config)
+  const { provider, ...rest } = validateConfig(config)
   const providerApiKeysScope = new ProviderApiKeysRepository(workspace.id)
   const apiKey = await providerApiKeysScope
     .findByName(provider)
@@ -35,13 +36,21 @@ export async function streamTextAction({
 
   ;(async () => {
     try {
-      const result = await ai({
-        apiKey: apiKey.token,
-        provider: apiKey.provider,
-        model,
-        messages,
-        config: rest,
-      })
+      const result = await ai(
+        {
+          provider: apiKey,
+          messages,
+          config: rest,
+        },
+        {
+          logHandler: (log) => {
+            queues.defaultQueue.jobs.enqueueCreateProviderLogJob({
+              ...log,
+              source: LogSources.Playground,
+            })
+          },
+        },
+      )
 
       for await (const value of streamToGenerator(result.fullStream)) {
         stream.update({

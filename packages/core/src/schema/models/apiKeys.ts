@@ -24,6 +24,7 @@ export const apiKeys = latitudeSchema.table(
       .notNull()
       .references(() => workspaces.id),
     name: varchar('name', { length: 256 }),
+    lastUsedAt: timestamp('last_used_at'),
     deletedAt: timestamp('deleted_at'),
     ...timestamps(),
   },

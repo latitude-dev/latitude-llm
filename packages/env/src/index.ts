@@ -12,6 +12,5 @@ if (env !== 'production') {
     ELASTIC_PASSWORD: 'secret',
     REDIS_PORT: '6379',
     REDIS_HOST: 'localhost',
-    REDIS_PASSWORD: 'secret',
   })
 }

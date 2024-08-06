@@ -13,3 +13,7 @@ export * from './models/commits'
 export * from './models/documentVersions'
 
 export * from './models/providerApiKeys'
+
+// Log tables
+export * from './models/documentLogs'
+export * from './models/providerLogs'
