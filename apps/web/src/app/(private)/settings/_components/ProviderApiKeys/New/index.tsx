@@ -44,7 +44,7 @@ export default function NewApiKey({
             required
             label='Provider'
             name='provider'
-            value={data?.provider}
+            defaultValue={data?.provider}
             options={Object.entries(Providers).map(([key, value]) => ({
               value,
               label: key,
