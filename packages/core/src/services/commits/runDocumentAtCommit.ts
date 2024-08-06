@@ -88,20 +88,20 @@ async function iterate({
     controller.enqueue({
       data: {
         type: ChainEventTypes.Step,
-        config: {
-          provider: apiKey.provider,
-        },
-        ...conversation.config,
+        config,
+        providerApiKey: apiKey,
         messages: conversation.messages,
       },
       event: LATITUDE_EVENT,
     })
 
+    const { model, provider, ...rest } = config
     const result = await ai({
-      messages: conversation.messages,
       apiKey: apiKey.token,
-      provider: apiKey.provider,
+      config: rest,
+      messages: conversation.messages,
       model: config.model,
+      provider: apiKey.provider,
     })
 
     for await (const value of streamToGenerator(result.fullStream)) {
@@ -136,6 +136,14 @@ async function iterate({
 
       return response
     } else {
+      controller.enqueue({
+        event: LATITUDE_EVENT,
+        data: {
+          type: ChainEventTypes.StepComplete,
+          response,
+        },
+      })
+
       return iterate({
         chain,
         scope,
@@ -169,8 +177,10 @@ async function doSomeCommonOperations({
   sentCount: number
 }) {
   const { completed, conversation } = await chain.step(previousResponse?.text)
+
   const config = validateConfig(conversation.config)
-  if (!apiKey || apiKey?.name !== conversation.config.apikey) {
+
+  if (!apiKey || apiKey?.name !== config.apikey) {
     apiKey = await findApiKey({ scope, name: config.provider })
   }
 

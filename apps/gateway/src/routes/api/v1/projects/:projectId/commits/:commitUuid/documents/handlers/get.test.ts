@@ -7,7 +7,11 @@ import {
 } from '@latitude-data/core'
 import app from '$/index'
 import { eq } from 'drizzle-orm'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
+
+vi.mock('$/jobs', () => ({
+  queues: { jobs: { enqueueUpdateApiKeyProviderJob: vi.fn() } },
+}))
 
 describe('GET documents', () => {
   describe('unauthorized', () => {

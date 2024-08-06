@@ -1,6 +1,8 @@
 import { Config } from '@latitude-data/compiler'
 import { CompletionTokenUsage, Message } from 'ai'
 
+import { ProviderApiKey } from './browser'
+
 export const LATITUDE_DOCS_URL = ''
 export const LATITUDE_EMAIL = ''
 export const LATITUDE_HELP_URL = ''
@@ -36,9 +38,11 @@ export const PROVIDER_EVENT = 'provider-event'
 export const LATITUDE_EVENT = 'latitude-event'
 
 export enum ChainEventTypes {
-  TextDelta = 'text-delta',
-  Step = 'chain-step',
+  Error = 'error',
   Complete = 'chain-complete',
+  Step = 'chain-step',
+  StepComplete = 'chain-step-complete',
+  TextDelta = 'text-delta',
 }
 
 export type ChainEvent = {
@@ -46,6 +50,7 @@ export type ChainEvent = {
     type: ChainEventTypes
     textDelta?: string
     config?: Config
+    providerApiKey?: ProviderApiKey
     messages?: Message[]
     usage?: CompletionTokenUsage
   }

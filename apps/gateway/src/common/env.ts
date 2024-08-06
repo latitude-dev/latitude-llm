@@ -3,16 +3,11 @@ import '@latitude-data/env'
 import { createEnv } from '@t3-oss/env-core'
 import { z } from 'zod'
 
-let env
+let localEnv = {}
 if (process.env.NODE_ENV === 'development') {
-  env = await import('./env/development').then((r) => r.default)
+  localEnv = await import('./env/development').then((r) => r.default)
 } else if (process.env.NODE_ENV === 'test') {
-  env = await import('./env/test').then((r) => r.default)
-} else {
-  env = process.env as {
-    GATEWAY_PORT: string
-    GATEWAY_HOST: string
-  }
+  localEnv = await import('./env/test').then((r) => r.default)
 }
 
 export default createEnv({
@@ -21,6 +16,12 @@ export default createEnv({
   server: {
     GATEWAY_PORT: z.string().optional().default('8787'),
     GATEWAY_HOST: z.string().optional().default('localhost'),
+    REDIS_HOST: z.string(),
+    REDIS_PORT: z.string(),
+    REDIS_PASSWORD: z.string().optional(),
   },
-  runtimeEnv: env,
+  runtimeEnv: {
+    ...process.env,
+    ...localEnv,
+  },
 })

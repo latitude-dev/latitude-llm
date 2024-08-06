@@ -26,7 +26,7 @@ describe('updateDocumentAction', async () => {
           doc1: 'foo',
         },
       })
-      doc1 = documents.filter((d) => d.path === 'doc1')[0]!
+      doc1 = documents.filter((d) => d.path === '/doc1')[0]!
       projectId = project.id
     })
 
@@ -57,7 +57,7 @@ describe('updateDocumentAction', async () => {
           },
         },
       )
-      doc1 = documents.filter((d) => d.path === 'doc1')[0]!
+      doc1 = documents.filter((d) => d.path === '/doc1')[0]!
       project = projectData
       user = userData
 

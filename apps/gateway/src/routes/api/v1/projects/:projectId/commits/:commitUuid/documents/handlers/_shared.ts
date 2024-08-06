@@ -1,17 +1,11 @@
 import {
   CommitsRepository,
   DocumentVersionsRepository,
+  NotFoundError,
   ProjectsRepository,
+  sanitizeDocumentPath,
 } from '@latitude-data/core'
 import type { Workspace } from '@latitude-data/core/browser'
-
-const toDocumentPath = (path: string) => {
-  if (path.startsWith('/')) {
-    return path
-  }
-
-  return `/${path}`
-}
 
 export const getData = async ({
   workspace,
@@ -34,12 +28,14 @@ export const getData = async ({
   const commit = await commitsScope
     .getCommitByUuid({ project, uuid: commitUuid })
     .then((r) => r.unwrap())
-  const document = await docsScope
-    .getDocumentByPath({
-      commit,
-      path: toDocumentPath(documentPath),
-    })
+  const documents = await docsScope
+    .getDocumentsAtCommit(commit)
     .then((r) => r.unwrap())
+
+  const document = documents.find(
+    (d) => d.path === sanitizeDocumentPath(documentPath),
+  )
+  if (!document) throw new NotFoundError('Document not found')
 
   return { project, commit, document }
 }

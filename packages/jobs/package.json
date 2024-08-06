@@ -3,6 +3,7 @@
   "version": "0.0.1",
   "description": "Latitude jobs from Latitude llm",
   "main": "./src/index.ts",
+  "type": "module",
   "scripts": {
     "dev": "tsx watch ./src/server.ts",
     "build:server": "rollup -c",
@@ -12,6 +13,7 @@
     "prettier": "prettier --write src/**/*.ts"
   },
   "dependencies": {
+    "@latitude-data/core": "workspace:^",
     "@latitude-data/env": "workspace:*",
     "bullmq": "^5.8.3",
     "ioredis": "^5.4.1",

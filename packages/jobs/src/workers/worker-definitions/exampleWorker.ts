@@ -1,19 +1,22 @@
-import { Queues } from '$jobs/constants'
-import { ExampleJobData } from '$jobs/job-definitions'
+import { Jobs, Queues } from '$jobs/constants'
+import {
+  UpdateApiKeyProviderJobData,
+  updateProviderApiKeyJob,
+} from '$jobs/job-definitions/providerApiKeys/updateJob'
 import { Job, Processor } from 'bullmq'
 
-type ExampleResult = { job: Job; patata: string }
-const processor: Processor<ExampleJobData, ExampleResult> = async (job) => {
-  console.log('JOB received', job.id, job.data)
-  const { patata } = job.data
-
-  await new Promise((resolve) => setTimeout(resolve, 5000))
-
-  console.log('Running run', job.id, patata)
-  return { job, patata }
+const processor: Processor = async (job) => {
+  switch (job.name) {
+    case Jobs.updateApiKeyProviderJob:
+      return await updateProviderApiKeyJob(
+        job as Job<UpdateApiKeyProviderJobData>,
+      )
+    default:
+    // do nothing
+  }
 }
 
-export default {
+export const defaultWorker = {
   processor,
-  queueName: Queues.exampleQueue,
+  queueName: Queues.defaultQueue,
 }

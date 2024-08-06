@@ -1,7 +1,7 @@
 import { Worker } from 'bullmq'
 import { Redis } from 'ioredis'
 
-import { default as exampleWorker } from './worker-definitions/exampleWorker'
+import { defaultWorker } from './worker-definitions/exampleWorker'
 
 const WORKER_OPTS = {
   concurrency: 5,
@@ -10,7 +10,7 @@ const WORKER_OPTS = {
   removeOnFail: { count: 0 },
 }
 
-const WORKERS = [exampleWorker]
+const WORKERS = [defaultWorker]
 
 export default function startWorkers({ connection }: { connection: Redis }) {
   return WORKERS.map((w) => {
@@ -18,7 +18,9 @@ export default function startWorkers({ connection }: { connection: Redis }) {
       ...WORKER_OPTS,
       connection,
     })
+
     worker.run()
+
     return worker
   })
 }

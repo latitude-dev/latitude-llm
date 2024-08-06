@@ -28,6 +28,8 @@ function setupQueue({
   const queue = new Queue(name, { connection })
   return {
     events: new QueueEvents(name, { connection }),
+    // TODO: Metaprogramming cannot grep nor lsp it correctly. Change to a more
+    // explicit way.
     jobs: jobs.reduce((acc, jobName) => {
       const key = `enqueue${capitalize(jobName)}`
       const enqueuFn = (
@@ -44,10 +46,10 @@ function setupQueue({
 
 export function setupQueues({ connection }: { connection: Redis }) {
   return {
-    [Queues.exampleQueue]: setupQueue({
+    [Queues.defaultQueue]: setupQueue({
       connection,
-      name: Queues.exampleQueue,
-      jobs: [Jobs.exampleJob],
+      name: Queues.defaultQueue,
+      jobs: [Jobs.updateApiKeyProviderJob],
     }),
   }
 }

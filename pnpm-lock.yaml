@@ -63,6 +63,9 @@ importers:
       '@latitude-data/env':
         specifier: workspace:^
         version: link:../../packages/env
+      '@latitude-data/jobs':
+        specifier: workspace:^
+        version: link:../../packages/jobs
       '@t3-oss/env-core':
         specifier: ^0.10.1
         version: 0.10.1(typescript@5.5.4)(zod@3.23.8)
@@ -371,6 +374,9 @@ importers:
 
   packages/jobs:
     dependencies:
+      '@latitude-data/core':
+        specifier: workspace:^
+        version: link:../core
       '@latitude-data/env':
         specifier: workspace:*
         version: link:../env
@@ -8052,6 +8058,7 @@ packages:
 
   /picocolors@1.0.1:
     resolution: {integrity: sha512-anP1Z8qwhkbmu7MFP5iTt+wQKXgwzf7zTyGlcdzabySa9vd0Xt392U0rVmz9poOaBj0uHJKyyo9/upk0HrEQew==}
+    requiresBuild: true
 
   /picomatch@2.3.1:
     resolution: {integrity: sha512-JU3teHTNjmE2VCGFzuY8EXzCDVwEqB2a8fsIvwaStHhAWJEeVd1o1QD80CU6+ZdEXXSLbSsuLwJjkCBWqRQUVA==}

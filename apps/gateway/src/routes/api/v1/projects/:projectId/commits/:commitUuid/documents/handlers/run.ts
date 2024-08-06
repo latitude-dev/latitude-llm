@@ -1,5 +1,12 @@
 import { zValidator } from '@hono/zod-validator'
-import { runDocumentAtCommit } from '@latitude-data/core'
+import {
+  ChainEvent,
+  ChainEventTypes,
+  LATITUDE_EVENT,
+  runDocumentAtCommit,
+  streamToGenerator,
+} from '@latitude-data/core'
+import { queues } from '$/jobs'
 import { Factory } from 'hono/factory'
 import { SSEStreamingApi, streamSSE } from 'hono/streaming'
 import { z } from 'zod'
@@ -15,28 +22,44 @@ const runSchema = z.object({
 
 export const runHandler = factory.createHandlers(
   zValidator('json', runSchema),
-  async (c) => {
-    return streamSSE(c, async (stream) => {
-      const { projectId, commitUuid } = c.req.param()
-      const { documentPath, parameters } = c.req.valid('json')
+  (c) => {
+    return streamSSE(
+      c,
+      async (stream) => {
+        const { projectId, commitUuid } = c.req.param()
+        const { documentPath, parameters } = c.req.valid('json')
 
-      const workspace = c.get('workspace')
+        const workspace = c.get('workspace')
 
-      const { document, commit } = await getData({
-        workspace,
-        projectId: Number(projectId!),
-        commitUuid: commitUuid!,
-        documentPath: documentPath!,
-      })
+        const { document, commit } = await getData({
+          workspace,
+          projectId: Number(projectId!),
+          commitUuid: commitUuid!,
+          documentPath: documentPath!,
+        })
 
-      const result = await runDocumentAtCommit({
-        documentUuid: document.documentUuid,
-        commit,
-        parameters,
-      }).then((r) => r.unwrap())
+        const result = await runDocumentAtCommit({
+          documentUuid: document.documentUuid,
+          commit,
+          parameters,
+        }).then((r) => r.unwrap())
 
-      await pipeToStream(stream, result.stream)
-    })
+        await pipeToStream(stream, result.stream)
+      },
+      async (error, stream) => {
+        await stream.write(
+          JSON.stringify({
+            event: LATITUDE_EVENT,
+            data: {
+              type: ChainEventTypes.Error,
+              error,
+            },
+          }),
+        )
+
+        stream.close()
+      },
+    )
   },
 )
 
@@ -45,11 +68,8 @@ async function pipeToStream(
   readableStream: ReadableStream,
 ) {
   let id = 0
-  const reader = readableStream.getReader()
-
-  while (true) {
-    const { done, value } = await reader.read()
-    if (done) break
+  for await (const value of streamToGenerator(readableStream)) {
+    updateProviderApiKey(value)
 
     stream.write(
       JSON.stringify({
@@ -57,5 +77,15 @@ async function pipeToStream(
         id: String(id++),
       }),
     )
+  }
+}
+
+function updateProviderApiKey(value: ChainEvent) {
+  const { event, data } = value
+  if (event === LATITUDE_EVENT && data.type === ChainEventTypes.StepComplete) {
+    queues.defaultQueue.jobs.enqueueUpdateApiKeyProviderJob({
+      providerApiKey: data.providerApiKey!,
+      lastUsedAt: new Date().toISOString(),
+    })
   }
 }

@@ -8,6 +8,7 @@ import {
   validateConfig,
 } from '@latitude-data/core'
 import { PROVIDER_EVENT } from '@latitude-data/core/browser'
+import { queues } from '$/jobs'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
 import { createStreamableValue, StreamableValue } from 'ai/rsc'
 
@@ -49,6 +50,11 @@ export async function streamTextAction({
           data: value,
         })
       }
+
+      queues.defaultQueue.jobs.enqueueUpdateApiKeyProviderJob({
+        providerApiKey: apiKey,
+        lastUsedAt: new Date().toISOString(),
+      })
 
       stream.done()
     } catch (error) {

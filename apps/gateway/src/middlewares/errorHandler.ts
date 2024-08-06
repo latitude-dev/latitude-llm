@@ -9,6 +9,7 @@ const errorHandlerMiddleware = () =>
     if (!err) return next()
 
     if (process.env.NODE_ENV !== 'test') {
+      console.error('=== ERROR ===')
       console.error(err.message)
     }
 

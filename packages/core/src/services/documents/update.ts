@@ -10,12 +10,14 @@ import { documentVersions } from '$core/schema'
 import { assertCommitIsDraft } from '$core/services/documents/utils'
 import { eq } from 'drizzle-orm'
 
+import { sanitizeDocumentPath } from './create'
+
 // TODO: refactor, can be simplified
 export async function updateDocument(
   {
     commit,
     document,
-    path,
+    path: inputPath,
     content,
   }: {
     commit: Commit
@@ -26,6 +28,7 @@ export async function updateDocument(
   trx = database,
 ): Promise<TypedResult<DocumentVersion, Error>> {
   return await Transaction.call(async (tx) => {
+    const path = sanitizeDocumentPath(inputPath)
     const updatedDocData = Object.fromEntries(
       Object.entries({ path, content }).filter(([_, v]) => v !== undefined),
     )
@@ -74,6 +77,7 @@ export async function updateDocument(
         set: newVersion,
       })
       .returning()
+
     if (updatedDocs.length === 0) {
       return Result.error(new NotFoundError('Document does not exist'))
     }
