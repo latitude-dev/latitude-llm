@@ -21,6 +21,7 @@
     "@latitude-data/env": "workspace:^",
     "@latitude-data/jobs": "workspace:*",
     "@latitude-data/web-ui": "workspace:*",
+    "@latitude-data/sdk-js": "workspace:*",
     "@lucia-auth/adapter-drizzle": "^1.0.7",
     "@monaco-editor/react": "^4.6.0",
     "@t3-oss/env-nextjs": "^0.10.1",

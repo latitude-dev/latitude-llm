@@ -5,7 +5,7 @@ import {
   mergeCommit,
   Result,
 } from '@latitude-data/core'
-import { ChainEventTypes, LATITUDE_EVENT } from '@latitude-data/core/browser'
+import { ChainEventTypes, StreamEventTypes } from '@latitude-data/core/browser'
 import app from '$/index'
 import { eq } from 'drizzle-orm'
 import { describe, expect, it, vi } from 'vitest'
@@ -50,7 +50,7 @@ describe('POST /run', () => {
       const stream = new ReadableStream({
         start(controller) {
           controller.enqueue({
-            event: LATITUDE_EVENT,
+            event: StreamEventTypes.Latitude,
             data: {
               type: ChainEventTypes.Complete,
               response: {
@@ -134,7 +134,7 @@ describe('POST /run', () => {
 
       expect(done).toBe(true)
       expect(JSON.parse(value!)).toEqual({
-        event: LATITUDE_EVENT,
+        event: StreamEventTypes.Latitude,
         data: {
           type: ChainEventTypes.Complete,
           response: {

@@ -123,9 +123,7 @@ describe('chain', async () => {
 
     const assistantMessage = conversation.messages[4]! as AssistantMessage
     expect(assistantMessage.role).toBe('assistant')
-    expect((assistantMessage.content[0]! as TextContent).text).toBe(
-      'Assistant message: foo',
-    )
+    expect(assistantMessage.content).toBe('Assistant message: foo')
   })
 
   it('stops at a step tag', async () => {
@@ -155,9 +153,7 @@ describe('chain', async () => {
     expect(completed2).toBe(true)
     expect(conversation2.messages.length).toBe(3)
     expect(conversation2.messages[0]!.content).toBe('Message 1')
-    expect((conversation2.messages[1]!.content[0]! as TextContent).text).toBe(
-      'response',
-    )
+    expect(conversation2.messages[1]!.content).toBe('response')
     expect(conversation2.messages[2]!.content).toBe('Message 2')
   })
 
@@ -244,7 +240,7 @@ describe('chain', async () => {
 
     const conversation = await complete({ chain })
     expect(conversation.messages[0]!.content).toBe('1')
-    expect((conversation.messages[1]!.content[0]! as TextContent).text).toBe('')
+    expect(conversation.messages[1]!.content).toBe('')
     expect(conversation.messages[2]!.content).toBe('2')
     expect(func1).toHaveBeenCalledTimes(1)
     expect(func2).toHaveBeenCalledTimes(1)
@@ -426,7 +422,7 @@ describe('chain', async () => {
   it('saves the response in a variable', async () => {
     const prompt = removeCommonIndent(`
       <${CHAIN_STEP_TAG} as="response" />
-      
+
       {{response}}
     `)
 
@@ -439,9 +435,7 @@ describe('chain', async () => {
     const { conversation } = await chain.step('foo')
 
     expect(conversation.messages.length).toBe(2)
-    expect((conversation.messages[0]!.content[0]! as TextContent).text).toBe(
-      'foo',
-    )
+    expect(conversation.messages[0]!.content).toBe('foo')
     expect(conversation.messages[1]!.content).toBe('foo')
   })
 

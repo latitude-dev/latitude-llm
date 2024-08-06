@@ -1,5 +1,5 @@
-import { Config } from '@latitude-data/compiler'
-import { CompletionTokenUsage, Message } from 'ai'
+import { Config, Message } from '@latitude-data/compiler'
+import { CompletionTokenUsage, CoreTool, TextStreamPart } from 'ai'
 
 export const LATITUDE_DOCS_URL = ''
 export const LATITUDE_EMAIL = ''
@@ -24,6 +24,7 @@ export const HELP_CENTER = {
   commitVersions: `${LATITUDE_DOCS_URL}/not-found`,
 }
 
+export type ChainCallResponse = { text: string; usage: CompletionTokenUsage }
 export enum Providers {
   OpenAI = 'openai',
   Anthropic = 'anthropic',
@@ -36,23 +37,48 @@ export enum LogSources {
   Playground = 'playground',
   API = 'api',
 }
-
-export const PROVIDER_EVENT = 'provider-event'
-export const LATITUDE_EVENT = 'latitude-event'
+export enum StreamEventTypes {
+  Latitude = 'latitude-event',
+  Provider = 'provider-event',
+}
 
 export enum ChainEventTypes {
-  TextDelta = 'text-delta',
+  Error = 'chain-error',
   Step = 'chain-step',
   Complete = 'chain-complete',
+  StepComplete = 'chain-step-complete',
 }
 
-export type ChainEvent = {
-  data: {
-    type: ChainEventTypes
-    textDelta?: string
-    config?: Config
-    messages?: Message[]
-    usage?: CompletionTokenUsage
-  }
-  event: typeof LATITUDE_EVENT | typeof PROVIDER_EVENT
-}
+type ProviderData = TextStreamPart<Record<string, CoreTool>>
+export type ProviderDataType = ProviderData['type']
+
+type LatitudeEventData =
+  | {
+      type: ChainEventTypes.Step
+      config: Config
+      messages: Message[]
+    }
+  | {
+      type: ChainEventTypes.StepComplete
+      response: ChainCallResponse
+    }
+  | {
+      type: ChainEventTypes.Complete
+      config: Config
+      messages: Message[]
+      usage: CompletionTokenUsage
+    }
+  | {
+      type: ChainEventTypes.Error
+      error: Error
+    }
+
+export type ChainEvent =
+  | {
+      data: LatitudeEventData
+      event: StreamEventTypes.Latitude
+    }
+  | {
+      data: ProviderData
+      event: StreamEventTypes.Provider
+    }

@@ -1,4 +1,4 @@
-export async function* streamToGenerator(stream: ReadableStream) {
+export async function* streamToGenerator<R>(stream: ReadableStream<R>) {
   const reader = stream.getReader()
   while (true) {
     const { done, value } = await reader.read()

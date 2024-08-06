@@ -13,6 +13,7 @@ const app = new Hono()
 if (process.env.NODE_ENV !== 'test') {
   app.use(logger())
 }
+
 app.use(authMiddleware())
 
 // Routers

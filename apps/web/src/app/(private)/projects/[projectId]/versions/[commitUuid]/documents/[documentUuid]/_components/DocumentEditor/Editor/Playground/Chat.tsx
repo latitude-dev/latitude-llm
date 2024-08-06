@@ -10,8 +10,7 @@ import {
 } from '@latitude-data/compiler'
 import {
   ChainEventTypes,
-  LATITUDE_EVENT,
-  PROVIDER_EVENT,
+  StreamEventTypes,
   type ChainEvent,
   type DocumentVersion,
 } from '@latitude-data/core/browser'
@@ -87,14 +86,18 @@ export default function Chat({
           const { event, data } = serverEvent as ChainEvent
 
           if (
-            event === PROVIDER_EVENT &&
-            data.type === ChainEventTypes.TextDelta
+            event === StreamEventTypes.Provider &&
+            data.type === 'text-delta'
           ) {
             yield [data.textDelta, null]
           }
 
-          if (event === LATITUDE_EVENT && data?.usage) {
-            yield [null, data.usage.totalTokens]
+          const isCompleted =
+            event === StreamEventTypes.Latitude &&
+            data.type === ChainEventTypes.Complete
+          const totalTokens = isCompleted ? data.usage.totalTokens : undefined
+          if (totalTokens !== undefined) {
+            yield [null, totalTokens]
           }
         }
       } catch (error) {
@@ -126,12 +129,7 @@ export default function Chat({
 
       addMessage({
         role: MessageRole.assistant,
-        content: [
-          {
-            type: ContentType.text,
-            text: response,
-          },
-        ],
+        content: response,
         toolCalls: [],
       })
 
@@ -163,10 +161,21 @@ export default function Chat({
       })
   }, [])
 
+  // Not working yet.
+  // const runDocument = useCallback(async () => {
+  //   const { output } = await runDocumentAction({
+  //     projectId: project.id,
+  //     documentPath: document.path,
+  //     commitUuid: commit.uuid,
+  //   })
+  //   console.log('SDK output', output)
+  // }, [])
+
   useEffect(() => {
     if (runChainOnce.current) return
     runChainOnce.current = true // Prevent double-running when StrictMode is enabled
     runChain()
+    // runDocument()
   }, [])
 
   const submitUserMessage = useCallback((input: string) => {
@@ -246,7 +255,7 @@ function AnimatedDots() {
         <span className='animate-pulse'>•</span>
       </Text.H6M>
       <Text.H6M color='foregroundMuted'>
-        <span className='animate-pulse delay-[250ms]'>•</span>
+        <span className='animate-pulse delay-250'>•</span>
       </Text.H6M>
       <Text.H6M color='foregroundMuted'>
         <span className='animate-pulse delay-500'>•</span>

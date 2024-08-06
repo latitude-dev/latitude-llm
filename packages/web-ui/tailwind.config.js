@@ -82,6 +82,9 @@ module.exports = {
       maxWidth: {
         modal: '580px',
       },
+      transitionDelay: {
+        '250': '250ms',
+      },
     },
   },
   plugins: [require('tailwindcss-animate')],

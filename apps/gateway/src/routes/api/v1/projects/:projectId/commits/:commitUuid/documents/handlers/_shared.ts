@@ -19,7 +19,6 @@ export const getData = async ({
   const projectsScope = new ProjectsRepository(workspace.id)
   const commitsScope = new CommitsRepository(workspace.id)
   const docsScope = new DocumentVersionsRepository(workspace.id)
-
   const project = await projectsScope
     .getProjectById(projectId)
     .then((r) => r.unwrap())
