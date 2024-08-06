@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react'
 
 import {
   Chain,
-  CompileError,
   Conversation,
   ConversationMetadata,
 } from '@latitude-data/compiler'
@@ -52,11 +51,6 @@ export default function Preview({
         setConversation(undefined)
         setCompleted(true)
         setError(error)
-        if (error instanceof CompileError) {
-          console.error(error.toString())
-        } else {
-          console.log(error)
-        }
       })
   }, [metadata, parameters])
 

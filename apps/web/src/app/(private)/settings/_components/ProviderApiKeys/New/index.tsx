@@ -39,7 +39,6 @@ export default function NewApiKey({
     >
       <form id='createApiKeyForm' action={action}>
         <FormWrapper>
-          <Input type='hidden' name='provider' value={Providers.OpenAI} />
           <Select
             required
             label='Provider'

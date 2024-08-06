@@ -1,23 +1,26 @@
 'use server'
 
 import { runDocumentVersion, streamToGenerator } from '@latitude-data/core'
-import { getDocumentByIdCached } from '$/app/(private)/_data-access'
+import type { Commit } from '@latitude-data/core/browser'
 import { createStreamableValue } from 'ai/rsc'
 
 export async function runAction({
-  id,
+  documentUuid,
+  commit,
   parameters,
 }: {
-  id: number
+  documentUuid: string
+  commit: Commit
   parameters: Record<string, unknown>
 }) {
-  const document = await getDocumentByIdCached(id)
   const stream = createStreamableValue()
 
   ;(async () => {
-    const result = await runDocumentVersion({ document, parameters }).then(
-      (r) => r.unwrap(),
-    )
+    const result = await runDocumentVersion({
+      documentUuid,
+      commit,
+      parameters,
+    }).then((r) => r.unwrap())
 
     try {
       for await (const value of streamToGenerator(result.stream)) {

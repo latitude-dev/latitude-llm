@@ -660,7 +660,7 @@
         "provider": {
           "name": "provider",
           "type": "provider",
-          "typeSchema": "public",
+          "typeSchema": "latitude",
           "primaryKey": false,
           "notNull": true
         },
@@ -723,9 +723,9 @@
     }
   },
   "enums": {
-    "public.provider": {
+    "latitude.provider": {
       "name": "provider",
-      "schema": "public",
+      "schema": "latitude",
       "values": [
         "openai",
         "anthropic"

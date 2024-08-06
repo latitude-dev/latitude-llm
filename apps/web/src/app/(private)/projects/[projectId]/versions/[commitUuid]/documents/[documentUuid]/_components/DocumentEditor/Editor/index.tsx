@@ -24,6 +24,7 @@ import {
   useCurrentProject,
   useLocalStorage,
 } from '@latitude-data/web-ui'
+import type { StreamTextOutputAction } from '$/actions/documents/streamTextAction'
 import useDocumentVersions from '$/stores/documentVersions'
 import { useDebouncedCallback } from 'use-debounce'
 
@@ -31,7 +32,11 @@ import { Header } from './Header'
 import Playground from './Playground'
 
 export const DocumentEditorContext = createContext<
-  { runAction: Function; streamTextAction: Function } | undefined
+  | {
+      runAction: Function
+      streamTextAction: StreamTextOutputAction
+    }
+  | undefined
 >(undefined)
 
 export default function DocumentEditor({
@@ -41,7 +46,7 @@ export default function DocumentEditor({
   documents,
 }: {
   runAction: Function
-  streamTextAction: Function
+  streamTextAction: StreamTextOutputAction
   document: DocumentVersion
   documents: DocumentVersion[]
 }) {
