@@ -43,6 +43,8 @@ export default function Chat({
   const [error, setError] = useState<Error | undefined>()
   const [tokens, setTokens] = useState<number>(0)
   const [isScrolledToBottom, setIsScrolledToBottom] = useState(false)
+  const [startTime, _] = useState(performance.now())
+  const [endTime, setEndTime] = useState<number>()
   const containerRef = useRef<HTMLDivElement>(null)
   useAutoScroll(containerRef, {
     startAtBottom: true,
@@ -154,7 +156,10 @@ export default function Chat({
 
         const response = await generateResponse()
 
-        if (completed) return
+        if (completed) {
+          setEndTime(performance.now())
+          return
+        }
         runChain(response)
       })
       .catch((error) => {
@@ -198,12 +203,15 @@ export default function Chat({
           messages={conversation?.messages.slice(0, chainLength - 1) ?? []}
         />
         {(conversation?.messages.length ?? 0) >= chainLength && (
-          <MessageList
-            messages={
-              conversation?.messages.slice(chainLength - 1, chainLength) ?? []
-            }
-            variant='accent'
-          />
+          <>
+            <MessageList
+              messages={
+                conversation?.messages.slice(chainLength - 1, chainLength) ?? []
+              }
+              variant='accent'
+            />
+            {endTime && <Timer timeMs={endTime - startTime} />}
+          </>
         )}
         {(conversation?.messages.length ?? 0) > chainLength && (
           <>
@@ -321,5 +329,19 @@ function StreamMessage({
       content={[{ type: ContentType.text, text: responseStream }]}
       variant='outline'
     />
+  )
+}
+
+function Timer({ timeMs }: { timeMs: number }) {
+  return (
+    <div className='flex flex-row items-center'>
+      <div className='flex-grow h-px bg-muted-foreground/40' />
+      <div className='flex px-2 items-center'>
+        <Text.H6 color='foregroundMuted'>
+          {`${(timeMs / 1_000).toFixed(2)} s`}
+        </Text.H6>
+      </div>
+      <div className='flex-grow h-px bg-muted-foreground/40' />
+    </div>
   )
 }
