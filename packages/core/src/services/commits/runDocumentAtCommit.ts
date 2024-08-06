@@ -1,32 +1,42 @@
-import { Chain, createChain } from '@latitude-data/compiler'
+import { Chain } from '@latitude-data/compiler'
 import {
   ChainEvent,
   ChainEventTypes,
-  DocumentVersion,
+  Commit,
   LATITUDE_EVENT,
   PROVIDER_EVENT,
   ProviderApiKey,
 } from '$core/browser'
-import { findWorkspaceFromDocument } from '$core/data-access'
-import { Result } from '$core/lib'
+import { findWorkspaceFromCommit } from '$core/data-access'
+import { NotFoundError, Result } from '$core/lib'
 import { streamToGenerator } from '$core/lib/streamToGenerator'
 import { ProviderApiKeysRepository } from '$core/repositories'
-import { z } from 'zod'
 
-import { ai } from '../ai'
+import { ai, validateConfig } from '../ai'
+import { createChainAtCommit } from './createChainAtCommit'
 
-export async function runDocumentVersion({
-  document,
+export async function runDocumentAtCommit({
+  documentUuid,
+  commit,
   parameters,
 }: {
-  document: DocumentVersion
+  documentUuid: string
+  commit: Commit
   parameters: Record<string, unknown>
 }) {
-  const workspace = await findWorkspaceFromDocument(document)
-  if (!workspace) throw new Error('Workspace not found')
+  const workspace = await findWorkspaceFromCommit(commit)
+  if (!workspace) throw Result.error(new NotFoundError('Workspace not found'))
 
+  const result = await createChainAtCommit({
+    documentUuid,
+    commit,
+    parameters,
+    workspace,
+  })
+  if (result.error) return result
+
+  const chain = result.value
   const scope = new ProviderApiKeysRepository(workspace.id)
-  const chain = createChain({ prompt: document.content, parameters })
 
   let stream: ReadableStream
   let response: Promise<{ text: string; usage: Record<string, unknown> }>
@@ -142,28 +152,6 @@ async function iterate({
   }
 }
 
-export function validateConfig(config: Record<string, unknown>) {
-  const configSchema = z.object({
-    model: z.string(),
-    apiKey: z.string(),
-  })
-
-  return configSchema.parse(config)
-}
-
-async function findApiKey({
-  scope,
-  name,
-}: {
-  scope: ProviderApiKeysRepository
-  name: string
-}) {
-  const apiKeyResult = await scope.findByName(name)
-  if (apiKeyResult.error) throw apiKeyResult.error
-
-  return apiKeyResult.value!
-}
-
 /**
  *  Performs some common operations needed for processing an iteration step
  **/
@@ -183,11 +171,24 @@ async function doSomeCommonOperations({
   const { completed, conversation } = await chain.step(previousResponse?.text)
   const config = validateConfig(conversation.config)
   if (!apiKey || apiKey?.name !== conversation.config.apikey) {
-    apiKey = await findApiKey({ scope, name: config.apiKey })
+    apiKey = await findApiKey({ scope, name: config.provider })
   }
 
   const msgs = conversation.messages.slice(sentCount)
   sentCount += msgs.length
 
   return { sentCount, apiKey, conversation, completed, config }
+}
+
+async function findApiKey({
+  scope,
+  name,
+}: {
+  scope: ProviderApiKeysRepository
+  name: string
+}) {
+  const apiKeyResult = await scope.findByName(name)
+  if (apiKeyResult.error) throw apiKeyResult.error
+
+  return apiKeyResult.value!
 }

@@ -12,6 +12,7 @@ import {
   FinishReason,
   streamText,
 } from 'ai'
+import { z } from 'zod'
 
 type FinishCallbackEvent = {
   finishReason: FinishReason
@@ -31,27 +32,37 @@ type FinishCallbackEvent = {
   }
   warnings?: CallWarning[]
 }
-
 type FinishCallback = (event: FinishCallbackEvent) => void
+
+export type Config = {
+  provider: string
+  model: string
+  azure?: { resourceName: string }
+} & Record<string, unknown>
+export type PartialConfig = Omit<Config, 'provider' & 'model'>
+
+const GROQ_API_URL = 'https://api.groq.com/openai/v1'
 
 function createProvider({
   provider,
   apiKey,
+  config,
 }: {
   provider: Providers
   apiKey: string
+  config?: PartialConfig
 }) {
   switch (provider) {
     case Providers.OpenAI:
       return createOpenAI({
         apiKey,
-        compatibility: 'strict', // needed for OpenAI to return token usage
+        compatibility: 'strict', // Needed for OpenAI to return token usage
       })
     case Providers.Groq:
       return createOpenAI({
         apiKey,
         compatibility: 'compatible',
-        baseURL: 'https://api.groq.com/openai/v1',
+        baseURL: GROQ_API_URL,
       })
     case Providers.Anthropic:
       return createAnthropic({
@@ -64,9 +75,7 @@ function createProvider({
     case Providers.Azure:
       return createAzure({
         apiKey,
-        // TODO: replace with real resource name that users can write in the
-        // document configuration
-        resourceName: 'fake-resource-name',
+        ...(config?.azure ?? {}),
       })
     default:
       throw new Error(`Provider ${provider} not supported`)
@@ -80,11 +89,13 @@ export async function ai(
     apiKey,
     model,
     provider,
+    config,
   }: {
     prompt?: string
     messages: Message[]
     apiKey: string
     model: OpenAICompletionModelId
+    config?: PartialConfig
     provider: Providers
   },
   {
@@ -93,7 +104,7 @@ export async function ai(
     onFinish?: FinishCallback
   } = {},
 ) {
-  const m = createProvider({ provider, apiKey })(model)
+  const m = createProvider({ provider, apiKey, config })(model)
 
   return await streamText({
     model: m,
@@ -101,4 +112,20 @@ export async function ai(
     messages: messages as CoreMessage[],
     onFinish,
   })
+}
+
+export function validateConfig(config: Record<string, unknown>): Config {
+  const configSchema = z
+    .object({
+      model: z.string(),
+      provider: z.string(),
+      azure: z
+        .object({
+          resourceName: z.string(),
+        })
+        .optional(),
+    })
+    .catchall(z.unknown())
+
+  return configSchema.parse(config)
 }

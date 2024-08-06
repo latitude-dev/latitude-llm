@@ -1,37 +1,48 @@
 'use server'
 
-import { Message, readMetadata } from '@latitude-data/compiler'
+import { Message } from '@latitude-data/compiler'
 import {
   ai,
   ProviderApiKeysRepository,
   streamToGenerator,
   validateConfig,
 } from '@latitude-data/core'
-import { DocumentVersion, PROVIDER_EVENT } from '@latitude-data/core/browser'
-import { getDocumentByIdCached } from '$/app/(private)/_data-access'
+import { PROVIDER_EVENT } from '@latitude-data/core/browser'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
-import { createStreamableValue } from 'ai/rsc'
+import { createStreamableValue, StreamableValue } from 'ai/rsc'
+
+type StreamTextActionProps = {
+  messages: Message[]
+  config: Record<string, unknown>
+}
+
+type StreamTextActionResponse = Promise<{ output: StreamableValue }>
+export type StreamTextOutputAction = (
+  _: StreamTextActionProps,
+) => StreamTextActionResponse
 
 export async function streamTextAction({
-  id,
+  config,
   messages,
-}: {
-  id: number
-  messages: Message[]
-}) {
-  const document = await getDocumentByIdCached(id)
-  const { config, apiKey } = await getConfigAndApiKey(document)
+}: StreamTextActionProps): StreamTextActionResponse {
+  const { workspace } = await getCurrentUser()
+  const { provider, model, ...rest } = validateConfig(config)
+  const providerApiKeysScope = new ProviderApiKeysRepository(workspace.id)
+  const apiKey = await providerApiKeysScope
+    .findByName(provider)
+    .then((r) => r.unwrap())
   const stream = createStreamableValue()
 
   ;(async () => {
-    const result = await ai({
-      apiKey: apiKey.token,
-      messages,
-      model: config.model,
-      provider: apiKey.provider,
-    })
-
     try {
+      const result = await ai({
+        apiKey: apiKey.token,
+        provider: apiKey.provider,
+        model,
+        messages,
+        config: rest,
+      })
+
       for await (const value of streamToGenerator(result.fullStream)) {
         stream.update({
           event: PROVIDER_EVENT,
@@ -53,16 +64,4 @@ export async function streamTextAction({
   return {
     output: stream.value,
   }
-}
-
-async function getConfigAndApiKey(document: DocumentVersion) {
-  const { workspace } = await getCurrentUser()
-  const metadata = await readMetadata({ prompt: document.content })
-  const config = validateConfig(metadata.config)
-  const providerApiKeysScope = new ProviderApiKeysRepository(workspace.id)
-  const apiKey = await providerApiKeysScope
-    .findByName(config.apiKey)
-    .then((r) => r.unwrap())
-
-  return { config, apiKey }
 }

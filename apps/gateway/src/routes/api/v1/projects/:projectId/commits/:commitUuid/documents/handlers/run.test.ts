@@ -11,7 +11,7 @@ import { eq } from 'drizzle-orm'
 import { describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
-  runDocumentVersion: vi.fn(),
+  runDocumentAtCommit: vi.fn(),
 }))
 
 vi.mock('@latitude-data/core', async (importOriginal) => {
@@ -19,7 +19,7 @@ vi.mock('@latitude-data/core', async (importOriginal) => {
 
   return {
     ...original,
-    runDocumentVersion: mocks.runDocumentVersion,
+    runDocumentAtCommit: mocks.runDocumentAtCommit,
   }
 })
 
@@ -63,7 +63,7 @@ describe('POST /run', () => {
         resolve({ text: 'Hello', usage: {} })
       })
 
-      mocks.runDocumentVersion.mockReturnValue(
+      mocks.runDocumentAtCommit.mockReturnValue(
         new Promise((resolve) => {
           resolve(
             Result.ok({

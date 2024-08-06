@@ -1,5 +1,5 @@
 import { zValidator } from '@hono/zod-validator'
-import { runDocumentVersion } from '@latitude-data/core'
+import { runDocumentAtCommit } from '@latitude-data/core'
 import { Factory } from 'hono/factory'
 import { SSEStreamingApi, streamSSE } from 'hono/streaming'
 import { z } from 'zod'
@@ -22,15 +22,16 @@ export const runHandler = factory.createHandlers(
 
       const workspace = c.get('workspace')
 
-      const { document } = await getData({
+      const { document, commit } = await getData({
         workspace,
         projectId: Number(projectId!),
         commitUuid: commitUuid!,
         documentPath: documentPath!,
       })
 
-      const result = await runDocumentVersion({
-        document,
+      const result = await runDocumentAtCommit({
+        documentUuid: document.documentUuid,
+        commit,
         parameters,
       }).then((r) => r.unwrap())
 

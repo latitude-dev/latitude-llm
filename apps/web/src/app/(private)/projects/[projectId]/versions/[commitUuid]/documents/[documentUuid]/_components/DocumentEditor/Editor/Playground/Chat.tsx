@@ -2,7 +2,6 @@ import { useCallback, useContext, useEffect, useRef, useState } from 'react'
 
 import {
   Chain,
-  CompileError,
   ContentType,
   Conversation,
   Message as ConversationMessage,
@@ -24,6 +23,7 @@ import {
   MessageList,
   Text,
   useAutoScroll,
+  useCurrentCommit,
 } from '@latitude-data/web-ui'
 import { readStreamableValue } from 'ai/rsc'
 
@@ -38,7 +38,8 @@ export default function Chat({
   metadata: ConversationMetadata
   parameters: Record<string, unknown>
 }) {
-  const { runAction, streamTextAction } = useContext(DocumentEditorContext)!
+  const { commit } = useCurrentCommit()
+  const { streamTextAction } = useContext(DocumentEditorContext)!
   const [initialMetadata] = useState<ConversationMetadata>(metadata)
   const [error, setError] = useState<Error | undefined>()
   const [tokens, setTokens] = useState<number>(0)
@@ -75,14 +76,12 @@ export default function Chat({
   }, [])
 
   const streamGenerator = useCallback(
-    async function* (conversation?: Conversation) {
+    async function* (conversation: Conversation) {
       try {
-        const { output } = conversation
-          ? await streamTextAction({
-              id: document.id,
-              messages: conversation.messages,
-            })
-          : await runAction({ id: document.id, parameters })
+        const { output } = await streamTextAction({
+          messages: conversation.messages,
+          config: conversation.config,
+        })
 
         for await (const serverEvent of readStreamableValue(output)) {
           const { event, data } = serverEvent as ChainEvent
@@ -100,16 +99,15 @@ export default function Chat({
         }
       } catch (error) {
         const { message } = error as { message: string }
-
         setError(new Error(message))
 
         throw error
       }
     },
-    [document, parameters],
+    [document, parameters, commit],
   )
 
-  const generateResponse = useCallback(async (conversation?: Conversation) => {
+  const generateResponse = useCallback(async (conversation: Conversation) => {
     let response = ''
     setError(undefined)
     setResponseStream(response)
@@ -125,8 +123,6 @@ export default function Chat({
           setTokens((prev) => prev + Number(tokenCount))
         }
       }
-
-      setResponseStream(undefined)
 
       addMessage({
         role: MessageRole.assistant,
@@ -154,7 +150,7 @@ export default function Chat({
         if (completed) setChainLength(conversation.messages.length + 1)
         setConversation(conversation)
 
-        const response = await generateResponse()
+        const response = await generateResponse(conversation)
 
         if (completed) {
           setEndTime(performance.now())
@@ -164,11 +160,6 @@ export default function Chat({
       })
       .catch((error) => {
         setError(error)
-        if (error instanceof CompileError) {
-          console.error(error.toString())
-        } else {
-          console.log(error)
-        }
       })
   }, [])
 
