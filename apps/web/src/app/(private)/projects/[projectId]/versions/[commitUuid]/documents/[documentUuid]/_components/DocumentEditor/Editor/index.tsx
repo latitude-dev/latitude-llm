@@ -168,7 +168,9 @@ export default function DocumentEditor({
               metadata={metadata}
               onChange={onChange}
               readOnlyMessage={
-                commit.mergedAt ? 'Create a draft to edit documents' : undefined
+                commit.mergedAt
+                  ? 'Create a draft to edit documents.'
+                  : undefined
               }
               isSaved={isSaved}
             />

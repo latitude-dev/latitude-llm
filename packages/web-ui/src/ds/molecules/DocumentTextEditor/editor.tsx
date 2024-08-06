@@ -5,7 +5,7 @@ import { AlertCircle, CheckCircle2, LoaderCircle } from 'lucide-react'
 
 import { CompileError } from '@latitude-data/compiler'
 import Editor, { Monaco } from '@monaco-editor/react'
-import { Button, Text } from '$ui/ds/atoms'
+import { Button, Icon, Text } from '$ui/ds/atoms'
 import { AppLocalStorage, useLocalStorage } from '$ui/lib/hooks/useLocalStorage'
 import { MarkerSeverity, type editor } from 'monaco-editor'
 
@@ -118,6 +118,14 @@ export function DocumentTextEditor({
 
   return (
     <div className='relative h-full rounded-lg border border-border overflow-hidden flex flex-col'>
+      {!!readOnlyMessage && (
+        <div className='flex flex-row w-full bg-secondary items-center justify-center px-2 gap-2 py-2'>
+          <Icon name='lock' color='foregroundMuted' />
+          <Text.H6 color='foregroundMuted'>
+            Version published. {readOnlyMessage}
+          </Text.H6>
+        </div>
+      )}
       <div className='flex flex-grow relative'>
         <div className='absolute top-0 left-0 right-0 bottom-0'>
           <Editor
@@ -134,7 +142,7 @@ export function DocumentTextEditor({
               fixedOverflowWidgets: true,
               lineDecorationsWidth: 0,
               padding: {
-                top: 16,
+                top: readOnlyMessage ? 0 : 16,
                 bottom: 16,
               },
               lineNumbers: showLineNumbers ? 'on' : 'off',
