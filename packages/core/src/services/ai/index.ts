@@ -1,5 +1,5 @@
 import { createAnthropic } from '@ai-sdk/anthropic'
-import { createAzure } from '@ai-sdk/azure'
+import { azure, createAzure } from '@ai-sdk/azure'
 import { createMistral } from '@ai-sdk/mistral'
 import { createOpenAI } from '@ai-sdk/openai'
 import { OpenAICompletionModelId } from '@ai-sdk/openai/internal'
@@ -10,12 +10,15 @@ import {
   CompletionTokenUsage,
   CoreMessage,
   FinishReason,
+  jsonSchema,
+  streamObject,
   streamText,
 } from 'ai'
 import { v4 as uuidv4 } from 'uuid'
 import { z } from 'zod'
 
 import { LogProviderGenerationProps } from '../providerLogs'
+import { JSONSchema7 } from 'json-schema'
 
 export type FinishCallbackEvent = {
   finishReason: FinishReason
@@ -37,12 +40,15 @@ export type FinishCallbackEvent = {
 }
 type FinishCallback = (event: FinishCallbackEvent) => void
 
-export type Config = {
-  provider: string
+export type GenerationConfig = {
   model: string
+  schema?: JSONSchema7
   azure?: { resourceName: string }
 } & Record<string, unknown>
-export type PartialConfig = Omit<Config, 'provider'>
+
+export type Config = GenerationConfig & {
+  provider: string
+}
 
 const GROQ_API_URL = 'https://api.groq.com/openai/v1'
 
@@ -53,7 +59,7 @@ function createProvider({
 }: {
   provider: Providers
   apiKey: string
-  config?: PartialConfig
+  config?: GenerationConfig
 }) {
   switch (provider) {
     case Providers.OpenAI:
@@ -90,10 +96,10 @@ export async function ai(
     provider: apiProvider,
     prompt,
     messages,
-    config,
+    config: _config,
   }: {
     provider: ProviderApiKey
-    config: PartialConfig
+    config: GenerationConfig
     messages: Message[]
     prompt?: string
   },
@@ -107,18 +113,25 @@ export async function ai(
 ) {
   const startTime = Date.now()
   const { provider, token: apiKey, id: providerId } = apiProvider
-  const model = config.model as OpenAICompletionModelId
-  const m = createProvider({ provider, apiKey, config })(model)
 
-  return await streamText({
-    model: m,
+  const config = {
+    ..._config,
+    schema: _config.schema ? jsonSchema(_config.schema) : undefined,
+    structuredOutputs: _config.schema !== undefined,
+  } as GenerationConfig
+  
+  const model = createProvider({ provider, apiKey, config })(config.model)
+
+  const props = {
+    ...config,
+    model,
     prompt,
     messages: messages as CoreMessage[],
-    onFinish: (event) => {
+    onFinish: (event: FinishCallbackEvent) => {
       logHandler({
         logUuid: uuidv4(),
         providerId,
-        model,
+        model: config.model,
         config,
         messages,
         responseText: event.text,
@@ -132,8 +145,11 @@ export async function ai(
       })
 
       onFinish?.(event)
-    },
-  })
+    }
+  }
+
+  if (config.structuredOutputs) return streamObject(props)
+  return streamText(props)
 }
 
 export function validateConfig(config: Record<string, unknown>): Config {
