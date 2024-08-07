@@ -1,55 +1,53 @@
-FROM latitudedata/base AS base
+FROM node:20-alpine AS base
+
+# Check https://github.com/nodejs/docker-node/tree/b4117f9333da4138b03a546ec926ef50a31506c3#nodealpine to understand why libc6-compat might be needed.
+RUN apk update
+RUN apk add --no-cache libc6-compat
+
+# Install pnpm
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable && corepack prepare pnpm@8.15.6 --activate
+
+RUN pnpm i -g turbo
+
+FROM base AS builder
 
 WORKDIR /app
 COPY . .
 
 RUN turbo prune @latitude-data/web --docker
 
-# BUILDER stage
-# ------------------------------------------------------
-FROM base AS builder
+FROM base AS installer
+
 WORKDIR /app
 
-COPY --from=base /app/out/json/ .
-COPY --from=base /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
-COPY --from=base /app/out/pnpm-workspace.yaml ./pnpm-workspace.yaml
-COPY --from=base /app/out/full/ .
-
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install \
-  --frozen-lockfile \
-  --filter "@latitude-data/web..."
-
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-  BUILDING_CONTAINER=true \
-  pnpm turbo build --filter='@latitude-data/web...'
-
-FROM base as prod-deps
-WORKDIR /app
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install \
-  --prod \
-  --frozen-lockfile \
-  --filter "@latitude-data/web..."
+COPY .gitignore .gitignore
+COPY --from=builder /app/out/json/ .
+COPY --from=builder /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install --prod --frozen-lockfile;
 
 # PRODUCTION
 FROM base AS production
-WORKDIR /app-prod
 
-# Public files doesn't have the unpriviledged user
-COPY --from=base /app/apps/web/public ./apps/web/public
+WORKDIR /app
 
 # Unpriviledged user
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
-USER nextjs
 
-COPY --from=builder /app/apps/web/next.config.mjs .
-COPY --from=builder /app/apps/web/package.json .
-COPY --from=prod-deps /app/node_modules ./node_modules
+COPY --from=builder /app/out/full .
+COPY --from=installer /app/node_modules ./node_modules
+COPY --from=installer /app/apps/web/node_modules ./apps/web/node_modules
+# Needed for db migrations
+COPY --from=installer /app/packages/core/node_modules ./packages/core/node_modules
 
-# Automatically leverage output traces to reduce image size
-# https://nextjs.org/docs/advanced-features/output-file-tracing
+RUN rm -fr apps/web
+
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/standalone ./apps
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./apps/web/.next/static
+
+USER nextjs
 
 ARG PORT=3000
 ENV PORT $PORT
