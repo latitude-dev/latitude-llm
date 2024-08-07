@@ -133,7 +133,8 @@ function NodeHeaderWrapper({
                     ? 'File name'
                     : 'Folder name'
               }
-              name='name'
+              name='filename'
+              data-1p-ignore
               type='text'
               size='small'
               errorStyle='tooltip'
