@@ -100,8 +100,8 @@ export default function Playground({
               ) : (
                 <Chat
                   document={document}
-                  metadata={metadata!}
                   parameters={parameters}
+                  metadata={metadata!}
                 />
               )}
             </div>

@@ -1,12 +1,24 @@
 import env from '$sdk/env'
 import { RouteResolver } from '$sdk/utils'
-import {
-  ChainEvent,
-  ChainEventTypes,
-  HandlerType,
-  StreamEventTypes,
-} from '$sdk/utils/types'
+import { ChainEvent, HandlerType } from '$sdk/utils/types'
 
+type Message = {
+  role: 'system' | 'user' | 'assistant' | 'tool'
+  content: string
+}
+type ChainCallResponse = {
+  text: string
+  usage: {
+    promptTokens: number
+    completionTokens: number
+    totalTokens: number
+  }
+}
+
+type RunDocument = {
+  conversation: Message[]
+  response: ChainCallResponse
+}
 export class LatitudeSdk {
   private latitudeApiKey: string
   private routeResolver: RouteResolver
@@ -35,6 +47,7 @@ export class LatitudeSdk {
   async runDocument({
     params: { documentPath, commitUuid, parameters },
     onMessage,
+    onFinished,
     onError,
   }: {
     params: {
@@ -42,7 +55,8 @@ export class LatitudeSdk {
       commitUuid?: string
       parameters?: Record<string, unknown>
     }
-    onMessage: (message: ChainEvent) => void
+    onMessage?: (message: ChainEvent) => void
+    onFinished?: (data: RunDocument) => void
     onError?: (error: Error) => void
   }) {
     const route = this.routeResolver.resolve({
@@ -65,29 +79,53 @@ export class LatitudeSdk {
     const body = response.body ?? new ReadableStream()
     const reader = body.getReader()
 
+    const conversation: Message[] = []
+    let chainResponse: ChainCallResponse | null = null
     while (true) {
       const { done, value } = await reader.read()
 
       if (done) break
 
-      const data = this.decodeValue(value, onError)
-      onMessage(data)
+      const chunks = new TextDecoder('utf-8').decode(value).trim()
+
+      chunks.split('\n').forEach((line) => {
+        const chunk = this.decodeValue(line, onError)
+        if (!chunk) return
+
+        // FIXME: Magic variables. I think we need to share these constants (enums)
+        // in a new package. Now they are in `core` but I don't want to depend on core
+        // just for this. We need these enums in production not only as a dev dependency.
+        if (chunk.event === 'latitude-event') {
+          const messages = 'messages' in chunk.data ? chunk.data.messages : []
+          if (messages.length > 0) {
+            // At the moment all message.content should be a string
+            // but in the future this could be an image or other type
+            // @ts-ignore
+            conversation.push(...messages)
+          }
+
+          if (chunk.data.type === 'chain-complete') {
+            chainResponse = chunk.data.response
+          }
+        }
+
+        onMessage?.(chunk)
+      })
     }
 
-    // TODO: type this response as the same the API returns
-    return response
+    const runResponse = {
+      conversation,
+      response: chainResponse!,
+    }
+    onFinished?.(runResponse)
+
+    return runResponse
   }
 
-  private decodeValue(
-    value: Uint8Array | null,
-    onError?: (error: Error) => void,
-  ) {
-    if (!value) return null
-
+  private decodeValue(line: string, onError?: (error: Error) => void) {
     let json = null
     try {
-      json = new TextDecoder('utf-8').decode(value)
-      return JSON.parse(json)
+      return JSON.parse(line) as ChainEvent
     } catch (e) {
       onError?.(e as Error)
     }
@@ -107,4 +145,4 @@ export class LatitudeSdk {
   }
 }
 
-export type { StreamEventTypes, ChainEventTypes }
+export type { ChainEvent, Message }
