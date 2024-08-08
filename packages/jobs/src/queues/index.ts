@@ -44,10 +44,10 @@ function setupQueue({
 
 export function setupQueues({ connection }: { connection: Redis }) {
   return {
-    [Queues.exampleQueue]: setupQueue({
+    [Queues.defaultQueue]: setupQueue({
       connection,
-      name: Queues.exampleQueue,
-      jobs: [Jobs.exampleJob],
+      name: Queues.defaultQueue,
+      jobs: [Jobs.createProviderLogJob],
     }),
   }
 }

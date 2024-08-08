@@ -16,6 +16,7 @@
     "@hono/zod-validator": "^0.2.2",
     "@latitude-data/core": "workspace:^",
     "@latitude-data/env": "workspace:^",
+    "@latitude-data/jobs": "workspace:^",
     "@t3-oss/env-core": "^0.10.1",
     "hono": "^4.5.3",
     "zod": "^3.23.8"

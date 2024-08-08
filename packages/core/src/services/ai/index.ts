@@ -4,7 +4,7 @@ import { createMistral } from '@ai-sdk/mistral'
 import { createOpenAI } from '@ai-sdk/openai'
 import { OpenAICompletionModelId } from '@ai-sdk/openai/internal'
 import { Message } from '@latitude-data/compiler'
-import { Providers } from '$core/browser'
+import { ProviderApiKey, Providers } from '$core/browser'
 import {
   CallWarning,
   CompletionTokenUsage,
@@ -12,9 +12,12 @@ import {
   FinishReason,
   streamText,
 } from 'ai'
+import { v4 as uuidv4 } from 'uuid'
 import { z } from 'zod'
 
-type FinishCallbackEvent = {
+import { CreateProviderLogProps } from '../providerLogs'
+
+export type FinishCallbackEvent = {
   finishReason: FinishReason
   usage: CompletionTokenUsage
   text: string
@@ -39,7 +42,7 @@ export type Config = {
   model: string
   azure?: { resourceName: string }
 } & Record<string, unknown>
-export type PartialConfig = Omit<Config, 'provider' & 'model'>
+export type PartialConfig = Omit<Config, 'provider'>
 
 const GROQ_API_URL = 'https://api.groq.com/openai/v1'
 
@@ -82,35 +85,56 @@ function createProvider({
   }
 }
 
+export type AILog = Omit<CreateProviderLogProps, 'apiKeyId' | 'source'>
+
 export async function ai(
   {
+    provider: apiProvider,
     prompt,
     messages,
-    apiKey,
-    model,
-    provider,
     config,
   }: {
-    prompt?: string
+    provider: ProviderApiKey
+    config: PartialConfig
     messages: Message[]
-    apiKey: string
-    model: OpenAICompletionModelId
-    config?: PartialConfig
-    provider: Providers
+    prompt?: string
   },
   {
+    logHandler,
     onFinish,
   }: {
+    logHandler: (log: AILog) => void
     onFinish?: FinishCallback
-  } = {},
+  },
 ) {
+  const startTime = Date.now()
+  const { provider, token: apiKey, id: providerId } = apiProvider
+  const model = config.model as OpenAICompletionModelId
   const m = createProvider({ provider, apiKey, config })(model)
 
   return await streamText({
     model: m,
     prompt,
     messages: messages as CoreMessage[],
-    onFinish,
+    onFinish: (event) => {
+      logHandler({
+        logUuid: uuidv4(),
+        providerId,
+        model,
+        config,
+        messages,
+        responseText: event.text,
+        toolCalls: event.toolCalls?.map((t) => ({
+          id: t.toolCallId,
+          name: t.toolName,
+          arguments: t.args,
+        })),
+        tokens: event.usage.totalTokens,
+        duration: Date.now() - startTime,
+      })
+
+      onFinish?.(event)
+    },
   })
 }
 

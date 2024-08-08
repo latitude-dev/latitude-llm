@@ -32,9 +32,10 @@
     "@t3-oss/env-core": "^0.10.1",
     "ai": "^3.2.42",
     "bcrypt": "^5.1.1",
-    "drizzle-orm": "0.31.4",
     "drizzle-kit": "^0.22.8",
+    "drizzle-orm": "0.31.4",
     "lodash-es": "^4.17.21",
+    "uuid": "^10.0.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
@@ -44,6 +45,7 @@
     "@types/bcrypt": "^5.0.2",
     "@types/lodash-es": "^4.17.12",
     "@types/node": "^20.14.10",
+    "@types/uuid": "^10.0.0",
     "eslint-plugin-drizzle": "^0.2.3",
     "pg-transactional-tests": "^1.0.9",
     "supertest": "^7.0.0",

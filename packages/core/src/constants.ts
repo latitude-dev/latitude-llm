@@ -32,6 +32,11 @@ export enum Providers {
   Azure = 'azure',
 }
 
+export enum LogSources {
+  Playground = 'playground',
+  API = 'api',
+}
+
 export const PROVIDER_EVENT = 'provider-event'
 export const LATITUDE_EVENT = 'latitude-event'
 

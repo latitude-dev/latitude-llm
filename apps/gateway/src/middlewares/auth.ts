@@ -23,6 +23,7 @@ const authMiddleware = () =>
       if (workspaceResult.error) return false
 
       c.set('workspace', workspaceResult.value)
+      c.set('apiKey', apiKeyResult.value)
 
       return true
     },

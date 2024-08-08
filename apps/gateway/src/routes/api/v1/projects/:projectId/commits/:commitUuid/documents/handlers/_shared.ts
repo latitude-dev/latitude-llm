@@ -5,14 +5,6 @@ import {
 } from '@latitude-data/core'
 import type { Workspace } from '@latitude-data/core/browser'
 
-const toDocumentPath = (path: string) => {
-  if (path.startsWith('/')) {
-    return path
-  }
-
-  return `/${path}`
-}
-
 export const getData = async ({
   workspace,
   projectId,
@@ -35,10 +27,7 @@ export const getData = async ({
     .getCommitByUuid({ project, uuid: commitUuid })
     .then((r) => r.unwrap())
   const document = await docsScope
-    .getDocumentByPath({
-      commit,
-      path: toDocumentPath(documentPath),
-    })
+    .getDocumentByPath({ commit, path: documentPath })
     .then((r) => r.unwrap())
 
   return { project, commit, document }

@@ -1,5 +1,10 @@
 import { zValidator } from '@hono/zod-validator'
-import { runDocumentAtCommit } from '@latitude-data/core'
+import {
+  LogSources,
+  runDocumentAtCommit,
+  streamToGenerator,
+} from '@latitude-data/core'
+import { queues } from '$/jobs'
 import { Factory } from 'hono/factory'
 import { SSEStreamingApi, streamSSE } from 'hono/streaming'
 import { z } from 'zod'
@@ -21,6 +26,7 @@ export const runHandler = factory.createHandlers(
       const { documentPath, parameters } = c.req.valid('json')
 
       const workspace = c.get('workspace')
+      const apiKey = c.get('apiKey')
 
       const { document, commit } = await getData({
         workspace,
@@ -33,6 +39,13 @@ export const runHandler = factory.createHandlers(
         documentUuid: document.documentUuid,
         commit,
         parameters,
+        logHandler: (log) => {
+          queues.defaultQueue.jobs.enqueueCreateProviderLogJob({
+            ...log,
+            source: LogSources.API,
+            apiKeyId: apiKey.id,
+          })
+        },
       }).then((r) => r.unwrap())
 
       await pipeToStream(stream, result.stream)
@@ -45,12 +58,7 @@ async function pipeToStream(
   readableStream: ReadableStream,
 ) {
   let id = 0
-  const reader = readableStream.getReader()
-
-  while (true) {
-    const { done, value } = await reader.read()
-    if (done) break
-
+  for await (const value of streamToGenerator(readableStream)) {
     stream.write(
       JSON.stringify({
         ...value,
