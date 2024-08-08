@@ -4,4 +4,5 @@ export enum Queues {
 
 export enum Jobs {
   createProviderLogJob = 'createProviderLogJob',
+  createDocumentLogJob = 'createDocumentLogJob',
 }

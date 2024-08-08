@@ -1,4 +1,4 @@
-import { Chain, MessageRole } from '@latitude-data/compiler'
+import { Chain, createChain, MessageRole } from '@latitude-data/compiler'
 import {
   ChainCallResponse,
   ChainEvent,
@@ -12,7 +12,7 @@ import { streamToGenerator } from '$core/lib/streamToGenerator'
 import { ProviderApiKeysRepository } from '$core/repositories'
 
 import { ai, AILog, validateConfig } from '../ai'
-import { createChainAtCommit } from './createChainAtCommit'
+import { getResolvedContent } from '../documents/getResolvedContent'
 
 export async function runDocumentAtCommit({
   documentUuid,
@@ -28,15 +28,15 @@ export async function runDocumentAtCommit({
   const workspace = await findWorkspaceFromCommit(commit)
   if (!workspace) throw Result.error(new NotFoundError('Workspace not found'))
 
-  const result = await createChainAtCommit({
+  const result = await getResolvedContent({
+    workspace,
     documentUuid,
     commit,
-    parameters,
-    workspace,
   })
+
   if (result.error) return result
 
-  const chain = result.value
+  const chain = createChain({ prompt: result.value, parameters })
   const scope = new ProviderApiKeysRepository(workspace.id)
 
   let stream: ReadableStream
@@ -55,6 +55,7 @@ export async function runDocumentAtCommit({
   return Result.ok({
     stream: stream!,
     response: response!,
+    resolvedContent: result.value,
   })
 }
 

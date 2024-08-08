@@ -15,7 +15,7 @@ import {
 import { v4 as uuidv4 } from 'uuid'
 import { z } from 'zod'
 
-import { CreateProviderLogProps } from '../providerLogs'
+import { CreateProviderLogProps } from '../providerLogs/create'
 
 export type FinishCallbackEvent = {
   finishReason: FinishReason
@@ -118,7 +118,7 @@ export async function ai(
     messages: messages as CoreMessage[],
     onFinish: (event) => {
       logHandler({
-        logUuid: uuidv4(),
+        uuid: uuidv4(),
         providerId,
         model,
         config,

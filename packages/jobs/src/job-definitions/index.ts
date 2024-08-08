@@ -1,9 +1,15 @@
 import { Jobs, Queues } from '$jobs/constants'
 
+import { CreateDocumentLogJobData } from './documentLogs/createJob'
 import { CreateProviderLogJobData } from './providerLogs/createJob'
 
-type JobData<J extends Jobs> = J extends Jobs.createProviderLogJob
-  ? CreateProviderLogJobData
+type JobDataMap = {
+  [Jobs.createProviderLogJob]: CreateProviderLogJobData
+  [Jobs.createDocumentLogJob]: CreateDocumentLogJobData
+}
+
+type JobData<J extends Jobs> = J extends keyof JobDataMap
+  ? JobDataMap[J]
   : never
 
 type JobSpec<J extends Jobs = Jobs> = {
@@ -13,6 +19,6 @@ type JobSpec<J extends Jobs = Jobs> = {
 
 export type JobDefinition = {
   [Queues.defaultQueue]: {
-    [Jobs.createProviderLogJob]: JobSpec<Jobs.createProviderLogJob>
+    [K in Jobs]: JobSpec<K>
   }
 }

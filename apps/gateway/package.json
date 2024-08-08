@@ -19,11 +19,13 @@
     "@latitude-data/jobs": "workspace:^",
     "@t3-oss/env-core": "^0.10.1",
     "hono": "^4.5.3",
+    "uuid": "^10.0.0",
     "zod": "^3.23.8"
   },
   "devDependencies": {
     "@latitude-data/eslint-config": "workspace:^",
     "@latitude-data/typescript-config": "workspace:^",
+    "@types/uuid": "^10.0.0",
     "eslint": "8",
     "jet-paths": "^1.0.6",
     "tsx": "^4.16.2",
