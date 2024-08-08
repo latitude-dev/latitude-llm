@@ -86,10 +86,7 @@ export class LatitudeSdk {
     // with tool calls and everything
   }
 
-  private decodeValue(
-    line: string,
-    onError?: (error: Error) => void,
-  ) {
+  private decodeValue(line: string, onError?: (error: Error) => void) {
     let json = null
     try {
       return JSON.parse(line)

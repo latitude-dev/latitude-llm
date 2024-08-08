@@ -54,32 +54,32 @@ export type ProviderDataType = ProviderData['type']
 
 type LatitudeEventData =
   | {
-    type: ChainEventTypes.Step
-    config: Config
-    isLastStep: boolean
-    messages: Message[]
-  }
+      type: ChainEventTypes.Step
+      config: Config
+      isLastStep: boolean
+      messages: Message[]
+    }
   | {
-    type: ChainEventTypes.StepComplete
-    response: ChainCallResponse
-  }
+      type: ChainEventTypes.StepComplete
+      response: ChainCallResponse
+    }
   | {
-    type: ChainEventTypes.Complete
-    config: Config
-    messages: Message[]
-    usage: CompletionTokenUsage
-  }
+      type: ChainEventTypes.Complete
+      config: Config
+      messages: Message[]
+      usage: CompletionTokenUsage
+    }
   | {
-    type: ChainEventTypes.Error
-    error: Error
-  }
+      type: ChainEventTypes.Error
+      error: Error
+    }
 
 export type ChainEvent =
   | {
-    data: LatitudeEventData
-    event: StreamEventTypes.Latitude
-  }
+      data: LatitudeEventData
+      event: StreamEventTypes.Latitude
+    }
   | {
-    data: ProviderData
-    event: StreamEventTypes.Provider
+      data: ProviderData
+      event: StreamEventTypes.Provider
     }
