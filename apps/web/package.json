@@ -2,6 +2,7 @@
   "name": "@latitude-data/web",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@8.15.6",
   "scripts": {
     "dev:local": "USE_LOCALHOST=true pnpm run dev",
     "dev": "next dev",

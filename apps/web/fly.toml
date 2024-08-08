@@ -21,4 +21,4 @@ primary_region = 'mad'
   cpus = 1
 
 [deploy]
-  release_command = "cd packages/core && pnpm db:migrate"
+  release_command = "pnpm --prefix packages/core db:migrate"
