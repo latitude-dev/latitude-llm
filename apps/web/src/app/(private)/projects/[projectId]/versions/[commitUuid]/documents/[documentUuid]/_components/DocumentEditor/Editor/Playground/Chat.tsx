@@ -23,11 +23,16 @@ import {
   Text,
   useAutoScroll,
   useCurrentCommit,
+  useCurrentProject,
 } from '@latitude-data/web-ui'
 import { readStreamableValue } from 'ai/rsc'
 
 import { DocumentEditorContext } from '..'
 
+const HAS_MESSAGES = [
+  ChainEventTypes.Step,
+  ChainEventTypes.Complete,
+]
 export default function Chat({
   document,
   metadata,
@@ -38,7 +43,10 @@ export default function Chat({
   parameters: Record<string, unknown>
 }) {
   const { commit } = useCurrentCommit()
-  const { streamTextAction } = useContext(DocumentEditorContext)!
+  const { project } = useCurrentProject()
+  const { streamTextAction, runDocumentAction } = useContext(
+    DocumentEditorContext,
+  )!
   const [initialMetadata] = useState<ConversationMetadata>(metadata)
   const [error, setError] = useState<Error | undefined>()
   const [tokens, setTokens] = useState<number>(0)
@@ -161,21 +169,29 @@ export default function Chat({
       })
   }, [])
 
-  // Not working yet.
-  // const runDocument = useCallback(async () => {
-  //   const { output } = await runDocumentAction({
-  //     projectId: project.id,
-  //     documentPath: document.path,
-  //     commitUuid: commit.uuid,
-  //   })
-  //   console.log('SDK output', output)
-  // }, [])
+  const runDocument = useCallback(async () => {
+    const { output } = await runDocumentAction({
+      projectId: project.id,
+      documentPath: document.path,
+      commitUuid: commit.uuid,
+    })
+
+    for await (const serverEvent of readStreamableValue(output)) {
+      const { event, data } = serverEvent as ChainEvent
+      const isLatitude = event === StreamEventTypes.Latitude
+      const hasMessages = isLatitude && data.type === ChainEventTypes.Step
+
+      if (hasMessages) {
+        data.messages.forEach((m) => addMessage(m))
+      }
+    }
+  , [project.id, document.path, commit.uuid, runDocumentAction])
 
   useEffect(() => {
     if (runChainOnce.current) return
     runChainOnce.current = true // Prevent double-running when StrictMode is enabled
     runChain()
-    // runDocument()
+    runDocument()
   }, [])
 
   const submitUserMessage = useCallback((input: string) => {

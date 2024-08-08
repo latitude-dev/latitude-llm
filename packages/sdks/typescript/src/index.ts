@@ -70,24 +70,26 @@ export class LatitudeSdk {
 
       if (done) break
 
-      const data = this.decodeValue(value, onError)
-      onMessage(data)
+      const chunks = new TextDecoder('utf-8').decode(value).trim()
+      chunks.split('\n').forEach((line) => {
+        const chunk = this.decodeValue(line, onError)
+        console.log('chunk', chunk)
+        onMessage(chunk)
+      })
     }
 
-    // TODO: type this response as the same the API returns
-    return response
+
+    // TODO: The SDK has to concatenate the chunks and send all the messages at once
+    // with tool calls and everything
   }
 
   private decodeValue(
-    value: Uint8Array | null,
+    line: string,
     onError?: (error: Error) => void,
   ) {
-    if (!value) return null
-
     let json = null
     try {
-      json = new TextDecoder('utf-8').decode(value)
-      return JSON.parse(json)
+      return JSON.parse(line)
     } catch (e) {
       onError?.(e as Error)
     }
@@ -107,4 +109,4 @@ export class LatitudeSdk {
   }
 }
 
-export type { StreamEventTypes, ChainEventTypes }
+export type { ChainEvent, StreamEventTypes, ChainEventTypes }
