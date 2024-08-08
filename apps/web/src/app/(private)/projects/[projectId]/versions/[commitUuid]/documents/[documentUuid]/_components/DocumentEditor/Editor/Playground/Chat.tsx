@@ -29,10 +29,6 @@ import { readStreamableValue } from 'ai/rsc'
 
 import { DocumentEditorContext } from '..'
 
-const HAS_MESSAGES = [
-  ChainEventTypes.Step,
-  ChainEventTypes.Complete,
-]
 export default function Chat({
   document,
   metadata,
@@ -170,27 +166,60 @@ export default function Chat({
   }, [])
 
   const runDocument = useCallback(async () => {
+    setError(undefined)
+    setResponseStream(undefined)
+
     const { output } = await runDocumentAction({
       projectId: project.id,
       documentPath: document.path,
       commitUuid: commit.uuid,
     })
 
+    let response = ''
+    let messagesCount = 0
     for await (const serverEvent of readStreamableValue(output)) {
       const { event, data } = serverEvent as ChainEvent
       const isLatitude = event === StreamEventTypes.Latitude
-      const hasMessages = isLatitude && data.type === ChainEventTypes.Step
+      const isProvider = event === StreamEventTypes.Provider
+      const completed =
+        isLatitude && data.type === ChainEventTypes.Step && data.isLastStep
+      const hasMessages = isLatitude && 'messages' in data
+      const delta = isProvider && data.type === 'text-delta'
+      const finishDelta = isProvider && data.type === 'finish'
+      const hasError = isLatitude && data.type === ChainEventTypes.Error
+      const isTotallyFinished =
+        isLatitude && data.type === ChainEventTypes.Complete
+
+      if (delta) {
+        response += data.textDelta
+        setResponseStream(response)
+      } else if (finishDelta) {
+        setResponseStream(undefined)
+        response = ''
+      }
 
       if (hasMessages) {
-        data.messages.forEach((m) => addMessage(m))
+        messagesCount += data.messages.length
+        data.messages.forEach(addMessage)
+      }
+
+      if (completed) setChainLength(messagesCount + 1)
+
+      if (isTotallyFinished) {
+        setTokens(data.usage.totalTokens)
+        setEndTime(performance.now())
+      }
+
+      if (hasError) {
+        setError(new Error(data.error.message))
       }
     }
-  , [project.id, document.path, commit.uuid, runDocumentAction])
+  }, [project.id, document.path, commit.uuid, runDocumentAction])
 
   useEffect(() => {
     if (runChainOnce.current) return
     runChainOnce.current = true // Prevent double-running when StrictMode is enabled
-    runChain()
+    // runChain()
     runDocument()
   }, [])
 

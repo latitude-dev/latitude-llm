@@ -104,6 +104,7 @@ async function iterate({
     enqueueEvent(controller, {
       data: {
         type: ChainEventTypes.Step,
+        isLastStep: completed,
         config: {
           provider: apiKey.provider,
         },

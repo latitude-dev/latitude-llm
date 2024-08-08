@@ -39,6 +39,7 @@ export async function runDocumentAction({
           stack: error.stack,
         })
       },
+      onFinished: () => stream.done(),
     })
   }
 

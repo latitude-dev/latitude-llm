@@ -35,6 +35,7 @@ export class LatitudeSdk {
   async runDocument({
     params: { documentPath, commitUuid, parameters },
     onMessage,
+    onFinished,
     onError,
   }: {
     params: {
@@ -43,6 +44,7 @@ export class LatitudeSdk {
       parameters?: Record<string, unknown>
     }
     onMessage: (message: ChainEvent) => void
+    onFinished?: () => void
     onError?: (error: Error) => void
   }) {
     const route = this.routeResolver.resolve({
@@ -78,6 +80,7 @@ export class LatitudeSdk {
       })
     }
 
+    onFinished?.()
 
     // TODO: The SDK has to concatenate the chunks and send all the messages at once
     // with tool calls and everything
