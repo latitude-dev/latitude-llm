@@ -1,12 +1,11 @@
-import { Chain } from '@latitude-data/compiler'
+import { Chain, MessageRole } from '@latitude-data/compiler'
 import {
+  ChainCallResponse,
   ChainEvent,
   ChainEventTypes,
-  Commit,
-  LATITUDE_EVENT,
-  PROVIDER_EVENT,
-  ProviderApiKey,
-} from '$core/browser'
+  StreamEventTypes,
+} from '@latitude-data/core'
+import type { Commit, ProviderApiKey } from '@latitude-data/core/browser'
 import { findWorkspaceFromCommit } from '$core/data-access'
 import { NotFoundError, Result } from '$core/lib'
 import { streamToGenerator } from '$core/lib/streamToGenerator'
@@ -41,7 +40,7 @@ export async function runDocumentAtCommit({
   const scope = new ProviderApiKeysRepository(workspace.id)
 
   let stream: ReadableStream
-  let response: Promise<{ text: string; usage: Record<string, unknown> }>
+  let response: Promise<ChainCallResponse>
 
   await new Promise<void>((resolve) => {
     stream = new ReadableStream<ChainEvent>({
@@ -57,6 +56,13 @@ export async function runDocumentAtCommit({
     stream: stream!,
     response: response!,
   })
+}
+
+function enqueueEvent(
+  controller: ReadableStreamDefaultController,
+  event: ChainEvent,
+) {
+  controller.enqueue(event)
 }
 
 async function iterate({
@@ -80,25 +86,30 @@ async function iterate({
   logHandler: (log: AILog) => void
 }) {
   try {
-    const { conversation, completed, config, apiKey, sentCount } =
-      await doSomeCommonOperations({
-        chain,
-        previousResponse,
-        scope,
-        apiKey: previousApiKey,
-        sentCount: previousCount,
-      })
+    const {
+      newMessagesInStep,
+      conversation,
+      completed,
+      config,
+      apiKey,
+      sentCount,
+    } = await doSomeCommonOperations({
+      chain,
+      previousResponse,
+      scope,
+      apiKey: previousApiKey,
+      sentCount: previousCount,
+    })
 
-    controller.enqueue({
+    enqueueEvent(controller, {
       data: {
         type: ChainEventTypes.Step,
         config: {
           provider: apiKey.provider,
         },
-        ...conversation.config,
-        messages: conversation.messages,
+        messages: newMessagesInStep,
       },
-      event: LATITUDE_EVENT,
+      event: StreamEventTypes.Latitude,
     })
 
     const result = await ai(
@@ -111,26 +122,35 @@ async function iterate({
     )
 
     for await (const value of streamToGenerator(result.fullStream)) {
-      controller.enqueue({
-        event: PROVIDER_EVENT,
+      enqueueEvent(controller, {
+        event: StreamEventTypes.Provider,
         data: value,
       })
     }
 
+    // TODO: The type on `ai` package return a different definition for `toolCalls`
+    // than `@latitude-data/compiler` package. We have to unify the naming.
+    // For now no toolCalls
     const response = {
       text: await result.text,
       usage: await result.usage,
+      toolCalls: (await result.toolCalls).map((t) => ({
+        id: t.toolCallId,
+        name: t.toolName,
+        arguments: t.args,
+      })),
     }
 
     if (completed) {
-      controller.enqueue({
-        event: LATITUDE_EVENT,
+      enqueueEvent(controller, {
+        event: StreamEventTypes.Latitude,
         data: {
           type: ChainEventTypes.Complete,
           config: conversation.config,
           messages: [
             {
-              role: 'assistant',
+              role: MessageRole.assistant,
+              toolCalls: response.toolCalls,
               content: response.text,
             },
           ],
@@ -142,6 +162,13 @@ async function iterate({
 
       return response
     } else {
+      enqueueEvent(controller, {
+        event: StreamEventTypes.Latitude,
+        data: {
+          type: ChainEventTypes.StepComplete,
+          response,
+        },
+      })
       return iterate({
         chain,
         scope,
@@ -178,13 +205,22 @@ async function doSomeCommonOperations({
   const { completed, conversation } = await chain.step(previousResponse?.text)
   const config = validateConfig(conversation.config)
   if (!apiKey || apiKey?.name !== conversation.config.apikey) {
+    // TODO: Maybe cache this to avoid unnecessary calls
     apiKey = await findApiKey({ scope, name: config.provider })
   }
 
-  const msgs = conversation.messages.slice(sentCount)
-  sentCount += msgs.length
+  // Only new message are sent in each step
+  const newMessagesInStep = conversation.messages.slice(sentCount)
+  sentCount += newMessagesInStep.length
 
-  return { sentCount, apiKey, conversation, completed, config }
+  return {
+    sentCount,
+    apiKey,
+    conversation,
+    completed,
+    config,
+    newMessagesInStep,
+  }
 }
 
 async function findApiKey({

@@ -154,9 +154,7 @@ describe('messages', async () => {
     expect((userMessage.content[0]! as TextContent).text).toBe('user message')
 
     expect(assistantMessage.role).toBe('assistant')
-    expect((assistantMessage.content[0]! as TextContent).text).toBe(
-      'assistant message',
-    )
+    expect(assistantMessage.content).toBe('assistant message')
 
     expect(toolMessage.role).toBe('tool')
     expect((toolMessage.content[0]! as TextContent).text).toBe('tool message')
@@ -576,9 +574,7 @@ describe('conditional expressions', async () => {
     expect(result2.messages.length).toBe(1)
     const message2 = result2.messages[0]! as AssistantMessage
     expect(message2.role).toBe('assistant')
-    expect(message2.content.length).toBe(1)
-    expect(message2.content[0]!.type).toBe('text')
-    expect((message2.content[0]! as TextContent).text).toBe('Bar!')
+    expect(message2.content).toBe('Bar!')
   })
 
   it('adds message contents conditionally', async () => {

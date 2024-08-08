@@ -184,21 +184,18 @@ export class Compile {
     return toolCalls
   }
 
-  private popStepResponse(): AssistantMessage | undefined {
+  private popStepResponse() {
     if (this.stepResponse === undefined) return undefined
+
     const response = {
       role: MessageRole.assistant,
-      content: [
-        {
-          type: ContentType.text,
-          text: this.stepResponse,
-        },
-      ],
-    } as AssistantMessage
+      content: this.stepResponse,
+      toolCalls: [],
+    }
 
     this.stepResponse = undefined
 
-    return response
+    return response as AssistantMessage
   }
 
   private async resolveExpression(

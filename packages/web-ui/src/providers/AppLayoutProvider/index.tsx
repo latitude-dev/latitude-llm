@@ -12,8 +12,10 @@ const AppLayoutContext = createContext<IAppLayoutContextType>(
   {} as IAppLayoutContextType,
 )
 
+const RIDICOUSLY_LARGE_NUMBER: number = 10000
+
 function getBrowserHeight() {
-  if (typeof window === 'undefined') return Infinity
+  if (typeof window === 'undefined') return RIDICOUSLY_LARGE_NUMBER
 
   return window.innerHeight
 }

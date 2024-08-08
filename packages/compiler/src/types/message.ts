@@ -47,9 +47,10 @@ export type UserMessage = IMessage & {
   name?: string
 }
 
-export type AssistantMessage = IMessage & {
+export type AssistantMessage = {
   role: MessageRole.assistant
   toolCalls: ToolCall[]
+  content: string
 }
 
 export type ToolMessage = IMessage & {

@@ -7,7 +7,7 @@ import {
   streamToGenerator,
   validateConfig,
 } from '@latitude-data/core'
-import { LogSources, PROVIDER_EVENT } from '@latitude-data/core/browser'
+import { LogSources, StreamEventTypes } from '@latitude-data/core/browser'
 import { queues } from '$/jobs'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
 import { createStreamableValue, StreamableValue } from 'ai/rsc'
@@ -54,7 +54,7 @@ export async function streamTextAction({
 
       for await (const value of streamToGenerator(result.fullStream)) {
         stream.update({
-          event: PROVIDER_EVENT,
+          event: StreamEventTypes.Provider,
           data: value,
         })
       }

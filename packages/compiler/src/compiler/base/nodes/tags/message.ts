@@ -73,19 +73,16 @@ export async function compile(
   addMessage(message)
 }
 
-function buildMessage(
+type BuildProps<R extends MessageRole> = {
+  role: R
+  attributes: Record<string, unknown>
+  content: R extends MessageRole.user ? MessageContent[] : string
+  toolCalls: ToolCallReference[]
+}
+
+function buildMessage<R extends MessageRole>(
   { node, baseNodeError }: CompileNodeContext<MessageTag>,
-  {
-    role,
-    attributes,
-    content,
-    toolCalls,
-  }: {
-    role: MessageRole
-    attributes: Record<string, unknown>
-    content: MessageContent[]
-    toolCalls: ToolCallReference[]
-  },
+  { role, attributes, content, toolCalls }: BuildProps<R>,
 ): Message | undefined {
   if (role !== MessageRole.assistant) {
     toolCalls.forEach(({ node: toolNode }) => {
@@ -112,7 +109,7 @@ function buildMessage(
     return {
       role,
       toolCalls: toolCalls.map(({ value }) => value),
-      content,
+      content: (content[0]! as TextContent).text,
     } as AssistantMessage
   }
 

@@ -6,9 +6,6 @@
   "description": "Compiler for Latitude's custom conversation language",
   "type": "module",
   "main": "src/index.ts",
-  "exoports": {
-    ".": "./src/index.ts"
-  },
   "files": [
     "src"
   ],

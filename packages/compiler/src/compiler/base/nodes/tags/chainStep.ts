@@ -1,7 +1,7 @@
 import { tagAttributeIsLiteral } from '$compiler/compiler/utils'
 import errors from '$compiler/error/errors'
 import { ChainStepTag } from '$compiler/parser/interfaces'
-import { Config, ContentType } from '$compiler/types'
+import { Config } from '$compiler/types'
 
 import { CompileNodeContext } from '../../types'
 
@@ -40,12 +40,7 @@ export async function compile(
       baseNodeError(errors.invalidStaticAttribute('as'), node)
     }
 
-    const responseText = stepResponse?.content
-      .filter((c) => c.type === ContentType.text)
-      .map((c) => c.text)
-      .join(' ')
-
-    scope.set(String(varName), responseText)
+    scope.set(String(varName), stepResponse?.content)
   }
 
   groupContent()

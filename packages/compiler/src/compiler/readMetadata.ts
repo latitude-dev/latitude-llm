@@ -392,6 +392,7 @@ export class ReadMetadata {
             return
           })
         }
+
         this.accumulatedToolCalls = []
         return
       }
