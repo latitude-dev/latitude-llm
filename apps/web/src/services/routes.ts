@@ -3,6 +3,11 @@ import { HEAD_COMMIT } from '@latitude-data/core/browser'
 const ROOT_PATH = '/'
 const PROJECTS_PATH = `${ROOT_PATH}projects`
 
+export enum DocumentRoutes {
+  editor = 'editor',
+  logs = 'logs',
+}
+
 export const ROUTES = {
   root: ROOT_PATH,
   settings: {
@@ -28,7 +33,13 @@ export const ROUTES = {
                 detail: ({ uuid }: { uuid: string }) => {
                   const root = `${rootDocuments}/${uuid}`
                   return {
-                    root,
+                    root: `${root}`,
+                    [DocumentRoutes.editor]: {
+                      root: `${root}`,
+                    },
+                    [DocumentRoutes.logs]: {
+                      root: `${root}/${DocumentRoutes.logs}`,
+                    },
                   }
                 },
               },

@@ -108,11 +108,16 @@ export async function ai(
   },
 ) {
   const startTime = Date.now()
-  const { provider, token: apiKey, id: providerId } = apiProvider
+  const {
+    provider,
+    token: apiKey,
+    id: providerId,
+    provider: providerType,
+  } = apiProvider
   const model = config.model as OpenAICompletionModelId
   const m = createProvider({ provider, apiKey, config })(model)
 
-  return await streamText({
+  const result = await streamText({
     model: m,
     prompt,
     messages: messages as CoreMessage[],
@@ -120,6 +125,7 @@ export async function ai(
       logHandler({
         uuid: uuidv4(),
         providerId,
+        providerType,
         model,
         config,
         messages,
@@ -129,13 +135,15 @@ export async function ai(
           name: t.toolName,
           arguments: t.args,
         })),
-        tokens: event.usage.totalTokens,
+        usage: event.usage,
         duration: Date.now() - startTime,
       })
 
       onFinish?.(event)
     },
   })
+
+  return result
 }
 
 export function validateConfig(config: Record<string, unknown>): Config {

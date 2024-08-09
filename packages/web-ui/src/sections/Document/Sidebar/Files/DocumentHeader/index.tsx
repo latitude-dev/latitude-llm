@@ -59,7 +59,7 @@ export default function DocumentHeader({
     if (!node.isPersisted) return
 
     onNavigateToDocument(node.doc!.documentUuid)
-  }, [node.doc!.documentUuid, selected, node.isPersisted])
+  }, [node.doc!.documentUuid, selected, node.isPersisted, onNavigateToDocument])
   const actions = useMemo<MenuOption[]>(
     () => [
       {

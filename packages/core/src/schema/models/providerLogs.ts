@@ -3,6 +3,7 @@ import { relations } from 'drizzle-orm'
 import {
   bigint,
   bigserial,
+  integer,
   json,
   text,
   uuid,
@@ -35,6 +36,7 @@ export const providerLogs = latitudeSchema.table('provider_logs', {
   responseText: text('response_text'),
   toolCalls: json('tool_calls'),
   tokens: bigint('tokens', { mode: 'number' }).notNull(),
+  cost: integer('cost').notNull(),
   duration: bigint('duration', { mode: 'number' }).notNull(),
   documentLogId: bigint('document_log_id', { mode: 'number' }).references(
     () => documentLogs.id,

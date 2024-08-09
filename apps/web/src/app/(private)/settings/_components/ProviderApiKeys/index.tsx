@@ -55,7 +55,7 @@ export default function ProviderApiKeys() {
         {providerApiKeys.length === 0 && (
           <div className='rounded-lg w-full py-12 flex flex-col gap-4 items-center justify-center bg-secondary'>
             <div className='max-w-[50%]'>
-              <Text.H5 centered display='block' color='foregroundMuted'>
+              <Text.H5 align='center' display='block' color='foregroundMuted'>
                 There are no providers yet. Create one to start working with
                 your prompts.
               </Text.H5>
@@ -81,7 +81,7 @@ const ProviderApiKeysTable = ({
   return (
     <Table>
       <TableHeader>
-        <TableRow>
+        <TableRow verticalPadding>
           <TableHead>ID</TableHead>
           <TableHead>Provider</TableHead>
           <TableHead>Token</TableHead>
@@ -93,7 +93,7 @@ const ProviderApiKeysTable = ({
       </TableHeader>
       <TableBody>
         {providerApiKeys.map((apiKey) => (
-          <TableRow key={apiKey.id}>
+          <TableRow key={apiKey.id} verticalPadding>
             <TableCell>
               <Text.H4>{apiKey.name}</Text.H4>
             </TableCell>

@@ -1,12 +1,12 @@
 import {
   database,
+  DocumentLogsRepository,
   NotFoundError,
   providerLogs,
   Result,
   Transaction,
 } from '@latitude-data/core'
 import { Workspace } from '$core/browser'
-import { DocumentLogsRepository } from '$core/repositories/documentLogsRepository'
 import { ProviderLogsRepository } from '$core/repositories/providerLogsRepository'
 import { inArray } from 'drizzle-orm'
 

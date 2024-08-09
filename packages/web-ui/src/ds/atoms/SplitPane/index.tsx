@@ -14,7 +14,7 @@ import { ResizableBox, ResizeCallbackData, ResizeHandle } from 'react-resizable'
 function Pane({ children }: { children: ReactNode }) {
   return (
     <div className='flex flex-col h-full relative'>
-      <div className='w-full h-full flex-grow'>{children}</div>
+      <div className='w-full h-full overflow-hidden'>{children}</div>
     </div>
   )
 }
@@ -30,7 +30,7 @@ const PaneWrapper = ({
 }) => {
   return (
     <div
-      className='h-full'
+      className='h-full max-h-full overflow-y-auto'
       style={{
         width: width === 'auto' ? 'auto' : isResizable ? width - 1 : width,
       }}
@@ -83,6 +83,7 @@ function ResizablePane({
   )
   return (
     <ResizableBox
+      style={{ overflow: 'hidden' }}
       axis='x'
       width={paneWidth}
       minConstraints={[minWidth, Infinity]}

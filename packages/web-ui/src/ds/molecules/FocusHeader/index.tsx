@@ -11,11 +11,11 @@ export default function FocusHeader({
     <div className='flex flex-col items-center justify-center gap-y-6'>
       <Icons.logo className='h-8 w-8' />
       <div className='flex flex-col items-center justify-center gap-y-2'>
-        <Text.H3 centered color='foreground'>
+        <Text.H3 align='center' color='foreground'>
           {title}
         </Text.H3>
         {description && (
-          <Text.H5 centered color='foregroundMuted'>
+          <Text.H5 align='center' color='foregroundMuted'>
             {description}
           </Text.H5>
         )}

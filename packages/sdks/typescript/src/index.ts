@@ -19,6 +19,7 @@ type RunDocument = {
   conversation: Message[]
   response: ChainCallResponse
 }
+
 export class LatitudeSdk {
   private latitudeApiKey: string
   private routeResolver: RouteResolver

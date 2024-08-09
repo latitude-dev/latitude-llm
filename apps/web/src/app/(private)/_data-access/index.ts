@@ -2,6 +2,7 @@ import { cache } from 'react'
 
 import {
   CommitsRepository,
+  DocumentLogsRepository,
   DocumentVersionsRepository,
   NotFoundError,
   ProjectsRepository,
@@ -104,3 +105,23 @@ export const getDocumentByIdCached = cache(async (id: number) => {
 
   return document
 })
+
+export const getDocumentLogsWithMetadataCached = cache(
+  async ({
+    documentUuid,
+    commit,
+  }: {
+    documentUuid: string
+    commit: Commit
+  }) => {
+    const { workspace } = await getCurrentUser()
+    const docsScope = new DocumentLogsRepository(workspace.id)
+    const result = await docsScope.getDocumentLogsWithMetadata({
+      documentUuid,
+      draft: commit,
+    })
+    const logs = result.unwrap()
+
+    return logs
+  },
+)

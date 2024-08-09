@@ -50,11 +50,14 @@ export async function createDocumentLog(
 
     const documentLog = inserts[0]!
 
-    await assignDocumentLogToProviderLog({
-      workspace,
-      documentLogUuid: uuid,
-      providerLogUuids,
-    })
+    await assignDocumentLogToProviderLog(
+      {
+        workspace,
+        documentLogUuid: uuid,
+        providerLogUuids,
+      },
+      trx,
+    )
 
     return Result.ok(documentLog)
   }, db)

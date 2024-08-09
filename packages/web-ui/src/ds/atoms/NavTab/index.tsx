@@ -23,8 +23,9 @@ function NavTabItem({
   return (
     <Comp
       onClick={onClick}
-      className={cn('px-4 py-2 cursor-pointer', {
-        'border-b-2 border-accent-foreground': selected,
+      className={cn('px-4 py-2 cursor-pointer border-b-2', {
+        'border-transparent': !selected,
+        'border-accent-foreground': selected,
       })}
     >
       <Text.H5M color={selected ? 'accentForeground' : 'foregroundMuted'}>

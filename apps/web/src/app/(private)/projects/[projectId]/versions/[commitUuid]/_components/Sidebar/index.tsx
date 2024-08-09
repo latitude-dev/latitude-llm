@@ -38,6 +38,7 @@ export default async function Sidebar({
         <CommitSelector
           headCommit={headCommit}
           currentCommit={commit}
+          currentDocument={currentDocument}
           draftCommits={draftCommits}
         />
       }

@@ -24,4 +24,12 @@ export class ProviderLogsRepository extends Repository {
       .where(inArray(this.scope.uuid, uuids))
     return Result.ok(result)
   }
+
+  async findByDocumentLogId(documentLogId: number) {
+    const result = await this.db
+      .select()
+      .from(this.scope)
+      .where(eq(this.scope.documentLogId, documentLogId))
+    return Result.ok(result)
+  }
 }
