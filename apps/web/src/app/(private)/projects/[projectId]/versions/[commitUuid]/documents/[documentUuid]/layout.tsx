@@ -1,20 +1,20 @@
-import { streamTextAction } from '$/actions/documents/streamTextAction'
-import { runDocumentAction } from '$/actions/sdk/runDocumentAction'
+import { ReactNode } from 'react'
+
 import {
   findCommitCached,
   findProjectCached,
   getDocumentByUuidCached,
-  getDocumentsAtCommitCached,
 } from '$/app/(private)/_data-access'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
 
-import DocumentEditor from './_components/DocumentEditor/Editor'
-import DocumentWrapper from './_components/DocumentWrapper'
+import DocumentsLayout from '../../_components/DocumentsLayout'
 
 export default async function DocumentPage({
   params,
+  children,
 }: {
   params: { projectId: string; commitUuid: string; documentUuid: string }
+  children: ReactNode
 }) {
   const session = await getCurrentUser()
   const projectId = Number(params.projectId)
@@ -28,16 +28,14 @@ export default async function DocumentPage({
     documentUuid: params.documentUuid,
     commit,
   })
-  const documents = await getDocumentsAtCommitCached({ commit })
 
   return (
-    <DocumentWrapper params={params}>
-      <DocumentEditor
-        streamTextAction={streamTextAction}
-        runDocumentAction={runDocumentAction}
-        documents={documents}
-        document={document}
-      />
-    </DocumentWrapper>
+    <DocumentsLayout
+      projectId={projectId}
+      commitUuid={commintUuid}
+      document={document}
+    >
+      {children}
+    </DocumentsLayout>
   )
 }

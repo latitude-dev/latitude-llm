@@ -29,6 +29,7 @@ export const ROUTES = {
                   const root = `${rootDocuments}/${uuid}`
                   return {
                     root,
+                    logs: { root: `${root}/logs` },
                   }
                 },
               },
