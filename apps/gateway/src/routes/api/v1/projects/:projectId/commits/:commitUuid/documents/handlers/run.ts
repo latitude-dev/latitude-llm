@@ -1,7 +1,9 @@
 import { zValidator } from '@hono/zod-validator'
 import {
+  ChainEventTypes,
   LogSources,
   runDocumentAtCommit,
+  StreamEventTypes,
   streamToGenerator,
 } from '@latitude-data/core'
 import { queues } from '$/jobs'
@@ -77,7 +79,7 @@ async function pipeToStream(
 ) {
   let id = 0
   for await (const value of streamToGenerator(readableStream)) {
-    stream.write(
+    stream.writeln(
       JSON.stringify({
         ...value,
         id: String(id++),

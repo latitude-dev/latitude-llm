@@ -1,6 +1,6 @@
 'use server'
 
-import { LatitudeSdk } from '@latitude-data/sdk-js'
+import { LatitudeSdk, type ChainEvent } from '@latitude-data/sdk-js'
 import { getLatitudeApiKey } from '$/app/(private)/_data-access/latitudeApiKey'
 import { createStreamableValue, StreamableValue } from 'ai/rsc'
 
@@ -22,26 +22,28 @@ export async function runDocumentAction({
   const result = await getLatitudeApiKey()
   if (result.error) return result
 
-  const stream = createStreamableValue()
-  const latitudeApiKey = result.value.token
+  const stream = createStreamableValue<ChainEvent, Error>()
 
-  const sdk = new LatitudeSdk({ latitudeApiKey, projectId })
-  await sdk.runDocument({
-    params: { commitUuid, documentPath },
-    onMessage: (message) => {
-      stream.update({
-        event: message.event,
-        data: message.data,
-      })
-    },
-    onError: (error) => {
-      stream.error({
-        name: error.name,
-        message: error.message,
-        stack: error.stack,
-      })
-    },
-  })
+  const runSdk = async () => {
+    const sdk = new LatitudeSdk({
+      latitudeApiKey: result.value.token,
+      projectId,
+    })
+    await sdk.runDocument({
+      params: { commitUuid, documentPath },
+      onMessage: (message) => stream.update(message),
+      onError: (error) => {
+        stream.error({
+          name: error.name,
+          message: error.message,
+          stack: error.stack,
+        })
+      },
+      onFinished: () => stream.done(),
+    })
+  }
+
+  runSdk()
 
   return {
     output: stream.value,

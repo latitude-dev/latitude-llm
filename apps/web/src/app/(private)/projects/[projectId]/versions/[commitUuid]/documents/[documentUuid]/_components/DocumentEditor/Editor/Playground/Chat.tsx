@@ -23,6 +23,7 @@ import {
   Text,
   useAutoScroll,
   useCurrentCommit,
+  useCurrentProject,
 } from '@latitude-data/web-ui'
 import { readStreamableValue } from 'ai/rsc'
 
@@ -38,7 +39,10 @@ export default function Chat({
   parameters: Record<string, unknown>
 }) {
   const { commit } = useCurrentCommit()
-  const { streamTextAction } = useContext(DocumentEditorContext)!
+  const { project } = useCurrentProject()
+  const { streamTextAction, runDocumentAction } = useContext(
+    DocumentEditorContext,
+  )!
   const [initialMetadata] = useState<ConversationMetadata>(metadata)
   const [error, setError] = useState<Error | undefined>()
   const [tokens, setTokens] = useState<number>(0)
@@ -141,41 +145,58 @@ export default function Chat({
     }
   }, [])
 
-  const runChain = useCallback((lastResponse?: string) => {
-    chain
-      .step(lastResponse)
-      .then(async ({ completed, conversation }) => {
-        if (completed) setChainLength(conversation.messages.length + 1)
-        setConversation(conversation)
+  const runDocument = useCallback(async () => {
+    setError(undefined)
+    setResponseStream(undefined)
 
-        const response = await generateResponse(conversation)
+    let response = ''
+    let messagesCount = 0
 
-        if (completed) {
-          setEndTime(performance.now())
-          return
+    const { output } = await runDocumentAction({
+      projectId: project.id,
+      documentPath: document.path,
+      commitUuid: commit.uuid,
+    })
+
+    for await (const serverEvent of readStreamableValue(output)) {
+      const { event, data } = serverEvent
+
+      switch (event) {
+        case StreamEventTypes.Latitude: {
+          if (data.type === ChainEventTypes.Step) {
+            data.messages.forEach(addMessage)
+            messagesCount += data.messages.length
+
+            if (data.isLastStep) setChainLength(messagesCount + 1)
+          } else if (data.type === ChainEventTypes.Error) {
+            setError(new Error(data.error.message))
+          } else if (data.type === ChainEventTypes.Complete) {
+            setTokens(data.usage.totalTokens)
+            setEndTime(performance.now())
+          }
+          break
         }
-        runChain(response)
-      })
-      .catch((error) => {
-        setError(error)
-      })
-  }, [])
-
-  // Not working yet.
-  // const runDocument = useCallback(async () => {
-  //   const { output } = await runDocumentAction({
-  //     projectId: project.id,
-  //     documentPath: document.path,
-  //     commitUuid: commit.uuid,
-  //   })
-  //   console.log('SDK output', output)
-  // }, [])
+        case StreamEventTypes.Provider: {
+          if (data.type === 'text-delta') {
+            response += data.textDelta
+            setResponseStream(response)
+          } else if (data.type === 'finish') {
+            setResponseStream(undefined)
+            response = ''
+          }
+          break
+        }
+        default:
+          break
+      }
+    }
+  }, [project.id, document.path, commit.uuid, runDocumentAction])
 
   useEffect(() => {
     if (runChainOnce.current) return
     runChainOnce.current = true // Prevent double-running when StrictMode is enabled
-    runChain()
-    // runDocument()
+
+    runDocument()
   }, [])
 
   const submitUserMessage = useCallback((input: string) => {

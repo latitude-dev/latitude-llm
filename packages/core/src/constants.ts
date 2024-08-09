@@ -56,6 +56,7 @@ type LatitudeEventData =
   | {
       type: ChainEventTypes.Step
       config: Config
+      isLastStep: boolean
       messages: Message[]
     }
   | {
