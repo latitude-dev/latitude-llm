@@ -180,10 +180,29 @@ async function iterate({
         logHandler,
       })
     }
-  } catch (error) {
-    controller.error(error)
-
-    throw error
+  } catch (e) {
+    const error = e as Error
+    enqueueEvent(controller, {
+      event: StreamEventTypes.Latitude,
+      data: {
+        type: ChainEventTypes.Error,
+        error: {
+          name: error.name,
+          message: error.message,
+          stack: error.stack,
+        },
+      },
+    })
+    controller.close()
+    return {
+      text: error.message,
+      usage: {
+        promptTokens: 0,
+        completionTokens: 0,
+        totalTokens: 0,
+      },
+      toolCalls: [],
+    }
   }
 }
 
