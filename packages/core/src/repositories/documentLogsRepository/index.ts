@@ -1,8 +1,9 @@
+import { Commit } from '$core/browser'
 import { NotFoundError, Result } from '$core/lib'
 import { commits, documentLogs, projects, workspaces } from '$core/schema'
-import { eq, getTableColumns } from 'drizzle-orm'
+import { and, eq, getTableColumns, isNotNull, or } from 'drizzle-orm'
 
-import Repository from './repository'
+import Repository from '../repository'
 
 export class DocumentLogsRepository extends Repository {
   get scope() {
@@ -25,5 +26,23 @@ export class DocumentLogsRepository extends Repository {
     }
 
     return Result.ok(result[0]!)
+  }
+
+  async getDocumentLogsAtCommit(
+    { documentUuid, commit }: { documentUuid: string; commit: Commit },
+    tx = this.db,
+  ) {
+    const result = await tx
+      .select()
+      .from(this.scope)
+      .innerJoin(commits, eq(commits.id, this.scope.commitId))
+      .where(
+        and(
+          eq(this.scope.documentUuid, documentUuid),
+          or(isNotNull(commits.mergedAt), eq(commits.id, commit.id)),
+        ),
+      )
+
+    return Result.ok(result.map((r) => r.documentLogsScope))
   }
 }
