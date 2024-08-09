@@ -12,7 +12,14 @@ import { describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
   runDocumentAtCommit: vi.fn(),
-  queues: { jobs: { enqueueUpdateApiKeyProviderJob: vi.fn() } },
+  queues: {
+    defaultQueue: {
+      jobs: {
+        enqueueCreateProviderLogJob: vi.fn(),
+        enqueueCreateDocumentLogJob: vi.fn(),
+      },
+    },
+  },
 }))
 
 vi.mock('@latitude-data/core', async (importOriginal) => {

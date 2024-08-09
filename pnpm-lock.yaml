@@ -72,6 +72,9 @@ importers:
       hono:
         specifier: ^4.5.3
         version: 4.5.3
+      uuid:
+        specifier: ^10.0.0
+        version: 10.0.0
       zod:
         specifier: ^3.23.8
         version: 3.23.8
@@ -82,6 +85,9 @@ importers:
       '@latitude-data/typescript-config':
         specifier: workspace:^
         version: link:../../tools/typescript
+      '@types/uuid':
+        specifier: ^10.0.0
+        version: 10.0.0
       eslint:
         specifier: '8'
         version: 8.57.0
