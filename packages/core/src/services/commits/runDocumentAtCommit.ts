@@ -40,7 +40,7 @@ export async function runDocumentAtCommit({
   const scope = new ProviderApiKeysRepository(workspace.id)
 
   let stream: ReadableStream
-  let response: Promise<ChainCallResponse>
+  let response: Promise<ChainCallResponse> | undefined = undefined
 
   await new Promise<void>((resolve) => {
     stream = new ReadableStream<ChainEvent>({
@@ -105,6 +105,7 @@ async function iterate({
     enqueueEvent(controller, {
       data: {
         type: ChainEventTypes.Step,
+        isLastStep: completed,
         config: {
           provider: apiKey.provider,
         },
@@ -155,7 +156,7 @@ async function iterate({
               content: response.text,
             },
           ],
-          usage: response.usage,
+          response,
         },
       })
 
@@ -180,10 +181,29 @@ async function iterate({
         logHandler,
       })
     }
-  } catch (error) {
-    controller.error(error)
-
-    throw error
+  } catch (e) {
+    const error = e as Error
+    enqueueEvent(controller, {
+      event: StreamEventTypes.Latitude,
+      data: {
+        type: ChainEventTypes.Error,
+        error: {
+          name: error.name,
+          message: error.message,
+          stack: error.stack,
+        },
+      },
+    })
+    controller.close()
+    return {
+      text: error.message,
+      usage: {
+        promptTokens: 0,
+        completionTokens: 0,
+        totalTokens: 0,
+      },
+      toolCalls: [],
+    }
   }
 }
 

@@ -77,7 +77,7 @@ async function pipeToStream(
 ) {
   let id = 0
   for await (const value of streamToGenerator(readableStream)) {
-    stream.write(
+    stream.writeln(
       JSON.stringify({
         ...value,
         id: String(id++),

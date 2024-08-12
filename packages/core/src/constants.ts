@@ -1,4 +1,4 @@
-import { Config, Message } from '@latitude-data/compiler'
+import { Message as CompilerMessage, Config } from '@latitude-data/compiler'
 import { CompletionTokenUsage, CoreTool, TextStreamPart } from 'ai'
 
 export const LATITUDE_DOCS_URL = ''
@@ -13,6 +13,8 @@ export enum CommitStatus {
   Merged = 'merged',
   Draft = 'draft',
 }
+
+export type Message = CompilerMessage
 
 export enum ModifiedDocumentType {
   Created = 'created',
@@ -56,6 +58,7 @@ type LatitudeEventData =
   | {
       type: ChainEventTypes.Step
       config: Config
+      isLastStep: boolean
       messages: Message[]
     }
   | {
@@ -66,7 +69,7 @@ type LatitudeEventData =
       type: ChainEventTypes.Complete
       config: Config
       messages: Message[]
-      usage: CompletionTokenUsage
+      response: ChainCallResponse
     }
   | {
       type: ChainEventTypes.Error
