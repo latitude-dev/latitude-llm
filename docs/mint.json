@@ -30,8 +30,8 @@
     },
     "tabs": [
       {
-        "name": "Sources",
-        "url": "sources"
+        "name": "Guides",
+        "url": "guides"
       }
     ],
     "anchors": [],
@@ -39,10 +39,7 @@
       {
         "group": "Getting started",
         "pages": [
-          "guides/getting-started/introduction",
-          "guides/getting-started/installation",
-          "guides/getting-started/windows-compatibility",
-          "guides/getting-started/troubleshooting"
+          "guides/getting-started/introduction"
         ]
       }
     ],
