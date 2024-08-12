@@ -34,7 +34,7 @@ export async function getUserFromCredentials({
   if (!user) return notFound()
 
   const validPassword = await verifyPassword(password, user.encryptedPassword)
-  if (!validPassword) notFound()
+  if (!validPassword) return notFound()
 
   const wpResult = await getWorkspace({ userId: user.id })
   if (wpResult.error) {

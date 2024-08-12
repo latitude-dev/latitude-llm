@@ -32,17 +32,14 @@ services:
   web:
     build:
       context: .
-      target: production
       dockerfile: apps/web/docker/Dockerfile
-    # This enables to have this service for testing production build
-    # It will not run when doing docker compose up
-    profiles: [building]
-    volumes:
-      - ./packages/env:/app/packages/env
-      - ./packages/core:/app/packages/core
-      - ./packages/jobs:/app/packages/jobs
-      - ./packages/web-ui:/app/packages/web-ui
-      - ./apps/web:/app/apps/web
+    ports:
+      - 3000:3000
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgres://latitude:secret@db:5432/latitude_production
+      - REDIS_PORT=6379
+      - REDIS_HOST=redis
+      - REDIS_PASSWORD=secret
     depends_on:
       - base
-      - db

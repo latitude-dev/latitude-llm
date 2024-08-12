@@ -16,6 +16,8 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 export default createEnv({
+  skipValidation:
+    process.env.BUILDING_CONTAINER == 'true' || process.env.NODE_ENV === 'test',
   server: {
     BASE_PATH: z.string(),
     HTTPS: z.boolean(),
