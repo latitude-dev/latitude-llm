@@ -17,7 +17,7 @@ export function ErrorComponent({
         })}
       >
         <Icons.logoMonochrome className='w-14 h-14' />
-        <Text.H5 centered color='foregroundMuted'>
+        <Text.H5 align='center' color='foregroundMuted'>
           {message}
         </Text.H5>
       </div>

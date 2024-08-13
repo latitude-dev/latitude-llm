@@ -6,19 +6,21 @@ import {
   touchApiKey,
   Transaction,
 } from '@latitude-data/core'
-import { LogSources, ProviderLog } from '$core/browser'
+import { LogSources, ProviderLog, Providers } from '$core/browser'
+import { CompletionTokenUsage } from 'ai'
 
 import { touchProviderApiKey } from '../providerApiKeys/touch'
 
 export type CreateProviderLogProps = {
   uuid: string
   providerId: number
+  providerType: Providers
   model: string
   config: Record<string, unknown>
   messages: Message[]
   responseText: string
   toolCalls?: ToolCall[]
-  tokens: number
+  usage: CompletionTokenUsage
   duration: number
   source: LogSources
   apiKeyId?: number
@@ -28,12 +30,13 @@ export async function createProviderLog(
   {
     uuid,
     providerId,
+    providerType: _,
     model,
     config,
     messages,
     responseText,
     toolCalls,
-    tokens,
+    usage,
     duration,
     source,
     apiKeyId,
@@ -41,6 +44,10 @@ export async function createProviderLog(
   db = database,
 ) {
   return Transaction.call<ProviderLog>(async (trx) => {
+    // TODO: Calculate cost based on usage, provider type, and model
+    const tokens = usage.totalTokens
+    const cost = 0
+
     const inserts = await trx
       .insert(providerLogs)
       .values({
@@ -52,6 +59,7 @@ export async function createProviderLog(
         responseText,
         toolCalls,
         tokens,
+        cost,
         duration,
         source,
         apiKeyId,

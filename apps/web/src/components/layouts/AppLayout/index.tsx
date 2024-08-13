@@ -1,8 +1,6 @@
-'use client'
-
 import { ReactNode } from 'react'
 
-import { AppLayoutProvider, SessionUser } from '@latitude-data/web-ui'
+import { SessionUser } from '@latitude-data/web-ui'
 
 import AppHeader, { AppHeaderProps } from './Header'
 
@@ -19,17 +17,14 @@ export default function AppLayout({
   sectionLinks,
 }: AppLayoutProps) {
   return (
-    <AppLayoutProvider
-      appHeader={
-        <AppHeader
-          sectionLinks={sectionLinks}
-          breadcrumbs={breadcrumbs}
-          navigationLinks={navigationLinks}
-          currentUser={currentUser}
-        />
-      }
-    >
-      {children}
-    </AppLayoutProvider>
+    <div className='grid grid-rows-[auto,1fr] h-screen overflow-hidden'>
+      <AppHeader
+        sectionLinks={sectionLinks}
+        breadcrumbs={breadcrumbs}
+        navigationLinks={navigationLinks}
+        currentUser={currentUser}
+      />
+      <main className='overflow-y-auto'>{children}</main>
+    </div>
   )
 }

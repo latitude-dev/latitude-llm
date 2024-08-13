@@ -10,14 +10,14 @@ import {
   type SidebarDocument,
 } from '@latitude-data/web-ui'
 import { useNavigate } from '$/hooks/useNavigate'
-import { ROUTES } from '$/services/routes'
+import { DocumentRoutes, ROUTES } from '$/services/routes'
 import useDocumentVersions from '$/stores/documentVersions'
+import { useSelectedLayoutSegment } from 'next/navigation'
 
 import CreateDraftCommitModal from '../CreateDraftCommitModal'
 import MergedCommitWarningModal from '../MergedCommitWarningModal'
 
 export default function ClientFilesTree({
-  headCommit,
   documents: serverDocuments,
   currentDocument,
 }: {
@@ -28,19 +28,24 @@ export default function ClientFilesTree({
   const router = useNavigate()
   const [createDraftCommitModalOpen, setDraftCommitModalOpen] = useState(false)
   const [warningOpen, setWarningOpen] = useState(false)
-  const { commit } = useCurrentCommit()
+  const { commit, isHead } = useCurrentCommit()
   const isMerged = !!commit.mergedAt
-  const isHead = commit.id === headCommit.id
   const { project } = useCurrentProject()
   const documentPath = currentDocument?.path
-  const navigateToDocument = useCallback((documentUuid: string) => {
-    router.push(
-      ROUTES.projects
+  const selectedSegment = useSelectedLayoutSegment() as DocumentRoutes | null
+  const navigateToDocument = useCallback(
+    (documentUuid: string) => {
+      const documentDetails = ROUTES.projects
         .detail({ id: project.id })
         .commits.detail({ uuid: isHead ? HEAD_COMMIT : commit.uuid })
-        .documents.detail({ uuid: documentUuid }).root,
-    )
-  }, [])
+        .documents.detail({ uuid: documentUuid })
+
+      if (!selectedSegment) return router.push(documentDetails.root)
+      router.push(documentDetails[selectedSegment].root)
+    },
+    [selectedSegment, project.id, commit.uuid, isHead],
+  )
+
   const { createFile, destroyFile, destroyFolder, isDestroying, data } =
     useDocumentVersions({ currentDocument }, { fallbackData: serverDocuments })
   const onMergeCommitClick = useCallback(() => {

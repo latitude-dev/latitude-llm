@@ -1,14 +1,12 @@
-import { streamTextAction } from '$/actions/documents/streamTextAction'
-import { runDocumentAction } from '$/actions/sdk/runDocumentAction'
 import {
   findCommitCached,
   findProjectCached,
-  getDocumentByUuidCached,
-  getDocumentsAtCommitCached,
+  getDocumentLogsWithMetadataCached,
 } from '$/app/(private)/_data-access'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
 
-import DocumentEditor from './_components/DocumentEditor/Editor'
+import { Header } from '../_components/DocumentEditor/Editor/Header'
+import { DocumentLogs } from './_components/DocumentLogs'
 
 export default async function DocumentPage({
   params,
@@ -23,18 +21,15 @@ export default async function DocumentPage({
     workspaceId: session.workspace.id,
   })
   const commit = await findCommitCached({ project, uuid: commintUuid })
-  const document = await getDocumentByUuidCached({
+  const logs = await getDocumentLogsWithMetadataCached({
     documentUuid: params.documentUuid,
     commit,
   })
-  const documents = await getDocumentsAtCommitCached({ commit })
 
   return (
-    <DocumentEditor
-      streamTextAction={streamTextAction}
-      runDocumentAction={runDocumentAction}
-      documents={documents}
-      document={document}
-    />
+    <div className='flex flex-col w-full h-full overflow-hidden p-6 gap-2 min-w-0'>
+      <Header title='Logs' />
+      <DocumentLogs documentLogs={logs} />
+    </div>
   )
 }

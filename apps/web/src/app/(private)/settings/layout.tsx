@@ -12,7 +12,7 @@ export default async function Layout({ children }: { children: ReactNode }) {
   const project = await getFirstProjectCached({
     workspaceId: session.workspace.id,
   })
-  const url = ROUTES.projects.detail({ id: project.id }).commits.latest
+  const url = ROUTES.projects.detail({ id: project.id }).root
   const sectionLinks = [
     { label: 'Projects', href: url },
     { label: 'Settings', href: ROUTES.settings.root },

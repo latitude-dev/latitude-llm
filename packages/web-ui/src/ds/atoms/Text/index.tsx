@@ -12,6 +12,7 @@ import {
   colors,
   font,
   overflow as overflowOptions,
+  TextAlign,
   whiteSpace as whiteSpaceOptions,
   wordBreak as wordBreakOptions,
   type FontSize,
@@ -30,7 +31,7 @@ export type Common = {
   theme?: CurrentTheme
   color?: TextColor
   darkColor?: TextColor
-  centered?: boolean
+  align?: TextAlign
   capitalize?: boolean
   uppercase?: boolean
   wordBreak?: WordBreak
@@ -50,7 +51,6 @@ export type TextProps = {
   size?: FontSize
   weight?: FontWeight
   spacing?: FontSpacing
-  centered?: boolean
   capitalize?: boolean
   wordBreak?: WordBreak
   uppercase?: boolean
@@ -70,7 +70,7 @@ const TextAtom = forwardRef<HTMLElement, AllTextProps>(function Text(
     weight = 'normal',
     display = 'inline',
     uppercase = false,
-    centered = false,
+    align = 'left',
     capitalize = false,
     whiteSpace = 'normal',
     wordBreak = 'normal',
@@ -89,6 +89,7 @@ const TextAtom = forwardRef<HTMLElement, AllTextProps>(function Text(
   const sizeClass = font.size[size]
   const weightClass = font.weight[weight]
   const spacingClass = font.spacing[spacing]
+  const alignClass = font.align[align]
   const wordBreakClass = wordBreakOptions[wordBreak]
   const whiteSpaceClass = whiteSpaceOptions[whiteSpace]
   const Comp = asChild ? Slot : 'span'
@@ -103,12 +104,11 @@ const TextAtom = forwardRef<HTMLElement, AllTextProps>(function Text(
         colorClass,
         wordBreakClass,
         whiteSpaceClass,
+        alignClass,
         display,
         {
           capitalize: capitalize,
           uppercase: uppercase,
-          'text-center': centered,
-          'text-left': !centered,
           truncate: ellipsis,
           'select-none': !userSelect,
           'whitespace-nowrap': noWrap,

@@ -1,8 +1,16 @@
 'use client'
 
-import { RefObject, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  RefObject,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 
 import {
+  DocumentVersion,
   HEAD_COMMIT,
   HELP_CENTER,
   User,
@@ -23,6 +31,7 @@ import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
 import useCommits from '$/stores/commitsStore'
 import useUsers from '$/stores/users'
+import { useSelectedLayoutSegment } from 'next/navigation'
 
 import CreateDraftCommitModal from '../CreateDraftCommitModal'
 import PublishDraftCommitModal from '../PublishDraftCommitModal'
@@ -95,12 +104,14 @@ type SimpleUser = Omit<User, 'encryptedPassword'>
 
 function CommitItem({
   commit,
+  currentDocument,
   headCommitId,
   user,
   onCommitPublish,
   onCommitDelete,
 }: {
   commit: Commit
+  currentDocument?: DocumentVersion
   headCommitId: number
   user: SimpleUser | undefined
   onCommitPublish: ReactStateDispatch<number | null>
@@ -112,9 +123,25 @@ function CommitItem({
   const router = useNavigate()
   const badgeType =
     commit.id === headCommitId ? BadgeType.Head : BadgeType.Draft
-  const commitPath = ROUTES.projects
-    .detail({ id: project.id })
-    .commits.detail({ uuid: isHead ? HEAD_COMMIT : commit.uuid }).root
+  const selectedSegment = useSelectedLayoutSegment()
+
+  const commitPath = useMemo(() => {
+    const commitRoute = ROUTES.projects
+      .detail({ id: project.id })
+      .commits.detail({ uuid: isHead ? HEAD_COMMIT : commit.uuid })
+    if (!currentDocument) return commitRoute.root
+
+    const documentRoute = commitRoute.documents.detail({
+      uuid: currentDocument.documentUuid,
+    })
+    if (!selectedSegment) return documentRoute.editor.root
+    return documentRoute[selectedSegment as 'editor' | 'logs'].root
+  }, [project.id, commit.uuid, isHead, currentDocument, selectedSegment])
+
+  const navigateToCommit = useCallback(() => {
+    router.push(commitPath)
+  }, [router, commitPath])
+
   return (
     <div className='flex flex-col p-4 gap-y-2'>
       <div className='flex flex-col gap-y-1'>
@@ -127,11 +154,7 @@ function CommitItem({
         </Text.H6>
       </div>
       <div className='flex gap-x-4'>
-        <Button
-          variant='link'
-          size='none'
-          onClick={() => router.push(commitPath)}
-        >
+        <Button variant='link' size='none' onClick={navigateToCommit}>
           View
         </Button>
         {isDraft ? (
@@ -160,10 +183,12 @@ function CommitItem({
 export default function CommitSelector({
   headCommit,
   currentCommit,
+  currentDocument,
   draftCommits,
 }: {
   headCommit: Commit
   currentCommit: Commit
+  currentDocument?: DocumentVersion
   draftCommits: Commit[]
 }) {
   const [open, setOpen] = useState(false)
@@ -218,6 +243,7 @@ export default function CommitSelector({
             <ul className='custom-scrollbar max-h-60 border border-border rounded-md divide-y divide-border'>
               <CommitItem
                 commit={headCommit}
+                currentDocument={currentDocument}
                 headCommitId={headCommit.id}
                 user={usersById[headCommit.userId]}
                 onCommitPublish={setPublishCommit}
@@ -227,6 +253,7 @@ export default function CommitSelector({
                 <li key={commit.id}>
                   <CommitItem
                     commit={commit}
+                    currentDocument={currentDocument}
                     headCommitId={headCommit.id}
                     user={usersById[commit.userId]}
                     onCommitPublish={setPublishCommit}
