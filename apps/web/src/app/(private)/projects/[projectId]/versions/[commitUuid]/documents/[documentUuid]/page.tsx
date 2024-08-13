@@ -1,5 +1,4 @@
 import { streamTextAction } from '$/actions/documents/streamTextAction'
-import { runDocumentAction } from '$/actions/sdk/runDocumentAction'
 import {
   findCommitCached,
   findProjectCached,
@@ -38,7 +37,6 @@ export default async function DocumentPage({
     >
       <DocumentEditor
         streamTextAction={streamTextAction}
-        runDocumentAction={runDocumentAction}
         documents={documents}
         document={document}
       />
