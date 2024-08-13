@@ -1,7 +1,6 @@
 import { useCallback, useContext, useEffect, useRef, useState } from 'react'
 
 import {
-  Chain,
   ContentType,
   Conversation,
   Message as ConversationMessage,
@@ -23,6 +22,7 @@ import {
   Text,
   useAutoScroll,
   useCurrentCommit,
+  useCurrentProject,
 } from '@latitude-data/web-ui'
 import { readStreamableValue } from 'ai/rsc'
 
@@ -37,9 +37,12 @@ export default function Chat({
   metadata: ConversationMetadata
   parameters: Record<string, unknown>
 }) {
+  const config = metadata.config ?? {}
   const { commit } = useCurrentCommit()
-  const { streamTextAction } = useContext(DocumentEditorContext)!
-  const [initialMetadata] = useState<ConversationMetadata>(metadata)
+  const { project } = useCurrentProject()
+  const { streamTextAction, runDocumentAction } = useContext(
+    DocumentEditorContext,
+  )!
   const [error, setError] = useState<Error | undefined>()
   const [tokens, setTokens] = useState<number>(0)
   const [isScrolledToBottom, setIsScrolledToBottom] = useState(false)
@@ -51,12 +54,6 @@ export default function Chat({
     onScrollChange: setIsScrolledToBottom,
   })
 
-  const [chain] = useState<Chain>(
-    new Chain({
-      prompt: initialMetadata.resolvedPrompt,
-      parameters,
-    }),
-  )
   const runChainOnce = useRef(false)
   // Index where the chain ends and the chat begins
   const [chainLength, setChainLength] = useState<number>(Infinity)
@@ -80,7 +77,7 @@ export default function Chat({
       try {
         const { output } = await streamTextAction({
           messages: conversation.messages,
-          config: conversation.config,
+          config,
         })
 
         for await (const serverEvent of readStreamableValue(output)) {
@@ -110,7 +107,7 @@ export default function Chat({
         throw error
       }
     },
-    [document, parameters, commit],
+    [document, parameters, config, commit],
   )
 
   const generateResponse = useCallback(async (conversation: Conversation) => {
@@ -144,32 +141,67 @@ export default function Chat({
     }
   }, [])
 
-  const runChain = useCallback((lastResponse?: string) => {
-    chain
-      .step(lastResponse)
-      .then(async ({ completed, conversation }) => {
-        if (completed) setChainLength(conversation.messages.length + 1)
-        setConversation(conversation)
+  const runDocument = useCallback(async () => {
+    setError(undefined)
+    setResponseStream(undefined)
 
-        const response = await generateResponse(conversation)
+    let response = ''
+    let messagesCount = 0
 
-        if (completed) {
-          setEndTime(performance.now())
-          return
+    const { output } = await runDocumentAction({
+      projectId: project.id,
+      documentPath: document.path,
+      commitUuid: commit.uuid,
+      parameters,
+    })
+
+    for await (const serverEvent of readStreamableValue(output)) {
+      if (!serverEvent) continue
+
+      const { event, data } = serverEvent
+
+      const hasMessages = 'messages' in data
+
+      if (hasMessages) {
+        data.messages.forEach(addMessage)
+        messagesCount += data.messages.length
+      }
+
+      switch (event) {
+        case StreamEventTypes.Latitude: {
+          if (data.type === ChainEventTypes.Step) {
+            if (data.isLastStep) setChainLength(messagesCount + 1)
+          } else if (data.type === ChainEventTypes.Complete) {
+            setTokens(data.response.usage.totalTokens)
+            setEndTime(performance.now())
+          } else if (data.type === ChainEventTypes.Error) {
+            setError(new Error(data.error.message))
+          }
+          break
         }
-        runChain(response)
-      })
-      .catch((error) => {
-        setError(error)
-      })
-  }, [])
+
+        case StreamEventTypes.Provider: {
+          if (data.type === 'text-delta') {
+            response += data.textDelta
+            setResponseStream(response)
+          } else if (data.type === 'finish') {
+            setResponseStream(undefined)
+            response = ''
+          }
+          break
+        }
+        default:
+          break
+      }
+    }
+  }, [project.id, document.path, commit.uuid, parameters, runDocumentAction])
 
   useEffect(() => {
     if (runChainOnce.current) return
 
     runChainOnce.current = true // Prevent double-running when StrictMode is enabled
-    runChain()
-  }, [runChain])
+    runDocument()
+  }, [runDocument])
 
   const submitUserMessage = useCallback((input: string) => {
     const newConversation = addMessage({
