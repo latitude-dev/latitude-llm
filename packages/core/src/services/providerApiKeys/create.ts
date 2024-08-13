@@ -3,20 +3,15 @@ import { database } from '$core/client'
 import { Result, Transaction } from '$core/lib'
 import { providerApiKeys } from '$core/schema'
 
+export type Props = {
+  workspace: Partial<Workspace>
+  provider: Providers
+  token: string
+  name: string
+  authorId: string
+}
 export function createProviderApiKey(
-  {
-    workspace,
-    provider,
-    token,
-    name,
-    authorId,
-  }: {
-    workspace: Partial<Workspace>
-    provider: Providers
-    token: string
-    name: string
-    authorId: string
-  },
+  { workspace, provider, token, name, authorId }: Props,
   db = database,
 ) {
   return Transaction.call(async (tx) => {

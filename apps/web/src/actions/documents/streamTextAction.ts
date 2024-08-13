@@ -15,6 +15,7 @@ import { createStreamableValue, StreamableValue } from 'ai/rsc'
 type StreamTextActionProps = {
   messages: Message[]
   config: Record<string, unknown>
+  documentLogUuid: string | undefined
 }
 
 type StreamTextActionResponse = Promise<{ output: StreamableValue }>
@@ -23,6 +24,7 @@ export type StreamTextOutputAction = (
 ) => StreamTextActionResponse
 
 export async function streamTextAction({
+  documentLogUuid,
   config,
   messages,
 }: StreamTextActionProps): StreamTextActionResponse {
@@ -43,9 +45,10 @@ export async function streamTextAction({
           config: rest,
         },
         {
-          logHandler: (log) => {
+          providerLogHandler: (log) => {
             queues.defaultQueue.jobs.enqueueCreateProviderLogJob({
               ...log,
+              documentLogUuid,
               source: LogSources.Playground,
             })
           },

@@ -24,6 +24,7 @@ export type CreateProviderLogProps = {
   duration: number
   source: LogSources
   apiKeyId?: number
+  documentLogUuid?: string
 }
 
 export async function createProviderLog(
@@ -40,6 +41,7 @@ export async function createProviderLog(
     duration,
     source,
     apiKeyId,
+    documentLogUuid,
   }: CreateProviderLogProps,
   db = database,
 ) {
@@ -52,6 +54,7 @@ export async function createProviderLog(
       .insert(providerLogs)
       .values({
         uuid,
+        documentLogUuid,
         providerId,
         model,
         config,

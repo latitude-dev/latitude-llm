@@ -5,11 +5,32 @@ import {
   mergeCommit,
   Result,
 } from '@latitude-data/core'
-import { ChainEventTypes, StreamEventTypes } from '@latitude-data/core/browser'
+import {
+  ChainEventTypes,
+  Commit,
+  DocumentVersion,
+  Project,
+  StreamEventTypes,
+  Workspace,
+} from '@latitude-data/core/browser'
 import app from '$/index'
 import { eq } from 'drizzle-orm'
-import { describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+async function consumeStream(body: ReadableStream) {
+  const responseStream = body as ReadableStream
+  const reader = responseStream.getReader()
+
+  let done = false
+  let value
+  while (!done) {
+    const { done: _done, value: _value } = await reader.read()
+    done = _done
+    if (_value) value = new TextDecoder().decode(_value)
+  }
+
+  return { done, value }
+}
 const mocks = vi.hoisted(() => ({
   runDocumentAtCommit: vi.fn(),
   queues: {
@@ -35,6 +56,15 @@ vi.mock('$/jobs', () => ({
   queues: mocks.queues,
 }))
 
+let route: string
+let body: string
+let token: string
+let headers: Record<string, string>
+let project: Project
+let workspace: Workspace
+let commit: Commit
+let documentVersion: DocumentVersion
+
 describe('POST /run', () => {
   describe('unauthorized', () => {
     it('fails', async () => {
@@ -53,7 +83,51 @@ describe('POST /run', () => {
   })
 
   describe('authorized', () => {
-    it('succeeds', async () => {
+    beforeEach(async () => {
+      const {
+        workspace: wsp,
+        user,
+        project: prj,
+      } = await factories.createProject()
+      project = prj
+      workspace = wsp
+      const apikey = await database.query.apiKeys.findFirst({
+        where: eq(apiKeys.workspaceId, workspace.id),
+      })
+      token = apikey?.token!
+      const path = '/path/to/document'
+      const { commit: cmt } = await factories.createDraft({
+        project,
+        user,
+      })
+      const document = await factories.createDocumentVersion({
+        commit: cmt,
+        path,
+        content: `
+          ---
+            provider: openai
+            model: gpt-4o
+          ---
+
+          Ignore all the rest and just return "Hello".
+        `,
+      })
+      documentVersion = document.documentVersion
+
+      commit = await mergeCommit(cmt).then((r) => r.unwrap())
+
+      route = `/api/v1/projects/${project!.id}/commits/${commit!.uuid}/documents/run`
+      body = JSON.stringify({
+        documentPath: document.documentVersion.path,
+        parameters: {},
+      })
+      headers = {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      }
+    })
+
+    it('stream succeeds', async () => {
       const stream = new ReadableStream({
         start(controller) {
           controller.enqueue({
@@ -86,59 +160,16 @@ describe('POST /run', () => {
         }),
       )
 
-      const { workspace, user, project } = await factories.createProject()
-      const apikey = await database.query.apiKeys.findFirst({
-        where: eq(apiKeys.workspaceId, workspace.id),
-      })
-      const path = '/path/to/document'
-      const { commit } = await factories.createDraft({
-        project,
-        user,
-      })
-      const document = await factories.createDocumentVersion({
-        commit,
-        path,
-        content: `
-          ---
-            provider: openai
-            model: gpt-4o
-          ---
-
-          Ignore all the rest and just return "Hello".
-        `,
-      })
-
-      await mergeCommit(commit).then((r) => r.unwrap())
-
-      const route = `/api/v1/projects/${project!.id}/commits/${commit!.uuid}/documents/run`
-      const body = JSON.stringify({
-        documentPath: document.documentVersion.path,
-        parameters: {},
-      })
       const res = await app.request(route, {
         method: 'POST',
         body,
-        headers: {
-          Authorization: `Bearer ${apikey!.token}`,
-          'Content-Type': 'application/json',
-        },
+        headers,
       })
 
+      const { done, value } = await consumeStream(res.body as ReadableStream)
       expect(mocks.queues)
       expect(res.status).toBe(200)
       expect(res.body).toBeInstanceOf(ReadableStream)
-
-      const responseStream = res.body as ReadableStream
-      const reader = responseStream.getReader()
-
-      let done = false
-      let value
-      while (!done) {
-        const { done: _done, value: _value } = await reader.read()
-        done = _done
-        if (_value) value = new TextDecoder().decode(_value)
-      }
-
       expect(done).toBe(true)
       expect(JSON.parse(value!)).toEqual({
         event: StreamEventTypes.Latitude,
@@ -150,6 +181,56 @@ describe('POST /run', () => {
           },
         },
         id: '0',
+      })
+    })
+
+    it('enqueue the document log', async () => {
+      const stream = new ReadableStream({
+        start(controller) {
+          controller.close()
+        },
+      })
+
+      const response = new Promise((resolve) => {
+        resolve({ text: 'Hello', usage: {} })
+      })
+
+      mocks.runDocumentAtCommit.mockClear()
+      mocks.runDocumentAtCommit.mockReturnValue(
+        new Promise((resolve) => {
+          resolve(
+            Result.ok({
+              stream,
+              response,
+              documentLogUuid: 'fake-document-log-uuid',
+              resolvedContent: 'resolved_content',
+            }),
+          )
+        }),
+      )
+
+      const res = await app.request(route, {
+        method: 'POST',
+        body,
+        headers,
+      })
+
+      expect(mocks.queues)
+      expect(res.status).toBe(200)
+      expect(res.body).toBeInstanceOf(ReadableStream)
+      await consumeStream(res.body as ReadableStream)
+
+      expect(
+        mocks.queues.defaultQueue.jobs.enqueueCreateDocumentLogJob,
+      ).toHaveBeenCalledWith({
+        commit,
+        data: {
+          uuid: 'fake-document-log-uuid',
+          documentUuid: documentVersion.documentUuid,
+          resolvedContent: 'resolved_content',
+          parameters: {},
+          duration: expect.any(Number),
+        },
       })
     })
   })

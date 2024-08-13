@@ -25,6 +25,7 @@ export const getData = async ({
   const commit = await commitsScope
     .getCommitByUuid({ project, uuid: commitUuid })
     .then((r) => r.unwrap())
+
   const document = await docsScope
     .getDocumentByPath({ commit, path: documentPath })
     .then((r) => r.unwrap())

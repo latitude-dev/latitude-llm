@@ -51,7 +51,10 @@ export class DocumentLogsRepository extends Repository {
         cost: sum(providerLogs.cost).mapWith(Number).as('cost'),
       })
       .from(this.scope)
-      .innerJoin(providerLogs, eq(providerLogs.documentLogId, this.scope.id))
+      .innerJoin(
+        providerLogs,
+        eq(providerLogs.documentLogUuid, this.scope.uuid),
+      )
       .groupBy(this.scope.id)
       .as('aggregatedFieldsSubQuery')
 

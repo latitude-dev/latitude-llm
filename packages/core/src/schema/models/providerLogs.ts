@@ -13,7 +13,6 @@ import {
 import { apiKeys } from '..'
 import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
-import { documentLogs } from './documentLogs'
 import { providerApiKeys } from './providerApiKeys'
 
 export const logSourcesEnum = latitudeSchema.enum('log_source', [
@@ -24,6 +23,7 @@ export const logSourcesEnum = latitudeSchema.enum('log_source', [
 export const providerLogs = latitudeSchema.table('provider_logs', {
   id: bigserial('id', { mode: 'number' }).notNull().primaryKey(),
   uuid: uuid('uuid').notNull().unique(),
+  documentLogUuid: uuid('document_log_uuid'),
   providerId: bigint('provider_id', { mode: 'number' })
     .notNull()
     .references(() => providerApiKeys.id, {
@@ -38,13 +38,6 @@ export const providerLogs = latitudeSchema.table('provider_logs', {
   tokens: bigint('tokens', { mode: 'number' }).notNull(),
   cost: integer('cost').notNull(),
   duration: bigint('duration', { mode: 'number' }).notNull(),
-  documentLogId: bigint('document_log_id', { mode: 'number' }).references(
-    () => documentLogs.id,
-    {
-      onDelete: 'restrict',
-      onUpdate: 'cascade',
-    },
-  ),
   source: logSourcesEnum('source').notNull(),
   apiKeyId: bigint('apiKeyId', { mode: 'number' }).references(
     () => apiKeys.id,
@@ -60,11 +53,6 @@ export const providerLogsRelations = relations(providerLogs, ({ one }) => ({
   provider: one(providerApiKeys, {
     fields: [providerLogs.providerId],
     references: [providerApiKeys.id],
-  }),
-  documentLog: one(documentLogs, {
-    relationName: 'providerLogDocumentLog',
-    fields: [providerLogs.documentLogId],
-    references: [documentLogs.id],
   }),
   apiKey: one(apiKeys, {
     fields: [providerLogs.apiKeyId],

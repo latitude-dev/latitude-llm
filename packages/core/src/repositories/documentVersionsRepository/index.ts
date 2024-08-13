@@ -150,9 +150,9 @@ export class DocumentVersionsRepository extends Repository {
     }
 
     const documentsFromDraft = await this.db
-      .select(getTableColumns(documentVersions))
-      .from(documentVersions)
-      .innerJoin(commits, eq(commits.id, documentVersions.commitId))
+      .select(this.scope._.selectedFields)
+      .from(this.scope)
+      .innerJoin(commits, eq(commits.id, this.scope.commitId))
       .where(eq(commits.id, commit.id))
 
     const totalDocuments = mergeDocuments(
@@ -172,7 +172,9 @@ export class DocumentVersionsRepository extends Repository {
   }): Promise<DocumentVersion[]> {
     const filterByMaxMergedAt = () => {
       const mergedAtNotNull = isNotNull(commits.mergedAt)
+
       if (maxMergedAt === null) return mergedAtNotNull
+
       return and(mergedAtNotNull, lte(commits.mergedAt, maxMergedAt))
     }
 
@@ -181,35 +183,27 @@ export class DocumentVersionsRepository extends Repository {
       .as(
         this.db
           .select({
-            documentUuid: documentVersions.documentUuid,
+            documentUuid: this.scope.documentUuid,
             mergedAt: max(commits.mergedAt).as('maxMergedAt'),
           })
-          // FIXME: This is not using the scope
-          .from(documentVersions)
-          .innerJoin(commits, eq(commits.id, documentVersions.commitId))
+          .from(this.scope)
+          .innerJoin(commits, eq(commits.id, this.scope.commitId))
           .where(and(filterByMaxMergedAt(), eq(commits.projectId, projectId)))
-          .groupBy(documentVersions.documentUuid),
+          .groupBy(this.scope.documentUuid),
       )
 
     const documentsFromMergedCommits = await this.db
       .with(lastVersionOfEachDocument)
-      .select(getTableColumns(documentVersions))
-      // FIXME: This is not using the scope
-      .from(documentVersions)
+      .select(this.scope._.selectedFields)
+      .from(this.scope)
       .innerJoin(
         commits,
-        and(
-          eq(commits.id, documentVersions.commitId),
-          isNotNull(commits.mergedAt),
-        ),
+        and(eq(commits.id, this.scope.commitId), isNotNull(commits.mergedAt)),
       )
       .innerJoin(
         lastVersionOfEachDocument,
         and(
-          eq(
-            documentVersions.documentUuid,
-            lastVersionOfEachDocument.documentUuid,
-          ),
+          eq(this.scope.documentUuid, lastVersionOfEachDocument.documentUuid),
           eq(commits.mergedAt, lastVersionOfEachDocument.mergedAt),
         ),
       )

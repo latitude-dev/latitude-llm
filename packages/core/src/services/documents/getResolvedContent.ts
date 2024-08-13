@@ -1,26 +1,41 @@
 import path from 'path'
 
 import { readMetadata, Document as RefDocument } from '@latitude-data/compiler'
-import { Commit, Workspace } from '$core/browser'
-import { LatitudeError, NotFoundError, Result, TypedResult } from '$core/lib'
+import { Commit, DocumentVersion, Workspace } from '$core/browser'
+import {
+  LatitudeError,
+  Result,
+  TypedResult,
+  UnprocessableEntityError,
+} from '$core/lib'
 import { DocumentVersionsRepository } from '$core/repositories'
 
+/**
+ * This is an internal method. It should always receives
+ * workspaceId from a trusted source. Like for example API gateway that validates
+ * requested documents belongs to the right workspace.
+ */
 export async function getResolvedContent({
-  workspace,
-  documentUuid,
+  workspaceId,
+  document,
   commit,
 }: {
-  // TODO: review, we shouldn't need to pass workspace around so much
-  workspace: Workspace
-  documentUuid: string
+  workspaceId: Workspace['id']
+  document: DocumentVersion
   commit: Commit
 }): Promise<TypedResult<string, LatitudeError>> {
-  const documentScope = new DocumentVersionsRepository(workspace.id)
-  const docs = await documentScope.getDocumentsAtCommit(commit)
-  if (docs.error) return Result.error(docs.error)
+  const documentScope = new DocumentVersionsRepository(workspaceId)
+  const docs = await documentScope
+    .getDocumentsAtCommit(commit)
+    .then((r) => r.unwrap())
 
-  const document = docs.value.find((d) => d.documentUuid === documentUuid)
-  if (!document) return Result.error(new NotFoundError('Document not found'))
+  const docInCommit = docs.find((d) => d.documentUuid === document.documentUuid)
+
+  if (!docInCommit) {
+    return Result.error(
+      new UnprocessableEntityError('Document not found in commit', {}),
+    )
+  }
 
   if (commit.mergedAt != null && document.resolvedContent != null) {
     return Result.ok(document.resolvedContent!)
@@ -34,12 +49,12 @@ export async function getResolvedContent({
       .resolve(path.dirname(`/${from ?? ''}`), refPath)
       .replace(/^\//, '')
 
-    const document = docs.value.find((d) => d.path === fullPath)
-    if (!document) return undefined
+    const doc = docs.find((d) => d.path === fullPath)
+    if (!doc) return undefined
 
     return {
       path: fullPath,
-      content: document.content,
+      content: doc.content,
     }
   }
 

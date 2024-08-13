@@ -41,8 +41,8 @@ export async function createDocumentLog({
   const providerScope = new ProviderApiKeysRepository(workspace.id)
 
   const documentContent = await getResolvedContent({
-    workspace,
-    documentUuid: document.documentUuid,
+    workspaceId: workspace.id,
+    document,
     commit,
   }).then((r) => r.unwrap())
 
@@ -52,6 +52,7 @@ export async function createDocumentLog({
   })
   let mockedResponse = undefined
 
+  const documentLogUuid = uuid()
   const providerLogs: ProviderLog[] = []
   while (true) {
     const { completed, conversation } = await chain.step(mockedResponse)
@@ -73,9 +74,9 @@ export async function createDocumentLog({
       return acc + content.length
     }, 0)
     const completionTokens = mockedResponse.length
-
     const log = await createProviderLog({
       uuid: uuid(),
+      documentLogUuid,
       providerId: provider.id,
       providerType: provider.provider,
       model: config.model,
@@ -102,15 +103,15 @@ export async function createDocumentLog({
     providerLogs.reduce((acc, log) => acc + log.duration, 0)
 
   const documentLog = await ogCreateDocumentLog({
-    workspace,
-    uuid: uuid(),
-    documentUuid: document.documentUuid,
     commit,
-    resolvedContent: documentContent,
-    parameters: parameters ?? {},
-    customIdentifier,
-    duration,
-    providerLogUuids: providerLogs.map((log) => log.uuid),
+    data: {
+      uuid: documentLogUuid,
+      documentUuid: document.documentUuid,
+      resolvedContent: documentContent,
+      parameters: parameters ?? {},
+      customIdentifier,
+      duration,
+    },
   }).then((r) => r.unwrap())
 
   return {

@@ -1,4 +1,5 @@
 import { Message as ConversationMessage } from '@latitude-data/compiler'
+import { Fragment } from 'react/jsx-runtime'
 
 import { Message, MessageProps } from '../Message'
 
@@ -16,7 +17,7 @@ export function MessageList({
   separator?: boolean
 }) {
   return messages.map((message, index) => (
-    <>
+    <Fragment key={index}>
       {separator && index > 0 && (
         <div
           key={`${index}-separator`}
@@ -24,13 +25,12 @@ export function MessageList({
         />
       )}
       <Message
-        key={index}
         role={message.role}
         content={message.content}
         variant={variant}
         layout={messageLayout}
         size={size}
       />
-    </>
+    </Fragment>
   ))
 }
