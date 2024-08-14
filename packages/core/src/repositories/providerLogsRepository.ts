@@ -1,6 +1,6 @@
 import { Result } from '$core/lib'
 import { providerApiKeys, providerLogs, workspaces } from '$core/schema'
-import { eq, getTableColumns, inArray } from 'drizzle-orm'
+import { asc, eq, getTableColumns, inArray } from 'drizzle-orm'
 
 import Repository from './repository'
 
@@ -30,6 +30,7 @@ export class ProviderLogsRepository extends Repository {
       .select()
       .from(this.scope)
       .where(eq(this.scope.documentLogId, documentLogId))
+      .orderBy(asc(this.scope.createdAt))
     return Result.ok(result)
   }
 }

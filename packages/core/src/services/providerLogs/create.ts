@@ -45,7 +45,7 @@ export async function createProviderLog(
 ) {
   return Transaction.call<ProviderLog>(async (trx) => {
     // TODO: Calculate cost based on usage, provider type, and model
-    const tokens = usage.totalTokens
+    const tokens = usage.totalTokens ?? 0
     const cost = 0
 
     const inserts = await trx

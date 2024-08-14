@@ -85,7 +85,7 @@ const TableHead = React.forwardRef<
     )}
     {...props}
   >
-    <Text.H5M>{props.children}</Text.H5M>
+    <Text.H5M noWrap>{props.children}</Text.H5M>
   </th>
 ))
 TableHead.displayName = 'TableHead'

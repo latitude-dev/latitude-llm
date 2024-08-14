@@ -21,19 +21,19 @@ export const DocumentLogsTable = ({
   setSelectedLog,
 }: {
   documentLogs: DocumentLogWithMetadata[]
-  selectedLog: DocumentLogWithMetadata | null
-  setSelectedLog: (log: DocumentLogWithMetadata | null) => void
+  selectedLog: DocumentLogWithMetadata | undefined
+  setSelectedLog: (log: DocumentLogWithMetadata | undefined) => void
 }) => {
   return (
     <Table className='table-auto'>
       <TableHeader className='sticky top-0 z-10'>
         <TableRow>
-          <TableHead className='whitespace-nowrap'>Time</TableHead>
-          <TableHead className='whitespace-nowrap'>Version</TableHead>
-          <TableHead className='whitespace-nowrap'>Custom Identifier</TableHead>
-          <TableHead className='whitespace-nowrap'>Duration</TableHead>
-          <TableHead className='whitespace-nowrap'>Tokens</TableHead>
-          <TableHead className='whitespace-nowrap'>Cost</TableHead>
+          <TableHead>Time</TableHead>
+          <TableHead>Version</TableHead>
+          <TableHead>Custom Identifier</TableHead>
+          <TableHead>Duration</TableHead>
+          <TableHead>Tokens</TableHead>
+          <TableHead>Cost</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody className='max-h-full overflow-y-auto'>
@@ -42,7 +42,9 @@ export const DocumentLogsTable = ({
             key={idx}
             onClick={() =>
               setSelectedLog(
-                selectedLog?.uuid === documentLog.uuid ? null : documentLog,
+                selectedLog?.uuid === documentLog.uuid
+                  ? undefined
+                  : documentLog,
               )
             }
             className={cn(
@@ -61,7 +63,7 @@ export const DocumentLogsTable = ({
                   variant={documentLog.commit.version ? 'accent' : 'muted'}
                   shape='square'
                 >
-                  <Text.H6>
+                  <Text.H6 noWrap>
                     {documentLog.commit.version
                       ? `v${documentLog.commit.version}`
                       : 'Draft'}
@@ -74,13 +76,13 @@ export const DocumentLogsTable = ({
               <Text.H4>{documentLog.customIdentifier}</Text.H4>
             </TableCell>
             <TableCell>
-              <Text.H4>{formatDuration(documentLog.duration)}</Text.H4>
+              <Text.H4 noWrap>{formatDuration(documentLog.duration)}</Text.H4>
             </TableCell>
             <TableCell>
-              <Text.H4>{documentLog.tokens}</Text.H4>
+              <Text.H4 noWrap>{documentLog.tokens}</Text.H4>
             </TableCell>
             <TableCell>
-              <Text.H4>{formatCost(documentLog.cost || 0)}</Text.H4>
+              <Text.H4 noWrap>{formatCost(documentLog.cost || 0)}</Text.H4>
             </TableCell>
           </TableRow>
         ))}
