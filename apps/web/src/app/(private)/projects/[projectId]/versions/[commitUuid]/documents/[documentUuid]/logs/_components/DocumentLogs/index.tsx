@@ -3,6 +3,7 @@
 import { useState } from 'react'
 
 import { DocumentLogWithMetadata } from '@latitude-data/core'
+import useProviderLogs from '$/stores/providerLogs'
 
 import { DocumentLogInfo } from './DocumentLogInfo'
 import { DocumentLogsTable } from './DocumentLogsTable'
@@ -12,19 +13,28 @@ export function DocumentLogs({
 }: {
   documentLogs: DocumentLogWithMetadata[]
 }) {
-  const [selectedLog, setSelectedLog] =
-    useState<DocumentLogWithMetadata | null>(null)
+  const [selectedLog, setSelectedLog] = useState<
+    DocumentLogWithMetadata | undefined
+  >()
+  const { data: providerLogs } = useProviderLogs({
+    documentLogId: selectedLog?.id,
+  })
 
   return (
-    <div className='flex flex-row w-full overflow-hidden gap-4'>
-      <div className='flex-grow min-w-0'>
+    <div className='flex flex-row w-full h-full overflow-hidden gap-4'>
+      <div className='flex-grow min-w-0 h-full'>
         <DocumentLogsTable
           documentLogs={documentLogs}
           selectedLog={selectedLog}
           setSelectedLog={setSelectedLog}
         />
       </div>
-      {selectedLog && <DocumentLogInfo documentLog={selectedLog} />}
+      {selectedLog && (
+        <DocumentLogInfo
+          documentLog={selectedLog}
+          providerLogs={providerLogs}
+        />
+      )}
     </div>
   )
 }

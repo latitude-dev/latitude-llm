@@ -36,6 +36,8 @@ export type MessageProps = {
   content: MessageContent[] | string
   className?: string
   variant?: keyof typeof MessageVariants
+  layout?: 'horizontal' | 'vertical'
+  size?: 'default' | 'small'
   animatePulse?: boolean
 }
 
@@ -44,12 +46,16 @@ export function Message({
   content,
   animatePulse,
   variant = 'muted',
+  layout = 'horizontal',
+  size = 'default',
 }: MessageProps) {
   const { badgeVariant, textColor } = MessageVariants[variant]
   return (
     <div
-      className={cn('flex flex-row gap-4 w-full items-start', {
+      className={cn('flex w-full items-start', {
         'animate-pulse': animatePulse,
+        'flex-row gap-4': layout === 'horizontal',
+        'flex-col gap-2': layout === 'vertical',
       })}
     >
       <div className='min-w-24'>
@@ -59,7 +65,7 @@ export function Message({
       </div>
       <div className='flex flex-col gap-1'>
         {typeof content === 'string' ? (
-          <ContentValue value={content} color={textColor} />
+          <ContentValue value={content} color={textColor} size={size} />
         ) : (
           content.map((c, idx) => (
             <ContentValue
@@ -67,6 +73,7 @@ export function Message({
               index={idx}
               color={textColor}
               value={(c as TextContent)?.text || (c as ImageContent)?.image}
+              size={size}
             />
           ))
         )}
@@ -79,17 +86,25 @@ const ContentValue = ({
   index = 0,
   color,
   value,
+  size,
 }: {
   index?: number
   color: TextColor
   value: string | Uint8Array | Buffer | ArrayBuffer | URL
+  size?: 'default' | 'small'
 }) => {
   // TODO: Handle the rest of types
   if (typeof value !== 'string') return
 
+  const TextComponent = size === 'small' ? Text.H6 : Text.H5
+
   return value?.split('\n')?.map((line, lineIndex) => (
-    <Text.H5 color={color} whiteSpace='preWrap' key={`${index}-${lineIndex}`}>
+    <TextComponent
+      color={color}
+      whiteSpace='preWrap'
+      key={`${index}-${lineIndex}`}
+    >
       {line}
-    </Text.H5>
+    </TextComponent>
   ))
 }
