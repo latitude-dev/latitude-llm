@@ -46,7 +46,7 @@ export function setupQueues({ connection }: { connection: Redis }) {
     [Queues.defaultQueue]: setupQueue({
       connection,
       name: Queues.defaultQueue,
-      jobs: [Jobs.createProviderLogJob],
+      jobs: [Jobs.createProviderLogJob, Jobs.createDocumentLogJob],
     }),
   }
 }
