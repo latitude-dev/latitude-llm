@@ -51,6 +51,8 @@ export const runHandler = factory.createHandlers(
         },
       }).then((r) => r.unwrap())
 
+      await pipeToStream(stream, result.stream)
+
       queues.defaultQueue.jobs.enqueueCreateDocumentLogJob({
         commit,
         data: {
@@ -61,8 +63,6 @@ export const runHandler = factory.createHandlers(
           duration: Date.now() - startTime,
         },
       })
-
-      await pipeToStream(stream, result.stream)
     })
   },
 )

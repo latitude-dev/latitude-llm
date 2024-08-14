@@ -28,13 +28,12 @@ export async function runDocumentAction({
   commitUuid,
   parameters,
 }: RunDocumentActionProps) {
-  const result = await getLatitudeApiKey()
-  if (result.error) return result
+  const latitudeApiKey = await getLatitudeApiKey().then((r) => r.unwrap())
 
   const stream = createStreamableValue<ChainEvent, Error>()
 
   const sdk = new LatitudeSdk({
-    latitudeApiKey: result.value.token,
+    latitudeApiKey: latitudeApiKey.token,
     projectId,
   })
   const response = sdk.runDocument({
@@ -51,6 +50,7 @@ export async function runDocumentAction({
     },
     onFinished: () => stream.done(),
   })
+
   return {
     output: stream.value,
     response,

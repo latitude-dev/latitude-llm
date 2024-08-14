@@ -204,6 +204,13 @@
       "when": 1723708833265,
       "tag": "0028_complex_leopardon",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1723799283129,
+      "tag": "0029_square_black_knight",
+      "breakpoints": true
     }
   ]
 }

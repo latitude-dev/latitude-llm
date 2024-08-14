@@ -5,6 +5,7 @@ export const colors = {
   textColors: {
     white: 'text-white',
     foreground: 'text-foreground',
+    background: 'text-background',
     foregroundMuted: 'text-muted-foreground',
     accent: 'text-accent',
     destructive: 'text-destructive',

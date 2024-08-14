@@ -197,6 +197,8 @@ describe('getDocumentLogsWithMetadata', () => {
 
     expect(result.find((l) => l.uuid === log.uuid)).toBeDefined()
     expect(result.find((l) => l.uuid === log.uuid)?.tokens).toBeTypeOf('number')
-    expect(result.find((l) => l.uuid === log.uuid)?.cost).toBeTypeOf('number')
+    expect(
+      result.find((l) => l.uuid === log.uuid)?.cost_in_millicents,
+    ).toBeTypeOf('number')
   })
 })

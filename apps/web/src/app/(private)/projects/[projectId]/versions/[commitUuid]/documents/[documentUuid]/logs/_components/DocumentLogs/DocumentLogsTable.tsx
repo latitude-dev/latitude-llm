@@ -13,7 +13,7 @@ import {
   Text,
 } from '@latitude-data/web-ui'
 
-import { formatCost, formatDuration, relativeTime } from './utils'
+import { formatCostInMillicents, formatDuration, relativeTime } from './utils'
 
 export const DocumentLogsTable = ({
   documentLogs,
@@ -82,7 +82,9 @@ export const DocumentLogsTable = ({
               <Text.H4 noWrap>{documentLog.tokens}</Text.H4>
             </TableCell>
             <TableCell>
-              <Text.H4 noWrap>{formatCost(documentLog.cost || 0)}</Text.H4>
+              <Text.H4 noWrap>
+                {formatCostInMillicents(documentLog.cost_in_millicents || 0)}
+              </Text.H4>
             </TableCell>
           </TableRow>
         ))}
