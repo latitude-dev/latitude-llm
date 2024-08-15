@@ -26,7 +26,13 @@ export const HELP_CENTER = {
   commitVersions: `${LATITUDE_DOCS_URL}/not-found`,
 }
 
-export type ChainCallResponse = { text: string; usage: CompletionTokenUsage }
+export type ChainStepCallResponse = {
+  text: string
+  usage: CompletionTokenUsage
+}
+export type ChainCallResponse = ChainStepCallResponse & {
+  documentLogUuid: string
+}
 export enum Providers {
   OpenAI = 'openai',
   Anthropic = 'anthropic',
@@ -63,7 +69,7 @@ type LatitudeEventData =
     }
   | {
       type: ChainEventTypes.StepComplete
-      response: ChainCallResponse
+      response: ChainStepCallResponse
     }
   | {
       type: ChainEventTypes.Complete

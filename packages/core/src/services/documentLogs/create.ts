@@ -4,33 +4,31 @@ import {
   Result,
   Transaction,
 } from '@latitude-data/core'
-import { Commit, DocumentLog, Workspace } from '$core/browser'
-
-import { assignDocumentLogToProviderLog } from '../providerLogs'
+import { Commit, DocumentLog } from '$core/browser'
 
 export type CreateDocumentLogProps = {
-  workspace: Workspace
-  uuid: string
-  documentUuid: string
   commit: Commit
-  resolvedContent: string
-  parameters: Record<string, unknown>
-  customIdentifier?: string
-  duration: number
-  providerLogUuids: string[]
+  data: {
+    uuid: string
+    documentUuid: string
+    parameters: Record<string, unknown>
+    resolvedContent: string
+    customIdentifier?: string
+    duration: number
+  }
 }
 
 export async function createDocumentLog(
   {
-    workspace,
-    uuid,
-    documentUuid,
+    data: {
+      uuid,
+      documentUuid,
+      resolvedContent,
+      parameters,
+      customIdentifier,
+      duration,
+    },
     commit,
-    resolvedContent,
-    parameters,
-    customIdentifier,
-    duration,
-    providerLogUuids,
   }: CreateDocumentLogProps,
   db = database,
 ) {
@@ -49,15 +47,6 @@ export async function createDocumentLog(
       .returning()
 
     const documentLog = inserts[0]!
-
-    await assignDocumentLogToProviderLog(
-      {
-        workspace,
-        documentLogUuid: uuid,
-        providerLogUuids,
-      },
-      trx,
-    )
 
     return Result.ok(documentLog)
   }, db)

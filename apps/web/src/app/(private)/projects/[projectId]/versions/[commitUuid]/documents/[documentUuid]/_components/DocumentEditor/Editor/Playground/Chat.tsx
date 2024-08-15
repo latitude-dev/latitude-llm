@@ -38,6 +38,7 @@ export default function Chat({
   parameters: Record<string, unknown>
 }) {
   const config = metadata.config ?? {}
+  const [documentLogUuid, setDocumentLogUuid] = useState<string>()
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
   const { streamTextAction, runDocumentAction } = useContext(
@@ -78,6 +79,7 @@ export default function Chat({
         const { output } = await streamTextAction({
           messages: conversation.messages,
           config,
+          documentLogUuid,
         })
 
         for await (const serverEvent of readStreamableValue(output)) {
@@ -107,39 +109,42 @@ export default function Chat({
         throw error
       }
     },
-    [document, parameters, config, commit],
+    [document, parameters, config, commit, documentLogUuid, streamTextAction],
   )
 
-  const generateResponse = useCallback(async (conversation: Conversation) => {
-    let response = ''
-    setError(undefined)
-    setResponseStream(response)
+  const generateResponse = useCallback(
+    async (conversation: Conversation) => {
+      let response = ''
+      setError(undefined)
+      setResponseStream(response)
 
-    try {
-      for await (const [char, tokenCount] of streamGenerator(conversation)) {
-        if (char) {
-          response += char
-          setResponseStream(response)
+      try {
+        for await (const [char, tokenCount] of streamGenerator(conversation)) {
+          if (char) {
+            response += char
+            setResponseStream(response)
+          }
+
+          if (tokenCount) {
+            setTokens((prev) => prev + Number(tokenCount))
+          }
         }
 
-        if (tokenCount) {
-          setTokens((prev) => prev + Number(tokenCount))
-        }
+        addMessage({
+          role: MessageRole.assistant,
+          content: response,
+          toolCalls: [],
+        })
+
+        return response
+      } catch (_) {
+        // do nothing
+      } finally {
+        setResponseStream(undefined)
       }
-
-      addMessage({
-        role: MessageRole.assistant,
-        content: response,
-        toolCalls: [],
-      })
-
-      return response
-    } catch (_) {
-      // do nothing
-    } finally {
-      setResponseStream(undefined)
-    }
-  }, [])
+    },
+    [streamGenerator, addMessage],
+  )
 
   const runDocument = useCallback(async () => {
     setError(undefined)
@@ -148,11 +153,15 @@ export default function Chat({
     let response = ''
     let messagesCount = 0
 
-    const { output } = await runDocumentAction({
+    const { response: actionResponse, output } = await runDocumentAction({
       projectId: project.id,
       documentPath: document.path,
       commitUuid: commit.uuid,
       parameters,
+    })
+
+    actionResponse.then((res) => {
+      setDocumentLogUuid(res?.response?.documentLogUuid)
     })
 
     for await (const serverEvent of readStreamableValue(output)) {
@@ -203,19 +212,22 @@ export default function Chat({
     runDocument()
   }, [runDocument])
 
-  const submitUserMessage = useCallback((input: string) => {
-    const newConversation = addMessage({
-      role: MessageRole.user,
-      content: [
-        {
-          type: ContentType.text,
-          text: input,
-        },
-      ],
-    })
+  const submitUserMessage = useCallback(
+    (input: string) => {
+      const newConversation = addMessage({
+        role: MessageRole.user,
+        content: [
+          {
+            type: ContentType.text,
+            text: input,
+          },
+        ],
+      })
 
-    generateResponse(newConversation)
-  }, [])
+      generateResponse(newConversation)
+    },
+    [generateResponse, addMessage],
+  )
 
   return (
     <div className='flex flex-col h-full'>

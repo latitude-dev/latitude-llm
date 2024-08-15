@@ -7,7 +7,7 @@ import useSWR, { SWRConfiguration } from 'swr'
 import { useServerAction } from 'zsa-react'
 
 export default function useProviderLogs(
-  { documentLogId }: { documentLogId?: number },
+  { documentLogUuid }: { documentLogUuid?: string },
   opts?: SWRConfiguration,
 ) {
   const { toast } = useToast()
@@ -20,11 +20,11 @@ export default function useProviderLogs(
     isLoading,
     error: swrError,
   } = useSWR<ProviderLog[] | undefined>(
-    ['providerLogs', documentLogId],
+    ['providerLogs', documentLogUuid],
     async () => {
-      if (!documentLogId) return
+      if (!documentLogUuid) return
       const [fetchedLogs, errorFetchingLogs] = await executeFetchAction({
-        documentLogId,
+        documentLogUuid,
       })
 
       if (errorFetchingLogs) {

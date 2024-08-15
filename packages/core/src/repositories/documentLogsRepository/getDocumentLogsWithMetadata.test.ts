@@ -16,7 +16,7 @@ ${content}
 describe('getDocumentLogsWithMetadata', () => {
   it('return all logs from merged commits', async () => {
     const { workspace, project, user } = await factories.createProject()
-    await factories.createProvider({
+    await factories.createProviderApiKey({
       workspace,
       user,
       name: 'foo',
@@ -53,15 +53,13 @@ describe('getDocumentLogsWithMetadata', () => {
       })
       .then((r) => r.unwrap())
 
-    console.log('result', result)
-
     expect(result.find((l) => l.uuid === log1.uuid)).toBeDefined()
     expect(result.find((l) => l.uuid === log2.uuid)).toBeDefined()
   })
 
   it('includes logs from specified draft', async () => {
     const { workspace, project, user } = await factories.createProject()
-    await factories.createProvider({
+    await factories.createProviderApiKey({
       workspace,
       user,
       name: 'foo',
@@ -117,7 +115,7 @@ describe('getDocumentLogsWithMetadata', () => {
 
   it('does not include logs from non-specified drafts', async () => {
     const { workspace, project, user } = await factories.createProject()
-    await factories.createProvider({
+    await factories.createProviderApiKey({
       workspace,
       user,
       name: 'foo',
@@ -172,7 +170,7 @@ describe('getDocumentLogsWithMetadata', () => {
 
   it('returns a sum of tokens and cost', async () => {
     const { workspace, project, user } = await factories.createProject()
-    await factories.createProvider({
+    await factories.createProviderApiKey({
       workspace,
       user,
       name: 'foo',

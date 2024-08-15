@@ -7,11 +7,11 @@ import { authProcedure } from '../procedures'
 
 export const getProviderLogsForDocumentLogAction = authProcedure
   .createServerAction()
-  .input(z.object({ documentLogId: z.number() }))
+  .input(z.object({ documentLogUuid: z.string() }))
   .handler(async ({ input, ctx }) => {
     const providerLogsScope = new ProviderLogsRepository(ctx.workspace.id)
 
     return await providerLogsScope
-      .findByDocumentLogId(input.documentLogId)
+      .findByDocumentLogUuid(input.documentLogUuid)
       .then((r) => r.unwrap())
   })

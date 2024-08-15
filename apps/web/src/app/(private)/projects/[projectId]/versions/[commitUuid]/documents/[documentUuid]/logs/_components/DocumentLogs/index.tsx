@@ -17,7 +17,7 @@ export function DocumentLogs({
     DocumentLogWithMetadata | undefined
   >()
   const { data: providerLogs } = useProviderLogs({
-    documentLogId: selectedLog?.id,
+    documentLogUuid: selectedLog?.uuid,
   })
 
   return (

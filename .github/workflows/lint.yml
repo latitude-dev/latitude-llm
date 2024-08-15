@@ -58,7 +58,7 @@ jobs:
             ${{ runner.os }}-turbo-
 
       - name: Use Turbo to build affected packages
-        run: pnpm turbo build --cache-dir=.turbo --filter=./packages/sdks/typescript
+        run: pnpm turbo build --cache-dir=.turbo --filter="@latitude-data/sdk-js"
 
       - name: Prettier
         run: pnpm prettier:check --filter=[HEAD^1]

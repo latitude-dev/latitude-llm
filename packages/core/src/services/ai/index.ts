@@ -59,7 +59,8 @@ function createProvider({
     case Providers.OpenAI:
       return createOpenAI({
         apiKey,
-        compatibility: 'strict', // Needed for OpenAI to return token usage
+        // Needed for OpenAI to return token usage
+        compatibility: 'strict',
       })
     case Providers.Groq:
       return createOpenAI({
@@ -86,24 +87,25 @@ function createProvider({
 }
 
 export type AILog = Omit<CreateProviderLogProps, 'apiKeyId' | 'source'>
-
 export async function ai(
   {
     provider: apiProvider,
     prompt,
     messages,
     config,
+    documentLogUuid,
   }: {
     provider: ProviderApiKey
     config: PartialConfig
     messages: Message[]
+    documentLogUuid?: string
     prompt?: string
   },
   {
-    logHandler,
+    providerLogHandler,
     onFinish,
   }: {
-    logHandler: (log: AILog) => void
+    providerLogHandler: (log: AILog) => void
     onFinish?: FinishCallback
   },
 ) {
@@ -122,8 +124,9 @@ export async function ai(
     prompt,
     messages: messages as CoreMessage[],
     onFinish: (event) => {
-      logHandler({
+      providerLogHandler({
         uuid: uuidv4(),
+        documentLogUuid,
         providerId,
         providerType,
         model,

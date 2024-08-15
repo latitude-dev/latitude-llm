@@ -1,5 +1,5 @@
 import { NotFoundError, Result } from '$core/lib'
-import { providerApiKeys, workspaces } from '$core/schema'
+import { providerApiKeys } from '$core/schema'
 import { eq, getTableColumns } from 'drizzle-orm'
 
 import Repository from './repository'
@@ -9,7 +9,7 @@ export class ProviderApiKeysRepository extends Repository {
     return this.db
       .select(getTableColumns(providerApiKeys))
       .from(providerApiKeys)
-      .innerJoin(workspaces, eq(workspaces.id, providerApiKeys.workspaceId))
+      .where(eq(providerApiKeys.workspaceId, this.workspaceId))
       .as('providerApiKeysScope')
   }
 

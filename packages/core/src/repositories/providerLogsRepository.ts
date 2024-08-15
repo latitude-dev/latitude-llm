@@ -1,6 +1,6 @@
 import { Result } from '$core/lib'
 import { providerApiKeys, providerLogs, workspaces } from '$core/schema'
-import { asc, eq, getTableColumns, inArray } from 'drizzle-orm'
+import { asc, eq, getTableColumns } from 'drizzle-orm'
 
 import Repository from './repository'
 
@@ -17,19 +17,11 @@ export class ProviderLogsRepository extends Repository {
       .as('providerLogsScope')
   }
 
-  async findByUuids(uuids: string[]) {
+  async findByDocumentLogUuid(documentLogUuid: string) {
     const result = await this.db
       .select()
       .from(this.scope)
-      .where(inArray(this.scope.uuid, uuids))
-    return Result.ok(result)
-  }
-
-  async findByDocumentLogId(documentLogId: number) {
-    const result = await this.db
-      .select()
-      .from(this.scope)
-      .where(eq(this.scope.documentLogId, documentLogId))
+      .where(eq(this.scope.documentLogUuid, documentLogUuid))
       .orderBy(asc(this.scope.createdAt))
     return Result.ok(result)
   }

@@ -5,57 +5,92 @@ import {
   ChainEventTypes,
   StreamEventTypes,
 } from '@latitude-data/core'
-import type { Commit, ProviderApiKey } from '@latitude-data/core/browser'
-import { findWorkspaceFromCommit } from '$core/data-access'
-import { NotFoundError, Result } from '$core/lib'
+import type {
+  Commit,
+  DocumentVersion,
+  ProviderApiKey,
+  Workspace,
+} from '@latitude-data/core/browser'
+import { NotFoundError, Result, UnprocessableEntityError } from '$core/lib'
 import { streamToGenerator } from '$core/lib/streamToGenerator'
 import { ProviderApiKeysRepository } from '$core/repositories'
+import { v4 as uuid } from 'uuid'
+import { ZodError } from 'zod'
 
 import { ai, AILog, validateConfig } from '../ai'
 import { getResolvedContent } from '../documents/getResolvedContent'
 
+type CachedApiKeys = Map<string, ProviderApiKey>
+async function cacheApiKeysByName({ workspaceId }: { workspaceId: number }) {
+  const scope = new ProviderApiKeysRepository(workspaceId)
+  const result = await scope.findAll().then((r) => r.unwrap())
+
+  return result.reduce((acc, apiKey) => {
+    acc.set(apiKey.name, apiKey)
+    return acc
+  }, new Map<string, ProviderApiKey>())
+}
+
 export async function runDocumentAtCommit({
-  documentUuid,
+  workspaceId,
+  document,
   commit,
   parameters,
-  logHandler,
+  providerLogHandler,
+  generateUUID = uuid,
 }: {
-  documentUuid: string
+  workspaceId: Workspace['id']
+  document: DocumentVersion
   commit: Commit
   parameters: Record<string, unknown>
-  logHandler: (log: AILog) => void
+  providerLogHandler: (log: AILog) => void
+  generateUUID?: typeof uuid
 }) {
-  const workspace = await findWorkspaceFromCommit(commit)
-  if (!workspace) throw Result.error(new NotFoundError('Workspace not found'))
-
   const result = await getResolvedContent({
-    workspace,
-    documentUuid,
+    workspaceId,
+    document,
     commit,
   })
 
   if (result.error) return result
 
-  const chain = createChain({ prompt: result.value, parameters })
-  const scope = new ProviderApiKeysRepository(workspace.id)
+  const resolvedContent = result.value
+  const chain = createChain({ prompt: resolvedContent, parameters })
+  const documentLogUuid = generateUUID()
 
-  let stream: ReadableStream
-  let response: Promise<ChainCallResponse> | undefined = undefined
+  let responseResolve: (value: ChainCallResponse) => void
+  let responseReject: (reason?: any) => void
 
-  await new Promise<void>((resolve) => {
-    stream = new ReadableStream<ChainEvent>({
-      start(controller) {
-        response = iterate({ chain, scope, controller, logHandler })
-
-        resolve()
-      },
-    })
+  const response = new Promise<ChainCallResponse>((resolve, reject) => {
+    responseResolve = resolve
+    responseReject = reject
   })
 
+  const allApiKeys = await cacheApiKeysByName({ workspaceId })
+  const stream = new ReadableStream<ChainEvent>({
+    start(controller) {
+      iterate({
+        chain,
+        allApiKeys,
+        controller,
+        providerLogHandler,
+        documentLogUuid,
+      })
+        .then(responseResolve)
+        .catch(responseReject)
+    },
+  })
+
+  // Dummy handling of the response
+  // This is helpful for not throwing the error
+  // when no one is listening to the promise
+  response.then(() => {}).catch(() => {})
+
   return Result.ok({
-    stream: stream!,
-    response: response!,
+    stream,
+    response,
     resolvedContent: result.value,
+    documentLogUuid,
   })
 }
 
@@ -69,22 +104,24 @@ function enqueueEvent(
 async function iterate({
   chain,
   previousApiKey,
-  scope,
+  allApiKeys,
   controller,
   previousCount = 0,
   previousResponse,
-  logHandler,
+  providerLogHandler,
+  documentLogUuid,
 }: {
   chain: Chain
-  scope: ProviderApiKeysRepository
+  allApiKeys: CachedApiKeys
   controller: ReadableStreamDefaultController
   previousCount?: number
   previousApiKey?: ProviderApiKey
+  documentLogUuid: string
   previousResponse?: {
     text: string
     usage: Record<string, unknown>
   }
-  logHandler: (log: AILog) => void
+  providerLogHandler: (log: AILog) => void
 }) {
   try {
     const {
@@ -97,7 +134,7 @@ async function iterate({
     } = await doSomeCommonOperations({
       chain,
       previousResponse,
-      scope,
+      allApiKeys,
       apiKey: previousApiKey,
       sentCount: previousCount,
     })
@@ -116,11 +153,14 @@ async function iterate({
 
     const result = await ai(
       {
+        documentLogUuid,
         messages: conversation.messages,
         config: config,
         provider: apiKey,
       },
-      { logHandler },
+      {
+        providerLogHandler,
+      },
     )
 
     for await (const value of streamToGenerator(result.fullStream)) {
@@ -144,6 +184,10 @@ async function iterate({
     }
 
     if (completed) {
+      const completedResponse = {
+        ...response,
+        documentLogUuid,
+      }
       enqueueEvent(controller, {
         event: StreamEventTypes.Latitude,
         data: {
@@ -156,13 +200,13 @@ async function iterate({
               content: response.text,
             },
           ],
-          response,
+          response: completedResponse,
         },
       })
 
       controller.close()
 
-      return response
+      return completedResponse
     } else {
       enqueueEvent(controller, {
         event: StreamEventTypes.Latitude,
@@ -173,12 +217,13 @@ async function iterate({
       })
       return iterate({
         chain,
-        scope,
+        documentLogUuid,
+        allApiKeys,
         controller,
         previousApiKey: apiKey,
         previousCount: sentCount,
         previousResponse: response,
-        logHandler,
+        providerLogHandler,
       })
     }
   } catch (e) {
@@ -195,14 +240,13 @@ async function iterate({
       },
     })
     controller.close()
-    return {
-      text: error.message,
-      usage: {
-        promptTokens: 0,
-        completionTokens: 0,
-        totalTokens: 0,
-      },
-      toolCalls: [],
+    if (error instanceof ZodError) {
+      throw new UnprocessableEntityError(
+        'Error validating document configuration',
+        error.formErrors.fieldErrors,
+      )
+    } else {
+      throw error
     }
   }
 }
@@ -212,23 +256,20 @@ async function iterate({
  **/
 async function doSomeCommonOperations({
   chain,
+  allApiKeys,
   previousResponse,
-  scope,
   apiKey,
   sentCount,
 }: {
   chain: Chain
+  allApiKeys: CachedApiKeys
   previousResponse?: { text: string; usage: Record<string, unknown> }
-  scope: ProviderApiKeysRepository
   apiKey?: ProviderApiKey
   sentCount: number
 }) {
   const { completed, conversation } = await chain.step(previousResponse?.text)
   const config = validateConfig(conversation.config)
-  if (!apiKey || apiKey?.name !== conversation.config.apikey) {
-    // TODO: Maybe cache this to avoid unnecessary calls
-    apiKey = await findApiKey({ scope, name: config.provider })
-  }
+  apiKey = findApiKey({ allApiKeys, name: config.provider })
 
   // Only new message are sent in each step
   const newMessagesInStep = conversation.messages.slice(sentCount)
@@ -244,15 +285,18 @@ async function doSomeCommonOperations({
   }
 }
 
-async function findApiKey({
-  scope,
+function findApiKey({
+  allApiKeys,
   name,
 }: {
-  scope: ProviderApiKeysRepository
+  allApiKeys: CachedApiKeys
   name: string
 }) {
-  const apiKeyResult = await scope.findByName(name)
-  if (apiKeyResult.error) throw apiKeyResult.error
+  const apiKey = allApiKeys.get(name)
 
-  return apiKeyResult.value!
+  if (!apiKey) {
+    throw new NotFoundError('ProviderApiKey not found')
+  }
+
+  return apiKey
 }

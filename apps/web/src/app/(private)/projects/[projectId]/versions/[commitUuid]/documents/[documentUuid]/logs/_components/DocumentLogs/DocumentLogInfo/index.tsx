@@ -17,7 +17,6 @@ export function DocumentLogInfo({
   providerLogs?: ProviderLog[]
 }) {
   const [selectedTab, setSelectedTab] = useState<string>('metadata')
-
   return (
     <div className='w-80 flex-shrink-0 flex flex-col border border-border rounded-lg px-4 pt-6 items-center'>
       <TabSelector

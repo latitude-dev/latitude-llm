@@ -7,6 +7,7 @@ type Message = {
   content: string
 }
 type ChainCallResponse = {
+  documentLogUuid: string
   text: string
   usage: {
     promptTokens: number
@@ -15,7 +16,7 @@ type ChainCallResponse = {
   }
 }
 
-type RunDocument = {
+export type RunDocumentResponse = {
   conversation: Message[]
   response: ChainCallResponse
 }
@@ -57,7 +58,7 @@ export class LatitudeSdk {
       parameters?: Record<string, unknown>
     }
     onMessage?: (message: ChainEvent) => void
-    onFinished?: (data: RunDocument) => void
+    onFinished?: (data: RunDocumentResponse) => void
     onError?: (error: Error) => void
   }) {
     const route = this.routeResolver.resolve({
