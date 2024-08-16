@@ -1,4 +1,8 @@
-import { Message as CompilerMessage, Config } from '@latitude-data/compiler'
+import {
+  Message as CompilerMessage,
+  Config,
+  ToolCall,
+} from '@latitude-data/compiler'
 import { CompletionTokenUsage, CoreTool, TextStreamPart } from 'ai'
 
 export const LATITUDE_DOCS_URL = ''
@@ -32,7 +36,9 @@ export type ChainStepCallResponse = {
 }
 export type ChainCallResponse = ChainStepCallResponse & {
   documentLogUuid: string
+  toolCalls: ToolCall[]
 }
+
 export enum Providers {
   OpenAI = 'openai',
   Anthropic = 'anthropic',

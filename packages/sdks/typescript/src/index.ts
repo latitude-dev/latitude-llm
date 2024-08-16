@@ -1,11 +1,13 @@
+import { LogSources, type Message } from '@latitude-data/core'
 import env from '$sdk/env'
 import { RouteResolver } from '$sdk/utils'
-import { ChainEvent, HandlerType } from '$sdk/utils/types'
+import {
+  BodyParams,
+  ChainEvent,
+  HandlerType,
+  UrlParams,
+} from '$sdk/utils/types'
 
-type Message = {
-  role: 'system' | 'user' | 'assistant' | 'tool'
-  content: string
-}
 type ChainCallResponse = {
   documentLogUuid: string
   text: string
@@ -15,25 +17,26 @@ type ChainCallResponse = {
     totalTokens: number
   }
 }
-
-export type RunDocumentResponse = {
+export type StreamChainResponse = {
   conversation: Message[]
   response: ChainCallResponse
+}
+type StreamResponseCallbacks = {
+  onMessage?: (chainEvent: ChainEvent) => void
+  onFinished?: (data: StreamChainResponse) => void
+  onError?: (error: Error) => void
 }
 
 export class LatitudeSdk {
   private latitudeApiKey: string
   private routeResolver: RouteResolver
-  private projectId: number
 
   constructor({
     latitudeApiKey,
-    projectId,
     basePath = env.BASE_PATH,
     https = env.HTTPS,
   }: {
     latitudeApiKey: string
-    projectId: number
     basePath?: string
     https?: boolean
   }) {
@@ -43,41 +46,69 @@ export class LatitudeSdk {
       apiVersion: 'v1',
     })
     this.latitudeApiKey = latitudeApiKey
-    this.projectId = projectId
   }
 
   async runDocument({
-    params: { documentPath, commitUuid, parameters },
+    params: { projectId, documentPath, commitUuid, parameters, source },
     onMessage,
     onFinished,
     onError,
   }: {
     params: {
+      projectId: number
       documentPath: string
       commitUuid?: string
       parameters?: Record<string, unknown>
+      source?: LogSources
     }
-    onMessage?: (message: ChainEvent) => void
-    onFinished?: (data: RunDocumentResponse) => void
-    onError?: (error: Error) => void
-  }) {
-    const route = this.routeResolver.resolve({
-      handler: HandlerType.RunDocument,
-      params: {
-        projectId: this.projectId,
-        commitUuid,
-      },
-    })
-
-    const response = await fetch(route, {
+  } & StreamResponseCallbacks) {
+    const response = await this.makeRequest({
       method: 'POST',
-      headers: this.authHeader,
-      body: this.bodyToString({
-        documentPath,
-        parameters,
-      }),
+      handler: HandlerType.RunDocument,
+      params: { projectId, commitUuid },
+      body: { documentPath, parameters, source },
     })
+    return this.handleStreamChainResponse({
+      response,
+      onMessage,
+      onFinished,
+      onError,
+    })
+  }
 
+  async addMessges({
+    params: { documentLogUuid, messages, source },
+    onMessage,
+    onFinished,
+    onError,
+  }: {
+    params: {
+      documentLogUuid: string
+      messages: Message[]
+      source?: LogSources
+    }
+  } & StreamResponseCallbacks) {
+    const response = await this.makeRequest({
+      method: 'POST',
+      handler: HandlerType.AddMessageToDocumentLog,
+      body: { documentLogUuid, messages, source },
+    })
+    return this.handleStreamChainResponse({
+      response,
+      onMessage,
+      onFinished,
+      onError,
+    })
+  }
+
+  private async handleStreamChainResponse({
+    response,
+    onMessage,
+    onFinished,
+    onError,
+  }: StreamResponseCallbacks & {
+    response: Response
+  }) {
     const body = response.body ?? new ReadableStream()
     const reader = body.getReader()
 
@@ -115,13 +146,31 @@ export class LatitudeSdk {
       })
     }
 
-    const runResponse = {
+    const finalResponse = {
       conversation,
       response: chainResponse!,
     }
-    onFinished?.(runResponse)
+    onFinished?.(finalResponse)
 
-    return runResponse
+    return finalResponse
+  }
+
+  private async makeRequest<H extends HandlerType>({
+    method,
+    handler,
+    params,
+    body,
+  }: {
+    handler: H
+    params?: UrlParams<H>
+    method: 'POST' | 'GET' | 'PUT' | 'DELETE'
+    body?: BodyParams<H>
+  }) {
+    return await fetch(this.routeResolver.resolve({ handler, params }), {
+      method,
+      headers: this.authHeader,
+      body: this.bodyToString(body),
+    })
   }
 
   private decodeValue(line: string, onError?: (error: Error) => void) {
@@ -142,7 +191,7 @@ export class LatitudeSdk {
     }
   }
 
-  private bodyToString(body: object) {
+  private bodyToString(body: object = {}) {
     return JSON.stringify(body)
   }
 }

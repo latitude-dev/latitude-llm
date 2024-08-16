@@ -1,3 +1,4 @@
+import { ToolCall } from '@latitude-data/compiler'
 import { apiKeys } from '$core/schema/models/apiKeys'
 import { commits } from '$core/schema/models/commits'
 import { documentVersions } from '$core/schema/models/documentVersions'
@@ -30,7 +31,12 @@ export type ApiKey = InferSelectModel<typeof apiKeys>
 export type Commit = InferSelectModel<typeof commits>
 export type DocumentVersion = InferSelectModel<typeof documentVersions>
 export type Project = InferSelectModel<typeof projects>
-export type ProviderLog = InferSelectModel<typeof providerLogs>
+export type ProviderLog = InferSelectModel<typeof providerLogs> & {
+  // Typescript thinks these 2 are optional because they are in the schema
+  // but we add a default empty string and empty array to them
+  responseText: string
+  toolCalls: ToolCall[]
+}
 export type DocumentLog = InferSelectModel<typeof documentLogs>
 export type Evaluation = InferSelectModel<typeof evaluations>
 export type ConnectedEvaluation = InferSelectModel<typeof connectedEvaluations>

@@ -1,4 +1,6 @@
+import { Message, ToolCall } from '@latitude-data/compiler'
 import { LogSources } from '$core/constants'
+import { PartialConfig } from '$core/index'
 import { relations } from 'drizzle-orm'
 import {
   bigint,
@@ -6,6 +8,7 @@ import {
   integer,
   json,
   text,
+  timestamp,
   uuid,
   varchar,
 } from 'drizzle-orm/pg-core'
@@ -32,10 +35,10 @@ export const providerLogs = latitudeSchema.table('provider_logs', {
       onUpdate: 'cascade',
     }),
   model: varchar('model'),
-  config: json('config').notNull(),
-  messages: json('messages').notNull(),
-  responseText: text('response_text'),
-  toolCalls: json('tool_calls'),
+  config: json('config').$type<PartialConfig>().notNull(),
+  messages: json('messages').$type<Message[]>().notNull(),
+  responseText: text('response_text').$type<string>().default(''),
+  toolCalls: json('tool_calls').$type<ToolCall[]>().default([]),
   tokens: bigint('tokens', { mode: 'number' }).notNull(),
   cost_in_millicents: integer('cost_in_millicents').notNull().default(0),
   duration: bigint('duration', { mode: 'number' }).notNull(),
@@ -47,6 +50,7 @@ export const providerLogs = latitudeSchema.table('provider_logs', {
       onUpdate: 'cascade',
     },
   ),
+  generatedAt: timestamp('generated_at', { mode: 'date' }).notNull(),
   ...timestamps(),
 })
 

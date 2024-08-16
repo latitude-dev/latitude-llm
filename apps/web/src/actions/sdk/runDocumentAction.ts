@@ -1,9 +1,10 @@
 'use server'
 
+import { LogSources } from '@latitude-data/core'
 import {
   LatitudeSdk,
   type ChainEvent,
-  type RunDocumentResponse as RunResponse,
+  type StreamChainResponse,
 } from '@latitude-data/sdk-js'
 import { getLatitudeApiKey } from '$/app/(private)/_data-access/latitudeApiKey'
 import { createStreamableValue, StreamableValue } from 'ai/rsc'
@@ -16,7 +17,7 @@ type RunDocumentActionProps = {
 }
 type RunDocumentResponse = Promise<{
   output: StreamableValue<ChainEvent>
-  response: Promise<RunResponse | undefined>
+  response: Promise<StreamChainResponse | undefined>
 }>
 export type RunDocumentActionFn = (
   _: RunDocumentActionProps,
@@ -32,12 +33,15 @@ export async function runDocumentAction({
 
   const stream = createStreamableValue<ChainEvent, Error>()
 
-  const sdk = new LatitudeSdk({
-    latitudeApiKey: latitudeApiKey.token,
-    projectId,
-  })
+  const sdk = new LatitudeSdk({ latitudeApiKey: latitudeApiKey.token })
   const response = sdk.runDocument({
-    params: { commitUuid, documentPath, parameters },
+    params: {
+      projectId,
+      commitUuid,
+      documentPath,
+      parameters,
+      source: LogSources.Playground,
+    },
     onMessage: (chainEvent) => {
       stream.update(chainEvent)
     },

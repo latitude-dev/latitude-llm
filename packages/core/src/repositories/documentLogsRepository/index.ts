@@ -28,11 +28,12 @@ export class DocumentLogsRepository extends Repository {
       .as('documentLogsScope')
   }
 
-  async findByUuid(uuid: string) {
+  async findByUuid(uuid: string | undefined) {
     const result = await this.db
       .select()
       .from(this.scope)
-      .where(eq(this.scope.uuid, uuid))
+      .where(eq(this.scope.uuid, uuid ?? ''))
+
     if (!result.length) {
       return Result.error(new NotFoundError('ProviderLog not found'))
     }

@@ -1,4 +1,4 @@
-import { streamTextAction } from '$/actions/documents/streamTextAction'
+import { addMessagesAction } from '$/actions/sdk/addMessagesAction'
 import { runDocumentAction } from '$/actions/sdk/runDocumentAction'
 import {
   findCommitCached,
@@ -31,8 +31,8 @@ export default async function DocumentPage({
 
   return (
     <DocumentEditor
-      streamTextAction={streamTextAction}
       runDocumentAction={runDocumentAction}
+      addMessagesAction={addMessagesAction}
       documents={documents}
       document={document}
     />

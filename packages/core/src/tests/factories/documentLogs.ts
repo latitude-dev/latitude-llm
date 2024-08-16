@@ -50,7 +50,6 @@ export async function createDocumentLog({
       .then((r) => r.unwrap())
 
     mockedResponse = factories.helpers.randomSentence()
-
     const promptTokens = conversation.messages.reduce((acc, message) => {
       let content = message.content
       if (Array.isArray(content)) {
@@ -63,6 +62,7 @@ export async function createDocumentLog({
     const completionTokens = mockedResponse.length
     const log = await createProviderLog({
       uuid: uuid(),
+      generatedAt: new Date(),
       documentLogUuid,
       providerId: provider.id,
       providerType: provider.provider,

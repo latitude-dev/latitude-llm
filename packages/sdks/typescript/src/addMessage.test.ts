@@ -1,3 +1,4 @@
+import { LogSources } from '@latitude-data/core/browser'
 import { CHUNKS, FINAL_RESPONSE } from '$sdk/test/chunks-example'
 import { http, HttpResponse } from 'msw'
 import { setupServer } from 'msw/node'
@@ -22,7 +23,7 @@ const SDK = new LatitudeSdk({
 
 const server = setupServer()
 
-describe('runDocument', () => {
+describe('addMessage', () => {
   beforeAll(() => server.listen())
   afterEach(() => server.resetHandlers())
   afterAll(() => server.close())
@@ -32,95 +33,19 @@ describe('runDocument', () => {
     server.boundary(async () => {
       const mockFn = vi.fn()
       server.use(
-        http.post(
-          'http://localhost:8787/api/v1/projects/123/commits/live/documents/run',
-          (info) => {
-            mockFn(info.request.headers.get('Authorization'))
-            return HttpResponse.json({})
-          },
-        ),
+        http.post('http://localhost:8787/api/v1/chats/add-message', (info) => {
+          mockFn(info.request.headers.get('Authorization'))
+          return HttpResponse.json({})
+        }),
       )
-      await SDK.runDocument({
-        params: { projectId, documentPath: 'path/to/document' },
+      await SDK.addMessges({
+        params: {
+          messages: [],
+          documentLogUuid: 'fake-document-log-uuid',
+          source: LogSources.Playground,
+        },
       })
       expect(mockFn).toHaveBeenCalledWith('Bearer fake-api-key')
-    }),
-  )
-
-  it(
-    'sends project id',
-    server.boundary(async () => {
-      const mockFn = vi.fn()
-      server.use(
-        http.post(
-          'http://localhost:8787/api/v1/projects/123/commits/live/documents/run',
-          (info) => {
-            mockFn(info.request.url)
-            return HttpResponse.json({})
-          },
-        ),
-      )
-      await SDK.runDocument({
-        params: { projectId, documentPath: 'path/to/document' },
-      })
-      expect(mockFn).toHaveBeenCalledWith(
-        'http://localhost:8787/api/v1/projects/123/commits/live/documents/run',
-      )
-    }),
-  )
-
-  it(
-    'sends request with specific commitUuid',
-    server.boundary(async () => {
-      const mockFn = vi.fn()
-      server.use(
-        http.post(
-          'http://localhost:8787/api/v1/projects/123/commits/SOME_UUID/documents/run',
-          (info) => {
-            mockFn(info.request.url)
-            return HttpResponse.json({})
-          },
-        ),
-      )
-      await SDK.runDocument({
-        params: {
-          projectId,
-          documentPath: 'path/to/document',
-          commitUuid: 'SOME_UUID',
-        },
-      })
-      expect(mockFn).toHaveBeenCalledWith(
-        'http://localhost:8787/api/v1/projects/123/commits/SOME_UUID/documents/run',
-      )
-    }),
-  )
-
-  it(
-    'sends documentPath and parameters',
-    server.boundary(async () => {
-      const mockFn = vi.fn()
-      server.use(
-        http.post(
-          'http://localhost:8787/api/v1/projects/123/commits/SOME_UUID/documents/run',
-          async (info) => {
-            const body = await info.request.json()
-            mockFn(body)
-            return HttpResponse.json({})
-          },
-        ),
-      )
-      await SDK.runDocument({
-        params: {
-          projectId,
-          documentPath: 'path/to/document',
-          commitUuid: 'SOME_UUID',
-          parameters: { foo: 'bar', lol: 'foo' },
-        },
-      })
-      expect(mockFn).toHaveBeenCalledWith({
-        documentPath: 'path/to/document',
-        parameters: { foo: 'bar', lol: 'foo' },
-      })
     }),
   )
 
@@ -130,7 +55,7 @@ describe('runDocument', () => {
       const onMessageMock = vi.fn()
       server.use(
         http.post(
-          'http://localhost:8787/api/v1/projects/123/commits/live/documents/run',
+          'http://localhost:8787/api/v1/chats/add-message',
           async () => {
             const stream = new ReadableStream({
               start(controller) {
@@ -151,14 +76,15 @@ describe('runDocument', () => {
           },
         ),
       )
-      await SDK.runDocument({
+      await SDK.addMessges({
         params: {
-          projectId,
-          documentPath: 'path/to/document',
-          parameters: { foo: 'bar', lol: 'foo' },
+          messages: [],
+          documentLogUuid: 'fake-document-log-uuid',
+          source: LogSources.Playground,
         },
         onMessage: onMessageMock,
       })
+
       CHUNKS.forEach((chunk, index) => {
         expect(onMessageMock).toHaveBeenNthCalledWith(index + 1, chunk)
       })
@@ -172,7 +98,7 @@ describe('runDocument', () => {
       const onErrorMock = vi.fn()
       server.use(
         http.post(
-          'http://localhost:8787/api/v1/projects/123/commits/live/documents/run',
+          'http://localhost:8787/api/v1/chats/add-message',
           async () => {
             const stream = new ReadableStream({
               start(controller) {
@@ -189,11 +115,11 @@ describe('runDocument', () => {
           },
         ),
       )
-      await SDK.runDocument({
+      await SDK.addMessges({
         params: {
-          projectId,
-          documentPath: 'path/to/document',
-          parameters: { foo: 'bar', lol: 'foo' },
+          messages: [],
+          documentLogUuid: 'fake-document-log-uuid',
+          source: LogSources.Playground,
         },
         onMessage: onMessageMock,
         onError: onErrorMock,
@@ -239,6 +165,45 @@ describe('runDocument', () => {
       })
       expect(onFinishMock).toHaveBeenCalledWith(FINAL_RESPONSE)
       expect(final).toEqual(FINAL_RESPONSE)
+    }),
+  )
+
+  it(
+    'calls endpoint with body and headers',
+    server.boundary(async () => {
+      const mockFn = vi.fn()
+      let body = {}
+      server.use(
+        http.post(
+          'http://localhost:8787/api/v1/chats/add-message',
+          async (info) => {
+            const reader = info.request.body!.getReader()
+            while (true) {
+              const { done, value } = await reader.read()
+              if (done) break
+              const chunks = new TextDecoder('utf-8').decode(value).trim()
+              body = JSON.parse(chunks)
+            }
+
+            mockFn({ body })
+            return HttpResponse.json({})
+          },
+        ),
+      )
+      await SDK.addMessges({
+        params: {
+          messages: [],
+          documentLogUuid: 'fake-document-log-uuid',
+          source: LogSources.Playground,
+        },
+      })
+      expect(mockFn).toHaveBeenCalledWith({
+        body: {
+          messages: [],
+          source: LogSources.Playground,
+          documentLogUuid: 'fake-document-log-uuid',
+        },
+      })
     }),
   )
 })

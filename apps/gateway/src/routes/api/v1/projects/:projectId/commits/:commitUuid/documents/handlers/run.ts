@@ -1,12 +1,9 @@
 import { zValidator } from '@hono/zod-validator'
-import {
-  LogSources,
-  runDocumentAtCommit,
-  streamToGenerator,
-} from '@latitude-data/core'
+import { LogSources, runDocumentAtCommit } from '@latitude-data/core'
+import { pipeToStream } from '$/common/pipeToStream'
 import { queues } from '$/jobs'
 import { Factory } from 'hono/factory'
-import { SSEStreamingApi, streamSSE } from 'hono/streaming'
+import { streamSSE } from 'hono/streaming'
 import { z } from 'zod'
 
 import { getData } from './_shared'
@@ -16,6 +13,7 @@ const factory = new Factory()
 const runSchema = z.object({
   documentPath: z.string(),
   parameters: z.record(z.any()).optional().default({}),
+  source: z.nativeEnum(LogSources).optional().default(LogSources.API),
 })
 
 export const runHandler = factory.createHandlers(
@@ -25,7 +23,7 @@ export const runHandler = factory.createHandlers(
       const startTime = Date.now()
 
       const { projectId, commitUuid } = c.req.param()
-      const { documentPath, parameters } = c.req.valid('json')
+      const { documentPath, parameters, source } = c.req.valid('json')
 
       const workspace = c.get('workspace')
       const apiKey = c.get('apiKey')
@@ -45,7 +43,7 @@ export const runHandler = factory.createHandlers(
         providerLogHandler: (log) => {
           queues.defaultQueue.jobs.enqueueCreateProviderLogJob({
             ...log,
-            source: LogSources.API,
+            source,
             apiKeyId: apiKey.id,
           })
         },
@@ -66,18 +64,3 @@ export const runHandler = factory.createHandlers(
     })
   },
 )
-
-async function pipeToStream(
-  stream: SSEStreamingApi,
-  readableStream: ReadableStream,
-) {
-  let id = 0
-  for await (const value of streamToGenerator(readableStream)) {
-    stream.writeln(
-      JSON.stringify({
-        ...value,
-        id: String(id++),
-      }),
-    )
-  }
-}

@@ -56,6 +56,7 @@ export async function createEvaluationResult({
     const completionTokens = mockedResponse.length
     const log = await createProviderLog({
       uuid: uuid(),
+      generatedAt: new Date(),
       documentLogUuid: documentLog.uuid,
       providerId: provider.id,
       providerType: provider.provider,

@@ -6,6 +6,7 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch ./src/server.ts",
+    "dev:debug": "tsx watch --inspect-brk ./src/server.ts",
     "build:server": "rollup -c",
     "start": "node ./dist/server.js",
     "lint": "eslint src",

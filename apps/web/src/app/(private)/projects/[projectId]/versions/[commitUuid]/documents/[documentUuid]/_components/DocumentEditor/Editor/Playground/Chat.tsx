@@ -4,13 +4,11 @@ import {
   ContentType,
   Conversation,
   Message as ConversationMessage,
-  ConversationMetadata,
   MessageRole,
 } from '@latitude-data/compiler'
 import {
   ChainEventTypes,
   StreamEventTypes,
-  type ChainEvent,
   type DocumentVersion,
 } from '@latitude-data/core/browser'
 import {
@@ -30,18 +28,15 @@ import { DocumentEditorContext } from '..'
 
 export default function Chat({
   document,
-  metadata,
   parameters,
 }: {
   document: DocumentVersion
-  metadata: ConversationMetadata
   parameters: Record<string, unknown>
 }) {
-  const config = metadata.config ?? {}
   const [documentLogUuid, setDocumentLogUuid] = useState<string>()
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
-  const { streamTextAction, runDocumentAction } = useContext(
+  const { runDocumentAction, addMessagesAction } = useContext(
     DocumentEditorContext,
   )!
   const [error, setError] = useState<Error | undefined>()
@@ -61,89 +56,19 @@ export default function Chat({
   const [conversation, setConversation] = useState<Conversation | undefined>()
   const [responseStream, setResponseStream] = useState<string | undefined>()
 
-  const addMessage = useCallback((message: ConversationMessage) => {
-    let newConversation: Conversation
-    setConversation((prevConversation) => {
-      newConversation = {
-        ...prevConversation,
-        messages: [...(prevConversation?.messages ?? []), message],
-      } as Conversation
-      return newConversation
-    })
-    return newConversation!
-  }, [])
-
-  const streamGenerator = useCallback(
-    async function* (conversation: Conversation) {
-      try {
-        const { output } = await streamTextAction({
-          messages: conversation.messages,
-          config,
-          documentLogUuid,
-        })
-
-        for await (const serverEvent of readStreamableValue(output)) {
-          const { event, data } = serverEvent as ChainEvent
-
-          if (
-            event === StreamEventTypes.Provider &&
-            data.type === 'text-delta'
-          ) {
-            yield [data.textDelta, null]
-          }
-
-          const isCompleted =
-            event === StreamEventTypes.Latitude &&
-            data.type === ChainEventTypes.Complete
-          const totalTokens = isCompleted
-            ? data.response.usage.totalTokens
-            : undefined
-          if (totalTokens !== undefined) {
-            yield [null, totalTokens]
-          }
-        }
-      } catch (error) {
-        const { message } = error as { message: string }
-        setError(new Error(message))
-
-        throw error
-      }
+  const addMessageToConversation = useCallback(
+    (message: ConversationMessage) => {
+      let newConversation: Conversation
+      setConversation((prevConversation) => {
+        newConversation = {
+          ...prevConversation,
+          messages: [...(prevConversation?.messages ?? []), message],
+        } as Conversation
+        return newConversation
+      })
+      return newConversation!
     },
-    [document, parameters, config, commit, documentLogUuid, streamTextAction],
-  )
-
-  const generateResponse = useCallback(
-    async (conversation: Conversation) => {
-      let response = ''
-      setError(undefined)
-      setResponseStream(response)
-
-      try {
-        for await (const [char, tokenCount] of streamGenerator(conversation)) {
-          if (char) {
-            response += char
-            setResponseStream(response)
-          }
-
-          if (tokenCount) {
-            setTokens((prev) => prev + Number(tokenCount))
-          }
-        }
-
-        addMessage({
-          role: MessageRole.assistant,
-          content: response,
-          toolCalls: [],
-        })
-
-        return response
-      } catch (_) {
-        // do nothing
-      } finally {
-        setResponseStream(undefined)
-      }
-    },
-    [streamGenerator, addMessage],
+    [],
   )
 
   const runDocument = useCallback(async () => {
@@ -172,7 +97,7 @@ export default function Chat({
       const hasMessages = 'messages' in data
 
       if (hasMessages) {
-        data.messages.forEach(addMessage)
+        data.messages.forEach(addMessageToConversation)
         messagesCount += data.messages.length
       }
 
@@ -203,7 +128,14 @@ export default function Chat({
           break
       }
     }
-  }, [project.id, document.path, commit.uuid, parameters, runDocumentAction])
+  }, [
+    project.id,
+    document.path,
+    commit.uuid,
+    parameters,
+    runDocumentAction,
+    addMessageToConversation,
+  ])
 
   useEffect(() => {
     if (runChainOnce.current) return
@@ -213,20 +145,54 @@ export default function Chat({
   }, [runDocument])
 
   const submitUserMessage = useCallback(
-    (input: string) => {
-      const newConversation = addMessage({
-        role: MessageRole.user,
-        content: [
-          {
-            type: ContentType.text,
-            text: input,
-          },
-        ],
-      })
+    async (input: string) => {
+      if (!documentLogUuid) return // This should not happen
 
-      generateResponse(newConversation)
+      const message: ConversationMessage = {
+        role: MessageRole.user,
+        content: [{ type: ContentType.text, text: input }],
+      }
+      let response = ''
+      addMessageToConversation(message)
+      const { output } = await addMessagesAction({
+        documentLogUuid,
+        messages: [message],
+      })
+      for await (const serverEvent of readStreamableValue(output)) {
+        if (!serverEvent) continue
+
+        const { event, data } = serverEvent
+
+        const hasMessages = 'messages' in data
+
+        if (hasMessages) {
+          data.messages.forEach(addMessageToConversation)
+        }
+
+        switch (event) {
+          case StreamEventTypes.Latitude: {
+            if (data.type === ChainEventTypes.Error) {
+              setError(new Error(data.error.message))
+            }
+            break
+          }
+
+          case StreamEventTypes.Provider: {
+            if (data.type === 'text-delta') {
+              response += data.textDelta
+              setResponseStream(response)
+            } else if (data.type === 'finish') {
+              setResponseStream(undefined)
+              response = ''
+            }
+            break
+          }
+          default:
+            break
+        }
+      }
     },
-    [generateResponse, addMessage],
+    [addMessageToConversation, setError, documentLogUuid],
   )
 
   return (
