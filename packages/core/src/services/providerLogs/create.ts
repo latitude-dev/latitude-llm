@@ -1,6 +1,7 @@
 import { Message, ToolCall } from '@latitude-data/compiler'
 import {
   database,
+  estimateCost,
   providerLogs,
   Result,
   touchApiKey,
@@ -31,7 +32,7 @@ export async function createProviderLog(
   {
     uuid,
     providerId,
-    providerType: _,
+    providerType,
     model,
     config,
     messages,
@@ -45,10 +46,8 @@ export async function createProviderLog(
   }: CreateProviderLogProps,
   db = database,
 ) {
-  return Transaction.call<ProviderLog>(async (trx) => {
-    // TODO: Calculate cost based on usage, provider type, and model
-    const tokens = usage.totalTokens ?? 0
-    const cost = 0
+  return await Transaction.call<ProviderLog>(async (trx) => {
+    const cost = estimateCost({ provider: providerType, model, usage })
 
     const inserts = await trx
       .insert(providerLogs)
@@ -61,8 +60,8 @@ export async function createProviderLog(
         messages,
         responseText,
         toolCalls,
-        tokens,
-        cost,
+        tokens: usage.totalTokens ?? 0,
+        cost_in_millicents: Math.floor(cost * 100_000),
         duration,
         source,
         apiKeyId,

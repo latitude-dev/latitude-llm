@@ -164,3 +164,5 @@ export function validateConfig(config: Record<string, unknown>): Config {
 
   return configSchema.parse(config)
 }
+
+export { estimateCost } from './estimateCost'

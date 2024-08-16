@@ -14,7 +14,7 @@ import Repository from '../repository'
 export type DocumentLogWithMetadata = DocumentLog & {
   commit: Commit
   tokens: number | null
-  cost: number | null
+  cost_in_millicents: number | null
 }
 
 export class DocumentLogsRepository extends Repository {
@@ -48,7 +48,9 @@ export class DocumentLogsRepository extends Repository {
       .select({
         id: this.scope.id,
         tokens: sum(providerLogs.tokens).mapWith(Number).as('tokens'),
-        cost: sum(providerLogs.cost).mapWith(Number).as('cost'),
+        cost_in_millicents: sum(providerLogs.cost_in_millicents)
+          .mapWith(Number)
+          .as('cost_in_millicents'),
       })
       .from(this.scope)
       .innerJoin(
@@ -67,7 +69,7 @@ export class DocumentLogsRepository extends Repository {
         ...this.scope._.selectedFields,
         commit: commits,
         tokens: aggregatedFieldsSubQuery.tokens,
-        cost: aggregatedFieldsSubQuery.cost,
+        cost_in_millicents: aggregatedFieldsSubQuery.cost_in_millicents,
       })
       .from(this.scope)
       .innerJoin(commits, eq(commits.id, this.scope.commitId))

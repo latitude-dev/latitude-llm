@@ -12,7 +12,7 @@ import {
 import useProviderApiKeys from '$/stores/providerApiKeys'
 import { format } from 'date-fns'
 
-import { formatCost, formatDuration } from '../utils'
+import { formatCostInMillicents, formatDuration } from '../utils'
 
 function MetadataItem({
   label,
@@ -74,7 +74,7 @@ export function DocumentLogMetadata({
       providerLogs?.reduce(
         (acc, log) => {
           const key = String(log.providerId)
-          acc[key] = (acc[key] ?? 0) + log.cost
+          acc[key] = (acc[key] ?? 0) + log.cost_in_millicents
           return acc
         },
         {} as Record<string, number>,
@@ -109,11 +109,22 @@ export function DocumentLogMetadata({
         >
           <div className='flex flex-col justify-between'>
             {Object.entries(tokensByModel).map(([model, tokens]) => (
-              <div key={model} className='flex flex-row items-center gap-4'>
-                <Text.H6B color='white'>{model}</Text.H6B>
-                <Text.H6 color='white'>{tokens}</Text.H6>
+              <div
+                key={model}
+                className='flex flex-row w-full justify-between items-center gap-4'
+              >
+                <Text.H6B color='background'>{model}</Text.H6B>
+                <Text.H6 color='background'>{tokens}</Text.H6>
               </div>
             ))}
+            {Object.values(tokensByModel).some((t) => t === 0) && (
+              <div className='pt-4'>
+                <Text.H6 color='background'>
+                  Note: Number of tokens is provided by your LLM Provider. Some
+                  providers may return 0 tokens.
+                </Text.H6>
+              </div>
+            )}
           </div>
         </Tooltip>
       </MetadataItem>
@@ -125,25 +136,35 @@ export function DocumentLogMetadata({
           trigger={
             <div className='flex flex-row items-center gap-x-1'>
               <Text.H5 color='foregroundMuted'>
-                {formatCost(documentLog.cost ?? 0)}
+                {formatCostInMillicents(documentLog.cost_in_millicents ?? 0)}
               </Text.H5>
               <Icons.info className='w-4 h-4 text-muted-foreground' />
             </div>
           }
         >
           <div className='flex flex-col justify-between'>
-            {Object.entries(costByModel).map(([providerId, cost]) => (
-              <div
-                key={providerId}
-                className='flex flex-row items-center gap-4'
-              >
-                <Text.H6B color='white'>
-                  {providers?.find((p) => p.id === Number(providerId))?.name ??
-                    'Unknown'}
-                </Text.H6B>
-                <Text.H6 color='white'>{formatCost(cost)}</Text.H6>
-              </div>
-            ))}
+            {Object.entries(costByModel).map(
+              ([providerId, cost_in_millicents]) => (
+                <div
+                  key={providerId}
+                  className='flex flex-row w-full justify-between items-center gap-4'
+                >
+                  <Text.H6B color='background'>
+                    {providers?.find((p) => p.id === Number(providerId))
+                      ?.name ?? 'Unknown'}
+                  </Text.H6B>
+                  <Text.H6 color='background'>
+                    {formatCostInMillicents(cost_in_millicents)}
+                  </Text.H6>
+                </div>
+              ),
+            )}
+            <div className='pt-4'>
+              <Text.H6 color='background'>
+                Note: This is just an estimate based on the token usage and your
+                provider's pricing. Actual cost may vary.
+              </Text.H6>
+            </div>
           </div>
         </Tooltip>
       </MetadataItem>
