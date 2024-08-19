@@ -9,7 +9,11 @@ import { users } from '$core/schema/models/users'
 import { workspaces } from '$core/schema/models/workspaces'
 import { type InferSelectModel } from 'drizzle-orm'
 
+import { connectedEvaluations } from './models/connectedEvaluations'
 import { documentLogs } from './models/documentLogs'
+import { evaluationResults } from './models/evaluationResults'
+import { evaluations } from './models/evaluations'
+import { evaluationTemplates } from './models/evaluationTemplates'
 import { providerLogs } from './models/providerLogs'
 
 // Model types are out of schema files to be able to share with NextJS webpack bundler
@@ -28,3 +32,7 @@ export type DocumentVersion = InferSelectModel<typeof documentVersions>
 export type Project = InferSelectModel<typeof projects>
 export type ProviderLog = InferSelectModel<typeof providerLogs>
 export type DocumentLog = InferSelectModel<typeof documentLogs>
+export type Evaluation = InferSelectModel<typeof evaluations>
+export type ConnectedEvaluation = InferSelectModel<typeof connectedEvaluations>
+export type EvaluationResult = InferSelectModel<typeof evaluationResults>
+export type EvaluationTemplate = InferSelectModel<typeof evaluationTemplates>
