@@ -17,3 +17,9 @@ export * from './models/providerApiKeys'
 // Log tables
 export * from './models/documentLogs'
 export * from './models/providerLogs'
+
+// Evaluations tables
+export * from './models/evaluations'
+export * from './models/connectedEvaluations'
+export * from './models/evaluationResults'
+export * from './models/evaluationTemplates'
