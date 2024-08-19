@@ -71,8 +71,11 @@ export default function Playground({
         <div className='flex flex-col gap-3'>
           <Text.H6M>Inputs</Text.H6M>
           {Object.keys(inputs).length > 0 ? (
-            Object.entries(inputs).map(([param, value]) => (
-              <div className='flex flex-row gap-4 w-full items-center'>
+            Object.entries(inputs).map(([param, value], idx) => (
+              <div
+                className='flex flex-row gap-4 w-full items-center'
+                key={idx}
+              >
                 <Badge variant='accent'>&#123;&#123;{param}&#125;&#125;</Badge>
                 <div className='flex flex-grow w-full'>
                   <Input
