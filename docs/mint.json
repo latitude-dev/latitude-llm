@@ -25,21 +25,55 @@
       "name": "Get started",
       "url": "https://github.com/latitude-dev/latitude-llm"
     },
-    "primaryTab": {
-      "name": "Guides"
-    },
-    "tabs": [
-      {
-        "name": "Guides",
-        "url": "guides"
-      }
-    ],
     "anchors": [],
     "navigation": [
       {
         "group": "Getting started",
         "pages": [
-          "guides/getting-started/introduction"
+          "guides/getting-started/introduction",
+          "guides/getting-started/concepts",
+          "guides/getting-started/quick-start",
+          "guides/getting-started/integration",
+          "guides/getting-started/invite-your-team"
+        ]
+      },
+      {
+        "group": "Prompt Manager",
+        "pages": [
+          "guides/prompt-manager/overview",
+          "guides/prompt-manager/parameters",
+          "guides/prompt-manager/snippets",
+          "guides/prompt-manager/chains",
+          "guides/prompt-manager/logic",
+          "guides/prompt-manager/version-control",
+          "guides/prompt-manager/api-access"
+        ]
+      },
+      {
+        "group": "Evaluations",
+        "pages": [
+          "guides/evaluations/evaluators",
+          "guides/evaluations/run-in-batch"
+        ]
+      },
+      {
+        "group": "Logs",
+        "pages": [
+          "guides/logs/overview"
+        ]
+      },
+      {
+        "group": "Datasets",
+        "pages": [
+          "guides/datasets/creating-datasets",
+          "guides/datasets/use-in-batch-evaluations"
+        ]
+      },
+      {
+        "group": "SDKs",
+        "pages": [
+          "guides/sdks/typescript",
+          "guides/sdks/python"
         ]
       }
     ],
