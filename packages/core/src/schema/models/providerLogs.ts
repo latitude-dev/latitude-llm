@@ -18,6 +18,7 @@ import { providerApiKeys } from './providerApiKeys'
 export const logSourcesEnum = latitudeSchema.enum('log_source', [
   LogSources.Playground,
   LogSources.API,
+  LogSources.Evaluation,
 ])
 
 export const providerLogs = latitudeSchema.table('provider_logs', {

@@ -25,11 +25,11 @@ export class EvaluationResultsRepository extends Repository {
 
   async findByDocumentUuid(uuid: string) {
     const result = await this.db
-      .select()
+      .select(this.scope._.selectedFields)
       .from(this.scope)
       .innerJoin(documentLogs, eq(documentLogs.id, this.scope.documentLogId))
       .where(eq(documentLogs.documentUuid, uuid))
 
-    return Result.ok(result[0]!)
+    return Result.ok(result)
   }
 }

@@ -218,6 +218,13 @@
       "when": 1724062619512,
       "tag": "0030_evaluations_schema",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1724149453412,
+      "tag": "0031_add_evaluation_as_provider_log_source",
+      "breakpoints": true
     }
   ]
 }

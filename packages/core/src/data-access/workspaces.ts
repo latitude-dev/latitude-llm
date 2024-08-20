@@ -1,7 +1,18 @@
-import { DocumentVersion, type Commit, type Workspace } from '$core/browser'
+import {
+  DocumentVersion,
+  ProviderApiKey,
+  type Commit,
+  type Workspace,
+} from '$core/browser'
 import { database } from '$core/client'
 import { NotFoundError, Result, TypedResult } from '$core/lib'
-import { commits, documentVersions, projects, workspaces } from '$core/schema'
+import {
+  commits,
+  documentVersions,
+  projects,
+  providerApiKeys,
+  workspaces,
+} from '$core/schema'
 import { eq, getTableColumns } from 'drizzle-orm'
 
 export async function unsafelyFindWorkspace(
@@ -42,6 +53,20 @@ export async function findWorkspaceFromDocument(
     .innerJoin(commits, eq(commits.projectId, projects.id))
     .innerJoin(documentVersions, eq(documentVersions.commitId, commits.id))
     .where(eq(documentVersions.id, document.id))
+    .limit(1)
+
+  return results[0]
+}
+
+export async function findWorkspaceFromProviderApiKey(
+  providerApiKey: ProviderApiKey,
+  db = database,
+) {
+  const results = await db
+    .select(getTableColumns(workspaces))
+    .from(workspaces)
+    .innerJoin(providerApiKeys, eq(providerApiKeys.workspaceId, workspaces.id))
+    .where(eq(providerApiKeys.id, providerApiKey.id))
     .limit(1)
 
   return results[0]

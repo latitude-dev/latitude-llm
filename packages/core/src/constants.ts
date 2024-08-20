@@ -44,6 +44,7 @@ export enum Providers {
 export enum LogSources {
   Playground = 'playground',
   API = 'api',
+  Evaluation = 'evaluation',
 }
 export enum StreamEventTypes {
   Latitude = 'latitude-event',
