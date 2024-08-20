@@ -1,46 +1,39 @@
+import { faker } from '@faker-js/faker'
 import { ContentType, createChain } from '@latitude-data/compiler'
-import { Commit, DocumentVersion, LogSources, ProviderLog } from '$core/browser'
+import { DocumentLog, Evaluation, LogSources, ProviderLog } from '$core/browser'
 import { findWorkspaceFromCommit } from '$core/data-access'
-import { factories } from '$core/index'
+import { findCommitById } from '$core/data-access/commits'
 import { ProviderApiKeysRepository } from '$core/repositories'
 import {
   Config,
+  createEvaluationResult as createEvaluationResultService,
   createProviderLog,
-  getResolvedContent,
-  createDocumentLog as ogCreateDocumentLog,
 } from '$core/services'
 import { v4 as uuid } from 'uuid'
 
-export type IDocumentLogData = {
-  document: DocumentVersion
-  commit: Commit
-  parameters?: Record<string, unknown>
-  customIdentifier?: string
+export type IEvaluationResultData = {
+  documentLog: DocumentLog
+  evaluation: Evaluation
 }
 
-export async function createDocumentLog({
-  document,
-  commit,
-  parameters,
-  customIdentifier,
-}: IDocumentLogData) {
+export async function createEvaluationResult({
+  documentLog,
+  evaluation,
+}: IEvaluationResultData) {
+  const commit = await findCommitById({ id: documentLog.commitId }).then((r) =>
+    r.unwrap(),
+  )
   const workspace = (await findWorkspaceFromCommit(commit))!
+
   const providerScope = new ProviderApiKeysRepository(workspace.id)
 
-  const documentContent = await getResolvedContent({
-    workspaceId: workspace.id,
-    document,
-    commit,
-  }).then((r) => r.unwrap())
-
   const chain = createChain({
-    prompt: documentContent,
-    parameters: parameters ?? {},
+    prompt: evaluation.prompt,
+    parameters: {},
   })
-  let mockedResponse = undefined
 
-  const documentLogUuid = uuid()
   const providerLogs: ProviderLog[] = []
+  let mockedResponse = undefined
   while (true) {
     const { completed, conversation } = await chain.step(mockedResponse)
 
@@ -49,7 +42,7 @@ export async function createDocumentLog({
       .findByName(config.provider)
       .then((r) => r.unwrap())
 
-    mockedResponse = factories.helpers.randomSentence()
+    mockedResponse = String(faker.number.int({ min: 0, max: 10 }))
 
     const promptTokens = conversation.messages.reduce((acc, message) => {
       let content = message.content
@@ -63,7 +56,7 @@ export async function createDocumentLog({
     const completionTokens = mockedResponse.length
     const log = await createProviderLog({
       uuid: uuid(),
-      documentLogUuid,
+      documentLogUuid: documentLog.uuid,
       providerId: provider.id,
       providerType: provider.provider,
       model: config.model,
@@ -77,7 +70,7 @@ export async function createDocumentLog({
         totalTokens: promptTokens + completionTokens,
       },
       duration: Math.floor(Math.random() * 1000),
-      source: LogSources.Playground,
+      source: LogSources.Evaluation,
     }).then((r) => r.unwrap())
 
     providerLogs.push(log)
@@ -85,24 +78,12 @@ export async function createDocumentLog({
     if (completed) break
   }
 
-  const duration =
-    Math.floor(Math.random() * 100) +
-    providerLogs.reduce((acc, log) => acc + log.duration, 0)
-
-  const documentLog = await ogCreateDocumentLog({
-    commit,
-    data: {
-      uuid: documentLogUuid,
-      documentUuid: document.documentUuid,
-      resolvedContent: documentContent,
-      parameters: parameters ?? {},
-      customIdentifier,
-      duration,
-    },
-  }).then((r) => r.unwrap())
-
-  return {
-    providerLogs,
+  const evaluationResult = await createEvaluationResultService({
+    evaluation,
     documentLog,
-  }
+    providerLog: providerLogs[providerLogs.length - 1]!,
+    result: mockedResponse,
+  })
+
+  return evaluationResult.unwrap()
 }
