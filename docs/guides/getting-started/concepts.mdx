@@ -1,0 +1,33 @@
+---
+title: Concepts
+description: 'Get familiar with the terminology used in Latitude'
+---
+
+## Prompts
+
+Prompts are the core building block of Latitude. They are the questions or tasks that you want to ask your model. Prompts can be as simple as a single sentence or as complex as a multi-step dialogue. You can use prompts to generate text, classify text, or perform any other task that your model is capable of.
+
+In Latitude, prompts support parameters, chaining, shared snippets, and more advanced features like logic (if/else, loops) or version control.
+
+To find out more about prompts, check out the [Prompt manager](/guides/prompt-manager/) overview.
+
+## Logs
+
+Logs are the records of the interactions between your prompts and your model. They contain the input prompt, the model's response, and any other metadata that you choose to include. Logs are essential for evaluations, monitoring your model's performance, and debugging any issues that may arise.
+
+In Latitude, logs are automatically captured and stored whenever you run a prompt (either manually or through an endpoint). You can learn more about logs in the [Logs](/guides/logs/) overview.
+
+## Evaluations
+
+Evaluations are the process of assessing your model's performance using logs. You can evaluate your model's output for accuracy, fluency, or any other metric that you choose. There are a few evaluation techniques that you can use:
+
+- **LLM evaluations**: You can use large language models to evaluate the output of other models. This is useful when you have a large number of logs and need to evaluate them quickly.
+- **Human evaluations (HITL)**: You—or your team—can manually review the logs and score them based on your criteria.
+
+Evaluations also generate logs that you can eventually use to fine-tune future models or improve your prompts. To learn more about evaluations, check out the [Evaluations](/guides/evaluations/) overview.
+
+## Datasets
+
+You can use datasets to add data in bulk to your Latitude workspace. Datasets are useful when evaluating model performance at scale, as they allow you to mock real-world data and test your model's performance in different scenarios by running batch evaluations.
+
+To learn more about datasets, check out the [Datasets](/guides/datasets/) overview.
