@@ -8,79 +8,15 @@ import {
 } from '@latitude-data/compiler'
 import { Commit, DocumentVersion } from '$core/browser'
 import { database } from '$core/client'
-import { findWorkspaceFromCommit } from '$core/data-access'
 import { Result, Transaction, TypedResult } from '$core/lib'
-import { BadRequestError } from '$core/lib/errors'
-import {
-  CommitsRepository,
-  DocumentVersionsRepository,
-  ProjectsRepository,
-} from '$core/repositories'
+import { assertCommitIsDraft } from '$core/lib/assertCommitIsDraft'
 import { documentVersions } from '$core/schema'
 import { eq } from 'drizzle-orm'
 
-export async function getMergedAndDraftDocuments(
-  {
-    draft,
-  }: {
-    draft: Commit
-  },
-  tx = database,
-): Promise<TypedResult<[DocumentVersion[], DocumentVersion[]], Error>> {
-  const mergedDocuments: DocumentVersion[] = []
+import { getHeadDocumentsAndDraftDocumentsForCommit } from './getHeadDocumentsAndDraftDocuments'
+import { getMergedAndDraftDocuments } from './getMergedAndDraftDocuments'
 
-  const workspace = await findWorkspaceFromCommit(draft, tx)
-  const commitsScope = new CommitsRepository(workspace!.id, tx)
-  const docsScope = new DocumentVersionsRepository(workspace!.id, tx)
-  const projectsScope = new ProjectsRepository(workspace!.id, tx)
-  const projectResult = await projectsScope.getProjectById(draft.projectId)
-  if (projectResult.error) return projectResult
-
-  const headCommitResult = await commitsScope.getHeadCommit(
-    projectResult.value!,
-  )
-  if (headCommitResult.error) return headCommitResult
-
-  const headDocumentsResult = await docsScope.getDocumentsAtCommit(
-    headCommitResult.value,
-  )
-  if (headDocumentsResult.error) return Result.error(headDocumentsResult.error)
-
-  mergedDocuments.push(...headDocumentsResult.value)
-
-  const draftChangesResult = await docsScope.listCommitChanges(draft)
-  if (draftChangesResult.error) return Result.error(draftChangesResult.error)
-
-  const draftDocuments = mergedDocuments
-    .filter(
-      (d) =>
-        !draftChangesResult.value.find(
-          (c) => c.documentUuid === d.documentUuid,
-        ),
-    )
-    .concat(draftChangesResult.value)
-
-  return Result.ok([mergedDocuments, structuredClone(draftDocuments)])
-}
-
-export function existsAnotherDocumentWithSamePath({
-  documents,
-  path,
-}: {
-  documents: DocumentVersion[]
-  path: string
-}) {
-  return documents.find((d) => d.path === path) !== undefined
-}
-
-export function assertCommitIsDraft(commit: Commit) {
-  if (commit.mergedAt !== null) {
-    return Result.error(new BadRequestError('Cannot modify a merged commit'))
-  }
-  return Result.ok(true)
-}
-
-export async function resolveDocumentChanges({
+async function resolveDocumentChanges({
   originalDocuments,
   newDocuments,
 }: {
@@ -138,18 +74,17 @@ export async function resolveDocumentChanges({
 
   return { documents: changedDocuments, errors }
 }
-
-// TODO: replace commitId param with commit object
-export async function replaceCommitChanges(
+async function replaceCommitChanges(
   {
-    commitId,
+    commit,
     documentChanges,
   }: {
-    commitId: number
+    commit: Commit
     documentChanges: DocumentVersion[]
   },
   tx = database,
 ): Promise<TypedResult<DocumentVersion[], Error>> {
+  const commitId = commit.id
   return Transaction.call<DocumentVersion[]>(async (trx) => {
     await trx
       .delete(documentVersions)
@@ -169,4 +104,61 @@ export async function replaceCommitChanges(
 
     return Result.ok(insertedDocuments)
   }, tx)
+}
+
+export type RecomputedChanges = {
+  changedDocuments: DocumentVersion[]
+  headDocuments: DocumentVersion[]
+  errors: { [documentUuid: string]: CompileError[] }
+}
+
+export async function recomputeChanges(
+  {
+    draft,
+    workspaceId,
+  }: {
+    draft: Commit
+    workspaceId: number
+  },
+  tx = database,
+): Promise<TypedResult<RecomputedChanges, Error>> {
+  try {
+    assertCommitIsDraft(draft).unwrap()
+
+    const result = await getHeadDocumentsAndDraftDocumentsForCommit(
+      { commit: draft, workspaceId },
+      tx,
+    )
+    if (result.error) return result
+
+    const { headDocuments, documentsInDrafCommit } = result.value
+    const { mergedDocuments, draftDocuments } = getMergedAndDraftDocuments({
+      headDocuments,
+      documentsInDrafCommit,
+    })
+
+    const { documents: documentsToUpdate, errors } =
+      await resolveDocumentChanges({
+        originalDocuments: mergedDocuments,
+        newDocuments: draftDocuments,
+      })
+
+    const newDraftDocuments = (
+      await replaceCommitChanges(
+        {
+          commit: draft,
+          documentChanges: documentsToUpdate,
+        },
+        tx,
+      )
+    ).unwrap()
+
+    return Result.ok({
+      headDocuments: mergedDocuments,
+      changedDocuments: newDraftDocuments,
+      errors,
+    })
+  } catch (error) {
+    return Result.error(error as Error)
+  }
 }

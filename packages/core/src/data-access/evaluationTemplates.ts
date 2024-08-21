@@ -1,11 +1,7 @@
-import {
-  database,
-  evaluationTemplates,
-  NotFoundError,
-  Result,
-  TypedResult,
-} from '@latitude-data/core'
 import { EvaluationTemplate } from '$core/browser'
+import { database } from '$core/client'
+import { NotFoundError, Result, TypedResult } from '$core/lib'
+import { evaluationTemplates } from '$core/schema'
 import { eq } from 'drizzle-orm'
 
 export async function findAllEvaluationTemplates(): Promise<

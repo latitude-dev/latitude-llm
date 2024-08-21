@@ -2,12 +2,11 @@
 
 import { LogSources } from '@latitude-data/core/browser'
 import {
-  LatitudeSdk,
   type ChainEvent,
   type Message,
   type StreamChainResponse,
 } from '@latitude-data/sdk-js'
-import { getLatitudeApiKey } from '$/app/(private)/_data-access/latitudeApiKey'
+import { createSdk } from '$/app/(private)/_lib/createSdk'
 import { createStreamableValue, StreamableValue } from 'ai/rsc'
 
 type AddMessagesActionProps = {
@@ -26,13 +25,9 @@ export async function addMessagesAction({
   documentLogUuid,
   messages,
 }: AddMessagesActionProps) {
-  const result = await getLatitudeApiKey()
-  if (result.error) return result
-
+  const sdk = await createSdk().then((r) => r.unwrap())
   const stream = createStreamableValue<ChainEvent, Error>()
 
-  const latitudeApiKey = result.value.token
-  const sdk = new LatitudeSdk({ latitudeApiKey })
   const response = sdk.addMessges({
     params: { documentLogUuid, messages, source: LogSources.Playground },
     onMessage: (chainEvent) => {

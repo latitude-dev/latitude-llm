@@ -1,6 +1,6 @@
 import { bigserial, text, varchar } from 'drizzle-orm/pg-core'
 
-import { latitudeSchema } from '..'
+import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
 
 export const evaluationTemplates = latitudeSchema.table(

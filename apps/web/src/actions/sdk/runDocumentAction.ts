@@ -2,11 +2,10 @@
 
 import { LogSources } from '@latitude-data/core'
 import {
-  LatitudeSdk,
   type ChainEvent,
   type StreamChainResponse,
 } from '@latitude-data/sdk-js'
-import { getLatitudeApiKey } from '$/app/(private)/_data-access/latitudeApiKey'
+import { createSdk } from '$/app/(private)/_lib/createSdk'
 import { createStreamableValue, StreamableValue } from 'ai/rsc'
 
 type RunDocumentActionProps = {
@@ -29,11 +28,8 @@ export async function runDocumentAction({
   commitUuid,
   parameters,
 }: RunDocumentActionProps) {
-  const latitudeApiKey = await getLatitudeApiKey().then((r) => r.unwrap())
-
+  const sdk = await createSdk().then((r) => r.unwrap())
   const stream = createStreamableValue<ChainEvent, Error>()
-
-  const sdk = new LatitudeSdk({ latitudeApiKey: latitudeApiKey.token })
   const response = sdk.runDocument({
     params: {
       projectId,

@@ -1,4 +1,4 @@
-import { relations, sql } from 'drizzle-orm'
+import { sql } from 'drizzle-orm'
 import {
   bigint,
   bigserial,
@@ -8,7 +8,7 @@ import {
   varchar,
 } from 'drizzle-orm/pg-core'
 
-import { latitudeSchema } from '..'
+import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
 import { workspaces } from './workspaces'
 
@@ -32,10 +32,3 @@ export const apiKeys = latitudeSchema.table(
     workspaceIdIdx: index('workspace_id_idx').on(table.workspaceId),
   }),
 )
-
-export const apiKeyRelations = relations(apiKeys, ({ one }) => ({
-  workspace: one(workspaces, {
-    fields: [apiKeys.workspaceId],
-    references: [workspaces.id],
-  }),
-}))

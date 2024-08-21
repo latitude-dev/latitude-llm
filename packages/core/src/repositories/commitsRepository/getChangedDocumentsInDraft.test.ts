@@ -1,15 +1,11 @@
 import {
-  CommitsRepository,
-  destroyDocument,
-  factories,
-  ModifiedDocumentType,
-  updateDocument,
-} from '@latitude-data/core'
-import type {
   Commit,
   DocumentVersion,
+  ModifiedDocumentType,
   Project,
-} from '@latitude-data/core/browser'
+} from '$core/browser'
+import { destroyDocument, factories, updateDocument } from '$core/index'
+import { CommitsRepository } from '$core/repositories/commitsRepository'
 import { beforeEach, describe, expect, it } from 'vitest'
 
 let project: Project

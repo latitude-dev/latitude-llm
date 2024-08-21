@@ -1,5 +1,4 @@
 import { Providers } from '$core/browser'
-import { relations } from 'drizzle-orm'
 import {
   bigint,
   bigserial,
@@ -54,19 +53,5 @@ export const providerApiKeys = latitudeSchema.table(
       table.provider,
       table.workspaceId,
     ),
-  }),
-)
-
-export const providerApiKeysRelations = relations(
-  providerApiKeys,
-  ({ one }) => ({
-    author: one(users, {
-      fields: [providerApiKeys.authorId],
-      references: [users.id],
-    }),
-    workspace: one(workspaces, {
-      fields: [providerApiKeys.workspaceId],
-      references: [workspaces.id],
-    }),
   }),
 )

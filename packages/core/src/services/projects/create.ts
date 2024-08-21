@@ -1,5 +1,7 @@
-import { database, projects, Result, Transaction } from '@latitude-data/core'
 import { Project, SafeUser, Workspace } from '$core/browser'
+import { database } from '$core/client'
+import { Result, Transaction } from '$core/lib'
+import { projects } from '$core/schema'
 import { createCommit } from '$core/services/commits/create'
 
 export async function createProject(

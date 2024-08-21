@@ -1,13 +1,15 @@
 {
   "name": "@latitude-data/gateway",
+  "version": "1.0.0",
   "type": "module",
+  "description": "Gateway for Latitude Data",
+  "private": true,
   "scripts": {
-    "build": "tsc --build tsconfig.prod.json --verbose",
+    "build": "tsup --config tsup.config.ts",
     "dev": "tsx watch src/server",
     "dev:debug": "tsx watch --inspect-brk src/server",
     "lint": "eslint src/",
     "prettier": "prettier --write \"**/*.{ts,tsx,md}\"",
-    "start": "node -r module-alias/register ./dist --env=production",
     "tc": "tsc --noEmit",
     "test": "vitest --run",
     "test:watch": "vitest"
@@ -20,6 +22,7 @@
     "@latitude-data/jobs": "workspace:^",
     "@t3-oss/env-core": "^0.10.1",
     "hono": "^4.5.3",
+    "jet-paths": "^1.0.6",
     "zod": "^3.23.8"
   },
   "devDependencies": {
@@ -27,7 +30,7 @@
     "@latitude-data/typescript-config": "workspace:^",
     "@types/uuid": "^10.0.0",
     "eslint": "8",
-    "jet-paths": "^1.0.6",
+    "tsup": "^8.2.4",
     "tsx": "^4.16.2",
     "typescript": "^5.5.4",
     "vitest": "^2.0.4"

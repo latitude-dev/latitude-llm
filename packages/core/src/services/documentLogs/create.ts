@@ -1,10 +1,7 @@
-import {
-  database,
-  documentLogs,
-  Result,
-  Transaction,
-} from '@latitude-data/core'
 import { Commit, DocumentLog } from '$core/browser'
+import { database } from '$core/client'
+import { Result, Transaction } from '$core/lib'
+import { documentLogs } from '$core/schema'
 
 export type CreateDocumentLogProps = {
   commit: Commit

@@ -1,4 +1,4 @@
-import { Providers } from '@latitude-data/core'
+import { Providers } from '$core/browser'
 import { CompletionTokenUsage } from 'ai'
 
 import { getCostPer1MAnthropic } from './anthropic'
@@ -26,6 +26,8 @@ function getCostPer1M({
       return getCostPer1MMistral(model)
     case Providers.Azure:
       return getCostPer1MOpenAI(model)
+    default:
+      throw new Error(`Unknown provider: ${provider}`)
   }
 }
 

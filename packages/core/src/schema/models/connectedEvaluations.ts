@@ -1,7 +1,6 @@
-import { relations } from 'drizzle-orm'
 import { bigint, bigserial, index, unique, uuid } from 'drizzle-orm/pg-core'
 
-import { documentVersions, latitudeSchema } from '..'
+import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
 import { evaluations } from './evaluations'
 
@@ -26,19 +25,5 @@ export const connectedEvaluations = latitudeSchema.table(
       table.documentUuid,
       table.evaluationId,
     ),
-  }),
-)
-
-export const connectedEvaluationRelations = relations(
-  connectedEvaluations,
-  ({ one }) => ({
-    document: one(documentVersions, {
-      fields: [connectedEvaluations.documentUuid],
-      references: [documentVersions.documentUuid],
-    }),
-    evaluation: one(evaluations, {
-      fields: [connectedEvaluations.evaluationId],
-      references: [evaluations.id],
-    }),
   }),
 )

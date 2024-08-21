@@ -1,4 +1,4 @@
-import { relations, sql } from 'drizzle-orm'
+import { sql } from 'drizzle-orm'
 import {
   bigint,
   bigserial,
@@ -10,7 +10,9 @@ import {
   varchar,
 } from 'drizzle-orm/pg-core'
 
-import { latitudeSchema, projects, users } from '..'
+import { latitudeSchema } from '../db-schema'
+import { projects } from '../models/projects'
+import { users } from '../models/users'
 import { timestamps } from '../schemaHelpers'
 
 export const commits = latitudeSchema.table(
@@ -44,14 +46,3 @@ export const commits = latitudeSchema.table(
     ),
   }),
 )
-
-export const commitRelations = relations(commits, ({ one }) => ({
-  project: one(projects, {
-    fields: [commits.projectId],
-    references: [projects.id],
-  }),
-  user: one(users, {
-    fields: [commits.userId],
-    references: [users.id],
-  }),
-}))

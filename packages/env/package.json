@@ -13,8 +13,8 @@
   "exports": {
     ".": "./src/index.ts"
   },
-  "dependencies": {
-    "dotenv": "^16.4.5"
+  "peerDependencies": {
+    "dotenv": "*"
   },
   "devDependencies": {
     "@latitude-data/eslint-config": "workspace:*",

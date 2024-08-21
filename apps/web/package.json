@@ -15,7 +15,6 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@elastic/elasticsearch": "^8.14.0",
     "@latitude-data/compiler": "workspace:^",
     "@latitude-data/core": "workspace:*",
     "@latitude-data/env": "workspace:^",

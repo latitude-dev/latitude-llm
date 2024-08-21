@@ -1,11 +1,7 @@
-import {
-  database,
-  hashPassword,
-  Result,
-  Transaction,
-  users,
-} from '@latitude-data/core'
 import { SafeUser } from '$core/browser'
+import { database } from '$core/client'
+import { hashPassword, Result, Transaction } from '$core/lib'
+import { users } from '$core/schema'
 
 export async function createUser(
   {

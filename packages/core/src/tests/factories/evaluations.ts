@@ -1,9 +1,9 @@
 import { faker } from '@faker-js/faker'
 import { ProviderApiKey } from '$core/browser'
 import { findWorkspaceFromProviderApiKey } from '$core/data-access'
-import { factories } from '$core/index'
 import { createEvaluation as createEvaluationService } from '$core/services'
 
+import { helpers } from './helpers'
 import { createProviderApiKey, ICreateProvider } from './providerApiKeys'
 
 export type IEvaluationData = {
@@ -23,7 +23,7 @@ export async function createEvaluation({
       : await createProviderApiKey(providerData)
 
   const workspace = (await findWorkspaceFromProviderApiKey(provider))!
-  const prompt = factories.helpers.createPrompt({ provider })
+  const prompt = helpers.createPrompt({ provider })
 
   const evaluationResult = await createEvaluationService({
     workspace,

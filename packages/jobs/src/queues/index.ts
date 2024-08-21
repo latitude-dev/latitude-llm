@@ -34,7 +34,7 @@ function setupQueue({
         params: JobDefinition[typeof name][typeof jobName]['data'],
         options?: JobsOptions,
       ) => {
-        return queue.add(jobName, params, options)
+        queue.add(jobName, params, options)
       }
       return { ...acc, [key]: enqueuFn }
     }, {} as JobEnqueueFn),

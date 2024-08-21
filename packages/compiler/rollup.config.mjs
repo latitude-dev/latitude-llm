@@ -1,8 +1,9 @@
-import typescript from '@rollup/plugin-typescript'
 import * as path from 'path'
 import * as url from 'url'
-import { dts } from 'rollup-plugin-dts'
+
 import alias from '@rollup/plugin-alias'
+import typescript from '@rollup/plugin-typescript'
+import { dts } from 'rollup-plugin-dts'
 
 /**
  * We have a internal circular dependency in the compiler,
@@ -21,7 +22,7 @@ function isInternalCircularDependency(warning) {
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url))
 const aliasEntries = {
-  entries: [{ find: '$', replacement: path.resolve(__dirname, 'src') }],
+  entries: [{ find: '$compiler', replacement: path.resolve(__dirname, 'src') }],
 }
 
 /** @type {import('rollup').RollupOptions} */
@@ -53,7 +54,6 @@ export default [
       'node:crypto',
       'yaml',
       'crypto',
-      'ajv',
     ],
   },
   {

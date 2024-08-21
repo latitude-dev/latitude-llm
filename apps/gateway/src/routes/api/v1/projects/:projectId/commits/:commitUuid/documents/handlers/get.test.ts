@@ -5,7 +5,7 @@ import {
   factories,
   mergeCommit,
 } from '@latitude-data/core'
-import app from '$/index'
+import app from '$/routes/app'
 import { eq } from 'drizzle-orm'
 import { describe, expect, it, vi } from 'vitest'
 
