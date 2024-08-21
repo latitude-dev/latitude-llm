@@ -37,7 +37,7 @@ export default function useProviderLogs(
         return undefined
       }
 
-      return fetchedLogs
+      return fetchedLogs as ProviderLog[]
     },
     opts,
   )

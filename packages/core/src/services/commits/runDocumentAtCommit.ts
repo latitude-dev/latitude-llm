@@ -31,6 +31,13 @@ async function cacheApiKeysByName({ workspaceId }: { workspaceId: number }) {
   }, new Map<string, ProviderApiKey>())
 }
 
+export function enqueueChainEvent(
+  controller: ReadableStreamDefaultController,
+  event: ChainEvent,
+) {
+  controller.enqueue(event)
+}
+
 export async function runDocumentAtCommit({
   workspaceId,
   document,
@@ -94,13 +101,6 @@ export async function runDocumentAtCommit({
   })
 }
 
-function enqueueEvent(
-  controller: ReadableStreamDefaultController,
-  event: ChainEvent,
-) {
-  controller.enqueue(event)
-}
-
 async function iterate({
   chain,
   previousApiKey,
@@ -131,7 +131,7 @@ async function iterate({
       config,
       apiKey,
       sentCount,
-    } = await doSomeCommonOperations({
+    } = await doChainStep({
       chain,
       previousResponse,
       allApiKeys,
@@ -139,7 +139,7 @@ async function iterate({
       sentCount: previousCount,
     })
 
-    enqueueEvent(controller, {
+    enqueueChainEvent(controller, {
       data: {
         type: ChainEventTypes.Step,
         isLastStep: completed,
@@ -164,7 +164,7 @@ async function iterate({
     )
 
     for await (const value of streamToGenerator(result.fullStream)) {
-      enqueueEvent(controller, {
+      enqueueChainEvent(controller, {
         event: StreamEventTypes.Provider,
         data: value,
       })
@@ -173,7 +173,8 @@ async function iterate({
     // TODO: The type on `ai` package return a different definition for `toolCalls`
     // than `@latitude-data/compiler` package. We have to unify the naming.
     // For now no toolCalls
-    const response = {
+    const response: ChainCallResponse = {
+      documentLogUuid,
       text: await result.text,
       usage: await result.usage,
       toolCalls: (await result.toolCalls).map((t) => ({
@@ -188,7 +189,7 @@ async function iterate({
         ...response,
         documentLogUuid,
       }
-      enqueueEvent(controller, {
+      enqueueChainEvent(controller, {
         event: StreamEventTypes.Latitude,
         data: {
           type: ChainEventTypes.Complete,
@@ -208,7 +209,7 @@ async function iterate({
 
       return completedResponse
     } else {
-      enqueueEvent(controller, {
+      enqueueChainEvent(controller, {
         event: StreamEventTypes.Latitude,
         data: {
           type: ChainEventTypes.StepComplete,
@@ -228,7 +229,7 @@ async function iterate({
     }
   } catch (e) {
     const error = e as Error
-    enqueueEvent(controller, {
+    enqueueChainEvent(controller, {
       event: StreamEventTypes.Latitude,
       data: {
         type: ChainEventTypes.Error,
@@ -240,6 +241,7 @@ async function iterate({
       },
     })
     controller.close()
+
     if (error instanceof ZodError) {
       throw new UnprocessableEntityError(
         'Error validating document configuration',
@@ -254,7 +256,7 @@ async function iterate({
 /**
  *  Performs some common operations needed for processing an iteration step
  **/
-async function doSomeCommonOperations({
+async function doChainStep({
   chain,
   allApiKeys,
   previousResponse,

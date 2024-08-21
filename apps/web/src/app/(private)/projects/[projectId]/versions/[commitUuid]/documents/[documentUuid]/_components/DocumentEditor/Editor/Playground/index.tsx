@@ -101,11 +101,7 @@ export default function Playground({
                   runPrompt={() => setMode('chat')}
                 />
               ) : (
-                <Chat
-                  document={document}
-                  parameters={parameters}
-                  metadata={metadata!}
-                />
+                <Chat document={document} parameters={parameters} />
               )}
             </div>
           </div>

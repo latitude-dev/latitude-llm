@@ -94,12 +94,14 @@ export async function ai(
     messages,
     config,
     documentLogUuid,
+    logGeneratedAt = new Date(),
   }: {
     provider: ProviderApiKey
     config: PartialConfig
     messages: Message[]
     documentLogUuid?: string
     prompt?: string
+    logGeneratedAt?: Date
   },
   {
     providerLogHandler,
@@ -126,6 +128,7 @@ export async function ai(
     onFinish: (event) => {
       providerLogHandler({
         uuid: uuidv4(),
+        generatedAt: logGeneratedAt,
         documentLogUuid,
         providerId,
         providerType,

@@ -1,10 +1,14 @@
 import {
-  BaseParams,
-  EntityType,
+  GetDocumentUrlParams,
   HandlerType,
+  RunUrlParams,
   UrlParams,
 } from '$sdk/utils/types'
 
+type ResolveParams<T extends HandlerType> = {
+  handler: T
+  params?: UrlParams<T>
+}
 export class RouteResolver {
   private basePath: string
   private apiVersion: string
@@ -23,26 +27,33 @@ export class RouteResolver {
     this.apiVersion = apiVersion
   }
 
-  resolve({ handler, params }: UrlParams) {
-    const baseUrl = this.baseEntityUrl({ entity: EntityType.Commit, params })
-
-    const documentsUrl = `${baseUrl}/documents`
+  resolve<T extends HandlerType>({ handler, params }: ResolveParams<T>) {
     switch (handler) {
       case HandlerType.RunDocument:
-        return `${documentsUrl}/run`
-      case HandlerType.GetDocument:
-        return `${documentsUrl}/${params.documentPath}`
+        return this.documents(params as RunUrlParams).run
+      case HandlerType.GetDocument: {
+        const getParams = params as GetDocumentUrlParams
+        return this.documents(getParams).document(getParams.documentPath)
+      }
+      case HandlerType.AddMessageToDocumentLog:
+        return this.chats().addMessage
       default:
         throw new Error(`Unknown handler: ${handler satisfies never}`)
     }
   }
 
-  private baseEntityUrl({ entity, params }: BaseParams) {
-    switch (entity) {
-      case EntityType.Commit:
-        return this.commitsUrl(params)
-      default:
-        throw new Error(`Unknown entity: ${entity satisfies never}`)
+  private chats() {
+    const base = `${this.baseUrl}/chats`
+    return {
+      addMessage: `${base}/add-message`,
+    }
+  }
+
+  private documents(params: { projectId: number; commitUuid?: string }) {
+    const base = `${this.commitsUrl(params)}/documents`
+    return {
+      run: `${base}/run`,
+      document: (documentPath: string) => `${base}/${documentPath}`,
     }
   }
 

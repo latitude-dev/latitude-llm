@@ -24,7 +24,7 @@ import {
   useCurrentProject,
   useLocalStorage,
 } from '@latitude-data/web-ui'
-import type { StreamTextOutputAction } from '$/actions/documents/streamTextAction'
+import { type AddMessagesActionFn } from '$/actions/sdk/addMessagesAction'
 import type { RunDocumentActionFn } from '$/actions/sdk/runDocumentAction'
 import useDocumentVersions from '$/stores/documentVersions'
 import { useDebouncedCallback } from 'use-debounce'
@@ -34,20 +34,20 @@ import Playground from './Playground'
 
 export const DocumentEditorContext = createContext<
   | {
-      streamTextAction: StreamTextOutputAction
       runDocumentAction: RunDocumentActionFn
+      addMessagesAction: AddMessagesActionFn
     }
   | undefined
 >(undefined)
 
 export default function DocumentEditor({
-  streamTextAction,
   runDocumentAction,
+  addMessagesAction,
   document,
   documents,
 }: {
-  streamTextAction: Function
   runDocumentAction: Function
+  addMessagesAction: Function
   document: DocumentVersion
   documents: DocumentVersion[]
 }) {
@@ -140,8 +140,8 @@ export default function DocumentEditor({
   return (
     <DocumentEditorContext.Provider
       value={{
-        streamTextAction: streamTextAction as StreamTextOutputAction,
         runDocumentAction: runDocumentAction as RunDocumentActionFn,
+        addMessagesAction: addMessagesAction as AddMessagesActionFn,
       }}
     >
       <div className='flex flex-row w-full h-full gap-8 p-6'>

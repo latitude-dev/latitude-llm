@@ -14,6 +14,7 @@ import { touchProviderApiKey } from '../providerApiKeys/touch'
 
 export type CreateProviderLogProps = {
   uuid: string
+  generatedAt: Date
   providerId: number
   providerType: Providers
   model: string
@@ -43,6 +44,7 @@ export async function createProviderLog(
     source,
     apiKeyId,
     documentLogUuid,
+    generatedAt,
   }: CreateProviderLogProps,
   db = database,
 ) {
@@ -52,6 +54,14 @@ export async function createProviderLog(
     const inserts = await trx
       .insert(providerLogs)
       .values({
+        // TODO: Review if wrapping with a `new Date` is necessary.
+        // `generatedAt` is already a `Date` object, so this should work but it doesn't.
+        // I saw this workouround here:
+        // https://github.com/drizzle-team/drizzle-orm/issues/1113#issuecomment-2220076371
+        //
+        // Docs for timestamp with `{ mode: 'date' }`
+        // https://orm.drizzle.team/docs/column-types/pg#timestamp
+        generatedAt: new Date(generatedAt),
         uuid,
         documentLogUuid,
         providerId,
@@ -68,7 +78,7 @@ export async function createProviderLog(
       })
       .returning()
 
-    const log = inserts[0]!
+    const log = inserts[0]! as ProviderLog
     await touchProviderApiKey(providerId, trx)
     if (apiKeyId) await touchApiKey(apiKeyId, trx)
 

@@ -15,22 +15,9 @@ import {
 } from '@latitude-data/core/browser'
 import app from '$/index'
 import { eq } from 'drizzle-orm'
+import { testConsumeStream } from 'test/helpers'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-async function consumeStream(body: ReadableStream) {
-  const responseStream = body as ReadableStream
-  const reader = responseStream.getReader()
-
-  let done = false
-  let value
-  while (!done) {
-    const { done: _done, value: _value } = await reader.read()
-    done = _done
-    if (_value) value = new TextDecoder().decode(_value)
-  }
-
-  return { done, value }
-}
 const mocks = vi.hoisted(() => ({
   runDocumentAtCommit: vi.fn(),
   queues: {
@@ -166,7 +153,9 @@ describe('POST /run', () => {
         headers,
       })
 
-      const { done, value } = await consumeStream(res.body as ReadableStream)
+      const { done, value } = await testConsumeStream(
+        res.body as ReadableStream,
+      )
       expect(mocks.queues)
       expect(res.status).toBe(200)
       expect(res.body).toBeInstanceOf(ReadableStream)
@@ -218,7 +207,7 @@ describe('POST /run', () => {
       expect(mocks.queues)
       expect(res.status).toBe(200)
       expect(res.body).toBeInstanceOf(ReadableStream)
-      await consumeStream(res.body as ReadableStream)
+      await testConsumeStream(res.body as ReadableStream)
 
       expect(
         mocks.queues.defaultQueue.jobs.enqueueCreateDocumentLogJob,

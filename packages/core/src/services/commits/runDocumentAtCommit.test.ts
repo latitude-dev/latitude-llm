@@ -7,25 +7,10 @@ import {
   Workspace,
 } from '$core/browser'
 import { factories } from '$core/index'
+import { testConsumeStream } from '$core/tests/helpers'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { runDocumentAtCommit } from './index'
-
-async function consumeStream(stream: ReadableStream) {
-  const reader = stream.getReader()
-
-  let done = false
-  const events = []
-  while (!done) {
-    const { done: _done, value } = await reader.read()
-    done = _done
-    if (value) {
-      events.push(value)
-    }
-  }
-
-  return { done, value: events }
-}
 
 const mocks = vi.hoisted(() => {
   return {
@@ -50,6 +35,7 @@ const mocks = vi.hoisted(() => {
     }),
   }
 })
+
 vi.mock('../ai', async (importMod) => {
   const mod = (await importMod()) as typeof import('../ai')
   return {
@@ -198,7 +184,7 @@ This is a test document
       expect(result.value?.documentLogUuid).toEqual('fake-document-log-uuid')
     })
 
-    it('pass documentUuid to AI', async () => {
+    it('pass params to AI', async () => {
       const { runDocumentAtCommit } = await import('./index')
       const { stream } = await runDocumentAtCommit({
         workspaceId,
@@ -211,7 +197,7 @@ This is a test document
         generateUUID: mocks.uuid,
       }).then((r) => r.unwrap())
 
-      await consumeStream(stream)
+      await testConsumeStream(stream)
       expect(mocks.runAi).toHaveBeenCalledWith(
         {
           messages: [
@@ -244,7 +230,7 @@ This is a test document
         // @ts-ignore
         generateUUID: mocks.uuid,
       }).then((r) => r.unwrap())
-      const { value } = await consumeStream(stream)
+      const { value } = await testConsumeStream(stream)
       expect(value).toEqual([
         {
           data: {
@@ -265,6 +251,7 @@ This is a test document
           data: {
             type: 'chain-step-complete',
             response: {
+              documentLogUuid: 'fake-document-log-uuid',
               text: 'Fake AI generated text',
               toolCalls: [],
               usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },

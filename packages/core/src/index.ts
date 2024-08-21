@@ -11,3 +11,4 @@ export * from './repositories'
 export * from './lib/streamToGenerator'
 
 export { factories }
+export type { Message } from '@latitude-data/compiler'

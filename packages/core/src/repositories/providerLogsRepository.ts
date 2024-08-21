@@ -1,6 +1,7 @@
-import { Result } from '$core/lib'
+import { ProviderLog } from '$core/browser'
+import { NotFoundError, Result } from '$core/lib'
 import { providerApiKeys, providerLogs, workspaces } from '$core/schema'
-import { asc, eq, getTableColumns } from 'drizzle-orm'
+import { asc, desc, eq, getTableColumns } from 'drizzle-orm'
 
 import Repository from './repository'
 
@@ -17,12 +18,31 @@ export class ProviderLogsRepository extends Repository {
       .as('providerLogsScope')
   }
 
+  async findLastByDocumentLogUuid(documentLogUuid: string | undefined) {
+    if (!documentLogUuid) {
+      return Result.error(new NotFoundError('documentLogUuid is required'))
+    }
+
+    const result = await this.db
+      .select()
+      .from(this.scope)
+      .where(eq(this.scope.documentLogUuid, documentLogUuid))
+      .orderBy(desc(this.scope.generatedAt))
+      .limit(1)
+
+    if (!result.length) {
+      return Result.error(new NotFoundError('ProviderLog not found'))
+    }
+
+    return Result.ok(result[0]! as ProviderLog)
+  }
+
   async findByDocumentLogUuid(documentLogUuid: string) {
     const result = await this.db
       .select()
       .from(this.scope)
       .where(eq(this.scope.documentLogUuid, documentLogUuid))
-      .orderBy(asc(this.scope.createdAt))
+      .orderBy(asc(this.scope.generatedAt))
     return Result.ok(result)
   }
 }

@@ -1,3 +1,5 @@
+import { LogSources, Message } from '@latitude-data/core'
+
 export type {
   ChainEvent,
   StreamEventTypes,
@@ -7,6 +9,18 @@ export type RunUrlParams = {
   projectId: number
   commitUuid?: string
 }
+
+type RunDocumentBodyParam = {
+  documentPath: string
+  parameters?: Record<string, unknown>
+  source?: LogSources
+}
+type AddMessageBodyParam = {
+  documentLogUuid: string
+  messages: Message[]
+  source?: LogSources
+}
+
 export type GetDocumentUrlParams = {
   projectId: number
   commitUuid?: string
@@ -15,24 +29,19 @@ export type GetDocumentUrlParams = {
 
 export enum HandlerType {
   RunDocument = 'run-document',
+  AddMessageToDocumentLog = 'add-message-to-document-log',
   GetDocument = 'get-document',
 }
 
-export enum EntityType {
-  Commit = 'commit',
-}
+export type UrlParams<T extends HandlerType> = T extends HandlerType.RunDocument
+  ? RunUrlParams
+  : T extends HandlerType.GetDocument
+    ? GetDocumentUrlParams
+    : never
 
-export type BaseParams = {
-  entity: EntityType.Commit
-  params: RunUrlParams
-}
-
-export type UrlParams =
-  | {
-      handler: HandlerType.RunDocument
-      params: RunUrlParams
-    }
-  | {
-      handler: HandlerType.GetDocument
-      params: GetDocumentUrlParams
-    }
+export type BodyParams<T extends HandlerType> =
+  T extends HandlerType.RunDocument
+    ? RunDocumentBodyParam
+    : T extends HandlerType.AddMessageToDocumentLog
+      ? AddMessageBodyParam
+      : never
