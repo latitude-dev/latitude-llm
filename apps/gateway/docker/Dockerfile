@@ -69,8 +69,4 @@ ENV NODE_ENV=production
 
 EXPOSE 8787
 
-# Bcrypt is not compiled for some reason
-# https://github.com/kelektiv/node.bcrypt.js/issues/800
-RUN  npm rebuild bcrypt
-
 CMD node server.js -p $PORT

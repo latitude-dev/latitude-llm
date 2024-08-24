@@ -1,13 +1,22 @@
-import bcrypt from 'bcrypt'
+import argon2 from 'argon2'
 
-const PASSWORD_SALT_ROUNDS = 10
-export async function hashPassword(password: string) {
-  return bcrypt.hash(password, PASSWORD_SALT_ROUNDS)
+export async function hashPassword(password: string): Promise<string> {
+  try {
+    const hash = await argon2.hash(password)
+    return hash
+  } catch (err) {
+    throw new Error('Error hashing password')
+  }
 }
 
-export function verifyPassword(
+export async function verifyPassword(
   password: string,
   hash: string,
 ): Promise<boolean> {
-  return bcrypt.compare(password, hash)
+  try {
+    const isMatch = await argon2.verify(hash, password)
+    return isMatch
+  } catch (err) {
+    throw new Error('Error verifying password')
+  }
 }

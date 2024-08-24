@@ -31,7 +31,7 @@
     "@latitude-data/env": "*",
     "@t3-oss/env-core": "*",
     "ai": "*",
-    "bcrypt": "*",
+    "argon2": "*",
     "drizzle-kit": "*",
     "drizzle-orm": "*",
     "lodash-es": "*",
@@ -40,7 +40,6 @@
   },
   "devDependencies": {
     "@faker-js/faker": "*",
-    "@types/bcrypt": "*",
     "@types/lodash-es": "*",
     "@types/node": "*",
     "@types/uuid": "*",

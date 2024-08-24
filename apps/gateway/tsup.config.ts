@@ -32,7 +32,7 @@ export default defineConfig({
     '@ai-sdk/mistral',
     '@ai-sdk/openai',
     'ai',
-    'bcrypt',
+    'argon2',
     'pg',
     'drizzle-kit',
     'drizzle-orm',
