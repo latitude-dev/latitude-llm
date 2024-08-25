@@ -1,0 +1,17 @@
+{
+  "name": "infra",
+  "main": "src/index.ts",
+  "type": "module",
+  "devDependencies": {
+    "@types/node": "^18",
+    "ts-node": "^10.9.2",
+    "tsconfig-paths": "^4.2.0",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "@pulumi/aws": "^6.50.1",
+    "@pulumi/awsx": "^2.14.0",
+    "@pulumi/docker": "^4.5.5",
+    "@pulumi/pulumi": "^3.113.0"
+  }
+}

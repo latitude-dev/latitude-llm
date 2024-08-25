@@ -21,10 +21,10 @@ export default createEnv({
   server: {
     DATABASE_URL: z.string(),
     REDIS_HOST: z.string(),
-    REDIS_PORT: z.string(),
+    REDIS_PORT: z.coerce.number().optional(),
     REDIS_PASSWORD: z.string().optional(),
-    GATEWAY_HOSTNAME: z.string(),
-    GATEWAY_PORT: z.string().transform((v) => Number(v)),
+    GATEWAY_HOSTNAME: z.string().optional().default('localhost'),
+    GATEWAY_PORT: z.coerce.number().optional(),
   },
   runtimeEnv: {
     ...process.env,

@@ -13,3 +13,14 @@ serve(
     console.log(`Listening on http://${env.GATEWAY_HOSTNAME}:${info.port}`)
   },
 )
+
+// Add graceful shutdown handler
+function gracefulShutdown() {
+  console.log('Received termination signal. Shutting down gracefully...')
+  // Perform any cleanup operations here
+  process.exit(0)
+}
+
+// Register signal handlers
+process.on('SIGTERM', gracefulShutdown)
+process.on('SIGINT', gracefulShutdown)

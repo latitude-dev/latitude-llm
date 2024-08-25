@@ -7,15 +7,16 @@ RUN apk add --no-cache libc6-compat
 # Install pnpm
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
-RUN corepack enable && corepack prepare pnpm@8.15.6 --activate
 
+RUN npm i -g pnpm
 RUN pnpm i -g turbo
 
 WORKDIR /app
-COPY package.json .
-COPY pnpm-lock.yaml .
 
-COPY . .
+COPY .npmrc package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
+COPY apps/workers ./apps/workers
+COPY tools ./tools
+COPY packages ./packages
 
 RUN turbo prune @latitude-data/workers --docker
 
@@ -38,8 +39,9 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
   pnpm turbo build --filter='@latitude-data/workers...'
 
 FROM builder AS prod-deps
+
 WORKDIR /app
-# pnpm deploy: https://pnpm.io/cli/deploy
+
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm deploy \
   --filter="@latitude-data/workers" \
   --prod --ignore-scripts --no-optional /dependencies

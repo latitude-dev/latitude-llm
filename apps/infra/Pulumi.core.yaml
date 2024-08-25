@@ -1,0 +1,16 @@
+encryptionsalt: v1:K+dTqOgU40c=:v1:xzsAOOiJEEAsdCQ4:Oe7NKHjXdYdZrcrrBa1/0yolY5M3SQ==
+config:
+  infra:DATABASE_PASSWORD:
+    secure: v1:WABt/tJjfsAKMplU:RRLtj5mTu301x4sn2Tr91u4O0Msd3mWVJutcDg==
+  infra:albSecurityGroup:
+    secure: v1:HCwWQvcrwQE9Py6E:U5ibuWwH2MNAooASzaHOnSS3pKNhuJHZTh2pnHcSYKRPuuMJ
+  infra:certificateArn:
+    secure: v1:cVoNFiCossdN2KJL:2rPP4LfjqbYMzVS+TtMzdhie2uk8cQ7TXecvGa+6FJEqpuI1EdbThaoNhVUlfqLuCYIn4OmaRRnndhjbHOOgDnQGT1kaXtj8zjdyJWHqZtEQHhvI1SKXC1g6WPj7vcvwkeTj/AFu
+  infra:databasePassword:
+    secure: v1:14xqj3LYKOBzD4so:NbE9HOwDUAZifQPJh6fIUeQHQ8MyJFGpjsUZGQ==
+  infra:ecsSecurityGroup:
+    secure: v1:uvoNJCPcP5g/yhLX:a1oNfCmvBJ4wl3/xk236O+klUaQPLM73Fih7uYs3Fnhf1x28
+  infra:hostedZoneId:
+    secure: v1:BXQl2TxAFhyF74A+:S+RilnAnXeNGROmxT7nwFRp+xprs+DJaBkdSyKxEJTqamKNJ
+  infra:vpcId:
+    secure: v1:HKYJSVecegwLIR3N:UwrixduYJlNIrmCnuDGqvr2oOoeKDwOh+b0aCF9F/kryL/TggQ==

@@ -8,5 +8,4 @@ export REDIS_HOST=redis
 docker compose run -it \
   -e DATABASE_URL="$DATABASE_URL" \
   -e REDIS_HOST="$REDIS_HOST" \
-  -e REDIS_PORT="$REDIS_PORT" \
-  gateway server.js -p $GATEWAY_PORT
+  workers server.js

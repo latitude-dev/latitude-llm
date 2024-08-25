@@ -1,13 +1,6 @@
 services:
-  base:
-    image: latitudedata/base
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.base
-    restart: 'none'
-
   db:
-    image: postgres
+    image: postgres:15.8
     environment:
       - 'POSTGRES_USER=latitude'
       - 'POSTGRES_PASSWORD=secret'
@@ -29,6 +22,8 @@ services:
     profiles: [building]
     environment:
       - NODE_ENV=production
+      - PORT=8080
+      - HOSTNAME=0.0.0.0
     depends_on:
       - db
       - redis

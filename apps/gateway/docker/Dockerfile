@@ -7,15 +7,16 @@ RUN apk add --no-cache libc6-compat
 # Install pnpm
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
-RUN corepack enable && corepack prepare pnpm@8.15.6 --activate
 
+RUN npm i -g pnpm
 RUN pnpm i -g turbo
 
 WORKDIR /app
-COPY package.json .
-COPY pnpm-lock.yaml .
 
-COPY . .
+COPY .npmrc package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
+COPY apps/gateway ./apps/gateway
+COPY tools ./tools
+COPY packages ./packages
 
 RUN turbo prune @latitude-data/gateway --docker
 
@@ -38,8 +39,9 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
   pnpm turbo build --filter='@latitude-data/gateway...'
 
 FROM builder AS prod-deps
+
 WORKDIR /app
-# pnpm deploy: https://pnpm.io/cli/deploy
+
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm deploy \
   --filter="@latitude-data/gateway" \
   --prod --ignore-scripts --no-optional /dependencies
@@ -58,15 +60,11 @@ COPY --from=prod-deps --chown=latitude:nodejs /dependencies/node_modules ./node_
 COPY --from=builder --chown=latitude:nodejs /app/apps/gateway/package.json ./package.json
 COPY --from=builder --chown=latitude:nodejs /app/apps/gateway/dist .
 
-ARG PORT=8787
+ARG PORT=8080
+
 ENV PORT $PORT
-
-# Configure host name. Important for setting the domain.
-ARG HOSTNAME="0.0.0.0"
-ENV HOSTNAME $HOSTNAME
-
 ENV NODE_ENV=production
 
-EXPOSE 8787
+EXPOSE $PORT
 
-CMD node server.js -p $PORT
+CMD node server.js

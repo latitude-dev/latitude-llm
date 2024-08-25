@@ -4,12 +4,8 @@ import { z } from 'zod'
 export default createEnv({
   server: {
     GATEWAY_HOSTNAME: z.string(),
-    GATEWAY_PORT: z.string(),
-    GATEWAY_SSL: z
-      .string()
-      .toLowerCase()
-      .transform((x) => x === 'true')
-      .pipe(z.boolean()),
+    GATEWAY_PORT: z.coerce.number().optional(),
+    GATEWAY_SSL: z.coerce.boolean(),
   },
   runtimeEnv: {
     GATEWAY_HOSTNAME: process.env.GATEWAY_HOSTNAME ?? 'localhost',

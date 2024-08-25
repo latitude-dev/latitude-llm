@@ -9,7 +9,7 @@ export default createEnv({
   server: {
     DATABASE_URL: z.string(),
     REDIS_HOST: z.string(),
-    REDIS_PORT: z.string(),
+    REDIS_PORT: z.coerce.number().optional(),
     REDIS_PASSWORD: z.string().optional(),
   },
   runtimeEnv: {

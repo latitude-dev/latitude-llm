@@ -30,7 +30,7 @@ jobs:
       - uses: pnpm/action-setup@v3
         name: Install pnpm
         with:
-          version: 8
+          version: 9
           run_install: false
 
       - name: Get pnpm store directory
@@ -61,10 +61,10 @@ jobs:
         run: pnpm turbo build --cache-dir=.turbo --filter="@latitude-data/sdk-js"
 
       - name: Prettier
-        run: pnpm prettier:check --filter=[HEAD^1]
+        run: pnpm prettier:check
 
       - name: Lint
-        run: pnpm lint --filter=[HEAD^1]
+        run: pnpm lint
 
       - name: TypeScript
-        run: pnpm tc --cache-dir=.turbo --filter=[HEAD^1]
+        run: pnpm tc --cache-dir=.turbo

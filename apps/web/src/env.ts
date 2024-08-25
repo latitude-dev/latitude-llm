@@ -9,15 +9,11 @@ export default createEnv({
   server: {
     DATABASE_URL: z.string(),
     REDIS_HOST: z.string(),
-    REDIS_PORT: z.string(),
+    REDIS_PORT: z.coerce.number().optional(),
     REDIS_PASSWORD: z.string().optional(),
     GATEWAY_HOSTNAME: z.string(),
-    GATEWAY_PORT: z.string(),
-    GATEWAY_SSL: z
-      .string()
-      .toLowerCase()
-      .transform((x) => x === 'true')
-      .pipe(z.boolean()),
+    GATEWAY_PORT: z.coerce.number().optional(),
+    GATEWAY_SSL: z.coerce.boolean().optional().default(true),
   },
   runtimeEnv: {
     DATABASE_URL: process.env.DATABASE_URL,

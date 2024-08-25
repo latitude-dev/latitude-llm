@@ -3,14 +3,14 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev:local": "USE_LOCALHOST=true pnpm run dev",
+    "build": "next build --debug",
     "dev": "next dev",
     "dev:debug": "NODE_OPTIONS='--inspect=0.0.0.0:9229' ./node_modules/.bin/next dev",
-    "build": "NODE_ENV='production' next build",
-    "start": "next start",
+    "dev:local": "USE_LOCALHOST=true pnpm run dev",
     "lint": "next lint",
-    "tc": "tsc --noEmit",
     "prettier": "prettier --write \"**/*.{ts,tsx,md}\"",
+    "start": "next start",
+    "tc": "tsc --noEmit",
     "test": "vitest --run",
     "test:watch": "vitest"
   },

@@ -1,15 +1,15 @@
 import { setupWorkers } from '@latitude-data/jobs'
 import env from '$/env'
 
-console.log('Workers starting...')
-
 const workers = setupWorkers({
   connectionParams: {
     host: env.REDIS_HOST,
-    port: Number(env.REDIS_PORT),
+    port: env.REDIS_PORT,
     password: env.REDIS_PASSWORD,
   },
 })
+
+console.log('Workers started')
 
 const gracefulShutdown = async (signal: string) => {
   console.log(`Received ${signal}, closing workers...`)

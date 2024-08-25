@@ -11,7 +11,7 @@ type ResolveParams<T extends HandlerType> = {
 }
 export type GatewayApiConfig = {
   host: string
-  port: string
+  port: number | undefined
   ssl: boolean
 }
 export class RouteResolver {
@@ -26,7 +26,9 @@ export class RouteResolver {
     gateway: GatewayApiConfig
   }) {
     const protocol = gateway.ssl ? 'https' : 'http'
-    const domain = `${gateway.host}:${gateway.port}`
+    const domain = gateway.port
+      ? `${gateway.host}:${gateway.port}`
+      : gateway.host
     this.basePath = `${protocol}://${domain}`
     this.apiVersion = apiVersion
   }

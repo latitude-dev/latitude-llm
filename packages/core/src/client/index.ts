@@ -8,5 +8,7 @@ const { Pool } = pg
 
 export type Database = NodePgDatabase<typeof schema>
 
-const pool = new Pool({ connectionString: env.DATABASE_URL })
+const pool = new Pool({
+  connectionString: env.DATABASE_URL,
+})
 export const database = drizzle(pool, { schema })
