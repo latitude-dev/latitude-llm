@@ -124,7 +124,7 @@ export default function AppHeader({
         <NavTabGroup>
           {sectionLinks.map((link, idx) => {
             const href = link.href
-            const selected = href ? pathname.startsWith(href) : false
+            const selected = href ? pathname?.startsWith(href) : false
 
             if (!href) return null
 

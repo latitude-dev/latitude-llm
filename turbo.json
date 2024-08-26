@@ -4,15 +4,13 @@
     "BUILDING_CONTAINER",
     "LATITUDE_API_KEY",
     "DATABASE_URL",
-    "ELASTIC_URL",
-    "ELASTIC_USERNAME",
-    "ELASTIC_PASSWORD",
     "REDIS_HOST",
     "REDIS_PORT",
     "REDIS_PASSWORD",
     "USE_LOCALHOST",
+    "GATEWAY_HOSTNAME",
     "GATEWAY_PORT",
-    "GATEWAY_HOSTNAME"
+    "GATEWAY_SSL"
   ],
   "$schema": "https://turbo.build/schema.json",
   "globalDependencies": ["**/.env.*local"],

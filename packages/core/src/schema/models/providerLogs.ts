@@ -1,7 +1,6 @@
 import { Message, ToolCall } from '@latitude-data/compiler'
 import { LogSources } from '$core/constants'
 import { PartialConfig } from '$core/index'
-import { relations } from 'drizzle-orm'
 import {
   bigint,
   bigserial,
@@ -13,8 +12,8 @@ import {
   varchar,
 } from 'drizzle-orm/pg-core'
 
-import { apiKeys } from '..'
 import { latitudeSchema } from '../db-schema'
+import { apiKeys } from '../models/apiKeys'
 import { timestamps } from '../schemaHelpers'
 import { providerApiKeys } from './providerApiKeys'
 
@@ -53,14 +52,3 @@ export const providerLogs = latitudeSchema.table('provider_logs', {
   generatedAt: timestamp('generated_at', { mode: 'date' }).notNull(),
   ...timestamps(),
 })
-
-export const providerLogsRelations = relations(providerLogs, ({ one }) => ({
-  provider: one(providerApiKeys, {
-    fields: [providerLogs.providerId],
-    references: [providerApiKeys.id],
-  }),
-  apiKey: one(apiKeys, {
-    fields: [providerLogs.apiKeyId],
-    references: [apiKeys.id],
-  }),
-}))

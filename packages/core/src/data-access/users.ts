@@ -1,5 +1,6 @@
-import { database, users } from '@latitude-data/core'
 import { type SafeUser } from '$core/browser'
+import { database } from '$core/client'
+import { users } from '$core/schema'
 import { eq } from 'drizzle-orm'
 
 export type SessionData = {

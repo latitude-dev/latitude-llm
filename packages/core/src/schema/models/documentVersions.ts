@@ -1,4 +1,3 @@
-import { relations } from 'drizzle-orm'
 import {
   bigint,
   bigserial,
@@ -37,15 +36,5 @@ export const documentVersions = latitudeSchema.table(
       table.commitId,
       table.deletedAt,
     ),
-  }),
-)
-
-export const documentVersionRelations = relations(
-  documentVersions,
-  ({ one }) => ({
-    commit: one(commits, {
-      fields: [documentVersions.commitId],
-      references: [commits.id],
-    }),
   }),
 )

@@ -11,18 +11,17 @@
   ],
   "scripts": {
     "dev": "rollup -c -w",
-    "build": "rollup -c",
     "test": "vitest run",
     "test:watch": "vitest",
     "prettier": "prettier --write src/**/*.ts",
     "lint": "eslint src",
     "tc": "tsc --noEmit"
   },
-  "dependencies": {
-    "acorn": "^8.9.0",
-    "code-red": "^1.0.3",
-    "locate-character": "^3.0.0",
-    "yaml": "^2.4.5"
+  "peerDependencies": {
+    "acorn": "*",
+    "code-red": "*",
+    "locate-character": "*",
+    "yaml": "*"
   },
   "devDependencies": {
     "@latitude-data/eslint-config": "workspace:*",

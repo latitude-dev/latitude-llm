@@ -1,9 +1,8 @@
-import { relations } from 'drizzle-orm'
 import { text, timestamp } from 'drizzle-orm/pg-core'
 
-import { latitudeSchema } from '..'
+import { latitudeSchema } from '../db-schema'
+import { users } from '../models/users'
 import { timestamps } from '../schemaHelpers'
-import { users } from './users'
 
 export const sessions = latitudeSchema.table('sessions', {
   id: text('id').primaryKey(),
@@ -16,10 +15,3 @@ export const sessions = latitudeSchema.table('sessions', {
   }).notNull(),
   ...timestamps(),
 })
-
-export const sessionRelations = relations(sessions, ({ one }) => ({
-  user: one(users, {
-    fields: [sessions.userId],
-    references: [users.id],
-  }),
-}))

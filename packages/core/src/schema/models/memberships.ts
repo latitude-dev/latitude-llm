@@ -1,7 +1,8 @@
-import { relations } from 'drizzle-orm'
 import { bigint, primaryKey, text } from 'drizzle-orm/pg-core'
 
-import { latitudeSchema, users, workspaces } from '..'
+import { latitudeSchema } from '../db-schema'
+import { users } from '../models/users'
+import { workspaces } from '../models/workspaces'
 import { timestamps } from '../schemaHelpers'
 
 export const memberships = latitudeSchema.table(
@@ -21,14 +22,3 @@ export const memberships = latitudeSchema.table(
     }),
   }),
 )
-
-export const membershipRelations = relations(memberships, ({ one }) => ({
-  workspace: one(workspaces, {
-    fields: [memberships.workspaceId],
-    references: [workspaces.id],
-  }),
-  user: one(users, {
-    fields: [memberships.userId],
-    references: [users.id],
-  }),
-}))

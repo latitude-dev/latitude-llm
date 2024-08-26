@@ -7,10 +7,10 @@ if (env !== 'production') {
   dotenv.populate(process.env as DotenvPopulateInput, {
     NODE_ENV: env,
     DATABASE_URL: `postgres://latitude:secret@localhost:5432/latitude_${env}`,
-    ELASTIC_URL: 'https://elastic:9200',
-    ELASTIC_USERNAME: 'latitude',
-    ELASTIC_PASSWORD: 'secret',
     REDIS_PORT: '6379',
     REDIS_HOST: '0.0.0.0',
+    GATEWAY_HOSTNAME: 'localhost',
+    GATEWAY_PORT: '8787', // 8788 for pro Docker image
+    GATEWAY_SSL: 'false',
   })
 }

@@ -1,11 +1,7 @@
-import {
-  database,
-  memberships,
-  Result,
-  Transaction,
-  workspaces,
-} from '@latitude-data/core'
 import { SafeUser, Workspace } from '$core/browser'
+import { database } from '$core/client'
+import { Result, Transaction } from '$core/lib'
+import { memberships, workspaces } from '$core/schema'
 import { createProject } from '$core/services/projects'
 
 import { createApiKey } from '../apiKeys/create'

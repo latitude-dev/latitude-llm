@@ -1,6 +1,6 @@
 import { LogSources, type Message } from '@latitude-data/core'
 import env from '$sdk/env'
-import { RouteResolver } from '$sdk/utils'
+import { GatewayApiConfig, RouteResolver } from '$sdk/utils'
 import {
   BodyParams,
   ChainEvent,
@@ -33,16 +33,17 @@ export class LatitudeSdk {
 
   constructor({
     latitudeApiKey,
-    basePath = env.BASE_PATH,
-    https = env.HTTPS,
+    gateway = {
+      host: env.GATEWAY_HOSTNAME,
+      port: env.GATEWAY_PORT,
+      ssl: env.GATEWAY_SSL,
+    },
   }: {
     latitudeApiKey: string
-    basePath?: string
-    https?: boolean
+    gateway?: GatewayApiConfig
   }) {
     this.routeResolver = new RouteResolver({
-      basePath,
-      https,
+      gateway,
       apiVersion: 'v1',
     })
     this.latitudeApiKey = latitudeApiKey

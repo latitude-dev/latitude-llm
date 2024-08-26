@@ -1,0 +1,9 @@
+{
+  "extends": ["./node_modules/@latitude-data/eslint-config/library.js"],
+  "env": {
+    "node": true
+  },
+  "rules": {
+    "no-constant-condition": "off"
+  }
+}

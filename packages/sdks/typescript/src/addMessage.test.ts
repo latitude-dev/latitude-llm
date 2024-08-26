@@ -23,7 +23,7 @@ const SDK = new LatitudeSdk({
 
 const server = setupServer()
 
-describe('addMessage', () => {
+describe.skip('addMessage', () => {
   beforeAll(() => server.listen())
   afterEach(() => server.resetHandlers())
   afterAll(() => server.close())

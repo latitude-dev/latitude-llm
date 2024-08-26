@@ -4,10 +4,10 @@ import { Commit, DocumentVersion } from '$core/browser'
 import { database } from '$core/client'
 import { findWorkspaceFromCommit } from '$core/data-access'
 import { Result, Transaction, TypedResult } from '$core/lib'
+import { assertCommitIsDraft } from '$core/lib/assertCommitIsDraft'
 import { BadRequestError, NotFoundError } from '$core/lib/errors'
-import { DocumentVersionsRepository } from '$core/repositories'
+import { DocumentVersionsRepository } from '$core/repositories/documentVersionsRepository'
 import { documentVersions } from '$core/schema'
-import { assertCommitIsDraft } from '$core/services/documents/utils'
 import { eq } from 'drizzle-orm'
 
 // TODO: refactor, can be simplified

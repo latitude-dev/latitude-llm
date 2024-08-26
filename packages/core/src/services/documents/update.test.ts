@@ -9,11 +9,12 @@ import { updateDocument } from './update'
 
 describe('updateDocument', () => {
   it('modifies a document that was created in a previous commit', async (ctx) => {
-    const { project, user, documents } = await ctx.factories.createProject({
-      documents: {
-        doc1: 'Doc 1 commit 1',
-      },
-    })
+    const { workspace, project, user, documents } =
+      await ctx.factories.createProject({
+        documents: {
+          doc1: 'Doc 1 commit 1',
+        },
+      })
 
     const docsScope = new DocumentVersionsRepository(project.workspaceId)
     const { commit } = await ctx.factories.createDraft({ project, user })
@@ -24,7 +25,7 @@ describe('updateDocument', () => {
       content: 'Doc 1 commit 2',
     }).then((r) => r.unwrap())
 
-    await recomputeChanges(commit)
+    await recomputeChanges({ draft: commit, workspaceId: workspace.id })
 
     const changedDocuments = await docsScope
       .listCommitChanges(commit)
@@ -36,7 +37,7 @@ describe('updateDocument', () => {
   })
 
   it('modifies a document that was created in the same commit', async (ctx) => {
-    const { project, user } = await ctx.factories.createProject()
+    const { workspace, project, user } = await ctx.factories.createProject()
     const docsScope = new DocumentVersionsRepository(project.workspaceId)
     const { commit } = await ctx.factories.createDraft({ project, user })
     const { documentVersion: doc } = await ctx.factories.createDocumentVersion({
@@ -51,7 +52,7 @@ describe('updateDocument', () => {
       content: 'Doc 1 v2',
     }).then((r) => r.unwrap())
 
-    await recomputeChanges(commit)
+    await recomputeChanges({ draft: commit, workspaceId: workspace.id })
 
     const changedDocuments = await docsScope
       .listCommitChanges(commit)
@@ -63,14 +64,15 @@ describe('updateDocument', () => {
   })
 
   it('modifying a document creates a change to all other documents that reference it', async (ctx) => {
-    const { project, user, documents } = await ctx.factories.createProject({
-      documents: {
-        referenced: {
-          doc: 'The document that is being referenced',
+    const { workspace, project, user, documents } =
+      await ctx.factories.createProject({
+        documents: {
+          referenced: {
+            doc: 'The document that is being referenced',
+          },
+          unmodified: '<ref prompt="referenced/doc" />',
         },
-        unmodified: '<ref prompt="referenced/doc" />',
-      },
-    })
+      })
 
     const docsScope = new DocumentVersionsRepository(project.workspaceId)
     const referencedDoc = documents.find((d) => d.path === 'referenced/doc')!
@@ -82,7 +84,7 @@ describe('updateDocument', () => {
       content: 'The document that is being referenced v2',
     }).then((r) => r.unwrap())
 
-    await recomputeChanges(draft)
+    await recomputeChanges({ draft, workspaceId: workspace.id })
 
     const changedDocuments = await docsScope
       .listCommitChanges(draft)
@@ -96,14 +98,15 @@ describe('updateDocument', () => {
   })
 
   it('renaming a document creates a change to all other documents that reference it', async (ctx) => {
-    const { project, user, documents } = await ctx.factories.createProject({
-      documents: {
-        referenced: {
-          doc: 'The document that is being referenced',
+    const { workspace, project, user, documents } =
+      await ctx.factories.createProject({
+        documents: {
+          referenced: {
+            doc: 'The document that is being referenced',
+          },
+          main: '<ref prompt="referenced/doc" />',
         },
-        main: '<ref prompt="referenced/doc" />',
-      },
-    })
+      })
     const docsScope = new DocumentVersionsRepository(project.workspaceId)
     const refDoc = documents.find((d) => d.path === 'referenced/doc')!
 
@@ -115,7 +118,7 @@ describe('updateDocument', () => {
       path: 'referenced/doc2',
     }).then((r) => r.unwrap())
 
-    await recomputeChanges(commit)
+    await recomputeChanges({ draft: commit, workspaceId: workspace.id })
 
     const changedDocuments = await docsScope
       .listCommitChanges(commit)
@@ -129,14 +132,15 @@ describe('updateDocument', () => {
   })
 
   it('undoing a change to a document removes it from the list of changed documents', async (ctx) => {
-    const { project, user, documents } = await ctx.factories.createProject({
-      documents: {
-        referenced: {
-          doc: 'The document that is being referenced',
+    const { workspace, project, user, documents } =
+      await ctx.factories.createProject({
+        documents: {
+          referenced: {
+            doc: 'The document that is being referenced',
+          },
+          unmodified: '<ref prompt="referenced/doc" />',
         },
-        unmodified: '<ref prompt="referenced/doc" />',
-      },
-    })
+      })
     const docsScope = new DocumentVersionsRepository(project.workspaceId)
     const referencedDoc = documents.find((d) => d.path === 'referenced/doc')!
 
@@ -148,7 +152,7 @@ describe('updateDocument', () => {
       content: 'The document that is being referenced v2',
     }).then((r) => r.unwrap())
 
-    await recomputeChanges(commit)
+    await recomputeChanges({ draft: commit, workspaceId: workspace.id })
 
     const changedDocuments = await docsScope
       .listCommitChanges(commit)
@@ -166,7 +170,7 @@ describe('updateDocument', () => {
       content: referencedDoc.content, // Undo the change
     }).then((r) => r.unwrap())
 
-    await recomputeChanges(commit)
+    await recomputeChanges({ draft: commit, workspaceId: workspace.id })
 
     const changedDocuments2 = await docsScope
       .listCommitChanges(commit)
@@ -222,12 +226,13 @@ describe('updateDocument', () => {
   })
 
   it('invalidates the resolvedContent for all documents in the commit', async (ctx) => {
-    const { project, user, documents } = await ctx.factories.createProject({
-      documents: {
-        doc1: 'Doc 1',
-        doc2: 'Doc 2',
-      },
-    })
+    const { workspace, project, user, documents } =
+      await ctx.factories.createProject({
+        documents: {
+          doc1: 'Doc 1',
+          doc2: 'Doc 2',
+        },
+      })
     const docsScope = new DocumentVersionsRepository(project.workspaceId)
 
     const { commit } = await ctx.factories.createDraft({ project, user })
@@ -240,7 +245,7 @@ describe('updateDocument', () => {
       content: 'Doc 1 v2',
     }).then((r) => r.unwrap())
 
-    await recomputeChanges(commit)
+    await recomputeChanges({ draft: commit, workspaceId: workspace.id })
 
     await updateDocument({
       commit,

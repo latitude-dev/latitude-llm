@@ -1,12 +1,14 @@
-import {
-  commits,
-  database,
-  recomputeChanges,
-  Result,
-  Transaction,
-} from '@latitude-data/core'
 import { Commit } from '$core/browser'
-import { LatitudeError, UnprocessableEntityError } from '$core/lib/errors'
+import { database } from '$core/client'
+import { findWorkspaceFromCommit } from '$core/data-access'
+import { Result, Transaction } from '$core/lib'
+import {
+  LatitudeError,
+  NotFoundError,
+  UnprocessableEntityError,
+} from '$core/lib/errors'
+import { commits } from '$core/schema'
+import { recomputeChanges } from '$core/services/documents'
 import { and, desc, eq, isNotNull } from 'drizzle-orm'
 
 export async function mergeCommit(commit: Commit, db = database) {
@@ -29,7 +31,15 @@ export async function mergeCommit(commit: Commit, db = database) {
       )
     }
 
-    const recomputedResults = await recomputeChanges(commit, tx)
+    const workspace = await findWorkspaceFromCommit(commit, tx)
+
+    if (!workspace)
+      return Result.error(new NotFoundError('Workspace not found'))
+
+    const recomputedResults = await recomputeChanges(
+      { draft: commit, workspaceId: workspace.id },
+      tx,
+    )
 
     if (recomputedResults.error) return recomputedResults
     if (Object.keys(recomputedResults.value.errors).length > 0) {

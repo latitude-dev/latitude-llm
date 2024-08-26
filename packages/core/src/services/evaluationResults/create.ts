@@ -1,15 +1,12 @@
 import {
-  database,
-  evaluationResults,
-  Result,
-  Transaction,
-} from '@latitude-data/core'
-import {
   DocumentLog,
   Evaluation,
   EvaluationResult,
   ProviderLog,
 } from '$core/browser'
+import { database } from '$core/client'
+import { Result, Transaction } from '$core/lib'
+import { evaluationResults } from '$core/schema'
 
 export type CreateEvaluationResultProps = {
   evaluation: Evaluation

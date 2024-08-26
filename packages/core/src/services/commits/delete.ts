@@ -1,6 +1,8 @@
-import { commits, database, Result, Transaction } from '@latitude-data/core'
 import { Commit } from '$core/browser'
-import { assertCommitIsDraft } from '$core/services/documents/utils'
+import { database } from '$core/client'
+import { Result, Transaction } from '$core/lib'
+import { assertCommitIsDraft } from '$core/lib/assertCommitIsDraft'
+import { commits } from '$core/schema'
 import { eq } from 'drizzle-orm'
 
 export async function deleteCommitDraft(commit: Commit, db = database) {

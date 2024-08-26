@@ -1,7 +1,6 @@
 import { ContentType, createChain } from '@latitude-data/compiler'
 import { Commit, DocumentVersion, LogSources, ProviderLog } from '$core/browser'
 import { findWorkspaceFromCommit } from '$core/data-access'
-import { factories } from '$core/index'
 import { ProviderApiKeysRepository } from '$core/repositories'
 import {
   Config,
@@ -10,6 +9,8 @@ import {
   createDocumentLog as ogCreateDocumentLog,
 } from '$core/services'
 import { v4 as uuid } from 'uuid'
+
+import { helpers } from './helpers'
 
 export type IDocumentLogData = {
   document: DocumentVersion
@@ -49,7 +50,7 @@ export async function createDocumentLog({
       .findByName(config.provider)
       .then((r) => r.unwrap())
 
-    mockedResponse = factories.helpers.randomSentence()
+    mockedResponse = helpers.randomSentence()
     const promptTokens = conversation.messages.reduce((acc, message) => {
       let content = message.content
       if (Array.isArray(content)) {

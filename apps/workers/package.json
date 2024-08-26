@@ -1,0 +1,28 @@
+{
+  "name": "@latitude-data/workers",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Latitude AI Workers for processing logs",
+  "private": true,
+  "scripts": {
+    "build": "tsup --config tsup.config.ts",
+    "dev": "tsx watch src/server",
+    "dev:debug": "tsx watch --inspect-brk src/server",
+    "lint": "eslint src/",
+    "prettier": "prettier --write \"**/*.{ts,tsx,md}\"",
+    "start": "node -r module-alias/register ./dist --env=production",
+    "tc": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@latitude-data/jobs": "workspace:^",
+    "@t3-oss/env-core": "*"
+  },
+  "devDependencies": {
+    "@latitude-data/eslint-config": "workspace:^",
+    "@latitude-data/typescript-config": "workspace:^",
+    "eslint": "8",
+    "tsup": "^8.2.4",
+    "tsx": "^4.16.2",
+    "typescript": "*"
+  }
+}

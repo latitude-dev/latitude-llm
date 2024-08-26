@@ -1,22 +1,19 @@
 import { DocumentVersion, Project } from '$core/browser'
+import { database } from '$core/client'
 import {
   CommitStatus,
   HEAD_COMMIT,
   ModifiedDocumentType,
 } from '$core/constants'
-import { NotFoundError, Result } from '$core/lib'
-import { commits, projects } from '$core/schema'
-import { recomputeChanges, RecomputedChanges } from '$core/services'
-import { assertCommitIsDraft } from '$core/services/documents/utils'
+import { InferedReturnType, NotFoundError, Result } from '$core/lib'
+import { assertCommitIsDraft } from '$core/lib/assertCommitIsDraft'
+import { buildCommitsScope } from '$core/repositories/commitsRepository/utils/buildCommitsScope'
+import { getHeadCommitForProject } from '$core/repositories/commitsRepository/utils/getHeadCommit'
 import {
-  and,
-  desc,
-  eq,
-  getTableColumns,
-  isNotNull,
-  isNull,
-  or,
-} from 'drizzle-orm'
+  recomputeChanges,
+  RecomputedChanges,
+} from '$core/services/documents/recomputeChanges'
+import { and, desc, eq, isNotNull, isNull, or } from 'drizzle-orm'
 
 import Repository, { PaginationArgs } from '../repository'
 
@@ -38,7 +35,7 @@ function filterByStatusQuery({
   status,
 }: {
   status: CommitStatus
-  scope: typeof CommitsRepository.prototype.scope
+  scope: InferedReturnType<typeof buildCommitsScope>
 }) {
   switch (status) {
     case CommitStatus.Draft:
@@ -52,32 +49,14 @@ function filterByStatusQuery({
 
 export class CommitsRepository extends Repository {
   get scope() {
-    return this.db
-      .select(getTableColumns(commits))
-      .from(commits)
-      .innerJoin(projects, eq(projects.workspaceId, this.workspaceId))
-      .where(eq(commits.projectId, projects.id))
-      .as('commitsScope')
+    return buildCommitsScope(this.workspaceId, this.db)
   }
 
   async getHeadCommit(project: Project) {
-    const result = await this.db
-      .select()
-      .from(this.scope)
-      .where(
-        and(
-          isNotNull(this.scope.mergedAt),
-          eq(this.scope.projectId, project.id),
-        ),
-      )
-      .orderBy(desc(this.scope.mergedAt))
-      .limit(1)
-
-    if (result.length < 1) {
-      return Result.error(new NotFoundError('No head commit found'))
-    }
-
-    return Result.ok(result[0]!)
+    return getHeadCommitForProject(
+      { project, commitsScope: this.scope },
+      this.db,
+    )
   }
 
   async getCommitByUuid({
@@ -172,7 +151,7 @@ export class CommitsRepository extends Repository {
     return Result.ok(result)
   }
 
-  async getChanges(id: number) {
+  async getChanges(id: number, tx = database) {
     const commitResult = await this.getCommitById(id)
     if (commitResult.error) return commitResult
 
@@ -180,7 +159,10 @@ export class CommitsRepository extends Repository {
     const isDraft = assertCommitIsDraft(commit)
     if (isDraft.error) return isDraft
 
-    const result = await recomputeChanges(commit)
+    const result = await recomputeChanges(
+      { draft: commit, workspaceId: this.workspaceId },
+      tx,
+    )
     if (result.error) return result
 
     const changes = result.value

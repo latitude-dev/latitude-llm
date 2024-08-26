@@ -1,12 +1,12 @@
+import ROUTES from '$/common/routes'
+import authMiddleware from '$/middlewares/auth'
+import errorHandlerMiddleware from '$/middlewares/errorHandler'
 import { Hono } from 'hono'
 import { logger } from 'hono/logger'
 import jetPaths from 'jet-paths'
 
-import ROUTES from './common/routes'
-import authMiddleware from './middlewares/auth'
-import errorHandlerMiddleware from './middlewares/errorHandler'
-import { chatsRouter } from './routes/api/v1/chats'
-import { documentsRouter } from './routes/api/v1/projects/:projectId/commits/:commitUuid/documents'
+import { chatsRouter } from './api/v1/chats'
+import { documentsRouter } from './api/v1/projects/:projectId/commits/:commitUuid/documents'
 
 const app = new Hono()
 
@@ -14,6 +14,10 @@ const app = new Hono()
 if (process.env.NODE_ENV !== 'test') {
   app.use(logger())
 }
+
+app.get('/health', (c) => {
+  return c.json({ status: 'ok' })
+})
 
 app.use(authMiddleware())
 

@@ -1,16 +1,14 @@
 import { Chain, createChain, MessageRole } from '@latitude-data/compiler'
 import {
-  ChainCallResponse,
-  ChainEvent,
   ChainEventTypes,
   StreamEventTypes,
-} from '@latitude-data/core'
-import type {
-  Commit,
-  DocumentVersion,
-  ProviderApiKey,
-  Workspace,
-} from '@latitude-data/core/browser'
+  type ChainCallResponse,
+  type ChainEvent,
+  type Commit,
+  type DocumentVersion,
+  type ProviderApiKey,
+  type Workspace,
+} from '$core/browser'
 import { NotFoundError, Result, UnprocessableEntityError } from '$core/lib'
 import { streamToGenerator } from '$core/lib/streamToGenerator'
 import { ProviderApiKeysRepository } from '$core/repositories'

@@ -2,7 +2,7 @@ import type { Commit, DocumentVersion } from '$core/browser'
 import { findWorkspaceFromCommit } from '$core/data-access'
 import { Result, Transaction, TypedResult } from '$core/lib'
 import { BadRequestError } from '$core/lib/errors'
-import { DocumentVersionsRepository } from '$core/repositories'
+import { DocumentVersionsRepository } from '$core/repositories/documentVersionsRepository'
 import { documentVersions } from '$core/schema'
 import { eq } from 'drizzle-orm'
 

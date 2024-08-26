@@ -1,13 +1,10 @@
 import { Message, ToolCall } from '@latitude-data/compiler'
-import {
-  database,
-  estimateCost,
-  providerLogs,
-  Result,
-  touchApiKey,
-  Transaction,
-} from '@latitude-data/core'
 import { LogSources, ProviderLog, Providers } from '$core/browser'
+import { database } from '$core/client'
+import { Result, Transaction } from '$core/lib'
+import { providerLogs } from '$core/schema'
+import { estimateCost } from '$core/services/ai'
+import { touchApiKey } from '$core/services/apiKeys'
 import { CompletionTokenUsage } from 'ai'
 
 import { touchProviderApiKey } from '../providerApiKeys/touch'

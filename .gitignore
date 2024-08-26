@@ -35,7 +35,6 @@ yarn-error.log*
 
 # Misc
 .DS_Store
-*.pem
 
 # postgres data in development. Ignore
 docker/pgdata/

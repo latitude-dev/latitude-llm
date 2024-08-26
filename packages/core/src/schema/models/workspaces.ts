@@ -1,7 +1,7 @@
-import { relations } from 'drizzle-orm'
 import { bigserial, text, varchar } from 'drizzle-orm/pg-core'
 
-import { latitudeSchema, memberships, users } from '..'
+import { latitudeSchema } from '../db-schema'
+import { users } from '../models/users'
 import { timestamps } from '../schemaHelpers'
 
 export const workspaces = latitudeSchema.table('workspaces', {
@@ -12,7 +12,3 @@ export const workspaces = latitudeSchema.table('workspaces', {
   }),
   ...timestamps(),
 })
-
-export const workspaceRelations = relations(workspaces, ({ many }) => ({
-  memberships: many(memberships),
-}))

@@ -1,20 +1,6 @@
 services:
-  base:
-    image: latitudedata/base
-    build:
-      context: .
-      dockerfile: docker/Dockerfile.base
-    restart: 'none'
-
-  elastic:
-    image: elasticsearch:8.14.1
-    environment:
-      - 'discovery.type=single-node'
-      - 'ELASTIC_USERNAME=latitude'
-      - 'ELASTIC_PASSWORD=secret'
-
   db:
-    image: postgres
+    image: postgres:15.8
     environment:
       - 'POSTGRES_USER=latitude'
       - 'POSTGRES_PASSWORD=secret'
@@ -33,13 +19,33 @@ services:
     build:
       context: .
       dockerfile: apps/web/docker/Dockerfile
-    ports:
-      - 3000:3000
+    profiles: [building]
     environment:
       - NODE_ENV=production
-      - DATABASE_URL=postgres://latitude:secret@db:5432/latitude_production
-      - REDIS_PORT=6379
-      - REDIS_HOST=redis
-      - REDIS_PASSWORD=secret
+      - PORT=8080
+      - HOSTNAME=0.0.0.0
     depends_on:
-      - base
+      - db
+      - redis
+
+  gateway:
+    build:
+      context: .
+      dockerfile: apps/gateway/docker/Dockerfile
+    profiles: [building]
+    environment:
+      - NODE_ENV=production
+    depends_on:
+      - db
+      - redis
+
+  workers:
+    build:
+      context: .
+      dockerfile: apps/workers/docker/Dockerfile
+    profiles: [building]
+    environment:
+      - NODE_ENV=production
+    depends_on:
+      - db
+      - redis

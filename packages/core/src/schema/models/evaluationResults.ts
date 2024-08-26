@@ -1,7 +1,8 @@
-import { relations } from 'drizzle-orm'
 import { bigint, bigserial, index, text } from 'drizzle-orm/pg-core'
 
-import { documentLogs, latitudeSchema, providerLogs } from '..'
+import { latitudeSchema } from '../db-schema'
+import { documentLogs } from '../models/documentLogs'
+import { providerLogs } from '../models/providerLogs'
 import { timestamps } from '../schemaHelpers'
 import { evaluations } from './evaluations'
 
@@ -29,23 +30,5 @@ export const evaluationResults = latitudeSchema.table(
     evaluationResultProviderLogIdx: index('provider_log_idx').on(
       table.providerLogId,
     ),
-  }),
-)
-
-export const evaluationResultRelations = relations(
-  evaluationResults,
-  ({ one }) => ({
-    evaluation: one(evaluations, {
-      fields: [evaluationResults.evaluationId],
-      references: [evaluations.id],
-    }),
-    documentLog: one(documentLogs, {
-      fields: [evaluationResults.documentLogId],
-      references: [documentLogs.id],
-    }),
-    providerLog: one(providerLogs, {
-      fields: [evaluationResults.providerLogId],
-      references: [providerLogs.id],
-    }),
   }),
 )

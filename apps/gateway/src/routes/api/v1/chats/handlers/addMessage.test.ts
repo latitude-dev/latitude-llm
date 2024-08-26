@@ -6,7 +6,7 @@ import {
   StreamEventTypes,
   Workspace,
 } from '@latitude-data/core/browser'
-import app from '$/index'
+import app from '$/routes/app'
 import { eq } from 'drizzle-orm'
 import { testConsumeStream } from 'test/helpers'
 import { beforeEach, describe, expect, it, vi } from 'vitest'

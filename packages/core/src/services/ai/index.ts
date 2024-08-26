@@ -149,7 +149,14 @@ export async function ai(
     },
   })
 
-  return result
+  // Do not expose all the classes from the `ai` package
+  // It has some private properties and TypeScript will not allow
+  return {
+    fullStream: result.fullStream,
+    text: result.text,
+    usage: result.usage,
+    toolCalls: result.toolCalls,
+  }
 }
 
 export function validateConfig(config: Record<string, unknown>): Config {

@@ -1,4 +1,3 @@
-import { relations } from 'drizzle-orm'
 import { bigint, bigserial, index, json, text, uuid } from 'drizzle-orm/pg-core'
 
 import { latitudeSchema } from '../db-schema'
@@ -28,10 +27,3 @@ export const documentLogs = latitudeSchema.table(
     documentLogUuidIdx: index('document_log_uuid_idx').on(table.documentUuid),
   }),
 )
-
-export const documentLogsRelations = relations(documentLogs, ({ one }) => ({
-  commit: one(commits, {
-    fields: [documentLogs.commitId],
-    references: [commits.id],
-  }),
-}))

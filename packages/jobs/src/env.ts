@@ -6,7 +6,7 @@ const envvars = z.object({
   NODE_ENV: z.string(),
   REDIS_HOST: z.string(),
   REDIS_PASSWORD: z.string().optional(),
-  REDIS_PORT: z.string(),
+  REDIS_PORT: z.coerce.number().optional(),
   DATABASE_URL: z.string(),
 })
 
