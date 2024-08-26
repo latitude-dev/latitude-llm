@@ -29,7 +29,7 @@ export default function ProviderApiKeys() {
       <NewApiKey open={open} setOpen={setOpen} />
       <div className='flex flex-row items-center justify-between'>
         <Text.H4B>Providers</Text.H4B>
-        <Button variant='outline' onClick={() => setOpen(true)}>
+        <Button variant='outline' fancy onClick={() => setOpen(true)}>
           Create Provider
         </Button>
       </div>
