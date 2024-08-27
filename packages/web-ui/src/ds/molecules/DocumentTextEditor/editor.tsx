@@ -5,11 +5,14 @@ import { AlertCircle, CheckCircle2, LoaderCircle } from 'lucide-react'
 
 import { CompileError } from '@latitude-data/compiler'
 import Editor, { Monaco } from '@monaco-editor/react'
-import { Button, Icon, Text } from '$ui/ds/atoms'
-import { AppLocalStorage, useLocalStorage } from '$ui/lib/hooks/useLocalStorage'
 import { MarkerSeverity, type editor } from 'monaco-editor'
 
 import { DocumentTextEditorFallback, type DocumentTextEditorProps } from '.'
+import {
+  AppLocalStorage,
+  useLocalStorage,
+} from '../../../lib/hooks/useLocalStorage'
+import { Button, Icon, Text } from '../../atoms'
 import { registerActions } from './actions'
 import { colorFromProperty, themeRules, tokenizer } from './language'
 
@@ -95,8 +98,8 @@ export function DocumentTextEditor({
       return {
         startLineNumber: error.start?.line ?? 0,
         startColumn: error.start?.column ?? 0,
-        endLineNumber: error.end ? error.end.line : error.start?.line ?? 0,
-        endColumn: error.end ? error.end.column : error.start?.column ?? 0,
+        endLineNumber: error.end ? error.end.line : (error.start?.line ?? 0),
+        endColumn: error.end ? error.end.column : (error.start?.column ?? 0),
         message: error.message,
         severity: MarkerSeverity.Error,
       }

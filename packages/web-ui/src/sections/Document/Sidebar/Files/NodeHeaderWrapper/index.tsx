@@ -1,11 +1,11 @@
 import { ReactNode, useEffect, useRef, useState } from 'react'
 
-import { Button } from '$ui/ds/atoms'
-import { MenuOption } from '$ui/ds/atoms/DropdownMenu'
-import { Input } from '$ui/ds/atoms/Input'
-import Text from '$ui/ds/atoms/Text'
-import { cn } from '$ui/lib/utils'
-import { useNodeValidator } from '$ui/sections/Document/Sidebar/Files/NodeHeaderWrapper/useNodeValidator'
+import { Button } from '../../../../../ds/atoms'
+import { MenuOption } from '../../../../../ds/atoms/DropdownMenu'
+import { Input } from '../../../../../ds/atoms/Input'
+import Text from '../../../../../ds/atoms/Text'
+import { cn } from '../../../../../lib/utils'
+import { useNodeValidator } from './useNodeValidator'
 
 export const ICON_CLASS = 'min-w-6 h-6 text-muted-foreground'
 export type IndentType = { isLast: boolean }

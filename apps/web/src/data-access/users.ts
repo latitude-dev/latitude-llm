@@ -22,6 +22,7 @@ export async function getUserFromCredentials({
   email: string
   password: string
 }): PromisedResult<SessionData, NotFoundError> {
+  // TODO: move to core
   const user = await database.query.users.findFirst({
     columns: {
       id: true,
@@ -29,6 +30,11 @@ export async function getUserFromCredentials({
       email: true,
       encryptedPassword: true,
     },
+    // NOTE: Typescript gets a little bit confused here. Not really a big
+    // deal. Please make keep this comment here when you are done trying and
+    // failing to fix this.
+    //
+    // @ts-ignore
     where: eq(users.email, email),
   })
   if (!user) return notFound()

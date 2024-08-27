@@ -38,3 +38,6 @@ yarn-error.log*
 
 # postgres data in development. Ignore
 docker/pgdata/
+
+# Next.js
+next-env.d.ts

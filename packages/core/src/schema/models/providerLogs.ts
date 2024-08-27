@@ -1,6 +1,4 @@
 import { Message, ToolCall } from '@latitude-data/compiler'
-import { LogSources } from '$core/constants'
-import { PartialConfig } from '$core/index'
 import {
   bigint,
   bigserial,
@@ -12,6 +10,8 @@ import {
   varchar,
 } from 'drizzle-orm/pg-core'
 
+import { PartialConfig } from '../..'
+import { LogSources } from '../../constants'
 import { latitudeSchema } from '../db-schema'
 import { apiKeys } from '../models/apiKeys'
 import { timestamps } from '../schemaHelpers'

@@ -1,8 +1,10 @@
-import { EvaluationTemplate } from '$core/browser'
-import { database } from '$core/client'
-import { NotFoundError, Result, TypedResult } from '$core/lib'
-import { evaluationTemplates } from '$core/schema'
 import { eq } from 'drizzle-orm'
+
+import { EvaluationTemplate } from '../browser'
+import { database } from '../client'
+import { NotFoundError } from '../lib/errors'
+import { Result, TypedResult } from '../lib/Result'
+import { evaluationTemplates } from '../schema'
 
 export async function findAllEvaluationTemplates(): Promise<
   TypedResult<EvaluationTemplate[], Error>

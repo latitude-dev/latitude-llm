@@ -1,8 +1,8 @@
-import { Commit, DocumentVersion } from '$core/browser'
-import { database, Database } from '$core/client'
-import { Transaction } from '$core/lib'
-import { assertCommitIsDraft } from '$core/lib/assertCommitIsDraft'
-import { destroyOrSoftDeleteDocuments } from '$core/services/documents/destroyOrSoftDeleteDocuments'
+import { Commit, DocumentVersion } from '../../browser'
+import { database, Database } from '../../client'
+import { Transaction } from '../../lib'
+import { assertCommitIsDraft } from '../../lib/assertCommitIsDraft'
+import { destroyOrSoftDeleteDocuments } from './destroyOrSoftDeleteDocuments'
 
 export async function destroyDocument({
   document,

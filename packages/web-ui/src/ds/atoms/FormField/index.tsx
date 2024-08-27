@@ -8,10 +8,10 @@ import {
 } from 'react'
 import { Slot } from '@radix-ui/react-slot'
 
-import { Label } from '$ui/ds/atoms/Label'
-import Text from '$ui/ds/atoms/Text'
-import { Tooltip } from '$ui/ds/atoms/Tooltip'
-import { cn } from '$ui/lib/utils'
+import { cn } from '../../../lib/utils'
+import { Label } from '../Label'
+import Text from '../Text'
+import { Tooltip } from '../Tooltip'
 
 function FormDescription({
   id,

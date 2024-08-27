@@ -1,14 +1,14 @@
-import { Commit, DocumentLog } from '$core/browser'
-import { NotFoundError, Result, TypedResult } from '$core/lib'
+import { and, desc, eq, getTableColumns, isNotNull, or, sum } from 'drizzle-orm'
+
+import { Commit, DocumentLog } from '../../browser'
+import { NotFoundError, Result, TypedResult } from '../../lib'
 import {
   commits,
   documentLogs,
   projects,
   providerLogs,
   workspaces,
-} from '$core/schema'
-import { and, desc, eq, getTableColumns, isNotNull, or, sum } from 'drizzle-orm'
-
+} from '../../schema'
 import Repository from '../repository'
 
 export type DocumentLogWithMetadata = DocumentLog & {

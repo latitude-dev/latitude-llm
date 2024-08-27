@@ -1,4 +1,4 @@
-import { ContentType, MessageRole } from '$compiler/types'
+import { ContentType, MessageRole } from '@latitude-data/compiler'
 import { z } from 'zod'
 
 const contentSchema = z.array(

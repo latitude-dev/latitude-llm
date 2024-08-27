@@ -1,8 +1,8 @@
-import { ProviderLog } from '$core/browser'
-import { NotFoundError, Result } from '$core/lib'
-import { providerApiKeys, providerLogs, workspaces } from '$core/schema'
 import { asc, desc, eq, getTableColumns } from 'drizzle-orm'
 
+import { ProviderLog } from '../browser'
+import { NotFoundError, Result } from '../lib'
+import { providerApiKeys, providerLogs, workspaces } from '../schema'
 import Repository from './repository'
 
 export class ProviderLogsRepository extends Repository {

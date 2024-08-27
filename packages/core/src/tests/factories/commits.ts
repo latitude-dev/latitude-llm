@@ -1,8 +1,8 @@
 import { faker } from '@faker-js/faker'
-import { Project, SafeUser } from '$core/browser'
-import { hasOwnProperty } from '$core/lib'
-import { createCommit as createCommitFn } from '$core/services/commits/create'
 
+import { Project, SafeUser } from '../../browser'
+import { hasOwnProperty } from '../../lib'
+import { createCommit as createCommitFn } from '../../services/commits/create'
 import { createProject, ICreateProject } from './projects'
 
 export type ICreateDraft = {

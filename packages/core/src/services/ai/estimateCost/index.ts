@@ -1,6 +1,6 @@
-import { Providers } from '$core/browser'
 import { CompletionTokenUsage } from 'ai'
 
+import { Providers } from '../../../browser'
 import { getCostPer1MAnthropic } from './anthropic'
 import { getCostPer1MGroq } from './groq'
 import { getCostPer1MMistral } from './mistral'

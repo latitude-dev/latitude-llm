@@ -2,9 +2,13 @@ import {
   apiKeys,
   database,
   DocumentVersionsRepository,
-  factories,
   mergeCommit,
 } from '@latitude-data/core'
+import {
+  createDocumentVersion,
+  createDraft,
+  createProject,
+} from '@latitude-data/core/factories'
 import app from '$/routes/app'
 import { eq } from 'drizzle-orm'
 import { describe, expect, it, vi } from 'vitest'
@@ -26,16 +30,17 @@ describe('GET documents', () => {
 
   describe('authorized', () => {
     it('succeeds', async () => {
-      const { workspace, user, project } = await factories.createProject()
+      const { workspace, user, project } = await createProject()
+      // TODO: move to core
       const apikey = await database.query.apiKeys.findFirst({
         where: eq(apiKeys.workspaceId, workspace.id),
       })
       const path = 'path/to/document'
-      const { commit } = await factories.createDraft({
+      const { commit } = await createDraft({
         project,
         user,
       })
-      const document = await factories.createDocumentVersion({ commit, path })
+      const document = await createDocumentVersion({ commit, path })
 
       await mergeCommit(commit).then((r) => r.unwrap())
 

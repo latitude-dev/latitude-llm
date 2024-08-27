@@ -1,16 +1,12 @@
 import { useCallback, useMemo } from 'react'
 
-import { Icons } from '$ui/ds/atoms'
-import { MenuOption } from '$ui/ds/atoms/DropdownMenu'
-import { cn } from '$ui/lib/utils'
-import { useFileTreeContext } from '$ui/sections/Document/Sidebar/Files/FilesProvider'
-import NodeHeaderWrapper, {
-  ICON_CLASS,
-  IndentType,
-} from '$ui/sections/Document/Sidebar/Files/NodeHeaderWrapper'
-import { useOpenPaths } from '$ui/sections/Document/Sidebar/Files/useOpenPaths'
-import { useTempNodes } from '$ui/sections/Document/Sidebar/Files/useTempNodes'
-
+import { Icons } from '../../../../../ds/atoms'
+import { MenuOption } from '../../../../../ds/atoms/DropdownMenu'
+import { cn } from '../../../../../lib/utils'
+import { useFileTreeContext } from '../FilesProvider'
+import NodeHeaderWrapper, { ICON_CLASS, IndentType } from '../NodeHeaderWrapper'
+import { useOpenPaths } from '../useOpenPaths'
+import { useTempNodes } from '../useTempNodes'
 import { Node } from '../useTree'
 
 export function FolderIcons({ open }: { open: boolean }) {

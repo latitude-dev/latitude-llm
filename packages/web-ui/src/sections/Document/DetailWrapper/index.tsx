@@ -2,7 +2,7 @@
 
 import { ReactNode, useCallback } from 'react'
 
-import { SplitPane } from '$ui/ds/atoms'
+import { SplitPane } from '../../../ds/atoms'
 
 export function buildResizableCookie({
   key,

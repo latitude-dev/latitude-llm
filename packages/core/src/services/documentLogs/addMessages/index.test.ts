@@ -1,4 +1,9 @@
 import { ContentType, MessageRole } from '@latitude-data/compiler'
+import { eq } from 'drizzle-orm'
+import { v4 as uuid } from 'uuid'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
+import { database, providerApiKeys } from '../../..'
 import {
   Commit,
   DocumentVersion,
@@ -7,14 +12,13 @@ import {
   Providers,
   SafeUser,
   Workspace,
-} from '$core/browser'
-import { database, factories, providerApiKeys } from '$core/index'
-import { createDocumentLog } from '$core/tests/factories'
-import { testConsumeStream } from '$core/tests/helpers'
-import { eq } from 'drizzle-orm'
-import { v4 as uuid } from 'uuid'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-
+} from '../../../browser'
+import {
+  createDocumentLog,
+  createProject,
+  createProviderApiKey,
+} from '../../../tests/factories'
+import { testConsumeStream } from '../../../tests/helpers'
 import { addMessages } from './index'
 
 const mocks = vi.hoisted(() => {
@@ -49,8 +53,8 @@ const mocks = vi.hoisted(() => {
   }
 })
 
-vi.mock('$core/services/ai', async (importMod) => {
-  const mod = (await importMod()) as typeof import('$core/services/ai')
+vi.mock('../../ai', async (importMod) => {
+  const mod = (await importMod()) as typeof import('../../ai')
   return {
     ...mod,
     ai: mocks.runAi,
@@ -82,7 +86,7 @@ async function buildData({
     documents,
     commit: cmt,
     user: usr,
-  } = await factories.createProject({
+  } = await createProject({
     documents: {
       doc1: doc1Content,
     },
@@ -91,7 +95,7 @@ async function buildData({
   commit = cmt
   workspace = wsp
   user = usr
-  providerApiKey = await factories.createProviderApiKey({
+  providerApiKey = await createProviderApiKey({
     workspace,
     type: Providers.OpenAI,
     name: 'openai',

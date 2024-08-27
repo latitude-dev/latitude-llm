@@ -2,9 +2,10 @@
 
 import { useCallback } from 'react'
 
-import { ReactStateDispatch, SetStateAction } from '$ui/lib/commonTypes'
 import { create, StateCreator } from 'zustand'
 import { persist, PersistOptions } from 'zustand/middleware'
+
+import { ReactStateDispatch, SetStateAction } from '../commonTypes'
 
 export enum AppLocalStorage {
   editorLineNumbers = 'editorLineNumbers',

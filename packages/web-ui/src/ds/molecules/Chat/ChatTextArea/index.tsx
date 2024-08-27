@@ -2,8 +2,9 @@
 
 import { KeyboardEvent, useCallback, useState } from 'react'
 
-import { Button } from '$ui/ds/atoms'
 import TextareaAutosize from 'react-textarea-autosize'
+
+import { Button } from '../../../atoms'
 
 export function ChatTextArea({
   placeholder,

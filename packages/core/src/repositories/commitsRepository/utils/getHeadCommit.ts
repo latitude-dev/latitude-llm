@@ -1,8 +1,8 @@
-import { Project } from '$core/browser'
-import { database } from '$core/client'
-import { InferedReturnType, NotFoundError, Result } from '$core/lib'
 import { and, desc, eq, isNotNull } from 'drizzle-orm'
 
+import { Project } from '../../../browser'
+import { database } from '../../../client'
+import { InferedReturnType, NotFoundError, Result } from '../../../lib'
 import { buildCommitsScope } from './buildCommitsScope'
 
 export async function getHeadCommitForProject(

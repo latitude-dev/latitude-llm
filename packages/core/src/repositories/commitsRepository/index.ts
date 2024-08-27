@@ -1,21 +1,21 @@
-import { DocumentVersion, Project } from '$core/browser'
-import { database } from '$core/client'
+import { and, desc, eq, isNotNull, isNull, or } from 'drizzle-orm'
+
+import { DocumentVersion, Project } from '../../browser'
+import { database } from '../../client'
 import {
   CommitStatus,
   HEAD_COMMIT,
   ModifiedDocumentType,
-} from '$core/constants'
-import { InferedReturnType, NotFoundError, Result } from '$core/lib'
-import { assertCommitIsDraft } from '$core/lib/assertCommitIsDraft'
-import { buildCommitsScope } from '$core/repositories/commitsRepository/utils/buildCommitsScope'
-import { getHeadCommitForProject } from '$core/repositories/commitsRepository/utils/getHeadCommit'
+} from '../../constants'
+import { InferedReturnType, NotFoundError, Result } from '../../lib'
+import { assertCommitIsDraft } from '../../lib/assertCommitIsDraft'
 import {
   recomputeChanges,
   RecomputedChanges,
-} from '$core/services/documents/recomputeChanges'
-import { and, desc, eq, isNotNull, isNull, or } from 'drizzle-orm'
-
+} from '../../services/documents/recomputeChanges'
 import Repository, { PaginationArgs } from '../repository'
+import { buildCommitsScope } from './utils/buildCommitsScope'
+import { getHeadCommitForProject } from './utils/getHeadCommit'
 
 const byErrors =
   (c: RecomputedChanges) => (a: DocumentVersion, b: DocumentVersion) => {

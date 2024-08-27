@@ -1,7 +1,7 @@
-import { NotFoundError, Result } from '$core/lib'
-import { projects } from '$core/schema'
 import { eq } from 'drizzle-orm'
 
+import { NotFoundError, Result } from '../lib'
+import { projects } from '../schema'
 import Repository from './repository'
 
 const NOT_FOUND_MSG = 'Project not found'

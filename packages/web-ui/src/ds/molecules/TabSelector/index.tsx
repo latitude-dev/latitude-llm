@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useState } from 'react'
 
-import { Button, Text } from '$ui/ds/atoms'
-import { cn } from '$ui/lib/utils'
+import { cn } from '../../../lib/utils'
+import { Button, Text } from '../../atoms'
 
 export type TabSelectorOption<T> = {
   label: string

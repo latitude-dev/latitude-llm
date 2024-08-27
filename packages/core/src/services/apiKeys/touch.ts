@@ -1,7 +1,8 @@
-import { database } from '$core/client'
-import { NotFoundError, Result, Transaction } from '$core/lib'
-import { apiKeys } from '$core/schema'
 import { eq } from 'drizzle-orm'
+
+import { database } from '../../client'
+import { NotFoundError, Result, Transaction } from '../../lib'
+import { apiKeys } from '../../schema'
 
 export function touchApiKey(id: number, db = database) {
   return Transaction.call(async (tx) => {

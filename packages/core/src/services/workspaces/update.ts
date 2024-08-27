@@ -1,7 +1,8 @@
-import type { Workspace } from '$core/browser'
-import { Result, Transaction } from '$core/lib'
-import { workspaces } from '$core/schema'
 import { eq } from 'drizzle-orm'
+
+import type { Workspace } from '../../browser'
+import { Result, Transaction } from '../../lib'
+import { workspaces } from '../../schema'
 
 export async function updateWorkspace({
   workspace,

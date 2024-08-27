@@ -1,10 +1,10 @@
-import { Commit } from '$core/browser'
-import { database } from '$core/client'
-import { HEAD_COMMIT } from '$core/constants'
-import { Result, TypedResult } from '$core/lib'
-import { LatitudeError, NotFoundError } from '$core/lib/errors'
-import { commits } from '$core/schema'
 import { and, desc, eq, isNotNull } from 'drizzle-orm'
+
+import { Commit, HEAD_COMMIT } from '../browser'
+import { database } from '../client'
+import { LatitudeError, NotFoundError } from '../lib/errors'
+import { Result, TypedResult } from '../lib/Result'
+import { commits } from '../schema'
 
 export async function findHeadCommit(
   { projectId }: { projectId: number },

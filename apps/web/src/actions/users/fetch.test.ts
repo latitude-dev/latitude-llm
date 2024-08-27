@@ -1,4 +1,4 @@
-import { factories } from '@latitude-data/core'
+import { createWorkspace } from '@latitude-data/core/factories'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { getUsersActions } from './fetch'
@@ -23,7 +23,7 @@ describe('getUsersAction', () => {
 
   describe('authorized', () => {
     beforeEach(async () => {
-      const { workspace, userData } = await factories.createWorkspace({
+      const { workspace, userData } = await createWorkspace({
         name: 'test',
       })
       mocks.getSession.mockReturnValue({

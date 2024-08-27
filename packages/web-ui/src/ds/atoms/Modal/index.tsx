@@ -2,9 +2,8 @@
 
 import { ReactNode } from 'react'
 
-import { Alert } from '$ui/ds/atoms/Alert'
-import { Button } from '$ui/ds/atoms/Button'
-
+import { Alert } from '../Alert'
+import { Button } from '../Button'
 import {
   Dialog,
   DialogClose,

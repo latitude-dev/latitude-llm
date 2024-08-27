@@ -2,11 +2,12 @@
   "name": "@latitude-data/core",
   "version": "0.0.1",
   "description": "Latitude core contains core services used across the latitude LLM stack",
-  "main": "src/index.ts",
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./browser": "./src/browser.ts"
+    "./browser": "./src/browser.ts",
+    "./factories": "./src/tests/factories/index.ts",
+    "./test": "./src/tests/useTestDatabase.ts"
   },
   "scripts": {
     "db:generate": "drizzle-kit generate",
@@ -22,33 +23,56 @@
     "test:watch": "vitest",
     "prettier": "prettier --write src/**/*.ts"
   },
-  "peerDependencies": {
-    "@ai-sdk/anthropic": "*",
-    "@ai-sdk/azure": "*",
-    "@ai-sdk/mistral": "*",
-    "@ai-sdk/openai": "*",
-    "@latitude-data/compiler": "*",
-    "@latitude-data/env": "*",
-    "@t3-oss/env-core": "*",
-    "ai": "*",
-    "argon2": "*",
-    "drizzle-kit": "*",
-    "drizzle-orm": "*",
-    "lodash-es": "*",
-    "uuid": "*",
-    "zod": "*"
+  "dependencies": {
+    "@latitude-data/compiler": "workspace:^",
+    "@latitude-data/env": "workspace:^"
   },
   "devDependencies": {
-    "@faker-js/faker": "*",
+    "@ai-sdk/anthropic": "^0.0.48",
+    "@ai-sdk/azure": "^0.0.32",
+    "@ai-sdk/mistral": "^0.0.38",
+    "@ai-sdk/openai": "^0.0.54",
+    "@faker-js/faker": "^8.4.1",
     "@latitude-data/eslint-config": "workspace:*",
     "@latitude-data/typescript-config": "workspace:*",
-    "@types/lodash-es": "*",
-    "@types/node": "*",
-    "@types/uuid": "*",
+    "@t3-oss/env-core": "^0.11.1",
+    "@types/lodash-es": "^4.17.12",
+    "@types/node": "^22.5.0",
+    "@types/pg": "^8.11.6",
+    "@types/uuid": "^10.0.0",
+    "ai": "^3.2.42",
+    "argon2": "^0.41.0",
     "drizzle-kit": "^0.22.8",
+    "drizzle-orm": "^0.33.0",
+    "eslint": "8",
     "eslint-plugin-drizzle": "^0.2.3",
+    "lodash-es": "^4.17.21",
+    "pg": "^8.12.0",
     "pg-transactional-tests": "^1.0.9",
+    "prettier": "^3.3.3",
+    "react": "^18.3.1",
     "supertest": "^7.0.0",
-    "vitest": "^2.0.3"
+    "svelte": "^4.2.19",
+    "uuid": "^10.0.0",
+    "vitest": "^2.0.3",
+    "vue": "^3.4.38",
+    "zod": "^3.23.8"
+  },
+  "peerDependencies": {
+    "@ai-sdk/anthropic": "^0.0.48",
+    "@ai-sdk/azure": "^0.0.32",
+    "@ai-sdk/mistral": "^0.0.38",
+    "@ai-sdk/openai": "^0.0.54",
+    "@t3-oss/env-core": "^0.11.1",
+    "ai": "^3.2.42",
+    "argon2": "^0.41.0",
+    "drizzle-orm": "^0.33.0",
+    "lodash-es": "^4.17.21",
+    "pg": "^8.12.0",
+    "react": "^18.3.1",
+    "svelte": "^4.2.19",
+    "uuid": "^10.0.0",
+    "vue": "^3.4.38",
+    "zod": "^3.23.8"
   }
 }

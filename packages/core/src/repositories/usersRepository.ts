@@ -1,7 +1,7 @@
-import { Result } from '$core/lib'
-import { memberships, users } from '$core/schema'
 import { and, eq, getTableColumns } from 'drizzle-orm'
 
+import { Result } from '../lib'
+import { memberships, users } from '../schema'
 import Repository from './repository'
 
 export class UsersRepository extends Repository {

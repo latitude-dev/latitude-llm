@@ -1,7 +1,8 @@
-import { type SafeUser } from '$core/browser'
-import { database } from '$core/client'
-import { users } from '$core/schema'
 import { eq } from 'drizzle-orm'
+
+import { type SafeUser } from '../browser'
+import { database } from '../client'
+import { users } from '../schema'
 
 export type SessionData = {
   user: SafeUser

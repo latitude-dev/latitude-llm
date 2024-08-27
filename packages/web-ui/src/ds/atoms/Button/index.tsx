@@ -2,8 +2,8 @@ import { ButtonHTMLAttributes, forwardRef, ReactNode } from 'react'
 import { cva, type VariantProps } from 'class-variance-authority'
 import { Slot, Slottable } from '@radix-ui/react-slot'
 
-import { Icon, IconProps } from '$ui/ds/atoms/Icons'
-import { cn } from '$ui/lib/utils'
+import { cn } from '../../../lib/utils'
+import { Icon, IconProps } from '../Icons'
 
 const buttonContainerVariants = cva(
   cn(

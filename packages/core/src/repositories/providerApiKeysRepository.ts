@@ -1,7 +1,7 @@
-import { NotFoundError, Result } from '$core/lib'
-import { providerApiKeys } from '$core/schema'
 import { eq, getTableColumns } from 'drizzle-orm'
 
+import { NotFoundError, Result } from '../lib'
+import { providerApiKeys } from '../schema'
 import Repository from './repository'
 
 export class ProviderApiKeysRepository extends Repository {

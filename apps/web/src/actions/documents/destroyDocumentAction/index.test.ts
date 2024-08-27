@@ -1,5 +1,11 @@
-import { database, documentVersions, factories } from '@latitude-data/core'
-import { Commit, DocumentVersion, Project, SafeUser } from '$core/browser'
+import { database, documentVersions } from '@latitude-data/core'
+import {
+  Commit,
+  DocumentVersion,
+  Project,
+  SafeUser,
+} from '@latitude-data/core/browser'
+import { createDraft, createProject } from '@latitude-data/core/factories'
 import { and, eq } from 'drizzle-orm'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -26,10 +32,10 @@ describe('destroyDocumentAction', async () => {
       user,
       commit: cmt,
       documents: allDocs,
-    } = await factories.createProject({
+    } = await createProject({
       documents: { doc1: 'Doc 1' },
     })
-    const { commit } = await factories.createDraft({ project: prj, user })
+    const { commit } = await createDraft({ project: prj, user })
     merged = cmt
     userData = user
     project = prj
@@ -59,7 +65,7 @@ describe('destroyDocumentAction', async () => {
         project: otherWorkspaceProject,
         commit: otherCommit,
         documents: allDocs,
-      } = await factories.createProject({
+      } = await createProject({
         documents: { doc1: 'Doc 1' },
       })
       const otherWorkspaceDocument = allDocs[0]!
@@ -86,11 +92,14 @@ describe('destroyDocumentAction', async () => {
         commitId: draft.id,
         documentUuid: document.documentUuid,
       })
+      // TODO: move to core
       const documents = await database.query.documentVersions.findMany({
         where: and(eq(documentVersions.documentUuid, document.documentUuid)),
       })
 
-      const drafDocument = documents.find((d) => d.commitId === draft.id)
+      const drafDocument = documents.find(
+        (d: DocumentVersion) => d.commitId === draft.id,
+      )
       expect(documents.length).toBe(2)
       expect(drafDocument!.deletedAt).not.toBe(null)
     })

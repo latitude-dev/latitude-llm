@@ -1,12 +1,18 @@
+import { beforeEach, describe, expect, it } from 'vitest'
+
+import { CommitsRepository } from '.'
+import { destroyDocument, updateDocument } from '../..'
 import {
   Commit,
   DocumentVersion,
   ModifiedDocumentType,
   Project,
-} from '$core/browser'
-import { destroyDocument, factories, updateDocument } from '$core/index'
-import { CommitsRepository } from '$core/repositories/commitsRepository'
-import { beforeEach, describe, expect, it } from 'vitest'
+} from '../../browser'
+import {
+  createDocumentVersion,
+  createDraft,
+  createProject,
+} from '../../tests/factories'
 
 let project: Project
 let commit: Commit
@@ -20,7 +26,7 @@ describe('publishDraftCommit', () => {
       commit: cmt,
       user,
       documents: docs,
-    } = await factories.createProject({
+    } = await createProject({
       documents: {
         folder1: {
           doc1: 'content1',
@@ -30,7 +36,7 @@ describe('publishDraftCommit', () => {
     })
     project = prj
     commit = cmt
-    const { commit: draft } = await factories.createDraft({ project, user })
+    const { commit: draft } = await createDraft({ project, user })
     draftCommit = draft
     documents = docs.reduce(
       (acc, doc) => {
@@ -74,7 +80,7 @@ describe('publishDraftCommit', () => {
   })
 
   it('show created documents', async () => {
-    const { documentVersion: newDoc } = await factories.createDocumentVersion({
+    const { documentVersion: newDoc } = await createDocumentVersion({
       commit: draftCommit,
       path: 'folder1/doc3',
       content: 'content3',

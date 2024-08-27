@@ -1,11 +1,11 @@
-import { database } from '$core/client'
-import { documentVersions } from '$core/schema'
-import { updateDocument } from '$core/services/documents/update'
-import * as factories from '$core/tests/factories'
 import { and, eq } from 'drizzle-orm'
 import { describe, expect, it } from 'vitest'
 
+import { database } from '../../client'
+import { documentVersions } from '../../schema'
+import * as factories from '../../tests/factories'
 import { destroyOrSoftDeleteDocuments } from './destroyOrSoftDeleteDocuments'
+import { updateDocument } from './update'
 
 describe('destroyOrSoftDeleteDocuments', () => {
   it('remove documents that were not present in merged commits', async () => {

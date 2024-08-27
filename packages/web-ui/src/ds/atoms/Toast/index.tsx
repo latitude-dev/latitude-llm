@@ -10,7 +10,7 @@ import { cva, type VariantProps } from 'class-variance-authority'
 import { Cross2Icon } from '@radix-ui/react-icons'
 import * as ToastPrimitives from '@radix-ui/react-toast'
 
-import { cn } from '$ui/lib/utils'
+import { cn } from '../../../lib/utils'
 
 const ToastProviderPrimitive = ToastPrimitives.Provider
 

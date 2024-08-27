@@ -1,4 +1,7 @@
 import { Chain, createChain, MessageRole } from '@latitude-data/compiler'
+import { v4 as uuid } from 'uuid'
+import { ZodError } from 'zod'
+
 import {
   ChainEventTypes,
   StreamEventTypes,
@@ -8,13 +11,10 @@ import {
   type DocumentVersion,
   type ProviderApiKey,
   type Workspace,
-} from '$core/browser'
-import { NotFoundError, Result, UnprocessableEntityError } from '$core/lib'
-import { streamToGenerator } from '$core/lib/streamToGenerator'
-import { ProviderApiKeysRepository } from '$core/repositories'
-import { v4 as uuid } from 'uuid'
-import { ZodError } from 'zod'
-
+} from '../../browser'
+import { NotFoundError, Result, UnprocessableEntityError } from '../../lib'
+import { streamToGenerator } from '../../lib/streamToGenerator'
+import { ProviderApiKeysRepository } from '../../repositories'
 import { ai, AILog, validateConfig } from '../ai'
 import { getResolvedContent } from '../documents/getResolvedContent'
 

@@ -1,6 +1,6 @@
 import { CompileError, ContentType } from '@latitude-data/compiler'
-import { Text } from '$ui/ds/atoms'
 
+import { Text } from '../../../atoms'
 import { Message } from '../Message'
 
 export function ErrorMessage({ error }: { error: Error }) {

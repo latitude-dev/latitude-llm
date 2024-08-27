@@ -1,5 +1,4 @@
-import { Jobs, Queues } from '$jobs/constants'
-
+import { Jobs, Queues } from '../constants'
 import { CreateDocumentLogJobData } from './documentLogs/createJob'
 import { CreateProviderLogJobData } from './providerLogs/createJob'
 

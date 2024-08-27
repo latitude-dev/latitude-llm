@@ -1,8 +1,10 @@
-import type { ApiKey } from '$core/browser'
-import { database } from '$core/client'
-import { NotFoundError, Result, TypedResult } from '$core/lib'
-import { apiKeys } from '$core/schema'
 import { eq } from 'drizzle-orm'
+
+import { ApiKey } from '../browser'
+import { database } from '../client'
+import { NotFoundError } from '../lib/errors'
+import { Result, TypedResult } from '../lib/Result'
+import { apiKeys } from '../schema'
 
 export async function unsafelyGetApiKeyByToken(
   { token }: { token: string },

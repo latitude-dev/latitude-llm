@@ -1,7 +1,7 @@
-import { NotFoundError, Result } from '$core/lib'
-import { evaluations } from '$core/schema'
 import { eq } from 'drizzle-orm'
 
+import { NotFoundError, Result } from '../lib'
+import { evaluations } from '../schema'
 import Repository from './repository'
 
 export class EvaluationsRepository extends Repository {

@@ -2,14 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
-import { ConfirmModal } from '$ui/ds/atoms'
-import { cn } from '$ui/lib/utils'
-import DocumentHeader from '$ui/sections/Document/Sidebar/Files/DocumentHeader'
-import FolderHeader from '$ui/sections/Document/Sidebar/Files/FolderHeader'
-import { TreeToolbar } from '$ui/sections/Document/Sidebar/Files/TreeToolbar'
-
+import { ConfirmModal } from '../../../../ds/atoms'
+import { cn } from '../../../../lib/utils'
+import DocumentHeader from './DocumentHeader'
 import { FileTreeProvider, useFileTreeContext } from './FilesProvider'
+import FolderHeader from './FolderHeader'
 import { type IndentType } from './NodeHeaderWrapper'
+import { TreeToolbar } from './TreeToolbar'
 import { useOpenPaths } from './useOpenPaths'
 import { useTempNodes } from './useTempNodes'
 import { Node, SidebarDocument, useTree } from './useTree'

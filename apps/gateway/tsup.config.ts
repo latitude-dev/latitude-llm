@@ -1,4 +1,12 @@
+import { readFileSync } from 'fs'
+
 import { defineConfig } from 'tsup'
+
+const getDependencies = (path: string) =>
+  Object.keys(JSON.parse(readFileSync(path, 'utf-8')).dependencies)
+
+const rootDependencies = getDependencies('../../package.json')
+const dependencies = getDependencies('./package.json')
 
 export default defineConfig({
   entry: ['src/server.ts'],
@@ -14,40 +22,9 @@ export default defineConfig({
     // So we just tell it to ignore it using 'empty' loader
     '.html': 'empty',
   },
-  external: [
-    'fs',
-    'path',
-    'os',
-    'crypto',
-    'hono',
-    'jet-paths',
-    '@hono/node-server',
-    '@hono/zod-validator',
-    'zod',
-    'dotenv',
-    '@t3-oss/env-core',
-    '@faker-js/faker',
-    '@ai-sdk/anthropic',
-    '@ai-sdk/azure',
-    '@ai-sdk/mistral',
-    '@ai-sdk/openai',
-    'ai',
-    'argon2',
-    'pg',
-    'drizzle-kit',
-    'drizzle-orm',
-    'uuid',
-    'lodash-es',
-    'code-red',
-    'locate-character',
-    'acorn',
-    'yaml',
-    'bullmq',
-    'ioredis',
-  ],
+  external: [...rootDependencies, ...dependencies],
   noExternal: [
     '@latitude-data/env',
-    '@latitude-data/compiler',
     '@latitude-data/core',
     '@latitude-data/jobs',
   ],

@@ -23,9 +23,8 @@ import {
   Trash,
 } from 'lucide-react'
 
-import { colors, type TextColor } from '$ui/ds/tokens'
-import { cn } from '$ui/lib/utils'
-
+import { cn } from '../../../lib/utils'
+import { colors, type TextColor } from '../../tokens'
 import { LatitudeLogo, LatitudeLogoMonochrome } from './custom-icons'
 
 export const Icons = {

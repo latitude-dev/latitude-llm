@@ -1,4 +1,4 @@
-import { Icons, Text } from '$ui/ds/atoms'
+import { Icons, Text } from '../../atoms'
 
 export default function FocusHeader({
   title,

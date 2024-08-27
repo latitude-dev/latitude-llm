@@ -6,13 +6,13 @@ import {
   Document as RefDocument,
   type CompileError,
 } from '@latitude-data/compiler'
-import { Commit, DocumentVersion } from '$core/browser'
-import { database } from '$core/client'
-import { Result, Transaction, TypedResult } from '$core/lib'
-import { assertCommitIsDraft } from '$core/lib/assertCommitIsDraft'
-import { documentVersions } from '$core/schema'
 import { eq } from 'drizzle-orm'
 
+import { Commit, DocumentVersion } from '../../../browser'
+import { database } from '../../../client'
+import { Result, Transaction, TypedResult } from '../../../lib'
+import { assertCommitIsDraft } from '../../../lib/assertCommitIsDraft'
+import { documentVersions } from '../../../schema'
 import { getHeadDocumentsAndDraftDocumentsForCommit } from './getHeadDocumentsAndDraftDocuments'
 import { getMergedAndDraftDocuments } from './getMergedAndDraftDocuments'
 

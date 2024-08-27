@@ -1,10 +1,11 @@
-import type { Commit, DocumentVersion } from '$core/browser'
-import { findWorkspaceFromCommit } from '$core/data-access'
-import { Result, Transaction, TypedResult } from '$core/lib'
-import { BadRequestError } from '$core/lib/errors'
-import { DocumentVersionsRepository } from '$core/repositories/documentVersionsRepository'
-import { documentVersions } from '$core/schema'
 import { eq } from 'drizzle-orm'
+
+import type { Commit, DocumentVersion } from '../../browser'
+import { findWorkspaceFromCommit } from '../../data-access'
+import { Result, Transaction, TypedResult } from '../../lib'
+import { BadRequestError } from '../../lib/errors'
+import { DocumentVersionsRepository } from '../../repositories'
+import { documentVersions } from '../../schema'
 
 export async function createNewDocument({
   commit,

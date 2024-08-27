@@ -1,8 +1,7 @@
 import { ReactNode } from 'react'
 import { Slot } from '@radix-ui/react-slot'
 
-import { cn } from '$ui/lib/utils'
-
+import { cn } from '../../../lib/utils'
 import Text from '../Text'
 
 type INavTabItem = {

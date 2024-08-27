@@ -1,7 +1,7 @@
-import { Commit, DocumentLog } from '$core/browser'
-import { database } from '$core/client'
-import { Result, Transaction } from '$core/lib'
-import { documentLogs } from '$core/schema'
+import { Commit, DocumentLog } from '../../browser'
+import { database } from '../../client'
+import { Result, Transaction } from '../../lib'
+import { documentLogs } from '../../schema'
 
 export type CreateDocumentLogProps = {
   commit: Commit

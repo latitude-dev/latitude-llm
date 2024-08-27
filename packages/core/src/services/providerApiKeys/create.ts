@@ -1,7 +1,7 @@
-import { Providers, Workspace } from '$core/browser'
-import { database } from '$core/client'
-import { Result, Transaction } from '$core/lib'
-import { providerApiKeys } from '$core/schema'
+import { Providers, Workspace } from '../../browser'
+import { database } from '../../client'
+import { Result, Transaction } from '../../lib'
+import { providerApiKeys } from '../../schema'
 
 export type Props = {
   workspace: Partial<Workspace>

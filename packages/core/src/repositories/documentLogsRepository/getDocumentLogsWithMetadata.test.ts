@@ -1,8 +1,8 @@
-import { Providers } from '$core/constants'
-import { mergeCommit, updateDocument } from '$core/services'
-import * as factories from '$core/tests/factories'
 import { describe, expect, it } from 'vitest'
 
+import { Providers } from '../../constants'
+import { mergeCommit, updateDocument } from '../../services'
+import * as factories from '../../tests/factories'
 import { DocumentLogsRepository } from './index'
 
 const documentContent = (content: string) => `

@@ -1,5 +1,5 @@
-import { Commit } from '$core/browser'
-import { BadRequestError, Result } from '$core/lib'
+import { BadRequestError, Result } from '.'
+import { Commit } from '../browser'
 
 export function assertCommitIsDraft(commit: Commit) {
   if (commit.mergedAt !== null) {

@@ -1,15 +1,16 @@
-import { Commit } from '$core/browser'
-import { database } from '$core/client'
-import { findWorkspaceFromCommit } from '$core/data-access'
-import { Result, Transaction } from '$core/lib'
+import { and, desc, eq, isNotNull } from 'drizzle-orm'
+
+import { Commit } from '../../browser'
+import { database } from '../../client'
+import { findWorkspaceFromCommit } from '../../data-access/workspaces'
+import { Result, Transaction } from '../../lib'
 import {
   LatitudeError,
   NotFoundError,
   UnprocessableEntityError,
-} from '$core/lib/errors'
-import { commits } from '$core/schema'
-import { recomputeChanges } from '$core/services/documents'
-import { and, desc, eq, isNotNull } from 'drizzle-orm'
+} from '../../lib/errors'
+import { commits } from '../../schema'
+import { recomputeChanges } from '../documents'
 
 export async function mergeCommit(commit: Commit, db = database) {
   return Transaction.call<Commit>(async (tx) => {

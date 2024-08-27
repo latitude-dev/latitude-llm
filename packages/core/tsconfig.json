@@ -1,14 +1,7 @@
 {
   "extends": "@latitude-data/typescript-config/base.json",
   "compilerOptions": {
-    "moduleResolution": "Bundler",
-    "baseUrl": ".",
-    "paths": {
-      "$core/*": ["src/*"],
-      "@latitude-data/compiler": ["../compiler/src/*"],
-      "$compiler/*": ["../compiler/src/*"],
-      "acorn": ["node_modules/@latitude-data/typescript-config/types/acorn"]
-    }
+    "moduleResolution": "Bundler"
   },
   "include": ["src"],
   "exclude": ["node_modules", "dist"]

@@ -1,7 +1,7 @@
-import { Workspace } from '$core/browser'
-import { database } from '$core/client'
-import { Result, Transaction } from '$core/lib'
-import { evaluations } from '$core/schema'
+import { Workspace } from '../../browser'
+import { database } from '../../client'
+import { Result, Transaction } from '../../lib'
+import { evaluations } from '../../schema'
 
 type Props = {
   workspace: Workspace

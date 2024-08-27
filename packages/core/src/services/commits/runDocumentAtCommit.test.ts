@@ -1,3 +1,5 @@
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+
 import {
   Commit,
   DocumentVersion,
@@ -5,11 +7,9 @@ import {
   Providers,
   SafeUser,
   Workspace,
-} from '$core/browser'
-import { factories } from '$core/index'
-import { testConsumeStream } from '$core/tests/helpers'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
-
+} from '../../browser'
+import { createProject, createProviderApiKey } from '../../tests/factories'
+import { testConsumeStream } from '../../tests/helpers'
 import { runDocumentAtCommit } from './index'
 
 const mocks = vi.hoisted(() => {
@@ -54,7 +54,7 @@ This is a test document
 <step />
 `
 async function buildData({ doc1Content = '' }: { doc1Content?: string } = {}) {
-  const { workspace, documents, commit, user } = await factories.createProject({
+  const { workspace, documents, commit, user } = await createProject({
     documents: {
       doc1: doc1Content,
     },
@@ -139,7 +139,7 @@ describe('runDocumentAtCommit', () => {
       commit = cmt
       workspaceId = wsp.id
       workspace = wsp
-      provider = await factories.createProviderApiKey({
+      provider = await createProviderApiKey({
         workspace,
         type: Providers.OpenAI,
         name: 'openai',

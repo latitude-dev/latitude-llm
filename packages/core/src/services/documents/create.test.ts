@@ -1,6 +1,6 @@
-import { DocumentVersionsRepository } from '$core/repositories'
 import { describe, expect, it } from 'vitest'
 
+import { DocumentVersionsRepository } from '../../repositories'
 import { mergeCommit } from '../commits/merge'
 import { createNewDocument } from './create'
 

@@ -1,7 +1,8 @@
-import { Jobs, Queues } from '$jobs/constants'
-import { JobDefinition } from '$jobs/job-definitions'
 import { Job, JobsOptions, Queue, QueueEvents } from 'bullmq'
 import { Redis } from 'ioredis'
+
+import { Jobs, Queues } from '../constants'
+import { JobDefinition } from '../job-definitions'
 
 function capitalize(string: string) {
   return string.charAt(0).toUpperCase() + string.slice(1)

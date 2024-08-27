@@ -1,10 +1,10 @@
 import { faker } from '@faker-js/faker'
-import type { DocumentVersion, SafeUser, Workspace } from '$core/browser'
-import { unsafelyGetUser } from '$core/data-access'
-import { CommitsRepository } from '$core/repositories'
-import { createNewDocument, mergeCommit, updateDocument } from '$core/services'
-import { createProject as createProjectFn } from '$core/services/projects'
 
+import type { DocumentVersion, SafeUser, Workspace } from '../../browser'
+import { unsafelyGetUser } from '../../data-access'
+import { CommitsRepository } from '../../repositories'
+import { createNewDocument, mergeCommit, updateDocument } from '../../services'
+import { createProject as createProjectFn } from '../../services/projects'
 import { createDraft } from './commits'
 import { createWorkspace, type ICreateWorkspace } from './workspaces'
 

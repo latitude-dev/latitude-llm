@@ -1,5 +1,4 @@
-import { Icons } from '$ui/ds/atoms/Icons'
-
+import { Icons } from '../Icons'
 import {
   AlertDescription,
   AlertProps,

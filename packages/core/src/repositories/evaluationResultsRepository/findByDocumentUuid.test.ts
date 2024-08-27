@@ -1,9 +1,9 @@
-import { Providers } from '$core/constants'
-import { mergeCommit } from '$core/services'
-import * as factories from '$core/tests/factories'
 import { describe, expect, it } from 'vitest'
 
 import { EvaluationResultsRepository } from '.'
+import { Providers } from '../../constants'
+import { mergeCommit } from '../../services'
+import * as factories from '../../tests/factories'
 
 describe('findEvaluationResultsByDocumentUuid', () => {
   it('return evaluation results', async () => {

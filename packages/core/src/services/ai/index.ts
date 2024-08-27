@@ -4,7 +4,6 @@ import { createMistral } from '@ai-sdk/mistral'
 import { createOpenAI } from '@ai-sdk/openai'
 import { OpenAICompletionModelId } from '@ai-sdk/openai/internal'
 import { Message } from '@latitude-data/compiler'
-import { ProviderApiKey, Providers } from '$core/browser'
 import {
   CallWarning,
   CompletionTokenUsage,
@@ -15,6 +14,7 @@ import {
 import { v4 as uuidv4 } from 'uuid'
 import { z } from 'zod'
 
+import { ProviderApiKey, Providers } from '../../browser'
 import { CreateProviderLogProps } from '../providerLogs/create'
 
 export type FinishCallbackEvent = {

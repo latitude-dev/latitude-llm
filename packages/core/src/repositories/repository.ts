@@ -1,6 +1,7 @@
-import { database } from '$core/client'
 import { Subquery } from 'drizzle-orm'
 import { PgSelect } from 'drizzle-orm/pg-core'
+
+import { database } from '../client'
 
 export type PaginationArgs = { page?: number; pageSize?: number }
 export default abstract class Repository {
