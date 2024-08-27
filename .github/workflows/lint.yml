@@ -49,14 +49,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
-      - name: Cache turbo build setup
-        uses: actions/cache@v3
-        with:
-          path: .turbo
-          key: ${{ runner.os }}-turbo-${{ github.sha }}
-          restore-keys: |
-            ${{ runner.os }}-turbo-
-
       - name: Use Turbo to build affected packages
         run: pnpm turbo build --cache-dir=.turbo --filter="@latitude-data/sdk-js"
 

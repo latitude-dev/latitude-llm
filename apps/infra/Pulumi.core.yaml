@@ -4,6 +4,8 @@ config:
     secure: v1:WABt/tJjfsAKMplU:RRLtj5mTu301x4sn2Tr91u4O0Msd3mWVJutcDg==
   infra:albSecurityGroup:
     secure: v1:HCwWQvcrwQE9Py6E:U5ibuWwH2MNAooASzaHOnSS3pKNhuJHZTh2pnHcSYKRPuuMJ
+  infra:bastionAccountId:
+    secure: v1:ZHhgRmCUW/7Tnz7J:Pk/rD/Jh6bTOe4tPT9KS7l9e0zxwpdEytOXfGw==
   infra:certificateArn:
     secure: v1:cVoNFiCossdN2KJL:2rPP4LfjqbYMzVS+TtMzdhie2uk8cQ7TXecvGa+6FJEqpuI1EdbThaoNhVUlfqLuCYIn4OmaRRnndhjbHOOgDnQGT1kaXtj8zjdyJWHqZtEQHhvI1SKXC1g6WPj7vcvwkeTj/AFu
   infra:databasePassword:

@@ -1,0 +1,19 @@
+name: Deploy Gateway
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'apps/gateway/**'
+
+jobs:
+  deploy:
+    uses: ./.github/workflows/deploy-common.yml
+    with:
+      working-directory: apps/infra
+      stack-name: gateway-production
+    secrets:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      PULUMI_CONFIG_PASSPHRASE: ${{ secrets.PULUMI_CONFIG_PASSPHRASE }}
