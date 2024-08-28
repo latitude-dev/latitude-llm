@@ -7,7 +7,7 @@ import { authProcedure } from '../procedures'
 
 export const getUsersActions = authProcedure
   .createServerAction()
-  .handler(({ ctx }) => {
+  .handler(async ({ ctx }) => {
     const usersScope = new UsersRepository(ctx.workspace.id)
 
     return usersScope

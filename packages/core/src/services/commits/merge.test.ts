@@ -1,9 +1,9 @@
-import { database } from '$core/client'
-import { findHeadCommit } from '$core/data-access/commits'
-import { documentVersions } from '$core/schema'
 import { eq } from 'drizzle-orm'
 import { describe, expect, it } from 'vitest'
 
+import { database } from '../../client'
+import { findHeadCommit } from '../../data-access/commits'
+import { documentVersions } from '../../schema'
 import { createNewDocument, updateDocument } from '../documents'
 import { mergeCommit } from './merge'
 

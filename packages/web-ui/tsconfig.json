@@ -2,17 +2,9 @@
   "extends": "@latitude-data/typescript-config/base.json",
   "compilerOptions": {
     "jsx": "react-jsx",
-    "moduleResolution": "Bundler",
     "module": "ESNext",
-    "baseUrl": ".",
-    "paths": {
-      "@latitude-data/core": ["../core/src/*"],
-      "@latitude-data/compiler": ["../compiler/src/*"],
-      "$compiler/*": ["../compiler/src/*"],
-      "$core/*": ["../core/src/*"],
-      "$ui/*": ["src/*"],
-      "acorn": ["node_modules/@latitude-data/typescript-config/types/acorn"]
-    }
+    "moduleResolution": "Bundler",
+    "types": ["node"]
   },
   "include": ["src"],
   "exclude": ["node_modules", "dist"]

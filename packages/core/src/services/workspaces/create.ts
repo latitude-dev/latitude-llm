@@ -1,10 +1,9 @@
-import { SafeUser, Workspace } from '$core/browser'
-import { database } from '$core/client'
-import { Result, Transaction } from '$core/lib'
-import { memberships, workspaces } from '$core/schema'
-import { createProject } from '$core/services/projects'
-
+import { SafeUser, Workspace } from '../../browser'
+import { database } from '../../client'
+import { Result, Transaction } from '../../lib'
+import { memberships, workspaces } from '../../schema'
 import { createApiKey } from '../apiKeys/create'
+import { createProject } from '../projects'
 
 export async function createWorkspace(
   {

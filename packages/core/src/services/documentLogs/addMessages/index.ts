@@ -1,4 +1,5 @@
 import { Config, Message, MessageRole } from '@latitude-data/compiler'
+
 import {
   ChainCallResponse,
   ChainEvent,
@@ -7,15 +8,15 @@ import {
   ProviderApiKey,
   StreamEventTypes,
   Workspace,
-} from '$core/browser'
-import { Result } from '$core/lib'
-import { streamToGenerator } from '$core/lib/streamToGenerator'
+} from '../../../browser'
+import { Result } from '../../../lib'
+import { streamToGenerator } from '../../../lib/streamToGenerator'
 import {
   ProviderApiKeysRepository,
   ProviderLogsRepository,
-} from '$core/repositories'
-import { ai, AILog } from '$core/services/ai'
-import { enqueueChainEvent } from '$core/services/commits'
+} from '../../../repositories'
+import { ai, AILog } from '../../ai'
+import { enqueueChainEvent } from '../../commits'
 
 export async function addMessages({
   workspace,

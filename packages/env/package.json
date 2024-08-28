@@ -13,13 +13,12 @@
   "exports": {
     ".": "./src/index.ts"
   },
-  "peerDependencies": {
-    "dotenv": "*"
-  },
   "devDependencies": {
     "@latitude-data/eslint-config": "workspace:*",
     "@latitude-data/typescript-config": "workspace:*",
-    "prettier": "^3.3.2",
-    "typescript": "^5.2.2"
+    "dotenv": "^16.4.5"
+  },
+  "peerDependencies": {
+    "dotenv": "^16.4.5"
   }
 }

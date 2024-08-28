@@ -3,10 +3,9 @@
 import { ReactNode, useCallback, useState } from 'react'
 import { Check } from 'lucide-react'
 
-import { Button, type ButtonProps } from '$ui/ds/atoms/Button'
-import { Icon, type IconProps } from '$ui/ds/atoms/Icons'
-import Text from '$ui/ds/atoms/Text'
-
+import { Button, type ButtonProps } from '../Button'
+import { Icon, type IconProps } from '../Icons'
+import Text from '../Text'
 import {
   DropdownMenuContent,
   DropdownMenuItem,

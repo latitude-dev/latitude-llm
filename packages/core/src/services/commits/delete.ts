@@ -1,9 +1,10 @@
-import { Commit } from '$core/browser'
-import { database } from '$core/client'
-import { Result, Transaction } from '$core/lib'
-import { assertCommitIsDraft } from '$core/lib/assertCommitIsDraft'
-import { commits } from '$core/schema'
 import { eq } from 'drizzle-orm'
+
+import { Commit } from '../../browser'
+import { database } from '../../client'
+import { Result, Transaction } from '../../lib'
+import { assertCommitIsDraft } from '../../lib/assertCommitIsDraft'
+import { commits } from '../../schema'
 
 export async function deleteCommitDraft(commit: Commit, db = database) {
   assertCommitIsDraft(commit).unwrap()

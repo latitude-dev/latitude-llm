@@ -1,9 +1,9 @@
-import type { Commit, DocumentVersion, Project } from '$core/browser'
-import { HEAD_COMMIT } from '$core/constants'
-import { mergeCommit, updateDocument } from '$core/services'
-import * as factories from '$core/tests/factories'
 import { beforeEach, describe, expect, it } from 'vitest'
 
+import type { Commit, DocumentVersion, Project } from '../../browser'
+import { HEAD_COMMIT } from '../../constants'
+import { mergeCommit, updateDocument } from '../../services'
+import * as factories from '../../tests/factories'
 import { CommitsRepository } from '../commitsRepository'
 import { DocumentVersionsRepository } from './index'
 

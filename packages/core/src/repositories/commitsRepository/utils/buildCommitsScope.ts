@@ -1,6 +1,7 @@
-import { database } from '$core/client'
-import { commits, projects } from '$core/schema'
 import { eq, getTableColumns } from 'drizzle-orm'
+
+import { database } from '../../../client'
+import { commits, projects } from '../../../schema'
 
 export function buildCommitsScope(workspaceId: number, db = database) {
   const scope = db

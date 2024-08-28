@@ -1,6 +1,6 @@
-import { buildConnection, ConnectionParams } from '$jobs/connection'
-import { setupQueues } from '$jobs/queues'
-import startWorkers from '$jobs/workers'
+import { buildConnection, ConnectionParams } from './connection'
+import { setupQueues } from './queues'
+import startWorkers from './workers'
 
 export { Worker } from 'bullmq'
 

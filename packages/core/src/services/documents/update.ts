@@ -1,14 +1,15 @@
 import { omit } from 'lodash-es'
 
-import { Commit, DocumentVersion } from '$core/browser'
-import { database } from '$core/client'
-import { findWorkspaceFromCommit } from '$core/data-access'
-import { Result, Transaction, TypedResult } from '$core/lib'
-import { assertCommitIsDraft } from '$core/lib/assertCommitIsDraft'
-import { BadRequestError, NotFoundError } from '$core/lib/errors'
-import { DocumentVersionsRepository } from '$core/repositories/documentVersionsRepository'
-import { documentVersions } from '$core/schema'
 import { eq } from 'drizzle-orm'
+
+import { Commit, DocumentVersion } from '../../browser'
+import { database } from '../../client'
+import { findWorkspaceFromCommit } from '../../data-access'
+import { Result, Transaction, TypedResult } from '../../lib'
+import { assertCommitIsDraft } from '../../lib/assertCommitIsDraft'
+import { BadRequestError, NotFoundError } from '../../lib/errors'
+import { DocumentVersionsRepository } from '../../repositories/documentVersionsRepository'
+import { documentVersions } from '../../schema'
 
 // TODO: refactor, can be simplified
 export async function updateDocument(

@@ -1,7 +1,8 @@
-import { Database, database } from '$core/client'
-import { NotFoundError, Result } from '$core/lib'
-import { memberships, workspaces } from '$core/schema'
 import { eq, getTableColumns } from 'drizzle-orm'
+
+import { Database, database } from '../client'
+import { NotFoundError, Result } from '../lib'
+import { memberships, workspaces } from '../schema'
 
 export class WorkspacesRepository {
   public userId: string

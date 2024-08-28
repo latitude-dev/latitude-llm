@@ -1,7 +1,7 @@
-import { Commit, Project, SafeUser } from '$core/browser'
-import { database, Database } from '$core/client'
-import { Result, Transaction } from '$core/lib'
-import { commits } from '$core/schema'
+import { Commit, Project, SafeUser } from '../../browser'
+import { database, Database } from '../../client'
+import { Result, Transaction } from '../../lib'
+import { commits } from '../../schema'
 
 export async function createCommit({
   project,

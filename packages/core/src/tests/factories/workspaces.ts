@@ -1,7 +1,7 @@
 import { faker } from '@faker-js/faker'
-import { type SafeUser } from '$core/browser'
-import { createWorkspace as createWorkspaceFn } from '$core/services/workspaces/create'
 
+import { type SafeUser } from '../../browser'
+import { createWorkspace as createWorkspaceFn } from '../../services/workspaces/create'
 import { createUser, type ICreateUser } from './users'
 
 export type ICreateWorkspace = {

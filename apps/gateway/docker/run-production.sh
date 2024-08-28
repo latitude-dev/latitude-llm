@@ -15,4 +15,4 @@ docker compose run -it \
   -e REDIS_HOST="$REDIS_HOST" \
   -e GATEWAY_HOSTNAME="$GATEWAY_HOSTNAME" \
   -e GATEWAY_PORT="$GATEWAY_PORT" \
-  gateway server.js -p $GATEWAY_PORT
+  gateway dist/server.js -p $GATEWAY_PORT

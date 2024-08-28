@@ -17,10 +17,12 @@
   "dependencies": {
     "@hono/node-server": "^1.12.0",
     "@hono/zod-validator": "^0.2.2",
+    "@latitude-data/compiler": "workspace:^",
     "@latitude-data/core": "workspace:^",
     "@latitude-data/env": "workspace:^",
     "@latitude-data/jobs": "workspace:^",
     "@t3-oss/env-core": "^0.10.1",
+    "drizzle-orm": "^0.33.0",
     "hono": "^4.5.3",
     "jet-paths": "^1.0.6",
     "zod": "^3.23.8"
@@ -28,11 +30,10 @@
   "devDependencies": {
     "@latitude-data/eslint-config": "workspace:^",
     "@latitude-data/typescript-config": "workspace:^",
+    "@types/node": "^22.5.1",
     "@types/uuid": "^10.0.0",
-    "eslint": "8",
     "tsup": "^8.2.4",
     "tsx": "^4.16.2",
-    "typescript": "^5.5.4",
     "vitest": "^2.0.4"
   }
 }

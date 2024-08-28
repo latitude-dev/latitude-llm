@@ -1,15 +1,15 @@
 import { ContentType, createChain } from '@latitude-data/compiler'
-import { Commit, DocumentVersion, LogSources, ProviderLog } from '$core/browser'
-import { findWorkspaceFromCommit } from '$core/data-access'
-import { ProviderApiKeysRepository } from '$core/repositories'
+import { v4 as uuid } from 'uuid'
+
+import { Commit, DocumentVersion, LogSources, ProviderLog } from '../../browser'
+import { findWorkspaceFromCommit } from '../../data-access'
+import { ProviderApiKeysRepository } from '../../repositories'
 import {
   Config,
   createProviderLog,
   getResolvedContent,
   createDocumentLog as ogCreateDocumentLog,
-} from '$core/services'
-import { v4 as uuid } from 'uuid'
-
+} from '../../services'
 import { helpers } from './helpers'
 
 export type IDocumentLogData = {

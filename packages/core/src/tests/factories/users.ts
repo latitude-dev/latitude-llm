@@ -1,5 +1,6 @@
 import { faker } from '@faker-js/faker'
-import { createUser as createUserFn } from '$core/services/users/createUser'
+
+import { createUser as createUserFn } from '../../services/users/createUser'
 
 function makeRandomUserData() {
   return {

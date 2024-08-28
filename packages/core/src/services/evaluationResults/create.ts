@@ -3,10 +3,10 @@ import {
   Evaluation,
   EvaluationResult,
   ProviderLog,
-} from '$core/browser'
-import { database } from '$core/client'
-import { Result, Transaction } from '$core/lib'
-import { evaluationResults } from '$core/schema'
+} from '../../browser'
+import { database } from '../../client'
+import { Result, Transaction } from '../../lib'
+import { evaluationResults } from '../../schema'
 
 export type CreateEvaluationResultProps = {
   evaluation: Evaluation

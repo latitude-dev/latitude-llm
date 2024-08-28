@@ -1,7 +1,7 @@
 import { act, renderHook } from '@testing-library/react'
-import { Node } from '$ui/sections/Document/Sidebar/Files/useTree'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
+import { Node } from '../useTree'
 import { useTempNodes } from './index'
 
 describe('useTempNodes', () => {

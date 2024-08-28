@@ -1,10 +1,4 @@
-import {
-  apiKeys,
-  database,
-  factories,
-  mergeCommit,
-  Result,
-} from '@latitude-data/core'
+import { apiKeys, database, mergeCommit, Result } from '@latitude-data/core'
 import {
   ChainEventTypes,
   Commit,
@@ -13,6 +7,11 @@ import {
   StreamEventTypes,
   Workspace,
 } from '@latitude-data/core/browser'
+import {
+  createDocumentVersion,
+  createDraft,
+  createProject,
+} from '@latitude-data/core/factories'
 import app from '$/routes/app'
 import { eq } from 'drizzle-orm'
 import { testConsumeStream } from 'test/helpers'
@@ -71,23 +70,20 @@ describe('POST /run', () => {
 
   describe('authorized', () => {
     beforeEach(async () => {
-      const {
-        workspace: wsp,
-        user,
-        project: prj,
-      } = await factories.createProject()
+      const { workspace: wsp, user, project: prj } = await createProject()
       project = prj
       workspace = wsp
+      // TODO: move to core
       const apikey = await database.query.apiKeys.findFirst({
         where: eq(apiKeys.workspaceId, workspace.id),
       })
       token = apikey?.token!
       const path = '/path/to/document'
-      const { commit: cmt } = await factories.createDraft({
+      const { commit: cmt } = await createDraft({
         project,
         user,
       })
-      const document = await factories.createDocumentVersion({
+      const document = await createDocumentVersion({
         commit: cmt,
         path,
         content: `

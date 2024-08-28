@@ -1,4 +1,4 @@
-import { DocumentVersion } from '$core/browser'
+import { DocumentVersion } from '../../../browser'
 
 export function getMergedAndDraftDocuments({
   headDocuments,

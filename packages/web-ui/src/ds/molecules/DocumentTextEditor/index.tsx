@@ -17,7 +17,9 @@ export type DocumentTextEditorProps = {
 const DocumentTextEditor = lazy(() =>
   import('./editor').then(
     (module) =>
-      ({ default: module.DocumentTextEditor }) as {
+      ({
+        default: module.DocumentTextEditor,
+      }) as {
         default: React.ComponentType<DocumentTextEditorProps>
       },
   ),

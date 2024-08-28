@@ -1,4 +1,4 @@
-import { apiKeys, database, factories, Result } from '@latitude-data/core'
+import { apiKeys, database, Result } from '@latitude-data/core'
 import {
   ApiKey,
   ChainEventTypes,
@@ -6,6 +6,7 @@ import {
   StreamEventTypes,
   Workspace,
 } from '@latitude-data/core/browser'
+import { createProject } from '@latitude-data/core/factories'
 import app from '$/routes/app'
 import { eq } from 'drizzle-orm'
 import { testConsumeStream } from 'test/helpers'
@@ -85,9 +86,11 @@ describe('POST /add-message', () => {
     beforeEach(async () => {
       mocks.addMessages.mockClear()
 
-      const { workspace: wsp } = await factories.createProject()
+      const { workspace: wsp } = await createProject()
       workspace = wsp
+      // TODO: move to core
       const key = await database.query.apiKeys.findFirst({
+        // @ts-ignore
         where: eq(apiKeys.workspaceId, workspace.id),
       })
       apiKey = key!

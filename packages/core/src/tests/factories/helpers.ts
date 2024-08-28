@@ -1,5 +1,6 @@
 import { faker } from '@faker-js/faker'
-import { ProviderApiKey } from '$core/browser'
+
+import { ProviderApiKey } from '../../browser'
 
 const randomSentence = () => {
   const randomSentenceGenerators = [

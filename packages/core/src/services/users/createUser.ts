@@ -1,7 +1,7 @@
-import { SafeUser } from '$core/browser'
-import { database } from '$core/client'
-import { hashPassword, Result, Transaction } from '$core/lib'
-import { users } from '$core/schema'
+import { SafeUser } from '../../browser'
+import { database } from '../../client'
+import { hashPassword, Result, Transaction } from '../../lib'
+import { users } from '../../schema'
 
 export async function createUser(
   {

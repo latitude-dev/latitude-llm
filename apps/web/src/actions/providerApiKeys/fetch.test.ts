@@ -1,7 +1,7 @@
 import { createProviderApiKey } from '@latitude-data/core'
 import { Providers } from '@latitude-data/core/browser'
+import { createWorkspace } from '@latitude-data/core/factories'
 import { getSession } from '$/services/auth/getSession'
-import { createWorkspace } from '$core/tests/factories/workspaces'
 import { beforeEach, describe, expect, it, Mock, vi } from 'vitest'
 
 import { getProviderApiKeyAction } from './fetch'

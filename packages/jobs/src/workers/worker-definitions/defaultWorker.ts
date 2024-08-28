@@ -1,13 +1,14 @@
-import { Jobs, Queues } from '$jobs/constants'
+import { Job, Processor } from 'bullmq'
+
+import { Jobs, Queues } from '../../constants'
 import {
   createDocumentLogJob,
   CreateDocumentLogJobData,
-} from '$jobs/job-definitions/documentLogs/createJob'
+} from '../../job-definitions/documentLogs/createJob'
 import {
   createProviderLogJob,
   CreateProviderLogJobData,
-} from '$jobs/job-definitions/providerLogs/createJob'
-import { Job, Processor } from 'bullmq'
+} from '../../job-definitions/providerLogs/createJob'
 
 const processor: Processor = async (job) => {
   switch (job.name) {

@@ -28,7 +28,8 @@ export const addMessageHandler = factory.createHandlers(
         documentLogUuid,
         messages,
         providerLogHandler: (log) => {
-          queues.defaultQueue.jobs.enqueueCreateProviderLogJob({
+          // TODO: Review why this is possibly undefined now
+          queues.defaultQueue.jobs.enqueueCreateProviderLogJob!({
             ...log,
             source,
             apiKeyId: apiKey.id,

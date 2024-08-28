@@ -63,6 +63,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
+      - name: Use Turbo to build affected packages
+        run: pnpm turbo build --cache-dir=.turbo --filter="./packages/*"
+
       - name: Wait for PostgreSQL to start
         run: until pg_isready -h localhost -p 5432; do sleep 1; done
 

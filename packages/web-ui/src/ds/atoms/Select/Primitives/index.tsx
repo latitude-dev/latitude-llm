@@ -17,8 +17,8 @@ import {
 } from '@radix-ui/react-icons'
 import * as SelectPrimitive from '@radix-ui/react-select'
 
-import { SelectOption, SelectOptionGroup } from '$ui/ds/atoms/Select'
-import { cn } from '$ui/lib/utils'
+import { SelectOption, SelectOptionGroup } from '..'
+import { cn } from '../../../../lib/utils'
 
 const SelectRoot = SelectPrimitive.Root
 

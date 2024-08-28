@@ -1,5 +1,5 @@
-import { Icons, Text } from '$ui/ds/atoms'
-import { cn } from '$ui/lib/utils'
+import { cn } from '../../../lib/utils'
+import { Icons, Text } from '../../atoms'
 
 export function ErrorComponent({
   message,

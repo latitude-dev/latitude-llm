@@ -14,15 +14,16 @@
     "tc": "tsc --noEmit"
   },
   "dependencies": {
+    "@latitude-data/env": "workspace:^",
     "@latitude-data/jobs": "workspace:^",
-    "@t3-oss/env-core": "*"
+    "@t3-oss/env-core": "*",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@latitude-data/eslint-config": "workspace:^",
     "@latitude-data/typescript-config": "workspace:^",
-    "eslint": "8",
+    "@types/node": "^22.5.1",
     "tsup": "^8.2.4",
-    "tsx": "^4.16.2",
-    "typescript": "*"
+    "tsx": "^4.16.2"
   }
 }

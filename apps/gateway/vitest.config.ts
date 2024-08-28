@@ -13,8 +13,6 @@ export default defineConfig({
   resolve: {
     alias: {
       $: `${root}/src`,
-      $core: `${root}/../../packages/core/src`,
-      $compiler: `${root}/../../packages/compiler/src`,
     },
   },
 })

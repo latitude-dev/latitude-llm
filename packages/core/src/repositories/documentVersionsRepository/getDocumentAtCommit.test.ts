@@ -1,9 +1,9 @@
 import { omit } from 'lodash-es'
 
-import { mergeCommit } from '$core/services'
-import * as factories from '$core/tests/factories'
 import { describe, expect, it } from 'vitest'
 
+import { mergeCommit } from '../../services'
+import * as factories from '../../tests/factories'
 import { DocumentVersionsRepository } from './index'
 
 describe('getDocumentAtCommit', () => {

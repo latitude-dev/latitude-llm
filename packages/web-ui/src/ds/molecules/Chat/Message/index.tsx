@@ -3,9 +3,10 @@ import {
   MessageContent,
   TextContent,
 } from '@latitude-data/compiler'
-import { Badge, BadgeProps, Text } from '$ui/ds/atoms'
-import { TextColor } from '$ui/ds/tokens'
-import { cn } from '$ui/lib/utils'
+
+import { cn } from '../../../../lib/utils'
+import { Badge, BadgeProps, Text } from '../../../atoms'
+import { TextColor } from '../../../tokens'
 
 type MessageVariant = {
   badgeVariant: BadgeProps['variant']

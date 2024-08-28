@@ -1,4 +1,3 @@
-import { Providers } from '$core/browser'
 import {
   bigint,
   bigserial,
@@ -10,6 +9,7 @@ import {
   varchar,
 } from 'drizzle-orm/pg-core'
 
+import { Providers } from '../../browser'
 import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
 import { users } from './users'

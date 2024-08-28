@@ -1,7 +1,7 @@
-import { Result, UnprocessableEntityError } from '$core/lib'
-import { apiKeys, workspaces } from '$core/schema'
 import { eq, getTableColumns } from 'drizzle-orm'
 
+import { Result, UnprocessableEntityError } from '../lib'
+import { apiKeys, workspaces } from '../schema'
 import Repository from './repository'
 
 export class LatitudeApiKeysRepository extends Repository {

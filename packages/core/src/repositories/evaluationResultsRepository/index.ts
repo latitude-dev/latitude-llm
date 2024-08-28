@@ -1,8 +1,8 @@
-import { Commit, DocumentLog } from '$core/browser'
-import { Result } from '$core/lib'
-import { documentLogs, evaluationResults, evaluations } from '$core/schema'
 import { eq, getTableColumns } from 'drizzle-orm'
 
+import { Commit, DocumentLog } from '../../browser'
+import { Result } from '../../lib'
+import { documentLogs, evaluationResults, evaluations } from '../../schema'
 import Repository from '../repository'
 
 export type DocumentLogWithMetadata = DocumentLog & {

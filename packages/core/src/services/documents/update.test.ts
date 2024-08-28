@@ -1,9 +1,9 @@
+import { describe, expect, it } from 'vitest'
+
 import {
   CommitsRepository,
   DocumentVersionsRepository,
-} from '$core/repositories'
-import { describe, expect, it } from 'vitest'
-
+} from '../../repositories'
 import { recomputeChanges } from './recomputeChanges'
 import { updateDocument } from './update'
 

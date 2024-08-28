@@ -2,7 +2,7 @@
 
 import { ReactNode, useCallback } from 'react'
 
-import { Icons, Text, Tooltip } from '$ui/ds/atoms'
+import { Icons, Text, Tooltip } from '../../atoms'
 
 export function ClickToCopy({
   copyValue,

@@ -8,4 +8,4 @@ export REDIS_HOST=redis
 docker compose run -it \
   -e DATABASE_URL="$DATABASE_URL" \
   -e REDIS_HOST="$REDIS_HOST" \
-  workers server.js
+  workers dist/server.js

@@ -1,80 +1,75 @@
-FROM node:20-alpine AS base
+ARG PROJECT="@latitude-data/web"
+ARG PROJECT_PATH="apps/web"
+
+FROM node:20-alpine AS alpine
 
 # Check https://github.com/nodejs/docker-node/tree/b4117f9333da4138b03a546ec926ef50a31506c3#nodealpine to understand why libc6-compat might be needed.
 RUN apk update
 RUN apk add --no-cache libc6-compat
 
+FROM alpine as base
+
+# Will be used to cache pnpm store
+RUN corepack enable
+
 # Install pnpm
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 
-RUN npm i -g pnpm
 RUN pnpm i -g turbo
+
+FROM base as pruner
+
+ARG PROJECT
 
 WORKDIR /app
 
-# Copy necessary files for the monorepo
-COPY .npmrc package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
-COPY packages ./packages
-COPY tools ./tools
-COPY apps/web/package.json ./apps/web/package.json
-COPY apps/web/next-env.d.ts ./apps/web/next-env.d.ts
-COPY apps/web/next.config.mjs ./apps/web/next.config.mjs
-COPY apps/web/postcss.config.js ./apps/web/postcss.config.js
-COPY apps/web/public ./apps/web/public
-COPY apps/web/src ./apps/web/src
-COPY apps/web/tailwind.config.js ./apps/web/tailwind.config.js
-COPY apps/web/tsconfig.json ./apps/web/tsconfig.json
-COPY apps/web/.eslintrc.json ./apps/web/.eslintrc.json
+COPY . .
 
-# Prune the workspace for the web app
-RUN turbo prune @latitude-data/web --docker
+RUN turbo prune "${PROJECT}" --docker
 
 # BUILDER stage
 # ------------------------------------------------------
 FROM base AS builder
+
+ARG PROJECT
+
 WORKDIR /app
 
-COPY --from=base /app/out/json/ .
-COPY --from=base /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
-COPY --from=base /app/out/pnpm-workspace.yaml ./pnpm-workspace.yaml
-COPY --from=base /app/out/full/ .
+COPY --from=pruner /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
+COPY --from=pruner /app/out/pnpm-workspace.yaml ./pnpm-workspace.yaml
+COPY --from=pruner /app/out/json/ .
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install \
   --frozen-lockfile \
-  --filter "@latitude-data/web..." \
-  --filter "@latitude-data/core..."
+  --filter "${PROJECT}..."
 
-ENV NODE_ENV=production
-ENV NEXT_TELEMETRY_DISABLED=1
-ENV NODE_OPTIONS="--max_old_space_size=4096"
+COPY --from=pruner /app/out/full/ .
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
   BUILDING_CONTAINER=true \
-  pnpm turbo build --filter='@latitude-data/web...'
+  pnpm turbo build --filter="${PROJECT}..."
+
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm prune --prod --no-optional
+RUN rm -rf ./**/*/src
 
 # PRODUCTION
-FROM base AS production
+FROM alpine AS runner
 
-WORKDIR /app-prod
+ARG PROJECT_PATH
 
-# Public files doesn't have the unpriviledged user
-COPY --from=base /app/apps/web/public ./apps/web/public
+ENV NODE_ENV=production
 
 # Unpriviledged user
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 USER nextjs
 
-COPY --from=builder /app/apps/web/next.config.mjs .
-COPY --from=builder /app/packages ./packages
-COPY --from=builder /app/node_modules ./node_modules
+WORKDIR /app
 
-# Automatically leverage output traces to reduce image size
-# https://nextjs.org/docs/advanced-features/output-file-tracing
-COPY --from=builder --chown=nextjs:nodejs /app/apps/web/package.json ./apps/web/package.json
-COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/standalone ./apps
-COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./apps/web/.next/static
+COPY --from=builder --chown=nodejs:latitude /app .
+
+WORKDIR /app/${PROJECT_PATH}
 
 ARG PORT=8080
 ARG HOSTNAME="0.0.0.0"
@@ -86,4 +81,4 @@ ENV NEXT_TELEMETRY_DISABLED=1
 
 EXPOSE $PORT
 
-CMD node apps/web/server.js -p $PORT -h $HOSTNAME
+CMD node .next/standalone/apps/web/server.js -p $PORT -h $HOSTNAME

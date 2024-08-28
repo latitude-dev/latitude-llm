@@ -1,14 +1,15 @@
 import path from 'path'
 
 import { readMetadata, Document as RefDocument } from '@latitude-data/compiler'
-import { Commit, DocumentVersion, Workspace } from '$core/browser'
+
+import { Commit, DocumentVersion, Workspace } from '../../browser'
 import {
   LatitudeError,
   Result,
   TypedResult,
   UnprocessableEntityError,
-} from '$core/lib'
-import { DocumentVersionsRepository } from '$core/repositories'
+} from '../../lib'
+import { DocumentVersionsRepository } from '../../repositories'
 
 /**
  * This is an internal method. It should always receives

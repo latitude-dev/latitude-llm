@@ -1,4 +1,4 @@
-import { CurrentTheme } from '$ui/constants'
+import { CurrentTheme } from '@latitude-data/web-ui/browser'
 import { useTheme } from 'next-themes'
 
 export function useCurrentTheme() {

@@ -1,11 +1,11 @@
 import { useCallback, useState } from 'react'
 
-import { Button, Text } from '$ui/ds/atoms'
-import { DocumentIcon } from '$ui/sections/Document/Sidebar/Files/DocumentHeader'
-import { useFileTreeContext } from '$ui/sections/Document/Sidebar/Files/FilesProvider'
-import { FolderIcons } from '$ui/sections/Document/Sidebar/Files/FolderHeader'
-import NodeHeaderWrapper from '$ui/sections/Document/Sidebar/Files/NodeHeaderWrapper'
-import { useTempNodes } from '$ui/sections/Document/Sidebar/Files/useTempNodes'
+import { Button, Text } from '../../../../../ds/atoms'
+import { DocumentIcon } from '../DocumentHeader'
+import { useFileTreeContext } from '../FilesProvider'
+import { FolderIcons } from '../FolderHeader'
+import NodeHeaderWrapper from '../NodeHeaderWrapper'
+import { useTempNodes } from '../useTempNodes'
 
 enum EntityType {
   File = 'file',

@@ -5,23 +5,27 @@
   "license": "LGPL",
   "description": "Compiler for Latitude's custom conversation language",
   "type": "module",
-  "main": "src/index.ts",
-  "files": [
-    "src"
-  ],
+  "files": ["dist"],
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
   "scripts": {
     "dev": "rollup -c -w",
+    "build": "rollup -c",
     "test": "vitest run",
     "test:watch": "vitest",
     "prettier": "prettier --write src/**/*.ts",
     "lint": "eslint src",
     "tc": "tsc --noEmit"
   },
-  "peerDependencies": {
-    "acorn": "*",
-    "code-red": "*",
-    "locate-character": "*",
-    "yaml": "*"
+  "dependencies": {
+    "acorn": "^8.9.0",
+    "code-red": "^1.0.3",
+    "locate-character": "^3.0.0",
+    "yaml": "^2.4.5"
   },
   "devDependencies": {
     "@latitude-data/eslint-config": "workspace:*",
@@ -32,7 +36,6 @@
     "@types/node": "^20.12.12",
     "rollup": "^4.10.0",
     "rollup-plugin-dts": "^6.1.1",
-    "typescript": "^5.2.2",
     "vitest": "^1.2.2"
   }
 }

@@ -41,7 +41,8 @@ export const runHandler = factory.createHandlers(
         commit,
         parameters,
         providerLogHandler: (log) => {
-          queues.defaultQueue.jobs.enqueueCreateProviderLogJob({
+          // TODO: review why this is possibly undefined now
+          queues.defaultQueue.jobs.enqueueCreateProviderLogJob!({
             ...log,
             source,
             apiKeyId: apiKey.id,
@@ -51,7 +52,8 @@ export const runHandler = factory.createHandlers(
 
       await pipeToStream(stream, result.stream)
 
-      queues.defaultQueue.jobs.enqueueCreateDocumentLogJob({
+      // TODO: review why this is possibly undefined now
+      queues.defaultQueue.jobs.enqueueCreateDocumentLogJob!({
         commit,
         data: {
           uuid: result.documentLogUuid,

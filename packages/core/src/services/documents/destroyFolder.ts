@@ -1,9 +1,9 @@
-import type { Commit } from '$core/browser'
-import { database, Database } from '$core/client'
-import { NotFoundError, Result, Transaction } from '$core/lib'
-import { assertCommitIsDraft } from '$core/lib/assertCommitIsDraft'
-import { DocumentVersionsRepository } from '$core/repositories/documentVersionsRepository'
-import { destroyOrSoftDeleteDocuments } from '$core/services/documents/destroyOrSoftDeleteDocuments'
+import type { Commit } from '../../browser'
+import { database, Database } from '../../client'
+import { NotFoundError, Result, Transaction } from '../../lib'
+import { assertCommitIsDraft } from '../../lib/assertCommitIsDraft'
+import { DocumentVersionsRepository } from '../../repositories/documentVersionsRepository'
+import { destroyOrSoftDeleteDocuments } from './destroyOrSoftDeleteDocuments'
 
 export async function destroyFolder({
   path,

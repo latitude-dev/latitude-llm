@@ -1,14 +1,14 @@
-import { database } from '$core/client'
-import { NotFoundError } from '$core/lib'
-import { documentVersions } from '$core/schema'
-import { mergeCommit } from '$core/services/commits'
-import { updateDocument } from '$core/services/documents/update'
-import * as factories from '$core/tests/factories'
 import { and, eq } from 'drizzle-orm'
 import { describe, expect, it } from 'vitest'
 
+import { database } from '../../client'
+import { NotFoundError } from '../../lib'
+import { documentVersions } from '../../schema'
+import * as factories from '../../tests/factories'
+import { mergeCommit } from '../commits'
 import { createNewDocument } from './create'
 import { destroyFolder } from './destroyFolder'
+import { updateDocument } from './update'
 
 describe('removing folders', () => {
   it('throws error if folder does not exist', async () => {

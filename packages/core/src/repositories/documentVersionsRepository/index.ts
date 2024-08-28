@@ -1,8 +1,8 @@
-import { Commit, DocumentVersion } from '$core/browser'
-import { NotFoundError, Result } from '$core/lib'
-import { commits, documentVersions, projects } from '$core/schema'
 import { and, eq, getTableColumns, isNotNull, lte, max } from 'drizzle-orm'
 
+import { Commit, DocumentVersion } from '../../browser'
+import { NotFoundError, Result } from '../../lib'
+import { commits, documentVersions, projects } from '../../schema'
 import Repository from '../repository'
 
 function mergeDocuments(

@@ -1,9 +1,9 @@
-import type { Project, SafeUser } from '$core/browser'
-import { CommitStatus } from '$core/constants'
-import { createNewDocument, mergeCommit } from '$core/services'
-import * as factories from '$core/tests/factories'
 import { beforeEach, describe, expect, it } from 'vitest'
 
+import type { Project, SafeUser } from '../../browser'
+import { CommitStatus } from '../../constants'
+import { createNewDocument, mergeCommit } from '../../services'
+import * as factories from '../../tests/factories'
 import { CommitsRepository } from './index'
 
 async function createDraftsCommits(project: Project, user: SafeUser) {

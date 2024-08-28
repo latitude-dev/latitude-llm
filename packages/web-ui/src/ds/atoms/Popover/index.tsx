@@ -3,7 +3,7 @@
 import { forwardRef } from 'react'
 import * as RadixPopover from '@radix-ui/react-popover'
 
-import { cn } from '$ui/lib/utils'
+import { cn } from '../../../lib/utils'
 
 type Props = RadixPopover.PopoverContentProps & {
   inPortal?: boolean

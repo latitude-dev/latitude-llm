@@ -5,8 +5,7 @@
   "devDependencies": {
     "@types/node": "^18",
     "ts-node": "^10.9.2",
-    "tsconfig-paths": "^4.2.0",
-    "typescript": "^5.0.0"
+    "tsconfig-paths": "^4.2.0"
   },
   "dependencies": {
     "@pulumi/aws": "^6.50.1",

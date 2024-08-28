@@ -2,8 +2,7 @@
 
 import { ReactNode, useState } from 'react'
 
-import { FormField, type FormFieldProps } from '$ui/ds/atoms/FormField'
-
+import { FormField, type FormFieldProps } from '../FormField'
 import {
   SelectContent,
   SelectGroup,

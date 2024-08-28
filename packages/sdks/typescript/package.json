@@ -14,6 +14,7 @@
     "prettier": "prettier --write \"**/*.{ts,tsx,md}\""
   },
   "type": "module",
+  "files": ["dist"],
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "dependencies": {
@@ -28,9 +29,11 @@
     "@rollup/plugin-typescript": "^11.1.6",
     "@types/eventsource": "^1.1.15",
     "msw": "^2.3.5",
-    "prettier": "^3.2.5",
-    "rollup": "^4.10.0",
+    "rollup": "^4.21.1",
     "rollup-plugin-dts": "^6.1.1",
     "vitest": "^2.0.5"
+  },
+  "peerDependencies": {
+    "typescript": "^5.5.4"
   }
 }

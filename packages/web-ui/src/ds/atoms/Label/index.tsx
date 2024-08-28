@@ -4,8 +4,8 @@ import { CustomComponentPropsWithRef, ElementRef, forwardRef } from 'react'
 import { cva, type VariantProps } from 'class-variance-authority'
 import * as LabelPrimitive from '@radix-ui/react-label'
 
-import { font } from '$ui/ds/tokens'
-import { cn } from '$ui/lib/utils'
+import { cn } from '../../../lib/utils'
+import { font } from '../../tokens'
 
 const labelVariants = cva(
   cn(

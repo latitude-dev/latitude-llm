@@ -1,54 +1,61 @@
-FROM node:20-alpine AS base
+ARG PROJECT="@latitude-data/gateway"
+ARG PROJECT_PATH="apps/gateway"
+
+FROM node:20-alpine AS alpine
 
 # Check https://github.com/nodejs/docker-node/tree/b4117f9333da4138b03a546ec926ef50a31506c3#nodealpine to understand why libc6-compat might be needed.
 RUN apk update
 RUN apk add --no-cache libc6-compat
 
+FROM alpine as base
+
+# Will be used to cache pnpm store
+RUN corepack enable
+
 # Install pnpm
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 
-RUN npm i -g pnpm
 RUN pnpm i -g turbo
+
+FROM base as pruner
+
+ARG PROJECT
 
 WORKDIR /app
 
-COPY .npmrc package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
-COPY apps/gateway ./apps/gateway
-COPY tools ./tools
-COPY packages ./packages
+COPY . .
 
-RUN turbo prune @latitude-data/gateway --docker
+RUN turbo prune "${PROJECT}" --docker
 
 # BUILDER stage
 # ------------------------------------------------------
 FROM base AS builder
+
+ARG PROJECT
+
 WORKDIR /app
 
-COPY --from=base /app/out/json/ .
-COPY --from=base /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
-COPY --from=base /app/out/pnpm-workspace.yaml ./pnpm-workspace.yaml
-COPY --from=base /app/out/full/ .
+COPY --from=pruner /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
+COPY --from=pruner /app/out/pnpm-workspace.yaml ./pnpm-workspace.yaml
+COPY --from=pruner /app/out/json/ .
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install \
   --frozen-lockfile \
-  --filter "@latitude-data/gateway..."
+  --filter "${PROJECT}..."
+
+COPY --from=pruner /app/out/full/ .
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
   BUILDING_CONTAINER=true \
-  pnpm turbo build --filter='@latitude-data/gateway...'
+  pnpm turbo build --filter="${PROJECT}..."
 
-FROM builder AS prod-deps
+RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm prune --prod --no-optional
+RUN rm -rf ./**/*/src
 
-WORKDIR /app
+FROM alpine AS runner
 
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm deploy \
-  --filter="@latitude-data/gateway" \
-  --prod --ignore-scripts --no-optional /dependencies
-
-# PRODUCTION
-FROM node:20-alpine
-WORKDIR /app-prod
+ARG PROJECT_PATH
 
 ENV NODE_ENV=production
 
@@ -56,9 +63,11 @@ RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 latitude
 USER latitude
 
-COPY --from=prod-deps --chown=latitude:nodejs /dependencies/node_modules ./node_modules
-COPY --from=builder --chown=latitude:nodejs /app/apps/gateway/package.json ./package.json
-COPY --from=builder --chown=latitude:nodejs /app/apps/gateway/dist .
+WORKDIR /app
+
+COPY --from=builder --chown=nodejs:latitude /app .
+
+WORKDIR /app/${PROJECT_PATH}
 
 ARG PORT=8080
 
@@ -67,4 +76,5 @@ ENV NODE_ENV=production
 
 EXPOSE $PORT
 
-CMD node server.js
+CMD node dist/server.js
+

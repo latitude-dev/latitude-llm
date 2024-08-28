@@ -1,19 +1,20 @@
+import { eq, getTableColumns } from 'drizzle-orm'
+
 import {
   DocumentVersion,
   ProviderApiKey,
   type Commit,
   type Workspace,
-} from '$core/browser'
-import { database } from '$core/client'
-import { NotFoundError, Result, TypedResult } from '$core/lib'
+} from '../browser'
+import { database } from '../client'
+import { NotFoundError, Result, TypedResult } from '../lib'
 import {
   commits,
   documentVersions,
   projects,
   providerApiKeys,
   workspaces,
-} from '$core/schema'
-import { eq, getTableColumns } from 'drizzle-orm'
+} from '../schema'
 
 export async function unsafelyFindWorkspace(
   id: number,

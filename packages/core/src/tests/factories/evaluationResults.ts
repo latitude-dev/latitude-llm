@@ -1,15 +1,16 @@
 import { faker } from '@faker-js/faker'
 import { ContentType, createChain } from '@latitude-data/compiler'
-import { DocumentLog, Evaluation, LogSources, ProviderLog } from '$core/browser'
-import { findWorkspaceFromCommit } from '$core/data-access'
-import { findCommitById } from '$core/data-access/commits'
-import { ProviderApiKeysRepository } from '$core/repositories'
+import { v4 as uuid } from 'uuid'
+
+import { DocumentLog, Evaluation, LogSources, ProviderLog } from '../../browser'
+import { findWorkspaceFromCommit } from '../../data-access'
+import { findCommitById } from '../../data-access/commits'
+import { ProviderApiKeysRepository } from '../../repositories'
 import {
   Config,
   createEvaluationResult as createEvaluationResultService,
   createProviderLog,
-} from '$core/services'
-import { v4 as uuid } from 'uuid'
+} from '../../services'
 
 export type IEvaluationResultData = {
   documentLog: DocumentLog

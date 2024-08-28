@@ -1,8 +1,8 @@
-import { Workspace } from '$core/browser'
-import { database } from '$core/client'
-import { findEvaluationTemplateById } from '$core/data-access'
-import { Result, Transaction } from '$core/lib'
-import { evaluations } from '$core/schema'
+import { Workspace } from '../../browser'
+import { database } from '../../client'
+import { findEvaluationTemplateById } from '../../data-access'
+import { Result, Transaction } from '../../lib'
+import { evaluations } from '../../schema'
 
 type Props = {
   workspace: Partial<Workspace>

@@ -1,3 +1,3 @@
-import useTestDatabase from '$core/tests/useTestDatabase'
+import useTestDatabase from '@latitude-data/core/test'
 
 useTestDatabase()

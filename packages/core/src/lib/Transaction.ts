@@ -1,9 +1,9 @@
-import { database, Database } from '$core/client'
-import * as schema from '$core/schema'
 import type { ExtractTablesWithRelations } from 'drizzle-orm'
 import { PgQueryResultHKT, PgTransaction } from 'drizzle-orm/pg-core'
 import { DatabaseError } from 'pg'
 
+import { database, Database } from '../client'
+import * as schema from '../schema'
 import { ConflictError, UnprocessableEntityError } from './errors'
 import { ErrorResult, Result, TypedResult } from './Result'
 
