@@ -1,13 +1,16 @@
 import { and, eq, getTableColumns } from 'drizzle-orm'
 
-import { Result } from '../lib'
+import { NotFoundError, Result } from '../lib'
 import { memberships, users } from '../schema'
 import Repository from './repository'
 
 export class UsersRepository extends Repository {
   get scope() {
     return this.db
-      .select(getTableColumns(users))
+      .select({
+        ...getTableColumns(users),
+        confirmedAt: memberships.confirmedAt,
+      })
       .from(users)
       .innerJoin(
         memberships,
@@ -22,5 +25,15 @@ export class UsersRepository extends Repository {
   async findAll() {
     const result = await this.db.select().from(this.scope)
     return Result.ok(result)
+  }
+
+  async find(id: string) {
+    const result = await this.db
+      .select()
+      .from(this.scope)
+      .where(eq(this.scope.id, id))
+    if (!result.length) return Result.error(new NotFoundError('User not found'))
+
+    return Result.ok(result[0]!)
   }
 }

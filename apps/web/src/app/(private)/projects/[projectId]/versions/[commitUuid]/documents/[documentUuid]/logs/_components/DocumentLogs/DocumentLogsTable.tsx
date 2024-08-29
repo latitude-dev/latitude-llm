@@ -1,6 +1,6 @@
 'use client'
 
-import { DocumentLogWithMetadata } from '@latitude-data/core'
+import { DocumentLogWithMetadata } from '@latitude-data/core/repositories'
 import {
   Badge,
   cn,

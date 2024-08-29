@@ -9,7 +9,8 @@
       "$/*": ["./src/*"],
       "acorn": ["node_modules/@latitude-data/typescript-config/types/acorn"]
     },
-    "types": ["node"]
+    "types": ["node"],
+    "jsx": "preserve"
   },
   "include": ["src/**/*.ts", "test/**/*.ts"],
   "exclude": ["node_modules"]

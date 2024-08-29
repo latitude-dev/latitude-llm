@@ -12,7 +12,7 @@ export default function SetupPage() {
       header={
         <FocusHeader
           title='Create your Latitude account'
-          description='Latitude self-hosted version allows only one account for your team to manage prompts, experiments, and analytics.'
+          description='Join us today and start improve the way you work with LLMs!'
         />
       }
     >

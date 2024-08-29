@@ -5,13 +5,8 @@
   "license": "LGPL",
   "description": "Compiler for Latitude's custom conversation language",
   "type": "module",
-  "files": ["dist"],
-  "exports": {
-    ".": {
-      "import": "./dist/index.js",
-      "types": "./dist/index.d.ts"
-    }
-  },
+  "main": "dist/index.js",
+  "files": ["src"],
   "scripts": {
     "dev": "rollup -c -w",
     "build": "rollup -c",

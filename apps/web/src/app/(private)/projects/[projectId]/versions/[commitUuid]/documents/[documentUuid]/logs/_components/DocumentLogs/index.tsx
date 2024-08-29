@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 
-import { DocumentLogWithMetadata } from '@latitude-data/core'
+import { DocumentLogWithMetadata } from '@latitude-data/core/repositories'
 import useProviderLogs from '$/stores/providerLogs'
 
 import { DocumentLogInfo } from './DocumentLogInfo'

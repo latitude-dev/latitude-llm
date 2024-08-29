@@ -1,6 +1,7 @@
 'use server'
 
-import { CommitsRepository, mergeCommit } from '@latitude-data/core'
+import { CommitsRepository } from '@latitude-data/core/repositories'
+import { mergeCommit } from '@latitude-data/core/services/commits/merge'
 import { z } from 'zod'
 
 import { withProject } from '../procedures'

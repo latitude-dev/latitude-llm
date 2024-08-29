@@ -1,14 +1,12 @@
-import {
-  apiKeys,
-  database,
-  DocumentVersionsRepository,
-  mergeCommit,
-} from '@latitude-data/core'
+import { database } from '@latitude-data/core/client'
 import {
   createDocumentVersion,
   createDraft,
   createProject,
 } from '@latitude-data/core/factories'
+import { DocumentVersionsRepository } from '@latitude-data/core/repositories'
+import { apiKeys } from '@latitude-data/core/schema'
+import { mergeCommit } from '@latitude-data/core/services/commits/merge'
 import app from '$/routes/app'
 import { eq } from 'drizzle-orm'
 import { describe, expect, it, vi } from 'vitest'

@@ -8,6 +8,7 @@ export enum DocumentRoutes {
   logs = 'logs',
 }
 
+// TODO: Move to core
 export const ROUTES = {
   root: ROOT_PATH,
   settings: {
@@ -52,5 +53,9 @@ export const ROUTES = {
   auth: {
     setup: '/setup',
     login: '/login',
+    magicLinkSent: (email: string) => `/magic-links/sent?email=${email}`,
+    magicLinks: {
+      confirm: (token: string) => `/magic-links/confirm/${token}`,
+    },
   },
 } as const

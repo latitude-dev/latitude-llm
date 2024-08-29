@@ -27,5 +27,6 @@ export default defineConfig({
     '@latitude-data/env',
     '@latitude-data/core',
     '@latitude-data/jobs',
+    '@latitude-data/mailers',
   ],
 })

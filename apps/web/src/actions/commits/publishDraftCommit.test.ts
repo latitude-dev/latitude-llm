@@ -1,4 +1,3 @@
-import { updateDocument } from '@latitude-data/core'
 import type {
   Commit,
   DocumentVersion,
@@ -7,6 +6,7 @@ import type {
   Workspace,
 } from '@latitude-data/core/browser'
 import * as factories from '@latitude-data/core/factories'
+import { updateDocument } from '@latitude-data/core/services/documents/update'
 import { publishDraftCommitAction } from '$/actions/commits/publishDraftCommitAction'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 

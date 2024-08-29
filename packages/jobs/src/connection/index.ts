@@ -1,19 +1,20 @@
-import IORedis from 'ioredis'
+import { buildRedisConnection } from '@latitude-data/core/redis'
 
 export type ConnectionParams = {
   port?: number
   host: string
   password?: string
 }
+
 export function buildConnection({
   host,
   port = 6379,
   password,
 }: ConnectionParams) {
-  console.log('🔥 Connecting to Redis', host, port)
-
-  return new IORedis(port, host, {
-    password: password ? password : undefined,
+  return buildRedisConnection({
+    host,
+    port,
+    password,
     enableOfflineQueue: false,
     maxRetriesPerRequest: null,
   })

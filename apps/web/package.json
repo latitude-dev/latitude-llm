@@ -19,6 +19,7 @@
     "@latitude-data/core": "workspace:*",
     "@latitude-data/env": "workspace:^",
     "@latitude-data/jobs": "workspace:*",
+    "@latitude-data/mailers": "workspace:^",
     "@latitude-data/sdk-js": "workspace:*",
     "@latitude-data/web-ui": "workspace:*",
     "@lucia-auth/adapter-drizzle": "^1.0.7",

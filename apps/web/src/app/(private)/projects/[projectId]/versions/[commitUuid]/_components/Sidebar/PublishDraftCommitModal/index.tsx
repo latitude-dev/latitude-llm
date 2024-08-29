@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 
-import { ChangedDocument } from '@latitude-data/core'
 import { Commit, ModifiedDocumentType } from '@latitude-data/core/browser'
+import { ChangedDocument } from '@latitude-data/core/repositories'
 import {
   cn,
   colors,

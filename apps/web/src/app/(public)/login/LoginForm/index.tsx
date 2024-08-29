@@ -12,7 +12,7 @@ export default function LoginForm({ footer }: { footer: ReactNode }) {
     onError: ({ err }) => {
       if (err.code === 'ERROR') {
         toast({
-          title: 'Saving failed',
+          title: 'Error',
           description: err.message,
           variant: 'destructive',
         })
@@ -30,14 +30,6 @@ export default function LoginForm({ footer }: { footer: ReactNode }) {
           label='Email'
           placeholder='Ex.: jon@example.com'
           errors={errors?.email}
-        />
-        <Input
-          name='password'
-          autoComplete='new-password'
-          type='password'
-          label='Password'
-          placeholder='Write a secure password'
-          errors={errors?.password}
         />
         <Button fullWidth isLoading={isPending}>
           Login

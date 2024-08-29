@@ -3,7 +3,8 @@ import { faker } from '@faker-js/faker'
 import { Project, SafeUser } from '../../browser'
 import { hasOwnProperty } from '../../lib'
 import { createCommit as createCommitFn } from '../../services/commits/create'
-import { createProject, ICreateProject } from './projects'
+import { createProject } from './createProject'
+import { ICreateProject } from './projects'
 
 export type ICreateDraft = {
   user: SafeUser

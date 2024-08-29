@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 
 import { Providers } from '../../constants'
-import { mergeCommit, updateDocument } from '../../services'
+import { mergeCommit } from '../../services/commits'
+import { updateDocument } from '../../services/documents'
 import * as factories from '../../tests/factories'
 import { DocumentLogsRepository } from './index'
 

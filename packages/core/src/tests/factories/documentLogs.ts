@@ -4,12 +4,10 @@ import { v4 as uuid } from 'uuid'
 import { Commit, DocumentVersion, LogSources, ProviderLog } from '../../browser'
 import { findWorkspaceFromCommit } from '../../data-access'
 import { ProviderApiKeysRepository } from '../../repositories'
-import {
-  Config,
-  createProviderLog,
-  getResolvedContent,
-  createDocumentLog as ogCreateDocumentLog,
-} from '../../services'
+import { Config } from '../../services/ai'
+import { createDocumentLog as ogCreateDocumentLog } from '../../services/documentLogs'
+import { getResolvedContent } from '../../services/documents'
+import { createProviderLog } from '../../services/providerLogs'
 import { helpers } from './helpers'
 
 export type IDocumentLogData = {

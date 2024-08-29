@@ -1,6 +1,7 @@
 'use server'
 
-import { CommitsRepository, CommitStatus } from '@latitude-data/core'
+import { CommitStatus } from '@latitude-data/core/browser'
+import { CommitsRepository } from '@latitude-data/core/repositories'
 import { z } from 'zod'
 
 import { withProject } from '../procedures'

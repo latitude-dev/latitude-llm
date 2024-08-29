@@ -1,4 +1,7 @@
-import { createDocumentLog, CreateDocumentLogProps } from '@latitude-data/core'
+import {
+  createDocumentLog,
+  CreateDocumentLogProps,
+} from '@latitude-data/core/services/documentLogs/create'
 import { Job } from 'bullmq'
 
 export type CreateDocumentLogJobData = CreateDocumentLogProps

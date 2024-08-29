@@ -2,7 +2,7 @@ import {
   LATITUDE_DOCS_URL,
   LATITUDE_EMAIL,
   LATITUDE_SLACK_URL,
-} from '@latitude-data/core'
+} from '@latitude-data/core/browser'
 import { Text } from '@latitude-data/web-ui'
 
 export default function AuthFooter() {

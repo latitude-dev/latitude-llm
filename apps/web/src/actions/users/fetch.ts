@@ -1,7 +1,6 @@
 'use server'
 
-import { UsersRepository } from '@latitude-data/core'
-import userPresenter from '$/presenters/userPresenter'
+import { UsersRepository } from '@latitude-data/core/repositories'
 
 import { authProcedure } from '../procedures'
 
@@ -10,8 +9,5 @@ export const getUsersActions = authProcedure
   .handler(async ({ ctx }) => {
     const usersScope = new UsersRepository(ctx.workspace.id)
 
-    return usersScope
-      .findAll()
-      .then((r) => r.unwrap())
-      .then((r) => r.map(userPresenter))
+    return usersScope.findAll().then((r) => r.unwrap())
   })

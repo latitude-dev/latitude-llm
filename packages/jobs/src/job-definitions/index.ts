@@ -1,10 +1,13 @@
+import { LatitudeEvent } from '@latitude-data/core/events/handlers/index'
+
 import { Jobs, Queues } from '../constants'
 import { CreateDocumentLogJobData } from './documentLogs/createJob'
 import { CreateProviderLogJobData } from './providerLogs/createJob'
 
-type JobDataMap = {
+export type JobDataMap = {
   [Jobs.createProviderLogJob]: CreateProviderLogJobData
   [Jobs.createDocumentLogJob]: CreateDocumentLogJobData
+  [Jobs.publishEventJob]: LatitudeEvent
 }
 
 type JobData<J extends Jobs> = J extends keyof JobDataMap
@@ -17,7 +20,10 @@ type JobSpec<J extends Jobs = Jobs> = {
 }
 
 export type JobDefinition = {
-  [Queues.defaultQueue]: {
+  [K in Queues]: {
     [K in Jobs]: JobSpec<K>
   }
 }
+
+export * from './documentLogs/createJob'
+export * from './providerLogs/createJob'

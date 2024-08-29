@@ -1,9 +1,9 @@
+import type { Workspace } from '@latitude-data/core/browser'
 import {
   CommitsRepository,
   DocumentVersionsRepository,
   ProjectsRepository,
-} from '@latitude-data/core'
-import type { Workspace } from '@latitude-data/core/browser'
+} from '@latitude-data/core/repositories'
 
 export const getData = async ({
   workspace,

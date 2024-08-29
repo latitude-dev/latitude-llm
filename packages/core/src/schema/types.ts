@@ -9,6 +9,7 @@ import { documentVersions } from './models/documentVersions'
 import { evaluationResults } from './models/evaluationResults'
 import { evaluations } from './models/evaluations'
 import { evaluationTemplates } from './models/evaluationTemplates'
+import { magicLinkTokens } from './models/magicLinkTokens'
 import { memberships } from './models/memberships'
 import { projects } from './models/projects'
 import { providerApiKeys } from './models/providerApiKeys'
@@ -21,7 +22,9 @@ import { workspaces } from './models/workspaces'
 // otherwise, it will throw an error.
 export type Workspace = InferSelectModel<typeof workspaces>
 export type User = InferSelectModel<typeof users>
-export type SafeUser = Pick<User, 'id' | 'name' | 'email'>
+// TODO: remove SafeUser and SafeWorkspace
+export type SafeUser = User
+export type SafeWorkspace = { id: number; name: string }
 export type Session = InferSelectModel<typeof sessions> & {
   user: User
 }
@@ -42,3 +45,4 @@ export type Evaluation = InferSelectModel<typeof evaluations>
 export type ConnectedEvaluation = InferSelectModel<typeof connectedEvaluations>
 export type EvaluationResult = InferSelectModel<typeof evaluationResults>
 export type EvaluationTemplate = InferSelectModel<typeof evaluationTemplates>
+export type MagicLinkToken = InferSelectModel<typeof magicLinkTokens>

@@ -1,8 +1,9 @@
 import { SafeUser, Workspace } from '../../browser'
 import { database } from '../../client'
 import { Result, Transaction } from '../../lib'
-import { memberships, workspaces } from '../../schema'
+import { workspaces } from '../../schema'
 import { createApiKey } from '../apiKeys/create'
+import { createMembership } from '../memberships/create'
 import { createProject } from '../projects'
 
 export async function createWorkspace(
@@ -20,11 +21,9 @@ export async function createWorkspace(
       .insert(workspaces)
       .values({ name, creatorId: user.id })
       .returning()
-
     const workspace = insertedWorkspaces[0]!
-    await tx
-      .insert(memberships)
-      .values({ workspaceId: workspace.id, userId: user.id })
+
+    await createMembership({ confirmedAt: new Date(), user, workspace }, tx)
     await createProject({ workspace, user }, tx)
     await createApiKey({ workspace }, tx)
 

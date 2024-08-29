@@ -2,7 +2,7 @@ import { faker } from '@faker-js/faker'
 
 import { ProviderApiKey } from '../../browser'
 import { findWorkspaceFromProviderApiKey } from '../../data-access'
-import { createEvaluation as createEvaluationService } from '../../services'
+import { createEvaluation as createEvaluationService } from '../../services/evaluations'
 import { helpers } from './helpers'
 import { createProviderApiKey, ICreateProvider } from './providerApiKeys'
 

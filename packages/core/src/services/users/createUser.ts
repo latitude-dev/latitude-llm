@@ -1,32 +1,32 @@
 import { SafeUser } from '../../browser'
 import { database } from '../../client'
-import { hashPassword, Result, Transaction } from '../../lib'
+import { Result, Transaction } from '../../lib'
 import { users } from '../../schema'
 
 export async function createUser(
   {
     email,
-    password,
     name,
+    confirmedAt,
   }: {
     email: string
-    password: string
     name: string
+    confirmedAt?: Date
   },
   db = database,
 ) {
-  const encryptedPassword = await hashPassword(password)
   return Transaction.call<SafeUser>(async (trx) => {
     const inserts = await trx
       .insert(users)
       .values({
         email,
         name,
-        encryptedPassword,
+        confirmedAt,
       })
       .returning()
 
     const user = inserts[0]!
+
     return Result.ok(user)
   }, db)
 }

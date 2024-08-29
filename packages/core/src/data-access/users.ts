@@ -1,12 +1,12 @@
 import { eq } from 'drizzle-orm'
 
-import { type SafeUser } from '../browser'
+import { SafeUser, SafeWorkspace } from '../browser'
 import { database } from '../client'
 import { users } from '../schema'
 
 export type SessionData = {
   user: SafeUser
-  workspace: { id: number; name: string }
+  workspace: SafeWorkspace
 }
 
 export function unsafelyGetUser(id?: string) {

@@ -1,4 +1,7 @@
-import { LatitudeError, UnprocessableEntityError } from '@latitude-data/core'
+import {
+  LatitudeError,
+  UnprocessableEntityError,
+} from '@latitude-data/core/lib/errors'
 import { NextResponse } from 'next/server'
 
 export default async function apiRoute(fn: () => any) {

@@ -1,16 +1,50 @@
-import dotenv, { type DotenvPopulateInput } from 'dotenv'
+import { resolve } from 'path'
+import { fileURLToPath } from 'url'
 
-const env = process.env.NODE_ENV || 'development'
+import { createEnv } from '@t3-oss/env-core'
+import dotenv, { type DotenvPopulateInput } from 'dotenv'
+import z from 'zod'
+
+const environment = process.env.NODE_ENV || 'development'
+
+const __dirname = fileURLToPath(import.meta.url)
+const pathToEnv = resolve(__dirname, `../../.env.${environment}`)
 
 // Don't write production .env files!
-if (env !== 'production') {
-  dotenv.populate(process.env as DotenvPopulateInput, {
-    NODE_ENV: env,
-    DATABASE_URL: `postgres://latitude:secret@localhost:5432/latitude_${env}`,
-    REDIS_PORT: '6379',
-    REDIS_HOST: '0.0.0.0',
-    GATEWAY_HOSTNAME: 'localhost',
-    GATEWAY_PORT: '8787', // 8788 for pro Docker image
-    GATEWAY_SSL: 'false',
-  })
+if (environment !== 'production') {
+  dotenv.populate(
+    process.env as DotenvPopulateInput,
+    {
+      NODE_ENV: environment,
+      DATABASE_URL: `postgres://latitude:secret@localhost:5432/latitude_${environment}`,
+      REDIS_PORT: '6379',
+      REDIS_HOST: '0.0.0.0',
+      GATEWAY_HOSTNAME: 'localhost',
+      GATEWAY_PORT: '8787',
+      GATEWAY_SSL: 'false',
+      LATITUDE_DOMAIN: 'latitude.so',
+      LATITUDE_URL: 'http://localhost:3000',
+      FROM_MAILER_EMAIL: 'hello@latitude.so',
+    },
+    { path: pathToEnv },
+  )
+
+  dotenv.config({ path: pathToEnv })
 }
+
+export const env = createEnv({
+  skipValidation:
+    process.env.BUILDING_CONTAINER == 'true' || process.env.NODE_ENV === 'test',
+  server: {
+    NODE_ENV: z.string(),
+    DATABASE_URL: z.string().url(),
+    REDIS_PORT: z.coerce.number(),
+    REDIS_HOST: z.string(),
+    REDIS_PASSWORD: z.string().optional(),
+    LATITUDE_URL: z.string().url(),
+    MAILER_API_KEY: z.string().optional(),
+    FROM_MAILER_EMAIL: z.string(),
+    LATITUDE_DOMAIN: z.string(),
+  },
+  runtimeEnv: process.env,
+})

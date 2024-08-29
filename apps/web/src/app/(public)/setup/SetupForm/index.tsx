@@ -28,28 +28,20 @@ export default function SetupForm({ footer }: { footer: ReactNode }) {
           name='name'
           autoComplete='name'
           label='Name'
-          placeholder='Your name'
+          placeholder='Jon Snow'
           errors={errors?.name}
         />
         <Input
           name='email'
           autoComplete='email'
           label='Email'
-          placeholder='Ex.: jon@example.com'
+          placeholder='jon@winterfell.com'
           errors={errors?.email}
-        />
-        <Input
-          name='password'
-          autoComplete='new-password'
-          type='password'
-          label='Password'
-          placeholder='Write a secure password'
-          errors={errors?.password}
         />
         <Input
           name='companyName'
           label='Workspace Name'
-          placeholder='Ex.: My Company'
+          placeholder='Acme Inc.'
           errors={errors?.companyName}
         />
         <Button fullWidth isLoading={isPending}>

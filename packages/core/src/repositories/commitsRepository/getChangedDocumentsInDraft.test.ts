@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import { CommitsRepository } from '.'
-import { destroyDocument, updateDocument } from '../..'
 import {
   Commit,
   DocumentVersion,
   ModifiedDocumentType,
   Project,
 } from '../../browser'
+import { destroyDocument, updateDocument } from '../../services/documents'
 import {
   createDocumentVersion,
   createDraft,

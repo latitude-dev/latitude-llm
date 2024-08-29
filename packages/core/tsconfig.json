@@ -1,8 +1,9 @@
 {
   "extends": "@latitude-data/typescript-config/base.json",
   "compilerOptions": {
-    "moduleResolution": "Bundler"
+    "moduleResolution": "Bundler",
+    "jsx": "preserve"
   },
-  "include": ["src"],
+  "include": ["src", "drizzle.config.ts"],
   "exclude": ["node_modules", "dist"]
 }

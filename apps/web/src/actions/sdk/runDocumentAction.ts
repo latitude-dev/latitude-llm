@@ -1,6 +1,6 @@
 'use server'
 
-import { LogSources } from '@latitude-data/core'
+import { LogSources } from '@latitude-data/core/browser'
 import {
   type ChainEvent,
   type StreamChainResponse,

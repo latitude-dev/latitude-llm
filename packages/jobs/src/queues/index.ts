@@ -1,10 +1,16 @@
+import { EventHandlers } from '@latitude-data/core/events/handlers/index'
 import { Job, JobsOptions, Queue, QueueEvents } from 'bullmq'
 import { Redis } from 'ioredis'
 
 import { Jobs, Queues } from '../constants'
-import { JobDefinition } from '../job-definitions'
+import {
+  createDocumentLogJob,
+  createProviderLogJob,
+  JobDefinition,
+} from '../job-definitions'
+import { publishEventJob } from '../job-definitions/events/publishEventJob'
 
-function capitalize(string: string) {
+export function capitalize(string: string) {
   return string.charAt(0).toUpperCase() + string.slice(1)
 }
 
@@ -17,6 +23,16 @@ type JobEnqueueFn = {
   ) => Promise<Job<JobDefinition[Queues][Jobs]['data']>>
 }
 
+const attempts = process.env.NODE_ENV === 'production' ? 100 : 3
+
+export const DEFAULT_JOB_OPTIONS: JobsOptions = {
+  attempts,
+  backoff: {
+    type: 'exponential',
+    delay: 1000,
+  },
+}
+
 function setupQueue({
   name,
   connection,
@@ -24,30 +40,58 @@ function setupQueue({
 }: {
   name: Queues
   connection: Redis
-  jobs: Jobs[]
+  jobs: readonly QueueJob[]
 }) {
-  const queue = new Queue(name, { connection })
+  const queue = new Queue(name, {
+    connection,
+    defaultJobOptions: DEFAULT_JOB_OPTIONS,
+  })
+  const jobz = jobs.reduce((acc, job) => {
+    const key = `enqueue${capitalize(job.name)}` as EnqueueFunctionName<
+      typeof job.name
+    >
+    const enqueueFn = (
+      params: JobDefinition[typeof name][Jobs]['data'],
+      options: JobsOptions,
+    ) => queue.add(job.name, params, options)
+
+    return { ...acc, [key]: enqueueFn }
+  }, {} as JobEnqueueFn)
+
   return {
+    queue,
     events: new QueueEvents(name, { connection }),
-    jobs: jobs.reduce((acc, jobName) => {
-      const key = `enqueue${capitalize(jobName)}`
-      const enqueuFn = (
-        params: JobDefinition[typeof name][typeof jobName]['data'],
-        options?: JobsOptions,
-      ) => {
-        queue.add(jobName, params, options)
-      }
-      return { ...acc, [key]: enqueuFn }
-    }, {} as JobEnqueueFn),
+    jobs: jobz,
   }
 }
 
+export const QUEUES = {
+  [Queues.defaultQueue]: {
+    name: Queues.defaultQueue,
+    jobs: [createProviderLogJob, createDocumentLogJob],
+  },
+  [Queues.eventsQueue]: {
+    name: Queues.eventsQueue,
+    jobs: [publishEventJob],
+  },
+  [Queues.eventHandlersQueue]: {
+    name: Queues.eventHandlersQueue,
+    jobs: Object.values(EventHandlers).flat(),
+  },
+} as const
+
+type QueueJob = (typeof QUEUES)[keyof typeof QUEUES]['jobs'][number]
+
 export function setupQueues({ connection }: { connection: Redis }) {
-  return {
-    [Queues.defaultQueue]: setupQueue({
-      connection,
-      name: Queues.defaultQueue,
-      jobs: [Jobs.createProviderLogJob, Jobs.createDocumentLogJob],
-    }),
-  }
+  return Object.entries(QUEUES).reduce<{
+    [K in keyof typeof QUEUES]: ReturnType<typeof setupQueue>
+  }>(
+    (acc, [name, { jobs }]) => {
+      return {
+        ...acc,
+        [name]: setupQueue({ name: name as Queues, connection, jobs }),
+      }
+    },
+    {} as { [K in keyof typeof QUEUES]: ReturnType<typeof setupQueue> },
+  )
 }

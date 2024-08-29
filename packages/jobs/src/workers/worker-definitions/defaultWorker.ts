@@ -1,27 +1,13 @@
-import { Job, Processor } from 'bullmq'
+import { buildProcessor } from '../_shared'
+import { Queues } from '../../constants'
 
-import { Jobs, Queues } from '../../constants'
-import {
-  createDocumentLogJob,
-  CreateDocumentLogJobData,
-} from '../../job-definitions/documentLogs/createJob'
-import {
-  createProviderLogJob,
-  CreateProviderLogJobData,
-} from '../../job-definitions/providerLogs/createJob'
-
-const processor: Processor = async (job) => {
-  switch (job.name) {
-    case Jobs.createProviderLogJob:
-      return await createProviderLogJob(job as Job<CreateProviderLogJobData>)
-    case Jobs.createDocumentLogJob:
-      return await createDocumentLogJob(job as Job<CreateDocumentLogJobData>)
-    default:
-    // do nothing
-  }
-}
+const defaultWorkerQueues = [
+  Queues.defaultQueue,
+  Queues.eventsQueue,
+  Queues.eventHandlersQueue,
+]
 
 export const defaultWorker = {
-  processor,
-  queueName: Queues.defaultQueue,
+  processor: buildProcessor(defaultWorkerQueues),
+  queues: defaultWorkerQueues,
 }

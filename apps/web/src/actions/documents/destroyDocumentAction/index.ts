@@ -2,9 +2,9 @@
 
 import {
   CommitsRepository,
-  destroyDocument,
   DocumentVersionsRepository,
-} from '@latitude-data/core'
+} from '@latitude-data/core/repositories'
+import { destroyDocument } from '@latitude-data/core/services/documents/destroyDocument'
 import { withProject } from '$/actions/procedures'
 import { z } from 'zod'
 

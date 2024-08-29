@@ -1,22 +1,11 @@
-import {
-  database,
-  NotFoundError,
-  Result,
-  workspaces,
-} from '@latitude-data/core'
-import { eq } from 'drizzle-orm'
+import { database } from '@latitude-data/core/client'
+import { unsafelyFindWorkspacesFromUser } from '@latitude-data/core/data-access'
+import { NotFoundError } from '@latitude-data/core/lib/errors'
+import { Result } from '@latitude-data/core/lib/Result'
 
-export async function getWorkspace({ userId }: { userId: string }) {
-  // TODO: move to core
-  const workspace = await database.query.workspaces.findFirst({
-    // NOTE: Typescript gets a little bit confused here. Not really a big
-    // deal. Please make keep this comment here when you are done trying and
-    // failing to fix this.
-    //
-    // @ts-ignore
-    where: eq(workspaces.creatorId, userId),
-  })
-
+export async function getFirstWorkspace({ userId }: { userId: string }) {
+  const workspaces = await unsafelyFindWorkspacesFromUser(userId)
+  const workspace = workspaces[0]
   if (!workspace) {
     return Result.error(new NotFoundError('Workspace not found'))
   }

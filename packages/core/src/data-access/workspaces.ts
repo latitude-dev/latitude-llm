@@ -1,4 +1,4 @@
-import { eq, getTableColumns } from 'drizzle-orm'
+import { desc, eq, getTableColumns } from 'drizzle-orm'
 
 import {
   DocumentVersion,
@@ -11,6 +11,7 @@ import { NotFoundError, Result, TypedResult } from '../lib'
 import {
   commits,
   documentVersions,
+  memberships,
   projects,
   providerApiKeys,
   workspaces,
@@ -29,6 +30,18 @@ export async function unsafelyFindWorkspace(
   }
 
   return Result.ok(workspace)
+}
+
+export async function unsafelyFindWorkspacesFromUser(
+  userId: string,
+  db = database,
+) {
+  return await db
+    .select(getTableColumns(workspaces))
+    .from(workspaces)
+    .innerJoin(memberships, eq(workspaces.id, memberships.workspaceId))
+    .where(eq(memberships.userId, userId))
+    .orderBy(desc(workspaces.createdAt))
 }
 
 export async function findWorkspaceFromCommit(commit: Commit, db = database) {

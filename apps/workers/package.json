@@ -14,8 +14,10 @@
     "tc": "tsc --noEmit"
   },
   "dependencies": {
+    "@latitude-data/core": "workspace:^",
     "@latitude-data/env": "workspace:^",
     "@latitude-data/jobs": "workspace:^",
+    "@latitude-data/mailers": "workspace:^",
     "@t3-oss/env-core": "*",
     "zod": "^3.23.8"
   },

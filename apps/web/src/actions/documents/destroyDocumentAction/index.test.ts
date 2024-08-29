@@ -1,11 +1,12 @@
-import { database, documentVersions } from '@latitude-data/core'
 import {
   Commit,
   DocumentVersion,
   Project,
   SafeUser,
 } from '@latitude-data/core/browser'
+import { database } from '@latitude-data/core/client'
 import { createDraft, createProject } from '@latitude-data/core/factories'
+import { documentVersions } from '@latitude-data/core/schema'
 import { and, eq } from 'drizzle-orm'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -94,6 +95,7 @@ describe('destroyDocumentAction', async () => {
       })
       // TODO: move to core
       const documents = await database.query.documentVersions.findMany({
+        // @ts-ignore
         where: and(eq(documentVersions.documentUuid, document.documentUuid)),
       })
 

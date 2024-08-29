@@ -1,7 +1,7 @@
 import { ReactNode, useMemo } from 'react'
 
-import type { DocumentLogWithMetadata } from '@latitude-data/core'
 import { ProviderLog } from '@latitude-data/core/browser'
+import { DocumentLogWithMetadata } from '@latitude-data/core/repositories'
 import {
   ClickToCopy,
   Icons,

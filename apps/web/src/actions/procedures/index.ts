@@ -1,4 +1,5 @@
-import { ProjectsRepository, UnauthorizedError } from '@latitude-data/core'
+import { UnauthorizedError } from '@latitude-data/core/lib/errors'
+import { ProjectsRepository } from '@latitude-data/core/repositories'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
 import { z } from 'zod'
 import { createServerActionProcedure } from 'zsa'
