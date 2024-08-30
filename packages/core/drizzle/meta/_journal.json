@@ -232,6 +232,41 @@
       "when": 1724221244827,
       "tag": "0032_whole_pet_avengers",
       "breakpoints": true
+    },
+    {
+      "idx": 33,
+      "version": "7",
+      "when": 1724923897149,
+      "tag": "0033_milky_pixie",
+      "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1724933921941,
+      "tag": "0034_wonderful_vampiro",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1724935492563,
+      "tag": "0035_special_firebird",
+      "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1725006025340,
+      "tag": "0036_silent_cammi",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1725009841568,
+      "tag": "0037_soft_elektra",
+      "breakpoints": true
     }
   ]
 }

@@ -1,4 +1,5 @@
-import { LogSources, type Message } from '@latitude-data/core'
+import type { Message } from '@latitude-data/compiler'
+import { LogSources } from '@latitude-data/core/browser'
 import env from '$sdk/env'
 import { GatewayApiConfig, RouteResolver } from '$sdk/utils'
 import {

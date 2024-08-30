@@ -1,5 +1,10 @@
-import { CommitsRepository, CommitStatus } from '@latitude-data/core'
-import { Commit, DocumentVersion, Project } from '@latitude-data/core/browser'
+import {
+  Commit,
+  CommitStatus,
+  DocumentVersion,
+  Project,
+} from '@latitude-data/core/browser'
+import { CommitsRepository } from '@latitude-data/core/repositories/index'
 import { DocumentSidebar } from '@latitude-data/web-ui'
 import { fetchCommitsByProjectAction } from '$/actions/commits/fetchCommitsByProjectAction'
 import { getDocumentsAtCommitCached } from '$/app/(private)/_data-access'

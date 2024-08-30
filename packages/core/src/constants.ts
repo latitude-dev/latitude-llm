@@ -5,6 +5,7 @@ import {
 } from '@latitude-data/compiler'
 import { CompletionTokenUsage, CoreTool, TextStreamPart } from 'ai'
 
+export const LATITUDE_EVENT = 'latitudeEventsChannel'
 export const LATITUDE_DOCS_URL = ''
 export const LATITUDE_EMAIL = ''
 export const LATITUDE_HELP_URL = ''

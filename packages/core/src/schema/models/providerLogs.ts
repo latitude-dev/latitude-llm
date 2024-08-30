@@ -10,8 +10,8 @@ import {
   varchar,
 } from 'drizzle-orm/pg-core'
 
-import { PartialConfig } from '../..'
 import { LogSources } from '../../constants'
+import { PartialConfig } from '../../services/ai'
 import { latitudeSchema } from '../db-schema'
 import { apiKeys } from '../models/apiKeys'
 import { timestamps } from '../schemaHelpers'

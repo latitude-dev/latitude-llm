@@ -1,4 +1,3 @@
-import { apiKeys, database, Result } from '@latitude-data/core'
 import {
   ApiKey,
   ChainEventTypes,
@@ -6,7 +5,10 @@ import {
   StreamEventTypes,
   Workspace,
 } from '@latitude-data/core/browser'
+import { database } from '@latitude-data/core/client'
 import { createProject } from '@latitude-data/core/factories'
+import { Result } from '@latitude-data/core/lib/Result'
+import { apiKeys } from '@latitude-data/core/schema'
 import app from '$/routes/app'
 import { eq } from 'drizzle-orm'
 import { testConsumeStream } from 'test/helpers'
@@ -48,14 +50,17 @@ const mocks = vi.hoisted(() => ({
   },
 }))
 
-vi.mock('@latitude-data/core', async (importOriginal) => {
-  const original = (await importOriginal()) as typeof importOriginal
+vi.mock(
+  '@latitude-data/core/services/documentLogs/index',
+  async (importOriginal) => {
+    const original = (await importOriginal()) as typeof importOriginal
 
-  return {
-    ...original,
-    addMessages: mocks.addMessages,
-  }
-})
+    return {
+      ...original,
+      addMessages: mocks.addMessages,
+    }
+  },
+)
 
 vi.mock('$/jobs', () => ({
   queues: mocks.queues,
@@ -90,7 +95,6 @@ describe('POST /add-message', () => {
       workspace = wsp
       // TODO: move to core
       const key = await database.query.apiKeys.findFirst({
-        // @ts-ignore
         where: eq(apiKeys.workspaceId, workspace.id),
       })
       apiKey = key!

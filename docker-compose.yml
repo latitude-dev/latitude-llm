@@ -15,6 +15,12 @@ services:
     ports:
       - '6379:6379'
 
+  mailpit:
+    image: axllent/mailpit
+    ports:
+      - 8025:8025
+      - 1025:1025
+
   web:
     build:
       context: .

@@ -1,6 +1,6 @@
 'use server'
 
-import { ProviderLogsRepository } from '@latitude-data/core'
+import { ProviderLogsRepository } from '@latitude-data/core/repositories'
 import { z } from 'zod'
 
 import { authProcedure } from '../procedures'

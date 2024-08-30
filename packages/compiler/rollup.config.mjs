@@ -59,6 +59,12 @@ export default [
   {
     input: 'src/index.ts',
     output: [{ file: 'dist/index.d.ts', format: 'es' }],
-    plugins: [alias(aliasEntries), dts()],
+    plugins: [
+      alias(aliasEntries),
+      dts({
+        tsconfig: './tsconfig.json',
+        exclude: ['**/__tests__', '**/*.test.ts'],
+      }),
+    ],
   },
 ]

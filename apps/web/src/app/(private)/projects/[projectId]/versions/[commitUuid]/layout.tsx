@@ -1,12 +1,15 @@
 import { ReactNode } from 'react'
 
 import {
-  CommitsRepository,
   HEAD_COMMIT,
-  NotFoundError,
+  type Commit,
+  type Project,
+} from '@latitude-data/core/browser'
+import { NotFoundError } from '@latitude-data/core/lib/errors'
+import {
+  CommitsRepository,
   ProjectsRepository,
-} from '@latitude-data/core'
-import type { Commit, Project } from '@latitude-data/core/browser'
+} from '@latitude-data/core/repositories/index'
 import { CommitProvider, ProjectProvider } from '@latitude-data/web-ui'
 import { BreadcrumpBadge } from '@latitude-data/web-ui/browser'
 import { NAV_LINKS } from '$/app/(private)/_lib/constants'

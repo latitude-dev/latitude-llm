@@ -1,5 +1,6 @@
 import { zValidator } from '@hono/zod-validator'
-import { addMessages, LogSources } from '@latitude-data/core'
+import { LogSources } from '@latitude-data/core/browser'
+import { addMessages } from '@latitude-data/core/services/documentLogs/index'
 import { messageSchema } from '$/common/messageSchema'
 import { pipeToStream } from '$/common/pipeToStream'
 import { queues } from '$/jobs'

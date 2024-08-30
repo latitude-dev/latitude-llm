@@ -1,10 +1,11 @@
-import { LogSources, Message } from '@latitude-data/core'
+import type { Message } from '@latitude-data/compiler'
+import { LogSources } from '@latitude-data/core/browser'
 
 export type {
   ChainEvent,
   StreamEventTypes,
   ChainEventTypes,
-} from '@latitude-data/core'
+} from '@latitude-data/core/browser'
 export type RunUrlParams = {
   projectId: number
   commitUuid?: string

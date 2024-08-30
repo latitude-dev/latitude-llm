@@ -1,14 +1,10 @@
-import {
-  database,
-  NotFoundError,
-  Result,
-  unsafelyGetUser,
-  users,
-  verifyPassword,
-  type PromisedResult,
-  type SessionData,
-} from '@latitude-data/core'
-import { getWorkspace } from '$/data-access/workspaces'
+import { database } from '@latitude-data/core/client'
+import { SessionData, unsafelyGetUser } from '@latitude-data/core/data-access'
+import { NotFoundError } from '@latitude-data/core/lib/errors'
+import { Result } from '@latitude-data/core/lib/Result'
+import { PromisedResult } from '@latitude-data/core/lib/Transaction'
+import { users } from '@latitude-data/core/schema'
+import { getFirstWorkspace } from '$/data-access/workspaces'
 import { eq } from 'drizzle-orm'
 
 function notFound() {
@@ -17,10 +13,8 @@ function notFound() {
 
 export async function getUserFromCredentials({
   email,
-  password,
 }: {
   email: string
-  password: string
 }): PromisedResult<SessionData, NotFoundError> {
   // TODO: move to core
   const user = await database.query.users.findFirst({
@@ -39,21 +33,15 @@ export async function getUserFromCredentials({
   })
   if (!user) return notFound()
 
-  const validPassword = await verifyPassword(password, user.encryptedPassword)
-  if (!validPassword) return notFound()
-
-  const wpResult = await getWorkspace({ userId: user.id })
+  const wpResult = await getFirstWorkspace({ userId: user.id })
   if (wpResult.error) {
     return Result.error(wpResult.error)
   }
 
   const workspace = wpResult.value!
+
   return Result.ok({
-    user: {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-    },
+    user,
     workspace: { id: Number(workspace.id), name: workspace.name },
   })
 }
@@ -67,17 +55,13 @@ export async function getCurrentUserFromDB({
     const user = await unsafelyGetUser(userId)
     if (!user) return notFound()
 
-    const wpResult = await getWorkspace({ userId: user.id })
+    const wpResult = await getFirstWorkspace({ userId: user.id })
     if (wpResult.error) return wpResult
 
     const workspace = wpResult.value!
 
     return Result.ok({
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-      },
+      user,
       workspace: { id: Number(workspace.id), name: workspace.name },
     })
   } catch (err) {

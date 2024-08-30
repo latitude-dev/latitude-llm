@@ -1,7 +1,7 @@
 'use server'
 
-import { createProviderApiKey } from '@latitude-data/core'
 import { Providers } from '@latitude-data/core/browser'
+import { createProviderApiKey } from '@latitude-data/core/services/providerApiKeys/create'
 import providerApiKeyPresenter from '$/presenters/providerApiKeyPresenter'
 import { z } from 'zod'
 

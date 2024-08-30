@@ -35,7 +35,7 @@ export type FinishCallbackEvent = {
   }
   warnings?: CallWarning[]
 }
-type FinishCallback = (event: FinishCallbackEvent) => void
+export type FinishCallback = (event: FinishCallbackEvent) => void
 
 export type Config = {
   provider: string

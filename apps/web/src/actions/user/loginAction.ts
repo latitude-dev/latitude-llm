@@ -1,7 +1,7 @@
 'use server'
 
+import { createMagicLinkToken } from '@latitude-data/core/services/magicLinkTokens/create'
 import { getUserFromCredentials } from '$/data-access'
-import { setSession } from '$/services/auth/setSession'
 import { ROUTES } from '$/services/routes'
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
@@ -11,14 +11,12 @@ export const loginAction = createServerAction()
   .input(
     z.object({
       email: z.string().email(),
-      password: z.string().min(3),
     }),
     { type: 'formData' },
   )
   .handler(async ({ input }) => {
-    const result = await getUserFromCredentials(input)
-    const sessionData = result.unwrap()
+    const { user } = await getUserFromCredentials(input).then((r) => r.unwrap())
+    await createMagicLinkToken({ user }).then((r) => r.unwrap())
 
-    setSession({ sessionData })
-    redirect(ROUTES.root)
+    redirect(ROUTES.auth.magicLinkSent(user.email))
   })

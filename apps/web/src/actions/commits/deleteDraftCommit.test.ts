@@ -1,10 +1,10 @@
-import { database } from '@latitude-data/core'
 import type {
   Commit,
   Project,
   SafeUser,
   Workspace,
 } from '@latitude-data/core/browser'
+import { database } from '@latitude-data/core/client'
 import * as factories from '@latitude-data/core/factories'
 import { deleteDraftCommitAction } from '$/actions/commits/deleteDraftCommitAction'
 import { beforeEach, describe, expect, it, vi } from 'vitest'

@@ -2,7 +2,8 @@ import { beforeEach, describe, expect, it } from 'vitest'
 
 import type { Project, SafeUser } from '../../browser'
 import { CommitStatus } from '../../constants'
-import { createNewDocument, mergeCommit } from '../../services'
+import { mergeCommit } from '../../services/commits'
+import { createNewDocument } from '../../services/documents'
 import * as factories from '../../tests/factories'
 import { CommitsRepository } from './index'
 

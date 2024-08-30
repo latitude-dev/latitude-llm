@@ -1,7 +1,7 @@
 import { faker } from '@faker-js/faker'
 
 import { Providers, SafeUser, Workspace } from '../../browser'
-import { createProviderApiKey as createFn } from '../../services'
+import { createProviderApiKey as createFn } from '../../services/providerApiKeys'
 
 export type ICreateProvider = {
   workspace: Workspace

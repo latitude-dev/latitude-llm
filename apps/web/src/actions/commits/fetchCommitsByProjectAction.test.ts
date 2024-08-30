@@ -1,5 +1,4 @@
-import { CommitStatus } from '@latitude-data/core'
-import type { Workspace } from '@latitude-data/core/browser'
+import { CommitStatus, type Workspace } from '@latitude-data/core/browser'
 import * as factories from '@latitude-data/core/factories'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 

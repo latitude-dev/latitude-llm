@@ -3,8 +3,8 @@
 import {
   CommitsRepository,
   DocumentVersionsRepository,
-  updateDocument,
-} from '@latitude-data/core'
+} from '@latitude-data/core/repositories'
+import { updateDocument } from '@latitude-data/core/services/documents/update'
 import { z } from 'zod'
 
 import { withProject } from '../procedures'

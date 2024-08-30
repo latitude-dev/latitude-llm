@@ -1,14 +1,13 @@
 import type { Config } from 'drizzle-kit'
 
-import env from './src/env'
-
-const connectionString = env.DATABASE_URL
+const env = process.env.NODE_ENV || 'development'
+const url = `postgres://latitude:secret@localhost:5432/latitude_${env}`
 
 export default {
   dialect: 'postgresql',
   schema: './src/schema/index.ts',
   out: './drizzle',
   dbCredentials: {
-    url: connectionString,
+    url,
   },
 } satisfies Config

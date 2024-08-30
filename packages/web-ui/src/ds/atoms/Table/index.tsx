@@ -57,13 +57,13 @@ const TableRow = React.forwardRef<
   React.HTMLAttributes<HTMLTableRowElement> & {
     verticalPadding?: boolean
   }
->(({ className, ...props }, ref) => (
+>(({ className, verticalPadding, ...props }, ref) => (
   <tr
     ref={ref}
     className={cn(
       'border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted',
       {
-        '[&>td]:py-4': props.verticalPadding,
+        '[&>td]:py-4': verticalPadding,
       },
       className,
     )}

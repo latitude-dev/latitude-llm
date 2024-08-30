@@ -3,14 +3,15 @@ import { faker } from '@faker-js/faker'
 import type { DocumentVersion, SafeUser, Workspace } from '../../browser'
 import { unsafelyGetUser } from '../../data-access'
 import { CommitsRepository } from '../../repositories'
-import { createNewDocument, mergeCommit, updateDocument } from '../../services'
-import { createProject as createProjectFn } from '../../services/projects'
+import { mergeCommit } from '../../services/commits'
+import { createNewDocument, updateDocument } from '../../services/documents'
+import { createProject as createProjectFn } from '../../services/projects/create'
 import { createDraft } from './commits'
 import { createWorkspace, type ICreateWorkspace } from './workspaces'
 
 export type IDocumentStructure = { [key: string]: string | IDocumentStructure }
 
-async function flattenDocumentStructure({
+export async function flattenDocumentStructure({
   currentPath = '',
   documents,
 }: {

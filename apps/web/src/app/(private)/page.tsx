@@ -1,5 +1,5 @@
-import { NotFoundError } from '@latitude-data/core'
 import { type Project } from '@latitude-data/core/browser'
+import { NotFoundError } from '@latitude-data/core/lib/errors'
 import { getFirstProjectCached } from '$/app/(private)/_data-access'
 import { getCurrentUser, SessionData } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'

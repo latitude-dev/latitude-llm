@@ -1,4 +1,7 @@
-import { LatitudeError, UnprocessableEntityError } from '@latitude-data/core'
+import {
+  LatitudeError,
+  UnprocessableEntityError,
+} from '@latitude-data/core/lib/errors'
 import { createMiddleware } from 'hono/factory'
 
 import HttpStatusCodes from '../common/httpStatusCodes'

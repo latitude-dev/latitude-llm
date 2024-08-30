@@ -1,4 +1,3 @@
-import { apiKeys, database, mergeCommit, Result } from '@latitude-data/core'
 import {
   ChainEventTypes,
   Commit,
@@ -7,11 +6,15 @@ import {
   StreamEventTypes,
   Workspace,
 } from '@latitude-data/core/browser'
+import { database } from '@latitude-data/core/client'
 import {
   createDocumentVersion,
   createDraft,
   createProject,
 } from '@latitude-data/core/factories'
+import { Result } from '@latitude-data/core/lib/Result'
+import { apiKeys } from '@latitude-data/core/schema'
+import { mergeCommit } from '@latitude-data/core/services/commits/merge'
 import app from '$/routes/app'
 import { eq } from 'drizzle-orm'
 import { testConsumeStream } from 'test/helpers'
@@ -29,14 +32,17 @@ const mocks = vi.hoisted(() => ({
   },
 }))
 
-vi.mock('@latitude-data/core', async (importOriginal) => {
-  const original = (await importOriginal()) as typeof importOriginal
+vi.mock(
+  '@latitude-data/core/services/commits/runDocumentAtCommit',
+  async (importOriginal) => {
+    const original = (await importOriginal()) as typeof importOriginal
 
-  return {
-    ...original,
-    runDocumentAtCommit: mocks.runDocumentAtCommit,
-  }
-})
+    return {
+      ...original,
+      runDocumentAtCommit: mocks.runDocumentAtCommit,
+    }
+  },
+)
 
 vi.mock('$/jobs', () => ({
   queues: mocks.queues,

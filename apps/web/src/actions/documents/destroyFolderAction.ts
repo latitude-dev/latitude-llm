@@ -1,6 +1,7 @@
 'use server'
 
-import { CommitsRepository, destroyFolder } from '@latitude-data/core'
+import { CommitsRepository } from '@latitude-data/core/repositories'
+import { destroyFolder } from '@latitude-data/core/services/documents/destroyFolder'
 import { z } from 'zod'
 
 import { withProject } from '../procedures'

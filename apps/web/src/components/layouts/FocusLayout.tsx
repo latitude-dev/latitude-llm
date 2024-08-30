@@ -5,11 +5,11 @@ export default function FocusLayout({
   children,
 }: {
   header: ReactNode
-  children: ReactNode
+  children?: ReactNode
 }) {
   return (
     <div className='flex flex-col items-center justify-center h-screen'>
-      <div className='flex flex-col gap-y-6 max-w-80'>
+      <div className='flex flex-col gap-y-6 max-w-[22rem]'>
         <div>{header}</div>
         {children}
       </div>

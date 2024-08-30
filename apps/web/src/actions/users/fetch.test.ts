@@ -37,8 +37,6 @@ describe('getUsersAction', () => {
 
       expect(error).toBeNull()
       expect(data?.length).toEqual(1)
-      // @ts-ignore - encryptedPassword is not defined on the User type for some reason?
-      expect(data![0]!.encryptedPassword).toBeUndefined()
     })
   })
 })

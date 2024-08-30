@@ -7,6 +7,7 @@ import { documentLogs } from './models/documentLogs'
 import { documentVersions } from './models/documentVersions'
 import { evaluationResults } from './models/evaluationResults'
 import { evaluations } from './models/evaluations'
+import { magicLinkTokens } from './models/magicLinkTokens'
 import { memberships } from './models/memberships'
 import { projects } from './models/projects'
 import { providerApiKeys } from './models/providerApiKeys'
@@ -24,6 +25,7 @@ import { workspaces } from './models/workspaces'
 export const userRelations = relations(users, ({ many }) => ({
   sessions: many(sessions),
   memberships: many(memberships),
+  magicLinkTokens: many(magicLinkTokens),
 }))
 
 export const workspaceRelations = relations(workspaces, ({ many }) => ({
@@ -153,3 +155,13 @@ export const providerLogsRelations = relations(providerLogs, ({ one }) => ({
     references: [apiKeys.id],
   }),
 }))
+
+export const magicLinkTokensRelations = relations(
+  magicLinkTokens,
+  ({ one }) => ({
+    user: one(users, {
+      fields: [magicLinkTokens.userId],
+      references: [users.id],
+    }),
+  }),
+)

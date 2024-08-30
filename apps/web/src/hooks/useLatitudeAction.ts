@@ -23,10 +23,21 @@ export default function useLatitudeAction<
   } = {},
 ) {
   const { toast } = useToast()
-  const successCb = useCallback(onSuccess || (() => {}), [onSuccess])
+  const successCb = useCallback(
+    onSuccess ||
+      (() => {
+        toast({
+          title: 'Success',
+          description: 'Action completed successfully',
+        })
+      }),
+    [onSuccess],
+  )
   const errorCb = useCallback(
     onError ||
       ((error: inferServerActionError<TServerAction>) => {
+        console.error(error)
+
         if (error?.err?.code === 'INPUT_PARSE_ERROR') return
 
         toast({

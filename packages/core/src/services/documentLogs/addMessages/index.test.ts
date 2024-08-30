@@ -3,7 +3,6 @@ import { eq } from 'drizzle-orm'
 import { v4 as uuid } from 'uuid'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { database, providerApiKeys } from '../../..'
 import {
   Commit,
   DocumentVersion,
@@ -13,6 +12,8 @@ import {
   SafeUser,
   Workspace,
 } from '../../../browser'
+import { database } from '../../../client'
+import { providerApiKeys } from '../../../schema'
 import {
   createDocumentLog,
   createProject,

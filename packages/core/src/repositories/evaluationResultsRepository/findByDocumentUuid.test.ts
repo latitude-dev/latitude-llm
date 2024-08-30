@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { EvaluationResultsRepository } from '.'
 import { Providers } from '../../constants'
-import { mergeCommit } from '../../services'
+import { mergeCommit } from '../../services/commits'
 import * as factories from '../../tests/factories'
 
 describe('findEvaluationResultsByDocumentUuid', () => {

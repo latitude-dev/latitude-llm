@@ -1,5 +1,6 @@
 import { zValidator } from '@hono/zod-validator'
-import { LogSources, runDocumentAtCommit } from '@latitude-data/core'
+import { LogSources } from '@latitude-data/core/browser'
+import { runDocumentAtCommit } from '@latitude-data/core/services/commits/runDocumentAtCommit'
 import { pipeToStream } from '$/common/pipeToStream'
 import { queues } from '$/jobs'
 import { Factory } from 'hono/factory'
@@ -41,8 +42,7 @@ export const runHandler = factory.createHandlers(
         commit,
         parameters,
         providerLogHandler: (log) => {
-          // TODO: review why this is possibly undefined now
-          queues.defaultQueue.jobs.enqueueCreateProviderLogJob!({
+          queues.defaultQueue.jobs.enqueueCreateProviderLogJob({
             ...log,
             source,
             apiKeyId: apiKey.id,
@@ -52,8 +52,7 @@ export const runHandler = factory.createHandlers(
 
       await pipeToStream(stream, result.stream)
 
-      // TODO: review why this is possibly undefined now
-      queues.defaultQueue.jobs.enqueueCreateDocumentLogJob!({
+      queues.defaultQueue.jobs.enqueueCreateDocumentLogJob({
         commit,
         data: {
           uuid: result.documentLogUuid,

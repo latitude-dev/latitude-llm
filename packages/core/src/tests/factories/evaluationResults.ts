@@ -6,11 +6,9 @@ import { DocumentLog, Evaluation, LogSources, ProviderLog } from '../../browser'
 import { findWorkspaceFromCommit } from '../../data-access'
 import { findCommitById } from '../../data-access/commits'
 import { ProviderApiKeysRepository } from '../../repositories'
-import {
-  Config,
-  createEvaluationResult as createEvaluationResultService,
-  createProviderLog,
-} from '../../services'
+import { Config } from '../../services/ai'
+import { createEvaluationResult as createEvaluationResultService } from '../../services/evaluationResults'
+import { createProviderLog } from '../../services/providerLogs'
 
 export type IEvaluationResultData = {
   documentLog: DocumentLog

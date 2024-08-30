@@ -1,5 +1,5 @@
+import { env } from '@latitude-data/env'
 import { setupJobs } from '@latitude-data/jobs'
-import env from '$/env'
 
 export const { queues } = setupJobs({
   connectionParams: {

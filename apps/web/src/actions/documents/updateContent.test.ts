@@ -1,6 +1,6 @@
-import { updateDocument } from '@latitude-data/core'
 import { DocumentVersion, Project, SafeUser } from '@latitude-data/core/browser'
 import * as factories from '@latitude-data/core/factories'
+import { updateDocument } from '@latitude-data/core/services/documents/update'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { updateDocumentContentAction } from './updateContent'

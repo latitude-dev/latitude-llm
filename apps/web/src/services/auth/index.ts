@@ -1,4 +1,5 @@
-import { database, sessions, users } from '@latitude-data/core'
+import { database } from '@latitude-data/core/client'
+import { sessions, users } from '@latitude-data/core/schema'
 import { DrizzlePostgreSQLAdapter } from '@lucia-auth/adapter-drizzle'
 import { Lucia } from 'lucia'
 

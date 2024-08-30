@@ -2,7 +2,7 @@ import { omit } from 'lodash-es'
 
 import { describe, expect, it } from 'vitest'
 
-import { mergeCommit } from '../../services'
+import { mergeCommit } from '../../services/commits'
 import * as factories from '../../tests/factories'
 import { DocumentVersionsRepository } from './index'
 
