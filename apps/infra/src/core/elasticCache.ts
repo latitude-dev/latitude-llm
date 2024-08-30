@@ -34,5 +34,30 @@ const cacheCluster = new aws.elasticache.Cluster('LatitudeLLMCacheCluster', {
   securityGroupIds: [SecurityGroup.id],
 })
 
+const queueParameterGroup = new aws.elasticache.ParameterGroup(
+  'LatitudeLLMQueueParameterGroup',
+  {
+    family: 'redis6.x',
+    description: 'Custom parameter group for queue cluster',
+    parameters: [
+      {
+        name: 'maxmemory-policy',
+        value: 'noeviction',
+      },
+    ],
+  },
+)
+
+const queueCluster = new aws.elasticache.Cluster('LatitudeLLMQueueCluster', {
+  engine: 'redis',
+  nodeType: 'cache.t3.micro',
+  numCacheNodes: 1,
+  port: 6379,
+  subnetGroupName: subnetGroup.name,
+  securityGroupIds: [SecurityGroup.id],
+  parameterGroupName: queueParameterGroup.name,
+})
+
 // Export the cluster endpoint and port
 export const cacheEndpoint = cacheCluster.cacheNodes[0].address
+export const queueEndpoint = queueCluster.cacheNodes[0].address

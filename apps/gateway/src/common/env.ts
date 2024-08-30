@@ -5,13 +5,12 @@ import { z } from 'zod'
 
 const isDev = process.env.NODE_ENV === 'development'
 const isTest = process.env.NODE_ENV === 'test'
-const hasHardcodedEnv = isDev || isTest
 
 let localEnv = {}
-if (hasHardcodedEnv) {
+if (isDev || isTest) {
   localEnv = {
-    GATEWAY_HOSTNAME: 'localhost',
-    GATEWAY_PORT: isTest ? '8788' : '8787',
+    HOSTNAME: 'localhost',
+    PORT: isTest ? '8788' : '8787',
   }
 }
 
@@ -23,8 +22,8 @@ export default createEnv({
     REDIS_HOST: z.string(),
     REDIS_PORT: z.coerce.number().optional(),
     REDIS_PASSWORD: z.string().optional(),
-    GATEWAY_HOSTNAME: z.string().optional().default('localhost'),
-    GATEWAY_PORT: z.coerce.number().optional(),
+    HOSTNAME: z.string().default('localhost'),
+    PORT: z.coerce.number(),
   },
   runtimeEnv: {
     ...process.env,

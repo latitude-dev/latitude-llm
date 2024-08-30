@@ -21,7 +21,7 @@
     "zod": "^3.23.8"
   },
   "peerDependencies": {
-    "@latitude-data/core": "workspace:*",
+    "@latitude-data/core": "workspace:^",
     "bullmq": "^5.8.7",
     "ioredis": "^5.4.1",
     "zod": "^3.23.8"

@@ -2,6 +2,8 @@ encryptionsalt: v1:K+dTqOgU40c=:v1:xzsAOOiJEEAsdCQ4:Oe7NKHjXdYdZrcrrBa1/0yolY5M3
 config:
   infra:DATABASE_PASSWORD:
     secure: v1:WABt/tJjfsAKMplU:RRLtj5mTu301x4sn2Tr91u4O0Msd3mWVJutcDg==
+  infra:MAILER_API_KEY:
+    secure: v1:Br02wGwX0UOAZiNp:wIzQFfWCzWygBRCVJNDs/ZP65EXEAIFhduPOOniN6EOeXPyJ4UHjOefPyO2bhOBkR5E3CWLmQBsVjIGrGwAHZYZCQg==
   infra:albSecurityGroup:
     secure: v1:HCwWQvcrwQE9Py6E:U5ibuWwH2MNAooASzaHOnSS3pKNhuJHZTh2pnHcSYKRPuuMJ
   infra:bastionAccountId:

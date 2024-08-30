@@ -51,25 +51,32 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
   pnpm turbo build --filter="${PROJECT}..."
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm prune --prod --no-optional
-RUN rm -rf ./**/*/src
 
 # PRODUCTION
 FROM alpine AS runner
 
 ARG PROJECT_PATH
 
-ENV NODE_ENV=production
-
-# Unpriviledged user
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
-USER nextjs
-
 WORKDIR /app
 
-COPY --from=builder --chown=nodejs:latitude /app .
+ENV NODE_ENV=production
 
-WORKDIR /app/${PROJECT_PATH}
+RUN addgroup --system --gid 1001 nodejs
+RUN adduser --system --uid 1001 nextjs
+
+COPY --from=builder packages/core/src/assets .
+COPY --from=builder /app/apps/web/public ./public
+
+# Set the correct permission for prerender cache
+RUN mkdir .next
+RUN chown nextjs:nodejs .next
+
+COPY --from=builder --chown=nodejs:nextjs /app/apps/web/.next/standalone ./
+COPY --from=builder --chown=nodejs:nextjs /app/apps/web/.next/static ./.next/static
+
+WORKDIR /app/apps/web
+
+USER nextjs
 
 ARG PORT=8080
 ARG HOSTNAME="0.0.0.0"
@@ -81,4 +88,4 @@ ENV NEXT_TELEMETRY_DISABLED=1
 
 EXPOSE $PORT
 
-CMD node .next/standalone/apps/web/server.js -p $PORT -h $HOSTNAME
+CMD node server.js -p $PORT -h $HOSTNAME

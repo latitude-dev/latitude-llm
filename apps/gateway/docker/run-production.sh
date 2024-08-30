@@ -6,13 +6,13 @@ export REDIS_PORT=6379
 export REDIS_HOST=redis
 
 # Gateway hostname and port
-export GATEWAY_HOSTNAME="0.0.0.0"
-export GATEWAY_PORT='8080'
+export HOST="0.0.0.0"
+export PORT
 
 docker compose run -it \
-  -p $GATEWAY_PORT:$GATEWAY_PORT \
+  -p $PORT:$PORT \
   -e DATABASE_URL="$DATABASE_URL" \
   -e REDIS_HOST="$REDIS_HOST" \
-  -e GATEWAY_HOSTNAME="$GATEWAY_HOSTNAME" \
-  -e GATEWAY_PORT="$GATEWAY_PORT" \
-  gateway dist/server.js -p $GATEWAY_PORT
+  -e HOST="$HOST" \
+  -e PORT="$PORT" \
+  gateway dist/server.js -p $PORT

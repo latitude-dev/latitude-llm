@@ -10,7 +10,7 @@ import {
   resolve,
   vpcId,
 } from '../shared'
-import { coreStack, dbUrl } from './shared'
+import { coreStack, environment } from './shared'
 
 const DNS_ADDRESS = 'gateway.latitude.so'
 
@@ -18,6 +18,7 @@ const DNS_ADDRESS = 'gateway.latitude.so'
 const repo = new aws.ecr.Repository('latitude-llm-gateway-repo')
 
 // Build and push the Docker image
+const token = await aws.ecr.getAuthorizationToken()
 const image = new docker.Image('LatitudeLLMGatewayImage', {
   build: {
     platform: 'linux/amd64',
@@ -25,92 +26,53 @@ const image = new docker.Image('LatitudeLLMGatewayImage', {
     dockerfile: resolve('../../../apps/gateway/docker/Dockerfile'),
   },
   imageName: pulumi.interpolate`${repo.repositoryUrl}:latest`,
-  registry: repo.registryId.apply(async (registryId) => {
-    const credentials = await aws.ecr.getCredentials({
-      registryId,
-    })
-    const decodedCredentials = Buffer.from(
-      credentials.authorizationToken,
-      'base64',
-    ).toString('ascii')
-    const [username, password] = decodedCredentials.split(':')
-    return {
-      server: credentials.proxyEndpoint,
-      username,
-      password: pulumi.secret(password),
-    }
-  }),
+  registry: {
+    server: repo.repositoryUrl,
+    username: token.userName,
+    password: pulumi.secret(token.password),
+  },
 })
 
 // Create a Fargate task definition
 const containerName = 'LatitudeLLMGatewayContainer'
-
 // Create the log group
 const logGroup = new aws.cloudwatch.LogGroup('LatitudeLLMGatewayLogGroup', {
   name: '/ecs/LatitudeLLMGateway',
   retentionInDays: 7,
 })
 
-const cacheEndpoint = coreStack.requireOutput('cacheEndpoint')
-const taskDefinition = cacheEndpoint.apply((cacheEndpoint) =>
-  dbUrl.apply((dbUrl) =>
-    logGroup.name.apply(
-      (logGroupName) =>
-        new aws.ecs.TaskDefinition('LatitudeLLMGatewayTaskDefinition', {
-          family: 'LatitudeLLMTaskFamily',
-          cpu: '256',
-          memory: '512',
-          networkMode: 'awsvpc',
-          requiresCompatibilities: ['FARGATE'],
-          executionRoleArn: ecsTaskExecutionRole,
-          containerDefinitions: pulumi
-            .output(image.imageName)
-            .apply((imageName) =>
-              JSON.stringify([
-                {
-                  name: containerName,
-                  image: imageName,
-                  essential: true,
-                  portMappings: [
-                    {
-                      containerPort: 8080,
-                      hostPort: 8080,
-                      protocol: 'tcp',
-                    },
-                  ],
-                  environment: [
-                    {
-                      name: 'DATABASE_URL',
-                      value: dbUrl,
-                    },
-                    {
-                      name: 'REDIS_HOST',
-                      value: cacheEndpoint,
-                    },
-                    {
-                      name: 'GATEWAY_HOSTNAME',
-                      value: '0.0.0.0',
-                    },
-                    {
-                      name: 'GATEWAY_PORT',
-                      value: '8080',
-                    },
-                  ],
-                  logConfiguration: {
-                    logDriver: 'awslogs',
-                    options: {
-                      'awslogs-group': logGroupName,
-                      'awslogs-region': 'eu-central-1',
-                      'awslogs-stream-prefix': 'ecs',
-                    },
-                  },
-                },
-              ]),
-            ),
-        }),
-    ),
-  ),
-)
+const taskDefinition = pulumi
+  .all([logGroup.name, image.imageName, environment])
+  .apply(
+    ([logGroupName, imageName, environment]) =>
+      new aws.ecs.TaskDefinition('LatitudeLLMGatewayTaskDefinition', {
+        family: 'LatitudeLLMTaskFamily',
+        cpu: '256',
+        memory: '512',
+        networkMode: 'awsvpc',
+        requiresCompatibilities: ['FARGATE'],
+        executionRoleArn: ecsTaskExecutionRole,
+        containerDefinitions: JSON.stringify([
+          {
+            name: containerName,
+            image: imageName,
+            essential: true,
+            portMappings: [
+              { containerPort: 8080, hostPort: 8080, protocol: 'tcp' },
+            ],
+            environment,
+            logConfiguration: {
+              logDriver: 'awslogs',
+              options: {
+                'awslogs-group': logGroupName,
+                'awslogs-region': 'eu-central-1',
+                'awslogs-stream-prefix': 'ecs',
+              },
+            },
+          },
+        ]),
+      }),
+  )
 
 const targetGroup = new aws.lb.TargetGroup('LatitudeLLMGatewayTg', {
   port: 8080,

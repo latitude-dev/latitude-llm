@@ -122,9 +122,6 @@ importers:
       react-textarea-autosize:
         specifier: ^8.5.3
         version: 8.5.3(@types/react@18.3.0)(react@18.3.1)
-      svelte:
-        specifier: ^4.2.19
-        version: 4.2.19
       tailwind-merge:
         specifier: ^2.4.0
         version: 2.4.0
@@ -140,15 +137,19 @@ importers:
       uuid:
         specifier: ^10.0.0
         version: 10.0.0
-      vue:
-        specifier: ^3.4.38
-        version: 3.4.38(typescript@5.5.4)
       zod:
         specifier: ^3.23.8
         version: 3.23.8
       zustand:
         specifier: ^4.5.4
         version: 4.5.4(@types/react@18.3.0)(react@18.3.1)
+    optionalDependencies:
+      svelte:
+        specifier: ^4.2.19
+        version: 4.2.19
+      vue:
+        specifier: ^3.4.38
+        version: 3.4.38(typescript@5.5.4)
     devDependencies:
       '@babel/parser':
         specifier: ^7.25.4
@@ -486,6 +487,9 @@ importers:
 
   packages/core:
     dependencies:
+      '@latitude-data/jobs':
+        specifier: workspace:^
+        version: link:../jobs
       '@latitude-data/mailers':
         specifier: workspace:^
         version: link:../mailers
@@ -514,9 +518,6 @@ importers:
       '@latitude-data/eslint-config':
         specifier: workspace:*
         version: link:../../tools/eslint
-      '@latitude-data/jobs':
-        specifier: workspace:^
-        version: link:../jobs
       '@latitude-data/typescript-config':
         specifier: workspace:*
         version: link:../../tools/typescript
@@ -608,7 +609,7 @@ importers:
   packages/jobs:
     dependencies:
       '@latitude-data/core':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../core
       '@latitude-data/env':
         specifier: workspace:*

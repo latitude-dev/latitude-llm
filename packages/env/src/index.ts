@@ -38,7 +38,7 @@ export const env = createEnv({
   server: {
     NODE_ENV: z.string(),
     DATABASE_URL: z.string().url(),
-    REDIS_PORT: z.coerce.number(),
+    REDIS_PORT: z.coerce.number().optional().default(6379),
     REDIS_HOST: z.string(),
     REDIS_PASSWORD: z.string().optional(),
     LATITUDE_URL: z.string().url(),

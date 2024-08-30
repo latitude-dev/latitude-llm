@@ -38,7 +38,6 @@
     "@ai-sdk/mistral": "^0.0.38",
     "@ai-sdk/openai": "^0.0.54",
     "@faker-js/faker": "^8.4.1",
-    "@latitude-data/jobs": "workspace:^",
     "@latitude-data/compiler": "workspace:^",
     "@latitude-data/env": "workspace:^",
     "@latitude-data/eslint-config": "workspace:*",

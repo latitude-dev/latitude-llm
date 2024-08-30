@@ -6,11 +6,11 @@ serve(
   {
     fetch: app.fetch,
     overrideGlobalObjects: undefined,
-    port: env.GATEWAY_PORT,
-    hostname: env.GATEWAY_HOSTNAME,
+    hostname: env.HOSTNAME,
+    port: env.PORT,
   },
   (info) => {
-    console.log(`Listening on http://${env.GATEWAY_HOSTNAME}:${info.port}`)
+    console.log(`Listening on http://${env.HOSTNAME}:${info.port}`)
   },
 )
 

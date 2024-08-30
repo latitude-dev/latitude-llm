@@ -10,7 +10,10 @@ const aliasEntries = {
   entries: [
     { find: '$sdk', replacement: path.resolve(__dirname, 'src') },
     { find: '$core', replacement: path.resolve(__dirname, '../../core') },
-    { find: '$compiler', replacement: path.resolve(__dirname, '../../compiler') }
+    {
+      find: '$compiler',
+      replacement: path.resolve(__dirname, '../../compiler'),
+    },
   ],
 }
 const EXTERNALS = ['@t3-oss/env-core', 'zod']

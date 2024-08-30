@@ -51,7 +51,6 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
   pnpm turbo build --filter="${PROJECT}..."
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm prune --prod --no-optional
-RUN rm -rf ./**/*/src
 
 FROM alpine AS runner
 

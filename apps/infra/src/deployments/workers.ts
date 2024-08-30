@@ -9,12 +9,13 @@ import {
   privateSubnets,
   resolve,
 } from '../shared'
-import { coreStack, dbUrl } from './shared'
+import { coreStack, environment } from './shared'
 
 // Create an ECR repository
 const repo = new aws.ecr.Repository('latitude-llm-workers-repo')
 
 // Build and push the Docker image
+const token = await aws.ecr.getAuthorizationToken()
 const image = new docker.Image('LatitudeLLMWorkersImage', {
   build: {
     platform: 'linux/amd64',
@@ -22,21 +23,11 @@ const image = new docker.Image('LatitudeLLMWorkersImage', {
     dockerfile: resolve('../../../apps/workers/docker/Dockerfile'),
   },
   imageName: pulumi.interpolate`${repo.repositoryUrl}:latest`,
-  registry: repo.registryId.apply(async (registryId) => {
-    const credentials = await aws.ecr.getCredentials({
-      registryId,
-    })
-    const decodedCredentials = Buffer.from(
-      credentials.authorizationToken,
-      'base64',
-    ).toString('ascii')
-    const [username, password] = decodedCredentials.split(':')
-    return {
-      server: credentials.proxyEndpoint,
-      username,
-      password: pulumi.secret(password),
-    }
-  }),
+  registry: {
+    server: repo.repositoryUrl,
+    username: token.userName,
+    password: pulumi.secret(token.password),
+  },
 })
 
 // Create a Fargate task definition
@@ -46,54 +37,41 @@ const logGroup = new aws.cloudwatch.LogGroup('LatitudeLLMWorkersLogGroup', {
   name: '/ecs/LatitudeLLMWorkers',
   retentionInDays: 7,
 })
-const cacheEndpoint = coreStack.requireOutput('cacheEndpoint')
-const taskDefinition = cacheEndpoint.apply((cacheEndpoint) =>
-  dbUrl.apply((dbUrl) =>
-    logGroup.name.apply(
-      (logGroupName) =>
-        new aws.ecs.TaskDefinition('LatitudeLLMWorkersTaskDefinition', {
-          family: 'LatitudeLLMTaskFamily',
-          cpu: '256',
-          memory: '512',
-          networkMode: 'awsvpc',
-          requiresCompatibilities: ['FARGATE'],
-          executionRoleArn: ecsTaskExecutionRole,
-          containerDefinitions: pulumi
-            .output(image.imageName)
-            .apply((imageName) =>
-              JSON.stringify([
-                {
-                  name: containerName,
-                  image: imageName,
-                  essential: true,
-                  environment: [
-                    {
-                      name: 'DATABASE_URL',
-                      value: dbUrl,
-                    },
-                    {
-                      name: 'REDIS_HOST',
-                      value: cacheEndpoint,
-                    },
-                  ],
-                  logConfiguration: {
-                    logDriver: 'awslogs',
-                    options: {
-                      'awslogs-group': logGroupName,
-                      'awslogs-region': 'eu-central-1',
-                      'awslogs-stream-prefix': 'ecs',
-                    },
-                  },
-                },
-              ]),
-            ),
-        }),
-    ),
-  ),
-)
+
+const taskDefinition = pulumi
+  .all([logGroup.name, image.imageName, environment])
+  .apply(
+    ([logGroupName, imageName, environment]) =>
+      new aws.ecs.TaskDefinition('LatitudeLLMWorkersTaskDefinition', {
+        family: 'LatitudeLLMTaskFamily',
+        cpu: '256',
+        memory: '512',
+        networkMode: 'awsvpc',
+        requiresCompatibilities: ['FARGATE'],
+        executionRoleArn: ecsTaskExecutionRole,
+        containerDefinitions: JSON.stringify([
+          {
+            name: containerName,
+            image: imageName,
+            essential: true,
+            portMappings: [
+              { containerPort: 8080, hostPort: 8080, protocol: 'tcp' },
+            ],
+            environment,
+            logConfiguration: {
+              logDriver: 'awslogs',
+              options: {
+                'awslogs-group': logGroupName,
+                'awslogs-region': 'eu-central-1',
+                'awslogs-stream-prefix': 'ecs',
+              },
+            },
+          },
+        ]),
+      }),
+  )
 
 const cluster = coreStack.requireOutput('cluster') as pulumi.Output<Cluster>
-
 export const service = new aws.ecs.Service('LatitudeLLMWorkers', {
   cluster: cluster.arn,
   taskDefinition: taskDefinition.arn,
