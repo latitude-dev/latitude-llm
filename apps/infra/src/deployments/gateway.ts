@@ -61,6 +61,16 @@ const taskDefinition = pulumi
               { containerPort: 8080, hostPort: 8080, protocol: 'tcp' },
             ],
             environment,
+            healthCheck: {
+              command: [
+                'CMD-SHELL',
+                'curl -f http://localhost:8080/health || exit 1',
+              ],
+              interval: 10,
+              timeout: 5,
+              retries: 3,
+              startPeriod: 60,
+            },
             logConfiguration: {
               logDriver: 'awslogs',
               options: {

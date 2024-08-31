@@ -16,6 +16,7 @@ const DNS_ADDRESS = 'app.latitude.so'
 
 // Create an ECR repository
 const repo = new aws.ecr.Repository('latitude-llm-app-repo')
+const coreRepo = new aws.ecr.Repository('latitude-llm-core-repo')
 
 // Build and push the Docker image
 const token = await aws.ecr.getAuthorizationToken()
@@ -32,6 +33,19 @@ const image = new docker.Image('LatitudeLLMAppImage', {
     password: pulumi.secret(token.password),
   },
 })
+const coreImage = new docker.Image('LatitudeLLMCoreImage', {
+  build: {
+    platform: 'linux/amd64',
+    context: resolve('../../../'),
+    dockerfile: resolve('../../../packages/core/docker/Dockerfile'),
+  },
+  imageName: pulumi.interpolate`${coreRepo.repositoryUrl}:latest`,
+  registry: {
+    server: coreRepo.repositoryUrl,
+    username: token.userName,
+    password: pulumi.secret(token.password),
+  },
+})
 
 // Create a Fargate task definition
 const containerName = 'LatitudeLLMAppContainer'
@@ -42,9 +56,9 @@ const logGroup = new aws.cloudwatch.LogGroup('LatitudeLLMAppLogGroup', {
 })
 
 const taskDefinition = pulumi
-  .all([logGroup.name, image.imageName, environment])
+  .all([logGroup.name, image.imageName, coreImage.imageName, environment])
   .apply(
-    ([logGroupName, imageName, environment]) =>
+    ([logGroupName, imageName, coreImageName, environment]) =>
       new aws.ecs.TaskDefinition('LatitudeLLMAppTaskDefinition', {
         family: 'LatitudeLLMTaskFamily',
         cpu: '256',
@@ -61,6 +75,16 @@ const taskDefinition = pulumi
               { containerPort: 8080, hostPort: 8080, protocol: 'tcp' },
             ],
             environment,
+            healthCheck: {
+              command: [
+                'CMD-SHELL',
+                'curl -f http://localhost:8080/api/health || exit 1',
+              ],
+              interval: 30,
+              timeout: 5,
+              retries: 3,
+              startPeriod: 60,
+            },
             logConfiguration: {
               logDriver: 'awslogs',
               options: {
@@ -72,7 +96,7 @@ const taskDefinition = pulumi
           },
           {
             name: 'db-migrate',
-            image: imageName,
+            image: coreImageName,
             command: ['pnpm', '--prefix', 'packages/core', 'db:migrate'],
             essential: false,
             environment,
@@ -142,11 +166,9 @@ new aws.ecs.Service('LatitudeLLMApp', {
       containerPort: 8080,
     },
   ],
-  tags: {
-    diggest: image.repoDigest,
-  },
   triggers: {
-    diggest: image.repoDigest,
+    digest: image.repoDigest,
+    coreDigest: coreImage.repoDigest,
   },
 })
 

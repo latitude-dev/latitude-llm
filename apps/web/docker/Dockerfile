@@ -5,7 +5,7 @@ FROM node:20-alpine AS alpine
 
 # Check https://github.com/nodejs/docker-node/tree/b4117f9333da4138b03a546ec926ef50a31506c3#nodealpine to understand why libc6-compat might be needed.
 RUN apk update
-RUN apk add --no-cache libc6-compat
+RUN apk add --no-cache libc6-compat curl
 
 FROM alpine as base
 
@@ -64,19 +64,19 @@ ENV NODE_ENV=production
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
-COPY --from=builder packages/core/src/assets .
-COPY --from=builder /app/apps/web/public ./public
+COPY --from=builder /app/packages/core/src/assets /app/packages/core/src/assets
+COPY --from=builder /app/apps/web/public ./apps/web/public
 
 # Set the correct permission for prerender cache
-RUN mkdir .next
-RUN chown nextjs:nodejs .next
+RUN mkdir -p apps/web/.next
+RUN chown nextjs:nodejs apps/web/.next
 
 COPY --from=builder --chown=nodejs:nextjs /app/apps/web/.next/standalone ./
-COPY --from=builder --chown=nodejs:nextjs /app/apps/web/.next/static ./.next/static
-
-WORKDIR /app/apps/web
+COPY --from=builder --chown=nodejs:nextjs /app/apps/web/.next/static ./apps/web/.next/static
 
 USER nextjs
+
+WORKDIR /app/apps/web
 
 ARG PORT=8080
 ARG HOSTNAME="0.0.0.0"
