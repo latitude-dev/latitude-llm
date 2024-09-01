@@ -4,10 +4,12 @@ import { Result, UnprocessableEntityError } from '../lib'
 import { apiKeys, workspaces } from '../schema'
 import Repository from './repository'
 
-export class LatitudeApiKeysRepository extends Repository {
+const tt = getTableColumns(apiKeys)
+
+export class LatitudeApiKeysRepository extends Repository<typeof tt> {
   get scope() {
     return this.db
-      .select(getTableColumns(apiKeys))
+      .select(tt)
       .from(apiKeys)
       .innerJoin(workspaces, eq(workspaces.id, apiKeys.workspaceId))
       .as('latitudeApiKeysScope')

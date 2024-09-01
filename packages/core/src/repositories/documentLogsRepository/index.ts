@@ -17,10 +17,12 @@ export type DocumentLogWithMetadata = DocumentLog & {
   cost_in_millicents: number | null
 }
 
-export class DocumentLogsRepository extends Repository {
+const tt = getTableColumns(documentLogs)
+
+export class DocumentLogsRepository extends Repository<typeof tt> {
   get scope() {
     return this.db
-      .select(getTableColumns(documentLogs))
+      .select(tt)
       .from(documentLogs)
       .innerJoin(commits, eq(commits.id, documentLogs.commitId))
       .innerJoin(projects, eq(projects.id, commits.projectId))

@@ -4,7 +4,6 @@ import { Result, Transaction } from '../../lib'
 import { workspaces } from '../../schema'
 import { createApiKey } from '../apiKeys/create'
 import { createMembership } from '../memberships/create'
-import { createProject } from '../projects'
 
 export async function createWorkspace(
   {
@@ -24,7 +23,6 @@ export async function createWorkspace(
     const workspace = insertedWorkspaces[0]!
 
     await createMembership({ confirmedAt: new Date(), user, workspace }, tx)
-    await createProject({ workspace, user }, tx)
     await createApiKey({ workspace }, tx)
 
     return Result.ok(workspace)

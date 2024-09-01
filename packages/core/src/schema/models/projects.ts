@@ -1,4 +1,10 @@
-import { bigint, bigserial, index, varchar } from 'drizzle-orm/pg-core'
+import {
+  bigint,
+  bigserial,
+  index,
+  timestamp,
+  varchar,
+} from 'drizzle-orm/pg-core'
 
 import { latitudeSchema } from '../db-schema'
 import { workspaces } from '../models/workspaces'
@@ -9,6 +15,7 @@ export const projects = latitudeSchema.table(
   {
     id: bigserial('id', { mode: 'number' }).notNull().primaryKey(),
     name: varchar('name', { length: 256 }).notNull(),
+    deletedAt: timestamp('deleted_at'),
     workspaceId: bigint('workspace_id', { mode: 'number' })
       .notNull()
       .references(() => workspaces.id, { onDelete: 'cascade' }),

@@ -14,6 +14,7 @@ import { CommitProvider, ProjectProvider } from '@latitude-data/web-ui'
 import { BreadcrumpBadge } from '@latitude-data/web-ui/browser'
 import { NAV_LINKS } from '$/app/(private)/_lib/constants'
 import { ProjectPageParams } from '$/app/(private)/projects/[projectId]/page'
+import BreadcrumpLInk from '$/components/BreadcrumpLink'
 import { AppLayout } from '$/components/layouts'
 import { getCurrentUser, SessionData } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
@@ -49,10 +50,7 @@ export default async function CommitLayout({
   }
 
   const url = ROUTES.projects.detail({ id: project.id }).commits.latest
-  const sectionLinks = [
-    { label: 'Projects', href: url },
-    { label: 'Settings', href: ROUTES.settings.root },
-  ]
+  const sectionLinks = [{ label: 'Projects', href: url }]
 
   return (
     <ProjectProvider project={project}>
@@ -61,7 +59,14 @@ export default async function CommitLayout({
           navigationLinks={NAV_LINKS}
           currentUser={session.user}
           breadcrumbs={[
-            { name: session.workspace.name },
+            {
+              name: (
+                <BreadcrumpLInk
+                  name={session.workspace.name}
+                  href={ROUTES.root}
+                />
+              ),
+            },
             { name: project.name },
             {
               name: (

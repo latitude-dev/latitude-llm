@@ -4,13 +4,15 @@ import { NotFoundError, Result } from '../lib'
 import { memberships, users } from '../schema'
 import Repository from './repository'
 
-export class UsersRepository extends Repository {
+const tt = {
+  ...getTableColumns(users),
+  confirmedAt: memberships.confirmedAt,
+}
+
+export class UsersRepository extends Repository<typeof tt> {
   get scope() {
     return this.db
-      .select({
-        ...getTableColumns(users),
-        confirmedAt: memberships.confirmedAt,
-      })
+      .select(tt)
       .from(users)
       .innerJoin(
         memberships,

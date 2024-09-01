@@ -8,16 +8,16 @@ import { redirect } from 'next/navigation'
 
 export default async function PrivateLayout({
   children,
-}: Readonly<{ children: ReactNode }>) {
+}: Readonly<{
+  children: ReactNode
+}>) {
   const data = await getSession()
+  if (!data.session) return redirect(ROUTES.auth.login)
 
-  if (!data.session) {
-    return redirect(ROUTES.auth.login)
-  }
+  const { workspace, user } = await getCurrentUser()
 
-  const session = await getCurrentUser()
   return (
-    <SessionProvider currentUser={session.user} workspace={session.workspace}>
+    <SessionProvider currentUser={user} workspace={workspace}>
       {children}
     </SessionProvider>
   )

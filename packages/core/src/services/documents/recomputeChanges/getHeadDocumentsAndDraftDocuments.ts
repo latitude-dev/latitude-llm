@@ -1,10 +1,10 @@
 import { Commit } from '../../../browser'
 import { database } from '../../../client'
 import { Result } from '../../../lib'
+import { ProjectsRepository } from '../../../repositories'
 import { buildCommitsScope } from '../../../repositories/commitsRepository/utils/buildCommitsScope'
 import { getHeadCommitForProject } from '../../../repositories/commitsRepository/utils/getHeadCommit'
 import { DocumentVersionsRepository } from '../../../repositories/documentVersionsRepository'
-import { ProjectsRepository } from '../../../repositories/projectsRepository'
 
 async function getProjectFromCommit(
   { commit, workspaceId }: { commit: Commit; workspaceId: number },

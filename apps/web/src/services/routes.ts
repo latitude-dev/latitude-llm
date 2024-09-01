@@ -1,23 +1,30 @@
 import { HEAD_COMMIT } from '@latitude-data/core/browser'
 
-const ROOT_PATH = '/'
-const PROJECTS_PATH = `${ROOT_PATH}projects`
-
 export enum DocumentRoutes {
   editor = 'editor',
   logs = 'logs',
 }
 
-// TODO: Move to core
 export const ROUTES = {
-  root: ROOT_PATH,
+  root: '/',
   settings: {
     root: '/settings',
   },
+  dashboard: {
+    root: '/dashboard',
+    projects: {
+      new: {
+        root: `/dashboard/projects/new`,
+      },
+      destroy: (id: number) => {
+        return { root: `/dashboard/projects/${id}/destroy` }
+      },
+    },
+  },
   projects: {
-    root: PROJECTS_PATH,
+    root: '/projects',
     detail: ({ id }: { id: number }) => {
-      const root = `${PROJECTS_PATH}/${id}`
+      const root = `/projects/${id}`
       const rootCommits = `${root}/versions`
       return {
         root,

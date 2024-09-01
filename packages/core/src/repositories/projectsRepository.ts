@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm'
+import { eq, getTableColumns, isNull } from 'drizzle-orm'
 
 import { NotFoundError, Result } from '../lib'
 import { projects } from '../schema'
@@ -6,10 +6,12 @@ import Repository from './repository'
 
 const NOT_FOUND_MSG = 'Project not found'
 
-export class ProjectsRepository extends Repository {
+const tt = getTableColumns(projects)
+
+export class ProjectsRepository extends Repository<typeof tt> {
   get scope() {
     return this.db
-      .select()
+      .select(tt)
       .from(projects)
       .where(eq(projects.workspaceId, this.workspaceId))
       .as('projectsScope')
@@ -35,5 +37,14 @@ export class ProjectsRepository extends Repository {
     if (!project) return Result.error(new NotFoundError(NOT_FOUND_MSG))
 
     return Result.ok(project)
+  }
+
+  async findAllActive() {
+    const result = await this.db
+      .select()
+      .from(this.scope)
+      .where(isNull(this.scope.deletedAt))
+
+    return Result.ok(result)
   }
 }

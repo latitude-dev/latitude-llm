@@ -1,10 +1,12 @@
-import { Subquery } from 'drizzle-orm'
-import { PgSelect } from 'drizzle-orm/pg-core'
+import { ColumnsSelection } from 'drizzle-orm'
+import { PgSelect, SubqueryWithSelection } from 'drizzle-orm/pg-core'
 
 import { database } from '../client'
+import { Result } from '../lib'
 
 export type PaginationArgs = { page?: number; pageSize?: number }
-export default abstract class Repository {
+
+export default abstract class Repository<U extends ColumnsSelection> {
   protected workspaceId: number
   protected db = database
 
@@ -27,5 +29,10 @@ export default abstract class Repository {
     return query.limit(pageSize).offset((page - 1) * pageSize)
   }
 
-  abstract get scope(): Subquery
+  abstract get scope(): SubqueryWithSelection<U, any>
+
+  async findAll() {
+    const result = await this.db.select().from(this.scope)
+    return Result.ok(result)
+  }
 }

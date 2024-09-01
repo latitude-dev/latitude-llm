@@ -1,4 +1,4 @@
-import { and, eq, getTableColumns, isNotNull, lte, max } from 'drizzle-orm'
+import { and, eq, getTableColumns, isNotNull, lte, max, sql } from 'drizzle-orm'
 
 import { Commit, DocumentVersion } from '../../browser'
 import { NotFoundError, Result } from '../../lib'
@@ -22,10 +22,22 @@ export type GetDocumentAtCommitProps = {
   documentUuid: string
 }
 
-export class DocumentVersionsRepository extends Repository {
+const tt = {
+  ...getTableColumns(documentVersions),
+  mergedAt: commits.mergedAt,
+  // Dear developer,
+  //
+  // This is the way to select columns from a table with an alias in
+  // drizzle-orm, which is hot garbage, but it works. We need it otherwise the
+  // resulting subquery returns two columns with the same name id and we can't
+  // use it in a join.
+  projectId: sql<number>`${projects.id}`.as('projectId'),
+}
+
+export class DocumentVersionsRepository extends Repository<typeof tt> {
   get scope() {
     return this.db
-      .select(getTableColumns(documentVersions))
+      .select(tt)
       .from(documentVersions)
       .innerJoin(projects, eq(projects.workspaceId, this.workspaceId))
       .innerJoin(commits, eq(commits.projectId, projects.id))
@@ -94,7 +106,6 @@ export class DocumentVersionsRepository extends Repository {
    */
   async getDocumentsAtCommit(commit: Commit) {
     const result = await this.getAllDocumentsAtCommit({ commit })
-
     if (result.error) return result
 
     return Result.ok(result.value.filter((d) => d.deletedAt === null))
@@ -115,14 +126,12 @@ export class DocumentVersionsRepository extends Repository {
       )
       .limit(1)
       .then((docs) => docs[0])
-
     if (documentInCommit !== undefined) return Result.ok(documentInCommit)
 
     const documents = await this.getDocumentsAtCommit(commit).then((r) =>
       r.unwrap(),
     )
     const document = documents.find((d) => d.documentUuid === documentUuid)
-
     if (!document) return Result.error(new NotFoundError('Document not found'))
 
     return Result.ok(document)
@@ -138,11 +147,12 @@ export class DocumentVersionsRepository extends Repository {
   }
 
   private async getAllDocumentsAtCommit({ commit }: { commit: Commit }) {
-    const documentsFromMergedCommits =
-      await this.fetchDocumentsFromMergedCommits({
+    const documentsFromMergedCommits = await this.getDocumentsFromMergedCommits(
+      {
         projectId: commit.projectId,
         maxMergedAt: commit.mergedAt,
-      })
+      },
+    ).then((r) => r.unwrap())
 
     if (commit.mergedAt !== null) {
       // Referenced commit is merged. No additional documents to return.
@@ -150,10 +160,9 @@ export class DocumentVersionsRepository extends Repository {
     }
 
     const documentsFromDraft = await this.db
-      .select(this.scope._.selectedFields)
+      .select()
       .from(this.scope)
-      .innerJoin(commits, eq(commits.id, this.scope.commitId))
-      .where(eq(commits.id, commit.id))
+      .where(eq(this.scope.commitId, commit.id))
 
     const totalDocuments = mergeDocuments(
       documentsFromMergedCommits,
@@ -163,20 +172,22 @@ export class DocumentVersionsRepository extends Repository {
     return Result.ok(totalDocuments)
   }
 
-  private async fetchDocumentsFromMergedCommits({
+  async getDocumentsFromMergedCommits({
     projectId,
     maxMergedAt,
   }: {
-    projectId: number
-    maxMergedAt: Date | null
-  }): Promise<DocumentVersion[]> {
+    projectId?: number
+    maxMergedAt?: Date | null
+  } = {}) {
     const filterByMaxMergedAt = () => {
-      const mergedAtNotNull = isNotNull(commits.mergedAt)
+      const mergedAtNotNull = isNotNull(this.scope.mergedAt)
+      if (!maxMergedAt) return mergedAtNotNull
 
-      if (maxMergedAt === null) return mergedAtNotNull
-
-      return and(mergedAtNotNull, lte(commits.mergedAt, maxMergedAt))
+      return and(mergedAtNotNull, lte(this.scope.mergedAt, maxMergedAt))
     }
+
+    const filterByproject = () =>
+      projectId ? eq(this.scope.projectId, projectId) : undefined
 
     const lastVersionOfEachDocument = this.db
       .$with('lastVersionOfDocuments')
@@ -184,11 +195,10 @@ export class DocumentVersionsRepository extends Repository {
         this.db
           .select({
             documentUuid: this.scope.documentUuid,
-            mergedAt: max(commits.mergedAt).as('maxMergedAt'),
+            mergedAt: max(this.scope.mergedAt).as('maxMergedAt'),
           })
           .from(this.scope)
-          .innerJoin(commits, eq(commits.id, this.scope.commitId))
-          .where(and(filterByMaxMergedAt(), eq(commits.projectId, projectId)))
+          .where(and(filterByMaxMergedAt(), filterByproject()))
           .groupBy(this.scope.documentUuid),
       )
 
@@ -196,18 +206,17 @@ export class DocumentVersionsRepository extends Repository {
       .with(lastVersionOfEachDocument)
       .select(this.scope._.selectedFields)
       .from(this.scope)
-      .innerJoin(
-        commits,
-        and(eq(commits.id, this.scope.commitId), isNotNull(commits.mergedAt)),
-      )
+      .innerJoin(documentVersions, eq(this.scope.id, documentVersions.id))
+      .innerJoin(projects, eq(this.scope.projectId, projects.id))
       .innerJoin(
         lastVersionOfEachDocument,
         and(
           eq(this.scope.documentUuid, lastVersionOfEachDocument.documentUuid),
-          eq(commits.mergedAt, lastVersionOfEachDocument.mergedAt),
+          eq(this.scope.mergedAt, lastVersionOfEachDocument.mergedAt),
         ),
       )
+      .where(isNotNull(this.scope.mergedAt))
 
-    return documentsFromMergedCommits
+    return Result.ok(documentsFromMergedCommits)
   }
 }

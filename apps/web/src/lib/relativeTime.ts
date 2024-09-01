@@ -3,7 +3,7 @@ import { format, formatDistanceToNow, formatRelative } from 'date-fns'
 const HOURS = 1000 * 60 * 60
 const DAYS = HOURS * 24
 
-export function relativeTime(date: Date | null) {
+export function relativeTime(date?: Date | null) {
   if (date == null) return '-'
 
   const now = new Date()

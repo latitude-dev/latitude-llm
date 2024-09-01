@@ -16,6 +16,10 @@ jobs:
         node-version: [20.x]
 
     services:
+      redis:
+        image: redis
+        ports:
+          - '6379:6379'
       postgres:
         image: postgres
         env:

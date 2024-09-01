@@ -51,6 +51,7 @@ export default function ClientFilesTree({
   const onMergeCommitClick = useCallback(() => {
     setWarningOpen(true)
   }, [setWarningOpen])
+
   return (
     <>
       <FilesTree

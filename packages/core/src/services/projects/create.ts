@@ -1,4 +1,4 @@
-import { Project, SafeUser, Workspace } from '../../browser'
+import { Project, SafeUser, SafeWorkspace, Workspace } from '../../browser'
 import { database } from '../../client'
 import { Result, Transaction } from '../../lib'
 import { projects } from '../../schema'
@@ -8,10 +8,10 @@ export async function createProject(
   {
     workspace,
     user,
-    name = 'First Project',
+    name,
   }: {
-    name?: string
-    workspace: Workspace
+    name: string
+    workspace: Workspace | SafeWorkspace
     user: SafeUser
   },
   db = database,
