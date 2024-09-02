@@ -44,7 +44,7 @@ export default function SetupForm({ footer }: { footer: ReactNode }) {
           placeholder='Acme Inc.'
           errors={errors?.companyName}
         />
-        <Button fullWidth isLoading={isPending}>
+        <Button fullWidth isLoading={isPending} fancy>
           Create account
         </Button>
 

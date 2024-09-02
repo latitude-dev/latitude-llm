@@ -55,7 +55,9 @@ function Breadcrump({ breadcrumbs }: { breadcrumbs: IBreadCrumb[] }) {
           <Fragment key={idx}>
             <li>
               {typeof breadcrumb.name === 'string' ? (
-                <Text.H5M>{breadcrumb.name as string}</Text.H5M>
+                <Text.H5 color='foregroundMuted'>
+                  {breadcrumb.name as string}
+                </Text.H5>
               ) : (
                 breadcrumb.name
               )}
@@ -108,7 +110,7 @@ export default function AppHeader({
       <div className='px-6 py-3 flex flex-row items-center justify-between '>
         <Breadcrump breadcrumbs={breadcrumbs} />
         <div className='flex flex-row items-center gap-x-6'>
-          <nav className='flex flex-row gap-x-2'>
+          <nav className='flex flex-row gap-x-4'>
             {navigationLinks.map((link, idx) => (
               <NavLink key={idx} {...link} />
             ))}

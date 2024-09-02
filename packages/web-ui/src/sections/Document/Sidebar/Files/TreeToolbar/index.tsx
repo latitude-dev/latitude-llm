@@ -39,9 +39,9 @@ export function TreeToolbar() {
             lookDisabled={isMerged}
             iconProps={{
               name: 'folderPlus',
-              size: 16,
-              widthClass: 'w-6',
-              heightClass: 'h-6',
+              size: 20,
+              widthClass: 'w-5',
+              heightClass: 'h-5',
             }}
             onClick={onClick(EntityType.Folder)}
           />
@@ -51,9 +51,9 @@ export function TreeToolbar() {
             lookDisabled={isMerged}
             iconProps={{
               name: 'filePlus',
-              size: 16,
-              widthClass: 'w-6',
-              heightClass: 'h-6',
+              size: 20,
+              widthClass: 'w-5',
+              heightClass: 'h-5',
             }}
             onClick={onClick(EntityType.File)}
           />
