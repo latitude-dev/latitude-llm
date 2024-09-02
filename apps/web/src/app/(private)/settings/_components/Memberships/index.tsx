@@ -15,37 +15,33 @@ import {
   Text,
 } from '@latitude-data/web-ui'
 import { relativeTime } from '$/lib/relativeTime'
+import { ROUTES } from '$/services/routes'
 import useUsers from '$/stores/users'
+import Link from 'next/link'
 
 import NewUser from './New'
 
 export default function Memberships() {
   const [open, setOpen] = useState(false)
-  const { data: users, destroy } = useUsers()
+  const { data: users } = useUsers()
 
   return (
     <div className='flex flex-col gap-4'>
       <NewUser open={open} setOpen={setOpen} />
       <div className='flex flex-row items-center justify-between'>
         <Text.H4B>Workspace Users</Text.H4B>
-        <Button variant='outline' onClick={() => setOpen(true)}>
+        <Button fancy variant='outline' onClick={() => setOpen(true)}>
           Add User
         </Button>
       </div>
       <div className='flex flex-col gap-2'>
-        {users.length > 0 && <UsersTable users={users} destroy={destroy} />}
+        {users.length > 0 && <UsersTable users={users} />}
       </div>
     </div>
   )
 }
 
-function UsersTable({
-  users,
-  destroy,
-}: {
-  users: SafeUser[]
-  destroy: Function
-}) {
+function UsersTable({ users }: { users: SafeUser[] }) {
   return (
     <Table>
       <TableHeader>
@@ -71,13 +67,9 @@ function UsersTable({
               </Text.H4>
             </TableCell>
             <TableCell>
-              <Button
-                size='small'
-                variant='linkDestructive'
-                onClick={() => destroy({ userId: user.id })}
-              >
+              <Link href={ROUTES.settings.users.destroy(user.id).root}>
                 <Icons.trash />
-              </Button>
+              </Link>
             </TableCell>
           </TableRow>
         ))}

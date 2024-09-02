@@ -9,6 +9,16 @@ export const ROUTES = {
   root: '/',
   settings: {
     root: '/settings',
+    providerApiKeys: {
+      destroy: (id: number) => {
+        return { root: `/settings/apikeys/${id}/destroy` }
+      },
+    },
+    users: {
+      destroy: (userId: string) => {
+        return { root: `/settings/users/${userId}/destroy` }
+      },
+    },
   },
   dashboard: {
     root: '/dashboard',

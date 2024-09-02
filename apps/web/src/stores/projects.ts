@@ -29,11 +29,21 @@ export default function useProjects(opts?: SWRConfiguration) {
   } = useSWR<Project[]>('api/projects', fetcher, opts)
   const { execute: create } = useLatitudeAction(createProjectAction, {
     onSuccess: ({ data: project }) => {
+      toast({
+        title: 'Success',
+        description: `${project.name} created successfully`,
+      })
+
       mutate([...data, project])
     },
   })
   const { execute: destroy } = useLatitudeAction(destroyProjectAction, {
     onSuccess: ({ data: project }) => {
+      toast({
+        title: 'Success',
+        description: `${project.name} destroyed successfully`,
+      })
+
       mutate(data.filter((p) => p.id !== project.id))
     },
   })

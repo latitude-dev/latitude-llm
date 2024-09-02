@@ -1,3 +1,4 @@
+import { NotFoundError } from '@latitude-data/core/lib/errors'
 import { Card, CardContent, FocusHeader } from '@latitude-data/web-ui'
 import { FocusLayout } from '$/components/layouts'
 import { ROUTES } from '$/services/routes'
@@ -19,14 +20,23 @@ export default async function InvitationPage({
   params: { token: string }
 }) {
   const { token } = params
-  const m = await findMembershipByTokenCache(token as string)
-  if (!m) return redirect(ROUTES.root)
+  let workspace, user, membership
+  try {
+    membership = await findMembershipByTokenCache(token as string)
+    if (!membership) return redirect(ROUTES.root)
 
-  const workspace = await findWorkspaceCache(m.workspaceId)
-  if (!workspace) return redirect(ROUTES.root)
+    workspace = await findWorkspaceCache(membership.workspaceId)
+    if (!workspace) return redirect(ROUTES.root)
 
-  const user = await findUserCache(m.userId)
-  if (!user) return redirect(ROUTES.root)
+    user = await findUserCache(membership.userId)
+    if (!user) return redirect(ROUTES.root)
+  } catch (err) {
+    if (err instanceof NotFoundError) {
+      return redirect(ROUTES.root)
+    } else {
+      throw err
+    }
+  }
 
   return (
     <FocusLayout
@@ -39,7 +49,11 @@ export default async function InvitationPage({
     >
       <Card>
         <CardContent standalone>
-          <InvitationForm user={user} membership={m} footer={<AuthFooter />} />
+          <InvitationForm
+            user={user}
+            membership={membership}
+            footer={<AuthFooter />}
+          />
         </CardContent>
       </Card>
     </FocusLayout>

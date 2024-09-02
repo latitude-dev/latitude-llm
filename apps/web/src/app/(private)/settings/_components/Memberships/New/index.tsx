@@ -28,7 +28,7 @@ export default function NewUser({
       footer={
         <>
           <CloseTrigger />
-          <Button form='createUserform' type='submit'>
+          <Button fancy form='createUserform' type='submit'>
             Add User
           </Button>
         </>
