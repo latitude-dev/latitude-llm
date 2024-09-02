@@ -23,7 +23,7 @@ import { useRouter } from 'next/navigation'
 import { useServerAction } from 'zsa-react'
 
 const MODIFICATION_ICONS = {
-  [ModifiedDocumentType.Created]: Icons.addition,
+  [ModifiedDocumentType.Created]: Icons.addSquare,
   [ModifiedDocumentType.Updated]: Icons.modification,
   [ModifiedDocumentType.Deleted]: Icons.deletion,
 }

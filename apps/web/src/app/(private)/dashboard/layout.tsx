@@ -28,6 +28,7 @@ export default async function DashboardLayout({
   const documents = await getDocumentsFromMergedCommitsCache(workspace.id)
   const sectionLinks = [
     { label: 'Projects', href: ROUTES.dashboard.root },
+    { label: 'Evaluations', href: ROUTES.evaluations.root },
     { label: 'Settings', href: ROUTES.settings.root },
   ]
 
@@ -44,7 +45,7 @@ export default async function DashboardLayout({
       breadcrumbs={breadcrumbs}
       sectionLinks={sectionLinks}
     >
-      <div className='flex justify-center items-center max-w-[1024px] m-auto pt-8'>
+      <div className='flex justify-center items-center max-w-screen-xl m-auto py-6'>
         {children}
         <div className='flex-1'>
           <div className='flex flex-row justify-between items-center gap-4 pb-4'>

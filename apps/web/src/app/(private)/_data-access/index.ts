@@ -1,6 +1,7 @@
 import { cache } from 'react'
 
 import { type Commit, type Project } from '@latitude-data/core/browser'
+import { findAllEvaluationTemplates } from '@latitude-data/core/data-access'
 import { NotFoundError } from '@latitude-data/core/lib/errors'
 import {
   CommitsRepository,
@@ -145,3 +146,10 @@ export const getDocumentsFromMergedCommitsCache = cache(
     return documents
   },
 )
+
+export const getEvaluationTemplatesCached = cache(async () => {
+  const result = await findAllEvaluationTemplates()
+  const templates = result.unwrap()
+
+  return templates
+})

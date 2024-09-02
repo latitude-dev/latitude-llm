@@ -23,6 +23,7 @@ export default async function SettingsLayout({
   const { workspace, user } = await getCurrentUser()
   const sectionLinks = [
     { label: 'Projects', href: ROUTES.dashboard.root },
+    { label: 'Evaluations', href: ROUTES.evaluations.root },
     { label: 'Settings', href: ROUTES.settings.root },
   ]
 
@@ -39,9 +40,9 @@ export default async function SettingsLayout({
       breadcrumbs={breadcrumbs}
       sectionLinks={sectionLinks}
     >
-      <div className='flex justify-center items-center max-w-[1024px] m-auto pt-8'>
+      <div className='flex justify-center items-center max-w-[1024px] m-auto py-6'>
         {children}
-        <div className='w-full py-6 flex flex-col items-center'>
+        <div className='w-full flex flex-col items-center'>
           <div className='flex flex-col w-[1024px] gap-[40px]'>
             <WorkspaceName />
             <ProviderApiKeys />

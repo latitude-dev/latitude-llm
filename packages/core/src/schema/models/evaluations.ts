@@ -1,4 +1,12 @@
-import { bigint, bigserial, index, text, varchar } from 'drizzle-orm/pg-core'
+import { relations } from 'drizzle-orm'
+import {
+  bigint,
+  bigserial,
+  index,
+  text,
+  uuid,
+  varchar,
+} from 'drizzle-orm/pg-core'
 
 import { latitudeSchema } from '../db-schema'
 import { workspaces } from '../models/workspaces'
@@ -9,6 +17,7 @@ export const evaluations = latitudeSchema.table(
   'evaluations',
   {
     id: bigserial('id', { mode: 'number' }).notNull().primaryKey(),
+    uuid: uuid('uuid').notNull().unique().defaultRandom(),
     name: varchar('name', { length: 256 }).notNull(),
     description: text('description').notNull(),
     prompt: text('prompt').notNull(),
@@ -26,3 +35,10 @@ export const evaluations = latitudeSchema.table(
     ),
   }),
 )
+
+export const evaluationRelations = relations(evaluations, ({ one }) => ({
+  workspace: one(workspaces, {
+    fields: [evaluations.workspaceId],
+    references: [workspaces.id],
+  }),
+}))
