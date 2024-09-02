@@ -31,7 +31,7 @@ const tt = {
   // drizzle-orm, which is hot garbage, but it works. We need it otherwise the
   // resulting subquery returns two columns with the same name id and we can't
   // use it in a join.
-  projectId: sql<number>`${projects.id}`.as('projectId'),
+  projectId: sql<number>`${projects.id}::int`.as('projectId'),
 }
 
 export class DocumentVersionsRepository extends Repository<typeof tt> {

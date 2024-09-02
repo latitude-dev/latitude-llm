@@ -9,7 +9,7 @@ export default function DocumentSidebar({
 }) {
   return (
     <aside className='flex flex-col gap-y-2 w-full max-h-full overflow-y-hidden'>
-      <div className='p-4 gap-y-2'>{header}</div>
+      <div className='p-4 py-6 gap-y-2'>{header}</div>
       <div className='flex-1 custom-scrollbar'>{tree}</div>
     </aside>
   )

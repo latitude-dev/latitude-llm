@@ -13,7 +13,11 @@ export default createEnv({
     REDIS_PASSWORD: z.string().optional(),
     GATEWAY_HOSTNAME: z.string(),
     GATEWAY_PORT: z.coerce.number().optional(),
-    GATEWAY_SSL: z.coerce.boolean().optional().default(true),
+    GATEWAY_SSL: z
+      .enum(['true', 'false'])
+      .transform((value) => value === 'true')
+      .optional()
+      .default('true'),
   },
   runtimeEnv: {
     DATABASE_URL: process.env.DATABASE_URL,

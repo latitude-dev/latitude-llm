@@ -15,6 +15,7 @@ const buttonContainerVariants = cva(
     variants: {
       variant: {
         default: 'bg-accent-foreground hover:bg-accent-foreground/90',
+        nope: 'bg-transparent hover:bg-transparent',
         destructive:
           'bg-destructive-muted-foreground hover:bg-destructive-muted-foreground/90',
         outline: 'hover:bg-accent/60',
@@ -56,6 +57,7 @@ const buttonVariants = cva(
       variant: {
         default:
           'bg-primary text-primary-foreground group-hover:bg-primary/90 shadow-[inset_0px_2px_2px_rgba(255,255,255,0.25),inset_0px_-1px_4px_rgba(0,0,0,0.04)]',
+        nope: 'bg-transparent text-primary-foreground group-hover:bg-transparent',
         destructive:
           'bg-destructive text-destructive-foreground group-hover:bg-destructive/90 shadow-[inset_0px_2px_2px_rgba(255,255,255,0.25),inset_0px_-1px_4px_rgba(0,0,0,0.04)]',
         outline:
@@ -79,6 +81,10 @@ const buttonVariants = cva(
       },
     },
     compoundVariants: [
+      {
+        variant: 'nope',
+        className: 'p-0',
+      },
       {
         variant: 'outline',
         fanciness: 'fancy',

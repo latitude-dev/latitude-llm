@@ -31,8 +31,6 @@ export function DocumentTextEditor({
   readOnlyMessage,
   isSaved,
 }: DocumentTextEditorProps) {
-  console.log('wtf')
-
   const [defaultValue, _] = useState(value)
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null)
   const monacoRef = useRef<Monaco | null>(null)
