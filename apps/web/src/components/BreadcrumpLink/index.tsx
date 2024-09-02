@@ -10,7 +10,7 @@ export default function BreadcrumpLInk({
 }) {
   return (
     <Link href={href}>
-      <Text.H5M>{name}</Text.H5M>
+      <Text.H5 color='foregroundMuted'>{name}</Text.H5>
     </Link>
   )
 }

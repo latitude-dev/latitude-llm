@@ -1,6 +1,6 @@
 import { ReactNode } from 'react'
 
-import BreadcrumpLink from '$/components/BreadcrumpLink'
+import { Text } from '@latitude-data/web-ui'
 import { AppLayout } from '$/components/layouts'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
 import { getSession } from '$/services/auth/getSession'
@@ -25,10 +25,7 @@ export default async function SettingsLayout({
 
   const breadcrumbs = [
     {
-      name: BreadcrumpLink({
-        name: workspace.name,
-        href: ROUTES.root,
-      }),
+      name: <Text.H5M>{workspace.name}</Text.H5M>,
     },
   ]
 

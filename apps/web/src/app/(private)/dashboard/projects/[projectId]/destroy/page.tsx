@@ -42,7 +42,12 @@ export default function DestroyProject({
       footer={
         <>
           <CloseTrigger />
-          <Button variant='destructive' form='destroyProjectForm' type='submit'>
+          <Button
+            fancy
+            variant='destructive'
+            form='destroyProjectForm'
+            type='submit'
+          >
             {`Destroy ${project?.name}`}
           </Button>
         </>

@@ -1,7 +1,6 @@
 import { ReactNode } from 'react'
 
 import { Button, Text } from '@latitude-data/web-ui'
-import BreadcrumpLink from '$/components/BreadcrumpLink'
 import { AppLayout } from '$/components/layouts'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
 import { getSession } from '$/services/auth/getSession'
@@ -34,10 +33,7 @@ export default async function DashboardLayout({
 
   const breadcrumbs = [
     {
-      name: BreadcrumpLink({
-        name: workspace.name,
-        href: ROUTES.root,
-      }),
+      name: <Text.H5M>{workspace.name}</Text.H5M>,
     },
   ]
 
@@ -54,7 +50,9 @@ export default async function DashboardLayout({
           <div className='flex flex-row justify-between items-center gap-4 pb-4'>
             <Text.H4B>Projects</Text.H4B>
             <Link href={ROUTES.dashboard.projects.new.root}>
-              <Button variant='outline'>Add project</Button>
+              <Button fancy variant='outline'>
+                Add project
+              </Button>
             </Link>
           </div>
           <div className='flex flex-col gap-2'>
@@ -74,7 +72,9 @@ export default async function DashboardLayout({
                   </Text.H5>
                 </div>
                 <Link href={ROUTES.dashboard.projects.new.root}>
-                  <Button variant='outline'>Create your first project</Button>
+                  <Button fancy variant='outline'>
+                    Create your first project
+                  </Button>
                 </Link>
               </div>
             )}

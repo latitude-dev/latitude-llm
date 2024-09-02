@@ -37,7 +37,7 @@ export default function NewProject() {
       footer={
         <>
           <CloseTrigger />
-          <Button form='createProjectForm' type='submit'>
+          <Button fancy form='createProjectForm' type='submit'>
             Add Project
           </Button>
         </>
