@@ -267,6 +267,13 @@
       "when": 1725009841568,
       "tag": "0037_soft_elektra",
       "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1725259019717,
+      "tag": "0038_blue_masque",
+      "breakpoints": true
     }
   ]
 }

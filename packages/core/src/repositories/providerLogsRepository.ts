@@ -5,10 +5,12 @@ import { NotFoundError, Result } from '../lib'
 import { providerApiKeys, providerLogs, workspaces } from '../schema'
 import Repository from './repository'
 
-export class ProviderLogsRepository extends Repository {
+const tt = getTableColumns(providerLogs)
+
+export class ProviderLogsRepository extends Repository<typeof tt> {
   get scope() {
     return this.db
-      .select(getTableColumns(providerLogs))
+      .select(tt)
       .from(providerLogs)
       .innerJoin(
         providerApiKeys,

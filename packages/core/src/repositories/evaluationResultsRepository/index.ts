@@ -11,10 +11,12 @@ export type DocumentLogWithMetadata = DocumentLog & {
   cost_in_millicents: number | null
 }
 
-export class EvaluationResultsRepository extends Repository {
+const tt = getTableColumns(evaluationResults)
+
+export class EvaluationResultsRepository extends Repository<typeof tt> {
   get scope() {
     return this.db
-      .select(getTableColumns(evaluationResults))
+      .select(tt)
       .from(evaluationResults)
       .innerJoin(
         evaluations,

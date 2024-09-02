@@ -1,30 +1,47 @@
 import { ReactNode } from 'react'
 
+import BreadcrumpLink from '$/components/BreadcrumpLink'
 import { AppLayout } from '$/components/layouts'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
+import { getSession } from '$/services/auth/getSession'
 import { ROUTES } from '$/services/routes'
+import { redirect } from 'next/navigation'
 
-import { getFirstProjectCached } from '../_data-access'
 import { NAV_LINKS } from '../_lib/constants'
 
-export default async function Layout({ children }: { children: ReactNode }) {
-  const session = await getCurrentUser()
-  const project = await getFirstProjectCached({
-    workspaceId: session.workspace.id,
-  })
-  const url = ROUTES.projects.detail({ id: project.id }).root
+export default async function SettingsLayout({
+  children,
+}: Readonly<{
+  children: ReactNode
+}>) {
+  const data = await getSession()
+  if (!data.session) return redirect(ROUTES.auth.login)
+
+  const { workspace, user } = await getCurrentUser()
   const sectionLinks = [
-    { label: 'Projects', href: url },
+    { label: 'Projects', href: ROUTES.dashboard.root },
     { label: 'Settings', href: ROUTES.settings.root },
   ]
+
+  const breadcrumbs = [
+    {
+      name: BreadcrumpLink({
+        name: workspace.name,
+        href: ROUTES.root,
+      }),
+    },
+  ]
+
   return (
     <AppLayout
       navigationLinks={NAV_LINKS}
-      currentUser={session.user}
-      breadcrumbs={[{ name: session.workspace.name }, { name: 'Settings' }]}
+      currentUser={{ ...user }}
+      breadcrumbs={breadcrumbs}
       sectionLinks={sectionLinks}
     >
-      {children}
+      <div className='flex justify-center items-center max-w-[1024px] m-auto pt-8'>
+        {children}
+      </div>
     </AppLayout>
   )
 }

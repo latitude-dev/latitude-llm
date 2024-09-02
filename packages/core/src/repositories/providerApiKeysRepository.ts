@@ -4,10 +4,12 @@ import { NotFoundError, Result } from '../lib'
 import { providerApiKeys } from '../schema'
 import Repository from './repository'
 
-export class ProviderApiKeysRepository extends Repository {
+const tt = getTableColumns(providerApiKeys)
+
+export class ProviderApiKeysRepository extends Repository<typeof tt> {
   get scope() {
     return this.db
-      .select(getTableColumns(providerApiKeys))
+      .select(tt)
       .from(providerApiKeys)
       .where(eq(providerApiKeys.workspaceId, this.workspaceId))
       .as('providerApiKeysScope')

@@ -1,13 +1,15 @@
-import { eq } from 'drizzle-orm'
+import { eq, getTableColumns } from 'drizzle-orm'
 
 import { NotFoundError, Result } from '../lib'
 import { evaluations } from '../schema'
 import Repository from './repository'
 
-export class EvaluationsRepository extends Repository {
+const tt = getTableColumns(evaluations)
+
+export class EvaluationsRepository extends Repository<typeof tt> {
   get scope() {
     return this.db
-      .select()
+      .select(tt)
       .from(evaluations)
       .where(eq(evaluations.workspaceId, this.workspaceId))
       .as('evaluationsScope')

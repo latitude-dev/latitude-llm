@@ -34,7 +34,9 @@ function BreadcrumpSeparator() {
   )
 }
 
-type IBreadCrumb = { name: string | ReactNode }
+type IBreadCrumb = {
+  name: string | ReactNode
+}
 
 function Breadcrump({ breadcrumbs }: { breadcrumbs: IBreadCrumb[] }) {
   return (
@@ -72,6 +74,7 @@ function Breadcrump({ breadcrumbs }: { breadcrumbs: IBreadCrumb[] }) {
 type INavigationLink = {
   label: string
   href?: string
+  index?: boolean
   onClick?: () => void
   _target?: '_blank' | '_self'
 }
@@ -123,14 +126,20 @@ export default function AppHeader({
       {sectionLinks.length > 0 ? (
         <NavTabGroup>
           {sectionLinks.map((link, idx) => {
-            const href = link.href
-            const selected = href ? pathname?.startsWith(href) : false
+            let { href, label, index } = link
+            href = href?.startsWith('/') ? href : `/${href}`
+
+            const selected = href
+              ? index
+                ? pathname === href
+                : pathname?.startsWith(href)
+              : false
 
             if (!href) return null
 
             return (
               <Link href={href} key={idx}>
-                <NavTabItem label={link.label} selected={selected} />
+                <NavTabItem label={label} selected={selected} />
               </Link>
             )
           })}

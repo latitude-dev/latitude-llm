@@ -14,7 +14,7 @@ import {
   RecomputedChanges,
 } from '../../services/documents/recomputeChanges'
 import Repository, { PaginationArgs } from '../repository'
-import { buildCommitsScope } from './utils/buildCommitsScope'
+import { buildCommitsScope, columnSelection } from './utils/buildCommitsScope'
 import { getHeadCommitForProject } from './utils/getHeadCommit'
 
 const byErrors =
@@ -47,7 +47,7 @@ function filterByStatusQuery({
   }
 }
 
-export class CommitsRepository extends Repository {
+export class CommitsRepository extends Repository<typeof columnSelection> {
   get scope() {
     return buildCommitsScope(this.workspaceId, this.db)
   }

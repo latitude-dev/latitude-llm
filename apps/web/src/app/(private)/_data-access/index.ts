@@ -21,6 +21,16 @@ export const getFirstProjectCached = cache(
   },
 )
 
+export const getActiveProjectsCached = cache(
+  async ({ workspaceId }: { workspaceId: number }) => {
+    const projectsScope = new ProjectsRepository(workspaceId)
+    const result = await projectsScope.findAllActive()
+    const projects = result.unwrap()
+
+    return projects
+  },
+)
+
 export const findProjectCached = cache(
   async ({
     projectId,
@@ -123,5 +133,15 @@ export const getDocumentLogsWithMetadataCached = cache(
     const logs = result.unwrap()
 
     return logs
+  },
+)
+
+export const getDocumentsFromMergedCommitsCache = cache(
+  async (workspaceId: number) => {
+    const docsScope = new DocumentVersionsRepository(workspaceId)
+    const result = await docsScope.getDocumentsFromMergedCommits()
+    const documents = result.unwrap()
+
+    return documents
   },
 )

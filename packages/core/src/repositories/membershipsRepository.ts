@@ -1,10 +1,12 @@
-import { eq } from 'drizzle-orm'
+import { eq, getTableColumns } from 'drizzle-orm'
 
 import { NotFoundError, Result } from '../lib'
 import { memberships } from '../schema'
 import Repository from './repository'
 
-export class MembershipsRepository extends Repository {
+const tt = getTableColumns(memberships)
+
+export class MembershipsRepository extends Repository<typeof tt> {
   get scope() {
     return this.db
       .select()
