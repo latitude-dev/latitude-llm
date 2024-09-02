@@ -1,15 +1,32 @@
-import { eq } from 'drizzle-orm'
+import { asc, eq, getTableColumns } from 'drizzle-orm'
 
 import { EvaluationTemplate } from '../browser'
 import { database } from '../client'
 import { NotFoundError } from '../lib/errors'
 import { Result, TypedResult } from '../lib/Result'
-import { evaluationTemplates } from '../schema'
+import { evaluationTemplateCategories, evaluationTemplates } from '../schema'
+
+export type EvaluationTemplateWithCategory = EvaluationTemplate & {
+  category: string
+}
 
 export async function findAllEvaluationTemplates(): Promise<
-  TypedResult<EvaluationTemplate[], Error>
+  TypedResult<EvaluationTemplateWithCategory[], Error>
 > {
-  const result = await database.query.evaluationTemplates.findMany()
+  const result = await database
+    .select({
+      ...getTableColumns(evaluationTemplates),
+      category: evaluationTemplateCategories.name,
+    })
+    .from(evaluationTemplates)
+    .innerJoin(
+      evaluationTemplateCategories,
+      eq(evaluationTemplates.categoryId, evaluationTemplateCategories.id),
+    )
+    .orderBy(
+      asc(evaluationTemplateCategories.name),
+      asc(evaluationTemplates.name),
+    )
   return Result.ok(result)
 }
 

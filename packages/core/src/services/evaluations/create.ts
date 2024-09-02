@@ -1,19 +1,30 @@
-import { Workspace } from '../../browser'
+import { SafeWorkspace, Workspace } from '../../browser'
 import { database } from '../../client'
 import { Result, Transaction } from '../../lib'
+import { EvaluationsRepository } from '../../repositories'
 import { evaluations } from '../../schema'
 
 type Props = {
-  workspace: Workspace
+  workspace: Workspace | SafeWorkspace
   name: string
   description: string
   prompt: string
 }
-export function createEvaluation(
+export async function createEvaluation(
   { workspace, name, description, prompt }: Props,
   db = database,
 ) {
-  return Transaction.call(async (tx) => {
+  const evaluationsScope = new EvaluationsRepository(workspace.id, db)
+  const existsEvaluation = await evaluationsScope.findByName(name)
+  if (existsEvaluation.ok) {
+    return Result.error(
+      new Error(
+        'An evaluation with the same name already exists in this workspace',
+      ),
+    )
+  }
+
+  return await Transaction.call(async (tx) => {
     const result = await tx
       .insert(evaluations)
       .values({

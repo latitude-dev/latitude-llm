@@ -23,5 +23,5 @@ export * from './models/evaluations'
 export * from './models/connectedEvaluations'
 export * from './models/evaluationResults'
 export * from './models/evaluationTemplates'
-
 export * from './models/magicLinkTokens'
+export * from './models/evaluationTemplateCategories'

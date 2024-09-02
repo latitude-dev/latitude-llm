@@ -8,6 +8,7 @@ import { documentLogs } from './models/documentLogs'
 import { documentVersions } from './models/documentVersions'
 import { evaluationResults } from './models/evaluationResults'
 import { evaluations } from './models/evaluations'
+import { evaluationTemplateCategories } from './models/evaluationTemplateCategories'
 import { evaluationTemplates } from './models/evaluationTemplates'
 import { magicLinkTokens } from './models/magicLinkTokens'
 import { memberships } from './models/memberships'
@@ -46,3 +47,8 @@ export type ConnectedEvaluation = InferSelectModel<typeof connectedEvaluations>
 export type EvaluationResult = InferSelectModel<typeof evaluationResults>
 export type EvaluationTemplate = InferSelectModel<typeof evaluationTemplates>
 export type MagicLinkToken = InferSelectModel<typeof magicLinkTokens>
+export type EvaluationTemplateCategory = InferSelectModel<
+  typeof evaluationTemplateCategories
+>
+
+export type { EvaluationTemplateWithCategory } from '../data-access/evaluationTemplates'

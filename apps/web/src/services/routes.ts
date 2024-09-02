@@ -31,6 +31,9 @@ export const ROUTES = {
       },
     },
   },
+  evaluations: {
+    root: '/evaluations',
+  },
   projects: {
     root: '/projects',
     detail: ({ id }: { id: number }) => {
