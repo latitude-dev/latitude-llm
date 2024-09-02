@@ -20,6 +20,8 @@ import { getCurrentUser, SessionData } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
 import { notFound } from 'next/navigation'
 
+import BreadcrumpInput from './documents/_components/BreadcrumpInput'
+
 export type CommitPageParams = {
   children: ReactNode
   params: ProjectPageParams['params'] & { commitUuid: string }
@@ -67,7 +69,7 @@ export default async function CommitLayout({
                 />
               ),
             },
-            { name: project.name },
+            { name: <BreadcrumpInput projectId={project.id} /> },
             {
               name: (
                 <BreadcrumpBadge

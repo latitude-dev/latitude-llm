@@ -31,23 +31,26 @@ export default abstract class Repository<U extends ColumnsSelection> {
 
   abstract get scope(): SubqueryWithSelection<U, string>
 
+  async findAll() {
+    const result = await this.db.select().from(this.scope)
+    return Result.ok(result)
+  }
+
   async find(id: string | number) {
     const result = await this.db
       .select()
       .from(this.scope)
-      // TODO: This is correct but I don't have time to fix the type
+      // TODO: This is correct but I don't have time to fix the types
+      // as it involves some generics with the return value of scope
+      // in the child classes
       //
       // @ts-expect-error
       .where(eq(this.scope.id, id))
       .limit(1)
-    if (!result[0])
+    if (!result[0]) {
       return Result.error(new NotFoundError(`Record with id ${id} not found`))
+    }
 
-    return Result.ok(result[0])
-  }
-
-  async findAll() {
-    const result = await this.db.select().from(this.scope)
-    return Result.ok(result)
+    return Result.ok(result[0]!)
   }
 }

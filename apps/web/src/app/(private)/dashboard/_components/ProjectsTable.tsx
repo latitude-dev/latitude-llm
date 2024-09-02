@@ -62,8 +62,8 @@ export function ProjectsTable({
                 {relativeTime(
                   findDocuments(project.id).sort(
                     (a: DocumentVersion, b: DocumentVersion) =>
-                      b.updatedAt.getTime() - a.updatedAt.getTime(),
-                  )?.[0]?.updatedAt,
+                      b.createdAt.getTime() - a.createdAt.getTime(),
+                  )?.[0]?.createdAt,
                 )}
               </Text.H4>
             </TableCell>

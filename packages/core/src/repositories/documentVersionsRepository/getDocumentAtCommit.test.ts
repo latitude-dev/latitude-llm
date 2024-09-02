@@ -26,7 +26,7 @@ describe('getDocumentAtCommit', () => {
 
     expect(omit(document, 'id', 'updatedAt')).toEqual({
       ...omit(doc, 'id', 'updatedAt'),
-      projectId: String(project.id),
+      projectId: project.id,
       mergedAt: mergedCommit.mergedAt,
       resolvedContent: 'VERSION_1',
     })

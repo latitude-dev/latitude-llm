@@ -5,7 +5,9 @@ export default createEnv({
   server: {
     GATEWAY_HOSTNAME: z.string(),
     GATEWAY_PORT: z.coerce.number().optional(),
-    GATEWAY_SSL: z.coerce.boolean(),
+    GATEWAY_SSL: z
+      .enum(['true', 'false'])
+      .transform((value) => value === 'true'),
   },
   runtimeEnv: {
     GATEWAY_HOSTNAME: process.env.GATEWAY_HOSTNAME ?? 'localhost',
