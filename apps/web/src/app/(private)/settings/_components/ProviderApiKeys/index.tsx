@@ -14,23 +14,11 @@ import {
   TableRow,
   Text,
 } from '@latitude-data/web-ui'
+import { relativeTime } from '$/lib/relativeTime'
 import useProviderApiKeys from '$/stores/providerApiKeys'
 import useUsers from '$/stores/users'
-import { format, formatDistanceToNow, formatRelative } from 'date-fns'
 
 import NewApiKey from './New'
-
-const HOURS = 1000 * 60 * 60
-const DAYS = HOURS * 24
-function relativeTime(date: Date | null) {
-  if (date == null) return 'never'
-
-  const now = new Date()
-  const diff = now.getTime() - date.getTime()
-  if (diff < 1 * HOURS) return formatDistanceToNow(date, { addSuffix: true })
-  if (diff < 7 * DAYS) return formatRelative(date, new Date())
-  return format(date, 'PPpp')
-}
 
 export default function ProviderApiKeys() {
   const { data: providerApiKeys, destroy } = useProviderApiKeys()

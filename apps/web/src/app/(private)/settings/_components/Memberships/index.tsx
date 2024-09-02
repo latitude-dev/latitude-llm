@@ -14,6 +14,7 @@ import {
   TableRow,
   Text,
 } from '@latitude-data/web-ui'
+import { relativeTime } from '$/lib/relativeTime'
 import useUsers from '$/stores/users'
 
 import NewUser from './New'
@@ -66,7 +67,7 @@ function UsersTable({
             </TableCell>
             <TableCell>
               <Text.H4 color='foregroundMuted'>
-                {user.confirmedAt?.toISOString() || '-'}
+                {relativeTime(user.confirmedAt)}
               </Text.H4>
             </TableCell>
             <TableCell>
