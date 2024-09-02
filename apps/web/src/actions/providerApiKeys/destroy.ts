@@ -11,7 +11,7 @@ export const destroyProviderApiKeyAction = authProcedure
   .createServerAction()
   .input(
     z.object({
-      id: z.number(),
+      id: z.number().or(z.string()),
     }),
   )
   .handler(async ({ input, ctx }) => {
@@ -19,7 +19,7 @@ export const destroyProviderApiKeyAction = authProcedure
       ctx.workspace.id,
     )
     const apiKeyProvider = await providerApiKeysRepository
-      .find(input.id)
+      .find(Number(input.id))
       .then((r) => r.unwrap())
 
     return await destroyProviderApiKey(apiKeyProvider)

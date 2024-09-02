@@ -21,6 +21,7 @@ const buttonContainerVariants = cva(
         secondary: 'bg-secondary hover:bg-secondary/80',
         ghost: 'shadow-none bg-transparent',
         link: 'shadow-none underline-offset-4 hover:underline',
+        linkOutline: 'shadow-none underline-offset-4 hover:underline',
         linkDestructive: 'shadow-none underline-offset-4 hover:underline',
       },
       fanciness: {
@@ -63,6 +64,7 @@ const buttonVariants = cva(
           'bg-secondary text-secondary-foreground group-hover:bg-secondary/80',
         ghost: 'shadow-none bg-transparent text-muted-foreground',
         link: 'shadow-none underline-offset-4 group-hover:underline text-primary',
+        linkOutline: 'shadow-none underline-offset-4 group-hover:underline',
         linkDestructive:
           'shadow-none underline-offset-4 group-hover:underline text-destructive',
       },

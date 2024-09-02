@@ -15,13 +15,15 @@ import {
   Text,
 } from '@latitude-data/web-ui'
 import { relativeTime } from '$/lib/relativeTime'
+import { ROUTES } from '$/services/routes'
 import useProviderApiKeys from '$/stores/providerApiKeys'
 import useUsers from '$/stores/users'
+import Link from 'next/link'
 
 import NewApiKey from './New'
 
 export default function ProviderApiKeys() {
-  const { data: providerApiKeys, destroy } = useProviderApiKeys()
+  const { data: providerApiKeys } = useProviderApiKeys()
   const [open, setOpen] = useState(false)
 
   return (
@@ -29,16 +31,13 @@ export default function ProviderApiKeys() {
       <NewApiKey open={open} setOpen={setOpen} />
       <div className='flex flex-row items-center justify-between'>
         <Text.H4B>Providers</Text.H4B>
-        <Button variant='outline' fancy onClick={() => setOpen(true)}>
+        <Button fancy variant='outline' onClick={() => setOpen(true)}>
           Create Provider
         </Button>
       </div>
       <div className='flex flex-col gap-2'>
         {providerApiKeys.length > 0 && (
-          <ProviderApiKeysTable
-            providerApiKeys={providerApiKeys}
-            destroy={destroy}
-          />
+          <ProviderApiKeysTable providerApiKeys={providerApiKeys} />
         )}
         {providerApiKeys.length === 0 && (
           <div className='rounded-lg w-full py-12 flex flex-col gap-4 items-center justify-center bg-secondary'>
@@ -48,7 +47,9 @@ export default function ProviderApiKeys() {
                 your prompts.
               </Text.H5>
             </div>
-            <Button onClick={() => setOpen(true)}>Create one</Button>
+            <Button fancy onClick={() => setOpen(true)}>
+              Create one
+            </Button>
           </div>
         )}
       </div>
@@ -58,10 +59,8 @@ export default function ProviderApiKeys() {
 
 const ProviderApiKeysTable = ({
   providerApiKeys,
-  destroy,
 }: {
   providerApiKeys: ProviderApiKey[]
-  destroy: Function
 }) => {
   const { data: users } = useUsers()
   const findUser = (id: string) => users.find((u) => u.id === id)
@@ -107,13 +106,11 @@ const ProviderApiKeysTable = ({
               </Text.H4>
             </TableCell>
             <TableCell>
-              <Button
-                size='small'
-                variant='linkDestructive'
-                onClick={() => destroy({ id: apiKey.id })}
+              <Link
+                href={ROUTES.settings.providerApiKeys.destroy(apiKey.id).root}
               >
                 <Icons.trash />
-              </Button>
+              </Link>
             </TableCell>
           </TableRow>
         ))}

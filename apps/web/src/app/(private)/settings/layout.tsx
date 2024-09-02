@@ -8,6 +8,9 @@ import { ROUTES } from '$/services/routes'
 import { redirect } from 'next/navigation'
 
 import { NAV_LINKS } from '../_lib/constants'
+import Memberships from './_components/Memberships'
+import ProviderApiKeys from './_components/ProviderApiKeys'
+import WorkspaceName from './_components/WorkspaceName'
 
 export default async function SettingsLayout({
   children,
@@ -38,6 +41,13 @@ export default async function SettingsLayout({
     >
       <div className='flex justify-center items-center max-w-[1024px] m-auto pt-8'>
         {children}
+        <div className='w-full py-6 flex flex-col items-center'>
+          <div className='flex flex-col w-[1024px] gap-[40px]'>
+            <WorkspaceName />
+            <ProviderApiKeys />
+            <Memberships />
+          </div>
+        </div>
       </div>
     </AppLayout>
   )

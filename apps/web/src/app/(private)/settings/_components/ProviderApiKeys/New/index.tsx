@@ -31,7 +31,7 @@ export default function NewApiKey({
       footer={
         <>
           <CloseTrigger />
-          <Button form='createApiKeyForm' type='submit'>
+          <Button fancy form='createApiKeyForm' type='submit'>
             Create Provider
           </Button>
         </>
