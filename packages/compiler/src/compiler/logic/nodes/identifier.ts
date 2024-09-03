@@ -23,8 +23,15 @@ export async function resolve({
 export function updateScopeContext({
   node,
   scopeContext,
+  raiseError,
 }: UpdateScopeContextProps<Identifier>) {
   if (!scopeContext.definedVariables.has(node.name)) {
-    scopeContext.usedUndefinedVariables.add(node.name)
+    if (scopeContext.onlyPredefinedVariables === undefined) {
+      scopeContext.usedUndefinedVariables.add(node.name)
+      return
+    }
+    if (!scopeContext.onlyPredefinedVariables.has(node.name)) {
+      raiseError(errors.variableNotDefined(node.name), node)
+    }
   }
 }

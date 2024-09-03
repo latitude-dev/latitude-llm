@@ -28,6 +28,8 @@ export default function CreateEvaluationModal({
   const [description, setDescription] = useState(initialData?.description ?? '')
   const [prompt, setPrompt] = useState(initialData?.prompt ?? '')
 
+  const router = useRouter()
+
   useEffect(() => {
     if (!initialData) return
     setTitle(initialData?.title ?? '')
@@ -41,18 +43,17 @@ export default function CreateEvaluationModal({
     createEvaluation,
     isCreating,
   } = useEvaluations({
-    onSuccessCreate: (_newEvaluation) => {
-      router.push(ROUTES.evaluations.root)
+    onSuccessCreate: (newEvaluation) => {
+      router.push(ROUTES.evaluations.detail({ uuid: newEvaluation.uuid }).root)
       onClose(null)
     },
   })
-  const router = useRouter()
 
   const onConfirm = useCallback(() => {
     createEvaluation({
       name: title,
       description,
-      prompt,
+      metadata: { prompt },
     })
     onClose(null)
   }, [createEvaluation, onClose, title, description, prompt])

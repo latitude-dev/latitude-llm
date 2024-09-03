@@ -36,14 +36,17 @@ export function readMetadata({
   prompt,
   fullPath,
   referenceFn,
+  withParameters,
 }: {
   prompt: string
   fullPath?: string
   referenceFn?: ReferencePromptFn
+  withParameters?: string[]
 }): Promise<ConversationMetadata> {
   return new ReadMetadata({
     document: { path: fullPath ?? '', content: prompt },
     referenceFn,
+    withParameters,
   }).run()
 }
 

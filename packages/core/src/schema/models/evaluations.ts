@@ -1,17 +1,21 @@
-import { relations } from 'drizzle-orm'
 import {
   bigint,
   bigserial,
   index,
   text,
+  uniqueIndex,
   uuid,
   varchar,
 } from 'drizzle-orm/pg-core'
 
+import { EvaluationMetadataType } from '../../constants'
 import { latitudeSchema } from '../db-schema'
 import { workspaces } from '../models/workspaces'
 import { timestamps } from '../schemaHelpers'
-import { evaluationTemplates } from './evaluationTemplates'
+
+export const metadataTypesEnum = latitudeSchema.enum('metadata_type', [
+  EvaluationMetadataType.LlmAsJudge,
+])
 
 export const evaluations = latitudeSchema.table(
   'evaluations',
@@ -20,25 +24,24 @@ export const evaluations = latitudeSchema.table(
     uuid: uuid('uuid').notNull().unique().defaultRandom(),
     name: varchar('name', { length: 256 }).notNull(),
     description: text('description').notNull(),
-    prompt: text('prompt').notNull(),
     workspaceId: bigint('workspace_id', { mode: 'number' })
       .notNull()
       .references(() => workspaces.id, { onDelete: 'cascade' }),
-    templateId: bigint('template_id', { mode: 'number' }).references(
-      () => evaluationTemplates.id,
-    ),
+    metadataId: bigint('metadata_id', { mode: 'number' }).notNull(),
+    metadataType: metadataTypesEnum('metadata_type').notNull(),
     ...timestamps(),
   },
   (table) => ({
     evaluationWorkspaceIdx: index('evaluation_workspace_idx').on(
       table.workspaceId,
     ),
+    evaluationMetadataIdx: index('evaluation_metadata_idx').on(
+      table.metadataId,
+      table.metadataType,
+    ),
+    uniqueNameWorkspace: uniqueIndex('unique_name_workspace').on(
+      table.name,
+      table.workspaceId,
+    ),
   }),
 )
-
-export const evaluationRelations = relations(evaluations, ({ one }) => ({
-  workspace: one(workspaces, {
-    fields: [evaluations.workspaceId],
-    references: [workspaces.id],
-  }),
-}))

@@ -1,10 +1,26 @@
-import { eq, getTableColumns } from 'drizzle-orm'
+import { omit } from 'lodash-es'
 
+import { and, eq, getTableColumns, sql } from 'drizzle-orm'
+
+import { EvaluationMetadataType } from '../constants'
 import { NotFoundError, Result } from '../lib'
-import { evaluations } from '../schema'
+import { evaluations, llmAsJudgeEvaluationMetadatas } from '../schema'
 import Repository from './repository'
 
-const tt = getTableColumns(evaluations)
+const tt = {
+  ...getTableColumns(evaluations),
+  metadata: {
+    id: sql<number>`llm_as_judge_evaluation_metadatas.id`.as(
+      'metadata_metadata_id',
+    ),
+    ...omit(getTableColumns(llmAsJudgeEvaluationMetadatas), [
+      'id',
+      'metadataType',
+      'createdAt',
+      'updatedAt',
+    ]),
+  },
+}
 
 export class EvaluationsRepository extends Repository<typeof tt> {
   get scope() {
@@ -12,20 +28,14 @@ export class EvaluationsRepository extends Repository<typeof tt> {
       .select(tt)
       .from(evaluations)
       .where(eq(evaluations.workspaceId, this.workspaceId))
+      .innerJoin(
+        llmAsJudgeEvaluationMetadatas,
+        and(
+          eq(evaluations.metadataId, llmAsJudgeEvaluationMetadatas.id),
+          eq(evaluations.metadataType, EvaluationMetadataType.LlmAsJudge),
+        ),
+      )
       .as('evaluationsScope')
-  }
-
-  async find(id: number) {
-    const result = await this.db
-      .select()
-      .from(this.scope)
-      .where(eq(this.scope.id, id))
-
-    if (!result.length) {
-      return Result.error(new NotFoundError('Evaluation not found'))
-    }
-
-    return Result.ok(result[0]!)
   }
 
   async findByName(name: string) {
@@ -41,8 +51,16 @@ export class EvaluationsRepository extends Repository<typeof tt> {
     return Result.ok(result[0]!)
   }
 
-  async findAll() {
-    const result = await this.db.select().from(this.scope)
-    return Result.ok(result)
+  async findByUuid(uuid: string) {
+    const result = await this.db
+      .select()
+      .from(this.scope)
+      .where(eq(this.scope.uuid, uuid))
+
+    if (!result.length) {
+      return Result.error(new NotFoundError('Evaluation not found'))
+    }
+
+    return Result.ok(result[0]!)
   }
 }

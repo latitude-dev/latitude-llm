@@ -2,7 +2,12 @@ import { faker } from '@faker-js/faker'
 import { ContentType, createChain } from '@latitude-data/compiler'
 import { v4 as uuid } from 'uuid'
 
-import { DocumentLog, Evaluation, LogSources, ProviderLog } from '../../browser'
+import {
+  DocumentLog,
+  EvaluationDto,
+  LogSources,
+  ProviderLog,
+} from '../../browser'
 import { findWorkspaceFromCommit } from '../../data-access'
 import { findCommitById } from '../../data-access/commits'
 import { ProviderApiKeysRepository } from '../../repositories'
@@ -12,7 +17,7 @@ import { createProviderLog } from '../../services/providerLogs'
 
 export type IEvaluationResultData = {
   documentLog: DocumentLog
-  evaluation: Evaluation
+  evaluation: EvaluationDto
 }
 
 export async function createEvaluationResult({
@@ -23,11 +28,10 @@ export async function createEvaluationResult({
     r.unwrap(),
   )
   const workspace = (await findWorkspaceFromCommit(commit))!
-
   const providerScope = new ProviderApiKeysRepository(workspace.id)
 
   const chain = createChain({
-    prompt: evaluation.prompt,
+    prompt: evaluation.metadata.prompt,
     parameters: {},
   })
 

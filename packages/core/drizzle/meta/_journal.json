@@ -281,6 +281,20 @@
       "when": 1725291413368,
       "tag": "0039_next_mother_askani",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "7",
+      "when": 1725356365868,
+      "tag": "0040_worthless_silvermane",
+      "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1725357027466,
+      "tag": "0041_friendly_talos",
+      "breakpoints": true
     }
   ]
 }

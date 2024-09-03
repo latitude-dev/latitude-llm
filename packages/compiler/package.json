@@ -6,7 +6,10 @@
   "description": "Compiler for Latitude's custom conversation language",
   "type": "module",
   "main": "dist/index.js",
-  "files": ["src"],
+  "types": "dist/index.d.ts",
+  "files": [
+    "src"
+  ],
   "scripts": {
     "dev": "rollup -c -w",
     "build": "rollup -c",

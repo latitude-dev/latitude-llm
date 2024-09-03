@@ -9,10 +9,9 @@ const __dirname = path.dirname(url.fileURLToPath(import.meta.url))
 const aliasEntries = {
   entries: [
     { find: '$sdk', replacement: path.resolve(__dirname, 'src') },
-    { find: '$core', replacement: path.resolve(__dirname, '../../core') },
     {
-      find: '$compiler',
-      replacement: path.resolve(__dirname, '../../compiler'),
+      find: '@latitude-data/core/browser',
+      replacement: path.resolve(__dirname, '../../core/src/browser'),
     },
   ],
 }

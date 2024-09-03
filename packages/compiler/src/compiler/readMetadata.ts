@@ -51,6 +51,7 @@ export class ReadMetadata {
   private rawText: string
   private referenceFn?: ReferencePromptFn
   private fullPath: string
+  private withParameters?: string[]
 
   private resolvedPrompt: string
   private resolvedPromptOffset: number = 0
@@ -64,20 +65,25 @@ export class ReadMetadata {
   constructor({
     document,
     referenceFn,
+    withParameters,
   }: {
     document: Document
     referenceFn?: ReferencePromptFn
-    configSchema?: object
+    withParameters?: string[]
   }) {
     this.rawText = document.content
     this.referenceFn = referenceFn
     this.fullPath = document.path
+    this.withParameters = withParameters
 
     this.resolvedPrompt = document.content
   }
 
   async run(): Promise<ConversationMetadata> {
     const scopeContext = {
+      onlyPredefinedVariables: this.withParameters
+        ? new Set(this.withParameters)
+        : undefined,
       usedUndefinedVariables: new Set<string>(),
       definedVariables: new Set<string>(),
     }

@@ -1,4 +1,4 @@
-import {
+import type {
   Message as CompilerMessage,
   Config,
   ToolCall,
@@ -18,6 +18,8 @@ export enum CommitStatus {
   Merged = 'merged',
   Draft = 'draft',
 }
+
+export { PARAMETERS_FROM_LOG } from './services/evaluations/compiler/constants'
 
 export type Message = CompilerMessage
 
@@ -99,3 +101,7 @@ export type ChainEvent =
       data: ProviderData
       event: StreamEventTypes.Provider
     }
+
+export enum EvaluationMetadataType {
+  LlmAsJudge = 'llm_as_judge',
+}

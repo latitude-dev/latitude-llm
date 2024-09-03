@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { EvaluationTemplateWithCategory } from '@latitude-data/core/browser'
 import {
   Button,
+  cn,
   Icon,
   Table,
   TableBody,
@@ -41,17 +42,20 @@ export const TemplateEvaluationsTableRow = ({
           <div className='flex-auto'>
             <Text.H4>{template.description}</Text.H4>
           </div>
-          {isHovered && (
-            <Button className='flex-shrink-0' variant='ghost'>
-              <div className='flex flex-row gap-1 items-center'>
-                <Text.H5M noWrap color='accentForeground'>
-                  Use this template
-                </Text.H5M>
-                <Icon name='addCircle' color='accentForeground' size={16} />
-              </div>
-            </Button>
-          )}
         </div>
+      </TableCell>
+      <TableCell>
+        <Button
+          className={cn('flex-shrink-0', { 'opacity-0 disabled': !isHovered })}
+          variant='ghost'
+        >
+          <div className='flex flex-row gap-1 items-center'>
+            <Text.H5M noWrap color='accentForeground'>
+              Use this template
+            </Text.H5M>
+            <Icon name='addCircle' color='accentForeground' size={16} />
+          </div>
+        </Button>
       </TableCell>
     </TableRow>
   )
@@ -71,6 +75,7 @@ export const TemplateEvaluationsTable = ({
           <TableHead>Name</TableHead>
           <TableHead>Category</TableHead>
           <TableHead>Description</TableHead>
+          <TableHead />
         </TableRow>
       </TableHeader>
       <TableBody className='max-h-full overflow-y-auto'>

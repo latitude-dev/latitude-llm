@@ -214,6 +214,10 @@ export default {
     code: 'variable-not-declared',
     message: `Variable '${name}' is not declared`,
   }),
+  variableNotDefined: (name: string) => ({
+    code: 'variable-not-defined',
+    message: `Variable '${name}' is not defined`,
+  }),
   invalidSpreadInArray: (element: string) => ({
     code: 'invalid-spread-in-array',
     message: `Element '${element}' is not iterable`,
