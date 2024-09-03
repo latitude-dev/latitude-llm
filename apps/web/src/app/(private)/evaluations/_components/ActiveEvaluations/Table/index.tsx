@@ -8,8 +8,8 @@ import {
   TableRow,
   Text,
 } from '@latitude-data/web-ui'
+import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
-import { useRouter } from 'next/navigation'
 
 export const ActiveEvaluationsTableRow = ({
   evaluation,
@@ -39,8 +39,7 @@ export default function ActiveEvaluationsTable({
 }: {
   evaluations: Evaluation[]
 }) {
-  const router = useRouter()
-
+  const navigate = useNavigate()
   return (
     <Table className='table-auto'>
       <TableHeader className='sticky top-0 z-10'>
@@ -55,7 +54,7 @@ export default function ActiveEvaluationsTable({
             key={template.id}
             evaluation={template}
             onSelect={() =>
-              router.push(
+              navigate.push(
                 ROUTES.evaluations.detail({ uuid: template.uuid }).root,
               )
             }

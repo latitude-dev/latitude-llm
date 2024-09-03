@@ -26,9 +26,9 @@ const DocumentTextEditor = lazy(() =>
 )
 
 function EditorWrapper(props: DocumentTextEditorProps) {
-  // When imported, Monaco automatically tries to use the window object.
-  // Since this is not available when rendering on the server, we only
-  // render the fallback component for SSR.
+  // When imported, Monaco automatically tries to use the window object. Since
+  // this is not available when rendering on the server, we only render the
+  // fallback component for SSR.
   const [isBrowser, setIsBrowser] = useState(false)
 
   useEffect(() => {
@@ -38,6 +38,7 @@ function EditorWrapper(props: DocumentTextEditorProps) {
   if (!isBrowser) {
     return <DocumentTextEditorFallback />
   }
+
   return <DocumentTextEditor {...props} />
 }
 
