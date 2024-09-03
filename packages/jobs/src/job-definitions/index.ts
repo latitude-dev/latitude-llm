@@ -2,10 +2,8 @@ import { LatitudeEvent } from '@latitude-data/core/events/handlers/index'
 
 import { Jobs, Queues } from '../constants'
 import { CreateDocumentLogJobData } from './documentLogs/createJob'
-import { CreateProviderLogJobData } from './providerLogs/createJob'
 
 export type JobDataMap = {
-  [Jobs.createProviderLogJob]: CreateProviderLogJobData
   [Jobs.createDocumentLogJob]: CreateDocumentLogJobData
   [Jobs.publishEventJob]: LatitudeEvent
 }
@@ -26,4 +24,3 @@ export type JobDefinition = {
 }
 
 export * from './documentLogs/createJob'
-export * from './providerLogs/createJob'

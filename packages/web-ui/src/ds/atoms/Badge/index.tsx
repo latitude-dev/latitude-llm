@@ -12,6 +12,10 @@ const badgeVariants = cva(
           'border-primary-foreground/10 bg-primary text-primary-foreground hover:bg-primary/80',
         secondary:
           'border-secondary-foreground/10 bg-secondary text-secondary-foreground hover:bg-secondary/80',
+        yellow:
+          'border-transparent bg-yellow text-foreground hover:bg-yellow/80',
+        purple:
+          'border-transparent bg-purple text-foreground hover:bg-purple/80',
         accent:
           'border-accent-foreground/10 bg-accent text-accent-foreground hover:bg-accent/80',
         destructive:

@@ -1,3 +1,4 @@
+import { env } from '@latitude-data/env'
 import type { ExtractTablesWithRelations } from 'drizzle-orm'
 import { PgQueryResultHKT, PgTransaction } from 'drizzle-orm/pg-core'
 import { DatabaseError } from 'pg'
@@ -50,6 +51,10 @@ export default class Transaction {
    * https://github.com/rails/rails/blob/main/activerecord/lib/active_record/connection_adapters/postgresql_adapter.rb#L769.
    */
   static toResultError(error: unknown): ErrorResult<Error> {
+    if (env.NODE_ENV === 'development') {
+      console.error(error)
+    }
+
     const code = (error as DatabaseError)?.code
     switch (code) {
       case DB_ERROR_CODES.UNIQUE_VIOLATION:

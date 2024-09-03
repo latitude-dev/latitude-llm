@@ -2,6 +2,7 @@
 
 import { ReactNode } from 'react'
 
+import { cn } from '../../../lib/utils'
 import { Alert } from '../Alert'
 import { Button } from '../Button'
 import {
@@ -25,6 +26,7 @@ export type ModalProps = {
   description?: string
   children: ReactNode
   footer?: ReactNode
+  size?: 'regular' | 'large'
 }
 export function Modal({
   open,
@@ -34,10 +36,16 @@ export function Modal({
   footer,
   title,
   description,
+  size = 'regular',
 }: ModalProps) {
   return (
     <Dialog open={open} defaultOpen={defaultOpen} onOpenChange={onOpenChange}>
-      <DialogContent className='sm:max-w-modal'>
+      <DialogContent
+        className={cn({
+          'max-w-modal': size === 'regular',
+          'max-w-modal-lg': size === 'large',
+        })}
+      >
         {(title || description) && (
           <DialogHeader>
             {title && <DialogTitle>{title}</DialogTitle>}

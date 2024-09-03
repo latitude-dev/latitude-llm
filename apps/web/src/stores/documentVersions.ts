@@ -2,13 +2,8 @@
 
 import { useCallback } from 'react'
 
-import type { DocumentVersion } from '@latitude-data/core/browser'
-import {
-  SidebarDocument,
-  useCurrentCommit,
-  useCurrentProject,
-  useToast,
-} from '@latitude-data/web-ui'
+import { HEAD_COMMIT, type DocumentVersion } from '@latitude-data/core/browser'
+import { useToast } from '@latitude-data/web-ui'
 import { createDocumentVersionAction } from '$/actions/documents/create'
 import { destroyDocumentAction } from '$/actions/documents/destroyDocumentAction'
 import { destroyFolderAction } from '$/actions/documents/destroyFolderAction'
@@ -21,13 +16,14 @@ import useSWR, { SWRConfiguration } from 'swr'
 import { useServerAction } from 'zsa-react'
 
 export default function useDocumentVersions(
-  { currentDocument }: { currentDocument?: SidebarDocument | undefined } = {},
+  {
+    commitUuid = HEAD_COMMIT,
+    projectId,
+  }: { commitUuid?: string; projectId?: number } = { commitUuid: HEAD_COMMIT },
   opts?: SWRConfiguration,
 ) {
   const { toast } = useToast()
   const router = useRouter()
-  const { project } = useCurrentProject()
-  const { commit } = useCurrentCommit()
   const { execute: executeCreateDocument } = useServerAction(
     createDocumentVersionAction,
   )
@@ -43,12 +39,14 @@ export default function useDocumentVersions(
     isLoading,
     error: swrError,
   } = useSWR<DocumentVersion[]>(
-    ['documentVersions', project.id, commit.id],
+    ['documentVersions', projectId, commitUuid],
     async () => {
+      if (!commitUuid || !projectId) return []
+
       const [fetchedDocuments, errorFetchingDocuments] =
         await getDocumentsAtCommitAction({
-          projectId: project.id,
-          commitId: commit.id,
+          projectId,
+          commitUuid,
         })
 
       if (errorFetchingDocuments) {
@@ -68,10 +66,12 @@ export default function useDocumentVersions(
   )
   const createFile = useCallback(
     async ({ path }: { path: string }) => {
+      if (!projectId) return
+
       const [document, error] = await executeCreateDocument({
         path,
-        projectId: project.id,
-        commitId: commit.id,
+        projectId,
+        commitUuid,
       })
 
       if (error) {
@@ -87,22 +87,24 @@ export default function useDocumentVersions(
           mutate([...prevDocuments, document])
           router.push(
             ROUTES.projects
-              .detail({ id: project.id })
-              .commits.detail({ uuid: commit.uuid })
+              .detail({ id: projectId! })
+              .commits.detail({ uuid: commitUuid })
               .documents.detail({ uuid: document.documentUuid }).root,
           )
         }
       }
     },
-    [executeCreateDocument, mutate, data, commit.id],
+    [executeCreateDocument, mutate, data, commitUuid],
   )
 
   const destroyFile = useCallback(
     async (documentUuid: string) => {
+      if (!projectId) return
+
       const [_, error] = await executeDestroyDocument({
         documentUuid,
-        projectId: project.id,
-        commitId: commit.id,
+        projectId,
+        commitUuid,
       })
       if (error) {
         toast({
@@ -117,29 +119,23 @@ export default function useDocumentVersions(
           title: 'Success',
           description: 'Document deleted',
         })
-        if (currentDocument?.documentUuid === documentUuid) {
-          router.push(
-            ROUTES.projects
-              .detail({ id: project.id })
-              .commits.detail({ uuid: commit.uuid }).documents.root,
-          )
-        }
+        router.push(
+          ROUTES.projects
+            .detail({ id: projectId })
+            .commits.detail({ uuid: commitUuid }).documents.root,
+        )
       }
     },
-    [
-      executeDestroyDocument,
-      mutate,
-      data,
-      currentDocument?.documentUuid,
-      commit.id,
-    ],
+    [executeDestroyDocument, mutate, data, commitUuid],
   )
 
   const destroyFolder = useCallback(
     async (path: string) => {
+      if (!projectId) return
+
       const [_, error] = await executeDestroyFolder({
-        projectId: project.id,
-        commitId: commit.id,
+        projectId,
+        commitUuid,
         path,
       })
 
@@ -156,16 +152,14 @@ export default function useDocumentVersions(
           title: 'Success',
           description: 'Folder deleted',
         })
-        if (currentDocument?.path?.startsWith?.(`${path}/`)) {
-          router.push(
-            ROUTES.projects
-              .detail({ id: project.id })
-              .commits.detail({ uuid: commit.uuid }).documents.root,
-          )
-        }
+        router.push(
+          ROUTES.projects
+            .detail({ id: projectId })
+            .commits.detail({ uuid: commitUuid }).documents.root,
+        )
       }
     },
-    [executeDestroyFolder, mutate, currentDocument?.path, commit.id],
+    [executeDestroyFolder, mutate, commitUuid],
   )
 
   const { execute: updateContent } = useLatitudeAction(

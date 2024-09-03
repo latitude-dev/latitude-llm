@@ -45,6 +45,9 @@ export const ROUTES = {
         [EvaluationRoutes.history]: { root },
         [EvaluationRoutes.editor]: {
           root: `${root}/editor`,
+          importLogs: {
+            root: `${root}/editor/import-logs`,
+          },
         },
       }
     },

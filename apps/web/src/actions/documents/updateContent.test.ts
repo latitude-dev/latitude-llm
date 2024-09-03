@@ -1,6 +1,7 @@
 import { DocumentVersion, Project, SafeUser } from '@latitude-data/core/browser'
 import * as factories from '@latitude-data/core/factories'
 import { updateDocument } from '@latitude-data/core/services/documents/update'
+import { findCommitById } from 'node_modules/@latitude-data/core/src/data-access/commits'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { updateDocumentContentAction } from './updateContent'
@@ -32,10 +33,13 @@ describe('updateDocumentAction', async () => {
     })
 
     it('errors when the user is not authenticated', async () => {
+      const commit = await findCommitById({ id: doc1.commitId }).then((r) =>
+        r.unwrap(),
+      )
       const [_, error] = await updateDocumentContentAction({
         projectId,
         documentUuid: doc1.documentUuid,
-        commitId: doc1.commitId,
+        commitUuid: commit.uuid,
         content: 'foo2',
       })
 
@@ -78,7 +82,7 @@ describe('updateDocumentAction', async () => {
       const [data, error] = await updateDocumentContentAction({
         projectId: project.id,
         documentUuid: doc1.documentUuid,
-        commitId: draft.id,
+        commitUuid: draft.uuid,
         content: 'foo3',
       })
 
@@ -96,7 +100,7 @@ describe('updateDocumentAction', async () => {
       const [data, error] = await updateDocumentContentAction({
         projectId: project.id,
         documentUuid: doc1.documentUuid,
-        commitId: draft.id,
+        commitUuid: draft.uuid,
         content: 'foo2',
       })
 

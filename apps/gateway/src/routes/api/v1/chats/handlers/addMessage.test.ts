@@ -15,8 +15,7 @@ import { testConsumeStream } from 'test/helpers'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
-  addMessages: vi.fn(async ({ providerLogHandler }) => {
-    providerLogHandler({ uuid: 'fake-provider-log-uuid' })
+  addMessages: vi.fn(async () => {
     const stream = new ReadableStream({
       start(controller) {
         controller.enqueue({
@@ -43,9 +42,7 @@ const mocks = vi.hoisted(() => ({
   }),
   queues: {
     defaultQueue: {
-      jobs: {
-        enqueueCreateProviderLogJob: vi.fn(),
-      },
+      jobs: {},
     },
   },
 }))
@@ -147,27 +144,6 @@ describe('POST /add-message', () => {
         documentLogUuid: 'fake-document-log-uuid',
         messages: [],
         providerLogHandler: expect.any(Function),
-      })
-    })
-
-    it('enqueue the provider log of the new message', async () => {
-      const res = await app.request(route, {
-        method: 'POST',
-        body,
-        headers,
-      })
-
-      expect(mocks.queues)
-      expect(res.status).toBe(200)
-      expect(res.body).toBeInstanceOf(ReadableStream)
-      await testConsumeStream(res.body as ReadableStream)
-
-      expect(
-        mocks.queues.defaultQueue.jobs.enqueueCreateProviderLogJob,
-      ).toHaveBeenCalledWith({
-        uuid: 'fake-provider-log-uuid',
-        source: LogSources.Playground,
-        apiKeyId: apiKey.id,
       })
     })
   })

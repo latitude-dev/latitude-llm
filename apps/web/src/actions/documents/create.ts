@@ -11,14 +11,14 @@ export const createDocumentVersionAction = withProject
   .input(
     z.object({
       path: z.string(),
-      commitId: z.number(),
+      commitUuid: z.string(),
     }),
     { type: 'json' },
   )
   .handler(async ({ input, ctx }) => {
     const commitsScope = new CommitsRepository(ctx.project.workspaceId)
     const commit = await commitsScope
-      .getCommitById(input.commitId)
+      .getCommitByUuid({ uuid: input.commitUuid, project: ctx.project })
       .then((r) => r.unwrap())
 
     const result = await createNewDocument({

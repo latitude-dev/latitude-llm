@@ -3,11 +3,7 @@ import { Job, JobsOptions, Queue, QueueEvents } from 'bullmq'
 import { Redis } from 'ioredis'
 
 import { Jobs, Queues } from '../constants'
-import {
-  createDocumentLogJob,
-  createProviderLogJob,
-  JobDefinition,
-} from '../job-definitions'
+import { createDocumentLogJob, JobDefinition } from '../job-definitions'
 import { publishEventJob } from '../job-definitions/events/publishEventJob'
 
 export function capitalize(string: string) {
@@ -68,7 +64,7 @@ function setupQueue({
 export const QUEUES = {
   [Queues.defaultQueue]: {
     name: Queues.defaultQueue,
-    jobs: [createProviderLogJob, createDocumentLogJob],
+    jobs: [createDocumentLogJob],
   },
   [Queues.eventsQueue]: {
     name: Queues.eventsQueue,
