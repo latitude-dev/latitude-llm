@@ -91,6 +91,7 @@ export default class Scope {
 }
 
 export type ScopeContext = {
+  onlyPredefinedVariables?: Set<string> // If defined, all usedUndefinedVariables that are not in this set will return an error
   usedUndefinedVariables: Set<string> // Variables that are not in current scope but have been used
   definedVariables: Set<string> // Variables that are in current scope
 }

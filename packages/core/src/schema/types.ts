@@ -10,6 +10,7 @@ import { evaluationResults } from './models/evaluationResults'
 import { evaluations } from './models/evaluations'
 import { evaluationTemplateCategories } from './models/evaluationTemplateCategories'
 import { evaluationTemplates } from './models/evaluationTemplates'
+import { llmAsJudgeEvaluationMetadatas } from './models/llmAsJudgeEvaluationMetadatas'
 import { magicLinkTokens } from './models/magicLinkTokens'
 import { memberships } from './models/memberships'
 import { projects } from './models/projects'
@@ -50,5 +51,15 @@ export type MagicLinkToken = InferSelectModel<typeof magicLinkTokens>
 export type EvaluationTemplateCategory = InferSelectModel<
   typeof evaluationTemplateCategories
 >
+export type LlmAsJudgeEvaluationMetadata = InferSelectModel<
+  typeof llmAsJudgeEvaluationMetadatas
+>
 
 export type { EvaluationTemplateWithCategory } from '../data-access/evaluationTemplates'
+
+export type EvaluationDto = Evaluation & {
+  metadata: Omit<
+    LlmAsJudgeEvaluationMetadata,
+    'metadataType' | 'createdAt' | 'updatedAt'
+  >
+}

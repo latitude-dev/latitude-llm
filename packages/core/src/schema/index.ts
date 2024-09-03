@@ -20,8 +20,10 @@ export * from './models/providerLogs'
 
 // Evaluations tables
 export * from './models/evaluations'
+export * from './models/llmAsJudgeEvaluationMetadatas'
 export * from './models/connectedEvaluations'
 export * from './models/evaluationResults'
 export * from './models/evaluationTemplates'
-export * from './models/magicLinkTokens'
 export * from './models/evaluationTemplateCategories'
+
+export * from './models/magicLinkTokens'

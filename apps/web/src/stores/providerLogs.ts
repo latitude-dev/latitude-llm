@@ -4,17 +4,12 @@ import type { ProviderLog } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui'
 import { getProviderLogsForDocumentLogAction } from '$/actions/providerLogs/getProviderLogsForDocumentLogAction'
 import useSWR, { SWRConfiguration } from 'swr'
-import { useServerAction } from 'zsa-react'
 
 export default function useProviderLogs(
   { documentLogUuid }: { documentLogUuid?: string },
   opts?: SWRConfiguration,
 ) {
   const { toast } = useToast()
-  const { execute: executeFetchAction } = useServerAction(
-    getProviderLogsForDocumentLogAction,
-  )
-
   const {
     data = undefined,
     isLoading,
@@ -23,21 +18,22 @@ export default function useProviderLogs(
     ['providerLogs', documentLogUuid],
     async () => {
       if (!documentLogUuid) return
-      const [fetchedLogs, errorFetchingLogs] = await executeFetchAction({
+      const [data, error] = await getProviderLogsForDocumentLogAction({
         documentLogUuid,
       })
 
-      if (errorFetchingLogs) {
+      if (error) {
+        console.error(error)
+
         toast({
           title: 'Error fetching provider logs',
-          description:
-            errorFetchingLogs.formErrors?.[0] || errorFetchingLogs.message,
+          description: error.formErrors?.[0] || error.message,
           variant: 'destructive',
         })
         return undefined
       }
 
-      return fetchedLogs as ProviderLog[]
+      return data as ProviderLog[]
     },
     opts,
   )

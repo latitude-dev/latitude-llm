@@ -8,6 +8,7 @@ export const fetchEvaluationsAction = authProcedure
   .createServerAction()
   .handler(async ({ ctx }) => {
     const evaluationsScope = new EvaluationsRepository(ctx.workspace.id)
+    const evaluations = await evaluationsScope.findAll().then((r) => r.unwrap())
 
-    return await evaluationsScope.findAll().then((r) => r.unwrap())
+    return evaluations
   })

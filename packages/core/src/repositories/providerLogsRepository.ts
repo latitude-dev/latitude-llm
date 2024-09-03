@@ -45,6 +45,7 @@ export class ProviderLogsRepository extends Repository<typeof tt> {
       .from(this.scope)
       .where(eq(this.scope.documentLogUuid, documentLogUuid))
       .orderBy(asc(this.scope.generatedAt))
+
     return Result.ok(result)
   }
 }

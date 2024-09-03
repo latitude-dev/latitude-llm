@@ -1,39 +1,41 @@
 'use client'
 
-import type { Evaluation } from '@latitude-data/core/browser'
+import type { EvaluationDto } from '@latitude-data/core/browser'
 import { useSession, useToast } from '@latitude-data/web-ui'
 import { createEvaluationAction } from '$/actions/evaluations/create'
 import { fetchEvaluationsAction } from '$/actions/evaluations/fetch'
+import { updateEvaluationContentAction } from '$/actions/evaluations/updateContent'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import useSWR, { SWRConfiguration } from 'swr'
 
 export default function useEvaluations(
   opts: SWRConfiguration & {
-    onSuccessCreate?: (evaluation: Evaluation) => void
+    onSuccessCreate?: (evaluation: EvaluationDto) => void
   } = {},
 ) {
   const { workspace } = useSession()
-
   const { onSuccessCreate } = opts
   const { toast } = useToast()
 
   const {
-    data = undefined,
+    data = [],
     mutate,
     isLoading,
     error: swrError,
-  } = useSWR<Evaluation[] | undefined>(
+  } = useSWR<EvaluationDto[]>(
     ['evaluations', workspace.id],
     async () => {
       const [data, error] = await fetchEvaluationsAction()
 
       if (error) {
+        console.error(error)
+
         toast({
-          title: 'Error fetching provider logs',
+          title: 'Error fetching evaluations',
           description: error.formErrors?.[0] || error.message,
           variant: 'destructive',
         })
-        return undefined
+        throw error
       }
 
       return data
@@ -54,11 +56,25 @@ export default function useEvaluations(
       },
     })
 
+  const { execute: updateEvaluation, isPending: isUpdating } =
+    useLatitudeAction(updateEvaluationContentAction, {
+      onSuccess: ({ data: newEval }) => {
+        const prevEvaluations = data
+        mutate(
+          prevEvaluations.map((prevEval) =>
+            prevEval.uuid === newEval.uuid ? newEval : prevEval,
+          ),
+        )
+      },
+    })
+
   return {
     data,
     isLoading,
     createEvaluation,
     isCreating,
+    updateEvaluation,
+    isUpdating,
     error: swrError,
   }
 }
