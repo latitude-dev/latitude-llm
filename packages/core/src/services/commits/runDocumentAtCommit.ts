@@ -15,7 +15,7 @@ import {
 import { NotFoundError, Result, UnprocessableEntityError } from '../../lib'
 import { streamToGenerator } from '../../lib/streamToGenerator'
 import { ProviderApiKeysRepository } from '../../repositories'
-import { ai, AILog, validateConfig } from '../ai'
+import { ai, AILog, Config, validateConfig } from '../ai'
 import { getResolvedContent } from '../documents/getResolvedContent'
 
 type CachedApiKeys = Map<string, ProviderApiKey>
@@ -89,7 +89,7 @@ export async function runDocumentAtCommit({
   // Dummy handling of the response
   // This is helpful for not throwing the error
   // when no one is listening to the promise
-  response.then(() => {}).catch(() => {})
+  response.catch(() => {})
 
   return Result.ok({
     stream,
@@ -141,9 +141,7 @@ async function iterate({
       data: {
         type: ChainEventTypes.Step,
         isLastStep: completed,
-        config: {
-          provider: apiKey.provider,
-        },
+        config: conversation.config as Config,
         messages: newMessagesInStep,
       },
       event: StreamEventTypes.Latitude,
@@ -191,7 +189,7 @@ async function iterate({
         event: StreamEventTypes.Latitude,
         data: {
           type: ChainEventTypes.Complete,
-          config: conversation.config,
+          config: conversation.config as Config,
           messages: [
             {
               role: MessageRole.assistant,
@@ -271,7 +269,6 @@ async function doChainStep({
   const config = validateConfig(conversation.config)
   apiKey = findApiKey({ allApiKeys, name: config.provider })
 
-  // Only new message are sent in each step
   const newMessagesInStep = conversation.messages.slice(sentCount)
   sentCount += newMessagesInStep.length
 

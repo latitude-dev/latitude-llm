@@ -1,4 +1,4 @@
-import { Config, Message, MessageRole } from '@latitude-data/compiler'
+import { Message, MessageRole } from '@latitude-data/compiler'
 
 import {
   ChainCallResponse,
@@ -15,7 +15,7 @@ import {
   ProviderApiKeysRepository,
   ProviderLogsRepository,
 } from '../../../repositories'
-import { ai, AILog } from '../../ai'
+import { ai, AILog, PartialConfig } from '../../ai'
 import { enqueueChainEvent } from '../../commits'
 
 export async function addMessages({
@@ -89,7 +89,7 @@ async function streamMessageResponse({
   messages,
   providerLogHandler,
 }: {
-  config: Config
+  config: PartialConfig
   documentLogUuid: DocumentLog['uuid']
   provider: ProviderApiKey
   controller: ReadableStreamDefaultController
@@ -123,7 +123,7 @@ async function streamMessageResponse({
       event: StreamEventTypes.Latitude,
       data: {
         type: ChainEventTypes.Complete,
-        config,
+        config: { ...config, provider: provider.name, model: config.model },
         messages: [
           {
             role: MessageRole.assistant,

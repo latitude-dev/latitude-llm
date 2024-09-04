@@ -236,7 +236,10 @@ This is a test document
           data: {
             type: 'chain-step',
             isLastStep: false,
-            config: { provider: 'openai' },
+            config: {
+              provider: 'openai',
+              model: 'gpt-4o',
+            },
             messages: [
               {
                 role: 'system',
@@ -262,7 +265,10 @@ This is a test document
           data: {
             type: 'chain-step',
             isLastStep: true,
-            config: { provider: 'openai' },
+            config: {
+              provider: 'openai',
+              model: 'gpt-4o',
+            },
             messages: [
               {
                 role: 'assistant',

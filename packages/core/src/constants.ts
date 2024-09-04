@@ -1,9 +1,10 @@
 import type {
   Message as CompilerMessage,
-  Config,
   ToolCall,
 } from '@latitude-data/compiler'
 import { CompletionTokenUsage, CoreTool, TextStreamPart } from 'ai'
+
+import { Config } from './services/ai'
 
 export const LATITUDE_EVENT = 'latitudeEventsChannel'
 export const LATITUDE_DOCS_URL = ''
@@ -48,6 +49,7 @@ export enum Providers {
   Groq = 'groq',
   Mistral = 'mistral',
   Azure = 'azure',
+  Google = 'google',
 }
 
 export enum LogSources {
