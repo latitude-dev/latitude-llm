@@ -21,6 +21,7 @@ export const providersEnum = latitudeSchema.enum('provider', [
   Providers.Groq,
   Providers.Mistral,
   Providers.Azure,
+  Providers.Google,
 ])
 
 export const providerApiKeys = latitudeSchema.table(

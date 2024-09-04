@@ -35,6 +35,7 @@
   "devDependencies": {
     "@ai-sdk/anthropic": "^0.0.48",
     "@ai-sdk/azure": "^0.0.32",
+    "@ai-sdk/google": "^0.0.46",
     "@ai-sdk/mistral": "^0.0.38",
     "@ai-sdk/openai": "^0.0.54",
     "@faker-js/faker": "^8.4.1",
@@ -68,11 +69,12 @@
   "peerDependencies": {
     "@ai-sdk/anthropic": "^0.0.48",
     "@ai-sdk/azure": "^0.0.32",
+    "@ai-sdk/google": "^0.0.46",
     "@ai-sdk/mistral": "^0.0.38",
     "@ai-sdk/openai": "^0.0.54",
-    "@latitude-data/jobs": "workspace:^",
     "@latitude-data/compiler": "workspace:^",
     "@latitude-data/env": "workspace:^",
+    "@latitude-data/jobs": "workspace:^",
     "@latitude-data/mailers": "workspace:^",
     "@t3-oss/env-core": "^0.11.1",
     "ai": "^3.2.42",

@@ -1,8 +1,8 @@
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { createAzure } from '@ai-sdk/azure'
+import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { createMistral } from '@ai-sdk/mistral'
 import { createOpenAI } from '@ai-sdk/openai'
-import { OpenAICompletionModelId } from '@ai-sdk/openai/internal'
 import { Message } from '@latitude-data/compiler'
 import {
   CallWarning,
@@ -38,10 +38,12 @@ export type FinishCallbackEvent = {
 export type FinishCallback = (event: FinishCallbackEvent) => void
 
 export type Config = {
+  [key: string]: any
   provider: string
   model: string
   azure?: { resourceName: string }
-} & Record<string, unknown>
+}
+
 export type PartialConfig = Omit<Config, 'provider'>
 
 const GROQ_API_URL = 'https://api.groq.com/openai/v1'
@@ -81,6 +83,11 @@ function createProvider({
         apiKey,
         ...(config?.azure ?? {}),
       })
+    case Providers.Google:
+      return createGoogleGenerativeAI({
+        apiKey,
+        ...(config?.google ?? {}),
+      })
     default:
       throw new Error(`Provider ${provider} not supported`)
   }
@@ -118,7 +125,7 @@ export async function ai(
     id: providerId,
     provider: providerType,
   } = apiProvider
-  const model = config.model as OpenAICompletionModelId
+  const model = config.model
   const m = createProvider({ provider, apiKey, config })(model)
 
   const result = await streamText({
@@ -149,8 +156,6 @@ export async function ai(
     },
   })
 
-  // Do not expose all the classes from the `ai` package
-  // It has some private properties and TypeScript will not allow
   return {
     fullStream: result.fullStream,
     text: result.text,
@@ -164,6 +169,22 @@ export function validateConfig(config: Record<string, unknown>): Config {
     .object({
       model: z.string(),
       provider: z.string(),
+      google: z
+        .object({
+          structuredOutputs: z.boolean().optional(),
+          cachedContent: z.string().optional(),
+          safetySettings: z
+            .array(
+              z
+                .object({
+                  category: z.string().optional(), // TODO: can be an enum
+                  threshold: z.string().optional(), // TODO: can be an enum
+                })
+                .optional(),
+            )
+            .optional(),
+        })
+        .optional(),
       azure: z
         .object({
           resourceName: z.string(),
