@@ -44,6 +44,7 @@
 @layer base {
   :root {
     --background: 255 255 255;
+    --background-gray: 252 252 252;
     --foreground: 3 7 17;
 
     --card: 255 255 255;
@@ -79,6 +80,7 @@
 
   .dark {
     --background: 12 12 18;
+    --background-gray: 17 24 39;
     --foreground: 243 244 246;
 
     --card: 3 7 17;

@@ -1,6 +1,6 @@
 import { ReactNode } from 'react'
 
-import { Text } from '@latitude-data/web-ui'
+import { Container, Text } from '@latitude-data/web-ui'
 import { AppLayout } from '$/components/layouts'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
 import { getSession } from '$/services/auth/getSession'
@@ -40,16 +40,12 @@ export default async function SettingsLayout({
       breadcrumbs={breadcrumbs}
       sectionLinks={sectionLinks}
     >
-      <div className='flex justify-center items-center max-w-[1024px] m-auto py-6'>
+      <Container>
         {children}
-        <div className='w-full flex flex-col items-center'>
-          <div className='flex flex-col w-[1024px] gap-[40px]'>
-            <WorkspaceName />
-            <ProviderApiKeys />
-            <Memberships />
-          </div>
-        </div>
-      </div>
+        <WorkspaceName />
+        <ProviderApiKeys />
+        <Memberships />
+      </Container>
     </AppLayout>
   )
 }

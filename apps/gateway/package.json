@@ -5,8 +5,8 @@
   "description": "Gateway for Latitude Data",
   "private": true,
   "scripts": {
-    "build": "tsup --config tsup.config.ts",
     "dev": "tsx watch src/server",
+    "build": "tsup --config tsup.config.ts",
     "dev:debug": "tsx watch --inspect-brk src/server",
     "lint": "eslint src/",
     "prettier": "prettier --write \"**/*.{ts,tsx,md}\"",

@@ -23,6 +23,7 @@ module.exports = {
         input: 'rgb(var(--input) / <alpha-value>)',
         ring: 'rgb(var(--ring) / <alpha-value>)',
         background: 'rgb(var(--background) / <alpha-value>)',
+        'background-gray': 'rgb(var(--background-gray) / <alpha-value>)',
         foreground: 'rgb(var(--foreground) / <alpha-value>)',
         primary: {
           DEFAULT: 'rgb(var(--primary) / <alpha-value>)',
