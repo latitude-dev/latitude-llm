@@ -1,7 +1,7 @@
 {
   "name": "@latitude-data/core",
   "version": "0.0.1",
-  "description": "Latitude core contains core services used across the latitude LLM stack",
+  "description": "Core services used across the latitude LLM stack",
   "type": "module",
   "exports": {
     "./browser": "./src/browser.ts",
