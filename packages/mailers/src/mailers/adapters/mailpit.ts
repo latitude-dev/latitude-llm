@@ -5,7 +5,6 @@ import { MailerOptions } from '.'
 export default function createMailtrapTransport({
   transportOptions,
 }: MailerOptions) {
-  // TODO: change
   return nodemailer.createTransport(
     {
       port: 1025,

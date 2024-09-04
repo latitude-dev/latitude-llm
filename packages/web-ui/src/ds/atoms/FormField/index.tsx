@@ -99,52 +99,44 @@ function FormField({
   const formItemId = `${id}-form-item`
   const formDescriptionId = `${id}-form-item-description`
   const formMessageId = `${id}-form-item-message`
+  const input = (
+    <div
+      className={cn('space-y-2 w-full', className)}
+      aria-describedby={
+        !error
+          ? `${formDescriptionId}`
+          : `${formDescriptionId} ${formMessageId}`
+      }
+      aria-invalid={!!error}
+    >
+      {label ? (
+        <Label variant={error ? 'destructive' : 'default'} htmlFor={formItemId}>
+          {label}
+        </Label>
+      ) : null}
+      <FormControl
+        error={error}
+        formItemId={formItemId}
+        formDescriptionId={formDescriptionId}
+        formMessageId={formMessageId}
+      >
+        {children}
+      </FormControl>
+
+      {description && (
+        <FormDescription id={formDescriptionId}>{description}</FormDescription>
+      )}
+
+      {errorStyle === 'inline' ? (
+        <InlineFormMessage error={error} id={formMessageId} />
+      ) : null}
+    </div>
+  )
+
+  if (errorStyle !== 'tooltip') return input
 
   return (
-    <Tooltip
-      side='bottom'
-      align='start'
-      asChild
-      open={!!error && errorStyle === 'tooltip'}
-      trigger={
-        <div
-          className={cn('space-y-2 w-full', className)}
-          aria-describedby={
-            !error
-              ? `${formDescriptionId}`
-              : `${formDescriptionId} ${formMessageId}`
-          }
-          aria-invalid={!!error}
-        >
-          {label ? (
-            <Label
-              variant={error ? 'destructive' : 'default'}
-              htmlFor={formItemId}
-            >
-              {label}
-            </Label>
-          ) : null}
-          <FormControl
-            error={error}
-            formItemId={formItemId}
-            formDescriptionId={formDescriptionId}
-            formMessageId={formMessageId}
-          >
-            {children}
-          </FormControl>
-
-          {description && (
-            <FormDescription id={formDescriptionId}>
-              {description}
-            </FormDescription>
-          )}
-
-          {errorStyle === 'inline' ? (
-            <InlineFormMessage error={error} id={formMessageId} />
-          ) : null}
-        </div>
-      }
-    >
+    <Tooltip side='bottom' align='start' asChild open={!!error} trigger={input}>
       <TooltipMessage error={error} />
     </Tooltip>
   )

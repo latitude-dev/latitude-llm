@@ -1,4 +1,4 @@
-import { Button, TableBlankSlate, Text } from '@latitude-data/web-ui'
+import { ListingHeader, TableBlankSlate } from '@latitude-data/web-ui'
 import useEvaluations from '$/stores/evaluationsStore'
 
 import ActiveEvaluationsTable from './Table'
@@ -12,12 +12,14 @@ export default function ActiveEvaluations({
 
   return (
     <div className='w-full flex flex-col gap-4'>
-      <div className='w-full flex flex-row justify-between items-center'>
-        <Text.H4M>Your evaluations</Text.H4M>
-        <Button fancy variant='outline' onClick={onCreateEvaluation}>
-          Add evaluation
-        </Button>
-      </div>
+      <ListingHeader
+        title='Your evaluations'
+        actions={
+          <ListingHeader.Button onClick={onCreateEvaluation}>
+            Add evaluation
+          </ListingHeader.Button>
+        }
+      />
       {evaluations?.length ? (
         <ActiveEvaluationsTable evaluations={evaluations} />
       ) : (

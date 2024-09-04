@@ -20,32 +20,38 @@ export default function Evaluations({
     useState<CreateEvaluationData>()
 
   return (
-    <Container>
-      <ActiveEvaluations
-        onCreateEvaluation={() =>
-          setNewEvaluationData({
-            title: 'New Evaluation',
-            description: '',
-            prompt: '',
-          })
-        }
-      />
-      {evaluationTemplates.length > 0 && (
-        <EvaluationTemplates
-          evaluationTemplates={evaluationTemplates}
-          onSelectTemplate={(template) =>
+    <>
+      <Container>
+        <ActiveEvaluations
+          onCreateEvaluation={() =>
             setNewEvaluationData({
-              title: template.name,
-              description: template.description,
-              prompt: template.prompt,
+              title: 'New Evaluation',
+              description: '',
+              prompt: '',
             })
           }
         />
+      </Container>
+      {evaluationTemplates.length > 0 && (
+        <div className='mt-6'>
+          <Container>
+            <EvaluationTemplates
+              evaluationTemplates={evaluationTemplates}
+              onSelectTemplate={(template) =>
+                setNewEvaluationData({
+                  title: template.name,
+                  description: template.description,
+                  prompt: template.prompt,
+                })
+              }
+            />
+          </Container>
+        </div>
       )}
       <CreateEvaluationModal
         data={newEvaluationData}
         onClose={() => setNewEvaluationData(undefined)}
       />
-    </Container>
+    </>
   )
 }
