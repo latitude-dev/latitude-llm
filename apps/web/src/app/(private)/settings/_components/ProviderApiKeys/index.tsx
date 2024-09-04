@@ -7,6 +7,7 @@ import {
   Button,
   Icons,
   Table,
+  TableBlankSlate,
   TableBody,
   TableCell,
   TableHead,
@@ -40,17 +41,14 @@ export default function ProviderApiKeys() {
           <ProviderApiKeysTable providerApiKeys={providerApiKeys} />
         )}
         {providerApiKeys.length === 0 && (
-          <div className='rounded-lg w-full py-12 flex flex-col gap-4 items-center justify-center bg-secondary'>
-            <div className='max-w-[50%]'>
-              <Text.H5 align='center' display='block' color='foregroundMuted'>
-                There are no providers yet. Create one to start working with
-                your prompts.
-              </Text.H5>
-            </div>
-            <Button fancy onClick={() => setOpen(true)}>
-              Create one
-            </Button>
-          </div>
+          <TableBlankSlate
+            description='There are no providers yet. Create one to start working with your prompts.'
+            link={
+              <TableBlankSlate.Button onClick={() => setOpen(true)}>
+                Create one
+              </TableBlankSlate.Button>
+            }
+          />
         )}
       </div>
     </div>

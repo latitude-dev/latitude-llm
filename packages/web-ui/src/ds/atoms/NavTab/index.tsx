@@ -20,24 +20,22 @@ function NavTabItem({
   const Comp = asChild ? Slot : 'div'
 
   return (
-    <Comp
-      onClick={onClick}
-      className={cn('px-4 py-2 cursor-pointer border-b-2', {
-        'border-transparent': !selected,
-        'border-accent-foreground': selected,
-      })}
-    >
-      <Text.H5M color={selected ? 'accentForeground' : 'foregroundMuted'}>
-        {label}
-      </Text.H5M>
+    <Comp onClick={onClick} className='px-2 py-1.5 cursor-pointer'>
+      <div
+        className={cn('py-1 px-2 rounded-md hover:bg-muted', {
+          'bg-muted': selected,
+        })}
+      >
+        <Text.H5M color={selected ? 'foreground' : 'foregroundMuted'}>
+          {label}
+        </Text.H5M>
+      </div>
     </Comp>
   )
 }
 
 function NavTabGroup({ children }: { children: ReactNode }) {
-  return (
-    <nav className='flex flex-row px-6 gap-2 bg-background'>{children}</nav>
-  )
+  return <nav className='flex flex-row gap-2'>{children}</nav>
 }
 
 function NavTab({ tabs }: { tabs: INavTabItem[] }) {

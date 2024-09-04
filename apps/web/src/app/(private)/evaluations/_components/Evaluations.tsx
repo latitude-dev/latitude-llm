@@ -3,6 +3,7 @@
 import { useState } from 'react'
 
 import { EvaluationTemplateWithCategory } from '@latitude-data/core/browser'
+import { Container } from '@latitude-data/web-ui'
 
 import ActiveEvaluations from './ActiveEvaluations'
 import CreateEvaluationModal, {
@@ -19,17 +20,17 @@ export default function Evaluations({
     useState<CreateEvaluationData>()
 
   return (
-    <div className='w-full flex flex-col items-center'>
-      <div className='w-full max-w-screen-xl py-6 px-4 flex flex-col gap-10'>
-        <ActiveEvaluations
-          onCreateEvaluation={() =>
-            setNewEvaluationData({
-              title: 'New Evaluation',
-              description: '',
-              prompt: '',
-            })
-          }
-        />
+    <Container>
+      <ActiveEvaluations
+        onCreateEvaluation={() =>
+          setNewEvaluationData({
+            title: 'New Evaluation',
+            description: '',
+            prompt: '',
+          })
+        }
+      />
+      {evaluationTemplates.length > 0 && (
         <EvaluationTemplates
           evaluationTemplates={evaluationTemplates}
           onSelectTemplate={(template) =>
@@ -40,11 +41,11 @@ export default function Evaluations({
             })
           }
         />
-        <CreateEvaluationModal
-          data={newEvaluationData}
-          onClose={() => setNewEvaluationData(undefined)}
-        />
-      </div>
-    </div>
+      )}
+      <CreateEvaluationModal
+        data={newEvaluationData}
+        onClose={() => setNewEvaluationData(undefined)}
+      />
+    </Container>
   )
 }

@@ -1,6 +1,6 @@
 import { ReactNode } from 'react'
 
-import { Button, Text } from '@latitude-data/web-ui'
+import { Button, TableBlankSlate, Text } from '@latitude-data/web-ui'
 import { AppLayout } from '$/components/layouts'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
 import { getSession } from '$/services/auth/getSession'
@@ -61,23 +61,16 @@ export default async function DashboardLayout({
               <ProjectsTable documents={documents} projects={projects} />
             )}
             {projects.length === 0 && (
-              <div className='rounded-lg w-full py-12 flex flex-col gap-4 items-center justify-center bg-secondary'>
-                <div className='max-w-[50%]'>
-                  <Text.H5
-                    align='center'
-                    display='block'
-                    color='foregroundMuted'
-                  >
-                    There are no projects yet. Create one to start adding your
-                    prompts.
-                  </Text.H5>
-                </div>
-                <Link href={ROUTES.dashboard.projects.new.root}>
-                  <Button fancy variant='outline'>
-                    Create your first project
-                  </Button>
-                </Link>
-              </div>
+              <TableBlankSlate
+                description='There are no projects yet. Create one to start adding your prompts.'
+                link={
+                  <Link href={ROUTES.dashboard.projects.new.root}>
+                    <TableBlankSlate.Button>
+                      Create your first project
+                    </TableBlankSlate.Button>
+                  </Link>
+                }
+              />
             )}
           </div>
         </div>

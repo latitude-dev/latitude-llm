@@ -519,7 +519,7 @@ importers:
         specifier: workspace:^
         version: link:../compiler
       '@latitude-data/env':
-        specifier: workspace:^
+        specifier: workspace:*
         version: link:../env
       '@latitude-data/eslint-config':
         specifier: workspace:*

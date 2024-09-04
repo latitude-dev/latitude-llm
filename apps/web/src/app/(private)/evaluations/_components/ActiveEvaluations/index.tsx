@@ -1,7 +1,6 @@
-import { Button, Text } from '@latitude-data/web-ui'
+import { Button, TableBlankSlate, Text } from '@latitude-data/web-ui'
 import useEvaluations from '$/stores/evaluationsStore'
 
-import EmptyActiveEvaluations from './Empty'
 import ActiveEvaluationsTable from './Table'
 
 export default function ActiveEvaluations({
@@ -22,7 +21,14 @@ export default function ActiveEvaluations({
       {evaluations?.length ? (
         <ActiveEvaluationsTable evaluations={evaluations} />
       ) : (
-        <EmptyActiveEvaluations onCreateEvaluation={onCreateEvaluation} />
+        <TableBlankSlate
+          description='There are no evaluations yet. Create one to start reviewing your prompts.'
+          link={
+            <TableBlankSlate.Button onClick={onCreateEvaluation}>
+              Create your first evaluation
+            </TableBlankSlate.Button>
+          }
+        />
       )}
     </div>
   )
