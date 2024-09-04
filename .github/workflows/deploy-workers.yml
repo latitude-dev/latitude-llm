@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - 'apps/workers/**'
+      - 'packages/**'
 
 jobs:
   deploy:

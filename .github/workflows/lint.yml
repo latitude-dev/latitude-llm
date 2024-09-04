@@ -14,13 +14,13 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [20.x] # Specify node versions you want to test against
+        node-version: [20.x]
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
         with:
-          fetch-depth: 2 # Checkout HEAD^
+          fetch-depth: 2
 
       - name: Setup Node.js
         uses: actions/setup-node@v3
