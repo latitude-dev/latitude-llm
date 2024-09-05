@@ -36,6 +36,12 @@ export const ROUTES = {
       },
     },
   },
+  datasets: {
+    root: '/datasets',
+    new: {
+      root: `/datasets/new`,
+    },
+  },
   evaluations: {
     root: '/evaluations',
     detail: ({ uuid }: { uuid: string }) => {
