@@ -1,6 +1,6 @@
 import { and, desc, eq, isNotNull, isNull, or } from 'drizzle-orm'
 
-import { DocumentVersion, Project } from '../../browser'
+import { Commit, DocumentVersion, Project } from '../../browser'
 import { database } from '../../client'
 import {
   CommitStatus,
@@ -47,7 +47,10 @@ function filterByStatusQuery({
   }
 }
 
-export class CommitsRepository extends Repository<typeof columnSelection> {
+export class CommitsRepository extends Repository<
+  typeof columnSelection,
+  Commit
+> {
   get scope() {
     return buildCommitsScope(this.workspaceId, this.db)
   }

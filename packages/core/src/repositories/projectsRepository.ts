@@ -1,5 +1,6 @@
 import { eq, getTableColumns, isNull } from 'drizzle-orm'
 
+import { Project } from '../browser'
 import { NotFoundError, Result } from '../lib'
 import { projects } from '../schema'
 import Repository from './repository'
@@ -8,7 +9,7 @@ const NOT_FOUND_MSG = 'Project not found'
 
 const tt = getTableColumns(projects)
 
-export class ProjectsRepository extends Repository<typeof tt> {
+export class ProjectsRepository extends Repository<typeof tt, Project> {
   get scope() {
     return this.db
       .select(tt)

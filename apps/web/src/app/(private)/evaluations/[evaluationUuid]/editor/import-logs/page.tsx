@@ -78,7 +78,7 @@ export default function ImportLogs({
         </>
       }
     >
-      <div className='flex flex-col gap-4'>
+      <div className='flex flex-col gap-4 min-w-0'>
         <div className='flex flex-row gap-4'>
           <FormField label='Project'>
             <Select
@@ -137,11 +137,21 @@ const ProviderLogsTable = ({
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead>Created at</TableHead>
-            <TableHead>Messages</TableHead>
-            <TableHead>Tokens</TableHead>
-            <TableHead>Prompt</TableHead>
-            <TableHead>Type</TableHead>
+            <TableHead>
+              <Text.H4>Created at</Text.H4>
+            </TableHead>
+            <TableHead>
+              <Text.H4>Messages</Text.H4>
+            </TableHead>
+            <TableHead>
+              <Text.H4>Tokens</Text.H4>
+            </TableHead>
+            <TableHead>
+              <Text.H4>Prompt</Text.H4>
+            </TableHead>
+            <TableHead>
+              <Text.H4>Type</Text.H4>
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>

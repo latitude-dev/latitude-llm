@@ -1,6 +1,6 @@
 import { eq, getTableColumns } from 'drizzle-orm'
 
-import { Commit, DocumentLog } from '../../browser'
+import { Commit, DocumentLog, EvaluationResult } from '../../browser'
 import { Result } from '../../lib'
 import { documentLogs, evaluationResults, evaluations } from '../../schema'
 import Repository from '../repository'
@@ -13,7 +13,10 @@ export type DocumentLogWithMetadata = DocumentLog & {
 
 const tt = getTableColumns(evaluationResults)
 
-export class EvaluationResultsRepository extends Repository<typeof tt> {
+export class EvaluationResultsRepository extends Repository<
+  typeof tt,
+  EvaluationResult
+> {
   get scope() {
     return this.db
       .select(tt)

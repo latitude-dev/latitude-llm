@@ -1,12 +1,16 @@
 import { eq, getTableColumns } from 'drizzle-orm'
 
+import { ProviderApiKey } from '../browser'
 import { NotFoundError, Result } from '../lib'
 import { providerApiKeys } from '../schema'
 import Repository from './repository'
 
 const tt = getTableColumns(providerApiKeys)
 
-export class ProviderApiKeysRepository extends Repository<typeof tt> {
+export class ProviderApiKeysRepository extends Repository<
+  typeof tt,
+  ProviderApiKey
+> {
   get scope() {
     return this.db
       .select(tt)

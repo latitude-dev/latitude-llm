@@ -11,10 +11,11 @@ import {
   FinishReason,
   streamText,
 } from 'ai'
-import { v4 as uuidv4 } from 'uuid'
+import { v4 } from 'uuid'
 import { z } from 'zod'
 
-import { ProviderApiKey, Providers } from '../../browser'
+import { LogSources, ProviderApiKey, Providers } from '../../browser'
+import { publisher } from '../../events/publisher'
 import { CreateProviderLogProps } from '../providerLogs/create'
 
 export type FinishCallbackEvent = {
@@ -101,22 +102,20 @@ export async function ai(
     messages,
     config,
     documentLogUuid,
-    logGeneratedAt = new Date(),
+    source,
   }: {
     provider: ProviderApiKey
     config: PartialConfig
     messages: Message[]
     documentLogUuid?: string
     prompt?: string
-    logGeneratedAt?: Date
+    source: LogSources
   },
   {
-    providerLogHandler,
     onFinish,
   }: {
-    providerLogHandler: (log: AILog) => void
     onFinish?: FinishCallback
-  },
+  } = {},
 ) {
   const startTime = Date.now()
   const {
@@ -133,23 +132,27 @@ export async function ai(
     prompt,
     messages: messages as CoreMessage[],
     onFinish: (event) => {
-      providerLogHandler({
-        uuid: uuidv4(),
-        generatedAt: logGeneratedAt,
-        documentLogUuid,
-        providerId,
-        providerType,
-        model,
-        config,
-        messages,
-        responseText: event.text,
-        toolCalls: event.toolCalls?.map((t) => ({
-          id: t.toolCallId,
-          name: t.toolName,
-          arguments: t.args,
-        })),
-        usage: event.usage,
-        duration: Date.now() - startTime,
+      publisher.publish({
+        type: 'aiProviderCallCompleted',
+        data: {
+          uuid: v4(),
+          source,
+          generatedAt: new Date(),
+          documentLogUuid,
+          providerId,
+          providerType,
+          model,
+          config,
+          messages,
+          responseText: event.text,
+          toolCalls: event.toolCalls?.map((t) => ({
+            id: t.toolCallId,
+            name: t.toolName,
+            arguments: t.args,
+          })),
+          usage: event.usage,
+          duration: Date.now() - startTime,
+        },
       })
 
       onFinish?.(event)

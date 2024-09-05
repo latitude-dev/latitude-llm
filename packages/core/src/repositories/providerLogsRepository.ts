@@ -1,5 +1,6 @@
 import { asc, desc, eq, getTableColumns } from 'drizzle-orm'
 
+import { ProviderLog } from '../browser'
 import { NotFoundError, Result } from '../lib'
 import {
   documentLogs,
@@ -11,7 +12,7 @@ import Repository, { QueryOptions } from './repository'
 
 const tt = getTableColumns(providerLogs)
 
-export class ProviderLogsRepository extends Repository<typeof tt> {
+export class ProviderLogsRepository extends Repository<typeof tt, ProviderLog> {
   get scope() {
     return this.db
       .select(tt)

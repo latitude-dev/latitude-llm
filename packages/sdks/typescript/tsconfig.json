@@ -5,6 +5,7 @@
     "outDir": "./dist",
     "rootDir": ".",
     "baseUrl": ".",
+    "jsx": "preserve",
     "paths": {
       "$sdk/*": ["./src/*"]
     }
