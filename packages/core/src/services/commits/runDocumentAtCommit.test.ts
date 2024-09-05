@@ -19,6 +19,7 @@ const aiSpy = vi.spyOn(await import('../ai'), 'ai')
 describe('runDocumentAtCommit', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // @ts-expect-error - we are mocking the function
     aiSpy.mockImplementation(mocks.runAi)
   })
 

@@ -11,7 +11,7 @@ import {
   DropdownMenu,
   useLocalStorage,
 } from '@latitude-data/web-ui'
-import useEvaluations from '$/stores/evaluationsStore'
+import useEvaluations from '$/stores/evaluations'
 import { useDebouncedCallback } from 'use-debounce'
 
 import { Header } from './Header'
@@ -23,7 +23,7 @@ export default function EvaluationEditor({
 }: {
   evaluation: EvaluationDto
 }) {
-  const { updateEvaluation } = useEvaluations()
+  const { update } = useEvaluations()
   const [value, setValue] = useState(evaluation.metadata.prompt)
   const [isSaved, setIsSaved] = useState(true)
   const [metadata, setMetadata] = useState<ConversationMetadata>()
@@ -44,7 +44,7 @@ export default function EvaluationEditor({
 
   const debouncedSave = useDebouncedCallback(
     (val: string) => {
-      updateEvaluation({
+      update({
         id: evaluation.id,
         metadata: { prompt: val },
       })

@@ -3,7 +3,7 @@
 import { useMemo } from 'react'
 
 import { Text } from '@latitude-data/web-ui'
-import useEvaluations from '$/stores/evaluationsStore'
+import useEvaluations from '$/stores/evaluations'
 
 export function EvaluationTitle({
   evaluationUuid,

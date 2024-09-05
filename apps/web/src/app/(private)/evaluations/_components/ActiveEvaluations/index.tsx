@@ -1,5 +1,5 @@
 import { ListingHeader, TableBlankSlate } from '@latitude-data/web-ui'
-import useEvaluations from '$/stores/evaluationsStore'
+import useEvaluations from '$/stores/evaluations'
 
 import ActiveEvaluationsTable from './Table'
 

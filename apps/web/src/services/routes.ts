@@ -48,6 +48,7 @@ export const ROUTES = {
       const root = `${ROUTES.evaluations.root}/${uuid}`
       return {
         root,
+        destroy: { root: `${root}/destroy` },
         [EvaluationRoutes.history]: { root },
         [EvaluationRoutes.editor]: {
           root: `${root}/editor`,

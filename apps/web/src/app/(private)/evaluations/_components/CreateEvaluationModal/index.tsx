@@ -8,7 +8,7 @@ import {
   TextArea,
 } from '@latitude-data/web-ui'
 import { ROUTES } from '$/services/routes'
-import useEvaluations from '$/stores/evaluationsStore'
+import useEvaluations from '$/stores/evaluations'
 import { useRouter } from 'next/navigation'
 
 export type CreateEvaluationData = {
@@ -40,7 +40,7 @@ export default function CreateEvaluationModal({
   const {
     data: existingEvaluations,
     isLoading,
-    createEvaluation,
+    create,
     isCreating,
   } = useEvaluations({
     onSuccessCreate: (newEvaluation) => {
@@ -50,13 +50,13 @@ export default function CreateEvaluationModal({
   })
 
   const onConfirm = useCallback(() => {
-    createEvaluation({
+    create({
       name: title,
       description,
       metadata: { prompt },
     })
     onClose(null)
-  }, [createEvaluation, onClose, title, description, prompt])
+  }, [create, onClose, title, description, prompt])
 
   const titleError = useMemo<string | undefined>(() => {
     if (!title) return 'Please enter a name for your evaluation.'
