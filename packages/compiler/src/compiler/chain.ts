@@ -11,7 +11,8 @@ type ChainStep = {
 }
 
 export class Chain {
-  private rawText: string
+  public rawText: string
+
   private ast: Fragment
   private scope: Scope
   private didStart: boolean = false

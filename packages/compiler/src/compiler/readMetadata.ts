@@ -118,7 +118,10 @@ export class ReadMetadata {
     }
 
     return {
-      parameters: scopeContext.usedUndefinedVariables,
+      parameters: new Set([
+        ...scopeContext.usedUndefinedVariables,
+        ...(scopeContext.onlyPredefinedVariables ?? new Set([])),
+      ]),
       resolvedPrompt,
       config,
       errors: this.errors,

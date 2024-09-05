@@ -1,5 +1,6 @@
 import { and, eq, getTableColumns } from 'drizzle-orm'
 
+import { User } from '../browser'
 import { memberships, users } from '../schema'
 import Repository from './repository'
 
@@ -8,7 +9,7 @@ const tt = {
   confirmedAt: memberships.confirmedAt,
 }
 
-export class UsersRepository extends Repository<typeof tt> {
+export class UsersRepository extends Repository<typeof tt, User> {
   get scope() {
     return this.db
       .select(tt)

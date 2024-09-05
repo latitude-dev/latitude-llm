@@ -5,6 +5,7 @@ import {
   ChainEvent,
   ChainEventTypes,
   DocumentLog,
+  LogSources,
   ProviderApiKey,
   StreamEventTypes,
   Workspace,
@@ -15,19 +16,19 @@ import {
   ProviderApiKeysRepository,
   ProviderLogsRepository,
 } from '../../../repositories'
-import { ai, AILog, PartialConfig } from '../../ai'
-import { enqueueChainEvent } from '../../commits'
+import { ai, PartialConfig } from '../../ai'
+import { enqueueChainEvent } from '../../chains/run'
 
 export async function addMessages({
   workspace,
   documentLogUuid,
   messages,
-  providerLogHandler,
+  source,
 }: {
   workspace: Workspace
   documentLogUuid: string | undefined
   messages: Message[]
-  providerLogHandler: (log: AILog) => void
+  source: LogSources
 }) {
   const providerLogRepo = new ProviderLogsRepository(workspace.id)
   const providerLogResult =
@@ -54,11 +55,11 @@ export async function addMessages({
   const stream = new ReadableStream<ChainEvent>({
     start(controller) {
       streamMessageResponse({
+        source,
         config: providerLog.config,
         documentLogUuid: documentLogUuid!,
         provider,
         controller,
-        providerLogHandler,
         messages: [
           ...providerLog.messages,
           {
@@ -87,20 +88,23 @@ async function streamMessageResponse({
   provider,
   controller,
   messages,
-  providerLogHandler,
+  source,
 }: {
   config: PartialConfig
   documentLogUuid: DocumentLog['uuid']
   provider: ProviderApiKey
   controller: ReadableStreamDefaultController
-  providerLogHandler: (log: AILog) => void
   messages: Message[]
+  source: LogSources
 }) {
   try {
-    const result = await ai(
-      { documentLogUuid, messages, config, provider },
-      { providerLogHandler },
-    )
+    const result = await ai({
+      documentLogUuid,
+      messages,
+      config,
+      provider,
+      source,
+    })
 
     for await (const value of streamToGenerator(result.fullStream)) {
       enqueueChainEvent(controller, {

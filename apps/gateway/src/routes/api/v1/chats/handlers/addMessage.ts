@@ -1,7 +1,6 @@
 import { zValidator } from '@hono/zod-validator'
 import { LogSources } from '@latitude-data/core/browser'
 import { addMessages } from '@latitude-data/core/services/documentLogs/index'
-import { createProviderLog } from '@latitude-data/core/services/providerLogs/create'
 import { messageSchema } from '$/common/messageSchema'
 import { pipeToStream } from '$/common/pipeToStream'
 import { Factory } from 'hono/factory'
@@ -22,19 +21,12 @@ export const addMessageHandler = factory.createHandlers(
     return streamSSE(c, async (stream) => {
       const { documentLogUuid, messages, source } = c.req.valid('json')
       const workspace = c.get('workspace')
-      const apiKey = c.get('apiKey')
 
       const result = await addMessages({
         workspace,
         documentLogUuid,
         messages,
-        providerLogHandler: async (log) => {
-          await createProviderLog({
-            ...log,
-            source,
-            apiKeyId: apiKey.id,
-          }).then((r) => r.unwrap())
-        },
+        source,
       }).then((r) => r.unwrap())
 
       await pipeToStream(stream, result.stream)

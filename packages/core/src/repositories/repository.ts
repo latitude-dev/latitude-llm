@@ -10,7 +10,10 @@ export type QueryOptions = {
   offset?: number
 }
 
-export default abstract class Repository<U extends ColumnsSelection> {
+export default abstract class Repository<
+  U extends ColumnsSelection,
+  T extends Record<string, unknown>,
+> {
   protected workspaceId: number
   protected db = database
 
@@ -38,11 +41,6 @@ export default abstract class Repository<U extends ColumnsSelection> {
   async findAll(opts: QueryOptions = {}) {
     let query = this.db.select().from(this.scope)
 
-    // TODO: Review typescript escape hatches
-    //
-    // Since this is performing sql operations over an sql query that gets
-    // defined by this class' childrens, typescript has a hard time figuring
-    // out the types. Should be fixable.
     if (opts.limit !== undefined) {
       // @ts-expect-error
       query = query.limit(opts.limit)
@@ -53,7 +51,7 @@ export default abstract class Repository<U extends ColumnsSelection> {
       query = query.offset(opts.offset)
     }
 
-    const result = await query
+    const result = (await query) as unknown as Promise<T[]>
 
     return Result.ok(result)
   }
@@ -73,6 +71,6 @@ export default abstract class Repository<U extends ColumnsSelection> {
       return Result.error(new NotFoundError(`Record with id ${id} not found`))
     }
 
-    return Result.ok(result[0]!)
+    return Result.ok(result[0]! as T)
   }
 }

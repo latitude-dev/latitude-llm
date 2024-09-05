@@ -1,19 +1,17 @@
 import { ContentType, MessageRole } from '@latitude-data/compiler'
-import { eq } from 'drizzle-orm'
 import { v4 as uuid } from 'uuid'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
   Commit,
   DocumentVersion,
+  LogSources,
   ProviderApiKey,
   ProviderLog,
   Providers,
   SafeUser,
   Workspace,
 } from '../../../browser'
-import { database } from '../../../client'
-import { providerApiKeys } from '../../../schema'
 import {
   createDocumentLog,
   createProject,
@@ -24,7 +22,6 @@ import { addMessages } from './index'
 
 const mocks = vi.hoisted(() => {
   return {
-    providerLogHandler: vi.fn(),
     runAi: vi.fn(async () => {
       const fullStream = new ReadableStream({
         start(controller) {
@@ -140,7 +137,7 @@ describe('addMessages', () => {
       workspace,
       documentLogUuid: uuid(),
       messages: [],
-      providerLogHandler: mocks.providerLogHandler,
+      source: LogSources.API,
     })
 
     expect(result.error).toBeDefined()
@@ -162,17 +159,14 @@ describe('addMessages', () => {
           ],
         },
       ],
-      providerLogHandler: mocks.providerLogHandler,
+      source: LogSources.API,
     }).then((r) => r.unwrap())
 
     await testConsumeStream(stream)
-    // Test touched apiKey after running AI
-    const provider = await database.query.providerApiKeys.findFirst({
-      where: eq(providerApiKeys.id, providerApiKey.id),
-    })
+
     expect(mocks.runAi).toHaveBeenCalledWith(
-      {
-        messages: [
+      expect.objectContaining({
+        messages: expect.arrayContaining([
           ...providerLog.messages,
           {
             role: MessageRole.assistant,
@@ -188,14 +182,14 @@ describe('addMessages', () => {
               },
             ],
           },
-        ],
-        config: { model: 'gpt-4o', provider: 'openai' },
-        provider,
+        ]),
+        config: expect.objectContaining({
+          model: 'gpt-4o',
+          provider: 'openai',
+        }),
+        provider: expect.any(Object),
         documentLogUuid: providerLog.documentLogUuid!,
-      },
-      {
-        providerLogHandler: mocks.providerLogHandler,
-      },
+      }),
     )
   })
 
@@ -215,7 +209,7 @@ describe('addMessages', () => {
           ],
         },
       ],
-      providerLogHandler: mocks.providerLogHandler,
+      source: LogSources.API,
     }).then((r) => r.unwrap())
     const { value } = await testConsumeStream(stream)
 

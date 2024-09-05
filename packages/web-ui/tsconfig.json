@@ -3,7 +3,8 @@
   "compilerOptions": {
     "module": "ESNext",
     "moduleResolution": "Bundler",
-    "types": ["node"]
+    "types": ["node"],
+    "jsx": "preserve"
   },
   "include": ["src"],
   "exclude": ["node_modules", "dist"]

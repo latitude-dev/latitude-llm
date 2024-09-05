@@ -19,7 +19,7 @@ export type DocumentLogWithMetadata = DocumentLog & {
 
 const tt = getTableColumns(documentLogs)
 
-export class DocumentLogsRepository extends Repository<typeof tt> {
+export class DocumentLogsRepository extends Repository<typeof tt, DocumentLog> {
   get scope() {
     return this.db
       .select(tt)

@@ -143,7 +143,7 @@ describe('POST /add-message', () => {
         workspace,
         documentLogUuid: 'fake-document-log-uuid',
         messages: [],
-        providerLogHandler: expect.any(Function),
+        source: LogSources.Playground,
       })
     })
   })

@@ -1,39 +1,45 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { capitalize } from 'lodash-es'
 
-import { ConversationMetadata } from '@latitude-data/compiler'
-import { EvaluationDto } from '@latitude-data/core/browser'
 import {
-  Badge,
-  Button,
-  Icons,
-  Input,
-  Text,
-  TextArea,
-} from '@latitude-data/web-ui'
+  ConversationMetadata,
+  Message,
+  MessageContent,
+  TextContent,
+} from '@latitude-data/compiler'
+import { EvaluationDto } from '@latitude-data/core/browser'
+import { Badge, Icons, Text, TextArea } from '@latitude-data/web-ui'
 import { ROUTES } from '$/services/routes'
 import useProviderLogs from '$/stores/providerLogs'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 
 import { Header } from '../Header'
+import Chat, { EVALUATION_PARAMETERS, Inputs } from './Chat'
 import Preview from './Preview'
 
-type InputDto = {
-  value: string
-  type: 'textarea' | 'input'
+function convertMessage(message: Message) {
+  if (typeof message.content === 'string') {
+    return `${capitalize(message.role)}: \n ${message.content}`
+  } else {
+    const content = message.content[0] as MessageContent
+    if (content.type === 'text') {
+      return `${capitalize(message.role)}: \n ${(content as TextContent).text}`
+    } else {
+      return `${capitalize(message.role)}: <${content.type} message>`
+    }
+  }
 }
 
-function convertParams(inputs: Record<string, InputDto>) {
+function convertMessages(messages: Message[]) {
+  return messages.map((message) => convertMessage(message)).join('\n')
+}
+
+function convertParams(inputs: Inputs) {
   return Object.fromEntries(
-    Object.entries(inputs).map(([key, inputDto]) => {
-      let value
-      try {
-        value = JSON.parse(inputDto.value)
-      } catch (e) {
-        // Do nothing
-      }
+    Object.entries(inputs).map(([key, value]) => {
       return [key, value]
     }),
   )
@@ -47,7 +53,11 @@ export default function Playground({
   metadata: ConversationMetadata
 }) {
   const [mode, setMode] = useState<'preview' | 'chat'>('preview')
-  const [inputs, setInputs] = useState<Record<string, InputDto>>({})
+  const [inputs, setInputs] = useState<Inputs>(
+    Object.fromEntries(
+      EVALUATION_PARAMETERS.map((param: string) => [param, '']),
+    ),
+  )
   const parameters = useMemo(() => convertParams(inputs), [inputs])
   const searchParams = useSearchParams()
   const providerLogUuid = searchParams.get('providerLogUuid')
@@ -57,44 +67,22 @@ export default function Playground({
     [data, providerLogUuid],
   )
 
-  const setInput = useCallback((param: string, value: InputDto) => {
+  const setInput = useCallback((param: string, value: string) => {
     setInputs((inputs) => ({ ...inputs, [param]: value }))
   }, [])
 
   useEffect(() => {
     if (providerLog) {
-      setInput('messages', {
-        type: 'textarea',
-        value: JSON.stringify(providerLog.messages),
+      setInputs({
+        messages: convertMessages(providerLog.messages),
+        last_message: `Assistant: ${providerLog.responseText}`,
       })
     }
   }, [setInput, providerLog])
 
-  useEffect(() => {
-    if (!metadata) return
-
-    // Remove only inputs that are no longer in the metadata, and add new ones
-    // Leave existing inputs as they are
-    setInputs(
-      Object.fromEntries(
-        Array.from(metadata.parameters).map((param) => {
-          if (param in inputs) return [param, inputs[param]!]
-
-          return [param, { value: '', type: 'input' }]
-        }),
-      ),
-    )
-  }, [metadata])
-
   return (
     <>
-      <Header title='Playground'>
-        {mode === 'chat' && (
-          <Button fancy onClick={() => setMode('preview')} variant='outline'>
-            Clear chat
-          </Button>
-        )}
-      </Header>
+      <Header title='Playground' />
       <div className='flex flex-col gap-6 h-full relative'>
         <div className='flex flex-col gap-3'>
           <div className='flex flex-row items-center justify-between gap-4'>
@@ -110,34 +98,17 @@ export default function Playground({
             </Link>
           </div>
           {Object.keys(inputs).length > 0 ? (
-            Object.entries(inputs).map(([param, inputDto], idx) => (
+            Object.entries(inputs).map(([param, value], idx) => (
               <div
                 className='flex flex-row gap-4 w-full items-center'
                 key={idx}
               >
                 <Badge variant='accent'>&#123;&#123;{param}&#125;&#125;</Badge>
                 <div className='flex flex-grow w-full'>
-                  {inputDto.type === 'textarea' ? (
-                    <TextArea
-                      value={inputDto.value}
-                      onChange={(e) =>
-                        setInput(param, {
-                          ...inputDto,
-                          value: e.currentTarget.value,
-                        })
-                      }
-                    />
-                  ) : (
-                    <Input
-                      value={inputDto.value}
-                      onChange={(e) =>
-                        setInput(param, {
-                          ...inputDto,
-                          value: e.currentTarget.value,
-                        })
-                      }
-                    />
-                  )}
+                  <TextArea
+                    value={value}
+                    onChange={(e) => setInput(param, e.currentTarget.value)}
+                  />
                 </div>
               </div>
             ))
@@ -150,15 +121,19 @@ export default function Playground({
         <div className='flex flex-col gap-3 h-full'>
           <div className='flex flex-col flex-grow flex-shrink relative h-full overflow-y-auto'>
             <div className='absolute top-0 left-0 right-0 bottom-0'>
-              {
-                mode === 'preview' ? (
-                  <Preview
-                    metadata={metadata}
-                    parameters={parameters}
-                    runPrompt={() => setMode('chat')}
-                  />
-                ) : null // TODO: Implement Chat component
-              }
+              {mode === 'preview' ? (
+                <Preview
+                  metadata={metadata}
+                  parameters={parameters}
+                  runPrompt={() => setMode('chat')}
+                />
+              ) : (
+                <Chat
+                  evaluation={evaluation}
+                  parameters={parameters}
+                  clearChat={() => setMode('preview')}
+                />
+              )}
             </div>
           </div>
         </div>

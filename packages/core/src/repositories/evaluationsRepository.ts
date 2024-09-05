@@ -2,6 +2,7 @@ import { omit } from 'lodash-es'
 
 import { and, eq, getTableColumns, sql } from 'drizzle-orm'
 
+import { EvaluationDto } from '../browser'
 import { EvaluationMetadataType } from '../constants'
 import { NotFoundError, Result } from '../lib'
 import { evaluations, llmAsJudgeEvaluationMetadatas } from '../schema'
@@ -22,7 +23,10 @@ const tt = {
   },
 }
 
-export class EvaluationsRepository extends Repository<typeof tt> {
+export class EvaluationsRepository extends Repository<
+  typeof tt,
+  EvaluationDto
+> {
   get scope() {
     return this.db
       .select(tt)

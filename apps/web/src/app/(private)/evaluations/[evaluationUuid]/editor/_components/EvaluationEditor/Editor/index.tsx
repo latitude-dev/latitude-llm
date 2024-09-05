@@ -16,6 +16,7 @@ import { useDebouncedCallback } from 'use-debounce'
 
 import { Header } from './Header'
 import Playground from './Playground'
+import { EVALUATION_PARAMETERS } from './Playground/Chat'
 
 export default function EvaluationEditor({
   evaluation,
@@ -62,7 +63,7 @@ export default function EvaluationEditor({
   useEffect(() => {
     readMetadata({
       prompt: value,
-      // withParameters: ['messages', 'response'], // TODO: uncomment this line once I understand why it breaks
+      withParameters: EVALUATION_PARAMETERS,
     }).then(setMetadata)
   }, [value])
 

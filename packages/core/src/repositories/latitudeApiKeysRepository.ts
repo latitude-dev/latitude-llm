@@ -1,12 +1,13 @@
 import { eq, getTableColumns } from 'drizzle-orm'
 
+import { ApiKey } from '../browser'
 import { Result, UnprocessableEntityError } from '../lib'
 import { apiKeys, workspaces } from '../schema'
 import Repository from './repository'
 
 const tt = getTableColumns(apiKeys)
 
-export class LatitudeApiKeysRepository extends Repository<typeof tt> {
+export class LatitudeApiKeysRepository extends Repository<typeof tt, ApiKey> {
   get scope() {
     return this.db
       .select(tt)

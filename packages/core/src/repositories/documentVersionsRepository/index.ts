@@ -34,7 +34,10 @@ const tt = {
   projectId: sql<number>`${projects.id}::int`.as('projectId'),
 }
 
-export class DocumentVersionsRepository extends Repository<typeof tt> {
+export class DocumentVersionsRepository extends Repository<
+  typeof tt,
+  DocumentVersion & { mergedAt: Date | null; projectId: number }
+> {
   get scope() {
     return this.db
       .select(tt)

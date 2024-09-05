@@ -249,7 +249,7 @@ export default function Chat({
   )
 }
 
-function AnimatedDots() {
+export function AnimatedDots() {
   return (
     <span className='flex flex-row items-center gap-1'>
       <Text.H6M color='foregroundMuted'>
@@ -265,7 +265,7 @@ function AnimatedDots() {
   )
 }
 
-function TokenUsage({
+export function TokenUsage({
   isScrolledToBottom,
   tokens,
   responseStream,
@@ -294,7 +294,7 @@ function TokenUsage({
   )
 }
 
-function StreamMessage({
+export function StreamMessage({
   responseStream,
   conversation,
   chainLength,
@@ -333,7 +333,7 @@ function StreamMessage({
   )
 }
 
-function Timer({ timeMs }: { timeMs: number }) {
+export function Timer({ timeMs }: { timeMs: number }) {
   return (
     <div className='flex flex-row items-center'>
       <div className='flex-grow h-px bg-muted-foreground/40' />
