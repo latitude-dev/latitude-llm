@@ -37,8 +37,10 @@ module.exports = {
           DEFAULT: 'rgb(var(--destructive) / <alpha-value>)',
           foreground: 'rgb(var(--destructive-foreground) / <alpha-value>)',
         },
-        'destructive-muted-foreground': 'rgb(var(--destructive-muted-foreground) / <alpha-value>)',
-        'warning-muted-foreground': 'rgb(var(--warning-muted-foreground) / <alpha-value>)',
+        'destructive-muted-foreground':
+          'rgb(var(--destructive-muted-foreground) / <alpha-value>)',
+        'warning-muted-foreground':
+          'rgb(var(--warning-muted-foreground) / <alpha-value>)',
         muted: {
           DEFAULT: 'rgb(var(--muted) / <alpha-value>)',
           foreground: 'rgb(var(--muted-foreground) / <alpha-value>)',
@@ -59,6 +61,12 @@ module.exports = {
         card: {
           DEFAULT: 'rgb(var(--card) / <alpha-value>)',
           foreground: 'rgb(var(--card-foreground) / <alpha-value>)',
+        },
+        purple: {
+          DEFAULT: 'rgb(var(--purple) / <alpha-value>)',
+        },
+        yellow: {
+          DEFAULT: 'rgb(var(--yellow) / <alpha-value>)',
         },
       },
       borderRadius: {
@@ -82,9 +90,10 @@ module.exports = {
       },
       maxWidth: {
         modal: '580px',
+        'modal-lg': '720px',
       },
       transitionDelay: {
-        '250': '250ms',
+        250: '250ms',
       },
     },
   },

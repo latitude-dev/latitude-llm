@@ -5,6 +5,10 @@ import { database } from '../client'
 import { NotFoundError, Result } from '../lib'
 
 export type PaginationArgs = { page?: number; pageSize?: number }
+export type QueryOptions = {
+  limit?: number
+  offset?: number
+}
 
 export default abstract class Repository<U extends ColumnsSelection> {
   protected workspaceId: number
@@ -31,8 +35,26 @@ export default abstract class Repository<U extends ColumnsSelection> {
 
   abstract get scope(): SubqueryWithSelection<U, string>
 
-  async findAll() {
-    const result = await this.db.select().from(this.scope)
+  async findAll(opts: QueryOptions = {}) {
+    let query = this.db.select().from(this.scope)
+
+    // TODO: Review typescript escape hatches
+    //
+    // Since this is performing sql operations over an sql query that gets
+    // defined by this class' childrens, typescript has a hard time figuring
+    // out the types. Should be fixable.
+    if (opts.limit !== undefined) {
+      // @ts-expect-error
+      query = query.limit(opts.limit)
+    }
+
+    if (opts.offset !== undefined) {
+      // @ts-expect-error
+      query = query.offset(opts.offset)
+    }
+
+    const result = await query
+
     return Result.ok(result)
   }
 

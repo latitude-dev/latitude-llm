@@ -78,7 +78,7 @@ export default function DocumentEditor({
   const debouncedSave = useDebouncedCallback(
     (val: string) => {
       updateContent({
-        commitId: commit.id,
+        commitUuid: commit.uuid,
         projectId: project.id,
         documentUuid: document.documentUuid,
         content: val,

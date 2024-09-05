@@ -1,6 +1,7 @@
 import { zValidator } from '@hono/zod-validator'
 import { LogSources } from '@latitude-data/core/browser'
 import { runDocumentAtCommit } from '@latitude-data/core/services/commits/runDocumentAtCommit'
+import { createProviderLog } from '@latitude-data/core/services/providerLogs/create'
 import { pipeToStream } from '$/common/pipeToStream'
 import { queues } from '$/jobs'
 import { Factory } from 'hono/factory'
@@ -42,16 +43,17 @@ export const runHandler = factory.createHandlers(
         commit,
         parameters,
         providerLogHandler: (log) => {
-          queues.defaultQueue.jobs.enqueueCreateProviderLogJob({
+          createProviderLog({
             ...log,
             source,
             apiKeyId: apiKey.id,
-          })
+          }).then((r) => r.unwrap())
         },
       }).then((r) => r.unwrap())
 
       await pipeToStream(stream, result.stream)
 
+      // TODO: review if this is needed and why it's not in addMessages handler?
       queues.defaultQueue.jobs.enqueueCreateDocumentLogJob({
         commit,
         data: {

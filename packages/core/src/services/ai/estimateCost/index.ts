@@ -44,8 +44,11 @@ export function estimateCost({
   const { input: inputCostPer1MToken, output: outputCostPer1MToken } =
     getCostPer1M({ provider, model })
 
-  const inputCost = (inputCostPer1MToken * (inputTokens ?? 0)) / 1_000_000
-  const outputCost = (outputCostPer1MToken * (outputTokens ?? 0)) / 1_000_000
+  const inputCost =
+    (inputCostPer1MToken * (isNaN(inputTokens) ? 0 : inputTokens)) / 1_000_000
+  const outputCost =
+    (outputCostPer1MToken * (isNaN(outputTokens) ? 0 : outputTokens)) /
+    1_000_000
 
   return inputCost + outputCost
 }

@@ -47,7 +47,7 @@ export default function ClientFilesTree({
   )
 
   const { createFile, destroyFile, destroyFolder, isDestroying, data } =
-    useDocumentVersions({ currentDocument }, { fallbackData: serverDocuments })
+    useDocumentVersions(undefined, { fallbackData: serverDocuments })
   const onMergeCommitClick = useCallback(() => {
     setWarningOpen(true)
   }, [setWarningOpen])

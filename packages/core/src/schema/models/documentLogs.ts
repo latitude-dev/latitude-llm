@@ -9,7 +9,6 @@ export const documentLogs = latitudeSchema.table(
   {
     id: bigserial('id', { mode: 'number' }).notNull().primaryKey(),
     uuid: uuid('uuid').notNull().unique(),
-    // document_uuid cannot be a reference to document_versions, because it is not a unique field
     documentUuid: uuid('document_uuid').notNull(),
     commitId: bigint('commit_id', { mode: 'number' })
       .notNull()

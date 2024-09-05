@@ -10,13 +10,13 @@ import { z } from 'zod'
 
 export const destroyDocumentAction = withProject
   .createServerAction()
-  .input(z.object({ documentUuid: z.string(), commitId: z.number() }), {
+  .input(z.object({ documentUuid: z.string(), commitUuid: z.string() }), {
     type: 'json',
   })
   .handler(async ({ input, ctx }) => {
     const commitsScope = new CommitsRepository(ctx.project.workspaceId)
     const commit = await commitsScope
-      .getCommitById(input.commitId)
+      .getCommitByUuid({ uuid: input.commitUuid, project: ctx.project })
       .then((r) => r.unwrap())
     const docsScope = new DocumentVersionsRepository(ctx.project.workspaceId)
     const document = await docsScope

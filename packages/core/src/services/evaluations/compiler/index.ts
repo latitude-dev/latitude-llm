@@ -37,6 +37,7 @@ export async function readMetadataFromEvaluation(
     prompt: evaluation.metadata.prompt,
     withParameters: Object.keys(PARAMETERS_FROM_LOG),
   })
+
   return Result.ok(metadata)
 }
 

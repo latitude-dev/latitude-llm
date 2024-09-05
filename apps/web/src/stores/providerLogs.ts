@@ -1,12 +1,17 @@
 'use client'
 
+import { compact } from 'lodash-es'
+
 import type { ProviderLog } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui'
-import { getProviderLogsForDocumentLogAction } from '$/actions/providerLogs/getProviderLogsForDocumentLogAction'
+import { getProviderLogsAction } from '$/actions/providerLogs/fetch'
 import useSWR, { SWRConfiguration } from 'swr'
 
 export default function useProviderLogs(
-  { documentLogUuid }: { documentLogUuid?: string },
+  {
+    documentUuid,
+    documentLogUuid,
+  }: { documentUuid?: string; documentLogUuid?: string } = {},
   opts?: SWRConfiguration,
 ) {
   const { toast } = useToast()
@@ -15,10 +20,10 @@ export default function useProviderLogs(
     isLoading,
     error: swrError,
   } = useSWR<ProviderLog[] | undefined>(
-    ['providerLogs', documentLogUuid],
+    compact(['providerLogs', documentUuid, documentLogUuid]),
     async () => {
-      if (!documentLogUuid) return
-      const [data, error] = await getProviderLogsForDocumentLogAction({
+      const [data, error] = await getProviderLogsAction({
+        documentUuid,
         documentLogUuid,
       })
 

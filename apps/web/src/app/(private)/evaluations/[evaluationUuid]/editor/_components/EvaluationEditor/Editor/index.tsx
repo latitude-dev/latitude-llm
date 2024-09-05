@@ -3,7 +3,7 @@
 import { Suspense, useCallback, useEffect, useState } from 'react'
 
 import { ConversationMetadata, readMetadata } from '@latitude-data/compiler'
-import { EvaluationDto, PARAMETERS_FROM_LOG } from '@latitude-data/core/browser'
+import { EvaluationDto } from '@latitude-data/core/browser'
 import {
   AppLocalStorage,
   DocumentTextEditor,
@@ -15,6 +15,7 @@ import useEvaluations from '$/stores/evaluationsStore'
 import { useDebouncedCallback } from 'use-debounce'
 
 import { Header } from './Header'
+import Playground from './Playground'
 
 export default function EvaluationEditor({
   evaluation,
@@ -61,7 +62,7 @@ export default function EvaluationEditor({
   useEffect(() => {
     readMetadata({
       prompt: value,
-      withParameters: Object.keys(PARAMETERS_FROM_LOG),
+      // withParameters: ['messages', 'response'], // TODO: uncomment this line once I understand why it breaks
     }).then(setMetadata)
   }, [value])
 
@@ -100,9 +101,9 @@ export default function EvaluationEditor({
           />
         </Suspense>
       </div>
-      {/* <div className='flex flex-col flex-1 gap-2'>
+      <div className='flex flex-col flex-1 gap-2'>
         <Playground evaluation={evaluation} metadata={metadata!} />
-      </div> */}
+      </div>
     </div>
   )
 }

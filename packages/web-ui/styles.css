@@ -59,6 +59,9 @@
     --secondary: 249 250 251;
     --secondary-foreground: 17 24 39;
 
+    --yellow: 254 240 210;
+    --purple: 241 224 245;
+
     --muted: 243 244 246;
     --muted-foreground: 102 114 127;
     --warning-muted-foreground: 180 83 9;

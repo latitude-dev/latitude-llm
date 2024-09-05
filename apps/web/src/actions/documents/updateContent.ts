@@ -14,7 +14,7 @@ export const updateDocumentContentAction = withProject
   .input(
     z.object({
       documentUuid: z.string(),
-      commitId: z.number(),
+      commitUuid: z.string(),
       content: z.string(),
     }),
     { type: 'json' },
@@ -22,7 +22,7 @@ export const updateDocumentContentAction = withProject
   .handler(async ({ input, ctx }) => {
     const commitsScope = new CommitsRepository(ctx.project.workspaceId)
     const commit = await commitsScope
-      .getCommitById(input.commitId)
+      .getCommitByUuid({ uuid: input.commitUuid, project: ctx.project })
       .then((r) => r.unwrap())
     const docsScope = new DocumentVersionsRepository(ctx.project.workspaceId)
     const document = await docsScope

@@ -47,7 +47,6 @@ export async function createProviderLog(
 ) {
   return await Transaction.call<ProviderLog>(async (trx) => {
     const cost = estimateCost({ provider: providerType, model, usage })
-
     const inserts = await trx
       .insert(providerLogs)
       .values({
@@ -60,7 +59,7 @@ export async function createProviderLog(
         messages,
         responseText,
         toolCalls,
-        tokens: usage.totalTokens ?? 0,
+        tokens: isNaN(usage.totalTokens) ? 0 : (usage.totalTokens ?? 0),
         cost_in_millicents: Math.floor(cost * 100_000),
         duration,
         source,

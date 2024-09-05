@@ -28,7 +28,7 @@ export async function addMessagesAction({
   const sdk = await createSdk().then((r) => r.unwrap())
   const stream = createStreamableValue<ChainEvent, Error>()
 
-  const response = sdk.addMessges({
+  const response = sdk.addMessages({
     params: { documentLogUuid, messages, source: LogSources.Playground },
     onMessage: (chainEvent) => {
       stream.update(chainEvent)

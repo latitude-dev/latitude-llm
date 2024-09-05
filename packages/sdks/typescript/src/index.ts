@@ -78,7 +78,7 @@ export class LatitudeSdk {
     })
   }
 
-  async addMessges({
+  async addMessages({
     params: { documentLogUuid, messages, source },
     onMessage,
     onFinished,

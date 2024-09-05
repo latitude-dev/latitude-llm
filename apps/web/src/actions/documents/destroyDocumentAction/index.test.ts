@@ -48,7 +48,7 @@ describe('destroyDocumentAction', async () => {
     it('fails when the user is not authenticated', async () => {
       const [_, error] = await destroyDocumentAction({
         projectId: project.id,
-        commitId: draft.id,
+        commitUuid: draft.uuid,
         documentUuid: document.documentUuid,
       })
 
@@ -72,7 +72,7 @@ describe('destroyDocumentAction', async () => {
       const otherWorkspaceDocument = allDocs[0]!
       const [_, error] = await destroyDocumentAction({
         projectId: otherWorkspaceProject.id,
-        commitId: otherCommit.id,
+        commitUuid: otherCommit.uuid,
         documentUuid: otherWorkspaceDocument.documentUuid,
       })
       expect(error?.name).toEqual('NotFoundError')
@@ -81,7 +81,7 @@ describe('destroyDocumentAction', async () => {
     it('fails when trying to remove a document from a merged commit', async () => {
       const [_, error] = await destroyDocumentAction({
         projectId: project.id,
-        commitId: merged.id,
+        commitUuid: merged.uuid,
         documentUuid: document.documentUuid,
       })
       expect(error?.name).toEqual('BadRequestError')
@@ -90,7 +90,7 @@ describe('destroyDocumentAction', async () => {
     it('creates a soft deleted documents in draft document', async () => {
       await destroyDocumentAction({
         projectId: project.id,
-        commitId: draft.id,
+        commitUuid: draft.uuid,
         documentUuid: document.documentUuid,
       })
       // TODO: move to core

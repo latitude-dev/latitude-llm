@@ -10,10 +10,10 @@ import { withProject } from '../procedures'
 
 export const getDocumentsAtCommitAction = withProject
   .createServerAction()
-  .input(z.object({ commitId: z.number() }))
+  .input(z.object({ commitUuid: z.string() }))
   .handler(async ({ input, ctx }) => {
     const commit = await new CommitsRepository(ctx.project.workspaceId)
-      .getCommitById(input.commitId)
+      .getCommitByUuid({ uuid: input.commitUuid, project: ctx.project })
       .then((r) => r.unwrap())
     const docsScope = new DocumentVersionsRepository(ctx.project.workspaceId)
     const result = await docsScope.getDocumentsAtCommit(commit)

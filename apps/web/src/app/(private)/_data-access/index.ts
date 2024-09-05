@@ -9,6 +9,7 @@ import {
   DocumentVersionsRepository,
   EvaluationsRepository,
   ProjectsRepository,
+  ProviderLogsRepository,
 } from '@latitude-data/core/repositories/index'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
 import { notFound } from 'next/navigation'
@@ -162,4 +163,10 @@ export const getEvaluationByUuidCached = cache(async (uuid: string) => {
   const evaluation = result.unwrap()
 
   return evaluation
+})
+
+export const getProviderLogCached = cache(async (uuid: string) => {
+  const { workspace } = await getCurrentUser()
+  const scope = new ProviderLogsRepository(workspace.id)
+  return await scope.findByUuid(uuid).then((r) => r.unwrap())
 })

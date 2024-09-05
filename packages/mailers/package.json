@@ -7,7 +7,7 @@
     ".": "./src/index.ts"
   },
   "scripts": {
-    "dev": "NODE_ENV=development email dev -d src/emails",
+    "dev": "NODE_ENV=development email dev -p 3001 -d src/emails",
     "lint": "eslint src",
     "tc": "tsc --noEmit",
     "prettier": "prettier --write src/**/*.ts"

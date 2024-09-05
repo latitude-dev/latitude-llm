@@ -42,6 +42,7 @@ type SelectProps = Omit<FormFieldProps, 'children'> & {
   placeholder?: string
   disabled?: boolean
   required?: boolean
+  onChange?: (value: string) => void
 }
 export function Select({
   name,
@@ -53,10 +54,15 @@ export function Select({
   options,
   defaultValue,
   value,
+  onChange,
   disabled = false,
   required = false,
 }: SelectProps) {
   const [selectedValue, setSelected] = useState(value ?? defaultValue)
+  const _onChange = (newValue: string) => {
+    setSelected(newValue)
+    if (onChange) onChange(newValue)
+  }
   return (
     <FormField label={label} description={description} errors={errors}>
       <div className='w-full'>
@@ -66,7 +72,7 @@ export function Select({
           name={name}
           value={value}
           defaultValue={defaultValue}
-          onValueChange={setSelected}
+          onValueChange={_onChange}
         >
           <SelectTrigger autoFocus={autoFocus}>
             <SelectValue

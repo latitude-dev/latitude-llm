@@ -38,7 +38,7 @@ describe.skip('addMessage', () => {
           return HttpResponse.json({})
         }),
       )
-      await SDK.addMessges({
+      await SDK.addMessages({
         params: {
           messages: [],
           documentLogUuid: 'fake-document-log-uuid',
@@ -76,7 +76,7 @@ describe.skip('addMessage', () => {
           },
         ),
       )
-      await SDK.addMessges({
+      await SDK.addMessages({
         params: {
           messages: [],
           documentLogUuid: 'fake-document-log-uuid',
@@ -115,7 +115,7 @@ describe.skip('addMessage', () => {
           },
         ),
       )
-      await SDK.addMessges({
+      await SDK.addMessages({
         params: {
           messages: [],
           documentLogUuid: 'fake-document-log-uuid',
@@ -190,7 +190,7 @@ describe.skip('addMessage', () => {
           },
         ),
       )
-      await SDK.addMessges({
+      await SDK.addMessages({
         params: {
           messages: [],
           documentLogUuid: 'fake-document-log-uuid',

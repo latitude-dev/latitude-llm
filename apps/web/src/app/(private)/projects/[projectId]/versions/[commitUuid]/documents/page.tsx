@@ -28,7 +28,7 @@ export default async function DocumentsPage({
   })
   const [documents, error] = await getDocumentsAtCommitAction({
     projectId: project.id,
-    commitId: commit.id,
+    commitUuid: commit.uuid,
   })
   if (error) throw error
   if (documents && documents.length > 0) {
