@@ -69,6 +69,7 @@ export function DocumentTextEditor({
       rules: themeRules,
       colors: {
         'editor.background': colorFromProperty('--secondary'),
+        'editor.foreground': colorFromProperty('--foreground'),
       },
     })
   }, [])
