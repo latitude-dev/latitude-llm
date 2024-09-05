@@ -25,6 +25,7 @@ if (environment !== 'production') {
       LATITUDE_DOMAIN: 'latitude.so',
       LATITUDE_URL: 'http://localhost:3000',
       FROM_MAILER_EMAIL: 'hello@latitude.so',
+      DRIVE_DISK: 'local',
     },
     { path: pathToEnv },
   )
@@ -45,6 +46,11 @@ export const env = createEnv({
     MAILER_API_KEY: z.string().optional(),
     FROM_MAILER_EMAIL: z.string(),
     LATITUDE_DOMAIN: z.string(),
+    AWS_REGION: z.string().optional(),
+    S3_BUCKET: z.string().optional(),
+    AWS_ACCESS_KEY: z.string().optional(),
+    AWS_ACCESS_SECRET: z.string().optional(),
+    DRIVE_DISK: z.union([z.literal('local'), z.literal('s3')]),
   },
   runtimeEnv: process.env,
 })

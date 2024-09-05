@@ -47,6 +47,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
       {...props}
     />
   )
+
   if (props.hidden) return inputComp
 
   return (

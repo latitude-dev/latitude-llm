@@ -23,7 +23,6 @@ export function DropzoneInput({
   const ref = useRef<HTMLInputElement>(null)
   const onClickZone = useCallback(() => {
     if (!ref.current) return
-    console.log('File input ref', ref.current)
 
     ref.current.click()
   }, [ref])
