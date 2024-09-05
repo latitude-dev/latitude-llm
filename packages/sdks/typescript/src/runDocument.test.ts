@@ -22,7 +22,7 @@ const SDK = new LatitudeSdk({
 
 const server = setupServer()
 
-describe.skip('runDocument', () => {
+describe('runDocument', () => {
   beforeAll(() => server.listen())
   afterEach(() => server.resetHandlers())
   afterAll(() => server.close())

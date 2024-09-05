@@ -13,72 +13,13 @@ import { createProject, createProviderApiKey } from '../../tests/factories'
 import { testConsumeStream } from '../../tests/helpers'
 import { runDocumentAtCommit } from './index'
 
-const mocks = vi.hoisted(() => {
-  return {
-    uuid: vi.fn(() => 'fake-document-log-uuid'),
-    runAi: vi.fn(async () => {
-      const fullStream = new ReadableStream({
-        start(controller) {
-          controller.close()
-        },
-      })
-      return {
-        text: Promise.resolve('Fake AI generated text'),
-        usage: Promise.resolve({
-          promptTokens: 0,
-          completionTokens: 0,
-          totalTokens: 0,
-        }),
-        toolCalls: Promise.resolve([]),
-        fullStream,
-      }
-    }),
-  }
-})
+// Create a spy for the ai function
+const aiSpy = vi.spyOn(await import('../ai'), 'ai')
 
-vi.mock('../ai', async (importMod) => {
-  const mod = (await importMod()) as typeof import('../ai')
-  return {
-    ...mod,
-    ai: mocks.runAi,
-  }
-})
-
-const dummyDoc1Content = `
----
-provider: openai
-model: gpt-4o
----
-
-This is a test document
-<step />
-`
-async function buildData({ doc1Content = '' }: { doc1Content?: string } = {}) {
-  const { workspace, documents, commit, user } = await createProject({
-    documents: {
-      doc1: doc1Content,
-    },
-  })
-
-  return {
-    workspace,
-    document: documents[0]!,
-    commit,
-    user,
-  }
-}
-
-let document: DocumentVersion
-let commit: Commit
-let workspaceId: number
-let workspace: Workspace
-let user: SafeUser
-let provider: ProviderApiKey
-
-// TODO: When running pnpm test this test is not correctly mocking the ai module (it does correctly mock it when running only this test file)
-describe.skip('runDocumentAtCommit', () => {
+describe('runDocumentAtCommit', () => {
   beforeEach(() => {
-    vi.resetModules()
+    vi.clearAllMocks()
+    aiSpy.mockImplementation(mocks.runAi)
   })
 
   it('fails if document is not found in commit', async () => {
@@ -169,21 +110,17 @@ This is a test document
     })
 
     it('pass params to AI', async () => {
-      const { runDocumentAtCommit } = await import('./index')
       const { stream } = await runDocumentAtCommit({
         workspaceId,
         document,
         commit,
         parameters: {},
-        // @ts-ignore
         source: LogSources.API,
-        // @ts-ignore
-        generateUUID: mocks.uuid,
       }).then((r) => r.unwrap())
 
       await testConsumeStream(stream)
 
-      expect(mocks.runAi).toHaveBeenCalledWith(
+      expect(aiSpy).toHaveBeenCalledWith(
         expect.objectContaining({
           messages: [
             { role: 'system', content: 'This is a test document' },
@@ -200,15 +137,12 @@ This is a test document
     })
 
     it('send documentLogUuid when chain is completed', async () => {
-      const { runDocumentAtCommit } = await import('./index')
       const { stream } = await runDocumentAtCommit({
         workspaceId,
         document,
         commit,
         parameters: {},
         source: LogSources.API,
-        // @ts-ignore
-        generateUUID: mocks.uuid,
       }).then((r) => r.unwrap())
       const { value } = await testConsumeStream(stream)
       expect(value).toEqual([
@@ -286,3 +220,60 @@ This is a test document
     })
   })
 })
+
+// Non-test code moved to the bottom
+const mocks = {
+  uuid: vi.fn(() => 'fake-document-log-uuid'),
+  runAi: vi.fn(async () => {
+    const fullStream = new ReadableStream({
+      start(controller) {
+        controller.close()
+      },
+    })
+
+    console.log('called?')
+
+    return {
+      text: Promise.resolve('Fake AI generated text'),
+      usage: Promise.resolve({
+        promptTokens: 0,
+        completionTokens: 0,
+        totalTokens: 0,
+      }),
+      toolCalls: Promise.resolve([]),
+      fullStream,
+    }
+  }),
+}
+
+const dummyDoc1Content = `
+---
+provider: openai
+model: gpt-4o
+---
+
+This is a test document
+<step />
+`
+
+async function buildData({ doc1Content = '' }: { doc1Content?: string } = {}) {
+  const { workspace, documents, commit, user } = await createProject({
+    documents: {
+      doc1: doc1Content,
+    },
+  })
+
+  return {
+    workspace,
+    document: documents[0]!,
+    commit,
+    user,
+  }
+}
+
+let document: DocumentVersion
+let commit: Commit
+let workspaceId: number
+let workspace: Workspace
+let user: SafeUser
+let provider: ProviderApiKey
