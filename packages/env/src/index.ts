@@ -50,7 +50,14 @@ export const env = createEnv({
     S3_BUCKET: z.string().optional(),
     AWS_ACCESS_KEY: z.string().optional(),
     AWS_ACCESS_SECRET: z.string().optional(),
-    DRIVE_DISK: z.union([z.literal('local'), z.literal('s3')]),
+    DRIVE_DISK: z
+      .union([z.literal('local'), z.literal('s3')])
+      .optional()
+      .default('local'),
   },
-  runtimeEnv: process.env,
+  runtimeEnv: {
+    ...process.env,
+    // TODO: Remove once s3 is implemented
+    DRIVE_DISK: 'local',
+  },
 })
