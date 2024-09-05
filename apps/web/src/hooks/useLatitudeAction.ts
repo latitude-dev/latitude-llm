@@ -36,8 +36,6 @@ export default function useLatitudeAction<
   const errorCb = useCallback(
     onError ||
       ((error: inferServerActionError<TServerAction>) => {
-        console.error(error)
-
         if (error?.err?.code === 'INPUT_PARSE_ERROR') return
 
         toast({

@@ -10,7 +10,12 @@
     "USE_LOCALHOST",
     "GATEWAY_HOSTNAME",
     "GATEWAY_PORT",
-    "GATEWAY_SSL"
+    "GATEWAY_SSL",
+    "DRIVE_DISK",
+    "AWS_REGION",
+    "S3_BUCKET",
+    "AWS_ACCESS_KEY",
+    "AWS_ACCESS_SECRET"
   ],
   "$schema": "https://turbo.build/schema.json",
   "globalDependencies": ["**/.env.*local"],
