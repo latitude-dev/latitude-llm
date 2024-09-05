@@ -4,6 +4,7 @@ import { type InferSelectModel } from 'drizzle-orm'
 import { apiKeys } from './models/apiKeys'
 import { commits } from './models/commits'
 import { connectedEvaluations } from './models/connectedEvaluations'
+import { datasets } from './models/datasets'
 import { documentLogs } from './models/documentLogs'
 import { documentVersions } from './models/documentVersions'
 import { evaluationResults } from './models/evaluationResults'
@@ -62,4 +63,8 @@ export type EvaluationDto = Evaluation & {
     LlmAsJudgeEvaluationMetadata,
     'metadataType' | 'createdAt' | 'updatedAt'
   >
+}
+
+export type Dataset = InferSelectModel<typeof datasets> & {
+  author: Pick<User, 'id' | 'name'> | undefined
 }

@@ -7,18 +7,18 @@ import {
   FormWrapper,
   Input,
   Modal,
-  // useToast,
 } from '@latitude-data/web-ui'
-import { createDatasetAction } from '$/actions/datasets/create'
-import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
+import useDatasets from '$/stores/datasets'
 
 export default function NewDataset() {
   const data = { name: '' }
   const navigate = useNavigate()
-  const { error, executeFormAction } = useLatitudeAction(createDatasetAction)
-  const errors = error?.fieldErrors
+  const { createError, createFormAction } = useDatasets({
+    onCreateSuccess: () => navigate.push(ROUTES.datasets.root),
+  })
+  const errors = createError?.fieldErrors
   return (
     <Modal
       open
@@ -37,7 +37,7 @@ export default function NewDataset() {
       <form
         className='min-w-0'
         id='createDatasetForm'
-        action={executeFormAction}
+        action={createFormAction}
       >
         <FormWrapper>
           <Input
@@ -49,12 +49,13 @@ export default function NewDataset() {
             placeholder='Amazing dataset'
           />
           <DropzoneInput
+            multiple={false}
+            accept='.csv'
             label='Upload dataset'
             name='dataset_file'
             errors={errors?.dataset_file}
             placeholder='Upload csv'
-            multiple={false}
-            accept='.csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel'
+            description='The first line of the uploaded .csv will be used as headers. The delimiter symbol must be ";"'
           />
         </FormWrapper>
       </form>

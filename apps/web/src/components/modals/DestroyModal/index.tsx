@@ -7,7 +7,23 @@ import {
   TAnyZodSafeFunctionHandler,
 } from 'zsa'
 
-export default function DestroyModal({
+type Props<TServerAction extends TAnyZodSafeFunctionHandler> = {
+  action: (
+    data: inferServerActionInput<TServerAction>,
+  ) => Promise<
+    | [inferServerActionReturnData<TServerAction>, null]
+    | [null, inferServerActionError<TServerAction>]
+  >
+  onSuccess?: (payload: inferServerActionReturnData<TServerAction>) => void
+  onOpenChange?: (open: boolean) => void
+  title: string
+  description: string
+  submitStr: string
+  model: { id: string | number }
+}
+export default function DestroyModal<
+  TServerAction extends TAnyZodSafeFunctionHandler,
+>({
   action,
   onSuccess,
   onOpenChange,
@@ -15,20 +31,7 @@ export default function DestroyModal({
   description,
   submitStr,
   model,
-}: {
-  action: (
-    data: inferServerActionInput<TAnyZodSafeFunctionHandler>,
-  ) => Promise<
-    | [inferServerActionReturnData<TAnyZodSafeFunctionHandler>, null]
-    | [null, inferServerActionError<TAnyZodSafeFunctionHandler>]
-  >
-  onSuccess?: (payload: any) => void
-  onOpenChange?: (open: boolean) => void
-  title: string
-  description: string
-  submitStr: string
-  model: { id: string | number }
-}) {
+}: Props<TServerAction>) {
   const { toast } = useToast()
   const { action: actionFn } = useFormAction(action, {
     onError: (error) => {

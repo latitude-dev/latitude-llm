@@ -40,7 +40,7 @@ export default async function DashboardLayout({
   return (
     <AppLayout
       navigationLinks={NAV_LINKS}
-      currentUser={{ ...user }}
+      currentUser={user}
       breadcrumbs={breadcrumbs}
       sectionLinks={MAIN_NAV_LINKS}
     >

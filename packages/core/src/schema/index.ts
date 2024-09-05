@@ -19,6 +19,7 @@ export * from './models/documentLogs'
 export * from './models/providerLogs'
 
 // Evaluations tables
+export * from './models/datasets'
 export * from './models/evaluations'
 export * from './models/llmAsJudgeEvaluationMetadatas'
 export * from './models/connectedEvaluations'
