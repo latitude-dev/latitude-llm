@@ -3,6 +3,7 @@
 import type { EvaluationDto } from '@latitude-data/core/browser'
 import { useSession, useToast } from '@latitude-data/web-ui'
 import { createEvaluationAction } from '$/actions/evaluations/create'
+import { destroyEvaluationAction } from '$/actions/evaluations/destroy'
 import { fetchEvaluationsAction } from '$/actions/evaluations/fetch'
 import { updateEvaluationContentAction } from '$/actions/evaluations/updateContent'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
@@ -43,8 +44,9 @@ export default function useEvaluations(
     opts,
   )
 
-  const { execute: createEvaluation, isPending: isCreating } =
-    useLatitudeAction(createEvaluationAction, {
+  const { execute: create, isPending: isCreating } = useLatitudeAction(
+    createEvaluationAction,
+    {
       onSuccess: async ({ data: newEvaluation }) => {
         mutate([...(data ?? []), newEvaluation])
         onSuccessCreate?.(newEvaluation)
@@ -54,10 +56,12 @@ export default function useEvaluations(
           description: `New Evaluation ${newEvaluation.name} created`,
         })
       },
-    })
+    },
+  )
 
-  const { execute: updateEvaluation, isPending: isUpdating } =
-    useLatitudeAction(updateEvaluationContentAction, {
+  const { execute: update, isPending: isUpdating } = useLatitudeAction(
+    updateEvaluationContentAction,
+    {
       onSuccess: ({ data: newEval }) => {
         const prevEvaluations = data
         mutate(
@@ -66,15 +70,28 @@ export default function useEvaluations(
           ),
         )
       },
-    })
+    },
+  )
+
+  const { execute: destroy } = useLatitudeAction(destroyEvaluationAction, {
+    onSuccess: ({ data: deletedEvaluation }) => {
+      toast({
+        title: 'Success',
+        description: `${deletedEvaluation.name} destroyed successfully`,
+      })
+
+      mutate(data.filter((e) => e.id !== deletedEvaluation.id))
+    },
+  })
 
   return {
     data,
     isLoading,
-    createEvaluation,
+    create,
     isCreating,
-    updateEvaluation,
+    update,
     isUpdating,
     error: swrError,
+    destroy,
   }
 }

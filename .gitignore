@@ -44,3 +44,7 @@ docker/pgdata/
 next-env.d.ts
 
 apps/web/public/uploads
+
+# Misc
+TODO.md
+.cursorrules
