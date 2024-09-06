@@ -39,17 +39,15 @@ export default async function DatasetsList({
               <TableWithHeader.Button>Upload dataset</TableWithHeader.Button>
             </Link>
           }
-          table={
-            <TableBlankSlate
-              description='There are no datasets yet. Create one to start testing your prompts.'
-              link={
-                <Link href={ROUTES.datasets.new.root}>
-                  <TableBlankSlate.Button>
-                    Create your first dataset
-                  </TableBlankSlate.Button>
-                </Link>
-              }
-            />
+        />
+        <TableBlankSlate
+          description='There are no datasets yet. Create one to start testing your prompts.'
+          link={
+            <Link href={ROUTES.datasets.new.root}>
+              <TableBlankSlate.Button>
+                Create your first dataset
+              </TableBlankSlate.Button>
+            </Link>
           }
         />
       </Container>
