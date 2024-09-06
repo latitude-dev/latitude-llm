@@ -37,20 +37,14 @@ export function TreeToolbar() {
             variant='ghost'
             size='none'
             lookDisabled={isMerged}
-            iconProps={{
-              name: 'folderPlus',
-              className: 'w-5 h-5',
-            }}
+            iconProps={{ name: 'folderPlus' }}
             onClick={onClick(EntityType.Folder)}
           />
           <Button
             variant='ghost'
             size='none'
             lookDisabled={isMerged}
-            iconProps={{
-              name: 'filePlus',
-              className: 'w-5 h-5',
-            }}
+            iconProps={{ name: 'filePlus' }}
             onClick={onClick(EntityType.File)}
           />
         </div>
