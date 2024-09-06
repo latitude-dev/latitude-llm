@@ -1,6 +1,7 @@
 import { ButtonHTMLAttributes, ReactNode } from 'react'
 
-import { Button, Text } from '../../atoms'
+import { Button } from '../../atoms'
+import { TitleWithActions } from '../TitleWithActions'
 
 export function ListingButton({
   children,
@@ -13,21 +14,21 @@ export function ListingButton({
   )
 }
 
-const ListingHeader = ({
+export const TableWithHeader = ({
   title,
   actions,
+  table,
 }: {
   title: string
   actions?: ReactNode
+  table?: ReactNode
 }) => {
   return (
-    <div className='flex flex-row justify-between items-center gap-4'>
-      <Text.H4B>{title}</Text.H4B>
-      {actions ? <div className='flex gap-1'>{actions}</div> : null}
+    <div className='flex flex-col gap-4'>
+      <TitleWithActions title={title} actions={actions} />
+      <div>{table}</div>
     </div>
   )
 }
 
-ListingHeader.Button = ListingButton
-
-export { ListingHeader }
+TableWithHeader.Button = ListingButton
