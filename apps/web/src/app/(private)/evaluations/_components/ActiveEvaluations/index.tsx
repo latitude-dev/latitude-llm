@@ -8,7 +8,8 @@ export default function ActiveEvaluations({
 }: {
   onCreateEvaluation: () => void
 }) {
-  const { data: evaluations } = useEvaluations()
+  const { data: evaluations, isLoading } = useEvaluations()
+  if (isLoading) return null
 
   return (
     <div className='w-full flex flex-col gap-4'>

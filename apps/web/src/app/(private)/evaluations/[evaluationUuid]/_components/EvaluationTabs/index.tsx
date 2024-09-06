@@ -23,10 +23,10 @@ export function EvaluationTabSelector({
     <div className='flex flex-row p-4 pb-0'>
       <TabSelector
         options={[
-          { label: 'History', value: EvaluationRoutes.history },
+          { label: 'History', value: EvaluationRoutes.dashboard },
           { label: 'Editor', value: EvaluationRoutes.editor },
         ]}
-        selected={selectedSegment ?? EvaluationRoutes.history}
+        selected={selectedSegment ?? EvaluationRoutes.dashboard}
         onSelect={(value) => {
           router.push(pathTo(value))
         }}

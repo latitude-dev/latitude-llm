@@ -6,7 +6,7 @@ export enum DocumentRoutes {
 }
 
 export enum EvaluationRoutes {
-  history = 'history',
+  dashboard = 'dashboard',
   editor = 'editor',
 }
 
@@ -48,8 +48,10 @@ export const ROUTES = {
       const root = `${ROUTES.evaluations.root}/${uuid}`
       return {
         root,
-        destroy: { root: `${root}/destroy` },
-        [EvaluationRoutes.history]: { root },
+        [EvaluationRoutes.dashboard]: {
+          root: `${root}/dashboard`,
+          destroy: { root: `${root}/dashboard/destroy` },
+        },
         [EvaluationRoutes.editor]: {
           root: `${root}/editor`,
           importLogs: {

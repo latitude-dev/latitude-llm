@@ -35,7 +35,8 @@ export const ActiveEvaluationsTableRow = ({
       <TableCell onClick={(e) => e.stopPropagation()}>
         <Link
           href={
-            ROUTES.evaluations.detail({ uuid: evaluation.uuid }).destroy.root
+            ROUTES.evaluations.detail({ uuid: evaluation.uuid }).dashboard
+              .destroy.root
           }
         >
           <Icons.trash />
