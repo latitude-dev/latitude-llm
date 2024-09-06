@@ -16,7 +16,7 @@ export function ErrorComponent({
           'text-destructive': type === 'red',
         })}
       >
-        <Icon name='logoMonochrome' className='w-14 h-14' />
+        <Icon name='logoMonochrome' size='xxxlarge' />
         <Text.H5 align='center' color='foregroundMuted'>
           {message}
         </Text.H5>

@@ -8,6 +8,7 @@ import {
   Input,
   Modal,
 } from '@latitude-data/web-ui'
+import DelimiterSelector from '$/app/(private)/datasets/new/_components/DelimiterSelector'
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
 import useDatasets from '$/stores/datasets'
@@ -15,7 +16,7 @@ import useDatasets from '$/stores/datasets'
 export default function NewDataset() {
   const data = { name: '' }
   const navigate = useNavigate()
-  const { createError, createFormAction } = useDatasets({
+  const { createError, createFormAction, isCreating } = useDatasets({
     onCreateSuccess: () => navigate.push(ROUTES.datasets.root),
   })
   const errors = createError?.fieldErrors
@@ -28,7 +29,12 @@ export default function NewDataset() {
       footer={
         <>
           <CloseTrigger />
-          <Button fancy form='createDatasetForm' type='submit'>
+          <Button
+            disabled={isCreating}
+            fancy
+            form='createDatasetForm'
+            type='submit'
+          >
             Create dataset
           </Button>
         </>
@@ -48,6 +54,14 @@ export default function NewDataset() {
             defaultValue={data?.name}
             placeholder='Amazing dataset'
           />
+          <DelimiterSelector
+            delimiterValue={undefined}
+            delimiterInputName='csvDelimiter'
+            delimiterErrors={errors?.csvDelimiter}
+            customDelimiterInputName='csvCustomDelimiter'
+            customDelimiterValue={''}
+            customDelimiterErrors={errors?.csvCustomDelimiter}
+          />
           <DropzoneInput
             multiple={false}
             accept='.csv'
@@ -55,7 +69,7 @@ export default function NewDataset() {
             name='dataset_file'
             errors={errors?.dataset_file}
             placeholder='Upload csv'
-            description='The first line of the uploaded .csv will be used as headers. The delimiter symbol must be ";"'
+            description='The first line of the uploaded .csv will be used as headers'
           />
         </FormWrapper>
       </form>
