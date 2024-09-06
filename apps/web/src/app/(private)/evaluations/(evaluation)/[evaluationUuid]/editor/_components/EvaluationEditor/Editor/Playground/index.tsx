@@ -1,15 +1,10 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { capitalize } from 'lodash-es'
 
-import {
-  ConversationMetadata,
-  Message,
-  MessageContent,
-  TextContent,
-} from '@latitude-data/compiler'
+import { ConversationMetadata } from '@latitude-data/compiler'
 import { EvaluationDto } from '@latitude-data/core/browser'
+import { formatMessages } from '@latitude-data/core/services/evaluations/formatMessages'
 import { Badge, Icon, Text, TextArea } from '@latitude-data/web-ui'
 import { ROUTES } from '$/services/routes'
 import useProviderLogs from '$/stores/providerLogs'
@@ -19,23 +14,6 @@ import { useSearchParams } from 'next/navigation'
 import { Header } from '../Header'
 import Chat, { EVALUATION_PARAMETERS, Inputs } from './Chat'
 import Preview from './Preview'
-
-function convertMessage(message: Message) {
-  if (typeof message.content === 'string') {
-    return `${capitalize(message.role)}: \n ${message.content}`
-  } else {
-    const content = message.content[0] as MessageContent
-    if (content.type === 'text') {
-      return `${capitalize(message.role)}: \n ${(content as TextContent).text}`
-    } else {
-      return `${capitalize(message.role)}: <${content.type} message>`
-    }
-  }
-}
-
-function convertMessages(messages: Message[]) {
-  return messages.map((message) => convertMessage(message)).join('\n')
-}
 
 function convertParams(inputs: Inputs) {
   return Object.fromEntries(
@@ -74,7 +52,7 @@ export default function Playground({
   useEffect(() => {
     if (providerLog) {
       setInputs({
-        messages: convertMessages(providerLog.messages),
+        messages: formatMessages(providerLog.messages),
         last_message: `Assistant: ${providerLog.responseText}`,
       })
     }

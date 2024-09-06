@@ -232,8 +232,6 @@ const mocks = {
       },
     })
 
-    console.log('called?')
-
     return {
       text: Promise.resolve('Fake AI generated text'),
       usage: Promise.resolve({

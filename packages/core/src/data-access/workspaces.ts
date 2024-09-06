@@ -1,6 +1,7 @@
 import { desc, eq, getTableColumns } from 'drizzle-orm'
 
 import {
+  DocumentLog,
   DocumentVersion,
   ProviderApiKey,
   type Commit,
@@ -10,6 +11,7 @@ import { database } from '../client'
 import { NotFoundError, Result, TypedResult } from '../lib'
 import {
   commits,
+  documentLogs,
   documentVersions,
   memberships,
   projects,
@@ -81,6 +83,26 @@ export async function findWorkspaceFromProviderApiKey(
     .from(workspaces)
     .innerJoin(providerApiKeys, eq(providerApiKeys.workspaceId, workspaces.id))
     .where(eq(providerApiKeys.id, providerApiKey.id))
+    .limit(1)
+
+  return results[0]
+}
+
+export async function findWorkspaceFromDocumentLog(
+  documentLog: DocumentLog,
+  db = database,
+) {
+  const results = await db
+    .select(getTableColumns(workspaces))
+    .from(workspaces)
+    .innerJoin(projects, eq(projects.workspaceId, workspaces.id))
+    .innerJoin(commits, eq(commits.projectId, projects.id))
+    .innerJoin(documentVersions, eq(documentVersions.commitId, commits.id))
+    .innerJoin(
+      documentLogs,
+      eq(documentLogs.documentUuid, documentVersions.documentUuid),
+    )
+    .where(eq(documentLogs.id, documentLog.id))
     .limit(1)
 
   return results[0]

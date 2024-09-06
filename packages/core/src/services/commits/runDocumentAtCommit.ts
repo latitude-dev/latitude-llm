@@ -6,6 +6,7 @@ import {
   type DocumentVersion,
   type Workspace,
 } from '../../browser'
+import { jobs } from '../../jobs'
 import { Result } from '../../lib'
 import { runChain } from '../chains/run'
 import { getResolvedContent } from '../documents'
@@ -32,6 +33,8 @@ export async function runDocumentAtCommit({
   })
   if (result.error) return result
   const chain = createChain({ prompt: result.value, parameters })
+
+  const startTime = Date.now()
   const rezult = await runChain({
     chain,
     apikeys,
@@ -39,6 +42,20 @@ export async function runDocumentAtCommit({
   })
 
   const { stream, response, documentLogUuid } = rezult.value
+
+  response.then(() => {
+    // TODO: move to events!
+    jobs.queues.defaultQueue.jobs.enqueueCreateDocumentLogJob({
+      commit,
+      data: {
+        uuid: documentLogUuid,
+        documentUuid: document.documentUuid,
+        resolvedContent: chain.rawText,
+        parameters,
+        duration: Date.now() - startTime,
+      },
+    })
+  })
 
   return Result.ok({
     stream,

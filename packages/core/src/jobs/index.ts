@@ -1,10 +1,10 @@
+import { env } from '@latitude-data/env'
 import { setupJobs } from '@latitude-data/jobs'
-import env from '$/common/env'
 
-export const { queues } = setupJobs({
+export const jobs = setupJobs({
   connectionParams: {
     host: env.REDIS_HOST,
     port: env.REDIS_PORT,
     password: env.REDIS_PASSWORD,
   },
-})
+}) as ReturnType<typeof setupJobs>

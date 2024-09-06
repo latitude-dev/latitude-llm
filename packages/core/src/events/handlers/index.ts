@@ -2,6 +2,7 @@ import { ToolCall } from '@latitude-data/compiler'
 import { CompletionTokenUsage } from 'ai'
 
 import {
+  DocumentLog,
   LogSources,
   MagicLinkToken,
   Membership,
@@ -11,6 +12,7 @@ import {
 } from '../../browser'
 import { PartialConfig } from '../../services/ai'
 import { createProviderLogJob } from './createProviderLogJob'
+import { documentLogCreatedHandler } from './documentLogCreatedHandler'
 import { sendInvitationToUserJob } from './sendInvitationToUser'
 import { sendMagicLinkJob } from './sendMagicLinkHandler'
 
@@ -55,18 +57,24 @@ export type MembershipCreatedEvent = LatitudeEventGeneric<
   'membershipCreated',
   Membership & { authorId?: string }
 >
+export type DocumentLogCreatedEvent = LatitudeEventGeneric<
+  'documentLogCreated',
+  DocumentLog
+>
 
 export type LatitudeEvent =
   | MembershipCreatedEvent
   | UserCreatedEvent
   | MagicLinkTokenCreated
   | AIProviderCallCompleted
+  | DocumentLogCreatedEvent
 
 export interface IEventsHandlers {
   aiProviderCallCompleted: EventHandler<AIProviderCallCompleted>[]
   magicLinkTokenCreated: EventHandler<MagicLinkTokenCreated>[]
   membershipCreated: EventHandler<MembershipCreatedEvent>[]
   userCreated: EventHandler<UserCreatedEvent>[]
+  documentLogCreated: EventHandler<DocumentLogCreatedEvent>[]
 }
 
 export const EventHandlers: IEventsHandlers = {
@@ -74,4 +82,5 @@ export const EventHandlers: IEventsHandlers = {
   membershipCreated: [sendInvitationToUserJob],
   userCreated: [],
   aiProviderCallCompleted: [createProviderLogJob],
+  documentLogCreated: [documentLogCreatedHandler],
 } as const

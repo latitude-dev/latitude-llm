@@ -5,7 +5,11 @@ import { and, eq, getTableColumns, sql } from 'drizzle-orm'
 import { EvaluationDto } from '../browser'
 import { EvaluationMetadataType } from '../constants'
 import { NotFoundError, Result } from '../lib'
-import { evaluations, llmAsJudgeEvaluationMetadatas } from '../schema'
+import {
+  connectedEvaluations,
+  evaluations,
+  llmAsJudgeEvaluationMetadatas,
+} from '../schema'
 import Repository from './repository'
 
 const tt = {
@@ -66,5 +70,16 @@ export class EvaluationsRepository extends Repository<
     }
 
     return Result.ok(result[0]!)
+  }
+
+  async findByDocumentUuid(documentUuid: string) {
+    return await this.db
+      .select()
+      .from(this.scope)
+      .innerJoin(
+        connectedEvaluations,
+        eq(connectedEvaluations.evaluationId, this.scope.id),
+      )
+      .where(eq(connectedEvaluations.documentUuid, documentUuid))
   }
 }

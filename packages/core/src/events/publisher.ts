@@ -1,9 +1,5 @@
-import { env } from '@latitude-data/env'
-import { setupJobs } from '@latitude-data/jobs'
-
+import { jobs } from '../jobs'
 import { EventHandler, EventHandlers, LatitudeEvent } from './handlers'
-
-let jobs: ReturnType<typeof setupJobs>
 
 export const publisher = {
   publish: async (event: LatitudeEvent) => {
@@ -15,16 +11,6 @@ export const publisher = {
     )
   },
   publishLater: (event: LatitudeEvent) => {
-    if (!jobs) {
-      jobs = setupJobs({
-        connectionParams: {
-          host: env.REDIS_HOST,
-          port: env.REDIS_PORT,
-          password: env.REDIS_PASSWORD,
-        },
-      })
-    }
-
     jobs.queues.eventsQueue.jobs.enqueuePublishEventJob(event)
   },
 }
