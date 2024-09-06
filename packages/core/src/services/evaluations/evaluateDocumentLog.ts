@@ -1,4 +1,9 @@
-import { DocumentLog, EvaluationDto, LogSources } from '../../browser'
+import {
+  ChainCallResponse,
+  DocumentLog,
+  EvaluationDto,
+  LogSources,
+} from '../../browser'
 import { database } from '../../client'
 import { findWorkspaceFromDocumentLog } from '../../data-access'
 import { NotFoundError, Result, Transaction } from '../../lib'
@@ -43,9 +48,12 @@ export const evaluateDocumentLog = async (
 
   const { response } = result.value
 
-  let evaluationResult
+  let evaluationResult: ChainCallResponse
   try {
-    evaluationResult = await response
+    const result = await response
+    if (result.error) return result
+
+    evaluationResult = result.value
   } catch (error) {
     return Result.error(error as Error)
   }

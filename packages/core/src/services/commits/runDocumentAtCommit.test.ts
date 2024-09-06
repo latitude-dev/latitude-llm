@@ -9,6 +9,7 @@ import {
   SafeUser,
   Workspace,
 } from '../../browser'
+import { Result, UnprocessableEntityError } from '../../lib'
 import { createProject, createProviderApiKey } from '../../tests/factories'
 import { testConsumeStream } from '../../tests/helpers'
 import { runDocumentAtCommit } from './index'
@@ -46,8 +47,13 @@ describe('runDocumentAtCommit', () => {
       source: LogSources.API,
     })
 
-    await expect(result?.value?.response).rejects.toThrowError(
-      'Error validating document configuration',
+    await expect(result?.value?.response).resolves.toEqual(
+      Result.error(
+        new UnprocessableEntityError(
+          'Error validating document configuration',
+          expect.any(Object),
+        ),
+      ),
     )
   })
 
@@ -63,8 +69,8 @@ describe('runDocumentAtCommit', () => {
       source: LogSources.API,
     })
 
-    await expect(result?.value?.response).rejects.toThrowError(
-      'ProviderApiKey not found',
+    await expect(result?.value?.response).resolves.toEqual(
+      Result.error(new Error('ProviderApiKey not found')),
     )
   })
 

@@ -43,7 +43,9 @@ export async function runDocumentAtCommit({
 
   const { stream, response, documentLogUuid } = rezult.value
 
-  response.then(() => {
+  response.then((result) => {
+    if (result.error) return result
+
     // TODO: move to events!
     jobs.queues.defaultQueue.jobs.enqueueCreateDocumentLogJob({
       commit,
@@ -55,6 +57,8 @@ export async function runDocumentAtCommit({
         duration: Date.now() - startTime,
       },
     })
+
+    return result
   })
 
   return Result.ok({

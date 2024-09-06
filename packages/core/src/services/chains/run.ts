@@ -10,7 +10,12 @@ import {
   LogSources,
   StreamEventTypes,
 } from '../../constants'
-import { NotFoundError, Result, UnprocessableEntityError } from '../../lib'
+import {
+  NotFoundError,
+  Result,
+  TypedResult,
+  UnprocessableEntityError,
+} from '../../lib'
 import { streamToGenerator } from '../../lib/streamToGenerator'
 import { ai, Config, validateConfig } from '../ai'
 
@@ -29,13 +34,12 @@ export async function runChain({
 }) {
   const documentLogUuid = generateUUID()
 
-  let responseResolve: (value: ChainCallResponse) => void
-  let responseReject: (reason?: any) => void
-
-  const response = new Promise<ChainCallResponse>((resolve, reject) => {
-    responseResolve = resolve
-    responseReject = reject
-  })
+  let responseResolve: (value: TypedResult<ChainCallResponse, Error>) => void
+  const response = new Promise<TypedResult<ChainCallResponse, Error>>(
+    (resolve) => {
+      responseResolve = resolve
+    },
+  )
 
   const stream = new ReadableStream<ChainEvent>({
     start(controller) {
@@ -45,9 +49,7 @@ export async function runChain({
         apikeys,
         controller,
         documentLogUuid,
-      })
-        .then(responseResolve)
-        .catch(responseReject)
+      }).then(responseResolve)
     },
   })
 
@@ -141,6 +143,7 @@ async function iterate({
         ...response,
         documentLogUuid,
       }
+
       enqueueChainEvent(controller, {
         event: StreamEventTypes.Latitude,
         data: {
@@ -159,7 +162,7 @@ async function iterate({
 
       controller.close()
 
-      return completedResponse
+      return Result.ok(completedResponse)
     } else {
       enqueueChainEvent(controller, {
         event: StreamEventTypes.Latitude,
@@ -168,6 +171,7 @@ async function iterate({
           response,
         },
       })
+
       return iterate({
         source,
         chain,
@@ -192,15 +196,18 @@ async function iterate({
         },
       },
     })
+
     controller.close()
 
     if (error instanceof ZodError) {
-      throw new UnprocessableEntityError(
-        'Error validating document configuration',
-        error.formErrors.fieldErrors,
+      return Result.error(
+        new UnprocessableEntityError(
+          'Error validating document configuration',
+          error.formErrors.fieldErrors,
+        ),
       )
     } else {
-      throw error
+      return Result.error(error)
     }
   }
 }
