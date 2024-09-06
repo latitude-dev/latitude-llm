@@ -5,7 +5,7 @@ import { useState } from 'react'
 import type { SafeUser } from '@latitude-data/core/browser'
 import {
   Button,
-  Icons,
+  Icon,
   Table,
   TableBody,
   TableCell,
@@ -68,7 +68,7 @@ function UsersTable({ users }: { users: SafeUser[] }) {
             </TableCell>
             <TableCell>
               <Link href={ROUTES.settings.users.destroy(user.id).root}>
-                <Icons.trash />
+                <Icon name='trash' />
               </Link>
             </TableCell>
           </TableRow>

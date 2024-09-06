@@ -5,7 +5,7 @@ import { useState } from 'react'
 import { type ProviderApiKey } from '@latitude-data/core/browser'
 import {
   Button,
-  Icons,
+  Icon,
   Table,
   TableBlankSlate,
   TableBody,
@@ -107,7 +107,7 @@ const ProviderApiKeysTable = ({
               <Link
                 href={ROUTES.settings.providerApiKeys.destroy(apiKey.id).root}
               >
-                <Icons.trash />
+                <Icon name='trash' />
               </Link>
             </TableCell>
           </TableRow>

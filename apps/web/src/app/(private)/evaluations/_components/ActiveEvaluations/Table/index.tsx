@@ -1,6 +1,6 @@
 import { Evaluation } from '@latitude-data/core/browser'
 import {
-  Icons,
+  Icon,
   Table,
   TableBody,
   TableCell,
@@ -39,7 +39,7 @@ export const ActiveEvaluationsTableRow = ({
               .destroy.root
           }
         >
-          <Icons.trash />
+          <Icon name='trash' />
         </Link>
       </TableCell>
     </TableRow>

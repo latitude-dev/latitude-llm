@@ -1,5 +1,5 @@
 import { cn } from '../../../lib/utils'
-import { Icons, Text } from '../../atoms'
+import { Icon, Text } from '../../atoms'
 
 export function ErrorComponent({
   message,
@@ -16,7 +16,7 @@ export function ErrorComponent({
           'text-destructive': type === 'red',
         })}
       >
-        <Icons.logoMonochrome className='w-14 h-14' />
+        <Icon name='logoMonochrome' className='w-14 h-14' />
         <Text.H5 align='center' color='foregroundMuted'>
           {message}
         </Text.H5>

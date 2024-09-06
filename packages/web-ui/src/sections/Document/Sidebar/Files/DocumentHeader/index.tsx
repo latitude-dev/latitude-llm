@@ -1,6 +1,6 @@
 import { useCallback, useMemo } from 'react'
 
-import { Icons } from '../../../../../ds/atoms'
+import { Icon } from '../../../../../ds/atoms'
 import { MenuOption } from '../../../../../ds/atoms/DropdownMenu'
 import { cn } from '../../../../../lib/utils'
 import { useFileTreeContext } from '../FilesProvider'
@@ -12,7 +12,8 @@ export function DocumentIcon(
   { selected }: { selected?: boolean } = { selected: false },
 ) {
   return (
-    <Icons.file
+    <Icon
+      name='file'
       className={cn(ICON_CLASS, {
         'text-accent-foreground': selected,
       })}

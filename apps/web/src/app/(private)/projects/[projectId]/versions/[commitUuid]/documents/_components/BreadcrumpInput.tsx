@@ -27,7 +27,7 @@ export default function BreadcrumpInput({ projectId }: { projectId: number }) {
     <EditableText
       value={project.name}
       handleChange={handleChange}
-      fallback={(value) => <Text.H5M>{value}</Text.H5M>}
+      fallback={(value) => <Text.H5M color='foregroundMuted'>{value}</Text.H5M>}
     />
   )
 }

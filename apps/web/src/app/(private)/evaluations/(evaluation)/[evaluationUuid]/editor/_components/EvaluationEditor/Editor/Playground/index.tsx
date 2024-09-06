@@ -10,7 +10,7 @@ import {
   TextContent,
 } from '@latitude-data/compiler'
 import { EvaluationDto } from '@latitude-data/core/browser'
-import { Badge, Icons, Text, TextArea } from '@latitude-data/web-ui'
+import { Badge, Icon, Text, TextArea } from '@latitude-data/web-ui'
 import { ROUTES } from '$/services/routes'
 import useProviderLogs from '$/stores/providerLogs'
 import Link from 'next/link'
@@ -94,7 +94,8 @@ export default function Playground({
                   .importLogs.root
               }
             >
-              <Text.H5M>Import data from logs</Text.H5M> <Icons.addSquare />
+              <Text.H5M>Import data from logs</Text.H5M>{' '}
+              <Icon name='addSquare' />
             </Link>
           </div>
           {Object.keys(inputs).length > 0 ? (

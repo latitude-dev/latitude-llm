@@ -2,7 +2,7 @@
 
 import { DocumentVersion, Project } from '@latitude-data/core/browser'
 import {
-  Icons,
+  Icon,
   Table,
   TableBody,
   TableCell,
@@ -77,7 +77,7 @@ export function ProjectsTable({
                 href={ROUTES.dashboard.projects.destroy(project.id).root}
                 onClick={(ev) => ev.stopPropagation()}
               >
-                <Icons.trash />
+                <Icon name='trash' />
               </Link>
             </TableCell>
           </TableRow>

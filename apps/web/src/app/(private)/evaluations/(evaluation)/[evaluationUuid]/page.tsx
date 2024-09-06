@@ -7,6 +7,4 @@ export default async function DocumentPage({
   params: { evaluationUuid: string }
 }) {
   redirect(ROUTES.evaluations.detail({ uuid: evaluationUuid }).dashboard.root)
-
-  return null // --> layout.tsx
 }

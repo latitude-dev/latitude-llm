@@ -2,7 +2,7 @@
 
 import { ReactNode, useCallback } from 'react'
 
-import { Icons, Text, Tooltip } from '../../atoms'
+import { Icon, Text, Tooltip } from '../../atoms'
 
 export function ClickToCopy({
   copyValue,
@@ -26,7 +26,7 @@ export function ClickToCopy({
           className='cursor-pointer flex flex-row items-center gap-x-1'
         >
           {children}
-          <Icons.clipboard className='w-4 h-4 text-muted-foreground' />
+          <Icon name='clipboard' className='text-muted-foreground' />
         </div>
       }
     >

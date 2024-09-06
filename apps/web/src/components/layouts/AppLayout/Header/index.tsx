@@ -5,7 +5,7 @@ import { ReactNode } from 'react'
 import {
   Avatar,
   getUserInfoFromSession,
-  Icons,
+  Icon,
   NavTabGroup,
   NavTabItem,
   SessionUser,
@@ -42,7 +42,7 @@ function Breadcrump({ breadcrumbs }: { breadcrumbs: IBreadCrumb[] }) {
   return (
     <ul className='flex flex-row items-center gap-x-4'>
       <li>
-        <Icons.logo className='w-6 h-6' />
+        <Icon name='logo' size='large' />
       </li>
       {breadcrumbs.length === 0 ? null : (
         <li>

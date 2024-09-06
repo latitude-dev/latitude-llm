@@ -1,4 +1,4 @@
-import { Icons, Text } from '../../atoms'
+import { Icon, Text } from '../../atoms'
 
 export default function FocusHeader({
   title,
@@ -9,7 +9,7 @@ export default function FocusHeader({
 }) {
   return (
     <div className='flex flex-col items-center justify-center gap-y-6'>
-      <Icons.logo className='h-8 w-8' />
+      <Icon name='logo' size='xlarge' />
       <div className='flex flex-col items-center justify-center gap-y-2'>
         <Text.H3 align='center' color='foreground'>
           {title}

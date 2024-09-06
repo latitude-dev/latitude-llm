@@ -6,7 +6,8 @@ import {
   cn,
   colors,
   ConfirmModal,
-  Icons,
+  Icon,
+  IconName,
   ReactStateDispatch,
   Skeleton,
   Text,
@@ -23,9 +24,9 @@ import { useRouter } from 'next/navigation'
 import { useServerAction } from 'zsa-react'
 
 const MODIFICATION_ICONS = {
-  [ModifiedDocumentType.Created]: Icons.addSquare,
-  [ModifiedDocumentType.Updated]: Icons.modification,
-  [ModifiedDocumentType.Deleted]: Icons.deletion,
+  [ModifiedDocumentType.Created]: 'addSquare',
+  [ModifiedDocumentType.Updated]: 'modification',
+  [ModifiedDocumentType.Deleted]: 'deletion',
 }
 const MODIFICATION_COLORS: Record<ModifiedDocumentType, TextColor> = {
   [ModifiedDocumentType.Created]: 'accentForeground',
@@ -39,10 +40,13 @@ function LoadingFile({
   changeType: ModifiedDocumentType
   width: number
 }) {
-  const Icon = MODIFICATION_ICONS[changeType]
+  const icon = MODIFICATION_ICONS[changeType]
   return (
     <li className='w-full flex flex-row items-center gap-x-1 min-h-8'>
-      <Icon className='flex-shrink-0 w-4 h-4 text-gray-400 animate-pulse' />
+      <Icon
+        name={icon as IconName}
+        className='flex-shrink-0 w-4 h-4 text-gray-400 animate-pulse'
+      />
       <div className='flex-grow h-5'>
         <Skeleton
           className={'h-full bg-muted rounded-full'}
@@ -67,7 +71,10 @@ function ChangeWithErrors({
   const theme = useCurrentTheme()
   return (
     <li className='w-full flex flex-row items-center justify-center gap-x-1 min-h-8'>
-      <Icons.alert className='flex-shrink-0 w-4 h-4 text-destructive dark:text-white/80' />
+      <Icon
+        name='alert'
+        className='flex-shrink-0 text-destructive dark:text-white/80'
+      />
       <div className='flex-grow truncate'>
         <Link
           onClick={() => onClose(null)}
@@ -104,7 +111,7 @@ function Change({
   change: ChangedDocument
   hasErrors: boolean
 }) {
-  const Icon = MODIFICATION_ICONS[change.changeType]
+  const icon = MODIFICATION_ICONS[change.changeType]
   const color: TextColor = hasErrors
     ? 'foreground'
     : MODIFICATION_COLORS[change.changeType]
@@ -118,7 +125,8 @@ function Change({
         },
       )}
     >
-      <Icons.file
+      <Icon
+        name='file'
         className={cn('flex-shrink-0 w-4 h-4', colors.textColors[color])}
       />
       <div className='flex-grow truncate'>
@@ -126,7 +134,10 @@ function Change({
           {change.path}
         </Text.H5>
       </div>
-      <Icon className={cn('flex-shrink-0 w-4 h-4', colors.textColors[color])} />
+      <Icon
+        name={icon as IconName}
+        className={cn('flex-shrink-0 w-4 h-4', colors.textColors[color])}
+      />
     </li>
   )
 }

@@ -3,9 +3,6 @@ import { ReactNode } from 'react'
 import { Container, Text, TitleWithActions } from '@latitude-data/web-ui'
 import { AppLayout } from '$/components/layouts'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
-import { getSession } from '$/services/auth/getSession'
-import { ROUTES } from '$/services/routes'
-import { redirect } from 'next/navigation'
 
 import { MAIN_NAV_LINKS, NAV_LINKS } from '../_lib/constants'
 import Memberships from './_components/Memberships'
@@ -17,20 +14,20 @@ export default async function SettingsLayout({
 }: Readonly<{
   children: ReactNode
 }>) {
-  const data = await getSession()
-  if (!data.session) return redirect(ROUTES.auth.login)
-
-  const { workspace, user } = await getCurrentUser()
+  const session = await getCurrentUser()
   const breadcrumbs = [
     {
-      name: <Text.H5M>{workspace.name}</Text.H5M>,
+      name: session.workspace.name,
+    },
+    {
+      name: <Text.H5M>Settings</Text.H5M>,
     },
   ]
 
   return (
     <AppLayout
       navigationLinks={NAV_LINKS}
-      currentUser={{ ...user }}
+      currentUser={session.user}
       breadcrumbs={breadcrumbs}
       sectionLinks={MAIN_NAV_LINKS}
     >

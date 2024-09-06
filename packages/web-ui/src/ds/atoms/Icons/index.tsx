@@ -29,7 +29,7 @@ import { cn } from '../../../lib/utils'
 import { colors, type TextColor } from '../../tokens'
 import { LatitudeLogo, LatitudeLogoMonochrome } from './custom-icons'
 
-export const Icons = {
+const Icons = {
   addCircle: CirclePlus,
   addSquare: SquarePlus,
   alert: CircleAlert,
@@ -64,25 +64,29 @@ export type IconProps = {
   name: IconName
   color?: TextColor
   spin?: boolean
-  size?: string | number
+  size?: Size
   widthClass?: string
   heightClass?: string
+  className?: string
 }
+
+type Size = 'normal' | 'large' | 'xlarge'
 
 export function Icon({
   name,
   color,
   spin,
-  widthClass,
-  heightClass,
+  size = 'normal',
+  className,
 }: IconProps) {
   const IconClass = Icons[name]!
   return (
     <IconClass
-      className={cn(widthClass, heightClass, {
+      className={cn(className, {
         [colors.textColors[color!]]: color,
-        'w-4': !widthClass,
-        'h-4': !heightClass,
+        'w-4 h-4': size === 'normal',
+        'w-6 h-6': size === 'large',
+        'w-8 h-8': size === 'xlarge',
         'animate-spin': spin,
       })}
     />

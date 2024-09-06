@@ -53,7 +53,7 @@ export const TemplateEvaluationsTableRow = ({
             <Text.H5M noWrap color='accentForeground'>
               Use this template
             </Text.H5M>
-            <Icon name='addCircle' color='accentForeground' size={16} />
+            <Icon name='addCircle' color='accentForeground' />
           </div>
         </Button>
       </TableCell>

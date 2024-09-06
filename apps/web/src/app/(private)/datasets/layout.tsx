@@ -4,13 +4,12 @@ import {
   Container,
   TableBlankSlate,
   TableWithHeader,
+  Text,
 } from '@latitude-data/web-ui'
 import { AppLayout } from '$/components/layouts'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
-import { getSession } from '$/services/auth/getSession'
 import { ROUTES } from '$/services/routes'
 import Link from 'next/link'
-import { redirect } from 'next/navigation'
 
 import { MAIN_NAV_LINKS, NAV_LINKS } from '../_lib/constants'
 
@@ -19,16 +18,21 @@ export default async function DatasetsList({
 }: Readonly<{
   children: ReactNode
 }>) {
-  const data = await getSession()
-  if (!data.session) return redirect(ROUTES.auth.login)
-
-  const { user } = await getCurrentUser()
+  const { workspace, user } = await getCurrentUser()
 
   return (
     <AppLayout
       navigationLinks={NAV_LINKS}
       currentUser={{ ...user }}
       sectionLinks={MAIN_NAV_LINKS}
+      breadcrumbs={[
+        {
+          name: workspace.name,
+        },
+        {
+          name: <Text.H5M>Datasets</Text.H5M>,
+        },
+      ]}
     >
       <Container>
         {children}

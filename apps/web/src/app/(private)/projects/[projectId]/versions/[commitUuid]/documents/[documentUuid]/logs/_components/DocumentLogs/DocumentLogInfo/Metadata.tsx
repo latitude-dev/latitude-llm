@@ -4,7 +4,7 @@ import { ProviderLog } from '@latitude-data/core/browser'
 import { DocumentLogWithMetadata } from '@latitude-data/core/repositories'
 import {
   ClickToCopy,
-  Icons,
+  Icon,
   Skeleton,
   Text,
   Tooltip,
@@ -103,7 +103,7 @@ export function DocumentLogMetadata({
           trigger={
             <div className='flex flex-row items-center gap-x-1'>
               <Text.H5 color='foregroundMuted'>{documentLog.tokens}</Text.H5>
-              <Icons.info className='w-4 h-4 text-muted-foreground' />
+              <Icon name='info' className='text-muted-foreground' />
             </div>
           }
         >
@@ -138,7 +138,7 @@ export function DocumentLogMetadata({
               <Text.H5 color='foregroundMuted'>
                 {formatCostInMillicents(documentLog.cost_in_millicents ?? 0)}
               </Text.H5>
-              <Icons.info className='w-4 h-4 text-muted-foreground' />
+              <Icon name='info' className='text-muted-foreground' />
             </div>
           }
         >

@@ -7,7 +7,7 @@ import Text from '../../../../../ds/atoms/Text'
 import { cn } from '../../../../../lib/utils'
 import { useNodeValidator } from './useNodeValidator'
 
-export const ICON_CLASS = 'min-w-6 h-6 text-muted-foreground'
+export const ICON_CLASS = 'text-muted-foreground'
 export type IndentType = { isLast: boolean }
 function IndentationBar({
   indentation,
@@ -169,9 +169,6 @@ function NodeHeaderWrapper({
               iconProps={{
                 color: selected ? 'accentForeground' : 'foregroundMuted',
                 name: action.iconProps?.name!,
-                size: 16,
-                widthClass: 'w-4',
-                heightClass: 'h-4',
               }}
             />
           ))}

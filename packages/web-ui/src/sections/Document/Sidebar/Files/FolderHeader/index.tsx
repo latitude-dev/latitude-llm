@@ -1,8 +1,7 @@
 import { useCallback, useMemo } from 'react'
 
-import { Icons } from '../../../../../ds/atoms'
+import { Icon } from '../../../../../ds/atoms'
 import { MenuOption } from '../../../../../ds/atoms/DropdownMenu'
-import { cn } from '../../../../../lib/utils'
 import { useFileTreeContext } from '../FilesProvider'
 import NodeHeaderWrapper, { ICON_CLASS, IndentType } from '../NodeHeaderWrapper'
 import { useOpenPaths } from '../useOpenPaths'
@@ -10,14 +9,14 @@ import { useTempNodes } from '../useTempNodes'
 import { Node } from '../useTree'
 
 export function FolderIcons({ open }: { open: boolean }) {
-  const FolderIcon = open ? Icons.folderOpen : Icons.folderClose
-  const ChevronIcon = open ? Icons.chevronDown : Icons.chevronRight
+  const folderIcon = open ? 'folderOpen' : 'folderClose'
+  const chevronIcon = open ? 'chevronDown' : 'chevronRight'
   return (
     <>
-      <div className='min-w-6 h-6 flex items-center justify-center'>
-        <ChevronIcon className={cn(ICON_CLASS, 'h-4 w-4')} />
+      <div className='flex items-center justify-center'>
+        <Icon name={chevronIcon} className={ICON_CLASS} />
       </div>
-      <FolderIcon className={ICON_CLASS} />
+      <Icon name={folderIcon} className={ICON_CLASS} />
     </>
   )
 }

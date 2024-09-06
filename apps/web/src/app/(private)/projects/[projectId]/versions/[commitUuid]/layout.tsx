@@ -14,7 +14,7 @@ import { CommitProvider, ProjectProvider } from '@latitude-data/web-ui'
 import { BreadcrumpBadge } from '@latitude-data/web-ui/browser'
 import { NAV_LINKS } from '$/app/(private)/_lib/constants'
 import { ProjectPageParams } from '$/app/(private)/projects/[projectId]/page'
-import BreadcrumpLInk from '$/components/BreadcrumpLink'
+import BreadcrumpLink from '$/components/BreadcrumpLink'
 import { AppLayout } from '$/components/layouts'
 import { getCurrentUser, SessionData } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
@@ -63,7 +63,7 @@ export default async function CommitLayout({
           breadcrumbs={[
             {
               name: (
-                <BreadcrumpLInk
+                <BreadcrumpLink
                   name={session.workspace.name}
                   href={ROUTES.root}
                 />

@@ -1,4 +1,4 @@
-import { Icons } from '../Icons'
+import { Icon } from '../Icons'
 import {
   AlertDescription,
   AlertProps,
@@ -14,7 +14,7 @@ type Props = {
 export function Alert({ title, description, variant = 'default' }: Props) {
   return (
     <AlertRoot variant={variant}>
-      <Icons.alert className='w-4 h-4' />
+      <Icon name='alert' />
       {title && <AlertTitle>{title}</AlertTitle>}
       {description && <AlertDescription>{description}</AlertDescription>}
     </AlertRoot>
