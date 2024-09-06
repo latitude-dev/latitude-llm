@@ -17,7 +17,10 @@ export default async function DocumentPage({
   return (
     <>
       {children}
-      <EvaluationEditor evaluation={evaluation} />
+      <EvaluationEditor
+        evaluationUuid={evaluationUuid}
+        defaultPrompt={evaluation.metadata.prompt}
+      />
     </>
   )
 }

@@ -1,31 +1,35 @@
 'use client'
 
-import { Suspense, useCallback, useEffect, useState } from 'react'
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 
 import { ConversationMetadata, readMetadata } from '@latitude-data/compiler'
-import { EvaluationDto } from '@latitude-data/core/browser'
 import {
   AppLocalStorage,
+  Button,
   DocumentTextEditor,
   DocumentTextEditorFallback,
   DropdownMenu,
   useLocalStorage,
 } from '@latitude-data/web-ui'
 import useEvaluations from '$/stores/evaluations'
-import { useDebouncedCallback } from 'use-debounce'
 
 import { Header } from './Header'
 import Playground from './Playground'
 import { EVALUATION_PARAMETERS } from './Playground/Chat'
 
 export default function EvaluationEditor({
-  evaluation,
+  evaluationUuid,
+  defaultPrompt,
 }: {
-  evaluation: EvaluationDto
+  evaluationUuid: string
+  defaultPrompt: string
 }) {
-  const { update } = useEvaluations()
-  const [value, setValue] = useState(evaluation.metadata.prompt)
-  const [isSaved, setIsSaved] = useState(true)
+  const { data, isLoading, update, isUpdating } = useEvaluations()
+  const evaluation = useMemo(
+    () => data.find((e) => e.uuid === evaluationUuid),
+    [evaluationUuid, data],
+  )
+  const [value, setValue] = useState(defaultPrompt)
   const [metadata, setMetadata] = useState<ConversationMetadata>()
 
   const { value: showLineNumbers, setValue: setShowLineNumbers } =
@@ -42,23 +46,22 @@ export default function EvaluationEditor({
     defaultValue: false,
   })
 
-  const debouncedSave = useDebouncedCallback(
+  const save = useCallback(
     (val: string) => {
       update({
-        id: evaluation.id,
+        id: evaluation!.id,
         metadata: { prompt: val },
       })
-      setIsSaved(true)
     },
-    500,
-    { trailing: true },
+    [update, evaluation],
   )
 
-  const onChange = useCallback((value: string) => {
-    setIsSaved(false)
-    setValue(value)
-    debouncedSave(value)
-  }, [])
+  const onChange = useCallback(
+    (value: string) => {
+      setValue(value)
+    },
+    [setValue],
+  )
 
   useEffect(() => {
     readMetadata({
@@ -67,10 +70,21 @@ export default function EvaluationEditor({
     }).then(setMetadata)
   }, [value])
 
+  if (!evaluation) return null
+
   return (
     <div className='flex flex-row w-full h-full gap-8 p-6'>
       <div className='flex flex-col flex-1 flex-grow flex-shrink gap-2 min-w-0'>
         <Header title='Evaluation editor'>
+          {value !== evaluation.metadata.prompt && (
+            <Button
+              fancy
+              disabled={isUpdating || isLoading}
+              onClick={() => save(value)}
+            >
+              Save changes
+            </Button>
+          )}
           <DropdownMenu
             options={[
               {
@@ -98,7 +112,6 @@ export default function EvaluationEditor({
             value={value}
             metadata={metadata}
             onChange={onChange}
-            isSaved={isSaved}
           />
         </Suspense>
       </div>

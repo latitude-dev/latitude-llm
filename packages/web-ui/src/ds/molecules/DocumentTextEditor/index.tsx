@@ -11,7 +11,7 @@ export type DocumentTextEditorProps = {
   metadata?: ConversationMetadata
   onChange?: (value: string) => void
   readOnlyMessage?: string
-  isSaved: boolean
+  isSaved?: boolean
 }
 
 const DocumentTextEditor = lazy(() =>

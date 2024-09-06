@@ -186,19 +186,21 @@ export function DocumentTextEditor({
               </Button>
             )}
 
-            <div className='flex flex-row items-center gap-2'>
-              {isSaved ? (
-                <>
-                  <Text.H6 color='foregroundMuted'>Saved</Text.H6>
-                  <CheckCircle2 className='h-4 w-4 text-muted-foreground' />
-                </>
-              ) : (
-                <>
-                  <Text.H6 color='foregroundMuted'>Saving...</Text.H6>
-                  <LoaderCircle className='h-4 w-4 text-muted-foreground animate-spin' />
-                </>
-              )}
-            </div>
+            {isSaved !== undefined && (
+              <div className='flex flex-row items-center gap-2'>
+                {isSaved ? (
+                  <>
+                    <Text.H6 color='foregroundMuted'>Saved</Text.H6>
+                    <CheckCircle2 className='h-4 w-4 text-muted-foreground' />
+                  </>
+                ) : (
+                  <>
+                    <Text.H6 color='foregroundMuted'>Saving...</Text.H6>
+                    <LoaderCircle className='h-4 w-4 text-muted-foreground animate-spin' />
+                  </>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}
