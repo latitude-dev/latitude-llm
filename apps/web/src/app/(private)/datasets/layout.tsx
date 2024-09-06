@@ -2,8 +2,8 @@ import { ReactNode } from 'react'
 
 import {
   Container,
-  ListingHeader,
   TableBlankSlate,
+  TableWithHeader,
 } from '@latitude-data/web-ui'
 import { AppLayout } from '$/components/layouts'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
@@ -32,22 +32,24 @@ export default async function DatasetsList({
     >
       <Container>
         {children}
-        <ListingHeader
+        <TableWithHeader
           title='Datasets'
           actions={
             <Link href={ROUTES.datasets.new.root}>
-              <ListingHeader.Button>Upload dataset</ListingHeader.Button>
+              <TableWithHeader.Button>Upload dataset</TableWithHeader.Button>
             </Link>
           }
-        />
-        <TableBlankSlate
-          description='There are no datasets yet. Create one to start testing your prompts.'
-          link={
-            <Link href={ROUTES.datasets.new.root}>
-              <TableBlankSlate.Button>
-                Create your first dataset
-              </TableBlankSlate.Button>
-            </Link>
+          table={
+            <TableBlankSlate
+              description='There are no datasets yet. Create one to start testing your prompts.'
+              link={
+                <Link href={ROUTES.datasets.new.root}>
+                  <TableBlankSlate.Button>
+                    Create your first dataset
+                  </TableBlankSlate.Button>
+                </Link>
+              }
+            />
           }
         />
       </Container>

@@ -2,8 +2,8 @@ import { ReactNode } from 'react'
 
 import {
   Container,
-  ListingHeader,
   TableBlankSlate,
+  TableWithHeader,
   Text,
 } from '@latitude-data/web-ui'
 import { AppLayout } from '$/components/layouts'
@@ -46,33 +46,33 @@ export default async function DashboardLayout({
     >
       <Container>
         {children}
-        <div className='flex-1'>
-          <ListingHeader
-            title='Projects'
-            actions={
-              <Link href={ROUTES.dashboard.projects.new.root}>
-                <ListingHeader.Button>Add project</ListingHeader.Button>
-              </Link>
-            }
-          />
-          <div className='flex flex-col gap-2'>
-            {projects.length > 0 && (
-              <ProjectsTable documents={documents} projects={projects} />
-            )}
-            {projects.length === 0 && (
-              <TableBlankSlate
-                description='There are no projects yet. Create one to start adding your prompts.'
-                link={
-                  <Link href={ROUTES.dashboard.projects.new.root}>
-                    <TableBlankSlate.Button>
-                      Create your first project
-                    </TableBlankSlate.Button>
-                  </Link>
-                }
-              />
-            )}
-          </div>
-        </div>
+        <TableWithHeader
+          title='Projects'
+          actions={
+            <Link href={ROUTES.dashboard.projects.new.root}>
+              <TableWithHeader.Button>Add project</TableWithHeader.Button>
+            </Link>
+          }
+          table={
+            <>
+              {projects.length > 0 && (
+                <ProjectsTable documents={documents} projects={projects} />
+              )}
+              {projects.length === 0 && (
+                <TableBlankSlate
+                  description='There are no projects yet. Create one to start adding your prompts.'
+                  link={
+                    <Link href={ROUTES.dashboard.projects.new.root}>
+                      <TableBlankSlate.Button>
+                        Create your first project
+                      </TableBlankSlate.Button>
+                    </Link>
+                  }
+                />
+              )}
+            </>
+          }
+        />
       </Container>
     </AppLayout>
   )

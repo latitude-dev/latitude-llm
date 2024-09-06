@@ -1,6 +1,6 @@
 import { ReactNode } from 'react'
 
-import { Container, ListingHeader, Text } from '@latitude-data/web-ui'
+import { Container, Text, TitleWithActions } from '@latitude-data/web-ui'
 import { AppLayout } from '$/components/layouts'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
 import { getSession } from '$/services/auth/getSession'
@@ -36,7 +36,7 @@ export default async function SettingsLayout({
     >
       <Container>
         {children}
-        <ListingHeader title='Workspace' />
+        <TitleWithActions title='Workspace' />
         <WorkspaceName />
         <ProviderApiKeys />
         <Memberships />
