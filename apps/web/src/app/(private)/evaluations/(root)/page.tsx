@@ -2,8 +2,8 @@ import { NotFoundError } from '@latitude-data/core/lib/errors'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
 import { notFound } from 'next/navigation'
 
-import { getEvaluationTemplatesCached } from '../../_data-access'
 import Evaluations from '../_components/Evaluations'
+import { getEvaluationTemplatesCached } from '../../_data-access'
 
 export default async function EvaluationsPage() {
   try {
