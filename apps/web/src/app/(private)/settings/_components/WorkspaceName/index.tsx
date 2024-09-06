@@ -2,7 +2,7 @@
 
 import React from 'react'
 
-import { Input, Text } from '@latitude-data/web-ui'
+import { Input } from '@latitude-data/web-ui'
 import useCurrentWorkspace from '$/stores/currentWorkspace'
 import { useDebouncedCallback } from 'use-debounce'
 
@@ -19,10 +19,8 @@ export default function WorkspaceName() {
     trailing: true,
   })
 
-  // TODO: i18n
   return (
     <div className='flex flex-col gap-4 max-w-[50%]'>
-      <Text.H4B>Workspace</Text.H4B>
       <Input
         defaultValue={workspace.name}
         label='Workspace name'

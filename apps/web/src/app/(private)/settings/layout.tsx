@@ -36,10 +36,12 @@ export default async function SettingsLayout({
     >
       <Container>
         {children}
-        <ListingHeader title='Workspace' />
-        <WorkspaceName />
-        <ProviderApiKeys />
-        <Memberships />
+        <div className='flex flex-col gap-6'>
+          <ListingHeader title='Workspace' />
+          <WorkspaceName />
+          <ProviderApiKeys />
+          <Memberships />
+        </div>
       </Container>
     </AppLayout>
   )
