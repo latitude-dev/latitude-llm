@@ -15,11 +15,6 @@ function convertParams(
 ): Record<string, unknown> {
   return Object.fromEntries(
     Object.entries(inputs).map(([key, value]) => {
-      try {
-        value = JSON.parse(value)
-      } catch (e) {
-        // Do nothing
-      }
       return [key, value]
     }),
   )
