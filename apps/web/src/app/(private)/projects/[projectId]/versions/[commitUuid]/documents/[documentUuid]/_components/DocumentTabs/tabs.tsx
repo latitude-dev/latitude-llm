@@ -27,7 +27,7 @@ export function DocumentTabSelector({
   }
 
   return (
-    <div className='flex flex-row p-4 pb-0'>
+    <div className='flex flex-row p-4 pt-6 pb-0'>
       <TabSelector
         options={[
           { label: 'Editor', value: DocumentRoutes.editor },

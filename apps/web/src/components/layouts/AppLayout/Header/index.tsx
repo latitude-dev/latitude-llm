@@ -106,8 +106,8 @@ export default function AppHeader({
   const pathname = usePathname()
   const info = currentUser ? getUserInfoFromSession(currentUser) : null
   return (
-    <header className='px-6 sticky top-0 flex flex-col bg-background-gray border-b border-b-border'>
-      <div className='py-3 flex flex-row items-center justify-between border-b border-b-border'>
+    <header className='sticky top-0 flex flex-col bg-background-gray border-b border-b-border'>
+      <div className='px-6 py-3 flex flex-row items-center justify-between border-b border-b-border'>
         <Breadcrump breadcrumbs={breadcrumbs} />
         <div className='flex flex-row items-center gap-x-6'>
           <nav className='flex flex-row gap-x-4'>
@@ -126,26 +126,28 @@ export default function AppHeader({
         </div>
       </div>
       {sectionLinks.length > 0 ? (
-        <NavTabGroup>
-          {sectionLinks.map((link, idx) => {
-            let { href, label, index } = link
-            href = href?.startsWith('/') ? href : `/${href}`
+        <div className='px-6'>
+          <NavTabGroup>
+            {sectionLinks.map((link, idx) => {
+              let { href, label, index } = link
+              href = href?.startsWith('/') ? href : `/${href}`
 
-            const selected = href
-              ? index
-                ? pathname === href
-                : pathname?.startsWith(href)
-              : false
+              const selected = href
+                ? index
+                  ? pathname === href
+                  : pathname?.startsWith(href)
+                : false
 
-            if (!href) return null
+              if (!href) return null
 
-            return (
-              <Link href={href} key={idx}>
-                <NavTabItem label={label} selected={selected} />
-              </Link>
-            )
-          })}
-        </NavTabGroup>
+              return (
+                <Link href={href} key={idx}>
+                  <NavTabItem label={label} selected={selected} />
+                </Link>
+              )
+            })}
+          </NavTabGroup>
+        </div>
       ) : null}
     </header>
   )

@@ -8,8 +8,6 @@ import { getCurrentUser, SessionData } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
 import { notFound, redirect } from 'next/navigation'
 
-export const dynamic = 'force-dynamic'
-
 const PROJECT_ROUTE = ROUTES.projects.detail
 
 export type ProjectPageParams = {

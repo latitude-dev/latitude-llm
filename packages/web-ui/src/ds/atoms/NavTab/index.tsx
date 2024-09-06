@@ -20,7 +20,7 @@ function NavTabItem({
   const Comp = asChild ? Slot : 'div'
 
   return (
-    <Comp onClick={onClick} className='px-2 py-1.5 cursor-pointer'>
+    <Comp onClick={onClick} className='cursor-pointer'>
       <div
         className={cn('py-1 px-2 rounded-md hover:bg-muted', {
           'bg-muted': selected,
@@ -35,7 +35,7 @@ function NavTabItem({
 }
 
 function NavTabGroup({ children }: { children: ReactNode }) {
-  return <nav className='flex flex-row gap-2'>{children}</nav>
+  return <nav className='flex flex-row gap-2 py-1.5'>{children}</nav>
 }
 
 function NavTab({ tabs }: { tabs: INavTabItem[] }) {
