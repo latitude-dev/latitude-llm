@@ -39,6 +39,8 @@
     "@ai-sdk/google": "^0.0.46",
     "@ai-sdk/mistral": "^0.0.38",
     "@ai-sdk/openai": "^0.0.54",
+    "@aws-sdk/client-s3": "^3.645.0",
+    "@aws-sdk/s3-request-presigner": "^3.645.0",
     "@monaco-editor/react": "^4.6.0",
     "@plunk/node": "^3.0.2",
     "@radix-ui/react-avatar": "^1.1.0",

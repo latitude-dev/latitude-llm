@@ -1,5 +1,7 @@
+import { debuglog } from 'node:util'
 import { Readable } from 'stream'
 
+import { HeadBucketCommand, S3Client } from '@aws-sdk/client-s3'
 import { Result } from '@latitude-data/core/lib/Result'
 import { env } from '@latitude-data/env'
 import { Disk, errors } from 'flydrive'
@@ -7,18 +9,34 @@ import { FSDriver } from 'flydrive/drivers/fs'
 import { S3Driver } from 'flydrive/drivers/s3'
 import { WriteOptions } from 'flydrive/types'
 
+var debug_default = debuglog('flydrive:s3')
+
 const generateUrl = (publicPath: string) => async (key: string) =>
   `/${publicPath}/${key}`
 
-function getAwsCredentials() {
+/**
+ * These env variables are set in production.
+ * If you want to test this locally, you need to set them in your machine.
+ * Create a .env.development file in packages/env/.env.development and add the following:
+ *
+ * S3_BUCKET=[your-bucket-name]
+ * AWS_REGION=[your-region]
+ * AWS_ACCESS_KEY=[your-key]
+ * AWS_ACCESS_SECRET=[your-secret]
+ */
+function getAwsConfig() {
   const accessKeyId = env.AWS_ACCESS_KEY
+  const bucket = env.S3_BUCKET
+  const region = env.AWS_REGION
   const secretAccessKey = env.AWS_ACCESS_SECRET
 
-  if (!accessKeyId || !secretAccessKey) {
-    throw new Error('AWS credentials not configured')
+  if (!accessKeyId || !secretAccessKey || !bucket || !region) {
+    throw new Error(
+      'AWS credentials not configured. Check you setup AWS_ACCESS_KEY, AWS_ACCESS_SECRET, S3_BUCKET and AWS_REGION in your .env file.',
+    )
   }
 
-  return { accessKeyId, secretAccessKey }
+  return { region, bucket, credentials: { accessKeyId, secretAccessKey } }
 }
 
 async function getReadableStreamFromFile(file: File) {
@@ -37,6 +55,27 @@ export class DiskWrapper {
 
   constructor(args: BuildArgs) {
     this.disk = new Disk(this.buildDisk(args))
+  }
+
+  async pingBucket() {
+    const bucket = env.S3_BUCKET
+    debug_default('pinging bucket %s', bucket)
+    const awsConfig = getAwsConfig()
+    const client = new S3Client({
+      credentials: awsConfig.credentials,
+      region: awsConfig.region,
+    })
+    const input = {
+      Bucket: env.S3_BUCKET,
+      ExpectedBucketOwner: 'TODO_FIND_ID',
+    }
+    const command = new HeadBucketCommand(input)
+    try {
+      await client.send(command)
+    } catch (error) {
+      debug_default('error pinging bucket %s', bucket)
+      debug_default('error pinging bucket %s', error)
+    }
   }
 
   file(key: string) {
@@ -99,10 +138,11 @@ export class DiskWrapper {
       })
     }
 
+    const awsConfig = getAwsConfig()
     return new S3Driver({
-      credentials: getAwsCredentials(),
-      region: env.AWS_REGION,
-      bucket: env.S3_BUCKET,
+      credentials: awsConfig.credentials,
+      region: awsConfig.region,
+      bucket: awsConfig.bucket,
       visibility: 'private',
     })
   }

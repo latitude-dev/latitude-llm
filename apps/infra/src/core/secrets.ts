@@ -1,7 +1,7 @@
 import * as aws from '@pulumi/aws'
 import * as pulumi from '@pulumi/pulumi'
 
-const cfg = new pulumi.Config()
+const config = new pulumi.Config()
 
 function createSecretWithVersion(
   name: string,
@@ -14,7 +14,7 @@ function createSecretWithVersion(
 
   new aws.secretsmanager.SecretVersion(`${name}_VERSION`, {
     secretId: secret.id,
-    secretString: cfg.requireSecret(name),
+    secretString: config.requireSecret(name),
   })
 
   return secret
@@ -37,7 +37,37 @@ const sentryProject = createSecretWithVersion(
   'Project for Sentry error tracking',
 )
 
+const awsAccessKey = new aws.secretsmanager.Secret(
+  'LATITUDE_LLM_AWS_ACCESS_KEY',
+  {
+    description: 'AWS access key',
+    name: 'LATITUDE_LLM_AWS_ACCESS_KEY',
+  },
+)
+const awsAccessSecret = new aws.secretsmanager.Secret(
+  'LATITUDE_LLM_AWS_ACCESS_SECRET',
+  {
+    description: 'AWS access secret',
+    name: 'LATITUDE_LLM_AWS_ACCESS_SECRET',
+  },
+)
+
+new aws.secretsmanager.SecretVersion('MAILER_API_KEY_VERSION', {
+  secretId: mailerApiKey.id,
+  secretString: config.requireSecret('MAILER_API_KEY'),
+})
+new aws.secretsmanager.SecretVersion('LATITUDE_LLM_AWS_ACCESS_KEY_VERSION', {
+  secretId: awsAccessKey.id,
+  secretString: config.requireSecret('LATITUDE_LLM_AWS_ACCESS_KEY'),
+})
+new aws.secretsmanager.SecretVersion('LATITUDE_LLM_AWS_ACCESS_SECRET_VERSION', {
+  secretId: awsAccessSecret.id,
+  secretString: config.requireSecret('LATITUDE_LLM_AWS_ACCESS_SECRET'),
+})
+
 export const mailerApiKeyArn = mailerApiKey.arn
 export const sentryDnsArn = sentryDns.arn
 export const sentryOrgArn = sentryOrg.arn
 export const sentryProjectArn = sentryProject.arn
+export const awsAccessKeyArn = awsAccessKey.arn
+export const awsAccessSecretArn = awsAccessSecret.arn
