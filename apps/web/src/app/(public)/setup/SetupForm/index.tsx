@@ -6,7 +6,17 @@ import { Button, FormWrapper, Input, useToast } from '@latitude-data/web-ui'
 import { setupAction } from '$/actions/user/setupAction'
 import { useServerAction } from 'zsa-react'
 
-export default function SetupForm({ footer }: { footer: ReactNode }) {
+export default function SetupForm({
+  email,
+  name,
+  companyName,
+  footer,
+}: {
+  email?: string
+  name?: string
+  companyName?: string
+  footer: ReactNode
+}) {
   const { toast } = useToast()
   const { isPending, error, executeFormAction } = useServerAction(setupAction, {
     onError: ({ err }) => {
@@ -30,6 +40,7 @@ export default function SetupForm({ footer }: { footer: ReactNode }) {
           label='Name'
           placeholder='Jon Snow'
           errors={errors?.name}
+          defaultValue={name}
         />
         <Input
           name='email'
@@ -37,12 +48,14 @@ export default function SetupForm({ footer }: { footer: ReactNode }) {
           label='Email'
           placeholder='jon@winterfell.com'
           errors={errors?.email}
+          defaultValue={email}
         />
         <Input
           name='companyName'
           label='Workspace Name'
           placeholder='Acme Inc.'
           errors={errors?.companyName}
+          defaultValue={companyName}
         />
         <Button fullWidth isLoading={isPending} fancy>
           Create account
