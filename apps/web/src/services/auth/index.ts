@@ -3,7 +3,12 @@ import { sessions, users } from '@latitude-data/core/schema'
 import { DrizzlePostgreSQLAdapter } from '@lucia-auth/adapter-drizzle'
 import { Lucia } from 'lucia'
 
-const adapter = new DrizzlePostgreSQLAdapter(database, sessions, users)
+const adapter = new DrizzlePostgreSQLAdapter(
+  // @ts-expect-error - No idea why this is happening
+  database,
+  sessions,
+  users,
+)
 
 interface DatabaseUserAttributes {
   email: string

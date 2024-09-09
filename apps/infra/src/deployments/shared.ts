@@ -25,6 +25,25 @@ const mailerApiKey = mailerApiKeyArn.apply((arn) => {
   return secret.secretString
 })
 
+const awsAccessKeyArn = coreStack.requireOutput('latitudeLlmAwsAccessKeyArn')
+const awsAccessKey = awsAccessKeyArn.apply((arn) => {
+  const secret = aws.secretsmanager.getSecretVersionOutput({
+    secretId: arn,
+  })
+
+  return secret.secretString
+})
+const awsAccessSecretArn = coreStack.requireOutput(
+  'latitudeLlmAwsAccessSecretArn',
+)
+const awsAccessSecret = awsAccessSecretArn.apply((arn) => {
+  const secret = aws.secretsmanager.getSecretVersionOutput({
+    secretId: arn,
+  })
+
+  return secret.secretString
+})
+
 export const dbUrl = pulumi.interpolate`postgresql://${dbUsername}:${dbPassword}@${dbEndpoint}/${dbName}?sslmode=verify-full&sslrootcert=/app/packages/core/src/assets/eu-central-1-bundle.pem`
 export const environment = pulumi
   .all([cacheEndpoint, dbUrl, mailerApiKey])
@@ -46,5 +65,10 @@ export const environment = pulumi
         name: 'SENTRY_PROJECT',
         value: coreStack.requireOutput('sentryProject'),
       },
+      { name: 'DRIVE_DISK', value: 's3' },
+      { name: 'ASW_REGION', value: 'eu-central-1' },
+      { name: 'S3_BUCKET', value: 'latitude-llm-bucket-production' },
+      { name: 'AWS_ACCESS_KEY', value: awsAccessKey },
+      { name: 'AWS_ACCESS_SECRET', value: awsAccessSecret },
     ]
   })

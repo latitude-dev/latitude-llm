@@ -21,8 +21,8 @@ const DELIMITER_VALUES = {
   space: ' ',
 }
 
-const MAX_SIZE = 3
-const MAX_UPLOAD_SIZE_IN_MB = 3 * 1024 * 1024
+const MAX_SIZE = 15
+const MAX_UPLOAD_SIZE_IN_MB = MAX_SIZE * 1024 * 1024
 export const createDatasetAction = authProcedure
   .createServerAction()
   .input(
@@ -36,7 +36,7 @@ export const createDatasetAction = authProcedure
               async (name) => {
                 const scope = new DatasetsRepository(ctx.workspace.id)
                 const existing = await scope.findByName(name)
-                return !existing
+                return !existing.length
               },
               {
                 message:

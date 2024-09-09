@@ -59,7 +59,5 @@ export const env = createEnv({
   },
   runtimeEnv: {
     ...process.env,
-    // TODO: Remove once s3 is implemented
-    DRIVE_DISK: 'local',
   },
 })

@@ -5,7 +5,7 @@
   "scripts": {
     "build": "next build",
     "dev": "next dev",
-    "dev:debug": "NODE_OPTIONS='--inspect=0.0.0.0:9229' ./node_modules/.bin/next dev",
+    "dev:debug": "NODE_DEBUG=flydrive:s3 NODE_OPTIONS='--inspect=0.0.0.0:9229' ./node_modules/.bin/next dev",
     "dev:local": "USE_LOCALHOST=true pnpm run dev",
     "lint": "next lint",
     "prettier": "prettier --write \"**/*.{ts,tsx,md}\"",
