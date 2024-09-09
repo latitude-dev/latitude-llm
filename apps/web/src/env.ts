@@ -7,6 +7,7 @@ export default createEnv({
   skipValidation:
     process.env.BUILDING_CONTAINER == 'true' || process.env.NODE_ENV === 'test',
   server: {
+    NODE_ENV: z.string(),
     DATABASE_URL: z.string(),
     REDIS_HOST: z.string(),
     REDIS_PORT: z.coerce.number().optional(),
@@ -20,6 +21,7 @@ export default createEnv({
       .default('true'),
   },
   runtimeEnv: {
+    NODE_ENV: process.env.NODE_ENV,
     DATABASE_URL: process.env.DATABASE_URL,
     REDIS_HOST: process.env.REDIS_HOST,
     REDIS_PORT: process.env.REDIS_PORT,

@@ -1,16 +1,15 @@
 import { and, desc, eq, isNotNull } from 'drizzle-orm'
 
-import { Project } from '../../../browser'
 import { database } from '../../../client'
 import { InferedReturnType, NotFoundError, Result } from '../../../lib'
 import { buildCommitsScope } from './buildCommitsScope'
 
 export async function getHeadCommitForProject(
   {
-    project,
+    projectId,
     commitsScope,
   }: {
-    project: Project
+    projectId: number
     commitsScope: InferedReturnType<typeof buildCommitsScope>
   },
   db = database,
@@ -21,7 +20,7 @@ export async function getHeadCommitForProject(
     .where(
       and(
         isNotNull(commitsScope.mergedAt),
-        eq(commitsScope.projectId, project.id),
+        eq(commitsScope.projectId, projectId),
       ),
     )
     .orderBy(desc(commitsScope.mergedAt))

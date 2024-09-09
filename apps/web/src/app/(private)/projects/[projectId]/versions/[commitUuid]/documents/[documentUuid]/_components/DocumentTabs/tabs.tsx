@@ -31,6 +31,7 @@ export function DocumentTabSelector({
       <TabSelector
         options={[
           { label: 'Editor', value: DocumentRoutes.editor },
+          { label: 'Evaluations', value: DocumentRoutes.evaluations },
           { label: 'Logs', value: DocumentRoutes.logs },
         ]}
         selected={selectedSegment ?? DocumentRoutes.editor}

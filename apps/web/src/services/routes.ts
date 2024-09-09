@@ -3,6 +3,7 @@ import { HEAD_COMMIT } from '@latitude-data/core/browser'
 export enum DocumentRoutes {
   editor = 'editor',
   logs = 'logs',
+  evaluations = 'evaluations',
 }
 
 export enum EvaluationRoutes {
@@ -83,6 +84,12 @@ export const ROUTES = {
                   return {
                     root,
                     [DocumentRoutes.editor]: { root },
+                    [DocumentRoutes.evaluations]: {
+                      root: `${root}/evaluations`,
+                      connect: {
+                        root: `${root}/evaluations/connect`,
+                      },
+                    },
                     [DocumentRoutes.logs]: {
                       root: `${root}/${DocumentRoutes.logs}`,
                     },

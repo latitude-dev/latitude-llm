@@ -23,7 +23,7 @@ export const getData = async ({
     .getProjectById(projectId)
     .then((r) => r.unwrap())
   const commit = await commitsScope
-    .getCommitByUuid({ project, uuid: commitUuid })
+    .getCommitByUuid({ projectId: project.id, uuid: commitUuid })
     .then((r) => r.unwrap())
 
   const document = await docsScope

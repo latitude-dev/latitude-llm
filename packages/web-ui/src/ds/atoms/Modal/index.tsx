@@ -5,6 +5,7 @@ import { ReactNode } from 'react'
 import { cn } from '../../../lib/utils'
 import { Alert } from '../Alert'
 import { Button } from '../Button'
+import Text from '../Text'
 import {
   Dialog,
   DialogClose,
@@ -27,7 +28,29 @@ export type ModalProps = {
   children: ReactNode
   footer?: ReactNode
   size?: 'regular' | 'large'
+  steps?: {
+    total: number
+    current: number
+  }
 }
+
+function StepSelector({ total, current }: { total: number; current: number }) {
+  return (
+    <div className='flex flex-row items-center w-full gap-2 pt-4 pr-6'>
+      {Array.from({ length: total }, (_, i) => (
+        <div
+          key={i}
+          className={cn(
+            'h-1 flex-grow rounded-full',
+            i < current ? 'bg-primary' : 'bg-muted',
+          )}
+        />
+      ))}
+      <Text.H6M>{`${current}/${total}`}</Text.H6M>
+    </div>
+  )
+}
+
 export function Modal({
   open,
   defaultOpen,
@@ -37,6 +60,7 @@ export function Modal({
   title,
   description,
   size = 'regular',
+  steps,
 }: ModalProps) {
   return (
     <Dialog open={open} defaultOpen={defaultOpen} onOpenChange={onOpenChange}>
@@ -46,6 +70,8 @@ export function Modal({
           'max-w-modal-lg': size === 'large',
         })}
       >
+        {steps && <StepSelector total={steps.total} current={steps.current} />}
+
         {(title || description) && (
           <DialogHeader>
             {title && <DialogTitle>{title}</DialogTitle>}

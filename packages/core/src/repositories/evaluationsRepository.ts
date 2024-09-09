@@ -1,11 +1,15 @@
 import { omit } from 'lodash-es'
 
-import { and, eq, getTableColumns, sql } from 'drizzle-orm'
+import { and, eq, getTableColumns, inArray, sql } from 'drizzle-orm'
 
 import { EvaluationDto } from '../browser'
 import { EvaluationMetadataType } from '../constants'
 import { NotFoundError, Result } from '../lib'
-import { evaluations, llmAsJudgeEvaluationMetadatas } from '../schema'
+import {
+  connectedEvaluations,
+  evaluations,
+  llmAsJudgeEvaluationMetadatas,
+} from '../schema'
 import Repository from './repository'
 
 const tt = {
@@ -66,5 +70,27 @@ export class EvaluationsRepository extends Repository<
     }
 
     return Result.ok(result[0]!)
+  }
+
+  async findByDocumentUuid(documentUuid: string) {
+    const result = await this.db
+      .select(this.scope._.selectedFields)
+      .from(this.scope)
+      .innerJoin(
+        connectedEvaluations,
+        eq(connectedEvaluations.evaluationId, this.scope.id),
+      )
+      .where(eq(connectedEvaluations.documentUuid, documentUuid))
+
+    return Result.ok(result as EvaluationDto[])
+  }
+
+  async filterByUuids(uuids: string[]) {
+    const result = await this.db
+      .select()
+      .from(this.scope)
+      .where(inArray(this.scope.uuid, uuids))
+
+    return Result.ok(result)
   }
 }

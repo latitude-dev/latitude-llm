@@ -211,7 +211,7 @@ describe('updateDocument', () => {
     const commitsScope = new CommitsRepository(project.workspaceId)
 
     const commit = await commitsScope
-      .getHeadCommit(project)
+      .getHeadCommit(project.id)
       .then((r) => r.unwrap())
     const fooDoc = documents.find((d) => d.path === 'foo')!
 

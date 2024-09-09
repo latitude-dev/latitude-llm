@@ -107,3 +107,8 @@ export type ChainEvent =
 export enum EvaluationMetadataType {
   LlmAsJudge = 'llm_as_judge',
 }
+
+export enum EvaluationMode {
+  Live = 'live',
+  Batch = 'batch',
+}

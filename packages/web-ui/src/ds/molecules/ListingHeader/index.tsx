@@ -19,7 +19,7 @@ export const TableWithHeader = ({
   actions,
   table,
 }: {
-  title: string
+  title: string | ReactNode
   actions?: ReactNode
   table?: ReactNode
 }) => {

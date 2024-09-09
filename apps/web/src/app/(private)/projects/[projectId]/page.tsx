@@ -1,9 +1,6 @@
-import { HEAD_COMMIT, type Project } from '@latitude-data/core/browser'
+import { type Project } from '@latitude-data/core/browser'
 import { NotFoundError } from '@latitude-data/core/lib/errors'
-import {
-  findCommitCached,
-  findProjectCached,
-} from '$/app/(private)/_data-access'
+import { findProjectCached } from '$/app/(private)/_data-access'
 import { getCurrentUser, SessionData } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
 import { notFound, redirect } from 'next/navigation'
@@ -25,7 +22,7 @@ export default async function ProjectPage({ params }: ProjectPageParams) {
       projectId: Number(params.projectId),
       workspaceId: session.workspace.id,
     })
-    await findCommitCached({ uuid: HEAD_COMMIT, project })
+
     url = PROJECT_ROUTE({ id: +project.id }).commits.latest
   } catch (error) {
     if (error instanceof NotFoundError) {

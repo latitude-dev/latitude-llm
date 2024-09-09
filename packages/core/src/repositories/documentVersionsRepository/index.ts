@@ -3,6 +3,7 @@ import { and, eq, getTableColumns, isNotNull, lte, max, sql } from 'drizzle-orm'
 import { Commit, DocumentVersion } from '../../browser'
 import { NotFoundError, Result } from '../../lib'
 import { commits, documentVersions, projects } from '../../schema'
+import { CommitsRepository } from '../commitsRepository'
 import Repository from '../repository'
 
 function mergeDocuments(
@@ -18,7 +19,8 @@ function mergeDocuments(
 }
 
 export type GetDocumentAtCommitProps = {
-  commit: Commit
+  projectId?: number
+  commitUuid: string
   documentUuid: string
 }
 
@@ -115,9 +117,18 @@ export class DocumentVersionsRepository extends Repository<
   }
 
   async getDocumentAtCommit({
-    commit,
+    projectId,
+    commitUuid,
     documentUuid,
   }: GetDocumentAtCommitProps) {
+    const commitsScope = new CommitsRepository(this.workspaceId)
+    const commitResult = await commitsScope.getCommitByUuid({
+      projectId,
+      uuid: commitUuid,
+    })
+    if (commitResult.error) return commitResult
+    const commit = commitResult.unwrap()
+
     const documentInCommit = await this.db
       .select()
       .from(this.scope)

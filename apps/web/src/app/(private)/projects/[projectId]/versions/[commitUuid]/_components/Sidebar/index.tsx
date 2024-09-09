@@ -30,7 +30,7 @@ export default async function Sidebar({
   })
   const commitsScope = new CommitsRepository(workspace.id)
   const headCommit = await commitsScope
-    .getHeadCommit(project)
+    .getHeadCommit(project.id)
     .then((r) => r.unwrap())
 
   if (fetchCommitsError) {

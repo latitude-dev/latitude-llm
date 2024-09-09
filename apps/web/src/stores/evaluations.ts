@@ -1,7 +1,9 @@
 'use client'
 
+import { compact, flatten } from 'lodash-es'
+
 import type { EvaluationDto } from '@latitude-data/core/browser'
-import { useSession, useToast } from '@latitude-data/web-ui'
+import { useToast } from '@latitude-data/web-ui'
 import { createEvaluationAction } from '$/actions/evaluations/create'
 import { destroyEvaluationAction } from '$/actions/evaluations/destroy'
 import { fetchEvaluationsAction } from '$/actions/evaluations/fetch'
@@ -12,9 +14,9 @@ import useSWR, { SWRConfiguration } from 'swr'
 export default function useEvaluations(
   opts: SWRConfiguration & {
     onSuccessCreate?: (evaluation: EvaluationDto) => void
+    params?: { documentUuid: string }
   } = {},
 ) {
-  const { workspace } = useSession()
   const { onSuccessCreate } = opts
   const { toast } = useToast()
 
@@ -24,13 +26,11 @@ export default function useEvaluations(
     isLoading,
     error: swrError,
   } = useSWR<EvaluationDto[]>(
-    ['evaluations', workspace.id],
+    compact(['evaluations', ...flatten(Object.entries(opts?.params ?? {}))]),
     async () => {
-      const [data, error] = await fetchEvaluationsAction()
+      const [data, error] = await fetchEvaluationsAction(opts?.params)
 
       if (error) {
-        console.error(error)
-
         toast({
           title: 'Error fetching evaluations',
           description: error.formErrors?.[0] || error.message,
@@ -86,6 +86,7 @@ export default function useEvaluations(
 
   return {
     data,
+    mutate,
     isLoading,
     create,
     isCreating,
