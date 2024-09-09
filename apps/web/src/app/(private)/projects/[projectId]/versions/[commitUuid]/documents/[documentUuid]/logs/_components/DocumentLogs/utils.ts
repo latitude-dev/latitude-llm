@@ -24,8 +24,4 @@ function formatDuration(duration: number) {
   return `${hours > 0 ? `${hours}h ` : ''}${minutes > 0 ? `${minutes}m ` : ''}${seconds}s`
 }
 
-function formatCostInMillicents(cost_in_millicents: number) {
-  return `$ ${cost_in_millicents / 100_000}`
-}
-
-export { relativeTime, formatDuration, formatCostInMillicents }
+export { relativeTime, formatDuration }

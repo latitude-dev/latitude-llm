@@ -14,7 +14,10 @@ describe('findEvaluationResultsByDocumentUuid', () => {
       name: 'openai',
       user,
     })
-    const evaluation = await factories.createEvaluation({ provider })
+    const evaluation = await factories.createLlmAsJudgeEvaluation({
+      workspace,
+      prompt: factories.helpers.createPrompt({ provider }),
+    })
 
     const { commit: draft } = await factories.createDraft({ project, user })
     const { documentVersion: doc } = await factories.createDocumentVersion({
@@ -28,7 +31,7 @@ describe('findEvaluationResultsByDocumentUuid', () => {
       commit,
     })
 
-    const evaluationResult = await factories.createEvaluationResult({
+    const { evaluationResult } = await factories.createEvaluationResult({
       documentLog,
       evaluation,
     })

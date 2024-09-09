@@ -32,8 +32,9 @@ export async function findAllEvaluationTemplates(): Promise<
 
 export async function findEvaluationTemplateById(
   id: number,
+  db = database,
 ): Promise<TypedResult<EvaluationTemplate, Error>> {
-  const result = await database.query.evaluationTemplates.findFirst({
+  const result = await db.query.evaluationTemplates.findFirst({
     where: eq(evaluationTemplates.id, id),
   })
 

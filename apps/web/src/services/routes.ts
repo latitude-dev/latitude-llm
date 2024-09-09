@@ -81,13 +81,20 @@ export const ROUTES = {
                 root: rootDocuments,
                 detail: ({ uuid }: { uuid: string }) => {
                   const root = `${rootDocuments}/${uuid}`
+                  const rootEvaluations = `${root}/evaluations`
                   return {
                     root,
                     [DocumentRoutes.editor]: { root },
                     [DocumentRoutes.evaluations]: {
-                      root: `${root}/evaluations`,
+                      root: rootEvaluations,
                       connect: {
-                        root: `${root}/evaluations/connect`,
+                        root: `${rootEvaluations}/connect`,
+                      },
+                      detail: ({ uuid }: { uuid: string }) => {
+                        const root = `${rootEvaluations}/${uuid}`
+                        return {
+                          root,
+                        }
                       },
                     },
                     [DocumentRoutes.logs]: {

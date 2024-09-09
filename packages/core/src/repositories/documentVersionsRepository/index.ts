@@ -50,6 +50,25 @@ export class DocumentVersionsRepository extends Repository<
       .as('documentVersionsScope')
   }
 
+  async existsDocumentWithUuid(documentUuid: string) {
+    if (
+      !documentUuid.match(
+        /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/,
+      )
+    ) {
+      // Note: otherwise the comparison fails with "invalid input syntax for type uuid: 'non-existent-uuid'""
+      return false
+    }
+
+    const result = await this.db
+      .select()
+      .from(this.scope)
+      .where(eq(this.scope.documentUuid, documentUuid))
+      .limit(1)
+
+    return result.length > 0
+  }
+
   async getDocumentById(documentId: number) {
     const res = await this.db
       .select()

@@ -18,11 +18,13 @@ import { createProviderLog } from '../../services/providerLogs'
 export type IEvaluationResultData = {
   documentLog: DocumentLog
   evaluation: EvaluationDto
+  result?: string
 }
 
 export async function createEvaluationResult({
   documentLog,
   evaluation,
+  result,
 }: IEvaluationResultData) {
   const commit = await findCommitById({ id: documentLog.commitId }).then((r) =>
     r.unwrap(),
@@ -32,7 +34,7 @@ export async function createEvaluationResult({
 
   const chain = createChain({
     prompt: evaluation.metadata.prompt,
-    parameters: {},
+    parameters: {}, // TODO: Generate parameters from documentLog
   })
 
   const providerLogs: ProviderLog[] = []
@@ -45,7 +47,7 @@ export async function createEvaluationResult({
       .findByName(config.provider)
       .then((r) => r.unwrap())
 
-    mockedResponse = String(faker.number.int({ min: 0, max: 10 }))
+    mockedResponse = result ?? String(faker.number.int({ min: 0, max: 10 }))
 
     const promptTokens = conversation.messages.reduce((acc, message) => {
       let content = message.content
@@ -89,5 +91,8 @@ export async function createEvaluationResult({
     result: mockedResponse,
   })
 
-  return evaluationResult.unwrap()
+  return {
+    evaluationResult: evaluationResult.unwrap(),
+    providerLogs: providerLogs,
+  }
 }

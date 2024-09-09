@@ -1,5 +1,6 @@
 import { EvaluationMetadataType, SafeWorkspace, Workspace } from '../../browser'
 import { database } from '../../client'
+import { findEvaluationTemplateById } from '../../data-access'
 import { Result, Transaction } from '../../lib'
 import { evaluations, llmAsJudgeEvaluationMetadatas } from '../../schema'
 
@@ -21,7 +22,7 @@ export async function createEvaluation(
       case EvaluationMetadataType.LlmAsJudge:
         metadataTable = await tx
           .insert(llmAsJudgeEvaluationMetadatas)
-          .values(metadata as { prompt: string; templateId: number })
+          .values(metadata as { prompt: string; templateId?: number })
           .returning()
 
         break
@@ -42,4 +43,30 @@ export async function createEvaluation(
 
     return Result.ok({ ...result[0]!, metadata: metadataTable[0]! })
   }, db)
+}
+
+export async function importLlmAsJudgeEvaluation(
+  {
+    workspace,
+    templateId,
+  }: { workspace: Workspace | SafeWorkspace; templateId: number },
+  db = database,
+) {
+  const templateResult = await findEvaluationTemplateById(templateId, db)
+  if (templateResult.error) return templateResult
+  const template = templateResult.unwrap()
+
+  return await createEvaluation(
+    {
+      workspace,
+      name: template.name,
+      description: template.description,
+      type: EvaluationMetadataType.LlmAsJudge,
+      metadata: {
+        prompt: template.prompt,
+        templateId: template.id,
+      },
+    },
+    db,
+  )
 }
