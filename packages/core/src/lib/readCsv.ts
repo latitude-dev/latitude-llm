@@ -1,25 +1,49 @@
-import { CsvError, parse } from 'csv-parse/sync'
+import { CsvError, parse, type Options as CsvOptions } from 'csv-parse/sync'
 
 import { Result } from './Result'
 
-type ParseCsvOptions = { delimiter?: string }
+function getData(file: File | string) {
+  if (typeof file === 'string') {
+    return file
+  }
+  return file.text()
+}
+
+type ParseCsvOptions = {
+  delimiter: string
+  // https://csv.js.org/parse/options/to_line/
+  limit?: number
+}
+type ParseResult = {
+  record: Record<string, string>
+  info: { columns: { name: string }[] }
+}
+export type CsvParsedData = {
+  headers: string[]
+  rows: string[][]
+  rowCount: number
+}
 export async function syncReadCsv(
-  file: File,
-  { delimiter = ';' }: ParseCsvOptions = {},
+  file: File | string,
+  { delimiter, limit = -1 }: ParseCsvOptions,
 ) {
   try {
-    const data = await file.text()
-    const records = parse(data, {
+    const data = await getData(file)
+    let opts: CsvOptions = {
       delimiter,
       relax_column_count: true,
-      trim: true,
       skip_empty_lines: true,
+      relax_quotes: true,
       columns: true,
+      trim: true,
       info: true,
-    }) as {
-      record: Record<string, string>
-      info: { columns: { name: string }[] }
-    }[] // not typed
+    }
+
+    if (limit > 0) {
+      opts = { ...opts, to_line: limit }
+    }
+
+    const records = parse(data, opts) as ParseResult[]
 
     if (records.length < 1)
       return Result.ok({ headers: [], rowCount: 0, data: [] })

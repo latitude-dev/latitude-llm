@@ -34,18 +34,21 @@ export default function useDatasets(
     mutate,
     ...rest
   } = useSWR(['workspace', workspace.id, 'datasets'], fetcher, opts)
-  const { error: createError, executeFormAction: createFormAction } =
-    useLatitudeAction<typeof createDatasetAction>(createDatasetAction, {
-      onSuccess: ({ data: dataset }) => {
-        toast({
-          title: 'Success',
-          description: 'Dataset uploaded successfully! 🎉',
-        })
+  const {
+    isPending: isCreating,
+    error: createError,
+    executeFormAction: createFormAction,
+  } = useLatitudeAction<typeof createDatasetAction>(createDatasetAction, {
+    onSuccess: ({ data: dataset }) => {
+      toast({
+        title: 'Success',
+        description: 'Dataset uploaded successfully! 🎉',
+      })
 
-        mutate([...data, dataset])
-        onCreateSuccess?.(dataset)
-      },
-    })
+      mutate([...data, dataset])
+      onCreateSuccess?.(dataset)
+    },
+  })
 
   const { execute: destroy, isPending: isDestroying } = useLatitudeAction<
     typeof destroyDatasetAction
@@ -63,6 +66,7 @@ export default function useDatasets(
   return {
     data,
     mutate,
+    isCreating,
     createFormAction,
     createError,
     destroy,

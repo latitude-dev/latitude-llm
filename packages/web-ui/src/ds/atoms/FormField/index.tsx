@@ -13,7 +13,7 @@ import { Label } from '../Label'
 import Text from '../Text'
 import { Tooltip } from '../Tooltip'
 
-function FormDescription({
+export function FormDescription({
   id,
   children,
   ...props

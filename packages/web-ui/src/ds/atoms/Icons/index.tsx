@@ -7,6 +7,7 @@ import {
   Copy,
   Ellipsis,
   EllipsisVertical,
+  Eye,
   File,
   FilePlus,
   FileUpIcon,
@@ -56,6 +57,7 @@ const Icons = {
   moon: Moon,
   trash: Trash,
   sun: Sun,
+  eye: Eye,
 }
 
 export type IconName = keyof typeof Icons
@@ -70,7 +72,7 @@ export type IconProps = {
   className?: string
 }
 
-type Size = 'normal' | 'large' | 'xlarge'
+type Size = 'normal' | 'large' | 'xlarge' | 'xxxlarge'
 
 export function Icon({
   name,
@@ -87,6 +89,7 @@ export function Icon({
         'w-4 h-4': size === 'normal',
         'w-6 h-6': size === 'large',
         'w-8 h-8': size === 'xlarge',
+        'w-14 h-14': size === 'xxxlarge',
         'animate-spin': spin,
       })}
     />

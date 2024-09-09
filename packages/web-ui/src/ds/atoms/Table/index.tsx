@@ -8,9 +8,17 @@ import {
 import { cn } from '../../../lib/utils'
 import Text from '../Text'
 
-const Table = forwardRef<HTMLTableElement, HTMLAttributes<HTMLTableElement>>(
-  ({ className, ...props }, ref) => (
-    <div className='relative w-full max-h-full overflow-auto rounded-lg border'>
+type TableProps = HTMLAttributes<HTMLTableElement> & {
+  maxHeight?: number
+}
+const Table = forwardRef<HTMLTableElement, TableProps>(
+  ({ className, maxHeight, ...props }, ref) => (
+    <div
+      style={{
+        maxHeight: maxHeight ? `${maxHeight}px` : 'auto',
+      }}
+      className='relative w-full max-h-full overflow-auto custom-scrollbar rounded-lg border'
+    >
       <table
         ref={ref}
         className={cn('w-full caption-bottom text-sm', className)}

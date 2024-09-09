@@ -11,6 +11,7 @@ export const datasetColumns = {
   authorId: datasets.authorId,
   fileKey: datasets.fileKey,
   fileMetadata: datasets.fileMetadata,
+  csvDelimiter: datasets.csvDelimiter,
   createdAt: datasets.createdAt,
   updatedAt: datasets.updatedAt,
   author: {
@@ -29,5 +30,9 @@ export class DatasetsRepository extends Repository<
       .leftJoin(users, eq(users.id, datasets.authorId))
       .where(eq(datasets.workspaceId, this.workspaceId))
       .as('datasetsScope')
+  }
+
+  findByName(name: string) {
+    return this.db.select().from(this.scope).where(eq(this.scope.name, name))
   }
 }

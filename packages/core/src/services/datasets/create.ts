@@ -36,7 +36,9 @@ export const createDataset = async (
 
   const file = disk.file(key)
   const fileMetadata = await file.toSnapshot()
-  const readCsvResult = await syncReadCsv(data.file)
+  const readCsvResult = await syncReadCsv(data.file, {
+    delimiter: data.csvDelimiter,
+  })
 
   if (readCsvResult.error) return readCsvResult
 
