@@ -52,6 +52,7 @@ const queueCluster = new aws.elasticache.Cluster('LatitudeLLMQueueCluster', {
   engine: 'redis',
   nodeType: 'cache.t3.micro',
   numCacheNodes: 1,
+  engineVersion: '6.x',
   port: 6379,
   subnetGroupName: subnetGroup.name,
   securityGroupIds: [SecurityGroup.id],
