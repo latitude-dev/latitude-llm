@@ -14,7 +14,6 @@ export const connectedEvaluations = latitudeSchema.table(
   'connected_evaluations',
   {
     id: bigserial('id', { mode: 'number' }).notNull().primaryKey(),
-    commitUuid: uuid('commit_uuid').notNull(),
     documentUuid: uuid('document_uuid').notNull(),
     evaluationMode: evaluationModeEnum('evaluation_mode').notNull(),
     evaluationId: bigint('evaluation_id', { mode: 'number' })
@@ -28,6 +27,6 @@ export const connectedEvaluations = latitudeSchema.table(
     ).on(table.evaluationId),
     connectedEvaluationsUniqueIdx: unique(
       'connected_evaluations_unique_idx',
-    ).on(table.documentUuid, table.commitUuid, table.evaluationId),
+    ).on(table.documentUuid, table.evaluationId),
   }),
 )

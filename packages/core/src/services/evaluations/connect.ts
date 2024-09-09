@@ -7,7 +7,6 @@ import {
 } from '../../browser'
 import { database } from '../../client'
 import { findWorkspaceFromDocument } from '../../data-access'
-import { findCommitById } from '../../data-access/commits'
 import { ErrorResult, NotFoundError, Result, Transaction } from '../../lib'
 import { connectedEvaluations } from '../../schema'
 import { createEvaluation } from './create'
@@ -31,11 +30,6 @@ export function connectEvaluations(
     if (!workspace) {
       return Result.error(new NotFoundError('Workspace not found'))
     }
-    const commitResult = await findCommitById({ id: document.commitId }, tx)
-    if (commitResult.error) {
-      return Result.error(new NotFoundError('Commit not found'))
-    }
-    const commit = commitResult.unwrap()
 
     // TODO: Creating an evaluation is kind of a pita because of the
     // polymorphic relation with metadata so we use the creation service which
@@ -72,7 +66,6 @@ export function connectEvaluations(
       .values(
         evaluations.map((evaluation) => ({
           evaluationMode,
-          commitUuid: commit.uuid,
           documentUuid: document.documentUuid,
           evaluationId: evaluation.id,
         })),
