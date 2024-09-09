@@ -1,5 +1,6 @@
 {
   "globalEnv": [
+    "NEXT_RUNTIME",
     "NODE_ENV",
     "BUILDING_CONTAINER",
     "LATITUDE_API_KEY",

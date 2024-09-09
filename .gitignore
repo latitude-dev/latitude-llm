@@ -48,3 +48,6 @@ apps/web/public/uploads
 # Misc
 TODO.md
 .cursorrules
+
+# Sentry
+.env.sentry-build-plugin

@@ -6,6 +6,8 @@ on:
       - main
     paths:
       - 'apps/web/**'
+      - 'apps/infra/src/deployments/web.ts'
+      - 'apps/infra/src/deployments/shared.ts'
       - 'packages/**'
 
 jobs:

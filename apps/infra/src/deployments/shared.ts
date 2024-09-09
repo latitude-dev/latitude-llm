@@ -40,5 +40,11 @@ export const environment = pulumi
       { name: 'LATITUDE_URL', value: 'https://app.latitude.so' },
       { name: 'FROM_MAILER_EMAIL', value: 'hello@latitude.so' },
       { name: 'MAILER_API_KEY', value: mailerApiKey },
+      { name: 'SENTRY_DNS', value: coreStack.requireOutput('sentryDns') },
+      { name: 'SENTRY_ORG', value: coreStack.requireOutput('sentryOrg') },
+      {
+        name: 'SENTRY_PROJECT',
+        value: coreStack.requireOutput('sentryProject'),
+      },
     ]
   })
