@@ -51,7 +51,7 @@ export default abstract class Repository<
       query = query.offset(opts.offset)
     }
 
-    const result = (await query) as unknown as Promise<T[]>
+    const result = (await query) as unknown as T[]
 
     return Result.ok(result)
   }

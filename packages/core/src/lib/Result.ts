@@ -54,4 +54,10 @@ export class Result {
   public static isOk<V>(result: TypedResult<V, Error>): result is Ok<V> {
     return result.ok
   }
+
+  public static findError<V, E extends Error>(
+    results: TypedResult<V, E>[],
+  ): TypedResult<V, E> | undefined {
+    return results.find((r) => !r.ok)
+  }
 }

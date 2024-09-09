@@ -3,7 +3,6 @@ import {
   bigserial,
   index,
   text,
-  uniqueIndex,
   uuid,
   varchar,
 } from 'drizzle-orm/pg-core'
@@ -38,10 +37,6 @@ export const evaluations = latitudeSchema.table(
     evaluationMetadataIdx: index('evaluation_metadata_idx').on(
       table.metadataId,
       table.metadataType,
-    ),
-    uniqueNameWorkspace: uniqueIndex('unique_name_workspace').on(
-      table.name,
-      table.workspaceId,
     ),
   }),
 )

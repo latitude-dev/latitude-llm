@@ -115,8 +115,6 @@ async function iterate({
       provider: apiKey,
     })
 
-    console.log(ai, result)
-
     for await (const value of streamToGenerator(result.fullStream)) {
       enqueueChainEvent(controller, {
         event: StreamEventTypes.Provider,

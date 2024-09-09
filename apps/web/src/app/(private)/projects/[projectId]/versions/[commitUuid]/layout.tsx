@@ -43,7 +43,10 @@ export default async function CommitLayout({
       await projectsRepo.getProjectById(Number(params.projectId))
     ).unwrap()
     commit = (
-      await commitsRepo.getCommitByUuid({ uuid: params.commitUuid, project })
+      await commitsRepo.getCommitByUuid({
+        uuid: params.commitUuid,
+        projectId: Number(params.projectId),
+      })
     ).unwrap()
   } catch (error) {
     if (error instanceof NotFoundError) return notFound()

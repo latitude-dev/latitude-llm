@@ -51,7 +51,7 @@ export default class Transaction {
    * https://github.com/rails/rails/blob/main/activerecord/lib/active_record/connection_adapters/postgresql_adapter.rb#L769.
    */
   static toResultError(error: unknown): ErrorResult<Error> {
-    if (env.NODE_ENV === 'development') {
+    if (env.NODE_ENV !== 'production') {
       console.error(error)
     }
 

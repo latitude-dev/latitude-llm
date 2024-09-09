@@ -32,7 +32,7 @@ export default async function DocumentsLayout({
     workspaceId: session.workspace.id,
   })
   const commit = await findCommitCached({
-    project,
+    projectId,
     uuid: commitUuid,
   })
   const resizableId = ResizableGroups.DocumentSidebar

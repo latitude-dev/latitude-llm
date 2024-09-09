@@ -135,7 +135,7 @@ describe('getDocumentsAtCommit', () => {
       const documentsScope = new DocumentVersionsRepository(project.workspaceId)
       const commit = await commitsScope
         .getCommitByUuid({
-          project,
+          projectId: project.id,
           uuid: HEAD_COMMIT,
         })
         .then((r) => r.unwrap())
@@ -229,7 +229,7 @@ describe('getDocumentsAtCommit', () => {
       const commitsScope = new CommitsRepository(project.workspaceId)
       const commit = await commitsScope
         .getCommitByUuid({
-          project: project,
+          projectId: project.id,
           uuid: HEAD_COMMIT,
         })
         .then((r) => r.unwrap())

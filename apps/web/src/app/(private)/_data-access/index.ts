@@ -1,6 +1,6 @@
 import { cache } from 'react'
 
-import { type Commit, type Project } from '@latitude-data/core/browser'
+import { type Commit } from '@latitude-data/core/browser'
 import { findAllEvaluationTemplates } from '@latitude-data/core/data-access'
 import { NotFoundError } from '@latitude-data/core/lib/errors'
 import {
@@ -51,9 +51,10 @@ export const findProjectCached = cache(
 )
 
 export const findCommitCached = cache(
-  async ({ uuid, project }: { uuid: string; project: Project }) => {
-    const commitsScope = new CommitsRepository(project.workspaceId)
-    const result = await commitsScope.getCommitByUuid({ project, uuid })
+  async ({ uuid, projectId }: { uuid: string; projectId: number }) => {
+    const { workspace } = await getCurrentUser()
+    const commitsScope = new CommitsRepository(workspace.id)
+    const result = await commitsScope.getCommitByUuid({ projectId, uuid })
     const commit = result.unwrap()
 
     return commit
@@ -62,15 +63,21 @@ export const findCommitCached = cache(
 
 export const getDocumentByUuidCached = cache(
   async ({
+    projectId,
     documentUuid,
-    commit,
+    commitUuid,
   }: {
+    projectId: number
     documentUuid: string
-    commit: Commit
+    commitUuid: string
   }) => {
     const { workspace } = await getCurrentUser()
     const scope = new DocumentVersionsRepository(workspace.id)
-    const result = await scope.getDocumentAtCommit({ documentUuid, commit })
+    const result = await scope.getDocumentAtCommit({
+      documentUuid,
+      commitUuid,
+      projectId,
+    })
     if (result.error) {
       const error = result.error
       if (error instanceof NotFoundError) {
@@ -170,3 +177,12 @@ export const getProviderLogCached = cache(async (uuid: string) => {
   const scope = new ProviderLogsRepository(workspace.id)
   return await scope.findByUuid(uuid).then((r) => r.unwrap())
 })
+
+export const getEvaluationsByDocumentUuidCached = cache(
+  async (documentUuid: string) => {
+    const { workspace } = await getCurrentUser()
+    const scope = new EvaluationsRepository(workspace.id)
+    const result = await scope.findByDocumentUuid(documentUuid)
+    return result.unwrap()
+  },
+)

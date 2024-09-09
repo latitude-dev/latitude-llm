@@ -55,26 +55,26 @@ export class CommitsRepository extends Repository<
     return buildCommitsScope(this.workspaceId, this.db)
   }
 
-  async getHeadCommit(project: Project) {
+  async getHeadCommit(projectId: number) {
     return getHeadCommitForProject(
-      { project, commitsScope: this.scope },
+      { projectId, commitsScope: this.scope },
       this.db,
     )
   }
 
   async getCommitByUuid({
     uuid,
-    project,
+    projectId,
   }: {
-    project?: Project
+    projectId?: number
     uuid: string
   }) {
     if (uuid === HEAD_COMMIT) {
-      if (!project) {
+      if (!projectId) {
         return Result.error(new NotFoundError('Project ID is required'))
       }
 
-      return this.getHeadCommit(project)
+      return this.getHeadCommit(projectId)
     }
 
     const result = await this.db

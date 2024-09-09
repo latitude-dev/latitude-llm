@@ -13,7 +13,7 @@ export const getDocumentsAtCommitAction = withProject
   .input(z.object({ commitUuid: z.string() }))
   .handler(async ({ input, ctx }) => {
     const commit = await new CommitsRepository(ctx.project.workspaceId)
-      .getCommitByUuid({ uuid: input.commitUuid, project: ctx.project })
+      .getCommitByUuid({ uuid: input.commitUuid, projectId: ctx.project.id })
       .then((r) => r.unwrap())
     const docsScope = new DocumentVersionsRepository(ctx.project.workspaceId)
     const result = await docsScope.getDocumentsAtCommit(commit)

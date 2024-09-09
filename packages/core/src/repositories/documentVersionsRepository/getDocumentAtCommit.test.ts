@@ -19,7 +19,8 @@ describe('getDocumentAtCommit', () => {
 
     const documentsScope = new DocumentVersionsRepository(project.workspaceId)
     const result = await documentsScope.getDocumentAtCommit({
-      commit: mergedCommit,
+      projectId: project.id,
+      commitUuid: mergedCommit.uuid,
       documentUuid,
     })
     const document = result.unwrap()

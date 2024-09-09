@@ -7,6 +7,7 @@ import {
   Copy,
   Ellipsis,
   EllipsisVertical,
+  ExternalLink,
   Eye,
   File,
   FilePlus,
@@ -58,6 +59,7 @@ const Icons = {
   trash: Trash,
   sun: Sun,
   eye: Eye,
+  externalLink: ExternalLink,
 }
 
 export type IconName = keyof typeof Icons

@@ -4,6 +4,7 @@ export const colors = {
   },
   textColors: {
     white: 'text-white',
+    primary: 'text-primary',
     foreground: 'text-foreground',
     background: 'text-background',
     foregroundMuted: 'text-muted-foreground',

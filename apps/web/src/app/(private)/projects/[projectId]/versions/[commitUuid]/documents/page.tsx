@@ -1,10 +1,6 @@
 import { Text } from '@latitude-data/web-ui'
 import { getDocumentsAtCommitAction } from '$/actions/documents/getDocumentsAtCommitAction'
-import {
-  findCommitCached,
-  findProjectCached,
-} from '$/app/(private)/_data-access'
-import { getCurrentUser } from '$/services/auth/getCurrentUser'
+import { findCommitCached } from '$/app/(private)/_data-access'
 import { ROUTES } from '$/services/routes'
 import { redirect } from 'next/navigation'
 
@@ -17,24 +13,19 @@ export default async function DocumentsPage({
 }) {
   const projectId = Number(params.projectId)
   const commitUuid = params.commitUuid
-  const session = await getCurrentUser()
-  const project = await findProjectCached({
-    projectId: Number(params.projectId),
-    workspaceId: session.workspace.id,
-  })
   const commit = await findCommitCached({
-    project,
+    projectId,
     uuid: commitUuid,
   })
   const [documents, error] = await getDocumentsAtCommitAction({
-    projectId: project.id,
-    commitUuid: commit.uuid,
+    projectId,
+    commitUuid,
   })
   if (error) throw error
   if (documents && documents.length > 0) {
     return redirect(
       ROUTES.projects
-        .detail({ id: project.id })
+        .detail({ id: projectId })
         .commits.detail({ uuid: params.commitUuid })
         .documents.detail({ uuid: documents[0]?.documentUuid! }).root,
     )
