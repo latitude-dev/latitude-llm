@@ -4,6 +4,12 @@ config:
     secure: v1:WABt/tJjfsAKMplU:RRLtj5mTu301x4sn2Tr91u4O0Msd3mWVJutcDg==
   infra:MAILER_API_KEY:
     secure: v1:Br02wGwX0UOAZiNp:wIzQFfWCzWygBRCVJNDs/ZP65EXEAIFhduPOOniN6EOeXPyJ4UHjOefPyO2bhOBkR5E3CWLmQBsVjIGrGwAHZYZCQg==
+  infra:SENTRY_DSN:
+    secure: v1:TFAocHKQe31DxpAX:8+iplSLckN3i91KshS+8mab3s158nFkNyWD8JBZM8Ojtu2zstpna5N50ugkXuH9hdcuUv4db088pI9Dkvuc/84OJDEm47z/0bJgD803f4ZWqVtA7Yt8Z2pyTSGqGzsj9RErstG0N
+  infra:SENTRY_ORG:
+    secure: v1:QaB3bMtGrRV6Bt+k:EBKRt/xWV03dXUfBHq5RwpyTs7U4fuCJVAC6
+  infra:SENTRY_PROJECT:
+    secure: v1:NOZy0ukyyjhgKqnX:VReMqdgQSFzhKNGrASeE2mwp4Pa4y55ACDlQVSBkDVM=
   infra:albSecurityGroup:
     secure: v1:HCwWQvcrwQE9Py6E:U5ibuWwH2MNAooASzaHOnSS3pKNhuJHZTh2pnHcSYKRPuuMJ
   infra:bastionAccountId:

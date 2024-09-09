@@ -10,7 +10,6 @@ const environment = process.env.NODE_ENV || 'development'
 const __dirname = fileURLToPath(import.meta.url)
 const pathToEnv = resolve(__dirname, `../../.env.${environment}`)
 
-// Don't write production .env files!
 if (environment !== 'production') {
   dotenv.populate(
     process.env as DotenvPopulateInput,
@@ -54,6 +53,9 @@ export const env = createEnv({
       .union([z.literal('local'), z.literal('s3')])
       .optional()
       .default('local'),
+    SENTRY_DSN: z.string().optional(),
+    SENTRY_ORG: z.string().optional(),
+    SENTRY_PROJECT: z.string().optional(),
   },
   runtimeEnv: {
     ...process.env,
