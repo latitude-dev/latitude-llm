@@ -4,6 +4,7 @@ import { evaluationTemplates, llmAsJudgeEvaluationMetadatas } from '.'
 import { apiKeys } from './models/apiKeys'
 import { commits } from './models/commits'
 import { connectedEvaluations } from './models/connectedEvaluations'
+import { datasets } from './models/datasets'
 import { documentLogs } from './models/documentLogs'
 import { documentVersions } from './models/documentVersions'
 import { evaluationResults } from './models/evaluationResults'
@@ -29,7 +30,11 @@ export const userRelations = relations(users, ({ many }) => ({
   magicLinkTokens: many(magicLinkTokens),
 }))
 
-export const workspaceRelations = relations(workspaces, ({ many }) => ({
+export const workspaceRelations = relations(workspaces, ({ one, many }) => ({
+  author: one(users, {
+    fields: [workspaces.creatorId],
+    references: [users.id],
+  }),
   memberships: many(memberships),
 }))
 
@@ -183,3 +188,14 @@ export const magicLinkTokensRelations = relations(
     }),
   }),
 )
+
+export const datasetsRelations = relations(datasets, ({ one }) => ({
+  author: one(users, {
+    fields: [datasets.authorId],
+    references: [users.id],
+  }),
+  workspace: one(workspaces, {
+    fields: [datasets.workspaceId],
+    references: [workspaces.id],
+  }),
+}))

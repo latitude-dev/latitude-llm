@@ -19,7 +19,7 @@ export function DropzoneInput({
   multiple,
   ...rest
 }: Props) {
-  const [selectedFile, setFile] = useState<File | null>(null)
+  const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const ref = useRef<HTMLInputElement>(null)
   const onClickZone = useCallback(() => {
     if (!ref.current) return
@@ -31,9 +31,9 @@ export function DropzoneInput({
       const file = files?.[0]
       if (!file) return
 
-      setFile(file)
+      setSelectedFile(file)
     },
-    [setFile],
+    [setSelectedFile],
   )
   const name = selectedFile?.name
   return (

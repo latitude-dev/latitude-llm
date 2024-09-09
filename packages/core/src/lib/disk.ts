@@ -39,6 +39,10 @@ export class DiskWrapper {
     this.disk = new Disk(this.buildDisk(args))
   }
 
+  file(key: string) {
+    return this.disk.file(key)
+  }
+
   async getUrl(key: string | undefined | null) {
     if (!key) return null
 
