@@ -28,3 +28,4 @@ export * from './models/evaluationTemplates'
 export * from './models/evaluationTemplateCategories'
 
 export * from './models/magicLinkTokens'
+export * from './models/events'

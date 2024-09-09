@@ -9,6 +9,7 @@ import { documentLogs } from './models/documentLogs'
 import { documentVersions } from './models/documentVersions'
 import { evaluationResults } from './models/evaluationResults'
 import { evaluations } from './models/evaluations'
+import { events } from './models/events'
 import { magicLinkTokens } from './models/magicLinkTokens'
 import { memberships } from './models/memberships'
 import { projects } from './models/projects'
@@ -36,6 +37,7 @@ export const workspaceRelations = relations(workspaces, ({ one, many }) => ({
     references: [users.id],
   }),
   memberships: many(memberships),
+  events: many(events),
 }))
 
 export const sessionRelations = relations(sessions, ({ one }) => ({
@@ -199,3 +201,11 @@ export const datasetsRelations = relations(datasets, ({ one }) => ({
     references: [workspaces.id],
   }),
 }))
+
+// TODO: uncomment when we are ready
+// export const eventRelations = relations(events, ({ one }) => ({
+//   workspace: one(workspaces, {
+//     fields: [events.workspaceId],
+//     references: [workspaces.id],
+//   }),
+// }))
