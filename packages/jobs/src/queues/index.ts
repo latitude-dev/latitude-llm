@@ -4,6 +4,7 @@ import { Redis } from 'ioredis'
 
 import { Jobs, Queues } from '../constants'
 import { createDocumentLogJob, JobDefinition } from '../job-definitions'
+import { createEventJob } from '../job-definitions/events/createEventJob'
 import { publishEventJob } from '../job-definitions/events/publishEventJob'
 
 export function capitalize(string: string) {
@@ -68,7 +69,7 @@ export const QUEUES = {
   },
   [Queues.eventsQueue]: {
     name: Queues.eventsQueue,
-    jobs: [publishEventJob],
+    jobs: [publishEventJob, createEventJob],
   },
   [Queues.eventHandlersQueue]: {
     name: Queues.eventHandlersQueue,

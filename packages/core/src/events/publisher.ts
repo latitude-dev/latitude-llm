@@ -25,6 +25,7 @@ export const publisher = {
       })
     }
 
+    jobs.queues.eventsQueue.jobs.enqueueCreateEventJob(event)
     jobs.queues.eventsQueue.jobs.enqueuePublishEventJob(event)
   },
 }
