@@ -9,11 +9,7 @@
 
 <br/>
 
-<h1 align="center" style="border: none; margin-bottom: 8px;">The open-source framework for embedded analytics</h1>
-
-<div align="center">
-The Open-Source Prompt Engineering Platform
-</div>
+<h1 align="center" style="border: none; margin-bottom: 8px;">The Open-Source Prompt Engineering Platform</h1>
 
   <p align="center">
     <br />
