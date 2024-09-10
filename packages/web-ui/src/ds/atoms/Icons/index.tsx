@@ -1,6 +1,7 @@
 import {
   CheckCircle2,
   ChevronDown,
+  ChevronLeft,
   ChevronRight,
   CircleAlert,
   CirclePlus,
@@ -38,6 +39,7 @@ const Icons = {
   check: CheckCircle2,
   chevronDown: ChevronDown,
   chevronRight: ChevronRight,
+  chevronLeft: ChevronLeft,
   clipboard: Copy,
   deletion: SquareMinus,
   ellipsis: Ellipsis,

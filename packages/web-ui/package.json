@@ -21,7 +21,8 @@
   },
   "dependencies": {
     "@latitude-data/compiler": "workspace:^",
-    "@latitude-data/core": "workspace:^"
+    "@latitude-data/core": "workspace:^",
+    "@radix-ui/react-switch": "^1.1.0"
   },
   "devDependencies": {
     "@faker-js/faker": "^8.4.1",

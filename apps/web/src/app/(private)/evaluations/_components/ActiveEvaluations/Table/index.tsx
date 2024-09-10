@@ -15,7 +15,7 @@ import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
 import Link from 'next/link'
 
-export const ActiveEvaluationsTableRow = ({
+const ActiveEvaluationsTableRow = ({
   evaluation,
   onSelect,
 }: {

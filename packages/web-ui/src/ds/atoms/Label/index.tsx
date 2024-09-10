@@ -6,6 +6,7 @@ import * as LabelPrimitive from '@radix-ui/react-label'
 
 import { cn } from '../../../lib/utils'
 import { font } from '../../tokens'
+import { Badge } from '../Badge'
 
 const labelVariants = cva(
   cn(
@@ -41,4 +42,10 @@ const Label = forwardRef<ElementRef<typeof LabelPrimitive.Root>, LabelProps>(
   },
 )
 
-export { Label }
+const BatchLabel = ({ children, ...rest }: LabelProps) => (
+  <Label {...rest}>
+    <Badge variant='accent'>&#123;&#123;{children}&#125;&#125;</Badge>
+  </Label>
+)
+
+export { Label, BatchLabel }

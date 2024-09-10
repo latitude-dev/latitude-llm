@@ -1,6 +1,4 @@
-import path from 'path'
 import { Readable } from 'stream'
-import { fileURLToPath } from 'url'
 
 import { Result } from '@latitude-data/core/lib/Result'
 import { env } from '@latitude-data/env'
@@ -47,13 +45,11 @@ async function getReadableStreamFromFile(file: File) {
   return stream
 }
 
-type BuildArgs = { local: { publicPath: string; location: string } }
-
 export class DiskWrapper {
   private disk: Disk
 
-  constructor(args: BuildArgs) {
-    this.disk = new Disk(this.buildDisk(args))
+  constructor() {
+    this.disk = new Disk(this.buildDisk())
   }
 
   file(key: string) {
@@ -104,18 +100,22 @@ export class DiskWrapper {
     }
   }
 
-  private buildDisk({ local }: BuildArgs) {
+  private buildDisk() {
     const key = env.DRIVE_DISK
+    const publicPath = env.FILE_PUBLIC_PATH
+    const location = env.FILES_STORAGE_PATH
 
-    if (key === 'local' && process.env.NODE_ENV === 'production') {
-      new Error('Local file system not allowed as file storage in production')
+    if (key === 'local' && !location) {
+      new Error(
+        'FILES_STORAGE_PATH env variable is required when using local disk.',
+      )
     }
 
     if (key === 'local') {
       return new FSDriver({
-        location: local.location,
+        location,
         visibility: 'private',
-        urlBuilder: { generateURL: generateUrl(local.publicPath) },
+        urlBuilder: { generateURL: generateUrl(publicPath) },
       })
     }
 
@@ -132,16 +132,4 @@ export class DiskWrapper {
   }
 }
 
-const PUBLIC_PATH = 'uploads'
-
-export const diskFactory = () =>
-  new DiskWrapper({
-    local: {
-      publicPath: PUBLIC_PATH,
-      location: path.join(
-        path.dirname(fileURLToPath(import.meta.url)),
-        // TODO: This needs to come from env
-        `../../public/${PUBLIC_PATH}`,
-      ),
-    },
-  })
+export const diskFactory = () => new DiskWrapper()

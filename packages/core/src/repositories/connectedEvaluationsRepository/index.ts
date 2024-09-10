@@ -29,6 +29,7 @@ const tt = getTableColumns(connectedEvaluations)
 export type ConnectedDocumentWithMetadata = DocumentVersion & {
   projectId: number // This is automatically provided by the DocumentVersionsRepository
   evaluationUuid: string
+  evaluationId: number
   evaluationLogs: number
   totalTokens: number
   costInMillicents: number
@@ -104,6 +105,9 @@ export class ConnectedEvaluationsRepository extends Repository<
         .select({
           ...lastVersionOfEachDocument._.selectedFields,
           evaluationUuid: evaluationsScope.scope.uuid,
+          evaluationId: sql`${evaluationsScope.scope.id}`
+            .mapWith(Number)
+            .as('evaluation_id'),
         })
         .from(lastVersionOfEachDocument)
         .innerJoin(

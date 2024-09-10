@@ -2,15 +2,6 @@ import React, { ReactNode, useEffect, useState } from 'react'
 
 import { Text } from '@latitude-data/web-ui'
 
-interface EvaluationEditorProps {
-  items: {
-    uuid: string
-    name: string
-    type: 'evaluation' | 'template'
-    data: any
-  }[]
-}
-
 const className =
   'flex-1 min-h-[450px] min-w-0 rounded-lg border bg-muted flex flex-col'
 
@@ -53,12 +44,21 @@ const TabsContent: React.FC<{ children: ReactNode }> = ({ children }) => (
   <div className='flex-grow overflow-auto'>{children}</div>
 )
 
-export default function EvaluationEditor({ items }: EvaluationEditorProps) {
+export default function EvaluationEditor({
+  items,
+}: {
+  items: {
+    uuid: string
+    name: string
+    type: 'evaluation' | 'template'
+    data: any
+  }[]
+}) {
   const [activeTab, setActiveTab] = useState<string>(items[0]?.uuid ?? '')
 
   useEffect(() => {
     if (items.length > 0) {
-      const activeTabExists = items.some((item) => item.uuid === activeTab)
+      const activeTabExists = items.some((item) => item?.uuid === activeTab)
       if (!activeTabExists) {
         setActiveTab(items[items.length - 1]!.uuid)
       }

@@ -16,5 +16,7 @@ export const previewDatasetAction = authProcedure
   .handler(async ({ ctx, input }) => {
     const repo = new DatasetsRepository(ctx.workspace.id)
     const dataset = await repo.find(input.id).then((r) => r.unwrap())
-    return await previewDataset({ dataset }).then((r) => r.unwrap())
+    return await previewDataset({ dataset, prependIndex: true }).then((r) =>
+      r.unwrap(),
+    )
   })

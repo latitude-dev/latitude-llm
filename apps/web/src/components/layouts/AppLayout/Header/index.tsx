@@ -38,17 +38,25 @@ type IBreadCrumb = {
   name: string | ReactNode
 }
 
-function Breadcrump({ breadcrumbs }: { breadcrumbs: IBreadCrumb[] }) {
+export function Breadcrump({
+  breadcrumbs,
+  showLogo = false,
+}: {
+  breadcrumbs: IBreadCrumb[]
+  showLogo?: boolean
+}) {
   return (
     <ul className='flex flex-row items-center gap-x-4'>
-      <li>
-        <Icon name='logo' size='large' />
-      </li>
-      {breadcrumbs.length === 0 ? null : (
-        <li>
-          <BreadcrumpSeparator />
-        </li>
-      )}
+      {showLogo ? (
+        <>
+          <li>
+            <Icon name='logo' size='large' />
+          </li>
+          <li>
+            <BreadcrumpSeparator />
+          </li>
+        </>
+      ) : null}
       {breadcrumbs.map((breadcrumb, idx) => {
         const isLast = idx === breadcrumbs.length - 1
         return (
@@ -108,7 +116,7 @@ export default function AppHeader({
   return (
     <header className='px-6 sticky top-0 flex flex-col bg-background-gray border-b border-b-border'>
       <div className='py-3 flex flex-row items-center justify-between border-b border-b-border'>
-        <Breadcrump breadcrumbs={breadcrumbs} />
+        <Breadcrump showLogo breadcrumbs={breadcrumbs} />
         <div className='flex flex-row items-center gap-x-6'>
           <nav className='flex flex-row gap-x-4'>
             {navigationLinks.map((link, idx) => (

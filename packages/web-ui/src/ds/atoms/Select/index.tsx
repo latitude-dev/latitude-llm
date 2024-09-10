@@ -47,6 +47,7 @@ type SelectProps = Omit<FormFieldProps, 'children'> & {
 export function Select({
   name,
   label,
+  badgeLabel,
   description,
   errors,
   autoFocus,
@@ -64,7 +65,12 @@ export function Select({
     if (onChange) onChange(newValue)
   }
   return (
-    <FormField label={label} description={description} errors={errors}>
+    <FormField
+      badgeLabel={badgeLabel}
+      label={label}
+      description={description}
+      errors={errors}
+    >
       <div className='w-full'>
         <SelectRoot
           required={required}

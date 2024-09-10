@@ -1,5 +1,8 @@
 import { UnauthorizedError } from '@latitude-data/core/lib/errors'
-import { ProjectsRepository } from '@latitude-data/core/repositories'
+import {
+  DocumentVersionsRepository,
+  ProjectsRepository,
+} from '@latitude-data/core/repositories'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
 import { z } from 'zod'
 import { createServerActionProcedure } from 'zsa'
@@ -28,4 +31,19 @@ export const withProject = createServerActionProcedure(authProcedure)
     ).unwrap()
 
     return { ...ctx, project }
+  })
+
+export const widthDocument = createServerActionProcedure(withProject)
+  .input(z.object({ commitUuid: z.string(), documentUuid: z.string() }))
+  .handler(async ({ input, ctx }) => {
+    const repo = new DocumentVersionsRepository(ctx.workspace.id)
+    const document = await repo
+      .getDocumentAtCommit({
+        projectId: ctx.project.id,
+        commitUuid: input.commitUuid,
+        documentUuid: input.documentUuid,
+      })
+      .then((r) => r.unwrap())
+
+    return { ...ctx, document }
   })
