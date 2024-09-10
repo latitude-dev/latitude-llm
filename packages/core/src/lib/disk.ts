@@ -1,15 +1,11 @@
-import { debuglog } from 'node:util'
 import { Readable } from 'stream'
 
-import { HeadBucketCommand, S3Client } from '@aws-sdk/client-s3'
 import { Result } from '@latitude-data/core/lib/Result'
 import { env } from '@latitude-data/env'
 import { Disk, errors } from 'flydrive'
 import { FSDriver } from 'flydrive/drivers/fs'
 import { S3Driver } from 'flydrive/drivers/s3'
 import { WriteOptions } from 'flydrive/types'
-
-var debug_default = debuglog('flydrive:s3')
 
 const generateUrl = (publicPath: string) => async (key: string) =>
   `/${publicPath}/${key}`
@@ -57,27 +53,6 @@ export class DiskWrapper {
     this.disk = new Disk(this.buildDisk(args))
   }
 
-  async pingBucket() {
-    const bucket = env.S3_BUCKET
-    debug_default('pinging bucket %s', bucket)
-    const awsConfig = getAwsConfig()
-    const client = new S3Client({
-      credentials: awsConfig.credentials,
-      region: awsConfig.region,
-    })
-    const input = {
-      Bucket: env.S3_BUCKET,
-      ExpectedBucketOwner: 'TODO_FIND_ID',
-    }
-    const command = new HeadBucketCommand(input)
-    try {
-      await client.send(command)
-    } catch (error) {
-      debug_default('error pinging bucket %s', bucket)
-      debug_default('error pinging bucket %s', error)
-    }
-  }
-
   file(key: string) {
     return this.disk.file(key)
   }
@@ -95,7 +70,10 @@ export class DiskWrapper {
 
   async putStream(key: string, contents: Readable, options?: WriteOptions) {
     try {
-      await this.disk.putStream(key, contents, options)
+      await this.disk.putStream(key, contents, {
+        ...options,
+        contentLength: contents.readableLength,
+      })
       return Result.nil()
     } catch (e) {
       if (e instanceof errors.E_CANNOT_WRITE_FILE) {
@@ -143,6 +121,7 @@ export class DiskWrapper {
       credentials: awsConfig.credentials,
       region: awsConfig.region,
       bucket: awsConfig.bucket,
+      supportsACL: false,
       visibility: 'private',
     })
   }

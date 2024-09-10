@@ -19,6 +19,7 @@ import {
 import useDatasetPreview from '$/stores/datasetPreviews'
 
 const VISIBLE_ROWS = 20
+const TABLE_MAX_HEIGHT = 450
 function PreviewModal({
   dataset,
   setPreview,
@@ -46,11 +47,12 @@ function PreviewModal({
     >
       {isLoading ? (
         <TableSkeleton
+          maxHeight={TABLE_MAX_HEIGHT}
           rows={rowCount}
           cols={dataset.fileMetadata.headers.length}
         />
       ) : (
-        <Table maxHeight={450}>
+        <Table maxHeight={TABLE_MAX_HEIGHT}>
           <TableHeader>
             <TableRow verticalPadding>
               <TableHead>

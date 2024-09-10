@@ -11,7 +11,15 @@ import {
 } from '../../atoms/Table'
 import Text from '../../atoms/Text'
 
-export function TableSkeleton({ rows, cols }: { rows: number; cols: number }) {
+export function TableSkeleton({
+  rows,
+  cols,
+  maxHeight,
+}: {
+  rows: number
+  cols: number
+  maxHeight?: number
+}) {
   const { data, headers } = useMemo(() => {
     const rowList = Array.from(Array(rows).keys())
     const headers = Array.from(Array(cols).keys())
@@ -19,7 +27,7 @@ export function TableSkeleton({ rows, cols }: { rows: number; cols: number }) {
     return { data, headers }
   }, [rows, cols])
   return (
-    <Table>
+    <Table maxHeight={maxHeight}>
       <TableHeader>
         <TableRow>
           {headers.map((header) => (
