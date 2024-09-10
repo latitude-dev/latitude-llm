@@ -37,33 +37,14 @@ const sentryProject = createSecretWithVersion(
   'Project for Sentry error tracking',
 )
 
-const awsAccessKey = new aws.secretsmanager.Secret(
+const awsAccessKey = createSecretWithVersion(
   'LATITUDE_LLM_AWS_ACCESS_KEY',
-  {
-    description: 'AWS access key',
-    name: 'LATITUDE_LLM_AWS_ACCESS_KEY',
-  },
+  'AWS access key',
 )
-const awsAccessSecret = new aws.secretsmanager.Secret(
+const awsAccessSecret = createSecretWithVersion(
   'LATITUDE_LLM_AWS_ACCESS_SECRET',
-  {
-    description: 'AWS access secret',
-    name: 'LATITUDE_LLM_AWS_ACCESS_SECRET',
-  },
+  'AWS access secret',
 )
-
-new aws.secretsmanager.SecretVersion('MAILER_API_KEY_VERSION', {
-  secretId: mailerApiKey.id,
-  secretString: config.requireSecret('MAILER_API_KEY'),
-})
-new aws.secretsmanager.SecretVersion('LATITUDE_LLM_AWS_ACCESS_KEY_VERSION', {
-  secretId: awsAccessKey.id,
-  secretString: config.requireSecret('LATITUDE_LLM_AWS_ACCESS_KEY'),
-})
-new aws.secretsmanager.SecretVersion('LATITUDE_LLM_AWS_ACCESS_SECRET_VERSION', {
-  secretId: awsAccessSecret.id,
-  secretString: config.requireSecret('LATITUDE_LLM_AWS_ACCESS_SECRET'),
-})
 
 export const mailerApiKeyArn = mailerApiKey.arn
 export const sentryDnsArn = sentryDns.arn

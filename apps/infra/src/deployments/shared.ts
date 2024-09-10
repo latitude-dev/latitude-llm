@@ -8,45 +8,41 @@ const dbUsername = coreStack.requireOutput('dbUsername')
 const dbPasswordSecretId = coreStack.requireOutput('dbPasswordSecretId')
 const dbEndpoint = coreStack.requireOutput('dbEndpoint')
 const dbName = coreStack.requireOutput('dbName')
-const dbPassword = dbPasswordSecretId.apply((secretId) =>
-  aws.secretsmanager
-    .getSecretVersion({
-      secretId: secretId,
-    })
-    .then((secret) => secret.secretString),
-)
 const mailerApiKeyArn = coreStack.requireOutput('mailerApiKeyArn')
 const cacheEndpoint = coreStack.requireOutput('cacheEndpoint')
-const mailerApiKey = mailerApiKeyArn.apply((arn) => {
-  const secret = aws.secretsmanager.getSecretVersionOutput({
-    secretId: arn,
-  })
+const awsAccessKeyArn = coreStack.requireOutput('awsAccessKeyArn')
+const awsAccessSecretArn = coreStack.requireOutput('awsAccessSecretArn')
+const getSecretString = (arn: pulumi.Output<any>) => {
+  return arn.apply((secretId) =>
+    aws.secretsmanager
+      .getSecretVersion({
+        secretId: secretId,
+      })
+      .then((secret) => secret.secretString),
+  )
+}
 
-  return secret.secretString
-})
+const dbPassword = getSecretString(dbPasswordSecretId)
+const mailerApiKey = getSecretString(mailerApiKeyArn)
+const awsAccessKey = getSecretString(awsAccessKeyArn)
+const awsAccessSecret = getSecretString(awsAccessSecretArn)
 
-const awsAccessKeyArn = coreStack.requireOutput('latitudeLlmAwsAccessKeyArn')
-const awsAccessKey = awsAccessKeyArn.apply((arn) => {
-  const secret = aws.secretsmanager.getSecretVersionOutput({
-    secretId: arn,
-  })
-
-  return secret.secretString
-})
-const awsAccessSecretArn = coreStack.requireOutput(
-  'latitudeLlmAwsAccessSecretArn',
-)
-const awsAccessSecret = awsAccessSecretArn.apply((arn) => {
-  const secret = aws.secretsmanager.getSecretVersionOutput({
-    secretId: arn,
-  })
-
-  return secret.secretString
-})
+const sentryDsn = coreStack.requireOutput('sentryDsn')
+const sentryOrg = coreStack.requireOutput('sentryOrg')
+const sentryProject = coreStack.requireOutput('sentryProject')
 
 export const dbUrl = pulumi.interpolate`postgresql://${dbUsername}:${dbPassword}@${dbEndpoint}/${dbName}?sslmode=verify-full&sslrootcert=/app/packages/core/src/assets/eu-central-1-bundle.pem`
 export const environment = pulumi
-  .all([cacheEndpoint, dbUrl, mailerApiKey])
+  .all([
+    awsAccessKey,
+    awsAccessSecret,
+    cacheEndpoint,
+    dbUrl,
+    mailerApiKey,
+    sentryDsn,
+    sentryOrg,
+    sentryProject,
+  ])
   .apply(() => {
     return [
       { name: 'HOSTNAME', value: '0.0.0.0' },
@@ -59,11 +55,11 @@ export const environment = pulumi
       { name: 'LATITUDE_URL', value: 'https://app.latitude.so' },
       { name: 'FROM_MAILER_EMAIL', value: 'hello@latitude.so' },
       { name: 'MAILER_API_KEY', value: mailerApiKey },
-      { name: 'SENTRY_DNS', value: coreStack.requireOutput('sentryDns') },
-      { name: 'SENTRY_ORG', value: coreStack.requireOutput('sentryOrg') },
+      { name: 'SENTRY_DSN', value: sentryDsn },
+      { name: 'SENTRY_ORG', value: sentryOrg },
       {
         name: 'SENTRY_PROJECT',
-        value: coreStack.requireOutput('sentryProject'),
+        value: sentryProject,
       },
       { name: 'DRIVE_DISK', value: 's3' },
       { name: 'ASW_REGION', value: 'eu-central-1' },
