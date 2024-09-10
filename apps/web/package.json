@@ -34,6 +34,7 @@
     "lodash-es": "^4.17.21",
     "lucia": "^3.2.0",
     "monaco-editor": "^0.50.0",
+    "nanoid": "^5.0.7",
     "next": "^14.3.0-canary.87",
     "next-themes": "^0.3.0",
     "nextjs-toploader": "^1.6.12",

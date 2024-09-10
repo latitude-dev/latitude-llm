@@ -12,7 +12,8 @@ function getData(file: File | string) {
 type ParseCsvOptions = {
   delimiter: string
   // https://csv.js.org/parse/options/to_line/
-  limit?: number
+  toLine?: number
+  fromLine?: number
 }
 type ParseResult = {
   record: Record<string, string>
@@ -25,7 +26,7 @@ export type CsvParsedData = {
 }
 export async function syncReadCsv(
   file: File | string,
-  { delimiter, limit = -1 }: ParseCsvOptions,
+  { delimiter, toLine, fromLine }: ParseCsvOptions,
 ) {
   try {
     const data = await getData(file)
@@ -39,8 +40,12 @@ export async function syncReadCsv(
       info: true,
     }
 
-    if (limit > 0) {
-      opts = { ...opts, to_line: limit }
+    if (toLine) {
+      opts = { ...opts, toLine }
+    }
+
+    if (fromLine) {
+      opts = { ...opts, fromLine }
     }
 
     const records = parse(data, opts) as ParseResult[]

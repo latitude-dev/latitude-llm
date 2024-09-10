@@ -13,9 +13,13 @@ const aliasEntries = {
       find: '@latitude-data/core/browser',
       replacement: path.resolve(__dirname, '../../core/src/browser'),
     },
+    {
+      find: '@latitude-data/core/lib/Result',
+      replacement: path.resolve(__dirname, '../../core/src/lib/Result.ts'),
+    },
   ],
 }
-const EXTERNALS = ['@t3-oss/env-core', 'zod']
+const EXTERNALS = ['@t3-oss/env-core', 'zod', 'flydrive/types', 'stream']
 const config = [
   {
     input: 'src/index.ts',
