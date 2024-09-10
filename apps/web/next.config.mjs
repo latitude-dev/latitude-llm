@@ -12,6 +12,13 @@ const INTERNAL_PACKAGES = [
 const nextConfig = {
   output: 'standalone',
   transpilePackages: INTERNAL_PACKAGES,
+  serverExternalPackages: [
+    'flydrive',
+    'flydrive/drivers/s3',
+    'flydrive/drivers/fs',
+    'flydrive/drivers/types',
+    '@sentry/nextjs',
+  ],
   experimental: {
     // Dear developer,
     //

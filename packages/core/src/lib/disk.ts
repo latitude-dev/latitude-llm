@@ -117,6 +117,7 @@ export class DiskWrapper {
     }
 
     const awsConfig = getAwsConfig()
+
     return new S3Driver({
       credentials: awsConfig.credentials,
       region: awsConfig.region,

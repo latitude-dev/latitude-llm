@@ -24,7 +24,7 @@ const mailerApiKey = createSecretWithVersion(
   'MAILER_API_KEY',
   'API key for the mailer service',
 )
-const sentryDns = createSecretWithVersion(
+const sentryDsn = createSecretWithVersion(
   'SENTRY_DSN',
   'DSN for Sentry error tracking',
 )
@@ -47,7 +47,7 @@ const awsAccessSecret = createSecretWithVersion(
 )
 
 export const mailerApiKeyArn = mailerApiKey.arn
-export const sentryDnsArn = sentryDns.arn
+export const sentryDsnArn = sentryDsn.arn
 export const sentryOrgArn = sentryOrg.arn
 export const sentryProjectArn = sentryProject.arn
 export const awsAccessKeyArn = awsAccessKey.arn
