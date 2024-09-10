@@ -2,7 +2,6 @@
 
 import { DatasetsRepository } from '@latitude-data/core/repositories'
 import { createDataset } from '@latitude-data/core/services/datasets/create'
-import disk from '$/lib/disk'
 import { z } from 'zod'
 
 import { authProcedure } from '../procedures'
@@ -78,7 +77,6 @@ export const createDatasetAction = authProcedure
     return createDataset({
       workspace: ctx.workspace,
       author: ctx.user,
-      disk: disk,
       data: {
         name: input.name,
         file: input.dataset_file,

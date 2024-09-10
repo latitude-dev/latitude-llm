@@ -1,6 +1,6 @@
 import { Worker } from 'bullmq'
-import { Redis } from 'ioredis'
 
+import { connection } from '../utils/connection'
 import { defaultWorker } from './worker-definitions/defaultWorker'
 
 const WORKER_OPTS = {
@@ -13,7 +13,7 @@ const WORKER_OPTS = {
 }
 const WORKERS = [defaultWorker]
 
-export default function startWorkers({ connection }: { connection: Redis }) {
+export default function startWorkers() {
   return WORKERS.flatMap((w) =>
     w.queues.map(
       (q) =>

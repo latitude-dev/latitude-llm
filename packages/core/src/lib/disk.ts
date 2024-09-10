@@ -1,4 +1,6 @@
+import path from 'path'
 import { Readable } from 'stream'
+import { fileURLToPath } from 'url'
 
 import { Result } from '@latitude-data/core/lib/Result'
 import { env } from '@latitude-data/env'
@@ -46,6 +48,7 @@ async function getReadableStreamFromFile(file: File) {
 }
 
 type BuildArgs = { local: { publicPath: string; location: string } }
+
 export class DiskWrapper {
   private disk: Disk
 
@@ -119,6 +122,7 @@ export class DiskWrapper {
     const awsConfig = getAwsConfig()
 
     return new S3Driver({
+      // @ts-ignore
       credentials: awsConfig.credentials,
       region: awsConfig.region,
       bucket: awsConfig.bucket,
@@ -127,3 +131,17 @@ export class DiskWrapper {
     })
   }
 }
+
+const PUBLIC_PATH = 'uploads'
+
+export const diskFactory = () =>
+  new DiskWrapper({
+    local: {
+      publicPath: PUBLIC_PATH,
+      location: path.join(
+        path.dirname(fileURLToPath(import.meta.url)),
+        // TODO: This needs to come from env
+        `../../public/${PUBLIC_PATH}`,
+      ),
+    },
+  })

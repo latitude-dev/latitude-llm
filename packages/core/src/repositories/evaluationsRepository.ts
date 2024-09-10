@@ -93,4 +93,13 @@ export class EvaluationsRepository extends Repository<
 
     return Result.ok(result)
   }
+
+  async filterById(ids: number[]) {
+    const result = await this.db
+      .select()
+      .from(this.scope)
+      .where(inArray(this.scope.id, ids))
+
+    return Result.ok(result)
+  }
 }
