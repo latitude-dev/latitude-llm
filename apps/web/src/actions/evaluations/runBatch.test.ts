@@ -4,8 +4,6 @@ import {
   DocumentVersion,
   EvaluationDto,
   Project,
-  ProviderApiKey,
-  Providers,
   User,
   Workspace,
 } from '@latitude-data/core/browser'
@@ -63,8 +61,7 @@ describe('runBatchAction', () => {
       document: DocumentVersion,
       commit: Commit,
       dataset: Dataset,
-      evaluation: EvaluationDto,
-      provider: ProviderApiKey
+      evaluation: EvaluationDto
 
     beforeEach(async () => {
       vi.clearAllMocks()
@@ -78,13 +75,6 @@ describe('runBatchAction', () => {
       document = setup.documents[0]!
       commit = setup.commit
 
-      provider = await factories.createProviderApiKey({
-        workspace,
-        type: Providers.OpenAI,
-        name: 'Test Provider',
-        user,
-      })
-
       dataset = await factories
         .createDataset({
           name: 'Test Dataset',
@@ -93,8 +83,8 @@ describe('runBatchAction', () => {
         })
         .then((result) => result.dataset)
 
-      evaluation = await factories.createEvaluation({
-        provider,
+      evaluation = await factories.createLlmAsJudgeEvaluation({
+        workspace,
         name: 'Test Evaluation',
       })
 
@@ -181,8 +171,8 @@ describe('runBatchAction', () => {
     })
 
     it('enqueues multiple evaluation jobs for multiple evaluationIds', async () => {
-      const evaluation2 = await factories.createEvaluation({
-        provider,
+      const evaluation2 = await factories.createLlmAsJudgeEvaluation({
+        workspace,
         name: 'Test Evaluation 2',
       })
 

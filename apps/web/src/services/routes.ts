@@ -81,19 +81,26 @@ export const ROUTES = {
                 root: rootDocuments,
                 detail: ({ uuid }: { uuid: string }) => {
                   const root = `${rootDocuments}/${uuid}`
-                  const rootEvaluations = `${root}/evaluations`
+                  const evaluationsRoot: string = `${root}/evaluations`
                   return {
                     root,
                     [DocumentRoutes.editor]: { root },
                     [DocumentRoutes.evaluations]: {
-                      root: rootEvaluations,
-                      connect: {
-                        root: `${rootEvaluations}/connect`,
+                      root: evaluationsRoot,
+                      dashboard: {
+                        root: `${evaluationsRoot}/dashboard`,
+                        connect: {
+                          root: `${evaluationsRoot}/dashboard/connect`,
+                        },
                       },
-                      detail: ({ uuid }: { uuid: string }) => {
-                        const root = `${rootEvaluations}/${uuid}`
+                      detail: (uuid: string) => {
+                        const detailRoot = `${evaluationsRoot}/${uuid}`
                         return {
                           root,
+                          dashboard: {
+                            root: `${detailRoot}/dashboard`,
+                            destroy: `${detailRoot}/dashboard/destroy`,
+                          },
                         }
                       },
                     },
