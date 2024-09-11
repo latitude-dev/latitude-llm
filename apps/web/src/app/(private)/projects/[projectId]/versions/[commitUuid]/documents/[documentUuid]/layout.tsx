@@ -1,5 +1,6 @@
 import { ReactNode } from 'react'
 
+import { DocumentVersionProvider } from '@latitude-data/web-ui'
 import { getDocumentByUuidCached } from '$/app/(private)/_data-access'
 import env from '$/env'
 import { ROUTES } from '$/services/routes'
@@ -26,13 +27,15 @@ export default async function DocumentPage({
     })
 
     return (
-      <DocumentsLayout
-        projectId={projectId}
-        commitUuid={commitUuid}
-        document={document}
-      >
-        <DocumentTabs params={params}>{children}</DocumentTabs>
-      </DocumentsLayout>
+      <DocumentVersionProvider document={document}>
+        <DocumentsLayout
+          projectId={projectId}
+          commitUuid={commitUuid}
+          document={document}
+        >
+          <DocumentTabs params={params}>{children}</DocumentTabs>
+        </DocumentsLayout>
+      </DocumentVersionProvider>
     )
   } catch (error) {
     // TODO: Show a 404 page within the documents layout, while still showing

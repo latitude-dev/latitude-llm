@@ -1,11 +1,11 @@
 import { ReactNode } from 'react'
 
-import { TableBlankSlate, TableWithHeader } from '@latitude-data/web-ui'
+import { TableWithHeader } from '@latitude-data/web-ui'
 import { getEvaluationsByDocumentUuidCached } from '$/app/(private)/_data-access'
 import { ROUTES } from '$/services/routes'
 import Link from 'next/link'
 
-import Layout from './_components/Layout'
+import EvaluationsLayoutClient from './_components/Layout'
 
 export default async function EvaluationsLayout({
   children,
@@ -18,7 +18,7 @@ export default async function EvaluationsLayout({
   const href = ROUTES.projects
     .detail({ id: Number(projectId) })
     .commits.detail({ uuid: commitUuid })
-    .documents.detail({ uuid: documentUuid }).evaluations.connect.root
+    .documents.detail({ uuid: documentUuid }).evaluations.dashboard.connect.root
 
   return (
     <div className='w-full p-6'>
@@ -30,23 +30,7 @@ export default async function EvaluationsLayout({
             <TableWithHeader.Button>Connect evaluation</TableWithHeader.Button>
           </Link>
         }
-        table={
-          <>
-            {evaluations.length > 0 && <Layout evaluations={evaluations} />}
-            {evaluations.length === 0 && (
-              <TableBlankSlate
-                description='There are no evaluations connected to this prompt yet. Connect one to start evaluating the prompt.'
-                link={
-                  <Link href={href}>
-                    <TableBlankSlate.Button>
-                      Connect your first evaluation
-                    </TableBlankSlate.Button>
-                  </Link>
-                }
-              />
-            )}
-          </>
-        }
+        table={<EvaluationsLayoutClient evaluations={evaluations} />}
       />
     </div>
   )

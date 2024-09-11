@@ -18,7 +18,7 @@ export async function createLlmAsJudgeEvaluation({
 }: IEvaluationData) {
   const evaluationResult = await createEvaluationService({
     workspace,
-    metadata: { prompt },
+    metadata: { prompt: prompt ?? faker.lorem.sentence() },
     type: EvaluationMetadataType.LlmAsJudge,
     name: name ?? faker.company.catchPhrase(),
     description: description ?? faker.lorem.sentence(),
