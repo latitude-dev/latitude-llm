@@ -2,7 +2,7 @@ import { EventHandlers } from '@latitude-data/core/events/handlers/index'
 import { Job, JobsOptions, Queue, QueueEvents } from 'bullmq'
 
 import { Jobs, Queues } from '../constants'
-import { createDocumentLogJob, JobDefinition } from '../job-definitions'
+import { JobDefinition } from '../job-definitions'
 import { runBatchEvaluationJob } from '../job-definitions/batchEvaluations/runBatchEvaluationJob'
 import { runDocumentJob } from '../job-definitions/batchEvaluations/runDocumentJob'
 import { runEvaluationJob } from '../job-definitions/batchEvaluations/runEvaluationJob'
@@ -66,12 +66,7 @@ function setupQueue({
 export const QUEUES = {
   [Queues.defaultQueue]: {
     name: Queues.defaultQueue,
-    jobs: [
-      createDocumentLogJob,
-      runBatchEvaluationJob,
-      runDocumentJob,
-      runEvaluationJob,
-    ],
+    jobs: [runBatchEvaluationJob, runDocumentJob, runEvaluationJob],
   },
   [Queues.eventsQueue]: {
     name: Queues.eventsQueue,

@@ -6,6 +6,7 @@ import {
   type DocumentVersion,
   type Workspace,
 } from '../../browser'
+import { publisher } from '../../events/publisher'
 import { Result } from '../../lib'
 import { runChain } from '../chains/run'
 import { getResolvedContent } from '../documents'
@@ -38,12 +39,29 @@ export async function runDocumentAtCommit({
     source,
   })
 
-  const { stream, response, documentLogUuid } = rezult.value
+  const { stream, response, duration, resolvedContent, documentLogUuid } =
+    rezult.value
 
   return Result.ok({
     stream,
-    response,
+    duration,
     resolvedContent: result.value,
     documentLogUuid,
+    response: response.then(async (response) =>
+      publisher.publish({
+        type: 'documentRun',
+        data: {
+          workspaceId,
+          projectId: commit.projectId,
+          documentUuid: document.documentUuid,
+          commitUuid: commit.uuid,
+          documentLogUuid,
+          response,
+          resolvedContent,
+          parameters,
+          duration: await duration,
+        },
+      }),
+    ),
   })
 }

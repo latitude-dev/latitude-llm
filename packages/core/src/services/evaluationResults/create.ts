@@ -1,6 +1,7 @@
 import {
   DocumentLog,
   Evaluation,
+  EvaluationDto,
   EvaluationResult,
   ProviderLog,
 } from '../../browser'
@@ -9,7 +10,7 @@ import { Result, Transaction } from '../../lib'
 import { evaluationResults } from '../../schema'
 
 export type CreateEvaluationResultProps = {
-  evaluation: Evaluation
+  evaluation: Evaluation | EvaluationDto
   documentLog: DocumentLog
   providerLog: ProviderLog
   result: string

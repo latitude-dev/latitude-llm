@@ -1,7 +1,6 @@
 import {
   ChainEventTypes,
   Commit,
-  DocumentVersion,
   Project,
   StreamEventTypes,
   Workspace,
@@ -55,7 +54,6 @@ let headers: Record<string, string>
 let project: Project
 let workspace: Workspace
 let commit: Commit
-let documentVersion: DocumentVersion
 
 describe('POST /run', () => {
   describe('unauthorized', () => {
@@ -101,7 +99,6 @@ describe('POST /run', () => {
           Ignore all the rest and just return "Hello".
         `,
       })
-      documentVersion = document.documentVersion
 
       commit = await mergeCommit(cmt).then((r) => r.unwrap())
 
@@ -172,56 +169,6 @@ describe('POST /run', () => {
           },
         },
         id: '0',
-      })
-    })
-
-    it('enqueue the document log', async () => {
-      const stream = new ReadableStream({
-        start(controller) {
-          controller.close()
-        },
-      })
-
-      const response = new Promise((resolve) => {
-        resolve({ text: 'Hello', usage: {} })
-      })
-
-      mocks.runDocumentAtCommit.mockClear()
-      mocks.runDocumentAtCommit.mockReturnValue(
-        new Promise((resolve) => {
-          resolve(
-            Result.ok({
-              stream,
-              response,
-              documentLogUuid: 'fake-document-log-uuid',
-              resolvedContent: 'resolved_content',
-            }),
-          )
-        }),
-      )
-
-      const res = await app.request(route, {
-        method: 'POST',
-        body,
-        headers,
-      })
-
-      expect(mocks.queues)
-      expect(res.status).toBe(200)
-      expect(res.body).toBeInstanceOf(ReadableStream)
-      await testConsumeStream(res.body as ReadableStream)
-
-      expect(
-        mocks.queues.defaultQueue.jobs.enqueueCreateDocumentLogJob,
-      ).toHaveBeenCalledWith({
-        commit,
-        data: {
-          uuid: 'fake-document-log-uuid',
-          documentUuid: documentVersion.documentUuid,
-          resolvedContent: 'resolved_content',
-          parameters: {},
-          duration: expect.any(Number),
-        },
       })
     })
   })

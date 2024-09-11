@@ -40,7 +40,7 @@ export const providerLogs = latitudeSchema.table('provider_logs', {
   toolCalls: json('tool_calls').$type<ToolCall[]>().notNull().default([]),
   tokens: bigint('tokens', { mode: 'number' }).notNull(),
   cost_in_millicents: integer('cost_in_millicents').notNull().default(0),
-  duration: bigint('duration', { mode: 'number' }).notNull(),
+  duration: bigint('duration', { mode: 'number' }).notNull(), // in milliseconds!
   source: logSourcesEnum('source').notNull(),
   apiKeyId: bigint('apiKeyId', { mode: 'number' }).references(
     () => apiKeys.id,

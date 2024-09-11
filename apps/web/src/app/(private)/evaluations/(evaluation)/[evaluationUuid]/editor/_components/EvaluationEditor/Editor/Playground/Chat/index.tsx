@@ -24,10 +24,18 @@ import {
 } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/DocumentEditor/Editor/Playground/Chat'
 import { readStreamableValue } from 'ai/rsc'
 
-export const EVALUATION_PARAMETERS = ['messages', 'last_message']
+export const EVALUATION_PARAMETERS = [
+  'messages',
+  'context',
+  'response',
+  'prompt',
+  'parameters',
+  'cost',
+  'latency',
+  'config',
+]
 
 export type Parameters = (typeof EVALUATION_PARAMETERS)[number]
-export type Inputs = { [key in Parameters]: string }
 
 export default function Chat({
   clearChat,
@@ -36,7 +44,7 @@ export default function Chat({
 }: {
   clearChat: () => void
   evaluation: EvaluationDto
-  parameters: Inputs
+  parameters: Record<string, string>
 }) {
   const [error, setError] = useState<Error | undefined>()
   const [tokens, setTokens] = useState<number>(0)
@@ -79,7 +87,7 @@ export default function Chat({
 
     const [data, error] = await runPromptAction({
       prompt: evaluation.metadata.prompt,
-      parameters: parameters as { messages: string; last_message: string },
+      parameters,
     })
     if (error) {
       setError(error)

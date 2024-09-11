@@ -1,4 +1,5 @@
 import { LogSources } from '@latitude-data/core/browser'
+import * as factories from '@latitude-data/core/factories'
 import { Result } from '@latitude-data/core/lib/Result'
 import { runDocumentAtCommit } from '@latitude-data/core/services/commits/runDocumentAtCommit'
 import { env } from '@latitude-data/env'
@@ -15,6 +16,12 @@ const mocks = vi.hoisted(() => ({
         enqueueRunEvaluationJob: vi.fn(),
       },
     },
+    eventsQueue: {
+      jobs: {
+        enqueueCreateEventJob: vi.fn(),
+        enqueuePublishEventJob: vi.fn(),
+      },
+    },
   },
 }))
 
@@ -29,19 +36,41 @@ vi.mock('@latitude-data/env')
 vi.mock('../../utils/progressTracker')
 
 describe('runDocumentJob', () => {
-  const mockJob = {
-    data: {
-      workspaceId: 1,
-      document: { id: 'doc1' },
-      commit: { id: 'commit1' },
-      parameters: { param1: 'value1' },
-      evaluationId: 123,
-      batchId: 'batch1',
-    },
-  } as Job<any>
+  let mockJob: Job
+  let workspace: any
+  let project: any
+  let document: any
+  let commit: any
+  let evaluation: any
 
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks()
+
+    // Create necessary resources using factories
+    const setup = await factories.createProject({
+      documents: { 'test-doc': 'Test content' },
+    })
+    workspace = setup.workspace
+    project = setup.project
+    document = setup.documents[0]
+    commit = setup.commit
+
+    evaluation = await factories.createLlmAsJudgeEvaluation({
+      workspace,
+      name: 'Test Evaluation',
+    })
+
+    mockJob = {
+      data: {
+        workspaceId: workspace.id,
+        documentUuid: document.documentUuid,
+        commitUuid: commit.uuid,
+        projectId: project.id,
+        parameters: { param1: 'value1' },
+        evaluationId: evaluation.id,
+        batchId: 'batch1',
+      },
+    } as Job<any>
   })
 
   it('should run document and enqueue evaluation job on success', async () => {
@@ -52,21 +81,23 @@ describe('runDocumentJob', () => {
     // @ts-ignore
     vi.mocked(runDocumentAtCommit).mockResolvedValue(Result.ok(mockResult))
 
-    await runDocumentJob.handler(mockJob)
+    await runDocumentJob(mockJob)
 
-    expect(runDocumentAtCommit).toHaveBeenCalledWith({
-      workspaceId: 1,
-      document: { id: 'doc1' },
-      commit: { id: 'commit1' },
-      parameters: { param1: 'value1' },
-      source: LogSources.Evaluation,
-    })
+    expect(runDocumentAtCommit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        workspaceId: workspace.id,
+        commit,
+        parameters: { param1: 'value1' },
+        source: LogSources.Evaluation,
+      }),
+    )
 
     expect(
       mocks.queues.defaultQueue.jobs.enqueueRunEvaluationJob,
     ).toHaveBeenCalledWith({
+      workspaceId: workspace.id,
       documentLogUuid: 'log1',
-      evaluationId: 123,
+      evaluationId: evaluation.id,
       batchId: 'batch1',
     })
 
@@ -78,7 +109,7 @@ describe('runDocumentJob', () => {
     vi.mocked(runDocumentAtCommit).mockRejectedValue(new Error('Test error'))
     vi.mocked(env).NODE_ENV = 'production'
 
-    await runDocumentJob.handler(mockJob)
+    await runDocumentJob(mockJob)
 
     expect(runDocumentAtCommit).toHaveBeenCalled()
     expect(
@@ -96,7 +127,7 @@ describe('runDocumentJob', () => {
 
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
-    await runDocumentJob.handler(mockJob)
+    await runDocumentJob(mockJob)
 
     expect(consoleSpy).toHaveBeenCalledWith(testError)
     expect(ProgressTracker.prototype.incrementErrors).toHaveBeenCalled()

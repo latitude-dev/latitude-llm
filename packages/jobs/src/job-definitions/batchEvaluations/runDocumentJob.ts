@@ -1,61 +1,73 @@
+import { LogSources } from '@latitude-data/core/browser'
 import {
-  Commit,
-  DocumentVersion,
-  LogSources,
-} from '@latitude-data/core/browser'
+  CommitsRepository,
+  DocumentVersionsRepository,
+} from '@latitude-data/core/repositories'
 import { runDocumentAtCommit } from '@latitude-data/core/services/commits/runDocumentAtCommit'
 import { env } from '@latitude-data/env'
 import { Job } from 'bullmq'
 
 import { setupJobs } from '../../'
-import { Queues } from '../../constants'
 import { connection } from '../../utils/connection'
 import { ProgressTracker } from '../../utils/progressTracker'
 
 type RunDocumentJobData = {
   workspaceId: number
-  document: DocumentVersion
-  commit: Commit
+  documentUuid: string
+  commitUuid: string
+  projectId: number
   parameters: Record<string, unknown>
   evaluationId: number
   batchId: string
 }
 
-export const runDocumentJob = {
-  name: 'runDocumentJob',
-  queue: Queues.defaultQueue,
-  handler: async (job: Job<RunDocumentJobData>) => {
-    const { workspaceId, document, commit, parameters, evaluationId, batchId } =
-      job.data
+export const runDocumentJob = async (job: Job<RunDocumentJobData>) => {
+  const {
+    workspaceId,
+    documentUuid,
+    commitUuid,
+    projectId,
+    parameters,
+    evaluationId,
+    batchId,
+  } = job.data
 
-    const progressTracker = new ProgressTracker(connection, batchId)
+  const progressTracker = new ProgressTracker(connection, batchId)
 
-    try {
-      const result = await runDocumentAtCommit({
-        workspaceId,
-        document,
-        commit,
-        parameters,
-        source: LogSources.Evaluation,
-      }).then((r) => r.unwrap())
+  try {
+    const documentsScope = new DocumentVersionsRepository(workspaceId)
+    const commitsScope = new CommitsRepository(workspaceId)
+    const document = await documentsScope
+      .getDocumentAtCommit({ projectId, documentUuid, commitUuid })
+      .then((r) => r.unwrap())
+    const commit = await commitsScope
+      .getCommitByUuid({ projectId, uuid: commitUuid })
+      .then((r) => r.unwrap())
+    const result = await runDocumentAtCommit({
+      workspaceId,
+      document,
+      commit,
+      parameters,
+      source: LogSources.Evaluation,
+    }).then((r) => r.unwrap())
 
-      await result.response
+    await result.response
 
-      const queues = setupJobs()
+    const queues = setupJobs()
 
-      // Enqueue the evaluation job
-      await queues.defaultQueue.jobs.enqueueRunEvaluationJob({
-        documentLogUuid: result.documentLogUuid,
-        evaluationId,
-        batchId,
-      })
-    } catch (error) {
-      if (env.NODE_ENV !== 'production') {
-        console.error(error)
-      }
-
-      await progressTracker.incrementErrors()
-      await progressTracker.decrementTotal()
+    // Enqueue the evaluation job
+    await queues.defaultQueue.jobs.enqueueRunEvaluationJob({
+      workspaceId,
+      documentLogUuid: result.documentLogUuid,
+      evaluationId,
+      batchId,
+    })
+  } catch (error) {
+    if (env.NODE_ENV !== 'production') {
+      console.error(error)
     }
-  },
+
+    await progressTracker.incrementErrors()
+    await progressTracker.decrementTotal()
+  }
 }

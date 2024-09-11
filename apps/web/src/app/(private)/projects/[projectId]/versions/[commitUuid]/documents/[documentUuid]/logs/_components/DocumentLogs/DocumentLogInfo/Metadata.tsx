@@ -137,7 +137,7 @@ export function DocumentLogMetadata({
           trigger={
             <div className='flex flex-row items-center gap-x-1'>
               <Text.H5 color='foregroundMuted'>
-                {formatCostInMillicents(documentLog.cost_in_millicents ?? 0)}
+                {formatCostInMillicents(documentLog.costInMillicents ?? 0)}
               </Text.H5>
               <Icon name='info' className='text-muted-foreground' />
             </div>
