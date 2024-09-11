@@ -10,12 +10,14 @@ import { Header } from '../Header'
 import Chat from './Chat'
 import Preview from './Preview'
 
-function convertParams(
-  inputs: Record<string, string>,
-): Record<string, unknown> {
+export function convertParams(inputs: Record<string, string>) {
   return Object.fromEntries(
     Object.entries(inputs).map(([key, value]) => {
-      return [key, value]
+      try {
+        return [key, JSON.parse(value)]
+      } catch (e) {
+        return [key, value]
+      }
     }),
   )
 }

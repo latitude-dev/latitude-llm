@@ -351,6 +351,13 @@
       "when": 1725898403698,
       "tag": "0049_sudden_crystal",
       "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1726065747521,
+      "tag": "0050_elite_marvel_boy",
+      "breakpoints": true
     }
   ]
 }

@@ -4,16 +4,12 @@ import { SentMessageInfo, Transporter } from 'nodemailer'
 import Mail, { Address } from 'nodemailer/lib/mailer'
 import SMTPTransport from 'nodemailer/lib/smtp-transport'
 
-import adapter from './adapters'
+import { createAdapter } from './adapters'
 
 export default abstract class Mailer {
   protected options: Mail.Options
 
-  private adapter: Transporter<SMTPTransport.SentMessageInfo> = adapter
-
-  public static get adapterOptions(): Mail.Options {
-    return adapter.options
-  }
+  private adapter: Transporter<SMTPTransport.SentMessageInfo>
 
   static get from(): string {
     return env.FROM_MAILER_EMAIL
@@ -23,8 +19,9 @@ export default abstract class Mailer {
     return `Latitude <${Mailer.from}>`
   }
 
-  constructor(options: Mail.Options) {
+  constructor(options: Mail.Options, adapter = createAdapter()) {
     this.options = options
+    this.adapter = adapter
   }
 
   abstract send(

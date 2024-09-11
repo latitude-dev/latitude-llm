@@ -10,7 +10,7 @@ import {
 import * as factories from '@latitude-data/core/factories'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { runBatchAction } from './runBatch'
+import { runBatchEvaluationAction } from './runBatch'
 
 const mocks = vi.hoisted(() => ({
   getSession: vi.fn(),
@@ -40,7 +40,7 @@ vi.mock('@latitude-data/jobs', () => ({
 describe('runBatchAction', () => {
   describe('unauthorized', () => {
     it('errors when the user is not authenticated', async () => {
-      const [_, error] = await runBatchAction({
+      const [_, error] = await runBatchEvaluationAction({
         datasetId: 1,
         projectId: 1,
         documentUuid: 'doc-uuid',
@@ -95,7 +95,7 @@ describe('runBatchAction', () => {
     })
 
     it('successfully enqueues a batch evaluation job', async () => {
-      const [result, error] = await runBatchAction({
+      const [result, error] = await runBatchEvaluationAction({
         datasetId: dataset.id,
         projectId: project.id,
         documentUuid: document.documentUuid,
@@ -128,7 +128,7 @@ describe('runBatchAction', () => {
     })
 
     it('handles optional parameters', async () => {
-      const [result, error] = await runBatchAction({
+      const [result, error] = await runBatchEvaluationAction({
         datasetId: dataset.id,
         projectId: project.id,
         documentUuid: document.documentUuid,
@@ -156,7 +156,7 @@ describe('runBatchAction', () => {
     })
 
     it('handles errors when resources are not found', async () => {
-      const [_, error] = await runBatchAction({
+      const [_, error] = await runBatchEvaluationAction({
         datasetId: 999999,
         projectId: project.id,
         documentUuid: document.documentUuid,
@@ -176,7 +176,7 @@ describe('runBatchAction', () => {
         name: 'Test Evaluation 2',
       })
 
-      const [result, error] = await runBatchAction({
+      const [result, error] = await runBatchEvaluationAction({
         datasetId: dataset.id,
         projectId: project.id,
         documentUuid: document.documentUuid,

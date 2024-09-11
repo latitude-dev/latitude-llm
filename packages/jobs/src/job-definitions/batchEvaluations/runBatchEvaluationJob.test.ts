@@ -93,7 +93,7 @@ describe('runBatchEvaluationJob', () => {
   })
 
   it('should process all rows and enqueue jobs', async () => {
-    await runBatchEvaluationJob.handler(mockJob)
+    await runBatchEvaluationJob(mockJob)
 
     expect(
       mocks.queues.defaultQueue.jobs.enqueueRunDocumentJob,
@@ -114,7 +114,7 @@ describe('runBatchEvaluationJob', () => {
     mockJob.data.fromLine = 1
     mockJob.data.toLine = 3
 
-    await runBatchEvaluationJob.handler(mockJob)
+    await runBatchEvaluationJob(mockJob)
 
     expect(vi.mocked(previewDataset)).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -131,7 +131,7 @@ describe('runBatchEvaluationJob', () => {
     const batchId = randomUUID()
     mockJob.data.batchId = batchId
 
-    await runBatchEvaluationJob.handler(mockJob)
+    await runBatchEvaluationJob(mockJob)
 
     expect(
       vi.mocked(mocks.queues.defaultQueue.jobs.enqueueRunDocumentJob),
@@ -146,9 +146,7 @@ describe('runBatchEvaluationJob', () => {
     // @ts-ignore
     vi.mocked(findWorkspaceFromDocument).mockResolvedValue(null)
 
-    await expect(runBatchEvaluationJob.handler(mockJob)).rejects.toThrow(
-      NotFoundError,
-    )
+    await expect(runBatchEvaluationJob(mockJob)).rejects.toThrow(NotFoundError)
   })
 
   it('should resume from last enqueued job on retry', async () => {
@@ -156,7 +154,7 @@ describe('runBatchEvaluationJob', () => {
     // @ts-ignore
     mockProgressTracker.getProgress.mockResolvedValue({ enqueued: 2 })
 
-    await runBatchEvaluationJob.handler(mockJob)
+    await runBatchEvaluationJob(mockJob)
 
     expect(
       vi.mocked(mocks.queues.defaultQueue.jobs.enqueueRunDocumentJob),
@@ -171,14 +169,14 @@ describe('runBatchEvaluationJob', () => {
   })
 
   it('should initialize progress on first attempt', async () => {
-    await runBatchEvaluationJob.handler(mockJob)
+    await runBatchEvaluationJob(mockJob)
 
     expect(mockProgressTracker.initializeProgress).toHaveBeenCalledWith(3)
   })
 
   it('should not initialize progress on retry attempts', async () => {
     mockJob.attemptsMade = 1
-    await runBatchEvaluationJob.handler(mockJob)
+    await runBatchEvaluationJob(mockJob)
 
     expect(mockProgressTracker.initializeProgress).not.toHaveBeenCalled()
   })

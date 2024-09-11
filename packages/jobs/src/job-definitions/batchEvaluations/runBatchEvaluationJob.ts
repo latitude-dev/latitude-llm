@@ -12,7 +12,6 @@ import { previewDataset } from '@latitude-data/core/services/datasets/preview'
 import { Job } from 'bullmq'
 
 import { setupJobs } from '../..'
-import { Queues } from '../../constants'
 import { connection } from '../../utils/connection'
 import { ProgressTracker } from '../../utils/progressTracker'
 
@@ -26,69 +25,65 @@ type RunBatchEvaluationJobParams = {
   batchId?: string
 }
 
-export const runBatchEvaluationJob = {
-  name: 'runBatchEvaluationJob',
-  queue: Queues.defaultQueue,
-  handler: async (job: Job<RunBatchEvaluationJobParams>) => {
-    const {
-      evaluation,
-      dataset,
-      document,
-      fromLine = 0,
-      toLine,
-      parametersMap,
-      batchId = randomUUID(),
-    } = job.data
-    const workspace = await findWorkspaceFromDocument(document)
-    if (!workspace) throw new NotFoundError('Workspace not found')
+export const runBatchEvaluationJob = async (
+  job: Job<RunBatchEvaluationJobParams>,
+) => {
+  const {
+    evaluation,
+    dataset,
+    document,
+    fromLine = 0,
+    toLine,
+    parametersMap,
+    batchId = randomUUID(),
+  } = job.data
+  const workspace = await findWorkspaceFromDocument(document)
+  if (!workspace) throw new NotFoundError('Workspace not found')
 
-    const commit = await new CommitsRepository(workspace.id)
-      .find(document.commitId)
-      .then((r) => r.unwrap())
-    const fileMetadata = dataset.fileMetadata
-    // TODO: use streaming instead of this service in order to avoid loading the
-    // whole dataset in memory
-    const result = await previewDataset({
-      dataset,
-      fromLine,
-      toLine: toLine || fileMetadata.rowCount,
-    }).then((r) => r.unwrap())
+  const commit = await new CommitsRepository(workspace.id)
+    .find(document.commitId)
+    .then((r) => r.unwrap())
+  const fileMetadata = dataset.fileMetadata
+  // TODO: use streaming instead of this service in order to avoid loading the
+  // whole dataset in memory
+  const result = await previewDataset({
+    dataset,
+    fromLine,
+    toLine: toLine || fileMetadata.rowCount,
+  }).then((r) => r.unwrap())
 
-    const { rows } = result
+  const { rows } = result
 
-    const parameters = rows.map((row) => {
-      return Object.fromEntries(
-        Object.entries(parametersMap!).map(([key, index]) => [
-          key,
-          row[index]!,
-        ]),
-      )
+  const parameters = rows.map((row) => {
+    return Object.fromEntries(
+      Object.entries(parametersMap!).map(([key, index]) => [key, row[index]!]),
+    )
+  })
+
+  const progressTracker = new ProgressTracker(connection, batchId)
+
+  if (job.attemptsMade === 0) {
+    await progressTracker.initializeProgress(parameters.length)
+  }
+
+  const { enqueued } = await progressTracker.getProgress()
+  const queues = setupJobs()
+
+  // Enqueue runDocumentJob for each set of parameters, starting from the last
+  // enqueued job. This allows us to resume the batch if the job fails.
+  for (let i = enqueued; i < parameters.length; i++) {
+    await queues.defaultQueue.jobs.enqueueRunDocumentJob({
+      workspaceId: workspace.id,
+      documentUuid: document.documentUuid,
+      commitUuid: commit.uuid,
+      projectId: commit.projectId,
+      parameters: parameters[i]!,
+      evaluationId: evaluation.id,
+      batchId,
     })
 
-    const progressTracker = new ProgressTracker(connection, batchId)
+    await progressTracker.incrementEnqueued()
+  }
 
-    if (job.attemptsMade === 0) {
-      await progressTracker.initializeProgress(parameters.length)
-    }
-
-    const { enqueued } = await progressTracker.getProgress()
-    const queues = setupJobs()
-
-    // Enqueue runDocumentJob for each set of parameters, starting from the last
-    // enqueued job. This allows us to resume the batch if the job fails.
-    for (let i = enqueued; i < parameters.length; i++) {
-      await queues.defaultQueue.jobs.enqueueRunDocumentJob({
-        workspaceId: workspace.id,
-        document,
-        commit,
-        parameters: parameters[i]!,
-        evaluationId: evaluation.id,
-        batchId,
-      })
-
-      await progressTracker.incrementEnqueued()
-    }
-
-    return { batchId }
-  },
+  return { batchId }
 }

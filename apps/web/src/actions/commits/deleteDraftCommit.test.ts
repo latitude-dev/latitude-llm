@@ -102,6 +102,8 @@ describe('getUsersAction', () => {
     })
 
     it('deletes associated documents with draft commit', async () => {
+      const before = await database.query.documentVersions.findMany()
+
       const { commit: draft } = await factories.createDraft({
         project,
         user,
@@ -118,13 +120,15 @@ describe('getUsersAction', () => {
         commit: anotherDraf,
         path: 'patata/doc2',
       })
+
       await deleteDraftCommitAction({
         projectId: project.id,
         id: draft.id,
       })
 
-      const result = await database.query.documentVersions.findMany()
-      expect(result.length).toEqual(1)
+      const after = await database.query.documentVersions.findMany()
+
+      expect(after.length - before.length).toEqual(1)
     })
   })
 })

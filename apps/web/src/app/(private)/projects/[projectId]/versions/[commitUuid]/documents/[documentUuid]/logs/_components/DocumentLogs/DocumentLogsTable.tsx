@@ -84,7 +84,7 @@ export const DocumentLogsTable = ({
             </TableCell>
             <TableCell>
               <Text.H4 noWrap>
-                {formatCostInMillicents(documentLog.cost_in_millicents || 0)}
+                {formatCostInMillicents(documentLog.costInMillicents || 0)}
               </Text.H4>
             </TableCell>
           </TableRow>

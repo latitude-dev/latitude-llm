@@ -1,49 +1,23 @@
 'use client'
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { capitalize } from 'lodash-es'
 
-import {
-  ConversationMetadata,
-  Message,
-  MessageContent,
-  TextContent,
-} from '@latitude-data/compiler'
+import { ConversationMetadata } from '@latitude-data/compiler'
 import { EvaluationDto } from '@latitude-data/core/browser'
-import { Badge, Icon, Text, TextArea } from '@latitude-data/web-ui'
+import {
+  formatContext,
+  formatConversation,
+} from '@latitude-data/core/services/providerLogs/formatForEvaluation'
+import { Badge, Icon, Input, Text } from '@latitude-data/web-ui'
+import { convertParams } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/DocumentEditor/Editor/Playground'
 import { ROUTES } from '$/services/routes'
 import useProviderLogs from '$/stores/providerLogs'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 
 import { Header } from '../Header'
-import Chat, { EVALUATION_PARAMETERS, Inputs } from './Chat'
+import Chat, { EVALUATION_PARAMETERS } from './Chat'
 import Preview from './Preview'
-
-function convertMessage(message: Message) {
-  if (typeof message.content === 'string') {
-    return `${capitalize(message.role)}: \n ${message.content}`
-  } else {
-    const content = message.content[0] as MessageContent
-    if (content.type === 'text') {
-      return `${capitalize(message.role)}: \n ${(content as TextContent).text}`
-    } else {
-      return `${capitalize(message.role)}: <${content.type} message>`
-    }
-  }
-}
-
-function convertMessages(messages: Message[]) {
-  return messages.map((message) => convertMessage(message)).join('\n')
-}
-
-function convertParams(inputs: Inputs) {
-  return Object.fromEntries(
-    Object.entries(inputs).map(([key, value]) => {
-      return [key, value]
-    }),
-  )
-}
 
 export default function Playground({
   evaluation,
@@ -53,7 +27,7 @@ export default function Playground({
   metadata: ConversationMetadata
 }) {
   const [mode, setMode] = useState<'preview' | 'chat'>('preview')
-  const [inputs, setInputs] = useState<Inputs>(
+  const [inputs, setInputs] = useState<Record<string, string>>(
     Object.fromEntries(
       EVALUATION_PARAMETERS.map((param: string) => [param, '']),
     ),
@@ -74,8 +48,14 @@ export default function Playground({
   useEffect(() => {
     if (providerLog) {
       setInputs({
-        messages: convertMessages(providerLog.messages),
-        last_message: `Assistant: ${providerLog.responseText}`,
+        messages: JSON.stringify(formatConversation(providerLog)),
+        context: JSON.stringify(formatContext(providerLog)),
+        response: providerLog.responseText,
+        prompt: '',
+        parameters: '',
+        config: '',
+        duration: '',
+        cost: '',
       })
     }
   }, [setInput, providerLog])
@@ -106,7 +86,7 @@ export default function Playground({
               >
                 <Badge variant='accent'>&#123;&#123;{param}&#125;&#125;</Badge>
                 <div className='flex flex-grow w-full'>
-                  <TextArea
+                  <Input
                     value={value}
                     onChange={(e) => setInput(param, e.currentTarget.value)}
                   />

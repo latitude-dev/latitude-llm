@@ -18,6 +18,7 @@ const nextConfig = {
     'flydrive/drivers/fs',
     'flydrive/drivers/types',
     '@sentry/nextjs',
+    'bullmq'
   ],
   experimental: {
     // Dear developer,

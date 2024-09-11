@@ -1,3 +1,5 @@
+'use server'
+
 import {
   DatasetsRepository,
   DocumentVersionsRepository,
@@ -9,7 +11,7 @@ import { z } from 'zod'
 
 import { authProcedure } from '../procedures'
 
-export const runBatchAction = authProcedure
+export const runBatchEvaluationAction = authProcedure
   .createServerAction()
   .input(
     z.object({
@@ -17,8 +19,8 @@ export const runBatchAction = authProcedure
       projectId: z.number(),
       documentUuid: z.string(),
       commitUuid: z.string(),
-      fromLine: z.number(),
-      toLine: z.number(),
+      fromLine: z.number().optional(),
+      toLine: z.number().optional(),
       parameters: z.record(z.number()).optional(),
       evaluationIds: z.array(z.number()),
     }),

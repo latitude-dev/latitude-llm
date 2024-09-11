@@ -37,6 +37,7 @@ export async function runChain({
     responseReject = reject
   })
 
+  const startTime = Date.now()
   const stream = new ReadableStream<ChainEvent>({
     start(controller) {
       iterate({
@@ -56,6 +57,7 @@ export async function runChain({
     response,
     resolvedContent: chain.rawText,
     documentLogUuid,
+    duration: response.then(() => Date.now() - startTime),
   })
 }
 

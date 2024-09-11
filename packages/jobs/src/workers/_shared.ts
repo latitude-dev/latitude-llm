@@ -1,3 +1,4 @@
+import { env } from '@latitude-data/env'
 import { Processor } from 'bullmq'
 
 import { Queues } from '../constants'
@@ -11,7 +12,15 @@ export const buildProcessor =
         await Promise.all(
           QUEUES[q].jobs.map(async (j) => {
             if (j.name === job.name) {
-              await j(job)
+              try {
+                await j(job)
+              } catch (err) {
+                if (env.NODE_ENV !== 'production') {
+                  console.error(err)
+                }
+
+                throw err
+              }
             }
           }),
         )
