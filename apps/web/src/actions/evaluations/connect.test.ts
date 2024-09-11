@@ -1,7 +1,4 @@
-import { randomUUID } from 'crypto'
-
 import {
-  Commit,
   DocumentVersion,
   Project,
   ProviderApiKey,
@@ -30,7 +27,6 @@ describe('connectEvaluationsAction', () => {
       const [_, error] = await connectEvaluationsAction({
         projectId: 1,
         documentUuid: 'fake-document-uuid',
-        commitUuid: 'fake-commit-uuid',
         templateIds: [1],
         evaluationUuids: ['fake-evaluation-uuid'],
       })
@@ -43,7 +39,6 @@ describe('connectEvaluationsAction', () => {
     let workspace: Workspace,
       user: User,
       document: DocumentVersion,
-      commit: Commit,
       provider: ProviderApiKey,
       project: Project
 
@@ -54,7 +49,6 @@ describe('connectEvaluationsAction', () => {
       workspace = setup.workspace
       user = setup.user
       document = setup.documents[0]!
-      commit = setup.commit
       project = setup.project
 
       provider = await factories.createProviderApiKey({
@@ -71,9 +65,10 @@ describe('connectEvaluationsAction', () => {
     })
 
     it('connects evaluations and templates to a document', async () => {
-      const evaluation = await factories.createEvaluation({
-        provider,
+      const evaluation = await factories.createLlmAsJudgeEvaluation({
+        workspace,
         name: 'Test Evaluation',
+        prompt: factories.helpers.createPrompt({ provider }),
       })
 
       const template = await factories.createEvaluationTemplate({
@@ -85,7 +80,6 @@ describe('connectEvaluationsAction', () => {
       const [result, error] = await connectEvaluationsAction({
         projectId: project.id,
         documentUuid: document.documentUuid,
-        commitUuid: commit.uuid,
         templateIds: [template.id],
         evaluationUuids: [evaluation.uuid],
       })
@@ -110,7 +104,6 @@ describe('connectEvaluationsAction', () => {
       const [result, error] = await connectEvaluationsAction({
         projectId: project.id,
         documentUuid: document.documentUuid,
-        commitUuid: commit.uuid,
         templateIds: [],
         evaluationUuids: [],
       })
@@ -123,19 +116,6 @@ describe('connectEvaluationsAction', () => {
       const [_, error] = await connectEvaluationsAction({
         projectId: project.id,
         documentUuid: 'non-existent-uuid',
-        commitUuid: randomUUID(),
-        templateIds: [],
-        evaluationUuids: [],
-      })
-
-      expect(error!.name).toEqual('NotFoundError')
-    })
-
-    it('fails when the commit does not exist', async () => {
-      const [_, error] = await connectEvaluationsAction({
-        projectId: project.id,
-        documentUuid: document.documentUuid,
-        commitUuid: randomUUID(),
         templateIds: [],
         evaluationUuids: [],
       })

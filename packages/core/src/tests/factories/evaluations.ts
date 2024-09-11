@@ -1,30 +1,21 @@
 import { faker } from '@faker-js/faker'
 
-import { EvaluationMetadataType, ProviderApiKey } from '../../browser'
-import { findWorkspaceFromProviderApiKey } from '../../data-access'
+import { EvaluationMetadataType, Workspace } from '../../browser'
 import { createEvaluation as createEvaluationService } from '../../services/evaluations'
-import { helpers } from './helpers'
-import { createProviderApiKey, ICreateProvider } from './providerApiKeys'
 
 export type IEvaluationData = {
-  provider: ICreateProvider | ProviderApiKey
+  workspace: Workspace
   name?: string
   description?: string
+  prompt?: string
 }
 
-export async function createEvaluation({
-  provider: providerData,
+export async function createLlmAsJudgeEvaluation({
+  workspace,
   name,
   description,
+  prompt,
 }: IEvaluationData) {
-  const provider =
-    'id' in providerData
-      ? providerData
-      : await createProviderApiKey(providerData)
-
-  const workspace = (await findWorkspaceFromProviderApiKey(provider))!
-  const prompt = helpers.createPrompt({ provider })
-
   const evaluationResult = await createEvaluationService({
     workspace,
     metadata: { prompt },

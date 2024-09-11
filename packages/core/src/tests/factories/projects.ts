@@ -1,12 +1,19 @@
 import { faker } from '@faker-js/faker'
 
-import type { DocumentVersion, SafeUser, Workspace } from '../../browser'
+import type {
+  DocumentVersion,
+  Providers,
+  SafeUser,
+  Workspace,
+} from '../../browser'
 import { unsafelyGetUser } from '../../data-access'
 import { CommitsRepository } from '../../repositories'
 import { mergeCommit } from '../../services/commits'
 import { createNewDocument, updateDocument } from '../../services/documents'
 import { createProject as createProjectFn } from '../../services/projects/create'
 import { createDraft } from './commits'
+import { createLlmAsJudgeEvaluation, IEvaluationData } from './evaluations'
+import { createProviderApiKey } from './providerApiKeys'
 import { createWorkspace, type ICreateWorkspace } from './workspaces'
 
 export type IDocumentStructure = { [key: string]: string | IDocumentStructure }
@@ -39,6 +46,8 @@ export async function flattenDocumentStructure({
 export type ICreateProject = {
   name?: string
   workspace?: Workspace | ICreateWorkspace
+  providers?: { type: Providers; name: string }[]
+  evaluations?: Omit<IEvaluationData, 'workspace'>[]
   documents?: IDocumentStructure
 }
 export async function createProject(projectData: Partial<ICreateProject> = {}) {
@@ -67,6 +76,23 @@ export async function createProject(projectData: Partial<ICreateProject> = {}) {
   const commitsScope = new CommitsRepository(workspace.id)
   let commit = (await commitsScope.getFirstCommitForProject(project)).unwrap()
 
+  const providers = await Promise.all(
+    projectData.providers?.map(({ type, name }) =>
+      createProviderApiKey({
+        workspace,
+        user,
+        type,
+        name,
+      }),
+    ) ?? [],
+  )
+
+  const evaluations = await Promise.all(
+    projectData.evaluations?.map((evaluationData) =>
+      createLlmAsJudgeEvaluation({ workspace, ...evaluationData }),
+    ) ?? [],
+  )
+
   const documents: DocumentVersion[] = []
 
   if (projectData.documents) {
@@ -88,5 +114,13 @@ export async function createProject(projectData: Partial<ICreateProject> = {}) {
     commit = await mergeCommit(draft).then((r) => r.unwrap())
   }
 
-  return { project, user, workspace, documents, commit: commit! }
+  return {
+    project,
+    user,
+    workspace,
+    providers,
+    documents,
+    commit: commit!,
+    evaluations,
+  }
 }

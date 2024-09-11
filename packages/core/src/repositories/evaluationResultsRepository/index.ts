@@ -1,15 +1,9 @@
 import { eq, getTableColumns } from 'drizzle-orm'
 
-import { Commit, DocumentLog, EvaluationResult } from '../../browser'
+import { EvaluationResult } from '../../browser'
 import { Result } from '../../lib'
 import { documentLogs, evaluationResults, evaluations } from '../../schema'
 import Repository from '../repository'
-
-export type DocumentLogWithMetadata = DocumentLog & {
-  commit: Commit
-  tokens: number | null
-  cost_in_millicents: number | null
-}
 
 const tt = getTableColumns(evaluationResults)
 

@@ -12,8 +12,9 @@ import {
   TableRow,
   Text,
 } from '@latitude-data/web-ui'
+import { formatCostInMillicents } from '$/app/_lib/formatCostInMillicents'
 
-import { formatCostInMillicents, formatDuration, relativeTime } from './utils'
+import { formatDuration, relativeTime } from './utils'
 
 export const DocumentLogsTable = ({
   documentLogs,

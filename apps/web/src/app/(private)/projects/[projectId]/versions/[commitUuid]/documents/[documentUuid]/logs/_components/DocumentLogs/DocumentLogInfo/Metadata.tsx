@@ -9,10 +9,11 @@ import {
   Text,
   Tooltip,
 } from '@latitude-data/web-ui'
+import { formatCostInMillicents } from '$/app/_lib/formatCostInMillicents'
 import useProviderApiKeys from '$/stores/providerApiKeys'
 import { format } from 'date-fns'
 
-import { formatCostInMillicents, formatDuration } from '../utils'
+import { formatDuration } from '../utils'
 
 function MetadataItem({
   label,
