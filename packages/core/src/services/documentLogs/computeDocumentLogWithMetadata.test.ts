@@ -79,12 +79,9 @@ describe('computeDocumentLogWithMetadata', () => {
         uuid: documentLog.uuid,
         documentUuid: documentLog.documentUuid,
         tokens: totalProviderLogs.reduce((acc, log) => acc + log.tokens, 0),
-        durationInMs: totalProviderLogs.reduce(
-          (acc, log) => acc + log.duration,
-          0,
-        ),
+        duration: totalProviderLogs.reduce((acc, log) => acc + log.duration, 0),
         costInMillicents: totalProviderLogs.reduce(
-          (acc, log) => acc + log.cost_in_millicents,
+          (acc, log) => acc + log.costInMillicents,
           0,
         ),
       })

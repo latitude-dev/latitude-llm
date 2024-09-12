@@ -1,5 +1,6 @@
 import { faker } from '@faker-js/faker'
 
+import { EvaluationResultableType } from '../../constants'
 import { createEvaluationTemplate as createEvaluationTemplateService } from '../../services/evaluationTemplates/create'
 
 export type IEvaluationTemplateData = {
@@ -23,6 +24,9 @@ export async function createEvaluationTemplate({
     categoryId,
     categoryName: categoryName ?? faker.lorem.word(),
     prompt,
+    configuration: {
+      type: EvaluationResultableType.Text,
+    },
   })
 
   return evaluationTemplateResult.unwrap()

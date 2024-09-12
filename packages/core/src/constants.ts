@@ -112,3 +112,9 @@ export enum EvaluationMode {
   Live = 'live',
   Batch = 'batch',
 }
+
+export enum EvaluationResultableType {
+  Boolean = 'evaluation_resultable_booleans',
+  Text = 'evaluation_resultable_texts',
+  Number = 'evaluation_resultable_numbers',
+}

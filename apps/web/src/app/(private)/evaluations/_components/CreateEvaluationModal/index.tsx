@@ -1,10 +1,15 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { ChangeEvent, useCallback, useEffect, useMemo, useState } from 'react'
 
 import {
+  EvaluationResultableType,
+  EvaluationResultConfiguration,
+} from '@latitude-data/core/browser'
+import {
   ConfirmModal,
+  FormField,
   Input,
   ReactStateDispatch,
-  Text,
+  TabSelector,
   TextArea,
 } from '@latitude-data/web-ui'
 import { ROUTES } from '$/services/routes'
@@ -27,6 +32,12 @@ export default function CreateEvaluationModal({
   const [title, setTitle] = useState(initialData?.title ?? '')
   const [description, setDescription] = useState(initialData?.description ?? '')
   const [prompt, setPrompt] = useState(initialData?.prompt ?? '')
+  const {
+    configuration,
+    handleTypeChange,
+    handleRangeFromChange,
+    handleRangeToChange,
+  } = useEvaluationConfiguration()
 
   const router = useRouter()
 
@@ -54,9 +65,10 @@ export default function CreateEvaluationModal({
       name: title,
       description,
       metadata: { prompt },
+      configuration,
     })
     onClose(null)
-  }, [create, onClose, title, description, prompt])
+  }, [create, onClose, title, description, prompt, configuration])
 
   const titleError = useMemo<string | undefined>(() => {
     if (!title) return 'Please enter a name for your evaluation.'
@@ -82,8 +94,7 @@ export default function CreateEvaluationModal({
       }}
     >
       <div className='w-full flex flex-col gap-4'>
-        <div className='w-full flex flex-col gap-4'>
-          <Text.H5M>Name</Text.H5M>
+        <FormField label='Title'>
           <Input
             value={title}
             errors={titleError ? [titleError] : undefined}
@@ -91,9 +102,8 @@ export default function CreateEvaluationModal({
             placeholder='Enter title'
             className='w-full'
           />
-        </div>
-        <div className='w-full flex flex-col gap-4'>
-          <Text.H5M>Description</Text.H5M>
+        </FormField>
+        <FormField label='Description'>
           <TextArea
             value={description}
             minRows={4}
@@ -102,8 +112,126 @@ export default function CreateEvaluationModal({
             placeholder='Describe what is the purpose of this evaluation'
             className='w-full'
           />
-        </div>
+        </FormField>
+        <FormField label='Type'>
+          <TabSelector
+            options={[
+              { label: 'Text', value: EvaluationResultableType.Text },
+              { label: 'Number', value: EvaluationResultableType.Number },
+              { label: 'Boolean', value: EvaluationResultableType.Boolean },
+            ]}
+            onSelect={handleTypeChange}
+            selected={configuration.type}
+          />
+        </FormField>
+        {configuration.type === EvaluationResultableType.Number && (
+          <FormField label='Range'>
+            <div className='flex flex-row items-center flex-1 gap-4'>
+              <Input
+                type='number'
+                min={0}
+                value={configuration.detail?.range.from.toString() || ''}
+                placeholder='From'
+                onChange={handleRangeFromChange}
+              />
+              <Input
+                type='number'
+                min={0}
+                value={configuration.detail?.range.to.toString() || ''}
+                placeholder='To'
+                onChange={handleRangeToChange}
+              />
+            </div>
+          </FormField>
+        )}
       </div>
     </ConfirmModal>
   )
+}
+
+function useEvaluationConfiguration() {
+  const [configuration, setConfiguration] =
+    useState<EvaluationResultConfiguration>({
+      type: EvaluationResultableType.Text,
+    })
+
+  const handleTypeChange = useCallback((value: EvaluationResultableType) => {
+    if (value === EvaluationResultableType.Number) {
+      setConfiguration({
+        type: value,
+        detail: { range: { from: 0, to: 1 } },
+      })
+    } else {
+      setConfiguration({ type: value })
+    }
+  }, [])
+
+  const handleRangeFromChange = useCallback(
+    (e: ChangeEvent<HTMLInputElement>) => {
+      setConfiguration((prev) => {
+        const next = { ...prev }
+        const value = e.target.value
+
+        if (value === '') {
+          next.detail = {
+            range: { from: 0, to: next.detail?.range.to || 0 },
+          }
+          return next
+        }
+
+        const from = parseInt(value)
+        if (next.detail?.range) {
+          next.detail.range.from = from
+          if (from > next.detail.range.to) {
+            next.detail.range.to = from + 1
+          }
+        } else {
+          next.detail = {
+            range: { from, to: from + 1 },
+          }
+        }
+
+        return next
+      })
+    },
+    [],
+  )
+
+  const handleRangeToChange = useCallback(
+    (e: ChangeEvent<HTMLInputElement>) => {
+      setConfiguration((prev) => {
+        const next = { ...prev }
+        const value = e.target.value
+
+        if (value === '') {
+          next.detail = {
+            range: { from: 0, to: 0 },
+          }
+          return next
+        }
+
+        const to = parseInt(value)
+        if (next.detail?.range) {
+          next.detail.range.to = to
+          if (to < next.detail.range.from) {
+            next.detail.range.from = to - 1
+          }
+        } else {
+          next.detail = {
+            range: { from: to - 1, to },
+          }
+        }
+
+        return next
+      })
+    },
+    [],
+  )
+
+  return {
+    configuration,
+    handleTypeChange,
+    handleRangeFromChange,
+    handleRangeToChange,
+  }
 }

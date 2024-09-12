@@ -1,10 +1,17 @@
-import { bigint, bigserial, index, text } from 'drizzle-orm/pg-core'
+import { bigint, bigserial, index, pgEnum } from 'drizzle-orm/pg-core'
 
+import { EvaluationResultableType } from '../../constants'
 import { latitudeSchema } from '../db-schema'
 import { documentLogs } from '../models/documentLogs'
 import { providerLogs } from '../models/providerLogs'
 import { timestamps } from '../schemaHelpers'
 import { evaluations } from './evaluations'
+
+export const evaluationResultTypes = pgEnum('evaluation_result_types', [
+  EvaluationResultableType.Boolean,
+  EvaluationResultableType.Text,
+  EvaluationResultableType.Number,
+])
 
 export const evaluationResults = latitudeSchema.table(
   'evaluation_results',
@@ -19,7 +26,8 @@ export const evaluationResults = latitudeSchema.table(
     providerLogId: bigint('provider_log_id', { mode: 'number' })
       .notNull()
       .references(() => providerLogs.id),
-    result: text('result').notNull(),
+    resultableType: evaluationResultTypes('resultable_type').notNull(),
+    resultableId: bigint('resultable_id', { mode: 'number' }).notNull(),
     ...timestamps(),
   },
   (table) => ({
@@ -29,6 +37,10 @@ export const evaluationResults = latitudeSchema.table(
     ),
     evaluationResultProviderLogIdx: index('provider_log_idx').on(
       table.providerLogId,
+    ),
+    evaluationResultMetadataIdx: index('resultable_idx').on(
+      table.resultableId,
+      table.resultableType,
     ),
   }),
 )

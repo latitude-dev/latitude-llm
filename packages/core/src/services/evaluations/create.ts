@@ -1,7 +1,12 @@
-import { EvaluationMetadataType, SafeWorkspace, Workspace } from '../../browser'
+import {
+  EvaluationMetadataType,
+  EvaluationResultConfiguration,
+  SafeWorkspace,
+  Workspace,
+} from '../../browser'
 import { database } from '../../client'
 import { findEvaluationTemplateById } from '../../data-access'
-import { Result, Transaction } from '../../lib'
+import { BadRequestError, Result, Transaction } from '../../lib'
 import { evaluations, llmAsJudgeEvaluationMetadatas } from '../../schema'
 
 type Props = {
@@ -9,11 +14,12 @@ type Props = {
   name: string
   description: string
   type: EvaluationMetadataType
+  configuration: EvaluationResultConfiguration
   metadata?: Record<string, unknown>
 }
 
 export async function createEvaluation(
-  { workspace, name, description, type, metadata = {} }: Props,
+  { workspace, name, description, type, configuration, metadata = {} }: Props,
   db = database,
 ) {
   return await Transaction.call(async (tx) => {
@@ -26,22 +32,30 @@ export async function createEvaluation(
           .returning()
 
         break
+      default:
+        return Result.error(
+          new BadRequestError(`Invalid evaluation type ${type}`),
+        )
     }
 
     const result = await tx
       .insert(evaluations)
       .values([
         {
+          configuration,
           description,
           metadataId: metadataTable[0]!.id,
-          name,
           metadataType: type,
+          name,
           workspaceId: workspace.id,
         },
       ])
       .returning()
 
-    return Result.ok({ ...result[0]!, metadata: metadataTable[0]! })
+    return Result.ok({
+      ...result[0]!,
+      metadata: metadataTable[0]!,
+    })
   }, db)
 }
 
@@ -62,6 +76,7 @@ export async function importLlmAsJudgeEvaluation(
       name: template.name,
       description: template.description,
       type: EvaluationMetadataType.LlmAsJudge,
+      configuration: template.configuration,
       metadata: {
         prompt: template.prompt,
         templateId: template.id,

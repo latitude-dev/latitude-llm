@@ -13,10 +13,8 @@ export function createDocumentLogQuery(workspaceId: number, db = database) {
     .select({
       id: scope.id,
       tokens: sum(providerLogs.tokens).mapWith(Number).as('tokens'),
-      durationInMs: sum(providerLogs.duration)
-        .mapWith(Number)
-        .as('duration_in_ms'),
-      costInMillicents: sum(providerLogs.cost_in_millicents)
+      duration: sum(providerLogs.duration).mapWith(Number).as('duration_in_ms'),
+      costInMillicents: sum(providerLogs.costInMillicents)
         .mapWith(Number)
         .as('cost_in_millicents'),
     })
@@ -33,7 +31,7 @@ export function createDocumentLogQuery(workspaceId: number, db = database) {
         ...scope._.selectedFields,
         commit: commits,
         tokens: aggregatedFieldsSubQuery.tokens,
-        durationInMs: aggregatedFieldsSubQuery.durationInMs,
+        duration: aggregatedFieldsSubQuery.duration,
         costInMillicents: aggregatedFieldsSubQuery.costInMillicents,
       })
       .from(scope)

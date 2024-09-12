@@ -29,3 +29,7 @@ export * from './models/evaluationTemplateCategories'
 
 export * from './models/magicLinkTokens'
 export * from './models/events'
+
+export * from './models/evaluationResultableNumbers'
+export * from './models/evaluationResultableTexts'
+export * from './models/evaluationResultableBooleans'

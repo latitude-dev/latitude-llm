@@ -1,8 +1,9 @@
 import { relations } from 'drizzle-orm'
-import { bigint, bigserial, text, varchar } from 'drizzle-orm/pg-core'
+import { bigint, bigserial, jsonb, text, varchar } from 'drizzle-orm/pg-core'
 
 import { evaluationTemplateCategories, latitudeSchema } from '..'
 import { timestamps } from '../schemaHelpers'
+import { EvaluationResultConfiguration } from '../types'
 
 export const evaluationTemplates = latitudeSchema.table(
   'evaluations_templates',
@@ -14,6 +15,9 @@ export const evaluationTemplates = latitudeSchema.table(
       () => evaluationTemplateCategories.id,
       { onDelete: 'restrict', onUpdate: 'cascade' },
     ),
+    configuration: jsonb('configuration')
+      .notNull()
+      .$type<EvaluationResultConfiguration>(),
     prompt: text('prompt').notNull(),
     ...timestamps(),
   },

@@ -15,6 +15,7 @@
     "@latitude-data/env": "workspace:*"
   },
   "devDependencies": {
+    "@latitude-data/core": "workspace:^",
     "@latitude-data/eslint-config": "workspace:*",
     "@latitude-data/typescript-config": "workspace:*",
     "@types/node": "*",

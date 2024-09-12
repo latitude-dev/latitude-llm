@@ -9,7 +9,7 @@ import Repository from '../repository'
 export type DocumentLogWithMetadata = DocumentLog & {
   commit: Commit
   tokens: number | null
-  durationInMs: number | null
+  duration: number | null
   costInMillicents: number | null
 }
 
