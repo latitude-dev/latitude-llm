@@ -32,8 +32,8 @@
   <a href="https://www.npmjs.com/package/@latitude-data/server">
     <img src="https://img.shields.io/npm/dm/@latitude-data/server" alt="npm downloads">
   </a>
-  <img src="https://github.com/latitude-dev/latitude/actions/workflows/linter.yml/badge.svg" alt="Linter">
-  <img src="https://github.com/latitude-dev/latitude/actions/workflows/test.yml/badge.svg" alt="Tests">
+  <img src="https://github.com/latitude-dev/latitude-llm/actions/workflows/linter.yml/badge.svg" alt="Linter">
+  <img src="https://github.com/latitude-dev/latitude-llm/actions/workflows/test.yml/badge.svg" alt="Tests">
 </p>
 
 ## 🌈 Why Latitude?
@@ -58,10 +58,10 @@ Latitude puts all these helpful tools in one place. This means you can add AI to
 
 ## 📚 Table Of Contents
 
-- [Quick start](https://github.com/latitude-dev/latitude#-quick-start)
-- [Community](https://github.com/latitude-dev/latitude#-community)
-- [Contributing](https://github.com/latitude-dev/latitude#-contributing)
-- [Links](https://github.com/latitude-dev/latitude#-links)
+- [Quick start](https://github.com/latitude-dev/latitude-llm#-quick-start)
+- [Community](https://github.com/latitude-dev/latitude-llm#-community)
+- [Contributing](https://github.com/latitude-dev/latitude-llm#-contributing)
+- [Links](https://github.com/latitude-dev/latitude-llm#-links)
 
 ## ⚡ Quick start
 
@@ -102,6 +102,7 @@ Follow the instructions in the [self-hosted guide](https://docs.latitude.so/self
 
 After setting up Latitude Self-Hosted, you can follow the same steps as in the Latitude Cloud guide to create, test, evaluate, and deploy your prompts.
 
+
 ## 👥 Community
 
 The Latitude community can be found on
@@ -115,7 +116,7 @@ Contributions to Latitude are welcome and highly appreciated.
 
 If you are interested in contributing, please join us on our [Slack
 community](https://trylatitude.slack.com/join/shared_invite/zt-17dyj4elt-rwM~h2OorAA3NtgmibhnLA#/shared-invite/email),
-open an [issue](https://github.com/evidence-dev/evidence/issues/new), or
+open an [issue](https://github.com/latitude-dev/latitude-llm/issues/new), or
 contribute a pull request.
 
 ## 🔗 Links
