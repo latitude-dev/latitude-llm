@@ -96,11 +96,9 @@ export const ROUTES = {
                       detail: (uuid: string) => {
                         const detailRoot = `${evaluationsRoot}/${uuid}`
                         return {
-                          root,
-                          dashboard: {
-                            root: `${detailRoot}/dashboard`,
-                            destroy: `${detailRoot}/dashboard/destroy`,
-                          },
+                          root: detailRoot,
+                          destroy: `${detailRoot}/destroy`,
+                          createBatch: `${detailRoot}/create-batch`,
                         }
                       },
                     },
