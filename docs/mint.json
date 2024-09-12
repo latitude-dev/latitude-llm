@@ -52,8 +52,8 @@
       {
         "group": "Evaluations",
         "pages": [
-          "guides/evaluations/evaluators",
-          "guides/evaluations/run-in-batch"
+          "guides/evaluations/overview",
+          "guides/evaluations/running-evaluations"
         ]
       },
       {
@@ -65,8 +65,7 @@
       {
         "group": "Datasets",
         "pages": [
-          "guides/datasets/creating-datasets",
-          "guides/datasets/use-in-batch-evaluations"
+          "guides/datasets/overview"
         ]
       },
       {
