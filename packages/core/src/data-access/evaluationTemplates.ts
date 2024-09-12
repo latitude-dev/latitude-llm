@@ -1,14 +1,10 @@
 import { asc, eq, getTableColumns, inArray } from 'drizzle-orm'
 
-import { EvaluationTemplate } from '../browser'
+import { EvaluationTemplate, EvaluationTemplateWithCategory } from '../browser'
 import { database } from '../client'
 import { NotFoundError } from '../lib/errors'
 import { Result, TypedResult } from '../lib/Result'
 import { evaluationTemplateCategories, evaluationTemplates } from '../schema'
-
-export type EvaluationTemplateWithCategory = EvaluationTemplate & {
-  category: string
-}
 
 export async function findAllEvaluationTemplates(): Promise<
   TypedResult<EvaluationTemplateWithCategory[], Error>

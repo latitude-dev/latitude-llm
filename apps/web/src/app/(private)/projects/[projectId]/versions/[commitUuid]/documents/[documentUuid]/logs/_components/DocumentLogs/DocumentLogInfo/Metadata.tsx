@@ -75,7 +75,7 @@ export function DocumentLogMetadata({
       providerLogs?.reduce(
         (acc, log) => {
           const key = String(log.providerId)
-          acc[key] = (acc[key] ?? 0) + log.cost_in_millicents
+          acc[key] = (acc[key] ?? 0) + log.costInMillicents
           return acc
         },
         {} as Record<string, number>,

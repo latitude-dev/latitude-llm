@@ -233,8 +233,7 @@ describe('getConnectedDocumentsWithMetadata', () => {
     )
     const totalCost = results.reduce(
       (acc, r) =>
-        acc +
-        r.providerLogs.reduce((acc2, l) => acc2 + l.cost_in_millicents, 0),
+        acc + r.providerLogs.reduce((acc2, l) => acc2 + l.costInMillicents, 0),
       0,
     )
 

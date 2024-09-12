@@ -4,7 +4,9 @@ import { useEffect } from 'react'
 
 import { ErrorComponent, useSession } from '@latitude-data/web-ui/browser'
 import { NAV_LINKS } from '$/app/(private)/_lib/constants'
+import BreadcrumpLink from '$/components/BreadcrumpLink'
 import { AppLayout } from '$/components/layouts'
+import { ROUTES } from '$/services/routes'
 
 export default function Error({
   error,
@@ -19,7 +21,14 @@ export default function Error({
   return (
     <AppLayout
       currentUser={session.currentUser}
-      breadcrumbs={[{ name: session.workspace.name }, { name: 'Error' }]}
+      breadcrumbs={[
+        {
+          name: (
+            <BreadcrumpLink name={session.workspace.name} href={ROUTES.root} />
+          ),
+        },
+        { name: 'Error' },
+      ]}
       navigationLinks={NAV_LINKS}
     >
       <ErrorComponent

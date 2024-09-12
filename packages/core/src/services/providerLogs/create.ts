@@ -69,7 +69,7 @@ export async function createProviderLog(
         responseText,
         toolCalls,
         tokens: isNaN(usage.totalTokens) ? 0 : (usage.totalTokens ?? 0),
-        cost_in_millicents: cost,
+        costInMillicents: cost,
         duration,
         source,
         apiKeyId,

@@ -20,6 +20,7 @@ import {
   providerLogs,
 } from '../../schema'
 import { DocumentVersionsRepository } from '../documentVersionsRepository'
+import { EvaluationResultsRepository } from '../evaluationResultsRepository'
 import { EvaluationsRepository } from '../evaluationsRepository'
 import Repository from '../repository'
 
@@ -121,16 +122,14 @@ export class ConnectedEvaluationsRepository extends Repository<
         ),
     )
 
+    // TODO: figure out proper type for this
     const selectedEvaluationResults = this.db
       .$with('selected_evaluation_results')
       .as(
-        this.db
-          .select({
-            ...getTableColumns(evaluationResults),
-            ...getTableColumns(documentLogs),
-            ...getTableColumns(providerLogs),
-          })
-          .from(evaluationResults)
+        EvaluationResultsRepository.baseQuery(this.db, {
+          ...getTableColumns(documentLogs),
+          ...getTableColumns(providerLogs),
+        })
           .innerJoin(
             documentLogs,
             eq(documentLogs.id, evaluationResults.documentLogId),
@@ -145,12 +144,15 @@ export class ConnectedEvaluationsRepository extends Repository<
     const aggregatedResults = this.db
       .with(selectedEvaluationResults)
       .select({
+        // @ts-expect-error
         documentUuid: selectedEvaluationResults.documentUuid,
         evaluationLogs: count(selectedEvaluationResults.id).as(
           'evaluation_logs',
         ),
+        // @ts-expect-error
         totalTokens: sum(selectedEvaluationResults.tokens).as('total_tokens'),
-        costInMillicents: sum(selectedEvaluationResults.cost_in_millicents).as(
+        // @ts-expect-error
+        costInMillicents: sum(selectedEvaluationResults.costInMillicents).as(
           'cost_in_millicents',
         ),
         modalValue: sql<
@@ -160,6 +162,7 @@ export class ConnectedEvaluationsRepository extends Repository<
         ),
       })
       .from(selectedEvaluationResults)
+      // @ts-expect-error
       .groupBy(selectedEvaluationResults.documentUuid)
       .as('aggregated_results')
 
@@ -177,6 +180,7 @@ export class ConnectedEvaluationsRepository extends Repository<
           selectedEvaluationResults,
           eq(
             aggregatedResults.documentUuid,
+            // @ts-expect-error
             selectedEvaluationResults.documentUuid,
           ),
         )

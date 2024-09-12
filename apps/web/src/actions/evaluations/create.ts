@@ -1,6 +1,9 @@
 'use server'
 
-import { EvaluationMetadataType } from '@latitude-data/core/browser'
+import {
+  EvaluationMetadataType,
+  EvaluationResultableType,
+} from '@latitude-data/core/browser'
 import { createEvaluation } from '@latitude-data/core/services/evaluations/create'
 import { z } from 'zod'
 
@@ -16,6 +19,12 @@ export const createEvaluationAction = authProcedure
         .nativeEnum(EvaluationMetadataType)
         .optional()
         .default(EvaluationMetadataType.LlmAsJudge),
+      configuration: z.object({
+        type: z.nativeEnum(EvaluationResultableType),
+        detail: z
+          .object({ range: z.object({ from: z.number(), to: z.number() }) })
+          .optional(),
+      }),
       metadata: z
         .object({
           prompt: z.string(),
@@ -30,6 +39,7 @@ export const createEvaluationAction = authProcedure
       name: input.name,
       description: input.description,
       metadata: input.metadata,
+      configuration: input.configuration,
       type: input.type,
     })
 

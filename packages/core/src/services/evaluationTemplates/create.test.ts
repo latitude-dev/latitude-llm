@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { EvaluationResultableType } from '../../constants'
 import { findEvaluationTemplateCategoryById } from '../../data-access/evaluationTemplateCategories'
 import { NotFoundError, Result } from '../../lib'
 import * as evaluationTemplateCategoriesService from '../evaluationTemplateCategories/create'
@@ -22,6 +23,7 @@ describe('createEvaluationTemplate', () => {
       description: 'Test Description',
       categoryId: category.id,
       prompt: 'Test Prompt',
+      configuration: { type: EvaluationResultableType.Text },
     })
 
     expect(result.ok).toBe(true)
@@ -40,6 +42,7 @@ describe('createEvaluationTemplate', () => {
       categoryId: 999,
       categoryName: 'New Category',
       prompt: 'Test Prompt',
+      configuration: { type: EvaluationResultableType.Text },
     })
 
     expect(result.ok).toBe(true)
@@ -63,6 +66,7 @@ describe('createEvaluationTemplate', () => {
       name: 'Test Template',
       description: 'Test Description',
       prompt: 'Test Prompt',
+      configuration: { type: EvaluationResultableType.Text },
     })
 
     expect(result.ok).toBe(true)
@@ -80,6 +84,34 @@ describe('createEvaluationTemplate', () => {
     }
   })
 
+  it('creates a configurable number table when configuration is of type number with a range', async () => {
+    const result = await createEvaluationTemplate({
+      name: 'Test Template',
+      description: 'Test Description',
+      prompt: 'Test Prompt',
+      categoryId: 999,
+      categoryName: 'New Category',
+      configuration: {
+        type: EvaluationResultableType.Number,
+        detail: { range: { from: 1, to: 10 } },
+      },
+    })
+
+    expect(result.ok).toBe(true)
+    if (result.ok) {
+      expect(result.value).toMatchObject({
+        name: 'Test Template',
+        description: 'Test Description',
+        prompt: 'Test Prompt',
+      })
+
+      expect(result.value?.configuration).toMatchObject({
+        type: EvaluationResultableType.Number,
+        detail: { range: { from: 1, to: 10 } },
+      })
+    }
+  })
+
   it('handles errors when category creation fails', async () => {
     vi.spyOn(
       evaluationTemplateCategoriesService,
@@ -93,6 +125,7 @@ describe('createEvaluationTemplate', () => {
       description: 'Test Description',
       categoryName: 'New Category',
       prompt: 'Test Prompt',
+      configuration: { type: EvaluationResultableType.Text },
     })
 
     expect(result.ok).toBe(false)

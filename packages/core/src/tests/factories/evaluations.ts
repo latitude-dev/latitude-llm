@@ -1,6 +1,11 @@
 import { faker } from '@faker-js/faker'
 
-import { EvaluationMetadataType, Workspace } from '../../browser'
+import {
+  EvaluationMetadataType,
+  EvaluationResultableType,
+  EvaluationResultConfiguration,
+  Workspace,
+} from '../../browser'
 import { createEvaluation as createEvaluationService } from '../../services/evaluations'
 
 export type IEvaluationData = {
@@ -8,6 +13,7 @@ export type IEvaluationData = {
   name?: string
   description?: string
   prompt?: string
+  configuration?: EvaluationResultConfiguration
 }
 
 export async function createLlmAsJudgeEvaluation({
@@ -15,6 +21,9 @@ export async function createLlmAsJudgeEvaluation({
   name,
   description,
   prompt,
+  configuration = {
+    type: EvaluationResultableType.Text,
+  },
 }: IEvaluationData) {
   const evaluationResult = await createEvaluationService({
     workspace,
@@ -22,6 +31,7 @@ export async function createLlmAsJudgeEvaluation({
     type: EvaluationMetadataType.LlmAsJudge,
     name: name ?? faker.company.catchPhrase(),
     description: description ?? faker.lorem.sentence(),
+    configuration,
   })
 
   return evaluationResult.unwrap()

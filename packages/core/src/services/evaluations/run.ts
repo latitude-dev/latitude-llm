@@ -48,7 +48,7 @@ export const runEvaluation = async (
       prompt: documentLog.resolvedContent,
       parameters: documentLog.parameters,
       config: metadata.config,
-      duration: documentLogWithMetadata.durationInMs,
+      duration: documentLogWithMetadata.duration,
       cost: documentLogWithMetadata.costInMillicents
         ? documentLogWithMetadata.costInMillicents * 1000
         : 0,

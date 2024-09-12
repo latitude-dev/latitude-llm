@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import { EvaluationResultsRepository } from '.'
-import { Providers } from '../../constants'
+import { EvaluationResultableType, Providers } from '../../constants'
 import { mergeCommit } from '../../services/commits'
 import * as factories from '../../tests/factories'
 
@@ -17,6 +17,12 @@ describe('findEvaluationResultsByDocumentUuid', () => {
     const evaluation = await factories.createLlmAsJudgeEvaluation({
       workspace,
       prompt: factories.helpers.createPrompt({ provider }),
+      configuration: {
+        type: EvaluationResultableType.Number,
+        detail: {
+          range: { from: 0, to: 100 },
+        },
+      },
     })
 
     const { commit: draft } = await factories.createDraft({ project, user })
