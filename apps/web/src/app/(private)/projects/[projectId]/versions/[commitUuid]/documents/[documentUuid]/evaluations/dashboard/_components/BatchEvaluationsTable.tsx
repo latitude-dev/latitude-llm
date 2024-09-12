@@ -45,7 +45,7 @@ export default function BatchEvaluationsTable({
                   .detail({ id: project.id })
                   .commits.detail({ uuid: commit.uuid })
                   .documents.detail({ uuid: document.documentUuid })
-                  .evaluations.detail(evaluation.uuid).dashboard.root,
+                  .evaluations.detail(evaluation.uuid).root,
               )
             }
           >
@@ -62,7 +62,7 @@ export default function BatchEvaluationsTable({
                     .detail({ id: project.id })
                     .commits.detail({ uuid: commit.uuid })
                     .documents.detail({ uuid: document.documentUuid })
-                    .evaluations.detail(evaluation.uuid).dashboard.destroy
+                    .evaluations.detail(evaluation.uuid).destroy
                 }
               >
                 <Icon name='trash' />

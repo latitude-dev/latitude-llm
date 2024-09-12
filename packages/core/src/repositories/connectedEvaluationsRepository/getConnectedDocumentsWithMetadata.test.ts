@@ -38,7 +38,7 @@ async function generateDocumentLogs({
   quantity?: number
 }) {
   return await Promise.all(
-    Array.from({ length: quantity }).map(() => {
+    Array.from({ length: quantity }).map(async () => {
       return factories
         .createDocumentLog({
           document,
