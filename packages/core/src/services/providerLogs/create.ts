@@ -9,6 +9,8 @@ import { estimateCost, PartialConfig } from '../ai'
 import { touchApiKey } from '../apiKeys'
 import { touchProviderApiKey } from '../providerApiKeys/touch'
 
+const TO_MILLICENTS_FACTOR = 100_000
+
 export type CreateProviderLogProps = {
   uuid: string
   generatedAt: Date
@@ -24,6 +26,7 @@ export type CreateProviderLogProps = {
   source: LogSources
   apiKeyId?: number
   documentLogUuid?: string
+  costInMillicents?: number
 }
 
 export async function createProviderLog(
@@ -42,11 +45,17 @@ export async function createProviderLog(
     apiKeyId,
     documentLogUuid,
     generatedAt,
+    costInMillicents,
   }: CreateProviderLogProps,
   db = database,
 ) {
   return await Transaction.call<ProviderLog>(async (trx) => {
-    const cost = estimateCost({ provider: providerType, model, usage })
+    const cost =
+      costInMillicents ??
+      Math.floor(
+        estimateCost({ provider: providerType, model, usage }) *
+          TO_MILLICENTS_FACTOR,
+      )
     const inserts = await trx
       .insert(providerLogs)
       .values({
@@ -60,7 +69,7 @@ export async function createProviderLog(
         responseText,
         toolCalls,
         tokens: isNaN(usage.totalTokens) ? 0 : (usage.totalTokens ?? 0),
-        cost_in_millicents: Math.floor(cost * 100_000),
+        costInMillicents: cost,
         duration,
         source,
         apiKeyId,

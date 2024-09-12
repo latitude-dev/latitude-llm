@@ -14,7 +14,7 @@ export const runPromptAction = authProcedure
   .input(
     z.object({
       prompt: z.string(),
-      parameters: z.object({ messages: z.string(), last_message: z.string() }),
+      parameters: z.record(z.any()),
     }),
   )
   .handler(async ({ ctx, input }) => {

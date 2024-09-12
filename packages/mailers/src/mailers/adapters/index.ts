@@ -20,7 +20,7 @@ export type AdapterResult = {
 
 type MaybeTransport = Transporter<SMTPTransport.SentMessageInfo> | null
 
-function createAdapter() {
+export function createAdapter() {
   const options = {
     transportOptions: { component: 'latitude_mailer' },
   }
@@ -38,7 +38,3 @@ function createAdapter() {
 
   return transport
 }
-
-const adapter = createAdapter()
-
-export default adapter

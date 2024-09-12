@@ -12,6 +12,9 @@ const mailerApiKeyArn = coreStack.requireOutput('mailerApiKeyArn')
 const cacheEndpoint = coreStack.requireOutput('cacheEndpoint')
 const awsAccessKeyArn = coreStack.requireOutput('awsAccessKeyArn')
 const awsAccessSecretArn = coreStack.requireOutput('awsAccessSecretArn')
+const sentryDsnArn = coreStack.requireOutput('sentryDsnArn')
+const sentryOrgArn = coreStack.requireOutput('sentryOrgArn')
+const sentryProjectArn = coreStack.requireOutput('sentryProjectArn')
 const getSecretString = (arn: pulumi.Output<any>) => {
   return arn.apply((secretId) =>
     aws.secretsmanager
@@ -26,10 +29,9 @@ const dbPassword = getSecretString(dbPasswordSecretId)
 const mailerApiKey = getSecretString(mailerApiKeyArn)
 const awsAccessKey = getSecretString(awsAccessKeyArn)
 const awsAccessSecret = getSecretString(awsAccessSecretArn)
-
-const sentryDsn = coreStack.requireOutput('sentryDsn')
-const sentryOrg = coreStack.requireOutput('sentryOrg')
-const sentryProject = coreStack.requireOutput('sentryProject')
+const sentryDsn = getSecretString(sentryDsnArn)
+const sentryOrg = getSecretString(sentryOrgArn)
+const sentryProject = getSecretString(sentryProjectArn)
 
 export const dbUrl = pulumi.interpolate`postgresql://${dbUsername}:${dbPassword}@${dbEndpoint}/${dbName}?sslmode=verify-full&sslrootcert=/app/packages/core/src/assets/eu-central-1-bundle.pem`
 export const environment = pulumi

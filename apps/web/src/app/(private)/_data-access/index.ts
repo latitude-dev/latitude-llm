@@ -5,6 +5,7 @@ import { findAllEvaluationTemplates } from '@latitude-data/core/data-access'
 import { NotFoundError } from '@latitude-data/core/lib/errors'
 import {
   CommitsRepository,
+  ConnectedEvaluationsRepository,
   DocumentLogsRepository,
   DocumentVersionsRepository,
   EvaluationsRepository,
@@ -183,6 +184,20 @@ export const getEvaluationsByDocumentUuidCached = cache(
     const { workspace } = await getCurrentUser()
     const scope = new EvaluationsRepository(workspace.id)
     const result = await scope.findByDocumentUuid(documentUuid)
+    return result.unwrap()
+  },
+)
+
+export const getConnectedDocumentsWithMetadataCached = cache(
+  async (evaluationId: number) => {
+    const { workspace } = await getCurrentUser()
+    const connectedEvaluationsScope = new ConnectedEvaluationsRepository(
+      workspace.id,
+    )
+    const result =
+      await connectedEvaluationsScope.getConnectedDocumentsWithMetadata(
+        evaluationId,
+      )
     return result.unwrap()
   },
 )

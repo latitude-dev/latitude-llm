@@ -64,7 +64,6 @@ export default function ConnectionEvaluationModal({
       templateIds,
       evaluationUuids,
       documentUuid,
-      commitUuid,
     })
 
     if (data) {

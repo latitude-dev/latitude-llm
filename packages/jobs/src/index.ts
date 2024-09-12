@@ -1,25 +1,16 @@
-import { buildConnection, ConnectionParams } from './connection'
 import { setupQueues } from './queues'
 import startWorkers from './workers'
 
 export { Worker } from 'bullmq'
 
-export function setupJobs({
-  connectionParams,
-}: {
-  connectionParams: ConnectionParams
-}) {
-  const connection = buildConnection(connectionParams)
-  const queues = setupQueues({ connection })
+let queues: ReturnType<typeof setupQueues>
+export function setupJobs() {
+  if (queues) return queues
+  queues = setupQueues()
 
-  return { queues }
+  return queues
 }
 
-export function setupWorkers({
-  connectionParams,
-}: {
-  connectionParams: ConnectionParams
-}) {
-  const connection = buildConnection(connectionParams)
-  return startWorkers({ connection })
+export function setupWorkers() {
+  return startWorkers()
 }

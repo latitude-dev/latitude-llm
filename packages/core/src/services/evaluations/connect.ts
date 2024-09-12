@@ -1,77 +1,101 @@
 import {
-  DocumentVersion,
-  EvaluationDto,
-  EvaluationMetadataType,
+  ConnectedEvaluation,
   EvaluationMode,
-  EvaluationTemplateWithCategory,
+  SafeWorkspace,
+  Workspace,
 } from '../../browser'
 import { database } from '../../client'
-import { findWorkspaceFromDocument } from '../../data-access'
-import { ErrorResult, NotFoundError, Result, Transaction } from '../../lib'
+import {
+  NotFoundError,
+  PromisedResult,
+  Result,
+  Transaction,
+  TypedResult,
+} from '../../lib'
+import {
+  DocumentVersionsRepository,
+  EvaluationsRepository,
+} from '../../repositories'
 import { connectedEvaluations } from '../../schema'
-import { createEvaluation } from './create'
+import { importLlmAsJudgeEvaluation } from './create'
 
 export function connectEvaluations(
   {
-    document,
-    templates,
-    evaluations: evaluationToImport,
+    workspace,
+    documentUuid,
+    evaluationUuids,
+    templateIds,
     evaluationMode = EvaluationMode.Batch,
   }: {
-    document: DocumentVersion
-    templates: EvaluationTemplateWithCategory[]
-    evaluations: EvaluationDto[]
+    workspace: Workspace | SafeWorkspace
+    documentUuid: string
+    evaluationUuids?: string[]
+    templateIds?: number[]
     evaluationMode?: EvaluationMode
   },
   db = database,
-) {
-  return Transaction.call(async (tx) => {
-    const workspace = await findWorkspaceFromDocument(document, tx)
-    if (!workspace) {
-      return Result.error(new NotFoundError('Workspace not found'))
-    }
-
-    // TODO: Creating an evaluation is kind of a pita because of the
-    // polymorphic relation with metadata so we use the creation service which
-    // causes N db operations (not ideal). Implement a bulkCreate of
-    // evaluations service.
-    const results = await Promise.all(
-      templates.map((template) =>
-        createEvaluation(
-          {
-            workspace,
-            name: template.name,
-            description: template.description,
-            type: EvaluationMetadataType.LlmAsJudge,
-            metadata: {
-              prompt: template.prompt,
-            },
-          },
-          tx,
-        ),
-      ),
-    )
-
-    const error = Result.findError(results)
-    if (error) return error as ErrorResult<Error>
-
-    const evaluations = [
-      ...evaluationToImport,
-      ...results.map((r) => r.unwrap()),
-    ]
-    if (!evaluations.length) return Result.ok([])
-
-    const rezults = await tx
-      .insert(connectedEvaluations)
-      .values(
-        evaluations.map((evaluation) => ({
-          evaluationMode,
-          documentUuid: document.documentUuid,
-          evaluationId: evaluation.id,
-        })),
+): PromisedResult<ConnectedEvaluation[], Error> {
+  return Transaction.call(
+    async (tx): PromisedResult<ConnectedEvaluation[], Error> => {
+      const documentVersionsScope = new DocumentVersionsRepository(
+        workspace.id,
+        tx,
       )
-      .returning()
+      const documentExists =
+        await documentVersionsScope.existsDocumentWithUuid(documentUuid)
+      if (!documentExists) {
+        return Result.error(new NotFoundError('Document not found'))
+      }
 
-    return Result.ok(rezults)
-  }, db)
+      // TODO: Creating an evaluation is kind of a pita because of the
+      // polymorphic relation with metadata so we use the creation service which
+      // causes N db operations (not ideal). Implement a bulkCreate of
+      // evaluations service.
+      const importedEvaluations = await Promise.all(
+        templateIds?.map((templateId) =>
+          importLlmAsJudgeEvaluation({ workspace, templateId }, tx),
+        ) ?? [],
+      )
+
+      const error = Result.findError(importedEvaluations)
+      if (error) return error as TypedResult<ConnectedEvaluation[], Error>
+
+      const evaluationsScope = new EvaluationsRepository(workspace.id, tx)
+      const selectedEvaluations = await evaluationsScope.filterByUuids(
+        evaluationUuids ?? [],
+      )
+      if (selectedEvaluations.error) return selectedEvaluations
+      if (selectedEvaluations.value.length !== evaluationUuids?.length) {
+        const missingEvaluationUuids = evaluationUuids?.filter(
+          (uuid) => !selectedEvaluations.value.some((r) => r.uuid === uuid),
+        )
+        return Result.error(
+          new NotFoundError(
+            `The following evaluations were not found: ${missingEvaluationUuids?.join(', ')}`,
+          ),
+        )
+      }
+
+      const allEvaluationIds = [
+        ...selectedEvaluations.unwrap().map((r) => r.id),
+        ...importedEvaluations.map((r) => r.unwrap().id),
+      ]
+
+      if (!allEvaluationIds.length) return Result.ok([])
+
+      const rezults = await tx
+        .insert(connectedEvaluations)
+        .values(
+          allEvaluationIds.map((evaluationId) => ({
+            evaluationMode,
+            documentUuid,
+            evaluationId,
+          })),
+        )
+        .returning()
+
+      return Result.ok(rezults)
+    },
+    db,
+  )
 }

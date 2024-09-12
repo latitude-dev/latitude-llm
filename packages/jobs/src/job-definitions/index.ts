@@ -1,10 +1,9 @@
 import { LatitudeEvent } from '@latitude-data/core/events/handlers/index'
 
 import { Jobs, Queues } from '../constants'
-import { CreateDocumentLogJobData } from './documentLogs/createJob'
 
+// TODO: fix these types
 export type JobDataMap = {
-  [Jobs.createDocumentLogJob]: CreateDocumentLogJobData
   [Jobs.publishEventJob]: LatitudeEvent
 }
 
@@ -22,5 +21,3 @@ export type JobDefinition = {
     [K in Jobs]: JobSpec<K>
   }
 }
-
-export * from './documentLogs/createJob'

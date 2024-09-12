@@ -9,11 +9,16 @@ import {
   SafeUser,
   Workspace,
 } from '../../browser'
+import { publisher } from '../../events/publisher'
 import { createProject, createProviderApiKey } from '../../tests/factories'
 import { testConsumeStream } from '../../tests/helpers'
 import { runDocumentAtCommit } from './index'
 
 // Create a spy for the ai function
+const publisherSpy = vi.spyOn(
+  await import('../../events/publisher').then((f) => f.publisher),
+  'publish',
+)
 const aiSpy = vi.spyOn(await import('../ai'), 'ai')
 
 describe('runDocumentAtCommit', () => {
@@ -21,6 +26,7 @@ describe('runDocumentAtCommit', () => {
     vi.clearAllMocks()
     // @ts-expect-error - we are mocking the function
     aiSpy.mockImplementation(mocks.runAi)
+    publisherSpy.mockImplementation(mocks.publish)
   })
 
   it('fails if document is not found in commit', async () => {
@@ -49,6 +55,9 @@ describe('runDocumentAtCommit', () => {
     await expect(result?.value?.response).rejects.toThrowError(
       'Error validating document configuration',
     )
+    await expect(result?.value?.duration).rejects.toThrowError(
+      'Error validating document configuration',
+    )
   })
 
   it('fails if provider api key is not found', async () => {
@@ -63,7 +72,10 @@ describe('runDocumentAtCommit', () => {
       source: LogSources.API,
     })
 
-    await expect(result?.value?.response).rejects.toThrowError(
+    expect(result?.value?.response).rejects.toThrowError(
+      'ProviderApiKey not found',
+    )
+    expect(result?.value?.duration).rejects.toThrowError(
       'ProviderApiKey not found',
     )
   })
@@ -219,11 +231,28 @@ This is a test document
         },
       ])
     })
+
+    it('calls publisher with correct data', async () => {
+      const parameters = { testParam: 'testValue' }
+      const { response } = await runDocumentAtCommit({
+        workspaceId,
+        document,
+        commit,
+        parameters,
+        source: LogSources.API,
+      }).then((r) => r.unwrap())
+
+      // Wait for the response promise to resolve
+      await response
+
+      expect(publisher.publish).toHaveBeenCalled()
+    })
   })
 })
 
 // Non-test code moved to the bottom
 const mocks = {
+  publish: vi.fn(),
   uuid: vi.fn(() => 'fake-document-log-uuid'),
   runAi: vi.fn(async () => {
     const fullStream = new ReadableStream({

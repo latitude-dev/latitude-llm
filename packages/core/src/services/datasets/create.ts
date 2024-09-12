@@ -5,7 +5,7 @@ import slugify from '@sindresorhus/slugify'
 import { SafeWorkspace, User } from '../../browser'
 import { database } from '../../client'
 import { Result, Transaction } from '../../lib'
-import { DiskWrapper } from '../../lib/disk'
+import { diskFactory, DiskWrapper } from '../../lib/disk'
 import { syncReadCsv } from '../../lib/readCsv'
 import { datasets } from '../../schema'
 
@@ -13,7 +13,7 @@ export const createDataset = async (
   {
     author,
     workspace,
-    disk,
+    disk = diskFactory(),
     data,
   }: {
     author: User
@@ -23,7 +23,7 @@ export const createDataset = async (
       file: File
       csvDelimiter: string
     }
-    disk: DiskWrapper
+    disk?: DiskWrapper
   },
   db = database,
 ) => {

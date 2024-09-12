@@ -9,10 +9,11 @@ import {
   Text,
   Tooltip,
 } from '@latitude-data/web-ui'
+import { formatCostInMillicents } from '$/app/_lib/formatCostInMillicents'
 import useProviderApiKeys from '$/stores/providerApiKeys'
 import { format } from 'date-fns'
 
-import { formatCostInMillicents, formatDuration } from '../utils'
+import { formatDuration } from '../utils'
 
 function MetadataItem({
   label,
@@ -74,7 +75,7 @@ export function DocumentLogMetadata({
       providerLogs?.reduce(
         (acc, log) => {
           const key = String(log.providerId)
-          acc[key] = (acc[key] ?? 0) + log.cost_in_millicents
+          acc[key] = (acc[key] ?? 0) + log.costInMillicents
           return acc
         },
         {} as Record<string, number>,
@@ -136,7 +137,7 @@ export function DocumentLogMetadata({
           trigger={
             <div className='flex flex-row items-center gap-x-1'>
               <Text.H5 color='foregroundMuted'>
-                {formatCostInMillicents(documentLog.cost_in_millicents ?? 0)}
+                {formatCostInMillicents(documentLog.costInMillicents ?? 0)}
               </Text.H5>
               <Icon name='info' className='text-muted-foreground' />
             </div>

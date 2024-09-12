@@ -1,13 +1,6 @@
 import { setupWorkers } from '@latitude-data/jobs'
-import env from '$/env'
 
-const workers = setupWorkers({
-  connectionParams: {
-    host: env.REDIS_HOST,
-    port: env.REDIS_PORT,
-    password: env.REDIS_PASSWORD,
-  },
-})
+const workers = setupWorkers()
 
 console.log('Workers started')
 

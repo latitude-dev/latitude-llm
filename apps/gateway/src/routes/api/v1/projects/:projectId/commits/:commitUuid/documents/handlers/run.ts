@@ -2,7 +2,6 @@ import { zValidator } from '@hono/zod-validator'
 import { LogSources } from '@latitude-data/core/browser'
 import { runDocumentAtCommit } from '@latitude-data/core/services/commits/runDocumentAtCommit'
 import { pipeToStream } from '$/common/pipeToStream'
-import { queues } from '$/jobs'
 import { Factory } from 'hono/factory'
 import { streamSSE } from 'hono/streaming'
 import { z } from 'zod'
@@ -21,8 +20,6 @@ export const runHandler = factory.createHandlers(
   zValidator('json', runSchema),
   async (c) => {
     return streamSSE(c, async (stream) => {
-      const startTime = Date.now()
-
       const { projectId, commitUuid } = c.req.param()
       const { documentPath, parameters, source } = c.req.valid('json')
 
@@ -44,17 +41,6 @@ export const runHandler = factory.createHandlers(
       }).then((r) => r.unwrap())
 
       await pipeToStream(stream, result.stream)
-
-      queues.defaultQueue.jobs.enqueueCreateDocumentLogJob({
-        commit,
-        data: {
-          uuid: result.documentLogUuid,
-          documentUuid: document.documentUuid,
-          resolvedContent: result.resolvedContent,
-          parameters,
-          duration: Date.now() - startTime,
-        },
-      })
     })
   },
 )

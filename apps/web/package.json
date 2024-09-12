@@ -4,8 +4,8 @@
   "private": true,
   "scripts": {
     "build": "next build",
-    "dev": "next dev",
-    "dev:debug": "NODE_DEBUG=flydrive:s3 NODE_OPTIONS='--inspect=0.0.0.0:9229' ./node_modules/.bin/next dev",
+    "dev": "NODE_DEBUG=latitude:debug next dev",
+    "dev:debug": "NODE_DEBUG=latitude:debug NODE_OPTIONS='--inspect=0.0.0.0:9229' ./node_modules/.bin/next dev",
     "dev:local": "USE_LOCALHOST=true pnpm run dev",
     "lint": "next lint",
     "prettier": "prettier --write \"**/*.{ts,tsx,md}\"",
@@ -34,6 +34,7 @@
     "lodash-es": "^4.17.21",
     "lucia": "^3.2.0",
     "monaco-editor": "^0.50.0",
+    "nanoid": "^5.0.7",
     "next": "^14.3.0-canary.87",
     "next-themes": "^0.3.0",
     "nextjs-toploader": "^1.6.12",

@@ -3,16 +3,16 @@ import { eq } from 'drizzle-orm'
 import { Dataset } from '../../browser'
 import { database } from '../../client'
 import { Result, Transaction } from '../../lib'
-import { DiskWrapper } from '../../lib/disk'
+import { diskFactory, DiskWrapper } from '../../lib/disk'
 import { datasets } from '../../schema'
 
 export async function destroyDataset(
   {
     dataset,
-    disk,
+    disk = diskFactory(),
   }: {
     dataset: Dataset
-    disk: DiskWrapper
+    disk?: DiskWrapper
   },
   db = database,
 ) {

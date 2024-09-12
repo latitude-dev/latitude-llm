@@ -102,7 +102,6 @@ Follow the instructions in the [self-hosted guide](https://docs.latitude.so/self
 
 After setting up Latitude Self-Hosted, you can follow the same steps as in the Latitude Cloud guide to create, test, evaluate, and deploy your prompts.
 
-
 ## 👥 Community
 
 The Latitude community can be found on

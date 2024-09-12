@@ -32,7 +32,10 @@ describe('destroyEvaluationAction', () => {
         name: 'Test Provider',
         user: userData,
       })
-      const evaluation = await factories.createEvaluation({ provider })
+      const evaluation = await factories.createLlmAsJudgeEvaluation({
+        workspace,
+        prompt: factories.helpers.createPrompt({ provider }),
+      })
       evaluationId = evaluation.id
     })
 
@@ -63,7 +66,10 @@ describe('destroyEvaluationAction', () => {
         name: 'Test Provider',
         user,
       })
-      evaluation = await factories.createEvaluation({ provider })
+      evaluation = await factories.createLlmAsJudgeEvaluation({
+        workspace,
+        prompt: factories.helpers.createPrompt({ provider }),
+      })
 
       mocks.getSession.mockReturnValue({
         user: userData,

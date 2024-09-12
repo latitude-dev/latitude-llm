@@ -4,7 +4,7 @@ import { and, eq, getTableColumns, inArray, sql } from 'drizzle-orm'
 
 import { EvaluationDto } from '../browser'
 import { EvaluationMetadataType } from '../constants'
-import { NotFoundError, Result } from '../lib'
+import { NotFoundError, PromisedResult, Result } from '../lib'
 import {
   connectedEvaluations,
   evaluations,
@@ -85,11 +85,20 @@ export class EvaluationsRepository extends Repository<
     return Result.ok(result as EvaluationDto[])
   }
 
-  async filterByUuids(uuids: string[]) {
+  async filterByUuids(uuids: string[]): PromisedResult<EvaluationDto[], Error> {
     const result = await this.db
       .select()
       .from(this.scope)
       .where(inArray(this.scope.uuid, uuids))
+
+    return Result.ok(result)
+  }
+
+  async filterById(ids: number[]) {
+    const result = await this.db
+      .select()
+      .from(this.scope)
+      .where(inArray(this.scope.id, ids))
 
     return Result.ok(result)
   }

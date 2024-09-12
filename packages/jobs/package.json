@@ -7,17 +7,21 @@
   "scripts": {
     "lint": "eslint src",
     "tc": "tsc --noEmit",
-    "prettier": "prettier --write src/**/*.ts"
+    "prettier": "prettier --write src/**/*.ts",
+    "test": "vitest run --pool=forks",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@latitude-data/env": "workspace:*"
   },
   "devDependencies": {
+    "@latitude-data/core": "workspace:^",
     "@latitude-data/eslint-config": "workspace:*",
     "@latitude-data/typescript-config": "workspace:*",
     "@types/node": "*",
     "bullmq": "^5.8.7",
     "ioredis": "^5.4.1",
+    "vitest": "^2.0.5",
     "zod": "^3.23.8"
   },
   "peerDependencies": {

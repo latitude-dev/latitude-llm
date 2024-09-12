@@ -2,13 +2,9 @@ import {
   EventHandlers,
   LatitudeEvent,
 } from '@latitude-data/core/events/handlers/index'
-import { env } from '@latitude-data/env'
 import { Job } from 'bullmq'
 
-import { buildConnection } from '../../connection'
-import { setupQueues } from '../../queues'
-
-let queues: ReturnType<typeof setupQueues>
+import { setupJobs } from '../..'
 
 export const publishEventJob = async (job: Job<LatitudeEvent>) => {
   const event = job.data
@@ -16,15 +12,7 @@ export const publishEventJob = async (job: Job<LatitudeEvent>) => {
   if (!handlers?.length) return
 
   handlers.forEach((handler) => {
-    if (!queues) {
-      const connection = buildConnection({
-        host: env.REDIS_HOST,
-        port: env.REDIS_PORT,
-        password: env.REDIS_PASSWORD,
-      })
-
-      queues = setupQueues({ connection })
-    }
+    const queues = setupJobs()
 
     queues.eventsQueue.queue.add(handler.name, event)
   })

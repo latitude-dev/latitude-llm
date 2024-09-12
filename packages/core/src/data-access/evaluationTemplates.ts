@@ -1,14 +1,10 @@
 import { asc, eq, getTableColumns, inArray } from 'drizzle-orm'
 
-import { EvaluationTemplate } from '../browser'
+import { EvaluationTemplate, EvaluationTemplateWithCategory } from '../browser'
 import { database } from '../client'
 import { NotFoundError } from '../lib/errors'
 import { Result, TypedResult } from '../lib/Result'
 import { evaluationTemplateCategories, evaluationTemplates } from '../schema'
-
-export type EvaluationTemplateWithCategory = EvaluationTemplate & {
-  category: string
-}
 
 export async function findAllEvaluationTemplates(): Promise<
   TypedResult<EvaluationTemplateWithCategory[], Error>
@@ -32,8 +28,9 @@ export async function findAllEvaluationTemplates(): Promise<
 
 export async function findEvaluationTemplateById(
   id: number,
+  db = database,
 ): Promise<TypedResult<EvaluationTemplate, Error>> {
-  const result = await database.query.evaluationTemplates.findFirst({
+  const result = await db.query.evaluationTemplates.findFirst({
     where: eq(evaluationTemplates.id, id),
   })
 

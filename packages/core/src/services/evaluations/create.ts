@@ -1,6 +1,12 @@
-import { EvaluationMetadataType, SafeWorkspace, Workspace } from '../../browser'
+import {
+  EvaluationMetadataType,
+  EvaluationResultConfiguration,
+  SafeWorkspace,
+  Workspace,
+} from '../../browser'
 import { database } from '../../client'
-import { Result, Transaction } from '../../lib'
+import { findEvaluationTemplateById } from '../../data-access'
+import { BadRequestError, Result, Transaction } from '../../lib'
 import { evaluations, llmAsJudgeEvaluationMetadatas } from '../../schema'
 
 type Props = {
@@ -8,11 +14,12 @@ type Props = {
   name: string
   description: string
   type: EvaluationMetadataType
+  configuration: EvaluationResultConfiguration
   metadata?: Record<string, unknown>
 }
 
 export async function createEvaluation(
-  { workspace, name, description, type, metadata = {} }: Props,
+  { workspace, name, description, type, configuration, metadata = {} }: Props,
   db = database,
 ) {
   return await Transaction.call(async (tx) => {
@@ -21,25 +28,60 @@ export async function createEvaluation(
       case EvaluationMetadataType.LlmAsJudge:
         metadataTable = await tx
           .insert(llmAsJudgeEvaluationMetadatas)
-          .values(metadata as { prompt: string; templateId: number })
+          .values(metadata as { prompt: string; templateId?: number })
           .returning()
 
         break
+      default:
+        return Result.error(
+          new BadRequestError(`Invalid evaluation type ${type}`),
+        )
     }
 
     const result = await tx
       .insert(evaluations)
       .values([
         {
+          configuration,
           description,
           metadataId: metadataTable[0]!.id,
-          name,
           metadataType: type,
+          name,
           workspaceId: workspace.id,
         },
       ])
       .returning()
 
-    return Result.ok({ ...result[0]!, metadata: metadataTable[0]! })
+    return Result.ok({
+      ...result[0]!,
+      metadata: metadataTable[0]!,
+    })
   }, db)
+}
+
+export async function importLlmAsJudgeEvaluation(
+  {
+    workspace,
+    templateId,
+  }: { workspace: Workspace | SafeWorkspace; templateId: number },
+  db = database,
+) {
+  const templateResult = await findEvaluationTemplateById(templateId, db)
+  if (templateResult.error) return templateResult
+  const template = templateResult.unwrap()
+
+  return await createEvaluation(
+    {
+      workspace,
+      name: template.name,
+      description: template.description,
+      type: EvaluationMetadataType.LlmAsJudge,
+      configuration: template.configuration,
+      metadata: {
+        prompt: template.prompt,
+        templateId: template.id,
+      },
+    },
+    db,
+  )
 }

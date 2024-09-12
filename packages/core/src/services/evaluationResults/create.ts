@@ -1,37 +1,66 @@
 import {
   DocumentLog,
   Evaluation,
-  EvaluationResult,
+  EvaluationDto,
+  EvaluationResultableType,
   ProviderLog,
 } from '../../browser'
 import { database } from '../../client'
-import { Result, Transaction } from '../../lib'
+import { BadRequestError, Result, Transaction } from '../../lib'
+import { EvaluationResultDto } from '../../repositories/evaluationResultsRepository'
 import { evaluationResults } from '../../schema'
+import { evaluationResultableBooleans } from '../../schema/models/evaluationResultableBooleans'
+import { evaluationResultableNumbers } from '../../schema/models/evaluationResultableNumbers'
+import { evaluationResultableTexts } from '../../schema/models/evaluationResultableTexts'
 
 export type CreateEvaluationResultProps = {
-  evaluation: Evaluation
+  evaluation: Evaluation | EvaluationDto
   documentLog: DocumentLog
   providerLog: ProviderLog
-  result: string
+  result: number | string | boolean
 }
 
 export async function createEvaluationResult(
   { evaluation, documentLog, providerLog, result }: CreateEvaluationResultProps,
   db = database,
 ) {
-  return Transaction.call<EvaluationResult>(async (trx) => {
+  return Transaction.call<EvaluationResultDto>(async (trx) => {
+    let table
+    switch (evaluation.configuration.type) {
+      case EvaluationResultableType.Boolean:
+        table = evaluationResultableBooleans
+        break
+      case EvaluationResultableType.Number:
+        table = evaluationResultableNumbers
+        break
+      case EvaluationResultableType.Text:
+        table = evaluationResultableTexts
+        break
+      default:
+        return Result.error(
+          new BadRequestError(
+            `Unsupported result type: ${evaluation.configuration.type}`,
+          ),
+        )
+    }
+
+    const metadata = await trx.insert(table).values({ result }).returning()
     const inserts = await trx
       .insert(evaluationResults)
       .values({
         evaluationId: evaluation.id,
         documentLogId: documentLog.id,
         providerLogId: providerLog.id,
-        result,
+        resultableType: evaluation.configuration.type,
+        resultableId: metadata[0]!.id,
       })
       .returning()
 
     const evaluationResult = inserts[0]!
 
-    return Result.ok(evaluationResult)
+    return Result.ok({
+      ...evaluationResult,
+      result: metadata[0]!.result,
+    })
   }, db)
 }

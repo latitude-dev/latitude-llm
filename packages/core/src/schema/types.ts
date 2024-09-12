@@ -1,6 +1,7 @@
 import { ToolCall } from '@latitude-data/compiler'
 import { type InferSelectModel } from 'drizzle-orm'
 
+import { EvaluationResultableType } from '../constants'
 import { apiKeys } from './models/apiKeys'
 import { commits } from './models/commits'
 import { connectedEvaluations } from './models/connectedEvaluations'
@@ -56,8 +57,6 @@ export type LlmAsJudgeEvaluationMetadata = InferSelectModel<
   typeof llmAsJudgeEvaluationMetadatas
 >
 
-export type { EvaluationTemplateWithCategory } from '../data-access/evaluationTemplates'
-
 export type EvaluationDto = Evaluation & {
   metadata: Omit<
     LlmAsJudgeEvaluationMetadata,
@@ -67,4 +66,17 @@ export type EvaluationDto = Evaluation & {
 
 export type Dataset = InferSelectModel<typeof datasets> & {
   author: Pick<User, 'id' | 'name'> | undefined
+}
+
+type EvaluationResultNumberConfiguration = {
+  range: { from: number; to: number }
+}
+
+export type EvaluationResultConfiguration = {
+  type: EvaluationResultableType
+  detail?: EvaluationResultNumberConfiguration
+}
+
+export type EvaluationTemplateWithCategory = EvaluationTemplate & {
+  category: string
 }
