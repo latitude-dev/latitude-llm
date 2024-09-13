@@ -65,7 +65,7 @@ export const runEvaluation = async (
   if (result.error) return result
 
   result.value.response.then((response) => {
-    publisher.publishLater({
+    publisher.publish({
       type: 'evaluationRun',
       data: {
         evaluationId: evaluation.id,
