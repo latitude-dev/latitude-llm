@@ -14,7 +14,7 @@ import {
   TableRow,
   Text,
 } from '@latitude-data/web-ui'
-import { formatCostInMillicents } from '$/app/_lib/formatCostInMillicents'
+import { formatCostInMillicents } from '$/app/_lib/formatUtils'
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
 import useProjects from '$/stores/projects'

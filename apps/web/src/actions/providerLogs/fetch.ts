@@ -32,3 +32,12 @@ export const getProviderLogsAction = authProcedure
 
     return result
   })
+
+export const getProviderLogAction = authProcedure
+  .createServerAction()
+  .input(z.object({ providerLogId: z.number() }))
+  .handler(async ({ input, ctx }) => {
+    const { providerLogId } = input
+    const scope = new ProviderLogsRepository(ctx.workspace.id)
+    return await scope.find(providerLogId).then((r) => r.unwrap())
+  })

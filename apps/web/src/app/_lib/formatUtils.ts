@@ -4,7 +4,7 @@ const SECONDS = 1000 // ms
 const MINUTES = 60 * SECONDS
 const HOURS = MINUTES * 60
 const DAYS = HOURS * 24
-function relativeTime(date: Date | null) {
+export function relativeTime(date: Date | null) {
   if (date == null) return 'never'
 
   const now = new Date()
@@ -14,7 +14,7 @@ function relativeTime(date: Date | null) {
   return format(date, 'PPpp')
 }
 
-function formatDuration(duration: number) {
+export function formatDuration(duration: number) {
   if (duration < MINUTES) return `${(duration / SECONDS).toFixed(3)}s`
 
   const hours = Math.floor(duration / HOURS)
@@ -24,4 +24,6 @@ function formatDuration(duration: number) {
   return `${hours > 0 ? `${hours}h ` : ''}${minutes > 0 ? `${minutes}m ` : ''}${seconds}s`
 }
 
-export { relativeTime, formatDuration }
+export function formatCostInMillicents(cost_in_millicents: number) {
+  return `$ ${cost_in_millicents / 100_000}`
+}

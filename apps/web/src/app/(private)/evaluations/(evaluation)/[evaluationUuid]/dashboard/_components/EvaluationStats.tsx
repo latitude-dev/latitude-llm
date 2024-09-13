@@ -6,7 +6,7 @@ import { readMetadata } from '@latitude-data/compiler'
 import { EvaluationDto } from '@latitude-data/core/browser'
 import { ConnectedDocumentWithMetadata } from '@latitude-data/core/repositories'
 import { Skeleton, Text } from '@latitude-data/web-ui'
-import { formatCostInMillicents } from '$/app/_lib/formatCostInMillicents'
+import { formatCostInMillicents } from '$/app/_lib/formatUtils'
 import useConnectedDocuments from '$/stores/connectedEvaluations'
 
 export function Stat({ label, value }: { label: string; value?: string }) {

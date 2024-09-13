@@ -474,7 +474,7 @@ describe('variable assignment', async () => {
     `
 
     const result = await getCompiledText(prompt)
-    expect(result).toBe('1,2,3,bar,5,6')
+    expect(result).toBe('[1,2,3,"bar",5,6]')
   })
 
   it('can modify variables with update operators', async () => {

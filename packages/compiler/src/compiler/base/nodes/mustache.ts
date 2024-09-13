@@ -11,5 +11,11 @@ export async function compile({
   const expression = node.expression
   const value = await resolveExpression(expression, scope)
   if (value === undefined) return
+
+  if (typeof value === 'object' && value !== null) {
+    addStrayText(JSON.stringify(value))
+    return
+  }
+
   addStrayText(String(value))
 }

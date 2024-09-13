@@ -1,6 +1,7 @@
 import { ReactNode } from 'react'
 
 import { EvaluationsRepository } from '@latitude-data/core/repositories'
+import { computeEvaluationResultsWithMetadata } from '@latitude-data/core/services/evaluationResults/computeEvaluationResultsWithMetadata'
 import { TableWithHeader, Text } from '@latitude-data/web-ui'
 import BreadcrumpLink from '$/components/BreadcrumpLink'
 import { Breadcrump } from '$/components/layouts/AppLayout/Header'
@@ -8,6 +9,8 @@ import { getCurrentUser } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
 
 import { Actions } from './_components/Actions'
+import { EvaluationResults } from './_components/EvaluationResults'
+import { MetricsSummary } from './_components/MetricsSummary'
 
 export default async function ConnectedEvaluationLayout({
   params,
@@ -26,8 +29,15 @@ export default async function ConnectedEvaluationLayout({
   const evaluation = await evaluationScope
     .find(params.evaluationId)
     .then((r) => r.unwrap())
+
+  const evaluationResults = await computeEvaluationResultsWithMetadata({
+    workspaceId: evaluation.workspaceId,
+    evaluation,
+    documentUuid: params.documentUuid,
+  }).then((r) => r.unwrap())
+
   return (
-    <div className='w-full p-6'>
+    <div className='flex flex-col w-full h-full gap-6 p-6 custom-scrollbar'>
       {children}
       <TableWithHeader
         title={
@@ -60,7 +70,15 @@ export default async function ConnectedEvaluationLayout({
             documentUuid={params.documentUuid}
           />
         }
-        table={<></>}
+      />
+
+      <MetricsSummary
+        evaluation={evaluation}
+        evaluationResults={evaluationResults}
+      />
+      <EvaluationResults
+        evaluation={evaluation}
+        evaluationResults={evaluationResults}
       />
     </div>
   )
