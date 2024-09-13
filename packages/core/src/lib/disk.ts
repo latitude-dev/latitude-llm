@@ -113,9 +113,9 @@ export class DiskWrapper {
 
     if (key === 'local') {
       return new FSDriver({
-        location,
+        location: location!,
         visibility: 'private',
-        urlBuilder: { generateURL: generateUrl(publicPath) },
+        urlBuilder: { generateURL: generateUrl(publicPath!) },
       })
     }
 
