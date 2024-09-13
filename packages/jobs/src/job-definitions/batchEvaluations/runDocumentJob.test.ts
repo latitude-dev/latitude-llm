@@ -96,6 +96,7 @@ describe('runDocumentJob', () => {
       mocks.queues.defaultQueue.jobs.enqueueRunEvaluationJob,
     ).toHaveBeenCalledWith({
       workspaceId: workspace.id,
+      documentUuid: document.documentUuid,
       documentLogUuid: 'log1',
       evaluationId: evaluation.id,
       batchId: 'batch1',

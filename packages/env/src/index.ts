@@ -33,6 +33,12 @@ if (environment !== 'production') {
       DRIVE_DISK: 'local',
       FILE_PUBLIC_PATH,
       FILES_STORAGE_PATH,
+      WEBSOCKETS_SERVER: 'http://localhost:4002',
+      WEBSOCKET_SECRET_TOKEN_KEY: 'secret-token-key',
+      WEBSOCKET_REFRESH_SECRET_TOKEN_KEY: 'refresh-refresh-token-key',
+      WORKERS_WEBSOCKET_SECRET_TOKEN: 'workers-secret-token',
+      APP_DOMAIN: 'localhost:3000',
+      APP_SUBDOMAIN: 'app',
     },
     { path: pathToEnv },
   )
@@ -66,9 +72,23 @@ export const env = createEnv({
       .union([z.literal('local'), z.literal('s3')])
       .optional()
       .default('local'),
+    WEBSOCKETS_SERVER: z.string(),
+    WEBSOCKET_SECRET_TOKEN_KEY: z.string(),
+    WORKERS_WEBSOCKET_SECRET_TOKEN: z.string(),
+    WEBSOCKET_REFRESH_SECRET_TOKEN_KEY: z.string(),
+    APP_DOMAIN: z.string(),
+    APP_SUBDOMAIN: z.string().optional(),
   },
   runtimeEnv: {
     ...process.env,
+    WEBSOCKETS_SERVER:
+      process.env.WEBSOCKETS_SERVER ?? 'https://ws.latitude.so',
+    APP_DOMAIN: process.env.APP_DOMAIN ?? 'latitude.so',
+    APP_SUBDOMAIN: process.env.APP_SUBDOMAIN ?? 'app',
     FILE_PUBLIC_PATH: process.env.FILE_PUBLIC_PATH ?? FILE_PUBLIC_PATH,
+    // FIXME: Infra needed
+    WEBSOCKET_SECRET_TOKEN_KEY: 'secret-token-key',
+    WEBSOCKET_REFRESH_SECRET_TOKEN_KEY: 'refresh-refresh-token-key',
+    WORKERS_WEBSOCKET_SECRET_TOKEN: 'workers-secret-token',
   },
 })

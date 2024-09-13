@@ -24,7 +24,7 @@ export const setupAction = errorHandlingProcedure
     const result = await setupService(input)
     const sessionData = result.unwrap()
 
-    setSession({ sessionData })
+    await setSession({ sessionData })
 
     redirect(ROUTES.root)
   })

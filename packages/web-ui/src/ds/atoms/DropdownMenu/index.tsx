@@ -69,7 +69,7 @@ function DropdownItem({
     <DropdownMenuItem
       onSelect={onSelect}
       disabled={disabled}
-      className='gap-2 items-start'
+      className='gap-2 items-start cursor-pointer'
     >
       {iconProps ? <Icon {...iconProps} /> : null}
       <div className='w-full'>

@@ -9,6 +9,7 @@ import { useProviderLog } from '$/stores/providerLogs'
 
 import { EvaluationResultInfo } from './EvaluationResultInfo'
 import { EvaluationResultsTable } from './EvaluationResultsTable'
+import { EvaluationStatusBanner } from './EvaluationStatusBanner'
 
 export function EvaluationResults({
   evaluation,
@@ -25,6 +26,7 @@ export function EvaluationResults({
   return (
     <div className='flex flex-col gap-4'>
       <Text.H4>Evaluation Results</Text.H4>
+      <EvaluationStatusBanner evaluation={evaluation} />
       <div className='flex flex-row w-full h-full overflow-hidden gap-4'>
         <div className='flex-grow min-w-0 h-full'>
           <EvaluationResultsTable

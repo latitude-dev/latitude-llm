@@ -3,8 +3,6 @@
 import { ReactNode } from 'react'
 
 import {
-  Avatar,
-  getUserInfoFromSession,
   Icon,
   NavTabGroup,
   NavTabItem,
@@ -15,6 +13,8 @@ import { ThemeButton } from '$/components/ThemeButton'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Fragment } from 'react/jsx-runtime'
+
+import AvatarDropdown from './AvatarDropdown'
 
 function BreadcrumpSeparator() {
   return (
@@ -112,7 +112,6 @@ export default function AppHeader({
   currentUser,
 }: AppHeaderProps) {
   const pathname = usePathname()
-  const info = currentUser ? getUserInfoFromSession(currentUser) : null
   return (
     <header className='px-6 sticky top-0 flex flex-col bg-background-gray border-b border-b-border'>
       <div className='py-3 flex flex-row items-center justify-between border-b border-b-border'>
@@ -123,13 +122,7 @@ export default function AppHeader({
               <NavLink key={idx} {...link} />
             ))}
           </nav>
-          {info ? (
-            <Avatar
-              alt={info.name}
-              fallback={info.fallback}
-              className='w-6 h-6'
-            />
-          ) : null}
+          <AvatarDropdown currentUser={currentUser} />
           <ThemeButton />
         </div>
       </div>

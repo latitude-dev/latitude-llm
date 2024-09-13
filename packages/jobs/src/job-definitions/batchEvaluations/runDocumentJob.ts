@@ -58,6 +58,7 @@ export const runDocumentJob = async (job: Job<RunDocumentJobData>) => {
     // Enqueue the evaluation job
     await queues.defaultQueue.jobs.enqueueRunEvaluationJob({
       workspaceId,
+      documentUuid: document.documentUuid,
       documentLogUuid: result.documentLogUuid,
       evaluationId,
       batchId,

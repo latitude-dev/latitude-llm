@@ -34,8 +34,7 @@ export const acceptInvitationAction = createServerAction()
     if (!user) throw new NotFoundError('User not found')
 
     await acceptInvitation({ membership, user })
-
-    setSession({
+    await setSession({
       sessionData: {
         user,
         workspace: { id: Number(workspace.id), name: workspace.name },

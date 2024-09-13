@@ -18,7 +18,8 @@ const nextConfig = {
     'flydrive/drivers/fs',
     'flydrive/drivers/types',
     '@sentry/nextjs',
-    'bullmq'
+    'bullmq',
+    'jose',
   ],
   experimental: {
     // Dear developer,
