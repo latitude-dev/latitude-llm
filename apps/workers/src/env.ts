@@ -8,14 +8,14 @@ export default createEnv({
     process.env.BUILDING_CONTAINER == 'true' || process.env.NODE_ENV === 'test',
   server: {
     DATABASE_URL: z.string(),
-    REDIS_HOST: z.string(),
-    REDIS_PORT: z.coerce.number().optional(),
-    REDIS_PASSWORD: z.string().optional(),
+    QUEUE_HOST: z.string(),
+    QUEUE_PORT: z.coerce.number().optional(),
+    QUEUE_PASSWORD: z.string().optional(),
   },
   runtimeEnv: {
     DATABASE_URL: process.env.DATABASE_URL,
-    REDIS_HOST: process.env.REDIS_HOST,
-    REDIS_PORT: process.env.REDIS_PORT,
-    REDIS_PASSWORD: process.env.REDIS_PASSWORD,
+    QUEUE_HOST: process.env.QUEUE_HOST,
+    QUEUE_PORT: process.env.QUEUE_PORT,
+    QUEUE_PASSWORD: process.env.QUEUE_PASSWORD,
   },
 })

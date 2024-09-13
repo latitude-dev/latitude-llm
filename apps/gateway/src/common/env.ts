@@ -19,9 +19,6 @@ export default createEnv({
     process.env.BUILDING_CONTAINER == 'true' || process.env.NODE_ENV === 'test',
   server: {
     DATABASE_URL: z.string(),
-    REDIS_HOST: z.string(),
-    REDIS_PORT: z.coerce.number().optional(),
-    REDIS_PASSWORD: z.string().optional(),
     HOSTNAME: z.string().default('localhost'),
     PORT: z.coerce.number(),
   },
