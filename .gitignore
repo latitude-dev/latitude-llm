@@ -43,7 +43,7 @@ docker/pgdata/
 # Next.js
 next-env.d.ts
 
-// File uploads in development
+# File uploads in development
 tmp
 
 # Misc

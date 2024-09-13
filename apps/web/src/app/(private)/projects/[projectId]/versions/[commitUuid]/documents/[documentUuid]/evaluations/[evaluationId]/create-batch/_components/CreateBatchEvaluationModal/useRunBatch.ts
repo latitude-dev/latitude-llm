@@ -46,7 +46,6 @@ export function useRunBatch({
         datasetId: datasetId!,
         fromLine: wantAllLines ? undefined : fromLine,
         toLine: wantAllLines ? undefined : toLine,
-        // @ts-ignore
         parameters,
       })
     },

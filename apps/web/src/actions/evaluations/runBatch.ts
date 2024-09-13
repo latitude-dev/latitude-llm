@@ -49,7 +49,7 @@ export const runBatchEvaluationAction = withDataset
       fromLine: z.number().optional(),
       toLine: z.number().optional(),
       parameters: z
-        .record(z.number())
+        .record(z.number().optional())
         .optional()
         .superRefine(async (parameters = {}, refineCtx) => {
           const metadata = await readMetadata({
