@@ -9,7 +9,7 @@ const dbPasswordSecretId = coreStack.requireOutput('dbPasswordSecretId')
 const dbEndpoint = coreStack.requireOutput('dbEndpoint')
 const dbName = coreStack.requireOutput('dbName')
 const mailerApiKeyArn = coreStack.requireOutput('mailerApiKeyArn')
-const cacheEndpoint = coreStack.requireOutput('cacheEndpoint')
+const queueEndpoint = coreStack.requireOutput('queueEndpoint')
 const awsAccessKeyArn = coreStack.requireOutput('awsAccessKeyArn')
 const awsAccessSecretArn = coreStack.requireOutput('awsAccessSecretArn')
 const sentryDsnArn = coreStack.requireOutput('sentryDsnArn')
@@ -38,7 +38,7 @@ export const environment = pulumi
   .all([
     awsAccessKey,
     awsAccessSecret,
-    cacheEndpoint,
+    queueEndpoint,
     dbUrl,
     mailerApiKey,
     sentryDsn,
@@ -50,7 +50,7 @@ export const environment = pulumi
       { name: 'HOSTNAME', value: '0.0.0.0' },
       { name: 'PORT', value: '8080' },
       { name: 'DATABASE_URL', value: dbUrl },
-      { name: 'REDIS_HOST', value: cacheEndpoint },
+      { name: 'QUEUE_HOST', value: queueEndpoint },
       { name: 'GATEWAY_HOSTNAME', value: 'gateway.latitude.so' },
       { name: 'GATEWAY_SSL', value: 'true' },
       { name: 'LATITUDE_DOMAIN', value: 'latitude.so' },

@@ -22,8 +22,8 @@ if (environment !== 'production') {
     {
       NODE_ENV: environment,
       DATABASE_URL: `postgres://latitude:secret@localhost:5432/latitude_${environment}`,
-      REDIS_PORT: '6379',
-      REDIS_HOST: '0.0.0.0',
+      QUEUE_PORT: '6379',
+      QUEUE_HOST: '0.0.0.0',
       GATEWAY_HOSTNAME: 'localhost',
       GATEWAY_PORT: '8787',
       GATEWAY_SSL: 'false',
@@ -46,9 +46,9 @@ export const env = createEnv({
   server: {
     NODE_ENV: z.string(),
     DATABASE_URL: z.string().url(),
-    REDIS_PORT: z.coerce.number().optional().default(6379),
-    REDIS_HOST: z.string(),
-    REDIS_PASSWORD: z.string().optional(),
+    QUEUE_PORT: z.coerce.number().optional().default(6379),
+    QUEUE_HOST: z.string(),
+    QUEUE_PASSWORD: z.string().optional(),
     LATITUDE_URL: z.string().url(),
     MAILER_API_KEY: z.string().optional(),
     FROM_MAILER_EMAIL: z.string(),
