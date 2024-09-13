@@ -136,7 +136,7 @@ export default function ConnectedDocumentsTable({
                   .detail({ id: document.projectId })
                   .commits.detail({ uuid: HEAD_COMMIT })
                   .documents.detail({ uuid: document.documentUuid })
-                  .evaluations.detail(document.evaluationUuid).root,
+                  .evaluations.detail(document.evaluationId).root,
               )
             }
           />

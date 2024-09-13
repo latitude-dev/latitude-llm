@@ -1,4 +1,4 @@
-import { resolve } from 'path'
+import { join, resolve } from 'path'
 import { fileURLToPath } from 'url'
 
 import { createEnv } from '@t3-oss/env-core'
@@ -9,6 +9,12 @@ const environment = process.env.NODE_ENV || 'development'
 
 const __dirname = fileURLToPath(import.meta.url)
 const pathToEnv = resolve(__dirname, `../../.env.${environment}`)
+
+const FILE_PUBLIC_PATH = 'uploads'
+const FILES_STORAGE_PATH = join(
+  __dirname,
+  `../../../../tmp/${FILE_PUBLIC_PATH}`,
+)
 
 if (environment !== 'production') {
   dotenv.populate(
@@ -25,6 +31,8 @@ if (environment !== 'production') {
       LATITUDE_URL: 'http://localhost:3000',
       FROM_MAILER_EMAIL: 'hello@latitude.so',
       DRIVE_DISK: 'local',
+      FILE_PUBLIC_PATH,
+      FILES_STORAGE_PATH,
     },
     { path: pathToEnv },
   )
@@ -49,6 +57,8 @@ export const env = createEnv({
     S3_BUCKET: z.string().optional(),
     AWS_ACCESS_KEY: z.string().optional(),
     AWS_ACCESS_SECRET: z.string().optional(),
+    FILE_PUBLIC_PATH: z.string(),
+    FILES_STORAGE_PATH: z.string(),
     DRIVE_DISK: z
       .union([z.literal('local'), z.literal('s3')])
       .optional()
@@ -59,5 +69,6 @@ export const env = createEnv({
   },
   runtimeEnv: {
     ...process.env,
+    FILE_PUBLIC_PATH: process.env.FILE_PUBLIC_PATH ?? FILE_PUBLIC_PATH,
   },
 })

@@ -13,6 +13,8 @@
     "GATEWAY_PORT",
     "GATEWAY_SSL",
     "DRIVE_DISK",
+    "FILES_STORAGE_PATH",
+    "FILE_PUBLIC_PATH",
     "AWS_REGION",
     "S3_BUCKET",
     "AWS_ACCESS_KEY",

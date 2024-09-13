@@ -1,15 +1,18 @@
-import { Text } from '@latitude-data/web-ui'
+import { Icon, Text } from '@latitude-data/web-ui'
 import Link from 'next/link'
 
 export default function BreadcrumpLink({
   name,
   href,
+  showBackIcon,
 }: {
   name: string
   href: string
+  showBackIcon?: boolean
 }) {
   return (
-    <Link href={href}>
+    <Link href={href} className='flex flex-row items-center gap-2'>
+      {showBackIcon && <Icon name='chevronLeft' color='foregroundMuted' />}
       <Text.H5 color='foregroundMuted'>{name}</Text.H5>
     </Link>
   )

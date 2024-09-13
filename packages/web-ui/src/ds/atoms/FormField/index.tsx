@@ -9,7 +9,7 @@ import {
 import { Slot } from '@radix-ui/react-slot'
 
 import { cn } from '../../../lib/utils'
-import { Label } from '../Label'
+import { BatchLabel, Label } from '../Label'
 import Text from '../Text'
 import { Tooltip } from '../Tooltip'
 
@@ -36,7 +36,7 @@ function TooltipMessage({ error }: { error: string | undefined }) {
   return <Text.H6B color='white'>{error}</Text.H6B>
 }
 
-function InlineFormMessage({
+export function InlineFormErrorMessage({
   error,
   id,
 }: {
@@ -52,7 +52,7 @@ function InlineFormMessage({
   )
 }
 
-const FormControl = forwardRef<
+export const FormControl = forwardRef<
   ElementRef<typeof Slot>,
   ComponentPropsWithRef<typeof Slot> & {
     error?: string | undefined
@@ -82,6 +82,7 @@ export type FormFieldProps = Omit<
 > & {
   children: ReactNode
   label?: string
+  badgeLabel?: boolean
   description?: string | ReactNode
   errors?: string[] | null | undefined
   errorStyle?: 'inline' | 'tooltip'
@@ -89,6 +90,7 @@ export type FormFieldProps = Omit<
 function FormField({
   children,
   label,
+  badgeLabel = false,
   description,
   className,
   errors,
@@ -99,6 +101,7 @@ function FormField({
   const formItemId = `${id}-form-item`
   const formDescriptionId = `${id}-form-item-description`
   const formMessageId = `${id}-form-item-message`
+  const LabelComponent = badgeLabel ? BatchLabel : Label
   const input = (
     <div
       className={cn('space-y-2 w-full', className)}
@@ -110,9 +113,12 @@ function FormField({
       aria-invalid={!!error}
     >
       {label ? (
-        <Label variant={error ? 'destructive' : 'default'} htmlFor={formItemId}>
+        <LabelComponent
+          variant={error ? 'destructive' : 'default'}
+          htmlFor={formItemId}
+        >
           {label}
-        </Label>
+        </LabelComponent>
       ) : null}
       <FormControl
         error={error}
@@ -128,7 +134,7 @@ function FormField({
       )}
 
       {errorStyle === 'inline' ? (
-        <InlineFormMessage error={error} id={formMessageId} />
+        <InlineFormErrorMessage error={error} id={formMessageId} />
       ) : null}
     </div>
   )

@@ -92,12 +92,13 @@ export const ROUTES = {
                         connect: {
                           root: `${evaluationsRoot}/dashboard/connect`,
                         },
+                        destroy: (id: number) =>
+                          `${evaluationsRoot}/destroy/${id}`,
                       },
-                      detail: (uuid: string) => {
-                        const detailRoot = `${evaluationsRoot}/${uuid}`
+                      detail: (id: number) => {
+                        const detailRoot = `${evaluationsRoot}/${id}`
                         return {
                           root: detailRoot,
-                          destroy: `${detailRoot}/destroy`,
                           createBatch: `${detailRoot}/create-batch`,
                         }
                       },

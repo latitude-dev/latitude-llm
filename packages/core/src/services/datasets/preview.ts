@@ -9,11 +9,13 @@ import { syncReadCsv } from '../../lib/readCsv'
 export async function previewDataset({
   dataset,
   disk = diskFactory(),
+  prependIndex,
   fromLine = 0,
   toLine = 100,
 }: {
   dataset: Dataset
   disk?: DiskWrapper
+  prependIndex?: boolean
   fromLine?: number
   toLine?: number
 }) {
@@ -30,6 +32,8 @@ export async function previewDataset({
   const csv = readResult.value!
   const rows = csv.data.map((row, i) => {
     const values = Object.values(row.record)
+    if (!prependIndex) return values
+
     values.unshift(String(i + 1))
     return values
   })

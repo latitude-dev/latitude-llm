@@ -45,7 +45,7 @@ export default function BatchEvaluationsTable({
                   .detail({ id: project.id })
                   .commits.detail({ uuid: commit.uuid })
                   .documents.detail({ uuid: document.documentUuid })
-                  .evaluations.detail(evaluation.uuid).root,
+                  .evaluations.detail(evaluation.id).root,
               )
             }
           >
@@ -57,13 +57,11 @@ export default function BatchEvaluationsTable({
             </TableCell>
             <TableCell onClick={(e) => e.stopPropagation()}>
               <Link
-                href={
-                  ROUTES.projects
-                    .detail({ id: project.id })
-                    .commits.detail({ uuid: commit.uuid })
-                    .documents.detail({ uuid: document.documentUuid })
-                    .evaluations.detail(evaluation.uuid).destroy
-                }
+                href={ROUTES.projects
+                  .detail({ id: project.id })
+                  .commits.detail({ uuid: commit.uuid })
+                  .documents.detail({ uuid: document.documentUuid })
+                  .evaluations.dashboard.destroy(evaluation.id)}
               >
                 <Icon name='trash' />
               </Link>
