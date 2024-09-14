@@ -10,7 +10,13 @@ import {
   resolve,
   vpcId,
 } from '../shared'
-import { coreStack, environment } from './shared'
+import {
+  coreStack,
+  environment,
+  sentryDsn,
+  sentryOrg,
+  sentryProject,
+} from './shared'
 
 const DNS_ADDRESS = 'app.latitude.so'
 
@@ -25,6 +31,11 @@ const image = new docker.Image('LatitudeLLMAppImage', {
     platform: 'linux/amd64',
     context: resolve('../../../'),
     dockerfile: resolve('../../../apps/web/docker/Dockerfile'),
+    args: {
+      SENTRY_DSN: sentryDsn,
+      SENTRY_ORG: sentryOrg,
+      SENTRY_PROJECT: sentryProject,
+    },
   },
   imageName: pulumi.interpolate`${repo.repositoryUrl}:latest`,
   registry: {

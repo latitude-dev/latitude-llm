@@ -9,6 +9,13 @@ on:
       - 'apps/infra/src/deployments/web.ts'
       - 'apps/infra/src/deployments/shared.ts'
       - 'packages/**'
+    secrets:
+      SENTRY_ORG:
+        required: true
+      SENTRY_PROJECT:
+        required: true
+      SENTRY_DSN:
+        required: true
 
 jobs:
   deploy:

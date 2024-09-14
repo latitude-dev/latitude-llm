@@ -29,9 +29,10 @@ const dbPassword = getSecretString(dbPasswordSecretId)
 const mailerApiKey = getSecretString(mailerApiKeyArn)
 const awsAccessKey = getSecretString(awsAccessKeyArn)
 const awsAccessSecret = getSecretString(awsAccessSecretArn)
-const sentryDsn = getSecretString(sentryDsnArn)
-const sentryOrg = getSecretString(sentryOrgArn)
-const sentryProject = getSecretString(sentryProjectArn)
+
+export const sentryDsn = getSecretString(sentryDsnArn)
+export const sentryOrg = getSecretString(sentryOrgArn)
+export const sentryProject = getSecretString(sentryProjectArn)
 
 export const dbUrl = pulumi.interpolate`postgresql://${dbUsername}:${dbPassword}@${dbEndpoint}/${dbName}?sslmode=verify-full&sslrootcert=/app/packages/core/src/assets/eu-central-1-bundle.pem`
 export const environment = pulumi
