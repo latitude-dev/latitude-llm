@@ -3,6 +3,7 @@
 import { useEffect } from 'react'
 
 import { ErrorComponent, useSession } from '@latitude-data/web-ui/browser'
+import * as Sentry from '@sentry/nextjs'
 import { NAV_LINKS } from '$/app/(private)/_lib/constants'
 import BreadcrumpLink from '$/components/BreadcrumpLink'
 import { AppLayout } from '$/components/layouts'
@@ -15,9 +16,11 @@ export default function Error({
   reset: () => void // Re-render of page
 }) {
   const session = useSession()
+
   useEffect(() => {
-    console.error(error)
+    Sentry.captureException(error)
   }, [error])
+
   return (
     <AppLayout
       currentUser={session.currentUser}

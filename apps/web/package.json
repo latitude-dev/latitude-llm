@@ -25,6 +25,7 @@
     "@lucia-auth/adapter-drizzle": "^1.0.7",
     "@monaco-editor/react": "^4.6.0",
     "@sentry/nextjs": "^8",
+    "@sentry/utils": "^8.30.0",
     "@t3-oss/env-nextjs": "^0.10.1",
     "ai": "^3.2.42",
     "bullmq": "^5.8.5",

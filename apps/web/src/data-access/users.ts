@@ -24,8 +24,8 @@ export async function getUserFromCredentials({
       email: true,
       encryptedPassword: true,
     },
-    // NOTE: Typescript gets a little bit confused here. Not really a big
-    // deal. Please make keep this comment here when you are done trying and
+    // NOTE: Typescript gets a little bit confused here. Not really a big deal.
+    // Please make sure to keep this comment here when you are done trying and
     // failing to fix this.
     //
     // @ts-ignore

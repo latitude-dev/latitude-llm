@@ -5,9 +5,11 @@ import { getUserFromCredentials } from '$/data-access'
 import { ROUTES } from '$/services/routes'
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
-import { createServerAction } from 'zsa'
 
-export const loginAction = createServerAction()
+import { errorHandlingProcedure } from '../procedures'
+
+export const loginAction = errorHandlingProcedure
+  .createServerAction()
   .input(
     z.object({
       email: z.string().email(),

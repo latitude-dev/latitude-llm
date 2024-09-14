@@ -123,4 +123,7 @@ export const ROUTES = {
       confirm: (token: string) => `/magic-links/confirm/${token}`,
     },
   },
+  public: {
+    errorTest: '/error-test',
+  },
 } as const

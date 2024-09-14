@@ -31,7 +31,7 @@ export default function LoginForm({ footer }: { footer: ReactNode }) {
           placeholder='Ex.: jon@example.com'
           errors={errors?.email}
         />
-        <Button fullWidth isLoading={isPending}>
+        <Button fullWidth isLoading={isPending && !error}>
           Login
         </Button>
 

@@ -1,23 +1,27 @@
-import { UnauthorizedError } from '@latitude-data/core/lib/errors'
 import {
   DocumentVersionsRepository,
   ProjectsRepository,
 } from '@latitude-data/core/repositories'
+import * as Sentry from '@sentry/nextjs'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
 import { z } from 'zod'
 import { createServerActionProcedure } from 'zsa'
 
-export const authProcedure = createServerActionProcedure().handler(async () => {
-  try {
-    const data = await getCurrentUser()
+export const errorHandlingProcedure = createServerActionProcedure()
+  .onError((error) => {
+    Sentry.captureException(error)
+  })
+  .handler((ctx) => ({ ...ctx }))
 
-    return {
-      session: data.session!,
-      workspace: data.workspace,
-      user: data.user,
-    }
-  } catch (err) {
-    throw new UnauthorizedError((err as Error).message)
+export const authProcedure = createServerActionProcedure(
+  errorHandlingProcedure,
+).handler(async () => {
+  const data = await getCurrentUser()
+
+  return {
+    session: data.session!,
+    workspace: data.workspace,
+    user: data.user,
   }
 })
 

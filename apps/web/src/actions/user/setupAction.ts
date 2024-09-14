@@ -5,9 +5,11 @@ import { ROUTES } from '$/services/routes'
 import setupService from '$/services/user/setupService'
 import { redirect } from 'next/navigation'
 import { z } from 'zod'
-import { createServerAction } from 'zsa'
 
-export const setupAction = createServerAction()
+import { errorHandlingProcedure } from '../procedures'
+
+export const setupAction = errorHandlingProcedure
+  .createServerAction()
   .input(
     z.object({
       name: z.string().min(1, { message: 'Name is a required field' }),
