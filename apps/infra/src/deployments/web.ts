@@ -56,6 +56,9 @@ const coreImage = new docker.Image('LatitudeLLMCoreImage', {
     platform: 'linux/amd64',
     context: resolve('../../../'),
     dockerfile: resolve('../../../packages/core/docker/Dockerfile'),
+    cacheFrom: {
+      images: [pulumi.interpolate`${coreRepo.repositoryUrl}:latest`],
+    },
   },
   imageName: pulumi.interpolate`${coreRepo.repositoryUrl}:latest`,
   registry: {

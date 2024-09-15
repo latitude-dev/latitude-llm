@@ -24,6 +24,9 @@ const image = new docker.Image('LatitudeLLMGatewayImage', {
     platform: 'linux/amd64',
     context: resolve('../../../'),
     dockerfile: resolve('../../../apps/gateway/docker/Dockerfile'),
+    cacheFrom: {
+      images: [pulumi.interpolate`${repo.repositoryUrl}:latest`],
+    },
   },
   imageName: pulumi.interpolate`${repo.repositoryUrl}:latest`,
   registry: {

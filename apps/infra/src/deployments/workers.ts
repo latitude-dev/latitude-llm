@@ -14,6 +14,9 @@ const image = new docker.Image('LatitudeLLMWorkersImage', {
     platform: 'linux/amd64',
     context: resolve('../../../'),
     dockerfile: resolve('../../../apps/workers/docker/Dockerfile'),
+    cacheFrom: {
+      images: [pulumi.interpolate`${repo.repositoryUrl}:latest`],
+    },
   },
   imageName: pulumi.interpolate`${repo.repositoryUrl}:latest`,
   registry: {
