@@ -3,18 +3,11 @@ import { Cluster } from '@pulumi/aws/ecs'
 import * as docker from '@pulumi/docker'
 import * as pulumi from '@pulumi/pulumi'
 
-import {
-  ecsSecurityGroup,
-  ecsTaskExecutionRole,
-  privateSubnets,
-  resolve,
-} from '../shared'
+import { ecsTaskExecutionRole, resolve } from '../shared'
 import { coreStack, environment } from './shared'
 
-// Create an ECR repository
 const repo = new aws.ecr.Repository('latitude-llm-workers-repo')
 
-// Build and push the Docker image
 const token = await aws.ecr.getAuthorizationToken()
 const image = new docker.Image('LatitudeLLMWorkersImage', {
   build: {
@@ -30,9 +23,7 @@ const image = new docker.Image('LatitudeLLMWorkersImage', {
   },
 })
 
-// Create a Fargate task definition
 const containerName = 'LatitudeLLMWorkersContainer'
-// Create the log group
 const logGroup = new aws.cloudwatch.LogGroup('LatitudeLLMWorkersLogGroup', {
   name: '/ecs/LatitudeLLMWorkers',
   retentionInDays: 7,
@@ -54,10 +45,17 @@ const taskDefinition = pulumi
             name: containerName,
             image: imageName,
             essential: true,
-            portMappings: [
-              { containerPort: 8080, hostPort: 8080, protocol: 'tcp' },
-            ],
             environment,
+            healthCheck: {
+              command: [
+                'CMD-SHELL',
+                'curl -f http://localhost:3000/health || exit 1',
+              ],
+              interval: 30,
+              timeout: 5,
+              retries: 3,
+              startPeriod: 60,
+            },
             logConfiguration: {
               logDriver: 'awslogs',
               options: {
@@ -78,11 +76,6 @@ export const service = new aws.ecs.Service('LatitudeLLMWorkers', {
   desiredCount: 1,
   launchType: 'FARGATE',
   forceNewDeployment: true,
-  networkConfiguration: {
-    subnets: privateSubnets.ids,
-    assignPublicIp: false,
-    securityGroups: [ecsSecurityGroup],
-  },
   tags: {
     diggest: image.repoDigest,
   },

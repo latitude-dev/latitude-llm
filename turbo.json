@@ -26,7 +26,8 @@
     "build": {
       "dependsOn": ["^build"],
       "inputs": ["$TURBO_DEFAULT$"],
-      "outputs": [".next/**", "!.next/cache/**", "dist/**"]
+      "outputs": [".next/**", "!.next/cache/**", "dist/**"],
+      "env": ["SENTRY_DSN", "SENTRY_ORG", "SENTRY_PROJECT"]
     },
     "lint": { "dependsOn": ["^lint"] },
     "tc": { "dependsOn": ["^tc"] },

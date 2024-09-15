@@ -15,12 +15,17 @@ const WORKERS = [defaultWorker]
 
 export default function startWorkers() {
   return WORKERS.flatMap((w) =>
-    w.queues.map(
-      (q) =>
-        new Worker(q, w.processor, {
-          ...WORKER_OPTS,
-          connection,
-        }),
-    ),
+    w.queues.map((q) => {
+      const worker = new Worker(q, w.processor, {
+        ...WORKER_OPTS,
+        connection,
+      })
+
+      worker.on('error', (error: Error) => {
+        console.error(error)
+      })
+
+      return worker
+    }),
   )
 }

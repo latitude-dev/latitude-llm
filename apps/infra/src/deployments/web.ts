@@ -26,24 +26,31 @@ const coreRepo = new aws.ecr.Repository('latitude-llm-core-repo')
 
 // Build and push the Docker image
 const token = await aws.ecr.getAuthorizationToken()
-const image = new docker.Image('LatitudeLLMAppImage', {
-  build: {
-    platform: 'linux/amd64',
-    context: resolve('../../../'),
-    dockerfile: resolve('../../../apps/web/docker/Dockerfile'),
-    args: {
-      SENTRY_DSN: sentryDsn,
-      SENTRY_ORG: sentryOrg,
-      SENTRY_PROJECT: sentryProject,
-    },
-  },
-  imageName: pulumi.interpolate`${repo.repositoryUrl}:latest`,
-  registry: {
-    server: repo.repositoryUrl,
-    username: token.userName,
-    password: pulumi.secret(token.password),
-  },
-})
+
+const image = pulumi.all([sentryDsn, sentryOrg, sentryProject]).apply(
+  ([sentryDsn, sentryOrg, sentryProject]) =>
+    new docker.Image('LatitudeLLMAppImage', {
+      build: {
+        platform: 'linux/amd64',
+        context: resolve('../../../'),
+        dockerfile: resolve('../../../apps/web/docker/Dockerfile'),
+        cacheFrom: {
+          images: [pulumi.interpolate`${repo.repositoryUrl}:latest`],
+        },
+        args: {
+          SENTRY_DSN: sentryDsn,
+          SENTRY_ORG: sentryOrg,
+          SENTRY_PROJECT: sentryProject,
+        },
+      },
+      imageName: pulumi.interpolate`${repo.repositoryUrl}:latest`,
+      registry: {
+        server: repo.repositoryUrl,
+        username: token.userName,
+        password: pulumi.secret(token.password),
+      },
+    }),
+)
 const coreImage = new docker.Image('LatitudeLLMCoreImage', {
   build: {
     platform: 'linux/amd64',

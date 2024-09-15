@@ -1,5 +1,8 @@
 ARG PROJECT="@latitude-data/web"
 ARG PROJECT_PATH="apps/web"
+ARG SENTRY_DSN
+ARG SENTRY_ORG
+ARG SENTRY_PROJECT
 
 FROM node:20-alpine AS alpine
 
@@ -55,6 +58,10 @@ COPY --from=pruner /app/out/full/ .
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
   BUILDING_CONTAINER=true \
+  NEXT_TELEMETRY_DISABLED=1 \ 
+  SENTRY_ORG=$SENTRY_ORG \
+  SENTRY_PROJECT=$SENTRY_PROJECT \
+  SENTRY_DSN=$SENTRY_DSN \
   pnpm turbo build --filter="${PROJECT}..."
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm prune --prod --no-optional
