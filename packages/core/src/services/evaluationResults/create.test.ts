@@ -59,7 +59,10 @@ describe('createEvaluationResult', () => {
       evaluation,
       documentLog,
       providerLog,
-      result: true,
+      result: {
+        result: true,
+        reason: 'This is a boolean result',
+      },
     })
 
     expect(result.ok).toBe(true)
@@ -70,7 +73,6 @@ describe('createEvaluationResult', () => {
     expect(result.value.providerLogId).toBe(providerLog.id)
     expect(result.value.resultableType).toBe(EvaluationResultableType.Boolean)
     expect(result.value.result).toBe(true)
-
     // Verify in database
     const dbResult = await database.query.evaluationResults.findFirst({
       where: eq(evaluationResults.id, result.value.id),
@@ -95,7 +97,10 @@ describe('createEvaluationResult', () => {
       evaluation,
       documentLog,
       providerLog,
-      result: 75,
+      result: {
+        result: 75,
+        reason: 'This is a number result',
+      },
     })
 
     expect(result.ok).toBe(true)
@@ -106,7 +111,6 @@ describe('createEvaluationResult', () => {
     expect(result.value.providerLogId).toBe(providerLog.id)
     expect(result.value.resultableType).toBe(EvaluationResultableType.Number)
     expect(result.value.result).toBe(75)
-
     // Verify in database
     const dbResult = await database.query.evaluationResults.findFirst({
       where: eq(evaluationResults.id, result.value.id),
@@ -131,7 +135,10 @@ describe('createEvaluationResult', () => {
       evaluation,
       documentLog,
       providerLog,
-      result: 'This is a text result',
+      result: {
+        result: 'This is a text result',
+        reason: 'Explanation for the text result',
+      },
     })
 
     expect(result.ok).toBe(true)
@@ -142,7 +149,6 @@ describe('createEvaluationResult', () => {
     expect(result.value.providerLogId).toBe(providerLog.id)
     expect(result.value.resultableType).toBe(EvaluationResultableType.Text)
     expect(result.value.result).toBe('This is a text result')
-
     // Verify in database
     const dbResult = await database.query.evaluationResults.findFirst({
       where: eq(evaluationResults.id, result.value.id),
@@ -168,7 +174,10 @@ describe('createEvaluationResult', () => {
       evaluation,
       documentLog,
       providerLog,
-      result: 'Some result',
+      result: {
+        result: 'Some result',
+        reason: 'Some reason',
+      },
     })
 
     expect(result.ok).toBe(false)

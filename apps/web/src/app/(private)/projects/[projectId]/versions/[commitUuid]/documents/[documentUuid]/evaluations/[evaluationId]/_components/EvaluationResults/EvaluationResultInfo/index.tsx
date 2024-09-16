@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 
-import { ProviderLog } from '@latitude-data/core/browser'
+import { ProviderLogDto } from '@latitude-data/core/browser'
 import { EvaluationResultWithMetadata } from '@latitude-data/core/repositories'
 import { TabSelector } from '@latitude-data/web-ui'
 
@@ -14,7 +14,7 @@ export function EvaluationResultInfo({
   providerLog,
 }: {
   evaluationResult: EvaluationResultWithMetadata
-  providerLog?: ProviderLog
+  providerLog?: ProviderLogDto
 }) {
   const [selectedTab, setSelectedTab] = useState<string>('metadata')
   return (

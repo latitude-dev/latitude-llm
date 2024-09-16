@@ -4,11 +4,13 @@ import {
   bigserial,
   integer,
   json,
+  jsonb,
   text,
   timestamp,
   uuid,
   varchar,
 } from 'drizzle-orm/pg-core'
+import { JSONSchema7 } from 'json-schema'
 
 import { LogSources } from '../../constants'
 import { PartialConfig } from '../../services/ai'
@@ -36,7 +38,8 @@ export const providerLogs = latitudeSchema.table('provider_logs', {
   model: varchar('model'),
   config: json('config').$type<PartialConfig>().notNull(),
   messages: json('messages').$type<Message[]>().notNull(),
-  responseText: text('response_text').$type<string>().notNull().default(''),
+  responseObject: jsonb('response_object').$type<JSONSchema7>(),
+  responseText: text('response_text').$type<string>(),
   toolCalls: json('tool_calls').$type<ToolCall[]>().notNull().default([]),
   tokens: bigint('tokens', { mode: 'number' }).notNull(),
   costInMillicents: integer('cost_in_millicents').notNull().default(0),

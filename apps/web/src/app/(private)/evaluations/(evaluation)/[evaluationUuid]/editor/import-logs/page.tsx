@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { capitalize } from 'lodash-es'
 
 import { MessageContent, TextContent } from '@latitude-data/compiler'
-import { HEAD_COMMIT } from '@latitude-data/core/browser'
+import { HEAD_COMMIT, ProviderLogDto } from '@latitude-data/core/browser'
 import {
   Badge,
   Button,
@@ -193,7 +193,9 @@ const ProviderLogMessages = ({
   providerLogUuid?: string
 }) => {
   const { data } = useProviderLogs({ documentUuid })
-  const providerLog = data?.find((log) => log.uuid === providerLogUuid)
+  const providerLog = data?.find(
+    (log) => log.uuid === providerLogUuid,
+  ) as ProviderLogDto
   if (!providerLog) {
     return (
       <div className='flex flex-col items-center justify-center rounded-lg border border-2 bg-secondary p-4 h-[480px]'>
@@ -225,7 +227,7 @@ const ProviderLogMessages = ({
             <Badge variant={roleVariant('assistant')}>Assistant</Badge>
           </div>
           <div className='pl-4'>
-            <Text.H6M>{printMessageContent(providerLog.responseText)}</Text.H6M>
+            <Text.H6M>{printMessageContent(providerLog.response)}</Text.H6M>
           </div>
         </div>
       </div>

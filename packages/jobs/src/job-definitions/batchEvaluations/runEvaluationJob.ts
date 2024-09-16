@@ -40,12 +40,10 @@ export const runEvaluationJob = async (job: Job<RunEvaluationJobData>) => {
       .find(evaluationId)
       .then((r) => r.unwrap())
 
-    const { response } = await runEvaluation({
+    await runEvaluation({
       documentLog,
       evaluation,
     }).then((r) => r.unwrap())
-
-    await response
 
     await progressTracker.incrementCompleted()
   } catch (error) {

@@ -1,18 +1,11 @@
-import { ToolCall } from '@latitude-data/compiler'
-import { CompletionTokenUsage } from 'ai'
-
 import {
   ChainCallResponse,
-  LogSources,
   MagicLinkToken,
   Membership,
-  Message,
-  Providers,
+  ProviderLog,
   User,
 } from '../../browser'
-import { PartialConfig } from '../../services/ai'
 import { createEvaluationResultJob } from './createEvaluationResultJob'
-import { createProviderLogJob } from './createProviderLogJob'
 import { createDocumentLogJob } from './documentLogs/createJob'
 import { sendInvitationToUserJob } from './sendInvitationToUser'
 import { sendMagicLinkJob } from './sendMagicLinkHandler'
@@ -31,24 +24,6 @@ export type EventHandler<E extends LatitudeEvent> = ({
   data: E
 }) => void
 
-export type AIProviderCallCompleted = LatitudeEventGeneric<
-  'aiProviderCallCompleted',
-  {
-    uuid: string
-    source: LogSources
-    generatedAt: Date
-    documentLogUuid?: string
-    providerId: number
-    providerType: Providers
-    model: string
-    config: PartialConfig
-    messages: Message[]
-    responseText: string
-    toolCalls?: ToolCall[]
-    usage: CompletionTokenUsage
-    duration: number
-  }
->
 export type MagicLinkTokenCreated = LatitudeEventGeneric<
   'magicLinkTokenCreated',
   MagicLinkToken
@@ -83,28 +58,33 @@ export type DocumentRunEvent = LatitudeEventGeneric<
   }
 >
 
+export type ProviderLogCreatedEvent = LatitudeEventGeneric<
+  'providerLogCreated',
+  ProviderLog
+>
+
 export type LatitudeEvent =
   | MembershipCreatedEvent
   | UserCreatedEvent
   | MagicLinkTokenCreated
-  | AIProviderCallCompleted
   | EvaluationRunEvent
   | DocumentRunEvent
+  | ProviderLogCreatedEvent
 
 export interface IEventsHandlers {
-  aiProviderCallCompleted: EventHandler<AIProviderCallCompleted>[]
   magicLinkTokenCreated: EventHandler<MagicLinkTokenCreated>[]
   membershipCreated: EventHandler<MembershipCreatedEvent>[]
   userCreated: EventHandler<UserCreatedEvent>[]
   evaluationRun: EventHandler<EvaluationRunEvent>[]
   documentRun: EventHandler<DocumentRunEvent>[]
+  providerLogCreated: EventHandler<ProviderLogCreatedEvent>[]
 }
 
 export const EventHandlers: IEventsHandlers = {
   magicLinkTokenCreated: [sendMagicLinkJob],
   membershipCreated: [sendInvitationToUserJob],
   userCreated: [],
-  aiProviderCallCompleted: [createProviderLogJob],
   evaluationRun: [createEvaluationResultJob],
   documentRun: [createDocumentLogJob],
+  providerLogCreated: [],
 } as const

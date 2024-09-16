@@ -1,4 +1,5 @@
 import { EvaluationRunEvent } from '.'
+import { ChainObjectResponse } from '../../constants'
 import {
   unsafelyFindDocumentLogByUuid,
   unsafelyFindEvaluation,
@@ -28,6 +29,6 @@ export const createEvaluationResultJob = async ({
     evaluation,
     documentLog,
     providerLog,
-    result: response.text,
+    result: (response as ChainObjectResponse).object,
   }).then((r) => r.unwrap())
 }

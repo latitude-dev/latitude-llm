@@ -2,7 +2,7 @@
 
 import { compact } from 'lodash-es'
 
-import type { ProviderLog } from '@latitude-data/core/browser'
+import { ProviderLogDto } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui'
 import {
   getProviderLogAction,
@@ -19,10 +19,10 @@ export default function useProviderLogs(
 ) {
   const { toast } = useToast()
   const {
-    data = undefined,
+    data = [],
     isLoading,
     error: swrError,
-  } = useSWR<ProviderLog[] | undefined>(
+  } = useSWR<ProviderLogDto[]>(
     compact(['providerLogs', documentUuid, documentLogUuid]),
     async () => {
       const [data, error] = await getProviderLogsAction({
@@ -38,10 +38,11 @@ export default function useProviderLogs(
           description: error.formErrors?.[0] || error.message,
           variant: 'destructive',
         })
-        return undefined
+
+        return []
       }
 
-      return data as ProviderLog[]
+      return data
     },
     opts,
   )
@@ -62,7 +63,7 @@ export function useProviderLog(
     data = undefined,
     isLoading,
     error: swrError,
-  } = useSWR<ProviderLog | undefined>(
+  } = useSWR<ProviderLogDto | undefined>(
     compact(['providerLog', providerLogId]),
     async () => {
       if (!providerLogId) return undefined
@@ -82,7 +83,7 @@ export function useProviderLog(
         return undefined
       }
 
-      return data as ProviderLog
+      return data
     },
     opts,
   )

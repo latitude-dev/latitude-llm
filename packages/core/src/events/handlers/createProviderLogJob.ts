@@ -1,10 +1,15 @@
-import { AIProviderCallCompleted } from '.'
-import { createProviderLog } from '../../services/providerLogs'
+import {
+  createProviderLog,
+  CreateProviderLogProps,
+} from '../../services/providerLogs'
 
 export const createProviderLogJob = async ({
-  data: event,
+  data,
 }: {
-  data: AIProviderCallCompleted
+  data: Omit<CreateProviderLogProps, 'generatedAt'> & { generatedAt: string }
 }) => {
-  await createProviderLog(event.data)
+  return await createProviderLog({
+    ...data,
+    generatedAt: new Date(data.generatedAt),
+  }).then((r) => r.unwrap())
 }

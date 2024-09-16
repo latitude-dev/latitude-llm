@@ -2,7 +2,12 @@ import type {
   Message as CompilerMessage,
   ToolCall,
 } from '@latitude-data/compiler'
-import { CompletionTokenUsage, CoreTool, TextStreamPart } from 'ai'
+import {
+  CompletionTokenUsage,
+  CoreTool,
+  ObjectStreamPart,
+  TextStreamPart,
+} from 'ai'
 
 import { Config } from './services/ai'
 
@@ -34,14 +39,24 @@ export const HELP_CENTER = {
   commitVersions: `${LATITUDE_DOCS_URL}/not-found`,
 }
 
-export type ChainStepCallResponse = {
+export type ChainStepTextResponse = {
+  text: string
+  usage: CompletionTokenUsage
+  toolCalls: ToolCall[]
+}
+export type ChainStepObjectResponse = {
+  object: any
   text: string
   usage: CompletionTokenUsage
 }
-export type ChainCallResponse = ChainStepCallResponse & {
+
+export type ChainTextResponse = ChainStepTextResponse & {
   documentLogUuid: string
-  toolCalls: ToolCall[]
 }
+export type ChainObjectResponse = ChainStepObjectResponse & {
+  documentLogUuid: string
+}
+export type ChainCallResponse = ChainTextResponse | ChainObjectResponse
 
 export enum Providers {
   OpenAI = 'openai',
@@ -69,7 +84,9 @@ export enum ChainEventTypes {
   StepComplete = 'chain-step-complete',
 }
 
-type ProviderData = TextStreamPart<Record<string, CoreTool>>
+export type ProviderData =
+  | TextStreamPart<Record<string, CoreTool>>
+  | ObjectStreamPart<Record<string, CoreTool>>
 export type ProviderDataType = ProviderData['type']
 
 type LatitudeEventData =
@@ -81,12 +98,13 @@ type LatitudeEventData =
     }
   | {
       type: ChainEventTypes.StepComplete
-      response: ChainStepCallResponse
+      response: ChainCallResponse
     }
   | {
       type: ChainEventTypes.Complete
       config: Config
-      messages: Message[]
+      messages?: Message[]
+      object?: any
       response: ChainCallResponse
     }
   | {
