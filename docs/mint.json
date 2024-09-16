@@ -53,7 +53,10 @@
         "group": "Evaluations",
         "pages": [
           "guides/evaluations/overview",
-          "guides/evaluations/running-evaluations"
+          "guides/evaluations/running-evaluations",
+          "guides/evaluations/numeric-evals",
+          "guides/evaluations/boolean-evals",
+          "guides/evaluations/text-evals"
         ]
       },
       {
