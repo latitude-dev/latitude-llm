@@ -4,10 +4,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { EvaluationDto } from '@latitude-data/core/browser'
 import { ProgressIndicator, useCurrentDocument } from '@latitude-data/web-ui'
-import {
-  useSockets,
-  type EventArgs,
-} from '$/components/Providers/WebsocketsProvider/useSockets'
+import { type EventArgs } from '$/components/Providers/WebsocketsProvider/useSockets'
 
 const DISAPERING_IN_MS = 1500
 export function EvaluationStatusBanner({
@@ -18,7 +15,10 @@ export function EvaluationStatusBanner({
   const timeoutRef = useRef<number | null>(null)
   const [jobs, setJobs] = useState<EventArgs<'evaluationStatus'>[]>([])
   const document = useCurrentDocument()
-  const onMessage = useCallback(
+
+  // FIXME: Remove this line when infra is ready
+  // @ts-ignore
+  const _onMessage = useCallback(
     (args: EventArgs<'evaluationStatus'>) => {
       if (evaluation.id !== args.evaluationId) return
       if (document.documentUuid !== args.documentUuid) return
@@ -56,7 +56,8 @@ export function EvaluationStatusBanner({
     }
   }, [])
 
-  useSockets({ event: 'evaluationStatus', onMessage })
+  // TODO: Implement websockets infra
+  // useSockets({ event: 'evaluationStatus', onMessage })
 
   return (
     <>

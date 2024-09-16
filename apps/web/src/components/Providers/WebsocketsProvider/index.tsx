@@ -44,6 +44,8 @@ export function useSocketConnection({
   >(
     `${socketServer}/web`, // namespace
     {
+      // FIXME: Remove this line when infra is ready
+      autoConnect: false,
       path: '/websocket', // Socket server endpoint
       withCredentials: true, // Cookies cross-origin
       transports: ['websocket'],

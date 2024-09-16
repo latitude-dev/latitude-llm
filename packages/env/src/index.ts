@@ -21,6 +21,7 @@ if (environment !== 'production') {
     process.env as DotenvPopulateInput,
     {
       NODE_ENV: environment,
+      FROM_MAILER_EMAIL: 'hello@latitude.so',
       DATABASE_URL: `postgres://latitude:secret@localhost:5432/latitude_${environment}`,
       QUEUE_PORT: '6379',
       QUEUE_HOST: '0.0.0.0',
@@ -29,16 +30,13 @@ if (environment !== 'production') {
       GATEWAY_SSL: 'false',
       LATITUDE_DOMAIN: 'latitude.so',
       LATITUDE_URL: 'http://localhost:3000',
-      FROM_MAILER_EMAIL: 'hello@latitude.so',
-      DRIVE_DISK: 'local',
-      FILE_PUBLIC_PATH,
-      FILES_STORAGE_PATH,
       WEBSOCKETS_SERVER: 'http://localhost:4002',
       WEBSOCKET_SECRET_TOKEN_KEY: 'secret-token-key',
       WEBSOCKET_REFRESH_SECRET_TOKEN_KEY: 'refresh-refresh-token-key',
       WORKERS_WEBSOCKET_SECRET_TOKEN: 'workers-secret-token',
-      APP_DOMAIN: 'localhost:3000',
-      APP_SUBDOMAIN: 'app',
+      DRIVE_DISK: 'local',
+      FILE_PUBLIC_PATH,
+      FILES_STORAGE_PATH,
     },
     { path: pathToEnv },
   )
@@ -76,15 +74,9 @@ export const env = createEnv({
     WEBSOCKET_SECRET_TOKEN_KEY: z.string(),
     WORKERS_WEBSOCKET_SECRET_TOKEN: z.string(),
     WEBSOCKET_REFRESH_SECRET_TOKEN_KEY: z.string(),
-    APP_DOMAIN: z.string(),
-    APP_SUBDOMAIN: z.string().optional(),
   },
   runtimeEnv: {
     ...process.env,
-    WEBSOCKETS_SERVER:
-      process.env.WEBSOCKETS_SERVER ?? 'https://ws.latitude.so',
-    APP_DOMAIN: process.env.APP_DOMAIN ?? 'latitude.so',
-    APP_SUBDOMAIN: process.env.APP_SUBDOMAIN ?? 'app',
     FILE_PUBLIC_PATH: process.env.FILE_PUBLIC_PATH ?? FILE_PUBLIC_PATH,
     // FIXME: Infra needed
     WEBSOCKET_SECRET_TOKEN_KEY: 'secret-token-key',

@@ -36,15 +36,11 @@ app.get('/health', (_, res) => {
   res.json({ status: 'Websockets server running' })
 })
 
-const isProd = process.env.NODE_ENV === 'production'
 const server = http.createServer(app)
-const subdomain = env.APP_SUBDOMAIN ? `${env.APP_SUBDOMAIN}.` : ''
 const io = new Server(server, {
   path: '/websocket',
   cors: {
-    origin: isProd
-      ? `https://${subdomain}${env.APP_DOMAIN}`
-      : 'http://localhost:3000',
+    origin: env.LATITUDE_URL,
     credentials: true,
     methods: ['GET', 'POST'],
   },
