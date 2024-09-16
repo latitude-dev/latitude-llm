@@ -50,7 +50,7 @@ export default function Playground({
       setInputs({
         messages: JSON.stringify(formatConversation(providerLog)),
         context: JSON.stringify(formatContext(providerLog)),
-        response: providerLog.responseText,
+        response: providerLog.response,
         prompt: '',
         parameters: '',
         config: '',

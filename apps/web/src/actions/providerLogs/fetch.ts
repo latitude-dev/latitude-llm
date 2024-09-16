@@ -1,6 +1,7 @@
 'use server'
 
 import { ProviderLogsRepository } from '@latitude-data/core/repositories'
+import providerLogPresenter from '$/presenters/providerLogPresenter'
 import { z } from 'zod'
 
 import { authProcedure } from '../procedures'
@@ -30,7 +31,7 @@ export const getProviderLogsAction = authProcedure
       result = await scope.findAll({ limit: 1000 }).then((r) => r.unwrap())
     }
 
-    return result
+    return result.map(providerLogPresenter)
   })
 
 export const getProviderLogAction = authProcedure
@@ -39,5 +40,8 @@ export const getProviderLogAction = authProcedure
   .handler(async ({ input, ctx }) => {
     const { providerLogId } = input
     const scope = new ProviderLogsRepository(ctx.workspace.id)
-    return await scope.find(providerLogId).then((r) => r.unwrap())
+    return await scope
+      .find(providerLogId)
+      .then((r) => r.unwrap())
+      .then(providerLogPresenter)
   })

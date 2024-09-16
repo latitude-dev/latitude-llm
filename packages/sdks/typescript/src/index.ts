@@ -1,5 +1,5 @@
 import type { Message } from '@latitude-data/compiler'
-import { LogSources } from '@latitude-data/core/browser'
+import { ChainCallResponse, LogSources } from '@latitude-data/core/browser'
 import env from '$sdk/env'
 import { GatewayApiConfig, RouteResolver } from '$sdk/utils'
 import {
@@ -9,15 +9,6 @@ import {
   UrlParams,
 } from '$sdk/utils/types'
 
-type ChainCallResponse = {
-  documentLogUuid: string
-  text: string
-  usage: {
-    promptTokens: number
-    completionTokens: number
-    totalTokens: number
-  }
-}
 export type StreamChainResponse = {
   conversation: Message[]
   response: ChainCallResponse
@@ -115,7 +106,7 @@ export class LatitudeSdk {
     const reader = body.getReader()
 
     const conversation: Message[] = []
-    let chainResponse: ChainCallResponse | null = null
+    let chainResponse: ChainCallResponse
     while (true) {
       const { done, value } = await reader.read()
 
@@ -131,7 +122,7 @@ export class LatitudeSdk {
         // in a new package. Now they are in `core` but I don't want to depend on core
         // just for this. We need these enums in production not only as a dev dependency.
         if (chunk.event === 'latitude-event') {
-          const messages = 'messages' in chunk.data ? chunk.data.messages : []
+          const messages = 'messages' in chunk.data ? chunk.data.messages! : []
           if (messages.length > 0) {
             // At the moment all message.content should be a string
             // but in the future this could be an image or other type

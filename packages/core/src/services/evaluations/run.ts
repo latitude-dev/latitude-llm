@@ -1,6 +1,12 @@
 import { createChain, readMetadata } from '@latitude-data/compiler'
+import { JSONSchema7 } from 'json-schema'
 
-import { DocumentLog, EvaluationDto, LogSources } from '../../browser'
+import {
+  DocumentLog,
+  EvaluationDto,
+  EvaluationResultableType,
+  LogSources,
+} from '../../browser'
 import { database } from '../../client'
 import { findLastProviderLogFromDocumentLogUuid } from '../../data-access'
 import { publisher } from '../../events/publisher'
@@ -9,6 +15,20 @@ import { runChain } from '../chains/run'
 import { computeDocumentLogWithMetadata } from '../documentLogs'
 import { buildProviderApikeysMap } from '../providerApiKeys/buildMap'
 import { formatContext, formatConversation } from '../providerLogs'
+
+// Helper function to get the result schema based on evaluation type
+const getResultSchema = (type: EvaluationResultableType): JSONSchema7 => {
+  switch (type) {
+    case EvaluationResultableType.Boolean:
+      return { type: 'boolean' }
+    case EvaluationResultableType.Number:
+      return { type: 'number' }
+    case EvaluationResultableType.Text:
+      return { type: 'string' }
+    default:
+      throw new Error(`Unsupported evaluation type: ${type}`)
+  }
+}
 
 export const runEvaluation = async (
   {
@@ -32,12 +52,11 @@ export const runEvaluation = async (
     )
   }
 
-  const rezult = await computeDocumentLogWithMetadata(documentLog)
-  if (rezult.error) return rezult
-  const documentLogWithMetadata = rezult.value
+  const documentLogWithMetadataResult =
+    await computeDocumentLogWithMetadata(documentLog)
+  if (documentLogWithMetadataResult.error) return documentLogWithMetadataResult
+  const documentLogWithMetadata = documentLogWithMetadataResult.value
 
-  // TODO: This will need to become polymorphic in the future given different
-  // types of evaluations
   const metadata = await readMetadata({ prompt: documentLog.resolvedContent })
   const chain = createChain({
     prompt: evaluation.metadata.prompt,
@@ -50,21 +69,37 @@ export const runEvaluation = async (
       config: metadata.config,
       duration: documentLogWithMetadata.duration,
       cost: documentLogWithMetadata.costInMillicents
-        ? documentLogWithMetadata.costInMillicents * 1000
+        ? documentLogWithMetadata.costInMillicents / 1000
         : 0,
     },
   })
 
-  const result = await runChain({
+  // Use the helper function to get the result schema
+  const resultSchema = getResultSchema(evaluation.configuration.type)
+
+  const schema: JSONSchema7 = {
+    type: 'object',
+    properties: {
+      result: resultSchema,
+      reason: { type: 'string' },
+    },
+    required: ['result', 'reason'],
+  }
+
+  const chainResult = await runChain({
     chain,
     source: LogSources.Evaluation,
     apikeys: await buildProviderApikeysMap({
       workspaceId: evaluation.workspaceId,
     }),
+    configOverrides: {
+      schema,
+      output: 'object',
+    },
   })
-  if (result.error) return result
+  if (chainResult.error) return chainResult
 
-  result.value.response.then((response) => {
+  chainResult.value.response.then((response) => {
     publisher.publish({
       type: 'evaluationRun',
       data: {
@@ -76,5 +111,5 @@ export const runEvaluation = async (
     })
   })
 
-  return result
+  return chainResult
 }

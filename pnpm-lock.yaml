@@ -615,6 +615,9 @@ importers:
       '@t3-oss/env-core':
         specifier: ^0.11.1
         version: 0.11.1(typescript@5.6.2)(zod@3.23.8)
+      '@types/json-schema':
+        specifier: ^7.0.15
+        version: 7.0.15
       '@types/lodash-es':
         specifier: ^4.17.12
         version: 4.17.12
@@ -654,6 +657,9 @@ importers:
       jose:
         specifier: ^5.8.0
         version: 5.9.2
+      json-schema:
+        specifier: ^0.4.0
+        version: 0.4.0
       lodash-es:
         specifier: ^4.17.21
         version: 4.17.21

@@ -1,13 +1,18 @@
 import { Chain, MessageRole } from '@latitude-data/compiler'
+import { CoreTool, ObjectStreamPart, TextStreamPart } from 'ai'
+import { JSONSchema7 } from 'json-schema'
 import { v4 } from 'uuid'
 import { ZodError } from 'zod'
 
-import { ProviderApiKey } from '../../browser'
+import { objectToString, ProviderApiKey } from '../../browser'
 import {
   ChainCallResponse,
   ChainEvent,
   ChainEventTypes,
+  ChainObjectResponse,
+  ChainTextResponse,
   LogSources,
+  ProviderData,
   StreamEventTypes,
 } from '../../constants'
 import { NotFoundError, Result, UnprocessableEntityError } from '../../lib'
@@ -21,11 +26,16 @@ export async function runChain({
   apikeys,
   source,
   generateUUID = v4,
+  configOverrides,
 }: {
   chain: Chain
   generateUUID?: () => string
   source: LogSources
   apikeys: CachedApiKeys
+  configOverrides?: {
+    schema: JSONSchema7
+    output: 'object' | 'array' | 'no-schema'
+  }
 }) {
   const documentLogUuid = generateUUID()
 
@@ -46,6 +56,7 @@ export async function runChain({
         apikeys,
         controller,
         documentLogUuid,
+        configOverrides,
       })
         .then(responseResolve)
         .catch(responseReject)
@@ -70,6 +81,7 @@ async function iterate({
   previousCount = 0,
   previousResponse,
   documentLogUuid,
+  configOverrides,
 }: {
   source: LogSources
   chain: Chain
@@ -78,20 +90,14 @@ async function iterate({
   previousCount?: number
   previousApiKey?: ProviderApiKey
   documentLogUuid: string
-  previousResponse?: {
-    text: string
-    usage: Record<string, unknown>
+  previousResponse?: ChainTextResponse
+  configOverrides?: {
+    schema: JSONSchema7
+    output: 'object' | 'array' | 'no-schema'
   }
 }) {
   try {
-    const {
-      newMessagesInStep,
-      conversation,
-      completed,
-      config,
-      apiKey,
-      sentCount,
-    } = await doChainStep({
+    const stepResult = await computeStepData({
       chain,
       previousResponse,
       apikeys,
@@ -99,35 +105,91 @@ async function iterate({
       sentCount: previousCount,
     })
 
-    enqueueChainEvent(controller, {
-      data: {
-        type: ChainEventTypes.Step,
-        isLastStep: completed,
-        config: conversation.config as Config,
-        messages: newMessagesInStep,
-      },
-      event: StreamEventTypes.Latitude,
-    })
+    publishStepStartEvent(controller, stepResult)
 
-    const result = await ai({
+    const aiResult = await ai({
       source,
       documentLogUuid,
-      messages: conversation.messages,
-      config: config,
-      provider: apiKey,
+      messages: stepResult.conversation.messages,
+      config: stepResult.config,
+      provider: stepResult.apiKey,
+      schema: configOverrides?.schema,
+      output: configOverrides?.output,
+      transactionalLogs: stepResult.completed,
     })
 
-    for await (const value of streamToGenerator(result.fullStream)) {
-      enqueueChainEvent(controller, {
-        event: StreamEventTypes.Provider,
-        data: value,
+    await streamAIResult(controller, aiResult)
+
+    const response = await createChainResponse(aiResult, documentLogUuid)
+
+    if (stepResult.completed) {
+      await handleCompletedChain(controller, stepResult, response)
+      return response
+    } else {
+      publishStepCompleteEvent(controller, response)
+
+      return iterate({
+        source,
+        chain,
+        documentLogUuid,
+        apikeys,
+        controller,
+        previousApiKey: stepResult.apiKey,
+        previousCount: stepResult.sentCount,
+        previousResponse: response as ChainTextResponse,
+        configOverrides,
       })
     }
+  } catch (error) {
+    handleIterationError(controller, error)
+    throw error
+  }
+}
 
-    // TODO: The type on `ai` package return a different definition for `toolCalls`
-    // than `@latitude-data/compiler` package. We have to unify the naming.
-    // For now no toolCalls
-    const response: ChainCallResponse = {
+// Helper functions
+
+function publishStepStartEvent(
+  controller: ReadableStreamDefaultController,
+  stepResult: Awaited<ReturnType<typeof computeStepData>>,
+) {
+  enqueueChainEvent(controller, {
+    data: {
+      type: ChainEventTypes.Step,
+      isLastStep: stepResult.completed,
+      config: stepResult.conversation.config as Config,
+      messages: stepResult.newMessagesInStep,
+    },
+    event: StreamEventTypes.Latitude,
+  })
+}
+
+async function streamAIResult(
+  controller: ReadableStreamDefaultController,
+  result: Awaited<ReturnType<typeof ai>>,
+) {
+  for await (const value of streamToGenerator<
+    TextStreamPart<Record<string, CoreTool>> | ObjectStreamPart<unknown>
+  >(result.fullStream)) {
+    enqueueChainEvent(controller, {
+      event: StreamEventTypes.Provider,
+      data: value as unknown as ProviderData,
+    })
+  }
+}
+
+async function createChainResponse(
+  result: Awaited<ReturnType<typeof ai>>,
+  documentLogUuid: string,
+): Promise<ChainCallResponse> {
+  if (result.object) {
+    return {
+      text: objectToString(await result.object),
+      object: await result.object,
+      usage: await result.usage,
+      documentLogUuid,
+    }
+  } else {
+    return {
       documentLogUuid,
       text: await result.text,
       usage: await result.usage,
@@ -137,80 +199,90 @@ async function iterate({
         arguments: t.args,
       })),
     }
+  }
+}
 
-    if (completed) {
-      const completedResponse = {
-        ...response,
-        documentLogUuid,
-      }
-      enqueueChainEvent(controller, {
-        event: StreamEventTypes.Latitude,
-        data: {
-          type: ChainEventTypes.Complete,
-          config: conversation.config as Config,
-          messages: [
-            {
-              role: MessageRole.assistant,
-              toolCalls: response.toolCalls,
-              content: response.text,
-            },
-          ],
-          response: completedResponse,
-        },
-      })
+async function handleCompletedChain(
+  controller: ReadableStreamDefaultController,
+  stepResult: Awaited<ReturnType<typeof computeStepData>>,
+  response: ChainCallResponse,
+) {
+  const eventData = {
+    type: ChainEventTypes.Complete,
+    config: stepResult.conversation.config as Config,
+    response,
+  } as const
 
-      controller.close()
-
-      return completedResponse
-    } else {
-      enqueueChainEvent(controller, {
-        event: StreamEventTypes.Latitude,
-        data: {
-          type: ChainEventTypes.StepComplete,
-          response,
+  if ('text' in response) {
+    Object.assign(eventData, {
+      messages: [
+        {
+          role: MessageRole.assistant,
+          toolCalls: (response as ChainTextResponse).toolCalls || [],
+          content: response.text || '',
         },
-      })
-      return iterate({
-        source,
-        chain,
-        documentLogUuid,
-        apikeys,
-        controller,
-        previousApiKey: apiKey,
-        previousCount: sentCount,
-        previousResponse: response,
-      })
-    }
-  } catch (e) {
-    const error = e as Error
-    enqueueChainEvent(controller, {
-      event: StreamEventTypes.Latitude,
-      data: {
-        type: ChainEventTypes.Error,
-        error: {
-          name: error.name,
-          message: error.message,
-          stack: error.stack,
-        },
-      },
+      ],
     })
-    controller.close()
+  } else if ('object' in response) {
+    Object.assign(eventData, {
+      object: (response as ChainObjectResponse).object,
+      text: objectToString((response as ChainObjectResponse).object),
+    })
+  }
 
-    if (error instanceof ZodError) {
-      throw new UnprocessableEntityError(
-        'Error validating document configuration',
-        error.formErrors.fieldErrors,
-      )
-    } else {
-      throw error
-    }
+  enqueueChainEvent(controller, {
+    event: StreamEventTypes.Latitude,
+    data: eventData,
+  })
+
+  controller.close()
+}
+
+function publishStepCompleteEvent(
+  controller: ReadableStreamDefaultController,
+  response: ChainCallResponse,
+) {
+  enqueueChainEvent(controller, {
+    event: StreamEventTypes.Latitude,
+    data: {
+      type: ChainEventTypes.StepComplete,
+      response: response,
+    },
+  })
+}
+
+function handleIterationError(
+  controller: ReadableStreamDefaultController,
+  error: unknown,
+) {
+  const chainError =
+    error instanceof Error ? error : new Error('An unknown error occurred')
+
+  enqueueChainEvent(controller, {
+    event: StreamEventTypes.Latitude,
+    data: {
+      type: ChainEventTypes.Error,
+      error: {
+        name: chainError.name,
+        message: chainError.message,
+        stack: chainError.stack,
+      },
+    },
+  })
+  controller.close()
+
+  if (error instanceof ZodError) {
+    throw new UnprocessableEntityError(
+      'Error validating document configuration',
+      error.formErrors.fieldErrors,
+    )
   }
 }
 
 /**
  *  Performs some common operations needed for processing an iteration step
  **/
-async function doChainStep({
+async function computeStepData({
   chain,
   apikeys,
   previousResponse,
@@ -219,7 +291,7 @@ async function doChainStep({
 }: {
   chain: Chain
   apikeys: CachedApiKeys
-  previousResponse?: { text: string; usage: Record<string, unknown> }
+  previousResponse?: ChainTextResponse
   apiKey?: ProviderApiKey
   sentCount: number
 }) {

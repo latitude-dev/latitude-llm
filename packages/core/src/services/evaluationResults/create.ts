@@ -17,7 +17,7 @@ export type CreateEvaluationResultProps = {
   evaluation: Evaluation | EvaluationDto
   documentLog: DocumentLog
   providerLog: ProviderLog
-  result: number | string | boolean
+  result: { result: number | string | boolean; reason: string }
 }
 
 export async function createEvaluationResult(
@@ -44,7 +44,11 @@ export async function createEvaluationResult(
         )
     }
 
-    const metadata = await trx.insert(table).values({ result }).returning()
+    // TODO: store the reason
+    const metadata = await trx
+      .insert(table)
+      .values({ result: result.result })
+      .returning()
     const inserts = await trx
       .insert(evaluationResults)
       .values({

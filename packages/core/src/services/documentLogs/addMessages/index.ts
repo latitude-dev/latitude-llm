@@ -1,4 +1,5 @@
 import { Message, MessageRole } from '@latitude-data/compiler'
+import { CoreTool, ObjectStreamPart, TextStreamPart } from 'ai'
 
 import {
   ChainCallResponse,
@@ -6,7 +7,9 @@ import {
   ChainEventTypes,
   DocumentLog,
   LogSources,
+  objectToString,
   ProviderApiKey,
+  ProviderData,
   StreamEventTypes,
   Workspace,
 } from '../../../browser'
@@ -64,7 +67,9 @@ export async function addMessages({
           ...providerLog.messages,
           {
             role: MessageRole.assistant,
-            content: providerLog.responseText,
+            content:
+              providerLog.responseText ||
+              objectToString(providerLog.responseObject),
             toolCalls: providerLog.toolCalls,
           },
           ...messages,
@@ -75,10 +80,6 @@ export async function addMessages({
     },
   })
 
-  // Dummy handling of the response
-  // This is helpful for not throwing the error
-  // when no one is listening to the promise
-  response.then(() => {}).catch(() => {})
   return Result.ok({ stream, response })
 }
 
@@ -106,22 +107,27 @@ async function streamMessageResponse({
       source,
     })
 
-    for await (const value of streamToGenerator(result.fullStream)) {
+    for await (const value of streamToGenerator<
+      TextStreamPart<Record<string, CoreTool>> | ObjectStreamPart<unknown>
+    >(result.fullStream)) {
       enqueueChainEvent(controller, {
         event: StreamEventTypes.Provider,
-        data: value,
+        data: value as unknown as ProviderData,
       })
     }
 
     const response = {
       documentLogUuid,
+      object: await result.object,
       text: await result.text,
       usage: await result.usage,
-      toolCalls: (await result.toolCalls).map((t) => ({
-        id: t.toolCallId,
-        name: t.toolName,
-        arguments: t.args,
-      })),
+      toolCalls: result.toolCalls
+        ? (await result.toolCalls).map((t) => ({
+            id: t.toolCallId,
+            name: t.toolName,
+            arguments: t.args,
+          }))
+        : [],
     }
     enqueueChainEvent(controller, {
       event: StreamEventTypes.Latitude,
@@ -132,14 +138,22 @@ async function streamMessageResponse({
           {
             role: MessageRole.assistant,
             toolCalls: response.toolCalls,
-            content: response.text,
+            content: response.text || objectToString(response.object),
           },
         ],
-        response,
+        response: {
+          ...response,
+          text: response.text || objectToString(response.object),
+        },
       },
     })
+
     controller.close()
-    return response
+
+    return {
+      ...response,
+      text: response.text || objectToString(response.object),
+    }
   } catch (e) {
     const error = e as Error
     enqueueChainEvent(controller, {

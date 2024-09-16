@@ -1,6 +1,6 @@
 import { ReactNode } from 'react'
 
-import { ProviderLog } from '@latitude-data/core/browser'
+import { ProviderLogDto } from '@latitude-data/core/browser'
 import { EvaluationResultWithMetadata } from '@latitude-data/core/repositories'
 import {
   ClickToCopy,
@@ -48,7 +48,7 @@ export function EvaluationResultMetadata({
   providerLog,
 }: {
   evaluationResult: EvaluationResultWithMetadata
-  providerLog?: ProviderLog
+  providerLog?: ProviderLogDto
 }) {
   const { data: providers, isLoading: providersLoading } = useProviderApiKeys()
 

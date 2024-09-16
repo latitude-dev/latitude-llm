@@ -1,6 +1,6 @@
 import { ReactNode, useMemo } from 'react'
 
-import { ProviderLog } from '@latitude-data/core/browser'
+import { ProviderLogDto } from '@latitude-data/core/browser'
 import { DocumentLogWithMetadata } from '@latitude-data/core/repositories'
 import {
   ClickToCopy,
@@ -48,7 +48,7 @@ export function DocumentLogMetadata({
   providerLogs,
 }: {
   documentLog: DocumentLogWithMetadata
-  providerLogs?: ProviderLog[]
+  providerLogs?: ProviderLogDto[]
 }) {
   const { data: providers, isLoading: providersLoading } = useProviderApiKeys()
   const lastProviderLog = useMemo(

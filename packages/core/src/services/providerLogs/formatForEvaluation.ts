@@ -1,23 +1,39 @@
 import { MessageRole } from '@latitude-data/compiler'
 
-import { Message, ProviderLog } from '../../browser'
+import {
+  Message,
+  objectToString,
+  ProviderLog,
+  ProviderLogDto,
+} from '../../browser'
 
-export function formatConversation(providerLog: ProviderLog) {
+export function formatConversation(providerLog: ProviderLogDto | ProviderLog) {
   const messages: Message[] = [...(providerLog.messages || [])]
 
-  // Add the response as an assistant message if it exists
-  if (providerLog.responseText) {
+  if ((providerLog as ProviderLogDto).response) {
     messages.push({
       role: MessageRole.assistant,
-      content: providerLog.responseText,
+      content: (providerLog as ProviderLogDto).response,
       toolCalls: providerLog.toolCalls,
+    })
+  } else if ((providerLog as ProviderLog).responseText) {
+    messages.push({
+      role: MessageRole.assistant,
+      content: (providerLog as ProviderLog).responseText!,
+      toolCalls: providerLog.toolCalls,
+    })
+  } else if ((providerLog as ProviderLog).responseObject) {
+    messages.push({
+      role: MessageRole.assistant,
+      content: objectToString((providerLog as ProviderLog).responseObject),
+      toolCalls: [],
     })
   }
 
   return formatMessages(messages)
 }
 
-export function formatContext(providerLog: ProviderLog) {
+export function formatContext(providerLog: ProviderLog | ProviderLogDto) {
   return formatMessages(providerLog.messages)
 }
 

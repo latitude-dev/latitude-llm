@@ -88,7 +88,10 @@ export async function createEvaluationResult({
     evaluation,
     documentLog,
     providerLog: providerLogs[providerLogs.length - 1]!,
-    result: mockedResponse,
+    result: {
+      result: mockedResponse,
+      reason: 'I do not even know to be honest.',
+    },
   })
 
   return {

@@ -1,4 +1,3 @@
-import { ToolCall } from '@latitude-data/compiler'
 import { type InferSelectModel } from 'drizzle-orm'
 
 import { EvaluationResultableType } from '../constants'
@@ -38,12 +37,7 @@ export type ApiKey = InferSelectModel<typeof apiKeys>
 export type Commit = InferSelectModel<typeof commits>
 export type DocumentVersion = InferSelectModel<typeof documentVersions>
 export type Project = InferSelectModel<typeof projects>
-export type ProviderLog = InferSelectModel<typeof providerLogs> & {
-  // Typescript thinks these 2 are optional because they are in the schema
-  // but we add a default empty string and empty array to them
-  responseText: string
-  toolCalls: ToolCall[]
-}
+export type ProviderLog = InferSelectModel<typeof providerLogs>
 export type DocumentLog = InferSelectModel<typeof documentLogs>
 export type Evaluation = InferSelectModel<typeof evaluations>
 export type ConnectedEvaluation = InferSelectModel<typeof connectedEvaluations>
@@ -80,3 +74,8 @@ export type EvaluationResultConfiguration = {
 export type EvaluationTemplateWithCategory = EvaluationTemplate & {
   category: string
 }
+
+export type ProviderLogDto = Omit<
+  ProviderLog,
+  'responseText' | 'responseObject'
+> & { response: string }

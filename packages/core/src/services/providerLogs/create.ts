@@ -1,8 +1,10 @@
 import { Message, ToolCall } from '@latitude-data/compiler'
 import { CompletionTokenUsage } from 'ai'
+import { JSONSchema7 } from 'json-schema'
 
 import { LogSources, ProviderLog, Providers } from '../../browser'
 import { database } from '../../client'
+import { publisher } from '../../events/publisher'
 import { Result, Transaction } from '../../lib'
 import { providerLogs } from '../../schema'
 import { estimateCost, PartialConfig } from '../ai'
@@ -19,7 +21,8 @@ export type CreateProviderLogProps = {
   model: string
   config: PartialConfig
   messages: Message[]
-  responseText: string
+  responseText?: string
+  responseObject?: JSONSchema7
   toolCalls?: ToolCall[]
   usage: CompletionTokenUsage
   duration: number
@@ -38,6 +41,7 @@ export async function createProviderLog(
     config,
     messages,
     responseText,
+    responseObject,
     toolCalls,
     usage,
     duration,
@@ -67,6 +71,7 @@ export async function createProviderLog(
         config,
         messages,
         responseText,
+        responseObject,
         toolCalls,
         tokens: isNaN(usage.totalTokens) ? 0 : (usage.totalTokens ?? 0),
         costInMillicents: cost,
@@ -79,6 +84,11 @@ export async function createProviderLog(
     const log = inserts[0]! as ProviderLog
     await touchProviderApiKey(providerId, trx)
     if (apiKeyId) await touchApiKey(apiKeyId, trx)
+
+    publisher.publishLater({
+      type: 'providerLogCreated',
+      data: log,
+    })
 
     return Result.ok(log)
   }, db)

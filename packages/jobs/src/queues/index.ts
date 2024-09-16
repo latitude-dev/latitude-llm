@@ -1,3 +1,4 @@
+import { createProviderLogJob } from '@latitude-data/core/events/handlers/createProviderLogJob'
 import { EventHandlers } from '@latitude-data/core/events/handlers/index'
 import { Job, JobsOptions, Queue, QueueEvents } from 'bullmq'
 
@@ -66,7 +67,12 @@ function setupQueue({
 export const QUEUES = {
   [Queues.defaultQueue]: {
     name: Queues.defaultQueue,
-    jobs: [runBatchEvaluationJob, runDocumentJob, runEvaluationJob],
+    jobs: [
+      runBatchEvaluationJob,
+      runDocumentJob,
+      runEvaluationJob,
+      createProviderLogJob,
+    ],
   },
   [Queues.eventsQueue]: {
     name: Queues.eventsQueue,

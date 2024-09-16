@@ -1,6 +1,7 @@
 import { useCallback, useContext, useEffect, useRef, useState } from 'react'
 
 import {
+  AssistantMessage,
   ContentType,
   Conversation,
   Message as ConversationMessage,
@@ -95,8 +96,8 @@ export default function Chat({
       const { event, data } = serverEvent
       const hasMessages = 'messages' in data
       if (hasMessages) {
-        data.messages.forEach(addMessageToConversation)
-        messagesCount += data.messages.length
+        data.messages!.forEach(addMessageToConversation)
+        messagesCount += data.messages!.length
       }
 
       switch (event) {
@@ -109,6 +110,7 @@ export default function Chat({
           } else if (data.type === ChainEventTypes.Error) {
             setError(new Error(data.error.message))
           }
+
           break
         }
 
@@ -161,17 +163,17 @@ export default function Chat({
 
         const { event, data } = serverEvent
 
-        const hasMessages = 'messages' in data
-
-        if (hasMessages) {
-          data.messages.forEach(addMessageToConversation)
-        }
-
         switch (event) {
           case StreamEventTypes.Latitude: {
             if (data.type === ChainEventTypes.Error) {
               setError(new Error(data.error.message))
+            } else if (data.type === ChainEventTypes.Complete) {
+              addMessageToConversation({
+                role: MessageRole.assistant,
+                content: data.response.text,
+              } as AssistantMessage)
             }
+
             break
           }
 
