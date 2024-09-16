@@ -3,7 +3,12 @@ import { Cluster } from '@pulumi/aws/ecs'
 import * as docker from '@pulumi/docker'
 import * as pulumi from '@pulumi/pulumi'
 
-import { ecsTaskExecutionRole, resolve } from '../shared'
+import {
+  ecsSecurityGroup,
+  ecsTaskExecutionRole,
+  privateSubnets,
+  resolve,
+} from '../shared'
 import { coreStack, environment } from './shared'
 
 const repo = new aws.ecr.Repository('latitude-llm-workers-repo')
@@ -43,6 +48,7 @@ const taskDefinition = pulumi
         networkMode: 'awsvpc',
         requiresCompatibilities: ['FARGATE'],
         executionRoleArn: ecsTaskExecutionRole,
+        taskRoleArn: ecsTaskExecutionRole,
         containerDefinitions: JSON.stringify([
           {
             name: containerName,
@@ -79,6 +85,12 @@ export const service = new aws.ecs.Service('LatitudeLLMWorkers', {
   desiredCount: 1,
   launchType: 'FARGATE',
   forceNewDeployment: true,
+  enableExecuteCommand: true,
+  networkConfiguration: {
+    subnets: privateSubnets.ids,
+    assignPublicIp: false,
+    securityGroups: [ecsSecurityGroup],
+  },
   tags: {
     diggest: image.repoDigest,
   },
