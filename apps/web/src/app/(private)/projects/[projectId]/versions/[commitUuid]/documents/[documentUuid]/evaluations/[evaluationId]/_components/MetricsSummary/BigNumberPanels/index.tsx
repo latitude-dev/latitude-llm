@@ -42,7 +42,7 @@ function Panel({
   if (additionalInfo) {
     return (
       <Tooltip side='left' trigger={panel}>
-        <Text.H5 color='foregroundMuted'>{additionalInfo}</Text.H5>
+        <Text.H5 color='white'>{additionalInfo}</Text.H5>
       </Tooltip>
     )
   }

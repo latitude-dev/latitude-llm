@@ -73,6 +73,7 @@ export default async function ConnectedEvaluationLayout({
       />
 
       <MetricsSummary
+        documentUuid={params.documentUuid}
         evaluation={evaluation}
         evaluationResults={evaluationResults}
       />
