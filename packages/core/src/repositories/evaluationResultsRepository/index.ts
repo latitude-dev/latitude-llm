@@ -1,7 +1,11 @@
 import { eq, getTableColumns, sql } from 'drizzle-orm'
 import { NodePgDatabase } from 'drizzle-orm/node-postgres'
 
-import { EvaluationResult, EvaluationResultableType } from '../../browser'
+import {
+  Commit,
+  EvaluationResult,
+  EvaluationResultableType,
+} from '../../browser'
 import { Result } from '../../lib'
 import {
   documentLogs,
@@ -26,6 +30,12 @@ export const evaluationResultDto = {
 
 export type EvaluationResultDto = EvaluationResult & {
   result: string | number | boolean
+}
+
+export type EvaluationResultWithMetadata = EvaluationResultDto & {
+  commit: Commit
+  tokens: number | null
+  costInMillicents: number | null
 }
 
 export class EvaluationResultsRepository extends Repository<

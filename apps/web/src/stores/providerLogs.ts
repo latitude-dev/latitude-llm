@@ -4,7 +4,10 @@ import { compact } from 'lodash-es'
 
 import type { ProviderLog } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui'
-import { getProviderLogsAction } from '$/actions/providerLogs/fetch'
+import {
+  getProviderLogAction,
+  getProviderLogsAction,
+} from '$/actions/providerLogs/fetch'
 import useSWR, { SWRConfiguration } from 'swr'
 
 export default function useProviderLogs(
@@ -46,6 +49,47 @@ export default function useProviderLogs(
   return {
     data,
     isLoading: isLoading,
+    error: swrError,
+  }
+}
+
+export function useProviderLog(
+  providerLogId?: number,
+  opts?: SWRConfiguration,
+) {
+  const { toast } = useToast()
+  const {
+    data = undefined,
+    isLoading,
+    error: swrError,
+  } = useSWR<ProviderLog | undefined>(
+    compact(['providerLog', providerLogId]),
+    async () => {
+      if (!providerLogId) return undefined
+
+      const [data, error] = await getProviderLogAction({
+        providerLogId,
+      })
+
+      if (error) {
+        console.error(error)
+
+        toast({
+          title: 'Error fetching provider log',
+          description: error.formErrors?.[0] || error.message,
+          variant: 'destructive',
+        })
+        return undefined
+      }
+
+      return data as ProviderLog
+    },
+    opts,
+  )
+
+  return {
+    data,
+    isLoading,
     error: swrError,
   }
 }

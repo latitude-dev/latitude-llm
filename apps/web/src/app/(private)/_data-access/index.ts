@@ -173,6 +173,15 @@ export const getEvaluationByUuidCached = cache(async (uuid: string) => {
   return evaluation
 })
 
+export const getEvaluationByIdCached = cache(async (id: number) => {
+  const { workspace } = await getCurrentUser()
+  const evaluationScope = new EvaluationsRepository(workspace.id)
+  const result = await evaluationScope.find(id)
+  const evaluation = result.unwrap()
+
+  return evaluation
+})
+
 export const getProviderLogCached = cache(async (uuid: string) => {
   const { workspace } = await getCurrentUser()
   const scope = new ProviderLogsRepository(workspace.id)
