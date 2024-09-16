@@ -15,9 +15,7 @@ export const buildProcessor =
               try {
                 await j(job)
               } catch (err) {
-                if (env.NODE_ENV !== 'production') {
-                  console.error(err)
-                }
+                console.error(err)
 
                 throw err
               }
