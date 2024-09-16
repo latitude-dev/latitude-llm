@@ -78,9 +78,5 @@ export const env = createEnv({
   runtimeEnv: {
     ...process.env,
     FILE_PUBLIC_PATH: process.env.FILE_PUBLIC_PATH ?? FILE_PUBLIC_PATH,
-    // FIXME: Infra needed
-    WEBSOCKET_SECRET_TOKEN_KEY: 'secret-token-key',
-    WEBSOCKET_REFRESH_SECRET_TOKEN_KEY: 'refresh-refresh-token-key',
-    WORKERS_WEBSOCKET_SECRET_TOKEN: 'workers-secret-token',
   },
 })

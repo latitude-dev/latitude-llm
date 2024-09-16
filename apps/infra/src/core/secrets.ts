@@ -46,9 +46,25 @@ const awsAccessSecret = createSecretWithVersion(
   'AWS access secret',
 )
 
+const websocketsSecretToken = createSecretWithVersion(
+  'WEBSOCKET_SECRET_TOKEN_KEY',
+  'Secret token key for websockets in web',
+)
+const websocketsSecretRefreshToken = createSecretWithVersion(
+  'WEBSOCKET_REFRESH_SECRET_TOKEN_KEY',
+  'Refresh token key for websockets in web',
+)
+const workersWebsocketsSecretToken = createSecretWithVersion(
+  'WORKERS_WEBSOCKET_SECRET_TOKEN',
+  'Secret token key for websockets in workers',
+)
+
 export const mailerApiKeyArn = mailerApiKey.arn
 export const sentryDsnArn = sentryDsn.arn
 export const sentryOrgArn = sentryOrg.arn
 export const sentryProjectArn = sentryProject.arn
 export const awsAccessKeyArn = awsAccessKey.arn
 export const awsAccessSecretArn = awsAccessSecret.arn
+export const websocketsSecretTokenArn = websocketsSecretToken.arn
+export const websocketsSecretRefreshTokenArn = websocketsSecretRefreshToken.arn
+export const workersWebsocketsSecretTokenArn = workersWebsocketsSecretToken.arn

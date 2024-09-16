@@ -14,6 +14,12 @@ config:
     secure: v1:QaB3bMtGrRV6Bt+k:EBKRt/xWV03dXUfBHq5RwpyTs7U4fuCJVAC6
   infra:SENTRY_PROJECT:
     secure: v1:NOZy0ukyyjhgKqnX:VReMqdgQSFzhKNGrASeE2mwp4Pa4y55ACDlQVSBkDVM=
+  infra:WEBSOCKET_REFRESH_SECRET_TOKEN_KEY:
+    secure: v1:x47WaZoLqr3UFTTP:MspNcg9R4YGCMxGuU+xTMnUlQ0n71zyamcBOEvGC7NknJqP1sedqPh3f9j4PgsJ+cbN9sMkmup1PHx4uZ7B3UpmsUMZt2Ad4Zf3u2fV2I/wbuy8AdmXXc1Z1lODRi1Fyjr2jijNutHA=
+  infra:WEBSOCKET_SECRET_TOKEN_KEY:
+    secure: v1:SFfE6P2qcXHELQ4T:bjmjDEtEIReB1tNWd/WyZ1rAbx4cJYGlmJrLU+dfhsXRtsSDlT42o/CEQ0MUZJ797Tip7iCaxkqMIkLyGF4MYl0dqmtx8/YQR3UQ8Hp8olcqvDr7MJJ34XgapNxWPmbtrlQamPQZntw=
+  infra:WORKERS_WEBSOCKET_SECRET_TOKEN:
+    secure: v1:9DwqR9orxERikOuC:U1FphkLG9IyDk5A8nmf78cOaPzSh+eU9wWOHLcLdPdUyxYheHoRov8EZvCG9dQQTQxUUDe4wYO+KZXNJ3Vi3R7yFByos8z+tfGzhZKYWEVu5Uszk4bHdSfeKwtKLXIfZYpfB65RYBDc=
   infra:albSecurityGroup:
     secure: v1:HCwWQvcrwQE9Py6E:U5ibuWwH2MNAooASzaHOnSS3pKNhuJHZTh2pnHcSYKRPuuMJ
   infra:bastionAccountId:

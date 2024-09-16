@@ -2,9 +2,12 @@ import * as pulumi from '@pulumi/pulumi'
 
 const stack = pulumi.getStack()
 
+// NOTE: ORDER MATTERS!
 let result
 if (stack.startsWith('core')) {
   result = await import('./core')
+} else if (stack.startsWith('websockets')) {
+  result = await import('./deployments/websockets')
 } else if (stack.startsWith('web')) {
   result = await import('./deployments/web')
 } else if (stack.startsWith('gateway')) {
