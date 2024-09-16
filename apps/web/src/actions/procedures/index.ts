@@ -1,3 +1,4 @@
+import { UnauthorizedError } from '@latitude-data/core/lib/errors'
 import {
   DocumentVersionsRepository,
   ProjectsRepository,
@@ -16,12 +17,16 @@ export const errorHandlingProcedure = createServerActionProcedure()
 export const authProcedure = createServerActionProcedure(
   errorHandlingProcedure,
 ).handler(async () => {
-  const data = await getCurrentUser()
+  try {
+    const data = await getCurrentUser()
 
-  return {
-    session: data.session!,
-    workspace: data.workspace,
-    user: data.user,
+    return {
+      session: data.session!,
+      workspace: data.workspace,
+      user: data.user,
+    }
+  } catch (error) {
+    throw new UnauthorizedError((error as Error).message)
   }
 })
 
