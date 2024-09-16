@@ -61,6 +61,7 @@ Latitude puts all these helpful tools in one place. This means you can add AI to
 - [Quick start](https://github.com/latitude-dev/latitude-llm#-quick-start)
 - [Community](https://github.com/latitude-dev/latitude-llm#-community)
 - [Contributing](https://github.com/latitude-dev/latitude-llm#-contributing)
+- [License](https://github.com/latitude-dev/latitude-llm#-license)
 - [Links](https://github.com/latitude-dev/latitude-llm#-links)
 
 ## ⚡ Quick start
