@@ -1,6 +1,6 @@
 import { faker } from '@faker-js/faker'
 
-import type { DocumentVersion, SafeUser, Workspace } from '../../browser'
+import type { DocumentVersion, User, Workspace } from '../../browser'
 import { unsafelyGetUser } from '../../data-access'
 import { CommitsRepository } from '../../repositories'
 import { mergeCommit } from '../../services/commits'
@@ -12,11 +12,11 @@ import { createWorkspace } from './workspaces'
 
 export async function createProject(projectData: Partial<ICreateProject> = {}) {
   let workspaceData = projectData.workspace ?? {}
-  let user: SafeUser
+  let user: User
   let workspace: Workspace
 
   if ('id' in workspaceData) {
-    user = (await unsafelyGetUser(workspaceData.creatorId!)) as SafeUser
+    user = (await unsafelyGetUser(workspaceData.creatorId!)) as User
     workspace = workspaceData as Workspace
   } else {
     const newWorkspace = await createWorkspace(workspaceData)

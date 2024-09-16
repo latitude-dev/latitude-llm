@@ -2,6 +2,7 @@ import { Chain, ContentType, MessageRole } from '@latitude-data/compiler'
 import { v4 as uuid } from 'uuid'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { Workspace } from '../../browser'
 import { LogSources, Providers } from '../../constants'
 import * as factories from '../../tests/factories'
 import * as aiModule from '../ai'
@@ -34,14 +35,17 @@ describe('runChain', () => {
     }
   }
 
+  let workspace: Workspace
+
   beforeEach(async () => {
     vi.resetAllMocks()
     vi.mocked(uuid).mockReturnValue(mockUUID)
 
-    const { providers } = await factories.createProject({
+    const { workspace: w, providers } = await factories.createProject({
       providers: [{ name: 'openai', type: Providers.OpenAI }],
     })
     apikeys = new Map(providers.map((p) => [p.name, p]))
+    workspace = w
   })
 
   it('runs a chain without schema override', async () => {
@@ -62,6 +66,7 @@ describe('runChain', () => {
     })
 
     const result = await runChain({
+      workspace,
       chain: mockChain as Chain,
       apikeys,
       source: LogSources.API,
@@ -126,6 +131,7 @@ describe('runChain', () => {
     })
 
     const result = await runChain({
+      workspace,
       chain: mockChain as Chain,
       apikeys,
       source: LogSources.API,
@@ -161,6 +167,7 @@ describe('runChain', () => {
     )
 
     const result = await runChain({
+      workspace,
       chain: mockChain as Chain,
       apikeys,
       source: LogSources.API,
@@ -221,6 +228,7 @@ describe('runChain', () => {
       })
 
     const result = await runChain({
+      workspace,
       chain: mockChain as Chain,
       apikeys,
       source: LogSources.API,
@@ -262,6 +270,7 @@ describe('runChain', () => {
     })
 
     const result = await runChain({
+      workspace,
       chain: mockChain as Chain,
       apikeys,
       source: LogSources.API,

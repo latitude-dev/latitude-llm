@@ -1,4 +1,4 @@
-import { DocumentVersion, Project, SafeUser } from '@latitude-data/core/browser'
+import { DocumentVersion, Project, User } from '@latitude-data/core/browser'
 import * as factories from '@latitude-data/core/factories'
 import { updateDocument } from '@latitude-data/core/services/documents/update'
 import { findCommitById } from 'node_modules/@latitude-data/core/src/data-access/commits'
@@ -50,7 +50,7 @@ describe('updateDocumentAction', async () => {
   describe('authorized', () => {
     let project: Project
     let doc1: DocumentVersion
-    let user: SafeUser
+    let user: User
 
     beforeEach(async () => {
       const { workspace, userData } = await factories.createWorkspace()

@@ -42,7 +42,7 @@ export async function getUserFromCredentials({
 
   return Result.ok({
     user,
-    workspace: { id: Number(workspace.id), name: workspace.name },
+    workspace,
   })
 }
 
@@ -62,7 +62,7 @@ export async function getCurrentUserFromDB({
 
     return Result.ok({
       user,
-      workspace: { id: Number(workspace.id), name: workspace.name },
+      workspace,
     })
   } catch (err) {
     return Result.error(err as Error)

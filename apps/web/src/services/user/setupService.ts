@@ -38,7 +38,7 @@ export default function setupService({
 
     return Result.ok({
       user,
-      workspace: { id: Number(workspace.id), name: workspace.name },
+      workspace,
     })
   })
 }

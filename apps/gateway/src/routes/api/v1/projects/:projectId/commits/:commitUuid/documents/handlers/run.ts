@@ -25,7 +25,7 @@ export const runHandler = factory.createHandlers(
 
       const workspace = c.get('workspace')
 
-      const { document, commit, project } = await getData({
+      const { document, commit } = await getData({
         workspace,
         projectId: Number(projectId!),
         commitUuid: commitUuid!,
@@ -33,7 +33,7 @@ export const runHandler = factory.createHandlers(
       })
 
       const result = await runDocumentAtCommit({
-        workspaceId: project.workspaceId,
+        workspace,
         document,
         commit,
         parameters,

@@ -1,4 +1,4 @@
-import { SafeUser } from '../../browser'
+import { User } from '../../browser'
 import { database } from '../../client'
 import { Result, Transaction } from '../../lib'
 import { users } from '../../schema'
@@ -15,7 +15,7 @@ export async function createUser(
   },
   db = database,
 ) {
-  return Transaction.call<SafeUser>(async (trx) => {
+  return Transaction.call<User>(async (trx) => {
     const inserts = await trx
       .insert(users)
       .values({

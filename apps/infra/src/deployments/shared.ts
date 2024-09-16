@@ -10,6 +10,7 @@ const dbEndpoint = coreStack.requireOutput('dbEndpoint')
 const dbName = coreStack.requireOutput('dbName')
 const mailerApiKeyArn = coreStack.requireOutput('mailerApiKeyArn')
 const queueEndpoint = coreStack.requireOutput('queueEndpoint')
+const cacheEndpoint = coreStack.requireOutput('cacheEndpoint')
 const awsAccessKeyArn = coreStack.requireOutput('awsAccessKeyArn')
 const awsAccessSecretArn = coreStack.requireOutput('awsAccessSecretArn')
 const websocketsSecretTokenArn = coreStack.requireOutput(
@@ -24,6 +25,8 @@ const workersWebsocketsSecretTokenArn = coreStack.requireOutput(
 const sentryDsnArn = coreStack.requireOutput('sentryDsnArn')
 const sentryOrgArn = coreStack.requireOutput('sentryOrgArn')
 const sentryProjectArn = coreStack.requireOutput('sentryProjectArn')
+const defaultProviderIdArn = coreStack.requireOutput('defaultProviderIdArn')
+
 const getSecretString = (arn: pulumi.Output<any>) => {
   return arn.apply((secretId) =>
     aws.secretsmanager
@@ -45,6 +48,7 @@ const websocketSecretRefreshToken = getSecretString(
 const workersWebsocketsSecretToken = getSecretString(
   workersWebsocketsSecretTokenArn,
 )
+const defaultProviderId = getSecretString(defaultProviderIdArn)
 
 export const sentryDsn = getSecretString(sentryDsnArn)
 export const sentryOrg = getSecretString(sentryOrgArn)
@@ -56,11 +60,13 @@ export const environment = pulumi
     awsAccessKey,
     awsAccessSecret,
     queueEndpoint,
+    cacheEndpoint,
     dbUrl,
     mailerApiKey,
     sentryDsn,
     sentryOrg,
     sentryProject,
+    defaultProviderId,
   ])
   .apply(() => {
     return [
@@ -68,6 +74,7 @@ export const environment = pulumi
       { name: 'PORT', value: '8080' },
       { name: 'DATABASE_URL', value: dbUrl },
       { name: 'QUEUE_HOST', value: queueEndpoint },
+      { name: 'CACHE_HOST', value: cacheEndpoint },
       { name: 'GATEWAY_HOSTNAME', value: 'gateway.latitude.so' },
       { name: 'GATEWAY_SSL', value: 'true' },
       { name: 'LATITUDE_DOMAIN', value: 'latitude.so' },
@@ -96,5 +103,7 @@ export const environment = pulumi
       { name: 'S3_BUCKET', value: 'latitude-llm-bucket-production' },
       { name: 'AWS_ACCESS_KEY', value: awsAccessKey },
       { name: 'AWS_ACCESS_SECRET', value: awsAccessSecret },
+      { name: 'DEFAULT_PROVIDER_ID', value: defaultProviderId },
+      { name: 'DEFAULT_PROVIDER_MODEL', value: 'gpt-4o-mini' },
     ]
   })

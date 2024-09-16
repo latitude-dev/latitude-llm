@@ -13,27 +13,28 @@ import { getResolvedContent } from '../documents'
 import { buildProviderApikeysMap } from '../providerApiKeys/buildMap'
 
 export async function runDocumentAtCommit({
-  workspaceId,
+  workspace,
   document,
   parameters,
   commit,
   source,
 }: {
-  workspaceId: Workspace['id']
+  workspace: Workspace
   document: DocumentVersion
   parameters: Record<string, unknown>
   commit: Commit
   source: LogSources
 }) {
-  const apikeys = await buildProviderApikeysMap({ workspaceId })
+  const apikeys = await buildProviderApikeysMap({ workspaceId: workspace.id })
   const result = await getResolvedContent({
-    workspaceId,
+    workspaceId: workspace.id,
     document,
     commit,
   })
   if (result.error) return result
   const chain = createChain({ prompt: result.value, parameters })
   const rezult = await runChain({
+    workspace,
     chain,
     apikeys,
     source,
@@ -51,7 +52,7 @@ export async function runDocumentAtCommit({
       publisher.publish({
         type: 'documentRun',
         data: {
-          workspaceId,
+          workspaceId: workspace.id,
           projectId: commit.projectId,
           documentUuid: document.documentUuid,
           commitUuid: commit.uuid,

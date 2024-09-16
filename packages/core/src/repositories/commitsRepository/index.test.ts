@@ -1,13 +1,13 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import type { Project, SafeUser } from '../../browser'
+import type { Project, User } from '../../browser'
 import { CommitStatus } from '../../constants'
 import { mergeCommit } from '../../services/commits'
 import { createNewDocument } from '../../services/documents'
 import * as factories from '../../tests/factories'
 import { CommitsRepository } from './index'
 
-async function createDraftsCommits(project: Project, user: SafeUser) {
+async function createDraftsCommits(project: Project, user: User) {
   const results = []
   for (let i = 0; i < 10; i++) {
     const draft = await factories.createDraft({ project, user })

@@ -11,7 +11,7 @@ export const findMembershipByTokenCache = cache(async (token: string) => {
 })
 
 export const findWorkspaceCache = cache(async (id: number) => {
-  return await unsafelyFindWorkspace(id).then((r) => r.unwrap())
+  return await unsafelyFindWorkspace(id)
 })
 
 export const findUserCache = cache(async (id: string) => {

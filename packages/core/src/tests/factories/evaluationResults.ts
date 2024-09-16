@@ -44,7 +44,7 @@ export async function createEvaluationResult({
 
     const config = conversation.config as Config
     const provider = await providerScope
-      .findByName(config.provider)
+      .findByName(config.provider!)
       .then((r) => r.unwrap())
 
     mockedResponse = result ?? String(faker.number.int({ min: 0, max: 10 }))
@@ -65,7 +65,7 @@ export async function createEvaluationResult({
       documentLogUuid: documentLog.uuid,
       providerId: provider.id,
       providerType: provider.provider,
-      model: config.model,
+      model: config.model!,
       config: config,
       messages: conversation.messages,
       responseText: mockedResponse,

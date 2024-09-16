@@ -1,7 +1,6 @@
 import {
   EvaluationMetadataType,
   EvaluationResultConfiguration,
-  SafeWorkspace,
   Workspace,
 } from '../../browser'
 import { database } from '../../client'
@@ -10,7 +9,7 @@ import { BadRequestError, Result, Transaction } from '../../lib'
 import { evaluations, llmAsJudgeEvaluationMetadatas } from '../../schema'
 
 type Props = {
-  workspace: Workspace | SafeWorkspace
+  workspace: Workspace
   name: string
   description: string
   type: EvaluationMetadataType
@@ -60,10 +59,7 @@ export async function createEvaluation(
 }
 
 export async function importLlmAsJudgeEvaluation(
-  {
-    workspace,
-    templateId,
-  }: { workspace: Workspace | SafeWorkspace; templateId: number },
+  { workspace, templateId }: { workspace: Workspace; templateId: number },
   db = database,
 ) {
   const templateResult = await findEvaluationTemplateById(templateId, db)

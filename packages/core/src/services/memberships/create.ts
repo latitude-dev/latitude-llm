@@ -1,4 +1,4 @@
-import { Membership, SafeWorkspace, User, Workspace } from '../../browser'
+import { Membership, User, Workspace } from '../../browser'
 import { database } from '../../client'
 import { publisher } from '../../events/publisher'
 import { Result, Transaction } from '../../lib'
@@ -13,7 +13,7 @@ export const createMembership = async (
   }: {
     author?: User
     user: User
-    workspace: Workspace | SafeWorkspace
+    workspace: Workspace
   } & Partial<Omit<Membership, 'userId' | 'workspaceId'>>,
   db = database,
 ) => {

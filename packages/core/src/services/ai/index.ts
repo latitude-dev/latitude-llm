@@ -1,4 +1,5 @@
 import { Message } from '@latitude-data/compiler'
+import { env } from '@latitude-data/env'
 import { setupJobs } from '@latitude-data/jobs'
 import {
   CallWarning,
@@ -12,12 +13,13 @@ import {
 import { JSONSchema7 } from 'json-schema'
 import { v4 } from 'uuid'
 
-import { LogSources, ProviderApiKey } from '../../browser'
-import {
-  createProviderLog,
-  CreateProviderLogProps,
-} from '../providerLogs/create'
+import { LogSources, ProviderApiKey, Workspace } from '../../browser'
+import { cache } from '../../cache'
+import { publisher } from '../../events/publisher'
+import { createProviderLog } from '../providerLogs/create'
 import { createProvider, PartialConfig } from './helpers'
+
+const DEFAULT_PROVIDER_MAX_RUNS = 100
 
 export type FinishCallbackEvent = {
   finishReason: FinishReason
@@ -39,30 +41,33 @@ export type FinishCallbackEvent = {
 }
 export type FinishCallback = (event: FinishCallbackEvent) => void
 
-export type AILog = Omit<CreateProviderLogProps, 'apiKeyId' | 'source'>
 export async function ai({
+  workspace,
   provider: apiProvider,
   prompt,
   messages,
   config,
   documentLogUuid,
   source,
+  onFinish,
   schema = config.schema,
   output = config.schema?.type || 'no-schema',
   transactionalLogs = false,
-  onFinish,
 }: {
+  workspace: Workspace
   provider: ProviderApiKey
   config: PartialConfig
   messages: Message[]
   documentLogUuid?: string
-  prompt?: string
   source: LogSources
+  prompt?: string
   schema?: JSONSchema7
   output?: 'object' | 'array' | 'no-schema'
   transactionalLogs?: boolean
   onFinish?: FinishCallback
 }) {
+  await checkDefaultProviderUsage({ provider: apiProvider, workspace })
+
   const startTime = Date.now()
   const {
     provider,
@@ -70,7 +75,7 @@ export async function ai({
     id: providerId,
     provider: providerType,
   } = apiProvider
-  const model = config.model
+  const model = config.model || env.DEFAULT_PROVIDER_MODEL
   const m = createProvider({ provider, apiKey, config })(model)
 
   const commonOptions = {
@@ -100,13 +105,21 @@ export async function ai({
     }
 
     const payload = {
-      type: 'aiProviderCallCompleted',
+      type: 'aiProviderCallCompleted' as 'aiProviderCallCompleted',
       data: {
         ...commonData,
         responseText: event.text,
         responseObject: isStructured ? event.object : undefined,
       },
     }
+
+    publisher.publishLater({
+      type: payload.type,
+      data: {
+        ...payload.data,
+        workspaceId: apiProvider.workspaceId,
+      },
+    })
 
     let providerLogUuid
     if (transactionalLogs) {
@@ -150,6 +163,25 @@ export async function ai({
       text: result.text,
       usage: result.usage,
       toolCalls: result.toolCalls,
+    }
+  }
+}
+
+const checkDefaultProviderUsage = async ({
+  provider,
+  workspace,
+}: {
+  provider: ProviderApiKey
+  workspace: Workspace
+}) => {
+  if (provider.id === env.DEFAULT_PROVIDER_ID) {
+    const c = cache()
+    const value = await c.incr(
+      `workspace:${workspace.id}:defaultProviderRunCount`,
+    )
+
+    if (value > DEFAULT_PROVIDER_MAX_RUNS) {
+      throw new Error('You have exceeded your maximum number of free runs')
     }
   }
 }

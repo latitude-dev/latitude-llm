@@ -8,7 +8,10 @@ import {
   LogSources,
 } from '../../browser'
 import { database } from '../../client'
-import { findLastProviderLogFromDocumentLogUuid } from '../../data-access'
+import {
+  findLastProviderLogFromDocumentLogUuid,
+  findWorkspaceFromDocumentLog,
+} from '../../data-access'
 import { publisher } from '../../events/publisher'
 import { NotFoundError, Result } from '../../lib'
 import { runChain } from '../chains/run'
@@ -76,6 +79,10 @@ export const runEvaluation = async (
 
   // Use the helper function to get the result schema
   const resultSchema = getResultSchema(evaluation.configuration.type)
+  const workspace = await findWorkspaceFromDocumentLog(documentLog)
+  if (!workspace) {
+    return Result.error(new NotFoundError('Workspace not found'))
+  }
 
   const schema: JSONSchema7 = {
     type: 'object',
@@ -87,6 +94,7 @@ export const runEvaluation = async (
   }
 
   const chainResult = await runChain({
+    workspace,
     chain,
     source: LogSources.Evaluation,
     apikeys: await buildProviderApikeysMap({

@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm'
 
-import { SafeUser, SafeWorkspace, User, Workspace } from '../../browser'
+import { User, Workspace } from '../../browser'
 import { database } from '../../client'
 import { Result, Transaction } from '../../lib'
 import { users } from '../../schema'
@@ -16,8 +16,8 @@ export async function inviteUser(
   }: {
     email: string
     name: string
-    workspace: Workspace | SafeWorkspace
-    author: User | SafeUser
+    workspace: Workspace
+    author: User
   },
   db = database,
 ) {

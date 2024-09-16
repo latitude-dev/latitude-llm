@@ -2,7 +2,7 @@ import type {
   Commit,
   DocumentVersion,
   Project,
-  SafeUser,
+  User,
   Workspace,
 } from '@latitude-data/core/browser'
 import * as factories from '@latitude-data/core/factories'
@@ -21,7 +21,7 @@ vi.mock('$/services/auth/getSession', () => ({
 
 let workspace: Workspace
 let project: Project
-let user: SafeUser
+let user: User
 let commit: Commit
 let document: DocumentVersion
 describe('publishDraftCommitAction', () => {

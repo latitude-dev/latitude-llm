@@ -1,12 +1,12 @@
 import { faker } from '@faker-js/faker'
 
-import { type SafeUser } from '../../browser'
+import { type User } from '../../browser'
 import { createWorkspace as createWorkspaceFn } from '../../services/workspaces/create'
 import { createUser, type ICreateUser } from './users'
 
 export type ICreateWorkspace = {
   name?: string
-  creator?: SafeUser | ICreateUser
+  creator?: User | ICreateUser
 }
 export async function createWorkspace(
   workspaceData: Partial<ICreateWorkspace> = {},

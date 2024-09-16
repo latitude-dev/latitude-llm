@@ -1,9 +1,4 @@
-import {
-  ConnectedEvaluation,
-  EvaluationMode,
-  SafeWorkspace,
-  Workspace,
-} from '../../browser'
+import { ConnectedEvaluation, EvaluationMode, Workspace } from '../../browser'
 import { database } from '../../client'
 import {
   NotFoundError,
@@ -27,7 +22,7 @@ export function connectEvaluations(
     templateIds,
     evaluationMode = EvaluationMode.Batch,
   }: {
-    workspace: Workspace | SafeWorkspace
+    workspace: Workspace
     documentUuid: string
     evaluationUuids?: string[]
     templateIds?: number[]

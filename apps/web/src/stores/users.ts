@@ -1,4 +1,4 @@
-import type { SafeUser } from '@latitude-data/core/browser'
+import type { User } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui'
 import { destroyMembershipAction } from '$/actions/memberships/destroy'
 import { getUsersActions } from '$/actions/users/fetch'
@@ -28,7 +28,7 @@ export default function useUsers(opts?: SWRConfiguration) {
     data = [],
     mutate,
     ...rest
-  } = useSWR<SafeUser[]>('api/users', fetcher, opts)
+  } = useSWR<User[]>('api/users', fetcher, opts)
   const { execute: invite } = useLatitudeAction(inviteUserAction, {
     onSuccess: ({ data: user }) => {
       toast({
