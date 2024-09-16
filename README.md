@@ -102,7 +102,6 @@ Follow the instructions in the [self-hosted guide](https://docs.latitude.so/self
 
 After setting up Latitude Self-Hosted, you can follow the same steps as in the Latitude Cloud guide to create, test, evaluate, and deploy your prompts.
 
-
 ## 👥 Community
 
 The Latitude community can be found on
@@ -118,6 +117,12 @@ If you are interested in contributing, please join us on our [Slack
 community](https://trylatitude.slack.com/join/shared_invite/zt-17dyj4elt-rwM~h2OorAA3NtgmibhnLA#/shared-invite/email),
 open an [issue](https://github.com/latitude-dev/latitude-llm/issues/new), or
 contribute a pull request.
+
+## 📄 License
+
+Latitude is licensed under the [LGPL-3.0](LICENSE).
+
+Alternatively, we offer a more permissive commercial license for those who need it. Please contact us at [licensing@latitude.so](mailto:licensing@latitude.so) for more information.
 
 ## 🔗 Links
 
