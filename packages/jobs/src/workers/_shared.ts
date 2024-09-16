@@ -1,4 +1,3 @@
-import { env } from '@latitude-data/env'
 import { Processor } from 'bullmq'
 
 import { Queues } from '../constants'
