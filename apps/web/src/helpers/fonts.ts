@@ -131,4 +131,3 @@ export const fontMono = localFont({
   ],
   variable: '--font-mono',
 })
-
