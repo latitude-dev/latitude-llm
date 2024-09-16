@@ -6,7 +6,7 @@ const workers = setupWorkers()
 
 console.log('Workers started')
 
-const port = 3000
+const port = process.env.WORKERS_PORT || 3002
 const server = http.createServer((req, res) => {
   if (req.url === '/health' && req.method === 'GET') {
     res.writeHead(200, { 'Content-Type': 'application/json' })
