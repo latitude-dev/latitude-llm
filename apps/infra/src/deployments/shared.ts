@@ -56,6 +56,7 @@ export const environment = pulumi
       { name: 'GATEWAY_SSL', value: 'true' },
       { name: 'LATITUDE_DOMAIN', value: 'latitude.so' },
       { name: 'LATITUDE_URL', value: 'https://app.latitude.so' },
+      { name: 'WEBSOCKETS_SERVER', value: 'ws.latitude.so' },
       { name: 'FROM_MAILER_EMAIL', value: 'hello@latitude.so' },
       { name: 'MAILER_API_KEY', value: mailerApiKey },
       { name: 'SENTRY_DSN', value: sentryDsn },

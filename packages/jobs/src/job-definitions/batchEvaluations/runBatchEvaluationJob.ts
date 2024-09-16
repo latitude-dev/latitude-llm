@@ -9,6 +9,7 @@ import { findWorkspaceFromDocument } from '@latitude-data/core/data-access'
 import { NotFoundError } from '@latitude-data/core/lib/errors'
 import { CommitsRepository } from '@latitude-data/core/repositories'
 import { previewDataset } from '@latitude-data/core/services/datasets/preview'
+import { WebsocketClient } from '@latitude-data/core/websockets/workers'
 import { Job } from 'bullmq'
 
 import { setupJobs } from '../..'
@@ -37,6 +38,7 @@ export const runBatchEvaluationJob = async (
     parametersMap,
     batchId = randomUUID(),
   } = job.data
+  const websockets = await WebsocketClient.getSocket()
   const workspace = await findWorkspaceFromDocument(document)
   if (!workspace) throw new NotFoundError('Workspace not found')
 
@@ -61,17 +63,34 @@ export const runBatchEvaluationJob = async (
   })
 
   const progressTracker = new ProgressTracker(connection, batchId)
+  const firstAttempt = job.attemptsMade === 0
 
-  if (job.attemptsMade === 0) {
+  if (firstAttempt) {
     await progressTracker.initializeProgress(parameters.length)
   }
 
-  const { enqueued } = await progressTracker.getProgress()
+  const progress = await progressTracker.getProgress()
   const queues = setupJobs()
+
+  if (firstAttempt && parameters.length > 0) {
+    websockets.emit('evaluationStatus', {
+      workspaceId: workspace.id,
+      data: {
+        batchId,
+        evaluationId: evaluation.id,
+        documentUuid: document.documentUuid,
+        status: 'started',
+        ...progress,
+        completed: 1, // Optimistic completion of first job
+        total: parameters.length,
+      },
+    })
+  }
 
   // Enqueue runDocumentJob for each set of parameters, starting from the last
   // enqueued job. This allows us to resume the batch if the job fails.
-  for (let i = enqueued; i < parameters.length; i++) {
+  for (let i = progress.enqueued; i < parameters.length; i++) {
+    const isFirstEnqueued = progress.enqueued === 0
     await queues.defaultQueue.jobs.enqueueRunDocumentJob({
       workspaceId: workspace.id,
       documentUuid: document.documentUuid,
@@ -79,6 +98,7 @@ export const runBatchEvaluationJob = async (
       projectId: commit.projectId,
       parameters: parameters[i]!,
       evaluationId: evaluation.id,
+      skipProgress: isFirstEnqueued,
       batchId,
     })
 

@@ -29,6 +29,7 @@ export class WorkspacesRepository {
       .where(eq(this.scope.id, workspaceId))
       .limit(1)
     const workspace = result[0]
+
     if (!workspace) {
       return Result.error(new NotFoundError('Workspace not found'))
     }

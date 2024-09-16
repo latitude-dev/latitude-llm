@@ -21,6 +21,7 @@ import {
   LoaderCircle,
   Lock,
   Moon,
+  RefreshCcw,
   SquareDot,
   SquareMinus,
   SquarePlus,
@@ -62,6 +63,7 @@ const Icons = {
   sun: Sun,
   eye: Eye,
   externalLink: ExternalLink,
+  refresh: RefreshCcw,
 }
 
 export type IconName = keyof typeof Icons

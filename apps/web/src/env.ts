@@ -11,6 +11,7 @@ export default createEnv({
     DATABASE_URL: z.string(),
     GATEWAY_HOSTNAME: z.string(),
     GATEWAY_PORT: z.coerce.number().optional(),
+    WEBSOCKETS_SERVER: z.string(),
     GATEWAY_SSL: z
       .enum(['true', 'false'])
       .transform((value) => value === 'true')
@@ -23,5 +24,6 @@ export default createEnv({
     GATEWAY_HOSTNAME: process.env.GATEWAY_HOSTNAME,
     GATEWAY_PORT: process.env.GATEWAY_PORT,
     GATEWAY_SSL: process.env.GATEWAY_SSL,
+    WEBSOCKETS_SERVER: process.env.WEBSOCKETS_SERVER,
   },
 })

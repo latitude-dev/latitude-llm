@@ -12,6 +12,7 @@ const alertVariants = cva(
           'bg-background dark:bg-accent text-foreground dark:text-accent-foreground border-primary text-primary dark:border-primary [&>svg]:text-primary [&>svg]:dark:text-accent-foreground',
         destructive:
           'border-destructive text-destructive dark:text-white [&>svg]:text-destructive [&>svg]:dark:text-white',
+        success: 'border-green-500 text-green-500 dark:text-white',
       },
     },
     defaultVariants: {
@@ -23,7 +24,7 @@ const alertVariants = cva(
 export type AlertProps = HTMLAttributes<HTMLDivElement> &
   VariantProps<typeof alertVariants>
 
-const Alert = forwardRef<HTMLDivElement, AlertProps>(
+const AlertRoot = forwardRef<HTMLDivElement, AlertProps>(
   ({ className, variant, ...props }, ref) => (
     <div
       ref={ref}
@@ -33,7 +34,7 @@ const Alert = forwardRef<HTMLDivElement, AlertProps>(
     />
   ),
 )
-Alert.displayName = 'Alert'
+AlertRoot.displayName = 'AlertRoot'
 
 const AlertTitle = forwardRef<
   HTMLParagraphElement,
@@ -59,4 +60,4 @@ const AlertDescription = forwardRef<
 ))
 AlertDescription.displayName = 'AlertDescription'
 
-export { Alert, AlertTitle, AlertDescription }
+export { AlertRoot, AlertTitle, AlertDescription }

@@ -1,6 +1,11 @@
 import { ReactNode } from 'react'
 
 import { SessionProvider } from '@latitude-data/web-ui/browser'
+import {
+  LatitudeWebsocketsProvider,
+  SocketIOProvider,
+} from '$/components/Providers/WebsocketsProvider'
+import env from '$/env'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
 import { getSession } from '$/services/auth/getSession'
 import { ROUTES } from '$/services/routes'
@@ -17,8 +22,12 @@ export default async function PrivateLayout({
   const { workspace, user } = await getCurrentUser()
 
   return (
-    <SessionProvider currentUser={user} workspace={workspace}>
-      {children}
-    </SessionProvider>
+    <SocketIOProvider>
+      <SessionProvider currentUser={user} workspace={workspace}>
+        <LatitudeWebsocketsProvider socketServer={env.WEBSOCKETS_SERVER}>
+          {children}
+        </LatitudeWebsocketsProvider>
+      </SessionProvider>
+    </SocketIOProvider>
   )
 }

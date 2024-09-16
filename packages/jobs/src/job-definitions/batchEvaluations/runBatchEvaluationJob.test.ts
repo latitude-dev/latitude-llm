@@ -11,6 +11,9 @@ import { ProgressTracker } from '../../utils/progressTracker'
 import { runBatchEvaluationJob } from './runBatchEvaluationJob'
 
 const mocks = vi.hoisted(() => ({
+  websockets: {
+    emit: vi.fn(),
+  },
   queues: {
     defaultQueue: {
       jobs: {
@@ -49,6 +52,12 @@ vi.mock('../../utils/progressTracker', () => ({
   })),
 }))
 
+vi.mock('@latitude-data/core/websockets/workers', () => ({
+  WebsocketClient: {
+    getSocket: () => Promise.resolve(mocks.websockets),
+  },
+}))
+
 describe('runBatchEvaluationJob', () => {
   let mockJob: Job
   let mockProgressTracker: ProgressTracker
@@ -60,7 +69,7 @@ describe('runBatchEvaluationJob', () => {
       data: {
         evaluation: { id: 1 },
         dataset: { fileMetadata: { rowCount: 3 } },
-        document: { commitId: 'commit-1' },
+        document: { documentUuid: 'fake-document-uuid', commitId: 'commit-1' },
         parametersMap: { param1: 0, param2: 1 },
       },
       attemptsMade: 0,
@@ -89,6 +98,23 @@ describe('runBatchEvaluationJob', () => {
           ['value5', 'value6'],
         ],
       }),
+    })
+  })
+
+  it('should emit first run evalution message', async () => {
+    await runBatchEvaluationJob(mockJob)
+
+    expect(mocks.websockets.emit).toHaveBeenCalledWith('evaluationStatus', {
+      workspaceId: 'workspace-1',
+      data: {
+        batchId: expect.any(String),
+        evaluationId: 1,
+        documentUuid: 'fake-document-uuid',
+        status: 'started',
+        enqueued: 0,
+        completed: 1,
+        total: 3,
+      },
     })
   })
 

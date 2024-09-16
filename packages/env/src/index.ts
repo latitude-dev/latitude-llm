@@ -21,6 +21,7 @@ if (environment !== 'production') {
     process.env as DotenvPopulateInput,
     {
       NODE_ENV: environment,
+      FROM_MAILER_EMAIL: 'hello@latitude.so',
       DATABASE_URL: `postgres://latitude:secret@localhost:5432/latitude_${environment}`,
       QUEUE_PORT: '6379',
       QUEUE_HOST: '0.0.0.0',
@@ -29,7 +30,10 @@ if (environment !== 'production') {
       GATEWAY_SSL: 'false',
       LATITUDE_DOMAIN: 'latitude.so',
       LATITUDE_URL: 'http://localhost:3000',
-      FROM_MAILER_EMAIL: 'hello@latitude.so',
+      WEBSOCKETS_SERVER: 'http://localhost:4002',
+      WEBSOCKET_SECRET_TOKEN_KEY: 'secret-token-key',
+      WEBSOCKET_REFRESH_SECRET_TOKEN_KEY: 'refresh-refresh-token-key',
+      WORKERS_WEBSOCKET_SECRET_TOKEN: 'workers-secret-token',
       DRIVE_DISK: 'local',
       FILE_PUBLIC_PATH,
       FILES_STORAGE_PATH,
@@ -66,9 +70,17 @@ export const env = createEnv({
       .union([z.literal('local'), z.literal('s3')])
       .optional()
       .default('local'),
+    WEBSOCKETS_SERVER: z.string(),
+    WEBSOCKET_SECRET_TOKEN_KEY: z.string(),
+    WORKERS_WEBSOCKET_SECRET_TOKEN: z.string(),
+    WEBSOCKET_REFRESH_SECRET_TOKEN_KEY: z.string(),
   },
   runtimeEnv: {
     ...process.env,
     FILE_PUBLIC_PATH: process.env.FILE_PUBLIC_PATH ?? FILE_PUBLIC_PATH,
+    // FIXME: Infra needed
+    WEBSOCKET_SECRET_TOKEN_KEY: 'secret-token-key',
+    WEBSOCKET_REFRESH_SECRET_TOKEN_KEY: 'refresh-refresh-token-key',
+    WORKERS_WEBSOCKET_SECRET_TOKEN: 'workers-secret-token',
   },
 })

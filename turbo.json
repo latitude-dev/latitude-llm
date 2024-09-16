@@ -19,7 +19,12 @@
     "S3_BUCKET",
     "AWS_ACCESS_KEY",
     "AWS_ACCESS_SECRET",
-    "WORKERS_PORT"
+    "WORKERS_PORT",
+    "PORT",
+    "WEBSOCKETS_SERVER",
+    "WORKERS_WEBSOCKET_SECRET_TOKEN",
+    "WEBSOCKET_REFRESH_TOKEN_SECRET_KEY",
+    "WEBSOCKET_TOKEN_SECRET_KEY"
   ],
   "$schema": "https://turbo.build/schema.json",
   "globalDependencies": ["**/.env.*local"],

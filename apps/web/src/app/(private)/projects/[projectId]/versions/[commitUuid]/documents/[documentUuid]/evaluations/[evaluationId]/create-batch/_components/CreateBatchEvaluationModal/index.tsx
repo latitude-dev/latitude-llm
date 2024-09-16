@@ -4,7 +4,7 @@ import { useCallback } from 'react'
 
 import { ConversationMetadata } from '@latitude-data/compiler'
 import { DocumentVersion, EvaluationDto } from '@latitude-data/core/browser'
-import { Button, CloseTrigger, Modal, useToast } from '@latitude-data/web-ui'
+import { Button, CloseTrigger, Modal } from '@latitude-data/web-ui'
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
 
@@ -25,7 +25,6 @@ export default function CreateBatchEvaluationModal({
   evaluation: EvaluationDto
   documentMetadata: ConversationMetadata
 }) {
-  const { toast } = useToast()
   const navigate = useNavigate()
   const documentUuid = document.documentUuid
   const goToDetail = useCallback(() => {
@@ -42,10 +41,6 @@ export default function CreateBatchEvaluationModal({
     projectId,
     commitUuid,
     onSuccess: () => {
-      toast({
-        title: 'Success',
-        description: 'Batch evaluation is processing',
-      })
       goToDetail()
     },
   })
