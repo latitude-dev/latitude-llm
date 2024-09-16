@@ -10,10 +10,18 @@ you didn't install it yet.
 ### Set pulumi config values (can be encrypted with --secret)
 
 Pulumi store screts encrypted in the state files like `Pulumi.core.yaml` or
-`Pulumi.web-production.yaml1`.
+`Pulumi.web-production.yaml`.
 
 ```bash
 pulumi config set AWS_ACCESS_KEY [your-access-key] --secret
+```
+
+### View secrets
+
+You need pulumi passphrase to view secrets.
+
+```bash
+pulumi config --stack core --show-secrets
 ```
 
 ### Do changes

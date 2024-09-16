@@ -1,5 +1,5 @@
 {
-  "name": "@latitude-data/websockts-server",
+  "name": "@latitude-data/websockets-server",
   "version": "1.0.0",
   "type": "module",
   "description": "Latitude AI Websockets server for processing logs",

@@ -143,7 +143,7 @@ workers.on('connection', (socket) => {
   })
 })
 
-const PORT = process.env.PORT || 4002
+const PORT = process.env.WEBSOCKETS_SERVER_PORT || 4002
 
 server.listen(PORT, () => {
   console.log(`Socket.IO server running on port ${PORT}`)
