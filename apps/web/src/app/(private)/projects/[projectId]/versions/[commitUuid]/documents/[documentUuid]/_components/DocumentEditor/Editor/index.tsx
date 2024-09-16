@@ -16,20 +16,17 @@ import {
 } from '@latitude-data/compiler'
 import { DocumentVersion } from '@latitude-data/core/browser'
 import {
-  AppLocalStorage,
   DocumentTextEditor,
   DocumentTextEditorFallback,
-  DropdownMenu,
   useCurrentCommit,
   useCurrentProject,
-  useLocalStorage,
 } from '@latitude-data/web-ui'
 import { type AddMessagesActionFn } from '$/actions/sdk/addMessagesAction'
 import type { RunDocumentActionFn } from '$/actions/sdk/runDocumentAction'
+import EditorHeader from '$/components/EditorHeader'
 import useDocumentVersions from '$/stores/documentVersions'
 import { useDebouncedCallback } from 'use-debounce'
 
-import { Header } from './Header'
 import Playground from './Playground'
 
 export const DocumentEditorContext = createContext<
@@ -57,20 +54,6 @@ export default function DocumentEditor({
   const [value, setValue] = useState(document.content)
   const [isSaved, setIsSaved] = useState(true)
   const [metadata, setMetadata] = useState<ConversationMetadata>()
-
-  const { value: showLineNumbers, setValue: setShowLineNumbers } =
-    useLocalStorage({
-      key: AppLocalStorage.editorLineNumbers,
-      defaultValue: true,
-    })
-  const { value: wrapText, setValue: setWrapText } = useLocalStorage({
-    key: AppLocalStorage.editorWrapText,
-    defaultValue: true,
-  })
-  const { value: showMinimap, setValue: setShowMinimap } = useLocalStorage({
-    key: AppLocalStorage.editorMinimap,
-    defaultValue: false,
-  })
 
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
@@ -146,29 +129,12 @@ export default function DocumentEditor({
     >
       <div className='flex flex-row w-full h-full gap-8 p-6'>
         <div className='flex flex-col flex-1 flex-grow flex-shrink gap-2 min-w-0'>
-          <Header title='Prompt editor'>
-            <DropdownMenu
-              options={[
-                {
-                  label: 'Show line numbers',
-                  onClick: () => setShowLineNumbers(!showLineNumbers),
-                  checked: showLineNumbers,
-                },
-                {
-                  label: 'Wrap text',
-                  onClick: () => setWrapText(!wrapText),
-                  checked: wrapText,
-                },
-                {
-                  label: 'Show minimap',
-                  onClick: () => setShowMinimap(!showMinimap),
-                  checked: showMinimap,
-                },
-              ]}
-              side='bottom'
-              align='end'
-            />
-          </Header>
+          <EditorHeader
+            title='Prompt editor'
+            metadata={metadata}
+            prompt={value}
+            onChangePrompt={onChange}
+          />
           <Suspense fallback={<DocumentTextEditorFallback />}>
             <DocumentTextEditor
               value={value}

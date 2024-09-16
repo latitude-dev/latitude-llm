@@ -6,6 +6,8 @@ import { getCostPer1MGroq } from './groq'
 import { getCostPer1MMistral } from './mistral'
 import { getCostPer1MOpenAI } from './openai'
 
+// FIXME: Unifify models with src/constants.ts
+// The list of supported models for each provider is duplicated.
 export type ModelCost = { input: number; output: number }
 
 function getCostPer1M({
@@ -26,6 +28,7 @@ function getCostPer1M({
       return getCostPer1MMistral(model)
     case Providers.Azure:
       return getCostPer1MOpenAI(model)
+    // FIXME: Add Google costs
     default:
       throw new Error(`Unknown provider: ${provider}`)
   }

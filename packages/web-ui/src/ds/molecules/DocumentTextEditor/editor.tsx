@@ -139,6 +139,7 @@ export function DocumentTextEditor({
             language='document'
             loading={<DocumentTextEditorFallback />}
             defaultValue={defaultValue}
+            value={value}
             beforeMount={handleEditorWillMount}
             onMount={handleEditorDidMount}
             onChange={handleValueChange}
