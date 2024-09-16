@@ -18,7 +18,8 @@
     "AWS_REGION",
     "S3_BUCKET",
     "AWS_ACCESS_KEY",
-    "AWS_ACCESS_SECRET"
+    "AWS_ACCESS_SECRET",
+    "WORKERS_PORT"
   ],
   "$schema": "https://turbo.build/schema.json",
   "globalDependencies": ["**/.env.*local"],
