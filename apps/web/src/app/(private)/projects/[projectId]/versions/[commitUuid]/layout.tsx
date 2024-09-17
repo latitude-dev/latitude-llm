@@ -46,13 +46,13 @@ export default async function CommitLayout({
     })
     const commits = await findCommitsByProjectCached({ projectId: project.id })
     if (params.commitUuid === HEAD_COMMIT) {
+      isHead = true
       commit = commits.find((c) => !!c.mergedAt)
     } else {
       commit = commits.find((c) => c.uuid === params.commitUuid)
     }
 
     if (!commit) throw new NotFoundError('Commit not found')
-    isHead = commit.uuid === HEAD_COMMIT
   } catch (error) {
     if (error instanceof NotFoundError) return notFound()
 
@@ -85,7 +85,7 @@ export default async function CommitLayout({
             {
               name: (
                 <BreadcrumpBadge
-                  uuid={commit.uuid}
+                  uuid={params.commitUuid}
                   title={commit.title}
                   isHead={isHead}
                 />

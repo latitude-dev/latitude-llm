@@ -10,6 +10,8 @@ import { ROUTES } from '$/services/routes'
 import { cookies } from 'next/headers'
 import { notFound, redirect } from 'next/navigation'
 
+import { getCommitUrl } from './utils'
+
 const PROJECT_ROUTE = ROUTES.projects.detail
 
 export type ProjectPageParams = {
@@ -33,19 +35,16 @@ export default async function ProjectPage({ params }: ProjectPageParams) {
       workspaceId: session.workspace.id,
     })
 
-    if (!lastSeenCommitUuid || lastSeenCommitUuid?.value === HEAD_COMMIT) {
-      url = PROJECT_ROUTE({ id: +project.id }).commits.latest
-    } else {
-      const commits = await findCommitsByProjectCached({
-        projectId: project.id,
-      })
-      const commit = commits.filter((c) => !!c.mergedAt)[0] || commits[0]
-      if (!commit) throw new NotFoundError('No commits found')
+    const commits = await findCommitsByProjectCached({
+      projectId: project.id,
+    })
 
-      url = PROJECT_ROUTE({ id: +project.id }).commits.detail({
-        uuid: commit.uuid,
-      }).root
-    }
+    url = getCommitUrl({
+      commits,
+      projectId: project.id,
+      lastSeenCommitUuid: lastSeenCommitUuid?.value,
+      PROJECT_ROUTE,
+    })
   } catch (error) {
     if (error instanceof NotFoundError) {
       return notFound()
