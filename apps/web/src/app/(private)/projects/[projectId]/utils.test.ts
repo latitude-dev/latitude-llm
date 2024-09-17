@@ -13,8 +13,11 @@ describe('getCommitUrl', () => {
   }
 
   const mockCommits: Commit[] = [
+    // @ts-expect-error
     { uuid: '1', mergedAt: new Date() },
+    // @ts-expect-error
     { uuid: '2', mergedAt: null },
+    // @ts-expect-error
     { uuid: '3', mergedAt: null },
   ]
 
@@ -61,6 +64,7 @@ describe('getCommitUrl', () => {
   it('returns first commit URL when there is no head commit and no lastSeenCommitUuid', () => {
     const noHeadCommits = [{ uuid: '1', mergedAt: null }]
     const result = getCommitUrl({
+      // @ts-expect-error
       commits: noHeadCommits,
       projectId: 1,
       lastSeenCommitUuid: undefined,
