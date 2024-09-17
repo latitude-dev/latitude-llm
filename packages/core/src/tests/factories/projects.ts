@@ -66,6 +66,7 @@ export async function createProject(projectData: Partial<ICreateProject> = {}) {
     name: name ?? randomName,
     workspace,
     user,
+    mergedAt: new Date(),
   })
   const project = result.unwrap()
   const commitsScope = new CommitsRepository(workspace.id)

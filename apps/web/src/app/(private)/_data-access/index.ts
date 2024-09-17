@@ -62,6 +62,17 @@ export const findCommitCached = cache(
   },
 )
 
+export const findCommitsByProjectCached = cache(
+  async ({ projectId }: { projectId: number }) => {
+    const { workspace } = await getCurrentUser()
+    const commitsScope = new CommitsRepository(workspace.id)
+    const result = await commitsScope.filterByProject(projectId)
+    const commits = result.unwrap()
+
+    return commits
+  },
+)
+
 export const getDocumentByUuidCached = cache(
   async ({
     projectId,

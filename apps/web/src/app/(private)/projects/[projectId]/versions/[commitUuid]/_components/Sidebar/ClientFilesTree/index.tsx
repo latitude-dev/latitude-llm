@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from 'react'
 
-import { Commit, HEAD_COMMIT } from '@latitude-data/core/browser'
+import { HEAD_COMMIT } from '@latitude-data/core/browser'
 import {
   FilesTree,
   useCurrentCommit,
@@ -21,7 +21,6 @@ export default function ClientFilesTree({
   documents: serverDocuments,
   currentDocument,
 }: {
-  headCommit: Commit
   documents: SidebarDocument[]
   currentDocument: SidebarDocument | undefined
 }) {

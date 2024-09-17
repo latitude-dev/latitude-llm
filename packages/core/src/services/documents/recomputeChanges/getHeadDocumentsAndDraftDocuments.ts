@@ -35,13 +35,10 @@ async function getDocumentsAtCommit(
   if (projectResult.error) return projectResult
 
   const commitsScope = buildCommitsScope(workspaceId, tx)
-  const headCommitResult = await getHeadCommitForProject(
+  const headCommit = await getHeadCommitForProject(
     { projectId: projectResult.value.id, commitsScope },
     tx,
-  )
-  if (headCommitResult.error) return headCommitResult
-
-  const headCommit = headCommitResult.value
+  ).then((r) => r.unwrap())
 
   const docsScope = new DocumentVersionsRepository(workspaceId, tx)
   const headDocumentsResult = await docsScope.getDocumentsAtCommit(headCommit)

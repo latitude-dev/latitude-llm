@@ -128,7 +128,7 @@ export class DocumentVersionsRepository extends Repository<
   /**
    * NOTE: By default we don't include deleted documents
    */
-  async getDocumentsAtCommit(commit: Commit) {
+  async getDocumentsAtCommit(commit?: Commit) {
     const result = await this.getAllDocumentsAtCommit({ commit })
     if (result.error) return result
 
@@ -179,7 +179,9 @@ export class DocumentVersionsRepository extends Repository<
     return Result.ok(changedDocuments)
   }
 
-  private async getAllDocumentsAtCommit({ commit }: { commit: Commit }) {
+  private async getAllDocumentsAtCommit({ commit }: { commit?: Commit }) {
+    if (!commit) return Result.ok([])
+
     const documentsFromMergedCommits = await this.getDocumentsFromMergedCommits(
       {
         projectId: commit.projectId,

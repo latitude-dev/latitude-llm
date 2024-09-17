@@ -74,7 +74,14 @@ export class CommitsRepository extends Repository<
         return Result.error(new NotFoundError('Project ID is required'))
       }
 
-      return this.getHeadCommit(projectId)
+      const headCommit = await this.getHeadCommit(projectId).then((r) =>
+        r.unwrap(),
+      )
+      if (!headCommit) {
+        return Result.error(new NotFoundError('Head commit not found'))
+      }
+
+      return Result.ok(headCommit)
     }
 
     const result = await this.db
@@ -193,5 +200,15 @@ export class CommitsRepository extends Repository<
         }
       }),
     )
+  }
+
+  async filterByProject(projectId: number) {
+    const result = await this.db
+      .select()
+      .from(this.scope)
+      .where(eq(this.scope.projectId, projectId))
+      .orderBy(desc(this.scope.mergedAt))
+
+    return Result.ok(result)
   }
 }

@@ -216,7 +216,7 @@ describe('updateDocument', () => {
     const fooDoc = documents.find((d) => d.path === 'foo')!
 
     const result = await updateDocument({
-      commit,
+      commit: commit!,
       document: fooDoc,
       content: 'bar',
     })

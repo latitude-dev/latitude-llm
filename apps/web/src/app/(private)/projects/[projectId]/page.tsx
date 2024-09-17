@@ -1,7 +1,7 @@
 import { HEAD_COMMIT, type Project } from '@latitude-data/core/browser'
 import { NotFoundError } from '@latitude-data/core/lib/errors'
 import {
-  findCommitCached,
+  findCommitsByProjectCached,
   findProjectCached,
 } from '$/app/(private)/_data-access'
 import { lastSeenCommitCookieName } from '$/helpers/cookies/lastSeenCommit'
@@ -36,21 +36,21 @@ export default async function ProjectPage({ params }: ProjectPageParams) {
     if (!lastSeenCommitUuid || lastSeenCommitUuid?.value === HEAD_COMMIT) {
       url = PROJECT_ROUTE({ id: +project.id }).commits.latest
     } else {
-      const commitUuid = await findCommitCached({
-        uuid: lastSeenCommitUuid.value,
-        projectId: Number(params.projectId),
+      const commits = await findCommitsByProjectCached({
+        projectId: project.id,
       })
-        .then((c) => c.uuid)
-        .catch(() => HEAD_COMMIT) // Reditect to HEAD COMMIT if the commit does not exist
+      const commit = commits.filter((c) => !!c.mergedAt)[0] || commits[0]
+      if (!commit) throw new NotFoundError('No commits found')
 
       url = PROJECT_ROUTE({ id: +project.id }).commits.detail({
-        uuid: commitUuid,
+        uuid: commit.uuid,
       }).root
     }
   } catch (error) {
     if (error instanceof NotFoundError) {
       return notFound()
     }
+
     throw error
   }
 

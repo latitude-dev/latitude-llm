@@ -12,8 +12,8 @@ export default async function DocumentPage({
   params: { projectId: string; commitUuid: string; documentUuid: string }
 }) {
   const projectId = Number(params.projectId)
-  const commintUuid = params.commitUuid
-  const commit = await findCommitCached({ projectId, uuid: commintUuid })
+  const commitUuid = params.commitUuid
+  const commit = await findCommitCached({ projectId, uuid: commitUuid })
   const logs = await getDocumentLogsWithMetadataCached({
     documentUuid: params.documentUuid,
     commit,

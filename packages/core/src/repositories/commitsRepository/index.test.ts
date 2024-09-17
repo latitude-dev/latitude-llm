@@ -58,6 +58,7 @@ describe('Commits by project', () => {
         filterByStatus: CommitStatus.Draft,
       })
       .then((r) => r.unwrap())
+
     expect(list).toHaveLength(8)
   })
 

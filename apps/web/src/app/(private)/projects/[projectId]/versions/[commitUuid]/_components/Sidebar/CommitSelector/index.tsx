@@ -110,20 +110,22 @@ function CommitItem({
   onCommitPublish,
   onCommitDelete,
 }: {
-  commit: Commit
+  commit?: Commit
   currentDocument?: DocumentVersion
-  headCommitId: number
-  user: SimpleUser | undefined
+  headCommitId?: number
+  user?: SimpleUser
   onCommitPublish: ReactStateDispatch<number | null>
   onCommitDelete: ReactStateDispatch<number | null>
 }) {
-  const isHead = commit.id === headCommitId
-  const isDraft = !commit.mergedAt
   const { project } = useCurrentProject()
   const router = useNavigate()
+  const selectedSegment = useSelectedLayoutSegment()
+  if (!commit) return null
+
+  const isHead = commit.id === headCommitId
+  const isDraft = !commit.mergedAt
   const badgeType =
     commit.id === headCommitId ? BadgeType.Head : BadgeType.Draft
-  const selectedSegment = useSelectedLayoutSegment()
 
   const commitPath = useMemo(() => {
     const commitRoute = ROUTES.projects
@@ -186,7 +188,7 @@ export default function CommitSelector({
   currentDocument,
   draftCommits,
 }: {
-  headCommit: Commit
+  headCommit?: Commit | undefined
   currentCommit: Commit
   currentDocument?: DocumentVersion
   draftCommits: Commit[]
@@ -212,17 +214,17 @@ export default function CommitSelector({
       commit,
       title: commit.title ?? commit.uuid,
       badgeType:
-        currentCommit?.id === headCommit.id
+        currentCommit?.id === headCommit?.id
           ? BadgeType.Head
           : foundCommit
             ? BadgeType.Draft
             : BadgeType.Merged,
     }
-  }, [commits, currentCommit.id, headCommit.id])
+  }, [commits, currentCommit.id, headCommit?.id])
   const [publishCommit, setPublishCommit] = useState<number | null>(null)
   const [deleteCommit, setDeleteCommit] = useState<number | null>(null)
-  const canPublish = currentCommit.id !== headCommit.id
-  const isHead = currentCommit.id === headCommit.id
+  const canPublish = currentCommit.id !== headCommit?.id
+  const isHead = currentCommit.id === headCommit?.id
   return (
     <div className='flex flex-col gap-y-2'>
       <SelectRoot value={String(currentCommit.id)}>
@@ -244,8 +246,8 @@ export default function CommitSelector({
               <CommitItem
                 commit={headCommit}
                 currentDocument={currentDocument}
-                headCommitId={headCommit.id}
-                user={usersById[headCommit.userId]}
+                headCommitId={headCommit?.id}
+                user={headCommit ? usersById[headCommit?.userId] : undefined}
                 onCommitPublish={setPublishCommit}
                 onCommitDelete={setDeleteCommit}
               />
@@ -254,7 +256,7 @@ export default function CommitSelector({
                   <CommitItem
                     commit={commit}
                     currentDocument={currentDocument}
-                    headCommitId={headCommit.id}
+                    headCommitId={headCommit?.id}
                     user={usersById[commit.userId]}
                     onCommitPublish={setPublishCommit}
                     onCommitDelete={setDeleteCommit}

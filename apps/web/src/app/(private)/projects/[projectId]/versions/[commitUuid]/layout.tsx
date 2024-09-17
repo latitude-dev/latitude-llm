@@ -8,12 +8,12 @@ import {
   type Project,
 } from '@latitude-data/core/browser'
 import { NotFoundError } from '@latitude-data/core/lib/errors'
-import {
-  CommitsRepository,
-  ProjectsRepository,
-} from '@latitude-data/core/repositories/index'
 import { CommitProvider, ProjectProvider } from '@latitude-data/web-ui'
 import { BreadcrumpBadge } from '@latitude-data/web-ui/browser'
+import {
+  findCommitsByProjectCached,
+  findProjectCached,
+} from '$/app/(private)/_data-access'
 import { NAV_LINKS } from '$/app/(private)/_lib/constants'
 import { ProjectPageParams } from '$/app/(private)/projects/[projectId]/page'
 import BreadcrumpLink from '$/components/BreadcrumpLink'
@@ -34,23 +34,25 @@ export default async function CommitLayout({
   children,
   params,
 }: CommitPageParams) {
-  const isHead = params.commitUuid === HEAD_COMMIT
   let session: SessionData
   let project: Project
-  let commit: Commit
+  let commit: Commit | undefined
+  let isHead = false
   try {
     session = await getCurrentUser()
-    const projectsRepo = new ProjectsRepository(session.workspace.id)
-    const commitsRepo = new CommitsRepository(session.workspace.id)
-    project = (
-      await projectsRepo.getProjectById(Number(params.projectId))
-    ).unwrap()
-    commit = (
-      await commitsRepo.getCommitByUuid({
-        uuid: params.commitUuid,
-        projectId: Number(params.projectId),
-      })
-    ).unwrap()
+    project = await findProjectCached({
+      projectId: Number(params.projectId),
+      workspaceId: session.workspace.id,
+    })
+    const commits = await findCommitsByProjectCached({ projectId: project.id })
+    if (params.commitUuid === HEAD_COMMIT) {
+      commit = commits.find((c) => !!c.mergedAt)
+    } else {
+      commit = commits.find((c) => c.uuid === params.commitUuid)
+    }
+
+    if (!commit) throw new NotFoundError('Commit not found')
+    isHead = commit.uuid === HEAD_COMMIT
   } catch (error) {
     if (error instanceof NotFoundError) return notFound()
 
