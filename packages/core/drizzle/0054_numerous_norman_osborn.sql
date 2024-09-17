@@ -1,0 +1,1 @@
+ALTER TABLE "latitude"."users" DROP COLUMN IF EXISTS "encrypted_password";
