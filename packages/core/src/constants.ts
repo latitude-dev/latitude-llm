@@ -12,13 +12,12 @@ import {
 import { Config } from './services/ai'
 
 export const LATITUDE_EVENT = 'latitudeEventsChannel'
-export const LATITUDE_DOCS_URL = ''
-export const LATITUDE_EMAIL = ''
-export const LATITUDE_HELP_URL = ''
+export const LATITUDE_DOCS_URL = 'https://docs.latitude.so'
+export const LATITUDE_EMAIL = 'hello@latitude.so'
 export const LATITUDE_SLACK_URL =
-  'https://join.slack.com/t/trylatitude/shared_invite/zt-17dyj4elt-rwM~h2OorAA3NtgmibhnLA'
+  'https://trylatitude.slack.com/join/shared_invite/zt-17dyj4elt-rwM~h2OorAA3NtgmibhnLA#/shared-invite/email'
+export const LATITUDE_HELP_URL = LATITUDE_SLACK_URL
 export const HEAD_COMMIT = 'live'
-export const LATITUDE_CHANGELOG_URL = ''
 export enum CommitStatus {
   All = 'all',
   Merged = 'merged',
