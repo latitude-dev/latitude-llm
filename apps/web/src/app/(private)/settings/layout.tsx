@@ -7,6 +7,7 @@ import { getCurrentUser } from '$/services/auth/getCurrentUser'
 import { MAIN_NAV_LINKS, NAV_LINKS } from '../_lib/constants'
 import Memberships from './_components/Memberships'
 import ProviderApiKeys from './_components/ProviderApiKeys'
+import WorkspaceApiKeys from './_components/WorkspaceApiKeys'
 import WorkspaceName from './_components/WorkspaceName'
 
 export default async function SettingsLayout({
@@ -35,6 +36,7 @@ export default async function SettingsLayout({
         {children}
         <TitleWithActions title='Workspace' />
         <WorkspaceName />
+        <WorkspaceApiKeys />
         <ProviderApiKeys />
         <Memberships />
       </Container>
