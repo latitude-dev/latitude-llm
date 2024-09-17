@@ -22,6 +22,7 @@ import { getCurrentUser, SessionData } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
 import { notFound } from 'next/navigation'
 
+import { LastSeenCommitCookie } from './_components/LastSeenCommitCookie'
 import BreadcrumpInput from './documents/_components/BreadcrumpInput'
 
 export type CommitPageParams = {
@@ -62,6 +63,10 @@ export default async function CommitLayout({
   return (
     <ProjectProvider project={project}>
       <CommitProvider commit={commit} isHead={isHead}>
+        <LastSeenCommitCookie
+          projectId={project.id}
+          commitUuid={params.commitUuid}
+        />
         <AppLayout
           navigationLinks={NAV_LINKS}
           currentUser={session.user}
