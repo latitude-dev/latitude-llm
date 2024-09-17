@@ -37,6 +37,8 @@ if (environment !== 'production') {
       WEBSOCKET_REFRESH_SECRET_TOKEN_KEY: 'refresh-refresh-token-key',
       WORKERS_WEBSOCKET_SECRET_TOKEN: 'workers-secret-token',
       DRIVE_DISK: 'local',
+      DEFAULT_PROVIDER_ID: '',
+      DEFAULT_PROVIDER_MODEL: '',
       FILE_PUBLIC_PATH,
       FILES_STORAGE_PATH,
     },
