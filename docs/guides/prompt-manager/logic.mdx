@@ -13,7 +13,7 @@ Conditional statements allow you to execute different parts of your prompt based
 
 ```
     {{#if condition}}
-    // Content to be rendered if the condition is true
+        // Content to be rendered if the condition is true
     {{/if}}
 ```
 
@@ -21,11 +21,11 @@ For more complex scenarios, you can use else and else if:
 
 ```
     {{#if condition1}}
-    // Content if condition1 is true
+        // Content if condition1 is true
     {{:else if condition2}}
-    // Content if condition2 is true
+        // Content if condition2 is true
     {{:else}}
-    // Content if all conditions are false
+        // Content if all conditions are false
     {{/if}}
 ```
 
@@ -35,9 +35,9 @@ You can use variables in your conditions. These variables can come from paramete
 
 ```
     {{#if user_age >= 18}}
-    You are eligible to vote.
+        You are eligible to vote.
     {{:else}}
-    You are not old enough to vote yet.
+        You are not old enough to vote yet.
     {{/if}}
 ```
 
@@ -71,7 +71,7 @@ The each statement allows you to iterate over arrays or objects in your prompts.
 ### Example Usage
 ```
     {{#each ['apple', 'banana', 'cherry'] as fruit}}
-    {{fruit}}
+        {{fruit}}
     {{/each}}
 ```
 
@@ -84,31 +84,32 @@ This will output:
 You can also access the index of the current item in the loop:
 ```
     {{#each ['a', 'b', 'c'] as letter, index}}
-    {{index + 1}}. {{letter}}
+        {{index + 1}}.{{letter}}
     {{/each}}
 ```
 This will output:
-1. a
-2. b
-3. c
+- `1.a`
+- `2.b`
+- `3.c`
 
 ### Conditional Rendering within Loops
 You can combine each with if for more complex logic:
 ```
     {{#each users as user}}
-    {{#if user.isActive}}
-    {{user.name}} is an active user.
-    {{:else}}
-    {{user.name}} is not currently active.
-    {{/if}}
+        {{#if user.isActive}}
+            {{user.name}} is an active user.
+        {{:else}}
+            {{user.name}} is not currently active.
+        {{/if}}
     {{/each}}
 ```
+
 ### Empty List Handling
 You can provide an alternative output when the list is empty:
 ```
     {{#each items as item}}
-    {{item}}
+        {{item}}
     {{:else}}
-    No items found.
+        No items found.
     {{/each}}
 ```
