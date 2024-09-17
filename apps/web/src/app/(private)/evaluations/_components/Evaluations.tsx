@@ -2,7 +2,10 @@
 
 import { useState } from 'react'
 
-import { EvaluationTemplateWithCategory } from '@latitude-data/core/browser'
+import {
+  EvaluationResultableType,
+  EvaluationTemplateWithCategory,
+} from '@latitude-data/core/browser'
 import { Container } from '@latitude-data/web-ui'
 
 import ActiveEvaluations from './ActiveEvaluations'
@@ -27,6 +30,7 @@ export default function Evaluations({
             title: 'New Evaluation',
             description: '',
             prompt: '',
+            configuration: { type: EvaluationResultableType.Text },
           })
         }
       />
@@ -38,6 +42,7 @@ export default function Evaluations({
               title: template.name,
               description: template.description,
               prompt: template.prompt,
+              configuration: template.configuration,
             })
           }
         />

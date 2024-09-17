@@ -20,6 +20,7 @@ export type CreateEvaluationData = {
   title: string
   description: string
   prompt: string
+  configuration: EvaluationResultConfiguration
 }
 
 export default function CreateEvaluationModal({
@@ -37,7 +38,7 @@ export default function CreateEvaluationModal({
     handleTypeChange,
     handleRangeFromChange,
     handleRangeToChange,
-  } = useEvaluationConfiguration()
+  } = useEvaluationConfiguration(initialData?.configuration)
 
   const router = useRouter()
 
@@ -149,11 +150,15 @@ export default function CreateEvaluationModal({
   )
 }
 
-export function useEvaluationConfiguration() {
+export function useEvaluationConfiguration(
+  init?: EvaluationResultConfiguration,
+) {
   const [configuration, setConfiguration] =
-    useState<EvaluationResultConfiguration>({
-      type: EvaluationResultableType.Text,
-    })
+    useState<EvaluationResultConfiguration>(
+      init || {
+        type: EvaluationResultableType.Text,
+      },
+    )
 
   const handleTypeChange = useCallback((value: EvaluationResultableType) => {
     if (value === EvaluationResultableType.Number) {
@@ -227,6 +232,12 @@ export function useEvaluationConfiguration() {
     },
     [],
   )
+
+  useEffect(() => {
+    if (!init) return
+
+    setConfiguration(init)
+  }, [init])
 
   return {
     configuration,
