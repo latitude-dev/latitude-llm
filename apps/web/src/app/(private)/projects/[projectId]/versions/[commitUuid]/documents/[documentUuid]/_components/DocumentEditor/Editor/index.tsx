@@ -48,15 +48,21 @@ export default function DocumentEditor({
   document: DocumentVersion
   documents: DocumentVersion[]
 }) {
-  const { data: _documents, updateContent } = useDocumentVersions(undefined, {
-    fallbackData: documents,
-  })
+  const { commit } = useCurrentCommit()
+  const { project } = useCurrentProject()
+
+  const { data: _documents, updateContent } = useDocumentVersions(
+    {
+      commitUuid: commit.uuid,
+      projectId: project.id,
+    },
+    {
+      fallbackData: documents,
+    },
+  )
   const [value, setValue] = useState(document.content)
   const [isSaved, setIsSaved] = useState(true)
   const [metadata, setMetadata] = useState<ConversationMetadata>()
-
-  const { commit } = useCurrentCommit()
-  const { project } = useCurrentProject()
 
   const debouncedSave = useDebouncedCallback(
     (val: string) => {
