@@ -26,6 +26,7 @@ const sentryDsnArn = coreStack.requireOutput('sentryDsnArn')
 const sentryOrgArn = coreStack.requireOutput('sentryOrgArn')
 const sentryProjectArn = coreStack.requireOutput('sentryProjectArn')
 const defaultProviderIdArn = coreStack.requireOutput('defaultProviderIdArn')
+const defaultProjectIdArn = coreStack.requireOutput('defaultProjectIdArn')
 
 const getSecretString = (arn: pulumi.Output<any>) => {
   return arn.apply((secretId) =>
@@ -49,6 +50,7 @@ const workersWebsocketsSecretToken = getSecretString(
   workersWebsocketsSecretTokenArn,
 )
 const defaultProviderId = getSecretString(defaultProviderIdArn)
+const defaultProjectId = getSecretString(defaultProjectIdArn)
 
 export const sentryDsn = getSecretString(sentryDsnArn)
 export const sentryOrg = getSecretString(sentryOrgArn)
@@ -67,6 +69,7 @@ export const environment = pulumi
     sentryOrg,
     sentryProject,
     defaultProviderId,
+    defaultProjectId,
   ])
   .apply(() => {
     return [
@@ -103,6 +106,7 @@ export const environment = pulumi
       { name: 'S3_BUCKET', value: 'latitude-llm-bucket-production' },
       { name: 'AWS_ACCESS_KEY', value: awsAccessKey },
       { name: 'AWS_ACCESS_SECRET', value: awsAccessSecret },
+      { name: 'DEFAULT_PROJECT_ID', value: defaultProjectId },
       { name: 'DEFAULT_PROVIDER_ID', value: defaultProviderId },
       { name: 'DEFAULT_PROVIDER_MODEL', value: 'gpt-4o-mini' },
     ]

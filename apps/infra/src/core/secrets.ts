@@ -62,6 +62,10 @@ const defaultProviderId = createSecretWithVersion(
   'DEFAULT_PROVIDER_ID',
   'Default provider ID',
 )
+const defaultProjectId = createSecretWithVersion(
+  'DEFAULT_PROJECT_ID',
+  'Default project ID',
+)
 
 export const mailerApiKeyArn = mailerApiKey.arn
 export const sentryDsnArn = sentryDsn.arn
@@ -73,3 +77,4 @@ export const websocketsSecretTokenArn = websocketsSecretToken.arn
 export const websocketsSecretRefreshTokenArn = websocketsSecretRefreshToken.arn
 export const workersWebsocketsSecretTokenArn = workersWebsocketsSecretToken.arn
 export const defaultProviderIdArn = defaultProviderId.arn
+export const defaultProjectIdArn = defaultProjectId.arn
