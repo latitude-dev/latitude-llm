@@ -1,0 +1,64 @@
+---
+title: Overview Prompt Editor 
+description: Learn about the powerful features of the Latitude prompt editor.
+---
+
+## Prompt Editor
+The Latitude prompt editor is a versatile tool that allows you to define and structure your prompts with precision. Here's what you can do:
+
+## Model Configuration
+At the top of the prompt editor, through the inputs but also in the code, you can specify the default AI model to use in your prompt and set its parameters. For example:
+
+```
+---
+provider: openai
+model: gpt-4
+temperature: 0.7
+---
+```
+You can check [Prompt config section](/guides/prompt-manager/parameters) to learn more details.
+
+## Defining Conversation Structure
+Use tags to structure your prompt as a conversation:
+- `<user>`: Represents user input or context. You must close the tag with `</user>`.
+- `<assistant>`: Defines the expected AI assistant response. You must close the tag with `</assistant>`.
+- `{{parameter}}`: Allows for dynamic input in your prompts.
+
+### Advanced features
+The Latitude prompt editor also offers advanced features to create more dynamic and complex prompts:
+
+- **Parameters**: Use `{{parameter}}` syntax to include dynamic values in your prompts. [Learn more about parameters section](/guides/prompt-manager/parameters).
+- **Snippets**: Reuse common prompt elements with the `<ref>` tag. [Learn more about snippets](/guides/prompt-manager/snippets)
+- **Chains and steps**: Create multi-step prompts using the `<response>` tag. [Learn more about chain and steps](/guides/prompt-manager/chains)
+- **Logic**: Implement conditional statements and loops in your prompts. [Learn more about logic](/guides/prompt-manager/logic)
+
+### Example
+
+```
+---
+provider: openai
+model: gpt-4o
+---
+
+<user>
+Hello, I'd like to know about {{topic}}.
+</user>
+
+<assistant>
+Certainly! I'd be happy to provide information about {{topic}}. 
+What specific aspect would you like to know?
+</assistant>
+
+<user>
+Tell me about its history.
+</user>
+
+<assistant>
+Of course! I'll give you an overview of the history of {{topic}}.
+
+<ref prompt="history_template" />
+
+Is there anything specific about the history of {{topic}} you'd like me to elaborate on?
+</assistant>
+```
+

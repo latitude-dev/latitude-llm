@@ -1,0 +1,46 @@
+---
+title: Chains and Steps
+description: Chains and Steps are used to create multi-step prompts that can interact with the AI model in stages.
+---
+
+## Overview
+Chains allow you to create multi-step prompts that can interact with the AI model in stages. You can pass the result of one step to the next one. This enables more complex workflows and dynamic conversations.
+
+## Using Steps in Your Prompts
+
+- Use the `response` tag in your prompt as follows: `<response>your prompt here</response>`. 
+- Each `<response>` tag represents a pause in the execution where the AI will respond before continuing to the next part of the prompt.
+- Each `<response>` can use a different configuration, the properties accepted are:
+    - provider
+    - model
+    - temperature
+    ```
+        <response provider="openai" model="gpt-4o-mini" temperature={0.1} />
+    ```
+- You can save the response of a step as a variable using the `as` attribute:
+    ```
+        <response as="response">Your prompt here</response>
+    ```
+  This allows you to reuse the response later in your chain. [Check the logic section](/guides/prompt-manager/logic).
+
+## Basic Example
+
+```
+    ---
+    provider: openai
+    model: gpt-4o
+    ---
+    <user>
+        Analyze the following sentence and identify the subject, verb, and object:
+        "The curious cat chased the playful mouse."
+    </user>
+
+    <response provider="openai" model="gpt-4o-mini">
+        Now, using the information from the previous step, create a new sentence by
+        replacing each part of speech with a different word, but keep the same structure.
+    </response>
+
+    <response>
+        Finally, translate the new sentence you created into French and return just the sentence.
+    </response>
+```
