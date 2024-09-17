@@ -1,7 +1,7 @@
 import { and, desc, eq, isNotNull } from 'drizzle-orm'
 
 import { database } from '../../../client'
-import { InferedReturnType, NotFoundError, Result } from '../../../lib'
+import { InferedReturnType, Result } from '../../../lib'
 import { buildCommitsScope } from './buildCommitsScope'
 
 export async function getHeadCommitForProject(
@@ -26,9 +26,5 @@ export async function getHeadCommitForProject(
     .orderBy(desc(commitsScope.mergedAt))
     .limit(1)
 
-  if (result.length < 1) {
-    return Result.error(new NotFoundError('No head commit found'))
-  }
-
-  return Result.ok(result[0]!)
+  return Result.ok(result[0])
 }

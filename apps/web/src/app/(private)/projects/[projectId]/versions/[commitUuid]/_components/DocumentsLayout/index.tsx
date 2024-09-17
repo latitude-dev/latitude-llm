@@ -38,6 +38,7 @@ export default async function DocumentsLayout({
   const resizableId = ResizableGroups.DocumentSidebar
   const sidebarWidth =
     getResizablePanelGroupData({ group: resizableId }) ?? MIN_SIDEBAR_WIDTH_PX
+
   return (
     <DocumentDetailWrapper
       resizableId={resizableId}

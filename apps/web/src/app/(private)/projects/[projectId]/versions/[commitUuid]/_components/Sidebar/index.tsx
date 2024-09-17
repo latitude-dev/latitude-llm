@@ -29,9 +29,8 @@ export default async function Sidebar({
     status: CommitStatus.Draft,
   })
   const commitsScope = new CommitsRepository(workspace.id)
-  const headCommit = await commitsScope
-    .getHeadCommit(project.id)
-    .then((r) => r.unwrap())
+  const headCommitResult = await commitsScope.getHeadCommit(project.id)
+  const headCommit = headCommitResult.value
 
   if (fetchCommitsError) {
     throw fetchCommitsError
@@ -50,7 +49,6 @@ export default async function Sidebar({
       tree={
         <ClientFilesTree
           currentDocument={currentDocument}
-          headCommit={headCommit}
           documents={documents}
         />
       }

@@ -9,10 +9,12 @@ export async function createProject(
     workspace,
     user,
     name,
+    mergedAt,
   }: {
     name: string
     workspace: Workspace
     user: User
+    mergedAt?: Date
   },
   db = database,
 ) {
@@ -27,8 +29,8 @@ export async function createProject(
     const result = await createCommit({
       data: {
         title: 'Initial version',
-        mergedAt: new Date(),
         version: 0,
+        mergedAt,
       },
       project,
       user,
