@@ -319,7 +319,7 @@ describe('reference tags', async () => {
     const prompts = {
       main: removeCommonIndent(`
         This is the main prompt.
-        <ref prompt="user_messages" />
+        <prompt path="user_messages" />
         The end.
       `),
       user_messages: removeCommonIndent(`

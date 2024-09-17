@@ -70,7 +70,7 @@ describe('updateDocument', () => {
           referenced: {
             doc: 'The document that is being referenced',
           },
-          unmodified: '<ref prompt="referenced/doc" />',
+          unmodified: '<prompt path="referenced/doc" />',
         },
       })
 
@@ -104,7 +104,7 @@ describe('updateDocument', () => {
           referenced: {
             doc: 'The document that is being referenced',
           },
-          main: '<ref prompt="referenced/doc" />',
+          main: '<prompt path="referenced/doc" />',
         },
       })
     const docsScope = new DocumentVersionsRepository(project.workspaceId)
@@ -138,7 +138,7 @@ describe('updateDocument', () => {
           referenced: {
             doc: 'The document that is being referenced',
           },
-          unmodified: '<ref prompt="referenced/doc" />',
+          unmodified: '<prompt path="referenced/doc" />',
         },
       })
     const docsScope = new DocumentVersionsRepository(project.workspaceId)

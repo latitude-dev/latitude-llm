@@ -100,7 +100,7 @@ model: gpt-4o
 
 
 This is a test document
-<step />`)
+<response />`)
     })
 
     it('pass params to AI', async () => {
@@ -262,7 +262,7 @@ model: gpt-4o
 ---
 
 This is a test document
-<step />
+<response />
 `
 
 async function buildData({ doc1Content = '' }: { doc1Content?: string } = {}) {

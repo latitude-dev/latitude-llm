@@ -445,9 +445,9 @@ describe('chain', async () => {
       model: foo-1
       temperature: 0.5
       ---
-      <step />                /* step1 */
-      <step model="foo-2" />  /* step2 */
-      <step temperature=1 />  /* step3 */
+      <response />                /* step1 */
+      <response model="foo-2" />  /* step2 */
+      <response temperature=1 />  /* step3 */
     `)
 
     const chain = new Chain({

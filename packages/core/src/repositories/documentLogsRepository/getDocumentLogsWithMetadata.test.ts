@@ -180,7 +180,7 @@ describe('getDocumentLogsWithMetadata', () => {
     const { commit } = await factories.createDraft({ project, user })
     const { documentVersion: doc } = await factories.createDocumentVersion({
       commit,
-      content: documentContent('<step/>\n<step/>'),
+      content: documentContent('<response/>\n<response/>'),
     })
     await mergeCommit(commit).then((r) => r.unwrap())
 
