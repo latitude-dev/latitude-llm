@@ -5,20 +5,25 @@ import { EvaluationResultWithMetadata } from '@latitude-data/core/repositories'
 import { useCurrentCommit } from '@latitude-data/web-ui'
 
 import { BigNumberPanels } from './BigNumberPanels'
+import { EvaluationResultsCharts } from './Charts'
 
 export function MetricsSummary({
   evaluation,
+  documentUuid,
   evaluationResults,
 }: {
   evaluation: Evaluation
+  documentUuid: string
   evaluationResults: EvaluationResultWithMetadata[]
 }) {
   const { commit } = useCurrentCommit()
 
   return (
     <div className='flex gap-6 flex-wrap'>
-      <div className='min-h-[192px] min-w-[300px] flex-1 bg-muted-foreground rounded-lg' />
-      <div className='min-h-[192px] min-w-[300px] flex-1 bg-muted-foreground rounded-lg' />
+      <EvaluationResultsCharts
+        evaluation={evaluation}
+        documentUuid={documentUuid}
+      />
       <div className='min-w-[400px] flex-1'>
         <BigNumberPanels
           evaluation={evaluation}
