@@ -50,7 +50,7 @@ export function useRunBatchForm({
 
       setSelectedDataset(ds)
       setParameters(buildEmptyParameters(parametersList))
-      setFromLine(0)
+      setFromLine(1)
       setToLine(ds.fileMetadata.rowCount)
       setHeaders([
         { value: '-1', label: '-- Leave this parameter empty' },

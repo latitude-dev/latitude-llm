@@ -20,6 +20,8 @@ type RunBatchEvaluationJobParams = {
   evaluation: EvaluationDto
   dataset: Dataset
   document: DocumentVersion
+  commitUuid: string
+  projectId: number
   fromLine?: number
   toLine?: number
   parametersMap?: Record<string, number>
@@ -33,7 +35,9 @@ export const runBatchEvaluationJob = async (
     evaluation,
     dataset,
     document,
-    fromLine = 0,
+    projectId,
+    commitUuid,
+    fromLine,
     toLine,
     parametersMap,
     batchId = randomUUID(),
@@ -43,7 +47,7 @@ export const runBatchEvaluationJob = async (
   if (!workspace) throw new NotFoundError('Workspace not found')
 
   const commit = await new CommitsRepository(workspace.id)
-    .find(document.commitId)
+    .getCommitByUuid({ projectId, uuid: commitUuid })
     .then((r) => r.unwrap())
   const fileMetadata = dataset.fileMetadata
   // TODO: use streaming instead of this service in order to avoid loading the

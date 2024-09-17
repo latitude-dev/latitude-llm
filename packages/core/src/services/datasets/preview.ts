@@ -10,7 +10,7 @@ export async function previewDataset({
   dataset,
   disk = diskFactory(),
   prependIndex,
-  fromLine = 0,
+  fromLine = 1,
   toLine = 100,
 }: {
   dataset: Dataset

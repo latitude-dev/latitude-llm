@@ -28,12 +28,13 @@ vi.mock('@latitude-data/core/data-access', () => ({
   findWorkspaceFromDocument: vi.fn(),
 }))
 
+const commitReo = vi.hoisted(() => ({
+  getCommitByUuid: vi.fn().mockResolvedValue({
+    unwrap: () => ({ id: 'commit-1' }),
+  }),
+}))
 vi.mock('@latitude-data/core/repositories', () => ({
-  CommitsRepository: vi.fn().mockImplementation(() => ({
-    find: vi.fn().mockResolvedValue({
-      unwrap: () => ({ id: 'commit-1' }),
-    }),
-  })),
+  CommitsRepository: vi.fn().mockImplementation(() => commitReo),
 }))
 
 vi.mock('@latitude-data/core/services/datasets/preview', () => ({
@@ -70,6 +71,8 @@ describe('runBatchEvaluationJob', () => {
         evaluation: { id: 1 },
         dataset: { fileMetadata: { rowCount: 3 } },
         document: { documentUuid: 'fake-document-uuid', commitId: 'commit-1' },
+        commitUuid: 'commit-uuid-1',
+        projectId: 1,
         parametersMap: { param1: 0, param2: 1 },
       },
       attemptsMade: 0,
@@ -115,6 +118,15 @@ describe('runBatchEvaluationJob', () => {
         completed: 1,
         total: 3,
       },
+    })
+  })
+
+  it('find commit by uuid and project Id', async () => {
+    await runBatchEvaluationJob(mockJob)
+
+    expect(commitReo.getCommitByUuid).toHaveBeenCalledWith({
+      projectId: 1,
+      uuid: 'commit-uuid-1',
     })
   })
 

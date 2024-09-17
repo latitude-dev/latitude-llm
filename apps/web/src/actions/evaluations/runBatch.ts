@@ -102,6 +102,8 @@ export const runBatchEvaluationAction = withDataset
         evaluation,
         dataset: ctx.dataset,
         document: ctx.document,
+        projectId: ctx.project.id,
+        commitUuid: ctx.currentCommitUuid,
         fromLine: input.fromLine,
         toLine: input.toLine,
         parametersMap: input.parameters,

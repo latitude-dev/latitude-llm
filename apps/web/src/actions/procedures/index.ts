@@ -54,5 +54,5 @@ export const widthDocument = createServerActionProcedure(withProject)
       })
       .then((r) => r.unwrap())
 
-    return { ...ctx, document }
+    return { ...ctx, document, currentCommitUuid: input.commitUuid }
   })
