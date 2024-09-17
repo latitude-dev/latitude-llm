@@ -2,7 +2,7 @@ import path from 'path'
 
 import slugify from '@sindresorhus/slugify'
 
-import { SafeWorkspace, User } from '../../browser'
+import { User, Workspace } from '../../browser'
 import { database } from '../../client'
 import { Result, Transaction } from '../../lib'
 import { diskFactory, DiskWrapper } from '../../lib/disk'
@@ -17,7 +17,7 @@ export const createDataset = async (
     data,
   }: {
     author: User
-    workspace: SafeWorkspace
+    workspace: Workspace
     data: {
       name: string
       file: File

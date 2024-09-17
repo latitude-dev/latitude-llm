@@ -6,7 +6,7 @@ import {
   LogSources,
   ProviderApiKey,
   Providers,
-  SafeUser,
+  User,
   Workspace,
 } from '../../browser'
 import { publisher } from '../../events/publisher'
@@ -29,43 +29,12 @@ describe('runDocumentAtCommit', () => {
     publisherSpy.mockImplementation(mocks.publish)
   })
 
-  it('fails if document is not found in commit', async () => {
-    const { document, commit } = await buildData()
-    const result = await runDocumentAtCommit({
-      workspaceId: 0,
-      document,
-      commit,
-      parameters: {},
-      source: LogSources.API,
-    })
-
-    expect(result.error).toBeDefined()
-  })
-
-  it('fails if documents has not valid config', async () => {
-    const { workspace, document, commit } = await buildData()
-    const result = await runDocumentAtCommit({
-      workspaceId: workspace.id,
-      document,
-      commit,
-      parameters: {},
-      source: LogSources.API,
-    })
-
-    await expect(result?.value?.response).rejects.toThrowError(
-      'Error validating document configuration',
-    )
-    await expect(result?.value?.duration).rejects.toThrowError(
-      'Error validating document configuration',
-    )
-  })
-
   it('fails if provider api key is not found', async () => {
     const { workspace, document, commit } = await buildData({
       doc1Content: dummyDoc1Content,
     })
     const result = await runDocumentAtCommit({
-      workspaceId: workspace.id,
+      workspace,
       document,
       commit,
       parameters: {},
@@ -73,10 +42,10 @@ describe('runDocumentAtCommit', () => {
     })
 
     expect(result?.value?.response).rejects.toThrowError(
-      'ProviderApiKey not found',
+      'Could not find any provider api key',
     )
     expect(result?.value?.duration).rejects.toThrowError(
-      'ProviderApiKey not found',
+      'Could not find any provider api key',
     )
   })
 
@@ -93,7 +62,6 @@ describe('runDocumentAtCommit', () => {
       user = usr
       document = doc
       commit = cmt
-      workspaceId = wsp.id
       workspace = wsp
       provider = await createProviderApiKey({
         workspace,
@@ -103,9 +71,22 @@ describe('runDocumentAtCommit', () => {
       })
     })
 
+    it('fails if document is not found in commit', async () => {
+      const { document } = await buildData()
+      const result = await runDocumentAtCommit({
+        workspace,
+        document,
+        commit,
+        parameters: {},
+        source: LogSources.API,
+      })
+
+      expect(result.error).toBeDefined()
+    })
+
     it('returns document resolvedContent', async () => {
       const result = await runDocumentAtCommit({
-        workspaceId,
+        workspace,
         document,
         commit,
         parameters: {},
@@ -124,7 +105,7 @@ This is a test document
 
     it('pass params to AI', async () => {
       const { stream } = await runDocumentAtCommit({
-        workspaceId,
+        workspace,
         document,
         commit,
         parameters: {},
@@ -151,7 +132,7 @@ This is a test document
 
     it('send documentLogUuid when chain is completed', async () => {
       const { stream } = await runDocumentAtCommit({
-        workspaceId,
+        workspace,
         document,
         commit,
         parameters: {},
@@ -235,7 +216,7 @@ This is a test document
     it('calls publisher with correct data', async () => {
       const parameters = { testParam: 'testValue' }
       const { response } = await runDocumentAtCommit({
-        workspaceId,
+        workspace,
         document,
         commit,
         parameters,
@@ -301,7 +282,6 @@ async function buildData({ doc1Content = '' }: { doc1Content?: string } = {}) {
 
 let document: DocumentVersion
 let commit: Commit
-let workspaceId: number
 let workspace: Workspace
-let user: SafeUser
+let user: User
 let provider: ProviderApiKey

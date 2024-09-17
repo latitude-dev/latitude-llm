@@ -1,7 +1,7 @@
 import type {
   Commit,
   Project,
-  SafeUser,
+  User,
   Workspace,
 } from '@latitude-data/core/browser'
 import { database } from '@latitude-data/core/client'
@@ -20,7 +20,7 @@ vi.mock('$/services/auth/getSession', () => ({
 
 let workspace: Workspace
 let project: Project
-let user: SafeUser
+let user: User
 let commit: Commit
 
 describe('getUsersAction', () => {

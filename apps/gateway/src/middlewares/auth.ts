@@ -18,12 +18,12 @@ const authMiddleware = () =>
       const apiKeyResult = await unsafelyGetApiKeyByToken({ token })
       if (apiKeyResult.error) return false
 
-      const workspaceResult = await unsafelyFindWorkspace(
+      const workspace = await unsafelyFindWorkspace(
         apiKeyResult.value.workspaceId,
       )
-      if (workspaceResult.error) return false
+      if (!workspace) return false
 
-      c.set('workspace', workspaceResult.value)
+      c.set('workspace', workspace)
       c.set('apiKey', apiKeyResult.value)
 
       return true

@@ -9,7 +9,7 @@ import {
   ProviderApiKey,
   ProviderLog,
   Providers,
-  SafeUser,
+  User,
   Workspace,
 } from '../../../browser'
 import {
@@ -72,7 +72,7 @@ This is a test document
 let document: DocumentVersion
 let commit: Commit
 let workspace: Workspace
-let user: SafeUser
+let user: User
 let providerApiKey: ProviderApiKey
 let providerLog: ProviderLog
 

@@ -85,7 +85,7 @@ describe('runDocumentJob', () => {
 
     expect(runDocumentAtCommit).toHaveBeenCalledWith(
       expect.objectContaining({
-        workspaceId: workspace.id,
+        workspace,
         commit,
         parameters: { param1: 'value1' },
         source: LogSources.Evaluation,

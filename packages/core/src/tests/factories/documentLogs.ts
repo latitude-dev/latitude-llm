@@ -45,7 +45,7 @@ export async function createDocumentLog({
 
     const config = conversation.config as Config
     const provider = await providerScope
-      .findByName(config.provider)
+      .findByName(config.provider!)
       .then((r) => r.unwrap())
 
     mockedResponse = helpers.randomSentence()
@@ -65,7 +65,7 @@ export async function createDocumentLog({
       documentLogUuid,
       providerId: provider.id,
       providerType: provider.provider,
-      model: config.model,
+      model: config.model!,
       config: config,
       messages: conversation.messages,
       responseText: mockedResponse,

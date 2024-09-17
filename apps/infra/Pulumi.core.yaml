@@ -2,6 +2,8 @@ encryptionsalt: v1:K+dTqOgU40c=:v1:xzsAOOiJEEAsdCQ4:Oe7NKHjXdYdZrcrrBa1/0yolY5M3
 config:
   infra:DATABASE_PASSWORD:
     secure: v1:WABt/tJjfsAKMplU:RRLtj5mTu301x4sn2Tr91u4O0Msd3mWVJutcDg==
+  infra:DEFAULT_PROVIDER_ID:
+    secure: v1:N7RvQfTlIJlrU5N5:NdbEHtxvPSMIOhapDNuLVxU=
   infra:LATITUDE_LLM_AWS_ACCESS_KEY:
     secure: v1:4SUt0/rEtwZMk0ts:BarCGxQjAzapKjZlsyNw9Vb6lyMGiMAdPlYCkrpfd4SU+fEb
   infra:LATITUDE_LLM_AWS_ACCESS_SECRET:

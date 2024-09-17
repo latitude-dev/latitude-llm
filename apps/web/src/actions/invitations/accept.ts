@@ -26,9 +26,8 @@ export const acceptInvitationAction = createServerAction()
     const membership = await unsafelyFindMembershipByToken(
       membershipToken,
     ).then((r) => r.unwrap())
-    const workspace = await unsafelyFindWorkspace(membership.workspaceId).then(
-      (r) => r.unwrap(),
-    )
+    const workspace = await unsafelyFindWorkspace(membership.workspaceId)
+    if (!workspace) throw new NotFoundError('Workspace not found')
 
     const user = await unsafelyGetUser(membership.userId)
     if (!user) throw new NotFoundError('User not found')
@@ -37,7 +36,7 @@ export const acceptInvitationAction = createServerAction()
     await setSession({
       sessionData: {
         user,
-        workspace: { id: Number(workspace.id), name: workspace.name },
+        workspace,
       },
     })
 

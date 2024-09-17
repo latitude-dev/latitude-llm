@@ -13,12 +13,10 @@ import {
   StreamEventTypes,
   Workspace,
 } from '../../../browser'
-import { Result } from '../../../lib'
+import { unsafelyFindProviderApiKey } from '../../../data-access'
+import { NotFoundError, Result } from '../../../lib'
 import { streamToGenerator } from '../../../lib/streamToGenerator'
-import {
-  ProviderApiKeysRepository,
-  ProviderLogsRepository,
-} from '../../../repositories'
+import { ProviderLogsRepository } from '../../../repositories'
 import { ai, PartialConfig } from '../../ai'
 import { enqueueChainEvent } from '../../chains/run'
 
@@ -36,16 +34,13 @@ export async function addMessages({
   const providerLogRepo = new ProviderLogsRepository(workspace.id)
   const providerLogResult =
     await providerLogRepo.findLastByDocumentLogUuid(documentLogUuid)
-
   if (providerLogResult.error) return providerLogResult
 
   const providerLog = providerLogResult.value
-
-  const apiProviderRepo = new ProviderApiKeysRepository(workspace.id)
-  const apiKeyResult = await apiProviderRepo.find(providerLog.providerId)
-  if (apiKeyResult.error) return apiKeyResult
-
-  const provider = apiKeyResult.value
+  const provider = await unsafelyFindProviderApiKey(providerLog.providerId)
+  if (!provider) {
+    return Result.error(new NotFoundError('Could not find a provider api key'))
+  }
 
   let responseResolve: (value: ChainCallResponse) => void
   let responseReject: (reason?: any) => void
@@ -58,6 +53,7 @@ export async function addMessages({
   const stream = new ReadableStream<ChainEvent>({
     start(controller) {
       streamMessageResponse({
+        workspace,
         source,
         config: providerLog.config,
         documentLogUuid: documentLogUuid!,
@@ -84,6 +80,7 @@ export async function addMessages({
 }
 
 async function streamMessageResponse({
+  workspace,
   config,
   documentLogUuid,
   provider,
@@ -91,6 +88,7 @@ async function streamMessageResponse({
   messages,
   source,
 }: {
+  workspace: Workspace
   config: PartialConfig
   documentLogUuid: DocumentLog['uuid']
   provider: ProviderApiKey
@@ -100,6 +98,7 @@ async function streamMessageResponse({
 }) {
   try {
     const result = await ai({
+      workspace,
       documentLogUuid,
       messages,
       config,
@@ -167,7 +166,9 @@ async function streamMessageResponse({
         },
       },
     })
+
     controller.close()
+
     throw error
   }
 }

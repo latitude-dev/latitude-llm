@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 
-import type { SafeUser } from '@latitude-data/core/browser'
+import type { User } from '@latitude-data/core/browser'
 import {
   Button,
   Icon,
@@ -41,7 +41,7 @@ export default function Memberships() {
   )
 }
 
-function UsersTable({ users }: { users: SafeUser[] }) {
+function UsersTable({ users }: { users: User[] }) {
   return (
     <Table>
       <TableHeader>

@@ -25,9 +25,6 @@ import { workspaces } from './models/workspaces'
 // otherwise, it will throw an error.
 export type Workspace = InferSelectModel<typeof workspaces>
 export type User = InferSelectModel<typeof users>
-// TODO: remove SafeUser and SafeWorkspace
-export type SafeUser = User
-export type SafeWorkspace = { id: number; name: string }
 export type Session = InferSelectModel<typeof sessions> & {
   user: User
 }

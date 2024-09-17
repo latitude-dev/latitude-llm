@@ -58,6 +58,10 @@ const workersWebsocketsSecretToken = createSecretWithVersion(
   'WORKERS_WEBSOCKET_SECRET_TOKEN',
   'Secret token key for websockets in workers',
 )
+const defaultProviderId = createSecretWithVersion(
+  'DEFAULT_PROVIDER_ID',
+  'Default provider ID',
+)
 
 export const mailerApiKeyArn = mailerApiKey.arn
 export const sentryDsnArn = sentryDsn.arn
@@ -68,3 +72,4 @@ export const awsAccessSecretArn = awsAccessSecret.arn
 export const websocketsSecretTokenArn = websocketsSecretToken.arn
 export const websocketsSecretRefreshTokenArn = websocketsSecretRefreshToken.arn
 export const workersWebsocketsSecretTokenArn = workersWebsocketsSecretToken.arn
+export const defaultProviderIdArn = defaultProviderId.arn

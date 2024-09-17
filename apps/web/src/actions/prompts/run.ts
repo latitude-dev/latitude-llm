@@ -22,6 +22,7 @@ export const runPromptAction = authProcedure
     const stream = createStreamableValue()
     try {
       const result = await runPrompt({
+        workspace: ctx.workspace,
         source: LogSources.Evaluation,
         prompt,
         parameters,

@@ -2,7 +2,7 @@
 
 import { ReactNode } from 'react'
 
-import { Membership, SafeUser } from '@latitude-data/core/browser'
+import { Membership, User } from '@latitude-data/core/browser'
 import { Button, FormWrapper, Input, useToast } from '@latitude-data/web-ui'
 import { acceptInvitationAction } from '$/actions/invitations/accept'
 import { useServerAction } from 'zsa-react'
@@ -12,7 +12,7 @@ export default function InvitationForm({
   membership,
   footer,
 }: {
-  user: SafeUser
+  user: User
   membership: Membership
   footer: ReactNode
 }) {

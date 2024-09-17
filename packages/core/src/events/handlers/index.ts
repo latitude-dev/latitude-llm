@@ -1,10 +1,13 @@
 import {
   ChainCallResponse,
+  LogSources,
   MagicLinkToken,
   Membership,
+  Message,
   ProviderLog,
   User,
 } from '../../browser'
+import { PartialConfig } from '../../services/ai'
 import { createEvaluationResultJob } from './createEvaluationResultJob'
 import { createDocumentLogJob } from './documentLogs/createJob'
 import { sendInvitationToUserJob } from './sendInvitationToUser'
@@ -63,6 +66,31 @@ export type ProviderLogCreatedEvent = LatitudeEventGeneric<
   ProviderLog
 >
 
+export type AIProviderCallCompletedEvent = LatitudeEventGeneric<
+  'aiProviderCallCompleted',
+  {
+    workspaceId: number
+    uuid: string
+    source: LogSources
+    generatedAt: Date
+    documentLogUuid?: string
+    providerId: number
+    providerType: string
+    model: string
+    config: PartialConfig
+    messages: Message[]
+    toolCalls: {
+      id: string
+      name: string
+      arguments: unknown[]
+    }[]
+    usage: unknown
+    duration: number
+    responseText: string
+    responseObject?: unknown
+  }
+>
+
 export type LatitudeEvent =
   | MembershipCreatedEvent
   | UserCreatedEvent
@@ -70,6 +98,7 @@ export type LatitudeEvent =
   | EvaluationRunEvent
   | DocumentRunEvent
   | ProviderLogCreatedEvent
+  | AIProviderCallCompletedEvent
 
 export interface IEventsHandlers {
   magicLinkTokenCreated: EventHandler<MagicLinkTokenCreated>[]
@@ -78,6 +107,7 @@ export interface IEventsHandlers {
   evaluationRun: EventHandler<EvaluationRunEvent>[]
   documentRun: EventHandler<DocumentRunEvent>[]
   providerLogCreated: EventHandler<ProviderLogCreatedEvent>[]
+  aiProviderCallCompleted: EventHandler<AIProviderCallCompletedEvent>[]
 }
 
 export const EventHandlers: IEventsHandlers = {
@@ -87,4 +117,5 @@ export const EventHandlers: IEventsHandlers = {
   evaluationRun: [createEvaluationResultJob],
   documentRun: [createDocumentLogJob],
   providerLogCreated: [],
+  aiProviderCallCompleted: [],
 } as const

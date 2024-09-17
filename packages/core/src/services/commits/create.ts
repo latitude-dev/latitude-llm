@@ -1,4 +1,4 @@
-import { Commit, Project, SafeUser } from '../../browser'
+import { Commit, Project, User } from '../../browser'
 import { database, Database } from '../../client'
 import { Result, Transaction } from '../../lib'
 import { commits } from '../../schema'
@@ -10,7 +10,7 @@ export async function createCommit({
   db = database,
 }: {
   project: Project
-  user: SafeUser
+  user: User
   data: {
     title: string
     description?: string

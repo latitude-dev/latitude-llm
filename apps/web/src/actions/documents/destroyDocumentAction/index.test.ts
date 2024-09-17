@@ -2,7 +2,7 @@ import {
   Commit,
   DocumentVersion,
   Project,
-  SafeUser,
+  User,
 } from '@latitude-data/core/browser'
 import { database } from '@latitude-data/core/client'
 import { createDraft, createProject } from '@latitude-data/core/factories'
@@ -25,7 +25,7 @@ let draft: Commit
 let merged: Commit
 let document: DocumentVersion
 let project: Project
-let userData: SafeUser
+let userData: User
 describe('destroyDocumentAction', async () => {
   beforeEach(async () => {
     const {

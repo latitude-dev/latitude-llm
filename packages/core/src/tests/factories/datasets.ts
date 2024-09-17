@@ -1,6 +1,6 @@
 import { faker } from '@faker-js/faker'
 
-import { SafeUser, Workspace } from '../../browser'
+import { User, Workspace } from '../../browser'
 import { DiskWrapper } from '../../lib/disk'
 import { createDataset as createDatasetFn } from '../../services/datasets/create'
 import { createWorkspace, ICreateWorkspace } from './workspaces'
@@ -8,14 +8,14 @@ import { createWorkspace, ICreateWorkspace } from './workspaces'
 export type ICreateDataset = {
   name?: string
   workspace?: Workspace | ICreateWorkspace
-  author?: SafeUser
+  author?: User
   csvDelimiter?: string
   fileContent?: string
 }
 
 export async function createDataset(datasetData: Partial<ICreateDataset> = {}) {
   let workspaceData = datasetData.workspace ?? {}
-  let user: SafeUser
+  let user: User
   let workspace: Workspace
 
   if ('id' in workspaceData) {

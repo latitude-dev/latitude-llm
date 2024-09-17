@@ -1,4 +1,4 @@
-import { SafeUser, Workspace } from '../../browser'
+import { User, Workspace } from '../../browser'
 import { database } from '../../client'
 import { Result, Transaction } from '../../lib'
 import { workspaces } from '../../schema'
@@ -11,7 +11,7 @@ export async function createWorkspace(
     user,
   }: {
     name: string
-    user: SafeUser
+    user: User
   },
   db = database,
 ) {

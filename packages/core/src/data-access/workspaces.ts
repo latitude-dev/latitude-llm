@@ -1,13 +1,7 @@
 import { desc, eq, getTableColumns } from 'drizzle-orm'
 
-import {
-  DocumentVersion,
-  ProviderApiKey,
-  type Commit,
-  type Workspace,
-} from '../browser'
+import { DocumentVersion, ProviderApiKey, type Commit } from '../browser'
 import { database } from '../client'
-import { NotFoundError, Result, TypedResult } from '../lib'
 import {
   commits,
   documentVersions,
@@ -17,19 +11,10 @@ import {
   workspaces,
 } from '../schema'
 
-export async function unsafelyFindWorkspace(
-  id: number,
-  db = database,
-): Promise<TypedResult<Workspace, Error>> {
-  const workspace = await db.query.workspaces.findFirst({
+export async function unsafelyFindWorkspace(id: number, db = database) {
+  return await db.query.workspaces.findFirst({
     where: eq(workspaces.id, id),
   })
-
-  if (!workspace) {
-    return Result.error(new NotFoundError('Workspace not found'))
-  }
-
-  return Result.ok(workspace)
 }
 
 export async function unsafelyFindWorkspacesFromUser(

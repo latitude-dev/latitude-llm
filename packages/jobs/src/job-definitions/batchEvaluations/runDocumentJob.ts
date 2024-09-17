@@ -1,4 +1,6 @@
 import { LogSources } from '@latitude-data/core/browser'
+import { unsafelyFindWorkspace } from '@latitude-data/core/data-access'
+import { NotFoundError } from '@latitude-data/core/lib/errors'
 import {
   CommitsRepository,
   DocumentVersionsRepository,
@@ -35,6 +37,9 @@ export const runDocumentJob = async (job: Job<RunDocumentJobData>) => {
   const progressTracker = new ProgressTracker(connection, batchId)
 
   try {
+    const workspace = await unsafelyFindWorkspace(workspaceId)
+    if (!workspace) throw new NotFoundError('Workspace not found')
+
     const documentsScope = new DocumentVersionsRepository(workspaceId)
     const commitsScope = new CommitsRepository(workspaceId)
     const document = await documentsScope
@@ -44,7 +49,7 @@ export const runDocumentJob = async (job: Job<RunDocumentJobData>) => {
       .getCommitByUuid({ projectId, uuid: commitUuid })
       .then((r) => r.unwrap())
     const result = await runDocumentAtCommit({
-      workspaceId,
+      workspace,
       document,
       commit,
       parameters,

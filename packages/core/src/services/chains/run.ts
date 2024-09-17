@@ -1,10 +1,11 @@
 import { Chain, MessageRole } from '@latitude-data/compiler'
+import { env } from '@latitude-data/env'
 import { CoreTool, ObjectStreamPart, TextStreamPart } from 'ai'
 import { JSONSchema7 } from 'json-schema'
 import { v4 } from 'uuid'
 import { ZodError } from 'zod'
 
-import { objectToString, ProviderApiKey } from '../../browser'
+import { objectToString, ProviderApiKey, Workspace } from '../../browser'
 import {
   ChainCallResponse,
   ChainEvent,
@@ -15,6 +16,7 @@ import {
   ProviderData,
   StreamEventTypes,
 } from '../../constants'
+import { unsafelyFindProviderApiKey } from '../../data-access'
 import { NotFoundError, Result, UnprocessableEntityError } from '../../lib'
 import { streamToGenerator } from '../../lib/streamToGenerator'
 import { ai, Config, validateConfig } from '../ai'
@@ -22,12 +24,14 @@ import { ai, Config, validateConfig } from '../ai'
 export type CachedApiKeys = Map<string, ProviderApiKey>
 
 export async function runChain({
+  workspace,
   chain,
   apikeys,
   source,
   generateUUID = v4,
   configOverrides,
 }: {
+  workspace: Workspace
   chain: Chain
   generateUUID?: () => string
   source: LogSources
@@ -51,6 +55,7 @@ export async function runChain({
   const stream = new ReadableStream<ChainEvent>({
     start(controller) {
       iterate({
+        workspace,
         source,
         chain,
         apikeys,
@@ -73,6 +78,7 @@ export async function runChain({
 }
 
 async function iterate({
+  workspace,
   source,
   chain,
   previousApiKey,
@@ -83,6 +89,7 @@ async function iterate({
   documentLogUuid,
   configOverrides,
 }: {
+  workspace: Workspace
   source: LogSources
   chain: Chain
   apikeys: CachedApiKeys
@@ -108,6 +115,7 @@ async function iterate({
     publishStepStartEvent(controller, stepResult)
 
     const aiResult = await ai({
+      workspace,
       source,
       documentLogUuid,
       messages: stepResult.conversation.messages,
@@ -129,6 +137,7 @@ async function iterate({
       publishStepCompleteEvent(controller, response)
 
       return iterate({
+        workspace,
         source,
         chain,
         documentLogUuid,
@@ -297,7 +306,7 @@ async function computeStepData({
 }) {
   const { completed, conversation } = await chain.step(previousResponse?.text)
   const config = validateConfig(conversation.config)
-  apiKey = findApiKey({ apikeys, name: config.provider })
+  apiKey = await findApiKey({ apikeys, name: config.provider })
 
   const newMessagesInStep = conversation.messages.slice(sentCount)
   sentCount += newMessagesInStep.length
@@ -312,20 +321,24 @@ async function computeStepData({
   }
 }
 
-function findApiKey({
+async function findApiKey({
   apikeys,
   name,
 }: {
   apikeys: CachedApiKeys
-  name: string
+  name?: string
 }) {
-  const apiKey = apikeys.get(name)
-
-  if (!apiKey) {
-    throw new NotFoundError('ProviderApiKey not found')
-  }
+  const apiKey = !!name && apikeys.get(name)
+  if (!apiKey) return await findDefaultProvider()
 
   return apiKey
+}
+
+async function findDefaultProvider() {
+  const result = await unsafelyFindProviderApiKey(env.DEFAULT_PROVIDER_ID)
+  if (!result) throw new NotFoundError('Could not find any provider api key.')
+
+  return result
 }
 
 export function enqueueChainEvent(

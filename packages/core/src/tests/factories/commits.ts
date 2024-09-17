@@ -1,13 +1,13 @@
 import { faker } from '@faker-js/faker'
 
-import { Project, SafeUser } from '../../browser'
+import { Project, User } from '../../browser'
 import { hasOwnProperty } from '../../lib'
 import { createCommit as createCommitFn } from '../../services/commits/create'
 import { createProject } from './createProject'
 import { ICreateProject } from './projects'
 
 export type ICreateDraft = {
-  user: SafeUser
+  user: User
   project?: Project | ICreateProject
 }
 export async function createDraft({ project, user }: ICreateDraft) {
