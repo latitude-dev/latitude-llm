@@ -66,7 +66,7 @@ model: gpt-4o
 ---
 
 This is a test document
-<step />
+<response />
 `
 
 let document: DocumentVersion

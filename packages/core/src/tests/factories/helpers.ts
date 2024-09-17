@@ -31,7 +31,7 @@ model: ${model ?? faker.internet.domainName()}
 ---
 ${Array.from({ length: steps ?? 1 })
   .map(() => randomSentence())
-  .join('\n<step />\n')}
+  .join('\n<response />\n')}
 `.trim()
 
   return prompt

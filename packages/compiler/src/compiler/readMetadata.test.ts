@@ -25,7 +25,7 @@ describe('resolvedPrompt', async () => {
     const prompts = {
       parent: removeCommonIndent(`
         This is the parent prompt.
-        <ref prompt="child" />
+        <prompt path="child" />
         The end.
       `),
       child: removeCommonIndent('Lorem ipsum'),
@@ -53,7 +53,7 @@ describe('resolvedPrompt', async () => {
         <user name={{ username }}>
           Test
         </user>
-        <ref prompt="child" />
+        <prompt path="child" />
         <foo>
           This tag does not even exist
         </foo>
@@ -89,11 +89,11 @@ describe('resolvedPrompt', async () => {
     const prompts = {
       parent: removeCommonIndent(`
         Parent:
-        <ref prompt="child" />
+        <prompt path="child" />
       `),
       child: removeCommonIndent(`
         Child:
-        <ref prompt="grandchild" />
+        <prompt path="grandchild" />
       `),
       grandchild: removeCommonIndent(`
         Grandchild.
@@ -118,9 +118,9 @@ describe('resolvedPrompt', async () => {
     const prompts = {
       parent: removeCommonIndent(`
         {{#if foo}}
-          <ref prompt="child1" />
+          <prompt path="child1" />
         {{:else}}
-          <ref prompt="child2" />
+          <prompt path="child2" />
         {{/if}}
       `),
       child1: removeCommonIndent(`
@@ -151,7 +151,7 @@ describe('resolvedPrompt', async () => {
     const prompts = {
       parent: removeCommonIndent(`
         This is the parent prompt.
-        <ref prompt="child" />
+        <prompt path="child" />
         The end.
       `),
     }
@@ -164,7 +164,7 @@ describe('resolvedPrompt', async () => {
     expect(cleanParentMetadata.resolvedPrompt).toBe(
       removeCommonIndent(`
       This is the parent prompt.
-      /* <ref prompt="child" /> */
+      /* <prompt path="child" /> */
       The end.
     `),
     )
@@ -177,7 +177,7 @@ describe('resolvedPrompt', async () => {
         config: parent
         ---
         Parent.
-        <ref prompt="child" />
+        <prompt path="child" />
       `),
       child: removeCommonIndent(`
         ---
@@ -208,7 +208,7 @@ describe('resolvedPrompt', async () => {
     const prompts = {
       parent: removeCommonIndent(`
         Parent. /* This is the parent document */
-        <ref prompt="child" />
+        <prompt path="child" />
         The end.
       `),
       child: removeCommonIndent(`
@@ -319,7 +319,7 @@ describe('referenced prompts', async () => {
     const prompts = {
       parent: removeCommonIndent(`
         This is the parent prompt.
-        <ref prompt="child" />
+        <prompt path="child" />
         The end.
       `),
       child: removeCommonIndent('Lorem ipsum'),
@@ -346,7 +346,7 @@ describe('referenced prompts', async () => {
         This is the parent prompt.
         ${CUSTOM_TAG_START}parentParam${CUSTOM_TAG_END}
         ${CUSTOM_TAG_START}parentDefinedVar = 5${CUSTOM_TAG_END}
-        <ref prompt="child" />
+        <prompt path="child" />
         The end.
       `),
       child: removeCommonIndent(`
@@ -386,12 +386,12 @@ describe('syntax errors', async () => {
     const prompts = {
       parent: removeCommonIndent(`
         This is the parent prompt.
-        <ref prompt="child" />
+        <prompt path="child" />
         The end.
       `),
       child: removeCommonIndent(`
         This is the child prompt.
-        <ref prompt="parent" />
+        <prompt path="parent" />
       `),
     }
 
@@ -409,7 +409,7 @@ describe('syntax errors', async () => {
     const prompts = {
       parent: removeCommonIndent(`
         This is the parent prompt.
-        <ref prompt="child" />
+        <prompt path="child" />
         The end.
       `),
       child: removeCommonIndent(`
