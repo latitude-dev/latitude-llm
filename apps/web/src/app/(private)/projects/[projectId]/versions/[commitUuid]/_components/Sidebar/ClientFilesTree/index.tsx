@@ -49,7 +49,12 @@ export default function ClientFilesTree({
   const { createFile, destroyFile, destroyFolder, isDestroying, data } =
     useDocumentVersions(
       { commitUuid: commit.uuid, projectId: project.id },
-      { fallbackData: serverDocuments },
+      {
+        fallbackData: serverDocuments,
+        onSuccessCreate: (document) => {
+          navigateToDocument(document.documentUuid)
+        },
+      },
     )
   const onMergeCommitClick = useCallback(() => {
     setWarningOpen(true)

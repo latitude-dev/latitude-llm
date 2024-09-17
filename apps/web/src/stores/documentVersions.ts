@@ -20,12 +20,20 @@ export default function useDocumentVersions(
     commitUuid = HEAD_COMMIT,
     projectId,
   }: { commitUuid?: string; projectId?: number } = { commitUuid: HEAD_COMMIT },
-  opts?: SWRConfiguration,
+  opts: SWRConfiguration & {
+    onSuccessCreate?: (document: DocumentVersion) => void
+  } = {},
 ) {
   const { toast } = useToast()
+  const { onSuccessCreate } = opts
   const router = useRouter()
   const { execute: executeCreateDocument } = useServerAction(
     createDocumentVersionAction,
+    {
+      onSuccess: ({ data: document }) => {
+        onSuccessCreate?.(document)
+      },
+    },
   )
   const { execute: executeDestroyDocument, isPending: isDestroyingFile } =
     useServerAction(destroyDocumentAction)
