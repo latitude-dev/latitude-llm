@@ -41,12 +41,15 @@
         "group": "Prompt Manager",
         "pages": [
           "guides/prompt-manager/overview",
+          "guides/prompt-manager/prompt-config",
+          "guides/prompt-manager/roles",
           "guides/prompt-manager/parameters",
           "guides/prompt-manager/snippets",
           "guides/prompt-manager/chains",
           "guides/prompt-manager/logic",
           "guides/prompt-manager/version-control",
-          "guides/prompt-manager/api-access"
+          "guides/prompt-manager/api-access",
+          "guides/prompt-manager/json-output"
         ]
       },
       {
