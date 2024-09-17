@@ -70,6 +70,7 @@ export function TabSelector<T>({
           return (
             <Button
               ref={isSelected ? selectedOptionButtonRef : null}
+              type='button'
               variant='ghost'
               size='none'
               key={idx}
