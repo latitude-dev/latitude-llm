@@ -41,6 +41,7 @@ if (environment !== 'production') {
       DEFAULT_PROVIDER_MODEL: 'gpt-4o',
       FILE_PUBLIC_PATH,
       FILES_STORAGE_PATH,
+      DEFAULT_PROJECT_ID: '1',
     },
     { path: pathToEnv },
   )
@@ -56,6 +57,7 @@ export const env = createEnv({
     DATABASE_URL: z.string().url(),
     DEFAULT_PROVIDER_ID: z.coerce.number(),
     DEFAULT_PROVIDER_MODEL: z.string(),
+    DEFAULT_PROJECT_ID: z.coerce.number(),
     FROM_MAILER_EMAIL: z.string(),
     LATITUDE_DOMAIN: z.string(),
     LATITUDE_URL: z.string().url(),

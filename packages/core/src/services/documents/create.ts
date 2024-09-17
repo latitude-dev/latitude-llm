@@ -1,21 +1,25 @@
 import { eq } from 'drizzle-orm'
 
 import type { Commit, DocumentVersion } from '../../browser'
+import { database } from '../../client'
 import { findWorkspaceFromCommit } from '../../data-access'
 import { Result, Transaction, TypedResult } from '../../lib'
 import { BadRequestError } from '../../lib/errors'
 import { DocumentVersionsRepository } from '../../repositories'
 import { documentVersions } from '../../schema'
 
-export async function createNewDocument({
-  commit,
-  path,
-  content,
-}: {
-  commit: Commit
-  path: string
-  content?: string
-}): Promise<TypedResult<DocumentVersion, Error>> {
+export async function createNewDocument(
+  {
+    commit,
+    path,
+    content,
+  }: {
+    commit: Commit
+    path: string
+    content?: string
+  },
+  db = database,
+): Promise<TypedResult<DocumentVersion, Error>> {
   return await Transaction.call(async (tx) => {
     if (commit.mergedAt !== null) {
       return Result.error(new BadRequestError('Cannot modify a merged commit'))
@@ -49,5 +53,5 @@ export async function createNewDocument({
       .where(eq(documentVersions.commitId, commit.id))
 
     return Result.ok(newDoc[0]!)
-  })
+  }, db)
 }
