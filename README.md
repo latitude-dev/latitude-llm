@@ -46,6 +46,8 @@ Latitude is a platform that helps developers and product teams build AI features
 
 Latitude puts all these helpful tools in one place. This means you can add AI to your products without a lot of hassle, and keep an eye on how it's all working.
 
+<img alt="Latitude screenshot" src="https://github.com/user-attachments/assets/0540c380-54a1-4dec-90f5-c3d45b374fab">
+
 ## ✨ Features
 
 - 👥 Collaborative prompt manager
