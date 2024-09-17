@@ -24,6 +24,7 @@ export enum CommitStatus {
   Draft = 'draft',
 }
 
+export { Providers, PROVIDER_MODELS } from './services/ai/providers/models'
 export { PARAMETERS_FROM_LOG } from './services/evaluations/compiler/constants'
 
 export type Message = CompilerMessage
@@ -56,15 +57,6 @@ export type ChainObjectResponse = ChainStepObjectResponse & {
   documentLogUuid: string
 }
 export type ChainCallResponse = ChainTextResponse | ChainObjectResponse
-
-export enum Providers {
-  OpenAI = 'openai',
-  Anthropic = 'anthropic',
-  Groq = 'groq',
-  Mistral = 'mistral',
-  Azure = 'azure',
-  Google = 'google',
-}
 
 export enum LogSources {
   Playground = 'playground',
