@@ -1,4 +1,4 @@
-import { HEAD_COMMIT, type Project } from '@latitude-data/core/browser'
+import { type Project } from '@latitude-data/core/browser'
 import { NotFoundError } from '@latitude-data/core/lib/errors'
 import {
   findCommitsByProjectCached,
