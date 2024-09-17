@@ -1,0 +1,59 @@
+---
+title: JSON Output
+description: Learn how to specify and enforce JSON output structure in your prompts.
+---
+
+## Overview
+Latitude's prompt editor allows you to define the expected JSON structure for your prompt's output directly in the frontmatter. This feature ensures that the AI model returns responses in a consistent, structured format that can be easily parsed and used in your applications.
+
+## Specifying JSON Output
+To specify the JSON output structure, use the output property in the frontmatter of your prompt. This property defines the structure and types of the expected output.
+
+## Basic Syntax
+Here's the basic structure for specifying JSON output in the frontmatter:
+```
+provider: <provider_name>
+model: <model_name>
+schema:
+    type: object
+    properties:
+        <property_name>:
+            type: <property_type>
+        required:
+            <required_property_name>
+```
+Example
+Here's an example of how you might specify a JSON output for a sentiment analysis prompt:
+```
+---
+provider: openai
+model: gpt-4
+schema:
+    type: object
+    properties:
+        sentiment:
+            type: string
+            enum: [positive, negative, neutral]
+        confidence:
+            type: number
+            minimum: 0
+            maximum: 1
+        explanation:
+            type: string
+        required:
+            sentiment
+            confidence
+---
+```
+In this example, we're expecting the AI to return a JSON object with three properties:
+- sentiment: a string that must be either "positive", "negative", or "neutral"
+- confidence: a number between 0 and 1
+- explanation: a string (optional)
+
+The sentiment and confidence fields are required in the output.
+
+## Benefits of Using JSON Output
+- **Consistency**: Ensures that the AI model always returns data in the expected format.
+- **Validation**: Latitude can automatically validate the AI's response against the specified structure.
+- **Ease of Integration**: Structured JSON output is easier to integrate into your applications and workflows.
+- **Clear Expectations**: Helps guide the AI model to provide responses in the desired format.

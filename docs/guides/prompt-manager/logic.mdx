@@ -43,10 +43,10 @@ You can use variables in your conditions. These variables can come from paramete
 
 ### Using Step Responses
 
-You can use the response from a previous step in your conditions. First, save the step response to a variable:
+You can use the response from a step in your conditions. First, save the step response to a variable:
 
 ```
-    <step as="variable_response">Is the user a premium member?</step>
+    <response as="variable_response">Is the user a premium member?</response>
 
     {{#if variable_response == 'Yes'}}
         Welcome, premium member! Here are your exclusive benefits:
@@ -89,8 +89,8 @@ You can also access the index of the current item in the loop:
 ```
 This will output:
 1. a
-b
-c
+2. b
+3. c
 
 ### Conditional Rendering within Loops
 You can combine each with if for more complex logic:
