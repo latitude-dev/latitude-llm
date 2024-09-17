@@ -53,7 +53,7 @@ export async function createEvaluationTemplate(
 
     return Result.ok({
       ...result[0]!,
-      category,
+      category: category.name,
     })
   }, db)
 }

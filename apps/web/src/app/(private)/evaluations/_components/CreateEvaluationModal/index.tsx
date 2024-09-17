@@ -149,7 +149,7 @@ export default function CreateEvaluationModal({
   )
 }
 
-function useEvaluationConfiguration() {
+export function useEvaluationConfiguration() {
   const [configuration, setConfiguration] =
     useState<EvaluationResultConfiguration>({
       type: EvaluationResultableType.Text,
