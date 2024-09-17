@@ -10,7 +10,6 @@ export const users = latitudeSchema.table('users', {
   name: text('name'),
   email: text('email').notNull().unique(),
   confirmedAt: timestamp('confirmed_at'),
-  encryptedPassword: text('encrypted_password'),
   admin: boolean('admin').notNull().default(false),
   ...timestamps(),
 })
