@@ -17,7 +17,6 @@ const runSchema = z.object({
   source: z.nativeEnum(LogSources).optional().default(LogSources.API),
 })
 
-// TODO: Gateway errorHandlerMiddleware is not handling exceptions from this handler for some reason
 export const runHandler = factory.createHandlers(
   zValidator('json', runSchema),
   async (c) => {
@@ -47,7 +46,6 @@ export const runHandler = factory.createHandlers(
         await pipeToStream(stream, result.stream)
       },
       (error: Error) => {
-        // TODO: Remove this once we have a proper error handler in place
         captureException(error)
 
         return Promise.resolve()

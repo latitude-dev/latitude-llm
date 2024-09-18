@@ -119,7 +119,10 @@ export class LatitudeSdk {
       }
 
       chunks.split('\n').forEach((line) => {
-        const chunk = this.decodeValue(line, onError)
+        if (!line.startsWith('data:')) return
+
+        const json = line.slice(6)
+        const chunk = this.parseJSON(json, onError)
         if (!chunk) return
 
         // FIXME: Magic variables. I think we need to share these constants (enums)
@@ -171,7 +174,7 @@ export class LatitudeSdk {
     })
   }
 
-  private decodeValue(line: string, onError?: (error: Error) => void) {
+  private parseJSON(line: string, onError?: (error: Error) => void) {
     let json = null
     try {
       return JSON.parse(line) as ChainEvent

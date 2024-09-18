@@ -1,6 +1,7 @@
 import { zValidator } from '@hono/zod-validator'
 import { LogSources } from '@latitude-data/core/browser'
 import { addMessages } from '@latitude-data/core/services/documentLogs/index'
+import { captureException } from '@sentry/node'
 import { messageSchema } from '$/common/messageSchema'
 import { pipeToStream } from '$/common/pipeToStream'
 import { Factory } from 'hono/factory'
@@ -18,18 +19,26 @@ const schema = z.object({
 export const addMessageHandler = factory.createHandlers(
   zValidator('json', schema),
   async (c) => {
-    return streamSSE(c, async (stream) => {
-      const { documentLogUuid, messages, source } = c.req.valid('json')
-      const workspace = c.get('workspace')
+    return streamSSE(
+      c,
+      async (stream) => {
+        const { documentLogUuid, messages, source } = c.req.valid('json')
+        const workspace = c.get('workspace')
 
-      const result = await addMessages({
-        workspace,
-        documentLogUuid,
-        messages,
-        source,
-      }).then((r) => r.unwrap())
+        const result = await addMessages({
+          workspace,
+          documentLogUuid,
+          messages,
+          source,
+        }).then((r) => r.unwrap())
 
-      await pipeToStream(stream, result.stream)
-    })
+        await pipeToStream(stream, result.stream)
+      },
+      (error: Error) => {
+        captureException(error)
+
+        return Promise.resolve()
+      },
+    )
   },
 )

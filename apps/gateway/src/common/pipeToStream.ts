@@ -7,11 +7,10 @@ export async function pipeToStream(
 ) {
   let id = 0
   for await (const value of streamToGenerator(readableStream)) {
-    stream.writeln(
-      JSON.stringify({
-        ...value,
-        id: String(id++),
-      }),
-    )
+    stream.writeSSE({
+      id: String(id++),
+      event: 'data',
+      data: JSON.stringify(value),
+    })
   }
 }
