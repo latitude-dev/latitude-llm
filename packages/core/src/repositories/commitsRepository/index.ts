@@ -90,7 +90,10 @@ export class CommitsRepository extends Repository<
       .where(eq(this.scope.uuid, uuid))
       .limit(1)
     const commit = result[0]
-    if (!commit) return Result.error(new NotFoundError('Commit not found'))
+    if (!commit)
+      return Result.error(
+        new NotFoundError(`Commit with uuid ${uuid} not found`),
+      )
 
     return Result.ok(commit)
   }
