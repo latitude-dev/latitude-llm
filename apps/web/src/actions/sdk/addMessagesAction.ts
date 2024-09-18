@@ -40,7 +40,13 @@ export async function addMessagesAction({
         stack: error.stack,
       })
     },
-    onFinished: () => stream.done(),
+    onFinished: () => {
+      try {
+        stream.done()
+      } catch (_) {
+        // do nothing, stream could be already closed
+      }
+    },
   })
   return {
     output: stream.value,
