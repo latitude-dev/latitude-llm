@@ -29,7 +29,7 @@ export const runEvaluationJob = async (job: Job<RunEvaluationJobData>) => {
     evaluationId,
   } = job.data
 
-  const progressTracker = new ProgressTracker(queues(), batchId)
+  const progressTracker = new ProgressTracker(await queues(), batchId)
   const documentLogsScope = new DocumentLogsRepository(workspaceId)
   const evaluationsScope = new EvaluationsRepository(workspaceId)
   try {

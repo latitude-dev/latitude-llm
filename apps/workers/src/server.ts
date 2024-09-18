@@ -3,7 +3,7 @@ import http from 'http'
 import { captureException, captureMessage } from './utils/sentry'
 import startWorkers from './workers'
 
-const workers = startWorkers()
+const workers = await startWorkers()
 
 console.log('Workers started')
 

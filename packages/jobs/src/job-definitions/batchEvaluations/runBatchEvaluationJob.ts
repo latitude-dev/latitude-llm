@@ -66,7 +66,7 @@ export const runBatchEvaluationJob = async (
     )
   })
 
-  const progressTracker = new ProgressTracker(queues(), batchId)
+  const progressTracker = new ProgressTracker(await queues(), batchId)
   const firstAttempt = job.attemptsMade === 0
 
   if (firstAttempt) {
@@ -74,7 +74,7 @@ export const runBatchEvaluationJob = async (
   }
 
   const progress = await progressTracker.getProgress()
-  const jobs = setupJobs()
+  const jobs = await setupJobs()
 
   if (firstAttempt && parameters.length > 0) {
     websockets.emit('evaluationStatus', {
