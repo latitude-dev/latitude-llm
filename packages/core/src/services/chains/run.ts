@@ -1,5 +1,4 @@
 import { Chain, MessageRole } from '@latitude-data/compiler'
-import { env } from '@latitude-data/env'
 import { CoreTool, ObjectStreamPart, TextStreamPart } from 'ai'
 import { JSONSchema7 } from 'json-schema'
 import { v4 } from 'uuid'
@@ -16,7 +15,6 @@ import {
   ProviderData,
   StreamEventTypes,
 } from '../../constants'
-import { unsafelyFindProviderApiKey } from '../../data-access'
 import { NotFoundError, Result, UnprocessableEntityError } from '../../lib'
 import { streamToGenerator } from '../../lib/streamToGenerator'
 import { ai, Config, validateConfig } from '../ai'
@@ -326,19 +324,16 @@ async function findApiKey({
   name,
 }: {
   apikeys: CachedApiKeys
-  name?: string
+  name: string
 }) {
-  const apiKey = !!name && apikeys.get(name)
-  if (!apiKey) return await findDefaultProvider()
+  const apiKey = apikeys.get(name)
+  if (!apiKey) {
+    throw new NotFoundError(
+      `Provider API Key with Id ${name} not found. Did you forget to add it to the workspace?`,
+    )
+  }
 
   return apiKey
-}
-
-async function findDefaultProvider() {
-  const result = await unsafelyFindProviderApiKey(env.DEFAULT_PROVIDER_ID)
-  if (!result) throw new NotFoundError('Could not find any provider api key.')
-
-  return result
 }
 
 export function enqueueChainEvent(

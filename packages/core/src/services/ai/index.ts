@@ -75,7 +75,7 @@ export async function ai({
     id: providerId,
     provider: providerType,
   } = apiProvider
-  const model = config.model || env.DEFAULT_PROVIDER_MODEL
+  const model = config.model
   const m = createProvider({ provider, apiKey, config })(model)
 
   const commonOptions = {
@@ -174,7 +174,7 @@ const checkDefaultProviderUsage = async ({
   provider: ProviderApiKey
   workspace: Workspace
 }) => {
-  if (provider.id === env.DEFAULT_PROVIDER_ID) {
+  if (provider.token === env.DEFAULT_PROVIDER_API_KEY) {
     const c = cache()
     const value = await c.incr(
       `workspace:${workspace.id}:defaultProviderRunCount`,

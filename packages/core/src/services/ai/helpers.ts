@@ -9,8 +9,8 @@ import { Providers } from '../../constants'
 
 export type Config = {
   [key: string]: any
-  provider?: string
-  model?: string
+  provider: string
+  model: string
   azure?: { resourceName: string }
 }
 
@@ -66,8 +66,8 @@ export function createProvider({
 export function validateConfig(config: Record<string, unknown>): Config {
   const configSchema = z
     .object({
-      model: z.string().optional(), // TODO: make it not optional if we ever remove the default provider
-      provider: z.string().optional(), // TODO: make it not optional if we ever remove the default provider
+      model: z.string(),
+      provider: z.string(),
       google: z
         .object({
           structuredOutputs: z.boolean().optional(),

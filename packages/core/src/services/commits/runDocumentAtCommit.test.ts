@@ -41,12 +41,8 @@ describe('runDocumentAtCommit', () => {
       source: LogSources.API,
     })
 
-    expect(result?.value?.response).rejects.toThrowError(
-      'Could not find any provider api key',
-    )
-    expect(result?.value?.duration).rejects.toThrowError(
-      'Could not find any provider api key',
-    )
+    expect(result?.value?.response).rejects.toThrowError()
+    expect(result?.value?.duration).rejects.toThrowError()
   })
 
   describe('with an existing provider key', () => {
