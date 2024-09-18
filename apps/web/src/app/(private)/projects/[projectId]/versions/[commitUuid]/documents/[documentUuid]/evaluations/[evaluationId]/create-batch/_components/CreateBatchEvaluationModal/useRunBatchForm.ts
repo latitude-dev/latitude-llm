@@ -17,11 +17,11 @@ function buildEmptyParameters(parameters: string[]) {
 export function useRunBatchForm({
   documentMetadata,
 }: {
-  documentMetadata: ConversationMetadata
+  documentMetadata?: ConversationMetadata
 }) {
   const parametersList = useMemo(
-    () => Array.from(documentMetadata.parameters),
-    [documentMetadata.parameters],
+    () => Array.from(documentMetadata?.parameters ?? []),
+    [documentMetadata?.parameters],
   )
   const { data: datasets, isLoading: isLoadingDatasets } = useDatasets()
   const [selectedDataset, setSelectedDataset] = useState<Dataset | null>(null)

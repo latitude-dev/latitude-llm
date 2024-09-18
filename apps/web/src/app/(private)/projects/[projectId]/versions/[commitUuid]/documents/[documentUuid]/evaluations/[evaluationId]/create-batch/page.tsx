@@ -1,4 +1,3 @@
-import { readMetadata } from '@latitude-data/compiler'
 import { EvaluationsRepository } from '@latitude-data/core/repositories'
 import { getDocumentByUuidCached } from '$/app/(private)/_data-access'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
@@ -28,15 +27,10 @@ export default async function ConnectionEvaluationModal({
     commitUuid,
     documentUuid,
   })
-  const metadata = await readMetadata({
-    prompt: document.content ?? '',
-    fullPath: document.path,
-  })
   return (
     <CreateBatchEvaluationModal
       evaluation={evaluation}
       document={document}
-      documentMetadata={metadata}
       projectId={params.projectId}
       commitUuid={commitUuid}
     />
