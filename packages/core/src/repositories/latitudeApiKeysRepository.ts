@@ -1,8 +1,8 @@
 import { eq, getTableColumns } from 'drizzle-orm'
 
 import { ApiKey } from '../browser'
-import { Result, UnprocessableEntityError } from '../lib'
-import { apiKeys, workspaces } from '../schema'
+import { NotFoundError, Result } from '../lib'
+import { apiKeys } from '../schema'
 import Repository from './repository'
 
 const tt = getTableColumns(apiKeys)
@@ -12,7 +12,7 @@ export class LatitudeApiKeysRepository extends Repository<typeof tt, ApiKey> {
     return this.db
       .select(tt)
       .from(apiKeys)
-      .innerJoin(workspaces, eq(workspaces.id, apiKeys.workspaceId))
+      .where(eq(apiKeys.workspaceId, this.workspaceId))
       .as('latitudeApiKeysScope')
   }
 
@@ -21,14 +21,10 @@ export class LatitudeApiKeysRepository extends Repository<typeof tt, ApiKey> {
     const [first] = result
     if (!first) {
       return Result.error(
-        new UnprocessableEntityError(
-          'A valid Latitude API keys was not found',
-          {
-            token: ['Latitude token not found'],
-          },
-        ),
+        new NotFoundError("Couldn't find a valid Latitude API key"),
       )
     }
+
     return Result.ok(first)
   }
 }
