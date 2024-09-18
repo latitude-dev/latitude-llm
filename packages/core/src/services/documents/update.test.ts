@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
+import { Providers } from '../../constants'
 import {
   CommitsRepository,
   DocumentVersionsRepository,
@@ -11,8 +12,17 @@ describe('updateDocument', () => {
   it('modifies a document that was created in a previous commit', async (ctx) => {
     const { workspace, project, user, documents } =
       await ctx.factories.createProject({
+        providers: [
+          {
+            type: Providers.OpenAI,
+            name: 'openai',
+          },
+        ],
         documents: {
-          doc1: 'Doc 1 commit 1',
+          doc1: ctx.factories.helpers.createPrompt({
+            provider: 'openai',
+            content: 'Doc 1 commit 1',
+          }),
         },
       })
 
@@ -22,7 +32,10 @@ describe('updateDocument', () => {
     await updateDocument({
       commit,
       document: documents[0]!,
-      content: 'Doc 1 commit 2',
+      content: ctx.factories.helpers.createPrompt({
+        provider: 'openai',
+        content: 'Doc 1 commit 2',
+      }),
     }).then((r) => r.unwrap())
 
     await recomputeChanges({ draft: commit, workspaceId: workspace.id })
@@ -33,23 +46,30 @@ describe('updateDocument', () => {
 
     expect(changedDocuments.length).toBe(1)
     expect(changedDocuments[0]!.path).toBe('doc1')
-    expect(changedDocuments[0]!.content).toBe('Doc 1 commit 2')
+    expect(changedDocuments[0]!.content).toContain('Doc 1 commit 2')
   })
 
   it('modifies a document that was created in the same commit', async (ctx) => {
-    const { workspace, project, user } = await ctx.factories.createProject()
+    const { workspace, project, user, providers } =
+      await ctx.factories.createProject()
     const docsScope = new DocumentVersionsRepository(project.workspaceId)
     const { commit } = await ctx.factories.createDraft({ project, user })
     const { documentVersion: doc } = await ctx.factories.createDocumentVersion({
       commit: commit,
       path: 'doc1',
-      content: 'Doc 1 v1',
+      content: ctx.factories.helpers.createPrompt({
+        provider: providers[0]!,
+        content: 'Doc 1 v1',
+      }),
     })
 
     await updateDocument({
       commit,
       document: doc,
-      content: 'Doc 1 v2',
+      content: ctx.factories.helpers.createPrompt({
+        provider: providers[0]!,
+        content: 'Doc 1 v2',
+      }),
     }).then((r) => r.unwrap())
 
     await recomputeChanges({ draft: commit, workspaceId: workspace.id })
@@ -60,17 +80,29 @@ describe('updateDocument', () => {
 
     expect(changedDocuments.length).toBe(1)
     expect(changedDocuments[0]!.path).toBe('doc1')
-    expect(changedDocuments[0]!.content).toBe('Doc 1 v2')
+    expect(changedDocuments[0]!.content).toContain('Doc 1 v2')
   })
 
   it('modifying a document creates a change to all other documents that reference it', async (ctx) => {
     const { workspace, project, user, documents } =
       await ctx.factories.createProject({
+        providers: [
+          {
+            type: Providers.OpenAI,
+            name: 'openai',
+          },
+        ],
         documents: {
           referenced: {
-            doc: 'The document that is being referenced',
+            doc: ctx.factories.helpers.createPrompt({
+              provider: 'openai',
+              content: 'The document that is being referenced',
+            }),
           },
-          unmodified: '<prompt path="referenced/doc" />',
+          unmodified: ctx.factories.helpers.createPrompt({
+            provider: 'openai',
+            content: '<prompt path="referenced/doc" />',
+          }),
         },
       })
 
@@ -81,7 +113,10 @@ describe('updateDocument', () => {
     await updateDocument({
       commit: draft,
       document: referencedDoc,
-      content: 'The document that is being referenced v2',
+      content: ctx.factories.helpers.createPrompt({
+        provider: 'openai',
+        content: 'The document that is being referenced v2',
+      }),
     }).then((r) => r.unwrap())
 
     await recomputeChanges({ draft, workspaceId: workspace.id })
@@ -100,11 +135,23 @@ describe('updateDocument', () => {
   it('renaming a document creates a change to all other documents that reference it', async (ctx) => {
     const { workspace, project, user, documents } =
       await ctx.factories.createProject({
+        providers: [
+          {
+            type: Providers.OpenAI,
+            name: 'openai',
+          },
+        ],
         documents: {
           referenced: {
-            doc: 'The document that is being referenced',
+            doc: ctx.factories.helpers.createPrompt({
+              provider: 'openai',
+              content: 'The document that is being referenced',
+            }),
           },
-          main: '<prompt path="referenced/doc" />',
+          main: ctx.factories.helpers.createPrompt({
+            provider: 'openai',
+            content: '<prompt path="referenced/doc" />',
+          }),
         },
       })
     const docsScope = new DocumentVersionsRepository(project.workspaceId)
@@ -134,11 +181,23 @@ describe('updateDocument', () => {
   it('undoing a change to a document removes it from the list of changed documents', async (ctx) => {
     const { workspace, project, user, documents } =
       await ctx.factories.createProject({
+        providers: [
+          {
+            type: Providers.OpenAI,
+            name: 'openai',
+          },
+        ],
         documents: {
           referenced: {
-            doc: 'The document that is being referenced',
+            doc: ctx.factories.helpers.createPrompt({
+              provider: 'openai',
+              content: 'The document that is being referenced',
+            }),
           },
-          unmodified: '<prompt path="referenced/doc" />',
+          unmodified: ctx.factories.helpers.createPrompt({
+            provider: 'openai',
+            content: '<prompt path="referenced/doc" />',
+          }),
         },
       })
     const docsScope = new DocumentVersionsRepository(project.workspaceId)
@@ -149,7 +208,10 @@ describe('updateDocument', () => {
     await updateDocument({
       commit,
       document: referencedDoc,
-      content: 'The document that is being referenced v2',
+      content: ctx.factories.helpers.createPrompt({
+        provider: 'openai',
+        content: 'The document that is being referenced v2',
+      }),
     }).then((r) => r.unwrap())
 
     await recomputeChanges({ draft: commit, workspaceId: workspace.id })
@@ -181,9 +243,21 @@ describe('updateDocument', () => {
 
   it('fails when renaming a document with a path that already exists', async (ctx) => {
     const { project, user, documents } = await ctx.factories.createProject({
+      providers: [
+        {
+          type: Providers.OpenAI,
+          name: 'openai',
+        },
+      ],
       documents: {
-        doc1: 'Doc 1',
-        doc2: 'Doc 2',
+        doc1: ctx.factories.helpers.createPrompt({
+          provider: 'openai',
+          content: 'Doc 1',
+        }),
+        doc2: ctx.factories.helpers.createPrompt({
+          provider: 'openai',
+          content: 'Doc 2',
+        }),
       },
     })
 
@@ -204,8 +278,17 @@ describe('updateDocument', () => {
 
   it('fails when trying to create a document in a merged commit', async (ctx) => {
     const { project, documents } = await ctx.factories.createProject({
+      providers: [
+        {
+          type: Providers.OpenAI,
+          name: 'openai',
+        },
+      ],
       documents: {
-        foo: 'foo',
+        foo: ctx.factories.helpers.createPrompt({
+          provider: 'openai',
+          content: 'foo',
+        }),
       },
     })
     const commitsScope = new CommitsRepository(project.workspaceId)
@@ -218,7 +301,10 @@ describe('updateDocument', () => {
     const result = await updateDocument({
       commit: commit!,
       document: fooDoc,
-      content: 'bar',
+      content: ctx.factories.helpers.createPrompt({
+        provider: 'openai',
+        content: 'bar',
+      }),
     })
 
     expect(result.ok).toBe(false)
@@ -228,9 +314,21 @@ describe('updateDocument', () => {
   it('invalidates the resolvedContent for all documents in the commit', async (ctx) => {
     const { workspace, project, user, documents } =
       await ctx.factories.createProject({
+        providers: [
+          {
+            type: Providers.OpenAI,
+            name: 'openai',
+          },
+        ],
         documents: {
-          doc1: 'Doc 1',
-          doc2: 'Doc 2',
+          doc1: ctx.factories.helpers.createPrompt({
+            provider: 'openai',
+            content: 'Doc 1',
+          }),
+          doc2: ctx.factories.helpers.createPrompt({
+            provider: 'openai',
+            content: 'Doc 2',
+          }),
         },
       })
     const docsScope = new DocumentVersionsRepository(project.workspaceId)
@@ -242,7 +340,10 @@ describe('updateDocument', () => {
     await updateDocument({
       commit,
       document: doc1,
-      content: 'Doc 1 v2',
+      content: ctx.factories.helpers.createPrompt({
+        provider: 'openai',
+        content: 'Doc 1 v2',
+      }),
     }).then((r) => r.unwrap())
 
     await recomputeChanges({ draft: commit, workspaceId: workspace.id })
@@ -250,8 +351,11 @@ describe('updateDocument', () => {
     await updateDocument({
       commit,
       document: doc2,
-      content: 'Doc 2 v2',
-    })
+      content: ctx.factories.helpers.createPrompt({
+        provider: 'openai',
+        content: 'Doc 2 v2',
+      }),
+    }).then((r) => r.unwrap())
 
     const commitDocs = await docsScope
       .getDocumentsAtCommit(commit)

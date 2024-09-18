@@ -1,6 +1,7 @@
 import type {
   Commit,
   Project,
+  ProviderApiKey,
   User,
   Workspace,
 } from '@latitude-data/core/browser'
@@ -22,6 +23,7 @@ let workspace: Workspace
 let project: Project
 let user: User
 let commit: Commit
+let provider: ProviderApiKey
 
 describe('getUsersAction', () => {
   beforeEach(async () => {
@@ -30,11 +32,13 @@ describe('getUsersAction', () => {
       workspace: wp,
       user: usr,
       project: prj,
+      providers,
     } = await factories.createProject()
     user = usr
     workspace = wp
     project = prj
     commit = cmt
+    provider = providers[0]!
   })
 
   describe('unauthorized', () => {
@@ -115,10 +119,12 @@ describe('getUsersAction', () => {
       await factories.createDocumentVersion({
         commit: draft,
         path: 'patata/doc1',
+        content: factories.helpers.createPrompt({ provider }),
       })
       await factories.createDocumentVersion({
         commit: anotherDraf,
         path: 'patata/doc2',
+        content: factories.helpers.createPrompt({ provider }),
       })
 
       await deleteDraftCommitAction({

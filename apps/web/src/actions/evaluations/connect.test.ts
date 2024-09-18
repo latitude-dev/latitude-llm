@@ -44,7 +44,13 @@ describe('connectEvaluationsAction', () => {
 
     beforeEach(async () => {
       const setup = await factories.createProject({
-        documents: { 'test-doc': 'Test content' },
+        providers: [{ type: Providers.OpenAI, name: 'openai' }],
+        documents: {
+          'test-doc': factories.helpers.createPrompt({
+            provider: 'openai',
+            content: 'Test content',
+          }),
+        },
       })
       workspace = setup.workspace
       user = setup.user

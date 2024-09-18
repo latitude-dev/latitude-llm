@@ -8,10 +8,16 @@ import {
 } from '@latitude-data/compiler'
 import { eq } from 'drizzle-orm'
 
-import { Commit, DocumentVersion } from '../../../browser'
+import {
+  Commit,
+  DocumentVersion,
+  promptConfigSchema,
+  ProviderApiKey,
+} from '../../../browser'
 import { database } from '../../../client'
 import { Result, Transaction, TypedResult } from '../../../lib'
 import { assertCommitIsDraft } from '../../../lib/assertCommitIsDraft'
+import { ProviderApiKeysRepository } from '../../../repositories'
 import { documentVersions } from '../../../schema'
 import { getHeadDocumentsAndDraftDocumentsForCommit } from './getHeadDocumentsAndDraftDocuments'
 import { getMergedAndDraftDocuments } from './getMergedAndDraftDocuments'
@@ -19,9 +25,11 @@ import { getMergedAndDraftDocuments } from './getMergedAndDraftDocuments'
 async function resolveDocumentChanges({
   originalDocuments,
   newDocuments,
+  providers,
 }: {
   originalDocuments: DocumentVersion[]
   newDocuments: DocumentVersion[]
+  providers: ProviderApiKey[]
 }): Promise<{
   documents: DocumentVersion[]
   errors: Record<string, CompileError[]>
@@ -43,12 +51,15 @@ async function resolveDocumentChanges({
     }
   }
 
+  const configSchema = promptConfigSchema({ providers })
+
   const newDocumentsWithUpdatedHash = await Promise.all(
     newDocuments.map(async (d) => {
       const metadata = await readMetadata({
         prompt: d.content ?? '',
         fullPath: d.path,
         referenceFn: getDocumentContent,
+        configSchema,
       })
       if (metadata.errors.length > 0) {
         errors[d.documentUuid] = metadata.errors
@@ -137,10 +148,15 @@ export async function recomputeChanges(
       documentsInDrafCommit,
     })
 
+    const providersScope = new ProviderApiKeysRepository(workspaceId, tx)
+    const providersResult = await providersScope.findAll()
+    if (providersResult.error) return Result.error(providersResult.error)
+
     const { documents: documentsToUpdate, errors } =
       await resolveDocumentChanges({
         originalDocuments: mergedDocuments,
         newDocuments: draftDocuments,
+        providers: providersResult.value,
       })
 
     const newDraftDocuments = (

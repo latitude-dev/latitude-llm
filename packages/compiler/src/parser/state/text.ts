@@ -14,9 +14,7 @@ export function text(parser: Parser) {
     if (isEscaping) data = data.slice(0, -1) // Remove the escape character
 
     if (!isEscaping && parser.match('---')) {
-      // Only parse config if it's the first thing in the file
-      const isFirst = parser.template.slice(0, parser.index).trim() === '' // Ignore any whitespace
-      if (isFirst) break
+      break
     }
 
     if (

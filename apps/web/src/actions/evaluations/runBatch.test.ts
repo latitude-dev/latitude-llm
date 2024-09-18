@@ -4,6 +4,7 @@ import {
   DocumentVersion,
   EvaluationDto,
   Project,
+  Providers,
   User,
   Workspace,
 } from '@latitude-data/core/browser'
@@ -67,7 +68,13 @@ describe('runBatchAction', () => {
       vi.clearAllMocks()
 
       const setup = await factories.createProject({
-        documents: { 'test-doc': 'Test content' },
+        providers: [{ type: Providers.OpenAI, name: 'openai' }],
+        documents: {
+          'test-doc': factories.helpers.createPrompt({
+            provider: 'openai',
+            content: 'Test content',
+          }),
+        },
       })
       workspace = setup.workspace
       user = setup.user

@@ -18,12 +18,13 @@ import type {
 } from '$compiler/parser/interfaces'
 import { Config, ConversationMetadata, MessageRole } from '$compiler/types'
 import { Node as LogicalExpression } from 'estree'
-import yaml from 'yaml'
+import yaml, { Node as YAMLItem } from 'yaml'
+import { z } from 'zod'
 
-import { readConfig } from './config'
 import { updateScopeContextForNode } from './logic'
 import { ScopeContext } from './scope'
 import {
+  findYAMLItemPosition,
   isChainStepTag,
   isContentTag,
   isMessageTag,
@@ -52,9 +53,13 @@ export class ReadMetadata {
   private referenceFn?: ReferencePromptFn
   private fullPath: string
   private withParameters?: string[]
+  private configSchema?: z.ZodType
 
+  private config?: Config
+  private configPosition?: { start: number; end: number }
   private resolvedPrompt: string
   private resolvedPromptOffset: number = 0
+  private hasContent: boolean = false
 
   private accumulatedToolCalls: ToolCallTag[] = []
   private errors: CompileError[] = []
@@ -66,15 +71,18 @@ export class ReadMetadata {
     document,
     referenceFn,
     withParameters,
+    configSchema,
   }: {
     document: Document
     referenceFn?: ReferencePromptFn
     withParameters?: string[]
+    configSchema?: z.ZodType
   }) {
     this.rawText = document.content
     this.referenceFn = referenceFn
     this.fullPath = document.path
     this.withParameters = withParameters
+    this.configSchema = configSchema
 
     this.resolvedPrompt = document.content
   }
@@ -89,7 +97,6 @@ export class ReadMetadata {
     }
 
     let fragment: Fragment
-    let config: Config = {}
 
     try {
       fragment = parse(this.rawText)
@@ -108,13 +115,36 @@ export class ReadMetadata {
       scopeContext,
       isInsideMessageTag: false,
       isInsideContentTag: false,
+      isRoot: true,
     })
 
-    config = readConfig(fragment)
-    let resolvedPrompt = this.resolvedPrompt
-    if (config && Object.keys(config).length > 0) {
-      const configYaml = yaml.stringify(config)
-      resolvedPrompt = `---\n${configYaml}---\n${this.resolvedPrompt}`
+    if (this.configSchema && !this.config) {
+      this.baseNodeError(errors.missingConfig, fragment, { start: 0, end: 0 })
+    }
+
+    const resolvedPrompt =
+      Object.keys(this.config ?? {}).length > 0
+        ? '---\n' +
+          yaml.stringify(this.config, { indent: 2 }) +
+          '---\n' +
+          this.resolvedPrompt
+        : this.resolvedPrompt
+
+    const setConfig = (config: Config) => {
+      const start = this.configPosition?.start ?? 0
+      const end = this.configPosition?.end ?? 0
+
+      if (Object.keys(config).length === 0) {
+        return this.rawText.slice(0, start) + this.rawText.slice(end)
+      }
+
+      return (
+        this.rawText.slice(0, start) +
+        '---\n' +
+        yaml.stringify(config, { indent: 2 }) +
+        '---\n' +
+        this.rawText.slice(end)
+      )
     }
 
     return {
@@ -123,8 +153,9 @@ export class ReadMetadata {
         ...(scopeContext.onlyPredefinedVariables ?? new Set([])),
       ]),
       resolvedPrompt,
-      config,
+      config: this.config ?? {},
       errors: this.errors,
+      setConfig,
     }
   }
 
@@ -190,11 +221,13 @@ export class ReadMetadata {
     scopeContext,
     isInsideMessageTag,
     isInsideContentTag,
+    isRoot = false,
   }: {
     node: TemplateNode
     scopeContext: ScopeContext
     isInsideMessageTag: boolean
     isInsideContentTag: boolean
+    isRoot?: boolean
   }): Promise<void> {
     if (node.type === 'Fragment') {
       for await (const childNode of node.children ?? []) {
@@ -203,27 +236,91 @@ export class ReadMetadata {
           scopeContext,
           isInsideMessageTag,
           isInsideContentTag,
+          isRoot,
         })
       }
       return
     }
 
-    if (node.type === 'Config' || node.type === 'Comment') {
+    if (node.type === 'Comment' || node.type === 'Config') {
       /* Remove from the resolved prompt */
       const start = node.start! + this.resolvedPromptOffset
       const end = node.end! + this.resolvedPromptOffset
       this.resolvedPrompt =
         this.resolvedPrompt.slice(0, start) + this.resolvedPrompt.slice(end)
       this.resolvedPromptOffset -= end - start
+    }
+
+    if (node.type === 'Config') {
+      if (this.config) {
+        this.baseNodeError(errors.configAlreadyDeclared, node)
+      }
+      if (!isRoot) {
+        this.baseNodeError(errors.configOutsideRoot, node)
+      }
+      if (this.hasContent) {
+        this.baseNodeError(errors.invalidConfigPlacement, node)
+      }
+
+      this.configPosition = { start: node.start!, end: node.end! }
+
+      const parsedYaml = yaml.parseDocument(node.value, {
+        keepSourceTokens: true,
+      })
+
+      const CONFIG_START_OFFSET = 3 // The config is always offsetted by 3 characters due to the `---`
+
+      if (parsedYaml.errors.length) {
+        parsedYaml.errors.forEach((error) => {
+          const [errorStart, errorEnd] = error.pos
+          this.baseNodeError(errors.invalidConfig(error.message), node, {
+            start: node.start! + CONFIG_START_OFFSET + errorStart,
+            end: node.start! + CONFIG_START_OFFSET + errorEnd,
+          })
+        })
+      }
+
+      const parsedObj = parsedYaml.toJS()
+
+      try {
+        this.configSchema?.parse(parsedObj)
+      } catch (err) {
+        if (err instanceof z.ZodError) {
+          err.errors.forEach((error) => {
+            const issue = error.message
+
+            const [errorStart, errorEnd] = findYAMLItemPosition(
+              parsedYaml.contents as YAMLItem,
+              error.path,
+            )!
+
+            this.baseNodeError(errors.invalidConfig(issue), node, {
+              start: node.start! + CONFIG_START_OFFSET + errorStart,
+              end: node.start! + CONFIG_START_OFFSET + errorEnd + 1,
+            })
+          })
+        }
+      }
+
+      this.config = parsedObj
       return
     }
 
     if (node.type === 'Text') {
+      if (node.data.trim()) {
+        this.hasContent = true
+      }
+      /* do nothing */
+      return
+    }
+
+    if (node.type === 'Comment') {
       /* do nothing */
       return
     }
 
     if (node.type === 'MustacheTag') {
+      this.hasContent = true
       const expression = node.expression
       await this.updateScopeContext({ node: expression, scopeContext })
       return
@@ -299,6 +396,7 @@ export class ReadMetadata {
     }
 
     if (node.type === 'ElementTag') {
+      this.hasContent = true
       if (isToolCallTag(node)) {
         if (isInsideContentTag) {
           this.baseNodeError(errors.toolCallTagInsideContent, node)
@@ -545,14 +643,15 @@ export class ReadMetadata {
   private baseNodeError(
     { code, message }: { code: string; message: string },
     node: BaseNode,
+    customPos?: { start: number; end: number },
   ): void {
     try {
       error(message, {
         name: 'CompileError',
         code,
         source: this.rawText || '',
-        start: node.start || 0,
-        end: node.end || undefined,
+        start: customPos?.start || node.start || 0,
+        end: customPos?.end || node.end || undefined,
       })
     } catch (error) {
       this.errors.push(error as CompileError)

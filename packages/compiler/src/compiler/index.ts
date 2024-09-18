@@ -1,4 +1,5 @@
 import { Conversation, ConversationMetadata } from '$compiler/types'
+import { z } from 'zod'
 
 import { Chain } from './chain'
 import {
@@ -37,16 +38,19 @@ export function readMetadata({
   fullPath,
   referenceFn,
   withParameters,
+  configSchema,
 }: {
   prompt: string
   fullPath?: string
   referenceFn?: ReferencePromptFn
   withParameters?: string[]
+  configSchema?: z.ZodType
 }): Promise<ConversationMetadata> {
   return new ReadMetadata({
     document: { path: fullPath ?? '', content: prompt },
     referenceFn,
     withParameters,
+    configSchema,
   }).run()
 }
 

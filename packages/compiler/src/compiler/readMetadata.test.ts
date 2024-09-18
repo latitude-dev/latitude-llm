@@ -1,6 +1,7 @@
 import { CUSTOM_TAG_END, CUSTOM_TAG_START } from '$compiler/constants'
 import CompileError from '$compiler/error/error'
 import { describe, expect, it } from 'vitest'
+import { z } from 'zod'
 
 import { readMetadata } from '.'
 import { Document } from './readMetadata'
@@ -253,8 +254,8 @@ describe('config', async () => {
     })
   })
 
-  it('does not compile the prompt as YAML when it is not the first element in the prompt', async () => {
-    const prompt = `
+  it('fails when there is content before the config section', async () => {
+    const prompt = removeCommonIndent(`
       Lorem ipsum
       ---
       foo: bar
@@ -262,13 +263,157 @@ describe('config', async () => {
        - qux
        - quux
       ---
-    `
+    `)
+
+    const metadata = await readMetadata({ prompt })
+
+    expect(metadata.errors.length).toBe(1)
+    expect(metadata.errors[0]).toBeInstanceOf(CompileError)
+    expect(metadata.errors[0]!.code).toBe('invalid-config-placement')
+  })
+
+  it('fails when the config is not valid YAML', async () => {
+    const prompt = removeCommonIndent(`
+      ---
+      foo: bar
+      baa
+      ---
+    `)
+
+    const metadata = await readMetadata({ prompt })
+
+    expect(metadata.config).toEqual({ foo: 'bar', baa: null })
+    expect(metadata.errors.length).toBe(1)
+    expect(metadata.errors[0]).toBeInstanceOf(CompileError)
+    expect(metadata.errors[0]!.code).toBe('invalid-config')
+  })
+
+  it('fails when there are multiple config sections', async () => {
+    const prompt = removeCommonIndent(`
+      ---
+      foo: bar
+      ---
+      ---
+      baz: qux
+      ---
+    `)
+
+    const metadata = await readMetadata({ prompt })
+
+    expect(metadata.errors.length).toBe(1)
+    expect(metadata.errors[0]).toBeInstanceOf(CompileError)
+    expect(metadata.errors[0]!.code).toBe('config-already-declared')
+  })
+
+  it('fails when a schema is provided and there is no config section', async () => {
+    const prompt = removeCommonIndent(`
+      Lorem ipsum
+    `)
 
     const metadata = await readMetadata({
-      prompt: removeCommonIndent(prompt),
+      prompt,
+      configSchema: z.object({
+        foo: z.string(),
+      }),
     })
 
-    expect(metadata.config).toEqual({})
+    expect(metadata.errors.length).toBe(1)
+    expect(metadata.errors[0]).toBeInstanceOf(CompileError)
+    expect(metadata.errors[0]!.code).toBe('config-not-found')
+  })
+
+  it('fails when the configSchema is not validated', async () => {
+    const prompt = removeCommonIndent(`
+      ---
+      foo: 2
+      ---
+    `)
+
+    const metadata = await readMetadata({
+      prompt,
+      configSchema: z.object({
+        foo: z.string(),
+      }),
+    })
+
+    expect(metadata.errors.length).toBe(1)
+    expect(metadata.errors[0]).toBeInstanceOf(CompileError)
+    expect(metadata.errors[0]!.code).toBe('invalid-config')
+  })
+
+  it('does not fail when the config schema is validated', async () => {
+    const prompt = removeCommonIndent(`
+      ---
+      foo: bar
+      ---
+    `)
+
+    const metadata = await readMetadata({
+      prompt,
+      configSchema: z.object({
+        foo: z.string(),
+      }),
+    })
+
+    expect(metadata.errors.length).toBe(0)
+  })
+
+  it('returns the correct positions of parsing errors', async () => {
+    const prompt = removeCommonIndent(`
+      /* 
+        Lorem ipsum
+      */
+      ---
+      foo: bar
+      baa
+      ---
+    `)
+
+    const expectedErrorPosition = prompt.indexOf('baa')
+
+    const metadata = await readMetadata({ prompt })
+
+    expect(metadata.errors.length).toBe(1)
+    expect(metadata.errors[0]).toBeInstanceOf(CompileError)
+    expect(metadata.errors[0]!.code).toBe('invalid-config')
+    expect(metadata.errors[0]!.pos).toBe(expectedErrorPosition)
+  })
+
+  it('returns the correct positions of schema errors', async () => {
+    const prompt = removeCommonIndent(`
+      ---
+      foo: bar
+      ---
+    `)
+
+    const metadata = await readMetadata({
+      prompt,
+      configSchema: z.object({
+        foo: z.number(),
+      }),
+    })
+    const expectedErrorPosition = prompt.indexOf('bar')
+
+    expect(metadata.errors.length).toBe(1)
+    expect(metadata.errors[0]).toBeInstanceOf(CompileError)
+    expect(metadata.errors[0]!.code).toBe('invalid-config')
+    expect(metadata.errors[0]!.pos).toBe(expectedErrorPosition)
+  })
+
+  it('fails when the config section is defined inside an if block', async () => {
+    const prompt = removeCommonIndent(`
+      ${CUSTOM_TAG_START}#if true${CUSTOM_TAG_END}
+        ---
+        foo: bar
+        ---
+      ${CUSTOM_TAG_START}/if${CUSTOM_TAG_END}
+    `)
+
+    const metadata = await readMetadata({ prompt })
+
+    expect(metadata.errors.length).toBe(1)
+    expect(metadata.errors[0]).toBeInstanceOf(CompileError)
+    expect(metadata.errors[0]!.code).toBe('config-outside-root')
   })
 })
 

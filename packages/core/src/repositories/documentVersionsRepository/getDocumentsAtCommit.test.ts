@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import type { Commit, DocumentVersion, Project } from '../../browser'
-import { HEAD_COMMIT } from '../../constants'
+import { HEAD_COMMIT, Providers } from '../../constants'
 import { mergeCommit } from '../../services/commits'
 import { updateDocument } from '../../services/documents'
 import * as factories from '../../tests/factories'
@@ -25,7 +25,10 @@ describe('getDocumentsAtCommit', () => {
       commit,
       documents: allDocs,
     } = await ctx.factories.createProject({
-      documents: { doc1: 'Doc 1' },
+      providers: [{ type: Providers.OpenAI, name: 'openai' }],
+      documents: {
+        doc1: ctx.factories.helpers.createPrompt({ provider: 'openai' }),
+      },
     })
 
     const documentsScope = new DocumentVersionsRepository(project.workspaceId)
@@ -39,7 +42,17 @@ describe('getDocumentsAtCommit', () => {
   it('get docs from HEAD without soft deleted', async (ctx) => {
     const { commit, project, documents, user } =
       await ctx.factories.createProject({
-        documents: { doc1: 'Doc 1', doc2: 'Doc 2' },
+        providers: [{ type: Providers.OpenAI, name: 'openai' }],
+        documents: {
+          doc1: ctx.factories.helpers.createPrompt({
+            provider: 'openai',
+            content: 'Doc 1',
+          }),
+          doc2: ctx.factories.helpers.createPrompt({
+            provider: 'openai',
+            content: 'Doc 2',
+          }),
+        },
       })
     const documentsScope = new DocumentVersionsRepository(project.workspaceId)
     const { commit: draft } = await factories.createDraft({ project, user })
@@ -51,12 +64,13 @@ describe('getDocumentsAtCommit', () => {
       .getDocumentsAtCommit(draft)
       .then((r) => r.unwrap())
     const contents = filteredDocs.map((d) => d.content)
-    expect(contents).toEqual(['Doc 1'])
+    expect(contents.length).toBe(1)
+    expect(contents[0]).toContain('Doc 1')
   })
 
   describe('documents for each commit', () => {
-    beforeEach(async () => {
-      const { project, user } = await factories.createProject()
+    beforeEach(async (ctx) => {
+      const { project, user, providers } = await ctx.factories.createProject()
       const documentsScope = new DocumentVersionsRepository(project.workspaceId)
       const { commit: commit1 } = await factories.createDraft({ project, user })
       const { commit: commit2 } = await factories.createDraft({ project, user })
@@ -65,7 +79,11 @@ describe('getDocumentsAtCommit', () => {
       // Initial document
       const { documentVersion: doc1 } = await factories.createDocumentVersion({
         commit: commit1,
-        content: 'VERSION_1',
+        path: 'doc1',
+        content: ctx.factories.helpers.createPrompt({
+          provider: providers[0]!,
+          content: 'VERSION_1',
+        }),
       })
       await mergeCommit(commit1).then((r) => r.unwrap())
 
@@ -73,7 +91,10 @@ describe('getDocumentsAtCommit', () => {
       const doc2 = await updateDocument({
         commit: commit2,
         document: doc1!,
-        content: 'VERSION_2',
+        content: ctx.factories.helpers.createPrompt({
+          provider: providers[0]!,
+          content: 'VERSION_2',
+        }),
       }).then((r) => r.unwrap())
       await mergeCommit(commit2).then((r) => r.unwrap())
 
@@ -81,7 +102,10 @@ describe('getDocumentsAtCommit', () => {
       const doc3 = await updateDocument({
         commit: commit3,
         document: doc1!,
-        content: 'VERSION_3_draft',
+        content: ctx.factories.helpers.createPrompt({
+          provider: providers[0]!,
+          content: 'VERSION_3_draft',
+        }),
       }).then((r) => r.unwrap())
 
       documentsByContent = {
@@ -104,7 +128,7 @@ describe('getDocumentsAtCommit', () => {
         .then((r) => r.unwrap())
 
       expect(documents.length).toBe(1)
-      expect(documents[0]!.content).toBe('VERSION_1')
+      expect(documents[0]!.content).toContain('VERSION_1')
     })
 
     it('get docs from version 2', async () => {
@@ -115,7 +139,7 @@ describe('getDocumentsAtCommit', () => {
         .then((r) => r.unwrap())
 
       expect(documents.length).toBe(1)
-      expect(documents[0]!.content).toBe('VERSION_2')
+      expect(documents[0]!.content).toContain('VERSION_2')
     })
 
     it('get docs from version 3', async () => {
@@ -126,7 +150,7 @@ describe('getDocumentsAtCommit', () => {
         .then((r) => r.unwrap())
 
       expect(documents.length).toBe(1)
-      expect(documents[0]!.content).toBe('VERSION_3_draft')
+      expect(documents[0]!.content).toContain('VERSION_3_draft')
     })
 
     it('get docs from HEAD', async () => {
@@ -144,20 +168,24 @@ describe('getDocumentsAtCommit', () => {
         .then((r) => r.unwrap())
 
       expect(documents.length).toBe(1)
-      expect(documents[0]!.content).toBe('VERSION_2')
+      expect(documents[0]!.content).toContain('VERSION_2')
     })
   })
 
   describe('documents from previous commits', () => {
-    beforeEach(async () => {
-      const { project, user } = await factories.createProject()
+    beforeEach(async (ctx) => {
+      const { project, user, providers } = await ctx.factories.createProject()
       const documentsScope = new DocumentVersionsRepository(project.workspaceId)
 
       // Doc 1
       const { commit: commit1 } = await factories.createDraft({ project, user })
       const { documentVersion: doc1 } = await factories.createDocumentVersion({
         commit: commit1,
-        content: 'Doc_1_commit_1',
+        path: 'doc1',
+        content: ctx.factories.helpers.createPrompt({
+          provider: providers[0]!,
+          content: 'Doc_1_commit_1',
+        }),
       })
       const mergedCommit1 = await mergeCommit(commit1).then((r) => r.unwrap())
 
@@ -165,7 +193,11 @@ describe('getDocumentsAtCommit', () => {
       const { commit: commit2 } = await factories.createDraft({ project, user })
       const { documentVersion: doc2 } = await factories.createDocumentVersion({
         commit: commit2,
-        content: 'Doc_2_commit_2',
+        path: 'doc2',
+        content: ctx.factories.helpers.createPrompt({
+          provider: providers[0]!,
+          content: 'Doc_2_commit_2',
+        }),
       })
       const mergedCommit2 = await mergeCommit(commit2).then((r) => r.unwrap())
 
@@ -174,7 +206,10 @@ describe('getDocumentsAtCommit', () => {
       const doc3 = await updateDocument({
         commit: commit3,
         document: doc2,
-        content: 'Doc_2_commit_3_draft',
+        content: ctx.factories.helpers.createPrompt({
+          provider: providers[0]!,
+          content: 'Doc_2_commit_3_draft',
+        }),
       }).then((r) => r.unwrap())
 
       documentsByContent = {
@@ -200,8 +235,10 @@ describe('getDocumentsAtCommit', () => {
         .getDocumentsAtCommit(commit)
         .then((r) => r.unwrap())
 
-      const contents = documents.map((d) => d.content)
-      expect(contents).toEqual(['Doc_1_commit_1'])
+      const contents = documents
+        .sort((a, b) => a.path.localeCompare(b.path))
+        .map((d) => d.content)
+      expect(contents[0]).toContain('Doc_1_commit_1')
     })
 
     it('get docs from commit 2', async () => {
@@ -210,8 +247,11 @@ describe('getDocumentsAtCommit', () => {
         .getDocumentsAtCommit(commit)
         .then((r) => r.unwrap())
 
-      const contents = documents.map((d) => d.content).sort()
-      expect(contents).toEqual(['Doc_1_commit_1', 'Doc_2_commit_2'])
+      const contents = documents
+        .sort((a, b) => a.path.localeCompare(b.path))
+        .map((d) => d.content)
+      expect(contents[0]).toContain('Doc_1_commit_1')
+      expect(contents[1]).toContain('Doc_2_commit_2')
     })
 
     it('get docs from commit 3', async () => {
@@ -220,8 +260,11 @@ describe('getDocumentsAtCommit', () => {
         .getDocumentsAtCommit(commit)
         .then((r) => r.unwrap())
 
-      const contents = documents.map((d) => d.content).sort()
-      expect(contents).toEqual(['Doc_1_commit_1', 'Doc_2_commit_3_draft'])
+      const contents = documents
+        .sort((a, b) => a.path.localeCompare(b.path))
+        .map((d) => d.content)
+      expect(contents[0]).toContain('Doc_1_commit_1')
+      expect(contents[1]).toContain('Doc_2_commit_3_draft')
     })
 
     it('get docs from HEAD', async () => {
@@ -237,8 +280,11 @@ describe('getDocumentsAtCommit', () => {
         .getDocumentsAtCommit(commit)
         .then((r) => r.unwrap())
 
-      const contents = documents.map((d) => d.content).sort()
-      expect(contents).toEqual(['Doc_1_commit_1', 'Doc_2_commit_2'])
+      const contents = documents
+        .sort((a, b) => a.path.localeCompare(b.path))
+        .map((d) => d.content)
+      expect(contents[0]).toContain('Doc_1_commit_1')
+      expect(contents[1]).toContain('Doc_2_commit_2')
     })
   })
 })

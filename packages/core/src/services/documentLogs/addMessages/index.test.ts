@@ -12,11 +12,7 @@ import {
   User,
   Workspace,
 } from '../../../browser'
-import {
-  createDocumentLog,
-  createProject,
-  createProviderApiKey,
-} from '../../../tests/factories'
+import { createDocumentLog, createProject } from '../../../tests/factories'
 import { testConsumeStream } from '../../../tests/helpers'
 import { addMessages } from './index'
 
@@ -84,7 +80,9 @@ async function buildData({
     documents,
     commit: cmt,
     user: usr,
+    providers,
   } = await createProject({
+    providers: [{ type: Providers.OpenAI, name: 'openai' }],
     documents: {
       doc1: doc1Content,
     },
@@ -93,12 +91,7 @@ async function buildData({
   commit = cmt
   workspace = wsp
   user = usr
-  providerApiKey = await createProviderApiKey({
-    workspace,
-    type: Providers.OpenAI,
-    name: 'openai',
-    user,
-  })
+  providerApiKey = providers[0]!
   const { providerLogs } = await createDocumentLog({
     commit,
     document,

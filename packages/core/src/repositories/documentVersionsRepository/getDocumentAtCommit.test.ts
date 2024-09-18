@@ -8,11 +8,15 @@ import { DocumentVersionsRepository } from './index'
 
 describe('getDocumentAtCommit', () => {
   it('return doc from merged commit', async () => {
-    const { project, user } = await factories.createProject()
+    const { project, user, providers } = await factories.createProject()
     const { commit } = await factories.createDraft({ project, user })
     const { documentVersion: doc } = await factories.createDocumentVersion({
       commit: commit,
-      content: 'VERSION_1',
+      path: 'folder1/doc1',
+      content: factories.helpers.createPrompt({
+        provider: providers[0]!,
+        content: 'VERSION_1',
+      }),
     })
     const mergedCommit = await mergeCommit(commit).then((r) => r.unwrap())
     const documentUuid = doc.documentUuid
@@ -25,11 +29,11 @@ describe('getDocumentAtCommit', () => {
     })
     const document = result.unwrap()
 
-    expect(omit(document, 'id', 'updatedAt')).toEqual({
-      ...omit(doc, 'id', 'updatedAt'),
+    expect(omit(document, 'id', 'updatedAt', 'resolvedContent')).toEqual({
+      ...omit(doc, 'id', 'updatedAt', 'resolvedContent'),
       projectId: project.id,
       mergedAt: mergedCommit.mergedAt,
-      resolvedContent: 'VERSION_1',
     })
+    expect(document.resolvedContent).toEqual(doc.content)
   })
 })

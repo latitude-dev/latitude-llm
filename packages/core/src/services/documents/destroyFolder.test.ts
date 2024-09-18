@@ -2,6 +2,7 @@ import { and, eq } from 'drizzle-orm'
 import { describe, expect, it } from 'vitest'
 
 import { database } from '../../client'
+import { Providers } from '../../constants'
 import { NotFoundError } from '../../lib'
 import { documentVersions } from '../../schema'
 import * as factories from '../../tests/factories'
@@ -23,13 +24,16 @@ describe('removing folders', () => {
     expect(result.error).toEqual(new NotFoundError('Folder does not exist'))
   })
 
-  it('throws error if commit is merged', async () => {
-    const { project, user } = await factories.createProject()
+  it('throws error if commit is merged', async (ctx) => {
+    const { project, user, providers } = await factories.createProject()
     const { commit: draft } = await factories.createDraft({ project, user })
     await createNewDocument({
       commit: draft,
       path: 'foo',
-      content: 'foo',
+      content: ctx.factories.helpers.createPrompt({
+        provider: providers[0]!,
+        content: 'foo',
+      }),
     })
     const mergedCommit = await mergeCommit(draft).then((r) => r.unwrap())
 
@@ -42,32 +46,56 @@ describe('removing folders', () => {
     expect(result.error).toEqual(new Error('Cannot modify a merged commit'))
   })
 
-  it('destroy folder that were in draft document but not in previous merged commits', async () => {
-    const { project, user } = await factories.createProject()
+  it('destroy folder that were in draft document but not in previous merged commits', async (ctx) => {
+    const { project, user, providers } = await factories.createProject()
     const { commit: draft } = await factories.createDraft({ project, user })
     await factories.createDocumentVersion({
       commit: draft,
       path: 'root-folder/some-folder/doc1',
+      content: ctx.factories.helpers.createPrompt({
+        provider: providers[0]!,
+        content: 'Doc 1',
+      }),
     })
     await factories.createDocumentVersion({
       commit: draft,
       path: 'root-folder/some-folder/doc2',
+      content: ctx.factories.helpers.createPrompt({
+        provider: providers[0]!,
+        content: 'Doc 2',
+      }),
     })
     await factories.createDocumentVersion({
       commit: draft,
       path: 'root-folder/some-folder/inner-folder/doc42',
+      content: ctx.factories.helpers.createPrompt({
+        provider: providers[0]!,
+        content: 'Doc 42',
+      }),
     })
     await factories.createDocumentVersion({
       commit: draft,
       path: 'root-folder/other-nested-folder/doc3',
+      content: ctx.factories.helpers.createPrompt({
+        provider: providers[0]!,
+        content: 'Doc 3',
+      }),
     })
     await factories.createDocumentVersion({
       commit: draft,
       path: 'root-folder/some-foldernoisadoc',
+      content: ctx.factories.helpers.createPrompt({
+        provider: providers[0]!,
+        content: 'Doc 3',
+      }),
     })
     await factories.createDocumentVersion({
       commit: draft,
       path: 'other-foler/doc4',
+      content: ctx.factories.helpers.createPrompt({
+        provider: providers[0]!,
+        content: 'Doc 4',
+      }),
     })
 
     await destroyFolder({
@@ -89,12 +117,19 @@ describe('removing folders', () => {
     ])
   })
 
-  it('create soft deleted documents that were present in merged commits and were deleted in this draft commit', async () => {
+  it('create soft deleted documents that were present in merged commits and were deleted in this draft commit', async (ctx) => {
     const { project, user } = await factories.createProject({
+      providers: [{ type: Providers.OpenAI, name: 'openai' }],
       documents: {
         'some-folder': {
-          doc2: 'Doc 2',
-          doc1: 'Doc 1',
+          doc2: ctx.factories.helpers.createPrompt({
+            provider: 'openai',
+            content: 'Doc 2',
+          }),
+          doc1: ctx.factories.helpers.createPrompt({
+            provider: 'openai',
+            content: 'Doc 1',
+          }),
         },
       },
     })
@@ -118,12 +153,19 @@ describe('removing folders', () => {
     expect(paths).toEqual(['some-folder/doc1', 'some-folder/doc2'])
   })
 
-  it('existing documents in this commit draft are marked as deleted', async () => {
+  it('existing documents in this commit draft are marked as deleted', async (ctx) => {
     const { project, user, documents } = await factories.createProject({
+      providers: [{ type: Providers.OpenAI, name: 'openai' }],
       documents: {
         'some-folder': {
-          doc2: 'Doc 2',
-          doc1: 'Doc 1',
+          doc2: ctx.factories.helpers.createPrompt({
+            provider: 'openai',
+            content: 'Doc 2',
+          }),
+          doc1: ctx.factories.helpers.createPrompt({
+            provider: 'openai',
+            content: 'Doc 1',
+          }),
         },
       },
     })

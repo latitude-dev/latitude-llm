@@ -1,43 +1,26 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import {
-  DocumentLog,
-  ProviderApiKey,
-  ProviderLog,
-  Providers,
-  Workspace,
-} from '../../browser'
+import { DocumentLog, ProviderApiKey, ProviderLog } from '../../browser'
 import { NotFoundError } from '../../lib'
 import * as factories from '../../tests/factories'
 import { computeDocumentLogWithMetadata } from './computeDocumentLogWithMetadata'
 
 describe('computeDocumentLogWithMetadata', () => {
   let documentLog: DocumentLog
-  let workspace: Workspace
   let provider: ProviderApiKey
   let providerLogs: ProviderLog[]
 
   beforeEach(async () => {
     const setup = await factories.createProject()
-    workspace = setup.workspace
-    provider = await factories.createProviderApiKey({
-      workspace,
-      type: Providers.OpenAI,
-      name: 'foo',
-      user: setup.user,
-    })
+    provider = setup.providers[0]!
     const { commit } = await factories.createDraft({
       project: setup.project,
       user: setup.user,
     })
     const { documentVersion } = await factories.createDocumentVersion({
       commit,
-      content: `
-      ---
-      provider: ${provider.name}
-      model: 'gpt-4o-mini'
-      ---
-      `,
+      path: 'folder1/doc1',
+      content: factories.helpers.createPrompt({ provider, content: 'Doc 1' }),
     })
     const { documentLog: dl, providerLogs: _providerLogs } =
       await factories.createDocumentLog({

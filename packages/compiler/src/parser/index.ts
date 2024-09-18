@@ -57,7 +57,7 @@ export class Parser {
           code: `unclosed-block`,
           message: `Block was left open`,
         },
-        current.start!,
+        current.start! + 1,
       )
     }
     if (state !== fragment) {

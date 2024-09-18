@@ -1,22 +1,17 @@
 import { describe, expect, it } from 'vitest'
 
 import { EvaluationResultsRepository } from '.'
-import { EvaluationResultableType, Providers } from '../../constants'
+import { EvaluationResultableType } from '../../constants'
 import { mergeCommit } from '../../services/commits'
 import * as factories from '../../tests/factories'
 
 describe('findEvaluationResultsByDocumentUuid', () => {
   it('return evaluation results', async () => {
-    const { workspace, project, user } = await factories.createProject()
-    const provider = await factories.createProviderApiKey({
-      workspace,
-      type: Providers.OpenAI,
-      name: 'openai',
-      user,
-    })
+    const { workspace, project, user, providers } =
+      await factories.createProject()
     const evaluation = await factories.createLlmAsJudgeEvaluation({
       workspace,
-      prompt: factories.helpers.createPrompt({ provider }),
+      prompt: factories.helpers.createPrompt({ provider: providers[0]! }),
       configuration: {
         type: EvaluationResultableType.Number,
         detail: {
@@ -28,7 +23,8 @@ describe('findEvaluationResultsByDocumentUuid', () => {
     const { commit: draft } = await factories.createDraft({ project, user })
     const { documentVersion: doc } = await factories.createDocumentVersion({
       commit: draft,
-      content: factories.helpers.createPrompt({ provider }),
+      path: 'folder1/doc1',
+      content: factories.helpers.createPrompt({ provider: providers[0]! }),
     })
     const commit = await mergeCommit(draft).then((r) => r.unwrap())
 

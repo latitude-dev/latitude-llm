@@ -69,24 +69,6 @@ describe('config section', async () => {
       baz: ['qux', 'quux'],
     })
   })
-
-  it('does not compile the prompt as YAML when it is not the first element in the prompt', async () => {
-    const prompt = `
-      Lorem ipsum
-      ---
-      foo: bar
-      baz:
-       - qux
-       - quux
-      ---
-    `
-    const result = await render({
-      prompt: removeCommonIndent(prompt),
-      parameters: {},
-    })
-
-    expect(result.config).toEqual({})
-  })
 })
 
 describe('comments', async () => {

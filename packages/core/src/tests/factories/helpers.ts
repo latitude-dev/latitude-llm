@@ -18,17 +18,20 @@ const randomSentence = () => {
 function createPrompt({
   provider,
   model,
+  content,
   steps,
 }: {
-  provider: ProviderApiKey
+  provider: ProviderApiKey | string
   model?: string
+  content?: string
   steps?: number
 }) {
   const prompt = `
 ---
-provider: ${provider.name}
+provider: ${typeof provider === 'string' ? provider : provider.name}
 model: ${model ?? faker.internet.domainName()}
 ---
+${content ?? ''}
 ${Array.from({ length: steps ?? 1 })
   .map(() => randomSentence())
   .join('\n<response />\n')}
