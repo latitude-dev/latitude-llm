@@ -1,15 +1,8 @@
-import { createProviderLogJob } from '@latitude-data/core/events/handlers/createProviderLogJob'
-import { EventHandlers } from '@latitude-data/core/events/handlers/index'
+import { queues } from '@latitude-data/core/queues'
 import { Job, JobsOptions, Queue, QueueEvents } from 'bullmq'
 
-import { Jobs, Queues } from '../constants'
+import { Jobs, Queues, QUEUES } from '../constants'
 import { JobDefinition } from '../job-definitions'
-import { runBatchEvaluationJob } from '../job-definitions/batchEvaluations/runBatchEvaluationJob'
-import { runDocumentJob } from '../job-definitions/batchEvaluations/runDocumentJob'
-import { runEvaluationJob } from '../job-definitions/batchEvaluations/runEvaluationJob'
-import { createEventJob } from '../job-definitions/events/createEventJob'
-import { publishEventJob } from '../job-definitions/events/publishEventJob'
-import { connection } from '../utils/connection'
 
 export function capitalize(string: string) {
   return string.charAt(0).toUpperCase() + string.slice(1)
@@ -41,6 +34,7 @@ function setupQueue({
   name: Queues
   jobs: readonly QueueJob[]
 }) {
+  const connection = queues()
   const queue = new Queue(name, {
     connection,
     defaultJobOptions: DEFAULT_JOB_OPTIONS,
@@ -63,26 +57,6 @@ function setupQueue({
     jobs: jobz,
   }
 }
-
-export const QUEUES = {
-  [Queues.defaultQueue]: {
-    name: Queues.defaultQueue,
-    jobs: [
-      runBatchEvaluationJob,
-      runDocumentJob,
-      runEvaluationJob,
-      createProviderLogJob,
-    ],
-  },
-  [Queues.eventsQueue]: {
-    name: Queues.eventsQueue,
-    jobs: [publishEventJob, createEventJob],
-  },
-  [Queues.eventHandlersQueue]: {
-    name: Queues.eventHandlersQueue,
-    jobs: Object.values(EventHandlers).flat(),
-  },
-} as const
 
 type QueueJob = (typeof QUEUES)[keyof typeof QUEUES]['jobs'][number]
 

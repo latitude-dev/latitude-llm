@@ -7,13 +7,13 @@ import {
 } from '@latitude-data/core/browser'
 import { findWorkspaceFromDocument } from '@latitude-data/core/data-access'
 import { NotFoundError } from '@latitude-data/core/lib/errors'
+import { queues } from '@latitude-data/core/queues'
 import { CommitsRepository } from '@latitude-data/core/repositories'
 import { previewDataset } from '@latitude-data/core/services/datasets/preview'
 import { WebsocketClient } from '@latitude-data/core/websockets/workers'
 import { Job } from 'bullmq'
 
 import { setupJobs } from '../..'
-import { connection } from '../../utils/connection'
 import { ProgressTracker } from '../../utils/progressTracker'
 
 type RunBatchEvaluationJobParams = {
@@ -66,7 +66,7 @@ export const runBatchEvaluationJob = async (
     )
   })
 
-  const progressTracker = new ProgressTracker(connection, batchId)
+  const progressTracker = new ProgressTracker(queues(), batchId)
   const firstAttempt = job.attemptsMade === 0
 
   if (firstAttempt) {
@@ -74,7 +74,7 @@ export const runBatchEvaluationJob = async (
   }
 
   const progress = await progressTracker.getProgress()
-  const queues = setupJobs()
+  const jobs = setupJobs()
 
   if (firstAttempt && parameters.length > 0) {
     websockets.emit('evaluationStatus', {
@@ -95,7 +95,7 @@ export const runBatchEvaluationJob = async (
   // enqueued job. This allows us to resume the batch if the job fails.
   for (let i = progress.enqueued; i < parameters.length; i++) {
     const isFirstEnqueued = progress.enqueued === 0
-    await queues.defaultQueue.jobs.enqueueRunDocumentJob({
+    await jobs.defaultQueue.jobs.enqueueRunDocumentJob({
       workspaceId: workspace.id,
       documentUuid: document.documentUuid,
       commitUuid: commit.uuid,

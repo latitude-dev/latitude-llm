@@ -1,5 +1,4 @@
 import { setupQueues } from './queues'
-import startWorkers from './workers'
 
 export { Worker } from 'bullmq'
 
@@ -9,8 +8,4 @@ export function setupJobs() {
   queues = setupQueues()
 
   return queues
-}
-
-export function setupWorkers() {
-  return startWorkers()
 }

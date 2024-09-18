@@ -1,6 +1,7 @@
+import { queues } from '@latitude-data/core/queues'
+import { captureException } from '$/utils/sentry'
 import { Worker } from 'bullmq'
 
-import { connection } from '../utils/connection'
 import { defaultWorker } from './worker-definitions/defaultWorker'
 
 const WORKER_OPTS = {
@@ -18,11 +19,11 @@ export default function startWorkers() {
     w.queues.map((q) => {
       const worker = new Worker(q, w.processor, {
         ...WORKER_OPTS,
-        connection,
+        connection: queues(),
       })
 
       worker.on('error', (error: Error) => {
-        console.error(error)
+        captureException(error)
       })
 
       return worker

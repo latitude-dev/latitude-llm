@@ -2,6 +2,7 @@ import {
   LatitudeError,
   UnprocessableEntityError,
 } from '@latitude-data/core/lib/errors'
+import { captureException } from '$/common/sentry'
 import { createMiddleware } from 'hono/factory'
 
 import HttpStatusCodes from '../common/httpStatusCodes'
@@ -12,7 +13,7 @@ const errorHandlerMiddleware = () =>
     if (!err) return next()
 
     if (process.env.NODE_ENV !== 'test') {
-      console.error(err.message)
+      captureException(err)
     }
 
     if (err instanceof UnprocessableEntityError) {

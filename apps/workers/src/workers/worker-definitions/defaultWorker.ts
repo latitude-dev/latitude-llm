@@ -1,10 +1,11 @@
+import { Queues } from '@latitude-data/jobs/constants'
+
 import { buildProcessor } from '../_shared'
-import { Queues } from '../../constants'
 
 const defaultWorkerQueues = [
   Queues.defaultQueue,
-  Queues.eventsQueue,
   Queues.eventHandlersQueue,
+  Queues.eventsQueue,
 ]
 
 export const defaultWorker = {

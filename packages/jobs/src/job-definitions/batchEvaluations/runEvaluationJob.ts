@@ -1,3 +1,4 @@
+import { queues } from '@latitude-data/core/queues'
 import {
   DocumentLogsRepository,
   EvaluationsRepository,
@@ -6,7 +7,6 @@ import { runEvaluation } from '@latitude-data/core/services/evaluations/run'
 import { WebsocketClient } from '@latitude-data/core/websockets/workers'
 import { Job } from 'bullmq'
 
-import { connection } from '../../utils/connection'
 import { ProgressTracker } from '../../utils/progressTracker'
 
 type RunEvaluationJobData = {
@@ -29,7 +29,7 @@ export const runEvaluationJob = async (job: Job<RunEvaluationJobData>) => {
     evaluationId,
   } = job.data
 
-  const progressTracker = new ProgressTracker(connection, batchId)
+  const progressTracker = new ProgressTracker(queues(), batchId)
   const documentLogsScope = new DocumentLogsRepository(workspaceId)
   const evaluationsScope = new EvaluationsRepository(workspaceId)
   try {

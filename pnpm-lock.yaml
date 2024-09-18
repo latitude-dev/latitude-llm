@@ -229,6 +229,9 @@ importers:
       '@latitude-data/mailers':
         specifier: workspace:^
         version: link:../../packages/mailers
+      '@sentry/node':
+        specifier: ^8.30.0
+        version: 8.30.0
       '@t3-oss/env-core':
         specifier: ^0.10.1
         version: 0.10.1(typescript@5.6.2)(zod@3.23.8)
@@ -323,7 +326,7 @@ importers:
         version: 4.6.0(monaco-editor@0.50.0)(react-dom@19.0.0-rc-f994737d14-20240522(react@19.0.0-rc-f994737d14-20240522))(react@19.0.0-rc-f994737d14-20240522)
       '@sentry/nextjs':
         specifier: ^8
-        version: 8.30.0(@opentelemetry/api@1.9.0)(@opentelemetry/core@1.26.0(@opentelemetry/api@1.9.0))(@opentelemetry/instrumentation@0.53.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@1.26.0(@opentelemetry/api@1.9.0))(encoding@0.1.13)(next@14.3.0-canary.87(@opentelemetry/api@1.9.0)(react-dom@19.0.0-rc-f994737d14-20240522(react@19.0.0-rc-f994737d14-20240522))(react@19.0.0-rc-f994737d14-20240522))(react@19.0.0-rc-f994737d14-20240522)(webpack@5.94.0(esbuild@0.19.12))
+        version: 8.30.0(@opentelemetry/api@1.9.0)(@opentelemetry/core@1.26.0(@opentelemetry/api@1.9.0))(@opentelemetry/instrumentation@0.53.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@1.26.0(@opentelemetry/api@1.9.0))(encoding@0.1.13)(next@14.3.0-canary.87(@opentelemetry/api@1.9.0)(react-dom@19.0.0-rc-f994737d14-20240522(react@19.0.0-rc-f994737d14-20240522))(react@19.0.0-rc-f994737d14-20240522))(react@19.0.0-rc-f994737d14-20240522)(webpack@5.94.0)
       '@sentry/utils':
         specifier: ^8.30.0
         version: 8.30.0
@@ -522,6 +525,9 @@ importers:
       '@latitude-data/mailers':
         specifier: workspace:^
         version: link:../../packages/mailers
+      '@sentry/node':
+        specifier: ^8.30.0
+        version: 8.30.0
       '@t3-oss/env-core':
         specifier: '*'
         version: 0.11.1(typescript@5.6.2)(zod@3.23.8)
@@ -2390,6 +2396,9 @@ packages:
     peerDependencies:
       drizzle-orm: '>= 0.29 <1'
       lucia: 3.x
+    peerDependenciesMeta:
+      drizzle-orm:
+        optional: true
 
   '@lukeed/ms@2.0.2':
     resolution: {integrity: sha512-9I2Zn6+NJLfaGoz9jN3lpwDgAYvfGeNYdbAIjJOqzs4Tpc+VU3Jqq4IofSUBKajiDS8k9fZIg18/z13mpk1bsA==}
@@ -10879,8 +10888,9 @@ snapshots:
 
   '@lucia-auth/adapter-drizzle@1.1.0(drizzle-orm@0.33.0(@opentelemetry/api@1.9.0)(@types/pg@8.11.10)(@types/react@18.3.0)(pg@8.12.0)(react@19.0.0-rc-f994737d14-20240522))(lucia@3.2.0)':
     dependencies:
-      drizzle-orm: 0.33.0(@opentelemetry/api@1.9.0)(@types/pg@8.11.10)(@types/react@18.3.0)(pg@8.12.0)(react@19.0.0-rc-f994737d14-20240522)
       lucia: 3.2.0
+    optionalDependencies:
+      drizzle-orm: 0.33.0(@opentelemetry/api@1.9.0)(@types/pg@8.11.10)(@types/react@18.3.0)(pg@8.12.0)(react@19.0.0-rc-f994737d14-20240522)
 
   '@lukeed/ms@2.0.2': {}
 
@@ -12826,7 +12836,7 @@ snapshots:
       '@sentry/types': 8.30.0
       '@sentry/utils': 8.30.0
 
-  '@sentry/nextjs@8.30.0(@opentelemetry/api@1.9.0)(@opentelemetry/core@1.26.0(@opentelemetry/api@1.9.0))(@opentelemetry/instrumentation@0.53.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@1.26.0(@opentelemetry/api@1.9.0))(encoding@0.1.13)(next@14.3.0-canary.87(@opentelemetry/api@1.9.0)(react-dom@19.0.0-rc-f994737d14-20240522(react@19.0.0-rc-f994737d14-20240522))(react@19.0.0-rc-f994737d14-20240522))(react@19.0.0-rc-f994737d14-20240522)(webpack@5.94.0(esbuild@0.19.12))':
+  '@sentry/nextjs@8.30.0(@opentelemetry/api@1.9.0)(@opentelemetry/core@1.26.0(@opentelemetry/api@1.9.0))(@opentelemetry/instrumentation@0.53.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@1.26.0(@opentelemetry/api@1.9.0))(encoding@0.1.13)(next@14.3.0-canary.87(@opentelemetry/api@1.9.0)(react-dom@19.0.0-rc-f994737d14-20240522(react@19.0.0-rc-f994737d14-20240522))(react@19.0.0-rc-f994737d14-20240522))(react@19.0.0-rc-f994737d14-20240522)(webpack@5.94.0)':
     dependencies:
       '@opentelemetry/instrumentation-http': 0.53.0(@opentelemetry/api@1.9.0)
       '@opentelemetry/semantic-conventions': 1.27.0
@@ -12838,14 +12848,14 @@ snapshots:
       '@sentry/types': 8.30.0
       '@sentry/utils': 8.30.0
       '@sentry/vercel-edge': 8.30.0
-      '@sentry/webpack-plugin': 2.22.3(encoding@0.1.13)(webpack@5.94.0(esbuild@0.19.12))
+      '@sentry/webpack-plugin': 2.22.3(encoding@0.1.13)(webpack@5.94.0)
       chalk: 3.0.0
       next: 14.3.0-canary.87(@opentelemetry/api@1.9.0)(react-dom@19.0.0-rc-f994737d14-20240522(react@19.0.0-rc-f994737d14-20240522))(react@19.0.0-rc-f994737d14-20240522)
       resolve: 1.22.8
       rollup: 3.29.4
       stacktrace-parser: 0.1.10
     optionalDependencies:
-      webpack: 5.94.0(esbuild@0.19.12)
+      webpack: 5.94.0
     transitivePeerDependencies:
       - '@opentelemetry/api'
       - '@opentelemetry/core'
@@ -12924,12 +12934,12 @@ snapshots:
       '@sentry/types': 8.30.0
       '@sentry/utils': 8.30.0
 
-  '@sentry/webpack-plugin@2.22.3(encoding@0.1.13)(webpack@5.94.0(esbuild@0.19.12))':
+  '@sentry/webpack-plugin@2.22.3(encoding@0.1.13)(webpack@5.94.0)':
     dependencies:
       '@sentry/bundler-plugin-core': 2.22.3(encoding@0.1.13)
       unplugin: 1.0.1
       uuid: 9.0.1
-      webpack: 5.94.0(esbuild@0.19.12)
+      webpack: 5.94.0
     transitivePeerDependencies:
       - encoding
       - supports-color
@@ -13435,7 +13445,7 @@ snapshots:
 
   '@types/connect@3.4.36':
     dependencies:
-      '@types/node': 20.16.5
+      '@types/node': 22.5.5
 
   '@types/connect@3.4.38':
     dependencies:
@@ -13529,7 +13539,7 @@ snapshots:
 
   '@types/mysql@2.15.26':
     dependencies:
-      '@types/node': 20.16.5
+      '@types/node': 22.5.5
 
   '@types/node@18.19.50':
     dependencies:
@@ -13572,7 +13582,7 @@ snapshots:
 
   '@types/pg@8.6.1':
     dependencies:
-      '@types/node': 20.16.5
+      '@types/node': 22.5.5
       pg-protocol: 1.6.1
       pg-types: 2.2.0
 
@@ -18533,16 +18543,14 @@ snapshots:
       mkdirp: 1.0.4
       yallist: 4.0.0
 
-  terser-webpack-plugin@5.3.10(esbuild@0.19.12)(webpack@5.94.0(esbuild@0.19.12)):
+  terser-webpack-plugin@5.3.10(webpack@5.94.0):
     dependencies:
       '@jridgewell/trace-mapping': 0.3.25
       jest-worker: 27.5.1
       schema-utils: 3.3.0
       serialize-javascript: 6.0.2
       terser: 5.32.0
-      webpack: 5.94.0(esbuild@0.19.12)
-    optionalDependencies:
-      esbuild: 0.19.12
+      webpack: 5.94.0
 
   terser@5.32.0:
     dependencies:
@@ -19227,7 +19235,7 @@ snapshots:
 
   webpack-virtual-modules@0.5.0: {}
 
-  webpack@5.94.0(esbuild@0.19.12):
+  webpack@5.94.0:
     dependencies:
       '@types/estree': 1.0.5
       '@webassemblyjs/ast': 1.12.1
@@ -19249,7 +19257,7 @@ snapshots:
       neo-async: 2.6.2
       schema-utils: 3.3.0
       tapable: 2.2.1
-      terser-webpack-plugin: 5.3.10(esbuild@0.19.12)(webpack@5.94.0(esbuild@0.19.12))
+      terser-webpack-plugin: 5.3.10(webpack@5.94.0)
       watchpack: 2.4.2
       webpack-sources: 3.2.3
     transitivePeerDependencies:

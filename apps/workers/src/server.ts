@@ -1,8 +1,9 @@
 import http from 'http'
 
-import { setupWorkers } from '@latitude-data/jobs'
+import { captureException, captureMessage } from './utils/sentry'
+import startWorkers from './workers'
 
-const workers = setupWorkers()
+const workers = startWorkers()
 
 console.log('Workers started')
 
@@ -33,13 +34,13 @@ process.on('SIGINT', () => gracefulShutdown('SIGINT'))
 process.on('SIGTERM', () => gracefulShutdown('SIGTERM'))
 
 process.on('uncaughtException', function (err) {
-  // TODO: Sentry.captureException(err)
+  captureException(err)
 
   console.error(err, 'Uncaught exception')
 })
 
-process.on('unhandledRejection', (reason, promise) => {
-  // TODO: Sentry.captureException(reason)
+process.on('unhandledRejection', (reason: string, promise) => {
+  captureMessage(reason)
 
   console.error({ promise, reason }, 'Unhandled Rejection at: Promise')
 })
