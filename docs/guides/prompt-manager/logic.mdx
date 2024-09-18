@@ -1,0 +1,115 @@
+---
+title: Logic in Prompts
+description: Learn how to use conditional statements and loops in your prompts.
+---
+
+## Overview
+Latitude allows you to add logic to your prompts, making them more dynamic and flexible. This guide covers two main logical constructs: conditional statements (if) and loops (each).
+
+## Conditional Statements (if)
+Conditional statements allow you to execute different parts of your prompt based on certain conditions.
+
+### Basic Syntax
+
+```
+    {{#if condition}}
+        // Content to be rendered if the condition is true
+    {{/if}}
+```
+
+For more complex scenarios, you can use else and else if:
+
+```
+    {{#if condition1}}
+        // Content if condition1 is true
+    {{:else if condition2}}
+        // Content if condition2 is true
+    {{:else}}
+        // Content if all conditions are false
+    {{/if}}
+```
+
+### Using Variables in Conditions
+
+You can use variables in your conditions. These variables can come from parameters or be set within the prompt:
+
+```
+    {{#if user_age >= 18}}
+        You are eligible to vote.
+    {{:else}}
+        You are not old enough to vote yet.
+    {{/if}}
+```
+
+### Using Step Responses
+
+You can use the response from a step in your conditions. First, save the step response to a variable:
+
+```
+    <response as="variable_response">Is the user a premium member?</response>
+
+    {{#if variable_response == 'Yes'}}
+        Welcome, premium member! Here are your exclusive benefits:
+        1. Priority support
+        Ad-free experience
+        Early access to new features
+    {{:else}}
+        Welcome! Consider upgrading to our premium membership for additional benefits.
+    {{/if}}
+```
+
+## Loops (each)
+The each statement allows you to iterate over arrays or objects in your prompts.
+
+### Basic Syntax
+```
+    {{#each items as item}}
+        // Content to be repeated for each item
+    {{/each}}
+```
+
+### Example Usage
+```
+    {{#each ['apple', 'banana', 'cherry'] as fruit}}
+        {{fruit}}
+    {{/each}}
+```
+
+This will output:
+- apple
+- banana
+- cherry
+
+### Using the Index
+You can also access the index of the current item in the loop:
+```
+    {{#each ['a', 'b', 'c'] as letter, index}}
+        {{index + 1}}.{{letter}}
+    {{/each}}
+```
+This will output:
+- `1.a`
+- `2.b`
+- `3.c`
+
+### Conditional Rendering within Loops
+You can combine each with if for more complex logic:
+```
+    {{#each users as user}}
+        {{#if user.isActive}}
+            {{user.name}} is an active user.
+        {{:else}}
+            {{user.name}} is not currently active.
+        {{/if}}
+    {{/each}}
+```
+
+### Empty List Handling
+You can provide an alternative output when the list is empty:
+```
+    {{#each items as item}}
+        {{item}}
+    {{:else}}
+        No items found.
+    {{/each}}
+```

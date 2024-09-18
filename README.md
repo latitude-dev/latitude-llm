@@ -32,8 +32,8 @@
   <a href="https://www.npmjs.com/package/@latitude-data/server">
     <img src="https://img.shields.io/npm/dm/@latitude-data/server" alt="npm downloads">
   </a>
-  <img src="https://github.com/latitude-dev/latitude/actions/workflows/linter.yml/badge.svg" alt="Linter">
-  <img src="https://github.com/latitude-dev/latitude/actions/workflows/test.yml/badge.svg" alt="Tests">
+  <img src="https://github.com/latitude-dev/latitude-llm/actions/workflows/linter.yml/badge.svg" alt="Linter">
+  <img src="https://github.com/latitude-dev/latitude-llm/actions/workflows/test.yml/badge.svg" alt="Tests">
 </p>
 
 ## 🌈 Why Latitude?
@@ -45,6 +45,8 @@ Latitude is a platform that helps developers and product teams build AI features
 3. Provides insights: Offers detailed analytics on LLM request performance, including response times and cost comparisons across various AI models and prompt versions.
 
 Latitude puts all these helpful tools in one place. This means you can add AI to your products without a lot of hassle, and keep an eye on how it's all working.
+
+<img alt="Latitude screenshot" src="https://github.com/user-attachments/assets/0540c380-54a1-4dec-90f5-c3d45b374fab">
 
 ## ✨ Features
 
@@ -58,10 +60,11 @@ Latitude puts all these helpful tools in one place. This means you can add AI to
 
 ## 📚 Table Of Contents
 
-- [Quick start](https://github.com/latitude-dev/latitude#-quick-start)
-- [Community](https://github.com/latitude-dev/latitude#-community)
-- [Contributing](https://github.com/latitude-dev/latitude#-contributing)
-- [Links](https://github.com/latitude-dev/latitude#-links)
+- [Quick start](https://github.com/latitude-dev/latitude-llm#-quick-start)
+- [Community](https://github.com/latitude-dev/latitude-llm#-community)
+- [Contributing](https://github.com/latitude-dev/latitude-llm#-contributing)
+- [License](https://github.com/latitude-dev/latitude-llm#-license)
+- [Links](https://github.com/latitude-dev/latitude-llm#-links)
 
 ## ⚡ Quick start
 
@@ -115,8 +118,14 @@ Contributions to Latitude are welcome and highly appreciated.
 
 If you are interested in contributing, please join us on our [Slack
 community](https://trylatitude.slack.com/join/shared_invite/zt-17dyj4elt-rwM~h2OorAA3NtgmibhnLA#/shared-invite/email),
-open an [issue](https://github.com/evidence-dev/evidence/issues/new), or
+open an [issue](https://github.com/latitude-dev/latitude-llm/issues/new), or
 contribute a pull request.
+
+## 📄 License
+
+Latitude is licensed under the [LGPL-3.0](LICENSE).
+
+Alternatively, we offer a more permissive commercial license for those who need it. Please contact us at [licensing@latitude.so](mailto:licensing@latitude.so) for more information.
 
 ## 🔗 Links
 

@@ -1,0 +1,73 @@
+---
+title: Overview Prompt Editor 
+description: Learn about the powerful features of the Latitude prompt editor.
+---
+
+## Prompt Editor
+The Latitude prompt editor allows you to define and structure your prompts with precision.
+
+## Model Configuration
+At the top of the prompt editor you can specify the default provider and AI model to use in your prompt. You can modify it using the input or directly in the code. 
+
+To add a provider, you can check the [Providers](/guides/getting-started/providers) page.
+
+For example:
+
+```
+---
+provider: openai
+model: gpt-4
+temperature: 0.7
+---
+```
+You can check [Prompt config section](/guides/prompt-manager/parameters) to learn more details.
+
+## Defining Conversation Structure
+
+The Latitude prompt editor uses different roles to structure conversations and define the behavior of the AI model. The main roles include:
+
+- [**System**](/guides/prompt-manager/roles#system-role): Sets the overall context and behavior for the AI model.
+- [**User**](/guides/prompt-manager/roles#user-role): Represents the input or questions from the end-user.
+- [**Assistant**](/guides/prompt-manager/roles#assistant-role): Represents the AI model's responses.
+
+To learn more about how to use these roles effectively in your prompts, please visit our [Roles in Prompt Editor](/guides/prompt-manager/roles) page.
+
+
+### Advanced features
+The Latitude prompt editor also offers advanced features to create more dynamic and complex prompts:
+
+- [**Parameters**](/guides/prompt-manager/parameters): Use `{{parameter}}` syntax to include dynamic values in your prompts.
+- [**Snippets**](/guides/prompt-manager/snippets): Reuse common prompt elements with the `<ref>` tag.
+- [**Chains and steps**](/guides/prompt-manager/chains): Create multi-step prompts using the `<response>` tag.
+- [**Logic**](/guides/prompt-manager/logic): Implement conditional statements and loops in your prompts.
+
+### Example
+
+```
+---
+provider: openai
+model: gpt-4o
+---
+
+<user>
+Hello, I'd like to know about {{topic}}.
+</user>
+
+<assistant>
+Certainly! I'd be happy to provide information about {{topic}}. 
+What specific aspect would you like to know?
+</assistant>
+
+<user>
+Tell me about its history.
+</user>
+
+<assistant>
+Of course! I'll give you an overview of the history of {{topic}}.
+
+<ref prompt="history_template" />
+
+Is there anything specific about the history of {{topic}} you'd like me to elaborate on?
+</assistant>```
+
+

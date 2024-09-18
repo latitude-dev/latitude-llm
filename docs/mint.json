@@ -34,6 +34,7 @@
           "guides/getting-started/concepts",
           "guides/getting-started/quick-start",
           "guides/getting-started/integration",
+          "guides/getting-started/providers",
           "guides/getting-started/invite-your-team"
         ]
       },
@@ -41,19 +42,25 @@
         "group": "Prompt Manager",
         "pages": [
           "guides/prompt-manager/overview",
+          "guides/prompt-manager/prompt-config",
+          "guides/prompt-manager/roles",
           "guides/prompt-manager/parameters",
           "guides/prompt-manager/snippets",
           "guides/prompt-manager/chains",
           "guides/prompt-manager/logic",
           "guides/prompt-manager/version-control",
-          "guides/prompt-manager/api-access"
+          "guides/prompt-manager/api-access",
+          "guides/prompt-manager/json-output"
         ]
       },
       {
         "group": "Evaluations",
         "pages": [
           "guides/evaluations/overview",
-          "guides/evaluations/running-evaluations"
+          "guides/evaluations/running-evaluations",
+          "guides/evaluations/numeric-evals",
+          "guides/evaluations/boolean-evals",
+          "guides/evaluations/text-evals"
         ]
       },
       {

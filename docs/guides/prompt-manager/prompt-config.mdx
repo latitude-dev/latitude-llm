@@ -1,0 +1,32 @@
+---
+title: Prompt Configuration
+description: 'Learn how to configure your prompts and set model parameters.'
+---
+
+## Overview
+Prompt configuration in Latitude allows you to specify the AI model and its parameters for your prompts. This configuration can be set at the prompt level or for specific response tags within the prompt.
+
+## Default Configuration
+The default configuration for a prompt can be set in two ways:
+
+1. Through the UI inputs at the top of the prompt editor.
+2. In the code at the beginning of your prompt.
+
+Here's an example of setting the configuration in code:
+
+```
+---
+provider: openai
+model: gpt-4
+temperature: 0.7
+---
+```
+
+The parameters available depend on each model, but the mandatory ones are:
+- **provider**: An alias for the AI service provider that you've configured in your settings. This determines which AI service will process your prompt.
+- **model**: The specific AI model to use from the chosen provider.
+
+## Additional Parameters
+Depending on the provider and model, you can set additional parameters such as temperature, max_tokens or top_p.
+
+Refer to your chosen provider's documentation to check the full list of available parameters.

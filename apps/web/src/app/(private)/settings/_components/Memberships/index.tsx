@@ -29,9 +29,9 @@ export default function Memberships() {
     <div className='flex flex-col gap-4'>
       <NewUser open={open} setOpen={setOpen} />
       <div className='flex flex-row items-center justify-between'>
-        <Text.H4B>Workspace Users</Text.H4B>
+        <Text.H4B>Workspace Members</Text.H4B>
         <Button fancy variant='outline' onClick={() => setOpen(true)}>
-          Add User
+          Add Member
         </Button>
       </div>
       <div className='flex flex-col gap-2'>

@@ -1,0 +1,40 @@
+---
+title: Providers
+description: Learn how to add providers into Latitude to use it in your prompts.
+---
+
+## Overview
+
+Providers in Latitude are the foundation for connecting to various AI models and services. 
+
+The name you introduce for each provider will be the one you will have to use in your prompts.
+
+## Creating a New Provider
+
+You can add more than one provider. To create a new provider:
+
+1. Go to the "Settings" section
+1. On the "Providers" section click on the "Create Provider" button
+1. Fill out the configuration:
+    1. **Provider**: Choose the AI service provider (e.g., OpenAI, Anthropic, Groq).
+    1. **ID**: Enter an alias for this provider configuration. This will be the name you have to use in the prompt editor.
+    1. **Token**: Input your API key or access token for the selected provider.
+1. Click "Create Provider" to save your new provider
+1. Now you can use it in your prompts
+
+## Using Providers in Prompts
+
+Once you've set up a provider, you can use it in your prompts:
+
+1. Open the Prompt editor
+1. Create a new prompt or edit an existing one
+1. In the prompt configuration, select your desired provider from the dropdown menu or in the code
+
+```
+---
+provider: openai
+model: gpt-4o
+---
+```
+
+For more information on integrating providers with your prompts and chains, see the [Prompt Manager Overview](/guides/prompt-manager/overview) guide.

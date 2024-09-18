@@ -1,0 +1,52 @@
+---
+title: API Access
+description: Learn how to access and use Latitude's API to run your prompts.
+---
+
+
+## API Access
+Latitude provides two types of API access: a general API for managing your workspace and project-level APIs for interacting with specific prompts.
+
+## Run a Document
+To run a Document through the API, you need to send a POST request to `https://gateway.latitude.so/api/v1/projects/<your-project-id>/commits/<your-commit-uuid>/documents/run`
+
+## API key
+The Latitude API allows you to run your Latitude documents from your app. To access the API, you will need an API key:
+1. Go to the Settings page in your Latitude workspace.
+2. Navigate to the "API Keys" section.
+3. Copy the auto generated API key or create a new one.
+
+Use this key in the Authorization header when making requests to the Latitude API.
+
+## Project and version
+All prompts in your Latitude project are bounded to a project and a version, and can be identified by the document path.
+
+You will find your `projectId` in the URL in Latitude, right after the `/projects/<projectId>`.
+
+To always select the latest published version of any document within the project, you can use `live` as the version id. However, if you want to use a specific version or draft, you can copy its UUID from the Breadcrumb on top of the app.
+
+## Run a document
+Each prompt in your Latitude project can be ran via its own API endpoint. This allows you to integrate your prompts directly into your applications.
+
+To run the document, simply send a POST request to this endpoint
+`https://gateway.latitude.io/api/v1/projects/<projectId>/commits/<versionUuid>/documents/run`
+
+The POST request must contain an `Authorization` header with your API key, and a body with both `documentPath` string and `parameters` object.
+
+Example request:
+```
+POST /v1/projects/1/commits/live/documents/run
+Authorization: Bearer your_api_key_here
+Content-Type: application/json
+
+{
+  "documentPath": "examples/hello_world",
+  "parameters": {
+    "user_input": "Hello, world!"
+  }
+}
+```
+
+The API will return a SSE streaming with the chain progress and all AI responses as different events.
+
+Remember to keep your API keys secure and never expose them in client-side code. Always make API calls from your server to protect your keys.

@@ -29,7 +29,7 @@ export default function NewUser({
         <>
           <CloseTrigger />
           <Button fancy form='createUserform' type='submit'>
-            Add User
+            Send invite
           </Button>
         </>
       }
