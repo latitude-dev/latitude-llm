@@ -14,10 +14,7 @@ import { ROUTES } from '$/services/routes'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
-import {
-  getActiveProjectsCached,
-  getDocumentsFromMergedCommitsCache,
-} from '../_data-access'
+import { getActiveProjectsCached } from '../_data-access'
 import { NAV_LINKS } from '../_lib/constants'
 import { ProjectsTable } from './_components/ProjectsTable'
 
@@ -31,7 +28,6 @@ export default async function DashboardLayout({
 
   const { workspace, user } = await getCurrentUser()
   const projects = await getActiveProjectsCached({ workspaceId: workspace.id })
-  const documents = await getDocumentsFromMergedCommitsCache(workspace.id)
   const breadcrumbs = [
     {
       name: <Text.H5M>{workspace.name}</Text.H5M>,
@@ -59,9 +55,7 @@ export default async function DashboardLayout({
           }
           table={
             <>
-              {projects.length > 0 && (
-                <ProjectsTable documents={documents} projects={projects} />
-              )}
+              {projects.length > 0 && <ProjectsTable projects={projects} />}
               {projects.length === 0 && (
                 <TableBlankSlate
                   description='There are no projects yet. Create one to start adding your prompts.'

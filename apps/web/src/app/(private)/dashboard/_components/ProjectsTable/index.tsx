@@ -1,6 +1,6 @@
 'use client'
 
-import { DocumentVersion, Project } from '@latitude-data/core/browser'
+import { Project } from '@latitude-data/core/browser'
 import {
   Icon,
   Table,
@@ -16,18 +16,16 @@ import { relativeTime } from '$/lib/relativeTime'
 import { ROUTES } from '$/services/routes'
 import Link from 'next/link'
 
-import { getDocumentsFromMergedCommitsCache } from '../../_data-access'
-
+type ProjectWithAgreggatedData = Project & {
+  documentCount: number
+  lastCreatedAtDocument: Date | null
+}
 export function ProjectsTable({
-  documents,
   projects,
 }: {
-  documents: Awaited<ReturnType<typeof getDocumentsFromMergedCommitsCache>>
-  projects: Project[]
+  projects: ProjectWithAgreggatedData[]
 }) {
   const navigate = useNavigate()
-  const findDocuments = (projectId: number) =>
-    documents.filter((d) => d.projectId === projectId)
   return (
     <Table>
       <TableHeader>
@@ -54,17 +52,12 @@ export function ProjectsTable({
             </TableCell>
             <TableCell>
               <Text.H4 color='foregroundMuted'>
-                {findDocuments(project.id).length || '-'}
+                {project.documentCount || '-'}
               </Text.H4>
             </TableCell>
             <TableCell>
               <Text.H4 color='foregroundMuted'>
-                {relativeTime(
-                  findDocuments(project.id).sort(
-                    (a: DocumentVersion, b: DocumentVersion) =>
-                      b.createdAt.getTime() - a.createdAt.getTime(),
-                  )?.[0]?.createdAt,
-                )}
+                {relativeTime(project.lastCreatedAtDocument)}
               </Text.H4>
             </TableCell>
             <TableCell>
