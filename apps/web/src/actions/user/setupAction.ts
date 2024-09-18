@@ -1,6 +1,6 @@
 'use server'
 
-import { UsersRepository } from '@latitude-data/core/repositories'
+import { unsafelyFindUserByEmail } from '@latitude-data/core/data-access'
 import { createMagicLinkToken } from '@latitude-data/core/services/magicLinkTokens/create'
 import { ROUTES } from '$/services/routes'
 import setupService from '$/services/user/setupService'
@@ -20,7 +20,7 @@ export const setupAction = errorHandlingProcedure
           .email()
           .refine(
             async (email) => {
-              const existingUser = await UsersRepository.findByEmail(email)
+              const existingUser = await unsafelyFindUserByEmail(email)
               return !existingUser
             },
             { message: 'Email is already in use' },

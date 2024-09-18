@@ -5,7 +5,7 @@ import { HEAD_COMMIT } from '@latitude-data/core/browser'
 import { Badge, Text } from '../../atoms'
 import { ClickToCopy } from '../ClicktoCopy'
 
-export function BreadcrumpBadge({
+export function BreadcrumbBadge({
   uuid: fullUuid,
   title,
   isHead,

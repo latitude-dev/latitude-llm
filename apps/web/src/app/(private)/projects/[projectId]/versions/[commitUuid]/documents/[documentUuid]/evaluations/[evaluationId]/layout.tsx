@@ -4,8 +4,8 @@ import { EvaluationsRepository } from '@latitude-data/core/repositories'
 import { computeEvaluationResultsWithMetadata } from '@latitude-data/core/services/evaluationResults/computeEvaluationResultsWithMetadata'
 import { TableWithHeader, Text } from '@latitude-data/web-ui'
 import { findCommitCached } from '$/app/(private)/_data-access'
-import BreadcrumpLink from '$/components/BreadcrumpLink'
-import { Breadcrump } from '$/components/layouts/AppLayout/Header'
+import BreadcrumbLink from '$/components/BreadcrumbLink'
+import { Breadcrumb } from '$/components/layouts/AppLayout/Header'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
 
@@ -47,11 +47,11 @@ export default async function ConnectedEvaluationLayout({
       {children}
       <TableWithHeader
         title={
-          <Breadcrump
+          <Breadcrumb
             breadcrumbs={[
               {
                 name: (
-                  <BreadcrumpLink
+                  <BreadcrumbLink
                     showBackIcon
                     name='Evaluations'
                     href={

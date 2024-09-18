@@ -6,6 +6,7 @@ import {
   TableWithHeader,
   Text,
 } from '@latitude-data/web-ui'
+import { AppTabs } from '$/app/(private)/AppTabs'
 import { AppLayout } from '$/components/layouts'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
 import { getSession } from '$/services/auth/getSession'
@@ -17,7 +18,7 @@ import {
   getActiveProjectsCached,
   getDocumentsFromMergedCommitsCache,
 } from '../_data-access'
-import { MAIN_NAV_LINKS, NAV_LINKS } from '../_lib/constants'
+import { NAV_LINKS } from '../_lib/constants'
 import { ProjectsTable } from './_components/ProjectsTable'
 
 export default async function DashboardLayout({
@@ -35,6 +36,9 @@ export default async function DashboardLayout({
     {
       name: <Text.H5M>{workspace.name}</Text.H5M>,
     },
+    {
+      name: <Text.H5M>Projects</Text.H5M>,
+    },
   ]
 
   return (
@@ -42,9 +46,9 @@ export default async function DashboardLayout({
       navigationLinks={NAV_LINKS}
       currentUser={user}
       breadcrumbs={breadcrumbs}
-      sectionLinks={MAIN_NAV_LINKS}
     >
       <Container>
+        <AppTabs />
         {children}
         <TableWithHeader
           title='Projects'

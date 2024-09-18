@@ -55,7 +55,7 @@ export default function EvaluationEditor({
   if (!evaluation) return null
 
   return (
-    <div className='flex flex-row w-full h-full gap-8 p-6'>
+    <div className='flex flex-row w-full h-full gap-8'>
       <div className='flex flex-col flex-1 flex-grow flex-shrink gap-2 min-w-0'>
         <EditorHeader
           title='Evaluation editor'

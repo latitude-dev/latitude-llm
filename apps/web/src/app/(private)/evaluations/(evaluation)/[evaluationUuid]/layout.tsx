@@ -1,9 +1,12 @@
 import { ReactNode } from 'react'
 
+import { Text } from '@latitude-data/web-ui'
 import { getEvaluationByUuidCached } from '$/app/(private)/_data-access'
-
-import { EvaluationTabSelector } from './_components/EvaluationTabs'
-import { EvaluationTitle } from './_components/EvaluationTitle'
+import { NAV_LINKS } from '$/app/(private)/_lib/constants'
+import BreadcrumbLink from '$/components/BreadcrumbLink'
+import { AppLayout } from '$/components/layouts'
+import { getCurrentUser } from '$/services/auth/getCurrentUser'
+import { ROUTES } from '$/services/routes'
 
 export default async function EvaluationLayout({
   params,
@@ -13,14 +16,32 @@ export default async function EvaluationLayout({
   children: ReactNode
 }) {
   const evaluation = await getEvaluationByUuidCached(params.evaluationUuid)
+  const session = await getCurrentUser()
 
   return (
-    <div className='flex flex-col h-full'>
-      <EvaluationTabSelector evaluation={evaluation} />
-      <EvaluationTitle evaluation={evaluation} />
-      <div className='flex-grow flex flex-col w-full overflow-hidden'>
-        {children}
-      </div>
-    </div>
+    <AppLayout
+      navigationLinks={NAV_LINKS}
+      currentUser={session.user}
+      breadcrumbs={[
+        {
+          name: (
+            <BreadcrumbLink
+              href={ROUTES.dashboard.root}
+              name={session.workspace.name}
+            />
+          ),
+        },
+        {
+          name: (
+            <BreadcrumbLink href={ROUTES.evaluations.root} name='Evaluations' />
+          ),
+        },
+        {
+          name: <Text.H5M>{evaluation.name}</Text.H5M>,
+        },
+      ]}
+    >
+      {children}
+    </AppLayout>
   )
 }

@@ -45,13 +45,13 @@ export const ROUTES = {
   },
   evaluations: {
     root: '/evaluations',
+    destroy: (uuid: string) => `${ROUTES.evaluations.root}/${uuid}/destroy`,
     detail: ({ uuid }: { uuid: string }) => {
       const root = `${ROUTES.evaluations.root}/${uuid}`
       return {
         root,
         [EvaluationRoutes.dashboard]: {
           root: `${root}/dashboard`,
-          destroy: { root: `${root}/dashboard/destroy` },
         },
         [EvaluationRoutes.editor]: {
           root: `${root}/editor`,

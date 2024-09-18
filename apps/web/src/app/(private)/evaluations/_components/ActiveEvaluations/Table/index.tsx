@@ -35,12 +35,7 @@ const ActiveEvaluationsTableRow = ({
         <Text.H4>{evaluation.description}</Text.H4>
       </TableCell>
       <TableCell onClick={(e) => e.stopPropagation()}>
-        <Link
-          href={
-            ROUTES.evaluations.detail({ uuid: evaluation.uuid }).dashboard
-              .destroy.root
-          }
-        >
+        <Link href={ROUTES.evaluations.destroy(evaluation.uuid)}>
           <Icon name='trash' />
         </Link>
       </TableCell>

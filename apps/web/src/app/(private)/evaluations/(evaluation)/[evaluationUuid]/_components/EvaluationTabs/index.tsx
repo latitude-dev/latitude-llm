@@ -1,10 +1,12 @@
 'use client'
 
+import { useMemo } from 'react'
+
 import { Evaluation } from '@latitude-data/core/browser'
 import { TabSelector } from '@latitude-data/web-ui'
 import { useNavigate } from '$/hooks/useNavigate'
+import { useSelectedPath } from '$/hooks/useSelectedPath'
 import { EvaluationRoutes, ROUTES } from '$/services/routes'
-import { useSelectedLayoutSegment } from 'next/navigation'
 
 export function EvaluationTabSelector({
   evaluation,
@@ -12,26 +14,23 @@ export function EvaluationTabSelector({
   evaluation: Evaluation
 }) {
   const router = useNavigate()
-  const selectedSegment = useSelectedLayoutSegment() as EvaluationRoutes | null
-
-  const pathTo = (evaluationRoute: EvaluationRoutes) => {
-    const evaluationDetail = ROUTES.evaluations.detail({
-      uuid: evaluation.uuid,
-    })
-    const detail = evaluationDetail[evaluationRoute] ?? evaluationDetail
-    return detail.root
-  }
-
+  const selected = useSelectedPath({ pickFirstSegment: false }) as
+    | EvaluationRoutes
+    | undefined
+  const options = useMemo(() => {
+    const base = ROUTES.evaluations.detail({ uuid: evaluation.uuid })
+    return [
+      { label: 'Dashboard', value: base.dashboard.root },
+      { label: 'Editor', value: base.editor.root },
+    ]
+  }, [evaluation.uuid])
   return (
-    <div className='flex flex-row p-4 pb-0'>
+    <div className='flex flex-row'>
       <TabSelector
-        options={[
-          { label: 'Dashboard', value: EvaluationRoutes.dashboard },
-          { label: 'Editor', value: EvaluationRoutes.editor },
-        ]}
-        selected={selectedSegment ?? EvaluationRoutes.dashboard}
+        options={options}
+        selected={selected}
         onSelect={(value) => {
-          router.push(pathTo(value))
+          router.push(value)
         }}
       />
     </div>

@@ -1,13 +1,16 @@
 'use client'
 
-import React from 'react'
-
-import { Text } from '@latitude-data/web-ui'
+import { EditableText, Text } from '@latitude-data/web-ui'
 import useProjects from '$/stores/projects'
-import { EditableText } from 'node_modules/@latitude-data/web-ui/src/ds/molecules/EditableText'
 import { useDebouncedCallback } from 'use-debounce'
 
-export default function BreadcrumpInput({ projectId }: { projectId: number }) {
+export default function BreadcrumbInput({
+  projectId,
+  projectName,
+}: {
+  projectId: number
+  projectName: string
+}) {
   const { data, update } = useProjects()
   const project = data.find((p) => p.id === projectId)
   const handleChange = useDebouncedCallback(
@@ -21,7 +24,9 @@ export default function BreadcrumpInput({ projectId }: { projectId: number }) {
     { trailing: true },
   )
 
-  if (!project) return null
+  if (!project) {
+    return <Text.H5M color='foregroundMuted'>{projectName}</Text.H5M>
+  }
 
   return (
     <EditableText

@@ -14,12 +14,10 @@ export default function AppLayout({
   currentUser,
   breadcrumbs,
   navigationLinks,
-  sectionLinks,
 }: AppLayoutProps) {
   return (
     <div className='grid grid-rows-[auto,1fr] h-screen overflow-hidden'>
       <AppHeader
-        sectionLinks={sectionLinks}
         breadcrumbs={breadcrumbs}
         navigationLinks={navigationLinks}
         currentUser={currentUser}
