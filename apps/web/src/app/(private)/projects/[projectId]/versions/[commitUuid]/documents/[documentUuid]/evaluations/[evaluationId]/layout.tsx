@@ -3,6 +3,7 @@ import { ReactNode } from 'react'
 import { EvaluationsRepository } from '@latitude-data/core/repositories'
 import { computeEvaluationResultsWithMetadata } from '@latitude-data/core/services/evaluationResults/computeEvaluationResultsWithMetadata'
 import { TableWithHeader, Text } from '@latitude-data/web-ui'
+import { findCommitCached } from '$/app/(private)/_data-access'
 import BreadcrumpLink from '$/components/BreadcrumpLink'
 import { Breadcrump } from '$/components/layouts/AppLayout/Header'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
@@ -30,10 +31,15 @@ export default async function ConnectedEvaluationLayout({
     .find(params.evaluationId)
     .then((r) => r.unwrap())
 
+  const commit = await findCommitCached({
+    projectId: Number(params.projectId),
+    uuid: params.commitUuid,
+  })
   const evaluationResults = await computeEvaluationResultsWithMetadata({
     workspaceId: evaluation.workspaceId,
     evaluation,
     documentUuid: params.documentUuid,
+    draft: commit,
   }).then((r) => r.unwrap())
 
   return (

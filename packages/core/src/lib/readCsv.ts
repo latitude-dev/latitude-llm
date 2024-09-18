@@ -1,3 +1,5 @@
+import { isNumber } from 'lodash-es'
+
 import { CsvError, parse, type Options as CsvOptions } from 'csv-parse/sync'
 
 import { Result } from './Result'
@@ -40,12 +42,14 @@ export async function syncReadCsv(
       info: true,
     }
 
-    if (toLine) {
-      opts = { ...opts, toLine }
+    if (isNumber(fromLine)) {
+      // from: https://csv.js.org/parse/options/from/
+      opts = { ...opts, from: fromLine }
     }
 
-    if (fromLine) {
-      opts = { ...opts, fromLine }
+    if (toLine) {
+      // to: https://csv.js.org/parse/options/to/
+      opts = { ...opts, to: toLine }
     }
 
     const records = parse(data, opts) as ParseResult[]

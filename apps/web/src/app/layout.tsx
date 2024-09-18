@@ -30,8 +30,8 @@ export default function RootLayout({
         <NextTopLoader showSpinner={false} />
         <ThemeProvider
           attribute='class'
-          defaultTheme='system'
-          enableSystem
+          defaultTheme='light'
+          enableSystem={false}
           disableTransitionOnChange
         >
           <TooltipProvider>{children}</TooltipProvider>

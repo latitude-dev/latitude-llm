@@ -9,7 +9,8 @@ import {
   SessionUser,
   Text,
 } from '@latitude-data/web-ui'
-import { ThemeButton } from '$/components/ThemeButton'
+// TODO: Review dark mode before enabling
+// import { ThemeButton } from '$/components/ThemeButton'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { Fragment } from 'react/jsx-runtime'
@@ -123,7 +124,7 @@ export default function AppHeader({
             ))}
           </nav>
           <AvatarDropdown currentUser={currentUser} />
-          <ThemeButton />
+          {/* <ThemeButton /> Not good enough for Cesar */}
         </div>
       </div>
       {sectionLinks.length > 0 ? (

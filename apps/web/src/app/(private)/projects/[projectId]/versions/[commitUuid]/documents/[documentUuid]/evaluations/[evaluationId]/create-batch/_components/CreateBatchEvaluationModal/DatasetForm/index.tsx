@@ -1,10 +1,11 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 
 import { Dataset } from '@latitude-data/core/browser'
 import {
   FormFieldGroup,
   Input,
   NumeredList,
+  ReactStateDispatch,
   Select,
   SelectOption,
   SwitchInput,
@@ -14,14 +15,15 @@ function LineRangeInputs({
   disabled,
   fromDefaultValue,
   toDefaultValue,
+  onChangeToLine,
   max,
 }: {
   disabled: boolean
   fromDefaultValue: number | undefined
   toDefaultValue: number | undefined
+  onChangeToLine: ReactStateDispatch<number | undefined>
   max: number | undefined
 }) {
-  const [to, setTo] = useState(toDefaultValue)
   return (
     <FormFieldGroup>
       <Input
@@ -31,8 +33,8 @@ function LineRangeInputs({
         label='From line'
         defaultValue={fromDefaultValue}
         placeholder='Starting line'
-        min={0}
-        max={to}
+        min={1}
+        max={toDefaultValue}
       />
       <Input
         disabled={disabled}
@@ -41,8 +43,10 @@ function LineRangeInputs({
         label='To line'
         placeholder='Ending line'
         defaultValue={toDefaultValue}
-        onChange={(e) => setTo(Number(e.target.value))}
-        min={0}
+        onChange={(e) => {
+          onChangeToLine(Number(e.target.value))
+        }}
+        min={fromDefaultValue}
         max={max}
       />
     </FormFieldGroup>
@@ -56,6 +60,7 @@ export default function DatasetForm({
   wantAllLines,
   fromLine,
   toLine,
+  onChangeToLine,
   datasets,
   isLoadingDatasets,
   parametersList,
@@ -68,6 +73,7 @@ export default function DatasetForm({
   wantAllLines: boolean
   fromLine: number | undefined
   toLine: number | undefined
+  onChangeToLine: ReactStateDispatch<number | undefined>
   headers: SelectOption[]
   selectedDataset: Dataset | null
   datasets: Dataset[]
@@ -122,6 +128,7 @@ export default function DatasetForm({
                 disabled={wantAllLines}
                 fromDefaultValue={fromLine}
                 toDefaultValue={toLine}
+                onChangeToLine={onChangeToLine}
                 max={selectedDataset?.fileMetadata?.rowCount}
               />
               <SwitchInput

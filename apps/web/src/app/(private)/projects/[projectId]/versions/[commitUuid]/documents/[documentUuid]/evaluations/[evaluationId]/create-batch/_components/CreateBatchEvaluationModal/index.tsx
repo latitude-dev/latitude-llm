@@ -94,6 +94,7 @@ export default function CreateBatchEvaluationModal({
         wantAllLines={form.wantAllLines}
         fromLine={form.fromLine}
         toLine={form.toLine}
+        onChangeToLine={form.setToLine}
         headers={form.headers}
         parametersList={form.parametersList}
         onParametersChange={form.onParameterChange}

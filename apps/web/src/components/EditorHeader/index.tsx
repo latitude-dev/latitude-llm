@@ -53,12 +53,14 @@ export default function EditorHeader({
   metadata,
   onChangePrompt,
   rightActions,
+  disabledMetadataSelectors = false,
 }: {
   title: string
   metadata: ConversationMetadata | undefined
   prompt: string
   onChangePrompt: (prompt: string) => void
   rightActions?: ReactNode
+  disabledMetadataSelectors?: boolean
 }) {
   const promptMetadata = useMemo<PromptMeta>(() => {
     const config = metadata?.config
@@ -204,13 +206,16 @@ export default function EditorHeader({
         <Select
           name='provider'
           label='Provider'
-          placeholder='Select a provider'
+          placeholder='Using default provider'
           options={providerOptions}
           value={selectedProvider}
+          disabled={
+            disabledMetadataSelectors || isLoading || !providerOptions.length
+          }
           onChange={onSelectProvider}
         />
         <Select
-          disabled={!selectedProvider}
+          disabled={disabledMetadataSelectors || !selectedProvider}
           name='model'
           label='Model'
           placeholder='Select a model'

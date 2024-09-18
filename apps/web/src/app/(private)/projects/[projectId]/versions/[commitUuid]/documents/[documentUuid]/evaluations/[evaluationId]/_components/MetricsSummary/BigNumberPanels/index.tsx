@@ -165,7 +165,7 @@ export function BigNumberPanels({
     <div className='flex flex-wrap gap-6'>
       <Panel label='Total logs' value={String(evaluationResults.length)} />
       <Panel label='Total cost' value={formatCostInMillicents(totalCost)} />
-      <Panel label='Total cost' value={String(totalTokens)} />
+      <Panel label='Total tokens' value={String(totalTokens)} />
       <TypeSpecificPanel
         evaluation={evaluation}
         evaluationResults={evaluationResults}

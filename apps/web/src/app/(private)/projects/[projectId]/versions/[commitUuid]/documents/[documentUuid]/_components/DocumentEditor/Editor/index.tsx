@@ -126,6 +126,7 @@ export default function DocumentEditor({
     }).then(setMetadata)
   }, [readDocument])
 
+  const isMerged = commit.mergedAt !== null
   return (
     <DocumentEditorContext.Provider
       value={{
@@ -136,6 +137,7 @@ export default function DocumentEditor({
       <div className='flex flex-row w-full h-full gap-8 p-6'>
         <div className='flex flex-col flex-1 flex-grow flex-shrink gap-2 min-w-0'>
           <EditorHeader
+            disabledMetadataSelectors={isMerged}
             title='Prompt editor'
             metadata={metadata}
             prompt={value}
@@ -147,9 +149,7 @@ export default function DocumentEditor({
               metadata={metadata}
               onChange={onChange}
               readOnlyMessage={
-                commit.mergedAt
-                  ? 'Create a draft to edit documents.'
-                  : undefined
+                isMerged ? 'Create a draft to edit documents.' : undefined
               }
               isSaved={isSaved}
             />
