@@ -37,11 +37,10 @@ if (environment !== 'production') {
       WEBSOCKET_REFRESH_SECRET_TOKEN_KEY: 'refresh-refresh-token-key',
       WORKERS_WEBSOCKET_SECRET_TOKEN: 'workers-secret-token',
       DRIVE_DISK: 'local',
-      DEFAULT_PROVIDER_ID: '-1', // Crazy number to avoid conflicts
-      DEFAULT_PROVIDER_MODEL: 'gpt-4o',
       FILE_PUBLIC_PATH,
       FILES_STORAGE_PATH,
       DEFAULT_PROJECT_ID: '1',
+      DEFAULT_PROVIDER_API_KEY: 'd32da7c2-94fd-49c3-8dca-b57a5c3bbe27',
     },
     { path: pathToEnv },
   )
@@ -55,9 +54,8 @@ export const env = createEnv({
   server: {
     CACHE_HOST: z.string(),
     DATABASE_URL: z.string().url(),
-    DEFAULT_PROVIDER_ID: z.coerce.number(),
-    DEFAULT_PROVIDER_MODEL: z.string(),
     DEFAULT_PROJECT_ID: z.coerce.number(),
+    DEFAULT_PROVIDER_API_KEY: z.string(),
     FROM_MAILER_EMAIL: z.string(),
     LATITUDE_DOMAIN: z.string(),
     LATITUDE_URL: z.string().url(),

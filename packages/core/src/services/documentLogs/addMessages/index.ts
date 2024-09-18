@@ -39,7 +39,11 @@ export async function addMessages({
   const providerLog = providerLogResult.value
   const provider = await unsafelyFindProviderApiKey(providerLog.providerId)
   if (!provider) {
-    return Result.error(new NotFoundError('Could not find a provider api key'))
+    return Result.error(
+      new NotFoundError(
+        `Could not find provider API key with id ${providerLog.providerId}`,
+      ),
+    )
   }
 
   let responseResolve: (value: ChainCallResponse) => void

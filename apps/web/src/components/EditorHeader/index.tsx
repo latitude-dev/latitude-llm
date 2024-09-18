@@ -206,7 +206,7 @@ export default function EditorHeader({
         <Select
           name='provider'
           label='Provider'
-          placeholder='Using default provider'
+          placeholder='Choose a provider'
           options={providerOptions}
           value={selectedProvider}
           disabled={
