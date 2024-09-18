@@ -1,6 +1,6 @@
 'use server'
 
-import { setSession } from '$/services/auth/setSession'
+import { createMagicLinkToken } from '@latitude-data/core/services/magicLinkTokens/create'
 import { ROUTES } from '$/services/routes'
 import setupService from '$/services/user/setupService'
 import { redirect } from 'next/navigation'
@@ -22,9 +22,8 @@ export const setupAction = errorHandlingProcedure
   )
   .handler(async ({ input }) => {
     const result = await setupService(input)
-    const sessionData = result.unwrap()
+    const { user } = result.unwrap()
+    await createMagicLinkToken({ user: user }).then((r) => r.unwrap())
 
-    await setSession({ sessionData })
-
-    redirect(ROUTES.root)
+    redirect(ROUTES.auth.magicLinkSent(user.email))
   })
