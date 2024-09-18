@@ -1,3 +1,4 @@
+import { env } from '@latitude-data/env'
 import { eq } from 'drizzle-orm'
 
 import type { Commit, DocumentVersion } from '../../browser'
@@ -42,7 +43,14 @@ export async function createNewDocument(
       .values({
         commitId: commit.id,
         path,
-        content: content ?? '',
+        content:
+          content ??
+          `
+---
+provider: ${env.DEFAULT_PROVIDER_ID}
+model: gpt-4o
+---
+        `.trim(),
       })
       .returning()
 

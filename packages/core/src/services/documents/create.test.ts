@@ -1,3 +1,4 @@
+import { env } from '@latitude-data/env'
 import { describe, expect, it } from 'vitest'
 
 import { DocumentVersionsRepository } from '../../repositories'
@@ -80,5 +81,36 @@ describe('createNewDocument', () => {
 
     expect(result.ok).toBe(false)
     expect(result.error!.message).toBe('Cannot modify a merged commit')
+  })
+
+  it('creates a new document with default content when no content is provided', async (ctx) => {
+    const { project, user } = await ctx.factories.createProject()
+    const { commit } = await ctx.factories.createDraft({ project, user })
+
+    const documentResult = await createNewDocument({
+      commit,
+      path: 'newdoc',
+    })
+
+    const document = documentResult.unwrap()
+    expect(document.path).toBe('newdoc')
+
+    const scope = new DocumentVersionsRepository(project.workspaceId)
+    const commitChanges = await scope.listCommitChanges(commit)
+    expect(commitChanges.value.length).toBe(1)
+
+    const createdDocument = commitChanges.value[0]!
+    expect(createdDocument.documentUuid).toBe(document.documentUuid)
+    expect(createdDocument.path).toBe(document.path)
+
+    // Check for default content
+    expect(createdDocument.content).toBe(
+      `
+---
+provider: ${env.DEFAULT_PROVIDER_ID}
+model: gpt-4o-mini
+---
+          `.trim(),
+    )
   })
 })

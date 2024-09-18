@@ -42,7 +42,7 @@ export default function setupService({
       {
         workspace,
         provider: Providers.OpenAI,
-        name: 'OpenAI',
+        name: env.DEFAULT_PROVIDER_ID,
         token: env.DEFAULT_PROVIDER_API_KEY,
         authorId: user.id,
       },

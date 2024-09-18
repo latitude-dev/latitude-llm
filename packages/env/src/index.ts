@@ -79,6 +79,7 @@ export const env = createEnv({
     SENTRY_DSN: z.string().optional(),
     SENTRY_ORG: z.string().optional(),
     SENTRY_PROJECT: z.string().optional(),
+    DEFAULT_PROVIDER_ID: z.string(),
   },
   runtimeEnv: {
     ...process.env,
@@ -86,5 +87,6 @@ export const env = createEnv({
     DRIVE_DISK: process.env.DRIVE_DISK ?? 'local',
     QUEUE_PORT: process.env.QUEUE_PORT ?? '6379',
     CACHE_PORT: process.env.CACHE_PORT ?? '6379',
+    DEFAULT_PROVIDER_ID: 'Latitude',
   },
 })
