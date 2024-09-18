@@ -172,7 +172,7 @@ const cluster = coreStack.requireOutput('cluster') as pulumi.Output<Cluster>
 new aws.ecs.Service('LatitudeLLMApp', {
   cluster: cluster.arn,
   taskDefinition: taskDefinition.arn,
-  desiredCount: 1,
+  desiredCount: 2,
   launchType: 'FARGATE',
   forceNewDeployment: true,
   networkConfiguration: {
