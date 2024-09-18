@@ -48,7 +48,7 @@ export async function createNewDocument(
           `
 ---
 provider: ${env.DEFAULT_PROVIDER_ID}
-model: gpt-4o
+model: gpt-4o-mini
 ---
         `.trim(),
       })
