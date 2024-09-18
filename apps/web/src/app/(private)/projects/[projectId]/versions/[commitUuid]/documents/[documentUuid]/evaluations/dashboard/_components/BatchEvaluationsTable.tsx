@@ -1,6 +1,5 @@
 import { EvaluationDto } from '@latitude-data/core/browser'
 import {
-  Icon,
   Table,
   TableBody,
   TableCell,
@@ -14,7 +13,6 @@ import {
 } from '@latitude-data/web-ui'
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
-import Link from 'next/link'
 
 export default function BatchEvaluationsTable({
   evaluations,
@@ -31,7 +29,6 @@ export default function BatchEvaluationsTable({
         <TableRow>
           <TableHead>Name</TableHead>
           <TableHead>Description</TableHead>
-          <TableHead>Actions</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody className='max-h-full overflow-y-auto'>
@@ -54,17 +51,6 @@ export default function BatchEvaluationsTable({
             </TableCell>
             <TableCell>
               <Text.H4>{evaluation.description}</Text.H4>
-            </TableCell>
-            <TableCell onClick={(e) => e.stopPropagation()}>
-              <Link
-                href={ROUTES.projects
-                  .detail({ id: project.id })
-                  .commits.detail({ uuid: commit.uuid })
-                  .documents.detail({ uuid: document.documentUuid })
-                  .evaluations.dashboard.destroy(evaluation.id)}
-              >
-                <Icon name='trash' />
-              </Link>
             </TableCell>
           </TableRow>
         ))}
