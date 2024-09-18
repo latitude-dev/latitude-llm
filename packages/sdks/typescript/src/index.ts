@@ -113,7 +113,7 @@ export class LatitudeSdk {
       if (done) break
 
       const chunks = new TextDecoder('utf-8').decode(value).trim()
-      if (chunks?.includes('event: error')) {
+      if (chunks?.startsWith('event: error')) {
         onError?.(new Error(chunks))
         break
       }

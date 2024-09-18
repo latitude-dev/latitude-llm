@@ -21,7 +21,7 @@ const runSchema = z.object({
 export const runHandler = factory.createHandlers(
   zValidator('json', runSchema),
   async (c) => {
-    return await streamSSE(
+    return streamSSE(
       c,
       async (stream) => {
         const { projectId, commitUuid } = c.req.param()
