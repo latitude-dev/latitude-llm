@@ -1,8 +1,8 @@
 'use client'
 
-import { useCallback } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
-import { ConversationMetadata } from '@latitude-data/compiler'
+import { ConversationMetadata, readMetadata } from '@latitude-data/compiler'
 import { DocumentVersion, EvaluationDto } from '@latitude-data/core/browser'
 import { Button, CloseTrigger, Modal } from '@latitude-data/web-ui'
 import { useNavigate } from '$/hooks/useNavigate'
@@ -15,7 +15,6 @@ import { useRunBatchForm } from './useRunBatchForm'
 export default function CreateBatchEvaluationModal({
   document,
   evaluation,
-  documentMetadata,
   projectId,
   commitUuid,
 }: {
@@ -23,7 +22,6 @@ export default function CreateBatchEvaluationModal({
   commitUuid: string
   document: DocumentVersion
   evaluation: EvaluationDto
-  documentMetadata: ConversationMetadata
 }) {
   const navigate = useNavigate()
   const documentUuid = document.documentUuid
@@ -44,7 +42,15 @@ export default function CreateBatchEvaluationModal({
       goToDetail()
     },
   })
-  const form = useRunBatchForm({ documentMetadata })
+  const [metadata, setMetadata] = useState<ConversationMetadata>()
+  useEffect(() => {
+    readMetadata({
+      prompt: document.content ?? '',
+      fullPath: document.path,
+    }).then(setMetadata)
+  }, [document])
+
+  const form = useRunBatchForm({ documentMetadata: metadata })
   const onRunBatch = useCallback(() => {
     runBatch({
       datasetId: form.selectedDataset?.id,
