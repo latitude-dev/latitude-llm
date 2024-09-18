@@ -109,12 +109,14 @@ workers.use(async (socket, next) => {
   try {
     const token = socket.handshake.auth?.token
     if (!token) {
+      console.log('DEBUG: No token provided')
       return next(new Error('Authentication error: No token provided'))
     }
 
     const result = await verifyWorkerWebsocketToken(token)
 
     if (result.error) {
+      console.log('DEBUG: JWT verification failed for worker:', result.error)
       return next(new Error(`Authentication error: ${result.error.message}`))
     }
 
