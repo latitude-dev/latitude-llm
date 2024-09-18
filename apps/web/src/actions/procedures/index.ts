@@ -9,8 +9,20 @@ import { z } from 'zod'
 import { createServerActionProcedure } from 'zsa'
 
 export const errorHandlingProcedure = createServerActionProcedure()
-  .onError((error) => {
-    Sentry.captureException(error)
+  .onError(async (error) => {
+    try {
+      const data = await getCurrentUser()
+
+      Sentry.captureException(error, {
+        user: {
+          id: data.user.id,
+          name: data.user.name,
+          email: data.user.email,
+        },
+      })
+    } catch (_) {
+      Sentry.captureException(error)
+    }
   })
   .handler((ctx) => ({ ...ctx }))
 
