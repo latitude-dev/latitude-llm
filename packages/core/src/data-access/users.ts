@@ -14,3 +14,13 @@ export function unsafelyGetUser(id?: string) {
     where: eq(users.id, id ?? ''),
   }) as Promise<User | null>
 }
+
+export async function unsafelyFindUserByEmail(email: string) {
+  return database.query.users.findFirst({
+    columns: {
+      id: true,
+      email: true,
+    },
+    where: eq(users.email, email),
+  })
+}

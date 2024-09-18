@@ -2,7 +2,7 @@ import {
   LATITUDE_DOCS_URL,
   LATITUDE_HELP_URL,
 } from '@latitude-data/core/browser'
-import { ROUTES } from '$/services/routes'
+import { DocumentRoutes, ROUTES } from '$/services/routes'
 
 export const NAV_LINKS = [
   { label: 'Docs', href: LATITUDE_DOCS_URL },
@@ -10,8 +10,8 @@ export const NAV_LINKS = [
 ]
 
 export const MAIN_NAV_LINKS = [
-  { label: 'Projects', href: ROUTES.dashboard.root },
-  { label: 'Evaluations', href: ROUTES.evaluations.root },
-  { label: 'Datasets', href: ROUTES.datasets.root },
-  { label: 'Settings', href: ROUTES.settings.root },
+  { label: 'Projects', value: ROUTES.dashboard.root as DocumentRoutes },
+  { label: 'Evaluations', value: ROUTES.evaluations.root as DocumentRoutes },
+  { label: 'Datasets', value: ROUTES.datasets.root as DocumentRoutes },
+  { label: 'Settings', value: ROUTES.settings.root as DocumentRoutes },
 ]

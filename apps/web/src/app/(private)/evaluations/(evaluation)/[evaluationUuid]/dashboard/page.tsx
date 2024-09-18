@@ -4,6 +4,7 @@ import {
   getEvaluationByUuidCached,
 } from '$/app/(private)/_data-access'
 
+import { EvaluationTabSelector } from '../_components/EvaluationTabs'
 import ConnectedDocumentsTable from './_components/ConnectedDocumentsTable'
 import EvaluationStats from './_components/EvaluationStats'
 
@@ -18,6 +19,7 @@ export default async function DashboardPage({
 
   return (
     <Container>
+      <EvaluationTabSelector evaluation={evaluation} />
       <EvaluationStats
         evaluation={evaluation}
         connectedDocumentsWithMetadata={connectedDocumentsWithMetadata}

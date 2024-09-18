@@ -7,6 +7,7 @@ import {
   EvaluationTemplateWithCategory,
 } from '@latitude-data/core/browser'
 import { Container } from '@latitude-data/web-ui'
+import { AppTabs } from '$/app/(private)/AppTabs'
 
 import ActiveEvaluations from './ActiveEvaluations'
 import CreateEvaluationModal, {
@@ -24,6 +25,7 @@ export default function Evaluations({
 
   return (
     <Container>
+      <AppTabs />
       <ActiveEvaluations
         onCreateEvaluation={() =>
           setNewEvaluationData({

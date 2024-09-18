@@ -9,21 +9,21 @@ import {
 } from '@latitude-data/core/browser'
 import { NotFoundError } from '@latitude-data/core/lib/errors'
 import { CommitProvider, ProjectProvider } from '@latitude-data/web-ui'
-import { BreadcrumpBadge } from '@latitude-data/web-ui/browser'
+import { BreadcrumbBadge } from '@latitude-data/web-ui/browser'
 import {
   findCommitsByProjectCached,
   findProjectCached,
 } from '$/app/(private)/_data-access'
 import { NAV_LINKS } from '$/app/(private)/_lib/constants'
 import { ProjectPageParams } from '$/app/(private)/projects/[projectId]/page'
-import BreadcrumpLink from '$/components/BreadcrumpLink'
+import BreadcrumbLink from '$/components/BreadcrumbLink'
 import { AppLayout } from '$/components/layouts'
 import { getCurrentUser, SessionData } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
 import { notFound } from 'next/navigation'
 
+import BreadcrumbInput from './_components/BreadcrumbInput'
 import { LastSeenCommitCookie } from './_components/LastSeenCommitCookie'
-import BreadcrumpInput from './documents/_components/BreadcrumpInput'
 
 export type CommitPageParams = {
   children: ReactNode
@@ -58,10 +58,6 @@ export default async function CommitLayout({
 
     throw error
   }
-
-  const projectUrl = ROUTES.projects.detail({ id: project.id }).commits.latest
-  const sectionLinks = [{ label: 'Editor', href: projectUrl }]
-
   return (
     <ProjectProvider project={project}>
       <CommitProvider commit={commit} isHead={isHead}>
@@ -75,16 +71,28 @@ export default async function CommitLayout({
           breadcrumbs={[
             {
               name: (
-                <BreadcrumpLink
+                <BreadcrumbLink
                   name={session.workspace.name}
                   href={ROUTES.root}
                 />
               ),
             },
-            { name: <BreadcrumpInput projectId={project.id} /> },
             {
               name: (
-                <BreadcrumpBadge
+                <BreadcrumbLink name='Projects' href={ROUTES.projects.root} />
+              ),
+            },
+            {
+              name: (
+                <BreadcrumbInput
+                  projectId={project.id}
+                  projectName={project.name}
+                />
+              ),
+            },
+            {
+              name: (
+                <BreadcrumbBadge
                   uuid={params.commitUuid}
                   title={commit.title}
                   isHead={isHead}
@@ -92,7 +100,6 @@ export default async function CommitLayout({
               ),
             },
           ]}
-          sectionLinks={sectionLinks}
         >
           {children}
         </AppLayout>

@@ -10,21 +10,20 @@ export type TabSelectorOption<T> = {
   value: T
 }
 
-export function TabSelector<T>({
+export function TabSelector<T extends string>({
   options,
   selected: originalSelected,
+  showSelectedOnSubroutes = false,
   onSelect,
 }: {
   options: TabSelectorOption<T>[]
-  selected?: T
+  selected?: T | null
   onSelect?: (value: T) => void
+  showSelectedOnSubroutes?: boolean
 }) {
   const selectedOptionButtonRef = useRef<HTMLButtonElement>(null)
   const selectedOptionBackgroundRef = useRef<HTMLDivElement>(null)
   const [selected, setSelected] = useState(originalSelected)
-  useEffect(() => {
-    setSelected(originalSelected)
-  }, [originalSelected])
 
   const handleSelect = (value: T) => {
     setSelected(value)
@@ -33,6 +32,7 @@ export function TabSelector<T>({
 
   useEffect(() => {
     if (!selectedOptionBackgroundRef.current) return
+
     const background = selectedOptionBackgroundRef.current
 
     if (!selectedOptionButtonRef.current) {
@@ -66,7 +66,9 @@ export function TabSelector<T>({
           ref={selectedOptionBackgroundRef}
         />
         {options.map((option, idx) => {
-          const isSelected = selected === option.value
+          const isSelected = showSelectedOnSubroutes
+            ? selected && option.value.startsWith(selected)
+            : selected === option.value
           return (
             <Button
               ref={isSelected ? selectedOptionButtonRef : null}

@@ -1,10 +1,11 @@
 import { ReactNode } from 'react'
 
 import { Container, Text, TitleWithActions } from '@latitude-data/web-ui'
+import { AppTabs } from '$/app/(private)/AppTabs'
 import { AppLayout } from '$/components/layouts'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
 
-import { MAIN_NAV_LINKS, NAV_LINKS } from '../_lib/constants'
+import { NAV_LINKS } from '../_lib/constants'
 import Memberships from './_components/Memberships'
 import ProviderApiKeys from './_components/ProviderApiKeys'
 import WorkspaceApiKeys from './_components/WorkspaceApiKeys'
@@ -30,9 +31,9 @@ export default async function SettingsLayout({
       navigationLinks={NAV_LINKS}
       currentUser={session.user}
       breadcrumbs={breadcrumbs}
-      sectionLinks={MAIN_NAV_LINKS}
     >
       <Container>
+        <AppTabs />
         {children}
         <TitleWithActions title='Workspace' />
         <WorkspaceName />

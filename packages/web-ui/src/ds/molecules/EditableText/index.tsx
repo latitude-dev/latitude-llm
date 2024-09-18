@@ -1,4 +1,6 @@
-import React, { useState } from 'react'
+'use client'
+
+import { ReactNode, useState } from 'react'
 
 import { Button, Input } from '@latitude-data/web-ui'
 
@@ -9,7 +11,7 @@ export const EditableText = ({
 }: {
   value: string
   handleChange: (value?: string) => void
-  fallback: (value: string) => React.ReactNode
+  fallback: (value: string) => ReactNode
 }) => {
   const [isEditing, setIsEditing] = useState(false)
   const [inputValue, setInputValue] = useState(value)

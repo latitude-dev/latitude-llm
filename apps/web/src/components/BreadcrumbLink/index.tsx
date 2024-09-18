@@ -1,7 +1,7 @@
 import { Icon, Text } from '@latitude-data/web-ui'
 import Link from 'next/link'
 
-export default function BreadcrumpLink({
+export default function BreadcrumbLink({
   name,
   href,
   showBackIcon,

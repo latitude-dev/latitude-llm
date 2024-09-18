@@ -1,2 +1,2 @@
 export * from './ErrorComponent'
-export * from './BreadcrumpBadge'
+export * from './BreadcrumbBadge'

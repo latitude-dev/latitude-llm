@@ -7,13 +7,14 @@ import {
   TableWithHeader,
   Text,
 } from '@latitude-data/web-ui'
+import { AppTabs } from '$/app/(private)/AppTabs'
 import { DatasetsTable } from '$/app/(private)/datasets/_components/DatasetsTable'
 import { AppLayout } from '$/components/layouts'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
 import Link from 'next/link'
 
-import { MAIN_NAV_LINKS, NAV_LINKS } from '../_lib/constants'
+import { NAV_LINKS } from '../_lib/constants'
 
 export default async function DatasetsList({
   children,
@@ -27,7 +28,6 @@ export default async function DatasetsList({
     <AppLayout
       navigationLinks={NAV_LINKS}
       currentUser={user}
-      sectionLinks={MAIN_NAV_LINKS}
       breadcrumbs={[
         {
           name: workspace.name,
@@ -38,6 +38,7 @@ export default async function DatasetsList({
       ]}
     >
       <Container>
+        <AppTabs />
         {children}
         <TableWithHeader
           title='Datasets'
