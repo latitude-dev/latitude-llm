@@ -565,6 +565,9 @@ importers:
       yaml:
         specifier: ^2.4.5
         version: 2.5.1
+      zod:
+        specifier: ^3.23.8
+        version: 3.23.8
     devDependencies:
       '@latitude-data/eslint-config':
         specifier: workspace:*

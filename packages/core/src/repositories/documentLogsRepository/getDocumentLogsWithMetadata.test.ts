@@ -1,32 +1,21 @@
 import { describe, expect, it } from 'vitest'
 
-import { Providers } from '../../constants'
 import { mergeCommit } from '../../services/commits'
 import { updateDocument } from '../../services/documents'
 import * as factories from '../../tests/factories'
 import { DocumentLogsRepository } from './index'
 
-const documentContent = (content: string) => `
----
-provider: foo
-model: bar
----
-${content}
-`
-
 describe('getDocumentLogsWithMetadata', () => {
   it('return all logs from merged commits', async () => {
-    const { workspace, project, user } = await factories.createProject()
-    await factories.createProviderApiKey({
-      workspace,
-      user,
-      name: 'foo',
-      type: Providers.OpenAI,
-    })
+    const { project, user, providers } = await factories.createProject()
     const { commit: commit1 } = await factories.createDraft({ project, user })
     const { documentVersion: doc } = await factories.createDocumentVersion({
       commit: commit1,
-      content: documentContent('VERSION_1'),
+      path: 'folder1/doc1',
+      content: factories.helpers.createPrompt({
+        provider: providers[0]!,
+        content: 'VERSION_1',
+      }),
     })
     await mergeCommit(commit1).then((r) => r.unwrap())
 
@@ -34,7 +23,10 @@ describe('getDocumentLogsWithMetadata', () => {
     await updateDocument({
       commit: commit2,
       document: doc,
-      content: documentContent('VERSION_2'),
+      content: factories.helpers.createPrompt({
+        provider: providers[0]!,
+        content: 'VERSION_2',
+      }),
     })
     await mergeCommit(commit2).then((r) => r.unwrap())
 
@@ -59,17 +51,15 @@ describe('getDocumentLogsWithMetadata', () => {
   })
 
   it('includes logs from specified draft', async () => {
-    const { workspace, project, user } = await factories.createProject()
-    await factories.createProviderApiKey({
-      workspace,
-      user,
-      name: 'foo',
-      type: Providers.OpenAI,
-    })
+    const { project, user, providers } = await factories.createProject()
     const { commit: commit1 } = await factories.createDraft({ project, user })
     const { documentVersion: doc } = await factories.createDocumentVersion({
       commit: commit1,
-      content: documentContent('VERSION_1'),
+      path: 'folder1/doc1',
+      content: factories.helpers.createPrompt({
+        provider: providers[0]!,
+        content: 'VERSION_1',
+      }),
     })
     await mergeCommit(commit1).then((r) => r.unwrap())
 
@@ -77,7 +67,11 @@ describe('getDocumentLogsWithMetadata', () => {
     await updateDocument({
       commit: commit2,
       document: doc,
-      content: documentContent('VERSION_2'),
+      path: 'folder1/doc1',
+      content: factories.helpers.createPrompt({
+        provider: providers[0]!,
+        content: 'VERSION_2',
+      }),
     })
     await mergeCommit(commit2).then((r) => r.unwrap())
 
@@ -85,7 +79,10 @@ describe('getDocumentLogsWithMetadata', () => {
     await updateDocument({
       commit: draft,
       document: doc,
-      content: documentContent('VERSION_3'),
+      content: factories.helpers.createPrompt({
+        provider: providers[0]!,
+        content: 'VERSION_3',
+      }),
     })
 
     const { documentLog: log1 } = await factories.createDocumentLog({
@@ -115,17 +112,15 @@ describe('getDocumentLogsWithMetadata', () => {
   })
 
   it('does not include logs from non-specified drafts', async () => {
-    const { workspace, project, user } = await factories.createProject()
-    await factories.createProviderApiKey({
-      workspace,
-      user,
-      name: 'foo',
-      type: Providers.OpenAI,
-    })
+    const { project, user, providers } = await factories.createProject()
     const { commit: commit1 } = await factories.createDraft({ project, user })
     const { documentVersion: doc } = await factories.createDocumentVersion({
       commit: commit1,
-      content: documentContent('VERSION_1'),
+      path: 'folder1/doc1',
+      content: factories.helpers.createPrompt({
+        provider: providers[0]!,
+        content: 'VERSION_1',
+      }),
     })
     await mergeCommit(commit1).then((r) => r.unwrap())
 
@@ -133,14 +128,20 @@ describe('getDocumentLogsWithMetadata', () => {
     await updateDocument({
       commit: draft1,
       document: doc,
-      content: documentContent('VERSION_2'),
+      content: factories.helpers.createPrompt({
+        provider: providers[0]!,
+        content: 'VERSION_2',
+      }),
     })
 
     const { commit: draft2 } = await factories.createDraft({ project, user })
     await updateDocument({
       commit: draft2,
       document: doc,
-      content: documentContent('VERSION_3'),
+      content: factories.helpers.createPrompt({
+        provider: providers[0]!,
+        content: 'VERSION_3',
+      }),
     })
 
     const { documentLog: log1 } = await factories.createDocumentLog({
@@ -170,17 +171,15 @@ describe('getDocumentLogsWithMetadata', () => {
   })
 
   it('returns a sum of tokens and cost', async () => {
-    const { workspace, project, user } = await factories.createProject()
-    await factories.createProviderApiKey({
-      workspace,
-      user,
-      name: 'foo',
-      type: Providers.OpenAI,
-    })
+    const { project, user, providers } = await factories.createProject()
     const { commit } = await factories.createDraft({ project, user })
     const { documentVersion: doc } = await factories.createDocumentVersion({
       commit,
-      content: documentContent('<response/>\n<response/>'),
+      path: 'folder1/doc1',
+      content: factories.helpers.createPrompt({
+        provider: providers[0]!,
+        content: '<response/>\n<response/>',
+      }),
     })
     await mergeCommit(commit).then((r) => r.unwrap())
 

@@ -10,6 +10,7 @@ import {
   createDocumentVersion,
   createDraft,
   createProject,
+  helpers,
 } from '@latitude-data/core/factories'
 import { Result } from '@latitude-data/core/lib/Result'
 import { apiKeys } from '@latitude-data/core/schema'
@@ -74,7 +75,12 @@ describe('POST /run', () => {
 
   describe('authorized', () => {
     beforeEach(async () => {
-      const { workspace: wsp, user, project: prj } = await createProject()
+      const {
+        workspace: wsp,
+        user,
+        project: prj,
+        providers,
+      } = await createProject()
       project = prj
       workspace = wsp
       // TODO: move to core
@@ -90,14 +96,7 @@ describe('POST /run', () => {
       const document = await createDocumentVersion({
         commit: cmt,
         path,
-        content: `
-          ---
-            provider: openai
-            model: gpt-4o
-          ---
-
-          Ignore all the rest and just return "Hello".
-        `,
+        content: helpers.createPrompt({ provider: providers[0]! }),
       })
 
       commit = await mergeCommit(cmt).then((r) => r.unwrap())

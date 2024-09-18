@@ -22,7 +22,7 @@ export type Fragment = BaseNode & {
 
 export type Config = BaseNode & {
   type: 'Config'
-  value: Record<string, any>
+  value: string
 }
 
 export type Text = BaseNode & {

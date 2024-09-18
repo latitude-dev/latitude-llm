@@ -13,6 +13,7 @@ import {
   ToolCallTag,
 } from '$compiler/parser/interfaces'
 import { ContentType, MessageRole } from '$compiler/types'
+import { Scalar, Node as YAMLItem, YAMLMap, YAMLSeq } from 'yaml'
 
 export function isIterable(obj: unknown): obj is Iterable<unknown> {
   return (obj as Iterable<unknown>)?.[Symbol.iterator] !== undefined
@@ -68,4 +69,29 @@ export function tagAttributeIsLiteral(tag: ElementTag, name: string): boolean {
   if (!attr) return false
   if (attr.value === true) return true
   return attr.value.every((v) => v.type === 'Text')
+}
+
+type YAMLItemRange = [number, number] | undefined
+export function findYAMLItemPosition(
+  parent: YAMLItem,
+  path: (string | number)[],
+): YAMLItemRange {
+  const parentRange: YAMLItemRange = parent.range
+    ? [parent.range[0], parent.range[1]]
+    : undefined
+
+  if (path.length === 0 || !('items' in parent)) return parentRange
+
+  let child: YAMLItem | undefined
+  if (parent instanceof YAMLMap) {
+    child = parent.items.find((i) => {
+      return (i.key as Scalar)?.value === path[0]!
+    })?.value as YAMLItem | undefined
+  }
+  if (parent instanceof YAMLSeq && typeof path[0] === 'number') {
+    child = parent.items[Number(path[0])] as YAMLItem | undefined
+  }
+
+  if (!child) return parentRange
+  return findYAMLItemPosition(child, path.slice(1)) ?? parentRange
 }

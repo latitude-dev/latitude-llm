@@ -18,11 +18,7 @@ export default function fragment(parser: Parser): (parser: Parser) => void {
     return multiLineComment
   }
   if (parser.match('---')) {
-    // Only parse config if it's the first thing in the file
-    const isFirst = parser.template.slice(0, parser.index).trim() === '' // Ignore any whitespace
-    if (isFirst) {
-      return config
-    }
+    return config
   }
 
   return text

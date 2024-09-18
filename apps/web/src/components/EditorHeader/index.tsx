@@ -14,7 +14,6 @@ import {
   Text,
   useLocalStorage,
 } from '@latitude-data/web-ui'
-import { useWritePromptProvider } from '$/components/EditorHeader/useWritePromptProvider'
 import useProviderApiKeys from '$/stores/providerApiKeys'
 
 const CUSTOM_MODEL = 'custom-model'
@@ -49,7 +48,6 @@ function selectModel({
 
 export default function EditorHeader({
   title,
-  prompt,
   metadata,
   onChangePrompt,
   rightActions,
@@ -68,30 +66,32 @@ export default function EditorHeader({
     const model = config?.model as string
     return { providerName, model }
   }, [metadata?.config])
+
   const { data: providerApiKeys, isLoading } = useProviderApiKeys()
+
   const { value: showLineNumbers, setValue: setShowLineNumbers } =
     useLocalStorage({
       key: AppLocalStorage.editorLineNumbers,
       defaultValue: true,
     })
+
   const { value: wrapText, setValue: setWrapText } = useLocalStorage({
     key: AppLocalStorage.editorWrapText,
     defaultValue: true,
   })
+
   const { value: showMinimap, setValue: setShowMinimap } = useLocalStorage({
     key: AppLocalStorage.editorMinimap,
     defaultValue: false,
   })
-  const { onProviderDataChange } = useWritePromptProvider({
-    prompt,
-    onChangePrompt,
-  })
+
   const providersByName = useMemo(() => {
     return providerApiKeys.reduce((acc, data) => {
       acc[data.name] = data
       return acc
     }, {} as IProviderByName)
   }, [isLoading, providerApiKeys])
+
   const [selectedProvider, setProvider] = useState<string | undefined>()
   const [selectedModel, setModel] = useState<string | undefined | null>(() =>
     selectModel({
@@ -99,6 +99,7 @@ export default function EditorHeader({
       providersByName,
     }),
   )
+
   const providerOptions = useMemo(() => {
     return providerApiKeys.map((apiKey) => ({
       label: apiKey.name,
@@ -110,6 +111,7 @@ export default function EditorHeader({
       ? providersByName[selectedProvider]?.provider
       : undefined,
   })
+
   useEffect(() => {
     if (isLoading) return
 
@@ -124,6 +126,7 @@ export default function EditorHeader({
     providersByName,
     promptMetadata?.providerName,
   ])
+
   useEffect(() => {
     if (isLoading) return
 
@@ -142,8 +145,11 @@ export default function EditorHeader({
     promptMetadata?.providerName,
     promptMetadata?.model,
   ])
+
   const onSelectProvider = useCallback(
     (value: string) => {
+      if (!metadata) return
+
       const provider = providersByName[value]!
       if (!provider) return
 
@@ -152,25 +158,27 @@ export default function EditorHeader({
         PROVIDER_MODELS[provider.provider] ?? {},
       )[0]
       setModel(firstModel)
-      onProviderDataChange({
-        name: provider.name,
-        model: firstModel,
-      })
+
+      const config = metadata.config
+      config.provider = provider.name
+      config.model = firstModel
+      onChangePrompt(metadata.setConfig(config))
     },
-    [providersByName, onProviderDataChange],
+    [providersByName, metadata],
   )
+
   const onModelChange = useCallback(
     (value: string) => {
+      if (!metadata) return
       if (value === CUSTOM_MODEL) return
       if (!selectedProvider) return
 
       setModel(value)
-      onProviderDataChange({
-        name: selectedProvider,
-        model: value,
-      })
+      const config = metadata.config
+      config.model = value
+      onChangePrompt(metadata.setConfig(config))
     },
-    [onProviderDataChange, selectedProvider],
+    [selectedProvider, metadata],
   )
 
   return (
@@ -206,16 +214,19 @@ export default function EditorHeader({
         <Select
           name='provider'
           label='Provider'
-          placeholder='Choose a provider'
+          placeholder='Select a provider'
           options={providerOptions}
           value={selectedProvider}
           disabled={
-            disabledMetadataSelectors || isLoading || !providerOptions.length
+            disabledMetadataSelectors ||
+            isLoading ||
+            !providerOptions.length ||
+            !metadata
           }
           onChange={onSelectProvider}
         />
         <Select
-          disabled={disabledMetadataSelectors || !selectedProvider}
+          disabled={disabledMetadataSelectors || !selectedProvider || !metadata}
           name='model'
           label='Model'
           placeholder='Select a model'

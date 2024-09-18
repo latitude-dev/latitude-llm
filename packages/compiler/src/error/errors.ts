@@ -90,16 +90,33 @@ export default {
     code: 'invalid-logic-block-placement',
     message: `${CUSTOM_TAG_START}#${name}${CUSTOM_TAG_END} block cannot be ${location}`,
   }),
-  invalidConfig: (message: string) => ({
-    code: 'invalid-config',
-    message: `Invalid config: ${message}`,
-  }),
   unexpectedTagClose: (name: string) => ({
     code: 'unexpected-tag-close',
     message: `Unexpected closing tag for ${name}`,
   }),
 
   /* COMPILER ERRORS */
+  missingConfig: {
+    code: 'config-not-found',
+    message:
+      'A configuration section is required. For example:\n\n---\nprovider: openai\nmodel: gpt-4\n---\n',
+  },
+  configAlreadyDeclared: {
+    code: 'config-already-declared',
+    message: 'Cannot declare config twice',
+  },
+  configOutsideRoot: {
+    code: 'config-outside-root',
+    message: 'Config can only be declared at the root of the prompt',
+  },
+  invalidConfig: (message: string) => ({
+    code: 'invalid-config',
+    message,
+  }),
+  invalidConfigPlacement: {
+    code: 'invalid-config-placement',
+    message: 'Config must be defined before any content',
+  },
   unsupportedBaseNodeType: (type: string) => ({
     code: 'unsupported-base-node-type',
     message: `Unsupported base node type: ${type}`,

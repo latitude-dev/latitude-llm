@@ -6,6 +6,7 @@ import {
   Suspense,
   useCallback,
   useEffect,
+  useMemo,
   useState,
 } from 'react'
 
@@ -14,7 +15,10 @@ import {
   readMetadata,
   Document as RefDocument,
 } from '@latitude-data/compiler'
-import { DocumentVersion } from '@latitude-data/core/browser'
+import {
+  DocumentVersion,
+  promptConfigSchema,
+} from '@latitude-data/core/browser'
 import {
   DocumentTextEditor,
   DocumentTextEditorFallback,
@@ -25,6 +29,7 @@ import { type AddMessagesActionFn } from '$/actions/sdk/addMessagesAction'
 import type { RunDocumentActionFn } from '$/actions/sdk/runDocumentAction'
 import EditorHeader from '$/components/EditorHeader'
 import useDocumentVersions from '$/stores/documentVersions'
+import useProviderApiKeys from '$/stores/providerApiKeys'
 import { useDebouncedCallback } from 'use-debounce'
 
 import Playground from './Playground'
@@ -50,6 +55,7 @@ export default function DocumentEditor({
 }) {
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
+  const { data: providers } = useProviderApiKeys()
 
   const { data: _documents, updateContent } = useDocumentVersions(
     {
@@ -63,6 +69,10 @@ export default function DocumentEditor({
   const [value, setValue] = useState(document.content)
   const [isSaved, setIsSaved] = useState(true)
   const [metadata, setMetadata] = useState<ConversationMetadata>()
+  const configSchema = useMemo(
+    () => promptConfigSchema({ providers }),
+    [providers],
+  )
 
   const debouncedSave = useDebouncedCallback(
     (val: string) => {
@@ -123,8 +133,9 @@ export default function DocumentEditor({
       prompt: value,
       fullPath: document.path,
       referenceFn: readDocument,
+      configSchema,
     }).then(setMetadata)
-  }, [readDocument])
+  }, [readDocument, configSchema])
 
   const isMerged = commit.mergedAt !== null
   return (

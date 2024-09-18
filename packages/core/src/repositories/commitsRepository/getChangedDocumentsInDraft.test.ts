@@ -6,12 +6,14 @@ import {
   DocumentVersion,
   ModifiedDocumentType,
   Project,
+  Providers,
 } from '../../browser'
 import { destroyDocument, updateDocument } from '../../services/documents'
 import {
   createDocumentVersion,
   createDraft,
   createProject,
+  helpers,
 } from '../../tests/factories'
 
 let project: Project
@@ -27,11 +29,15 @@ describe('publishDraftCommit', () => {
       user,
       documents: docs,
     } = await createProject({
+      providers: [{ type: Providers.OpenAI, name: 'openai' }],
       documents: {
         folder1: {
-          doc1: 'content1',
+          doc1: helpers.createPrompt({
+            provider: 'openai',
+            content: 'content1',
+          }),
         },
-        doc2: 'content2',
+        doc2: helpers.createPrompt({ provider: 'openai', content: 'content2' }),
       },
     })
     project = prj
@@ -61,7 +67,10 @@ describe('publishDraftCommit', () => {
   it('show changed documents', async () => {
     await updateDocument({
       document: documents['folder1/doc1']!,
-      content: 'content1.1',
+      content: helpers.createPrompt({
+        provider: 'openai',
+        content: 'content1.1',
+      }),
       commit: draftCommit,
     }).then((r) => r.unwrap())
 
@@ -83,7 +92,10 @@ describe('publishDraftCommit', () => {
     const { documentVersion: newDoc } = await createDocumentVersion({
       commit: draftCommit,
       path: 'folder1/doc3',
-      content: 'content3',
+      content: helpers.createPrompt({
+        provider: 'openai',
+        content: 'content3',
+      }),
     })
 
     const changes = await repo
@@ -123,12 +135,18 @@ describe('publishDraftCommit', () => {
   it('show documents with number of errors sorted by errors', async () => {
     await updateDocument({
       document: documents['folder1/doc1']!,
-      content: 'Content doc1 changed',
+      content: helpers.createPrompt({
+        provider: 'openai',
+        content: 'Content doc1 changed',
+      }),
       commit: draftCommit,
     }).then((r) => r.unwrap())
     await updateDocument({
       document: documents['doc2']!,
-      content: '<foo>WRONG</foo>',
+      content: helpers.createPrompt({
+        provider: 'openai',
+        content: '<foo>WRONG</foo>',
+      }),
       commit: draftCommit,
     }).then((r) => r.unwrap())
 

@@ -1,7 +1,5 @@
-import PARSER_ERRORS from '$compiler/error/errors'
 import { Parser } from '$compiler/parser'
 import type { Config } from '$compiler/parser/interfaces'
-import yaml from 'yaml'
 
 export function config(parser: Parser) {
   const start = parser.index
@@ -14,19 +12,12 @@ export function config(parser: Parser) {
   parser.eat('---', true)
   parser.eat('\n')
 
-  let parsedData
-  try {
-    parsedData = yaml.parse(data)
-  } catch (error) {
-    parser.error(PARSER_ERRORS.invalidConfig((error as Error).message), start)
-  }
-
   const node = {
     start,
     end: parser.index,
     type: 'Config',
     raw: data,
-    value: parsedData,
+    value: data,
   } as Config
 
   parser.current().children!.push(node)

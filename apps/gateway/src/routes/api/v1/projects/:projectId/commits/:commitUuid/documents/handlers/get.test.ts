@@ -3,6 +3,7 @@ import {
   createDocumentVersion,
   createDraft,
   createProject,
+  helpers,
 } from '@latitude-data/core/factories'
 import { DocumentVersionsRepository } from '@latitude-data/core/repositories'
 import { apiKeys } from '@latitude-data/core/schema'
@@ -28,7 +29,7 @@ describe('GET documents', () => {
 
   describe('authorized', () => {
     it('succeeds', async () => {
-      const { workspace, user, project } = await createProject()
+      const { workspace, user, project, providers } = await createProject()
       // TODO: move to core
       const apikey = await database.query.apiKeys.findFirst({
         where: eq(apiKeys.workspaceId, workspace.id),
@@ -38,7 +39,11 @@ describe('GET documents', () => {
         project,
         user,
       })
-      const document = await createDocumentVersion({ commit, path })
+      const document = await createDocumentVersion({
+        commit,
+        path,
+        content: helpers.createPrompt({ provider: providers[0]! }),
+      })
 
       await mergeCommit(commit).then((r) => r.unwrap())
 

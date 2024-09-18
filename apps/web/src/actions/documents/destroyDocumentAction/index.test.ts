@@ -2,10 +2,15 @@ import {
   Commit,
   DocumentVersion,
   Project,
+  Providers,
   User,
 } from '@latitude-data/core/browser'
 import { database } from '@latitude-data/core/client'
-import { createDraft, createProject } from '@latitude-data/core/factories'
+import {
+  createDraft,
+  createProject,
+  helpers,
+} from '@latitude-data/core/factories'
 import { documentVersions } from '@latitude-data/core/schema'
 import { and, eq } from 'drizzle-orm'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -34,7 +39,10 @@ describe('destroyDocumentAction', async () => {
       commit: cmt,
       documents: allDocs,
     } = await createProject({
-      documents: { doc1: 'Doc 1' },
+      providers: [{ type: Providers.OpenAI, name: 'openai' }],
+      documents: {
+        doc1: helpers.createPrompt({ provider: 'openai', content: 'Doc 1' }),
+      },
     })
     const { commit } = await createDraft({ project: prj, user })
     merged = cmt
@@ -67,7 +75,10 @@ describe('destroyDocumentAction', async () => {
         commit: otherCommit,
         documents: allDocs,
       } = await createProject({
-        documents: { doc1: 'Doc 1' },
+        providers: [{ type: Providers.OpenAI, name: 'openai' }],
+        documents: {
+          doc1: helpers.createPrompt({ provider: 'openai', content: 'Doc 1' }),
+        },
       })
       const otherWorkspaceDocument = allDocs[0]!
       const [_, error] = await destroyDocumentAction({

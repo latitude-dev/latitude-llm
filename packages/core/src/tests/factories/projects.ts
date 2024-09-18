@@ -1,6 +1,6 @@
 import { faker } from '@faker-js/faker'
 
-import type { DocumentVersion, Providers, User, Workspace } from '../../browser'
+import { DocumentVersion, Providers, User, Workspace } from '../../browser'
 import { unsafelyGetUser } from '../../data-access'
 import { CommitsRepository } from '../../repositories'
 import { mergeCommit } from '../../services/commits'
@@ -72,8 +72,12 @@ export async function createProject(projectData: Partial<ICreateProject> = {}) {
   const commitsScope = new CommitsRepository(workspace.id)
   let commit = (await commitsScope.getFirstCommitForProject(project)).unwrap()
 
+  const providersToCreate =
+    projectData.providers == undefined
+      ? [{ type: Providers.OpenAI, name: faker.internet.domainName() }]
+      : projectData.providers
   const providers = await Promise.all(
-    projectData.providers?.map(({ type, name }) =>
+    providersToCreate.map(({ type, name }) =>
       createProviderApiKey({
         workspace,
         user,

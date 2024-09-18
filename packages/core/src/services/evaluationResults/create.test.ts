@@ -29,6 +29,7 @@ async function setupTest(configurationType: EvaluationResultableType) {
   const { commit } = await factories.createDraft({ project, user })
   const { documentVersion } = await factories.createDocumentVersion({
     commit,
+    path: 'folder1/doc1',
     content: `
       ---
       provider: ${provider!.name}

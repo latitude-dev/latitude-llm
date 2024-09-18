@@ -1,4 +1,3 @@
-import { faker } from '@faker-js/faker'
 import { and, eq } from 'drizzle-orm'
 
 import { type Commit } from '../../browser'
@@ -9,15 +8,8 @@ import { updateDocument } from '../../services/documents/update'
 
 export type IDocumentVersionData = {
   commit: Commit
-  path?: string
-  content?: string
-}
-
-function makeRandomDocumentVersionData() {
-  return {
-    path: faker.commerce.productName().replace(/\s/g, '_').toLowerCase(),
-    content: faker.lorem.paragraphs().toLowerCase(),
-  }
+  path: string
+  content: string
 }
 
 export async function markAsSoftDelete(
@@ -35,16 +27,7 @@ export async function markAsSoftDelete(
     )
 }
 
-export async function createDocumentVersion(
-  documentData: IDocumentVersionData,
-) {
-  const randomData = makeRandomDocumentVersionData()
-  const data = {
-    ...randomData,
-    content: randomData.content,
-    ...documentData,
-  }
-
+export async function createDocumentVersion(data: IDocumentVersionData) {
   let result = await createNewDocument({
     commit: data.commit,
     path: data.path,

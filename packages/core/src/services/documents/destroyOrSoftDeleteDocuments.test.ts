@@ -2,19 +2,23 @@ import { and, eq } from 'drizzle-orm'
 import { describe, expect, it } from 'vitest'
 
 import { database } from '../../client'
+import { Providers } from '../../constants'
 import { documentVersions } from '../../schema'
 import * as factories from '../../tests/factories'
 import { destroyOrSoftDeleteDocuments } from './destroyOrSoftDeleteDocuments'
 import { updateDocument } from './update'
 
 describe('destroyOrSoftDeleteDocuments', () => {
-  it('remove documents that were not present in merged commits', async () => {
-    const { project, user } = await factories.createProject()
+  it('remove documents that were not present in merged commits', async (ctx) => {
+    const { project, user, providers } = await factories.createProject()
     const { commit: draft } = await factories.createDraft({ project, user })
     const { documentVersion: draftDocument } =
       await factories.createDocumentVersion({
         commit: draft,
         path: 'doc1',
+        content: ctx.factories.helpers.createPrompt({
+          provider: providers[0]!,
+        }),
       })
 
     await destroyOrSoftDeleteDocuments({
@@ -29,13 +33,16 @@ describe('destroyOrSoftDeleteDocuments', () => {
     expect(documents.length).toBe(0)
   })
 
-  it('mark as deleted documents that were present in merged commits and not in the draft commit', async () => {
+  it('mark as deleted documents that were present in merged commits and not in the draft commit', async (ctx) => {
     const {
       project,
       user,
       documents: allDocs,
     } = await factories.createProject({
-      documents: { doc1: 'Doc 1' },
+      providers: [{ type: Providers.OpenAI, name: 'openai' }],
+      documents: {
+        doc1: ctx.factories.helpers.createPrompt({ provider: 'openai' }),
+      },
     })
     const document = allDocs[0]!
     const { commit: draft } = await factories.createDraft({ project, user })
@@ -54,13 +61,16 @@ describe('destroyOrSoftDeleteDocuments', () => {
     expect(drafDocument!.deletedAt).not.toBe(null)
   })
 
-  it('mark as deleted documents present in the draft commit', async () => {
+  it('mark as deleted documents present in the draft commit', async (ctx) => {
     const {
       project,
       user,
       documents: allDocs,
     } = await factories.createProject({
-      documents: { doc1: 'Doc 1' },
+      providers: [{ type: Providers.OpenAI, name: 'openai' }],
+      documents: {
+        doc1: ctx.factories.helpers.createPrompt({ provider: 'openai' }),
+      },
     })
     const document = allDocs[0]!
     const { commit: draft } = await factories.createDraft({ project, user })

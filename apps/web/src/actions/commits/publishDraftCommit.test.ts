@@ -1,11 +1,13 @@
-import type {
-  Commit,
-  DocumentVersion,
-  Project,
-  User,
-  Workspace,
+import {
+  Providers,
+  type Commit,
+  type DocumentVersion,
+  type Project,
+  type User,
+  type Workspace,
 } from '@latitude-data/core/browser'
 import * as factories from '@latitude-data/core/factories'
+import { helpers } from '@latitude-data/core/factories'
 import { updateDocument } from '@latitude-data/core/services/documents/update'
 import { publishDraftCommitAction } from '$/actions/commits/publishDraftCommitAction'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -33,7 +35,10 @@ describe('publishDraftCommitAction', () => {
       project: prj,
       documents: docs,
     } = await factories.createProject({
-      documents: { doc1: 'content' },
+      providers: [{ type: Providers.OpenAI, name: 'openai' }],
+      documents: {
+        doc1: helpers.createPrompt({ provider: 'openai', content: 'content' }),
+      },
     })
     user = usr
     workspace = wp

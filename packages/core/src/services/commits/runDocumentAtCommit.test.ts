@@ -1,3 +1,4 @@
+import { eq } from 'drizzle-orm'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import {
@@ -6,11 +7,12 @@ import {
   LogSources,
   ProviderApiKey,
   Providers,
-  User,
   Workspace,
 } from '../../browser'
+import { database } from '../../client'
 import { publisher } from '../../events/publisher'
-import { createProject, createProviderApiKey } from '../../tests/factories'
+import { providerApiKeys } from '../../schema'
+import { createProject } from '../../tests/factories'
 import { testConsumeStream } from '../../tests/helpers'
 import { runDocumentAtCommit } from './index'
 
@@ -30,9 +32,15 @@ describe('runDocumentAtCommit', () => {
   })
 
   it('fails if provider api key is not found', async () => {
-    const { workspace, document, commit } = await buildData({
+    const { workspace, document, commit, provider } = await buildData({
       doc1Content: dummyDoc1Content,
     })
+
+    await database
+      .update(providerApiKeys)
+      .set({ name: 'another-name' })
+      .where(eq(providerApiKeys.id, provider.id))
+
     const result = await runDocumentAtCommit({
       workspace,
       document,
@@ -49,26 +57,20 @@ describe('runDocumentAtCommit', () => {
     beforeEach(async () => {
       const {
         workspace: wsp,
-        user: usr,
         document: doc,
         commit: cmt,
+        provider: prv,
       } = await buildData({
         doc1Content: dummyDoc1Content,
       })
-      user = usr
       document = doc
       commit = cmt
       workspace = wsp
-      provider = await createProviderApiKey({
-        workspace,
-        type: Providers.OpenAI,
-        name: 'openai',
-        user,
-      })
+      provider = prv
     })
 
     it('fails if document is not found in commit', async () => {
-      const { document } = await buildData()
+      const { document } = await buildData({ doc1Content: dummyDoc1Content })
       const result = await runDocumentAtCommit({
         workspace,
         document,
@@ -261,23 +263,26 @@ This is a test document
 <response />
 `
 
-async function buildData({ doc1Content = '' }: { doc1Content?: string } = {}) {
-  const { workspace, documents, commit, user } = await createProject({
-    documents: {
-      doc1: doc1Content,
+async function buildData({ doc1Content }: { doc1Content: string }) {
+  const { workspace, documents, commit, user, providers } = await createProject(
+    {
+      providers: [{ type: Providers.OpenAI, name: 'openai' }],
+      documents: {
+        doc1: doc1Content,
+      },
     },
-  })
+  )
 
   return {
     workspace,
     document: documents[0]!,
     commit,
     user,
+    provider: providers[0]!,
   }
 }
 
 let document: DocumentVersion
 let commit: Commit
 let workspace: Workspace
-let user: User
 let provider: ProviderApiKey

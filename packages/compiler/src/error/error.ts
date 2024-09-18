@@ -65,8 +65,14 @@ function getCodeFrame(
 export function error(message: string, props: CompileErrorProps): never {
   const error = new CompileError(message)
   error.name = props.name
-  const start = locate(props.source, props.start, { offsetLine: 1 })
-  const end = locate(props.source, props.end || props.start, { offsetLine: 1 })
+  const start = locate(props.source, props.start, {
+    offsetLine: 1,
+    offsetColumn: 1,
+  })
+  const end = locate(props.source, props.end ?? props.start, {
+    offsetLine: 1,
+    offsetColumn: 1,
+  })
   error.code = props.code
   error.start = start
   error.end = end

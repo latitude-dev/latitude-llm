@@ -23,7 +23,8 @@
     "acorn": "^8.9.0",
     "code-red": "^1.0.3",
     "locate-character": "^3.0.0",
-    "yaml": "^2.4.5"
+    "yaml": "^2.4.5",
+    "zod": "^3.23.8"
   },
   "devDependencies": {
     "@latitude-data/eslint-config": "workspace:*",
