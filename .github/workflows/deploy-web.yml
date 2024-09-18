@@ -17,8 +17,11 @@ on:
       SENTRY_DSN:
         required: true
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+
 jobs:
-  deploy:
+  deployment:
     uses: ./.github/workflows/deploy-common.yml
     with:
       working-directory: apps/infra

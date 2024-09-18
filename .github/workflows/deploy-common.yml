@@ -26,7 +26,7 @@ on:
         required: false
 
 jobs:
-  deploy:
+  deployment:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
