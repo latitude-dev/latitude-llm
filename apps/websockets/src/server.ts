@@ -129,7 +129,7 @@ workers.on('connection', (socket) => {
   console.log('DEBUG: Worker connected')
 
   socket.on('evaluationStatus', (args) => {
-    console.log('DEBUG: Evaluation STATUS %s', args)
+    console.log('DEBUG: Evaluation STATUS %s', JSON.stringify(args))
     const { workspaceId, data } = args
     const workspace = buildWorkspaceRoom({ workspaceId })
     web.to(workspace).emit('evaluationStatus', data)

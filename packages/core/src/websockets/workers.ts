@@ -26,6 +26,14 @@ export class WebsocketClient {
         console.log('Workers connected to WebSocket server')
         resolve(websockets)
       })
+
+      websockets.on('connect_error', (error) => {
+        console.error(
+          'Error connecting to WebSocket server from WORKERS:',
+          error.message,
+        )
+        resolve(websockets)
+      })
     })
   }
 
