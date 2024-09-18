@@ -53,7 +53,9 @@ export const runEvaluationJob = async (job: Job<RunEvaluationJobData>) => {
     const progress = await progressTracker.getProgress()
     const finished = await progressTracker.isFinished()
 
+    console.log('DEBUG: Emitting evaluationStatus before check')
     if (!skipProgress) {
+      console.log('DEBUG: Emitting evaluationStatus', workspaceId)
       websockets.emit('evaluationStatus', {
         workspaceId,
         data: {

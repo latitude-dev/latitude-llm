@@ -102,12 +102,6 @@ web.on('connection', (socket) => {
       socket.join(room)
     }
   })
-
-  socket.on('disconnect', () => {
-    console.log(
-      `${socket.data.userId} disconnected from workspace ${socket.data.workspaceId}`,
-    )
-  })
 })
 
 const workers: Namespace<WorkersClientToServerEvents> = io.of('/workers')
@@ -132,7 +126,10 @@ workers.use(async (socket, next) => {
 })
 
 workers.on('connection', (socket) => {
+  console.log('DEBUG: Worker connected')
+
   socket.on('evaluationStatus', (args) => {
+    console.log('DEBUG: Evaluation STATUS %s', args)
     const { workspaceId, data } = args
     const workspace = buildWorkspaceRoom({ workspaceId })
     web.to(workspace).emit('evaluationStatus', data)
