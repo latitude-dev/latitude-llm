@@ -113,6 +113,10 @@ export class LatitudeSdk {
       if (done) break
 
       const chunks = new TextDecoder('utf-8').decode(value).trim()
+      if (chunks?.includes('event: error')) {
+        onError?.(new Error(chunks))
+        break
+      }
 
       chunks.split('\n').forEach((line) => {
         const chunk = this.decodeValue(line, onError)
@@ -143,6 +147,7 @@ export class LatitudeSdk {
       conversation,
       response: chainResponse!,
     }
+
     onFinished?.(finalResponse)
 
     return finalResponse

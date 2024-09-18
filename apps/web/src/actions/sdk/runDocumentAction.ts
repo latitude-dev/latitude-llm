@@ -48,7 +48,13 @@ export async function runDocumentAction({
         stack: error.stack,
       })
     },
-    onFinished: () => stream.done(),
+    onFinished: () => {
+      try {
+        stream.done()
+      } catch (error) {
+        // do nothing, stream could already be done
+      }
+    },
   })
 
   return {

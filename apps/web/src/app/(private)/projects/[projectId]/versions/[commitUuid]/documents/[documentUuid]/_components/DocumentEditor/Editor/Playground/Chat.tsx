@@ -90,43 +90,49 @@ export default function Chat({
       setDocumentLogUuid(res?.response?.documentLogUuid)
     })
 
-    for await (const serverEvent of readStreamableValue(output)) {
-      if (!serverEvent) continue
+    try {
+      for await (const serverEvent of readStreamableValue(output)) {
+        if (!serverEvent) continue
 
-      const { event, data } = serverEvent
-      const hasMessages = 'messages' in data
-      if (hasMessages) {
-        data.messages!.forEach(addMessageToConversation)
-        messagesCount += data.messages!.length
-      }
+        console.log('serverEvent', serverEvent)
 
-      switch (event) {
-        case StreamEventTypes.Latitude: {
-          if (data.type === ChainEventTypes.Step) {
-            if (data.isLastStep) setChainLength(messagesCount + 1)
-          } else if (data.type === ChainEventTypes.Complete) {
-            setTokens(data.response.usage.totalTokens)
-            setEndTime(performance.now())
-          } else if (data.type === ChainEventTypes.Error) {
-            setError(new Error(data.error.message))
-          }
-
-          break
+        const { event, data } = serverEvent
+        const hasMessages = 'messages' in data
+        if (hasMessages) {
+          data.messages!.forEach(addMessageToConversation)
+          messagesCount += data.messages!.length
         }
 
-        case StreamEventTypes.Provider: {
-          if (data.type === 'text-delta') {
-            response += data.textDelta
-            setResponseStream(response)
-          } else if (data.type === 'finish') {
-            setResponseStream(undefined)
-            response = ''
+        switch (event) {
+          case StreamEventTypes.Latitude: {
+            if (data.type === ChainEventTypes.Step) {
+              if (data.isLastStep) setChainLength(messagesCount + 1)
+            } else if (data.type === ChainEventTypes.Complete) {
+              setTokens(data.response.usage.totalTokens)
+              setEndTime(performance.now())
+            } else if (data.type === ChainEventTypes.Error) {
+              setError(new Error(data.error.message))
+            }
+
+            break
           }
-          break
+
+          case StreamEventTypes.Provider: {
+            if (data.type === 'text-delta') {
+              response += data.textDelta
+              setResponseStream(response)
+            } else if (data.type === 'finish') {
+              setResponseStream(undefined)
+              response = ''
+            }
+            break
+          }
+          default:
+            break
         }
-        default:
-          break
       }
+    } catch (error) {
+      setError(error as Error)
     }
   }, [
     project.id,

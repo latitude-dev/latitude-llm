@@ -1,6 +1,6 @@
 import { faker } from '@faker-js/faker'
 
-import { ApiKey, Workspace } from '../../browser'
+import { Workspace } from '../../browser'
 import { createApiKey as createApiKeyFn } from '../../services/apiKeys/create'
 
 export type ICreateApiKey = {
