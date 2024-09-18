@@ -1,6 +1,7 @@
 import { LogSources } from '@latitude-data/core/browser'
 import { unsafelyFindWorkspace } from '@latitude-data/core/data-access'
 import { NotFoundError } from '@latitude-data/core/lib/errors'
+import { queues } from '@latitude-data/core/queues'
 import {
   CommitsRepository,
   DocumentVersionsRepository,
@@ -10,7 +11,6 @@ import { env } from '@latitude-data/env'
 import { Job } from 'bullmq'
 
 import { setupJobs } from '../../'
-import { connection } from '../../utils/connection'
 import { ProgressTracker } from '../../utils/progressTracker'
 
 type RunDocumentJobData = {
@@ -34,7 +34,7 @@ export const runDocumentJob = async (job: Job<RunDocumentJobData>) => {
     batchId,
   } = job.data
 
-  const progressTracker = new ProgressTracker(connection, batchId)
+  const progressTracker = new ProgressTracker(queues(), batchId)
 
   try {
     const workspace = await unsafelyFindWorkspace(workspaceId)

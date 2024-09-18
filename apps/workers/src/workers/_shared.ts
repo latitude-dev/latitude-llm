@@ -1,7 +1,6 @@
+import { Queues, QUEUES } from '@latitude-data/jobs/constants'
+import { captureException } from '$/utils/sentry'
 import { Processor } from 'bullmq'
-
-import { Queues } from '../constants'
-import { QUEUES } from '../queues'
 
 export const buildProcessor =
   (queues: Queues[]): Processor =>
@@ -13,10 +12,10 @@ export const buildProcessor =
             if (j.name === job.name) {
               try {
                 await j(job)
-              } catch (err) {
-                console.error(err)
+              } catch (error) {
+                captureException(error as Error)
 
-                throw err
+                throw error
               }
             }
           }),

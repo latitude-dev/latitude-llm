@@ -2,7 +2,10 @@
   "name": "@latitude-data/jobs",
   "version": "0.0.1",
   "description": "Latitude jobs from Latitude llm",
-  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./constants": "./src/constants.ts"
+  },
   "type": "module",
   "scripts": {
     "lint": "eslint src",
