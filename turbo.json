@@ -30,7 +30,6 @@
     "WEBSOCKET_TOKEN_SECRET_KEY",
     "NEXT_PUBLIC_POSTHOG_KEY",
     "NEXT_PUBLIC_POSTHOG_HOST"
-
   ],
   "$schema": "https://turbo.build/schema.json",
   "globalDependencies": ["**/.env.*local"],
@@ -39,7 +38,13 @@
       "dependsOn": ["^build"],
       "inputs": ["$TURBO_DEFAULT$"],
       "outputs": [".next/**", "!.next/cache/**", "dist/**"],
-      "env": ["SENTRY_DSN", "SENTRY_ORG", "SENTRY_PROJECT"]
+      "env": [
+        "SENTRY_DSN",
+        "SENTRY_ORG",
+        "SENTRY_PROJECT",
+        "NEXT_PUBLIC_POSTHOG_KEY",
+        "NEXT_PUBLIC_POSTHOG_HOST"
+      ]
     },
     "lint": { "dependsOn": ["^lint"] },
     "tc": { "dependsOn": ["^tc"] },

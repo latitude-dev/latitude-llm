@@ -53,12 +53,12 @@ const workersWebsocketsSecretToken = getSecretString(
   workersWebsocketsSecretTokenArn,
 )
 const defaultProjectId = getSecretString(defaultProjectIdArn)
-const postHogApiKey = getSecretString(postHogApiKeyArn)
 
 export const sentryDsn = getSecretString(sentryDsnArn)
 export const sentryOrg = getSecretString(sentryOrgArn)
 export const sentryProject = getSecretString(sentryProjectArn)
 export const defaultProviderApiKey = getSecretString(defaultProviderApiKeyArn)
+export const postHogApiKey = getSecretString(postHogApiKeyArn)
 
 export const dbUrl = pulumi.interpolate`postgresql://${dbUsername}:${dbPassword}@${dbEndpoint}/${dbName}?sslmode=verify-full&sslrootcert=/app/packages/core/src/assets/eu-central-1-bundle.pem`
 export const environment = pulumi

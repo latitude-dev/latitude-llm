@@ -25,6 +25,14 @@ services:
     build:
       context: .
       dockerfile: apps/web/docker/Dockerfile
+      args:
+        - BUILDING_CONTAINER=true
+        - NODE_ENV=production
+        - SENTRY_ORG=latitude-i5
+        - SENTRY_PROJECT=latitude-app-llm
+        - SENTRY_DSN=http://sentrymock.com
+        - NEXT_PUBLIC_POSTHOG_KEY=eu.posthog.com
+        - NEXT_PUBLIC_POSTHOG_HOST=test
     profiles: [building]
     environment:
       - NODE_ENV=production
