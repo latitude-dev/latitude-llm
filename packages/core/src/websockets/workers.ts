@@ -30,7 +30,7 @@ export class WebsocketClient {
       websockets.on('connect_error', (error) => {
         console.error(
           'Error connecting to WebSocket server from WORKERS:',
-          error.message,
+          error,
         )
         resolve(websockets)
       })
