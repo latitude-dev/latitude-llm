@@ -120,7 +120,7 @@ export async function createProject(projectData: Partial<ICreateProject> = {}) {
     workspace,
     providers,
     documents,
-    commit: commit!,
+    commit: commit,
     evaluations,
   }
 }

@@ -1,34 +1,31 @@
-'use client'
-
-import { Commit, Evaluation } from '@latitude-data/core/browser'
-import { EvaluationResultWithMetadata } from '@latitude-data/core/repositories'
-import { useCurrentCommit } from '@latitude-data/web-ui'
+import { Commit, Evaluation, Workspace } from '@latitude-data/core/browser'
 
 import { BigNumberPanels } from './BigNumberPanels'
 import { EvaluationResultsCharts } from './Charts'
 
 export function MetricsSummary({
+  workspace,
+  commit,
   evaluation,
   documentUuid,
-  evaluationResults,
 }: {
+  workspace: Workspace
+  commit: Commit
   evaluation: Evaluation
   documentUuid: string
-  evaluationResults: EvaluationResultWithMetadata[]
 }) {
-  const { commit } = useCurrentCommit()
-
   return (
     <div className='flex gap-6 flex-wrap'>
       <EvaluationResultsCharts
         evaluation={evaluation}
         documentUuid={documentUuid}
       />
-      <div className='min-w-[400px] flex-1'>
+      <div className='min-w-[400px] flex-1 flex flex-col gap-y-6'>
         <BigNumberPanels
+          workspace={workspace}
+          commit={commit}
           evaluation={evaluation}
-          evaluationResults={evaluationResults}
-          commit={commit as Commit}
+          documentUuid={documentUuid}
         />
       </div>
     </div>

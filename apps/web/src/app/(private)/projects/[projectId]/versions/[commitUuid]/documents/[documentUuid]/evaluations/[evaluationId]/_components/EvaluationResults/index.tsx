@@ -1,9 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { EvaluationDto } from '@latitude-data/core/browser'
-import { EvaluationResultWithMetadata } from '@latitude-data/core/repositories'
+import { type EvaluationResultWithMetadata } from '@latitude-data/core/repositories'
 import {
   TableBlankSlate,
   Text,
@@ -12,6 +12,7 @@ import {
   useCurrentProject,
 } from '@latitude-data/web-ui'
 import { DocumentRoutes, ROUTES } from '$/services/routes'
+import useEvaluationResultsWithMetadata from '$/stores/evaluationResultsWithMetadata'
 import { useProviderLog } from '$/stores/providerLogs'
 import Link from 'next/link'
 
@@ -19,9 +20,11 @@ import { EvaluationResultInfo } from './EvaluationResultInfo'
 import { EvaluationResultsTable } from './EvaluationResultsTable'
 import { EvaluationStatusBanner } from './EvaluationStatusBanner'
 
+const FIVE_SECONDS = 5000
+
 export function EvaluationResults({
   evaluation,
-  evaluationResults,
+  evaluationResults: serverData,
 }: {
   evaluation: EvaluationDto
   evaluationResults: EvaluationResultWithMetadata[]
@@ -33,6 +36,27 @@ export function EvaluationResults({
     EvaluationResultWithMetadata | undefined
   >(undefined)
   const { data: providerLog } = useProviderLog(selectedResult?.providerLogId)
+  const { data: evaluationResults, mutate } = useEvaluationResultsWithMetadata(
+    {
+      evaluationId: evaluation.id,
+      documentUuid: document.documentUuid,
+      commitUuid: commit.uuid,
+      projectId: project.id,
+    },
+    {
+      fallbackData: serverData,
+    },
+  )
+
+  // FIXME: Listen to websockets to update new evaluation results
+  useEffect(() => {
+    const interval = setInterval(() => {
+      mutate()
+    }, FIVE_SECONDS)
+
+    return () => clearInterval(interval)
+  }, [mutate])
+
   return (
     <div className='flex flex-col gap-4'>
       <Text.H4>Evaluation Results</Text.H4>

@@ -136,3 +136,19 @@ export enum EvaluationResultableType {
   Text = 'evaluation_resultable_texts',
   Number = 'evaluation_resultable_numbers',
 }
+
+export type EvaluationAggregationTotals = {
+  tokens: number
+  costInMillicents: number
+  totalCount: number
+}
+export type EvaluationModalValue = {
+  mostCommon: string
+  percentage: number
+}
+
+export type EvaluationMeanValue = {
+  minValue: number
+  maxValue: number
+  meanValue: number
+}

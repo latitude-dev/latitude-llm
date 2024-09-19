@@ -14,11 +14,10 @@ export function EvaluationResultsCharts({
   evaluation: Evaluation
   documentUuid: string
 }) {
-  if (evaluation.configuration.type === EvaluationResultableType.Number) {
-    return (
-      <NumericalCharts evaluation={evaluation} documentUuid={documentUuid} />
-    )
-  }
+  const isNumerical =
+    evaluation.configuration.type === EvaluationResultableType.Number
 
-  return null
+  if (!isNumerical) return null
+
+  return <NumericalCharts evaluation={evaluation} documentUuid={documentUuid} />
 }

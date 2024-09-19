@@ -1,5 +1,6 @@
 import { ReactNode } from 'react'
 
+import { EvaluationResultableType } from '@latitude-data/core/browser'
 import { EvaluationsRepository } from '@latitude-data/core/repositories'
 import { computeEvaluationResultsWithMetadata } from '@latitude-data/core/services/evaluationResults/computeEvaluationResultsWithMetadata'
 import { TableWithHeader, Text } from '@latitude-data/web-ui'
@@ -10,8 +11,14 @@ import { getCurrentUser } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
 
 import { Actions } from './_components/Actions'
-import ClientContainer from './_components/ClientContainer'
+import { EvaluationResults } from './_components/EvaluationResults'
+import { MetricsSummary } from './_components/MetricsSummary'
 
+const TYPE_TEXT: Record<EvaluationResultableType, string> = {
+  [EvaluationResultableType.Text]: 'Text',
+  [EvaluationResultableType.Number]: 'Numerical',
+  [EvaluationResultableType.Boolean]: 'Boolean',
+}
 export default async function ConnectedEvaluationLayout({
   params,
   children,
@@ -34,6 +41,7 @@ export default async function ConnectedEvaluationLayout({
     projectId: Number(params.projectId),
     uuid: params.commitUuid,
   })
+
   const evaluationResults = await computeEvaluationResultsWithMetadata({
     workspaceId: evaluation.workspaceId,
     evaluation,
@@ -64,7 +72,16 @@ export default async function ConnectedEvaluationLayout({
                   />
                 ),
               },
-              { name: <Text.H5M>{evaluation.name}</Text.H5M> },
+              {
+                name: (
+                  <div className='flex flex-row items-center gap-x-4'>
+                    <Text.H4M>{evaluation.name}</Text.H4M>
+                    <Text.H4M color='foregroundMuted'>
+                      {TYPE_TEXT[evaluation.configuration.type]}
+                    </Text.H4M>
+                  </div>
+                ),
+              },
             ]}
           />
         }
@@ -77,10 +94,14 @@ export default async function ConnectedEvaluationLayout({
           />
         }
       />
-
-      <ClientContainer
-        evaluationResults={evaluationResults}
+      <MetricsSummary
+        workspace={workspace}
+        commit={commit}
+        evaluation={evaluation}
         documentUuid={params.documentUuid}
+      />
+      <EvaluationResults
+        evaluationResults={evaluationResults}
         evaluation={evaluation}
       />
     </div>

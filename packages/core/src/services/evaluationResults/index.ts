@@ -1,3 +1,6 @@
 export * from './create'
 export * from './computeEvaluationResultsWithMetadata'
 export * from './computeAggregatedResults'
+export * from './aggregations/countersQuery'
+export * from './aggregations/meanValueQuery'
+export * from './aggregations/modalValueQuery'

@@ -94,8 +94,6 @@ export default function Chat({
       for await (const serverEvent of readStreamableValue(output)) {
         if (!serverEvent) continue
 
-        console.log('serverEvent', serverEvent)
-
         const { event, data } = serverEvent
         const hasMessages = 'messages' in data
         if (hasMessages) {
