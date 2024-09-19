@@ -1,20 +1,9 @@
 'use client'
 
 import path from 'path'
-import {
-  createContext,
-  Suspense,
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from 'react'
+import { createContext, Suspense, useCallback, useMemo, useState } from 'react'
 
-import {
-  ConversationMetadata,
-  readMetadata,
-  Document as RefDocument,
-} from '@latitude-data/compiler'
+import { Document as RefDocument } from '@latitude-data/compiler'
 import {
   DocumentVersion,
   promptConfigSchema,
@@ -28,6 +17,7 @@ import {
 import { type AddMessagesActionFn } from '$/actions/sdk/addMessagesAction'
 import type { RunDocumentActionFn } from '$/actions/sdk/runDocumentAction'
 import EditorHeader from '$/components/EditorHeader'
+import { useMetadata } from '$/hooks/useMetadata'
 import useDocumentVersions from '$/stores/documentVersions'
 import useProviderApiKeys from '$/stores/providerApiKeys'
 import { useDebouncedCallback } from 'use-debounce'
@@ -68,11 +58,6 @@ export default function DocumentEditor({
   )
   const [value, setValue] = useState(document.content)
   const [isSaved, setIsSaved] = useState(true)
-  const [metadata, setMetadata] = useState<ConversationMetadata>()
-  const configSchema = useMemo(
-    () => promptConfigSchema({ providers }),
-    [providers],
-  )
 
   const debouncedSave = useDebouncedCallback(
     (val: string) => {
@@ -128,14 +113,17 @@ export default function DocumentEditor({
     [readDocumentContent, value],
   )
 
-  useEffect(() => {
-    readMetadata({
-      prompt: value,
-      fullPath: document.path,
-      referenceFn: readDocument,
-      configSchema,
-    }).then(setMetadata)
-  }, [readDocument, configSchema])
+  const configSchema = useMemo(
+    () => promptConfigSchema({ providers }),
+    [providers],
+  )
+
+  const { metadata } = useMetadata({
+    prompt: value,
+    fullPath: document.path,
+    referenceFn: readDocument,
+    configSchema,
+  })
 
   const isMerged = commit.mergedAt !== null
   return (
