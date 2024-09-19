@@ -26,6 +26,10 @@ describe('runChain', () => {
       text: Promise.resolve(text),
       usage: Promise.resolve({ totalTokens }),
       toolCalls: Promise.resolve([]),
+      providerLog: Promise.resolve({
+        provider: 'openai',
+        model: 'gpt-3.5-turbo',
+      }),
       fullStream: new ReadableStream({
         start(controller) {
           controller.enqueue({ type: 'text', text })
@@ -50,8 +54,8 @@ describe('runChain', () => {
 
   it('runs a chain without schema override', async () => {
     const mockAiResponse = createMockAiResponse('AI response', 10)
-    vi.spyOn(aiModule, 'ai').mockResolvedValue(mockAiResponse as any)
 
+    vi.spyOn(aiModule, 'ai').mockResolvedValue(mockAiResponse as any)
     vi.mocked(mockChain.step!).mockResolvedValue({
       completed: true,
       conversation: {
@@ -76,12 +80,14 @@ describe('runChain', () => {
     if (!result.ok) return
 
     const response = await result.value.response
-    expect(response).toEqual({
-      documentLogUuid: expect.any(String),
-      text: 'AI response',
-      usage: { totalTokens: 10 },
-      toolCalls: [],
-    })
+    expect(response).toEqual(
+      expect.objectContaining({
+        documentLogUuid: expect.any(String),
+        text: 'AI response',
+        usage: { totalTokens: 10 },
+        toolCalls: [],
+      }),
+    )
 
     expect(aiModule.ai).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -104,6 +110,10 @@ describe('runChain', () => {
     const mockAiResponse = {
       object: Promise.resolve({ name: 'John', age: 30 }),
       usage: Promise.resolve({ totalTokens: 15 }),
+      providerLog: Promise.resolve({
+        provider: 'openai',
+        model: 'gpt-3.5-turbo',
+      }),
       fullStream: new ReadableStream({
         start(controller) {
           controller.enqueue({
@@ -145,12 +155,14 @@ describe('runChain', () => {
     if (!result.ok) return
 
     const response = await result.value.response
-    expect(response).toEqual({
-      documentLogUuid: expect.any(String),
-      object: { name: 'John', age: 30 },
-      text: '{"name":"John","age":30}',
-      usage: { totalTokens: 15 },
-    })
+    expect(response).toEqual(
+      expect.objectContaining({
+        documentLogUuid: expect.any(String),
+        object: { name: 'John', age: 30 },
+        text: '{"name":"John","age":30}',
+        usage: { totalTokens: 15 },
+      }),
+    )
 
     expect(aiModule.ai).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -238,12 +250,14 @@ describe('runChain', () => {
     if (!result.ok) return
 
     const response = await result.value.response
-    expect(response).toEqual({
-      documentLogUuid: expect.any(String),
-      text: 'AI response 2',
-      usage: { totalTokens: 15 },
-      toolCalls: [],
-    })
+    expect(response).toEqual(
+      expect.objectContaining({
+        documentLogUuid: expect.any(String),
+        text: 'AI response 2',
+        usage: { totalTokens: 15 },
+        toolCalls: [],
+      }),
+    )
 
     expect(aiModule.ai).toHaveBeenCalledTimes(2)
   })
@@ -280,12 +294,14 @@ describe('runChain', () => {
     if (!result.ok) return
 
     const response = await result.value.response
-    expect(response).toEqual({
-      documentLogUuid: expect.any(String),
-      text: 'AI response',
-      usage: { totalTokens: 10 },
-      toolCalls: [],
-    })
+    expect(response).toEqual(
+      expect.objectContaining({
+        documentLogUuid: expect.any(String),
+        text: 'AI response',
+        usage: { totalTokens: 10 },
+        toolCalls: [],
+      }),
+    )
 
     expect(aiModule.ai).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -312,6 +328,10 @@ describe('runChain', () => {
     const mockAiResponse = {
       object: Promise.resolve({ name: 'John', age: 30 }),
       usage: Promise.resolve({ totalTokens: 15 }),
+      providerLog: Promise.resolve({
+        provider: 'openai',
+        model: 'gpt-3.5-turbo',
+      }),
       fullStream: new ReadableStream({
         start(controller) {
           controller.enqueue({
@@ -353,12 +373,14 @@ describe('runChain', () => {
     if (!result.ok) return
 
     const response = await result.value.response
-    expect(response).toEqual({
-      documentLogUuid: expect.any(String),
-      object: { name: 'John', age: 30 },
-      text: '{"name":"John","age":30}',
-      usage: { totalTokens: 15 },
-    })
+    expect(response).toEqual(
+      expect.objectContaining({
+        documentLogUuid: expect.any(String),
+        object: { name: 'John', age: 30 },
+        text: '{"name":"John","age":30}',
+        usage: { totalTokens: 15 },
+      }),
+    )
 
     expect(aiModule.ai).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -385,6 +407,10 @@ describe('runChain', () => {
         { name: 'John', age: 30 },
         { name: 'Jane', age: 25 },
       ]),
+      providerLog: Promise.resolve({
+        provider: 'openai',
+        model: 'gpt-3.5-turbo',
+      }),
       usage: Promise.resolve({ totalTokens: 20 }),
       fullStream: new ReadableStream({
         start(controller) {
@@ -430,15 +456,17 @@ describe('runChain', () => {
     if (!result.ok) return
 
     const response = await result.value.response
-    expect(response).toEqual({
-      documentLogUuid: expect.any(String),
-      object: [
-        { name: 'John', age: 30 },
-        { name: 'Jane', age: 25 },
-      ],
-      text: '[{"name":"John","age":30},{"name":"Jane","age":25}]',
-      usage: { totalTokens: 20 },
-    })
+    expect(response).toEqual(
+      expect.objectContaining({
+        documentLogUuid: expect.any(String),
+        object: [
+          { name: 'John', age: 30 },
+          { name: 'Jane', age: 25 },
+        ],
+        text: '[{"name":"John","age":30},{"name":"Jane","age":25}]',
+        usage: { totalTokens: 20 },
+      }),
+    )
 
     expect(aiModule.ai).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -482,12 +510,14 @@ describe('runChain', () => {
     if (!result.ok) return
 
     const response = await result.value.response
-    expect(response).toEqual({
-      documentLogUuid: expect.any(String),
-      text: 'AI response without schema',
-      usage: { totalTokens: 10 },
-      toolCalls: [],
-    })
+    expect(response).toEqual(
+      expect.objectContaining({
+        documentLogUuid: expect.any(String),
+        text: 'AI response without schema',
+        usage: { totalTokens: 10 },
+        toolCalls: [],
+      }),
+    )
 
     expect(aiModule.ai).toHaveBeenCalledWith(
       expect.objectContaining({

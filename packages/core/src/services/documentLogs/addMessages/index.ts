@@ -5,6 +5,8 @@ import {
   ChainCallResponse,
   ChainEvent,
   ChainEventTypes,
+  ChainObjectResponse,
+  ChainTextResponse,
   DocumentLog,
   LogSources,
   objectToString,
@@ -124,6 +126,7 @@ async function streamMessageResponse({
       object: await result.object,
       text: await result.text,
       usage: await result.usage,
+      providerLog: await result.providerLog,
       toolCalls: result.toolCalls
         ? (await result.toolCalls).map((t) => ({
             id: t.toolCallId,
@@ -131,7 +134,8 @@ async function streamMessageResponse({
             arguments: t.args,
           }))
         : [],
-    }
+    } as ChainCallResponse
+
     enqueueChainEvent(controller, {
       event: StreamEventTypes.Latitude,
       data: {
@@ -140,13 +144,17 @@ async function streamMessageResponse({
         messages: [
           {
             role: MessageRole.assistant,
-            toolCalls: response.toolCalls,
-            content: response.text || objectToString(response.object),
+            toolCalls: (response as ChainTextResponse).toolCalls,
+            content:
+              response.text ||
+              objectToString((response as ChainObjectResponse).object),
           },
         ],
         response: {
           ...response,
-          text: response.text || objectToString(response.object),
+          text:
+            response.text ||
+            objectToString((response as ChainObjectResponse).object),
         },
       },
     })
@@ -155,7 +163,9 @@ async function streamMessageResponse({
 
     return {
       ...response,
-      text: response.text || objectToString(response.object),
+      text:
+        response.text ||
+        objectToString((response as ChainObjectResponse).object),
     }
   } catch (e) {
     const error = e as Error

@@ -10,12 +10,18 @@ import {
   ChainEvent,
   ChainEventTypes,
   ChainObjectResponse,
+  ChainStepResponse,
   ChainTextResponse,
   LogSources,
   ProviderData,
   StreamEventTypes,
 } from '../../constants'
-import { NotFoundError, Result, UnprocessableEntityError } from '../../lib'
+import {
+  LatitudeError,
+  NotFoundError,
+  Result,
+  UnprocessableEntityError,
+} from '../../lib'
 import { streamToGenerator } from '../../lib/streamToGenerator'
 import { ai, Config, validateConfig } from '../ai'
 
@@ -126,13 +132,21 @@ async function iterate({
 
     await streamAIResult(controller, aiResult)
 
-    const response = await createChainResponse(aiResult, documentLogUuid)
+    const response = await createChainResponse({
+      aiResult,
+      documentLogUuid,
+      step,
+    })
 
     if (step.completed) {
-      await handleCompletedChain(controller, step, response)
-      return response
+      await handleCompletedChain(
+        controller,
+        step,
+        response as ChainCallResponse,
+      )
+      return response as ChainCallResponse
     } else {
-      publishStepCompleteEvent(controller, response)
+      publishStepCompleteEvent(controller, response as ChainStepResponse)
 
       return iterate({
         workspace,
@@ -201,28 +215,46 @@ async function streamAIResult(
   }
 }
 
-async function createChainResponse(
-  result: Awaited<ReturnType<typeof ai>>,
-  documentLogUuid: string,
-): Promise<ChainCallResponse> {
-  if (result.object) {
+async function createChainResponse({
+  step,
+  aiResult,
+  documentLogUuid,
+}: {
+  step: { completed: boolean }
+  aiResult: Awaited<ReturnType<typeof ai>>
+  documentLogUuid: string
+}): Promise<ChainCallResponse | ChainStepResponse> {
+  const providerLog = await aiResult.providerLog
+  if (step.completed && !providerLog) {
+    throw new LatitudeError(
+      'The response completed but the provider log was not created!',
+    )
+  }
+
+  if (aiResult.object) {
     return {
-      text: objectToString(await result.object),
-      object: await result.object,
-      usage: await result.usage,
+      text: objectToString(await aiResult.object),
+      object: await aiResult.object,
+      usage: await aiResult.usage,
       documentLogUuid,
-    }
+      ...(providerLog ? { providerLog } : {}),
+    } as typeof providerLog extends undefined
+      ? ChainStepResponse
+      : ChainCallResponse
   } else {
     return {
       documentLogUuid,
-      text: await result.text,
-      usage: await result.usage,
-      toolCalls: (await result.toolCalls).map((t) => ({
+      ...(providerLog ? { providerLog } : {}),
+      text: await aiResult.text,
+      usage: await aiResult.usage,
+      toolCalls: (await aiResult.toolCalls).map((t) => ({
         id: t.toolCallId,
         name: t.toolName,
         arguments: t.args,
       })),
-    }
+    } as typeof providerLog extends undefined
+      ? ChainStepResponse
+      : ChainCallResponse
   }
 }
 
@@ -264,7 +296,7 @@ async function handleCompletedChain(
 
 function publishStepCompleteEvent(
   controller: ReadableStreamDefaultController,
-  response: ChainCallResponse,
+  response: ChainStepResponse,
 ) {
   enqueueChainEvent(controller, {
     event: StreamEventTypes.Latitude,

@@ -113,7 +113,7 @@ export const runEvaluation = async (
       data: {
         evaluationId: evaluation.id,
         documentLogUuid: documentLog.uuid,
-        providerLogUuid: lastProviderLog.uuid,
+        providerLogUuid: response.providerLog.uuid,
         response,
       },
     })
