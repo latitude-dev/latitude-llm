@@ -1,7 +1,8 @@
 'use client'
 
-import { Suspense, useCallback, useMemo, useState } from 'react'
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 
+import { ConversationMetadata, readMetadata } from '@latitude-data/compiler'
 import { promptConfigSchema } from '@latitude-data/core/browser'
 import {
   Button,
@@ -9,7 +10,6 @@ import {
   DocumentTextEditorFallback,
 } from '@latitude-data/web-ui'
 import EditorHeader from '$/components/EditorHeader'
-import { useMetadata } from '$/hooks/useMetadata'
 import useEvaluations from '$/stores/evaluations'
 import useProviderApiKeys from '$/stores/providerApiKeys'
 
@@ -30,16 +30,11 @@ export default function EvaluationEditor({
   )
   const { data: providers } = useProviderApiKeys()
   const [value, setValue] = useState(defaultPrompt)
+  const [metadata, setMetadata] = useState<ConversationMetadata>()
   const configSchema = useMemo(
     () => promptConfigSchema({ providers: providers ?? [] }),
     [providers],
   )
-  const { metadata } = useMetadata({
-    prompt: value,
-    withParameters: EVALUATION_PARAMETERS,
-    configSchema,
-  })
-
   const save = useCallback(
     (val: string) => {
       update({
@@ -56,6 +51,14 @@ export default function EvaluationEditor({
     },
     [setValue],
   )
+
+  useEffect(() => {
+    readMetadata({
+      prompt: value,
+      withParameters: EVALUATION_PARAMETERS,
+      configSchema,
+    }).then(setMetadata)
+  }, [value, configSchema])
 
   if (!evaluation) return null
 
