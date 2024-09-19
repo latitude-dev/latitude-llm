@@ -11,7 +11,7 @@ import { getSession } from '$/services/auth/getSession'
 import { ROUTES } from '$/services/routes'
 import { redirect } from 'next/navigation'
 
-import { CSPostHogProvider } from '../providers'
+import { CSPostHogProvider, IdentifyUser } from '../providers'
 
 export default async function PrivateLayout({
   children,
@@ -25,13 +25,15 @@ export default async function PrivateLayout({
 
   return (
     <CSPostHogProvider>
-      <SocketIOProvider>
-        <SessionProvider currentUser={user} workspace={workspace}>
-          <LatitudeWebsocketsProvider socketServer={env.WEBSOCKETS_SERVER}>
-            {children}
-          </LatitudeWebsocketsProvider>
-        </SessionProvider>
-      </SocketIOProvider>
+      <IdentifyUser user={user} workspace={workspace}>
+        <SocketIOProvider>
+          <SessionProvider currentUser={user} workspace={workspace}>
+            <LatitudeWebsocketsProvider socketServer={env.WEBSOCKETS_SERVER}>
+              {children}
+            </LatitudeWebsocketsProvider>
+          </SessionProvider>
+        </SocketIOProvider>
+      </IdentifyUser>
     </CSPostHogProvider>
   )
 }

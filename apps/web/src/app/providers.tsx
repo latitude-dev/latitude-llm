@@ -1,10 +1,11 @@
 'use client'
 
-import { ReactNode } from 'react'
+import { ReactNode, useEffect } from 'react'
 
+import { User, Workspace } from '@latitude-data/core/browser'
 import { envClient } from '$/envClient'
 import posthog from 'posthog-js'
-import { PostHogProvider } from 'posthog-js/react'
+import { PostHogProvider, usePostHog } from 'posthog-js/react'
 
 if (typeof window !== 'undefined') {
   posthog.init(envClient.NEXT_PUBLIC_POSTHOG_KEY, {
@@ -14,4 +15,27 @@ if (typeof window !== 'undefined') {
 }
 export function CSPostHogProvider({ children }: { children: ReactNode }) {
   return <PostHogProvider client={posthog}>{children}</PostHogProvider>
+}
+
+export function IdentifyUser({
+  user,
+  workspace,
+  children,
+}: {
+  user: User
+  workspace: Workspace
+  children: ReactNode
+}) {
+  const posthog = usePostHog()
+
+  useEffect(() => {
+    if (user) {
+      posthog?.identify(user.id, {
+        email: user.email,
+      })
+      posthog?.group('workspace', String(workspace.id))
+    }
+  }, [posthog, user.id, user.email, workspace.id])
+
+  return children
 }
