@@ -37,8 +37,8 @@ To learn more about how to use these roles effectively in your prompts, please v
 The Latitude prompt editor also offers advanced features to create more dynamic and complex prompts:
 
 - [**Parameters**](/guides/prompt-manager/parameters): Use `{{parameter}}` syntax to include dynamic values in your prompts.
-- [**Snippets**](/guides/prompt-manager/snippets): Reuse common prompt elements with the `<ref>` tag.
-- [**Chains and steps**](/guides/prompt-manager/chains): Create multi-step prompts using the `<response>` tag.
+- [**Snippets**](/guides/prompt-manager/snippets): Reuse common prompt elements with the `<prompt />` tag.
+- [**Chains and steps**](/guides/prompt-manager/chains): Create multi-step prompts using the `<response />` tag.
 - [**Logic**](/guides/prompt-manager/logic): Implement conditional statements and loops in your prompts.
 
 ### Example
@@ -65,7 +65,7 @@ Tell me about its history.
 <assistant>
 Of course! I'll give you an overview of the history of {{topic}}.
 
-<ref prompt="history_template" />
+<prompt path="history_template" />
 
 Is there anything specific about the history of {{topic}} you'd like me to elaborate on?
 </assistant>```
