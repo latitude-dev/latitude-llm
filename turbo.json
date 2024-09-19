@@ -27,7 +27,10 @@
     "WEBSOCKETS_SERVER_PORT",
     "WORKERS_WEBSOCKET_SECRET_TOKEN",
     "WEBSOCKET_REFRESH_TOKEN_SECRET_KEY",
-    "WEBSOCKET_TOKEN_SECRET_KEY"
+    "WEBSOCKET_TOKEN_SECRET_KEY",
+    "NEXT_PUBLIC_POSTHOG_KEY",
+    "NEXT_PUBLIC_POSTHOG_HOST"
+
   ],
   "$schema": "https://turbo.build/schema.json",
   "globalDependencies": ["**/.env.*local"],
