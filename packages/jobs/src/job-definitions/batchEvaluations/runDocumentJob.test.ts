@@ -97,13 +97,16 @@ describe('runDocumentJob', () => {
 
     expect(
       mocks.queues.defaultQueue.jobs.enqueueRunEvaluationJob,
-    ).toHaveBeenCalledWith({
-      workspaceId: workspace.id,
-      documentUuid: document.documentUuid,
-      documentLogUuid: 'log1',
-      evaluationId: evaluation.id,
-      batchId: 'batch1',
-    })
+    ).toHaveBeenCalledWith(
+      {
+        workspaceId: workspace.id,
+        documentUuid: document.documentUuid,
+        documentLogUuid: 'log1',
+        evaluationId: evaluation.id,
+        batchId: 'batch1',
+      },
+      { lifo: true },
+    )
 
     expect(ProgressTracker.prototype.incrementErrors).not.toHaveBeenCalled()
     expect(ProgressTracker.prototype.decrementTotal).not.toHaveBeenCalled()
