@@ -81,7 +81,7 @@ export async function ai({
     messages: messages as CoreMessage[],
   }
   const { onFinish, providerLog } = createFinishHandler({
-    isStructured: false,
+    isStructured: !!schema && !!output,
     startTime,
     apiProvider,
     source,
