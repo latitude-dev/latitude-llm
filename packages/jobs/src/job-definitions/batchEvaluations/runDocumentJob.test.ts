@@ -1,4 +1,4 @@
-import { LogSources } from '@latitude-data/core/browser'
+import { LogSources, Providers } from '@latitude-data/core/browser'
 import * as factories from '@latitude-data/core/factories'
 import { Result } from '@latitude-data/core/lib/Result'
 import { runDocumentAtCommit } from '@latitude-data/core/services/commits/runDocumentAtCommit'
@@ -48,7 +48,10 @@ describe('runDocumentJob', () => {
 
     // Create necessary resources using factories
     const setup = await factories.createProject({
-      documents: { 'test-doc': 'Test content' },
+      providers: [{ type: Providers.OpenAI, name: 'Latitude' }],
+      documents: {
+        'test-doc': factories.helpers.createPrompt({ provider: 'Latitude' }),
+      },
     })
     workspace = setup.workspace
     project = setup.project
