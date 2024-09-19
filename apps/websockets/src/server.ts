@@ -130,6 +130,10 @@ workers.use(async (socket, next) => {
 workers.on('connection', (socket) => {
   console.log('DEBUG: Worker connected')
 
+  socket.on('pingFromWorkers', () => {
+    console.log('DEBUG: Ping from workers')
+  })
+
   socket.on('evaluationStatus', (args) => {
     console.log('DEBUG: Evaluation STATUS %s', JSON.stringify(args))
     const { workspaceId, data } = args

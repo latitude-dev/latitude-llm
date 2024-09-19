@@ -50,4 +50,5 @@ export type WorkersClientToServerEvents = {
     data: EvaluationStatusArgs
     workspaceId: number
   }) => void
+  pingFromWorkers: () => void
 }

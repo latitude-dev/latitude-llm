@@ -1,5 +1,7 @@
 import http from 'http'
 
+import { WebsocketClient } from '@latitude-data/core/websockets/workers'
+
 import { captureException, captureMessage } from './utils/sentry'
 import startWorkers from './workers'
 
@@ -8,8 +10,13 @@ const workers = startWorkers()
 console.log('Workers started')
 
 const port = process.env.WORKERS_PORT || 3002
-const server = http.createServer((req, res) => {
-  if (req.url === '/health' && req.method === 'GET') {
+const server = http.createServer(async (req, res) => {
+  const websockets = await WebsocketClient.getSocket()
+
+  if (req.url === '/ping' && req.method === 'GET') {
+    websockets.emit('pingFromWorkers')
+    res.end(JSON.stringify({ status: 'OK', message: 'Pong' }))
+  } else if (req.url === '/health' && req.method === 'GET') {
     res.writeHead(200, { 'Content-Type': 'application/json' })
     res.end(JSON.stringify({ status: 'OK', message: 'Workers are healthy' }))
   } else {
