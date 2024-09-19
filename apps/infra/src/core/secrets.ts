@@ -66,6 +66,10 @@ const defaultProviderApiKey = createSecretWithVersion(
   'DEFAULT_PROVIDER_API_KEY',
   'Default provider API key',
 )
+const postHogApiKey = createSecretWithVersion(
+  'NEXT_PUBLIC_POSTHOG_KEY',
+  'Posthog API Key for product analytics',
+)
 
 export const mailerApiKeyArn = mailerApiKey.arn
 export const sentryDsnArn = sentryDsn.arn
@@ -78,3 +82,4 @@ export const websocketsSecretRefreshTokenArn = websocketsSecretRefreshToken.arn
 export const workersWebsocketsSecretTokenArn = workersWebsocketsSecretToken.arn
 export const defaultProjectIdArn = defaultProjectId.arn
 export const defaultProviderApiKeyArn = defaultProviderApiKey.arn
+export const postHogApiKeyArn = postHogApiKey.arn
