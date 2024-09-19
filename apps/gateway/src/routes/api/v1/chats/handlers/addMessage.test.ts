@@ -9,6 +9,7 @@ import { database } from '@latitude-data/core/client'
 import { createProject } from '@latitude-data/core/factories'
 import { Result } from '@latitude-data/core/lib/Result'
 import { apiKeys } from '@latitude-data/core/schema'
+import { parseSSEEvent } from '$/common/parseSSEEvent'
 import app from '$/routes/app'
 import { eq } from 'drizzle-orm'
 import { testConsumeStream } from 'test/helpers'
@@ -116,14 +117,14 @@ describe('POST /add-message', () => {
         headers,
       })
 
-      const { done, value } = await testConsumeStream(
-        res.body as ReadableStream,
-      )
+      let { done, value } = await testConsumeStream(res.body as ReadableStream)
+      value = parseSSEEvent(value!)!.data
+
       expect(mocks.queues)
       expect(res.status).toBe(200)
       expect(res.body).toBeInstanceOf(ReadableStream)
       expect(done).toBe(true)
-      expect(JSON.parse(value!)).toEqual({
+      expect(value).toEqual({
         event: StreamEventTypes.Latitude,
         data: {
           type: ChainEventTypes.Complete,
@@ -132,7 +133,6 @@ describe('POST /add-message', () => {
             usage: {},
           },
         },
-        id: '0',
       })
     })
 
