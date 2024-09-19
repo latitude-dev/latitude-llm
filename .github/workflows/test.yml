@@ -82,4 +82,4 @@ jobs:
       - name: Test
         env:
           NODE_ENV: test
-        run: pnpm test --filter=[HEAD^1]
+        run: pnpm test
