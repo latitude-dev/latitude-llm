@@ -54,6 +54,7 @@ export default [
       'node:crypto',
       'yaml',
       'crypto',
+      'zod'
     ],
   },
   {
