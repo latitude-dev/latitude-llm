@@ -40,7 +40,20 @@ services:
       dockerfile: apps/gateway/docker/Dockerfile
     profiles: [building]
     environment:
+      - CACHE_HOST=redis
+      - DATABASE_URL=postgresql://latitude:secret@db:5432/latitude
+      - DEFAULT_PROJECT_ID=1
+      - DEFAULT_PROVIDER_API_KEY=test
+      - FROM_MAILER_EMAIL=jon@winterfell.com
+      - LATITUDE_DOMAIN=web
+      - LATITUDE_URL=http://web:8080
       - NODE_ENV=production
+      - QUEUE_HOST=redis
+      - WEBSOCKETS_SERVER=websockets
+      - WEBSOCKET_REFRESH_SECRET_TOKEN_KEY=test
+      - WEBSOCKET_SECRET_TOKEN_KEY=test
+      - WORKERS_WEBSOCKET_SECRET_TOKEN=test
+      - HOSTNAME=localhost
     depends_on:
       - db
       - redis
@@ -51,7 +64,19 @@ services:
       dockerfile: apps/workers/docker/Dockerfile
     profiles: [building]
     environment:
+      - CACHE_HOST=redis
+      - DATABASE_URL=postgresql://latitude:secret@db:5432/latitude
+      - DEFAULT_PROJECT_ID=1
+      - DEFAULT_PROVIDER_API_KEY=test
+      - FROM_MAILER_EMAIL=jon@winterfell.com
+      - LATITUDE_DOMAIN=web
+      - LATITUDE_URL=http://web:8080
       - NODE_ENV=production
+      - QUEUE_HOST=redis
+      - WEBSOCKETS_SERVER=websockets
+      - WEBSOCKET_REFRESH_SECRET_TOKEN_KEY=test
+      - WEBSOCKET_SECRET_TOKEN_KEY=test
+      - WORKERS_WEBSOCKET_SECRET_TOKEN=test
     depends_on:
       - db
       - redis

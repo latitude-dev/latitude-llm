@@ -95,7 +95,7 @@ export const runBatchEvaluationAction = withDataset
     const evaluations = await evaluationsRepo
       .filterById(input.evaluationIds)
       .then((r) => r.unwrap())
-    const queues = setupJobs()
+    const queues = await setupJobs()
     evaluations.forEach((evaluation) => {
       const batchId = `evaluation:${evaluation.id}:${nanoid(5)}`
       queues.defaultQueue.jobs.enqueueRunBatchEvaluationJob({

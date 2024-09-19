@@ -1,5 +1,6 @@
 import { queues } from '@latitude-data/core/queues'
 import { Job, JobsOptions, Queue, QueueEvents } from 'bullmq'
+import Redis from 'ioredis'
 
 import { Jobs, Queues, QUEUES } from '../constants'
 import { JobDefinition } from '../job-definitions'
@@ -30,11 +31,12 @@ export const DEFAULT_JOB_OPTIONS: JobsOptions = {
 function setupQueue({
   name,
   jobs,
+  connection,
 }: {
   name: Queues
   jobs: readonly QueueJob[]
+  connection: Redis
 }) {
-  const connection = queues()
   const queue = new Queue(name, {
     connection,
     defaultJobOptions: DEFAULT_JOB_OPTIONS,
@@ -60,14 +62,16 @@ function setupQueue({
 
 type QueueJob = (typeof QUEUES)[keyof typeof QUEUES]['jobs'][number]
 
-export function setupQueues() {
+export async function setupQueues() {
+  const connection = await queues()
+
   return Object.entries(QUEUES).reduce<{
     [K in keyof typeof QUEUES]: ReturnType<typeof setupQueue>
   }>(
     (acc, [name, { jobs }]) => {
       return {
         ...acc,
-        [name]: setupQueue({ name: name as Queues, jobs }),
+        [name]: setupQueue({ name: name as Queues, jobs, connection }),
       }
     },
     {} as { [K in keyof typeof QUEUES]: ReturnType<typeof setupQueue> },

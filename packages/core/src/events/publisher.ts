@@ -11,8 +11,8 @@ export const publisher = {
       handlers.map((handler) => handler({ data: event })),
     )
   },
-  publishLater: (event: LatitudeEvent) => {
-    const queues = setupJobs()
+  publishLater: async (event: LatitudeEvent) => {
+    const queues = await setupJobs()
 
     queues.eventsQueue.jobs.enqueueCreateEventJob(event)
     queues.eventsQueue.jobs.enqueuePublishEventJob(event)

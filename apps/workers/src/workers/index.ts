@@ -14,12 +14,13 @@ const WORKER_OPTS = {
 }
 const WORKERS = [defaultWorker]
 
-export default function startWorkers() {
+export default async function startWorkers() {
+  const connection = await queues()
   return WORKERS.flatMap((w) =>
     w.queues.map((q) => {
       const worker = new Worker(q, w.processor, {
         ...WORKER_OPTS,
-        connection: queues(),
+        connection,
       })
 
       worker.on('error', (error: Error) => {

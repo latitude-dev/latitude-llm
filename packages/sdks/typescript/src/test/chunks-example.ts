@@ -1,5 +1,6 @@
 export const CHUNKS = [
-  {
+  `event: data
+data: ${JSON.stringify({
     data: {
       type: 'chain-step',
       isLastStep: false,
@@ -14,78 +15,100 @@ export const CHUNKS = [
       ],
     },
     event: 'latitude-event',
-  },
-  {
+  })}
+`,
+  `event: data
+data: ${JSON.stringify({
     event: 'provider-event',
     data: {
       type: 'text-delta',
       textDelta: '9',
     },
-  },
-  {
+  })}
+`,
+  `event: data
+data: ${JSON.stringify({
     event: 'provider-event',
     data: {
       type: 'text-delta',
       textDelta: '.',
     },
-  },
-  {
+  })}
+`,
+  `event: data
+data: ${JSON.stringify({
     event: 'provider-event',
     data: {
       type: 'text-delta',
       textDelta: '9',
     },
-  },
-  {
+  })}
+`,
+  `event: data
+data: ${JSON.stringify({
     event: 'provider-event',
     data: {
       type: 'text-delta',
       textDelta: ' is',
     },
-  },
-  {
+  })}
+`,
+  `event: data
+data: ${JSON.stringify({
     event: 'provider-event',
     data: {
       type: 'text-delta',
       textDelta: ' bigger',
     },
-  },
-  {
+  })}
+`,
+  `event: data
+data: ${JSON.stringify({
     event: 'provider-event',
     data: {
       type: 'text-delta',
       textDelta: ' than',
     },
-  },
-  {
+  })}
+`,
+  `event: data
+data: ${JSON.stringify({
     event: 'provider-event',
     data: {
       type: 'text-delta',
       textDelta: ' ',
     },
-  },
-  {
+  })}
+`,
+  `event: data
+data: ${JSON.stringify({
     event: 'provider-event',
     data: {
       type: 'text-delta',
       textDelta: '9',
     },
-  },
-  {
+  })}
+`,
+  `event: data
+data: ${JSON.stringify({
     event: 'provider-event',
     data: {
       type: 'text-delta',
       textDelta: '.',
     },
-  },
-  {
+  })}
+`,
+  `event: data
+data: ${JSON.stringify({
     event: 'provider-event',
     data: {
       type: 'text-delta',
       textDelta: '11',
     },
-  },
-  {
+  })}
+`,
+  `event: data
+data: ${JSON.stringify({
     event: 'latitude-event',
     data: {
       type: 'chain-step-complete',
@@ -99,8 +122,10 @@ export const CHUNKS = [
         toolCalls: [],
       },
     },
-  },
-  {
+  })}
+`,
+  `event: data
+data: ${JSON.stringify({
     data: {
       type: 'chain-step',
       isLastStep: true,
@@ -120,8 +145,10 @@ export const CHUNKS = [
       ],
     },
     event: 'latitude-event',
-  },
-  {
+  })}
+`,
+  `event: data
+data: ${JSON.stringify({
     event: 'latitude-event',
     data: {
       type: 'chain-complete',
@@ -147,7 +174,8 @@ export const CHUNKS = [
         },
       },
     },
-  },
+  })}
+`,
 ]
 
 export const FINAL_RESPONSE = {

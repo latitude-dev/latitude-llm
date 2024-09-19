@@ -128,9 +128,8 @@ export async function ai({
       )
       providerLogUuid = providerLog.uuid
     } else {
-      await setupJobs().defaultQueue.jobs.enqueueCreateProviderLogJob(
-        payload.data,
-      )
+      const queues = await setupJobs()
+      queues.defaultQueue.jobs.enqueueCreateProviderLogJob(payload.data)
     }
 
     onFinish?.({ ...event, providerLogUuid })
@@ -175,7 +174,7 @@ const checkDefaultProviderUsage = async ({
   workspace: Workspace
 }) => {
   if (provider.token === env.DEFAULT_PROVIDER_API_KEY) {
-    const c = cache()
+    const c = await cache()
     const value = await c.incr(
       `workspace:${workspace.id}:defaultProviderRunCount`,
     )

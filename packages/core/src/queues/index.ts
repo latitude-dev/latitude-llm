@@ -5,10 +5,10 @@ import { buildRedisConnection } from '../redis'
 
 let connection: Redis
 
-export const queues = () => {
+export const queues = async () => {
   if (connection) return connection
 
-  connection = buildRedisConnection({
+  connection = await buildRedisConnection({
     host: env.QUEUE_HOST,
     port: env.QUEUE_PORT,
     password: env.QUEUE_PASSWORD,

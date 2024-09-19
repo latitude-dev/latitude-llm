@@ -5,7 +5,7 @@ import { WebsocketClient } from '@latitude-data/core/websockets/workers'
 import { captureException, captureMessage } from './utils/sentry'
 import startWorkers from './workers'
 
-const workers = startWorkers()
+const workers = await startWorkers()
 
 console.log('Workers started')
 
