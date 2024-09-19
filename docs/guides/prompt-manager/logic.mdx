@@ -13,7 +13,7 @@ Conditional statements allow you to execute different parts of your prompt based
 
 ```
     {{#if condition}}
-        // Content to be rendered if the condition is true
+        /* Content to be rendered if the condition is true */
     {{/if}}
 ```
 
@@ -21,11 +21,11 @@ For more complex scenarios, you can use else and else if:
 
 ```
     {{#if condition1}}
-        // Content if condition1 is true
+        /* Content if condition1 is true */
     {{:else if condition2}}
-        // Content if condition2 is true
+        /* Content if condition2 is true */
     {{:else}}
-        // Content if all conditions are false
+        /* Content if all conditions are false */
     {{/if}}
 ```
 
@@ -64,7 +64,7 @@ The each statement allows you to iterate over arrays or objects in your prompts.
 ### Basic Syntax
 ```
     {{#each items as item}}
-        // Content to be repeated for each item
+        /* Content to be repeated for each item */
     {{/each}}
 ```
 

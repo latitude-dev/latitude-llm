@@ -8,18 +8,18 @@ Chains allow you to create multi-step prompts that can interact with the AI mode
 
 ## Using Steps in Your Prompts
 
-- Use the `response` tag in your prompt as follows: `<response>your prompt here</response>`. 
-- Each `<response>` tag represents a pause in the execution where the AI will respond before continuing to the next part of the prompt.
-- Each `<response>` can use a different configuration, the properties accepted are:
-    - provider
-    - model
-    - temperature
+- Use the `<response />` tag in your prompt to add a step. The engine will pause at that step, generate a response, and add it to the conversaion as an assistant message, before continuing with the prompt.
+- You can add custom configuration to each step by adding attributes to the `<response />` tag:
     ```
-        <response provider="openai" model="gpt-4o-mini" temperature={0.1} />
+        <response provider="openai" model="gpt-4o-mini" temperature={{0.1}} />
     ```
-- You can save the response of a step as a variable using the `as` attribute:
+- You can store the response of a step as a variable using the `as` attribute, followed by the variable name.
     ```
-        <response as="response">Your prompt here</response>
+        <response as="result" />
+
+        {{#if result === "correct"}}
+            …
+        {{/if}}
     ```
   This allows you to reuse the response later in your prompt and use it in conditionals or other logic. [Check the logic section](/guides/prompt-manager/logic).
 
@@ -30,17 +30,18 @@ Chains allow you to create multi-step prompts that can interact with the AI mode
     provider: openai
     model: gpt-4o
     ---
+    Analyze the following sentence and identify the subject, verb, and object:
+
     <user>
-        Analyze the following sentence and identify the subject, verb, and object:
         "The curious cat chased the playful mouse."
     </user>
 
-    <response provider="openai" model="gpt-4o-mini">
-        Now, using the information from the previous step, create a new sentence by
-        replacing each part of speech with a different word, but keep the same structure.
-    </response>
+    <response provider="openai" model="gpt-4o-mini" />
 
-    <response>
-        Finally, translate the new sentence you created into French and return just the sentence.
-    </response>
+    Now, using this information, create a new sentence by
+    replacing each part of speech with a different word, but keep the same structure.
+
+    <response />
+
+    Finally, translate the new sentence you created into French and return just the sentence.
 ```
