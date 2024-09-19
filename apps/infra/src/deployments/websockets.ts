@@ -55,6 +55,7 @@ const taskDefinition = pulumi
         networkMode: 'awsvpc',
         requiresCompatibilities: ['FARGATE'],
         executionRoleArn: ecsTaskExecutionRole,
+        taskRoleArn: ecsTaskExecutionRole,
         containerDefinitions: JSON.stringify([
           {
             name: containerName,
@@ -128,6 +129,7 @@ new aws.ecs.Service('LatitudeLLMWebsockets', {
   desiredCount: 1,
   launchType: 'FARGATE',
   forceNewDeployment: true,
+  enableExecuteCommand: true,
   networkConfiguration: {
     subnets: privateSubnets.ids,
     assignPublicIp: false,
