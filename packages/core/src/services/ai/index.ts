@@ -1,3 +1,5 @@
+import { omit } from 'lodash-es'
+
 import { Message } from '@latitude-data/compiler'
 import { env } from '@latitude-data/env'
 import { setupJobs } from '@latitude-data/jobs'
@@ -76,6 +78,7 @@ export async function ai({
   const model = config.model
   const m = createProvider({ provider, apiKey, config })(model)
   const commonOptions = {
+    ...omit(config, ['schema']),
     model: m,
     prompt,
     messages: messages as CoreMessage[],
@@ -95,10 +98,10 @@ export async function ai({
     const result = await streamObject({
       ...commonOptions,
       schema: jsonSchema(schema),
-      // @ts-expect-error - output is valid but depending on the type of schema
+      // output is valid but depending on the type of schema
       // there might be a mismatch (e.g you pass an object schema but the
       // output is "array"). Not really an issue we need to defend atm.
-      output,
+      output: output as any,
       onFinish,
     })
 
@@ -224,4 +227,4 @@ const createFinishHandler = ({
 
 export { estimateCost } from './estimateCost'
 export { validateConfig } from './helpers'
-export type { PartialConfig, Config } from './helpers'
+export type { Config, PartialConfig } from './helpers'
