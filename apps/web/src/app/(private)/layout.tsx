@@ -11,6 +11,8 @@ import { getSession } from '$/services/auth/getSession'
 import { ROUTES } from '$/services/routes'
 import { redirect } from 'next/navigation'
 
+import { CSPostHogProvider } from '../providers'
+
 export default async function PrivateLayout({
   children,
 }: Readonly<{
@@ -22,12 +24,14 @@ export default async function PrivateLayout({
   const { workspace, user } = await getCurrentUser()
 
   return (
-    <SocketIOProvider>
-      <SessionProvider currentUser={user} workspace={workspace}>
-        <LatitudeWebsocketsProvider socketServer={env.WEBSOCKETS_SERVER}>
-          {children}
-        </LatitudeWebsocketsProvider>
-      </SessionProvider>
-    </SocketIOProvider>
+    <CSPostHogProvider>
+      <SocketIOProvider>
+        <SessionProvider currentUser={user} workspace={workspace}>
+          <LatitudeWebsocketsProvider socketServer={env.WEBSOCKETS_SERVER}>
+            {children}
+          </LatitudeWebsocketsProvider>
+        </SessionProvider>
+      </SocketIOProvider>
+    </CSPostHogProvider>
   )
 }

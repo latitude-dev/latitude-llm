@@ -65,6 +65,7 @@ export const env = createEnv({
     WEBSOCKET_REFRESH_SECRET_TOKEN_KEY: z.string(),
     WEBSOCKET_SECRET_TOKEN_KEY: z.string(),
     WORKERS_WEBSOCKET_SECRET_TOKEN: z.string(),
+    DEFAULT_PROVIDER_ID: z.string(),
     AWS_ACCESS_KEY: z.string().optional(),
     AWS_ACCESS_SECRET: z.string().optional(),
     AWS_REGION: z.string().optional(),
@@ -79,7 +80,6 @@ export const env = createEnv({
     SENTRY_DSN: z.string().optional(),
     SENTRY_ORG: z.string().optional(),
     SENTRY_PROJECT: z.string().optional(),
-    DEFAULT_PROVIDER_ID: z.string(),
   },
   runtimeEnv: {
     ...process.env,
