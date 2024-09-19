@@ -61,6 +61,7 @@ export class LatitudeSdk {
       params: { projectId, commitUuid },
       body: { documentPath, parameters, source },
     })
+
     return this.handleStreamChainResponse({
       response,
       onMessage,

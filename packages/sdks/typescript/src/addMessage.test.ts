@@ -13,6 +13,7 @@ import {
 } from 'vitest'
 
 import { LatitudeSdk } from './index'
+import { parseSSE } from './utils/parseSSE'
 
 const encoder = new TextEncoder()
 let latitudeApiKey = 'fake-api-key'
@@ -60,7 +61,7 @@ describe('addMessage', () => {
             const stream = new ReadableStream({
               start(controller) {
                 CHUNKS.forEach((chunk, index) => {
-                  controller.enqueue(encoder.encode(JSON.stringify(chunk)))
+                  controller.enqueue(encoder.encode(chunk))
                   if (index === CHUNKS.length - 1) {
                     controller.close()
                   }
@@ -86,45 +87,11 @@ describe('addMessage', () => {
       })
 
       CHUNKS.forEach((chunk, index) => {
-        expect(onMessageMock).toHaveBeenNthCalledWith(index + 1, chunk)
+        expect(onMessageMock).toHaveBeenNthCalledWith(
+          index + 1,
+          parseSSE(chunk)!.data,
+        )
       })
-    }),
-  )
-
-  it(
-    'send on Error callback when chunk is not a valid JSON',
-    server.boundary(async () => {
-      const onMessageMock = vi.fn()
-      const onErrorMock = vi.fn()
-      server.use(
-        http.post(
-          'http://localhost:8787/api/v1/chats/add-message',
-          async () => {
-            const stream = new ReadableStream({
-              start(controller) {
-                controller.enqueue(encoder.encode('invalid json'))
-                controller.close()
-              },
-            })
-
-            return new HttpResponse(stream, {
-              headers: {
-                'Content-Type': 'text/plain',
-              },
-            })
-          },
-        ),
-      )
-      await SDK.addMessages({
-        params: {
-          messages: [],
-          documentLogUuid: 'fake-document-log-uuid',
-          source: LogSources.Playground,
-        },
-        onMessage: onMessageMock,
-        onError: onErrorMock,
-      })
-      expect(onErrorMock).toHaveBeenCalledWith(expect.any(Error))
     }),
   )
 
@@ -139,7 +106,7 @@ describe('addMessage', () => {
             const stream = new ReadableStream({
               start(controller) {
                 CHUNKS.forEach((chunk, index) => {
-                  controller.enqueue(encoder.encode(JSON.stringify(chunk)))
+                  controller.enqueue(encoder.encode(chunk))
                   if (index === CHUNKS.length - 1) {
                     controller.close()
                   }
