@@ -50,8 +50,8 @@ export async function ai({
   documentLogUuid,
   source,
   onFinish,
-  schema = config.schema,
-  output = config.schema?.type || 'no-schema',
+  schema,
+  output,
   transactionalLogs = false,
 }: {
   workspace: Workspace
