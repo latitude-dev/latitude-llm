@@ -84,7 +84,7 @@ export const environment = pulumi
       { name: 'GATEWAY_SSL', value: 'true' },
       { name: 'LATITUDE_DOMAIN', value: 'latitude.so' },
       { name: 'LATITUDE_URL', value: 'https://app.latitude.so' },
-      { name: 'WEBSOCKETS_SERVER', value: 'ws.latitude.so' },
+      { name: 'WEBSOCKETS_SERVER', value: 'https://ws.latitude.so' },
       { name: 'WEBSOCKETS_SERVER_PORT', value: '8080' },
       { name: 'WEBSOCKET_SECRET_TOKEN_KEY', value: websocketSecretToken },
       {

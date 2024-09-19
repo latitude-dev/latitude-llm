@@ -59,6 +59,7 @@ const web: Namespace<
   {},
   WebSocketData
 > = io.of('/web')
+
 web.use(async (socket, next) => {
   try {
     const cookieHeader = socket.request.headers.cookie
@@ -105,6 +106,7 @@ web.on('connection', (socket) => {
 })
 
 const workers: Namespace<WorkersClientToServerEvents> = io.of('/workers')
+
 workers.use(async (socket, next) => {
   try {
     const token = socket.handshake.auth?.token
