@@ -1,19 +1,27 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import { EvaluationDto } from '@latitude-data/core/browser'
 import { EvaluationResultWithMetadata } from '@latitude-data/core/repositories'
-import { Text } from '@latitude-data/web-ui'
+import {
+  Text,
+  useCurrentCommit,
+  useCurrentDocument,
+  useCurrentProject,
+} from '@latitude-data/web-ui'
+import useEvaluationResultsWithMetadata from '$/stores/evaluationResultsWithMetadata'
 import { useProviderLog } from '$/stores/providerLogs'
 
 import { EvaluationResultInfo } from './EvaluationResultInfo'
 import { EvaluationResultsTable } from './EvaluationResultsTable'
 import { EvaluationStatusBanner } from './EvaluationStatusBanner'
 
+const FIVE_SECONDS = 5000
+
 export function EvaluationResults({
   evaluation,
-  evaluationResults,
+  evaluationResults: serverData,
 }: {
   evaluation: EvaluationDto
   evaluationResults: EvaluationResultWithMetadata[]
@@ -21,6 +29,28 @@ export function EvaluationResults({
   const [selectedResult, setSelectedResult] = useState<
     EvaluationResultWithMetadata | undefined
   >(undefined)
+  const document = useCurrentDocument()
+  const { project } = useCurrentProject()
+  const { commit } = useCurrentCommit()
+  const { data: evaluationResults, mutate } = useEvaluationResultsWithMetadata(
+    {
+      evaluationId: evaluation.id,
+      documentUuid: document.documentUuid,
+      commitUuid: commit.uuid,
+      projectId: project.id,
+    },
+    {
+      fallbackData: serverData,
+    },
+  )
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      mutate()
+    }, FIVE_SECONDS)
+
+    return () => clearInterval(interval)
+  }, [mutate])
 
   const { data: providerLog } = useProviderLog(selectedResult?.providerLogId)
   return (

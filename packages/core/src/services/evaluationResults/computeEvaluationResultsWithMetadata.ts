@@ -15,18 +15,20 @@ export async function computeEvaluationResultsWithMetadata(
     evaluation,
     documentUuid,
     draft,
+    limit,
   }: {
     workspaceId: number
     evaluation: Evaluation
     documentUuid: string
     draft?: Commit
+    limit?: number
   },
   db = database,
 ): Promise<TypedResult<EvaluationResultWithMetadata[], Error>> {
   const { evaluationResultsScope, documentLogsScope, baseQuery } =
     createEvaluationResultQuery(workspaceId, db)
 
-  const result = await baseQuery
+  const query = baseQuery
     .where(
       and(
         eq(evaluationResultsScope.evaluationId, evaluation.id),
@@ -35,6 +37,8 @@ export async function computeEvaluationResultsWithMetadata(
       ),
     )
     .orderBy(desc(evaluationResultsScope.createdAt))
+
+  const result = await (limit ? query.limit(limit) : query)
 
   return Result.ok(result)
 }

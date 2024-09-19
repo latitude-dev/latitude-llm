@@ -54,7 +54,7 @@ export const withProject = createServerActionProcedure(authProcedure)
     return { ...ctx, project }
   })
 
-export const widthDocument = createServerActionProcedure(withProject)
+export const withDocument = createServerActionProcedure(withProject)
   .input(z.object({ commitUuid: z.string(), documentUuid: z.string() }))
   .handler(async ({ input, ctx }) => {
     const repo = new DocumentVersionsRepository(ctx.workspace.id)

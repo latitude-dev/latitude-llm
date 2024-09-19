@@ -61,13 +61,16 @@ export const runDocumentJob = async (job: Job<RunDocumentJobData>) => {
     const queues = await setupJobs()
 
     // Enqueue the evaluation job
-    await queues.defaultQueue.jobs.enqueueRunEvaluationJob({
-      workspaceId,
-      documentUuid: document.documentUuid,
-      documentLogUuid: result.documentLogUuid,
-      evaluationId,
-      batchId,
-    })
+    await queues.defaultQueue.jobs.enqueueRunEvaluationJob(
+      {
+        workspaceId,
+        documentUuid: document.documentUuid,
+        documentLogUuid: result.documentLogUuid,
+        evaluationId,
+        batchId,
+      },
+      { lifo: true },
+    )
   } catch (error) {
     if (env.NODE_ENV !== 'production') {
       console.error(error)

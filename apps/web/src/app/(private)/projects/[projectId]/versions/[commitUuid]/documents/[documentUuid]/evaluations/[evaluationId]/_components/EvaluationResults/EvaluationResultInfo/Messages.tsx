@@ -25,6 +25,7 @@ export function EvaluationResultMessages({
   return (
     <div className='flex flex-col gap-4 py-6 w-full max-h-full overflow-y-auto'>
       <MessageList
+        collapsable
         messages={messages}
         messageLayout='vertical'
         separator

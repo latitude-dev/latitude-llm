@@ -10,11 +10,11 @@ import { nanoid } from 'nanoid'
 import { z } from 'zod'
 import { createServerActionProcedure } from 'zsa'
 
-import { widthDocument } from '../procedures'
+import { withDocument } from '../procedures'
 
 const USER_DECIDED_TO_IGNORE_THIS_PARAMETER = -1
 
-const withDataset = createServerActionProcedure(widthDocument)
+const withDataset = createServerActionProcedure(withDocument)
   .input(z.object({ datasetId: z.number() }))
   .handler(async ({ input, ctx }) => {
     const datasetsRepo = new DatasetsRepository(ctx.workspace.id)
