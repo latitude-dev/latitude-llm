@@ -41,6 +41,8 @@ if (environment !== 'production') {
       FILES_STORAGE_PATH,
       DEFAULT_PROJECT_ID: '1',
       DEFAULT_PROVIDER_API_KEY: 'd32da7c2-94fd-49c3-8dca-b57a5c3bbe27',
+      NEXT_PUBLIC_POSTHOG_KEY: '',
+      NEXT_PUBLIC_POSTHOG_HOST: '',
     },
     { path: pathToEnv },
   )
@@ -80,6 +82,8 @@ export const env = createEnv({
     SENTRY_DSN: z.string().optional(),
     SENTRY_ORG: z.string().optional(),
     SENTRY_PROJECT: z.string().optional(),
+    NEXT_PUBLIC_POSTHOG_KEY: z.string(),
+    NEXT_PUBLIC_POSTHOG_HOST: z.string(),
   },
   runtimeEnv: {
     ...process.env,

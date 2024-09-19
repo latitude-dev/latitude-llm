@@ -29,7 +29,7 @@ export default function ClientFilesTree({
   const { commit, isHead } = useCurrentCommit()
   const isMerged = !!commit.mergedAt
   const { project } = useCurrentProject()
-  const documentPath = currentDocument?.path
+  const documentUuid = currentDocument?.documentUuid
   const navigateToDocument = useCallback(
     (documentUuid: string) => {
       const documentDetails = ROUTES.projects
@@ -42,16 +42,22 @@ export default function ClientFilesTree({
     [project.id, commit.uuid, isHead],
   )
 
-  const { createFile, destroyFile, destroyFolder, isDestroying, data } =
-    useDocumentVersions(
-      { commitUuid: commit.uuid, projectId: project.id },
-      {
-        fallbackData: serverDocuments,
-        onSuccessCreate: (document) => {
-          navigateToDocument(document.documentUuid)
-        },
+  const {
+    createFile,
+    destroyFile,
+    destroyFolder,
+    renamePaths,
+    isDestroying,
+    data,
+  } = useDocumentVersions(
+    { commitUuid: commit.uuid, projectId: project.id },
+    {
+      fallbackData: serverDocuments,
+      onSuccessCreate: (document) => {
+        navigateToDocument(document.documentUuid)
       },
-    )
+    },
+  )
   const onMergeCommitClick = useCallback(() => {
     setWarningOpen(true)
   }, [setWarningOpen])
@@ -61,10 +67,11 @@ export default function ClientFilesTree({
       <FilesTree
         isMerged={isMerged}
         documents={data}
-        currentPath={documentPath}
+        currentUuid={documentUuid}
         navigateToDocument={navigateToDocument}
         onMergeCommitClick={onMergeCommitClick}
         createFile={createFile}
+        renamePaths={renamePaths}
         destroyFile={destroyFile}
         destroyFolder={destroyFolder}
         isDestroying={isDestroying}
