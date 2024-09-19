@@ -87,7 +87,7 @@ describe('runChain', () => {
       expect.objectContaining({
         config: { provider: 'openai', model: 'gpt-3.5-turbo' },
         schema: undefined,
-        output: undefined,
+        output: 'no-schema',
       }),
     )
   })
@@ -296,6 +296,202 @@ describe('runChain', () => {
             content: [{ type: ContentType.text, text: 'User message' }],
           },
         ],
+      }),
+    )
+  })
+
+  it('runs a chain with object schema and output', async () => {
+    const mockSchema = {
+      type: 'object',
+      properties: {
+        name: { type: 'string' },
+        age: { type: 'number' },
+      },
+    } as const
+
+    const mockAiResponse = {
+      object: Promise.resolve({ name: 'John', age: 30 }),
+      usage: Promise.resolve({ totalTokens: 15 }),
+      fullStream: new ReadableStream({
+        start(controller) {
+          controller.enqueue({
+            type: 'object',
+            object: { name: 'John', age: 30 },
+          })
+          controller.close()
+        },
+      }),
+    }
+
+    vi.spyOn(aiModule, 'ai').mockResolvedValue(mockAiResponse as any)
+
+    vi.mocked(mockChain.step!).mockResolvedValue({
+      completed: true,
+      conversation: {
+        messages: [
+          {
+            role: MessageRole.user,
+            content: [{ type: ContentType.text, text: 'Test message' }],
+          },
+        ],
+        config: { provider: 'openai', model: 'gpt-3.5-turbo' },
+      },
+    })
+
+    const result = await runChain({
+      workspace,
+      chain: mockChain as Chain,
+      apikeys,
+      source: LogSources.API,
+      configOverrides: {
+        schema: mockSchema,
+        output: 'object',
+      },
+    })
+
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+
+    const response = await result.value.response
+    expect(response).toEqual({
+      documentLogUuid: expect.any(String),
+      object: { name: 'John', age: 30 },
+      text: '{"name":"John","age":30}',
+      usage: { totalTokens: 15 },
+    })
+
+    expect(aiModule.ai).toHaveBeenCalledWith(
+      expect.objectContaining({
+        schema: mockSchema,
+        output: 'object',
+      }),
+    )
+  })
+
+  it('runs a chain with array schema and output', async () => {
+    const mockSchema = {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          name: { type: 'string' },
+          age: { type: 'number' },
+        },
+      },
+    } as const
+
+    const mockAiResponse = {
+      object: Promise.resolve([
+        { name: 'John', age: 30 },
+        { name: 'Jane', age: 25 },
+      ]),
+      usage: Promise.resolve({ totalTokens: 20 }),
+      fullStream: new ReadableStream({
+        start(controller) {
+          controller.enqueue({
+            type: 'object',
+            object: [
+              { name: 'John', age: 30 },
+              { name: 'Jane', age: 25 },
+            ],
+          })
+          controller.close()
+        },
+      }),
+    }
+
+    vi.spyOn(aiModule, 'ai').mockResolvedValue(mockAiResponse as any)
+
+    vi.mocked(mockChain.step!).mockResolvedValue({
+      completed: true,
+      conversation: {
+        messages: [
+          {
+            role: MessageRole.user,
+            content: [{ type: ContentType.text, text: 'Test message' }],
+          },
+        ],
+        config: { provider: 'openai', model: 'gpt-3.5-turbo' },
+      },
+    })
+
+    const result = await runChain({
+      workspace,
+      chain: mockChain as Chain,
+      apikeys,
+      source: LogSources.API,
+      configOverrides: {
+        schema: mockSchema,
+        output: 'array',
+      },
+    })
+
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+
+    const response = await result.value.response
+    expect(response).toEqual({
+      documentLogUuid: expect.any(String),
+      object: [
+        { name: 'John', age: 30 },
+        { name: 'Jane', age: 25 },
+      ],
+      text: '[{"name":"John","age":30},{"name":"Jane","age":25}]',
+      usage: { totalTokens: 20 },
+    })
+
+    expect(aiModule.ai).toHaveBeenCalledWith(
+      expect.objectContaining({
+        schema: mockSchema,
+        output: 'array',
+      }),
+    )
+  })
+
+  it('runs a chain with no-schema output', async () => {
+    const mockAiResponse = createMockAiResponse(
+      'AI response without schema',
+      10,
+    )
+    vi.spyOn(aiModule, 'ai').mockResolvedValue(mockAiResponse as any)
+
+    vi.mocked(mockChain.step!).mockResolvedValue({
+      completed: true,
+      conversation: {
+        messages: [
+          {
+            role: MessageRole.user,
+            content: [{ type: ContentType.text, text: 'Test message' }],
+          },
+        ],
+        config: { provider: 'openai', model: 'gpt-3.5-turbo' },
+      },
+    })
+
+    const result = await runChain({
+      workspace,
+      chain: mockChain as Chain,
+      apikeys,
+      source: LogSources.API,
+      configOverrides: {
+        output: 'no-schema',
+      },
+    })
+
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+
+    const response = await result.value.response
+    expect(response).toEqual({
+      documentLogUuid: expect.any(String),
+      text: 'AI response without schema',
+      usage: { totalTokens: 10 },
+      toolCalls: [],
+    })
+
+    expect(aiModule.ai).toHaveBeenCalledWith(
+      expect.objectContaining({
+        output: 'no-schema',
       }),
     )
   })

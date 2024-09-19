@@ -20,6 +20,12 @@ import { streamToGenerator } from '../../lib/streamToGenerator'
 import { ai, Config, validateConfig } from '../ai'
 
 export type CachedApiKeys = Map<string, ProviderApiKey>
+type ConfigOverrides =
+  | {
+      schema: JSONSchema7
+      output: 'object' | 'array'
+    }
+  | { output: 'no-schema' }
 
 export async function runChain({
   workspace,
@@ -34,10 +40,7 @@ export async function runChain({
   generateUUID?: () => string
   source: LogSources
   apikeys: CachedApiKeys
-  configOverrides?: {
-    schema: JSONSchema7
-    output: 'object' | 'array' | 'no-schema'
-  }
+  configOverrides?: ConfigOverrides
 }) {
   const documentLogUuid = generateUUID()
 
@@ -96,13 +99,10 @@ async function iterate({
   previousApiKey?: ProviderApiKey
   documentLogUuid: string
   previousResponse?: ChainTextResponse
-  configOverrides?: {
-    schema: JSONSchema7
-    output: 'object' | 'array' | 'no-schema'
-  }
+  configOverrides?: ConfigOverrides
 }) {
   try {
-    const stepResult = await computeStepData({
+    const step = await computeStepData({
       chain,
       previousResponse,
       apikeys,
@@ -110,26 +110,26 @@ async function iterate({
       sentCount: previousCount,
     })
 
-    publishStepStartEvent(controller, stepResult)
+    publishStepStartEvent(controller, step)
 
     const aiResult = await ai({
       workspace,
       source,
       documentLogUuid,
-      messages: stepResult.conversation.messages,
-      config: stepResult.config,
-      provider: stepResult.apiKey,
-      schema: configOverrides?.schema,
-      output: configOverrides?.output,
-      transactionalLogs: stepResult.completed,
+      messages: step.conversation.messages,
+      config: step.config,
+      provider: step.apiKey,
+      schema: getSchemaForAI(step, configOverrides),
+      output: getOutputForAI(step, configOverrides),
+      transactionalLogs: step.completed,
     })
 
     await streamAIResult(controller, aiResult)
 
     const response = await createChainResponse(aiResult, documentLogUuid)
 
-    if (stepResult.completed) {
-      await handleCompletedChain(controller, stepResult, response)
+    if (step.completed) {
+      await handleCompletedChain(controller, step, response)
       return response
     } else {
       publishStepCompleteEvent(controller, response)
@@ -141,8 +141,8 @@ async function iterate({
         documentLogUuid,
         apikeys,
         controller,
-        previousApiKey: stepResult.apiKey,
-        previousCount: stepResult.sentCount,
+        previousApiKey: step.apiKey,
+        previousCount: step.sentCount,
         previousResponse: response as ChainTextResponse,
         configOverrides,
       })
@@ -153,7 +153,24 @@ async function iterate({
   }
 }
 
-// Helper functions
+function getSchemaForAI(
+  step: Awaited<ReturnType<typeof computeStepData>>,
+  configOverrides?: ConfigOverrides,
+) {
+  return step.completed
+    ? // @ts-expect-error - schema does not exist in some types of configOverrides which is fine
+      configOverrides?.schema || step.config.schema
+    : undefined
+}
+
+function getOutputForAI(
+  step: Awaited<ReturnType<typeof computeStepData>>,
+  configOverrides?: ConfigOverrides,
+) {
+  return step.completed
+    ? configOverrides?.output || step.config.schema?.type || 'no-schema'
+    : undefined
+}
 
 function publishStepStartEvent(
   controller: ReadableStreamDefaultController,
