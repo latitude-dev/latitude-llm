@@ -60,6 +60,7 @@ export async function createProviderLog(
         estimateCost({ provider: providerType, model, usage }) *
           TO_MILLICENTS_FACTOR,
       )
+
     const inserts = await trx
       .insert(providerLogs)
       .values({

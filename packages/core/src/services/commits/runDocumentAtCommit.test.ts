@@ -163,6 +163,7 @@ This is a test document
               documentLogUuid: expect.any(String),
               text: 'Fake AI generated text',
               toolCalls: [],
+              providerLog: { uuid: 'fake-provider-log-uuid' },
               usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
             },
           },
@@ -204,6 +205,7 @@ This is a test document
               text: 'Fake AI generated text',
               toolCalls: [],
               usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+              providerLog: { uuid: 'fake-provider-log-uuid' },
               documentLogUuid: expect.any(String),
             },
           },
@@ -242,6 +244,7 @@ const mocks = {
 
     return {
       text: Promise.resolve('Fake AI generated text'),
+      providerLog: Promise.resolve({ uuid: 'fake-provider-log-uuid' }),
       usage: Promise.resolve({
         promptTokens: 0,
         completionTokens: 0,

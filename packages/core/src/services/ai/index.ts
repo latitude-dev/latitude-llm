@@ -13,7 +13,12 @@ import {
 import { JSONSchema7 } from 'json-schema'
 import { v4 } from 'uuid'
 
-import { LogSources, ProviderApiKey, Workspace } from '../../browser'
+import {
+  LogSources,
+  ProviderApiKey,
+  ProviderLog,
+  Workspace,
+} from '../../browser'
 import { cache } from '../../cache'
 import { publisher } from '../../events/publisher'
 import { createProviderLog } from '../providerLogs/create'
@@ -49,7 +54,6 @@ export async function ai({
   config,
   documentLogUuid,
   source,
-  onFinish,
   schema,
   output,
   transactionalLogs = false,
@@ -64,97 +68,50 @@ export async function ai({
   schema?: JSONSchema7
   output?: 'object' | 'array' | 'no-schema'
   transactionalLogs?: boolean
-  onFinish?: FinishCallback
 }) {
   await checkDefaultProviderUsage({ provider: apiProvider, workspace })
 
   const startTime = Date.now()
-  const {
-    provider,
-    token: apiKey,
-    id: providerId,
-    provider: providerType,
-  } = apiProvider
+  const { provider, token: apiKey } = apiProvider
   const model = config.model
   const m = createProvider({ provider, apiKey, config })(model)
-
   const commonOptions = {
     model: m,
     prompt,
     messages: messages as CoreMessage[],
   }
-
-  const createFinishHandler = (isStructured: boolean) => async (event: any) => {
-    const commonData = {
-      uuid: v4(),
-      source,
-      generatedAt: new Date(),
-      documentLogUuid,
-      providerId,
-      providerType,
-      model,
-      config,
-      messages,
-      toolCalls: event.toolCalls?.map((t: any) => ({
-        id: t.toolCallId,
-        name: t.toolName,
-        arguments: t.args,
-      })),
-      usage: event.usage,
-      duration: Date.now() - startTime,
-    }
-
-    const payload = {
-      type: 'aiProviderCallCompleted' as 'aiProviderCallCompleted',
-      data: {
-        ...commonData,
-        responseText: event.text,
-        responseObject: isStructured ? event.object : undefined,
-      },
-    }
-
-    publisher.publishLater({
-      type: payload.type,
-      data: {
-        ...payload.data,
-        workspaceId: apiProvider.workspaceId,
-      },
-    })
-
-    let providerLogUuid
-    if (transactionalLogs) {
-      const providerLog = await createProviderLog(payload.data).then((r) =>
-        r.unwrap(),
-      )
-      providerLogUuid = providerLog.uuid
-    } else {
-      const queues = await setupJobs()
-      queues.defaultQueue.jobs.enqueueCreateProviderLogJob(payload.data)
-    }
-
-    onFinish?.({ ...event, providerLogUuid })
-  }
+  const { onFinish, providerLog } = createFinishHandler({
+    isStructured: !!schema && !!output,
+    startTime,
+    apiProvider,
+    source,
+    documentLogUuid,
+    messages,
+    config,
+    transactionalLogs,
+  })
 
   if (schema && output) {
     const result = await streamObject({
       ...commonOptions,
       schema: jsonSchema(schema),
-      // @ts-expect-error - output is vale but depending on the type of schema
+      // @ts-expect-error - output is valid but depending on the type of schema
       // there might be a mismatch (e.g you pass an object schema but the
-      // output is "array"). Not really an issue we need to defend atm
+      // output is "array"). Not really an issue we need to defend atm.
       output,
-      onFinish: createFinishHandler(true),
+      onFinish,
     })
 
     return {
       fullStream: result.fullStream,
       object: result.object,
       usage: result.usage,
+      providerLog,
     }
   } else {
     const result = await streamText({
       ...commonOptions,
-      onFinish: createFinishHandler(false),
+      onFinish,
     })
 
     return {
@@ -162,6 +119,7 @@ export async function ai({
       text: result.text,
       usage: result.usage,
       toolCalls: result.toolCalls,
+      providerLog,
     }
   }
 }
@@ -182,6 +140,83 @@ const checkDefaultProviderUsage = async ({
     if (value > DEFAULT_PROVIDER_MAX_RUNS) {
       throw new Error('You have exceeded your maximum number of free runs')
     }
+  }
+}
+
+const createFinishHandler = ({
+  isStructured,
+  startTime,
+  apiProvider,
+  source,
+  messages,
+  config,
+  transactionalLogs,
+  documentLogUuid,
+}: {
+  isStructured: boolean
+  startTime: number
+  apiProvider: ProviderApiKey
+  source: LogSources
+  messages: Message[]
+  config: PartialConfig
+  transactionalLogs: boolean
+  documentLogUuid?: string
+}) => {
+  let resolveProviderLog: (value?: ProviderLog) => void
+  const providerLogPromise = new Promise<ProviderLog | undefined>((resolve) => {
+    resolveProviderLog = resolve
+  })
+
+  return {
+    providerLog: providerLogPromise,
+    onFinish: async (event: any) => {
+      const commonData = {
+        uuid: v4(),
+        source,
+        generatedAt: new Date(),
+        documentLogUuid,
+        providerId: apiProvider.id,
+        providerType: apiProvider.provider,
+        model: config.model,
+        config,
+        messages,
+        toolCalls: event.toolCalls?.map((t: any) => ({
+          id: t.toolCallId,
+          name: t.toolName,
+          arguments: t.args,
+        })),
+        usage: event.usage,
+        duration: Date.now() - startTime,
+      }
+
+      const payload = {
+        type: 'aiProviderCallCompleted' as 'aiProviderCallCompleted',
+        data: {
+          ...commonData,
+          responseText: event.text,
+          responseObject: isStructured ? event.object : undefined,
+        },
+      }
+
+      publisher.publishLater({
+        type: payload.type,
+        data: {
+          ...payload.data,
+          workspaceId: apiProvider.workspaceId,
+        },
+      })
+
+      if (transactionalLogs) {
+        const providerLog = await createProviderLog(payload.data).then((r) =>
+          r.unwrap(),
+        )
+        resolveProviderLog(providerLog)
+      } else {
+        const queues = await setupJobs()
+        queues.defaultQueue.jobs.enqueueCreateProviderLogJob(payload.data)
+        resolveProviderLog()
+      }
+    },
   }
 }
 

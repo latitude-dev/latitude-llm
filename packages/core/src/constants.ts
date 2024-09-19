@@ -9,6 +9,7 @@ import {
   TextStreamPart,
 } from 'ai'
 
+import { ProviderLog } from './browser'
 import { Config } from './services/ai'
 
 export const LATITUDE_EVENT = 'latitudeEventsChannel'
@@ -43,19 +44,27 @@ export type ChainStepTextResponse = {
   text: string
   usage: CompletionTokenUsage
   toolCalls: ToolCall[]
+  documentLogUuid: string
+  providerLog: undefined
 }
 export type ChainStepObjectResponse = {
   object: any
   text: string
   usage: CompletionTokenUsage
+  documentLogUuid: string
+  providerLog: undefined
 }
 
-export type ChainTextResponse = ChainStepTextResponse & {
-  documentLogUuid: string
+export type ChainTextResponse = Omit<ChainStepTextResponse, 'providerLog'> & {
+  providerLog: ProviderLog
 }
-export type ChainObjectResponse = ChainStepObjectResponse & {
-  documentLogUuid: string
+export type ChainObjectResponse = Omit<
+  ChainStepObjectResponse,
+  'providerLog'
+> & {
+  providerLog: ProviderLog
 }
+export type ChainStepResponse = ChainStepTextResponse | ChainStepObjectResponse
 export type ChainCallResponse = ChainTextResponse | ChainObjectResponse
 
 export enum LogSources {
@@ -89,7 +98,7 @@ type LatitudeEventData =
     }
   | {
       type: ChainEventTypes.StepComplete
-      response: ChainCallResponse
+      response: ChainStepResponse
     }
   | {
       type: ChainEventTypes.Complete
