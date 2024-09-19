@@ -10,8 +10,8 @@ export default createEnv({
     NODE_ENV: z.string(),
     DATABASE_URL: z.string(),
     GATEWAY_HOSTNAME: z.string(),
-    GATEWAY_PORT: z.coerce.number().optional(),
     WEBSOCKETS_SERVER: z.string(),
+    GATEWAY_PORT: z.coerce.number().optional(),
     GATEWAY_SSL: z
       .enum(['true', 'false'])
       .transform((value) => value === 'true')

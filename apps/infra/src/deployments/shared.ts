@@ -29,6 +29,7 @@ const defaultProjectIdArn = coreStack.requireOutput('defaultProjectIdArn')
 const defaultProviderApiKeyArn = coreStack.requireOutput(
   'defaultProviderApiKeyArn',
 )
+const postHogApiKeyArn = coreStack.requireOutput('postHogApiKeyArn')
 
 const getSecretString = (arn: pulumi.Output<any>) => {
   return arn.apply((secretId) =>
@@ -57,6 +58,7 @@ export const sentryDsn = getSecretString(sentryDsnArn)
 export const sentryOrg = getSecretString(sentryOrgArn)
 export const sentryProject = getSecretString(sentryProjectArn)
 export const defaultProviderApiKey = getSecretString(defaultProviderApiKeyArn)
+export const postHogApiKey = getSecretString(postHogApiKeyArn)
 
 export const dbUrl = pulumi.interpolate`postgresql://${dbUsername}:${dbPassword}@${dbEndpoint}/${dbName}?sslmode=verify-full&sslrootcert=/app/packages/core/src/assets/eu-central-1-bundle.pem`
 export const environment = pulumi
@@ -72,6 +74,7 @@ export const environment = pulumi
     sentryProject,
     defaultProjectId,
     defaultProviderApiKey,
+    postHogApiKey,
   ])
   .apply(() => {
     return [
@@ -110,5 +113,7 @@ export const environment = pulumi
       { name: 'AWS_ACCESS_SECRET', value: awsAccessSecret },
       { name: 'DEFAULT_PROJECT_ID', value: defaultProjectId },
       { name: 'DEFAULT_PROVIDER_API_KEY', value: defaultProviderApiKey },
+      { name: 'NEXT_PUBLIC_POSTHOG_KEY', value: postHogApiKey },
+      { name: 'NEXT_PUBLIC_POSTHOG_HOST', value: 'https://eu.i.posthog.com' },
     ]
   })
