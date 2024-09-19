@@ -6,6 +6,8 @@ import { getProviderApiKeyAction } from '$/actions/providerApiKeys/fetch'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import useSWR, { SWRConfiguration } from 'swr'
 
+const EMPTY_ARRAY: ProviderApiKey[] = []
+
 export default function useProviderApiKeys(opts?: SWRConfiguration) {
   const { toast } = useToast()
   const key = 'api/providerApiKeys'
@@ -24,7 +26,7 @@ export default function useProviderApiKeys(opts?: SWRConfiguration) {
     return data || []
   }
   const {
-    data = [],
+    data = EMPTY_ARRAY,
     mutate,
     ...rest
   } = useSWR<ProviderApiKey[]>(key, fetcher, opts)
