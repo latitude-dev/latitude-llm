@@ -1,10 +1,10 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback } from 'react'
 
-import { ConversationMetadata, readMetadata } from '@latitude-data/compiler'
 import { DocumentVersion, EvaluationDto } from '@latitude-data/core/browser'
 import { Button, CloseTrigger, Modal } from '@latitude-data/web-ui'
+import { useMetadata } from '$/hooks/useMetadata'
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
 
@@ -42,13 +42,14 @@ export default function CreateBatchEvaluationModal({
       goToDetail()
     },
   })
-  const [metadata, setMetadata] = useState<ConversationMetadata>()
-  useEffect(() => {
-    readMetadata({
+
+  const { metadata } = useMetadata(
+    {
       prompt: document.content ?? '',
       fullPath: document.path,
-    }).then(setMetadata)
-  }, [document])
+    },
+    [document],
+  )
 
   const form = useRunBatchForm({ documentMetadata: metadata })
   const onRunBatch = useCallback(() => {
