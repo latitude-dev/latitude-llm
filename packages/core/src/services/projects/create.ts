@@ -1,5 +1,6 @@
 import { Commit, Project, User, Workspace } from '../../browser'
 import { database } from '../../client'
+import { publisher } from '../../events/publisher'
 import { Result, Transaction } from '../../lib'
 import { projects } from '../../schema'
 import { createCommit } from '../commits/create'
@@ -37,6 +38,11 @@ export async function createProject(
       db: tx,
     })
     if (result.error) return result
+
+    publisher.publishLater({
+      type: 'projectCreated',
+      data: { project, commit: result.value },
+    })
 
     return Result.ok({ project, commit: result.value })
   }, db)

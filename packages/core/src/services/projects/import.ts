@@ -34,6 +34,7 @@ export async function importDefaultProject(
     await defaultProjectDocumentsScope.getDocumentsFromMergedCommits({
       projectId: defaultProject!.id,
     })
+
   if (defaultDocuments.error) return defaultDocuments
 
   return Transaction.call<Project>(async (tx) => {

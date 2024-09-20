@@ -1,10 +1,8 @@
 import { User, Workspace } from '../../browser'
 import { database } from '../../client'
+import { publisher } from '../../events/publisher'
 import { Result, Transaction } from '../../lib'
 import { workspaces } from '../../schema'
-import { createApiKey } from '../apiKeys/create'
-import { createMembership } from '../memberships/create'
-import { importDefaultProject } from '../projects/import'
 
 export async function createWorkspace(
   {
@@ -23,9 +21,10 @@ export async function createWorkspace(
       .returning()
     const workspace = insertedWorkspaces[0]!
 
-    await createMembership({ confirmedAt: new Date(), user, workspace }, tx)
-    await createApiKey({ workspace }, tx)
-    await importDefaultProject({ workspace, user }, tx)
+    publisher.publishLater({
+      type: 'workspaceCreated',
+      data: { workspace, user },
+    })
 
     return Result.ok(workspace)
   }, db)
