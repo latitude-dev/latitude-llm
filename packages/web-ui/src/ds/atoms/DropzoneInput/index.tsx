@@ -8,7 +8,8 @@ import { FormField, type FormFieldProps } from '../FormField'
 import { Icon } from '../Icons'
 import Text from '../Text'
 
-type Props = Omit<DropzoneProps, 'children'> & Omit<FormFieldProps, 'children'>
+type Props = Omit<DropzoneProps, 'children'> &
+  Omit<FormFieldProps, 'children'> & { placeholder: string }
 export function DropzoneInput({
   label,
   description,
@@ -74,18 +75,7 @@ export function DropzoneInput({
                     {name}
                   </Text.H5>
                 ) : (
-                  <>
-                    {placeholder ? (
-                      <>
-                        <Text.H5M color='accentForeground'>
-                          {placeholder}
-                        </Text.H5M>
-                        &nbsp;
-                        <Text.H5 color='foreground'>or</Text.H5>&nbsp;
-                      </>
-                    ) : null}
-                    <Text.H5 color='foreground'>drag and drop here</Text.H5>
-                  </>
+                  <Text.H5M color='accentForeground'>{placeholder}</Text.H5M>
                 )}
               </div>
             </div>
