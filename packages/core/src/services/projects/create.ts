@@ -1,4 +1,4 @@
-import { Project, User, Workspace } from '../../browser'
+import { Commit, Project, User, Workspace } from '../../browser'
 import { database } from '../../client'
 import { Result, Transaction } from '../../lib'
 import { projects } from '../../schema'
@@ -18,7 +18,7 @@ export async function createProject(
   },
   db = database,
 ) {
-  return Transaction.call<Project>(async (tx) => {
+  return Transaction.call<{ project: Project; commit: Commit }>(async (tx) => {
     const project = (
       await tx
         .insert(projects)
@@ -38,6 +38,6 @@ export async function createProject(
     })
     if (result.error) return result
 
-    return Result.ok(project)
+    return Result.ok({ project, commit: result.value })
   }, db)
 }

@@ -6,8 +6,6 @@ import { database } from '../../client'
 import { NotFoundError, Result, Transaction } from '../../lib'
 import { DocumentVersionsRepository } from '../../repositories'
 import { projects } from '../../schema'
-import { mergeCommit } from '../commits'
-import { createCommit } from '../commits/create'
 import { createNewDocument } from '../documents'
 import { createProject } from './create'
 
@@ -39,7 +37,7 @@ export async function importDefaultProject(
   if (defaultDocuments.error) return defaultDocuments
 
   return Transaction.call<Project>(async (tx) => {
-    const project = await createProject(
+    const { project, commit } = await createProject(
       {
         workspace,
         user,
@@ -47,13 +45,6 @@ export async function importDefaultProject(
       },
       tx,
     ).then((r) => r.unwrap())
-
-    const commit = await createCommit({
-      project,
-      user,
-      data: { title: 'Initial version' },
-      db: tx,
-    }).then((r) => r.unwrap())
 
     await Promise.all(
       defaultDocuments.value.map(async (document) => {
@@ -68,7 +59,6 @@ export async function importDefaultProject(
       }),
     )
 
-    await mergeCommit(commit, tx).then((r) => r.unwrap())
     return Result.ok(project)
   }, db)
 }

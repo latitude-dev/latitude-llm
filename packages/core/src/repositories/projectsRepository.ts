@@ -100,7 +100,7 @@ export class ProjectsRepository extends Repository<typeof tt, Project> {
         lastCreatedAtDocument: aggredatedData.lastCreatedAtDocument,
       })
       .from(this.scope)
-      .innerJoin(aggredatedData, eq(aggredatedData.id, this.scope.id))
+      .leftJoin(aggredatedData, eq(aggredatedData.id, this.scope.id))
 
     return Result.ok(result)
   }

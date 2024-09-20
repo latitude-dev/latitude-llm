@@ -25,7 +25,6 @@ export async function createWorkspace(
 
     await createMembership({ confirmedAt: new Date(), user, workspace }, tx)
     await createApiKey({ workspace }, tx)
-
     await importDefaultProject({ workspace, user }, tx)
 
     return Result.ok(workspace)
