@@ -5,15 +5,13 @@ import { useEffect } from 'react'
 import { ErrorComponent, useSession } from '@latitude-data/web-ui/browser'
 import * as Sentry from '@sentry/nextjs'
 import { NAV_LINKS } from '$/app/(private)/_lib/constants'
-import BreadcrumbLink from '$/components/BreadcrumbLink'
 import { AppLayout } from '$/components/layouts'
-import { ROUTES } from '$/services/routes'
 
 export default function Error({
   error,
 }: {
   error: Error & { digest?: string }
-  reset: () => void // Re-render of page
+  reset: () => void
 }) {
   const session = useSession()
 
@@ -26,9 +24,7 @@ export default function Error({
       currentUser={session.currentUser}
       breadcrumbs={[
         {
-          name: (
-            <BreadcrumbLink name={session.workspace.name} href={ROUTES.root} />
-          ),
+          name: session.workspace.name,
         },
         { name: 'Error' },
       ]}
