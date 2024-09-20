@@ -1,7 +1,7 @@
 'use client'
 
 import { EvaluationDto } from '@latitude-data/core/browser'
-import { TableWithHeader } from '@latitude-data/web-ui'
+import { Button, Icon, TableWithHeader } from '@latitude-data/web-ui'
 import { ROUTES } from '$/services/routes'
 import Link from 'next/link'
 
@@ -23,8 +23,15 @@ export function Actions({
     .evaluations.detail(evaluation.id).createBatch
 
   return (
-    <Link href={href}>
-      <TableWithHeader.Button>Run batch evaluation</TableWithHeader.Button>
-    </Link>
+    <div className='flex flex-row items-center gap-4'>
+      <Link href={ROUTES.evaluations.detail({ uuid: evaluation.uuid }).root}>
+        <Button variant='ghost'>
+          Go to evaluation <Icon name='externalLink' />
+        </Button>
+      </Link>
+      <Link href={href}>
+        <TableWithHeader.Button>Run batch evaluation</TableWithHeader.Button>
+      </Link>
+    </div>
   )
 }
