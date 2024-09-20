@@ -19,7 +19,7 @@ import {
 } from '@latitude-data/web-ui'
 import { formatCostInMillicents, relativeTime } from '$/app/_lib/formatUtils'
 
-const ResultCellContent = ({
+export const ResultCellContent = ({
   evaluation,
   value,
 }: {
