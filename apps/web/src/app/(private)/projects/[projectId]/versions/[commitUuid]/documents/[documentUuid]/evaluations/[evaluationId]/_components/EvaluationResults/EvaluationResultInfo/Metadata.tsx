@@ -1,6 +1,6 @@
 import { ReactNode } from 'react'
 
-import { ProviderLogDto } from '@latitude-data/core/browser'
+import { EvaluationDto, ProviderLogDto } from '@latitude-data/core/browser'
 import { EvaluationResultWithMetadata } from '@latitude-data/core/repositories'
 import {
   ClickToCopy,
@@ -13,40 +13,51 @@ import { formatCostInMillicents } from '$/app/_lib/formatUtils'
 import useProviderApiKeys from '$/stores/providerApiKeys'
 import { format } from 'date-fns'
 
+import { ResultCellContent } from '../EvaluationResultsTable'
+
 function MetadataItem({
   label,
+  stacked = false,
   value,
   loading,
   children,
 }: {
+  stacked?: boolean
   label: string
   value?: string
   loading?: boolean
   children?: ReactNode
 }) {
+  const className = stacked
+    ? 'flex-flex-col gap-2'
+    : 'flex flex-row justify-between items-center gap-2'
   return (
-    <div className='flex flex-row justify-between items-center gap-2'>
+    <div className={className}>
       <Text.H5M color='foreground'>{label}</Text.H5M>
-      {loading ? (
-        <Skeleton className='w-12 h-4 bg-muted-foreground/10' />
-      ) : (
-        <>
-          {value && (
-            <Text.H5 align='right' color='foregroundMuted'>
-              {value}
-            </Text.H5>
-          )}
-          {children}
-        </>
-      )}
+      <div>
+        {loading ? (
+          <Skeleton className='w-12 h-4 bg-muted-foreground/10' />
+        ) : (
+          <>
+            {value && (
+              <Text.H5 align='right' color='foregroundMuted'>
+                {value}
+              </Text.H5>
+            )}
+            {children}
+          </>
+        )}
+      </div>
     </div>
   )
 }
 
 export function EvaluationResultMetadata({
+  evaluation,
   evaluationResult,
   providerLog,
 }: {
+  evaluation: EvaluationDto
   evaluationResult: EvaluationResultWithMetadata
   providerLog?: ProviderLogDto
 }) {
@@ -112,6 +123,32 @@ export function EvaluationResultMetadata({
           </Text.H5>
         </ClickToCopy>
       </MetadataItem>
+      <MetadataItem label='Result' loading={!evaluation || !evaluationResult}>
+        <ResultCellContent
+          evaluation={evaluation}
+          value={evaluationResult.result}
+        />
+      </MetadataItem>
+      <MetadataItem
+        stacked
+        label='Result reasoning'
+        loading={!providerLog}
+        value={getReasonFromProviderLog(providerLog)}
+      />
     </div>
   )
+}
+
+function getReasonFromProviderLog(providerLog?: ProviderLogDto) {
+  if (!providerLog) return '-'
+
+  try {
+    const response = JSON.parse(providerLog?.response)
+    if (response) {
+      return response.reason || '-'
+    }
+    return '-'
+  } catch (e) {
+    return '-'
+  }
 }

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 
-import { ProviderLogDto } from '@latitude-data/core/browser'
+import { EvaluationDto, ProviderLogDto } from '@latitude-data/core/browser'
 import { EvaluationResultWithMetadata } from '@latitude-data/core/repositories'
 import { TabSelector } from '@latitude-data/web-ui'
 
@@ -10,9 +10,11 @@ import { EvaluationResultMessages } from './Messages'
 import { EvaluationResultMetadata } from './Metadata'
 
 export function EvaluationResultInfo({
+  evaluation,
   evaluationResult,
   providerLog,
 }: {
+  evaluation: EvaluationDto
   evaluationResult: EvaluationResultWithMetadata
   providerLog?: ProviderLogDto
 }) {
@@ -30,6 +32,7 @@ export function EvaluationResultInfo({
       <div className='flex relative w-full h-full max-h-full max-w-full overflow-auto'>
         {selectedTab === 'metadata' && (
           <EvaluationResultMetadata
+            evaluation={evaluation}
             evaluationResult={evaluationResult}
             providerLog={providerLog}
           />

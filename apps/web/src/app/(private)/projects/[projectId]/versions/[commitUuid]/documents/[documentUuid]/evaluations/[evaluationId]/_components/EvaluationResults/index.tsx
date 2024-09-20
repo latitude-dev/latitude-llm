@@ -68,6 +68,7 @@ export function EvaluationResults({
         </div>
         {selectedResult && (
           <EvaluationResultInfo
+            evaluation={evaluation}
             evaluationResult={selectedResult}
             providerLog={providerLog}
           />
