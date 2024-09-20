@@ -1,3 +1,5 @@
+import { useCallback } from 'react'
+
 import { Project } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui'
 import { createProjectAction } from '$/actions/projects/create'
@@ -5,11 +7,11 @@ import { destroyProjectAction } from '$/actions/projects/destroy'
 import { fetchProjectsAction } from '$/actions/projects/fetch'
 import { updateProjectAction } from '$/actions/projects/update'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
-import useSWR, { SWRConfiguration } from 'swr'
+import useSWR from 'swr'
 
-export default function useProjects(opts?: SWRConfiguration) {
+export default function useProjects() {
   const { toast } = useToast()
-  const fetcher = async () => {
+  const fetcher = useCallback(async () => {
     const [data, error] = await fetchProjectsAction()
     if (error) {
       toast({
@@ -21,13 +23,13 @@ export default function useProjects(opts?: SWRConfiguration) {
     if (!data) return []
 
     return data
-  }
+  }, [])
 
   const {
     data = [],
     mutate,
     ...rest
-  } = useSWR<Project[]>('api/projects', fetcher, opts)
+  } = useSWR<Project[]>('api/projects', fetcher)
   const { execute: create } = useLatitudeAction(createProjectAction, {
     onSuccess: ({ data: project }) => {
       toast({

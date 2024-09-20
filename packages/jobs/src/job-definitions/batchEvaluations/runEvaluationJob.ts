@@ -10,7 +10,7 @@ import { Job } from 'bullmq'
 
 import { ProgressTracker } from '../../utils/progressTracker'
 
-type RunEvaluationJobData = {
+export type RunEvaluationJobData = {
   workspaceId: number
   documentUuid: string
   documentLogUuid: string
@@ -35,10 +35,15 @@ export const runEvaluationJob = async (job: Job<RunEvaluationJobData>) => {
       .find(evaluationId)
       .then((r) => r.unwrap())
 
-    await runEvaluation({
+    const { response } = await runEvaluation({
       documentLog,
       evaluation,
+      documentUuid,
     }).then((r) => r.unwrap())
+
+    // Waiting for the reponse is important. It guarantees that the evaluation
+    // has been created before we notify the client via websockets.
+    await response
 
     await progressTracker.incrementCompleted()
   } catch (error) {

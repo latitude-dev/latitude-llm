@@ -25,16 +25,8 @@ export class ProgressTracker {
     await this.redis.incr(this.getKey('errors'))
   }
 
-  async decrementTotal() {
-    await this.redis.decr(this.getKey('total'))
-  }
-
   async incrementEnqueued() {
     await this.redis.incr(this.getKey('enqueued'))
-  }
-
-  async decrementEnqueued() {
-    await this.redis.decr(this.getKey('enqueued'))
   }
 
   async getProgress() {

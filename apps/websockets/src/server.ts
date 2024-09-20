@@ -47,9 +47,7 @@ const io = new Server(server, {
 })
 
 io.on('connection', (socket: Socket) => {
-  console.log(
-    'Main namespace is not enabled. Connect to /web or /workers instead.',
-  )
+  // Main namespace is not enabled. Connect to /web or /workers instead.
   socket.disconnect()
 })
 
@@ -111,14 +109,12 @@ workers.use(async (socket, next) => {
   try {
     const token = socket.handshake.auth?.token
     if (!token) {
-      console.log('DEBUG: No token provided')
       return next(new Error('Authentication error: No token provided'))
     }
 
     const result = await verifyWorkerWebsocketToken(token)
 
     if (result.error) {
-      console.log('DEBUG: JWT verification failed for worker:', result.error)
       return next(new Error(`Authentication error: ${result.error.message}`))
     }
 
@@ -130,21 +126,15 @@ workers.use(async (socket, next) => {
 })
 
 workers.on('connection', (socket) => {
-  console.log('DEBUG: Worker connected')
-
-  socket.on('pingFromWorkers', () => {
-    console.log('DEBUG: Ping from workers')
-  })
-
   socket.on('evaluationStatus', (args) => {
-    console.log('DEBUG: Evaluation STATUS %s', JSON.stringify(args))
     const { workspaceId, data } = args
     const workspace = buildWorkspaceRoom({ workspaceId })
     web.to(workspace).emit('evaluationStatus', data)
   })
-
-  socket.on('disconnect', () => {
-    console.log('Worker disconnected')
+  socket.on('evaluationResultCreated', (args) => {
+    const { workspaceId, data } = args
+    const workspace = buildWorkspaceRoom({ workspaceId })
+    web.to(workspace).emit('evaluationResultCreated', data)
   })
 })
 

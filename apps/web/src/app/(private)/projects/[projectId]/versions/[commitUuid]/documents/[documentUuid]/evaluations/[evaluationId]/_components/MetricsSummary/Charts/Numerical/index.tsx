@@ -1,5 +1,3 @@
-'use client'
-
 import { Evaluation } from '@latitude-data/core/browser'
 
 import { CostOverResultsChart } from './CostOverResults'

@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 
 import { EvaluationDto } from '@latitude-data/core/browser'
 import { type EvaluationResultWithMetadata } from '@latitude-data/core/repositories'
@@ -11,6 +11,10 @@ import {
   useCurrentDocument,
   useCurrentProject,
 } from '@latitude-data/web-ui'
+import {
+  EventArgs,
+  useSockets,
+} from '$/components/Providers/WebsocketsProvider/useSockets'
 import { DocumentRoutes, ROUTES } from '$/services/routes'
 import useEvaluationResultsWithMetadata from '$/stores/evaluationResultsWithMetadata'
 import { useProviderLog } from '$/stores/providerLogs'
@@ -20,14 +24,14 @@ import { EvaluationResultInfo } from './EvaluationResultInfo'
 import { EvaluationResultsTable } from './EvaluationResultsTable'
 import { EvaluationStatusBanner } from './EvaluationStatusBanner'
 
-const FIVE_SECONDS = 5000
-
 export function EvaluationResults({
   evaluation,
   evaluationResults: serverData,
+  jobs,
 }: {
   evaluation: EvaluationDto
   evaluationResults: EvaluationResultWithMetadata[]
+  jobs: EventArgs<'evaluationStatus'>[]
 }) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
@@ -47,20 +51,28 @@ export function EvaluationResults({
       fallbackData: serverData,
     },
   )
+  const onMessage = (args: EventArgs<'evaluationResultCreated'>) => {
+    if (evaluation.id !== args.evaluationId) return
+    if (document.documentUuid !== args.documentUuid) return
 
-  // FIXME: Listen to websockets to update new evaluation results
-  useEffect(() => {
-    const interval = setInterval(() => {
-      mutate()
-    }, FIVE_SECONDS)
+    const createdAt = new Date(args.row.createdAt)
+    mutate(
+      (prevData) => {
+        return [
+          { ...args.row, createdAt, realtimeAdded: true },
+          ...(prevData ?? []),
+        ]
+      },
+      { revalidate: false },
+    )
+  }
 
-    return () => clearInterval(interval)
-  }, [mutate])
+  useSockets({ event: 'evaluationResultCreated', onMessage })
 
   return (
     <div className='flex flex-col gap-4'>
       <Text.H4>Evaluation Results</Text.H4>
-      <EvaluationStatusBanner evaluation={evaluation} />
+      <EvaluationStatusBanner jobs={jobs} />
       <div className='flex flex-row w-full h-full overflow-hidden gap-4'>
         <div className='flex-grow min-w-0 h-full'>
           {evaluationResults.length === 0 && (
