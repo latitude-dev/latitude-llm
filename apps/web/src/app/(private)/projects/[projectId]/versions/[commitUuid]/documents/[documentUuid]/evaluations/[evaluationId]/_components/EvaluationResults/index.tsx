@@ -5,13 +5,16 @@ import { useEffect, useState } from 'react'
 import { EvaluationDto } from '@latitude-data/core/browser'
 import { EvaluationResultWithMetadata } from '@latitude-data/core/repositories'
 import {
+  TableBlankSlate,
   Text,
   useCurrentCommit,
   useCurrentDocument,
   useCurrentProject,
 } from '@latitude-data/web-ui'
+import { DocumentRoutes, ROUTES } from '$/services/routes'
 import useEvaluationResultsWithMetadata from '$/stores/evaluationResultsWithMetadata'
 import { useProviderLog } from '$/stores/providerLogs'
+import Link from 'next/link'
 
 import { EvaluationResultInfo } from './EvaluationResultInfo'
 import { EvaluationResultsTable } from './EvaluationResultsTable'
@@ -59,12 +62,35 @@ export function EvaluationResults({
       <EvaluationStatusBanner evaluation={evaluation} />
       <div className='flex flex-row w-full h-full overflow-hidden gap-4'>
         <div className='flex-grow min-w-0 h-full'>
-          <EvaluationResultsTable
-            evaluation={evaluation}
-            evaluationResults={evaluationResults}
-            selectedResult={selectedResult}
-            setSelectedResult={setSelectedResult}
-          />
+          {evaluationResults.length === 0 && (
+            <TableBlankSlate
+              description='There are no evaluation results yet. Run the evaluation or, if you already have, wait a few seconds for the first results to stream in.'
+              link={
+                <Link
+                  href={
+                    ROUTES.projects
+                      .detail({ id: project.id })
+                      .commits.detail({ uuid: commit.uuid })
+                      .documents.detail({ uuid: document.documentUuid })
+                      [DocumentRoutes.evaluations].detail(evaluation.id)
+                      .createBatch
+                  }
+                >
+                  <TableBlankSlate.Button>
+                    Run the evaluation
+                  </TableBlankSlate.Button>
+                </Link>
+              }
+            />
+          )}
+          {evaluationResults.length > 0 && (
+            <EvaluationResultsTable
+              evaluation={evaluation}
+              evaluationResults={evaluationResults}
+              selectedResult={selectedResult}
+              setSelectedResult={setSelectedResult}
+            />
+          )}
         </div>
         {selectedResult && (
           <EvaluationResultInfo

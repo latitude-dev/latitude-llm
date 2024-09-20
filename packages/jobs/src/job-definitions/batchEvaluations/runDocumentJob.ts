@@ -34,6 +34,7 @@ export const runDocumentJob = async (job: Job<RunDocumentJobData>) => {
     batchId,
   } = job.data
 
+  const jobs = await setupJobs()
   const progressTracker = new ProgressTracker(await queues(), batchId)
 
   try {
@@ -58,10 +59,7 @@ export const runDocumentJob = async (job: Job<RunDocumentJobData>) => {
 
     await result.response
 
-    const queues = await setupJobs()
-
-    // Enqueue the evaluation job
-    await queues.defaultQueue.jobs.enqueueRunEvaluationJob(
+    await jobs.defaultQueue.jobs.enqueueRunEvaluationJob(
       {
         workspaceId,
         documentUuid: document.documentUuid,
