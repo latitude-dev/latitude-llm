@@ -10,8 +10,7 @@ import { getCurrentUser } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
 
 import { Actions } from './_components/Actions'
-import { EvaluationResults } from './_components/EvaluationResults'
-import { MetricsSummary } from './_components/MetricsSummary'
+import ClientContainer from './_components/ClientContainer'
 
 export default async function ConnectedEvaluationLayout({
   params,
@@ -79,14 +78,10 @@ export default async function ConnectedEvaluationLayout({
         }
       />
 
-      <MetricsSummary
+      <ClientContainer
+        evaluationResults={evaluationResults}
         documentUuid={params.documentUuid}
         evaluation={evaluation}
-        evaluationResults={evaluationResults}
-      />
-      <EvaluationResults
-        evaluation={evaluation}
-        evaluationResults={evaluationResults}
       />
     </div>
   )

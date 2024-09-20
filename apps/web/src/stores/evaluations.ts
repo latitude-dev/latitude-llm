@@ -64,6 +64,12 @@ export default function useEvaluations(
     {
       onSuccess: ({ data: newEval }) => {
         const prevEvaluations = data
+
+        toast({
+          title: 'Success',
+          description: `${newEval.name} updated successfully`,
+        })
+
         mutate(
           prevEvaluations.map((prevEval) =>
             prevEval.uuid === newEval.uuid ? newEval : prevEval,

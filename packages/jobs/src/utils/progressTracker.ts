@@ -40,6 +40,7 @@ export class ProgressTracker {
         this.getKey('errors'),
         this.getKey('enqueued'),
       ])
+
     return {
       initialTotal: parseInt(initialTotal || '0', 10),
       total: parseInt(total || '0', 10),

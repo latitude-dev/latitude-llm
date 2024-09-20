@@ -64,7 +64,6 @@ export const runEvaluationJob = async (job: Job<RunEvaluationJobData>) => {
           documentUuid,
           status: finished ? 'finished' : 'running',
           ...progress,
-          completed: progress.completed < 1 ? 1 : progress.completed,
         },
       })
     }

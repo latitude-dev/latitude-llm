@@ -24,12 +24,7 @@ export default async function EvaluationLayout({
       currentUser={session.user}
       breadcrumbs={[
         {
-          name: (
-            <BreadcrumbLink
-              href={ROUTES.dashboard.root}
-              name={session.workspace.name}
-            />
-          ),
+          name: session.workspace.name,
         },
         {
           name: (
