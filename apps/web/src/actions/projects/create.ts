@@ -12,6 +12,7 @@ export const createProjectAction = authProcedure
     const workspace = ctx.workspace
     const user = ctx.user
     const result = await createProject({ name: input.name, workspace, user })
+    const { project } = result.unwrap()
 
-    return result.unwrap()
+    return project
   })

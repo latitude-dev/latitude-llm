@@ -2,7 +2,6 @@ import { faker } from '@faker-js/faker'
 
 import { DocumentVersion, Providers, User, Workspace } from '../../browser'
 import { unsafelyGetUser } from '../../data-access'
-import { CommitsRepository } from '../../repositories'
 import { mergeCommit } from '../../services/commits'
 import { createNewDocument, updateDocument } from '../../services/documents'
 import { createProject as createProjectFn } from '../../services/projects/create'
@@ -68,9 +67,7 @@ export async function createProject(projectData: Partial<ICreateProject> = {}) {
     user,
     mergedAt: new Date(),
   })
-  const project = result.unwrap()
-  const commitsScope = new CommitsRepository(workspace.id)
-  let commit = (await commitsScope.getFirstCommitForProject(project)).unwrap()
+  let { project, commit } = result.unwrap()
 
   const providersToCreate =
     projectData.providers == undefined
