@@ -34,11 +34,10 @@ export const runDocumentJob = async (job: Job<RunDocumentJobData>) => {
     evaluationId,
     batchId,
   } = job.data
-
-  const jobs = await setupJobs()
   const progressTracker = new ProgressTracker(await queues(), batchId)
 
   try {
+    const jobs = await setupJobs()
     const workspace = await unsafelyFindWorkspace(workspaceId)
     if (!workspace) throw new NotFoundError('Workspace not found')
 
@@ -59,7 +58,6 @@ export const runDocumentJob = async (job: Job<RunDocumentJobData>) => {
     }).then((r) => r.unwrap())
 
     await result.response
-
     await jobs.defaultQueue.jobs.enqueueRunEvaluationJob(
       {
         workspaceId,
@@ -76,10 +74,8 @@ export const runDocumentJob = async (job: Job<RunDocumentJobData>) => {
     }
 
     await progressTracker.incrementErrors()
-    await progressTracker.decrementTotal()
 
     const progress = await progressTracker.getProgress()
-    const finished = await progressTracker.isFinished()
     const websockets = await WebsocketClient.getSocket()
 
     websockets.emit('evaluationStatus', {
@@ -88,7 +84,6 @@ export const runDocumentJob = async (job: Job<RunDocumentJobData>) => {
         batchId,
         evaluationId,
         documentUuid,
-        status: finished ? 'finished' : 'running',
         ...progress,
       },
     })

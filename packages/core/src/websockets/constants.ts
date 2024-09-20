@@ -30,8 +30,6 @@ type EvaluationStatusArgs = {
   batchId: string
   evaluationId: number
   documentUuid: string
-  status: 'started' | 'running' | 'finished'
-  initialTotal: number
   total: number
   completed: number
   errors: number

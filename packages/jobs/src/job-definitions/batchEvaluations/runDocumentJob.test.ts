@@ -109,7 +109,6 @@ describe('runDocumentJob', () => {
     )
 
     expect(ProgressTracker.prototype.incrementErrors).not.toHaveBeenCalled()
-    expect(ProgressTracker.prototype.decrementTotal).not.toHaveBeenCalled()
   })
 
   it('should handle errors and update progress tracker', async () => {
@@ -124,7 +123,6 @@ describe('runDocumentJob', () => {
     ).not.toHaveBeenCalled()
 
     expect(ProgressTracker.prototype.incrementErrors).toHaveBeenCalled()
-    expect(ProgressTracker.prototype.decrementTotal).toHaveBeenCalled()
   })
 
   it('should log errors in non-production environment', async () => {
@@ -138,6 +136,5 @@ describe('runDocumentJob', () => {
 
     expect(consoleSpy).toHaveBeenCalledWith(testError)
     expect(ProgressTracker.prototype.incrementErrors).toHaveBeenCalled()
-    expect(ProgressTracker.prototype.decrementTotal).toHaveBeenCalled()
   })
 })

@@ -81,7 +81,9 @@ describe('runBatchEvaluationJob', () => {
     // @ts-ignore
     mockProgressTracker = {
       initializeProgress: vi.fn(),
-      getProgress: vi.fn().mockResolvedValue({ enqueued: 0 }),
+      getProgress: vi
+        .fn()
+        .mockResolvedValue({ total: 3, completed: 0, enqueued: 0 }),
       incrementEnqueued: vi.fn(),
     }
 
@@ -113,10 +115,9 @@ describe('runBatchEvaluationJob', () => {
         batchId: expect.any(String),
         evaluationId: 1,
         documentUuid: 'fake-document-uuid',
-        status: 'started',
         enqueued: 0,
-        completed: 1,
         total: 3,
+        completed: 0,
       },
     })
   })

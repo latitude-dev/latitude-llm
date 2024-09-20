@@ -83,10 +83,7 @@ export const runBatchEvaluationJob = async (
         batchId,
         evaluationId: evaluation.id,
         documentUuid: document.documentUuid,
-        status: 'started',
         ...progress,
-        completed: 1, // Optimistic completion of first job
-        total: parameters.length,
       },
     })
   }
@@ -94,19 +91,17 @@ export const runBatchEvaluationJob = async (
   // Enqueue runDocumentJob for each set of parameters, starting from the last
   // enqueued job. This allows us to resume the batch if the job fails.
   for (let i = progress.enqueued; i < parameters.length; i++) {
-    const isFirstEnqueued = progress.enqueued === 0
+    progressTracker.incrementEnqueued()
+
     await jobs.defaultQueue.jobs.enqueueRunDocumentJob({
       workspaceId: workspace.id,
       documentUuid: document.documentUuid,
       commitUuid: commit.uuid,
       projectId: commit.projectId,
-      parameters: parameters[i]!,
+      parameters: parameters[i],
       evaluationId: evaluation.id,
-      skipProgress: isFirstEnqueued,
       batchId,
     })
-
-    await progressTracker.incrementEnqueued()
   }
 
   return { batchId }
