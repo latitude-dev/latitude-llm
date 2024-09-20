@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 
 import { EvaluationDto } from '@latitude-data/core/browser'
 import { EvaluationResultWithMetadata } from '@latitude-data/core/repositories'
@@ -12,7 +12,6 @@ import {
   useCurrentProject,
 } from '@latitude-data/web-ui'
 import { DocumentRoutes, ROUTES } from '$/services/routes'
-import useEvaluationResultsWithMetadata from '$/stores/evaluationResultsWithMetadata'
 import { useProviderLog } from '$/stores/providerLogs'
 import Link from 'next/link'
 
@@ -20,41 +19,19 @@ import { EvaluationResultInfo } from './EvaluationResultInfo'
 import { EvaluationResultsTable } from './EvaluationResultsTable'
 import { EvaluationStatusBanner } from './EvaluationStatusBanner'
 
-const FIVE_SECONDS = 5000
-
 export function EvaluationResults({
   evaluation,
-  evaluationResults: serverData,
+  evaluationResults,
 }: {
   evaluation: EvaluationDto
   evaluationResults: EvaluationResultWithMetadata[]
 }) {
+  const { project } = useCurrentProject()
+  const { commit } = useCurrentCommit()
+  const document = useCurrentDocument()
   const [selectedResult, setSelectedResult] = useState<
     EvaluationResultWithMetadata | undefined
   >(undefined)
-  const document = useCurrentDocument()
-  const { project } = useCurrentProject()
-  const { commit } = useCurrentCommit()
-  const { data: evaluationResults, mutate } = useEvaluationResultsWithMetadata(
-    {
-      evaluationId: evaluation.id,
-      documentUuid: document.documentUuid,
-      commitUuid: commit.uuid,
-      projectId: project.id,
-    },
-    {
-      fallbackData: serverData,
-    },
-  )
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      mutate()
-    }, FIVE_SECONDS)
-
-    return () => clearInterval(interval)
-  }, [mutate])
-
   const { data: providerLog } = useProviderLog(selectedResult?.providerLogId)
   return (
     <div className='flex flex-col gap-4'>
