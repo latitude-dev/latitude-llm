@@ -42,7 +42,6 @@ export function DatasetsTable({
             <TableHead>Author</TableHead>
             <TableHead>Created at</TableHead>
             <TableHead />
-            <TableHead />
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -66,26 +65,26 @@ export function DatasetsTable({
                 </Text.H4>
               </TableCell>
               <TableCell align='center'>
-                <Tooltip
-                  trigger={
-                    <Button
-                      onClick={() => setPreview(dataset)}
-                      variant='nope'
-                      iconProps={{ name: 'eye', color: 'foregroundMuted' }}
-                    />
-                  }
-                >
-                  <Text.H6B color='white'>
-                    Show file preview (first 100 rows)
-                  </Text.H6B>
-                </Tooltip>
-              </TableCell>
-              <TableCell align='center'>
-                <Button
-                  onClick={() => setDeletable(dataset)}
-                  variant='nope'
-                  iconProps={{ name: 'trash', color: 'destructive' }}
-                />
+                <div className='flex flex-row gap-4'>
+                  <Tooltip
+                    trigger={
+                      <Button
+                        onClick={() => setPreview(dataset)}
+                        variant='nope'
+                        iconProps={{ name: 'eye', color: 'foregroundMuted' }}
+                      />
+                    }
+                  >
+                    <Text.H6B color='white'>
+                      Show file preview (first 100 rows)
+                    </Text.H6B>
+                  </Tooltip>
+                  <Button
+                    onClick={() => setDeletable(dataset)}
+                    variant='nope'
+                    iconProps={{ name: 'trash', color: 'foregroundMuted' }}
+                  />
+                </div>
               </TableCell>
             </TableRow>
           ))}
