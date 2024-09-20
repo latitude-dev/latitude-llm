@@ -5,6 +5,7 @@ import {
 } from '@latitude-data/core/repositories'
 import { runEvaluation } from '@latitude-data/core/services/evaluations/run'
 import { WebsocketClient } from '@latitude-data/core/websockets/workers'
+import { env } from '@latitude-data/env'
 import { Job } from 'bullmq'
 
 import { ProgressTracker } from '../../utils/progressTracker'
@@ -19,20 +20,14 @@ type RunEvaluationJobData = {
 }
 
 export const runEvaluationJob = async (job: Job<RunEvaluationJobData>) => {
+  const { workspaceId, batchId, documentUuid, documentLogUuid, evaluationId } =
+    job.data
   const websockets = await WebsocketClient.getSocket()
-  const {
-    skipProgress,
-    workspaceId,
-    batchId,
-    documentUuid,
-    documentLogUuid,
-    evaluationId,
-  } = job.data
-
   const progressTracker = new ProgressTracker(await queues(), batchId)
-  const documentLogsScope = new DocumentLogsRepository(workspaceId)
-  const evaluationsScope = new EvaluationsRepository(workspaceId)
+
   try {
+    const documentLogsScope = new DocumentLogsRepository(workspaceId)
+    const evaluationsScope = new EvaluationsRepository(workspaceId)
     const documentLog = await documentLogsScope
       .findByUuid(documentLogUuid)
       .then((r) => r.unwrap())
@@ -47,25 +42,22 @@ export const runEvaluationJob = async (job: Job<RunEvaluationJobData>) => {
 
     await progressTracker.incrementCompleted()
   } catch (error) {
+    if (env.NODE_ENV !== 'production') {
+      console.error(error)
+    }
+
     await progressTracker.incrementErrors()
   } finally {
-    await progressTracker.decrementTotal()
     const progress = await progressTracker.getProgress()
-    const finished = await progressTracker.isFinished()
 
-    console.log('DEBUG: Emitting evaluationStatus before check')
-    if (!skipProgress) {
-      console.log('DEBUG: Emitting evaluationStatus', workspaceId)
-      websockets.emit('evaluationStatus', {
-        workspaceId,
-        data: {
-          batchId,
-          evaluationId,
-          documentUuid,
-          status: finished ? 'finished' : 'running',
-          ...progress,
-        },
-      })
-    }
+    websockets.emit('evaluationStatus', {
+      workspaceId,
+      data: {
+        batchId,
+        evaluationId,
+        documentUuid,
+        ...progress,
+      },
+    })
   }
 }
