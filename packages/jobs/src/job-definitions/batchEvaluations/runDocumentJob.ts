@@ -7,6 +7,7 @@ import {
   DocumentVersionsRepository,
 } from '@latitude-data/core/repositories'
 import { runDocumentAtCommit } from '@latitude-data/core/services/commits/runDocumentAtCommit'
+import { WebsocketClient } from '@latitude-data/core/websockets/workers'
 import { env } from '@latitude-data/env'
 import { Job } from 'bullmq'
 
@@ -76,5 +77,20 @@ export const runDocumentJob = async (job: Job<RunDocumentJobData>) => {
 
     await progressTracker.incrementErrors()
     await progressTracker.decrementTotal()
+
+    const progress = await progressTracker.getProgress()
+    const finished = await progressTracker.isFinished()
+    const websockets = await WebsocketClient.getSocket()
+
+    websockets.emit('evaluationStatus', {
+      workspaceId,
+      data: {
+        batchId,
+        evaluationId,
+        documentUuid,
+        status: finished ? 'finished' : 'running',
+        ...progress,
+      },
+    })
   }
 }
