@@ -70,12 +70,7 @@ export default async function CommitLayout({
           currentUser={session.user}
           breadcrumbs={[
             {
-              name: (
-                <BreadcrumbLink
-                  name={session.workspace.name}
-                  href={ROUTES.root}
-                />
-              ),
+              name: session.workspace.name,
             },
             {
               name: (
