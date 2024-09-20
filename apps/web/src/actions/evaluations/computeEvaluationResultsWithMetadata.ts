@@ -35,5 +35,6 @@ export const computeEvaluationResultsWithMetadataAction = withProject
       evaluation,
       documentUuid,
       draft: commit,
+      limit: 1000,
     }).then((r) => r.unwrap())
   })

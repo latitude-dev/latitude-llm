@@ -146,17 +146,16 @@ export function ScatterChart({ config }: { config: ScatterChartConfig }) {
           }
         />
         <ZAxis type='number' dataKey='size' range={[0, 100]} domain={[1, 10]} />
-        {dataGroups.map((group) => {
-          return (
-            <Scatter
-              dataKey='y'
-              fill={group.color}
-              data={group.data}
-              scale={group.size}
-              fontSize={group.size}
-            />
-          )
-        })}
+        {dataGroups.map((group, idx) => (
+          <Scatter
+            key={idx}
+            dataKey='y'
+            fill={group.color}
+            data={group.data}
+            scale={group.size}
+            fontSize={group.size}
+          />
+        ))}
         <ChartTooltip
           content={
             <ChartTooltipContent

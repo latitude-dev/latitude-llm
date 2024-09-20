@@ -13,7 +13,7 @@ export default function BreadcrumbLink({
   return (
     <Link href={href} className='flex flex-row items-center gap-2'>
       {showBackIcon && <Icon name='chevronLeft' color='foregroundMuted' />}
-      <Text.H5 color='foregroundMuted'>{name}</Text.H5>
+      <Text.H4M color='foregroundMuted'>{name}</Text.H4M>
     </Link>
   )
 }
