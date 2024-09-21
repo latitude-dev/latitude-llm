@@ -8,7 +8,7 @@ export function buildRedisConnection({
   return new Promise<Redis>((resolve) => {
     const instance = new Redis(port, host, opts)
 
-    instance.on('connect', () => {
+    instance.connect(() => {
       resolve(instance)
     })
   })
