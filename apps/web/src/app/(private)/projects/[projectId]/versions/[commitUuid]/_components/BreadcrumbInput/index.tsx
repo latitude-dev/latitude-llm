@@ -25,14 +25,14 @@ export default function BreadcrumbInput({
   )
 
   if (!project) {
-    return <Text.H5M color='foregroundMuted'>{projectName}</Text.H5M>
+    return <Text.H5 color='foregroundMuted'>{projectName}</Text.H5>
   }
 
   return (
     <EditableText
       value={project.name}
       handleChange={handleChange}
-      fallback={(value) => <Text.H5M color='foregroundMuted'>{value}</Text.H5M>}
+      fallback={(value) => <Text.H5 color='foregroundMuted'>{value}</Text.H5>}
     />
   )
 }
