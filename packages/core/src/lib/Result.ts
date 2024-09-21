@@ -55,9 +55,9 @@ export class Result {
     return result.ok
   }
 
-  public static findError<V, E extends Error>(
-    results: TypedResult<V, E>[],
-  ): TypedResult<V, E> | undefined {
-    return results.find((r) => !r.ok)
+  public static findError<E extends Error>(
+    results: TypedResult<any, E>[],
+  ): ErrorResult<E> | undefined {
+    return results.find((r) => !r.ok) as ErrorResult<E> | undefined
   }
 }

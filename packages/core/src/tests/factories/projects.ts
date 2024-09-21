@@ -5,6 +5,7 @@ import { unsafelyGetUser } from '../../data-access'
 import { mergeCommit } from '../../services/commits'
 import { createNewDocument, updateDocument } from '../../services/documents'
 import { createProject as createProjectFn } from '../../services/projects/create'
+import { createApiKey } from './apiKeys'
 import { createDraft } from './commits'
 import { createLlmAsJudgeEvaluation, IEvaluationData } from './evaluations'
 import { createProviderApiKey } from './providerApiKeys'
@@ -43,8 +44,10 @@ export type ICreateProject = {
   providers?: { type: Providers; name: string }[]
   evaluations?: Omit<IEvaluationData, 'workspace'>[]
   documents?: IDocumentStructure
+  skipMerge?: boolean
 }
 export async function createProject(projectData: Partial<ICreateProject> = {}) {
+  const skipMerge = projectData.skipMerge ?? false
   let workspaceData = projectData.workspace ?? {}
   let user: User
   let workspace: Workspace
@@ -56,6 +59,8 @@ export async function createProject(projectData: Partial<ICreateProject> = {}) {
     const newWorkspace = await createWorkspace(workspaceData)
     workspace = newWorkspace.workspace
     user = newWorkspace.userData
+
+    await createApiKey({ workspace })
   }
 
   const randomName = faker.commerce.department()
@@ -108,7 +113,10 @@ export async function createProject(projectData: Partial<ICreateProject> = {}) {
       })
       documents.push(updatedDoc.unwrap())
     }
-    commit = await mergeCommit(draft).then((r) => r.unwrap())
+
+    commit = skipMerge
+      ? commit
+      : await mergeCommit(draft).then((r) => r.unwrap())
   }
 
   return {

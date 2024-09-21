@@ -1,6 +1,7 @@
 import { faker } from '@faker-js/faker'
 
 import { type User } from '../../browser'
+import { createMembership } from '../../services/memberships/create'
 import { createWorkspace as createWorkspaceFn } from '../../services/workspaces/create'
 import { createUser, type ICreateUser } from './users'
 
@@ -23,6 +24,7 @@ export async function createWorkspace(
     user: userData,
   })
   const workspace = result.unwrap()
+  await createMembership({ workspace, user: userData }).then((r) => r.unwrap())
 
   return { workspace, userData }
 }

@@ -1,11 +1,14 @@
 import {
   ChainCallResponse,
+  Commit,
   LogSources,
   MagicLinkToken,
   Membership,
   Message,
+  Project,
   ProviderLog,
   User,
+  Workspace,
 } from '../../browser'
 import { PartialConfig } from '../../services/ai'
 import { createEvaluationResultJob } from './createEvaluationResultJob'
@@ -91,6 +94,22 @@ export type AIProviderCallCompletedEvent = LatitudeEventGeneric<
   }
 >
 
+export type WorkspaceCreatedEvent = LatitudeEventGeneric<
+  'workspaceCreated',
+  {
+    workspace: Workspace
+    user: User
+  }
+>
+
+export type ProjectCreated = LatitudeEventGeneric<
+  'projectCreated',
+  {
+    project: Project
+    commit: Commit
+  }
+>
+
 export type LatitudeEvent =
   | MembershipCreatedEvent
   | UserCreatedEvent
@@ -99,6 +118,8 @@ export type LatitudeEvent =
   | DocumentRunEvent
   | ProviderLogCreatedEvent
   | AIProviderCallCompletedEvent
+  | WorkspaceCreatedEvent
+  | ProjectCreated
 
 export interface IEventsHandlers {
   magicLinkTokenCreated: EventHandler<MagicLinkTokenCreated>[]
@@ -108,6 +129,8 @@ export interface IEventsHandlers {
   documentRun: EventHandler<DocumentRunEvent>[]
   providerLogCreated: EventHandler<ProviderLogCreatedEvent>[]
   aiProviderCallCompleted: EventHandler<AIProviderCallCompletedEvent>[]
+  workspaceCreated: EventHandler<WorkspaceCreatedEvent>[]
+  projectCreated: EventHandler<ProjectCreated>[]
 }
 
 export const EventHandlers: IEventsHandlers = {
@@ -118,4 +141,6 @@ export const EventHandlers: IEventsHandlers = {
   documentRun: [createDocumentLogJob],
   providerLogCreated: [],
   aiProviderCallCompleted: [],
+  workspaceCreated: [],
+  projectCreated: [],
 } as const

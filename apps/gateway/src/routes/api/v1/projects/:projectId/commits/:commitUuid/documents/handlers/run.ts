@@ -25,16 +25,13 @@ export const runHandler = factory.createHandlers(
       async (stream) => {
         const { projectId, commitUuid } = c.req.param()
         const { documentPath, parameters, source } = c.req.valid('json')
-
         const workspace = c.get('workspace')
-
         const { document, commit } = await getData({
           workspace,
           projectId: Number(projectId!),
           commitUuid: commitUuid!,
           documentPath: documentPath!,
         })
-
         const result = await runDocumentAtCommit({
           workspace,
           document,
