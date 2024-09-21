@@ -41,7 +41,7 @@ export async function flattenDocumentStructure({
 
 export type ICreateProject = {
   name?: string
-  deletedAt?: Date
+  deletedAt?: Date | null
   workspace?: Workspace | ICreateWorkspace
   providers?: { type: Providers; name: string }[]
   evaluations?: Omit<IEvaluationData, 'workspace'>[]
