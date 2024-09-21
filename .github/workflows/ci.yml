@@ -19,6 +19,8 @@ jobs:
   deploy-gateway:
     needs: [lint, test]
     uses: ./.github/workflows/deploy-common.yml
+    concurrency:
+      group: production
     with:
       working-directory: apps/infra
       stack-name: gateway-production
@@ -31,6 +33,8 @@ jobs:
   deploy-web:
     needs: [lint, test]
     uses: ./.github/workflows/deploy-common.yml
+    concurrency:
+      group: production
     with:
       working-directory: apps/infra
       stack-name: web-production
@@ -43,6 +47,8 @@ jobs:
   deploy-websockets:
     needs: [lint, test]
     uses: ./.github/workflows/deploy-common.yml
+    concurrency:
+      group: production
     with:
       working-directory: apps/infra
       stack-name: websockets-production
@@ -55,6 +61,8 @@ jobs:
   deploy-workers:
     needs: [lint, test]
     uses: ./.github/workflows/deploy-common.yml
+    concurrency:
+      group: production
     with:
       working-directory: apps/infra
       stack-name: workers-production
