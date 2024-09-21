@@ -30,7 +30,7 @@ export default async function DashboardLayout({
   const projects = await getActiveProjectsCached({ workspaceId: workspace.id })
   const breadcrumbs = [
     {
-      name: <Text.H5M>{workspace.name}</Text.H5M>,
+      name: workspace.name,
     },
     {
       name: <Text.H5M>Projects</Text.H5M>,
