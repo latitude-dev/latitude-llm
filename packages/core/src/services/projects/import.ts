@@ -28,6 +28,7 @@ export async function importDefaultProject(
 
   const defaultProjectDocumentsScope = new DocumentVersionsRepository(
     defaultProject!.workspaceId,
+    db,
   )
 
   const defaultDocuments =
@@ -47,18 +48,21 @@ export async function importDefaultProject(
       tx,
     ).then((r) => r.unwrap())
 
-    await Promise.all(
-      defaultDocuments.value.map(async (document) => {
-        await createNewDocument(
+    const results = await Promise.all(
+      defaultDocuments.value.map(async (document) =>
+        createNewDocument(
           {
             commit,
             path: document.path,
             content: document.content,
           },
           tx,
-        ).then((r) => r.unwrap())
-      }),
+        ),
+      ),
     )
+
+    const result = Result.findError(results)
+    if (result) return result
 
     return Result.ok(project)
   }, db)
