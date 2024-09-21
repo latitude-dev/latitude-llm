@@ -31,6 +31,7 @@ let merged: Commit
 let document: DocumentVersion
 let project: Project
 let userData: User
+
 describe('destroyDocumentAction', async () => {
   beforeEach(async () => {
     const {
@@ -44,6 +45,7 @@ describe('destroyDocumentAction', async () => {
         doc1: helpers.createPrompt({ provider: 'openai', content: 'Doc 1' }),
       },
     })
+
     const { commit } = await createDraft({ project: prj, user })
     merged = cmt
     userData = user

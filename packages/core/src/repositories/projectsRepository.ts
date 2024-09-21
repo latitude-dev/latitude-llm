@@ -6,6 +6,7 @@ import {
   isNotNull,
   isNull,
   max,
+  sql,
 } from 'drizzle-orm'
 
 import { Project } from '../browser'
@@ -96,7 +97,10 @@ export class ProjectsRepository extends Repository<typeof tt, Project> {
       .with(aggredatedData)
       .select({
         ...this.scope._.selectedFields,
-        documentCount: aggredatedData.documentCount,
+        documentCount:
+          sql<number>`CAST(CASE WHEN ${aggredatedData.documentCount} IS NULL THEN 0 ELSE ${aggredatedData.documentCount} END AS INTEGER)`.as(
+            'documentCount',
+          ),
         lastCreatedAtDocument: aggredatedData.lastCreatedAtDocument,
       })
       .from(this.scope)
