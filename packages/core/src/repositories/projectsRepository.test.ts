@@ -86,5 +86,25 @@ describe('ProjectsRepository', async () => {
 
       expect(projects).toHaveLength(1)
     })
+
+    it('should not include deleted projects', async () => {
+      const { project: deletedProject } = await createProject({
+        workspace,
+        deletedAt: new Date(),
+      })
+
+      const { project: activeProject } = await createProject({
+        workspace,
+      })
+
+      const result = await repository.findAllActiveDocumentsWithAgreggatedData()
+
+      expect(result.ok).toBe(true)
+      const projects = result.unwrap()
+
+      expect(projects).toHaveLength(1)
+      expect(projects[0]?.id).toBe(activeProject.id)
+      expect(projects.find((p) => p.id === deletedProject.id)).toBeUndefined()
+    })
   })
 })

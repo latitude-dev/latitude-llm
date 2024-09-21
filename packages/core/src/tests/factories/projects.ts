@@ -4,6 +4,7 @@ import { DocumentVersion, Providers, User, Workspace } from '../../browser'
 import { unsafelyGetUser } from '../../data-access'
 import { mergeCommit } from '../../services/commits'
 import { createNewDocument, updateDocument } from '../../services/documents'
+import { destroyProject, updateProject } from '../../services/projects'
 import { createProject as createProjectFn } from '../../services/projects/create'
 import { createApiKey } from './apiKeys'
 import { createDraft } from './commits'
@@ -40,6 +41,7 @@ export async function flattenDocumentStructure({
 
 export type ICreateProject = {
   name?: string
+  deletedAt?: Date
   workspace?: Workspace | ICreateWorkspace
   providers?: { type: Providers; name: string }[]
   evaluations?: Omit<IEvaluationData, 'workspace'>[]
@@ -73,6 +75,11 @@ export async function createProject(projectData: Partial<ICreateProject> = {}) {
     mergedAt: new Date(),
   })
   let { project, commit } = result.unwrap()
+
+  if (projectData.deletedAt)
+    await updateProject(project, { deletedAt: projectData.deletedAt }).then(
+      (r) => r.unwrap(),
+    )
 
   const providersToCreate =
     projectData.providers == undefined

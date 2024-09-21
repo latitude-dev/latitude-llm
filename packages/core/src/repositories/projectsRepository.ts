@@ -105,6 +105,7 @@ export class ProjectsRepository extends Repository<typeof tt, Project> {
       })
       .from(this.scope)
       .leftJoin(aggredatedData, eq(aggredatedData.id, this.scope.id))
+      .where(isNull(this.scope.deletedAt))
 
     return Result.ok(result)
   }
