@@ -1,12 +1,15 @@
 name: Tests
 
 on:
-  push:
-    branches:
-      - main
   pull_request:
     branches:
       - main
+  workflow_call:
+    inputs:
+      workflow_call:
+        type: boolean
+        required: false
+        default: false
 
 jobs:
   test:
