@@ -20,7 +20,8 @@ jobs:
     needs: [lint, test]
     uses: ./.github/workflows/deploy-common.yml
     concurrency:
-      group: production
+      group: production-gateway
+      cancel-in-progress: false
     with:
       working-directory: apps/infra
       stack-name: gateway-production
@@ -34,7 +35,8 @@ jobs:
     needs: [lint, test]
     uses: ./.github/workflows/deploy-common.yml
     concurrency:
-      group: production
+      group: production-web
+      cancel-in-progress: false
     with:
       working-directory: apps/infra
       stack-name: web-production
@@ -48,7 +50,8 @@ jobs:
     needs: [lint, test]
     uses: ./.github/workflows/deploy-common.yml
     concurrency:
-      group: production
+      group: production-websockets
+      cancel-in-progress: false
     with:
       working-directory: apps/infra
       stack-name: websockets-production
@@ -62,7 +65,8 @@ jobs:
     needs: [lint, test]
     uses: ./.github/workflows/deploy-common.yml
     concurrency:
-      group: production
+      group: production-workers
+      cancel-in-progress: false
     with:
       working-directory: apps/infra
       stack-name: workers-production
