@@ -25,6 +25,7 @@ import {
   SelectTrigger,
   SelectValueWithIcon,
   Text,
+  useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui'
 import { useNavigate } from '$/hooks/useNavigate'
@@ -118,6 +119,7 @@ function CommitItem({
   onCommitDelete: ReactStateDispatch<number | null>
 }) {
   const { project } = useCurrentProject()
+  const { commit: currentCommit } = useCurrentCommit()
   const router = useNavigate()
   const selectedSegment = useSelectedLayoutSegment()
   if (!commit) return null
@@ -156,9 +158,11 @@ function CommitItem({
         </Text.H6>
       </div>
       <div className='flex gap-x-4'>
-        <Button variant='link' size='none' onClick={navigateToCommit}>
-          View
-        </Button>
+        {currentCommit.uuid !== commit.uuid && (
+          <Button variant='link' size='none' onClick={navigateToCommit}>
+            View
+          </Button>
+        )}
         {isDraft ? (
           <>
             <Button
