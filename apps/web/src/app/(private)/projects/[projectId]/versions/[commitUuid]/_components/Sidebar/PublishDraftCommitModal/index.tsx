@@ -241,6 +241,12 @@ export default function PublishDraftCommitModal({
   const { data, publishDraft, isPublishing } = useCommits({
     onSuccessPublish: () => {
       router.push(ROUTES.projects.detail({ id: project.id }).commits.latest)
+
+      toast({
+        title: 'Success',
+        description: 'Project published successfully.',
+      })
+
       onClose(null)
     },
   })
