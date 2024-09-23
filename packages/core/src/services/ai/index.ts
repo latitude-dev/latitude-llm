@@ -24,7 +24,7 @@ import { publisher } from '../../events/publisher'
 import { createProviderLog } from '../providerLogs/create'
 import { createProvider, PartialConfig } from './helpers'
 
-const DEFAULT_PROVIDER_MAX_RUNS = 100
+const MAX_FREE_RUNS = 100
 
 export type FinishCallbackEvent = {
   finishReason: FinishReason
@@ -131,15 +131,17 @@ const checkDefaultProviderUsage = async ({
   provider: ProviderApiKey
   workspace: Workspace
 }) => {
-  if (provider.token === env.DEFAULT_PROVIDER_API_KEY) {
-    const c = await cache()
-    const value = await c.incr(
-      `workspace:${workspace.id}:defaultProviderRunCount`,
-    )
+  if (provider.token !== env.DEFAULT_PROVIDER_API_KEY) return
 
-    if (value > DEFAULT_PROVIDER_MAX_RUNS) {
-      throw new Error('You have exceeded your maximum number of free runs')
-    }
+  const c = await cache()
+  const date = new Date()
+  const key = `workspace:${workspace.id}:${date.toISOString().slice(0, 10)}:defaultProviderRunCount`
+  const value = await c.incr(key)
+
+  if (value > MAX_FREE_RUNS) {
+    throw new Error(
+      'You have exceeded your maximum number of free runs for today',
+    )
   }
 }
 
