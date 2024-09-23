@@ -1,9 +1,9 @@
+import { TableBlankSlate, TableWithHeader } from '@latitude-data/web-ui'
 import {
   findCommitCached,
   getDocumentLogsWithMetadataCached,
 } from '$/app/(private)/_data-access'
 
-import { Header } from '../_components/DocumentEditor/Editor/Header'
 import { DocumentLogs } from './_components/DocumentLogs'
 
 export default async function DocumentPage({
@@ -21,8 +21,17 @@ export default async function DocumentPage({
 
   return (
     <div className='flex flex-col w-full h-full overflow-hidden p-6 gap-2 min-w-0'>
-      <Header title='Logs' />
-      <DocumentLogs documentLogs={logs} />
+      <TableWithHeader
+        title='Logs'
+        table={
+          <>
+            {!logs.length && (
+              <TableBlankSlate description='There are no logs for this prompt yet. Logs will appear here when you run the prompt for the first time.' />
+            )}
+            {logs.length > 0 && <DocumentLogs documentLogs={logs} />}
+          </>
+        }
+      />
     </div>
   )
 }
