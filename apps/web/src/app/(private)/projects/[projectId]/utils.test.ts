@@ -2,13 +2,23 @@ import { Commit, HEAD_COMMIT } from '@latitude-data/core/browser'
 import { NotFoundError } from '@latitude-data/core/lib/errors'
 import { describe, expect, it } from 'vitest'
 
-import { getCommitUrl } from './utils'
+import { getRedirectUrl } from './utils'
 
 describe('getCommitUrl', () => {
   const mockProjectRoute = {
     commits: {
-      latest: '/latest',
-      detail: ({ uuid }: { uuid: string }) => ({ root: `/commits/${uuid}` }),
+      detail: ({ uuid }: { uuid: string }) => {
+        return {
+          documents: {
+            root: `/commits/${uuid}/documents`,
+            detail: ({ uuid: documentUuid }: { uuid: string }) => {
+              return {
+                root: `/commits/${uuid}/documents/${documentUuid}`,
+              }
+            },
+          },
+        }
+      },
     },
   }
 
@@ -22,65 +32,76 @@ describe('getCommitUrl', () => {
   ]
 
   it('returns latest commit URL when lastSeenCommitUuid is HEAD_COMMIT', () => {
-    const result = getCommitUrl({
+    const result = getRedirectUrl({
       commits: mockCommits,
       projectId: 1,
       lastSeenCommitUuid: HEAD_COMMIT,
       PROJECT_ROUTE: () => mockProjectRoute,
     })
-    expect(result).toBe('/latest')
+    expect(result).toBe('/commits/live/documents')
   })
 
   it('returns latest commit URL when lastSeenCommitUuid is not found and there is a head commit', () => {
-    const result = getCommitUrl({
+    const result = getRedirectUrl({
       commits: mockCommits,
       projectId: 1,
       lastSeenCommitUuid: 'non-existent',
       PROJECT_ROUTE: () => mockProjectRoute,
     })
-    expect(result).toBe('/latest')
+    expect(result).toBe('/commits/live/documents')
   })
 
   it('returns specific commit URL when lastSeenCommitUuid is found', () => {
-    const result = getCommitUrl({
+    const result = getRedirectUrl({
       commits: mockCommits,
       projectId: 1,
       lastSeenCommitUuid: '2',
       PROJECT_ROUTE: () => mockProjectRoute,
     })
-    expect(result).toBe('/commits/2')
+    expect(result).toBe('/commits/2/documents')
   })
 
   it('returns latest commit URL when there is a head commit and no lastSeenCommitUuid', () => {
-    const result = getCommitUrl({
+    const result = getRedirectUrl({
       commits: mockCommits,
       projectId: 1,
       lastSeenCommitUuid: undefined,
       PROJECT_ROUTE: () => mockProjectRoute,
     })
-    expect(result).toBe('/latest')
+    expect(result).toBe('/commits/live/documents')
   })
 
   it('returns first commit URL when there is no head commit and no lastSeenCommitUuid', () => {
     const noHeadCommits = [{ uuid: '1', mergedAt: null }]
-    const result = getCommitUrl({
+    const result = getRedirectUrl({
       // @ts-expect-error
       commits: noHeadCommits,
       projectId: 1,
       lastSeenCommitUuid: undefined,
       PROJECT_ROUTE: () => mockProjectRoute,
     })
-    expect(result).toBe('/commits/1')
+    expect(result).toBe('/commits/1/documents')
   })
 
   it('throws NotFoundError when there are no commits', () => {
     expect(() =>
-      getCommitUrl({
+      getRedirectUrl({
         commits: [],
         projectId: 1,
         lastSeenCommitUuid: undefined,
         PROJECT_ROUTE: () => mockProjectRoute,
       }),
     ).toThrow(NotFoundError)
+  })
+
+  it('redirects to document url if lastSeenDocumentUuid is provided', () => {
+    const result = getRedirectUrl({
+      commits: mockCommits,
+      projectId: 1,
+      lastSeenCommitUuid: '2',
+      lastSeenDocumentUuid: 'fake-document-uuid',
+      PROJECT_ROUTE: () => mockProjectRoute,
+    })
+    expect(result).toBe('/commits/2/documents/fake-document-uuid')
   })
 })

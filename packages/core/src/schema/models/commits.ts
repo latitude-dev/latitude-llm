@@ -5,7 +5,7 @@ import {
   index,
   text,
   timestamp,
-  unique,
+  uniqueIndex,
   uuid,
   varchar,
 } from 'drizzle-orm/pg-core'
@@ -40,9 +40,12 @@ export const commits = latitudeSchema.table(
       table.mergedAt,
       table.projectId,
     ),
-    uniqueCommitVersion: unique('unique_commit_version').on(
+    uniqueCommitVersion: uniqueIndex('unique_commit_version').on(
       table.version,
       table.projectId,
     ),
+    userIdx: index('user_idx').on(table.userId),
+    mergedAtIdx: index('merged_at_idx').on(table.mergedAt),
+    projectIdIdx: index('project_id_idx').on(table.projectId),
   }),
 )

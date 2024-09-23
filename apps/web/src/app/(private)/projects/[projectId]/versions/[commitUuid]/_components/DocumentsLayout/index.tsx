@@ -13,6 +13,7 @@ import {
 } from '$/app/(private)/_data-access'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
 
+import { LastSeenCommitCookie } from '../LastSeenCommitCookie'
 import Sidebar from '../Sidebar'
 
 export default async function DocumentsLayout({
@@ -48,6 +49,11 @@ export default async function DocumentsLayout({
         <Sidebar project={project} commit={commit} currentDocument={document} />
       }
     >
+      <LastSeenCommitCookie
+        projectId={project.id}
+        commitUuid={commitUuid}
+        documentUuid={document?.documentUuid}
+      />
       {children}
     </DocumentDetailWrapper>
   )

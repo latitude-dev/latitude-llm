@@ -10,7 +10,7 @@ import { ROUTES } from '$/services/routes'
 import { cookies } from 'next/headers'
 import { notFound, redirect } from 'next/navigation'
 
-import { getCommitUrl } from './utils'
+import { getRedirectUrl } from './utils'
 
 const PROJECT_ROUTE = ROUTES.projects.detail
 
@@ -19,10 +19,8 @@ export type ProjectPageParams = {
 }
 
 export default async function ProjectPage({ params }: ProjectPageParams) {
-  const cookieStore = cookies()
-  const lastSeenCommitUuid = cookieStore.get(
-    lastSeenCommitCookieName(Number(params.projectId)),
-  )
+  const { commitUuid: lastSeenCommitUuid, documentUuid: lastSeenDocumentUuid } =
+    getLastSeenDataFromCookie(params.projectId)
 
   let session: SessionData
   let project: Project
@@ -34,15 +32,15 @@ export default async function ProjectPage({ params }: ProjectPageParams) {
       projectId: Number(params.projectId),
       workspaceId: session.workspace.id,
     })
-
     const commits = await findCommitsByProjectCached({
       projectId: project.id,
     })
 
-    url = getCommitUrl({
+    url = getRedirectUrl({
       commits,
       projectId: project.id,
-      lastSeenCommitUuid: lastSeenCommitUuid?.value,
+      lastSeenCommitUuid,
+      lastSeenDocumentUuid,
       PROJECT_ROUTE,
     })
   } catch (error) {
@@ -54,4 +52,17 @@ export default async function ProjectPage({ params }: ProjectPageParams) {
   }
 
   return redirect(url)
+}
+
+function getLastSeenDataFromCookie(projectId: string) {
+  const cookieStore = cookies()
+  const data = cookieStore.get(lastSeenCommitCookieName(Number(projectId)))
+  if (!data?.value) return {}
+
+  try {
+    const { commitUuid, documentUuid } = JSON.parse(data.value)
+    return { commitUuid, documentUuid }
+  } catch (_) {
+    return { commitUuid: data.value as string }
+  }
 }

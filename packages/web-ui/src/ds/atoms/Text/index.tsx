@@ -46,6 +46,7 @@ export type Common = {
   weight?: FontWeight
   asChild?: boolean
   monospace?: boolean
+  centered?: boolean
 }
 
 export type TextProps = {
@@ -82,6 +83,7 @@ const TextAtom = forwardRef<HTMLElement, AllTextProps>(function Text(
     lineThrough = false,
     asChild = false,
     monospace = false,
+    centered = false,
   },
   ref,
 ) {
@@ -117,6 +119,7 @@ const TextAtom = forwardRef<HTMLElement, AllTextProps>(function Text(
           'line-through': lineThrough,
           [font.family.mono]: monospace,
           [font.family.sans]: !monospace,
+          'text-center': centered,
         },
       )}
     >
