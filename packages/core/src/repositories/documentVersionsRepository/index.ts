@@ -221,7 +221,7 @@ export class DocumentVersionsRepository extends Repository<
       return and(mergedAtNotNull, lte(this.scope.mergedAt, maxMergedAt))
     }
 
-    const filterByproject = () =>
+    const filterByProject = () =>
       projectId ? eq(this.scope.projectId, projectId) : undefined
 
     const lastVersionOfEachDocument = this.db
@@ -233,7 +233,7 @@ export class DocumentVersionsRepository extends Repository<
             mergedAt: max(this.scope.mergedAt).as('maxMergedAt'),
           })
           .from(this.scope)
-          .where(and(filterByMaxMergedAt(), filterByproject()))
+          .where(and(filterByMaxMergedAt(), filterByProject()))
           .groupBy(this.scope.documentUuid),
       )
 
@@ -241,8 +241,6 @@ export class DocumentVersionsRepository extends Repository<
       .with(lastVersionOfEachDocument)
       .select(this.scope._.selectedFields)
       .from(this.scope)
-      .innerJoin(documentVersions, eq(this.scope.id, documentVersions.id))
-      .innerJoin(projects, eq(this.scope.projectId, projects.id))
       .innerJoin(
         lastVersionOfEachDocument,
         and(

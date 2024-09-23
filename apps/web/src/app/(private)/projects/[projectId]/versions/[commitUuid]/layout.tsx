@@ -23,7 +23,6 @@ import { ROUTES } from '$/services/routes'
 import { notFound } from 'next/navigation'
 
 import BreadcrumbInput from './_components/BreadcrumbInput'
-import { LastSeenCommitCookie } from './_components/LastSeenCommitCookie'
 
 export type CommitPageParams = {
   children: ReactNode
@@ -61,10 +60,6 @@ export default async function CommitLayout({
   return (
     <ProjectProvider project={project}>
       <CommitProvider commit={commit} isHead={isHead}>
-        <LastSeenCommitCookie
-          projectId={project.id}
-          commitUuid={params.commitUuid}
-        />
         <AppLayout
           navigationLinks={NAV_LINKS}
           currentUser={session.user}

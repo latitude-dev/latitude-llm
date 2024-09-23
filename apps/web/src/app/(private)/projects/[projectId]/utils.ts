@@ -5,15 +5,37 @@ type GetCommitUrlParams = {
   commits: Commit[]
   projectId: number
   lastSeenCommitUuid: string | undefined
+  lastSeenDocumentUuid?: string | undefined
   PROJECT_ROUTE: any // Replace 'any' with the actual type of PROJECT_ROUTE
 }
 
-export function getCommitUrl({
+export function getRedirectUrl({
+  commits,
+  projectId,
+  lastSeenCommitUuid,
+  lastSeenDocumentUuid,
+  PROJECT_ROUTE,
+}: GetCommitUrlParams): string {
+  const url = getCommitUrl({
+    commits,
+    projectId,
+    lastSeenCommitUuid,
+    PROJECT_ROUTE,
+  })
+
+  if (!lastSeenDocumentUuid) {
+    return url.root
+  } else {
+    return url.detail({ uuid: lastSeenDocumentUuid }).root
+  }
+}
+
+function getCommitUrl({
   commits,
   projectId,
   lastSeenCommitUuid,
   PROJECT_ROUTE,
-}: GetCommitUrlParams): string {
+}: Omit<GetCommitUrlParams, 'lastSeenDocumentUuid'>) {
   const headCommit = commits.find((c) => c.mergedAt)
   const firstCommit = commits[0]
 
@@ -23,7 +45,9 @@ export function getCommitUrl({
       !commits.some((c) => c.uuid === lastSeenCommitUuid) &&
       headCommit)
   ) {
-    return PROJECT_ROUTE({ id: projectId }).commits.latest
+    return PROJECT_ROUTE({ id: projectId }).commits.detail({
+      uuid: HEAD_COMMIT,
+    }).documents
   }
 
   if (lastSeenCommitUuid) {
@@ -31,18 +55,20 @@ export function getCommitUrl({
     if (commit) {
       return PROJECT_ROUTE({ id: projectId }).commits.detail({
         uuid: commit.uuid,
-      }).root
+      }).documents
     }
   }
 
   if (headCommit) {
-    return PROJECT_ROUTE({ id: projectId }).commits.latest
+    return PROJECT_ROUTE({ id: projectId }).commits.detail({
+      uuid: HEAD_COMMIT,
+    }).documents
   }
 
   if (firstCommit) {
     return PROJECT_ROUTE({ id: projectId }).commits.detail({
       uuid: firstCommit.uuid,
-    }).root
+    }).documents
   }
 
   throw new NotFoundError('No commits found')

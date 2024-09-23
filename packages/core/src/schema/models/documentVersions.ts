@@ -1,9 +1,10 @@
 import {
   bigint,
   bigserial,
+  index,
   text,
   timestamp,
-  unique,
+  uniqueIndex,
   uuid,
   varchar,
 } from 'drizzle-orm/pg-core'
@@ -27,14 +28,14 @@ export const documentVersions = latitudeSchema.table(
     ...timestamps(),
   },
   (table) => ({
-    uniqueDocumentUuidCommitId: unique('unique_document_uuid_commit_id').on(
-      table.documentUuid,
-      table.commitId,
-    ),
-    uniquePathCommitId: unique('unique_path_commit_id_deleted_at').on(
-      table.path,
-      table.commitId,
-      table.deletedAt,
-    ),
+    uniqueDocumentUuidCommitId: uniqueIndex(
+      'document_versions_unique_document_uuid_commit_id',
+    ).on(table.documentUuid, table.commitId),
+    uniquePathCommitIdDeletedAt: uniqueIndex(
+      'document_versions_unique_path_commit_id_deleted_at',
+    ).on(table.path, table.commitId, table.deletedAt),
+    commitIdIdx: index('document_versions_commit_id_idx').on(table.commitId),
+    deletedAtIdx: index('document_versions_deleted_at_idx').on(table.deletedAt),
+    pathIdx: index('document_versions_path_idx').on(table.path),
   }),
 )

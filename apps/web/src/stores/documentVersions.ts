@@ -7,7 +7,6 @@ import { useToast } from '@latitude-data/web-ui'
 import { createDocumentVersionAction } from '$/actions/documents/create'
 import { destroyDocumentAction } from '$/actions/documents/destroyDocumentAction'
 import { destroyFolderAction } from '$/actions/documents/destroyFolderAction'
-import { getDocumentsAtCommitAction } from '$/actions/documents/getDocumentsAtCommitAction'
 import { updateDocumentContentAction } from '$/actions/documents/updateContent'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
@@ -48,28 +47,27 @@ export default function useDocumentVersions(
     error: swrError,
   } = useSWR<DocumentVersion[]>(
     ['documentVersions', projectId, commitUuid],
-    async () => {
+    useCallback(async () => {
       if (!commitUuid || !projectId) return []
 
-      const [fetchedDocuments, errorFetchingDocuments] =
-        await getDocumentsAtCommitAction({
-          projectId,
-          commitUuid,
-        })
+      const response = await fetch(
+        `/api/documents/${projectId}/${commitUuid}`,
+        { credentials: 'include' },
+      )
+      if (!response.ok) {
+        const error = await response.json()
 
-      if (errorFetchingDocuments) {
         toast({
-          title: 'Error fetching sidebar documents',
-          description:
-            errorFetchingDocuments.formErrors?.[0] ||
-            errorFetchingDocuments.message,
+          title: 'Error fetching documents',
+          description: error.formErrors?.[0] || error.message,
           variant: 'destructive',
         })
+
         return []
       }
 
-      return fetchedDocuments
-    },
+      return response.json()
+    }, [projectId, commitUuid]),
     opts,
   )
   const createFile = useCallback(
