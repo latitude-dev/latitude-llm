@@ -10,9 +10,8 @@ import {
   type SidebarDocument,
 } from '@latitude-data/web-ui'
 import { useNavigate } from '$/hooks/useNavigate'
-import { DocumentRoutes, ROUTES } from '$/services/routes'
+import { ROUTES } from '$/services/routes'
 import useDocumentVersions from '$/stores/documentVersions'
-import { useSelectedLayoutSegment } from 'next/navigation'
 
 import CreateDraftCommitModal from '../CreateDraftCommitModal'
 import MergedCommitWarningModal from '../MergedCommitWarningModal'
@@ -31,7 +30,6 @@ export default function ClientFilesTree({
   const isMerged = !!commit.mergedAt
   const { project } = useCurrentProject()
   const documentPath = currentDocument?.path
-  const selectedSegment = useSelectedLayoutSegment() as DocumentRoutes | null
   const navigateToDocument = useCallback(
     (documentUuid: string) => {
       const documentDetails = ROUTES.projects
@@ -39,10 +37,9 @@ export default function ClientFilesTree({
         .commits.detail({ uuid: isHead ? HEAD_COMMIT : commit.uuid })
         .documents.detail({ uuid: documentUuid })
 
-      if (!selectedSegment) return router.push(documentDetails.root)
-      router.push(documentDetails[selectedSegment].root)
+      return router.push(documentDetails.root)
     },
-    [selectedSegment, project.id, commit.uuid, isHead],
+    [project.id, commit.uuid, isHead],
   )
 
   const { createFile, destroyFile, destroyFolder, isDestroying, data } =
