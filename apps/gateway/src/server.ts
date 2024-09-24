@@ -2,6 +2,8 @@ import { serve } from '@hono/node-server'
 import env from '$/common/env'
 import app from '$/routes/app'
 
+import { captureException, captureMessage } from './common/sentry'
+
 serve(
   {
     fetch: app.fetch,
@@ -21,3 +23,11 @@ function gracefulShutdown() {
 
 process.on('SIGTERM', gracefulShutdown)
 process.on('SIGINT', gracefulShutdown)
+
+process.on('uncaughtException', function (err) {
+  captureException(err)
+})
+
+process.on('unhandledRejection', (reason: string) => {
+  captureMessage(reason)
+})

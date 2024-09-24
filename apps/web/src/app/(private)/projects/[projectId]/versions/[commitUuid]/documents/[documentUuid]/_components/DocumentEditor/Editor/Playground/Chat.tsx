@@ -79,24 +79,23 @@ export default function Chat({
     let response = ''
     let messagesCount = 0
 
-    const { response: actionResponse, output } = await runDocumentAction({
-      projectId: project.id,
-      documentPath: document.path,
-      commitUuid: commit.uuid,
-      parameters,
-    })
-
-    actionResponse.then((res) => {
-      setDocumentLogUuid(res?.response?.documentLogUuid)
-    })
-
     try {
+      const { response: actionResponse, output } = await runDocumentAction({
+        projectId: project.id,
+        documentPath: document.path,
+        commitUuid: commit.uuid,
+        parameters,
+      })
+
+      actionResponse.then((r) => {
+        setDocumentLogUuid(r?.uuid)
+      })
+
       for await (const serverEvent of readStreamableValue(output)) {
         if (!serverEvent) continue
 
         const { event, data } = serverEvent
-        const hasMessages = 'messages' in data
-        if (hasMessages) {
+        if ('messages' in data) {
           data.messages!.forEach(addMessageToConversation)
           messagesCount += data.messages!.length
         }
