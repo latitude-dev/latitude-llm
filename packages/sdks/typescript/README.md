@@ -16,7 +16,7 @@ Welcome to the Latitude SDK for TypeScript! This SDK is designed to help develop
 
 ### Installation
 
-To install the SDK, use npm or yarn:
+To install the SDK, use npm, yarn, or pnpm:
 
 ```bash
 npm install @latitude-data/sdk
@@ -26,6 +26,12 @@ or
 
 ```bash
 yarn add @latitude-data/sdk
+```
+
+or
+
+```bash
+pnpm add @latitude-data/sdk
 ```
 
 ### Usage
