@@ -1,6 +1,10 @@
 import { withSentryConfig } from '@sentry/nextjs'
 
 const INTERNAL_PACKAGES = [
+  'flydrive',
+  'flydrive/drivers/s3',
+  'flydrive/drivers/fs',
+  'flydrive/drivers/types',
   '@latitude-data/web-ui',
   '@latitude-data/env',
   '@latitude-data/core',
@@ -12,15 +16,7 @@ const INTERNAL_PACKAGES = [
 const nextConfig = {
   output: 'standalone',
   transpilePackages: INTERNAL_PACKAGES,
-  serverExternalPackages: [
-    'flydrive',
-    'flydrive/drivers/s3',
-    'flydrive/drivers/fs',
-    'flydrive/drivers/types',
-    '@sentry/nextjs',
-    'bullmq',
-    'jose',
-  ],
+  serverExternalPackages: ['@sentry/nextjs', 'bullmq', 'jose'],
   experimental: {
     // Dear developer,
     //

@@ -2,7 +2,8 @@
 
 import { ReactNode, useState } from 'react'
 
-import { Button, Input } from '@latitude-data/web-ui'
+import { Button } from '../../atoms/Button'
+import { Input } from '../../atoms/Input'
 
 export const EditableText = ({
   value,

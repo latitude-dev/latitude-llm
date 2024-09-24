@@ -1,6 +1,6 @@
 import { Readable } from 'stream'
 
-import { Result } from '@latitude-data/core/lib/Result'
+import { Result } from '../lib/Result'
 import { env } from '@latitude-data/env'
 import { Disk, errors } from 'flydrive'
 import { FSDriver } from 'flydrive/drivers/fs'

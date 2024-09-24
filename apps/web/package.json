@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "build": "next build --debug",
-    "dev": "NODE_DEBUG=latitude:debug next dev",
+    "dev": "NODE_DEBUG=latitude:debug next dev --turbo",
     "dev:debug": "NODE_DEBUG=latitude:debug NODE_OPTIONS='--inspect=0.0.0.0:9229' ./node_modules/.bin/next dev",
     "dev:local": "USE_LOCALHOST=true pnpm run dev",
     "lint": "next lint",
