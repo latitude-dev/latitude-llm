@@ -13,7 +13,7 @@ export const getHandler = factory.createHandlers(async (c) => {
     projectId: Number(projectId!),
     commitUuid: commitUuid!,
     documentPath: documentPath!,
-  }).then((r) => r.unwrap())
+  })
 
   return c.json(document)
 })

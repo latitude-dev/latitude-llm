@@ -1,204 +1,155 @@
 import type { Message } from '@latitude-data/compiler'
-import {
-  ChainCallResponseDto,
-  ChainEventDto,
-  StreamEventTypes,
-} from '@latitude-data/core/browser'
+import { ChainCallResponse, LogSources } from '@latitude-data/core/browser'
 import env from '$sdk/env'
 import { GatewayApiConfig, RouteResolver } from '$sdk/utils'
-import { BodyParams, HandlerType, UrlParams } from '$sdk/utils/types'
+import {
+  BodyParams,
+  ChainEvent,
+  HandlerType,
+  UrlParams,
+} from '$sdk/utils/types'
 
 export type StreamChainResponse = {
   conversation: Message[]
-  response: ChainCallResponseDto
+  response: ChainCallResponse
 }
 type StreamResponseCallbacks = {
-  onEvent?: ({
-    event,
-    data,
-  }: {
-    event: StreamEventTypes
-    data: ChainEventDto
-  }) => void
+  onMessage?: (chainEvent: ChainEvent) => void
   onFinished?: (data: StreamChainResponse) => void
   onError?: (error: Error) => void
 }
 
 export class LatitudeSdk {
-  private projectId?: number
-  private apiKey: string
+  private latitudeApiKey: string
   private routeResolver: RouteResolver
 
-  constructor(
-    apiKey: string,
-    {
-      projectId,
-      gateway = {
-        host: env.GATEWAY_HOSTNAME,
-        port: env.GATEWAY_PORT,
-        ssl: env.GATEWAY_SSL,
-      },
-    }: {
-      projectId?: number
-      gateway?: GatewayApiConfig
-    } = {
-      gateway: {
-        host: env.GATEWAY_HOSTNAME,
-        port: env.GATEWAY_PORT,
-        ssl: env.GATEWAY_SSL,
-      },
+  constructor({
+    latitudeApiKey,
+    gateway = {
+      host: env.GATEWAY_HOSTNAME,
+      port: env.GATEWAY_PORT,
+      ssl: env.GATEWAY_SSL,
     },
-  ) {
+  }: {
+    latitudeApiKey: string
+    gateway?: GatewayApiConfig
+  }) {
     this.routeResolver = new RouteResolver({
       gateway,
       apiVersion: 'v1',
     })
-    this.projectId = projectId
-    this.apiKey = apiKey
+    this.latitudeApiKey = latitudeApiKey
   }
 
-  async run(
-    path: string,
-    {
-      projectId,
-      commitUuid,
-      parameters,
-      onEvent,
-      onFinished,
-      onError,
-    }: {
-      projectId?: number
+  async runDocument({
+    params: { projectId, documentPath, commitUuid, parameters, source },
+    onMessage,
+    onFinished,
+    onError,
+  }: {
+    params: {
+      projectId: number
+      documentPath: string
       commitUuid?: string
       parameters?: Record<string, unknown>
-    } & StreamResponseCallbacks,
-  ) {
-    projectId = projectId ?? this.projectId
-    if (!projectId) {
-      onError?.(new Error('Project ID is required'))
-      return
+      source?: LogSources
     }
-
-    try {
-      const response = await this.request({
-        method: 'POST',
-        handler: HandlerType.RunDocument,
-        params: { projectId, commitUuid },
-        body: { path, parameters },
-      })
-
-      return this.handleStream({
-        stream: response.body!,
-        onEvent,
-        onFinished,
-        onError,
-      })
-    } catch (err) {
-      onError?.(err as Error)
-      return
-    }
-  }
-
-  async chat(
-    uuid: string,
-    messages: Message[],
-    { onEvent, onFinished, onError }: StreamResponseCallbacks = {},
-  ) {
-    const response = await this.request({
+  } & StreamResponseCallbacks) {
+    const response = await this.makeRequest({
       method: 'POST',
-      handler: HandlerType.AddMessageToDocumentLog,
-      body: { uuid, messages },
+      handler: HandlerType.RunDocument,
+      params: { projectId, commitUuid },
+      body: { documentPath, parameters, source },
     })
-    return this.handleStream({
-      stream: response.body!,
-      onEvent,
+
+    return this.handleStreamChainResponse({
+      response,
+      onMessage,
       onFinished,
       onError,
     })
   }
 
-  private async handleStream({
-    stream,
-    onEvent,
+  async addMessages({
+    params: { documentLogUuid, messages, source },
+    onMessage,
+    onFinished,
+    onError,
+  }: {
+    params: {
+      documentLogUuid: string
+      messages: Message[]
+      source?: LogSources
+    }
+  } & StreamResponseCallbacks) {
+    const response = await this.makeRequest({
+      method: 'POST',
+      handler: HandlerType.AddMessageToDocumentLog,
+      body: { documentLogUuid, messages, source },
+    })
+    return this.handleStreamChainResponse({
+      response,
+      onMessage,
+      onFinished,
+      onError,
+    })
+  }
+
+  private async handleStreamChainResponse({
+    response,
+    onMessage,
     onFinished,
     onError,
   }: StreamResponseCallbacks & {
-    stream: ReadableStream
+    response: Response
   }) {
-    let conversation: Message[] = []
-    let uuid: string | undefined
-    let chainResponse: ChainCallResponseDto | undefined
-    const consumeEvent = (event: { event: string; data: string }) => {
-      if (!event.event) {
-        onError?.(new Error(`Invalid SSE event: ${event}`))
-        return
-      }
-      if (!event.data) {
-        onError?.(new Error(`Invalid data in server event:\n${event}`))
-        return
-      }
-      if (event.event === 'error') {
-        onError?.(new Error(event.data))
-        return
-      }
+    const body = response.body ?? new ReadableStream()
+    const reader = body.getReader()
 
-      const json = this.parseJSON(event.data)
-      if (!json) {
-        const error = new Error(`Invalid JSON in server event:\n${event}`)
-        onError?.(error)
-        return
-      }
-
-      if (event.event === 'latitude-event') {
-        const messages = 'messages' in json ? (json.messages! as Message[]) : []
-
-        if (json.type === 'chain-error') {
-          const error = new Error((json.error as Error).message)
-          onError?.(error)
-
-          return
-        }
-
-        if (messages.length > 0) {
-          conversation.push(...messages)
-        }
-
-        if (json.type === 'chain-complete') {
-          uuid = json.uuid!
-          chainResponse = json.response!
-        }
-      }
-
-      onEvent?.({ event: event.event as StreamEventTypes, data: json })
-    }
-
-    const reader = stream.getReader()
+    const conversation: Message[] = []
+    let chainResponse: ChainCallResponse
     while (true) {
       const { done, value } = await reader.read()
+
       if (done) break
 
       const chunks = new TextDecoder('utf-8').decode(value).trim()
-      for (const chunk of chunks.split('\n\n')) {
-        const event = this.parseEvent(chunk)
-        if (!event) {
-          onError?.(new Error(`Invalid SSE event: ${chunk}`))
-          return
-        }
-        const data = this.parseData(chunk)
-        if (data === null || data === undefined) {
-          onError?.(new Error(`Invalid data in server event:\n${chunk}`))
-          return
-        }
-
-        consumeEvent({ event, data })
+      if (chunks?.startsWith('event: error')) {
+        onError?.(new Error(chunks))
+        break
       }
-    }
 
-    if (!uuid || !chainResponse) return
+      chunks.split('\n').forEach((line) => {
+        if (!line.startsWith('data:')) return
+
+        const json = line.slice(6)
+        const chunk = this.parseJSON(json, onError)
+        if (!chunk) return
+
+        // FIXME: Magic variables. I think we need to share these constants (enums)
+        // in a new package. Now they are in `core` but I don't want to depend on core
+        // just for this. We need these enums in production not only as a dev dependency.
+        if (chunk.event === 'latitude-event') {
+          const messages = 'messages' in chunk.data ? chunk.data.messages! : []
+          if (messages.length > 0) {
+            // At the moment all message.content should be a string
+            // but in the future this could be an image or other type
+            // @ts-ignore
+            conversation.push(...messages)
+          }
+
+          if (chunk.data.type === 'chain-complete') {
+            chainResponse = chunk.data.response
+          }
+        }
+
+        onMessage?.(chunk)
+      })
+    }
 
     const finalResponse = {
       conversation,
-      uuid,
-      response: chainResponse,
+      response: chainResponse!,
     }
 
     onFinished?.(finalResponse)
@@ -206,7 +157,7 @@ export class LatitudeSdk {
     return finalResponse
   }
 
-  private async request<H extends HandlerType>({
+  private async makeRequest<H extends HandlerType>({
     method,
     handler,
     params,
@@ -224,27 +175,20 @@ export class LatitudeSdk {
     })
   }
 
-  private parseJSON(line: string) {
+  private parseJSON(line: string, onError?: (error: Error) => void) {
+    let json = null
     try {
-      return JSON.parse(line) as ChainEventDto
+      return JSON.parse(line) as ChainEvent
     } catch (e) {
-      // do nothing
+      onError?.(e as Error)
     }
-  }
 
-  private parseEvent(chunk: string) {
-    const event = chunk.split('\n')[0]
-    return event?.split('event: ')[1]
-  }
-
-  private parseData(chunk: string) {
-    const data = chunk.split('\n')[1]
-    return data?.split('data: ')[1]
+    return json
   }
 
   private get authHeader() {
     return {
-      Authorization: `Bearer ${this.apiKey}`,
+      Authorization: `Bearer ${this.latitudeApiKey}`,
       'Content-Type': 'application/json',
     }
   }
@@ -254,4 +198,4 @@ export class LatitudeSdk {
   }
 }
 
-export type { ChainEventDto, Message }
+export type { ChainEvent, Message }

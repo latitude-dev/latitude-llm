@@ -1,8 +1,8 @@
 'use server'
 
-import { StreamEventTypes } from '@latitude-data/core/browser'
+import { LogSources } from '@latitude-data/core/browser'
 import {
-  type ChainEventDto,
+  type ChainEvent,
   type Message,
   type StreamChainResponse,
 } from '@latitude-data/sdk-js'
@@ -14,7 +14,7 @@ type AddMessagesActionProps = {
   messages: Message[]
 }
 type AddMessagesResponse = Promise<{
-  output: StreamableValue<{ event: StreamEventTypes; data: ChainEventDto }>
+  output: StreamableValue<ChainEvent>
   response: Promise<StreamChainResponse | undefined>
 }>
 export type AddMessagesActionFn = (
@@ -26,14 +26,12 @@ export async function addMessagesAction({
   messages,
 }: AddMessagesActionProps) {
   const sdk = await createSdk().then((r) => r.unwrap())
-  const stream = createStreamableValue<
-    { event: StreamEventTypes; data: ChainEventDto },
-    Error
-  >()
+  const stream = createStreamableValue<ChainEvent, Error>()
 
-  const response = sdk.chat(documentLogUuid, messages, {
-    onEvent: (event) => {
-      stream.update(event)
+  const response = sdk.addMessages({
+    params: { documentLogUuid, messages, source: LogSources.Playground },
+    onMessage: (chainEvent) => {
+      stream.update(chainEvent)
     },
     onError: (error) => {
       stream.error({
@@ -43,10 +41,13 @@ export async function addMessagesAction({
       })
     },
     onFinished: () => {
-      stream.done()
+      try {
+        stream.done()
+      } catch (_) {
+        // do nothing, stream could be already closed
+      }
     },
   })
-
   return {
     output: stream.value,
     response,

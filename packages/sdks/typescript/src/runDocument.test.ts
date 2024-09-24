@@ -17,11 +17,13 @@ import { parseSSE } from './utils/parseSSE'
 const encoder = new TextEncoder()
 let latitudeApiKey = 'fake-api-key'
 let projectId = 123
-const SDK = new LatitudeSdk(latitudeApiKey)
+const SDK = new LatitudeSdk({
+  latitudeApiKey,
+})
 
 const server = setupServer()
 
-describe('run', () => {
+describe('runDocument', () => {
   beforeAll(() => server.listen())
   afterEach(() => server.resetHandlers())
   afterAll(() => server.close())
@@ -39,8 +41,8 @@ describe('run', () => {
           },
         ),
       )
-      await SDK.run('path/to/document', {
-        projectId,
+      await SDK.runDocument({
+        params: { projectId, documentPath: 'path/to/document' },
       })
       expect(mockFn).toHaveBeenCalledWith('Bearer fake-api-key')
     }),
@@ -59,8 +61,8 @@ describe('run', () => {
           },
         ),
       )
-      await SDK.run('path/to/document', {
-        projectId,
+      await SDK.runDocument({
+        params: { projectId, documentPath: 'path/to/document' },
       })
       expect(mockFn).toHaveBeenCalledWith(
         'http://localhost:8787/api/v1/projects/123/commits/live/documents/run',
@@ -81,9 +83,12 @@ describe('run', () => {
           },
         ),
       )
-      await SDK.run('path/to/document', {
-        projectId,
-        commitUuid: 'SOME_UUID',
+      await SDK.runDocument({
+        params: {
+          projectId,
+          documentPath: 'path/to/document',
+          commitUuid: 'SOME_UUID',
+        },
       })
       expect(mockFn).toHaveBeenCalledWith(
         'http://localhost:8787/api/v1/projects/123/commits/SOME_UUID/documents/run',
@@ -105,13 +110,16 @@ describe('run', () => {
           },
         ),
       )
-      await SDK.run('path/to/document', {
-        projectId,
-        commitUuid: 'SOME_UUID',
-        parameters: { foo: 'bar', lol: 'foo' },
+      await SDK.runDocument({
+        params: {
+          projectId,
+          documentPath: 'path/to/document',
+          commitUuid: 'SOME_UUID',
+          parameters: { foo: 'bar', lol: 'foo' },
+        },
       })
       expect(mockFn).toHaveBeenCalledWith({
-        path: 'path/to/document',
+        documentPath: 'path/to/document',
         parameters: { foo: 'bar', lol: 'foo' },
       })
     }),
@@ -144,18 +152,19 @@ describe('run', () => {
           },
         ),
       )
-      await SDK.run('path/to/document', {
-        projectId,
-        parameters: { foo: 'bar', lol: 'foo' },
-        onEvent: onMessageMock,
+      await SDK.runDocument({
+        params: {
+          projectId,
+          documentPath: 'path/to/document',
+          parameters: { foo: 'bar', lol: 'foo' },
+        },
+        onMessage: onMessageMock,
       })
       CHUNKS.forEach((chunk, index) => {
-        // @ts-expect-error
-        const { event, data } = parseSSE(chunk)
-        expect(onMessageMock).toHaveBeenNthCalledWith(index + 1, {
-          event,
-          data: JSON.parse(data),
-        })
+        expect(onMessageMock).toHaveBeenNthCalledWith(
+          index + 1,
+          parseSSE(chunk)!.data,
+        )
       })
     }),
   )
@@ -187,14 +196,14 @@ describe('run', () => {
           },
         ),
       )
-      const onErrorMock = vi.fn()
-      const final = await SDK.run('path/to/document', {
-        projectId,
-        parameters: { foo: 'bar', lol: 'foo' },
+      const final = await SDK.runDocument({
+        params: {
+          projectId,
+          documentPath: 'path/to/document',
+          parameters: { foo: 'bar', lol: 'foo' },
+        },
         onFinished: onFinishMock,
-        onError: onErrorMock,
       })
-      expect(onErrorMock).not.toHaveBeenCalled()
       expect(onFinishMock).toHaveBeenCalledWith(FINAL_RESPONSE)
       expect(final).toEqual(FINAL_RESPONSE)
     }),

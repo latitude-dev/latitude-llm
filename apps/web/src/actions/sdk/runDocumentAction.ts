@@ -1,7 +1,10 @@
 'use server'
 
-import { StreamEventTypes } from '@latitude-data/core/browser'
-import { LatitudeSdk, type ChainEventDto } from '@latitude-data/sdk-js'
+import { LogSources } from '@latitude-data/core/browser'
+import {
+  type ChainEvent,
+  type StreamChainResponse,
+} from '@latitude-data/sdk-js'
 import { createSdk } from '$/app/(private)/_lib/createSdk'
 import { createStreamableValue, StreamableValue } from 'ai/rsc'
 
@@ -12,8 +15,8 @@ type RunDocumentActionProps = {
   parameters: Record<string, unknown>
 }
 type RunDocumentResponse = Promise<{
-  output: StreamableValue<{ event: StreamEventTypes; data: ChainEventDto }>
-  response: ReturnType<typeof LatitudeSdk.prototype.run>
+  output: StreamableValue<ChainEvent>
+  response: Promise<StreamChainResponse | undefined>
 }>
 export type RunDocumentActionFn = (
   _: RunDocumentActionProps,
@@ -25,17 +28,18 @@ export async function runDocumentAction({
   commitUuid,
   parameters,
 }: RunDocumentActionProps) {
-  const sdk = await createSdk(projectId).then((r) => r.unwrap())
-  const stream = createStreamableValue<
-    { event: StreamEventTypes; data: ChainEventDto },
-    Error
-  >()
-
-  const response = sdk.run(documentPath, {
-    commitUuid,
-    parameters,
-    onEvent: (event) => {
-      stream.update(event)
+  const sdk = await createSdk().then((r) => r.unwrap())
+  const stream = createStreamableValue<ChainEvent, Error>()
+  const response = sdk.runDocument({
+    params: {
+      projectId,
+      commitUuid,
+      documentPath,
+      parameters,
+      source: LogSources.Playground,
+    },
+    onMessage: (chainEvent) => {
+      stream.update(chainEvent)
     },
     onError: (error) => {
       stream.error({
@@ -45,7 +49,11 @@ export async function runDocumentAction({
       })
     },
     onFinished: () => {
-      stream.done()
+      try {
+        stream.done()
+      } catch (error) {
+        // do nothing, stream could already be done
+      }
     },
   })
 

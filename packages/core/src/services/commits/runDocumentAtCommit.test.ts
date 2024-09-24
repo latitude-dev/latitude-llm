@@ -142,7 +142,6 @@ This is a test document
           data: {
             type: 'chain-step',
             isLastStep: false,
-            documentLogUuid: expect.any(String),
             config: {
               provider: 'openai',
               model: 'gpt-4o',
@@ -160,7 +159,6 @@ This is a test document
           event: 'latitude-event',
           data: {
             type: 'chain-step-complete',
-            documentLogUuid: expect.any(String),
             response: {
               documentLogUuid: expect.any(String),
               text: 'Fake AI generated text',
@@ -174,7 +172,6 @@ This is a test document
           data: {
             type: 'chain-step',
             isLastStep: true,
-            documentLogUuid: expect.any(String),
             config: {
               provider: 'openai',
               model: 'gpt-4o',
@@ -193,7 +190,6 @@ This is a test document
           event: 'latitude-event',
           data: {
             type: 'chain-complete',
-            documentLogUuid: expect.any(String),
             config: {
               provider: 'openai',
               model: 'gpt-4o',

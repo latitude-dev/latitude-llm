@@ -116,7 +116,7 @@ async function iterate({
       sentCount: previousCount,
     })
 
-    publishStepStartEvent(controller, step, documentLogUuid)
+    publishStepStartEvent(controller, step)
 
     const aiResult = await ai({
       workspace,
@@ -189,7 +189,6 @@ function getOutputForAI(
 function publishStepStartEvent(
   controller: ReadableStreamDefaultController,
   stepResult: Awaited<ReturnType<typeof computeStepData>>,
-  documentLogUuid?: string,
 ) {
   enqueueChainEvent(controller, {
     data: {
@@ -197,7 +196,6 @@ function publishStepStartEvent(
       isLastStep: stepResult.completed,
       config: stepResult.conversation.config as Config,
       messages: stepResult.newMessagesInStep,
-      documentLogUuid,
     },
     event: StreamEventTypes.Latitude,
   })
@@ -268,7 +266,6 @@ async function handleCompletedChain(
   const eventData = {
     type: ChainEventTypes.Complete,
     config: stepResult.conversation.config as Config,
-    documentLogUuid: response.documentLogUuid,
     response,
   } as const
 
@@ -305,7 +302,6 @@ function publishStepCompleteEvent(
     event: StreamEventTypes.Latitude,
     data: {
       type: ChainEventTypes.StepComplete,
-      documentLogUuid: response.documentLogUuid,
       response: response,
     },
   })

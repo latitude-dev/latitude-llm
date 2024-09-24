@@ -12,7 +12,6 @@
   },
   "devDependencies": {
     "@babel/parser": "^7.25.4",
-    "@changesets/cli": "^2.27.8",
     "@types/node": "^22.5.1",
     "eslint": "8",
     "glob": "^11.0.0",

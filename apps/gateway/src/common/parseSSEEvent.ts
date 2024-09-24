@@ -1,4 +1,4 @@
-export function parseSSEvent(data?: string) {
+export function parseSSEEvent(data?: string) {
   if (!data) return
 
   const event = data

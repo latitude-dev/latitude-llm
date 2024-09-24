@@ -44,27 +44,32 @@ export type ChainStepTextResponse = {
   text: string
   usage: CompletionTokenUsage
   toolCalls: ToolCall[]
-  documentLogUuid?: string
+  documentLogUuid: string
+  providerLog: undefined
 }
 export type ChainStepObjectResponse = {
   object: any
   text: string
   usage: CompletionTokenUsage
-  documentLogUuid?: string
+  documentLogUuid: string
+  providerLog: undefined
 }
 
-export type ChainTextResponse = ChainStepTextResponse & {
+export type ChainTextResponse = Omit<ChainStepTextResponse, 'providerLog'> & {
   providerLog: ProviderLog
 }
-export type ChainObjectResponse = ChainStepObjectResponse & {
+export type ChainObjectResponse = Omit<
+  ChainStepObjectResponse,
+  'providerLog'
+> & {
   providerLog: ProviderLog
 }
 export type ChainStepResponse = ChainStepTextResponse | ChainStepObjectResponse
 export type ChainCallResponse = ChainTextResponse | ChainObjectResponse
 
 export enum LogSources {
-  API = 'api',
   Playground = 'playground',
+  API = 'api',
   Evaluation = 'evaluation',
 }
 export enum StreamEventTypes {
@@ -84,18 +89,16 @@ export type ProviderData =
   | ObjectStreamPart<Record<string, CoreTool>>
 export type ProviderDataType = ProviderData['type']
 
-export type LatitudeEventData =
+type LatitudeEventData =
   | {
       type: ChainEventTypes.Step
       config: Config
       isLastStep: boolean
       messages: Message[]
-      documentLogUuid?: string
     }
   | {
       type: ChainEventTypes.StepComplete
       response: ChainStepResponse
-      documentLogUuid?: string
     }
   | {
       type: ChainEventTypes.Complete
@@ -103,7 +106,6 @@ export type LatitudeEventData =
       messages?: Message[]
       object?: any
       response: ChainCallResponse
-      documentLogUuid?: string
     }
   | {
       type: ChainEventTypes.Error
@@ -150,35 +152,3 @@ export type EvaluationMeanValue = {
   maxValue: number
   meanValue: number
 }
-
-export type ChainCallResponseDto = Omit<
-  ChainCallResponse,
-  'documentLogUuid' | 'providerLog'
->
-
-export type ChainEventDto =
-  | ProviderData
-  | {
-      type: ChainEventTypes.Step
-      config: Config
-      isLastStep: boolean
-      messages: Message[]
-      uuid?: string
-    }
-  | {
-      type: ChainEventTypes.StepComplete
-      response: Omit<ChainStepResponse, 'providerLog'>
-      uuid?: string
-    }
-  | {
-      type: ChainEventTypes.Complete
-      config: Config
-      messages?: Message[]
-      object?: any
-      response: Omit<ChainCallResponse, 'providerLog'>
-      uuid?: string
-    }
-  | {
-      type: ChainEventTypes.Error
-      error: Error
-    }

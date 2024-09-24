@@ -219,7 +219,6 @@ describe('addMessages', () => {
         event: 'latitude-event',
         data: {
           type: 'chain-complete',
-          documentLogUuid: providerLog.documentLogUuid!,
           config: {
             provider: 'openai',
             model: 'gpt-4o',
@@ -232,10 +231,10 @@ describe('addMessages', () => {
             },
           ],
           response: {
-            documentLogUuid: providerLog.documentLogUuid,
             text: 'Fake AI generated text',
             toolCalls: [],
             usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+            documentLogUuid: providerLog.documentLogUuid!,
           },
         },
       },

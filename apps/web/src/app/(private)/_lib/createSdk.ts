@@ -1,7 +1,7 @@
-import { compactObject } from '@latitude-data/core/lib/compactObject'
 import { Result } from '@latitude-data/core/lib/Result'
 import { LatitudeApiKeysRepository } from '@latitude-data/core/repositories'
 import { LatitudeSdk } from '@latitude-data/sdk-js'
+import env from '$/env'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
 
 // NOTE: this would be a great candidate for a cache function with redis
@@ -15,13 +15,15 @@ async function getLatitudeApiKey() {
   return Result.ok(result.value)
 }
 
-export async function createSdk(projectId?: number) {
+export async function createSdk() {
   const result = await getLatitudeApiKey()
   if (result.error) return result
 
   const latitudeApiKey = result.value.token
-
-  return Result.ok(
-    new LatitudeSdk(latitudeApiKey, compactObject({ projectId })),
-  )
+  const gateway = {
+    host: env.GATEWAY_HOSTNAME,
+    port: env.GATEWAY_PORT,
+    ssl: env.GATEWAY_SSL,
+  }
+  return Result.ok(new LatitudeSdk({ latitudeApiKey, gateway }))
 }

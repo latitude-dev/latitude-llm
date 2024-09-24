@@ -9,7 +9,7 @@ import { database } from '@latitude-data/core/client'
 import { createProject } from '@latitude-data/core/factories'
 import { Result } from '@latitude-data/core/lib/Result'
 import { apiKeys } from '@latitude-data/core/schema'
-import { parseSSEvent } from '$/common/parseSSEEvent'
+import { parseSSEEvent } from '$/common/parseSSEEvent'
 import app from '$/routes/app'
 import { eq } from 'drizzle-orm'
 import { testConsumeStream } from 'test/helpers'
@@ -77,7 +77,7 @@ describe('POST /add-message', () => {
       const res = await app.request('/api/v1/chats/add-message', {
         method: 'POST',
         body: JSON.stringify({
-          path: '/path/to/document',
+          documentPath: '/path/to/document',
         }),
       })
 
@@ -101,7 +101,8 @@ describe('POST /add-message', () => {
       route = '/api/v1/chats/add-message'
       body = JSON.stringify({
         messages: [],
-        uuid: 'fake-document-log-uuid',
+        source: LogSources.Playground,
+        documentLogUuid: 'fake-document-log-uuid',
       })
       headers = {
         Authorization: `Bearer ${token}`,
@@ -117,14 +118,13 @@ describe('POST /add-message', () => {
       })
 
       let { done, value } = await testConsumeStream(res.body as ReadableStream)
-      const event = parseSSEvent(value!)
+      value = parseSSEEvent(value!)!.data
 
       expect(mocks.queues)
       expect(res.status).toBe(200)
       expect(res.body).toBeInstanceOf(ReadableStream)
       expect(done).toBe(true)
-      expect(event).toEqual({
-        id: 0,
+      expect(value).toEqual({
         event: StreamEventTypes.Latitude,
         data: {
           type: ChainEventTypes.Complete,
@@ -136,14 +136,14 @@ describe('POST /add-message', () => {
       })
     })
 
-    it('calls chat provider', async () => {
+    it('calls addMessages provider', async () => {
       await app.request(route, { method: 'POST', body, headers })
 
       expect(mocks.addMessages).toHaveBeenCalledWith({
         workspace,
         documentLogUuid: 'fake-document-log-uuid',
         messages: [],
-        source: LogSources.API,
+        source: LogSources.Playground,
       })
     })
   })
