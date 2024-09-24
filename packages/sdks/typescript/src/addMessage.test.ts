@@ -1,4 +1,3 @@
-import { LogSources } from '@latitude-data/core/browser'
 import { CHUNKS, FINAL_RESPONSE } from '$sdk/test/chunks-example'
 import { http, HttpResponse } from 'msw'
 import { setupServer } from 'msw/node'
@@ -18,13 +17,11 @@ import { parseSSE } from './utils/parseSSE'
 const encoder = new TextEncoder()
 let latitudeApiKey = 'fake-api-key'
 let projectId = 123
-const SDK = new LatitudeSdk({
-  latitudeApiKey,
-})
+const SDK = new LatitudeSdk(latitudeApiKey)
 
 const server = setupServer()
 
-describe('addMessage', () => {
+describe('message', () => {
   beforeAll(() => server.listen())
   afterEach(() => server.resetHandlers())
   afterAll(() => server.close())
@@ -39,13 +36,7 @@ describe('addMessage', () => {
           return HttpResponse.json({})
         }),
       )
-      await SDK.addMessages({
-        params: {
-          messages: [],
-          documentLogUuid: 'fake-document-log-uuid',
-          source: LogSources.Playground,
-        },
-      })
+      await SDK.chat('fake-document-log-uuid', [])
       expect(mockFn).toHaveBeenCalledWith('Bearer fake-api-key')
     }),
   )
@@ -77,20 +68,17 @@ describe('addMessage', () => {
           },
         ),
       )
-      await SDK.addMessages({
-        params: {
-          messages: [],
-          documentLogUuid: 'fake-document-log-uuid',
-          source: LogSources.Playground,
-        },
-        onMessage: onMessageMock,
+      await SDK.chat('fake-document-log-uuid', [], {
+        onEvent: onMessageMock,
       })
 
       CHUNKS.forEach((chunk, index) => {
-        expect(onMessageMock).toHaveBeenNthCalledWith(
-          index + 1,
-          parseSSE(chunk)!.data,
-        )
+        // @ts-expect-error
+        const { event, data } = parseSSE(chunk)
+        expect(onMessageMock).toHaveBeenNthCalledWith(index + 1, {
+          event,
+          data: JSON.parse(data),
+        })
       })
     }),
   )
@@ -122,12 +110,9 @@ describe('addMessage', () => {
           },
         ),
       )
-      const final = await SDK.runDocument({
-        params: {
-          projectId,
-          documentPath: 'path/to/document',
-          parameters: { foo: 'bar', lol: 'foo' },
-        },
+      const final = await SDK.run('path/to/document', {
+        projectId,
+        parameters: { foo: 'bar', lol: 'foo' },
         onFinished: onFinishMock,
       })
       expect(onFinishMock).toHaveBeenCalledWith(FINAL_RESPONSE)
@@ -157,18 +142,12 @@ describe('addMessage', () => {
           },
         ),
       )
-      await SDK.addMessages({
-        params: {
-          messages: [],
-          documentLogUuid: 'fake-document-log-uuid',
-          source: LogSources.Playground,
-        },
-      })
+      await SDK.chat('fake-document-log-uuid', [])
+
       expect(mockFn).toHaveBeenCalledWith({
         body: {
           messages: [],
-          source: LogSources.Playground,
-          documentLogUuid: 'fake-document-log-uuid',
+          uuid: 'fake-document-log-uuid',
         },
       })
     }),
