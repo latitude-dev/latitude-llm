@@ -42,12 +42,8 @@ process.on('SIGTERM', () => gracefulShutdown('SIGTERM'))
 
 process.on('uncaughtException', function (err) {
   captureException(err)
-
-  console.error(err, 'Uncaught exception')
 })
 
-process.on('unhandledRejection', (reason: string, promise) => {
+process.on('unhandledRejection', (reason: string) => {
   captureMessage(reason)
-
-  console.error({ promise, reason }, 'Unhandled Rejection at: Promise')
 })

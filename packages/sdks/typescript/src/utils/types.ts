@@ -1,5 +1,4 @@
 import type { Message } from '@latitude-data/compiler'
-import { LogSources } from '@latitude-data/core/browser'
 
 export type {
   ChainEvent,
@@ -12,14 +11,12 @@ export type RunUrlParams = {
 }
 
 type RunDocumentBodyParam = {
-  documentPath: string
+  path: string
   parameters?: Record<string, unknown>
-  source?: LogSources
 }
 type AddMessageBodyParam = {
-  documentLogUuid: string
+  uuid: string
   messages: Message[]
-  source?: LogSources
 }
 
 export type GetDocumentUrlParams = {
