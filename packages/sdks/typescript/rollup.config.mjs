@@ -4,7 +4,6 @@ import * as url from 'url'
 import alias from '@rollup/plugin-alias'
 import typescript from '@rollup/plugin-typescript'
 import { dts } from 'rollup-plugin-dts'
-import replace from '@rollup/plugin-replace'
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url))
 const aliasEntries = {
@@ -29,10 +28,6 @@ const config = [
       typescript({
         exclude: ['**/__tests__', '**/*.test.ts'],
       }),
-      replace({
-        'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV),
-        preventAssignment: true,
-      })
     ],
     external: EXTERNALS,
   },

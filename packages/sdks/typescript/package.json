@@ -6,7 +6,7 @@
   "license": "LGPL-3.0",
   "scripts": {
     "dev": "rollup -w -c ./rollup.config.mjs",
-    "build": "NODE_ENV=production rollup -c ./rollup.config.mjs",
+    "build": "rollup -c ./rollup.config.mjs",
     "test": "vitest run --pool=forks",
     "test:watch": "vitest",
     "tc": "tsc --noEmit",
@@ -29,7 +29,6 @@
     "@latitude-data/eslint-config": "workspace:*",
     "@latitude-data/typescript-config": "workspace:^",
     "@rollup/plugin-alias": "^5.1.0",
-    "@rollup/plugin-replace": "^6.0.1",
     "@rollup/plugin-typescript": "^11.1.6",
     "@types/eventsource": "^1.1.15",
     "msw": "^2.3.5",

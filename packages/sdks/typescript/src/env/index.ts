@@ -1,16 +1,6 @@
 import { createEnv } from '@t3-oss/env-core'
 import { z } from 'zod'
 
-let GATEWAY_HOSTNAME, GATEWAY_PORT, GATEWAY_SSL
-if (process.env.NODE_ENV === 'development') {
-  GATEWAY_HOSTNAME = 'localhost'
-  GATEWAY_PORT = '8787'
-  GATEWAY_SSL = 'false'
-} else {
-  GATEWAY_HOSTNAME = 'gateway.latitude.so'
-  GATEWAY_SSL = 'true'
-}
-
 export default createEnv({
   server: {
     GATEWAY_HOSTNAME: z.string(),
@@ -20,8 +10,8 @@ export default createEnv({
       .transform((value) => value === 'true'),
   },
   runtimeEnv: {
-    GATEWAY_HOSTNAME,
-    GATEWAY_PORT,
-    GATEWAY_SSL,
+    GATEWAY_HOSTNAME: process.env.GATEWAY_HOSTNAME ?? 'localhost',
+    GATEWAY_PORT: process.env.GATEWAY_PORT ?? '8787',
+    GATEWAY_SSL: process.env.GATEWAY_SSL ?? 'false',
   },
 })
