@@ -1,15 +1,17 @@
 import { withSentryConfig } from '@sentry/nextjs'
 
 const INTERNAL_PACKAGES = [
-  'flydrive',
-  'flydrive/drivers/s3',
-  'flydrive/drivers/fs',
-  'flydrive/drivers/types',
   '@latitude-data/web-ui',
   '@latitude-data/env',
   '@latitude-data/core',
   '@latitude-data/jobs',
   '@latitude-data/mailers',
+
+  // ESM module only. They don't work with CommonJS
+  'flydrive',
+  'flydrive/drivers/s3',
+  'flydrive/drivers/fs',
+  'flydrive/drivers/types',
 ]
 
 /** @type {import('next').NextConfig} */

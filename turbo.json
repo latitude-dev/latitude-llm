@@ -1,5 +1,6 @@
 {
   "globalEnv": [
+    "CI",
     "NEXT_RUNTIME",
     "NODE_ENV",
     "BUILDING_CONTAINER",

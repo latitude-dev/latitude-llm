@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "build": "next build --debug",
-    "dev": "NODE_DEBUG=latitude:debug next dev --turbo",
+    "dev": "NEXT_TURBOPACK_TRACING=1 next dev --turbo",
     "dev:debug": "NODE_DEBUG=latitude:debug NODE_OPTIONS='--inspect=0.0.0.0:9229' ./node_modules/.bin/next dev",
     "dev:local": "USE_LOCALHOST=true pnpm run dev",
     "lint": "next lint",
@@ -38,7 +38,7 @@
     "lucia": "^3.2.0",
     "monaco-editor": "^0.50.0",
     "nanoid": "^5.0.7",
-    "next": "^14.3.0-canary.87",
+    "next": "^15.0.0-canary.165",
     "next-themes": "^0.3.0",
     "nextjs-toploader": "^1.6.12",
     "nprogress": "^0.2.0",
