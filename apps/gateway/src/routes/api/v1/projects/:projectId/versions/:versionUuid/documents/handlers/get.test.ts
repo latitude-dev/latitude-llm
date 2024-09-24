@@ -20,7 +20,7 @@ describe('GET documents', () => {
   describe('unauthorized', () => {
     it('fails', async () => {
       const res = await app.request(
-        '/api/v1/projects/1/commits/asldkfjhsadl/documents/path/to/document',
+        '/api/v1/projects/1/versions/asldkfjhsadl/documents/path/to/document',
       )
 
       expect(res.status).toBe(401)
@@ -54,7 +54,7 @@ describe('GET documents', () => {
         .getDocumentByPath({ commit, path })
         .then((r) => r.unwrap())
 
-      const route = `/api/v1/projects/${project!.id}/commits/${commit!.uuid}/documents/${document.documentVersion.path}`
+      const route = `/api/v1/projects/${project!.id}/versions/${commit!.uuid}/documents/${document.documentVersion.path}`
       const res = await app.request(route, {
         headers: {
           Authorization: `Bearer ${apikey!.token}`,

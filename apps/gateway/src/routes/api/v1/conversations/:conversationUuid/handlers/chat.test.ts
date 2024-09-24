@@ -74,12 +74,15 @@ let apiKey: ApiKey
 describe('POST /add-message', () => {
   describe('unauthorized', () => {
     it('fails', async () => {
-      const res = await app.request('/api/v1/chats/add-message', {
-        method: 'POST',
-        body: JSON.stringify({
-          path: '/path/to/document',
-        }),
-      })
+      const res = await app.request(
+        '/api/v1/conversations/fake-document-log-uuid/chat',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            path: '/path/to/document',
+          }),
+        },
+      )
 
       expect(res.status).toBe(401)
     })
@@ -98,10 +101,9 @@ describe('POST /add-message', () => {
       apiKey = key!
       token = apiKey.token
 
-      route = '/api/v1/chats/add-message'
+      route = '/api/v1/conversations/fake-document-log-uuid/chat'
       body = JSON.stringify({
         messages: [],
-        uuid: 'fake-document-log-uuid',
       })
       headers = {
         Authorization: `Bearer ${token}`,

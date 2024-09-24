@@ -1,7 +1,7 @@
 import { compactObject } from '@latitude-data/core/lib/compactObject'
 import { Result } from '@latitude-data/core/lib/Result'
 import { LatitudeApiKeysRepository } from '@latitude-data/core/repositories'
-import { LatitudeSdk } from '@latitude-data/sdk'
+import { Latitude } from '@latitude-data/sdk'
 import env from '$/env'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
 
@@ -28,6 +28,6 @@ export async function createSdk(projectId?: number) {
     ssl: env.GATEWAY_SSL,
   }
   return Result.ok(
-    new LatitudeSdk(latitudeApiKey, compactObject({ gateway, projectId })),
+    new Latitude(latitudeApiKey, compactObject({ gateway, projectId })),
   )
 }

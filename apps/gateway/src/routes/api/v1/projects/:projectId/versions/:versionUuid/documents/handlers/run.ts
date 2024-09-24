@@ -22,13 +22,13 @@ export const runHandler = factory.createHandlers(
     return streamSSE(
       c,
       async (stream) => {
-        const { projectId, commitUuid } = c.req.param()
+        const { projectId, versionUuid } = c.req.param()
         const { path, parameters } = c.req.valid('json')
         const workspace = c.get('workspace')
         const { document, commit } = await getData({
           workspace,
           projectId: Number(projectId!),
-          commitUuid: commitUuid!,
+          commitUuid: versionUuid!,
           documentPath: path!,
         }).then((r) => r.unwrap())
         const result = await runDocumentAtCommit({

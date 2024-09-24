@@ -61,7 +61,7 @@ describe('POST /run', () => {
   describe('unauthorized', () => {
     it('fails', async () => {
       const res = await app.request(
-        '/api/v1/projects/1/commits/asldkfjhsadl/documents/run',
+        '/api/v1/projects/1/versions/asldkfjhsadl/documents/run',
         {
           method: 'POST',
           body: JSON.stringify({
@@ -102,7 +102,7 @@ describe('POST /run', () => {
 
       commit = await mergeCommit(cmt).then((r) => r.unwrap())
 
-      route = `/api/v1/projects/${project!.id}/commits/${commit!.uuid}/documents/run`
+      route = `/api/v1/projects/${project!.id}/versions/${commit!.uuid}/documents/run`
       body = JSON.stringify({
         path: document.documentVersion.path,
         parameters: {},
