@@ -1,7 +1,7 @@
 'use server'
 
 import { StreamEventTypes } from '@latitude-data/core/browser'
-import { LatitudeSdk, type ChainEventDto } from '@latitude-data/sdk-js'
+import { LatitudeSdk, type ChainEventDto } from '@latitude-data/sdk'
 import { createSdk } from '$/app/(private)/_lib/createSdk'
 import { createStreamableValue, StreamableValue } from 'ai/rsc'
 

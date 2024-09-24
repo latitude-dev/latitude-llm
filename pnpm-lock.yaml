@@ -318,7 +318,7 @@ importers:
       '@latitude-data/mailers':
         specifier: workspace:^
         version: link:../../packages/mailers
-      '@latitude-data/sdk-js':
+      '@latitude-data/sdk':
         specifier: workspace:*
         version: link:../../packages/sdks/typescript
       '@latitude-data/web-ui':
