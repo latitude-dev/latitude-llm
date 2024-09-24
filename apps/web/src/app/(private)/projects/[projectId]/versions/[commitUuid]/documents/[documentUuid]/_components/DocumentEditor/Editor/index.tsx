@@ -67,6 +67,7 @@ export default function DocumentEditor({
         documentUuid: document.documentUuid,
         content: val,
       })
+
       setIsSaved(true)
     },
     500,
