@@ -1,3 +1,4 @@
+import { compactObject } from '@latitude-data/core/lib/compactObject'
 import { Result } from '@latitude-data/core/lib/Result'
 import { LatitudeApiKeysRepository } from '@latitude-data/core/repositories'
 import { LatitudeSdk } from '@latitude-data/sdk-js'
@@ -15,15 +16,18 @@ async function getLatitudeApiKey() {
   return Result.ok(result.value)
 }
 
-export async function createSdk() {
+export async function createSdk(projectId?: number) {
   const result = await getLatitudeApiKey()
   if (result.error) return result
 
   const latitudeApiKey = result.value.token
+
   const gateway = {
     host: env.GATEWAY_HOSTNAME,
     port: env.GATEWAY_PORT,
     ssl: env.GATEWAY_SSL,
   }
-  return Result.ok(new LatitudeSdk({ latitudeApiKey, gateway }))
+  return Result.ok(
+    new LatitudeSdk(latitudeApiKey, compactObject({ gateway, projectId })),
+  )
 }

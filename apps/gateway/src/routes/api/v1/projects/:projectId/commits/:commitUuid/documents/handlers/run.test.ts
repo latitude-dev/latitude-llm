@@ -15,7 +15,7 @@ import {
 import { Result } from '@latitude-data/core/lib/Result'
 import { apiKeys } from '@latitude-data/core/schema'
 import { mergeCommit } from '@latitude-data/core/services/commits/merge'
-import { parseSSEEvent } from '$/common/parseSSEEvent'
+import { parseSSEvent } from '$/common/parseSSEEvent'
 import app from '$/routes/app'
 import { eq } from 'drizzle-orm'
 import { testConsumeStream } from 'test/helpers'
@@ -104,7 +104,7 @@ describe('POST /run', () => {
 
       route = `/api/v1/projects/${project!.id}/commits/${commit!.uuid}/documents/run`
       body = JSON.stringify({
-        documentPath: document.documentVersion.path,
+        path: document.documentVersion.path,
         parameters: {},
       })
       headers = {
@@ -153,12 +153,13 @@ describe('POST /run', () => {
       })
 
       let { done, value } = await testConsumeStream(res.body as ReadableStream)
-      value = parseSSEEvent(value)!.data
+      const event = parseSSEvent(value)
       expect(mocks.queues)
       expect(res.status).toBe(200)
       expect(res.body).toBeInstanceOf(ReadableStream)
       expect(done).toBe(true)
-      expect(value).toEqual({
+      expect(event).toEqual({
+        id: 0,
         event: StreamEventTypes.Latitude,
         data: {
           type: ChainEventTypes.Complete,
