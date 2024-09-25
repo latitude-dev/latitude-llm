@@ -4,13 +4,13 @@ Welcome to the Latitude SDK for TypeScript! This SDK is designed to help develop
 
 ## 🌟 Features
 
-- **Collaborative prompt manager**: Work together on prompts with your team.
-- **Advanced features**: Support for parameters, snippets, logic, and more.
-- **Version control**: Keep track of different prompt versions.
-- **API + SDKs**: Easy integration with your applications.
-- **Built-in observability**: Monitor and evaluate AI performance.
-- **Batch or real-time evaluations**: Assess prompt performance across various scenarios.
-- **Open-source**: Driven by the community.
+-   **Collaborative prompt manager**: Work together on prompts with your team.
+-   **Advanced features**: Support for parameters, snippets, logic, and more.
+-   **Version control**: Keep track of different prompt versions.
+-   **API + SDKs**: Easy integration with your applications.
+-   **Built-in observability**: Monitor and evaluate AI performance.
+-   **Batch or real-time evaluations**: Assess prompt performance across various scenarios.
+-   **Open-source**: Driven by the community.
 
 ## ⚡ Quick Start
 
@@ -41,42 +41,42 @@ pnpm add @latitude-data/sdk
 First, import the necessary classes and types from the SDK:
 
 ```typescript
-import { LatitudeSdk, Message, StreamChainResponse } from '@latitude-data/sdk'
+import { Latitude, Message, StreamChainResponse } from '@latitude-data/sdk'
 ```
 
 #### Initializing the SDK
 
-Create an instance of the `LatitudeSdk` class by providing your API key and optionally a project ID and gateway configuration:
+Create an instance of the `Latitude` class by providing your API key and optionally a project ID and gateway configuration:
 
 ```typescript
-const sdk = new LatitudeSdk('your-api-key', {
-  projectId: 123, // optional
-  gateway: {
-    host: 'your-gateway-hostname',
-    port: 443,
-    ssl: true,
-  },
+const sdk = new Latitude('your-api-key', {
+    projectId: 123, // optional
+    gateway: {
+        host: 'your-gateway-hostname',
+        port: 443,
+        ssl: true,
+    },
 })
 ```
 
 #### Running a Prompt
 
-To run a prompt, use the `run` method. You can provide a path, project ID, commit UUID, parameters, and callbacks for handling events, completion, and errors:
+To run a prompt, use the `run` method. You can provide a path, project ID, version UUID, parameters, and callbacks for handling events, completion, and errors:
 
 ```typescript
 sdk.run('path/to/prompt', {
-  projectId: 123, // optional, defaults to the projectId provided during initialization
-  commitUuid: 'commit-uuid', // optional, defaults to the live version
-  parameters: { key: 'value' }, // optional, depends on whether the prompt expects parameters
-  onEvent: ({ event, data }) => {
-    console.log('Event:', event, 'Data:', data)
-  },
-  onFinished: (data: StreamChainResponse) => {
-    console.log('Finished:', data)
-  },
-  onError: (error: Error) => {
-    console.error('Error:', error)
-  },
+    projectId: 123, // optional, defaults to the projectId provided during initialization
+    versionUuid: 'version-uuid', // optional, defaults to the live version
+    parameters: { key: 'value' }, // optional, depends on whether the prompt expects parameters
+    onEvent: ({ event, data }) => {
+        console.log('Event:', event, 'Data:', data)
+    },
+    onFinished: (data: StreamChainResponse) => {
+        console.log('Finished:', data)
+    },
+    onError: (error: Error) => {
+        console.error('Error:', error)
+    },
 })
 ```
 
@@ -86,20 +86,20 @@ To chat with a prompt, use the `chat` method. Provide the prompt UUID, an array 
 
 ```typescript
 const messages: Message[] = [
-  { role: 'user', content: 'Hello, how are you?' },
-  { role: 'assistant', content: 'I am fine, thank you!' },
+    { role: 'user', content: 'Hello, how are you?' },
+    { role: 'assistant', content: 'I am fine, thank you!' },
 ]
 
 sdk.chat('prompt-uuid', messages, {
-  onEvent: ({ event, data }) => {
-    console.log('Event:', event, 'Data:', data)
-  },
-  onFinished: (data: StreamChainResponse) => {
-    console.log('Finished:', data)
-  },
-  onError: (error: Error) => {
-    console.error('Error:', error)
-  },
+    onEvent: ({ event, data }) => {
+        console.log('Event:', event, 'Data:', data)
+    },
+    onFinished: (data: StreamChainResponse) => {
+        console.log('Finished:', data)
+    },
+    onError: (error: Error) => {
+        console.error('Error:', error)
+    },
 })
 ```
 
@@ -113,7 +113,7 @@ Both the `run` and `chat` methods accept an `onError` callback to handle any err
 
 ```typescript
 onError: (error: Error) => {
-  console.error('Error:', error)
+    console.error('Error:', error)
 }
 ```
 
