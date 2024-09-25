@@ -1,12 +1,18 @@
-import { env } from '@latitude-data/env'
 import { eq } from 'drizzle-orm'
 
-import type { Commit, DocumentVersion } from '../../browser'
+import {
+  findFirstModelForProvider,
+  type Commit,
+  type DocumentVersion,
+} from '../../browser'
 import { database } from '../../client'
 import { findWorkspaceFromCommit } from '../../data-access'
 import { Result, Transaction, TypedResult } from '../../lib'
 import { BadRequestError } from '../../lib/errors'
-import { DocumentVersionsRepository } from '../../repositories'
+import {
+  DocumentVersionsRepository,
+  ProviderApiKeysRepository,
+} from '../../repositories'
 import { documentVersions } from '../../schema'
 
 export async function createNewDocument(
@@ -32,9 +38,19 @@ export async function createNewDocument(
     const currentDocs = await docsScope
       .getDocumentsAtCommit(commit)
       .then((r) => r.unwrap())
+
     if (currentDocs.find((d) => d.path === path)) {
       return Result.error(
         new BadRequestError('A document with the same path already exists'),
+      )
+    }
+
+    const providerScope = new ProviderApiKeysRepository(workspace!.id, tx)
+    const provider = await providerScope.findFirst().then((r) => r.unwrap())
+
+    if (!provider) {
+      return Result.error(
+        new BadRequestError('No provider found when creating document'),
       )
     }
 
@@ -47,8 +63,8 @@ export async function createNewDocument(
           content ??
           `
 ---
-provider: ${env.DEFAULT_PROVIDER_ID}
-model: gpt-4o-mini
+provider: ${provider.name}
+model: ${findFirstModelForProvider(provider.provider)}
 ---
         `.trim(),
       })

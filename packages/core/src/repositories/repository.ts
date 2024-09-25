@@ -73,4 +73,10 @@ export default abstract class Repository<
 
     return Result.ok(result[0]! as T)
   }
+
+  async findFirst() {
+    const result = await this.db.select().from(this.scope).limit(1)
+
+    return Result.ok(result[0] as T | undefined)
+  }
 }
