@@ -4,6 +4,10 @@ on:
   push:
     branches:
       - main
+    paths:
+      - 'apps/**'
+      - 'packages/**'
+      - '.github/workflows/**'
 
 jobs:
   lint:
@@ -16,62 +20,12 @@ jobs:
     with:
       workflow_call: true
 
-  deploy-gateway:
+  deploy:
     needs: [lint, test]
-    uses: ./.github/workflows/deploy-common.yml
-    concurrency:
-      group: production-gateway
-      cancel-in-progress: false
+    strategy:
+      matrix:
+        app: [gateway, web, websockets, workers]
+    uses: ./.github/workflows/deploy-app.yml
     with:
-      working-directory: apps/infra
-      stack-name: gateway-production
-    secrets:
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      ARN_OF_IAM_ROLE_TO_ASSUME: ${{ secrets.ARN_OF_IAM_ROLE_TO_ASSUME }}
-      PULUMI_CONFIG_PASSPHRASE: ${{ secrets.PULUMI_CONFIG_PASSPHRASE }}
-
-  deploy-web:
-    needs: [lint, test]
-    uses: ./.github/workflows/deploy-common.yml
-    concurrency:
-      group: production-web
-      cancel-in-progress: false
-    with:
-      working-directory: apps/infra
-      stack-name: web-production
-    secrets:
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      ARN_OF_IAM_ROLE_TO_ASSUME: ${{ secrets.ARN_OF_IAM_ROLE_TO_ASSUME }}
-      PULUMI_CONFIG_PASSPHRASE: ${{ secrets.PULUMI_CONFIG_PASSPHRASE }}
-
-  deploy-websockets:
-    needs: [lint, test]
-    uses: ./.github/workflows/deploy-common.yml
-    concurrency:
-      group: production-websockets
-      cancel-in-progress: false
-    with:
-      working-directory: apps/infra
-      stack-name: websockets-production
-    secrets:
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      ARN_OF_IAM_ROLE_TO_ASSUME: ${{ secrets.ARN_OF_IAM_ROLE_TO_ASSUME }}
-      PULUMI_CONFIG_PASSPHRASE: ${{ secrets.PULUMI_CONFIG_PASSPHRASE }}
-
-  deploy-workers:
-    needs: [lint, test]
-    uses: ./.github/workflows/deploy-common.yml
-    concurrency:
-      group: production-workers
-      cancel-in-progress: false
-    with:
-      working-directory: apps/infra
-      stack-name: workers-production
-    secrets:
-      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-      ARN_OF_IAM_ROLE_TO_ASSUME: ${{ secrets.ARN_OF_IAM_ROLE_TO_ASSUME }}
-      PULUMI_CONFIG_PASSPHRASE: ${{ secrets.PULUMI_CONFIG_PASSPHRASE }}
+      app-name: ${{ matrix.app }}
+    secrets: inherit

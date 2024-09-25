@@ -1,0 +1,41 @@
+name: Deploy App
+
+on:
+  workflow_call:
+    inputs:
+      app-name:
+        required: true
+        type: string
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 2
+      - name: Check for relevant changes
+        id: check_changes
+        run: |
+          changes=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }})
+          echo "Changes detected:"
+          echo "$changes"
+          if echo "$changes" | grep -qE "^(apps/infra/|apps/${{ inputs.app-name }}/|packages/)"
+          then
+            echo "changes_detected=true" >> $GITHUB_OUTPUT
+          else
+            echo "changes_detected=false" >> $GITHUB_OUTPUT
+          fi
+      - uses: ./.github/workflows/deploy-common.yml
+        if: steps.check_changes.outputs.changes_detected == 'true'
+        with:
+          working-directory: apps/infra
+          stack-name: ${{ inputs.app-name }}-production
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          ARN_OF_IAM_ROLE_TO_ASSUME: ${{ secrets.ARN_OF_IAM_ROLE_TO_ASSUME }}
+          PULUMI_CONFIG_PASSPHRASE: ${{ secrets.PULUMI_CONFIG_PASSPHRASE }}
+    concurrency:
+      group: production-${{ inputs.app-name }}
+      cancel-in-progress: false
