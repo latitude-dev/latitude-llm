@@ -83,10 +83,15 @@ module.exports = {
           from: { height: 'var(--radix-accordion-content-height)' },
           to: { height: '0' },
         },
+        'flash-background': {
+          '0%': { backgroundColor: 'transparent' },
+         '100%': { backgroundColor: 'rgb(var(--accent))' },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
+        'flash': 'flash-background 1s ease-in-out',
       },
       maxWidth: {
         modal: '580px',

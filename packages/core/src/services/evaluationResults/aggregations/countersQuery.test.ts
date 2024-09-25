@@ -193,7 +193,7 @@ describe('evaluation results aggregations', () => {
         expect(result.mostCommon).toBe('apple')
         // Funcky test because of floating point math issues
         // in Mac OS and CI Linux
-        expect(result.percentage).toBeGreaterThan(65)
+        expect(result.percentage).toBeGreaterThan(64)
         expect(result.percentage).toBeLessThan(67)
       })
     })

@@ -3,6 +3,8 @@
 // All this can be seen in the browser. If you want something private
 // put in other place.
 
+import { type EvaluationResultWithMetadata } from '../repositories'
+
 const ONE_HOUR = 60 * 60 * 1000
 const SEVEN_DAYS = 7 * 24 * ONE_HOUR
 
@@ -35,8 +37,18 @@ type EvaluationStatusArgs = {
   errors: number
   enqueued: number
 }
+
+type evaluationResultCreatedArgs = {
+  workspaceId: number
+  evaluationId: number
+  documentUuid: string
+  evaluationResultId: number
+  row: EvaluationResultWithMetadata
+}
+
 export type WebServerToClientEvents = {
   evaluationStatus: (args: EvaluationStatusArgs) => void
+  evaluationResultCreated: (args: evaluationResultCreatedArgs) => void
   joinWorkspace: (args: { workspaceId: number; userId: string }) => void
 }
 export type WebClientToServerEvents = {
@@ -45,8 +57,11 @@ export type WebClientToServerEvents = {
 
 export type WorkersClientToServerEvents = {
   evaluationStatus: (args: {
-    data: EvaluationStatusArgs
     workspaceId: number
+    data: EvaluationStatusArgs
   }) => void
-  pingFromWorkers: () => void
+  evaluationResultCreated: (args: {
+    workspaceId: number
+    data: evaluationResultCreatedArgs
+  }) => void
 }

@@ -36,9 +36,11 @@ const getResultSchema = (type: EvaluationResultableType): JSONSchema7 => {
 export const runEvaluation = async (
   {
     documentLog,
+    documentUuid,
     evaluation,
   }: {
     documentLog: DocumentLog
+    documentUuid: string
     evaluation: EvaluationDto
   },
   db = database,
@@ -105,12 +107,14 @@ export const runEvaluation = async (
       output: 'object',
     },
   })
+
   if (chainResult.error) return chainResult
 
   chainResult.value.response.then((response) => {
     publisher.publish({
       type: 'evaluationRun',
       data: {
+        documentUuid,
         evaluationId: evaluation.id,
         documentLogUuid: documentLog.uuid,
         providerLogUuid: response.providerLog.uuid,
