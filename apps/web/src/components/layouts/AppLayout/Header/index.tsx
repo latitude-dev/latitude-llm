@@ -10,6 +10,7 @@ import Link from 'next/link'
 import { Fragment } from 'react/jsx-runtime'
 
 import AvatarDropdown from './AvatarDropdown'
+import { UsageIndicator } from './UsageIndicator'
 
 function BreadcrumbSeparator() {
   return (
@@ -110,7 +111,8 @@ export default function AppHeader({
       <div className='py-3 flex flex-row items-center justify-between'>
         <Breadcrumb showLogo breadcrumbs={breadcrumbs} />
         <div className='flex flex-row items-center gap-x-6'>
-          <nav className='flex flex-row gap-x-4'>
+          <nav className='flex flex-row gap-x-4 items-center'>
+            <UsageIndicator />
             {navigationLinks.map((link, idx) => (
               <NavLink key={idx} {...link} />
             ))}

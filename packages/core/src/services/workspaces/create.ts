@@ -8,16 +8,18 @@ export async function createWorkspace(
   {
     name,
     user,
+    createdAt,
   }: {
     name: string
     user: User
+    createdAt?: Date
   },
   db = database,
 ) {
   return Transaction.call<Workspace>(async (tx) => {
     const insertedWorkspaces = await tx
       .insert(workspaces)
-      .values({ name, creatorId: user.id })
+      .values({ name, creatorId: user.id, createdAt })
       .returning()
     const workspace = insertedWorkspaces[0]!
 

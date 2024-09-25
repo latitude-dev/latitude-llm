@@ -46,11 +46,20 @@ type evaluationResultCreatedArgs = {
   row: EvaluationResultWithMetadata
 }
 
+type DocumentLogCreatedArgs = {
+  workspaceId: number
+  documentUuid: string
+  commitUuid: string
+  documentLogId: number
+}
+
 export type WebServerToClientEvents = {
   evaluationStatus: (args: EvaluationStatusArgs) => void
   evaluationResultCreated: (args: evaluationResultCreatedArgs) => void
   joinWorkspace: (args: { workspaceId: number; userId: string }) => void
+  documentLogCreated: (args: DocumentLogCreatedArgs) => void
 }
+
 export type WebClientToServerEvents = {
   joinWorkspace: (args: { workspaceId: number; userId: string }) => void
 }
@@ -63,5 +72,9 @@ export type WorkersClientToServerEvents = {
   evaluationResultCreated: (args: {
     workspaceId: number
     data: evaluationResultCreatedArgs
+  }) => void
+  documentLogCreated: (args: {
+    workspaceId: number
+    data: DocumentLogCreatedArgs
   }) => void
 }

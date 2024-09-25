@@ -8,6 +8,7 @@ import { createUser, type ICreateUser } from './users'
 export type ICreateWorkspace = {
   name?: string
   creator?: User | ICreateUser
+  createdAt?: Date
 }
 export async function createWorkspace(
   workspaceData: Partial<ICreateWorkspace> = {},
@@ -22,6 +23,7 @@ export async function createWorkspace(
   const result = await createWorkspaceFn({
     name: name ?? randomName,
     user: userData,
+    createdAt: workspaceData.createdAt,
   })
   const workspace = result.unwrap()
   await createMembership({ workspace, user: userData }).then((r) => r.unwrap())
