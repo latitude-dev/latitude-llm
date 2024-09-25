@@ -58,8 +58,10 @@ function FileNode({
 }) {
   const allTmpFolders = useTempNodes((state) => state.tmpFolders)
   const tmpNodes = allTmpFolders[node.path] ?? []
-  const { currentPath } = useFileTreeContext()
-  const [selected, setSelected] = useState(currentPath === node.path)
+  const { currentUuid } = useFileTreeContext()
+  const [selected, setSelected] = useState(
+    !!currentUuid && currentUuid === node.doc?.documentUuid,
+  )
   const allNodes = useMemo(
     () => [...tmpNodes, ...node.children],
     [tmpNodes, node.children],
@@ -79,8 +81,8 @@ function FileNode({
   }, [togglePath, node.path, node.isPersisted])
 
   useEffect(() => {
-    setSelected(currentPath === node.path)
-  }, [currentPath])
+    setSelected(!!currentUuid && currentUuid === node.doc?.documentUuid)
+  }, [currentUuid])
 
   return (
     <div className='flex-1 w-full'>
@@ -132,22 +134,24 @@ type DeletableElement<T extends DeletableType> = T extends DeletableType.File
 
 export function FilesTree({
   isMerged,
-  currentPath,
+  currentUuid,
   documents,
   onMergeCommitClick,
   navigateToDocument,
   createFile,
+  renamePaths,
   destroyFile,
   destroyFolder,
   isDestroying,
 }: {
   isMerged: boolean
   createFile: (args: { path: string }) => Promise<void>
+  renamePaths: (args: { oldPath: string; newPath: string }) => Promise<void>
   destroyFile: (documentUuid: string) => Promise<void>
   onMergeCommitClick: () => void
   destroyFolder: (path: string) => Promise<void>
   documents: SidebarDocument[]
-  currentPath: string | undefined
+  currentUuid: string | undefined
   navigateToDocument: (documentUuid: string) => void
   isDestroying: boolean
 }) {
@@ -156,11 +160,20 @@ export function FilesTree({
   const [deletableNode, setDeletable] =
     useState<DeletableElement<DeletableType> | null>(null)
 
+  const currentPath = useMemo(() => {
+    if (!currentUuid) return undefined
+    const currentDocument = documents.find(
+      (d) => d.documentUuid === currentUuid,
+    )
+    return currentDocument?.path
+  }, [currentUuid, documents])
+
   useEffect(() => {
     if (currentPath) {
       togglePath(currentPath)
     }
   }, [currentPath, togglePath])
+
   const onConfirmDelete = useCallback(
     async <T extends DeletableType>(deletable: DeletableElement<T>) => {
       if (deletable.type === DeletableType.File) {
@@ -180,10 +193,15 @@ export function FilesTree({
       <FileTreeProvider
         isMerged={isMerged}
         onMergeCommitClick={onMergeCommitClick}
-        currentPath={currentPath}
+        currentUuid={currentUuid}
         onNavigateToDocument={navigateToDocument}
-        onCreateFile={async (path) => {
+        onCreateFile={(path) => {
           createFile({ path })
+        }}
+        onRenameFile={({ node, path }) => {
+          const oldPath = node.path + (node.isFile ? '' : '/')
+          const newPath = path + (node.isFile ? '' : '/')
+          renamePaths({ oldPath, newPath })
         }}
         onDeleteFile={({ node, documentUuid }) => {
           setDeletable({

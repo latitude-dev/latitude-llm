@@ -21,6 +21,7 @@ import {
   LoaderCircle,
   Lock,
   Moon,
+  Pencil,
   RefreshCcw,
   SquareDot,
   SquareMinus,
@@ -63,6 +64,7 @@ const Icons = {
   sun: Sun,
   eye: Eye,
   externalLink: ExternalLink,
+  pencil: Pencil,
   refresh: RefreshCcw,
 }
 

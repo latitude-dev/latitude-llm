@@ -54,7 +54,9 @@ export function TreeToolbar() {
           open={false}
           hasChildren={false}
           isFile={isFile}
-          name=' '
+          name=''
+          isEditing={true}
+          setIsEditing={() => {}}
           icons={isFile ? <DocumentIcon /> : <FolderIcons open={false} />}
           indentation={[{ isLast: true }]}
           onSaveValue={async ({ path }) => {

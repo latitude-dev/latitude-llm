@@ -7,6 +7,7 @@ import { useToast } from '@latitude-data/web-ui'
 import { createDocumentVersionAction } from '$/actions/documents/create'
 import { destroyDocumentAction } from '$/actions/documents/destroyDocumentAction'
 import { destroyFolderAction } from '$/actions/documents/destroyFolderAction'
+import { renameDocumentPathsAction } from '$/actions/documents/renamePathsAction'
 import { updateDocumentContentAction } from '$/actions/documents/updateContent'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
@@ -33,6 +34,9 @@ export default function useDocumentVersions(
         onSuccessCreate?.(document)
       },
     },
+  )
+  const { execute: executeRenamePaths } = useServerAction(
+    renameDocumentPathsAction,
   )
   const { execute: executeDestroyDocument, isPending: isDestroyingFile } =
     useServerAction(destroyDocumentAction)
@@ -101,6 +105,39 @@ export default function useDocumentVersions(
       }
     },
     [executeCreateDocument, mutate, data, commitUuid],
+  )
+
+  const renamePaths = useCallback(
+    async ({ oldPath, newPath }: { oldPath: string; newPath: string }) => {
+      if (!projectId) return
+
+      const [updatedDocuments, error] = await executeRenamePaths({
+        oldPath,
+        newPath,
+        projectId,
+        commitUuid,
+      })
+
+      if (updatedDocuments) {
+        mutate(
+          data.map((d) => {
+            const updatedDocument = updatedDocuments.find(
+              (ud) => ud.documentUuid === d.documentUuid,
+            )
+            return updatedDocument ? updatedDocument : d
+          }),
+        )
+      }
+
+      if (error) {
+        toast({
+          title: 'Error renaming paths',
+          description: error.formErrors?.[0] || error.message,
+          variant: 'destructive',
+        })
+      }
+    },
+    [executeRenamePaths, mutate, data, commitUuid],
   )
 
   const destroyFile = useCallback(
@@ -188,6 +225,7 @@ export default function useDocumentVersions(
     isLoading: isLoading,
     error: swrError,
     createFile,
+    renamePaths,
     destroyFile,
     destroyFolder,
     updateContent,

@@ -178,9 +178,14 @@ export const useTempNodes = create<TmpFoldersState>((set, get) => ({
       const node = allNodes.find((node) => node.id === id)
       if (!node) return state
 
-      const parentPath = node.path.split('/').slice(0, -1).join('/')
-      node.name = path
-      node.path = `${parentPath}/${path}`
+      const parentPathParts = node.path.split('/').slice(0, -1)
+      const newPathParts = path.split('/')
+      const newPath = [...parentPathParts, ...newPathParts].join('/')
+
+      node.path = newPath
+      node.name = newPathParts.pop()!
+
+      // TODO: Create in-between folders when new path contains nested paths.
 
       return state
     })
