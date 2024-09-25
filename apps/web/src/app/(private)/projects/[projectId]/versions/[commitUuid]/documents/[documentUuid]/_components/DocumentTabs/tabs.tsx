@@ -27,18 +27,16 @@ export function DocumentTabSelector({
   }
 
   return (
-    <div className='flex flex-row p-4 pt-6 pb-0'>
-      <TabSelector
-        options={[
-          { label: 'Editor', value: DocumentRoutes.editor },
-          { label: 'Evaluations', value: DocumentRoutes.evaluations },
-          { label: 'Logs', value: DocumentRoutes.logs },
-        ]}
-        selected={selectedSegment ?? DocumentRoutes.editor}
-        onSelect={(value) => {
-          router.push(pathTo(value))
-        }}
-      />
-    </div>
+    <TabSelector
+      options={[
+        { label: 'Editor', value: DocumentRoutes.editor },
+        { label: 'Evaluations', value: DocumentRoutes.evaluations },
+        { label: 'Logs', value: DocumentRoutes.logs },
+      ]}
+      selected={selectedSegment ?? DocumentRoutes.editor}
+      onSelect={(value) => {
+        router.push(pathTo(value))
+      }}
+    />
   )
 }

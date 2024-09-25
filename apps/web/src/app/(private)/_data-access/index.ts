@@ -3,6 +3,7 @@ import { cache } from 'react'
 import { type Commit } from '@latitude-data/core/browser'
 import { findAllEvaluationTemplates } from '@latitude-data/core/data-access'
 import { NotFoundError } from '@latitude-data/core/lib/errors'
+import { ApiKeysRepository } from '@latitude-data/core/repositories/apiKeysRepository'
 import {
   CommitsRepository,
   ConnectedEvaluationsRepository,
@@ -222,3 +223,10 @@ export const getConnectedDocumentsWithMetadataCached = cache(
     return result.unwrap()
   },
 )
+
+export const getApiKeysCached = cache(async () => {
+  const { workspace } = await getCurrentUser()
+  const scope = new ApiKeysRepository(workspace.id)
+  const result = await scope.findAll()
+  return result.unwrap()
+})

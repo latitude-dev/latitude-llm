@@ -1,11 +1,17 @@
 import { ReactNode } from 'react'
 
 import { DocumentVersionProvider } from '@latitude-data/web-ui'
-import { getDocumentByUuidCached } from '$/app/(private)/_data-access'
+import {
+  getApiKeysCached,
+  getDocumentByUuidCached,
+} from '$/app/(private)/_data-access'
 import { ROUTES } from '$/services/routes'
 import { redirect } from 'next/navigation'
 
 import DocumentsLayout from '../../_components/DocumentsLayout'
+import DocumentationModal, {
+  DocumentationModalProvider,
+} from './_components/DocumentationModal'
 import DocumentTabs from './_components/DocumentTabs'
 
 export default async function DocumentPage({
@@ -18,7 +24,9 @@ export default async function DocumentPage({
   const projectId = Number(params.projectId)
   const documentUuid = params.documentUuid
   const commitUuid = params.commitUuid
+
   try {
+    const apiKeys = await getApiKeysCached()
     const document = await getDocumentByUuidCached({
       projectId,
       commitUuid,
@@ -32,7 +40,14 @@ export default async function DocumentPage({
           commitUuid={commitUuid}
           document={document}
         >
-          <DocumentTabs params={params}>{children}</DocumentTabs>
+          <DocumentationModalProvider>
+            <DocumentationModal
+              projectId={params.projectId}
+              commitUuid={params.commitUuid}
+              apiKeys={apiKeys}
+            />
+            <DocumentTabs params={params}>{children}</DocumentTabs>
+          </DocumentationModalProvider>
         </DocumentsLayout>
       </DocumentVersionProvider>
     )
