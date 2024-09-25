@@ -1,4 +1,4 @@
-import { Commit, DocumentLog } from '../../browser'
+import { Commit, DocumentLog, LogSources } from '../../browser'
 import { database } from '../../client'
 import { publisher } from '../../events/publisher'
 import { Result, Transaction } from '../../lib'
@@ -13,6 +13,7 @@ export type CreateDocumentLogProps = {
     resolvedContent: string
     customIdentifier?: string
     duration: number
+    source: LogSources
   }
 }
 
@@ -25,6 +26,7 @@ export async function createDocumentLog(
       parameters,
       customIdentifier,
       duration,
+      source,
     },
     commit,
   }: CreateDocumentLogProps,
@@ -41,6 +43,7 @@ export async function createDocumentLog(
         parameters,
         customIdentifier,
         duration,
+        source,
       })
       .returning()
 

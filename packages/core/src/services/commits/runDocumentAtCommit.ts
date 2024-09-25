@@ -61,6 +61,7 @@ export async function runDocumentAtCommit({
           resolvedContent,
           parameters,
           duration: await duration,
+          source,
         },
       }),
     ),

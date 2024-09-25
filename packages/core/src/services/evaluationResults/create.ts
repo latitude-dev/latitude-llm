@@ -57,6 +57,7 @@ export async function createEvaluationResult(
         providerLogId: providerLog.id,
         resultableType: evaluation.configuration.type,
         resultableId: metadata[0]!.id,
+        source: documentLog.source,
       })
       .returning()
 

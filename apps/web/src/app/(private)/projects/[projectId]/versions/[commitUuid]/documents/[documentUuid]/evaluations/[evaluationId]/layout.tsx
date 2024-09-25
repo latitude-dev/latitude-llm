@@ -15,12 +15,13 @@ import {
   getEvaluationModalValueQuery,
   getEvaluationTotalsQuery,
 } from '@latitude-data/core/services/evaluationResults/index'
-import { TableWithHeader, Text } from '@latitude-data/web-ui'
+import { Icon, TableWithHeader, Text, Tooltip } from '@latitude-data/web-ui'
 import { findCommitCached } from '$/app/(private)/_data-access'
 import BreadcrumbLink from '$/components/BreadcrumbLink'
 import { Breadcrumb } from '$/components/layouts/AppLayout/Header'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
+import Link from 'next/link'
 
 import { Actions } from './_components/Actions'
 import Content from './_components/Content'
@@ -143,11 +144,26 @@ export default async function ConnectedEvaluationLayout({
               },
               {
                 name: (
-                  <div className='flex flex-row items-center gap-x-4'>
+                  <div className='flex flex-row items-center gap-4'>
                     <Text.H4M>{evaluation.name}</Text.H4M>
                     <Text.H4M color='foregroundMuted'>
                       {TYPE_TEXT[evaluation.configuration.type]}
                     </Text.H4M>
+                    <Tooltip
+                      asChild
+                      trigger={
+                        <Link
+                          href={
+                            ROUTES.evaluations.detail({ uuid: evaluation.uuid })
+                              .root
+                          }
+                        >
+                          <Icon name='externalLink' />
+                        </Link>
+                      }
+                    >
+                      Go to evaluation
+                    </Tooltip>
                   </div>
                 ),
               },

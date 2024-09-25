@@ -414,6 +414,13 @@
       "when": 1727267232098,
       "tag": "0058_white_sleeper",
       "breakpoints": true
+    },
+    {
+      "idx": 59,
+      "version": "7",
+      "when": 1727298596943,
+      "tag": "0059_faulty_barracuda",
+      "breakpoints": true
     }
   ]
 }
