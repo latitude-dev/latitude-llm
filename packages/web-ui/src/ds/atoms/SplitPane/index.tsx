@@ -114,7 +114,7 @@ function HorizontalSplit({
   const [paneWidth, setPaneWidth] = useState<number>(initialWidth)
   const width = typeof window !== 'undefined' ? paneWidth : initialWidth
   return (
-    <div className='h-full w-full grid grid-cols-[auto,1fr]'>
+    <div className='min-h-full w-full grid grid-cols-[auto,1fr]'>
       <ResizablePane
         minWidth={minWidth}
         paneWidth={paneWidth}

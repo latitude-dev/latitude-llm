@@ -64,6 +64,7 @@ export type DocumentRunEvent = LatitudeEventGeneric<
     response: ChainCallResponse
     resolvedContent: string
     parameters: Record<string, unknown>
+    source: LogSources
   }
 >
 

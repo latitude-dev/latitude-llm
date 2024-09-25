@@ -1,3 +1,5 @@
+import { capitalize } from 'lodash-es'
+
 import {
   EvaluationDto,
   EvaluationResultableType,
@@ -68,6 +70,7 @@ export const EvaluationResultsTable = ({
         <TableRow>
           <TableHead>Time</TableHead>
           <TableHead>Version</TableHead>
+          <TableHead>Origin</TableHead>
           <TableHead>Result</TableHead>
           <TableHead>Cost</TableHead>
           <TableHead>Tokens</TableHead>
@@ -93,14 +96,14 @@ export const EvaluationResultsTable = ({
             )}
           >
             <TableCell>
-              <Text.H4 noWrap>
+              <Text.H5 noWrap>
                 <time
                   dateTime={evaluationResult.createdAt.toISOString()}
                   suppressHydrationWarning
                 >
                   {relativeTime(evaluationResult.createdAt)}
                 </time>
-              </Text.H4>
+              </Text.H5>
             </TableCell>
             <TableCell>
               <div className='flex flex-row gap-2 items-center'>
@@ -118,18 +121,25 @@ export const EvaluationResultsTable = ({
               </div>
             </TableCell>
             <TableCell>
+              <Text.H5 noWrap>
+                {evaluationResult.source
+                  ? capitalize(evaluationResult.source)
+                  : '-'}
+              </Text.H5>
+            </TableCell>
+            <TableCell>
               <ResultCellContent
                 evaluation={evaluation}
                 value={evaluationResult.result}
               />
             </TableCell>
             <TableCell>
-              <Text.H4 noWrap>
+              <Text.H5 noWrap>
                 {formatCostInMillicents(evaluationResult.costInMillicents || 0)}
-              </Text.H4>
+              </Text.H5>
             </TableCell>
             <TableCell>
-              <Text.H4 noWrap>{evaluationResult.tokens}</Text.H4>
+              <Text.H5 noWrap>{evaluationResult.tokens}</Text.H5>
             </TableCell>
           </TableRow>
         ))}

@@ -29,6 +29,7 @@ export const createDocumentLogJob = async ({
       parameters: event.data.parameters,
       resolvedContent: event.data.resolvedContent,
       uuid: event.data.documentLogUuid,
+      source: event.data.source,
     },
   }).then((r) => r.unwrap())
 }

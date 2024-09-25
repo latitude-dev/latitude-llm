@@ -76,6 +76,7 @@ function Tooltip({
   sticky,
   hideWhenDetached,
   updatePositionStrategy,
+  asChild = true,
 }: Props) {
   return (
     <TooltipRoot
@@ -85,9 +86,7 @@ function Tooltip({
       delayDuration={delayDuration}
       disableHoverableContent={disableHoverableContent}
     >
-      <TooltipTrigger asChild onClick={(e) => e.preventDefault()}>
-        {trigger}
-      </TooltipTrigger>
+      <TooltipTrigger asChild={asChild}>{trigger}</TooltipTrigger>
       <TooltipPrimitive.Portal>
         <TooltipContent
           variant={variant}

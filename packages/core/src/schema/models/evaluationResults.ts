@@ -3,7 +3,7 @@ import { bigint, bigserial, index, pgEnum } from 'drizzle-orm/pg-core'
 import { EvaluationResultableType } from '../../constants'
 import { latitudeSchema } from '../db-schema'
 import { documentLogs } from '../models/documentLogs'
-import { providerLogs } from '../models/providerLogs'
+import { logSourcesEnum, providerLogs } from '../models/providerLogs'
 import { timestamps } from '../schemaHelpers'
 import { evaluations } from './evaluations'
 
@@ -28,6 +28,7 @@ export const evaluationResults = latitudeSchema.table(
       .references(() => providerLogs.id),
     resultableType: evaluationResultTypes('resultable_type').notNull(),
     resultableId: bigint('resultable_id', { mode: 'number' }).notNull(),
+    source: logSourcesEnum('source'),
     ...timestamps(),
   },
   (table) => ({

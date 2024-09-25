@@ -123,6 +123,7 @@ describe('createEvaluationResultJob', () => {
           updatedAt: expect.any(Date),
           tokens: expect.any(Number),
           costInMillicents: expect.any(Number),
+          source: expect.any(String),
           result: '33',
         },
       },

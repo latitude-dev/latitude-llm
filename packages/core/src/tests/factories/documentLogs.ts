@@ -96,6 +96,7 @@ export async function createDocumentLog({
       resolvedContent: documentContent,
       parameters: parameters ?? {},
       customIdentifier,
+      source: LogSources.API,
       duration,
     },
   }).then((r) => r.unwrap())
