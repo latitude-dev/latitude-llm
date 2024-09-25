@@ -20,35 +20,40 @@ vi.mock('$/middlewares/authHandler', () => ({
 }))
 
 describe('GET /api/documents/[projectId]/[commitUuid]/[documentUuid]/evaluations', async () => {
-  const { workspace, documents } = await factories.createProject({
-    providers: [{ type: Providers.OpenAI, name: 'openai' }],
-    documents: {
-      doc1: factories.helpers.createPrompt({
-        provider: 'openai',
-        content: 'foo',
-      }),
-      doc2: factories.helpers.createPrompt({
-        provider: 'openai',
-        content: 'bar',
-      }),
-    },
-  })
+  let workspace: any
+  let documents: any
+  let mockEvaluations: any
 
-  const mockEvaluations = [
-    await factories.createConnectedEvaluation({
-      workspace,
-      live: false,
-      documentUuid: documents[0]!.documentUuid,
-    }),
-    await factories.createConnectedEvaluation({
-      workspace,
-      live: false,
-      documentUuid: documents[1]!.documentUuid,
-    }),
-  ]
-
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.resetAllMocks()
+
+    const setup = await factories.createProject({
+      providers: [{ type: Providers.OpenAI, name: 'openai' }],
+      documents: {
+        doc1: factories.helpers.createPrompt({
+          provider: 'openai',
+          content: 'foo',
+        }),
+        doc2: factories.helpers.createPrompt({
+          provider: 'openai',
+          content: 'bar',
+        }),
+      },
+    })
+
+    workspace = setup.workspace
+    documents = setup.documents
+
+    mockEvaluations = [
+      await factories.createConnectedEvaluation({
+        workspace,
+        documentUuid: documents[0]!.documentUuid,
+      }),
+      await factories.createConnectedEvaluation({
+        workspace,
+        documentUuid: documents[1]!.documentUuid,
+      }),
+    ]
   })
 
   it('should return evaluations for the given document UUID', async () => {
@@ -78,6 +83,7 @@ describe('GET /api/documents/[projectId]/[commitUuid]/[documentUuid]/evaluations
     expect(response).toBeInstanceOf(NextResponse)
     // @ts-expect-error
     expect((await response.json()).map((ev) => ev.id)).toEqual(
+      // @ts-expect-error
       mockEvaluations.map((ev) => ev.id),
     )
     expect(response.status).toBe(200)

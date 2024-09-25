@@ -6,22 +6,21 @@ import {
   EvaluationResultableType,
   Workspace,
 } from '../../browser'
-import { database } from '../../client'
-import { connectedEvaluations } from '../../schema'
-import { createEvaluation } from '../../services/evaluations'
+import {
+  connectEvaluations,
+  createEvaluation,
+} from '../../services/evaluations'
 
 export async function createConnectedEvaluation({
   workspace,
-  evaluationId,
+  evaluationUuid,
   documentUuid,
-  live = false,
 }: {
   workspace: Workspace
-  evaluationId?: number
+  evaluationUuid?: string
   documentUuid: string
-  live?: boolean
 }): Promise<ConnectedEvaluation> {
-  if (!evaluationId) {
+  if (!evaluationUuid) {
     const evaluation = await createEvaluation({
       workspace,
       name: faker.company.name(),
@@ -36,17 +35,15 @@ export async function createConnectedEvaluation({
       },
     }).then((r) => r.unwrap())
 
-    evaluationId = evaluation.id
+    evaluationUuid = evaluation.uuid
   }
 
-  const [connectedEvaluation] = await database
-    .insert(connectedEvaluations)
-    .values({
-      evaluationId,
-      documentUuid,
-      live,
-    })
-    .returning()
+  const connectedEvaluations = await connectEvaluations({
+    workspace,
+    documentUuid,
+    evaluationUuids: [evaluationUuid],
+  }).then((r) => r.unwrap())
+  const connectedEvaluation = connectedEvaluations[0]
 
   if (!connectedEvaluation) {
     throw new Error('Failed to create connected evaluation')

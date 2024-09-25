@@ -134,7 +134,7 @@ describe('createEvaluationResultJob', () => {
     const { createEvaluationResultJob } = mod
     const data = {
       ...event,
-      data: { ...event.data, evaluationId: 999 },
+      data: { ...event.data, evaluationId: -1 },
     }
     await expect(createEvaluationResultJob({ data })).rejects.toThrow(
       new NotFoundError('Evaluation not found'),

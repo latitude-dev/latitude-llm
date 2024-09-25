@@ -48,7 +48,7 @@ describe('updateConnectedEvaluationAction', () => {
 
     connectedEvaluation = await factories.createConnectedEvaluation({
       workspace,
-      evaluationId: evaluation.id,
+      evaluationUuid: evaluation.uuid,
       documentUuid: documentLog.documentUuid,
     })
   })
