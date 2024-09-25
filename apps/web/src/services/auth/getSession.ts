@@ -1,4 +1,5 @@
 import type { Session, User } from 'lucia'
+import { cookies } from 'next/headers'
 
 import { lucia } from '.'
 
@@ -7,7 +8,6 @@ export async function getSession(): Promise<
 > {
   // NOTE: We dynamically import the cookies function to make Nextjs happy
   // Info: https://github.com/vercel/next.js/issues/49757
-  const { cookies } = await import('next/headers')
   const sessionId = cookies().get(lucia.sessionCookieName)?.value ?? null
   if (!sessionId) {
     return {
