@@ -32,7 +32,7 @@ jobs:
   deploy:
     needs: check_changes
     if: needs.check_changes.outputs.changes_detected == 'true'
-    uses: ./.github/workflows/deploy-common.yml@main
+    uses: ./.github/workflows/deploy-common.yml
     with:
       working-directory: apps/infra
       stack-name: ${{ inputs.app-name }}-production
