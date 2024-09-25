@@ -11,13 +11,13 @@ import {
   vi,
 } from 'vitest'
 
-import { LatitudeSdk } from './index'
+import { Latitude } from './index'
 import { parseSSE } from './utils/parseSSE'
 
 const encoder = new TextEncoder()
 let latitudeApiKey = 'fake-api-key'
 let projectId = 123
-const SDK = new LatitudeSdk(latitudeApiKey)
+const SDK = new Latitude(latitudeApiKey)
 
 const server = setupServer()
 
@@ -31,10 +31,13 @@ describe('message', () => {
     server.boundary(async () => {
       const mockFn = vi.fn()
       server.use(
-        http.post('http://localhost:8787/api/v1/chats/add-message', (info) => {
-          mockFn(info.request.headers.get('Authorization'))
-          return HttpResponse.json({})
-        }),
+        http.post(
+          'http://localhost:8787/api/v1/conversations/fake-document-log-uuid/chat',
+          (info) => {
+            mockFn(info.request.headers.get('Authorization'))
+            return HttpResponse.json({})
+          },
+        ),
       )
       await SDK.chat('fake-document-log-uuid', [])
       expect(mockFn).toHaveBeenCalledWith('Bearer fake-api-key')
@@ -47,7 +50,7 @@ describe('message', () => {
       const onMessageMock = vi.fn()
       server.use(
         http.post(
-          'http://localhost:8787/api/v1/chats/add-message',
+          'http://localhost:8787/api/v1/conversations/fake-document-log-uuid/chat',
           async () => {
             const stream = new ReadableStream({
               start(controller) {
@@ -89,7 +92,7 @@ describe('message', () => {
       const onFinishMock = vi.fn()
       server.use(
         http.post(
-          'http://localhost:8787/api/v1/projects/123/commits/live/documents/run',
+          'http://localhost:8787/api/v1/projects/123/versions/live/documents/run',
           async () => {
             const stream = new ReadableStream({
               start(controller) {
@@ -127,7 +130,7 @@ describe('message', () => {
       let body = {}
       server.use(
         http.post(
-          'http://localhost:8787/api/v1/chats/add-message',
+          'http://localhost:8787/api/v1/conversations/fake-document-log-uuid/chat',
           async (info) => {
             const reader = info.request.body!.getReader()
             while (true) {
@@ -147,7 +150,6 @@ describe('message', () => {
       expect(mockFn).toHaveBeenCalledWith({
         body: {
           messages: [],
-          uuid: 'fake-document-log-uuid',
         },
       })
     }),

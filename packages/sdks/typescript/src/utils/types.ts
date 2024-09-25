@@ -7,39 +7,43 @@ export type {
 } from '@latitude-data/core/browser'
 export type RunUrlParams = {
   projectId: number
-  commitUuid?: string
+  versionUuid?: string
+}
+export type ChatUrlParams = {
+  conversationUuid: string
 }
 
 type RunDocumentBodyParam = {
   path: string
   parameters?: Record<string, unknown>
 }
-type AddMessageBodyParam = {
-  uuid: string
+type ChatBodyParams = {
   messages: Message[]
 }
 
 export type GetDocumentUrlParams = {
   projectId: number
-  commitUuid?: string
-  documentPath: string
+  versionUuid?: string
+  path: string
 }
 
 export enum HandlerType {
-  RunDocument = 'run-document',
-  AddMessageToDocumentLog = 'add-message-to-document-log',
+  Chat = 'chat',
   GetDocument = 'get-document',
+  RunDocument = 'run-document',
 }
 
 export type UrlParams<T extends HandlerType> = T extends HandlerType.RunDocument
   ? RunUrlParams
   : T extends HandlerType.GetDocument
     ? GetDocumentUrlParams
-    : never
+    : T extends HandlerType.Chat
+      ? ChatUrlParams
+      : never
 
 export type BodyParams<T extends HandlerType> =
   T extends HandlerType.RunDocument
     ? RunDocumentBodyParam
-    : T extends HandlerType.AddMessageToDocumentLog
-      ? AddMessageBodyParam
+    : T extends HandlerType.Chat
+      ? ChatBodyParams
       : never

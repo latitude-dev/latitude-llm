@@ -8,27 +8,27 @@ import { Factory } from 'hono/factory'
 import { streamSSE } from 'hono/streaming'
 import { z } from 'zod'
 
-import { chainEventPresenter } from '../../projects/:projectId/commits/:commitUuid/documents/handlers/_shared'
+import { chainEventPresenter } from '../../../projects/:projectId/versions/:versionUuid/documents/handlers/_shared'
 
 const factory = new Factory()
 
 const schema = z.object({
   messages: z.array(messageSchema),
-  uuid: z.string(),
 })
 
-export const addMessageHandler = factory.createHandlers(
+export const chatHandler = factory.createHandlers(
   zValidator('json', schema),
   async (c) => {
     return streamSSE(
       c,
       async (stream) => {
-        const { uuid, messages } = c.req.valid('json')
+        const { conversationUuid } = c.req.param()
+        const { messages } = c.req.valid('json')
         const workspace = c.get('workspace')
 
         const result = await addMessages({
           workspace,
-          documentLogUuid: uuid,
+          documentLogUuid: conversationUuid,
           messages,
           source: LogSources.API,
         }).then((r) => r.unwrap())

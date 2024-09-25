@@ -1,4 +1,5 @@
 import {
+  ChatUrlParams,
   GetDocumentUrlParams,
   HandlerType,
   RunUrlParams,
@@ -39,41 +40,43 @@ export class RouteResolver {
         return this.documents(params as RunUrlParams).run
       case HandlerType.GetDocument: {
         const getParams = params as GetDocumentUrlParams
-        return this.documents(getParams).document(getParams.documentPath)
+        return this.documents(getParams).document(getParams.path)
       }
-      case HandlerType.AddMessageToDocumentLog:
-        return this.chats().addMessage
+      case HandlerType.Chat:
+        return this.conversations().chat(
+          (params as ChatUrlParams).conversationUuid,
+        )
       default:
         throw new Error(`Unknown handler: ${handler satisfies never}`)
     }
   }
 
-  private chats() {
-    const base = `${this.baseUrl}/chats`
+  private conversations() {
+    const base = `${this.baseUrl}/conversations`
     return {
-      addMessage: `${base}/add-message`,
+      chat: (uuid: string) => `${base}/${uuid}/chat`,
     }
   }
 
-  private documents(params: { projectId: number; commitUuid?: string }) {
+  private documents(params: { projectId: number; versionUuid?: string }) {
     const base = `${this.commitsUrl(params)}/documents`
     return {
       run: `${base}/run`,
-      document: (documentPath: string) => `${base}/${documentPath}`,
+      document: (path: string) => `${base}/${path}`,
     }
   }
 
   private commitsUrl({
     projectId,
-    commitUuid,
+    versionUuid,
   }: {
     projectId: number
-    commitUuid?: string
+    versionUuid?: string
   }) {
     // TODO: Think how to share HEAD_COMMIT constant from core
     // I don't want to require all core just for this
-    const commit = commitUuid ?? 'live'
-    return `${this.projectsUrl({ projectId })}/commits/${commit}`
+    const commit = versionUuid ?? 'live'
+    return `${this.projectsUrl({ projectId })}/versions/${commit}`
   }
 
   private projectsUrl({ projectId }: { projectId: number }) {
