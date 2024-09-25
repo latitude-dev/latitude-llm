@@ -8,8 +8,10 @@ on:
         type: string
 
 jobs:
-  deploy:
+  check_changes:
     runs-on: ubuntu-latest
+    outputs:
+      changes_detected: ${{ steps.check_changes.outputs.changes_detected }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -26,16 +28,16 @@ jobs:
           else
             echo "changes_detected=false" >> $GITHUB_OUTPUT
           fi
-      - uses: ./.github/workflows/deploy-common.yml
-        if: steps.check_changes.outputs.changes_detected == 'true'
-        with:
-          working-directory: apps/infra
-          stack-name: ${{ inputs.app-name }}-production
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          ARN_OF_IAM_ROLE_TO_ASSUME: ${{ secrets.ARN_OF_IAM_ROLE_TO_ASSUME }}
-          PULUMI_CONFIG_PASSPHRASE: ${{ secrets.PULUMI_CONFIG_PASSPHRASE }}
-    concurrency:
-      group: production-${{ inputs.app-name }}
-      cancel-in-progress: false
+
+  deploy:
+    needs: check_changes
+    if: needs.check_changes.outputs.changes_detected == 'true'
+    uses: ./.github/workflows/deploy-common.yml@main
+    with:
+      working-directory: apps/infra
+      stack-name: ${{ inputs.app-name }}-production
+    secrets: inherit
+
+concurrency:
+  group: production-${{ inputs.app-name }}
+  cancel-in-progress: false
