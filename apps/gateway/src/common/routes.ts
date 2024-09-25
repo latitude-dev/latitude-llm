@@ -4,12 +4,12 @@ const ROUTES = {
     Base: '/api',
     V1: {
       Base: '/v1',
-      Chats: {
-        Base: '/chats',
-        AddMessage: '/add-message',
+      Conversations: {
+        Base: '/conversations',
+        Chat: '/:conversationUuid/chat',
       },
       Documents: {
-        Base: '/projects/:projectId/commits/:commitUuid/documents',
+        Base: '/projects/:projectId/versions/:versionUuid/documents',
         Get: '/:documentPath{.+}',
         Run: '/run',
       },

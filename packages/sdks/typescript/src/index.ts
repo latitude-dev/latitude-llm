@@ -24,7 +24,7 @@ type StreamResponseCallbacks = {
   onError?: (error: Error) => void
 }
 
-export class LatitudeSdk {
+export class Latitude {
   private projectId?: number
   private apiKey: string
   private routeResolver: RouteResolver
@@ -61,14 +61,14 @@ export class LatitudeSdk {
     path: string,
     {
       projectId,
-      commitUuid,
+      versionUuid,
       parameters,
       onEvent,
       onFinished,
       onError,
     }: {
       projectId?: number
-      commitUuid?: string
+      versionUuid?: string
       parameters?: Record<string, unknown>
     } & StreamResponseCallbacks,
   ) {
@@ -82,7 +82,7 @@ export class LatitudeSdk {
       const response = await this.request({
         method: 'POST',
         handler: HandlerType.RunDocument,
-        params: { projectId, commitUuid },
+        params: { projectId, versionUuid },
         body: { path, parameters },
       })
 
@@ -105,8 +105,9 @@ export class LatitudeSdk {
   ) {
     const response = await this.request({
       method: 'POST',
-      handler: HandlerType.AddMessageToDocumentLog,
-      body: { uuid, messages },
+      handler: HandlerType.Chat,
+      params: { conversationUuid: uuid },
+      body: { messages },
     })
     return this.handleStream({
       stream: response.body!,

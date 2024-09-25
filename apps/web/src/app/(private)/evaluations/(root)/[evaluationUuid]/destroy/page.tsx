@@ -25,7 +25,7 @@ export default function DestroyEvaluation({
         !open && navigate.push(ROUTES.evaluations.root)
       }
       action={destroy}
-      submitStr={`Delete ${evaluation.name}`}
+      submitStr='Delete'
       model={evaluation}
       onSuccess={() => navigate.push(ROUTES.evaluations.root)}
     />

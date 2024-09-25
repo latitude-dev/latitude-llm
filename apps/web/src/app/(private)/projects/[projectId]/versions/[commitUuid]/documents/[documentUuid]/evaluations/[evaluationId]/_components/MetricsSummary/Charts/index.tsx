@@ -1,7 +1,5 @@
-'use client'
-
 import {
-  Evaluation,
+  EvaluationDto,
   EvaluationResultableType,
 } from '@latitude-data/core/browser'
 
@@ -11,7 +9,7 @@ export function EvaluationResultsCharts({
   evaluation,
   documentUuid,
 }: {
-  evaluation: Evaluation
+  evaluation: EvaluationDto
   documentUuid: string
 }) {
   const isNumerical =

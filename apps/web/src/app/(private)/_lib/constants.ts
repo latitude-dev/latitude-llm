@@ -13,5 +13,4 @@ export const MAIN_NAV_LINKS = [
   { label: 'Projects', value: ROUTES.dashboard.root as DocumentRoutes },
   { label: 'Evaluations', value: ROUTES.evaluations.root as DocumentRoutes },
   { label: 'Datasets', value: ROUTES.datasets.root as DocumentRoutes },
-  { label: 'Settings', value: ROUTES.settings.root as DocumentRoutes },
 ]

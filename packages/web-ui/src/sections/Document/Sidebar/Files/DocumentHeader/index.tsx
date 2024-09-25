@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 
 import { Icon } from '../../../../../ds/atoms'
 import { MenuOption } from '../../../../../ds/atoms/DropdownMenu'
@@ -38,6 +38,7 @@ export default function DocumentHeader({
     onNavigateToDocument,
     onDeleteFile,
     onCreateFile,
+    onRenameFile,
   } = useFileTreeContext()
   const { deleteTmpFolder, reset } = useTempNodes((state) => ({
     reset: state.reset,
@@ -45,11 +46,17 @@ export default function DocumentHeader({
   }))
   const onSaveValue = useCallback(
     async ({ path }: { path: string }) => {
-      const parentPath = node.path.split('/').slice(0, -1).join('/')
-      await onCreateFile(`${parentPath}/${path}`)
+      const parentPathParts = node.path.split('/').slice(0, -1)
+      const newPathParts = path.split('/')
+      const newPath = [...parentPathParts, ...newPathParts].join('/')
+      if (node.isPersisted) {
+        onRenameFile({ node, path: newPath })
+      } else {
+        onCreateFile(newPath)
+      }
       reset()
     },
-    [reset, onCreateFile, node.path],
+    [reset, onCreateFile, onRenameFile, node.path, node.isPersisted],
   )
   const handleClick = useCallback(() => {
     if (selected) return
@@ -57,8 +64,22 @@ export default function DocumentHeader({
 
     onNavigateToDocument(node.doc!.documentUuid)
   }, [node.doc!.documentUuid, selected, node.isPersisted, onNavigateToDocument])
+  const [isEditing, setIsEditing] = useState(node.name === ' ')
   const actions = useMemo<MenuOption[]>(
     () => [
+      {
+        label: 'Rename',
+        disabled: isMerged,
+        iconProps: { name: 'pencil' },
+        onClick: () => {
+          if (isMerged) {
+            onMergeCommitClick()
+            return
+          }
+
+          setIsEditing(true)
+        },
+      },
       {
         label: 'Delete file',
         type: 'destructive',
@@ -80,6 +101,8 @@ export default function DocumentHeader({
       isFile
       open={open}
       name={node.name}
+      isEditing={isEditing}
+      setIsEditing={setIsEditing}
       hasChildren={false}
       actions={actions}
       selected={selected}

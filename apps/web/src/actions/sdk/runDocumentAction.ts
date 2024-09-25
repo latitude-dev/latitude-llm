@@ -1,7 +1,7 @@
 'use server'
 
 import { StreamEventTypes } from '@latitude-data/core/browser'
-import { LatitudeSdk, type ChainEventDto } from '@latitude-data/sdk-js'
+import { Latitude, type ChainEventDto } from '@latitude-data/sdk'
 import { createSdk } from '$/app/(private)/_lib/createSdk'
 import { createStreamableValue, StreamableValue } from 'ai/rsc'
 
@@ -13,7 +13,7 @@ type RunDocumentActionProps = {
 }
 type RunDocumentResponse = Promise<{
   output: StreamableValue<{ event: StreamEventTypes; data: ChainEventDto }>
-  response: ReturnType<typeof LatitudeSdk.prototype.run>
+  response: ReturnType<typeof Latitude.prototype.run>
 }>
 export type RunDocumentActionFn = (
   _: RunDocumentActionProps,
@@ -30,9 +30,8 @@ export async function runDocumentAction({
     { event: StreamEventTypes; data: ChainEventDto },
     Error
   >()
-
   const response = sdk.run(documentPath, {
-    commitUuid,
+    versionUuid: commitUuid,
     parameters,
     onEvent: (event) => {
       stream.update(event)

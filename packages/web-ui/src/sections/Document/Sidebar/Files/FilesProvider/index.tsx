@@ -4,10 +4,11 @@ import { Node } from '../useTree'
 
 type IFilesContext = {
   isMerged: boolean
-  onCreateFile: (path: string) => Promise<void>
+  onCreateFile: (path: string) => void
+  onRenameFile: (args: { node: Node; path: string }) => void
   onDeleteFile: (args: { node: Node; documentUuid: string }) => void
   onMergeCommitClick: () => void
-  currentPath?: string
+  currentUuid?: string
   onDeleteFolder: (args: { node: Node; path: string }) => void
   onNavigateToDocument: (documentUuid: string) => void
 }
@@ -17,8 +18,9 @@ const FileTreeProvider = ({
   isMerged,
   onMergeCommitClick,
   children,
-  currentPath,
+  currentUuid,
   onCreateFile,
+  onRenameFile,
   onDeleteFile,
   onDeleteFolder,
   onNavigateToDocument,
@@ -28,8 +30,9 @@ const FileTreeProvider = ({
       value={{
         isMerged,
         onMergeCommitClick,
-        currentPath,
+        currentUuid,
         onCreateFile,
+        onRenameFile,
         onDeleteFile,
         onDeleteFolder,
         onNavigateToDocument,

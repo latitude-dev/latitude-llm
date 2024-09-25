@@ -23,15 +23,6 @@ export class WebsocketClient {
     WebsocketClient.instance = instance
     return new Promise<WorkerSocket>((resolve) => {
       websockets.on('connect', () => {
-        console.log('Workers connected to WebSocket server')
-        resolve(websockets)
-      })
-
-      websockets.on('connect_error', (error) => {
-        console.error(
-          'Error connecting to WebSocket server from WORKERS:',
-          error,
-        )
         resolve(websockets)
       })
     })

@@ -20,7 +20,7 @@
     "@latitude-data/env": "workspace:^",
     "@latitude-data/jobs": "workspace:*",
     "@latitude-data/mailers": "workspace:^",
-    "@latitude-data/sdk-js": "workspace:*",
+    "@latitude-data/sdk": "workspace:*",
     "@latitude-data/web-ui": "workspace:*",
     "@lucia-auth/adapter-drizzle": "^1.0.7",
     "@monaco-editor/react": "^4.6.0",

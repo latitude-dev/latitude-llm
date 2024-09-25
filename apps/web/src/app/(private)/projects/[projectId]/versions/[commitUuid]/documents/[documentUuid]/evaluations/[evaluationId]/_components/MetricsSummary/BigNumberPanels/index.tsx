@@ -1,93 +1,30 @@
 import {
   Commit,
-  Evaluation,
-  EvaluationResultableType,
-  Workspace,
+  EvaluationAggregationTotals,
+  EvaluationDto,
+  EvaluationMeanValue,
+  EvaluationModalValue,
 } from '@latitude-data/core/browser'
-import {
-  getEvaluationMeanValueQuery,
-  getEvaluationModalValueQuery,
-  getEvaluationTotalsQuery,
-} from '@latitude-data/core/services/evaluationResults/index'
 
 import MeanValuePanel from './MeanValuePanel'
 import ModalValuePanel from './ModalValuePanel'
 import TotalsPanels from './TotalsPanels'
 
-async function MeanPanel({
-  workspaceId,
-  evaluation,
-  documentUuid,
-  commit,
-}: {
-  workspaceId: number
-  evaluation: Evaluation
-  documentUuid: string
-  commit: Commit
-}) {
-  const mean = await getEvaluationMeanValueQuery({
-    workspaceId,
-    evaluation,
-    documentUuid,
-    commit,
-  })
-
-  return (
-    <MeanValuePanel
-      mean={mean}
-      evaluation={evaluation}
-      commitUuid={commit.uuid}
-      documentUuid={documentUuid}
-    />
-  )
-}
-
-async function ModalPanel({
-  workspaceId,
-  evaluation,
-  documentUuid,
-  commit,
-}: {
-  workspaceId: number
-  evaluation: Evaluation
-  documentUuid: string
-  commit: Commit
-}) {
-  const modal = await getEvaluationModalValueQuery({
-    workspaceId,
-    evaluation,
-    documentUuid,
-    commit,
-  })
-  return (
-    <ModalValuePanel
-      modal={modal}
-      evaluationId={evaluation.id}
-      commitUuid={commit.uuid}
-      documentUuid={documentUuid}
-    />
-  )
-}
-
-export async function BigNumberPanels({
-  workspace,
+export function BigNumberPanels<T extends boolean>({
   commit,
   evaluation,
   documentUuid,
+  aggregationTotals,
+  isNumeric,
+  meanOrModal,
 }: {
-  workspace: Workspace
+  isNumeric: T
   commit: Commit
-  evaluation: Evaluation
+  evaluation: EvaluationDto
   documentUuid: string
+  aggregationTotals: EvaluationAggregationTotals
+  meanOrModal: T extends true ? EvaluationMeanValue : EvaluationModalValue
 }) {
-  const aggregationTotals = await getEvaluationTotalsQuery({
-    workspaceId: workspace.id,
-    commit,
-    evaluation,
-    documentUuid,
-  })
-  const isNumeric =
-    evaluation.configuration.type == EvaluationResultableType.Number
   return (
     <div className='flex flex-wrap gap-6'>
       <TotalsPanels
@@ -98,19 +35,19 @@ export async function BigNumberPanels({
       />
 
       {isNumeric && (
-        <MeanPanel
-          commit={commit}
+        <MeanValuePanel
+          mean={meanOrModal as EvaluationMeanValue}
           evaluation={evaluation}
-          workspaceId={workspace.id}
+          commitUuid={commit.uuid}
           documentUuid={documentUuid}
         />
       )}
 
       {!isNumeric && (
-        <ModalPanel
-          commit={commit}
-          evaluation={evaluation}
-          workspaceId={workspace.id}
+        <ModalValuePanel
+          modal={meanOrModal as EvaluationModalValue}
+          evaluationId={evaluation.id}
+          commitUuid={commit.uuid}
           documentUuid={documentUuid}
         />
       )}

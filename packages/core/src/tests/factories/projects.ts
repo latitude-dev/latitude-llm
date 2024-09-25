@@ -9,7 +9,10 @@ import { createProject as createProjectFn } from '../../services/projects/create
 import { createApiKey } from './apiKeys'
 import { createDraft } from './commits'
 import { createLlmAsJudgeEvaluation, IEvaluationData } from './evaluations'
-import { createProviderApiKey } from './providerApiKeys'
+import {
+  createProviderApiKey,
+  defaultProviderFakeData,
+} from './providerApiKeys'
 import { createWorkspace, type ICreateWorkspace } from './workspaces'
 
 export type IDocumentStructure = { [key: string]: string | IDocumentStructure }
@@ -83,7 +86,7 @@ export async function createProject(projectData: Partial<ICreateProject> = {}) {
 
   const providersToCreate =
     projectData.providers == undefined
-      ? [{ type: Providers.OpenAI, name: faker.internet.domainName() }]
+      ? [defaultProviderFakeData()]
       : projectData.providers
   const providers = await Promise.all(
     providersToCreate.map(({ type, name }) =>

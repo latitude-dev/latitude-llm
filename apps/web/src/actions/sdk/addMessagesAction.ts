@@ -5,7 +5,7 @@ import {
   type ChainEventDto,
   type Message,
   type StreamChainResponse,
-} from '@latitude-data/sdk-js'
+} from '@latitude-data/sdk'
 import { createSdk } from '$/app/(private)/_lib/createSdk'
 import { createStreamableValue, StreamableValue } from 'ai/rsc'
 

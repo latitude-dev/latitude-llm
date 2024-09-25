@@ -9,28 +9,43 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ProgressTracker } from '../../utils/progressTracker'
 import { runDocumentJob } from './runDocumentJob'
 
-const mocks = vi.hoisted(() => ({
-  queues: {
-    defaultQueue: {
-      jobs: {
-        enqueueRunEvaluationJob: vi.fn(),
+const mocks = vi.hoisted(() => {
+  const mockEmit = vi.fn()
+  return {
+    mockEmit,
+    getSocketMock: vi.fn().mockResolvedValue({ emit: mockEmit }),
+    queues: {
+      defaultQueue: {
+        jobs: {
+          enqueueRunEvaluationJob: vi.fn(),
+        },
+      },
+      eventsQueue: {
+        jobs: {
+          enqueueCreateEventJob: vi.fn(),
+          enqueuePublishEventJob: vi.fn(),
+        },
       },
     },
-    eventsQueue: {
-      jobs: {
-        enqueueCreateEventJob: vi.fn(),
-        enqueuePublishEventJob: vi.fn(),
-      },
-    },
+  }
+})
+
+vi.mock('@latitude-data/core/websockets/workers', () => ({
+  WebsocketClient: {
+    getSocket: mocks.getSocketMock,
   },
 }))
 
-// Mock dependencies
 vi.mock('../../', () => ({
   setupJobs: vi.fn().mockImplementation(() => mocks.queues),
 }))
 
 vi.mock('@latitude-data/core/redis')
+vi.mock('@latitude-data/core/queues', () => {
+  return {
+    queues: vi.fn().mockResolvedValue({}),
+  }
+})
 vi.mock('@latitude-data/core/services/commits/runDocumentAtCommit')
 vi.mock('@latitude-data/env')
 vi.mock('../../utils/progressTracker')
@@ -117,6 +132,15 @@ describe('runDocumentJob', () => {
 
     await runDocumentJob(mockJob)
 
+    expect(mocks.mockEmit).toHaveBeenCalledWith('evaluationStatus', {
+      workspaceId: workspace.id,
+      data: {
+        batchId: 'batch1',
+        evaluationId: evaluation.id,
+        documentUuid: document.documentUuid,
+      },
+    })
+
     expect(runDocumentAtCommit).toHaveBeenCalled()
     expect(
       mocks.queues.defaultQueue.jobs.enqueueRunEvaluationJob,
@@ -136,5 +160,13 @@ describe('runDocumentJob', () => {
 
     expect(consoleSpy).toHaveBeenCalledWith(testError)
     expect(ProgressTracker.prototype.incrementErrors).toHaveBeenCalled()
+    expect(mocks.mockEmit).toHaveBeenCalledWith('evaluationStatus', {
+      workspaceId: workspace.id,
+      data: {
+        batchId: 'batch1',
+        evaluationId: evaluation.id,
+        documentUuid: document.documentUuid,
+      },
+    })
   })
 })

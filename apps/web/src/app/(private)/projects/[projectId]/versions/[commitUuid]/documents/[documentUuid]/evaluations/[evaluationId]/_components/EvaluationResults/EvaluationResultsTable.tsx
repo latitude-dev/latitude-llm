@@ -48,6 +48,9 @@ export const ResultCellContent = ({
   return <Text.H4 noWrap>{value as string}</Text.H4>
 }
 
+type EvaluationResultRow = EvaluationResultWithMetadata & {
+  realtimeAdded?: boolean
+}
 export const EvaluationResultsTable = ({
   evaluation,
   evaluationResults,
@@ -55,8 +58,8 @@ export const EvaluationResultsTable = ({
   setSelectedResult,
 }: {
   evaluation: EvaluationDto
-  evaluationResults: EvaluationResultWithMetadata[]
-  selectedResult: EvaluationResultWithMetadata | undefined
+  evaluationResults: EvaluationResultRow[]
+  selectedResult: EvaluationResultRow | undefined
   setSelectedResult: (log: EvaluationResultWithMetadata | undefined) => void
 }) => {
   return (
@@ -71,9 +74,9 @@ export const EvaluationResultsTable = ({
         </TableRow>
       </TableHeader>
       <TableBody className='max-h-full overflow-y-auto'>
-        {evaluationResults.map((evaluationResult, idx) => (
+        {evaluationResults.map((evaluationResult) => (
           <TableRow
-            key={idx}
+            key={evaluationResult.id}
             onClick={() =>
               setSelectedResult(
                 selectedResult?.id === evaluationResult.id
@@ -85,12 +88,18 @@ export const EvaluationResultsTable = ({
               'cursor-pointer border-b-[0.5px] h-12 max-h-12 border-border',
               {
                 'bg-secondary': selectedResult?.id === evaluationResult.id,
+                'animate-flash': evaluationResult.realtimeAdded,
               },
             )}
           >
             <TableCell>
               <Text.H4 noWrap>
-                {relativeTime(evaluationResult.createdAt)}
+                <time
+                  dateTime={evaluationResult.createdAt.toISOString()}
+                  suppressHydrationWarning
+                >
+                  {relativeTime(evaluationResult.createdAt)}
+                </time>
               </Text.H4>
             </TableCell>
             <TableCell>

@@ -1,4 +1,6 @@
-import { useCurrentProject } from '@latitude-data/web-ui'
+import { useCallback } from 'react'
+
+import { useCurrentProject, useToast } from '@latitude-data/web-ui'
 import { computeEvaluationResultsMeanValueAction } from '$/actions/evaluationResults/computeEvaluationResultsMeanValueAction'
 import useSWR, { SWRConfiguration } from 'swr'
 
@@ -12,24 +14,33 @@ export default function useEvaluationResultsMeanValue(
     documentUuid: string
     evaluationId: number
   },
-  opts: SWRConfiguration = {},
+  { fallbackData }: SWRConfiguration = {},
 ) {
+  const { toast } = useToast()
   const { project } = useCurrentProject()
+  const fetcher = useCallback(async () => {
+    const [data, error] = await computeEvaluationResultsMeanValueAction({
+      projectId: project.id,
+      commitUuid,
+      documentUuid,
+      evaluationId,
+    })
+
+    if (error) {
+      toast({
+        title: 'Error fetching mean value',
+        description: error.formErrors?.[0] || error.message,
+        variant: 'destructive',
+      })
+      return null
+    }
+
+    return data
+  }, [commitUuid, documentUuid, evaluationId, project.id])
   const { data, isLoading, error, mutate } = useSWR(
     ['evaluationResultsMeanQuery', commitUuid, documentUuid, evaluationId],
-    async () => {
-      const [data, error] = await computeEvaluationResultsMeanValueAction({
-        projectId: project.id,
-        commitUuid,
-        documentUuid,
-        evaluationId,
-      })
-
-      if (error) null
-
-      return data
-    },
-    opts,
+    fetcher,
+    { fallbackData },
   )
 
   return {

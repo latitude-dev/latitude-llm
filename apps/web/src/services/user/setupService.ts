@@ -41,10 +41,26 @@ export default function setupService({
     if (resultWorkspace.error) return resultWorkspace
     const workspace = resultWorkspace.value
 
+    const firstProvider = await createProviderApiKey(
+      {
+        workspace,
+        provider: Providers.OpenAI,
+        name: env.DEFAULT_PROVIDER_ID,
+        token: env.DEFAULT_PROVIDER_API_KEY,
+        authorId: user.id,
+      },
+      tx,
+    )
+
+    if (firstProvider.error) {
+      captureException(firstProvider.error)
+    }
+
     const resultImportingDefaultProject = await importDefaultProject(
       { workspace, user },
       tx,
     )
+
     if (resultImportingDefaultProject.error) {
       captureException(resultImportingDefaultProject.error)
     }
@@ -52,16 +68,6 @@ export default function setupService({
     const results = await Promise.all([
       createMembership({ confirmedAt: new Date(), user, workspace }, tx),
       createApiKey({ workspace }, tx),
-      createProviderApiKey(
-        {
-          workspace,
-          provider: Providers.OpenAI,
-          name: env.DEFAULT_PROVIDER_ID,
-          token: env.DEFAULT_PROVIDER_API_KEY,
-          authorId: user.id,
-        },
-        tx,
-      ),
     ])
 
     const result = Result.findError(results)

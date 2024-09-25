@@ -11,13 +11,13 @@ import {
   vi,
 } from 'vitest'
 
-import { LatitudeSdk } from './index'
+import { Latitude } from './index'
 import { parseSSE } from './utils/parseSSE'
 
 const encoder = new TextEncoder()
 let latitudeApiKey = 'fake-api-key'
 let projectId = 123
-const SDK = new LatitudeSdk(latitudeApiKey)
+const SDK = new Latitude(latitudeApiKey)
 
 const server = setupServer()
 
@@ -32,7 +32,7 @@ describe('run', () => {
       const mockFn = vi.fn()
       server.use(
         http.post(
-          'http://localhost:8787/api/v1/projects/123/commits/live/documents/run',
+          'http://localhost:8787/api/v1/projects/123/versions/live/documents/run',
           (info) => {
             mockFn(info.request.headers.get('Authorization'))
             return HttpResponse.json({})
@@ -52,7 +52,7 @@ describe('run', () => {
       const mockFn = vi.fn()
       server.use(
         http.post(
-          'http://localhost:8787/api/v1/projects/123/commits/live/documents/run',
+          'http://localhost:8787/api/v1/projects/123/versions/live/documents/run',
           (info) => {
             mockFn(info.request.url)
             return HttpResponse.json({})
@@ -63,18 +63,18 @@ describe('run', () => {
         projectId,
       })
       expect(mockFn).toHaveBeenCalledWith(
-        'http://localhost:8787/api/v1/projects/123/commits/live/documents/run',
+        'http://localhost:8787/api/v1/projects/123/versions/live/documents/run',
       )
     }),
   )
 
   it(
-    'sends request with specific commitUuid',
+    'sends request with specific versionUuid',
     server.boundary(async () => {
       const mockFn = vi.fn()
       server.use(
         http.post(
-          'http://localhost:8787/api/v1/projects/123/commits/SOME_UUID/documents/run',
+          'http://localhost:8787/api/v1/projects/123/versions/SOME_UUID/documents/run',
           (info) => {
             mockFn(info.request.url)
             return HttpResponse.json({})
@@ -83,10 +83,10 @@ describe('run', () => {
       )
       await SDK.run('path/to/document', {
         projectId,
-        commitUuid: 'SOME_UUID',
+        versionUuid: 'SOME_UUID',
       })
       expect(mockFn).toHaveBeenCalledWith(
-        'http://localhost:8787/api/v1/projects/123/commits/SOME_UUID/documents/run',
+        'http://localhost:8787/api/v1/projects/123/versions/SOME_UUID/documents/run',
       )
     }),
   )
@@ -97,7 +97,7 @@ describe('run', () => {
       const mockFn = vi.fn()
       server.use(
         http.post(
-          'http://localhost:8787/api/v1/projects/123/commits/SOME_UUID/documents/run',
+          'http://localhost:8787/api/v1/projects/123/versions/SOME_UUID/documents/run',
           async (info) => {
             const body = await info.request.json()
             mockFn(body)
@@ -107,7 +107,7 @@ describe('run', () => {
       )
       await SDK.run('path/to/document', {
         projectId,
-        commitUuid: 'SOME_UUID',
+        versionUuid: 'SOME_UUID',
         parameters: { foo: 'bar', lol: 'foo' },
       })
       expect(mockFn).toHaveBeenCalledWith({
@@ -123,7 +123,7 @@ describe('run', () => {
       const onMessageMock = vi.fn()
       server.use(
         http.post(
-          'http://localhost:8787/api/v1/projects/123/commits/live/documents/run',
+          'http://localhost:8787/api/v1/projects/123/versions/live/documents/run',
           async () => {
             const stream = new ReadableStream({
               start(controller) {
@@ -166,7 +166,7 @@ describe('run', () => {
       const onFinishMock = vi.fn()
       server.use(
         http.post(
-          'http://localhost:8787/api/v1/projects/123/commits/live/documents/run',
+          'http://localhost:8787/api/v1/projects/123/versions/live/documents/run',
           async () => {
             const stream = new ReadableStream({
               start(controller) {

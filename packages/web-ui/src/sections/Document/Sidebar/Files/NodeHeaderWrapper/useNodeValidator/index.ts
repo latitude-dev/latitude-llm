@@ -45,6 +45,8 @@ export function useNodeValidator({
   name,
   inputRef,
   nodeRef,
+  isEditing,
+  setIsEditing,
   leaveWithoutSave,
   saveValue,
   saveAndAddOther,
@@ -52,12 +54,14 @@ export function useNodeValidator({
   name: string | undefined
   inputRef: RefObject<HTMLInputElement>
   nodeRef: RefObject<HTMLDivElement>
+  isEditing: boolean
+  setIsEditing: (isEditing: boolean) => void
   saveValue: (args: { path: string }) => Promise<void> | void
   saveAndAddOther?: (args: { path: string }) => void
   leaveWithoutSave?: () => void
 }) {
-  const [isEditing, setIsEditing] = useState(name === ' ')
   const [validationError, setError] = useState<string>()
+  const [inputValue, setInputValue] = useState(name)
   const onInputChange: ChangeEventHandler<HTMLInputElement> = useCallback(
     (event) => {
       const value = event.target.value
@@ -70,8 +74,9 @@ export function useNodeValidator({
       }
 
       setError(error)
+      setInputValue(value)
     },
-    [setError],
+    [setError, setInputValue],
   )
   const onClickOutside = useCallback(async () => {
     const val = inputRef.current?.value ?? ''
@@ -119,6 +124,7 @@ export function useNodeValidator({
   )
 
   return {
+    inputValue,
     isEditing,
     onInputChange,
     onInputKeyDown,

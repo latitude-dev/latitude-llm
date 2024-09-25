@@ -42,6 +42,7 @@ export type MembershipCreatedEvent = LatitudeEventGeneric<
 export type EvaluationRunEvent = LatitudeEventGeneric<
   'evaluationRun',
   {
+    documentUuid: string
     evaluationId: number
     documentLogUuid: string
     providerLogUuid: string

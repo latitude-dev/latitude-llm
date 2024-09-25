@@ -1,6 +1,6 @@
 'use client'
 
-import { Evaluation, EvaluationMeanValue } from '@latitude-data/core/browser'
+import { EvaluationDto, EvaluationMeanValue } from '@latitude-data/core/browser'
 import { RangeBadge } from '@latitude-data/web-ui'
 import useEvaluationResultsMeanValue from '$/stores/evaluationResultCharts/evaluationResultsMeanValue'
 
@@ -14,7 +14,7 @@ export default function MeanValuePanel({
 }: {
   commitUuid: string
   documentUuid: string
-  evaluation: Evaluation
+  evaluation: EvaluationDto
   mean: EvaluationMeanValue
 }) {
   const { data } = useEvaluationResultsMeanValue(

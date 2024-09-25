@@ -46,6 +46,8 @@ type Props = {
   hasChildren?: boolean
   isFile?: boolean
   selected?: boolean
+  isEditing: boolean
+  setIsEditing: (isEditing: boolean) => void
   onClick?: () => void
   actions?: MenuOption[]
   icons: ReactNode
@@ -60,6 +62,8 @@ function NodeHeaderWrapper({
   open,
   hasChildren = false,
   isFile = false,
+  isEditing,
+  setIsEditing,
   onSaveValue,
   onSaveValueAndTab,
   onLeaveWithoutSave,
@@ -72,17 +76,21 @@ function NodeHeaderWrapper({
   const [tmpName, setTmpName] = useState(name)
   const inputRef = useRef<HTMLInputElement>(null)
   const nodeRef = useRef<HTMLDivElement>(null)
-  const { isEditing, error, onInputChange, onInputKeyDown } = useNodeValidator({
-    name,
-    nodeRef,
-    inputRef,
-    saveValue: ({ path }) => {
-      setTmpName(path)
-      onSaveValue({ path })
+  const { error, inputValue, onInputChange, onInputKeyDown } = useNodeValidator(
+    {
+      name,
+      nodeRef,
+      inputRef,
+      isEditing,
+      setIsEditing,
+      saveValue: ({ path }) => {
+        setTmpName(path)
+        onSaveValue({ path })
+      },
+      saveAndAddOther: onSaveValueAndTab,
+      leaveWithoutSave: onLeaveWithoutSave,
     },
-    saveAndAddOther: onSaveValueAndTab,
-    leaveWithoutSave: onLeaveWithoutSave,
-  })
+  )
   // Litle trick to focus the input after the component is mounted
   // We wait some time to focus the input to avoid the focus being stolen
   // by the click event in the menu item that created this node.
@@ -123,6 +131,7 @@ function NodeHeaderWrapper({
               tabIndex={0}
               ref={inputRef}
               autoFocus
+              value={inputValue}
               onKeyDown={onInputKeyDown}
               onChange={onInputChange}
               errors={error ? [error] : undefined}
