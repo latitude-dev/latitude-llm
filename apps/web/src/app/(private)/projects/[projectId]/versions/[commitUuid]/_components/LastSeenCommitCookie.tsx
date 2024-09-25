@@ -17,7 +17,9 @@ export function LastSeenCommitCookie({
   const cookieName = lastSeenCommitCookieName(projectId)
 
   useEffect(() => {
-    Cookies.set(cookieName, JSON.stringify({ commitUuid, documentUuid }))
+    Cookies.set(cookieName, JSON.stringify({ commitUuid, documentUuid }), {
+      sameSite: 'strict',
+    })
   }, [cookieName, commitUuid, documentUuid])
 
   return null
