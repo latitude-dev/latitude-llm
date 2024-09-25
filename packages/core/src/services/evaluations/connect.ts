@@ -1,4 +1,4 @@
-import { ConnectedEvaluation, EvaluationMode, Workspace } from '../../browser'
+import { ConnectedEvaluation, Workspace } from '../../browser'
 import { database } from '../../client'
 import {
   NotFoundError,
@@ -20,13 +20,11 @@ export function connectEvaluations(
     documentUuid,
     evaluationUuids,
     templateIds,
-    evaluationMode = EvaluationMode.Batch,
   }: {
     workspace: Workspace
     documentUuid: string
     evaluationUuids?: string[]
     templateIds?: number[]
-    evaluationMode?: EvaluationMode
   },
   db = database,
 ): PromisedResult<ConnectedEvaluation[], Error> {
@@ -82,7 +80,6 @@ export function connectEvaluations(
         .insert(connectedEvaluations)
         .values(
           allEvaluationIds.map((evaluationId) => ({
-            evaluationMode,
             documentUuid,
             evaluationId,
           })),

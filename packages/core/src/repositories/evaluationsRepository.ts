@@ -74,7 +74,10 @@ export class EvaluationsRepository extends Repository<
 
   async findByDocumentUuid(documentUuid: string) {
     const result = await this.db
-      .select(this.scope._.selectedFields)
+      .select({
+        ...this.scope._.selectedFields,
+        live: connectedEvaluations.live,
+      })
       .from(this.scope)
       .innerJoin(
         connectedEvaluations,
@@ -82,7 +85,7 @@ export class EvaluationsRepository extends Repository<
       )
       .where(eq(connectedEvaluations.documentUuid, documentUuid))
 
-    return Result.ok(result as EvaluationDto[])
+    return Result.ok(result as (EvaluationDto & { live: boolean })[])
   }
 
   async filterByUuids(uuids: string[]): PromisedResult<EvaluationDto[], Error> {

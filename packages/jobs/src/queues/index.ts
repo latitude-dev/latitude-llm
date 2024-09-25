@@ -64,7 +64,6 @@ type QueueJob = (typeof QUEUES)[keyof typeof QUEUES]['jobs'][number]
 
 export async function setupQueues() {
   const connection = await queues()
-
   return Object.entries(QUEUES).reduce<{
     [K in keyof typeof QUEUES]: ReturnType<typeof setupQueue>
   }>(

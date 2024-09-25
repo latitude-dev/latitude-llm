@@ -1,51 +1,76 @@
-'use client'
+import { useCallback } from 'react'
 
-import type { DocumentVersion, Evaluation } from '@latitude-data/core/browser'
-import { useSession, useToast } from '@latitude-data/web-ui'
-import { fetchConnectedDocumentsAction } from '$/actions/connectedEvaluations/fetchConnectedDocuments'
+import { ConnectedEvaluation } from '@latitude-data/core/browser'
+import { useToast } from '@latitude-data/web-ui'
+import { updateConnectedEvaluationAction } from '$/actions/connectedEvaluations/update'
+import useLatitudeAction from '$/hooks/useLatitudeAction'
 import useSWR, { SWRConfiguration } from 'swr'
 
-export default function useConnectedDocuments(
+export default function useConnectedEvaluations(
   {
-    evaluation,
+    projectId,
+    commitUuid,
+    documentUuid,
   }: {
-    evaluation: Evaluation
+    projectId: number
+    commitUuid: string
+    documentUuid: string
   },
   opts: SWRConfiguration = {},
 ) {
-  const { workspace } = useSession()
   const { toast } = useToast()
-
   const {
     data = [],
-    isLoading,
-    error,
-  } = useSWR<DocumentVersion[]>(
-    ['connectedDocuments', workspace.id, evaluation.id],
-    async () => {
-      const [data, error] = await fetchConnectedDocumentsAction({
-        evaluationId: evaluation.id,
-      })
-
-      if (error) {
-        console.error(error)
+    mutate,
+    ...rest
+  } = useSWR<ConnectedEvaluation[]>(
+    ['connectedEvaluations', documentUuid],
+    useCallback(async () => {
+      const response = await fetch(
+        `/api/documents/${projectId}/${commitUuid}/${documentUuid}/evaluations`,
+        { credentials: 'include' },
+      )
+      if (!response.ok) {
+        const error = await response.json()
 
         toast({
-          title: 'Error fetching evaluation connections',
+          title: 'Error fetching evaluations',
           description: error.formErrors?.[0] || error.message,
           variant: 'destructive',
         })
-        throw error
+
+        return []
       }
 
-      return data
-    },
+      return response.json()
+    }, [projectId, commitUuid, documentUuid]),
     opts,
+  )
+
+  const { execute: update, isPending: isUpdating } = useLatitudeAction(
+    updateConnectedEvaluationAction,
+    {
+      onSuccess: ({
+        data: updatedEvaluation,
+      }: {
+        data: ConnectedEvaluation
+      }) => {
+        mutate(
+          (evaluations) =>
+            evaluations?.map((evaluation) =>
+              evaluation.id === updatedEvaluation.id
+                ? updatedEvaluation
+                : evaluation,
+            ) ?? [updatedEvaluation],
+        )
+      },
+    },
   )
 
   return {
     data,
-    isLoading,
-    error,
+    update,
+    isUpdating,
+    ...rest,
   }
 }

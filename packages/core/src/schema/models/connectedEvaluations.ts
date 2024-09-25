@@ -1,21 +1,24 @@
-import { bigint, bigserial, index, unique, uuid } from 'drizzle-orm/pg-core'
+import {
+  bigint,
+  bigserial,
+  boolean,
+  index,
+  timestamp,
+  unique,
+  uuid,
+} from 'drizzle-orm/pg-core'
 
-import { EvaluationMode } from '../../constants'
 import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
 import { evaluations } from './evaluations'
-
-const evaluationModeEnum = latitudeSchema.enum('evaluation_mode_enum', [
-  EvaluationMode.Live,
-  EvaluationMode.Batch,
-])
 
 export const connectedEvaluations = latitudeSchema.table(
   'connected_evaluations',
   {
     id: bigserial('id', { mode: 'number' }).notNull().primaryKey(),
+    live: boolean('live').notNull().default(false),
     documentUuid: uuid('document_uuid').notNull(),
-    evaluationMode: evaluationModeEnum('evaluation_mode').notNull(),
+    deletedAt: timestamp('deleted_at'),
     evaluationId: bigint('evaluation_id', { mode: 'number' })
       .notNull()
       .references(() => evaluations.id),
