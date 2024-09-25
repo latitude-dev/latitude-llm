@@ -1,11 +1,13 @@
 import {
   EvaluationMetadataType,
   EvaluationResultConfiguration,
+  findFirstModelForProvider,
   Workspace,
 } from '../../browser'
 import { database } from '../../client'
 import { findEvaluationTemplateById } from '../../data-access'
 import { BadRequestError, Result, Transaction } from '../../lib'
+import { ProviderApiKeysRepository } from '../../repositories'
 import { evaluations, llmAsJudgeEvaluationMetadatas } from '../../schema'
 
 type Props = {
@@ -21,13 +23,30 @@ export async function createEvaluation(
   { workspace, name, description, type, configuration, metadata = {} }: Props,
   db = database,
 ) {
+  const providerScope = new ProviderApiKeysRepository(workspace!.id, db)
+  const providerResult = await providerScope.findFirst()
+  const provider = providerResult.unwrap()
+
+  if (!provider) {
+    return Result.error(
+      new BadRequestError('No provider found when creating evaluation'),
+    )
+  }
+  const meta = metadata as { prompt: string; templateId?: number }
+  const promptWithProvider = `---
+provider: ${provider.name}
+model: ${findFirstModelForProvider(provider.provider)}
+---
+${meta.prompt}
+`.trim()
+
   return await Transaction.call(async (tx) => {
     let metadataTable
     switch (type) {
       case EvaluationMetadataType.LlmAsJudge:
         metadataTable = await tx
           .insert(llmAsJudgeEvaluationMetadatas)
-          .values(metadata as { prompt: string; templateId?: number })
+          .values({ prompt: promptWithProvider, templateId: meta.templateId })
           .returning()
 
         break

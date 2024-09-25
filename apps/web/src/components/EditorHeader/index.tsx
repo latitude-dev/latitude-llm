@@ -2,6 +2,7 @@ import { ReactNode, useCallback, useEffect, useMemo, useState } from 'react'
 
 import { ConversationMetadata } from '@latitude-data/compiler'
 import {
+  findFirstModelForProvider,
   PROVIDER_MODELS,
   ProviderApiKey,
   Providers,
@@ -154,9 +155,7 @@ export default function EditorHeader({
       if (!provider) return
 
       setProvider(provider.name)
-      const firstModel = Object.keys(
-        PROVIDER_MODELS[provider.provider] ?? {},
-      )[0]
+      const firstModel = findFirstModelForProvider(provider.provider)
       setModel(firstModel)
 
       const config = metadata.config

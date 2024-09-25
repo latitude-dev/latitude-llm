@@ -1,4 +1,5 @@
 import { compactObject } from '@latitude-data/core/lib/compactObject'
+import { NotFoundError } from '@latitude-data/core/lib/errors'
 import { Result } from '@latitude-data/core/lib/Result'
 import { LatitudeApiKeysRepository } from '@latitude-data/core/repositories'
 import { Latitude } from '@latitude-data/sdk'
@@ -9,11 +10,15 @@ import { getCurrentUser } from '$/services/auth/getCurrentUser'
 async function getLatitudeApiKey() {
   const { workspace } = await getCurrentUser()
   const repo = new LatitudeApiKeysRepository(workspace.id)
-  const result = await repo.findFirst()
+  const firstApiKey = await repo.findFirst().then((r) => r.unwrap())
 
-  if (result.error) return result
+  if (!firstApiKey) {
+    return Result.error(
+      new NotFoundError("Couldn't find a valid Latitude API key"),
+    )
+  }
 
-  return Result.ok(result.value)
+  return Result.ok(firstApiKey)
 }
 
 export async function createSdk(projectId?: number) {

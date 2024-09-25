@@ -17,7 +17,7 @@ vi.mock('$/services/auth/getSession', () => ({
   getSession: mocks.getSession,
 }))
 
-vi.mock('@latitude-data/core/repositories')
+vi.mock('@latitude-data/core/repositories/evaluationsRepository')
 vi.mock('@latitude-data/core/services/evaluations/destroy')
 
 describe('destroyEvaluationAction', () => {

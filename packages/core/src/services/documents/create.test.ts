@@ -1,6 +1,7 @@
-import { env } from '@latitude-data/env'
 import { describe, expect, it } from 'vitest'
 
+import { database } from '../../client'
+import { BadRequestError } from '../../lib'
 import { DocumentVersionsRepository } from '../../repositories'
 import { mergeCommit } from '../commits/merge'
 import { createNewDocument } from './create'
@@ -84,14 +85,32 @@ describe('createNewDocument', () => {
     expect(createdDocument.documentUuid).toBe(document.documentUuid)
     expect(createdDocument.path).toBe(document.path)
 
+    const firstProvider = await database.query.providerApiKeys.findFirst()
+
     // Check for default content
     expect(createdDocument.content).toBe(
       `
 ---
-provider: ${env.DEFAULT_PROVIDER_ID}
+provider: ${firstProvider!.name}
 model: gpt-4o-mini
 ---
           `.trim(),
+    )
+  })
+
+  it('fails when no provider is found', async (ctx) => {
+    const { project, user } = await ctx.factories.createProject({
+      providers: [],
+    })
+    const { commit } = await ctx.factories.createDraft({ project, user })
+
+    const result = await createNewDocument({
+      commit,
+      path: 'newdoc',
+    })
+
+    expect(result.error).toEqual(
+      new BadRequestError('No provider found when creating document'),
     )
   })
 })

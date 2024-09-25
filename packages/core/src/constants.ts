@@ -25,7 +25,11 @@ export enum CommitStatus {
   Draft = 'draft',
 }
 
-export { Providers, PROVIDER_MODELS } from './services/ai/providers/models'
+export {
+  Providers,
+  PROVIDER_MODELS,
+  findFirstModelForProvider,
+} from './services/ai/providers/models'
 export { PARAMETERS_FROM_LOG } from './services/evaluations/compiler/constants'
 
 export type Message = CompilerMessage
