@@ -36,7 +36,7 @@ export default function useEvaluationResultsMeanValue(
     }
 
     return data
-  }, [commitUuid, documentUuid, evaluationId, project.id])
+  }, [commitUuid, documentUuid, evaluationId, project.id, toast])
   const { data, isLoading, error, mutate } = useSWR(
     ['evaluationResultsMeanQuery', commitUuid, documentUuid, evaluationId],
     fetcher,

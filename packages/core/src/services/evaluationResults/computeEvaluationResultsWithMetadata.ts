@@ -27,7 +27,6 @@ export async function computeEvaluationResultsWithMetadata(
 ): Promise<TypedResult<EvaluationResultWithMetadata[], Error>> {
   const { evaluationResultsScope, documentLogsScope, baseQuery } =
     createEvaluationResultQuery(workspaceId, db)
-
   const query = baseQuery
     .where(
       and(

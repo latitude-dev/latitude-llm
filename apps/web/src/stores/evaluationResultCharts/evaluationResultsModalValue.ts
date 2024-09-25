@@ -36,7 +36,7 @@ export default function useEvaluationResultsModalValue(
     }
 
     return data
-  }, [commitUuid, documentUuid, evaluationId, project.id])
+  }, [commitUuid, documentUuid, evaluationId, project.id, toast])
   const { data, isLoading, error, mutate } = useSWR(
     ['evaluationResultsModalQuery', commitUuid, documentUuid, evaluationId],
     fetcher,

@@ -1,9 +1,12 @@
 'use client'
 
+import { useCallback } from 'react'
+
 import { EvaluationDto, EvaluationMeanValue } from '@latitude-data/core/browser'
 import { RangeBadge } from '@latitude-data/web-ui'
 import useEvaluationResultsMeanValue from '$/stores/evaluationResultCharts/evaluationResultsMeanValue'
 
+import { useEvaluationStatusEvent } from '../../../../_lib/useEvaluationStatusEvent'
 import Panel from '../Panel'
 
 export default function MeanValuePanel({
@@ -17,7 +20,7 @@ export default function MeanValuePanel({
   evaluation: EvaluationDto
   mean: EvaluationMeanValue
 }) {
-  const { data } = useEvaluationResultsMeanValue(
+  const { data, refetch } = useEvaluationResultsMeanValue(
     {
       commitUuid,
       documentUuid,
@@ -27,6 +30,12 @@ export default function MeanValuePanel({
       fallbackData: mean,
     },
   )
+  const onStatusChange = useCallback(() => refetch(), [refetch])
+  useEvaluationStatusEvent({
+    evaluationId: evaluation.id,
+    documentUuid,
+    onStatusChange,
+  })
   const config = evaluation.configuration.detail!
   const defaultMinValue = config.range.from
   const defaultMaxValue = config.range.to
