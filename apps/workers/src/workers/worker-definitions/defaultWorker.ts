@@ -6,6 +6,7 @@ const defaultWorkerQueues = [
   Queues.defaultQueue,
   Queues.eventHandlersQueue,
   Queues.eventsQueue,
+  Queues.liveEvaluationsQueue,
 ]
 
 export const defaultWorker = {

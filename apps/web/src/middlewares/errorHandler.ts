@@ -6,8 +6,6 @@ export function errorHandler(handler: any) {
     try {
       return await handler(req, res)
     } catch (error) {
-      console.error('Error occurred:', error)
-
       if (error instanceof LatitudeError) {
         return NextResponse.json(
           { message: error.message, details: error.details },

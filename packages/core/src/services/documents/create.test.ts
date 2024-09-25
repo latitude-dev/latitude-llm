@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 
-import { database } from '../../client'
 import { BadRequestError } from '../../lib'
 import { DocumentVersionsRepository } from '../../repositories'
 import { mergeCommit } from '../commits/merge'
@@ -66,7 +65,7 @@ describe('createNewDocument', () => {
   })
 
   it('creates a new document with default content when no content is provided', async (ctx) => {
-    const { project, user } = await ctx.factories.createProject()
+    const { project, user, providers } = await ctx.factories.createProject()
     const { commit } = await ctx.factories.createDraft({ project, user })
 
     const documentResult = await createNewDocument({
@@ -85,13 +84,11 @@ describe('createNewDocument', () => {
     expect(createdDocument.documentUuid).toBe(document.documentUuid)
     expect(createdDocument.path).toBe(document.path)
 
-    const firstProvider = await database.query.providerApiKeys.findFirst()
-
     // Check for default content
     expect(createdDocument.content).toBe(
       `
 ---
-provider: ${firstProvider!.name}
+provider: ${providers[0]!.name}
 model: gpt-4o-mini
 ---
           `.trim(),

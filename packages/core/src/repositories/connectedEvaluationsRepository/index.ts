@@ -62,13 +62,13 @@ export class ConnectedEvaluationsRepository extends Repository<
     return Result.ok(result)
   }
 
-  async findByDocumentUuid(uuid: string) {
+  async filterByDocumentUuid(uuid: string) {
     const result = await this.db
       .select()
       .from(this.scope)
       .where(eq(this.scope.documentUuid, uuid))
 
-    return Result.ok(result[0]!)
+    return Result.ok(result)
   }
 
   async getConnectedDocumentsWithMetadata(

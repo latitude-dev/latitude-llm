@@ -1,5 +1,6 @@
 import { Commit, DocumentLog } from '../../browser'
 import { database } from '../../client'
+import { publisher } from '../../events/publisher'
 import { Result, Transaction } from '../../lib'
 import { documentLogs } from '../../schema'
 
@@ -44,6 +45,11 @@ export async function createDocumentLog(
       .returning()
 
     const documentLog = inserts[0]!
+
+    publisher.publishLater({
+      type: 'documentLogCreated',
+      data: documentLog,
+    })
 
     return Result.ok(documentLog)
   }, db)
