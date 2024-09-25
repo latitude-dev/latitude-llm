@@ -15,6 +15,20 @@ import { format } from 'date-fns'
 
 import { ResultCellContent } from '../EvaluationResultsTable'
 
+function getReasonFromProviderLog(providerLog?: ProviderLogDto) {
+  if (!providerLog) return '-'
+
+  try {
+    const response = JSON.parse(providerLog?.response)
+    if (response) {
+      return response.reason || '-'
+    }
+    return '-'
+  } catch (e) {
+    return '-'
+  }
+}
+
 function MetadataItem({
   label,
   stacked = false,
@@ -137,18 +151,4 @@ export function EvaluationResultMetadata({
       />
     </div>
   )
-}
-
-function getReasonFromProviderLog(providerLog?: ProviderLogDto) {
-  if (!providerLog) return '-'
-
-  try {
-    const response = JSON.parse(providerLog?.response)
-    if (response) {
-      return response.reason || '-'
-    }
-    return '-'
-  } catch (e) {
-    return '-'
-  }
 }

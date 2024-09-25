@@ -4,9 +4,9 @@ import { useCallback } from 'react'
 
 import { EvaluationModalValue } from '@latitude-data/core/browser'
 import { Text } from '@latitude-data/web-ui'
-import { useEvaluationStatusEvent } from '../../../../_lib/useEvaluationStatusEvent'
 import useEvaluationResultsModalValue from '$/stores/evaluationResultCharts/evaluationResultsModalValue'
 
+import { useEvaluationStatusEvent } from '../../../../_lib/useEvaluationStatusEvent'
 import Panel from '../Panel'
 
 export default function ModalValuePanel({

@@ -108,6 +108,7 @@ export function EvaluationResults({
         </div>
         {selectedResult && (
           <EvaluationResultInfo
+            key={selectedResult.id}
             evaluation={evaluation}
             evaluationResult={selectedResult}
             providerLog={providerLog}

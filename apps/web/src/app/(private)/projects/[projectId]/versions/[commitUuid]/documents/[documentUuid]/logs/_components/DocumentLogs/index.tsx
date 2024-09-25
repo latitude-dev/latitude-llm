@@ -30,10 +30,12 @@ export function DocumentLogs({
         />
       </div>
       {selectedLog && (
-        <DocumentLogInfo
-          documentLog={selectedLog}
-          providerLogs={providerLogs}
-        />
+        <div className='w-80 flex-shrink-0 flex flex-col border border-border rounded-lg px-4 pt-6 items-center'>
+          <DocumentLogInfo
+            documentLog={selectedLog}
+            providerLogs={providerLogs}
+          />
+        </div>
       )}
     </div>
   )

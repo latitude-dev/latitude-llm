@@ -25,7 +25,7 @@ import Link from 'next/link'
 
 import { Actions } from './_components/Actions'
 import { EvaluationResults } from './_components/EvaluationResults'
-import { MetricsSummary }from './_components/MetricsSummary'
+import { MetricsSummary } from './_components/MetricsSummary'
 
 const TYPE_TEXT: Record<EvaluationResultableType, string> = {
   [EvaluationResultableType.Text]: 'Text',
