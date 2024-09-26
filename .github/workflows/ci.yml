@@ -24,7 +24,7 @@ jobs:
     needs: [lint, test]
     strategy:
       matrix:
-        app: [gateway, web, websockets, workers]
+        app: [gateway, websockets, workers]
     uses: ./.github/workflows/deploy-app.yml
     with:
       app-name: ${{ matrix.app }}

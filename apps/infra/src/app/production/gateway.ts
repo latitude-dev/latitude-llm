@@ -9,21 +9,21 @@ import {
   privateSubnets,
   resolve,
   vpcId,
-} from '../shared'
+} from '../../shared'
 import { coreStack, environment } from './shared'
 
-const DNS_ADDRESS = 'ws.latitude.so'
+const DNS_ADDRESS = 'gateway.latitude.so'
 
 // Create an ECR repository
-const repo = new aws.ecr.Repository('latitude-llm-websockets-repo')
+const repo = new aws.ecr.Repository('latitude-llm-gateway-repo')
 
 // Build and push the Docker image
 const token = await aws.ecr.getAuthorizationToken()
-const image = new docker.Image('LatitudeLLMWebsocketsImage', {
+const image = new docker.Image('LatitudeLLMGatewayImage', {
   build: {
     platform: 'linux/amd64',
     context: resolve('../../../'),
-    dockerfile: resolve('../../../apps/websockets/docker/Dockerfile'),
+    dockerfile: resolve('../../../apps/gateway/docker/Dockerfile'),
     cacheFrom: {
       images: [pulumi.interpolate`${repo.repositoryUrl}:latest`],
     },
@@ -37,10 +37,10 @@ const image = new docker.Image('LatitudeLLMWebsocketsImage', {
 })
 
 // Create a Fargate task definition
-const containerName = 'LatitudeLLMWebsocketsContainer'
+const containerName = 'LatitudeLLMGatewayContainer'
 // Create the log group
-const logGroup = new aws.cloudwatch.LogGroup('LatitudeLLMWebsocketsLogGroup', {
-  name: '/ecs/LatitudeLLMWebsockets',
+const logGroup = new aws.cloudwatch.LogGroup('LatitudeLLMGatewayLogGroup', {
+  name: '/ecs/LatitudeLLMGateway',
   retentionInDays: 7,
 })
 
@@ -48,7 +48,7 @@ const taskDefinition = pulumi
   .all([logGroup.name, image.imageName, environment])
   .apply(
     ([logGroupName, imageName, environment]) =>
-      new aws.ecs.TaskDefinition('LatitudeLLMWebsocketsTaskDefinition', {
+      new aws.ecs.TaskDefinition('LatitudeLLMGatewayTaskDefinition', {
         family: 'LatitudeLLMTaskFamily',
         cpu: '256',
         memory: '512',
@@ -70,7 +70,7 @@ const taskDefinition = pulumi
                 'CMD-SHELL',
                 'curl -f http://localhost:8080/health || exit 1',
               ],
-              interval: 30,
+              interval: 10,
               timeout: 5,
               retries: 3,
               startPeriod: 60,
@@ -88,7 +88,7 @@ const taskDefinition = pulumi
       }),
   )
 
-const targetGroup = new aws.lb.TargetGroup('LatitudeLLMWebsocketsTg', {
+const targetGroup = new aws.lb.TargetGroup('LatitudeLLMGatewayTg', {
   port: 8080,
   vpcId,
   protocol: 'HTTP',
@@ -105,7 +105,7 @@ const targetGroup = new aws.lb.TargetGroup('LatitudeLLMWebsocketsTg', {
 
 const defaultListenerArn = coreStack.requireOutput('defaultListenerArn')
 
-new aws.lb.ListenerRule('LatitudeLLMWebsocketsListenerRule', {
+new aws.lb.ListenerRule('LatitudeLLMGatewayListenerRule', {
   listenerArn: defaultListenerArn,
   actions: [
     {
@@ -123,10 +123,10 @@ new aws.lb.ListenerRule('LatitudeLLMWebsocketsListenerRule', {
 })
 
 const cluster = coreStack.requireOutput('cluster') as pulumi.Output<Cluster>
-new aws.ecs.Service('LatitudeLLMWebsockets', {
+new aws.ecs.Service('LatitudeLLMGateway', {
   cluster: cluster.arn,
   taskDefinition: taskDefinition.arn,
-  desiredCount: 1,
+  desiredCount: 2,
   launchType: 'FARGATE',
   forceNewDeployment: true,
   enableExecuteCommand: true,
@@ -142,8 +142,11 @@ new aws.ecs.Service('LatitudeLLMWebsockets', {
       containerPort: 8080,
     },
   ],
-  triggers: {
+  tags: {
     digest: image.repoDigest,
+  },
+  triggers: {
+    diggest: image.repoDigest,
   },
 })
 
