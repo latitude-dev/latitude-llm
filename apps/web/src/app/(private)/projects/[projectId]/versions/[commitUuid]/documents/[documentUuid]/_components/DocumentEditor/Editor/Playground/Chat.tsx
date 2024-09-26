@@ -43,8 +43,7 @@ export default function Chat({
   const [error, setError] = useState<Error | undefined>()
   const [tokens, setTokens] = useState<number>(0)
   const [isScrolledToBottom, setIsScrolledToBottom] = useState(false)
-  const [startTime, _] = useState(performance.now())
-  const [endTime, setEndTime] = useState<number>()
+  const [time, setTime] = useState<number>()
   const containerRef = useRef<HTMLDivElement>(null)
   useAutoScroll(containerRef, {
     startAtBottom: true,
@@ -73,6 +72,7 @@ export default function Chat({
   )
 
   const runDocument = useCallback(async () => {
+    const start = performance.now()
     setError(undefined)
     setResponseStream(undefined)
 
@@ -105,8 +105,9 @@ export default function Chat({
             if (data.type === ChainEventTypes.Step) {
               if (data.isLastStep) setChainLength(messagesCount + 1)
             } else if (data.type === ChainEventTypes.Complete) {
+              setResponseStream(undefined)
               setTokens(data.response.usage.totalTokens)
-              setEndTime(performance.now())
+              setTime(performance.now() - start)
             } else if (data.type === ChainEventTypes.Error) {
               setError(new Error(data.error.message))
             }
@@ -118,9 +119,6 @@ export default function Chat({
             if (data.type === 'text-delta') {
               response += data.textDelta
               setResponseStream(response)
-            } else if (data.type === 'finish') {
-              setResponseStream(undefined)
-              response = ''
             }
             break
           }
@@ -175,6 +173,7 @@ export default function Chat({
                 role: MessageRole.assistant,
                 content: data.response.text,
               } as AssistantMessage)
+              setResponseStream(undefined)
             }
 
             break
@@ -184,9 +183,6 @@ export default function Chat({
             if (data.type === 'text-delta') {
               response += data.textDelta
               setResponseStream(response)
-            } else if (data.type === 'finish') {
-              setResponseStream(undefined)
-              response = ''
             }
             break
           }
@@ -216,7 +212,7 @@ export default function Chat({
               }
               variant='accent'
             />
-            {endTime && <Timer timeMs={endTime - startTime} />}
+            {time && <Timer timeMs={time} />}
           </>
         )}
         {(conversation?.messages.length ?? 0) > chainLength && (
