@@ -1,9 +1,12 @@
 'use client'
 
+import { useCallback } from 'react'
+
 import { EvaluationModalValue } from '@latitude-data/core/browser'
 import { Text } from '@latitude-data/web-ui'
 import useEvaluationResultsModalValue from '$/stores/evaluationResultCharts/evaluationResultsModalValue'
 
+import { useEvaluationStatusEvent } from '../../../../_lib/useEvaluationStatusEvent'
 import Panel from '../Panel'
 
 export default function ModalValuePanel({
@@ -17,7 +20,7 @@ export default function ModalValuePanel({
   evaluationId: number
   modal: EvaluationModalValue
 }) {
-  const { data } = useEvaluationResultsModalValue(
+  const { data, refetch } = useEvaluationResultsModalValue(
     {
       commitUuid,
       documentUuid,
@@ -27,6 +30,8 @@ export default function ModalValuePanel({
       fallbackData: modal,
     },
   )
+  const onStatusChange = useCallback(() => refetch(), [refetch])
+  useEvaluationStatusEvent({ evaluationId, documentUuid, onStatusChange })
   return (
     <Panel
       label='Value more repeated'

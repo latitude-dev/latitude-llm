@@ -13,7 +13,7 @@ import { formatCostInMillicents, formatDuration } from '$/app/_lib/formatUtils'
 import useProviderApiKeys from '$/stores/providerApiKeys'
 import { format } from 'date-fns'
 
-function MetadataItem({
+export function MetadataItem({
   label,
   value,
   loading,

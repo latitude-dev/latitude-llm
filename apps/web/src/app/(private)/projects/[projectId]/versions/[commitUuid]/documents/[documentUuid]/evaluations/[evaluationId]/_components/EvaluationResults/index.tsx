@@ -27,11 +27,9 @@ import { EvaluationStatusBanner } from './EvaluationStatusBanner'
 export function EvaluationResults({
   evaluation,
   evaluationResults: serverData,
-  jobs,
 }: {
   evaluation: EvaluationDto
   evaluationResults: EvaluationResultWithMetadata[]
-  jobs: EventArgs<'evaluationStatus'>[]
 }) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
@@ -72,7 +70,10 @@ export function EvaluationResults({
   return (
     <div className='flex flex-col gap-4'>
       <Text.H4>Evaluation Results</Text.H4>
-      <EvaluationStatusBanner jobs={jobs} />
+      <EvaluationStatusBanner
+        documentUuid={document.documentUuid}
+        evaluationId={evaluation.id}
+      />
       <div className='flex flex-row w-full h-full overflow-hidden gap-4'>
         <div className='flex-grow min-w-0 h-full'>
           {evaluationResults.length === 0 && (
@@ -107,6 +108,7 @@ export function EvaluationResults({
         </div>
         {selectedResult && (
           <EvaluationResultInfo
+            key={selectedResult.id}
             evaluation={evaluation}
             evaluationResult={selectedResult}
             providerLog={providerLog}

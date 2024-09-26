@@ -1,14 +1,61 @@
 'use client'
 
+import { useEffect, useRef, useState } from 'react'
+
 import { ProgressIndicator } from '@latitude-data/web-ui'
-import { isEvaluationRunDone } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/evaluations/[evaluationId]/_lib/isEvaluationRunDone'
 import { type EventArgs } from '$/components/Providers/WebsocketsProvider/useSockets'
 
+import { isEvaluationRunDone } from '../../../_lib/isEvaluationRunDone'
+import { useEvaluationStatusEvent } from '../../../_lib/useEvaluationStatusEvent'
+
+const DISAPERING_IN_MS = 5000
+
 export function EvaluationStatusBanner({
-  jobs,
+  documentUuid,
+  evaluationId,
 }: {
-  jobs: EventArgs<'evaluationStatus'>[]
+  evaluationId: number
+  documentUuid: string
 }) {
+  const timeoutRef = useRef<number | null>(null)
+  const [jobs, setJobs] = useState<EventArgs<'evaluationStatus'>[]>([])
+  useEvaluationStatusEvent({
+    evaluationId,
+    documentUuid,
+    onStatusChange: (args) => {
+      setJobs((prevJobs) => {
+        const jobIndex = prevJobs.findIndex(
+          (job) => job.batchId === args.batchId,
+        )
+
+        if (jobIndex === -1) {
+          return [...prevJobs, args]
+        } else {
+          const newJobs = [...prevJobs]
+          newJobs[jobIndex] = args
+
+          if (isEvaluationRunDone(args)) {
+            setTimeout(() => {
+              setJobs((currentJobs) =>
+                currentJobs.filter((job) => job.batchId !== args.batchId),
+              )
+            }, DISAPERING_IN_MS)
+          }
+
+          return newJobs
+        }
+      })
+    },
+  })
+
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current)
+      }
+    }
+  }, [])
+
   return (
     <>
       {jobs.map((job) => (

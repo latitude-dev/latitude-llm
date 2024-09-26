@@ -24,7 +24,8 @@ import { ROUTES } from '$/services/routes'
 import Link from 'next/link'
 
 import { Actions } from './_components/Actions'
-import Content from './_components/Content'
+import { EvaluationResults } from './_components/EvaluationResults'
+import { MetricsSummary } from './_components/MetricsSummary'
 
 const TYPE_TEXT: Record<EvaluationResultableType, string> = {
   [EvaluationResultableType.Text]: 'Text',
@@ -179,14 +180,17 @@ export default async function ConnectedEvaluationLayout({
           />
         }
       />
-      <Content
+      <MetricsSummary
         commit={commit}
         evaluation={evaluation}
         documentUuid={params.documentUuid}
-        evaluationResults={evaluationResults}
-        isNumeric={isNumeric}
         aggregationTotals={data.aggregationTotals}
+        isNumeric={isNumeric}
         meanOrModal={data.meanOrModal}
+      />
+      <EvaluationResults
+        evaluation={evaluation}
+        evaluationResults={evaluationResults}
       />
     </div>
   )

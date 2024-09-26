@@ -35,7 +35,7 @@ export default function useEvaluationResultsCounters(
       return null
     }
     return data
-  }, [commitUuid, documentUuid, evaluationId, project.id])
+  }, [commitUuid, documentUuid, evaluationId, project.id, toast])
   const { data, isLoading, error, mutate } = useSWR(
     ['evaluationResultsCounters', commitUuid, documentUuid, evaluationId],
     fetcher,

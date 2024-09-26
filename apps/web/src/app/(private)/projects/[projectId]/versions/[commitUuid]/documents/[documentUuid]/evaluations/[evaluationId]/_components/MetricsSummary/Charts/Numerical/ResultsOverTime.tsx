@@ -1,11 +1,12 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
 
 import { Evaluation } from '@latitude-data/core/browser'
 import { AreaChart, Text } from '@latitude-data/web-ui'
 import useAverageResultOverTime from '$/stores/evaluationResultCharts/numericalResults/averageResultOverTimeStore'
 
+import { useEvaluationStatusEvent } from '../../../../_lib/useEvaluationStatusEvent'
 import { ChartWrapper, NoData } from '../ChartContainer'
 
 const formatDate = (date: number) => {
@@ -22,9 +23,15 @@ export function ResultOverTimeChart({
   evaluation: Evaluation
   documentUuid: string
 }) {
-  const { isLoading, error, data } = useAverageResultOverTime({
+  const { isLoading, error, data, refetch } = useAverageResultOverTime({
     evaluation,
     documentUuid,
+  })
+  const onStatusChange = useCallback(() => refetch(), [refetch])
+  useEvaluationStatusEvent({
+    evaluationId: evaluation.id,
+    documentUuid,
+    onStatusChange,
   })
 
   const minDate = useMemo(() => {

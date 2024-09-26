@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useCallback, useMemo } from 'react'
 
 import { Evaluation } from '@latitude-data/core/browser'
 import {
@@ -11,6 +11,7 @@ import {
 } from '@latitude-data/web-ui'
 import useAverageResultsAndCostOverCommit from '$/stores/evaluationResultCharts/numericalResults/averageResultAndCostOverCommitStore'
 
+import { useEvaluationStatusEvent } from '../../../../_lib/useEvaluationStatusEvent'
 import { ChartWrapper, NoData } from '../ChartContainer'
 
 export function CostOverResultsChart({
@@ -20,11 +21,18 @@ export function CostOverResultsChart({
   evaluation: Evaluation
   documentUuid: string
 }) {
-  const { isLoading, error, data } = useAverageResultsAndCostOverCommit({
-    evaluation,
-    documentUuid,
-  })
+  const { isLoading, error, data, refetch } =
+    useAverageResultsAndCostOverCommit({
+      evaluation,
+      documentUuid,
+    })
   const { commit } = useCurrentCommit()
+  const onStatusChange = useCallback(() => refetch(), [refetch])
+  useEvaluationStatusEvent({
+    evaluationId: evaluation.id,
+    documentUuid,
+    onStatusChange,
+  })
 
   const parsedData = useMemo(
     () =>
