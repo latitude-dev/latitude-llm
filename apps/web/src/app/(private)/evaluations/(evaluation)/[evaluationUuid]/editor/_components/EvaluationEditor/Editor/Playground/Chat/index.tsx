@@ -111,6 +111,7 @@ export default function Chat({
           if (data.type === ChainEventTypes.Step) {
             if (data.isLastStep) setChainLength(messagesCount + 1)
           } else if (data.type === ChainEventTypes.Complete) {
+            setResponseStream(undefined)
             setTokens(data.response.usage.totalTokens)
             setEndTime(performance.now())
           } else if (data.type === ChainEventTypes.Error) {
@@ -123,9 +124,6 @@ export default function Chat({
           if (data.type === 'text-delta') {
             response += data.textDelta
             setResponseStream(response)
-          } else if (data.type === 'finish') {
-            setResponseStream(undefined)
-            response = ''
           }
           break
         }
