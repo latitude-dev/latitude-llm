@@ -31,7 +31,7 @@ ${parameterEntries}
 
   const apiCode = `
 curl -X POST \\
-  https://api.latitude.io/v1/projects/${projectId}/versions/${commitUuid}/documents/run \\
+  https://gateway.latitude.io/api/v1/projects/${projectId}/versions/${commitUuid}/documents/run \\
   -H 'Authorization: Bearer ${apiKey ?? 'YOUR_API_KEY'}' \\
   -H 'Content-Type: application/json' \\
   -d '{
