@@ -68,14 +68,16 @@ const TableRow = forwardRef<
   HTMLTableRowElement,
   HTMLAttributes<HTMLTableRowElement> & {
     verticalPadding?: boolean
+    hoverable?: boolean
   }
->(({ className, verticalPadding, ...props }, ref) => (
+>(({ className, verticalPadding, hoverable = true, ...props }, ref) => (
   <tr
     ref={ref}
     className={cn(
-      'border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted',
+      'border-b transition-colors data-[state=selected]:bg-muted',
       {
         '[&>td]:py-4': verticalPadding,
+        'hover:bg-muted/50': hoverable,
       },
       className,
     )}

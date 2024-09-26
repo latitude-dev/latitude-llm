@@ -2,6 +2,7 @@
 
 import {
   Button,
+  CopyButton,
   Icon,
   Table,
   TableBody,
@@ -34,7 +35,7 @@ export default function WorkspaceApiKeys() {
             </TableHeader>
             <TableBody>
               {apiKeys.map((apiKey) => (
-                <TableRow key={apiKey.id} verticalPadding>
+                <TableRow key={apiKey.id} verticalPadding hoverable={false}>
                   <TableCell>
                     <Text.H4>{apiKey.name || 'Unnamed API Key'}</Text.H4>
                   </TableCell>
@@ -50,9 +51,15 @@ export default function WorkspaceApiKeys() {
                             })
                           }}
                         >
-                          <Text.H4 color='foregroundMuted'>
-                            {apiKey.token}
-                          </Text.H4>
+                          <div className='flex flex-row items-center gap-2'>
+                            <Text.H4 color='foregroundMuted'>
+                              {apiKey.token}
+                            </Text.H4>
+                            <CopyButton
+                              content={apiKey.token}
+                              color='foregroundMuted'
+                            />
+                          </div>
                         </Button>
                       }
                     >

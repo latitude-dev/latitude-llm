@@ -3,7 +3,7 @@ import React from 'react'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
 import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism'
 
-import { CopyButton } from './CopyButton'
+import { CopyButton } from '../CopyButton'
 
 interface CodeBlockProps {
   language: string
@@ -14,7 +14,7 @@ export function CodeBlock({ language, children }: CodeBlockProps) {
   return (
     <div className='relative max-w-full'>
       <div className='absolute top-4 right-2'>
-        <CopyButton content={children} />
+        <CopyButton content={children} color='foregroundMuted' />
       </div>
       <SyntaxHighlighter
         language={language}
