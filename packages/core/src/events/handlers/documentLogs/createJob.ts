@@ -4,6 +4,7 @@ import {
   createDocumentLog,
   CreateDocumentLogProps,
 } from '../../../services/documentLogs'
+import { WebsocketClient } from '../../../websockets/workers'
 
 export type CreateDocumentLogJobData = CreateDocumentLogProps
 
@@ -12,7 +13,9 @@ export const createDocumentLogJob = async ({
 }: {
   data: DocumentRunEvent
 }) => {
-  const scope = new CommitsRepository(event.data.workspaceId)
+  const websockets = await WebsocketClient.getSocket()
+  const workspaceId = event.data.workspaceId
+  const scope = new CommitsRepository(workspaceId)
   const commit = await scope
     .getCommitByUuid({
       projectId: event.data.projectId,
@@ -20,7 +23,7 @@ export const createDocumentLogJob = async ({
     })
     .then((r) => r.unwrap())
 
-  await createDocumentLog({
+  const documentLog = await createDocumentLog({
     commit,
     data: {
       customIdentifier: event.data.customIdentifier,
@@ -32,4 +35,15 @@ export const createDocumentLogJob = async ({
       source: event.data.source,
     },
   }).then((r) => r.unwrap())
+
+  // TODO: Move to its own event handler.
+  websockets.emit('documentLogCreated', {
+    workspaceId,
+    data: {
+      workspaceId,
+      documentUuid: event.data.documentUuid,
+      commitUuid: event.data.commitUuid,
+      documentLogId: documentLog.id,
+    },
+  })
 }

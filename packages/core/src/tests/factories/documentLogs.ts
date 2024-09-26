@@ -15,6 +15,7 @@ export type IDocumentLogData = {
   commit: Commit
   parameters?: Record<string, unknown>
   customIdentifier?: string
+  createdAt?: Date
 }
 
 export async function createDocumentLog({
@@ -22,6 +23,7 @@ export async function createDocumentLog({
   commit,
   parameters,
   customIdentifier,
+  createdAt,
 }: IDocumentLogData) {
   const workspace = (await findWorkspaceFromCommit(commit))!
   const providerScope = new ProviderApiKeysRepository(workspace.id)
@@ -98,6 +100,7 @@ export async function createDocumentLog({
       customIdentifier,
       source: LogSources.API,
       duration,
+      createdAt,
     },
   }).then((r) => r.unwrap())
 

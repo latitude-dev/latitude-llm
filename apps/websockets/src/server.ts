@@ -136,6 +136,11 @@ workers.on('connection', (socket) => {
     const workspace = buildWorkspaceRoom({ workspaceId })
     web.to(workspace).emit('evaluationResultCreated', data)
   })
+  socket.on('documentLogCreated', (args) => {
+    const { workspaceId, data } = args
+    const workspace = buildWorkspaceRoom({ workspaceId })
+    web.to(workspace).emit('documentLogCreated', data)
+  })
 })
 
 const PORT = process.env.WEBSOCKETS_SERVER_PORT || 4002
