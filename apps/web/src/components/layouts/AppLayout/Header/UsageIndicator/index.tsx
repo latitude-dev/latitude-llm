@@ -24,14 +24,15 @@ function UsageIndicatorCircle({
   isLoading: boolean
 }) {
   const ratio = useMemo(() => {
-    if (!data) return 0
-    if (data.max === 0) return 0
-    const actualRatio = (data.max - data.usage) / data.max
+    if (!data) return 1
+    if (data.max === 0) return 1
+    const actualRatio = data.usage / data.max
 
-    if (actualRatio <= 0) return 0
     if (actualRatio >= 1) return 1
+    if (actualRatio <= 0) return 0
 
-    if (actualRatio < 0.01) return 0.01 // Too low of a ratio makes the circle so small it disappears
+    if (actualRatio < 0.01) return 0.01 // Too small of a value makes the progress so small its not visible
+
     return actualRatio
   }, [data])
 
@@ -46,20 +47,18 @@ function UsageIndicatorCircle({
       />
     )
   }
-  if (ratio <= 0) {
-    return <CircularProgress value={1} color='destructive' {...props} />
-  }
 
   return (
     <CircularProgress
-      value={ratio || 1}
+      value={ratio}
       color={
-        ratio > 0.25
+        ratio < 0.75
           ? 'primary'
-          : ratio === 0
+          : ratio >= 1
             ? 'destructive'
             : 'warningMutedForeground'
       }
+      showBackground
       {...props}
     />
   )

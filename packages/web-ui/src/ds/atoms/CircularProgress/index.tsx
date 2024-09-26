@@ -8,7 +8,7 @@ import { colors, TextColor } from '../../tokens'
 export type CircularProgressProps = {
   value: number
   color?: TextColor
-  backgroundColor?: TextColor
+  showBackground?: boolean
   size?: number
   strokeWidth?: number
   className?: string
@@ -18,7 +18,7 @@ export type CircularProgressProps = {
 export function CircularProgress({
   value: valueProp,
   color = 'primary',
-  backgroundColor,
+  showBackground,
   size = 14,
   strokeWidth = 3,
   className,
@@ -44,17 +44,13 @@ export function CircularProgress({
       height={size}
       className={cn('-rotate-90', colors.textColors[color], className)}
     >
-      {backgroundColor && (
+      {showBackground && (
         <circle
-          className={cn(
-            'transition-all duration-300 ease-in-out',
-            colors.textColors[backgroundColor],
-          )}
+          className='opacity-20'
           stroke='currentColor'
           fill='transparent'
           strokeWidth={strokeWidth}
           strokeDasharray={circumference}
-          strokeDashoffset={progress - circumference}
           strokeLinecap='round'
           r={radius}
           cx={size / 2}
