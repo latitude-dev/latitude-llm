@@ -26,13 +26,7 @@
   </p>
 
 <p align="center">
-  <a href="https://www.npmjs.com/package/@latitude-data/cli">
-    <img src="https://img.shields.io/npm/v/@latitude-data/cli" alt="NPM">
-  </a>
-  <a href="https://www.npmjs.com/package/@latitude-data/server">
-    <img src="https://img.shields.io/npm/dm/@latitude-data/server" alt="npm downloads">
-  </a>
-  <img src="https://github.com/latitude-dev/latitude-llm/actions/workflows/linter.yml/badge.svg" alt="Linter">
+  <img src="https://github.com/latitude-dev/latitude-llm/actions/workflows/lint.yml/badge.svg" alt="Linter">
   <img src="https://github.com/latitude-dev/latitude-llm/actions/workflows/test.yml/badge.svg" alt="Tests">
 </p>
 
