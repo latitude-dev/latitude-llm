@@ -2,13 +2,13 @@
 
 import { verifyWebsocketToken } from '@latitude-data/core/websockets/utils'
 import { setWebsocketSessionCookie } from '$/services/auth/setSession'
+import { cookies } from 'next/headers'
 
 import { authProcedure } from '../procedures'
 
 export const refreshWebesocketTokenAction = authProcedure
   .createServerAction()
   .handler(async ({ ctx: { user, workspace } }) => {
-    const { cookies } = await import('next/headers')
     const refreshWebsocketCookie = cookies().get('websocketRefresh')
     const refreshToken = refreshWebsocketCookie?.value
     const result = await verifyWebsocketToken({
