@@ -2,8 +2,8 @@ import { setupJobs } from '@latitude-data/jobs'
 
 import { DocumentLogCreatedEvent } from '.'
 import { findWorkspaceFromDocumentLog } from '../../data-access'
-import { NotFoundError, Result } from '../../lib'
-import { CommitsRepository, EvaluationsRepository } from '../../repositories'
+import { NotFoundError } from '../../lib'
+import { EvaluationsRepository } from '../../repositories'
 
 export const runLiveEvaluationsJob = async ({
   data: event,
@@ -15,12 +15,6 @@ export const runLiveEvaluationsJob = async ({
   if (!workspace) {
     throw new NotFoundError('Workspace not found')
   }
-
-  const commitId = documentLog.commitId
-  const commitsScope = new CommitsRepository(workspace.id)
-  const commit = await commitsScope.find(commitId).then((r) => r.unwrap())
-  if (!commit.mergedAt) return Result.nil()
-
   const scope = new EvaluationsRepository(workspace.id)
   const evaluations = await scope
     .findByDocumentUuid(documentLog.documentUuid)
