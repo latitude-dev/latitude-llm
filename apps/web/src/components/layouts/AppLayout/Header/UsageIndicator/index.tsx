@@ -58,7 +58,6 @@ function UsageIndicatorCircle({
             ? 'destructive'
             : 'warningMutedForeground'
       }
-      showBackground
       {...props}
     />
   )
@@ -120,8 +119,8 @@ export function UsageIndicator() {
               data={data}
               size={20}
               isLoading={isLoading}
-              backgroundColor='foregroundMuted'
               className='overflow-clip'
+              showBackground
             />
             <LoadingText isLoading={isLoading}>
               <div className='flex flex-row w-full items-center gap-2'>
