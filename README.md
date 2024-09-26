@@ -20,8 +20,6 @@
     ·
   <a href="https://trylatitude.slack.com/join/shared_invite/zt-17dyj4elt-rwM~h2OorAA3NtgmibhnLA#/shared-invite/email">Join Our Slack</a>
     ·
-    <a href="https://github.com/orgs/latitude-dev/projects/1">Roadmap</a>
-    ·
     <a href="https://x.com/trylatitude">X</a>
   </p>
 
