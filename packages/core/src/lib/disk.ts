@@ -1,11 +1,12 @@
 import { Readable } from 'stream'
 
-import { Result } from '@latitude-data/core/lib/Result'
 import { env } from '@latitude-data/env'
 import { Disk, errors } from 'flydrive'
 import { FSDriver } from 'flydrive/drivers/fs'
 import { S3Driver } from 'flydrive/drivers/s3'
 import { WriteOptions } from 'flydrive/types'
+
+import { Result } from './Result'
 
 const generateUrl = (publicPath: string) => async (key: string) =>
   `/${publicPath}/${key}`
