@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { capitalize } from 'lodash-es'
 
 import { MessageContent, TextContent } from '@latitude-data/compiler'
-import { HEAD_COMMIT, ProviderLogDto } from '@latitude-data/core/browser'
+import { ProviderLogDto } from '@latitude-data/core/browser'
 import {
   Badge,
   Button,
@@ -23,7 +23,7 @@ import {
 import { useNavigate } from '$/hooks/useNavigate'
 import { relativeTime } from '$/lib/relativeTime'
 import { ROUTES } from '$/services/routes'
-import useDocumentVersions from '$/stores/documentVersions'
+import useDocumentsForImport from '$/stores/documentsForImport'
 import useProjects from '$/stores/projects'
 import useProviderLogs from '$/stores/providerLogs'
 
@@ -35,7 +35,7 @@ export default function ImportLogs({
   const navigate = useNavigate()
   const [projectId, setProjectId] = useState<number | undefined>()
   const [documentUuid, setDocumentUuid] = useState<string | undefined>()
-  const [providerLogUuid, setProviderLogUuid] = useState<string | undefined>()
+  const [providerLogId, setProviderLogId] = useState<number | undefined>()
 
   const onChangeProjectId = (value: string) => {
     setProjectId(Number(value))
@@ -45,10 +45,7 @@ export default function ImportLogs({
     setDocumentUuid(value)
   }
   const { data: projects } = useProjects()
-  const { data: documents } = useDocumentVersions({
-    commitUuid: HEAD_COMMIT,
-    projectId,
-  })
+  const { data: documents } = useDocumentsForImport({ projectId })
 
   return (
     <Modal
@@ -66,10 +63,10 @@ export default function ImportLogs({
           <CloseTrigger />
           <Button
             fancy
-            disabled={!providerLogUuid}
+            disabled={!providerLogId}
             onClick={() => {
               navigate.push(
-                `${ROUTES.evaluations.detail({ uuid: evaluationUuid }).editor.root}?providerLogUuid=${providerLogUuid}`,
+                `${ROUTES.evaluations.detail({ uuid: evaluationUuid }).editor.root}?providerLogId=${providerLogId}`,
               )
             }}
           >
@@ -102,13 +99,13 @@ export default function ImportLogs({
         {documentUuid && (
           <ProviderLogsTable
             documentUuid={documentUuid}
-            setProviderLogUuid={setProviderLogUuid}
+            setProviderLogId={setProviderLogId}
           />
         )}
         {documentUuid && (
           <ProviderLogMessages
             documentUuid={documentUuid}
-            providerLogUuid={providerLogUuid}
+            providerLogId={providerLogId}
           />
         )}
       </div>
@@ -118,10 +115,10 @@ export default function ImportLogs({
 
 const ProviderLogsTable = ({
   documentUuid,
-  setProviderLogUuid: setProviderLogId,
+  setProviderLogId: setProviderLogId,
 }: {
   documentUuid: string
-  setProviderLogUuid: (id: string) => void
+  setProviderLogId: (id: number) => void
 }) => {
   const { data = [] } = useProviderLogs({ documentUuid })
   if (!data.length) {
@@ -158,7 +155,7 @@ const ProviderLogsTable = ({
           {data?.map((log) => (
             <TableRow
               key={log.id}
-              onClick={() => setProviderLogId(log.uuid)}
+              onClick={() => setProviderLogId(log.id)}
               className='cursor-pointer'
               role='button'
             >
@@ -187,14 +184,14 @@ const ProviderLogsTable = ({
 
 const ProviderLogMessages = ({
   documentUuid,
-  providerLogUuid,
+  providerLogId,
 }: {
   documentUuid?: string
-  providerLogUuid?: string
+  providerLogId?: number
 }) => {
   const { data } = useProviderLogs({ documentUuid })
   const providerLog = data?.find(
-    (log) => log.uuid === providerLogUuid,
+    (log) => log.id === providerLogId,
   ) as ProviderLogDto
   if (!providerLog) {
     return (

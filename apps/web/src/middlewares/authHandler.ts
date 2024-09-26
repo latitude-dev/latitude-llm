@@ -9,10 +9,7 @@ export function authHandler(handler: any) {
       user = uzer
       workspace = workzpace
     } catch (error) {
-      return NextResponse.json(
-        { message: (error as Error).message },
-        { status: 401 },
-      )
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
     }
 
     return await handler(req, { ...rest, user, workspace })

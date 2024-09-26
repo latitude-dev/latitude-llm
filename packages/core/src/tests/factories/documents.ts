@@ -10,6 +10,7 @@ export type IDocumentVersionData = {
   commit: Commit
   path: string
   content: string
+  deletedAt?: Date
 }
 
 export async function markAsSoftDelete(
@@ -38,6 +39,7 @@ export async function createDocumentVersion(data: IDocumentVersionData) {
       commit: data.commit,
       document: result.unwrap(),
       content: data.content,
+      deletedAt: data.deletedAt,
     })
   }
 
