@@ -1,4 +1,13 @@
-import { and, eq, getTableColumns, isNotNull, lte, max, sql } from 'drizzle-orm'
+import {
+  and,
+  eq,
+  getTableColumns,
+  isNotNull,
+  lte,
+  max,
+  notInArray,
+  sql,
+} from 'drizzle-orm'
 
 import { Commit, DocumentVersion } from '../../browser'
 import { NotFoundError, Result } from '../../lib'
@@ -251,5 +260,33 @@ export class DocumentVersionsRepository extends Repository<
       .where(isNotNull(this.scope.mergedAt))
 
     return Result.ok(documentsFromMergedCommits)
+  }
+
+  async getDocumentsForImport(projectId: number) {
+    const documents = await this.db
+      .selectDistinct({
+        documentUuid: this.scope.documentUuid,
+        path: this.scope.path,
+      })
+      .from(this.scope)
+      .where(
+        and(
+          eq(this.scope.projectId, projectId),
+          notInArray(
+            this.scope.documentUuid,
+            this.db
+              .select({ documentUuid: this.scope.documentUuid })
+              .from(this.scope)
+              .where(
+                and(
+                  eq(this.scope.projectId, projectId),
+                  isNotNull(this.scope.deletedAt),
+                ),
+              ),
+          ),
+        ),
+      )
+
+    return Result.ok(documents)
   }
 }

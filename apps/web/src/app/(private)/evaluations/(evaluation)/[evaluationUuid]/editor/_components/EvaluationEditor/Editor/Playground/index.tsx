@@ -11,7 +11,7 @@ import {
 import { Badge, Icon, Input, Text } from '@latitude-data/web-ui'
 import { convertParams } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/DocumentEditor/Editor/Playground'
 import { ROUTES } from '$/services/routes'
-import useProviderLogs from '$/stores/providerLogs'
+import { useProviderLog } from '$/stores/providerLogs'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 
@@ -34,11 +34,9 @@ export default function Playground({
   )
   const parameters = useMemo(() => convertParams(inputs), [inputs])
   const searchParams = useSearchParams()
-  const providerLogUuid = searchParams.get('providerLogUuid')
-  const { data } = useProviderLogs()
-  const providerLog = useMemo(
-    () => data?.find((log) => log.uuid === providerLogUuid),
-    [data, providerLogUuid],
+  const providerLogId = searchParams.get('providerLogId')
+  const { data: providerLog } = useProviderLog(
+    providerLogId ? Number(providerLogId) : undefined,
   )
 
   const setInput = useCallback((param: string, value: string) => {

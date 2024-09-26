@@ -75,7 +75,7 @@ export async function createProject(projectData: Partial<ICreateProject> = {}) {
     name: name ?? randomName,
     workspace,
     user,
-    mergedAt: new Date(),
+    mergedAt: skipMerge ? undefined : new Date(),
   })
   let { project, commit } = result.unwrap()
 

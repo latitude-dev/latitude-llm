@@ -18,17 +18,21 @@ export async function updateDocument(
     document,
     path,
     content,
+    deletedAt,
   }: {
     commit: Commit
     document: DocumentVersion
     path?: string
     content?: string | null
+    deletedAt?: Date
   },
   trx = database,
 ): Promise<TypedResult<DocumentVersion, Error>> {
   return await Transaction.call(async (tx) => {
     const updatedDocData = Object.fromEntries(
-      Object.entries({ path, content }).filter(([_, v]) => v !== undefined),
+      Object.entries({ path, content, deletedAt }).filter(
+        ([_, v]) => v !== undefined,
+      ),
     )
 
     const asertResult = assertCommitIsDraft(commit)
