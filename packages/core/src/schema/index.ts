@@ -6,6 +6,7 @@ export * from './models/sessions'
 export * from './models/workspaces'
 export * from './models/memberships'
 export * from './models/apiKeys'
+export * from './models/claimedRewards'
 
 // Document tables
 export * from './models/projects'

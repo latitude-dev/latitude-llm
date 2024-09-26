@@ -10,6 +10,7 @@ import Link from 'next/link'
 import { Fragment } from 'react/jsx-runtime'
 
 import AvatarDropdown from './AvatarDropdown'
+import { RewardsButton } from './Rewards'
 import { UsageIndicator } from './UsageIndicator'
 
 function BreadcrumbSeparator() {
@@ -112,6 +113,7 @@ export default function AppHeader({
         <Breadcrumb showLogo breadcrumbs={breadcrumbs} />
         <div className='flex flex-row items-center gap-x-6'>
           <nav className='flex flex-row gap-x-4 items-center'>
+            <RewardsButton />
             <UsageIndicator />
             {navigationLinks.map((link, idx) => (
               <NavLink key={idx} {...link} />

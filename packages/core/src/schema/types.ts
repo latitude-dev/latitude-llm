@@ -2,6 +2,7 @@ import { type InferSelectModel } from 'drizzle-orm'
 
 import { EvaluationResultableType } from '../constants'
 import { apiKeys } from './models/apiKeys'
+import { claimedRewards } from './models/claimedRewards'
 import { commits } from './models/commits'
 import { connectedEvaluations } from './models/connectedEvaluations'
 import { datasets } from './models/datasets'
@@ -41,6 +42,7 @@ export type ConnectedEvaluation = InferSelectModel<typeof connectedEvaluations>
 export type EvaluationResult = InferSelectModel<typeof evaluationResults>
 export type EvaluationTemplate = InferSelectModel<typeof evaluationTemplates>
 export type MagicLinkToken = InferSelectModel<typeof magicLinkTokens>
+export type ClaimedReward = InferSelectModel<typeof claimedRewards>
 export type EvaluationTemplateCategory = InferSelectModel<
   typeof evaluationTemplateCategories
 >
@@ -76,3 +78,9 @@ export type ProviderLogDto = Omit<
   ProviderLog,
   'responseText' | 'responseObject'
 > & { response: string }
+
+export type ClaimedRewardWithUserInfo = ClaimedReward & {
+  workspaceName: string | null
+  userName: string | null
+  userEmail: string | null
+}

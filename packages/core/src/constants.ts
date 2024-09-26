@@ -141,6 +141,22 @@ export enum EvaluationResultableType {
   Number = 'evaluation_resultable_numbers',
 }
 
+export enum RewardType {
+  GithubStar = 'github_star',
+  GithubIssue = 'github_issue',
+  Follow = 'follow',
+  Post = 'post',
+  Referral = 'referral',
+}
+
+export const REWARD_VALUES: Record<RewardType, number> = {
+  [RewardType.GithubStar]: 1_000,
+  [RewardType.Follow]: 2_000,
+  [RewardType.Post]: 5_000,
+  [RewardType.GithubIssue]: 10_000,
+  [RewardType.Referral]: 5_000,
+}
+
 export type EvaluationAggregationTotals = {
   tokens: number
   costInMillicents: number

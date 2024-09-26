@@ -1,2 +1,2 @@
-export * from './invitations/invitationMail'
+export * from './invitations/InvitationMail'
 export * from './magicLinks/magicLinkMail'

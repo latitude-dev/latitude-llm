@@ -92,12 +92,18 @@ export default {
           '0%': { backgroundPosition: '200% center' },
           '100%': { backgroundPosition: '-200% center' },
         },
+        shine: {
+          '0%': { transform: 'translateX(-100%)' },
+          '25%': { transform: 'translateX(100%)' }, // Hack to apply a delay between animation iterations
+          '100%': { transform: 'translateX(100%)' },
+        },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
         flash: 'flash-background 1s ease-in-out',
         'text-gradient': 'gradient-animation 3s linear infinite',
+        shine: 'shine 12s linear infinite',
       },
       maxWidth: {
         modal: '580px',

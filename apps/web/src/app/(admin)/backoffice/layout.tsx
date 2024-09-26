@@ -6,6 +6,8 @@ import { getSession } from '$/services/auth/getSession'
 import { ROUTES } from '$/services/routes'
 import { redirect } from 'next/navigation'
 
+import { BackofficeTabs } from './_components/BackofficeTabs'
+
 export default async function AdminLayout({
   children,
 }: {
@@ -19,7 +21,7 @@ export default async function AdminLayout({
 
   return (
     <SessionProvider currentUser={user} workspace={workspace}>
-      {children}
+      <BackofficeTabs>{children}</BackofficeTabs>
     </SessionProvider>
   )
 }

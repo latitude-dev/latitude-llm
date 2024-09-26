@@ -7,39 +7,27 @@ import { Link, Text } from '@react-email/components'
 import Layout from '../_components/Layout'
 
 type Props = {
-  invited: User
   invitee: User
-  invitationToken: string
 }
-export default function InvitationMail({
-  invited,
-  invitee,
-  invitationToken,
-}: Props) {
+export default function InvitationMail({ invitee }: Props) {
   return (
-    <Layout title='Login' previewText='Log in with this magic link'>
-      <Text>Hi {invited.name},</Text>
+    <Layout previewText={`You've been invited to join Latitude!`}>
+      <Text>Hi!</Text>
       <Text>
         {invitee.name} has invited you to join Latitude. Click the link below to
-        log in.
+        set up an account for free.
       </Text>
       <Link
-        href={createInvitationLink(invitationToken)}
+        href={`${env.LATITUDE_URL}/setup`}
         target='_blank'
         className='text-blue-500 font-medium text-normal mb-4 underline'
       >
-        Click here to log in
+        Click here to set up your account
       </Link>
     </Layout>
   )
 }
 
-const createInvitationLink = (token: string) => {
-  return `${env.LATITUDE_URL}/invitations/${token}`
-}
-
 InvitationMail.PreviewProps = {
-  invited: { name: 'Jon' },
   invitee: { name: 'Arya' },
-  invitationToken: 'asdlfkjhasdflkjhdsaflkjh',
 }

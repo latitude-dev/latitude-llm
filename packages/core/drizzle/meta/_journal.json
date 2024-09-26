@@ -421,6 +421,13 @@
       "when": 1727298596943,
       "tag": "0059_faulty_barracuda",
       "breakpoints": true
+    },
+    {
+      "idx": 60,
+      "version": "7",
+      "when": 1727426397960,
+      "tag": "0060_curved_brood",
+      "breakpoints": true
     }
   ]
 }

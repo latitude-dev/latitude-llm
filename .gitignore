@@ -49,6 +49,7 @@ tmp
 # Misc
 TODO.md
 .cursorrules
+.vscode/settings.json
 
 # Sentry
 .env.sentry-build-plugin
