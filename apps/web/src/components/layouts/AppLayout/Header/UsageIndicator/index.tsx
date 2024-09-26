@@ -98,7 +98,11 @@ export function UsageIndicator() {
       <Popover.Trigger asChild>
         <Button variant='ghost' className='hover:bg-muted'>
           <div className='flex flex-row items-center gap-x-2'>
-            <UsageIndicatorCircle data={data} isLoading={isLoading} />
+            <UsageIndicatorCircle
+              data={data}
+              isLoading={isLoading}
+              showBackground
+            />
             <LoadingText isLoading={isLoading}>
               <Text.H6>
                 {data?.usage} / {data?.max}
