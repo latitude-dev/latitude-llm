@@ -9,83 +9,46 @@ import {
   privateSubnets,
   resolve,
   vpcId,
-} from '../shared'
-import {
-  coreStack,
-  environment,
-  postHogApiKey,
-  sentryDsn,
-  sentryOrg,
-  sentryProject,
-} from './shared'
+} from '../../shared'
+import { coreStack, environment } from './shared'
 
-const DNS_ADDRESS = 'app.latitude.so'
+const DNS_ADDRESS = 'ws.latitude.so'
 
 // Create an ECR repository
-const repo = new aws.ecr.Repository('latitude-llm-app-repo')
-const coreRepo = new aws.ecr.Repository('latitude-llm-core-repo')
+const repo = new aws.ecr.Repository('latitude-llm-websockets-repo')
 
 // Build and push the Docker image
 const token = await aws.ecr.getAuthorizationToken()
-
-const image = pulumi
-  .all([sentryDsn, sentryOrg, sentryProject, postHogApiKey])
-  .apply(
-    ([sentryDsn, sentryOrg, sentryProject, postHogApiKey]) =>
-      new docker.Image('LatitudeLLMAppImage', {
-        build: {
-          platform: 'linux/amd64',
-          context: resolve('../../../'),
-          dockerfile: resolve('../../../apps/web/docker/Dockerfile'),
-          cacheFrom: {
-            images: [pulumi.interpolate`${repo.repositoryUrl}:latest`],
-          },
-          args: {
-            SENTRY_DSN: sentryDsn,
-            SENTRY_ORG: sentryOrg,
-            SENTRY_PROJECT: sentryProject,
-            NEXT_PUBLIC_POSTHOG_KEY: postHogApiKey,
-            NEXT_PUBLIC_POSTHOG_HOST: 'https://eu.i.posthog.com',
-          },
-        },
-        imageName: pulumi.interpolate`${repo.repositoryUrl}:latest`,
-        registry: {
-          server: repo.repositoryUrl,
-          username: token.userName,
-          password: pulumi.secret(token.password),
-        },
-      }),
-  )
-const coreImage = new docker.Image('LatitudeLLMCoreImage', {
+const image = new docker.Image('LatitudeLLMWebsocketsImage', {
   build: {
     platform: 'linux/amd64',
     context: resolve('../../../'),
-    dockerfile: resolve('../../../packages/core/docker/Dockerfile'),
+    dockerfile: resolve('../../../apps/websockets/docker/Dockerfile'),
     cacheFrom: {
-      images: [pulumi.interpolate`${coreRepo.repositoryUrl}:latest`],
+      images: [pulumi.interpolate`${repo.repositoryUrl}:latest`],
     },
   },
-  imageName: pulumi.interpolate`${coreRepo.repositoryUrl}:latest`,
+  imageName: pulumi.interpolate`${repo.repositoryUrl}:latest`,
   registry: {
-    server: coreRepo.repositoryUrl,
+    server: repo.repositoryUrl,
     username: token.userName,
     password: pulumi.secret(token.password),
   },
 })
 
 // Create a Fargate task definition
-const containerName = 'LatitudeLLMAppContainer'
+const containerName = 'LatitudeLLMWebsocketsContainer'
 // Create the log group
-const logGroup = new aws.cloudwatch.LogGroup('LatitudeLLMAppLogGroup', {
-  name: '/ecs/LatitudeLLMApp',
+const logGroup = new aws.cloudwatch.LogGroup('LatitudeLLMWebsocketsLogGroup', {
+  name: '/ecs/LatitudeLLMWebsockets',
   retentionInDays: 7,
 })
 
 const taskDefinition = pulumi
-  .all([logGroup.name, image.imageName, coreImage.imageName, environment])
+  .all([logGroup.name, image.imageName, environment])
   .apply(
-    ([logGroupName, imageName, coreImageName, environment]) =>
-      new aws.ecs.TaskDefinition('LatitudeLLMAppTaskDefinition', {
+    ([logGroupName, imageName, environment]) =>
+      new aws.ecs.TaskDefinition('LatitudeLLMWebsocketsTaskDefinition', {
         family: 'LatitudeLLMTaskFamily',
         cpu: '256',
         memory: '512',
@@ -105,7 +68,7 @@ const taskDefinition = pulumi
             healthCheck: {
               command: [
                 'CMD-SHELL',
-                'curl -f http://localhost:8080/api/health || exit 1',
+                'curl -f http://localhost:8080/health || exit 1',
               ],
               interval: 30,
               timeout: 5,
@@ -121,32 +84,17 @@ const taskDefinition = pulumi
               },
             },
           },
-          {
-            name: 'db-migrate',
-            image: coreImageName,
-            command: ['pnpm', '--prefix', 'packages/core', 'db:migrate'],
-            essential: false,
-            environment,
-            logConfiguration: {
-              logDriver: 'awslogs',
-              options: {
-                'awslogs-group': logGroupName,
-                'awslogs-region': 'eu-central-1',
-                'awslogs-stream-prefix': 'ecs',
-              },
-            },
-          },
         ]),
       }),
   )
 
-const targetGroup = new aws.lb.TargetGroup('LatitudeLLMAppTg', {
+const targetGroup = new aws.lb.TargetGroup('LatitudeLLMWebsocketsTg', {
   port: 8080,
   vpcId,
   protocol: 'HTTP',
   targetType: 'ip',
   healthCheck: {
-    path: '/api/health',
+    path: '/health',
     interval: 5,
     timeout: 2,
     healthyThreshold: 2,
@@ -157,7 +105,7 @@ const targetGroup = new aws.lb.TargetGroup('LatitudeLLMAppTg', {
 
 const defaultListenerArn = coreStack.requireOutput('defaultListenerArn')
 
-new aws.lb.ListenerRule('LatitudeLLMAppListenerRule', {
+new aws.lb.ListenerRule('LatitudeLLMWebsocketsListenerRule', {
   listenerArn: defaultListenerArn,
   actions: [
     {
@@ -175,10 +123,10 @@ new aws.lb.ListenerRule('LatitudeLLMAppListenerRule', {
 })
 
 const cluster = coreStack.requireOutput('cluster') as pulumi.Output<Cluster>
-new aws.ecs.Service('LatitudeLLMApp', {
+new aws.ecs.Service('LatitudeLLMWebsockets', {
   cluster: cluster.arn,
   taskDefinition: taskDefinition.arn,
-  desiredCount: 2,
+  desiredCount: 1,
   launchType: 'FARGATE',
   forceNewDeployment: true,
   enableExecuteCommand: true,
@@ -196,7 +144,6 @@ new aws.ecs.Service('LatitudeLLMApp', {
   ],
   triggers: {
     digest: image.repoDigest,
-    coreDigest: coreImage.repoDigest,
   },
 })
 

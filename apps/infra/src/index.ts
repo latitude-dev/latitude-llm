@@ -2,20 +2,12 @@ import * as pulumi from '@pulumi/pulumi'
 
 const stack = pulumi.getStack()
 
-// NOTE: ORDER MATTERS!
 let result
-if (stack.startsWith('core')) {
+if (stack === 'core') {
   result = await import('./core')
-} else if (stack.startsWith('websockets')) {
-  result = await import('./deployments/websockets')
-} else if (stack.startsWith('web')) {
-  result = await import('./deployments/web')
-} else if (stack.startsWith('gateway')) {
-  result = await import('./deployments/gateway')
-} else if (stack.startsWith('workers')) {
-  result = await import('./deployments/workers')
 } else {
-  console.error(`Unknown stack: ${stack}`)
+  const [action, environment, app] = stack.split('-')
+  result = await import(`./${action}/${environment}/${app}`)
 }
 
 export default result
