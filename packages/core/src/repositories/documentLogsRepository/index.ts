@@ -1,9 +1,8 @@
 import { eq, getTableColumns } from 'drizzle-orm'
 
 import { Commit, DocumentLog } from '../../browser'
-import { NotFoundError, Result, TypedResult } from '../../lib'
+import { NotFoundError, Result } from '../../lib'
 import { commits, documentLogs, projects, workspaces } from '../../schema'
-import { computeDocumentLogsWithMetadata } from '../../services/documentLogs'
 import Repository from '../repository'
 
 export type DocumentLogWithMetadata = DocumentLog & {
@@ -39,23 +38,5 @@ export class DocumentLogsRepository extends Repository<typeof tt, DocumentLog> {
     }
 
     return Result.ok(result[0]!)
-  }
-
-  // TODO: remove in favor of computeDocumentLogsWithMetadata
-  async getDocumentLogsWithMetadata({
-    documentUuid,
-    draft,
-  }: {
-    documentUuid: string
-    draft?: Commit
-  }): Promise<TypedResult<DocumentLogWithMetadata[], Error>> {
-    return computeDocumentLogsWithMetadata(
-      {
-        workspaceId: this.workspaceId,
-        documentUuid,
-        draft,
-      },
-      this.db,
-    )
   }
 }

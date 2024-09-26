@@ -1,5 +1,3 @@
-'use client'
-
 import { DocumentLogWithMetadata } from '@latitude-data/core/repositories'
 import {
   Badge,
@@ -33,6 +31,7 @@ export const DocumentLogsTable = ({
         <TableRow>
           <TableHead>Time</TableHead>
           <TableHead>Version</TableHead>
+          <TableHead>Origin</TableHead>
           <TableHead>Custom Identifier</TableHead>
           <TableHead>Duration</TableHead>
           <TableHead>Tokens</TableHead>
@@ -74,6 +73,9 @@ export const DocumentLogsTable = ({
                 </Badge>
                 <Text.H5>{documentLog.commit.title}</Text.H5>
               </div>
+            </TableCell>
+            <TableCell>
+              <Text.H4>{documentLog.source}</Text.H4>
             </TableCell>
             <TableCell>
               <Text.H4>{documentLog.customIdentifier}</Text.H4>

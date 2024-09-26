@@ -198,7 +198,7 @@ const ProviderLogMessages = ({
   ) as ProviderLogDto
   if (!providerLog) {
     return (
-      <div className='flex flex-col items-center justify-center rounded-lg border border-2 bg-secondary p-4 h-[480px]'>
+      <div className='flex flex-col items-center justify-center rounded-lg border-2 bg-secondary p-4 h-[480px]'>
         <Text.H5M color='foregroundMuted'>
           Select a log on the table to preview the messages here and import
         </Text.H5M>
@@ -207,7 +207,7 @@ const ProviderLogMessages = ({
   }
 
   return (
-    <div className='rounded-lg border border-2 bg-secondary p-4 overflow-y-auto max-h-[480px]'>
+    <div className='rounded-lg border-2 bg-secondary p-4 overflow-y-auto max-h-[480px]'>
       <Text.H5M>Messages</Text.H5M>
       <div className='flex flex-col gap-2'>
         {providerLog.messages.map((message, index) => (

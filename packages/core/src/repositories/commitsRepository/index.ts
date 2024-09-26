@@ -156,12 +156,13 @@ export class CommitsRepository extends Repository<
       .where(and(eq(this.scope.projectId, project.id), filter))
       .orderBy(desc(this.scope.createdAt))
 
-    const result = await Repository.paginateQuery({
+    const [rows] = await Repository.paginateQuery({
       query: query.$dynamic(),
       page,
       pageSize,
     })
-    return Result.ok(result)
+
+    return Result.ok(rows)
   }
 
   async getChanges(id: number, tx = database) {
