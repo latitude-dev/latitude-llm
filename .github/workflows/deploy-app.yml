@@ -35,7 +35,7 @@ jobs:
     uses: ./.github/workflows/deploy-common.yml
     with:
       working-directory: apps/infra
-      stack-name: ${{ inputs.app-name }}-production
+      stack-name: app-production-${{ inputs.app-name }}
     secrets: inherit
 
 concurrency:
