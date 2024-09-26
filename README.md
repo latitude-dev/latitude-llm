@@ -25,11 +25,6 @@
     <a href="https://x.com/trylatitude">X</a>
   </p>
 
-<p align="center">
-  <img src="https://github.com/latitude-dev/latitude-llm/actions/workflows/lint.yml/badge.svg" alt="Linter">
-  <img src="https://github.com/latitude-dev/latitude-llm/actions/workflows/test.yml/badge.svg" alt="Tests">
-</p>
-
 ## 🌈 Why Latitude?
 
 Latitude is a platform that helps developers and product teams build AI features with confidence. Here's what it does:
