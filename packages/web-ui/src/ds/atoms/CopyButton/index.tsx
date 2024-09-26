@@ -3,14 +3,18 @@
 import React from 'react'
 
 import { Button } from '../Button'
-import { Icon } from '../Icons'
+import { Icon, IconProps } from '../Icons'
 import { useToast } from '../Toast/useToast'
 
-interface CopyButtonProps {
+type CopyButtonProps = Omit<IconProps, 'name'> & {
   content: string
 }
 
-export function CopyButton({ content }: CopyButtonProps) {
+export function CopyButton({
+  content,
+  color = 'foregroundMuted',
+  ...rest
+}: CopyButtonProps) {
   const { toast } = useToast()
 
   const handleCopy = () => {
@@ -23,8 +27,8 @@ export function CopyButton({ content }: CopyButtonProps) {
   }
 
   return (
-    <Button onClick={handleCopy} variant='ghost' size='small'>
-      <Icon name='clipboard' />
+    <Button onClick={handleCopy} variant='nope' size='small'>
+      <Icon name='clipboard' color={color} {...rest} />
     </Button>
   )
 }
