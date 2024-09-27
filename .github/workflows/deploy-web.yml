@@ -98,4 +98,3 @@ jobs:
           aws deploy create-deployment \
             --application-name LatitudeLLMCodeDeployApp \
             --deployment-group-name LatitudeLLMDeploymentGroup \
-            --codedeploy-appspec ./appspec.yml
