@@ -91,7 +91,11 @@ jobs:
       #     PULUMI_CONFIG_PASSPHRASE: ${{ secrets.PULUMI_CONFIG_PASSPHRASE }}
 
       - name: Deploy with CodeDeploy
+        working-directory: apps/web
         run: |
           echo "Deploying branch ${{ github.ref }} to production"
           commit_hash=`git rev-parse HEAD`
-          aws deploy create-deployment --application-name LatitudeLLMCodeDeployApp --deployment-group-name LatitudeLLMDeploymentGroup --github-location repository=$GITHUB_REPOSITORY,commitId=$commit_hash
+          aws deploy create-deployment \
+            --application-name LatitudeLLMCodeDeployApp \
+            --deployment-group-name LatitudeLLMDeploymentGroup \
+            --codedeploy-appspec ./appspec.yml
