@@ -53,9 +53,9 @@ export class DocumentVersionsRepository extends Repository<
     return this.db
       .select(tt)
       .from(documentVersions)
-      .innerJoin(projects, eq(projects.workspaceId, this.workspaceId))
-      .innerJoin(commits, eq(commits.projectId, projects.id))
-      .where(eq(documentVersions.commitId, commits.id))
+      .innerJoin(commits, eq(commits.id, documentVersions.commitId))
+      .innerJoin(projects, eq(projects.id, commits.projectId))
+      .where(eq(projects.workspaceId, this.workspaceId))
       .as('documentVersionsScope')
   }
 
