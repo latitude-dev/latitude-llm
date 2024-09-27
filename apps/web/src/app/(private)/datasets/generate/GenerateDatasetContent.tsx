@@ -1,14 +1,8 @@
 'use client'
 
-import { FormEvent, useEffect, useState } from 'react'
+import { ChangeEvent, FormEvent, useState } from 'react'
 
-import { ConversationMetadata, readMetadata } from '@latitude-data/compiler'
-import {
-  ChainEventTypes,
-  DocumentVersion,
-  HEAD_COMMIT,
-  StreamEventTypes,
-} from '@latitude-data/core/browser'
+import { ChainEventTypes, StreamEventTypes } from '@latitude-data/core/browser'
 import { syncReadCsv } from '@latitude-data/core/lib/readCsv'
 import {
   Alert,
@@ -27,31 +21,16 @@ import {
 } from '@latitude-data/web-ui'
 import { generateDatasetAction } from '$/actions/datasets/generateDataset'
 import { generateDatasetPreviewAction } from '$/actions/sdk/generateDatasetPreviewAction'
-import { ProjectDocumentSelector } from '$/components/ProjectDocumentSelector'
 import { useNavigate } from '$/hooks/useNavigate'
 import { useStreamableAction } from '$/hooks/useStreamableAction'
 import { ROUTES } from '$/services/routes'
 import useDatasets from '$/stores/datasets'
-import useDocumentVersions from '$/stores/documentVersions'
 
 import { CsvPreviewTable } from './CsvPreviewTable'
 import { LoadingText } from './LoadingText'
 
-interface GenerateDatasetContentProps {
-  projectId: number
-  fallbackDocuments: DocumentVersion[]
-}
-
-export function GenerateDatasetContent({
-  projectId: fallbackProjectId,
-  fallbackDocuments,
-}: GenerateDatasetContentProps) {
+export function GenerateDatasetContent() {
   const navigate = useNavigate()
-  const [documentUuid, setDocumentUuid] = useState<string | undefined>()
-  const [metadata, setMetadata] = useState<ConversationMetadata | undefined>()
-  const [projectId, setProjectId] = useState<number | undefined>(
-    fallbackProjectId,
-  )
   const [previewCsv, setPreviewCsv] = useState<{
     data: {
       record: Record<string, string>
@@ -61,16 +40,15 @@ export function GenerateDatasetContent({
   }>()
   const { data: datasets, mutate } = useDatasets()
   const [explanation, setExplanation] = useState<string | undefined>()
-  const { data: documents } = useDocumentVersions(
-    {
-      commitUuid: HEAD_COMMIT,
-      projectId,
-    },
-    { fallbackData: fallbackDocuments },
-  )
-  const document = documents?.find(
-    (document) => document.documentUuid === documentUuid,
-  )
+  const [parameters, setParameters] = useState<string[]>([])
+
+  const handleParametersChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const parameterList = e.target.value
+      .split(',')
+      .map((param) => param.trim())
+      .filter(Boolean)
+    setParameters(parameterList)
+  }
 
   const {
     runAction: runPreviewAction,
@@ -113,14 +91,6 @@ export function GenerateDatasetContent({
     },
   )
 
-  const handleProjectChange = (projectId: number) => {
-    setProjectId(projectId)
-  }
-
-  const handleDocumentChange = (newDocumentUuid: string) => {
-    setDocumentUuid(newDocumentUuid)
-  }
-
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const formData = new FormData(e.target as HTMLFormElement)
@@ -162,28 +132,13 @@ export function GenerateDatasetContent({
     })
   }
 
-  useEffect(() => {
-    const fetchMetadata = async () => {
-      if (document) {
-        const metadata = await readMetadata({
-          prompt: document.resolvedContent ?? '',
-          fullPath: document.path,
-        })
-
-        setMetadata(metadata)
-      }
-    }
-
-    fetchMetadata()
-  }, [document])
-
   return (
     <Modal
       open
       size='large'
       onOpenChange={(open) => !open && navigate.push(ROUTES.datasets.root)}
       title='Generate new dataset'
-      description='Generate a dataset of parameters using AI from one of your prompts. Datasets can be used to run batch evaluations over prompts.'
+      description='Generate a dataset of parameters using AI. Datasets can be used to run batch evaluations over prompts.'
       footer={
         <>
           <CloseTrigger />
@@ -198,7 +153,7 @@ export function GenerateDatasetContent({
             </Button>
           )}
           <Button
-            disabled={!documentUuid || previewIsLoading || generateIsLoading}
+            disabled={previewIsLoading || generateIsLoading}
             fancy
             form='generateDatasetForm'
             type='submit'
@@ -227,13 +182,35 @@ export function GenerateDatasetContent({
                 placeholder='Dataset name'
               />
             </FormField>
-            <ProjectDocumentSelector
-              defaultProjectId={fallbackProjectId}
-              documents={documents}
-              onProjectChange={handleProjectChange}
-              onDocumentChange={handleDocumentChange}
-              labelInfo='Datasets can only be generated from live versions of prompts'
-            />
+            <FormField
+              label='Parameters'
+              info='When you evaluate a prompt, you will map these dataset parameters to your prompt parameters'
+            >
+              <div className='flex flex-col gap-2'>
+                <Input
+                  required
+                  type='text'
+                  name='parameters'
+                  placeholder='Enter comma-separated parameters (e.g., name, age, city)'
+                  onChange={handleParametersChange}
+                />
+                {parameters.length > 0 && (
+                  <div className='flex flex-col gap-2'>
+                    <Text.H6 color='foregroundMuted'>
+                      The AI agent will generate a dataset with these
+                      parameters:
+                    </Text.H6>
+                    <div className='flex flex-wrap gap-2'>
+                      {parameters.map((param, index) => (
+                        <Badge key={index} variant='secondary'>
+                          {param}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </FormField>
             <FormField label='Additional instructions'>
               <TextArea
                 name='description'
@@ -259,7 +236,6 @@ export function GenerateDatasetContent({
             </FormField>
           </FormWrapper>
         </form>
-        {metadata && <ParametersList parameters={metadata?.parameters} />}
         {(previewError || generateError) && (
           <Alert
             title='Error'
@@ -267,13 +243,9 @@ export function GenerateDatasetContent({
             variant='destructive'
           />
         )}
-        {previewIsLoading && !previewDone && !!metadata && (
+        {previewIsLoading && !previewDone && (
           <div className='animate-in fade-in slide-in-from-top-5 duration-300 overflow-y-hidden'>
-            <TableSkeleton
-              rows={10}
-              cols={metadata.parameters.size}
-              maxHeight={320}
-            />
+            <TableSkeleton rows={10} cols={parameters.length} maxHeight={320} />
           </div>
         )}
         {previewDone &&
@@ -296,22 +268,5 @@ export function GenerateDatasetContent({
         {generateIsLoading && !generateIsDone && <LoadingText />}
       </div>
     </Modal>
-  )
-}
-
-function ParametersList({ parameters }: { parameters: Set<string> }) {
-  return (
-    <div className='flex flex-col gap-2'>
-      <Text.H5 color='foregroundMuted'>
-        The agent will generate synthetic data for these parameters:
-      </Text.H5>
-      <div className='flex flex-wrap gap-2'>
-        {Array.from(parameters).map((parameter, index) => (
-          <Badge key={index} variant='secondary'>
-            {parameter}
-          </Badge>
-        ))}
-      </div>
-    </div>
   )
 }
