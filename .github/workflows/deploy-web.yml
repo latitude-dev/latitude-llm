@@ -97,4 +97,4 @@ jobs:
           commit_hash=`git rev-parse HEAD`
           aws deploy create-deployment \
             --application-name LatitudeLLMCodeDeployApp \
-            --deployment-group-name LatitudeLLMDeploymentGroup \
+            --deployment-group-name LatitudeLLMDeploymentGroup
