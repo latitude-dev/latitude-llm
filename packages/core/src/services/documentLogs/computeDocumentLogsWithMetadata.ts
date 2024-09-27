@@ -2,8 +2,7 @@ import { and, desc, eq } from 'drizzle-orm'
 
 import { Commit } from '../../browser'
 import { database } from '../../client'
-import { Result, TypedResult } from '../../lib'
-import { DocumentLogWithMetadata } from '../../repositories/documentLogsRepository'
+import Repository, { PaginationArgs } from '../../repositories/repository'
 import {
   createDocumentLogQuery,
   getCommitFilter,
@@ -14,18 +13,19 @@ export async function computeDocumentLogsWithMetadata(
     workspaceId,
     documentUuid,
     draft,
+    pagination,
   }: {
     workspaceId: number
     documentUuid: string
     draft?: Commit
+    pagination: PaginationArgs
   },
   db = database,
-): Promise<TypedResult<DocumentLogWithMetadata[], Error>> {
+) {
   const { scope, baseQuery } = createDocumentLogQuery(workspaceId, db)
-
-  const result = await baseQuery
+  const query = baseQuery
     .where(and(eq(scope.documentUuid, documentUuid), getCommitFilter(draft)))
     .orderBy(desc(scope.createdAt))
 
-  return Result.ok(result)
+  return Repository.paginateQuery({ query: query.$dynamic(), ...pagination })
 }

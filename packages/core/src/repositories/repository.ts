@@ -1,4 +1,4 @@
-import { ColumnsSelection, eq } from 'drizzle-orm'
+import { ColumnsSelection, eq, sql } from 'drizzle-orm'
 import { PgSelect, SubqueryWithSelection } from 'drizzle-orm/pg-core'
 
 import { database } from '../client'
@@ -9,6 +9,8 @@ export type QueryOptions = {
   limit?: number
   offset?: number
 }
+
+type PaginatatedResult<T> = [rows: Awaited<T>, count: number]
 
 export default abstract class Repository<
   U extends ColumnsSelection,
@@ -32,8 +34,16 @@ export default abstract class Repository<
     pageSize = 20,
   }: {
     query: T
-  } & PaginationArgs) {
-    return query.limit(pageSize).offset((page - 1) * pageSize)
+  } & PaginationArgs): Promise<PaginatatedResult<T>> {
+    // @ts-ignore
+    query.config.fields = {
+      // @ts-ignore
+      ...query.config.fields,
+      __count: sql<number>`count(*) over()`,
+    }
+    const rows = await query.limit(pageSize).offset((page - 1) * pageSize)
+    const count = rows[0]?.__count ? Number(rows[0]?.__count) : 0
+    return [rows, count]
   }
 
   abstract get scope(): SubqueryWithSelection<U, string>
