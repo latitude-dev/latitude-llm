@@ -22,6 +22,7 @@ export class DocumentLogsRepository extends Repository<typeof tt, DocumentLog> {
       .innerJoin(commits, eq(commits.id, documentLogs.commitId))
       .innerJoin(projects, eq(projects.id, commits.projectId))
       .innerJoin(workspaces, eq(workspaces.id, projects.workspaceId))
+      .where(eq(workspaces.id, this.workspaceId))
       .as('documentLogsScope')
   }
 
