@@ -95,6 +95,8 @@ jobs:
         run: |
           echo "Deploying branch ${{ github.ref }} to production"
           commit_hash=`git rev-parse HEAD`
+          appspec_content=$(cat appspec.yml | jq -Rs .)
           aws deploy create-deployment \
             --application-name LatitudeLLMCodeDeployApp \
-            --deployment-group-name LatitudeLLMDeploymentGroup
+            --deployment-group-name LatitudeLLMDeploymentGroup \
+            --revision "{\"revisionType\": \"AppSpecContent\", \"appSpecContent\": {\"content\": $appspec_content}}"
