@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 
-import { BadRequestError } from '../../lib'
 import { DocumentVersionsRepository } from '../../repositories'
 import { mergeCommit } from '../commits/merge'
 import { createNewDocument } from './create'
@@ -95,7 +94,7 @@ model: gpt-4o-mini
     )
   })
 
-  it('fails when no provider is found', async (ctx) => {
+  it('creates the document without the frontmatter if no provider is found', async (ctx) => {
     const { project, user } = await ctx.factories.createProject({
       providers: [],
     })
@@ -106,8 +105,7 @@ model: gpt-4o-mini
       path: 'newdoc',
     })
 
-    expect(result.error).toEqual(
-      new BadRequestError('No provider found when creating document'),
-    )
+    expect(result.ok).toBe(true)
+    expect(result.unwrap().content).toBe('')
   })
 })

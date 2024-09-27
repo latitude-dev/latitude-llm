@@ -5,7 +5,6 @@ import {
   EvaluationMetadataType,
   EvaluationResultableType,
 } from '../../constants'
-import { BadRequestError } from '../../lib'
 import * as factories from '../../tests/factories'
 import { createEvaluation } from './create'
 
@@ -21,7 +20,7 @@ describe('createEvaluation', () => {
   })
 
   describe('without existing provider', () => {
-    it('fails when there is no provider', async () => {
+    it('creates the evaluation without the frontmatter if no provider is found', async () => {
       const name = 'Test Evaluation'
       const description = 'Test Description'
       const metadata = { prompt: 'Test prompt' }
@@ -36,9 +35,8 @@ describe('createEvaluation', () => {
         metadata,
       })
 
-      expect(result.error).toEqual(
-        new BadRequestError('No provider found when creating evaluation'),
-      )
+      expect(result.ok).toBe(true)
+      expect(result.unwrap().metadata.prompt).toBe(metadata.prompt)
     })
   })
 

@@ -47,13 +47,6 @@ export async function createNewDocument(
 
     const providerScope = new ProviderApiKeysRepository(workspace!.id, tx)
     const provider = await providerScope.findFirst().then((r) => r.unwrap())
-
-    if (!provider) {
-      return Result.error(
-        new BadRequestError('No provider found when creating document'),
-      )
-    }
-
     const newDoc = await tx
       .insert(documentVersions)
       .values({
@@ -61,12 +54,14 @@ export async function createNewDocument(
         path,
         content:
           content ??
-          `
+          (provider
+            ? `
 ---
 provider: ${provider.name}
 model: ${findFirstModelForProvider(provider.provider)}
 ---
-        `.trim(),
+        `.trim()
+            : ''),
       })
       .returning()
 
