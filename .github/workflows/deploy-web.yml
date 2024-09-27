@@ -75,7 +75,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4.0.2
         with:
           role-to-assume: ${{ secrets.ARN_OF_IAM_ROLE_TO_ASSUME }}
-          role-session-name: 'WebDeployment-${GITHUB_RUN_ID}'
+          role-session-name: WebDeployment-${{ github.run_id }}
           aws-region: eu-central-1
         env:
           ARN_OF_IAM_ROLE_TO_ASSUME: ${{ secrets.ARN_OF_IAM_ROLE_TO_ASSUME }}
