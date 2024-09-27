@@ -85,6 +85,8 @@ jobs:
         run: |
           echo "Deploying Pulumi stack: docker-production-web"
           pulumi up --stack docker-production-web --yes
+        env:
+          PULUMI_CONFIG_PASSPHRASE: ${{ secrets.PULUMI_CONFIG_PASSPHRASE }}
 
       - name: Deploy with CodeDeploy
         run: |
