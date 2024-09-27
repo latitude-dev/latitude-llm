@@ -15,7 +15,6 @@ import { LatitudeError, Result, TypedResult } from '../../lib'
 import {
   connectedEvaluations,
   documentLogs,
-  evaluationResults,
   evaluations,
   providerLogs,
 } from '../../schema'
@@ -126,36 +125,39 @@ export class ConnectedEvaluationsRepository extends Repository<
         ),
     )
 
-    // TODO: figure out proper type for this
+    const evaluationResultsRepo = new EvaluationResultsRepository(
+      this.workspaceId,
+      this.db,
+    )
     const selectedEvaluationResults = this.db
       .$with('selected_evaluation_results')
       .as(
-        EvaluationResultsRepository.baseQuery(this.db, {
-          ...getTableColumns(documentLogs),
-          ...getTableColumns(providerLogs),
-        })
+        this.db
+          .select({
+            ...evaluationResultsRepo.scope._.selectedFields,
+            ...getTableColumns(documentLogs),
+            ...getTableColumns(providerLogs),
+          })
+          .from(evaluationResultsRepo.scope)
           .innerJoin(
             documentLogs,
-            eq(documentLogs.id, evaluationResults.documentLogId),
+            eq(documentLogs.id, evaluationResultsRepo.scope.documentLogId),
           )
           .innerJoin(
             providerLogs,
-            eq(providerLogs.id, evaluationResults.providerLogId),
+            eq(providerLogs.id, evaluationResultsRepo.scope.providerLogId),
           )
-          .where(eq(evaluationResults.evaluationId, evaluationId)),
+          .where(eq(evaluationResultsRepo.scope.evaluationId, evaluationId)),
       )
 
     const aggregatedResults = this.db
       .with(selectedEvaluationResults)
       .select({
-        // @ts-expect-error
         documentUuid: selectedEvaluationResults.documentUuid,
         evaluationLogs: count(selectedEvaluationResults.id).as(
           'evaluation_logs',
         ),
-        // @ts-expect-error
         totalTokens: sum(selectedEvaluationResults.tokens).as('total_tokens'),
-        // @ts-expect-error
         costInMillicents: sum(selectedEvaluationResults.costInMillicents).as(
           'cost_in_millicents',
         ),
@@ -166,7 +168,6 @@ export class ConnectedEvaluationsRepository extends Repository<
         ),
       })
       .from(selectedEvaluationResults)
-      // @ts-expect-error
       .groupBy(selectedEvaluationResults.documentUuid)
       .as('aggregated_results')
 
@@ -184,7 +185,6 @@ export class ConnectedEvaluationsRepository extends Repository<
           selectedEvaluationResults,
           eq(
             aggregatedResults.documentUuid,
-            // @ts-expect-error
             selectedEvaluationResults.documentUuid,
           ),
         )

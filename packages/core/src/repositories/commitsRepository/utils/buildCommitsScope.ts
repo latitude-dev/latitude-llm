@@ -9,8 +9,9 @@ export function buildCommitsScope(workspaceId: number, db = database) {
   const scope = db
     .select(columnSelection)
     .from(commits)
-    .innerJoin(projects, eq(projects.workspaceId, workspaceId))
-    .where(eq(commits.projectId, projects.id))
+    .innerJoin(projects, eq(projects.id, commits.projectId))
+    .where(eq(projects.workspaceId, workspaceId))
     .as('commitsScope')
+
   return scope
 }

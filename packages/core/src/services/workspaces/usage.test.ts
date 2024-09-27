@@ -63,6 +63,117 @@ describe('computeWorkspaceUsage', () => {
     expect(result.usage).toBe(documentLogs.length + evaluationLogs.length)
   })
 
+  it('calculates usage correctly even if there are multiple workspaces with evaluation results and document logs', async (ctx) => {
+    const {
+      workspace: workspace1,
+      documents: documents1,
+      evaluations: evaluations1,
+      commit: commit1,
+    } = await ctx.factories.createProject({
+      providers: [{ type: Providers.OpenAI, name: 'test' }],
+      documents: {
+        foo: ctx.factories.helpers.createPrompt({ provider: 'test' }),
+      },
+      evaluations: [
+        { prompt: ctx.factories.helpers.createPrompt({ provider: 'test' }) },
+      ],
+    })
+
+    const {
+      workspace: workspace2,
+      documents: documents2,
+      evaluations: evaluations2,
+      commit: commit2,
+    } = await ctx.factories.createProject({
+      providers: [{ type: Providers.OpenAI, name: 'bar' }],
+      documents: {
+        bar: ctx.factories.helpers.createPrompt({ provider: 'bar' }),
+      },
+      evaluations: [
+        { prompt: ctx.factories.helpers.createPrompt({ provider: 'bar' }) },
+      ],
+    })
+
+    const NUM_DOC_LOGS = 5
+    const NUM_EVAL_LOGS = 5
+
+    const document1 = documents1[0]!
+    const document2 = documents2[0]!
+    const evaluation1 = evaluations1[0]!
+    const evaluation2 = evaluations2[0]!
+
+    await connectEvaluations({
+      workspace: workspace1,
+      documentUuid: document1.documentUuid,
+      evaluationUuids: [evaluation1.uuid],
+    })
+
+    await connectEvaluations({
+      workspace: workspace2,
+      documentUuid: document2.documentUuid,
+      evaluationUuids: [evaluation2.uuid],
+    })
+
+    // Create document logs
+    const documentLogs1: DocumentLog[] = await Promise.all(
+      Array(NUM_DOC_LOGS)
+        .fill(null)
+        .map(() =>
+          ctx.factories
+            .createDocumentLog({
+              document: document1,
+              commit: commit1,
+            })
+            .then((r) => r.documentLog),
+        ),
+    )
+
+    const evaluationLogs1 = await Promise.all(
+      Array(NUM_EVAL_LOGS)
+        .fill(null)
+        .map((_, idx) =>
+          ctx.factories
+            .createEvaluationResult({
+              documentLog: documentLogs1[idx % documentLogs1.length]!,
+              evaluation: evaluations1[0]!,
+            })
+            .then((r) => r.evaluationResult),
+        ),
+    )
+
+    const documentLogs2: DocumentLog[] = await Promise.all(
+      Array(NUM_DOC_LOGS)
+        .fill(null)
+        .map(() =>
+          ctx.factories
+            .createDocumentLog({
+              document: document2,
+              commit: commit2,
+            })
+            .then((r) => r.documentLog),
+        ),
+    )
+
+    await Promise.all(
+      Array(NUM_EVAL_LOGS)
+        .fill(null)
+        .map((_, idx) =>
+          ctx.factories
+            .createEvaluationResult({
+              documentLog: documentLogs2[idx % documentLogs2.length]!,
+              evaluation: evaluations2[0]!,
+            })
+            .then((r) => r.evaluationResult),
+        ),
+    )
+
+    const result = await computeWorkspaceUsage(workspace1).then((r) =>
+      r.unwrap(),
+    )
+
+    expect(result.usage).toBe(documentLogs1.length + evaluationLogs1.length)
+  })
+
   it('calculates usage correctly when there are no evaluation results or document logs', async (ctx) => {
     const { workspace, documents, evaluations } =
       await ctx.factories.createProject({

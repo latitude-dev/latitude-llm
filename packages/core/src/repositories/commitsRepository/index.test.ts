@@ -27,6 +27,7 @@ async function createDraftsCommits(
 
 let project: Project
 let repository: CommitsRepository
+
 describe('Commits by project', () => {
   beforeEach(async () => {
     let {
@@ -85,5 +86,22 @@ describe('Commits by project', () => {
       })
       .then((r) => r.unwrap())
     expect(list).toHaveLength(5)
+  })
+})
+
+describe('findAll', () => {
+  beforeEach(async () => {
+    const { project, user, providers } = await factories.createProject()
+
+    await createDraftsCommits(project, user, providers[0]!)
+  })
+
+  it('does not return commits from other workspaces', async () => {
+    const { project: otherProject, commit } = await factories.createProject()
+    const otherRepository = new CommitsRepository(otherProject.workspaceId)
+    const list = await otherRepository.findAll().then((r) => r.unwrap())
+
+    expect(list).toHaveLength(1)
+    expect(list[0]!.id).toBe(commit.id)
   })
 })

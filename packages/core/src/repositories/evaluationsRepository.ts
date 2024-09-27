@@ -35,7 +35,6 @@ export class EvaluationsRepository extends Repository<
     return this.db
       .select(tt)
       .from(evaluations)
-      .where(eq(evaluations.workspaceId, this.workspaceId))
       .innerJoin(
         llmAsJudgeEvaluationMetadatas,
         and(
@@ -43,6 +42,7 @@ export class EvaluationsRepository extends Repository<
           eq(evaluations.metadataType, EvaluationMetadataType.LlmAsJudge),
         ),
       )
+      .where(eq(evaluations.workspaceId, this.workspaceId))
       .as('evaluationsScope')
   }
 

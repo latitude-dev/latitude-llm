@@ -1,5 +1,4 @@
 import { eq, getTableColumns, sql } from 'drizzle-orm'
-import { NodePgDatabase } from 'drizzle-orm/node-postgres'
 
 import {
   Commit,
@@ -42,15 +41,9 @@ export class EvaluationResultsRepository extends Repository<
   typeof evaluationResultDto,
   EvaluationResultDto
 > {
-  static baseQuery(
-    db: NodePgDatabase<any>,
-    selectStatements?: Record<string, any>,
-  ) {
-    return db
-      .select({
-        ...evaluationResultDto,
-        ...selectStatements,
-      })
+  get scope() {
+    return this.db
+      .select(evaluationResultDto)
       .from(evaluationResults)
       .innerJoin(
         evaluations,
@@ -68,12 +61,8 @@ export class EvaluationResultsRepository extends Repository<
         evaluationResultableTexts,
         sql`${evaluationResults.resultableType} = ${EvaluationResultableType.Text} AND ${evaluationResults.resultableId} = ${evaluationResultableTexts.id}`,
       )
-  }
-
-  get scope() {
-    return EvaluationResultsRepository.baseQuery(this.db).as(
-      'evaluationResultsScope',
-    )
+      .where(eq(evaluations.workspaceId, this.workspaceId))
+      .as('evaluationResultsBaseQuery')
   }
 
   async findByDocumentUuid(uuid: string) {
