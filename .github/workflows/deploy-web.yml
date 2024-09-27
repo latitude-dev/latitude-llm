@@ -1,0 +1,78 @@
+name: Deploy Web
+
+on:
+  workflow_call:
+    secrets:
+      AWS_ACCESS_KEY_ID:
+        required: true
+      AWS_SECRET_ACCESS_KEY:
+        required: true
+      ARN_OF_IAM_ROLE_TO_ASSUME:
+        required: true
+      PULUMI_CONFIG_PASSPHRASE:
+        required: true
+
+jobs:
+  deployment:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 9
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - uses: actions/cache@v3
+        name: Setup pnpm cache
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Install dependencies
+        run: pnpm install
+        working-directory: apps/infra
+
+      - name: Setup Pulumi
+        uses: pulumi/setup-pulumi@v2
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          role-to-assume: ${{ secrets.ARN_OF_IAM_ROLE_TO_ASSUME }}
+          role-session-name: 'WebDeployment-${GITHUB_RUN_ID}'
+          aws-region: eu-central-1
+        env:
+          ARN_OF_IAM_ROLE_TO_ASSUME: ${{ secrets.ARN_OF_IAM_ROLE_TO_ASSUME }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Build & push docker images
+        working-directory: apps/infra
+        run: |
+          echo "Deploying Pulumi stack: docker-production-web"
+          pulumi up --stack docker-production-web --yes
+        env:
+          ARN_OF_IAM_ROLE_TO_ASSUME: ${{ secrets.ARN_OF_IAM_ROLE_TO_ASSUME }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          PULUMI_CONFIG_PASSPHRASE: ${{ secrets.PULUMI_CONFIG_PASSPHRASE }}
+
+      - name: Deploy with CodeDeploy
+        run: |
+          echo "Deploying branch ${{ env.GITHUB_REF }} to production"
+          commit_hash=`git rev-parse HEAD`
+          aws deploy create-deployment --application-name LatitudeLLMCodeDeployApp --deployment-group-name LatitudeLLMDeploymentGroup --github-location repository=$GITHUB_REPOSITORY,commitId=$commit_hash

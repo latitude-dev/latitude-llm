@@ -1,0 +1,9 @@
+version: 0.0
+Resources:
+    - TargetService:
+        Type: AWS::ECS::Service
+        Properties:
+            TaskDefinition: arn:aws:ecs:eu-central-1:442420265876:task-definition/LatitudeLLMTaskFamily:91
+            LoadBalancerInfo:
+                ContainerName: "LatitudeLLMAppContainer"
+                ContainerPort: 8080

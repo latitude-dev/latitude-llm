@@ -13,8 +13,8 @@ import { coreStack, environment } from './shared'
 const DNS_ADDRESS = 'app.latitude.so'
 
 // Create an ECR repository
-const repo = new aws.ecr.Repository('latitude-llm-app-repo')
-const coreRepo = new aws.ecr.Repository('latitude-llm-core-repo')
+export const repo = new aws.ecr.Repository('latitude-llm-app-repo')
+export const coreRepo = new aws.ecr.Repository('latitude-llm-core-repo')
 
 // Use existing images (replace 'latest' with the specific tag you want to deploy)
 const imageName = pulumi.interpolate`${repo.repositoryUrl}:latest`
@@ -102,13 +102,28 @@ const greenTargetGroup = new aws.lb.TargetGroup('LatitudeLLMAppTg', {
   deregistrationDelay: 5,
 })
 
+const blueTargetGroup = new aws.lb.TargetGroup('LatitudeLLMAppBlueTg', {
+  port: 8080,
+  vpcId,
+  protocol: 'HTTP',
+  targetType: 'ip',
+  healthCheck: {
+    path: '/api/health',
+    interval: 5,
+    timeout: 2,
+    healthyThreshold: 2,
+    unhealthyThreshold: 2,
+  },
+  deregistrationDelay: 5,
+})
+
 const defaultListenerArn = coreStack.requireOutput('defaultListenerArn')
 new aws.lb.ListenerRule('LatitudeLLMAppListenerRule', {
   listenerArn: defaultListenerArn,
   actions: [
     {
       type: 'forward',
-      targetGroupArn: greenTargetGroup.arn,
+      targetGroupArn: blueTargetGroup.arn,
     },
   ],
   conditions: [
@@ -139,26 +154,11 @@ const ecsService = new aws.ecs.Service('LatitudeLLMApp', {
   },
   loadBalancers: [
     {
-      targetGroupArn: greenTargetGroup.arn,
+      targetGroupArn: blueTargetGroup.arn,
       containerName,
       containerPort: 8080,
     },
   ],
-})
-
-const blueTargetGroup = new aws.lb.TargetGroup('LatitudeLLMAppBlueTg', {
-  port: 8080,
-  vpcId,
-  protocol: 'HTTP',
-  targetType: 'ip',
-  healthCheck: {
-    path: '/api/health',
-    interval: 5,
-    timeout: 2,
-    healthyThreshold: 2,
-    unhealthyThreshold: 2,
-  },
-  deregistrationDelay: 5,
 })
 
 const codeDeployApp = new aws.codedeploy.Application(
