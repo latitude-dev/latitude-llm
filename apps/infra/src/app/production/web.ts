@@ -164,6 +164,7 @@ const ecsService = new aws.ecs.Service('LatitudeLLMApp', {
 const codeDeployApp = new aws.codedeploy.Application(
   'LatitudeLLMCodeDeployApp',
   {
+    name: 'LatitudeLLMCodeDeployApp',
     computePlatform: 'ECS',
   },
 )
