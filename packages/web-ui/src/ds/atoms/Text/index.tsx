@@ -47,6 +47,7 @@ export type Common = {
   asChild?: boolean
   monospace?: boolean
   centered?: boolean
+  animate?: boolean
 }
 
 export type TextProps = {
@@ -84,6 +85,7 @@ const TextAtom = forwardRef<HTMLElement, AllTextProps>(function Text(
     asChild = false,
     monospace = false,
     centered = false,
+    animate = false,
   },
   ref,
 ) {
@@ -110,6 +112,8 @@ const TextAtom = forwardRef<HTMLElement, AllTextProps>(function Text(
         alignClass,
         display,
         {
+          'bg-[length:200%_auto] text-transparent bg-clip-text animate-text-gradient bg-gradient-to-r from-muted via-muted-foreground to-muted':
+            animate,
           capitalize: capitalize,
           uppercase: uppercase,
           truncate: ellipsis,

@@ -43,6 +43,10 @@ if (environment !== 'production') {
       DEFAULT_PROVIDER_API_KEY: 'd32da7c2-94fd-49c3-8dca-b57a5c3bbe27',
       NEXT_PUBLIC_POSTHOG_KEY: '',
       NEXT_PUBLIC_POSTHOG_HOST: '',
+      DATASET_GENERATOR_PROJECT_ID: '20',
+      DATASET_GENERATOR_DOCUMENT_PATH: 'generator',
+      DATASET_GENERATOR_WORKSPACE_APIKEY:
+        'd7c94cc1-72a8-4252-b1a8-3e6b3cf9c29f',
     },
     { path: pathToEnv },
   )

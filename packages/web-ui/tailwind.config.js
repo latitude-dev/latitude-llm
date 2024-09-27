@@ -85,13 +85,18 @@ export default {
         },
         'flash-background': {
           '0%': { backgroundColor: 'transparent' },
-         '100%': { backgroundColor: 'rgb(var(--accent))' },
+          '100%': { backgroundColor: 'rgb(var(--accent))' },
+        },
+        'gradient-animation': {
+          '0%': { backgroundPosition: '200% center' },
+          '100%': { backgroundPosition: '-200% center' },
         },
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
         'flash': 'flash-background 1s ease-in-out',
+        'text-gradient': 'gradient-animation 3s linear infinite',
       },
       maxWidth: {
         modal: '580px',

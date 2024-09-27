@@ -2,6 +2,8 @@ encryptionsalt: v1:K+dTqOgU40c=:v1:xzsAOOiJEEAsdCQ4:Oe7NKHjXdYdZrcrrBa1/0yolY5M3
 config:
   infra:DATABASE_PASSWORD:
     secure: v1:WABt/tJjfsAKMplU:RRLtj5mTu301x4sn2Tr91u4O0Msd3mWVJutcDg==
+  infra:DATASET_GENERATOR_WORKSPACE_APIKEY:
+    secure: v1:l9AShyNWMRBbgHre:cKM7YpzKRoAxChL40q2RixG0mm081qGrkpKSAitb9E5TMhXR7AVOtDaG9TiwYG9NXQNsCw==
   infra:DEFAULT_PROJECT_ID:
     secure: v1:M0giTdD2+Mjre0ps:YIaUlExLI41EFdcpf+6Fxec=
   infra:DEFAULT_PROVIDER_API_KEY:

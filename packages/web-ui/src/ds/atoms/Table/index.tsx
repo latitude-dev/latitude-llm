@@ -10,14 +10,17 @@ import Text from '../Text'
 
 type TableProps = HTMLAttributes<HTMLTableElement> & {
   maxHeight?: number
+  overflow?: 'overflow-auto' | 'overflow-hidden'
 }
 const Table = forwardRef<HTMLTableElement, TableProps>(
-  ({ className, maxHeight, ...props }, ref) => (
+  ({ className, maxHeight, overflow = 'overflow-auto', ...props }, ref) => (
     <div
       style={{
         maxHeight: maxHeight ? `${maxHeight}px` : 'auto',
       }}
-      className='relative w-full max-h-full overflow-auto custom-scrollbar rounded-lg border'
+      className={cn('relative w-full max-h-full rounded-lg border', overflow, {
+        'custom-scrollbar': overflow === 'overflow-auto',
+      })}
     >
       <table
         ref={ref}

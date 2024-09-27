@@ -21,18 +21,24 @@ async function getLatitudeApiKey() {
   return Result.ok(firstApiKey)
 }
 
-export async function createSdk(projectId?: number) {
-  const result = await getLatitudeApiKey()
-  if (result.error) return result
+export async function createSdk({
+  projectId,
+  apiKey,
+}: {
+  projectId?: number
+  apiKey?: string
+} = {}) {
+  if (!apiKey) {
+    const result = await getLatitudeApiKey()
+    if (result.error) return result
 
-  const latitudeApiKey = result.value.token
+    apiKey = result.value.token
+  }
 
   const gateway = {
     host: env.GATEWAY_HOSTNAME,
     port: env.GATEWAY_PORT,
     ssl: env.GATEWAY_SSL,
   }
-  return Result.ok(
-    new Latitude(latitudeApiKey, compactObject({ gateway, projectId })),
-  )
+  return Result.ok(new Latitude(apiKey, compactObject({ gateway, projectId })))
 }

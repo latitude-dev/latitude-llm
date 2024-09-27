@@ -9,9 +9,7 @@ import {
   Badge,
   Button,
   CloseTrigger,
-  FormField,
   Modal,
-  Select,
   Table,
   TableBody,
   TableCell,
@@ -20,11 +18,11 @@ import {
   TableRow,
   Text,
 } from '@latitude-data/web-ui'
+import { ProjectDocumentSelector } from '$/components/ProjectDocumentSelector'
 import { useNavigate } from '$/hooks/useNavigate'
 import { relativeTime } from '$/lib/relativeTime'
 import { ROUTES } from '$/services/routes'
 import useDocumentsForImport from '$/stores/documentsForImport'
-import useProjects from '$/stores/projects'
 import useProviderLogs from '$/stores/providerLogs'
 
 export default function ImportLogs({
@@ -33,19 +31,22 @@ export default function ImportLogs({
   params: { evaluationUuid: string }
 }) {
   const navigate = useNavigate()
-  const [projectId, setProjectId] = useState<number | undefined>()
   const [documentUuid, setDocumentUuid] = useState<string | undefined>()
   const [providerLogId, setProviderLogId] = useState<number | undefined>()
-
-  const onChangeProjectId = (value: string) => {
-    setProjectId(Number(value))
-    setDocumentUuid(undefined)
-  }
-  const onChangeDocumentUuid = (value: string) => {
-    setDocumentUuid(value)
-  }
-  const { data: projects } = useProjects()
+  const [projectId, setProjectId] = useState<number | undefined>()
   const { data: documents } = useDocumentsForImport({ projectId })
+
+  const handleProjectChange = (projectId: number) => {
+    // Reset document selection when project changes
+    setProjectId(projectId)
+    setDocumentUuid(undefined)
+    setProviderLogId(undefined)
+  }
+
+  const handleDocumentChange = (newDocumentUuid: string) => {
+    setDocumentUuid(newDocumentUuid)
+    setProviderLogId(undefined)
+  }
 
   return (
     <Modal
@@ -76,26 +77,11 @@ export default function ImportLogs({
       }
     >
       <div className='flex flex-col gap-4 min-w-0'>
-        <div className='flex flex-row gap-4'>
-          <FormField label='Project'>
-            <Select
-              name='projectId'
-              options={projects.map((p) => ({ label: p.name, value: p.id }))}
-              onChange={onChangeProjectId}
-            />
-          </FormField>
-          <FormField label='Prompt'>
-            <Select
-              disabled={!documents.length}
-              name='documentUuid'
-              options={documents.map((d) => ({
-                label: d.path,
-                value: d.documentUuid,
-              }))}
-              onChange={onChangeDocumentUuid}
-            />
-          </FormField>
-        </div>
+        <ProjectDocumentSelector
+          documents={documents}
+          onProjectChange={handleProjectChange}
+          onDocumentChange={handleDocumentChange}
+        />
         {documentUuid && (
           <ProviderLogsTable
             documentUuid={documentUuid}

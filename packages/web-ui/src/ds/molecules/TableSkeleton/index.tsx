@@ -15,10 +15,12 @@ export function TableSkeleton({
   rows,
   cols,
   maxHeight,
+  verticalPadding = false,
 }: {
   rows: number
   cols: number
   maxHeight?: number
+  verticalPadding?: boolean
 }) {
   const { data, headers } = useMemo(() => {
     const rowList = Array.from(Array(rows).keys())
@@ -27,13 +29,13 @@ export function TableSkeleton({
     return { data, headers }
   }, [rows, cols])
   return (
-    <Table maxHeight={maxHeight}>
+    <Table maxHeight={maxHeight} overflow='overflow-hidden'>
       <TableHeader>
-        <TableRow>
+        <TableRow hoverable={false}>
           {headers.map((header) => (
             <TableHead key={header}>
-              <Skeleton>
-                <div className='opacity-0'>
+              <Skeleton className='bg-white'>
+                <div className='opacity-0 h-4'>
                   <Text.H4>{header}</Text.H4>
                 </div>
               </Skeleton>
@@ -43,10 +45,14 @@ export function TableSkeleton({
       </TableHeader>
       <TableBody>
         {data.map((row, indexRow) => (
-          <TableRow key={indexRow} verticalPadding>
+          <TableRow
+            key={indexRow}
+            verticalPadding={verticalPadding}
+            hoverable={false}
+          >
             {row.map((cell) => (
-              <TableCell key={cell}>
-                <Skeleton className='w-full'>
+              <TableCell key={cell} className='py-2'>
+                <Skeleton className='w-full h-4'>
                   <div className='opacity-0'>{row}</div>
                 </Skeleton>
               </TableCell>

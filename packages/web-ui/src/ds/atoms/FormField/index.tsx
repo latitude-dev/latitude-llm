@@ -9,6 +9,7 @@ import {
 import { Slot } from '@radix-ui/react-slot'
 
 import { cn } from '../../../lib/utils'
+import { Icon } from '../Icons'
 import { BatchLabel, Label } from '../Label'
 import Text from '../Text'
 import { Tooltip } from '../Tooltip'
@@ -84,6 +85,7 @@ export type FormFieldProps = Omit<
   label?: string
   badgeLabel?: boolean
   description?: string | ReactNode
+  info?: string
   errors?: string[] | null | undefined
   errorStyle?: 'inline' | 'tooltip'
 }
@@ -95,6 +97,7 @@ function FormField({
   className,
   errors,
   errorStyle = 'inline',
+  info,
 }: FormFieldProps) {
   const error = errors?.[0]
   const id = useId()
@@ -113,12 +116,35 @@ function FormField({
       aria-invalid={!!error}
     >
       {label ? (
-        <LabelComponent
-          variant={error ? 'destructive' : 'default'}
-          htmlFor={formItemId}
-        >
-          {label}
-        </LabelComponent>
+        info ? (
+          <Tooltip
+            asChild
+            trigger={
+              <div className='inline-block'>
+                <div className='flex flex-row gap-1 items-center'>
+                  <LabelComponent
+                    variant={error ? 'destructive' : 'default'}
+                    htmlFor={formItemId}
+                  >
+                    {label}
+                  </LabelComponent>
+                  <Icon name='info' />
+                </div>
+              </div>
+            }
+          >
+            {info}
+          </Tooltip>
+        ) : (
+          <div className='flex flex-row gap-1 items-center'>
+            <LabelComponent
+              variant={error ? 'destructive' : 'default'}
+              htmlFor={formItemId}
+            >
+              {label}
+            </LabelComponent>
+          </div>
+        )
       ) : null}
       <FormControl
         error={error}

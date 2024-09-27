@@ -42,6 +42,9 @@ export const ROUTES = {
     new: {
       root: `/datasets/new`,
     },
+    generate: {
+      root: `/datasets/generate`,
+    },
   },
   evaluations: {
     root: '/evaluations',

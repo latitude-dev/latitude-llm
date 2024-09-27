@@ -17,6 +17,9 @@ export default createEnv({
       .transform((value) => value === 'true')
       .optional()
       .default('true'),
+    DATASET_GENERATOR_PROJECT_ID: z.coerce.number().optional(),
+    DATASET_GENERATOR_DOCUMENT_PATH: z.string().optional(),
+    DATASET_GENERATOR_WORKSPACE_APIKEY: z.string().optional(),
   },
   runtimeEnv: {
     NODE_ENV: process.env.NODE_ENV,
@@ -25,5 +28,10 @@ export default createEnv({
     GATEWAY_PORT: process.env.GATEWAY_PORT,
     GATEWAY_SSL: process.env.GATEWAY_SSL,
     WEBSOCKETS_SERVER: process.env.WEBSOCKETS_SERVER,
+    DATASET_GENERATOR_PROJECT_ID: process.env.DATASET_GENERATOR_PROJECT_ID,
+    DATASET_GENERATOR_DOCUMENT_PATH:
+      process.env.DATASET_GENERATOR_DOCUMENT_PATH,
+    DATASET_GENERATOR_WORKSPACE_APIKEY:
+      process.env.DATASET_GENERATOR_WORKSPACE_APIKEY,
   },
 })
