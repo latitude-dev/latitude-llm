@@ -54,7 +54,7 @@ function PreviewModal({
       ) : (
         <Table maxHeight={TABLE_MAX_HEIGHT}>
           <TableHeader>
-            <TableRow verticalPadding>
+            <TableRow verticalPadding hoverable={false}>
               <TableHead>
                 <Text.H4>#</Text.H4>
               </TableHead>
@@ -68,7 +68,7 @@ function PreviewModal({
           <TableBody>
             {rows.map((row, rowIndex) => {
               return (
-                <TableRow key={rowIndex} verticalPadding>
+                <TableRow key={rowIndex} verticalPadding hoverable={false}>
                   {row.map((cell, cellIndex) => (
                     <TableCell key={cellIndex}>{cell}</TableCell>
                   ))}

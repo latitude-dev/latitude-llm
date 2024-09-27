@@ -25,7 +25,7 @@ export async function runDocumentAction({
   commitUuid,
   parameters,
 }: RunDocumentActionProps) {
-  const sdk = await createSdk(projectId).then((r) => r.unwrap())
+  const sdk = await createSdk({ projectId }).then((r) => r.unwrap())
   const stream = createStreamableValue<
     { event: StreamEventTypes; data: ChainEventDto },
     Error

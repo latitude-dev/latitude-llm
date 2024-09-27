@@ -43,9 +43,16 @@ export default async function DatasetsList({
         <TableWithHeader
           title='Datasets'
           actions={
-            <Link href={ROUTES.datasets.new.root}>
-              <TableWithHeader.Button>Upload dataset</TableWithHeader.Button>
-            </Link>
+            <div className='flex flex-row items-center gap-2'>
+              <Link href={ROUTES.datasets.generate.root}>
+                <TableWithHeader.Button>
+                  Generate dataset
+                </TableWithHeader.Button>
+              </Link>
+              <Link href={ROUTES.datasets.new.root}>
+                <TableWithHeader.Button>Upload dataset</TableWithHeader.Button>
+              </Link>
+            </div>
           }
           table={
             <>

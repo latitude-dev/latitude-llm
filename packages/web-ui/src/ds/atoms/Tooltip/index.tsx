@@ -23,26 +23,38 @@ type ContentProps = ComponentPropsWithoutRef<
   typeof TooltipPrimitive.Content
 > & {
   variant?: TooltipVariant
+  maxWidth?: string
 }
 const TooltipContent = forwardRef<
   ElementRef<typeof TooltipPrimitive.Content>,
   ContentProps
->(({ className, variant = 'default', sideOffset = 4, ...props }, ref) => (
-  <TooltipPrimitive.Content
-    ref={ref}
-    sideOffset={sideOffset}
-    className={cn(
-      'z-50 overflow-hidden rounded-md text-white px-3 py-1.5 text-xs animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2',
-      'max-w-72',
+>(
+  (
+    {
       className,
-      {
-        'bg-foreground': variant === 'default',
-        'bg-destructive': variant === 'destructive',
-      },
-    )}
-    {...props}
-  />
-))
+      variant = 'default',
+      sideOffset = 4,
+      maxWidth = 'max-w-72',
+      ...props
+    },
+    ref,
+  ) => (
+    <TooltipPrimitive.Content
+      ref={ref}
+      sideOffset={sideOffset}
+      className={cn(
+        'z-50 overflow-hidden rounded-md text-white px-3 py-1.5 text-xs animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2',
+        maxWidth,
+        className,
+        {
+          'bg-foreground': variant === 'default',
+          'bg-destructive': variant === 'destructive',
+        },
+      )}
+      {...props}
+    />
+  ),
+)
 TooltipContent.displayName = TooltipPrimitive.Content.displayName
 
 type Props = PropviderProps &
@@ -76,6 +88,7 @@ function Tooltip({
   sticky,
   hideWhenDetached,
   updatePositionStrategy,
+  maxWidth,
   asChild = true,
 }: Props) {
   return (
@@ -89,6 +102,7 @@ function Tooltip({
       <TooltipTrigger asChild={asChild}>{trigger}</TooltipTrigger>
       <TooltipPrimitive.Portal>
         <TooltipContent
+          maxWidth={maxWidth}
           variant={variant}
           side={side}
           sideOffset={sideOffset}

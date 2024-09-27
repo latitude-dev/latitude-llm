@@ -61,11 +61,7 @@ export default function useDocumentVersions(
       if (!response.ok) {
         const error = await response.json()
 
-        toast({
-          title: 'Error fetching documents',
-          description: error.formErrors?.[0] || error.message,
-          variant: 'destructive',
-        })
+        console.error(error)
 
         return []
       }

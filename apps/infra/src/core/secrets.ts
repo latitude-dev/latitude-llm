@@ -70,6 +70,10 @@ const postHogApiKey = createSecretWithVersion(
   'NEXT_PUBLIC_POSTHOG_KEY',
   'Posthog API Key for product analytics',
 )
+const datasetGeneratorWorkspaceApiKey = createSecretWithVersion(
+  'DATASET_GENERATOR_WORKSPACE_APIKEY',
+  'API key for the dataset generator',
+)
 
 export const mailerApiKeyArn = mailerApiKey.arn
 export const sentryDsnArn = sentryDsn.arn
@@ -83,3 +87,5 @@ export const workersWebsocketsSecretTokenArn = workersWebsocketsSecretToken.arn
 export const defaultProjectIdArn = defaultProjectId.arn
 export const defaultProviderApiKeyArn = defaultProviderApiKey.arn
 export const postHogApiKeyArn = postHogApiKey.arn
+export const datasetGeneratorWorkspaceApiKeyArn =
+  datasetGeneratorWorkspaceApiKey.arn

@@ -30,6 +30,9 @@ const defaultProviderApiKeyArn = coreStack.requireOutput(
   'defaultProviderApiKeyArn',
 )
 const postHogApiKeyArn = coreStack.requireOutput('postHogApiKeyArn')
+const datasetGeneratorWorkspaceApiKeyArn = coreStack.requireOutput(
+  'datasetGeneratorWorkspaceApiKeyArn',
+)
 
 const getSecretString = (arn: pulumi.Output<any>) => {
   return arn.apply((secretId) =>
@@ -59,6 +62,9 @@ export const sentryOrg = getSecretString(sentryOrgArn)
 export const sentryProject = getSecretString(sentryProjectArn)
 export const defaultProviderApiKey = getSecretString(defaultProviderApiKeyArn)
 export const postHogApiKey = getSecretString(postHogApiKeyArn)
+export const datasetGeneratorWorkspaceApiKey = getSecretString(
+  datasetGeneratorWorkspaceApiKeyArn,
+)
 
 export const dbUrl = pulumi.interpolate`postgresql://${dbUsername}:${dbPassword}@${dbEndpoint}/${dbName}?sslmode=verify-full&sslrootcert=/app/packages/core/src/assets/eu-central-1-bundle.pem`
 export const environment = pulumi
@@ -75,6 +81,7 @@ export const environment = pulumi
     defaultProjectId,
     defaultProviderApiKey,
     postHogApiKey,
+    datasetGeneratorWorkspaceApiKey,
   ])
   .apply(() => {
     return [
@@ -115,5 +122,11 @@ export const environment = pulumi
       { name: 'DEFAULT_PROVIDER_API_KEY', value: defaultProviderApiKey },
       { name: 'NEXT_PUBLIC_POSTHOG_KEY', value: postHogApiKey },
       { name: 'NEXT_PUBLIC_POSTHOG_HOST', value: 'https://eu.i.posthog.com' },
+      {
+        name: 'DATASET_GENERATOR_WORKSPACE_APIKEY',
+        value: datasetGeneratorWorkspaceApiKey,
+      },
+      { name: 'DATASET_GENERATOR_PROJECT_ID', value: '74' },
+      { name: 'DATASET_GENERATOR_DOCUMENT_PATH', value: 'generator' },
     ]
   })
