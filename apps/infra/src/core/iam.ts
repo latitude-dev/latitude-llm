@@ -67,6 +67,7 @@ export const deployerPolicyDocument: aws.iam.PolicyDocument = {
         'secretsmanager:*',
         'cloudformation:*',
         'ssm:*',
+        'codedeploy:*',
       ],
       Resource: '*',
     },
