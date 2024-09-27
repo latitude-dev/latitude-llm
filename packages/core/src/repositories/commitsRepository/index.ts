@@ -13,7 +13,7 @@ import {
   recomputeChanges,
   RecomputedChanges,
 } from '../../services/documents/recomputeChanges'
-import Repository, { PaginationArgs } from '../repository'
+import Repository from '../repository'
 import { buildCommitsScope, columnSelection } from './utils/buildCommitsScope'
 import { getHeadCommitForProject } from './utils/getHeadCommit'
 
@@ -129,17 +129,18 @@ export class CommitsRepository extends Repository<
     return Result.ok(result[0]!)
   }
 
-  async getCommitsByProject({
+  getCommitsByProjectQuery({
     project,
-    page = 1,
     filterByStatus = CommitStatus.All,
-    pageSize = 20,
-  }: { project: Project; filterByStatus?: CommitStatus } & PaginationArgs) {
+  }: {
+    project: Project
+    filterByStatus?: CommitStatus
+  }) {
     const filter = filterByStatusQuery({
       scope: this.scope,
       status: filterByStatus,
     })
-    const query = this.db
+    return this.db
       .select({
         id: this.scope.id,
         uuid: this.scope.uuid,
@@ -155,14 +156,6 @@ export class CommitsRepository extends Repository<
       .from(this.scope)
       .where(and(eq(this.scope.projectId, project.id), filter))
       .orderBy(desc(this.scope.createdAt))
-
-    const [rows] = await Repository.paginateQuery({
-      query: query.$dynamic(),
-      page,
-      pageSize,
-    })
-
-    return Result.ok(rows)
   }
 
   async getChanges(id: number, tx = database) {

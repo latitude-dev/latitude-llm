@@ -1,45 +1,34 @@
-'use client'
-
 import { useCallback } from 'react'
 
 import { DocumentVersion, EvaluationDto } from '@latitude-data/core/browser'
 import { Button, CloseTrigger, Modal } from '@latitude-data/web-ui'
 import { useMetadata } from '$/hooks/useMetadata'
-import { useNavigate } from '$/hooks/useNavigate'
-import { ROUTES } from '$/services/routes'
 
 import DatasetForm from './DatasetForm'
 import { useRunBatch } from './useRunBatch'
 import { useRunBatchForm } from './useRunBatchForm'
 
 export default function CreateBatchEvaluationModal({
+  open,
+  onClose,
   document,
   evaluation,
   projectId,
   commitUuid,
 }: {
+  open: boolean
+  onClose: () => void
   projectId: string
   commitUuid: string
   document: DocumentVersion
   evaluation: EvaluationDto
 }) {
-  const navigate = useNavigate()
-  const documentUuid = document.documentUuid
-  const goToDetail = useCallback(() => {
-    navigate.push(
-      ROUTES.projects
-        .detail({ id: Number(projectId) })
-        .commits.detail({ uuid: commitUuid })
-        .documents.detail({ uuid: documentUuid })
-        .evaluations.detail(evaluation.id).root,
-    )
-  }, [evaluation.id, projectId, commitUuid, documentUuid])
   const { runBatch, errors, isRunningBatch } = useRunBatch({
     document,
     projectId,
     commitUuid,
     onSuccess: () => {
-      goToDetail()
+      onClose()
     },
   })
 
@@ -73,11 +62,11 @@ export default function CreateBatchEvaluationModal({
 
   return (
     <Modal
-      open
+      open={open}
+      onOpenChange={onClose}
       size='large'
       title='Select the dataset that contain the data to generate the logs'
       description='Select the dataset you want to analyze and map the parameters of selected evaluations with dataset columns.'
-      onOpenChange={goToDetail}
       footer={
         <>
           <CloseTrigger />

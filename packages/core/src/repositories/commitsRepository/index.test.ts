@@ -49,43 +49,25 @@ describe('Commits by project', () => {
   })
 
   it('gets all commits', async () => {
-    const list = await repository
-      .getCommitsByProject({ project })
-      .then((r) => r.unwrap())
+    const list = await repository.getCommitsByProjectQuery({ project })
     expect(list).toHaveLength(11)
   })
 
   it('get merged commits', async () => {
-    const list = await repository
-      .getCommitsByProject({
-        project,
-        filterByStatus: CommitStatus.Merged,
-      })
-      .then((r) => r.unwrap())
+    const list = await repository.getCommitsByProjectQuery({
+      project,
+      filterByStatus: CommitStatus.Merged,
+    })
     expect(list).toHaveLength(3)
   })
 
   it('get drafts commits', async () => {
-    const list = await repository
-      .getCommitsByProject({
-        project,
-        filterByStatus: CommitStatus.Draft,
-      })
-      .then((r) => r.unwrap())
+    const list = await repository.getCommitsByProjectQuery({
+      project,
+      filterByStatus: CommitStatus.Draft,
+    })
 
     expect(list).toHaveLength(8)
-  })
-
-  it('get first page of drafts commits', async () => {
-    const list = await repository
-      .getCommitsByProject({
-        project,
-        filterByStatus: CommitStatus.Draft,
-        page: 1,
-        pageSize: 5,
-      })
-      .then((r) => r.unwrap())
-    expect(list).toHaveLength(5)
   })
 })
 

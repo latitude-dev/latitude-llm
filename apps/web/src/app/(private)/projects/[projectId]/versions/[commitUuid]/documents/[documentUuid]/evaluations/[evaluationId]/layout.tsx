@@ -8,8 +8,6 @@ import {
   EvaluationModalValue,
   EvaluationResultableType,
 } from '@latitude-data/core/browser'
-import { EvaluationsRepository } from '@latitude-data/core/repositories'
-import { computeEvaluationResultsWithMetadata } from '@latitude-data/core/services/evaluationResults/computeEvaluationResultsWithMetadata'
 import {
   getEvaluationMeanValueQuery,
   getEvaluationModalValueQuery,
@@ -24,8 +22,8 @@ import { ROUTES } from '$/services/routes'
 import Link from 'next/link'
 
 import { Actions } from './_components/Actions'
-import { EvaluationResults } from './_components/EvaluationResults'
 import { MetricsSummary } from './_components/MetricsSummary'
+import { fetchEvaluationCached } from './_lib/fetchEvaluationCached'
 
 const TYPE_TEXT: Record<EvaluationResultableType, string> = {
   [EvaluationResultableType.Text]: 'Text',
@@ -94,23 +92,11 @@ export default async function ConnectedEvaluationLayout({
   }
 }) {
   const { workspace } = await getCurrentUser()
-  const evaluationScope = new EvaluationsRepository(workspace.id)
-  const evaluation = await evaluationScope
-    .find(params.evaluationId)
-    .then((r) => r.unwrap())
-
+  const evaluation = await fetchEvaluationCached(Number(params.evaluationId))
   const commit = await findCommitCached({
     projectId: Number(params.projectId),
     uuid: params.commitUuid,
   })
-
-  const evaluationResults = await computeEvaluationResultsWithMetadata({
-    workspaceId: evaluation.workspaceId,
-    evaluation,
-    documentUuid: params.documentUuid,
-    draft: commit,
-    limit: 1000,
-  }).then((r) => r.unwrap())
   const isNumeric =
     evaluation.configuration.type == EvaluationResultableType.Number
   const data = await fetchData({
@@ -120,10 +106,8 @@ export default async function ConnectedEvaluationLayout({
     isNumeric,
     commit,
   })
-
   return (
-    <div className='flex flex-col w-full h-full gap-6 p-6 custom-scrollbar'>
-      {children}
+    <div className='flex flex-col w-full h-full gap-6 p-6'>
       <TableWithHeader
         title={
           <Breadcrumb
@@ -188,10 +172,7 @@ export default async function ConnectedEvaluationLayout({
         isNumeric={isNumeric}
         meanOrModal={data.meanOrModal}
       />
-      <EvaluationResults
-        evaluation={evaluation}
-        evaluationResults={evaluationResults}
-      />
+      {children}
     </div>
   )
 }

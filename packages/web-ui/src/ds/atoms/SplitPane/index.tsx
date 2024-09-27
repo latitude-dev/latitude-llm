@@ -14,7 +14,7 @@ import { ResizableBox, ResizeCallbackData, ResizeHandle } from 'react-resizable'
 function Pane({ children }: { children: ReactNode }) {
   return (
     <div className='flex flex-col h-full relative'>
-      <div className='w-full h-full overflow-hidden'>{children}</div>
+      <div className='w-full h-full'>{children}</div>
     </div>
   )
 }

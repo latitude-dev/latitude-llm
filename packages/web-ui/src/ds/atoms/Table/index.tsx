@@ -9,14 +9,17 @@ import { cn } from '../../../lib/utils'
 import Text from '../Text'
 
 type TableProps = HTMLAttributes<HTMLTableElement> & {
-  maxHeight?: number
+  maxHeight?: number | string
   overflow?: 'overflow-auto' | 'overflow-hidden'
 }
 const Table = forwardRef<HTMLTableElement, TableProps>(
   ({ className, maxHeight, overflow = 'overflow-auto', ...props }, ref) => (
     <div
       style={{
-        maxHeight: maxHeight ? `${maxHeight}px` : 'auto',
+        maxHeight:
+          maxHeight && typeof maxHeight === 'number'
+            ? `${maxHeight}px`
+            : 'auto',
       }}
       className={cn('relative w-full max-h-full rounded-lg border', overflow, {
         'custom-scrollbar': overflow === 'overflow-auto',
@@ -52,19 +55,24 @@ const TableBody = forwardRef<
 ))
 TableBody.displayName = 'TableBody'
 
-const TableFooter = forwardRef<
-  HTMLTableSectionElement,
-  HTMLAttributes<HTMLTableSectionElement>
->(({ className, ...props }, ref) => (
-  <tfoot
-    ref={ref}
-    className={cn(
-      'border-t bg-muted/50 font-medium [&>tr]:last:border-b-0',
-      className,
-    )}
-    {...props}
-  />
-))
+type TableFooterProps = HTMLAttributes<HTMLTableSectionElement> & {
+  sticky?: boolean
+}
+const TableFooter = forwardRef<HTMLTableSectionElement, TableFooterProps>(
+  ({ className, sticky = false, ...props }, ref) => (
+    <tfoot
+      ref={ref}
+      className={cn(
+        'border-t bg-muted font-medium [&>tr]:last:border-b-0',
+        className,
+        {
+          'sticky bottom-0': sticky,
+        },
+      )}
+      {...props}
+    />
+  ),
+)
 TableFooter.displayName = 'TableFooter'
 
 const TableRow = forwardRef<

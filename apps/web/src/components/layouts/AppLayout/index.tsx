@@ -22,7 +22,7 @@ export default function AppLayout({
         navigationLinks={navigationLinks}
         currentUser={currentUser}
       />
-      <main className='overflow-y-auto'>{children}</main>
+      <main>{children}</main>
     </div>
   )
 }

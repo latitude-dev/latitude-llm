@@ -1,3 +1,6 @@
+import { useRef } from 'react'
+
+import { IPagination } from '@latitude-data/core/lib/pagination/buildPagination'
 import { DocumentLogWithMetadata } from '@latitude-data/core/repositories'
 import {
   Badge,
@@ -15,18 +18,28 @@ import {
   formatDuration,
   relativeTime,
 } from '$/app/_lib/formatUtils'
+import { TablePaginationFooter } from '$/components/TablePaginationFooter'
+import useDynamicHeight from '$/hooks/useDynamicHeight'
+
+function countLabel(count: number) {
+  return `${count} logs`
+}
 
 export const DocumentLogsTable = ({
   documentLogs,
   selectedLog,
   setSelectedLog,
+  pagination,
 }: {
   documentLogs: DocumentLogWithMetadata[]
   selectedLog: DocumentLogWithMetadata | undefined
   setSelectedLog: (log: DocumentLogWithMetadata | undefined) => void
+  pagination: IPagination
 }) => {
+  const ref = useRef<HTMLTableElement>(null)
+  const height = useDynamicHeight({ ref, paddingBottom: 16 })
   return (
-    <Table className='table-auto'>
+    <Table className='table-auto' ref={ref} maxHeight={height}>
       <TableHeader className='sticky top-0 z-10'>
         <TableRow>
           <TableHead>Time</TableHead>
@@ -38,7 +51,7 @@ export const DocumentLogsTable = ({
           <TableHead>Cost</TableHead>
         </TableRow>
       </TableHeader>
-      <TableBody className='max-h-full overflow-y-auto'>
+      <TableBody>
         {documentLogs.map((documentLog, idx) => (
           <TableRow
             key={idx}
@@ -94,6 +107,11 @@ export const DocumentLogsTable = ({
           </TableRow>
         ))}
       </TableBody>
+      <TablePaginationFooter
+        colSpan={7}
+        pagination={pagination}
+        countLabel={countLabel}
+      />
     </Table>
   )
 }

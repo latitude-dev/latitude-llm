@@ -38,7 +38,7 @@ type EvaluationStatusArgs = {
   enqueued: number
 }
 
-type evaluationResultCreatedArgs = {
+type EvaluationResultCreatedArgs = {
   workspaceId: number
   evaluationId: number
   documentUuid: string
@@ -55,7 +55,7 @@ type DocumentLogCreatedArgs = {
 
 export type WebServerToClientEvents = {
   evaluationStatus: (args: EvaluationStatusArgs) => void
-  evaluationResultCreated: (args: evaluationResultCreatedArgs) => void
+  evaluationResultCreated: (args: EvaluationResultCreatedArgs) => void
   joinWorkspace: (args: { workspaceId: number; userId: string }) => void
   documentLogCreated: (args: DocumentLogCreatedArgs) => void
 }
@@ -71,7 +71,7 @@ export type WorkersClientToServerEvents = {
   }) => void
   evaluationResultCreated: (args: {
     workspaceId: number
-    data: evaluationResultCreatedArgs
+    data: EvaluationResultCreatedArgs
   }) => void
   documentLogCreated: (args: {
     workspaceId: number
