@@ -13,7 +13,29 @@ on:
         required: true
 
 jobs:
+  check_changes:
+    runs-on: ubuntu-latest
+    outputs:
+      changes_detected: ${{ steps.check_changes.outputs.changes_detected }}
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 2
+      - name: Check for relevant changes
+        id: check_changes
+        run: |
+          changes=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }})
+          echo "Changes detected:"
+          echo "$changes"
+          if echo "$changes" | grep -qE "^(apps/infra/|apps/web/|packages/)"
+          then
+            echo "changes_detected=true" >> $GITHUB_OUTPUT
+          else
+            echo "changes_detected=false" >> $GITHUB_OUTPUT
+          fi
   deployment:
+    # TODO: uncomment
+    # needs: check_changes
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code

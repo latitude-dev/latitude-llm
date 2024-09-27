@@ -38,12 +38,6 @@ jobs:
       stack-name: app-production-${{ inputs.app-name }}
     secrets: inherit
 
-  deploy-web:
-    needs: check_changes
-    if: needs.check_changes.outputs.changes_detected == 'true'
-    uses: ./.github/workflows/deploy-web.yml
-    secrets: inherit
-
 concurrency:
   group: production-${{ inputs.app-name }}
   cancel-in-progress: false

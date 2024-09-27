@@ -29,3 +29,8 @@ jobs:
     with:
       app-name: ${{ matrix.app }}
     secrets: inherit
+
+  deploy-web:
+    # needs: [lint, test] TODO: uncomment
+    uses: ./.github/workflows/deploy-web.yml
+    secrets: inherit
