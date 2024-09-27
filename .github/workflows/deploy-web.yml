@@ -95,6 +95,6 @@ jobs:
 
       - name: Deploy with CodeDeploy
         run: |
-          echo "Deploying branch ${{ env.GITHUB_REF }} to production"
+          echo "Deploying branch ${{ github.ref }} to production"
           commit_hash=`git rev-parse HEAD`
           aws deploy create-deployment --application-name LatitudeLLMCodeDeployApp --deployment-group-name LatitudeLLMDeploymentGroup --github-location repository=$GITHUB_REPOSITORY,commitId=$commit_hash
