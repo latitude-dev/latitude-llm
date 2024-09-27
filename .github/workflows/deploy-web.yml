@@ -71,8 +71,8 @@ jobs:
       - name: Setup Pulumi
         uses: pulumi/setup-pulumi@v2
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v1
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4.0.2
         with:
           role-to-assume: ${{ secrets.ARN_OF_IAM_ROLE_TO_ASSUME }}
           role-session-name: 'WebDeployment-${GITHUB_RUN_ID}'
