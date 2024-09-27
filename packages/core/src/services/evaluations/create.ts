@@ -26,19 +26,15 @@ export async function createEvaluation(
   const providerScope = new ProviderApiKeysRepository(workspace!.id, db)
   const providerResult = await providerScope.findFirst()
   const provider = providerResult.unwrap()
-
-  if (!provider) {
-    return Result.error(
-      new BadRequestError('No provider found when creating evaluation'),
-    )
-  }
   const meta = metadata as { prompt: string; templateId?: number }
-  const promptWithProvider = `---
+  const promptWithProvider = provider
+    ? `---
 provider: ${provider.name}
 model: ${findFirstModelForProvider(provider.provider)}
 ---
 ${meta.prompt}
 `.trim()
+    : meta.prompt
 
   return await Transaction.call(async (tx) => {
     let metadataTable
