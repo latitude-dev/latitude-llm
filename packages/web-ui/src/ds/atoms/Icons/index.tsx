@@ -35,7 +35,11 @@ import {
 
 import { cn } from '../../../lib/utils'
 import { colors, type TextColor } from '../../tokens'
-import { LatitudeLogo, LatitudeLogoMonochrome } from './custom-icons'
+import {
+  Evaluation,
+  LatitudeLogo,
+  LatitudeLogoMonochrome,
+} from './custom-icons'
 
 const Icons = {
   addCircle: CirclePlus,
@@ -49,6 +53,7 @@ const Icons = {
   deletion: SquareMinus,
   ellipsis: Ellipsis,
   ellipsisVertical: EllipsisVertical,
+  evaluation: Evaluation,
   file: File,
   fileUp: FileUpIcon,
   filePlus: FilePlus,
@@ -98,14 +103,17 @@ export function Icon({
   const IconClass = Icons[name]!
   return (
     <IconClass
-      className={cn(className, {
-        [colors.textColors[color!]]: color,
-        'w-4 h-4': size === 'normal',
-        'w-6 h-6': size === 'large',
-        'w-8 h-8': size === 'xlarge',
-        'w-14 h-14': size === 'xxxlarge',
-        'animate-spin': spin,
-      })}
+      className={cn(
+        {
+          [colors.textColors[color!]]: color,
+          'w-4 h-4': size === 'normal',
+          'w-6 h-6': size === 'large',
+          'w-8 h-8': size === 'xlarge',
+          'w-14 h-14': size === 'xxxlarge',
+          'animate-spin': spin,
+        },
+        className,
+      )}
     />
   )
 }
