@@ -20,7 +20,7 @@ jobs:
     with:
       workflow_call: true
 
-  deploy:
+  deploy-apps:
     needs: [lint, test]
     strategy:
       matrix:
@@ -31,6 +31,6 @@ jobs:
     secrets: inherit
 
   deploy-web:
-    # needs: [lint, test] TODO: uncomment
+    needs: [lint, test]
     uses: ./.github/workflows/deploy-web.yml
     secrets: inherit
