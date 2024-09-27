@@ -1,4 +1,4 @@
-name: Deploy App
+name: Deploy Apps
 
 on:
   workflow_call:
@@ -36,6 +36,12 @@ jobs:
     with:
       working-directory: apps/infra
       stack-name: app-production-${{ inputs.app-name }}
+    secrets: inherit
+
+  deploy-web:
+    needs: check_changes
+    if: needs.check_changes.outputs.changes_detected == 'true'
+    uses: ./.github/workflows/deploy-web.yml
     secrets: inherit
 
 concurrency:
