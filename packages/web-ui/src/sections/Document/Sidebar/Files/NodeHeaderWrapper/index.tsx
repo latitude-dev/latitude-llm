@@ -131,7 +131,7 @@ function NodeHeaderWrapper({
               tabIndex={0}
               ref={inputRef}
               autoFocus
-              value={inputValue}
+              value={inputValue?.trim()}
               onKeyDown={onInputKeyDown}
               onChange={onInputChange}
               errors={error ? [error] : undefined}
