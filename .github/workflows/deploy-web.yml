@@ -79,7 +79,6 @@ jobs:
           role-to-assume: ${{ secrets.ARN_OF_IAM_ROLE_TO_ASSUME }}
           role-session-name: WebDeployment
           aws-region: eu-central-1
-          role-skip-session-tagging: true
 
       - name: Build & push docker images
         working-directory: apps/infra
