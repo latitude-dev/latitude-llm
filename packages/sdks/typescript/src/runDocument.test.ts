@@ -128,7 +128,11 @@ describe('run', () => {
             const stream = new ReadableStream({
               start(controller) {
                 CHUNKS.forEach((chunk, index) => {
-                  controller.enqueue(encoder.encode(chunk))
+                  // @ts-expect-error
+                  const { event, data } = parseSSE(chunk)
+                  controller.enqueue(
+                    encoder.encode(`event: ${event}\ndata: ${data}\n\n`),
+                  )
                   if (index === CHUNKS.length - 1) {
                     controller.close()
                   }
@@ -171,7 +175,11 @@ describe('run', () => {
             const stream = new ReadableStream({
               start(controller) {
                 CHUNKS.forEach((chunk, index) => {
-                  controller.enqueue(encoder.encode(chunk))
+                  // @ts-expect-error
+                  const { event, data } = parseSSE(chunk)
+                  controller.enqueue(
+                    encoder.encode(`event: ${event}\ndata: ${data}\n\n`),
+                  )
                   if (index === CHUNKS.length - 1) {
                     controller.close()
                   }

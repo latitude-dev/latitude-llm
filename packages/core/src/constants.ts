@@ -191,5 +191,9 @@ export type ChainEventDto =
     }
   | {
       type: ChainEventTypes.Error
-      error: Error
+      error: {
+        name: string
+        message: string
+        stack?: string
+      }
     }
