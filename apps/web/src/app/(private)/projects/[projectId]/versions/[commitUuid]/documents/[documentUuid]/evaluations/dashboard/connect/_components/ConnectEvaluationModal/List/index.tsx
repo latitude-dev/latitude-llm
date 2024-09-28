@@ -23,7 +23,7 @@ export default function EvaluationList({
   onSearchChange,
 }: EvaluationListProps) {
   return (
-    <div className='w-1/3'>
+    <div className='w-1/2'>
       <Input
         type='text'
         placeholder='Search evaluations and templates...'

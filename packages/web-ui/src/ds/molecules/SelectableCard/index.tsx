@@ -30,18 +30,12 @@ export function SelectableCard({
         </div>
       )}
       <div className='w-full flex flex-col gap-1'>
-        <Text.H5M ellipsis noWrap color={selected ? 'primary' : 'foreground'}>
-          {title}
+        <Text.H5M color={selected ? 'primary' : 'foreground'}>
+          {title.length > 30 ? `${title.slice(0, 30)}...` : title}
         </Text.H5M>
         {description.length > 0 && (
-          <Text.H6
-            ellipsis
-            noWrap
-            color={selected ? 'accentForeground' : 'foregroundMuted'}
-          >
-            {description.length > 45
-              ? `${description.slice(0, 42)}...`
-              : description}
+          <Text.H6 color={selected ? 'accentForeground' : 'foregroundMuted'}>
+            {description}
           </Text.H6>
         )}
       </div>
