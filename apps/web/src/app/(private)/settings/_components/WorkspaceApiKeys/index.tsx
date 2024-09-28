@@ -37,7 +37,7 @@ export default function WorkspaceApiKeys() {
               {apiKeys.map((apiKey) => (
                 <TableRow key={apiKey.id} verticalPadding hoverable={false}>
                   <TableCell>
-                    <Text.H4>{apiKey.name || 'Unnamed API Key'}</Text.H4>
+                    <Text.H4>{apiKey.name || 'Latitude API Key'}</Text.H4>
                   </TableCell>
                   <TableCell>
                     <Tooltip
