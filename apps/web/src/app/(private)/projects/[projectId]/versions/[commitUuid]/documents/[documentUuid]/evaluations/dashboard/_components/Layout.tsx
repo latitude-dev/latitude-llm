@@ -3,18 +3,101 @@
 import { EvaluationDto } from '@latitude-data/core/browser'
 import {
   BlankSlateStep,
+  BlankSlateStepSkeleton,
   BlankSlateWithSteps,
+  Button,
   Icon,
   TableBlankSlate,
+  Text,
   useCurrentCommit,
   useCurrentDocument,
   useCurrentProject,
 } from '@latitude-data/web-ui'
+import { connectEvaluationsAction } from '$/actions/evaluations/connect'
+import useLatitudeAction from '$/hooks/useLatitudeAction'
+import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
 import useEvaluations from '$/stores/evaluations'
+import useSuggestedEvaluations, {
+  SuggestedEvaluation,
+} from '$/stores/suggestedEvaluations'
 import Link from 'next/link'
 
 import BatchEvaluationsTable from './BatchEvaluationsTable'
+
+function SuggestedEvaluations() {
+  const document = useCurrentDocument()
+  const { project } = useCurrentProject()
+  const { commit } = useCurrentCommit()
+  const { data: suggestions, isLoading } = useSuggestedEvaluations(
+    document.content,
+  )
+  const navigate = useNavigate()
+  const { mutate } = useEvaluations()
+  const { execute, isPending } = useLatitudeAction(connectEvaluationsAction)
+  const onConnect = async (suggestion: SuggestedEvaluation) => {
+    const [data] = await execute({
+      projectId: project.id,
+      templateIds: [suggestion.id],
+      evaluationUuids: [],
+      documentUuid: document.documentUuid,
+    })
+
+    if (data) {
+      mutate()
+      const connectedEvaluation = data[0]!
+      navigate.push(
+        ROUTES.projects
+          .detail({ id: project.id })
+          .commits.detail({ uuid: commit.uuid })
+          .documents.detail({ uuid: document.documentUuid })
+          .evaluations.detail(connectedEvaluation.evaluationId).root,
+      )
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <BlankSlateStepSkeleton className='w-[448px] animate-in fade-in duration-300 max-h-[360px] overflow-y-auto' />
+    )
+  }
+  if (!suggestions.length) return null
+
+  return (
+    <BlankSlateStep
+      number={3}
+      title='...Or try our suggested evaluations'
+      description='Our AI agent recommends starting with these evaluations based on the contents of your prompt.'
+      className='animate-in fade-in duration-300 max-h-[360px] over overflow-y-auto'
+    >
+      <div className='space-y-4'>
+        {suggestions.map((suggestion, index) => (
+          <div
+            key={index}
+            className='flex flex-row items-center justify-between gap-4 p-4 border border-border rounded-md'
+          >
+            <div className='flex flex-col gap-1'>
+              <Text.H5M>{suggestion.title}</Text.H5M>
+              <Text.H6 color='foregroundMuted'>
+                {suggestion.description}
+              </Text.H6>
+            </div>
+            <Button
+              fancy
+              variant='secondary'
+              disabled={isPending}
+              onClick={() => onConnect(suggestion)}
+            >
+              <Text.H5 noWrap color='foreground'>
+                Add Evaluation
+              </Text.H5>
+            </Button>
+          </div>
+        ))}
+      </div>
+    </BlankSlateStep>
+  )
+}
 
 export default function EvaluationsLayoutClient({
   evaluations: fallbackData,
@@ -71,6 +154,8 @@ export default function EvaluationsLayoutClient({
           </Link>
         </div>
       </BlankSlateStep>
+
+      <SuggestedEvaluations />
     </BlankSlateWithSteps>
   )
 }

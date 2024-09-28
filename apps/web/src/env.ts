@@ -20,6 +20,8 @@ export default createEnv({
     DATASET_GENERATOR_PROJECT_ID: z.coerce.number().optional(),
     DATASET_GENERATOR_DOCUMENT_PATH: z.string().optional(),
     DATASET_GENERATOR_WORKSPACE_APIKEY: z.string().optional(),
+    TEMPLATES_SUGGESTION_PROJECT_ID: z.coerce.number().optional(),
+    TEMPLATES_SUGGESTION_PROMPT_PATH: z.string().optional(),
   },
   runtimeEnv: {
     NODE_ENV: process.env.NODE_ENV,
@@ -33,5 +35,9 @@ export default createEnv({
       process.env.DATASET_GENERATOR_DOCUMENT_PATH,
     DATASET_GENERATOR_WORKSPACE_APIKEY:
       process.env.DATASET_GENERATOR_WORKSPACE_APIKEY,
+    TEMPLATES_SUGGESTION_PROJECT_ID:
+      process.env.TEMPLATES_SUGGESTION_PROJECT_ID,
+    TEMPLATES_SUGGESTION_PROMPT_PATH:
+      process.env.TEMPLATES_SUGGESTION_PROMPT_PATH,
   },
 })
