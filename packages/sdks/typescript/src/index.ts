@@ -7,6 +7,8 @@ import {
 import env from '$sdk/env'
 import { GatewayApiConfig, RouteResolver } from '$sdk/utils'
 import { BodyParams, HandlerType, UrlParams } from '$sdk/utils/types'
+import { ParsedEvent, ReconnectInterval } from 'eventsource-parser'
+import { EventSourceParserStream } from 'eventsource-parser/stream'
 
 export type StreamChainResponse = {
   conversation: Message[]
@@ -128,83 +130,62 @@ export class Latitude {
     let conversation: Message[] = []
     let uuid: string | undefined
     let chainResponse: ChainCallResponseDto | undefined
-    const consumeEvent = (event: { event: string; data: string }) => {
-      if (!event.event) {
-        onError?.(new Error(`Invalid SSE event: ${event}`))
-        return
-      }
-      if (!event.data) {
-        onError?.(new Error(`Invalid data in server event:\n${event}`))
-        return
-      }
-      if (event.event === 'error') {
-        onError?.(new Error(event.data))
-        return
-      }
 
-      const json = this.parseJSON(event.data)
-      if (!json) {
-        const error = new Error(`Invalid JSON in server event:\n${event}`)
-        onError?.(error)
-        return
-      }
+    const parser = new EventSourceParserStream()
+    const eventStream = stream
+      .pipeThrough(new TextDecoderStream())
+      .pipeThrough(parser)
 
-      if (event.event === 'latitude-event') {
-        const messages = 'messages' in json ? (json.messages! as Message[]) : []
+    try {
+      for await (const event of eventStream as unknown as AsyncIterable<
+        ParsedEvent | ReconnectInterval
+      >) {
+        const parsedEvent = event as ParsedEvent | ReconnectInterval
 
-        if (json.type === 'chain-error') {
-          const error = new Error((json.error as Error).message)
-          onError?.(error)
+        if (parsedEvent.type === 'event') {
+          const data = this.parseJSON(parsedEvent.data)
+          if (!data) {
+            throw new Error(
+              `Invalid JSON in server event:\n${parsedEvent.data}`,
+            )
+          }
 
-          return
+          if (parsedEvent.event === 'latitude-event') {
+            const messages =
+              'messages' in data ? (data.messages! as Message[]) : []
+
+            if (data.type === 'chain-error') {
+              throw new Error(data.error.message)
+            }
+
+            if (messages.length > 0) {
+              conversation.push(...messages)
+            }
+
+            if (data.type === 'chain-complete') {
+              uuid = data.uuid!
+              chainResponse = data.response!
+            }
+          }
+
+          onEvent?.({ event: parsedEvent.event as StreamEventTypes, data })
         }
-
-        if (messages.length > 0) {
-          conversation.push(...messages)
-        }
-
-        if (json.type === 'chain-complete') {
-          uuid = json.uuid!
-          chainResponse = json.response!
-        }
       }
 
-      onEvent?.({ event: event.event as StreamEventTypes, data: json })
+      if (!uuid || !chainResponse) return
+
+      const finalResponse = {
+        conversation,
+        uuid,
+        response: chainResponse,
+      }
+
+      onFinished?.(finalResponse)
+
+      return finalResponse
+    } catch (error) {
+      onError?.(error as Error)
     }
-
-    const reader = stream.getReader()
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) break
-
-      const chunks = new TextDecoder('utf-8').decode(value).trim()
-      for (const chunk of chunks.split('\n\n')) {
-        const event = this.parseEvent(chunk)
-        if (!event) {
-          onError?.(new Error(`Invalid SSE event: ${chunk}`))
-          return
-        }
-        const data = this.parseData(chunk)
-        if (data === null || data === undefined) {
-          onError?.(new Error(`Invalid data in server event:\n${chunk}`))
-          return
-        }
-
-        consumeEvent({ event, data })
-      }
-    }
-
-    if (!uuid || !chainResponse) return
-
-    const finalResponse = {
-      conversation,
-      uuid,
-      response: chainResponse,
-    }
-
-    onFinished?.(finalResponse)
-
-    return finalResponse
   }
 
   private async request<H extends HandlerType>({
@@ -231,16 +212,6 @@ export class Latitude {
     } catch (e) {
       // do nothing
     }
-  }
-
-  private parseEvent(chunk: string) {
-    const event = chunk.split('\n')[0]
-    return event?.split('event: ')[1]
-  }
-
-  private parseData(chunk: string) {
-    const data = chunk.split('\n')[1]
-    return data?.split('data: ')[1]
   }
 
   private get authHeader() {
