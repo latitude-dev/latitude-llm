@@ -3,7 +3,7 @@ import React, { ReactNode, useEffect, useState } from 'react'
 import { Text } from '@latitude-data/web-ui'
 
 const className =
-  'flex-1 min-h-[450px] min-w-0 rounded-lg border bg-muted flex flex-col'
+  'flex-1 min-h-[450px] max-h-[580px] min-w-0 rounded-lg border bg-muted flex flex-col'
 
 interface TabsProps {
   children: ReactNode
@@ -81,7 +81,7 @@ export default function EvaluationEditor({
     return (
       <div className={className}>
         <textarea
-          className='w-full h-full p-4 bg-muted text-foregound text-sm resize-none'
+          className='w-full h-full p-4 bg-muted text-foregound text-sm resize-none overflow-x-auto '
           value={
             items[0]!.type === 'evaluation'
               ? items[0]!.data.metadata.prompt
@@ -89,6 +89,7 @@ export default function EvaluationEditor({
           }
           readOnly
           disabled
+          wrap='off'
         />
       </div>
     )
@@ -117,7 +118,7 @@ export default function EvaluationEditor({
               activeTab === item.uuid && (
                 <textarea
                   key={item.uuid}
-                  className='w-full h-full p-4 bg-muted text-foregound text-sm resize-none'
+                  className='w-full h-full p-4 bg-muted text-foregound text-sm resize-none overflow-x-auto '
                   value={
                     item.type === 'evaluation'
                       ? item.data.metadata.prompt
@@ -125,6 +126,7 @@ export default function EvaluationEditor({
                   }
                   readOnly
                   disabled
+                  wrap='off'
                 />
               ),
           )}
