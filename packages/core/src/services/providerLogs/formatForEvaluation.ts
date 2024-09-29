@@ -33,8 +33,33 @@ export function formatConversation(providerLog: ProviderLogDto | ProviderLog) {
   return formatMessages(messages)
 }
 
-export function formatContext(providerLog: ProviderLog | ProviderLogDto) {
-  return formatMessages(providerLog.messages)
+export function formatContext(
+  providerLog: ProviderLog | ProviderLogDto,
+): string {
+  const messages = providerLog.messages || []
+  let formattedConversation = ''
+
+  messages.forEach((message) => {
+    const speaker = message.role.charAt(0).toUpperCase() + message.role.slice(1)
+    let content = ''
+    if (typeof message.content === 'string') {
+      content = message.content
+    } else if (
+      Array.isArray(message.content) &&
+      'text' in message.content[0]!
+    ) {
+      content = message.content[0].text
+    } else if (
+      Array.isArray(message.content) &&
+      'image' in message.content[0]!
+    ) {
+      content = '[IMAGE]'
+    }
+
+    formattedConversation += `${speaker}:\n${content}\n\n`
+  })
+
+  return formattedConversation.trim()
 }
 
 function formatMessages(messages: Message[]) {

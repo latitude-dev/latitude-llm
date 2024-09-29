@@ -4,7 +4,7 @@ import { ProviderApiKey } from './browser'
 
 export function objectToString(object: any) {
   try {
-    return JSON.stringify(object)
+    return JSON.stringify(object, null, 2)
   } catch (error) {
     return 'Error: Provider returned an object that could not be stringified'
   }

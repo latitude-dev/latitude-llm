@@ -2,7 +2,7 @@ import { Chain, ContentType, MessageRole } from '@latitude-data/compiler'
 import { v4 as uuid } from 'uuid'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { Workspace } from '../../browser'
+import { objectToString, Workspace } from '../../browser'
 import { LogSources, Providers } from '../../constants'
 import * as factories from '../../tests/factories'
 import * as aiModule from '../ai'
@@ -159,7 +159,7 @@ describe('runChain', () => {
       expect.objectContaining({
         documentLogUuid: expect.any(String),
         object: { name: 'John', age: 30 },
-        text: '{"name":"John","age":30}',
+        text: objectToString({ name: 'John', age: 30 }),
         usage: { totalTokens: 15 },
       }),
     )
@@ -377,7 +377,7 @@ describe('runChain', () => {
       expect.objectContaining({
         documentLogUuid: expect.any(String),
         object: { name: 'John', age: 30 },
-        text: '{"name":"John","age":30}',
+        text: objectToString({ name: 'John', age: 30 }),
         usage: { totalTokens: 15 },
       }),
     )
@@ -463,7 +463,10 @@ describe('runChain', () => {
           { name: 'John', age: 30 },
           { name: 'Jane', age: 25 },
         ],
-        text: '[{"name":"John","age":30},{"name":"Jane","age":25}]',
+        text: objectToString([
+          { name: 'John', age: 30 },
+          { name: 'Jane', age: 25 },
+        ]),
         usage: { totalTokens: 20 },
       }),
     )
