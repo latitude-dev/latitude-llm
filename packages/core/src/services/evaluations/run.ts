@@ -17,7 +17,11 @@ import { NotFoundError, Result } from '../../lib'
 import { runChain } from '../chains/run'
 import { computeDocumentLogWithMetadata } from '../documentLogs'
 import { buildProviderApikeysMap } from '../providerApiKeys/buildMap'
-import { formatContext, formatConversation } from '../providerLogs'
+import {
+  buildProviderLogResponse,
+  formatContext,
+  formatConversation,
+} from '../providerLogs'
 
 // Helper function to get the result schema based on evaluation type
 const getResultSchema = (type: EvaluationResultableType): JSONSchema7 => {
@@ -68,7 +72,7 @@ export const runEvaluation = async (
     parameters: {
       messages: formatConversation(lastProviderLog),
       context: formatContext(lastProviderLog),
-      response: lastProviderLog.responseText,
+      response: buildProviderLogResponse(lastProviderLog),
       prompt: documentLog.resolvedContent,
       parameters: documentLog.parameters,
       config: metadata.config,

@@ -8,7 +8,7 @@ import {
   formatContext,
   formatConversation,
 } from '@latitude-data/core/services/providerLogs/formatForEvaluation'
-import { Badge, Icon, Input, Text } from '@latitude-data/web-ui'
+import { Button, Icon, TableBlankSlate, Text } from '@latitude-data/web-ui'
 import { convertParams } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/DocumentEditor/Editor/Playground'
 import { ROUTES } from '$/services/routes'
 import { useProviderLog } from '$/stores/providerLogs'
@@ -18,6 +18,26 @@ import { useSearchParams } from 'next/navigation'
 import { Header } from '../Header'
 import Chat, { EVALUATION_PARAMETERS } from './Chat'
 import Preview from './Preview'
+import { Variables } from './Variables'
+
+const BlankSlate = ({ evaluation }: { evaluation: EvaluationDto }) => (
+  <>
+    <Header title='Playground' />
+    <TableBlankSlate
+      description='Import data from an existing log to add it to your variables. Then test your evaluation prompt to see how it performs.'
+      link={
+        <Link
+          href={
+            ROUTES.evaluations.detail({ uuid: evaluation.uuid }).editor
+              .importLogs.root
+          }
+        >
+          <Button fancy>Import Log</Button>
+        </Link>
+      }
+    />
+  </>
+)
 
 export default function Playground({
   evaluation,
@@ -58,46 +78,29 @@ export default function Playground({
     }
   }, [setInput, providerLog])
 
+  if (!providerLog) {
+    return <BlankSlate evaluation={evaluation} />
+  }
+
   return (
     <>
-      <Header title='Playground' />
+      <div className='flex flex-row justify-between items-center'>
+        <Header title='Playground' />
+        {providerLog && (
+          <Link
+            className='flex flex-row gap-2 items-center'
+            href={
+              ROUTES.evaluations.detail({ uuid: evaluation.uuid }).editor
+                .importLogs.root
+            }
+          >
+            <Text.H5M>Import another log</Text.H5M> <Icon name='addSquare' />
+          </Link>
+        )}
+      </div>
       <div className='flex flex-col gap-6 h-full relative'>
-        <div className='flex flex-col gap-3'>
-          <div className='flex flex-row items-center justify-between gap-4'>
-            <Text.H6M>Variables</Text.H6M>
-            <Link
-              className='flex flex-row gap-2 items-center'
-              href={
-                ROUTES.evaluations.detail({ uuid: evaluation.uuid }).editor
-                  .importLogs.root
-              }
-            >
-              <Text.H5M>Import data from logs</Text.H5M>{' '}
-              <Icon name='addSquare' />
-            </Link>
-          </div>
-          {Object.keys(inputs).length > 0 ? (
-            Object.entries(inputs).map(([param, value], idx) => (
-              <div
-                className='flex flex-row gap-4 w-full items-center'
-                key={idx}
-              >
-                <Badge variant='accent'>&#123;&#123;{param}&#125;&#125;</Badge>
-                <div className='flex flex-grow w-full'>
-                  <Input
-                    value={value}
-                    onChange={(e) => setInput(param, e.currentTarget.value)}
-                  />
-                </div>
-              </div>
-            ))
-          ) : (
-            <Text.H6 color='foregroundMuted'>
-              No inputs. Use &#123;&#123; input_name &#125;&#125; to insert.
-            </Text.H6>
-          )}
-        </div>
-        <div className='flex flex-col gap-3 h-full'>
+        <Variables providerLog={providerLog} />
+        <div className='flex flex-col h-full'>
           <div className='flex flex-col flex-grow flex-shrink relative h-full overflow-y-auto'>
             <div className='absolute top-0 left-0 right-0 bottom-0'>
               {mode === 'preview' ? (

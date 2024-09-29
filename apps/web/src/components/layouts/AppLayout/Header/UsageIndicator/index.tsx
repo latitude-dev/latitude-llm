@@ -8,12 +8,12 @@ import {
   Button,
   CircularProgress,
   CircularProgressProps,
+  Popover,
   Skeleton,
   Text,
 } from '@latitude-data/web-ui'
 import useWorkspaceUsage from '$/stores/workspaceUsage'
 import Link from 'next/link'
-import Popover from 'node_modules/@latitude-data/web-ui/src/ds/atoms/Popover'
 
 function UsageIndicatorCircle({
   data,

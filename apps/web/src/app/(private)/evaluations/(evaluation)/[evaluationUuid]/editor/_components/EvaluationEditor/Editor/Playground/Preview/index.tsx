@@ -59,7 +59,6 @@ export default function Preview({
       ref={containerRef}
       className='flex flex-col gap-3 h-full overflow-y-auto'
     >
-      <Text.H6M>Preview</Text.H6M>
       {(conversation?.messages ?? [])
         .filter((message) => message.role === 'assistant')
         .map((message, index) => (

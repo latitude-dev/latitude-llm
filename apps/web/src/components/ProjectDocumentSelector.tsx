@@ -36,11 +36,13 @@ export function ProjectDocumentSelector({
           name='projectId'
           options={projects.map((p) => ({ label: p.name, value: p.id }))}
           onChange={handleProjectChange}
-          defaultValue={String(defaultProjectId)}
+          defaultValue={defaultProjectId ? String(defaultProjectId) : undefined}
+          placeholder='Select a project'
         />
       </FormField>
       <FormField label='Prompt' info={labelInfo}>
         <Select
+          placeholder='Select a prompt'
           disabled={!documents.length}
           name='documentUuid'
           options={documents.map((d) => ({

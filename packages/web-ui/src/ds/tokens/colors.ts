@@ -1,6 +1,7 @@
 export const colors = {
   backgrounds: {
     transparent: 'bg-transparent',
+    backgroundCode: 'bg-backgroundCode',
   },
   textColors: {
     white: 'text-white',
