@@ -6,6 +6,7 @@ import { users } from '../../schema'
 import { paginateQuery } from './paginate'
 
 const pageUrl = { base: 'http://localhost/my-page' }
+
 describe('paginateQuery', () => {
   beforeEach(async () => {
     await Promise.all(

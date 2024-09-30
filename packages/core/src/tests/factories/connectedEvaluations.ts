@@ -4,6 +4,7 @@ import {
   ConnectedEvaluation,
   EvaluationMetadataType,
   EvaluationResultableType,
+  User,
   Workspace,
 } from '../../browser'
 import {
@@ -14,14 +15,17 @@ import {
 export async function createConnectedEvaluation({
   workspace,
   evaluationUuid,
+  user,
   documentUuid,
 }: {
   workspace: Workspace
+  user: User
   evaluationUuid?: string
   documentUuid: string
 }): Promise<ConnectedEvaluation> {
   if (!evaluationUuid) {
     const evaluation = await createEvaluation({
+      user,
       workspace,
       name: faker.company.name(),
       description: faker.lorem.sentence(),
@@ -40,6 +44,7 @@ export async function createConnectedEvaluation({
 
   const connectedEvaluations = await connectEvaluations({
     workspace,
+    user,
     documentUuid,
     evaluationUuids: [evaluationUuid],
   }).then((r) => r.unwrap())

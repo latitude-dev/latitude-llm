@@ -34,6 +34,7 @@ describe('destroyEvaluationAction', () => {
       })
       const evaluation = await factories.createLlmAsJudgeEvaluation({
         workspace,
+        user: userData,
         prompt: factories.helpers.createPrompt({ provider }),
       })
       evaluationId = evaluation.id
@@ -68,6 +69,7 @@ describe('destroyEvaluationAction', () => {
       })
       evaluation = await factories.createLlmAsJudgeEvaluation({
         workspace,
+        user,
         prompt: factories.helpers.createPrompt({ provider }),
       })
 

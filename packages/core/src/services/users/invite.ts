@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm'
 
 import { User, Workspace } from '../../browser'
 import { database } from '../../client'
+import { publisher } from '../../events/publisher'
 import { Result, Transaction } from '../../lib'
 import { users } from '../../schema'
 import { createMembership } from '../memberships/create'
@@ -32,6 +33,16 @@ export async function inviteUser(
     await createMembership({ author, user, workspace }, tx).then((r) =>
       r.unwrap(),
     )
+
+    publisher.publishLater({
+      type: 'userInvited',
+      data: {
+        invited: user,
+        invitee: author,
+        userEmail: author.email,
+        workspaceId: workspace.id,
+      },
+    })
 
     return Result.ok(user)
   }, db)

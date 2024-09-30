@@ -40,6 +40,8 @@ describe('GET documents', () => {
         user,
       })
       const document = await createDocumentVersion({
+        workspace,
+        user,
         commit,
         path,
         content: helpers.createPrompt({ provider: providers[0]! }),

@@ -35,6 +35,7 @@ export const setupAction = errorHandlingProcedure
   .handler(async ({ input }) => {
     const result = await setupService(input)
     const { user } = result.unwrap()
+
     await createMagicLinkToken({ user: user }).then((r) => r.unwrap())
 
     redirect(ROUTES.auth.magicLinkSent(user.email))

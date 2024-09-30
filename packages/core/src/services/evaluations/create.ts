@@ -2,10 +2,12 @@ import {
   EvaluationMetadataType,
   EvaluationResultConfiguration,
   findFirstModelForProvider,
+  User,
   Workspace,
 } from '../../browser'
 import { database } from '../../client'
 import { findEvaluationTemplateById } from '../../data-access'
+import { publisher } from '../../events/publisher'
 import { BadRequestError, Result, Transaction } from '../../lib'
 import { ProviderApiKeysRepository } from '../../repositories'
 import { evaluations, llmAsJudgeEvaluationMetadatas } from '../../schema'
@@ -17,10 +19,19 @@ type Props = {
   type: EvaluationMetadataType
   configuration: EvaluationResultConfiguration
   metadata?: Record<string, unknown>
+  user: User
 }
 
 export async function createEvaluation(
-  { workspace, name, description, type, configuration, metadata = {} }: Props,
+  {
+    workspace,
+    name,
+    description,
+    type,
+    configuration,
+    user,
+    metadata = {},
+  }: Props,
   db = database,
 ) {
   const providerScope = new ProviderApiKeysRepository(workspace!.id, db)
@@ -66,6 +77,15 @@ ${meta.prompt}
       ])
       .returning()
 
+    publisher.publishLater({
+      type: 'evaluationCreated',
+      data: {
+        evaluation: result[0]!,
+        workspaceId: workspace.id,
+        userEmail: user.email,
+      },
+    })
+
     return Result.ok({
       ...result[0]!,
       metadata: metadataTable[0]!,
@@ -74,7 +94,11 @@ ${meta.prompt}
 }
 
 export async function importLlmAsJudgeEvaluation(
-  { workspace, templateId }: { workspace: Workspace; templateId: number },
+  {
+    workspace,
+    user,
+    templateId,
+  }: { workspace: Workspace; user: User; templateId: number },
   db = database,
 ) {
   const templateResult = await findEvaluationTemplateById(templateId, db)
@@ -83,6 +107,7 @@ export async function importLlmAsJudgeEvaluation(
 
   return await createEvaluation(
     {
+      user,
       workspace,
       name: template.name,
       description: template.description,

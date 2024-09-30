@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { database } from '../../client'
 import { LatitudeEvent } from '../../events/handlers'
+import { createProject } from '../../tests/factories'
 import { createEvent } from './create'
 
 describe('createEvent', () => {
@@ -47,5 +48,23 @@ describe('createEvent', () => {
     const result = await createEvent(testEvent, mockDb as any)
     expect(result.ok).toBe(false)
     expect(result.error).toBeDefined()
+  })
+
+  it('adds workspaceId to the event if it exists in the data', async () => {
+    const { workspace } = await createProject()
+    const testEvent = {
+      type: 'testEventWithWorkspace' as const,
+      data: { foo: 'bar', workspaceId: workspace.id },
+    } as unknown as LatitudeEvent
+
+    const result = await createEvent(testEvent)
+
+    expect(result.ok).toBe(true)
+
+    const createdEvent = result.value!
+
+    expect(createdEvent.type).toBe(testEvent.type)
+    expect(createdEvent.data).toEqual(testEvent.data)
+    expect(createdEvent.workspaceId).toBe(workspace.id)
   })
 })

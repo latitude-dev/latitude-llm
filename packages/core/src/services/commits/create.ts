@@ -1,5 +1,6 @@
 import { Commit, Project, User } from '../../browser'
 import { database, Database } from '../../client'
+import { publisher } from '../../events/publisher'
 import { Result, Transaction } from '../../lib'
 import { commits } from '../../schema'
 
@@ -32,6 +33,15 @@ export async function createCommit({
       })
       .returning()
     const createdCommit = result[0]
+
+    publisher.publishLater({
+      type: 'commitCreated',
+      data: {
+        commit: createdCommit!,
+        userEmail: user.email,
+        workspaceId: project.workspaceId,
+      },
+    })
 
     return Result.ok(createdCommit!)
   }, db)

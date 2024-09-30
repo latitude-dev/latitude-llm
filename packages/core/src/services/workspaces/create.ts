@@ -25,7 +25,12 @@ export async function createWorkspace(
 
     publisher.publishLater({
       type: 'workspaceCreated',
-      data: { workspace, user },
+      data: {
+        workspace,
+        user,
+        workspaceId: workspace.id,
+        userEmail: user.email,
+      },
     })
 
     return Result.ok(workspace)

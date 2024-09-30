@@ -1,6 +1,6 @@
 import { and, eq } from 'drizzle-orm'
 
-import { type Commit } from '../../browser'
+import { User, Workspace, type Commit } from '../../browser'
 import { database } from '../../client'
 import { documentVersions } from '../../schema'
 import { createNewDocument } from '../../services/documents/create'
@@ -14,7 +14,7 @@ export type IDocumentVersionData = {
 }
 
 export async function markAsSoftDelete(
-  { commitId, documentUuid }: { commitId: number; documentUuid: string },
+  { documentUuid, commitId }: { documentUuid: string; commitId: number },
   tx = database,
 ) {
   return tx
@@ -28,8 +28,12 @@ export async function markAsSoftDelete(
     )
 }
 
-export async function createDocumentVersion(data: IDocumentVersionData) {
+export async function createDocumentVersion(
+  data: IDocumentVersionData & { workspace: Workspace; user: User },
+) {
   let result = await createNewDocument({
+    workspace: data.workspace,
+    user: data.user,
     commit: data.commit,
     path: data.path,
   })

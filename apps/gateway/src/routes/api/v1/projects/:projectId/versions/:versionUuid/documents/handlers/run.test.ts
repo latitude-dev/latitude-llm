@@ -95,6 +95,8 @@ describe('POST /run', () => {
         user,
       })
       const document = await createDocumentVersion({
+        workspace,
+        user,
         commit: cmt,
         path,
         content: helpers.createPrompt({ provider: providers[0]! }),

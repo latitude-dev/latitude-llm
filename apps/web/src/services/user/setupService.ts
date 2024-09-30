@@ -47,7 +47,7 @@ export default function setupService({
         provider: Providers.OpenAI,
         name: env.DEFAULT_PROVIDER_ID,
         token: env.DEFAULT_PROVIDER_API_KEY,
-        authorId: user.id,
+        author: user,
       },
       tx,
     )

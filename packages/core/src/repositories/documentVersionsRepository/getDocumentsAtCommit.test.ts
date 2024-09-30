@@ -70,7 +70,8 @@ describe('getDocumentsAtCommit', () => {
 
   describe('documents for each commit', () => {
     beforeEach(async (ctx) => {
-      const { project, user, providers } = await ctx.factories.createProject()
+      const { project, user, workspace, providers } =
+        await ctx.factories.createProject()
       const documentsScope = new DocumentVersionsRepository(project.workspaceId)
       const { commit: commit1 } = await factories.createDraft({ project, user })
       const { commit: commit2 } = await factories.createDraft({ project, user })
@@ -78,6 +79,8 @@ describe('getDocumentsAtCommit', () => {
 
       // Initial document
       const { documentVersion: doc1 } = await factories.createDocumentVersion({
+        workspace,
+        user,
         commit: commit1,
         path: 'doc1',
         content: ctx.factories.helpers.createPrompt({
@@ -174,12 +177,15 @@ describe('getDocumentsAtCommit', () => {
 
   describe('documents from previous commits', () => {
     beforeEach(async (ctx) => {
-      const { project, user, providers } = await ctx.factories.createProject()
+      const { project, user, workspace, providers } =
+        await ctx.factories.createProject()
       const documentsScope = new DocumentVersionsRepository(project.workspaceId)
 
       // Doc 1
       const { commit: commit1 } = await factories.createDraft({ project, user })
       const { documentVersion: doc1 } = await factories.createDocumentVersion({
+        workspace,
+        user,
         commit: commit1,
         path: 'doc1',
         content: ctx.factories.helpers.createPrompt({
@@ -192,6 +198,8 @@ describe('getDocumentsAtCommit', () => {
       // Doc 2
       const { commit: commit2 } = await factories.createDraft({ project, user })
       const { documentVersion: doc2 } = await factories.createDocumentVersion({
+        workspace,
+        user,
         commit: commit2,
         path: 'doc2',
         content: ctx.factories.helpers.createPrompt({

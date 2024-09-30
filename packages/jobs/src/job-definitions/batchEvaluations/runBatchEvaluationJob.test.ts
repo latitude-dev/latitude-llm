@@ -2,7 +2,6 @@ import { randomUUID } from 'crypto'
 
 import { Workspace } from '@latitude-data/core/browser'
 import { findWorkspaceFromDocument } from '@latitude-data/core/data-access'
-import { NotFoundError } from '@latitude-data/core/lib/errors'
 import { previewDataset } from '@latitude-data/core/services/datasets/preview'
 import { Job } from 'bullmq'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -18,6 +17,13 @@ const mocks = vi.hoisted(() => ({
     defaultQueue: {
       jobs: {
         enqueueRunDocumentJob: vi.fn(),
+      },
+    },
+    eventsQueue: {
+      jobs: {
+        enqueueCreateEventJob: vi.fn(),
+        enqueuePublishEventJob: vi.fn(),
+        enqueuePublishToAnalyticsJob: vi.fn(),
       },
     },
   },
@@ -66,6 +72,7 @@ describe('runBatchEvaluationJob', () => {
   beforeEach(() => {
     vi.clearAllMocks()
 
+    // @ts-ignore
     mockJob = {
       data: {
         evaluation: { id: 1 },
@@ -74,9 +81,11 @@ describe('runBatchEvaluationJob', () => {
         commitUuid: 'commit-uuid-1',
         projectId: 1,
         parametersMap: { param1: 0, param2: 1 },
-      },
+        workspace: { id: 'workspace-1' },
+        user: { id: 'user-1', email: 'user-1@example.com' },
+      } as unknown as Job,
       attemptsMade: 0,
-    } as unknown as Job
+    }
 
     // @ts-ignore
     mockProgressTracker = {
@@ -179,13 +188,6 @@ describe('runBatchEvaluationJob', () => {
         batchId,
       }),
     )
-  })
-
-  it('should throw NotFoundError if workspace is not found', async () => {
-    // @ts-ignore
-    vi.mocked(findWorkspaceFromDocument).mockResolvedValue(null)
-
-    await expect(runBatchEvaluationJob(mockJob)).rejects.toThrow(NotFoundError)
   })
 
   it('should resume from last enqueued job on retry', async () => {

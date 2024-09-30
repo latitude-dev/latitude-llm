@@ -6,6 +6,7 @@ import {
   ProviderLog,
 } from '../../browser'
 import { database } from '../../client'
+import { publisher } from '../../events/publisher'
 import { BadRequestError, Result, Transaction } from '../../lib'
 import { EvaluationResultDto } from '../../repositories/evaluationResultsRepository'
 import { evaluationResults } from '../../schema'
@@ -62,6 +63,16 @@ export async function createEvaluationResult(
       .returning()
 
     const evaluationResult = inserts[0]!
+
+    publisher.publishLater({
+      type: 'evaluationResultCreated',
+      data: {
+        evaluationResult,
+        documentLog,
+        evaluation,
+        workspaceId: evaluation.workspaceId,
+      },
+    })
 
     return Result.ok({
       ...evaluationResult,

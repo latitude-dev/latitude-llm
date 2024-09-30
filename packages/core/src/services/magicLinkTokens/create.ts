@@ -16,7 +16,10 @@ export async function createMagicLinkToken(
 
     publisher.publishLater({
       type: 'magicLinkTokenCreated',
-      data: magicLinkToken[0]!,
+      data: {
+        ...magicLinkToken[0]!,
+        userEmail: user.email,
+      },
     })
 
     return Result.ok(magicLinkToken[0]!)

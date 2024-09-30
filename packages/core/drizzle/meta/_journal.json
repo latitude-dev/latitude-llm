@@ -428,6 +428,13 @@
       "when": 1727426397960,
       "tag": "0060_curved_brood",
       "breakpoints": true
+    },
+    {
+      "idx": 61,
+      "version": "7",
+      "when": 1727782683036,
+      "tag": "0061_orange_master_mold",
+      "breakpoints": true
     }
   ]
 }

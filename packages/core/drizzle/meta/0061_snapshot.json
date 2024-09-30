@@ -1,6 +1,6 @@
 {
-  "id": "cbadc94a-e425-4e7d-b9d5-f8af58e53fcf",
-  "prevId": "5f5a2cd9-2dd1-461e-ad9e-f5161b837ef3",
+  "id": "2bcd1906-3131-412c-9058-0249f0f37645",
+  "prevId": "cbadc94a-e425-4e7d-b9d5-f8af58e53fcf",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -61,7 +61,9 @@
         "users_email_unique": {
           "name": "users_email_unique",
           "nullsNotDistinct": false,
-          "columns": ["email"]
+          "columns": [
+            "email"
+          ]
         }
       }
     },
@@ -109,8 +111,12 @@
           "tableFrom": "sessions",
           "tableTo": "users",
           "schemaTo": "latitude",
-          "columnsFrom": ["user_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -162,8 +168,12 @@
           "tableFrom": "workspaces",
           "tableTo": "users",
           "schemaTo": "latitude",
-          "columnsFrom": ["creator_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "creator_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -265,8 +275,12 @@
           "tableFrom": "memberships",
           "tableTo": "workspaces",
           "schemaTo": "latitude",
-          "columnsFrom": ["workspace_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "workspace_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -275,8 +289,12 @@
           "tableFrom": "memberships",
           "tableTo": "users",
           "schemaTo": "latitude",
-          "columnsFrom": ["user_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -286,7 +304,9 @@
         "memberships_invitation_token_unique": {
           "name": "memberships_invitation_token_unique",
           "nullsNotDistinct": false,
-          "columns": ["invitation_token"]
+          "columns": [
+            "invitation_token"
+          ]
         }
       }
     },
@@ -369,8 +389,12 @@
           "tableFrom": "api_keys",
           "tableTo": "workspaces",
           "schemaTo": "latitude",
-          "columnsFrom": ["workspace_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "workspace_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -380,7 +404,9 @@
         "api_keys_token_unique": {
           "name": "api_keys_token_unique",
           "nullsNotDistinct": false,
-          "columns": ["token"]
+          "columns": [
+            "token"
+          ]
         }
       }
     },
@@ -469,8 +495,12 @@
           "tableFrom": "claimed_rewards",
           "tableTo": "workspaces",
           "schemaTo": "latitude",
-          "columnsFrom": ["workspace_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "workspace_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -479,8 +509,12 @@
           "tableFrom": "claimed_rewards",
           "tableTo": "users",
           "schemaTo": "latitude",
-          "columnsFrom": ["creator_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "creator_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -554,8 +588,12 @@
           "tableFrom": "projects",
           "tableTo": "workspaces",
           "schemaTo": "latitude",
-          "columnsFrom": ["workspace_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "workspace_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -726,8 +764,12 @@
           "tableFrom": "commits",
           "tableTo": "projects",
           "schemaTo": "latitude",
-          "columnsFrom": ["project_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "project_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -736,8 +778,12 @@
           "tableFrom": "commits",
           "tableTo": "users",
           "schemaTo": "latitude",
-          "columnsFrom": ["user_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -747,7 +793,9 @@
         "commits_uuid_unique": {
           "name": "commits_uuid_unique",
           "nullsNotDistinct": false,
-          "columns": ["uuid"]
+          "columns": [
+            "uuid"
+          ]
         }
       }
     },
@@ -915,8 +963,12 @@
           "tableFrom": "document_versions",
           "tableTo": "commits",
           "schemaTo": "latitude",
-          "columnsFrom": ["commit_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "commit_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1072,8 +1124,12 @@
           "tableFrom": "provider_api_keys",
           "tableTo": "users",
           "schemaTo": "latitude",
-          "columnsFrom": ["author_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "author_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -1082,8 +1138,12 @@
           "tableFrom": "provider_api_keys",
           "tableTo": "workspaces",
           "schemaTo": "latitude",
-          "columnsFrom": ["workspace_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "workspace_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1203,8 +1263,12 @@
           "tableFrom": "document_logs",
           "tableTo": "commits",
           "schemaTo": "latitude",
-          "columnsFrom": ["commit_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "commit_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "restrict",
           "onUpdate": "cascade"
         }
@@ -1214,7 +1278,9 @@
         "document_logs_uuid_unique": {
           "name": "document_logs_uuid_unique",
           "nullsNotDistinct": false,
-          "columns": ["uuid"]
+          "columns": [
+            "uuid"
+          ]
         }
       }
     },
@@ -1343,8 +1409,12 @@
           "tableFrom": "provider_logs",
           "tableTo": "provider_api_keys",
           "schemaTo": "latitude",
-          "columnsFrom": ["provider_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "provider_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "restrict",
           "onUpdate": "cascade"
         },
@@ -1353,8 +1423,12 @@
           "tableFrom": "provider_logs",
           "tableTo": "api_keys",
           "schemaTo": "latitude",
-          "columnsFrom": ["apiKeyId"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "apiKeyId"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "restrict",
           "onUpdate": "cascade"
         }
@@ -1364,7 +1438,9 @@
         "provider_logs_uuid_unique": {
           "name": "provider_logs_uuid_unique",
           "nullsNotDistinct": false,
-          "columns": ["uuid"]
+          "columns": [
+            "uuid"
+          ]
         }
       }
     },
@@ -1488,8 +1564,12 @@
           "tableFrom": "datasets",
           "tableTo": "workspaces",
           "schemaTo": "latitude",
-          "columnsFrom": ["workspace_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "workspace_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1498,8 +1578,12 @@
           "tableFrom": "datasets",
           "tableTo": "users",
           "schemaTo": "latitude",
-          "columnsFrom": ["author_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "author_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -1620,8 +1704,12 @@
           "tableFrom": "evaluations",
           "tableTo": "workspaces",
           "schemaTo": "latitude",
-          "columnsFrom": ["workspace_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "workspace_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1631,7 +1719,9 @@
         "evaluations_uuid_unique": {
           "name": "evaluations_uuid_unique",
           "nullsNotDistinct": false,
-          "columns": ["uuid"]
+          "columns": [
+            "uuid"
+          ]
         }
       }
     },
@@ -1702,8 +1792,12 @@
           "tableFrom": "llm_as_judge_evaluation_metadatas",
           "tableTo": "evaluations_templates",
           "schemaTo": "latitude",
-          "columnsFrom": ["template_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "template_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1784,8 +1878,12 @@
           "tableFrom": "connected_evaluations",
           "tableTo": "evaluations",
           "schemaTo": "latitude",
-          "columnsFrom": ["evaluation_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "evaluation_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -1795,7 +1893,10 @@
         "connected_evaluations_unique_idx": {
           "name": "connected_evaluations_unique_idx",
           "nullsNotDistinct": false,
-          "columns": ["document_uuid", "evaluation_id"]
+          "columns": [
+            "document_uuid",
+            "evaluation_id"
+          ]
         }
       }
     },
@@ -1936,8 +2037,12 @@
           "tableFrom": "evaluation_results",
           "tableTo": "evaluations",
           "schemaTo": "latitude",
-          "columnsFrom": ["evaluation_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "evaluation_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1946,8 +2051,12 @@
           "tableFrom": "evaluation_results",
           "tableTo": "document_logs",
           "schemaTo": "latitude",
-          "columnsFrom": ["document_log_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "document_log_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         },
@@ -1956,8 +2065,12 @@
           "tableFrom": "evaluation_results",
           "tableTo": "provider_logs",
           "schemaTo": "latitude",
-          "columnsFrom": ["provider_log_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "provider_log_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "no action",
           "onUpdate": "no action"
         }
@@ -2027,8 +2140,12 @@
           "tableFrom": "evaluations_templates",
           "tableTo": "evaluations_template_categories",
           "schemaTo": "latitude",
-          "columnsFrom": ["category"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "category"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "restrict",
           "onUpdate": "cascade"
         }
@@ -2123,8 +2240,12 @@
           "tableFrom": "magic_link_tokens",
           "tableTo": "users",
           "schemaTo": "latitude",
-          "columnsFrom": ["user_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -2134,7 +2255,9 @@
         "magic_link_tokens_token_unique": {
           "name": "magic_link_tokens_token_unique",
           "nullsNotDistinct": false,
-          "columns": ["token"]
+          "columns": [
+            "token"
+          ]
         }
       }
     },
@@ -2145,8 +2268,14 @@
         "id": {
           "name": "id",
           "type": "bigserial",
-          "primaryKey": true,
+          "primaryKey": false,
           "notNull": true
+        },
+        "workspace_id": {
+          "name": "workspace_id",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false
         },
         "type": {
           "name": "type",
@@ -2176,6 +2305,21 @@
         }
       },
       "indexes": {
+        "event_workspace_idx": {
+          "name": "event_workspace_idx",
+          "columns": [
+            {
+              "expression": "workspace_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
         "event_type_idx": {
           "name": "event_type_idx",
           "columns": [
@@ -2192,7 +2336,22 @@
           "with": {}
         }
       },
-      "foreignKeys": {},
+      "foreignKeys": {
+        "events_workspace_id_workspaces_id_fk": {
+          "name": "events_workspace_id_workspaces_id_fk",
+          "tableFrom": "events",
+          "tableTo": "workspaces",
+          "schemaTo": "latitude",
+          "columnsFrom": [
+            "workspace_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {}
     },
@@ -2309,22 +2468,41 @@
     "latitude.reward_types": {
       "name": "reward_types",
       "schema": "latitude",
-      "values": ["github_star", "follow", "post", "github_issue", "referral"]
+      "values": [
+        "github_star",
+        "follow",
+        "post",
+        "github_issue",
+        "referral"
+      ]
     },
     "latitude.provider": {
       "name": "provider",
       "schema": "latitude",
-      "values": ["openai", "anthropic", "groq", "mistral", "azure", "google"]
+      "values": [
+        "openai",
+        "anthropic",
+        "groq",
+        "mistral",
+        "azure",
+        "google"
+      ]
     },
     "latitude.log_source": {
       "name": "log_source",
       "schema": "latitude",
-      "values": ["playground", "api", "evaluation"]
+      "values": [
+        "playground",
+        "api",
+        "evaluation"
+      ]
     },
     "latitude.metadata_type": {
       "name": "metadata_type",
       "schema": "latitude",
-      "values": ["llm_as_judge"]
+      "values": [
+        "llm_as_judge"
+      ]
     },
     "public.evaluation_result_types": {
       "name": "evaluation_result_types",

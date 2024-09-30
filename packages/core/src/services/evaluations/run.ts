@@ -2,6 +2,7 @@ import { createChain, readMetadata } from '@latitude-data/compiler'
 import { JSONSchema7 } from 'json-schema'
 
 import {
+  ChainObjectResponse,
   DocumentLog,
   EvaluationDto,
   EvaluationResultableType,
@@ -16,6 +17,7 @@ import { publisher } from '../../events/publisher'
 import { NotFoundError, Result } from '../../lib'
 import { runChain } from '../chains/run'
 import { computeDocumentLogWithMetadata } from '../documentLogs'
+import { createEvaluationResult } from '../evaluationResults'
 import { buildProviderApikeysMap } from '../providerApiKeys/buildMap'
 import {
   buildProviderLogResponse,
@@ -114,18 +116,37 @@ export const runEvaluation = async (
 
   if (chainResult.error) return chainResult
 
-  chainResult.value.response.then((response) => {
-    publisher.publish({
-      type: 'evaluationRun',
-      data: {
-        documentUuid,
-        evaluationId: evaluation.id,
-        documentLogUuid: documentLog.uuid,
-        providerLogUuid: response.providerLog.uuid,
-        response,
-      },
-    })
-  })
+  // Call the new method to handle the promise
+  chainResult.value.response.then((response) =>
+    handleEvaluationResponse(response, documentUuid, evaluation, documentLog),
+  )
 
   return chainResult
+}
+
+// Moved to the end of the file
+async function handleEvaluationResponse(
+  response: any,
+  documentUuid: string,
+  evaluation: EvaluationDto,
+  documentLog: DocumentLog,
+) {
+  publisher.publishLater({
+    type: 'evaluationRun',
+    data: {
+      documentUuid,
+      evaluationId: evaluation.id,
+      documentLogUuid: documentLog.uuid,
+      providerLogUuid: response.providerLog.uuid,
+      response,
+      workspaceId: evaluation.workspaceId,
+    },
+  })
+
+  await createEvaluationResult({
+    evaluation,
+    documentLog,
+    providerLog: response.providerLog,
+    result: (response as ChainObjectResponse).object,
+  }).then((r) => r.unwrap())
 }

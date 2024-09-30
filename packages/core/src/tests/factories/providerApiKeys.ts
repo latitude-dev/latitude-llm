@@ -24,7 +24,7 @@ export async function createProviderApiKey({
     provider: type,
     name,
     token: `sk-${faker.string.alphanumeric(48)}`,
-    authorId: user.id,
+    author: user,
   }).then((r) => r.unwrap())
 
   return providerApiKey

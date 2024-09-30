@@ -6,10 +6,12 @@ import { createNewDocument } from './create'
 
 describe('createNewDocument', () => {
   it('creates a new document version in the commit', async (ctx) => {
-    const { project, user } = await ctx.factories.createProject()
+    const { project, user, workspace } = await ctx.factories.createProject()
     const { commit } = await ctx.factories.createDraft({ project, user })
 
     const documentResult = await createNewDocument({
+      workspace,
+      user,
       commit,
       path: 'foo',
     })
@@ -25,15 +27,19 @@ describe('createNewDocument', () => {
   })
 
   it('fails if there is another document with the same path', async (ctx) => {
-    const { project, user } = await ctx.factories.createProject()
+    const { project, user, workspace } = await ctx.factories.createProject()
     const { commit } = await ctx.factories.createDraft({ project, user })
 
     await createNewDocument({
+      workspace,
+      user,
       commit,
       path: 'foo',
     })
 
     const result = await createNewDocument({
+      workspace,
+      user,
       commit,
       path: 'foo',
     })
@@ -45,9 +51,12 @@ describe('createNewDocument', () => {
   })
 
   it('fails when trying to create a document in a merged commit', async (ctx) => {
-    const { project, user, providers } = await ctx.factories.createProject()
+    const { project, user, workspace, providers } =
+      await ctx.factories.createProject()
     let { commit } = await ctx.factories.createDraft({ project, user })
     await createNewDocument({
+      workspace,
+      user,
       commit,
       path: 'foo',
       content: ctx.factories.helpers.createPrompt({ provider: providers[0]! }),
@@ -55,6 +64,8 @@ describe('createNewDocument', () => {
     commit = await mergeCommit(commit).then((r) => r.unwrap())
 
     const result = await createNewDocument({
+      workspace,
+      user,
       commit,
       path: 'foo',
     })
@@ -64,10 +75,13 @@ describe('createNewDocument', () => {
   })
 
   it('creates a new document with default content when no content is provided', async (ctx) => {
-    const { project, user, providers } = await ctx.factories.createProject()
+    const { project, user, workspace, providers } =
+      await ctx.factories.createProject()
     const { commit } = await ctx.factories.createDraft({ project, user })
 
     const documentResult = await createNewDocument({
+      workspace,
+      user,
       commit,
       path: 'newdoc',
     })
@@ -95,12 +109,14 @@ model: gpt-4o-mini
   })
 
   it('creates the document without the frontmatter if no provider is found', async (ctx) => {
-    const { project, user } = await ctx.factories.createProject({
+    const { project, user, workspace } = await ctx.factories.createProject({
       providers: [],
     })
     const { commit } = await ctx.factories.createDraft({ project, user })
 
     const result = await createNewDocument({
+      workspace,
+      user,
       commit,
       path: 'newdoc',
     })

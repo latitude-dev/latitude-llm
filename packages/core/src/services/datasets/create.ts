@@ -4,6 +4,7 @@ import slugify from '@sindresorhus/slugify'
 
 import { User, Workspace } from '../../browser'
 import { database } from '../../client'
+import { publisher } from '../../events/publisher'
 import { Result, Transaction } from '../../lib'
 import { diskFactory, DiskWrapper } from '../../lib/disk'
 import { syncReadCsv } from '../../lib/readCsv'
@@ -62,6 +63,18 @@ export const createDataset = async (
       .returning()
 
     const dataset = inserts[0]!
+
+    publisher.publishLater({
+      type: 'datasetCreated',
+      data: {
+        dataset: {
+          ...dataset,
+          author,
+        },
+        workspaceId: workspace.id,
+        userEmail: author.email,
+      },
+    })
 
     return Result.ok({
       ...dataset,

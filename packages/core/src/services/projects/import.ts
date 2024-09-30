@@ -52,6 +52,8 @@ export async function importDefaultProject(
       defaultDocuments.value.map(async (document) =>
         createNewDocument(
           {
+            workspace,
+            user,
             commit,
             path: document.path,
             content: document.content,

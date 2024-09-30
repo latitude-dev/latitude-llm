@@ -22,6 +22,8 @@ export const createDocumentVersionAction = withProject
       .then((r) => r.unwrap())
 
     const result = await createNewDocument({
+      workspace: ctx.workspace,
+      user: ctx.user,
       commit,
       path: input.path,
     })

@@ -46,8 +46,8 @@ describe('getProviderApiKeyAction', async () => {
         // openai example apikey token
         token: 'sk-1234567890abcdef1234567890abcdef',
         workspace: session!.workspace,
+        author: session!.userData,
         name: 'foo',
-        authorId: session!.userData.id,
       })
 
       const [data, error] = await getProviderApiKeyAction()

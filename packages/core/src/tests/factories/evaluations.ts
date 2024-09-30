@@ -4,12 +4,14 @@ import {
   EvaluationMetadataType,
   EvaluationResultableType,
   EvaluationResultConfiguration,
+  User,
   Workspace,
 } from '../../browser'
 import { createEvaluation as createEvaluationService } from '../../services/evaluations'
 
 export type IEvaluationData = {
   workspace: Workspace
+  user: User
   name?: string
   description?: string
   prompt?: string
@@ -18,6 +20,7 @@ export type IEvaluationData = {
 
 export async function createLlmAsJudgeEvaluation({
   workspace,
+  user,
   name,
   description,
   prompt,
@@ -27,6 +30,7 @@ export async function createLlmAsJudgeEvaluation({
 }: IEvaluationData) {
   const evaluationResult = await createEvaluationService({
     workspace,
+    user,
     metadata: { prompt: prompt ?? faker.lorem.sentence() },
     type: EvaluationMetadataType.LlmAsJudge,
     name: name ?? faker.company.catchPhrase(),

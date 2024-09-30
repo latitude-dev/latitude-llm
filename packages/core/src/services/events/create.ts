@@ -5,13 +5,17 @@ import { events } from '../../schema'
 
 export async function createEvent(event: LatitudeEvent, db = database) {
   return Transaction.call(async (tx) => {
+    let workspaceId: number | undefined
+    if ('workspaceId' in event.data) {
+      workspaceId = event.data.workspaceId
+    }
+
     const result = await tx
       .insert(events)
       .values({
-        // TODO: uncomment this line when we are ready
-        // workspaceId: event.data.workspaceId,
         type: event.type,
         data: event.data,
+        workspaceId,
       })
       .returning()
 

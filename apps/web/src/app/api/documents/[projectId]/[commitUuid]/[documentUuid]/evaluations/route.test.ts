@@ -47,10 +47,12 @@ describe('GET /api/documents/[projectId]/[commitUuid]/[documentUuid]/evaluations
     mockEvaluations = [
       await factories.createConnectedEvaluation({
         workspace,
+        user: setup.user,
         documentUuid: documents[0]!.documentUuid,
       }),
       await factories.createConnectedEvaluation({
         workspace,
+        user: setup.user,
         documentUuid: documents[1]!.documentUuid,
       }),
     ]

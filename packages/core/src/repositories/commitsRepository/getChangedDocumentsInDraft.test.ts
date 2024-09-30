@@ -7,6 +7,8 @@ import {
   ModifiedDocumentType,
   Project,
   Providers,
+  User,
+  Workspace,
 } from '../../browser'
 import { destroyDocument, updateDocument } from '../../services/documents'
 import {
@@ -21,12 +23,16 @@ let commit: Commit
 let draftCommit: Commit
 let documents: Record<string, DocumentVersion>
 let repo: CommitsRepository
+let workspace: Workspace
+let user: User
+
 describe('publishDraftCommit', () => {
   beforeEach(async () => {
     const {
       project: prj,
       commit: cmt,
-      user,
+      user: usr,
+      workspace: ws,
       documents: docs,
     } = await createProject({
       providers: [{ type: Providers.OpenAI, name: 'openai' }],
@@ -40,6 +46,8 @@ describe('publishDraftCommit', () => {
         doc2: helpers.createPrompt({ provider: 'openai', content: 'content2' }),
       },
     })
+    workspace = ws
+    user = usr
     project = prj
     commit = cmt
     const { commit: draft } = await createDraft({ project, user })
@@ -90,6 +98,8 @@ describe('publishDraftCommit', () => {
 
   it('show created documents', async () => {
     const { documentVersion: newDoc } = await createDocumentVersion({
+      workspace: workspace,
+      user: user,
       commit: draftCommit,
       path: 'folder1/doc3',
       content: helpers.createPrompt({

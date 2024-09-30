@@ -25,6 +25,7 @@ const mocks = vi.hoisted(() => ({
       jobs: {
         enqueueCreateEventJob: vi.fn(),
         enqueuePublishEventJob: vi.fn(),
+        enqueuePublishToAnalyticsJob: vi.fn(),
       },
     },
   },
@@ -91,6 +92,7 @@ describe('runBatchAction', () => {
         .then((result) => result.dataset)
 
       evaluation = await factories.createLlmAsJudgeEvaluation({
+        user,
         workspace,
         name: 'Test Evaluation',
       })
@@ -179,6 +181,7 @@ describe('runBatchAction', () => {
 
     it('enqueues multiple evaluation jobs for multiple evaluationIds', async () => {
       const evaluation2 = await factories.createLlmAsJudgeEvaluation({
+        user,
         workspace,
         name: 'Test Evaluation 2',
       })

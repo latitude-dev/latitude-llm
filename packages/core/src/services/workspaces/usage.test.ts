@@ -7,7 +7,7 @@ import { computeWorkspaceUsage, getLatestRenewalDate } from './usage'
 
 describe('computeWorkspaceUsage', () => {
   it('calculates usage correctly when there are evaluation results and document logs', async (ctx) => {
-    const { workspace, commit, documents, evaluations } =
+    const { workspace, user, commit, documents, evaluations } =
       await ctx.factories.createProject({
         providers: [{ type: Providers.OpenAI, name: 'test' }],
         documents: {
@@ -24,6 +24,7 @@ describe('computeWorkspaceUsage', () => {
     const document = documents[0]!
     const evaluation = evaluations[0]!
     await connectEvaluations({
+      user,
       workspace,
       documentUuid: document.documentUuid,
       evaluationUuids: [evaluation.uuid],
@@ -84,13 +85,16 @@ describe('computeWorkspaceUsage', () => {
       documents: documents2,
       evaluations: evaluations2,
       commit: commit2,
+      user,
     } = await ctx.factories.createProject({
       providers: [{ type: Providers.OpenAI, name: 'bar' }],
       documents: {
         bar: ctx.factories.helpers.createPrompt({ provider: 'bar' }),
       },
       evaluations: [
-        { prompt: ctx.factories.helpers.createPrompt({ provider: 'bar' }) },
+        {
+          prompt: ctx.factories.helpers.createPrompt({ provider: 'bar' }),
+        },
       ],
     })
 
@@ -104,12 +108,14 @@ describe('computeWorkspaceUsage', () => {
 
     await connectEvaluations({
       workspace: workspace1,
+      user,
       documentUuid: document1.documentUuid,
       evaluationUuids: [evaluation1.uuid],
     })
 
     await connectEvaluations({
       workspace: workspace2,
+      user,
       documentUuid: document2.documentUuid,
       evaluationUuids: [evaluation2.uuid],
     })
@@ -175,7 +181,7 @@ describe('computeWorkspaceUsage', () => {
   })
 
   it('calculates usage correctly when there are no evaluation results or document logs', async (ctx) => {
-    const { workspace, documents, evaluations } =
+    const { workspace, user, documents, evaluations } =
       await ctx.factories.createProject({
         providers: [{ type: Providers.OpenAI, name: 'test' }],
         documents: {
@@ -190,6 +196,7 @@ describe('computeWorkspaceUsage', () => {
     const evaluation = evaluations[0]!
     await connectEvaluations({
       workspace,
+      user,
       documentUuid: document.documentUuid,
       evaluationUuids: [evaluation.uuid],
     })
@@ -204,6 +211,7 @@ describe('computeWorkspaceUsage', () => {
   it('calculates usage correctly across multiple projects within the workspace', async (ctx) => {
     const {
       workspace,
+      user: user1,
       commit: commit1,
       documents: documents1,
       evaluations,
@@ -217,13 +225,16 @@ describe('computeWorkspaceUsage', () => {
       ],
     })
 
-    const { commit: commit2, documents: documents2 } =
-      await ctx.factories.createProject({
-        workspace,
-        documents: {
-          bar: ctx.factories.helpers.createPrompt({ provider: 'test' }),
-        },
-      })
+    const {
+      commit: commit2,
+      documents: documents2,
+      user: user2,
+    } = await ctx.factories.createProject({
+      workspace,
+      documents: {
+        bar: ctx.factories.helpers.createPrompt({ provider: 'test' }),
+      },
+    })
 
     const NUM_DOC_LOGS_PER_PROJECT = 5
     const NUM_EVAL_LOGS_PER_PROJECT = 5
@@ -234,12 +245,14 @@ describe('computeWorkspaceUsage', () => {
 
     await connectEvaluations({
       workspace,
+      user: user1,
       documentUuid: document1.documentUuid,
       evaluationUuids: [evaluation.uuid],
     })
 
     await connectEvaluations({
       workspace,
+      user: user2,
       documentUuid: document2.documentUuid,
       evaluationUuids: [evaluation.uuid],
     })

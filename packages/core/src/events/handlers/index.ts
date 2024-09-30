@@ -1,20 +1,25 @@
 import {
   ChainCallResponse,
   Commit,
+  Dataset,
   DocumentLog,
+  DocumentVersion,
+  Evaluation,
+  EvaluationResult,
   LogSources,
   MagicLinkToken,
   Membership,
   Message,
   Project,
+  ProviderApiKey,
   ProviderLog,
   User,
   Workspace,
 } from '../../browser'
 import { PartialConfig } from '../../services/ai'
 import { createClaimInvitationReferralJob } from './createClaimInvitationReferralJob'
-import { createEvaluationResultJob } from './createEvaluationResultJob'
-import { createDocumentLogJob } from './documentLogs/createJob'
+import { notifyToClientDocumentLogCreatedJob } from './notifyToClientDocumentLogCreatedJob'
+import { notifyToClientEvaluationResultCreatedJob } from './notifyToClientEvaluationResultCreatedJob'
 import { runLiveEvaluationsJob } from './runLiveEvaluationsJob'
 import { sendInvitationToUserJob } from './sendInvitationToUser'
 import { sendMagicLinkJob } from './sendMagicLinkHandler'
@@ -36,12 +41,15 @@ export type EventHandler<E extends LatitudeEvent> = ({
 
 export type MagicLinkTokenCreated = LatitudeEventGeneric<
   'magicLinkTokenCreated',
-  MagicLinkToken
+  MagicLinkToken & { userEmail: string }
 >
-export type UserCreatedEvent = LatitudeEventGeneric<'userCreated', User>
+export type UserCreatedEvent = LatitudeEventGeneric<
+  'userCreated',
+  User & { workspaceId: number; userEmail: string }
+>
 export type MembershipCreatedEvent = LatitudeEventGeneric<
   'membershipCreated',
-  Membership & { authorId?: string }
+  Membership & { authorId?: string; userEmail?: string }
 >
 export type EvaluationRunEvent = LatitudeEventGeneric<
   'evaluationRun',
@@ -51,6 +59,7 @@ export type EvaluationRunEvent = LatitudeEventGeneric<
     documentLogUuid: string
     providerLogUuid: string
     response: ChainCallResponse
+    workspaceId: number
   }
 >
 export type DocumentRunEvent = LatitudeEventGeneric<
@@ -105,6 +114,8 @@ export type WorkspaceCreatedEvent = LatitudeEventGeneric<
   {
     workspace: Workspace
     user: User
+    userEmail: string
+    workspaceId: number
   }
 >
 
@@ -113,6 +124,17 @@ export type ProjectCreatedEvent = LatitudeEventGeneric<
   {
     project: Project
     commit: Commit
+    userEmail: string
+    workspaceId: number
+  }
+>
+
+export type CommitCreatedEvent = LatitudeEventGeneric<
+  'commitCreated',
+  {
+    commit: Commit
+    userEmail: string
+    workspaceId: number
   }
 >
 
@@ -137,6 +159,89 @@ export type ClaimReferralInvitationEvent = LatitudeEventGeneric<
   }
 >
 
+export type EvaluationCreatedEvent = LatitudeEventGeneric<
+  'evaluationCreated',
+  {
+    evaluation: Evaluation
+    userEmail: string
+    workspaceId: number
+  }
+>
+
+export type DatasetCreatedEvent = LatitudeEventGeneric<
+  'datasetCreated',
+  {
+    dataset: Dataset
+    userEmail: string
+    workspaceId: number
+  }
+>
+
+export type ProviderApiKeyCreatedEvent = LatitudeEventGeneric<
+  'providerApiKeyCreated',
+  {
+    providerApiKey: ProviderApiKey
+    userEmail: string
+    workspaceId: number
+  }
+>
+
+export type UserInvitedEvent = LatitudeEventGeneric<
+  'userInvited',
+  {
+    invited: User
+    invitee: User
+    userEmail: string
+    workspaceId: number
+  }
+>
+
+export type EvaluationsConnectedEvent = LatitudeEventGeneric<
+  'evaluationsConnected',
+  {
+    evaluations: Partial<Evaluation>[] // it includes the basic stuff
+    userEmail: string
+    workspaceId: number
+  }
+>
+
+export type CommitPublishedEvent = LatitudeEventGeneric<
+  'commitPublished',
+  {
+    commit: Commit
+    userEmail: string
+    workspaceId: number
+  }
+>
+
+export type BatchEvaluationRunEvent = LatitudeEventGeneric<
+  'batchEvaluationRun',
+  {
+    evaluationId: number
+    workspaceId: number
+    userEmail: string
+  }
+>
+
+export type DocumentCreatedEvent = LatitudeEventGeneric<
+  'documentCreated',
+  {
+    document: DocumentVersion
+    workspaceId: number
+    userEmail: string
+  }
+>
+
+export type EvaluationResultCreatedEvent = LatitudeEventGeneric<
+  'evaluationResultCreated',
+  {
+    evaluationResult: EvaluationResult
+    evaluation: Evaluation
+    documentLog: DocumentLog
+    workspaceId: number
+  }
+>
+
 export type LatitudeEvent =
   | MembershipCreatedEvent
   | UserCreatedEvent
@@ -150,6 +255,16 @@ export type LatitudeEvent =
   | DocumentLogCreatedEvent
   | SendReferralInvitationEvent
   | ClaimReferralInvitationEvent
+  | EvaluationCreatedEvent
+  | DatasetCreatedEvent
+  | ProviderApiKeyCreatedEvent
+  | UserInvitedEvent
+  | CommitCreatedEvent
+  | CommitPublishedEvent
+  | EvaluationsConnectedEvent
+  | BatchEvaluationRunEvent
+  | DocumentCreatedEvent
+  | EvaluationResultCreatedEvent
 
 export interface IEventsHandlers {
   magicLinkTokenCreated: EventHandler<MagicLinkTokenCreated>[]
@@ -164,19 +279,42 @@ export interface IEventsHandlers {
   documentLogCreated: EventHandler<DocumentLogCreatedEvent>[]
   sendReferralInvitation: EventHandler<SendReferralInvitationEvent>[]
   claimReferralInvitations: EventHandler<ClaimReferralInvitationEvent>[]
+  evaluationCreated: EventHandler<EvaluationCreatedEvent>[]
+  datasetCreated: EventHandler<DatasetCreatedEvent>[]
+  providerApiKeyCreated: EventHandler<ProviderApiKeyCreatedEvent>[]
+  userInvited: EventHandler<UserInvitedEvent>[]
+  commitCreated: EventHandler<CommitCreatedEvent>[]
+  commitPublished: EventHandler<CommitPublishedEvent>[]
+  evaluationsConnected: EventHandler<EvaluationsConnectedEvent>[]
+  batchEvaluationRun: EventHandler<BatchEvaluationRunEvent>[]
+  documentCreated: EventHandler<DocumentCreatedEvent>[]
+  evaluationResultCreated: EventHandler<EvaluationResultCreatedEvent>[]
 }
 
 export const EventHandlers: IEventsHandlers = {
+  aiProviderCallCompleted: [],
+  batchEvaluationRun: [],
+  claimReferralInvitations: [createClaimInvitationReferralJob],
+  commitCreated: [],
+  commitPublished: [],
+  datasetCreated: [],
+  documentCreated: [],
+  documentLogCreated: [
+    runLiveEvaluationsJob,
+    notifyToClientDocumentLogCreatedJob,
+  ],
+  documentRun: [],
+  evaluationCreated: [],
+  evaluationResultCreated: [notifyToClientEvaluationResultCreatedJob],
+  evaluationRun: [],
+  evaluationsConnected: [],
   magicLinkTokenCreated: [sendMagicLinkJob],
   membershipCreated: [sendInvitationToUserJob],
-  userCreated: [],
-  evaluationRun: [createEvaluationResultJob],
-  documentRun: [createDocumentLogJob],
-  providerLogCreated: [],
-  aiProviderCallCompleted: [],
-  workspaceCreated: [],
   projectCreated: [],
-  documentLogCreated: [runLiveEvaluationsJob],
+  providerApiKeyCreated: [],
+  providerLogCreated: [],
   sendReferralInvitation: [sendReferralInvitationJob],
-  claimReferralInvitations: [createClaimInvitationReferralJob],
+  userCreated: [],
+  userInvited: [],
+  workspaceCreated: [],
 } as const

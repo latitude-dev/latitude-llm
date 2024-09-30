@@ -35,6 +35,8 @@ describe('evaluation results aggregations', () => {
 
     const { commit: draft } = await factories.createDraft({ project, user })
     const doc = await factories.createDocumentVersion({
+      workspace,
+      user,
       commit: draft,
       path: 'folder1/doc1',
       content: factories.helpers.createPrompt({ provider }),
@@ -47,6 +49,7 @@ describe('evaluation results aggregations', () => {
   describe('numeric evaluations', () => {
     beforeEach(async () => {
       evaluation = await factories.createLlmAsJudgeEvaluation({
+        user,
         workspace,
         prompt: factories.helpers.createPrompt({ provider }),
         configuration: {
@@ -130,6 +133,7 @@ describe('evaluation results aggregations', () => {
   describe('text evaluations', () => {
     beforeEach(async () => {
       evaluation = await factories.createLlmAsJudgeEvaluation({
+        user,
         workspace,
         prompt: factories.helpers.createPrompt({ provider }),
         configuration: {

@@ -9,6 +9,7 @@ import {
 import { publisher } from '../../events/publisher'
 import { Result } from '../../lib'
 import { runChain } from '../chains/run'
+import { createDocumentLog } from '../documentLogs'
 import { getResolvedContent } from '../documents'
 import { buildProviderApikeysMap } from '../providerApiKeys/buildMap'
 
@@ -48,8 +49,8 @@ export async function runDocumentAtCommit({
     duration,
     resolvedContent: result.value,
     documentLogUuid,
-    response: response.then(async (response) =>
-      publisher.publish({
+    response: response.then(async (response) => {
+      publisher.publishLater({
         type: 'documentRun',
         data: {
           workspaceId: workspace.id,
@@ -63,7 +64,19 @@ export async function runDocumentAtCommit({
           duration: await duration,
           source,
         },
-      }),
-    ),
+      })
+
+      return createDocumentLog({
+        commit,
+        data: {
+          documentUuid: document.documentUuid,
+          duration: await duration,
+          parameters,
+          resolvedContent,
+          uuid: documentLogUuid,
+          source,
+        },
+      }).then((r) => r.unwrap())
+    }),
   })
 }

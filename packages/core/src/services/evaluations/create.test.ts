@@ -25,6 +25,7 @@ describe('createEvaluation', () => {
       const description = 'Test Description'
       const metadata = { prompt: 'Test prompt' }
       const result = await createEvaluation({
+        user,
         workspace,
         name,
         description,
@@ -55,6 +56,7 @@ describe('createEvaluation', () => {
       const metadata = { prompt: 'Test prompt' }
       const result = await createEvaluation({
         workspace,
+        user,
         name,
         description,
         type: EvaluationMetadataType.LlmAsJudge,
@@ -94,6 +96,7 @@ ${metadata.prompt}
 
       const result = await createEvaluation({
         workspace,
+        user,
         name,
         description,
         configuration: {
@@ -115,6 +118,7 @@ ${metadata.prompt}
 
       const result = await createEvaluation({
         workspace,
+        user,
         name,
         description,
         type: EvaluationMetadataType.LlmAsJudge,
@@ -136,6 +140,7 @@ ${metadata.prompt}
     it('returns an error for invalid evaluation type', async () => {
       const result = await createEvaluation({
         workspace,
+        user,
         name: 'Test Evaluation',
         description: 'Test Description',
         type: 'InvalidType' as EvaluationMetadataType,
@@ -163,6 +168,7 @@ ${metadata.prompt}
 
       const result = await createEvaluation({
         workspace,
+        user,
         name: 'Test Evaluation',
         description: 'Test Description',
         type: EvaluationMetadataType.LlmAsJudge,

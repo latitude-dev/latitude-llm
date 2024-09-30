@@ -117,11 +117,15 @@ describe('getUsersAction', () => {
         user,
       })
       await factories.createDocumentVersion({
+        workspace,
+        user,
         commit: draft,
         path: 'patata/doc1',
         content: factories.helpers.createPrompt({ provider }),
       })
       await factories.createDocumentVersion({
+        workspace,
+        user,
         commit: anotherDraf,
         path: 'patata/doc2',
         content: factories.helpers.createPrompt({ provider }),
