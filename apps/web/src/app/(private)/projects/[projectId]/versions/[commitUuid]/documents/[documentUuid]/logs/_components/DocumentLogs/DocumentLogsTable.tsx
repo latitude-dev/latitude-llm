@@ -1,5 +1,3 @@
-import { useRef } from 'react'
-
 import { IPagination } from '@latitude-data/core/lib/pagination/buildPagination'
 import { DocumentLogWithMetadata } from '@latitude-data/core/repositories'
 import {
@@ -19,7 +17,6 @@ import {
   relativeTime,
 } from '$/app/_lib/formatUtils'
 import { TablePaginationFooter } from '$/components/TablePaginationFooter'
-import useDynamicHeight from '$/hooks/useDynamicHeight'
 
 function countLabel(count: number) {
   return `${count} logs`
@@ -36,13 +33,9 @@ export const DocumentLogsTable = ({
   setSelectedLog: (log: DocumentLogWithMetadata | undefined) => void
   pagination: IPagination
 }) => {
-  const ref = useRef<HTMLTableElement>(null)
-  const height = useDynamicHeight({ ref, paddingBottom: 16 })
   return (
     <Table
       className='table-auto'
-      ref={ref}
-      maxHeight={height}
       externalFooter={
         <TablePaginationFooter
           pagination={pagination}

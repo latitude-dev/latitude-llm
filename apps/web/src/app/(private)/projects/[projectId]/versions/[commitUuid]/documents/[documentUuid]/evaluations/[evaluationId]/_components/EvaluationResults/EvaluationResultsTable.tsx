@@ -1,4 +1,3 @@
-import { useRef } from 'react'
 import { capitalize } from 'lodash-es'
 
 import {
@@ -21,7 +20,6 @@ import {
 } from '@latitude-data/web-ui'
 import { formatCostInMillicents, relativeTime } from '$/app/_lib/formatUtils'
 import { TablePaginationFooter } from '$/components/TablePaginationFooter'
-import useDynamicHeight from '$/hooks/useDynamicHeight'
 
 function countLabel(count: number) {
   return `${count} evaluation results`
@@ -74,13 +72,9 @@ export const EvaluationResultsTable = ({
   selectedResult: EvaluationResultRow | undefined
   setSelectedResult: (log: EvaluationResultWithMetadata | undefined) => void
 }) => {
-  const ref = useRef<HTMLTableElement>(null)
-  const height = useDynamicHeight({ ref, paddingBottom: 16 })
   return (
     <Table
-      ref={ref}
       className='table-auto'
-      maxHeight={height}
       externalFooter={
         <TablePaginationFooter
           pagination={pagination}

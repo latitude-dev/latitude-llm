@@ -16,7 +16,7 @@ export default function DocumentTabs({
 }) {
   const { toggleDocumentation } = useContext(DocumentationContext)
   return (
-    <div className='flex flex-col h-full'>
+    <>
       <div className='flex flex-row items-center justify-between pt-6 px-4'>
         <DocumentTabSelector
           projectId={params.projectId}
@@ -28,6 +28,6 @@ export default function DocumentTabs({
         </Button>
       </div>
       <div className='flex-grow flex flex-col w-full'>{children}</div>
-    </div>
+    </>
   )
 }

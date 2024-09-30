@@ -11,26 +11,26 @@ import {
 
 import { ResizableBox, ResizeCallbackData, ResizeHandle } from 'react-resizable'
 
+import { cn } from '../../../lib/utils'
+
 function Pane({ children }: { children: ReactNode }) {
-  return (
-    <div className='flex flex-col h-full relative'>
-      <div className='w-full h-full'>{children}</div>
-    </div>
-  )
+  return <div className='flex flex-col h-full relative'>{children}</div>
 }
 
 const PaneWrapper = ({
   width = 'auto',
   children,
   isResizable = false,
+  className,
 }: {
+  children: ReactNode
   width?: number | 'auto'
   isResizable?: boolean
-  children: ReactNode
+  className?: string
 }) => {
   return (
     <div
-      className='h-full max-h-full overflow-y-auto'
+      className={cn('h-full overflow-y-auto custom-scrollbar', className)}
       style={{
         width: width === 'auto' ? 'auto' : isResizable ? width - 1 : width,
       }}
@@ -104,12 +104,14 @@ function HorizontalSplit({
   initialWidth,
   minWidth,
   onResizeStop,
+  cssPanelHeight,
 }: {
   leftPane: ReactNode
   rightPane: ReactNode
   initialWidth: number
   minWidth: number
   onResizeStop: (width: number) => void
+  cssPanelHeight?: string
 }) {
   const [paneWidth, setPaneWidth] = useState<number>(initialWidth)
   const width = typeof window !== 'undefined' ? paneWidth : initialWidth
@@ -121,11 +123,11 @@ function HorizontalSplit({
         onResizePane={setPaneWidth}
         onResizeStop={onResizeStop}
       >
-        <PaneWrapper isResizable width={width}>
+        <PaneWrapper isResizable width={width} className={cssPanelHeight}>
           {leftPane}
         </PaneWrapper>
       </ResizablePane>
-      <PaneWrapper>{rightPane}</PaneWrapper>
+      <PaneWrapper className={cssPanelHeight}>{rightPane}</PaneWrapper>
     </div>
   )
 }
@@ -136,15 +138,18 @@ const SplitPane = ({
   initialWidth,
   minWidth,
   onResizeStop,
+  cssPanelHeight,
 }: {
   leftPane: ReactNode
   rightPane: ReactNode
   initialWidth: number
   minWidth: number
   onResizeStop: (width: number) => void
+  cssPanelHeight?: string
 }) => {
   return (
     <HorizontalSplit
+      cssPanelHeight={cssPanelHeight}
       leftPane={leftPane}
       rightPane={rightPane}
       initialWidth={initialWidth}
