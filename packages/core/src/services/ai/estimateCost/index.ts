@@ -1,4 +1,4 @@
-import { CompletionTokenUsage } from 'ai'
+import { LanguageModelUsage } from 'ai'
 
 import { Providers } from '../../../browser'
 import { getCostPer1MAnthropic } from './anthropic'
@@ -39,7 +39,7 @@ export function estimateCost({
   provider,
   model,
 }: {
-  usage: CompletionTokenUsage
+  usage: LanguageModelUsage
   provider: Providers
   model: string
 }): number {

@@ -16,14 +16,11 @@ import {
   ProviderData,
   StreamEventTypes,
 } from '../../constants'
-import {
-  LatitudeError,
-  NotFoundError,
-  Result,
-  UnprocessableEntityError,
-} from '../../lib'
+import { StreamType } from '../../events/handlers'
+import { NotFoundError, Result, UnprocessableEntityError } from '../../lib'
 import { streamToGenerator } from '../../lib/streamToGenerator'
-import { ai, Config, validateConfig } from '../ai'
+import { ai, AIReturn, Config, validateConfig } from '../ai'
+import { ProviderProcessor } from './ProviderProcessor'
 
 export type CachedApiKeys = Map<string, ProviderApiKey>
 type ConfigOverrides =
@@ -118,24 +115,26 @@ async function iterate({
 
     publishStepStartEvent(controller, step, documentLogUuid)
 
-    const aiResult = await ai({
-      workspace,
+    const providerProcessor = new ProviderProcessor({
       source,
       documentLogUuid,
+      config: step.config,
+      apiProvider: step.apiKey,
+      messages: step.conversation.messages,
+    })
+    const aiResult = await ai({
+      workspace,
       messages: step.conversation.messages,
       config: step.config,
       provider: step.apiKey,
       schema: getSchemaForAI(step, configOverrides),
       output: getOutputForAI(step, configOverrides),
-      transactionalLogs: step.completed,
     })
 
     await streamAIResult(controller, aiResult)
-
-    const response = await createChainResponse({
+    const response = await providerProcessor.call({
       aiResult,
-      documentLogUuid,
-      step,
+      saveSyncProviderLogs: step.completed,
     })
 
     if (step.completed) {
@@ -205,58 +204,15 @@ function publishStepStartEvent(
 
 async function streamAIResult(
   controller: ReadableStreamDefaultController,
-  result: Awaited<ReturnType<typeof ai>>,
+  result: Awaited<AIReturn<StreamType>>,
 ) {
   for await (const value of streamToGenerator<
     TextStreamPart<Record<string, CoreTool>> | ObjectStreamPart<unknown>
-  >(result.fullStream)) {
+  >(result.data.fullStream)) {
     enqueueChainEvent(controller, {
       event: StreamEventTypes.Provider,
       data: value as unknown as ProviderData,
     })
-  }
-}
-
-async function createChainResponse({
-  step,
-  aiResult,
-  documentLogUuid,
-}: {
-  step: { completed: boolean }
-  aiResult: Awaited<ReturnType<typeof ai>>
-  documentLogUuid: string
-}): Promise<ChainCallResponse | ChainStepResponse> {
-  const providerLog = await aiResult.providerLog
-  if (step.completed && !providerLog) {
-    throw new LatitudeError(
-      'The response completed but the provider log was not created!',
-    )
-  }
-
-  if (aiResult.object) {
-    return {
-      text: objectToString(await aiResult.object),
-      object: await aiResult.object,
-      usage: await aiResult.usage,
-      documentLogUuid,
-      ...(providerLog ? { providerLog } : {}),
-    } as typeof providerLog extends undefined
-      ? ChainStepResponse
-      : ChainCallResponse
-  } else {
-    return {
-      documentLogUuid,
-      ...(providerLog ? { providerLog } : {}),
-      text: await aiResult.text,
-      usage: await aiResult.usage,
-      toolCalls: (await aiResult.toolCalls).map((t) => ({
-        id: t.toolCallId,
-        name: t.toolName,
-        arguments: t.args,
-      })),
-    } as typeof providerLog extends undefined
-      ? ChainStepResponse
-      : ChainCallResponse
   }
 }
 
@@ -315,6 +271,7 @@ function handleIterationError(
   controller: ReadableStreamDefaultController,
   error: unknown,
 ) {
+  // TODO: Capture all these errors in the errors table
   const chainError =
     error instanceof Error ? error : new Error('An unknown error occurred')
 

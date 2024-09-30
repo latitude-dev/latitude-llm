@@ -1,6 +1,5 @@
 import { Message, ToolCall } from '@latitude-data/compiler'
-import { CompletionTokenUsage } from 'ai'
-import { JSONSchema7 } from 'json-schema'
+import { LanguageModelUsage } from 'ai'
 
 import { LogSources, ProviderLog, Providers } from '../../browser'
 import { database } from '../../client'
@@ -22,9 +21,9 @@ export type CreateProviderLogProps = {
   config: PartialConfig
   messages: Message[]
   responseText?: string
-  responseObject?: JSONSchema7
+  responseObject?: unknown
   toolCalls?: ToolCall[]
-  usage: CompletionTokenUsage
+  usage: LanguageModelUsage
   duration: number
   source: LogSources
   apiKeyId?: number
@@ -60,7 +59,6 @@ export async function createProviderLog(
         estimateCost({ provider: providerType, model, usage }) *
           TO_MILLICENTS_FACTOR,
       )
-
     const inserts = await trx
       .insert(providerLogs)
       .values({

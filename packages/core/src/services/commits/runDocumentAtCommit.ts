@@ -32,7 +32,9 @@ export async function runDocumentAtCommit({
     document,
     commit,
   })
+
   if (result.error) return result
+
   const chain = createChain({ prompt: result.value, parameters })
   const rezult = await runChain({
     workspace,

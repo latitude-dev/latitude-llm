@@ -12,6 +12,7 @@ import {
   User,
   Workspace,
 } from '../../../browser'
+import { ProviderLogsRepository } from '../../../repositories'
 import { createDocumentLog, createProject } from '../../../tests/factories'
 import { testConsumeStream } from '../../../tests/helpers'
 import { addMessages } from './index'
@@ -34,14 +35,17 @@ const mocks = vi.hoisted(() => {
         },
       })
       return {
-        text: Promise.resolve('Fake AI generated text'),
-        usage: Promise.resolve({
-          promptTokens: 0,
-          completionTokens: 0,
-          totalTokens: 0,
-        }),
-        toolCalls: Promise.resolve([]),
-        fullStream,
+        type: 'text',
+        data: {
+          text: Promise.resolve('Fake AI generated text'),
+          usage: Promise.resolve({
+            promptTokens: 0,
+            completionTokens: 0,
+            totalTokens: 0,
+          }),
+          toolCalls: Promise.resolve([]),
+          fullStream,
+        },
       }
     }),
   }
@@ -181,7 +185,6 @@ describe('addMessages', () => {
           provider: 'openai',
         }),
         provider: expect.any(Object),
-        documentLogUuid: providerLog.documentLogUuid!,
       }),
     )
   })
@@ -205,6 +208,9 @@ describe('addMessages', () => {
       source: LogSources.API,
     }).then((r) => r.unwrap())
     const { value } = await testConsumeStream(stream)
+
+    const repo = new ProviderLogsRepository(workspace.id)
+    const logs = await repo.findAll().then((r) => r.unwrap())
 
     expect(value).toEqual([
       {
@@ -233,6 +239,7 @@ describe('addMessages', () => {
           ],
           response: {
             documentLogUuid: providerLog.documentLogUuid,
+            providerLog: logs[logs.length - 1],
             text: 'Fake AI generated text',
             toolCalls: [],
             usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
