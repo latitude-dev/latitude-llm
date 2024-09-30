@@ -41,6 +41,7 @@ export default function DocumentDetailWrapper({
   )
   return (
     <SplitPane
+      cssPanelHeight='h-[calc(100vh-53px)]'
       initialWidth={sidebarWidth ?? minSidebarWidth}
       minWidth={minSidebarWidth}
       onResizeStop={onResizeStop}

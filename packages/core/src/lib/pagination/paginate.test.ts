@@ -5,10 +5,6 @@ import { database } from '../../client'
 import { users } from '../../schema'
 import { paginateQuery } from './paginate'
 
-const dynamicQuery = database
-  .select({ email: users.email })
-  .from(users)
-  .$dynamic()
 const pageUrl = { base: 'http://localhost/my-page' }
 describe('paginateQuery', () => {
   beforeEach(async () => {
@@ -21,7 +17,10 @@ describe('paginateQuery', () => {
 
   it('returns first 2 users', async () => {
     const { rows, pagination } = await paginateQuery({
-      dynamicQuery,
+      dynamicQuery: database
+        .select({ email: users.email })
+        .from(users)
+        .$dynamic(),
       pageUrl,
       searchParams: 'page=1&pageSize=2',
     })
@@ -46,7 +45,10 @@ describe('paginateQuery', () => {
 
   it('returns page 3', async () => {
     const { rows, pagination } = await paginateQuery({
-      dynamicQuery,
+      dynamicQuery: database
+        .select({ email: users.email })
+        .from(users)
+        .$dynamic(),
       pageUrl,
       searchParams: {
         page: '3',
@@ -77,7 +79,10 @@ describe('paginateQuery', () => {
 
   it('with default page size', async () => {
     const { rows, pagination } = await paginateQuery({
-      dynamicQuery,
+      dynamicQuery: database
+        .select({ email: users.email })
+        .from(users)
+        .$dynamic(),
       pageUrl,
       defaultPaginate: { pageSize: 4 },
     })
@@ -104,7 +109,10 @@ describe('paginateQuery', () => {
 
   it('respect other search params', async () => {
     const { rows, pagination } = await paginateQuery({
-      dynamicQuery,
+      dynamicQuery: database
+        .select({ email: users.email })
+        .from(users)
+        .$dynamic(),
       pageUrl,
       searchParams: 'page=1&pageSize=2&sort=email',
     })

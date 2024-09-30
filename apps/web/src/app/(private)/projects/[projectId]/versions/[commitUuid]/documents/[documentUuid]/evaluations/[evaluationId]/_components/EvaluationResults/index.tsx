@@ -83,8 +83,8 @@ export function EvaluationResults({
         documentUuid={document.documentUuid}
         evaluationId={evaluation.id}
       />
-      <div className='flex flex-row w-full h-full overflow-hidden gap-4'>
-        <div className='flex-grow min-w-0 h-full'>
+      <div className='relative flex flex-row w-full gap-4'>
+        <div className='flex-1'>
           {evaluationResults.length === 0 && (
             <TableBlankSlate
               description='There are no evaluation results yet. Run the evaluation or, if you already have, wait a few seconds for the first results to stream in.'

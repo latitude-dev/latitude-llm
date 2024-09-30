@@ -32,7 +32,7 @@ const Table = forwardRef<HTMLTableElement, TableProps>(
             ? `${maxHeight}px`
             : 'auto',
       }}
-      className='flex flex-col relative w-full rounded-lg border'
+      className='flex flex-col relative w-full rounded-lg border overflow-hidden'
     >
       <div
         className={cn('relative w-full flex-grow', overflow, {
