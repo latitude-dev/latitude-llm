@@ -13,7 +13,8 @@ export function text(parser: Parser) {
     const isEscaping = ENDS_WITH_ESCAPE_REGEX.test(data)
     if (isEscaping) data = data.slice(0, -1) // Remove the escape character
 
-    if (!isEscaping && parser.match('---')) {
+    if (!isEscaping && parser.matchRegex(/-{3}(?!-)/)) {
+      // Detecting ONLY 3 consecutive dashes
       break
     }
 
@@ -23,7 +24,14 @@ export function text(parser: Parser) {
     ) {
       break
     }
-    data += parser.template[parser.index++]
+
+    const nonConfigDashes = parser.matchRegex(/-+/)
+    if (nonConfigDashes) {
+      data += nonConfigDashes
+      parser.index += nonConfigDashes.length
+    } else {
+      data += parser.template[parser.index++]
+    }
   }
 
   const node = {

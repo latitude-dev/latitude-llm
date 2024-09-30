@@ -254,6 +254,43 @@ describe('config', async () => {
     })
   })
 
+  it('does not confuse several dashes with a config section', async () => {
+    const prompt = removeCommonIndent(`
+      This is not config:
+      --------------------
+
+      Nor this:
+      ----
+
+      This ain't either:
+      --
+    `)
+
+    const metadata = await readMetadata({
+      prompt: removeCommonIndent(prompt),
+    })
+
+    expect(metadata.errors[0]?.toString()).toBeUndefined()
+    expect(metadata.errors.length).toBe(0)
+    expect(metadata.config).toEqual({})
+  })
+
+  it('can be escaped', async () => {
+    const prompt = removeCommonIndent(`
+      This is NOT a config:
+      \\---
+      foo: bar
+      baz:
+       - qux
+       - quux
+      \\---
+    `)
+
+    const metadata = await readMetadata({ prompt })
+
+    expect(metadata.config).toEqual({})
+  })
+
   it('fails when there is content before the config section', async () => {
     const prompt = removeCommonIndent(`
       Lorem ipsum
@@ -360,7 +397,7 @@ describe('config', async () => {
 
   it('returns the correct positions of parsing errors', async () => {
     const prompt = removeCommonIndent(`
-      /* 
+      /*
         Lorem ipsum
       */
       ---

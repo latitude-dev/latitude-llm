@@ -17,7 +17,7 @@ export default function fragment(parser: Parser): (parser: Parser) => void {
   if (parser.match('/*') || parser.match('*/')) {
     return multiLineComment
   }
-  if (parser.match('---')) {
+  if (parser.matchRegex(/-{3}(?!-)/)) {
     return config
   }
 
