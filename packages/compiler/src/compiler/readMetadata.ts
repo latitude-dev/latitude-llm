@@ -280,7 +280,7 @@ export class ReadMetadata {
         })
       }
 
-      const parsedObj = parsedYaml.toJS()
+      const parsedObj = parsedYaml.toJS() ?? {}
 
       try {
         this.configSchema?.parse(parsedObj)
@@ -289,14 +289,21 @@ export class ReadMetadata {
           err.errors.forEach((error) => {
             const issue = error.message
 
-            const [errorStart, errorEnd] = findYAMLItemPosition(
+            const range = findYAMLItemPosition(
               parsedYaml.contents as YAMLItem,
               error.path,
-            )!
+            )
+
+            const errorStart = range
+              ? node.start! + CONFIG_START_OFFSET + range[0]
+              : node.start!
+            const errorEnd = range
+              ? node.start! + CONFIG_START_OFFSET + range[1] + 1
+              : node.end!
 
             this.baseNodeError(errors.invalidConfig(issue), node, {
-              start: node.start! + CONFIG_START_OFFSET + errorStart,
-              end: node.start! + CONFIG_START_OFFSET + errorEnd + 1,
+              start: errorStart,
+              end: errorEnd,
             })
           })
         }
@@ -627,6 +634,10 @@ export class ReadMetadata {
             const asValue = asAttribute.value.map((n) => n.data).join('')
             scopeContext.definedVariables.add(asValue)
           }
+        }
+
+        if (node.children.length) {
+          this.baseNodeError(errors.invalidStepChildren, node)
         }
 
         return

@@ -15,11 +15,11 @@ export default {
   },
   unexpectedEofToken: (token: string) => ({
     code: 'unexpected-eof',
-    message: `Unexpected '${token}'`,
+    message: `Unexpected EOF. Expected '${token}' but did not find it.`,
   }),
   unexpectedToken: (token: string) => ({
     code: 'unexpected-token',
-    message: `Expected '${token}'`,
+    message: `Expected '${token}' but did not find it.`,
   }),
   unexpectedBlockClose: {
     code: 'unexpected-block-close',
@@ -265,6 +265,11 @@ export default {
   },
   invalidStepConfig: {
     code: 'invalid-step-config',
-    message: 'Step config must be an object',
+    message: 'Response config must be an object',
+  },
+  invalidStepChildren: {
+    code: 'invalid-step-children',
+    message:
+      'Response tags cannot have children.\nIf you need to add content to the response context, just add it before the response tag.',
   },
 }

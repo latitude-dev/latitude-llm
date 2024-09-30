@@ -76,11 +76,13 @@ export function findYAMLItemPosition(
   parent: YAMLItem,
   path: (string | number)[],
 ): YAMLItemRange {
-  const parentRange: YAMLItemRange = parent.range
+  const parentRange: YAMLItemRange = parent?.range
     ? [parent.range[0], parent.range[1]]
     : undefined
 
-  if (path.length === 0 || !('items' in parent)) return parentRange
+  if (!parentRange || path.length === 0 || !('items' in parent)) {
+    return parentRange
+  }
 
   let child: YAMLItem | undefined
   if (parent instanceof YAMLMap) {
