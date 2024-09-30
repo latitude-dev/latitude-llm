@@ -30,9 +30,6 @@ async function paginateQuerySql<T extends PgSelect>({
   return { rows, count }
 }
 
-/**
- * TODO: Add tests
- */
 export async function paginateQuery<T extends PgSelect>({
   dynamicQuery,
   pageUrl,

@@ -82,7 +82,7 @@ export function DocumentLogMetadata({
   )
 
   return (
-    <div className='flex flex-col gap-6 py-6 w-full'>
+    <>
       <MetadataItem label='Log uuid'>
         <ClickToCopy copyValue={documentLog.uuid}>
           <Text.H5 align='right' color='foregroundMuted'>
@@ -187,6 +187,6 @@ export function DocumentLogMetadata({
           </Text.H5>
         </ClickToCopy>
       </MetadataItem>
-    </div>
+    </>
   )
 }

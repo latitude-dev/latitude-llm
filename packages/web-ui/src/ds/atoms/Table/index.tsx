@@ -1,6 +1,7 @@
 import {
   forwardRef,
   HTMLAttributes,
+  ReactNode,
   TdHTMLAttributes,
   ThHTMLAttributes,
 } from 'react'
@@ -11,9 +12,19 @@ import Text from '../Text'
 type TableProps = HTMLAttributes<HTMLTableElement> & {
   maxHeight?: number | string
   overflow?: 'overflow-auto' | 'overflow-hidden'
+  externalFooter?: ReactNode
 }
 const Table = forwardRef<HTMLTableElement, TableProps>(
-  ({ className, maxHeight, overflow = 'overflow-auto', ...props }, ref) => (
+  (
+    {
+      className,
+      maxHeight,
+      externalFooter,
+      overflow = 'overflow-auto',
+      ...props
+    },
+    ref,
+  ) => (
     <div
       style={{
         maxHeight:
@@ -21,15 +32,24 @@ const Table = forwardRef<HTMLTableElement, TableProps>(
             ? `${maxHeight}px`
             : 'auto',
       }}
-      className={cn('relative w-full max-h-full rounded-lg border', overflow, {
-        'custom-scrollbar': overflow === 'overflow-auto',
-      })}
+      className='flex flex-col relative w-full rounded-lg border'
     >
-      <table
-        ref={ref}
-        className={cn('w-full caption-bottom text-sm', className)}
-        {...props}
-      />
+      <div
+        className={cn('relative w-full flex-grow', overflow, {
+          'custom-scrollbar': overflow === 'overflow-auto',
+        })}
+      >
+        <table
+          ref={ref}
+          className={cn('w-full caption-bottom text-sm', className)}
+          {...props}
+        />
+      </div>
+      {externalFooter ? (
+        <div className='border-t bg-muted w-full py-2 px-4'>
+          {externalFooter}
+        </div>
+      ) : null}
     </div>
   ),
 )

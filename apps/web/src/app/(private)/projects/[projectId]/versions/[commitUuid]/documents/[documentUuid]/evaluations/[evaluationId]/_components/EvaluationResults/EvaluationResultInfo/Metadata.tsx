@@ -78,7 +78,7 @@ export function EvaluationResultMetadata({
   const { data: providers, isLoading: providersLoading } = useProviderApiKeys()
 
   return (
-    <div className='flex flex-col gap-6 py-6 w-full'>
+    <>
       <MetadataItem label='Result id'>
         <ClickToCopy copyValue={evaluationResult.id.toString()}>
           <Text.H5 align='right' color='foregroundMuted'>
@@ -149,6 +149,6 @@ export function EvaluationResultMetadata({
         loading={!providerLog}
         value={getReasonFromProviderLog(providerLog)}
       />
-    </div>
+    </>
   )
 }

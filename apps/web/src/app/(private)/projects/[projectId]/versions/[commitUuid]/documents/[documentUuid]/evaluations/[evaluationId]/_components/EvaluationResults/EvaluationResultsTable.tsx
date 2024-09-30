@@ -77,7 +77,17 @@ export const EvaluationResultsTable = ({
   const ref = useRef<HTMLTableElement>(null)
   const height = useDynamicHeight({ ref, paddingBottom: 16 })
   return (
-    <Table ref={ref} className='table-auto' maxHeight={height}>
+    <Table
+      ref={ref}
+      className='table-auto'
+      maxHeight={height}
+      externalFooter={
+        <TablePaginationFooter
+          pagination={pagination}
+          countLabel={countLabel}
+        />
+      }
+    >
       <TableHeader className='sticky top-0 z-10'>
         <TableRow>
           <TableHead>Time</TableHead>
@@ -156,11 +166,6 @@ export const EvaluationResultsTable = ({
           </TableRow>
         ))}
       </TableBody>
-      <TablePaginationFooter
-        colSpan={6}
-        pagination={pagination}
-        countLabel={countLabel}
-      />
     </Table>
   )
 }

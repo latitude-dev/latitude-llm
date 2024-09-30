@@ -24,13 +24,11 @@ export function DocumentLogMessages({
 
   if (!providerLogs) return null
   return (
-    <div className='flex flex-col gap-4 py-6 w-full'>
-      <MessageList
-        messages={messages}
-        messageLayout='vertical'
-        separator
-        size='small'
-      />
-    </div>
+    <MessageList
+      messages={messages}
+      messageLayout='vertical'
+      separator
+      size='small'
+    />
   )
 }
