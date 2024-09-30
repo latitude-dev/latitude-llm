@@ -1,10 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 
 import { ProviderLogDto } from '@latitude-data/core/browser'
 import { DocumentLogWithMetadata } from '@latitude-data/core/repositories'
-import { Alert, TabSelector } from '@latitude-data/web-ui'
+import { Alert, cn, TabSelector } from '@latitude-data/web-ui'
+import useDynamicHeight from '$/hooks/useDynamicHeight'
 
 import { DocumentLogMessages } from './Messages'
 import { DocumentLogMetadata, MetadataItem } from './Metadata'
@@ -27,24 +28,42 @@ export function DocumentLogInfo({
   providerLogs,
   isLoading = false,
   error,
+  className,
 }: {
   documentLog: DocumentLogWithMetadata
   providerLogs?: ProviderLogDto[]
   isLoading?: boolean
   error?: Error
+  className?: string
 }) {
   const [selectedTab, setSelectedTab] = useState<string>('metadata')
+  const ref = useRef<HTMLDivElement>(null)
+  const height = useDynamicHeight({ ref, paddingBottom: 16 })
   return (
-    <>
-      <TabSelector
-        options={[
-          { label: 'Metadata', value: 'metadata' },
-          { label: 'Messages', value: 'messages' },
-        ]}
-        selected={selectedTab}
-        onSelect={setSelectedTab}
-      />
-      <div className='flex relative w-full h-full max-h-full max-w-full overflow-auto'>
+    <div
+      ref={ref}
+      className={cn(
+        'relative flex-shrink-0 flex flex-col',
+        'border border-border rounded-lg items-center custom-scrollbar overflow-y-auto',
+        className,
+      )}
+      style={{
+        maxHeight: height ? `${height}px` : 'auto',
+      }}
+    >
+      <div className='z-10 w-full sticky top-0 px-4 bg-white flex justify-center'>
+        <div className='pt-6'>
+          <TabSelector
+            options={[
+              { label: 'Metadata', value: 'metadata' },
+              { label: 'Messages', value: 'messages' },
+            ]}
+            selected={selectedTab}
+            onSelect={setSelectedTab}
+          />
+        </div>
+      </div>
+      <div className='px-4 flex relative w-full h-full max-w-full'>
         {isLoading ? (
           <DocumentLogMetadataLoading />
         ) : (
@@ -71,6 +90,6 @@ export function DocumentLogInfo({
           </>
         )}
       </div>
-    </>
+    </div>
   )
 }

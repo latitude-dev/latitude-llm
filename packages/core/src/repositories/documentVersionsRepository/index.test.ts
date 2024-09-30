@@ -47,7 +47,8 @@ describe('DocumentVersionsRepository', () => {
 
       const documents = result.unwrap()
       expect(documents).toHaveLength(2)
-      expect(documents.map((d) => d.path)).toEqual(['foo', 'bar'])
+      const paths = documents.map((d) => d.path).sort()
+      expect(paths).toEqual(['bar', 'foo'])
       expect(documents.every((d) => d.commitId === commit1Id)).toBe(true)
     })
 

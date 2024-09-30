@@ -1,16 +1,13 @@
-import { ColumnsSelection, eq, sql } from 'drizzle-orm'
-import { PgSelect, SubqueryWithSelection } from 'drizzle-orm/pg-core'
+import { ColumnsSelection, eq } from 'drizzle-orm'
+import { SubqueryWithSelection } from 'drizzle-orm/pg-core'
 
 import { database } from '../client'
 import { NotFoundError, Result } from '../lib'
 
-export type PaginationArgs = { page?: number; pageSize?: number }
 export type QueryOptions = {
   limit?: number
   offset?: number
 }
-
-type PaginatatedResult<T> = [rows: Awaited<T>, count: number]
 
 export default abstract class Repository<
   U extends ColumnsSelection,
@@ -22,28 +19,6 @@ export default abstract class Repository<
   constructor(workspaceId: number, db = database) {
     this.workspaceId = workspaceId
     this.db = db
-  }
-
-  /**
-   * This use $dynamic() query
-   * https://orm.drizzle.team/docs/dynamic-query-building
-   */
-  static async paginateQuery<T extends PgSelect>({
-    query,
-    page = 1,
-    pageSize = 20,
-  }: {
-    query: T
-  } & PaginationArgs): Promise<PaginatatedResult<T>> {
-    // @ts-ignore
-    query.config.fields = {
-      // @ts-ignore
-      ...query.config.fields,
-      __count: sql<number>`count(*) over()`,
-    }
-    const rows = await query.limit(pageSize).offset((page - 1) * pageSize)
-    const count = rows[0]?.__count ? Number(rows[0]?.__count) : 0
-    return [rows, count]
   }
 
   abstract get scope(): SubqueryWithSelection<U, string>

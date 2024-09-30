@@ -2,32 +2,28 @@ import { and, desc, eq } from 'drizzle-orm'
 
 import { Commit, Evaluation } from '../../browser'
 import { database } from '../../client'
-import { Result, TypedResult } from '../../lib'
-import { EvaluationResultWithMetadata } from '../../repositories/evaluationResultsRepository'
 import {
   createEvaluationResultQuery,
   getCommitFilter,
 } from './_createEvaluationResultQuery'
 
-export async function computeEvaluationResultsWithMetadata(
+export function computeEvaluationResultsWithMetadataQuery(
   {
     workspaceId,
     evaluation,
     documentUuid,
     draft,
-    limit,
   }: {
     workspaceId: number
     evaluation: Evaluation
     documentUuid: string
     draft?: Commit
-    limit?: number
   },
   db = database,
-): Promise<TypedResult<EvaluationResultWithMetadata[], Error>> {
+) {
   const { evaluationResultsScope, documentLogsScope, baseQuery } =
     createEvaluationResultQuery(workspaceId, db)
-  const query = baseQuery
+  return baseQuery
     .where(
       and(
         eq(evaluationResultsScope.evaluationId, evaluation.id),
@@ -36,8 +32,4 @@ export async function computeEvaluationResultsWithMetadata(
       ),
     )
     .orderBy(desc(evaluationResultsScope.createdAt))
-
-  const result = await (limit ? query.limit(limit) : query)
-
-  return Result.ok(result)
 }

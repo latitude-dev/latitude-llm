@@ -1,8 +1,6 @@
-import {
-  buildPagination,
-  parsePage,
-} from '@latitude-data/core/lib/buildPagination'
-import { computeDocumentLogsWithMetadata } from '@latitude-data/core/services/documentLogs/computeDocumentLogsWithMetadata'
+import { QueryParams } from '@latitude-data/core/lib/pagination/buildPaginatedUrl'
+import { paginateQuery } from '@latitude-data/core/lib/pagination/paginate'
+import { computeDocumentLogsWithMetadataQuery } from '@latitude-data/core/services/documentLogs/computeDocumentLogsWithMetadata'
 import { TableBlankSlate, TableWithHeader } from '@latitude-data/web-ui'
 import { findCommitCached } from '$/app/(private)/_data-access'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
@@ -10,40 +8,41 @@ import { ROUTES } from '$/services/routes'
 
 import { DocumentLogs } from './_components/DocumentLogs'
 
-const PAGE_SIZE = 25
+function pageUrl(params: {
+  projectId: string
+  commitUuid: string
+  documentUuid: string
+}) {
+  return ROUTES.projects
+    .detail({ id: Number(params.projectId) })
+    .commits.detail({ uuid: params.commitUuid })
+    .documents.detail({ uuid: params.documentUuid }).logs.root
+}
+
 export default async function DocumentPage({
   params,
   searchParams,
 }: {
   params: { projectId: string; commitUuid: string; documentUuid: string }
-  searchParams: { [key: string]: string | string[] | undefined }
+  searchParams: QueryParams
 }) {
   const { workspace } = await getCurrentUser()
   const projectId = Number(params.projectId)
   const commitUuid = params.commitUuid
   const commit = await findCommitCached({ projectId, uuid: commitUuid })
-  const page = parsePage(searchParams.page)
-  const [rows, count] = await computeDocumentLogsWithMetadata({
-    workspaceId: workspace.id,
-    documentUuid: params.documentUuid,
-    draft: commit,
-    pagination: { page, pageSize: PAGE_SIZE },
+  const { rows, pagination } = await paginateQuery({
+    searchParams,
+    pageUrl: { base: pageUrl(params) },
+    dynamicQuery: computeDocumentLogsWithMetadataQuery({
+      workspaceId: workspace.id,
+      documentUuid: params.documentUuid,
+      draft: commit,
+    }).$dynamic(),
   })
-  const baseUrl = ROUTES.projects
-    .detail({ id: projectId })
-    .commits.detail({ uuid: commitUuid })
-    .documents.detail({ uuid: params.documentUuid }).logs.root
-  const pagination = buildPagination({
-    baseUrl,
-    count,
-    page,
-    pageSize: PAGE_SIZE,
-  })
-  const title = `${pagination.count} logs (page ${pagination.currentPage} of ${pagination.totalPages})`
   return (
     <div className='flex flex-col w-full h-full overflow-hidden p-6 gap-2 min-w-0'>
       <TableWithHeader
-        title={title}
+        title='Logs'
         table={
           <>
             {!rows.length && (

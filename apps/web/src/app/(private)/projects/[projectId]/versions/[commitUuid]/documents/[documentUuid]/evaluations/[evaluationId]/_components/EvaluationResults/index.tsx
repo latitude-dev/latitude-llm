@@ -3,6 +3,7 @@
 import { useState } from 'react'
 
 import { EvaluationDto } from '@latitude-data/core/browser'
+import { IPagination } from '@latitude-data/core/lib/pagination/buildPagination'
 import { type EvaluationResultWithMetadata } from '@latitude-data/core/repositories'
 import {
   TableBlankSlate,
@@ -19,6 +20,7 @@ import { DocumentRoutes, ROUTES } from '$/services/routes'
 import useEvaluationResultsWithMetadata from '$/stores/evaluationResultsWithMetadata'
 import { useProviderLog } from '$/stores/providerLogs'
 import Link from 'next/link'
+import { useSearchParams } from 'next/navigation'
 
 import { EvaluationResultInfo } from './EvaluationResultInfo'
 import { EvaluationResultsTable } from './EvaluationResultsTable'
@@ -27,9 +29,11 @@ import { EvaluationStatusBanner } from './EvaluationStatusBanner'
 export function EvaluationResults({
   evaluation,
   evaluationResults: serverData,
+  pagination,
 }: {
   evaluation: EvaluationDto
   evaluationResults: EvaluationResultWithMetadata[]
+  pagination: IPagination
 }) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
@@ -38,12 +42,17 @@ export function EvaluationResults({
     EvaluationResultWithMetadata | undefined
   >(undefined)
   const { data: providerLog } = useProviderLog(selectedResult?.providerLogId)
+  const searchParams = useSearchParams()
+  const page = searchParams.get('page')
+  const pageSize = searchParams.get('pageSize')
   const { data: evaluationResults, mutate } = useEvaluationResultsWithMetadata(
     {
       evaluationId: evaluation.id,
       documentUuid: document.documentUuid,
       commitUuid: commit.uuid,
       projectId: project.id,
+      page,
+      pageSize,
     },
     {
       fallbackData: serverData,
@@ -103,6 +112,7 @@ export function EvaluationResults({
               evaluationResults={evaluationResults}
               selectedResult={selectedResult}
               setSelectedResult={setSelectedResult}
+              pagination={pagination}
             />
           )}
         </div>

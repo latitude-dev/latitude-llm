@@ -46,9 +46,7 @@ export const createEvaluationResultJob = async ({
   const result = await baseQuery
     .where(eq(evaluationResultsScope.id, evaluationResult.id))
     .limit(1)
-
-  const evaluationResultWithMetadata = result[0]!
-
+  const row = result[0]!
   websockets.emit('evaluationResultCreated', {
     workspaceId: evaluation.workspaceId,
     data: {
@@ -56,7 +54,7 @@ export const createEvaluationResultJob = async ({
       workspaceId: evaluation.workspaceId,
       evaluationId: evaluation.id,
       evaluationResultId: evaluationResult.id,
-      row: evaluationResultWithMetadata,
+      row,
     },
   })
 }

@@ -1,9 +1,11 @@
+import { useRef } from 'react'
 import { capitalize } from 'lodash-es'
 
 import {
   EvaluationDto,
   EvaluationResultableType,
 } from '@latitude-data/core/browser'
+import { IPagination } from '@latitude-data/core/lib/pagination/buildPagination'
 import { EvaluationResultWithMetadata } from '@latitude-data/core/repositories'
 import {
   Badge,
@@ -18,6 +20,12 @@ import {
   Text,
 } from '@latitude-data/web-ui'
 import { formatCostInMillicents, relativeTime } from '$/app/_lib/formatUtils'
+import { TablePaginationFooter } from '$/components/TablePaginationFooter'
+import useDynamicHeight from '$/hooks/useDynamicHeight'
+
+function countLabel(count: number) {
+  return `${count} evaluation results`
+}
 
 export const ResultCellContent = ({
   evaluation,
@@ -55,17 +63,21 @@ type EvaluationResultRow = EvaluationResultWithMetadata & {
 }
 export const EvaluationResultsTable = ({
   evaluation,
+  pagination,
   evaluationResults,
   selectedResult,
   setSelectedResult,
 }: {
   evaluation: EvaluationDto
+  pagination: IPagination
   evaluationResults: EvaluationResultRow[]
   selectedResult: EvaluationResultRow | undefined
   setSelectedResult: (log: EvaluationResultWithMetadata | undefined) => void
 }) => {
+  const ref = useRef<HTMLTableElement>(null)
+  const height = useDynamicHeight({ ref, paddingBottom: 16 })
   return (
-    <Table className='table-auto'>
+    <Table ref={ref} className='table-auto' maxHeight={height}>
       <TableHeader className='sticky top-0 z-10'>
         <TableRow>
           <TableHead>Time</TableHead>
@@ -76,7 +88,7 @@ export const EvaluationResultsTable = ({
           <TableHead>Tokens</TableHead>
         </TableRow>
       </TableHeader>
-      <TableBody className='max-h-full overflow-y-auto'>
+      <TableBody>
         {evaluationResults.map((evaluationResult) => (
           <TableRow
             key={evaluationResult.id}
@@ -144,6 +156,11 @@ export const EvaluationResultsTable = ({
           </TableRow>
         ))}
       </TableBody>
+      <TablePaginationFooter
+        colSpan={6}
+        pagination={pagination}
+        countLabel={countLabel}
+      />
     </Table>
   )
 }

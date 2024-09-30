@@ -11,11 +11,15 @@ export default function useEvaluationResultsWithMetadata(
     documentUuid,
     commitUuid,
     projectId,
+    page,
+    pageSize,
   }: {
     evaluationId: number
     documentUuid: string
     commitUuid: string
     projectId: number
+    page: string | null
+    pageSize: string | null
   },
   { fallbackData }: SWRConfiguration = {},
 ) {
@@ -26,6 +30,8 @@ export default function useEvaluationResultsWithMetadata(
       documentUuid,
       commitUuid,
       projectId,
+      page,
+      pageSize,
     })
 
     if (error) {
@@ -38,9 +44,17 @@ export default function useEvaluationResultsWithMetadata(
     }
 
     return data
-  }, [commitUuid, documentUuid, evaluationId, projectId, toast])
+  }, [commitUuid, documentUuid, evaluationId, projectId, toast, page, pageSize])
   const { data = EMPTY_ARRAY, mutate } = useSWR(
-    ['evaluationResults', evaluationId, documentUuid, commitUuid, projectId],
+    [
+      'evaluationResults',
+      evaluationId,
+      documentUuid,
+      commitUuid,
+      projectId,
+      page,
+      pageSize,
+    ],
     fetcher,
     { fallbackData },
   )

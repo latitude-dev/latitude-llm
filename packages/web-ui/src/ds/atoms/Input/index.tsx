@@ -31,9 +31,21 @@ const inputVariants = cva(cn(INPUT_BASE_CLASSES), {
 
 export type InputProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'size'> &
   VariantProps<typeof inputVariants> &
-  Omit<FormFieldProps, 'children'>
+  Omit<FormFieldProps, 'children'> & {
+    hideNativeAppearance?: boolean
+  }
 const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
-  { className, label, errors, errorStyle, description, type, size, ...props },
+  {
+    className,
+    label,
+    errors,
+    errorStyle,
+    description,
+    type,
+    size,
+    hideNativeAppearance = false,
+    ...props
+  },
   ref,
 ) {
   const inputComp = (
@@ -43,6 +55,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
       className={cn(inputVariants({ size }), className, {
         'border-red-500 focus-visible:ring-red-500': errors,
         hidden: !!props.hidden,
+        'appearance-none': hideNativeAppearance,
       })}
       {...props}
     />
