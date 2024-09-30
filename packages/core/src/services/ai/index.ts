@@ -26,7 +26,7 @@ import { publisher } from '../../events/publisher'
 import { createProviderLog } from '../providerLogs/create'
 import { createProvider, PartialConfig } from './helpers'
 
-const MAX_FREE_RUNS = 100
+const MAX_FREE_RUNS = 1000
 
 export type FinishCallbackEvent = {
   finishReason: FinishReason
