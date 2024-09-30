@@ -137,29 +137,35 @@ new aws.lb.ListenerRule('LatitudeLLMAppListenerRule', {
 
 const cluster = coreStack.requireOutput('cluster') as pulumi.Output<Cluster>
 
-const ecsService = new aws.ecs.Service('LatitudeLLMApp', {
-  cluster: cluster.arn,
-  taskDefinition: taskDefinition.arn,
-  desiredCount: 2,
-  launchType: 'FARGATE',
-  forceNewDeployment: true,
-  enableExecuteCommand: true,
-  deploymentController: {
-    type: 'CODE_DEPLOY',
-  },
-  networkConfiguration: {
-    subnets: privateSubnets.ids,
-    assignPublicIp: false,
-    securityGroups: [ecsSecurityGroup],
-  },
-  loadBalancers: [
-    {
-      targetGroupArn: blueTargetGroup.arn,
-      containerName,
-      containerPort: 8080,
+const ecsService = new aws.ecs.Service(
+  'LatitudeLLMApp',
+  {
+    cluster: cluster.arn,
+    taskDefinition: taskDefinition.arn,
+    desiredCount: 2,
+    launchType: 'FARGATE',
+    forceNewDeployment: true,
+    enableExecuteCommand: true,
+    deploymentController: {
+      type: 'CODE_DEPLOY',
     },
-  ],
-})
+    networkConfiguration: {
+      subnets: privateSubnets.ids,
+      assignPublicIp: false,
+      securityGroups: [ecsSecurityGroup],
+    },
+    loadBalancers: [
+      {
+        targetGroupArn: blueTargetGroup.arn,
+        containerName,
+        containerPort: 8080,
+      },
+    ],
+  },
+  {
+    ignoreChanges: ['taskDefinition'], // CodeDeploy controls the task definition that is deployed
+  },
+)
 
 const codeDeployApp = new aws.codedeploy.Application(
   'LatitudeLLMCodeDeployApp',

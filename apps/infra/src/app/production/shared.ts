@@ -128,5 +128,10 @@ export const environment = pulumi
       },
       { name: 'DATASET_GENERATOR_PROJECT_ID', value: '74' },
       { name: 'DATASET_GENERATOR_DOCUMENT_PATH', value: 'generator' },
+      {
+        name: 'TEMPLATES_SUGGESTION_PROMPT_PATH',
+        value: 'evaluation-template-suggestions',
+      },
+      { name: 'TEMPLATES_SUGGESTION_PROJECT_ID', value: '60' },
     ]
   })
