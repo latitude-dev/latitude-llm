@@ -44,6 +44,7 @@
 @layer base {
   :root {
     --background: 255 255 255;
+    --background-code: 250 250 250;
     --background-gray: 252 252 252;
     --foreground: 3 7 17;
 
@@ -117,7 +118,7 @@
     --border: 31 41 55;
     --input: 31 41 55;
     --ring: 10 129 217;
-    
+
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;
     --chart-3: 30 80% 55%;

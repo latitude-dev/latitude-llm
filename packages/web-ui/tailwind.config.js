@@ -22,6 +22,7 @@ export default {
         border: 'rgb(var(--border) / <alpha-value>)',
         input: 'rgb(var(--input) / <alpha-value>)',
         ring: 'rgb(var(--ring) / <alpha-value>)',
+        backgroundCode: 'rgb(var(--background-code) / <alpha-value>)',
         background: 'rgb(var(--background) / <alpha-value>)',
         'background-gray': 'rgb(var(--background-gray) / <alpha-value>)',
         foreground: 'rgb(var(--foreground) / <alpha-value>)',
@@ -95,7 +96,7 @@ export default {
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
-        'flash': 'flash-background 1s ease-in-out',
+        flash: 'flash-background 1s ease-in-out',
         'text-gradient': 'gradient-animation 3s linear infinite',
       },
       maxWidth: {

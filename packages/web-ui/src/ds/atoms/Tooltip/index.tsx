@@ -67,7 +67,7 @@ function Tooltip({
   children,
   trigger,
   // Provider
-  delayDuration,
+  delayDuration = 200,
   disableHoverableContent,
 
   // Root
