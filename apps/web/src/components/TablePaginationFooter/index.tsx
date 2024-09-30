@@ -1,11 +1,5 @@
 import { IPagination } from '@latitude-data/core/lib/pagination/buildPagination'
-import {
-  Button,
-  TableCell,
-  TableFooter,
-  TableRow,
-  Text,
-} from '@latitude-data/web-ui'
+import { Button, Text } from '@latitude-data/web-ui'
 import { GoToPageInput } from '$/components/TablePaginationFooter/GoToPageInput'
 import Link from 'next/link'
 
@@ -31,42 +25,31 @@ function NavLink({
 }
 
 export function TablePaginationFooter({
-  colSpan,
   pagination,
   countLabel,
 }: {
-  colSpan: number
   pagination: IPagination
   countLabel?: (count: number) => string
 }) {
   return (
-    <TableFooter sticky>
-      <TableRow>
-        <TableCell colSpan={colSpan}>
-          <div className='w-full py-2 flex justify-between items-center'>
-            <Text.H5M color='foregroundMuted'>
-              {countLabel ? countLabel(pagination.count) : pagination.count}{' '}
-            </Text.H5M>
+    <div className='w-full flex justify-between items-center'>
+      <Text.H5M color='foregroundMuted'>
+        {countLabel ? countLabel(pagination.count) : pagination.count}{' '}
+      </Text.H5M>
 
-            <div className='flex items-center'>
-              <NavLink url={pagination.prevPage?.url} direction='prev' />
-              <div className='flex flex-row items-center gap-x-1'>
-                <Text.H5M color='foregroundMuted'>Page</Text.H5M>
-                <div className='max-w-14'>
-                  <GoToPageInput
-                    key={pagination.page}
-                    pagination={pagination}
-                  />
-                </div>
-                <Text.H5M color='foregroundMuted'>
-                  of {pagination.totalPages}
-                </Text.H5M>
-              </div>
-              <NavLink url={pagination.nextPage?.url} direction='next' />
-            </div>
+      <div className='flex items-center'>
+        <NavLink url={pagination.prevPage?.url} direction='prev' />
+        <div className='flex flex-row items-center gap-x-1'>
+          <Text.H5M color='foregroundMuted'>Page</Text.H5M>
+          <div className='max-w-14'>
+            <GoToPageInput key={pagination.page} pagination={pagination} />
           </div>
-        </TableCell>
-      </TableRow>
-    </TableFooter>
+          <Text.H5M color='foregroundMuted'>
+            of {pagination.totalPages}
+          </Text.H5M>
+        </div>
+        <NavLink url={pagination.nextPage?.url} direction='next' />
+      </div>
+    </div>
   )
 }

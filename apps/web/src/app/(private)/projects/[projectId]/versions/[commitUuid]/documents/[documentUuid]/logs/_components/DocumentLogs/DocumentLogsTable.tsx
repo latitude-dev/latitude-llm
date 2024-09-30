@@ -39,7 +39,17 @@ export const DocumentLogsTable = ({
   const ref = useRef<HTMLTableElement>(null)
   const height = useDynamicHeight({ ref, paddingBottom: 16 })
   return (
-    <Table className='table-auto' ref={ref} maxHeight={height}>
+    <Table
+      className='table-auto'
+      ref={ref}
+      maxHeight={height}
+      externalFooter={
+        <TablePaginationFooter
+          pagination={pagination}
+          countLabel={countLabel}
+        />
+      }
+    >
       <TableHeader className='sticky top-0 z-10'>
         <TableRow>
           <TableHead>Time</TableHead>
@@ -107,11 +117,6 @@ export const DocumentLogsTable = ({
           </TableRow>
         ))}
       </TableBody>
-      <TablePaginationFooter
-        colSpan={7}
-        pagination={pagination}
-        countLabel={countLabel}
-      />
     </Table>
   )
 }
