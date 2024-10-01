@@ -28,7 +28,7 @@ const PaneWrapper = ({
 }) => {
   return (
     <div
-      className={className}
+      className={cn('h-full overflow-y-auto custom-scrollbar', className)}
       style={{
         width: width === 'auto' ? 'auto' : isResizable ? width - 1 : width,
       }}
