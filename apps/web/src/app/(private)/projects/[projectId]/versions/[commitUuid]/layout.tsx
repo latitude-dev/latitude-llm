@@ -61,6 +61,7 @@ export default async function CommitLayout({
     <ProjectProvider project={project}>
       <CommitProvider commit={commit} isHead={isHead}>
         <AppLayout
+          scrollable={false}
           navigationLinks={NAV_LINKS}
           currentUser={session.user}
           breadcrumbs={[
