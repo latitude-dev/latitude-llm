@@ -16,12 +16,12 @@ import {
   EventArgs,
   useSockets,
 } from '$/components/Providers/WebsocketsProvider/useSockets'
-import { DocumentRoutes, ROUTES } from '$/services/routes'
+import { useToggleModal } from '$/hooks/useToogleModal'
 import useEvaluationResultsWithMetadata from '$/stores/evaluationResultsWithMetadata'
 import { useProviderLog } from '$/stores/providerLogs'
-import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 
+import CreateBatchEvaluationModal from '../Actions/CreateBatchEvaluationModal'
 import { EvaluationResultInfo } from './EvaluationResultInfo'
 import { EvaluationResultsTable } from './EvaluationResultsTable'
 import { EvaluationStatusBanner } from './EvaluationStatusBanner'
@@ -41,6 +41,7 @@ export function EvaluationResults({
   const [selectedResult, setSelectedResult] = useState<
     EvaluationResultWithMetadata | undefined
   >(undefined)
+  const { open, onClose, onOpen } = useToggleModal()
   const { data: providerLog } = useProviderLog(selectedResult?.providerLogId)
   const searchParams = useSearchParams()
   const page = searchParams.get('page')
@@ -89,20 +90,9 @@ export function EvaluationResults({
             <TableBlankSlate
               description='There are no evaluation results yet. Run the evaluation or, if you already have, wait a few seconds for the first results to stream in.'
               link={
-                <Link
-                  href={
-                    ROUTES.projects
-                      .detail({ id: project.id })
-                      .commits.detail({ uuid: commit.uuid })
-                      .documents.detail({ uuid: document.documentUuid })
-                      [DocumentRoutes.evaluations].detail(evaluation.id)
-                      .createBatch
-                  }
-                >
-                  <TableBlankSlate.Button>
-                    Run the evaluation
-                  </TableBlankSlate.Button>
-                </Link>
+                <TableBlankSlate.Button onClick={onOpen}>
+                  Run the evaluation
+                </TableBlankSlate.Button>
               }
             />
           )}
@@ -127,6 +117,14 @@ export function EvaluationResults({
           </div>
         )}
       </div>
+      <CreateBatchEvaluationModal
+        open={open}
+        onClose={onClose}
+        document={document}
+        evaluation={evaluation}
+        projectId={project.id.toString()}
+        commitUuid={commit.uuid}
+      />
     </div>
   )
 }

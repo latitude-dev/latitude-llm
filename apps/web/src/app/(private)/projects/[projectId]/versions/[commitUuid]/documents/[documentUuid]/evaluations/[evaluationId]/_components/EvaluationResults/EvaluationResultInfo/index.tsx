@@ -5,12 +5,7 @@ import {
   DocumentLogWithMetadata,
   EvaluationResultWithMetadata,
 } from '@latitude-data/core/repositories'
-import {
-  Button,
-  Icon,
-  Modal,
-  ReactStateDispatch,
-} from '@latitude-data/web-ui'
+import { Button, Icon, Modal, ReactStateDispatch } from '@latitude-data/web-ui'
 import useProviderLogs from '$/stores/providerLogs'
 import useSWR from 'swr'
 
