@@ -10,18 +10,16 @@ export function MetadataInfoTabs({
     { label: 'Messages', value: 'messages' },
   ],
   children,
-  beforeTabs,
 }: {
   children: (args: RenderProps) => ReactNode
   tabs?: TabSelectorOption<string>[]
-  beforeTabs?: ReactNode
   className?: string
 }) {
   const [selectedTab, setSelectedTab] = useState<string>('metadata')
   return (
     <div
       className={cn(
-        'relative flex-shrink-0 flex flex-col',
+        'flex-shrink-0 flex flex-col',
         'border border-border rounded-lg items-center',
         className,
       )}
@@ -34,7 +32,6 @@ export function MetadataInfoTabs({
         />
       </div>
       <div className='my-5 px-4 flex flex-col gap-y-5 relative w-full'>
-        {beforeTabs}
         <div className='flex flex-col gap-4 w-full overflow-x-auto'>
           {children({ selectedTab })}
         </div>

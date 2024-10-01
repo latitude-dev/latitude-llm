@@ -5,7 +5,12 @@ import {
   DocumentLogWithMetadata,
   EvaluationResultWithMetadata,
 } from '@latitude-data/core/repositories'
-import { Modal, ReactStateDispatch, Text } from '@latitude-data/web-ui'
+import {
+  Button,
+  Icon,
+  Modal,
+  ReactStateDispatch,
+} from '@latitude-data/web-ui'
 import useProviderLogs from '$/stores/providerLogs'
 import useSWR from 'swr'
 
@@ -84,19 +89,7 @@ export function EvaluationResultInfo({
   }, [evaluationResult.documentLogId])
   return (
     <>
-      <MetadataInfoTabs
-        className='w-full'
-        beforeTabs={
-          <div>
-            <Text.H6 color='foregroundMuted'>
-              Showing the evaluation metadata. Check the{' '}
-            </Text.H6>
-            <button onClick={onClickOpen}>
-              <Text.H6 color='primary'>original log metadata here</Text.H6>
-            </button>
-          </div>
-        }
-      >
+      <MetadataInfoTabs className='w-full'>
         {({ selectedTab }) => (
           <>
             {selectedTab === 'metadata' && (
@@ -109,6 +102,12 @@ export function EvaluationResultInfo({
             {selectedTab === 'messages' && (
               <EvaluationResultMessages providerLog={providerLog} />
             )}
+            <div className='w-full bg-white flex justify-center'>
+              <Button variant='link' onClick={onClickOpen}>
+                Check original log
+                <Icon name='arrowRight' widthClass='w-4' heightClass='h-4' />
+              </Button>
+            </div>
           </>
         )}
       </MetadataInfoTabs>
