@@ -105,7 +105,7 @@ export function UsageIndicator() {
             />
             <LoadingText isLoading={isLoading}>
               <Text.H6>
-                {data ? data.max - data.usage : 0} / {data?.max ?? 0}
+                {data?.usage} / {data?.max}
               </Text.H6>
             </LoadingText>
           </div>
@@ -115,7 +115,7 @@ export function UsageIndicator() {
         side='bottom'
         sideOffset={8}
         align='center'
-        className='bg-background rounded-md w-[400px] p-4 shadow-lg border border-border'
+        className='bg-background rounded-md w-80 p-4 shadow-lg border border-border'
       >
         <div className='flex flex-col gap-4'>
           <div className='flex flex-row items-center gap-2'>
@@ -128,12 +128,10 @@ export function UsageIndicator() {
             />
             <LoadingText isLoading={isLoading}>
               <div className='flex flex-row w-full items-center gap-2'>
-                <Text.H4 color='foreground'>
-                  {data ? data.max - data.usage : 0}
-                </Text.H4>
+                <Text.H4 color='foreground'>{data?.usage}</Text.H4>
                 <Text.H4 color='foregroundMuted' noWrap>
                   {' '}
-                  / {data?.max} runs left
+                  / {data?.max} runs
                 </Text.H4>
                 <div className='w-full flex items-center justify-end'>
                   <Badge variant='muted'>

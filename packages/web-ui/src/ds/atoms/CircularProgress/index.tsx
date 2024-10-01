@@ -12,7 +12,6 @@ export type CircularProgressProps = {
   size?: number
   strokeWidth?: number
   className?: string
-  backgroundClassName?: string
   animateOnMount?: boolean
 }
 
