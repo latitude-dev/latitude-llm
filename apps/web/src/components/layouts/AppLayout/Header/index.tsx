@@ -108,7 +108,7 @@ export default function AppHeader({
   currentUser,
 }: AppHeaderProps) {
   return (
-    <header className='px-6 sticky top-0 flex flex-col border-b border-b-border bg-white isolate z-10'>
+    <header className='px-6 sticky top-0 flex flex-col border-b border-b-border bg-white isolate z-20'>
       <div className='py-3 flex flex-row items-center justify-between'>
         <Breadcrumb showLogo breadcrumbs={breadcrumbs} />
         <div className='flex flex-row items-center gap-x-6 pl-6'>
