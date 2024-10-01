@@ -20,7 +20,7 @@ export default function AppLayout({
   return (
     <div
       className={cn('grid grid-rows-[auto,1fr] h-screen overflow-hidden', {
-        'overflow-y-auto': scrollable,
+        'overflow-y-auto custom-scrollbar': scrollable,
       })}
     >
       <AppHeader
