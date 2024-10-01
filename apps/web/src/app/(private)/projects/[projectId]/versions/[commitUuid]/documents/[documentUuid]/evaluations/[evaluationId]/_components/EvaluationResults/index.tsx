@@ -83,7 +83,7 @@ export function EvaluationResults({
         documentUuid={document.documentUuid}
         evaluationId={evaluation.id}
       />
-      <div className='relative flex flex-row w-full gap-4'>
+      <div className='relative flex flex-row w-full gap-4 overflow-x-auto min-w-[1024px]'>
         <div className='flex-1'>
           {evaluationResults.length === 0 && (
             <TableBlankSlate
@@ -117,12 +117,14 @@ export function EvaluationResults({
           )}
         </div>
         {selectedResult && (
-          <EvaluationResultInfo
-            key={selectedResult.id}
-            evaluation={evaluation}
-            evaluationResult={selectedResult}
-            providerLog={providerLog}
-          />
+          <div className='lg:w-1/2 2xl:w-1/3'>
+            <EvaluationResultInfo
+              key={selectedResult.id}
+              evaluation={evaluation}
+              evaluationResult={selectedResult}
+              providerLog={providerLog}
+            />
+          </div>
         )}
       </div>
     </div>

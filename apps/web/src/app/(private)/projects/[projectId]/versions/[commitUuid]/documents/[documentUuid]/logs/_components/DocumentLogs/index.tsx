@@ -24,8 +24,8 @@ export function DocumentLogs({
   })
 
   return (
-    <div className='flex flex-row w-full h-full gap-4'>
-      <div className='flex flex-col flex-grow min-w-0 h-full gap-y-4'>
+    <div className='flex flex-row w-full h-full gap-4 min-w-[1024px] overflow-x-auto'>
+      <div className='flex flex-col flex-grow h-full gap-y-4 min-w-0 lg:w-1/2 2xl:w-2/3'>
         <DocumentLogsTable
           documentLogs={documentLogs}
           selectedLog={selectedLog}
@@ -34,11 +34,12 @@ export function DocumentLogs({
         />
       </div>
       {selectedLog && (
-        <DocumentLogInfo
-          className='w-80'
-          documentLog={selectedLog}
-          providerLogs={providerLogs}
-        />
+        <div className='lg:w-1/2 2xl:w-1/3'>
+          <DocumentLogInfo
+            documentLog={selectedLog}
+            providerLogs={providerLogs}
+          />
+        </div>
       )}
     </div>
   )

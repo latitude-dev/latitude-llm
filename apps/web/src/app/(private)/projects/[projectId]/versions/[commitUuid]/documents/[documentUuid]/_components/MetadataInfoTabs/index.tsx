@@ -35,7 +35,7 @@ export function MetadataInfoTabs({
       </div>
       <div className='my-5 px-4 flex flex-col gap-y-5 relative w-full'>
         {beforeTabs}
-        <div className='flex flex-col gap-4 w-full'>
+        <div className='flex flex-col gap-4 w-full overflow-x-auto'>
           {children({ selectedTab })}
         </div>
       </div>

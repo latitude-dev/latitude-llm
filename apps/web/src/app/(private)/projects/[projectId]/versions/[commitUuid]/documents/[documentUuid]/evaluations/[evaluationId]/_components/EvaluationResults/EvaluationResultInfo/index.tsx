@@ -85,7 +85,7 @@ export function EvaluationResultInfo({
   return (
     <>
       <MetadataInfoTabs
-        className='w-80'
+        className='w-full'
         beforeTabs={
           <div>
             <Text.H6 color='foregroundMuted'>

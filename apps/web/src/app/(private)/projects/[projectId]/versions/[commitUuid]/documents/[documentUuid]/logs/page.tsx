@@ -40,7 +40,7 @@ export default async function DocumentPage({
     }).$dynamic(),
   })
   return (
-    <div className='flex flex-col w-full h-full overflow-hidden p-6 gap-2 min-w-0'>
+    <div className='flex flex-col w-full h-full overflow-x-auto p-6 gap-2 min-w-0'>
       <TableWithHeader
         title='Logs'
         table={

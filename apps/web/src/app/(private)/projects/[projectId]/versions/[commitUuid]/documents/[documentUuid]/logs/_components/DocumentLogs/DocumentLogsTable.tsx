@@ -76,7 +76,7 @@ export const DocumentLogsTable = ({
               <Text.H4 noWrap>{relativeTime(documentLog.createdAt)}</Text.H4>
             </TableCell>
             <TableCell>
-              <div className='flex flex-row gap-2 items-center'>
+              <div className='flex flex-row gap-2 items-center min-w-0 max-w-xs'>
                 <Badge
                   variant={documentLog.commit.version ? 'accent' : 'muted'}
                   shape='square'
@@ -87,7 +87,9 @@ export const DocumentLogsTable = ({
                       : 'Draft'}
                   </Text.H6>
                 </Badge>
-                <Text.H5>{documentLog.commit.title}</Text.H5>
+                <Text.H5 noWrap ellipsis>
+                  {documentLog.commit.title}
+                </Text.H5>
               </div>
             </TableCell>
             <TableCell>
