@@ -98,25 +98,23 @@ export default function Playground({
           </Link>
         )}
       </div>
-      <div className='flex flex-col gap-6 h-full relative'>
+      <div className='flex flex-col gap-6'>
         <Variables providerLog={providerLog} />
-        <div className='flex flex-col h-full'>
+        <div className='flex flex-col flex-grow'>
           <div className='flex flex-col flex-grow flex-shrink relative h-full overflow-y-auto'>
-            <div className='absolute top-0 left-0 right-0 bottom-0'>
-              {mode === 'preview' ? (
-                <Preview
-                  metadata={metadata}
-                  parameters={parameters}
-                  runPrompt={() => setMode('chat')}
-                />
-              ) : (
-                <Chat
-                  evaluation={evaluation}
-                  parameters={parameters}
-                  clearChat={() => setMode('preview')}
-                />
-              )}
-            </div>
+            {mode === 'preview' ? (
+              <Preview
+                metadata={metadata}
+                parameters={parameters}
+                runPrompt={() => setMode('chat')}
+              />
+            ) : (
+              <Chat
+                evaluation={evaluation}
+                parameters={parameters}
+                clearChat={() => setMode('preview')}
+              />
+            )}
           </div>
         </div>
       </div>

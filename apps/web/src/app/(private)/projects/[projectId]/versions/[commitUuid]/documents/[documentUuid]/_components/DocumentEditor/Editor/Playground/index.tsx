@@ -64,8 +64,8 @@ export default function Playground({
           </Button>
         )}
       </Header>
-      <div className='flex flex-col gap-6 h-full relative'>
-        <div className='flex flex-col gap-3'>
+      <div className='flex flex-col gap-6 relative'>
+        <div className='flex flex-col gap-3 max-h-[35vh] overflow-y-auto'>
           <Text.H6M>Inputs</Text.H6M>
           {Object.keys(inputs).length > 0 ? (
             Object.entries(inputs).map(([param, value], idx) => (
@@ -88,19 +88,17 @@ export default function Playground({
             </Text.H6>
           )}
         </div>
-        <div className='flex flex-col gap-3 h-full'>
+        <div className='flex flex-col flex-grow gap-3'>
           <div className='flex flex-col flex-grow flex-shrink relative h-full overflow-y-auto'>
-            <div className='absolute top-0 left-0 right-0 bottom-0'>
-              {mode === 'preview' ? (
-                <Preview
-                  metadata={metadata}
-                  parameters={parameters}
-                  runPrompt={() => setMode('chat')}
-                />
-              ) : (
-                <Chat document={document} parameters={parameters} />
-              )}
-            </div>
+            {mode === 'preview' ? (
+              <Preview
+                metadata={metadata}
+                parameters={parameters}
+                runPrompt={() => setMode('chat')}
+              />
+            ) : (
+              <Chat document={document} parameters={parameters} />
+            )}
           </div>
         </div>
       </div>

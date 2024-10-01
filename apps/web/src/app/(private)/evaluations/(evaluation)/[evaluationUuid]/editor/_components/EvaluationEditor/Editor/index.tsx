@@ -92,7 +92,7 @@ export default function EvaluationEditor({
           />
         </Suspense>
       </div>
-      <div className='flex flex-col flex-1 gap-2 min-w-0 max-w-1/2'>
+      <div className='flex flex-col flex-1 gap-2 min-w-0 max-w-1/2 overflow-y-auto max-h-[calc(100vh-150px)]'>
         <Playground evaluation={evaluation} metadata={metadata!} />
       </div>
     </div>
