@@ -12,11 +12,13 @@ import {
   Workspace,
 } from '../../browser'
 import { PartialConfig } from '../../services/ai'
+import { createClaimInvitationReferralJob } from './createClaimInvitationReferralJob'
 import { createEvaluationResultJob } from './createEvaluationResultJob'
 import { createDocumentLogJob } from './documentLogs/createJob'
 import { runLiveEvaluationsJob } from './runLiveEvaluationsJob'
 import { sendInvitationToUserJob } from './sendInvitationToUser'
 import { sendMagicLinkJob } from './sendMagicLinkHandler'
+import { sendReferralInvitationJob } from './sendReferralInvitation'
 
 type LatitudeEventGeneric<
   U extends keyof typeof EventHandlers,
@@ -119,6 +121,22 @@ export type DocumentLogCreatedEvent = LatitudeEventGeneric<
   DocumentLog
 >
 
+export type SendReferralInvitationEvent = LatitudeEventGeneric<
+  'sendReferralInvitation',
+  {
+    email: string
+    workspaceId: number
+    userId: string
+  }
+>
+
+export type ClaimReferralInvitationEvent = LatitudeEventGeneric<
+  'claimReferralInvitations',
+  {
+    newUser: User
+  }
+>
+
 export type LatitudeEvent =
   | MembershipCreatedEvent
   | UserCreatedEvent
@@ -130,6 +148,8 @@ export type LatitudeEvent =
   | WorkspaceCreatedEvent
   | ProjectCreatedEvent
   | DocumentLogCreatedEvent
+  | SendReferralInvitationEvent
+  | ClaimReferralInvitationEvent
 
 export interface IEventsHandlers {
   magicLinkTokenCreated: EventHandler<MagicLinkTokenCreated>[]
@@ -142,6 +162,8 @@ export interface IEventsHandlers {
   workspaceCreated: EventHandler<WorkspaceCreatedEvent>[]
   projectCreated: EventHandler<ProjectCreatedEvent>[]
   documentLogCreated: EventHandler<DocumentLogCreatedEvent>[]
+  sendReferralInvitation: EventHandler<SendReferralInvitationEvent>[]
+  claimReferralInvitations: EventHandler<ClaimReferralInvitationEvent>[]
 }
 
 export const EventHandlers: IEventsHandlers = {
@@ -155,4 +177,6 @@ export const EventHandlers: IEventsHandlers = {
   workspaceCreated: [],
   projectCreated: [],
   documentLogCreated: [runLiveEvaluationsJob],
+  sendReferralInvitation: [sendReferralInvitationJob],
+  claimReferralInvitations: [createClaimInvitationReferralJob],
 } as const

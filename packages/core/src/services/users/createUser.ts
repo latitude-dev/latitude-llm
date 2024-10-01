@@ -1,5 +1,6 @@
 import { User } from '../../browser'
 import { database } from '../../client'
+import { publisher } from '../../events/publisher'
 import { Result, Transaction } from '../../lib'
 import { users } from '../../schema'
 
@@ -15,7 +16,7 @@ export async function createUser(
   },
   db = database,
 ) {
-  return Transaction.call<User>(async (trx) => {
+  const result = await Transaction.call<User>(async (trx) => {
     const inserts = await trx
       .insert(users)
       .values({
@@ -29,4 +30,15 @@ export async function createUser(
 
     return Result.ok(user)
   }, db)
+
+  if (result.ok) {
+    publisher.publishLater({
+      type: 'claimReferralInvitations',
+      data: {
+        newUser: result.unwrap(),
+      },
+    })
+  }
+
+  return result
 }

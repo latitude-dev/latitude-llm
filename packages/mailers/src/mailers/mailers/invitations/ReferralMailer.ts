@@ -4,27 +4,21 @@ import { render } from '@react-email/components'
 import Mail from 'nodemailer/lib/mailer'
 import SMTPTransport from 'nodemailer/lib/smtp-transport'
 
-import InvitationMail from '../../../emails/invitations/InvitationMail'
+import ReferralMail from '../../../emails/invitations/ReferralMail'
 import Mailer from '../../Mailer'
 
-export class InvitationMailer extends Mailer {
-  invited: User
+export class ReferralMailer extends Mailer {
+  email: string
   invitee: User
-  invitationToken: string
 
   constructor(
     options: Mail.Options,
-    {
-      invited,
-      invitee,
-      invitationToken,
-    }: { invited: User; invitee: User; invitationToken: string },
+    { email, invitee }: { email: string; invitee: User },
   ) {
     super(options)
 
-    this.invited = invited
+    this.email = email
     this.invitee = invitee
-    this.invitationToken = invitationToken
   }
 
   async send(): Promise<TypedResult<SMTPTransport.SentMessageInfo, Error>> {
@@ -33,10 +27,8 @@ export class InvitationMailer extends Mailer {
       from: this.options.from,
       subject: 'You have been invited to join Latitude!',
       html: await render(
-        InvitationMail({
-          invited: this.invited,
+        ReferralMail({
           invitee: this.invitee,
-          invitationToken: this.invitationToken,
         }),
       ),
     })

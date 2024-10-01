@@ -24,6 +24,7 @@ const buttonContainerVariants = cva(
         link: 'shadow-none underline-offset-4 hover:underline',
         linkOutline: 'shadow-none underline-offset-4 hover:underline',
         linkDestructive: 'shadow-none underline-offset-4 hover:underline',
+        shiny: '',
       },
       fanciness: {
         default: 'bg-transparent hover:bg-transparent',
@@ -69,6 +70,11 @@ const buttonVariants = cva(
         linkOutline: 'shadow-none underline-offset-4 group-hover:underline',
         linkDestructive:
           'shadow-none underline-offset-4 group-hover:underline text-destructive',
+        shiny: cn(
+          'bg-primary/10 text-primary group-hover:bg-primary/15 overflow-hidden',
+          'shadow-[inset_0px_0px_0px_1px_rgb(var(--primary)/0.1),inset_0px_2px_2px_rgba(255,255,255,0.25),inset_0px_-1px_4px_rgba(0,0,0,0.04)]',
+          'group-hover:shadow-[inset_0px_0px_0px_1px_rgb(var(--primary)/0.5),inset_0px_2px_2px_rgba(255,255,255,0.25),inset_0px_-1px_4px_rgba(0,0,0,0.04)]',
+        ),
       },
       size: {
         default: 'py-1.5 px-3',
@@ -85,6 +91,11 @@ const buttonVariants = cva(
       {
         variant: 'nope',
         className: 'p-0',
+      },
+      {
+        variant: 'shiny',
+        size: 'small',
+        className: 'rounded-lg px-2',
       },
       {
         variant: 'outline',
@@ -149,20 +160,38 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
   return (
     <Comp
       disabled={disabled || isLoading}
-      className={cn('group', buttonContainerVariants({ fanciness, variant }), {
-        'w-full': fullWidth,
-        'opacity-50': lookDisabled,
-      })}
+      className={cn(
+        'group relative',
+        buttonContainerVariants({ fanciness, variant }),
+        {
+          'w-full': fullWidth,
+          'opacity-50': lookDisabled,
+        },
+      )}
       ref={ref}
       {...props}
     >
       <Slottable>
         <div
           className={cn(
+            'relative',
             buttonVariants({ variant, size, className, fanciness }),
           )}
         >
-          <div className='flex flex-row items-center gap-x-1'>
+          {variant === 'shiny' && (
+            <span
+              className={cn(
+                'absolute inset-0',
+                'bg-gradient-to-r from-transparent via-white to-transparent',
+                'opacity-50 transform -translate-x-full group-hover:animate-shine animate-shine',
+              )}
+            ></span>
+          )}
+          <div
+            className={cn('flex flex-row items-center gap-x-1', {
+              'w-full': fullWidth,
+            })}
+          >
             {iconProps ? <Icon {...iconProps} /> : null}
             {children}
           </div>

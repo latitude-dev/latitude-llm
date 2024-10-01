@@ -21,7 +21,7 @@ export default function Layout({
   previewText,
 }: {
   children: ReactNode
-  title: string
+  title?: string
   previewText: string
 }) {
   const rootUrl = env.LATITUDE_URL
@@ -44,12 +44,14 @@ export default function Layout({
         <Tailwind>
           <Container className='p-4 bg-gray-100'>
             <Section className='bg-white rounded-lg p-4'>
-              <Heading
-                as='h1'
-                className='text-gray-900 text-2xl font-bold mb-4 p-0'
-              >
-                {title}
-              </Heading>
+              {title && (
+                <Heading
+                  as='h1'
+                  className='text-gray-900 text-2xl font-bold mb-4 p-0'
+                >
+                  {title}
+                </Heading>
+              )}
               {children}
               <Section className='pt-4'>
                 <Text className='text-gray-500 text-sm'>The Latitude Team</Text>

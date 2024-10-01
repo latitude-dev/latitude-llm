@@ -11,8 +11,22 @@ export enum EvaluationRoutes {
   editor = 'editor',
 }
 
+export enum BackofficeRoutes {
+  templates = 'templates',
+  rewards = 'rewards',
+}
+
 export const ROUTES = {
   root: '/',
+  backoffice: {
+    root: '/backoffice',
+    [BackofficeRoutes.templates]: {
+      root: '/backoffice/templates',
+    },
+    [BackofficeRoutes.rewards]: {
+      root: '/backoffice/rewards',
+    },
+  },
   settings: {
     root: '/settings',
     providerApiKeys: {
