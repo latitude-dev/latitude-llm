@@ -4,7 +4,8 @@ import { ReactNode } from 'react'
 
 import { Button, FormWrapper, Input, useToast } from '@latitude-data/web-ui'
 import { setupAction } from '$/actions/user/setupAction'
-import { useServerAction } from 'zsa-react'
+import { useFormAction } from '$/hooks/useFormAction'
+import useLatitudeAction from '$/hooks/useLatitudeAction'
 
 export default function SetupForm({
   email,
@@ -18,8 +19,9 @@ export default function SetupForm({
   footer: ReactNode
 }) {
   const { toast } = useToast()
-  const { isPending, error, executeFormAction } = useServerAction(setupAction, {
-    onError: ({ err }) => {
+  const { execute, isPending } = useLatitudeAction(setupAction)
+  const { error, action, data } = useFormAction(execute, {
+    onError: (err) => {
       if (err.code === 'ERROR') {
         toast({
           title: 'Saving failed',
@@ -31,31 +33,37 @@ export default function SetupForm({
   })
   const errors = error?.fieldErrors
   return (
-    <form action={executeFormAction}>
+    <form action={action}>
       <FormWrapper>
         <Input
           autoFocus
+          required
           name='name'
           autoComplete='name'
           label='Name'
           placeholder='Jon Snow'
+          // @ts-expect-error
           errors={errors?.name}
-          defaultValue={name}
+          defaultValue={data?.name || name}
         />
         <Input
+          required
           name='email'
           autoComplete='email'
           label='Email'
           placeholder='jon@winterfell.com'
+          // @ts-expect-error
           errors={errors?.email}
-          defaultValue={email}
+          defaultValue={data?.email || email}
         />
         <Input
+          required
           name='companyName'
           label='Workspace Name'
           placeholder='Acme Inc.'
+          // @ts-expect-error
           errors={errors?.companyName}
-          defaultValue={companyName}
+          defaultValue={data?.companyName || companyName}
         />
         <Button fullWidth isLoading={isPending} fancy>
           Create account
