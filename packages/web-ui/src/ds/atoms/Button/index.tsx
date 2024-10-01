@@ -189,7 +189,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
           )}
           <div
             className={cn('flex flex-row items-center gap-x-1', {
-              'w-full': fullWidth,
+              'w-full justify-center': fullWidth,
             })}
           >
             {iconProps ? <Icon {...iconProps} /> : null}
