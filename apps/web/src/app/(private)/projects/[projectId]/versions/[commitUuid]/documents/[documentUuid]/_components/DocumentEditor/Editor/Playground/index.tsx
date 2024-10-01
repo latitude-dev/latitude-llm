@@ -65,7 +65,7 @@ export default function Playground({
         )}
       </Header>
       <div className='flex flex-col gap-6 h-full relative'>
-        <div className='flex flex-col gap-3 max-h-[35vh] overflow-y-auto custom-scrollbar'>
+        <div className='flex flex-col gap-3'>
           <Text.H6M>Inputs</Text.H6M>
           {Object.keys(inputs).length > 0 ? (
             Object.entries(inputs).map(([param, value], idx) => (
