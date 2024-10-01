@@ -10,6 +10,7 @@ import {
   Button,
   CloseTrigger,
   Modal,
+  roleVariant,
   Table,
   TableBody,
   TableCell,
@@ -223,19 +224,6 @@ const printMessageContent = (content: string | MessageContent[]) => {
   if (content[0]!.type === 'text') return (content[0] as TextContent).text
 
   return '-'
-}
-
-const roleVariant = (role: string) => {
-  switch (role) {
-    case 'user':
-      return 'purple'
-    case 'system':
-      return 'outline'
-    case 'assistant':
-      return 'yellow'
-    default:
-      return 'default'
-  }
 }
 
 function ellipsis(str: string) {

@@ -59,10 +59,12 @@ export default function Preview({
       ref={containerRef}
       className='flex flex-col gap-3 h-full overflow-y-auto'
     >
-      <Text.H6M>Preview</Text.H6M>
-      {(conversation?.messages ?? []).map((message, index) => (
-        <Message key={index} role={message.role} content={message.content} />
-      ))}
+      <div className='flex flex-col gap-2'>
+        <Text.H6M>Preview</Text.H6M>
+        {(conversation?.messages ?? []).map((message, index) => (
+          <Message key={index} role={message.role} content={message.content} />
+        ))}
+      </div>
       {error !== undefined && <ErrorMessage error={error} />}
       {!completed && (
         <div className='w-full py-1 px-4 bg-secondary rounded-lg'>

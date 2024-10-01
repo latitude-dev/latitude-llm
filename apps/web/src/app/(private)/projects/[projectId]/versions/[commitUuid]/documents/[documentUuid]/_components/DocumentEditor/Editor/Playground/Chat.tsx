@@ -210,7 +210,6 @@ export default function Chat({
               messages={
                 conversation?.messages.slice(chainLength - 1, chainLength) ?? []
               }
-              variant='accent'
             />
             {time && <Timer timeMs={time} />}
           </>
@@ -218,10 +217,7 @@ export default function Chat({
         {(conversation?.messages.length ?? 0) > chainLength && (
           <>
             <Text.H6M>Chat</Text.H6M>
-            <MessageList
-              messages={conversation!.messages.slice(chainLength)}
-              variant='outline'
-            />
+            <MessageList messages={conversation!.messages.slice(chainLength)} />
           </>
         )}
         {error ? (
@@ -320,7 +316,6 @@ export function StreamMessage({
       <Message
         role={MessageRole.assistant}
         content={[{ type: ContentType.text, text: responseStream }]}
-        variant='accent'
       />
     )
   }
@@ -329,7 +324,6 @@ export function StreamMessage({
     <Message
       role={MessageRole.assistant}
       content={[{ type: ContentType.text, text: responseStream }]}
-      variant='outline'
     />
   )
 }
