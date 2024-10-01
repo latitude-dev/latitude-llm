@@ -1,16 +1,11 @@
-import { CompileError, ContentType } from '@latitude-data/compiler'
+import { CompileError } from '@latitude-data/compiler'
 
-import { Text } from '../../../atoms'
-import { Message } from '../Message'
+import { Alert, Text } from '../../../atoms'
 
 export function ErrorMessage({ error }: { error: Error }) {
   return (
     <div className='flex flex-col gap-2'>
-      <Message
-        role='Error'
-        content={[{ type: ContentType.text, text: error.message }]}
-        variant='destructive'
-      />
+      <Alert title='Error' description={error.message} variant='destructive' />
       {error instanceof CompileError && (
         <div className='flex flex-col w-full relative overflow-auto border border-destructive p-4 rounded-lg gap-0'>
           {error

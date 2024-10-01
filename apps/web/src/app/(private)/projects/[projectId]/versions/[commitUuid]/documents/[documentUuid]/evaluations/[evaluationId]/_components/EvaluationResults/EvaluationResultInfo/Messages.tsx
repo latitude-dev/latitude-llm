@@ -22,12 +22,6 @@ export function EvaluationResultMessages({
   }, [providerLog])
 
   if (!providerLog) return null
-  return (
-    <MessageList
-      messages={messages}
-      messageLayout='vertical'
-      separator
-      size='small'
-    />
-  )
+
+  return <MessageList messages={messages} />
 }

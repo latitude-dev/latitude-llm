@@ -156,7 +156,6 @@ export default function Chat({
               messages={
                 conversation?.messages.slice(chainLength - 1, chainLength) ?? []
               }
-              variant='accent'
             />
             {endTime && <Timer timeMs={endTime - startTime} />}
           </>
@@ -164,10 +163,7 @@ export default function Chat({
         {(conversation?.messages.length ?? 0) > chainLength && (
           <>
             <Text.H6M>Chat</Text.H6M>
-            <MessageList
-              messages={conversation!.messages.slice(chainLength)}
-              variant='outline'
-            />
+            <MessageList messages={conversation!.messages.slice(chainLength)} />
           </>
         )}
         {error ? (
@@ -188,7 +184,7 @@ export default function Chat({
         />
       </div>
       <div className='flex items-center justify-center'>
-        <Button fancy onClick={clearChat} variant='outline'>
+        <Button fancy onClick={clearChat}>
           Clear chat
         </Button>
       </div>

@@ -23,12 +23,6 @@ export function DocumentLogMessages({
   }, [providerLogs])
 
   if (!providerLogs) return null
-  return (
-    <MessageList
-      messages={messages}
-      messageLayout='vertical'
-      separator
-      size='small'
-    />
-  )
+
+  return <MessageList messages={messages} />
 }
