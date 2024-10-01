@@ -73,6 +73,7 @@ describe('connectEvaluationsAction', () => {
     it('connects evaluations and templates to a document', async () => {
       const evaluation = await factories.createLlmAsJudgeEvaluation({
         workspace,
+        user,
         name: 'Test Evaluation',
         prompt: factories.helpers.createPrompt({ provider }),
       })

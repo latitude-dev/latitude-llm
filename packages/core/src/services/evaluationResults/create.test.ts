@@ -19,6 +19,7 @@ async function setupTest(configurationType: EvaluationResultableType) {
   const provider = providers[0]
   const evaluation = await factories.createLlmAsJudgeEvaluation({
     workspace,
+    user,
     configuration: {
       type: configurationType,
       ...(configurationType === EvaluationResultableType.Number
@@ -28,6 +29,8 @@ async function setupTest(configurationType: EvaluationResultableType) {
   })
   const { commit } = await factories.createDraft({ project, user })
   const { documentVersion } = await factories.createDocumentVersion({
+    workspace,
+    user,
     commit,
     path: 'folder1/doc1',
     content: `

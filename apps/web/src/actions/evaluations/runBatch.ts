@@ -98,7 +98,10 @@ export const runBatchEvaluationAction = withDataset
     const queues = await setupJobs()
     evaluations.forEach((evaluation) => {
       const batchId = `evaluation:${evaluation.id}:${nanoid(5)}`
+
       queues.defaultQueue.jobs.enqueueRunBatchEvaluationJob({
+        workspace: ctx.workspace,
+        user: ctx.user,
         evaluation,
         dataset: ctx.dataset,
         document: ctx.document,

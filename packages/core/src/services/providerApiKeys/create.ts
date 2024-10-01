@@ -1,17 +1,18 @@
-import { Providers, Workspace } from '../../browser'
+import { Providers, User, Workspace } from '../../browser'
 import { database } from '../../client'
+import { publisher } from '../../events/publisher'
 import { Result, Transaction } from '../../lib'
 import { providerApiKeys } from '../../schema'
 
 export type Props = {
-  workspace: Partial<Workspace>
+  workspace: Workspace
   provider: Providers
   token: string
   name: string
-  authorId: string
+  author: User
 }
 export function createProviderApiKey(
-  { workspace, provider, token, name, authorId }: Props,
+  { workspace, provider, token, name, author }: Props,
   db = database,
 ) {
   return Transaction.call(async (tx) => {
@@ -22,9 +23,18 @@ export function createProviderApiKey(
         provider,
         token,
         name,
-        authorId,
+        authorId: author.id,
       })
       .returning()
+
+    publisher.publishLater({
+      type: 'providerApiKeyCreated',
+      data: {
+        providerApiKey: result[0]!,
+        workspaceId: workspace.id,
+        userEmail: author.email,
+      },
+    })
 
     return Result.ok(result[0]!)
   }, db)

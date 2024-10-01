@@ -7,9 +7,12 @@ import { computeDocumentLogsWithMetadataQuery } from './computeDocumentLogsWithM
 
 describe('getDocumentLogsWithMetadata', () => {
   it('return all logs from merged commits', async () => {
-    const { project, user, providers } = await factories.createProject()
+    const { project, user, workspace, providers } =
+      await factories.createProject()
     const { commit: commit1 } = await factories.createDraft({ project, user })
     const { documentVersion: doc } = await factories.createDocumentVersion({
+      workspace,
+      user,
       commit: commit1,
       path: 'folder1/doc1',
       content: factories.helpers.createPrompt({
@@ -50,9 +53,12 @@ describe('getDocumentLogsWithMetadata', () => {
   })
 
   it('includes logs from specified draft', async () => {
-    const { project, user, providers } = await factories.createProject()
+    const { project, user, workspace, providers } =
+      await factories.createProject()
     const { commit: commit1 } = await factories.createDraft({ project, user })
     const { documentVersion: doc } = await factories.createDocumentVersion({
+      workspace,
+      user,
       commit: commit1,
       path: 'folder1/doc1',
       content: factories.helpers.createPrompt({
@@ -109,9 +115,12 @@ describe('getDocumentLogsWithMetadata', () => {
   })
 
   it('does not include logs from non-specified drafts', async () => {
-    const { project, user, providers } = await factories.createProject()
+    const { project, user, workspace, providers } =
+      await factories.createProject()
     const { commit: commit1 } = await factories.createDraft({ project, user })
     const { documentVersion: doc } = await factories.createDocumentVersion({
+      workspace,
+      user,
       commit: commit1,
       path: 'folder1/doc1',
       content: factories.helpers.createPrompt({
@@ -166,9 +175,12 @@ describe('getDocumentLogsWithMetadata', () => {
   })
 
   it('returns a sum of tokens and cost', async () => {
-    const { project, user, providers } = await factories.createProject()
+    const { project, user, workspace, providers } =
+      await factories.createProject()
     const { commit } = await factories.createDraft({ project, user })
     const { documentVersion: doc } = await factories.createDocumentVersion({
+      workspace,
+      user,
       commit,
       path: 'folder1/doc1',
       content: factories.helpers.createPrompt({

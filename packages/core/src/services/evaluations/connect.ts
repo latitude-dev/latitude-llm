@@ -1,5 +1,6 @@
-import { ConnectedEvaluation, Workspace } from '../../browser'
+import { ConnectedEvaluation, User, Workspace } from '../../browser'
 import { database } from '../../client'
+import { publisher } from '../../events/publisher'
 import {
   NotFoundError,
   PromisedResult,
@@ -20,11 +21,13 @@ export function connectEvaluations(
     documentUuid,
     evaluationUuids,
     templateIds,
+    user,
   }: {
     workspace: Workspace
     documentUuid: string
     evaluationUuids?: string[]
     templateIds?: number[]
+    user: User
   },
   db = database,
 ): PromisedResult<ConnectedEvaluation[], Error> {
@@ -46,7 +49,7 @@ export function connectEvaluations(
       // evaluations service.
       const importedEvaluations = await Promise.all(
         templateIds?.map((templateId) =>
-          importLlmAsJudgeEvaluation({ workspace, templateId }, tx),
+          importLlmAsJudgeEvaluation({ workspace, user, templateId }, tx),
         ) ?? [],
       )
 
@@ -85,6 +88,15 @@ export function connectEvaluations(
           })),
         )
         .returning()
+
+      publisher.publishLater({
+        type: 'evaluationsConnected',
+        data: {
+          evaluations: rezults,
+          userEmail: user.email,
+          workspaceId: workspace.id,
+        },
+      })
 
       return Result.ok(rezults)
     },

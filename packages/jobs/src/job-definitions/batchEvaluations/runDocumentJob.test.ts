@@ -24,6 +24,7 @@ const mocks = vi.hoisted(() => {
         jobs: {
           enqueueCreateEventJob: vi.fn(),
           enqueuePublishEventJob: vi.fn(),
+          enqueuePublishToAnalyticsJob: vi.fn(),
         },
       },
     },
@@ -74,6 +75,7 @@ describe('runDocumentJob', () => {
     commit = setup.commit
 
     evaluation = await factories.createLlmAsJudgeEvaluation({
+      user: setup.user,
       workspace,
       name: 'Test Evaluation',
     })

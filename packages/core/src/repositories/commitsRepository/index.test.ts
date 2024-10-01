@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import type { Project, ProviderApiKey, User } from '../../browser'
+import type { Project, ProviderApiKey, User, Workspace } from '../../browser'
 import { CommitStatus } from '../../constants'
 import { mergeCommit } from '../../services/commits'
 import { createNewDocument } from '../../services/documents'
@@ -8,14 +8,17 @@ import * as factories from '../../tests/factories'
 import { CommitsRepository } from './index'
 
 async function createDraftsCommits(
-  project: Project,
   user: User,
+  workpace: Workspace,
+  project: Project,
   provider: ProviderApiKey,
 ) {
   const results = []
   for (let i = 0; i < 10; i++) {
     const draft = await factories.createDraft({ project, user })
     await createNewDocument({
+      user,
+      workspace: workpace,
       commit: draft.commit,
       path: `${i}/foo`,
       content: factories.helpers.createPrompt({ provider }),
@@ -31,13 +34,15 @@ let repository: CommitsRepository
 describe('Commits by project', () => {
   beforeEach(async () => {
     let {
+      workspace,
       project: firstProject,
       user,
       providers,
     } = await factories.createProject()
     const drafsCommits = await createDraftsCommits(
-      firstProject,
       user,
+      workspace,
+      firstProject,
       providers[0]!,
     )
     await Promise.all([
@@ -73,9 +78,10 @@ describe('Commits by project', () => {
 
 describe('findAll', () => {
   beforeEach(async () => {
-    const { project, user, providers } = await factories.createProject()
+    const { project, workspace, user, providers } =
+      await factories.createProject()
 
-    await createDraftsCommits(project, user, providers[0]!)
+    await createDraftsCommits(user, workspace, project, providers[0]!)
   })
 
   it('does not return commits from other workspaces', async () => {

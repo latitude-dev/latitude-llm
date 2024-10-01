@@ -20,6 +20,7 @@ describe('EvaluationResultsRepository', () => {
         documents: [document1],
         commit: commit1,
         providers: [provider1],
+        user: user1,
       } = await createProject({
         providers: [{ type: Providers.OpenAI, name: 'openai' }],
         documents: {
@@ -30,6 +31,7 @@ describe('EvaluationResultsRepository', () => {
       })
       const {
         workspace: workspace2,
+        user: user2,
         documents: [document2],
         commit: commit2,
         providers: [provider2],
@@ -44,9 +46,11 @@ describe('EvaluationResultsRepository', () => {
 
       // Create evaluations for each workspace
       const evaluation1 = await createLlmAsJudgeEvaluation({
+        user: user1,
         workspace: workspace1,
       })
       const evaluation2 = await createLlmAsJudgeEvaluation({
+        user: user2,
         workspace: workspace2,
       })
 

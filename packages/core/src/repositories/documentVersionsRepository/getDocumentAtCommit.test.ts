@@ -8,9 +8,12 @@ import { DocumentVersionsRepository } from './index'
 
 describe('getDocumentAtCommit', () => {
   it('return doc from merged commit', async () => {
-    const { project, user, providers } = await factories.createProject()
+    const { workspace, project, user, providers } =
+      await factories.createProject()
     const { commit } = await factories.createDraft({ project, user })
     const { documentVersion: doc } = await factories.createDocumentVersion({
+      workspace,
+      user,
       commit: commit,
       path: 'folder1/doc1',
       content: factories.helpers.createPrompt({

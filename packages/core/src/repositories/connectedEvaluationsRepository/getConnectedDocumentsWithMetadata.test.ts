@@ -64,6 +64,7 @@ describe('getConnectedDocumentsWithMetadata', () => {
     await Promise.all(
       (documentsArr ?? documents).map(async (document) => {
         await connectEvaluations({
+          user,
           workspace,
           documentUuid: document.documentUuid,
           evaluationUuids: [evaluation.uuid],
@@ -160,6 +161,8 @@ describe('getConnectedDocumentsWithMetadata', () => {
   it('does not return documents that only exist in a draft, even when its connected to an evaluation', async () => {
     const { commit: draft } = await factories.createDraft({ project, user })
     const draftDocument = await createNewDocument({
+      user,
+      workspace,
       commit: draft,
       path: 'foo',
       content: documentContent('New document'),

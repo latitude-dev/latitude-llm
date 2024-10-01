@@ -2,11 +2,13 @@ import { eq } from 'drizzle-orm'
 
 import {
   findFirstModelForProvider,
+  User,
+  Workspace,
   type Commit,
   type DocumentVersion,
 } from '../../browser'
 import { database } from '../../client'
-import { findWorkspaceFromCommit } from '../../data-access'
+import { publisher } from '../../events/publisher'
 import { Result, Transaction, TypedResult } from '../../lib'
 import { BadRequestError } from '../../lib/errors'
 import {
@@ -17,10 +19,14 @@ import { documentVersions } from '../../schema'
 
 export async function createNewDocument(
   {
+    workspace,
+    user,
     commit,
     path,
     content,
   }: {
+    workspace: Workspace
+    user: User
     commit: Commit
     path: string
     content?: string
@@ -32,7 +38,6 @@ export async function createNewDocument(
       return Result.error(new BadRequestError('Cannot modify a merged commit'))
     }
 
-    const workspace = await findWorkspaceFromCommit(commit, tx)
     const docsScope = new DocumentVersionsRepository(workspace!.id, tx)
 
     const currentDocs = await docsScope
@@ -70,6 +75,15 @@ model: ${findFirstModelForProvider(provider.provider)}
       .update(documentVersions)
       .set({ resolvedContent: null })
       .where(eq(documentVersions.commitId, commit.id))
+
+    publisher.publishLater({
+      type: 'documentCreated',
+      data: {
+        document: newDoc[0]!,
+        workspaceId: workspace.id,
+        userEmail: user.email,
+      },
+    })
 
     return Result.ok(newDoc[0]!)
   }, db)

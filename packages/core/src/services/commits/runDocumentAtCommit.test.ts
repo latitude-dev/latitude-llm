@@ -11,6 +11,7 @@ import {
 } from '../../browser'
 import { database } from '../../client'
 import { publisher } from '../../events/publisher'
+import { Ok } from '../../lib'
 import { providerApiKeys } from '../../schema'
 import { createProject } from '../../tests/factories'
 import { testConsumeStream } from '../../tests/helpers'
@@ -19,16 +20,21 @@ import { runDocumentAtCommit } from './index'
 // Create a spy for the ai function
 const publisherSpy = vi.spyOn(
   await import('../../events/publisher').then((f) => f.publisher),
-  'publish',
+  'publishLater',
 )
 const aiSpy = vi.spyOn(await import('../ai'), 'ai')
+const createDocumentLogSpy = vi.spyOn(
+  await import('../documentLogs/create'),
+  'createDocumentLog',
+)
 
 describe('runDocumentAtCommit', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     // @ts-expect-error - we are mocking the function
     aiSpy.mockImplementation(mocks.runAi)
-    publisherSpy.mockImplementation(mocks.publish)
+    // @ts-expect-error - we are mocking the function
+    publisherSpy.mockImplementation(mocks.publishLater)
   })
 
   it('fails if provider api key is not found', async () => {
@@ -91,6 +97,8 @@ describe('runDocumentAtCommit', () => {
         source: LogSources.API,
       })
 
+      await result.value?.response
+
       expect(result.value?.resolvedContent.trim()).toEqual(`---
 provider: openai
 model: gpt-4o
@@ -102,13 +110,15 @@ This is a test document
     })
 
     it('pass params to AI', async () => {
-      const { stream } = await runDocumentAtCommit({
+      const { stream, response } = await runDocumentAtCommit({
         workspace,
         document,
         commit,
         parameters: {},
         source: LogSources.API,
       }).then((r) => r.unwrap())
+
+      await response
 
       await testConsumeStream(stream)
 
@@ -129,14 +139,18 @@ This is a test document
     })
 
     it('send documentLogUuid when chain is completed', async () => {
-      const { stream } = await runDocumentAtCommit({
+      const { stream, response } = await runDocumentAtCommit({
         workspace,
         document,
         commit,
         parameters: {},
         source: LogSources.API,
       }).then((r) => r.unwrap())
+
+      await response
+
       const { value } = await testConsumeStream(stream)
+
       expect(value).toEqual([
         {
           data: {
@@ -230,7 +244,21 @@ This is a test document
       // Wait for the response promise to resolve
       await response
 
-      expect(publisher.publish).toHaveBeenCalled()
+      expect(publisher.publishLater).toHaveBeenCalled()
+    })
+
+    it('creates a document log', async () => {
+      const { response } = await runDocumentAtCommit({
+        workspace,
+        document,
+        commit,
+        parameters: {},
+        source: LogSources.API,
+      }).then((r) => r.unwrap())
+
+      await response
+
+      expect(createDocumentLogSpy).toHaveResolvedWith(expect.any(Ok))
     })
   })
 })

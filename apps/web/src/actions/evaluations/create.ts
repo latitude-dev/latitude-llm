@@ -41,6 +41,7 @@ export const createEvaluationAction = authProcedure
       metadata: input.metadata,
       configuration: input.configuration,
       type: input.type,
+      user: ctx.user,
     })
 
     return result.unwrap()

@@ -10,10 +10,13 @@ import { mergeCommit } from './merge'
 
 describe('mergeCommit', () => {
   it('merges a commit', async (ctx) => {
-    const { project, user, providers } = await ctx.factories.createProject()
+    const { project, workspace, user, providers } =
+      await ctx.factories.createProject()
     const { commit } = await ctx.factories.createDraft({ project, user })
 
     await createNewDocument({
+      user,
+      workspace,
       commit,
       path: 'foo',
       content: ctx.factories.helpers.createPrompt({ provider: providers[0]! }),
@@ -36,10 +39,13 @@ describe('mergeCommit', () => {
   })
 
   it('recomputes all changes in the commit', async (ctx) => {
-    const { project, user, providers } = await ctx.factories.createProject()
+    const { project, user, workspace, providers } =
+      await ctx.factories.createProject()
     const { commit } = await ctx.factories.createDraft({ project, user })
 
     await createNewDocument({
+      user,
+      workspace,
       commit,
       path: 'foo',
       content: ctx.factories.helpers.createPrompt({ provider: providers[0]! }),
@@ -65,10 +71,13 @@ describe('mergeCommit', () => {
   })
 
   it('fails when trying to merge a commit with syntax errors', async (ctx) => {
-    const { project, user, providers } = await ctx.factories.createProject()
+    const { project, user, workspace, providers } =
+      await ctx.factories.createProject()
     const { commit } = await ctx.factories.createDraft({ project, user })
 
     await createNewDocument({
+      user,
+      workspace,
       commit,
       path: 'foo',
       content: ctx.factories.helpers.createPrompt({
@@ -122,13 +131,16 @@ describe('mergeCommit', () => {
   })
 
   it('increases the version number of the commit', async (ctx) => {
-    const { project, user, providers } = await ctx.factories.createProject()
+    const { project, user, workspace, providers } =
+      await ctx.factories.createProject()
     const { commit: commit1 } = await ctx.factories.createDraft({
       project,
       user,
     })
 
     const doc = await createNewDocument({
+      workspace,
+      user,
       commit: commit1,
       path: 'foo1',
       content: ctx.factories.helpers.createPrompt({

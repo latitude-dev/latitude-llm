@@ -4,9 +4,10 @@ import {
   Dataset,
   DocumentVersion,
   EvaluationDto,
+  User,
+  Workspace,
 } from '@latitude-data/core/browser'
-import { findWorkspaceFromDocument } from '@latitude-data/core/data-access'
-import { NotFoundError } from '@latitude-data/core/lib/errors'
+import { publisher } from '@latitude-data/core/events/publisher'
 import { queues } from '@latitude-data/core/queues'
 import { CommitsRepository } from '@latitude-data/core/repositories'
 import { previewDataset } from '@latitude-data/core/services/datasets/preview'
@@ -17,6 +18,8 @@ import { setupJobs } from '../..'
 import { ProgressTracker } from '../../utils/progressTracker'
 
 type RunBatchEvaluationJobParams = {
+  workspace: Workspace
+  user: User
   evaluation: EvaluationDto
   dataset: Dataset
   document: DocumentVersion
@@ -32,6 +35,8 @@ export const runBatchEvaluationJob = async (
   job: Job<RunBatchEvaluationJobParams>,
 ) => {
   const {
+    workspace,
+    user,
     evaluation,
     dataset,
     document,
@@ -43,13 +48,20 @@ export const runBatchEvaluationJob = async (
     batchId = randomUUID(),
   } = job.data
   const websockets = await WebsocketClient.getSocket()
-  const workspace = await findWorkspaceFromDocument(document)
-  if (!workspace) throw new NotFoundError('Workspace not found')
-
   const commit = await new CommitsRepository(workspace.id)
     .getCommitByUuid({ projectId, uuid: commitUuid })
     .then((r) => r.unwrap())
   const fileMetadata = dataset.fileMetadata
+
+  publisher.publishLater({
+    type: 'batchEvaluationRun',
+    data: {
+      evaluationId: evaluation.id,
+      workspaceId: workspace.id,
+      userEmail: user.email,
+    },
+  })
+
   // TODO: use streaming instead of this service in order to avoid loading the
   // whole dataset in memory
   const result = await previewDataset({

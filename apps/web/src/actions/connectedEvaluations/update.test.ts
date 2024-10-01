@@ -39,7 +39,10 @@ describe('updateConnectedEvaluationAction', () => {
     user = setup.user
 
     // Create a connected evaluation using a factory
-    const evaluation = await factories.createLlmAsJudgeEvaluation({ workspace })
+    const evaluation = await factories.createLlmAsJudgeEvaluation({
+      workspace,
+      user,
+    })
     const { commit } = await factories.createDraft({ project, user })
     const { documentLog } = await factories.createDocumentLog({
       document: setup.documents[0]!,
@@ -47,6 +50,7 @@ describe('updateConnectedEvaluationAction', () => {
     })
 
     connectedEvaluation = await factories.createConnectedEvaluation({
+      user,
       workspace,
       evaluationUuid: evaluation.uuid,
       documentUuid: documentLog.documentUuid,

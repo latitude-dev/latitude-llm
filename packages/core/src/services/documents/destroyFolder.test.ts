@@ -25,9 +25,12 @@ describe('removing folders', () => {
   })
 
   it('throws error if commit is merged', async (ctx) => {
-    const { project, user, providers } = await factories.createProject()
+    const { project, user, workspace, providers } =
+      await factories.createProject()
     const { commit: draft } = await factories.createDraft({ project, user })
     await createNewDocument({
+      workspace,
+      user,
       commit: draft,
       path: 'foo',
       content: ctx.factories.helpers.createPrompt({
@@ -47,9 +50,12 @@ describe('removing folders', () => {
   })
 
   it('destroy folder that were in draft document but not in previous merged commits', async (ctx) => {
-    const { project, user, providers } = await factories.createProject()
+    const { project, user, workspace, providers } =
+      await factories.createProject()
     const { commit: draft } = await factories.createDraft({ project, user })
     await factories.createDocumentVersion({
+      workspace,
+      user,
       commit: draft,
       path: 'root-folder/some-folder/doc1',
       content: ctx.factories.helpers.createPrompt({
@@ -58,6 +64,8 @@ describe('removing folders', () => {
       }),
     })
     await factories.createDocumentVersion({
+      workspace,
+      user,
       commit: draft,
       path: 'root-folder/some-folder/doc2',
       content: ctx.factories.helpers.createPrompt({
@@ -66,6 +74,8 @@ describe('removing folders', () => {
       }),
     })
     await factories.createDocumentVersion({
+      workspace,
+      user,
       commit: draft,
       path: 'root-folder/some-folder/inner-folder/doc42',
       content: ctx.factories.helpers.createPrompt({
@@ -74,6 +84,8 @@ describe('removing folders', () => {
       }),
     })
     await factories.createDocumentVersion({
+      workspace,
+      user,
       commit: draft,
       path: 'root-folder/other-nested-folder/doc3',
       content: ctx.factories.helpers.createPrompt({
@@ -82,6 +94,8 @@ describe('removing folders', () => {
       }),
     })
     await factories.createDocumentVersion({
+      workspace,
+      user,
       commit: draft,
       path: 'root-folder/some-foldernoisadoc',
       content: ctx.factories.helpers.createPrompt({
@@ -90,6 +104,8 @@ describe('removing folders', () => {
       }),
     })
     await factories.createDocumentVersion({
+      workspace,
+      user,
       commit: draft,
       path: 'other-foler/doc4',
       content: ctx.factories.helpers.createPrompt({

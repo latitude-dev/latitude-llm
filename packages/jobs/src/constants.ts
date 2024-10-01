@@ -6,6 +6,7 @@ import { runDocumentJob } from './job-definitions/batchEvaluations/runDocumentJo
 import { runEvaluationJob } from './job-definitions/batchEvaluations/runEvaluationJob'
 import { createEventJob } from './job-definitions/events/createEventJob'
 import { publishEventJob } from './job-definitions/events/publishEventJob'
+import { publishToAnalyticsJob } from './job-definitions/events/publishToAnalyticsJob'
 import { runLiveEvaluationJob } from './job-definitions/liveEvaluations/runLiveEvaluationJob'
 
 // TODO: Review if we can remove this declarations
@@ -36,7 +37,7 @@ export const QUEUES = {
   },
   [Queues.eventsQueue]: {
     name: Queues.eventsQueue,
-    jobs: [publishEventJob, createEventJob],
+    jobs: [publishEventJob, createEventJob, publishToAnalyticsJob],
   },
   [Queues.eventHandlersQueue]: {
     name: Queues.eventHandlersQueue,

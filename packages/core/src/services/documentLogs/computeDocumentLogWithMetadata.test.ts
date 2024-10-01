@@ -18,6 +18,8 @@ describe('computeDocumentLogWithMetadata', () => {
       user: setup.user,
     })
     const { documentVersion } = await factories.createDocumentVersion({
+      workspace: setup.workspace,
+      user: setup.user,
       commit,
       path: 'folder1/doc1',
       content: factories.helpers.createPrompt({ provider, content: 'Doc 1' }),

@@ -41,9 +41,12 @@ export async function createProject(projectData: Partial<ICreateProject> = {}) {
     })
     const { commit: draft } = await createDraft({ project, user })
     for await (const { path, content } of documentsToCreate) {
-      const newDoc = await createNewDocument({ commit: draft, path }).then(
-        (r) => r.unwrap(),
-      )
+      const newDoc = await createNewDocument({
+        commit: draft,
+        path,
+        user,
+        workspace,
+      }).then((r) => r.unwrap())
       const updatedDoc = await updateDocument({
         commit: draft,
         document: newDoc,

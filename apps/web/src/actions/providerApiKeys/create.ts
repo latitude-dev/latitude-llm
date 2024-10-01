@@ -22,7 +22,7 @@ export const createProviderApiKeyAction = authProcedure
       provider: input.provider,
       token: input.token,
       name: input.name,
-      authorId: ctx.user.id,
+      author: ctx.user,
     })
       .then((r) => r.unwrap())
       .then(providerApiKeyPresenter)

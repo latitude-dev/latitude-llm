@@ -47,7 +47,7 @@ export type ICreateProject = {
   deletedAt?: Date | null
   workspace?: Workspace | ICreateWorkspace
   providers?: { type: Providers; name: string }[]
-  evaluations?: Omit<IEvaluationData, 'workspace'>[]
+  evaluations?: Omit<IEvaluationData, 'workspace' | 'user'>[]
   documents?: IDocumentStructure
   skipMerge?: boolean
 }
@@ -101,7 +101,7 @@ export async function createProject(projectData: Partial<ICreateProject> = {}) {
 
   const evaluations = await Promise.all(
     projectData.evaluations?.map((evaluationData) =>
-      createLlmAsJudgeEvaluation({ workspace, ...evaluationData }),
+      createLlmAsJudgeEvaluation({ workspace, user, ...evaluationData }),
     ) ?? [],
   )
 
@@ -113,9 +113,12 @@ export async function createProject(projectData: Partial<ICreateProject> = {}) {
     })
     const { commit: draft } = await createDraft({ project, user })
     for await (const { path, content } of documentsToCreate) {
-      const newDoc = await createNewDocument({ commit: draft, path }).then(
-        (r) => r.unwrap(),
-      )
+      const newDoc = await createNewDocument({
+        workspace,
+        user,
+        commit: draft,
+        path,
+      }).then((r) => r.unwrap())
       const updatedDoc = await updateDocument({
         commit: draft,
         document: newDoc,

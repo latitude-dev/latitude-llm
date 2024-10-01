@@ -55,6 +55,8 @@ describe('updateDocument', () => {
     const docsScope = new DocumentVersionsRepository(project.workspaceId)
     const { commit } = await ctx.factories.createDraft({ project, user })
     const { documentVersion: doc } = await ctx.factories.createDocumentVersion({
+      workspace,
+      user,
       commit: commit,
       path: 'doc1',
       content: ctx.factories.helpers.createPrompt({

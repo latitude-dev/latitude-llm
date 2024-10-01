@@ -45,6 +45,7 @@ const publishEvent = ({
     data: {
       ...membership,
       authorId: author?.id,
+      userEmail: author?.email,
     },
   })
 }

@@ -41,7 +41,12 @@ export async function createProject(
 
     publisher.publishLater({
       type: 'projectCreated',
-      data: { project, commit: result.value },
+      data: {
+        project,
+        commit: result.value,
+        workspaceId: workspace.id,
+        userEmail: user.email,
+      },
     })
 
     return Result.ok({ project, commit: result.value })

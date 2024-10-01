@@ -10,6 +10,7 @@ describe('findEvaluationResultsByDocumentUuid', () => {
     const { workspace, project, user, providers } =
       await factories.createProject()
     const evaluation = await factories.createLlmAsJudgeEvaluation({
+      user,
       workspace,
       prompt: factories.helpers.createPrompt({ provider: providers[0]! }),
       configuration: {
@@ -22,6 +23,8 @@ describe('findEvaluationResultsByDocumentUuid', () => {
 
     const { commit: draft } = await factories.createDraft({ project, user })
     const { documentVersion: doc } = await factories.createDocumentVersion({
+      workspace,
+      user,
       commit: draft,
       path: 'folder1/doc1',
       content: factories.helpers.createPrompt({ provider: providers[0]! }),

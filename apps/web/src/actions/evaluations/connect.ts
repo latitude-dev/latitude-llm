@@ -20,6 +20,7 @@ export const connectEvaluationsAction = withProject
       documentUuid: input.documentUuid,
       evaluationUuids: input.evaluationUuids,
       templateIds: input.templateIds,
+      user: ctx.user,
     }).then((r) => r.unwrap())
 
     return connectedEvaluations
