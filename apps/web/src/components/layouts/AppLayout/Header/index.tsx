@@ -111,7 +111,7 @@ export default function AppHeader({
     <header className='px-6 sticky top-0 flex flex-col bg-background-gray border-b border-b-border'>
       <div className='py-3 flex flex-row items-center justify-between'>
         <Breadcrumb showLogo breadcrumbs={breadcrumbs} />
-        <div className='flex flex-row items-center gap-x-6'>
+        <div className='flex flex-row items-center gap-x-6 pl-6'>
           <nav className='flex flex-row gap-x-4 items-center'>
             <RewardsButton />
             <UsageIndicator />

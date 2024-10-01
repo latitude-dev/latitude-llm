@@ -7,7 +7,9 @@ export function RewardsButton() {
     <Popover.Root>
       <Popover.Trigger asChild>
         <Button size='small' variant='shiny'>
-          <Text.H6 color='primary'>Get rewards!</Text.H6>
+          <Text.H6 color='primary' noWrap ellipsis>
+            Get rewards!
+          </Text.H6>
         </Button>
       </Popover.Trigger>
       <Popover.Content
