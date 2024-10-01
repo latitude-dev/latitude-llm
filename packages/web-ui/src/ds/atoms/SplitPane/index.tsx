@@ -11,6 +11,8 @@ import {
 
 import { ResizableBox, ResizeCallbackData, ResizeHandle } from 'react-resizable'
 
+import { cn } from '../../../lib/utils'
+
 function Pane({ children }: { children: ReactNode }) {
   return <div className='flex flex-col h-full relative'>{children}</div>
 }
