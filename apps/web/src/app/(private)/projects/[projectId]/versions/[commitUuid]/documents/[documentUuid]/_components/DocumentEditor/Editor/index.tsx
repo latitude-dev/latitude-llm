@@ -158,7 +158,7 @@ export default function DocumentEditor({
             />
           </Suspense>
         </div>
-        <div className='flex flex-col flex-1 gap-2'>
+        <div className='flex flex-col flex-1 gap-2 overflow-y-auto max-h-[calc(100vh-150px)]'>
           <Playground document={document} metadata={metadata!} />
         </div>
       </div>
