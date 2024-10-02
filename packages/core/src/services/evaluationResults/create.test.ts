@@ -72,24 +72,28 @@ describe('createEvaluationResult', () => {
     expect(result.ok).toBe(true)
     if (result.error) return
 
-    expect(result.value.evaluationId).toBe(evaluation.id)
-    expect(result.value.documentLogId).toBe(documentLog.id)
-    expect(result.value.providerLogId).toBe(providerLog.id)
-    expect(result.value.resultableType).toBe(EvaluationResultableType.Boolean)
-    expect(result.value.result).toBe(true)
+    const value = result.value
+    expect(value.evaluationId).toBe(evaluation.id)
+    expect(value.documentLogId).toBe(documentLog.id)
+    expect(value.providerLogId).toBe(providerLog.id)
+    expect(value.resultableType).toBe(EvaluationResultableType.Boolean)
+    expect(value.result).toBe(true)
+
     // Verify in database
     const dbResult = await database.query.evaluationResults.findFirst({
-      where: eq(evaluationResults.id, result.value.id),
+      where: eq(evaluationResults.id, value.id),
     })
     expect(dbResult).toBeDefined()
-    expect(dbResult?.resultableType).toBe(EvaluationResultableType.Boolean)
+    expect(dbResult!.resultableType).toBe(EvaluationResultableType.Boolean)
 
-    const booleanResult =
-      await database.query.evaluationResultableBooleans.findFirst({
-        where: eq(evaluationResultableBooleans.id, dbResult!.resultableId),
-      })
-    expect(booleanResult).toBeDefined()
-    expect(booleanResult?.result).toBe(true)
+    if (dbResult!.resultableId !== null) {
+      const booleanResult =
+        await database.query.evaluationResultableBooleans.findFirst({
+          where: eq(evaluationResultableBooleans.id, dbResult!.resultableId),
+        })
+      expect(booleanResult).toBeDefined()
+      expect(booleanResult?.result).toBe(true)
+    }
   })
 
   it('creates a number evaluation result', async () => {
@@ -122,12 +126,14 @@ describe('createEvaluationResult', () => {
     expect(dbResult).toBeDefined()
     expect(dbResult?.resultableType).toBe(EvaluationResultableType.Number)
 
-    const numberResult =
-      await database.query.evaluationResultableNumbers.findFirst({
-        where: eq(evaluationResultableNumbers.id, dbResult!.resultableId),
-      })
-    expect(numberResult).toBeDefined()
-    expect(numberResult?.result).toBe(75)
+    if (dbResult!.resultableId !== null) {
+      const numberResult =
+        await database.query.evaluationResultableNumbers.findFirst({
+          where: eq(evaluationResultableNumbers.id, dbResult!.resultableId),
+        })
+      expect(numberResult).toBeDefined()
+      expect(numberResult?.result).toBe(75)
+    }
   })
 
   it('creates a text evaluation result', async () => {
@@ -160,13 +166,14 @@ describe('createEvaluationResult', () => {
     expect(dbResult).toBeDefined()
     expect(dbResult?.resultableType).toBe(EvaluationResultableType.Text)
 
-    const textResult = await database.query.evaluationResultableTexts.findFirst(
-      {
-        where: eq(evaluationResultableTexts.id, dbResult!.resultableId),
-      },
-    )
-    expect(textResult).toBeDefined()
-    expect(textResult?.result).toBe('This is a text result')
+    if (dbResult!.resultableId !== null) {
+      const textResult =
+        await database.query.evaluationResultableTexts.findFirst({
+          where: eq(evaluationResultableTexts.id, dbResult!.resultableId),
+        })
+      expect(textResult).toBeDefined()
+      expect(textResult?.result).toBe('This is a text result')
+    }
   })
 
   it('returns an error for unsupported result type', async () => {

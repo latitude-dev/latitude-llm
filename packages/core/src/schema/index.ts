@@ -17,6 +17,7 @@ export * from './models/providerApiKeys'
 
 // Log tables
 export * from './models/documentLogs'
+export * from './models/runErrors'
 export * from './models/providerLogs'
 
 // Evaluations tables

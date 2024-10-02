@@ -18,6 +18,7 @@ import { memberships } from './models/memberships'
 import { projects } from './models/projects'
 import { providerApiKeys } from './models/providerApiKeys'
 import { providerLogs } from './models/providerLogs'
+import { runErrors } from './models/runErrors'
 import { sessions } from './models/sessions'
 import { users } from './models/users'
 import { workspaces } from './models/workspaces'
@@ -37,6 +38,7 @@ export type DocumentVersion = InferSelectModel<typeof documentVersions>
 export type Project = InferSelectModel<typeof projects>
 export type ProviderLog = InferSelectModel<typeof providerLogs>
 export type DocumentLog = InferSelectModel<typeof documentLogs>
+export type RunError = InferSelectModel<typeof runErrors>
 export type Evaluation = InferSelectModel<typeof evaluations>
 export type ConnectedEvaluation = InferSelectModel<typeof connectedEvaluations>
 export type EvaluationResult = InferSelectModel<typeof evaluationResults>
