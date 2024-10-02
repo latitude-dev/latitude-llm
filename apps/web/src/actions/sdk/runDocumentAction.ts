@@ -1,8 +1,10 @@
 'use server'
 
 import { StreamEventTypes } from '@latitude-data/core/browser'
+import { publisher } from '@latitude-data/core/events/publisher'
 import { Latitude, type ChainEventDto } from '@latitude-data/sdk'
 import { createSdk } from '$/app/(private)/_lib/createSdk'
+import { getCurrentUser } from '$/services/auth/getCurrentUser'
 import { createStreamableValue, StreamableValue } from 'ai/rsc'
 
 type RunDocumentActionProps = {
@@ -25,6 +27,20 @@ export async function runDocumentAction({
   commitUuid,
   parameters,
 }: RunDocumentActionProps) {
+  const { workspace, user } = await getCurrentUser()
+
+  publisher.publishLater({
+    type: 'documentRunRequested',
+    data: {
+      projectId,
+      commitUuid,
+      documentPath,
+      parameters,
+      workspaceId: workspace.id,
+      userEmail: user.email,
+    },
+  })
+
   const sdk = await createSdk({ projectId }).then((r) => r.unwrap())
   const stream = createStreamableValue<
     { event: StreamEventTypes; data: ChainEventDto },

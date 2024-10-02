@@ -1,12 +1,14 @@
 'use server'
 
 import { StreamEventTypes } from '@latitude-data/core/browser'
+import { publisher } from '@latitude-data/core/events/publisher'
 import {
   type ChainEventDto,
   type Message,
   type StreamChainResponse,
 } from '@latitude-data/sdk'
 import { createSdk } from '$/app/(private)/_lib/createSdk'
+import { getCurrentUser } from '$/services/auth/getCurrentUser'
 import { createStreamableValue, StreamableValue } from 'ai/rsc'
 
 type AddMessagesActionProps = {
@@ -25,6 +27,18 @@ export async function addMessagesAction({
   documentLogUuid,
   messages,
 }: AddMessagesActionProps) {
+  const { workspace, user } = await getCurrentUser()
+
+  publisher.publishLater({
+    type: 'chatMessageRequested',
+    data: {
+      documentLogUuid,
+      messages,
+      workspaceId: workspace.id,
+      userEmail: user.email,
+    },
+  })
+
   const sdk = await createSdk().then((r) => r.unwrap())
   const stream = createStreamableValue<
     { event: StreamEventTypes; data: ChainEventDto },
