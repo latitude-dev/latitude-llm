@@ -1,3 +1,4 @@
+import { getFreeRuns } from '@latitude-data/core/services/freeRunsManager/index'
 import { addMessagesAction } from '$/actions/sdk/addMessagesAction'
 import { runDocumentAction } from '$/actions/sdk/runDocumentAction'
 import {
@@ -7,6 +8,7 @@ import {
   getProviderApiKeysCached,
 } from '$/app/(private)/_data-access'
 import providerApiKeyPresenter from '$/presenters/providerApiKeyPresenter'
+import { getCurrentUser } from '$/services/auth/getCurrentUser'
 
 import DocumentEditor from './_components/DocumentEditor/Editor'
 
@@ -15,6 +17,7 @@ export default async function DocumentPage({
 }: {
   params: { projectId: string; commitUuid: string; documentUuid: string }
 }) {
+  const { workspace } = await getCurrentUser()
   const projectId = Number(params.projectId)
   const commitUuid = params.commitUuid
   const commit = await findCommitCached({ projectId, uuid: commitUuid })
@@ -25,6 +28,7 @@ export default async function DocumentPage({
   })
   const documents = await getDocumentsAtCommitCached({ commit })
   const providerApiKeys = await getProviderApiKeysCached()
+  const freeRunsCount = await getFreeRuns(workspace.id)
 
   return (
     <DocumentEditor
@@ -33,6 +37,7 @@ export default async function DocumentPage({
       documents={documents}
       document={document}
       providerApiKeys={providerApiKeys.map(providerApiKeyPresenter)}
+      freeRunsCount={freeRunsCount ? Number(freeRunsCount) : undefined}
     />
   )
 }

@@ -11,11 +11,16 @@ import {
   AppLocalStorage,
   DropdownMenu,
   FormFieldGroup,
+  Icon,
   Select,
   Text,
+  Tooltip,
   useLocalStorage,
 } from '@latitude-data/web-ui'
+import { envClient } from '$/envClient'
+import { ROUTES } from '$/services/routes'
 import useProviderApiKeys from '$/stores/providerApiKeys'
+import Link from 'next/link'
 
 const CUSTOM_MODEL = 'custom-model'
 
@@ -55,6 +60,7 @@ export default function EditorHeader({
   rightActions,
   disabledMetadataSelectors = false,
   providers,
+  freeRunsCount,
 }: {
   title: string
   metadata: ConversationMetadata | undefined
@@ -63,6 +69,7 @@ export default function EditorHeader({
   rightActions?: ReactNode
   disabledMetadataSelectors?: boolean
   providers?: ProviderApiKey[]
+  freeRunsCount?: number
 }) {
   const promptMetadata = useMemo<PromptMeta>(() => {
     const config = metadata?.config
@@ -234,6 +241,55 @@ export default function EditorHeader({
           onChange={onModelChange}
         />
       </FormFieldGroup>
+      {selectedProvider === envClient.NEXT_PUBLIC_DEFAULT_PROJECT_ID && (
+        <div>
+          {freeRunsCount !== undefined ? (
+            <Text.H6 color='foregroundMuted'>
+              You have consumed{' '}
+              <Tooltip
+                trigger={
+                  <strong className='text-primary'>
+                    {freeRunsCount} of 100 daily free runs.
+                  </strong>
+                }
+              >
+                We include the Latitude provider by default with 100 free runs
+                to allow you to test the product.
+                <br />
+                <br />
+                <Link
+                  href={ROUTES.settings.root}
+                  className='flex flex-row items-center gap-1'
+                >
+                  Set up new provider <Icon name='arrowRight' color='white' />{' '}
+                </Link>
+              </Tooltip>{' '}
+              We highly recommend switching to your own provider.
+            </Text.H6>
+          ) : (
+            <Text.H6 color='foregroundMuted'>
+              This provider has a limit of{' '}
+              <Tooltip
+                trigger={
+                  <strong className='text-primary'>100 daily free runs.</strong>
+                }
+              >
+                We include the Latitude provider by default with 100 free runs
+                to allow you to test the product.
+                <br />
+                <br />
+                <Link
+                  href={ROUTES.settings.root}
+                  className='flex flex-row items-center gap-1'
+                >
+                  Set up new provider <Icon name='arrowRight' color='white' />{' '}
+                </Link>
+              </Tooltip>{' '}
+              We highly recommend switching to your own provider.
+            </Text.H6>
+          )}
+        </div>
+      )}
     </div>
   )
 }
