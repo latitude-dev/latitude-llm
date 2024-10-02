@@ -1,6 +1,7 @@
 'use server'
 
 import { readMetadata } from '@latitude-data/compiler'
+import { publisher } from '@latitude-data/core/events/publisher'
 import {
   DatasetsRepository,
   EvaluationsRepository,
@@ -91,6 +92,16 @@ export const runBatchEvaluationAction = withDataset
     })
   })
   .handler(async ({ input, ctx }) => {
+    publisher.publishLater({
+      type: 'batchEvaluationRunRequested',
+      data: {
+        evaluationIds: input.evaluationIds,
+        documentUuid: input.documentUuid,
+        workspaceId: ctx.workspace.id,
+        userEmail: ctx.user.email,
+      },
+    })
+
     const evaluationsRepo = new EvaluationsRepository(ctx.workspace.id)
     const evaluations = await evaluationsRepo
       .filterById(input.evaluationIds)

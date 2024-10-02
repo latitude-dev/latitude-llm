@@ -1,5 +1,6 @@
 import { LatitudeEvent } from '@latitude-data/core/events/handlers/index'
 import { PostHogClient } from '@latitude-data/core/services/posthog'
+import { env } from '@latitude-data/env'
 import { Job } from 'bullmq'
 
 export const publishToAnalyticsJob = async (job: Job<LatitudeEvent>) => {
@@ -12,28 +13,24 @@ export const publishToAnalyticsJob = async (job: Job<LatitudeEvent>) => {
     workspaceId = event.data.workspaceId
   }
 
+  if (!userEmail) return
+
+  if (env.NODE_ENV !== 'production') {
+    console.log('Analytics event captured:', event.type)
+
+    return
+  }
+
   const client = PostHogClient()
 
-  if (!userEmail && !workspaceId) return
-  if (!userEmail) {
-    client.capture({
-      distinctId: `workspace:${workspaceId}`,
-      event: event.type,
-      properties: {
-        data: event.data,
-        workspaceId,
-      },
-    })
-  } else {
-    client.capture({
-      distinctId: userEmail,
-      event: event.type,
-      properties: {
-        data: event.data,
-        workspaceId,
-      },
-    })
-  }
+  client.capture({
+    distinctId: userEmail,
+    event: event.type,
+    properties: {
+      data: event.data,
+      workspaceId,
+    },
+  })
 
   await client.shutdown()
 }

@@ -242,6 +242,38 @@ export type EvaluationResultCreatedEvent = LatitudeEventGeneric<
   }
 >
 
+export type DocumentRunRequestedEvent = LatitudeEventGeneric<
+  'documentRunRequested',
+  {
+    projectId: number
+    commitUuid: string
+    documentPath: string
+    parameters: Record<string, unknown>
+    workspaceId: number
+    userEmail: string
+  }
+>
+
+export type ChatMessageRequestedEvent = LatitudeEventGeneric<
+  'chatMessageRequested',
+  {
+    documentLogUuid: string
+    messages: Message[]
+    workspaceId: number
+    userEmail: string
+  }
+>
+
+export type BatchEvaluationRunRequestedEvent = LatitudeEventGeneric<
+  'batchEvaluationRunRequested',
+  {
+    evaluationIds: number[]
+    documentUuid: string
+    workspaceId: number
+    userEmail: string
+  }
+>
+
 export type LatitudeEvent =
   | MembershipCreatedEvent
   | UserCreatedEvent
@@ -265,6 +297,9 @@ export type LatitudeEvent =
   | BatchEvaluationRunEvent
   | DocumentCreatedEvent
   | EvaluationResultCreatedEvent
+  | DocumentRunRequestedEvent
+  | ChatMessageRequestedEvent
+  | BatchEvaluationRunRequestedEvent
 
 export interface IEventsHandlers {
   magicLinkTokenCreated: EventHandler<MagicLinkTokenCreated>[]
@@ -289,6 +324,9 @@ export interface IEventsHandlers {
   batchEvaluationRun: EventHandler<BatchEvaluationRunEvent>[]
   documentCreated: EventHandler<DocumentCreatedEvent>[]
   evaluationResultCreated: EventHandler<EvaluationResultCreatedEvent>[]
+  documentRunRequested: EventHandler<DocumentRunRequestedEvent>[]
+  chatMessageRequested: EventHandler<ChatMessageRequestedEvent>[]
+  batchEvaluationRunRequested: EventHandler<BatchEvaluationRunRequestedEvent>[]
 }
 
 export const EventHandlers: IEventsHandlers = {
@@ -317,4 +355,7 @@ export const EventHandlers: IEventsHandlers = {
   userCreated: [],
   userInvited: [],
   workspaceCreated: [],
+  documentRunRequested: [],
+  chatMessageRequested: [],
+  batchEvaluationRunRequested: [],
 } as const
