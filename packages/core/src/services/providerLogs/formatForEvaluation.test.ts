@@ -195,6 +195,7 @@ describe('formatConversation', () => {
   it('should format a ProviderLog with responseObject correctly', () => {
     const obj = { key: 'value', number: 42 }
     const objStr = JSON.stringify(obj, null, 2)
+    // @ts-expect-error
     const providerLog: ProviderLog = {
       messages: [
         {
@@ -202,7 +203,6 @@ describe('formatConversation', () => {
           content: [{ type: ContentType.text, text: 'Give me a JSON object' }],
         },
       ],
-      // @ts-expect-error
       responseObject: obj,
       toolCalls: [],
     }

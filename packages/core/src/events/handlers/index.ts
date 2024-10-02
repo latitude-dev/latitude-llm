@@ -1,3 +1,5 @@
+import { LanguageModelUsage } from 'ai'
+
 import {
   ChainCallResponse,
   Commit,
@@ -13,6 +15,7 @@ import {
   Project,
   ProviderApiKey,
   ProviderLog,
+  Providers,
   User,
   Workspace,
 } from '../../browser'
@@ -84,29 +87,42 @@ export type ProviderLogCreatedEvent = LatitudeEventGeneric<
   ProviderLog
 >
 
+export type StreamType = 'object' | 'text'
+export type StreamCommonData = {
+  workspaceId: number
+  uuid: string
+  source: LogSources
+  generatedAt: Date
+  documentLogUuid?: string
+  providerId: number
+  providerType: Providers
+  model: string
+  config: PartialConfig
+  messages: Message[]
+  usage: LanguageModelUsage
+  duration: number
+}
+
+type StreamTextData = {
+  toolCalls: {
+    id: string
+    name: string
+    arguments: unknown[]
+  }[]
+  responseText: string
+}
+type StreamObjectData = {
+  responseObject: unknown
+}
+export type AIProviderCallCompletedData<T extends StreamType> = T extends 'text'
+  ? StreamCommonData & StreamTextData & { streamType: 'text' }
+  : T extends 'object'
+    ? StreamCommonData & StreamObjectData & { streamType: 'object' }
+    : never
+
 export type AIProviderCallCompletedEvent = LatitudeEventGeneric<
   'aiProviderCallCompleted',
-  {
-    workspaceId: number
-    uuid: string
-    source: LogSources
-    generatedAt: Date
-    documentLogUuid?: string
-    providerId: number
-    providerType: string
-    model: string
-    config: PartialConfig
-    messages: Message[]
-    toolCalls: {
-      id: string
-      name: string
-      arguments: unknown[]
-    }[]
-    usage: unknown
-    duration: number
-    responseText: string
-    responseObject?: unknown
-  }
+  AIProviderCallCompletedData<StreamType>
 >
 
 export type WorkspaceCreatedEvent = LatitudeEventGeneric<

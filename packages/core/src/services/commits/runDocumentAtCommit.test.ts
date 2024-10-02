@@ -1,23 +1,77 @@
 import { eq } from 'drizzle-orm'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import {
-  Commit,
-  DocumentVersion,
-  LogSources,
-  ProviderApiKey,
-  Providers,
-  Workspace,
-} from '../../browser'
+import { LogSources, Providers } from '../../browser'
 import { database } from '../../client'
 import { publisher } from '../../events/publisher'
-import { Ok } from '../../lib'
+import { Ok, UnprocessableEntityError } from '../../lib'
+import { ProviderLogsRepository } from '../../repositories'
 import { providerApiKeys } from '../../schema'
-import { createProject } from '../../tests/factories'
+import {
+  createDocumentVersion,
+  createDraft,
+  createProject,
+  helpers,
+} from '../../tests/factories'
 import { testConsumeStream } from '../../tests/helpers'
 import { runDocumentAtCommit } from './index'
 
-// Create a spy for the ai function
+const mocks = {
+  publish: vi.fn(),
+  uuid: vi.fn(() => 'fake-document-log-uuid'),
+  runAi: vi.fn(async () => {
+    const fullStream = new ReadableStream({
+      start(controller) {
+        controller.close()
+      },
+    })
+
+    return {
+      type: 'text',
+      data: {
+        text: Promise.resolve('Fake AI generated text'),
+        providerLog: Promise.resolve({ uuid: 'fake-provider-log-uuid' }),
+        usage: Promise.resolve({
+          promptTokens: 0,
+          completionTokens: 0,
+          totalTokens: 0,
+        }),
+        toolCalls: Promise.resolve([]),
+        fullStream,
+      },
+    }
+  }),
+}
+
+const dummyDoc1Content = `
+---
+provider: openai
+model: gpt-4o
+---
+
+This is a test document
+<response />
+`
+
+async function buildData({ doc1Content }: { doc1Content: string }) {
+  const { workspace, project, documents, commit, user, providers } =
+    await createProject({
+      providers: [{ type: Providers.OpenAI, name: 'openai' }],
+      documents: {
+        doc1: doc1Content,
+      },
+    })
+
+  return {
+    workspace,
+    document: documents[0]!,
+    commit,
+    user,
+    project,
+    provider: providers[0]!,
+  }
+}
+
 const publisherSpy = vi.spyOn(
   await import('../../events/publisher').then((f) => f.publisher),
   'publishLater',
@@ -60,46 +114,54 @@ describe('runDocumentAtCommit', () => {
   })
 
   describe('with an existing provider key', () => {
-    beforeEach(async () => {
-      const {
-        workspace: wsp,
-        document: doc,
-        commit: cmt,
-        provider: prv,
-      } = await buildData({
+    it('fails if document is not found in commit', async () => {
+      const { workspace, project, user, commit, provider } = await buildData({
         doc1Content: dummyDoc1Content,
       })
-      document = doc
-      commit = cmt
-      workspace = wsp
-      provider = prv
-    })
 
-    it('fails if document is not found in commit', async () => {
-      const { document } = await buildData({ doc1Content: dummyDoc1Content })
+      const { commit: draft } = await createDraft({
+        project,
+        user,
+      })
+      const { documentVersion: documentNotInCommit } =
+        await createDocumentVersion({
+          workspace,
+          user,
+          commit: draft,
+          path: 'path/to/document',
+          content: helpers.createPrompt({ provider }),
+        })
       const result = await runDocumentAtCommit({
         workspace,
-        document,
+        document: documentNotInCommit,
         commit,
         parameters: {},
         source: LogSources.API,
       })
 
-      expect(result.error).toBeDefined()
+      expect(result.error).toEqual(
+        new UnprocessableEntityError('Document not found in commit', {}),
+      )
     })
 
     it('returns document resolvedContent', async () => {
-      const result = await runDocumentAtCommit({
-        workspace,
-        document,
-        commit,
-        parameters: {},
-        source: LogSources.API,
+      const { workspace, document, commit } = await buildData({
+        doc1Content: dummyDoc1Content,
       })
+      const { response, duration, resolvedContent } = await runDocumentAtCommit(
+        {
+          workspace,
+          document,
+          commit,
+          parameters: {},
+          source: LogSources.API,
+        },
+      ).then((r) => r.unwrap())
 
-      await result.value?.response
+      await response
+      await duration
 
-      expect(result.value?.resolvedContent.trim()).toEqual(`---
+      expect(resolvedContent.trim()).toEqual(`---
 provider: openai
 model: gpt-4o
 ---
@@ -110,7 +172,11 @@ This is a test document
     })
 
     it('pass params to AI', async () => {
-      const { stream, response } = await runDocumentAtCommit({
+      const { workspace, document, commit, provider } = await buildData({
+        doc1Content: dummyDoc1Content,
+      })
+
+      const { stream, duration, response } = await runDocumentAtCommit({
         workspace,
         document,
         commit,
@@ -119,6 +185,7 @@ This is a test document
       }).then((r) => r.unwrap())
 
       await response
+      await duration
 
       await testConsumeStream(stream)
 
@@ -139,18 +206,22 @@ This is a test document
     })
 
     it('send documentLogUuid when chain is completed', async () => {
-      const { stream, response } = await runDocumentAtCommit({
+      const { workspace, document, commit } = await buildData({
+        doc1Content: dummyDoc1Content,
+      })
+      const { response, duration, stream } = await runDocumentAtCommit({
         workspace,
         document,
         commit,
         parameters: {},
         source: LogSources.API,
       }).then((r) => r.unwrap())
-
       await response
+      await duration
 
       const { value } = await testConsumeStream(stream)
-
+      const repo = new ProviderLogsRepository(workspace.id)
+      const logs = await repo.findAll().then((r) => r.unwrap())
       expect(value).toEqual([
         {
           data: {
@@ -179,7 +250,7 @@ This is a test document
               documentLogUuid: expect.any(String),
               text: 'Fake AI generated text',
               toolCalls: [],
-              providerLog: { uuid: 'fake-provider-log-uuid' },
+              providerLog: undefined,
               usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
             },
           },
@@ -223,7 +294,7 @@ This is a test document
               text: 'Fake AI generated text',
               toolCalls: [],
               usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
-              providerLog: { uuid: 'fake-provider-log-uuid' },
+              providerLog: logs[logs.length - 1],
               documentLogUuid: expect.any(String),
             },
           },
@@ -232,8 +303,11 @@ This is a test document
     })
 
     it('calls publisher with correct data', async () => {
+      const { workspace, document, commit } = await buildData({
+        doc1Content: dummyDoc1Content,
+      })
       const parameters = { testParam: 'testValue' }
-      const { response } = await runDocumentAtCommit({
+      const { response, duration } = await runDocumentAtCommit({
         workspace,
         document,
         commit,
@@ -243,11 +317,15 @@ This is a test document
 
       // Wait for the response promise to resolve
       await response
+      await duration
 
       expect(publisher.publishLater).toHaveBeenCalled()
     })
 
     it('creates a document log', async () => {
+      const { workspace, document, commit } = await buildData({
+        doc1Content: dummyDoc1Content,
+      })
       const { response } = await runDocumentAtCommit({
         workspace,
         document,
@@ -262,62 +340,3 @@ This is a test document
     })
   })
 })
-
-// Non-test code moved to the bottom
-const mocks = {
-  publish: vi.fn(),
-  uuid: vi.fn(() => 'fake-document-log-uuid'),
-  runAi: vi.fn(async () => {
-    const fullStream = new ReadableStream({
-      start(controller) {
-        controller.close()
-      },
-    })
-
-    return {
-      text: Promise.resolve('Fake AI generated text'),
-      providerLog: Promise.resolve({ uuid: 'fake-provider-log-uuid' }),
-      usage: Promise.resolve({
-        promptTokens: 0,
-        completionTokens: 0,
-        totalTokens: 0,
-      }),
-      toolCalls: Promise.resolve([]),
-      fullStream,
-    }
-  }),
-}
-
-const dummyDoc1Content = `
----
-provider: openai
-model: gpt-4o
----
-
-This is a test document
-<response />
-`
-
-async function buildData({ doc1Content }: { doc1Content: string }) {
-  const { workspace, documents, commit, user, providers } = await createProject(
-    {
-      providers: [{ type: Providers.OpenAI, name: 'openai' }],
-      documents: {
-        doc1: doc1Content,
-      },
-    },
-  )
-
-  return {
-    workspace,
-    document: documents[0]!,
-    commit,
-    user,
-    provider: providers[0]!,
-  }
-}
-
-let document: DocumentVersion
-let commit: Commit
-let workspace: Workspace
-let provider: ProviderApiKey

@@ -17,7 +17,6 @@ export const notifyToClientDocumentLogCreatedJob = async ({
     r.unwrap(),
   )
 
-  console.log('NEW DOCUMENT LOG!')
   const websockets = await WebsocketClient.getSocket()
   websockets.emit('documentLogCreated', {
     workspaceId: workspace.id,

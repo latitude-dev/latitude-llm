@@ -19,6 +19,7 @@ import { unsafelyFindProviderApiKey } from '../../data-access'
 import { NotFoundError, Result } from '../../lib'
 import { streamToGenerator } from '../../lib/streamToGenerator'
 import { ai, PartialConfig } from '../ai'
+import { ProviderProcessor } from '../chains/ProviderProcessor'
 import { enqueueChainEvent } from '../chains/run'
 
 export async function addMessages({
@@ -99,39 +100,34 @@ async function streamMessageResponse({
   documentLogUuid?: string
 }) {
   try {
+    const providerProcessor = new ProviderProcessor({
+      source,
+      documentLogUuid,
+      config,
+      apiProvider: provider,
+      messages,
+    })
     const result = await ai({
       workspace,
       messages,
       config,
       provider,
-      source,
-      documentLogUuid,
-      transactionalLogs: true,
     })
 
     for await (const value of streamToGenerator<
       TextStreamPart<Record<string, CoreTool>> | ObjectStreamPart<unknown>
-    >(result.fullStream)) {
+    >(result.data.fullStream)) {
       enqueueChainEvent(controller, {
         event: StreamEventTypes.Provider,
         data: value as unknown as ProviderData,
       })
     }
 
-    const response = {
-      object: await result.object,
-      text: await result.text,
-      usage: await result.usage,
-      documentLogUuid,
-      providerLog: await result.providerLog,
-      toolCalls: result.toolCalls
-        ? (await result.toolCalls).map((t) => ({
-            id: t.toolCallId,
-            name: t.toolName,
-            arguments: t.args,
-          }))
-        : [],
-    } as ChainCallResponse
+    const response = await providerProcessor.call({
+      aiResult: result,
+      saveSyncProviderLogs: true,
+    })
+    const providerLog = response.providerLog!
 
     enqueueChainEvent(controller, {
       event: StreamEventTypes.Latitude,
@@ -150,6 +146,7 @@ async function streamMessageResponse({
         ],
         response: {
           ...response,
+          providerLog,
           text:
             response.text ||
             objectToString((response as ChainObjectResponse).object),
@@ -161,6 +158,7 @@ async function streamMessageResponse({
 
     return {
       ...response,
+      providerLog,
       text:
         response.text ||
         objectToString((response as ChainObjectResponse).object),

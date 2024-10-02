@@ -2,51 +2,41 @@ import { omit } from 'lodash-es'
 
 import { Message } from '@latitude-data/compiler'
 import { env } from '@latitude-data/env'
-import { setupJobs } from '@latitude-data/jobs'
 import {
-  CallWarning,
-  CompletionTokenUsage,
   CoreMessage,
-  FinishReason,
+  CoreTool,
   jsonSchema,
   streamObject,
+  StreamObjectResult,
   streamText,
+  StreamTextResult,
 } from 'ai'
 import { JSONSchema7 } from 'json-schema'
-import { v4 } from 'uuid'
 
-import {
-  LogSources,
-  ProviderApiKey,
-  ProviderLog,
-  Workspace,
-} from '../../browser'
-import { publisher } from '../../events/publisher'
+import { ProviderApiKey, Workspace } from '../../browser'
+import { StreamType } from '../../events/handlers'
 import { incrFreeRuns } from '../freeRunsManager'
-import { createProviderLog } from '../providerLogs/create'
 import { createProvider, PartialConfig } from './helpers'
 
 const MAX_FREE_RUNS = 1000
 
-export type FinishCallbackEvent = {
-  finishReason: FinishReason
-  usage: CompletionTokenUsage
-  text: string
-  toolCalls?:
-    | {
-        type: 'tool-call'
-        toolCallId: string
-        toolName: string
-        args: any
-      }[]
-    | undefined
-  toolResults?: never[] | undefined
-  rawResponse?: {
-    headers?: Record<string, string>
-  }
-  warnings?: CallWarning[]
-}
-export type FinishCallback = (event: FinishCallbackEvent) => void
+export type AIReturn<T extends StreamType> = T extends 'object'
+  ? {
+      type: 'object'
+      data: Pick<
+        StreamObjectResult<unknown, unknown, never>,
+        'fullStream' | 'object' | 'usage'
+      >
+    }
+  : T extends 'text'
+    ? {
+        type: 'text'
+        data: Pick<
+          StreamTextResult<Record<string, CoreTool<any, any>>>,
+          'fullStream' | 'text' | 'usage' | 'toolCalls'
+        >
+      }
+    : never
 
 export async function ai({
   workspace,
@@ -54,45 +44,36 @@ export async function ai({
   prompt,
   messages,
   config,
-  documentLogUuid,
-  source,
   schema,
   output,
-  transactionalLogs = false,
 }: {
+  // TODO: Review if workspace and provider are necessary
+  // Maybe we should pass a valid `languageModel` from AI SDK
   workspace: Workspace
   provider: ProviderApiKey
   config: PartialConfig
   messages: Message[]
-  documentLogUuid?: string
-  source: LogSources
   prompt?: string
   schema?: JSONSchema7
   output?: 'object' | 'array' | 'no-schema'
-  transactionalLogs?: boolean
-}) {
+}): Promise<AIReturn<StreamType>> {
+  // FIXME: This is the quota limit. We want also to store this as
+  // an error so it can't be here. Move to a service before invoking
+  // the AI service.
   await checkDefaultProviderUsage({ provider: apiProvider, workspace })
 
-  const startTime = Date.now()
   const { provider, token: apiKey } = apiProvider
   const model = config.model
-  const m = createProvider({ provider, apiKey, config })(model)
+
+  // FIXME: This also can generate an error. I think we should move out
+  const languageModel = createProvider({ provider, apiKey, config })(model)
+
   const commonOptions = {
     ...omit(config, ['schema']),
-    model: m,
+    model: languageModel,
     prompt,
     messages: messages as CoreMessage[],
   }
-  const { onFinish, providerLog } = createFinishHandler({
-    isStructured: !!schema && !!output,
-    startTime,
-    apiProvider,
-    source,
-    documentLogUuid,
-    messages,
-    config,
-    transactionalLogs,
-  })
 
   if (schema && output) {
     const result = await streamObject({
@@ -102,28 +83,27 @@ export async function ai({
       // there might be a mismatch (e.g you pass an object schema but the
       // output is "array"). Not really an issue we need to defend atm.
       output: output as any,
-      onFinish,
     })
 
     return {
-      fullStream: result.fullStream,
-      object: result.object,
-      usage: result.usage,
-      providerLog,
+      type: 'object',
+      data: {
+        fullStream: result.fullStream,
+        object: result.object,
+        usage: result.usage,
+      },
     }
-  } else {
-    const result = await streamText({
-      ...commonOptions,
-      onFinish,
-    })
+  }
 
-    return {
+  const result = await streamText(commonOptions)
+  return {
+    type: 'text',
+    data: {
       fullStream: result.fullStream,
       text: result.text,
       usage: result.usage,
       toolCalls: result.toolCalls,
-      providerLog,
-    }
+    },
   }
 }
 
@@ -142,83 +122,6 @@ const checkDefaultProviderUsage = async ({
     throw new Error(
       'You have exceeded your maximum number of free runs for today',
     )
-  }
-}
-
-const createFinishHandler = ({
-  isStructured,
-  startTime,
-  apiProvider,
-  source,
-  messages,
-  config,
-  transactionalLogs,
-  documentLogUuid,
-}: {
-  isStructured: boolean
-  startTime: number
-  apiProvider: ProviderApiKey
-  source: LogSources
-  messages: Message[]
-  config: PartialConfig
-  transactionalLogs: boolean
-  documentLogUuid?: string
-}) => {
-  let resolveProviderLog: (value?: ProviderLog) => void
-  const providerLogPromise = new Promise<ProviderLog | undefined>((resolve) => {
-    resolveProviderLog = resolve
-  })
-
-  return {
-    providerLog: providerLogPromise,
-    onFinish: async (event: any) => {
-      const commonData = {
-        uuid: v4(),
-        source,
-        generatedAt: new Date(),
-        documentLogUuid,
-        providerId: apiProvider.id,
-        providerType: apiProvider.provider,
-        model: config.model,
-        config,
-        messages,
-        toolCalls: event.toolCalls?.map((t: any) => ({
-          id: t.toolCallId,
-          name: t.toolName,
-          arguments: t.args,
-        })),
-        usage: event.usage,
-        duration: Date.now() - startTime,
-      }
-
-      const payload = {
-        type: 'aiProviderCallCompleted' as 'aiProviderCallCompleted',
-        data: {
-          ...commonData,
-          responseText: event.text,
-          responseObject: isStructured ? event.object : undefined,
-        },
-      }
-
-      publisher.publishLater({
-        type: payload.type,
-        data: {
-          ...payload.data,
-          workspaceId: apiProvider.workspaceId,
-        },
-      })
-
-      if (transactionalLogs) {
-        const providerLog = await createProviderLog(payload.data).then((r) =>
-          r.unwrap(),
-        )
-        resolveProviderLog(providerLog)
-      } else {
-        const queues = await setupJobs()
-        queues.defaultQueue.jobs.enqueueCreateProviderLogJob(payload.data)
-        resolveProviderLog()
-      }
-    },
   }
 }
 

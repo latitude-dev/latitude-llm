@@ -23,19 +23,22 @@ describe('runChain', () => {
 
   function createMockAiResponse(text: string, totalTokens: number) {
     return {
-      text: Promise.resolve(text),
-      usage: Promise.resolve({ totalTokens }),
-      toolCalls: Promise.resolve([]),
-      providerLog: Promise.resolve({
-        provider: 'openai',
-        model: 'gpt-3.5-turbo',
-      }),
-      fullStream: new ReadableStream({
-        start(controller) {
-          controller.enqueue({ type: 'text', text })
-          controller.close()
-        },
-      }),
+      type: 'text',
+      data: {
+        text: Promise.resolve(text),
+        usage: Promise.resolve({ totalTokens }),
+        toolCalls: Promise.resolve([]),
+        providerLog: Promise.resolve({
+          provider: 'openai',
+          model: 'gpt-3.5-turbo',
+        }),
+        fullStream: new ReadableStream({
+          start(controller) {
+            controller.enqueue({ type: 'text', text })
+            controller.close()
+          },
+        }),
+      },
     }
   }
 
@@ -108,21 +111,24 @@ describe('runChain', () => {
     } as const
 
     const mockAiResponse = {
-      object: Promise.resolve({ name: 'John', age: 30 }),
-      usage: Promise.resolve({ totalTokens: 15 }),
-      providerLog: Promise.resolve({
-        provider: 'openai',
-        model: 'gpt-3.5-turbo',
-      }),
-      fullStream: new ReadableStream({
-        start(controller) {
-          controller.enqueue({
-            type: 'object',
-            object: { name: 'John', age: 30 },
-          })
-          controller.close()
-        },
-      }),
+      type: 'object',
+      data: {
+        object: Promise.resolve({ name: 'John', age: 30 }),
+        usage: Promise.resolve({ totalTokens: 15 }),
+        providerLog: Promise.resolve({
+          provider: 'openai',
+          model: 'gpt-3.5-turbo',
+        }),
+        fullStream: new ReadableStream({
+          start(controller) {
+            controller.enqueue({
+              type: 'object',
+              object: { name: 'John', age: 30 },
+            })
+            controller.close()
+          },
+        }),
+      },
     }
 
     vi.spyOn(aiModule, 'ai').mockResolvedValue(mockAiResponse as any)
@@ -326,21 +332,24 @@ describe('runChain', () => {
     } as const
 
     const mockAiResponse = {
-      object: Promise.resolve({ name: 'John', age: 30 }),
-      usage: Promise.resolve({ totalTokens: 15 }),
-      providerLog: Promise.resolve({
-        provider: 'openai',
-        model: 'gpt-3.5-turbo',
-      }),
-      fullStream: new ReadableStream({
-        start(controller) {
-          controller.enqueue({
-            type: 'object',
-            object: { name: 'John', age: 30 },
-          })
-          controller.close()
-        },
-      }),
+      type: 'object',
+      data: {
+        object: Promise.resolve({ name: 'John', age: 30 }),
+        usage: Promise.resolve({ totalTokens: 15 }),
+        providerLog: Promise.resolve({
+          provider: 'openai',
+          model: 'gpt-3.5-turbo',
+        }),
+        fullStream: new ReadableStream({
+          start(controller) {
+            controller.enqueue({
+              type: 'object',
+              object: { name: 'John', age: 30 },
+            })
+            controller.close()
+          },
+        }),
+      },
     }
 
     vi.spyOn(aiModule, 'ai').mockResolvedValue(mockAiResponse as any)
@@ -403,27 +412,30 @@ describe('runChain', () => {
     } as const
 
     const mockAiResponse = {
-      object: Promise.resolve([
-        { name: 'John', age: 30 },
-        { name: 'Jane', age: 25 },
-      ]),
-      providerLog: Promise.resolve({
-        provider: 'openai',
-        model: 'gpt-3.5-turbo',
-      }),
-      usage: Promise.resolve({ totalTokens: 20 }),
-      fullStream: new ReadableStream({
-        start(controller) {
-          controller.enqueue({
-            type: 'object',
-            object: [
-              { name: 'John', age: 30 },
-              { name: 'Jane', age: 25 },
-            ],
-          })
-          controller.close()
-        },
-      }),
+      type: 'object',
+      data: {
+        object: Promise.resolve([
+          { name: 'John', age: 30 },
+          { name: 'Jane', age: 25 },
+        ]),
+        providerLog: Promise.resolve({
+          provider: 'openai',
+          model: 'gpt-3.5-turbo',
+        }),
+        usage: Promise.resolve({ totalTokens: 20 }),
+        fullStream: new ReadableStream({
+          start(controller) {
+            controller.enqueue({
+              type: 'object',
+              object: [
+                { name: 'John', age: 30 },
+                { name: 'Jane', age: 25 },
+              ],
+            })
+            controller.close()
+          },
+        }),
+      },
     }
 
     vi.spyOn(aiModule, 'ai').mockResolvedValue(mockAiResponse as any)

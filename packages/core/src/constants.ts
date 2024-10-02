@@ -3,8 +3,8 @@ import type {
   ToolCall,
 } from '@latitude-data/compiler'
 import {
-  CompletionTokenUsage,
   CoreTool,
+  LanguageModelUsage,
   ObjectStreamPart,
   TextStreamPart,
 } from 'ai'
@@ -48,16 +48,17 @@ export const HELP_CENTER = {
 
 export type ChainStepTextResponse = {
   text: string
-  usage: CompletionTokenUsage
+  usage: LanguageModelUsage
   toolCalls: ToolCall[]
   documentLogUuid?: string
 }
 export type ChainStepObjectResponse = {
   object: any
   text: string
-  usage: CompletionTokenUsage
+  usage: LanguageModelUsage
   documentLogUuid?: string
 }
+export type ChainStepResponse = ChainStepTextResponse | ChainStepObjectResponse
 
 export type ChainTextResponse = ChainStepTextResponse & {
   providerLog: ProviderLog
@@ -65,7 +66,6 @@ export type ChainTextResponse = ChainStepTextResponse & {
 export type ChainObjectResponse = ChainStepObjectResponse & {
   providerLog: ProviderLog
 }
-export type ChainStepResponse = ChainStepTextResponse | ChainStepObjectResponse
 export type ChainCallResponse = ChainTextResponse | ChainObjectResponse
 
 export enum LogSources {
