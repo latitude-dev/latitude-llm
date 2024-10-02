@@ -7,7 +7,7 @@ import {
   Providers,
   RunErrorCodes,
   Workspace,
-} from '../../browser'
+} from '../../../browser'
 import {
   createDocumentLog,
   createEvaluationResult,
@@ -15,9 +15,9 @@ import {
   createProject,
   createProviderLog,
   helpers,
-} from '../../tests/factories'
-import { createRunError } from '../../tests/factories/runErrors'
-import { EvaluationResultsRepository } from './index'
+} from '../../../tests/factories'
+import { createRunError } from '../../../tests/factories/runErrors'
+import { EvaluationResultsWithErrorsRepository } from './index'
 
 let workspace: Workspace
 let documentLog: DocumentLog
@@ -51,10 +51,16 @@ describe('EvaluationResultsRepository', () => {
         workspace: workspace,
       })
 
-      await createEvaluationResult({
+      const { evaluationResult } = await createEvaluationResult({
         documentLog,
         evaluation,
         result: 'Result 1',
+      })
+      await createRunError({
+        errorableType: ErrorableEntity.EvaluationResult,
+        errorableId: evaluationResult.id,
+        code: RunErrorCodes.Unknown,
+        message: 'Error message',
       })
     })
 
@@ -90,13 +96,20 @@ describe('EvaluationResultsRepository', () => {
         providerType: Providers.OpenAI,
       })
 
-      await createEvaluationResult({
-        documentLog: documentLog2.documentLog,
-        evaluation: evaluation2,
-        result: 'Result 2',
+      const { evaluationResult: evaluationResult2 } =
+        await createEvaluationResult({
+          documentLog: documentLog2.documentLog,
+          evaluation: evaluation2,
+          result: 'Result 2',
+        })
+      await createRunError({
+        errorableType: ErrorableEntity.EvaluationResult,
+        errorableId: evaluationResult2.id,
+        code: RunErrorCodes.Unknown,
+        message: 'Error message',
       })
 
-      const repo = new EvaluationResultsRepository(workspace.id)
+      const repo = new EvaluationResultsWithErrorsRepository(workspace.id)
       const results = await repo.findAll()
       const data = results.unwrap()
 
@@ -105,26 +118,19 @@ describe('EvaluationResultsRepository', () => {
       expect(data[0]?.result).toBe('Result 1')
     })
 
-    it('does not return evaluation results with errors', async () => {
-      const { evaluationResult } = await createEvaluationResult({
+    it('does return evaluation results with out errors', async () => {
+      await createEvaluationResult({
         documentLog,
         evaluation,
         result: 'Result 2',
       })
-      await createRunError({
-        errorableType: ErrorableEntity.EvaluationResult,
-        errorableId: evaluationResult.id,
-        code: RunErrorCodes.Unknown,
-        message: 'Error message',
-      })
 
-      const repo = new EvaluationResultsRepository(workspace.id)
+      const repo = new EvaluationResultsWithErrorsRepository(workspace.id)
       const results = await repo.findAll()
       const data = results.unwrap()
 
       expect(results.ok).toBe(true)
-      expect(data.length).toBe(1)
-      expect(data[0]?.result).toBe('Result 1')
+      expect(data.length).toBe(2)
     })
   })
 })

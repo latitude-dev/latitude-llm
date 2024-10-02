@@ -449,6 +449,13 @@
       "when": 1728039445042,
       "tag": "0063_cloudy_scalphunter",
       "breakpoints": true
+    },
+    {
+      "idx": 64,
+      "version": "7",
+      "when": 1728296064861,
+      "tag": "0064_futuristic_blue_blade",
+      "breakpoints": true
     }
   ]
 }

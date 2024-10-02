@@ -1,8 +1,14 @@
-import { eq, getTableColumns } from 'drizzle-orm'
+import { and, eq, getTableColumns, isNull } from 'drizzle-orm'
 
-import { Commit, DocumentLog } from '../../browser'
+import { Commit, DocumentLog, ErrorableEntity } from '../../browser'
 import { NotFoundError, Result } from '../../lib'
-import { commits, documentLogs, projects, workspaces } from '../../schema'
+import {
+  commits,
+  documentLogs,
+  projects,
+  runErrors,
+  workspaces,
+} from '../../schema'
 import Repository from '../repository'
 
 export type DocumentLogWithMetadata = DocumentLog & {
@@ -22,7 +28,14 @@ export class DocumentLogsRepository extends Repository<typeof tt, DocumentLog> {
       .innerJoin(commits, eq(commits.id, documentLogs.commitId))
       .innerJoin(projects, eq(projects.id, commits.projectId))
       .innerJoin(workspaces, eq(workspaces.id, projects.workspaceId))
-      .where(eq(workspaces.id, this.workspaceId))
+      .leftJoin(
+        runErrors,
+        and(
+          eq(runErrors.errorableId, documentLogs.id),
+          eq(runErrors.errorableType, ErrorableEntity.DocumentLog),
+        ),
+      )
+      .where(and(isNull(runErrors.id), eq(workspaces.id, this.workspaceId)))
       .as('documentLogsScope')
   }
 
