@@ -7,6 +7,7 @@ import { Document as RefDocument } from '@latitude-data/compiler'
 import {
   DocumentVersion,
   promptConfigSchema,
+  ProviderApiKey,
 } from '@latitude-data/core/browser'
 import {
   DocumentTextEditor,
@@ -37,16 +38,19 @@ export default function DocumentEditor({
   addMessagesAction,
   document,
   documents,
+  providerApiKeys,
 }: {
   runDocumentAction: Function
   addMessagesAction: Function
   document: DocumentVersion
   documents: DocumentVersion[]
+  providerApiKeys?: ProviderApiKey[]
 }) {
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
-  const { data: providers } = useProviderApiKeys()
-
+  const { data: providers } = useProviderApiKeys({
+    fallbackData: providerApiKeys,
+  })
   const { data: _documents, updateContent } = useDocumentVersions(
     {
       commitUuid: commit.uuid,
@@ -140,6 +144,7 @@ export default function DocumentEditor({
       <div className='flex flex-row w-full h-full gap-8 p-6'>
         <div className='flex flex-col flex-1 flex-grow flex-shrink gap-2 min-w-0'>
           <EditorHeader
+            providers={providers}
             disabledMetadataSelectors={isMerged}
             title='Prompt editor'
             metadata={metadata}

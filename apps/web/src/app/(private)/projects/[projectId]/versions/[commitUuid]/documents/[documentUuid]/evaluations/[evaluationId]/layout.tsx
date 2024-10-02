@@ -1,5 +1,6 @@
 import { ReactNode } from 'react'
 
+import { readMetadata } from '@latitude-data/compiler'
 import {
   Commit,
   Evaluation,
@@ -13,8 +14,12 @@ import {
   getEvaluationModalValueQuery,
   getEvaluationTotalsQuery,
 } from '@latitude-data/core/services/evaluationResults/index'
+import { env } from '@latitude-data/env'
 import { Icon, TableWithHeader, Text, Tooltip } from '@latitude-data/web-ui'
-import { findCommitCached } from '$/app/(private)/_data-access'
+import {
+  findCommitCached,
+  getProviderApiKeyCached,
+} from '$/app/(private)/_data-access'
 import BreadcrumbLink from '$/components/BreadcrumbLink'
 import { Breadcrumb } from '$/components/layouts/AppLayout/Header'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
@@ -106,6 +111,20 @@ export default async function ConnectedEvaluationLayout({
     isNumeric,
     commit,
   })
+
+  let provider
+  if (evaluation.metadata.prompt) {
+    const metadata = await readMetadata({
+      prompt: evaluation.metadata.prompt,
+    })
+
+    if (
+      metadata.config.provider &&
+      typeof metadata.config.provider === 'string'
+    ) {
+      provider = await getProviderApiKeyCached(metadata.config.provider)
+    }
+  }
   return (
     <div className='flex flex-col w-full h-full gap-6 p-6'>
       <TableWithHeader
@@ -140,7 +159,7 @@ export default async function ConnectedEvaluationLayout({
                         <Link
                           href={
                             ROUTES.evaluations.detail({ uuid: evaluation.uuid })
-                              .root
+                              .editor.root
                           }
                         >
                           <Icon name='externalLink' />
@@ -157,6 +176,9 @@ export default async function ConnectedEvaluationLayout({
         }
         actions={
           <Actions
+            isUsingDefaultProvider={
+              provider && provider.token === env.DEFAULT_PROVIDER_API_KEY
+            }
             evaluation={evaluation}
             projectId={params.projectId}
             commitUuid={params.commitUuid}

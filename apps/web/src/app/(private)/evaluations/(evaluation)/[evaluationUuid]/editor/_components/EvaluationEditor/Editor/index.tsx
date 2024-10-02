@@ -2,7 +2,7 @@
 
 import { Suspense, useCallback, useMemo, useState } from 'react'
 
-import { promptConfigSchema } from '@latitude-data/core/browser'
+import { promptConfigSchema, ProviderApiKey } from '@latitude-data/core/browser'
 import {
   Button,
   DocumentTextEditor,
@@ -19,16 +19,20 @@ import { EVALUATION_PARAMETERS } from './Playground/Chat'
 export default function EvaluationEditor({
   evaluationUuid,
   defaultPrompt,
+  providerApiKeys,
 }: {
   evaluationUuid: string
   defaultPrompt: string
+  providerApiKeys?: ProviderApiKey[]
 }) {
   const { data, isLoading, update, isUpdating } = useEvaluations()
   const evaluation = useMemo(
     () => data.find((e) => e.uuid === evaluationUuid),
     [evaluationUuid, data],
   )
-  const { data: providers } = useProviderApiKeys()
+  const { data: providers } = useProviderApiKeys({
+    fallbackData: providerApiKeys,
+  })
   const [value, setValue] = useState(defaultPrompt)
   const configSchema = useMemo(
     () => promptConfigSchema({ providers: providers ?? [] }),
@@ -66,6 +70,7 @@ export default function EvaluationEditor({
     <div className='flex flex-row w-full h-full gap-8'>
       <div className='flex flex-col flex-1 flex-grow flex-shrink gap-2 min-w-0'>
         <EditorHeader
+          providers={providers}
           title='Evaluation editor'
           metadata={metadata}
           prompt={value}

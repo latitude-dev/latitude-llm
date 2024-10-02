@@ -1,7 +1,10 @@
 import { ReactNode } from 'react'
 
 import { Text } from '@latitude-data/web-ui'
-import { getEvaluationByUuidCached } from '$/app/(private)/_data-access'
+import {
+  getEvaluationByUuidCached,
+  getProviderApiKeysCached,
+} from '$/app/(private)/_data-access'
 import { NAV_LINKS } from '$/app/(private)/_lib/constants'
 import BreadcrumbLink from '$/components/BreadcrumbLink'
 import { AppLayout } from '$/components/layouts'
@@ -21,6 +24,7 @@ export default async function DocumentPage({
   const evaluationUuid = params.evaluationUuid
   const evaluation = await getEvaluationByUuidCached(evaluationUuid)
   const session = await getCurrentUser()
+  const providerApiKeys = await getProviderApiKeysCached()
 
   return (
     <AppLayout
@@ -45,6 +49,7 @@ export default async function DocumentPage({
         <EvaluationTabSelector evaluation={evaluation} />
         <div className='flex-grow'>
           <EvaluationEditor
+            providerApiKeys={providerApiKeys}
             evaluationUuid={evaluationUuid}
             defaultPrompt={evaluation.metadata.prompt}
           />
