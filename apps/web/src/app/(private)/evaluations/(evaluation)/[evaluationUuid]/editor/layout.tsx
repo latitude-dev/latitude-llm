@@ -1,5 +1,6 @@
 import { ReactNode } from 'react'
 
+import { getFreeRuns } from '@latitude-data/core/services/freeRunsManager/index'
 import { Text } from '@latitude-data/web-ui'
 import {
   getEvaluationByUuidCached,
@@ -22,10 +23,12 @@ export default async function DocumentPage({
   children: ReactNode
   params: { evaluationUuid: string }
 }) {
+  const { workspace } = await getCurrentUser()
   const evaluationUuid = params.evaluationUuid
   const evaluation = await getEvaluationByUuidCached(evaluationUuid)
   const session = await getCurrentUser()
   const providerApiKeys = await getProviderApiKeysCached()
+  const freeRunsCount = await getFreeRuns(workspace.id)
 
   return (
     <AppLayout
@@ -53,6 +56,7 @@ export default async function DocumentPage({
             providerApiKeys={providerApiKeys.map(providerApiKeyPresenter)}
             evaluationUuid={evaluationUuid}
             defaultPrompt={evaluation.metadata.prompt}
+            freeRunsCount={freeRunsCount ? Number(freeRunsCount) : undefined}
           />
         </div>
         {children}

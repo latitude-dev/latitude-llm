@@ -20,10 +20,12 @@ export default function EvaluationEditor({
   evaluationUuid,
   defaultPrompt,
   providerApiKeys,
+  freeRunsCount,
 }: {
   evaluationUuid: string
   defaultPrompt: string
   providerApiKeys?: ProviderApiKey[]
+  freeRunsCount?: number
 }) {
   const { data, isLoading, update, isUpdating } = useEvaluations()
   const evaluation = useMemo(
@@ -70,6 +72,7 @@ export default function EvaluationEditor({
     <div className='flex flex-row w-full h-full gap-8'>
       <div className='flex flex-col flex-1 flex-grow flex-shrink gap-2 min-w-0'>
         <EditorHeader
+          freeRunsCount={freeRunsCount}
           providers={providers}
           title='Evaluation editor'
           metadata={metadata}

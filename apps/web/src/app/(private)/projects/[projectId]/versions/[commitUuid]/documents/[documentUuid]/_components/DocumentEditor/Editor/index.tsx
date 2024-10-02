@@ -39,12 +39,14 @@ export default function DocumentEditor({
   document,
   documents,
   providerApiKeys,
+  freeRunsCount,
 }: {
   runDocumentAction: Function
   addMessagesAction: Function
   document: DocumentVersion
   documents: DocumentVersion[]
   providerApiKeys?: ProviderApiKey[]
+  freeRunsCount?: number
 }) {
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
@@ -150,6 +152,7 @@ export default function DocumentEditor({
             metadata={metadata}
             prompt={value}
             onChangePrompt={onChange}
+            freeRunsCount={freeRunsCount}
           />
           <Suspense fallback={<DocumentTextEditorFallback />}>
             <DocumentTextEditor

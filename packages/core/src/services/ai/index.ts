@@ -21,8 +21,8 @@ import {
   ProviderLog,
   Workspace,
 } from '../../browser'
-import { cache } from '../../cache'
 import { publisher } from '../../events/publisher'
+import { incrFreeRuns } from '../freeRunsManager'
 import { createProviderLog } from '../providerLogs/create'
 import { createProvider, PartialConfig } from './helpers'
 
@@ -136,10 +136,7 @@ const checkDefaultProviderUsage = async ({
 }) => {
   if (provider.token !== env.DEFAULT_PROVIDER_API_KEY) return
 
-  const c = await cache()
-  const date = new Date()
-  const key = `workspace:${workspace.id}:${date.toISOString().slice(0, 10)}:defaultProviderRunCount`
-  const value = await c.incr(key)
+  const value = await incrFreeRuns(workspace.id)
 
   if (value > MAX_FREE_RUNS) {
     throw new Error(
