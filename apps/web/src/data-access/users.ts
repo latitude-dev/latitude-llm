@@ -7,8 +7,12 @@ import { users } from '@latitude-data/core/schema'
 import { getFirstWorkspace } from '$/data-access/workspaces'
 import { eq } from 'drizzle-orm'
 
-function notFound() {
-  return Result.error(new NotFoundError('Not found user'))
+function notFoundWithEmail(email: string | undefined | null) {
+  return Result.error(new NotFoundError(`Not found user with email: ${email}`))
+}
+
+function notFoundWithId(id: string | undefined | null) {
+  return Result.error(new NotFoundError(`Not found user with ID: ${id}`))
 }
 
 export async function getUserFromCredentials({
@@ -30,7 +34,8 @@ export async function getUserFromCredentials({
     // @ts-ignore
     where: eq(users.email, email),
   })
-  if (!user) return notFound()
+
+  if (!user) return notFoundWithEmail(email)
 
   const wpResult = await getFirstWorkspace({ userId: user.id })
   if (wpResult.error) {
@@ -52,7 +57,7 @@ export async function getCurrentUserFromDB({
 }): PromisedResult<SessionData, Error> {
   try {
     const user = await unsafelyGetUser(userId)
-    if (!user) return notFound()
+    if (!user) return notFoundWithId(userId)
 
     const wpResult = await getFirstWorkspace({ userId: user.id })
     if (wpResult.error) return wpResult
