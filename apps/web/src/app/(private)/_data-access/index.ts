@@ -10,6 +10,7 @@ import {
   DocumentVersionsRepository,
   EvaluationsRepository,
   ProjectsRepository,
+  ProviderApiKeysRepository,
   ProviderLogsRepository,
 } from '@latitude-data/core/repositories/index'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
@@ -206,6 +207,20 @@ export const getConnectedDocumentsWithMetadataCached = cache(
 export const getApiKeysCached = cache(async () => {
   const { workspace } = await getCurrentUser()
   const scope = new ApiKeysRepository(workspace.id)
+  const result = await scope.findAll()
+  return result.unwrap()
+})
+
+export const getProviderApiKeyCached = cache(async (name: string) => {
+  const { workspace } = await getCurrentUser()
+  const scope = new ProviderApiKeysRepository(workspace.id)
+  const result = await scope.findByName(name)
+  return result.unwrap()
+})
+
+export const getProviderApiKeysCached = cache(async () => {
+  const { workspace } = await getCurrentUser()
+  const scope = new ProviderApiKeysRepository(workspace.id)
   const result = await scope.findAll()
   return result.unwrap()
 })

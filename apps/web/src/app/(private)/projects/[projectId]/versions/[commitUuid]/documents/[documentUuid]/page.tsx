@@ -4,6 +4,7 @@ import {
   findCommitCached,
   getDocumentByUuidCached,
   getDocumentsAtCommitCached,
+  getProviderApiKeysCached,
 } from '$/app/(private)/_data-access'
 
 import DocumentEditor from './_components/DocumentEditor/Editor'
@@ -22,6 +23,7 @@ export default async function DocumentPage({
     commitUuid,
   })
   const documents = await getDocumentsAtCommitCached({ commit })
+  const providerApiKeys = await getProviderApiKeysCached()
 
   return (
     <DocumentEditor
@@ -29,6 +31,7 @@ export default async function DocumentPage({
       addMessagesAction={addMessagesAction}
       documents={documents}
       document={document}
+      providerApiKeys={providerApiKeys}
     />
   )
 }

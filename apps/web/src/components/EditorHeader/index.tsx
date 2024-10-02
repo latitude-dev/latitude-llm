@@ -18,6 +18,7 @@ import {
 import useProviderApiKeys from '$/stores/providerApiKeys'
 
 const CUSTOM_MODEL = 'custom-model'
+
 function useModelsOptions({ provider }: { provider: Providers | undefined }) {
   return useMemo(() => {
     const models = provider ? PROVIDER_MODELS[provider] : null
@@ -53,6 +54,7 @@ export default function EditorHeader({
   onChangePrompt,
   rightActions,
   disabledMetadataSelectors = false,
+  providers,
 }: {
   title: string
   metadata: ConversationMetadata | undefined
@@ -60,6 +62,7 @@ export default function EditorHeader({
   onChangePrompt: (prompt: string) => void
   rightActions?: ReactNode
   disabledMetadataSelectors?: boolean
+  providers?: ProviderApiKey[]
 }) {
   const promptMetadata = useMemo<PromptMeta>(() => {
     const config = metadata?.config
@@ -68,7 +71,9 @@ export default function EditorHeader({
     return { providerName, model }
   }, [metadata?.config])
 
-  const { data: providerApiKeys, isLoading } = useProviderApiKeys()
+  const { data: providerApiKeys, isLoading } = useProviderApiKeys({
+    fallbackData: providers,
+  })
 
   const { value: showLineNumbers, setValue: setShowLineNumbers } =
     useLocalStorage({
@@ -114,23 +119,14 @@ export default function EditorHeader({
   })
 
   useEffect(() => {
-    if (isLoading) return
-
     const foundProvider = providersByName[promptMetadata?.providerName]
     if (foundProvider?.name === selectedProvider) return
 
     setProvider(foundProvider?.name)
     setModel(undefined)
-  }, [
-    isLoading,
-    selectedProvider,
-    providersByName,
-    promptMetadata?.providerName,
-  ])
+  }, [selectedProvider, providersByName, promptMetadata?.providerName])
 
   useEffect(() => {
-    if (isLoading) return
-
     const model = selectModel({
       promptMetadata,
       providersByName,
@@ -140,7 +136,6 @@ export default function EditorHeader({
 
     setModel(model)
   }, [
-    isLoading,
     providersByName,
     selectedModel,
     promptMetadata?.providerName,
@@ -225,7 +220,12 @@ export default function EditorHeader({
           onChange={onSelectProvider}
         />
         <Select
-          disabled={disabledMetadataSelectors || !selectedProvider || !metadata}
+          disabled={
+            isLoading ||
+            disabledMetadataSelectors ||
+            !selectedProvider ||
+            !metadata
+          }
           name='model'
           label='Model'
           placeholder='Select a model'

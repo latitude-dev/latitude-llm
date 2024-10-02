@@ -13,13 +13,19 @@ type Props = {
   variant?: AlertProps['variant']
   title?: string
   description?: string
+  cta?: ReactNode
 }
-export function Alert({ title, description, variant = 'default' }: Props) {
+export function Alert({ title, description, cta, variant = 'default' }: Props) {
   return (
     <AlertRoot variant={variant}>
       <Icon name='alert' />
-      {title && <AlertTitle>{title}</AlertTitle>}
-      {description && <AlertDescription>{description}</AlertDescription>}
+      <div className='flex flex-row items-center gap-4 justify-between'>
+        <div className='flex flex-col gap-2'>
+          <AlertTitle>{title}</AlertTitle>
+          <AlertDescription>{description}</AlertDescription>
+        </div>
+        {cta}
+      </div>
     </AlertRoot>
   )
 }
