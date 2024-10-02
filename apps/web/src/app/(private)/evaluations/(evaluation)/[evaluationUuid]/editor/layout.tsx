@@ -8,6 +8,7 @@ import {
 import { NAV_LINKS } from '$/app/(private)/_lib/constants'
 import BreadcrumbLink from '$/components/BreadcrumbLink'
 import { AppLayout } from '$/components/layouts'
+import providerApiKeyPresenter from '$/presenters/providerApiKeyPresenter'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
 
@@ -49,7 +50,7 @@ export default async function DocumentPage({
         <EvaluationTabSelector evaluation={evaluation} />
         <div className='flex-grow'>
           <EvaluationEditor
-            providerApiKeys={providerApiKeys}
+            providerApiKeys={providerApiKeys.map(providerApiKeyPresenter)}
             evaluationUuid={evaluationUuid}
             defaultPrompt={evaluation.metadata.prompt}
           />

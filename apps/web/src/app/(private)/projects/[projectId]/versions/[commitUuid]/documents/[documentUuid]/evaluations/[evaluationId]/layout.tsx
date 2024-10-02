@@ -122,7 +122,12 @@ export default async function ConnectedEvaluationLayout({
       metadata.config.provider &&
       typeof metadata.config.provider === 'string'
     ) {
-      provider = await getProviderApiKeyCached(metadata.config.provider)
+      try {
+        provider = await getProviderApiKeyCached(metadata.config.provider)
+      } catch (error) {
+        // do nothing, it could be that the provider name does not match any
+        // provider in the workspace
+      }
     }
   }
   return (

@@ -6,6 +6,7 @@ import {
   getDocumentsAtCommitCached,
   getProviderApiKeysCached,
 } from '$/app/(private)/_data-access'
+import providerApiKeyPresenter from '$/presenters/providerApiKeyPresenter'
 
 import DocumentEditor from './_components/DocumentEditor/Editor'
 
@@ -31,7 +32,7 @@ export default async function DocumentPage({
       addMessagesAction={addMessagesAction}
       documents={documents}
       document={document}
-      providerApiKeys={providerApiKeys}
+      providerApiKeys={providerApiKeys.map(providerApiKeyPresenter)}
     />
   )
 }
