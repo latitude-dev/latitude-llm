@@ -16,7 +16,7 @@ export function ChartWrapper({
   return (
     <div
       className={cn(
-        'h-[203px] min-w-[300px] flex-1 rounded-lg flex flex-col gap-2 p-2 overflow-hidden border',
+        'h-[203px] min-w-[300px] flex-1 rounded-lg flex flex-col gap-2 p-2 border',
         {
           'border-border': !error,
           'border-destructive': !!error,
