@@ -26,8 +26,8 @@ export const evaluationResults = latitudeSchema.table(
     providerLogId: bigint('provider_log_id', { mode: 'number' })
       .notNull()
       .references(() => providerLogs.id),
-    resultableType: evaluationResultTypes('resultable_type').notNull(),
-    resultableId: bigint('resultable_id', { mode: 'number' }).notNull(),
+    resultableType: evaluationResultTypes('resultable_type'),
+    resultableId: bigint('resultable_id', { mode: 'number' }),
     source: logSourcesEnum('source'),
     ...timestamps(),
   },

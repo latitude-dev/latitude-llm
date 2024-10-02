@@ -435,6 +435,13 @@
       "when": 1727782683036,
       "tag": "0061_orange_master_mold",
       "breakpoints": true
+    },
+    {
+      "idx": 62,
+      "version": "7",
+      "when": 1727875218351,
+      "tag": "0062_clammy_dark_beast",
+      "breakpoints": true
     }
   ]
 }

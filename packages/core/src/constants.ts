@@ -73,6 +73,20 @@ export enum LogSources {
   Playground = 'playground',
   Evaluation = 'evaluation',
 }
+
+export enum RunErrorCodes {
+  Unknown = 'unknown_error',
+  DefaultProviderExceededQuota = 'default_provider_exceeded_quota_error',
+  DocumentConfigError = 'document_config_error',
+  MissingProvider = 'missing_provider_error',
+  ChainCompileError = 'chain_compile_error',
+  AIRunError = 'ai_run_error',
+}
+export enum ErrorableEntity {
+  DocumentLog = 'document_log',
+  EvaluationResult = 'evaluation_result',
+}
+
 export enum StreamEventTypes {
   Latitude = 'latitude-event',
   Provider = 'provider-event',
