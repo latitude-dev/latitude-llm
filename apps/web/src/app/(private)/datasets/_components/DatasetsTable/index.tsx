@@ -16,7 +16,8 @@ import {
   Tooltip,
 } from '@latitude-data/web-ui'
 import DeleteDatasetModal from '$/app/(private)/datasets/_components/DeleteDatasetModal'
-import PreviewDatasetModal from '$/app/(private)/datasets/_components/PreviewDatasetModal'
+import { useNavigate } from '$/hooks/useNavigate'
+import { ROUTES } from '$/services/routes'
 import useDatasets from '$/stores/datasets'
 
 export function DatasetsTable({
@@ -24,15 +25,14 @@ export function DatasetsTable({
 }: {
   datasets: Dataset[]
 }) {
+  const navigate = useNavigate()
   const [deletable, setDeletable] = useState<Dataset | null>(null)
-  const [preview, setPreview] = useState<Dataset | null>(null)
   const { data: datasets } = useDatasets(undefined, {
     fallbackData: serverDatasets,
   })
   return (
     <>
       <DeleteDatasetModal dataset={deletable} setDataset={setDeletable} />
-      <PreviewDatasetModal dataset={preview} setPreview={setPreview} />
       <Table>
         <TableHeader>
           <TableRow verticalPadding>
@@ -46,7 +46,7 @@ export function DatasetsTable({
         </TableHeader>
         <TableBody>
           {datasets.map((dataset) => (
-            <TableRow key={dataset.id} verticalPadding>
+            <TableRow key={dataset.id} verticalPadding hoverable={false}>
               <TableCell>
                 <Text.H4>{dataset.name}</Text.H4>
               </TableCell>
@@ -69,7 +69,9 @@ export function DatasetsTable({
                   <Tooltip
                     trigger={
                       <Button
-                        onClick={() => setPreview(dataset)}
+                        onClick={() =>
+                          navigate.push(ROUTES.datasets.preview(dataset.id))
+                        }
                         variant='nope'
                         iconProps={{ name: 'eye', color: 'foregroundMuted' }}
                       />
