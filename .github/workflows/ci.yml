@@ -21,18 +21,21 @@ jobs:
       workflow_call: true
 
   deploy-apps:
-    # TODO: add back tests when redis service container becomes available again
-    needs: [lint]
+    needs: [lint, test]
     strategy:
       matrix:
-        app: [gateway, websockets, workers]
+        app: [websockets, workers]
     uses: ./.github/workflows/deploy-app.yml
     with:
       app-name: ${{ matrix.app }}
     secrets: inherit
 
   deploy-web:
-    # TODO: add back tests when redis service container becomes available again
-    needs: [lint]
+    needs: [lint, test]
     uses: ./.github/workflows/deploy-web.yml
+    secrets: inherit
+
+  deploy-gateway:
+    needs: [lint, test]
+    uses: ./.github/workflows/deploy-gateway.yml
     secrets: inherit

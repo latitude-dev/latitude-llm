@@ -1,40 +1,21 @@
 import * as aws from '@pulumi/aws'
 import { Cluster } from '@pulumi/aws/ecs'
-import * as docker from '@pulumi/docker'
 import * as pulumi from '@pulumi/pulumi'
 
 import {
   ecsSecurityGroup,
   ecsTaskExecutionRole,
   privateSubnets,
-  resolve,
   vpcId,
 } from '../../shared'
 import { coreStack, environment } from './shared'
 
+const webProductionStack = new pulumi.StackReference('app-production-web')
+
 const DNS_ADDRESS = 'gateway.latitude.so'
 
 // Create an ECR repository
-const repo = new aws.ecr.Repository('latitude-llm-gateway-repo')
-
-// Build and push the Docker image
-const token = await aws.ecr.getAuthorizationToken()
-const image = new docker.Image('LatitudeLLMGatewayImage', {
-  build: {
-    platform: 'linux/amd64',
-    context: resolve('../../../'),
-    dockerfile: resolve('../../../apps/gateway/docker/Dockerfile'),
-    cacheFrom: {
-      images: [pulumi.interpolate`${repo.repositoryUrl}:latest`],
-    },
-  },
-  imageName: pulumi.interpolate`${repo.repositoryUrl}:latest`,
-  registry: {
-    server: repo.repositoryUrl,
-    username: token.userName,
-    password: pulumi.secret(token.password),
-  },
-})
+export const repo = new aws.ecr.Repository('latitude-llm-gateway-repo')
 
 // Create a Fargate task definition
 const containerName = 'LatitudeLLMGatewayContainer'
@@ -44,8 +25,10 @@ const logGroup = new aws.cloudwatch.LogGroup('LatitudeLLMGatewayLogGroup', {
   retentionInDays: 7,
 })
 
+const imageName = pulumi.interpolate`${repo.repositoryUrl}:latest`
+
 const taskDefinition = pulumi
-  .all([logGroup.name, image.imageName, environment])
+  .all([logGroup.name, imageName, environment])
   .apply(
     ([logGroupName, imageName, environment]) =>
       new aws.ecs.TaskDefinition('LatitudeLLMGatewayTaskDefinition', {
@@ -88,7 +71,22 @@ const taskDefinition = pulumi
       }),
   )
 
-const targetGroup = new aws.lb.TargetGroup('LatitudeLLMGatewayTg', {
+const greenTargetGroup = new aws.lb.TargetGroup('LatitudeLLMGatewayTg', {
+  port: 8080,
+  vpcId,
+  protocol: 'HTTP',
+  targetType: 'ip',
+  healthCheck: {
+    path: '/health',
+    interval: 5,
+    timeout: 2,
+    healthyThreshold: 2,
+    unhealthyThreshold: 2,
+  },
+  deregistrationDelay: 5,
+})
+
+const blueTargetGroup = new aws.lb.TargetGroup('LatitudeLLMGatewayBlueTg', {
   port: 8080,
   vpcId,
   protocol: 'HTTP',
@@ -104,13 +102,12 @@ const targetGroup = new aws.lb.TargetGroup('LatitudeLLMGatewayTg', {
 })
 
 const defaultListenerArn = coreStack.requireOutput('defaultListenerArn')
-
 new aws.lb.ListenerRule('LatitudeLLMGatewayListenerRule', {
   listenerArn: defaultListenerArn,
   actions: [
     {
       type: 'forward',
-      targetGroupArn: targetGroup.arn,
+      targetGroupArn: blueTargetGroup.arn,
     },
   ],
   conditions: [
@@ -123,31 +120,89 @@ new aws.lb.ListenerRule('LatitudeLLMGatewayListenerRule', {
 })
 
 const cluster = coreStack.requireOutput('cluster') as pulumi.Output<Cluster>
-new aws.ecs.Service('LatitudeLLMGateway', {
-  cluster: cluster.arn,
-  taskDefinition: taskDefinition.arn,
-  desiredCount: 2,
-  launchType: 'FARGATE',
-  forceNewDeployment: true,
-  enableExecuteCommand: true,
-  networkConfiguration: {
-    subnets: privateSubnets.ids,
-    assignPublicIp: false,
-    securityGroups: [ecsSecurityGroup],
-  },
-  loadBalancers: [
-    {
-      targetGroupArn: targetGroup.arn,
-      containerName,
-      containerPort: 8080,
+const ecsService = new aws.ecs.Service(
+  'LatitudeLLMGateway',
+  {
+    cluster: cluster.arn,
+    taskDefinition: taskDefinition.arn,
+    desiredCount: 2,
+    launchType: 'FARGATE',
+    forceNewDeployment: false,
+    enableExecuteCommand: true,
+    deploymentController: {
+      type: 'CODE_DEPLOY',
     },
-  ],
-  tags: {
-    digest: image.repoDigest,
+    networkConfiguration: {
+      subnets: privateSubnets.ids,
+      assignPublicIp: false,
+      securityGroups: [ecsSecurityGroup],
+    },
+    loadBalancers: [
+      {
+        targetGroupArn: blueTargetGroup.arn,
+        containerName,
+        containerPort: 8080,
+      },
+    ],
   },
-  triggers: {
-    diggest: image.repoDigest,
+  {
+    ignoreChanges: ['taskDefinition'], // CodeDeploy controls the task definition that is deployed
   },
-})
+)
+
+const codeDeployGateway = new aws.codedeploy.Application(
+  'LatitudeLLMCodeDeployGateway',
+  {
+    name: 'LatitudeLLMCodeDeployGateway',
+    computePlatform: 'ECS',
+  },
+)
+
+const codeDeployServiceRole = webProductionStack.requireOutput(
+  'codeDeployServiceRole',
+) as pulumi.Output<aws.iam.Role>
+
+codeDeployServiceRole.arn.apply(
+  (codeDeployServiceRoleArn: string) =>
+    new aws.codedeploy.DeploymentGroup('LatitudeLLMGatewayDeploymentGroup', {
+      appName: codeDeployGateway.name,
+      serviceRoleArn: codeDeployServiceRoleArn,
+      deploymentConfigName: 'CodeDeployDefault.ECSAllAtOnce',
+      deploymentGroupName: 'LatitudeLLMGatewayDeploymentGroup',
+      ecsService: {
+        clusterName: cluster.name,
+        serviceName: ecsService.name,
+      },
+      autoRollbackConfiguration: {
+        enabled: true,
+        events: ['DEPLOYMENT_FAILURE'],
+      },
+      blueGreenDeploymentConfig: {
+        deploymentReadyOption: {
+          actionOnTimeout: 'CONTINUE_DEPLOYMENT',
+          waitTimeInMinutes: 0,
+        },
+        terminateBlueInstancesOnDeploymentSuccess: {
+          action: 'TERMINATE',
+          terminationWaitTimeInMinutes: 1,
+        },
+      },
+      deploymentStyle: {
+        deploymentOption: 'WITH_TRAFFIC_CONTROL',
+        deploymentType: 'BLUE_GREEN',
+      },
+      loadBalancerInfo: {
+        targetGroupPairInfo: {
+          prodTrafficRoute: {
+            listenerArns: [defaultListenerArn],
+          },
+          targetGroups: [
+            { name: blueTargetGroup.name },
+            { name: greenTargetGroup.name },
+          ],
+        },
+      },
+    }),
+)
 
 export const serviceUrl = pulumi.interpolate`https://${DNS_ADDRESS}`
