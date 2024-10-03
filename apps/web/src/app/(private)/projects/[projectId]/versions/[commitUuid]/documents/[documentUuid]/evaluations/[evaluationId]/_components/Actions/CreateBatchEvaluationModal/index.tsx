@@ -81,7 +81,6 @@ export default function CreateBatchEvaluationModal({
       }
     >
       <DatasetForm
-        document={document}
         errors={errors}
         datasets={form.datasets}
         isLoadingDatasets={form.isLoadingDatasets}

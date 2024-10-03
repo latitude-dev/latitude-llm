@@ -12,7 +12,7 @@ const INTERNAL_PACKAGES = [
 const nextConfig = {
   output: 'standalone',
   transpilePackages: INTERNAL_PACKAGES,
-  serverExternalPackages: ['import-in-the-middle', 'bullmq', 'jose'],
+  serverExternalPackages: ['@sentry/nextjs', 'bullmq', 'jose'],
   experimental: {
     // Dear developer,
     //
@@ -71,7 +71,7 @@ if (process.env.SENTRY_ORG && process.env.SENTRY_PROJECT) {
     // See the following for more information:
     // https://docs.sentry.io/product/crons/
     // https://vercel.com/docs/cron-jobs
-    automaticVercelMonitors: false,
+    automaticVercelMonitors: true,
   })
 } else {
   config = nextConfig

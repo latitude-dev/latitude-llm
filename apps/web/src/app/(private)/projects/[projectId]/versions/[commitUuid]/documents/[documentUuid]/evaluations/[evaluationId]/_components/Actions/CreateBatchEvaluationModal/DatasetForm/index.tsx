@@ -1,10 +1,8 @@
 import { useMemo } from 'react'
 
-import { Dataset, DocumentVersion } from '@latitude-data/core/browser'
+import { Dataset } from '@latitude-data/core/browser'
 import {
-  Button,
   FormFieldGroup,
-  Icon,
   Input,
   NumeredList,
   ReactStateDispatch,
@@ -12,8 +10,6 @@ import {
   SelectOption,
   SwitchInput,
 } from '@latitude-data/web-ui'
-import { ROUTES } from '$/services/routes'
-import Link from 'next/link'
 
 function LineRangeInputs({
   disabled,
@@ -58,7 +54,6 @@ function LineRangeInputs({
 }
 
 export default function DatasetForm({
-  document,
   onParametersChange,
   selectedDataset,
   headers,
@@ -73,7 +68,6 @@ export default function DatasetForm({
   onSelectDataset,
   errors,
 }: {
-  document: DocumentVersion
   onParametersChange: (param: string) => (header: string) => void
   parametersList: string[]
   wantAllLines: boolean
@@ -117,27 +111,15 @@ export default function DatasetForm({
   return (
     <>
       <NumeredList>
-        <NumeredList.Item title='Pick dataset'>
-          <div className='flex flex-row items-center gap-4'>
-            <div className='w-1/2'>
-              <Select
-                name='datasetId'
-                placeholder='Select dataset'
-                disabled={isLoadingDatasets}
-                options={datasetOptions}
-                onChange={onSelectDataset}
-                defaultValue={selectedDataset?.id?.toString()}
-              />
-            </div>
-            <Link
-              href={`${ROUTES.datasets.generate.root}?name='${document.path}'&parameters=${parametersList.join(',')}&backUrl=${window.location.href}`}
-              className='flex flex-row items-center gap-1'
-            >
-              <Button variant='link'>
-                Generate dataset <Icon name='externalLink' />
-              </Button>
-            </Link>
-          </div>
+        <NumeredList.Item title='Pick dataset' width='w-1/2'>
+          <Select
+            name='datasetId'
+            placeholder='Select dataset'
+            disabled={isLoadingDatasets}
+            options={datasetOptions}
+            onChange={onSelectDataset}
+            defaultValue={selectedDataset?.id?.toString()}
+          />
         </NumeredList.Item>
         <NumeredList.Item title='Select lines from dataset' width='w-1/2'>
           {selectedDataset ? (

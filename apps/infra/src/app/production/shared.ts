@@ -85,12 +85,12 @@ export const environment = pulumi
   ])
   .apply(() => {
     return [
-      { name: 'HOSTNAME', value: '0.0.0.0' }, // This is the host gateway listens to within its container
+      { name: 'HOSTNAME', value: '0.0.0.0' },
       { name: 'PORT', value: '8080' },
       { name: 'DATABASE_URL', value: dbUrl },
       { name: 'QUEUE_HOST', value: queueEndpoint },
       { name: 'CACHE_HOST', value: cacheEndpoint },
-      { name: 'GATEWAY_HOSTNAME', value: 'gateway.latitude.so' }, // This is the host gateway is available at
+      { name: 'GATEWAY_HOSTNAME', value: 'gateway.latitude.so' },
       { name: 'GATEWAY_SSL', value: 'true' },
       { name: 'LATITUDE_DOMAIN', value: 'latitude.so' },
       { name: 'LATITUDE_URL', value: 'https://app.latitude.so' },

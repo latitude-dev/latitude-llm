@@ -88,11 +88,6 @@ export class Latitude {
         body: { path, parameters },
       })
 
-      if (!response.ok) {
-        onError?.(new Error(response.statusText))
-        return
-      }
-
       return this.handleStream({
         stream: response.body!,
         onEvent,
