@@ -1,5 +1,6 @@
 import { zValidator } from '@hono/zod-validator'
 import { LogSources } from '@latitude-data/core/browser'
+import { database } from '@latitude-data/core/client'
 import { streamToGenerator } from '@latitude-data/core/lib/streamToGenerator'
 import { runDocumentAtCommit } from '@latitude-data/core/services/commits/runDocumentAtCommit'
 import { captureException } from '$/common/sentry'
@@ -14,6 +15,11 @@ const factory = new Factory()
 const runSchema = z.object({
   path: z.string(),
   parameters: z.record(z.any()).optional().default({}),
+  __internal: z
+    .object({
+      source: z.nativeEnum(LogSources).optional(),
+    })
+    .optional(),
 })
 
 export const runHandler = factory.createHandlers(
@@ -23,7 +29,7 @@ export const runHandler = factory.createHandlers(
       c,
       async (stream) => {
         const { projectId, versionUuid } = c.req.param()
-        const { path, parameters } = c.req.valid('json')
+        const { path, parameters, __internal } = c.req.valid('json')
         const workspace = c.get('workspace')
         const { document, commit } = await getData({
           workspace,
@@ -36,7 +42,7 @@ export const runHandler = factory.createHandlers(
           document,
           commit,
           parameters,
-          source: LogSources.API,
+          source: __internal?.source ?? LogSources.API,
         }).then((r) => r.unwrap())
 
         let id = 0

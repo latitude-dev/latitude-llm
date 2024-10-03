@@ -1,6 +1,6 @@
 'use server'
 
-import { StreamEventTypes } from '@latitude-data/core/browser'
+import { LogSources, StreamEventTypes } from '@latitude-data/core/browser'
 import { publisher } from '@latitude-data/core/events/publisher'
 import { Latitude, type ChainEventDto } from '@latitude-data/sdk'
 import { createSdk } from '$/app/(private)/_lib/createSdk'
@@ -41,7 +41,10 @@ export async function runDocumentAction({
     },
   })
 
-  const sdk = await createSdk({ projectId }).then((r) => r.unwrap())
+  const sdk = await createSdk({
+    projectId,
+    __internal: { source: LogSources.Playground },
+  }).then((r) => r.unwrap())
   const stream = createStreamableValue<
     { event: StreamEventTypes; data: ChainEventDto },
     Error

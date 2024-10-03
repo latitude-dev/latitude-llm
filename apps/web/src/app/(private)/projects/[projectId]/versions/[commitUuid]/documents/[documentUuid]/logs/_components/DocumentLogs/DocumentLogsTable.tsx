@@ -1,3 +1,5 @@
+import { capitalize } from 'lodash-es'
+
 import { IPagination } from '@latitude-data/core/lib/pagination/buildPagination'
 import { DocumentLogWithMetadata } from '@latitude-data/core/repositories'
 import {
@@ -93,7 +95,7 @@ export const DocumentLogsTable = ({
               </div>
             </TableCell>
             <TableCell>
-              <Text.H4>{documentLog.source}</Text.H4>
+              <Text.H4>{capitalize(documentLog.source || '')}</Text.H4>
             </TableCell>
             <TableCell>
               <Text.H4>{documentLog.customIdentifier}</Text.H4>
