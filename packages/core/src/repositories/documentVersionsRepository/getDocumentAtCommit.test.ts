@@ -32,8 +32,10 @@ describe('getDocumentAtCommit', () => {
     })
     const document = result.unwrap()
 
-    expect(omit(document, 'id', 'updatedAt', 'resolvedContent')).toEqual({
-      ...omit(doc, 'id', 'updatedAt', 'resolvedContent'),
+    expect(
+      omit(document, 'id', 'updatedAt', 'resolvedContent', 'contentHash'),
+    ).toEqual({
+      ...omit(doc, 'id', 'updatedAt', 'resolvedContent', 'contentHash'),
       projectId: project.id,
       mergedAt: mergedCommit.mergedAt,
     })

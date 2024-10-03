@@ -55,7 +55,9 @@ export default function useDocumentVersions(
       if (!commitUuid || !projectId) return []
 
       const response = await fetch(
-        `/api/documents/${projectId}/${commitUuid}`,
+        ROUTES.api.documents.detail({ projectId }).detail({
+          commitUuid,
+        }).root,
         { credentials: 'include' },
       )
       if (!response.ok) {

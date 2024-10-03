@@ -1,4 +1,5 @@
 import { DocumentLogWithMetadata } from '@latitude-data/core/repositories'
+import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'
 
 export default function useDocumentLogWithMetadata(
@@ -11,7 +12,7 @@ export default function useDocumentLogWithMetadata(
       if (!documentLogUuid) return []
 
       const response = await fetch(
-        `/api/documentLogs/uuids/${documentLogUuid}`,
+        ROUTES.api.documentLogs.uuids.detail({ uuid: documentLogUuid }).root,
         {
           credentials: 'include',
         },

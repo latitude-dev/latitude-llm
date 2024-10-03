@@ -25,6 +25,7 @@ export const documentLogs = latitudeSchema.table(
         onUpdate: 'cascade',
       }),
     resolvedContent: text('resolved_content').notNull(),
+    contentHash: text('content_hash').notNull(),
     parameters: jsonb('parameters').$type<Record<string, unknown>>().notNull(),
     customIdentifier: text('custom_identifier'),
     duration: bigint('duration', { mode: 'number' }).notNull(),
@@ -34,5 +35,8 @@ export const documentLogs = latitudeSchema.table(
   (table) => ({
     documentLogUuidIdx: index('document_log_uuid_idx').on(table.documentUuid),
     commitIdIdx: index('document_logs_commit_id_idx').on(table.commitId),
+    contentHashIdx: index('document_logs_content_hash_idx').on(
+      table.contentHash,
+    ),
   }),
 )

@@ -1,6 +1,7 @@
 import { useCallback } from 'react'
 
 import { useToast } from '@latitude-data/web-ui'
+import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'
 
 interface DocumentForImport {
@@ -16,9 +17,12 @@ export default function useDocumentsForImport(
   const fetcher = useCallback(async () => {
     if (!projectId) return []
 
-    const response = await fetch(`/api/documents/${projectId}/for-import`, {
-      credentials: 'include',
-    })
+    const response = await fetch(
+      ROUTES.api.documents.detail({ projectId }).forImport.root,
+      {
+        credentials: 'include',
+      },
+    )
 
     if (!response.ok) {
       const error = await response.json()
