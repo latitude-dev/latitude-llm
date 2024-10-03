@@ -7,10 +7,10 @@ import {
 } from '@latitude-data/core/browser'
 import { BadRequestError } from '@latitude-data/core/lib/errors'
 import { createDataset } from '@latitude-data/core/services/datasets/create'
+import { env } from '@latitude-data/env'
 import { ChainEventDto } from '@latitude-data/sdk'
 import slugify from '@sindresorhus/slugify'
 import { createSdk } from '$/app/(private)/_lib/createSdk'
-import env from '$/env'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
 import { createStreamableValue } from 'ai/rsc'
 

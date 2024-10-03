@@ -1,6 +1,6 @@
 'use client'
 
-import { ChangeEvent, FormEvent, useState } from 'react'
+import { ChangeEvent, FormEvent, useEffect, useState } from 'react'
 
 import { ChainEventTypes, StreamEventTypes } from '@latitude-data/core/browser'
 import { syncReadCsv } from '@latitude-data/core/lib/readCsv'
@@ -18,6 +18,7 @@ import {
   Text,
   TextArea,
   Tooltip,
+  useToast,
 } from '@latitude-data/web-ui'
 import { generateDatasetAction } from '$/actions/datasets/generateDataset'
 import { generateDatasetPreviewAction } from '$/actions/sdk/generateDatasetPreviewAction'
@@ -25,11 +26,21 @@ import { useNavigate } from '$/hooks/useNavigate'
 import { useStreamableAction } from '$/hooks/useStreamableAction'
 import { ROUTES } from '$/services/routes'
 import useDatasets from '$/stores/datasets'
+import Link from 'next/link'
 
 import { CsvPreviewTable } from './CsvPreviewTable'
 import { LoadingText } from './LoadingText'
 
-export function GenerateDatasetContent() {
+export function GenerateDatasetContent({
+  defaultParameters,
+  defaultName,
+  backUrl,
+}: {
+  defaultParameters?: string[]
+  defaultName?: string
+  backUrl?: string
+}) {
+  const { toast } = useToast()
   const navigate = useNavigate()
   const [previewCsv, setPreviewCsv] = useState<{
     data: {
@@ -40,7 +51,10 @@ export function GenerateDatasetContent() {
   }>()
   const { data: datasets, mutate } = useDatasets()
   const [explanation, setExplanation] = useState<string | undefined>()
-  const [parameters, setParameters] = useState<string[]>([])
+  const [parameters, setParameters] = useState<string[]>(
+    defaultParameters ?? [],
+  )
+  const [unexpectedError, setUnexpectedError] = useState<Error | undefined>()
 
   const handleParametersChange = (e: ChangeEvent<HTMLInputElement>) => {
     const parameterList = e.target.value
@@ -76,20 +90,7 @@ export function GenerateDatasetContent() {
     isLoading: generateIsLoading,
     done: generateIsDone,
     error: generateError,
-  } = useStreamableAction<typeof generateDatasetAction>(
-    generateDatasetAction,
-    async (event, data) => {
-      if (
-        event === StreamEventTypes.Latitude &&
-        data.type === ChainEventTypes.Complete
-      ) {
-        const parsedCsv = await syncReadCsv(data.response.object.csv, {
-          delimiter: ',',
-        }).then((r) => r.unwrap())
-        setPreviewCsv(parsedCsv)
-      }
-    },
-  )
+  } = useStreamableAction<typeof generateDatasetAction>(generateDatasetAction)
 
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
@@ -113,9 +114,18 @@ export function GenerateDatasetContent() {
         if (!dataset) return
 
         mutate([...datasets, dataset])
-        navigate.push(ROUTES.datasets.root)
+        toast({
+          title: 'Success',
+          description: 'Dataset generated succesfully',
+        })
+
+        if (backUrl) {
+          navigate.push(backUrl)
+        } else {
+          navigate.push(ROUTES.datasets.preview(dataset.id))
+        }
       } catch (error) {
-        console.error(error)
+        setUnexpectedError(error as Error)
       }
     }
   }
@@ -132,6 +142,15 @@ export function GenerateDatasetContent() {
     })
   }
 
+  useEffect(() => {
+    if (defaultName && defaultParameters && runPreviewAction) {
+      runPreviewAction({
+        parameters: defaultParameters.join(','),
+        description: defaultName,
+      })
+    }
+  }, [defaultName, defaultParameters])
+
   return (
     <Modal
       open
@@ -140,31 +159,40 @@ export function GenerateDatasetContent() {
       title='Generate new dataset'
       description='Generate a dataset of parameters using AI. Datasets can be used to run batch evaluations over prompts.'
       footer={
-        <>
-          <CloseTrigger />
-          {previewCsv && (
+        <div className='w-full flex flex-row flex-grow justify-between gap-4'>
+          {backUrl && (
+            <Link href={backUrl}>
+              <Button variant='link'>
+                <Icon name='arrowLeft' /> Back to evaluation
+              </Button>
+            </Link>
+          )}
+          <div className='flex flex-row gap-2'>
+            <CloseTrigger />
+            {previewCsv && (
+              <Button
+                onClick={handleRegeneratePreview}
+                disabled={previewIsLoading || generateIsLoading}
+                fancy
+                variant='outline'
+              >
+                Regenerate preview
+              </Button>
+            )}
             <Button
-              onClick={handleRegeneratePreview}
               disabled={previewIsLoading || generateIsLoading}
               fancy
-              variant='outline'
+              form='generateDatasetForm'
+              type='submit'
             >
-              Regenerate preview
+              {previewIsLoading || generateIsLoading
+                ? 'Generating...'
+                : previewCsv
+                  ? 'Generate dataset'
+                  : 'Generate preview'}
             </Button>
-          )}
-          <Button
-            disabled={previewIsLoading || generateIsLoading}
-            fancy
-            form='generateDatasetForm'
-            type='submit'
-          >
-            {previewIsLoading || generateIsLoading
-              ? 'Generating...'
-              : previewCsv
-                ? 'Generate dataset'
-                : 'Generate preview'}
-          </Button>
-        </>
+          </div>
+        </div>
       }
     >
       <div className='flex flex-col gap-6'>
@@ -180,6 +208,7 @@ export function GenerateDatasetContent() {
                 type='text'
                 name='name'
                 placeholder='Dataset name'
+                defaultValue={defaultName}
               />
             </FormField>
             <FormField
@@ -193,6 +222,7 @@ export function GenerateDatasetContent() {
                   name='parameters'
                   placeholder='Enter comma-separated parameters (e.g., name, age, city)'
                   onChange={handleParametersChange}
+                  defaultValue={defaultParameters?.join(', ')}
                 />
                 {parameters.length > 0 && (
                   <div className='flex flex-col gap-2'>
@@ -236,10 +266,14 @@ export function GenerateDatasetContent() {
             </FormField>
           </FormWrapper>
         </form>
-        {(previewError || generateError) && (
+        {(previewError || generateError || unexpectedError) && (
           <Alert
             title='Error'
-            description={previewError?.message ?? generateError?.message}
+            description={
+              previewError?.message ??
+              generateError?.message ??
+              unexpectedError?.message
+            }
             variant='destructive'
           />
         )}
