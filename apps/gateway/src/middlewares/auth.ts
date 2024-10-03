@@ -17,8 +17,6 @@ const authMiddleware = () =>
     verifyToken: async (token: string, c) => {
       const apiKeyResult = await unsafelyGetApiKeyByToken({ token })
 
-      console.log('apiKeyResult', apiKeyResult)
-
       if (apiKeyResult.error) return false
 
       const workspace = await unsafelyFindWorkspace(
