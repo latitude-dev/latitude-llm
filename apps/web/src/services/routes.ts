@@ -59,6 +59,7 @@ export const ROUTES = {
     generate: {
       root: `/datasets/generate`,
     },
+    preview: (id: string | number) => `/datasets/preview/${id}`,
   },
   evaluations: {
     root: '/evaluations',

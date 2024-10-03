@@ -7,6 +7,7 @@ import { ApiKeysRepository } from '@latitude-data/core/repositories/apiKeysRepos
 import {
   CommitsRepository,
   ConnectedEvaluationsRepository,
+  DatasetsRepository,
   DocumentVersionsRepository,
   EvaluationsRepository,
   ProjectsRepository,
@@ -222,5 +223,12 @@ export const getProviderApiKeysCached = cache(async () => {
   const { workspace } = await getCurrentUser()
   const scope = new ProviderApiKeysRepository(workspace.id)
   const result = await scope.findAll()
+  return result.unwrap()
+})
+
+export const getDatasetCached = cache(async (id: string) => {
+  const { workspace } = await getCurrentUser()
+  const scope = new DatasetsRepository(workspace.id)
+  const result = await scope.find(id)
   return result.unwrap()
 })
