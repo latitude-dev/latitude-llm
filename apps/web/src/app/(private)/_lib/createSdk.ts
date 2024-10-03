@@ -1,3 +1,4 @@
+import { LogSources } from '@latitude-data/core/browser'
 import { compactObject } from '@latitude-data/core/lib/compactObject'
 import { NotFoundError } from '@latitude-data/core/lib/errors'
 import { Result } from '@latitude-data/core/lib/Result'
@@ -24,9 +25,11 @@ async function getLatitudeApiKey() {
 export async function createSdk({
   projectId,
   apiKey,
+  __internal,
 }: {
   projectId?: number
   apiKey?: string
+  __internal?: { source: LogSources }
 } = {}) {
   if (!apiKey) {
     const result = await getLatitudeApiKey()
@@ -40,5 +43,7 @@ export async function createSdk({
     port: env.GATEWAY_PORT,
     ssl: env.GATEWAY_SSL,
   }
-  return Result.ok(new Latitude(apiKey, compactObject({ gateway, projectId })))
+  return Result.ok(
+    new Latitude(apiKey, compactObject({ gateway, projectId, __internal })),
+  )
 }

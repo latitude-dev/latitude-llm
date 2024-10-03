@@ -3,6 +3,7 @@
 import {
   ChainObjectResponse,
   Dataset,
+  LogSources,
   StreamEventTypes,
 } from '@latitude-data/core/browser'
 import { BadRequestError } from '@latitude-data/core/lib/errors'
@@ -46,6 +47,7 @@ export async function generateDatasetAction({
   const sdk = await createSdk({
     apiKey: env.DATASET_GENERATOR_WORKSPACE_APIKEY,
     projectId: env.DATASET_GENERATOR_PROJECT_ID,
+    __internal: { source: LogSources.Playground },
   }).then((r) => r.unwrap())
   const sdkResponse = await sdk.run(env.DATASET_GENERATOR_DOCUMENT_PATH, {
     parameters: {

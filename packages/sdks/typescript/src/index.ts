@@ -2,6 +2,7 @@ import type { Message } from '@latitude-data/compiler'
 import {
   ChainCallResponseDto,
   ChainEventDto,
+  LogSources,
   StreamEventTypes,
 } from '@latitude-data/core/browser'
 import env from '$sdk/env'
@@ -30,6 +31,7 @@ export class Latitude {
   private projectId?: number
   private apiKey: string
   private routeResolver: RouteResolver
+  private source: LogSources
 
   constructor(
     apiKey: string,
@@ -40,15 +42,18 @@ export class Latitude {
         port: env.GATEWAY_PORT,
         ssl: env.GATEWAY_SSL,
       },
+      __internal = { source: LogSources.API },
     }: {
       projectId?: number
       gateway?: GatewayApiConfig
+      __internal?: { source: LogSources }
     } = {
       gateway: {
         host: env.GATEWAY_HOSTNAME,
         port: env.GATEWAY_PORT,
         ssl: env.GATEWAY_SSL,
       },
+      __internal: { source: LogSources.API },
     },
   ) {
     this.routeResolver = new RouteResolver({
@@ -57,6 +62,7 @@ export class Latitude {
     })
     this.projectId = projectId
     this.apiKey = apiKey
+    this.source = __internal.source
   }
 
   async run(
@@ -207,7 +213,7 @@ export class Latitude {
     return await fetch(this.routeResolver.resolve({ handler, params }), {
       method,
       headers: this.authHeader,
-      body: this.bodyToString(body),
+      body: this.bodyToString({ ...body, __internal: { source: this.source } }),
     })
   }
 

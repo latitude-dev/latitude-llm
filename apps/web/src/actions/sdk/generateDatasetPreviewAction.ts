@@ -1,6 +1,6 @@
 'use server'
 
-import { StreamEventTypes } from '@latitude-data/core/browser'
+import { LogSources, StreamEventTypes } from '@latitude-data/core/browser'
 import { BadRequestError } from '@latitude-data/core/lib/errors'
 import { env } from '@latitude-data/env'
 import { ChainEventDto } from '@latitude-data/sdk'
@@ -35,6 +35,7 @@ export async function generateDatasetPreviewAction({
   const sdk = await createSdk({
     apiKey: env.DATASET_GENERATOR_WORKSPACE_APIKEY,
     projectId: env.DATASET_GENERATOR_PROJECT_ID,
+    __internal: { source: LogSources.Playground },
   }).then((r) => r.unwrap())
   const response = await sdk.run(env.DATASET_GENERATOR_DOCUMENT_PATH, {
     parameters: {

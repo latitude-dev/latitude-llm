@@ -1,6 +1,7 @@
 import {
   ChainEventTypes,
   Commit,
+  LogSources,
   Project,
   StreamEventTypes,
   Workspace,
@@ -113,6 +114,60 @@ describe('POST /run', () => {
         Authorization: `Bearer ${token}`,
         'Content-Type': 'application/json',
       }
+    })
+
+    it('uses source from __internal', async () => {
+      const stream = new ReadableStream({
+        start(controller) {
+          controller.enqueue({
+            event: StreamEventTypes.Latitude,
+            data: {
+              type: ChainEventTypes.Complete,
+              response: {
+                text: 'Hello',
+                usage: {},
+              },
+            },
+          })
+
+          controller.close()
+        },
+      })
+
+      const response = new Promise((resolve) => {
+        resolve({ text: 'Hello', usage: {} })
+      })
+
+      mocks.runDocumentAtCommit.mockReturnValue(
+        new Promise((resolve) => {
+          resolve(
+            Result.ok({
+              stream,
+              response,
+            }),
+          )
+        }),
+      )
+
+      const res = await app.request(route, {
+        method: 'POST',
+        body: JSON.stringify({
+          path: '/path/to/document',
+          parameters: {},
+          __internal: { source: LogSources.Playground },
+        }),
+        headers,
+      })
+
+      await testConsumeStream(res.body as ReadableStream)
+
+      expect(mocks.runDocumentAtCommit).toHaveBeenCalledWith({
+        workspace,
+        document: expect.anything(),
+        commit,
+        parameters: {},
+        source: LogSources.Playground,
+      })
     })
 
     it('stream succeeds', async () => {

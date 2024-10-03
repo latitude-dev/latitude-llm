@@ -148,5 +148,23 @@ describe('POST /add-message', () => {
         source: LogSources.API,
       })
     })
+
+    it('uses source from __internal', async () => {
+      await app.request(route, {
+        method: 'POST',
+        body: JSON.stringify({
+          messages: [],
+          __internal: { source: LogSources.Playground },
+        }),
+        headers,
+      })
+
+      expect(mocks.addMessages).toHaveBeenCalledWith({
+        workspace,
+        documentLogUuid: 'fake-document-log-uuid',
+        messages: [],
+        source: LogSources.Playground,
+      })
+    })
   })
 })

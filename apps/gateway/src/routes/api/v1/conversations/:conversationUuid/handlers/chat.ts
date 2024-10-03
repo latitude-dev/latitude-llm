@@ -14,6 +14,11 @@ const factory = new Factory()
 
 const schema = z.object({
   messages: z.array(messageSchema),
+  __internal: z
+    .object({
+      source: z.nativeEnum(LogSources).optional(),
+    })
+    .optional(),
 })
 
 export const chatHandler = factory.createHandlers(
@@ -23,14 +28,14 @@ export const chatHandler = factory.createHandlers(
       c,
       async (stream) => {
         const { conversationUuid } = c.req.param()
-        const { messages } = c.req.valid('json')
+        const { messages, __internal } = c.req.valid('json')
         const workspace = c.get('workspace')
 
         const result = await addMessages({
           workspace,
           documentLogUuid: conversationUuid,
           messages,
-          source: LogSources.API,
+          source: __internal?.source ?? LogSources.API,
         }).then((r) => r.unwrap())
 
         let id = 0

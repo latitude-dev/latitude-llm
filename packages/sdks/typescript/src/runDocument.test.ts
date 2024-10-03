@@ -1,3 +1,4 @@
+import { LogSources } from '@latitude-data/core/browser'
 import { CHUNKS, FINAL_RESPONSE } from '$sdk/test/chunks-example'
 import { http, HttpResponse } from 'msw'
 import { setupServer } from 'msw/node'
@@ -113,6 +114,7 @@ describe('run', () => {
       expect(mockFn).toHaveBeenCalledWith({
         path: 'path/to/document',
         parameters: { foo: 'bar', lol: 'foo' },
+        __internal: { source: LogSources.API },
       })
     }),
   )
