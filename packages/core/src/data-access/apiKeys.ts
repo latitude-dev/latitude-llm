@@ -10,10 +10,6 @@ export async function unsafelyGetApiKeyByToken(
   { token }: { token: string },
   db = database,
 ): Promise<TypedResult<ApiKey, Error>> {
-  console.log('---------------------\n')
-  console.log("TOKEN", token)
-  console.log('---------------------\n')
-
   const apiKey = await db.query.apiKeys.findFirst({
     where: eq(apiKeys.token, token),
   })
