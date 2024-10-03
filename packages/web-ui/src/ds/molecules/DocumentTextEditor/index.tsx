@@ -1,6 +1,6 @@
 'use client'
 
-import React, { lazy, useEffect, useState } from 'react'
+import React, { lazy, ReactNode, useEffect, useState } from 'react'
 
 import type { ConversationMetadata } from '@latitude-data/compiler'
 
@@ -12,6 +12,7 @@ export type DocumentTextEditorProps = {
   onChange?: (value: string) => void
   readOnlyMessage?: string
   isSaved?: boolean
+  actionButtons?: ReactNode
 }
 
 const DocumentTextEditor = lazy(() =>
