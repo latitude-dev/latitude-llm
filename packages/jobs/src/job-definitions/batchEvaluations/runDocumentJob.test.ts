@@ -7,7 +7,7 @@ import { Job } from 'bullmq'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { ProgressTracker } from '../../utils/progressTracker'
-import { runDocumentJob } from './runDocumentJob'
+import { runDocumentForEvaluationJob } from './runDocumentJob'
 
 const mocks = vi.hoisted(() => {
   const mockEmit = vi.fn()
@@ -101,7 +101,7 @@ describe('runDocumentJob', () => {
     // @ts-ignore
     vi.mocked(runDocumentAtCommit).mockResolvedValue(Result.ok(mockResult))
 
-    await runDocumentJob(mockJob)
+    await runDocumentForEvaluationJob(mockJob)
 
     expect(runDocumentAtCommit).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -132,7 +132,7 @@ describe('runDocumentJob', () => {
     vi.mocked(runDocumentAtCommit).mockRejectedValue(new Error('Test error'))
     vi.mocked(env).NODE_ENV = 'production'
 
-    await runDocumentJob(mockJob)
+    await runDocumentForEvaluationJob(mockJob)
 
     expect(mocks.mockEmit).toHaveBeenCalledWith('evaluationStatus', {
       workspaceId: workspace.id,
@@ -158,7 +158,7 @@ describe('runDocumentJob', () => {
 
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
-    await runDocumentJob(mockJob)
+    await runDocumentForEvaluationJob(mockJob)
 
     expect(consoleSpy).toHaveBeenCalledWith(testError)
     expect(ProgressTracker.prototype.incrementErrors).toHaveBeenCalled()

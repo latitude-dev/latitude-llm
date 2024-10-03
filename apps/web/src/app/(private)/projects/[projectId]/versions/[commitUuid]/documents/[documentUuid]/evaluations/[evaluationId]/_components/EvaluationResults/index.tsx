@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useCallback, useState } from 'react'
 
 import { EvaluationDto } from '@latitude-data/core/browser'
 import { IPagination } from '@latitude-data/core/lib/pagination/buildPagination'
@@ -23,8 +23,57 @@ import { useSearchParams } from 'next/navigation'
 
 import CreateBatchEvaluationModal from '../Actions/CreateBatchEvaluationModal'
 import { EvaluationResultInfo } from './EvaluationResultInfo'
-import { EvaluationResultsTable } from './EvaluationResultsTable'
+import {
+  EvaluationResultRow,
+  EvaluationResultsTable,
+} from './EvaluationResultsTable'
 import { EvaluationStatusBanner } from './EvaluationStatusBanner'
+
+const useEvaluationResultsSocket = (
+  evaluation: EvaluationDto,
+  document: { documentUuid: string },
+  mutate: ReturnType<typeof useEvaluationResultsWithMetadata>['mutate'],
+) => {
+  const onMessage = useCallback(
+    (args: EventArgs<'evaluationResultCreated'>) => {
+      if (evaluation.id !== args.evaluationId) return
+      if (document.documentUuid !== args.documentUuid) return
+
+      const createdAt = new Date(args.row.createdAt)
+
+      mutate(
+        (prevData) => {
+          return [
+            { ...args.row, createdAt, realtimeAdded: true },
+            ...(prevData ?? []),
+          ]
+        },
+        { revalidate: false },
+      )
+
+      setTimeout(() => {
+        mutate(
+          (prevData) => {
+            return prevData?.map((row) => {
+              if (
+                row.id === args.row.id &&
+                (row as EvaluationResultRow).realtimeAdded
+              ) {
+                const { realtimeAdded: _, ...rest } = row as EvaluationResultRow
+                return rest
+              }
+              return row
+            })
+          },
+          { revalidate: false },
+        )
+      }, 1000)
+    },
+    [evaluation.id, document.documentUuid, mutate],
+  )
+
+  useSockets({ event: 'evaluationResultCreated', onMessage })
+}
 
 export function EvaluationResults({
   evaluation,
@@ -59,23 +108,8 @@ export function EvaluationResults({
       fallbackData: serverData,
     },
   )
-  const onMessage = (args: EventArgs<'evaluationResultCreated'>) => {
-    if (evaluation.id !== args.evaluationId) return
-    if (document.documentUuid !== args.documentUuid) return
 
-    const createdAt = new Date(args.row.createdAt)
-    mutate(
-      (prevData) => {
-        return [
-          { ...args.row, createdAt, realtimeAdded: true },
-          ...(prevData ?? []),
-        ]
-      },
-      { revalidate: false },
-    )
-  }
-
-  useSockets({ event: 'evaluationResultCreated', onMessage })
+  useEvaluationResultsSocket(evaluation, document, mutate)
 
   return (
     <div className='flex flex-col gap-4'>

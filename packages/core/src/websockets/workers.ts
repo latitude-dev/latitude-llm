@@ -4,7 +4,7 @@ import { io, Socket } from 'socket.io-client'
 import { WorkersClientToServerEvents } from './constants'
 import { generateWorkerWebsocketToken } from './utils'
 
-type WorkerSocket = Socket<{}, WorkersClientToServerEvents>
+export type WorkerSocket = Socket<{}, WorkersClientToServerEvents>
 
 export class WebsocketClient {
   private static instance: WebsocketClient
