@@ -3,50 +3,126 @@ title: API Access
 description: Learn how to access and use Latitude's API to run your prompts.
 ---
 
+We recommend checking our [sdk docs](/sdk/overview) in case you're looking for a specific language or framework.
 
-## API Access
-Latitude provides two types of API access: a general API for managing your workspace and project-level APIs for interacting with specific prompts.
+## Latitude HTTP API Documentation
 
-## Run a Document
-To run a Document through the API, you need to send a POST request to `https://gateway.latitude.so/api/v1/projects/<your-project-id>/commits/<your-commit-uuid>/documents/run`
+This guide explains how to use the Latitude HTTP API to interact with the Prompt Manager and run AI-powered conversations.
 
-## API key
-The Latitude API allows you to run your Latitude documents from your app. To access the API, you will need an API key:
-1. Go to the Settings page in your Latitude workspace.
-2. Navigate to the "API Keys" section.
-3. Copy the auto generated API key or create a new one.
+### Authentication
 
-Use this key in the Authorization header when making requests to the Latitude API.
+All API requests require authentication. Include your API key in the `Authorization` header of your HTTP requests:
 
-## Project and version
-All prompts in your Latitude project are bounded to a project and a version, and can be identified by the document path.
-
-You will find your `projectId` in the URL in Latitude, right after the `/projects/<projectId>`.
-
-To always select the latest published version of any document within the project, you can use `live` as the version id. However, if you want to use a specific version or draft, you can copy its UUID from the Breadcrumb on top of the app.
-
-## Run a document
-Each prompt in your Latitude project can be ran via its own API endpoint. This allows you to integrate your prompts directly into your applications.
-
-To run the document, simply send a POST request to this endpoint
-`https://gateway.latitude.io/api/v1/projects/<projectId>/commits/<versionUuid>/documents/run`
-
-The POST request must contain an `Authorization` header with your API key, and a body with both `documentPath` string and `parameters` object.
-
-Example request:
 ```
-POST /v1/projects/1/commits/live/documents/run
-Authorization: Bearer your_api_key_here
-Content-Type: application/json
+Authorization: Bearer YOUR_API_KEY
+```
 
+### Base URL
+
+The base URL for API requests depends on your environment:
+
+`https://gateway.latitude.so/api/v1`
+
+### Endpoints
+
+#### 1. Run a Document
+
+Run a specific document (prompt) with optional parameters.
+
+**Endpoint:** `POST /projects/{projectId}/versions/{versionUuid}/documents/run`
+
+**Path Parameters:**
+
+- `projectId`: Your project ID (required)
+- `versionUuid`: Version UUID (optional, defaults to 'live')
+
+**Request Body:**
+
+```json
 {
-  "documentPath": "examples/hello_world",
+  "path": "path/to/document",
   "parameters": {
-    "user_input": "Hello, world!"
+    "key1": "value1",
+    "key2": "value2"
   }
 }
 ```
 
-The API will return a SSE streaming with the chain progress and all AI responses as different events.
+**Response:**
+The response is a stream of Server-Sent Events (SSE). Each event contains JSON data with the following structure:
 
-Remember to keep your API keys secure and never expose them in client-side code. Always make API calls from your server to protect your keys.
+```json
+{
+  "type": "chain-step" | "chain-step-complete" | "chain-complete",
+  "isLastStep": boolean,
+  "uuid": string,
+  "config": {
+    "provider": string,
+    "model": string
+  },
+  "messages": [
+    {
+      "role": "system" | "user" | "assistant",
+      "content": string,
+      "toolCalls": []
+    }
+  ],
+  "response": {
+    "text": string,
+    "toolCalls": [],
+    "usage": {
+      "promptTokens": number,
+      "completionTokens": number,
+      "totalTokens": number
+    }
+  }
+}
+```
+
+#### 2. Chat
+
+The previously described `POST /projects/{projectId}/versions/{versionUuid}/documents/run` endpoint can also be used to continue a conversation. Notice all events contain a `uuid` field that represents that conversation with the AI. You can use this uuid to continue the conversation.
+
+**Endpoint:** `POST /conversations/{conversationUuid}/chat`
+
+**Path Parameters:**
+
+- `conversationUuid`: UUID of the conversation
+
+**Request Body:**
+
+```json
+{
+  "messages": [
+    {
+      "role": "user" | "system" | "assistant",
+      "content": string
+    }
+  ]
+}
+```
+
+**Response:**
+The response is a stream of Server-Sent Events (SSE), similar to the "Run a Document" endpoint.
+
+### Handling Server-Sent Events (SSE)
+
+The API uses SSE for real-time updates. Here's how to handle SSE responses:
+
+1. Set up an EventSource or use a library that supports SSE.
+2. Listen for events and parse the JSON data in each event.
+3. Handle different event types:
+   - `latitude-event`: Contains information about the chain progress and results.
+   - `provider-event`: Contains real-time updates from the AI provider.
+
+### Error Handling
+
+The API uses standard HTTP status codes. In case of an error, the response body will contain an error message:
+
+```json
+{
+  "error": {
+    "message": "Error description"
+  }
+}
+```

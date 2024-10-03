@@ -1,0 +1,130 @@
+---
+title: Javascript/Typescript SDK
+description: Learn how to use the SDKs to interact with the Latitude API.
+---
+
+## Latitude SDK Documentation
+
+The Latitude SDK provides an easy way to interact with the Latitude API, allowing you to run documents and chat with AI models.
+
+### Installation
+
+To install the Latitude SDK, use your preferred package manager:
+
+```bash
+npm install @latitude-data/sdk
+# or
+yarn add @latitude-data/sdk
+# or
+pnpm add @latitude-data/sdk
+```
+
+### Getting Started
+
+First, import the Latitude class from the SDK:
+
+```typescript
+import { Latitude } from '@latitude-data/sdk'
+```
+
+Then, create an instance of the Latitude class with your API key:
+
+```typescript
+const latitude = new Latitude('your-api-key-here', {
+  projectId: 12345, // Optional: You can specify a default project ID here
+})
+```
+
+### Running a Document
+
+To run a document, use the `run` method:
+
+```typescript
+latitude.run('path/to/your/document', {
+  projectId: 12345, // Optional if you provided it in the constructor
+  versionUuid: 'optional-version-uuid', // Optiona, by default it targets latest live version
+  parameters: {
+    // Any parameters your document expects
+  },
+  onEvent: ({ event, data }) => {
+    // Handle events during execution
+  },
+  onFinished: (result) => {
+    // Handle the final result
+    console.log('Conversation:', result.conversation)
+    console.log('Response:', result.response)
+  },
+  onError: (error) => {
+    // Handle any errors
+    console.error('Error:', error)
+  },
+})
+```
+
+## Chatting with an AI Model
+
+The document run method previously described returns events which all contain a
+singular `uuid` field. This field can be used to further continue the
+conversation with the document, including the context from the document run.
+Here's how to do it.
+
+To continue a chat conversation, use the `chat` method:
+
+```typescript
+const messages = [
+  { role: 'user', content: 'Hello, how are you?' },
+  // ... other messages
+]
+
+// conversation-uuid is the uuid from the document run
+latitude.chat('conversation-uuid', messages, {
+  onEvent: ({ event, data }) => {
+    // Handle events during the chat
+  },
+  onFinished: (result) => {
+    // Handle the final result
+    console.log('Conversation:', result.conversation)
+    console.log('Response:', result.response)
+  },
+  onError: (error) => {
+    // Handle any errors
+    console.error('Error:', error)
+  },
+})
+```
+
+## Handling Streams
+
+Both `run` and `chat` methods return streams of events. You can handle these events in real-time using the `onEvent` callback:
+
+```typescript
+onEvent: ({ event, data }) => {
+  switch (event) {
+    case 'latitude-event':
+      // Handle Latitude-specific events
+      break
+    // Handle other event types as needed
+  }
+}
+```
+
+## Error Handling
+
+Errors are handled through the `onError` callback. It's recommended to always provide this callback to catch and handle any errors that may occur during execution:
+
+```typescript
+onError: (error) => {
+  console.error('An error occurred:', error.message)
+  // Perform any necessary error handling or logging
+}
+```
+
+## TypeScript Support
+
+The Latitude SDK is written in TypeScript and provides type definitions out of the box. This ensures type safety and enables autocompletion in supported IDEs.
+
+## Conclusion
+
+The Latitude SDK provides a simple and efficient way to interact with the Latitude API. By using the `run` and `chat` methods, you can easily execute documents and engage in AI-powered conversations. Remember to handle events, results, and errors appropriately for a smooth user experience.
+
+For more detailed information about specific features or advanced usage, please refer to the official Latitude API documentation.
