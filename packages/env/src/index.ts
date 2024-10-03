@@ -45,8 +45,6 @@ if (environment !== 'production') {
       NEXT_PUBLIC_POSTHOG_HOST: '',
       DATASET_GENERATOR_DOCUMENT_PATH: 'generator',
       DATASET_GENERATOR_PROJECT_ID: '20',
-      DATASET_GENERATOR_WORKSPACE_APIKEY:
-        'd7c94cc1-72a8-4252-b1a8-3e6b3cf9c29f',
       TEMPLATES_SUGGESTION_PROJECT_ID: '6',
       TEMPLATES_SUGGESTION_PROMPT_PATH: 'evaluation-suggestions',
     },
@@ -110,5 +108,6 @@ export const env = createEnv({
     DRIVE_DISK: process.env.DRIVE_DISK ?? 'local',
     FILE_PUBLIC_PATH: process.env.FILE_PUBLIC_PATH ?? FILE_PUBLIC_PATH,
     QUEUE_PORT: process.env.QUEUE_PORT ?? '6379',
+    DATASET_GENERATOR_PROJECT_ID: process.env.DATASET_GENERATOR_PROJECT_ID ?? 'NOT_A_REAL_API_KEY_USE_YOUR_OWN',
   },
 })
