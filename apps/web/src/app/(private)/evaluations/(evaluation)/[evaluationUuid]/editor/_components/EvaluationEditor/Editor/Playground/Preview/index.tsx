@@ -57,7 +57,7 @@ export default function Preview({
   return (
     <div
       ref={containerRef}
-      className='flex flex-col gap-3 h-full overflow-y-auto'
+      className='flex flex-col gap-3 h-full overflow-y-auto custom-scrollbar'
     >
       {(conversation?.messages ?? [])
         .filter((message) => message.role === 'assistant')

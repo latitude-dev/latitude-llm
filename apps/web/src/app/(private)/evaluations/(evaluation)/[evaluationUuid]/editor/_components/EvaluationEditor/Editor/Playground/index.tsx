@@ -101,7 +101,7 @@ export default function Playground({
       <div className='flex flex-col gap-6'>
         <Variables providerLog={providerLog} />
         <div className='flex flex-col flex-grow'>
-          <div className='flex flex-col flex-grow flex-shrink relative h-full overflow-y-auto'>
+          <div className='flex flex-col flex-grow flex-shrink relative h-full overflow-y-auto custom-scrollbar'>
             {mode === 'preview' ? (
               <Preview
                 metadata={metadata}
