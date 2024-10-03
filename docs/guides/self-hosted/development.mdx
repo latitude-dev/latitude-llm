@@ -1,0 +1,37 @@
+---
+title: Development
+description: Learn how to set up a local Latitude instance for development
+---
+
+## Prerequisites:
+
+- Install [PNPM](https://pnpm.io/installation).
+- Install [Tmuxinator](https://github.com/tmuxinator/tmuxinator) (`brew install tmuxinator` on Mac).
+- Install [Docker](https://docs.docker.com/desktop/install/mac-install) and docker-compose (or a compatible alternative).
+
+## Setting up the environment
+
+Install dependencies:
+
+```
+pnpm i
+```
+
+Start the environment:
+
+```bash
+tmuxinator
+```
+
+Once docker compose is up (you'll see that on the 3rd tmux window) run the database migrations on a separate tab:
+
+```bash
+cd packages/core
+pnpm db:migrate
+```
+
+## Signing up
+
+Go to `localhost:3000`, sign up with any email, then open `localhost:8025`, click on the first email, and log in.
+
+Welcome to your very own Latitude!
