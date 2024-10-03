@@ -9,6 +9,7 @@ import {
   Badge,
   Button,
   CloseTrigger,
+  cn,
   FormField,
   FormWrapper,
   Icon,
@@ -159,38 +160,48 @@ export function GenerateDatasetContent({
       title='Generate new dataset'
       description='Generate a dataset of parameters using AI. Datasets can be used to run batch evaluations over prompts.'
       footer={
-        <div className='w-full flex flex-row flex-grow justify-between gap-4'>
-          {backUrl && (
-            <Link href={backUrl}>
-              <Button variant='link'>
-                <Icon name='arrowLeft' /> Back to evaluation
-              </Button>
-            </Link>
-          )}
-          <div className='flex flex-row gap-2'>
-            <CloseTrigger />
-            {previewCsv && (
+        <div className='flex flex-col gap-2 w-full'>
+          <div
+            className={cn('w-full flex flex-row flex-grow gap-4', {
+              'justify-between': !!backUrl,
+              'justify-end': !backUrl,
+            })}
+          >
+            {backUrl && (
+              <Link href={backUrl}>
+                <Button variant='link'>
+                  <Icon name='arrowLeft' /> Back to evaluation
+                </Button>
+              </Link>
+            )}
+            <div className='flex flex-row gap-2'>
+              <CloseTrigger />
+              {previewCsv && (
+                <Button
+                  onClick={handleRegeneratePreview}
+                  disabled={previewIsLoading || generateIsLoading}
+                  fancy
+                  variant='outline'
+                >
+                  Regenerate preview
+                </Button>
+              )}
               <Button
-                onClick={handleRegeneratePreview}
                 disabled={previewIsLoading || generateIsLoading}
                 fancy
-                variant='outline'
+                form='generateDatasetForm'
+                type='submit'
               >
-                Regenerate preview
+                {previewIsLoading || generateIsLoading
+                  ? 'Generating...'
+                  : previewCsv
+                    ? 'Generate dataset'
+                    : 'Generate preview'}
               </Button>
-            )}
-            <Button
-              disabled={previewIsLoading || generateIsLoading}
-              fancy
-              form='generateDatasetForm'
-              type='submit'
-            >
-              {previewIsLoading || generateIsLoading
-                ? 'Generating...'
-                : previewCsv
-                  ? 'Generate dataset'
-                  : 'Generate preview'}
-            </Button>
+            </div>
+          </div>
+          <div className='justify-end flex-grow'>
+            {generateIsLoading && !generateIsDone && <LoadingText />}
           </div>
         </div>
       }
@@ -298,8 +309,6 @@ export function GenerateDatasetContent({
               </div>
             </div>
           )}
-
-        {generateIsLoading && !generateIsDone && <LoadingText />}
       </div>
     </Modal>
   )
