@@ -216,7 +216,7 @@ new aws.codedeploy.DeploymentGroup('LatitudeLLMDeploymentGroup', {
     },
     terminateBlueInstancesOnDeploymentSuccess: {
       action: 'TERMINATE',
-      terminationWaitTimeInMinutes: 1,
+      terminationWaitTimeInMinutes: 5,
     },
   },
   deploymentStyle: {
