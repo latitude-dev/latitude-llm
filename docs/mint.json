@@ -78,8 +78,7 @@
       {
         "group": "SDKs",
         "pages": [
-          "guides/sdk/overview",
-          "guides/sdk/javascript/javascript-typescript-sdk"
+          "guides/sdk/javascript-typescript-sdk"
         ]
       }
     ],
