@@ -18,7 +18,7 @@ import {
   formatDuration,
   relativeTime,
 } from '$/app/_lib/formatUtils'
-import { TablePaginationFooter } from '$/components/TablePaginationFooter'
+import { LinkableTablePaginationFooter } from '$/components/TablePaginationFooter'
 
 function countLabel(count: number) {
   return `${count} logs`
@@ -39,7 +39,7 @@ export const DocumentLogsTable = ({
     <Table
       className='table-auto'
       externalFooter={
-        <TablePaginationFooter
+        <LinkableTablePaginationFooter
           pagination={pagination}
           countLabel={countLabel}
         />

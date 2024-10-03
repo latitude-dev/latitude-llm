@@ -24,7 +24,7 @@ function NavLink({
   return <Link href={url}>{button}</Link>
 }
 
-export function TablePaginationFooter({
+export function LinkableTablePaginationFooter({
   pagination,
   countLabel,
 }: {
@@ -42,7 +42,13 @@ export function TablePaginationFooter({
         <div className='flex flex-row items-center gap-x-1'>
           <Text.H5M color='foregroundMuted'>Page</Text.H5M>
           <div className='max-w-14'>
-            <GoToPageInput key={pagination.page} pagination={pagination} />
+            <GoToPageInput
+              key={pagination.page}
+              page={pagination.page}
+              totalPages={pagination.totalPages}
+              pageSize={pagination.pageSize}
+              baseUrl={pagination.baseUrl}
+            />
           </div>
           <Text.H5M color='foregroundMuted'>
             of {pagination.totalPages}

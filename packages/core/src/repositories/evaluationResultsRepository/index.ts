@@ -1,4 +1,4 @@
-import { eq, getTableColumns, sql } from 'drizzle-orm'
+import { and, desc, eq, getTableColumns, sql } from 'drizzle-orm'
 
 import {
   Commit,
@@ -75,12 +75,24 @@ export class EvaluationResultsRepository extends Repository<
     return Result.ok(result.map(this.parseResult))
   }
 
-  async findByContentHash(contentHash: string) {
+  async findByContentHash({
+    evaluationId,
+    contentHash,
+  }: {
+    evaluationId: number
+    contentHash: string
+  }) {
     const result = await this.db
       .select(this.scope._.selectedFields)
       .from(this.scope)
       .innerJoin(documentLogs, eq(documentLogs.id, this.scope.documentLogId))
-      .where(eq(documentLogs.contentHash, contentHash))
+      .where(
+        and(
+          eq(this.scope.evaluationId, evaluationId),
+          eq(documentLogs.contentHash, contentHash),
+        ),
+      )
+      .orderBy(desc(this.scope.createdAt))
 
     return Result.ok(result.map(this.parseResult))
   }

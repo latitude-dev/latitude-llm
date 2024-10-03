@@ -13,6 +13,7 @@ import {
   FormWrapper,
   Icon,
   Input,
+  LoadingText,
   Modal,
   TableSkeleton,
   Text,
@@ -29,7 +30,6 @@ import useDatasets from '$/stores/datasets'
 import Link from 'next/link'
 
 import { CsvPreviewTable } from './CsvPreviewTable'
-import { LoadingText } from './LoadingText'
 
 export function GenerateDatasetContent({
   defaultParameters,

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react'
 
-import { Text } from '@latitude-data/web-ui'
+import { Text } from '../../atoms'
 
 const loadingTexts = [
   'Convincing AI to work overtime...',
