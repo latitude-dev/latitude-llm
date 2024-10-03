@@ -2,8 +2,8 @@ import { compactObject } from '@latitude-data/core/lib/compactObject'
 import { NotFoundError } from '@latitude-data/core/lib/errors'
 import { Result } from '@latitude-data/core/lib/Result'
 import { LatitudeApiKeysRepository } from '@latitude-data/core/repositories'
+import { env } from '@latitude-data/env'
 import { Latitude } from '@latitude-data/sdk'
-import env from '$/env'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
 
 // NOTE: this would be a great candidate for a cache function with redis

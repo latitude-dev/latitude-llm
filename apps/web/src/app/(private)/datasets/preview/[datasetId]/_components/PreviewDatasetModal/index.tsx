@@ -1,3 +1,5 @@
+'use client'
+
 import { Dataset } from '@latitude-data/core/browser'
 
 import '@latitude-data/web-ui'
@@ -6,7 +8,6 @@ import {
   Button,
   Modal,
   ModalTrigger,
-  ReactStateDispatch,
   Table,
   TableBody,
   TableCell,
@@ -16,17 +17,14 @@ import {
   TableSkeleton,
   Text,
 } from '@latitude-data/web-ui'
+import { useNavigate } from '$/hooks/useNavigate'
+import { ROUTES } from '$/services/routes'
 import useDatasetPreview from '$/stores/datasetPreviews'
 
 const VISIBLE_ROWS = 20
 const TABLE_MAX_HEIGHT = 450
-function PreviewModal({
-  dataset,
-  setPreview,
-}: {
-  dataset: Dataset
-  setPreview: ReactStateDispatch<Dataset | null>
-}) {
+function PreviewModal({ dataset }: { dataset: Dataset }) {
+  const navigate = useNavigate()
   const { data, isLoading } = useDatasetPreview({ dataset })
   const rows = data?.rows ?? []
   const rowCount = Math.min(dataset.fileMetadata.rowCount, VISIBLE_ROWS)
@@ -36,7 +34,9 @@ function PreviewModal({
       open
       title={`${dataset.name} preview`}
       description='First 100 rows of the dataset'
-      onOpenChange={(open: boolean) => !open && setPreview(null)}
+      onOpenChange={(open: boolean) =>
+        !open && navigate.push(ROUTES.datasets.root)
+      }
       footer={
         <ModalTrigger asChild>
           <Button fancy variant='outline'>
@@ -84,12 +84,10 @@ function PreviewModal({
 
 export default function PreviewDatasetModal({
   dataset,
-  setPreview,
 }: {
   dataset: Dataset | null
-  setPreview: ReactStateDispatch<Dataset | null>
 }) {
   if (!dataset) return null
 
-  return <PreviewModal dataset={dataset} setPreview={setPreview} />
+  return <PreviewModal dataset={dataset} />
 }
