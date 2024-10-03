@@ -30,6 +30,7 @@ export function DocumentTextEditor({
   onChange,
   readOnlyMessage,
   isSaved,
+  actionButtons,
 }: DocumentTextEditorProps) {
   const [defaultValue, _] = useState(value)
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null)
@@ -168,43 +169,42 @@ export function DocumentTextEditor({
           />
         </div>
       </div>
-      {!readOnlyMessage && (
-        <div className='flex flex-row w-full items-center justify-between bg-muted'>
-          <div className='flex flex-row items-center gap-2 px-2 py-1'>
+      <div className='flex flex-row w-full px-2 pb-3 pt-1 items-center justify-between gap-2 bg-secondary'>
+        <div className='flex flex-row items-center gap-2'>
+          <div className='flex flex-row items-center gap-2 px-2 py-1 bg-background border border-border rounded-md'>
             <Text.H6 color='foregroundMuted'>{editorLines} lines</Text.H6>
           </div>
-          <div className='flex flex-row items-center gap-2 px-2'>
-            {(metadata?.errors.length ?? 0) > 0 && (
-              <Button
-                variant='ghost'
-                onClick={focusNextError}
-                className='flex flex-row items-center gap-2'
-              >
-                <Text.H6 color='destructive'>
-                  {metadata!.errors.length} errors
-                </Text.H6>
-                <AlertCircle className='h-4 w-4 text-destructive' />
-              </Button>
-            )}
-
-            {isSaved !== undefined && (
-              <div className='flex flex-row items-center gap-2'>
-                {isSaved ? (
-                  <>
-                    <Text.H6 color='foregroundMuted'>Saved</Text.H6>
-                    <CheckCircle2 className='h-4 w-4 text-muted-foreground' />
-                  </>
-                ) : (
-                  <>
-                    <Text.H6 color='foregroundMuted'>Saving...</Text.H6>
-                    <LoaderCircle className='h-4 w-4 text-muted-foreground animate-spin' />
-                  </>
-                )}
-              </div>
-            )}
-          </div>
+          {!readOnlyMessage && isSaved !== undefined && (
+            <div className='flex flex-row items-center gap-2 px-2 py-1 bg-background border border-border rounded-md'>
+              {isSaved ? (
+                <>
+                  <Text.H6 color='foregroundMuted'>Saved</Text.H6>
+                  <CheckCircle2 className='h-4 w-4 text-muted-foreground' />
+                </>
+              ) : (
+                <>
+                  <Text.H6 color='foregroundMuted'>Saving...</Text.H6>
+                  <LoaderCircle className='h-4 w-4 text-muted-foreground animate-spin' />
+                </>
+              )}
+            </div>
+          )}
+          {(metadata?.errors.length ?? 0) > 0 && (
+            <Button
+              variant='outline'
+              onClick={focusNextError}
+              size='small'
+              className='flex flex-row items-center gap-2 bg-background hover:border-destructive'
+            >
+              <Text.H6 color='destructive'>
+                {metadata!.errors.length} errors
+              </Text.H6>
+              <AlertCircle className='h-4 w-4 text-destructive' />
+            </Button>
+          )}
         </div>
-      )}
+        <div className='flex flex-row items-center gap-2'>{actionButtons}</div>
+      </div>
     </div>
   )
 }
