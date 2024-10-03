@@ -20,7 +20,6 @@ const coreRepo = webProductionStack.requireOutput(
 ) as pulumi.Output<aws.ecr.Repository>
 
 const token = await aws.ecr.getAuthorizationToken()
-
 pulumi.all([sentryDsn, sentryOrg, sentryProject, postHogApiKey]).apply(
   ([sentryDsn, sentryOrg, sentryProject, postHogApiKey]) =>
     new docker.Image('LatitudeLLMAppImage', {
