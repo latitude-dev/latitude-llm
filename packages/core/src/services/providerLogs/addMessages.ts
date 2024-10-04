@@ -1,30 +1,28 @@
 import { Message, MessageRole } from '@latitude-data/compiler'
-import { CoreTool, ObjectStreamPart, TextStreamPart } from 'ai'
 
 import {
   ChainEvent,
-  ChainEventTypes,
   ChainStepResponse,
   LogSources,
   objectToString,
   ProviderApiKey,
-  ProviderData,
   ProviderLog,
-  StreamEventTypes,
   StreamType,
   Workspace,
 } from '../../browser'
 import { unsafelyFindProviderApiKey } from '../../data-access'
 import { NotFoundError, Result } from '../../lib'
-import { streamToGenerator } from '../../lib/streamToGenerator'
+import debug from '../../lib/debug'
 import { ai, PartialConfig } from '../ai'
+import {
+  ChainStreamConsumer,
+  parseResponseText,
+} from '../chains/ChainStreamConsumer'
+import { consumeStream } from '../chains/ChainStreamConsumer/consumeStream'
+import { checkFreeProviderQuota } from '../chains/checkFreeProviderQuota'
 import { ProviderProcessor } from '../chains/ProviderProcessor'
-import { enqueueChainEvent } from '../chains/run'
 
 export async function addMessages({
-  // TODO: We really don't need to pass the workspace here, we can get it from
-  // the providerLog but it's currently kind of a pita to do so given the data
-  // model so we can just pass it for now
   workspace,
   providerLog,
   messages,
@@ -45,18 +43,14 @@ export async function addMessages({
   }
 
   let responseResolve: (value: ChainStepResponse<StreamType>) => void
-  let responseReject: (reason?: any) => void
 
-  const response = new Promise<ChainStepResponse<StreamType>>(
-    (resolve, reject) => {
-      responseResolve = resolve
-      responseReject = reject
-    },
-  )
+  const response = new Promise<ChainStepResponse<StreamType>>((resolve) => {
+    responseResolve = resolve
+  })
 
   const stream = new ReadableStream<ChainEvent>({
     start(controller) {
-      streamMessageResponse({
+      iterate({
         workspace,
         source,
         config: providerLog.config,
@@ -76,14 +70,16 @@ export async function addMessages({
         ],
       })
         .then(responseResolve)
-        .catch(responseReject)
+        .catch((e) => {
+          debug(`Error in addMessages: ${e}`)
+        })
     },
   })
 
   return Result.ok({ stream, response })
 }
 
-async function streamMessageResponse({
+async function iterate({
   workspace,
   config,
   provider,
@@ -101,84 +97,49 @@ async function streamMessageResponse({
   documentLogUuid?: string
 }) {
   try {
+    await checkFreeProviderQuota({
+      workspace,
+      provider,
+    }).then((r) => r.unwrap())
+
     const providerProcessor = new ProviderProcessor({
       source,
       documentLogUuid,
       config,
       apiProvider: provider,
       messages,
+      saveSyncProviderLogs: true,
     })
+    const stepStartTime = Date.now()
     const result = await ai({
-      workspace,
       messages,
       config,
       provider,
-    })
-
-    for await (const value of streamToGenerator<
-      TextStreamPart<Record<string, CoreTool>> | ObjectStreamPart<unknown>
-    >(result.data.fullStream)) {
-      enqueueChainEvent(controller, {
-        event: StreamEventTypes.Provider,
-        data: value as unknown as ProviderData,
-      })
-    }
-
+    }).then((r) => r.unwrap())
+    const streamConsumedResult = await consumeStream({ controller, result })
     const response = await providerProcessor.call({
       aiResult: result,
-      saveSyncProviderLogs: true,
+      startTime: stepStartTime,
+      streamConsumedResult,
     })
     const providerLog = response.providerLog!
-    const isStreamText = response.streamType === 'text'
-    const isStreamObject = response.streamType === 'object'
-    const textContent = isStreamText
-      ? response.text
-      : isStreamObject
-        ? objectToString(response.object)
-        : ''
-    enqueueChainEvent(controller, {
-      event: StreamEventTypes.Latitude,
-      data: {
-        type: ChainEventTypes.Complete,
-        config: { ...config, provider: provider.name, model: config.model },
-        documentLogUuid,
-        messages: [
-          {
-            role: MessageRole.assistant,
-            toolCalls: isStreamText ? response.toolCalls : [],
-            content: textContent,
-          },
-        ],
-        response: {
-          ...response,
-          providerLog,
-          text: textContent,
-        },
+    const text = parseResponseText(response)
+    ChainStreamConsumer.chainCompleted({
+      controller,
+      response: { ...response, providerLog, text },
+      config: {
+        ...config,
+        provider: provider.name,
+        model: config.model,
       },
     })
 
-    controller.close()
-
-    return {
-      ...response,
-      providerLog,
-      text: textContent,
-    }
+    return { ...response, providerLog, text }
   } catch (e) {
-    const error = e as Error
-    enqueueChainEvent(controller, {
-      event: StreamEventTypes.Latitude,
-      data: {
-        type: ChainEventTypes.Error,
-        error: {
-          name: error.name,
-          message: error.message,
-          stack: error.stack,
-        },
-      },
+    const error = ChainStreamConsumer.chainError({
+      controller,
+      e,
     })
-
-    controller.close()
 
     throw error
   }

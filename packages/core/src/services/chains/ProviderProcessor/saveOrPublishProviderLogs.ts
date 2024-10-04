@@ -1,8 +1,11 @@
-import { StreamType } from '../../../constants'
+import { RunErrorCodes, StreamType } from '../../../constants'
 import { AIProviderCallCompletedData } from '../../../events/events'
 import { publisher } from '../../../events/publisher'
 import { setupJobs } from '../../../jobs'
+import { TypedResult } from '../../../lib'
+import { StreamChunk } from '../../ai'
 import { createProviderLog } from '../../providerLogs'
+import { ChainError } from '../ChainErrors'
 import { type ObjectProviderLogsData } from './processStreamObject'
 import { type TextProviderLogsData } from './processStreamText'
 
@@ -20,6 +23,12 @@ export async function saveOrPublishProviderLogs<T extends StreamType>({
   streamType: T
   data: LogData<T>
   saveSyncProviderLogs: boolean
+  // TODO: Use stream result check if contains an AI error to be
+  // persisted in the provider log
+  streamConsumedResult: TypedResult<
+    StreamChunk[],
+    ChainError<RunErrorCodes.AIRunError>
+  >
 }) {
   publisher.publishLater({
     type: 'aiProviderCallCompleted',
@@ -32,8 +41,5 @@ export async function saveOrPublishProviderLogs<T extends StreamType>({
   }
 
   const queues = await setupJobs()
-
-  // FIXME: JOBS are not typed at all inference is not working at all
-  // Review this because we can introduce bugs here
   queues.defaultQueue.jobs.enqueueCreateProviderLogJob(data)
 }

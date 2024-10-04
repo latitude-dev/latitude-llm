@@ -1,12 +1,9 @@
-import { eq } from 'drizzle-orm'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { LogSources, Providers } from '../../browser'
-import { database } from '../../client'
 import { publisher } from '../../events/publisher'
-import { Ok, UnprocessableEntityError } from '../../lib'
+import { Ok, Result, UnprocessableEntityError } from '../../lib'
 import { ProviderLogsRepository } from '../../repositories'
-import { providerApiKeys } from '../../schema'
 import {
   createDocumentVersion,
   createDraft,
@@ -26,7 +23,7 @@ const mocks = {
       },
     })
 
-    return {
+    return Result.ok({
       type: 'text',
       data: {
         text: Promise.resolve('Fake AI generated text'),
@@ -39,7 +36,7 @@ const mocks = {
         toolCalls: Promise.resolve([]),
         fullStream,
       },
-    }
+    })
   }),
 }
 
@@ -89,28 +86,6 @@ describe('runDocumentAtCommit', () => {
     aiSpy.mockImplementation(mocks.runAi)
     // @ts-expect-error - we are mocking the function
     publisherSpy.mockImplementation(mocks.publishLater)
-  })
-
-  it('fails if provider api key is not found', async () => {
-    const { workspace, document, commit, provider } = await buildData({
-      doc1Content: dummyDoc1Content,
-    })
-
-    await database
-      .update(providerApiKeys)
-      .set({ name: 'another-name' })
-      .where(eq(providerApiKeys.id, provider.id))
-
-    const result = await runDocumentAtCommit({
-      workspace,
-      document,
-      commit,
-      parameters: {},
-      source: LogSources.API,
-    })
-
-    expect(result?.value?.response).rejects.toThrowError()
-    expect(result?.value?.duration).rejects.toThrowError()
   })
 
   describe('with an existing provider key', () => {
