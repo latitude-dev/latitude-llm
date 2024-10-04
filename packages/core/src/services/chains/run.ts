@@ -3,7 +3,7 @@ import { CoreTool, ObjectStreamPart, TextStreamPart } from 'ai'
 import { JSONSchema7 } from 'json-schema'
 import { v4 } from 'uuid'
 
-import { objectToString, ProviderApiKey, Workspace } from '../../browser'
+import { ProviderApiKey, Workspace } from '../../browser'
 import {
   ChainEvent,
   ChainEventTypes,
@@ -234,33 +234,22 @@ async function handleCompletedChain(
   stepResult: ValidatedStep,
   response: ChainStepResponse<StreamType>,
 ) {
-  const eventData = {
-    type: ChainEventTypes.Complete,
-    config: stepResult.conversation.config as Config,
-    documentLogUuid: response.documentLogUuid,
-    response,
-  } as const
-
-  if (response.streamType === 'text') {
-    Object.assign(eventData, {
+  enqueueChainEvent(controller, {
+    event: StreamEventTypes.Latitude,
+    data: {
+      type: ChainEventTypes.Complete,
+      config: stepResult.conversation.config as Config,
+      documentLogUuid: response.documentLogUuid,
+      response,
       messages: [
         {
           role: MessageRole.assistant,
-          toolCalls: response.toolCalls || [],
+          toolCalls:
+            response.streamType === 'text' ? response.toolCalls || [] : [],
           content: response.text || '',
         },
       ],
-    })
-  } else if (response.streamType === 'object') {
-    Object.assign(eventData, {
-      object: response.object,
-      text: objectToString(response.object),
-    })
-  }
-
-  enqueueChainEvent(controller, {
-    event: StreamEventTypes.Latitude,
-    data: eventData,
+    },
   })
 
   controller.close()
