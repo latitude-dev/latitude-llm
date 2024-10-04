@@ -1,7 +1,6 @@
-import { ReferralMailer } from '@latitude-data/mailers'
-
 import { unsafelyFindUserByEmail, unsafelyGetUser } from '../../data-access'
 import { BadRequestError, NotFoundError } from '../../lib'
+import { ReferralMailer } from '../../mailers'
 import { SendReferralInvitationEvent } from '../events'
 
 export const sendReferralInvitationJob = async ({

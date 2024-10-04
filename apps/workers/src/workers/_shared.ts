@@ -1,4 +1,4 @@
-import { Queues, QUEUES } from '@latitude-data/jobs/constants'
+import { Queues, QUEUES } from '@latitude-data/core/jobs/constants'
 import { captureException } from '$/utils/sentry'
 import { Processor } from 'bullmq'
 

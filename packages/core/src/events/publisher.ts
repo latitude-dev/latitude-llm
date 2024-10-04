@@ -1,5 +1,4 @@
-import { setupJobs } from '@latitude-data/jobs'
-
+import { setupJobs } from '../jobs'
 import { LatitudeEvent } from './events'
 
 export const publisher = {

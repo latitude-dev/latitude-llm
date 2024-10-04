@@ -20,8 +20,6 @@
     "@latitude-data/compiler": "workspace:^",
     "@latitude-data/core": "workspace:^",
     "@latitude-data/env": "workspace:^",
-    "@latitude-data/jobs": "workspace:^",
-    "@latitude-data/mailers": "workspace:^",
     "@sentry/node": "^8.30.0",
     "@t3-oss/env-core": "^0.10.1",
     "drizzle-orm": "^0.33.0",

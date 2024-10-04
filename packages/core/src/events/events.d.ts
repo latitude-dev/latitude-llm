@@ -22,8 +22,35 @@ import {
 } from '../../browser'
 import { PartialConfig } from '../services/ai'
 
+export type Events =
+  | 'magicLinkTokenCreated'
+  | 'userCreated'
+  | 'membershipCreated'
+  | 'evaluationRun'
+  | 'documentRun'
+  | 'providerLogCreated'
+  | 'aiProviderCallCompleted'
+  | 'workspaceCreated'
+  | 'projectCreated'
+  | 'documentLogCreated'
+  | 'sendReferralInvitation'
+  | 'claimReferralInvitations'
+  | 'evaluationCreated'
+  | 'datasetCreated'
+  | 'providerApiKeyCreated'
+  | 'userInvited'
+  | 'commitCreated'
+  | 'commitPublished'
+  | 'evaluationsConnected'
+  | 'batchEvaluationRun'
+  | 'documentCreated'
+  | 'evaluationResultCreated'
+  | 'documentRunRequested'
+  | 'chatMessageRequested'
+  | 'batchEvaluationRunRequested'
+
 export type LatitudeEventGeneric<
-  U extends keyof typeof EventHandlers,
+  U extends Events,
   T extends Record<string, unknown>,
 > = {
   type: U

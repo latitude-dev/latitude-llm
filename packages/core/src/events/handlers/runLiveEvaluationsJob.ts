@@ -1,6 +1,5 @@
-import { setupJobs } from '@latitude-data/jobs'
-
 import { findWorkspaceFromDocumentLog } from '../../data-access'
+import { setupJobs } from '../../jobs'
 import { NotFoundError } from '../../lib'
 import { EvaluationsRepository } from '../../repositories'
 import { DocumentLogCreatedEvent } from '../events'
