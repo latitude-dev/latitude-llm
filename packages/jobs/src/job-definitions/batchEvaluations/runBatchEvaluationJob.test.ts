@@ -16,7 +16,7 @@ const mocks = vi.hoisted(() => ({
   queues: {
     defaultQueue: {
       jobs: {
-        enqueueRunDocumentJob: vi.fn(),
+        enqueueRunDocumentForEvaluationJob: vi.fn(),
       },
     },
     eventsQueue: {
@@ -144,10 +144,10 @@ describe('runBatchEvaluationJob', () => {
     await runBatchEvaluationJob(mockJob)
 
     expect(
-      mocks.queues.defaultQueue.jobs.enqueueRunDocumentJob,
+      mocks.queues.defaultQueue.jobs.enqueueRunDocumentForEvaluationJob,
     ).toHaveBeenCalledTimes(3)
     expect(
-      mocks.queues.defaultQueue.jobs.enqueueRunDocumentJob,
+      mocks.queues.defaultQueue.jobs.enqueueRunDocumentForEvaluationJob,
     ).toHaveBeenCalledWith(
       expect.objectContaining({
         workspaceId: 'workspace-1',
@@ -171,7 +171,9 @@ describe('runBatchEvaluationJob', () => {
       }),
     )
     expect(
-      vi.mocked(mocks.queues.defaultQueue.jobs.enqueueRunDocumentJob),
+      vi.mocked(
+        mocks.queues.defaultQueue.jobs.enqueueRunDocumentForEvaluationJob,
+      ),
     ).toHaveBeenCalledTimes(3)
   })
 
@@ -182,7 +184,9 @@ describe('runBatchEvaluationJob', () => {
     await runBatchEvaluationJob(mockJob)
 
     expect(
-      vi.mocked(mocks.queues.defaultQueue.jobs.enqueueRunDocumentJob),
+      vi.mocked(
+        mocks.queues.defaultQueue.jobs.enqueueRunDocumentForEvaluationJob,
+      ),
     ).toHaveBeenCalledWith(
       expect.objectContaining({
         batchId,
@@ -198,10 +202,14 @@ describe('runBatchEvaluationJob', () => {
     await runBatchEvaluationJob(mockJob)
 
     expect(
-      vi.mocked(mocks.queues.defaultQueue.jobs.enqueueRunDocumentJob),
+      vi.mocked(
+        mocks.queues.defaultQueue.jobs.enqueueRunDocumentForEvaluationJob,
+      ),
     ).toHaveBeenCalledTimes(1)
     expect(
-      vi.mocked(mocks.queues.defaultQueue.jobs.enqueueRunDocumentJob),
+      vi.mocked(
+        mocks.queues.defaultQueue.jobs.enqueueRunDocumentForEvaluationJob,
+      ),
     ).toHaveBeenCalledWith(
       expect.objectContaining({
         parameters: { param1: 'value5', param2: 'value6' },

@@ -2,22 +2,20 @@
 
 import { readMetadata } from '@latitude-data/compiler'
 import { publisher } from '@latitude-data/core/events/publisher'
-import { EvaluationsRepository } from '@latitude-data/core/repositories'
+import { CommitsRepository } from '@latitude-data/core/repositories'
 import { setupJobs } from '@latitude-data/jobs'
-import { nanoid } from 'nanoid'
 import { z } from 'zod'
 
 import {
   isValidParameter,
   parameterErrorMessage,
   withDataset,
-} from './_helpers'
+} from '../evaluations/_helpers'
 
-export const runBatchEvaluationAction = withDataset
+export const runDocumentInBatchAction = withDataset
   .createServerAction()
   .input(async ({ ctx }) =>
     z.object({
-      evaluationIds: z.array(z.number()),
       fromLine: z.number().optional(),
       toLine: z.number().optional(),
       parameters: z
@@ -64,36 +62,29 @@ export const runBatchEvaluationAction = withDataset
   )
   .handler(async ({ input, ctx }) => {
     publisher.publishLater({
-      type: 'batchEvaluationRunRequested',
+      type: 'runDocumentInBatchRequested',
       data: {
-        evaluationIds: input.evaluationIds,
-        documentUuid: input.documentUuid,
+        document: ctx.document,
         workspaceId: ctx.workspace.id,
         userEmail: ctx.user.email,
       },
     })
 
-    const evaluationsRepo = new EvaluationsRepository(ctx.workspace.id)
-    const evaluations = await evaluationsRepo
-      .filterById(input.evaluationIds)
+    const commitsScope = new CommitsRepository(ctx.workspace.id)
+    const commit = await commitsScope
+      .getCommitByUuid({ uuid: ctx.currentCommitUuid })
       .then((r) => r.unwrap())
-    const queues = await setupJobs()
-    evaluations.forEach((evaluation) => {
-      const batchId = `evaluation:${evaluation.id}:${nanoid(5)}`
 
-      queues.defaultQueue.jobs.enqueueRunBatchEvaluationJob({
-        workspace: ctx.workspace,
-        user: ctx.user,
-        evaluation,
-        dataset: ctx.dataset,
-        document: ctx.document,
-        projectId: ctx.project.id,
-        commitUuid: ctx.currentCommitUuid,
-        fromLine: input.fromLine,
-        toLine: input.toLine,
-        parametersMap: input.parameters,
-        batchId,
-      })
+    const queues = await setupJobs()
+
+    queues.defaultQueue.jobs.enqueueRunDocumentInBatchJob({
+      commit,
+      document: ctx.document,
+      dataset: ctx.dataset,
+      workspace: ctx.workspace,
+      parametersMap: input.parameters,
+      fromLine: input.fromLine,
+      toLine: input.toLine,
     })
 
     return { success: true }

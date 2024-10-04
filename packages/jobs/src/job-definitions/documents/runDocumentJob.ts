@@ -7,11 +7,13 @@ import {
   DocumentVersionsRepository,
 } from '@latitude-data/core/repositories'
 import { runDocumentAtCommit } from '@latitude-data/core/services/commits/runDocumentAtCommit'
-import { WebsocketClient } from '@latitude-data/core/websockets/workers'
+import {
+  WebsocketClient,
+  WorkerSocket,
+} from '@latitude-data/core/websockets/workers'
 import { env } from '@latitude-data/env'
 import { Job } from 'bullmq'
 
-import { setupJobs } from '../../'
 import { ProgressTracker } from '../../utils/progressTracker'
 
 type RunDocumentJobData = {
@@ -20,26 +22,38 @@ type RunDocumentJobData = {
   commitUuid: string
   projectId: number
   parameters: Record<string, unknown>
-  evaluationId: number
   batchId: string
 }
 
-export const runDocumentForEvaluationJob = async (
-  job: Job<RunDocumentJobData>,
+const emitDocumentBatchRunStatus = async (
+  websockets: WorkerSocket,
+  workspaceId: number,
+  documentUuid: string,
+  progressTracker: ProgressTracker,
 ) => {
+  const progress = await progressTracker.getProgress()
+  websockets.emit('documentBatchRunStatus', {
+    workspaceId,
+    data: {
+      documentUuid,
+      ...progress,
+    },
+  })
+}
+
+export const runDocumentJob = async (job: Job<RunDocumentJobData>) => {
   const {
     workspaceId,
     documentUuid,
     commitUuid,
     projectId,
     parameters,
-    evaluationId,
     batchId,
   } = job.data
+  const websockets = await WebsocketClient.getSocket()
   const progressTracker = new ProgressTracker(await queues(), batchId)
 
   try {
-    const jobs = await setupJobs()
     const workspace = await unsafelyFindWorkspace(workspaceId)
     if (!workspace) throw new NotFoundError('Workspace not found')
 
@@ -51,24 +65,20 @@ export const runDocumentForEvaluationJob = async (
     const commit = await commitsScope
       .getCommitByUuid({ projectId, uuid: commitUuid })
       .then((r) => r.unwrap())
-    const result = await runDocumentAtCommit({
+    await runDocumentAtCommit({
       workspace,
       document,
       commit,
       parameters,
-      source: LogSources.Evaluation,
+      source: LogSources.Playground,
     }).then((r) => r.unwrap())
 
-    await result.response
-    await jobs.defaultQueue.jobs.enqueueRunEvaluationJob(
-      {
-        workspaceId,
-        documentUuid: document.documentUuid,
-        documentLogUuid: result.documentLogUuid,
-        evaluationId,
-        batchId,
-      },
-      { lifo: true },
+    await progressTracker.incrementCompleted()
+    await emitDocumentBatchRunStatus(
+      websockets,
+      workspaceId,
+      documentUuid,
+      progressTracker,
     )
   } catch (error) {
     if (env.NODE_ENV !== 'production') {
@@ -76,18 +86,11 @@ export const runDocumentForEvaluationJob = async (
     }
 
     await progressTracker.incrementErrors()
-
-    const progress = await progressTracker.getProgress()
-    const websockets = await WebsocketClient.getSocket()
-
-    websockets.emit('evaluationStatus', {
+    await emitDocumentBatchRunStatus(
+      websockets,
       workspaceId,
-      data: {
-        batchId,
-        evaluationId,
-        documentUuid,
-        ...progress,
-      },
-    })
+      documentUuid,
+      progressTracker,
+    )
   }
 }
