@@ -3,7 +3,7 @@
 import { LogSources } from '@latitude-data/core/browser'
 import { streamToGenerator } from '@latitude-data/core/lib/streamToGenerator'
 import { runPrompt } from '@latitude-data/core/services/prompts/run'
-import { buildProviderApikeysMap } from '@latitude-data/core/services/providerApiKeys/buildMap'
+import { buildProvidersMap } from '@latitude-data/core/services/providerApiKeys/buildMap'
 import { createStreamableValue } from 'ai/rsc'
 import { z } from 'zod'
 
@@ -21,21 +21,21 @@ export const runPromptAction = authProcedure
     const { prompt, parameters } = input
     const stream = createStreamableValue()
     try {
-      const result = await runPrompt({
+      const run = await runPrompt({
         workspace: ctx.workspace,
         source: LogSources.Evaluation,
         prompt,
         parameters,
-        apikeys: await buildProviderApikeysMap({
+        providersMap: await buildProvidersMap({
           workspaceId: ctx.workspace.id,
         }),
       }).then((r) => r.unwrap())
 
-      pipeToStream(result.stream, stream)
+      pipeToStream(run.stream, stream)
 
       return {
         output: stream.value,
-        response: result.response,
+        response: run.response,
       }
     } catch (error) {
       stream.error(error)

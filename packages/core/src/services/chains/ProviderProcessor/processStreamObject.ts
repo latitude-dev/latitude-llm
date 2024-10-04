@@ -1,3 +1,4 @@
+import { ChainStepResponse } from '../../../constants'
 import { StreamCommonData } from '../../../events/handlers'
 import { objectToString } from '../../../helpers'
 import { AIReturn } from '../../ai'
@@ -9,9 +10,10 @@ async function processResponse({
 }: {
   commonData: StreamCommonData
   aiResult: Awaited<AIReturn<'object'>>
-}) {
+}): Promise<ChainStepResponse<'object'>> {
   const object = await aiResult.data.object
   return {
+    streamType: aiResult.type,
     documentLogUuid: commonData.documentLogUuid,
     usage: await aiResult.data.usage,
     text: objectToString(object),
@@ -49,7 +51,7 @@ export async function processStreamObject({
     commonData,
   })
   const providerLog = await saveOrPublishProviderLogs({
-    streamType: 'object',
+    streamType: aiResult.type,
     data: logsData,
     saveSyncProviderLogs,
   })

@@ -1,7 +1,7 @@
 'use server'
 
 import {
-  ChainObjectResponse,
+  ChainStepResponse,
   Dataset,
   LogSources,
   StreamEventTypes,
@@ -65,8 +65,8 @@ export async function generateDatasetAction({
   })
 
   try {
-    const sdkResult = await sdkResponse
-    const csv = (sdkResult?.response! as ChainObjectResponse).object.csv
+    const sdkResult = sdkResponse
+    const csv = (sdkResult?.response! as ChainStepResponse<'object'>).object.csv
     const result = await createDataset({
       author: user,
       workspace,

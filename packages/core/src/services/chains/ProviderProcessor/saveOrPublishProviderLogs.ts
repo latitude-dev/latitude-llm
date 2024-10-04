@@ -1,9 +1,7 @@
 import { setupJobs } from '@latitude-data/jobs'
 
-import {
-  AIProviderCallCompletedData,
-  StreamType,
-} from '../../../events/handlers'
+import { StreamType } from '../../../constants'
+import { AIProviderCallCompletedData } from '../../../events/handlers'
 import { publisher } from '../../../events/publisher'
 import { createProviderLog } from '../../providerLogs'
 import { type ObjectProviderLogsData } from './processStreamObject'
@@ -13,7 +11,7 @@ export type LogData<T extends StreamType> = T extends 'text'
   ? Awaited<TextProviderLogsData>
   : T extends 'object'
     ? Awaited<ObjectProviderLogsData>
-    : never
+    : unknown
 
 export async function saveOrPublishProviderLogs<T extends StreamType>({
   data,
