@@ -1,4 +1,4 @@
-import { LatitudeEvent } from '@latitude-data/core/events/handlers/index'
+import { LatitudeEvent } from '@latitude-data/core/events/events.d'
 import { PostHogClient } from '@latitude-data/core/services/posthog'
 import { env } from '@latitude-data/env'
 import { Job } from 'bullmq'

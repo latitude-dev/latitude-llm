@@ -1,7 +1,7 @@
 import { setupJobs } from '@latitude-data/jobs'
 
 import { StreamType } from '../../../constants'
-import { AIProviderCallCompletedData } from '../../../events/handlers'
+import { AIProviderCallCompletedData } from '../../../events/events'
 import { publisher } from '../../../events/publisher'
 import { createProviderLog } from '../../providerLogs'
 import { type ObjectProviderLogsData } from './processStreamObject'

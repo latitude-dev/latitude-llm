@@ -1,8 +1,8 @@
 import { MagicLinkMailer } from '@latitude-data/mailers'
 
-import { MagicLinkTokenCreated } from '.'
 import { unsafelyGetUser } from '../../data-access'
 import { NotFoundError } from '../../lib'
+import { MagicLinkTokenCreated } from '../events'
 
 export async function sendMagicLinkJob({
   data: event,

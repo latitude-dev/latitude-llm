@@ -1,8 +1,8 @@
-import { DocumentLogCreatedEvent } from '.'
 import { findWorkspaceFromDocumentLog } from '../../data-access'
 import { findCommitById } from '../../data-access/commits'
 import { NotFoundError } from '../../lib'
 import { WebsocketClient } from '../../websockets/workers'
+import { DocumentLogCreatedEvent } from '../events'
 
 export const notifyToClientDocumentLogCreatedJob = async ({
   data: event,

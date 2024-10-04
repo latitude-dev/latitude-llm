@@ -12,7 +12,7 @@ const INTERNAL_PACKAGES = [
 const nextConfig = {
   output: 'standalone',
   transpilePackages: INTERNAL_PACKAGES,
-  serverExternalPackages: ['@sentry/nextjs', 'bullmq', 'jose'],
+  serverExternalPackages: ['bullmq', 'jose'],
   experimental: {
     // Dear developer,
     //

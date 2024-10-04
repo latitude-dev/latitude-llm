@@ -1,8 +1,8 @@
 import { eq } from 'drizzle-orm'
 
-import { EvaluationResultCreatedEvent } from '.'
 import { createEvaluationResultQuery } from '../../services/evaluationResults/_createEvaluationResultQuery'
 import { WebsocketClient } from '../../websockets/workers'
+import { EvaluationResultCreatedEvent } from '../events'
 
 export const notifyToClientEvaluationResultCreatedJob = async ({
   data: event,

@@ -1,6 +1,6 @@
 import { setupJobs } from '@latitude-data/jobs'
 
-import { LatitudeEvent } from './handlers'
+import { LatitudeEvent } from './events'
 
 export const publisher = {
   publishLater: async (event: LatitudeEvent) => {

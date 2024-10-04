@@ -1,4 +1,4 @@
-import { LatitudeEvent } from '@latitude-data/core/events/handlers/index'
+import { LatitudeEvent } from '@latitude-data/core/events/events.d'
 
 import { Jobs, Queues } from '../constants'
 

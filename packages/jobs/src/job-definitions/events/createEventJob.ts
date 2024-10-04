@@ -1,4 +1,4 @@
-import { LatitudeEvent } from '@latitude-data/core/events/handlers/index'
+import { LatitudeEvent } from '@latitude-data/core/events/events.d'
 import { createEvent } from '@latitude-data/core/services/events/create'
 import { Job } from 'bullmq'
 
