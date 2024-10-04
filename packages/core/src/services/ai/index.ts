@@ -62,11 +62,16 @@ export async function ai({
   // the AI service.
   await checkDefaultProviderUsage({ provider: apiProvider, workspace })
 
-  const { provider, token: apiKey } = apiProvider
+  const { provider, token: apiKey, url } = apiProvider
   const model = config.model
 
   // FIXME: This also can generate an error. I think we should move out
-  const languageModel = createProvider({ provider, apiKey, config })(model)
+  const languageModel = createProvider({
+    provider,
+    apiKey,
+    config,
+    ...(url ? { url } : {}),
+  })(model)
 
   const commonOptions = {
     ...omit(config, ['schema']),

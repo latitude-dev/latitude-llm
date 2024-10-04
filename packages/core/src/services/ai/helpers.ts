@@ -11,6 +11,7 @@ export type Config = {
   [key: string]: any
   provider: string
   model: string
+  url?: string
   azure?: { resourceName: string }
 }
 
@@ -21,10 +22,12 @@ const GROQ_API_URL = 'https://api.groq.com/openai/v1'
 export function createProvider({
   provider,
   apiKey,
+  url,
   config,
 }: {
   provider: Providers
   apiKey: string
+  url?: string
   config?: PartialConfig
 }) {
   switch (provider) {
@@ -57,6 +60,12 @@ export function createProvider({
       return createGoogleGenerativeAI({
         apiKey,
         ...(config?.google ?? {}),
+      })
+    case Providers.Custom:
+      return createOpenAI({
+        apiKey: apiKey,
+        compatibility: 'compatible',
+        baseURL: url,
       })
     default:
       throw new Error(`Provider ${provider} not supported`)

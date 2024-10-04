@@ -8,11 +8,12 @@ export type Props = {
   workspace: Workspace
   provider: Providers
   token: string
+  url?: string
   name: string
   author: User
 }
 export function createProviderApiKey(
-  { workspace, provider, token, name, author }: Props,
+  { workspace, provider, token, url, name, author }: Props,
   db = database,
 ) {
   return Transaction.call(async (tx) => {
@@ -22,6 +23,7 @@ export function createProviderApiKey(
         workspaceId: workspace.id!,
         provider,
         token,
+        url,
         name,
         authorId: author.id,
       })
