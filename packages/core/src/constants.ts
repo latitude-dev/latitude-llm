@@ -46,30 +46,27 @@ export const HELP_CENTER = {
   commitVersions: `${LATITUDE_DOCS_URL}/not-found`,
 }
 
-export type StreamType = 'object' | 'text'
 export type ChainStepTextResponse = {
-  streamType: 'text'
   text: string
   usage: LanguageModelUsage
   toolCalls: ToolCall[]
   documentLogUuid?: string
-  providerLog?: ProviderLog
 }
-
 export type ChainStepObjectResponse = {
-  streamType: 'object'
   object: any
   text: string
   usage: LanguageModelUsage
   documentLogUuid?: string
-  providerLog?: ProviderLog
 }
+export type ChainStepResponse = ChainStepTextResponse | ChainStepObjectResponse
 
-export type ChainStepResponse<T extends StreamType> = T extends 'text'
-  ? ChainStepTextResponse
-  : T extends 'object'
-    ? ChainStepObjectResponse
-    : never
+export type ChainTextResponse = ChainStepTextResponse & {
+  providerLog: ProviderLog
+}
+export type ChainObjectResponse = ChainStepObjectResponse & {
+  providerLog: ProviderLog
+}
+export type ChainCallResponse = ChainTextResponse | ChainObjectResponse
 
 export enum LogSources {
   API = 'api',
@@ -85,11 +82,6 @@ export enum RunErrorCodes {
   ChainCompileError = 'chain_compile_error',
   AIRunError = 'ai_run_error',
 }
-
-export type RunErrorDetails<C extends RunErrorCodes> =
-  C extends RunErrorCodes.ChainCompileError
-    ? { compileCode: string; message: string }
-    : never
 export enum ErrorableEntity {
   DocumentLog = 'document_log',
   EvaluationResult = 'evaluation_result',
@@ -122,7 +114,7 @@ export type LatitudeEventData =
     }
   | {
       type: ChainEventTypes.StepComplete
-      response: ChainStepResponse<StreamType>
+      response: ChainStepResponse
       documentLogUuid?: string
     }
   | {
@@ -130,7 +122,7 @@ export type LatitudeEventData =
       config: Config
       messages?: Message[]
       object?: any
-      response: ChainStepResponse<StreamType>
+      response: ChainCallResponse
       documentLogUuid?: string
     }
   | {
@@ -201,7 +193,7 @@ export type WorkspaceUsage = {
 }
 
 export type ChainCallResponseDto = Omit<
-  ChainStepResponse<StreamType>,
+  ChainCallResponse,
   'documentLogUuid' | 'providerLog'
 >
 
@@ -216,7 +208,7 @@ export type ChainEventDto =
     }
   | {
       type: ChainEventTypes.StepComplete
-      response: Omit<ChainStepResponse<StreamType>, 'providerLog'>
+      response: Omit<ChainStepResponse, 'providerLog'>
       uuid?: string
     }
   | {
@@ -224,7 +216,7 @@ export type ChainEventDto =
       config: Config
       messages?: Message[]
       object?: any
-      response: Omit<ChainStepResponse<StreamType>, 'providerLog'>
+      response: Omit<ChainCallResponse, 'providerLog'>
       uuid?: string
     }
   | {

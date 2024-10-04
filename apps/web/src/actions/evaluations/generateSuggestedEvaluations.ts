@@ -2,7 +2,7 @@
 
 import { createHash } from 'crypto'
 
-import { ChainStepResponse } from '@latitude-data/core/browser'
+import { ChainObjectResponse } from '@latitude-data/core/browser'
 import { cache } from '@latitude-data/core/cache'
 import { findAllEvaluationTemplates } from '@latitude-data/core/data-access'
 import { BadRequestError } from '@latitude-data/core/lib/errors'
@@ -59,7 +59,7 @@ export const generateSuggestedEvaluationsAction = authProcedure
 
     if (!result) return []
 
-    const res = result.response as ChainStepResponse<'object'>
+    const res = result.response as ChainObjectResponse
     if (!res.object) return []
 
     const suggestedEvaluations = res.object[0] as SuggestedEvaluation[]

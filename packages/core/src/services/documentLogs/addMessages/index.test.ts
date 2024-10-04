@@ -238,7 +238,6 @@ describe('addMessages', () => {
             },
           ],
           response: {
-            streamType: 'text',
             documentLogUuid: providerLog.documentLogUuid,
             providerLog: logs[logs.length - 1],
             text: 'Fake AI generated text',

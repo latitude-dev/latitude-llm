@@ -1,7 +1,7 @@
 import { LanguageModelUsage } from 'ai'
 
 import {
-  ChainStepResponse,
+  ChainCallResponse,
   Commit,
   Dataset,
   DocumentLog,
@@ -16,7 +16,6 @@ import {
   ProviderApiKey,
   ProviderLog,
   Providers,
-  StreamType,
   User,
   Workspace,
 } from '../../browser'
@@ -62,7 +61,7 @@ export type EvaluationRunEvent = LatitudeEventGeneric<
     evaluationId: number
     documentLogUuid: string
     providerLogUuid: string
-    response: ChainStepResponse<StreamType>
+    response: ChainCallResponse
     workspaceId: number
   }
 >
@@ -76,7 +75,7 @@ export type DocumentRunEvent = LatitudeEventGeneric<
     customIdentifier?: string
     duration: number
     documentLogUuid: string
-    response: ChainStepResponse<StreamType>
+    response: ChainCallResponse
     resolvedContent: string
     parameters: Record<string, unknown>
     source: LogSources
@@ -88,6 +87,7 @@ export type ProviderLogCreatedEvent = LatitudeEventGeneric<
   ProviderLog
 >
 
+export type StreamType = 'object' | 'text'
 export type StreamCommonData = {
   workspaceId: number
   uuid: string

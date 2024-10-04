@@ -3,10 +3,9 @@ import { v4 as uuid } from 'uuid'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { objectToString, Workspace } from '../../browser'
-import { LogSources, Providers, RunErrorCodes } from '../../constants'
+import { LogSources, Providers } from '../../constants'
 import * as factories from '../../tests/factories'
 import * as aiModule from '../ai'
-import { ChainError } from './ChainErrors'
 import { runChain } from './run'
 
 // Mock other dependencies
@@ -20,7 +19,7 @@ describe('runChain', () => {
   }
 
   const mockUUID = '12345678-1234-1234-1234-123456789012'
-  let providersMap: Map<string, any>
+  let apikeys: Map<string, any>
 
   function createMockAiResponse(text: string, totalTokens: number) {
     return {
@@ -52,7 +51,7 @@ describe('runChain', () => {
     const { workspace: w, providers } = await factories.createProject({
       providers: [{ name: 'openai', type: Providers.OpenAI }],
     })
-    providersMap = new Map(providers.map((p) => [p.name, p]))
+    apikeys = new Map(providers.map((p) => [p.name, p]))
     workspace = w
   })
 
@@ -73,14 +72,17 @@ describe('runChain', () => {
       },
     })
 
-    const run = await runChain({
+    const result = await runChain({
       workspace,
       chain: mockChain as Chain,
-      providersMap,
+      apikeys,
       source: LogSources.API,
     })
 
-    const response = await run.response
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+
+    const response = await result.value.response
     expect(response).toEqual(
       expect.objectContaining({
         documentLogUuid: expect.any(String),
@@ -144,10 +146,10 @@ describe('runChain', () => {
       },
     })
 
-    const run = await runChain({
+    const result = await runChain({
       workspace,
       chain: mockChain as Chain,
-      providersMap,
+      apikeys,
       source: LogSources.API,
       configOverrides: {
         schema: mockSchema,
@@ -155,7 +157,10 @@ describe('runChain', () => {
       },
     })
 
-    const response = await run.response
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+
+    const response = await result.value.response
     expect(response).toEqual(
       expect.objectContaining({
         documentLogUuid: expect.any(String),
@@ -176,21 +181,25 @@ describe('runChain', () => {
 
   it('handles errors during chain execution', async () => {
     vi.mocked(mockChain.step!).mockRejectedValue(
-      new ChainError({
-        message: 'Chain execution failed',
-        code: RunErrorCodes.ChainCompileError,
-      }),
+      new Error('Chain execution failed'),
     )
 
-    const run = await runChain({
+    const result = await runChain({
       workspace,
       chain: mockChain as Chain,
-      providersMap,
+      apikeys,
       source: LogSources.API,
     })
 
-    await expect(run.response).rejects.toThrow('Error validating chain')
-    await expect(run.duration).rejects.toThrow('Error validating chain')
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+
+    await expect(result.value.response).rejects.toThrow(
+      'Chain execution failed',
+    )
+    await expect(result.value.duration).rejects.toThrow(
+      'Chain execution failed',
+    )
   })
 
   it('handles multiple steps in a chain', async () => {
@@ -236,14 +245,17 @@ describe('runChain', () => {
         },
       })
 
-    const run = await runChain({
+    const result = await runChain({
       workspace,
       chain: mockChain as Chain,
-      providersMap,
+      apikeys,
       source: LogSources.API,
     })
 
-    const response = await run.response
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+
+    const response = await result.value.response
     expect(response).toEqual(
       expect.objectContaining({
         documentLogUuid: expect.any(String),
@@ -277,14 +289,17 @@ describe('runChain', () => {
       },
     })
 
-    const run = await runChain({
+    const result = await runChain({
       workspace,
       chain: mockChain as Chain,
-      providersMap,
+      apikeys,
       source: LogSources.API,
     })
 
-    const response = await run.response
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+
+    const response = await result.value.response
     expect(response).toEqual(
       expect.objectContaining({
         documentLogUuid: expect.any(String),
@@ -352,10 +367,10 @@ describe('runChain', () => {
       },
     })
 
-    const run = await runChain({
+    const result = await runChain({
       workspace,
       chain: mockChain as Chain,
-      providersMap,
+      apikeys,
       source: LogSources.API,
       configOverrides: {
         schema: mockSchema,
@@ -363,7 +378,10 @@ describe('runChain', () => {
       },
     })
 
-    const response = await run.response
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+
+    const response = await result.value.response
     expect(response).toEqual(
       expect.objectContaining({
         documentLogUuid: expect.any(String),
@@ -435,10 +453,10 @@ describe('runChain', () => {
       },
     })
 
-    const run = await runChain({
+    const result = await runChain({
       workspace,
       chain: mockChain as Chain,
-      providersMap,
+      apikeys,
       source: LogSources.API,
       configOverrides: {
         schema: mockSchema,
@@ -446,7 +464,10 @@ describe('runChain', () => {
       },
     })
 
-    const response = await run.response
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+
+    const response = await result.value.response
     expect(response).toEqual(
       expect.objectContaining({
         documentLogUuid: expect.any(String),
@@ -490,17 +511,20 @@ describe('runChain', () => {
       },
     })
 
-    const run = await runChain({
+    const result = await runChain({
       workspace,
       chain: mockChain as Chain,
-      providersMap,
+      apikeys,
       source: LogSources.API,
       configOverrides: {
         output: 'no-schema',
       },
     })
 
-    const response = await run.response
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+
+    const response = await result.value.response
     expect(response).toEqual(
       expect.objectContaining({
         documentLogUuid: expect.any(String),

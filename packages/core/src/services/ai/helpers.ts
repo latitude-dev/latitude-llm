@@ -3,6 +3,7 @@ import { createAzure } from '@ai-sdk/azure'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { createMistral } from '@ai-sdk/mistral'
 import { createOpenAI } from '@ai-sdk/openai'
+import { z } from 'zod'
 
 import { Providers } from '../../constants'
 
@@ -60,4 +61,36 @@ export function createProvider({
     default:
       throw new Error(`Provider ${provider} not supported`)
   }
+}
+
+export function validateConfig(config: Record<string, unknown>): Config {
+  const configSchema = z
+    .object({
+      model: z.string(),
+      provider: z.string(),
+      google: z
+        .object({
+          structuredOutputs: z.boolean().optional(),
+          cachedContent: z.string().optional(),
+          safetySettings: z
+            .array(
+              z
+                .object({
+                  category: z.string().optional(), // TODO: can be an enum
+                  threshold: z.string().optional(), // TODO: can be an enum
+                })
+                .optional(),
+            )
+            .optional(),
+        })
+        .optional(),
+      azure: z
+        .object({
+          resourceName: z.string(),
+        })
+        .optional(),
+    })
+    .catchall(z.unknown())
+
+  return configSchema.parse(config)
 }

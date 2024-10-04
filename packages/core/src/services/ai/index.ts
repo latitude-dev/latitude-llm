@@ -13,7 +13,8 @@ import {
 } from 'ai'
 import { JSONSchema7 } from 'json-schema'
 
-import { ProviderApiKey, StreamType, Workspace } from '../../browser'
+import { ProviderApiKey, Workspace } from '../../browser'
+import { StreamType } from '../../events/handlers'
 import { incrFreeRuns } from '../freeRunsManager'
 import { createProvider, PartialConfig } from './helpers'
 
@@ -125,4 +126,5 @@ const checkDefaultProviderUsage = async ({
 }
 
 export { estimateCost } from './estimateCost'
+export { validateConfig } from './helpers'
 export type { Config, PartialConfig } from './helpers'

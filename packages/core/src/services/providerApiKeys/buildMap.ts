@@ -1,7 +1,7 @@
 import { ProviderApiKey } from '../../browser'
 import { ProviderApiKeysRepository } from '../../repositories'
 
-export async function buildProvidersMap({
+export async function buildProviderApikeysMap({
   workspaceId,
 }: {
   workspaceId: number
