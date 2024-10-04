@@ -2,21 +2,50 @@
 
 import { readMetadata } from '@latitude-data/compiler'
 import { publisher } from '@latitude-data/core/events/publisher'
-import { EvaluationsRepository } from '@latitude-data/core/repositories'
+import {
+  DatasetsRepository,
+  EvaluationsRepository,
+} from '@latitude-data/core/repositories'
 import { setupJobs } from '@latitude-data/jobs'
 import { nanoid } from 'nanoid'
 import { z } from 'zod'
+import { createServerActionProcedure } from 'zsa'
 
-import {
-  isValidParameter,
-  parameterErrorMessage,
-  withDataset,
-} from './_helpers'
+import { withDocument } from '../procedures'
+
+const USER_DECIDED_TO_IGNORE_THIS_PARAMETER = -1
+
+const withDataset = createServerActionProcedure(withDocument)
+  .input(z.object({ datasetId: z.number() }))
+  .handler(async ({ input, ctx }) => {
+    const datasetsRepo = new DatasetsRepository(ctx.workspace.id)
+    const dataset = await datasetsRepo
+      .find(input.datasetId)
+      .then((r) => r.unwrap())
+
+    return { ...ctx, dataset }
+  })
+
+function isValidParameter(valueIndex: number | undefined, headers: string[]) {
+  if (valueIndex === undefined) return false
+  if (valueIndex === USER_DECIDED_TO_IGNORE_THIS_PARAMETER) return true
+  const hasIndex = headers[valueIndex]
+  return hasIndex !== undefined
+}
+function parameterErrorMessage({
+  param,
+  message,
+}: {
+  param: string
+  message: string
+}) {
+  return `${param}: ${message}`
+}
 
 export const runBatchEvaluationAction = withDataset
   .createServerAction()
-  .input(async ({ ctx }) =>
-    z.object({
+  .input(async ({ ctx }) => {
+    return z.object({
       evaluationIds: z.array(z.number()),
       fromLine: z.number().optional(),
       toLine: z.number().optional(),
@@ -60,8 +89,8 @@ export const runBatchEvaluationAction = withDataset
             }
           })
         }),
-    }),
-  )
+    })
+  })
   .handler(async ({ input, ctx }) => {
     publisher.publishLater({
       type: 'batchEvaluationRunRequested',

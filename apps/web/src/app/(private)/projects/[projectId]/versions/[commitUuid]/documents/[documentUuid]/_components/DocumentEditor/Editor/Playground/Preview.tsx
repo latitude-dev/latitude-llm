@@ -12,12 +12,7 @@ import {
   Text,
   Tooltip,
   useAutoScroll,
-  useCurrentCommit,
-  useCurrentDocument,
-  useCurrentProject,
 } from '@latitude-data/web-ui'
-import { ROUTES } from '$/services/routes'
-import Link from 'next/link'
 
 export default function Preview({
   metadata,
@@ -28,9 +23,6 @@ export default function Preview({
   parameters: Record<string, unknown>
   runPrompt: () => void
 }) {
-  const { commit } = useCurrentCommit()
-  const document = useCurrentDocument()
-  const { project } = useCurrentProject()
   const [conversation, setConversation] = useState<Conversation | undefined>(
     undefined,
   )
@@ -82,7 +74,7 @@ export default function Preview({
         </div>
       )}
 
-      <div className='flex flex-row w-full items-center justify-center gap-2'>
+      <div className='flex flex-row w-full items-center justify-center'>
         {error || (metadata?.errors.length ?? 0) > 0 ? (
           <Tooltip
             side='bottom'
@@ -99,19 +91,6 @@ export default function Preview({
             Run prompt
           </Button>
         )}
-        <Link
-          href={
-            ROUTES.projects
-              .detail({ id: project.id })
-              .commits.detail({ uuid: commit.uuid })
-              .documents.detail({ uuid: document.documentUuid }).editor.runBatch
-              .root
-          }
-        >
-          <Button fancy variant='outline'>
-            Run in batch
-          </Button>
-        </Link>
       </div>
     </div>
   )

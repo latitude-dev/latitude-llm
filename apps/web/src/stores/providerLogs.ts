@@ -4,7 +4,10 @@ import { compact } from 'lodash-es'
 
 import { ProviderLogDto } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui'
-import { getProviderLogsAction } from '$/actions/providerLogs/fetch'
+import {
+  getProviderLogAction,
+  getProviderLogsAction,
+} from '$/actions/providerLogs/fetch'
 import useSWR, { SWRConfiguration } from 'swr'
 
 export default function useProviderLogs(
@@ -22,7 +25,6 @@ export default function useProviderLogs(
   } = useSWR<ProviderLogDto[]>(
     compact(['providerLogs', documentUuid, documentLogUuid]),
     async () => {
-      // TODO: Move to regula HTTP GET
       const [data, error] = await getProviderLogsAction({
         documentUuid,
         documentLogUuid,
@@ -66,29 +68,22 @@ export function useProviderLog(
     async () => {
       if (!providerLogId) return undefined
 
-      try {
-        const response = await fetch(`/api/providerLogs/${providerLogId}`)
-        if (!response.ok) {
-          toast({
-            title: 'Error fetching provider log',
-            description: response.statusText,
-            variant: 'destructive',
-          })
-          return
-        }
-        const data = await response.json()
-        return data
-      } catch (error) {
+      const [data, error] = await getProviderLogAction({
+        providerLogId,
+      })
+
+      if (error) {
+        console.error(error)
+
         toast({
           title: 'Error fetching provider log',
-          description:
-            error instanceof Error
-              ? error.message
-              : 'An unknown error occurred',
+          description: error.formErrors?.[0] || error.message,
           variant: 'destructive',
         })
-        return
+        return undefined
       }
+
+      return data
     },
     opts,
   )

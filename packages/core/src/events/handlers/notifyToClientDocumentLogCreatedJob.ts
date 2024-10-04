@@ -2,7 +2,6 @@ import { DocumentLogCreatedEvent } from '.'
 import { findWorkspaceFromDocumentLog } from '../../data-access'
 import { findCommitById } from '../../data-access/commits'
 import { NotFoundError } from '../../lib'
-import { computeDocumentLogWithMetadata } from '../../services/documentLogs'
 import { WebsocketClient } from '../../websockets/workers'
 
 export const notifyToClientDocumentLogCreatedJob = async ({
@@ -18,12 +17,7 @@ export const notifyToClientDocumentLogCreatedJob = async ({
     r.unwrap(),
   )
 
-  const documentLogWithMetadata = await computeDocumentLogWithMetadata(
-    documentLog,
-  ).then((r) => r.unwrap())
-
   const websockets = await WebsocketClient.getSocket()
-
   websockets.emit('documentLogCreated', {
     workspaceId: workspace.id,
     data: {
@@ -31,7 +25,6 @@ export const notifyToClientDocumentLogCreatedJob = async ({
       documentUuid: documentLog.documentUuid,
       documentLogId: documentLog.id,
       commitUuid: commit.uuid,
-      documentLogWithMetadata,
     },
   })
 }

@@ -290,15 +290,6 @@ export type BatchEvaluationRunRequestedEvent = LatitudeEventGeneric<
   }
 >
 
-export type RunDocumentInBatchRequestedEvent = LatitudeEventGeneric<
-  'runDocumentInBatchRequested',
-  {
-    document: DocumentVersion
-    workspaceId: number
-    userEmail: string
-  }
->
-
 export type LatitudeEvent =
   | MembershipCreatedEvent
   | UserCreatedEvent
@@ -325,7 +316,6 @@ export type LatitudeEvent =
   | DocumentRunRequestedEvent
   | ChatMessageRequestedEvent
   | BatchEvaluationRunRequestedEvent
-  | RunDocumentInBatchRequestedEvent
 
 export interface IEventsHandlers {
   magicLinkTokenCreated: EventHandler<MagicLinkTokenCreated>[]
@@ -353,7 +343,6 @@ export interface IEventsHandlers {
   documentRunRequested: EventHandler<DocumentRunRequestedEvent>[]
   chatMessageRequested: EventHandler<ChatMessageRequestedEvent>[]
   batchEvaluationRunRequested: EventHandler<BatchEvaluationRunRequestedEvent>[]
-  runDocumentInBatchRequested: EventHandler<RunDocumentInBatchRequestedEvent>[]
 }
 
 export const EventHandlers: IEventsHandlers = {
@@ -385,5 +374,4 @@ export const EventHandlers: IEventsHandlers = {
   documentRunRequested: [],
   chatMessageRequested: [],
   batchEvaluationRunRequested: [],
-  runDocumentInBatchRequested: [],
 } as const

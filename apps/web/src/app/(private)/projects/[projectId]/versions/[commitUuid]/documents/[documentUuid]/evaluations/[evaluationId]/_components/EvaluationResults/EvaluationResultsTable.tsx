@@ -56,7 +56,7 @@ export const ResultCellContent = ({
   return <Text.H4 noWrap>{value as string}</Text.H4>
 }
 
-export type EvaluationResultRow = EvaluationResultWithMetadata & {
+type EvaluationResultRow = EvaluationResultWithMetadata & {
   realtimeAdded?: boolean
 }
 export const EvaluationResultsTable = ({

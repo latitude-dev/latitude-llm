@@ -24,9 +24,7 @@ type RunDocumentJobData = {
   batchId: string
 }
 
-export const runDocumentForEvaluationJob = async (
-  job: Job<RunDocumentJobData>,
-) => {
+export const runDocumentJob = async (job: Job<RunDocumentJobData>) => {
   const {
     workspaceId,
     documentUuid,

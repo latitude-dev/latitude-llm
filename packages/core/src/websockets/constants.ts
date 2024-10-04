@@ -3,10 +3,7 @@
 // All this can be seen in the browser. If you want something private
 // put in other place.
 
-import {
-  DocumentLogWithMetadata,
-  type EvaluationResultWithMetadata,
-} from '../repositories'
+import { type EvaluationResultWithMetadata } from '../repositories'
 
 const ONE_HOUR = 60 * 60 * 1000
 const SEVEN_DAYS = 7 * 24 * ONE_HOUR
@@ -31,14 +28,6 @@ export type WebSocketData = {
 }
 export type WorkerPayload = {}
 
-type DocumentBatchRunStatusArgs = {
-  documentUuid: string
-  total: number
-  completed: number
-  errors: number
-  enqueued: number
-}
-
 type EvaluationStatusArgs = {
   batchId: string
   evaluationId: number
@@ -62,11 +51,9 @@ type DocumentLogCreatedArgs = {
   documentUuid: string
   commitUuid: string
   documentLogId: number
-  documentLogWithMetadata: DocumentLogWithMetadata
 }
 
 export type WebServerToClientEvents = {
-  documentBatchRunStatus: (args: DocumentBatchRunStatusArgs) => void
   evaluationStatus: (args: EvaluationStatusArgs) => void
   evaluationResultCreated: (args: EvaluationResultCreatedArgs) => void
   joinWorkspace: (args: { workspaceId: number; userId: string }) => void
@@ -78,10 +65,6 @@ export type WebClientToServerEvents = {
 }
 
 export type WorkersClientToServerEvents = {
-  documentBatchRunStatus: (args: {
-    workspaceId: number
-    data: DocumentBatchRunStatusArgs
-  }) => void
   evaluationStatus: (args: {
     workspaceId: number
     data: EvaluationStatusArgs

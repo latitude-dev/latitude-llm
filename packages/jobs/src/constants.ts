@@ -2,10 +2,8 @@ import { createProviderLogJob } from '@latitude-data/core/events/handlers/create
 import { EventHandlers } from '@latitude-data/core/events/handlers/index'
 
 import { runBatchEvaluationJob } from './job-definitions/batchEvaluations/runBatchEvaluationJob'
-import { runDocumentForEvaluationJob } from './job-definitions/batchEvaluations/runDocumentJob'
+import { runDocumentJob } from './job-definitions/batchEvaluations/runDocumentJob'
 import { runEvaluationJob } from './job-definitions/batchEvaluations/runEvaluationJob'
-import { runDocumentInBatchJob } from './job-definitions/documents/runDocumentInBatchJob'
-import { runDocumentJob } from './job-definitions/documents/runDocumentJob'
 import { createEventJob } from './job-definitions/events/createEventJob'
 import { publishEventJob } from './job-definitions/events/publishEventJob'
 import { publishToAnalyticsJob } from './job-definitions/events/publishToAnalyticsJob'
@@ -31,12 +29,10 @@ export const QUEUES = {
   [Queues.defaultQueue]: {
     name: Queues.defaultQueue,
     jobs: [
-      createProviderLogJob,
       runBatchEvaluationJob,
-      runDocumentInBatchJob,
-      runDocumentForEvaluationJob,
       runDocumentJob,
       runEvaluationJob,
+      createProviderLogJob,
     ],
   },
   [Queues.eventsQueue]: {

@@ -138,13 +138,8 @@ function CommitItem({
     const documentRoute = commitRoute.documents.detail({
       uuid: currentDocument.documentUuid,
     })
-
     if (!selectedSegment) return documentRoute.editor.root
-
-    return (
-      documentRoute[selectedSegment as 'editor' | 'logs']?.root ??
-      documentRoute.editor.root
-    )
+    return documentRoute[selectedSegment as 'editor' | 'logs'].root
   }, [project.id, commit.uuid, isHead, currentDocument, selectedSegment])
 
   const navigateToCommit = useCallback(() => {
