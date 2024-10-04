@@ -1,8 +1,8 @@
 import { Message } from '@latitude-data/compiler'
 import { v4 } from 'uuid'
 
-import { LogSources, ProviderApiKey } from '../../../browser'
-import { StreamCommonData, StreamType } from '../../../events/handlers'
+import { LogSources, ProviderApiKey, StreamType } from '../../../browser'
+import { StreamCommonData } from '../../../events/handlers'
 import { AIReturn, PartialConfig } from '../../ai'
 import { processStreamObject } from './processStreamObject'
 import { processStreamText } from './processStreamText'

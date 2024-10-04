@@ -2,17 +2,16 @@ import { Message, MessageRole } from '@latitude-data/compiler'
 import { CoreTool, ObjectStreamPart, TextStreamPart } from 'ai'
 
 import {
-  ChainCallResponse,
   ChainEvent,
   ChainEventTypes,
-  ChainObjectResponse,
-  ChainTextResponse,
+  ChainStepResponse,
   LogSources,
   objectToString,
   ProviderApiKey,
   ProviderData,
   ProviderLog,
   StreamEventTypes,
+  StreamType,
   Workspace,
 } from '../../browser'
 import { unsafelyFindProviderApiKey } from '../../data-access'
@@ -45,13 +44,15 @@ export async function addMessages({
     )
   }
 
-  let responseResolve: (value: ChainCallResponse) => void
+  let responseResolve: (value: ChainStepResponse<StreamType>) => void
   let responseReject: (reason?: any) => void
 
-  const response = new Promise<ChainCallResponse>((resolve, reject) => {
-    responseResolve = resolve
-    responseReject = reject
-  })
+  const response = new Promise<ChainStepResponse<StreamType>>(
+    (resolve, reject) => {
+      responseResolve = resolve
+      responseReject = reject
+    },
+  )
 
   const stream = new ReadableStream<ChainEvent>({
     start(controller) {
@@ -128,7 +129,13 @@ async function streamMessageResponse({
       saveSyncProviderLogs: true,
     })
     const providerLog = response.providerLog!
-
+    const isStreamText = response.streamType === 'text'
+    const isStreamObject = response.streamType === 'object'
+    const textContent = isStreamText
+      ? response.text
+      : isStreamObject
+        ? objectToString(response.object)
+        : ''
     enqueueChainEvent(controller, {
       event: StreamEventTypes.Latitude,
       data: {
@@ -138,18 +145,14 @@ async function streamMessageResponse({
         messages: [
           {
             role: MessageRole.assistant,
-            toolCalls: (response as ChainTextResponse).toolCalls,
-            content:
-              response.text ||
-              objectToString((response as ChainObjectResponse).object),
+            toolCalls: isStreamText ? response.toolCalls : [],
+            content: textContent,
           },
         ],
         response: {
           ...response,
           providerLog,
-          text:
-            response.text ||
-            objectToString((response as ChainObjectResponse).object),
+          text: textContent,
         },
       },
     })
@@ -159,9 +162,7 @@ async function streamMessageResponse({
     return {
       ...response,
       providerLog,
-      text:
-        response.text ||
-        objectToString((response as ChainObjectResponse).object),
+      text: textContent,
     }
   } catch (e) {
     const error = e as Error

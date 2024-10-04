@@ -8,14 +8,14 @@ import { CachedApiKeys, runChain } from '../chains/run'
 export async function runPrompt({
   workspace,
   parameters,
-  apikeys,
+  providersMap,
   prompt,
   source,
 }: {
   workspace: Workspace
   parameters: Record<string, unknown>
   prompt: string
-  apikeys: CachedApiKeys
+  providersMap: CachedApiKeys
   source: LogSources
 }) {
   let metadata
@@ -29,6 +29,6 @@ export async function runPrompt({
   }
 
   const chain = createChain({ prompt: metadata.resolvedPrompt, parameters })
-
-  return await runChain({ workspace, chain, apikeys, source })
+  const run = await runChain({ workspace, chain, providersMap, source })
+  return Result.ok(run)
 }
