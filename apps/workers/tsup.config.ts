@@ -23,10 +23,5 @@ export default defineConfig({
     '.html': 'empty',
   },
   external: [...rootDependencies, ...dependencies],
-  noExternal: [
-    '@latitude-data/env',
-    '@latitude-data/jobs',
-    '@latitude-data/core',
-    '@latitude-data/mailers',
-  ],
+  noExternal: ['@latitude-data/env', '@latitude-data/core'],
 })

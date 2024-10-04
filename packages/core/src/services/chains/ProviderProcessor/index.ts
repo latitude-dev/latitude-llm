@@ -2,7 +2,7 @@ import { Message } from '@latitude-data/compiler'
 import { v4 } from 'uuid'
 
 import { LogSources, ProviderApiKey, StreamType } from '../../../browser'
-import { StreamCommonData } from '../../../events/handlers'
+import { StreamCommonData } from '../../../events/events'
 import { AIReturn, PartialConfig } from '../../ai'
 import { processStreamObject } from './processStreamObject'
 import { processStreamText } from './processStreamText'

@@ -1,5 +1,5 @@
 import { database } from '../../client'
-import { LatitudeEvent } from '../../events/handlers'
+import { LatitudeEvent } from '../../events/events'
 import { Result, Transaction } from '../../lib'
 import { events } from '../../schema'
 

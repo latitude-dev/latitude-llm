@@ -16,8 +16,6 @@
   "dependencies": {
     "@latitude-data/core": "workspace:^",
     "@latitude-data/env": "workspace:^",
-    "@latitude-data/jobs": "workspace:^",
-    "@latitude-data/mailers": "workspace:^",
     "@sentry/node": "^8.30.0",
     "@t3-oss/env-core": "*",
     "zod": "^3.23.8"

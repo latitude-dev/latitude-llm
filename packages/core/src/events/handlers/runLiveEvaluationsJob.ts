@@ -1,9 +1,8 @@
-import { setupJobs } from '@latitude-data/jobs'
-
-import { DocumentLogCreatedEvent } from '.'
 import { findWorkspaceFromDocumentLog } from '../../data-access'
+import { setupJobs } from '../../jobs'
 import { NotFoundError } from '../../lib'
 import { EvaluationsRepository } from '../../repositories'
+import { DocumentLogCreatedEvent } from '../events'
 
 export const runLiveEvaluationsJob = async ({
   data: event,

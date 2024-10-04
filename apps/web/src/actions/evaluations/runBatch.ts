@@ -2,11 +2,11 @@
 
 import { readMetadata } from '@latitude-data/compiler'
 import { publisher } from '@latitude-data/core/events/publisher'
+import { setupJobs } from '@latitude-data/core/jobs'
 import {
   DatasetsRepository,
   EvaluationsRepository,
 } from '@latitude-data/core/repositories'
-import { setupJobs } from '@latitude-data/jobs'
 import { nanoid } from 'nanoid'
 import { z } from 'zod'
 import { createServerActionProcedure } from 'zsa'

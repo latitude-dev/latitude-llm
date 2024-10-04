@@ -1,5 +1,5 @@
 import { ChainStepResponse } from '../../../constants'
-import { StreamCommonData } from '../../../events/handlers'
+import { StreamCommonData } from '../../../events/events'
 import { objectToString } from '../../../helpers'
 import { AIReturn } from '../../ai'
 import { saveOrPublishProviderLogs } from './saveOrPublishProviderLogs'

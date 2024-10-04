@@ -1,8 +1,7 @@
-import { InvitationMailer } from '@latitude-data/mailers'
-
-import { MembershipCreatedEvent } from '.'
 import { unsafelyGetUser } from '../../data-access'
 import { NotFoundError } from '../../lib'
+import { InvitationMailer } from '../../mailers'
+import { MembershipCreatedEvent } from '../events'
 
 export const sendInvitationToUserJob = async ({
   data: event,

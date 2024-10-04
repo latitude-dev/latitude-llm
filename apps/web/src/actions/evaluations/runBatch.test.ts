@@ -35,7 +35,7 @@ vi.mock('$/services/auth/getSession', () => ({
   getSession: mocks.getSession,
 }))
 
-vi.mock('@latitude-data/jobs', () => ({
+vi.mock('@latitude-data/core/jobs', () => ({
   setupJobs: vi.fn().mockImplementation(() => mocks.queues),
 }))
 

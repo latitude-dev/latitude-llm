@@ -1,8 +1,8 @@
-import * as factories from '@latitude-data/core/factories'
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import { database } from '../../client'
 import { users } from '../../schema'
+import * as factories from '../../tests/factories'
 import { paginateQuery } from './paginate'
 
 const pageUrl = { base: 'http://localhost/my-page' }
