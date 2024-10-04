@@ -22,6 +22,9 @@ export async function generateDatasetPreviewAction({
     { event: StreamEventTypes; data: ChainEventDto },
     Error
   >()
+
+  console.log("DATASET_PROJECT_ID", env.DATASET_GENERATOR_PROJECT_ID)
+
   if (!env.DATASET_GENERATOR_PROJECT_ID) {
     throw new BadRequestError('DATASET_GENERATOR_PROJECT_ID is not set')
   }

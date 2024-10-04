@@ -44,7 +44,6 @@ if (environment !== 'production') {
       NEXT_PUBLIC_POSTHOG_KEY: '',
       NEXT_PUBLIC_POSTHOG_HOST: '',
       DATASET_GENERATOR_DOCUMENT_PATH: 'generator',
-      DATASET_GENERATOR_PROJECT_ID: '20',
       TEMPLATES_SUGGESTION_PROJECT_ID: '6',
       TEMPLATES_SUGGESTION_PROMPT_PATH: 'evaluation-suggestions',
     },
@@ -95,7 +94,6 @@ export const env = createEnv({
       .transform((value) => value === 'true')
       .optional()
       .default('true'),
-    // FIXME: set this in env file too
     DATASET_GENERATOR_PROJECT_ID: z.coerce.number().optional(),
     DATASET_GENERATOR_DOCUMENT_PATH: z.string().optional(),
     DATASET_GENERATOR_WORKSPACE_APIKEY: z.string().optional(),
@@ -110,8 +108,6 @@ export const env = createEnv({
     DRIVE_DISK: process.env.DRIVE_DISK ?? 'local',
     FILE_PUBLIC_PATH: process.env.FILE_PUBLIC_PATH ?? FILE_PUBLIC_PATH,
     QUEUE_PORT: process.env.QUEUE_PORT ?? '6379',
-    DATASET_GENERATOR_PROJECT_ID: process.env.DATASET_GENERATOR_PROJECT_ID,
-    DATASET_GENERATOR_DOCUMENT_PATH: process.env.DATASET_GENERATOR_DOCUMENT_PATH,
-    DATASET_GENERATOR_WORKSPACE_APIKEY: process.env.DATASET_GENERATOR_WORKSPACE_APIKEY,
+    DATASET_GENERATOR_PROJECT_ID: 4
   },
 })
