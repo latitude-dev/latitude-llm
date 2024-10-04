@@ -3,7 +3,7 @@ Resources:
   - TargetService:
       Type: AWS::ECS::Service
       Properties:
-        TaskDefinition: arn:aws:ecs:eu-central-1:442420265876:task-definition/LatitudeLLMAppTaskFamily:1
+        TaskDefinition: '<PLACEHOLDER_TASK_DEFINITION_ARN>'
         LoadBalancerInfo:
           ContainerName: 'LatitudeLLMAppContainer'
           ContainerPort: 8080

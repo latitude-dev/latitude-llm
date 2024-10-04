@@ -21,6 +21,10 @@ const coreRepo = webProductionStack.requireOutput(
 
 const token = await aws.ecr.getAuthorizationToken()
 
+if (!process.env.IMAGE_TAG) {
+  throw new Error('IMAGE_TAG is not set')
+}
+
 pulumi.all([sentryDsn, sentryOrg, sentryProject, postHogApiKey]).apply(
   ([sentryDsn, sentryOrg, sentryProject, postHogApiKey]) =>
     new docker.Image('LatitudeLLMAppImage', {
@@ -39,7 +43,7 @@ pulumi.all([sentryDsn, sentryOrg, sentryProject, postHogApiKey]).apply(
           NEXT_PUBLIC_POSTHOG_HOST: 'https://eu.i.posthog.com',
         },
       },
-      imageName: pulumi.interpolate`${repo.repositoryUrl}:latest`,
+      imageName: pulumi.interpolate`${repo.repositoryUrl}:${process.env.IMAGE_TAG}`,
       registry: {
         server: repo.repositoryUrl,
         username: token.userName,
@@ -56,7 +60,7 @@ new docker.Image('LatitudeLLMCoreImage', {
       images: [pulumi.interpolate`${coreRepo.repositoryUrl}:latest`],
     },
   },
-  imageName: pulumi.interpolate`${coreRepo.repositoryUrl}:latest`,
+  imageName: pulumi.interpolate`${coreRepo.repositoryUrl}:${process.env.IMAGE_TAG}`,
   registry: {
     server: coreRepo.repositoryUrl,
     username: token.userName,

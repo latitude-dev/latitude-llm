@@ -81,6 +81,9 @@ jobs:
           aws-region: eu-central-1
           role-skip-session-tagging: true
 
+      - name: Generate unique image tag
+        run: echo "IMAGE_TAG=$(date +%Y%m%d-%H%M%S)-${GITHUB_SHA::8}" >> $GITHUB_ENV
+
       - name: Build & push docker images
         working-directory: apps/infra
         run: |
@@ -88,6 +91,19 @@ jobs:
           pulumi up --stack docker-production-web --yes
         env:
           PULUMI_CONFIG_PASSPHRASE: ${{ secrets.PULUMI_CONFIG_PASSPHRASE }}
+          IMAGE_TAG: ${{ env.IMAGE_TAG }}
+
+      - name: Create new task definition
+        run: |
+          TASK_DEFINITION=$(aws ecs describe-task-definition --task-definition LatitudeLLMAppTaskFamily --query taskDefinition)
+          NEW_TASK_DEFINITION=$(echo $TASK_DEFINITION | jq '.containerDefinitions[0].image = "'${{ env.IMAGE_TAG }}'" | .containerDefinitions[1].image = "'${{ env.IMAGE_TAG }}'"')
+          echo $NEW_TASK_DEFINITION > new-task-definition.json
+          NEW_TASK_DEFINITION_ARN=$(aws ecs register-task-definition --cli-input-json file://new-task-definition.json --query taskDefinition.taskDefinitionArn --output text)
+          echo "NEW_TASK_DEFINITION_ARN=$NEW_TASK_DEFINITION_ARN" >> $GITHUB_ENV
+
+      - name: Update AppSpec with new task definition
+        run: |
+          sed -i 's|TaskDefinition: .*|TaskDefinition: '"$NEW_TASK_DEFINITION_ARN"'|' apps/web/appspec.yml
 
       - name: Deploy with CodeDeploy
         working-directory: apps/web

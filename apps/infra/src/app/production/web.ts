@@ -33,7 +33,7 @@ const taskDefinition = pulumi
   .apply(
     ([logGroupName, imageName, coreImageName, environment]) =>
       new aws.ecs.TaskDefinition('LatitudeLLMAppTaskDefinition', {
-        family: 'LatitudeLLMTaskFamily',
+        family: 'LatitudeLLMAppTaskFamily',
         cpu: '256',
         memory: '512',
         networkMode: 'awsvpc',

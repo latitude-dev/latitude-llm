@@ -49,7 +49,7 @@ const taskDefinition = pulumi
   .apply(
     ([logGroupName, imageName, environment]) =>
       new aws.ecs.TaskDefinition('LatitudeLLMWebsocketsTaskDefinition', {
-        family: 'LatitudeLLMTaskFamily',
+        family: 'LatitudeLLMWebsocketsTaskFamily',
         cpu: '256',
         memory: '512',
         networkMode: 'awsvpc',
