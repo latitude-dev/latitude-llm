@@ -44,10 +44,6 @@ if (environment !== 'production') {
       NEXT_PUBLIC_POSTHOG_KEY: '',
       NEXT_PUBLIC_POSTHOG_HOST: '',
       DATASET_GENERATOR_DOCUMENT_PATH: 'generator',
-      DATASET_GENERATOR_PROJECT_ID: '20',
-      DATASET_GENERATOR_WORKSPACE_APIKEY:
-        'd7c94cc1-72a8-4252-b1a8-3e6b3cf9c29f',
-      TEMPLATES_SUGGESTION_PROJECT_ID: '6',
       TEMPLATES_SUGGESTION_PROMPT_PATH: 'evaluation-suggestions',
     },
     { path: pathToEnv },

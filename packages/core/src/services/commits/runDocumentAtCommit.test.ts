@@ -247,6 +247,7 @@ This is a test document
             type: 'chain-step-complete',
             documentLogUuid: expect.any(String),
             response: {
+              streamType: 'text',
               documentLogUuid: expect.any(String),
               text: 'Fake AI generated text',
               toolCalls: [],
@@ -291,6 +292,7 @@ This is a test document
               },
             ],
             response: {
+              streamType: 'text',
               text: 'Fake AI generated text',
               toolCalls: [],
               usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },

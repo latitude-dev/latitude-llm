@@ -2,7 +2,7 @@ import { createChain, readMetadata } from '@latitude-data/compiler'
 import { JSONSchema7 } from 'json-schema'
 
 import {
-  ChainObjectResponse,
+  ChainStepResponse,
   DocumentLog,
   EvaluationDto,
   EvaluationResultableType,
@@ -18,7 +18,7 @@ import { NotFoundError, Result } from '../../lib'
 import { runChain } from '../chains/run'
 import { computeDocumentLogWithMetadata } from '../documentLogs'
 import { createEvaluationResult } from '../evaluationResults'
-import { buildProviderApikeysMap } from '../providerApiKeys/buildMap'
+import { buildProvidersMap } from '../providerApiKeys/buildMap'
 import {
   buildProviderLogResponse,
   formatContext,
@@ -101,32 +101,30 @@ export const runEvaluation = async (
     required: ['result', 'reason'],
   }
 
-  const chainResult = await runChain({
+  const providersMap = await buildProvidersMap({
+    workspaceId: evaluation.workspaceId,
+  })
+  const run = await runChain({
     workspace,
     chain,
     source: LogSources.Evaluation,
-    apikeys: await buildProviderApikeysMap({
-      workspaceId: evaluation.workspaceId,
-    }),
+    providersMap,
     configOverrides: {
       schema,
       output: 'object',
     },
   })
 
-  if (chainResult.error) return chainResult
-
-  // Call the new method to handle the promise
-  chainResult.value.response.then((response) =>
-    handleEvaluationResponse(response, documentUuid, evaluation, documentLog),
+  const response = run.response as Promise<ChainStepResponse<'object'>>
+  response.then((res) =>
+    handleEvaluationResponse(res, documentUuid, evaluation, documentLog),
   )
 
-  return chainResult
+  return Result.ok(run)
 }
 
-// Moved to the end of the file
 async function handleEvaluationResponse(
-  response: any,
+  response: ChainStepResponse<'object'>,
   documentUuid: string,
   evaluation: EvaluationDto,
   documentLog: DocumentLog,
@@ -134,11 +132,11 @@ async function handleEvaluationResponse(
   publisher.publishLater({
     type: 'evaluationRun',
     data: {
+      response,
       documentUuid,
       evaluationId: evaluation.id,
       documentLogUuid: documentLog.uuid,
-      providerLogUuid: response.providerLog.uuid,
-      response,
+      providerLogUuid: response.providerLog!.uuid,
       workspaceId: evaluation.workspaceId,
     },
   })
@@ -146,7 +144,7 @@ async function handleEvaluationResponse(
   await createEvaluationResult({
     evaluation,
     documentLog,
-    providerLog: response.providerLog,
-    result: (response as ChainObjectResponse).object,
+    providerLog: response.providerLog!,
+    result: response.object,
   }).then((r) => r.unwrap())
 }
