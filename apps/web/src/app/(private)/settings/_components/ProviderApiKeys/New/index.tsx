@@ -4,6 +4,7 @@ import { Providers } from '@latitude-data/core/browser'
 import {
   Button,
   CloseTrigger,
+  FormField,
   FormWrapper,
   Input,
   Modal,
@@ -50,39 +51,43 @@ export default function NewApiKey({
     >
       <form id='createApiKeyForm' action={action}>
         <FormWrapper>
-          <Select
-            required
-            label='Provider'
-            name='provider'
-            onChange={(newValue) => setProviderType(newValue)}
-            defaultValue={data?.provider}
-            options={PROVIDER_OPTIONS}
-          />
-          <Input
-            required
-            type='text'
-            label='ID'
-            name='name'
-            defaultValue={data?.name}
-            placeholder={isCustom ? 'My server' : 'My API key'}
-          />
-          <Input
-            required
-            label='Token'
-            type='text'
-            name='token'
-            defaultValue={data?.token}
-            placeholder='sk-0dfdsn23bm4m23n4MfB'
-          />
-          {isCustom && (
+          <FormField label='Provider'>
+            <Select
+              required
+              name='provider'
+              onChange={(newValue) => setProviderType(newValue)}
+              defaultValue={data?.provider}
+              options={PROVIDER_OPTIONS}
+            />
+          </FormField>
+          <FormField label='Name'>
             <Input
               required
-              label='URL'
               type='text'
-              name='url'
-              defaultValue={data?.url}
-              placeholder='http://localhost:11434/v1'
+              name='name'
+              defaultValue={data?.name}
+              placeholder='My API Key'
             />
+          </FormField>
+          <FormField label='Token'>
+            <Input
+              required
+              type='text'
+              name='token'
+              defaultValue={data?.token}
+              placeholder='sk-0dfdsn23bm4m23n4MfB'
+            />
+          </FormField>
+          {isCustom && (
+            <FormField label='URL' info='URL to an OpenAI compatible API'>
+              <Input
+                required
+                type='text'
+                name='url'
+                defaultValue={data?.url}
+                placeholder='http://localhost:11434/v1'
+              />
+            </FormField>
           )}
         </FormWrapper>
       </form>

@@ -1,9 +1,9 @@
-import type {
-  Commit,
-  Project,
-  ProviderApiKey,
-  User,
-  Workspace,
+import {
+  type Commit,
+  type Project,
+  type ProviderApiKey,
+  type User,
+  type Workspace,
 } from '@latitude-data/core/browser'
 import { database } from '@latitude-data/core/client'
 import * as factories from '@latitude-data/core/factories'
@@ -25,7 +25,7 @@ let user: User
 let commit: Commit
 let provider: ProviderApiKey
 
-describe('getUsersAction', () => {
+describe('deleteDraftCommitAction', () => {
   beforeEach(async () => {
     const {
       commit: cmt,

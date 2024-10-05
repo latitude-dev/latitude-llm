@@ -1,5 +1,6 @@
-import { Providers } from '@latitude-data/core/browser'
+import { Providers, Workspace } from '@latitude-data/core/browser'
 import * as factories from '@latitude-data/core/factories'
+import { User } from 'lucia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { createProviderApiKeyAction } from './create'
@@ -36,8 +37,14 @@ describe('createProviderApiKeyAction', () => {
   })
 
   describe('authorized', () => {
+    let workspace: Workspace
+    let user: User
+
     beforeEach(async () => {
-      const { userData, workspace } = await factories.createWorkspace()
+      const { userData, workspace: w } = await factories.createWorkspace()
+
+      user = userData
+      workspace = w
 
       mocks.getSession.mockReturnValue({
         user: userData,
@@ -80,6 +87,26 @@ describe('createProviderApiKeyAction', () => {
         provider: Providers.Custom,
         token: 'test-token',
         name: 'Test API Key',
+      })
+
+      expect(data).toBeNull()
+      expect(error).toBeDefined()
+    })
+
+    it('returns proper error when duplicate name', async () => {
+      await factories.createProviderApiKey({
+        workspace,
+        type: Providers.OpenAI,
+        name: 'foo',
+        // @ts-expect-error - Testing invalid input
+        user,
+      })
+
+      const [data, error] = await createProviderApiKeyAction({
+        provider: Providers.OpenAI,
+        token: 'test-token',
+        name: 'foo',
+        url: 'https://api.openai.com',
       })
 
       expect(data).toBeNull()
