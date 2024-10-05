@@ -1,7 +1,7 @@
 import { Providers, User, Workspace } from '../../browser'
 import { database } from '../../client'
 import { publisher } from '../../events/publisher'
-import { Result, Transaction } from '../../lib'
+import { BadRequestError, Result, Transaction } from '../../lib'
 import { providerApiKeys } from '../../schema'
 
 export type Props = {
@@ -17,6 +17,10 @@ export function createProviderApiKey(
   db = database,
 ) {
   return Transaction.call(async (tx) => {
+    if (provider === Providers.Custom && !url) {
+      return Result.error(new BadRequestError('Custom provider requires a URL'))
+    }
+
     const result = await tx
       .insert(providerApiKeys)
       .values({
