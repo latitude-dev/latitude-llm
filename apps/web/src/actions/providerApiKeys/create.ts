@@ -13,7 +13,7 @@ export const createProviderApiKeyAction = authProcedure
     z.object({
       provider: z.nativeEnum(Providers),
       token: z.string(),
-      url: z.string(),
+      url: z.string().optional(),
       name: z.string(),
     }),
   )
