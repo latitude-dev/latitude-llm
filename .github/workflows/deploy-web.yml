@@ -82,7 +82,7 @@ jobs:
           role-skip-session-tagging: true
 
       - name: Generate unique image tag
-        run: echo "IMAGE_TAG=$(date +%Y%m%d-%H%M%S)-${GITHUB_SHA::8}" >> $GITHUB_ENV
+        run: echo "IMAGE_TAG=$(date +%Y%m%d-%H%M%S)-${GITHUB_SHA}" >> $GITHUB_ENV
 
       - name: Build & push docker images
         working-directory: apps/infra
