@@ -34,8 +34,8 @@ jobs:
             echo "changes_detected=false" >> $GITHUB_OUTPUT
           fi
   deployment:
-    # TODO: uncomment this
-    # needs: check_changes
+    needs: check_changes
+    if: needs.check_changes.outputs.changes_detected == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -81,18 +81,17 @@ jobs:
           aws-region: eu-central-1
           role-skip-session-tagging: true
 
-      # TODO: uncomment this
-      # - name: Generate unique image tag
-      #   run: echo "IMAGE_TAG=$(date +%Y%m%d-%H%M%S)-${GITHUB_SHA::8}" >> $GITHUB_ENV
+      - name: Generate unique image tag
+        run: echo "IMAGE_TAG=$(date +%Y%m%d-%H%M%S)-${GITHUB_SHA::8}" >> $GITHUB_ENV
 
-      # - name: Build & push docker images
-      #   working-directory: apps/infra
-      #   run: |
-      #     echo "Deploying Pulumi stack: docker-production-web"
-      #     pulumi up --stack docker-production-web --yes
-      #   env:
-      #     PULUMI_CONFIG_PASSPHRASE: ${{ secrets.PULUMI_CONFIG_PASSPHRASE }}
-      #     IMAGE_TAG: ${{ env.IMAGE_TAG }}
+      - name: Build & push docker images
+        working-directory: apps/infra
+        run: |
+          echo "Deploying Pulumi stack: docker-production-web"
+          pulumi up --stack docker-production-web --yes
+        env:
+          PULUMI_CONFIG_PASSPHRASE: ${{ secrets.PULUMI_CONFIG_PASSPHRASE }}
+          IMAGE_TAG: ${{ env.IMAGE_TAG }}
 
       - name: Create new task definition
         run: |
@@ -102,9 +101,8 @@ jobs:
           echo $NEW_TASK_DEFINITION > new-task-definition.json
           NEW_TASK_DEFINITION_ARN=$(aws ecs register-task-definition --cli-input-json file://new-task-definition.json --query taskDefinition.taskDefinitionArn --output text)
           echo "NEW_TASK_DEFINITION_ARN=$NEW_TASK_DEFINITION_ARN" >> $GITHUB_ENV
-        # TODO: remove
         env:
-          IMAGE_TAG: 20241005-025529-2af55b97
+          IMAGE_TAG: ${{ env.IMAGE_TAG }}
 
       - name: Update AppSpec with new task definition
         run: |
