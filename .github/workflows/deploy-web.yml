@@ -96,8 +96,9 @@ jobs:
 
       - name: Create new task definition
         run: |
+          AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query "Account" --output text)
           TASK_DEFINITION=$(aws ecs describe-task-definition --task-definition LatitudeLLMAppTaskFamily --query 'taskDefinition')
-          NEW_TASK_DEFINITION=$(echo $TASK_DEFINITION | jq 'del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy) | .containerDefinitions[0].image = "'${{ env.IMAGE_TAG }}'" | .containerDefinitions[1].image = "'${{ env.IMAGE_TAG }}'"')
+          NEW_TASK_DEFINITION=$(echo $TASK_DEFINITION | jq 'del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy) | .containerDefinitions[0].image = "'"$AWS_ACCOUNT_ID"'.dkr.ecr.eu-central-1.amazonaws.com/latitude-llm-app-repo-43d71dc:${{ env.IMAGE_TAG }}" | .containerDefinitions[1].image = "'"$AWS_ACCOUNT_ID"'.dkr.ecr.eu-central-1.amazonaws.com/latitude-llm-core-repo-43d71dc:${{ env.IMAGE_TAG }}"')
           echo $NEW_TASK_DEFINITION > new-task-definition.json
           NEW_TASK_DEFINITION_ARN=$(aws ecs register-task-definition --cli-input-json file://new-task-definition.json --query taskDefinition.taskDefinitionArn --output text)
           echo "NEW_TASK_DEFINITION_ARN=$NEW_TASK_DEFINITION_ARN" >> $GITHUB_ENV
