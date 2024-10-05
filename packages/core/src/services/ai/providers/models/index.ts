@@ -5,6 +5,7 @@ export enum Providers {
   Mistral = 'mistral',
   Azure = 'azure',
   Google = 'google',
+  Custom = 'custom',
 }
 const OPEN_AI_MODELS = {
   'gpt-4o-mini': 'gpt-4o-mini',
@@ -58,6 +59,7 @@ export const PROVIDER_MODELS: Partial<
     'mistral-medium-latest': 'mistral-medium-latest',
   },
   [Providers.Azure]: OPEN_AI_MODELS,
+  [Providers.Custom]: {},
   // FIXME: Add models for Google
 }
 

@@ -28,6 +28,8 @@ function getCostPer1M({
       return getCostPer1MMistral(model)
     case Providers.Azure:
       return getCostPer1MOpenAI(model)
+    case Providers.Custom:
+      return { input: 0, output: 0 }
     // FIXME: Add Google costs
     default:
       throw new Error(`Unknown provider: ${provider}`)

@@ -21,6 +21,7 @@ export const providersEnum = latitudeSchema.enum('provider', [
   Providers.Mistral,
   Providers.Azure,
   Providers.Google,
+  Providers.Custom,
 ])
 
 export const providerApiKeys = latitudeSchema.table(
@@ -30,6 +31,7 @@ export const providerApiKeys = latitudeSchema.table(
     name: varchar('name').notNull(),
     token: varchar('token').notNull(),
     provider: providersEnum('provider').notNull(),
+    url: varchar('url'),
     authorId: text('author_id')
       .notNull()
       .references(() => users.id),

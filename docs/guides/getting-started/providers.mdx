@@ -16,9 +16,10 @@ You can add more than one provider. To create a new provider:
 1. Go to the "Settings" section
 1. On the "Providers" section click on the "Create Provider" button
 1. Fill out the configuration:
-    1. **Provider**: Choose the AI service provider (e.g., OpenAI, Anthropic, Groq).
+    1. **Provider**: Choose the AI service provider (e.g., OpenAI, Anthropic, Groq) or 'Custom' (instances like Ollama or Gpustack, compatible with the OpenAI API format).
     1. **ID**: Enter an alias for this provider configuration. This will be the name you have to use in the prompt editor.
     1. **Token**: Input your API key or access token for the selected provider.
+    1. **URL**: Only for 'Custom', enter the base URL (the part before /chat/completions)
 1. Click "Create Provider" to save your new provider
 1. Now you can use it in your prompts
 

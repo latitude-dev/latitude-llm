@@ -1,3 +1,5 @@
+import { useState } from 'react'
+
 import { Providers } from '@latitude-data/core/browser'
 import {
   Button,
@@ -10,6 +12,11 @@ import {
 import { useFormAction } from '$/hooks/useFormAction'
 import useProviderApiKeys from '$/stores/providerApiKeys'
 
+const PROVIDER_OPTIONS = Object.entries(Providers).map(([key, value]) => ({
+  value,
+  label: key,
+}))
+
 export default function NewApiKey({
   open,
   setOpen,
@@ -21,6 +28,10 @@ export default function NewApiKey({
   const { data, action } = useFormAction(create, {
     onSuccess: () => setOpen(false),
   })
+
+  const [providerType, setProviderType] = useState(PROVIDER_OPTIONS[0]!.label)
+
+  const isCustom = providerType == 'custom'
 
   return (
     <Modal
@@ -43,11 +54,9 @@ export default function NewApiKey({
             required
             label='Provider'
             name='provider'
+            onChange={(newValue) => setProviderType(newValue)}
             defaultValue={data?.provider}
-            options={Object.entries(Providers).map(([key, value]) => ({
-              value,
-              label: key,
-            }))}
+            options={PROVIDER_OPTIONS}
           />
           <Input
             required
@@ -55,7 +64,7 @@ export default function NewApiKey({
             label='ID'
             name='name'
             defaultValue={data?.name}
-            placeholder='My API Key'
+            placeholder={isCustom ? 'My server' : 'My API key'}
           />
           <Input
             required
@@ -65,6 +74,16 @@ export default function NewApiKey({
             defaultValue={data?.token}
             placeholder='sk-0dfdsn23bm4m23n4MfB'
           />
+          {isCustom && (
+            <Input
+              required
+              label='URL'
+              type='text'
+              name='url'
+              defaultValue={data?.url}
+              placeholder='http://localhost:11434/v1'
+            />
+          )}
         </FormWrapper>
       </form>
     </Modal>

@@ -13,6 +13,7 @@ export const createProviderApiKeyAction = authProcedure
     z.object({
       provider: z.nativeEnum(Providers),
       token: z.string(),
+      url: z.string(),
       name: z.string(),
     }),
   )
@@ -21,6 +22,7 @@ export const createProviderApiKeyAction = authProcedure
       workspace: ctx.workspace,
       provider: input.provider,
       token: input.token,
+      url: input.url,
       name: input.name,
       author: ctx.user,
     })
