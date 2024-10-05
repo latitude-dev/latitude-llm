@@ -10,7 +10,7 @@ const environment = process.env.NODE_ENV || 'development'
 const __dirname = fileURLToPath(import.meta.url)
 const FILE_PUBLIC_PATH = 'uploads'
 
-if (environment !== 'production') {
+if (environment === 'development' || environment === 'test') {
   const pathToEnv = resolve(cwd(), `../../.env.${environment}`)
   const FILES_STORAGE_PATH = join(
     __dirname,
