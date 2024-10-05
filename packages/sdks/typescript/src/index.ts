@@ -1,8 +1,7 @@
 import type { Message } from '@latitude-data/compiler'
-import {
+import type {
   ChainCallResponseDto,
   ChainEventDto,
-  LogSources,
   StreamEventTypes,
 } from '@latitude-data/core/browser'
 import env from '$sdk/env'
@@ -25,6 +24,12 @@ type StreamResponseCallbacks = {
   }) => void
   onFinished?: (data: StreamChainResponse) => void
   onError?: (error: Error) => void
+}
+
+export enum LogSources {
+  API = 'api',
+  Playground = 'playground',
+  Evaluation = 'evaluation',
 }
 
 export class Latitude {
