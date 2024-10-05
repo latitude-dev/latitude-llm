@@ -34,7 +34,8 @@ function getCostPer1M({
     case Providers.Custom:
       return { input: 0, output: 0 }
     default:
-      throw new Error(`Unknown provider: ${provider}`)
+      // TODO: Log it to Sentry since this should never happen
+      return { input: 0, output: 0 }
   }
 }
 
