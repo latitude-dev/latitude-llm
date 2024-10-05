@@ -80,6 +80,13 @@
         "pages": [
           "guides/sdk/javascript-typescript-sdk"
         ]
+      },
+      {
+        "group": "Self-hosting",
+        "pages": [
+          "guides/self-hosted/quick-start",
+          "guides/self-hosted/development"
+        ]
       }
     ],
     "footerSocials": {
