@@ -15,8 +15,15 @@ export function useSockets<SEName extends ServerEventType>({
   onMessage: (args: EventArgs<SEName>) => void
 }) {
   const connection = useWebsocketConfig()
-  useSocketEvent<EventArgs<SEName>>(connection.socket, event, {
-    onMessage,
-  })
+
+  try {
+    useSocketEvent<EventArgs<SEName>>(connection.socket, event, {
+      onMessage,
+    })
+  } catch (_) {
+    // do nothing, sometimes the socket is not ready yet and the event is not
+    // registered
+  }
+
   return connection.socket
 }
