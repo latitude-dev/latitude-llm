@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { ConversationMetadata } from '@latitude-data/compiler'
 import { DocumentVersion } from '@latitude-data/core/browser'
-import { Badge, Button, Input, Text } from '@latitude-data/web-ui'
+import { Badge, Input, Text } from '@latitude-data/web-ui'
 
 import { Header } from '../Header'
 import Chat from './Chat'
