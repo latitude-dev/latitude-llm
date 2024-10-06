@@ -1,5 +1,5 @@
 import { unsafelyFindUserByEmail, unsafelyGetUser } from '../../data-access'
-import { BadRequestError, NotFoundError } from '../../lib'
+import { NotFoundError } from '../../lib'
 import { ReferralMailer } from '../../mailers'
 import { SendReferralInvitationEvent } from '../events'
 
@@ -12,7 +12,7 @@ export const sendReferralInvitationJob = async ({
   if (!invitee) throw new NotFoundError('Invitee user not found')
 
   const invited = await unsafelyFindUserByEmail(event.data.email)
-  if (invited) throw new BadRequestError('User already exists')
+  if (invited) return // Should never happen
 
   const mailer = new ReferralMailer(
     {

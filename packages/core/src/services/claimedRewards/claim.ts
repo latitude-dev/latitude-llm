@@ -1,7 +1,8 @@
 import { REWARD_VALUES, RewardType, User, Workspace } from '../../browser'
 import { database } from '../../client'
+import { unsafelyFindUserByEmail } from '../../data-access'
 import { publisher } from '../../events/publisher'
-import { ForbiddenError, Result, Transaction } from '../../lib'
+import { BadRequestError, Result, Transaction } from '../../lib'
 import { ClaimedRewardsRepository } from '../../repositories'
 import { claimedRewards } from '../../schema'
 
@@ -22,7 +23,7 @@ export async function claimReward(
   const claimedRewardsScope = new ClaimedRewardsRepository(workspace.id, db)
   const hasAlreadyClaimed = await claimedRewardsScope.hasClaimed(type)
   if (hasAlreadyClaimed) {
-    return Result.error(new ForbiddenError('Reward already claimed'))
+    return Result.error(new BadRequestError('Reward already claimed'))
   }
 
   if (type === RewardType.Referral) {
@@ -32,7 +33,12 @@ export async function claimReward(
     })
 
     if (alreadyReferred) {
-      return Result.error(new ForbiddenError('Referral already solicited'))
+      return Result.error(new BadRequestError('Referral already solicited'))
+    }
+
+    const invited = await unsafelyFindUserByEmail(reference)
+    if (invited) {
+      return Result.error(new BadRequestError('User already exists'))
     }
   }
 
