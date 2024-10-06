@@ -59,8 +59,13 @@ export const PROVIDER_MODELS: Partial<
     'mistral-medium-latest': 'mistral-medium-latest',
   },
   [Providers.Azure]: OPEN_AI_MODELS,
+  [Providers.Google]: {
+    'gemini-1.5-flash': 'gemini-1.5-flash',
+    'gemini-1.5-flash-8b': 'gemini-1.5-flash-8b',
+    'gemini-1.5-pro': 'gemini-1.5-pro',
+    'gemini-1.0-pro': 'gemini-1.0-pro',
+  },
   [Providers.Custom]: {},
-  // FIXME: Add models for Google
 }
 
 export function findFirstModelForProvider(provider: Providers) {
