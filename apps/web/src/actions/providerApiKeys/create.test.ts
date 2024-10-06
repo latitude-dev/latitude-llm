@@ -66,6 +66,7 @@ describe('createProviderApiKeyAction', () => {
     it('handles errors when creating a provider API key fails', async () => {
       const [data, error] = await createProviderApiKeyAction({
         provider: Providers.OpenAI,
+        // @ts-expect-error - Testing invalid input
         token: null,
         name: 'Test API Key',
       })
