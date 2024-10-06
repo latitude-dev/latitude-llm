@@ -5,6 +5,7 @@ import { useCallback, useState } from 'react'
 import { IPagination } from '@latitude-data/core/lib/pagination/buildPagination'
 import { DocumentLogWithMetadata } from '@latitude-data/core/repositories'
 import {
+  TableBlankSlate,
   useCurrentCommit,
   useCurrentDocument,
   useCurrentProject,
@@ -95,6 +96,12 @@ export function DocumentLogs({
   )
 
   useDocumentLogSocket(document.documentUuid, mutate)
+
+  if (!documentLogs.length) {
+    return (
+      <TableBlankSlate description='There are no logs for this prompt yet. Logs will appear here when you run the prompt for the first time.' />
+    )
+  }
 
   return (
     <div className='flex flex-row w-full h-full gap-4 min-w-[1024px] overflow-x-auto'>

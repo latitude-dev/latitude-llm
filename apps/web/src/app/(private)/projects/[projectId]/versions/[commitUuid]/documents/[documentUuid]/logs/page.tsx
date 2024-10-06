@@ -1,7 +1,7 @@
 import { QueryParams } from '@latitude-data/core/lib/pagination/buildPaginatedUrl'
 import { paginateQuery } from '@latitude-data/core/lib/pagination/paginate'
 import { computeDocumentLogsWithMetadataQuery } from '@latitude-data/core/services/documentLogs/computeDocumentLogsWithMetadata'
-import { TableBlankSlate, TableWithHeader } from '@latitude-data/web-ui'
+import { TableWithHeader } from '@latitude-data/web-ui'
 import { findCommitCached } from '$/app/(private)/_data-access'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
@@ -39,20 +39,12 @@ export default async function DocumentPage({
       draft: commit,
     }).$dynamic(),
   })
+
   return (
     <div className='flex flex-col w-full h-full overflow-x-auto p-6 gap-2 min-w-0'>
       <TableWithHeader
         title='Logs'
-        table={
-          <>
-            {!rows.length && (
-              <TableBlankSlate description='There are no logs for this prompt yet. Logs will appear here when you run the prompt for the first time.' />
-            )}
-            {rows.length > 0 && (
-              <DocumentLogs documentLogs={rows} pagination={pagination} />
-            )}
-          </>
-        }
+        table={<DocumentLogs documentLogs={rows} pagination={pagination} />}
       />
     </div>
   )
