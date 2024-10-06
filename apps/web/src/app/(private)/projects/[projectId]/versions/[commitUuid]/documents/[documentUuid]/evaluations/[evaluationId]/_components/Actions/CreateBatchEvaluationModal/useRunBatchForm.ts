@@ -7,7 +7,7 @@ import useDatasets from '$/stores/datasets'
 
 import { RunBatchParameters } from './useRunBatch'
 
-function buildEmptyParameters(parameters: string[]) {
+export function buildEmptyParameters(parameters: string[]) {
   return parameters.reduce((acc, key) => {
     acc[key] = undefined
     return acc
