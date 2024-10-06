@@ -50,3 +50,8 @@ export class UnauthorizedError extends LatitudeError {
   public statusCode = 401
   public name = 'UnauthorizedError'
 }
+
+export const databaseErrorCodes = {
+  foreignKeyViolation: '23503',
+  uniqueViolation: '23505',
+}

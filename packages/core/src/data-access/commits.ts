@@ -66,3 +66,12 @@ export async function findCommitById(
 export async function listCommits() {
   return database.select().from(commits)
 }
+
+export async function unsafelyFindCommitsByProjectId(
+  projectId: number,
+  db = database,
+) {
+  return db.query.commits.findMany({
+    where: eq(commits.projectId, projectId),
+  })
+}

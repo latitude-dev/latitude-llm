@@ -50,6 +50,7 @@ export const providerApiKeys = latitudeSchema.table(
       table.workspaceId,
     ),
     userIdIdx: index('provider_apikeys_user_id_idx').on(table.authorId),
+    // TODO: This constratin is not working for some reason
     uniqueTokenByProvider: uniqueIndex(
       'provider_apikeys_token_provider_unique',
     ).on(table.token, table.provider, table.workspaceId),
