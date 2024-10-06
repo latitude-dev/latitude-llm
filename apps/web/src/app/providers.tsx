@@ -15,6 +15,7 @@ if (
   posthog.init(envClient.NEXT_PUBLIC_POSTHOG_KEY, {
     api_host: envClient.NEXT_PUBLIC_POSTHOG_HOST,
     person_profiles: 'identified_only', // or 'always' to create profiles for anonymous users as well
+    disable_session_recording: true,
   })
 }
 export function CSPostHogProvider({ children }: { children: ReactNode }) {
@@ -33,11 +34,12 @@ export function IdentifyUser({
   const posthog = usePostHog()
 
   useEffect(() => {
-    if (user) {
+    if (user && !user.email.match(/@latitude\.so/)) {
       posthog?.identify(user.id, {
         email: user.email,
       })
       posthog?.group('workspace', String(workspace.id))
+      posthog?.startSessionRecording()
     }
   }, [posthog, user.id, user.email, workspace.id])
 
