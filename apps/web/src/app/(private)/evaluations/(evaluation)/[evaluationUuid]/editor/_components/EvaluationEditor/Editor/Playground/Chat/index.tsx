@@ -184,7 +184,7 @@ export default function Chat({
         />
       </div>
       <div className='flex items-center justify-center'>
-        <Button fancy onClick={clearChat}>
+        <Button fancy variant='outline' onClick={clearChat}>
           Clear chat
         </Button>
       </div>

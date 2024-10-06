@@ -30,9 +30,11 @@ import { DocumentEditorContext } from '..'
 export default function Chat({
   document,
   parameters,
+  clearChat,
 }: {
   document: DocumentVersion
   parameters: Record<string, unknown>
+  clearChat: () => void
 }) {
   const [documentLogUuid, setDocumentLogUuid] = useState<string>()
   const { commit } = useCurrentCommit()
@@ -74,7 +76,7 @@ export default function Chat({
   const runDocument = useCallback(async () => {
     const start = performance.now()
     setError(undefined)
-    setResponseStream(undefined)
+    setResponseStream('')
 
     let response = ''
     let messagesCount = 0
@@ -128,6 +130,8 @@ export default function Chat({
       }
     } catch (error) {
       setError(error as Error)
+    } finally {
+      setResponseStream(undefined)
     }
   }, [
     project.id,
@@ -153,42 +157,57 @@ export default function Chat({
         role: MessageRole.user,
         content: [{ type: ContentType.text, text: input }],
       }
+
+      setResponseStream('')
+
       let response = ''
+
       addMessageToConversation(message)
-      const { output } = await addMessagesAction({
-        documentLogUuid,
-        messages: [message],
-      })
-      for await (const serverEvent of readStreamableValue(output)) {
-        if (!serverEvent) continue
 
-        const { event, data } = serverEvent
+      try {
+        const { output } = await addMessagesAction({
+          documentLogUuid,
+          messages: [message],
+        })
 
-        switch (event) {
-          case StreamEventTypes.Latitude: {
-            if (data.type === ChainEventTypes.Error) {
-              setError(new Error(data.error.message))
-            } else if (data.type === ChainEventTypes.Complete) {
-              addMessageToConversation({
-                role: MessageRole.assistant,
-                content: data.response.text,
-              } as AssistantMessage)
-              setResponseStream(undefined)
+        for await (const serverEvent of readStreamableValue(output)) {
+          if (!serverEvent) continue
+
+          const { event, data } = serverEvent
+
+          switch (event) {
+            case StreamEventTypes.Latitude: {
+              if (data.type === ChainEventTypes.Error) {
+                setError(new Error(data.error.message))
+              } else if (data.type === ChainEventTypes.Complete) {
+                addMessageToConversation({
+                  role: MessageRole.assistant,
+                  content: data.response.text,
+                } as AssistantMessage)
+
+                setTokens((prev) => prev + data.response.usage.totalTokens)
+
+                setResponseStream(undefined)
+              }
+
+              break
             }
 
-            break
-          }
-
-          case StreamEventTypes.Provider: {
-            if (data.type === 'text-delta') {
-              response += data.textDelta
-              setResponseStream(response)
+            case StreamEventTypes.Provider: {
+              if (data.type === 'text-delta') {
+                response += data.textDelta
+                setResponseStream(response)
+              }
+              break
             }
-            break
+            default:
+              break
           }
-          default:
-            break
         }
+      } catch (error) {
+        setError(error as Error)
+      } finally {
+        setResponseStream(undefined)
       }
     },
     [addMessageToConversation, setError, documentLogUuid],
@@ -237,6 +256,7 @@ export default function Chat({
           responseStream={responseStream}
         />
         <ChatTextArea
+          clearChat={clearChat}
           placeholder='Enter followup message...'
           disabled={responseStream !== undefined}
           onSubmit={submitUserMessage}

@@ -57,13 +57,7 @@ export default function Playground({
 
   return (
     <>
-      <Header title='Playground'>
-        {mode === 'chat' && (
-          <Button fancy onClick={() => setMode('preview')} variant='outline'>
-            Clear chat
-          </Button>
-        )}
-      </Header>
+      <Header title='Playground' />
       <div className='flex flex-col gap-6 relative'>
         <div className='flex flex-col gap-3 max-h-[35vh] overflow-y-auto pr-4 pb-4'>
           <Text.H6M>Inputs</Text.H6M>
@@ -97,7 +91,11 @@ export default function Playground({
                 runPrompt={() => setMode('chat')}
               />
             ) : (
-              <Chat document={document} parameters={parameters} />
+              <Chat
+                clearChat={() => setMode('preview')}
+                document={document}
+                parameters={parameters}
+              />
             )}
           </div>
         </div>
