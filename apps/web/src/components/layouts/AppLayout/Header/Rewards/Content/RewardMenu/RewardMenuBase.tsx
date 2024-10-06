@@ -33,7 +33,7 @@ type RewardMenuBaseProps = {
     type: RewardType
     reference: string
     optimistic?: boolean
-  }) => void
+  }) => Promise<void>
   config: RewardConfig
 }
 
@@ -56,9 +56,10 @@ export function RewardMenuBase({
       setInputError(referenceParsing.error.issues.at(0)!.message)
       return
     }
-    setInputError(undefined)
 
+    setInputError(undefined)
     setClaimedReferences((prev) => [...prev, reference])
+
     claimReward({
       type,
       reference,

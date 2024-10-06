@@ -74,7 +74,7 @@ export default function useRewards(opts?: SWRConfiguration) {
   )
 
   const claimReward = useCallback(
-    ({
+    async ({
       type,
       reference,
       optimistic,
@@ -86,6 +86,11 @@ export default function useRewards(opts?: SWRConfiguration) {
       return executeClaimRewardAction({ type, reference }).then(
         ([claimedReward]) => {
           if (!claimedReward) return
+
+          toast({
+            title: 'Success',
+            description: 'Your reward has been claimed successfully',
+          })
 
           if (optimistic) {
             updateRewards(claimedReward)
