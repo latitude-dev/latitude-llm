@@ -36,4 +36,5 @@ export const EventHandlers: IEventsHandlers = {
   documentRunRequested: [],
   chatMessageRequested: [],
   batchEvaluationRunRequested: [],
-} as const
+  runDocumentInBatchRequested: [],
+}

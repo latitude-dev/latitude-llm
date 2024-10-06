@@ -10,7 +10,7 @@ import * as commits from '../../../services/commits/runDocumentAtCommit'
 import * as factories from '../../../tests/factories'
 import { WebsocketClient } from '../../../websockets/workers'
 import * as utils from '../../utils/progressTracker'
-import { runDocumentJob } from './runDocumentJob'
+import { runDocumentForEvaluationJob } from './runDocumentJob'
 
 const incrementErrorsMock = vi.hoisted(() => vi.fn())
 
@@ -95,7 +95,7 @@ describe('runDocumentJob', () => {
       Result.ok(mockResult),
     )
 
-    await runDocumentJob(mockJob)
+    await runDocumentForEvaluationJob(mockJob)
 
     expect(commits.runDocumentAtCommit).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -129,7 +129,7 @@ describe('runDocumentJob', () => {
     )
     vi.mocked(env).NODE_ENV = 'production'
 
-    await runDocumentJob(mockJob)
+    await runDocumentForEvaluationJob(mockJob)
 
     const socket = await WebsocketClient.getSocket()
     expect(socket.emit).toHaveBeenCalledWith('evaluationStatus', {
@@ -157,7 +157,7 @@ describe('runDocumentJob', () => {
 
     const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
 
-    await runDocumentJob(mockJob)
+    await runDocumentForEvaluationJob(mockJob)
 
     expect(consoleSpy).toHaveBeenCalledWith(testError)
     expect(incrementErrorsMock).toHaveBeenCalled()

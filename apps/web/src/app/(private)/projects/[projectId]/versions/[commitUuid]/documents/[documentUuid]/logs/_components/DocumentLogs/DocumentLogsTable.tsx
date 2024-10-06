@@ -24,13 +24,17 @@ function countLabel(count: number) {
   return `${count} logs`
 }
 
+type DocumentLogRow = DocumentLogWithMetadata & {
+  realtimeAdded?: boolean
+}
+
 export const DocumentLogsTable = ({
   documentLogs,
   selectedLog,
   setSelectedLog,
   pagination,
 }: {
-  documentLogs: DocumentLogWithMetadata[]
+  documentLogs: DocumentLogRow[]
   selectedLog: DocumentLogWithMetadata | undefined
   setSelectedLog: (log: DocumentLogWithMetadata | undefined) => void
   pagination: IPagination
@@ -71,6 +75,7 @@ export const DocumentLogsTable = ({
               'cursor-pointer border-b-[0.5px] h-12 max-h-12 border-border',
               {
                 'bg-secondary': selectedLog?.uuid === documentLog.uuid,
+                'animate-flash': documentLog.realtimeAdded,
               },
             )}
           >

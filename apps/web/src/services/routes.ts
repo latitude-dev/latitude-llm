@@ -102,7 +102,12 @@ export const ROUTES = {
                   const evaluationsRoot: string = `${root}/evaluations`
                   return {
                     root,
-                    [DocumentRoutes.editor]: { root },
+                    [DocumentRoutes.editor]: {
+                      root,
+                      runBatch: {
+                        root: `${root}/batch`,
+                      },
+                    },
                     [DocumentRoutes.evaluations]: {
                       root: evaluationsRoot,
                       dashboard: {
