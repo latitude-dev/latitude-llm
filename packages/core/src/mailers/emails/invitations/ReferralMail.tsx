@@ -1,4 +1,5 @@
 import { env } from 'process'
+import React from 'react'
 
 import { Link, Text } from '@react-email/components'
 
