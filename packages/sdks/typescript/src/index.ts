@@ -33,6 +33,7 @@ export enum LogSources {
 }
 
 export class Latitude {
+  private versionUuid?: string
   private projectId?: number
   private apiKey: string
   private routeResolver: RouteResolver
@@ -42,6 +43,7 @@ export class Latitude {
     apiKey: string,
     {
       projectId,
+      versionUuid,
       gateway = {
         host: env.GATEWAY_HOSTNAME,
         port: env.GATEWAY_PORT,
@@ -49,6 +51,7 @@ export class Latitude {
       },
       __internal = { source: LogSources.API },
     }: {
+      versionUuid?: string
       projectId?: number
       gateway?: GatewayApiConfig
       __internal?: { source: LogSources }
@@ -66,6 +69,7 @@ export class Latitude {
       apiVersion: 'v1',
     })
     this.projectId = projectId
+    this.versionUuid = versionUuid
     this.apiKey = apiKey
     this.source = __internal.source
   }
@@ -83,13 +87,15 @@ export class Latitude {
       projectId?: number
       versionUuid?: string
       parameters?: Record<string, unknown>
-    } & StreamResponseCallbacks,
+    } & StreamResponseCallbacks = {},
   ) {
     projectId = projectId ?? this.projectId
     if (!projectId) {
       onError?.(new Error('Project ID is required'))
       return
     }
+
+    versionUuid = versionUuid ?? this.versionUuid
 
     try {
       const response = await this.request({
