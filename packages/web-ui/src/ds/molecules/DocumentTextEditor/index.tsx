@@ -1,22 +1,12 @@
 'use client'
 
-import React, { lazy, ReactNode, useEffect, useState } from 'react'
-
-import type { ConversationMetadata } from '@latitude-data/compiler'
+import React, { lazy, useEffect, useState } from 'react'
 
 import { DocumentTextEditorFallback } from './fallback'
-
-export type DocumentTextEditorProps = {
-  value: string
-  metadata?: ConversationMetadata
-  onChange?: (value: string) => void
-  readOnlyMessage?: string
-  isSaved?: boolean
-  actionButtons?: ReactNode
-}
+import { DocumentTextEditorProps } from './types'
 
 const DocumentTextEditor = lazy(() =>
-  import('./editor').then(
+  import('./Editor/index').then(
     (module) =>
       ({
         default: module.DocumentTextEditor,

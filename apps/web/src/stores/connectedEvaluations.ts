@@ -4,6 +4,7 @@ import { ConnectedEvaluation } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui'
 import { updateConnectedEvaluationAction } from '$/actions/connectedEvaluations/update'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
+import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'
 
 export default function useConnectedEvaluations(
@@ -27,7 +28,12 @@ export default function useConnectedEvaluations(
     ['connectedEvaluations', documentUuid],
     useCallback(async () => {
       const response = await fetch(
-        `/api/documents/${projectId}/${commitUuid}/${documentUuid}/evaluations`,
+        ROUTES.api.documents
+          .detail({ projectId })
+          .detail({
+            commitUuid,
+          })
+          .detail({ documentUuid }).evaluations.root,
         { credentials: 'include' },
       )
       if (!response.ok) {

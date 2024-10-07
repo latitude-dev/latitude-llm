@@ -15,7 +15,7 @@ import {
   ProviderApiKey,
 } from '../../../browser'
 import { database } from '../../../client'
-import { Result, Transaction, TypedResult } from '../../../lib'
+import { hashContent, Result, Transaction, TypedResult } from '../../../lib'
 import { assertCommitIsDraft } from '../../../lib/assertCommitIsDraft'
 import { ProviderApiKeysRepository } from '../../../repositories'
 import { documentVersions } from '../../../schema'
@@ -68,6 +68,7 @@ async function resolveDocumentChanges({
       return {
         ...d,
         resolvedContent: metadata.resolvedPrompt,
+        contentHash: hashContent(metadata.resolvedPrompt),
       }
     }),
   )
@@ -78,6 +79,7 @@ async function resolveDocumentChanges({
         (oldDoc) =>
           oldDoc.documentUuid === newDoc.documentUuid &&
           oldDoc.resolvedContent === newDoc.resolvedContent &&
+          oldDoc.contentHash === newDoc.contentHash &&
           oldDoc.path === newDoc.path &&
           oldDoc.deletedAt === newDoc.deletedAt,
       ),

@@ -1,5 +1,7 @@
 import { HEAD_COMMIT } from '@latitude-data/core/browser'
 
+import { _API_ROUTES } from './routes/api'
+
 export enum DocumentRoutes {
   editor = 'editor',
   logs = 'logs',
@@ -27,6 +29,7 @@ export const ROUTES = {
       root: '/backoffice/rewards',
     },
   },
+  api: _API_ROUTES,
   settings: {
     root: '/settings',
     providerApiKeys: {
