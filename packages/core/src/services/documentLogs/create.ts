@@ -1,7 +1,7 @@
 import { Commit, DocumentLog, LogSources } from '../../browser'
 import { database } from '../../client'
 import { publisher } from '../../events/publisher'
-import { Result, Transaction } from '../../lib'
+import { hashContent, Result, Transaction } from '../../lib'
 import { documentLogs } from '../../schema'
 
 export type CreateDocumentLogProps = {
@@ -42,6 +42,7 @@ export async function createDocumentLog(
         documentUuid,
         commitId: commit.id,
         resolvedContent,
+        contentHash: hashContent(resolvedContent),
         parameters,
         customIdentifier,
         duration,

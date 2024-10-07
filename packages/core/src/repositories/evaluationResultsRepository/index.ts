@@ -75,6 +75,16 @@ export class EvaluationResultsRepository extends Repository<
     return Result.ok(result.map(this.parseResult))
   }
 
+  async findByContentHash(contentHash: string) {
+    const result = await this.db
+      .select(this.scope._.selectedFields)
+      .from(this.scope)
+      .innerJoin(documentLogs, eq(documentLogs.id, this.scope.documentLogId))
+      .where(eq(documentLogs.contentHash, contentHash))
+
+    return Result.ok(result.map(this.parseResult))
+  }
+
   private parseResult(row: EvaluationResult & { result: string }) {
     const { result, resultableType, ...rest } = row
 
