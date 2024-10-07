@@ -1,4 +1,4 @@
-import { type InferSelectModel } from 'drizzle-orm'
+import { type InferInsertModel, type InferSelectModel } from 'drizzle-orm'
 
 import { EvaluationResultableType } from '../constants'
 import { apiKeys } from './models/apiKeys'
@@ -39,6 +39,7 @@ export type Project = InferSelectModel<typeof projects>
 export type ProviderLog = InferSelectModel<typeof providerLogs>
 export type DocumentLog = InferSelectModel<typeof documentLogs>
 export type RunError = InferSelectModel<typeof runErrors>
+export type RunErrorInsert = InferInsertModel<typeof runErrors>
 export type Evaluation = InferSelectModel<typeof evaluations>
 export type ConnectedEvaluation = InferSelectModel<typeof connectedEvaluations>
 export type EvaluationResult = InferSelectModel<typeof evaluationResults>
