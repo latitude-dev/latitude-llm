@@ -14,7 +14,12 @@ import {
   findWorkspaceFromDocumentLog,
 } from '../../data-access'
 import { publisher } from '../../events/publisher'
-import { NotFoundError, Result } from '../../lib'
+import {
+  LatitudeError,
+  NotFoundError,
+  Result,
+  UnprocessableEntityError,
+} from '../../lib'
 import { runChain } from '../chains/run'
 import { computeDocumentLogWithMetadata } from '../documentLogs'
 import { createEvaluationResult } from '../evaluationResults'
@@ -141,7 +146,13 @@ async function handleEvaluationResponse(
     },
   })
 
-  await createEvaluationResult({
+  if (response.object === undefined) {
+    throw new LatitudeError(
+      'Provider did not return a valid JSON-formatted response',
+    )
+  }
+
+  return await createEvaluationResult({
     evaluation,
     documentLog,
     providerLog: response.providerLog!,
