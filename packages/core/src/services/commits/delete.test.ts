@@ -38,7 +38,7 @@ describe('deleteCommitDraft', () => {
 
     expect(result.ok).toBe(false)
     expect(result.error?.message).toBe(
-      'Cannot delete a commit because there are logs or evaluations associated with it.',
+      'Cannot delete this version because there are logs or evaluations associated with it.',
     )
   })
 
@@ -51,7 +51,7 @@ describe('deleteCommitDraft', () => {
 
     expect(result.ok).toBe(false)
     expect(result.error?.message).toBe(
-      'Cannot delete the only commit in a project',
+      'Cannot delete the only version in a project',
     )
   })
 })

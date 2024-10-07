@@ -24,7 +24,7 @@ export async function deleteCommitDraft(commit: Commit, db = database) {
       )
       if (projectCommits.length === 1) {
         return Result.error(
-          new BadRequestError('Cannot delete the only commit in a project'),
+          new BadRequestError('Cannot delete the only version in a project'),
         )
       }
 
@@ -41,7 +41,7 @@ export async function deleteCommitDraft(commit: Commit, db = database) {
         error.code === databaseErrorCodes.foreignKeyViolation
       ) {
         throw new BadRequestError(
-          'Cannot delete a commit because there are logs or evaluations associated with it.',
+          'Cannot delete this version because there are logs or evaluations associated with it.',
         )
       } else {
         throw error
