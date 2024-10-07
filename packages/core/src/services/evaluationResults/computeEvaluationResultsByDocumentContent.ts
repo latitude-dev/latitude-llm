@@ -39,9 +39,10 @@ export async function computeEvaluationResultsByDocumentContent(
     workspaceId,
     db,
   )
-  const result = await evaluationResultsScope.findByContentHash(
-    hashContent(resolvedContent),
-  )
+  const result = await evaluationResultsScope.findByContentHash({
+    evaluationId: evaluation.id,
+    contentHash: hashContent(resolvedContent),
+  })
   if (result.error) return result
 
   return Result.ok(result.unwrap())

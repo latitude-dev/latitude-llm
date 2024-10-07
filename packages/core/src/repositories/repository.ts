@@ -1,4 +1,4 @@
-import { ColumnsSelection, eq } from 'drizzle-orm'
+import { ColumnsSelection, eq, inArray } from 'drizzle-orm'
 import { SubqueryWithSelection } from 'drizzle-orm/pg-core'
 
 import { database } from '../client'
@@ -57,6 +57,17 @@ export default abstract class Repository<
     }
 
     return Result.ok(result[0]! as T)
+  }
+
+  async findMany(ids: (string | number)[]) {
+    const result = await this.db
+      .select()
+      .from(this.scope)
+      // @ts-expect-error
+      .where(inArray(this.scope.id, ids))
+      .limit(ids.length)
+
+    return Result.ok(result as T[])
   }
 
   async findFirst() {

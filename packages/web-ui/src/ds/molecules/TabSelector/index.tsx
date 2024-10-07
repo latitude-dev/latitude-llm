@@ -25,6 +25,10 @@ export function TabSelector<T extends string>({
   const selectedOptionBackgroundRef = useRef<HTMLDivElement>(null)
   const [selected, setSelected] = useState(originalSelected)
 
+  useEffect(() => {
+    setSelected(originalSelected)
+  }, [originalSelected])
+
   const handleSelect = (value: T) => {
     setSelected(value)
     onSelect?.(value)

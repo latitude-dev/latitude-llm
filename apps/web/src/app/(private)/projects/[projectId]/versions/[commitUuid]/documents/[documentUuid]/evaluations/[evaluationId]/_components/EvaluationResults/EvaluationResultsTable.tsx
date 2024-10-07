@@ -19,7 +19,7 @@ import {
   Text,
 } from '@latitude-data/web-ui'
 import { formatCostInMillicents, relativeTime } from '$/app/_lib/formatUtils'
-import { TablePaginationFooter } from '$/components/TablePaginationFooter'
+import { LinkableTablePaginationFooter } from '$/components/TablePaginationFooter'
 
 function countLabel(count: number) {
   return `${count} evaluation results`
@@ -76,7 +76,7 @@ export const EvaluationResultsTable = ({
     <Table
       className='table-auto'
       externalFooter={
-        <TablePaginationFooter
+        <LinkableTablePaginationFooter
           pagination={pagination}
           countLabel={countLabel}
         />

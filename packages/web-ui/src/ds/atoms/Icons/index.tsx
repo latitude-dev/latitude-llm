@@ -32,6 +32,7 @@ import {
   Pin,
   PinOff,
   RefreshCcw,
+  Sparkles,
   SquareDot,
   SquareMinus,
   SquarePlus,
@@ -91,6 +92,7 @@ const Icons = {
   pinOff: PinOff,
   refresh: RefreshCcw,
   sun: Sun,
+  sparkles: Sparkles,
   thumbsDown: ThumbsDown,
   thumbsUp: ThumbsUp,
   trash: Trash,
@@ -109,7 +111,7 @@ export type IconProps = {
   className?: string
 }
 
-type Size = 'normal' | 'large' | 'xlarge' | 'xxxlarge'
+type Size = 'small' | 'normal' | 'large' | 'xlarge' | 'xxxlarge'
 
 export function Icon({
   name,
@@ -124,6 +126,7 @@ export function Icon({
       className={cn(
         {
           [colors.textColors[color!]]: color,
+          'w-3 h-3': size === 'small',
           'w-4 h-4': size === 'normal',
           'w-6 h-6': size === 'large',
           'w-8 h-8': size === 'xlarge',

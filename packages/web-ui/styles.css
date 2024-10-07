@@ -75,6 +75,9 @@
     --destructive-foreground: 250 250 250;
     --destructive-muted-foreground: 185 28 28;
 
+    --success: 21 128 61;
+    --success-foreground: 250 250 250;
+
     --border: 229 231 235;
     --input: 229 231 235;
     --ring: 7 106 213;
@@ -114,6 +117,9 @@
     --destructive: 129 29 29;
     --destructive-foreground: 254 241 241;
     --destructive-muted-foreground: 185 28 28;
+
+    --success: 22 163 74;
+    --success-foreground: 241 254 241;
 
     --border: 31 41 55;
     --input: 31 41 55;
