@@ -10,13 +10,11 @@ import {
   ChainStepResponse,
   LogSources,
   ProviderData,
-  RunErrorCodes,
   StreamEventTypes,
   StreamType,
 } from '../../constants'
 import { streamToGenerator } from '../../lib/streamToGenerator'
 import { ai, AIReturn, Config } from '../ai'
-import { ChainError } from './ChainErrors'
 import { ChainValidator, ValidatedStep } from './ChainValidator'
 import { ProviderProcessor } from './ProviderProcessor'
 
@@ -46,14 +44,10 @@ export async function runChain({
   const documentLogUuid = generateUUID()
 
   let responseResolve: (value: ChainStepResponse<StreamType>) => void
-  let responseReject: (error: ChainError<RunErrorCodes>) => void
 
-  const response = new Promise<ChainStepResponse<StreamType>>(
-    (resolve, reject) => {
-      responseResolve = resolve
-      responseReject = reject
-    },
-  )
+  const response = new Promise<ChainStepResponse<StreamType>>((resolve) => {
+    responseResolve = resolve
+  })
 
   const startTime = Date.now()
   const stream = new ReadableStream<ChainEvent>({
@@ -68,7 +62,17 @@ export async function runChain({
         configOverrides,
       })
         .then(responseResolve)
-        .catch(responseReject)
+        .catch((error) => {
+          enqueueChainEvent(controller, {
+            event: StreamEventTypes.Latitude,
+            data: {
+              type: ChainEventTypes.Error,
+              error,
+            },
+          })
+
+          controller.close()
+        })
     },
   })
 
@@ -106,75 +110,50 @@ async function iterate({
   const stepValidator = new ChainValidator({ prevText, chain, providersMap })
   const step = await stepValidator.call().then((r) => r.unwrap())
 
-  try {
-    const newMessagesInStep = step.conversation.messages.slice(previousCount)
-    const sentCount = previousCount + newMessagesInStep.length
-    publishStepStartEvent(controller, step, newMessagesInStep, documentLogUuid)
+  const newMessagesInStep = step.conversation.messages.slice(previousCount)
+  const sentCount = previousCount + newMessagesInStep.length
+  publishStepStartEvent(controller, step, newMessagesInStep, documentLogUuid)
 
-    const providerProcessor = new ProviderProcessor({
-      source,
-      documentLogUuid,
-      config: step.config,
-      apiProvider: step.provider,
-      messages: step.conversation.messages,
-    })
-    const aiResult = await ai({
+  const providerProcessor = new ProviderProcessor({
+    source,
+    documentLogUuid,
+    config: step.config,
+    apiProvider: step.provider,
+    messages: step.conversation.messages,
+  })
+  const aiResult = await ai({
+    workspace,
+    messages: step.conversation.messages,
+    config: step.config,
+    provider: step.provider,
+    schema: getSchemaForAI(step, configOverrides),
+    output: getOutputForAI(step, configOverrides),
+  })
+
+  await streamAIResult(controller, aiResult)
+  const response = await providerProcessor.call({
+    aiResult,
+    saveSyncProviderLogs: step.chainCompleted,
+  })
+
+  if (step.chainCompleted) {
+    await handleCompletedChain(controller, step, response)
+
+    return response
+  } else {
+    publishStepCompleteEvent(controller, response)
+
+    return iterate({
       workspace,
-      messages: step.conversation.messages,
-      config: step.config,
-      provider: step.provider,
-      schema: getSchemaForAI(step, configOverrides),
-      output: getOutputForAI(step, configOverrides),
+      source,
+      chain,
+      documentLogUuid,
+      providersMap,
+      controller,
+      previousCount: sentCount,
+      previousResponse: response,
+      configOverrides,
     })
-
-    await streamAIResult(controller, aiResult)
-    const response = await providerProcessor.call({
-      aiResult,
-      saveSyncProviderLogs: step.chainCompleted,
-    })
-
-    if (step.chainCompleted) {
-      await handleCompletedChain(controller, step, response)
-
-      return response
-    } else {
-      publishStepCompleteEvent(controller, response)
-
-      return iterate({
-        workspace,
-        source,
-        chain,
-        documentLogUuid,
-        providersMap,
-        controller,
-        previousCount: sentCount,
-        previousResponse: response,
-        configOverrides,
-      })
-    }
-  } catch (e: unknown) {
-    const error =
-      e instanceof ChainError
-        ? e
-        : new ChainError({
-            code: RunErrorCodes.Unknown,
-            message: (e as Error).message,
-          })
-
-    enqueueChainEvent(controller, {
-      event: StreamEventTypes.Latitude,
-      data: {
-        type: ChainEventTypes.Error,
-        error: {
-          name: error.name,
-          message: error.message,
-          stack: error.stack,
-        },
-      },
-    })
-    controller.close()
-
-    throw error
   }
 }
 

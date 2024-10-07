@@ -36,6 +36,7 @@ export const runHandler = factory.createHandlers(
           commitUuid: versionUuid!,
           documentPath: path!,
         }).then((r) => r.unwrap())
+
         const result = await runDocumentAtCommit({
           workspace,
           document,

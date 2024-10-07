@@ -45,14 +45,10 @@ export async function addMessages({
   }
 
   let responseResolve: (value: ChainStepResponse<StreamType>) => void
-  let responseReject: (reason?: any) => void
 
-  const response = new Promise<ChainStepResponse<StreamType>>(
-    (resolve, reject) => {
-      responseResolve = resolve
-      responseReject = reject
-    },
-  )
+  const response = new Promise<ChainStepResponse<StreamType>>((resolve) => {
+    responseResolve = resolve
+  })
 
   const stream = new ReadableStream<ChainEvent>({
     start(controller) {
@@ -76,7 +72,17 @@ export async function addMessages({
         ],
       })
         .then(responseResolve)
-        .catch(responseReject)
+        .catch((error) => {
+          enqueueChainEvent(controller, {
+            event: StreamEventTypes.Latitude,
+            data: {
+              type: ChainEventTypes.Error,
+              error,
+            },
+          })
+
+          controller.close()
+        })
     },
   })
 
@@ -100,86 +106,67 @@ async function streamMessageResponse({
   source: LogSources
   documentLogUuid?: string
 }) {
-  try {
-    const providerProcessor = new ProviderProcessor({
-      source,
+  const providerProcessor = new ProviderProcessor({
+    source,
+    documentLogUuid,
+    config,
+    apiProvider: provider,
+    messages,
+  })
+  const result = await ai({
+    workspace,
+    messages,
+    config,
+    provider,
+  })
+
+  for await (const value of streamToGenerator<
+    TextStreamPart<Record<string, CoreTool>> | ObjectStreamPart<unknown>
+  >(result.data.fullStream)) {
+    enqueueChainEvent(controller, {
+      event: StreamEventTypes.Provider,
+      data: value as unknown as ProviderData,
+    })
+  }
+
+  const response = await providerProcessor.call({
+    aiResult: result,
+    saveSyncProviderLogs: true,
+  })
+  const providerLog = response.providerLog!
+  const isStreamText = response.streamType === 'text'
+  const isStreamObject = response.streamType === 'object'
+  const textContent = isStreamText
+    ? response.text
+    : isStreamObject
+      ? objectToString(response.object)
+      : ''
+  enqueueChainEvent(controller, {
+    event: StreamEventTypes.Latitude,
+    data: {
+      type: ChainEventTypes.Complete,
+      config: { ...config, provider: provider.name, model: config.model },
       documentLogUuid,
-      config,
-      apiProvider: provider,
-      messages,
-    })
-    const result = await ai({
-      workspace,
-      messages,
-      config,
-      provider,
-    })
-
-    for await (const value of streamToGenerator<
-      TextStreamPart<Record<string, CoreTool>> | ObjectStreamPart<unknown>
-    >(result.data.fullStream)) {
-      enqueueChainEvent(controller, {
-        event: StreamEventTypes.Provider,
-        data: value as unknown as ProviderData,
-      })
-    }
-
-    const response = await providerProcessor.call({
-      aiResult: result,
-      saveSyncProviderLogs: true,
-    })
-    const providerLog = response.providerLog!
-    const isStreamText = response.streamType === 'text'
-    const isStreamObject = response.streamType === 'object'
-    const textContent = isStreamText
-      ? response.text
-      : isStreamObject
-        ? objectToString(response.object)
-        : ''
-    enqueueChainEvent(controller, {
-      event: StreamEventTypes.Latitude,
-      data: {
-        type: ChainEventTypes.Complete,
-        config: { ...config, provider: provider.name, model: config.model },
-        documentLogUuid,
-        messages: [
-          {
-            role: MessageRole.assistant,
-            toolCalls: isStreamText ? response.toolCalls : [],
-            content: textContent,
-          },
-        ],
-        response: {
-          ...response,
-          providerLog,
-          text: textContent,
+      messages: [
+        {
+          role: MessageRole.assistant,
+          toolCalls: isStreamText ? response.toolCalls : [],
+          content: textContent,
         },
+      ],
+      response: {
+        ...response,
+        providerLog,
+        text: textContent,
       },
-    })
+    },
+  })
 
-    controller.close()
+  controller.close()
 
-    return {
-      ...response,
-      providerLog,
-      text: textContent,
-    }
-  } catch (e) {
-    const error = e as Error
-    enqueueChainEvent(controller, {
-      event: StreamEventTypes.Latitude,
-      data: {
-        type: ChainEventTypes.Error,
-        error: {
-          name: error.name,
-          message: error.message,
-          stack: error.stack,
-        },
-      },
-    })
-
-    controller.close()
-
-    throw error
+  return {
+    ...response,
+    providerLog,
+    text: textContent,
   }
 }
