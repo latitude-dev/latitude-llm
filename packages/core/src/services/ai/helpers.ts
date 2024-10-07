@@ -12,6 +12,10 @@ export type Config = {
   model: string
   url?: string
   azure?: { resourceName: string }
+  tools?: Record<
+    string,
+    { description?: string; parameters: Record<string, any> }
+  >
 }
 
 export type PartialConfig = Omit<Config, 'provider'>

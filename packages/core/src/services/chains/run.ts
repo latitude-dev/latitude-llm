@@ -246,7 +246,7 @@ async function handleCompletedChain(
           role: MessageRole.assistant,
           toolCalls:
             response.streamType === 'text' ? response.toolCalls || [] : [],
-          content: response.text || '',
+          content: buildContent(response),
         },
       ],
     },
@@ -267,6 +267,21 @@ function publishStepCompleteEvent(
       response: response,
     },
   })
+}
+
+function buildContent(response: ChainStepResponse<StreamType>) {
+  if (response.streamType === 'text') {
+    if (response.text && response.text.length > 0) return response.text
+    if (response.toolCalls?.length > 0) {
+      return `Tool calls requested:
+${JSON.stringify(response.toolCalls, null, 2)}
+      `
+    }
+
+    return response.text || ''
+  }
+
+  return ''
 }
 
 export function enqueueChainEvent(

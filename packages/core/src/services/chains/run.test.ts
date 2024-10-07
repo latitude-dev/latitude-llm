@@ -516,4 +516,70 @@ describe('runChain', () => {
       }),
     )
   })
+
+  it('returns a nicely formatted response text when the response contains a tool call', async () => {
+    const mockAiResponse = {
+      type: 'text',
+      data: {
+        text: Promise.resolve(''),
+        usage: Promise.resolve({
+          promptTokens: 0,
+          completionTokens: 0,
+          totalTokens: 0,
+        }),
+        toolCalls: Promise.resolve([
+          {
+            toolCallId: 'tool-call-id',
+            toolName: 'tool-call-name',
+            args: { foo: 'bar' },
+          },
+        ]),
+        providerLog: Promise.resolve({
+          provider: 'openai',
+          model: 'gpt-3.5-turbo',
+        }),
+        fullStream: new ReadableStream({
+          start(controller) {
+            controller.enqueue({ type: 'text', text: '' })
+            controller.close()
+          },
+        }),
+      },
+    }
+
+    vi.spyOn(aiModule, 'ai').mockResolvedValue(mockAiResponse as any)
+    vi.mocked(mockChain.step!).mockResolvedValue({
+      completed: true,
+      conversation: {
+        messages: [
+          {
+            role: MessageRole.user,
+            content: [{ type: ContentType.text, text: 'Test message' }],
+          },
+        ],
+        config: { provider: 'openai', model: 'gpt-3.5-turbo' },
+      },
+    })
+
+    const run = await runChain({
+      workspace,
+      chain: mockChain as Chain,
+      providersMap,
+      source: LogSources.API,
+    })
+
+    const res = await run.response
+
+    expect(res).toEqual(
+      expect.objectContaining({
+        toolCalls: [
+          {
+            id: 'tool-call-id',
+            name: 'tool-call-name',
+            arguments: { foo: 'bar' },
+          },
+        ],
+      }),
+    )
+  })
 })

@@ -15,6 +15,7 @@ import { JSONSchema7 } from 'json-schema'
 
 import { ProviderApiKey, Providers, StreamType, Workspace } from '../../browser'
 import { LatitudeError } from '../../lib'
+import { compactObject } from '../../lib/compactObject'
 import { incrFreeRuns } from '../freeRunsManager'
 import { createProvider, PartialConfig } from './helpers'
 
@@ -82,11 +83,17 @@ export async function ai({
     ...(url ? { url } : {}),
   })(model)
 
-  const commonOptions = {
-    ...omit(config, ['schema']),
-    model: languageModel,
-    prompt,
-    messages: messages as CoreMessage[],
+  let commonOptions
+  try {
+    commonOptions = {
+      ...omit(config, ['schema', 'tools']),
+      model: languageModel,
+      prompt,
+      messages: messages as CoreMessage[],
+      tools: buildTools(config.tools),
+    }
+  } catch (error) {
+    throw new LatitudeError(`Failure parsing prompt configuration`)
   }
 
   if (schema && output) {
@@ -137,6 +144,27 @@ const checkDefaultProviderUsage = async ({
       'You have exceeded your maximum number of free runs for today',
     )
   }
+}
+
+const buildTools = (
+  tools: Record<
+    string,
+    { description?: string; parameters: Record<string, any> }
+  >,
+) => {
+  return tools
+    ? Object.entries(tools).reduce<Record<string, CoreTool>>(
+        (acc, [key, value]) => {
+          acc[key] = compactObject({
+            ...value,
+            parameters: jsonSchema(value.parameters),
+          }) as unknown as CoreTool
+
+          return acc
+        },
+        {},
+      )
+    : undefined
 }
 
 export { estimateCost } from './estimateCost'
