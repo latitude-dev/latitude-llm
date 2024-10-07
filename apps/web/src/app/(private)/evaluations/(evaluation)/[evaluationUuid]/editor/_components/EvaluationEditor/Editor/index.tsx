@@ -2,7 +2,11 @@
 
 import { Suspense, useCallback, useMemo, useState } from 'react'
 
-import { promptConfigSchema, ProviderApiKey } from '@latitude-data/core/browser'
+import {
+  promptConfigSchema,
+  ProviderApiKey,
+  SERIALIZED_DOCUMENT_LOG_FIELDS,
+} from '@latitude-data/core/browser'
 import {
   Button,
   DocumentTextEditor,
@@ -14,7 +18,6 @@ import useEvaluations from '$/stores/evaluations'
 import useProviderApiKeys from '$/stores/providerApiKeys'
 
 import Playground from './Playground'
-import { EVALUATION_PARAMETERS } from './Playground/Chat'
 
 export default function EvaluationEditor({
   evaluationUuid,
@@ -43,7 +46,7 @@ export default function EvaluationEditor({
   const { metadata } = useMetadata(
     {
       prompt: value,
-      withParameters: EVALUATION_PARAMETERS,
+      withParameters: SERIALIZED_DOCUMENT_LOG_FIELDS,
       configSchema,
     },
     [value, configSchema],

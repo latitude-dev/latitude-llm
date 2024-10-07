@@ -1,6 +1,9 @@
 import type {
+  AssistantMessage,
   Message as CompilerMessage,
+  SystemMessage,
   ToolCall,
+  UserMessage,
 } from '@latitude-data/compiler'
 import {
   CoreTool,
@@ -227,3 +230,59 @@ export type ChainEventDto =
         stack?: string
       }
     }
+
+export type SerializedConversation = {
+  all: Message[]
+  first: Message | null
+  last: Message | null
+  user: {
+    all: UserMessage[]
+    first: UserMessage | null
+    last: UserMessage | null
+  }
+  system: {
+    all: SystemMessage[]
+    first: SystemMessage | null
+    last: SystemMessage | null
+  }
+  assistant: {
+    all: AssistantMessage[]
+    first: AssistantMessage | null
+    last: AssistantMessage | null
+  }
+}
+
+export type SerializedProviderLog = {
+  messages: SerializedConversation
+  context: string
+  response: string | null
+  config: object
+  duration: number
+  cost: number
+}
+
+export type SerializedDocumentLog = SerializedProviderLog & {
+  prompt: string
+  parameters: Record<string, unknown>
+}
+
+export const SERIALIZED_DOCUMENT_LOG_FIELDS = [
+  'messages',
+  'context',
+  'response',
+  'config',
+  'duration',
+  'cost',
+  'prompt',
+  'parameters',
+]
+
+export type SerializedEvaluationResult = Omit<
+  SerializedProviderLog,
+  'response'
+> & {
+  resultableType: EvaluationResultableType
+  result: string | number | boolean
+  reason: string | null
+  evaluatedLog: SerializedDocumentLog
+}
