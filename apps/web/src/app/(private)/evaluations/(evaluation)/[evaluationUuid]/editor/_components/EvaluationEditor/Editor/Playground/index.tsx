@@ -3,11 +3,14 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { ConversationMetadata } from '@latitude-data/compiler'
-import { EvaluationDto } from '@latitude-data/core/browser'
+import {
+  EvaluationDto,
+  SERIALIZED_DOCUMENT_LOG_FIELDS,
+} from '@latitude-data/core/browser'
 import {
   formatContext,
   formatConversation,
-} from '@latitude-data/core/services/providerLogs/formatForEvaluation'
+} from '@latitude-data/core/services/providerLogs/serialize'
 import { Button, Icon, TableBlankSlate, Text } from '@latitude-data/web-ui'
 import { convertParams } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/DocumentEditor/Editor/Playground'
 import { ROUTES } from '$/services/routes'
@@ -16,7 +19,7 @@ import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 
 import { Header } from '../Header'
-import Chat, { EVALUATION_PARAMETERS } from './Chat'
+import Chat from './Chat'
 import Preview from './Preview'
 import { Variables } from './Variables'
 
@@ -49,7 +52,7 @@ export default function Playground({
   const [mode, setMode] = useState<'preview' | 'chat'>('preview')
   const [inputs, setInputs] = useState<Record<string, string>>(
     Object.fromEntries(
-      EVALUATION_PARAMETERS.map((param: string) => [param, '']),
+      SERIALIZED_DOCUMENT_LOG_FIELDS.map((param: string) => [param, '']),
     ),
   )
   const parameters = useMemo(() => convertParams(inputs), [inputs])
