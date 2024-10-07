@@ -164,4 +164,107 @@ describe('message', () => {
       })
     }),
   )
+
+  it('uses the versionUUID from the constructor if no versionUUID is passed to the chat method', async () => {
+    const mockFn = vi.fn()
+    let body = {}
+    server.use(
+      http.post(
+        'http://localhost:8787/api/v1/projects/123/versions/fake-version-uuid/documents/run',
+        async (info) => {
+          const reader = info.request.body!.getReader()
+          while (true) {
+            const { done, value } = await reader.read()
+            if (done) break
+            const chunks = new TextDecoder('utf-8').decode(value).trim()
+            body = JSON.parse(chunks)
+          }
+
+          mockFn({ body })
+          return HttpResponse.json({})
+        },
+      ),
+    )
+    const sdk = new Latitude(latitudeApiKey, {
+      projectId,
+      versionUuid: 'fake-version-uuid',
+    })
+    await sdk.run('fake-document-log-uuid')
+
+    expect(mockFn).toHaveBeenCalledWith({
+      body: {
+        __internal: { source: LogSources.API },
+        path: 'fake-document-log-uuid',
+      },
+    })
+  })
+
+  it('overrides constructor versionUUID with the versionUUID from the run call', async () => {
+    const mockFn = vi.fn()
+    let body = {}
+    server.use(
+      http.post(
+        'http://localhost:8787/api/v1/projects/123/versions/fake-version-uuid-override/documents/run',
+        async (info) => {
+          const reader = info.request.body!.getReader()
+          while (true) {
+            const { done, value } = await reader.read()
+            if (done) break
+            const chunks = new TextDecoder('utf-8').decode(value).trim()
+            body = JSON.parse(chunks)
+          }
+
+          mockFn({ body })
+          return HttpResponse.json({})
+        },
+      ),
+    )
+    const sdk = new Latitude(latitudeApiKey, {
+      projectId,
+      versionUuid: 'fake-version-uuid',
+    })
+    await sdk.run('fake-document-log-uuid', {
+      versionUuid: 'fake-version-uuid-override',
+    })
+
+    expect(mockFn).toHaveBeenCalledWith({
+      body: {
+        __internal: { source: LogSources.API },
+        path: 'fake-document-log-uuid',
+      },
+    })
+  })
+
+  it('calls live version if no versionUUID is provided anyhwere', async () => {
+    const mockFn = vi.fn()
+    let body = {}
+    server.use(
+      http.post(
+        'http://localhost:8787/api/v1/projects/123/versions/live/documents/run',
+        async (info) => {
+          const reader = info.request.body!.getReader()
+          while (true) {
+            const { done, value } = await reader.read()
+            if (done) break
+            const chunks = new TextDecoder('utf-8').decode(value).trim()
+            body = JSON.parse(chunks)
+          }
+
+          mockFn({ body })
+          return HttpResponse.json({})
+        },
+      ),
+    )
+    const sdk = new Latitude(latitudeApiKey, {
+      projectId,
+    })
+    await sdk.run('fake-document-log-uuid')
+
+    expect(mockFn).toHaveBeenCalledWith({
+      body: {
+        __internal: { source: LogSources.API },
+        path: 'fake-document-log-uuid',
+      },
+    })
+  })
 })
