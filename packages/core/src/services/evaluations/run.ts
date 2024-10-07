@@ -14,12 +14,7 @@ import {
   findWorkspaceFromDocumentLog,
 } from '../../data-access'
 import { publisher } from '../../events/publisher'
-import {
-  LatitudeError,
-  NotFoundError,
-  Result,
-  UnprocessableEntityError,
-} from '../../lib'
+import { LatitudeError, NotFoundError, Result } from '../../lib'
 import { runChain } from '../chains/run'
 import { computeDocumentLogWithMetadata } from '../documentLogs'
 import { createEvaluationResult } from '../evaluationResults'
