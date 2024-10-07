@@ -36,7 +36,7 @@ export function IdentifyUser({
   useEffect(() => {
     try {
       if (user && !user.email.match(/@latitude\.so/)) {
-        posthog?.identify(user.id, {
+        posthog?.identify(user.email, {
           email: user.email,
         })
         posthog?.group('workspace', String(workspace.id))
