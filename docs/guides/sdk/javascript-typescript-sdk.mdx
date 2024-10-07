@@ -34,6 +34,7 @@ Then, create an instance of the Latitude class with your API key:
 ```typescript
 const latitude = new Latitude('your-api-key-here', {
   projectId: 12345, // Optional: You can specify a default project ID here
+  versionUuid: 'optional-version-uuid', // Optional: You can specify a default version UUID here
 })
 ```
 
@@ -44,7 +45,7 @@ To run a document, use the `run` method:
 ```typescript
 latitude.run('path/to/your/document', {
   projectId: 12345, // Optional if you provided it in the constructor
-  versionUuid: 'optional-version-uuid', // Optiona, by default it targets latest live version
+  versionUuid: 'optional-version-uuid', // Optional, by default it targets latest live version
   parameters: {
     // Any parameters your document expects
   },
