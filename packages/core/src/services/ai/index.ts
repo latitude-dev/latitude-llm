@@ -1,6 +1,6 @@
 import { omit } from 'lodash-es'
 
-import { Message } from '@latitude-data/compiler'
+import { Message, MessageRole } from '@latitude-data/compiler'
 import { env } from '@latitude-data/env'
 import {
   CoreMessage,
@@ -13,7 +13,8 @@ import {
 } from 'ai'
 import { JSONSchema7 } from 'json-schema'
 
-import { ProviderApiKey, StreamType, Workspace } from '../../browser'
+import { ProviderApiKey, Providers, StreamType, Workspace } from '../../browser'
+import { LatitudeError } from '../../lib'
 import { incrFreeRuns } from '../freeRunsManager'
 import { createProvider, PartialConfig } from './helpers'
 
@@ -63,6 +64,15 @@ export async function ai({
 
   const { provider, token: apiKey, url } = apiProvider
   const model = config.model
+
+  if (provider === Providers.Google) {
+    const firstUserMessage = messages.find((m) => m.role === MessageRole.user)
+    if (!firstUserMessage) {
+      throw new LatitudeError(
+        'Google provider requires at least one user message',
+      )
+    }
+  }
 
   // FIXME: This also can generate an error. I think we should move out
   const languageModel = createProvider({
