@@ -2,9 +2,9 @@ import { ContentType, MessageRole } from '@latitude-data/compiler'
 import { describe, expect, it } from 'vitest'
 
 import { ProviderLog, ProviderLogDto } from '../../browser'
-import { formatContext, formatConversation } from './formatForEvaluation'
+import { formatContext, formatConversation } from './serialize'
 
-describe('formatConversation', () => {
+describe('serialize', () => {
   it('should format a ProviderLogDto with response correctly', () => {
     // @ts-expect-error
     const providerLogDto: ProviderLogDto = {
