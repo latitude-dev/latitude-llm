@@ -1,5 +1,9 @@
 encryptionsalt: v1:K+dTqOgU40c=:v1:xzsAOOiJEEAsdCQ4:Oe7NKHjXdYdZrcrrBa1/0yolY5M3SQ==
 config:
+  infra:COPILOT_PROJECT_ID:
+    secure: v1:GVbqlqtilIEdFp/C:tBlZldZFbejT/F/VnW1Kgm2o
+  infra:COPILOT_REFINE_PROMPT_PATH:
+    secure: v1:41ou43mQtWHrBPSL:MNeUE4SqiOOfmHQ4iopFczoGVhOxQg==
   infra:DATABASE_PASSWORD:
     secure: v1:WABt/tJjfsAKMplU:RRLtj5mTu301x4sn2Tr91u4O0Msd3mWVJutcDg==
   infra:DATASET_GENERATOR_WORKSPACE_APIKEY:
