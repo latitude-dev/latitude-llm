@@ -477,6 +477,13 @@
       "when": 1728390921653,
       "tag": "0067_loud_emma_frost",
       "breakpoints": true
+    },
+    {
+      "idx": 68,
+      "version": "7",
+      "when": 1728394416794,
+      "tag": "0068_thin_mandroid",
+      "breakpoints": true
     }
   ]
 }
