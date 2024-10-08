@@ -53,16 +53,15 @@ WORKDIR /app
 COPY --from=pruner /app/out/pnpm-lock.yaml ./pnpm-lock.yaml
 COPY --from=pruner /app/out/pnpm-workspace.yaml ./pnpm-workspace.yaml
 COPY --from=pruner /app/out/json/ .
+COPY --from=pruner /app/out/full/ .
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install \
   --frozen-lockfile \
   --filter "${PROJECT}..."
 
-COPY --from=pruner /app/out/full/ .
-
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
   BUILDING_CONTAINER=true \
-  NEXT_TELEMETRY_DISABLED=1 \ 
+  NEXT_TELEMETRY_DISABLED=1 \
   SENTRY_ORG=$SENTRY_ORG \
   SENTRY_PROJECT=$SENTRY_PROJECT \
   SENTRY_DSN=$SENTRY_DSN \

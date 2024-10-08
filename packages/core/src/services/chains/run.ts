@@ -1,5 +1,4 @@
 import { Chain } from '@latitude-data/compiler'
-import { v4 } from 'uuid'
 
 import { ProviderApiKey, Workspace } from '../../browser'
 import {
@@ -9,6 +8,7 @@ import {
   RunErrorCodes,
   StreamType,
 } from '../../constants'
+import { generateUUIDIdentifier } from '../../lib/generateUUID'
 import { ai } from '../ai'
 import { ChainError } from './ChainErrors'
 import { ChainStreamConsumer } from './ChainStreamConsumer'
@@ -40,7 +40,7 @@ export async function runChain({
   chain,
   providersMap,
   source,
-  generateUUID = v4,
+  generateUUID = generateUUIDIdentifier,
   configOverrides,
 }: {
   workspace: Workspace

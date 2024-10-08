@@ -42,6 +42,7 @@ docker/pgdata/
 
 # Next.js
 next-env.d.ts
+apps/web/scripts-dist
 
 # File uploads in development
 tmp
