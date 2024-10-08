@@ -470,6 +470,13 @@
       "when": 1728384993083,
       "tag": "0066_fuzzy_ultimates",
       "breakpoints": true
+    },
+    {
+      "idx": 67,
+      "version": "7",
+      "when": 1728390921653,
+      "tag": "0067_loud_emma_frost",
+      "breakpoints": true
     }
   ]
 }
