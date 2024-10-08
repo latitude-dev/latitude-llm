@@ -1,8 +1,12 @@
+import { eq } from 'drizzle-orm'
+
 import { User, Workspace } from '../../browser'
 import { database } from '../../client'
 import { publisher } from '../../events/publisher'
 import { Result, Transaction } from '../../lib'
+import { SubscriptionPlan } from '../../plans'
 import { workspaces } from '../../schema'
+import { createSubscription } from '../subscriptions/create'
 
 export async function createWorkspace(
   {
@@ -21,7 +25,22 @@ export async function createWorkspace(
       .insert(workspaces)
       .values({ name, creatorId: user.id, createdAt })
       .returning()
-    const workspace = insertedWorkspaces[0]!
+    let workspace = insertedWorkspaces[0]!
+
+    const subscription = await createSubscription(
+      {
+        workspace,
+        plan: SubscriptionPlan.HobbyV1,
+      },
+      tx,
+    ).then((r) => r.unwrap())
+
+    const updated = await tx
+      .update(workspaces)
+      .set({ currentSubscriptionId: subscription.id })
+      .where(eq(workspaces.id, workspace.id))
+      .returning()
+    workspace = updated[0]!
 
     publisher.publishLater({
       type: 'workspaceCreated',

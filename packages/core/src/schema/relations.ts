@@ -39,6 +39,11 @@ export const workspaceRelations = relations(workspaces, ({ one, many }) => ({
   }),
   memberships: many(memberships),
   events: many(events),
+  currentSubscription: one(subscriptions, {
+    fields: [workspaces.currentSubscriptionId],
+    references: [subscriptions.id],
+  }),
+  subscriptions: many(subscriptions),
 }))
 
 export const sessionRelations = relations(sessions, ({ one }) => ({
