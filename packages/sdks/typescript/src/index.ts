@@ -1,7 +1,8 @@
-import type { Message } from '@latitude-data/compiler'
+import type { Config, Message } from '@latitude-data/compiler'
 import type {
   ChainCallResponseDto,
   ChainEventDto,
+  DocumentVersion,
   StreamEventTypes,
 } from '@latitude-data/core/browser'
 import env from '$sdk/env'
@@ -24,6 +25,28 @@ type StreamResponseCallbacks = {
   }) => void
   onFinished?: (data: StreamChainResponse) => void
   onError?: (error: Error) => void
+}
+
+export class LatitudeApiError extends Error {
+  status: number
+  statusText: string
+  serverResponse: string
+
+  constructor({
+    status,
+    statusText,
+    serverResponse,
+  }: {
+    status: number
+    statusText: string
+    serverResponse: string
+  }) {
+    super(`Unexpected API Error: ${status} ${statusText}`)
+
+    this.status = status
+    this.statusText = statusText
+    this.serverResponse = serverResponse
+  }
 }
 
 export enum LogSources {
@@ -72,6 +95,38 @@ export class Latitude {
     this.versionUuid = versionUuid
     this.apiKey = apiKey
     this.source = __internal.source
+  }
+
+  async get(
+    path: string,
+    {
+      projectId,
+      versionUuid,
+    }: {
+      projectId?: number
+      versionUuid?: string
+    } = {},
+  ) {
+    projectId = projectId ?? this.projectId
+    if (!projectId) {
+      throw new Error('Project ID is required')
+    }
+
+    const response = await this.request({
+      method: 'GET',
+      handler: HandlerType.GetDocument,
+      params: { projectId, versionUuid, path },
+    })
+
+    if (!response.ok) {
+      throw new LatitudeApiError({
+        status: response.status,
+        statusText: response.statusText,
+        serverResponse: await response.text(),
+      })
+    }
+
+    return (await response.json()) as DocumentVersion & { config: Config }
   }
 
   async run(
@@ -224,7 +279,10 @@ export class Latitude {
     return await fetch(this.routeResolver.resolve({ handler, params }), {
       method,
       headers: this.authHeader,
-      body: this.bodyToString({ ...body, __internal: { source: this.source } }),
+      body:
+        method === 'POST'
+          ? this.bodyToString({ ...body, __internal: { source: this.source } })
+          : undefined,
     })
   }
 
