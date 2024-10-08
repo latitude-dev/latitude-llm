@@ -44,7 +44,10 @@ describe('GET documents', () => {
         user,
         commit,
         path,
-        content: helpers.createPrompt({ provider: providers[0]! }),
+        content: helpers.createPrompt({
+          provider: providers[0]!,
+          model: 'foo',
+        }),
       })
 
       await mergeCommit(commit).then((r) => r.unwrap())
@@ -64,7 +67,11 @@ describe('GET documents', () => {
       })
 
       expect(res.status).toBe(200)
-      expect(await res.json().then((r) => r.id)).toEqual(documentVersion.id)
+
+      const doc = await res.json()
+
+      expect(doc.id).toEqual(documentVersion.id)
+      expect(doc.config).toEqual({ model: 'foo', provider: providers[0]!.name })
     })
   })
 })
