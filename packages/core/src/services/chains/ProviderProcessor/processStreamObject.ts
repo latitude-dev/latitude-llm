@@ -2,7 +2,6 @@ import { ChainStepResponse } from '../../../constants'
 import { StreamCommonData } from '../../../events/events'
 import { objectToString } from '../../../helpers'
 import { AIReturn } from '../../ai'
-import { saveOrPublishProviderLogs } from './saveOrPublishProviderLogs'
 
 async function processResponse({
   aiResult,
@@ -39,22 +38,15 @@ export type ObjectProviderLogsData = ReturnType<typeof createProviderLogData>
 export async function processStreamObject({
   aiResult,
   commonData,
-  saveSyncProviderLogs,
 }: {
   commonData: StreamCommonData
   aiResult: Awaited<AIReturn<'object'>>
-  saveSyncProviderLogs: boolean
 }) {
   const response = await processResponse({ aiResult, commonData })
-  const logsData = await createProviderLogData({
+  const providerLogsData = await createProviderLogData({
     response,
     commonData,
   })
-  const providerLog = await saveOrPublishProviderLogs({
-    streamType: aiResult.type,
-    data: logsData,
-    saveSyncProviderLogs,
-  })
 
-  return { ...response, providerLog }
+  return { response, providerLogsData }
 }

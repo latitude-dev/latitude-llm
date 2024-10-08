@@ -2,11 +2,16 @@ import { z } from 'zod'
 
 import { ProviderApiKey } from './browser'
 
-export function objectToString(object: any) {
+const DEFAULT_OBJECT_TO_STRING_MESSAGE =
+  'Error: Provider returned an object that could not be stringified'
+export function objectToString(
+  object: any,
+  message = DEFAULT_OBJECT_TO_STRING_MESSAGE,
+) {
   try {
     return JSON.stringify(object, null, 2)
   } catch (error) {
-    return 'Error: Provider returned an object that could not be stringified'
+    return message
   }
 }
 

@@ -55,6 +55,7 @@ export const runEvaluation = async (
     documentLog.uuid,
     db,
   )
+  // TODO: Handle this as an ChainError. Assign code in the enum
   if (!lastProviderLog) {
     return Result.error(
       new NotFoundError(
@@ -104,6 +105,9 @@ export const runEvaluation = async (
   const providersMap = await buildProvidersMap({
     workspaceId: evaluation.workspaceId,
   })
+
+  // TODO: pass ErrorableEntity.EvaluationResult to runChain
+  // This way we associate errors to evaluation results
   const run = await runChain({
     workspace,
     chain,

@@ -1,32 +1,39 @@
-import { Chain, Message, MessageRole } from '@latitude-data/compiler'
-import { CoreTool, ObjectStreamPart, TextStreamPart } from 'ai'
-import { JSONSchema7 } from 'json-schema'
+import { Chain } from '@latitude-data/compiler'
 import { v4 } from 'uuid'
 
 import { ProviderApiKey, Workspace } from '../../browser'
 import {
   ChainEvent,
-  ChainEventTypes,
   ChainStepResponse,
   LogSources,
-  ProviderData,
   RunErrorCodes,
-  StreamEventTypes,
   StreamType,
 } from '../../constants'
-import { streamToGenerator } from '../../lib/streamToGenerator'
-import { ai, AIReturn, Config } from '../ai'
+import { ai } from '../ai'
 import { ChainError } from './ChainErrors'
-import { ChainValidator, ValidatedStep } from './ChainValidator'
+import { ChainStreamConsumer } from './ChainStreamConsumer'
+import { consumeStream } from './ChainStreamConsumer/consumeStream'
+import { ChainValidator, ConfigOverrides } from './ChainValidator'
 import { ProviderProcessor } from './ProviderProcessor'
 
 export type CachedApiKeys = Map<string, ProviderApiKey>
-type ConfigOverrides =
-  | {
-      schema: JSONSchema7
-      output: 'object' | 'array'
-    }
-  | { output: 'no-schema' }
+
+async function handleError(error: ChainError<RunErrorCodes>) {
+  // TODO: Extract this into a service responsible of
+  // saving the error in the database
+  // AiError are a special case. We want to save the error inside
+  // ProviderProcessor class that's where the error is catched.
+  // We throw those error and they arrive here but we filter it
+  // We do this because provider logs will have a pointer to the error
+  // providerLog.error_id = error.id
+  // This way is easier for use to know when a provider log has errors by
+  // joining the tables and in the UI check if providerLog.error_id is not null
+  //
+  // Also this service will need `errorableType` and `errorableId`
+  // this way we associate the polymorphic relationship with the error
+  // to the run documentLog.uuid or evaluationResult.uuid
+  return error
+}
 
 export async function runChain({
   workspace,
@@ -43,19 +50,18 @@ export async function runChain({
   providersMap: CachedApiKeys
   configOverrides?: ConfigOverrides
 }) {
+  // TODO: this hast to be renamed to errorableUuid
+  // We want to link 2 different entities with the errors
+  // the AI run produce: Document logs and Evaluation results
   const documentLogUuid = generateUUID()
 
   let responseResolve: (value: ChainStepResponse<StreamType>) => void
-  let responseReject: (error: ChainError<RunErrorCodes>) => void
 
-  const response = new Promise<ChainStepResponse<StreamType>>(
-    (resolve, reject) => {
-      responseResolve = resolve
-      responseReject = reject
-    },
-  )
+  const response = new Promise<ChainStepResponse<StreamType>>((resolve) => {
+    responseResolve = resolve
+  })
 
-  const startTime = Date.now()
+  const chainStartTime = Date.now()
   const stream = new ReadableStream<ChainEvent>({
     start(controller) {
       iterate({
@@ -68,7 +74,9 @@ export async function runChain({
         configOverrides,
       })
         .then(responseResolve)
-        .catch(responseReject)
+        .catch(async (e: ChainError<RunErrorCodes>) => {
+          await handleError(e)
+        })
     },
   })
 
@@ -77,7 +85,7 @@ export async function runChain({
     response,
     resolvedContent: chain.rawText,
     documentLogUuid,
-    duration: response.then(() => Date.now() - startTime),
+    duration: response.then(() => Date.now() - chainStartTime),
   }
 }
 
@@ -103,43 +111,53 @@ async function iterate({
   configOverrides?: ConfigOverrides
 }) {
   const prevText = previousResponse?.text
-  const stepValidator = new ChainValidator({ prevText, chain, providersMap })
-  const step = await stepValidator.call().then((r) => r.unwrap())
+  const chainValidator = new ChainValidator({
+    workspace,
+    prevText,
+    chain,
+    providersMap,
+    configOverrides,
+  })
+  const streamConsumer = new ChainStreamConsumer({
+    controller,
+    previousCount,
+    documentLogUuid,
+  })
 
   try {
-    const newMessagesInStep = step.conversation.messages.slice(previousCount)
-    const sentCount = previousCount + newMessagesInStep.length
-    publishStepStartEvent(controller, step, newMessagesInStep, documentLogUuid)
-
+    const step = await chainValidator.call().then((r) => r.unwrap())
+    const { messageCount, stepStartTime } = streamConsumer.setup(step)
     const providerProcessor = new ProviderProcessor({
       source,
       documentLogUuid,
       config: step.config,
       apiProvider: step.provider,
       messages: step.conversation.messages,
+      saveSyncProviderLogs: step.chainCompleted,
     })
     const aiResult = await ai({
-      workspace,
       messages: step.conversation.messages,
       config: step.config,
       provider: step.provider,
-      schema: getSchemaForAI(step, configOverrides),
-      output: getOutputForAI(step, configOverrides),
-    })
+      schema: step.schema,
+      output: step.output,
+    }).then((r) => r.unwrap())
 
-    await streamAIResult(controller, aiResult)
+    const aiStreamConsumedResult = await consumeStream({
+      controller,
+      result: aiResult,
+    })
     const response = await providerProcessor.call({
       aiResult,
-      saveSyncProviderLogs: step.chainCompleted,
+      streamConsumedResult: aiStreamConsumedResult,
+      startTime: stepStartTime,
     })
 
     if (step.chainCompleted) {
-      await handleCompletedChain(controller, step, response)
-
+      streamConsumer.chainCompleted({ step, response })
       return response
     } else {
-      publishStepCompleteEvent(controller, response)
-
+      streamConsumer.stepCompleted(response)
       return iterate({
         workspace,
         source,
@@ -147,146 +165,13 @@ async function iterate({
         documentLogUuid,
         providersMap,
         controller,
-        previousCount: sentCount,
+        previousCount: messageCount,
         previousResponse: response,
         configOverrides,
       })
     }
   } catch (e: unknown) {
-    const error =
-      e instanceof ChainError
-        ? e
-        : new ChainError({
-            code: RunErrorCodes.Unknown,
-            message: (e as Error).message,
-          })
-
-    enqueueChainEvent(controller, {
-      event: StreamEventTypes.Latitude,
-      data: {
-        type: ChainEventTypes.Error,
-        error: {
-          name: error.name,
-          message: error.message,
-          stack: error.stack,
-        },
-      },
-    })
-    controller.close()
-
+    const error = streamConsumer.chainError(e)
     throw error
   }
-}
-
-function getSchemaForAI(
-  step: ValidatedStep,
-  configOverrides?: ConfigOverrides,
-) {
-  return step.chainCompleted
-    ? // @ts-expect-error - schema does not exist in some types of configOverrides which is fine
-      configOverrides?.schema || step.config.schema
-    : undefined
-}
-
-function getOutputForAI(
-  step: ValidatedStep,
-  configOverrides?: ConfigOverrides,
-) {
-  return step.chainCompleted
-    ? configOverrides?.output || step.config.schema?.type || 'no-schema'
-    : undefined
-}
-
-function publishStepStartEvent(
-  controller: ReadableStreamDefaultController,
-  stepResult: ValidatedStep,
-  newMessagesInStep: Message[],
-  documentLogUuid?: string,
-) {
-  enqueueChainEvent(controller, {
-    data: {
-      type: ChainEventTypes.Step,
-      isLastStep: stepResult.chainCompleted,
-      config: stepResult.conversation.config as Config,
-      messages: newMessagesInStep,
-      documentLogUuid,
-    },
-    event: StreamEventTypes.Latitude,
-  })
-}
-
-async function streamAIResult(
-  controller: ReadableStreamDefaultController,
-  result: Awaited<AIReturn<StreamType>>,
-) {
-  for await (const value of streamToGenerator<
-    TextStreamPart<Record<string, CoreTool>> | ObjectStreamPart<unknown>
-  >(result.data.fullStream)) {
-    enqueueChainEvent(controller, {
-      event: StreamEventTypes.Provider,
-      data: value as unknown as ProviderData,
-    })
-  }
-}
-
-async function handleCompletedChain(
-  controller: ReadableStreamDefaultController,
-  stepResult: ValidatedStep,
-  response: ChainStepResponse<StreamType>,
-) {
-  enqueueChainEvent(controller, {
-    event: StreamEventTypes.Latitude,
-    data: {
-      type: ChainEventTypes.Complete,
-      config: stepResult.conversation.config as Config,
-      documentLogUuid: response.documentLogUuid,
-      response,
-      messages: [
-        {
-          role: MessageRole.assistant,
-          toolCalls:
-            response.streamType === 'text' ? response.toolCalls || [] : [],
-          content: buildContent(response),
-        },
-      ],
-    },
-  })
-
-  controller.close()
-}
-
-function publishStepCompleteEvent(
-  controller: ReadableStreamDefaultController,
-  response: ChainStepResponse<StreamType>,
-) {
-  enqueueChainEvent(controller, {
-    event: StreamEventTypes.Latitude,
-    data: {
-      type: ChainEventTypes.StepComplete,
-      documentLogUuid: response.documentLogUuid,
-      response: response,
-    },
-  })
-}
-
-function buildContent(response: ChainStepResponse<StreamType>) {
-  if (response.streamType === 'text') {
-    if (response.text && response.text.length > 0) return response.text
-    if (response.toolCalls?.length > 0) {
-      return `Tool calls requested:
-${JSON.stringify(response.toolCalls, null, 2)}
-      `
-    }
-
-    return response.text || ''
-  }
-
-  return ''
-}
-
-export function enqueueChainEvent(
-  controller: ReadableStreamDefaultController,
-  event: ChainEvent,
-) {
-  controller.enqueue(event)
 }

@@ -12,6 +12,7 @@ import {
   User,
   Workspace,
 } from '../../../browser'
+import { Result } from '../../../lib'
 import { ProviderLogsRepository } from '../../../repositories'
 import { createDocumentLog, createProject } from '../../../tests/factories'
 import { testConsumeStream } from '../../../tests/helpers'
@@ -34,7 +35,7 @@ const mocks = vi.hoisted(() => {
           controller.close()
         },
       })
-      return {
+      return Result.ok({
         type: 'text',
         data: {
           text: Promise.resolve('Fake AI generated text'),
@@ -46,7 +47,7 @@ const mocks = vi.hoisted(() => {
           toolCalls: Promise.resolve([]),
           fullStream,
         },
-      }
+      })
     }),
   }
 })

@@ -87,7 +87,14 @@ function latitudeEventPresenter(event: {
         response: omit(event.data.response, 'providerLog', 'documentLogUuid'),
       }
     case ChainEventTypes.Error:
-      return event.data
+      return {
+        type: ChainEventTypes.Error,
+        error: {
+          name: event.data.error.name,
+          message: event.data.error.message,
+          stack: event.data.error.stack,
+        },
+      }
     default:
       throw new BadRequestError(
         `Unknown event type in chainEventPresenter ${JSON.stringify(event)}`,

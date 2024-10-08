@@ -25,7 +25,7 @@ export async function createProviderLog(
     providerId: data.providerId,
     providerType: data.providerType,
     model: data.model ?? faker.lorem.word(),
-    config: {},
+    config: { model: 'gpt-4o' },
     messages: [],
     responseText: faker.lorem.sentence(),
     toolCalls: [],

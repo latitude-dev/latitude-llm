@@ -38,6 +38,9 @@ export async function runDocumentAtCommit({
   if (result.error) return result
 
   const chain = createChain({ prompt: result.value, parameters })
+
+  // TODO: pass ErrorableEntity.DocumentLog to runChain
+  // This way we associate errors to document logs
   const run = await runChain({ workspace, chain, providersMap, source })
   const { stream, response, duration, resolvedContent, documentLogUuid } = run
 

@@ -3,10 +3,10 @@ import { v4 as uuid } from 'uuid'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { objectToString, Workspace } from '../../browser'
-import { LogSources, Providers, RunErrorCodes } from '../../constants'
+import { LogSources, Providers } from '../../constants'
+import { Result } from '../../lib'
 import * as factories from '../../tests/factories'
 import * as aiModule from '../ai'
-import { ChainError } from './ChainErrors'
 import { runChain } from './run'
 
 // Mock other dependencies
@@ -23,7 +23,7 @@ describe('runChain', () => {
   let providersMap: Map<string, any>
 
   function createMockAiResponse(text: string, totalTokens: number) {
-    return {
+    return Result.ok({
       type: 'text',
       data: {
         text: Promise.resolve(text),
@@ -40,7 +40,7 @@ describe('runChain', () => {
           },
         }),
       },
-    }
+    })
   }
 
   let workspace: Workspace
@@ -108,7 +108,7 @@ describe('runChain', () => {
       },
     } as const
 
-    const mockAiResponse = {
+    const mockAiResponse = Result.ok({
       type: 'object',
       data: {
         object: Promise.resolve({ name: 'John', age: 30 }),
@@ -127,7 +127,7 @@ describe('runChain', () => {
           },
         }),
       },
-    }
+    })
 
     vi.spyOn(aiModule, 'ai').mockResolvedValue(mockAiResponse as any)
 
@@ -172,25 +172,6 @@ describe('runChain', () => {
         output: 'object',
       }),
     )
-  })
-
-  it('handles errors during chain execution', async () => {
-    vi.mocked(mockChain.step!).mockRejectedValue(
-      new ChainError({
-        message: 'Chain execution failed',
-        code: RunErrorCodes.ChainCompileError,
-      }),
-    )
-
-    const run = await runChain({
-      workspace,
-      chain: mockChain as Chain,
-      providersMap,
-      source: LogSources.API,
-    })
-
-    await expect(run.response).rejects.toThrow('Error validating chain')
-    await expect(run.duration).rejects.toThrow('Error validating chain')
   })
 
   it('handles multiple steps in a chain', async () => {
@@ -316,7 +297,7 @@ describe('runChain', () => {
       },
     } as const
 
-    const mockAiResponse = {
+    const mockAiResponse = Result.ok({
       type: 'object',
       data: {
         object: Promise.resolve({ name: 'John', age: 30 }),
@@ -335,7 +316,7 @@ describe('runChain', () => {
           },
         }),
       },
-    }
+    })
 
     vi.spyOn(aiModule, 'ai').mockResolvedValue(mockAiResponse as any)
 
@@ -373,12 +354,18 @@ describe('runChain', () => {
       }),
     )
 
-    expect(aiModule.ai).toHaveBeenCalledWith(
-      expect.objectContaining({
-        schema: mockSchema,
-        output: 'object',
-      }),
-    )
+    expect(aiModule.ai).toHaveBeenCalledWith({
+      messages: [
+        {
+          role: MessageRole.user,
+          content: [{ type: ContentType.text, text: 'Test message' }],
+        },
+      ],
+      config: { provider: 'openai', model: 'gpt-3.5-turbo' },
+      provider: providersMap.get('openai'),
+      schema: mockSchema,
+      output: 'object',
+    })
   })
 
   it('runs a chain with array schema and output', async () => {
@@ -393,7 +380,7 @@ describe('runChain', () => {
       },
     } as const
 
-    const mockAiResponse = {
+    const mockAiResponse = Result.ok({
       type: 'object',
       data: {
         object: Promise.resolve([
@@ -418,7 +405,7 @@ describe('runChain', () => {
           },
         }),
       },
-    }
+    })
 
     vi.spyOn(aiModule, 'ai').mockResolvedValue(mockAiResponse as any)
 
@@ -518,7 +505,7 @@ describe('runChain', () => {
   })
 
   it('returns a nicely formatted response text when the response contains a tool call', async () => {
-    const mockAiResponse = {
+    const mockAiResponse = Result.ok({
       type: 'text',
       data: {
         text: Promise.resolve(''),
@@ -545,7 +532,7 @@ describe('runChain', () => {
           },
         }),
       },
-    }
+    })
 
     vi.spyOn(aiModule, 'ai').mockResolvedValue(mockAiResponse as any)
     vi.mocked(mockChain.step!).mockResolvedValue({
