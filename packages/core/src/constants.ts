@@ -22,7 +22,6 @@ export const LATITUDE_SLACK_URL =
   'https://trylatitude.slack.com/join/shared_invite/zt-17dyj4elt-rwM~h2OorAA3NtgmibhnLA#/shared-invite/email'
 export const LATITUDE_HELP_URL = LATITUDE_SLACK_URL
 export const HEAD_COMMIT = 'live'
-export const MAX_FREE_RUNS = 50_000
 export const DEFAULT_PROVIDER_MAX_FREE_RUNS = 1000
 
 export enum CommitStatus {

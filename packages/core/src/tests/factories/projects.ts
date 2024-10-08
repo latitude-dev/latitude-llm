@@ -1,6 +1,12 @@
 import { faker } from '@faker-js/faker'
 
-import { DocumentVersion, Providers, User, Workspace } from '../../browser'
+import {
+  DocumentVersion,
+  Providers,
+  User,
+  Workspace,
+  WorkspaceDto,
+} from '../../browser'
 import { unsafelyGetUser } from '../../data-access'
 import { mergeCommit } from '../../services/commits'
 import { createNewDocument, updateDocument } from '../../services/documents'
@@ -45,7 +51,7 @@ export async function flattenDocumentStructure({
 export type ICreateProject = {
   name?: string
   deletedAt?: Date | null
-  workspace?: Workspace | ICreateWorkspace
+  workspace?: Workspace | WorkspaceDto | ICreateWorkspace
   providers?: { type: Providers; name: string }[]
   evaluations?: Omit<IEvaluationData, 'workspace' | 'user'>[]
   documents?: IDocumentStructure

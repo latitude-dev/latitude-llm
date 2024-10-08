@@ -2,7 +2,12 @@ import { eq, getTableColumns } from 'drizzle-orm'
 
 import { Database, database } from '../client'
 import { NotFoundError, Result } from '../lib'
-import { memberships, workspaces } from '../schema'
+import { memberships, subscriptions, workspaces } from '../schema'
+
+export const workspacesDtoColumns = {
+  ...getTableColumns(workspaces),
+  currentSubscription: getTableColumns(subscriptions),
+}
 
 export class WorkspacesRepository {
   public userId: string
@@ -15,9 +20,13 @@ export class WorkspacesRepository {
 
   get scope() {
     return this.db
-      .select(getTableColumns(workspaces))
+      .select(workspacesDtoColumns)
       .from(workspaces)
       .innerJoin(memberships, eq(memberships.workspaceId, workspaces.id))
+      .innerJoin(
+        subscriptions,
+        eq(subscriptions.id, workspaces.currentSubscriptionId),
+      )
       .where(eq(memberships.userId, this.userId))
       .as('workspacesScope')
   }

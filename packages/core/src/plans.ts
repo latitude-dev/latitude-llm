@@ -14,16 +14,16 @@ export const SubscriptionPlans = {
   [SubscriptionPlan.HobbyV1]: {
     name: 'Hobby',
     credits: 50_000,
-    users: undefined,
+    users: 1,
   },
   [SubscriptionPlan.TeamV1]: {
     name: 'Team',
     credits: 100_000,
-    users: undefined,
+    users: 5,
   },
   [SubscriptionPlan.EnterpriseV1]: {
     name: 'Enterprise',
-    credits: undefined,
-    users: undefined,
+    credits: 1_000_000,
+    users: 1000,
   },
 }
