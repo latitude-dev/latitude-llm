@@ -16,6 +16,7 @@ import { projects } from './models/projects'
 import { providerApiKeys } from './models/providerApiKeys'
 import { providerLogs } from './models/providerLogs'
 import { sessions } from './models/sessions'
+import { subscriptions } from './models/subscriptions'
 import { users } from './models/users'
 import { workspaces } from './models/workspaces'
 
@@ -202,10 +203,16 @@ export const datasetsRelations = relations(datasets, ({ one }) => ({
   }),
 }))
 
-// TODO: uncomment when we are ready
-// export const eventRelations = relations(events, ({ one }) => ({
-//   workspace: one(workspaces, {
-//     fields: [events.workspaceId],
-//     references: [workspaces.id],
-//   }),
-// }))
+export const eventRelations = relations(events, ({ one }) => ({
+  workspace: one(workspaces, {
+    fields: [events.workspaceId],
+    references: [workspaces.id],
+  }),
+}))
+
+export const subscriptionRelations = relations(subscriptions, ({ one }) => ({
+  workspace: one(workspaces, {
+    fields: [subscriptions.workspaceId],
+    references: [workspaces.id],
+  }),
+}))
