@@ -11,6 +11,7 @@ import React, {
 
 import { Document as RefDocument } from '@latitude-data/compiler'
 import {
+  Commit,
   DocumentVersion,
   promptConfigSchema,
   ProviderApiKey,
@@ -23,13 +24,17 @@ import {
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui'
+import { createDraftWithContentAction } from '$/actions/commits/createDraftWithContentAction'
 import { type AddMessagesActionFn } from '$/actions/sdk/addMessagesAction'
 import type { RunDocumentActionFn } from '$/actions/sdk/runDocumentAction'
 import EditorHeader from '$/components/EditorHeader'
+import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { useMetadata } from '$/hooks/useMetadata'
+import { ROUTES } from '$/services/routes'
 import useCurrentWorkspace from '$/stores/currentWorkspace'
 import useDocumentVersions from '$/stores/documentVersions'
 import useProviderApiKeys from '$/stores/providerApiKeys'
+import { useRouter } from 'next/navigation'
 import { DiffOptions } from 'node_modules/@latitude-data/web-ui/src/ds/molecules/DocumentTextEditor/types'
 import { useDebouncedCallback } from 'use-debounce'
 
@@ -61,6 +66,20 @@ export default function DocumentEditor({
 }) {
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
+  const router = useRouter()
+  const { execute: createDraftWithContent } = useLatitudeAction(
+    createDraftWithContentAction,
+    {
+      onSuccess: ({ data: draft }: { data: Commit }) => {
+        router.push(
+          ROUTES.projects
+            .detail({ id: project.id })
+            .commits.detail({ uuid: draft.uuid })
+            .documents.detail({ uuid: document.documentUuid }).root,
+        )
+      },
+    },
+  )
   const { data: workspace } = useCurrentWorkspace()
   const { data: providers } = useProviderApiKeys({
     fallbackData: providerApiKeys,
@@ -79,19 +98,34 @@ export default function DocumentEditor({
   const [refineDocumentModalOpen, setRefineDocumentModalOpen] = useState(false)
 
   const [diff, setDiff] = useState<DiffOptions>()
-  const handleSuggestion = (suggestion: string) => {
-    setDiff({
-      newValue: suggestion,
-      description: 'Generated suggestion',
-      onAccept: (newValue) => {
-        onChange(newValue)
+  const handleSuggestion = useCallback(
+    (suggestion: string) => {
+      const onAccept = (newValue: string) => {
         setDiff(undefined)
-      },
-      onReject: () => {
-        setDiff(undefined)
-      },
-    })
-  }
+        if (!commit.mergedAt) {
+          onChange(newValue)
+          return
+        }
+
+        createDraftWithContent({
+          title: `Refined '${document.path.split('/').pop()}'`,
+          content: newValue,
+          documentUuid: document.documentUuid,
+          projectId: project.id,
+        })
+      }
+
+      setDiff({
+        newValue: suggestion,
+        description: 'Generated suggestion',
+        onAccept,
+        onReject: () => {
+          setDiff(undefined)
+        },
+      })
+    },
+    [document.documentUuid, document.path, commit.mergedAt],
+  )
 
   const debouncedSave = useDebouncedCallback(
     (val: string) => {
@@ -200,8 +234,7 @@ export default function DocumentEditor({
                 }
                 isSaved={isSaved}
                 actionButtons={
-                  workspace?.id == 1 && //TODO: Primitive Feature Flag. Remove later.
-                  commit.mergedAt === null && (
+                  workspace?.id == 1 && ( //TODO: Primitive Feature Flag. Remove later.
                     <Button
                       className='bg-background'
                       variant='outline'
