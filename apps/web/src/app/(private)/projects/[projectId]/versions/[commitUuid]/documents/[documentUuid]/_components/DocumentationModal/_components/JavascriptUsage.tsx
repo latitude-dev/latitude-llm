@@ -53,13 +53,13 @@ const result = await sdk.run('${documentPath}'${getRunOptions() ? `, ${getRunOpt
 
   return (
     <div className='flex flex-col gap-4'>
-      <Text.H4>
+      <Text.H5>
         To run this document programmatically, First install the SDK:
-      </Text.H4>
+      </Text.H5>
       <CodeBlock language='bash'>npm install @latitude-data/sdk</CodeBlock>
-      <Text.H4>Then, use the following code to run the document:</Text.H4>
+      <Text.H5>Then, use the following code to run the document:</Text.H5>
       <CodeBlock language='typescript'>{sdkCode}</CodeBlock>
-      <Text.H4>
+      <Text.H5>
         Check out{' '}
         <a
           target='_blank'
@@ -69,7 +69,7 @@ const result = await sdk.run('${documentPath}'${getRunOptions() ? `, ${getRunOpt
           our docs
         </a>{' '}
         for more details.
-      </Text.H4>
+      </Text.H5>
     </div>
   )
 }

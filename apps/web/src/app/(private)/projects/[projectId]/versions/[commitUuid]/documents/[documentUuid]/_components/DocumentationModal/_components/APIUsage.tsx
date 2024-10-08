@@ -41,7 +41,7 @@ ${getRequestBodyContent()}
 
   return (
     <div className='flex flex-col gap-4'>
-      <Text.H4>You can use the Latitude API to run this document:</Text.H4>
+      <Text.H5>You can use the Latitude API to run this document:</Text.H5>
       <CodeBlock language='bash'>{apiCode.trim()}</CodeBlock>
     </div>
   )

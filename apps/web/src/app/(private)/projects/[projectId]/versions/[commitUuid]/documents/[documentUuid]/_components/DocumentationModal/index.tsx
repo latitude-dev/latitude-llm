@@ -61,8 +61,8 @@ export default function DocumentationModal({
 
   return (
     <Modal
-      title='Documentation'
-      description="Implementing this prompt in your application is straightforward. Here's what you need to do."
+      title='Deploy this prompt'
+      description="Deploying this prompt in your application is straightforward. Here's what you need to do."
       size='large'
       open={open}
       onOpenChange={toggleDocumentation}
