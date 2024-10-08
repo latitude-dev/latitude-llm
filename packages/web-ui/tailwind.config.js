@@ -38,6 +38,10 @@ export default {
           DEFAULT: 'rgb(var(--destructive) / <alpha-value>)',
           foreground: 'rgb(var(--destructive-foreground) / <alpha-value>)',
         },
+        success: {
+          DEFAULT: 'rgb(var(--success) / <alpha-value>)',
+          foreground: 'rgb(var(--success-foreground) / <alpha-value>)',
+        },
         'destructive-muted-foreground':
           'rgb(var(--destructive-muted-foreground) / <alpha-value>)',
         'warning-muted-foreground':

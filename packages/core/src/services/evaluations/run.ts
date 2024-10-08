@@ -1,4 +1,4 @@
-import { createChain, readMetadata } from '@latitude-data/compiler'
+import { createChain } from '@latitude-data/compiler'
 import { JSONSchema7 } from 'json-schema'
 
 import {
@@ -16,14 +16,9 @@ import {
 import { publisher } from '../../events/publisher'
 import { LatitudeError, NotFoundError, Result } from '../../lib'
 import { runChain } from '../chains/run'
-import { computeDocumentLogWithMetadata } from '../documentLogs'
+import { serialize as serializeDocumentLog } from '../documentLogs/serialize'
 import { createEvaluationResult } from '../evaluationResults'
 import { buildProvidersMap } from '../providerApiKeys/buildMap'
-import {
-  buildProviderLogResponse,
-  formatContext,
-  formatConversation,
-} from '../providerLogs'
 
 // Helper function to get the result schema based on evaluation type
 const getResultSchema = (type: EvaluationResultableType): JSONSchema7 => {
@@ -64,25 +59,13 @@ export const runEvaluation = async (
     )
   }
 
-  const documentLogWithMetadataResult =
-    await computeDocumentLogWithMetadata(documentLog)
-  if (documentLogWithMetadataResult.error) return documentLogWithMetadataResult
-  const documentLogWithMetadata = documentLogWithMetadataResult.value
+  const serializedDocumentLog = await serializeDocumentLog(documentLog, db)
+  if (serializedDocumentLog.error) return serializedDocumentLog
 
-  const metadata = await readMetadata({ prompt: documentLog.resolvedContent })
   const chain = createChain({
     prompt: evaluation.metadata.prompt,
     parameters: {
-      messages: formatConversation(lastProviderLog),
-      context: formatContext(lastProviderLog),
-      response: buildProviderLogResponse(lastProviderLog),
-      prompt: documentLog.resolvedContent,
-      parameters: documentLog.parameters,
-      config: metadata.config,
-      duration: documentLogWithMetadata.duration,
-      cost: documentLogWithMetadata.costInMillicents
-        ? documentLogWithMetadata.costInMillicents / 1000
-        : 0,
+      ...serializedDocumentLog.value,
     },
   })
 

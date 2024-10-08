@@ -1,7 +1,13 @@
 'use client'
 
 import path from 'path'
-import { createContext, Suspense, useCallback, useMemo, useState } from 'react'
+import React, {
+  createContext,
+  Suspense,
+  useCallback,
+  useMemo,
+  useState,
+} from 'react'
 
 import { Document as RefDocument } from '@latitude-data/compiler'
 import {
@@ -10,8 +16,10 @@ import {
   ProviderApiKey,
 } from '@latitude-data/core/browser'
 import {
+  Button,
   DocumentTextEditor,
   DocumentTextEditorFallback,
+  Text,
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui'
@@ -19,11 +27,14 @@ import { type AddMessagesActionFn } from '$/actions/sdk/addMessagesAction'
 import type { RunDocumentActionFn } from '$/actions/sdk/runDocumentAction'
 import EditorHeader from '$/components/EditorHeader'
 import { useMetadata } from '$/hooks/useMetadata'
+import useCurrentWorkspace from '$/stores/currentWorkspace'
 import useDocumentVersions from '$/stores/documentVersions'
 import useProviderApiKeys from '$/stores/providerApiKeys'
+import { DiffOptions } from 'node_modules/@latitude-data/web-ui/src/ds/molecules/DocumentTextEditor/types'
 import { useDebouncedCallback } from 'use-debounce'
 
 import Playground from './Playground'
+import RefineDocumentModal from './RefineModal'
 
 export const DocumentEditorContext = createContext<
   | {
@@ -50,6 +61,7 @@ export default function DocumentEditor({
 }) {
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
+  const { data: workspace } = useCurrentWorkspace()
   const { data: providers } = useProviderApiKeys({
     fallbackData: providerApiKeys,
   })
@@ -64,6 +76,22 @@ export default function DocumentEditor({
   )
   const [value, setValue] = useState(document.content)
   const [isSaved, setIsSaved] = useState(true)
+  const [refineDocumentModalOpen, setRefineDocumentModalOpen] = useState(false)
+
+  const [diff, setDiff] = useState<DiffOptions>()
+  const handleSuggestion = (suggestion: string) => {
+    setDiff({
+      newValue: suggestion,
+      description: 'Generated suggestion',
+      onAccept: (newValue) => {
+        onChange(newValue)
+        setDiff(undefined)
+      },
+      onReject: () => {
+        setDiff(undefined)
+      },
+    })
+  }
 
   const debouncedSave = useDebouncedCallback(
     (val: string) => {
@@ -137,39 +165,65 @@ export default function DocumentEditor({
 
   const isMerged = commit.mergedAt !== null
   return (
-    <DocumentEditorContext.Provider
-      value={{
-        runDocumentAction: runDocumentAction as RunDocumentActionFn,
-        addMessagesAction: addMessagesAction as AddMessagesActionFn,
-      }}
-    >
-      <div className='flex flex-row w-full h-full gap-8 p-6'>
-        <div className='flex flex-col flex-1 flex-grow flex-shrink gap-2 min-w-0'>
-          <EditorHeader
-            providers={providers}
-            disabledMetadataSelectors={isMerged}
-            title='Prompt editor'
-            metadata={metadata}
-            prompt={value}
-            onChangePrompt={onChange}
-            freeRunsCount={freeRunsCount}
-          />
-          <Suspense fallback={<DocumentTextEditorFallback />}>
-            <DocumentTextEditor
-              value={value}
+    <>
+      <RefineDocumentModal
+        open={refineDocumentModalOpen}
+        onOpenChange={setRefineDocumentModalOpen}
+        documentVersion={document}
+        setDocumentContent={handleSuggestion}
+      />
+      <DocumentEditorContext.Provider
+        value={{
+          runDocumentAction: runDocumentAction as RunDocumentActionFn,
+          addMessagesAction: addMessagesAction as AddMessagesActionFn,
+        }}
+      >
+        <div className='flex flex-row w-full h-full gap-8 p-6'>
+          <div className='flex flex-col flex-1 flex-grow flex-shrink gap-2 min-w-0'>
+            <EditorHeader
+              providers={providers}
+              disabledMetadataSelectors={isMerged}
+              title='Prompt editor'
               metadata={metadata}
-              onChange={onChange}
-              readOnlyMessage={
-                isMerged ? 'Create a draft to edit documents.' : undefined
-              }
-              isSaved={isSaved}
+              prompt={value}
+              onChangePrompt={onChange}
+              freeRunsCount={freeRunsCount}
             />
-          </Suspense>
+            <Suspense fallback={<DocumentTextEditorFallback />}>
+              <DocumentTextEditor
+                value={value}
+                metadata={metadata}
+                onChange={onChange}
+                diff={diff}
+                readOnlyMessage={
+                  isMerged ? 'Create a draft to edit documents.' : undefined
+                }
+                isSaved={isSaved}
+                actionButtons={
+                  workspace?.id == 1 && //TODO: Primitive Feature Flag. Remove later.
+                  commit.mergedAt === null && (
+                    <Button
+                      className='bg-background'
+                      variant='outline'
+                      size='small'
+                      iconProps={{
+                        name: 'sparkles',
+                        size: 'small',
+                      }}
+                      onClick={() => setRefineDocumentModalOpen(true)}
+                    >
+                      <Text.H6>Refine</Text.H6>
+                    </Button>
+                  )
+                }
+              />
+            </Suspense>
+          </div>
+          <div className='flex flex-col flex-1 gap-2 overflow-y-auto custom-scrollbar max-h-[calc(100vh-170px)]'>
+            <Playground document={document} metadata={metadata!} />
+          </div>
         </div>
-        <div className='flex flex-col flex-1 gap-2 overflow-y-auto custom-scrollbar max-h-[calc(100vh-170px)]'>
-          <Playground document={document} metadata={metadata!} />
-        </div>
-      </div>
-    </DocumentEditorContext.Provider>
+      </DocumentEditorContext.Provider>
+    </>
   )
 }

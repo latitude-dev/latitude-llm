@@ -5,9 +5,13 @@ import {
   objectToString,
   ProviderLog,
   ProviderLogDto,
+  SerializedConversation,
+  SerializedProviderLog,
 } from '../../browser'
 
-export function formatConversation(providerLog: ProviderLogDto | ProviderLog) {
+export function formatConversation(
+  providerLog: ProviderLogDto | ProviderLog,
+): SerializedConversation {
   const messages: Message[] = [...(providerLog.messages || [])]
 
   if ((providerLog as ProviderLogDto).response) {
@@ -30,7 +34,7 @@ export function formatConversation(providerLog: ProviderLogDto | ProviderLog) {
     })
   }
 
-  return formatMessages(messages)
+  return formatMessages(messages) as SerializedConversation
 }
 
 export function formatContext(
@@ -82,5 +86,19 @@ function formatMessages(messages: Message[]) {
     user: formatRoleMessages(MessageRole.user),
     system: formatRoleMessages(MessageRole.system),
     assistant: formatRoleMessages(MessageRole.assistant),
+  }
+}
+
+export function serialize(providerLog: ProviderLog): SerializedProviderLog {
+  const response = providerLog.responseObject
+    ? JSON.stringify(providerLog.responseObject, null, 2)
+    : providerLog.responseText
+  return {
+    messages: formatConversation(providerLog),
+    context: formatContext(providerLog),
+    response,
+    config: providerLog.config,
+    duration: providerLog.duration,
+    cost: providerLog.costInMillicents / 1000,
   }
 }

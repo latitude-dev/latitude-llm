@@ -456,6 +456,13 @@
       "when": 1728296064861,
       "tag": "0064_futuristic_blue_blade",
       "breakpoints": true
+    },
+    {
+      "idx": 65,
+      "version": "7",
+      "when": 1728315662483,
+      "tag": "0065_perpetual_the_leader",
+      "breakpoints": true
     }
   ]
 }

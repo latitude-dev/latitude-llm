@@ -24,19 +24,6 @@ import {
 } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/DocumentEditor/Editor/Playground/Chat'
 import { readStreamableValue } from 'ai/rsc'
 
-export const EVALUATION_PARAMETERS = [
-  'messages',
-  'context',
-  'response',
-  'prompt',
-  'parameters',
-  'cost',
-  'latency',
-  'config',
-]
-
-export type Parameters = (typeof EVALUATION_PARAMETERS)[number]
-
 export default function Chat({
   clearChat,
   evaluation,

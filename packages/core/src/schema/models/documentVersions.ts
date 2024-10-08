@@ -21,6 +21,7 @@ export const documentVersions = latitudeSchema.table(
     path: varchar('path').notNull(),
     content: text('content').notNull().default(''),
     resolvedContent: text('resolved_content'),
+    contentHash: text('content_hash'),
     commitId: bigint('commit_id', { mode: 'number' })
       .notNull()
       .references(() => commits.id, { onDelete: 'cascade' }),

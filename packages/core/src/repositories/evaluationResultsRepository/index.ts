@@ -1,4 +1,4 @@
-import { and, eq, getTableColumns, isNull, sql } from 'drizzle-orm'
+import { and, desc, eq, getTableColumns, isNull, sql } from 'drizzle-orm'
 
 import {
   Commit,
@@ -6,7 +6,9 @@ import {
   EvaluationResult,
   EvaluationResultableType,
 } from '../../browser'
+import { Result } from '../../lib'
 import {
+  documentLogs,
   evaluationResultableBooleans,
   evaluationResultableNumbers,
   evaluationResultableTexts,
@@ -87,5 +89,49 @@ export class EvaluationResultsRepository extends Repository<
         ),
       )
       .as('evaluationResultsBaseQuery')
+  }
+
+  async findByContentHash({
+    evaluationId,
+    contentHash,
+  }: {
+    evaluationId: number
+    contentHash: string
+  }) {
+    const result = await this.db
+      .select(this.scope._.selectedFields)
+      .from(this.scope)
+      .innerJoin(documentLogs, eq(documentLogs.id, this.scope.documentLogId))
+      .where(
+        and(
+          eq(this.scope.evaluationId, evaluationId),
+          eq(documentLogs.contentHash, contentHash),
+        ),
+      )
+      .orderBy(desc(this.scope.createdAt))
+
+    return Result.ok(result.map(this.parseResult))
+  }
+
+  private parseResult(row: EvaluationResult & { result: string }) {
+    const { result, resultableType, ...rest } = row
+
+    let parsedResult
+    switch (resultableType) {
+      case EvaluationResultableType.Boolean:
+        parsedResult = result.toLowerCase() === 'true'
+        break
+      case EvaluationResultableType.Number:
+        parsedResult = parseFloat(result)
+        break
+      default:
+        parsedResult = result
+    }
+
+    return {
+      ...rest,
+      resultableType,
+      result: parsedResult,
+    }
   }
 }

@@ -93,6 +93,8 @@ export const env = createEnv({
       .transform((value) => value === 'true')
       .optional()
       .default('true'),
+    COPILOT_PROJECT_ID: z.coerce.number().optional(),
+    COPILOT_REFINE_PROMPT_PATH: z.string().optional(),
     DATASET_GENERATOR_PROJECT_ID: z.coerce.number().optional(),
     DATASET_GENERATOR_DOCUMENT_PATH: z.string().optional(),
     DATASET_GENERATOR_WORKSPACE_APIKEY: z.string().optional(),

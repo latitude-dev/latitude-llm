@@ -41,6 +41,7 @@ const ConnectedDocumentTableRow = ({
     return document.path.split('/').pop()
   }, [document.path])
 
+  // TODO: Use <EvaluationAggregatedResult /> component instead.
   const modalValuePercentage = useMemo(() => {
     return ((100 * document.modalValueCount) / document.evaluationLogs).toFixed(
       2,

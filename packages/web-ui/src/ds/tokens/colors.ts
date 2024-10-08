@@ -13,6 +13,8 @@ export const colors = {
     destructive: 'text-destructive',
     destructiveForeground: 'text-destructive-foreground',
     destructiveMutedForeground: 'text-destructive-muted-foreground',
+    success: 'text-success',
+    successForeground: 'text-success-foreground',
     accentForeground: 'text-accent-foreground',
     secondaryForeground: 'text-secondary-foreground',
     warningMutedForeground: 'text-warning-muted-foreground',
