@@ -16,6 +16,7 @@
     "./repositories/*": "./src/repositories/*.ts",
     "./schema": "./src/schema/index.ts",
     "./schema/*": "./src/schema/*.ts",
+    "./data-migrations/*": "./src/data-migrations/*.ts",
     "./services/*": "./src/services/*.ts",
     "./websockets/*": "./src/websockets/*.ts",
     "./factories": "./src/tests/factories/index.ts",

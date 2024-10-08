@@ -7,7 +7,12 @@ import {
 } from '../../browser'
 import { database } from '../../client'
 import { publisher } from '../../events/publisher'
-import { BadRequestError, Result, Transaction } from '../../lib'
+import {
+  BadRequestError,
+  generateUUIDIdentifier,
+  Result,
+  Transaction,
+} from '../../lib'
 import { EvaluationResultDto } from '../../repositories/evaluationResultsRepository'
 import { evaluationResults } from '../../schema'
 import { evaluationResultableBooleans } from '../../schema/models/evaluationResultableBooleans'
@@ -53,6 +58,7 @@ export async function createEvaluationResult(
     const inserts = await trx
       .insert(evaluationResults)
       .values({
+        uuid: generateUUIDIdentifier(),
         evaluationId: evaluation.id,
         documentLogId: documentLog.id,
         providerLogId: providerLog.id,

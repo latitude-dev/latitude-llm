@@ -73,11 +73,18 @@ describe('createEvaluationResult', () => {
     if (result.error) return
 
     const value = result.value
-    expect(value.evaluationId).toBe(evaluation.id)
-    expect(value.documentLogId).toBe(documentLog.id)
-    expect(value.providerLogId).toBe(providerLog.id)
-    expect(value.resultableType).toBe(EvaluationResultableType.Boolean)
-    expect(value.result).toBe(true)
+    expect(value).toEqual(
+      expect.objectContaining({
+        id: value.id,
+        uuid: expect.any(String),
+        evaluationId: evaluation.id,
+        documentLogId: documentLog.id,
+        providerLogId: providerLog.id,
+        resultableType: EvaluationResultableType.Boolean,
+        result: true,
+        source: documentLog.source,
+      }),
+    )
 
     // Verify in database
     const dbResult = await database.query.evaluationResults.findFirst({

@@ -7,9 +7,9 @@ import {
 } from '@latitude-data/core/browser'
 import * as factories from '@latitude-data/core/factories'
 import { helpers } from '@latitude-data/core/factories'
+import { generateUUIDIdentifier } from '@latitude-data/core/lib/generateUUID'
 import { DocumentVersionsRepository } from '@latitude-data/core/repositories'
 import { createDraftWithContentAction } from '$/actions/commits/createDraftWithContentAction'
-import { v4 as uuid } from 'uuid'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => {
@@ -84,7 +84,7 @@ describe('createDraftWithContentAction', () => {
         projectId: project.id,
         title: 'New Draft',
         description: 'Draft Description',
-        documentUuid: uuid(),
+        documentUuid: generateUUIDIdentifier(),
         content: 'New content',
       })
 

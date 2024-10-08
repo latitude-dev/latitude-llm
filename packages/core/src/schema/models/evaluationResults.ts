@@ -1,4 +1,4 @@
-import { bigint, bigserial, index, pgEnum } from 'drizzle-orm/pg-core'
+import { bigint, bigserial, index, pgEnum, uuid } from 'drizzle-orm/pg-core'
 
 import { EvaluationResultableType } from '../../constants'
 import { latitudeSchema } from '../db-schema'
@@ -17,6 +17,7 @@ export const evaluationResults = latitudeSchema.table(
   'evaluation_results',
   {
     id: bigserial('id', { mode: 'number' }).notNull().primaryKey(),
+    uuid: uuid('uuid').unique(),
     evaluationId: bigint('evaluation_id', { mode: 'number' })
       .notNull()
       .references(() => evaluations.id, { onDelete: 'cascade' }),
