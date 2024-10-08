@@ -107,6 +107,8 @@ export default function Chat({
           case StreamEventTypes.Latitude: {
             if (data.type === ChainEventTypes.Step) {
               if (data.isLastStep) setChainLength(messagesCount + 1)
+            } else if (data.type === ChainEventTypes.StepComplete) {
+              response = ''
             } else if (data.type === ChainEventTypes.Complete) {
               setTokens(data.response.usage.totalTokens)
               setTime(performance.now() - start)
@@ -160,9 +162,9 @@ export default function Chat({
 
       setResponseStream('')
 
-      let response = ''
-
       addMessageToConversation(message)
+
+      let response = ''
 
       try {
         const { output } = await addMessagesAction({
