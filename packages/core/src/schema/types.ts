@@ -93,3 +93,15 @@ export type ClaimedRewardWithUserInfo = ClaimedReward & {
 export type WorkspaceDto = Workspace & {
   currentSubscription: Subscription
 }
+
+export interface AverageResultAndCostOverCommit extends Commit {
+  results: number
+  averageResult: number
+  averageCostInMillicents: number
+}
+
+export interface AverageResultOverTime {
+  date: Date
+  averageResult: number
+  count: number
+}

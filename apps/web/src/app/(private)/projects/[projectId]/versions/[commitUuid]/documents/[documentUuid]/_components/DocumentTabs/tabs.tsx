@@ -16,26 +16,34 @@ export function DocumentTabSelector({
 }) {
   const router = useNavigate()
   const selectedSegment = useSelectedLayoutSegment() as DocumentRoutes | null
-
-  const pathTo = (documentRoute: DocumentRoutes) => {
-    const documentDetail = ROUTES.projects
-      .detail({ id: Number(projectId) })
-      .commits.detail({ uuid: commitUuid })
-      .documents.detail({ uuid: documentUuid })
-
-    return documentDetail[documentRoute].root
+  const baseRoute = ROUTES.projects
+    .detail({ id: Number(projectId) })
+    .commits.detail({ uuid: commitUuid })
+    .documents.detail({ uuid: documentUuid })
+  const options = {
+    [DocumentRoutes.editor]: {
+      label: 'Editor',
+      value: DocumentRoutes.editor,
+      route: baseRoute.root,
+    },
+    [DocumentRoutes.evaluations]: {
+      label: 'Evaluations',
+      value: DocumentRoutes.evaluations,
+      route: baseRoute.evaluations.dashboard.root,
+    },
+    [DocumentRoutes.logs]: {
+      label: 'Logs',
+      value: DocumentRoutes.logs,
+      route: baseRoute.logs.root,
+    },
   }
 
   return (
     <TabSelector
-      options={[
-        { label: 'Editor', value: DocumentRoutes.editor },
-        { label: 'Evaluations', value: DocumentRoutes.evaluations },
-        { label: 'Logs', value: DocumentRoutes.logs },
-      ]}
+      options={Object.values(options)}
       selected={selectedSegment ?? DocumentRoutes.editor}
       onSelect={(value) => {
-        router.push(pathTo(value))
+        router.push(options[value].route)
       }}
     />
   )

@@ -3,8 +3,8 @@
 import { compact } from 'lodash-es'
 
 import { ProviderLogDto } from '@latitude-data/core/browser'
-import { useToast } from '@latitude-data/web-ui'
-import { getProviderLogsAction } from '$/actions/providerLogs/fetch'
+import useFetcher from '$/hooks/useFetcher'
+import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'
 
 export default function useProviderLogs(
@@ -14,34 +14,16 @@ export default function useProviderLogs(
   }: { documentUuid?: string; documentLogUuid?: string } = {},
   opts?: SWRConfiguration,
 ) {
-  const { toast } = useToast()
+  const fetcher = useFetcher(buildRoute({ documentUuid, documentLogUuid }), {
+    serializer: (rows) => rows.map(deserialize),
+  })
   const {
     data = [],
     isLoading,
     error: swrError,
   } = useSWR<ProviderLogDto[]>(
     compact(['providerLogs', documentUuid, documentLogUuid]),
-    async () => {
-      // TODO: Move to regula HTTP GET
-      const [data, error] = await getProviderLogsAction({
-        documentUuid,
-        documentLogUuid,
-      })
-
-      if (error) {
-        console.error(error)
-
-        toast({
-          title: 'Error fetching provider logs',
-          description: error.formErrors?.[0] || error.message,
-          variant: 'destructive',
-        })
-
-        return []
-      }
-
-      return data
-    },
+    fetcher,
     opts,
   )
 
@@ -56,40 +38,19 @@ export function useProviderLog(
   providerLogId?: number | null,
   opts?: SWRConfiguration,
 ) {
-  const { toast } = useToast()
+  const fetcher = useFetcher(
+    providerLogId ? `/api/providerLogs/${providerLogId}` : undefined,
+    {
+      fallback: null,
+    },
+  )
   const {
     data = undefined,
     isLoading,
     error: swrError,
   } = useSWR<ProviderLogDto | undefined>(
     compact(['providerLog', providerLogId]),
-    async () => {
-      if (!providerLogId) return undefined
-
-      try {
-        const response = await fetch(`/api/providerLogs/${providerLogId}`)
-        if (!response.ok) {
-          toast({
-            title: 'Error fetching provider log',
-            description: response.statusText,
-            variant: 'destructive',
-          })
-          return
-        }
-        const data = await response.json()
-        return data
-      } catch (error) {
-        toast({
-          title: 'Error fetching provider log',
-          description:
-            error instanceof Error
-              ? error.message
-              : 'An unknown error occurred',
-          variant: 'destructive',
-        })
-        return
-      }
-    },
+    fetcher,
     opts,
   )
 
@@ -97,5 +58,38 @@ export function useProviderLog(
     data,
     isLoading,
     error: swrError,
+  }
+}
+
+function buildRoute({
+  documentUuid,
+  documentLogUuid,
+}: {
+  documentUuid?: string
+  documentLogUuid?: string
+}) {
+  let route = ROUTES.api.providerLogs.root
+  if (documentUuid) {
+    route += `?documentUuid=${documentUuid}`
+  }
+  if (documentLogUuid) {
+    if (documentUuid) {
+      route += '&'
+    } else {
+      route += '?'
+    }
+
+    route += `documentLogUuid=${documentLogUuid}`
+  }
+
+  return route
+}
+
+function deserialize(item: ProviderLogDto) {
+  return {
+    ...item,
+    generatedAt: item.generatedAt ? new Date(item.generatedAt) : null,
+    createdAt: new Date(item.createdAt),
+    updatedAt: new Date(item.updatedAt),
   }
 }

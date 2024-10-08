@@ -8,6 +8,7 @@ import { Button, Text } from '../../atoms'
 export type TabSelectorOption<T> = {
   label: string
   value: T
+  route?: string
 }
 
 export function TabSelector<T extends string>({

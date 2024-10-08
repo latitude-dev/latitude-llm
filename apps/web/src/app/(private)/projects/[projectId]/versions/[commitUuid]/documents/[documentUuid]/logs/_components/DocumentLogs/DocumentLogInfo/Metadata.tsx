@@ -83,13 +83,6 @@ export function DocumentLogMetadata({
 
   return (
     <>
-      <MetadataItem label='Log uuid'>
-        <ClickToCopy copyValue={documentLog.uuid}>
-          <Text.H5 align='right' color='foregroundMuted'>
-            {documentLog.uuid.split('-')[0]}
-          </Text.H5>
-        </ClickToCopy>
-      </MetadataItem>
       <MetadataItem
         label='Timestamp'
         value={format(documentLog.createdAt, 'PPp')}

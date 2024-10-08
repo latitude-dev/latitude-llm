@@ -79,13 +79,6 @@ export function EvaluationResultMetadata({
 
   return (
     <>
-      <MetadataItem label='Result id'>
-        <ClickToCopy copyValue={evaluationResult.id.toString()}>
-          <Text.H5 align='right' color='foregroundMuted'>
-            {evaluationResult.id}
-          </Text.H5>
-        </ClickToCopy>
-      </MetadataItem>
       <MetadataItem
         label='Timestamp'
         value={format(evaluationResult.createdAt, 'PPp')}

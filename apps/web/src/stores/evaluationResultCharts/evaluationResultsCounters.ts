@@ -1,7 +1,7 @@
-import { useCallback } from 'react'
-
-import { useCurrentProject, useToast } from '@latitude-data/web-ui'
-import { computeEvaluationResultsCountersAction } from '$/actions/evaluationResults/computeEvaluationResultsCountersAction'
+import { useCurrentProject } from '@latitude-data/web-ui'
+import useFetcher from '$/hooks/useFetcher'
+import { ROUTES } from '$/services/routes'
+import { _API_ROUTES } from '$/services/routes/api'
 import useSWR, { SWRConfiguration } from 'swr'
 
 export default function useEvaluationResultsCounters(
@@ -16,26 +16,16 @@ export default function useEvaluationResultsCounters(
   },
   { fallbackData }: SWRConfiguration = {},
 ) {
+  // TODO: remove this hook, pass the project id as a parameter
   const { project } = useCurrentProject()
-  const { toast } = useToast()
-  const fetcher = useCallback(async () => {
-    const [data, error] = await computeEvaluationResultsCountersAction({
-      projectId: project.id,
-      commitUuid,
-      documentUuid,
-      evaluationId,
-    })
-
-    if (error) {
-      toast({
-        title: 'Error fetching evaluation stats',
-        description: error.formErrors?.[0] || error.message,
-        variant: 'destructive',
-      })
-      return null
-    }
-    return data
-  }, [commitUuid, documentUuid, evaluationId, project.id, toast])
+  const fetcher = useFetcher(
+    ROUTES.api.projects
+      .detail(project.id)
+      .commits.detail(commitUuid)
+      .documents.detail(documentUuid)
+      .evaluations.detail({ evaluationId }).evaluationResults.counters,
+    { fallback: null },
+  )
   const { data, isLoading, error, mutate } = useSWR(
     ['evaluationResultsCounters', commitUuid, documentUuid, evaluationId],
     fetcher,

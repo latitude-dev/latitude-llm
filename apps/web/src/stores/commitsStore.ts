@@ -1,12 +1,11 @@
-import { useCallback } from 'react'
-
 import { Commit, CommitStatus } from '@latitude-data/core/browser'
 import { useCurrentProject, useToast } from '@latitude-data/web-ui'
 import { createDraftCommitAction } from '$/actions/commits/create'
 import { deleteDraftCommitAction } from '$/actions/commits/deleteDraftCommitAction'
-import { fetchCommitsByProjectAction } from '$/actions/commits/fetchCommitsByProjectAction'
 import { publishDraftCommitAction } from '$/actions/commits/publishDraftCommitAction'
+import useFetcher from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
+import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'
 
 export default function useCommits(
@@ -17,28 +16,18 @@ export default function useCommits(
     commitStatus?: CommitStatus
   } = {},
 ) {
-  const { onSuccessCreate, onSuccessDestroy, onSuccessPublish, commitStatus } =
-    opts
+  const {
+    onSuccessCreate,
+    onSuccessDestroy,
+    onSuccessPublish,
+    commitStatus = CommitStatus.Draft,
+  } = opts
   const { project } = useCurrentProject()
   const { toast } = useToast()
-
-  const fetcher = useCallback(async () => {
-    const [data, error] = await fetchCommitsByProjectAction({
-      projectId: project.id,
-      status: commitStatus ?? CommitStatus.Draft,
-    })
-    if (error) {
-      toast({
-        title: 'Error',
-        description: error.message,
-        variant: 'destructive',
-      })
-
-      return []
-    }
-
-    return data
-  }, [project.id, toast, commitStatus])
+  const route = ROUTES.api.projects.detail(project.id).commits.root
+  const fetcher = useFetcher(
+    commitStatus ? `${route}?status=${commitStatus}` : route,
+  )
 
   const {
     data = [],

@@ -1,11 +1,10 @@
-import { useCallback } from 'react'
-
 import type { Dataset } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui'
 import { createDatasetAction } from '$/actions/datasets/create'
 import { destroyDatasetAction } from '$/actions/datasets/destroy'
-import { getDatasetsAction } from '$/actions/datasets/fetch'
+import useFetcher from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
+import { ROUTES } from '$/services/routes'
 import useCurrentWorkspace from '$/stores/currentWorkspace'
 import useSWR, { SWRConfiguration } from 'swr'
 
@@ -15,25 +14,14 @@ export default function useDatasets(
 ) {
   const { data: workspace } = useCurrentWorkspace()
   const { toast } = useToast()
-  const fetcher = useCallback(async () => {
-    const [data, error] = await getDatasetsAction()
-    if (error) {
-      toast({
-        title: 'Error',
-        description: error.message,
-        variant: 'destructive',
-      })
-
-      return []
-    }
-
-    return data
-  }, [toast])
+  const fetcher = useFetcher(ROUTES.api.datasets.root, {
+    serializer: (rows) => rows.map(deserialize),
+  })
   const {
     data = [],
     mutate,
     ...rest
-  } = useSWR(['workspace', workspace.id, 'datasets'], fetcher, opts)
+  } = useSWR<Dataset[]>(['workspace', workspace.id, 'datasets'], fetcher, opts)
   const {
     isPending: isCreating,
     error: createError,
@@ -72,5 +60,13 @@ export default function useDatasets(
     destroy,
     isDestroying,
     ...rest,
+  }
+}
+
+function deserialize(item: Dataset) {
+  return {
+    ...item,
+    createdAt: new Date(item.createdAt),
+    updatedAt: new Date(item.updatedAt),
   }
 }

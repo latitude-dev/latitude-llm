@@ -12,6 +12,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableSkeleton,
   Text,
 } from '@latitude-data/web-ui'
 import { relativeTime } from '$/lib/relativeTime'
@@ -23,7 +24,7 @@ import NewUser from './New'
 
 export default function Memberships() {
   const [open, setOpen] = useState(false)
-  const { data: users } = useUsers()
+  const { data: users, isLoading } = useUsers()
 
   return (
     <div className='flex flex-col gap-4'>
@@ -36,6 +37,7 @@ export default function Memberships() {
       </div>
       <div className='flex flex-col gap-2'>
         {users.length > 0 && <UsersTable users={users} />}
+        {isLoading && <TableSkeleton cols={4} rows={3} />}
       </div>
     </div>
   )
@@ -63,7 +65,7 @@ function UsersTable({ users }: { users: User[] }) {
             </TableCell>
             <TableCell>
               <Text.H4 color='foregroundMuted'>
-                {relativeTime(user.confirmedAt)}
+                {relativeTime(user.confirmedAt ? user.confirmedAt : null)}
               </Text.H4>
             </TableCell>
             <TableCell>

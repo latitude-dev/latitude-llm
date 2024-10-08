@@ -1,7 +1,6 @@
-import { useCallback } from 'react'
-
-import { useToast } from '@latitude-data/web-ui'
-import { computeEvaluationResultsWithMetadataAction } from '$/actions/evaluations/computeEvaluationResultsWithMetadata'
+import { EvaluationResultWithMetadata } from '@latitude-data/core/repositories'
+import useFetcher from '$/hooks/useFetcher'
+import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'
 
 const EMPTY_ARRAY: [] = []
@@ -23,29 +22,15 @@ export default function useEvaluationResultsWithMetadata(
   },
   { fallbackData }: SWRConfiguration = {},
 ) {
-  const { toast } = useToast()
-  const fetcher = useCallback(async () => {
-    const [data, error] = await computeEvaluationResultsWithMetadataAction({
-      evaluationId,
-      documentUuid,
-      commitUuid,
-      projectId,
-      page,
-      pageSize,
-    })
-
-    if (error) {
-      toast({
-        title: 'Error fetching evaluations',
-        description: error.formErrors?.[0] || error.message,
-        variant: 'destructive',
-      })
-      throw error
-    }
-
-    return data
-  }, [commitUuid, documentUuid, evaluationId, projectId, toast, page, pageSize])
-  const { data = EMPTY_ARRAY, mutate } = useSWR(
+  const fetcher = useFetcher(
+    ROUTES.api.projects
+      .detail(projectId)
+      .commits.detail(commitUuid)
+      .documents.detail(documentUuid)
+      .evaluations.detail({ evaluationId }).evaluationResults.root,
+    { serializer: (rows) => rows.map(deserialize) },
+  )
+  const { data = EMPTY_ARRAY, mutate } = useSWR<EvaluationResultWithMetadata[]>(
     [
       'evaluationResults',
       evaluationId,
@@ -60,4 +45,12 @@ export default function useEvaluationResultsWithMetadata(
   )
 
   return { data, mutate }
+}
+
+function deserialize(item: EvaluationResultWithMetadata) {
+  return {
+    ...item,
+    createdAt: new Date(item.createdAt),
+    updatedAt: new Date(item.updatedAt),
+  }
 }

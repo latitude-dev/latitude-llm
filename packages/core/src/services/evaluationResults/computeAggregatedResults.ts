@@ -9,13 +9,11 @@ import {
   ProviderLogsRepository,
 } from '../../repositories'
 import { evaluationResultableNumbers } from '../../schema'
-import { Commit, Evaluation } from '../../schema/types'
-
-export interface AverageResultAndCostOverCommit extends Commit {
-  results: number
-  averageResult: number
-  averageCostInMillicents: number
-}
+import {
+  AverageResultAndCostOverCommit,
+  AverageResultOverTime,
+  Evaluation,
+} from '../../schema/types'
 
 export async function computeAverageResultAndCostOverCommit(
   {
@@ -99,12 +97,6 @@ export async function computeAverageResultAndCostOverCommit(
     )
 
   return Result.ok(results)
-}
-
-export interface AverageResultOverTime {
-  date: Date
-  averageResult: number
-  count: number
 }
 
 export async function computeAverageResultOverTime(

@@ -5,6 +5,7 @@ import { useCallback } from 'react'
 import { EvaluationModalValue } from '@latitude-data/core/browser'
 import { Text } from '@latitude-data/web-ui'
 import useEvaluationResultsModalValue from '$/stores/evaluationResultCharts/evaluationResultsModalValue'
+import { useDebouncedCallback } from 'use-debounce'
 
 import { useEvaluationStatusEvent } from '../../../../_lib/useEvaluationStatusEvent'
 import Panel from '../Panel'
@@ -30,7 +31,11 @@ export default function ModalValuePanel({
       fallbackData: modal,
     },
   )
-  const onStatusChange = useCallback(() => refetch(), [refetch])
+  const onStatusChange = useDebouncedCallback(
+    useCallback(() => refetch(), [refetch]),
+    2000,
+    { trailing: true },
+  )
   useEvaluationStatusEvent({ evaluationId, documentUuid, onStatusChange })
   return (
     <Panel

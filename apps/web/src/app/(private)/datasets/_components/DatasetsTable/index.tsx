@@ -7,6 +7,7 @@ import {
   Button,
   dateFormatter,
   Table,
+  TableBlankSlate,
   TableBody,
   TableCell,
   TableHead,
@@ -19,6 +20,7 @@ import DeleteDatasetModal from '$/app/(private)/datasets/_components/DeleteDatas
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
 import useDatasets from '$/stores/datasets'
+import Link from 'next/link'
 
 export function DatasetsTable({
   datasets: serverDatasets,
@@ -30,6 +32,21 @@ export function DatasetsTable({
   const { data: datasets } = useDatasets(undefined, {
     fallbackData: serverDatasets,
   })
+  if (!datasets.length) {
+    return (
+      <TableBlankSlate
+        description='There are no datasets yet. Create one to start testing your prompts.'
+        link={
+          <Link href={ROUTES.datasets.new.root}>
+            <TableBlankSlate.Button>
+              Create your first dataset
+            </TableBlankSlate.Button>
+          </Link>
+        }
+      />
+    )
+  }
+
   return (
     <>
       <DeleteDatasetModal dataset={deletable} setDataset={setDeletable} />

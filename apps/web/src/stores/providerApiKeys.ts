@@ -2,34 +2,23 @@ import type { ProviderApiKey } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui'
 import { createProviderApiKeyAction } from '$/actions/providerApiKeys/create'
 import { destroyProviderApiKeyAction } from '$/actions/providerApiKeys/destroy'
-import { getProviderApiKeyAction } from '$/actions/providerApiKeys/fetch'
+import useFetcher from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
+import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'
 
 const EMPTY_ARRAY: ProviderApiKey[] = []
 
 export default function useProviderApiKeys(opts?: SWRConfiguration) {
   const { toast } = useToast()
-  const key = 'api/providerApiKeys'
-  const fetcher = async () => {
-    const [data, error] = await getProviderApiKeyAction()
-    if (error) {
-      toast({
-        title: 'Error',
-        description: error.message,
-        variant: 'destructive',
-      })
-
-      return []
-    }
-
-    return data || []
-  }
+  const fetcher = useFetcher(ROUTES.api.providerApiKeys.root, {
+    serializer: (rows) => rows.map(deserialize),
+  })
   const {
     data = EMPTY_ARRAY,
     mutate,
     ...rest
-  } = useSWR<ProviderApiKey[]>(key, fetcher, opts)
+  } = useSWR<ProviderApiKey[]>('api/providerApiKeys', fetcher, opts)
   const { execute: create } = useLatitudeAction(createProviderApiKeyAction, {
     onSuccess: async ({ data: apikey }) => {
       toast({
@@ -58,5 +47,14 @@ export default function useProviderApiKeys(opts?: SWRConfiguration) {
     destroy,
     mutate,
     ...rest,
+  }
+}
+
+function deserialize(item: ProviderApiKey) {
+  return {
+    ...item,
+    createdAt: new Date(item.createdAt),
+    updatedAt: new Date(item.updatedAt),
+    lastUsedAt: item.lastUsedAt ? new Date(item.lastUsedAt) : null,
   }
 }

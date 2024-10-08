@@ -1,29 +1,17 @@
 import type { User } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui'
 import { destroyMembershipAction } from '$/actions/memberships/destroy'
-import { getUsersActions } from '$/actions/users/fetch'
 import { inviteUserAction } from '$/actions/users/invite'
+import useFetcher from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
+import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'
 
 export default function useUsers(opts?: SWRConfiguration) {
   const { toast } = useToast()
-
-  const fetcher = async () => {
-    const [data, error] = await getUsersActions()
-    if (error) {
-      toast({
-        title: 'Error',
-        description: error.message,
-        variant: 'destructive',
-      })
-
-      return []
-    }
-
-    return data
-  }
-
+  const fetcher = useFetcher(ROUTES.api.users.root, {
+    serializer: (rows) => rows.map(deserialize),
+  })
   const {
     data = [],
     mutate,
@@ -51,4 +39,13 @@ export default function useUsers(opts?: SWRConfiguration) {
   })
 
   return { data, mutate, invite, destroy, ...rest }
+}
+
+function deserialize(item: User) {
+  return {
+    ...item,
+    confirmedAt: item.confirmedAt ? new Date(item.confirmedAt) : null,
+    createdAt: new Date(item.createdAt),
+    updatedAt: new Date(item.updatedAt),
+  }
 }

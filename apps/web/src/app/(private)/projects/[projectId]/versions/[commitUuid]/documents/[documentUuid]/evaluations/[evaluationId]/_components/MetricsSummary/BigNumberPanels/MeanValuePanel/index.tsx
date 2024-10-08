@@ -5,6 +5,7 @@ import { useCallback } from 'react'
 import { EvaluationDto, EvaluationMeanValue } from '@latitude-data/core/browser'
 import { RangeBadge } from '@latitude-data/web-ui'
 import useEvaluationResultsMeanValue from '$/stores/evaluationResultCharts/evaluationResultsMeanValue'
+import { useDebouncedCallback } from 'use-debounce'
 
 import { useEvaluationStatusEvent } from '../../../../_lib/useEvaluationStatusEvent'
 import Panel from '../Panel'
@@ -30,7 +31,11 @@ export default function MeanValuePanel({
       fallbackData: mean,
     },
   )
-  const onStatusChange = useCallback(() => refetch(), [refetch])
+  const onStatusChange = useDebouncedCallback(
+    useCallback(() => refetch(), [refetch]),
+    2000,
+    { trailing: true },
+  )
   useEvaluationStatusEvent({
     evaluationId: evaluation.id,
     documentUuid,

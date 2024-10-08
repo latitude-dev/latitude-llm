@@ -1,35 +1,19 @@
 import { useCallback } from 'react'
 
 import { WorkspaceUsage } from '@latitude-data/core/browser'
-import { useToast } from '@latitude-data/web-ui'
-import { fetchWorkspaceUsageAction } from '$/actions/workspaces/usage'
 import { useSockets } from '$/components/Providers/WebsocketsProvider/useSockets'
+import useFetcher from '$/hooks/useFetcher'
+import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'
 
 export default function useWorkspaceUsage(opts?: SWRConfiguration) {
-  const { toast } = useToast()
+  const fetcher = useFetcher(ROUTES.api.workspaces.usage, { fallback: null })
   const {
     mutate,
     data = undefined,
     isLoading,
     error: swrError,
-  } = useSWR<WorkspaceUsage | undefined>(
-    ['workspaceUsage'],
-    useCallback(async () => {
-      const [data, error] = await fetchWorkspaceUsageAction()
-      if (error) {
-        toast({
-          title: 'Error',
-          description: error.message,
-          variant: 'destructive',
-        })
-      }
-      if (!data) return undefined
-
-      return data
-    }, []),
-    opts,
-  )
+  } = useSWR<WorkspaceUsage | undefined>(['workspaceUsage'], fetcher, opts)
 
   const onMessage = useCallback(() => {
     mutate(
