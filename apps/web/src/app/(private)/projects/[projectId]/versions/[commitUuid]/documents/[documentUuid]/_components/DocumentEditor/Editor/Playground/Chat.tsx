@@ -98,6 +98,7 @@ export default function Chat({
 
         const { event, data } = serverEvent
         if ('messages' in data) {
+          setResponseStream(undefined)
           data.messages!.forEach(addMessageToConversation)
           messagesCount += data.messages!.length
         }
@@ -107,7 +108,6 @@ export default function Chat({
             if (data.type === ChainEventTypes.Step) {
               if (data.isLastStep) setChainLength(messagesCount + 1)
             } else if (data.type === ChainEventTypes.Complete) {
-              setResponseStream(undefined)
               setTokens(data.response.usage.totalTokens)
               setTime(performance.now() - start)
             } else if (data.type === ChainEventTypes.Error) {
