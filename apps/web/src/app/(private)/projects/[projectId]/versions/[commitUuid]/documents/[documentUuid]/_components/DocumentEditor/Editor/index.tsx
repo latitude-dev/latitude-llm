@@ -234,7 +234,7 @@ export default function DocumentEditor({
                 }
                 isSaved={isSaved}
                 actionButtons={
-                  workspace?.id == 1 && ( //TODO: Primitive Feature Flag. Remove later.
+                  (workspace?.id == 1 || workspace?.id == 190) && ( //TODO: Primitive Feature Flag. Remove later.
                     <Button
                       className='bg-background'
                       variant='outline'
