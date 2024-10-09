@@ -1,0 +1,1 @@
+ALTER TYPE "latitude"."reward_types" ADD VALUE 'signup_launch_day';

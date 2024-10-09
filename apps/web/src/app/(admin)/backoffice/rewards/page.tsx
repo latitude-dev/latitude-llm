@@ -53,6 +53,7 @@ const REWARD_TITLES: Record<RewardType, string> = {
   [RewardType.Post]: 'Post on X or LinkedIn',
   [RewardType.GithubIssue]: 'Solve a Github Issue',
   [RewardType.Referral]: 'Referral',
+  [RewardType.SignupLaunchDay]: 'Signed up on Launch Day',
 }
 
 function RewardTypeCell({

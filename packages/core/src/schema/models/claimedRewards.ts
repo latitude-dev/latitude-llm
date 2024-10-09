@@ -12,6 +12,7 @@ export const rewardTypesEnum = latitudeSchema.enum('reward_types', [
   RewardType.Post,
   RewardType.GithubIssue,
   RewardType.Referral,
+  RewardType.SignupLaunchDay,
 ])
 
 export const claimedRewards = latitudeSchema.table(

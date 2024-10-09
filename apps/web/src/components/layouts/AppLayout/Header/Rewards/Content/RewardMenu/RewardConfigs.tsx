@@ -4,7 +4,7 @@ import { z } from 'zod'
 
 import { RewardConfig } from './RewardMenuBase'
 
-export const REWARD_CONFIGS: { [key in RewardType]: RewardConfig } = {
+export const REWARD_CONFIGS: Partial<{ [key in RewardType]: RewardConfig }> = {
   [RewardType.Follow]: {
     type: RewardType.Follow,
     referenceSchema: z.string({ required_error: 'Name is required' }),

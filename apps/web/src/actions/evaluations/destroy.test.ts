@@ -2,7 +2,6 @@ import { ProviderApiKey, Providers } from '@latitude-data/core/browser'
 import * as factories from '@latitude-data/core/factories'
 import { Result } from '@latitude-data/core/lib/Result'
 import { EvaluationsRepository } from '@latitude-data/core/repositories'
-import { destroyEvaluation } from '@latitude-data/core/services/evaluations/destroy'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { destroyEvaluationAction } from './destroy'
