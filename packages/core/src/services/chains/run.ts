@@ -29,7 +29,7 @@ async function handleError(error: ChainError<RunErrorCodes>) {
   // This way is easier for use to know when a provider log has errors by
   // joining the tables and in the UI check if providerLog.error_id is not null
   //
-  // Also this service will need `errorableType` and `errorableId`
+  // Also this service will need `errorableType` and `errorableUuid`
   // this way we associate the polymorphic relationship with the error
   // to the run documentLog.uuid or evaluationResult.uuid
   return error
