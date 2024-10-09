@@ -35,6 +35,7 @@ export const providerLogs = latitudeSchema.table('provider_logs', {
       onUpdate: 'cascade',
     }),
   model: varchar('model'),
+  finishReason: varchar('finish_reason').notNull().default('stop'),
   config: json('config').$type<PartialConfig>().notNull(),
   messages: json('messages').$type<Message[]>().notNull(),
   responseObject: jsonb('response_object').$type<unknown>(),
