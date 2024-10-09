@@ -11,6 +11,7 @@ import {
   Button,
   FakeProgress,
   LoadingText,
+  MeshGradient,
   Text,
   useCurrentCommit,
   useCurrentProject,
@@ -68,7 +69,7 @@ export function GenerateSuggestion({
   }, [isLoading, suggestion, error])
 
   return (
-    <div className='rounded-lg w-full py-40 flex flex-col gap-4 items-center justify-center bg-gradient-to-b from-secondary to-transparent px-4'>
+    <MeshGradient className='rounded-lg w-full py-40 flex flex-col gap-4 items-center justify-center bg-gradient-to-b from-secondary to-transparent px-4'>
       <div className='max-w-lg flex flex-col gap-6 items-center'>
         <div className='flex flex-col gap-2'>
           <Text.H4 align='center' display='block'>
@@ -97,6 +98,6 @@ export function GenerateSuggestion({
           )}
         </div>
       </div>
-    </div>
+    </MeshGradient>
   )
 }
