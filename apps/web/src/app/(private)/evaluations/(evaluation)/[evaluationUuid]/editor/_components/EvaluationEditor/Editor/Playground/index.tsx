@@ -1,19 +1,16 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 
 import { ConversationMetadata } from '@latitude-data/compiler'
-import {
-  EvaluationDto,
-  SERIALIZED_DOCUMENT_LOG_FIELDS,
-} from '@latitude-data/core/browser'
+import { EvaluationDto } from '@latitude-data/core/browser'
 import {
   formatContext,
   formatConversation,
 } from '@latitude-data/core/services/providerLogs/serialize'
 import { Button, Icon, TableBlankSlate, Text } from '@latitude-data/web-ui'
-import { convertParams } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/DocumentEditor/Editor/Playground'
 import { ROUTES } from '$/services/routes'
+import useDocumentLogWithMetadata from '$/stores/documentLogWithMetadata'
 import { useProviderLog } from '$/stores/providerLogs'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
@@ -50,36 +47,39 @@ export default function Playground({
   metadata: ConversationMetadata
 }) {
   const [mode, setMode] = useState<'preview' | 'chat'>('preview')
-  const [inputs, setInputs] = useState<Record<string, string>>(
-    Object.fromEntries(
-      SERIALIZED_DOCUMENT_LOG_FIELDS.map((param: string) => [param, '']),
-    ),
-  )
-  const parameters = useMemo(() => convertParams(inputs), [inputs])
   const searchParams = useSearchParams()
   const providerLogId = searchParams.get('providerLogId')
   const { data: providerLog } = useProviderLog(
     providerLogId ? Number(providerLogId) : undefined,
   )
-
-  const setInput = useCallback((param: string, value: string) => {
-    setInputs((inputs) => ({ ...inputs, [param]: value }))
-  }, [])
-
-  useEffect(() => {
-    if (providerLog) {
-      setInputs({
-        messages: JSON.stringify(formatConversation(providerLog)),
-        context: JSON.stringify(formatContext(providerLog)),
-        response: providerLog.response,
+  const { data: documentLogWithMetadata } = useDocumentLogWithMetadata(
+    providerLog?.documentLogUuid,
+  )
+  const parameters = useMemo(() => {
+    if (!providerLog || !documentLogWithMetadata) {
+      return {
+        messages: [],
+        context: '',
+        response: '',
+        config: {},
         prompt: '',
-        parameters: '',
-        config: '',
-        duration: '',
-        cost: '',
-      })
+        duration: 0,
+        parameters: {},
+        cost: 0,
+      }
     }
-  }, [setInput, providerLog])
+
+    return {
+      messages: formatConversation(providerLog),
+      context: formatContext(providerLog),
+      response: providerLog.response,
+      config: providerLog.config,
+      prompt: documentLogWithMetadata.resolvedContent,
+      duration: documentLogWithMetadata.duration,
+      parameters: documentLogWithMetadata.parameters,
+      cost: (documentLogWithMetadata.costInMillicents || 0) / 1000,
+    }
+  }, [documentLogWithMetadata, providerLog])
 
   if (!providerLog) {
     return <BlankSlate evaluation={evaluation} />

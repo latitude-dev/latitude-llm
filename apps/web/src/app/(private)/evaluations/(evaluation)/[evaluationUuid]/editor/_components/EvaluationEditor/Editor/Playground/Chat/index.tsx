@@ -31,7 +31,7 @@ export default function Chat({
 }: {
   clearChat: () => void
   evaluation: EvaluationDto
-  parameters: Record<string, string>
+  parameters: Record<string, unknown>
 }) {
   const [error, setError] = useState<Error | undefined>()
   const [tokens, setTokens] = useState<number>(0)
