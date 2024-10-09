@@ -38,10 +38,12 @@ async function resolveTagAttributes({
       continue
     }
 
-    let totalValue: string = ''
+    const accumulatedValue: unknown[] = []
     for await (const node of value) {
       if (node.type === 'Text') {
-        totalValue += node.data
+        if (node.data) {
+          accumulatedValue.push(node.data)
+        }
         continue
       }
 
@@ -49,12 +51,17 @@ async function resolveTagAttributes({
         const expression = node.expression
         const resolvedValue = await resolveExpression(expression, scope)
         if (resolvedValue === undefined) continue
-        totalValue += String(resolvedValue)
+        accumulatedValue.push(resolvedValue)
         continue
       }
     }
 
-    attributes[name] = totalValue
+    const finalValue =
+      accumulatedValue.length > 1
+        ? accumulatedValue.map(String).join('')
+        : accumulatedValue[0]
+
+    attributes[name] = finalValue
   }
 
   return attributes
