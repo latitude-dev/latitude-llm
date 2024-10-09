@@ -1,7 +1,7 @@
 'use client'
 
 import { ProviderLogDto } from '@latitude-data/core/browser'
-import { DocumentLogWithMetadata } from '@latitude-data/core/repositories'
+import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
 import { Alert } from '@latitude-data/web-ui'
 
 import { MetadataInfoTabs } from '../../../../_components/MetadataInfoTabs'
@@ -28,7 +28,7 @@ export function DocumentLogInfo({
   error,
   className,
 }: {
-  documentLog: DocumentLogWithMetadata
+  documentLog: DocumentLogWithMetadataAndError
   providerLogs?: ProviderLogDto[]
   isLoading?: boolean
   error?: Error

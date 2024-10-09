@@ -1,6 +1,6 @@
 import { useCallback } from 'react'
 
-import { DocumentLogWithMetadata } from '@latitude-data/core/repositories'
+import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
 import { useToast } from '@latitude-data/web-ui'
 import useSWR, { SWRConfiguration } from 'swr'
 
@@ -61,7 +61,9 @@ export default function useDocumentLogs(
     }
   }, [commitUuid, documentUuid, projectId, toast, page, pageSize])
 
-  const { data = EMPTY_ARRAY, mutate } = useSWR<DocumentLogWithMetadata[]>(
+  const { data = EMPTY_ARRAY, mutate } = useSWR<
+    DocumentLogWithMetadataAndError[]
+  >(
     ['documentLogs', documentUuid, commitUuid, projectId, page, pageSize],
     fetcher,
     { fallbackData },
@@ -70,7 +72,9 @@ export default function useDocumentLogs(
   return { data, mutate }
 }
 
-export function documentLogPresenter(documentLog: DocumentLogWithMetadata) {
+export function documentLogPresenter(
+  documentLog: DocumentLogWithMetadataAndError,
+) {
   return {
     ...documentLog,
     createdAt: new Date(documentLog.createdAt),

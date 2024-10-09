@@ -2,10 +2,11 @@ import { useCallback, useState } from 'react'
 
 import { EvaluationDto, ProviderLogDto } from '@latitude-data/core/browser'
 import {
-  DocumentLogWithMetadata,
-  EvaluationResultWithMetadata,
+  DocumentLogWithMetadataAndError,
+  type EvaluationResultWithMetadataAndErrors,
 } from '@latitude-data/core/repositories'
 import { Button, Icon, Modal, ReactStateDispatch } from '@latitude-data/web-ui'
+import { ROUTES } from '$/services/routes'
 import useProviderLogs from '$/stores/providerLogs'
 import useSWR from 'swr'
 
@@ -21,12 +22,15 @@ function useFetchDocumentLog({ documentLogId }: { documentLogId: number }) {
     data: documentLog,
     isLoading,
     error,
-  } = useSWR<DocumentLogWithMetadata>(
+  } = useSWR<DocumentLogWithMetadataAndError>(
     ['documentLogs', documentLogId],
     useCallback(async () => {
-      const response = await fetch(`/api/documentLogs/${documentLogId}`, {
-        credentials: 'include',
-      })
+      const response = await fetch(
+        ROUTES.api.documentLogs.detail({ id: documentLogId }).root,
+        {
+          credentials: 'include',
+        },
+      )
 
       if (!response.ok) {
         const error = await response.json()
@@ -39,7 +43,7 @@ function useFetchDocumentLog({ documentLogId }: { documentLogId: number }) {
   return { documentLog, isLoading, error }
 }
 
-export default function DocumentLogInfoModal({
+function DocumentLogInfoModal({
   documentLogId,
   onOpenChange,
 }: {
@@ -75,7 +79,7 @@ export function EvaluationResultInfo({
   providerLog,
 }: {
   evaluation: EvaluationDto
-  evaluationResult: EvaluationResultWithMetadata
+  evaluationResult: EvaluationResultWithMetadataAndErrors
   providerLog?: ProviderLogDto
 }) {
   const [selected, setSelected] = useState<MaybeDocumentLog>(null)
@@ -97,7 +101,7 @@ export function EvaluationResultInfo({
             {selectedTab === 'messages' && (
               <EvaluationResultMessages providerLog={providerLog} />
             )}
-            <div className='w-full bg-white flex justify-center'>
+            <div className='w-full flex justify-center'>
               <Button variant='link' onClick={onClickOpen}>
                 Check original log
                 <Icon name='arrowRight' widthClass='w-4' heightClass='h-4' />

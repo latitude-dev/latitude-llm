@@ -1,7 +1,7 @@
 import { ReactNode, useMemo } from 'react'
 
 import { ProviderLogDto } from '@latitude-data/core/browser'
-import { DocumentLogWithMetadata } from '@latitude-data/core/repositories'
+import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
 import {
   ClickToCopy,
   Icon,
@@ -10,6 +10,7 @@ import {
   Tooltip,
 } from '@latitude-data/web-ui'
 import { formatCostInMillicents, formatDuration } from '$/app/_lib/formatUtils'
+import { RunErrorMessage } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/_components/RunErrorMessage'
 import useProviderApiKeys from '$/stores/providerApiKeys'
 import { format } from 'date-fns'
 
@@ -43,12 +44,12 @@ export function MetadataItem({
   )
 }
 
-export function DocumentLogMetadata({
+function ProviderLogsMetadata({
   documentLog,
   providerLogs,
 }: {
-  documentLog: DocumentLogWithMetadata
-  providerLogs?: ProviderLogDto[]
+  documentLog: DocumentLogWithMetadataAndError
+  providerLogs: ProviderLogDto[]
 }) {
   const { data: providers, isLoading: providersLoading } = useProviderApiKeys()
   const lastProviderLog = useMemo(
@@ -83,17 +84,6 @@ export function DocumentLogMetadata({
 
   return (
     <>
-      <MetadataItem label='Log uuid'>
-        <ClickToCopy copyValue={documentLog.uuid}>
-          <Text.H5 align='right' color='foregroundMuted'>
-            {documentLog.uuid.split('-')[0]}
-          </Text.H5>
-        </ClickToCopy>
-      </MetadataItem>
-      <MetadataItem
-        label='Timestamp'
-        value={format(documentLog.createdAt, 'PPp')}
-      />
       <MetadataItem label='Tokens' loading={!lastProviderLog}>
         <Tooltip
           side='bottom'
@@ -167,10 +157,6 @@ export function DocumentLogMetadata({
           </div>
         </Tooltip>
       </MetadataItem>
-      <MetadataItem
-        label='Duration'
-        value={formatDuration(documentLog.duration)}
-      />
       {(providerLogs?.length ?? 0) > 0 && (
         <MetadataItem
           label='Time until last message'
@@ -180,6 +166,36 @@ export function DocumentLogMetadata({
           loading={!lastProviderLog}
         />
       )}
+    </>
+  )
+}
+
+export function DocumentLogMetadata({
+  documentLog,
+  providerLogs: _providerLogs,
+}: {
+  documentLog: DocumentLogWithMetadataAndError
+  providerLogs?: ProviderLogDto[]
+}) {
+  const providerLogs = _providerLogs ?? []
+  return (
+    <>
+      <RunErrorMessage error={documentLog.error} />
+      <MetadataItem label='Log uuid'>
+        <ClickToCopy copyValue={documentLog.uuid}>
+          <Text.H5 align='right' color='foregroundMuted'>
+            {documentLog.uuid.split('-')[0]}
+          </Text.H5>
+        </ClickToCopy>
+      </MetadataItem>
+      <MetadataItem
+        label='Timestamp'
+        value={format(documentLog.createdAt, 'PPp')}
+      />
+      <MetadataItem
+        label='Duration'
+        value={formatDuration(documentLog.duration)}
+      />
       <MetadataItem label='Version'>
         <ClickToCopy copyValue={documentLog.commit.uuid}>
           <Text.H5 align='right' color='foregroundMuted'>
@@ -187,6 +203,12 @@ export function DocumentLogMetadata({
           </Text.H5>
         </ClickToCopy>
       </MetadataItem>
+      {providerLogs.length > 0 ? (
+        <ProviderLogsMetadata
+          providerLogs={providerLogs}
+          documentLog={documentLog}
+        />
+      ) : null}
     </>
   )
 }
