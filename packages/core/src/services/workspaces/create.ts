@@ -30,7 +30,7 @@ export async function createWorkspace(
     const subscription = await createSubscription(
       {
         workspace,
-        plan: SubscriptionPlan.HobbyV1,
+        plan: SubscriptionPlan.HobbyV2,
       },
       tx,
     ).then((r) => r.unwrap())
