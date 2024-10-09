@@ -4,8 +4,8 @@
 // put in other place.
 
 import {
-  DocumentLogWithMetadata,
-  type EvaluationResultWithMetadata,
+  type DocumentLogWithMetadataAndError,
+  type EvaluationResultWithMetadataAndErrors,
 } from '../repositories'
 
 const ONE_HOUR = 60 * 60 * 1000
@@ -54,7 +54,7 @@ type EvaluationResultCreatedArgs = {
   evaluationId: number
   documentUuid: string
   evaluationResultId: number
-  row: EvaluationResultWithMetadata
+  row: EvaluationResultWithMetadataAndErrors
 }
 
 type DocumentLogCreatedArgs = {
@@ -62,7 +62,7 @@ type DocumentLogCreatedArgs = {
   documentUuid: string
   commitUuid: string
   documentLogId: number
-  documentLogWithMetadata: DocumentLogWithMetadata
+  documentLogWithMetadata: DocumentLogWithMetadataAndError
 }
 
 export type WebServerToClientEvents = {

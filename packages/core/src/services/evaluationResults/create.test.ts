@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 
 import { database } from '../../client'
 import { EvaluationResultableType, Providers } from '../../constants'
+import { generateUUIDIdentifier } from '../../lib'
 import {
   evaluationResultableBooleans,
   evaluationResultableNumbers,
@@ -60,6 +61,7 @@ describe('createEvaluationResult', () => {
     )
 
     const result = await createEvaluationResult({
+      uuid: generateUUIDIdentifier(),
       evaluation,
       documentLog,
       providerLog,
@@ -109,6 +111,7 @@ describe('createEvaluationResult', () => {
     )
 
     const result = await createEvaluationResult({
+      uuid: generateUUIDIdentifier(),
       evaluation,
       documentLog,
       providerLog,
@@ -149,6 +152,7 @@ describe('createEvaluationResult', () => {
     )
 
     const result = await createEvaluationResult({
+      uuid: generateUUIDIdentifier(),
       evaluation,
       documentLog,
       providerLog,
@@ -189,6 +193,7 @@ describe('createEvaluationResult', () => {
     )
 
     const result = await createEvaluationResult({
+      uuid: generateUUIDIdentifier(),
       evaluation,
       documentLog,
       providerLog,
@@ -199,8 +204,33 @@ describe('createEvaluationResult', () => {
     })
 
     expect(result.ok).toBe(false)
-    if (result.error) {
-      expect(result.error.message).toContain('Unsupported result type')
-    }
+    expect(result.error!.message).toContain('Unsupported result type')
+  })
+
+  it('saves unsupported type if result is not defined', async () => {
+    const { evaluation, documentLog, providerLog } = await setupTest(
+      'UnsupportedType' as any,
+    )
+
+    const result = await createEvaluationResult({
+      uuid: generateUUIDIdentifier(),
+      evaluation,
+      documentLog,
+      providerLog,
+      result: undefined,
+    })
+
+    expect(result.value).toEqual(
+      expect.objectContaining({
+        uuid: expect.any(String),
+        evaluationId: evaluation.id,
+        documentLogId: documentLog.id,
+        providerLogId: providerLog.id,
+        resultableType: null,
+        resultableId: null,
+        result: undefined,
+        source: documentLog.source,
+      }),
+    )
   })
 })

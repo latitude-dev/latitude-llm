@@ -3,7 +3,7 @@
 import { useCallback, useState } from 'react'
 
 import { EvaluationDto } from '@latitude-data/core/browser'
-import { type EvaluationResultWithMetadata } from '@latitude-data/core/repositories'
+import { type EvaluationResultWithMetadataAndErrors } from '@latitude-data/core/repositories'
 import {
   TableBlankSlate,
   Text,
@@ -79,13 +79,13 @@ export function EvaluationResults({
   evaluationResults: serverData,
 }: {
   evaluation: EvaluationDto
-  evaluationResults: EvaluationResultWithMetadata[]
+  evaluationResults: EvaluationResultWithMetadataAndErrors[]
 }) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
   const document = useCurrentDocument()
   const [selectedResult, setSelectedResult] = useState<
-    EvaluationResultWithMetadata | undefined
+    EvaluationResultWithMetadataAndErrors | undefined
   >(undefined)
   const { open, onClose, onOpen } = useToggleModal()
   const { data: providerLog } = useProviderLog(selectedResult?.providerLogId)

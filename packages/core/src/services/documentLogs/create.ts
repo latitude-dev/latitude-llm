@@ -11,9 +11,9 @@ export type CreateDocumentLogProps = {
     documentUuid: string
     parameters: Record<string, unknown>
     resolvedContent: string
-    customIdentifier?: string
     duration: number
     source: LogSources
+    customIdentifier?: string
     createdAt?: Date
   }
 }

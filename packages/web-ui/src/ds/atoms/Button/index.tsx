@@ -21,7 +21,7 @@ const buttonContainerVariants = cva(
         outline: 'bg-secondary hover:bg-secondary/60',
         secondary: 'bg-secondary hover:bg-secondary/80',
         ghost: 'shadow-none bg-transparent',
-        link: 'shadow-none underline-offset-4 hover:underline',
+        link: 'bg-transparent shadow-none underline-offset-4 hover:underline',
         linkOutline: 'shadow-none underline-offset-4 hover:underline',
         linkDestructive: 'shadow-none underline-offset-4 hover:underline',
         shiny: '',

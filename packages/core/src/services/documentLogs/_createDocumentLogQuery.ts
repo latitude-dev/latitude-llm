@@ -2,11 +2,14 @@ import { eq, isNotNull, or, sum } from 'drizzle-orm'
 
 import { Commit } from '../../browser'
 import { database } from '../../client'
-import { DocumentLogsRepository } from '../../repositories/documentLogsRepository'
+import { DocumentLogsWithErrorsRepository } from '../../repositories'
 import { commits, providerLogs } from '../../schema'
 
 export function createDocumentLogQuery(workspaceId: number, db = database) {
-  const documentLogsScope = new DocumentLogsRepository(workspaceId, db)
+  const documentLogsScope = new DocumentLogsWithErrorsRepository(
+    workspaceId,
+    db,
+  )
   const scope = documentLogsScope.scope
 
   const aggregatedFieldsSubQuery = db
@@ -19,7 +22,7 @@ export function createDocumentLogQuery(workspaceId: number, db = database) {
         .as('cost_in_millicents'),
     })
     .from(scope)
-    .innerJoin(providerLogs, eq(providerLogs.documentLogUuid, scope.uuid))
+    .leftJoin(providerLogs, eq(providerLogs.documentLogUuid, scope.uuid))
     .groupBy(scope.id)
     .as('aggregatedFieldsSubQuery')
 

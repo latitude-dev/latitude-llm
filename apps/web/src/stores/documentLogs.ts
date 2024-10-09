@@ -1,5 +1,5 @@
 import { compactObject } from '@latitude-data/core/lib/compactObject'
-import { DocumentLogWithMetadata } from '@latitude-data/core/repositories'
+import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'
@@ -35,7 +35,9 @@ export default function useDocumentLogs(
     },
   )
 
-  const { data = EMPTY_ARRAY, mutate } = useSWR<DocumentLogWithMetadata[]>(
+  const { data = EMPTY_ARRAY, mutate } = useSWR<
+    DocumentLogWithMetadataAndError[]
+  >(
     ['documentLogs', documentUuid, commitUuid, projectId, page, pageSize],
     fetcher,
     { fallbackData },
@@ -44,7 +46,9 @@ export default function useDocumentLogs(
   return { data, mutate }
 }
 
-export function documentLogPresenter(documentLog: DocumentLogWithMetadata) {
+export function documentLogPresenter(
+  documentLog: DocumentLogWithMetadataAndError,
+) {
   return {
     ...documentLog,
     createdAt: new Date(documentLog.createdAt),

@@ -7,12 +7,7 @@ import {
 } from '../../browser'
 import { database } from '../../client'
 import { publisher } from '../../events/publisher'
-import {
-  BadRequestError,
-  generateUUIDIdentifier,
-  Result,
-  Transaction,
-} from '../../lib'
+import { BadRequestError, Result, Transaction } from '../../lib'
 import { EvaluationResultDto } from '../../repositories/evaluationResultsRepository'
 import { evaluationResults } from '../../schema'
 import { evaluationResultableBooleans } from '../../schema/models/evaluationResultableBooleans'
@@ -32,23 +27,35 @@ function getResultable(type: EvaluationResultableType) {
   }
 }
 
+export type EvaluationResultObject = {
+  result: number | string | boolean
+  reason: string
+}
 export type CreateEvaluationResultProps = {
+  uuid: string
   evaluation: Evaluation | EvaluationDto
   documentLog: DocumentLog
   providerLog?: ProviderLog
-  result: { result: number | string | boolean; reason: string } | undefined
+  result: EvaluationResultObject | undefined
 }
 
 type MaybeFailedEvaluationResultDto = Omit<EvaluationResultDto, 'result'> & {
   result: EvaluationResultDto['result'] | undefined
 }
 export async function createEvaluationResult(
-  { evaluation, documentLog, providerLog, result }: CreateEvaluationResultProps,
+  {
+    uuid,
+    evaluation,
+    documentLog,
+    providerLog,
+    result,
+  }: CreateEvaluationResultProps,
   db = database,
 ) {
   const resultableTable = getResultable(evaluation.configuration.type)
+  let resultableId: number | undefined
 
-  if (!resultableTable) {
+  if (!resultableTable && result) {
     return Result.error(
       new BadRequestError(
         `Unsupported result type: ${evaluation.configuration.type}`,
@@ -56,11 +63,9 @@ export async function createEvaluationResult(
     )
   }
 
-  let resultableId: number | undefined
-
   return Transaction.call<MaybeFailedEvaluationResultDto>(async (trx) => {
     // TODO: store the reason
-    if (result) {
+    if (result && resultableTable) {
       const resultable = await trx
         .insert(resultableTable)
         .values({ result: result.result })
@@ -68,14 +73,15 @@ export async function createEvaluationResult(
       resultableId = resultable[0]!.id
     }
 
+    // TODO: store the reason
     const inserts = await trx
       .insert(evaluationResults)
       .values({
-        uuid: generateUUIDIdentifier(),
+        uuid,
         evaluationId: evaluation.id,
         documentLogId: documentLog.id,
         providerLogId: providerLog?.id,
-        resultableType: evaluation.configuration.type,
+        resultableType: result ? evaluation.configuration.type : null,
         resultableId,
         source: documentLog.source,
       })

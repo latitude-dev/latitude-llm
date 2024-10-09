@@ -1,11 +1,9 @@
-import { RunErrorCodes, StreamType } from '../../../constants'
+import { StreamType } from '../../../constants'
 import { AIProviderCallCompletedData } from '../../../events/events'
 import { publisher } from '../../../events/publisher'
 import { setupJobs } from '../../../jobs'
-import { TypedResult } from '../../../lib'
-import { StreamChunk } from '../../ai'
 import { createProviderLog } from '../../providerLogs'
-import { ChainError } from '../ChainErrors'
+import { StreamConsumeReturn } from '../ChainStreamConsumer/consumeStream'
 import { type ObjectProviderLogsData } from './processStreamObject'
 import { type TextProviderLogsData } from './processStreamText'
 
@@ -19,30 +17,33 @@ export async function saveOrPublishProviderLogs<T extends StreamType>({
   data,
   streamType,
   saveSyncProviderLogs,
+  finishReason,
 }: {
   streamType: T
   data: LogData<T>
   saveSyncProviderLogs: boolean
-  // TODO: Use stream result check if contains an AI error to be
-  // persisted in the provider log
-  streamConsumedResult: TypedResult<
-    StreamChunk[],
-    ChainError<RunErrorCodes.AIRunError>
-  >
+  finishReason: StreamConsumeReturn['finishReason']
 }) {
   publisher.publishLater({
     type: 'aiProviderCallCompleted',
     data: { ...data, streamType } as AIProviderCallCompletedData<T>,
   })
 
+  const providerLogsData = {
+    ...data,
+    finishReason,
+  }
+
   if (saveSyncProviderLogs) {
-    const providerLog = await createProviderLog(data).then((r) => r.unwrap())
+    const providerLog = await createProviderLog(providerLogsData).then((r) =>
+      r.unwrap(),
+    )
     return providerLog
   }
 
   const queues = await setupJobs()
   queues.defaultQueue.jobs.enqueueCreateProviderLogJob({
-    ...data,
+    ...providerLogsData,
     generatedAt: data.generatedAt.toISOString(),
   })
 }
