@@ -1,12 +1,16 @@
 import * as aws from '@pulumi/aws'
 
+export const usEastProvider = new aws.Provider('us-east-1', {
+  region: 'us-east-1',
+})
+
 const certificate = new aws.acm.Certificate(
   'latitudeCertificate',
   {
     domainName: 'ai.latitude.so',
     validationMethod: 'DNS',
   },
-  { provider: new aws.Provider('us-east-1', { region: 'us-east-1' }) },
+  { provider: usEastProvider },
 )
 
 const redirectFunction = new aws.cloudfront.Function('redirectFunction', {
