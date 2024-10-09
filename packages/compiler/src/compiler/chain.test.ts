@@ -447,7 +447,7 @@ describe('chain', async () => {
       ---
       <response />                /* step1 */
       <response model="foo-2" />  /* step2 */
-      <response temperature=1 />  /* step3 */
+      <response temperature={{1}} />  /* step3 */
     `)
 
     const chain = new Chain({
@@ -465,7 +465,7 @@ describe('chain', async () => {
 
     const { conversation: step3 } = await chain.step('')
     expect(step3.config.model).toBe('foo-1')
-    expect(step3.config.temperature).toBe('1')
+    expect(step3.config.temperature).toBe(1)
 
     const { conversation: finalConversation } = await chain.step('')
     expect(finalConversation.config.model).toBe('foo-1')
