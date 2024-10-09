@@ -484,6 +484,13 @@
       "when": 1728394416794,
       "tag": "0068_thin_mandroid",
       "breakpoints": true
+    },
+    {
+      "idx": 69,
+      "version": "7",
+      "when": 1728456230527,
+      "tag": "0069_gifted_kulan_gath",
+      "breakpoints": true
     }
   ]
 }
