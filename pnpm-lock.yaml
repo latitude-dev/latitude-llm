@@ -15,8 +15,8 @@ importers:
         specifier: ^0.0.32
         version: 0.0.32(zod@3.23.8)
       '@ai-sdk/google':
-        specifier: ^0.0.46
-        version: 0.0.46(zod@3.23.8)
+        specifier: ^0.0.51
+        version: 0.0.51(zod@3.23.8)
       '@ai-sdk/mistral':
         specifier: ^0.0.38
         version: 0.0.38(zod@3.23.8)
@@ -612,8 +612,8 @@ importers:
         specifier: ^0.0.32
         version: 0.0.32(zod@3.23.8)
       '@ai-sdk/google':
-        specifier: ^0.0.46
-        version: 0.0.46(zod@3.23.8)
+        specifier: ^0.0.51
+        version: 0.0.51(zod@3.23.8)
       '@ai-sdk/mistral':
         specifier: ^0.0.38
         version: 0.0.38(zod@3.23.8)
@@ -1026,8 +1026,8 @@ packages:
     peerDependencies:
       zod: ^3.0.0
 
-  '@ai-sdk/google@0.0.46':
-    resolution: {integrity: sha512-rsc3Wh54EfSt3l/7IqPdTeuxA7xvFk2p8/HxxyoHfcwvQYmQ/bpgxmadId862sVsK79L8k3iRxvVwGVkkaEeaA==}
+  '@ai-sdk/google@0.0.51':
+    resolution: {integrity: sha512-MUwN3tFH0grkL5zZdTUFDCDubQdMjykFw0o9bR3dMFtKP8Z2tc/iEqU1fb79+jbz2HzUBbnNGjqMQiUwG3/OrA==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: ^3.0.0
@@ -10728,10 +10728,10 @@ snapshots:
       '@ai-sdk/provider-utils': 1.0.17(zod@3.23.8)
       zod: 3.23.8
 
-  '@ai-sdk/google@0.0.46(zod@3.23.8)':
+  '@ai-sdk/google@0.0.51(zod@3.23.8)':
     dependencies:
-      '@ai-sdk/provider': 0.0.22
-      '@ai-sdk/provider-utils': 1.0.17(zod@3.23.8)
+      '@ai-sdk/provider': 0.0.24
+      '@ai-sdk/provider-utils': 1.0.20(zod@3.23.8)
       json-schema: 0.4.0
       zod: 3.23.8
 
