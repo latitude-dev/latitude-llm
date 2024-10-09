@@ -8,7 +8,7 @@ export enum SubscriptionPlan {
 export const SubscriptionPlans = {
   [SubscriptionPlan.HobbyV2]: {
     name: 'Hobby',
-    credits: 20_000,
+    credits: 10_000,
     users: 1,
   },
   [SubscriptionPlan.HobbyV1]: {

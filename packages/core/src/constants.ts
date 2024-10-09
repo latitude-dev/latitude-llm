@@ -175,6 +175,7 @@ export enum RewardType {
   Follow = 'follow',
   Post = 'post',
   Referral = 'referral',
+  SignupLaunchDay = 'signup_launch_day',
 }
 
 export const REWARD_VALUES: Record<RewardType, number> = {
@@ -183,6 +184,7 @@ export const REWARD_VALUES: Record<RewardType, number> = {
   [RewardType.Post]: 5_000,
   [RewardType.GithubIssue]: 10_000,
   [RewardType.Referral]: 5_000,
+  [RewardType.SignupLaunchDay]: 10_000,
 }
 
 export type EvaluationAggregationTotals = {

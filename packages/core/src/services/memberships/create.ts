@@ -26,6 +26,7 @@ export const createMembership = async (
 
     return Result.ok(m)
   }, db)
+
   if (result.error) return result
 
   publishEvent({ membership: result.value, author })

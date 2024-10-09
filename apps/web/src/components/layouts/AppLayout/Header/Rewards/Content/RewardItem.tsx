@@ -13,7 +13,7 @@ export function RewardItem({
 }: {
   description: string
   type: RewardType
-  onClick: () => void
+  onClick?: () => void
 }) {
   const { data: claimedRewards, isLoading } = useRewards()
 
@@ -27,12 +27,16 @@ export function RewardItem({
   return (
     <Button
       variant='ghost'
-      className='justify-start hover:bg-muted'
+      className={cn('justify-start', {
+        ' hover:bg-muted': !isClaimed,
+        'cursor-default': isClaimed,
+      })}
       fullWidth
+      aria-disabled={isClaimed}
       onClick={onClick}
     >
       <div className='flex flex-row w-full items-center gap-4 justify-between'>
-        <div className='flex flex-row items-center gap-2'>
+        <div className='flex flex-row items-center gap-1'>
           {isLoading ? (
             <Icon
               name='loader'
@@ -46,7 +50,9 @@ export function RewardItem({
               className={cn({ 'opacity-50': !isClaimed })}
             />
           )}
-          <Text.H5M>{description}</Text.H5M>
+          <Text.H5M color={isClaimed ? 'primary' : 'foreground'}>
+            {description}
+          </Text.H5M>
         </div>
         <Text.H5M color={isClaimed ? 'primary' : 'foregroundMuted'}>
           +{runs} runs

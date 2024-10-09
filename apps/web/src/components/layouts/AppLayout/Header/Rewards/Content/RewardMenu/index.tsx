@@ -27,6 +27,8 @@ export function RewardMenu({
     return REWARD_CONFIGS[type]
   }, [type, claimedRewardData])
 
+  if (!config) return null
+
   return (
     <div className='flex flex-col p-4 gap-6 items-start'>
       <Button variant='link' className='p-0' onClick={onClose}>

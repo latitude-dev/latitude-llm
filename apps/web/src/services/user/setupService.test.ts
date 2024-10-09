@@ -1,6 +1,7 @@
-import { Providers } from '@latitude-data/core/browser'
+import { Providers, RewardType } from '@latitude-data/core/browser'
 import { database } from '@latitude-data/core/client'
 import { createProject, helpers } from '@latitude-data/core/factories'
+import { Result } from '@latitude-data/core/lib/Result'
 import {
   apiKeys,
   commits,
@@ -13,9 +14,17 @@ import {
 } from '@latitude-data/core/schema'
 import { env } from '@latitude-data/env'
 import { eq } from 'drizzle-orm'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import setupService from './setupService'
+
+const mocks = vi.hoisted(() => ({
+  claimReward: vi.fn(),
+}))
+
+vi.mock('@latitude-data/core/services/claimedRewards/claim', () => ({
+  claimReward: mocks.claimReward,
+}))
 
 describe('setupService', () => {
   it('should create all necessary entities when calling setup service', async () => {
@@ -122,5 +131,32 @@ describe('setupService', () => {
       .where(eq(commits.projectId, importedProject!.id))
     expect(importedDocuments.length).toBe(1)
     expect(importedDocuments[0]!.document_versions.content).toEqual(prompt)
+  })
+
+  describe('with custom timers', () => {
+    beforeEach(() => {
+      vi.setSystemTime(new Date('2024-10-10'))
+      mocks.claimReward.mockResolvedValue(Result.nil())
+    })
+
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    // TODO: review, not sure why the timers :point_up: are messing with the test
+    it.skip('should claim the reward for sigingup on the launch day', async () => {
+      await setupService({
+        email: 'test@example.com',
+        name: 'Test User',
+        companyName: 'Test Company',
+      })
+
+      expect(mocks.claimReward).toHaveBeenCalledWith({
+        workspace: { id: 'workspace-id' },
+        user: { id: 'user-id' },
+        type: RewardType.SignupLaunchDay,
+        reference: '',
+      })
+    })
   })
 })

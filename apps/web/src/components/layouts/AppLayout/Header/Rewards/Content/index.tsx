@@ -1,14 +1,24 @@
 'use client'
 
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 
 import { RewardType } from '@latitude-data/core/browser'
 import { Text } from '@latitude-data/web-ui'
+import useRewards from '$/stores/rewards'
 
 import { RewardItem } from './RewardItem'
 import { RewardMenu } from './RewardMenu'
 
 export function RewardsContent() {
+  const { data: claimedRewards, isLoading } = useRewards()
+
+  const isLaunchDaySignupClaimed = useMemo(() => {
+    if (isLoading || !claimedRewards) return false
+    return claimedRewards.some(
+      (r) => r.rewardType === RewardType.SignupLaunchDay,
+    )
+  }, [isLoading, claimedRewards])
+
   const [selectedType, setSelectedType] = useState<RewardType>()
 
   if (selectedType) {
@@ -51,6 +61,12 @@ export function RewardsContent() {
         type={RewardType.GithubIssue}
         onClick={() => setSelectedType(RewardType.GithubIssue)}
       />
+      {isLaunchDaySignupClaimed && (
+        <RewardItem
+          description='Signed up on the launch day'
+          type={RewardType.SignupLaunchDay}
+        />
+      )}
     </div>
   )
 }
