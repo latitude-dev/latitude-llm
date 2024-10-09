@@ -234,22 +234,18 @@ export default function DocumentEditor({
                 }
                 isSaved={isSaved}
                 actionButtons={
-                  (workspace?.id == 1 ||
-                    workspace?.id == 190 ||
-                    workspace?.id == 188) && ( //TODO: Primitive Feature Flag. Remove later.
-                    <Button
-                      className='bg-background'
-                      variant='outline'
-                      size='small'
-                      iconProps={{
-                        name: 'sparkles',
-                        size: 'small',
-                      }}
-                      onClick={() => setRefineDocumentModalOpen(true)}
-                    >
-                      <Text.H6>Refine</Text.H6>
-                    </Button>
-                  )
+                  <Button
+                    className='bg-background'
+                    variant='outline'
+                    size='small'
+                    iconProps={{
+                      name: 'sparkles',
+                      size: 'small',
+                    }}
+                    onClick={() => setRefineDocumentModalOpen(true)}
+                  >
+                    <Text.H6>Refine</Text.H6>
+                  </Button>
                 }
               />
             </Suspense>
