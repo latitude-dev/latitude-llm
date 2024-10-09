@@ -1,4 +1,4 @@
-import { Providers } from '@latitude-data/core/browser'
+import { ProviderApiKey, Providers } from '@latitude-data/core/browser'
 import * as factories from '@latitude-data/core/factories'
 import { Result } from '@latitude-data/core/lib/Result'
 import { EvaluationsRepository } from '@latitude-data/core/repositories'
@@ -18,7 +18,6 @@ vi.mock('$/services/auth/getSession', () => ({
 }))
 
 vi.mock('@latitude-data/core/repositories/evaluationsRepository')
-vi.mock('@latitude-data/core/services/evaluations/destroy')
 
 describe('destroyEvaluationAction', () => {
   describe('unauthorized', () => {
@@ -55,13 +54,15 @@ describe('destroyEvaluationAction', () => {
     let evaluation: any
     let user: any
     let workspace: any
+    let provider: ProviderApiKey
 
     beforeEach(async () => {
       const { workspace: createdWorkspace, userData } =
         await factories.createWorkspace()
+
       workspace = createdWorkspace
       user = userData
-      const provider = await factories.createProviderApiKey({
+      provider = await factories.createProviderApiKey({
         workspace,
         type: Providers.OpenAI,
         name: 'Test Provider',
@@ -83,17 +84,13 @@ describe('destroyEvaluationAction', () => {
       vi.mocked(EvaluationsRepository).mockImplementation(() => ({
         find: vi.fn().mockResolvedValue(Result.ok(evaluation)),
       }))
-      // @ts-expect-error - Mocking the repository
-      vi.mocked(destroyEvaluation).mockResolvedValue(Result.ok(true))
 
       const [data, error] = await destroyEvaluationAction({
         id: evaluation.id,
       })
 
       expect(error).toBeNull()
-      expect(data).toBe(true)
-      expect(EvaluationsRepository).toHaveBeenCalledWith(workspace.id)
-      expect(destroyEvaluation).toHaveBeenCalledWith({ evaluation })
+      expect(data).toEqual(expect.objectContaining({ id: evaluation.id }))
     })
 
     it('throws an error if evaluation is not found', async () => {
@@ -112,19 +109,34 @@ describe('destroyEvaluationAction', () => {
       expect(error!.message).toEqual('Evaluation not found')
     })
 
-    it('throws an error if destroyEvaluation fails', async () => {
-      // @ts-expect-error - Mocking the repository
+    it('should throw a user-friendly error when trying to delete an evaluation connected to a document', async () => {
+      const { documents } = await factories.createProject({
+        workspace,
+        documents: {
+          foo: factories.helpers.createPrompt({ provider }),
+        },
+      })
+
+      // @ts-expect-error - mock implementation
       vi.mocked(EvaluationsRepository).mockImplementation(() => ({
         find: vi.fn().mockResolvedValue(Result.ok(evaluation)),
+        filterByUuids: vi.fn().mockResolvedValue(Result.ok([evaluation])),
       }))
-      vi.mocked(destroyEvaluation).mockResolvedValue(
-        Result.error(new Error('Failed to destroy evaluation')),
-      )
+
+      const document = documents[0]!
+      await factories.createConnectedEvaluation({
+        user,
+        workspace,
+        evaluationUuid: evaluation.uuid,
+        documentUuid: document.documentUuid,
+      })
 
       const [_, error] = await destroyEvaluationAction({ id: evaluation.id })
 
       expect(error).not.toBeNull()
-      expect(error!.message).toEqual('Failed to destroy evaluation')
+      expect(error!.message).toEqual(
+        'Cannot delete evaluation because it is still used in at least one project',
+      )
     })
   })
 })
