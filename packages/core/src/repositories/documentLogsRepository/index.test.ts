@@ -66,6 +66,7 @@ describe('DocumentLogsRepository', () => {
       await createRunError({
         errorableType: ErrorableEntity.DocumentLog,
         errorableId: documentLog.id,
+        errorableUuid: documentLog.uuid,
         code: RunErrorCodes.Unknown,
         message: 'Error message',
       })

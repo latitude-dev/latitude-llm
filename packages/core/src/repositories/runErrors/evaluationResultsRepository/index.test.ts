@@ -59,6 +59,7 @@ describe('EvaluationResultsRepository', () => {
       await createRunError({
         errorableType: ErrorableEntity.EvaluationResult,
         errorableId: evaluationResult.id,
+        errorableUuid: evaluationResult.uuid,
         code: RunErrorCodes.Unknown,
         message: 'Error message',
       })
@@ -105,6 +106,7 @@ describe('EvaluationResultsRepository', () => {
       await createRunError({
         errorableType: ErrorableEntity.EvaluationResult,
         errorableId: evaluationResult2.id,
+        errorableUuid: evaluationResult2.uuid,
         code: RunErrorCodes.Unknown,
         message: 'Error message',
       })
