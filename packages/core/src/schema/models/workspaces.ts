@@ -10,7 +10,7 @@ export const workspaces = latitudeSchema.table('workspaces', {
   name: varchar('name', { length: 256 }).notNull(),
   currentSubscriptionId: bigint('current_subscription_id', {
     mode: 'number',
-  }).references(() => subscriptions.id),
+  }).references(() => subscriptions.id).notNull(),
   creatorId: text('creator_id').references(() => users.id, {
     onDelete: 'set null',
   }),
