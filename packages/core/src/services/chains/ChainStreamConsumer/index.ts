@@ -20,7 +20,7 @@ export function parseResponseText(response: ChainStepResponse<StreamType>) {
   const hasTextResponse = text && text.length > 0
   if (hasTextResponse) return text
 
-  if (!response.toolCalls.length) return text ?? ''
+  if (!response?.toolCalls?.length) return text ?? ''
 
   const toolsString = objectToString(
     response.toolCalls,
@@ -36,14 +36,16 @@ export function enqueueChainEvent(
   controller.enqueue(event)
 }
 
-function parseError(e: unknown) {
-  const isChainError = (e: unknown): e is ChainError<RunErrorCodes> =>
-    e instanceof ChainError
+export const isChainError = (e: unknown): e is ChainError<RunErrorCodes> =>
+  e instanceof ChainError
 
+function parseError(e: unknown) {
   if (!isChainError(e)) {
+    const error = e as Error
     return new ChainError({
       code: RunErrorCodes.Unknown,
-      message: (e as Error).message,
+      message: error.message,
+      stack: error.stack,
     })
   }
 
@@ -53,7 +55,7 @@ function parseError(e: unknown) {
 export class ChainStreamConsumer {
   private controller: ReadableStreamDefaultController
   private previousCount: number
-  private documentLogUuid: string
+  private errorableUuid: string
 
   static chainCompleted({
     response,
@@ -112,15 +114,15 @@ export class ChainStreamConsumer {
   constructor({
     controller,
     previousCount,
-    documentLogUuid,
+    errorableUuid,
   }: {
     controller: ReadableStreamDefaultController
     previousCount: number
-    documentLogUuid: string
+    errorableUuid: string
   }) {
     this.controller = controller
     this.previousCount = previousCount
-    this.documentLogUuid = documentLogUuid
+    this.errorableUuid = errorableUuid
   }
 
   setup(step: ValidatedStep) {
@@ -132,7 +134,7 @@ export class ChainStreamConsumer {
         isLastStep: step.chainCompleted,
         config: step.conversation.config as Config,
         messages: newMessages,
-        documentLogUuid: this.documentLogUuid,
+        documentLogUuid: this.errorableUuid,
       },
       event: StreamEventTypes.Latitude,
     })

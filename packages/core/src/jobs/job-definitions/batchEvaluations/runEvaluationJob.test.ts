@@ -1,54 +1,35 @@
-import * as env from '@latitude-data/env'
 import { Job } from 'bullmq'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { DocumentLog, EvaluationDto, Workspace } from '../../../browser'
+import { Providers, RunErrorCodes } from '../../../constants'
+import { Result } from '../../../lib'
 import * as queues from '../../../queues'
-import * as repositories from '../../../repositories'
+import { EvaluationsRepository } from '../../../repositories'
+import { ChainError } from '../../../services/chains/ChainErrors'
+import { ChainResponse } from '../../../services/chains/run'
 import * as evaluations from '../../../services/evaluations/run'
+import * as factories from '../../../tests/factories'
 import * as websockets from '../../../websockets/workers'
 import * as progressTracker from '../../utils/progressTracker'
 import { runEvaluationJob, type RunEvaluationJobData } from './runEvaluationJob'
 
-// Spy on console.error
-vi.spyOn(console, 'error').mockImplementation(() => undefined)
-
-// Spy on queues
 // @ts-ignore
 vi.spyOn(queues, 'queues').mockResolvedValue({})
+const runEvaluationSpy = vi.spyOn(evaluations, 'runEvaluation')
 
-// Spy on repositories
-vi.spyOn(
-  repositories.DocumentLogsRepository.prototype,
-  'findByUuid',
-  // @ts-ignore
-).mockResolvedValue({ unwrap: () => Promise.resolve({}) })
-vi.spyOn(
-  repositories.EvaluationsRepository.prototype,
-  'find',
-  // @ts-ignore
-).mockResolvedValue({ unwrap: () => Promise.resolve({}) })
-
-// Spy on runEvaluation
-const runEvaluationSpy = vi
-  .spyOn(evaluations, 'runEvaluation')
-  .mockResolvedValue({
-    unwrap: () =>
-      // @ts-ignore
-      Promise.resolve({
-        response: Promise.resolve(null),
-      }),
-  })
-
-// Spy on WebsocketClient
+const FAKE_ERRORABLE_UUID = '12345678-1234-1234-1234-123456789012'
+const stream = new ReadableStream({
+  start(controller) {
+    controller.enqueue({ type: 'text', text: 'foo' })
+    controller.close()
+  },
+})
 const mockEmit = vi.fn()
 // @ts-ignore
 vi.spyOn(websockets.WebsocketClient, 'getSocket').mockResolvedValue({
   emit: mockEmit,
 })
-
-// Spy on env
-// @ts-ignore
-vi.spyOn(env, 'env', 'get').mockReturnValue({ NODE_ENV: 'test' })
 
 // Spy on ProgressTracker
 const incrementCompletedSpy = vi.fn()
@@ -61,83 +42,187 @@ vi.spyOn(progressTracker, 'ProgressTracker').mockImplementation(() => ({
 }))
 
 let jobData: Job<RunEvaluationJobData>
+
+function buildJobData(
+  data: Partial<RunEvaluationJobData>,
+): RunEvaluationJobData {
+  return {
+    workspaceId: data.workspaceId || 1,
+    documentUuid: data.documentUuid || 'doc-uuid',
+    documentLogUuid: data.documentLogUuid || 'log-uuid',
+    evaluationId: data.evaluationId || 2,
+    batchId: 'batch-123',
+  }
+}
+let workspace: Workspace
+let documentUuid: string
+let documentLog: DocumentLog
+let evaluation: EvaluationDto
+let runChainResponse: ChainResponse<'object'>
+
 describe('runEvaluationJob', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     vi.clearAllMocks()
-
-    jobData = {
-      id: '1',
-      data: {
-        workspaceId: 1,
-        documentUuid: 'doc-uuid',
-        documentLogUuid: 'log-uuid',
-        evaluationId: 2,
-        batchId: 'batch-123',
-      },
-    } as Job<RunEvaluationJobData>
-  })
-
-  it('calls runEvaluation', async () => {
-    await runEvaluationJob(jobData)
-    expect(runEvaluationSpy).toHaveBeenCalledWith({
-      documentLog: expect.any(Object),
-      evaluation: expect.any(Object),
-      documentUuid: 'doc-uuid',
-    })
-  })
-
-  it('wait for runEvaluation response to finish', async () => {
-    const responsePromise = new Promise((resolve) =>
-      setTimeout(() => resolve('expected response'), 100),
-    )
-    runEvaluationSpy.mockResolvedValueOnce({
-      unwrap: () =>
-        // @ts-ignore
-        Promise.resolve({
-          response: responsePromise,
+    const setup = await factories.createProject({
+      providers: [{ name: 'openai', type: Providers.OpenAI }],
+      documents: {
+        doc1: factories.helpers.createPrompt({
+          provider: 'openai',
+          content: 'foo',
         }),
-    })
-
-    const awaitResponseSpy = vi.fn()
-    responsePromise.then(awaitResponseSpy)
-
-    await runEvaluationJob(jobData)
-    expect(awaitResponseSpy).toHaveBeenCalled()
-  })
-
-  it('increment successful counter', async () => {
-    await runEvaluationJob(jobData)
-
-    expect(websockets.WebsocketClient.getSocket).toHaveBeenCalledTimes(1)
-    expect(incrementCompletedSpy).toHaveBeenCalledTimes(1)
-    expect(mockEmit).toHaveBeenCalledWith('evaluationStatus', {
-      workspaceId: 1,
-      data: {
-        batchId: 'batch-123',
-        evaluationId: 2,
-        documentUuid: 'doc-uuid',
-        completed: 1,
-        total: 1,
       },
     })
+    workspace = setup.workspace
+    const documentVersion = setup.documents[0]!
+    const { documentLog: docLog } = await factories.createDocumentLog({
+      document: documentVersion,
+      commit: setup.commit,
+    })
+    const llmEval = await factories.createLlmAsJudgeEvaluation({
+      user: setup.user,
+      workspace: setup.workspace,
+      name: 'Test Evaluation',
+    })
+    const evaluationsScope = new EvaluationsRepository(workspace.id)
+
+    evaluation = await evaluationsScope.find(llmEval.id).then((r) => r.unwrap())
+    documentUuid = documentVersion.documentUuid
+    documentLog = docLog
   })
 
-  it('increment error counter', async () => {
-    runEvaluationSpy.mockRejectedValueOnce(new Error('Some error occurred'))
+  describe('with valid data', () => {
+    beforeEach(async () => {
+      jobData = {
+        id: '1',
+        data: buildJobData({
+          workspaceId: workspace.id,
+          documentUuid,
+          documentLogUuid: documentLog.uuid,
+          evaluationId: evaluation.id,
+        }),
+      } as Job<RunEvaluationJobData>
+    })
 
-    await runEvaluationJob(jobData)
+    it('calls runEvaluation', async () => {
+      await runEvaluationJob(jobData)
+      expect(runEvaluationSpy).toHaveBeenCalledWith({
+        documentLog: {
+          ...documentLog,
+          error: {
+            code: null,
+            message: null,
+            details: null,
+          },
+        },
+        evaluation,
+        documentUuid: documentUuid,
+      })
+    })
 
-    expect(websockets.WebsocketClient.getSocket).toHaveBeenCalledTimes(1)
-    expect(incrementErrorsSpy).toHaveBeenCalledTimes(1)
-    expect(mockEmit).toHaveBeenCalledWith('evaluationStatus', {
-      workspaceId: 1,
-      data: {
-        batchId: 'batch-123',
-        evaluationId: 2,
-        documentUuid: 'doc-uuid',
-        completed: 1,
-        total: 1,
-      },
+    it('increment successful counter', async () => {
+      runChainResponse = Result.ok({
+        streamType: 'object' as 'object',
+        object: { result: { result: '42', reason: 'Is always 42' } },
+        text: 'chain resolved text',
+        usage: { promptTokens: 8, completionTokens: 2, totalTokens: 10 },
+        documentLogUuid: documentLog.uuid,
+        providerLog: undefined,
+      })
+      runEvaluationSpy.mockResolvedValueOnce(
+        Result.ok({
+          stream,
+          response: new Promise((resolve) => resolve(runChainResponse)),
+          resolvedContent: 'chain resolved text',
+          errorableUuid: FAKE_ERRORABLE_UUID,
+          duration: new Promise((resolve) => resolve(1000)),
+        }),
+      )
+      await runEvaluationJob(jobData)
+
+      expect(websockets.WebsocketClient.getSocket).toHaveBeenCalledTimes(1)
+      expect(incrementCompletedSpy).toHaveBeenCalledTimes(1)
+      expect(mockEmit).toHaveBeenCalledWith('evaluationStatus', {
+        workspaceId: workspace.id,
+        data: {
+          batchId: 'batch-123',
+          evaluationId: evaluation.id,
+          documentUuid,
+          completed: 1,
+          total: 1,
+        },
+      })
+    })
+
+    it('increment error counter', async () => {
+      runEvaluationSpy.mockResolvedValueOnce(
+        Result.error(
+          new ChainError({
+            code: RunErrorCodes.EvaluationRunResponseJsonFormatError,
+            message: 'malformed json response',
+          }),
+        ),
+      )
+
+      await runEvaluationJob(jobData)
+
+      expect(websockets.WebsocketClient.getSocket).toHaveBeenCalledTimes(1)
+      expect(incrementErrorsSpy).toHaveBeenCalledTimes(1)
+      expect(mockEmit).toHaveBeenCalledWith('evaluationStatus', {
+        workspaceId: workspace.id,
+        data: {
+          batchId: 'batch-123',
+          evaluationId: evaluation.id,
+          documentUuid,
+          completed: 1,
+          total: 1,
+        },
+      })
+    })
+
+    it('throws an error if runEvaluation fails', async () => {
+      runEvaluationSpy.mockRejectedValue(new Error('Some error'))
+
+      await expect(runEvaluationJob(jobData)).rejects.toThrowError(
+        new Error('Some error'),
+      )
+    })
+
+    it('throws an error when runEvaluation fails with a ChainError.Unknown', async () => {
+      runEvaluationSpy.mockResolvedValueOnce(
+        Result.error(
+          new ChainError({
+            code: RunErrorCodes.Unknown,
+            message: 'We didnt expect this error',
+          }),
+        ),
+      )
+
+      await expect(runEvaluationJob(jobData)).rejects.toThrowError(
+        new ChainError({
+          code: RunErrorCodes.Unknown,
+          message: 'We didnt expect this error',
+        }),
+      )
+    })
+  })
+
+  describe('with invalid data', () => {
+    it('throws an error if documentLogUuid is invalid', async () => {
+      await expect(
+        runEvaluationJob({
+          id: '1',
+          data: buildJobData({
+            workspaceId: workspace.id,
+            documentUuid,
+            documentLogUuid: '12345678-1234-1234-1234-123456789034',
+            evaluationId: evaluation.id,
+          }),
+        } as Job<RunEvaluationJobData>),
+      ).rejects.toThrowError(
+        new Error(
+          'DocumentLog not found with uuid 12345678-1234-1234-1234-123456789034',
+        ),
+      )
     })
   })
 })

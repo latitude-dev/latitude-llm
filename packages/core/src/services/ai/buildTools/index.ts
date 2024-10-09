@@ -5,11 +5,11 @@ import { Result } from '../../../lib'
 import { compactObject } from '../../../lib/compactObject'
 import { ChainError } from '../../chains/ChainErrors'
 
-export const buildTools = (
-  tools:
-    | Record<string, { description?: string; parameters: Record<string, any> }>
-    | undefined,
-) => {
+export type AITools = Record<
+  string,
+  { description?: string; parameters: Record<string, any> }
+>
+export const buildTools = (tools: AITools | undefined) => {
   if (!tools) return Result.ok(undefined)
   try {
     const data = Object.entries(tools).reduce<Record<string, CoreTool>>(

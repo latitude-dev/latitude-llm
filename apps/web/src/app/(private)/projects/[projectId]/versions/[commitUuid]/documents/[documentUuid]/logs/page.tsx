@@ -39,7 +39,6 @@ export default async function DocumentPage({
       draft: commit,
     }).$dynamic(),
   })
-
   return (
     <div className='flex flex-col w-full h-full overflow-x-auto p-6 gap-2 min-w-0'>
       <TableWithHeader

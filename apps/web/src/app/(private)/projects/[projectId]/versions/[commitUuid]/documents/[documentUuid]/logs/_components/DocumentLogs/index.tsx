@@ -3,7 +3,7 @@
 import { useCallback, useState } from 'react'
 
 import { IPagination } from '@latitude-data/core/lib/pagination/buildPagination'
-import { DocumentLogWithMetadata } from '@latitude-data/core/repositories'
+import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
 import {
   TableBlankSlate,
   useCurrentCommit,
@@ -70,18 +70,19 @@ export function DocumentLogs({
   documentLogs: serverDocumentLogs,
   pagination,
 }: {
-  documentLogs: DocumentLogWithMetadata[]
+  documentLogs: DocumentLogWithMetadataAndError[]
   pagination: IPagination
 }) {
   const document = useCurrentDocument()
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
   const [selectedLog, setSelectedLog] = useState<
-    DocumentLogWithMetadata | undefined
+    DocumentLogWithMetadataAndError | undefined
   >()
-  const { data: providerLogs } = useProviderLogs({
-    documentLogUuid: selectedLog?.uuid,
-  })
+  const { data: providerLogs, isLoading: isProviderLogsLoading } =
+    useProviderLogs({
+      documentLogUuid: selectedLog?.uuid,
+    })
   const { data: documentLogs, mutate } = useDocumentLogs(
     {
       documentUuid: document.documentUuid,
@@ -118,6 +119,7 @@ export function DocumentLogs({
           <DocumentLogInfo
             documentLog={selectedLog}
             providerLogs={providerLogs}
+            isLoading={isProviderLogsLoading}
           />
         </div>
       )}

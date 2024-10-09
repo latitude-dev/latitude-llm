@@ -1,5 +1,4 @@
 import { Message } from '@latitude-data/compiler'
-import { v4 } from 'uuid'
 
 import {
   LogSources,
@@ -8,9 +7,10 @@ import {
   StreamType,
 } from '../../../browser'
 import { StreamCommonData } from '../../../events/events'
-import { TypedResult } from '../../../lib'
-import { AIReturn, PartialConfig, StreamChunk } from '../../ai'
+import { generateUUIDIdentifier, Result } from '../../../lib'
+import { AIReturn, PartialConfig } from '../../ai'
 import { ChainError } from '../ChainErrors'
+import { StreamConsumeReturn } from '../ChainStreamConsumer/consumeStream'
 import { processStreamObject } from './processStreamObject'
 import { processStreamText } from './processStreamText'
 import { saveOrPublishProviderLogs } from './saveOrPublishProviderLogs'
@@ -18,34 +18,34 @@ import { saveOrPublishProviderLogs } from './saveOrPublishProviderLogs'
 export class ProviderProcessor {
   private apiProvider: ProviderApiKey
   private source: LogSources
-  private documentLogUuid?: string
   private workspaceId: number
   private config: PartialConfig
   private messages: Message[]
   private saveSyncProviderLogs: boolean
+  private errorableUuid: string | undefined
 
   constructor({
     apiProvider,
     source,
-    documentLogUuid,
     config,
     messages,
     saveSyncProviderLogs,
+    errorableUuid,
   }: {
     apiProvider: ProviderApiKey
     source: LogSources
-    documentLogUuid?: string
     config: PartialConfig
     messages: Message[]
     saveSyncProviderLogs: boolean
+    errorableUuid?: string
   }) {
     this.apiProvider = apiProvider
     this.workspaceId = apiProvider.workspaceId
     this.source = source
-    this.documentLogUuid = documentLogUuid
     this.config = config
     this.messages = messages
     this.saveSyncProviderLogs = saveSyncProviderLogs
+    this.errorableUuid = errorableUuid
   }
 
   /**
@@ -58,16 +58,14 @@ export class ProviderProcessor {
   async call({
     aiResult,
     startTime,
-    streamConsumedResult,
+    finishReason,
   }: {
     aiResult: Awaited<AIReturn<StreamType>>
     startTime: number
-    streamConsumedResult: TypedResult<
-      StreamChunk[],
-      ChainError<RunErrorCodes.AIRunError>
-    >
+    finishReason: StreamConsumeReturn['finishReason']
   }) {
-    this.throwIfNotValidStreamType(aiResult)
+    const checkResult = this.checkValidType(aiResult)
+    if (checkResult.error) return checkResult
 
     const { response, providerLogsData } = await this.processResponse({
       aiResult,
@@ -76,12 +74,12 @@ export class ProviderProcessor {
 
     const providerLog = await saveOrPublishProviderLogs({
       streamType: aiResult.type,
-      streamConsumedResult,
+      finishReason,
       data: providerLogsData,
       saveSyncProviderLogs: this.saveSyncProviderLogs,
     })
 
-    return { ...response, providerLog }
+    return Result.ok({ ...response, providerLog })
   }
 
   private async processResponse({
@@ -108,18 +106,21 @@ export class ProviderProcessor {
     startTime: number
   }): Promise<StreamCommonData> {
     const endTime = Date.now()
+    const duration = endTime - startTime
     return {
-      uuid: v4(),
+      uuid: generateUUIDIdentifier(),
 
-      // Data
+      // AI Provider Data
       workspaceId: this.workspaceId,
       source: this.source,
       providerId: this.apiProvider.id,
       providerType: this.apiProvider.provider,
-      documentLogUuid: this.documentLogUuid,
+      // FIXME: This should be polymorphic
+      // https://github.com/latitude-dev/latitude-llm/issues/229
+      documentLogUuid: this.errorableUuid,
 
       // AI
-      duration: endTime - startTime,
+      duration,
       generatedAt: new Date(),
       model: this.config.model,
       config: this.config,
@@ -128,14 +129,16 @@ export class ProviderProcessor {
     }
   }
 
-  private throwIfNotValidStreamType(aiResult: AIReturn<StreamType>) {
+  private checkValidType(aiResult: AIReturn<StreamType>) {
     const { type } = aiResult
     const invalidType = type !== 'text' && type !== 'object'
-    if (!invalidType) return
+    if (!invalidType) return Result.nil()
 
-    throw new ChainError({
-      code: RunErrorCodes.UnsupportedProviderResponseTypeError,
-      message: `Invalid stream type ${type} result is not a textStream or objectStream`,
-    })
+    return Result.error(
+      new ChainError({
+        code: RunErrorCodes.UnsupportedProviderResponseTypeError,
+        message: `Invalid stream type ${type} result is not a textStream or objectStream`,
+      }),
+    )
   }
 }

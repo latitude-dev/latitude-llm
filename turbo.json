@@ -37,7 +37,8 @@
     "TEMPLATES_SUGGESTION_PROMPT_PATH",
     "CI",
     "SUPPORT_APP_ID",
-    "SUPPORT_APP_SECRET_KEY"
+    "SUPPORT_APP_SECRET_KEY",
+    "DEFAULT_PROVIDER_API_KEY"
   ],
   "$schema": "https://turbo.build/schema.json",
   "globalDependencies": ["**/.env.*local"],
