@@ -78,7 +78,7 @@ export class EvaluationResultsRepository extends Repository<
       .leftJoin(
         runErrors,
         and(
-          eq(runErrors.errorableId, evaluationResults.id),
+          eq(runErrors.errorableUuid, evaluationResults.uuid),
           eq(runErrors.errorableType, ErrorableEntity.EvaluationResult),
         ),
       )

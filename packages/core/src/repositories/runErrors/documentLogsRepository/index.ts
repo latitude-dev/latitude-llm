@@ -1,6 +1,6 @@
 import { and, eq, getTableColumns } from 'drizzle-orm'
 
-import { Commit, DocumentLog, ErrorableEntity } from '../../../browser'
+import { ErrorableEntity } from '../../../browser'
 import {
   commits,
   documentLogs,
@@ -10,13 +10,6 @@ import {
 } from '../../../schema'
 import Repository from '../../repository'
 import { ERROR_SELECT } from '../evaluationResultsRepository'
-
-export type DocumentLogWithMetadata = DocumentLog & {
-  commit: Commit
-  tokens: number | null
-  duration: number | null
-  costInMillicents: number | null
-}
 
 const tt = {
   ...getTableColumns(documentLogs),
@@ -38,7 +31,7 @@ export class DocumentLogsWithErrorsRepository extends Repository<
       .leftJoin(
         runErrors,
         and(
-          eq(runErrors.errorableId, documentLogs.id),
+          eq(runErrors.errorableUuid, documentLogs.uuid),
           eq(runErrors.errorableType, ErrorableEntity.DocumentLog),
         ),
       )
