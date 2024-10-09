@@ -31,7 +31,7 @@ export class DocumentLogsRepository extends Repository<typeof tt, DocumentLog> {
       .leftJoin(
         runErrors,
         and(
-          eq(runErrors.errorableId, documentLogs.id),
+          eq(runErrors.errorableUuid, documentLogs.uuid),
           eq(runErrors.errorableType, ErrorableEntity.DocumentLog),
         ),
       )

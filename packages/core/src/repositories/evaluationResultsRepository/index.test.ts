@@ -113,7 +113,6 @@ describe('EvaluationResultsRepository', () => {
       })
       await createRunError({
         errorableType: ErrorableEntity.EvaluationResult,
-        errorableId: evaluationResult.id,
         errorableUuid: evaluationResult.uuid,
         code: RunErrorCodes.Unknown,
         message: 'Error message',
