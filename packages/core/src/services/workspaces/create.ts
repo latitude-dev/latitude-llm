@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm'
 
-import { User, Workspace } from '../../browser'
+import { User, WorkspaceDto } from '../../browser'
 import { database } from '../../client'
 import { publisher } from '../../events/publisher'
 import { Result, Transaction } from '../../lib'
@@ -20,7 +20,7 @@ export async function createWorkspace(
   },
   db = database,
 ) {
-  return Transaction.call<Workspace>(async (tx) => {
+  return Transaction.call<WorkspaceDto>(async (tx) => {
     const insertedWorkspaces = await tx
       .insert(workspaces)
       .values({ name, creatorId: user.id, createdAt })
@@ -52,6 +52,6 @@ export async function createWorkspace(
       },
     })
 
-    return Result.ok(workspace)
+    return Result.ok({ ...workspace, currentSubscription: subscription })
   }, db)
 }

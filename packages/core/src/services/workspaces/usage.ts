@@ -1,8 +1,9 @@
 import { count, gte } from 'drizzle-orm'
 
-import { MAX_FREE_RUNS, Workspace, WorkspaceUsage } from '../../browser'
+import { WorkspaceDto, WorkspaceUsage } from '../../browser'
 import { database } from '../../client'
 import { PromisedResult, Result } from '../../lib'
+import { SubscriptionPlans } from '../../plans'
 import {
   ClaimedRewardsRepository,
   EvaluationResultsRepository,
@@ -24,7 +25,7 @@ export function getLatestRenewalDate(firstRenewalDate: Date, targetDate: Date) {
 }
 
 export async function computeWorkspaceUsage(
-  workspace: Workspace,
+  workspace: WorkspaceDto,
   db = database,
 ): PromisedResult<WorkspaceUsage, Error> {
   const { scope: documentLogsScope } = new DocumentLogsRepository(
@@ -36,9 +37,8 @@ export async function computeWorkspaceUsage(
     db,
   )
 
-  const createdAtDate = workspace.createdAt
+  const createdAtDate = workspace.currentSubscription.createdAt
   const currentDate = new Date(Date.now())
-
   const latestRenewalDate = getLatestRenewalDate(createdAtDate, currentDate)
 
   const evaluationResultsCount = await db
@@ -61,8 +61,11 @@ export async function computeWorkspaceUsage(
   const extraRunsResult = await claimedRewardsScope.getExtraRunsOptimistic()
   if (extraRunsResult.error) return Result.error(extraRunsResult.error)
 
+  const currentSubscriptionPlan =
+    SubscriptionPlans[workspace.currentSubscription.plan]
+
   return Result.ok({
     usage: evaluationResultsCount + documentLogsCount,
-    max: MAX_FREE_RUNS + extraRunsResult.value,
+    max: currentSubscriptionPlan.credits + extraRunsResult.value,
   })
 }

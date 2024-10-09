@@ -1,12 +1,14 @@
-import { eq, getTableColumns } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 
 import { DocumentLog } from '../browser'
 import { database } from '../client'
+import { workspacesDtoColumns } from '../repositories'
 import {
   commits,
   documentLogs,
   documentVersions,
   projects,
+  subscriptions,
   workspaces,
 } from '../schema'
 
@@ -15,8 +17,12 @@ export const findWorkspaceFromDocumentLog = async (
   db = database,
 ) => {
   const result = await db
-    .select(getTableColumns(workspaces))
+    .select(workspacesDtoColumns)
     .from(workspaces)
+    .innerJoin(
+      subscriptions,
+      eq(workspaces.currentSubscriptionId, subscriptions.id),
+    )
     .innerJoin(projects, eq(projects.workspaceId, workspaces.id))
     .innerJoin(commits, eq(commits.projectId, projects.id))
     .innerJoin(documentVersions, eq(documentVersions.commitId, commits.id))

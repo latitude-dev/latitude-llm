@@ -1,16 +1,26 @@
-import { eq, getTableColumns } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 
 import { EvaluationResult } from '../browser'
 import { database } from '../client'
-import { evaluationResults, evaluations, workspaces } from '../schema'
+import { workspacesDtoColumns } from '../repositories'
+import {
+  evaluationResults,
+  evaluations,
+  subscriptions,
+  workspaces,
+} from '../schema'
 
 export const findWorkspaceFromEvaluationResult = async (
   evaluationResult: EvaluationResult,
   db = database,
 ) => {
   const result = await db
-    .select(getTableColumns(workspaces))
+    .select(workspacesDtoColumns)
     .from(workspaces)
+    .innerJoin(
+      subscriptions,
+      eq(workspaces.currentSubscriptionId, subscriptions.id),
+    )
     .innerJoin(evaluations, eq(evaluations.workspaceId, workspaces.id))
     .innerJoin(
       evaluationResults,

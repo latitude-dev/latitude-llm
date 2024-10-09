@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { DocumentLog } from '../../browser'
+import { DocumentLog, WorkspaceDto } from '../../browser'
 import { Providers } from '../../constants'
 import { connectEvaluations } from '../evaluations'
 import { computeWorkspaceUsage, getLatestRenewalDate } from './usage'
@@ -57,8 +57,8 @@ describe('computeWorkspaceUsage', () => {
         ),
     )
 
-    const result = await computeWorkspaceUsage(workspace).then((r) =>
-      r.unwrap(),
+    const result = await computeWorkspaceUsage(workspace as WorkspaceDto).then(
+      (r) => r.unwrap(),
     )
 
     expect(result.usage).toBe(documentLogs.length + evaluationLogs.length)
@@ -173,8 +173,8 @@ describe('computeWorkspaceUsage', () => {
         ),
     )
 
-    const result = await computeWorkspaceUsage(workspace1).then((r) =>
-      r.unwrap(),
+    const result = await computeWorkspaceUsage(workspace1 as WorkspaceDto).then(
+      (r) => r.unwrap(),
     )
 
     expect(result.usage).toBe(documentLogs1.length + evaluationLogs1.length)
@@ -201,8 +201,8 @@ describe('computeWorkspaceUsage', () => {
       evaluationUuids: [evaluation.uuid],
     })
 
-    const result = await computeWorkspaceUsage(workspace).then((r) =>
-      r.unwrap(),
+    const result = await computeWorkspaceUsage(workspace as WorkspaceDto).then(
+      (r) => r.unwrap(),
     )
 
     expect(result.usage).toBe(0)
@@ -312,8 +312,8 @@ describe('computeWorkspaceUsage', () => {
     const documentLogs = [...document1Logs, ...document2Logs]
     const evaluationLogs = [...evaluation1Logs, ...evaluation2Logs]
 
-    const result = await computeWorkspaceUsage(workspace).then((r) =>
-      r.unwrap(),
+    const result = await computeWorkspaceUsage(workspace as WorkspaceDto).then(
+      (r) => r.unwrap(),
     )
 
     expect(result.usage).toBe(documentLogs.length + evaluationLogs.length)
@@ -378,8 +378,8 @@ describe('computeWorkspaceUsage', () => {
         }),
     )
 
-    const result = await computeWorkspaceUsage(workspace).then((r) =>
-      r.unwrap(),
+    const result = await computeWorkspaceUsage(workspace as WorkspaceDto).then(
+      (r) => r.unwrap(),
     )
 
     expect(result.usage).toBe(NUM_INCLUDED_DOC_LOGS)

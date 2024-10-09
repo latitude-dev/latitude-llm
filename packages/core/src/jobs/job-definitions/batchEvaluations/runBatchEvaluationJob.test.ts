@@ -4,7 +4,7 @@ import { Job } from 'bullmq'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import * as jobsModule from '../../'
-import { Workspace } from '../../../browser'
+import { WorkspaceDto } from '../../../browser'
 import { findWorkspaceFromDocument } from '../../../data-access'
 import { CommitsRepository } from '../../../repositories'
 import * as datasetsPreview from '../../../services/datasets/preview'
@@ -111,7 +111,7 @@ describe('runBatchEvaluationJob', () => {
 
     vi.mocked(findWorkspaceFromDocument).mockResolvedValue({
       id: 'workspace-1',
-    } as unknown as Workspace)
+    } as unknown as WorkspaceDto)
   })
 
   it('should emit first run evalution message', async () => {

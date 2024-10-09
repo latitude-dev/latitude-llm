@@ -20,6 +20,7 @@ import { providerApiKeys } from './models/providerApiKeys'
 import { providerLogs } from './models/providerLogs'
 import { runErrors } from './models/runErrors'
 import { sessions } from './models/sessions'
+import { subscriptions } from './models/subscriptions'
 import { users } from './models/users'
 import { workspaces } from './models/workspaces'
 
@@ -52,6 +53,7 @@ export type EvaluationTemplateCategory = InferSelectModel<
 export type LlmAsJudgeEvaluationMetadata = InferSelectModel<
   typeof llmAsJudgeEvaluationMetadatas
 >
+export type Subscription = InferSelectModel<typeof subscriptions>
 
 export type EvaluationDto = Evaluation & {
   metadata: Omit<
@@ -86,4 +88,8 @@ export type ClaimedRewardWithUserInfo = ClaimedReward & {
   workspaceName: string | null
   userName: string | null
   userEmail: string | null
+}
+
+export type WorkspaceDto = Workspace & {
+  currentSubscription: Subscription
 }
