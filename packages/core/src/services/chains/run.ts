@@ -55,11 +55,13 @@ export async function runChain({
   // the AI run produce: Document logs and Evaluation results
   const documentLogUuid = generateUUID()
 
-  let responseResolve: (value: ChainStepResponse<StreamType>) => void
+  let responseResolve: (value?: ChainStepResponse<StreamType>) => void
 
-  const response = new Promise<ChainStepResponse<StreamType>>((resolve) => {
-    responseResolve = resolve
-  })
+  const response = new Promise<ChainStepResponse<StreamType> | undefined>(
+    (resolve) => {
+      responseResolve = resolve
+    },
+  )
 
   const chainStartTime = Date.now()
   const stream = new ReadableStream<ChainEvent>({
@@ -76,6 +78,8 @@ export async function runChain({
         .then(responseResolve)
         .catch(async (e: ChainError<RunErrorCodes>) => {
           await handleError(e)
+
+          responseResolve()
         })
     },
   })

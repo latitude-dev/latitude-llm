@@ -50,6 +50,8 @@ export async function runDocumentAtCommit({
     resolvedContent: result.value,
     documentLogUuid,
     response: response.then(async (response) => {
+      if (!response) return
+
       publisher.publishLater({
         type: 'documentRun',
         data: {

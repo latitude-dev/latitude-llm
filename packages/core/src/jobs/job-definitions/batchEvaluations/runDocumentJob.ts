@@ -4,7 +4,7 @@ import { Job } from 'bullmq'
 import { setupJobs } from '../../'
 import { LogSources } from '../../../browser'
 import { unsafelyFindWorkspace } from '../../../data-access'
-import { NotFoundError } from '../../../lib/errors'
+import { BadRequestError, NotFoundError } from '../../../lib/errors'
 import { queues } from '../../../queues'
 import {
   CommitsRepository,
@@ -59,7 +59,10 @@ export const runDocumentForEvaluationJob = async (
       source: LogSources.Evaluation,
     }).then((r) => r.unwrap())
 
-    await result.response
+    // TODO handle this error better
+    const res = await result.response
+    if (!res) throw new BadRequestError('Document run failed')
+
     await jobs.defaultQueue.jobs.enqueueRunEvaluationJob(
       {
         workspaceId,

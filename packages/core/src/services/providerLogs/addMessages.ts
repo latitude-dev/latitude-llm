@@ -42,11 +42,13 @@ export async function addMessages({
     )
   }
 
-  let responseResolve: (value: ChainStepResponse<StreamType>) => void
+  let responseResolve: (value?: ChainStepResponse<StreamType>) => void
 
-  const response = new Promise<ChainStepResponse<StreamType>>((resolve) => {
-    responseResolve = resolve
-  })
+  const response = new Promise<ChainStepResponse<StreamType> | undefined>(
+    (resolve) => {
+      responseResolve = resolve
+    },
+  )
 
   const stream = new ReadableStream<ChainEvent>({
     start(controller) {
@@ -72,6 +74,8 @@ export async function addMessages({
         .then(responseResolve)
         .catch((e) => {
           debug(`Error in addMessages: ${e}`)
+
+          responseResolve()
         })
     },
   })

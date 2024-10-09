@@ -111,11 +111,13 @@ export const runEvaluation = async (
 }
 
 async function handleEvaluationResponse(
-  response: ChainStepResponse<'object'>,
+  response: ChainStepResponse<'object'> | undefined,
   documentUuid: string,
   evaluation: EvaluationDto,
   documentLog: DocumentLog,
 ) {
+  if (!response) return
+
   publisher.publishLater({
     type: 'evaluationRun',
     data: {
