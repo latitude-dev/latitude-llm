@@ -6,7 +6,7 @@ import { Icon, SessionUser, Text } from '@latitude-data/web-ui'
 import { ROUTES } from '$/services/routes'
 import Link from 'next/link'
 // TODO: Review dark mode before enabling
-// import { ThemeButton } from '$/components/ThemeButton'
+import { ThemeButton } from '$/components/ThemeButton'
 import { Fragment } from 'react/jsx-runtime'
 
 import AvatarDropdown from './AvatarDropdown'
@@ -108,7 +108,7 @@ export default function AppHeader({
   currentUser,
 }: AppHeaderProps) {
   return (
-    <header className='px-6 sticky top-0 flex flex-col border-b border-b-border bg-white isolate z-20'>
+    <header className='px-6 sticky top-0 flex flex-col border-b border-b-border bg-background isolate z-20'>
       <div className='py-3 flex flex-row items-center justify-between'>
         <Breadcrumb showLogo breadcrumbs={breadcrumbs} />
         <div className='flex flex-row items-center gap-x-6 pl-6'>
@@ -120,7 +120,7 @@ export default function AppHeader({
             ))}
           </nav>
           <AvatarDropdown currentUser={currentUser} />
-          {/* <ThemeButton /> Not good enough for Cesar */}
+          <ThemeButton /> 
         </div>
       </div>
     </header>

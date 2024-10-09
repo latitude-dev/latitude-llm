@@ -22,8 +22,8 @@ export function useMonacoSetup() {
       inherit: true,
       rules: themeRules,
       colors: {
-        'editor.background': colorFromProperty('--secondary'),
-        'editor.foreground': colorFromProperty('--foreground'),
+        'editor.background': colorFromProperty('--secondary-rgb'),
+        'editor.foreground': colorFromProperty('--foreground-rgb'),
       },
     })
   }, [])

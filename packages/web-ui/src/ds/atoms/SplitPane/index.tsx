@@ -48,7 +48,7 @@ const SplitHandle = (
     ref={ref}
     className='group/handler w-2 z-10 h-full absolute -right-0.5 flex justify-center cursor-col-resize bg-transparent'
   >
-    <div className='w-px h-full bg-gray-200 duration-200 transition-all group-hover/handler:w-0.5 group-hover/handler:bg-accent-foreground' />
+    <div className='w-px h-full bg-border duration-200 transition-all group-hover/handler:w-0.5 group-hover/handler:bg-accent-foreground' />
   </div>
 )
 

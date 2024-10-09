@@ -47,7 +47,7 @@ const TooltipContent = forwardRef<
         maxWidth,
         className,
         {
-          'bg-foreground': variant === 'default',
+          'bg-background border': variant === 'default',
           'bg-destructive': variant === 'destructive',
         },
       )}

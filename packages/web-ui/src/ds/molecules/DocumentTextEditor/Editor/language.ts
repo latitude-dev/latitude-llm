@@ -133,49 +133,49 @@ export const tokenizer = {
 } as { [key: string]: languages.IMonarchLanguageRule[] }
 
 export const themeRules = [
-  { token: 'yaml-delimiter', foreground: colorFromProperty('--primary') },
-  { token: 'yaml', foreground: colorFromProperty('--primary') },
+  { token: 'yaml-delimiter', foreground: colorFromProperty('--primary-rgb') },
+  { token: 'yaml', foreground: colorFromProperty('--primary-rgb') },
 
-  { token: 'header', foreground: colorFromProperty('--primary') },
+  { token: 'header', foreground: colorFromProperty('--primary-rgb') },
   {
     token: 'bold',
     fontStyle: 'bold',
-    foreground: colorFromProperty('--foreground'),
+    foreground: colorFromProperty('--foreground-rgb'),
   },
   {
     token: 'italic',
     fontStyle: 'italic',
-    foreground: colorFromProperty('--foreground'),
+    foreground: colorFromProperty('--foreground-rgb'),
   },
   {
     token: 'link',
-    foreground: colorFromProperty('--primary'),
+    foreground: colorFromProperty('--primary-rgb'),
     fontStyle: 'underline',
   },
   {
     token: 'tag-open',
-    foreground: colorFromProperty('--accent-foreground'),
+    foreground: colorFromProperty('--accent-foreground-rgb'),
   },
   {
     token: 'tag-close',
-    foreground: colorFromProperty('--accent-foreground'),
+    foreground: colorFromProperty('--accent-foreground-rgb'),
   },
   {
     token: 'attribute.name',
-    foreground: colorFromProperty('--destructive'),
+    foreground: colorFromProperty('--destructive-rgb'),
   },
   {
     token: 'js-open',
-    foreground: colorFromProperty('--accent-foreground'),
+    foreground: colorFromProperty('--accent-foreground-rgb'),
   },
   {
     token: 'js-close',
-    foreground: colorFromProperty('--accent-foreground'),
+    foreground: colorFromProperty('--accent-foreground-rgb'),
   },
-  { token: 'js', foreground: colorFromProperty('--primary') },
+  { token: 'js', foreground: colorFromProperty('--primary-rgb') },
   {
     token: 'comment',
     fontStyle: 'italic',
-    foreground: colorFromProperty('--muted-foreground'),
+    foreground: colorFromProperty('--muted-foreground-rgb'),
   },
 ]

@@ -41,8 +41,8 @@ export function CostOverResultsChart({
         y: Number(r.averageCostInMillicents) / 100_000,
         color:
           commit.id === r.id
-            ? 'rgb(var(--primary))'
-            : 'rgba(var(--muted-foreground))',
+            ? 'hsl(var(--primary))'
+            : 'hsl(var(--muted-foreground))',
         size: commit.id === r.id ? 10 : 5,
         commitVersion: r.version,
         commitTitle: r.title,

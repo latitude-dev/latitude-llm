@@ -46,7 +46,6 @@ import {
 import { cn } from '../../../lib/utils'
 import { colors, type TextColor } from '../../tokens'
 import {
-  Evaluation,
   LatitudeLogo,
   LatitudeLogoMonochrome,
 } from './custom-icons'
@@ -69,7 +68,6 @@ const Icons = {
   deletion: SquareMinus,
   ellipsis: Ellipsis,
   ellipsisVertical: EllipsisVertical,
-  evaluation: Evaluation,
   externalLink: ExternalLink,
   eye: Eye,
   file: File,

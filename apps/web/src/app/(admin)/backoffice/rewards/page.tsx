@@ -29,7 +29,7 @@ function ReferenceCell({
     return (
       <Link href={reference}>
         <Button variant='link' className='p-0'>
-          <Text.H5 noWrap ellipsis color='primary'>
+          <Text.H5 noWrap ellipsis color='accentForeground'>
             {reference}
           </Text.H5>
           <Icon name='externalLink' />

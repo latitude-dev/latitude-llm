@@ -2,7 +2,7 @@ import { EvaluationDto } from '@latitude-data/core/browser'
 import {
   BlankSlateStep,
   BlankSlateWithSteps,
-  Icon,
+  EvaluationIllustation,
   TableBlankSlate,
   TableWithHeader,
 } from '@latitude-data/web-ui'
@@ -45,7 +45,7 @@ export function TableContent({
         description='Create an evaluation to start reviewing your prompts.'
       >
         <div className='flex flex-col gap-5 w-full aspect-video rounded-md border border-border bg-muted items-center justify-center'>
-          <Icon name='evaluation' className='w-24 h-24' />
+          <EvaluationIllustation className='w-24 h-24' />
           <TableBlankSlate.Button onClick={onCreateEvaluation}>
             Create your first evaluation
           </TableBlankSlate.Button>

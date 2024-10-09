@@ -10,7 +10,7 @@ export default function LatitudeLogo(props: LucideProps) {
         clipRule='evenodd'
       />
       <path
-        fill='#030712'
+        className='fill-[#030712] dark:fill-white'
         fillRule='evenodd'
         d='M0 16.79C.41 25.28 7.412 32 16 32c8.59 0 15.59-6.72 16-15.21H0Z'
         clipRule='evenodd'
