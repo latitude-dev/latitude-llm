@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 
 import {
   DocumentVersion,
@@ -19,6 +19,8 @@ import Link from 'next/link'
 
 import { SelectableEvaluationResultsTable } from './SelectableEvaluationResultsTable'
 
+const PAGE_SIZE = 10
+
 export function SelectEvaluationResults({
   documentVersion,
   evaluation,
@@ -36,13 +38,18 @@ export function SelectEvaluationResults({
     EvaluationResultWithMetadata[]
   >([])
 
-  const { data: evaluationResults, isLoading } =
-    useEvaluationResultsByDocumentContent({
-      documentUuid: documentVersion.documentUuid,
-      evaluationId: evaluation.id,
-      commitUuid: commit.uuid,
-      projectId: project.id,
-    })
+  const [page, setPage] = useState(1)
+
+  const { data, isLoading } = useEvaluationResultsByDocumentContent({
+    documentUuid: documentVersion.documentUuid,
+    evaluationId: evaluation.id,
+    commitUuid: commit.uuid,
+    projectId: project.id,
+    page: page,
+    pageSize: PAGE_SIZE,
+  })
+
+  const { rows, count } = useMemo(() => data ?? { rows: [], count: 0 }, [data])
 
   const confirmSelection = useCallback(() => {
     setEvaluationResults(selectedEvaluationResults)
@@ -54,9 +61,7 @@ export function SelectEvaluationResults({
         Back
       </Button>
       <Button
-        disabled={
-          !evaluationResults?.length || !selectedEvaluationResults.length
-        }
+        disabled={!rows?.length || !selectedEvaluationResults.length}
         onClick={confirmSelection}
       >
         Select results
@@ -67,13 +72,13 @@ export function SelectEvaluationResults({
   if (isLoading) {
     return (
       <>
-        <TableSkeleton rows={7} cols={5} />
+        <TableSkeleton rows={PAGE_SIZE} cols={5} />
         <ActionButtons />
       </>
     )
   }
 
-  if (!evaluationResults?.length) {
+  if (!rows?.length) {
     return (
       <>
         <TableBlankSlate
@@ -102,9 +107,13 @@ export function SelectEvaluationResults({
       <div className='flex'>
         <SelectableEvaluationResultsTable
           evaluation={evaluation}
-          evaluationResults={evaluationResults}
+          evaluationResultsRows={rows}
           selectedResults={selectedEvaluationResults}
           setSelectedResults={setSelectedEvaluationResults}
+          page={page}
+          setPage={setPage}
+          pageSize={PAGE_SIZE}
+          totalCount={count}
         />
       </div>
       <ActionButtons />

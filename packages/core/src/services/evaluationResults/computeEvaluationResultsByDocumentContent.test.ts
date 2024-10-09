@@ -74,7 +74,7 @@ describe('computeEvaluationResultsByDocumentContent', () => {
     })
 
     expect(result.ok).toBe(true)
-    expect(result.value!.length).toBe(10)
+    expect(result.value!.count).toBe(10)
   })
 
   it('includes evaluation results from previous commits if the document did not change', async () => {
@@ -146,7 +146,7 @@ describe('computeEvaluationResultsByDocumentContent', () => {
     })
 
     expect(result.ok).toBe(true)
-    expect(result.value!.length).toBe(25)
+    expect(result.value!.count).toBe(25)
   })
 
   it('does not include evaluation results from previous commits if the document changed', async () => {
@@ -217,10 +217,10 @@ describe('computeEvaluationResultsByDocumentContent', () => {
     })
 
     expect(result.ok).toBe(true)
-    expect(result.value!.length).toBe(15)
+    expect(result.value!.count).toBe(15)
   })
 
-  it('does not include evaluation results from the same draft if the document changed', async () => {
+  it('includes evaluation results from the same draft even if the document changed', async () => {
     const { workspace, project, evaluations, user } =
       await factories.createProject({
         providers: [{ name: 'foo', type: Providers.OpenAI }],
@@ -286,6 +286,75 @@ describe('computeEvaluationResultsByDocumentContent', () => {
     })
 
     expect(result.ok).toBe(true)
-    expect(result.value!.length).toBe(15)
+    expect(result.value!.count).toBe(25)
+  })
+
+  it('paginates the results correctly', async () => {
+    const { workspace, commit, documents, evaluations, user } =
+      await factories.createProject({
+        providers: [{ name: 'foo', type: Providers.OpenAI }],
+        documents: {
+          foo: factories.helpers.createPrompt({
+            provider: 'foo',
+          }),
+        },
+        evaluations: [
+          {
+            prompt: factories.helpers.createPrompt({
+              provider: 'foo',
+            }),
+          },
+        ],
+      })
+
+    const document = documents[0]!
+    const evaluation = evaluations[0]!
+
+    await connectEvaluations({
+      workspace,
+      documentUuid: document.documentUuid,
+      evaluationUuids: [evaluation.uuid],
+      user,
+    })
+
+    await evaluateDocument({
+      document,
+      commit,
+      evaluation,
+      count: 10,
+    })
+
+    const result = await computeEvaluationResultsByDocumentContent({
+      evaluation,
+      commit,
+      documentUuid: document.documentUuid,
+    })
+
+    expect(result.ok).toBe(true)
+    expect(result.value!.count).toBe(10)
+
+    const firstResult = await computeEvaluationResultsByDocumentContent({
+      evaluation,
+      commit,
+      documentUuid: document.documentUuid,
+      page: 1,
+      pageSize: 1,
+    })
+    expect(firstResult.ok).toBe(true)
+    expect(firstResult.value!.count).toBe(10)
+    expect(firstResult.value!.rows.length).toBe(1)
+    expect(firstResult.value!.rows[0]!.id).toBe(result.value!.rows[0]!.id)
+
+    const secondResult = await computeEvaluationResultsByDocumentContent({
+      evaluation,
+      commit,
+      documentUuid: document.documentUuid,
+      page: 2,
+      pageSize: 1,
+    })
+    expect(secondResult.ok).toBe(true)
+    expect(secondResult.value!.count).toBe(10)
+    expect(secondResult.value!.rows.length).toBe(1)
+    expect(secondResult.value!.rows[0]!.id).toBe(result.value!.rows[1]!.id)
   })
 })

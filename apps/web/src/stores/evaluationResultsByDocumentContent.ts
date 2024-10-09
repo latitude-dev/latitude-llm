@@ -13,66 +13,83 @@ type SerializedEvaluationResult = Omit<
   updatedAt: string
 }
 
-const EMPTY_ARRAY: [] = []
 export default function useEvaluationResultsByDocumentContent(
   {
     evaluationId,
     documentUuid,
     commitUuid,
     projectId,
+    page = 1,
+    pageSize = 10,
   }: {
     evaluationId: number
     documentUuid: string
     commitUuid: string
     projectId: number
+    page: number
+    pageSize: number
   },
   { fallbackData }: SWRConfiguration = {},
 ) {
   const { toast } = useToast()
 
   const fetcher = useCallback(async () => {
-    const response = await fetch(
-      ROUTES.api.documents
-        .detail({ projectId })
-        .detail({
-          commitUuid,
-        })
-        .detail({ documentUuid })
-        .evaluationResultsByDocumentContent.detail({ evaluationId }).root,
-      {
-        credentials: 'include',
-      },
-    )
+    const route = ROUTES.api.documents
+      .detail({ projectId })
+      .detail({
+        commitUuid,
+      })
+      .detail({ documentUuid })
+      .evaluationResultsByDocumentContent.detail({ evaluationId }).root
+
+    const params = new URLSearchParams({
+      page: String(page),
+      pageSize: String(pageSize),
+    })
+
+    const url = route.toString() + '?' + params.toString()
+
+    const response = await fetch(url, {
+      credentials: 'include',
+    })
     if (!response.ok) {
       const error = await response.json()
+      toast({
+        title: 'Error',
+        description: error?.err?.message || error?.message,
+        variant: 'destructive',
+      })
 
-      console.error(error)
-
-      return []
+      return { rows: [], count: 0 }
     }
 
-    const jsonResult = await response.json()
+    const { rows, count } = await response.json()
 
-    return jsonResult.map((result: SerializedEvaluationResult) => {
+    const reformattedRows = rows.map((result: SerializedEvaluationResult) => {
       return {
         ...result,
         createdAt: new Date(result.createdAt),
         updatedAt: new Date(result.updatedAt),
-      } as EvaluationResultWithMetadata
-    })
-  }, [commitUuid, documentUuid, evaluationId, projectId, toast])
+      }
+    }) as EvaluationResultWithMetadata[]
 
-  const {
-    data = EMPTY_ARRAY,
-    isLoading,
-    mutate,
-  } = useSWR(
+    return { rows: reformattedRows, count } as {
+      rows: EvaluationResultWithMetadata[]
+      count: number
+    }
+  }, [commitUuid, documentUuid, evaluationId, projectId, page, pageSize, toast])
+
+  const { data, isLoading, mutate } = useSWR<
+    { rows: EvaluationResultWithMetadata[]; count: number } | undefined
+  >(
     [
       'evaluationResultsByDocumentContent',
       evaluationId,
       documentUuid,
       commitUuid,
       projectId,
+      page,
+      pageSize,
     ],
     fetcher,
     { fallbackData },

@@ -37,6 +37,7 @@ export type EvaluationResultWithMetadata = EvaluationResultDto & {
   commit: Commit
   tokens: number | null
   costInMillicents: number | null
+  documentContentHash: string
 }
 
 export class EvaluationResultsRepository extends Repository<
