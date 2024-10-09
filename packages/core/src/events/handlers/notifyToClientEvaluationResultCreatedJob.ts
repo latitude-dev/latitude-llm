@@ -10,6 +10,8 @@ export const notifyToClientEvaluationResultCreatedJob = async ({
   data: EvaluationResultCreatedEvent
 }) => {
   const { evaluation, documentLog, evaluationResult } = event.data
+  // FIXME: Change this query to include the error
+  // This has to be done with care because it can break aggregations
   const { evaluationResultsScope, baseQuery } = createEvaluationResultQuery(
     evaluation.workspaceId,
   )

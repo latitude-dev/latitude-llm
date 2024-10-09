@@ -82,9 +82,9 @@ export type EvaluationRunEvent = LatitudeEventGeneric<
     documentUuid: string
     evaluationId: number
     documentLogUuid: string
-    providerLogUuid: string
-    response: ChainStepResponse<StreamType>
     workspaceId: number
+    providerLogUuid: string | undefined
+    response: ChainStepResponse<StreamType> | undefined
   }
 >
 export type DocumentRunEvent = LatitudeEventGeneric<

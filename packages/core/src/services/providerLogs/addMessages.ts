@@ -108,7 +108,7 @@ async function iterate({
 
     const providerProcessor = new ProviderProcessor({
       source,
-      documentLogUuid,
+      errorableUuid: documentLogUuid,
       config,
       apiProvider: provider,
       messages,
@@ -121,11 +121,13 @@ async function iterate({
       provider,
     }).then((r) => r.unwrap())
     const streamConsumedResult = await consumeStream({ controller, result })
-    const response = await providerProcessor.call({
-      aiResult: result,
-      startTime: stepStartTime,
-      streamConsumedResult,
-    })
+    const response = await providerProcessor
+      .call({
+        aiResult: result,
+        startTime: stepStartTime,
+        finishReason: streamConsumedResult.finishReason,
+      })
+      .then((r) => r.unwrap())
     const providerLog = response.providerLog!
     const text = parseResponseText(response)
     ChainStreamConsumer.chainCompleted({
