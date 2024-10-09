@@ -7,64 +7,77 @@ import {
 } from '../../browser'
 import { database } from '../../client'
 import { publisher } from '../../events/publisher'
-import {
-  BadRequestError,
-  generateUUIDIdentifier,
-  Result,
-  Transaction,
-} from '../../lib'
+import { BadRequestError, Result, Transaction } from '../../lib'
 import { EvaluationResultDto } from '../../repositories/evaluationResultsRepository'
 import { evaluationResults } from '../../schema'
 import { evaluationResultableBooleans } from '../../schema/models/evaluationResultableBooleans'
 import { evaluationResultableNumbers } from '../../schema/models/evaluationResultableNumbers'
 import { evaluationResultableTexts } from '../../schema/models/evaluationResultableTexts'
 
+function getResultable(type: EvaluationResultableType) {
+  switch (type) {
+    case EvaluationResultableType.Boolean:
+      return evaluationResultableBooleans
+    case EvaluationResultableType.Number:
+      return evaluationResultableNumbers
+    case EvaluationResultableType.Text:
+      return evaluationResultableTexts
+    default:
+      return null
+  }
+}
+
 export type CreateEvaluationResultProps = {
+  uuid: string
   evaluation: Evaluation | EvaluationDto
   documentLog: DocumentLog
   providerLog: ProviderLog
-  result: { result: number | string | boolean; reason: string }
+  result: { result: number | string | boolean; reason: string } | undefined
 }
 
 export async function createEvaluationResult(
-  { evaluation, documentLog, providerLog, result }: CreateEvaluationResultProps,
+  {
+    uuid,
+    evaluation,
+    documentLog,
+    providerLog,
+    result,
+  }: CreateEvaluationResultProps,
   db = database,
 ) {
-  return Transaction.call<EvaluationResultDto>(async (trx) => {
-    let table
-    switch (evaluation.configuration.type) {
-      case EvaluationResultableType.Boolean:
-        table = evaluationResultableBooleans
-        break
-      case EvaluationResultableType.Number:
-        table = evaluationResultableNumbers
-        break
-      case EvaluationResultableType.Text:
-        table = evaluationResultableTexts
-        break
-      default:
-        return Result.error(
-          new BadRequestError(
-            `Unsupported result type: ${evaluation.configuration.type}`,
-          ),
-        )
-    }
+  const resultable = getResultable(evaluation.configuration.type)
 
+  if (!resultable) {
+    return Result.error(
+      new BadRequestError(
+        `Unsupported result type: ${evaluation.configuration.type}`,
+      ),
+    )
+  }
+
+  let metadataId: number | undefined
+
+  return Transaction.call<EvaluationResultDto>(async (trx) => {
     // TODO: store the reason
-    const metadata = await trx
-      .insert(table)
-      .values({ result: result.result })
-      .returning()
+    if (result) {
+      const metadata = await trx
+        .insert(resultable)
+        .values({ result: result.result })
+        .returning()
+      metadataId = metadata[0]!.id
+    }
     const inserts = await trx
       .insert(evaluationResults)
       .values({
-        uuid: generateUUIDIdentifier(),
+        uuid,
         evaluationId: evaluation.id,
         documentLogId: documentLog.id,
-        providerLogId: providerLog.id,
         resultableType: evaluation.configuration.type,
-        resultableId: metadata[0]!.id,
         source: documentLog.source,
+        resultableId: metadataId,
+        // TODO: Make this nullable. An evaluation result can fail before
+        // calling the AI. We want to store the result + error to let users know
+        providerLogId: providerLog.id,
       })
       .returning()
 
@@ -82,7 +95,7 @@ export async function createEvaluationResult(
 
     return Result.ok({
       ...evaluationResult,
-      result: metadata[0]!.result,
+      result: result?.result,
     })
   }, db)
 }

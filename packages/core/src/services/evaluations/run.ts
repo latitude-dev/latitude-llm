@@ -2,11 +2,12 @@ import { createChain } from '@latitude-data/compiler'
 import { JSONSchema7 } from 'json-schema'
 
 import {
-  ChainStepResponse,
   DocumentLog,
+  ErrorableEntity,
   EvaluationDto,
   EvaluationResultableType,
   LogSources,
+  ProviderLog,
 } from '../../browser'
 import { database } from '../../client'
 import {
@@ -15,12 +16,14 @@ import {
 } from '../../data-access'
 import { publisher } from '../../events/publisher'
 import { LatitudeError, NotFoundError, Result } from '../../lib'
-import { runChain } from '../chains/run'
+import { ChainResponse, runChain } from '../chains/run'
 import { serialize as serializeDocumentLog } from '../documentLogs/serialize'
-import { createEvaluationResult } from '../evaluationResults'
+import {
+  createEvaluationResult,
+  CreateEvaluationResultProps,
+} from '../evaluationResults'
 import { buildProvidersMap } from '../providerApiKeys/buildMap'
 
-// Helper function to get the result schema based on evaluation type
 const getResultSchema = (type: EvaluationResultableType): JSONSchema7 => {
   switch (type) {
     case EvaluationResultableType.Boolean:
@@ -89,9 +92,8 @@ export const runEvaluation = async (
     workspaceId: evaluation.workspaceId,
   })
 
-  // TODO: pass ErrorableEntity.EvaluationResult to runChain
-  // This way we associate errors to evaluation results
   const run = await runChain({
+    errorableType: ErrorableEntity.EvaluationResult,
     workspace,
     chain,
     source: LogSources.Evaluation,
@@ -102,42 +104,62 @@ export const runEvaluation = async (
     },
   })
 
-  const response = run.response as Promise<ChainStepResponse<'object'>>
-  response.then((res) =>
-    handleEvaluationResponse(res, documentUuid, evaluation, documentLog),
-  )
+  const responseResult = (await run.response) as ChainResponse<'object'>
+  handleEvaluationResponse({
+    responseResult,
+    errorableUuid: run.errorableUuid,
+    documentUuid,
+    evaluation,
+    documentLog,
+  })
 
   return Result.ok(run)
 }
 
-async function handleEvaluationResponse(
-  response: ChainStepResponse<'object'>,
-  documentUuid: string,
-  evaluation: EvaluationDto,
-  documentLog: DocumentLog,
-) {
-  publisher.publishLater({
-    type: 'evaluationRun',
-    data: {
-      response,
-      documentUuid,
-      evaluationId: evaluation.id,
-      documentLogUuid: documentLog.uuid,
-      providerLogUuid: response.providerLog!.uuid,
-      workspaceId: evaluation.workspaceId,
-    },
-  })
+async function handleEvaluationResponse({
+  errorableUuid,
+  responseResult,
+  documentUuid,
+  evaluation,
+  documentLog,
+}: {
+  errorableUuid: string
+  responseResult: ChainResponse<'object'>
+  documentUuid: string
+  evaluation: EvaluationDto
+  documentLog: DocumentLog
+}) {
+  let providerLog: ProviderLog
+  let result: CreateEvaluationResultProps['result'] | undefined
 
-  if (response.object === undefined) {
-    throw new LatitudeError(
-      'Provider did not return a valid JSON-formatted response',
-    )
+  if (responseResult.ok && responseResult.value) {
+    const response = responseResult.value
+    providerLog = response.providerLog!
+    result = response.object.result
+    publisher.publishLater({
+      type: 'evaluationRun',
+      data: {
+        response: responseResult.value,
+        documentUuid,
+        evaluationId: evaluation.id,
+        documentLogUuid: documentLog.uuid,
+        providerLogUuid: providerLog!.uuid,
+        workspaceId: evaluation.workspaceId,
+      },
+    })
+
+    if (response.object === undefined) {
+      throw new LatitudeError(
+        'Provider did not return a valid JSON-formatted response',
+      )
+    }
   }
 
   return await createEvaluationResult({
+    uuid: errorableUuid,
     evaluation,
     documentLog,
-    providerLog: response.providerLog!,
-    result: response.object,
+    providerLog: providerLog!,
+    result,
   }).then((r) => r.unwrap())
 }

@@ -2,6 +2,7 @@ import { createChain } from '@latitude-data/compiler'
 
 import {
   Commit,
+  ErrorableEntity,
   LogSources,
   type DocumentVersion,
   type Workspace,
@@ -39,16 +40,20 @@ export async function runDocumentAtCommit({
 
   const chain = createChain({ prompt: result.value, parameters })
 
-  // TODO: pass ErrorableEntity.DocumentLog to runChain
-  // This way we associate errors to document logs
-  const run = await runChain({ workspace, chain, providersMap, source })
-  const { stream, response, duration, resolvedContent, documentLogUuid } = run
+  const run = await runChain({
+    errorableType: ErrorableEntity.DocumentLog,
+    workspace,
+    chain,
+    providersMap,
+    source,
+  })
+  const { stream, response, duration, resolvedContent, errorableUuid } = run
 
   return Result.ok({
     stream,
     duration,
     resolvedContent: result.value,
-    documentLogUuid,
+    documentLogUuid: errorableUuid,
     response: response.then(async (response) => {
       publisher.publishLater({
         type: 'documentRun',
@@ -57,7 +62,7 @@ export async function runDocumentAtCommit({
           projectId: commit.projectId,
           documentUuid: document.documentUuid,
           commitUuid: commit.uuid,
-          documentLogUuid,
+          documentLogUuid: errorableUuid,
           response,
           resolvedContent,
           parameters,
@@ -73,7 +78,7 @@ export async function runDocumentAtCommit({
           duration: await duration,
           parameters,
           resolvedContent,
-          uuid: documentLogUuid,
+          uuid: errorableUuid,
           source,
         },
       }).then((r) => r.unwrap())

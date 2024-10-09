@@ -53,7 +53,6 @@ function parseError(e: unknown) {
 export class ChainStreamConsumer {
   private controller: ReadableStreamDefaultController
   private previousCount: number
-  private documentLogUuid: string
 
   static chainCompleted({
     response,
@@ -70,7 +69,6 @@ export class ChainStreamConsumer {
       data: {
         type: ChainEventTypes.Complete,
         config,
-        documentLogUuid: response.documentLogUuid,
         response,
         messages: [
           {
@@ -112,15 +110,12 @@ export class ChainStreamConsumer {
   constructor({
     controller,
     previousCount,
-    documentLogUuid,
   }: {
     controller: ReadableStreamDefaultController
     previousCount: number
-    documentLogUuid: string
   }) {
     this.controller = controller
     this.previousCount = previousCount
-    this.documentLogUuid = documentLogUuid
   }
 
   setup(step: ValidatedStep) {
@@ -132,7 +127,6 @@ export class ChainStreamConsumer {
         isLastStep: step.chainCompleted,
         config: step.conversation.config as Config,
         messages: newMessages,
-        documentLogUuid: this.documentLogUuid,
       },
       event: StreamEventTypes.Latitude,
     })
@@ -144,7 +138,6 @@ export class ChainStreamConsumer {
       event: StreamEventTypes.Latitude,
       data: {
         type: ChainEventTypes.StepComplete,
-        documentLogUuid: response.documentLogUuid,
         response: response,
       },
     })

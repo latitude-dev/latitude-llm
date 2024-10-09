@@ -35,7 +35,8 @@
     "DATASET_GENERATOR_WORKSPACE_APIKEY",
     "TEMPLATES_SUGGESTION_PROJECT_ID",
     "TEMPLATES_SUGGESTION_PROMPT_PATH",
-    "CI"
+    "CI",
+    "DEFAULT_PROVIDER_API_KEY"
   ],
   "$schema": "https://turbo.build/schema.json",
   "globalDependencies": ["**/.env.*local"],
