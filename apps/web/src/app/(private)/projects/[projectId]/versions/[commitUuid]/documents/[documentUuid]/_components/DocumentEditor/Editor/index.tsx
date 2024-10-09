@@ -31,7 +31,6 @@ import EditorHeader from '$/components/EditorHeader'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { useMetadata } from '$/hooks/useMetadata'
 import { ROUTES } from '$/services/routes'
-import useCurrentWorkspace from '$/stores/currentWorkspace'
 import useDocumentVersions from '$/stores/documentVersions'
 import useProviderApiKeys from '$/stores/providerApiKeys'
 import { useRouter } from 'next/navigation'
@@ -80,7 +79,6 @@ export default function DocumentEditor({
       },
     },
   )
-  const { data: workspace } = useCurrentWorkspace()
   const { data: providers } = useProviderApiKeys({
     fallbackData: providerApiKeys,
   })
