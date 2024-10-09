@@ -132,6 +132,7 @@ export const tokenizer = {
   ],
 } as { [key: string]: languages.IMonarchLanguageRule[] }
 
+// TODO: Find a way of converting HSL to HEX to avoid duplicating all our color scheme.
 export const themeRules = [
   { token: 'yaml-delimiter', foreground: colorFromProperty('--primary-rgb') },
   { token: 'yaml', foreground: colorFromProperty('--primary-rgb') },

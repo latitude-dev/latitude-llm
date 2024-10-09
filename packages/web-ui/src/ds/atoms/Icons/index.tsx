@@ -45,10 +45,7 @@ import {
 
 import { cn } from '../../../lib/utils'
 import { colors, type TextColor } from '../../tokens'
-import {
-  LatitudeLogo,
-  LatitudeLogoMonochrome,
-} from './custom-icons'
+import { LatitudeLogo, LatitudeLogoMonochrome } from './custom-icons'
 
 const Icons = {
   addCircle: CirclePlus,

@@ -3,10 +3,9 @@
 import { ReactNode } from 'react'
 
 import { Icon, SessionUser, Text } from '@latitude-data/web-ui'
+import { ThemeButton } from '$/components/ThemeButton'
 import { ROUTES } from '$/services/routes'
 import Link from 'next/link'
-// TODO: Review dark mode before enabling
-import { ThemeButton } from '$/components/ThemeButton'
 import { Fragment } from 'react/jsx-runtime'
 
 import AvatarDropdown from './AvatarDropdown'
@@ -120,7 +119,7 @@ export default function AppHeader({
             ))}
           </nav>
           <AvatarDropdown currentUser={currentUser} />
-          <ThemeButton /> 
+          <ThemeButton />
         </div>
       </div>
     </header>

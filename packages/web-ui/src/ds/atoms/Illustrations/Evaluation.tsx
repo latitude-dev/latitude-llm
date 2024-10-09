@@ -1,9 +1,7 @@
-import { LucideProps } from 'lucide-react'
-
-export default function LatitudeLogo(props: LucideProps) {
+export default function EvaluationIllustration() {
   return (
-    // <svg viewBox='0 0 32 32' fill='none' {...props}>
-    <svg width='118' height='137' viewBox='0 0 118 137' fill='none' {...props}>
+    // <svg viewBox='0 0 32 32' fill='none'>
+    <svg width='118' height='137' viewBox='0 0 118 137' fill='none'>
       <g clip-path='url(#clip0_2139_9057)'>
         <rect
           x='0.5'
@@ -163,6 +161,5 @@ export default function LatitudeLogo(props: LucideProps) {
         </clipPath>
       </defs>
     </svg>
-
   )
 }

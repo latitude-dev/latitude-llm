@@ -82,8 +82,8 @@
     --destructive-foreground: 0 0% 98%;
     --destructive-muted-foreground: 0 74% 42%;
     
-    --success: 21 128 61;
-    --success-foreground: 250 250 250;
+    --success: 142 72% 29%;
+    --success-foreground: 120 87% 97%;
 
     --border: 0 0% 89.8%;
     --input: 0 0% 89.8%;
@@ -133,8 +133,8 @@
     --destructive-foreground: 0 0% 98%;
     --destructive-muted-foreground: 0 74% 42%;
 
-    --success: 22 163 74;
-    --success-foreground: 241 254 241;
+    --success: 142 76% 36%;
+    --success-foreground: 120 87% 97%;
 
     --border: 231 9% 12.9%;
     --input: 0 0% 14.9%;
