@@ -491,13 +491,6 @@
       "when": 1728456230527,
       "tag": "0069_gifted_kulan_gath",
       "breakpoints": true
-    },
-    {
-      "idx": 70,
-      "version": "7",
-      "when": 1728460811544,
-      "tag": "0070_cynical_rictor",
-      "breakpoints": true
     }
   ]
 }

@@ -1,1 +1,0 @@
-ALTER TABLE "latitude"."workspaces" ALTER COLUMN "current_subscription_id" SET NOT NULL;
