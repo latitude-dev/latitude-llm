@@ -115,9 +115,12 @@
     --primary-rgb: 10 129 217;
     --primary-foreground: 210 20% 98%;
 
-    --secondary: 0 0% 8%;
+    --secondary: 0 0% 10%;
     --secondary-rgb: 20 20 20;
     --secondary-foreground: 0 0% 98%;
+
+    --yellow: 41 90% 14%;
+    --purple: 289 51% 14%;
 
     --muted: 0 0% 14.9%;
     --muted-foreground: 0 0% 63.9%;

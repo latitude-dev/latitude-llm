@@ -1,7 +1,16 @@
-export default function EvaluationIllustration() {
+export default function EvaluationIllustration({
+  className,
+}: {
+  className?: string
+}) {
   return (
-    // <svg viewBox='0 0 32 32' fill='none'>
-    <svg width='118' height='137' viewBox='0 0 118 137' fill='none'>
+    <svg
+      width='118'
+      height='137'
+      viewBox='0 0 118 137'
+      fill='none'
+      className={className}
+    >
       <g clip-path='url(#clip0_2139_9057)'>
         <rect
           x='0.5'
