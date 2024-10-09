@@ -1,6 +1,6 @@
 'use client'
 
-import { Dispatch, SetStateAction, useMemo, useState } from 'react'
+import { Dispatch, SetStateAction } from 'react'
 import { capitalize } from 'lodash-es'
 
 import {
@@ -53,37 +53,37 @@ export const ResultCellContent = ({
   return <Text.H4 noWrap>{String(value)}</Text.H4>
 }
 
-const PAGE_SIZE = 10
-
 type EvaluationResultRow = EvaluationResultWithMetadata & {
   realtimeAdded?: boolean
 }
 export const SelectableEvaluationResultsTable = ({
   evaluation,
-  evaluationResults,
+  evaluationResultsRows,
   selectedResults,
   setSelectedResults,
+  totalCount,
+  pageSize,
+  page,
+  setPage,
 }: {
   evaluation: EvaluationDto
-  evaluationResults: EvaluationResultRow[]
+  evaluationResultsRows: EvaluationResultRow[]
   selectedResults: EvaluationResultRow[]
   setSelectedResults: Dispatch<SetStateAction<EvaluationResultRow[]>>
+  totalCount: number
+  pageSize: number
+  page: number
+  setPage: (_: number) => void
 }) => {
-  const [page, setPage] = useState(1)
-  const scopedEvaluationResults = useMemo(
-    () => evaluationResults.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
-    [evaluationResults, page],
-  )
-
   return (
     <Table
       className='table-auto'
       externalFooter={
         <LogicTablePaginationFooter
           page={page}
-          totalCount={evaluationResults.length}
-          totalCountLabel={`${evaluationResults.length} results, ${selectedResults.length} selected`}
-          pageSize={PAGE_SIZE}
+          totalCount={totalCount}
+          totalCountLabel={`${totalCount} results, ${selectedResults.length} selected`}
+          pageSize={pageSize}
           onPageChange={setPage}
         />
       }
@@ -97,7 +97,7 @@ export const SelectableEvaluationResultsTable = ({
         </TableRow>
       </TableHeader>
       <TableBody className='custom-scrollbar'>
-        {scopedEvaluationResults.map((evaluationResult) => {
+        {evaluationResultsRows.map((evaluationResult) => {
           const isSelected = !!selectedResults.find(
             (r) => r.id === evaluationResult.id,
           )

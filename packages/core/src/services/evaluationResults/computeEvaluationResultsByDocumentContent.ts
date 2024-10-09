@@ -1,21 +1,26 @@
+import { and, desc, eq, or } from 'drizzle-orm'
+
 import { Commit, Evaluation } from '../../browser'
 import { database } from '../../client'
-import { hashContent, Result } from '../../lib'
-import {
-  DocumentVersionsRepository,
-  EvaluationResultsRepository,
-} from '../../repositories'
+import { hashContent, paginateQuery, Result } from '../../lib'
+import { DocumentVersionsRepository } from '../../repositories'
+import { commits } from '../../schema'
 import { getResolvedContent } from '../documents'
+import { createEvaluationResultQuery } from './_createEvaluationResultQuery'
 
 export async function computeEvaluationResultsByDocumentContent(
   {
     evaluation,
     commit,
     documentUuid,
+    page,
+    pageSize,
   }: {
     evaluation: Evaluation
     commit: Commit
     documentUuid: string
+    page?: number
+    pageSize?: number
   },
   db = database,
 ) {
@@ -35,15 +40,32 @@ export async function computeEvaluationResultsByDocumentContent(
   })
   if (resolvedContentResult.error) return resolvedContentResult
   const resolvedContent = resolvedContentResult.unwrap()
-  const evaluationResultsScope = new EvaluationResultsRepository(
-    workspaceId,
-    db,
-  )
-  const result = await evaluationResultsScope.findByContentHash({
-    evaluationId: evaluation.id,
-    contentHash: hashContent(resolvedContent),
-  })
-  if (result.error) return result
 
-  return Result.ok(result.unwrap())
+  const { evaluationResultsScope, documentLogsScope, baseQuery } =
+    createEvaluationResultQuery(workspaceId, db)
+
+  const query = baseQuery
+    .where(
+      and(
+        eq(evaluationResultsScope.evaluationId, evaluation.id),
+        or(
+          eq(documentLogsScope.contentHash, hashContent(resolvedContent)),
+          eq(commits.id, commit.id),
+        ),
+      ),
+    )
+    .orderBy(
+      desc(evaluationResultsScope.createdAt),
+      desc(evaluationResultsScope.id),
+    )
+
+  const { rows, pagination } = await paginateQuery({
+    searchParams: {
+      page: page ? String(page) : undefined,
+      pageSize: pageSize ? String(pageSize) : undefined,
+    },
+    dynamicQuery: query.$dynamic(),
+  })
+
+  return Result.ok({ rows, count: pagination.count })
 }

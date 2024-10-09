@@ -45,6 +45,7 @@ export function createEvaluationResultQuery(
         commit: commits,
         tokens: aggregatedFieldsSubQuery.tokens,
         costInMillicents: aggregatedFieldsSubQuery.costInMillicents,
+        documentContentHash: documentLogsScope.contentHash,
       })
       .from(evaluationResultsScope)
       .innerJoin(

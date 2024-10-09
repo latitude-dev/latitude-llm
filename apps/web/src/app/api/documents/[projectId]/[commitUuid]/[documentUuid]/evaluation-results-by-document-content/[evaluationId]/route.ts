@@ -11,7 +11,7 @@ import { NextRequest, NextResponse } from 'next/server'
 export const GET = errorHandler(
   authHandler(
     async (
-      _: NextRequest,
+      req: NextRequest,
       {
         params,
         workspace,
@@ -26,6 +26,10 @@ export const GET = errorHandler(
       },
     ) => {
       const { evaluationId, documentUuid, commitUuid, projectId } = params
+      const { searchParams } = new URL(req.url)
+      const page = Number(searchParams.get('page')) || 1
+      const pageSize = Number(searchParams.get('pageSize')) || 10
+
       const commitsScope = new CommitsRepository(workspace.id)
       const commit = await commitsScope
         .getCommitByUuid({ projectId, uuid: commitUuid })
@@ -40,9 +44,12 @@ export const GET = errorHandler(
         evaluation,
         commit,
         documentUuid,
-      }).then((r) => r.unwrap())
+        page,
+        pageSize,
+      })
+      const data = result.unwrap()
 
-      return NextResponse.json(result, { status: 200 })
+      return NextResponse.json(data, { status: 200 })
     },
   ),
 )
