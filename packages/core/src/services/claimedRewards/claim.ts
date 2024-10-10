@@ -12,11 +12,13 @@ export async function claimReward(
     user,
     type,
     reference,
+    autoValidated,
   }: {
     workspace: Workspace
     user: User
     type: RewardType
     reference: string
+    autoValidated?: boolean
   },
   db = database,
 ) {
@@ -51,6 +53,7 @@ export async function claimReward(
         rewardType: type,
         reference,
         value: REWARD_VALUES[type],
+        isValid: autoValidated ? true : null,
       })
       .returning()
       .then((r) => r[0])

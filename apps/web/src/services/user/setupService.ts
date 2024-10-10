@@ -51,6 +51,7 @@ export default function setupService({
           user,
           type: RewardType.SignupLaunchDay,
           reference: LAUNCH_DAY, // not really used for this reward type
+          autoValidated: true,
         },
         tx,
       )
