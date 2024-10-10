@@ -23,6 +23,7 @@ import {
   FolderClosed,
   FolderOpen,
   FolderPlus,
+  Github,
   InfoIcon,
   ListOrdered,
   LoaderCircle,
@@ -36,10 +37,12 @@ import {
   SquareDot,
   SquareMinus,
   SquarePlus,
+  Star,
   Sun,
   ThumbsDown,
   ThumbsUp,
   Trash,
+  Twitter,
   Undo,
 } from 'lucide-react'
 
@@ -79,6 +82,7 @@ const Icons = {
   folderClose: FolderClosed,
   folderOpen: FolderOpen,
   folderPlus: FolderPlus,
+  github: Github,
   info: InfoIcon,
   listOrdered: ListOrdered,
   loader: LoaderCircle,
@@ -91,11 +95,13 @@ const Icons = {
   pin: Pin,
   pinOff: PinOff,
   refresh: RefreshCcw,
+  star: Star,
   sun: Sun,
   sparkles: Sparkles,
   thumbsDown: ThumbsDown,
   thumbsUp: ThumbsUp,
   trash: Trash,
+  twitter: Twitter,
   undo: Undo,
 }
 

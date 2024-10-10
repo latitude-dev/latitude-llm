@@ -5,6 +5,7 @@ import {
   Button,
   ClickToCopy,
   Icon,
+  IconName,
   Table,
   TableBody,
   TableCell,
@@ -96,6 +97,25 @@ function ValidateButtons({
   )
 }
 
+function LinkButton({
+  label,
+  href,
+  icon,
+}: {
+  label: string
+  href: string
+  icon: IconName
+}) {
+  return (
+    <Link href={href} target='_blank'>
+      <Button variant='outline' className='w-fit' iconProps={{ name: icon }}>
+        {label}
+        <Icon name='externalLink' />
+      </Button>
+    </Link>
+  )
+}
+
 export default function AdminPage() {
   const { data: pendingClaims, updateRewardClaim } = usePendingRewardClaims()
   const { toast } = useToast()
@@ -128,6 +148,23 @@ export default function AdminPage() {
 
   return (
     <div className='w-full max-w-[1250px] m-auto px-4 py-8 pt-0 flex flex-col gap-8'>
+      <div className='w-full flex flex-row align-center justify-end gap-2'>
+        <LinkButton
+          label='Star gazers'
+          href='https://github.com/latitude-dev/latitude-llm/stargazers'
+          icon='star'
+        />
+        <LinkButton
+          label='X Followers'
+          href='https://x.com/trylatitude/followers'
+          icon='twitter'
+        />
+        <LinkButton
+          label='Pull Requests'
+          href='https://github.com/latitude-dev/latitude-llm/pulls'
+          icon='github'
+        />
+      </div>
       <TableWithHeader
         title='Pending claims'
         table={
