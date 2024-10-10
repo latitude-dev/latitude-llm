@@ -185,15 +185,12 @@ export default function DocumentEditor({
     [providers],
   )
 
-  const { metadata } = useMetadata(
-    {
-      prompt: value,
-      fullPath: document.path,
-      referenceFn: readDocument,
-      configSchema,
-    },
-    [readDocument, configSchema],
-  )
+  const { metadata } = useMetadata({
+    prompt: value,
+    fullPath: document.path,
+    referenceFn: readDocument,
+    configSchema,
+  })
 
   const isMerged = commit.mergedAt !== null
   return (
