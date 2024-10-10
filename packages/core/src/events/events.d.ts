@@ -202,6 +202,8 @@ export type EvaluationCreatedEvent = LatitudeEventGeneric<
     evaluation: Evaluation
     userEmail: string
     workspaceId: number
+    projectId?: number
+    documentUuid?: string
   }
 >
 

@@ -1,20 +1,38 @@
 'use client'
 
-import { createContext, ReactNode, useContext } from 'react'
+import { createContext, ReactNode, useContext, useMemo } from 'react'
 
 import { DocumentVersion } from '@latitude-data/core/browser'
+import useDocumentVersions from '$/stores/documentVersions'
 
 const DocumentContext = createContext<DocumentVersion | undefined>(undefined)
 
 const DocumentVersionProvider = ({
   children,
-  document,
+  document: fallbackDocument,
+  documentUuid,
+  projectId,
+  commitUuid,
 }: {
   children: ReactNode
   document: DocumentVersion
+  documentUuid: string
+  projectId: number
+  commitUuid: string
 }) => {
+  const { data: documents } = useDocumentVersions({
+    projectId,
+    commitUuid,
+  })
+
+  const document = useMemo(() => {
+    return (
+      documents?.find((d) => d.id === fallbackDocument.id) ?? fallbackDocument
+    )
+  }, [documents, documentUuid, fallbackDocument])
+
   return (
-    <DocumentContext.Provider value={document}>
+    <DocumentContext.Provider value={document || fallbackDocument}>
       {children}
     </DocumentContext.Provider>
   )

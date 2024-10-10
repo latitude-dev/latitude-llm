@@ -9,9 +9,9 @@ import {
   TableBlankSlate,
   Text,
   useCurrentCommit,
-  useCurrentDocument,
   useCurrentProject,
 } from '@latitude-data/web-ui'
+import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import {
   EventArgs,
   useSockets,

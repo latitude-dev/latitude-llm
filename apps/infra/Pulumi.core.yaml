@@ -2,10 +2,14 @@ encryptionsalt: v1:K+dTqOgU40c=:v1:xzsAOOiJEEAsdCQ4:Oe7NKHjXdYdZrcrrBa1/0yolY5M3
 config:
   infra:COPILOT_CODE_SUGGESTION_PROMPT_PATH:
     secure: v1:b9j/sOqgFs3929X4:mrgW1HIfxZbT5dFEKXNZqluiDtk=
+  infra:COPILOT_EVALUATION_SUGGESTION_PROMPT_PATH:
+    secure: v1:4Yjovb2ZOf2wq63t:TwCZIpVnbRiUJiRtMP+8vOLh9eSqaovKRgYqVJ8Eb/ELzoyF
   infra:COPILOT_PROJECT_ID:
     secure: v1:GVbqlqtilIEdFp/C:tBlZldZFbejT/F/VnW1Kgm2o
   infra:COPILOT_REFINE_PROMPT_PATH:
     secure: v1:41ou43mQtWHrBPSL:MNeUE4SqiOOfmHQ4iopFczoGVhOxQg==
+  infra:COPILOT_WORKSPACE_API_KEY:
+    secure: v1:xqyimU5j/nMs/zlG:G/dQ3+6XO9Xx1jaHe93nMwUz92y//PRrLaIkOQOTodBJceBQZmdJyVBYmGR48WXq9vumew==
   infra:DATABASE_PASSWORD:
     secure: v1:WABt/tJjfsAKMplU:RRLtj5mTu301x4sn2Tr91u4O0Msd3mWVJutcDg==
   infra:DATASET_GENERATOR_WORKSPACE_APIKEY:

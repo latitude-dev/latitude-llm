@@ -1,7 +1,8 @@
 'use client'
 
 import { EvaluationDto } from '@latitude-data/core/browser'
-import { TableWithHeader, useCurrentDocument } from '@latitude-data/web-ui'
+import { TableWithHeader } from '@latitude-data/web-ui'
+import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useToggleModal } from '$/hooks/useToogleModal'
 
 import DefaultProviderBanner from '../DefaulProviderBanner'

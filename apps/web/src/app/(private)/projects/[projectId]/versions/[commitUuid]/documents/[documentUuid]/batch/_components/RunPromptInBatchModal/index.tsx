@@ -10,11 +10,11 @@ import {
   Modal,
   SelectOption,
   useCurrentCommit,
-  useCurrentDocument,
   useCurrentProject,
   useToast,
 } from '@latitude-data/web-ui'
 import { runDocumentInBatchAction } from '$/actions/documents/runDocumentInBatchAction'
+import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'

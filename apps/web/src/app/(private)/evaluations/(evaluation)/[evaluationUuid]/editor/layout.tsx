@@ -13,8 +13,7 @@ import providerApiKeyPresenter from '$/presenters/providerApiKeyPresenter'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
 
-import { EvaluationTabSelector } from '../_components/EvaluationTabs'
-import EvaluationEditor from './_components/EvaluationEditor/Editor'
+import EvaluationEditorLayout from './_components/EvaluationEditorLayout'
 
 export default async function DocumentPage({
   children,
@@ -49,18 +48,14 @@ export default async function DocumentPage({
         },
       ]}
     >
-      <div className='h-full flex flex-col gap-y-4 p-6'>
-        <EvaluationTabSelector evaluation={evaluation} />
-        <div className='flex-grow'>
-          <EvaluationEditor
-            providerApiKeys={providerApiKeys.map(providerApiKeyPresenter)}
-            evaluationUuid={evaluationUuid}
-            defaultPrompt={evaluation.metadata.prompt}
-            freeRunsCount={freeRunsCount ? Number(freeRunsCount) : undefined}
-          />
-        </div>
+      <EvaluationEditorLayout
+        evaluation={evaluation}
+        providerApiKeys={providerApiKeys.map(providerApiKeyPresenter)}
+        evaluationUuid={evaluationUuid}
+        freeRunsCount={freeRunsCount ? Number(freeRunsCount) : undefined}
+      >
         {children}
-      </div>
+      </EvaluationEditorLayout>
     </AppLayout>
   )
 }

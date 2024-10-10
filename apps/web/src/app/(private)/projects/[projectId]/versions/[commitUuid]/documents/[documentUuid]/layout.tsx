@@ -1,10 +1,10 @@
 import { ReactNode } from 'react'
 
-import { DocumentVersionProvider } from '@latitude-data/web-ui'
 import {
   getApiKeysCached,
   getDocumentByUuidCached,
 } from '$/app/(private)/_data-access'
+import { DocumentVersionProvider } from '$/app/providers/DocumentProvider'
 import { ROUTES } from '$/services/routes'
 import { redirect } from 'next/navigation'
 
@@ -34,7 +34,12 @@ export default async function DocumentPage({
     })
 
     return (
-      <DocumentVersionProvider document={document}>
+      <DocumentVersionProvider
+        document={document}
+        documentUuid={documentUuid}
+        projectId={projectId}
+        commitUuid={commitUuid}
+      >
         <DocumentsLayout
           projectId={projectId}
           commitUuid={commitUuid}
