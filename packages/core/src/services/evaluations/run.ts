@@ -102,12 +102,19 @@ export const runEvaluation = async (
     },
   })
 
-  const response = run.response as Promise<ChainStepResponse<'object'>>
-  response.then((res) =>
-    handleEvaluationResponse(res, documentUuid, evaluation, documentLog),
-  )
+  return Result.ok({
+    ...run,
+    response: run.response.then(async (res) => {
+      await handleEvaluationResponse(
+        res as ChainStepResponse<'object'> | undefined,
+        documentUuid,
+        evaluation,
+        documentLog,
+      )
 
-  return Result.ok(run)
+      return res
+    }),
+  })
 }
 
 async function handleEvaluationResponse(
@@ -117,6 +124,11 @@ async function handleEvaluationResponse(
   documentLog: DocumentLog,
 ) {
   if (!response) return
+  if (response.object === undefined) {
+    throw new LatitudeError(
+      'Provider did not return a valid JSON-formatted response',
+    )
+  }
 
   publisher.publishLater({
     type: 'evaluationRun',
@@ -129,12 +141,6 @@ async function handleEvaluationResponse(
       workspaceId: evaluation.workspaceId,
     },
   })
-
-  if (response.object === undefined) {
-    throw new LatitudeError(
-      'Provider did not return a valid JSON-formatted response',
-    )
-  }
 
   return await createEvaluationResult({
     evaluation,
