@@ -32,13 +32,10 @@ export default function CreateBatchEvaluationModal({
     },
   })
 
-  const { metadata } = useMetadata(
-    {
-      prompt: document.content ?? '',
-      fullPath: document.path,
-    },
-    [document],
-  )
+  const { metadata } = useMetadata({
+    prompt: document.content ?? '',
+    fullPath: document.path,
+  })
 
   const form = useRunBatchForm({ documentMetadata: metadata })
   const onRunBatch = useCallback(() => {

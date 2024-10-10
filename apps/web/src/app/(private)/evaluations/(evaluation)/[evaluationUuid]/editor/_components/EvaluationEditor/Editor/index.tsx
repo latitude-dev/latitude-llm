@@ -43,14 +43,11 @@ export default function EvaluationEditor({
     () => promptConfigSchema({ providers: providers ?? [] }),
     [providers],
   )
-  const { metadata } = useMetadata(
-    {
-      prompt: value,
-      withParameters: SERIALIZED_DOCUMENT_LOG_FIELDS,
-      configSchema,
-    },
-    [value, configSchema],
-  )
+  const { metadata } = useMetadata({
+    prompt: value,
+    withParameters: SERIALIZED_DOCUMENT_LOG_FIELDS,
+    configSchema,
+  })
 
   const save = useCallback(
     (val: string) => {
