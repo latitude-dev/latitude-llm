@@ -24,6 +24,12 @@ export const setupAction = errorHandlingProcedure
               return !existingUser
             },
             { message: 'Email is already in use' },
+          )
+          .refine(
+            (email) =>
+              !email.match(/^[A-Z0-9_!#$%&'*+/=?`{|}~^.-]+@[A-Z0-9.-]+$/) &&
+              !email.match(/^[^+]+\+\d+@[A-Z0-9.-]+$/i),
+            { message: 'Email is not valid' },
           ),
         companyName: z
           .string()
