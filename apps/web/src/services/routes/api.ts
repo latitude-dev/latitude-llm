@@ -1,4 +1,41 @@
 export const _API_ROUTES = {
+  apiKeys: {
+    root: '/api/apiKeys',
+  },
+  providerApiKeys: {
+    root: '/api/providerApiKeys',
+  },
+  claimedRewards: {
+    root: '/api/claimedRewards',
+  },
+  providerLogs: {
+    root: '/api/providerLogs',
+  },
+  users: {
+    root: '/api/users',
+  },
+  projects: {
+    root: '/api/projects',
+    detail: (id: number) => ({
+      commits: {
+        root: `/api/projects/${id}/commits`,
+      },
+    }),
+  },
+  evaluations: {
+    root: '/api/evaluations',
+    detail: (id: number) => ({
+      connectedDocuments: {
+        root: `/api/evaluations/${id}/connected-documents`,
+      },
+    }),
+  },
+  datasets: {
+    root: '/api/datasets',
+  },
+  evaluationTemplates: {
+    root: '/api/evaluationTemplates',
+  },
   documentLogs: {
     detail: ({ id }: { id: number }) => ({
       root: `/api/documentLogs/${id}`,

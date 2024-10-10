@@ -90,12 +90,12 @@ const ProviderApiKeysTable = ({
             </TableCell>
             <TableCell>
               <Text.H4 color='foregroundMuted'>
-                {apiKey.createdAt.toDateString()}
+                {new Date(apiKey.createdAt).toDateString()}
               </Text.H4>
             </TableCell>
             <TableCell>
               <Text.H4 color='foregroundMuted'>
-                {relativeTime(apiKey.lastUsedAt)}
+                {relativeTime(apiKey.lastUsedAt ? new Date(apiKey.lastUsedAt) : null)}
               </Text.H4>
             </TableCell>
             <TableCell>

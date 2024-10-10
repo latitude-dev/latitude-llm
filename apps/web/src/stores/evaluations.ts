@@ -6,9 +6,9 @@ import type { EvaluationDto } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui'
 import { createEvaluationAction } from '$/actions/evaluations/create'
 import { destroyEvaluationAction } from '$/actions/evaluations/destroy'
-import { fetchEvaluationsAction } from '$/actions/evaluations/fetch'
 import { updateEvaluationContentAction } from '$/actions/evaluations/updateContent'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
+import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'
 
 export default function useEvaluations(
@@ -17,7 +17,7 @@ export default function useEvaluations(
     params?: { documentUuid: string }
   } = {},
 ) {
-  const { onSuccessCreate } = opts
+  const { onSuccessCreate, params } = opts
   const { toast } = useToast()
 
   const {
@@ -28,18 +28,25 @@ export default function useEvaluations(
   } = useSWR<EvaluationDto[]>(
     compact(['evaluations', ...flatten(Object.entries(opts?.params ?? {}))]),
     async () => {
-      const [data, error] = await fetchEvaluationsAction(opts?.params)
+      let route = ROUTES.api.evaluations.root
+      if (params?.documentUuid) {
+        route += `?documentUuid=${params?.documentUuid}`
+      }
+      const response = await fetch(route)
 
-      if (error) {
+      if (!response.ok) {
+        const error = await response.json()
+
         toast({
           title: 'Error fetching evaluations',
           description: error.formErrors?.[0] || error.message,
           variant: 'destructive',
         })
-        throw error
+
+        return []
       }
 
-      return data
+      return await response.json()
     },
     opts,
   )

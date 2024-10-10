@@ -4,7 +4,7 @@ import { compact } from 'lodash-es'
 
 import { ProviderLogDto } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui'
-import { getProviderLogsAction } from '$/actions/providerLogs/fetch'
+import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'
 
 export default function useProviderLogs(
@@ -22,14 +22,11 @@ export default function useProviderLogs(
   } = useSWR<ProviderLogDto[]>(
     compact(['providerLogs', documentUuid, documentLogUuid]),
     async () => {
-      // TODO: Move to regula HTTP GET
-      const [data, error] = await getProviderLogsAction({
-        documentUuid,
-        documentLogUuid,
-      })
-
-      if (error) {
-        console.error(error)
+      const response = await fetch(
+        buildRoute({ documentUuid, documentLogUuid }),
+      )
+      if (!response.ok) {
+        const error = await response.json()
 
         toast({
           title: 'Error fetching provider logs',
@@ -40,7 +37,7 @@ export default function useProviderLogs(
         return []
       }
 
-      return data
+      return await response.json()
     },
     opts,
   )
@@ -98,4 +95,28 @@ export function useProviderLog(
     isLoading,
     error: swrError,
   }
+}
+
+function buildRoute({
+  documentUuid,
+  documentLogUuid,
+}: {
+  documentUuid?: string
+  documentLogUuid?: string
+}) {
+  let route = ROUTES.api.providerLogs.root
+  if (documentUuid) {
+    route += `?documentUuid=${documentUuid}`
+  }
+  if (documentLogUuid) {
+    if (documentUuid) {
+      route += '&'
+    } else {
+      route += '?'
+    }
+
+    route += `documentLogUuid=${documentLogUuid}`
+  }
+
+  return route
 }

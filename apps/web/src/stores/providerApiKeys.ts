@@ -2,8 +2,8 @@ import type { ProviderApiKey } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui'
 import { createProviderApiKeyAction } from '$/actions/providerApiKeys/create'
 import { destroyProviderApiKeyAction } from '$/actions/providerApiKeys/destroy'
-import { getProviderApiKeyAction } from '$/actions/providerApiKeys/fetch'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
+import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'
 
 const EMPTY_ARRAY: ProviderApiKey[] = []
@@ -12,8 +12,10 @@ export default function useProviderApiKeys(opts?: SWRConfiguration) {
   const { toast } = useToast()
   const key = 'api/providerApiKeys'
   const fetcher = async () => {
-    const [data, error] = await getProviderApiKeyAction()
-    if (error) {
+    const response = await fetch(ROUTES.api.providerApiKeys.root)
+    if (!response.ok) {
+      const error = await response.json()
+
       toast({
         title: 'Error',
         description: error.message,
@@ -23,7 +25,7 @@ export default function useProviderApiKeys(opts?: SWRConfiguration) {
       return []
     }
 
-    return data || []
+    return await response.json()
   }
   const {
     data = EMPTY_ARRAY,

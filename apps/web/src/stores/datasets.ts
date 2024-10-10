@@ -4,8 +4,8 @@ import type { Dataset } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui'
 import { createDatasetAction } from '$/actions/datasets/create'
 import { destroyDatasetAction } from '$/actions/datasets/destroy'
-import { getDatasetsAction } from '$/actions/datasets/fetch'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
+import { ROUTES } from '$/services/routes'
 import useCurrentWorkspace from '$/stores/currentWorkspace'
 import useSWR, { SWRConfiguration } from 'swr'
 
@@ -16,8 +16,10 @@ export default function useDatasets(
   const { data: workspace } = useCurrentWorkspace()
   const { toast } = useToast()
   const fetcher = useCallback(async () => {
-    const [data, error] = await getDatasetsAction()
-    if (error) {
+    const response = await fetch(ROUTES.api.datasets.root)
+    if (!response.ok) {
+      const error = await response.json()
+
       toast({
         title: 'Error',
         description: error.message,
@@ -27,13 +29,13 @@ export default function useDatasets(
       return []
     }
 
-    return data
+    return await response.json()
   }, [toast])
   const {
     data = [],
     mutate,
     ...rest
-  } = useSWR(['workspace', workspace.id, 'datasets'], fetcher, opts)
+  } = useSWR<Dataset[]>(['workspace', workspace.id, 'datasets'], fetcher, opts)
   const {
     isPending: isCreating,
     error: createError,

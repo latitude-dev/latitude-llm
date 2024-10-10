@@ -8,9 +8,9 @@ import {
 } from '@latitude-data/web-ui'
 import { createDraftCommitAction } from '$/actions/commits/create'
 import { deleteDraftCommitAction } from '$/actions/commits/deleteDraftCommitAction'
-import { fetchCommitsByProjectAction } from '$/actions/commits/fetchCommitsByProjectAction'
 import { publishDraftCommitAction } from '$/actions/commits/publishDraftCommitAction'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
+import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'
 
 export default function useCommits(
@@ -26,11 +26,14 @@ export default function useCommits(
   const { toast } = useToast()
 
   const fetcher = useCallback(async () => {
-    const [data, error] = await fetchCommitsByProjectAction({
-      projectId: project.id,
-      status: CommitStatus.Draft,
-    })
-    if (error) {
+    const response = await fetch(
+      ROUTES.api.projects.detail(project.id).commits.root,
+      { credentials: 'include' },
+    )
+
+    if (!response.ok) {
+      const error = await response.json()
+
       toast({
         title: 'Error',
         description: error.message,
@@ -40,7 +43,7 @@ export default function useCommits(
       return []
     }
 
-    return data
+    return await response.json()
   }, [project.id, toast])
 
   const {

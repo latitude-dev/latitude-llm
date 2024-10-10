@@ -2,7 +2,7 @@
 
 import type { DocumentVersion, Evaluation } from '@latitude-data/core/browser'
 import { useSession, useToast } from '@latitude-data/web-ui'
-import { fetchConnectedDocumentsAction } from '$/actions/connectedEvaluations/fetchConnectedDocuments'
+import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'
 
 export default function useConnectedDocuments(
@@ -23,22 +23,23 @@ export default function useConnectedDocuments(
   } = useSWR<DocumentVersion[]>(
     ['connectedDocuments', workspace.id, evaluation.id],
     async () => {
-      const [data, error] = await fetchConnectedDocumentsAction({
-        evaluationId: evaluation.id,
-      })
+      const response = await fetch(
+        ROUTES.api.evaluations.detail(evaluation.id).connectedDocuments.root,
+      )
 
-      if (error) {
-        console.error(error)
+      if (!response.ok) {
+        const error = await response.json()
 
         toast({
           title: 'Error fetching evaluation connections',
           description: error.formErrors?.[0] || error.message,
           variant: 'destructive',
         })
-        throw error
+
+        return []
       }
 
-      return data
+      return await response.json()
     },
     opts,
   )

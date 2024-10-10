@@ -1,17 +1,19 @@
 import type { User } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui'
 import { destroyMembershipAction } from '$/actions/memberships/destroy'
-import { getUsersActions } from '$/actions/users/fetch'
 import { inviteUserAction } from '$/actions/users/invite'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
+import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'
 
 export default function useUsers(opts?: SWRConfiguration) {
   const { toast } = useToast()
 
   const fetcher = async () => {
-    const [data, error] = await getUsersActions()
-    if (error) {
+    const response = await fetch(ROUTES.api.users.root)
+    if (!response.ok) {
+      const error = await response.json()
+
       toast({
         title: 'Error',
         description: error.message,
@@ -21,7 +23,7 @@ export default function useUsers(opts?: SWRConfiguration) {
       return []
     }
 
-    return data
+    return await response.json()
   }
 
   const {

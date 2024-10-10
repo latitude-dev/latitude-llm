@@ -2,8 +2,8 @@ import type { ApiKey } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui'
 import { createApiKeyAction } from '$/actions/apiKeys/create'
 import { destroyApiKeyAction } from '$/actions/apiKeys/destroy'
-import { getApiKeysAction } from '$/actions/apiKeys/fetch'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
+import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'
 
 export default function useApiKeys(opts?: SWRConfiguration) {
@@ -11,8 +11,12 @@ export default function useApiKeys(opts?: SWRConfiguration) {
   const key = 'api/apiKeys'
 
   const fetcher = async () => {
-    const [data, error] = await getApiKeysAction()
-    if (error) {
+    const response = await fetch(ROUTES.api.apiKeys.root, {
+      credentials: 'include',
+    })
+    if (!response.ok) {
+      const error = await response.json()
+
       toast({
         title: 'Error',
         description: error.message,
@@ -20,7 +24,8 @@ export default function useApiKeys(opts?: SWRConfiguration) {
       })
       return []
     }
-    return data || []
+
+    return await response.json()
   }
 
   const { data = [], mutate, ...rest } = useSWR<ApiKey[]>(key, fetcher, opts)
