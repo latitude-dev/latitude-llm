@@ -15,7 +15,8 @@ const WORKER_OPTS = {
 const WORKERS = [defaultWorker]
 
 export default async function startWorkers() {
-  const connection = await queues()
+  const connection = await queues({ enableOfflineQueue: true })
+
   return WORKERS.flatMap((w) =>
     w.queues.map((q) => {
       const worker = new Worker(q, w.processor, {
