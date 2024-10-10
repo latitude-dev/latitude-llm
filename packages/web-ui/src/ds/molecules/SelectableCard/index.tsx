@@ -26,11 +26,11 @@ export function SelectableCard({
     >
       {selected && (
         <div className='absolute right-2 top-2'>
-          <Icon name='check' color='primary' />
+          <Icon name='check' color='accentForeground' />
         </div>
       )}
       <div className='w-full flex flex-col gap-1'>
-        <Text.H5M color={selected ? 'primary' : 'foreground'}>
+        <Text.H5M color={selected ? 'accentForeground' : 'foreground'}>
           {title.length > 30 ? `${title.slice(0, 30)}...` : title}
         </Text.H5M>
         {description.length > 0 && (

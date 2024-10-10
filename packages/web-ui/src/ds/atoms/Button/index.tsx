@@ -14,11 +14,11 @@ const buttonContainerVariants = cva(
   {
     variants: {
       variant: {
-        default: 'bg-accent-foreground hover:bg-accent-foreground/90',
+        default: 'bg-accent-button hover:bg-accent-foreground/90',
         nope: 'bg-transparent hover:bg-transparent',
         destructive:
           'bg-destructive-muted-foreground hover:bg-destructive-muted-foreground/90',
-        outline: 'hover:bg-accent/60',
+        outline: 'bg-secondary hover:bg-secondary/60',
         secondary: 'bg-secondary hover:bg-secondary/80',
         ghost: 'shadow-none bg-transparent',
         link: 'shadow-none underline-offset-4 hover:underline',
@@ -36,7 +36,7 @@ const buttonContainerVariants = cva(
       {
         variant: 'outline',
         fanciness: 'fancy',
-        className: 'shadow-[inset_0px_0px_0px_1px_rgb(var(--border)/0.4)]',
+        className: 'shadow-[inset_0px_0px_0px_1px_hsl(var(--border))]',
       },
     ],
     defaultVariants: {
@@ -62,18 +62,16 @@ const buttonVariants = cva(
         destructive:
           'bg-destructive text-destructive-foreground group-hover:bg-destructive/90 shadow-[inset_0px_2px_2px_rgba(255,255,255,0.25),inset_0px_-1px_4px_rgba(0,0,0,0.04)]',
         outline:
-          'border border-input group-hover:bg-accent group-hover:text-accent-foreground',
+          'border border-input bg-background group-hover:bg-secondary group-hover:text-secondary-foreground/80',
         secondary:
           'bg-secondary text-secondary-foreground group-hover:bg-secondary/80',
         ghost: 'shadow-none bg-transparent text-muted-foreground',
-        link: 'shadow-none underline-offset-4 group-hover:underline text-primary',
+        link: 'shadow-none underline-offset-4 group-hover:underline text-accent-foreground',
         linkOutline: 'shadow-none underline-offset-4 group-hover:underline',
         linkDestructive:
           'shadow-none underline-offset-4 group-hover:underline text-destructive',
         shiny: cn(
-          'bg-primary/10 text-primary group-hover:bg-primary/15 overflow-hidden',
-          'shadow-[inset_0px_0px_0px_1px_rgb(var(--primary)/0.1),inset_0px_2px_2px_rgba(255,255,255,0.25),inset_0px_-1px_4px_rgba(0,0,0,0.04)]',
-          'group-hover:shadow-[inset_0px_0px_0px_1px_rgb(var(--primary)/0.5),inset_0px_2px_2px_rgba(255,255,255,0.25),inset_0px_-1px_4px_rgba(0,0,0,0.04)]',
+          'bg-accent border-accent group-hover:bg-primary/15 overflow-hidden',
         ),
       },
       size: {
@@ -100,7 +98,7 @@ const buttonVariants = cva(
       {
         variant: 'outline',
         fanciness: 'fancy',
-        className: 'shadow-[inset_0px_0px_0px_1px_rgb(var(--border)/0.4)]',
+        className: 'shadow-[inset_0px_0px_0px_1px_hsl(var(--border))]',
       },
       {
         size: 'default',
@@ -182,7 +180,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
             <span
               className={cn(
                 'absolute inset-0',
-                'bg-gradient-to-r from-transparent via-white to-transparent',
+                'bg-gradient-to-r from-transparent via-background to-transparent dark:from-transparent',
                 'opacity-50 transform -translate-x-full group-hover:animate-shine animate-shine',
               )}
             ></span>

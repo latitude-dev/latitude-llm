@@ -6,7 +6,7 @@ import {
   BlankSlateStepSkeleton,
   BlankSlateWithSteps,
   Button,
-  Icon,
+  EvaluationIllustation,
   TableBlankSlate,
   Text,
   useCurrentCommit,
@@ -146,7 +146,7 @@ export default function EvaluationsLayoutClient({
         description='Connect an evaluation from the templates gallery to get insights about how your prompt performs.'
       >
         <div className='flex flex-col gap-5 w-full aspect-video rounded-md border border-border bg-muted items-center justify-center'>
-          <Icon name='evaluation' className='w-24 h-24' />
+          <EvaluationIllustation className='w-24 h-24' />
           <Link href={href}>
             <TableBlankSlate.Button>
               Connect your first evaluation

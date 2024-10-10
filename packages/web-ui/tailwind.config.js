@@ -19,59 +19,60 @@ export default {
         h2: '26px',
       },
       colors: {
-        border: 'rgb(var(--border) / <alpha-value>)',
-        input: 'rgb(var(--input) / <alpha-value>)',
-        ring: 'rgb(var(--ring) / <alpha-value>)',
-        backgroundCode: 'rgb(var(--background-code) / <alpha-value>)',
-        background: 'rgb(var(--background) / <alpha-value>)',
-        'background-gray': 'rgb(var(--background-gray) / <alpha-value>)',
-        foreground: 'rgb(var(--foreground) / <alpha-value>)',
+        border: 'hsl(var(--border) / <alpha-value>)',
+        input: 'hsl(var(--input) / <alpha-value>)',
+        ring: 'hsl(var(--ring) / <alpha-value>)',
+        backgroundCode: 'hsl(var(--background-code) / <alpha-value>)',
+        background: 'hsl(var(--background) / <alpha-value>)',
+        'background-gray': 'hsl(var(--background-gray) / <alpha-value>)',
+        foreground: 'hsl(var(--foreground) / <alpha-value>)',
         primary: {
-          DEFAULT: 'rgb(var(--primary) / <alpha-value>)',
-          foreground: 'rgb(var(--primary-foreground) / <alpha-value>)',
+          DEFAULT: 'hsl(var(--primary) / <alpha-value>)',
+          foreground: 'hsl(var(--primary-foreground) / <alpha-value>)',
         },
         secondary: {
-          DEFAULT: 'rgb(var(--secondary) / <alpha-value>)',
-          foreground: 'rgb(var(--secondary-foreground) / <alpha-value>)',
+          DEFAULT: 'hsl(var(--secondary) / <alpha-value>)',
+          foreground: 'hsl(var(--secondary-foreground) / <alpha-value>)',
         },
         destructive: {
-          DEFAULT: 'rgb(var(--destructive) / <alpha-value>)',
-          foreground: 'rgb(var(--destructive-foreground) / <alpha-value>)',
+          DEFAULT: 'hsl(var(--destructive) / <alpha-value>)',
+          foreground: 'hsl(var(--destructive-foreground) / <alpha-value>)',
         },
         success: {
           DEFAULT: 'rgb(var(--success) / <alpha-value>)',
           foreground: 'rgb(var(--success-foreground) / <alpha-value>)',
         },
         'destructive-muted-foreground':
-          'rgb(var(--destructive-muted-foreground) / <alpha-value>)',
+          'hsl(var(--destructive-muted-foreground) / <alpha-value>)',
         'warning-muted-foreground':
-          'rgb(var(--warning-muted-foreground) / <alpha-value>)',
+          'hsl(var(--warning-muted-foreground) / <alpha-value>)',
         muted: {
-          DEFAULT: 'rgb(var(--muted) / <alpha-value>)',
-          foreground: 'rgb(var(--muted-foreground) / <alpha-value>)',
+          DEFAULT: 'hsl(var(--muted) / <alpha-value>)',
+          foreground: 'hsl(var(--muted-foreground) / <alpha-value>)',
         },
         'destructive-muted': {
-          DEFAULT: 'rgb(var(--destructive-muted-foreground) / <alpha-value>)',
+          DEFAULT: 'hsl(var(--destructive-muted-foreground) / <alpha-value>)',
           foreground:
-            'rgb(var(--destructive-muted-foreground) / <alpha-value>)',
+            'hsl(var(--destructive-muted-foreground) / <alpha-value>)',
         },
         accent: {
-          DEFAULT: 'rgb(var(--accent) / <alpha-value>)',
-          foreground: 'rgb(var(--accent-foreground) / <alpha-value>)',
+          DEFAULT: 'hsl(var(--accent) / <alpha-value>)',
+          button: 'hsl(var(--accent-button) / <alpha-value>)',
+          foreground: 'hsl(var(--accent-foreground) / <alpha-value>)',
         },
         popover: {
-          DEFAULT: 'rgb(var(--popover) / <alpha-value>)',
-          foreground: 'rgb(var(--popover-foreground) / <alpha-value>)',
+          DEFAULT: 'hsl(var(--popover) / <alpha-value>)',
+          foreground: 'hsl(var(--popover-foreground) / <alpha-value>)',
         },
         card: {
-          DEFAULT: 'rgb(var(--card) / <alpha-value>)',
-          foreground: 'rgb(var(--card-foreground) / <alpha-value>)',
+          DEFAULT: 'hsl(var(--card) / <alpha-value>)',
+          foreground: 'hsl(var(--card-foreground) / <alpha-value>)',
         },
         purple: {
-          DEFAULT: 'rgb(var(--purple) / <alpha-value>)',
+          DEFAULT: 'hsl(var(--purple) / <alpha-value>)',
         },
         yellow: {
-          DEFAULT: 'rgb(var(--yellow) / <alpha-value>)',
+          DEFAULT: 'hsl(var(--yellow) / <alpha-value>)',
         },
       },
       borderRadius: {
@@ -90,7 +91,7 @@ export default {
         },
         'flash-background': {
           '0%': { backgroundColor: 'transparent' },
-          '100%': { backgroundColor: 'rgb(var(--accent))' },
+          '100%': { backgroundColor: 'hsl(var(--accent))' },
         },
         'gradient-animation': {
           '0%': { backgroundPosition: '200% center' },

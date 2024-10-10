@@ -46,7 +46,7 @@ export function RewardItem({
           ) : (
             <Icon
               name='check'
-              color={isClaimed ? 'primary' : 'foregroundMuted'}
+              color={isClaimed ? 'accentForeground' : 'foregroundMuted'}
               className={cn({ 'opacity-50': !isClaimed })}
             />
           )}
@@ -54,7 +54,7 @@ export function RewardItem({
             {description}
           </Text.H5M>
         </div>
-        <Text.H5M color={isClaimed ? 'primary' : 'foregroundMuted'}>
+        <Text.H5M color={isClaimed ? 'accentForeground' : 'foregroundMuted'}>
           +{runs} runs
         </Text.H5M>
       </div>
