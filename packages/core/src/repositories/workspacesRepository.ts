@@ -1,4 +1,4 @@
-import { eq, getTableColumns } from 'drizzle-orm'
+import { eq, getTableColumns, sql } from 'drizzle-orm'
 
 import { Database, database } from '../client'
 import { NotFoundError, Result } from '../lib'
@@ -6,7 +6,19 @@ import { memberships, subscriptions, workspaces } from '../schema'
 
 export const workspacesDtoColumns = {
   ...getTableColumns(workspaces),
-  currentSubscription: getTableColumns(subscriptions),
+  currentSubscription: {
+    id: sql<number>`${subscriptions.id}`
+      .mapWith(Number)
+      .as('currentSubscriptionId'),
+    plan: subscriptions.plan,
+    workspaceId: subscriptions.workspaceId,
+    updatedAt: sql<Date>`${subscriptions.updatedAt}`
+      .mapWith(subscriptions.updatedAt)
+      .as('currentSubscriptionUpdatedAt'),
+    createdAt: sql<Date>`${subscriptions.createdAt}`
+      .mapWith(subscriptions.createdAt)
+      .as('currentSubscriptionCreatedAt'),
+  },
 }
 
 export class WorkspacesRepository {
