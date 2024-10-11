@@ -2,6 +2,7 @@ import { omit } from 'lodash-es'
 
 import { Message } from '@latitude-data/compiler'
 import {
+  ChainCallResponseDto,
   ChainEventDto,
   ChainEventTypes,
   LatitudeEventData,
@@ -84,7 +85,11 @@ function latitudeEventPresenter(event: {
       return {
         ...omit(event.data, 'documentLogUuid'),
         uuid: event.data.response.documentLogUuid!,
-        response: omit(event.data.response, 'providerLog', 'documentLogUuid'),
+        response: omit(
+          event.data.response,
+          'providerLog',
+          'documentLogUuid',
+        ) as ChainCallResponseDto,
       }
     case ChainEventTypes.Error:
       return {
