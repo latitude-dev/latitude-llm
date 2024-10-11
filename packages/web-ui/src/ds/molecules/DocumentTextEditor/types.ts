@@ -18,6 +18,10 @@ export type DocumentTextEditorProps = {
   isSaved?: boolean
   actionButtons?: ReactNode
   diff?: DiffOptions
+  copilot?: {
+    isLoading: boolean
+    requestSuggestion: (_: string) => void
+  }
 }
 
 export type DocumentError = {
