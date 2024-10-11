@@ -61,6 +61,7 @@ export default function EditorHeader({
   disabledMetadataSelectors = false,
   providers,
   freeRunsCount,
+  showCopilotSetting,
 }: {
   title: string
   metadata: ConversationMetadata | undefined
@@ -70,6 +71,7 @@ export default function EditorHeader({
   disabledMetadataSelectors?: boolean
   providers?: ProviderApiKey[]
   freeRunsCount?: number
+  showCopilotSetting?: boolean
 }) {
   const promptMetadata = useMemo<PromptMeta>(() => {
     const config = metadata?.config
@@ -96,6 +98,11 @@ export default function EditorHeader({
   const { value: showMinimap, setValue: setShowMinimap } = useLocalStorage({
     key: AppLocalStorage.editorMinimap,
     defaultValue: false,
+  })
+
+  const { value: showCopilot, setValue: setShowCopilot } = useLocalStorage({
+    key: AppLocalStorage.editorCopilot,
+    defaultValue: true,
   })
 
   const providersByName = useMemo(() => {
@@ -205,6 +212,15 @@ export default function EditorHeader({
                 onClick: () => setShowMinimap(!showMinimap),
                 checked: showMinimap,
               },
+              ...(showCopilotSetting
+                ? [
+                    {
+                      label: 'Show Copilot',
+                      onClick: () => setShowCopilot(!showCopilot),
+                      checked: showCopilot,
+                    },
+                  ]
+                : []),
             ]}
             side='bottom'
             align='end'

@@ -11,6 +11,7 @@ export enum AppLocalStorage {
   editorLineNumbers = 'editorLineNumbers',
   editorWrapText = 'editorWrapText',
   editorMinimap = 'editorMinimap',
+  editorCopilot = 'editorCopilot',
 }
 
 const isLocalStorageAvailable = (() => {

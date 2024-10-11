@@ -13,8 +13,10 @@ Pulumi store screts encrypted in the state files like `Pulumi.core.yaml` or
 `Pulumi.web-production.yaml`.
 
 ```bash
-pulumi config set AWS_ACCESS_KEY [your-access-key] --secret
+pulumi config --stack core set [EXAMPLE_KEY] [example-secret] --secret
 ```
+
+By default all secrets are added in the stack 'core'.
 
 ### View secrets
 
