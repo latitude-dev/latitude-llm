@@ -120,7 +120,7 @@ export default function EvaluationAggregatedResult({
 }) {
   if (evaluation.configuration.type === EvaluationResultableType.Number) {
     return (
-      <EvaluationModalValue
+      <EvaluationMeanValue
         evaluation={evaluation}
         documentUuid={documentUuid}
         commitUuid={commitUuid}
@@ -139,7 +139,7 @@ export default function EvaluationAggregatedResult({
   }
 
   return (
-    <EvaluationMeanValue
+    <EvaluationModalValue
       evaluation={evaluation}
       documentUuid={documentUuid}
       commitUuid={commitUuid}
