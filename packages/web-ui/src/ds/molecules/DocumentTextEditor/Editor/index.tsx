@@ -10,6 +10,7 @@ import {
   AppLocalStorage,
   useLocalStorage,
 } from '../../../../lib/hooks/useLocalStorage'
+import { cn } from '../../../../lib/utils'
 import { Button, Icon, Text } from '../../../atoms'
 import { type DocumentError, type DocumentTextEditorProps } from '../types'
 import { CopilotSection } from './CopilotSection'
@@ -81,6 +82,16 @@ export function DocumentTextEditor({
     diff.onReject()
   }, [diff])
 
+  const errorFixFn = useMemo(() => {
+    if (!copilot) return undefined
+    return (errors: DocumentError[]) => {
+      const request =
+        'Please, fix the following errors from the prompt:\n' +
+        errors.map((error) => ` - ${JSON.stringify(error)}`).join('\n')
+      return copilot.requestSuggestion(request)
+    }
+  }, [copilot])
+
   return (
     <div className='relative h-full rounded-lg border border-border overflow-hidden flex flex-col bg-secondary'>
       {!!readOnlyMessage && (
@@ -106,8 +117,12 @@ export function DocumentTextEditor({
             readOnlyMessage ||
             (copilot?.isLoading ? 'Copilot is thinking...' : undefined)
           }
+          className={cn('w-full h-full flex', {
+            'animate-pulse': copilot?.isLoading,
+          })}
           onChange={handleValueChange}
           errorMarkers={errorMarkers}
+          errorFixFn={errorFixFn}
         />
       )}
       {diff && (

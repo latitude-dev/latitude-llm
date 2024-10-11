@@ -13,21 +13,25 @@ import { useEditorOptions } from './useEditorOptions'
 import { useMonacoSetup } from './useMonacoSetup'
 
 export function RegularMonacoEditor({
+  className,
   editorRef,
   value,
   path,
   readOnlyMessage,
   errorMarkers,
   onChange,
+  errorFixFn,
 }: {
+  className?: string
   editorRef: MutableRefObject<editor.IStandaloneCodeEditor | null>
   value: string
   path?: string
   readOnlyMessage?: string
   errorMarkers?: DocumentError[]
   onChange?: (value?: string) => void
+  errorFixFn?: (errors: DocumentError[]) => void
 }) {
-  const { monacoRef, handleEditorWillMount } = useMonacoSetup()
+  const { monacoRef, handleEditorWillMount } = useMonacoSetup({ errorFixFn })
 
   const [defaultValue, _] = useState(value)
   const [isEditorMounted, setIsEditorMounted] = useState(false) // to avoid race conditions
@@ -70,7 +74,7 @@ export function RegularMonacoEditor({
   }, [errorMarkers, isEditorMounted])
 
   return (
-    <EditorWrapper>
+    <EditorWrapper className={className}>
       <Editor
         height='100%'
         width='100%'
