@@ -208,10 +208,13 @@ export type WorkspaceUsage = {
   max: number
 }
 
-export type ChainCallResponseDto = Omit<
-  ChainStepResponse<StreamType>,
-  'documentLogUuid' | 'providerLog'
->
+export type ChainCallResponseDto =
+  | Omit<ChainStepResponse<'object'>, 'documentLogUuid' | 'providerLog'>
+  | Omit<ChainStepResponse<'text'>, 'documentLogUuid' | 'providerLog'>
+
+type ChainEventDtoResponse =
+  | Omit<ChainStepResponse<'object'>, 'providerLog'>
+  | Omit<ChainStepResponse<'text'>, 'providerLog'>
 
 export type ChainEventDto =
   | ProviderData
@@ -224,7 +227,7 @@ export type ChainEventDto =
     }
   | {
       type: ChainEventTypes.StepComplete
-      response: Omit<ChainStepResponse<StreamType>, 'providerLog'>
+      response: ChainEventDtoResponse
       uuid?: string
     }
   | {
@@ -232,7 +235,7 @@ export type ChainEventDto =
       config: Config
       messages?: Message[]
       object?: any
-      response: Omit<ChainStepResponse<StreamType>, 'providerLog'>
+      response: ChainEventDtoResponse
       uuid?: string
     }
   | {
