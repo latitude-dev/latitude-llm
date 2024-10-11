@@ -281,7 +281,7 @@ export default function DocumentEditor({
                   </Button>
                 }
                 copilot={
-                  workspace.id == 1 // Primitive feature flag
+                  workspace.id == 1 // Primitive feature flag, tmp
                     ? {
                         isLoading: isCopilotLoading,
                         requestSuggestion,
