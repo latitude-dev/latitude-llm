@@ -8,7 +8,7 @@ import { Factory } from 'hono/factory'
 import { streamSSE } from 'hono/streaming'
 import { z } from 'zod'
 
-import { chainEventPresenter } from '../../../projects/:projectId/versions/:versionUuid/documents/handlers/_shared'
+import { chainEventPresenter } from '../../../projects/[projectId]/versions/[versionUuid]/documents/handlers/_shared'
 
 const factory = new Factory()
 
