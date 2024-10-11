@@ -32,6 +32,12 @@ describe('createEvaluation', () => {
         type: EvaluationMetadataType.LlmAsJudge,
         configuration: {
           type: EvaluationResultableType.Number,
+          detail: {
+            range: {
+              from: 0,
+              to: 100,
+            },
+          },
         },
         metadata,
       })
@@ -62,17 +68,29 @@ describe('createEvaluation', () => {
         type: EvaluationMetadataType.LlmAsJudge,
         configuration: {
           type: EvaluationResultableType.Number,
+          detail: {
+            range: {
+              from: 0,
+              to: 100,
+            },
+          },
         },
         metadata,
       })
 
-      const evaluation = result.value!
+      const evaluation = result.unwrap()
       expect(evaluation).toEqual({
         ...evaluation,
         name,
         description,
         configuration: {
           type: EvaluationResultableType.Number,
+          detail: {
+            range: {
+              from: 0,
+              to: 100,
+            },
+          },
         },
         metadata: {
           ...evaluation.metadata,
@@ -184,5 +202,80 @@ ${metadata.prompt}
         expect(evaluation.metadata.templateId).toBe(template.id)
       }
     })
+  })
+
+  it('does not allow to create a number type evaluation without proper configuration', async () => {
+    const result = await createEvaluation({
+      workspace,
+      user,
+      name: 'Test Evaluation',
+      description: 'Test Description',
+      type: EvaluationMetadataType.LlmAsJudge,
+      configuration: {
+        type: EvaluationResultableType.Number,
+      },
+      metadata: {
+        prompt: 'miau',
+      },
+    })
+
+    expect(result.ok).toBe(false)
+    expect(result.error!.message).toContain(
+      'Range is required for number evaluations',
+    )
+  })
+
+  it('does not allow to create a number type evaluation with invalid range', async () => {
+    const result = await createEvaluation({
+      workspace,
+      user,
+      name: 'Test Evaluation',
+      description: 'Test Description',
+      type: EvaluationMetadataType.LlmAsJudge,
+      configuration: {
+        type: EvaluationResultableType.Number,
+        detail: {
+          range: {
+            from: 100,
+            to: 0,
+          },
+        },
+      },
+      metadata: {
+        prompt: 'miau',
+      },
+    })
+
+    expect(result.ok).toBe(false)
+    expect(result.error!.message).toContain(
+      'Invalid range to has to be greater than from',
+    )
+  })
+
+  it('should return an error when the range is of length 0', async () => {
+    const result = await createEvaluation({
+      workspace,
+      user,
+      name: 'Test Evaluation',
+      description: 'Test Description',
+      type: EvaluationMetadataType.LlmAsJudge,
+      configuration: {
+        type: EvaluationResultableType.Number,
+        detail: {
+          range: {
+            from: 0,
+            to: 0,
+          },
+        },
+      },
+      metadata: {
+        prompt: 'miau',
+      },
+    })
+
+    expect(result.ok).toBe(false)
+    expect(result.error!.message).toContain(
+      'Invalid range to has to be greater than from',
+    )
   })
 })

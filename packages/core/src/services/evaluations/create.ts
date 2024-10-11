@@ -1,5 +1,6 @@
 import {
   EvaluationMetadataType,
+  EvaluationResultableType,
   EvaluationResultConfiguration,
   findFirstModelForProvider,
   User,
@@ -63,6 +64,8 @@ ${meta.prompt}
         )
     }
 
+    validateConfiguration(configuration)
+
     const result = await tx
       .insert(evaluations)
       .values([
@@ -120,4 +123,19 @@ export async function importLlmAsJudgeEvaluation(
     },
     db,
   )
+}
+
+function validateConfiguration(config: EvaluationResultConfiguration) {
+  if (config.type === EvaluationResultableType.Number) {
+    if (!config.detail?.range) {
+      throw new BadRequestError('Range is required for number evaluations')
+    } else {
+      const { from, to } = config.detail.range
+      if (from >= to) {
+        throw new BadRequestError(
+          'Invalid range to has to be greater than from',
+        )
+      }
+    }
+  }
 }
