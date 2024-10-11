@@ -41,7 +41,7 @@ export default abstract class Repository<
     return Result.ok(result)
   }
 
-  async find(id: string | number) {
+  async find(id: string | number | undefined | null) {
     const result = await this.db
       .select()
       .from(this.scope)

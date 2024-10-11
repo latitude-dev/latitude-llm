@@ -24,9 +24,9 @@ export const evaluationResults = latitudeSchema.table(
     documentLogId: bigint('document_log_id', { mode: 'number' })
       .notNull()
       .references(() => documentLogs.id),
-    providerLogId: bigint('provider_log_id', { mode: 'number' })
-      .notNull()
-      .references(() => providerLogs.id),
+    providerLogId: bigint('provider_log_id', { mode: 'number' }).references(
+      () => providerLogs.id,
+    ),
     resultableType: evaluationResultTypes('resultable_type'),
     resultableId: bigint('resultable_id', { mode: 'number' }),
     source: logSourcesEnum('source'),

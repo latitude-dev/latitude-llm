@@ -519,6 +519,13 @@
       "when": 1728474096856,
       "tag": "0073_mute_changeling",
       "breakpoints": true
+    },
+    {
+      "idx": 74,
+      "version": "7",
+      "when": 1728640176282,
+      "tag": "0074_fantastic_wolfpack",
+      "breakpoints": true
     }
   ]
 }

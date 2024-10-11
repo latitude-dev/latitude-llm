@@ -295,7 +295,7 @@ export type SerializedEvaluationResult = Omit<
   'response'
 > & {
   resultableType: EvaluationResultableType
-  result: string | number | boolean
+  result: string | number | boolean | undefined
   reason: string | null
   evaluatedLog: SerializedDocumentLog
 }
