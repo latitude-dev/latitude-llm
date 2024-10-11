@@ -1,7 +1,7 @@
 'use server'
 
 import { unsafelyFindUserByEmail } from '@latitude-data/core/data-access'
-import { createMagicLinkToken } from '@latitude-data/core/services/magicLinkTokens/create'
+import { setSession } from '$/services/auth/setSession'
 import { ROUTES } from '$/services/routes'
 import setupService from '$/services/user/setupService'
 import { redirect } from 'next/navigation'
@@ -40,9 +40,14 @@ export const setupAction = errorHandlingProcedure
   )
   .handler(async ({ input }) => {
     const result = await setupService(input)
-    const { user } = result.unwrap()
+    const { workspace, user } = result.unwrap()
 
-    await createMagicLinkToken({ user: user }).then((r) => r.unwrap())
+    await setSession({
+      sessionData: {
+        user,
+        workspace,
+      },
+    })
 
-    redirect(ROUTES.auth.magicLinkSent(user.email))
+    redirect(ROUTES.root)
   })

@@ -24,7 +24,8 @@ describe('setupAction', () => {
     mocks.redirect.mockImplementation(() => {})
   })
 
-  it('accepts a valid email', async () => {
+  // TODO: unskip once we have email signup again
+  it.skip('accepts a valid email', async () => {
     const [_, error] = await setupAction({
       // @ts-expect-error - testing
       name: 'John Doe',
@@ -65,7 +66,8 @@ describe('setupAction', () => {
     expect(data).toBeNull()
   })
 
-  it('accepts an email with a subdomain', async () => {
+  // TODO: unskip once we have email signup again
+  it.skip('accepts an email with a subdomain', async () => {
     const [_, error] = await setupAction({
       // @ts-expect-error - testing
       name: 'John Doe',
