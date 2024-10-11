@@ -1,4 +1,12 @@
-import { and, desc, eq, getTableColumns, isNull, sql } from 'drizzle-orm'
+import {
+  and,
+  desc,
+  eq,
+  getTableColumns,
+  isNotNull,
+  isNull,
+  sql,
+} from 'drizzle-orm'
 
 import {
   Commit,
@@ -86,6 +94,8 @@ export class EvaluationResultsRepository extends Repository<
       .where(
         and(
           isNull(runErrors.id),
+          isNotNull(evaluationResults.resultableId),
+          isNotNull(evaluationResults.providerLogId),
           eq(evaluations.workspaceId, this.workspaceId),
         ),
       )

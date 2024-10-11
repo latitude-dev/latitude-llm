@@ -53,7 +53,7 @@ export default function useProviderLogs(
 }
 
 export function useProviderLog(
-  providerLogId?: number,
+  providerLogId?: number | null,
   opts?: SWRConfiguration,
 ) {
   const { toast } = useToast()

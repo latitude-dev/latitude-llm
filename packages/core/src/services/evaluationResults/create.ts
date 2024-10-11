@@ -19,51 +19,64 @@ import { evaluationResultableBooleans } from '../../schema/models/evaluationResu
 import { evaluationResultableNumbers } from '../../schema/models/evaluationResultableNumbers'
 import { evaluationResultableTexts } from '../../schema/models/evaluationResultableTexts'
 
+function getResultable(type: EvaluationResultableType) {
+  switch (type) {
+    case EvaluationResultableType.Boolean:
+      return evaluationResultableBooleans
+    case EvaluationResultableType.Number:
+      return evaluationResultableNumbers
+    case EvaluationResultableType.Text:
+      return evaluationResultableTexts
+    default:
+      return null
+  }
+}
+
 export type CreateEvaluationResultProps = {
   evaluation: Evaluation | EvaluationDto
   documentLog: DocumentLog
-  providerLog: ProviderLog
-  result: { result: number | string | boolean; reason: string }
+  providerLog?: ProviderLog
+  result: { result: number | string | boolean; reason: string } | undefined
 }
 
+type MaybeFailedEvaluationResultDto = Omit<EvaluationResultDto, 'result'> & {
+  result: EvaluationResultDto['result'] | undefined
+}
 export async function createEvaluationResult(
   { evaluation, documentLog, providerLog, result }: CreateEvaluationResultProps,
   db = database,
 ) {
-  return Transaction.call<EvaluationResultDto>(async (trx) => {
-    let table
-    switch (evaluation.configuration.type) {
-      case EvaluationResultableType.Boolean:
-        table = evaluationResultableBooleans
-        break
-      case EvaluationResultableType.Number:
-        table = evaluationResultableNumbers
-        break
-      case EvaluationResultableType.Text:
-        table = evaluationResultableTexts
-        break
-      default:
-        return Result.error(
-          new BadRequestError(
-            `Unsupported result type: ${evaluation.configuration.type}`,
-          ),
-        )
+  const resultableTable = getResultable(evaluation.configuration.type)
+
+  if (!resultableTable) {
+    return Result.error(
+      new BadRequestError(
+        `Unsupported result type: ${evaluation.configuration.type}`,
+      ),
+    )
+  }
+
+  let resultableId: number | undefined
+
+  return Transaction.call<MaybeFailedEvaluationResultDto>(async (trx) => {
+    // TODO: store the reason
+    if (result) {
+      const resultable = await trx
+        .insert(resultableTable)
+        .values({ result: result.result })
+        .returning()
+      resultableId = resultable[0]!.id
     }
 
-    // TODO: store the reason
-    const metadata = await trx
-      .insert(table)
-      .values({ result: result.result })
-      .returning()
     const inserts = await trx
       .insert(evaluationResults)
       .values({
         uuid: generateUUIDIdentifier(),
         evaluationId: evaluation.id,
         documentLogId: documentLog.id,
-        providerLogId: providerLog.id,
+        providerLogId: providerLog?.id,
         resultableType: evaluation.configuration.type,
-        resultableId: metadata[0]!.id,
+        resultableId,
         source: documentLog.source,
       })
       .returning()
@@ -82,7 +95,7 @@ export async function createEvaluationResult(
 
     return Result.ok({
       ...evaluationResult,
-      result: metadata[0]!.result,
+      result: result?.result,
     })
   }, db)
 }

@@ -25,6 +25,8 @@ export type IEvaluationResultData = {
     promptTokens: number
     completionTokens: number
   }[]
+  skipProviderLogCreation?: boolean
+  skipEvaluationResultCreation?: boolean
 }
 
 export async function createEvaluationResult({
@@ -32,6 +34,8 @@ export async function createEvaluationResult({
   evaluation,
   result,
   stepCosts,
+  skipProviderLogCreation = false,
+  skipEvaluationResultCreation = false,
 }: IEvaluationResultData) {
   const commit = await findCommitById({ id: documentLog.commitId }).then((r) =>
     r.unwrap(),
@@ -126,11 +130,15 @@ export async function createEvaluationResult({
   const evaluationResult = await createEvaluationResultService({
     evaluation,
     documentLog,
-    providerLog: providerLogs[providerLogs.length - 1]!,
-    result: {
-      result: mockedResponse,
-      reason: 'I do not even know to be honest.',
-    },
+    providerLog: skipProviderLogCreation
+      ? undefined
+      : providerLogs[providerLogs.length - 1]!,
+    result: skipEvaluationResultCreation
+      ? undefined
+      : {
+          result: mockedResponse,
+          reason: 'I do not even know to be honest.',
+        },
   })
 
   return {
