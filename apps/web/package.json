@@ -15,6 +15,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
+    "@intercom/messenger-js-sdk": "^0.0.14",
     "@latitude-data/compiler": "workspace:^",
     "@latitude-data/core": "workspace:*",
     "@latitude-data/env": "workspace:^",

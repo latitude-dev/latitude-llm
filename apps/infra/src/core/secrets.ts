@@ -83,6 +83,14 @@ export const copilotCodeSuggestionPromptPath = config.requireSecret(
   'COPILOT_CODE_SUGGESTION_PROMPT_PATH',
 )
 
+const supportAppId = createSecretWithVersion(
+  'SUPPORT_APP_ID',
+  'Support app ID for the support chat',
+)
+const supportAppSecretKey = createSecretWithVersion(
+  'SUPPORT_APP_SECRET_KEY',
+  'Support app secret key for the support chat',
+)
 export const mailerApiKeyArn = mailerApiKey.arn
 export const sentryDsnArn = sentryDsn.arn
 export const sentryOrgArn = sentryOrg.arn
@@ -95,5 +103,7 @@ export const workersWebsocketsSecretTokenArn = workersWebsocketsSecretToken.arn
 export const defaultProjectIdArn = defaultProjectId.arn
 export const defaultProviderApiKeyArn = defaultProviderApiKey.arn
 export const postHogApiKeyArn = postHogApiKey.arn
+export const supportAppIdArn = supportAppId.arn
+export const supportAppSecretKeyArn = supportAppSecretKey.arn
 export const datasetGeneratorWorkspaceApiKeyArn =
   datasetGeneratorWorkspaceApiKey.arn
