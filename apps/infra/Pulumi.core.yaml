@@ -1,11 +1,11 @@
 encryptionsalt: v1:K+dTqOgU40c=:v1:xzsAOOiJEEAsdCQ4:Oe7NKHjXdYdZrcrrBa1/0yolY5M3SQ==
 config:
+  infra:COPILOT_CODE_SUGGESTION_PROMPT_PATH:
+    secure: v1:b9j/sOqgFs3929X4:mrgW1HIfxZbT5dFEKXNZqluiDtk=
   infra:COPILOT_PROJECT_ID:
     secure: v1:GVbqlqtilIEdFp/C:tBlZldZFbejT/F/VnW1Kgm2o
   infra:COPILOT_REFINE_PROMPT_PATH:
     secure: v1:41ou43mQtWHrBPSL:MNeUE4SqiOOfmHQ4iopFczoGVhOxQg==
-  infra:COPILOT_CODE_SUGGESTION_PROMPT_PATH:
-    secure: v1:b9j/sOqgFs3929X4:mrgW1HIfxZbT5dFEKXNZqluiDtk=
   infra:DATABASE_PASSWORD:
     secure: v1:WABt/tJjfsAKMplU:RRLtj5mTu301x4sn2Tr91u4O0Msd3mWVJutcDg==
   infra:DATASET_GENERATOR_WORKSPACE_APIKEY:
@@ -30,6 +30,10 @@ config:
     secure: v1:QaB3bMtGrRV6Bt+k:EBKRt/xWV03dXUfBHq5RwpyTs7U4fuCJVAC6
   infra:SENTRY_PROJECT:
     secure: v1:NOZy0ukyyjhgKqnX:VReMqdgQSFzhKNGrASeE2mwp4Pa4y55ACDlQVSBkDVM=
+  infra:SUPPORT_APP_ID:
+    secure: v1:q+a+6iXkhwdSBr+t:vhsMzHeEfCBODZJdhwVZFQqwRVBocSP9
+  infra:SUPPORT_APP_SECRET_KEY:
+    secure: v1:o6kDtArZ+TIqOWyD:6vNg8McmFpNdpEMPV63sDA7a0fStvwYdyg54cvlosk2ZSE3uLpd0hQmNWJBZ4SV1VGgPmBR1JKA=
   infra:WEBSOCKET_REFRESH_SECRET_TOKEN_KEY:
     secure: v1:x47WaZoLqr3UFTTP:MspNcg9R4YGCMxGuU+xTMnUlQ0n71zyamcBOEvGC7NknJqP1sedqPh3f9j4PgsJ+cbN9sMkmup1PHx4uZ7B3UpmsUMZt2Ad4Zf3u2fV2I/wbuy8AdmXXc1Z1lODRi1Fyjr2jijNutHA=
   infra:WEBSOCKET_SECRET_TOKEN_KEY:

@@ -33,6 +33,8 @@ const postHogApiKeyArn = coreStack.requireOutput('postHogApiKeyArn')
 const datasetGeneratorWorkspaceApiKeyArn = coreStack.requireOutput(
   'datasetGeneratorWorkspaceApiKeyArn',
 )
+const supportAppIdArn = coreStack.requireOutput('supportAppIdArn')
+const supportAppSecretKeyArn = coreStack.requireOutput('supportAppSecretKeyArn')
 
 const getSecretString = (arn: pulumi.Output<any>) => {
   return arn.apply((secretId) =>
@@ -62,6 +64,8 @@ export const sentryOrg = getSecretString(sentryOrgArn)
 export const sentryProject = getSecretString(sentryProjectArn)
 export const defaultProviderApiKey = getSecretString(defaultProviderApiKeyArn)
 export const postHogApiKey = getSecretString(postHogApiKeyArn)
+export const supportAppId = getSecretString(supportAppIdArn)
+export const supportAppSecretKey = getSecretString(supportAppSecretKeyArn)
 export const datasetGeneratorWorkspaceApiKey = getSecretString(
   datasetGeneratorWorkspaceApiKeyArn,
 )
@@ -92,6 +96,8 @@ export const environment = pulumi
     copilotProjectId,
     copilotRefinePromptPath,
     copilotCodeSuggestionPromptPath,
+    supportAppId,
+    supportAppSecretKey,
   ])
   .apply(() => {
     return [
@@ -149,5 +155,7 @@ export const environment = pulumi
         name: 'COPILOT_CODE_SUGGESTION_PROMPT_PATH',
         value: copilotCodeSuggestionPromptPath,
       },
+      { name: 'SUPPORT_APP_ID', value: supportAppId },
+      { name: 'SUPPORT_APP_SECRET_KEY', value: supportAppSecretKey },
     ]
   })

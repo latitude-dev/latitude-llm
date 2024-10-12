@@ -34,6 +34,8 @@ services:
         - SENTRY_DSN=$SENTRY_DSN
         - NEXT_PUBLIC_POSTHOG_KEY=$NEXT_PUBLIC_POSTHOG_KEY
         - NEXT_PUBLIC_POSTHOG_HOST=$NEXT_PUBLIC_POSTHOG_HOST
+        - SUPPORT_APP_ID=$SUPPORT_APP_ID
+        - SUPPORT_APP_SECRET_KEY=$SUPPORT_APP_SECRET_KEY
     profiles: [building]
     ports:
       - '8080:8080'
@@ -64,6 +66,8 @@ services:
       - NEXT_PUBLIC_POSTHOG_HOST=''
       - DATASET_GENERATOR_DOCUMENT_PATH=generator
       - TEMPLATES_SUGGESTION_PROMPT_PATH=evaluation-suggestions
+      - SUPPORT_APP_ID=''
+      - SUPPORT_APP_SECRET_KEY=''
     depends_on:
       - db
       - redis
