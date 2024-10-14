@@ -32,7 +32,6 @@ import EditorHeader from '$/components/EditorHeader'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { useMetadata } from '$/hooks/useMetadata'
 import { ROUTES } from '$/services/routes'
-import useCurrentWorkspace from '$/stores/currentWorkspace'
 import useDocumentVersions from '$/stores/documentVersions'
 import useProviderApiKeys from '$/stores/providerApiKeys'
 import { useRouter } from 'next/navigation'
@@ -65,7 +64,6 @@ export default function DocumentEditor({
   providerApiKeys?: ProviderApiKey[]
   freeRunsCount?: number
 }) {
-  const { data: workspace } = useCurrentWorkspace()
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
   const router = useRouter()
@@ -254,7 +252,7 @@ export default function DocumentEditor({
               prompt={value}
               onChangePrompt={onChange}
               freeRunsCount={freeRunsCount}
-              showCopilotSetting={workspace.id == 1} // Primitive feature flag
+              showCopilotSetting
             />
             <Suspense fallback={<DocumentTextEditorFallback />}>
               <DocumentTextEditor
@@ -280,14 +278,10 @@ export default function DocumentEditor({
                     <Text.H6>Refine</Text.H6>
                   </Button>
                 }
-                copilot={
-                  workspace.id == 1 // Primitive feature flag, tmp
-                    ? {
-                        isLoading: isCopilotLoading,
-                        requestSuggestion,
-                      }
-                    : undefined
-                }
+                copilot={{
+                  isLoading: isCopilotLoading,
+                  requestSuggestion,
+                }}
               />
             </Suspense>
           </div>
