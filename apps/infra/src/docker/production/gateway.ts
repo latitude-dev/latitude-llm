@@ -4,7 +4,9 @@ import * as pulumi from '@pulumi/pulumi'
 
 import { resolve } from '../../shared'
 
-const gatewayProductionStack = new pulumi.StackReference('app-production-web')
+const gatewayProductionStack = new pulumi.StackReference(
+  'app-production-gateway',
+)
 const repo = gatewayProductionStack.requireOutput(
   'repo',
 ) as pulumi.Output<aws.ecr.Repository>
