@@ -1,5 +1,6 @@
 import { KeyboardEvent, useState } from 'react'
 
+import { cn } from '../../../../lib/utils'
 import { Button, TextArea } from '../../../atoms'
 
 export function CopilotSection({
@@ -24,7 +25,12 @@ export function CopilotSection({
     <div className='w-full px-2'>
       <div className='flex relative w-full rounded-md'>
         <TextArea
-          className='bg-background w-full px-2 pt-2 pb-14 resize-none text-sm'
+          className={cn(
+            'bg-background w-full px-2 pt-2 pb-14 resize-none text-sm',
+            {
+              'animate-pulse': isLoading,
+            },
+          )}
           disabled={isLoading}
           placeholder='Ask for changes or suggestions!'
           value={value}
@@ -35,7 +41,7 @@ export function CopilotSection({
         />
         <div className='absolute bottom-4 right-4 flex flex-row gap-2 items-center'>
           <Button fancy disabled={isLoading} onClick={handleSubmit}>
-            Submit
+            {isLoading ? 'Generating...' : 'Submit'}
           </Button>
         </div>
       </div>
