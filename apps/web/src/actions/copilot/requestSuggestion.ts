@@ -1,6 +1,6 @@
 'use server'
 
-import { ChainStepResponse } from '@latitude-data/core/browser'
+import { ChainStepResponse, PROVIDER_MODELS } from '@latitude-data/core/browser'
 import { BadRequestError } from '@latitude-data/core/lib/errors'
 import {
   DocumentVersionsRepository,
@@ -47,11 +47,13 @@ export const requestSuggestionAction = authProcedure
       .then((r) => r.unwrap())
 
     const providersScope = new ProviderApiKeysRepository(ctx.workspace.id)
-    const providers = await providersScope
-      .findAll()
-      .then((r) =>
-        r.unwrap().map((p) => ({ name: p.name, provider: p.provider })),
-      )
+    const providers = await providersScope.findAll().then((r) =>
+      r.unwrap().map((p) => ({
+        name: p.name,
+        provider: p.provider,
+        models: Object.values(PROVIDER_MODELS[p.provider]!),
+      })),
+    )
 
     const sdk = await createSdk({
       apiKey: env.DATASET_GENERATOR_WORKSPACE_APIKEY,
