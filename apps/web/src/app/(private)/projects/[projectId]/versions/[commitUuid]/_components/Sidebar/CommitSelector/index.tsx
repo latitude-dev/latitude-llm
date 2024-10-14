@@ -81,7 +81,7 @@ function CommitSelectorHeader({
           </Button>
         </div>
         <Text.H6 color='foregroundMuted'>
-          Versions allow you to stage changes ahead of release. {' '}
+          Versions allow you to stage changes ahead of release.{' '}
           <Text.H6 asChild color='accentForeground'>
             <a href={HELP_CENTER.commitVersions} target='_blank'>
               Learn more
