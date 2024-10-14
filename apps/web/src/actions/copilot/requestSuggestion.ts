@@ -2,7 +2,10 @@
 
 import { ChainStepResponse } from '@latitude-data/core/browser'
 import { BadRequestError } from '@latitude-data/core/lib/errors'
-import { DocumentVersionsRepository } from '@latitude-data/core/repositories'
+import {
+  DocumentVersionsRepository,
+  ProviderApiKeysRepository,
+} from '@latitude-data/core/repositories'
 import { env } from '@latitude-data/env'
 import { createSdk } from '$/app/(private)/_lib/createSdk'
 import { z } from 'zod'
@@ -43,6 +46,13 @@ export const requestSuggestionAction = authProcedure
       })
       .then((r) => r.unwrap())
 
+    const providersScope = new ProviderApiKeysRepository(ctx.workspace.id)
+    const providers = await providersScope
+      .findAll()
+      .then((r) =>
+        r.unwrap().map((p) => ({ name: p.name, provider: p.provider })),
+      )
+
     const sdk = await createSdk({
       apiKey: env.DATASET_GENERATOR_WORKSPACE_APIKEY,
       projectId: env.COPILOT_PROJECT_ID,
@@ -52,6 +62,7 @@ export const requestSuggestionAction = authProcedure
       parameters: {
         prompt: document.content,
         request,
+        providers,
       },
     })
 
