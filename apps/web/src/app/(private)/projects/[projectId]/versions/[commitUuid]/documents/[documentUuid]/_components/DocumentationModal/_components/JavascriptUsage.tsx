@@ -63,7 +63,7 @@ const result = await sdk.run('${documentPath}'${getRunOptions() ? `, ${getRunOpt
         Check out{' '}
         <a
           target='_blank'
-          className='text-primary underline'
+          className='text-primary-foreground underline'
           href='https://docs.latitude.so'
         >
           our docs

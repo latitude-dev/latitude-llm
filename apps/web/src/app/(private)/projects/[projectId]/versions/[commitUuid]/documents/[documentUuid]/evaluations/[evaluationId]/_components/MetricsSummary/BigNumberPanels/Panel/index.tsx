@@ -46,7 +46,7 @@ export default function Panel({
         </div>
       }
     >
-      <Text.H5 color='white'>{additionalInfo}</Text.H5>
+      <Text.H5 color='foreground'>{additionalInfo}</Text.H5>
     </Tooltip>
   )
 }

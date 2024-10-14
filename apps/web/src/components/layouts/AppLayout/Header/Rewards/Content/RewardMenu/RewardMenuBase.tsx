@@ -102,8 +102,8 @@ export function RewardMenuBase({
             step.links.map((link, idx) => (
               <Link href={link.href} key={idx}>
                 <Button variant='link' className='p-0'>
-                  <Text.H5 color='primary'>{link.text}</Text.H5>
-                  <Icon color='primary' name='externalLink' />
+                  <Text.H5 color='accentForeground'>{link.text}</Text.H5>
+                  <Icon color='accentForeground' name='externalLink' />
                 </Button>
               </Link>
             ))}

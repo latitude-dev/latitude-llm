@@ -264,9 +264,9 @@ export default function EditorHeader({
               You have consumed{' '}
               <Tooltip
                 trigger={
-                  <strong className='text-primary'>
+                  <Text.H6M color='accentForeground'>
                     {freeRunsCount} of 100 daily free runs.
-                  </strong>
+                  </Text.H6M>
                 }
               >
                 We include the Latitude provider by default with 100 free runs
@@ -287,7 +287,9 @@ export default function EditorHeader({
               This provider has a limit of{' '}
               <Tooltip
                 trigger={
-                  <strong className='text-primary'>100 daily free runs.</strong>
+                  <Text.H6M color='accentForeground'>
+                    100 daily free runs.
+                  </Text.H6M>
                 }
               >
                 We include the Latitude provider by default with 100 free runs

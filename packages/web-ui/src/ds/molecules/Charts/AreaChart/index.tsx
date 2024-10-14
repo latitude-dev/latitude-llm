@@ -25,7 +25,7 @@ export function AreaChart({ config }: { config: AreaChartConfig }) {
   }>({ width: 0, height: 0 })
 
   const color = useMemo(
-    () => config.color ?? 'rgb(var(--primary))',
+    () => config.color ?? 'hsl(var(--primary))',
     [config.color],
   )
 

@@ -24,7 +24,7 @@ const Tabs: React.FC<{
           key={tab.id}
           className={`px-4 py-2 text-sm font-medium ${
             activeTab === tab.id
-              ? 'border-b-2 border-primary text-primary'
+              ? 'border-b-2 border-primary text-primary-foreground'
               : 'text-muted-foreground'
           }`}
           onClick={() => onChange(tab.id)}
