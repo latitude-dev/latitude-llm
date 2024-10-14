@@ -13,6 +13,10 @@ export const errorCodeEnum = latitudeSchema.enum('run_error_code_enum', [
   RunErrorCodes.AIRunError,
   RunErrorCodes.UnsupportedProviderResponseTypeError,
   RunErrorCodes.AIProviderConfigError,
+  RunErrorCodes.EvaluationRunMissingProviderLogError,
+  RunErrorCodes.EvaluationRunMissingWorkspaceError,
+  RunErrorCodes.EvaluationRunUnsupportedResultTypeError,
+  RunErrorCodes.EvaluationRunResponseJsonFormatError,
 ])
 
 export const runErrorEntities = latitudeSchema.enum('run_error_entity_enum', [
