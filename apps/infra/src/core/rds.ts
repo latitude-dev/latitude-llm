@@ -54,7 +54,7 @@ const dbPasswordSecretVersion = new aws.secretsmanager.SecretVersion(
 const db = new aws.rds.Instance('latitude-llm-db', {
   engine: 'postgres',
   engineVersion: '15.8',
-  instanceClass: 'db.t3.small',
+  instanceClass: 'db.t3.micro',
   allocatedStorage: 20,
   dbName: DATABASE_NAME,
   backupRetentionPeriod: 14,
