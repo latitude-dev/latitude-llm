@@ -89,6 +89,10 @@ export enum RunErrorCodes {
   AIRunError = 'ai_run_error',
   UnsupportedProviderResponseTypeError = 'unsupported_provider_response_type_error',
   AIProviderConfigError = 'ai_provider_config_error',
+  EvaluationRunMissingProviderLogError = 'ev_run_missing_provider_log_error',
+  EvaluationRunMissingWorkspaceError = 'ev_run_missing_workspace_error',
+  EvaluationRunUnsupportedResultTypeError = 'ev_run_unsupported_result_type_error',
+  EvaluationRunResponseJsonFormatError = 'ev_run_response_json_format_error',
 }
 
 export type RunErrorDetails<C extends RunErrorCodes> =
