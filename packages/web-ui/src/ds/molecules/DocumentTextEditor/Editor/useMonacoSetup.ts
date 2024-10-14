@@ -24,6 +24,8 @@ export function useMonacoSetup() {
       colors: {
         'editor.background': colorFromProperty('--secondary-rgb'),
         'editor.foreground': colorFromProperty('--foreground-rgb'),
+        'editorLineNumber.activeForeground': colorFromProperty('--foreground-rgb'),
+        'editorCursor.foreground': colorFromProperty('--foreground-rgb'),
       },
     })
   }, [])

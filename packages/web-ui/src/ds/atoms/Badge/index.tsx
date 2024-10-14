@@ -27,7 +27,7 @@ const badgeVariants = cva(
         outline: 'text-foreground',
       },
       shape: {
-        default: 'px-2 py-0.5',
+        default: 'max-h-5 py-2 px-[6px]',
         square: 'max-h-5 py-2 px-[6px]',
       },
     },

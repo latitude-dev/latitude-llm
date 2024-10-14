@@ -39,8 +39,8 @@ export default {
           foreground: 'hsl(var(--destructive-foreground) / <alpha-value>)',
         },
         success: {
-          DEFAULT: 'rgb(var(--success) / <alpha-value>)',
-          foreground: 'rgb(var(--success-foreground) / <alpha-value>)',
+          DEFAULT: 'hsl(var(--success) / <alpha-value>)',
+          foreground: 'hsl(var(--success-foreground) / <alpha-value>)',
         },
         'destructive-muted-foreground':
           'hsl(var(--destructive-muted-foreground) / <alpha-value>)',
