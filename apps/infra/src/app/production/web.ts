@@ -144,7 +144,7 @@ const ecsService = new aws.ecs.Service(
     taskDefinition: taskDefinition.arn,
     desiredCount: 2,
     launchType: 'FARGATE',
-    forceNewDeployment: true,
+    forceNewDeployment: false,
     enableExecuteCommand: true,
     deploymentController: {
       type: 'CODE_DEPLOY',
@@ -175,7 +175,7 @@ const codeDeployApp = new aws.codedeploy.Application(
   },
 )
 
-const codeDeployServiceRole = new aws.iam.Role('codeDeployServiceRole', {
+export const codeDeployServiceRole = new aws.iam.Role('codeDeployServiceRole', {
   assumeRolePolicy: JSON.stringify({
     Version: '2012-10-17',
     Statement: [
