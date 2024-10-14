@@ -116,7 +116,7 @@ jobs:
           appspec_content=$(cat appspec.yml | jq -Rs .)
           aws deploy create-deployment \
             --application-name LatitudeLLMCodeDeployGateway \
-            --deployment-group-name LatitudeLLMDeploymentGroup \
+            --deployment-group-name LatitudeLLMGatewayDeploymentGroup \
             --revision "{\"revisionType\": \"AppSpecContent\", \"appSpecContent\": {\"content\": $appspec_content}}"
 
 concurrency:
