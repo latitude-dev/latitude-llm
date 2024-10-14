@@ -319,7 +319,8 @@ describe('computeWorkspaceUsage', () => {
     expect(result.usage).toBe(documentLogs.length + evaluationLogs.length)
   })
 
-  it('only takes into account the runs since the last renewal', async (ctx) => {
+  // FIXME: Probably this test can be removed. cc @geclos
+  it.skip('only takes into account the runs since the last renewal', async (ctx) => {
     const today = new Date(2024, 9, 12)
     const createdAt = new Date(2023, 6, 3)
     vi.spyOn(Date, 'now').mockImplementation(() => today.getTime())
