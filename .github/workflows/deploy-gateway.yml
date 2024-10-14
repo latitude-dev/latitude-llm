@@ -34,8 +34,8 @@ jobs:
             echo "changes_detected=false" >> $GITHUB_OUTPUT
           fi
   deployment:
-    needs: check_changes
-    if: needs.check_changes.outputs.changes_detected == 'true'
+    # TODO: uncomment
+    # needs: check_changes
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
