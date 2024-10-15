@@ -4,6 +4,7 @@ import { ProviderApiKey, User } from '../../browser'
 import {
   EvaluationMetadataType,
   EvaluationResultableType,
+  Providers,
 } from '../../constants'
 import * as factories from '../../tests/factories'
 import { createEvaluation } from './create'
@@ -19,16 +20,121 @@ describe('createEvaluation', () => {
     user = setup.userData
   })
 
-  describe('without existing provider', () => {
-    it('creates the evaluation without the frontmatter if no provider is found', async () => {
-      const name = 'Test Evaluation'
-      const description = 'Test Description'
-      const metadata = { prompt: 'Test prompt' }
-      const result = await createEvaluation({
-        user,
+  it('should throw an error when no provider API key is found', async () => {
+    const result = await createEvaluation({
+      workspace: workspace,
+      user,
+      name: 'Test Evaluation',
+      description: 'Test Description',
+      type: EvaluationMetadataType.LlmAsJudge,
+      configuration: {
+        type: EvaluationResultableType.Text,
+        detail: {
+          range: {
+            from: 0,
+            to: 100,
+          },
+        },
+      },
+      metadata: {
+        prompt: 'miau',
+      },
+    })
+
+    expect(result.ok).toBe(false)
+    expect(result.error!.message).toContain(
+      'In order to create an evaluation you need to first create a provider API key',
+    )
+  })
+
+  describe('with provider from unsupported type', () => {
+    beforeEach(async () => {
+      provider = await factories.createProviderApiKey({
         workspace,
-        name,
-        description,
+        user,
+        name: 'Test Provider',
+        type: Providers.Groq,
+      })
+    })
+
+    it('should fail because the provider is not supported', async () => {
+      const result = await createEvaluation({
+        workspace,
+        user,
+        name: 'Test Evaluation',
+        description: 'Test Description',
+        type: EvaluationMetadataType.LlmAsJudge,
+        configuration: {
+          type: EvaluationResultableType.Text,
+          detail: {
+            range: {
+              from: 0,
+              to: 100,
+            },
+          },
+        },
+        metadata: {
+          prompt: 'miau',
+        },
+      })
+
+      expect(result.ok).toBe(false)
+      expect(result.error!.message).toContain(
+        'In order to create an evaluation you need to first create a provider API key from OpenAI or Anthropic',
+      )
+    })
+  })
+
+  describe('with OpenAI provider', () => {
+    beforeEach(async () => {
+      provider = await factories.createProviderApiKey({
+        workspace,
+        user,
+        name: 'Test Provider',
+        type: Providers.OpenAI,
+      })
+    })
+    it('creates an LLM as Judge evaluation with text configuration', async () => {
+      const result = await createEvaluation({
+        workspace,
+        user,
+        name: 'Test Evaluation',
+        description: 'Test Description',
+        type: EvaluationMetadataType.LlmAsJudge,
+        configuration: {
+          type: EvaluationResultableType.Text,
+          detail: {
+            range: {
+              from: 0,
+              to: 100,
+            },
+          },
+        },
+        metadata: {
+          prompt: 'miau',
+        },
+      })
+
+      expect(result.ok).toBe(true)
+    })
+  })
+
+  describe('with Anthropic provider', () => {
+    beforeEach(async () => {
+      provider = await factories.createProviderApiKey({
+        workspace,
+        user,
+        name: 'Test Provider',
+        type: Providers.Anthropic,
+      })
+    })
+
+    it('creates an LLM as Judge evaluation with number configuration', async () => {
+      const result = await createEvaluation({
+        workspace,
+        user,
+        name: 'Test Evaluation',
+        description: 'Test Description',
         type: EvaluationMetadataType.LlmAsJudge,
         configuration: {
           type: EvaluationResultableType.Number,
@@ -39,11 +145,12 @@ describe('createEvaluation', () => {
             },
           },
         },
-        metadata,
+        metadata: {
+          prompt: 'miau',
+        },
       })
 
       expect(result.ok).toBe(true)
-      expect(result.unwrap().metadata.prompt).toBe(metadata.prompt)
     })
   })
 
@@ -202,80 +309,80 @@ ${metadata.prompt}
         expect(evaluation.metadata.templateId).toBe(template.id)
       }
     })
-  })
 
-  it('does not allow to create a number type evaluation without proper configuration', async () => {
-    const result = await createEvaluation({
-      workspace,
-      user,
-      name: 'Test Evaluation',
-      description: 'Test Description',
-      type: EvaluationMetadataType.LlmAsJudge,
-      configuration: {
-        type: EvaluationResultableType.Number,
-      },
-      metadata: {
-        prompt: 'miau',
-      },
+    it('does not allow to create a number type evaluation without proper configuration', async () => {
+      const result = await createEvaluation({
+        workspace,
+        user,
+        name: 'Test Evaluation',
+        description: 'Test Description',
+        type: EvaluationMetadataType.LlmAsJudge,
+        configuration: {
+          type: EvaluationResultableType.Number,
+        },
+        metadata: {
+          prompt: 'miau',
+        },
+      })
+
+      expect(result.ok).toBe(false)
+      expect(result.error!.message).toContain(
+        'Range is required for number evaluations',
+      )
     })
 
-    expect(result.ok).toBe(false)
-    expect(result.error!.message).toContain(
-      'Range is required for number evaluations',
-    )
-  })
-
-  it('does not allow to create a number type evaluation with invalid range', async () => {
-    const result = await createEvaluation({
-      workspace,
-      user,
-      name: 'Test Evaluation',
-      description: 'Test Description',
-      type: EvaluationMetadataType.LlmAsJudge,
-      configuration: {
-        type: EvaluationResultableType.Number,
-        detail: {
-          range: {
-            from: 100,
-            to: 0,
+    it('does not allow to create a number type evaluation with invalid range', async () => {
+      const result = await createEvaluation({
+        workspace,
+        user,
+        name: 'Test Evaluation',
+        description: 'Test Description',
+        type: EvaluationMetadataType.LlmAsJudge,
+        configuration: {
+          type: EvaluationResultableType.Number,
+          detail: {
+            range: {
+              from: 100,
+              to: 0,
+            },
           },
         },
-      },
-      metadata: {
-        prompt: 'miau',
-      },
+        metadata: {
+          prompt: 'miau',
+        },
+      })
+
+      expect(result.ok).toBe(false)
+      expect(result.error!.message).toContain(
+        'Invalid range to has to be greater than from',
+      )
     })
 
-    expect(result.ok).toBe(false)
-    expect(result.error!.message).toContain(
-      'Invalid range to has to be greater than from',
-    )
-  })
-
-  it('should return an error when the range is of length 0', async () => {
-    const result = await createEvaluation({
-      workspace,
-      user,
-      name: 'Test Evaluation',
-      description: 'Test Description',
-      type: EvaluationMetadataType.LlmAsJudge,
-      configuration: {
-        type: EvaluationResultableType.Number,
-        detail: {
-          range: {
-            from: 0,
-            to: 0,
+    it('should return an error when the range is of length 0', async () => {
+      const result = await createEvaluation({
+        workspace,
+        user,
+        name: 'Test Evaluation',
+        description: 'Test Description',
+        type: EvaluationMetadataType.LlmAsJudge,
+        configuration: {
+          type: EvaluationResultableType.Number,
+          detail: {
+            range: {
+              from: 0,
+              to: 0,
+            },
           },
         },
-      },
-      metadata: {
-        prompt: 'miau',
-      },
-    })
+        metadata: {
+          prompt: 'miau',
+        },
+      })
 
-    expect(result.ok).toBe(false)
-    expect(result.error!.message).toContain(
-      'Invalid range to has to be greater than from',
-    )
+      expect(result.ok).toBe(false)
+      expect(result.error!.message).toContain(
+        'Invalid range to has to be greater than from',
+      )
+    })
   })
 })

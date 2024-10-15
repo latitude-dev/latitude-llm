@@ -1,3 +1,4 @@
+import { env } from '@latitude-data/env'
 import { eq } from 'drizzle-orm'
 import { DatabaseError } from 'pg'
 
@@ -11,10 +12,16 @@ import {
 } from '../../lib'
 import { providerApiKeys } from '../../schema'
 
-export function destroyProviderApiKey(
+export async function destroyProviderApiKey(
   providerApiKey: ProviderApiKey,
   db = database,
 ) {
+  if (providerApiKey.token === env.DEFAULT_PROVIDER_API_KEY) {
+    return Result.error(
+      new BadRequestError('Cannot delete the default provider API key'),
+    )
+  }
+
   return Transaction.call(async (tx) => {
     try {
       const result = await tx
