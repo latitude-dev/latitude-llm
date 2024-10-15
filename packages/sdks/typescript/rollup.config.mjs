@@ -44,6 +44,24 @@ const config = [
   },
   {
     input: 'src/index.ts',
+    output: {
+      file: 'dist/index.cjs',
+      format: 'cjs',
+      sourcemap: true,
+    },
+    plugins: [
+      typescript({
+        exclude: ['**/__tests__', '**/*.test.ts'],
+      }),
+      replace({
+        'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV),
+        preventAssignment: true,
+      }),
+    ],
+    external: EXTERNALS,
+  },
+  {
+    input: 'src/index.ts',
     output: [{ file: 'dist/index.d.ts', format: 'es' }],
     plugins: [alias(aliasEntries), dts()],
     external: EXTERNALS,
