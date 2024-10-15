@@ -19,7 +19,7 @@ export function SelectableCard({
         'relative p-2 flex flex-row gap-1 items-start cursor-pointer rounded-lg border',
         {
           'bg-primary/10 border-primary/20': selected,
-          'hover:bg-muted border-border': !selected,
+          'hover:bg-secondary border-border': !selected,
         },
       )}
       onClick={onClick}

@@ -162,19 +162,21 @@ export default function ConnectionEvaluationModal({
             </Link>
           }
           table={
-            <div className='flex space-x-4'>
-              {isLoadingList ? (
-                <LoadingEvaluationList />
-              ) : (
-                <EvaluationList
-                  items={filteredItems}
-                  selectedItem={selectedItem}
-                  onSelectItem={handleSelectItem}
-                  searchTerm={searchTerm}
-                  onSearchChange={setSearchTerm}
-                />
-              )}
-              <EvaluationEditor items={item ? [item] : []} />
+            <div className='flex flex-col gap-4'>
+              <div className='flex space-x-4'>
+                {isLoadingList ? (
+                  <LoadingEvaluationList />
+                ) : (
+                  <EvaluationList
+                    items={filteredItems}
+                    selectedItem={selectedItem}
+                    onSelectItem={handleSelectItem}
+                    searchTerm={searchTerm}
+                    onSearchChange={setSearchTerm}
+                  />
+                )}
+                <EvaluationEditor items={item ? [item] : []} />
+              </div>
             </div>
           }
         />
