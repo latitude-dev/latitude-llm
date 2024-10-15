@@ -2,6 +2,7 @@ import { and, desc, eq } from 'drizzle-orm'
 
 import { Commit, Evaluation } from '../../browser'
 import { database } from '../../client'
+import { EvaluationResultsWithErrorsRepository } from '../../repositories'
 import {
   createEvaluationResultQuery,
   getCommitFilter,
@@ -22,7 +23,13 @@ export function computeEvaluationResultsWithMetadataQuery(
   db = database,
 ) {
   const { evaluationResultsScope, documentLogsScope, baseQuery } =
-    createEvaluationResultQuery(workspaceId, db)
+    createEvaluationResultQuery(
+      {
+        workspaceId,
+        EvaluationResultsRepositoryKlass: EvaluationResultsWithErrorsRepository,
+      },
+      db,
+    )
   return baseQuery
     .where(
       and(

@@ -20,6 +20,7 @@ type EvaluationRunErrorCheckerCodes =
   | RunErrorCodes.EvaluationRunMissingProviderLogError
   | RunErrorCodes.EvaluationRunMissingWorkspaceError
   | RunErrorCodes.EvaluationRunUnsupportedResultTypeError
+  | RunErrorCodes.ChainCompileError
   | RunErrorCodes.Unknown
 
 function getResultSchema(type: EvaluationResultableType) {
@@ -115,14 +116,24 @@ export class EvaluationRunChecker {
       return Result.error(error)
     }
 
-    return Result.ok(
-      createChainFn({
-        prompt: this.evaluation.metadata.prompt,
-        parameters: {
-          ...serializedDocumentLogResult.value,
-        },
-      }),
-    )
+    try {
+      return Result.ok(
+        createChainFn({
+          prompt: this.evaluation.metadata.prompt,
+          parameters: {
+            ...serializedDocumentLogResult.value,
+          },
+        }),
+      )
+    } catch (e) {
+      const error = e as Error
+      return Result.error(
+        new ChainError({
+          code: RunErrorCodes.ChainCompileError,
+          message: error.message,
+        }),
+      )
+    }
   }
 
   async findWorkspace() {

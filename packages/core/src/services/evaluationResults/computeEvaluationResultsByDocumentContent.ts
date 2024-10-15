@@ -3,7 +3,10 @@ import { and, desc, eq, or } from 'drizzle-orm'
 import { Commit, Evaluation } from '../../browser'
 import { database } from '../../client'
 import { hashContent, paginateQuery, Result } from '../../lib'
-import { DocumentVersionsRepository } from '../../repositories'
+import {
+  DocumentVersionsRepository,
+  EvaluationResultsRepository,
+} from '../../repositories'
 import { commits } from '../../schema'
 import { getResolvedContent } from '../documents'
 import { createEvaluationResultQuery } from './_createEvaluationResultQuery'
@@ -42,7 +45,13 @@ export async function computeEvaluationResultsByDocumentContent(
   const resolvedContent = resolvedContentResult.unwrap()
 
   const { evaluationResultsScope, documentLogsScope, baseQuery } =
-    createEvaluationResultQuery(workspaceId, db)
+    createEvaluationResultQuery(
+      {
+        workspaceId,
+        EvaluationResultsRepositoryKlass: EvaluationResultsRepository,
+      },
+      db,
+    )
 
   const query = baseQuery
     .where(

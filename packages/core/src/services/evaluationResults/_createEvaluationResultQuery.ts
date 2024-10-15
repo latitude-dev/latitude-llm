@@ -2,15 +2,24 @@ import { eq, isNotNull, or, sum } from 'drizzle-orm'
 
 import { Commit } from '../../browser'
 import { database } from '../../client'
+import { EvaluationResultsWithErrorsRepository } from '../../repositories'
 import { DocumentLogsRepository } from '../../repositories/documentLogsRepository'
 import { EvaluationResultsRepository } from '../../repositories/evaluationResultsRepository'
 import { commits, providerLogs } from '../../schema'
 
 export function createEvaluationResultQuery(
-  workspaceId: number,
+  {
+    workspaceId,
+    EvaluationResultsRepositoryKlass,
+  }: {
+    workspaceId: number
+    EvaluationResultsRepositoryKlass:
+    | typeof EvaluationResultsRepository
+    | typeof EvaluationResultsWithErrorsRepository
+  },
   db = database,
 ) {
-  const { scope: evaluationResultsScope } = new EvaluationResultsRepository(
+  const { scope: evaluationResultsScope } = new EvaluationResultsRepositoryKlass(
     workspaceId,
     db,
   )
@@ -28,7 +37,7 @@ export function createEvaluationResultQuery(
         .as('cost_in_millicents'),
     })
     .from(evaluationResultsScope)
-    .innerJoin(
+    .leftJoin(
       providerLogs,
       eq(providerLogs.id, evaluationResultsScope.providerLogId),
     )

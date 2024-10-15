@@ -9,7 +9,10 @@ import {
   evaluations,
   runErrors,
 } from '../../../schema'
-import { evaluationResultDto } from '../../evaluationResultsRepository'
+import {
+  evaluationResultDto,
+  EvaluationResultWithMetadata,
+} from '../../evaluationResultsRepository'
 import Repository from '../../repository'
 
 export const ERROR_SELECT = {
@@ -24,6 +27,14 @@ const evaluationResultDtoWithErrors = {
 }
 
 type EvaluationResultDtoWithErrors = typeof evaluationResultDtoWithErrors
+export type EvaluationResultWithMetadataAndErrors =
+  EvaluationResultWithMetadata & {
+    error: {
+      code: string
+      message: string
+      details: string
+    }
+  }
 
 export class EvaluationResultsWithErrorsRepository extends Repository<
   typeof evaluationResultDtoWithErrors,

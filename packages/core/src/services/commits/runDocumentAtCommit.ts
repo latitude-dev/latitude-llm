@@ -38,6 +38,7 @@ export async function runDocumentAtCommit({
 
   if (result.error) return result
 
+  // FIXME: Create chain can fail. Handle it and create error
   const chain = createChain({ prompt: result.value, parameters })
 
   const run = await runChain({
@@ -47,43 +48,35 @@ export async function runDocumentAtCommit({
     providersMap,
     source,
   })
-  const { stream, response, duration, resolvedContent, errorableUuid } = run
+  const { response, duration, resolvedContent, errorableUuid } = run
 
-  return Result.ok({
-    stream,
-    duration,
-    resolvedContent: result.value,
-    documentLogUuid: errorableUuid,
-    response: response.then(async (response) => {
-      if (!response) return
-
-      publisher.publishLater({
-        type: 'documentRun',
-        data: {
-          workspaceId: workspace.id,
-          projectId: commit.projectId,
-          documentUuid: document.documentUuid,
-          commitUuid: commit.uuid,
-          documentLogUuid: errorableUuid,
-          response,
-          resolvedContent,
-          parameters,
-          duration: await duration,
-          source,
-        },
-      })
-
-      return createDocumentLog({
-        commit,
-        data: {
-          documentUuid: document.documentUuid,
-          duration: await duration,
-          parameters,
-          resolvedContent,
-          uuid: errorableUuid,
-          source,
-        },
-      }).then((r) => r.unwrap())
-    }),
+  publisher.publishLater({
+    type: 'documentRun',
+    data: {
+      workspaceId: workspace.id,
+      projectId: commit.projectId,
+      documentUuid: document.documentUuid,
+      commitUuid: commit.uuid,
+      documentLogUuid: errorableUuid,
+      response,
+      resolvedContent,
+      parameters,
+      duration: await duration,
+      source,
+    },
   })
+
+  await createDocumentLog({
+    commit,
+    data: {
+      documentUuid: document.documentUuid,
+      duration: await duration,
+      parameters,
+      resolvedContent,
+      uuid: errorableUuid,
+      source,
+    },
+  }).then((r) => r.unwrap())
+
+  return Result.ok(run)
 }

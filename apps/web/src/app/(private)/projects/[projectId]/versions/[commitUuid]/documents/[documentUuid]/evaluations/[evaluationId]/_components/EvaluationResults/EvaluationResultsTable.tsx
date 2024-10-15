@@ -5,7 +5,10 @@ import {
   EvaluationResultableType,
 } from '@latitude-data/core/browser'
 import { IPagination } from '@latitude-data/core/lib/pagination/buildPagination'
-import { EvaluationResultWithMetadata } from '@latitude-data/core/repositories'
+import {
+  EvaluationResultWithMetadata,
+  EvaluationResultWithMetadataAndErrors,
+} from '@latitude-data/core/repositories'
 import {
   Badge,
   cn,
@@ -56,7 +59,7 @@ export const ResultCellContent = ({
   return <Text.H4 noWrap>{value as string}</Text.H4>
 }
 
-export type EvaluationResultRow = EvaluationResultWithMetadata & {
+export type EvaluationResultRow = EvaluationResultWithMetadataAndErrors & {
   realtimeAdded?: boolean
 }
 export const EvaluationResultsTable = ({
@@ -70,7 +73,9 @@ export const EvaluationResultsTable = ({
   pagination: IPagination
   evaluationResults: EvaluationResultRow[]
   selectedResult: EvaluationResultRow | undefined
-  setSelectedResult: (log: EvaluationResultWithMetadata | undefined) => void
+  setSelectedResult: (
+    log: EvaluationResultWithMetadataAndErrors | undefined,
+  ) => void
 }) => {
   return (
     <Table
@@ -144,18 +149,26 @@ export const EvaluationResultsTable = ({
               </Text.H5>
             </TableCell>
             <TableCell>
-              <ResultCellContent
-                evaluation={evaluation}
-                value={evaluationResult.result}
-              />
+              {evaluationResult.result !== null ? (
+                <ResultCellContent
+                  evaluation={evaluation}
+                  value={evaluationResult.result}
+                />
+              ) : evaluationResult.error ? (
+                <Badge variant='destructive'>Error</Badge>
+              ) : (
+                '-'
+              )}
             </TableCell>
             <TableCell>
               <Text.H5 noWrap>
-                {formatCostInMillicents(evaluationResult.costInMillicents || 0)}
+                {typeof evaluationResult.costInMillicents === 'number'
+                  ? formatCostInMillicents(evaluationResult.costInMillicents)
+                  : '-'}
               </Text.H5>
             </TableCell>
             <TableCell>
-              <Text.H5 noWrap>{evaluationResult.tokens}</Text.H5>
+              <Text.H5 noWrap>{evaluationResult.tokens ?? '-'}</Text.H5>
             </TableCell>
           </TableRow>
         ))}
