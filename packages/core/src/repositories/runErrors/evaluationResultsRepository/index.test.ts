@@ -144,17 +144,19 @@ describe('EvaluationResultsRepository', () => {
       const data = results.unwrap()
       expect(results.ok).toBe(true)
       expect(data.length).toBe(1)
-      expect(data[0]).toEqual(expect.objectContaining({
-        error: {
-          code: RunErrorCodes.Unknown,
-          message: 'Error message',
-          details: null
-        },
-        evaluationId: evaluation.id,
-        documentLogId: documentLog.id,
-        resultableId: null,
-        resultableType: null
-      }))
+      expect(data[0]).toEqual(
+        expect.objectContaining({
+          error: {
+            code: RunErrorCodes.Unknown,
+            message: 'Error message',
+            details: null,
+          },
+          evaluationId: evaluation.id,
+          documentLogId: documentLog.id,
+          resultableId: null,
+          resultableType: null,
+        }),
+      )
     })
 
     it('does return evaluation results with out errors', async () => {

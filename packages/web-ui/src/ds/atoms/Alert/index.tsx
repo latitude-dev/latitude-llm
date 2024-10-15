@@ -16,7 +16,13 @@ type Props = {
   cta?: ReactNode
   showIcon?: boolean
 }
-export function Alert({ title, description, cta, showIcon = true, variant = 'default' }: Props) {
+export function Alert({
+  title,
+  description,
+  cta,
+  showIcon = true,
+  variant = 'default',
+}: Props) {
   return (
     <AlertRoot variant={variant}>
       {showIcon && <Icon name='alert' />}

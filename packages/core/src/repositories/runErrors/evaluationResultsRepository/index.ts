@@ -1,13 +1,12 @@
 import { and, eq, sql } from 'drizzle-orm'
 
-import { ErrorableEntity, EvaluationResultableType, RunErrorCodes } from '../../../browser'
+import { ErrorableEntity, EvaluationResultableType } from '../../../browser'
 import {
   evaluationResultableBooleans,
   evaluationResultableNumbers,
   evaluationResultableTexts,
   evaluationResults,
   evaluations,
-  RunErrorDetails,
   runErrors,
 } from '../../../schema'
 import {
@@ -27,19 +26,18 @@ const evaluationResultDtoWithErrors = {
   error: ERROR_SELECT,
 }
 
-type EvaluationResultDtoWithErrors = typeof evaluationResultDtoWithErrors
-export type EvaluationResultWithMetadataAndErrors<T extends RunErrorCodes = RunErrorCodes> =
+export type EvaluationResultWithMetadataAndErrors =
   EvaluationResultWithMetadata & {
     error: {
-      code: T | null
+      code: string | null
       message: string | null
-      details: RunErrorDetails<T> | null
+      details: string | null
     }
   }
 
 export class EvaluationResultsWithErrorsRepository extends Repository<
   typeof evaluationResultDtoWithErrors,
-  EvaluationResultDtoWithErrors
+  EvaluationResultWithMetadataAndErrors
 > {
   get scope() {
     return this.db

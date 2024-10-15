@@ -128,7 +128,11 @@ function ProviderLogItems({
     </>
   )
 }
-function ErrorMessage ({ error }: { error: EvaluationResultWithMetadataAndErrors['error']}) {
+function ErrorMessage({
+  error,
+}: {
+  error: EvaluationResultWithMetadataAndErrors['error']
+}) {
   const resultError = getEnsureEvaluationResultError(error)
 
   if (!resultError) return null

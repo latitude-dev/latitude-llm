@@ -1,19 +1,16 @@
-import { eq, isNotNull, or, sum } from 'drizzle-orm'
+import { eq, sum } from 'drizzle-orm'
 
-import { Commit } from '../../browser'
 import { database } from '../../client'
+import { EvaluationResultsWithErrorsRepository } from '../../repositories'
 import { DocumentLogsRepository } from '../../repositories/documentLogsRepository'
-import { EvaluationResultsRepository } from '../../repositories/evaluationResultsRepository'
 import { commits, providerLogs } from '../../schema'
 
-export function createEvaluationResultQuery(
+export function createEvaluationResultQueryWithErrors(
   workspaceId: number,
   db = database,
 ) {
-  const { scope: evaluationResultsScope } = new EvaluationResultsRepository(
-    workspaceId,
-    db,
-  )
+  const { scope: evaluationResultsScope } =
+    new EvaluationResultsWithErrorsRepository(workspaceId, db)
   const { scope: documentLogsScope } = new DocumentLogsRepository(
     workspaceId,
     db,
@@ -58,10 +55,4 @@ export function createEvaluationResultQuery(
         eq(aggregatedFieldsSubQuery.id, evaluationResultsScope.id),
       ),
   }
-}
-
-export function getCommitFilter(draft?: Commit) {
-  return draft
-    ? or(isNotNull(commits.mergedAt), eq(commits.id, draft.id))
-    : isNotNull(commits.mergedAt)
 }

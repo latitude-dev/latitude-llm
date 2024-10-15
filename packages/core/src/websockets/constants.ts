@@ -5,7 +5,7 @@
 
 import {
   DocumentLogWithMetadata,
-  type EvaluationResultWithMetadata,
+  type EvaluationResultWithMetadataAndErrors,
 } from '../repositories'
 
 const ONE_HOUR = 60 * 60 * 1000
@@ -54,7 +54,7 @@ type EvaluationResultCreatedArgs = {
   evaluationId: number
   documentUuid: string
   evaluationResultId: number
-  row: EvaluationResultWithMetadata
+  row: EvaluationResultWithMetadataAndErrors
 }
 
 type DocumentLogCreatedArgs = {

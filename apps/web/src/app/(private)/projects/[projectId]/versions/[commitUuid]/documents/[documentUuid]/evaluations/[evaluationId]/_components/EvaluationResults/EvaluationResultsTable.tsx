@@ -21,8 +21,9 @@ import {
   Tooltip,
 } from '@latitude-data/web-ui'
 import { formatCostInMillicents, relativeTime } from '$/app/_lib/formatUtils'
-import { getEnsureEvaluationResultError } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/evaluations/[evaluationId]/_lib/getEnsureEvaluationResultError'
 import { LinkableTablePaginationFooter } from '$/components/TablePaginationFooter'
+
+import { getEnsureEvaluationResultError } from '../../_lib/getEnsureEvaluationResultError'
 
 function countLabel(count: number) {
   return `${count} evaluation results`
@@ -118,12 +119,12 @@ export const EvaluationResultsTable = ({
         </TableRow>
       </TableHeader>
       <TableBody>
-        {evaluationResults.map((evaluationResult, index) => {
+        {evaluationResults.map((evaluationResult) => {
           const error = getEnsureEvaluationResultError(evaluationResult.error)
           const cellColor = error ? 'destructive' : 'foreground'
           return (
             <TableRow
-              key={`${evaluationResult.id}-${index}`}
+              key={evaluationResult.id}
               onClick={() =>
                 setSelectedResult(
                   selectedResult?.id === evaluationResult.id
