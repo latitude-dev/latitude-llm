@@ -102,7 +102,7 @@ export default function EvaluationsLayoutClient({
           title='How to evaluate your prompts using LLMs and Latitude.so'
         />
       </BlankSlateStep>
-      {workspace.data.id === 1 ? (
+      {workspace.data.id === 3 ? (
         <SuggestedEvaluations />
       ) : (
         <BlankSlateStep

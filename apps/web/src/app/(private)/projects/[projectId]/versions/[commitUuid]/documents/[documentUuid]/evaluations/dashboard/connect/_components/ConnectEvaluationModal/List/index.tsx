@@ -49,7 +49,7 @@ export function EvaluationList({
       />
 
       <div className='space-y-6'>
-        {workspace.data.id === 1 && (
+        {workspace.data.id === 3 && (
           <div className='flex flex-col gap-2'>
             <Text.H6M color='foregroundMuted'>Suggested</Text.H6M>
             <Link
