@@ -20,8 +20,8 @@ export const _API_ROUTES = {
             detail: ({ documentUuid }: { documentUuid: string }) => {
               const documentRoot = `${documentsAtCommit}/${documentUuid}`
               return {
-                evaluations: {
-                  root: `${documentRoot}/evaluations`,
+                connectedEvaluations: {
+                  root: `${documentRoot}/connected-evaluations`,
                 },
                 evaluationResultsByDocumentContent: {
                   detail: ({ evaluationId }: { evaluationId: number }) => ({
@@ -37,5 +37,11 @@ export const _API_ROUTES = {
         },
       }
     },
+  },
+  evaluations: {
+    root: '/api/evaluations',
+    detail: ({ documentUuid }: { documentUuid: string }) => ({
+      root: `/api/evaluations/${documentUuid}`,
+    }),
   },
 }

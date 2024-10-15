@@ -1,6 +1,6 @@
 import React from 'react'
 
-import { Input, SelectableCard, Text } from '@latitude-data/web-ui'
+import { Input, SelectableCard, Skeleton, Text } from '@latitude-data/web-ui'
 
 interface EvaluationListProps {
   items: {
@@ -15,7 +15,7 @@ interface EvaluationListProps {
   onSearchChange: (term: string) => void
 }
 
-export default function EvaluationList({
+export function EvaluationList({
   items,
   selectedItem,
   onSelectItem,
@@ -49,6 +49,24 @@ export default function EvaluationList({
           </Text.H6>
         </div>
       )}
+    </div>
+  )
+}
+
+export function LoadingEvaluationList({ items = 6 }: { items?: number }) {
+  return (
+    <div className='w-1/2 max-h-[520px] overflow-y-auto'>
+      <Input
+        type='text'
+        placeholder='Search evaluations and templates...'
+        disabled
+        className='w-full p-2 mb-4 border rounded-lg'
+      />
+      <ul className='space-y-2'>
+        {Array.from({ length: items }).map((_, i) => (
+          <Skeleton key={i} className='w-full h-16' />
+        ))}
+      </ul>
     </div>
   )
 }

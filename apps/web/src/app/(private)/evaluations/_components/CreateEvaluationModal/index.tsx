@@ -86,7 +86,7 @@ export default function CreateEvaluationModal({
       onOpenChange={() => onClose(null)}
       onConfirm={onConfirm}
       confirm={{
-        label: 'Create evaluation',
+        label: isLoading ? 'Loading...' : 'Create evaluation',
         description:
           prompt &&
           'A prompt is included with this template. You can edit it once you create the evaluation.',
