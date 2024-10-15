@@ -11,6 +11,8 @@ on:
         required: true
       PULUMI_CONFIG_PASSPHRASE:
         required: true
+      SENTRY_AUTH_TOKEN:
+        required: true
 
 jobs:
   check_changes:
@@ -92,6 +94,7 @@ jobs:
         env:
           PULUMI_CONFIG_PASSPHRASE: ${{ secrets.PULUMI_CONFIG_PASSPHRASE }}
           IMAGE_TAG: ${{ env.IMAGE_TAG }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
 
       - name: Create new task definition
         run: |

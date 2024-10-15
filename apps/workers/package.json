@@ -5,17 +5,19 @@
   "description": "Latitude AI Workers for processing logs",
   "private": true,
   "scripts": {
-    "build": "tsup --config tsup.config.ts",
+    "build": "tsup --config tsup.config.ts && pnpm run sentry:sourcemaps",
     "dev": "NODE_DEBUG=latitude:debug tsx watch src/server",
     "dev:debug": "tsx watch --inspect-brk src/server",
     "lint": "eslint src/",
     "prettier": "prettier --write \"**/*.{ts,tsx,md}\"",
     "start": "node -r module-alias/register ./dist --env=production",
-    "tc": "tsc --noEmit"
+    "tc": "tsc --noEmit",
+    "sentry:sourcemaps": "sentry-cli sourcemaps inject --org latitude-l5 --project latitude-llm-app ./dist && sentry-cli sourcemaps upload --org latitude-l5 --project latitude-llm-app ./dist"
   },
   "dependencies": {
     "@latitude-data/core": "workspace:^",
     "@latitude-data/env": "workspace:^",
+    "@sentry/cli": "^2.37.0",
     "@sentry/node": "^8.30.0",
     "@t3-oss/env-core": "*",
     "zod": "^3.23.8"

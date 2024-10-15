@@ -11,7 +11,7 @@ const dependencies = getDependencies('./package.json')
 export default defineConfig({
   entry: ['src/server.ts'],
   outDir: 'dist',
-  sourcemap: false,
+  sourcemap: true,
   clean: true,
   dts: false,
   format: ['esm'],

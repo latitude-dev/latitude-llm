@@ -18,6 +18,8 @@ on:
         required: true
       PULUMI_CONFIG_PASSPHRASE:
         required: true
+      SENTRY_AUTH_TOKEN:
+        required: true
 
 jobs:
   deployment:
@@ -82,3 +84,4 @@ jobs:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           PULUMI_CONFIG_PASSPHRASE: ${{ secrets.PULUMI_CONFIG_PASSPHRASE }}
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
