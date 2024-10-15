@@ -50,6 +50,8 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install \
 
 COPY --from=pruner /app/out/full/ .
 
+RUN echo $SENTRY_AUTH_TOKEN
+
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
   BUILDING_CONTAINER=true \
   SENTRY_AUTH_TOKEN=$SENTRY_AUTH_TOKEN \
