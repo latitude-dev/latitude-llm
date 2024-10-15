@@ -5,6 +5,7 @@ import useSWR, { SWRConfiguration } from 'swr'
 
 export interface SuggestedEvaluation {
   eval_name: string
+  eval_description: string
   eval_type: 'number' | 'boolean'
   eval_prompt: string
   metadata?: {

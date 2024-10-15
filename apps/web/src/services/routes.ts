@@ -118,6 +118,9 @@ export const ROUTES = {
                         connect: {
                           root: `${evaluationsRoot}/dashboard/connect`,
                         },
+                        generate: {
+                          root: `${evaluationsRoot}/dashboard/generate`,
+                        },
                         destroy: (id: number) =>
                           `${evaluationsRoot}/destroy/${id}`,
                       },
