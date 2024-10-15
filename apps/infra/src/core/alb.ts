@@ -14,6 +14,7 @@ const alb = new aws.lb.LoadBalancer('alb', {
   loadBalancerType: 'application',
   securityGroups: [shared.albSecurityGroup],
   subnets: shared.publicSubnets.ids,
+  idleTimeout: 120,
   accessLogs: {
     bucket: albLogsBucket.id,
     enabled: true,
