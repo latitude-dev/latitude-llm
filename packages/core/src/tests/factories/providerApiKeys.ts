@@ -12,18 +12,20 @@ export type ICreateProvider = {
   type: Providers
   name: string
   user: User
+  token?: string
 }
 export async function createProviderApiKey({
   workspace,
   type,
   name,
   user,
+  token = `sk-${faker.string.alphanumeric(48)}`,
 }: ICreateProvider) {
   const providerApiKey = await createFn({
     workspace,
     provider: type,
     name,
-    token: `sk-${faker.string.alphanumeric(48)}`,
+    token,
     author: user,
   }).then((r) => r.unwrap())
 

@@ -1,15 +1,18 @@
+import { env } from '@latitude-data/env'
+
 import {
   EvaluationMetadataType,
   EvaluationResultableType,
   EvaluationResultConfiguration,
   findFirstModelForProvider,
+  Providers,
   User,
   Workspace,
 } from '../../browser'
-import { database } from '../../client'
+import { Database, database } from '../../client'
 import { findEvaluationTemplateById } from '../../data-access'
 import { publisher } from '../../events/publisher'
-import { BadRequestError, Result, Transaction } from '../../lib'
+import { BadRequestError, NotFoundError, Result, Transaction } from '../../lib'
 import { ProviderApiKeysRepository } from '../../repositories'
 import {
   connectedEvaluations,
@@ -43,9 +46,15 @@ export async function createEvaluation(
   }: Props,
   db = database,
 ) {
-  const providerScope = new ProviderApiKeysRepository(workspace!.id, db)
-  const providerResult = await providerScope.findFirst()
-  const provider = providerResult.unwrap()
+  const provider = await findProvider(workspace, db)
+  if (!provider) {
+    return Result.error(
+      new NotFoundError(
+        'In order to create an evaluation you need to first create a provider API key from OpenAI or Anthropic',
+      ),
+    )
+  }
+
   const meta = metadata as { prompt: string; templateId?: number }
   const promptWithProvider = provider
     ? `---
@@ -162,4 +171,23 @@ function validateConfiguration(config: EvaluationResultConfiguration) {
       }
     }
   }
+}
+
+async function findProvider(workspace: Workspace, db: Database) {
+  const providerScope = new ProviderApiKeysRepository(workspace!.id, db)
+  const providers = await providerScope.findAll().then((r) => r.unwrap())
+  const found = providers.find((p) => {
+    if (
+      [Providers.OpenAI, Providers.Anthropic].includes(p.provider) &&
+      p.token !== env.DEFAULT_PROVIDER_API_KEY
+    ) {
+      return true
+    }
+
+    return false
+  })
+
+  if (found) return found
+
+  return providers.find((p) => p.token === env.DEFAULT_PROVIDER_API_KEY)
 }
