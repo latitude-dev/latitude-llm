@@ -13,6 +13,27 @@ import { coreStack, environment } from './shared'
 
 const repo = new aws.ecr.Repository('latitude-llm-workers-repo')
 
+new aws.ecr.LifecyclePolicy('latitude-llm-workers-repo-lifecycle', {
+  repository: repo.name,
+  policy: JSON.stringify({
+    rules: [
+      {
+        rulePriority: 1,
+        description: 'Keep last 7 days of images',
+        selection: {
+          tagStatus: 'any',
+          countType: 'sinceImagePushed',
+          countUnit: 'days',
+          countNumber: 7,
+        },
+        action: {
+          type: 'expire',
+        },
+      },
+    ],
+  }),
+})
+
 const token = await aws.ecr.getAuthorizationToken()
 const image = new docker.Image('LatitudeLLMWorkersImage', {
   build: {

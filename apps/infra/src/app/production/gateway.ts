@@ -14,8 +14,28 @@ const webProductionStack = new pulumi.StackReference('app-production-web')
 
 const DNS_ADDRESS = 'gateway.latitude.so'
 
-// Create an ECR repository
 export const repo = new aws.ecr.Repository('latitude-llm-gateway-repo')
+
+new aws.ecr.LifecyclePolicy('latitude-llm-gateway-repo-lifecycle', {
+  repository: repo.name,
+  policy: JSON.stringify({
+    rules: [
+      {
+        rulePriority: 1,
+        description: 'Keep last 7 days of images',
+        selection: {
+          tagStatus: 'any',
+          countType: 'sinceImagePushed',
+          countUnit: 'days',
+          countNumber: 7,
+        },
+        action: {
+          type: 'expire',
+        },
+      },
+    ],
+  }),
+})
 
 // Create a Fargate task definition
 const containerName = 'LatitudeLLMGatewayContainer'

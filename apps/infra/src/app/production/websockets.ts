@@ -17,6 +17,27 @@ const DNS_ADDRESS = 'ws.latitude.so'
 // Create an ECR repository
 const repo = new aws.ecr.Repository('latitude-llm-websockets-repo')
 
+new aws.ecr.LifecyclePolicy('latitude-llm-websockets-repo-lifecycle', {
+  repository: repo.name,
+  policy: JSON.stringify({
+    rules: [
+      {
+        rulePriority: 1,
+        description: 'Keep last 7 days of images',
+        selection: {
+          tagStatus: 'any',
+          countType: 'sinceImagePushed',
+          countUnit: 'days',
+          countNumber: 7,
+        },
+        action: {
+          type: 'expire',
+        },
+      },
+    ],
+  }),
+})
+
 // Build and push the Docker image
 const token = await aws.ecr.getAuthorizationToken()
 const image = new docker.Image('LatitudeLLMWebsocketsImage', {

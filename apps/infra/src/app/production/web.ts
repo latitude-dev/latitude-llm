@@ -12,9 +12,51 @@ import { coreStack, environment } from './shared'
 
 const DNS_ADDRESS = 'app.latitude.so'
 
-// Create an ECR repository
 export const repo = new aws.ecr.Repository('latitude-llm-app-repo')
+
+new aws.ecr.LifecyclePolicy('latitude-llm-app-repo-lifecycle', {
+  repository: repo.name,
+  policy: JSON.stringify({
+    rules: [
+      {
+        rulePriority: 1,
+        description: 'Keep last 7 days of images',
+        selection: {
+          tagStatus: 'any',
+          countType: 'sinceImagePushed',
+          countUnit: 'days',
+          countNumber: 7,
+        },
+        action: {
+          type: 'expire',
+        },
+      },
+    ],
+  }),
+})
+
 export const coreRepo = new aws.ecr.Repository('latitude-llm-core-repo')
+
+new aws.ecr.LifecyclePolicy('latitude-llm-core-repo-lifecycle', {
+  repository: coreRepo.name,
+  policy: JSON.stringify({
+    rules: [
+      {
+        rulePriority: 1,
+        description: 'Keep last 7 days of images',
+        selection: {
+          tagStatus: 'any',
+          countType: 'sinceImagePushed',
+          countUnit: 'days',
+          countNumber: 7,
+        },
+        action: {
+          type: 'expire',
+        },
+      },
+    ],
+  }),
+})
 
 // Use existing images (replace 'latest' with the specific tag you want to deploy)
 const imageName = pulumi.interpolate`${repo.repositoryUrl}:latest`
