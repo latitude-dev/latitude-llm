@@ -52,6 +52,7 @@ COPY --from=pruner /app/out/full/ .
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
   BUILDING_CONTAINER=true \
+  SENTRY_AUTH_TOKEN=$SENTRY_AUTH_TOKEN \
   pnpm turbo build --filter="${PROJECT}..."
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm prune --prod --no-optional
