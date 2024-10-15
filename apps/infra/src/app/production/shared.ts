@@ -70,6 +70,9 @@ export const datasetGeneratorWorkspaceApiKey = getSecretString(
   datasetGeneratorWorkspaceApiKeyArn,
 )
 
+export const copilotWorkspaceApiKey = coreStack.requireOutput(
+  'copilotWorkspaceApiKey',
+)
 export const copilotProjectId = coreStack.requireOutput('copilotProjectId')
 export const copilotRefinePromptPath = coreStack.requireOutput(
   'copilotRefinePromptPath',
@@ -77,6 +80,10 @@ export const copilotRefinePromptPath = coreStack.requireOutput(
 export const copilotCodeSuggestionPromptPath = coreStack.requireOutput(
   'copilotCodeSuggestionPromptPath',
 )
+export const copilotEvaluationSuggestionPromptPath = coreStack.requireOutput(
+  'copilotEvaluationSuggestionPromptPath',
+)
+
 export const dbUrl = pulumi.interpolate`postgresql://${dbUsername}:${dbPassword}@${dbEndpoint}/${dbName}?sslmode=verify-full&sslrootcert=/app/packages/core/src/assets/eu-central-1-bundle.pem`
 export const environment = pulumi
   .all([
@@ -93,9 +100,11 @@ export const environment = pulumi
     defaultProviderApiKey,
     postHogApiKey,
     datasetGeneratorWorkspaceApiKey,
+    copilotWorkspaceApiKey,
     copilotProjectId,
     copilotRefinePromptPath,
     copilotCodeSuggestionPromptPath,
+    copilotEvaluationSuggestionPromptPath,
     supportAppId,
     supportAppSecretKey,
   ])
@@ -149,6 +158,11 @@ export const environment = pulumi
         value: 'evaluation-template-suggestions',
       },
       { name: 'TEMPLATES_SUGGESTION_PROJECT_ID', value: '60' },
+      { name: 'COPILOT_WORKSPACE_API_KEY', value: copilotWorkspaceApiKey },
+      {
+        name: 'COPILOT_EVALUATION_SUGGESTION_PROMPT_PATH',
+        value: copilotEvaluationSuggestionPromptPath,
+      },
       { name: 'COPILOT_PROJECT_ID', value: copilotProjectId },
       { name: 'COPILOT_REFINE_PROMPT_PATH', value: copilotRefinePromptPath },
       {

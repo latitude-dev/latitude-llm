@@ -11,7 +11,11 @@ import { findEvaluationTemplateById } from '../../data-access'
 import { publisher } from '../../events/publisher'
 import { BadRequestError, Result, Transaction } from '../../lib'
 import { ProviderApiKeysRepository } from '../../repositories'
-import { evaluations, llmAsJudgeEvaluationMetadatas } from '../../schema'
+import {
+  connectedEvaluations,
+  evaluations,
+  llmAsJudgeEvaluationMetadatas,
+} from '../../schema'
 
 type Props = {
   workspace: Workspace
@@ -21,6 +25,8 @@ type Props = {
   configuration: EvaluationResultConfiguration
   metadata?: Record<string, unknown>
   user: User
+  projectId?: number
+  documentUuid?: string
 }
 
 export async function createEvaluation(
@@ -32,6 +38,8 @@ export async function createEvaluation(
     configuration,
     user,
     metadata = {},
+    projectId,
+    documentUuid,
   }: Props,
   db = database,
 ) {
@@ -80,17 +88,33 @@ ${meta.prompt}
       ])
       .returning()
 
+    const evaluation = result[0]!
+
+    // If projectId and documentUuid are provided, connect the evaluation
+    if (projectId && documentUuid) {
+      // TODO: Move to a connectEvaluation service
+      await tx
+        .insert(connectedEvaluations)
+        .values({
+          documentUuid,
+          evaluationId: evaluation.id,
+        })
+        .returning()
+    }
+
     publisher.publishLater({
       type: 'evaluationCreated',
       data: {
-        evaluation: result[0]!,
+        evaluation,
         workspaceId: workspace.id,
         userEmail: user.email,
+        projectId,
+        documentUuid,
       },
     })
 
     return Result.ok({
-      ...result[0]!,
+      ...evaluation,
       metadata: metadataTable[0]!,
     })
   }, db)

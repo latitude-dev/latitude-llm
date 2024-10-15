@@ -4,7 +4,6 @@ import { createHash } from 'crypto'
 
 import { ChainStepResponse } from '@latitude-data/core/browser'
 import { cache } from '@latitude-data/core/cache'
-import { findAllEvaluationTemplates } from '@latitude-data/core/data-access'
 import { BadRequestError } from '@latitude-data/core/lib/errors'
 import { env } from '@latitude-data/env'
 import { createSdk } from '$/app/(private)/_lib/createSdk'
@@ -21,50 +20,48 @@ export const generateSuggestedEvaluationsAction = authProcedure
     }),
   )
   .handler(async ({ input }) => {
-    if (!env.DATASET_GENERATOR_WORKSPACE_APIKEY) {
-      throw new BadRequestError('DATASET_GENERATOR_WORKSPACE_APIKEY is not set')
+    if (!env.COPILOT_WORKSPACE_API_KEY) {
+      throw new BadRequestError('COPILOT_WORKSPACE_API_KEY is not set')
     }
-    if (!env.TEMPLATES_SUGGESTION_PROJECT_ID) {
-      throw new BadRequestError('TEMPLATES_SUGGESTION_PROJECT_ID is not set')
+    if (!env.COPILOT_PROJECT_ID) {
+      throw new BadRequestError('COPILOT_PROJECT_ID is not set')
     }
-    if (!env.TEMPLATES_SUGGESTION_PROMPT_PATH) {
-      throw new BadRequestError('TEMPLATES_SUGGESTION_PROMPT_PATH is not set')
+    if (!env.COPILOT_EVALUATION_SUGGESTION_PROMPT_PATH) {
+      throw new BadRequestError(
+        'COPILOT_EVALUATION_SUGGESTION_PROMPT_PATH is not set',
+      )
     }
 
     const cacheInstance = await cache()
     const contentHash = createHash('sha1')
       .update(input.documentContent)
       .digest('hex')
-    const cacheKey = `suggested_evaluations:${contentHash}`
-
+    const cacheKey = `suggested_evaluations:v2:${contentHash}`
     const cachedResult = await cacheInstance.get(cacheKey)
     if (cachedResult) {
-      return JSON.parse(cachedResult) as SuggestedEvaluation[]
+      return JSON.parse(cachedResult) as SuggestedEvaluation
     }
 
-    const templates = await findAllEvaluationTemplates().then((r) => r.unwrap())
-    const templateString = templates
-      .map((t) => `${t.id}\n${t.name}\n${t.description}\n`)
-      .join('\n')
     const sdk = await createSdk({
-      apiKey: env.DATASET_GENERATOR_WORKSPACE_APIKEY,
-      projectId: env.TEMPLATES_SUGGESTION_PROJECT_ID,
+      apiKey: env.COPILOT_WORKSPACE_API_KEY,
+      projectId: env.COPILOT_PROJECT_ID,
     }).then((r) => r.unwrap())
-    const result = await sdk.run(env.TEMPLATES_SUGGESTION_PROMPT_PATH, {
-      parameters: {
-        templates: templateString,
-        prompt: input.documentContent,
+    const result = await sdk.run(
+      env.COPILOT_EVALUATION_SUGGESTION_PROMPT_PATH,
+      {
+        parameters: {
+          user_prompt: input.documentContent,
+        },
       },
-    })
-
-    if (!result) return []
+    )
+    if (!result) return undefined
 
     const res = result.response as ChainStepResponse<'object'>
-    if (!res.object) return []
+    if (!res.object) return undefined
 
-    const suggestedEvaluations = res.object[0] as SuggestedEvaluation[]
+    const suggestedEvaluation = res.object
 
-    await cacheInstance.set(cacheKey, JSON.stringify(suggestedEvaluations))
+    await cacheInstance.set(cacheKey, JSON.stringify(suggestedEvaluation))
 
-    return suggestedEvaluations
+    return suggestedEvaluation
   })

@@ -7,9 +7,9 @@ import { DocumentLogWithMetadata } from '@latitude-data/core/repositories'
 import {
   TableBlankSlate,
   useCurrentCommit,
-  useCurrentDocument,
   useCurrentProject,
 } from '@latitude-data/web-ui'
+import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import {
   EventArgs,
   useSockets,

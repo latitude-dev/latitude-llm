@@ -40,11 +40,16 @@ if (environment === 'development' || environment === 'test') {
       FILE_PUBLIC_PATH,
       FILES_STORAGE_PATH,
       DEFAULT_PROJECT_ID: '1',
-      DEFAULT_PROVIDER_API_KEY: 'd32da7c2-94fd-49c3-8dca-b57a5c3bbe27',
       NEXT_PUBLIC_POSTHOG_KEY: '',
       NEXT_PUBLIC_POSTHOG_HOST: '',
+      DEFAULT_PROVIDER_API_KEY: '33275751-f0c4-46f3-bc9a-cd2fb22d86ca', // fake
+      COPILOT_WORKSPACE_APIKEY: '33275751-f0c4-46f3-bc9a-cd2fb22d86ca', // fake
+      DATASET_GENERATOR_WORKSPACE_APIKEY:
+        '33275751-f0c4-46f3-bc9a-cd2fb22d86ca', // fake
       DATASET_GENERATOR_DOCUMENT_PATH: 'generator',
-      TEMPLATES_SUGGESTION_PROMPT_PATH: 'evaluation-suggestions',
+      TEMPLATES_SUGGESTION_PROJECT_ID: '10',
+      TEMPLATES_SUGGESTION_PROMPT_PATH: 'generator',
+      COPILOT_EVALUATION_SUGGESTION_PROMPT_PATH: 'generator',
     },
     { path: pathToEnv },
   )
@@ -95,6 +100,7 @@ export const env = createEnv({
       .transform((value) => value === 'true')
       .optional()
       .default('true'),
+    COPILOT_WORKSPACE_API_KEY: z.string().optional(),
     COPILOT_PROJECT_ID: z.coerce.number().optional(),
     COPILOT_REFINE_PROMPT_PATH: z.string().optional(),
     COPILOT_CODE_SUGGESTION_PROMPT_PATH: z.string().optional(),
@@ -103,6 +109,7 @@ export const env = createEnv({
     DATASET_GENERATOR_WORKSPACE_APIKEY: z.string().optional(),
     TEMPLATES_SUGGESTION_PROJECT_ID: z.coerce.number().optional(),
     TEMPLATES_SUGGESTION_PROMPT_PATH: z.string().optional(),
+    COPILOT_EVALUATION_SUGGESTION_PROMPT_PATH: z.string().optional(),
   },
   runtimeEnv: {
     ...process.env,

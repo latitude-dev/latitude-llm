@@ -13,9 +13,9 @@ import {
   Tooltip,
   useAutoScroll,
   useCurrentCommit,
-  useCurrentDocument,
   useCurrentProject,
 } from '@latitude-data/web-ui'
+import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { ROUTES } from '$/services/routes'
 import Link from 'next/link'
 

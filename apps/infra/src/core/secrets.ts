@@ -75,12 +75,18 @@ const datasetGeneratorWorkspaceApiKey = createSecretWithVersion(
   'API key for the dataset generator',
 )
 
+export const copilotWorkspaceApiKey = config.requireSecret(
+  'COPILOT_WORKSPACE_API_KEY',
+)
 export const copilotProjectId = config.requireSecret('COPILOT_PROJECT_ID')
 export const copilotRefinePromptPath = config.requireSecret(
   'COPILOT_REFINE_PROMPT_PATH',
 )
 export const copilotCodeSuggestionPromptPath = config.requireSecret(
   'COPILOT_CODE_SUGGESTION_PROMPT_PATH',
+)
+export const copilotEvaluationSuggestionPromptPath = config.requireSecret(
+  'COPILOT_EVALUATION_SUGGESTION_PROMPT_PATH',
 )
 
 const supportAppId = createSecretWithVersion(

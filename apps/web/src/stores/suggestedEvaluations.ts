@@ -4,28 +4,34 @@ import { generateSuggestedEvaluationsAction } from '$/actions/evaluations/genera
 import useSWR, { SWRConfiguration } from 'swr'
 
 export interface SuggestedEvaluation {
-  id: number
-  title: string
-  description: string
+  eval_name: string
+  eval_type: 'number' | 'boolean'
+  eval_prompt: string
+  metadata?: {
+    range: {
+      from: number
+      to: number
+    }
+  }
 }
 
-export default function useSuggestedEvaluations(
+export default function useSuggestedEvaluation(
   documentContent?: string | null,
   opts?: SWRConfiguration,
 ) {
-  const { data, error, isLoading } = useSWR<SuggestedEvaluation[]>(
+  const { data, error, isLoading } = useSWR<SuggestedEvaluation | undefined>(
     [
       'suggestedEvaluations',
       documentContent ? documentContent.slice(-100) : null,
     ],
     async () => {
-      if (!documentContent) return []
+      if (!documentContent) return undefined
 
       const [data, error] = await generateSuggestedEvaluationsAction({
         documentContent,
       })
 
-      if (error) return []
+      if (error) return undefined
 
       return data
     },
@@ -33,7 +39,7 @@ export default function useSuggestedEvaluations(
   )
 
   return {
-    data: data || [],
+    data,
     isLoading,
     error,
   }

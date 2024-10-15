@@ -11,7 +11,8 @@ import {
 
 import { ConversationMetadata, readMetadata } from '@latitude-data/compiler'
 import { ApiKey } from '@latitude-data/core/browser'
-import { Modal, useCurrentDocument } from '@latitude-data/web-ui'
+import { Modal } from '@latitude-data/web-ui'
+import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import useDocumentVersions from '$/stores/documentVersions'
 
 import { SettingsTabs } from './_components/SettingsTabs'
