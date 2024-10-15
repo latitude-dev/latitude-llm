@@ -39,6 +39,7 @@ pulumi.all([sentryDsn, sentryOrg, sentryProject, postHogApiKey]).apply(
           SENTRY_DSN: sentryDsn,
           SENTRY_ORG: sentryOrg,
           SENTRY_PROJECT: sentryProject,
+          SENTRY_AUTH_TOKEN: process.env.SENTRY_AUTH_TOKEN!,
           NEXT_PUBLIC_POSTHOG_KEY: postHogApiKey,
           NEXT_PUBLIC_POSTHOG_HOST: 'https://eu.i.posthog.com',
         },

@@ -43,6 +43,9 @@ const image = new docker.Image('LatitudeLLMWorkersImage', {
     cacheFrom: {
       images: [pulumi.interpolate`${repo.repositoryUrl}:latest`],
     },
+    args: {
+      SENTRY_AUTH_TOKEN: process.env.SENTRY_AUTH_TOKEN!,
+    },
   },
   imageName: pulumi.interpolate`${repo.repositoryUrl}:latest`,
   registry: {

@@ -25,6 +25,9 @@ new docker.Image('LatitudeLLMGatewayImage', {
     cacheFrom: {
       images: [pulumi.interpolate`${repo.repositoryUrl}:latest`],
     },
+    args: {
+      SENTRY_AUTH_TOKEN: process.env.SENTRY_AUTH_TOKEN!,
+    },
   },
   imageName: pulumi.interpolate`${repo.repositoryUrl}:${process.env.IMAGE_TAG}`,
   registry: {

@@ -6,13 +6,14 @@
   "private": true,
   "scripts": {
     "dev": "tsx watch src/server",
-    "build": "tsup --config tsup.config.ts",
+    "build": "tsup --config tsup.config.ts && pnpm run sentry:sourcemaps",
     "dev:debug": "tsx watch --inspect-brk src/server",
     "lint": "eslint src/",
     "prettier": "prettier --write \"**/*.{ts,tsx,md}\"",
     "tc": "tsc --noEmit",
     "test": "vitest --run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "sentry:sourcemaps": "sentry-cli sourcemaps inject --org latitude-l5 --project latitude-llm-app ./dist && sentry-cli sourcemaps upload --org latitude-l5 --project latitude-llm-app ./dist"
   },
   "dependencies": {
     "@hono/node-server": "^1.12.0",
@@ -20,6 +21,7 @@
     "@latitude-data/compiler": "workspace:^",
     "@latitude-data/core": "workspace:^",
     "@latitude-data/env": "workspace:^",
+    "@sentry/cli": "^2.37.0",
     "@sentry/node": "^8.30.0",
     "@t3-oss/env-core": "^0.10.1",
     "drizzle-orm": "^0.33.0",

@@ -53,5 +53,7 @@ TODO.md
 .vscode/settings.json
 
 # Sentry
+.sentryclirc
 .env.sentry-build-plugin
 bin
+

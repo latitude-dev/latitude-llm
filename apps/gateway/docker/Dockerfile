@@ -1,5 +1,6 @@
 ARG PROJECT="@latitude-data/gateway"
 ARG PROJECT_PATH="apps/gateway"
+ARG SENTRY_AUTH_TOKEN
 
 FROM node:20-alpine AS alpine
 
@@ -33,6 +34,9 @@ RUN turbo prune "${PROJECT}" --docker
 FROM base AS builder
 
 ARG PROJECT
+ARG SENTRY_AUTH_TOKEN
+
+ENV SENTRY_AUTH_TOKEN=$SENTRY_AUTH_TOKEN
 
 WORKDIR /app
 
