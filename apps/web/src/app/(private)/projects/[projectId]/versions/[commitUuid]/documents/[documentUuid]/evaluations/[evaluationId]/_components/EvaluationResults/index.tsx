@@ -4,7 +4,7 @@ import { useCallback, useState } from 'react'
 
 import { EvaluationDto } from '@latitude-data/core/browser'
 import { IPagination } from '@latitude-data/core/lib/pagination/buildPagination'
-import { type EvaluationResultWithMetadata } from '@latitude-data/core/repositories'
+import { type EvaluationResultWithMetadataAndErrors } from '@latitude-data/core/repositories'
 import {
   TableBlankSlate,
   Text,
@@ -81,14 +81,14 @@ export function EvaluationResults({
   pagination,
 }: {
   evaluation: EvaluationDto
-  evaluationResults: EvaluationResultWithMetadata[]
+  evaluationResults: EvaluationResultWithMetadataAndErrors[]
   pagination: IPagination
 }) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
   const document = useCurrentDocument()
   const [selectedResult, setSelectedResult] = useState<
-    EvaluationResultWithMetadata | undefined
+    EvaluationResultWithMetadataAndErrors | undefined
   >(undefined)
   const { open, onClose, onOpen } = useToggleModal()
   const { data: providerLog } = useProviderLog(selectedResult?.providerLogId)

@@ -5,13 +5,11 @@ import {
   EvaluationResultableType,
 } from '@latitude-data/core/browser'
 import { IPagination } from '@latitude-data/core/lib/pagination/buildPagination'
-import {
-  EvaluationResultWithMetadata,
-  EvaluationResultWithMetadataAndErrors,
-} from '@latitude-data/core/repositories'
+import { EvaluationResultWithMetadataAndErrors } from '@latitude-data/core/repositories'
 import {
   Badge,
   cn,
+  Icon,
   RangeBadge,
   Table,
   TableBody,
@@ -20,12 +18,34 @@ import {
   TableHeader,
   TableRow,
   Text,
+  Tooltip,
 } from '@latitude-data/web-ui'
 import { formatCostInMillicents, relativeTime } from '$/app/_lib/formatUtils'
+import { getEnsureEvaluationResultError } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/evaluations/[evaluationId]/_lib/getEnsureEvaluationResultError'
 import { LinkableTablePaginationFooter } from '$/components/TablePaginationFooter'
 
 function countLabel(count: number) {
   return `${count} evaluation results`
+}
+
+function ErrorCell({
+  error,
+}: {
+  error: EvaluationResultWithMetadataAndErrors['error']
+}) {
+  return (
+    <Tooltip
+      variant='destructive'
+      trigger={
+        <div className='flex flex-row items-center gap-x-2'>
+          <Text.H5 color='destructive'>-</Text.H5>
+          <Icon name='alert' color='destructive' />
+        </div>
+      }
+    >
+      <Text.H6B color='white'>{error.message}</Text.H6B>
+    </Tooltip>
+  )
 }
 
 export const ResultCellContent = ({
@@ -98,80 +118,90 @@ export const EvaluationResultsTable = ({
         </TableRow>
       </TableHeader>
       <TableBody>
-        {evaluationResults.map((evaluationResult) => (
-          <TableRow
-            key={evaluationResult.id}
-            onClick={() =>
-              setSelectedResult(
-                selectedResult?.id === evaluationResult.id
-                  ? undefined
-                  : evaluationResult,
-              )
-            }
-            className={cn(
-              'cursor-pointer border-b-[0.5px] h-12 max-h-12 border-border',
-              {
-                'bg-secondary': selectedResult?.id === evaluationResult.id,
-                'animate-flash': evaluationResult.realtimeAdded,
-              },
-            )}
-          >
-            <TableCell>
-              <Text.H5 noWrap>
-                <time
-                  dateTime={evaluationResult.createdAt.toISOString()}
-                  suppressHydrationWarning
-                >
-                  {relativeTime(evaluationResult.createdAt)}
-                </time>
-              </Text.H5>
-            </TableCell>
-            <TableCell>
-              <div className='flex flex-row gap-2 items-center'>
-                <Badge
-                  variant={evaluationResult.commit.version ? 'accent' : 'muted'}
-                  shape='square'
-                >
-                  <Text.H6 noWrap>
-                    {evaluationResult.commit.version
-                      ? `v${evaluationResult.commit.version}`
-                      : 'Draft'}
-                  </Text.H6>
-                </Badge>
-                <Text.H5>{evaluationResult.commit.title}</Text.H5>
-              </div>
-            </TableCell>
-            <TableCell>
-              <Text.H5 noWrap>
-                {evaluationResult.source
-                  ? capitalize(evaluationResult.source)
-                  : '-'}
-              </Text.H5>
-            </TableCell>
-            <TableCell>
-              {evaluationResult.result !== null ? (
-                <ResultCellContent
-                  evaluation={evaluation}
-                  value={evaluationResult.result}
-                />
-              ) : evaluationResult.error ? (
-                <Badge variant='destructive'>Error</Badge>
-              ) : (
-                '-'
+        {evaluationResults.map((evaluationResult, index) => {
+          const error = getEnsureEvaluationResultError(evaluationResult.error)
+          const cellColor = error ? 'destructive' : 'foreground'
+          return (
+            <TableRow
+              key={`${evaluationResult.id}-${index}`}
+              onClick={() =>
+                setSelectedResult(
+                  selectedResult?.id === evaluationResult.id
+                    ? undefined
+                    : evaluationResult,
+                )
+              }
+              className={cn(
+                'cursor-pointer border-b-[0.5px] h-12 max-h-12 border-border',
+                {
+                  'bg-secondary': selectedResult?.id === evaluationResult.id,
+                  'animate-flash': evaluationResult.realtimeAdded,
+                },
               )}
-            </TableCell>
-            <TableCell>
-              <Text.H5 noWrap>
-                {typeof evaluationResult.costInMillicents === 'number'
-                  ? formatCostInMillicents(evaluationResult.costInMillicents)
-                  : '-'}
-              </Text.H5>
-            </TableCell>
-            <TableCell>
-              <Text.H5 noWrap>{evaluationResult.tokens ?? '-'}</Text.H5>
-            </TableCell>
-          </TableRow>
-        ))}
+            >
+              <TableCell>
+                <Text.H5 noWrap color={cellColor}>
+                  <time
+                    dateTime={evaluationResult.createdAt.toISOString()}
+                    suppressHydrationWarning
+                  >
+                    {relativeTime(evaluationResult.createdAt)}
+                  </time>
+                </Text.H5>
+              </TableCell>
+              <TableCell>
+                <div className='flex flex-row gap-2 items-center'>
+                  <Badge
+                    variant={
+                      evaluationResult.commit.version ? 'accent' : 'muted'
+                    }
+                    shape='square'
+                  >
+                    <Text.H6 noWrap>
+                      {evaluationResult.commit.version
+                        ? `v${evaluationResult.commit.version}`
+                        : 'Draft'}
+                    </Text.H6>
+                  </Badge>
+                  <Text.H5 color={cellColor}>
+                    {evaluationResult.commit.title}
+                  </Text.H5>
+                </div>
+              </TableCell>
+              <TableCell>
+                <Text.H5 noWrap color={cellColor}>
+                  {evaluationResult.source
+                    ? capitalize(evaluationResult.source)
+                    : '-'}
+                </Text.H5>
+              </TableCell>
+              <TableCell>
+                {error ? (
+                  <ErrorCell error={error} />
+                ) : evaluationResult.result !== null ? (
+                  <ResultCellContent
+                    evaluation={evaluation}
+                    value={evaluationResult.result}
+                  />
+                ) : (
+                  '-'
+                )}
+              </TableCell>
+              <TableCell>
+                <Text.H5 noWrap color={cellColor}>
+                  {typeof evaluationResult.costInMillicents === 'number'
+                    ? formatCostInMillicents(evaluationResult.costInMillicents)
+                    : '-'}
+                </Text.H5>
+              </TableCell>
+              <TableCell>
+                <Text.H5 noWrap color={cellColor}>
+                  {evaluationResult.tokens ?? '-'}
+                </Text.H5>
+              </TableCell>
+            </TableRow>
+          )
+        })}
       </TableBody>
     </Table>
   )

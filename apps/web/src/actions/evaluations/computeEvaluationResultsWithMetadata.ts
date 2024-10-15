@@ -3,7 +3,7 @@
 import { paginateQuery } from '@latitude-data/core/lib/index'
 import {
   CommitsRepository,
-  EvaluationResultWithMetadata,
+  EvaluationResultWithMetadataAndErrors,
   EvaluationsRepository,
 } from '@latitude-data/core/repositories'
 import { computeEvaluationResultsWithMetadataQuery } from '@latitude-data/core/services/evaluationResults/computeEvaluationResultsWithMetadata'
@@ -46,5 +46,5 @@ export const computeEvaluationResultsWithMetadataAction = withProject
       }).$dynamic(),
     })
 
-    return rows as EvaluationResultWithMetadata[]
+    return rows as EvaluationResultWithMetadataAndErrors[]
   })

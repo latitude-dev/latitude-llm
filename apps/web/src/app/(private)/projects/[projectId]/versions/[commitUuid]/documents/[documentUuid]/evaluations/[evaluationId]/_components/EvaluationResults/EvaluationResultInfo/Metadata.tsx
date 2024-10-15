@@ -1,8 +1,9 @@
-import { ReactNode } from 'react'
+import { ReactNode, useMemo } from 'react'
 
 import { EvaluationDto, ProviderLogDto } from '@latitude-data/core/browser'
-import { EvaluationResultWithMetadata } from '@latitude-data/core/repositories'
+import { EvaluationResultWithMetadataAndErrors } from '@latitude-data/core/repositories'
 import {
+  Alert,
   ClickToCopy,
   Icon,
   Skeleton,
@@ -10,6 +11,7 @@ import {
   Tooltip,
 } from '@latitude-data/web-ui'
 import { formatCostInMillicents } from '$/app/_lib/formatUtils'
+import { getEnsureEvaluationResultError } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/evaluations/[evaluationId]/_lib/getEnsureEvaluationResultError'
 import useProviderApiKeys from '$/stores/providerApiKeys'
 import { format } from 'date-fns'
 
@@ -65,31 +67,21 @@ function MetadataItem({
     </div>
   )
 }
-
-export function EvaluationResultMetadata({
-  evaluation,
-  evaluationResult,
+function ProviderLogItems({
   providerLog,
+  evaluationResult,
 }: {
-  evaluation: EvaluationDto
-  evaluationResult: EvaluationResultWithMetadata
-  providerLog?: ProviderLogDto
+  evaluationResult: EvaluationResultWithMetadataAndErrors
+  providerLog: ProviderLogDto
 }) {
   const { data: providers, isLoading: providersLoading } = useProviderApiKeys()
-
+  const providerId = providerLog?.providerId
+  const providerName = useMemo(
+    () => providers.find((p) => p.id === providerId)?.name ?? 'Unknown',
+    [providers, providerId],
+  )
   return (
     <>
-      <MetadataItem label='Result id'>
-        <ClickToCopy copyValue={evaluationResult.id.toString()}>
-          <Text.H5 align='right' color='foregroundMuted'>
-            {evaluationResult.id}
-          </Text.H5>
-        </ClickToCopy>
-      </MetadataItem>
-      <MetadataItem
-        label='Timestamp'
-        value={format(evaluationResult.createdAt, 'PPp')}
-      />
       <MetadataItem
         label='Tokens'
         loading={!providerLog}
@@ -103,10 +95,7 @@ export function EvaluationResultMetadata({
       <MetadataItem
         label='Provider'
         loading={!providerLog}
-        value={
-          providers.find((p) => p.id === providerLog?.providerId)?.name ??
-          'Unknown'
-        }
+        value={providerName}
       />
       <MetadataItem label='Cost' loading={!providerLog || providersLoading}>
         <Tooltip
@@ -130,6 +119,62 @@ export function EvaluationResultMetadata({
           </div>
         </Tooltip>
       </MetadataItem>
+      <MetadataItem
+        stacked
+        label='Result reasoning'
+        loading={!providerLog}
+        value={getReasonFromProviderLog(providerLog)}
+      />
+    </>
+  )
+}
+function ErrorMessage ({ error }: { error: EvaluationResultWithMetadataAndErrors['error']}) {
+  const resultError = getEnsureEvaluationResultError(error)
+
+  if (!resultError) return null
+
+  let message = resultError.message
+  if (resultError.details) {
+    const keys = Object.keys(resultError.details)
+    for (const key of keys) {
+      // @ts-ignore
+      message += `\n${key}: ${resultError.details[key]}`
+    }
+  }
+
+  return (
+    <Alert
+      showIcon={false}
+      variant='destructive'
+      title='Error message'
+      description={message}
+    />
+  )
+}
+
+export function EvaluationResultMetadata({
+  evaluation,
+  evaluationResult,
+  providerLog,
+}: {
+  evaluation: EvaluationDto
+  evaluationResult: EvaluationResultWithMetadataAndErrors
+  providerLog?: ProviderLogDto
+}) {
+  return (
+    <>
+      <ErrorMessage error={evaluationResult.error} />
+      <MetadataItem label='Result id'>
+        <ClickToCopy copyValue={evaluationResult.id.toString()}>
+          <Text.H5 align='right' color='foregroundMuted'>
+            {evaluationResult.id}
+          </Text.H5>
+        </ClickToCopy>
+      </MetadataItem>
+      <MetadataItem
+        label='Timestamp'
+        value={format(evaluationResult.createdAt, 'PPp')}
+      />
       <MetadataItem label='Version'>
         <ClickToCopy copyValue={evaluationResult.commit.uuid}>
           <Text.H5 align='right' color='foregroundMuted'>
@@ -137,18 +182,20 @@ export function EvaluationResultMetadata({
           </Text.H5>
         </ClickToCopy>
       </MetadataItem>
-      <MetadataItem label='Result' loading={!evaluation || !evaluationResult}>
-        <ResultCellContent
-          evaluation={evaluation}
-          value={evaluationResult.result}
+      {evaluationResult.result ? (
+        <MetadataItem label='Result' loading={!evaluation || !evaluationResult}>
+          <ResultCellContent
+            evaluation={evaluation}
+            value={evaluationResult.result}
+          />
+        </MetadataItem>
+      ) : null}
+      {providerLog ? (
+        <ProviderLogItems
+          providerLog={providerLog}
+          evaluationResult={evaluationResult}
         />
-      </MetadataItem>
-      <MetadataItem
-        stacked
-        label='Result reasoning'
-        loading={!providerLog}
-        value={getReasonFromProviderLog(providerLog)}
-      />
+      ) : null}
     </>
   )
 }
