@@ -4,6 +4,7 @@ import {
   BlankSlateWithSteps,
   EvaluationIllustation,
   TableBlankSlate,
+  TableSkeleton,
   TableWithHeader,
 } from '@latitude-data/web-ui'
 import useEvaluations from '$/stores/evaluations'
@@ -61,8 +62,6 @@ export default function ActiveEvaluations({
   onCreateEvaluation: () => void
 }) {
   const { data: evaluations, isLoading } = useEvaluations()
-  if (isLoading) return null
-
   return (
     <TableWithHeader
       title='Your evaluations'
@@ -72,10 +71,14 @@ export default function ActiveEvaluations({
         </TableWithHeader.Button>
       }
       table={
-        <TableContent
-          evaluations={evaluations}
-          onCreateEvaluation={onCreateEvaluation}
-        />
+        isLoading ? (
+          <TableSkeleton cols={3} rows={3} />
+        ) : (
+          <TableContent
+            evaluations={evaluations}
+            onCreateEvaluation={onCreateEvaluation}
+          />
+        )
       }
     />
   )

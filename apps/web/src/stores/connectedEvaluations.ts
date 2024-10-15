@@ -33,7 +33,7 @@ export default function useConnectedEvaluations(
           .detail({
             commitUuid,
           })
-          .detail({ documentUuid }).evaluations.root,
+          .detail({ documentUuid }).connectedEvaluations.root,
         { credentials: 'include' },
       )
       if (!response.ok) {

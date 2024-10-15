@@ -24,7 +24,7 @@ import useEvaluationTemplates from '$/stores/evaluationTemplates'
 import Link from 'next/link'
 
 import EvaluationEditor from './Editor'
-import EvaluationList from './List'
+import { EvaluationList, LoadingEvaluationList } from './List'
 
 type SelectableItem = {
   uuid: string
@@ -48,7 +48,11 @@ export default function ConnectionEvaluationModal({
     connectEvaluationsAction,
   )
   const navigate = useNavigate()
-  const { data: usedEvaluations, mutate } = useEvaluations({
+  const {
+    data: usedEvaluations,
+    isLoading: isLoadingUsedEvaluations,
+    mutate,
+  } = useEvaluations({
     params: { documentUuid },
   })
   const { data: evaluations, isLoading: isLoadingEvaluations } =
@@ -117,7 +121,8 @@ export default function ConnectionEvaluationModal({
     }
   }, [execute, projectId, documentUuid, selectedItem, templates, evaluations])
 
-  const isLoadingList = isLoadingEvaluations || isLoadingTemplates
+  const isLoadingList =
+    isLoadingEvaluations || isLoadingTemplates || isLoadingUsedEvaluations
   const item = selectableItems.find((item) => item.uuid === selectedItem)
   return (
     <Modal
@@ -158,7 +163,9 @@ export default function ConnectionEvaluationModal({
           }
           table={
             <div className='flex space-x-4'>
-              {!isLoadingList ? (
+              {isLoadingList ? (
+                <LoadingEvaluationList />
+              ) : (
                 <EvaluationList
                   items={filteredItems}
                   selectedItem={selectedItem}
@@ -166,7 +173,7 @@ export default function ConnectionEvaluationModal({
                   searchTerm={searchTerm}
                   onSearchChange={setSearchTerm}
                 />
-              ) : null}
+              )}
               <EvaluationEditor items={item ? [item] : []} />
             </div>
           }
