@@ -188,6 +188,12 @@ export class Latitude {
       params: { conversationUuid: uuid },
       body: { messages },
     })
+
+    if (!response.ok) {
+      onError?.(new Error(response.statusText))
+      return
+    }
+
     return this.handleStream({
       stream: response.body!,
       onEvent,
@@ -270,20 +276,42 @@ export class Latitude {
     handler,
     params,
     body,
+    retries = 0,
   }: {
     handler: H
     params?: UrlParams<H>
     method: 'POST' | 'GET' | 'PUT' | 'DELETE'
     body?: BodyParams<H>
-  }) {
-    return await fetch(this.routeResolver.resolve({ handler, params }), {
-      method,
-      headers: this.authHeader,
-      body:
-        method === 'POST'
-          ? this.bodyToString({ ...body, __internal: { source: this.source } })
-          : undefined,
-    })
+    retries?: number
+  }): Promise<Response> {
+    const response = await fetch(
+      this.routeResolver.resolve({ handler, params }),
+      {
+        method,
+        headers: this.authHeader,
+        body:
+          method === 'POST'
+            ? this.bodyToString({
+                ...body,
+                __internal: { source: this.source },
+              })
+            : undefined,
+      },
+    )
+
+    if (!response.ok && response.status === 502 && retries < 2) {
+      await new Promise((resolve) => setTimeout(resolve, 1000)) // Wait for 1 second
+
+      return this.request({
+        handler,
+        params,
+        method,
+        body,
+        retries: retries + 1,
+      })
+    }
+
+    return response
   }
 
   private parseJSON(line: string) {

@@ -267,4 +267,22 @@ describe('message', () => {
       },
     })
   })
+
+  it('should retry 3 times if gateway is not available', async () => {
+    const mockFn = vi.fn()
+    server.use(
+      http.post(
+        'http://localhost:8787/api/v1/conversations/fake-document-log-uuid/chat',
+        () => {
+          mockFn('called!')
+          return new HttpResponse(null, {
+            status: 502,
+          })
+        },
+      ),
+    )
+
+    await SDK.chat('fake-document-log-uuid', [])
+    expect(mockFn).toHaveBeenCalledTimes(3)
+  })
 })
