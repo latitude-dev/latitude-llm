@@ -5,14 +5,11 @@ import {
   BlankSlateStep,
   BlankSlateWithSteps,
   Button,
-  EvaluationIllustation,
-  TableBlankSlate,
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { ROUTES } from '$/services/routes'
-import useCurrentWorkspace from '$/stores/currentWorkspace'
 import useEvaluations from '$/stores/evaluations'
 import Link from 'next/link'
 
@@ -66,9 +63,6 @@ export default function EvaluationsLayoutClient({
 }: {
   evaluations: EvaluationDto[]
 }) {
-  const workspace = useCurrentWorkspace()
-  const { project } = useCurrentProject()
-  const { commit } = useCurrentCommit()
   const document = useCurrentDocument()
   const { data: evaluations } = useEvaluations({
     fallbackData,
@@ -78,11 +72,6 @@ export default function EvaluationsLayoutClient({
   if (evaluations.length) {
     return <BatchEvaluationsTable evaluations={evaluations} />
   }
-  const href = ROUTES.projects
-    .detail({ id: project.id })
-    .commits.detail({ uuid: commit.uuid })
-    .documents.detail({ uuid: document.documentUuid }).evaluations.dashboard
-    .connect.root
 
   return (
     <BlankSlateWithSteps
@@ -102,24 +91,7 @@ export default function EvaluationsLayoutClient({
           title='How to evaluate your prompts using LLMs and Latitude.so'
         />
       </BlankSlateStep>
-      {workspace.data.id === 3 ? (
-        <SuggestedEvaluations />
-      ) : (
-        <BlankSlateStep
-          number={2}
-          title='Connect your first evaluation'
-          description='Connect an evaluation from the templates gallery to get insights about how your prompt performs.'
-        >
-          <div className='flex flex-col gap-5 w-full aspect-video rounded-md border border-border bg-muted items-center justify-center'>
-            <EvaluationIllustation className='w-24 h-24' />
-            <Link href={href}>
-              <TableBlankSlate.Button>
-                Connect your first evaluation
-              </TableBlankSlate.Button>
-            </Link>
-          </div>
-        </BlankSlateStep>
-      )}
+      <SuggestedEvaluations />
     </BlankSlateWithSteps>
   )
 }

@@ -10,7 +10,6 @@ import {
 } from '@latitude-data/web-ui'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { ROUTES } from '$/services/routes'
-import useCurrentWorkspace from '$/stores/currentWorkspace'
 import Link from 'next/link'
 
 interface EvaluationListProps {
@@ -36,7 +35,6 @@ export function EvaluationList({
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
   const document = useCurrentDocument()
-  const workspace = useCurrentWorkspace()
 
   return (
     <div className='w-1/2 max-h-[520px] overflow-y-auto'>
@@ -49,28 +47,26 @@ export function EvaluationList({
       />
 
       <div className='space-y-6'>
-        {workspace.data.id === 3 && (
-          <div className='flex flex-col gap-2'>
-            <Text.H6M color='foregroundMuted'>Suggested</Text.H6M>
-            <Link
-              href={
-                ROUTES.projects
-                  .detail({ id: project.id })
-                  .commits.detail({ uuid: commit.uuid })
-                  .documents.detail({ uuid: document.documentUuid }).evaluations
-                  .dashboard.generate.root
-              }
-            >
-              <div className='flex flex-col gap-2 p-2 rounded-lg border hover:bg-secondary'>
-                <Text.H5M>AI generated eval</Text.H5M>
-                <Text.H6 color='foregroundMuted'>
-                  Our AI will craft an evaluation template just for this
-                  specific prompt. Try it out!
-                </Text.H6>
-              </div>
-            </Link>
-          </div>
-        )}
+        <div className='flex flex-col gap-2'>
+          <Text.H6M color='foregroundMuted'>Suggested</Text.H6M>
+          <Link
+            href={
+              ROUTES.projects
+                .detail({ id: project.id })
+                .commits.detail({ uuid: commit.uuid })
+                .documents.detail({ uuid: document.documentUuid }).evaluations
+                .dashboard.generate.root
+            }
+          >
+            <div className='flex flex-col gap-2 p-2 rounded-lg border hover:bg-secondary'>
+              <Text.H5M>AI generated eval</Text.H5M>
+              <Text.H6 color='foregroundMuted'>
+                Our AI will craft an evaluation template just for this specific
+                prompt. Try it out!
+              </Text.H6>
+            </div>
+          </Link>
+        </div>
         {items.length > 0 && (
           <div className='flex flex-col gap-2'>
             <Text.H6M color='foregroundMuted'>Templates</Text.H6M>
