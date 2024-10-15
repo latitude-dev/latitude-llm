@@ -102,26 +102,16 @@ export class EvaluationRunChecker {
   }
 
   private async createChain(workspace: WorkspaceDto) {
-    const serializedDocumentLogResult = await serialize(
-      { workspace, documentLog: this.documentLog },
-      this.db,
-    )
+    const serializedLogResult = await this.serializeDocumentLog(workspace)
 
-    if (serializedDocumentLogResult.error) {
-      const error = new ChainError({
-        code: RunErrorCodes.EvaluationRunMissingProviderLogError,
-        message: `Could not serialize documentLog ${this.documentLog.uuid}. No provider logs found.`,
-      })
-      await this.saveError(error)
-      return Result.error(error)
-    }
+    if (serializedLogResult.error) return serializedLogResult
 
     try {
       return Result.ok(
         createChainFn({
           prompt: this.evaluation.metadata.prompt,
           parameters: {
-            ...serializedDocumentLogResult.value,
+            ...serializedLogResult.value,
           },
         }),
       )
@@ -130,7 +120,35 @@ export class EvaluationRunChecker {
       return Result.error(
         new ChainError({
           code: RunErrorCodes.ChainCompileError,
-          message: error.message,
+          message: `Error compiling evaluation prompt ${this.evaluation.name} with ID: ${this.evaluation.id} while running evaluation: ${error.message}`,
+        }),
+      )
+    }
+  }
+
+  private async serializeDocumentLog(workspace: WorkspaceDto) {
+    try {
+      const serializedDocumentLogResult = await serialize(
+        { workspace, documentLog: this.documentLog },
+        this.db,
+      )
+
+      if (serializedDocumentLogResult.error) {
+        const error = new ChainError({
+          code: RunErrorCodes.EvaluationRunMissingProviderLogError,
+          message: `Could not serialize documentLog ${this.documentLog.uuid}. No provider logs found.`,
+        })
+        await this.saveError(error)
+        return Result.error(error)
+      }
+
+      return Result.ok(serializedDocumentLogResult.value)
+    } catch (e) {
+      const error = e as Error
+      return Result.error(
+        new ChainError({
+          code: RunErrorCodes.ChainCompileError,
+          message: `Error serializing documentLog ${this.documentLog.uuid} while running evaluation: ${error.message}`,
         }),
       )
     }
