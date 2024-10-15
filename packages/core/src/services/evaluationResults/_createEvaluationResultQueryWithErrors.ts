@@ -25,7 +25,7 @@ export function createEvaluationResultQueryWithErrors(
         .as('cost_in_millicents'),
     })
     .from(evaluationResultsScope)
-    .innerJoin(
+    .leftJoin(
       providerLogs,
       eq(providerLogs.id, evaluationResultsScope.providerLogId),
     )
