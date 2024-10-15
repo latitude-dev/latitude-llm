@@ -1,3 +1,4 @@
+import { CommitStatus } from '@latitude-data/core/browser'
 import {
   Button,
   CloseTrigger,
@@ -20,6 +21,7 @@ export default function DraftCommitModal({
   setOpen: (open: boolean) => void
 }) {
   const { createDraft, isCreating } = useCommits({
+    commitStatus: CommitStatus.Draft,
     onSuccessCreate: (draft) => {
       router.push(
         ROUTES.projects
