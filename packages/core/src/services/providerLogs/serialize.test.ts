@@ -420,4 +420,22 @@ describe('formatContext', () => {
         "User:\nI don't know, why?",
     )
   })
+
+  it('should return an empty speaker response if message without content', async () => {
+    // @ts-expect-error
+    const providerLogDto: ProviderLogDto = {
+      messages: [
+        {
+          role: MessageRole.user,
+          content: [],
+        },
+      ],
+      response: 'To get to the other side!',
+      toolCalls: [],
+    }
+
+    const result = formatContext(providerLogDto)
+
+    expect(result).toBe('User:')
+  })
 })

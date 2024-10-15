@@ -50,12 +50,16 @@ export function formatContext(
       content = message.content
     } else if (
       Array.isArray(message.content) &&
-      'text' in message.content[0]!
+      message.content &&
+      message.content[0] &&
+      'text' in message.content[0]
     ) {
       content = message.content[0].text
     } else if (
       Array.isArray(message.content) &&
-      'image' in message.content[0]!
+      message.content &&
+      message.content[0] &&
+      'image' in message.content[0]
     ) {
       content = '[IMAGE]'
     }
