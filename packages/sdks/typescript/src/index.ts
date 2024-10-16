@@ -299,7 +299,7 @@ export class Latitude {
       },
     )
 
-    if (!response.ok && response.status === 502 && retries < 2) {
+    if (!response.ok && response.status > 500 && retries < 2) {
       await new Promise((resolve) => setTimeout(resolve, 1000)) // Wait for 1 second
 
       return this.request({
