@@ -19,11 +19,14 @@
     "prettier": "prettier --write \"**/*.{ts,tsx,md}\""
   },
   "type": "module",
-  "files": [
-    "dist"
-  ],
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "files": ["dist"],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
   "dependencies": {
     "@t3-oss/env-core": "^0.10.1",
     "eventsource-parser": "^2.0.1",
