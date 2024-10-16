@@ -32,9 +32,6 @@ pulumi.all([sentryDsn, sentryOrg, sentryProject, postHogApiKey]).apply(
         platform: 'linux/amd64',
         context: resolve('../../../'),
         dockerfile: resolve('../../../apps/web/docker/Dockerfile'),
-        cacheFrom: {
-          images: [pulumi.interpolate`${repo.repositoryUrl}:latest`],
-        },
         args: {
           SENTRY_DSN: sentryDsn,
           SENTRY_ORG: sentryOrg,
@@ -57,9 +54,6 @@ new docker.Image('LatitudeLLMCoreImage', {
     platform: 'linux/amd64',
     context: resolve('../../../'),
     dockerfile: resolve('../../../packages/core/docker/Dockerfile'),
-    cacheFrom: {
-      images: [pulumi.interpolate`${coreRepo.repositoryUrl}:latest`],
-    },
   },
   imageName: pulumi.interpolate`${coreRepo.repositoryUrl}:${process.env.IMAGE_TAG}`,
   registry: {
