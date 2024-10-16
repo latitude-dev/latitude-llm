@@ -24,6 +24,10 @@ const mailerApiKey = createSecretWithVersion(
   'MAILER_API_KEY',
   'API key for the mailer service',
 )
+const mailgunMailerApiKey = createSecretWithVersion(
+  'MAILGUN_MAILER_API_KEY',
+  'API key for the Mailgun API mailer service',
+)
 const sentryDsn = createSecretWithVersion(
   'SENTRY_DSN',
   'DSN for Sentry error tracking',
@@ -98,6 +102,7 @@ const supportAppSecretKey = createSecretWithVersion(
   'Support app secret key for the support chat',
 )
 export const mailerApiKeyArn = mailerApiKey.arn
+export const mailgunMailerApiKeyArn = mailgunMailerApiKey.arn
 export const sentryDsnArn = sentryDsn.arn
 export const sentryOrgArn = sentryOrg.arn
 export const sentryProjectArn = sentryProject.arn
