@@ -1,15 +1,8 @@
+import { useEffect, useState } from 'react'
+
+import hslToHex from 'hsl-to-hex'
 import type { languages } from 'monaco-editor'
-
-const style = getComputedStyle(document.body)
-
-export const colorFromProperty = (property: string): string => {
-  const rgb = style.getPropertyValue(property)
-  const [r, g, b] = rgb.split(' ').map(Number)
-  const hr = (r ?? 0).toString(16).padStart(2, '0')
-  const hg = (g ?? 0).toString(16).padStart(2, '0')
-  const hb = (b ?? 0).toString(16).padStart(2, '0')
-  return `#${hr}${hg}${hb}`
-}
+import { useTheme } from 'next-themes'
 
 export const tokenizer = {
   root: [
@@ -132,51 +125,82 @@ export const tokenizer = {
   ],
 } as { [key: string]: languages.IMonarchLanguageRule[] }
 
-// TODO: Find a way of converting HSL to HEX to avoid duplicating all our color scheme.
-export const themeRules = [
-  { token: 'yaml-delimiter', foreground: colorFromProperty('--primary-rgb') },
-  { token: 'yaml', foreground: colorFromProperty('--primary-rgb') },
+const style = getComputedStyle(document.body)
 
-  { token: 'header', foreground: colorFromProperty('--primary-rgb') },
-  {
-    token: 'bold',
-    fontStyle: 'bold',
-    foreground: colorFromProperty('--foreground-rgb'),
-  },
-  {
-    token: 'italic',
-    fontStyle: 'italic',
-    foreground: colorFromProperty('--foreground-rgb'),
-  },
-  {
-    token: 'link',
-    foreground: colorFromProperty('--primary-rgb'),
-    fontStyle: 'underline',
-  },
-  {
-    token: 'tag-open',
-    foreground: colorFromProperty('--accent-foreground-rgb'),
-  },
-  {
-    token: 'tag-close',
-    foreground: colorFromProperty('--accent-foreground-rgb'),
-  },
-  {
-    token: 'attribute.name',
-    foreground: colorFromProperty('--destructive-rgb'),
-  },
-  {
-    token: 'js-open',
-    foreground: colorFromProperty('--accent-foreground-rgb'),
-  },
-  {
-    token: 'js-close',
-    foreground: colorFromProperty('--accent-foreground-rgb'),
-  },
-  { token: 'js', foreground: colorFromProperty('--primary-rgb') },
-  {
-    token: 'comment',
-    fontStyle: 'italic',
-    foreground: colorFromProperty('--muted-foreground-rgb'),
-  },
-]
+function colorFromProperty(property: string): string {
+  const hsl = style.getPropertyValue(property)
+  const [h, s, l] = hsl.split(' ').map((v) => Number(v.replace('%', '')))
+  return hslToHex(h!, s!, l!)
+}
+
+const recalculateColors = () => ({
+  primary: colorFromProperty('--primary'),
+  secondary: colorFromProperty('--secondary'),
+  foreground: colorFromProperty('--foreground'),
+  accentForeground: colorFromProperty('--accent-foreground'),
+  destructive: colorFromProperty('--destructive'),
+  mutedForeground: colorFromProperty('--muted-foreground'),
+})
+
+export type ThemeColors = ReturnType<typeof recalculateColors>
+
+export const useThemeColors = () => {
+  const { theme } = useTheme()
+  const [themeColors, setThemeColors] = useState(recalculateColors())
+  useEffect(() => {
+    // Must resolve current callstack before recalculating colors, otherwise they won't be updated on time.
+    setTimeout(() => setThemeColors(recalculateColors()), 0)
+  }, [theme])
+
+  return themeColors
+}
+
+export const themeRules = (themeColors: ThemeColors) => {
+  return [
+    { token: 'yaml-delimiter', foreground: themeColors.primary },
+    { token: 'yaml', foreground: themeColors.primary },
+
+    { token: 'header', foreground: themeColors.primary },
+    {
+      token: 'bold',
+      fontStyle: 'bold',
+      foreground: themeColors.foreground,
+    },
+    {
+      token: 'italic',
+      fontStyle: 'italic',
+      foreground: themeColors.foreground,
+    },
+    {
+      token: 'link',
+      foreground: themeColors.primary,
+      fontStyle: 'underline',
+    },
+    {
+      token: 'tag-open',
+      foreground: themeColors.accentForeground,
+    },
+    {
+      token: 'tag-close',
+      foreground: themeColors.accentForeground,
+    },
+    {
+      token: 'attribute.name',
+      foreground: themeColors.destructive,
+    },
+    {
+      token: 'js-open',
+      foreground: themeColors.accentForeground,
+    },
+    {
+      token: 'js-close',
+      foreground: themeColors.accentForeground,
+    },
+    { token: 'js', foreground: themeColors.primary },
+    {
+      token: 'comment',
+      fontStyle: 'italic',
+      foreground: themeColors.mutedForeground,
+    },
+  ]
+}

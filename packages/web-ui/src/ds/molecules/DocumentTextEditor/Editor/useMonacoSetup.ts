@@ -1,10 +1,10 @@
-import { useCallback, useRef } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
 
 import { Monaco } from '@monaco-editor/react'
 import { languages } from 'monaco-editor'
 
 import { DocumentError } from '../types'
-import { colorFromProperty, themeRules, tokenizer } from './language'
+import { themeRules, tokenizer, useThemeColors } from './language'
 
 export function useMonacoSetup({
   errorFixFn,
@@ -12,6 +12,31 @@ export function useMonacoSetup({
   errorFixFn?: (errors: DocumentError[]) => void
 } = {}) {
   const monacoRef = useRef<Monaco | null>(null)
+  const themeColors = useThemeColors()
+
+  const applyTheme = useCallback(
+    (monaco: Monaco) => {
+      monaco.editor.defineTheme('latitude', {
+        base: 'vs',
+        inherit: true,
+        rules: themeRules(themeColors),
+        colors: {
+          'editor.background': themeColors.secondary,
+          'editor.foreground': themeColors.foreground,
+          'editorLineNumber.activeForeground': themeColors.foreground,
+          'editorCursor.foreground': themeColors.foreground,
+        },
+      })
+
+      monaco.editor.setTheme('latitude')
+    },
+    [themeColors],
+  )
+
+  useEffect(() => {
+    if (!monacoRef.current) return
+    applyTheme(monacoRef.current)
+  }, [applyTheme])
 
   const handleEditorWillMount = useCallback((monaco: Monaco) => {
     if (monacoRef.current) return
@@ -23,18 +48,7 @@ export function useMonacoSetup({
         blockComment: ['/*', '*/'],
       },
     })
-    monaco.editor.defineTheme('latitude', {
-      base: 'vs',
-      inherit: true,
-      rules: themeRules,
-      colors: {
-        'editor.background': colorFromProperty('--secondary-rgb'),
-        'editor.foreground': colorFromProperty('--foreground-rgb'),
-        'editorLineNumber.activeForeground':
-          colorFromProperty('--foreground-rgb'),
-        'editorCursor.foreground': colorFromProperty('--foreground-rgb'),
-      },
-    })
+    applyTheme(monaco)
 
     monaco.editor.addCommand({
       id: 'fixErrors',

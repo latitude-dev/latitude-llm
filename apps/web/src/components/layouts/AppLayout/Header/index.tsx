@@ -2,8 +2,7 @@
 
 import { ReactNode } from 'react'
 
-import { Icon, SessionUser, Text } from '@latitude-data/web-ui'
-import { ThemeButton } from '$/components/ThemeButton'
+import { Icon, SessionUser, Text, ThemeButton } from '@latitude-data/web-ui'
 import { ROUTES } from '$/services/routes'
 import Link from 'next/link'
 import { Fragment } from 'react/jsx-runtime'
