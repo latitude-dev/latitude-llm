@@ -87,11 +87,15 @@ export async function generateDatasetAction({
       stream.done()
     }
   } catch (error) {
-    stream.error({
-      name: (error as Error).name,
-      message: (error as Error).message,
-      stack: (error as Error).stack,
-    })
+    try {
+      stream.error({
+        name: (error as Error).name,
+        message: (error as Error).message,
+        stack: (error as Error).stack,
+      })
+    } catch (error) {
+      // do nothing, stream ight be already closed
+    }
   }
 
   return {
