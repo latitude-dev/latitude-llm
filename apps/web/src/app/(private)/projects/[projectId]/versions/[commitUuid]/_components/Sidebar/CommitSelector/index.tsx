@@ -1,50 +1,33 @@
 'use client'
 
-import {
-  RefObject,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react'
+import { RefObject, useEffect, useMemo, useRef, useState } from 'react'
 
 import {
   DocumentVersion,
-  HEAD_COMMIT,
   HELP_CENTER,
-  User,
   type Commit,
 } from '@latitude-data/core/browser'
 import {
-  Badge,
   Button,
   ReactStateDispatch,
   SelectContent,
   SelectRoot,
   SelectTrigger,
   SelectValueWithIcon,
+  TabSelector,
   Text,
-  useCurrentCommit,
-  useCurrentProject,
 } from '@latitude-data/web-ui'
-import { useNavigate } from '$/hooks/useNavigate'
-import { ROUTES } from '$/services/routes'
-import useCommits from '$/stores/commitsStore'
 import useUsers from '$/stores/users'
-import { useSelectedLayoutSegment } from 'next/navigation'
 
 import CreateDraftCommitModal from '../CreateDraftCommitModal'
 import PublishDraftCommitModal from '../PublishDraftCommitModal'
+import { ArchivedCommitsList } from './ArchivedCommitsList'
+import { BadgeCommit, BadgeType, SimpleUser } from './CommitItem'
+import { CurrentCommitsList } from './CurrentCommitsList'
 import DeleteDraftCommitModal from './DeleteDraftCommitModal'
 
 const MIN_WIDTH_SELECTOR_PX = 380
 const TRIGGER_X_PADDING_PX = 26
-enum BadgeType {
-  Head = 'head',
-  Draft = 'draft',
-  Merged = 'merged',
-}
 
 function useObserveSelectWidth(ref: RefObject<HTMLButtonElement>) {
   const [width, setWidth] = useState(MIN_WIDTH_SELECTOR_PX)
@@ -94,102 +77,6 @@ function CommitSelectorHeader({
   )
 }
 
-function BadgeCommit({ badgeType }: { badgeType: BadgeType }) {
-  const isLive = badgeType === BadgeType.Head
-  const text = isLive ? 'Live' : badgeType === BadgeType.Draft ? 'Draft' : 'Old'
-  return <Badge variant={isLive ? 'accent' : 'muted'}>{text}</Badge>
-}
-
-type SimpleUser = Omit<User, 'encryptedPassword'>
-
-function CommitItem({
-  commit,
-  currentDocument,
-  headCommitId,
-  user,
-  onCommitPublish,
-  onCommitDelete,
-}: {
-  commit?: Commit
-  currentDocument?: DocumentVersion
-  headCommitId?: number
-  user?: SimpleUser
-  onCommitPublish: ReactStateDispatch<number | null>
-  onCommitDelete: ReactStateDispatch<number | null>
-}) {
-  const { project } = useCurrentProject()
-  const { commit: currentCommit } = useCurrentCommit()
-  const router = useNavigate()
-  const selectedSegment = useSelectedLayoutSegment()
-  if (!commit) return null
-
-  const isHead = commit.id === headCommitId
-  const isDraft = !commit.mergedAt
-  const badgeType =
-    commit.id === headCommitId ? BadgeType.Head : BadgeType.Draft
-
-  const commitPath = useMemo(() => {
-    const commitRoute = ROUTES.projects
-      .detail({ id: project.id })
-      .commits.detail({ uuid: isHead ? HEAD_COMMIT : commit.uuid })
-    if (!currentDocument) return commitRoute.root
-
-    const documentRoute = commitRoute.documents.detail({
-      uuid: currentDocument.documentUuid,
-    })
-
-    if (!selectedSegment) return documentRoute.editor.root
-
-    return (
-      documentRoute[selectedSegment as 'editor' | 'logs']?.root ??
-      documentRoute.editor.root
-    )
-  }, [project.id, commit.uuid, isHead, currentDocument, selectedSegment])
-
-  const navigateToCommit = useCallback(() => {
-    router.push(commitPath)
-  }, [router, commitPath])
-
-  return (
-    <div className='flex flex-col p-4 gap-y-2'>
-      <div className='flex flex-col gap-y-1'>
-        <div className='flex items-center justify-between'>
-          <Text.H5>{commit.title}</Text.H5>
-          <BadgeCommit badgeType={badgeType} />
-        </div>
-        <Text.H6 color='foregroundMuted'>
-          {user ? user.name : 'Unknown user'}
-        </Text.H6>
-      </div>
-      <div className='flex gap-x-4'>
-        {currentCommit.uuid !== commit.uuid && (
-          <Button variant='link' size='none' onClick={navigateToCommit}>
-            View
-          </Button>
-        )}
-        {isDraft ? (
-          <>
-            <Button
-              variant='link'
-              size='none'
-              onClick={() => onCommitPublish(commit.id)}
-            >
-              Publish
-            </Button>
-            <Button
-              variant='link'
-              size='none'
-              onClick={() => onCommitDelete(commit.id)}
-            >
-              Delete
-            </Button>
-          </>
-        ) : null}
-      </div>
-    </div>
-  )
-}
-
 export default function CommitSelector({
   headCommit,
   currentCommit,
@@ -214,31 +101,41 @@ export default function CommitSelector({
       {} as Record<string, SimpleUser>,
     )
   }, [users])
-  const { data: commits } = useCommits({ fallbackData: draftCommits })
+
   const selected = useMemo(() => {
-    const foundCommit = commits.find((commit) => commit.id === currentCommit.id)
-    const commit = foundCommit ?? currentCommit
     return {
-      commit,
-      title: commit.title ?? commit.uuid,
+      commit: currentCommit,
+      title: currentCommit.title ?? currentCommit.uuid,
       badgeType:
-        currentCommit?.id === headCommit?.id
+        currentCommit.id === headCommit?.id
           ? BadgeType.Head
-          : foundCommit
-            ? BadgeType.Draft
-            : BadgeType.Merged,
+          : currentCommit.mergedAt
+            ? BadgeType.Merged
+            : BadgeType.Draft,
     }
-  }, [commits, currentCommit.id, headCommit?.id])
+  }, [currentCommit.id, headCommit?.id, currentCommit.mergedAt])
+
   const [publishCommit, setPublishCommit] = useState<number | null>(null)
   const [deleteCommit, setDeleteCommit] = useState<number | null>(null)
-  const canPublish = currentCommit.id !== headCommit?.id
+
+  const canPublish = !currentCommit.mergedAt
   const isHead = currentCommit.id === headCommit?.id
+  const [selectedTab, setSelectedTab] = useState<'current' | 'archived'>(
+    !currentCommit.mergedAt || currentCommit.id == headCommit?.id
+      ? 'current'
+      : 'archived',
+  )
   return (
     <div className='flex flex-col gap-y-2'>
       <SelectRoot value={String(currentCommit.id)}>
         <SelectTrigger ref={ref}>
           <SelectValueWithIcon
-            icon={<BadgeCommit badgeType={selected.badgeType} />}
+            icon={
+              <BadgeCommit
+                commit={currentCommit}
+                isLive={currentCommit.id == headCommit?.id}
+              />
+            }
           >
             <Text.H5M ellipsis noWrap userSelect={false}>
               {selected.title}
@@ -246,32 +143,34 @@ export default function CommitSelector({
           </SelectValueWithIcon>
         </SelectTrigger>
         <SelectContent autoScroll={false}>
-          <div className='flex flex-col gap-y-4 p-4'>
+          <div className='flex flex-col gap-y-4 p-4 relative max-h-96'>
             <div style={{ width, minWidth: MIN_WIDTH_SELECTOR_PX }}>
               <CommitSelectorHeader setOpen={setOpen} />
             </div>
-            <ul className='custom-scrollbar max-h-60 border border-border rounded-md divide-y divide-border'>
-              <CommitItem
-                commit={headCommit}
+            <TabSelector
+              options={[
+                { label: 'Current', value: 'current' },
+                { label: 'Archived', value: 'archived' },
+              ]}
+              selected={selectedTab}
+              onSelect={setSelectedTab}
+            />
+            {selectedTab === 'current' ? (
+              <CurrentCommitsList
                 currentDocument={currentDocument}
-                headCommitId={headCommit?.id}
-                user={headCommit ? usersById[headCommit?.userId] : undefined}
+                headCommit={headCommit}
+                usersById={usersById}
                 onCommitPublish={setPublishCommit}
                 onCommitDelete={setDeleteCommit}
+                draftCommits={draftCommits}
               />
-              {commits.map((commit) => (
-                <li key={commit.id}>
-                  <CommitItem
-                    commit={commit}
-                    currentDocument={currentDocument}
-                    headCommitId={headCommit?.id}
-                    user={usersById[commit.userId]}
-                    onCommitPublish={setPublishCommit}
-                    onCommitDelete={setDeleteCommit}
-                  />
-                </li>
-              ))}
-            </ul>
+            ) : (
+              <ArchivedCommitsList
+                currentDocument={currentDocument}
+                headCommit={headCommit}
+                usersById={usersById}
+              />
+            )}
           </div>
         </SelectContent>
       </SelectRoot>

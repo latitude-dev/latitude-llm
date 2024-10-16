@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 
-import { Commit, ModifiedDocumentType } from '@latitude-data/core/browser'
+import {
+  Commit,
+  CommitStatus,
+  ModifiedDocumentType,
+} from '@latitude-data/core/browser'
 import { ChangedDocument } from '@latitude-data/core/repositories'
 import {
   cn,
@@ -239,6 +243,7 @@ export default function PublishDraftCommitModal({
 }) {
   const { toast } = useToast()
   const { data, publishDraft, isPublishing } = useCommits({
+    commitStatus: CommitStatus.Draft,
     onSuccessPublish: () => {
       router.push(ROUTES.projects.detail({ id: project.id }).commits.latest)
 

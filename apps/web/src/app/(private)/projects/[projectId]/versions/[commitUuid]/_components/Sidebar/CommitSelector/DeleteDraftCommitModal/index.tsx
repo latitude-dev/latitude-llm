@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 
+import { CommitStatus } from '@latitude-data/core/browser'
 import {
   ConfirmModal,
   ReactStateDispatch,
@@ -17,11 +18,13 @@ export default function DeleteDraftCommitModal({
   onClose: ReactStateDispatch<number | null>
 }) {
   const { data, destroyDraft, isDestroying } = useCommits({
+    commitStatus: CommitStatus.Draft,
     onSuccessDestroy: async () => {
       router.push(ROUTES.projects.detail({ id: project.id }).commits.latest)
       onClose(null)
     },
   })
+
   const commit = useMemo(() => data.find((c) => c.id === commitId), [commitId])
 
   const { project } = useCurrentProject()

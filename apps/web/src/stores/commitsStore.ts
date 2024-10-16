@@ -1,11 +1,7 @@
 import { useCallback } from 'react'
 
 import { Commit, CommitStatus } from '@latitude-data/core/browser'
-import {
-  useCurrentCommit,
-  useCurrentProject,
-  useToast,
-} from '@latitude-data/web-ui'
+import { useCurrentProject, useToast } from '@latitude-data/web-ui'
 import { createDraftCommitAction } from '$/actions/commits/create'
 import { deleteDraftCommitAction } from '$/actions/commits/deleteDraftCommitAction'
 import { fetchCommitsByProjectAction } from '$/actions/commits/fetchCommitsByProjectAction'
@@ -18,17 +14,18 @@ export default function useCommits(
     onSuccessCreate?: (commit: Commit) => void
     onSuccessDestroy?: (commit: Commit) => void
     onSuccessPublish?: (commit: Commit) => void
+    commitStatus?: CommitStatus
   } = {},
 ) {
-  const { onSuccessCreate, onSuccessDestroy, onSuccessPublish } = opts
+  const { onSuccessCreate, onSuccessDestroy, onSuccessPublish, commitStatus } =
+    opts
   const { project } = useCurrentProject()
-  useCurrentCommit
   const { toast } = useToast()
 
   const fetcher = useCallback(async () => {
     const [data, error] = await fetchCommitsByProjectAction({
       projectId: project.id,
-      status: CommitStatus.Draft,
+      status: commitStatus ?? CommitStatus.Draft,
     })
     if (error) {
       toast({
@@ -41,17 +38,13 @@ export default function useCommits(
     }
 
     return data
-  }, [project.id, toast])
+  }, [project.id, toast, commitStatus])
 
   const {
     data = [],
     mutate,
     ...rest
-  } = useSWR<Commit[]>(
-    ['commits', project.id, CommitStatus.Draft],
-    fetcher,
-    opts,
-  )
+  } = useSWR<Commit[]>(['commits', project.id, commitStatus], fetcher, opts)
   const { execute: createDraft, isPending: isCreating } = useLatitudeAction(
     createDraftCommitAction,
     {
