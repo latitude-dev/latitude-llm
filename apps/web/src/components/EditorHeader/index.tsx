@@ -22,23 +22,24 @@ import { ROUTES } from '$/services/routes'
 import useProviderApiKeys from '$/stores/providerApiKeys'
 import Link from 'next/link'
 
-const CUSTOM_MODEL = 'custom-model'
-
 function useModelsOptions({ provider }: { provider: Providers | undefined }) {
   return useMemo(() => {
     const models = provider ? PROVIDER_MODELS[provider] : null
     if (!models) return []
 
-    const options = Object.keys(models).map((model) => ({
+    return Object.keys(models).map((model) => ({
       label: model,
       value: model,
     }))
-    return [...options, { label: 'Custom Model', value: CUSTOM_MODEL }]
   }, [provider])
 }
 
 type PromptMeta = { providerName: string; model: string }
 type IProviderByName = Record<string, ProviderApiKey>
+/**
+ * @returns the selected model when it exists on the provider's model list,
+ * `undefined` when it does not, and `null` when it is not configured.
+ */
 function selectModel({
   promptMetadata,
   providersByName,
@@ -46,11 +47,15 @@ function selectModel({
   promptMetadata: PromptMeta
   providersByName: IProviderByName
 }) {
-  const found = providersByName[promptMetadata?.providerName]
-  const models = found ? PROVIDER_MODELS[found.provider] : null
-  const model = promptMetadata?.model
-  const modelInModels = models ? models[model] : undefined
-  return modelInModels ? modelInModels : model ? CUSTOM_MODEL : undefined
+  const inputModel = promptMetadata?.model
+  if (!inputModel) return null
+  const provider = providersByName[promptMetadata?.providerName]
+  const providerModels = provider
+    ? PROVIDER_MODELS[provider.provider]
+    : undefined
+  const selectedModel = providerModels?.[inputModel]
+  if (selectedModel) return selectedModel
+  return undefined
 }
 
 export default function EditorHeader({
@@ -178,7 +183,6 @@ export default function EditorHeader({
   const onModelChange = useCallback(
     (value: string) => {
       if (!metadata) return
-      if (value === CUSTOM_MODEL) return
       if (!selectedProvider) return
 
       setModel(value)
@@ -251,9 +255,11 @@ export default function EditorHeader({
           }
           name='model'
           label='Model'
-          placeholder='Select a model'
+          placeholder={
+            selectedModel === undefined ? 'Custom model' : 'Select a model'
+          }
           options={modelOptions}
-          value={selectedModel as string}
+          value={selectedModel || ''}
           onChange={onModelChange}
         />
       </FormFieldGroup>
