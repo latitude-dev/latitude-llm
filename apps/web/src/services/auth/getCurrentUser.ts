@@ -3,9 +3,7 @@ import { cache } from 'react'
 import { User, Workspace } from '@latitude-data/core/browser'
 import { getCurrentUserFromDB } from '$/data-access'
 import { Session } from 'lucia'
-import { redirect } from 'next/navigation'
 
-import { ROUTES } from '../routes'
 import { getSession } from './getSession'
 
 export type SessionData = {
@@ -15,13 +13,7 @@ export type SessionData = {
 }
 export const getCurrentUser = cache(async () => {
   const sessionData = await getSession()
-  if (!sessionData.session) {
-    return redirect(ROUTES.auth.login)
-  }
-
   const result = await getCurrentUserFromDB({ userId: sessionData?.user?.id })
-  if (!result.ok) return redirect(ROUTES.auth.login)
-
   const { user, workspace } = result.unwrap()
 
   return {
