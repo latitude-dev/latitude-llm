@@ -1,3 +1,5 @@
+import { Readable } from 'stream'
+
 import type { Config, Message } from '@latitude-data/compiler'
 import type {
   ChainCallResponseDto,
@@ -7,10 +9,14 @@ import type {
 } from '@latitude-data/core/browser'
 import env from '$sdk/env'
 import { GatewayApiConfig, RouteResolver } from '$sdk/utils'
+import { nodeFetchResponseToReadableStream } from '$sdk/utils/nodeFetchResponseToReadableStream'
 import { BodyParams, HandlerType, UrlParams } from '$sdk/utils/types'
 import { ParsedEvent, ReconnectInterval } from 'eventsource-parser'
 import { EventSourceParserStream } from 'eventsource-parser/stream'
+import nodeFetch, { Response } from 'node-fetch'
 
+const MAX_RETRIES = 2
+const WAIT_IN_MS_BEFORE_RETRY = 1000
 export type StreamChainResponse = {
   conversation: Message[]
   response: ChainCallResponseDto
@@ -166,7 +172,7 @@ export class Latitude {
       }
 
       return this.handleStream({
-        stream: response.body!,
+        body: response.body! as Readable,
         onEvent,
         onFinished,
         onError,
@@ -195,7 +201,7 @@ export class Latitude {
     }
 
     return this.handleStream({
-      stream: response.body!,
+      body: response.body! as Readable,
       onEvent,
       onFinished,
       onError,
@@ -203,18 +209,19 @@ export class Latitude {
   }
 
   private async handleStream({
-    stream,
+    body,
     onEvent,
     onFinished,
     onError,
   }: StreamResponseCallbacks & {
-    stream: ReadableStream
+    body: Readable
   }) {
     let conversation: Message[] = []
     let uuid: string | undefined
     let chainResponse: ChainCallResponseDto | undefined
 
     const parser = new EventSourceParserStream()
+    const stream = nodeFetchResponseToReadableStream(body)
     const eventStream = stream
       .pipeThrough(new TextDecoderStream())
       .pipeThrough(parser)
@@ -284,7 +291,7 @@ export class Latitude {
     body?: BodyParams<H>
     retries?: number
   }): Promise<Response> {
-    const response = await fetch(
+    const response = await nodeFetch(
       this.routeResolver.resolve({ handler, params }),
       {
         method,
@@ -299,8 +306,10 @@ export class Latitude {
       },
     )
 
-    if (!response.ok && response.status > 500 && retries < 2) {
-      await new Promise((resolve) => setTimeout(resolve, 1000)) // Wait for 1 second
+    if (!response.ok && response.status > 500 && retries < MAX_RETRIES) {
+      await new Promise((resolve) =>
+        setTimeout(resolve, WAIT_IN_MS_BEFORE_RETRY),
+      )
 
       return this.request({
         handler,
