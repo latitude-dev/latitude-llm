@@ -10,7 +10,12 @@ const INTERNAL_PACKAGES = [
 const nextConfig = {
   output: 'standalone',
   transpilePackages: INTERNAL_PACKAGES,
-  serverExternalPackages: ['@sentry/nextjs', 'bullmq', 'jose'],
+  serverExternalPackages: [
+    '@sentry/nextjs',
+    'bullmq',
+    'jose',
+    'nodemailer-mailgun-transport',
+  ],
   experimental: {
     // Dear developer,
     //
