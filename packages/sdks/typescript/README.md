@@ -117,4 +117,12 @@ onError: (error: Error) => {
 }
 ```
 
+### Publish a new version
+
+If you have publish permissions you can do:
+
+```bash
+pnpm version patch && pnpm build && pnpm publish
+```
+
 That's it! You are now ready to integrate Latitude's powerful AI features into your TypeScript application using the Latitude SDK. For more detailed information and advanced usage, please refer to the official documentation.

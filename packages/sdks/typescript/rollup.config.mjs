@@ -19,7 +19,9 @@ const aliasEntries = {
 const EXTERNALS = [
   '@t3-oss/env-core',
   'zod',
+  // This fix some circular dependencies from core. Not really needed in prod
   'flydrive/types',
+  'node-fetch',
   'stream',
   'eventsource-parser/stream',
 ]

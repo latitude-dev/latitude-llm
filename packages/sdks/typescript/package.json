@@ -1,6 +1,6 @@
 {
   "name": "@latitude-data/sdk",
-  "version": "0.0.12",
+  "version": "0.0.13",
   "description": "Latitude SDK for Typescript",
   "author": "Latitude Data SL <hello@latitude.so>",
   "license": "LGPL-3.0",
@@ -19,7 +19,9 @@
     "prettier": "prettier --write \"**/*.{ts,tsx,md}\""
   },
   "type": "module",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -30,6 +32,7 @@
   "dependencies": {
     "@t3-oss/env-core": "^0.10.1",
     "eventsource-parser": "^2.0.1",
+    "node-fetch": "3.3.2",
     "zod": "^3.23.8"
   },
   "devDependencies": {
@@ -41,6 +44,8 @@
     "@rollup/plugin-replace": "^6.0.1",
     "@rollup/plugin-typescript": "^11.1.6",
     "@types/eventsource": "^1.1.15",
+    "@types/node": "^22.7.5",
+    "@types/node-fetch": "^2.6.11",
     "msw": "^2.3.5",
     "rollup": "^4.21.1",
     "rollup-plugin-dts": "^6.1.1",
