@@ -5,8 +5,11 @@ import NextTopLoader from 'nextjs-toploader'
 
 import '@latitude-data/web-ui/styles.css'
 
-import { ToastProvider, TooltipProvider } from '@latitude-data/web-ui'
-import { ThemeProvider } from '$/components/Providers/ThemeProvider'
+import {
+  ThemeProvider,
+  ToastProvider,
+  TooltipProvider,
+} from '@latitude-data/web-ui'
 import { fontMono, fontSans } from '$/helpers/fonts'
 
 export const metadata: Metadata = {

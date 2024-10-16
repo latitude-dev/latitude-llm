@@ -47,41 +47,35 @@
     --background-code: 0 0% 98%;
     --background-gray: 0 0% 99%;
     --foreground: 223 70% 4%;
-    --foreground-rgb: 3 7 17;
-    
+
     --card: 0 0% 100%;
     --card-foreground: 223 70% 4%;
-    
+
     --popover: 0 0% 100%;
     --popover-foreground: 223 70% 4%;
-    
+
     --primary: 211 94% 43%;
-    --primary-rgb: 7 106 213;
     --primary-foreground: 210 20% 98%;
-    
+
     --secondary: 210 20% 98%;
-    --secondary-rgb: 249 250 251;;
     --secondary-foreground: 221 39% 11%;
-    
+
     --yellow: 41 96% 91%;
     --purple: 289 51% 92%;
-    
+
     --muted: 220 14% 96%;
     --muted-foreground: 211 11% 45%;
-    --muted-foreground-rgb: 102 114 127;
     --warning-muted-foreground: 26 90% 37%;
     --destructive-muted-foreground: 0 74% 42%;
-    
+
     --accent: 210 100% 97%;
     --accent-button: 211 97% 35%;
     --accent-foreground: 211 97% 35%;
-    --accent-foreground-rgb: 3 86 176;
-    
+
     --destructive: 0 72% 51%;
-    --destructive-rgb: 220 40 40;
     --destructive-foreground: 0 0% 98%;
     --destructive-muted-foreground: 0 74% 42%;
-    
+
     --success: 142 72% 29%;
     --success-foreground: 120 87% 97%;
 
@@ -99,11 +93,9 @@
   }
 
   .dark {
-
     --background-gray: 0 0% 10%;
     --background: 0 0% 7%;
     --foreground: 0 0% 98%;
-    --foreground-rgb: 243 244 246;
 
     --card: 0 0% 3.9%;
     --card-foreground: 0 0% 98%;
@@ -112,11 +104,9 @@
     --popover-foreground: 0 0% 98%;
 
     --primary: 210 98% 24%;
-    --primary-rgb: 10 129 217;
     --primary-foreground: 210 20% 98%;
 
     --secondary: 0 0% 10%;
-    --secondary-rgb: 25 25 25;
     --secondary-foreground: 0 0% 98%;
 
     --yellow: 41 90% 14%;
@@ -124,15 +114,12 @@
 
     --muted: 0 0% 14.9%;
     --muted-foreground: 0 0% 63.9%;
-    --muted-foreground-rgb: 102 114 127;
 
     --accent: 211 88% 10%;
     --accent-button: 211 97% 35%;
     --accent-foreground: 211 94% 65%;
-    --accent-foreground-rgb: 8 128 255;
 
     --destructive: 0 62.8% 30.6%;
-    --destructive-rgb: 129 29 29;
     --destructive-foreground: 0 0% 98%;
     --destructive-muted-foreground: 0 74% 42%;
 
@@ -142,7 +129,6 @@
     --border: 231 9% 12.9%;
     --input: 0 0% 14.9%;
     --ring: 205 91% 44%;
-    
 
     --chart-1: 220 70% 50%;
     --chart-2: 160 60% 45%;

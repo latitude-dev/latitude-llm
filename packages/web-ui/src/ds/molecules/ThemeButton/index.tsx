@@ -1,5 +1,7 @@
 'use client'
 
+import { useTheme } from 'next-themes'
+
 import {
   Button,
   DropdownMenuContent,
@@ -7,8 +9,7 @@ import {
   DropdownMenuRoot,
   DropdownMenuTrigger,
   Icon,
-} from '@latitude-data/web-ui'
-import { useTheme } from 'next-themes'
+} from '../../atoms'
 
 export function ThemeButton() {
   const { setTheme } = useTheme()
