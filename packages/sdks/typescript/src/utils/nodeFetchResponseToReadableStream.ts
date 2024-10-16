@@ -15,16 +15,26 @@ export function nodeFetchResponseToReadableStream(nodeStream: Readable) {
       })
 
       /**
-       * The 'close' event is emitted when the stream and any of its underlying resources
-       * (like a file descriptor) have been closed.
+       * The 'end' event is emitted when there is no more data to be consumed from the stream.
+       * The 'end' event will not be emitted unless the data is completely consumed.
+       * This can be accomplished by switching the stream into flowing mode, or by calling stream.read() repeatedly until all data has been consumed.
+       */
+      nodeStream.on('end', () => {
+        controller.close()
+      })
+
+      /**
+       * The 'close' event is emitted when the stream and any of its
+       * underlying resources (a file descriptor, for example) have been closed.
        * The event indicates that no more events will be emitted, and no further computation will occur.
        *
-       * Other similar event is `end` event, which is emitted when there is no more data to be consumed from the stream.
-       * But I think is safer to rely on `close` event, because it is emitted when the stream is closed,
-       * and no more events will be emitted.
+       * A Readable stream will always emit the 'close' event if it is created with the emitClose option.
        */
       nodeStream.on('close', () => {
-        controller.close()
+        // Optionally handle the case when the stream closes unexpectedly
+        if (!nodeStream.readableEnded) {
+          controller.close()
+        }
       })
 
       /**
