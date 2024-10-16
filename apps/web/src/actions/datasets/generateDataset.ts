@@ -94,7 +94,7 @@ export async function generateDatasetAction({
         stack: (error as Error).stack,
       })
     } catch (error) {
-      // do nothing, stream ight be already closed
+      // do nothing, stream might be already closed
     }
   }
 

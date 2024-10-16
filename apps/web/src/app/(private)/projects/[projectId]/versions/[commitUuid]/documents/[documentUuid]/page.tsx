@@ -28,7 +28,7 @@ export default async function DocumentPage({
   try {
     commit = await findCommitCached({ projectId, uuid: commitUuid })
   } catch (error) {
-    console.error((error as Error).message)
+    console.warn((error as Error).message)
 
     if (error instanceof NotFoundError) {
       return redirect(ROUTES.dashboard.root)

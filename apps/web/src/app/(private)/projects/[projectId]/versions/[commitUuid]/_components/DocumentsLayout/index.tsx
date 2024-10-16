@@ -1,6 +1,7 @@
 import { ReactNode } from 'react'
 
 import type { DocumentVersion } from '@latitude-data/core/browser'
+import { NotFoundError } from '@latitude-data/core/lib/errors'
 import { DocumentDetailWrapper } from '@latitude-data/web-ui'
 import {
   getResizablePanelGroupData,
@@ -12,6 +13,8 @@ import {
   findProjectCached,
 } from '$/app/(private)/_data-access'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
+import { ROUTES } from '$/services/routes'
+import { redirect } from 'next/navigation'
 
 import { LastSeenCommitCookie } from '../LastSeenCommitCookie'
 import Sidebar from '../Sidebar'
@@ -28,10 +31,22 @@ export default async function DocumentsLayout({
   commitUuid: string
 }) {
   const session = await getCurrentUser()
-  const project = await findProjectCached({
-    projectId,
-    workspaceId: session.workspace.id,
-  })
+  let project
+  try {
+    project = await findProjectCached({
+      projectId,
+      workspaceId: session.workspace.id,
+    })
+  } catch (error) {
+    console.warn((error as Error).message)
+
+    if (error instanceof NotFoundError) {
+      return redirect(ROUTES.dashboard.root)
+    }
+
+    throw error
+  }
+
   const commit = await findCommitCached({
     projectId,
     uuid: commitUuid,
