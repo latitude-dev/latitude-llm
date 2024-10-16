@@ -40,7 +40,7 @@ export function CopilotSection({
           maxRows={5}
         />
         <div className='absolute bottom-4 right-4 flex flex-row gap-2 items-center'>
-          <Button fancy disabled={isLoading} onClick={handleSubmit}>
+          <Button fancy disabled={isLoading || !value} onClick={handleSubmit}>
             {isLoading ? 'Generating...' : 'Submit'}
           </Button>
         </div>
