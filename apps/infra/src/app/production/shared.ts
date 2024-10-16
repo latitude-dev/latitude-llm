@@ -9,6 +9,7 @@ const dbPasswordSecretId = coreStack.requireOutput('dbPasswordSecretId')
 const dbEndpoint = coreStack.requireOutput('dbEndpoint')
 const dbName = coreStack.requireOutput('dbName')
 const mailerApiKeyArn = coreStack.requireOutput('mailerApiKeyArn')
+const mailgunMailerApiKeyArn = coreStack.requireOutput('mailgunMailerApiKeyArn')
 const queueEndpoint = coreStack.requireOutput('queueEndpoint')
 const cacheEndpoint = coreStack.requireOutput('cacheEndpoint')
 const awsAccessKeyArn = coreStack.requireOutput('awsAccessKeyArn')
@@ -48,6 +49,7 @@ const getSecretString = (arn: pulumi.Output<any>) => {
 
 const dbPassword = getSecretString(dbPasswordSecretId)
 const mailerApiKey = getSecretString(mailerApiKeyArn)
+const mailgunMailerApiKey = getSecretString(mailgunMailerApiKeyArn)
 const awsAccessKey = getSecretString(awsAccessKeyArn)
 const awsAccessSecret = getSecretString(awsAccessSecretArn)
 const websocketSecretToken = getSecretString(websocketsSecretTokenArn)
@@ -118,6 +120,7 @@ export const environment = pulumi
       { name: 'GATEWAY_HOSTNAME', value: 'gateway.latitude.so' }, // This is the host gateway is available at
       { name: 'GATEWAY_SSL', value: 'true' },
       { name: 'LATITUDE_DOMAIN', value: 'latitude.so' },
+      { name: 'LATITUDE_EMAIL_DOMAIN', value: 'mail.latitude.so' },
       { name: 'LATITUDE_URL', value: 'https://app.latitude.so' },
       { name: 'WEBSOCKETS_SERVER', value: 'https://ws.latitude.so' },
       { name: 'WEBSOCKETS_SERVER_PORT', value: '8080' },
@@ -132,6 +135,7 @@ export const environment = pulumi
       },
       { name: 'FROM_MAILER_EMAIL', value: 'hello@latitude.so' },
       { name: 'MAILER_API_KEY', value: mailerApiKey },
+      { name: 'MAILGUN_MAILER_API_KEY', value: mailgunMailerApiKey },
       { name: 'SENTRY_DSN', value: sentryDsn },
       { name: 'SENTRY_ORG', value: sentryOrg },
       {

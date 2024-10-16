@@ -3,8 +3,8 @@ import { type Transporter, type TransportOptions } from 'nodemailer'
 import HTMLToText from 'nodemailer-html-to-text'
 import SMTPTransport from 'nodemailer/lib/smtp-transport'
 
+import createMailgunTransport from './mailgun'
 import createMailpitTransport from './mailpit'
-import createPlunkTransport from './plunk'
 
 const htmlToText = HTMLToText.htmlToText
 
@@ -28,7 +28,7 @@ export function createAdapter() {
   const isPro = env.NODE_ENV === 'production'
 
   const transport: MaybeTransport = isPro
-    ? createPlunkTransport(options)
+    ? createMailgunTransport(options)
     : createMailpitTransport(options)
 
   if (!transport) throw new Error('Could not create transport')
