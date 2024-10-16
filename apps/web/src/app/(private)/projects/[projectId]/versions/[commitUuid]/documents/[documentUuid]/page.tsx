@@ -1,3 +1,4 @@
+import { NotFoundError } from '@latitude-data/core/lib/errors'
 import { getFreeRuns } from '@latitude-data/core/services/freeRunsManager/index'
 import { addMessagesAction } from '$/actions/sdk/addMessagesAction'
 import { runDocumentAction } from '$/actions/sdk/runDocumentAction'
@@ -9,6 +10,8 @@ import {
 } from '$/app/(private)/_data-access'
 import providerApiKeyPresenter from '$/presenters/providerApiKeyPresenter'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
+import { ROUTES } from '$/services/routes'
+import { redirect } from 'next/navigation'
 
 import DocumentEditor from './_components/DocumentEditor/Editor'
 
@@ -20,7 +23,17 @@ export default async function DocumentPage({
   const { workspace } = await getCurrentUser()
   const projectId = Number(params.projectId)
   const commitUuid = params.commitUuid
-  const commit = await findCommitCached({ projectId, uuid: commitUuid })
+
+  let commit
+  try {
+    commit = await findCommitCached({ projectId, uuid: commitUuid })
+  } catch (error) {
+    if (error instanceof NotFoundError) {
+      return redirect(ROUTES.dashboard.root)
+    }
+
+    throw error
+  }
   const document = await getDocumentByUuidCached({
     documentUuid: params.documentUuid,
     projectId,
