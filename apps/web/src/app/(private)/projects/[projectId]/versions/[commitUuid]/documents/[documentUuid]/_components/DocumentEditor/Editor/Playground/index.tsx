@@ -1,6 +1,13 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import {
+  Dispatch,
+  SetStateAction,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react'
 
 import { ConversationMetadata } from '@latitude-data/compiler'
 import { DocumentVersion } from '@latitude-data/core/browser'
@@ -22,6 +29,44 @@ export function convertParams(inputs: Record<string, string>) {
   )
 }
 
+function InputParams({
+  inputs,
+  setInputs,
+}: {
+  inputs: Record<string, string>
+  setInputs: Dispatch<SetStateAction<Record<string, string>>>
+}) {
+  const setInput = useCallback(
+    (param: string, value: string) => {
+      setInputs({ ...inputs, [param]: value })
+    },
+    [inputs],
+  )
+
+  return (
+    <div className='flex flex-col gap-3 flex-shrink-0 max-h-[33%] custom-scrollbar'>
+      <Text.H6M>Inputs</Text.H6M>
+      {Object.keys(inputs).length > 0 ? (
+        Object.entries(inputs).map(([param, value], idx) => (
+          <div className='flex flex-row gap-4 w-full items-center' key={idx}>
+            <Badge variant='accent'>&#123;&#123;{param}&#125;&#125;</Badge>
+            <div className='flex flex-grow w-full'>
+              <Input
+                value={value}
+                onChange={(e) => setInput(param, e.target.value)}
+              />
+            </div>
+          </div>
+        ))
+      ) : (
+        <Text.H6 color='foregroundMuted'>
+          No inputs. Use &#123;&#123; input_name &#125;&#125; to insert.
+        </Text.H6>
+      )}
+    </div>
+  )
+}
+
 export default function Playground({
   document,
   metadata,
@@ -32,13 +77,6 @@ export default function Playground({
   const [mode, setMode] = useState<'preview' | 'chat'>('preview')
   const [inputs, setInputs] = useState<Record<string, string>>({})
   const parameters = useMemo(() => convertParams(inputs), [inputs])
-
-  const setInput = useCallback(
-    (param: string, value: string) => {
-      setInputs({ ...inputs, [param]: value })
-    },
-    [inputs],
-  )
 
   useEffect(() => {
     if (!metadata) return
@@ -56,50 +94,24 @@ export default function Playground({
   }, [metadata])
 
   return (
-    <>
+    <div className='flex flex-col gap-2 max-h-full h-full'>
       <Header title='Playground' />
-      <div className='flex flex-col gap-6 relative'>
-        <div className='flex flex-col gap-3 max-h-[35vh] overflow-y-auto pr-4 pb-4'>
-          <Text.H6M>Inputs</Text.H6M>
-          {Object.keys(inputs).length > 0 ? (
-            Object.entries(inputs).map(([param, value], idx) => (
-              <div
-                className='flex flex-row gap-4 w-full items-center'
-                key={idx}
-              >
-                <Badge variant='accent'>&#123;&#123;{param}&#125;&#125;</Badge>
-                <div className='flex flex-grow w-full'>
-                  <Input
-                    value={value}
-                    onChange={(e) => setInput(param, e.target.value)}
-                  />
-                </div>
-              </div>
-            ))
-          ) : (
-            <Text.H6 color='foregroundMuted'>
-              No inputs. Use &#123;&#123; input_name &#125;&#125; to insert.
-            </Text.H6>
-          )}
-        </div>
-        <div className='flex flex-col flex-grow gap-3'>
-          <div className='flex flex-col flex-grow flex-shrink relative h-full overflow-y-auto'>
-            {mode === 'preview' ? (
-              <Preview
-                metadata={metadata}
-                parameters={parameters}
-                runPrompt={() => setMode('chat')}
-              />
-            ) : (
-              <Chat
-                clearChat={() => setMode('preview')}
-                document={document}
-                parameters={parameters}
-              />
-            )}
-          </div>
-        </div>
+      <InputParams inputs={inputs} setInputs={setInputs} />
+      <div className='flex-grow flex-shrink min-h-0 flex flex-col gap-2 overflow-hidden'>
+        {mode === 'preview' ? (
+          <Preview
+            metadata={metadata}
+            parameters={parameters}
+            runPrompt={() => setMode('chat')}
+          />
+        ) : (
+          <Chat
+            clearChat={() => setMode('preview')}
+            document={document}
+            parameters={parameters}
+          />
+        )}
       </div>
-    </>
+    </div>
   )
 }

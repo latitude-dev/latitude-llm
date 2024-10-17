@@ -18,7 +18,6 @@ function Pane({ children }: { children: ReactNode }) {
 }
 
 const PaneWrapper = ({
-  width = 'auto',
   children,
   isResizable = false,
   className,
@@ -30,10 +29,13 @@ const PaneWrapper = ({
 }) => {
   return (
     <div
-      className={cn('h-full overflow-y-auto custom-scrollbar', className)}
-      style={{
-        width: width === 'auto' ? 'auto' : isResizable ? width - 1 : width,
-      }}
+      className={cn(
+        'h-full max-h-full custom-scrollbar w-full relative min-h-0',
+        {
+          'flex-grow min-w-0': !isResizable,
+        },
+        className,
+      )}
     >
       {children}
     </div>
@@ -87,7 +89,7 @@ function ResizablePane({
       axis='x'
       width={paneWidth}
       minConstraints={[minWidth, Infinity]}
-      className='flex relative'
+      className='flex relative flex-shrink-0 flex-grow-0'
       resizeHandles={['e']}
       handle={SplitHandle}
       onResize={onResize}
@@ -114,16 +116,15 @@ function HorizontalSplit({
   cssPanelHeight?: string
 }) {
   const [paneWidth, setPaneWidth] = useState<number>(initialWidth)
-  const width = typeof window !== 'undefined' ? paneWidth : initialWidth
   return (
-    <div className='min-h-full w-full grid grid-cols-[auto,1fr]'>
+    <div className='flex flex-row w-full relative h-full max-h-full min-h-full'>
       <ResizablePane
         minWidth={minWidth}
         paneWidth={paneWidth}
         onResizePane={setPaneWidth}
         onResizeStop={onResizeStop}
       >
-        <PaneWrapper isResizable width={width} className={cssPanelHeight}>
+        <PaneWrapper isResizable className={cssPanelHeight}>
           {leftPane}
         </PaneWrapper>
       </ResizablePane>

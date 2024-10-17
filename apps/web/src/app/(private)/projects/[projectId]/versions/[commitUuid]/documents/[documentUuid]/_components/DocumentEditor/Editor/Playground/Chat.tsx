@@ -216,10 +216,10 @@ export default function Chat({
   )
 
   return (
-    <div className='flex flex-col h-full'>
+    <div className='flex flex-col flex-1 gap-2 h-full overflow-hidden'>
       <div
         ref={containerRef}
-        className='flex flex-col gap-3 h-full overflow-y-auto custom-scrollbar pb-12'
+        className='flex flex-col gap-3 flex-grow flex-shrink min-h-0 custom-scrollbar pb-12'
       >
         <Text.H6M>Prompt</Text.H6M>
         <MessageList
