@@ -27,7 +27,9 @@ export default function DocumentTabs({
           Deploy this prompt <Icon name='code2' />
         </Button>
       </div>
-      <div className='flex-grow flex flex-col w-full'>{children}</div>
+      <div className='flex-grow min-h-0 flex flex-col w-full relative'>
+        {children}
+      </div>
     </>
   )
 }

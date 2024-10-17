@@ -19,7 +19,7 @@ export default function AppLayout({
 }: AppLayoutProps) {
   return (
     <div
-      className={cn('grid grid-rows-[auto,1fr] h-screen overflow-hidden', {
+      className={cn('flex flex-col h-screen overflow-hidden relative', {
         'overflow-y-auto custom-scrollbar': scrollable,
       })}
     >
@@ -28,7 +28,9 @@ export default function AppLayout({
         navigationLinks={navigationLinks}
         currentUser={currentUser}
       />
-      <main>{children}</main>
+      <main className='w-full flex-grow min-h-0 h-full relative'>
+        {children}
+      </main>
     </div>
   )
 }

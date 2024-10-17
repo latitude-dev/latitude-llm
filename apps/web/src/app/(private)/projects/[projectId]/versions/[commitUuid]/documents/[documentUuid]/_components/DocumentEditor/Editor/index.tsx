@@ -285,7 +285,7 @@ export default function DocumentEditor({
               />
             </Suspense>
           </div>
-          <div className='flex flex-col flex-1 gap-2 overflow-y-auto custom-scrollbar max-h-[calc(100vh-170px)]'>
+          <div className='flex-1 relative'>
             <Playground document={document} metadata={metadata!} />
           </div>
         </div>
