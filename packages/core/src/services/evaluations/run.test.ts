@@ -1,11 +1,12 @@
 import { createChain } from '@latitude-data/compiler'
 import { and, eq, isNull } from 'drizzle-orm'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, MockInstance, vi } from 'vitest'
 
 import {
   DocumentLog,
   EvaluationDto,
   ProviderApiKey,
+  User,
   Workspace,
 } from '../../browser'
 import { database } from '../../client'
@@ -55,9 +56,11 @@ async function findError(errorCode: RunErrorCodes) {
 let documentLog: DocumentLog
 let documentUuid: string
 let workspace: Workspace
+let user: User
 let evaluation: EvaluationDto
 let provider: ProviderApiKey
 let runChainResponse: runChainModule.ChainResponse<'object'>
+let runChainSpy: MockInstance
 
 describe('run', () => {
   beforeEach(async () => {
@@ -78,6 +81,7 @@ describe('run', () => {
     workspace = setup.workspace
     provider = setup.providers[0]!
     const documentVersion = setup.documents[0]!
+    user = setup.user
     documentUuid = documentVersion.documentUuid
     const { documentLog: docLog } = await factories.createDocumentLog({
       document: setup.documents[0]!,
@@ -118,13 +122,17 @@ describe('run', () => {
         documentLogUuid: FAKE_GENERATED_UUID,
         providerLog: resultProviderLog,
       })
-      vi.spyOn(runChainModule, 'runChain').mockResolvedValue({
+      runChainSpy = vi.spyOn(runChainModule, 'runChain').mockResolvedValue({
         stream,
         response: new Promise((resolve) => resolve(runChainResponse)),
         resolvedContent: 'chain resolved text',
         errorableUuid: FAKE_GENERATED_UUID,
         duration: new Promise((resolve) => resolve(1000)),
       })
+    })
+
+    afterEach(() => {
+      runChainSpy.mockRestore()
     })
 
     it('calls runChain', async () => {
@@ -369,7 +377,7 @@ describe('run', () => {
         providerLog: resultProviderLog,
       })
 
-      vi.spyOn(runChainModule, 'runChain').mockResolvedValue({
+      runChainSpy = vi.spyOn(runChainModule, 'runChain').mockResolvedValue({
         stream,
         response: new Promise((resolve) => resolve(runChainResponse)),
         resolvedContent: 'chain resolved text',
@@ -390,6 +398,34 @@ describe('run', () => {
             'Provider with model [gpt-4o] did not return a valid JSON object',
         }),
       )
+      runChainSpy.mockRestore()
+    })
+
+    it('saves only once the error', async () => {
+      const brokenPromptEvaluation = await factories.createLlmAsJudgeEvaluation({
+        user: user,
+        workspace,
+        name: 'Test Evaluation',
+        prompt: `
+          ---
+          provider: openai
+          model: gpt-4o-mini
+          ---
+          {{#if condition}}
+            It fail because "condition" is not defined
+          {{/if}}
+        `
+      })
+      await runEvaluation({
+        documentLog,
+        documentUuid,
+        evaluation: brokenPromptEvaluation,
+      })
+      const errors = await database.query.runErrors.findMany({
+        where: eq(runErrors.errorableUuid, FAKE_GENERATED_UUID),
+      })
+
+      expect(errors.length).toEqual(1)
     })
   })
 })

@@ -68,7 +68,7 @@ export async function handleEvaluationResponse({
 }) {
   let providerLog: ProviderLog | undefined = undefined
   let result: CreateEvaluationResultProps['result'] | undefined
-  let error: ChainError<RunErrorCodes> | undefined = responseResult.error
+  let error: ChainError<RunErrorCodes> | undefined
 
   if (responseResult.ok && responseResult.value) {
     const response = responseResult.value

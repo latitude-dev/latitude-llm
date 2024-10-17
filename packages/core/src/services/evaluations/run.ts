@@ -8,7 +8,6 @@ import { database } from '../../client'
 import { generateUUIDIdentifier, Result } from '../../lib'
 import { ChainResponse, runChain } from '../chains/run'
 import { buildProvidersMap } from '../providerApiKeys/buildMap'
-import { createRunError } from '../runErrors/create'
 import { EvaluationRunChecker } from './EvaluationRunChecker'
 import {
   createEvaluationRunResult,
@@ -39,17 +38,6 @@ export async function runEvaluation(
   const checkerResult = await checker.call()
 
   if (checkerResult.error) {
-    const error = checkerResult.error
-    // TODO: Add a test for creating the error
-    await createRunError({
-      data: {
-        errorableUuid,
-        errorableType: ErrorableEntity.EvaluationResult,
-        code: error.errorCode,
-        message: error.message,
-        details: error.details,
-      },
-    }).then((r) => r.unwrap())
     await createEvaluationRunResult({
       errorableUuid,
       documentUuid,
