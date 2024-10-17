@@ -77,7 +77,7 @@ function ChangeWithErrors({
     <li className='w-full flex flex-row items-center justify-center gap-x-1 min-h-8'>
       <Icon
         name='alert'
-        className='flex-shrink-0 text-destructive dark:text-white/80'
+        className='flex-shrink-0 text-destructive-muted-foreground'
       />
       <div className='flex-grow truncate'>
         <Link
