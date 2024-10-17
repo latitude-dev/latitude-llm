@@ -122,9 +122,45 @@ onError: (error) => {
 }
 ```
 
-## TypeScript Support
+## More examples
 
-The Latitude SDK is written in TypeScript and provides type definitions out of the box. This ensures type safety and enables autocompletion in supported IDEs.
+### Executing tool calls
+
+```typescript
+const latitude = new Latitude('your-api-key-here', {
+  projectId: 12345, // Optional: You can specify a default project ID here
+  versionUuid: 'optional-version-uuid', // Optional: You can specify a default version UUID here
+})
+
+const response = await latitude.run(documentPath, {
+  versionUuid: commitUuid,
+  parameters,
+})
+
+const uuid = response!.uuid
+const conversation = response!.conversation
+const last = conversation[conversation.length - 1]!
+if (last.role === MessageRole.assistant && last.toolCalls.length > 0) {
+  // Execute your tool calls...
+  const tool = last.toolCalls[0]! // we assume a single tool call for this example
+  const result = 'result from calling my tool' // we fake the rool call result!
+
+  latitude.chat(uuid, [
+    {
+      role: MessageRole.tool,
+      content: [
+        {
+          type: ContentType.toolResult,
+          toolCallId: tool.id,
+          toolName: tool.name,
+          result,
+          isError: false,
+        },
+      ],
+    },
+  ])
+}
+```
 
 ## Conclusion
 
