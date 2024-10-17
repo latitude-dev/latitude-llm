@@ -22,7 +22,7 @@ export function CopilotSection({
   }
 
   return (
-    <div className='w-full px-2'>
+    <div className='w-full px-2 pt-2'>
       <div className='flex relative w-full rounded-md'>
         <TextArea
           className={cn(

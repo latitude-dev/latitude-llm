@@ -52,16 +52,16 @@ export const tokenizer = {
   tagAttribute: [
     [/\{\{/, { token: 'js-open', next: '@js' }],
     [/"([^"\\]|\\.)*$/, 'string.invalid'], // non-terminated string
-    [/"/, 'string', '@attribute_string'],
-    [/\s+/, { token: 'attribute.value', next: '@pop' }],
-    [/>/, { token: 'tag-close', next: '@popall' }], // Close tag directly if encountered
+    [/"/, 'attribute.quote', '@attribute_string'], // tokenize opening quote
+    [/\s+/, { token: '', next: '@pop' }],
+    [/>/, { token: 'tag-close', next: '@popall' }],
   ],
 
   attribute_string: [
     [/\{\{/, { token: 'js-open', next: '@js' }],
-    [/[^\\"]+/, 'string'],
+    [/[^\\"]+/, 'attribute.value'],
     [/\\./, 'string.escape'],
-    [/"/, 'string', '@pop'],
+    [/"/, 'attribute.quote', '@pop'], // tokenize closing quote
   ],
 
   string_double: [
@@ -86,8 +86,14 @@ export const tokenizer = {
   js: [
     [/\}\}/, { token: 'js-close', next: '@pop' }],
 
+    // equal
+    [/=/, 'delimiter.equal'],
+
     // whitespace
     { include: '@whitespace' },
+
+    // control structures
+    [/(#|\/|:)([a-zA-Z_]\w*)/, ['control-symbol', 'control-word']],
 
     // identifiers and keywords
     [/[a-z_$][\w$]*/, 'identifier'],
@@ -98,18 +104,37 @@ export const tokenizer = {
     [/\d+/, 'number'],
 
     // strings
-    [/"([^"\\]|\\.)*$/, 'string.invalid'], // non-terminated string
-    [/'([^'\\]|\\.)*$/, 'string.invalid'], // non-terminated string
-    [/"/, 'string', '@string_double'],
-    [/'/, 'string', '@string_single'],
-    [/`/, 'string', '@string_backtick'],
+    [/"([^"\\]|\\.)*$/, 'js-string.invalid'], // non-terminated string
+    [/'([^'\\]|\\.)*$/, 'js-string.invalid'], // non-terminated string
+    [/"/, 'js-string', '@js_string_double'],
+    [/'/, 'js-string', '@js_string_single'],
+    [/`/, 'js-string', '@js_string_backtick'],
 
     // delimiters and operators
-    [/[{}()[\]]/, '@brackets'],
+    [/[{}[\]()]/, '@bracket'],
     [/[<>](?![[=><!~?:&|+\-*/^%]+])/, 'delimiter'],
     [/[<>]=?/, 'delimiter'],
     [/!=?=?/, 'delimiter'],
     [/[=+\-*/^%&|!~?:]/, 'delimiter'],
+  ],
+
+  js_string_double: [
+    [/[^\\"]+/, 'js-string'],
+    [/\\./, 'string.escape'],
+    [/"/, 'js-string', '@pop'],
+  ],
+
+  js_string_single: [
+    [/[^\\']+/, 'js-string'],
+    [/\\./, 'string.escape'],
+    [/'/, 'js-string', '@pop'],
+  ],
+
+  js_string_backtick: [
+    [/\$\{/, { token: 'delimiter.bracket', next: '@bracketCounting' }],
+    [/[^\\`]+/, 'js-string'],
+    [/\\./, 'string.escape'],
+    [/`/, 'js-string', '@pop'],
   ],
 
   bracketCounting: [
@@ -135,10 +160,15 @@ function colorFromProperty(property: string): string {
 
 const recalculateColors = () => ({
   primary: colorFromProperty('--primary'),
+  primaryForeground: colorFromProperty('--primary-foreground'),
   secondary: colorFromProperty('--secondary'),
+  secondaryForeground: colorFromProperty('--secondary-foreground'),
   foreground: colorFromProperty('--foreground'),
   accentForeground: colorFromProperty('--accent-foreground'),
   destructive: colorFromProperty('--destructive'),
+  destructiveMutedForeground: colorFromProperty(
+    '--destructive-muted-foreground',
+  ),
   mutedForeground: colorFromProperty('--muted-foreground'),
 })
 
@@ -157,8 +187,9 @@ export const useThemeColors = () => {
 
 export const themeRules = (themeColors: ThemeColors) => {
   return [
-    { token: 'yaml-delimiter', foreground: themeColors.primary },
-    { token: 'yaml', foreground: themeColors.primary },
+    { token: '', foreground: themeColors.foreground },
+    { token: 'yaml-delimiter', foreground: themeColors.accentForeground },
+    { token: 'yaml', foreground: themeColors.accentForeground },
 
     { token: 'header', foreground: themeColors.primary },
     {
@@ -186,7 +217,15 @@ export const themeRules = (themeColors: ThemeColors) => {
     },
     {
       token: 'attribute.name',
-      foreground: themeColors.destructive,
+      foreground: themeColors.destructiveMutedForeground,
+    },
+    {
+      token: 'attribute.value',
+      foreground: themeColors.foreground,
+    },
+    {
+      token: 'attribute.quote',
+      foreground: themeColors.accentForeground,
     },
     {
       token: 'js-open',
@@ -201,6 +240,26 @@ export const themeRules = (themeColors: ThemeColors) => {
       token: 'comment',
       fontStyle: 'italic',
       foreground: themeColors.mutedForeground,
+    },
+    {
+      token: 'bracket',
+      foreground: themeColors.accentForeground,
+    },
+    {
+      token: 'delimiter.equal',
+      foreground: themeColors.accentForeground,
+    },
+    {
+      token: 'control-symbol',
+      foreground: themeColors.accentForeground,
+    },
+    {
+      token: 'js-string',
+      foreground: themeColors.destructiveMutedForeground,
+    },
+    {
+      token: 'string.escape',
+      foreground: themeColors.accentForeground,
     },
   ]
 }
