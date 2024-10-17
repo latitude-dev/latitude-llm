@@ -1,3 +1,4 @@
+import { compactObject } from '@latitude-data/core/lib/compactObject'
 import { EvaluationResultWithMetadata } from '@latitude-data/core/repositories'
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
@@ -28,7 +29,13 @@ export default function useEvaluationResultsWithMetadata(
       .commits.detail(commitUuid)
       .documents.detail(documentUuid)
       .evaluations.detail({ evaluationId }).evaluationResults.root,
-    { serializer: (rows) => rows.map(deserialize) },
+    {
+      serializer: (rows) => rows.map(deserialize),
+      searchParams: compactObject({
+        page: page ? String(page) : undefined,
+        pageSize: pageSize ? String(pageSize) : undefined,
+      }) as Record<string, string>,
+    },
   )
   const { data = EMPTY_ARRAY, mutate } = useSWR<EvaluationResultWithMetadata[]>(
     [

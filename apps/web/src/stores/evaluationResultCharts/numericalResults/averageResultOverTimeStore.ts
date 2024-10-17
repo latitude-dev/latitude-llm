@@ -1,19 +1,22 @@
 import { AverageResultOverTime, Evaluation } from '@latitude-data/core/browser'
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
-import useSWR from 'swr'
+import useSWR, { SWRConfiguration } from 'swr'
 
-export default function useAverageResultOverTime({
-  evaluation,
-  documentUuid,
-  projectId,
-  commitUuid,
-}: {
-  evaluation: Evaluation
-  documentUuid: string
-  projectId: number
-  commitUuid: string
-}) {
+export default function useAverageResultOverTime(
+  {
+    evaluation,
+    documentUuid,
+    projectId,
+    commitUuid,
+  }: {
+    evaluation: Evaluation
+    documentUuid: string
+    projectId: number
+    commitUuid: string
+  },
+  opts?: SWRConfiguration,
+) {
   const fetcher = useFetcher(
     ROUTES.api.projects
       .detail(projectId)
@@ -25,7 +28,7 @@ export default function useAverageResultOverTime({
   )
   const { data, isValidating, isLoading, error, mutate } = useSWR<
     AverageResultOverTime[]
-  >(['averageResultOverTime', evaluation.id, documentUuid], fetcher)
+  >(['averageResultOverTime', evaluation.id, documentUuid], fetcher, opts)
 
   return {
     data,

@@ -12,7 +12,7 @@ import { NextRequest, NextResponse } from 'next/server'
 export const GET = errorHandler(
   authHandler(
     async (
-      _: NextRequest,
+      req: NextRequest,
       {
         params,
         workspace,
@@ -22,21 +22,15 @@ export const GET = errorHandler(
           documentUuid: string
           commitUuid: string
           projectId: number
-          page: string | null
-          pageSize: string | null
         }
         workspace: Workspace
       },
     ) => {
-      const {
-        documentUuid,
-        commitUuid,
-        evaluationId,
-        projectId,
-        page,
-        pageSize,
-      } = params
+      const { documentUuid, commitUuid, evaluationId, projectId } = params
 
+      const searchParams = req.nextUrl.searchParams
+      const page = searchParams.get('page')
+      const pageSize = searchParams.get('pageSize')
       const commitsScope = new CommitsRepository(workspace.id)
       const evaluationScope = new EvaluationsRepository(workspace.id)
       const evaluation = await evaluationScope

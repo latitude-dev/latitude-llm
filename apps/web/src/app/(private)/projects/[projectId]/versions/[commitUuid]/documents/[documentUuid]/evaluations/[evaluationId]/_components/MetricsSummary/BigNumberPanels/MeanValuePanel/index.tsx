@@ -2,7 +2,7 @@
 
 import { useCallback } from 'react'
 
-import { EvaluationDto, EvaluationMeanValue } from '@latitude-data/core/browser'
+import { EvaluationDto } from '@latitude-data/core/browser'
 import { RangeBadge } from '@latitude-data/web-ui'
 import useEvaluationResultsMeanValue from '$/stores/evaluationResultCharts/evaluationResultsMeanValue'
 import { useDebouncedCallback } from 'use-debounce'
@@ -11,7 +11,6 @@ import { useEvaluationStatusEvent } from '../../../../_lib/useEvaluationStatusEv
 import Panel from '../Panel'
 
 export default function MeanValuePanel({
-  mean,
   commitUuid,
   documentUuid,
   evaluation,
@@ -19,16 +18,15 @@ export default function MeanValuePanel({
   commitUuid: string
   documentUuid: string
   evaluation: EvaluationDto
-  mean: EvaluationMeanValue
 }) {
-  const { data, refetch } = useEvaluationResultsMeanValue(
+  const { data, refetch, isLoading } = useEvaluationResultsMeanValue(
     {
       commitUuid,
       documentUuid,
       evaluationId: evaluation.id,
     },
     {
-      fallbackData: mean,
+      revalidateIfStale: false,
     },
   )
   const onStatusChange = useDebouncedCallback(
@@ -51,6 +49,7 @@ export default function MeanValuePanel({
     >
       <div className='w-fit'>
         <RangeBadge
+          loading={isLoading}
           minValue={data?.minValue ?? defaultMinValue}
           maxValue={data?.maxValue ?? defaultMaxValue}
           value={data?.meanValue ?? 0}
