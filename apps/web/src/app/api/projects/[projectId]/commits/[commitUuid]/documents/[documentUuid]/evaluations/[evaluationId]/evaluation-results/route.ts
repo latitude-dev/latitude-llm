@@ -45,17 +45,19 @@ export const GET = errorHandler(
       const commit = await commitsScope
         .getCommitByUuid({ projectId, uuid: commitUuid })
         .then((r) => r.unwrap())
+      const query = computeEvaluationResultsWithMetadataQuery({
+        workspaceId: evaluation.workspaceId,
+        evaluation,
+        documentUuid,
+        draft: commit,
+      })
+
       const { rows } = await paginateQuery({
         searchParams: {
           page: page ?? undefined,
           pageSize: pageSize ?? undefined,
         },
-        dynamicQuery: computeEvaluationResultsWithMetadataQuery({
-          workspaceId: evaluation.workspaceId,
-          evaluation,
-          documentUuid,
-          draft: commit,
-        }).$dynamic(),
+        dynamicQuery: query.$dynamic(),
       })
 
       return NextResponse.json(rows, { status: 200 })

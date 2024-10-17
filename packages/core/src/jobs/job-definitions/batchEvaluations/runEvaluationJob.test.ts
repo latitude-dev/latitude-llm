@@ -73,7 +73,6 @@ describe('runEvaluationJob', () => {
         documentLogUuid: 'log-uuid',
         evaluationId: 2,
         batchId: 'batch-123',
-        skipProgress: false,
       },
     } as Job<RunEvaluationJobData>
   })

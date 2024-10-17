@@ -3,7 +3,7 @@ import Redis from 'ioredis'
 
 import { queues } from '../../queues'
 import { Jobs, Queues, QUEUES } from '../constants'
-import { JobDefinition } from '../job-definitions'
+import { JobDefinition } from '../job-definitions/types'
 
 export function capitalize(string: string) {
   return string.charAt(0).toUpperCase() + string.slice(1)
@@ -34,7 +34,7 @@ function setupQueue({
   connection,
 }: {
   name: Queues
-  jobs: readonly QueueJob[]
+  jobs: readonly string[]
   connection: Redis
 }) {
   const queue = new Queue(name, {
@@ -42,13 +42,11 @@ function setupQueue({
     defaultJobOptions: DEFAULT_JOB_OPTIONS,
   })
   const jobz = jobs.reduce((acc, job) => {
-    const key = `enqueue${capitalize(job.name)}` as EnqueueFunctionName<
-      typeof job.name
-    >
+    const key = `enqueue${capitalize(job)}` as EnqueueFunctionName<typeof job>
     const enqueueFn = (
       params: JobDefinition[typeof name][Jobs]['data'],
       options: JobsOptions,
-    ) => queue.add(job.name, params, options)
+    ) => queue.add(job, params, options)
 
     return { ...acc, [key]: enqueueFn }
   }, {} as JobEnqueueFn)
@@ -59,8 +57,6 @@ function setupQueue({
     jobs: jobz,
   }
 }
-
-type QueueJob = (typeof QUEUES)[keyof typeof QUEUES]['jobs'][number]
 
 export async function setupQueues() {
   const connection = await queues()

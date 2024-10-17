@@ -3,10 +3,15 @@ import {
   CreateProviderLogProps,
 } from '../../services/providerLogs'
 
+export type CreateProviderLogJobProps = Omit<
+  CreateProviderLogProps,
+  'generatedAt'
+> & { generatedAt: string }
+
 export const createProviderLogJob = async ({
   data,
 }: {
-  data: Omit<CreateProviderLogProps, 'generatedAt'> & { generatedAt: string }
+  data: CreateProviderLogJobProps
 }) => {
   return await createProviderLog({
     ...data,

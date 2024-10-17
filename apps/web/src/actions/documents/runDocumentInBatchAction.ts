@@ -82,7 +82,7 @@ export const runDocumentInBatchAction = withDataset
       document: ctx.document,
       dataset: ctx.dataset,
       workspace: ctx.workspace,
-      parametersMap: input.parameters,
+      parametersMap: input.parameters as Record<string, number>,
       fromLine: input.fromLine,
       toLine: input.toLine,
     })

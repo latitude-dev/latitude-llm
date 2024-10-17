@@ -14,7 +14,7 @@ import { runDocumentAtCommit } from '../../../services/commits/runDocumentAtComm
 import { WebsocketClient } from '../../../websockets/workers'
 import { ProgressTracker } from '../../utils/progressTracker'
 
-type RunDocumentJobData = {
+export type RunDocumentForEvaluationJobData = {
   workspaceId: number
   documentUuid: string
   commitUuid: string
@@ -25,7 +25,7 @@ type RunDocumentJobData = {
 }
 
 export const runDocumentForEvaluationJob = async (
-  job: Job<RunDocumentJobData>,
+  job: Job<RunDocumentForEvaluationJobData>,
 ) => {
   const {
     workspaceId,

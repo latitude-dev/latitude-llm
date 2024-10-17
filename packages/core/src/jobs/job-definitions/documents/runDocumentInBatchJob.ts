@@ -4,7 +4,7 @@ import { setupJobs } from '../..'
 import { Commit, Dataset, DocumentVersion, Workspace } from '../../../browser'
 import { previewDataset } from '../../../services/datasets/preview'
 
-type RunDocumentInBatchJobProps = {
+export type RunDocumentInBatchJobProps = {
   commit: Commit
   document: DocumentVersion
   dataset: Dataset
@@ -52,7 +52,7 @@ export const runDocumentInBatchJob = async (
       documentUuid: document.documentUuid,
       commitUuid: commit.uuid,
       projectId: commit.projectId,
-      parameters: parameters[i],
+      parameters: parameters[i]!,
     })
   }
 }

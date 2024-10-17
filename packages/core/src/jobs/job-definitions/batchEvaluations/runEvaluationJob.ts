@@ -16,7 +16,6 @@ export type RunEvaluationJobData = {
   documentLogUuid: string
   evaluationId: number
   batchId: string
-  skipProgress: boolean
 }
 
 export const runEvaluationJob = async (job: Job<RunEvaluationJobData>) => {
