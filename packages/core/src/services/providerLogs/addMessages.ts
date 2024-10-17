@@ -1,4 +1,9 @@
-import { Message, MessageRole } from '@latitude-data/compiler'
+import {
+  AssistantMessage,
+  ContentType,
+  Message,
+  MessageRole,
+} from '@latitude-data/compiler'
 
 import {
   ChainEvent,
@@ -50,6 +55,24 @@ export async function addMessages({
     },
   )
 
+  const fmessages = [
+    ...providerLog.messages,
+    {
+      role: MessageRole.assistant,
+      content:
+        providerLog.toolCalls.length > 0
+          ? providerLog.toolCalls.map((t) => ({
+              type: ContentType.toolCall,
+              toolCallId: t.id,
+              toolName: t.name,
+              args: t.arguments,
+            }))
+          : providerLog.responseText ||
+            objectToString(providerLog.responseObject),
+    } as AssistantMessage,
+    ...messages,
+  ]
+
   const stream = new ReadableStream<ChainEvent>({
     start(controller) {
       iterate({
@@ -59,17 +82,7 @@ export async function addMessages({
         provider,
         controller,
         documentLogUuid: providerLog.documentLogUuid!,
-        messages: [
-          ...providerLog.messages,
-          {
-            role: MessageRole.assistant,
-            content:
-              providerLog.responseText ||
-              objectToString(providerLog.responseObject),
-            toolCalls: providerLog.toolCalls,
-          },
-          ...messages,
-        ],
+        messages: fmessages,
       })
         .then(responseResolve)
         .catch((e) => {

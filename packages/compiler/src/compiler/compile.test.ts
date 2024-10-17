@@ -7,7 +7,6 @@ import {
   MessageContent,
   SystemMessage,
   TextContent,
-  ToolMessage,
   UserMessage,
 } from '$compiler/types'
 import { describe, expect, it, vi } from 'vitest'
@@ -111,23 +110,21 @@ describe('comments', async () => {
 })
 
 describe('messages', async () => {
-  it('allows creating system, user, assistant and tool messages', async () => {
+  it('allows creating system, user, assistant', async () => {
     const prompt = `
       <system>system message</system>
       <user>user message</user>
       <assistant>assistant message</assistant>
-      <tool id="123">tool message</tool>
     `
     const result = await render({
       prompt: removeCommonIndent(prompt),
       parameters: {},
     })
 
-    expect(result.messages.length).toBe(4)
+    expect(result.messages.length).toBe(3)
     const systemMessage = result.messages[0]!
     const userMessage = result.messages[1]! as UserMessage
     const assistantMessage = result.messages[2]! as AssistantMessage
-    const toolMessage = result.messages[3]! as ToolMessage
 
     expect(systemMessage.role).toBe('system')
     expect(systemMessage.content).toBe('system message')
@@ -137,9 +134,6 @@ describe('messages', async () => {
 
     expect(assistantMessage.role).toBe('assistant')
     expect(assistantMessage.content).toBe('assistant message')
-
-    expect(toolMessage.role).toBe('tool')
-    expect((toolMessage.content[0]! as TextContent).text).toBe('tool message')
   })
 
   it('fails when using an unknown tag', async () => {

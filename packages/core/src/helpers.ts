@@ -9,6 +9,8 @@ export function objectToString(
   message = DEFAULT_OBJECT_TO_STRING_MESSAGE,
 ) {
   try {
+    if (!object) return ''
+
     return JSON.stringify(object, null, 2)
   } catch (error) {
     return message

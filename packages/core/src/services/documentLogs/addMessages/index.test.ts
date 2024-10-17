@@ -35,6 +35,7 @@ const mocks = vi.hoisted(() => {
           controller.close()
         },
       })
+
       return Result.ok({
         type: 'text',
         data: {
@@ -169,7 +170,6 @@ describe('addMessages', () => {
           {
             role: MessageRole.assistant,
             content: providerLog.responseText,
-            toolCalls: providerLog.toolCalls,
           },
           {
             role: MessageRole.user,
