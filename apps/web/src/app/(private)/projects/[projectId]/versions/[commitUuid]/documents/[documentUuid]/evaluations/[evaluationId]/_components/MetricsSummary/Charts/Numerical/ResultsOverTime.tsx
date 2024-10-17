@@ -31,12 +31,17 @@ export function ResultOverTimeChart({
 }) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
-  const { isLoading, error, data, refetch } = useAverageResultOverTime({
-    projectId: project.id,
-    commitUuid: commit.uuid,
-    evaluation,
-    documentUuid,
-  })
+  const { isLoading, error, data, refetch } = useAverageResultOverTime(
+    {
+      projectId: project.id,
+      commitUuid: commit.uuid,
+      evaluation,
+      documentUuid,
+    },
+    {
+      revalidateIfStale: false,
+    },
+  )
   const onStatusChange = useDebouncedCallback(
     useCallback(() => refetch(), [refetch]),
     2000,

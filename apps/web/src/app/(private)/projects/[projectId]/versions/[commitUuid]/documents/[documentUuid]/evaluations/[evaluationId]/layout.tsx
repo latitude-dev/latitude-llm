@@ -1,19 +1,7 @@
 import { ReactNode } from 'react'
 
 import { readMetadata } from '@latitude-data/compiler'
-import {
-  Commit,
-  Evaluation,
-  EvaluationAggregationTotals,
-  EvaluationMeanValue,
-  EvaluationModalValue,
-  EvaluationResultableType,
-} from '@latitude-data/core/browser'
-import {
-  getEvaluationMeanValueQuery,
-  getEvaluationModalValueQuery,
-  getEvaluationTotalsQuery,
-} from '@latitude-data/core/services/evaluationResults/index'
+import { EvaluationResultableType } from '@latitude-data/core/browser'
 import { env } from '@latitude-data/env'
 import { Icon, TableWithHeader, Text, Tooltip } from '@latitude-data/web-ui'
 import {
@@ -22,7 +10,6 @@ import {
 } from '$/app/(private)/_data-access'
 import BreadcrumbLink from '$/components/BreadcrumbLink'
 import { Breadcrumb } from '$/components/layouts/AppLayout/Header'
-import { getCurrentUser } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
 import Link from 'next/link'
 
@@ -34,54 +21,6 @@ const TYPE_TEXT: Record<EvaluationResultableType, string> = {
   [EvaluationResultableType.Text]: 'Text',
   [EvaluationResultableType.Number]: 'Numerical',
   [EvaluationResultableType.Boolean]: 'Boolean',
-}
-
-type ReturnType<T extends boolean> = T extends true
-  ? {
-      aggregationTotals: EvaluationAggregationTotals
-      meanOrModal: EvaluationMeanValue
-    }
-  : {
-      aggregationTotals: EvaluationAggregationTotals
-      meanOrModal: EvaluationModalValue
-    }
-async function fetchData<T extends boolean>({
-  workspaceId,
-  evaluation,
-  documentUuid,
-  isNumeric,
-  commit,
-}: {
-  isNumeric: T
-  workspaceId: number
-  evaluation: Evaluation
-  documentUuid: string
-  commit: Commit
-}): Promise<ReturnType<T>> {
-  const aggregationTotals = await getEvaluationTotalsQuery({
-    workspaceId,
-    commit,
-    evaluation,
-    documentUuid,
-  })
-
-  if (isNumeric) {
-    const mean = await getEvaluationMeanValueQuery({
-      workspaceId,
-      evaluation,
-      documentUuid,
-      commit,
-    })
-    return { aggregationTotals, meanOrModal: mean } as ReturnType<T>
-  }
-
-  const modal = await getEvaluationModalValueQuery({
-    workspaceId,
-    evaluation,
-    documentUuid,
-    commit,
-  })
-  return { aggregationTotals, meanOrModal: modal } as ReturnType<T>
 }
 
 export default async function ConnectedEvaluationLayout({
@@ -96,7 +35,6 @@ export default async function ConnectedEvaluationLayout({
     evaluationId: string
   }
 }) {
-  const { workspace } = await getCurrentUser()
   const evaluation = await fetchEvaluationCached(Number(params.evaluationId))
   const commit = await findCommitCached({
     projectId: Number(params.projectId),
@@ -104,13 +42,6 @@ export default async function ConnectedEvaluationLayout({
   })
   const isNumeric =
     evaluation.configuration.type == EvaluationResultableType.Number
-  const data = await fetchData({
-    workspaceId: workspace.id,
-    evaluation,
-    documentUuid: params.documentUuid,
-    isNumeric,
-    commit,
-  })
 
   let provider
   if (evaluation.metadata.prompt) {
@@ -195,9 +126,7 @@ export default async function ConnectedEvaluationLayout({
         commit={commit}
         evaluation={evaluation}
         documentUuid={params.documentUuid}
-        aggregationTotals={data.aggregationTotals}
         isNumeric={isNumeric}
-        meanOrModal={data.meanOrModal}
       />
       {children}
     </div>

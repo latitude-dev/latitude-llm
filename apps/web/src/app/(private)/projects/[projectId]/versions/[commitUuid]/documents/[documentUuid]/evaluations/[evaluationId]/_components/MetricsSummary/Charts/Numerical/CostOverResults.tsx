@@ -26,12 +26,17 @@ export function CostOverResultsChart({
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
   const { isLoading, error, data, refetch } =
-    useAverageResultsAndCostOverCommit({
-      projectId: project.id,
-      commitUuid: commit.uuid,
-      evaluation,
-      documentUuid,
-    })
+    useAverageResultsAndCostOverCommit(
+      {
+        projectId: project.id,
+        commitUuid: commit.uuid,
+        evaluation,
+        documentUuid,
+      },
+      {
+        revalidateIfStale: false,
+      },
+    )
   const onStatusChange = useDebouncedCallback(
     useCallback(() => refetch(), [refetch]),
     2000,

@@ -2,8 +2,7 @@
 
 import { useCallback } from 'react'
 
-import { EvaluationModalValue } from '@latitude-data/core/browser'
-import { Text } from '@latitude-data/web-ui'
+import { Skeleton, Text } from '@latitude-data/web-ui'
 import useEvaluationResultsModalValue from '$/stores/evaluationResultCharts/evaluationResultsModalValue'
 import { useDebouncedCallback } from 'use-debounce'
 
@@ -11,7 +10,6 @@ import { useEvaluationStatusEvent } from '../../../../_lib/useEvaluationStatusEv
 import Panel from '../Panel'
 
 export default function ModalValuePanel({
-  modal,
   commitUuid,
   documentUuid,
   evaluationId,
@@ -19,16 +17,15 @@ export default function ModalValuePanel({
   commitUuid: string
   documentUuid: string
   evaluationId: number
-  modal: EvaluationModalValue
 }) {
-  const { data, refetch } = useEvaluationResultsModalValue(
+  const { data, refetch, isLoading } = useEvaluationResultsModalValue(
     {
       commitUuid,
       documentUuid,
       evaluationId,
     },
     {
-      fallbackData: modal,
+      revalidateIfStale: false,
     },
   )
   const onStatusChange = useDebouncedCallback(
@@ -40,13 +37,22 @@ export default function ModalValuePanel({
   return (
     <Panel
       label='Value more repeated'
-      additionalInfo='Value more repeated in the evaluation results.'
+      additionalInfo={
+        data?.percentage
+          ? `It appeared in ${data?.percentage}% of instances`
+          : undefined
+      }
     >
-      <Text.H3B>{data?.mostCommon ?? '-'}</Text.H3B>
-      <Text.H3 color='foregroundMuted'>
-        {' '}
-        It appeared ({data?.percentage ?? '0'}%)
-      </Text.H3>
+      {isLoading ? (
+        <Skeleton className='mt-4 w-16' height='h4' />
+      ) : (
+        <div className='flex flex-row gap-2 items-center'>
+          <Text.H3B>{data?.mostCommon ?? '-'}</Text.H3B>
+          {!!data?.percentage && (
+            <Text.H6 color='foregroundMuted'>({data?.percentage}%)</Text.H6>
+          )}
+        </div>
+      )}
     </Panel>
   )
 }

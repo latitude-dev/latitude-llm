@@ -2,18 +2,20 @@
 
 import { ReactNode, useCallback, useState } from 'react'
 
-import { Icon, Text, Tooltip } from '@latitude-data/web-ui'
+import { Icon, Skeleton, Text, Tooltip } from '@latitude-data/web-ui'
 
 export default function Panel({
   label,
   value,
   additionalInfo,
   children,
+  loading = false,
 }: {
   label: string
   value?: string
   additionalInfo?: string
   children?: ReactNode
+  loading?: boolean
 }) {
   const [open, setOpen] = useState(false)
   // On hover panel show tooltip with additional info
@@ -41,7 +43,11 @@ export default function Panel({
               <Icon name='info' className='text-muted-foreground' />
             )}
           </div>
-          {value && <Text.H3B>{value}</Text.H3B>}
+          {loading ? (
+            <Skeleton className='w-16 mt-4' height='h4' />
+          ) : value ? (
+            <Text.H3B>{value}</Text.H3B>
+          ) : null}
           {children}
         </div>
       }

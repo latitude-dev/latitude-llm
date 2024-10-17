@@ -34,7 +34,7 @@ export const ResultCellContent = ({
 }) => {
   if (evaluation.configuration.type === EvaluationResultableType.Boolean) {
     return (
-      <Badge variant={(value as boolean) ? 'success' : 'destructive'}>
+      <Badge variant={value === 'true' ? 'success' : 'destructive'}>
         {String(value)}
       </Badge>
     )

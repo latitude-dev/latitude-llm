@@ -1,10 +1,11 @@
-import { Text } from '../../atoms'
+import { Skeleton, Text } from '../../atoms'
 import { Badge, BadgeProps } from '../../atoms/Badge'
 
 type RangeBadgeProps = {
   value: number
   minValue: number
   maxValue: number
+  loading?: boolean
 } & Omit<BadgeProps, 'variant'>
 
 export function RangeBadge({
@@ -12,6 +13,7 @@ export function RangeBadge({
   minValue,
   maxValue,
   children,
+  loading = false,
   ...badgeProps
 }: RangeBadgeProps) {
   const positionInRange = Math.max(
@@ -22,6 +24,10 @@ export function RangeBadge({
   const borderColor = `hsla(${120 * positionInRange}, 65%, 50%, 1)`
 
   const formattedValue = Number.isInteger(value) ? value : value.toFixed(2)
+
+  if (loading) {
+    return <Skeleton className='w-16 mt-4' height='h4' />
+  }
 
   return (
     <Badge
