@@ -1,15 +1,3 @@
-import { EventHandlers } from '../events/handlers'
-import { createProviderLogJob } from '../events/handlers/createProviderLogJob'
-import { runBatchEvaluationJob } from './job-definitions/batchEvaluations/runBatchEvaluationJob'
-import { runDocumentForEvaluationJob } from './job-definitions/batchEvaluations/runDocumentJob'
-import { runEvaluationJob } from './job-definitions/batchEvaluations/runEvaluationJob'
-import { runDocumentInBatchJob } from './job-definitions/documents/runDocumentInBatchJob'
-import { runDocumentJob } from './job-definitions/documents/runDocumentJob'
-import { createEventJob } from './job-definitions/events/createEventJob'
-import { publishEventJob } from './job-definitions/events/publishEventJob'
-import { publishToAnalyticsJob } from './job-definitions/events/publishToAnalyticsJob'
-import { runLiveEvaluationJob } from './job-definitions/liveEvaluations/runLiveEvaluationJob'
-
 // TODO: Review if we can remove this declarations
 export enum Queues {
   defaultQueue = 'defaultQueue',
@@ -24,30 +12,45 @@ export enum Jobs {
   createDocumentLogJob = 'createDocumentLogJob',
   createEventJob = 'createEventJob',
   publishEventJob = 'publishEventJob',
+  runBatchEvaluationJob = 'runBatchEvaluationJob',
+  runDocumentForEvaluationJob = 'runDocumentForEvaluationJob',
+  runDocumentInBatchJob = 'runDocumentInBatchJob',
+  runDocumentJob = 'runDocumentJob',
+  runEvaluationJob = 'runEvaluationJob',
+  publishToAnalyticsJob = 'publishToAnalyticsJob',
+  runLiveEvaluationJob = 'runLiveEvaluationJob',
 }
 
 export const QUEUES = {
   [Queues.defaultQueue]: {
     name: Queues.defaultQueue,
     jobs: [
-      createProviderLogJob,
-      runBatchEvaluationJob,
-      runDocumentForEvaluationJob,
-      runDocumentInBatchJob,
-      runDocumentJob,
-      runEvaluationJob,
+      'createProviderLogJob',
+      'runBatchEvaluationJob',
+      'runDocumentForEvaluationJob',
+      'runDocumentInBatchJob',
+      'runDocumentJob',
+      'runEvaluationJob',
     ],
   },
   [Queues.eventsQueue]: {
     name: Queues.eventsQueue,
-    jobs: [publishEventJob, createEventJob, publishToAnalyticsJob],
+    jobs: ['publishEventJob', 'createEventJob', 'publishToAnalyticsJob'],
   },
   [Queues.eventHandlersQueue]: {
     name: Queues.eventHandlersQueue,
-    jobs: Object.values(EventHandlers).flat(),
+    jobs: [
+      'createClaimInvitationReferralJob',
+      'notifyToClientDocumentLogCreatedJob',
+      'notifyToClientEvaluationResultCreatedJob',
+      'runLiveEvaluationsJob',
+      'sendInvitationToUserJob',
+      'sendMagicLinkJob',
+      'sendReferralInvitationJob',
+    ],
   },
   [Queues.liveEvaluationsQueue]: {
     name: Queues.liveEvaluationsQueue,
-    jobs: [runLiveEvaluationJob],
+    jobs: ['runLiveEvaluationJob'],
   },
 } as const

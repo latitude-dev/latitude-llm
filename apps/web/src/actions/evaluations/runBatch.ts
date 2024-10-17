@@ -91,7 +91,7 @@ export const runBatchEvaluationAction = withDataset
         commitUuid: ctx.currentCommitUuid,
         fromLine: input.fromLine,
         toLine: input.toLine,
-        parametersMap: input.parameters,
+        parametersMap: input.parameters as Record<string, number>,
         batchId,
       })
     })

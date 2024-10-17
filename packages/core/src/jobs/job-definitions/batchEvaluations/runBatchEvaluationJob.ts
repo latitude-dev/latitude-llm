@@ -17,7 +17,7 @@ import { previewDataset } from '../../../services/datasets/preview'
 import { WebsocketClient } from '../../../websockets/workers'
 import { ProgressTracker } from '../../utils/progressTracker'
 
-type RunBatchEvaluationJobParams = {
+export type RunBatchEvaluationJobParams = {
   workspace: Workspace
   user: User
   evaluation: EvaluationDto
@@ -110,7 +110,7 @@ export const runBatchEvaluationJob = async (
       documentUuid: document.documentUuid,
       commitUuid: commit.uuid,
       projectId: commit.projectId,
-      parameters: parameters[i],
+      parameters: parameters[i]!,
       evaluationId: evaluation.id,
       batchId,
     })

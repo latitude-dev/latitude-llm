@@ -41,5 +41,8 @@ export async function saveOrPublishProviderLogs<T extends StreamType>({
   }
 
   const queues = await setupJobs()
-  queues.defaultQueue.jobs.enqueueCreateProviderLogJob(data)
+  queues.defaultQueue.jobs.enqueueCreateProviderLogJob({
+    ...data,
+    generatedAt: data.generatedAt.toISOString(),
+  })
 }

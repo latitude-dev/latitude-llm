@@ -1,3 +1,5 @@
+import { randomUUID } from 'crypto'
+
 import { env } from '@latitude-data/env'
 import { Job } from 'bullmq'
 
@@ -13,13 +15,13 @@ import { runDocumentAtCommit } from '../../../services/commits/runDocumentAtComm
 import { WebsocketClient, WorkerSocket } from '../../../websockets/workers'
 import { ProgressTracker } from '../../utils/progressTracker'
 
-type RunDocumentJobData = {
+export type RunDocumentJobData = {
   workspaceId: number
   documentUuid: string
   commitUuid: string
   projectId: number
   parameters: Record<string, unknown>
-  batchId: string
+  batchId?: string
 }
 
 const emitDocumentBatchRunStatus = async (
@@ -45,7 +47,7 @@ export const runDocumentJob = async (job: Job<RunDocumentJobData>) => {
     commitUuid,
     projectId,
     parameters,
-    batchId,
+    batchId = randomUUID(),
   } = job.data
   const websockets = await WebsocketClient.getSocket()
   const progressTracker = new ProgressTracker(await queues(), batchId)

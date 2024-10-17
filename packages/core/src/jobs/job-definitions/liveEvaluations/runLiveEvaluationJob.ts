@@ -3,12 +3,14 @@ import { Job } from 'bullmq'
 import { DocumentLog, EvaluationDto } from '../../../browser'
 import { runEvaluation } from '../../../services/evaluations'
 
+export type RunLiveEvaluationJobData = {
+  evaluation: EvaluationDto
+  documentLog: DocumentLog
+  documentUuid: string
+}
+
 export const runLiveEvaluationJob = async (
-  job: Job<{
-    evaluation: EvaluationDto
-    documentLog: DocumentLog
-    documentUuid: string
-  }>,
+  job: Job<RunLiveEvaluationJobData>,
 ) => {
   const { evaluation, documentLog, documentUuid } = job.data
 
