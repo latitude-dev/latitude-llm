@@ -1,6 +1,8 @@
 export enum ContentType {
   text = 'text',
   image = 'image',
+  toolCall = 'tool-call',
+  toolResult = 'tool-result',
 }
 
 export enum MessageRole {
@@ -24,7 +26,26 @@ export type ImageContent = IMessageContent & {
   image: string | Uint8Array | Buffer | ArrayBuffer | URL
 }
 
-export type MessageContent = TextContent | ImageContent
+export type ToolContent = {
+  type: ContentType.toolResult
+  toolCallId: string
+  toolName: string
+  result: unknown
+  isError?: boolean
+}
+
+export type ToolRequestContent = {
+  type: ContentType.toolCall
+  toolCallId: string
+  toolName: string
+  args: Record<string, unknown>
+}
+
+export type MessageContent =
+  | TextContent
+  | ImageContent
+  | ToolContent
+  | ToolRequestContent
 
 export type ToolCall = {
   id: string
@@ -50,12 +71,12 @@ export type UserMessage = IMessage & {
 export type AssistantMessage = {
   role: MessageRole.assistant
   toolCalls: ToolCall[]
-  content: string
+  content: string | ToolRequestContent[]
 }
 
 export type ToolMessage = IMessage & {
   role: MessageRole.tool
-  id: string
+  content: ToolContent[]
 }
 
 export type Message =

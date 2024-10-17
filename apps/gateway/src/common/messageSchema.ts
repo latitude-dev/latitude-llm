@@ -1,7 +1,7 @@
 import { ContentType, MessageRole } from '@latitude-data/compiler'
 import { z } from 'zod'
 
-const contentSchema = z.array(
+const userContentSchema = z.array(
   z
     .object({
       type: z.literal(ContentType.text),
@@ -32,13 +32,22 @@ export const messageSchema = z
     z.object({
       role: z.literal(MessageRole.user),
       name: z.string().optional(),
-      content: contentSchema,
+      content: userContentSchema,
     }),
   )
   .or(
     z.object({
       role: z.literal(MessageRole.assistant),
-      content: z.string(),
+      content: z.string().or(
+        z.array(
+          z.object({
+            type: z.literal(ContentType.toolCall),
+            toolCallId: z.string(),
+            toolName: z.string(),
+            args: z.record(z.any()),
+          }),
+        ),
+      ),
       toolCalls: z.array(
         z.object({
           id: z.string(),
@@ -51,7 +60,14 @@ export const messageSchema = z
   .or(
     z.object({
       role: z.literal(MessageRole.tool),
-      content: contentSchema,
-      id: z.string(),
+      content: z.array(
+        z.object({
+          type: z.literal(ContentType.toolResult),
+          toolCallId: z.string(),
+          toolName: z.string(),
+          result: z.string(),
+          isError: z.boolean().optional(),
+        }),
+      ),
     }),
   )

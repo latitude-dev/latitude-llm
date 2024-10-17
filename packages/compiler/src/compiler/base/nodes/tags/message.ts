@@ -120,7 +120,6 @@ function buildMessage<R extends MessageRole>(
 
     return {
       role,
-      id: String(attributes.id),
       content,
     } as ToolMessage
   }
