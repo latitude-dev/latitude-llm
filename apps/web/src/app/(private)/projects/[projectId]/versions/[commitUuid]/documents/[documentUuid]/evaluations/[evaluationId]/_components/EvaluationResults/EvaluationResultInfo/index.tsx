@@ -3,7 +3,7 @@ import { useCallback, useState } from 'react'
 import { EvaluationDto, ProviderLogDto } from '@latitude-data/core/browser'
 import {
   DocumentLogWithMetadata,
-  EvaluationResultWithMetadata,
+  type EvaluationResultWithMetadataAndErrors,
 } from '@latitude-data/core/repositories'
 import { Button, Icon, Modal, ReactStateDispatch } from '@latitude-data/web-ui'
 import useProviderLogs from '$/stores/providerLogs'
@@ -75,7 +75,7 @@ export function EvaluationResultInfo({
   providerLog,
 }: {
   evaluation: EvaluationDto
-  evaluationResult: EvaluationResultWithMetadata
+  evaluationResult: EvaluationResultWithMetadataAndErrors
   providerLog?: ProviderLogDto
 }) {
   const [selected, setSelected] = useState<MaybeDocumentLog>(null)

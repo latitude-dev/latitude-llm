@@ -51,6 +51,7 @@ export const runDocumentForEvaluationJob = async (
     const commit = await commitsScope
       .getCommitByUuid({ projectId, uuid: commitUuid })
       .then((r) => r.unwrap())
+
     const result = await runDocumentAtCommit({
       workspace,
       document,
@@ -67,7 +68,7 @@ export const runDocumentForEvaluationJob = async (
       {
         workspaceId,
         documentUuid: document.documentUuid,
-        documentLogUuid: result.documentLogUuid,
+        documentLogUuid: result.errorableUuid,
         evaluationId,
         batchId,
       },

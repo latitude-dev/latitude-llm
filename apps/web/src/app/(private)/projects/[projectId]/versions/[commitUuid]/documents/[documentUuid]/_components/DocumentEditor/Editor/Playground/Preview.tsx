@@ -83,7 +83,7 @@ export default function Preview({
       )}
 
       <div className='flex flex-row w-full items-center justify-center gap-2'>
-        {error || (metadata?.errors.length ?? 0) > 0 ? (
+        {false && (error || (metadata?.errors.length ?? 0) > 0) ? (
           <Tooltip
             side='bottom'
             trigger={

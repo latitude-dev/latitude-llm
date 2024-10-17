@@ -13,6 +13,7 @@ export type IProviderLogData = {
   duration?: number
   source?: LogSources
   costInMillicents?: number
+  generatedAt?: Date
 }
 
 export async function createProviderLog(
@@ -20,7 +21,7 @@ export async function createProviderLog(
 ): Promise<ProviderLog> {
   const providerLog = await createProviderLogService({
     uuid: uuid(),
-    generatedAt: new Date(),
+    generatedAt: data.generatedAt ?? new Date(),
     documentLogUuid: data.documentLogUuid,
     providerId: data.providerId,
     providerType: data.providerType,

@@ -51,9 +51,10 @@ export async function serialize(
       ? (responseObject.reason ?? null)
       : null
 
-  const serializedDocumentLog = await serializeDocumentLog(
-    documentLogsResult.value,
-  )
+  const serializedDocumentLog = await serializeDocumentLog({
+    workspace,
+    documentLog: documentLogsResult.value,
+  })
   if (serializedDocumentLog.error) return serializedDocumentLog
 
   return Result.ok({

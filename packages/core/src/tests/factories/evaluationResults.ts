@@ -1,7 +1,6 @@
 import { faker } from '@faker-js/faker'
 import { ContentType, createChain } from '@latitude-data/compiler'
 import { LanguageModelUsage } from 'ai'
-import { v4 as uuid } from 'uuid'
 
 import {
   DocumentLog,
@@ -11,6 +10,7 @@ import {
 } from '../../browser'
 import { findWorkspaceFromCommit } from '../../data-access'
 import { findCommitById } from '../../data-access/commits'
+import { generateUUIDIdentifier } from '../../lib'
 import { ProviderApiKeysRepository } from '../../repositories'
 import { Config } from '../../services/ai'
 import { createEvaluationResult as createEvaluationResultService } from '../../services/evaluationResults'
@@ -27,9 +27,11 @@ export type IEvaluationResultData = {
   }[]
   skipProviderLogCreation?: boolean
   skipEvaluationResultCreation?: boolean
+  evaluationResultUuid?: string
 }
 
 export async function createEvaluationResult({
+  evaluationResultUuid,
   documentLog,
   evaluation,
   result,
@@ -100,7 +102,7 @@ export async function createEvaluationResult({
     }
 
     const log = await createProviderLog({
-      uuid: uuid(),
+      uuid: generateUUIDIdentifier(),
       generatedAt: new Date(),
       documentLogUuid: documentLog.uuid,
       providerId: provider.id,
@@ -128,6 +130,7 @@ export async function createEvaluationResult({
   }
 
   const evaluationResult = await createEvaluationResultService({
+    uuid: evaluationResultUuid ?? generateUUIDIdentifier(),
     evaluation,
     documentLog,
     providerLog: skipProviderLogCreation

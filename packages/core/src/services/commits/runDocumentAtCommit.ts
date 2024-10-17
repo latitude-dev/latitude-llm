@@ -2,6 +2,7 @@ import { createChain } from '@latitude-data/compiler'
 
 import {
   Commit,
+  ErrorableEntity,
   LogSources,
   type DocumentVersion,
   type Workspace,
@@ -37,48 +38,45 @@ export async function runDocumentAtCommit({
 
   if (result.error) return result
 
+  // FIXME: Create chain can fail. Handle it and create error
   const chain = createChain({ prompt: result.value, parameters })
 
-  // TODO: pass ErrorableEntity.DocumentLog to runChain
-  // This way we associate errors to document logs
-  const run = await runChain({ workspace, chain, providersMap, source })
-  const { stream, response, duration, resolvedContent, documentLogUuid } = run
-
-  return Result.ok({
-    stream,
-    duration,
-    resolvedContent: result.value,
-    documentLogUuid,
-    response: response.then(async (response) => {
-      if (!response) return
-
-      publisher.publishLater({
-        type: 'documentRun',
-        data: {
-          workspaceId: workspace.id,
-          projectId: commit.projectId,
-          documentUuid: document.documentUuid,
-          commitUuid: commit.uuid,
-          documentLogUuid,
-          response,
-          resolvedContent,
-          parameters,
-          duration: await duration,
-          source,
-        },
-      })
-
-      return createDocumentLog({
-        commit,
-        data: {
-          documentUuid: document.documentUuid,
-          duration: await duration,
-          parameters,
-          resolvedContent,
-          uuid: documentLogUuid,
-          source,
-        },
-      }).then((r) => r.unwrap())
-    }),
+  const run = await runChain({
+    errorableType: ErrorableEntity.DocumentLog,
+    workspace,
+    chain,
+    providersMap,
+    source,
   })
+  const { response, duration, resolvedContent, errorableUuid } = run
+
+  publisher.publishLater({
+    type: 'documentRun',
+    data: {
+      workspaceId: workspace.id,
+      projectId: commit.projectId,
+      documentUuid: document.documentUuid,
+      commitUuid: commit.uuid,
+      documentLogUuid: errorableUuid,
+      response,
+      resolvedContent,
+      parameters,
+      duration: await duration,
+      source,
+    },
+  })
+
+  await createDocumentLog({
+    commit,
+    data: {
+      documentUuid: document.documentUuid,
+      duration: await duration,
+      parameters,
+      resolvedContent,
+      uuid: errorableUuid,
+      source,
+    },
+  }).then((r) => r.unwrap())
+
+  return Result.ok(run)
 }
