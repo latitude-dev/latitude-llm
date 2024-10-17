@@ -5,6 +5,7 @@ import {
   BlankSlateStep,
   BlankSlateWithSteps,
   Button,
+  TableSkeleton,
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui'
@@ -64,11 +65,14 @@ export default function EvaluationsLayoutClient({
   evaluations: EvaluationDto[]
 }) {
   const document = useCurrentDocument()
-  const { data: evaluations } = useEvaluations({
+  const { data: evaluations, isLoading } = useEvaluations({
     fallbackData,
     params: { documentUuid: document.documentUuid },
   })
 
+  if (!evaluations.length && isLoading) {
+    return <TableSkeleton cols={2} rows={3} />
+  }
   if (evaluations.length) {
     return <BatchEvaluationsTable evaluations={evaluations} />
   }

@@ -5,6 +5,7 @@ import { useCallback } from 'react'
 import { EvaluationAggregationTotals } from '@latitude-data/core/browser'
 import { formatCostInMillicents } from '$/app/_lib/formatUtils'
 import useEvaluationResultsCounters from '$/stores/evaluationResultCharts/evaluationResultsCounters'
+import { useDebouncedCallback } from 'use-debounce'
 
 import { useEvaluationStatusEvent } from '../../../../_lib/useEvaluationStatusEvent'
 import Panel from '../Panel'
@@ -30,7 +31,11 @@ export default function TotalsPanels({
       fallbackData: aggregation,
     },
   )
-  const onStatusChange = useCallback(() => refetch(), [refetch])
+  const onStatusChange = useDebouncedCallback(
+    useCallback(() => refetch(), [refetch]),
+    2000,
+    { trailing: true },
+  )
   useEvaluationStatusEvent({ evaluationId, documentUuid, onStatusChange })
   const cost =
     data?.costInMillicents === undefined

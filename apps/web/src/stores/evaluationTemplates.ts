@@ -6,14 +6,16 @@ import { EvaluationTemplateWithCategory } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui'
 import { createEvaluationTemplateAction } from '$/actions/evaluationTemplates/create'
 import { destroyEvaluationTemplateAction } from '$/actions/evaluationTemplates/destroy'
-import { fetchEvaluationTemplatesAction } from '$/actions/evaluationTemplates/fetch'
+import useFetcher from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
+import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'
 
 export default function useEvaluationTemplates(
   opts: SWRConfiguration & { params?: Record<string, unknown> } = {},
 ) {
   const { toast } = useToast()
+  const fetcher = useFetcher(ROUTES.api.evaluationTemplates.root)
 
   const {
     data = [],
@@ -24,20 +26,7 @@ export default function useEvaluationTemplates(
       'evaluationTemplates',
       ...flatten(Object.entries(opts?.params ?? {})),
     ]),
-    async () => {
-      const [data, error] = await fetchEvaluationTemplatesAction()
-
-      if (error) {
-        toast({
-          title: 'Error fetching evaluation templates',
-          description: error.formErrors?.[0] || error.message,
-          variant: 'destructive',
-        })
-        throw error
-      }
-
-      return data
-    },
+    fetcher,
     opts,
   )
 

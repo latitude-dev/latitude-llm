@@ -1,29 +1,16 @@
-import { useCallback } from 'react'
-
 import { Project } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui'
 import { createProjectAction } from '$/actions/projects/create'
 import { destroyProjectAction } from '$/actions/projects/destroy'
-import { fetchProjectsAction } from '$/actions/projects/fetch'
 import { updateProjectAction } from '$/actions/projects/update'
+import useFetcher from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
+import { ROUTES } from '$/services/routes'
 import useSWR from 'swr'
 
 export default function useProjects() {
   const { toast } = useToast()
-  const fetcher = useCallback(async () => {
-    const [data, error] = await fetchProjectsAction()
-    if (error) {
-      toast({
-        title: 'Error',
-        description: error.message,
-        variant: 'destructive',
-      })
-    }
-    if (!data) return []
-
-    return data
-  }, [])
+  const fetcher = useFetcher(ROUTES.api.projects.root)
 
   const {
     data = [],

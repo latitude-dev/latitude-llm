@@ -1,29 +1,33 @@
-import { useCallback } from 'react'
-
-import { Evaluation } from '@latitude-data/core/browser'
-import { computeAverageResultAndCostOverCommitAction } from '$/actions/evaluationResults/computeAggregatedResults'
+import {
+  AverageResultAndCostOverCommit,
+  Evaluation,
+} from '@latitude-data/core/browser'
+import useFetcher from '$/hooks/useFetcher'
+import { ROUTES } from '$/services/routes'
 import useSWR from 'swr'
 
 export default function useAverageResultsAndCostOverCommit({
   evaluation,
   documentUuid,
+  projectId,
+  commitUuid,
 }: {
   evaluation: Evaluation
   documentUuid: string
+  projectId: number
+  commitUuid: string
 }) {
-  const fetcher = useCallback(async () => {
-    const [data, error] = await computeAverageResultAndCostOverCommitAction({
-      documentUuid,
-      evaluationId: evaluation.id,
-    })
-
-    if (error) return []
-    return data
-  }, [documentUuid, evaluation.id])
-  const { data, isValidating, isLoading, error, mutate } = useSWR(
-    ['averageResultAndCostOverCommit', evaluation.id, documentUuid],
-    fetcher,
+  const fetcher = useFetcher(
+    ROUTES.api.projects
+      .detail(projectId)
+      .commits.detail(commitUuid)
+      .documents.detail(documentUuid)
+      .evaluations.detail({ evaluationId: evaluation.id }).evaluationResults
+      .averageAndCost,
   )
+  const { data, isValidating, isLoading, error, mutate } = useSWR<
+    AverageResultAndCostOverCommit[]
+  >(['averageResultAndCostOverCommit', evaluation.id, documentUuid], fetcher)
 
   return {
     data,

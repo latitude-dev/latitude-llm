@@ -4,8 +4,9 @@ import { noop } from 'lodash-es'
 import { ClaimedReward } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui'
 import { claimRewardAction } from '$/actions/rewards/claimRewardAction'
-import { fetchClaimedRewardsAction } from '$/actions/rewards/fetchClaimedRewardsAction'
+import useFetcher from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
+import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'
 
 import useWorkspaceUsage from './workspaceUsage'
@@ -16,28 +17,13 @@ export default function useRewards(opts?: SWRConfiguration) {
   const { mutate: mutateUsage } = useWorkspaceUsage()
 
   const { toast } = useToast()
+  const fetcher = useFetcher(ROUTES.api.claimedRewards.root)
   const {
     mutate,
     data = EMPTY_ARRAY,
     isLoading,
     error: swrError,
-  } = useSWR<ClaimedReward[]>(
-    ['workspaceClaimedRewards'],
-    useCallback(async () => {
-      const [data, error] = await fetchClaimedRewardsAction()
-      if (error) {
-        toast({
-          title: 'Error',
-          description: error.message,
-          variant: 'destructive',
-        })
-      }
-      if (!data) return EMPTY_ARRAY
-
-      return data
-    }, []),
-    opts,
-  )
+  } = useSWR<ClaimedReward[]>(['workspaceClaimedRewards'], fetcher, opts)
 
   const updateRewards = useCallback(
     (newReward: ClaimedReward) => {

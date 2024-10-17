@@ -7,15 +7,19 @@ import { NextRequest, NextResponse } from 'next/server'
 export const GET = errorHandler(
   authHandler(
     async (
-      _req: NextRequest,
+      req: NextRequest,
       {
         workspace,
       }: {
         workspace: Workspace
       },
     ) => {
+      const documentUuid = req.nextUrl.searchParams.get('documentUuid')
       const evaluationsScope = new EvaluationsRepository(workspace.id)
-      const result = await evaluationsScope.findAll()
+      const result = documentUuid
+        ? await evaluationsScope.findByDocumentUuid(documentUuid)
+        : await evaluationsScope.findAll()
+
       return NextResponse.json(result.unwrap(), { status: 200 })
     },
   ),

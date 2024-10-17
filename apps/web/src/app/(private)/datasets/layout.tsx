@@ -1,12 +1,7 @@
 import { ReactNode } from 'react'
 
 import { DatasetsRepository } from '@latitude-data/core/repositories'
-import {
-  Container,
-  TableBlankSlate,
-  TableWithHeader,
-  Text,
-} from '@latitude-data/web-ui'
+import { Container, TableWithHeader, Text } from '@latitude-data/web-ui'
 import { AppTabs } from '$/app/(private)/AppTabs'
 import { DatasetsTable } from '$/app/(private)/datasets/_components/DatasetsTable'
 import { AppLayout } from '$/components/layouts'
@@ -54,24 +49,7 @@ export default async function DatasetsList({
               </Link>
             </div>
           }
-          table={
-            <>
-              {datasets.length > 0 ? (
-                <DatasetsTable datasets={datasets} />
-              ) : (
-                <TableBlankSlate
-                  description='There are no datasets yet. Create one to start testing your prompts.'
-                  link={
-                    <Link href={ROUTES.datasets.new.root}>
-                      <TableBlankSlate.Button>
-                        Create your first dataset
-                      </TableBlankSlate.Button>
-                    </Link>
-                  }
-                />
-              )}
-            </>
-          }
+          table={<DatasetsTable datasets={datasets} />}
         />
       </Container>
     </AppLayout>

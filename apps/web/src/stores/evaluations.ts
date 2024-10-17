@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback } from 'react'
+import { useMemo } from 'react'
 import { compact } from 'lodash-es'
 
 import type { EvaluationDto } from '@latitude-data/core/browser'
@@ -8,8 +8,9 @@ import { useToast } from '@latitude-data/web-ui'
 import { createEvaluationAction } from '$/actions/evaluations/create'
 import { destroyEvaluationAction } from '$/actions/evaluations/destroy'
 import { updateEvaluationContentAction } from '$/actions/evaluations/updateContent'
+import useFetcher from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
-import { _API_ROUTES } from '$/services/routes/api'
+import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'
 
 export default function useEvaluations(
@@ -18,11 +19,17 @@ export default function useEvaluations(
     params?: { documentUuid: string }
   } = {},
 ) {
-  const { onSuccessCreate } = opts
+  const { onSuccessCreate, params } = opts
   const { toast } = useToast()
-
-  const { documentUuid } = opts?.params ?? {}
-
+  const { documentUuid } = params ?? {}
+  const route = useMemo(
+    () =>
+      documentUuid
+        ? `${ROUTES.api.evaluations.root}?documentUuid=${documentUuid}`
+        : ROUTES.api.evaluations.root,
+    [documentUuid],
+  )
+  const fetcher = useFetcher(route)
   const {
     data = [],
     mutate,
@@ -30,27 +37,7 @@ export default function useEvaluations(
     error: swrError,
   } = useSWR<EvaluationDto[]>(
     compact(['evaluations', documentUuid]),
-    useCallback(async () => {
-      const route = documentUuid
-        ? _API_ROUTES.evaluations.detail({ documentUuid })
-        : _API_ROUTES.evaluations
-
-      const response = await fetch(route.root, { credentials: 'include' })
-
-      if (!response.ok) {
-        const error = await response.json()
-
-        toast({
-          title: 'Error fetching evaluations',
-          description: error.formErrors?.[0] || error.message,
-          variant: 'destructive',
-        })
-
-        throw error
-      }
-
-      return response.json()
-    }, [documentUuid]),
+    fetcher,
     opts,
   )
 

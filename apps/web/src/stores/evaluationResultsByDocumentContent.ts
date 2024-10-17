@@ -1,7 +1,7 @@
-import { useCallback } from 'react'
+import { useMemo } from 'react'
 
 import { EvaluationResultWithMetadata } from '@latitude-data/core/repositories'
-import { useToast } from '@latitude-data/web-ui'
+import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'
 
@@ -31,15 +31,11 @@ export default function useEvaluationResultsByDocumentContent(
   },
   { fallbackData }: SWRConfiguration = {},
 ) {
-  const { toast } = useToast()
-
-  const fetcher = useCallback(async () => {
-    const route = ROUTES.api.documents
-      .detail({ projectId })
-      .detail({
-        commitUuid,
-      })
-      .detail({ documentUuid })
+  const route = useMemo(() => {
+    const route = ROUTES.api.projects
+      .detail(projectId)
+      .commits.detail(commitUuid)
+      .documents.detail(documentUuid)
       .evaluationResultsByDocumentContent.detail({ evaluationId }).root
 
     const params = new URLSearchParams({
@@ -47,37 +43,13 @@ export default function useEvaluationResultsByDocumentContent(
       pageSize: String(pageSize),
     })
 
-    const url = route.toString() + '?' + params.toString()
+    return route.toString() + '?' + params.toString()
+  }, [projectId, commitUuid, documentUuid, evaluationId, page, pageSize])
 
-    const response = await fetch(url, {
-      credentials: 'include',
-    })
-    if (!response.ok) {
-      const error = await response.json()
-      toast({
-        title: 'Error',
-        description: error?.err?.message || error?.message,
-        variant: 'destructive',
-      })
-
-      return { rows: [], count: 0 }
-    }
-
-    const { rows, count } = await response.json()
-
-    const reformattedRows = rows.map((result: SerializedEvaluationResult) => {
-      return {
-        ...result,
-        createdAt: new Date(result.createdAt),
-        updatedAt: new Date(result.updatedAt),
-      }
-    }) as EvaluationResultWithMetadata[]
-
-    return { rows: reformattedRows, count } as {
-      rows: EvaluationResultWithMetadata[]
-      count: number
-    }
-  }, [commitUuid, documentUuid, evaluationId, projectId, page, pageSize, toast])
+  const fetcher = useFetcher(route, {
+    serializer: ({ rows, count }) => ({ rows: rows.map(deserialize), count }),
+    fallback: { rows: [], count: 0 },
+  })
 
   const { data, isLoading, mutate } = useSWR<
     { rows: EvaluationResultWithMetadata[]; count: number } | undefined
@@ -96,4 +68,12 @@ export default function useEvaluationResultsByDocumentContent(
   )
 
   return { data, isLoading, mutate }
+}
+
+function deserialize(item: SerializedEvaluationResult) {
+  return {
+    ...item,
+    createdAt: new Date(item.createdAt),
+    updatedAt: new Date(item.updatedAt),
+  }
 }

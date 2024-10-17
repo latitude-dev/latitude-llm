@@ -8,8 +8,10 @@ import {
   ScatterChart,
   Text,
   useCurrentCommit,
+  useCurrentProject,
 } from '@latitude-data/web-ui'
 import useAverageResultsAndCostOverCommit from '$/stores/evaluationResultCharts/numericalResults/averageResultAndCostOverCommitStore'
+import { useDebouncedCallback } from 'use-debounce'
 
 import { useEvaluationStatusEvent } from '../../../../_lib/useEvaluationStatusEvent'
 import { ChartWrapper, NoData } from '../ChartContainer'
@@ -21,13 +23,20 @@ export function CostOverResultsChart({
   evaluation: Evaluation
   documentUuid: string
 }) {
+  const { project } = useCurrentProject()
+  const { commit } = useCurrentCommit()
   const { isLoading, error, data, refetch } =
     useAverageResultsAndCostOverCommit({
+      projectId: project.id,
+      commitUuid: commit.uuid,
       evaluation,
       documentUuid,
     })
-  const { commit } = useCurrentCommit()
-  const onStatusChange = useCallback(() => refetch(), [refetch])
+  const onStatusChange = useDebouncedCallback(
+    useCallback(() => refetch(), [refetch]),
+    2000,
+    { trailing: true },
+  )
   useEvaluationStatusEvent({
     evaluationId: evaluation.id,
     documentUuid,

@@ -97,7 +97,7 @@ export function EvaluationResultInfo({
             {selectedTab === 'messages' && (
               <EvaluationResultMessages providerLog={providerLog} />
             )}
-            <div className='w-full bg-white flex justify-center'>
+            <div className='w-full flex justify-center'>
               <Button variant='link' onClick={onClickOpen}>
                 Check original log
                 <Icon name='arrowRight' widthClass='w-4' heightClass='h-4' />

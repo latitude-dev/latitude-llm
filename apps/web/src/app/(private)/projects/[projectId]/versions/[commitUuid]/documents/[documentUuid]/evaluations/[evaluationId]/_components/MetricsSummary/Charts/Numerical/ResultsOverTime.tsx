@@ -3,8 +3,14 @@
 import { useCallback, useMemo } from 'react'
 
 import { Evaluation } from '@latitude-data/core/browser'
-import { AreaChart, Text } from '@latitude-data/web-ui'
+import {
+  AreaChart,
+  Text,
+  useCurrentCommit,
+  useCurrentProject,
+} from '@latitude-data/web-ui'
 import useAverageResultOverTime from '$/stores/evaluationResultCharts/numericalResults/averageResultOverTimeStore'
+import { useDebouncedCallback } from 'use-debounce'
 
 import { useEvaluationStatusEvent } from '../../../../_lib/useEvaluationStatusEvent'
 import { ChartWrapper, NoData } from '../ChartContainer'
@@ -23,11 +29,19 @@ export function ResultOverTimeChart({
   evaluation: Evaluation
   documentUuid: string
 }) {
+  const { project } = useCurrentProject()
+  const { commit } = useCurrentCommit()
   const { isLoading, error, data, refetch } = useAverageResultOverTime({
+    projectId: project.id,
+    commitUuid: commit.uuid,
     evaluation,
     documentUuid,
   })
-  const onStatusChange = useCallback(() => refetch(), [refetch])
+  const onStatusChange = useDebouncedCallback(
+    useCallback(() => refetch(), [refetch]),
+    2000,
+    { trailing: true },
+  )
   useEvaluationStatusEvent({
     evaluationId: evaluation.id,
     documentUuid,

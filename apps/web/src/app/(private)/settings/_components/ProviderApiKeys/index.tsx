@@ -13,6 +13,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
+  TableSkeleton,
   Text,
 } from '@latitude-data/web-ui'
 import { relativeTime } from '$/lib/relativeTime'
@@ -24,7 +25,7 @@ import Link from 'next/link'
 import NewApiKey from './New'
 
 export default function ProviderApiKeys() {
-  const { data: providerApiKeys } = useProviderApiKeys()
+  const { data: providerApiKeys, isLoading } = useProviderApiKeys()
   const [open, setOpen] = useState(false)
 
   return (
@@ -37,10 +38,11 @@ export default function ProviderApiKeys() {
         </Button>
       </div>
       <div className='flex flex-col gap-2'>
+        {isLoading && <TableSkeleton cols={6} rows={3} />}
         {providerApiKeys.length > 0 && (
           <ProviderApiKeysTable providerApiKeys={providerApiKeys} />
         )}
-        {providerApiKeys.length === 0 && (
+        {!isLoading && providerApiKeys.length === 0 && (
           <TableBlankSlate
             description='There are no providers yet. Create one to start working with your prompts.'
             link={
@@ -95,7 +97,7 @@ const ProviderApiKeysTable = ({
             </TableCell>
             <TableCell>
               <Text.H4 color='foregroundMuted'>
-                {relativeTime(apiKey.lastUsedAt)}
+                {relativeTime(apiKey.lastUsedAt ? apiKey.lastUsedAt : null)}
               </Text.H4>
             </TableCell>
             <TableCell>

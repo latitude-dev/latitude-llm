@@ -1,8 +1,6 @@
-import { useCallback } from 'react'
-
 import { ConnectedEvaluation } from '@latitude-data/core/browser'
-import { useToast } from '@latitude-data/web-ui'
 import { updateConnectedEvaluationAction } from '$/actions/connectedEvaluations/update'
+import useFetcher from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'
@@ -19,37 +17,19 @@ export default function useConnectedEvaluations(
   },
   opts: SWRConfiguration = {},
 ) {
-  const { toast } = useToast()
+  const fetcher = useFetcher(
+    ROUTES.api.projects
+      .detail(projectId)
+      .commits.detail(commitUuid)
+      .documents.detail(documentUuid).evaluations.root,
+  )
   const {
     data = [],
     mutate,
     ...rest
   } = useSWR<ConnectedEvaluation[]>(
     ['connectedEvaluations', documentUuid],
-    useCallback(async () => {
-      const response = await fetch(
-        ROUTES.api.documents
-          .detail({ projectId })
-          .detail({
-            commitUuid,
-          })
-          .detail({ documentUuid }).connectedEvaluations.root,
-        { credentials: 'include' },
-      )
-      if (!response.ok) {
-        const error = await response.json()
-
-        toast({
-          title: 'Error fetching evaluations',
-          description: error.formErrors?.[0] || error.message,
-          variant: 'destructive',
-        })
-
-        return []
-      }
-
-      return response.json()
-    }, [projectId, commitUuid, documentUuid]),
+    fetcher,
     opts,
   )
 

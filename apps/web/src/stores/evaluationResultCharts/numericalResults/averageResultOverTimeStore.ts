@@ -1,29 +1,31 @@
-import { useCallback } from 'react'
-
-import { Evaluation } from '@latitude-data/core/browser'
-import { computeAverageResultOverTimeAction } from '$/actions/evaluationResults/computeAggregatedResults'
+import { AverageResultOverTime, Evaluation } from '@latitude-data/core/browser'
+import useFetcher from '$/hooks/useFetcher'
+import { ROUTES } from '$/services/routes'
 import useSWR from 'swr'
 
 export default function useAverageResultOverTime({
   evaluation,
   documentUuid,
+  projectId,
+  commitUuid,
 }: {
   evaluation: Evaluation
   documentUuid: string
+  projectId: number
+  commitUuid: string
 }) {
-  const fetcher = useCallback(async () => {
-    const [data, error] = await computeAverageResultOverTimeAction({
-      documentUuid,
-      evaluationId: evaluation.id,
-    })
-
-    if (error) return []
-    return data
-  }, [documentUuid, evaluation.id])
-  const { data, isValidating, isLoading, error, mutate } = useSWR(
-    ['averageResultOverTime', evaluation.id, documentUuid],
-    fetcher,
+  const fetcher = useFetcher(
+    ROUTES.api.projects
+      .detail(projectId)
+      .commits.detail(commitUuid)
+      .documents.detail(documentUuid)
+      .evaluations.detail({ evaluationId: evaluation.id }).evaluationResults
+      .average,
+    { serializer: (rows) => rows.map(deserialize) },
   )
+  const { data, isValidating, isLoading, error, mutate } = useSWR<
+    AverageResultOverTime[]
+  >(['averageResultOverTime', evaluation.id, documentUuid], fetcher)
 
   return {
     data,
@@ -31,5 +33,13 @@ export default function useAverageResultOverTime({
     isValidating,
     error,
     refetch: mutate,
+  }
+}
+
+function deserialize(item: AverageResultOverTime) {
+  return {
+    date: new Date(item.date),
+    averageResult: item.averageResult,
+    count: item.count,
   }
 }
