@@ -44,7 +44,7 @@ function InputParams({
   )
 
   return (
-    <div className='flex flex-col gap-3 flex-shrink-0 max-h-[33%] custom-scrollbar'>
+    <div className='flex flex-col gap-3 flex-shrink-0 pb-1 pr-1 max-h-[33%] custom-scrollbar'>
       <Text.H6M>Inputs</Text.H6M>
       {Object.keys(inputs).length > 0 ? (
         Object.entries(inputs).map(([param, value], idx) => (
