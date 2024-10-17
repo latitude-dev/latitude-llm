@@ -3,12 +3,12 @@ import {
   CommitStatus,
   DocumentVersion,
   Project,
+  ULTRA_LARGE_PAGE_SIZE,
 } from '@latitude-data/core/browser'
 import { paginateQuery } from '@latitude-data/core/lib/index'
 import { CommitsRepository } from '@latitude-data/core/repositories/index'
 import { DocumentSidebar } from '@latitude-data/web-ui'
 import { getDocumentsAtCommitCached } from '$/app/(private)/_data-access'
-import { ULTRA_LARGE_PAGE_SIZE } from '$/app/api/projects/[projectId]/commits/route'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
 
 import ClientFilesTree from './ClientFilesTree'

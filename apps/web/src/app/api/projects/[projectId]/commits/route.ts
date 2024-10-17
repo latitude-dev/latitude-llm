@@ -1,4 +1,8 @@
-import { CommitStatus, Workspace } from '@latitude-data/core/browser'
+import {
+  CommitStatus,
+  ULTRA_LARGE_PAGE_SIZE,
+  Workspace,
+} from '@latitude-data/core/browser'
 import {
   BadRequestError,
   NotFoundError,
@@ -11,8 +15,6 @@ import {
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'
-
-export const ULTRA_LARGE_PAGE_SIZE = 1000
 
 export const GET = errorHandler(
   authHandler(

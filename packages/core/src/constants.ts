@@ -306,3 +306,5 @@ export type SerializedEvaluationResult = Omit<
   reason: string | null
   evaluatedLog: SerializedDocumentLog
 }
+
+export const ULTRA_LARGE_PAGE_SIZE = 1000
