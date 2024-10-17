@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "build": "next build",
+    "build:workers": "tsc -p tsconfig.workers.json",
+    "build": "next build && pnpm run build:workers",
+    "build:workers:watch": "tsc -w -p tsconfig.workers.json",
     "dev": "NODE_DEBUG=latitude:debug next dev --turbo",
     "dev:debug": "NODE_DEBUG=latitude:debug NODE_OPTIONS='--inspect=0.0.0.0:9229' ./node_modules/.bin/next dev",
     "dev:local": "USE_LOCALHOST=true pnpm run dev",
