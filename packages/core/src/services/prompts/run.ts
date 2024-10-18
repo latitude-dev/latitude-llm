@@ -29,6 +29,12 @@ export async function runPrompt({
   }
 
   const chain = createChain({ prompt: metadata.resolvedPrompt, parameters })
-  const run = await runChain({ workspace, chain, providersMap, source })
+  const run = await runChain({
+    workspace,
+    chain,
+    providersMap,
+    source,
+    persistErrors: false,
+  })
   return Result.ok(run)
 }

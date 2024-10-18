@@ -1,4 +1,4 @@
-import { CoreTool, ObjectStreamPart, TextStreamPart } from 'ai'
+import { CoreTool, FinishReason, ObjectStreamPart, TextStreamPart } from 'ai'
 
 import {
   ChainEvent,
@@ -6,14 +6,9 @@ import {
   StreamEventTypes,
   StreamType,
 } from '../../../constants'
-import { Result } from '../../../lib'
 import { streamToGenerator } from '../../../lib/streamToGenerator'
 import { AIReturn, StreamChunk } from '../../ai'
 import { ChainError } from '../ChainErrors'
-
-function nonErrorChunk(chunk: StreamChunk) {
-  return chunk.type !== 'error'
-}
 
 export function enqueueChainEvent(
   controller: ReadableStreamDefaultController,
@@ -21,25 +16,40 @@ export function enqueueChainEvent(
 ) {
   controller.enqueue(event)
 }
-/**
- *  We check that chunk type is not 'error'
- *  if not we return the first error chunk
- */
-function validate(chunks: StreamChunk[]) {
-  const errorChunk = chunks.filter(nonErrorChunk)[0]
 
-  if (!errorChunk) return Result.ok(chunks)
-
-  const error = 'error' in errorChunk ? (errorChunk.error as Error) : undefined
-  if (!error) return Result.ok(chunks)
-
-  return Result.error(
-    new ChainError({
-      code: RunErrorCodes.AIRunError,
-      message: error.message,
-    }),
-  )
+function getErrorMessage(e: unknown) {
+  return e instanceof Error ? e.message : null
 }
+
+function parseChunks(chunks: StreamChunk[]) {
+  let error: ChainError<RunErrorCodes.AIRunError> | undefined
+  let finishReason: FinishReason = 'stop'
+
+  for (const chunk of chunks) {
+    if (chunk.type === 'error') {
+      finishReason = 'error'
+      error = new ChainError({
+        code: RunErrorCodes.AIRunError,
+        message: getErrorMessage(chunk.error) || 'Unknown AI chunk error',
+      })
+      break
+    } else if (chunk.type === 'finish') {
+      finishReason = chunk.finishReason
+      if (chunk.finishReason === 'error') {
+        chunk
+        error = new ChainError({
+          code: RunErrorCodes.AIRunError,
+          message: 'AI run finished with error',
+        })
+        break
+      }
+    }
+  }
+
+  return { error, finishReason }
+}
+
+export type StreamConsumeReturn = ReturnType<typeof parseChunks>
 
 export async function consumeStream({
   controller,
@@ -59,5 +69,5 @@ export async function consumeStream({
     })
   }
 
-  return validate(chunks)
+  return parseChunks(chunks)
 }

@@ -3,7 +3,7 @@ import { v4 as uuid } from 'uuid'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { objectToString, Workspace } from '../../browser'
-import { LogSources, Providers } from '../../constants'
+import { ErrorableEntity, LogSources, Providers } from '../../constants'
 import { Result } from '../../lib'
 import * as factories from '../../tests/factories'
 import * as aiModule from '../ai'
@@ -78,10 +78,11 @@ describe('runChain', () => {
       chain: mockChain as Chain,
       providersMap,
       source: LogSources.API,
+      errorableType: ErrorableEntity.DocumentLog,
     })
 
     const response = await run.response
-    expect(response).toEqual(
+    expect(response.value).toEqual(
       expect.objectContaining({
         documentLogUuid: expect.any(String),
         text: 'AI response',
@@ -149,6 +150,7 @@ describe('runChain', () => {
       chain: mockChain as Chain,
       providersMap,
       source: LogSources.API,
+      errorableType: ErrorableEntity.DocumentLog,
       configOverrides: {
         schema: mockSchema,
         output: 'object',
@@ -156,7 +158,7 @@ describe('runChain', () => {
     })
 
     const response = await run.response
-    expect(response).toEqual(
+    expect(response.value).toEqual(
       expect.objectContaining({
         documentLogUuid: expect.any(String),
         object: { name: 'John', age: 30 },
@@ -222,10 +224,11 @@ describe('runChain', () => {
       chain: mockChain as Chain,
       providersMap,
       source: LogSources.API,
+      errorableType: ErrorableEntity.DocumentLog,
     })
 
     const response = await run.response
-    expect(response).toEqual(
+    expect(response.value).toEqual(
       expect.objectContaining({
         documentLogUuid: expect.any(String),
         text: 'AI response 2',
@@ -263,10 +266,11 @@ describe('runChain', () => {
       chain: mockChain as Chain,
       providersMap,
       source: LogSources.API,
+      errorableType: ErrorableEntity.DocumentLog,
     })
 
     const response = await run.response
-    expect(response).toEqual(
+    expect(response.value).toEqual(
       expect.objectContaining({
         documentLogUuid: expect.any(String),
         text: 'AI response',
@@ -338,6 +342,7 @@ describe('runChain', () => {
       chain: mockChain as Chain,
       providersMap,
       source: LogSources.API,
+      errorableType: ErrorableEntity.DocumentLog,
       configOverrides: {
         schema: mockSchema,
         output: 'object',
@@ -345,7 +350,7 @@ describe('runChain', () => {
     })
 
     const response = await run.response
-    expect(response).toEqual(
+    expect(response.value).toEqual(
       expect.objectContaining({
         documentLogUuid: expect.any(String),
         object: { name: 'John', age: 30 },
@@ -427,6 +432,7 @@ describe('runChain', () => {
       chain: mockChain as Chain,
       providersMap,
       source: LogSources.API,
+      errorableType: ErrorableEntity.DocumentLog,
       configOverrides: {
         schema: mockSchema,
         output: 'array',
@@ -434,7 +440,7 @@ describe('runChain', () => {
     })
 
     const response = await run.response
-    expect(response).toEqual(
+    expect(response.value).toEqual(
       expect.objectContaining({
         documentLogUuid: expect.any(String),
         object: [
@@ -482,13 +488,14 @@ describe('runChain', () => {
       chain: mockChain as Chain,
       providersMap,
       source: LogSources.API,
+      errorableType: ErrorableEntity.DocumentLog,
       configOverrides: {
         output: 'no-schema',
       },
     })
 
     const response = await run.response
-    expect(response).toEqual(
+    expect(response.value).toEqual(
       expect.objectContaining({
         documentLogUuid: expect.any(String),
         text: 'AI response without schema',
@@ -553,11 +560,12 @@ describe('runChain', () => {
       chain: mockChain as Chain,
       providersMap,
       source: LogSources.API,
+      errorableType: ErrorableEntity.DocumentLog,
     })
 
     const res = await run.response
 
-    expect(res).toEqual(
+    expect(res.value).toEqual(
       expect.objectContaining({
         toolCalls: [
           {

@@ -5,7 +5,7 @@ import {
   EvaluationResultableType,
 } from '@latitude-data/core/browser'
 import { buildPagination } from '@latitude-data/core/lib/pagination/buildPagination'
-import { EvaluationResultWithMetadata } from '@latitude-data/core/repositories'
+import { EvaluationResultWithMetadataAndErrors } from '@latitude-data/core/repositories'
 import {
   Badge,
   cn,
@@ -21,6 +21,7 @@ import {
   useCurrentProject,
 } from '@latitude-data/web-ui'
 import { formatCostInMillicents, relativeTime } from '$/app/_lib/formatUtils'
+import { getRunErrorFromErrorable } from '$/app/(private)/_lib/getRunErrorFromErrorable'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { LinkableTablePaginationFooter } from '$/components/TablePaginationFooter'
 import { ROUTES } from '$/services/routes'
@@ -62,7 +63,7 @@ export const ResultCellContent = ({
   return <Text.H4 noWrap>{value as string}</Text.H4>
 }
 
-export type EvaluationResultRow = EvaluationResultWithMetadata & {
+export type EvaluationResultRow = EvaluationResultWithMetadataAndErrors & {
   realtimeAdded?: boolean
 }
 export const EvaluationResultsTable = ({
@@ -74,7 +75,9 @@ export const EvaluationResultsTable = ({
   evaluation: EvaluationDto
   evaluationResults: EvaluationResultRow[]
   selectedResult: EvaluationResultRow | undefined
-  setSelectedResult: (log: EvaluationResultWithMetadata | undefined) => void
+  setSelectedResult: (
+    log: EvaluationResultWithMetadataAndErrors | undefined,
+  ) => void
 }) => {
   const searchParams = useSearchParams()
   const page = searchParams.get('page') ?? '1'
@@ -126,72 +129,88 @@ export const EvaluationResultsTable = ({
         </TableRow>
       </TableHeader>
       <TableBody>
-        {evaluationResults.map((evaluationResult) => (
-          <TableRow
-            key={evaluationResult.id}
-            onClick={() =>
-              setSelectedResult(
-                selectedResult?.id === evaluationResult.id
-                  ? undefined
-                  : evaluationResult,
-              )
-            }
-            className={cn(
-              'cursor-pointer border-b-[0.5px] h-12 max-h-12 border-border',
-              {
-                'bg-secondary': selectedResult?.id === evaluationResult.id,
-                'animate-flash': evaluationResult.realtimeAdded,
-              },
-            )}
-          >
-            <TableCell>
-              <Text.H5 noWrap>
-                <time
-                  dateTime={evaluationResult.createdAt.toISOString()}
-                  suppressHydrationWarning
-                >
-                  {relativeTime(evaluationResult.createdAt)}
-                </time>
-              </Text.H5>
-            </TableCell>
-            <TableCell>
-              <div className='flex flex-row gap-2 items-center'>
-                <Badge
-                  variant={evaluationResult.commit.version ? 'accent' : 'muted'}
-                  shape='square'
-                >
-                  <Text.H6 noWrap>
-                    {evaluationResult.commit.version
-                      ? `v${evaluationResult.commit.version}`
-                      : 'Draft'}
-                  </Text.H6>
-                </Badge>
-                <Text.H5>{evaluationResult.commit.title}</Text.H5>
-              </div>
-            </TableCell>
-            <TableCell>
-              <Text.H5 noWrap>
-                {evaluationResult.source
-                  ? capitalize(evaluationResult.source)
-                  : '-'}
-              </Text.H5>
-            </TableCell>
-            <TableCell>
-              <ResultCellContent
-                evaluation={evaluation}
-                value={evaluationResult.result}
-              />
-            </TableCell>
-            <TableCell>
-              <Text.H5 noWrap>
-                {formatCostInMillicents(evaluationResult.costInMillicents || 0)}
-              </Text.H5>
-            </TableCell>
-            <TableCell>
-              <Text.H5 noWrap>{evaluationResult.tokens}</Text.H5>
-            </TableCell>
-          </TableRow>
-        ))}
+        {evaluationResults.map((evaluationResult) => {
+          const error = getRunErrorFromErrorable(evaluationResult.error)
+          const cellColor = error ? 'destructiveMutedForeground' : 'foreground'
+          return (
+            <TableRow
+              key={evaluationResult.id}
+              onClick={() =>
+                setSelectedResult(
+                  selectedResult?.id === evaluationResult.id
+                    ? undefined
+                    : evaluationResult,
+                )
+              }
+              className={cn(
+                'cursor-pointer border-b-[0.5px] h-12 max-h-12 border-border',
+                {
+                  'bg-secondary': selectedResult?.id === evaluationResult.id,
+                  'animate-flash': evaluationResult.realtimeAdded,
+                },
+              )}
+            >
+              <TableCell>
+                <Text.H5 noWrap color={cellColor}>
+                  <time
+                    dateTime={evaluationResult.createdAt.toISOString()}
+                    suppressHydrationWarning
+                  >
+                    {relativeTime(evaluationResult.createdAt)}
+                  </time>
+                </Text.H5>
+              </TableCell>
+              <TableCell>
+                <div className='flex flex-row gap-2 items-center'>
+                  <Badge
+                    variant={
+                      evaluationResult.commit.version ? 'accent' : 'muted'
+                    }
+                    shape='square'
+                  >
+                    <Text.H6 noWrap>
+                      {evaluationResult.commit.version
+                        ? `v${evaluationResult.commit.version}`
+                        : 'Draft'}
+                    </Text.H6>
+                  </Badge>
+                  <Text.H5 color={cellColor}>
+                    {evaluationResult.commit.title}
+                  </Text.H5>
+                </div>
+              </TableCell>
+              <TableCell>
+                <Text.H5 noWrap color={cellColor}>
+                  {evaluationResult.source
+                    ? capitalize(evaluationResult.source)
+                    : '-'}
+                </Text.H5>
+              </TableCell>
+              <TableCell>
+                {evaluationResult.result !== null ? (
+                  <ResultCellContent
+                    evaluation={evaluation}
+                    value={evaluationResult.result}
+                  />
+                ) : (
+                  <Text.H5 color={cellColor}> - </Text.H5>
+                )}
+              </TableCell>
+              <TableCell>
+                <Text.H5 noWrap color={cellColor}>
+                  {typeof evaluationResult.costInMillicents === 'number'
+                    ? formatCostInMillicents(evaluationResult.costInMillicents)
+                    : '-'}
+                </Text.H5>
+              </TableCell>
+              <TableCell>
+                <Text.H5 noWrap color={cellColor}>
+                  {evaluationResult.tokens ?? '-'}
+                </Text.H5>
+              </TableCell>
+            </TableRow>
+          )
+        })}
       </TableBody>
     </Table>
   )

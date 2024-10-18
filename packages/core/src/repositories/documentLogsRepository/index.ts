@@ -39,6 +39,7 @@ export class DocumentLogsRepository extends Repository<typeof tt, DocumentLog> {
       .as('documentLogsScope')
   }
 
+  // FIXME: Add a index to `documentLogs.uuid` column we missed since the beginning
   async findByUuid(uuid: string) {
     const result = await this.db
       .select()

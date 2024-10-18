@@ -8,6 +8,7 @@ import { Result, Transaction } from '../../lib'
 import { providerLogs } from '../../schema'
 import { estimateCost, PartialConfig } from '../ai'
 import { touchApiKey } from '../apiKeys'
+import { StreamConsumeReturn } from '../chains/ChainStreamConsumer/consumeStream'
 import { touchProviderApiKey } from '../providerApiKeys/touch'
 
 const TO_MILLICENTS_FACTOR = 100_000
@@ -20,13 +21,14 @@ export type CreateProviderLogProps = {
   model: string
   config: PartialConfig
   messages: Message[]
-  responseText?: string
-  responseObject?: unknown
-  toolCalls?: ToolCall[]
   usage: LanguageModelUsage
   duration: number
   source: LogSources
+  finishReason?: StreamConsumeReturn['finishReason']
   apiKeyId?: number
+  responseText?: string
+  responseObject?: unknown
+  toolCalls?: ToolCall[]
   documentLogUuid?: string
   costInMillicents?: number
 }
@@ -49,6 +51,7 @@ export async function createProviderLog(
     documentLogUuid,
     generatedAt,
     costInMillicents,
+    finishReason = 'stop',
   }: CreateProviderLogProps,
   db = database,
 ) {
@@ -77,11 +80,13 @@ export async function createProviderLog(
         duration,
         source,
         apiKeyId,
+        finishReason,
       })
       .returning()
 
     const log = inserts[0]! as ProviderLog
     await touchProviderApiKey(providerId, trx)
+
     if (apiKeyId) await touchApiKey(apiKeyId, trx)
 
     publisher.publishLater({
