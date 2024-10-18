@@ -16,9 +16,11 @@ import {
   ChatTextArea,
   cn,
   ErrorMessage,
+  Icon,
   Message,
   MessageList,
   Text,
+  Tooltip,
   useAutoScroll,
   useCurrentCommit,
   useCurrentProject,
@@ -306,10 +308,31 @@ export function TokenUsage({
       )}
     >
       {responseStream === undefined ? (
-        <Text.H6M color='foregroundMuted'>
-          Prompt tokens: {usage?.promptTokens} | Completion tokens:{' '}
-          {usage?.completionTokens}
-        </Text.H6M>
+        <div className='flex flex-row gap-2'>
+          <Text.H6M color='foregroundMuted'>
+            {usage?.totalTokens} tokens
+          </Text.H6M>
+          <Tooltip
+            side='right'
+            align='center'
+            sideOffset={15}
+            delayDuration={250}
+            trigger={
+              <div className='flex flex-row items-center gap-x-1'>
+                <Icon name='info' color='foregroundMuted' />
+              </div>
+            }
+          >
+            <div className='flex flex-col gap-2'>
+              <Text.H6M color='foregroundMuted'>
+                {usage?.promptTokens} prompt tokens
+              </Text.H6M>
+              <Text.H6M color='foregroundMuted'>
+                {usage?.completionTokens} completion tokens
+              </Text.H6M>
+            </div>
+          </Tooltip>
+        </div>
       ) : (
         <AnimatedDots />
       )}
