@@ -36,7 +36,6 @@ export function CostOverResultsChart({
       {
         revalidateIfStale: false,
         revalidateOnFocus: false,
-        revalidateOnMount: false,
       },
     )
   const onStatusChange = useDebouncedCallback(
