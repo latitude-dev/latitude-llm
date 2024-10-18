@@ -60,6 +60,7 @@ export async function computeEvaluationResultsWithMetadata(
   const filteredResultsSubQuery = db
     .select({
       id: evaluationResultsScope.id,
+      providerLogId: evaluationResultsScope.providerLogId,
     })
     .from(evaluationResultsScope)
     .innerJoin(
@@ -91,12 +92,12 @@ export async function computeEvaluationResultsWithMetadata(
     })
     .from(evaluationResultsScope)
     .innerJoin(
-      providerLogs,
-      eq(providerLogs.id, evaluationResultsScope.providerLogId),
-    )
-    .innerJoin(
       filteredResultsSubQuery,
       eq(filteredResultsSubQuery.id, evaluationResultsScope.id),
+    )
+    .innerJoin(
+      providerLogs,
+      eq(providerLogs.id, filteredResultsSubQuery.providerLogId),
     )
     .groupBy(evaluationResultsScope.id)
     .as('aggregatedFieldsSubQuery')

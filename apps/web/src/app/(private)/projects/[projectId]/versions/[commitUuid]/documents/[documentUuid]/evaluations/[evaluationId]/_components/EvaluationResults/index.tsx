@@ -3,7 +3,6 @@
 import { useCallback, useState } from 'react'
 
 import { EvaluationDto } from '@latitude-data/core/browser'
-import { IPagination } from '@latitude-data/core/lib/pagination/buildPagination'
 import { type EvaluationResultWithMetadata } from '@latitude-data/core/repositories'
 import {
   TableBlankSlate,
@@ -78,11 +77,9 @@ const useEvaluationResultsSocket = (
 export function EvaluationResults({
   evaluation,
   evaluationResults: serverData,
-  pagination,
 }: {
   evaluation: EvaluationDto
   evaluationResults: EvaluationResultWithMetadata[]
-  pagination: IPagination
 }) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
@@ -136,7 +133,6 @@ export function EvaluationResults({
               evaluationResults={evaluationResults}
               selectedResult={selectedResult}
               setSelectedResult={setSelectedResult}
-              pagination={pagination}
             />
           )}
         </div>
