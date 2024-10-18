@@ -119,6 +119,7 @@ export async function computeEvaluationResultsWithMetadata(
       eq(documentLogsScope.id, evaluationResultsScope.documentLogId),
     )
     .innerJoin(commits, eq(commits.id, documentLogsScope.commitId))
+    .orderBy(desc(evaluationResultsScope.createdAt))
 }
 
 export async function computeEvaluationResultsWithMetadataCount(
