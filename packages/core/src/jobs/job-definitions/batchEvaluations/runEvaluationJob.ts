@@ -61,6 +61,15 @@ export type RunEvaluationJobData = {
   batchId: string
 }
 
+async function isSuccessful(run: Awaited<ReturnType<typeof runEvaluation>>) {
+  if (run.error) return { ok: false, error: run.error }
+
+  const response = await run.value.response
+  if (response.error) return { ok: false, error: response.error }
+
+  return { ok: true, error: undefined }
+}
+
 export async function runEvaluationJob(job: Job<RunEvaluationJobData>) {
   const { workspaceId, batchId, documentUuid, documentLogUuid, evaluationId } =
     job.data
@@ -72,13 +81,15 @@ export async function runEvaluationJob(job: Job<RunEvaluationJobData>) {
     documentLogUuid,
   }).then((r) => r.unwrap())
 
-  const result = await runEvaluation({
+  const run = await runEvaluation({
     documentLog,
     evaluation,
     documentUuid,
   })
 
-  if (result.ok) {
+  const { ok, error } = await isSuccessful(run)
+
+  if (ok) {
     await progressTracker.incrementCompleted()
   } else {
     await progressTracker.incrementErrors()
@@ -96,5 +107,5 @@ export async function runEvaluationJob(job: Job<RunEvaluationJobData>) {
     },
   })
 
-  throwIfUnknownError(result.error)
+  throwIfUnknownError(error)
 }
