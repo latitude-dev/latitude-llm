@@ -187,7 +187,7 @@ export default function Chat({
                   content: data.response.text,
                 } as AssistantMessage)
 
-                setTokens((prev) => prev + data.response.usage.totalTokens)
+                setTokens(data.response.usage.totalTokens)
 
                 setResponseStream(undefined)
               }
