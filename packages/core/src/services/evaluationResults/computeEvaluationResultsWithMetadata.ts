@@ -58,10 +58,7 @@ export async function computeEvaluationResultsWithMetadata(
   const offset = (parseInt(page) - 1) * parseInt(pageSize)
 
   const filteredResultsSubQuery = db
-    .select({
-      id: evaluationResultsScope.id,
-      providerLogId: evaluationResultsScope.providerLogId,
-    })
+    .select(evaluationResultsScope._.selectedFields)
     .from(evaluationResultsScope)
     .innerJoin(
       documentLogsScope,
@@ -84,43 +81,39 @@ export async function computeEvaluationResultsWithMetadata(
 
   const aggregatedFieldsSubQuery = db
     .select({
-      id: evaluationResultsScope.id,
+      id: filteredResultsSubQuery.id,
       tokens: sum(providerLogs.tokens).mapWith(Number).as('tokens'),
       costInMillicents: sum(providerLogs.costInMillicents)
         .mapWith(Number)
         .as('cost_in_millicents'),
     })
-    .from(evaluationResultsScope)
-    .innerJoin(
-      filteredResultsSubQuery,
-      eq(filteredResultsSubQuery.id, evaluationResultsScope.id),
-    )
+    .from(filteredResultsSubQuery)
     .innerJoin(
       providerLogs,
       eq(providerLogs.id, filteredResultsSubQuery.providerLogId),
     )
-    .groupBy(evaluationResultsScope.id)
+    .groupBy(filteredResultsSubQuery.id)
     .as('aggregatedFieldsSubQuery')
 
   return db
     .select({
-      ...evaluationResultsScope._.selectedFields,
+      ...filteredResultsSubQuery._.selectedFields,
       commit: getTableColumns(commits),
       tokens: aggregatedFieldsSubQuery.tokens,
       costInMillicents: aggregatedFieldsSubQuery.costInMillicents,
       documentContentHash: documentLogsScope.contentHash,
     })
-    .from(evaluationResultsScope)
+    .from(filteredResultsSubQuery)
     .innerJoin(
       aggregatedFieldsSubQuery,
-      eq(aggregatedFieldsSubQuery.id, evaluationResultsScope.id),
+      eq(aggregatedFieldsSubQuery.id, filteredResultsSubQuery.id),
     )
     .innerJoin(
       documentLogsScope,
-      eq(documentLogsScope.id, evaluationResultsScope.documentLogId),
+      eq(documentLogsScope.id, filteredResultsSubQuery.documentLogId),
     )
     .innerJoin(commits, eq(commits.id, documentLogsScope.commitId))
-    .orderBy(desc(evaluationResultsScope.createdAt))
+    .orderBy(desc(filteredResultsSubQuery.createdAt))
 }
 
 export async function computeEvaluationResultsWithMetadataCount(
