@@ -10,15 +10,17 @@ import {
   StreamObjectResult,
   streamText,
   StreamTextResult,
+  generateText,
+  generateObject,
   TextStreamPart,
 } from 'ai'
 import { JSONSchema7 } from 'json-schema'
-
 import { ProviderApiKey, RunErrorCodes, StreamType } from '../../browser'
 import { Result, TypedResult } from '../../lib'
 import { ChainError } from '../chains/ChainErrors'
 import { buildTools } from './buildTools'
 import { createProvider, PartialConfig } from './helpers'
+import { UNSUPPORTED_STREAM_MODELS } from './providers/models'
 
 type AIReturnObject = {
   type: 'object'
@@ -88,6 +90,67 @@ export async function ai({
     prompt,
     messages: messages as CoreMessage[],
     tools: toolsResult.value,
+  }
+
+  if (UNSUPPORTED_STREAM_MODELS.includes(model)) {
+
+    if (output && schema) {
+      const result = await generateObject({
+        ...commonOptions,
+        schema: jsonSchema(schema),
+        output: output as any,
+      })
+
+      const fullStream = new ReadableStream<StreamChunk>({
+        start(controller: any) {
+          const streamChunk: StreamChunk = {
+            type: 'object',
+            object: result.object,
+          }
+          controller.enqueue(streamChunk)
+          controller.close()
+        },
+      })
+
+      return Result.ok({
+        type: 'object',
+        data: {
+          fullStream: fullStream as any,
+          object: Promise.resolve(result.object),
+          usage: Promise.resolve(result.usage),
+        },
+      })
+    }
+
+    const result = await generateText(commonOptions)
+
+    const fullStream = new ReadableStream<StreamChunk>({
+      start(controller: any) {
+        const streamChunk: StreamChunk = {
+          type: 'text-delta',
+          textDelta: result.text,
+        }
+        controller.enqueue(streamChunk)
+        controller.close()
+      },
+    })
+
+    const toolCalls = result.toolCalls.map((toolCall) => ({
+      type: 'tool-call' as const,
+      toolCallId: toolCall.toolCallId,
+      toolName: toolCall.toolName,
+      args: toolCall.args,
+    }))
+
+    return Result.ok({
+      type: 'text',
+      data: {
+        fullStream: fullStream as any,
+        text: Promise.resolve(result.text),
+        usage: Promise.resolve(result.usage),
+        toolCalls: Promise.resolve(toolCalls),
+      },
+    })
   }
 
   if (schema && output) {
