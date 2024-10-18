@@ -1,10 +1,9 @@
 import { Workspace } from '@latitude-data/core/browser'
-import { paginateQuery } from '@latitude-data/core/lib/index'
 import {
   CommitsRepository,
   EvaluationsRepository,
 } from '@latitude-data/core/repositories'
-import { computeEvaluationResultsWithMetadataQuery } from '@latitude-data/core/services/evaluationResults/computeEvaluationResultsWithMetadata'
+import { computeEvaluationResultsWithMetadata } from '@latitude-data/core/services/evaluationResults/computeEvaluationResultsWithMetadata'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'
@@ -39,19 +38,14 @@ export const GET = errorHandler(
       const commit = await commitsScope
         .getCommitByUuid({ projectId, uuid: commitUuid })
         .then((r) => r.unwrap())
-      const query = computeEvaluationResultsWithMetadataQuery({
+
+      const rows = await computeEvaluationResultsWithMetadata({
         workspaceId: evaluation.workspaceId,
         evaluation,
         documentUuid,
         draft: commit,
-      })
-
-      const { rows } = await paginateQuery({
-        searchParams: {
-          page: page ?? undefined,
-          pageSize: pageSize ?? undefined,
-        },
-        dynamicQuery: query.$dynamic(),
+        page: page ?? undefined,
+        pageSize: pageSize ?? undefined,
       })
 
       return NextResponse.json(rows, { status: 200 })

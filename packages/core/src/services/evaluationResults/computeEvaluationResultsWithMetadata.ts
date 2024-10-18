@@ -1,13 +1,127 @@
-import { and, desc, eq } from 'drizzle-orm'
+import { and, desc, eq, getTableColumns, sql, sum } from 'drizzle-orm'
 
 import { Commit, Evaluation } from '../../browser'
 import { database } from '../../client'
 import {
-  createEvaluationResultQuery,
-  getCommitFilter,
-} from './_createEvaluationResultQuery'
+  DocumentLogsRepository,
+  EvaluationResultsRepository,
+} from '../../repositories'
+import { commits, providerLogs } from '../../schema'
+import { getCommitFilter } from './_createEvaluationResultQuery'
 
-export function computeEvaluationResultsWithMetadataQuery(
+function getRepositoryScopes(workspaceId: number, db = database) {
+  const evaluationResultsScope = new EvaluationResultsRepository(
+    workspaceId,
+    db,
+  ).scope
+  const documentLogsScope = new DocumentLogsRepository(workspaceId, db).scope
+  return { evaluationResultsScope, documentLogsScope }
+}
+
+function getCommonQueryConditions(
+  evaluationResultsScope: any,
+  documentLogsScope: any,
+  evaluation: Evaluation,
+  documentUuid: string,
+  draft?: Commit,
+) {
+  return and(
+    eq(evaluationResultsScope.evaluationId, evaluation.id),
+    eq(documentLogsScope.documentUuid, documentUuid),
+    getCommitFilter(draft),
+  )
+}
+
+export async function computeEvaluationResultsWithMetadata(
+  {
+    workspaceId,
+    evaluation,
+    documentUuid,
+    draft,
+    page = '1',
+    pageSize = '25',
+  }: {
+    workspaceId: number
+    evaluation: Evaluation
+    documentUuid: string
+    draft?: Commit
+    page?: string
+    pageSize?: string
+  },
+  db = database,
+) {
+  const { evaluationResultsScope, documentLogsScope } = getRepositoryScopes(
+    workspaceId,
+    db,
+  )
+
+  const offset = (parseInt(page) - 1) * parseInt(pageSize)
+
+  const filteredResultsSubQuery = db
+    .select({
+      id: evaluationResultsScope.id,
+    })
+    .from(evaluationResultsScope)
+    .innerJoin(
+      documentLogsScope,
+      eq(documentLogsScope.id, evaluationResultsScope.documentLogId),
+    )
+    .innerJoin(commits, eq(commits.id, documentLogsScope.commitId))
+    .where(
+      getCommonQueryConditions(
+        evaluationResultsScope,
+        documentLogsScope,
+        evaluation,
+        documentUuid,
+        draft,
+      ),
+    )
+    .orderBy(desc(evaluationResultsScope.createdAt))
+    .limit(parseInt(pageSize))
+    .offset(offset)
+    .as('filteredResultsSubQuery')
+
+  const aggregatedFieldsSubQuery = db
+    .select({
+      id: evaluationResultsScope.id,
+      tokens: sum(providerLogs.tokens).mapWith(Number).as('tokens'),
+      costInMillicents: sum(providerLogs.costInMillicents)
+        .mapWith(Number)
+        .as('cost_in_millicents'),
+    })
+    .from(evaluationResultsScope)
+    .innerJoin(
+      providerLogs,
+      eq(providerLogs.id, evaluationResultsScope.providerLogId),
+    )
+    .innerJoin(
+      filteredResultsSubQuery,
+      eq(filteredResultsSubQuery.id, evaluationResultsScope.id),
+    )
+    .groupBy(evaluationResultsScope.id)
+    .as('aggregatedFieldsSubQuery')
+
+  return db
+    .select({
+      ...evaluationResultsScope._.selectedFields,
+      commit: getTableColumns(commits),
+      tokens: aggregatedFieldsSubQuery.tokens,
+      costInMillicents: aggregatedFieldsSubQuery.costInMillicents,
+      documentContentHash: documentLogsScope.contentHash,
+    })
+    .from(evaluationResultsScope)
+    .innerJoin(
+      aggregatedFieldsSubQuery,
+      eq(aggregatedFieldsSubQuery.id, evaluationResultsScope.id),
+    )
+    .innerJoin(
+      documentLogsScope,
+      eq(documentLogsScope.id, evaluationResultsScope.documentLogId),
+    )
+    .innerJoin(commits, eq(commits.id, documentLogsScope.commitId))
+}
+
+export async function computeEvaluationResultsWithMetadataCount(
   {
     workspaceId,
     evaluation,
@@ -21,15 +135,28 @@ export function computeEvaluationResultsWithMetadataQuery(
   },
   db = database,
 ) {
-  const { evaluationResultsScope, documentLogsScope, baseQuery } =
-    createEvaluationResultQuery(workspaceId, db)
-  return baseQuery
+  const { evaluationResultsScope, documentLogsScope } = getRepositoryScopes(
+    workspaceId,
+    db,
+  )
+
+  return db
+    .select({
+      count: sql<number>`count(*)`.as('total_count'),
+    })
+    .from(evaluationResultsScope)
+    .innerJoin(
+      documentLogsScope,
+      eq(documentLogsScope.id, evaluationResultsScope.documentLogId),
+    )
+    .innerJoin(commits, eq(commits.id, documentLogsScope.commitId))
     .where(
-      and(
-        eq(evaluationResultsScope.evaluationId, evaluation.id),
-        eq(documentLogsScope.documentUuid, documentUuid),
-        getCommitFilter(draft),
+      getCommonQueryConditions(
+        evaluationResultsScope,
+        documentLogsScope,
+        evaluation,
+        documentUuid,
+        draft,
       ),
     )
-    .orderBy(desc(evaluationResultsScope.createdAt))
 }
