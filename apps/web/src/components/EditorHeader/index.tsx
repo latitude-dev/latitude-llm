@@ -283,7 +283,8 @@ export default function EditorHeader({
                   href={ROUTES.settings.root}
                   className='flex flex-row items-center gap-1'
                 >
-                  Set up new provider <Icon name='arrowRight' color='white' />{' '}
+                  Set up new provider{' '}
+                  <Icon name='arrowRight' color='foregroundMuted' />{' '}
                 </Link>
               </Tooltip>{' '}
               We highly recommend switching to your own provider.
