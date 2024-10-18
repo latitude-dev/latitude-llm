@@ -179,6 +179,39 @@ describe('runEvaluationJob', () => {
       })
     })
 
+    it('increment error counter when response has an error', async () => {
+      runChainResponse = Result.error(
+        new ChainError({
+          code: RunErrorCodes.EvaluationRunResponseJsonFormatError,
+          message: 'malformed json response',
+        }),
+      )
+      runEvaluationSpy.mockResolvedValueOnce(
+        Result.ok({
+          stream,
+          response: new Promise((resolve) => resolve(runChainResponse)),
+          resolvedContent: 'chain resolved text',
+          errorableUuid: FAKE_ERRORABLE_UUID,
+          duration: new Promise((resolve) => resolve(1000)),
+        }),
+      )
+
+      await runEvaluationJob(jobData)
+
+      expect(websockets.WebsocketClient.getSocket).toHaveBeenCalledTimes(1)
+      expect(incrementErrorsSpy).toHaveBeenCalledTimes(1)
+      expect(mockEmit).toHaveBeenCalledWith('evaluationStatus', {
+        workspaceId: workspace.id,
+        data: {
+          batchId: 'batch-123',
+          evaluationId: evaluation.id,
+          documentUuid,
+          completed: 1,
+          total: 1,
+        },
+      })
+    })
+
     it('throws an error if runEvaluation fails', async () => {
       runEvaluationSpy.mockRejectedValue(new Error('Some error'))
 
