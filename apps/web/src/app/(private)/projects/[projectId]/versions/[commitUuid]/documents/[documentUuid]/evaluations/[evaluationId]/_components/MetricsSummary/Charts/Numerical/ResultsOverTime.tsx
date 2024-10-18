@@ -40,6 +40,8 @@ export function ResultOverTimeChart({
     },
     {
       revalidateIfStale: false,
+      revalidateOnFocus: false,
+      revalidateOnMount: false,
     },
   )
   const onStatusChange = useDebouncedCallback(

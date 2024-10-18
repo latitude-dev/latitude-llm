@@ -26,6 +26,8 @@ export default function ModalValuePanel({
     },
     {
       revalidateIfStale: false,
+      revalidateOnFocus: false,
+      revalidateOnMount: false,
     },
   )
   const onStatusChange = useDebouncedCallback(
