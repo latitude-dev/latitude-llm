@@ -22,6 +22,7 @@ import {
   Timer,
   TokenUsage,
 } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/DocumentEditor/Editor/Playground/Chat'
+import { LanguageModelUsage } from 'ai'
 import { readStreamableValue } from 'ai/rsc'
 
 export default function Chat({
@@ -34,7 +35,7 @@ export default function Chat({
   parameters: Record<string, unknown>
 }) {
   const [error, setError] = useState<Error | undefined>()
-  const [tokens, setTokens] = useState<number>(0)
+  const [usage, setUsage] = useState<LanguageModelUsage | undefined>()
   const [isScrolledToBottom, setIsScrolledToBottom] = useState(false)
   const [startTime, _] = useState(performance.now())
   const [endTime, setEndTime] = useState<number>()
@@ -99,7 +100,7 @@ export default function Chat({
             if (data.isLastStep) setChainLength(messagesCount + 1)
           } else if (data.type === ChainEventTypes.Complete) {
             setResponseStream(undefined)
-            setTokens(data.response.usage.totalTokens)
+            setUsage(data.response.usage)
             setEndTime(performance.now())
           } else if (data.type === ChainEventTypes.Error) {
             setError(new Error(data.error.message))
@@ -166,7 +167,7 @@ export default function Chat({
       <div className='flex relative flex-row w-full items-center justify-center'>
         <TokenUsage
           isScrolledToBottom={isScrolledToBottom}
-          tokens={tokens}
+          usage={usage}
           responseStream={responseStream}
         />
       </div>
