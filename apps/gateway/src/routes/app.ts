@@ -5,8 +5,10 @@ import { Hono } from 'hono'
 import { logger } from 'hono/logger'
 import jetPaths from 'jet-paths'
 
-import { chatsRouter } from './api/v1/conversations/[conversationUuid]'
-import { documentsRouter } from './api/v1/projects/[projectId]/versions/[versionUuid]/documents'
+import { chatsRouter as chatsRouterV1 } from './api/v1/conversations/[conversationUuid]'
+import { documentsRouter as documentsRouterV1 } from './api/v1/projects/[projectId]/versions/[versionUuid]/documents'
+import { chatsRouter as chatsRouterV2 } from './api/v2/conversations/[conversationUuid]'
+import { documentsRouter as documentsRouterV2 } from './api/v2/projects/[projectId]/versions/[versionUuid]/documents'
 
 const app = new Hono()
 
@@ -22,8 +24,10 @@ app.get('/health', (c) => {
 app.use(authMiddleware())
 
 // Routers
-app.route(jetPaths(ROUTES).Api.V1.Documents.Base, documentsRouter)
-app.route(jetPaths(ROUTES).Api.V1.Conversations.Base, chatsRouter)
+app.route(jetPaths(ROUTES).Api.V1.Documents.Base, documentsRouterV1)
+app.route(jetPaths(ROUTES).Api.V1.Conversations.Base, chatsRouterV1)
+app.route(jetPaths(ROUTES).Api.V2.Documents.Base, documentsRouterV2)
+app.route(jetPaths(ROUTES).Api.V2.Conversations.Base, chatsRouterV2)
 
 // Must be the last one!
 app.use(errorHandlerMiddleware())

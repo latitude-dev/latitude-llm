@@ -14,24 +14,27 @@ export function APIUsage({
   parameters: Set<string>
 }) {
   const getRequestBodyContent = () => {
-    const bodyContent = [`    "path": "${documentPath}"`]
+    const body = {
+      path: documentPath,
+      stream: false,
+    } as Record<string, unknown>
 
     if (parameters.size > 0) {
-      const parameterEntries = Array.from(parameters)
-        .map((key) => `      "${key}": ""`)
-        .join(',\n')
-
-      bodyContent.push(`    "parameters": {
-${parameterEntries}
-    }`)
+      body['parameters'] = Array.from(parameters).reduce(
+        (acc, param) => ({ ...acc, [param]: '' }),
+        {},
+      )
     }
 
-    return bodyContent.join(',\n')
+    return JSON.stringify(body, null, 2)
+      .split('\n')
+      .map((line) => `    ${line}`)
+      .join('\n')
   }
 
   const apiCode = `
 curl -X POST \\
-  https://gateway.latitude.so/api/v1/projects/${projectId}/versions/${commitUuid}/documents/run \\
+  https://gateway.latitude.so/api/v2/projects/${projectId}/versions/${commitUuid}/documents/run \\
   -H 'Authorization: Bearer ${apiKey ?? 'YOUR_API_KEY'}' \\
   -H 'Content-Type: application/json' \\
   -d '{

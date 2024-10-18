@@ -14,6 +14,18 @@ const ROUTES = {
         Run: '/run',
       },
     },
+    V2: {
+      Base: '/v2',
+      Conversations: {
+        Base: '/conversations',
+        Chat: '/:conversationUuid/chat',
+      },
+      Documents: {
+        Base: '/projects/:projectId/versions/:versionUuid/documents',
+        Get: '/:documentPath{.+}',
+        Run: '/run',
+      },
+    },
   },
 }
 
