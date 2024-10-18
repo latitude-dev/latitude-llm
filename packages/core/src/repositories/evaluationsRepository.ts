@@ -66,7 +66,9 @@ export class EvaluationsRepository extends Repository<
       .where(eq(this.scope.uuid, uuid))
 
     if (!result.length) {
-      return Result.error(new NotFoundError('Evaluation not found'))
+      return Result.error(
+        new NotFoundError(`Evaluation with UUID ${uuid} not found`),
+      )
     }
 
     return Result.ok(result[0]!)
