@@ -89,7 +89,7 @@ function Tooltip({
   hideWhenDetached,
   updatePositionStrategy,
   maxWidth,
-  asChild = true,
+  asChild = false,
 }: Props) {
   return (
     <TooltipRoot
