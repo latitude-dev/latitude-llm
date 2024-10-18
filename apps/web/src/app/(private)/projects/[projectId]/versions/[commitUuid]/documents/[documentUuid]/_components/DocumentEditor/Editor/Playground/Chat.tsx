@@ -306,15 +306,10 @@ export function TokenUsage({
       )}
     >
       {responseStream === undefined ? (
-        <div className='flex flex-col gap-1'>
-          <Text.H6M color='foregroundMuted'>
-            Prompt tokens: {usage?.promptTokens} | Completion tokens:{' '}
-            {usage?.completionTokens}
-          </Text.H6M>
-          {/* <Text.H6M color='foregroundMuted'>
-            Total tokens: {usage?.totalTokens}
-          </Text.H6M> */}
-        </div>
+        <Text.H6M color='foregroundMuted'>
+          Prompt tokens: {usage?.promptTokens} | Completion tokens:{' '}
+          {usage?.completionTokens}
+        </Text.H6M>
       ) : (
         <AnimatedDots />
       )}
