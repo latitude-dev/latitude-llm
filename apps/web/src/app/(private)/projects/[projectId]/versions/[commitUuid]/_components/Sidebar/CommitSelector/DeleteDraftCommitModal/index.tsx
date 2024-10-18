@@ -7,7 +7,7 @@ import {
   useCurrentProject,
 } from '@latitude-data/web-ui'
 import { ROUTES } from '$/services/routes'
-import useCommits from '$/stores/commitsStore'
+import { useCommits } from '$/stores/commitsStore'
 import { useRouter } from 'next/navigation'
 
 export default function DeleteDraftCommitModal({
