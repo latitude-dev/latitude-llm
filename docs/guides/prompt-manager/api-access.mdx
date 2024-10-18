@@ -21,7 +21,7 @@ Authorization: Bearer YOUR_API_KEY
 
 The base URL for API requests depends on your environment:
 
-`https://gateway.latitude.so/api/v1`
+`https://gateway.latitude.so/api/v2`
 
 ### Endpoints
 
@@ -44,17 +44,50 @@ Run a specific document (prompt) with optional parameters.
   "parameters": {
     "key1": "value1",
     "key2": "value2"
-  }
+  },
+  "stream": false
 }
 ```
 
+- `stream`: Optional boolean parameter (defaults to `false`). When set to true, the response will be a stream of Server-Sent Events (SSE). If false, a single JSON response containing the last event is returned.
+
 **Response:**
-The response is a stream of Server-Sent Events (SSE). Each event contains JSON data with the following structure:
+
+- If `stream` is `true`: The response is a stream of Server-Sent Events (SSE). Each event contains JSON data with the following structure:
 
 ```json
 {
   "type": "chain-step" | "chain-step-complete" | "chain-complete",
   "isLastStep": boolean,
+  "uuid": string,
+  "config": {
+    "provider": string,
+    "model": string
+  },
+  "messages": [
+    {
+      "role": "system" | "user" | "assistant",
+      "content": string,
+      "toolCalls": []
+    }
+  ],
+  "response": {
+    "text": string,
+    "toolCalls": [],
+    "usage": {
+      "promptTokens": number,
+      "completionTokens": number,
+      "totalTokens": number
+    }
+  }
+}
+```
+
+- If `stream` is `false`: A single JSON response is returned with the final event (typically the chain-complete event) in the following structure:
+
+```json
+{
+  "type": "chain-complete" | "error",
   "uuid": string,
   "config": {
     "provider": string,
@@ -168,7 +201,7 @@ The response contains the document details along with its configuration.
 **Example Request:**
 
 ```bash
-curl -X GET "https://gateway.latitude.so/api/v1/projects/123/versions/live/documents/path/to/document" \
+curl -X GET "https://gateway.latitude.so/api/v2/projects/123/versions/live/documents/path/to/document" \
      -H "Authorization: Bearer YOUR_API_KEY"
 ```
 
