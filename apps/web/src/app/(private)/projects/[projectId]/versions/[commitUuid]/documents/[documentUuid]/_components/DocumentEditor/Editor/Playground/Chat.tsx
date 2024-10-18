@@ -23,6 +23,7 @@ import {
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui'
+import { LanguageModelUsage } from 'ai'
 import { readStreamableValue } from 'ai/rsc'
 
 import { DocumentEditorContext } from '..'
@@ -43,7 +44,7 @@ export default function Chat({
     DocumentEditorContext,
   )!
   const [error, setError] = useState<Error | undefined>()
-  const [tokens, setTokens] = useState<number>(0)
+  const [usage, setUsage] = useState<LanguageModelUsage | undefined>()
   const [isScrolledToBottom, setIsScrolledToBottom] = useState(false)
   const [time, setTime] = useState<number>()
   const containerRef = useRef<HTMLDivElement>(null)
@@ -110,7 +111,7 @@ export default function Chat({
             } else if (data.type === ChainEventTypes.StepComplete) {
               response = ''
             } else if (data.type === ChainEventTypes.Complete) {
-              setTokens(data.response.usage.totalTokens)
+              setUsage(data.response.usage)
               setTime(performance.now() - start)
             } else if (data.type === ChainEventTypes.Error) {
               setError(new Error(data.error.message))
@@ -187,7 +188,7 @@ export default function Chat({
                   content: data.response.text,
                 } as AssistantMessage)
 
-                setTokens(data.response.usage.totalTokens)
+                setUsage(data.response.usage)
 
                 setResponseStream(undefined)
               }
@@ -254,7 +255,7 @@ export default function Chat({
       <div className='flex relative flex-row w-full items-center justify-center'>
         <TokenUsage
           isScrolledToBottom={isScrolledToBottom}
-          tokens={tokens}
+          usage={usage}
           responseStream={responseStream}
         />
         <ChatTextArea
@@ -286,14 +287,14 @@ export function AnimatedDots() {
 
 export function TokenUsage({
   isScrolledToBottom,
-  tokens,
+  usage,
   responseStream,
 }: {
   isScrolledToBottom: boolean
-  tokens: number
+  usage: LanguageModelUsage | undefined
   responseStream: string | undefined
 }) {
-  if (!tokens && responseStream === undefined) return null
+  if (!usage && responseStream === undefined) return null
 
   return (
     <div
@@ -305,7 +306,15 @@ export function TokenUsage({
       )}
     >
       {responseStream === undefined ? (
-        <Text.H6M color='foregroundMuted'>{tokens} tokens</Text.H6M>
+        <div className='flex flex-col gap-1'>
+          <Text.H6M color='foregroundMuted'>
+            Prompt tokens: {usage?.promptTokens} | Completion tokens:{' '}
+            {usage?.completionTokens}
+          </Text.H6M>
+          {/* <Text.H6M color='foregroundMuted'>
+            Total tokens: {usage?.totalTokens}
+          </Text.H6M> */}
+        </div>
       ) : (
         <AnimatedDots />
       )}
