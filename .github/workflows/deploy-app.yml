@@ -30,8 +30,8 @@ jobs:
           fi
 
   deploy:
-    # needs: check_changes
-    # if: needs.check_changes.outputs.changes_detected == 'true'
+    needs: check_changes
+    if: needs.check_changes.outputs.changes_detected == 'true'
     uses: ./.github/workflows/deploy-common.yml
     with:
       working-directory: apps/infra
