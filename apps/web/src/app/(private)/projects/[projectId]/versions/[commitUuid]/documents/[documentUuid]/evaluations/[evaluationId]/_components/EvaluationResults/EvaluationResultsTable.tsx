@@ -4,7 +4,7 @@ import {
   EvaluationDto,
   EvaluationResultableType,
 } from '@latitude-data/core/browser'
-import { IPagination } from '@latitude-data/core/lib/pagination/buildPagination'
+import { buildPagination } from '@latitude-data/core/lib/pagination/buildPagination'
 import { EvaluationResultWithMetadata } from '@latitude-data/core/repositories'
 import {
   Badge,
@@ -17,9 +17,15 @@ import {
   TableHeader,
   TableRow,
   Text,
+  useCurrentCommit,
+  useCurrentProject,
 } from '@latitude-data/web-ui'
 import { formatCostInMillicents, relativeTime } from '$/app/_lib/formatUtils'
+import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { LinkableTablePaginationFooter } from '$/components/TablePaginationFooter'
+import { ROUTES } from '$/services/routes'
+import useEvaluationResultsPagination from '$/stores/useEvaluationResultsCount'
+import { useSearchParams } from 'next/navigation'
 
 function countLabel(count: number) {
   return `${count} evaluation results`
@@ -61,23 +67,50 @@ export type EvaluationResultRow = EvaluationResultWithMetadata & {
 }
 export const EvaluationResultsTable = ({
   evaluation,
-  pagination,
   evaluationResults,
   selectedResult,
   setSelectedResult,
 }: {
   evaluation: EvaluationDto
-  pagination: IPagination
   evaluationResults: EvaluationResultRow[]
   selectedResult: EvaluationResultRow | undefined
   setSelectedResult: (log: EvaluationResultWithMetadata | undefined) => void
 }) => {
+  const searchParams = useSearchParams()
+  const page = searchParams.get('page') ?? '1'
+  const pageSize = searchParams.get('pageSize') ?? '25'
+  const document = useCurrentDocument()
+  const { commit } = useCurrentCommit()
+  const { project } = useCurrentProject()
+  const { data: pagination, isLoading } = useEvaluationResultsPagination({
+    evaluationId: evaluation.id,
+    documentUuid: document.documentUuid,
+    commitUuid: commit.uuid,
+    projectId: project.id,
+    page,
+    pageSize,
+  })
+
   return (
     <Table
       className='table-auto'
       externalFooter={
         <LinkableTablePaginationFooter
-          pagination={pagination}
+          isLoading={isLoading}
+          pagination={
+            pagination
+              ? buildPagination({
+                  baseUrl: ROUTES.projects
+                    .detail({ id: project.id })
+                    .commits.detail({ uuid: commit.uuid })
+                    .documents.detail({ uuid: document.documentUuid })
+                    .evaluations.detail(evaluation.id).root,
+                  count: pagination.count,
+                  page: Number(page),
+                  pageSize: Number(pageSize),
+                })
+              : undefined
+          }
           countLabel={countLabel}
         />
       }

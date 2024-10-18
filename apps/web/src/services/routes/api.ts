@@ -42,6 +42,7 @@ export const _API_ROUTES = {
                     root: `${documentRoot}/evaluations/${evaluationId}`,
                     evaluationResults: {
                       root: `${documentRoot}/evaluations/${evaluationId}/evaluation-results`,
+                      pagination: `${documentRoot}/evaluations/${evaluationId}/evaluation-results/pagination`,
                       counters: `${documentRoot}/evaluations/${evaluationId}/evaluation-results/counters`,
                       mean: `${documentRoot}/evaluations/${evaluationId}/evaluation-results/mean`,
                       modal: `${documentRoot}/evaluations/${evaluationId}/evaluation-results/modal`,
