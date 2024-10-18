@@ -308,31 +308,29 @@ export function TokenUsage({
       )}
     >
       {responseStream === undefined ? (
-        <div className='flex flex-row gap-2'>
-          <Text.H6M color='foregroundMuted'>
-            {usage?.totalTokens} tokens
-          </Text.H6M>
-          <Tooltip
-            side='right'
-            align='center'
-            sideOffset={15}
-            delayDuration={250}
-            trigger={
-              <div className='flex flex-row items-center gap-x-1'>
-                <Icon name='info' color='foregroundMuted' />
-              </div>
-            }
-          >
-            <div className='flex flex-col gap-2'>
+        <Tooltip
+          side='top'
+          align='center'
+          sideOffset={5}
+          delayDuration={250}
+          trigger={
+            <div className='cursor-pointer flex flex-row items-center gap-x-1'>
               <Text.H6M color='foregroundMuted'>
-                {usage?.promptTokens} prompt tokens
+                {usage?.totalTokens} tokens
               </Text.H6M>
-              <Text.H6M color='foregroundMuted'>
-                {usage?.completionTokens} completion tokens
-              </Text.H6M>
+              <Icon name='info' color='foregroundMuted' />
             </div>
-          </Tooltip>
-        </div>
+          }
+        >
+          <div className='flex flex-col gap-2'>
+            <Text.H6M color='foregroundMuted'>
+              {usage?.promptTokens} prompt tokens
+            </Text.H6M>
+            <Text.H6M color='foregroundMuted'>
+              {usage?.completionTokens} completion tokens
+            </Text.H6M>
+          </div>
+        </Tooltip>
       ) : (
         <AnimatedDots />
       )}
