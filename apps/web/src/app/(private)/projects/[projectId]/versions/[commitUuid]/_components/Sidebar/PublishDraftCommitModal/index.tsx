@@ -22,7 +22,7 @@ import {
 import { getChangedDocumentsInDraftAction } from '$/actions/commits/getChangedDocumentsInDraftAction'
 import { useCurrentTheme } from '$/hooks/useCurrentTheme'
 import { ROUTES } from '$/services/routes'
-import useCommits from '$/stores/commitsStore'
+import { useCommits } from '$/stores/commitsStore'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useServerAction } from 'zsa-react'

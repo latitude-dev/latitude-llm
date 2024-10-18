@@ -13,7 +13,6 @@ export type AppLayoutProps = AppHeaderProps & {
 export default function AppLayout({
   children,
   currentUser,
-  breadcrumbs,
   navigationLinks,
   scrollable = true,
 }: AppLayoutProps) {
@@ -23,11 +22,7 @@ export default function AppLayout({
         'overflow-y-auto custom-scrollbar': scrollable,
       })}
     >
-      <AppHeader
-        breadcrumbs={breadcrumbs}
-        navigationLinks={navigationLinks}
-        currentUser={currentUser}
-      />
+      <AppHeader navigationLinks={navigationLinks} currentUser={currentUser} />
       <main className='w-full flex-grow min-h-0 h-full relative'>
         {children}
       </main>

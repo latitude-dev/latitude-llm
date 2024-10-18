@@ -8,23 +8,26 @@ import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'
 
-export default function useCommits(
-  opts: SWRConfiguration & {
-    onSuccessCreate?: (commit: Commit) => void
-    onSuccessDestroy?: (commit: Commit) => void
-    onSuccessPublish?: (commit: Commit) => void
-    commitStatus?: CommitStatus
-  } = {},
-) {
-  const {
-    onSuccessCreate,
-    onSuccessDestroy,
-    onSuccessPublish,
-    commitStatus = CommitStatus.Draft,
-  } = opts
+type CommitOptions = SWRConfiguration & {
+  onSuccessCreate?: (commit: Commit) => void
+  onSuccessDestroy?: (commit: Commit) => void
+  onSuccessPublish?: (commit: Commit) => void
+  commitStatus?: CommitStatus
+}
+
+export function useCommits(opts: CommitOptions = {}) {
   const { project } = useCurrentProject()
+  return useCommitsFromProject(project.id, opts)
+}
+
+export function useCommitsFromProject(
+  projectId: number,
+  opts: CommitOptions = {},
+) {
+  const { onSuccessCreate, onSuccessDestroy, onSuccessPublish, commitStatus } =
+    opts
   const { toast } = useToast()
-  const route = ROUTES.api.projects.detail(project.id).commits.root
+  const route = ROUTES.api.projects.detail(projectId).commits.root
   const fetcher = useFetcher(
     commitStatus ? `${route}?status=${commitStatus}` : route,
   )
@@ -33,7 +36,7 @@ export default function useCommits(
     data = [],
     mutate,
     ...rest
-  } = useSWR<Commit[]>(['commits', project.id, commitStatus], fetcher, opts)
+  } = useSWR<Commit[]>(['commits', projectId, commitStatus], fetcher, opts)
   const { execute: createDraft, isPending: isCreating } = useLatitudeAction(
     createDraftCommitAction,
     {

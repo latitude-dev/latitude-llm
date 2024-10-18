@@ -16,7 +16,7 @@ const TooltipRoot = TooltipPrimitive.Root
 
 const TooltipTrigger = TooltipPrimitive.Trigger
 
-type TooltipVariant = 'default' | 'destructive'
+type TooltipVariant = 'default' | 'destructive' | 'inverse'
 type PropviderProps = ComponentPropsWithoutRef<typeof TooltipProvider>
 type RootProps = ComponentPropsWithoutRef<typeof TooltipRoot>
 type ContentProps = ComponentPropsWithoutRef<
@@ -49,6 +49,7 @@ const TooltipContent = forwardRef<
         {
           'bg-background border': variant === 'default',
           'bg-destructive': variant === 'destructive',
+          'bg-foreground text-background': variant === 'inverse',
         },
       )}
       {...props}
