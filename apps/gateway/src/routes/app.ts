@@ -30,6 +30,6 @@ app.route(jetPaths(ROUTES).Api.V2.Documents.Base, documentsRouterV2)
 app.route(jetPaths(ROUTES).Api.V2.Conversations.Base, chatsRouterV2)
 
 // Must be the last one!
-app.use(errorHandlerMiddleware())
+app.onError(errorHandlerMiddleware)
 
 export default app
