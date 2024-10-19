@@ -1,6 +1,6 @@
 'use client'
 
-import { compact } from 'lodash-es'
+import { compact, reverse } from 'lodash-es'
 
 import { ProviderLogDto } from '@latitude-data/core/browser'
 import useFetcher from '$/hooks/useFetcher'
@@ -11,12 +11,20 @@ export default function useProviderLogs(
   {
     documentUuid,
     documentLogUuid,
-  }: { documentUuid?: string; documentLogUuid?: string } = {},
+    documentLogId,
+  }: {
+    documentUuid?: string
+    documentLogUuid?: string
+    documentLogId?: number
+  } = {},
   opts?: SWRConfiguration,
 ) {
-  const fetcher = useFetcher(buildRoute({ documentUuid, documentLogUuid }), {
-    serializer: (rows) => rows.map(deserialize),
-  })
+  const fetcher = useFetcher(
+    buildRoute({ documentUuid, documentLogUuid, documentLogId }),
+    {
+      serializer: (rows) => reverse(rows.map(deserialize)),
+    },
+  )
   const {
     data = [],
     isLoading,
@@ -64,10 +72,16 @@ export function useProviderLog(
 function buildRoute({
   documentUuid,
   documentLogUuid,
+  documentLogId,
 }: {
   documentUuid?: string
   documentLogUuid?: string
+  documentLogId?: number
 }) {
+  if (!documentUuid && !documentLogUuid && !documentLogId) {
+    return undefined
+  }
+
   let route = ROUTES.api.providerLogs.root
   if (documentUuid) {
     route += `?documentUuid=${documentUuid}`
@@ -80,6 +94,15 @@ function buildRoute({
     }
 
     route += `documentLogUuid=${documentLogUuid}`
+  }
+  if (documentLogId) {
+    if (documentUuid || documentLogUuid) {
+      route += '&'
+    } else {
+      route += '?'
+    }
+
+    route += `documentLogId=${documentLogId}`
   }
 
   return route

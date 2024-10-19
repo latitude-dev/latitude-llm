@@ -50,7 +50,7 @@ export default function DocumentLogInfoModal({
     documentLogId,
   })
   const { data: providerLogs } = useProviderLogs({
-    documentLogUuid: documentLog?.uuid,
+    documentLogId: documentLogId,
   })
   return (
     <Modal
