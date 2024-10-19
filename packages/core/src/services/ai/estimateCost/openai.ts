@@ -14,7 +14,6 @@ const OPENAI_MODEL_COST_PER_1M_TOKENS = {
   'o1-mini': { input: 3.0, output: 12.0 },
   'o1-mini-2024-09-12': { input: 3.0, output: 12.0 },
 
-
   'chatgpt-4o-latest': { input: 5.0, output: 15.0 },
   'gpt-4-turbo': { input: 10.0, output: 30.0 },
   'gpt-4-turbo-2024-04-09': { input: 10.0, output: 30.0 },

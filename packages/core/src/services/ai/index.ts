@@ -4,17 +4,18 @@ import { Message } from '@latitude-data/compiler'
 import {
   CoreMessage,
   CoreTool,
+  generateObject,
+  generateText,
   jsonSchema,
   ObjectStreamPart,
   streamObject,
   StreamObjectResult,
   streamText,
   StreamTextResult,
-  generateText,
-  generateObject,
   TextStreamPart,
 } from 'ai'
 import { JSONSchema7 } from 'json-schema'
+
 import { ProviderApiKey, RunErrorCodes, StreamType } from '../../browser'
 import { Result, TypedResult } from '../../lib'
 import { ChainError } from '../chains/ChainErrors'
@@ -93,7 +94,6 @@ export async function ai({
   }
 
   if (UNSUPPORTED_STREAM_MODELS.includes(model)) {
-
     if (output && schema) {
       const result = await generateObject({
         ...commonOptions,
