@@ -29,7 +29,7 @@ const errorHandlerMiddleware = (err: Error) => {
         message: err.message,
         details: err.details,
       },
-      { status: err.statusCode },
+      { status: err.statusCode, headers: err.headers },
     )
   } else {
     return Response.json(

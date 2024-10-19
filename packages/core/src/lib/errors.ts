@@ -7,6 +7,7 @@ type ErrorType = {
 export class LatitudeError extends Error {
   statusCode: number = 500
   name: string = 'UnexpectedError'
+  headers: Record<string, string> = {}
 
   public details: ErrorType
 
