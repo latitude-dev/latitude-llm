@@ -1,5 +1,6 @@
 import ROUTES from '$/common/routes'
 import authMiddleware from '$/middlewares/auth'
+import rateLimitMiddleware from '$/middlewares/rateLimit'
 import errorHandlerMiddleware from '$/middlewares/errorHandler'
 import { Hono } from 'hono'
 import { logger } from 'hono/logger'
@@ -22,6 +23,7 @@ app.get('/health', (c) => {
 })
 
 app.use(authMiddleware())
+app.use(rateLimitMiddleware())
 
 // Routers
 app.route(jetPaths(ROUTES).Api.V1.Documents.Base, documentsRouterV1)
