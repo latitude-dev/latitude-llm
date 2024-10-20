@@ -23,6 +23,12 @@ const rateLimiter = new RateLimiterRedis({
 
 const rateLimitMiddleware = () =>
     createMiddleware(async (c, next) => {
+        const handleRateLimitHeaders = (result: RateLimiterRes) => {
+            c.header('Retry-After', (result.msBeforeNext / 1000).toString())
+            c.header('X-RateLimit-Limit', RATE_LIMIT_POINTS.toString())
+            c.header('X-RateLimit-Remaining', result.remainingPoints.toString())
+            c.header('X-RateLimit-Reset', (Date.now() + result.msBeforeNext).toString())
+        }
 
         try {
             const authorization = c.req.header('Authorization')
@@ -31,7 +37,8 @@ const rateLimitMiddleware = () =>
             const token = authorization.split(' ')[1]
             if (!token) return await next()
 
-            await rateLimiter.consume(token)
+            const result = await rateLimiter.consume(token)
+            handleRateLimitHeaders(result)
             await next()
         } catch (error) {
             if (error instanceof RateLimiterRes) {
