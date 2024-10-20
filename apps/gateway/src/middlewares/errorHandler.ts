@@ -16,7 +16,7 @@ const errorHandlerMiddleware = (err: Error) => {
   if (err instanceof HTTPException) {
     return Response.json(
       { message: err.message },
-      { status: err.status },
+      { status: err.status, headers: err.res?.headers },
     )
   } else if (err instanceof UnprocessableEntityError) {
     return Response.json(
