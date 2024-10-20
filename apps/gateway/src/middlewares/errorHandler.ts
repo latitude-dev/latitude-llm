@@ -2,6 +2,8 @@ import {
   LatitudeError,
   UnprocessableEntityError,
 } from '@latitude-data/core/lib/errors'
+import { HTTPException } from 'hono/http-exception'
+
 import { captureException } from '$/common/sentry'
 
 import HttpStatusCodes from '../common/httpStatusCodes'
@@ -11,7 +13,12 @@ const errorHandlerMiddleware = (err: Error) => {
     captureException(err)
   }
 
-  if (err instanceof UnprocessableEntityError) {
+  if (err instanceof HTTPException) {
+    return Response.json(
+      { message: err.message },
+      { status: err.status },
+    )
+  } else if (err instanceof UnprocessableEntityError) {
     return Response.json(
       {
         name: err.name,
@@ -31,7 +38,7 @@ const errorHandlerMiddleware = (err: Error) => {
   } else {
     return Response.json(
       { message: err.message },
-      { status: HttpStatusCodes.BAD_REQUEST },
+      { status: HttpStatusCodes.INTERNAL_SERVER_ERROR },
     )
   }
 }
