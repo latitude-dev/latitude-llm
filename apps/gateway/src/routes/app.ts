@@ -1,7 +1,7 @@
 import ROUTES from '$/common/routes'
 import authMiddleware from '$/middlewares/auth'
-import rateLimitMiddleware from '$/middlewares/rateLimit'
 import errorHandlerMiddleware from '$/middlewares/errorHandler'
+import rateLimitMiddleware from '$/middlewares/rateLimit'
 import { Hono } from 'hono'
 import { logger } from 'hono/logger'
 import jetPaths from 'jet-paths'

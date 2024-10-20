@@ -4,12 +4,9 @@ import {
 } from '@latitude-data/core/lib/errors'
 import { captureException } from '$/common/sentry'
 
-
 import HttpStatusCodes from '../common/httpStatusCodes'
 
-
 const errorHandlerMiddleware = (err: Error) => {
-
   if (process.env.NODE_ENV !== 'test') {
     captureException(err)
   }

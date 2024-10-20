@@ -55,7 +55,13 @@ export class RateLimitError extends LatitudeError {
   public statusCode = 429
   public name = 'RateLimitError'
 
-  constructor(message: string, retryAfter: number, limit: number, remaining: number, resetTime: number) {
+  constructor(
+    message: string,
+    retryAfter: number,
+    limit: number,
+    remaining: number,
+    resetTime: number,
+  ) {
     super(message)
     this.headers = {
       'Retry-After': retryAfter.toString(),
