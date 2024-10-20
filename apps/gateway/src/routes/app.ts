@@ -22,8 +22,8 @@ app.get('/health', (c) => {
   return c.json({ status: 'ok' })
 })
 
-app.use(authMiddleware())
 app.use(rateLimitMiddleware())
+app.use(authMiddleware())
 
 // Routers
 app.route(jetPaths(ROUTES).Api.V1.Documents.Base, documentsRouterV1)

@@ -1,16 +1,9 @@
-import type { ApiKey } from '@latitude-data/core/browser'
 import { buildRedisConnection } from '@latitude-data/core/redis'
 import { env } from '@latitude-data/env'
 import { RateLimiterRedis, RateLimiterRes } from 'rate-limiter-flexible'
 import { createMiddleware } from 'hono/factory'
 import { RateLimitError } from '@latitude-data/core/lib/errors'
 
-
-declare module 'hono' {
-    interface ContextVariableMap {
-        apiKey: ApiKey
-    }
-}
 
 
 const RATE_LIMIT_POINTS = 1000
@@ -30,10 +23,15 @@ const rateLimiter = new RateLimiterRedis({
 
 const rateLimitMiddleware = () =>
     createMiddleware(async (c, next) => {
-        const workspaceId: number = c.get('workspace').id
 
         try {
-            await rateLimiter.consume(workspaceId.toString())
+            const authorization = c.req.header('Authorization')
+            if (!authorization) return await next()
+
+            const token = authorization.split(' ')[1]
+            if (!token) return await next()
+
+            await rateLimiter.consume(token)
             await next()
         } catch (error) {
             if (error instanceof RateLimiterRes) {
@@ -42,7 +40,7 @@ const rateLimitMiddleware = () =>
                     res.msBeforeNext / 1000,
                     RATE_LIMIT_POINTS,
                     res.remainingPoints,
-                    new Date(Date.now() + res.msBeforeNext).getTime());
+                    Date.now() + res.msBeforeNext)
             }
             throw error
         }
