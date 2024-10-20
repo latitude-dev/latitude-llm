@@ -24,14 +24,16 @@ const rateLimitMiddleware = () =>
       )
     }
 
+    let token: string | undefined
     try {
-      const authorization = c.req.header('Authorization')
-      if (!authorization) return await next()
+      try {
+        const authorization = c.req.header('Authorization')
+        token = authorization?.split(' ')[1]
+      } catch (error) {
+        return await next()
+      }
 
-      const token = authorization.split(' ')[1]
-      if (!token) return await next()
-
-      const result = await rateLimiter.consume(token)
+      const result = await rateLimiter.consume(token as string)
       handleRateLimitHeaders(result)
       await next()
     } catch (error) {
