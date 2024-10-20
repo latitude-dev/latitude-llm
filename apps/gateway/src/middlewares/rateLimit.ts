@@ -1,8 +1,7 @@
-import { buildRedisConnection } from '@latitude-data/core/redis'
-import { env } from '@latitude-data/env'
 import { RateLimiterRedis, RateLimiterRes } from 'rate-limiter-flexible'
 import { createMiddleware } from 'hono/factory'
 import { RateLimitError } from '@latitude-data/core/lib/errors'
+import { cache } from '@latitude-data/core/cache'
 
 
 
@@ -10,13 +9,7 @@ const RATE_LIMIT_POINTS = 1000
 const RATE_LIMIT_DURATION = 60
 
 const rateLimiter = new RateLimiterRedis({
-    storeClient: await buildRedisConnection({
-        host: env.QUEUE_HOST,
-        port: env.QUEUE_PORT,
-        password: env.QUEUE_PASSWORD,
-        enableOfflineQueue: true,
-        maxRetriesPerRequest: null,
-    }),
+    storeClient: await cache(),
     points: RATE_LIMIT_POINTS,
     duration: RATE_LIMIT_DURATION,
 });
