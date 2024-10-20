@@ -106,13 +106,24 @@ export async function ai({
         output: output as any,
       })
 
+      const chunks: StreamChunk[] = [
+        {
+          type: 'object',
+          object: result.object,
+        },
+        {
+          type: 'finish',
+          finishReason: result.finishReason,
+          usage: result.usage,
+          response: result.response,
+        },
+      ]
+
       const fullStream = new ReadableStream<StreamChunk>({
         start(controller: any) {
-          const streamChunk: StreamChunk = {
-            type: 'object',
-            object: result.object,
-          }
-          controller.enqueue(streamChunk)
+          chunks.forEach((chunk) => {
+            controller.enqueue(chunk)
+          })
           controller.close()
         },
       })
@@ -129,13 +140,24 @@ export async function ai({
 
     const result = await generateText(commonOptions)
 
+    const chunks: StreamChunk[] = [
+      {
+        type: 'text-delta',
+        textDelta: result.text,
+      },
+      {
+        type: 'finish',
+        finishReason: result.finishReason,
+        usage: result.usage,
+        response: result.response,
+      },
+    ]
+
     const fullStream = new ReadableStream<StreamChunk>({
       start(controller: any) {
-        const streamChunk: StreamChunk = {
-          type: 'text-delta',
-          textDelta: result.text,
-        }
-        controller.enqueue(streamChunk)
+        chunks.forEach((chunk) => {
+          controller.enqueue(chunk)
+        })
         controller.close()
       },
     })
