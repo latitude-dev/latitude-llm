@@ -23,6 +23,33 @@ The base URL for API requests depends on your environment:
 
 `https://gateway.latitude.so/api/v2`
 
+### Rate Limiting
+
+The API enforces rate limits based on your API key to ensure fair usage and prevent abuse.
+
+**Limits:**
+
+- **Rate Limit Points:** 1000 requests
+- **Rate Limit Duration:** 60 seconds
+
+When the rate limit is exceeded, the following headers are included in the response to help you manage your request rate:
+
+- `Retry-After`: Indicates the number of seconds to wait before making a new request.
+- `X-RateLimit-Limit`: The maximum number of requests allowed in the current period.
+- `X-RateLimit-Remaining`: The number of requests remaining in the current period.
+- `X-RateLimit-Reset`: The timestamp when the rate limit will reset.
+
+**Example Headers:**
+
+```http
+Retry-After: 60
+X-RateLimit-Limit: 1000
+X-RateLimit-Remaining: 999
+X-RateLimit-Reset: 1729399082482
+```
+
+These headers are sent with every request to help you monitor and adjust your request rate accordingly.
+
 ### Endpoints
 
 #### 1. Run a Document
