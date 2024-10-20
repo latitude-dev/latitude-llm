@@ -7,6 +7,7 @@ import {
   generateObject,
   generateText,
   jsonSchema,
+  LanguageModel,
   ObjectStreamPart,
   streamObject,
   StreamObjectResult,
@@ -55,6 +56,7 @@ export async function ai({
   config,
   schema,
   output,
+  customLanguageModel,
 }: {
   provider: ProviderApiKey
   config: PartialConfig
@@ -62,6 +64,7 @@ export async function ai({
   prompt?: string
   schema?: JSONSchema7
   output?: 'object' | 'array' | 'no-schema' | undefined
+  customLanguageModel?: LanguageModel
 }): Promise<
   TypedResult<
     AIReturn<StreamType>,
@@ -81,7 +84,9 @@ export async function ai({
 
   if (languageModelResult.error) return languageModelResult
 
-  const languageModel = languageModelResult.value(model)
+  const languageModel = customLanguageModel
+    ? customLanguageModel
+    : languageModelResult.value(model)
   const toolsResult = buildTools(config.tools)
   if (toolsResult.error) return toolsResult
 
