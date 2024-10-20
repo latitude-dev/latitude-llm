@@ -2,9 +2,8 @@ import {
   LatitudeError,
   UnprocessableEntityError,
 } from '@latitude-data/core/lib/errors'
-import { HTTPException } from 'hono/http-exception'
-
 import { captureException } from '$/common/sentry'
+import { HTTPException } from 'hono/http-exception'
 
 import HttpStatusCodes from '../common/httpStatusCodes'
 
