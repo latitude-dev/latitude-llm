@@ -1,11 +1,6 @@
-import { useCallback, useMemo, useState } from 'react'
+import { useCallback, useState } from 'react'
 
-import {
-  DocumentVersion,
-  EvaluationDto,
-  EvaluationResult,
-} from '@latitude-data/core/browser'
-import { EvaluationResultWithMetadata } from '@latitude-data/core/repositories'
+import { DocumentVersion, EvaluationDto } from '@latitude-data/core/browser'
 import {
   Button,
   TableBlankSlate,
@@ -14,7 +9,10 @@ import {
   useCurrentProject,
 } from '@latitude-data/web-ui'
 import { DocumentRoutes, ROUTES } from '$/services/routes'
-import useEvaluationResultsByDocumentContent from '$/stores/evaluationResultsByDocumentContent'
+import useEvaluationResultsByDocumentContent, {
+  EvaluationResultByDocument,
+} from '$/stores/evaluationResultsByDocumentContent'
+import useEvaluationResultsByDocumentPagination from '$/stores/useEvaluationResultsByDocumentCount'
 import Link from 'next/link'
 
 import { SelectableEvaluationResultsTable } from './SelectableEvaluationResultsTable'
@@ -29,18 +27,20 @@ export function SelectEvaluationResults({
 }: {
   documentVersion: DocumentVersion
   evaluation: EvaluationDto
-  setEvaluationResults: (evaluationResults: EvaluationResult[]) => void
+  setEvaluationResults: (
+    evaluationResults: EvaluationResultByDocument[],
+  ) => void
   navigateBack: () => void
 }) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
   const [selectedEvaluationResults, setSelectedEvaluationResults] = useState<
-    EvaluationResultWithMetadata[]
+    EvaluationResultByDocument[]
   >([])
 
   const [page, setPage] = useState(1)
 
-  const { data, isLoading } = useEvaluationResultsByDocumentContent({
+  const { data: rows, isLoading } = useEvaluationResultsByDocumentContent({
     documentUuid: documentVersion.documentUuid,
     evaluationId: evaluation.id,
     commitUuid: commit.uuid,
@@ -48,8 +48,15 @@ export function SelectEvaluationResults({
     page: page,
     pageSize: PAGE_SIZE,
   })
-
-  const { rows, count } = useMemo(() => data ?? { rows: [], count: 0 }, [data])
+  const { data: pagination, isLoading: isLoadingCount } =
+    useEvaluationResultsByDocumentPagination({
+      documentUuid: documentVersion.documentUuid,
+      evaluationId: evaluation.id,
+      commitUuid: commit.uuid,
+      projectId: project.id,
+      page: page.toString(),
+      pageSize: PAGE_SIZE.toString(),
+    })
 
   const confirmSelection = useCallback(() => {
     setEvaluationResults(selectedEvaluationResults)
@@ -113,7 +120,8 @@ export function SelectEvaluationResults({
           page={page}
           setPage={setPage}
           pageSize={PAGE_SIZE}
-          totalCount={count}
+          totalCount={pagination?.count ?? 0}
+          isLoadingCount={isLoadingCount}
         />
       </div>
       <ActionButtons />

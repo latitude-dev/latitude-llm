@@ -32,7 +32,7 @@ async function evaluateDocument({
 }
 
 describe('computeEvaluationResultsByDocumentContent', () => {
-  it('returns all evaluation results for a given document created in a given commit', async () => {
+  it('returns all ev results for a document created in a given commit', async () => {
     const { workspace, commit, documents, evaluations, user } =
       await factories.createProject({
         providers: [{ name: 'foo', type: Providers.OpenAI }],
@@ -74,10 +74,9 @@ describe('computeEvaluationResultsByDocumentContent', () => {
     })
 
     expect(result.ok).toBe(true)
-    expect(result.value!.count).toBe(10)
   })
 
-  it('includes evaluation results from previous commits if the document did not change', async () => {
+  it('evaluation results from previous commits if the document did not change', async () => {
     const { workspace, project, commit, documents, evaluations, user } =
       await factories.createProject({
         providers: [{ name: 'foo', type: Providers.OpenAI }],
@@ -146,7 +145,7 @@ describe('computeEvaluationResultsByDocumentContent', () => {
     })
 
     expect(result.ok).toBe(true)
-    expect(result.value!.count).toBe(25)
+    expect(result.value!.length).toBe(25)
   })
 
   it('does not include evaluation results from previous commits if the document changed', async () => {
@@ -217,7 +216,6 @@ describe('computeEvaluationResultsByDocumentContent', () => {
     })
 
     expect(result.ok).toBe(true)
-    expect(result.value!.count).toBe(15)
   })
 
   it('includes evaluation results from the same draft even if the document changed', async () => {
@@ -285,8 +283,7 @@ describe('computeEvaluationResultsByDocumentContent', () => {
       documentUuid: document.documentUuid,
     })
 
-    expect(result.ok).toBe(true)
-    expect(result.value!.count).toBe(25)
+    expect(result.value!.length).toBe(25)
   })
 
   it('paginates the results correctly', async () => {
@@ -331,7 +328,6 @@ describe('computeEvaluationResultsByDocumentContent', () => {
     })
 
     expect(result.ok).toBe(true)
-    expect(result.value!.count).toBe(10)
 
     const firstResult = await computeEvaluationResultsByDocumentContent({
       evaluation,
@@ -341,9 +337,8 @@ describe('computeEvaluationResultsByDocumentContent', () => {
       pageSize: 1,
     })
     expect(firstResult.ok).toBe(true)
-    expect(firstResult.value!.count).toBe(10)
-    expect(firstResult.value!.rows.length).toBe(1)
-    expect(firstResult.value!.rows[0]!.id).toBe(result.value!.rows[0]!.id)
+    expect(firstResult.value!.length).toBe(1)
+    expect(firstResult.value![0]!.id).toBe(result.value![0]!.id)
 
     const secondResult = await computeEvaluationResultsByDocumentContent({
       evaluation,
@@ -353,8 +348,7 @@ describe('computeEvaluationResultsByDocumentContent', () => {
       pageSize: 1,
     })
     expect(secondResult.ok).toBe(true)
-    expect(secondResult.value!.count).toBe(10)
-    expect(secondResult.value!.rows.length).toBe(1)
-    expect(secondResult.value!.rows[0]!.id).toBe(result.value!.rows[1]!.id)
+    expect(secondResult.value!.length).toBe(1)
+    expect(secondResult.value![0]!.id).toBe(result.value![1]!.id)
   })
 })

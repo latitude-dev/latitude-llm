@@ -1,13 +1,12 @@
 'use client'
 
-import { Dispatch, SetStateAction } from 'react'
+import { Dispatch, SetStateAction, useCallback } from 'react'
 import { capitalize } from 'lodash-es'
 
 import {
   EvaluationDto,
   EvaluationResultableType,
 } from '@latitude-data/core/browser'
-import { EvaluationResultWithMetadata } from '@latitude-data/core/repositories'
 import {
   cn,
   RangeBadge,
@@ -21,6 +20,7 @@ import {
 } from '@latitude-data/web-ui'
 import { relativeTime } from '$/app/_lib/formatUtils'
 import { LogicTablePaginationFooter } from '$/components/TablePaginationFooter/LogicTablePaginationFooter'
+import { EvaluationResultByDocument } from '$/stores/evaluationResultsByDocumentContent'
 
 export const ResultCellContent = ({
   evaluation,
@@ -53,7 +53,7 @@ export const ResultCellContent = ({
   return <Text.H4 noWrap>{String(value)}</Text.H4>
 }
 
-type EvaluationResultRow = EvaluationResultWithMetadata & {
+type EvaluationResultRow = EvaluationResultByDocument & {
   realtimeAdded?: boolean
 }
 export const SelectableEvaluationResultsTable = ({
@@ -62,6 +62,7 @@ export const SelectableEvaluationResultsTable = ({
   selectedResults,
   setSelectedResults,
   totalCount,
+  isLoadingCount,
   pageSize,
   page,
   setPage,
@@ -69,23 +70,41 @@ export const SelectableEvaluationResultsTable = ({
   evaluation: EvaluationDto
   evaluationResultsRows: EvaluationResultRow[]
   selectedResults: EvaluationResultRow[]
-  setSelectedResults: Dispatch<SetStateAction<EvaluationResultRow[]>>
+  setSelectedResults: Dispatch<SetStateAction<EvaluationResultByDocument[]>>
   totalCount: number
+  isLoadingCount: boolean
   pageSize: number
   page: number
   setPage: (_: number) => void
 }) => {
+  const toggleSelection = useCallback(
+    (evaluationResult: EvaluationResultRow) => () => {
+      const isSelected = !!selectedResults.find(
+        (r) => r.id === evaluationResult.id,
+      )
+      if (isSelected) {
+        setSelectedResults((old) =>
+          old.filter((r) => r.id !== evaluationResult.id),
+        )
+      } else {
+        setSelectedResults((old) => [...old, evaluationResult])
+      }
+    },
+    [selectedResults, setSelectedResults],
+  )
   return (
     <Table
       className='table-auto'
       externalFooter={
-        <LogicTablePaginationFooter
-          page={page}
-          totalCount={totalCount}
-          totalCountLabel={`${totalCount} results, ${selectedResults.length} selected`}
-          pageSize={pageSize}
-          onPageChange={setPage}
-        />
+        isLoadingCount ? null : (
+          <LogicTablePaginationFooter
+            page={page}
+            totalCount={totalCount}
+            totalCountLabel={`${totalCount} results, ${selectedResults.length} selected`}
+            pageSize={pageSize}
+            onPageChange={setPage}
+          />
+        )
       }
     >
       <TableHeader className='sticky top-0 z-10'>
@@ -101,20 +120,11 @@ export const SelectableEvaluationResultsTable = ({
           const isSelected = !!selectedResults.find(
             (r) => r.id === evaluationResult.id,
           )
-          const toggleSelection = () => {
-            if (isSelected) {
-              setSelectedResults((old) =>
-                old.filter((r) => r.id !== evaluationResult.id),
-              )
-            } else {
-              setSelectedResults((old) => [...old, evaluationResult])
-            }
-          }
 
           return (
             <TableRow
               key={evaluationResult.id}
-              onClick={toggleSelection}
+              onClick={toggleSelection(evaluationResult)}
               className={cn(
                 'cursor-pointer border-b-[0.5px] h-12 max-h-12 border-border',
                 {
@@ -124,7 +134,11 @@ export const SelectableEvaluationResultsTable = ({
               )}
             >
               <TableCell>
-                <input type='checkbox' checked={isSelected} />
+                <input
+                  type='checkbox'
+                  checked={isSelected}
+                  onChange={toggleSelection(evaluationResult)}
+                />
               </TableCell>
               <TableCell>
                 <Text.H5 noWrap>

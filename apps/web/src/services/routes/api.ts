@@ -54,6 +54,7 @@ export const _API_ROUTES = {
                 evaluationResultsByDocumentContent: {
                   detail: ({ evaluationId }: { evaluationId: number }) => ({
                     root: `${documentRoot}/evaluation-results-by-document-content/${evaluationId}`,
+                    pagination: `${documentRoot}/evaluation-results-by-document-content/${evaluationId}/pagination`,
                   }),
                 },
               }
