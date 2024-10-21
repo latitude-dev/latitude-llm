@@ -1,6 +1,7 @@
 import ROUTES from '$/common/routes'
 import authMiddleware from '$/middlewares/auth'
 import errorHandlerMiddleware from '$/middlewares/errorHandler'
+import rateLimitMiddleware from '$/middlewares/rateLimit'
 import { Hono } from 'hono'
 import { logger } from 'hono/logger'
 import jetPaths from 'jet-paths'
@@ -21,6 +22,7 @@ app.get('/health', (c) => {
   return c.json({ status: 'ok' })
 })
 
+app.use(rateLimitMiddleware())
 app.use(authMiddleware())
 
 // Routers
@@ -30,6 +32,6 @@ app.route(jetPaths(ROUTES).Api.V2.Documents.Base, documentsRouterV2)
 app.route(jetPaths(ROUTES).Api.V2.Conversations.Base, chatsRouterV2)
 
 // Must be the last one!
-app.use(errorHandlerMiddleware())
+app.onError(errorHandlerMiddleware)
 
 export default app

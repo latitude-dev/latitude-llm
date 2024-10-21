@@ -7,6 +7,7 @@ type ErrorType = {
 export class LatitudeError extends Error {
   statusCode: number = 500
   name: string = 'UnexpectedError'
+  headers: Record<string, string> = {}
 
   public details: ErrorType
 
@@ -49,6 +50,26 @@ export class ForbiddenError extends LatitudeError {
 export class UnauthorizedError extends LatitudeError {
   public statusCode = 401
   public name = 'UnauthorizedError'
+}
+export class RateLimitError extends LatitudeError {
+  public statusCode = 429
+  public name = 'RateLimitError'
+
+  constructor(
+    message: string,
+    retryAfter: number,
+    limit: number,
+    remaining: number,
+    resetTime: number,
+  ) {
+    super(message)
+    this.headers = {
+      'Retry-After': retryAfter.toString(),
+      'X-RateLimit-Limit': limit.toString(),
+      'X-RateLimit-Remaining': remaining.toString(),
+      'X-RateLimit-Reset': resetTime.toString(),
+    }
+  }
 }
 
 export const databaseErrorCodes = {
