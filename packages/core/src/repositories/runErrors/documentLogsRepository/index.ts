@@ -24,6 +24,8 @@ const tt = {
 export type DocumentLogWithMetadataAndError = DocumentLogWithMetadata & {
   error: RunErrorField
 }
+export type DocumentLogWithErrorScope =
+  typeof DocumentLogsWithErrorsRepository.prototype.scope
 
 export class DocumentLogsWithErrorsRepository extends Repository<
   typeof tt,

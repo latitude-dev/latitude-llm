@@ -1,7 +1,13 @@
 import { ContentType, createChain } from '@latitude-data/compiler'
 import { v4 as uuid } from 'uuid'
 
-import { Commit, DocumentVersion, LogSources, ProviderLog } from '../../browser'
+import {
+  Commit,
+  DocumentVersion,
+  LogSources,
+  ProviderLog,
+  Workspace,
+} from '../../browser'
 import { findWorkspaceFromCommit } from '../../data-access'
 import { ProviderApiKeysRepository } from '../../repositories'
 import { Config } from '../../services/ai'
@@ -16,32 +22,28 @@ export type IDocumentLogData = {
   parameters?: Record<string, unknown>
   customIdentifier?: string
   createdAt?: Date
+  skipProviderLogs?: boolean
 }
 
-export async function createDocumentLog({
-  document,
-  commit,
+async function generateProviderLogs({
+  workspace,
   parameters,
-  customIdentifier,
-  createdAt,
-}: IDocumentLogData) {
-  const workspace = (await findWorkspaceFromCommit(commit))!
-  const providerScope = new ProviderApiKeysRepository(workspace.id)
-
-  const documentContent = await getResolvedContent({
-    workspaceId: workspace.id,
-    document,
-    commit,
-  }).then((r) => r.unwrap())
-
+  documentContent,
+  documentLogUuid,
+}: {
+  workspace: Workspace
+  parameters?: Record<string, unknown>
+  documentContent: string
+  documentLogUuid: string
+}) {
+  const providerLogs: ProviderLog[] = []
   const chain = createChain({
     prompt: documentContent,
     parameters: parameters ?? {},
   })
   let mockedResponse = undefined
+  const providerScope = new ProviderApiKeysRepository(workspace.id)
 
-  const documentLogUuid = uuid()
-  const providerLogs: ProviderLog[] = []
   while (true) {
     const { completed, conversation } = await chain.step(mockedResponse)
 
@@ -84,6 +86,35 @@ export async function createDocumentLog({
     providerLogs.push(log)
 
     if (completed) break
+  }
+
+  return providerLogs
+}
+
+export async function createDocumentLog({
+  document,
+  commit,
+  parameters,
+  customIdentifier,
+  createdAt,
+  skipProviderLogs,
+}: IDocumentLogData) {
+  const workspace = (await findWorkspaceFromCommit(commit))!
+  const documentContent = await getResolvedContent({
+    workspaceId: workspace.id,
+    document,
+    commit,
+  }).then((r) => r.unwrap())
+  const documentLogUuid = uuid()
+  let providerLogs: ProviderLog[] = []
+
+  if (!skipProviderLogs) {
+    providerLogs = await generateProviderLogs({
+      workspace,
+      parameters,
+      documentContent,
+      documentLogUuid,
+    })
   }
 
   const duration =

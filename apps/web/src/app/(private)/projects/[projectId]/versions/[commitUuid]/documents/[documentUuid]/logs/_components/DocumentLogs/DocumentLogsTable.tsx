@@ -1,6 +1,6 @@
 import { capitalize } from 'lodash-es'
 
-import { IPagination } from '@latitude-data/core/lib/pagination/buildPagination'
+import { buildPagination } from '@latitude-data/core/lib/pagination/buildPagination'
 import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
 import {
   Badge,
@@ -12,6 +12,8 @@ import {
   TableHeader,
   TableRow,
   Text,
+  useCurrentCommit,
+  useCurrentProject,
 } from '@latitude-data/web-ui'
 import {
   formatCostInMillicents,
@@ -19,7 +21,11 @@ import {
   relativeTime,
 } from '$/app/_lib/formatUtils'
 import { getRunErrorFromErrorable } from '$/app/(private)/_lib/getRunErrorFromErrorable'
+import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { LinkableTablePaginationFooter } from '$/components/TablePaginationFooter'
+import { ROUTES } from '$/services/routes'
+import useDocumentLogsPagination from '$/stores/useDocumentLogsPagination'
+import { useSearchParams } from 'next/navigation'
 
 function countLabel(count: number) {
   return `${count} logs`
@@ -33,20 +39,45 @@ export const DocumentLogsTable = ({
   documentLogs,
   selectedLog,
   setSelectedLog,
-  pagination,
 }: {
   documentLogs: DocumentLogRow[]
   selectedLog: DocumentLogWithMetadataAndError | undefined
   setSelectedLog: (log: DocumentLogWithMetadataAndError | undefined) => void
-  pagination: IPagination
 }) => {
+  const searchParams = useSearchParams()
+  const page = searchParams.get('page') ?? '1'
+  const pageSize = searchParams.get('pageSize') ?? '25'
+  const { commit } = useCurrentCommit()
+  const { project } = useCurrentProject()
+  const document = useCurrentDocument()
+  const { data: pagination, isLoading } = useDocumentLogsPagination({
+    projectId: project.id,
+    commitUuid: commit.uuid,
+    documentUuid: document.documentUuid,
+    page,
+    pageSize,
+  })
   return (
     <Table
       className='table-auto'
       externalFooter={
         <LinkableTablePaginationFooter
-          pagination={pagination}
           countLabel={countLabel}
+          isLoading={isLoading}
+          pagination={
+            pagination
+              ? buildPagination({
+                  baseUrl: ROUTES.projects
+                    .detail({ id: project.id })
+                    .commits.detail({ uuid: commit.uuid })
+                    .documents.detail({ uuid: document.documentUuid }).logs
+                    .root,
+                  count: pagination.count,
+                  page: Number(page),
+                  pageSize: Number(pageSize),
+                })
+              : undefined
+          }
         />
       }
     >

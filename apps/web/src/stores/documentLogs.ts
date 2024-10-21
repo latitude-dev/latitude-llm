@@ -16,8 +16,8 @@ export default function useDocumentLogs(
     documentUuid: string
     commitUuid: string
     projectId: number
-    page: number | null
-    pageSize: number | null
+    page: string | null
+    pageSize: string | null
   },
   { fallbackData }: SWRConfiguration = {},
 ) {
@@ -29,8 +29,8 @@ export default function useDocumentLogs(
     {
       serializer: (rows) => rows.map(documentLogPresenter),
       searchParams: compactObject({
-        page: page ? String(page) : undefined,
-        pageSize: pageSize ? String(pageSize) : undefined,
+        page,
+        pageSize,
       }) as Record<string, string>,
     },
   )
