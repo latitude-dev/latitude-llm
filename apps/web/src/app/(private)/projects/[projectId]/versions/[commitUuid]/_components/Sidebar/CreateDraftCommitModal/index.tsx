@@ -10,7 +10,7 @@ import {
 } from '@latitude-data/web-ui'
 import { useFormAction } from '$/hooks/useFormAction'
 import { ROUTES } from '$/services/routes'
-import useCommits from '$/stores/commitsStore'
+import { useCommits } from '$/stores/commitsStore'
 import { useRouter } from 'next/navigation'
 
 export default function DraftCommitModal({

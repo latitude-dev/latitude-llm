@@ -3,13 +3,20 @@ import { ReactNode } from 'react'
 import { readMetadata } from '@latitude-data/compiler'
 import { EvaluationResultableType } from '@latitude-data/core/browser'
 import { env } from '@latitude-data/env'
-import { Icon, TableWithHeader, Text, Tooltip } from '@latitude-data/web-ui'
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbSeparator,
+  Icon,
+  TableWithHeader,
+  Text,
+  Tooltip,
+} from '@latitude-data/web-ui'
 import {
   findCommitCached,
   getProviderApiKeyCached,
 } from '$/app/(private)/_data-access'
 import BreadcrumbLink from '$/components/BreadcrumbLink'
-import { Breadcrumb } from '$/components/layouts/AppLayout/Header'
 import { ROUTES } from '$/services/routes'
 import Link from 'next/link'
 
@@ -65,50 +72,45 @@ export default async function ConnectedEvaluationLayout({
     <div className='flex flex-col w-full h-full gap-6 p-6'>
       <TableWithHeader
         title={
-          <Breadcrumb
-            breadcrumbs={[
-              {
-                name: (
-                  <BreadcrumbLink
-                    showBackIcon
-                    name='Evaluations'
+          <Breadcrumb>
+            <BreadcrumbItem noShrink>
+              <BreadcrumbLink
+                showBackIcon
+                name='Evaluations'
+                href={
+                  ROUTES.projects
+                    .detail({ id: Number(params.projectId) })
+                    .commits.detail({ uuid: params.commitUuid })
+                    .documents.detail({ uuid: params.documentUuid }).evaluations
+                    .root
+                }
+              />
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <Text.H4M noWrap ellipsis>
+                {evaluation.name}
+              </Text.H4M>
+              <Text.H4M color='foregroundMuted'>
+                {TYPE_TEXT[evaluation.configuration.type]}
+              </Text.H4M>
+              <Tooltip
+                asChild
+                trigger={
+                  <Link
                     href={
-                      ROUTES.projects
-                        .detail({ id: Number(params.projectId) })
-                        .commits.detail({ uuid: params.commitUuid })
-                        .documents.detail({ uuid: params.documentUuid })
-                        .evaluations.root
+                      ROUTES.evaluations.detail({ uuid: evaluation.uuid })
+                        .editor.root
                     }
-                  />
-                ),
-              },
-              {
-                name: (
-                  <div className='flex flex-row items-center gap-4'>
-                    <Text.H4M>{evaluation.name}</Text.H4M>
-                    <Text.H4M color='foregroundMuted'>
-                      {TYPE_TEXT[evaluation.configuration.type]}
-                    </Text.H4M>
-                    <Tooltip
-                      asChild
-                      trigger={
-                        <Link
-                          href={
-                            ROUTES.evaluations.detail({ uuid: evaluation.uuid })
-                              .editor.root
-                          }
-                        >
-                          <Icon name='externalLink' />
-                        </Link>
-                      }
-                    >
-                      Go to evaluation
-                    </Tooltip>
-                  </div>
-                ),
-              },
-            ]}
-          />
+                  >
+                    <Icon name='externalLink' />
+                  </Link>
+                }
+              >
+                Go to evaluation
+              </Tooltip>
+            </BreadcrumbItem>
+          </Breadcrumb>
         }
         actions={
           <Actions

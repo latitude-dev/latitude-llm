@@ -3,6 +3,7 @@ import { ReactNode } from 'react'
 import { SessionProvider } from '@latitude-data/web-ui/browser'
 import { createSupportUserIdentity } from '$/app/(private)/_lib/createSupportUserIdentity'
 import { SupportChat } from '$/components/IntercomSupportChat'
+import { AppLayout } from '$/components/layouts'
 import {
   LatitudeWebsocketsProvider,
   SocketIOProvider,
@@ -14,6 +15,7 @@ import { ROUTES } from '$/services/routes'
 import { redirect } from 'next/navigation'
 
 import { CSPostHogProvider, IdentifyUser } from '../providers'
+import { NAV_LINKS } from './_lib/constants'
 
 export default async function PrivateLayout({
   children,
@@ -33,7 +35,9 @@ export default async function PrivateLayout({
         <SocketIOProvider>
           <SessionProvider currentUser={user} workspace={workspace}>
             <LatitudeWebsocketsProvider socketServer={env.WEBSOCKETS_SERVER}>
-              {children}
+              <AppLayout currentUser={user} navigationLinks={NAV_LINKS}>
+                {children}
+              </AppLayout>
             </LatitudeWebsocketsProvider>
           </SessionProvider>
         </SocketIOProvider>

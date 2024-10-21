@@ -20,6 +20,7 @@ export function ClickToCopy({
       side='right'
       align='center'
       delayDuration={250}
+      variant='inverse'
       trigger={
         <div
           onClick={onCopy}
@@ -30,7 +31,7 @@ export function ClickToCopy({
         </div>
       }
     >
-      <Text.H6>Click to copy: {copyValue}</Text.H6>
+      <Text.H6 color='background'>Click to copy: {copyValue}</Text.H6>
     </Tooltip>
   )
 }
