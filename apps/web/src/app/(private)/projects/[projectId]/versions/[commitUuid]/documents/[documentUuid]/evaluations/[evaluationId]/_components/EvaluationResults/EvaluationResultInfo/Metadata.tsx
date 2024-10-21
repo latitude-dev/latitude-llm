@@ -61,6 +61,21 @@ export function EvaluationResultMetadata({
   evaluationResult: EvaluationResultWithMetadataAndErrors
   providerLog?: ProviderLogDto
 }) {
+  const reasoning = useMemo(() => {
+    if (!providerLog) return '-'
+
+    try {
+      const response = JSON.parse(providerLog?.response)
+
+      if (response) {
+        return response.reason || '-'
+      }
+      return '-'
+    } catch (e) {
+      return '-'
+    }
+  }, [providerLog])
+
   return (
     <>
       <RunErrorMessage error={evaluationResult.error} />
@@ -82,6 +97,12 @@ export function EvaluationResultMetadata({
           </Text.H5>
         </ClickToCopy>
       </MetadataItem>
+      {providerLog ? (
+        <ProviderLogItems
+          providerLog={providerLog}
+          evaluationResult={evaluationResult}
+        />
+      ) : null}
       {evaluationResult.result ? (
         <MetadataItem label='Result' loading={!evaluation || !evaluationResult}>
           <ResultCellContent
@@ -90,12 +111,7 @@ export function EvaluationResultMetadata({
           />
         </MetadataItem>
       ) : null}
-      {providerLog ? (
-        <ProviderLogItems
-          providerLog={providerLog}
-          evaluationResult={evaluationResult}
-        />
-      ) : null}
+      <MetadataItem stacked label='Result reasoning' value={reasoning} />
     </>
   )
 }
