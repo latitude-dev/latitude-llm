@@ -1,3 +1,4 @@
+import { like } from 'drizzle-orm'
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import { database } from '../../client'
@@ -6,12 +7,13 @@ import * as factories from '../../tests/factories'
 import { paginateQuery } from './paginate'
 
 const pageUrl = { base: 'http://localhost/my-page' }
+const prefix = Math.random().toString(36).substring(2, 15)
 
 describe('paginateQuery', () => {
   beforeEach(async () => {
     await Promise.all(
       Array.from({ length: 8 }, (_, i) =>
-        factories.createUser({ email: `user_${i + 1}@example.com` }),
+        factories.createUser({ email: `${prefix}_${i + 1}@example.com` }),
       ),
     )
   })
@@ -21,6 +23,8 @@ describe('paginateQuery', () => {
       dynamicQuery: database
         .select({ email: users.email })
         .from(users)
+        .where(like(users.email, `${prefix}%`))
+        .orderBy(users.email)
         .$dynamic(),
       pageUrl,
       searchParams: 'page=1&pageSize=2',
@@ -39,8 +43,8 @@ describe('paginateQuery', () => {
       prevPage: undefined,
     })
     expect(rows.map((r) => r.email)).toEqual([
-      'user_1@example.com',
-      'user_2@example.com',
+      `${prefix}_1@example.com`,
+      `${prefix}_2@example.com`,
     ])
   })
 
@@ -49,6 +53,8 @@ describe('paginateQuery', () => {
       dynamicQuery: database
         .select({ email: users.email })
         .from(users)
+        .where(like(users.email, `${prefix}%`))
+        .orderBy(users.email)
         .$dynamic(),
       pageUrl,
       searchParams: {
@@ -73,8 +79,8 @@ describe('paginateQuery', () => {
       },
     })
     expect(rows.map((r) => r.email)).toEqual([
-      'user_5@example.com',
-      'user_6@example.com',
+      `${prefix}_5@example.com`,
+      `${prefix}_6@example.com`,
     ])
   })
 
@@ -83,6 +89,8 @@ describe('paginateQuery', () => {
       dynamicQuery: database
         .select({ email: users.email })
         .from(users)
+        .where(like(users.email, `${prefix}%`))
+        .orderBy(users.email)
         .$dynamic(),
       pageUrl,
       defaultPaginate: { pageSize: 4 },
@@ -101,10 +109,10 @@ describe('paginateQuery', () => {
       prevPage: undefined,
     })
     expect(rows.map((r) => r.email)).toEqual([
-      'user_1@example.com',
-      'user_2@example.com',
-      'user_3@example.com',
-      'user_4@example.com',
+      `${prefix}_1@example.com`,
+      `${prefix}_2@example.com`,
+      `${prefix}_3@example.com`,
+      `${prefix}_4@example.com`,
     ])
   })
 
@@ -113,6 +121,8 @@ describe('paginateQuery', () => {
       dynamicQuery: database
         .select({ email: users.email })
         .from(users)
+        .where(like(users.email, `${prefix}%`))
+        .orderBy(users.email)
         .$dynamic(),
       pageUrl,
       searchParams: 'page=1&pageSize=2&sort=email',
@@ -131,8 +141,8 @@ describe('paginateQuery', () => {
       prevPage: undefined,
     })
     expect(rows.map((r) => r.email)).toEqual([
-      'user_1@example.com',
-      'user_2@example.com',
+      `${prefix}_1@example.com`,
+      `${prefix}_2@example.com`,
     ])
   })
 })
