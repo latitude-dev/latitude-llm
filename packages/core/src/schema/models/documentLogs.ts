@@ -33,6 +33,7 @@ export const documentLogs = latitudeSchema.table(
     ...timestamps(),
   },
   (table) => ({
+    documentLogOwnUuidIdx: index('document_log_own_uuid_idx').on(table.uuid),
     documentLogUuidIdx: index('document_log_uuid_idx').on(table.documentUuid),
     commitIdIdx: index('document_logs_commit_id_idx').on(table.commitId),
     contentHashIdx: index('document_logs_content_hash_idx').on(
