@@ -34,8 +34,9 @@ export async function mergeCommit(commit: Commit, db = database) {
 
     const workspace = await findWorkspaceFromCommit(commit, tx)
 
-    if (!workspace)
+    if (!workspace) {
       return Result.error(new NotFoundError('Workspace not found'))
+    }
 
     const recomputedResults = await recomputeChanges(
       { draft: commit, workspaceId: workspace.id },

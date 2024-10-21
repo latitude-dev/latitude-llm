@@ -2,27 +2,34 @@ import { useMemo } from 'react'
 
 import { AssistantMessage, Message, MessageRole } from '@latitude-data/compiler'
 import { ProviderLogDto } from '@latitude-data/core/browser'
-import { MessageList } from '@latitude-data/web-ui'
+import { MessageList, Text } from '@latitude-data/web-ui'
 
 export function DocumentLogMessages({
   providerLogs,
 }: {
   providerLogs?: ProviderLogDto[]
 }) {
+  const providerLog = providerLogs?.[providerLogs.length - 1]
+
   const messages = useMemo<Message[]>(() => {
-    const lastLog = providerLogs?.[providerLogs.length - 1]
-    if (!lastLog) return [] as Message[]
+    if (!providerLog) return [] as Message[]
 
     const responseMessage = {
       role: MessageRole.assistant,
-      content: lastLog.response,
-      toolCalls: lastLog.toolCalls,
+      content: providerLog.response,
+      toolCalls: providerLog.toolCalls,
     } as AssistantMessage
 
-    return [...(lastLog.messages as Message[]), responseMessage]
-  }, [providerLogs])
+    return [...(providerLog.messages as Message[]), responseMessage]
+  }, [providerLog])
 
-  if (!providerLogs) return null
+  if (!providerLog) {
+    return (
+      <Text.H5 color='foregroundMuted' centered>
+        There are no messages generated for this log
+      </Text.H5>
+    )
+  }
 
   return <MessageList messages={messages} />
 }

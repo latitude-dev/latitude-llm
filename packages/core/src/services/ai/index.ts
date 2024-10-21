@@ -4,14 +4,12 @@ import { Message } from '@latitude-data/compiler'
 import {
   CoreMessage,
   CoreTool,
-  generateObject,
-  generateText,
   jsonSchema,
   LanguageModel,
   ObjectStreamPart,
-  streamObject,
+  streamObject as originalStreamObject,
+  streamText as originalStreamText,
   StreamObjectResult,
-  streamText,
   StreamTextResult,
   TextStreamPart,
 } from 'ai'
@@ -21,9 +19,16 @@ import { ProviderApiKey, RunErrorCodes, StreamType } from '../../browser'
 import { Result, TypedResult } from '../../lib'
 import { ChainError } from '../chains/ChainErrors'
 import { buildTools } from './buildTools'
+import { handleAICallAPIError } from './handleError'
 import { createProvider, PartialConfig } from './helpers'
 import { UNSUPPORTED_STREAM_MODELS } from './providers/models'
+import { runNoStreamingModels } from './runNoStreamingModels'
 
+const DEFAULT_AI_SDK_PROVIDER = {
+  streamText: originalStreamText,
+  streamObject: originalStreamObject,
+}
+type AISDKProvider = typeof DEFAULT_AI_SDK_PROVIDER
 type AIReturnObject = {
   type: 'object'
   data: Pick<
@@ -49,6 +54,7 @@ export type StreamChunk =
   | TextStreamPart<Record<string, CoreTool>>
   | ObjectStreamPart<unknown>
 
+export type ObjectOutput = 'object' | 'array' | 'no-schema' | undefined
 export async function ai({
   provider: apiProvider,
   prompt,
@@ -57,159 +63,99 @@ export async function ai({
   schema,
   output,
   customLanguageModel,
+  aiSdkProvider,
 }: {
   provider: ProviderApiKey
   config: PartialConfig
   messages: Message[]
   prompt?: string
   schema?: JSONSchema7
-  output?: 'object' | 'array' | 'no-schema' | undefined
   customLanguageModel?: LanguageModel
+  output?: ObjectOutput
+  aiSdkProvider?: Partial<AISDKProvider>
 }): Promise<
   TypedResult<
     AIReturn<StreamType>,
-    ChainError<RunErrorCodes.AIProviderConfigError>
+    ChainError<
+      | RunErrorCodes.AIProviderConfigError
+      | RunErrorCodes.AIRunError
+      | RunErrorCodes.Unknown
+    >
   >
 > {
-  const { provider, token: apiKey, url } = apiProvider
-  const model = config.model
-
-  const languageModelResult = createProvider({
-    messages,
-    provider,
-    apiKey,
-    config,
-    ...(url ? { url } : {}),
-  })
-
-  if (languageModelResult.error) return languageModelResult
-
-  const languageModel = customLanguageModel
-    ? customLanguageModel
-    : languageModelResult.value(model)
-  const toolsResult = buildTools(config.tools)
-  if (toolsResult.error) return toolsResult
-
-  const commonOptions = {
-    ...omit(config, ['schema']),
-    model: languageModel,
-    prompt,
-    messages: messages as CoreMessage[],
-    tools: toolsResult.value,
+  const { streamText, streamObject } = {
+    ...DEFAULT_AI_SDK_PROVIDER,
+    ...(aiSdkProvider || {}),
   }
+  try {
+    const { provider, token: apiKey, url } = apiProvider
+    const model = config.model
 
-  if (UNSUPPORTED_STREAM_MODELS.includes(model)) {
-    if (output && schema) {
-      const result = await generateObject({
+    const languageModelResult = createProvider({
+      messages,
+      provider,
+      apiKey,
+      config,
+      ...(url ? { url } : {}),
+    })
+
+    if (languageModelResult.error) return languageModelResult
+
+    const languageModel = customLanguageModel
+      ? customLanguageModel
+      : languageModelResult.value(model)
+    const toolsResult = buildTools(config.tools)
+    if (toolsResult.error) return toolsResult
+
+    const commonOptions = {
+      ...omit(config, ['schema']),
+      model: languageModel,
+      prompt,
+      messages: messages as CoreMessage[],
+      tools: toolsResult.value,
+    }
+
+    if (UNSUPPORTED_STREAM_MODELS.includes(model)) {
+      return runNoStreamingModels({
+        schema,
+        output,
+        commonOptions,
+      })
+    }
+
+    if (schema && output) {
+      const result = await streamObject({
         ...commonOptions,
         schema: jsonSchema(schema),
+        // output is valid but depending on the type of schema
+        // there might be a mismatch (e.g you pass an object schema but the
+        // output is "array"). Not really an issue we need to defend atm.
         output: output as any,
-      })
-
-      const chunks: StreamChunk[] = [
-        {
-          type: 'object',
-          object: result.object,
-        },
-        {
-          type: 'finish',
-          finishReason: result.finishReason,
-          usage: result.usage,
-          response: result.response,
-        },
-      ]
-
-      const fullStream = new ReadableStream<StreamChunk>({
-        start(controller: any) {
-          chunks.forEach((chunk) => {
-            controller.enqueue(chunk)
-          })
-          controller.close()
-        },
       })
 
       return Result.ok({
         type: 'object',
         data: {
-          fullStream: fullStream as any,
-          object: Promise.resolve(result.object),
-          usage: Promise.resolve(result.usage),
+          fullStream: result.fullStream,
+          object: result.object,
+          usage: result.usage,
         },
       })
     }
 
-    const result = await generateText(commonOptions)
-
-    const chunks: StreamChunk[] = [
-      {
-        type: 'text-delta',
-        textDelta: result.text,
-      },
-      {
-        type: 'finish',
-        finishReason: result.finishReason,
-        usage: result.usage,
-        response: result.response,
-      },
-    ]
-
-    const fullStream = new ReadableStream<StreamChunk>({
-      start(controller: any) {
-        chunks.forEach((chunk) => {
-          controller.enqueue(chunk)
-        })
-        controller.close()
-      },
-    })
-
-    const toolCalls = result.toolCalls.map((toolCall) => ({
-      type: 'tool-call' as const,
-      toolCallId: toolCall.toolCallId,
-      toolName: toolCall.toolName,
-      args: toolCall.args,
-    }))
-
+    const result = await streamText(commonOptions)
     return Result.ok({
       type: 'text',
       data: {
-        fullStream: fullStream as any,
-        text: Promise.resolve(result.text),
-        usage: Promise.resolve(result.usage),
-        toolCalls: Promise.resolve(toolCalls),
-      },
-    })
-  }
-
-  if (schema && output) {
-    const result = await streamObject({
-      ...commonOptions,
-      schema: jsonSchema(schema),
-      // output is valid but depending on the type of schema
-      // there might be a mismatch (e.g you pass an object schema but the
-      // output is "array"). Not really an issue we need to defend atm.
-      output: output as any,
-    })
-
-    return Result.ok({
-      type: 'object',
-      data: {
         fullStream: result.fullStream,
-        object: result.object,
+        text: result.text,
         usage: result.usage,
+        toolCalls: result.toolCalls,
       },
     })
+  } catch (e) {
+    return handleAICallAPIError(e)
   }
-
-  const result = await streamText(commonOptions)
-  return Result.ok({
-    type: 'text',
-    data: {
-      fullStream: result.fullStream,
-      text: result.text,
-      usage: result.usage,
-      toolCalls: result.toolCalls,
-    },
-  })
 }
 
 export { estimateCost } from './estimateCost'

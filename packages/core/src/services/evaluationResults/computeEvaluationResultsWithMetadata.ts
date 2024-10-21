@@ -3,18 +3,21 @@ import { and, desc, eq, getTableColumns, sql, sum } from 'drizzle-orm'
 import { Commit, Evaluation } from '../../browser'
 import { database } from '../../client'
 import {
-  DocumentLogsRepository,
-  EvaluationResultsRepository,
+  DocumentLogsWithErrorsRepository,
+  EvaluationResultsWithErrorsRepository,
 } from '../../repositories'
 import { commits, providerLogs } from '../../schema'
 import { getCommitFilter } from './_createEvaluationResultQuery'
 
 function getRepositoryScopes(workspaceId: number, db = database) {
-  const evaluationResultsScope = new EvaluationResultsRepository(
+  const evaluationResultsScope = new EvaluationResultsWithErrorsRepository(
     workspaceId,
     db,
   ).scope
-  const documentLogsScope = new DocumentLogsRepository(workspaceId, db).scope
+  const documentLogsScope = new DocumentLogsWithErrorsRepository(
+    workspaceId,
+    db,
+  ).scope
   return { evaluationResultsScope, documentLogsScope }
 }
 
@@ -61,6 +64,7 @@ export async function computeEvaluationResultsWithMetadata(
     .select({
       id: evaluationResultsScope.id,
       providerLogId: evaluationResultsScope.providerLogId,
+      error: evaluationResultsScope.error,
     })
     .from(evaluationResultsScope)
     .innerJoin(
@@ -95,7 +99,7 @@ export async function computeEvaluationResultsWithMetadata(
       filteredResultsSubQuery,
       eq(filteredResultsSubQuery.id, evaluationResultsScope.id),
     )
-    .innerJoin(
+    .leftJoin(
       providerLogs,
       eq(providerLogs.id, filteredResultsSubQuery.providerLogId),
     )

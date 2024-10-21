@@ -38,7 +38,7 @@ export const evaluationResultDto = {
 }
 
 export type EvaluationResultDto = EvaluationResult & {
-  result: string | number | boolean
+  result: string | number | boolean | undefined
 }
 
 export type EvaluationResultWithMetadata = EvaluationResultDto & {

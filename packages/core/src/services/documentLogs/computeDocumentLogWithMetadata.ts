@@ -4,13 +4,13 @@ import { DocumentLog } from '../../browser'
 import { database } from '../../client'
 import { findWorkspaceFromDocumentLog } from '../../data-access'
 import { NotFoundError, Result, TypedResult } from '../../lib'
-import { DocumentLogWithMetadata } from '../../repositories/documentLogsRepository'
+import { DocumentLogWithMetadataAndError } from '../../repositories'
 import { createDocumentLogQuery } from './_createDocumentLogQuery'
 
 export async function computeDocumentLogWithMetadata(
   documentLog: DocumentLog,
   db = database,
-): Promise<TypedResult<DocumentLogWithMetadata, Error>> {
+): Promise<TypedResult<DocumentLogWithMetadataAndError, Error>> {
   const workspace = await findWorkspaceFromDocumentLog(documentLog, db)
   if (!workspace) return Result.error(new NotFoundError('Workspace not found'))
 
