@@ -17,6 +17,7 @@ const factory = new Factory()
 const runSchema = z.object({
   path: z.string(),
   stream: z.boolean().default(false),
+  customIdentifier: z.string().optional(),
   parameters: z.record(z.any()).optional().default({}),
   __internal: z
     .object({
@@ -29,7 +30,13 @@ export const runHandler = factory.createHandlers(
   zValidator('json', runSchema),
   async (c) => {
     const { projectId, versionUuid } = c.req.param()
-    const { path, parameters, stream: useSSE, __internal } = c.req.valid('json')
+    const {
+      path,
+      parameters,
+      customIdentifier,
+      stream: useSSE,
+      __internal,
+    } = c.req.valid('json')
     const workspace = c.get('workspace')
     const { document, commit } = await getData({
       workspace,
@@ -43,6 +50,7 @@ export const runHandler = factory.createHandlers(
       document,
       commit,
       parameters,
+      customIdentifier,
       source: __internal?.source ?? LogSources.API,
     }).then((r) => r.unwrap())
 

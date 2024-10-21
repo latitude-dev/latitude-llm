@@ -110,6 +110,7 @@ describe('POST /run', () => {
       body = JSON.stringify({
         path: document.documentVersion.path,
         parameters: {},
+        customIdentifier: 'miau',
         stream: true,
       })
       headers = {

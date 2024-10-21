@@ -93,7 +93,7 @@ describe('run', () => {
   )
 
   it(
-    'sends documentPath and parameters',
+    'sends documentPath and parameters and customIdentifier',
     server.boundary(async () => {
       const mockFn = vi.fn()
       server.use(
@@ -110,10 +110,12 @@ describe('run', () => {
         projectId,
         versionUuid: 'SOME_UUID',
         parameters: { foo: 'bar', lol: 'foo' },
+        customIdentifier: 'miau',
       })
       expect(mockFn).toHaveBeenCalledWith({
         path: 'path/to/document',
         parameters: { foo: 'bar', lol: 'foo' },
+        customIdentifier: 'miau',
         __internal: { source: LogSources.API },
       })
     }),
