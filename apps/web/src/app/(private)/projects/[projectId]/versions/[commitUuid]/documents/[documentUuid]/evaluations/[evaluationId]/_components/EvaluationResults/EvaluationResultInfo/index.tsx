@@ -44,7 +44,7 @@ function DocumentLogInfoModal({
     documentLogId,
   })
   const { data: providerLogs } = useProviderLogs({
-    documentLogId: documentLogId,
+    documentLogUuid: documentLog?.uuid,
   })
   return (
     <Modal
