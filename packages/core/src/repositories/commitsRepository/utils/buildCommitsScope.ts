@@ -1,4 +1,4 @@
-import { eq, getTableColumns } from 'drizzle-orm'
+import { and, eq, getTableColumns, isNull } from 'drizzle-orm'
 
 import { database } from '../../../client'
 import { commits, projects } from '../../../schema'
@@ -10,7 +10,9 @@ export function buildCommitsScope(workspaceId: number, db = database) {
     .select(columnSelection)
     .from(commits)
     .innerJoin(projects, eq(projects.id, commits.projectId))
-    .where(eq(projects.workspaceId, workspaceId))
+    .where(
+      and(isNull(commits.deletedAt), eq(projects.workspaceId, workspaceId)),
+    )
     .as('commitsScope')
 
   return scope

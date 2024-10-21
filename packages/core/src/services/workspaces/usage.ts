@@ -1,5 +1,3 @@
-import { count, gte } from 'drizzle-orm'
-
 import { WorkspaceDto, WorkspaceUsage } from '../../browser'
 import { database } from '../../client'
 import { PromisedResult, Result } from '../../lib'
@@ -28,11 +26,8 @@ export async function computeWorkspaceUsage(
   workspace: WorkspaceDto,
   db = database,
 ): PromisedResult<WorkspaceUsage, Error> {
-  const { scope: documentLogsScope } = new DocumentLogsRepository(
-    workspace.id,
-    db,
-  )
-  const { scope: evaluationResultsScope } = new EvaluationResultsRepository(
+  const documentLogsScope = new DocumentLogsRepository(workspace.id, db)
+  const evaluationResultsScope = new EvaluationResultsRepository(
     workspace.id,
     db,
   )
@@ -41,21 +36,11 @@ export async function computeWorkspaceUsage(
   const currentDate = new Date(Date.now())
   const latestRenewalDate = getLatestRenewalDate(createdAtDate, currentDate)
 
-  const evaluationResultsCount = await db
-    .select({
-      count: count(evaluationResultsScope.id),
-    })
-    .from(evaluationResultsScope)
-    .where(gte(evaluationResultsScope.createdAt, latestRenewalDate))
-    .then((r) => r[0]?.count ?? 0)
+  const evaluationResultsCount =
+    await evaluationResultsScope.totalCountSinceDate(latestRenewalDate)
 
-  const documentLogsCount = await db
-    .select({
-      count: count(documentLogsScope.id),
-    })
-    .from(documentLogsScope)
-    .where(gte(documentLogsScope.createdAt, latestRenewalDate))
-    .then((r) => r[0]?.count ?? 0)
+  const documentLogsCount =
+    await documentLogsScope.totalCountSinceDate(latestRenewalDate)
 
   const claimedRewardsScope = new ClaimedRewardsRepository(workspace.id, db)
   const extraRunsResult = await claimedRewardsScope.getExtraRunsOptimistic()

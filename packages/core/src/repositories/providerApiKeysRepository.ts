@@ -1,4 +1,4 @@
-import { eq, getTableColumns } from 'drizzle-orm'
+import { and, eq, getTableColumns, isNull } from 'drizzle-orm'
 
 import { ProviderApiKey } from '../browser'
 import { NotFoundError, Result } from '../lib'
@@ -15,7 +15,12 @@ export class ProviderApiKeysRepository extends Repository<
     return this.db
       .select(tt)
       .from(providerApiKeys)
-      .where(eq(providerApiKeys.workspaceId, this.workspaceId))
+      .where(
+        and(
+          isNull(providerApiKeys.deletedAt),
+          eq(providerApiKeys.workspaceId, this.workspaceId),
+        ),
+      )
       .as('providerApiKeysScope')
   }
 

@@ -16,6 +16,7 @@ export function EvaluationBreadcrumbItems({
   segments: string[]
 }) {
   const evaluationUuid = segments[0]!
+  const evaluationSegment = segments[1] as EvaluationRoutes | undefined
 
   const { data: evaluations, isLoading } = useEvaluations()
   const currentEvaluation = useMemo(
@@ -25,14 +26,17 @@ export function EvaluationBreadcrumbItems({
 
   const options = useMemo<BreadcrumbSelectorOption[]>(() => {
     if (!evaluations) return []
-    return evaluations.map((p) => ({
-      label: p.name,
-      href: segments[1]
-        ? ROUTES.evaluations.detail({ uuid: p.uuid })[
-            segments[1] as EvaluationRoutes
-          ].root
-        : ROUTES.evaluations.detail({ uuid: p.uuid }).root,
-    }))
+    return evaluations.map((p) => {
+      const baseRoute = ROUTES.evaluations.detail({ uuid: p.uuid })
+      const href = evaluationSegment
+        ? (baseRoute[evaluationSegment]?.root ?? baseRoute.root)
+        : baseRoute.root
+
+      return {
+        label: p.name,
+        href,
+      }
+    })
   }, [evaluations, segments])
 
   return (

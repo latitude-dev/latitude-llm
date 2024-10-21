@@ -1,9 +1,13 @@
 import { env } from 'process'
 
+import { eq } from 'drizzle-orm'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { Providers, User, Workspace } from '../../browser'
+import { database } from '../../client'
 import { BadRequestError } from '../../lib'
+import { ProviderApiKeysRepository } from '../../repositories'
+import { providerApiKeys } from '../../schema'
 import { createProject, createProviderApiKey } from '../../tests/factories'
 import { destroyProviderApiKey } from './destroy'
 
@@ -23,7 +27,7 @@ describe('destroyProviderApiKey', () => {
     user = u
   })
 
-  it('should not allow deleting the default provider API key', async () => {
+  it('does not allow deleting the default provider API key', async () => {
     const provider = await createProviderApiKey({
       workspace,
       user,
@@ -41,18 +45,30 @@ describe('destroyProviderApiKey', () => {
     )
   })
 
-  it('should allow deleting a non-default provider API key', async () => {
+  it('deletes a non-default provider API key', async () => {
+    const secretToken = 'non-default-api-key'
     const provider = await createProviderApiKey({
       workspace,
       user,
       name: 'Non-Default Provider',
       type: Providers.OpenAI,
-      token: 'non-default-api-key',
+      token: secretToken,
     })
 
     const result = await destroyProviderApiKey(provider)
 
     expect(result.ok).toBe(true)
-    expect(result.value).toEqual(provider)
+
+    const providersScope = new ProviderApiKeysRepository(workspace.id)
+    const providers = await providersScope.findAll().then((r) => r.unwrap())
+
+    expect(providers.map((p) => p.id)).not.toContain(provider.id)
+
+    const removedProvidedData = await database.query.providerApiKeys.findFirst({
+      where: eq(providerApiKeys.id, provider.id),
+    })
+
+    expect(removedProvidedData).toBeDefined()
+    expect(removedProvidedData?.token).not.toBe(secretToken)
   })
 })

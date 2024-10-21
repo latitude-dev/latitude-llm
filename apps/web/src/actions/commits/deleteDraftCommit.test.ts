@@ -5,8 +5,8 @@ import {
   type User,
   type Workspace,
 } from '@latitude-data/core/browser'
-import { database } from '@latitude-data/core/client'
 import * as factories from '@latitude-data/core/factories'
+import { DocumentVersionsRepository } from '@latitude-data/core/repositories'
 import { deleteDraftCommitAction } from '$/actions/commits/deleteDraftCommitAction'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -102,11 +102,15 @@ describe('deleteDraftCommitAction', () => {
         id: draft.id,
       })
 
-      expect(data).toEqual(draft)
+      expect(data?.id).toEqual(draft.id)
     })
 
     it('deletes associated documents with draft commit', async () => {
-      const before = await database.query.documentVersions.findMany()
+      const documentVersionsScope = new DocumentVersionsRepository(workspace.id)
+
+      const before = await documentVersionsScope
+        .findAll()
+        .then((r) => r.unwrap())
 
       const { commit: draft } = await factories.createDraft({
         project,
@@ -136,7 +140,9 @@ describe('deleteDraftCommitAction', () => {
         id: draft.id,
       })
 
-      const after = await database.query.documentVersions.findMany()
+      const after = await documentVersionsScope
+        .findAll()
+        .then((r) => r.unwrap())
 
       expect(after.length - before.length).toEqual(1)
     })

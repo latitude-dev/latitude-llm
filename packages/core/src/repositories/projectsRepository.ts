@@ -66,7 +66,7 @@ export class ProjectsRepository extends Repository<typeof tt, Project> {
           maxVersion: max(commits.version).as('maxVersion'),
         })
         .from(commits)
-        .where(isNotNull(commits.mergedAt))
+        .where(and(isNull(commits.deletedAt), isNotNull(commits.mergedAt)))
         .groupBy(commits.projectId),
     )
     const aggredatedData = this.db.$with('aggredatedData').as(

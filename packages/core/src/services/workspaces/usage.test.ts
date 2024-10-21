@@ -2,7 +2,8 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { DocumentLog, WorkspaceDto } from '../../browser'
 import { Providers } from '../../constants'
-import { connectEvaluations } from '../evaluations'
+import { deleteCommitDraft } from '../commits'
+import { connectEvaluations, destroyEvaluation } from '../evaluations'
 import { computeWorkspaceUsage, getLatestRenewalDate } from './usage'
 
 describe('computeWorkspaceUsage', () => {
@@ -311,6 +312,70 @@ describe('computeWorkspaceUsage', () => {
 
     const documentLogs = [...document1Logs, ...document2Logs]
     const evaluationLogs = [...evaluation1Logs, ...evaluation2Logs]
+
+    const result = await computeWorkspaceUsage(workspace as WorkspaceDto).then(
+      (r) => r.unwrap(),
+    )
+
+    expect(result.usage).toBe(documentLogs.length + evaluationLogs.length)
+  })
+
+  it('takes logs from removed commits and evaluations into account', async (ctx) => {
+    const { user, workspace, project, documents, evaluations } =
+      await ctx.factories.createProject({
+        providers: [{ type: Providers.OpenAI, name: 'test' }],
+        documents: {
+          foo: ctx.factories.helpers.createPrompt({ provider: 'test' }),
+        },
+        evaluations: [
+          { prompt: ctx.factories.helpers.createPrompt({ provider: 'test' }) },
+        ],
+      })
+
+    const { commit: draft } = await ctx.factories.createDraft({ project, user })
+
+    const NUM_DOC_LOGS = 5
+    const NUM_EVAL_LOGS = 5
+
+    const document = documents[0]!
+    const evaluation = evaluations[0]!
+    await connectEvaluations({
+      user,
+      workspace,
+      documentUuid: document.documentUuid,
+      evaluationUuids: [evaluation.uuid],
+    })
+
+    // Create document logs
+    const documentLogs: DocumentLog[] = await Promise.all(
+      Array(NUM_DOC_LOGS)
+        .fill(null)
+        .map(() =>
+          ctx.factories
+            .createDocumentLog({
+              document,
+              commit: draft,
+            })
+            .then((r) => r.documentLog),
+        ),
+    )
+
+    const evaluationLogs = await Promise.all(
+      Array(NUM_EVAL_LOGS)
+        .fill(null)
+        .map((_, idx) =>
+          ctx.factories
+            .createEvaluationResult({
+              documentLog: documentLogs[idx % documentLogs.length]!,
+              evaluation,
+            })
+            .then((r) => r.evaluationResult),
+        ),
+    )
+
+    // Remove commit and evaluation
+    await deleteCommitDraft(draft)
+    await destroyEvaluation({ evaluation })
 
     const result = await computeWorkspaceUsage(workspace as WorkspaceDto).then(
       (r) => r.unwrap(),

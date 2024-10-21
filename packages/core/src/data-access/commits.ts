@@ -1,4 +1,4 @@
-import { and, desc, eq, isNotNull } from 'drizzle-orm'
+import { and, desc, eq, isNotNull, isNull } from 'drizzle-orm'
 
 import { Commit, HEAD_COMMIT } from '../browser'
 import { database } from '../client'
@@ -13,7 +13,13 @@ export async function findHeadCommit(
   const result = await tx
     .select()
     .from(commits)
-    .where(and(isNotNull(commits.mergedAt), eq(commits.projectId, projectId)))
+    .where(
+      and(
+        isNull(commits.deletedAt),
+        isNotNull(commits.mergedAt),
+        eq(commits.projectId, projectId),
+      ),
+    )
     .orderBy(desc(commits.mergedAt))
     .limit(1)
 
@@ -61,10 +67,6 @@ export async function findCommitById(
   if (!commit) return Result.error(new NotFoundError('Commit not found'))
 
   return Result.ok(commit)
-}
-
-export async function listCommits() {
-  return database.select().from(commits)
 }
 
 export async function unsafelyFindCommitsByProjectId(

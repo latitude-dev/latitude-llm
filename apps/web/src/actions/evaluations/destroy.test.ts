@@ -108,7 +108,7 @@ describe('destroyEvaluationAction', () => {
       expect(error!.message).toEqual('Evaluation not found')
     })
 
-    it('should throw a user-friendly error when trying to delete an evaluation connected to a document', async () => {
+    it('works even when trying to delete an evaluation connected to a document', async () => {
       const { documents } = await factories.createProject({
         workspace,
         documents: {
@@ -130,12 +130,10 @@ describe('destroyEvaluationAction', () => {
         documentUuid: document.documentUuid,
       })
 
-      const [_, error] = await destroyEvaluationAction({ id: evaluation.id })
+      const [data, error] = await destroyEvaluationAction({ id: evaluation.id })
 
-      expect(error).not.toBeNull()
-      expect(error!.message).toEqual(
-        'Cannot delete evaluation because it is still used in at least one project',
-      )
+      expect(error).toBeNull()
+      expect(data?.id).toEqual(evaluation.id)
     })
   })
 })

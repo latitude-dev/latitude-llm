@@ -1,4 +1,4 @@
-import { and, eq, getTableColumns, isNull } from 'drizzle-orm'
+import { and, count, eq, getTableColumns, gte, isNull } from 'drizzle-orm'
 
 import { Commit, DocumentLog, ErrorableEntity } from '../../browser'
 import { NotFoundError, Result } from '../../lib'
@@ -25,7 +25,10 @@ export class DocumentLogsRepository extends Repository<typeof tt, DocumentLog> {
     return this.db
       .select(tt)
       .from(documentLogs)
-      .innerJoin(commits, eq(commits.id, documentLogs.commitId))
+      .innerJoin(
+        commits,
+        and(isNull(commits.deletedAt), eq(commits.id, documentLogs.commitId)),
+      )
       .innerJoin(projects, eq(projects.id, commits.projectId))
       .innerJoin(workspaces, eq(workspaces.id, projects.workspaceId))
       .leftJoin(
@@ -52,5 +55,31 @@ export class DocumentLogsRepository extends Repository<typeof tt, DocumentLog> {
     }
 
     return Result.ok(result[0]!)
+  }
+
+  async totalCountSinceDate(minDate: Date) {
+    const result = await this.db
+      .select({
+        count: count(documentLogs.id),
+      })
+      .from(documentLogs)
+      .innerJoin(commits, eq(commits.id, documentLogs.commitId))
+      .innerJoin(
+        projects,
+        and(
+          eq(projects.id, commits.projectId),
+          eq(projects.workspaceId, this.workspaceId),
+        ),
+      )
+      .leftJoin(
+        runErrors,
+        and(
+          eq(runErrors.errorableUuid, documentLogs.uuid),
+          eq(runErrors.errorableType, ErrorableEntity.DocumentLog),
+        ),
+      )
+      .where(and(isNull(runErrors.id), gte(documentLogs.createdAt, minDate)))
+
+    return result[0]?.count ?? 0
   }
 }

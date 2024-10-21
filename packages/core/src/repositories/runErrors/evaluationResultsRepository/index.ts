@@ -1,4 +1,4 @@
-import { and, eq, sql } from 'drizzle-orm'
+import { and, eq, isNull, sql } from 'drizzle-orm'
 
 import { ErrorableEntity, EvaluationResultableType } from '../../../browser'
 import {
@@ -48,7 +48,10 @@ export class EvaluationResultsWithErrorsRepository extends Repository<
       .from(evaluationResults)
       .innerJoin(
         evaluations,
-        eq(evaluations.id, evaluationResults.evaluationId),
+        and(
+          isNull(evaluations.deletedAt),
+          eq(evaluations.id, evaluationResults.evaluationId),
+        ),
       )
       .leftJoin(
         evaluationResultableBooleans,

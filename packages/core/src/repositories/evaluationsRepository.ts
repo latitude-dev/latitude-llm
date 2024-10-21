@@ -1,6 +1,6 @@
 import { omit } from 'lodash-es'
 
-import { and, eq, getTableColumns, inArray, sql } from 'drizzle-orm'
+import { and, eq, getTableColumns, inArray, isNull, sql } from 'drizzle-orm'
 
 import { EvaluationDto } from '../browser'
 import { EvaluationMetadataType } from '../constants'
@@ -38,6 +38,7 @@ export class EvaluationsRepository extends Repository<
       .innerJoin(
         llmAsJudgeEvaluationMetadatas,
         and(
+          isNull(evaluations.deletedAt),
           eq(evaluations.metadataId, llmAsJudgeEvaluationMetadatas.id),
           eq(evaluations.metadataType, EvaluationMetadataType.LlmAsJudge),
         ),

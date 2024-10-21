@@ -33,6 +33,7 @@ export const commits = latitudeSchema.table(
       .notNull()
       .references(() => users.id, { onDelete: 'set null' }),
     mergedAt: timestamp('merged_at'),
+    deletedAt: timestamp('deleted_at'),
     ...timestamps(),
   },
   (table) => ({
