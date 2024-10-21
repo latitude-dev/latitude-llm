@@ -50,6 +50,7 @@ export default function Chat({
   const [chainLength, setChainLength] = useState<number>(Infinity)
   const [conversation, setConversation] = useState<Conversation | undefined>()
   const [responseStream, setResponseStream] = useState<string | undefined>()
+  const [isStreaming, setIsStreaming] = useState(false)
 
   const addMessageToConversation = useCallback(
     (message: ConversationMessage) => {
@@ -69,7 +70,7 @@ export default function Chat({
   const runEvaluation = useCallback(async () => {
     setError(undefined)
     setResponseStream(undefined)
-
+    setIsStreaming(true)
     let response = ''
     let messagesCount = 0
 
@@ -101,9 +102,11 @@ export default function Chat({
           } else if (data.type === ChainEventTypes.Complete) {
             setResponseStream(undefined)
             setUsage(data.response.usage)
+            setIsStreaming(false)
             setEndTime(performance.now())
           } else if (data.type === ChainEventTypes.Error) {
             setError(new Error(data.error.message))
+            setIsStreaming(false)
           }
           break
         }
@@ -119,6 +122,7 @@ export default function Chat({
           break
       }
     }
+    setIsStreaming(false)
   }, [parameters, runPromptAction])
 
   useEffect(() => {
@@ -168,11 +172,16 @@ export default function Chat({
         <TokenUsage
           isScrolledToBottom={isScrolledToBottom}
           usage={usage}
-          responseStream={responseStream}
+          isStreaming={isStreaming}
         />
       </div>
       <div className='flex items-center justify-center'>
-        <Button fancy variant='outline' onClick={clearChat}>
+        <Button
+          disabled={isStreaming}
+          fancy
+          variant='outline'
+          onClick={clearChat}
+        >
           Clear chat
         </Button>
       </div>

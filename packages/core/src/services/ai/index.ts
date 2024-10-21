@@ -4,7 +4,10 @@ import { Message } from '@latitude-data/compiler'
 import {
   CoreMessage,
   CoreTool,
+  generateObject,
+  generateText,
   jsonSchema,
+  LanguageModel,
   ObjectStreamPart,
   streamObject,
   StreamObjectResult,
@@ -19,6 +22,7 @@ import { Result, TypedResult } from '../../lib'
 import { ChainError } from '../chains/ChainErrors'
 import { buildTools } from './buildTools'
 import { createProvider, PartialConfig } from './helpers'
+import { UNSUPPORTED_STREAM_MODELS } from './providers/models'
 
 type AIReturnObject = {
   type: 'object'
@@ -52,6 +56,7 @@ export async function ai({
   config,
   schema,
   output,
+  customLanguageModel,
 }: {
   provider: ProviderApiKey
   config: PartialConfig
@@ -59,6 +64,7 @@ export async function ai({
   prompt?: string
   schema?: JSONSchema7
   output?: 'object' | 'array' | 'no-schema' | undefined
+  customLanguageModel?: LanguageModel
 }): Promise<
   TypedResult<
     AIReturn<StreamType>,
@@ -78,7 +84,9 @@ export async function ai({
 
   if (languageModelResult.error) return languageModelResult
 
-  const languageModel = languageModelResult.value(model)
+  const languageModel = customLanguageModel
+    ? customLanguageModel
+    : languageModelResult.value(model)
   const toolsResult = buildTools(config.tools)
   if (toolsResult.error) return toolsResult
 
@@ -88,6 +96,88 @@ export async function ai({
     prompt,
     messages: messages as CoreMessage[],
     tools: toolsResult.value,
+  }
+
+  if (UNSUPPORTED_STREAM_MODELS.includes(model)) {
+    if (output && schema) {
+      const result = await generateObject({
+        ...commonOptions,
+        schema: jsonSchema(schema),
+        output: output as any,
+      })
+
+      const chunks: StreamChunk[] = [
+        {
+          type: 'object',
+          object: result.object,
+        },
+        {
+          type: 'finish',
+          finishReason: result.finishReason,
+          usage: result.usage,
+          response: result.response,
+        },
+      ]
+
+      const fullStream = new ReadableStream<StreamChunk>({
+        start(controller: any) {
+          chunks.forEach((chunk) => {
+            controller.enqueue(chunk)
+          })
+          controller.close()
+        },
+      })
+
+      return Result.ok({
+        type: 'object',
+        data: {
+          fullStream: fullStream as any,
+          object: Promise.resolve(result.object),
+          usage: Promise.resolve(result.usage),
+        },
+      })
+    }
+
+    const result = await generateText(commonOptions)
+
+    const chunks: StreamChunk[] = [
+      {
+        type: 'text-delta',
+        textDelta: result.text,
+      },
+      {
+        type: 'finish',
+        finishReason: result.finishReason,
+        usage: result.usage,
+        response: result.response,
+      },
+    ]
+
+    const fullStream = new ReadableStream<StreamChunk>({
+      start(controller: any) {
+        chunks.forEach((chunk) => {
+          controller.enqueue(chunk)
+        })
+        controller.close()
+      },
+    })
+
+    const toolCalls = result.toolCalls.map((toolCall) => ({
+      type: 'tool-call' as const,
+      toolCallId: toolCall.toolCallId,
+      toolName: toolCall.toolName,
+      args: toolCall.args,
+    }))
+
+    return Result.ok({
+      type: 'text',
+      data: {
+        fullStream: fullStream as any,
+        text: Promise.resolve(result.text),
+        usage: Promise.resolve(result.usage),
+        toolCalls: Promise.resolve(toolCalls),
+      },
+    })
   }
 
   if (schema && output) {

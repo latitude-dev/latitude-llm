@@ -10,6 +10,10 @@ export enum Providers {
 const OPEN_AI_MODELS = {
   'gpt-4o-mini': 'gpt-4o-mini',
   'gpt-4o': 'gpt-4o',
+  'o1-preview': 'o1-preview',
+  'o1-preview-2024-09-12': 'o1-preview-2024-09-12',
+  'o1-mini': 'o1-mini',
+  'o1-mini-2024-09-12	': 'o1-mini-2024-09-12',
   'gpt-4': 'gpt-4',
   'gpt-4-32k': 'gpt-4-32k',
   'gpt-4o-2024-08-06': 'gpt-4o-2024-08-06',
@@ -67,6 +71,13 @@ export const PROVIDER_MODELS: Partial<
   },
   [Providers.Custom]: {},
 }
+
+export const UNSUPPORTED_STREAM_MODELS = [
+  'o1-preview',
+  'o1-preview-2024-09-12',
+  'o1-mini',
+  'o1-mini-2024-09-12',
+]
 
 export function findFirstModelForProvider(provider: Providers) {
   return Object.keys(PROVIDER_MODELS[provider] ?? {})[0]

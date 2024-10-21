@@ -60,6 +60,7 @@ export default function Chat({
   const [chainLength, setChainLength] = useState<number>(Infinity)
   const [conversation, setConversation] = useState<Conversation | undefined>()
   const [responseStream, setResponseStream] = useState<string | undefined>()
+  const [isStreaming, setIsStreaming] = useState(false)
 
   const addMessageToConversation = useCallback(
     (message: ConversationMessage) => {
@@ -80,7 +81,12 @@ export default function Chat({
     const start = performance.now()
     setError(undefined)
     setResponseStream('')
-
+    setIsStreaming(true)
+    setUsage({
+      promptTokens: 0,
+      completionTokens: 0,
+      totalTokens: 0,
+    })
     let response = ''
     let messagesCount = 0
 
@@ -136,6 +142,7 @@ export default function Chat({
     } catch (error) {
       setError(error as Error)
     } finally {
+      setIsStreaming(false)
       setResponseStream(undefined)
     }
   }, [
@@ -258,12 +265,12 @@ export default function Chat({
         <TokenUsage
           isScrolledToBottom={isScrolledToBottom}
           usage={usage}
-          responseStream={responseStream}
+          isStreaming={isStreaming}
         />
         <ChatTextArea
           clearChat={clearChat}
           placeholder='Enter followup message...'
-          disabled={responseStream !== undefined}
+          disabled={isStreaming}
           onSubmit={submitUserMessage}
         />
       </div>
@@ -290,13 +297,13 @@ export function AnimatedDots() {
 export function TokenUsage({
   isScrolledToBottom,
   usage,
-  responseStream,
+  isStreaming,
 }: {
   isScrolledToBottom: boolean
   usage: LanguageModelUsage | undefined
-  responseStream: string | undefined
+  isStreaming: boolean
 }) {
-  if (!usage && responseStream === undefined) return null
+  if (!usage && isStreaming) return null
 
   return (
     <div
@@ -307,7 +314,7 @@ export function TokenUsage({
         },
       )}
     >
-      {responseStream === undefined ? (
+      {!isStreaming && usage ? (
         <Tooltip
           side='top'
           align='center'
