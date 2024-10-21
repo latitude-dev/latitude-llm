@@ -6,6 +6,7 @@ import {
   type EvaluationResultWithMetadataAndErrors,
 } from '@latitude-data/core/repositories'
 import { Button, Icon, Modal, ReactStateDispatch } from '@latitude-data/web-ui'
+import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
 import useProviderLogs from '$/stores/providerLogs'
 import useSWR from 'swr'
@@ -18,27 +19,16 @@ import { EvaluationResultMetadata } from './Metadata'
 type MaybeDocumentLog = number | null | undefined
 
 function useFetchDocumentLog({ documentLogId }: { documentLogId: number }) {
+  const fetcher = useFetcher(
+    ROUTES.api.documentLogs.detail({ id: documentLogId }).root,
+  )
   const {
     data: documentLog,
     isLoading,
     error,
   } = useSWR<DocumentLogWithMetadataAndError>(
     ['documentLogs', documentLogId],
-    useCallback(async () => {
-      const response = await fetch(
-        ROUTES.api.documentLogs.detail({ id: documentLogId }).root,
-        {
-          credentials: 'include',
-        },
-      )
-
-      if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.message)
-      }
-
-      return response.json()
-    }, [documentLogId]),
+    fetcher,
   )
   return { documentLog, isLoading, error }
 }
