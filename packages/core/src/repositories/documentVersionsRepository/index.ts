@@ -3,6 +3,7 @@ import {
   eq,
   getTableColumns,
   isNotNull,
+  isNull,
   lte,
   max,
   notInArray,
@@ -53,7 +54,13 @@ export class DocumentVersionsRepository extends Repository<
     return this.db
       .select(tt)
       .from(documentVersions)
-      .innerJoin(commits, eq(commits.id, documentVersions.commitId))
+      .innerJoin(
+        commits,
+        and(
+          eq(commits.id, documentVersions.commitId),
+          isNull(commits.deletedAt),
+        ),
+      )
       .innerJoin(projects, eq(projects.id, commits.projectId))
       .where(eq(projects.workspaceId, this.workspaceId))
       .as('documentVersionsScope')

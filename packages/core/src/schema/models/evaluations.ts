@@ -4,6 +4,7 @@ import {
   index,
   jsonb,
   text,
+  timestamp,
   uuid,
   varchar,
 } from 'drizzle-orm/pg-core'
@@ -33,6 +34,7 @@ export const evaluations = latitudeSchema.table(
     workspaceId: bigint('workspace_id', { mode: 'number' })
       .notNull()
       .references(() => workspaces.id, { onDelete: 'cascade' }),
+    deletedAt: timestamp('deleted_at'),
     ...timestamps(),
   },
   (table) => ({

@@ -14,7 +14,8 @@ import { assertCommitIsDraft } from '../../lib/assertCommitIsDraft'
 import { commits } from '../../schema'
 
 export async function deleteCommitDraft(commit: Commit, db = database) {
-  assertCommitIsDraft(commit).unwrap()
+  const assertionResult = assertCommitIsDraft(commit)
+  if (assertionResult.error) return assertionResult
 
   return Transaction.call<Commit>(async (tx) => {
     try {
@@ -29,7 +30,8 @@ export async function deleteCommitDraft(commit: Commit, db = database) {
       }
 
       const deleted = await tx
-        .delete(commits)
+        .update(commits)
+        .set({ deletedAt: new Date() })
         .where(eq(commits.id, commit.id))
         .returning()
 

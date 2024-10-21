@@ -152,6 +152,7 @@ export class CommitsRepository extends Repository<
         mergedAt: this.scope.mergedAt,
         createdAt: this.scope.createdAt,
         updatedAt: this.scope.updatedAt,
+        deletedAt: this.scope.deletedAt,
       })
       .from(this.scope)
       .where(and(eq(this.scope.projectId, project.id), filter))

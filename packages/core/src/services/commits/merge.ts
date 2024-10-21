@@ -1,4 +1,4 @@
-import { and, desc, eq, isNotNull } from 'drizzle-orm'
+import { and, desc, eq, isNotNull, isNull } from 'drizzle-orm'
 
 import { Commit } from '../../browser'
 import { database } from '../../client'
@@ -20,6 +20,7 @@ export async function mergeCommit(commit: Commit, db = database) {
       .from(commits)
       .where(
         and(
+          isNull(commits.deletedAt),
           eq(commits.projectId, commit.projectId),
           eq(commits.mergedAt, mergedAt),
         ),

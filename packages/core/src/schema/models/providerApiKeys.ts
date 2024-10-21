@@ -39,6 +39,7 @@ export const providerApiKeys = latitudeSchema.table(
       .notNull()
       .references(() => workspaces.id),
     lastUsedAt: timestamp('last_used_at'),
+    deletedAt: timestamp('deleted_at'),
     ...timestamps(),
   },
   (table) => ({

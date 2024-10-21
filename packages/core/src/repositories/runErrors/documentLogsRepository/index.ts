@@ -1,4 +1,4 @@
-import { and, eq, getTableColumns, sql } from 'drizzle-orm'
+import { and, eq, getTableColumns, isNull, sql } from 'drizzle-orm'
 
 import { ErrorableEntity } from '../../../browser'
 import { NotFoundError, Result } from '../../../lib'
@@ -33,7 +33,10 @@ export class DocumentLogsWithErrorsRepository extends Repository<
     return this.db
       .select(tt)
       .from(documentLogs)
-      .innerJoin(commits, eq(commits.id, documentLogs.commitId))
+      .innerJoin(
+        commits,
+        and(eq(commits.id, documentLogs.commitId), isNull(commits.deletedAt)),
+      )
       .innerJoin(projects, eq(projects.id, commits.projectId))
       .innerJoin(workspaces, eq(workspaces.id, projects.workspaceId))
       .leftJoin(
