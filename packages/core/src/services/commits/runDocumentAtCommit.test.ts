@@ -315,5 +315,30 @@ This is a test document
 
       expect(createDocumentLogSpy).toHaveResolvedWith(expect.any(Ok))
     })
+
+    it('creates a document log with custom identifier', async () => {
+      const { workspace, document, commit } = await buildData({
+        doc1Content: dummyDoc1Content,
+      })
+      const parameters = { testParam: 'testValue' }
+      const { response } = await runDocumentAtCommit({
+        workspace,
+        document,
+        commit,
+        parameters,
+        customIdentifier: 'custom-identifier',
+        source: LogSources.API,
+      }).then((r) => r.unwrap())
+
+      // Wait for the response promise to resolve
+      await response
+
+      expect(createDocumentLogSpy).toHaveResolvedWith(expect.any(Ok))
+      expect(
+        createDocumentLogSpy.mock.calls[
+          createDocumentLogSpy.mock.calls.length - 1
+        ]![0].data.customIdentifier,
+      ).toEqual('custom-identifier')
+    })
   })
 })

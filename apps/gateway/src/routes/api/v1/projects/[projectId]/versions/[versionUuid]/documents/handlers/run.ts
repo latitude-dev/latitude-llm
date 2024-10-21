@@ -13,6 +13,7 @@ const factory = new Factory()
 
 const runSchema = z.object({
   path: z.string(),
+  customIdentifier: z.string().optional(),
   parameters: z.record(z.any()).optional().default({}),
   __internal: z
     .object({
@@ -28,7 +29,8 @@ export const runHandler = factory.createHandlers(
       c,
       async (stream) => {
         const { projectId, versionUuid } = c.req.param()
-        const { path, parameters, __internal } = c.req.valid('json')
+        const { path, parameters, customIdentifier, __internal } =
+          c.req.valid('json')
         const workspace = c.get('workspace')
         const { document, commit } = await getData({
           workspace,
@@ -41,6 +43,7 @@ export const runHandler = factory.createHandlers(
           document,
           commit,
           parameters,
+          customIdentifier,
           source: __internal?.source ?? LogSources.API,
         }).then((r) => r.unwrap())
 

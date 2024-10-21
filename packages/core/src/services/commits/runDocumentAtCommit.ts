@@ -21,6 +21,7 @@ export async function createDocumentRunResult({
   errorableUuid,
   parameters,
   resolvedContent,
+  customIdentifier,
   publishEvent,
   source,
   response,
@@ -61,6 +62,7 @@ export async function createDocumentRunResult({
     commit,
     data: {
       documentUuid: document.documentUuid,
+      customIdentifier,
       duration: durantionInMs,
       parameters,
       resolvedContent,
@@ -75,12 +77,14 @@ export async function runDocumentAtCommit({
   document,
   parameters,
   commit,
+  customIdentifier,
   source,
 }: {
   workspace: Workspace
   document: DocumentVersion
   parameters: Record<string, unknown>
   commit: Commit
+  customIdentifier?: string
   source: LogSources
 }) {
   const errorableType = ErrorableEntity.DocumentLog
@@ -142,11 +146,13 @@ export async function runDocumentAtCommit({
         errorableUuid,
         parameters,
         resolvedContent: result.value,
+        customIdentifier,
         source,
         response,
         duration: await run.duration,
         publishEvent: !response.error,
       })
+
       return response
     }),
   })

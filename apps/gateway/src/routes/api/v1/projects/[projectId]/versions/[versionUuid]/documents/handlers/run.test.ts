@@ -109,6 +109,7 @@ describe('POST /run', () => {
       body = JSON.stringify({
         path: document.documentVersion.path,
         parameters: {},
+        customIdentifier: 'miau',
       })
       headers = {
         Authorization: `Bearer ${token}`,
