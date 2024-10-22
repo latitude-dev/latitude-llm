@@ -1,4 +1,4 @@
-import { and, desc, eq, or } from 'drizzle-orm'
+import { desc, eq, or } from 'drizzle-orm'
 
 import { Commit, Evaluation } from '../../browser'
 import { database } from '../../client'
@@ -75,31 +75,34 @@ export async function computeEvaluationResultsByDocumentContent(
     db,
   )
 
+  const filteredEvaluationResults = db
+    .select()
+    .from(evaluationResultsScope)
+    .where(eq(evaluationResultsScope.evaluationId, evaluation.id))
+    .as('filteredEvaluationResults')
+
   const rows = await db
     .select({
-      id: evaluationResultsScope.id,
-      source: evaluationResultsScope.source,
-      result: evaluationResultsScope.result,
-      createdAt: evaluationResultsScope.createdAt,
+      id: filteredEvaluationResults.id,
+      source: filteredEvaluationResults.source,
+      result: filteredEvaluationResults.result,
+      createdAt: filteredEvaluationResults.createdAt,
     })
-    .from(evaluationResultsScope)
+    .from(filteredEvaluationResults)
     .innerJoin(
       documentLogsScope,
-      eq(documentLogsScope.id, evaluationResultsScope.documentLogId),
+      eq(documentLogsScope.id, filteredEvaluationResults.documentLogId),
     )
     .innerJoin(commits, eq(commits.id, documentLogsScope.commitId))
     .where(
-      and(
-        eq(evaluationResultsScope.evaluationId, evaluation.id),
-        or(
-          eq(documentLogsScope.contentHash, hashContent(resolvedContent)),
-          eq(commits.id, commit.id),
-        ),
+      or(
+        eq(documentLogsScope.contentHash, hashContent(resolvedContent)),
+        eq(commits.id, commit.id),
       ),
     )
     .orderBy(
-      desc(evaluationResultsScope.createdAt),
-      desc(evaluationResultsScope.id),
+      desc(filteredEvaluationResults.createdAt),
+      desc(filteredEvaluationResults.id),
     )
     .limit(pageSize)
     .offset(offset)

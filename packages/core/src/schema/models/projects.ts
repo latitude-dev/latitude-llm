@@ -23,5 +23,6 @@ export const projects = latitudeSchema.table(
   },
   (table) => ({
     projectWorkspaceIdx: index('workspace_idx').on(table.workspaceId),
+    deletedAt: index('projects_deleted_at_idx').on(table.deletedAt),
   }),
 )

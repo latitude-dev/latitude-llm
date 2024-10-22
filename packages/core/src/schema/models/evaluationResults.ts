@@ -44,5 +44,8 @@ export const evaluationResults = latitudeSchema.table(
       table.resultableId,
       table.resultableType,
     ),
+    createdAtIdx: index('evaluation_results_created_at_idx').on(
+      table.createdAt,
+    ),
   }),
 )
