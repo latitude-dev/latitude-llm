@@ -6,7 +6,7 @@ import {
   StreamEventTypes,
   Workspace,
 } from '@latitude-data/core/browser'
-import { database } from '@latitude-data/core/client'
+import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/data-access'
 import {
   createDocumentVersion,
   createDraft,
@@ -14,11 +14,9 @@ import {
   helpers,
 } from '@latitude-data/core/factories'
 import { Result } from '@latitude-data/core/lib/Result'
-import { apiKeys } from '@latitude-data/core/schema'
 import { mergeCommit } from '@latitude-data/core/services/commits/merge'
 import { parseSSEvent } from '$/common/parseSSEEvent'
 import app from '$/routes/app'
-import { eq } from 'drizzle-orm'
 import { testConsumeStream } from 'test/helpers'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -86,10 +84,9 @@ describe('POST /run', () => {
       } = await createProject()
       project = prj
       workspace = wsp
-      // TODO: move to core
-      const apikey = await database.query.apiKeys.findFirst({
-        where: eq(apiKeys.workspaceId, workspace.id),
-      })
+      const apikey = await unsafelyGetFirstApiKeyByWorkspaceId({
+        workspaceId: workspace.id,
+      }).then((r) => r.unwrap())
       token = apikey?.token!
       const path = '/path/to/document'
       const { commit: cmt } = await createDraft({
@@ -243,10 +240,9 @@ describe('POST /run', () => {
       } = await createProject()
       project = prj
       workspace = wsp
-      // TODO: move to core
-      const apikey = await database.query.apiKeys.findFirst({
-        where: eq(apiKeys.workspaceId, workspace.id),
-      })
+      const apikey = await unsafelyGetFirstApiKeyByWorkspaceId({
+        workspaceId: workspace.id,
+      }).then((r) => r.unwrap())
       token = apikey?.token!
       const path = '/path/to/document'
       const { commit: cmt } = await createDraft({

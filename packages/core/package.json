@@ -12,6 +12,7 @@
     "./events/*": "./src/events/*.ts",
     "./factories": "./src/tests/factories/index.ts",
     "./jobs": "./src/jobs/index.ts",
+    "./data-access/*": "./src/data-access/*.ts",
     "./jobs/constants": "./src/jobs/constants.ts",
     "./jobs/definitions": "./src/jobs/job-definitions/index.ts",
     "./lib/*": "./src/lib/*.ts",

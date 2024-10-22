@@ -35,7 +35,6 @@ export const runPromptAction = authProcedure
 
       return {
         output: stream.value,
-        response: run.response,
       }
     } catch (error) {
       stream.error(error)

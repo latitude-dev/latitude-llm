@@ -5,13 +5,11 @@ import {
   StreamEventTypes,
   Workspace,
 } from '@latitude-data/core/browser'
-import { database } from '@latitude-data/core/client'
+import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/data-access'
 import { createProject } from '@latitude-data/core/factories'
 import { Result } from '@latitude-data/core/lib/Result'
-import { apiKeys } from '@latitude-data/core/schema'
 import { parseSSEvent } from '$/common/parseSSEEvent'
 import app from '$/routes/app'
-import { eq } from 'drizzle-orm'
 import { testConsumeStream } from 'test/helpers'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -94,10 +92,9 @@ describe('POST /add-message', () => {
 
       const { workspace: wsp } = await createProject()
       workspace = wsp
-      // TODO: move to core
-      const key = await database.query.apiKeys.findFirst({
-        where: eq(apiKeys.workspaceId, workspace.id),
-      })
+      const key = await unsafelyGetFirstApiKeyByWorkspaceId({
+        workspaceId: workspace.id,
+      }).then((r) => r.unwrap())
       apiKey = key!
       token = apiKey.token
 

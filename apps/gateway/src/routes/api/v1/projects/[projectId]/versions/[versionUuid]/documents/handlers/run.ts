@@ -1,5 +1,6 @@
 import { zValidator } from '@hono/zod-validator'
 import { LogSources } from '@latitude-data/core/browser'
+import { getUnknownError } from '@latitude-data/core/lib/getUnknownError'
 import { streamToGenerator } from '@latitude-data/core/lib/streamToGenerator'
 import { runDocumentAtCommit } from '@latitude-data/core/services/commits/runDocumentAtCommit'
 import { captureException } from '$/common/sentry'
@@ -59,7 +60,11 @@ export const runHandler = factory.createHandlers(
         }
       },
       (error: Error) => {
-        captureException(error)
+        const unknownError = getUnknownError(error)
+
+        if (unknownError) {
+          captureException(error)
+        }
 
         return Promise.resolve()
       },

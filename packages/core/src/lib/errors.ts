@@ -1,7 +1,7 @@
-type ErrorType = {
-  [key: string]: string[] | undefined
-  [key: number]: string[] | undefined
-  [key: symbol]: string[] | undefined
+export type LatitudeErrorDetails = {
+  [key: string]: string[] | string | undefined
+  [key: number]: string[] | string | undefined
+  [key: symbol]: string[] | string | undefined
 }
 
 export class LatitudeError extends Error {
@@ -9,9 +9,9 @@ export class LatitudeError extends Error {
   name: string = 'UnexpectedError'
   headers: Record<string, string> = {}
 
-  public details: ErrorType
+  public details: LatitudeErrorDetails
 
-  constructor(message: string, details: ErrorType = {}) {
+  constructor(message: string, details: LatitudeErrorDetails = {}) {
     super(message)
     this.details = details
     this.name = this.constructor.name
@@ -27,7 +27,7 @@ export class UnprocessableEntityError extends LatitudeError {
   public statusCode = 422
   public name = 'UnprocessableEntityError'
 
-  constructor(message: string, details: ErrorType) {
+  constructor(message: string, details: LatitudeErrorDetails) {
     super(message, details)
   }
 }

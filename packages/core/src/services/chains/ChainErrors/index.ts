@@ -1,9 +1,12 @@
 import { RunError } from '../../../browser'
 import { RunErrorCodes, RunErrorDetails } from '../../../constants'
+import { LatitudeErrorDetails, UnprocessableEntityError } from '../../../lib'
 
-export class ChainError<T extends RunErrorCodes> extends Error {
+export class ChainError<
+  T extends RunErrorCodes,
+> extends UnprocessableEntityError {
   errorCode: T
-  details: RunErrorDetails<T> | undefined
+  details: LatitudeErrorDetails
   runError?: RunError
 
   constructor({
@@ -17,9 +20,13 @@ export class ChainError<T extends RunErrorCodes> extends Error {
     details?: RunErrorDetails<T>
     stack?: string
   }) {
-    super(message)
+    const detailsWithCode = details
+      ? { ...details, errorCode: code }
+      : { errorCode: code }
+    super(message, detailsWithCode)
+
     this.errorCode = code
-    this.details = details || undefined
+    this.details = detailsWithCode
     this.stack = stack
   }
 
