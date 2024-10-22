@@ -69,8 +69,8 @@ function ProviderLogsMetadata({
                 key={model}
                 className='flex flex-row w-full justify-between items-center gap-4'
               >
-                <Text.H6B>{model}</Text.H6B>
-                <Text.H6>{tokens}</Text.H6>
+                <Text.H6B color='foregroundMuted'>{model}</Text.H6B>
+                <Text.H6 color='foregroundMuted'>{tokens}</Text.H6>
               </div>
             ))}
             {Object.values(tokensByModel).some((t) => t === 0) && (
@@ -100,11 +100,11 @@ function ProviderLogsMetadata({
                   key={providerId}
                   className='flex flex-row w-full justify-between items-center gap-4'
                 >
-                  <Text.H6B>
+                  <Text.H6B color='foregroundMuted'>
                     {providers?.find((p) => p.id === Number(providerId))
                       ?.name ?? 'Unknown'}
                   </Text.H6B>
-                  <Text.H6>
+                  <Text.H6 color='foregroundMuted'>
                     {formatCostInMillicents(cost_in_millicents)}
                   </Text.H6>
                 </div>

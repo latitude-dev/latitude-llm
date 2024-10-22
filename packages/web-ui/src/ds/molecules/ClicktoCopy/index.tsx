@@ -31,7 +31,7 @@ export function ClickToCopy({
         </div>
       }
     >
-      <Text.H6 color='background'>Click to copy: {copyValue}</Text.H6>
+      <Text.H6 color='foregroundMuted'>Click to copy: {copyValue}</Text.H6>
     </Tooltip>
   )
 }
