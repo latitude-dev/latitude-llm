@@ -7,10 +7,8 @@ import {
 } from '@latitude-data/web-ui'
 import { AppTabs } from '$/app/(private)/AppTabs'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
-import { getSession } from '$/services/auth/getSession'
 import { ROUTES } from '$/services/routes'
 import Link from 'next/link'
-import { redirect } from 'next/navigation'
 
 import { getActiveProjectsCached } from '../_data-access'
 import { ProjectsTable } from './_components/ProjectsTable'
@@ -20,12 +18,8 @@ export default async function DashboardLayout({
 }: Readonly<{
   children: ReactNode
 }>) {
-  const data = await getSession()
-  if (!data.session) return redirect(ROUTES.auth.login)
-
   const { workspace } = await getCurrentUser()
   const projects = await getActiveProjectsCached({ workspaceId: workspace.id })
-
   return (
     <Container>
       <AppTabs />

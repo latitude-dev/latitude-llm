@@ -70,6 +70,7 @@ export const refinePromptAction = authProcedure
     )
 
     const sdk = await createSdk({
+      workspace: ctx.workspace,
       apiKey: env.DATASET_GENERATOR_WORKSPACE_APIKEY,
       projectId: env.COPILOT_PROJECT_ID,
     }).then((r) => r.unwrap())

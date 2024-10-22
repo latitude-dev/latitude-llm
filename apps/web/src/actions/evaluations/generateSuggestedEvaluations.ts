@@ -19,7 +19,7 @@ export const generateSuggestedEvaluationsAction = authProcedure
       documentContent: z.string(),
     }),
   )
-  .handler(async ({ input }) => {
+  .handler(async ({ input, ctx }) => {
     if (!env.COPILOT_WORKSPACE_API_KEY) {
       throw new BadRequestError('COPILOT_WORKSPACE_API_KEY is not set')
     }
@@ -43,6 +43,7 @@ export const generateSuggestedEvaluationsAction = authProcedure
     }
 
     const sdk = await createSdk({
+      workspace: ctx.workspace,
       apiKey: env.COPILOT_WORKSPACE_API_KEY,
       projectId: env.COPILOT_PROJECT_ID,
     }).then((r) => r.unwrap())

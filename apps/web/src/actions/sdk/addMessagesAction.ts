@@ -8,7 +8,7 @@ import {
   type StreamChainResponse,
 } from '@latitude-data/sdk'
 import { createSdk } from '$/app/(private)/_lib/createSdk'
-import { getCurrentUser } from '$/services/auth/getCurrentUser'
+import { getCurrentUserOrError } from '$/services/auth/getCurrentUser'
 import { createStreamableValue, StreamableValue } from 'ai/rsc'
 
 type AddMessagesActionProps = {
@@ -27,7 +27,7 @@ export async function addMessagesAction({
   documentLogUuid,
   messages,
 }: AddMessagesActionProps) {
-  const { workspace, user } = await getCurrentUser()
+  const { workspace, user } = await getCurrentUserOrError()
 
   publisher.publishLater({
     type: 'chatMessageRequested',
@@ -40,6 +40,7 @@ export async function addMessagesAction({
   })
 
   const sdk = await createSdk({
+    workspace,
     __internal: { source: LogSources.Playground },
   }).then((r) => r.unwrap())
   const stream = createStreamableValue<

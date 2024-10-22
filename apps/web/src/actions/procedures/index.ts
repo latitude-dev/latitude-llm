@@ -4,14 +4,14 @@ import {
   ProjectsRepository,
 } from '@latitude-data/core/repositories'
 import * as Sentry from '@sentry/nextjs'
-import { getCurrentUser } from '$/services/auth/getCurrentUser'
+import { getCurrentUserOrError } from '$/services/auth/getCurrentUser'
 import { z } from 'zod'
 import { createServerActionProcedure } from 'zsa'
 
 export const errorHandlingProcedure = createServerActionProcedure()
   .onError(async (error) => {
     try {
-      const data = await getCurrentUser()
+      const data = await getCurrentUserOrError()
 
       Sentry.captureException(error, {
         user: {
@@ -30,7 +30,7 @@ export const authProcedure = createServerActionProcedure(
   errorHandlingProcedure,
 ).handler(async () => {
   try {
-    const data = await getCurrentUser()
+    const data = await getCurrentUserOrError()
 
     return {
       session: data.session!,

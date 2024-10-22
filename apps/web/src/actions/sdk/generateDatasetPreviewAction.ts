@@ -5,6 +5,7 @@ import { BadRequestError } from '@latitude-data/core/lib/errors'
 import { env } from '@latitude-data/env'
 import { ChainEventDto } from '@latitude-data/sdk'
 import { createSdk } from '$/app/(private)/_lib/createSdk'
+import { getCurrentUserOrError } from '$/services/auth/getCurrentUser'
 import { createStreamableValue } from 'ai/rsc'
 
 type RunDocumentActionProps = {
@@ -32,7 +33,9 @@ export async function generateDatasetPreviewAction({
     throw new BadRequestError('DATASET_GENERATOR_WORKSPACE_APIKEY is not set')
   }
 
+  const { workspace } = await getCurrentUserOrError()
   const sdk = await createSdk({
+    workspace,
     apiKey: env.DATASET_GENERATOR_WORKSPACE_APIKEY,
     projectId: env.DATASET_GENERATOR_PROJECT_ID,
     __internal: { source: LogSources.Playground },

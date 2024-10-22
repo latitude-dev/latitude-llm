@@ -1,5 +1,9 @@
 import { database } from '@latitude-data/core/client'
-import { SessionData, unsafelyGetUser } from '@latitude-data/core/data-access'
+import {
+  SessionData,
+  unsafelyFindWorkspacesFromUser,
+  unsafelyGetUser,
+} from '@latitude-data/core/data-access'
 import { NotFoundError } from '@latitude-data/core/lib/errors'
 import { Result } from '@latitude-data/core/lib/Result'
 import { PromisedResult } from '@latitude-data/core/lib/Transaction'
@@ -71,4 +75,16 @@ export async function getCurrentUserFromDB({
   } catch (err) {
     return Result.error(err as Error)
   }
+}
+
+export async function unsafelyGetCurrentUserFromDb({
+  userId,
+}: {
+  userId: string | undefined
+}) {
+  const user = await unsafelyGetUser(userId)
+  const workspaces = await unsafelyFindWorkspacesFromUser(userId)
+  const workspace = workspaces[0]
+
+  return { user, workspace }
 }

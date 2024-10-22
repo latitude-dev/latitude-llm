@@ -44,6 +44,7 @@ export default function WorkspaceApiKeys() {
                     </TableCell>
                     <TableCell>
                       <Tooltip
+                        asChild
                         trigger={
                           <Button
                             variant='ghost'
