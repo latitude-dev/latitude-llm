@@ -51,7 +51,7 @@ export default {
           foreground: 'hsl(var(--muted-foreground) / <alpha-value>)',
         },
         'destructive-muted': {
-          DEFAULT: 'hsl(var(--destructive-muted-foreground) / <alpha-value>)',
+          DEFAULT: 'hsl(var(--destructive-muted) / <alpha-value>)',
           foreground:
             'hsl(var(--destructive-muted-foreground) / <alpha-value>)',
         },

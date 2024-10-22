@@ -34,7 +34,7 @@ export default function AppHeader({
   currentUser,
 }: AppHeaderProps) {
   return (
-    <header className='flex flex-row items-center justify-between border-b border-b-border bg-background sticky top-0 isolate px-6 py-3'>
+    <header className='flex flex-row items-center justify-between border-b border-b-border bg-background sticky top-0 isolate px-6 py-3 z-10'>
       <HeaderBreadcrumb />
       <div className='flex flex-row items-center gap-x-6 pl-6'>
         <nav className='flex flex-row gap-x-4 items-center'>
