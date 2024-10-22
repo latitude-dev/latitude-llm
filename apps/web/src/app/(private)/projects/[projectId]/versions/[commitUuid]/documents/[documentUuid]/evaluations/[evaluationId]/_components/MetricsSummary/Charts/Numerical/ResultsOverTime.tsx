@@ -2,7 +2,10 @@
 
 import { useCallback, useMemo } from 'react'
 
-import { Evaluation } from '@latitude-data/core/browser'
+import {
+  EvaluationDto,
+  EvaluationMetadataType,
+} from '@latitude-data/core/browser'
 import {
   AreaChart,
   Text,
@@ -26,7 +29,7 @@ export function ResultOverTimeChart({
   evaluation,
   documentUuid,
 }: {
-  evaluation: Evaluation
+  evaluation: EvaluationDto
   documentUuid: string
 }) {
   const { project } = useCurrentProject()
@@ -80,6 +83,30 @@ export function ResultOverTimeChart({
     [data],
   )
 
+  const minValue = useMemo(() => {
+    if (evaluation.metadataType === EvaluationMetadataType.LlmAsJudgeLegacy) {
+      return evaluation.metadata.configuration.detail?.range.from ?? 0
+    }
+    if (
+      evaluation.metadataType === EvaluationMetadataType.LlmAsJudgeNumerical
+    ) {
+      return evaluation.metadata.minValue
+    }
+    return 0
+  }, [evaluation])
+
+  const maxValue = useMemo(() => {
+    if (evaluation.metadataType === EvaluationMetadataType.LlmAsJudgeLegacy) {
+      return evaluation.metadata.configuration.detail?.range.to ?? 10
+    }
+    if (
+      evaluation.metadataType === EvaluationMetadataType.LlmAsJudgeNumerical
+    ) {
+      return evaluation.metadata.maxValue
+    }
+    return 10
+  }, [evaluation])
+
   return (
     <ChartWrapper label='Results over time' loading={isLoading} error={error}>
       {!data?.length ? (
@@ -97,8 +124,8 @@ export function ResultOverTimeChart({
             yAxis: {
               label: 'Average result',
               type: 'number',
-              min: evaluation.configuration.detail!.range.from,
-              max: evaluation.configuration.detail!.range.to,
+              min: minValue,
+              max: maxValue,
             },
             data: parsedData,
             tooltipLabel: (item) => {

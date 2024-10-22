@@ -2,6 +2,7 @@
 
 import {
   EvaluationDto,
+  EvaluationMetadataType,
   EvaluationResultableType,
 } from '@latitude-data/core/browser'
 import { RangeBadge, Skeleton, Text } from '@latitude-data/web-ui'
@@ -136,7 +137,12 @@ export default function EvaluationAggregatedResult({
   documentUuid: string
   commitUuid: string
 }) {
-  if (evaluation.configuration.type === EvaluationResultableType.Number) {
+  if (
+    evaluation.metadataType === EvaluationMetadataType.LlmAsJudgeNumerical ||
+    (evaluation.metadataType === EvaluationMetadataType.LlmAsJudgeLegacy &&
+      evaluation.metadata.configuration.type ===
+        EvaluationResultableType.Number)
+  ) {
     return (
       <EvaluationMeanValue
         evaluation={evaluation}
@@ -146,7 +152,12 @@ export default function EvaluationAggregatedResult({
     )
   }
 
-  if (evaluation.configuration.type === EvaluationResultableType.Boolean) {
+  if (
+    evaluation.metadataType === EvaluationMetadataType.LlmAsJudgeBoolean ||
+    (evaluation.metadataType === EvaluationMetadataType.LlmAsJudgeLegacy &&
+      evaluation.metadata.configuration.type ===
+        EvaluationResultableType.Boolean)
+  ) {
     return (
       <EvaluationBooleanValue
         evaluation={evaluation}

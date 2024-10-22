@@ -1,5 +1,6 @@
 import {
   EvaluationDto,
+  EvaluationMetadataType,
   EvaluationResultableType,
 } from '@latitude-data/core/browser'
 
@@ -13,7 +14,10 @@ export function EvaluationResultsCharts({
   documentUuid: string
 }) {
   const isNumerical =
-    evaluation.configuration.type === EvaluationResultableType.Number
+    evaluation.metadataType === EvaluationMetadataType.LlmAsJudgeNumerical ||
+    (evaluation.metadataType === EvaluationMetadataType.LlmAsJudgeLegacy &&
+      evaluation.metadata.configuration.type ===
+        EvaluationResultableType.Number)
 
   if (!isNumerical) return null
 

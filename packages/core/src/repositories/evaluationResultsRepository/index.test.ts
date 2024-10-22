@@ -11,7 +11,7 @@ import {
 import {
   createDocumentLog,
   createEvaluationResult,
-  createLlmAsJudgeEvaluation,
+  createLegacyLlmAsJudgeEvaluation,
   createProject,
   createProviderLog,
   helpers,
@@ -46,7 +46,7 @@ describe('EvaluationResultsRepository', () => {
         commit: commit1,
       })
       documentLog = docLog
-      evaluation = await createLlmAsJudgeEvaluation({
+      evaluation = await createLegacyLlmAsJudgeEvaluation({
         user: user,
         workspace: workspace,
       })
@@ -74,7 +74,7 @@ describe('EvaluationResultsRepository', () => {
         },
       })
 
-      const evaluation2 = await createLlmAsJudgeEvaluation({
+      const evaluation2 = await createLegacyLlmAsJudgeEvaluation({
         user: user2,
         workspace: workspace2,
       })

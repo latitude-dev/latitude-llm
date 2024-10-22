@@ -1,6 +1,7 @@
 import { env } from '@latitude-data/env'
 
 import {
+  EvaluationDto,
   EvaluationMetadataType,
   EvaluationResultableType,
   EvaluationResultConfiguration,
@@ -16,8 +17,8 @@ import { BadRequestError, NotFoundError, Result, Transaction } from '../../lib'
 import { ProviderApiKeysRepository } from '../../repositories'
 import {
   connectedEvaluations,
+  evaluationMetadataLlmAsJudgeLegacy,
   evaluations,
-  llmAsJudgeEvaluationMetadatas,
 } from '../../schema'
 
 type Props = {
@@ -66,12 +67,18 @@ ${meta.prompt}
     : meta.prompt
 
   return await Transaction.call(async (tx) => {
+    validateConfiguration(configuration)
+
     let metadataTable
     switch (type) {
-      case EvaluationMetadataType.LlmAsJudge:
+      case EvaluationMetadataType.LlmAsJudgeLegacy:
         metadataTable = await tx
-          .insert(llmAsJudgeEvaluationMetadatas)
-          .values({ prompt: promptWithProvider, templateId: meta.templateId })
+          .insert(evaluationMetadataLlmAsJudgeLegacy)
+          .values({
+            prompt: promptWithProvider,
+            templateId: meta.templateId,
+            configuration,
+          })
           .returning()
 
         break
@@ -81,13 +88,10 @@ ${meta.prompt}
         )
     }
 
-    validateConfiguration(configuration)
-
     const result = await tx
       .insert(evaluations)
       .values([
         {
-          configuration,
           description,
           metadataId: metadataTable[0]!.id,
           metadataType: type,
@@ -125,7 +129,7 @@ ${meta.prompt}
     return Result.ok({
       ...evaluation,
       metadata: metadataTable[0]!,
-    })
+    } as EvaluationDto)
   }, db)
 }
 
@@ -147,7 +151,7 @@ export async function importLlmAsJudgeEvaluation(
       workspace,
       name: template.name,
       description: template.description,
-      type: EvaluationMetadataType.LlmAsJudge,
+      type: EvaluationMetadataType.LlmAsJudgeLegacy,
       configuration: template.configuration,
       metadata: {
         prompt: template.prompt,

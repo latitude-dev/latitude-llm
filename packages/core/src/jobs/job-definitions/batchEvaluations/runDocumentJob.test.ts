@@ -37,7 +37,7 @@ describe('runDocumentJob', () => {
     document = setup.documents[0]
     commit = setup.commit
 
-    evaluation = await factories.createLlmAsJudgeEvaluation({
+    evaluation = await factories.createLegacyLlmAsJudgeEvaluation({
       user: setup.user,
       workspace,
       name: 'Test Evaluation',

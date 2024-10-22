@@ -1,7 +1,7 @@
 import {
   DocumentLog,
-  Evaluation,
   EvaluationDto,
+  EvaluationMetadataType,
   EvaluationResultableType,
   ProviderLog,
 } from '../../browser'
@@ -14,7 +14,24 @@ import { evaluationResultableBooleans } from '../../schema/models/evaluationResu
 import { evaluationResultableNumbers } from '../../schema/models/evaluationResultableNumbers'
 import { evaluationResultableTexts } from '../../schema/models/evaluationResultableTexts'
 
-function getResultable(type: EvaluationResultableType) {
+function getResultableType(
+  evaluation: EvaluationDto,
+): EvaluationResultableType {
+  if (evaluation.metadataType === EvaluationMetadataType.LlmAsJudgeLegacy) {
+    return evaluation.metadata.configuration.type
+  }
+
+  switch (evaluation.metadataType) {
+    case EvaluationMetadataType.LlmAsJudgeBoolean:
+      return EvaluationResultableType.Boolean
+    case EvaluationMetadataType.LlmAsJudgeNumerical:
+      return EvaluationResultableType.Number
+    case EvaluationMetadataType.LlmAsJudgeCustom:
+      return EvaluationResultableType.Text
+  }
+}
+
+function getResultableTable(type: EvaluationResultableType) {
   switch (type) {
     case EvaluationResultableType.Boolean:
       return evaluationResultableBooleans
@@ -33,7 +50,7 @@ export type EvaluationResultObject = {
 }
 export type CreateEvaluationResultProps = {
   uuid: string
-  evaluation: Evaluation | EvaluationDto
+  evaluation: EvaluationDto
   documentLog: DocumentLog
   providerLog?: ProviderLog
   result: EvaluationResultObject | undefined
@@ -52,13 +69,14 @@ export async function createEvaluationResult(
   }: CreateEvaluationResultProps,
   db = database,
 ) {
-  const resultableTable = getResultable(evaluation.configuration.type)
+  const resultableType = getResultableType(evaluation)
+  const resultableTable = getResultableTable(resultableType)
   let resultableId: number | undefined
 
   if (!resultableTable && result) {
     return Result.error(
       new BadRequestError(
-        `Unsupported result type: ${evaluation.configuration.type}`,
+        `Unsupported evaluation type: ${evaluation.metadataType}`,
       ),
     )
   }
@@ -81,7 +99,7 @@ export async function createEvaluationResult(
         evaluationId: evaluation.id,
         documentLogId: documentLog.id,
         providerLogId: providerLog?.id,
-        resultableType: result ? evaluation.configuration.type : null,
+        resultableType,
         resultableId,
         source: documentLog.source,
       })

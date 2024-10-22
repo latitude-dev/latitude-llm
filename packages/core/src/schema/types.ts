@@ -1,6 +1,6 @@
 import { type InferInsertModel, type InferSelectModel } from 'drizzle-orm'
 
-import { EvaluationResultableType } from '../constants'
+import { EvaluationMetadataType, EvaluationResultableType } from '../constants'
 import { apiKeys } from './models/apiKeys'
 import { claimedRewards } from './models/claimedRewards'
 import { commits } from './models/commits'
@@ -8,11 +8,14 @@ import { connectedEvaluations } from './models/connectedEvaluations'
 import { datasets } from './models/datasets'
 import { documentLogs } from './models/documentLogs'
 import { documentVersions } from './models/documentVersions'
+import { evaluationMetadataLlmAsJudgeBoolean } from './models/evaluationMetadataLlmAsJudgeBoolean'
+import { evaluationMetadataLlmAsJudgeCustom } from './models/evaluationMetadataLlmAsJudgeCustom'
+import { evaluationMetadataLlmAsJudgeLegacy } from './models/evaluationMetadataLlmAsJudgeLegacy'
+import { evaluationMetadataLlmAsJudgeNumerical } from './models/evaluationMetadataLlmAsJudgeNumerical'
 import { evaluationResults } from './models/evaluationResults'
 import { evaluations } from './models/evaluations'
 import { evaluationTemplateCategories } from './models/evaluationTemplateCategories'
-import { evaluationTemplates } from './models/evaluationTemplates'
-import { llmAsJudgeEvaluationMetadatas } from './models/llmAsJudgeEvaluationMetadatas'
+import { evaluationLegacyTemplates } from './models/evaluationTemplates'
 import { magicLinkTokens } from './models/magicLinkTokens'
 import { memberships } from './models/memberships'
 import { projects } from './models/projects'
@@ -44,23 +47,63 @@ export type RunErrorInsert = InferInsertModel<typeof runErrors>
 export type Evaluation = InferSelectModel<typeof evaluations>
 export type ConnectedEvaluation = InferSelectModel<typeof connectedEvaluations>
 export type EvaluationResult = InferSelectModel<typeof evaluationResults>
-export type EvaluationTemplate = InferSelectModel<typeof evaluationTemplates>
+export type EvaluationTemplate = InferSelectModel<
+  typeof evaluationLegacyTemplates
+>
 export type MagicLinkToken = InferSelectModel<typeof magicLinkTokens>
 export type ClaimedReward = InferSelectModel<typeof claimedRewards>
 export type EvaluationTemplateCategory = InferSelectModel<
   typeof evaluationTemplateCategories
 >
-export type LlmAsJudgeEvaluationMetadata = InferSelectModel<
-  typeof llmAsJudgeEvaluationMetadatas
+export type EvaluationMetadataLlmAsJudgeLegacy = InferSelectModel<
+  typeof evaluationMetadataLlmAsJudgeLegacy
 >
-export type Subscription = InferSelectModel<typeof subscriptions>
+export type EvaluationMetadataLlmAsJudgeBoolean = InferSelectModel<
+  typeof evaluationMetadataLlmAsJudgeBoolean
+>
+export type EvaluationMetadataLlmAsJudgeNumerical = InferSelectModel<
+  typeof evaluationMetadataLlmAsJudgeNumerical
+>
+export type EvaluationMetadataLlmAsJudgeCustom = InferSelectModel<
+  typeof evaluationMetadataLlmAsJudgeCustom
+>
 
-export type EvaluationDto = Evaluation & {
+export interface EvaluationDtoLlmAsJudgeLegacy extends Evaluation {
+  metadataType: EvaluationMetadataType.LlmAsJudgeLegacy
   metadata: Omit<
-    LlmAsJudgeEvaluationMetadata,
+    EvaluationMetadataLlmAsJudgeLegacy,
     'metadataType' | 'createdAt' | 'updatedAt'
   >
 }
+export interface EvaluationDtoLlmAsJudgeBoolean extends Evaluation {
+  metadataType: EvaluationMetadataType.LlmAsJudgeBoolean
+  metadata: Omit<
+    EvaluationMetadataLlmAsJudgeBoolean,
+    'metadataType' | 'createdAt' | 'updatedAt'
+  >
+}
+export interface EvaluationDtoLlmAsJudgeNumerical extends Evaluation {
+  metadataType: EvaluationMetadataType.LlmAsJudgeNumerical
+  metadata: Omit<
+    EvaluationMetadataLlmAsJudgeNumerical,
+    'metadataType' | 'createdAt' | 'updatedAt'
+  >
+}
+export interface EvaluationDtoLlmAsJudgeCustom extends Evaluation {
+  metadataType: EvaluationMetadataType.LlmAsJudgeCustom
+  metadata: Omit<
+    EvaluationMetadataLlmAsJudgeCustom,
+    'metadataType' | 'createdAt' | 'updatedAt'
+  >
+}
+
+export type EvaluationDto =
+  | EvaluationDtoLlmAsJudgeLegacy
+  | EvaluationDtoLlmAsJudgeBoolean
+  | EvaluationDtoLlmAsJudgeNumerical
+  | EvaluationDtoLlmAsJudgeCustom
+
+export type Subscription = InferSelectModel<typeof subscriptions>
 
 export type Dataset = InferSelectModel<typeof datasets> & {
   author: Pick<User, 'id' | 'name'> | undefined

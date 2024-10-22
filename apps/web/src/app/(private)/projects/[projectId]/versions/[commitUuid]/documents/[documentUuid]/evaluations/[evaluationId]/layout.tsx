@@ -1,7 +1,11 @@
 import { ReactNode } from 'react'
 
 import { readMetadata } from '@latitude-data/compiler'
-import { EvaluationResultableType } from '@latitude-data/core/browser'
+import {
+  EvaluationDto,
+  EvaluationMetadataType,
+  EvaluationResultableType,
+} from '@latitude-data/core/browser'
 import { env } from '@latitude-data/env'
 import {
   Breadcrumb,
@@ -24,10 +28,23 @@ import { Actions } from './_components/Actions'
 import { MetricsSummary } from './_components/MetricsSummary'
 import { fetchEvaluationCached } from './_lib/fetchEvaluationCached'
 
-const TYPE_TEXT: Record<EvaluationResultableType, string> = {
+const LEGACY_TYPE_TEXT: Record<EvaluationResultableType, string> = {
   [EvaluationResultableType.Text]: 'Text',
   [EvaluationResultableType.Number]: 'Numerical',
   [EvaluationResultableType.Boolean]: 'Boolean',
+}
+
+function typeText(evaluation: EvaluationDto) {
+  if (evaluation.metadataType === EvaluationMetadataType.LlmAsJudgeLegacy) {
+    return LEGACY_TYPE_TEXT[evaluation.metadata.configuration.type]
+  }
+  if (evaluation.metadataType === EvaluationMetadataType.LlmAsJudgeBoolean) {
+    return 'Boolean'
+  }
+  if (evaluation.metadataType === EvaluationMetadataType.LlmAsJudgeNumerical) {
+    return 'Numerical'
+  }
+  return 'Custom'
 }
 
 export default async function ConnectedEvaluationLayout({
@@ -48,10 +65,12 @@ export default async function ConnectedEvaluationLayout({
     uuid: params.commitUuid,
   })
   const isNumeric =
-    evaluation.configuration.type == EvaluationResultableType.Number
+    evaluation.metadataType === EvaluationMetadataType.LlmAsJudgeNumerical ||
+    (evaluation.metadataType === EvaluationMetadataType.LlmAsJudgeLegacy &&
+      evaluation.metadata.configuration.type == EvaluationResultableType.Number)
 
   let provider
-  if (evaluation.metadata.prompt) {
+  if (evaluation.metadataType === EvaluationMetadataType.LlmAsJudgeLegacy) {
     const metadata = await readMetadata({
       prompt: evaluation.metadata.prompt,
     })
@@ -92,7 +111,7 @@ export default async function ConnectedEvaluationLayout({
                 {evaluation.name}
               </Text.H4M>
               <Text.H4M color='foregroundMuted'>
-                {TYPE_TEXT[evaluation.configuration.type]}
+                {typeText(evaluation)}
               </Text.H4M>
               <Tooltip
                 asChild

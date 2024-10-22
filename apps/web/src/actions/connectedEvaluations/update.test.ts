@@ -39,7 +39,7 @@ describe('updateConnectedEvaluationAction', () => {
     user = setup.user
 
     // Create a connected evaluation using a factory
-    const evaluation = await factories.createLlmAsJudgeEvaluation({
+    const evaluation = await factories.createLegacyLlmAsJudgeEvaluation({
       workspace,
       user,
     })

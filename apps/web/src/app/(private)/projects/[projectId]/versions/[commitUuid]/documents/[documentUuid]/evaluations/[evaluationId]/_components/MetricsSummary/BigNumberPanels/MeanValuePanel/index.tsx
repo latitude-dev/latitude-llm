@@ -2,7 +2,11 @@
 
 import { useCallback } from 'react'
 
-import { EvaluationDto } from '@latitude-data/core/browser'
+import {
+  EvaluationDtoLlmAsJudgeLegacy,
+  EvaluationDtoLlmAsJudgeNumerical,
+  EvaluationMetadataType,
+} from '@latitude-data/core/browser'
 import { RangeBadge } from '@latitude-data/web-ui'
 import useEvaluationResultsMeanValue from '$/stores/evaluationResultCharts/evaluationResultsMeanValue'
 import { useDebouncedCallback } from 'use-debounce'
@@ -17,7 +21,7 @@ export default function MeanValuePanel({
 }: {
   commitUuid: string
   documentUuid: string
-  evaluation: EvaluationDto
+  evaluation: EvaluationDtoLlmAsJudgeLegacy | EvaluationDtoLlmAsJudgeNumerical
 }) {
   const { data, refetch, isLoading } = useEvaluationResultsMeanValue(
     {
@@ -41,9 +45,14 @@ export default function MeanValuePanel({
     documentUuid,
     onStatusChange,
   })
-  const config = evaluation.configuration.detail!
-  const defaultMinValue = config.range.from
-  const defaultMaxValue = config.range.to
+  const defaultMinValue =
+    evaluation.metadataType === EvaluationMetadataType.LlmAsJudgeLegacy
+      ? (evaluation.metadata.configuration.detail?.range?.from ?? 0)
+      : evaluation.metadata.minValue
+  const defaultMaxValue =
+    evaluation.metadataType === EvaluationMetadataType.LlmAsJudgeLegacy
+      ? (evaluation.metadata.configuration.detail?.range?.to ?? 10)
+      : evaluation.metadata.maxValue
   return (
     <Panel
       label='Current average'
