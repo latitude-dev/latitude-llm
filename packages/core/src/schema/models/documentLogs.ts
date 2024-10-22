@@ -39,5 +39,6 @@ export const documentLogs = latitudeSchema.table(
     contentHashIdx: index('document_logs_content_hash_idx').on(
       table.contentHash,
     ),
+    createdAtIdx: index('document_logs_created_at_idx').on(table.createdAt),
   }),
 )

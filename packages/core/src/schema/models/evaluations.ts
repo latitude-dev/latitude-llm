@@ -45,5 +45,6 @@ export const evaluations = latitudeSchema.table(
       table.metadataId,
       table.metadataType,
     ),
+    deletedAt: index('evaluations_deleted_at_idx').on(table.deletedAt),
   }),
 )

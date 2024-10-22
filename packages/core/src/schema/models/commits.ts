@@ -48,5 +48,6 @@ export const commits = latitudeSchema.table(
     userIdx: index('user_idx').on(table.userId),
     mergedAtIdx: index('merged_at_idx').on(table.mergedAt),
     projectIdIdx: index('project_id_idx').on(table.projectId),
+    deletedAtIdx: index('commits_deleted_at_indx').on(table.deletedAt),
   }),
 )
