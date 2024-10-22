@@ -1,6 +1,9 @@
 import { Readable } from 'stream'
 
-export function nodeFetchResponseToReadableStream(nodeStream: Readable) {
+export function nodeFetchResponseToReadableStream(
+  nodeStream: Readable,
+  onError?: (err: Error) => void,
+) {
   return new ReadableStream({
     start(controller) {
       /**
@@ -43,7 +46,14 @@ export function nodeFetchResponseToReadableStream(nodeStream: Readable) {
        * an underlying internal failure, or when a stream implementation attempts to push an invalid chunk of data.
        */
       nodeStream.on('error', (err) => {
-        controller.error(err)
+        try {
+          controller.error(err)
+        } catch (e) {
+          // controller might be claused already
+          if (onError) {
+            onError(err)
+          }
+        }
       })
     },
   })
