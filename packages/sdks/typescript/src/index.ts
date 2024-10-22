@@ -227,7 +227,7 @@ export class Latitude {
     let chainResponse: ChainCallResponseDto | undefined
 
     const parser = new EventSourceParserStream()
-    const stream = nodeFetchResponseToReadableStream(body)
+    const stream = nodeFetchResponseToReadableStream(body, onError)
     const eventStream = stream
       .pipeThrough(new TextDecoderStream())
       .pipeThrough(parser)
