@@ -2,13 +2,35 @@
 
 import { useEffect, useRef, useState } from 'react'
 
-import { ProgressIndicator } from '@latitude-data/web-ui'
+import { Badge, Text } from '@latitude-data/web-ui'
 import { type EventArgs } from '$/components/Providers/WebsocketsProvider/useSockets'
 
 import { isEvaluationRunDone } from '../../../_lib/isEvaluationRunDone'
 import { useEvaluationStatusEvent } from '../../../_lib/useEvaluationStatusEvent'
 
 const DISAPERING_IN_MS = 5000
+
+function BatchIndicator({ job }: { job: EventArgs<'evaluationStatus'> }) {
+  const isDone = isEvaluationRunDone(job)
+  const badgeLabel = isDone ? 'Finished' : 'Running'
+  const doneRuns = job.completed + job.errors
+  return (
+    <div className='flex flex-row items-center gap-x-4'>
+      <Badge variant={isDone ? 'muted' : 'accent'}>{badgeLabel}</Badge>
+      <div className='flex flex-row items-center gap-x-2'>
+        <Text.H5>{`${doneRuns} of ${job.total} generated`}</Text.H5>
+        {job.errors > 0 ? (
+          <>
+            <Text.H5 color='foregroundMuted'>·</Text.H5>
+            <Text.H5 color='destructiveMutedForeground'>
+              {job.errors} Errors
+            </Text.H5>
+          </>
+        ) : null}
+      </div>
+    </div>
+  )
+}
 
 export function EvaluationStatusBanner({
   documentUuid,
@@ -59,27 +81,11 @@ export function EvaluationStatusBanner({
   return (
     <>
       {jobs.map((job) => (
-        <div key={job.batchId} className='flex flex-col gap-4'>
-          {!isEvaluationRunDone(job) && (
-            <ProgressIndicator state='running'>
-              {`Running batch evaluation ${job.completed}/${job.total}`}
-            </ProgressIndicator>
-          )}
-          {job.errors > 0 && (
-            <ProgressIndicator state='error'>
-              Some evaluations failed to run. We won't retry them automatically
-              to avoid increasing provider costs. Total errors:{' '}
-              <strong>{job.errors}</strong>
-            </ProgressIndicator>
-          )}
-          {isEvaluationRunDone(job) && (
-            <ProgressIndicator state='completed'>
-              Batch evaluation completed! Total evaluations:{' '}
-              <strong>{job.total}</strong> · Total errors:{' '}
-              <strong>{job.errors}</strong> · Total completed:{' '}
-              <strong>{job.completed}</strong>
-            </ProgressIndicator>
-          )}
+        <div
+          key={job.batchId}
+          className='flex flex-col gap-4 p-4 rounded-lg border border-border'
+        >
+          <BatchIndicator job={job} />
         </div>
       ))}
     </>

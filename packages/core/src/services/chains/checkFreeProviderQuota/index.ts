@@ -13,11 +13,13 @@ import { ChainError } from '../ChainErrors'
 export async function checkFreeProviderQuota({
   workspace,
   provider,
+  defaultProviderApiKey = env.DEFAULT_PROVIDER_API_KEY,
 }: {
   workspace: Workspace
   provider: ProviderApiKey
+  defaultProviderApiKey?: string
 }) {
-  if (provider.token !== env.DEFAULT_PROVIDER_API_KEY) {
+  if (provider.token !== defaultProviderApiKey) {
     return Result.ok(true)
   }
   const value = await incrFreeRuns(workspace.id)

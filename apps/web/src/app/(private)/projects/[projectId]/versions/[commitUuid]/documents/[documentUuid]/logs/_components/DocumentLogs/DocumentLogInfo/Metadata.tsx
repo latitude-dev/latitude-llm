@@ -1,61 +1,29 @@
-import { ReactNode, useMemo } from 'react'
+import { useMemo } from 'react'
 
 import { ProviderLogDto } from '@latitude-data/core/browser'
-import { DocumentLogWithMetadata } from '@latitude-data/core/repositories'
-import {
-  ClickToCopy,
-  Icon,
-  Skeleton,
-  Text,
-  Tooltip,
-} from '@latitude-data/web-ui'
+import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
+import { ClickToCopy, Text } from '@latitude-data/web-ui'
 import { formatCostInMillicents, formatDuration } from '$/app/_lib/formatUtils'
+import { RunErrorMessage } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/_components/RunErrorMessage'
 import useProviderApiKeys from '$/stores/providerApiKeys'
 import { format } from 'date-fns'
 
-export function MetadataItem({
-  label,
-  value,
-  loading,
-  children,
-}: {
-  label: string
-  value?: string
-  loading?: boolean
-  children?: ReactNode
-}) {
-  return (
-    <div className='flex flex-row justify-between items-center gap-2'>
-      <Text.H5M color='foreground'>{label}</Text.H5M>
-      {loading ? (
-        <Skeleton className='w-12 h-4 bg-muted-foreground/10' />
-      ) : (
-        <>
-          {value && (
-            <Text.H5 align='right' color='foregroundMuted'>
-              {value}
-            </Text.H5>
-          )}
-          {children}
-        </>
-      )}
-    </div>
-  )
-}
+import {
+  FinishReasonItem,
+  MetadataItem,
+  MetadataItemTooltip,
+} from '../../../../../[documentUuid]/_components/MetadataItem'
 
-export function DocumentLogMetadata({
+function ProviderLogsMetadata({
+  providerLog,
   documentLog,
   providerLogs,
 }: {
-  documentLog: DocumentLogWithMetadata
-  providerLogs?: ProviderLogDto[]
+  providerLog: ProviderLogDto
+  documentLog: DocumentLogWithMetadataAndError
+  providerLogs: ProviderLogDto[]
 }) {
   const { data: providers, isLoading: providersLoading } = useProviderApiKeys()
-  const lastProviderLog = useMemo(
-    () => providerLogs?.[providerLogs.length - 1],
-    [providerLogs],
-  )
-
   const tokensByModel = useMemo(
     () =>
       providerLogs?.reduce(
@@ -87,18 +55,14 @@ export function DocumentLogMetadata({
         label='Timestamp'
         value={format(documentLog.createdAt, 'PPp')}
       />
-      <MetadataItem label='Tokens' loading={!lastProviderLog}>
-        <Tooltip
-          side='bottom'
-          align='end'
-          delayDuration={250}
-          trigger={
-            <div className='flex flex-row items-center gap-x-1'>
-              <Text.H5 color='foregroundMuted'>{documentLog.tokens}</Text.H5>
-              <Icon name='info' className='text-muted-foreground' />
-            </div>
-          }
-        >
+      <FinishReasonItem providerLog={providerLog} />
+      <MetadataItemTooltip
+        label='Tokens'
+        loading={providersLoading}
+        trigger={
+          <Text.H5 color='foregroundMuted'>{documentLog.tokens}</Text.H5>
+        }
+        tooltipContent={
           <div className='flex flex-col justify-between'>
             {Object.entries(tokensByModel).map(([model, tokens]) => (
               <div
@@ -118,22 +82,17 @@ export function DocumentLogMetadata({
               </div>
             )}
           </div>
-        </Tooltip>
-      </MetadataItem>
-      <MetadataItem label='Cost' loading={!lastProviderLog || providersLoading}>
-        <Tooltip
-          side='bottom'
-          align='end'
-          delayDuration={250}
-          trigger={
-            <div className='flex flex-row items-center gap-x-1'>
-              <Text.H5 color='foregroundMuted'>
-                {formatCostInMillicents(documentLog.costInMillicents ?? 0)}
-              </Text.H5>
-              <Icon name='info' className='text-muted-foreground' />
-            </div>
-          }
-        >
+        }
+      />
+      <MetadataItemTooltip
+        label='Cost'
+        loading={providersLoading}
+        trigger={
+          <Text.H5 color='foregroundMuted'>
+            {formatCostInMillicents(documentLog.costInMillicents ?? 0)}
+          </Text.H5>
+        }
+        tooltipContent={
           <div className='flex flex-col justify-between'>
             {Object.entries(costByModel).map(
               ([providerId, cost_in_millicents]) => (
@@ -158,21 +117,39 @@ export function DocumentLogMetadata({
               </Text.H6>
             </div>
           </div>
-        </Tooltip>
-      </MetadataItem>
-      <MetadataItem
-        label='Duration'
-        value={formatDuration(documentLog.duration)}
+        }
       />
       {(providerLogs?.length ?? 0) > 0 && (
         <MetadataItem
           label='Time until last message'
           value={formatDuration(
-            documentLog.duration - (lastProviderLog?.duration ?? 0),
+            documentLog.duration - (providerLog.duration ?? 0),
           )}
-          loading={!lastProviderLog}
+          loading={providersLoading}
         />
       )}
+    </>
+  )
+}
+
+export function DocumentLogMetadata({
+  documentLog,
+  providerLogs = [],
+}: {
+  documentLog: DocumentLogWithMetadataAndError
+  providerLogs?: ProviderLogDto[]
+}) {
+  const providerLog = providerLogs[providerLogs.length - 1]
+  return (
+    <>
+      <RunErrorMessage error={documentLog.error} />
+      <MetadataItem label='Log uuid'>
+        <ClickToCopy copyValue={documentLog.uuid}>
+          <Text.H5 align='right' color='foregroundMuted'>
+            {documentLog.uuid.split('-')[0]}
+          </Text.H5>
+        </ClickToCopy>
+      </MetadataItem>
       <MetadataItem label='Version'>
         <ClickToCopy copyValue={documentLog.commit.uuid}>
           <Text.H5 align='right' color='foregroundMuted'>
@@ -180,6 +157,17 @@ export function DocumentLogMetadata({
           </Text.H5>
         </ClickToCopy>
       </MetadataItem>
+      <MetadataItem
+        label='Duration'
+        value={formatDuration(documentLog.duration)}
+      />
+      {providerLog ? (
+        <ProviderLogsMetadata
+          providerLog={providerLog}
+          providerLogs={providerLogs}
+          documentLog={documentLog}
+        />
+      ) : null}
     </>
   )
 }

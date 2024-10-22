@@ -1,4 +1,4 @@
-import { and, eq, sql } from 'drizzle-orm'
+import { and, eq, isNull, sql } from 'drizzle-orm'
 
 import { ErrorableEntity, EvaluationResultableType } from '../../../browser'
 import {
@@ -9,25 +9,38 @@ import {
   evaluations,
   runErrors,
 } from '../../../schema'
-import { evaluationResultDto } from '../../evaluationResultsRepository'
+import {
+  evaluationResultDto,
+  EvaluationResultWithMetadata,
+} from '../../evaluationResultsRepository'
 import Repository from '../../repository'
-
-export const ERROR_SELECT = {
-  code: sql<string>`${runErrors.code}`.as('error_code'),
-  message: sql<string>`${runErrors.message}`.as('error_message'),
-  details: sql<string>`${runErrors.details}`.as('error_details'),
-}
 
 const evaluationResultDtoWithErrors = {
   ...evaluationResultDto,
-  error: ERROR_SELECT,
+  error: {
+    code: sql<string>`${runErrors.code}`.as('evaluation_result_error_code'),
+    message: sql<string>`${runErrors.message}`.as(
+      'evaluation_result_error_message',
+    ),
+    details: sql<string>`${runErrors.details}`.as(
+      'evaluation_result_error_details',
+    ),
+  },
 }
 
-type EvaluationResultDtoWithErrors = typeof evaluationResultDtoWithErrors
+export type RunErrorField = {
+  code: string | null
+  message: string | null
+  details: string | null
+}
+export type EvaluationResultWithMetadataAndErrors =
+  EvaluationResultWithMetadata & {
+    error: RunErrorField
+  }
 
 export class EvaluationResultsWithErrorsRepository extends Repository<
   typeof evaluationResultDtoWithErrors,
-  EvaluationResultDtoWithErrors
+  EvaluationResultWithMetadataAndErrors
 > {
   get scope() {
     return this.db
@@ -35,7 +48,10 @@ export class EvaluationResultsWithErrorsRepository extends Repository<
       .from(evaluationResults)
       .innerJoin(
         evaluations,
-        eq(evaluations.id, evaluationResults.evaluationId),
+        and(
+          isNull(evaluations.deletedAt),
+          eq(evaluations.id, evaluationResults.evaluationId),
+        ),
       )
       .leftJoin(
         evaluationResultableBooleans,

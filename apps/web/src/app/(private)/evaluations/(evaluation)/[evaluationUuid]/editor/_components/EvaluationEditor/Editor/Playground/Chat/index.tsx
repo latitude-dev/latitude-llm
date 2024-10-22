@@ -22,6 +22,7 @@ import {
   Timer,
   TokenUsage,
 } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/DocumentEditor/Editor/Playground/Chat'
+import { LanguageModelUsage } from 'ai'
 import { readStreamableValue } from 'ai/rsc'
 
 export default function Chat({
@@ -34,7 +35,7 @@ export default function Chat({
   parameters: Record<string, unknown>
 }) {
   const [error, setError] = useState<Error | undefined>()
-  const [tokens, setTokens] = useState<number>(0)
+  const [usage, setUsage] = useState<LanguageModelUsage | undefined>()
   const [isScrolledToBottom, setIsScrolledToBottom] = useState(false)
   const [startTime, _] = useState(performance.now())
   const [endTime, setEndTime] = useState<number>()
@@ -49,6 +50,7 @@ export default function Chat({
   const [chainLength, setChainLength] = useState<number>(Infinity)
   const [conversation, setConversation] = useState<Conversation | undefined>()
   const [responseStream, setResponseStream] = useState<string | undefined>()
+  const [isStreaming, setIsStreaming] = useState(false)
 
   const addMessageToConversation = useCallback(
     (message: ConversationMessage) => {
@@ -68,7 +70,7 @@ export default function Chat({
   const runEvaluation = useCallback(async () => {
     setError(undefined)
     setResponseStream(undefined)
-
+    setIsStreaming(true)
     let response = ''
     let messagesCount = 0
 
@@ -99,10 +101,12 @@ export default function Chat({
             if (data.isLastStep) setChainLength(messagesCount + 1)
           } else if (data.type === ChainEventTypes.Complete) {
             setResponseStream(undefined)
-            setTokens(data.response.usage.totalTokens)
+            setUsage(data.response.usage)
+            setIsStreaming(false)
             setEndTime(performance.now())
           } else if (data.type === ChainEventTypes.Error) {
             setError(new Error(data.error.message))
+            setIsStreaming(false)
           }
           break
         }
@@ -118,6 +122,7 @@ export default function Chat({
           break
       }
     }
+    setIsStreaming(false)
   }, [parameters, runPromptAction])
 
   useEffect(() => {
@@ -166,12 +171,17 @@ export default function Chat({
       <div className='flex relative flex-row w-full items-center justify-center'>
         <TokenUsage
           isScrolledToBottom={isScrolledToBottom}
-          tokens={tokens}
-          responseStream={responseStream}
+          usage={usage}
+          isStreaming={isStreaming}
         />
       </div>
       <div className='flex items-center justify-center'>
-        <Button fancy variant='outline' onClick={clearChat}>
+        <Button
+          disabled={isStreaming}
+          fancy
+          variant='outline'
+          onClick={clearChat}
+        >
           Clear chat
         </Button>
       </div>

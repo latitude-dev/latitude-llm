@@ -46,7 +46,10 @@ export class ConnectedEvaluationsRepository extends Repository<
       .from(connectedEvaluations)
       .innerJoin(
         evaluations,
-        eq(connectedEvaluations.evaluationId, evaluations.id),
+        and(
+          isNull(evaluations.deletedAt),
+          eq(connectedEvaluations.evaluationId, evaluations.id),
+        ),
       )
       .where(eq(evaluations.workspaceId, this.workspaceId))
       .as('connectedEvaluationsScope')

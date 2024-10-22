@@ -28,7 +28,8 @@
     "hono": "^4.5.3",
     "jet-paths": "^1.0.6",
     "lodash-es": "^4.17.21",
-    "zod": "^3.23.8"
+    "zod": "^3.23.8",
+    "rate-limiter-flexible": "^5.0.3"
   },
   "devDependencies": {
     "@latitude-data/eslint-config": "workspace:^",

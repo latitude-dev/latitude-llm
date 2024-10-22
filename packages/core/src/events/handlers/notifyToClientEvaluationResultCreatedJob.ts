@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm'
 
-import { createEvaluationResultQuery } from '../../services/evaluationResults/_createEvaluationResultQuery'
+import { createEvaluationResultQueryWithErrors } from '../../services/evaluationResults/_createEvaluationResultQueryWithErrors'
 import { WebsocketClient } from '../../websockets/workers'
 import { EvaluationResultCreatedEvent } from '../events'
 
@@ -10,9 +10,10 @@ export const notifyToClientEvaluationResultCreatedJob = async ({
   data: EvaluationResultCreatedEvent
 }) => {
   const { evaluation, documentLog, evaluationResult } = event.data
-  const { evaluationResultsScope, baseQuery } = createEvaluationResultQuery(
-    evaluation.workspaceId,
-  )
+  // FIXME: DRY. This should be using same query as
+  // computeEvaluationResultsWithMetadata
+  const { evaluationResultsScope, baseQuery } =
+    createEvaluationResultQueryWithErrors(evaluation.workspaceId)
   const result = await baseQuery
     .where(eq(evaluationResultsScope.id, evaluationResult.id))
     .limit(1)

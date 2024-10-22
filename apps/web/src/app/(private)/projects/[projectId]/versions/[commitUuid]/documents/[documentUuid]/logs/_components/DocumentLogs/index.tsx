@@ -2,8 +2,7 @@
 
 import { useCallback, useState } from 'react'
 
-import { IPagination } from '@latitude-data/core/lib/pagination/buildPagination'
-import { DocumentLogWithMetadata } from '@latitude-data/core/repositories'
+import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
 import {
   TableBlankSlate,
   useCurrentCommit,
@@ -16,6 +15,7 @@ import {
 } from '$/components/Providers/WebsocketsProvider/useSockets'
 import useDocumentLogs, { documentLogPresenter } from '$/stores/documentLogs'
 import useProviderLogs from '$/stores/providerLogs'
+import { useSearchParams } from 'next/navigation'
 
 import { DocumentLogInfo } from './DocumentLogInfo'
 import { DocumentLogsTable } from './DocumentLogsTable'
@@ -68,27 +68,29 @@ const useDocumentLogSocket = (
 
 export function DocumentLogs({
   documentLogs: serverDocumentLogs,
-  pagination,
 }: {
-  documentLogs: DocumentLogWithMetadata[]
-  pagination: IPagination
+  documentLogs: DocumentLogWithMetadataAndError[]
 }) {
+  const searchParams = useSearchParams()
+  const page = searchParams.get('page')
+  const pageSize = searchParams.get('pageSize')
   const document = useCurrentDocument()
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
   const [selectedLog, setSelectedLog] = useState<
-    DocumentLogWithMetadata | undefined
+    DocumentLogWithMetadataAndError | undefined
   >()
-  const { data: providerLogs } = useProviderLogs({
-    documentLogUuid: selectedLog?.uuid,
-  })
+  const { data: providerLogs, isLoading: isProviderLogsLoading } =
+    useProviderLogs({
+      documentLogUuid: selectedLog?.uuid,
+    })
   const { data: documentLogs, mutate } = useDocumentLogs(
     {
       documentUuid: document.documentUuid,
       commitUuid: commit.uuid,
       projectId: project.id,
-      page: pagination.page,
-      pageSize: pagination.pageSize,
+      page,
+      pageSize,
     },
     {
       fallbackData: serverDocumentLogs,
@@ -110,7 +112,6 @@ export function DocumentLogs({
           documentLogs={documentLogs}
           selectedLog={selectedLog}
           setSelectedLog={setSelectedLog}
-          pagination={pagination}
         />
       </div>
       {selectedLog && (
@@ -118,6 +119,7 @@ export function DocumentLogs({
           <DocumentLogInfo
             documentLog={selectedLog}
             providerLogs={providerLogs}
+            isLoading={isProviderLogsLoading}
           />
         </div>
       )}

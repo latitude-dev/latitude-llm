@@ -24,7 +24,7 @@ export const runErrorEntities = latitudeSchema.enum('run_error_entity_enum', [
   ErrorableEntity.EvaluationResult,
 ])
 
-type RunErrorDetails<C extends RunErrorCodes> =
+export type RunErrorDetails<C extends RunErrorCodes> =
   C extends RunErrorCodes.ChainCompileError
     ? { compileCode: string; message: string }
     : never

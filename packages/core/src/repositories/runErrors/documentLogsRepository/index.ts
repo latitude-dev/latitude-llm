@@ -1,6 +1,7 @@
-import { and, eq, getTableColumns } from 'drizzle-orm'
+import { and, eq, getTableColumns, isNull, sql } from 'drizzle-orm'
 
 import { ErrorableEntity } from '../../../browser'
+import { NotFoundError, Result } from '../../../lib'
 import {
   commits,
   documentLogs,
@@ -8,24 +9,36 @@ import {
   runErrors,
   workspaces,
 } from '../../../schema'
+import { DocumentLogWithMetadata } from '../../documentLogsRepository'
 import Repository from '../../repository'
-import { ERROR_SELECT } from '../evaluationResultsRepository'
+import { RunErrorField } from '../evaluationResultsRepository'
 
 const tt = {
   ...getTableColumns(documentLogs),
-  error: ERROR_SELECT,
+  error: {
+    code: sql<string>`${runErrors.code}`.as('document_log_error_code'),
+    message: sql<string>`${runErrors.message}`.as('document_log_error_message'),
+    details: sql<string>`${runErrors.details}`.as('document_log_error_details'),
+  },
 }
-type DocumentLogWithError = typeof tt
+export type DocumentLogWithMetadataAndError = DocumentLogWithMetadata & {
+  error: RunErrorField
+}
+export type DocumentLogWithErrorScope =
+  typeof DocumentLogsWithErrorsRepository.prototype.scope
 
 export class DocumentLogsWithErrorsRepository extends Repository<
   typeof tt,
-  DocumentLogWithError
+  DocumentLogWithMetadataAndError
 > {
   get scope() {
     return this.db
       .select(tt)
       .from(documentLogs)
-      .innerJoin(commits, eq(commits.id, documentLogs.commitId))
+      .innerJoin(
+        commits,
+        and(eq(commits.id, documentLogs.commitId), isNull(commits.deletedAt)),
+      )
       .innerJoin(projects, eq(projects.id, commits.projectId))
       .innerJoin(workspaces, eq(workspaces.id, projects.workspaceId))
       .leftJoin(
@@ -37,5 +50,20 @@ export class DocumentLogsWithErrorsRepository extends Repository<
       )
       .where(eq(workspaces.id, this.workspaceId))
       .as('documentLogsWithErrorsScope')
+  }
+
+  async findByUuid(uuid: string) {
+    const result = await this.db
+      .select()
+      .from(this.scope)
+      .where(eq(this.scope.uuid, uuid))
+
+    if (!result.length) {
+      return Result.error(
+        new NotFoundError(`DocumentLog not found with uuid ${uuid}`),
+      )
+    }
+
+    return Result.ok(result[0]!)
   }
 }

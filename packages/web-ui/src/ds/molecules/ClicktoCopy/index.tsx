@@ -20,6 +20,7 @@ export function ClickToCopy({
       side='right'
       align='center'
       delayDuration={250}
+      variant='inverse'
       trigger={
         <div
           onClick={onCopy}

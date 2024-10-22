@@ -1,8 +1,10 @@
 import {
   and,
+  count,
   desc,
   eq,
   getTableColumns,
+  gte,
   isNotNull,
   isNull,
   sql,
@@ -38,7 +40,7 @@ export const evaluationResultDto = {
 }
 
 export type EvaluationResultDto = EvaluationResult & {
-  result: string | number | boolean
+  result: string | number | boolean | undefined
 }
 
 export type EvaluationResultWithMetadata = EvaluationResultDto & {
@@ -58,7 +60,10 @@ export class EvaluationResultsRepository extends Repository<
       .from(evaluationResults)
       .innerJoin(
         evaluations,
-        eq(evaluations.id, evaluationResults.evaluationId),
+        and(
+          isNull(evaluations.deletedAt),
+          eq(evaluations.id, evaluationResults.evaluationId),
+        ),
       )
       .leftJoin(
         evaluationResultableBooleans,
@@ -122,6 +127,33 @@ export class EvaluationResultsRepository extends Repository<
       .orderBy(desc(this.scope.createdAt))
 
     return Result.ok(result.map(this.parseResult))
+  }
+
+  async totalCountSinceDate(minDate: Date) {
+    const result = await this.db
+      .select({
+        count: count(evaluationResults.id),
+      })
+      .from(evaluationResults)
+      .innerJoin(
+        evaluations,
+        and(
+          eq(evaluations.id, evaluationResults.evaluationId),
+          eq(evaluations.workspaceId, this.workspaceId),
+        ),
+      )
+      .leftJoin(
+        runErrors,
+        and(
+          eq(runErrors.errorableUuid, evaluationResults.uuid),
+          eq(runErrors.errorableType, ErrorableEntity.EvaluationResult),
+        ),
+      )
+      .where(
+        and(isNull(runErrors.id), gte(evaluationResults.createdAt, minDate)),
+      )
+
+    return result[0]?.count ?? 0
   }
 
   private parseResult(row: EvaluationResult & { result: string }) {

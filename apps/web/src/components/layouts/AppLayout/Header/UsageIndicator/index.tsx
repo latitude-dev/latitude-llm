@@ -104,7 +104,7 @@ export function UsageIndicator() {
               showBackground
             />
             <LoadingText isLoading={isLoading}>
-              <Text.H6>
+              <Text.H6 noWrap>
                 {data?.usage} / {data?.max}
               </Text.H6>
             </LoadingText>

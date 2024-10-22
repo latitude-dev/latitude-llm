@@ -16,6 +16,7 @@ export type ChatUrlParams = {
 type RunDocumentBodyParam = {
   path: string
   parameters?: Record<string, unknown>
+  customIdentifier?: string
 }
 type ChatBodyParams = {
   messages: Message[]

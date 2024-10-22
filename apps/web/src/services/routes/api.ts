@@ -35,6 +35,7 @@ export const _API_ROUTES = {
                 root: documentRoot,
                 documentLogs: {
                   root: `${documentRoot}/documentLogs`,
+                  pagination: `${documentRoot}/documentLogs/pagination`,
                 },
                 evaluations: {
                   root: `${documentRoot}/evaluations`,
@@ -54,6 +55,7 @@ export const _API_ROUTES = {
                 evaluationResultsByDocumentContent: {
                   detail: ({ evaluationId }: { evaluationId: number }) => ({
                     root: `${documentRoot}/evaluation-results-by-document-content/${evaluationId}`,
+                    pagination: `${documentRoot}/evaluation-results-by-document-content/${evaluationId}/pagination`,
                   }),
                 },
               }

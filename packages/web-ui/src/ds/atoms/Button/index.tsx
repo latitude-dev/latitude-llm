@@ -21,7 +21,7 @@ const buttonContainerVariants = cva(
         outline: 'bg-secondary hover:bg-secondary/60',
         secondary: 'bg-secondary hover:bg-secondary/80',
         ghost: 'shadow-none bg-transparent',
-        link: 'shadow-none underline-offset-4 hover:underline',
+        link: 'bg-transparent shadow-none underline-offset-4 hover:underline',
         linkOutline: 'shadow-none underline-offset-4 hover:underline',
         linkDestructive: 'shadow-none underline-offset-4 hover:underline',
         shiny: '',
@@ -128,6 +128,7 @@ export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> &
     isLoading?: boolean
     fancy?: boolean
     lookDisabled?: boolean
+    ellipsis?: boolean
   }
 
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
@@ -143,6 +144,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
     children,
     disabled,
     lookDisabled,
+    ellipsis,
     ...props
   },
   ref,
@@ -164,6 +166,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
         {
           'w-full': fullWidth,
           'opacity-50': lookDisabled,
+          'overflow-hidden': ellipsis,
         },
       )}
       ref={ref}
@@ -174,6 +177,9 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
           className={cn(
             'relative',
             buttonVariants({ variant, size, className, fanciness }),
+            {
+              'overflow-hidden': ellipsis,
+            },
           )}
         >
           {variant === 'shiny' && (
@@ -188,6 +194,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
           <div
             className={cn('flex flex-row items-center gap-x-1', {
               'w-full justify-center': fullWidth,
+              'overflow-hidden': ellipsis,
             })}
           >
             {iconProps ? <Icon {...iconProps} /> : null}

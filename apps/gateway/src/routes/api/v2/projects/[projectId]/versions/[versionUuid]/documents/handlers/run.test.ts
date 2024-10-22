@@ -72,6 +72,7 @@ describe('POST /run', () => {
       )
 
       expect(res.status).toBe(401)
+      expect(res.headers.get('www-authenticate')).toBe('Bearer realm=""')
     })
   })
 
@@ -109,6 +110,7 @@ describe('POST /run', () => {
       body = JSON.stringify({
         path: document.documentVersion.path,
         parameters: {},
+        customIdentifier: 'miau',
         stream: true,
       })
       headers = {

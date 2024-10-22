@@ -141,12 +141,14 @@ export class Latitude {
       projectId,
       versionUuid,
       parameters,
+      customIdentifier,
       onEvent,
       onFinished,
       onError,
     }: {
       projectId?: number
       versionUuid?: string
+      customIdentifier?: string
       parameters?: Record<string, unknown>
     } & StreamResponseCallbacks = {},
   ) {
@@ -163,7 +165,11 @@ export class Latitude {
         method: 'POST',
         handler: HandlerType.RunDocument,
         params: { projectId, versionUuid },
-        body: { path, parameters },
+        body: {
+          path,
+          parameters,
+          customIdentifier,
+        },
       })
 
       if (!response.ok) {
@@ -221,7 +227,7 @@ export class Latitude {
     let chainResponse: ChainCallResponseDto | undefined
 
     const parser = new EventSourceParserStream()
-    const stream = nodeFetchResponseToReadableStream(body)
+    const stream = nodeFetchResponseToReadableStream(body, onError)
     const eventStream = stream
       .pipeThrough(new TextDecoderStream())
       .pipeThrough(parser)

@@ -23,6 +23,28 @@ let workspace: Workspace
 let documentLog: DocumentLog
 let evaluation: EvaluationDto
 
+async function createEvaluationResultWithError({
+  documentLog,
+  evaluation,
+  result,
+}: {
+  documentLog: DocumentLog
+  evaluation: EvaluationDto
+  result?: string | undefined
+}) {
+  const { evaluationResult } = await createEvaluationResult({
+    documentLog,
+    evaluation,
+    result,
+    skipEvaluationResultCreation: result === undefined,
+  })
+  await createRunError({
+    errorableType: ErrorableEntity.EvaluationResult,
+    errorableUuid: evaluationResult.uuid,
+    code: RunErrorCodes.Unknown,
+    message: 'Error message',
+  })
+}
 describe('EvaluationResultsRepository', () => {
   describe('findAll', () => {
     beforeEach(async () => {
@@ -49,18 +71,6 @@ describe('EvaluationResultsRepository', () => {
       evaluation = await createLlmAsJudgeEvaluation({
         user: user,
         workspace: workspace,
-      })
-
-      const { evaluationResult } = await createEvaluationResult({
-        documentLog,
-        evaluation,
-        result: 'Result 1',
-      })
-      await createRunError({
-        errorableType: ErrorableEntity.EvaluationResult,
-        errorableUuid: evaluationResult.uuid,
-        code: RunErrorCodes.Unknown,
-        message: 'Error message',
       })
     })
 
@@ -109,6 +119,12 @@ describe('EvaluationResultsRepository', () => {
         message: 'Error message',
       })
 
+      await createEvaluationResultWithError({
+        documentLog,
+        evaluation,
+        result: 'Result 1',
+      })
+
       const repo = new EvaluationResultsWithErrorsRepository(workspace.id)
       const results = await repo.findAll()
       const data = results.unwrap()
@@ -118,7 +134,38 @@ describe('EvaluationResultsRepository', () => {
       expect(data[0]?.result).toBe('Result 1')
     })
 
+    it('show evaluation result without result', async () => {
+      await createEvaluationResultWithError({
+        documentLog,
+        evaluation,
+      })
+      const repo = new EvaluationResultsWithErrorsRepository(workspace.id)
+      const results = await repo.findAll()
+      const data = results.unwrap()
+      expect(results.ok).toBe(true)
+      expect(data.length).toBe(1)
+      expect(data[0]).toEqual(
+        expect.objectContaining({
+          error: {
+            code: RunErrorCodes.Unknown,
+            message: 'Error message',
+            details: null,
+          },
+          evaluationId: evaluation.id,
+          documentLogId: documentLog.id,
+          resultableId: null,
+          resultableType: null,
+        }),
+      )
+    })
+
     it('does return evaluation results with out errors', async () => {
+      await createEvaluationResultWithError({
+        documentLog,
+        evaluation,
+        result: 'Result 1',
+      })
+
       await createEvaluationResult({
         documentLog,
         evaluation,

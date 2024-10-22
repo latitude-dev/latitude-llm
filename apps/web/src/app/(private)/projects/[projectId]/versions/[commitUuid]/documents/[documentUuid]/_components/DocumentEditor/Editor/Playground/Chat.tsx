@@ -16,13 +16,16 @@ import {
   ChatTextArea,
   cn,
   ErrorMessage,
+  Icon,
   Message,
   MessageList,
   Text,
+  Tooltip,
   useAutoScroll,
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui'
+import { LanguageModelUsage } from 'ai'
 import { readStreamableValue } from 'ai/rsc'
 
 import { DocumentEditorContext } from '..'
@@ -43,7 +46,7 @@ export default function Chat({
     DocumentEditorContext,
   )!
   const [error, setError] = useState<Error | undefined>()
-  const [tokens, setTokens] = useState<number>(0)
+  const [usage, setUsage] = useState<LanguageModelUsage | undefined>()
   const [isScrolledToBottom, setIsScrolledToBottom] = useState(false)
   const [time, setTime] = useState<number>()
   const containerRef = useRef<HTMLDivElement>(null)
@@ -57,6 +60,7 @@ export default function Chat({
   const [chainLength, setChainLength] = useState<number>(Infinity)
   const [conversation, setConversation] = useState<Conversation | undefined>()
   const [responseStream, setResponseStream] = useState<string | undefined>()
+  const [isStreaming, setIsStreaming] = useState(false)
 
   const addMessageToConversation = useCallback(
     (message: ConversationMessage) => {
@@ -77,7 +81,12 @@ export default function Chat({
     const start = performance.now()
     setError(undefined)
     setResponseStream('')
-
+    setIsStreaming(true)
+    setUsage({
+      promptTokens: 0,
+      completionTokens: 0,
+      totalTokens: 0,
+    })
     let response = ''
     let messagesCount = 0
 
@@ -110,7 +119,7 @@ export default function Chat({
             } else if (data.type === ChainEventTypes.StepComplete) {
               response = ''
             } else if (data.type === ChainEventTypes.Complete) {
-              setTokens(data.response.usage.totalTokens)
+              setUsage(data.response.usage)
               setTime(performance.now() - start)
             } else if (data.type === ChainEventTypes.Error) {
               setError(new Error(data.error.message))
@@ -133,6 +142,7 @@ export default function Chat({
     } catch (error) {
       setError(error as Error)
     } finally {
+      setIsStreaming(false)
       setResponseStream(undefined)
     }
   }, [
@@ -187,7 +197,7 @@ export default function Chat({
                   content: data.response.text,
                 } as AssistantMessage)
 
-                setTokens((prev) => prev + data.response.usage.totalTokens)
+                setUsage(data.response.usage)
 
                 setResponseStream(undefined)
               }
@@ -254,13 +264,13 @@ export default function Chat({
       <div className='flex relative flex-row w-full items-center justify-center'>
         <TokenUsage
           isScrolledToBottom={isScrolledToBottom}
-          tokens={tokens}
-          responseStream={responseStream}
+          usage={usage}
+          isStreaming={isStreaming}
         />
         <ChatTextArea
           clearChat={clearChat}
           placeholder='Enter followup message...'
-          disabled={responseStream !== undefined}
+          disabled={isStreaming}
           onSubmit={submitUserMessage}
         />
       </div>
@@ -286,14 +296,14 @@ export function AnimatedDots() {
 
 export function TokenUsage({
   isScrolledToBottom,
-  tokens,
-  responseStream,
+  usage,
+  isStreaming,
 }: {
   isScrolledToBottom: boolean
-  tokens: number
-  responseStream: string | undefined
+  usage: LanguageModelUsage | undefined
+  isStreaming: boolean
 }) {
-  if (!tokens && responseStream === undefined) return null
+  if (!usage && isStreaming) return null
 
   return (
     <div
@@ -304,8 +314,30 @@ export function TokenUsage({
         },
       )}
     >
-      {responseStream === undefined ? (
-        <Text.H6M color='foregroundMuted'>{tokens} tokens</Text.H6M>
+      {!isStreaming && usage ? (
+        <Tooltip
+          side='top'
+          align='center'
+          sideOffset={5}
+          delayDuration={250}
+          trigger={
+            <div className='cursor-pointer flex flex-row items-center gap-x-1'>
+              <Text.H6M color='foregroundMuted'>
+                {usage?.totalTokens} tokens
+              </Text.H6M>
+              <Icon name='info' color='foregroundMuted' />
+            </div>
+          }
+        >
+          <div className='flex flex-col gap-2'>
+            <Text.H6M color='foregroundMuted'>
+              {usage?.promptTokens} prompt tokens
+            </Text.H6M>
+            <Text.H6M color='foregroundMuted'>
+              {usage?.completionTokens} completion tokens
+            </Text.H6M>
+          </div>
+        </Tooltip>
       ) : (
         <AnimatedDots />
       )}

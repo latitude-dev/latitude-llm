@@ -8,7 +8,7 @@ Chains allow you to create multi-step prompts that can interact with the AI mode
 
 ## Using Steps in Your Prompts
 
-- Use the `<response />` tag in your prompt to add a step. The engine will pause at that step, generate a response, and add it to the conversaion as an assistant message, before continuing with the prompt.
+- Use the `<response />` tag in your prompt to add a step. The engine will pause at that step, generate a response, and add it to the conversation as an assistant message, before continuing with the prompt.
 - You can add custom configuration to each step by adding attributes to the `<response />` tag:
     ```
         <response provider="openai" model="gpt-4o-mini" temperature={{0.1}} />

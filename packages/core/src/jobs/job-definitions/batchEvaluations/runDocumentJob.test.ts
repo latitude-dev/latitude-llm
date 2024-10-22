@@ -88,7 +88,7 @@ describe('runDocumentJob', () => {
   it('should run document and enqueue evaluation job on success', async () => {
     const mockResult = {
       response: Promise.resolve('not undefined value'),
-      documentLogUuid: 'log1',
+      errorableUuid: 'log1',
     }
     vi.mocked(commits.runDocumentAtCommit).mockResolvedValue(
       // @ts-ignore

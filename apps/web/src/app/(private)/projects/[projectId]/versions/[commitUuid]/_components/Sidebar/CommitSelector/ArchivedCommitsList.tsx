@@ -8,7 +8,7 @@ import {
   DocumentVersion,
 } from '@latitude-data/core/browser'
 import { Text } from '@latitude-data/web-ui'
-import useCommits from '$/stores/commitsStore'
+import { useCommits } from '$/stores/commitsStore'
 
 import { CommitItem, CommitItemSkeleton, SimpleUser } from './CommitItem'
 import { CommitItemsWrapper } from './CommitItemsWrapper'

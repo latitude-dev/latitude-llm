@@ -2,11 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 
-import {
-  DocumentVersion,
-  EvaluationDto,
-  EvaluationResult,
-} from '@latitude-data/core/browser'
+import { DocumentVersion, EvaluationDto } from '@latitude-data/core/browser'
 import {
   Button,
   FakeProgress,
@@ -17,6 +13,7 @@ import {
 } from '@latitude-data/web-ui'
 import { refinePromptAction } from '$/actions/copilot/refinePrompt'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
+import { EvaluationResultByDocument } from '$/stores/evaluationResultsByDocumentContent'
 
 export function GenerateSuggestion({
   documentVersion,
@@ -26,7 +23,7 @@ export function GenerateSuggestion({
 }: {
   documentVersion: DocumentVersion
   evaluation: EvaluationDto
-  evaluationResults: EvaluationResult[]
+  evaluationResults: EvaluationResultByDocument[]
   applySuggestion: (prompt: string) => void
 }) {
   const { project } = useCurrentProject()

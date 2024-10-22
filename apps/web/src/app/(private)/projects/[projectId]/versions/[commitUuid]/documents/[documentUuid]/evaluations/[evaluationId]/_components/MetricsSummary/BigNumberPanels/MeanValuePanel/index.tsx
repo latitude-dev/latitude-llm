@@ -27,6 +27,8 @@ export default function MeanValuePanel({
     },
     {
       revalidateIfStale: false,
+      revalidateOnFocus: false,
+      revalidateOnMount: false,
     },
   )
   const onStatusChange = useDebouncedCallback(
