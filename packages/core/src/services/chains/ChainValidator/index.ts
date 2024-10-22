@@ -2,7 +2,7 @@ import { Chain, CompileError, Conversation } from '@latitude-data/compiler'
 import { JSONSchema7 } from 'json-schema'
 import { z } from 'zod'
 
-import { ProviderApiKey, Workspace } from '../../../browser'
+import { applyCustomRules, ProviderApiKey, Workspace } from '../../../browser'
 import { RunErrorCodes } from '../../../constants'
 import { Result, TypedResult } from '../../../lib'
 import { Config } from '../../ai'
@@ -69,11 +69,19 @@ export class ChainValidator {
     })
     if (freeQuota.error) return freeQuota
 
+    const { messages } = applyCustomRules({
+      providerType: provider.provider,
+      messages: conversation.messages,
+    })
+
     return Result.ok({
       provider,
       config,
       chainCompleted,
-      conversation,
+      conversation: {
+        ...conversation,
+        messages,
+      },
       schema: this.getInputSchema(chainCompleted, config),
       output: this.getOutputType(chainCompleted, config),
     })
