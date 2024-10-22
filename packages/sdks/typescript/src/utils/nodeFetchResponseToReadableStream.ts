@@ -49,7 +49,7 @@ export function nodeFetchResponseToReadableStream(
         try {
           controller.error(err)
         } catch (e) {
-          // controller might be claused already
+          // controller might be closed already
           if (onError) {
             onError(err)
           }
