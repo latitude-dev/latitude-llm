@@ -17,11 +17,17 @@ function EvaluationMeanValue({
   documentUuid: string
   commitUuid: string
 }) {
-  const { data, isLoading } = useEvaluationResultsMeanValue({
-    commitUuid,
-    documentUuid,
-    evaluationId: evaluation.id,
-  })
+  const { data, isLoading } = useEvaluationResultsMeanValue(
+    {
+      commitUuid,
+      documentUuid,
+      evaluationId: evaluation.id,
+    },
+    {
+      revalidateIfStale: false,
+      revalidateOnFocus: false,
+    },
+  )
 
   if (isLoading || data == null) {
     return <Skeleton height='h4' className='w-6' />
@@ -45,11 +51,17 @@ function EvaluationBooleanValue({
   documentUuid: string
   commitUuid: string
 }) {
-  const { data, isLoading } = useEvaluationResultsModalValue({
-    commitUuid,
-    documentUuid,
-    evaluationId: evaluation.id,
-  })
+  const { data, isLoading } = useEvaluationResultsModalValue(
+    {
+      commitUuid,
+      documentUuid,
+      evaluationId: evaluation.id,
+    },
+    {
+      revalidateIfStale: false,
+      revalidateOnFocus: false,
+    },
+  )
 
   if (isLoading || data == null) {
     return (
@@ -84,11 +96,17 @@ function EvaluationModalValue({
   documentUuid: string
   commitUuid: string
 }) {
-  const { data, isLoading } = useEvaluationResultsModalValue({
-    commitUuid,
-    documentUuid,
-    evaluationId: evaluation.id,
-  })
+  const { data, isLoading } = useEvaluationResultsModalValue(
+    {
+      commitUuid,
+      documentUuid,
+      evaluationId: evaluation.id,
+    },
+    {
+      revalidateIfStale: false,
+      revalidateOnFocus: false,
+    },
+  )
 
   if (isLoading || data == undefined) {
     return (
