@@ -11,7 +11,6 @@ import { hashContent, Result } from '../../lib'
 import { calculateOffset } from '../../lib/pagination/calculateOffset'
 import { DocumentVersionsRepository } from '../../repositories'
 import {
-  commits,
   documentLogs,
   evaluationResultableBooleans,
   evaluationResultableNumbers,
