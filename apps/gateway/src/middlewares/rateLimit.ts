@@ -3,7 +3,7 @@ import { RateLimitError } from '@latitude-data/core/lib/errors'
 import { createMiddleware } from 'hono/factory'
 import { RateLimiterRedis, RateLimiterRes } from 'rate-limiter-flexible'
 
-const RATE_LIMIT_POINTS = 1000
+const RATE_LIMIT_POINTS = 2000
 const RATE_LIMIT_DURATION = 60
 
 const rateLimiter = new RateLimiterRedis({
