@@ -27,8 +27,8 @@ export function Alert({
       {showIcon && <Icon name='alert' />}
       <div className='flex flex-row items-center gap-4 justify-between'>
         <div className='flex flex-col gap-2'>
-          <AlertTitle>{title}</AlertTitle>
-          <AlertDescription>{description}</AlertDescription>
+          {title && <AlertTitle>{title}</AlertTitle>}
+          {description && <AlertDescription>{description}</AlertDescription>}
         </div>
         {cta}
       </div>
