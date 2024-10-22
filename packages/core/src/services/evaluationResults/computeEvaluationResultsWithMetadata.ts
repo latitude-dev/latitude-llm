@@ -2,6 +2,7 @@ import { and, desc, eq, getTableColumns, sql, sum } from 'drizzle-orm'
 
 import { Commit, Evaluation } from '../../browser'
 import { database } from '../../client'
+import { calculateOffset } from '../../lib/pagination/calculateOffset'
 import {
   DocumentLogsWithErrorsRepository,
   EvaluationResultsWithErrorsRepository,
@@ -58,8 +59,7 @@ export async function computeEvaluationResultsWithMetadata(
     db,
   )
 
-  const offset = (parseInt(page) - 1) * parseInt(pageSize)
-
+  const offset = calculateOffset(page, pageSize)
   const filteredResultsSubQuery = db
     .select({
       id: evaluationResultsScope.id,

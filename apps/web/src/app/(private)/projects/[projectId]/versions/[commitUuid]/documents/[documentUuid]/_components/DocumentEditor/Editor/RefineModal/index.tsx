@@ -2,12 +2,9 @@
 
 import { ReactNode, useEffect, useMemo, useState } from 'react'
 
-import {
-  DocumentVersion,
-  EvaluationDto,
-  EvaluationResult,
-} from '@latitude-data/core/browser'
+import { DocumentVersion, EvaluationDto } from '@latitude-data/core/browser'
 import { Modal } from '@latitude-data/web-ui'
+import { EvaluationResultByDocument } from '$/stores/evaluationResultsByDocumentContent'
 
 import { SelectEvaluation } from './steps/1_SelectEvaluation'
 import { SelectEvaluationResults } from './steps/2_SelectEvaluationResults'
@@ -33,7 +30,7 @@ export default function RefineDocumentModal({
 }) {
   const [evaluation, setEvaluation] = useState<EvaluationDto>()
   const [evaluationResults, setEvaluationResults] = useState<
-    EvaluationResult[]
+    EvaluationResultByDocument[]
   >([])
 
   useEffect(() => {
