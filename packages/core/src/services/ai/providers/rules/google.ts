@@ -1,4 +1,4 @@
-import { ContentType, MessageRole } from '@latitude-data/compiler'
+import type { ContentType, MessageRole } from '@latitude-data/compiler'
 
 import { AppliedRules, ApplyCustomRulesProps } from '.'
 
@@ -11,7 +11,7 @@ export function applyGoogleRules({
   }
 
   const firstNonSystemMessageIndex = messages.findIndex(
-    (m) => m.role !== MessageRole.system,
+    (m) => m.role !== 'system',
   )
 
   if (firstNonSystemMessageIndex === -1) return noChanges
@@ -20,11 +20,7 @@ export function applyGoogleRules({
     firstNonSystemMessageIndex,
   )
 
-  if (
-    !messagesAfterFirstNonSystemMessage.some(
-      (m) => m.role === MessageRole.system,
-    )
-  ) {
+  if (!messagesAfterFirstNonSystemMessage.some((m) => m.role === 'system')) {
     return noChanges
   }
 
@@ -34,11 +30,11 @@ export function applyGoogleRules({
       'Google only supports system messages at the beggining of the conversation. All other system messages have been converted to user messages.',
     messages: messages.map((m, i) => {
       if (i < firstNonSystemMessageIndex) return m
-      if (m.role !== MessageRole.system) return m
+      if (m.role !== 'system') return m
       return {
         ...m,
-        role: MessageRole.user,
-        content: [{ type: ContentType.text, text: m.content }],
+        role: 'user' as MessageRole.user,
+        content: [{ type: 'text' as ContentType.text, text: m.content }],
       }
     }),
   }

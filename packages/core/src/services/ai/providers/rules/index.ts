@@ -1,4 +1,4 @@
-import { Message } from '@latitude-data/compiler'
+import type { Message } from '@latitude-data/compiler'
 
 import { Providers } from '../models'
 import { applyAntrhopicRules } from './anthropic'
