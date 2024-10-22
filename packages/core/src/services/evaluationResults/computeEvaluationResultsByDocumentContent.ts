@@ -74,6 +74,7 @@ export async function computeEvaluationResultsByDocumentContent(
     workspaceId,
     db,
   )
+  const content = hashContent(resolvedContent)
 
   const filteredEvaluationResults = db
     .select()
@@ -95,10 +96,7 @@ export async function computeEvaluationResultsByDocumentContent(
     )
     .innerJoin(commits, eq(commits.id, documentLogsScope.commitId))
     .where(
-      or(
-        eq(documentLogsScope.contentHash, hashContent(resolvedContent)),
-        eq(commits.id, commit.id),
-      ),
+      or(eq(documentLogsScope.contentHash, content), eq(commits.id, commit.id)),
     )
     .orderBy(
       desc(filteredEvaluationResults.createdAt),
