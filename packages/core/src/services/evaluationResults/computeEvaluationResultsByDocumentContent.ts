@@ -1,25 +1,25 @@
-import { desc, eq, or } from 'drizzle-orm'
+import { and, desc, eq, isNotNull, isNull, or, sql } from 'drizzle-orm'
 
-import { Commit, Evaluation } from '../../browser'
+import {
+  Commit,
+  ErrorableEntity,
+  Evaluation,
+  EvaluationResultableType,
+} from '../../browser'
 import { database } from '../../client'
 import { hashContent, Result } from '../../lib'
 import { calculateOffset } from '../../lib/pagination/calculateOffset'
+import { DocumentVersionsRepository } from '../../repositories'
 import {
-  DocumentLogsRepository,
-  DocumentVersionsRepository,
-  EvaluationResultsRepository,
-} from '../../repositories'
-import { commits } from '../../schema'
+  commits,
+  documentLogs,
+  evaluationResultableBooleans,
+  evaluationResultableNumbers,
+  evaluationResultableTexts,
+  evaluationResults,
+} from '../../schema'
+import { runErrors } from '../../schema/models/runErrors'
 import { getResolvedContent } from '../documents'
-
-function getRepositoryScopes(workspaceId: number, db = database) {
-  const evaluationResultsScope = new EvaluationResultsRepository(
-    workspaceId,
-    db,
-  ).scope
-  const documentLogsScope = new DocumentLogsRepository(workspaceId, db).scope
-  return { evaluationResultsScope, documentLogsScope }
-}
 
 async function getDocumentContent(
   {
@@ -61,49 +61,107 @@ export async function computeEvaluationResultsByDocumentContent(
   db = database,
 ) {
   const { workspaceId } = evaluation
-  const resolvedContentResult = await getDocumentContent({
+  const offset = calculateOffset(page, pageSize)
+  const content = await buildDocumentContentHash({
     workspaceId,
     documentUuid,
     commit,
   })
-  if (resolvedContentResult.error) return resolvedContentResult
-
-  const resolvedContent = resolvedContentResult.value
-  const offset = calculateOffset(page, pageSize)
-  const { evaluationResultsScope, documentLogsScope } = getRepositoryScopes(
-    workspaceId,
-    db,
-  )
-  const content = hashContent(resolvedContent)
-
-  const filteredEvaluationResults = db
-    .select()
-    .from(evaluationResultsScope)
-    .where(eq(evaluationResultsScope.evaluationId, evaluation.id))
-    .as('filteredEvaluationResults')
+  if (content.error) return content
 
   const rows = await db
     .select({
-      id: filteredEvaluationResults.id,
-      source: filteredEvaluationResults.source,
-      result: filteredEvaluationResults.result,
-      createdAt: filteredEvaluationResults.createdAt,
+      id: evaluationResults.id,
+      source: evaluationResults.source,
+      result: sql<string>`CASE
+        WHEN ${evaluationResults.resultableType} = ${EvaluationResultableType.Boolean} THEN ${evaluationResultableBooleans.result}::text
+        WHEN ${evaluationResults.resultableType} = ${EvaluationResultableType.Number} THEN ${evaluationResultableNumbers.result}::text
+        WHEN ${evaluationResults.resultableType} = ${EvaluationResultableType.Text} THEN ${evaluationResultableTexts.result}
+      END`.as('result'),
+      createdAt: evaluationResults.createdAt,
     })
-    .from(filteredEvaluationResults)
+    .from(evaluationResults)
     .innerJoin(
-      documentLogsScope,
-      eq(documentLogsScope.id, filteredEvaluationResults.documentLogId),
+      documentLogs,
+      eq(documentLogs.id, evaluationResults.documentLogId),
     )
-    .innerJoin(commits, eq(commits.id, documentLogsScope.commitId))
+    .leftJoin(
+      evaluationResultableBooleans,
+      and(
+        eq(evaluationResults.resultableType, EvaluationResultableType.Boolean),
+        eq(
+          evaluationResults.resultableId,
+          sql`${evaluationResultableBooleans.id}`,
+        ),
+      ),
+    )
+    .leftJoin(
+      evaluationResultableNumbers,
+      and(
+        eq(evaluationResults.resultableType, EvaluationResultableType.Number),
+        eq(
+          evaluationResults.resultableId,
+          sql`${evaluationResultableNumbers.id}`,
+        ),
+      ),
+    )
+    .leftJoin(
+      evaluationResultableTexts,
+      and(
+        eq(evaluationResults.resultableType, EvaluationResultableType.Text),
+        eq(
+          evaluationResults.resultableId,
+          sql`${evaluationResultableTexts.id}`,
+        ),
+      ),
+    )
+    .leftJoin(
+      runErrors,
+      or(
+        and(
+          eq(runErrors.errorableUuid, evaluationResults.uuid),
+          eq(runErrors.errorableType, ErrorableEntity.EvaluationResult),
+        ),
+        and(
+          eq(runErrors.errorableUuid, documentLogs.uuid),
+          eq(runErrors.errorableType, ErrorableEntity.DocumentLog),
+        ),
+      ),
+    )
     .where(
-      or(eq(documentLogsScope.contentHash, content), eq(commits.id, commit.id)),
+      and(
+        eq(evaluationResults.evaluationId, evaluation.id),
+        or(
+          eq(documentLogs.contentHash, content.value),
+          eq(documentLogs.commitId, commit.id),
+        ),
+        isNull(runErrors.id),
+        isNotNull(evaluationResults.resultableId),
+        isNotNull(evaluationResults.providerLogId),
+      ),
     )
-    .orderBy(
-      desc(filteredEvaluationResults.createdAt),
-      desc(filteredEvaluationResults.id),
-    )
+    .orderBy(desc(evaluationResults.createdAt), desc(evaluationResults.id))
     .limit(pageSize)
     .offset(offset)
 
   return Result.ok(rows)
+}
+
+async function buildDocumentContentHash({
+  workspaceId,
+  documentUuid,
+  commit,
+}: {
+  workspaceId: number
+  documentUuid: string
+  commit: Commit
+}) {
+  const documentContent = await getDocumentContent({
+    workspaceId,
+    documentUuid,
+    commit,
+  })
+  if (documentContent.error) return documentContent
+
+  return Result.ok(hashContent(documentContent.value))
 }
