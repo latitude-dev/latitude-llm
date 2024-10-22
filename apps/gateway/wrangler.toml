@@ -1,0 +1,8 @@
+# Top-level configuration
+name = "latitude-gateway"
+main = "src/routes/app.ts"
+compatibility_date = "2024-09-23"
+compatibility_flags = [ "nodejs_compat" ]
+
+workers_dev = false
+route = { pattern = "staging-gateway.latitude.so/*", zone_name = "latitude.so" }

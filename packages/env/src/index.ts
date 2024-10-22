@@ -1,26 +1,29 @@
-import { join, resolve } from 'path'
-import { cwd } from 'process'
-import { fileURLToPath } from 'url'
-
 import { createEnv } from '@t3-oss/env-core'
 import dotenv, { type DotenvPopulateInput } from 'dotenv'
 import z from 'zod'
 
-const environment = process.env.NODE_ENV || 'development'
-const __dirname = fileURLToPath(import.meta.url)
 const FILE_PUBLIC_PATH = 'uploads'
+const environment =
+  process.env.NODE_ENV === 'undefined'
+    ? 'development'
+    : (process.env.NODE_ENV ?? 'development')
 
-if (environment === 'development' || environment === 'test') {
+if (
+  environment === 'development' ||
+  environment === 'test' ||
+  environment === 'undefined' // cloudflare workers
+) {
+  const { resolve } = await import('path')
+  const { cwd } = await import('process')
+
   const pathToEnv = resolve(cwd(), `../../.env.${environment}`)
-  const FILES_STORAGE_PATH = join(
-    __dirname,
-    `../../../../tmp/${FILE_PUBLIC_PATH}`,
-  )
+  const FILES_STORAGE_PATH = `../../../../tmp/${FILE_PUBLIC_PATH}`
 
   dotenv.populate(
     process.env as DotenvPopulateInput,
     {
       NODE_ENV: environment,
+      WORKERS: process.env.NODE_ENV === 'undefined' ? 'true' : 'false',
       FROM_MAILER_EMAIL: 'hello@latitude.so',
       DATABASE_URL: `postgres://latitude:secret@localhost:5432/latitude_${environment}`,
       QUEUE_PORT: '6379',
@@ -52,6 +55,7 @@ if (environment === 'development' || environment === 'test') {
       TEMPLATES_SUGGESTION_PROMPT_PATH: 'generator',
       COPILOT_PROJECT_ID: '10',
       COPILOT_EVALUATION_SUGGESTION_PROMPT_PATH: 'generator',
+      EVENT_PUBLISHER_API_KEY: 'fake-api-key',
     },
     { path: pathToEnv },
   )
@@ -71,10 +75,11 @@ export const env = createEnv({
     FROM_MAILER_EMAIL: z.string(),
     GATEWAY_HOSTNAME: z.string(),
     LATITUDE_DOMAIN: z.string(),
-    LATITUDE_EMAIL_DOMAIN: z.string().optional(),
     LATITUDE_URL: z.string().url(),
     NEXT_PUBLIC_POSTHOG_HOST: z.string(),
     NEXT_PUBLIC_POSTHOG_KEY: z.string(),
+    WORKERS: z.coerce.boolean().default(true),
+    LATITUDE_EMAIL_DOMAIN: z.string().optional(),
     SUPPORT_APP_SECRET_KEY: z.string().optional(),
     NEXT_PUBLIC_SUPPORT_APP_ID: z.string().optional(),
     NODE_ENV: z.string(),
@@ -114,6 +119,7 @@ export const env = createEnv({
     TEMPLATES_SUGGESTION_PROJECT_ID: z.coerce.number().optional(),
     TEMPLATES_SUGGESTION_PROMPT_PATH: z.string().optional(),
     COPILOT_EVALUATION_SUGGESTION_PROMPT_PATH: z.string().optional(),
+    EVENT_PUBLISHER_API_KEY: z.string(),
   },
   runtimeEnv: {
     ...process.env,
@@ -124,5 +130,6 @@ export const env = createEnv({
     QUEUE_PORT: process.env.QUEUE_PORT ?? '6379',
     SUPPORT_APP_ID: process.env.SUPPORT_APP_ID ?? '',
     SUPPORT_APP_SECRET_KEY: process.env.SUPPORT_APP_SECRET_KEY ?? '',
+    EVENT_PUBLISHER_API_KEY: process.env.EVENT_PUBLISHER_API_KEY,
   },
 })

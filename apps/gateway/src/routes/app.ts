@@ -13,7 +13,6 @@ import { documentsRouter as documentsRouterV2 } from './api/v2/projects/[project
 
 const app = new Hono()
 
-// Middlewares
 if (process.env.NODE_ENV !== 'test') {
   app.use(logger())
 }

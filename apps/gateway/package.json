@@ -5,7 +5,7 @@
   "description": "Gateway for Latitude Data",
   "private": true,
   "scripts": {
-    "dev": "tsx watch src/server",
+    "dev": "wrangler dev src/routes/app.ts",
     "build": "tsup --config tsup.config.ts && pnpm run sentry:sourcemaps",
     "dev:debug": "tsx watch --inspect-brk src/server",
     "lint": "eslint src/",
@@ -39,6 +39,7 @@
     "@types/uuid": "^10.0.0",
     "tsup": "^8.2.4",
     "tsx": "^4.16.2",
-    "vitest": "^2.0.4"
+    "vitest": "^2.0.4",
+    "wrangler": "^3.81.0"
   }
 }

@@ -1,16 +1,19 @@
 import { cache } from '@latitude-data/core/cache'
 import { RateLimitError } from '@latitude-data/core/lib/errors'
+import { env } from '@latitude-data/env'
 import { createMiddleware } from 'hono/factory'
 import { RateLimiterRedis, RateLimiterRes } from 'rate-limiter-flexible'
 
 const RATE_LIMIT_POINTS = 2000
 const RATE_LIMIT_DURATION = 60
 
-const rateLimiter = new RateLimiterRedis({
-  storeClient: await cache(),
-  points: RATE_LIMIT_POINTS,
-  duration: RATE_LIMIT_DURATION,
-})
+const rateLimiter =
+  !env.WORKERS &&
+  new RateLimiterRedis({
+    storeClient: await cache(),
+    points: RATE_LIMIT_POINTS,
+    duration: RATE_LIMIT_DURATION,
+  })
 
 const rateLimitMiddleware = () =>
   createMiddleware(async (c, next) => {
@@ -23,6 +26,8 @@ const rateLimitMiddleware = () =>
         (Date.now() + result.msBeforeNext).toString(),
       )
     }
+
+    if (!rateLimiter) return await next()
 
     let token: string | undefined
     try {
