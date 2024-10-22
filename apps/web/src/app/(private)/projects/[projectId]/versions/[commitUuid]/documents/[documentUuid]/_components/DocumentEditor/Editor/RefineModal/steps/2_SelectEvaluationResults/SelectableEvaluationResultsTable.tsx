@@ -19,7 +19,7 @@ import {
   Text,
 } from '@latitude-data/web-ui'
 import { relativeTime } from '$/app/_lib/formatUtils'
-import { LogicTablePaginationFooter } from '$/components/TablePaginationFooter/LogicTablePaginationFooter'
+import { LogicTablePaginationFooterWithoutCount } from '$/components/TablePaginationFooter/TablePaginationFooterWithoutCount'
 import { EvaluationResultByDocument } from '$/stores/evaluationResultsByDocumentContent'
 
 export const ResultCellContent = ({
@@ -61,20 +61,16 @@ export const SelectableEvaluationResultsTable = ({
   evaluationResultsRows,
   selectedResults,
   setSelectedResults,
-  totalCount,
-  isLoadingCount,
-  pageSize,
   page,
+  nextPage = false,
   setPage,
 }: {
   evaluation: EvaluationDto
   evaluationResultsRows: EvaluationResultRow[]
   selectedResults: EvaluationResultRow[]
   setSelectedResults: Dispatch<SetStateAction<EvaluationResultByDocument[]>>
-  totalCount: number
-  isLoadingCount: boolean
-  pageSize: number
   page: number
+  nextPage?: boolean
   setPage: (_: number) => void
 }) => {
   const toggleSelection = useCallback(
@@ -96,15 +92,11 @@ export const SelectableEvaluationResultsTable = ({
     <Table
       className='table-auto'
       externalFooter={
-        isLoadingCount ? null : (
-          <LogicTablePaginationFooter
-            page={page}
-            totalCount={totalCount}
-            totalCountLabel={`${totalCount} results, ${selectedResults.length} selected`}
-            pageSize={pageSize}
-            onPageChange={setPage}
-          />
-        )
+        <LogicTablePaginationFooterWithoutCount
+          page={page}
+          nextPage={nextPage}
+          onPageChange={setPage}
+        />
       }
     >
       <TableHeader className='sticky top-0 z-10'>
