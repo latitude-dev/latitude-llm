@@ -1,11 +1,14 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 
 import {
   Chain,
   Conversation,
+  Message as ConversationMessage,
   ConversationMetadata,
 } from '@latitude-data/compiler'
+import { applyCustomRules } from '@latitude-data/core/browser'
 import {
+  Alert,
   Button,
   ErrorMessage,
   Message,
@@ -17,6 +20,7 @@ import {
 } from '@latitude-data/web-ui'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { ROUTES } from '$/services/routes'
+import useProviderApiKeys from '$/stores/providerApiKeys'
 import Link from 'next/link'
 
 export default function Preview({
@@ -28,12 +32,21 @@ export default function Preview({
   parameters: Record<string, unknown>
   runPrompt: () => void
 }) {
+  const { data: providers } = useProviderApiKeys()
   const { commit } = useCurrentCommit()
   const document = useCurrentDocument()
   const { project } = useCurrentProject()
-  const [conversation, setConversation] = useState<Conversation | undefined>(
-    undefined,
-  )
+  const [conversation, setConversation] = useState<Conversation>()
+  const provider = useMemo(() => {
+    if (!conversation) return undefined
+    if (!providers) return undefined
+    const providerName = conversation.config?.['provider']
+    if (!providerName) return undefined
+    return providers.find((p) => p.name === providerName)
+  }, [conversation, providers])
+  const [fixedMessages, setFixedMessages] = useState<ConversationMessage[]>()
+  const [warningMessage, setWarningMessage] = useState<string>()
+
   const [completed, setCompleted] = useState(true)
   const [error, setError] = useState<Error | undefined>(undefined)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -62,15 +75,38 @@ export default function Preview({
       })
   }, [metadata, parameters])
 
+  useEffect(() => {
+    if (!conversation) return
+    if (!provider) {
+      setFixedMessages(conversation.messages)
+      setWarningMessage(undefined)
+      return
+    }
+
+    const { messages, ruleMessage } = applyCustomRules({
+      providerType: provider.provider,
+      messages: conversation.messages,
+    })
+    setFixedMessages(messages)
+    setWarningMessage(ruleMessage)
+  }, [provider, conversation])
+
   return (
     <div className='flex flex-col flex-1 gap-2 h-full overflow-hidden'>
+      {warningMessage && (
+        <Alert
+          variant='warning'
+          description={warningMessage}
+          showIcon={false}
+        />
+      )}
       <div
         ref={containerRef}
         className='flex flex-col gap-3 flex-grow flex-shrink min-h-0 custom-scrollbar'
       >
         <div className='flex flex-col gap-2'>
           <Text.H6M>Preview</Text.H6M>
-          {(conversation?.messages ?? []).map((message, index) => (
+          {(fixedMessages ?? []).map((message, index) => (
             <Message
               key={index}
               role={message.role}

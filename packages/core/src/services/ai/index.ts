@@ -22,6 +22,7 @@ import { buildTools } from './buildTools'
 import { handleAICallAPIError } from './handleError'
 import { createProvider, PartialConfig } from './helpers'
 import { UNSUPPORTED_STREAM_MODELS } from './providers/models'
+import { applyCustomRules } from './providers/rules'
 import { runNoStreamingModels } from './runNoStreamingModels'
 
 const DEFAULT_AI_SDK_PROVIDER = {
@@ -58,7 +59,7 @@ export type ObjectOutput = 'object' | 'array' | 'no-schema' | undefined
 export async function ai({
   provider: apiProvider,
   prompt,
-  messages,
+  messages: originalMessages,
   config,
   schema,
   output,
@@ -88,6 +89,11 @@ export async function ai({
     ...(aiSdkProvider || {}),
   }
   try {
+    const { messages } = applyCustomRules({
+      providerType: apiProvider.provider,
+      messages: originalMessages,
+    })
+
     const { provider, token: apiKey, url } = apiProvider
     const model = config.model
 
