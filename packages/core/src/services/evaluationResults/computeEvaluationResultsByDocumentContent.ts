@@ -92,40 +92,53 @@ export async function computeEvaluationResultsByDocumentContent(
   if (resolvedContentResult.error) return resolvedContentResult
 
   const resolvedContent = resolvedContentResult.value
-
   const offset = calculateOffset(page, pageSize)
   const { evaluationResultsScope, documentLogsScope } = getRepositoryScopes(
     workspaceId,
     db,
   )
-  const rows = await db
+
+  const limitedEvaluationResults = db
     .select({
       id: evaluationResultsScope.id,
+      documentLogId: evaluationResultsScope.documentLogId,
       source: evaluationResultsScope.source,
       result: evaluationResultsScope.result,
       createdAt: evaluationResultsScope.createdAt,
     })
     .from(evaluationResultsScope)
-    .innerJoin(
-      documentLogsScope,
-      eq(documentLogsScope.id, evaluationResultsScope.documentLogId),
-    )
-    .innerJoin(commits, eq(commits.id, documentLogsScope.commitId))
-    .where(
-      getCommonQueryConditions({
-        evaluationResultsScope,
-        documentLogsScope,
-        evaluation,
-        resolvedContent,
-        commit,
-      }),
-    )
+    .where(eq(evaluationResultsScope.evaluationId, evaluation.id))
     .orderBy(
       desc(evaluationResultsScope.createdAt),
       desc(evaluationResultsScope.id),
     )
     .limit(pageSize)
     .offset(offset)
+    .as('limited_evaluation_results')
+
+  const rows = await db
+    .select({
+      id: limitedEvaluationResults.id,
+      source: limitedEvaluationResults.source,
+      result: limitedEvaluationResults.result,
+      createdAt: limitedEvaluationResults.createdAt,
+    })
+    .from(limitedEvaluationResults)
+    .innerJoin(
+      documentLogsScope,
+      eq(documentLogsScope.id, limitedEvaluationResults.documentLogId),
+    )
+    .innerJoin(commits, eq(commits.id, documentLogsScope.commitId))
+    .where(
+      or(
+        eq(documentLogsScope.contentHash, hashContent(resolvedContent)),
+        eq(commits.id, commit.id),
+      ),
+    )
+    .orderBy(
+      desc(limitedEvaluationResults.createdAt),
+      desc(limitedEvaluationResults.id),
+    )
 
   return Result.ok(rows)
 }
