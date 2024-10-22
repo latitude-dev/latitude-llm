@@ -13,6 +13,7 @@ import {
 import {
   DocumentLog,
   EvaluationDto,
+  getEvaluationResultableType,
   ProviderApiKey,
   User,
   Workspace,
@@ -108,7 +109,7 @@ describe('run', () => {
       providerType: Providers.OpenAI,
       generatedAt: new Date('2024-10-10T10:00:00'),
     })
-    evaluation = await factories.createLlmAsJudgeEvaluation({
+    evaluation = await factories.createLegacyLlmAsJudgeEvaluation({
       user: setup.user,
       workspace,
       name: 'Test Evaluation',
@@ -201,7 +202,7 @@ describe('run', () => {
 
       expect(evaluationResult).toMatchObject({
         uuid: FAKE_GENERATED_UUID,
-        resultableType: evaluation.configuration.type,
+        resultableType: getEvaluationResultableType(evaluation),
         source: LogSources.API,
       })
     })
@@ -409,8 +410,8 @@ describe('run', () => {
     })
 
     it('saves only once the error', async () => {
-      const brokenPromptEvaluation = await factories.createLlmAsJudgeEvaluation(
-        {
+      const brokenPromptEvaluation =
+        await factories.createLegacyLlmAsJudgeEvaluation({
           user: user,
           workspace,
           name: 'Test Evaluation',
@@ -423,8 +424,7 @@ describe('run', () => {
             It fail because "condition" is not defined
           {{/if}}
         `,
-        },
-      )
+        })
       await runEvaluation({
         documentLog,
         documentUuid,

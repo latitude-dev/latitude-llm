@@ -1,12 +1,18 @@
 import { relations } from 'drizzle-orm'
 
-import { evaluationTemplates, llmAsJudgeEvaluationMetadatas } from '.'
+import {
+  evaluationLegacyTemplates,
+  evaluationMetadataLlmAsJudgeLegacy,
+} from '.'
 import { apiKeys } from './models/apiKeys'
 import { commits } from './models/commits'
 import { connectedEvaluations } from './models/connectedEvaluations'
 import { datasets } from './models/datasets'
 import { documentLogs } from './models/documentLogs'
 import { documentVersions } from './models/documentVersions'
+import { evaluationMetadataLlmAsJudgeBoolean } from './models/evaluationMetadataLlmAsJudgeBoolean'
+import { evaluationMetadataLlmAsJudgeCustom } from './models/evaluationMetadataLlmAsJudgeCustom'
+import { evaluationMetadataLlmAsJudgeNumerical } from './models/evaluationMetadataLlmAsJudgeNumerical'
 import { evaluationResults } from './models/evaluationResults'
 import { evaluations } from './models/evaluations'
 import { events } from './models/events'
@@ -132,21 +138,54 @@ export const evaluationRelations = relations(evaluations, ({ one }) => ({
     fields: [evaluations.workspaceId],
     references: [workspaces.id],
   }),
-  llmAsJudgeEvaluationMetadata: one(llmAsJudgeEvaluationMetadatas, {
-    fields: [evaluations.metadataId, evaluations.metadataType],
-    references: [
-      llmAsJudgeEvaluationMetadatas.id,
-      llmAsJudgeEvaluationMetadatas.metadataType,
-    ],
-  }),
 }))
 
 export const llmAsJudgeEvaluationMetadataRelations = relations(
-  llmAsJudgeEvaluationMetadatas,
+  evaluationMetadataLlmAsJudgeLegacy,
   ({ one }) => ({
-    template: one(evaluationTemplates, {
-      fields: [llmAsJudgeEvaluationMetadatas.templateId],
-      references: [evaluationTemplates.id],
+    template: one(evaluationLegacyTemplates, {
+      fields: [evaluationMetadataLlmAsJudgeLegacy.templateId],
+      references: [evaluationLegacyTemplates.id],
+    }),
+  }),
+)
+
+export const evaluationMetadataLlmAsJudgeLegacyRelations = relations(
+  evaluationMetadataLlmAsJudgeLegacy,
+  ({ one }) => ({
+    evaluation: one(evaluations, {
+      fields: [evaluationMetadataLlmAsJudgeLegacy.id],
+      references: [evaluations.metadataId],
+    }),
+  }),
+)
+
+export const evaluationMetadataLlmAsJudgeBooleanRelations = relations(
+  evaluationMetadataLlmAsJudgeBoolean,
+  ({ one }) => ({
+    evaluation: one(evaluations, {
+      fields: [evaluationMetadataLlmAsJudgeBoolean.id],
+      references: [evaluations.metadataId],
+    }),
+  }),
+)
+
+export const evaluationMetadataLlmAsJudgeNumericalRelations = relations(
+  evaluationMetadataLlmAsJudgeNumerical,
+  ({ one }) => ({
+    evaluation: one(evaluations, {
+      fields: [evaluationMetadataLlmAsJudgeNumerical.id],
+      references: [evaluations.metadataId],
+    }),
+  }),
+)
+
+export const evaluationMetadataLlmAsJudgeCustomRelations = relations(
+  evaluationMetadataLlmAsJudgeCustom,
+  ({ one }) => ({
+    evaluation: one(evaluations, {
+      fields: [evaluationMetadataLlmAsJudgeCustom.id],
+      references: [evaluations.metadataId],
     }),
   }),
 )

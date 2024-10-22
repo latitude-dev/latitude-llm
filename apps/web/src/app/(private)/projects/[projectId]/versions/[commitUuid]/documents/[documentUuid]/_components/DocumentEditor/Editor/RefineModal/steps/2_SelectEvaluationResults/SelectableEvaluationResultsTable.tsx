@@ -5,6 +5,7 @@ import { capitalize } from 'lodash-es'
 
 import {
   EvaluationDto,
+  EvaluationMetadataType,
   EvaluationResultableType,
 } from '@latitude-data/core/browser'
 import {
@@ -29,7 +30,12 @@ export const ResultCellContent = ({
   evaluation: EvaluationDto
   value: unknown
 }) => {
-  if (evaluation.configuration.type === EvaluationResultableType.Boolean) {
+  if (
+    (evaluation.metadataType === EvaluationMetadataType.LlmAsJudgeLegacy &&
+      evaluation.metadata.configuration.type ===
+        EvaluationResultableType.Boolean) ||
+    evaluation.metadataType === EvaluationMetadataType.LlmAsJudgeBoolean
+  ) {
     return (
       <Text.H4 color={(value as boolean) ? 'success' : 'destructive'}>
         {String(value)}
@@ -37,9 +43,20 @@ export const ResultCellContent = ({
     )
   }
 
-  if (evaluation.configuration.type === EvaluationResultableType.Number) {
-    const minValue = evaluation.configuration.detail?.range.from ?? 0
-    const maxValue = evaluation.configuration.detail?.range.to ?? 10
+  if (
+    (evaluation.metadataType === EvaluationMetadataType.LlmAsJudgeLegacy &&
+      evaluation.metadata.configuration.type ===
+        EvaluationResultableType.Number) ||
+    evaluation.metadataType === EvaluationMetadataType.LlmAsJudgeNumerical
+  ) {
+    const minValue =
+      evaluation.metadataType === EvaluationMetadataType.LlmAsJudgeLegacy
+        ? (evaluation.metadata.configuration.detail?.range.from ?? 0)
+        : evaluation.metadata.minValue
+    const maxValue =
+      evaluation.metadataType === EvaluationMetadataType.LlmAsJudgeLegacy
+        ? (evaluation.metadata.configuration.detail?.range.to ?? 10)
+        : evaluation.metadata.maxValue
 
     return (
       <RangeBadge

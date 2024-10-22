@@ -18,7 +18,7 @@ async function setupTest(configurationType: EvaluationResultableType) {
     { providers: [{ name: 'foo', type: Providers.OpenAI }] },
   )
   const provider = providers[0]
-  const evaluation = await factories.createLlmAsJudgeEvaluation({
+  const evaluation = await factories.createLegacyLlmAsJudgeEvaluation({
     workspace,
     user,
     configuration: {

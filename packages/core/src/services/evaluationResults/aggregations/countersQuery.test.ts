@@ -20,7 +20,9 @@ let workspace: Workspace
 let user: User
 let project: Project
 let provider: ProviderApiKey
-let evaluation: Awaited<ReturnType<typeof factories.createLlmAsJudgeEvaluation>>
+let evaluation: Awaited<
+  ReturnType<typeof factories.createLegacyLlmAsJudgeEvaluation>
+>
 let commit: Commit
 let documentVersion: DocumentVersion
 
@@ -48,7 +50,7 @@ describe('evaluation results aggregations', () => {
 
   describe('numeric evaluations', () => {
     beforeEach(async () => {
-      evaluation = await factories.createLlmAsJudgeEvaluation({
+      evaluation = await factories.createLegacyLlmAsJudgeEvaluation({
         user,
         workspace,
         prompt: factories.helpers.createPrompt({ provider }),
@@ -132,7 +134,7 @@ describe('evaluation results aggregations', () => {
 
   describe('text evaluations', () => {
     beforeEach(async () => {
-      evaluation = await factories.createLlmAsJudgeEvaluation({
+      evaluation = await factories.createLegacyLlmAsJudgeEvaluation({
         user,
         workspace,
         prompt: factories.helpers.createPrompt({ provider }),

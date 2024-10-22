@@ -18,7 +18,7 @@ export const createEvaluationAction = authProcedure
       type: z
         .nativeEnum(EvaluationMetadataType)
         .optional()
-        .default(EvaluationMetadataType.LlmAsJudge),
+        .default(EvaluationMetadataType.LlmAsJudgeLegacy),
       configuration: z.object({
         type: z.nativeEnum(EvaluationResultableType),
         detail: z

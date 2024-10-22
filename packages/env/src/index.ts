@@ -22,7 +22,8 @@ if (environment === 'development' || environment === 'test') {
     {
       NODE_ENV: environment,
       FROM_MAILER_EMAIL: 'hello@latitude.so',
-      DATABASE_URL: `postgres://latitude:secret@localhost:5432/latitude_${environment}`,
+      // DATABASE_URL: `postgres://latitude:secret@localhost:5432/latitude_${environment}`,
+      DATABASE_URL: `postgres://latitude:secret@localhost:5432/latitude_development`,
       QUEUE_PORT: '6379',
       QUEUE_HOST: '0.0.0.0',
       CACHE_PORT: '6379',

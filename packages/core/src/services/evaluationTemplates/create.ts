@@ -2,7 +2,7 @@ import { EvaluationResultConfiguration } from '../../browser'
 import { database } from '../../client'
 import { findEvaluationTemplateCategoryById } from '../../data-access/evaluationTemplateCategories'
 import { NotFoundError, Result, Transaction } from '../../lib'
-import { evaluationTemplates } from '../../schema'
+import { evaluationLegacyTemplates } from '../../schema'
 import { createEvaluationTemplateCategory } from '../evaluationTemplateCategories/create'
 
 const DEFAULT_CATEGORY_NAME = 'Default Category'
@@ -41,7 +41,7 @@ export async function createEvaluationTemplate(
     }
 
     const result = await tx
-      .insert(evaluationTemplates)
+      .insert(evaluationLegacyTemplates)
       .values({
         name,
         description,

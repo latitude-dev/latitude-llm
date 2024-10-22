@@ -2,7 +2,6 @@ import {
   bigint,
   bigserial,
   index,
-  jsonb,
   text,
   timestamp,
   uuid,
@@ -13,10 +12,12 @@ import { EvaluationMetadataType } from '../../constants'
 import { latitudeSchema } from '../db-schema'
 import { workspaces } from '../models/workspaces'
 import { timestamps } from '../schemaHelpers'
-import { EvaluationResultConfiguration } from '../types'
 
 export const metadataTypesEnum = latitudeSchema.enum('metadata_type', [
-  EvaluationMetadataType.LlmAsJudge,
+  EvaluationMetadataType.LlmAsJudgeLegacy,
+  EvaluationMetadataType.LlmAsJudgeBoolean,
+  EvaluationMetadataType.LlmAsJudgeNumerical,
+  EvaluationMetadataType.LlmAsJudgeCustom,
 ])
 
 export const evaluations = latitudeSchema.table(
@@ -27,9 +28,6 @@ export const evaluations = latitudeSchema.table(
     name: varchar('name', { length: 256 }).notNull(),
     description: text('description').notNull(),
     metadataId: bigint('metadata_id', { mode: 'number' }).notNull(),
-    configuration: jsonb('configuration')
-      .notNull()
-      .$type<EvaluationResultConfiguration>(),
     metadataType: metadataTypesEnum('metadata_type').notNull(),
     workspaceId: bigint('workspace_id', { mode: 'number' })
       .notNull()

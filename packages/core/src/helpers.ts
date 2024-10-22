@@ -1,6 +1,11 @@
 import { z } from 'zod'
 
-import { ProviderApiKey } from './browser'
+import {
+  EvaluationDto,
+  EvaluationMetadataType,
+  EvaluationResultableType,
+  ProviderApiKey,
+} from './browser'
 
 const DEFAULT_OBJECT_TO_STRING_MESSAGE =
   'Error: Provider returned an object that could not be stringified'
@@ -37,4 +42,21 @@ export function promptConfigSchema({
     }),
     temperature: z.number().min(0).max(2).optional(),
   })
+}
+
+export function getEvaluationResultableType(
+  evaluation: EvaluationDto,
+): EvaluationResultableType {
+  if (evaluation.metadataType === EvaluationMetadataType.LlmAsJudgeLegacy) {
+    return evaluation.metadata.configuration.type
+  }
+
+  switch (evaluation.metadataType) {
+    case EvaluationMetadataType.LlmAsJudgeBoolean:
+      return EvaluationResultableType.Boolean
+    case EvaluationMetadataType.LlmAsJudgeNumerical:
+      return EvaluationResultableType.Number
+    case EvaluationMetadataType.LlmAsJudgeCustom:
+      return EvaluationResultableType.Text
+  }
 }
