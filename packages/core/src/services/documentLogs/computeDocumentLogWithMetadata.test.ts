@@ -35,7 +35,6 @@ describe('computeDocumentLogWithMetadata', () => {
   })
 
   it('returns DocumentLogWithMetadata when successful', async () => {
-    // Create provider logs for the document log
     const providerLog1 = await factories.createProviderLog({
       documentLogUuid: documentLog.uuid,
       providerId: provider.id,
@@ -56,21 +55,17 @@ describe('computeDocumentLogWithMetadata', () => {
     const totalProviderLogs = [providerLog1, providerLog2, ...providerLogs]
 
     const result = await computeDocumentLogWithMetadata(documentLog)
-
-    expect(result.ok).toBe(true)
-    if (result.ok) {
-      expect(result.value).toMatchObject({
-        id: documentLog.id,
-        uuid: documentLog.uuid,
-        documentUuid: documentLog.documentUuid,
-        tokens: totalProviderLogs.reduce((acc, log) => acc + log.tokens, 0),
-        duration: totalProviderLogs.reduce((acc, log) => acc + log.duration, 0),
-        costInMillicents: totalProviderLogs.reduce(
-          (acc, log) => acc + log.costInMillicents,
-          0,
-        ),
-      })
-    }
+    expect(result.value).toMatchObject({
+      id: documentLog.id,
+      uuid: documentLog.uuid,
+      documentUuid: documentLog.documentUuid,
+      tokens: totalProviderLogs.reduce((acc, log) => acc + log.tokens, 0),
+      duration: totalProviderLogs.reduce((acc, log) => acc + log.duration, 0),
+      costInMillicents: totalProviderLogs.reduce(
+        (acc, log) => acc + log.costInMillicents,
+        0,
+      ),
+    })
   })
 
   it('returns NotFoundError when document log is not found', async () => {

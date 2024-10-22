@@ -35,6 +35,7 @@ export const _API_ROUTES = {
                 root: documentRoot,
                 documentLogs: {
                   root: `${documentRoot}/documentLogs`,
+                  pagination: `${documentRoot}/documentLogs/pagination`,
                 },
                 evaluations: {
                   root: `${documentRoot}/evaluations`,

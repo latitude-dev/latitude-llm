@@ -1,5 +1,4 @@
 import { Workspace } from '@latitude-data/core/browser'
-import { paginateQuery } from '@latitude-data/core/lib/index'
 import { CommitsRepository } from '@latitude-data/core/repositories'
 import { computeDocumentLogsWithMetadataQuery } from '@latitude-data/core/services/documentLogs/computeDocumentLogsWithMetadata'
 import { authHandler } from '$/middlewares/authHandler'
@@ -29,17 +28,14 @@ export const GET = errorHandler(
         .getCommitByUuid({ projectId: Number(projectId), uuid: commitUuid })
         .then((r) => r.unwrap())
 
-      const { rows } = await paginateQuery({
-        searchParams: {
-          page: searchParams.get('page') ?? '1',
-          pageSize: searchParams.get('pageSize') ?? '25',
-        },
-        dynamicQuery: computeDocumentLogsWithMetadataQuery({
-          workspaceId: workspace.id,
-          documentUuid,
-          draft: commit,
-        }).$dynamic(),
+      const { baseQuery } = computeDocumentLogsWithMetadataQuery({
+        workspaceId: workspace.id,
+        documentUuid,
+        draft: commit,
+        page: searchParams.get('page') ?? '1',
+        pageSize: searchParams.get('pageSize') ?? '25',
       })
+      const rows = await baseQuery
 
       return NextResponse.json(rows, { status: 200 })
     },
