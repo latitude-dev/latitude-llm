@@ -28,12 +28,14 @@ export const GET = errorHandler(
         .getCommitByUuid({ projectId: Number(projectId), uuid: commitUuid })
         .then((r) => r.unwrap())
 
+      const page = searchParams.get('page') ?? '1'
+      const pageSize = searchParams.get('pageSize') ?? '25'
       const { baseQuery } = computeDocumentLogsWithMetadataQuery({
         workspaceId: workspace.id,
         documentUuid,
         draft: commit,
-        page: searchParams.get('page') ?? '1',
-        pageSize: searchParams.get('pageSize') ?? '25',
+        page,
+        pageSize,
       })
       const rows = await baseQuery
 

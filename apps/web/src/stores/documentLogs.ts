@@ -29,8 +29,8 @@ export default function useDocumentLogs(
     {
       serializer: (rows) => rows.map(documentLogPresenter),
       searchParams: compactObject({
-        page,
-        pageSize,
+        page: page ? String(page) : undefined,
+        pageSize: pageSize ? String(pageSize) : undefined,
       }) as Record<string, string>,
     },
   )
