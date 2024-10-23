@@ -10,12 +10,7 @@ const INTERNAL_PACKAGES = [
 const nextConfig = {
   output: 'standalone',
   transpilePackages: INTERNAL_PACKAGES,
-  serverExternalPackages: [
-    '@sentry/nextjs',
-    'bullmq',
-    'jose',
-    'nodemailer-mailgun-transport',
-  ],
+  serverExternalPackages: ['bullmq', 'jose', 'nodemailer-mailgun-transport'],
   experimental: {
     // Dear developer,
     //
@@ -32,6 +27,11 @@ const nextConfig = {
     serverActions: {
       bodySizeLimit: '15mb',
     },
+  },
+  webpack: (config) => {
+    config.ignoreWarnings = [{ module: /@opentelemetry\/instrumentation/ }]
+
+    return config
   },
 }
 
