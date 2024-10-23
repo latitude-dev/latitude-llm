@@ -1,5 +1,6 @@
 import { LogSources } from '@latitude-data/core/browser'
 import { CHUNKS, FINAL_RESPONSE } from '$sdk/test/chunks-example'
+import { LatitudeWrongSdkVersion } from '$sdk/utils/errors'
 import { http, HttpResponse } from 'msw'
 import { setupServer } from 'msw/node'
 import {
@@ -211,4 +212,14 @@ describe('run', () => {
       expect(final).toEqual(FINAL_RESPONSE)
     }),
   )
+})
+
+describe('Wrong sdk version', () => {
+  it('throws error', async () => {
+    expect(
+      () =>
+        // @ts-ignore
+        new Latitude(latitudeApiKey, { apiVersion: 'patata' }),
+    ).toThrowError(new LatitudeWrongSdkVersion('patata'))
+  })
 })

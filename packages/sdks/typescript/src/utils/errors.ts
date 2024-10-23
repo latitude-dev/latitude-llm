@@ -20,10 +20,17 @@ export class LatitudeApiError extends Error {
   }
 }
 
-
 export class LatitudeWrongSdkVersion extends Error {
   constructor(version: string) {
     const message = `Unknown SDK version: ${version}`
     super(message)
+  }
+}
+
+export class LatitudeMissingStreamOption extends Error {
+  constructor() {
+    super(
+      '"stream" option is required. Latitude will response with streaming if marked as stream: true',
+    )
   }
 }

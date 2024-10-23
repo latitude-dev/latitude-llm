@@ -6,6 +6,7 @@ import type {
   DocumentVersion,
 } from '@latitude-data/core/browser'
 import { RouteResolver } from '$sdk/utils'
+import { LatitudeApiError } from '$sdk/utils/errors'
 import { handleStream } from '$sdk/utils/handleStream'
 import {
   BodyParams,
@@ -14,17 +15,24 @@ import {
   StreamResponseCallbacks,
   UrlParams,
 } from '$sdk/utils/types'
-import { LatitudeApiError } from '$sdk/utils/errors'
 import nodeFetch, { Response } from 'node-fetch'
 
 const MAX_RETRIES = 2
 const WAIT_IN_MS_BEFORE_RETRY = 1000
+type BaseRunOptions = StreamResponseCallbacks & {
+  projectId?: number
+  versionUuid?: string
+  customIdentifier?: string
+  parameters?: Record<string, unknown>
+}
+type BaseChatOptions = StreamResponseCallbacks
+
 export class LatitudeSdk {
-  private versionUuid?: string
-  private projectId?: number
-  private apiKey: string
-  private routeResolver: RouteResolver
-  private source: LogSources
+  protected projectId?: number
+  protected versionUuid?: string
+  protected apiKey: string
+  protected routeResolver: RouteResolver
+  protected source: LogSources
 
   constructor({
     apiKey,
@@ -77,24 +85,50 @@ export class LatitudeSdk {
     return (await response.json()) as DocumentVersion & { config: Config }
   }
 
-  async run(
+  async run(path: string, options: BaseRunOptions = {}) {
+    return this.streamRun(path, options)
+  }
+
+  async chat(uuid: string, messages: Message[], options: BaseChatOptions = {}) {
+    return this.streamChat(uuid, messages, options)
+  }
+
+  protected async streamChat(
+    uuid: string,
+    messages: Message[],
+    { onEvent, onFinished, onError }: BaseChatOptions = {},
+  ) {
+    const response = await this.request({
+      method: 'POST',
+      handler: HandlerType.Chat,
+      params: { conversationUuid: uuid },
+      body: { messages },
+    })
+
+    if (!response.ok) {
+      onError?.(new Error(response.statusText))
+      return
+    }
+
+    return handleStream({
+      body: response.body! as Readable,
+      onEvent,
+      onFinished,
+      onError,
+    })
+  }
+
+  protected async streamRun(
     path: string,
     {
       projectId,
       versionUuid,
       parameters,
       customIdentifier,
-      stream,
       onEvent,
       onFinished,
       onError,
-    }: {
-      projectId?: number
-      versionUuid?: string
-      customIdentifier?: string
-      parameters?: Record<string, unknown>
-      stream?: boolean
-    } & StreamResponseCallbacks = {},
+    }: BaseRunOptions,
   ) {
     projectId = projectId ?? this.projectId
 
@@ -112,7 +146,6 @@ export class LatitudeSdk {
         params: { projectId, versionUuid },
         body: {
           path,
-          stream,
           parameters,
           customIdentifier,
         },
@@ -135,32 +168,7 @@ export class LatitudeSdk {
     }
   }
 
-  async chat(
-    uuid: string,
-    messages: Message[],
-    { onEvent, onFinished, onError }: StreamResponseCallbacks = {},
-  ) {
-    const response = await this.request({
-      method: 'POST',
-      handler: HandlerType.Chat,
-      params: { conversationUuid: uuid },
-      body: { messages },
-    })
-
-    if (!response.ok) {
-      onError?.(new Error(response.statusText))
-      return
-    }
-
-    return handleStream({
-      body: response.body! as Readable,
-      onEvent,
-      onFinished,
-      onError,
-    })
-  }
-
-  private async request<H extends HandlerType>({
+  protected async request<H extends HandlerType>({
     method,
     handler,
     params,
