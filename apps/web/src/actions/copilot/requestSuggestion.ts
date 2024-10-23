@@ -62,6 +62,7 @@ export const requestSuggestionAction = authProcedure
     }).then((r) => r.unwrap())
 
     const result = await sdk.run(env.COPILOT_CODE_SUGGESTION_PROMPT_PATH, {
+      stream: false,
       parameters: {
         prompt: document.content,
         request,

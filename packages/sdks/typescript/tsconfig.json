@@ -3,11 +3,12 @@
   "compilerOptions": {
     "moduleResolution": "Bundler",
     "outDir": "./dist",
-    "rootDir": ".",
+    "rootDir": "../../",
     "baseUrl": ".",
     "jsx": "preserve",
     "paths": {
-      "$sdk/*": ["./src/*"]
+      "$sdk/*": ["./src/*"],
+      "@latitude-data/constants/*": ["../../constants/src/*"]
     }
   }
 }

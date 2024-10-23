@@ -1,3 +1,5 @@
+import { LatitudeErrorCodes } from '@latitude-data/constants/errors'
+
 export type LatitudeErrorDetails = {
   [key: string]: string[] | string | undefined
   [key: number]: string[] | string | undefined
@@ -6,7 +8,7 @@ export type LatitudeErrorDetails = {
 
 export class LatitudeError extends Error {
   statusCode: number = 500
-  name: string = 'UnexpectedError'
+  name: string = LatitudeErrorCodes.UnexpectedError
   headers: Record<string, string> = {}
 
   public details: LatitudeErrorDetails
@@ -20,12 +22,12 @@ export class LatitudeError extends Error {
 
 export class ConflictError extends LatitudeError {
   public statusCode = 409
-  public name = 'ConflictError'
+  public name = LatitudeErrorCodes.ConflictError
 }
 
 export class UnprocessableEntityError extends LatitudeError {
   public statusCode = 422
-  public name = 'UnprocessableEntityError'
+  public name = LatitudeErrorCodes.UnprocessableEntityError
 
   constructor(message: string, details: LatitudeErrorDetails) {
     super(message, details)
@@ -34,26 +36,26 @@ export class UnprocessableEntityError extends LatitudeError {
 
 export class NotFoundError extends LatitudeError {
   public statusCode = 404
-  public name = 'NotFoundError'
+  public name = LatitudeErrorCodes.NotFoundError
 }
 
 export class BadRequestError extends LatitudeError {
   public statusCode = 400
-  public name = 'BadRequestError'
+  public name = LatitudeErrorCodes.BadRequestError
 }
 
 export class ForbiddenError extends LatitudeError {
   public statusCode = 403
-  public name = 'ForbiddenError'
+  public name = LatitudeErrorCodes.ForbiddenError
 }
 
 export class UnauthorizedError extends LatitudeError {
   public statusCode = 401
-  public name = 'UnauthorizedError'
+  public name = LatitudeErrorCodes.UnauthorizedError
 }
 export class RateLimitError extends LatitudeError {
   public statusCode = 429
-  public name = 'RateLimitError'
+  public name = LatitudeErrorCodes.RateLimitError
 
   constructor(
     message: string,

@@ -46,6 +46,7 @@ To run a document, use the `run` method:
 latitude.run('path/to/your/document', {
   projectId: 12345, // Optional if you provided it in the constructor
   versionUuid: 'optional-version-uuid', // Optional, by default it targets latest live version
+  stream: false, // Optional, by default it's false
   parameters: {
     // Any parameters your document expects
   },
@@ -81,6 +82,7 @@ const messages = [
 
 // conversation-uuid is the uuid from the document run
 latitude.chat('conversation-uuid', messages, {
+  stream: true, // This send the request from Latitude API as a stream
   onEvent: ({ event, data }) => {
     // Handle events during the chat
   },
@@ -121,6 +123,7 @@ onError: (error) => {
   // Perform any necessary error handling or logging
 }
 ```
+**IMPORTANT**: If you don't provide `onError` callback `await sdk.run` will throw an error.
 
 ## More examples
 
@@ -128,6 +131,7 @@ onError: (error) => {
 
 ```typescript
 const latitude = new Latitude('your-api-key-here', {
+  stream: false,
   projectId: 12345, // Optional: You can specify a default project ID here
   versionUuid: 'optional-version-uuid', // Optional: You can specify a default version UUID here
 })

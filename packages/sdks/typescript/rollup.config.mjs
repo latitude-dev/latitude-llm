@@ -14,6 +14,10 @@ const aliasEntries = {
       find: '@latitude-data/core/browser',
       replacement: path.resolve(__dirname, '../../core/src/browser'),
     },
+    {
+      find: '@latitude-data/constants/errors',
+      replacement: path.resolve(__dirname, '../../constants/src/errors'),
+    },
   ],
 }
 const EXTERNALS = [

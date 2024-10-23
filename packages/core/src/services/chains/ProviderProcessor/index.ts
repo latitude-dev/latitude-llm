@@ -1,9 +1,9 @@
 import { Message } from '@latitude-data/compiler'
+import { RunErrorCodes } from '@latitude-data/constants/errors'
 
 import {
   LogSources,
   ProviderApiKey,
-  RunErrorCodes,
   StreamType,
   Workspace,
 } from '../../../browser'

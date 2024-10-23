@@ -51,6 +51,7 @@ export async function runDocumentAction({
     Error
   >()
   const response = sdk.run(documentPath, {
+    stream: true,
     versionUuid: commitUuid,
     parameters,
     onEvent: (event) => {

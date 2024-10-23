@@ -52,6 +52,7 @@
     "@faker-js/faker": "^8.4.1",
     "@latitude-data/compiler": "workspace:^",
     "@latitude-data/env": "workspace:*",
+    "@latitude-data/constants": "workspace:*",
     "@latitude-data/eslint-config": "workspace:*",
     "@latitude-data/typescript-config": "workspace:*",
     "@sindresorhus/slugify": "^2.2.1",

@@ -1,8 +1,10 @@
 import { Readable } from 'stream'
 
+import { ApiErrorCodes, LatitudeApiError } from '$sdk/utils/errors'
+
 export function nodeFetchResponseToReadableStream(
   nodeStream: Readable,
-  onError?: (err: Error) => void,
+  onError?: (err: LatitudeApiError) => void,
 ) {
   return new ReadableStream({
     start(controller) {
@@ -51,7 +53,13 @@ export function nodeFetchResponseToReadableStream(
         } catch (e) {
           // controller might be closed already
           if (onError) {
-            onError(err)
+            const error = new LatitudeApiError({
+              status: 500,
+              message: err.message,
+              serverResponse: err.stack ?? '',
+              errorCode: ApiErrorCodes.InternalServerError,
+            })
+            onError(error)
           }
         }
       })

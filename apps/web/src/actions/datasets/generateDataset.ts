@@ -51,22 +51,16 @@ export async function generateDatasetAction({
     projectId: env.DATASET_GENERATOR_PROJECT_ID,
     __internal: { source: LogSources.Playground },
   }).then((r) => r.unwrap())
-  const sdkResponse = await sdk.run(env.DATASET_GENERATOR_DOCUMENT_PATH, {
-    parameters: {
-      row_count: rowCount,
-      parameters,
-      user_message: description,
-    },
-    onError: (error) => {
-      stream.error({
-        name: error.name,
-        message: error.message,
-        stack: error.stack,
-      })
-    },
-  })
 
   try {
+    const sdkResponse = await sdk.run(env.DATASET_GENERATOR_DOCUMENT_PATH, {
+      stream: false,
+      parameters: {
+        row_count: rowCount,
+        parameters,
+        user_message: description,
+      },
+    })
     const sdkResult = sdkResponse
     const csv = (sdkResult?.response! as ChainStepResponse<'object'>).object.csv
     const result = await createDataset({
@@ -78,6 +72,7 @@ export async function generateDatasetAction({
         csvDelimiter: ',',
       },
     })
+
     if (result.error) {
       stream.error({
         name: result.error.name,

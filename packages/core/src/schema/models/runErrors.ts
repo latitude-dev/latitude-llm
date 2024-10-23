@@ -1,6 +1,7 @@
+import { RunErrorCodes } from '@latitude-data/constants/errors'
 import { bigserial, index, jsonb, text, uuid } from 'drizzle-orm/pg-core'
 
-import { ErrorableEntity, RunErrorCodes } from '../../constants'
+import { ErrorableEntity } from '../../constants'
 import { LatitudeErrorDetails } from '../../lib'
 import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'

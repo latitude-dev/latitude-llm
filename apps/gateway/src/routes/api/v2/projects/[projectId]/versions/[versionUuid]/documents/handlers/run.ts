@@ -1,6 +1,5 @@
 import { zValidator } from '@hono/zod-validator'
-import { ChainEvent, LogSources } from '@latitude-data/core/browser'
-import { LatitudeError } from '@latitude-data/core/lib/errors'
+import { LogSources } from '@latitude-data/core/browser'
 import { getUnknownError } from '@latitude-data/core/lib/getUnknownError'
 import { streamToGenerator } from '@latitude-data/core/lib/streamToGenerator'
 import { runDocumentAtCommit } from '@latitude-data/core/services/commits/runDocumentAtCommit'
@@ -12,6 +11,8 @@ import {
 import { Factory } from 'hono/factory'
 import { streamSSE } from 'hono/streaming'
 import { z } from 'zod'
+
+import { documentRunPresenter } from './documentPresenter'
 
 const factory = new Factory()
 
@@ -82,18 +83,8 @@ export const runHandler = factory.createHandlers(
       )
     }
 
-    let lastEvent: ChainEvent | undefined = undefined
-    for await (const event of streamToGenerator(result.stream)) {
-      lastEvent = event
-    }
-
-    if (!lastEvent) {
-      const error = new LatitudeError('Streaming did not return any events')
-      captureException(error)
-      throw error
-    }
-
-    const data = chainEventPresenter(lastEvent)
-    return c.json(data)
+    const response = await result.response.then((r) => r.unwrap())
+    const body = documentRunPresenter(response).unwrap()
+    return c.json(body)
   },
 )

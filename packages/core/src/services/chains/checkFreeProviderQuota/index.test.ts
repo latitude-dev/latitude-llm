@@ -1,11 +1,7 @@
+import { RunErrorCodes } from '@latitude-data/constants/errors'
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import {
-  ProviderApiKey,
-  Providers,
-  RunErrorCodes,
-  Workspace,
-} from '../../../browser'
+import { ProviderApiKey, Providers, Workspace } from '../../../browser'
 import { cache } from '../../../cache'
 import { Result } from '../../../lib'
 import * as factories from '../../../tests/factories'

@@ -1,3 +1,4 @@
+import { RunErrorCodes } from '@latitude-data/constants/errors'
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import {
@@ -5,7 +6,6 @@ import {
   ErrorableEntity,
   EvaluationDto,
   Providers,
-  RunErrorCodes,
   Workspace,
 } from '../../../browser'
 import {

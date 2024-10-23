@@ -4,16 +4,12 @@ import {
   createChain,
   MessageRole,
 } from '@latitude-data/compiler'
+import { RunErrorCodes } from '@latitude-data/constants/errors'
 import { TextStreamPart } from 'ai'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { Workspace } from '../../browser'
-import {
-  ErrorableEntity,
-  LogSources,
-  Providers,
-  RunErrorCodes,
-} from '../../constants'
+import { ErrorableEntity, LogSources, Providers } from '../../constants'
 import { Result } from '../../lib'
 import * as factories from '../../tests/factories'
 import * as aiModule from '../ai'

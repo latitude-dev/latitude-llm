@@ -1,11 +1,7 @@
+import { RunErrorCodes } from '@latitude-data/constants/errors'
 import { CoreTool, FinishReason, ObjectStreamPart, TextStreamPart } from 'ai'
 
-import {
-  ChainEvent,
-  RunErrorCodes,
-  StreamEventTypes,
-  StreamType,
-} from '../../../constants'
+import { ChainEvent, StreamEventTypes, StreamType } from '../../../constants'
 import { streamToGenerator } from '../../../lib/streamToGenerator'
 import { AIReturn, StreamChunk } from '../../ai'
 import { ChainError } from '../ChainErrors'
