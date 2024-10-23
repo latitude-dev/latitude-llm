@@ -28,9 +28,11 @@ export async function unsafelyFindWorkspace(id: number, db = database) {
 }
 
 export async function unsafelyFindWorkspacesFromUser(
-  userId: string,
+  userId: string | undefined,
   db = database,
 ) {
+  if (!userId) return []
+
   return await db
     .select(workspacesDtoColumns)
     .from(workspaces)

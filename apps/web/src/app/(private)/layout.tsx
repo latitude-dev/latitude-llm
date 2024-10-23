@@ -26,6 +26,8 @@ export default async function PrivateLayout({
   if (!data.session) return redirect(ROUTES.auth.login)
 
   const { workspace, user } = await getCurrentUser()
+  if (!user) return redirect(ROUTES.auth.login)
+
   const supportIdentity = createSupportUserIdentity(user)
 
   return (

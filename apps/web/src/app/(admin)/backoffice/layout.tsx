@@ -17,7 +17,7 @@ export default async function AdminLayout({
   if (!data.session) redirect(ROUTES.root)
 
   const { user, workspace } = await getCurrentUser()
-  if (!user.admin) redirect(ROUTES.root)
+  if (!user?.admin) redirect(ROUTES.root)
 
   return (
     <SessionProvider currentUser={user} workspace={workspace}>

@@ -1,15 +1,13 @@
-import { LogSources } from '@latitude-data/core/browser'
+import { LogSources, Workspace } from '@latitude-data/core/browser'
 import { compactObject } from '@latitude-data/core/lib/compactObject'
 import { NotFoundError } from '@latitude-data/core/lib/errors'
 import { Result } from '@latitude-data/core/lib/Result'
 import { LatitudeApiKeysRepository } from '@latitude-data/core/repositories'
 import { env } from '@latitude-data/env'
 import { Latitude } from '@latitude-data/sdk'
-import { getCurrentUser } from '$/services/auth/getCurrentUser'
 
 // NOTE: this would be a great candidate for a cache function with redis
-async function getLatitudeApiKey() {
-  const { workspace } = await getCurrentUser()
+async function getLatitudeApiKey(workspace: Workspace) {
   const repo = new LatitudeApiKeysRepository(workspace.id)
   const firstApiKey = await repo.findFirst().then((r) => r.unwrap())
 
@@ -23,16 +21,18 @@ async function getLatitudeApiKey() {
 }
 
 export async function createSdk({
+  workspace,
   projectId,
   apiKey,
   __internal,
 }: {
+  workspace: Workspace
   projectId?: number
   apiKey?: string
   __internal?: { source: LogSources }
-} = {}) {
+}) {
   if (!apiKey) {
-    const result = await getLatitudeApiKey()
+    const result = await getLatitudeApiKey(workspace)
     if (result.error) return result
 
     apiKey = result.value.token

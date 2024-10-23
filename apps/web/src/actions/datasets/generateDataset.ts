@@ -12,7 +12,7 @@ import { env } from '@latitude-data/env'
 import { ChainEventDto } from '@latitude-data/sdk'
 import slugify from '@sindresorhus/slugify'
 import { createSdk } from '$/app/(private)/_lib/createSdk'
-import { getCurrentUser } from '$/services/auth/getCurrentUser'
+import { getCurrentUserOrError } from '$/services/auth/getCurrentUser'
 import { createStreamableValue } from 'ai/rsc'
 
 type GenerateDatasetActionProps = {
@@ -39,12 +39,14 @@ export async function generateDatasetAction({
   }
 
   let response: Dataset | undefined
-  const { user, workspace } = await getCurrentUser()
+  const { user, workspace } = await getCurrentUserOrError()
+
   const stream = createStreamableValue<
     { event: StreamEventTypes; data: ChainEventDto },
     Error
   >()
   const sdk = await createSdk({
+    workspace,
     apiKey: env.DATASET_GENERATOR_WORKSPACE_APIKEY,
     projectId: env.DATASET_GENERATOR_PROJECT_ID,
     __internal: { source: LogSources.Playground },
