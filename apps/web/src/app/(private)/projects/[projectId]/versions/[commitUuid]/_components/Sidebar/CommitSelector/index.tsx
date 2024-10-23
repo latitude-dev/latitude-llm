@@ -1,6 +1,13 @@
 'use client'
 
-import { RefObject, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  RefObject,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 
 import {
   DocumentVersion,
@@ -49,6 +56,32 @@ function useObserveSelectWidth(ref: RefObject<HTMLButtonElement>) {
   return width
 }
 
+const BOTTOM_PADDING_PX = 32
+
+function useCalculateMaxHeight() {
+  const ref = useRef<HTMLButtonElement>(null)
+  const [maxHeight, setMaxHeight] = useState<string | number>('auto')
+
+  const calculateMaxHeight = useCallback(
+    (open: boolean) => {
+      const target = ref.current
+
+      if (!target || !open) {
+        setMaxHeight('auto')
+        return
+      }
+
+      const { top, height } = target.getBoundingClientRect()
+      const windowHeight = window.innerHeight
+      const maxH = windowHeight - (top + height + BOTTOM_PADDING_PX)
+      setMaxHeight(maxH)
+    },
+    [ref],
+  )
+
+  return { calculateMaxHeight, maxHeight, ref }
+}
+
 function CommitSelectorHeader({
   setOpen,
 }: {
@@ -89,7 +122,7 @@ export default function CommitSelector({
   draftCommits: Commit[]
 }) {
   const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLButtonElement>(null)
+  const { ref, maxHeight, calculateMaxHeight } = useCalculateMaxHeight()
   const width = useObserveSelectWidth(ref)
   const { data: users } = useUsers()
   const usersById = useMemo(() => {
@@ -127,7 +160,10 @@ export default function CommitSelector({
   )
   return (
     <div className='flex flex-col gap-y-2'>
-      <SelectRoot value={String(currentCommit.id)}>
+      <SelectRoot
+        value={String(currentCommit.id)}
+        onOpenChange={calculateMaxHeight}
+      >
         <SelectTrigger ref={ref}>
           <SelectValueWithIcon
             icon={
@@ -142,36 +178,41 @@ export default function CommitSelector({
             </Text.H5M>
           </SelectValueWithIcon>
         </SelectTrigger>
-        <SelectContent autoScroll={false}>
-          <div className='flex flex-col gap-y-4 p-4 relative max-h-96'>
-            <div style={{ width, minWidth: MIN_WIDTH_SELECTOR_PX }}>
-              <CommitSelectorHeader setOpen={setOpen} />
-            </div>
-            <TabSelector
-              options={[
-                { label: 'Current', value: 'current' },
-                { label: 'Archived', value: 'archived' },
-              ]}
-              selected={selectedTab}
-              onSelect={setSelectedTab}
+        <SelectContent
+          autoScroll={false}
+          maxHeightAuto
+          className='flex flex-col gap-y-4 p-4 relative'
+          style={{
+            width,
+            minWidth: MIN_WIDTH_SELECTOR_PX,
+            maxHeight,
+          }}
+        >
+          <CommitSelectorHeader setOpen={setOpen} />
+          <TabSelector
+            options={[
+              { label: 'Current', value: 'current' },
+              { label: 'Archived', value: 'archived' },
+            ]}
+            selected={selectedTab}
+            onSelect={setSelectedTab}
+          />
+          {selectedTab === 'current' ? (
+            <CurrentCommitsList
+              currentDocument={currentDocument}
+              headCommit={headCommit}
+              usersById={usersById}
+              onCommitPublish={setPublishCommit}
+              onCommitDelete={setDeleteCommit}
+              draftCommits={draftCommits}
             />
-            {selectedTab === 'current' ? (
-              <CurrentCommitsList
-                currentDocument={currentDocument}
-                headCommit={headCommit}
-                usersById={usersById}
-                onCommitPublish={setPublishCommit}
-                onCommitDelete={setDeleteCommit}
-                draftCommits={draftCommits}
-              />
-            ) : (
-              <ArchivedCommitsList
-                currentDocument={currentDocument}
-                headCommit={headCommit}
-                usersById={usersById}
-              />
-            )}
-          </div>
+          ) : (
+            <ArchivedCommitsList
+              currentDocument={currentDocument}
+              headCommit={headCommit}
+              usersById={usersById}
+            />
+          )}
         </SelectContent>
       </SelectRoot>
       {canPublish ? (
