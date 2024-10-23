@@ -1,97 +1,90 @@
 {
-    "$schema": "https://mintlify.com/schema.json",
-    "name": "Latitude Docs",
-    "logo": {
-      "dark": "/logo/dark.svg",
-      "light": "/logo/light.svg"
-    },
-    "favicon": "/favicon.svg",
-    "colors": {
-      "primary": "#0080ff",
-      "light": "#0080ff",
-      "dark": "#0080ff",
-      "anchors": {
-        "from": "#0080ff",
-        "to": "#0080ff"
-      }
-    },
-    "topbarLinks": [
-      {
-        "name": "",
-        "url": " "
-      }
-    ],
-    "topbarCtaButton": {
-      "name": "Get started",
-      "url": "https://github.com/latitude-dev/latitude-llm"
-    },
-    "anchors": [],
-    "navigation": [
-      {
-        "group": "Getting started",
-        "pages": [
-          "guides/getting-started/introduction",
-          "guides/getting-started/concepts",
-          "guides/getting-started/quick-start",
-          "guides/getting-started/integration",
-          "guides/getting-started/providers",
-          "guides/getting-started/invite-your-team"
-        ]
-      },
-      {
-        "group": "Prompt Manager",
-        "pages": [
-          "guides/prompt-manager/overview",
-          "guides/prompt-manager/prompt-config",
-          "guides/prompt-manager/roles",
-          "guides/prompt-manager/parameters",
-          "guides/prompt-manager/snippets",
-          "guides/prompt-manager/chains",
-          "guides/prompt-manager/logic",
-          "guides/prompt-manager/version-control",
-          "guides/prompt-manager/api-access",
-          "guides/prompt-manager/json-output"
-        ]
-      },
-      {
-        "group": "Evaluations",
-        "pages": [
-          "guides/evaluations/overview",
-          "guides/evaluations/running-evaluations",
-          "guides/evaluations/numeric-evals",
-          "guides/evaluations/boolean-evals",
-          "guides/evaluations/text-evals"
-        ]
-      },
-      {
-        "group": "Logs",
-        "pages": [
-          "guides/logs/overview"
-        ]
-      },
-      {
-        "group": "Datasets",
-        "pages": [
-          "guides/datasets/overview"
-        ]
-      },
-      {
-        "group": "SDKs",
-        "pages": [
-          "guides/sdk/javascript-typescript-sdk"
-        ]
-      },
-      {
-        "group": "Self-hosting",
-        "pages": [
-          "guides/self-hosted/quick-start",
-          "guides/self-hosted/development"
-        ]
-      }
-    ],
-    "footerSocials": {
-      "twitter": "https://twitter.com/trylatitude",
-      "github": "https://github.com/latitude-dev/latitude",
-      "linkedin": "https://www.linkedin.com/company/trylatitude/"
+  "$schema": "https://mintlify.com/schema.json",
+  "name": "Latitude Docs",
+  "logo": {
+    "dark": "/logo/dark.svg",
+    "light": "/logo/light.svg"
+  },
+  "favicon": "/favicon.svg",
+  "colors": {
+    "primary": "#0080ff",
+    "light": "#0080ff",
+    "dark": "#0080ff",
+    "anchors": {
+      "from": "#0080ff",
+      "to": "#0080ff"
     }
+  },
+  "topbarLinks": [
+    {
+      "name": "",
+      "url": " "
+    }
+  ],
+  "topbarCtaButton": {
+    "name": "Get started",
+    "url": "https://github.com/latitude-dev/latitude-llm"
+  },
+  "anchors": [],
+  "navigation": [
+    {
+      "group": "Getting started",
+      "pages": [
+        "guides/getting-started/introduction",
+        "guides/getting-started/concepts",
+        "guides/getting-started/quick-start",
+        "guides/getting-started/providers",
+        "guides/getting-started/invite-your-team"
+      ]
+    },
+    {
+      "group": "Prompt Manager",
+      "pages": [
+        "guides/prompt-manager/overview",
+        "guides/prompt-manager/prompt-config",
+        "guides/prompt-manager/roles",
+        "guides/prompt-manager/parameters",
+        "guides/prompt-manager/snippets",
+        "guides/prompt-manager/chains",
+        "guides/prompt-manager/logic",
+        "guides/prompt-manager/version-control",
+        "guides/prompt-manager/json-output"
+      ]
+    },
+    {
+      "group": "Evaluations",
+      "pages": [
+        "guides/evaluations/overview",
+        "guides/evaluations/running-evaluations",
+        "guides/evaluations/numeric-evals",
+        "guides/evaluations/boolean-evals",
+        "guides/evaluations/text-evals"
+      ]
+    },
+    {
+      "group": "Logs",
+      "pages": ["guides/logs/overview"]
+    },
+    {
+      "group": "Datasets",
+      "pages": ["guides/datasets/overview"]
+    },
+    {
+      "group": "HTTP API",
+      "pages": ["guides/prompt-manager/api-access"]
+    },
+    {
+      "group": "SDKs",
+      "pages": ["guides/sdk/javascript-typescript-sdk"]
+    },
+    {
+      "group": "Self-hosting",
+      "pages": ["guides/self-hosted/development"]
+    }
+  ],
+  "footerSocials": {
+    "twitter": "https://twitter.com/trylatitude",
+    "github": "https://github.com/latitude-dev/latitude",
+    "linkedin": "https://www.linkedin.com/company/trylatitude/"
   }
+}

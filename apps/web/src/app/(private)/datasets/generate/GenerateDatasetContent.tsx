@@ -252,7 +252,10 @@ export function GenerateDatasetContent({
                 )}
               </div>
             </FormField>
-            <FormField label='Additional instructions'>
+            <FormField
+              label='Additional instructions'
+              info='Provide additional context about each parameter to the LLM agent to help it generate the dataset'
+            >
               <TextArea
                 name='description'
                 placeholder='Provide additional context to the LLM agent to help it generate the dataset'
