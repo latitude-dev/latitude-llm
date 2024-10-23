@@ -10,6 +10,11 @@ serve(
     overrideGlobalObjects: undefined,
     hostname: env.HOSTNAME,
     port: env.PORT,
+    serverOptions: {
+      keepAliveTimeout: process.env.KEEP_ALIVE_TIMEOUT
+        ? Number(process.env.KEEP_ALIVE_TIMEOUT)
+        : 121000,
+    },
   },
   (info) => {
     console.log(`Listening on http://${env.HOSTNAME}:${info.port}`)
