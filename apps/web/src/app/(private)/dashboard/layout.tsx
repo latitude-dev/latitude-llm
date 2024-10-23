@@ -9,6 +9,7 @@ import { AppTabs } from '$/app/(private)/AppTabs'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 
 import { getActiveProjectsCached } from '../_data-access'
 import { ProjectsTable } from './_components/ProjectsTable'
@@ -19,7 +20,10 @@ export default async function DashboardLayout({
   children: ReactNode
 }>) {
   const { workspace } = await getCurrentUser()
+  if (!workspace) return redirect(ROUTES.auth.login)
+
   const projects = await getActiveProjectsCached({ workspaceId: workspace.id })
+
   return (
     <Container>
       <AppTabs />
