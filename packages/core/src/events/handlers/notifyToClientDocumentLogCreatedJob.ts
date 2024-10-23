@@ -14,13 +14,25 @@ export const notifyToClientDocumentLogCreatedJob = async ({
   const workspace = await findWorkspaceFromDocumentLog(documentLog)
   if (!workspace) throw new NotFoundError('Workspace not found')
 
-  const commit = await findCommitById({ id: documentLog.commitId }).then((r) =>
-    r.unwrap(),
-  )
+  let commit
+  try {
+    commit = await findCommitById({ id: documentLog.commitId }).then((r) =>
+      r.unwrap(),
+    )
+  } catch (error) {
+    // do nothing, we don't wanna retry the job
+    return
+  }
 
-  const documentLogWithMetadata = await computeDocumentLogWithMetadata(
-    documentLog,
-  ).then((r) => r.unwrap())
+  let documentLogWithMetadata
+  try {
+    documentLogWithMetadata = await computeDocumentLogWithMetadata(
+      documentLog,
+    ).then((r) => r.unwrap())
+  } catch (error) {
+    // do nothing, we don't wanna retry the job
+    return
+  }
 
   const websockets = await WebsocketClient.getSocket()
 
