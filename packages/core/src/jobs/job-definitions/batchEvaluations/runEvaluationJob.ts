@@ -1,33 +1,14 @@
 import { Job } from 'bullmq'
 
-import { RunErrorCodes } from '../../../constants'
-import { Result } from '../../../lib'
+import { getUnknownError, Result } from '../../../lib'
 import { queues } from '../../../queues'
 import {
   DocumentLogsWithErrorsRepository,
   EvaluationsRepository,
 } from '../../../repositories'
-import { isChainError } from '../../../services/chains/ChainStreamConsumer'
 import { runEvaluation } from '../../../services/evaluations/run'
 import { WebsocketClient } from '../../../websockets/workers'
 import { ProgressTracker } from '../../utils/progressTracker'
-
-/**
- * We only throw an error in an evaluation run in 2 situations
- *
- *  1. Is a ChainError of type `unknown`. This is the catch in `runChain` not knowing what happened.
- *  2. is not a `ChainError` so it means something exploded.
- */
-function throwIfUnknownError(
-  error: unknown | undefined,
-): asserts error is Error {
-  const isAllGood =
-    !error || (isChainError(error) && error.errorCode !== RunErrorCodes.Unknown)
-
-  if (isAllGood) return
-
-  throw error
-}
 
 async function fetchData({
   workspaceId,
@@ -107,5 +88,7 @@ export async function runEvaluationJob(job: Job<RunEvaluationJobData>) {
     },
   })
 
-  throwIfUnknownError(error)
+  const unknownError = getUnknownError(error)
+
+  if (unknownError) throw unknownError
 }

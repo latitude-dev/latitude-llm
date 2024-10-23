@@ -1,6 +1,7 @@
 import { bigserial, index, jsonb, text, uuid } from 'drizzle-orm/pg-core'
 
 import { ErrorableEntity, RunErrorCodes } from '../../constants'
+import { LatitudeErrorDetails } from '../../lib'
 import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
 
@@ -37,7 +38,9 @@ export const runErrors = latitudeSchema.table(
     errorableType: runErrorEntities('errorable_type').notNull(),
     errorableUuid: uuid('errorable_uuid').notNull(),
     message: text('message').notNull(),
-    details: jsonb('details').$type<RunErrorDetails<RunErrorCodes>>(),
+    details: jsonb('details').$type<
+      RunErrorDetails<RunErrorCodes> | LatitudeErrorDetails
+    >(),
     ...timestamps(),
   },
   (table) => ({

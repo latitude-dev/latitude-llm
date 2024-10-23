@@ -118,7 +118,9 @@ describe('run chain error handling', () => {
       errorableType: ErrorableEntity.DocumentLog,
       code: RunErrorCodes.DefaultProviderExceededQuota,
       message: 'You have exceeded your maximum number of free runs for today',
-      details: null,
+      details: {
+        errorCode: RunErrorCodes.DefaultProviderExceededQuota,
+      },
       createdAt: expect.any(Date),
       updatedAt: expect.any(Date),
     })
@@ -146,7 +148,9 @@ describe('run chain error handling', () => {
       errorableType: ErrorableEntity.DocumentLog,
       code: RunErrorCodes.Unknown,
       message: 'Something undefined happened',
-      details: null,
+      details: {
+        errorCode: RunErrorCodes.Unknown,
+      },
       createdAt: expect.any(Date),
       updatedAt: expect.any(Date),
     })
@@ -174,7 +178,9 @@ describe('run chain error handling', () => {
       code: RunErrorCodes.DocumentConfigError,
       message:
         '"model" attribute is required. Read more here: https://docs.latitude.so/guides/getting-started/providers#using-providers-in-prompts',
-      details: null,
+      details: {
+        errorCode: RunErrorCodes.DocumentConfigError,
+      },
       createdAt: expect.any(Date),
       updatedAt: expect.any(Date),
     })
@@ -206,7 +212,9 @@ describe('run chain error handling', () => {
       code: RunErrorCodes.MissingProvider,
       message:
         'Provider API Key with name patata_provider not found. Go to https://app.latitude.so/settings to add a new provider if there is not one already with that name.',
-      details: null,
+      details: {
+        errorCode: 'missing_provider_error',
+      },
       createdAt: expect.any(Date),
       updatedAt: expect.any(Date),
     })
@@ -239,6 +247,7 @@ describe('run chain error handling', () => {
       code: RunErrorCodes.ChainCompileError,
       message: 'Error validating chain',
       details: {
+        errorCode: RunErrorCodes.ChainCompileError,
         compileCode: 'unknown-tag',
         message: "Unknown tag: 'ref'",
       },
@@ -272,7 +281,9 @@ describe('run chain error handling', () => {
       errorableType: ErrorableEntity.DocumentLog,
       code: RunErrorCodes.AIProviderConfigError,
       message: 'Google provider requires at least one user message',
-      details: null,
+      details: {
+        errorCode: RunErrorCodes.AIProviderConfigError,
+      },
       createdAt: expect.any(Date),
       updatedAt: expect.any(Date),
     })
@@ -310,7 +321,9 @@ describe('run chain error handling', () => {
       errorableType: ErrorableEntity.DocumentLog,
       code: RunErrorCodes.AIRunError,
       message: 'AI stream finished with error',
-      details: null,
+      details: {
+        errorCode: RunErrorCodes.AIRunError,
+      },
       createdAt: expect.any(Date),
       updatedAt: expect.any(Date),
     })

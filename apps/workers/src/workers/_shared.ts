@@ -1,6 +1,7 @@
 import { Queues, QUEUES } from '@latitude-data/core/jobs/constants'
 import * as jobs from '@latitude-data/core/jobs/definitions'
 import { NotFoundError } from '@latitude-data/core/lib/errors'
+import { getUnknownError } from '@latitude-data/core/lib/getUnknownError'
 import { captureException } from '$/utils/sentry'
 import { Processor } from 'bullmq'
 
@@ -18,9 +19,12 @@ export const buildProcessor =
                 try {
                   await jobFn(job)
                 } catch (error) {
-                  captureException(error as Error)
+                  const unknownError = getUnknownError(error)
 
-                  throw error
+                  if (unknownError) {
+                    captureException(error as Error)
+                    throw error
+                  }
                 }
               } else {
                 throw new NotFoundError(`Job ${job.name} not found`)

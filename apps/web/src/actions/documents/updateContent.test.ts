@@ -4,9 +4,9 @@ import {
   Providers,
   User,
 } from '@latitude-data/core/browser'
+import { findCommitById } from '@latitude-data/core/data-access/commits'
 import * as factories from '@latitude-data/core/factories'
 import { updateDocument } from '@latitude-data/core/services/documents/update'
-import { findCommitById } from 'node_modules/@latitude-data/core/src/data-access/commits'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { updateDocumentContentAction } from './updateContent'

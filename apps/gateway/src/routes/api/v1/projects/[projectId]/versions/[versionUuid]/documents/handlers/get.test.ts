@@ -1,4 +1,4 @@
-import { database } from '@latitude-data/core/client'
+import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/data-access'
 import {
   createDocumentVersion,
   createDraft,
@@ -6,10 +6,8 @@ import {
   helpers,
 } from '@latitude-data/core/factories'
 import { DocumentVersionsRepository } from '@latitude-data/core/repositories'
-import { apiKeys } from '@latitude-data/core/schema'
 import { mergeCommit } from '@latitude-data/core/services/commits/merge'
 import app from '$/routes/app'
-import { eq } from 'drizzle-orm'
 import { describe, expect, it, vi } from 'vitest'
 
 vi.mock('$/jobs', () => ({
@@ -30,10 +28,9 @@ describe('GET documents', () => {
   describe('authorized', () => {
     it('succeeds', async () => {
       const { workspace, user, project, providers } = await createProject()
-      // TODO: move to core
-      const apikey = await database.query.apiKeys.findFirst({
-        where: eq(apiKeys.workspaceId, workspace.id),
-      })
+      const apiKey = await unsafelyGetFirstApiKeyByWorkspaceId({
+        workspaceId: workspace.id,
+      }).then((r) => r.unwrap())
       const path = 'path/to/document'
       const { commit } = await createDraft({
         project,
@@ -62,7 +59,7 @@ describe('GET documents', () => {
       const route = `/api/v1/projects/${project!.id}/versions/${commit!.uuid}/documents/${document.documentVersion.path}`
       const res = await app.request(route, {
         headers: {
-          Authorization: `Bearer ${apikey!.token}`,
+          Authorization: `Bearer ${apiKey!.token}`,
         },
       })
 

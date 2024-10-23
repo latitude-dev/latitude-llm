@@ -2,6 +2,7 @@ import {
   LatitudeError,
   UnprocessableEntityError,
 } from '@latitude-data/core/lib/errors'
+import { getUnknownError } from '@latitude-data/core/lib/getUnknownError'
 import { captureException } from '$/common/sentry'
 import { HTTPException } from 'hono/http-exception'
 
@@ -9,7 +10,11 @@ import HttpStatusCodes from '../common/httpStatusCodes'
 
 const errorHandlerMiddleware = (err: Error) => {
   if (process.env.NODE_ENV !== 'test') {
-    captureException(err)
+    const unknownError = getUnknownError(err)
+
+    if (unknownError) {
+      captureException(err)
+    }
   }
 
   if (err instanceof HTTPException) {

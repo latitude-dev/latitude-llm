@@ -18,3 +18,17 @@ export async function unsafelyGetApiKeyByToken(
 
   return Result.ok(apiKey)
 }
+
+export async function unsafelyGetFirstApiKeyByWorkspaceId({
+  workspaceId,
+}: {
+  workspaceId: number
+}) {
+  const apiKey = await database.query.apiKeys.findFirst({
+    where: eq(apiKeys.workspaceId, workspaceId),
+  })
+
+  if (!apiKey) return Result.error(new NotFoundError('API key not found'))
+
+  return Result.ok(apiKey)
+}
