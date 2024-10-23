@@ -204,7 +204,7 @@ codeDeployServiceRole.arn.apply(
         },
         terminateBlueInstancesOnDeploymentSuccess: {
           action: 'TERMINATE',
-          terminationWaitTimeInMinutes: 1,
+          terminationWaitTimeInMinutes: 3,
         },
       },
       deploymentStyle: {
