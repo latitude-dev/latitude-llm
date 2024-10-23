@@ -1,6 +1,8 @@
 'use server'
 
 import { createProject } from '@latitude-data/core/services/projects/create'
+import { ROUTES } from '$/services/routes'
+import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 
 import { authProcedure } from '../procedures'
@@ -13,6 +15,8 @@ export const createProjectAction = authProcedure
     const user = ctx.user
     const result = await createProject({ name: input.name, workspace, user })
     const { project } = result.unwrap()
+
+    revalidatePath(ROUTES.dashboard.root)
 
     return project
   })
