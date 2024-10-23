@@ -2,6 +2,7 @@ import * as aws from '@pulumi/aws'
 import * as pulumi from '@pulumi/pulumi'
 
 import * as shared from '../shared'
+import { subnets } from './networking'
 
 const albLogsBucket = new aws.s3.Bucket('alb-logs', {
   bucket: `${pulumi.getProject()}-${pulumi.getStack()}-alb-logs`,
@@ -13,7 +14,7 @@ const alb = new aws.lb.LoadBalancer('alb', {
   internal: false,
   loadBalancerType: 'application',
   securityGroups: [shared.albSecurityGroup],
-  subnets: shared.publicSubnets.ids,
+  subnets: subnets.euCentral.public,
   enableDeletionProtection: true,
   idleTimeout: 120,
   accessLogs: {

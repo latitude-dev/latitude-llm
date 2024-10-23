@@ -33,12 +33,15 @@ export const albSecurityGroup = 'sg-075fe1e81dfdba506'
 export const certificateArn =
   'arn:aws:acm:eu-central-1:442420265876:certificate/5eef5b60-a66e-4f12-b691-86b57716af2c'
 export const ecsSecurityGroup = 'sg-0619cea3f53af9fb3'
-export const hostedZoneId = 'Z04918046RTZRA6UX0HY'
-export const vpcId = 'vpc-06721425006e988f9'
+export const hostedZoneId = 'Z04918046RTZRA6UX0HY' // latitude.so
+export const vpcId = 'vpc-06721425006e988f9' // eu-central
 export const ecsTaskExecutionRole =
   'arn:aws:iam::442420265876:role/latitude-execution-task-role'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
+
+// get vpc
+export const euCentralVpc = await aws.ec2.getVpc({ id: vpcId })
 
 export const resolve = (path: string) => resolveFn(__dirname, path)

@@ -1,7 +1,7 @@
 import * as aws from '@pulumi/aws'
 import * as pulumi from '@pulumi/pulumi'
 
-import { privateSubnets, vpcId } from '../shared'
+import { euCentralVpc, privateSubnets, vpcId } from '../shared'
 
 const cfg = new pulumi.Config()
 
@@ -13,7 +13,7 @@ const rdsSecurityGroup = new aws.ec2.SecurityGroup('latitude-llm-rds-sg', {
       protocol: 'tcp',
       fromPort: 5432,
       toPort: 5432,
-      cidrBlocks: ['10.10.0.0/16'], // Our VPC CIDR block
+      cidrBlocks: [euCentralVpc.cidrBlock],
     },
   ],
   egress: [
@@ -43,18 +43,15 @@ const dbPasswordSecret = new aws.secretsmanager.Secret('rds-password-secret', {
   description: 'Password for Latitude LLM RDS instance',
 })
 
-const dbPasswordSecretVersion = new aws.secretsmanager.SecretVersion(
-  'rds-password-secret-version',
-  {
-    secretId: dbPasswordSecret.id,
-    secretString: DATABASE_PASSWORD,
-  },
-)
+new aws.secretsmanager.SecretVersion('rds-password-secret-version', {
+  secretId: dbPasswordSecret.id,
+  secretString: DATABASE_PASSWORD,
+})
 
 const db = new aws.rds.Instance('latitude-llm-db', {
   engine: 'postgres',
   engineVersion: '15.8',
-  instanceClass: 'db.t3.micro',
+  instanceClass: 'db.t4g.small',
   allocatedStorage: 20,
   dbName: DATABASE_NAME,
   backupRetentionPeriod: 14,
