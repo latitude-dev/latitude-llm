@@ -20,3 +20,10 @@ export class LatitudeApiError extends Error {
   }
 }
 
+
+export class LatitudeWrongSdkVersion extends Error {
+  constructor(version: string) {
+    const message = `Unknown SDK version: ${version}`
+    super(message)
+  }
+}

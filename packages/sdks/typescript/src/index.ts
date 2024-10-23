@@ -2,7 +2,7 @@ import type { Message } from '@latitude-data/compiler'
 import { type ChainEventDto } from '@latitude-data/core/browser'
 import env from '$sdk/env'
 import { GatewayApiConfig, RouteResolver } from '$sdk/utils'
-import { LatitudeApiError } from '$sdk/utils/errors'
+import { LatitudeApiError, LatitudeWrongSdkVersion } from '$sdk/utils/errors'
 import {
   LogSources,
   SdkApiVersion,
@@ -10,6 +10,7 @@ import {
 } from '$sdk/utils/types'
 import { LatitudeSdk } from '$sdk/versions/LatitudeSdk'
 import { LatitudeSdkV1 } from '$sdk/versions/LatitudeSdkV1'
+import { LatitudeSdkV2 } from '$sdk/versions/LatitudeSdkV2'
 
 type Options = {
   versionUuid?: string
@@ -25,6 +26,13 @@ const DEFAULT_GAWATE_WAY = {
   ssl: env.GATEWAY_SSL,
 }
 const DEFAULT_INTERNAL = { source: LogSources.API }
+
+function getKlass(apiVersion: SdkApiVersion) {
+  if (apiVersion === 'v1') return LatitudeSdkV1
+  if (apiVersion === 'v2') return LatitudeSdkV2
+
+  throw new LatitudeWrongSdkVersion(apiVersion)
+}
 
 class Latitude {
   sdk: LatitudeSdk
@@ -43,29 +51,17 @@ class Latitude {
         __internal: DEFAULT_INTERNAL,
       },
   ) {
-    const routeResolver = new RouteResolver({
-      gateway,
-      apiVersion,
+    const SDKlass = getKlass(apiVersion)
+    this.sdk = new SDKlass({
+      apiKey,
+      projectId,
+      versionUuid,
+      source: __internal.source,
+      routeResolver: new RouteResolver({
+        gateway,
+        apiVersion,
+      }),
     })
-    switch (apiVersion) {
-      case 'v2':
-        this.sdk = new LatitudeSdkV1({
-          apiKey,
-          projectId,
-          versionUuid,
-          source: __internal.source,
-          routeResolver,
-        })
-        break
-      default:
-        this.sdk = new LatitudeSdkV1({
-          apiKey,
-          projectId,
-          versionUuid,
-          source: __internal.source,
-          routeResolver,
-        })
-    }
   }
 
   async get(...args: Parameters<LatitudeSdk['get']>) {
