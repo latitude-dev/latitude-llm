@@ -51,9 +51,9 @@ class Latitude {
       __internal,
       apiVersion = 'v1',
     }: Options = {
-        apiVersion: 'v1',
-        gateway: DEFAULT_GAWATE_WAY,
-      },
+      apiVersion: 'v1',
+      gateway: DEFAULT_GAWATE_WAY,
+    },
   ) {
     const SDKlass = getKlass(apiVersion)
     const { source, retryMs } = { ...DEFAULT_INTERNAL, ...__internal }

@@ -189,17 +189,15 @@ export class LatitudeSdk {
         body:
           method === 'POST'
             ? this.bodyToString({
-              ...body,
-              __internal: { source: this.options.source },
-            })
+                ...body,
+                __internal: { source: this.options.source },
+              })
             : undefined,
       },
     )
 
     if (!response.ok && response.status > 500 && retries < MAX_RETRIES) {
-      await new Promise((resolve) =>
-        setTimeout(resolve, this.options.retryMs),
-      )
+      await new Promise((resolve) => setTimeout(resolve, this.options.retryMs))
 
       return this.request({
         handler,

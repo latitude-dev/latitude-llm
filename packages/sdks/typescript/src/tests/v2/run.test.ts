@@ -1,5 +1,6 @@
 import { LogSources } from '@latitude-data/core/browser'
 import { CHUNKS } from '$sdk/test/chunks-example'
+import { LatitudeMissingStreamOption } from '$sdk/utils/errors'
 import { http, HttpResponse } from 'msw'
 import { setupServer } from 'msw/node'
 import {
@@ -14,7 +15,6 @@ import {
 
 import { Latitude } from '../../index'
 import { parseSSE } from '../../utils/parseSSE'
-import { LatitudeMissingStreamOption } from '$sdk/utils/errors'
 
 const encoder = new TextEncoder()
 let latitudeApiKey = 'fake-api-key'

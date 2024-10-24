@@ -41,17 +41,17 @@ export enum HandlerType {
 export type UrlParams<T extends HandlerType> = T extends HandlerType.RunDocument
   ? RunUrlParams
   : T extends HandlerType.GetDocument
-  ? GetDocumentUrlParams
-  : T extends HandlerType.Chat
-  ? ChatUrlParams
-  : never
+    ? GetDocumentUrlParams
+    : T extends HandlerType.Chat
+      ? ChatUrlParams
+      : never
 
 export type BodyParams<T extends HandlerType> =
   T extends HandlerType.RunDocument
-  ? RunDocumentBodyParam
-  : T extends HandlerType.Chat
-  ? ChatBodyParams
-  : never
+    ? RunDocumentBodyParam
+    : T extends HandlerType.Chat
+      ? ChatBodyParams
+      : never
 
 export type StreamChainResponse = {
   conversation: Message[]
