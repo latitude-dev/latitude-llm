@@ -78,5 +78,26 @@ describe('checkFreeProviderQuota', () => {
       )
       resetFreeRuns(workspace.id, prevCount)
     })
+
+    it('returns an error when the model is 4o', async () => {
+      const model = 'gpt-4o'
+      const result = await checkFreeProviderQuota({
+        workspace,
+        provider,
+        model,
+        defaultProviderApiKey: provider.token,
+      })
+
+      expect(result.ok).toBe(false)
+      expect(result).toEqual(
+        Result.error(
+          new ChainError({
+            code: RunErrorCodes.DefaultProviderInvalidModel,
+            message:
+              'The default provider does not support the gpt-4o model, except 4o-mini.',
+          }),
+        ),
+      )
+    })
   })
 })

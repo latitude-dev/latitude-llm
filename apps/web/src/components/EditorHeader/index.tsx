@@ -1,4 +1,5 @@
 import { ReactNode, useCallback, useEffect, useMemo, useState } from 'react'
+import { omit } from 'lodash-es'
 
 import { ConversationMetadata } from '@latitude-data/compiler'
 import {
@@ -7,6 +8,7 @@ import {
   ProviderApiKey,
   Providers,
 } from '@latitude-data/core/browser'
+import { DEFAULT_PROVIDER_UNSUPPORTED_MODELS } from '@latitude-data/core/services/ai/providers/models/index'
 import {
   AppLocalStorage,
   DropdownMenu,
@@ -22,16 +24,26 @@ import { ROUTES } from '$/services/routes'
 import useProviderApiKeys from '$/stores/providerApiKeys'
 import Link from 'next/link'
 
-function useModelsOptions({ provider }: { provider: Providers | undefined }) {
+function useModelsOptions({
+  provider,
+  isDefaultProvider = false,
+}: {
+  provider: Providers | undefined
+  isDefaultProvider?: boolean
+}) {
   return useMemo(() => {
-    const models = provider ? PROVIDER_MODELS[provider] : null
+    let models = provider ? PROVIDER_MODELS[provider] : null
     if (!models) return []
+
+    if (isDefaultProvider) {
+      models = omit(models, DEFAULT_PROVIDER_UNSUPPORTED_MODELS)
+    }
 
     return Object.keys(models).map((model) => ({
       label: model,
       value: model,
     }))
-  }, [provider])
+  }, [provider, isDefaultProvider])
 }
 
 type PromptMeta = { providerName: string; model: string }
@@ -131,10 +143,13 @@ export default function EditorHeader({
       value: apiKey.name,
     }))
   }, [providerApiKeys])
+  const isDefaultProvider =
+    selectedProvider === envClient.NEXT_PUBLIC_DEFAULT_PROJECT_ID
   const modelOptions = useModelsOptions({
     provider: selectedProvider
       ? providersByName[selectedProvider]?.provider
       : undefined,
+    isDefaultProvider,
   })
 
   useEffect(() => {
@@ -263,7 +278,7 @@ export default function EditorHeader({
           onChange={onModelChange}
         />
       </FormFieldGroup>
-      {selectedProvider === envClient.NEXT_PUBLIC_DEFAULT_PROJECT_ID && (
+      {isDefaultProvider && (
         <div>
           {freeRunsCount !== undefined ? (
             <Text.H6 color='foregroundMuted'>

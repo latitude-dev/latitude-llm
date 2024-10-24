@@ -66,6 +66,7 @@ export class ChainValidator {
     const freeQuota = await checkFreeProviderQuota({
       workspace: this.workspace,
       provider,
+      model: config.model,
     })
     if (freeQuota.error) return freeQuota
 
