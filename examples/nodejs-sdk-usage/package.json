@@ -3,13 +3,18 @@
   "version": "0.0.1",
   "license": "LGPL-3.0",
   "description": "",
-  "license": "LGPL-3.0",
   "author": "Latitude Data SL <hello@latitude.so>",
+  "type": "module",
   "scripts": {
-    "runDocument": "tsx --env-file=.env.local ./src/run"
+    "rollup": "rollup -c",
+    "dev": "pnpm run rollup --watch",
+    "build": "pnpm run rollup",
+    "runDocument": "node --env-file=.env.local ./dist/run"
   },
   "devDependencies": {
-    "tsx": "^4.16.2",
-    "@latitude-data/sdk": "workspace:^"
+    "@latitude-data/sdk": "workspace:^",
+    "@rollup/plugin-commonjs": "^28.0.1",
+    "@rollup/plugin-node-resolve": "^15.3.0",
+    "rollup": "^4.24.0"
   }
 }

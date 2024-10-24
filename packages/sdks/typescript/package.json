@@ -45,6 +45,7 @@
     "@rollup/plugin-typescript": "^11.1.6",
     "@types/eventsource": "^1.1.15",
     "@types/node": "^22.7.5",
+    "node-fetch": "3.3.2",
     "@types/node-fetch": "^2.6.11",
     "msw": "^2.3.5",
     "rollup": "^4.21.1",

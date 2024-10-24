@@ -1,0 +1,13 @@
+import commonjs from '@rollup/plugin-commonjs'
+import resolve from '@rollup/plugin-node-resolve'
+
+export default {
+  input: 'src/run.ts',
+  output: {
+    file: 'dist/run.js',
+    format: 'esm',
+    sourcemap: true,
+  },
+  plugins: [resolve(), commonjs()],
+  external: ['@latitude-data/sdk', 'node-fetch'],
+}

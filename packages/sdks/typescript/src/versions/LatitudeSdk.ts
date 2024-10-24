@@ -200,10 +200,6 @@ export class LatitudeSdk {
     retries?: number
   }): Promise<Response> {
     const url = this.options.routeResolver.resolve({ handler, params })
-
-    console.log("URL", url)
-    console.log("METHOD", method)
-
     const response = await nodeFetch(url, {
       method,
       headers: this.authHeader,
