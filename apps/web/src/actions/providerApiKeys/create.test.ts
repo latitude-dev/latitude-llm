@@ -98,7 +98,7 @@ describe('createProviderApiKeyAction', () => {
         workspace,
         type: Providers.OpenAI,
         name: 'foo',
-        // @ts-expect-error - Testing invalid input
+        // @ts-expect-error - Mock
         user,
       })
 
@@ -111,6 +111,26 @@ describe('createProviderApiKeyAction', () => {
 
       expect(data).toBeNull()
       expect(error).toBeDefined()
+    })
+
+    it('allows creating to providers with same name if one is deleted', async () => {
+      await factories.createProviderApiKey({
+        workspace,
+        type: Providers.OpenAI,
+        name: 'foo',
+        // @ts-expect-error - Mock
+        user,
+        deletedAt: new Date(),
+      })
+
+      const [_, error] = await createProviderApiKeyAction({
+        provider: Providers.OpenAI,
+        token: 'test-token',
+        name: 'foo',
+        url: 'https://api.openai.com',
+      })
+
+      expect(error).toBeNull()
     })
   })
 })

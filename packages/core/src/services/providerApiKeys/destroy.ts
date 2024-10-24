@@ -22,7 +22,7 @@ export async function destroyProviderApiKey(
       .set({ deletedAt: new Date(), token: '<removed>' })
       .where(eq(providerApiKeys.id, providerApiKey.id))
       .returning()
-    const deleted = result[0]
+    const deleted = result[0]!
 
     return Result.ok(deleted)
   }, db)
