@@ -1,6 +1,9 @@
 {
   "extends": "@latitude-data/typescript-config/base.json",
   "compilerOptions": {
+    "outDir": "./public/workers",
+    "module": "ES6",
+    "noEmit": false,
     "plugins": [
       {
         "name": "next"
@@ -14,13 +17,6 @@
       "$/*": ["./src/*"]
     }
   },
-  "include": [
-    "./src/**/*.test.ts",
-    "./src/**/*.ts",
-    "./src/**/*.tsx",
-    "next-env.d.ts",
-    "next.config.js",
-    ".next/types/**/*.ts"
-  ],
-  "exclude": ["node_modules", "./src/workers"]
+  "include": ["./src/workers/**/*.ts"],
+  "exclude": ["node_modules", ""]
 }
