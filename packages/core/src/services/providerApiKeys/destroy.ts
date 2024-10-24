@@ -19,7 +19,7 @@ export async function destroyProviderApiKey(
   return Transaction.call(async (tx) => {
     const result = await tx
       .update(providerApiKeys)
-      .set({ deletedAt: new Date(), token: '<removed>' })
+      .set({ deletedAt: new Date(), token: `<removed-${providerApiKey.id}>` })
       .where(eq(providerApiKeys.id, providerApiKey.id))
       .returning()
     const deleted = result[0]
