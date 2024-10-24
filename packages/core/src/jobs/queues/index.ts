@@ -26,6 +26,8 @@ export const DEFAULT_JOB_OPTIONS: JobsOptions = {
     type: 'exponential',
     delay: 1000,
   },
+  removeOnFail: true,
+  removeOnComplete: true,
 }
 
 function setupQueue({
