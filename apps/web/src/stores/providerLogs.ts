@@ -1,6 +1,6 @@
 'use client'
 
-import { compact, reverse } from 'lodash-es'
+import { compact } from 'lodash-es'
 
 import { ProviderLogDto } from '@latitude-data/core/browser'
 import useFetcher from '$/hooks/useFetcher'
@@ -22,7 +22,7 @@ export default function useProviderLogs(
   const fetcher = useFetcher(
     buildRoute({ documentUuid, documentLogUuid, documentLogId }),
     {
-      serializer: (rows) => reverse(rows.map(deserialize)),
+      serializer: (rows) => rows.map(deserialize),
     },
   )
   const {
