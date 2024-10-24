@@ -17,7 +17,11 @@ import {
   vi,
 } from 'vitest'
 
-import { mockRequest, mockStreamResponse } from './helpers/run'
+import {
+  mockNonStreamResponse,
+  mockRequest,
+  mockStreamResponse,
+} from './helpers/run'
 
 let latitudeApiKey = 'fake-api-key'
 let projectId = 123
@@ -457,10 +461,7 @@ describe('/run', () => {
         'do not send data onEvent callback',
         server.boundary(async () => {
           const onMessageMock = vi.fn()
-          mockStreamResponse({
-            server,
-            apiVersion: 'v2',
-          })
+          mockNonStreamResponse({ server, expectedBody: FINAL_RESPONSE })
           await sdk.run('path/to/document', {
             projectId,
             parameters: { foo: 'bar', lol: 'foo' },

@@ -1,4 +1,4 @@
-import { CHUNKS } from '$sdk/test/chunks-example'
+import { CHUNKS, FINAL_RESPONSE } from '$sdk/test/chunks-example'
 import { parseSSE } from '$sdk/utils/parseSSE'
 import { SdkApiVersion } from '$sdk/utils/types'
 import { http, HttpResponse } from 'msw'
@@ -73,4 +73,19 @@ export function mockStreamResponse({
     ),
   )
   return { chunks: CHUNKS }
+}
+
+export function mockNonStreamResponse({
+  server,
+  expectedBody,
+}: {
+  server: Server
+  expectedBody: object
+}) {
+  server.use(
+    http.post(
+      'http://localhost:8787/api/v2/projects/123/versions/live/documents/run',
+      () => HttpResponse.json(expectedBody),
+    ),
+  )
 }

@@ -58,6 +58,7 @@ export class LatitudeSdkV2 extends LatitudeSdk implements ILatitudeSdk<'v2'> {
         onError?.(error)
         return Promise.reject(error)
       }
+
       const json = await response.json()
       const body = json as Awaited<ReturnType<typeof handleStream>>
       onFinished?.(body!)
