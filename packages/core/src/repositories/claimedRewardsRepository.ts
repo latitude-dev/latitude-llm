@@ -3,11 +3,11 @@ import { and, eq, getTableColumns, isNull, not, or, sum } from 'drizzle-orm'
 import { ClaimedReward, RewardType } from '../browser'
 import { Result } from '../lib'
 import { claimedRewards } from '../schema/models/claimedRewards'
-import Repository from './repository'
+import RepositoryLegacy from './repository'
 
 const tt = getTableColumns(claimedRewards)
 
-export class ClaimedRewardsRepository extends Repository<
+export class ClaimedRewardsRepository extends RepositoryLegacy<
   typeof tt,
   ClaimedReward
 > {

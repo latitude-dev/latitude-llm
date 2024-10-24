@@ -9,7 +9,7 @@ import {
   runErrors,
   workspaces,
 } from '../../schema'
-import Repository from '../repository'
+import Repository from '../repositoryV2'
 
 export type DocumentLogWithMetadata = DocumentLog & {
   commit: Commit
@@ -20,7 +20,7 @@ export type DocumentLogWithMetadata = DocumentLog & {
 
 const tt = getTableColumns(documentLogs)
 
-export class DocumentLogsRepository extends Repository<typeof tt, DocumentLog> {
+export class DocumentLogsRepository extends Repository<DocumentLog> {
   get scope() {
     return this.db
       .select(tt)
@@ -39,14 +39,11 @@ export class DocumentLogsRepository extends Repository<typeof tt, DocumentLog> {
         ),
       )
       .where(and(isNull(runErrors.id), eq(workspaces.id, this.workspaceId)))
-      .as('documentLogsScope')
+      .$dynamic()
   }
 
   async findByUuid(uuid: string) {
-    const result = await this.db
-      .select()
-      .from(this.scope)
-      .where(eq(this.scope.uuid, uuid))
+    const result = await this.scope.where(eq(documentLogs.uuid, uuid))
 
     if (!result.length) {
       return Result.error(

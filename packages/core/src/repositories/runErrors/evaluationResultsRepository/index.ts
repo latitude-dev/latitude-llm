@@ -13,7 +13,7 @@ import {
   evaluationResultDto,
   EvaluationResultWithMetadata,
 } from '../../evaluationResultsRepository'
-import Repository from '../../repository'
+import RepositoryLegacy from '../../repository'
 
 const evaluationResultDtoWithErrors = {
   ...evaluationResultDto,
@@ -38,7 +38,7 @@ export type EvaluationResultWithMetadataAndErrors =
     error: RunErrorField
   }
 
-export class EvaluationResultsWithErrorsRepository extends Repository<
+export class EvaluationResultsWithErrorsRepository extends RepositoryLegacy<
   typeof evaluationResultDtoWithErrors,
   EvaluationResultWithMetadataAndErrors
 > {

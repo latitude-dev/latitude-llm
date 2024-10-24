@@ -13,7 +13,7 @@ import {
   recomputeChanges,
   RecomputedChanges,
 } from '../../services/documents/recomputeChanges'
-import Repository from '../repository'
+import RepositoryLegacy from '../repository'
 import { buildCommitsScope, columnSelection } from './utils/buildCommitsScope'
 import { getHeadCommitForProject } from './utils/getHeadCommit'
 
@@ -47,7 +47,7 @@ function filterByStatusQuery({
   }
 }
 
-export class CommitsRepository extends Repository<
+export class CommitsRepository extends RepositoryLegacy<
   typeof columnSelection,
   Commit
 > {

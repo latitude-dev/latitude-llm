@@ -3,11 +3,8 @@ import { and, desc, eq, getTableColumns, sql, sum } from 'drizzle-orm'
 import { Commit, Evaluation } from '../../browser'
 import { database } from '../../client'
 import { calculateOffset } from '../../lib/pagination/calculateOffset'
-import {
-  DocumentLogsWithErrorsRepository,
-  EvaluationResultsWithErrorsRepository,
-} from '../../repositories'
-import { commits, providerLogs } from '../../schema'
+import { EvaluationResultsWithErrorsRepository } from '../../repositories'
+import { commits, documentLogs, providerLogs } from '../../schema'
 import { getCommitFilter } from './_createEvaluationResultQuery'
 
 function getRepositoryScopes(workspaceId: number, db = database) {
@@ -15,11 +12,8 @@ function getRepositoryScopes(workspaceId: number, db = database) {
     workspaceId,
     db,
   ).scope
-  const documentLogsScope = new DocumentLogsWithErrorsRepository(
-    workspaceId,
-    db,
-  ).scope
-  return { evaluationResultsScope, documentLogsScope }
+
+  return { evaluationResultsScope }
 }
 
 function getCommonQueryConditions(
@@ -54,10 +48,7 @@ export async function computeEvaluationResultsWithMetadata(
   },
   db = database,
 ) {
-  const { evaluationResultsScope, documentLogsScope } = getRepositoryScopes(
-    workspaceId,
-    db,
-  )
+  const { evaluationResultsScope } = getRepositoryScopes(workspaceId, db)
 
   const offset = calculateOffset(page, pageSize)
   const filteredResultsSubQuery = db
@@ -68,14 +59,14 @@ export async function computeEvaluationResultsWithMetadata(
     })
     .from(evaluationResultsScope)
     .innerJoin(
-      documentLogsScope,
-      eq(documentLogsScope.id, evaluationResultsScope.documentLogId),
+      documentLogs,
+      eq(documentLogs.id, evaluationResultsScope.documentLogId),
     )
-    .innerJoin(commits, eq(commits.id, documentLogsScope.commitId))
+    .innerJoin(commits, eq(commits.id, documentLogs.commitId))
     .where(
       getCommonQueryConditions(
         evaluationResultsScope,
-        documentLogsScope,
+        documentLogs,
         evaluation,
         documentUuid,
         draft,
@@ -112,7 +103,7 @@ export async function computeEvaluationResultsWithMetadata(
       commit: getTableColumns(commits),
       tokens: aggregatedFieldsSubQuery.tokens,
       costInMillicents: aggregatedFieldsSubQuery.costInMillicents,
-      documentContentHash: documentLogsScope.contentHash,
+      documentContentHash: documentLogs.contentHash,
     })
     .from(evaluationResultsScope)
     .innerJoin(
@@ -120,10 +111,10 @@ export async function computeEvaluationResultsWithMetadata(
       eq(aggregatedFieldsSubQuery.id, evaluationResultsScope.id),
     )
     .innerJoin(
-      documentLogsScope,
-      eq(documentLogsScope.id, evaluationResultsScope.documentLogId),
+      documentLogs,
+      eq(documentLogs.id, evaluationResultsScope.documentLogId),
     )
-    .innerJoin(commits, eq(commits.id, documentLogsScope.commitId))
+    .innerJoin(commits, eq(commits.id, documentLogs.commitId))
     .orderBy(desc(evaluationResultsScope.createdAt))
 }
 
@@ -141,10 +132,7 @@ export async function computeEvaluationResultsWithMetadataCount(
   },
   db = database,
 ) {
-  const { evaluationResultsScope, documentLogsScope } = getRepositoryScopes(
-    workspaceId,
-    db,
-  )
+  const { evaluationResultsScope } = getRepositoryScopes(workspaceId, db)
 
   return db
     .select({
@@ -152,14 +140,14 @@ export async function computeEvaluationResultsWithMetadataCount(
     })
     .from(evaluationResultsScope)
     .innerJoin(
-      documentLogsScope,
-      eq(documentLogsScope.id, evaluationResultsScope.documentLogId),
+      documentLogs,
+      eq(documentLogs.id, evaluationResultsScope.documentLogId),
     )
-    .innerJoin(commits, eq(commits.id, documentLogsScope.commitId))
+    .innerJoin(commits, eq(commits.id, documentLogs.commitId))
     .where(
       getCommonQueryConditions(
         evaluationResultsScope,
-        documentLogsScope,
+        documentLogs,
         evaluation,
         documentUuid,
         draft,

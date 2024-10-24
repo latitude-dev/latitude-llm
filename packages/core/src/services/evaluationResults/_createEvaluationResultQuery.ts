@@ -4,16 +4,14 @@ import { Commit } from '../../browser'
 import { database } from '../../client'
 import { DocumentLogsRepository } from '../../repositories/documentLogsRepository'
 import { EvaluationResultsRepository } from '../../repositories/evaluationResultsRepository'
-import { commits, providerLogs } from '../../schema'
+import { commits, documentLogs, providerLogs } from '../../schema'
 
 export function createEvaluationResultQuery(
   workspaceId: number,
   db = database,
 ) {
-  const { scope: evaluationResultsScope } = new EvaluationResultsRepository(
-    workspaceId,
-    db,
-  )
+  const { scope } = new EvaluationResultsRepository(workspaceId, db)
+  const evaluationResultsScope = scope.as('evaluation_results_scope')
   const { scope: documentLogsScope } = new DocumentLogsRepository(
     workspaceId,
     db,
@@ -45,14 +43,14 @@ export function createEvaluationResultQuery(
         commit: commits,
         tokens: aggregatedFieldsSubQuery.tokens,
         costInMillicents: aggregatedFieldsSubQuery.costInMillicents,
-        documentContentHash: documentLogsScope.contentHash,
+        documentContentHash: documentLogs.contentHash,
       })
       .from(evaluationResultsScope)
       .innerJoin(
-        documentLogsScope,
-        eq(documentLogsScope.id, evaluationResultsScope.documentLogId),
+        documentLogs,
+        eq(documentLogs.id, evaluationResultsScope.documentLogId),
       )
-      .innerJoin(commits, eq(commits.id, documentLogsScope.commitId))
+      .innerJoin(commits, eq(commits.id, documentLogs.commitId))
       .innerJoin(
         aggregatedFieldsSubQuery,
         eq(aggregatedFieldsSubQuery.id, evaluationResultsScope.id),

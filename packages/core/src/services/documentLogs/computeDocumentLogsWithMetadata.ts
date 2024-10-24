@@ -12,11 +12,14 @@ import {
 import { Commit } from '../../browser'
 import { database } from '../../client'
 import { calculateOffset } from '../../lib/pagination/calculateOffset'
+import { DocumentLogsWithErrorsRepository } from '../../repositories'
 import {
-  DocumentLogsWithErrorsRepository,
-  DocumentLogWithErrorScope,
-} from '../../repositories'
-import { commits, providerLogs } from '../../schema'
+  commits,
+  documentLogs,
+  projects,
+  providerLogs,
+  workspaces,
+} from '../../schema'
 
 function getRepositoryScopes(workspaceId: number, db = database) {
   const scope = new DocumentLogsWithErrorsRepository(workspaceId, db).scope
@@ -36,7 +39,7 @@ function getCommonQueryConditions({
   draft,
   allowAnyDraft,
 }: {
-  scope: DocumentLogWithErrorScope
+  scope: any
   documentUuid?: string
   allowAnyDraft?: boolean
   draft?: Commit
@@ -70,53 +73,55 @@ export function computeDocumentLogsWithMetadataQuery(
 ) {
   const { scope } = getRepositoryScopes(workspaceId, db)
   const offset = calculateOffset(page, pageSize)
-  const filteredSubQuery = db
-    .select({
-      id: scope.id,
-      error: scope.error,
-    })
-    .from(scope)
-    .innerJoin(commits, eq(commits.id, scope.commitId))
+  const filteredSubQuery = scope
     .where(
-      getCommonQueryConditions({ scope, documentUuid, draft, allowAnyDraft }),
+      getCommonQueryConditions({
+        scope: documentLogs,
+        documentUuid,
+        draft,
+        allowAnyDraft,
+      }),
     )
-    .orderBy(desc(scope.createdAt))
+    .orderBy(desc(documentLogs.createdAt))
     .limit(parseInt(pageSize))
     .offset(offset)
     .as('filteredDocumentLogsSubQuery')
 
   const aggregatedFieldsSubQuery = db
     .select({
-      id: scope.id,
+      id: filteredSubQuery.id,
       tokens: sum(providerLogs.tokens).mapWith(Number).as('tokens'),
       duration: sum(providerLogs.duration).mapWith(Number).as('duration_in_ms'),
       costInMillicents: sum(providerLogs.costInMillicents)
         .mapWith(Number)
         .as('cost_in_millicents'),
     })
-    .from(scope)
-    .innerJoin(filteredSubQuery, eq(filteredSubQuery.id, scope.id))
-    .leftJoin(providerLogs, eq(providerLogs.documentLogUuid, scope.uuid))
-    .groupBy(scope.id)
+    .from(filteredSubQuery)
+    .leftJoin(
+      providerLogs,
+      eq(providerLogs.documentLogUuid, filteredSubQuery.uuid),
+    )
+    .groupBy(filteredSubQuery.id)
     .as('aggregatedFieldsSubQuery')
 
   return {
     scope,
     baseQuery: db
       .select({
-        ...scope._.selectedFields,
+        ...filteredSubQuery._.selectedFields,
         commit: getTableColumns(commits),
         tokens: aggregatedFieldsSubQuery.tokens,
         duration: aggregatedFieldsSubQuery.duration,
         costInMillicents: aggregatedFieldsSubQuery.costInMillicents,
       })
-      .from(scope)
-      .innerJoin(commits, eq(commits.id, scope.commitId))
+      .from(documentLogs)
+      .innerJoin(filteredSubQuery, eq(filteredSubQuery.id, documentLogs.id))
+      .innerJoin(commits, eq(commits.id, filteredSubQuery.commitId))
       .innerJoin(
         aggregatedFieldsSubQuery,
-        eq(aggregatedFieldsSubQuery.id, scope.id),
+        eq(aggregatedFieldsSubQuery.id, filteredSubQuery.id),
       )
-      .orderBy(desc(scope.createdAt)),
+      .orderBy(desc(documentLogs.createdAt)),
   }
 }
 
@@ -132,15 +137,20 @@ export async function computeDocumentLogsWithMetadataCount(
   },
   db = database,
 ) {
-  const { scope } = getRepositoryScopes(workspaceId, db)
-
   const countList = await db
     .select({
       count: sql<number>`count(*)`.as('total_count'),
     })
-    .from(scope)
-    .innerJoin(commits, eq(commits.id, scope.commitId))
-    .where(getCommonQueryConditions({ scope, documentUuid, draft }))
+    .from(documentLogs)
+    .innerJoin(commits, eq(commits.id, documentLogs.commitId))
+    .innerJoin(projects, eq(projects.id, commits.projectId))
+    .innerJoin(workspaces, eq(workspaces.id, projects.workspaceId))
+    .where(
+      and(
+        eq(workspaces.id, workspaceId),
+        getCommonQueryConditions({ scope: documentLogs, documentUuid, draft }),
+      ),
+    )
 
   return countList?.[0]?.count ? Number(countList[0].count) : 0
 }

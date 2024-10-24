@@ -4,8 +4,7 @@ import { getCommitFilter } from '../_createEvaluationResultQuery'
 import { Commit, Evaluation } from '../../../browser'
 import { database } from '../../../client'
 import { EvaluationResultsRepository } from '../../../repositories'
-import { DocumentLogsRepository } from '../../../repositories/documentLogsRepository'
-import { commits } from '../../../schema'
+import { commits, documentLogs } from '../../../schema'
 
 export async function getEvaluationModalValueQuery(
   {
@@ -21,15 +20,8 @@ export async function getEvaluationModalValueQuery(
   },
   db = database,
 ) {
-  const { scope: evaluationResultsScope } = new EvaluationResultsRepository(
-    workspaceId,
-    db,
-  )
-  const { scope: documentLogsScope } = new DocumentLogsRepository(
-    workspaceId,
-    db,
-  )
-
+  const repo = new EvaluationResultsRepository(workspaceId, db)
+  const evaluationResultsScope = repo.scope.as('evaluation_results_scope')
   const totalQuery = await db
     .select({
       totalCount: sum(evaluationResultsScope.id)
@@ -38,14 +30,14 @@ export async function getEvaluationModalValueQuery(
     })
     .from(evaluationResultsScope)
     .innerJoin(
-      documentLogsScope,
-      eq(documentLogsScope.id, evaluationResultsScope.documentLogId),
+      documentLogs,
+      eq(documentLogs.id, evaluationResultsScope.documentLogId),
     )
-    .innerJoin(commits, eq(commits.id, documentLogsScope.commitId))
+    .innerJoin(commits, eq(commits.id, documentLogs.commitId))
     .where(
       and(
         eq(evaluationResultsScope.evaluationId, evaluation.id),
-        eq(documentLogsScope.documentUuid, documentUuid),
+        eq(documentLogs.documentUuid, documentUuid),
         getCommitFilter(commit),
       ),
     )
@@ -61,14 +53,14 @@ export async function getEvaluationModalValueQuery(
     })
     .from(evaluationResultsScope)
     .innerJoin(
-      documentLogsScope,
-      eq(documentLogsScope.id, evaluationResultsScope.documentLogId),
+      documentLogs,
+      eq(documentLogs.id, evaluationResultsScope.documentLogId),
     )
-    .innerJoin(commits, eq(commits.id, documentLogsScope.commitId))
+    .innerJoin(commits, eq(commits.id, documentLogs.commitId))
     .where(
       and(
         eq(evaluationResultsScope.evaluationId, evaluation.id),
-        eq(documentLogsScope.documentUuid, documentUuid),
+        eq(documentLogs.documentUuid, documentUuid),
         getCommitFilter(commit),
       ),
     )

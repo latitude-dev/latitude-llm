@@ -26,7 +26,7 @@ import {
   evaluations,
   runErrors,
 } from '../../schema'
-import Repository from '../repository'
+import Repository from '../repositoryV2'
 
 export const evaluationResultDto = {
   ...getTableColumns(evaluationResults),
@@ -50,10 +50,7 @@ export type EvaluationResultWithMetadata = EvaluationResultDto & {
   documentContentHash: string
 }
 
-export class EvaluationResultsRepository extends Repository<
-  typeof evaluationResultDto,
-  EvaluationResultDto
-> {
+export class EvaluationResultsRepository extends Repository<EvaluationResultDto> {
   get scope() {
     return this.db
       .select(evaluationResultDto)
@@ -104,7 +101,7 @@ export class EvaluationResultsRepository extends Repository<
           eq(evaluations.workspaceId, this.workspaceId),
         ),
       )
-      .as('evaluationResultsBaseQuery')
+      .$dynamic()
   }
 
   async findByContentHash({
@@ -114,17 +111,18 @@ export class EvaluationResultsRepository extends Repository<
     evaluationId: number
     contentHash: string
   }) {
-    const result = await this.db
-      .select(this.scope._.selectedFields)
-      .from(this.scope)
-      .innerJoin(documentLogs, eq(documentLogs.id, this.scope.documentLogId))
+    const result = await this.scope
+      .innerJoin(
+        documentLogs,
+        eq(documentLogs.id, evaluationResults.documentLogId),
+      )
       .where(
         and(
-          eq(this.scope.evaluationId, evaluationId),
+          eq(evaluationResults.evaluationId, evaluationId),
           eq(documentLogs.contentHash, contentHash),
         ),
       )
-      .orderBy(desc(this.scope.createdAt))
+      .orderBy(desc(evaluationResults.createdAt))
 
     return Result.ok(result.map(this.parseResult))
   }
