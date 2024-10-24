@@ -112,7 +112,7 @@ export function FinishReasonItem({
     <MetadataItemTooltip
       label='Finish reason'
       loading={!providerLog}
-      trigger={<Text.H5B color={color}>{finishReason}</Text.H5B>}
+      trigger={<Text.H5 color={color}>{finishReason}</Text.H5>}
       tooltipContent={REASONS_FINISH[finishReason] ?? 'Unknown reason'}
     />
   )
