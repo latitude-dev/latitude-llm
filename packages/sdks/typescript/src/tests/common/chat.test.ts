@@ -4,7 +4,7 @@ import {
   mockAuthHeader,
   mockBodyResponse,
   mockChatMessage,
-} from '$sdk/tests/common/helpers'
+} from '$sdk/tests/common/helpers/chat'
 import { setupServer } from 'msw/node'
 import {
   afterAll,

@@ -3,7 +3,7 @@ import { parseSSE } from '$sdk/utils/parseSSE'
 import { SdkApiVersion } from '$sdk/utils/types'
 import { http, HttpResponse } from 'msw'
 import { setupServer } from 'msw/node'
-import { Mock, vi } from 'vitest'
+import { vi } from 'vitest'
 
 type Server = ReturnType<typeof setupServer>
 const encoder = new TextEncoder()

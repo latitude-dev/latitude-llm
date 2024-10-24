@@ -1,4 +1,8 @@
-import { http, HttpResponse } from 'msw'
+import {
+  mock500Error,
+  mockAuthHeader,
+  mockGetBody,
+} from '$sdk/tests/common/helpers/get'
 import { setupServer } from 'msw/node'
 import {
   afterAll,
@@ -12,90 +16,146 @@ import {
 
 import { Latitude } from '../../index'
 
-let latitudeApiKey = 'fake-api-key'
+let FAKE_API_KEY = 'fake-api-key'
 let projectId = 123
-const SDK = new Latitude(latitudeApiKey)
+let sdk: Latitude
 
 const server = setupServer()
 
-describe('get', () => {
+describe('/get', () => {
   beforeAll(() => server.listen())
   afterEach(() => server.resetHandlers())
   afterAll(() => server.close())
 
-  it(
-    'sends auth header',
-    server.boundary(async () => {
-      const mockFn = vi.fn()
-      server.use(
-        http.get(
-          'http://localhost:8787/api/v1/projects/123/versions/live/documents/fake-document-id',
-          (info) => {
-            mockFn(info.request.headers.get('Authorization'))
-            return HttpResponse.json({})
-          },
-        ),
-      )
-      await SDK.get('fake-document-id', { projectId })
-      expect(mockFn).toHaveBeenCalledWith('Bearer fake-api-key')
-    }),
-  )
-
-  it(
-    'handles response correctly',
-    server.boundary(async () => {
-      const mockResponse = { data: 'some data' }
-      server.use(
-        http.get(
-          'http://localhost:8787/api/v1/projects/123/versions/live/documents/fake-document-id',
-          () => {
-            return HttpResponse.json(mockResponse)
-          },
-        ),
-      )
-      const response = await SDK.get('fake-document-id', { projectId })
-      expect(response).toEqual(mockResponse)
-    }),
-  )
-
-  it(
-    'handles errors correctly',
-    server.boundary(async () => {
-      const mockError = { error: 'something went wrong' }
-      server.use(
-        http.get(
-          'http://localhost:8787/api/v1/projects/123/versions/live/documents/fake-document-id',
-          () => {
-            // @ts-expect-error - mock error
-            return HttpResponse.status(500).json(mockError)
-          },
-        ),
-      )
-      try {
-        await SDK.get('fake-document-id', { projectId })
-      } catch (error) {
-        // @ts-expect-error - mock error
-        expect(error.message).toEqual(
-          'Unexpected API Error: 500 Unhandled Exception',
-        )
-      }
-    }),
-  )
-
-  it('target correct version uuid if one is provided', async () => {
-    const mockResponse = { data: 'some data' }
-    server.use(
-      http.get(
-        'http://localhost:8787/api/v1/projects/123/versions/fake-version-uuid/documents/fake-document-id',
-        () => {
-          return HttpResponse.json(mockResponse)
-        },
-      ),
-    )
-    const response = await SDK.get('fake-document-id', {
-      projectId,
-      versionUuid: 'fake-version-uuid',
+  describe('v1', () => {
+    beforeAll(() => {
+      sdk = new Latitude(FAKE_API_KEY)
     })
-    expect(response).toEqual(mockResponse)
+
+    it(
+      'sends auth header',
+      server.boundary(async () => {
+        const { docPath, mockFn } = mockAuthHeader({
+          server,
+          apiVersion: 'v1',
+          docPath: 'fake-document-id',
+        })
+        await sdk.get(docPath, { projectId })
+        expect(mockFn).toHaveBeenCalledWith('Bearer fake-api-key')
+      }),
+    )
+
+    it(
+      'handles response correctly',
+      server.boundary(async () => {
+        const { docPath, mockResponse } = mockGetBody({
+          server,
+          apiVersion: 'v1',
+          version: 'live',
+          docPath: 'fake-document-id',
+        })
+        const response = await sdk.get(docPath, { projectId })
+        expect(response).toEqual(mockResponse)
+      }),
+    )
+
+    it(
+      'handles errors correctly',
+      server.boundary(async () => {
+        const { docPath } = mock500Error({
+          server,
+          apiVersion: 'v1',
+          docPath: 'fake-document-id',
+        })
+        try {
+          await sdk.get(docPath, { projectId })
+        } catch (error) {
+          // @ts-expect-error - mock error
+          expect(error.message).toEqual(
+            'Unexpected API Error: 500 Unhandled Exception',
+          )
+        }
+      }),
+    )
+
+    it('target correct version uuid if one is provided', async () => {
+      const { docPath, version, mockResponse } = mockGetBody({
+        server,
+        apiVersion: 'v1',
+        version: 'fake-version-uuid',
+        docPath: 'fake-document-id',
+      })
+      const response = await sdk.get(docPath, {
+        projectId,
+        versionUuid: version,
+      })
+      expect(response).toEqual(mockResponse)
+    })
+  })
+
+  describe('v2', () => {
+    beforeAll(() => {
+      sdk = new Latitude(FAKE_API_KEY, { apiVersion: 'v2' })
+    })
+
+    it(
+      'sends auth header',
+      server.boundary(async () => {
+        const { docPath, mockFn } = mockAuthHeader({
+          server,
+          apiVersion: 'v2',
+          docPath: 'fake-document-id',
+        })
+        await sdk.get(docPath, { projectId })
+        expect(mockFn).toHaveBeenCalledWith('Bearer fake-api-key')
+      }),
+    )
+
+    it(
+      'handles response correctly',
+      server.boundary(async () => {
+        const { docPath, mockResponse } = mockGetBody({
+          server,
+          apiVersion: 'v2',
+          version: 'live',
+          docPath: 'fake-document-id',
+        })
+        const response = await sdk.get(docPath, { projectId })
+        expect(response).toEqual(mockResponse)
+      }),
+    )
+
+    it(
+      'handles errors correctly',
+      server.boundary(async () => {
+        const { docPath } = mock500Error({
+          server,
+          apiVersion: 'v2',
+          docPath: 'fake-document-id',
+        })
+        try {
+          await sdk.get(docPath, { projectId })
+        } catch (error) {
+          // @ts-expect-error - mock error
+          expect(error.message).toEqual(
+            'Unexpected API Error: 500 Unhandled Exception',
+          )
+        }
+      }),
+    )
+
+    it('target correct version uuid if one is provided', async () => {
+      const { docPath, version, mockResponse } = mockGetBody({
+        server,
+        apiVersion: 'v2',
+        version: 'fake-version-uuid',
+        docPath: 'fake-document-id',
+      })
+      const response = await sdk.get(docPath, {
+        projectId,
+        versionUuid: version,
+      })
+      expect(response).toEqual(mockResponse)
+    })
   })
 })
