@@ -568,6 +568,13 @@
       "when": 1729759954890,
       "tag": "0080_hard_sinister_six",
       "breakpoints": true
+    },
+    {
+      "idx": 81,
+      "version": "7",
+      "when": 1729764355637,
+      "tag": "0081_cultured_vance_astro",
+      "breakpoints": true
     }
   ]
 }
