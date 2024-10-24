@@ -2,11 +2,14 @@ import { eq, getTableColumns } from 'drizzle-orm'
 
 import { ApiKey } from '../browser'
 import { apiKeys } from '../schema'
-import Repository from './repository'
+import RepositoryLegacy from './repository'
 
 const tt = getTableColumns(apiKeys)
 
-export class LatitudeApiKeysRepository extends Repository<typeof tt, ApiKey> {
+export class LatitudeApiKeysRepository extends RepositoryLegacy<
+  typeof tt,
+  ApiKey
+> {
   get scope() {
     return this.db
       .select(tt)

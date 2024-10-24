@@ -10,7 +10,7 @@ import {
   workspaces,
 } from '../../../schema'
 import { DocumentLogWithMetadata } from '../../documentLogsRepository'
-import Repository from '../../repository'
+import Repository from '../../repositoryV2'
 import { RunErrorField } from '../evaluationResultsRepository'
 
 const tt = {
@@ -27,10 +27,7 @@ export type DocumentLogWithMetadataAndError = DocumentLogWithMetadata & {
 export type DocumentLogWithErrorScope =
   typeof DocumentLogsWithErrorsRepository.prototype.scope
 
-export class DocumentLogsWithErrorsRepository extends Repository<
-  typeof tt,
-  DocumentLogWithMetadataAndError
-> {
+export class DocumentLogsWithErrorsRepository extends Repository<DocumentLogWithMetadataAndError> {
   get scope() {
     return this.db
       .select(tt)
@@ -49,14 +46,11 @@ export class DocumentLogsWithErrorsRepository extends Repository<
         ),
       )
       .where(eq(workspaces.id, this.workspaceId))
-      .as('documentLogsWithErrorsScope')
+      .$dynamic()
   }
 
   async findByUuid(uuid: string) {
-    const result = await this.db
-      .select()
-      .from(this.scope)
-      .where(eq(this.scope.uuid, uuid))
+    const result = await this.scope.where(eq(documentLogs.uuid, uuid))
 
     if (!result.length) {
       return Result.error(

@@ -3,11 +3,11 @@ import { and, eq, getTableColumns, isNull } from 'drizzle-orm'
 import { ProviderApiKey } from '../browser'
 import { NotFoundError, Result } from '../lib'
 import { providerApiKeys } from '../schema'
-import Repository from './repository'
+import RepositoryLegacy from './repository'
 
 const tt = getTableColumns(providerApiKeys)
 
-export class ProviderApiKeysRepository extends Repository<
+export class ProviderApiKeysRepository extends RepositoryLegacy<
   typeof tt,
   ProviderApiKey
 > {

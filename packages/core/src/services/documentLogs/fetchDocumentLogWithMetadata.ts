@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm'
 import { database } from '../../client'
 import { NotFoundError, Result, TypedResult } from '../../lib'
 import { DocumentLogWithMetadataAndError } from '../../repositories'
+import { documentLogs } from '../../schema'
 import { computeDocumentLogsWithMetadataQuery } from './computeDocumentLogsWithMetadata'
 
 function throwNotFound({
@@ -34,7 +35,7 @@ export async function fetchDocumentLogWithMetadata(
 
   if (identifier === undefined) return throwNotFound({ identifier, type })
 
-  const { scope, baseQuery } = computeDocumentLogsWithMetadataQuery(
+  const { baseQuery } = computeDocumentLogsWithMetadataQuery(
     {
       workspaceId,
       allowAnyDraft: true,
@@ -44,9 +45,11 @@ export async function fetchDocumentLogWithMetadata(
   let logs: DocumentLogWithMetadataAndError[] = []
 
   if (documentLogUuid) {
-    logs = await baseQuery.where(eq(scope.uuid, documentLogUuid)).limit(1)
+    logs = await baseQuery
+      .where(eq(documentLogs.uuid, documentLogUuid))
+      .limit(1)
   } else if (documentLogId) {
-    logs = await baseQuery.where(eq(scope.id, documentLogId)).limit(1)
+    logs = await baseQuery.where(eq(documentLogs.id, documentLogId)).limit(1)
   }
 
   const documentLog = logs[0]

@@ -21,7 +21,7 @@ import {
 import { DocumentVersionsRepository } from '../documentVersionsRepository'
 import { EvaluationResultsRepository } from '../evaluationResultsRepository'
 import { EvaluationsRepository } from '../evaluationsRepository'
-import Repository from '../repository'
+import RepositoryLegacy from '../repository'
 
 const tt = getTableColumns(connectedEvaluations)
 
@@ -36,7 +36,7 @@ export type ConnectedDocumentWithMetadata = DocumentVersion & {
   modalValueCount: number
 }
 
-export class ConnectedEvaluationsRepository extends Repository<
+export class ConnectedEvaluationsRepository extends RepositoryLegacy<
   typeof tt,
   ConnectedEvaluation
 > {
@@ -128,29 +128,27 @@ export class ConnectedEvaluationsRepository extends Repository<
         ),
     )
 
-    const evaluationResultsRepo = new EvaluationResultsRepository(
-      this.workspaceId,
-      this.db,
-    )
+    const { scope } = new EvaluationResultsRepository(this.workspaceId, this.db)
+    const evaluationResultsScope = scope.as('evaluation_results_repo')
     const selectedEvaluationResults = this.db
       .$with('selected_evaluation_results')
       .as(
         this.db
           .select({
-            ...evaluationResultsRepo.scope._.selectedFields,
+            ...evaluationResultsScope._.selectedFields,
             ...getTableColumns(documentLogs),
             ...getTableColumns(providerLogs),
           })
-          .from(evaluationResultsRepo.scope)
+          .from(evaluationResultsScope)
           .innerJoin(
             documentLogs,
-            eq(documentLogs.id, evaluationResultsRepo.scope.documentLogId),
+            eq(documentLogs.id, evaluationResultsScope.documentLogId),
           )
           .innerJoin(
             providerLogs,
-            eq(providerLogs.id, evaluationResultsRepo.scope.providerLogId),
+            eq(providerLogs.id, evaluationResultsScope.providerLogId),
           )
-          .where(eq(evaluationResultsRepo.scope.evaluationId, evaluationId)),
+          .where(eq(evaluationResultsScope.evaluationId, evaluationId)),
       )
 
     const aggregatedResults = this.db

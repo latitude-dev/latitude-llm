@@ -1,5 +1,5 @@
 import { ColumnsSelection, eq, inArray } from 'drizzle-orm'
-import { SubqueryWithSelection } from 'drizzle-orm/pg-core'
+import { PgSelect, SubqueryWithSelection } from 'drizzle-orm/pg-core'
 
 import { database } from '../client'
 import { NotFoundError, Result } from '../lib'
@@ -9,7 +9,7 @@ export type QueryOptions = {
   offset?: number
 }
 
-export default abstract class Repository<
+export default abstract class RepositoryLegacy<
   U extends ColumnsSelection,
   T extends Record<string, unknown>,
 > {
@@ -21,10 +21,12 @@ export default abstract class Repository<
     this.db = db
   }
 
-  abstract get scope(): SubqueryWithSelection<U, string>
+  abstract get scope(): SubqueryWithSelection<U, string> | PgSelect<string>
 
   async findAll(opts: QueryOptions = {}) {
-    let query = this.db.select().from(this.scope)
+    let query = this.db
+      .select()
+      .from(this.scope as SubqueryWithSelection<U, string>)
 
     if (opts.limit !== undefined) {
       // @ts-expect-error
@@ -44,7 +46,7 @@ export default abstract class Repository<
   async find(id: string | number | undefined | null) {
     const result = await this.db
       .select()
-      .from(this.scope)
+      .from(this.scope as SubqueryWithSelection<U, string>)
       // TODO: This is correct but I don't have time to fix the types
       // as it involves some generics with the return value of scope
       // in the child classes
@@ -62,7 +64,7 @@ export default abstract class Repository<
   async findMany(ids: (string | number)[]) {
     const result = await this.db
       .select()
-      .from(this.scope)
+      .from(this.scope as SubqueryWithSelection<U, string>)
       // @ts-expect-error
       .where(inArray(this.scope.id, ids))
       .limit(ids.length)
@@ -71,7 +73,10 @@ export default abstract class Repository<
   }
 
   async findFirst() {
-    const result = await this.db.select().from(this.scope).limit(1)
+    const result = await this.db
+      .select()
+      .from(this.scope as SubqueryWithSelection<U, string>)
+      .limit(1)
 
     return Result.ok(result[0] as T | undefined)
   }

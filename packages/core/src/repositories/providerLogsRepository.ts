@@ -8,11 +8,12 @@ import {
   providerLogs,
   workspaces,
 } from '../schema'
-import Repository, { QueryOptions } from './repository'
+import { QueryOptions } from './repository'
+import Repository from './repositoryV2'
 
 const tt = getTableColumns(providerLogs)
 
-export class ProviderLogsRepository extends Repository<typeof tt, ProviderLog> {
+export class ProviderLogsRepository extends Repository<ProviderLog> {
   get scope() {
     return this.db
       .select(tt)
@@ -22,15 +23,11 @@ export class ProviderLogsRepository extends Repository<typeof tt, ProviderLog> {
         eq(providerApiKeys.id, providerLogs.providerId),
       )
       .innerJoin(workspaces, eq(workspaces.id, providerApiKeys.workspaceId))
-      .as('providerLogsScope')
+      .$dynamic()
   }
 
   async findByUuid(uuid: string) {
-    const result = await this.db
-      .select()
-      .from(this.scope)
-      .where(eq(this.scope.uuid, uuid))
-      .limit(1)
+    const result = await this.scope.where(eq(providerLogs.uuid, uuid)).limit(1)
 
     if (!result.length) {
       return Result.error(new NotFoundError('ProviderLog not found'))
@@ -40,15 +37,13 @@ export class ProviderLogsRepository extends Repository<typeof tt, ProviderLog> {
   }
 
   async findByDocumentUuid(documentUuid: string, opts: QueryOptions = {}) {
-    const query = this.db
-      .select(this.scope._.selectedFields)
-      .from(this.scope)
+    const query = this.scope
       .innerJoin(
         documentLogs,
-        eq(documentLogs.uuid, this.scope.documentLogUuid),
+        eq(documentLogs.uuid, providerLogs.documentLogUuid),
       )
       .where(eq(documentLogs.documentUuid, documentUuid))
-      .orderBy(asc(this.scope.generatedAt))
+      .orderBy(asc(providerLogs.generatedAt))
 
     if (opts.limit !== undefined) {
       query.limit(opts.limit)
@@ -67,11 +62,9 @@ export class ProviderLogsRepository extends Repository<typeof tt, ProviderLog> {
       return Result.error(new NotFoundError('documentLogUuid is required'))
     }
 
-    const result = await this.db
-      .select()
-      .from(this.scope)
-      .where(eq(this.scope.documentLogUuid, documentLogUuid))
-      .orderBy(desc(this.scope.generatedAt))
+    const result = await this.scope
+      .where(eq(providerLogs.documentLogUuid, documentLogUuid))
+      .orderBy(desc(providerLogs.generatedAt))
       .limit(1)
 
     if (!result.length) {
@@ -85,11 +78,9 @@ export class ProviderLogsRepository extends Repository<typeof tt, ProviderLog> {
     documentLogUuid: string,
     opts: QueryOptions = {},
   ) {
-    const query = this.db
-      .select()
-      .from(this.scope)
-      .where(eq(this.scope.documentLogUuid, documentLogUuid))
-      .orderBy(asc(this.scope.generatedAt))
+    const query = this.scope
+      .where(eq(providerLogs.documentLogUuid, documentLogUuid))
+      .orderBy(asc(providerLogs.generatedAt))
 
     if (opts.limit !== undefined) {
       query.limit(opts.limit)

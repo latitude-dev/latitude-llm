@@ -10,7 +10,7 @@ import {
   evaluations,
   llmAsJudgeEvaluationMetadatas,
 } from '../schema'
-import Repository from './repository'
+import RepositoryLegacy from './repository'
 
 const tt = {
   ...getTableColumns(evaluations),
@@ -27,7 +27,7 @@ const tt = {
   },
 }
 
-export class EvaluationsRepository extends Repository<
+export class EvaluationsRepository extends RepositoryLegacy<
   typeof tt,
   EvaluationDto
 > {

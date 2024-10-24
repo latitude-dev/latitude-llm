@@ -4,11 +4,15 @@ import { database } from '../../client'
 import { PromisedResult, Result } from '../../lib'
 import {
   CommitsRepository,
-  DocumentLogsRepository,
   EvaluationResultsRepository,
-  ProviderLogsRepository,
 } from '../../repositories'
-import { evaluationResultableNumbers } from '../../schema'
+import {
+  commits,
+  documentLogs,
+  evaluationResultableNumbers,
+  projects,
+  providerLogs,
+} from '../../schema'
 import {
   AverageResultAndCostOverCommit,
   AverageResultOverTime,
@@ -27,34 +31,39 @@ export async function computeAverageResultAndCostOverCommit(
   },
   db = database,
 ): PromisedResult<AverageResultAndCostOverCommit[]> {
-  const { scope: evaluationResultsScope } = new EvaluationResultsRepository(
-    workspaceId,
-  )
+  const { scope } = new EvaluationResultsRepository(workspaceId)
+  const evaluationResultsScope = scope.as('evaluation_results_scope')
   const { scope: commitsScope } = new CommitsRepository(workspaceId)
-  const { scope: documentLogsScope } = new DocumentLogsRepository(workspaceId)
-  const { scope: providerLogsScope } = new ProviderLogsRepository(workspaceId)
 
   const documentLogCost = db.$with('document_log_cost').as(
     db
       .select({
-        id: documentLogsScope.id,
-        costInMillicents: sum(providerLogsScope.costInMillicents)
+        id: documentLogs.id,
+        costInMillicents: sum(providerLogs.costInMillicents)
           .mapWith(Number)
           .as('total_cost'),
       })
-      .from(documentLogsScope)
+      .from(documentLogs)
+      .innerJoin(commits, eq(commits.id, documentLogs.commitId))
       .innerJoin(
-        providerLogsScope,
-        eq(providerLogsScope.documentLogUuid, documentLogsScope.uuid),
+        projects,
+        and(
+          eq(projects.id, commits.projectId),
+          eq(projects.workspaceId, workspaceId),
+        ),
       )
-      .groupBy(documentLogsScope.id),
+      .innerJoin(
+        providerLogs,
+        eq(providerLogs.documentLogUuid, documentLogs.uuid),
+      )
+      .groupBy(documentLogs.id),
   )
 
   const evaluationResultsData = db.$with('evaluation_results_data').as(
     db
       .with(documentLogCost)
       .select({
-        commitId: documentLogsScope.commitId,
+        commitId: documentLogs.commitId,
         results: count(evaluationResultableNumbers.id).as('results'),
         averageResult: avg(evaluationResultableNumbers.result)
           .mapWith(Number)
@@ -65,10 +74,10 @@ export async function computeAverageResultAndCostOverCommit(
       })
       .from(evaluationResultsScope)
       .innerJoin(
-        documentLogsScope,
-        eq(documentLogsScope.id, evaluationResultsScope.documentLogId),
+        documentLogs,
+        eq(documentLogs.id, evaluationResultsScope.documentLogId),
       )
-      .innerJoin(documentLogCost, eq(documentLogCost.id, documentLogsScope.id))
+      .innerJoin(documentLogCost, eq(documentLogCost.id, documentLogs.id))
       .innerJoin(
         evaluationResultableNumbers,
         eq(evaluationResultableNumbers.id, evaluationResultsScope.resultableId),
@@ -76,10 +85,10 @@ export async function computeAverageResultAndCostOverCommit(
       .where(
         and(
           eq(evaluationResultsScope.evaluationId, evaluation.id),
-          eq(documentLogsScope.documentUuid, documentUuid),
+          eq(documentLogs.documentUuid, documentUuid),
         ),
       )
-      .groupBy(documentLogsScope.commitId),
+      .groupBy(documentLogs.commitId),
   )
 
   const results = await db
@@ -111,11 +120,8 @@ export async function computeAverageResultOverTime(
   },
   db = database,
 ): PromisedResult<AverageResultOverTime[]> {
-  const { scope: evaluationResultsScope } = new EvaluationResultsRepository(
-    workspaceId,
-  )
-  const { scope: documentLogsScope } = new DocumentLogsRepository(workspaceId)
-
+  const { scope } = new EvaluationResultsRepository(workspaceId)
+  const evaluationResultsScope = scope.as('evaluation_results_scope')
   const parseToDate = (date: string) => {
     return new Date(date)
   }
@@ -136,13 +142,13 @@ export async function computeAverageResultOverTime(
       eq(evaluationResultsScope.resultableId, evaluationResultableNumbers.id),
     )
     .innerJoin(
-      documentLogsScope,
-      eq(documentLogsScope.id, evaluationResultsScope.documentLogId),
+      documentLogs,
+      eq(documentLogs.id, evaluationResultsScope.documentLogId),
     )
     .where(
       and(
         eq(evaluationResultsScope.evaluationId, evaluation.id),
-        eq(documentLogsScope.documentUuid, documentUuid),
+        eq(documentLogs.documentUuid, documentUuid),
       ),
     )
     .groupBy(sql`DATE(${evaluationResultableNumbers.createdAt})`)

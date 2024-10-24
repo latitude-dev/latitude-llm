@@ -2,7 +2,7 @@ import { eq, sql } from 'drizzle-orm'
 
 import { Dataset } from '../browser'
 import { datasets, users } from '../schema'
-import Repository from './repository'
+import RepositoryLegacy from './repository'
 
 export const datasetColumns = {
   id: datasets.id,
@@ -19,7 +19,7 @@ export const datasetColumns = {
     name: sql`${users.name}`.as('users_name'),
   },
 }
-export class DatasetsRepository extends Repository<
+export class DatasetsRepository extends RepositoryLegacy<
   typeof datasetColumns,
   Dataset
 > {

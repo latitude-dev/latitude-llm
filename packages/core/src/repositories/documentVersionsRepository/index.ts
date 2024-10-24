@@ -14,7 +14,7 @@ import { Commit, DocumentVersion } from '../../browser'
 import { NotFoundError, Result } from '../../lib'
 import { commits, documentVersions, projects } from '../../schema'
 import { CommitsRepository } from '../commitsRepository'
-import Repository from '../repository'
+import RepositoryLegacy from '../repository'
 
 function mergeDocuments(
   ...documentsArr: DocumentVersion[][]
@@ -46,7 +46,7 @@ const tt = {
   projectId: sql<number>`${projects.id}::int`.as('projectId'),
 }
 
-export class DocumentVersionsRepository extends Repository<
+export class DocumentVersionsRepository extends RepositoryLegacy<
   typeof tt,
   DocumentVersion & { mergedAt: Date | null; projectId: number }
 > {

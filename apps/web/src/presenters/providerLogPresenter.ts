@@ -8,6 +8,7 @@ export default function providerLogPresenter(
 ): ProviderLogDto {
   return {
     ...omit(providerLog, 'responseText', 'responseObject'),
+
     response: buildProviderLogResponse(providerLog),
   }
 }
