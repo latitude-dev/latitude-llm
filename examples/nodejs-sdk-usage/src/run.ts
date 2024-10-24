@@ -7,17 +7,28 @@ async function makeSdkRequest() {
     throw new Error('Latitude API key is required')
   }
 
-  const sdk = new Latitude(apiKey, {})
+  const sdk = new Latitude(apiKey, {
+    apiVersion: 'v2',
+    gateway: {
+      host: 'localhost',
+      port: 8787,
+      ssl: false,
+    }
+  })
+
+  console.log("SDK", sdk)
+
   const response = await sdk.run('eval-food', {
     projectId: 1,
     parameters: { food: 'pizza' },
     versionUuid: '08c60d53-2701-4349-9e98-f811e4ffd8ab',
+    stream: false,
     onEvent: (event) => {
       console.log('CHUNK', event)
     },
-    /* onFinished: (data) => { */
-    /*   console.log('FINISHED', data) */
-    /* }, */
+    onFinished: (data) => {
+      console.log('FINISHED', data)
+    },
     onError: (error) => {
       console.log('ERROR', error)
     },

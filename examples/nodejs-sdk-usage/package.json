@@ -9,12 +9,14 @@
     "rollup": "rollup -c",
     "dev": "pnpm run rollup --watch",
     "build": "pnpm run rollup",
-    "runDocument": "node --env-file=.env.local ./dist/run"
+    "runDocument": "node --env-file=.env.local ./dist/run.js"
   },
   "devDependencies": {
+    "@latitude-data/typescript-config": "workspace:^",
     "@latitude-data/sdk": "workspace:^",
     "@rollup/plugin-commonjs": "^28.0.1",
     "@rollup/plugin-node-resolve": "^15.3.0",
+    "@rollup/plugin-typescript": "^11.1.6",
     "rollup": "^4.24.0"
   }
 }
