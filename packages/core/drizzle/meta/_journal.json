@@ -554,6 +554,20 @@
       "when": 1729604166615,
       "tag": "0078_modern_doctor_doom",
       "breakpoints": true
+    },
+    {
+      "idx": 79,
+      "version": "7",
+      "when": 1729756397801,
+      "tag": "0079_glorious_beast",
+      "breakpoints": true
+    },
+    {
+      "idx": 80,
+      "version": "7",
+      "when": 1729759954890,
+      "tag": "0080_hard_sinister_six",
+      "breakpoints": true
     }
   ]
 }
