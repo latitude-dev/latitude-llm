@@ -71,7 +71,7 @@ describe('connectEvaluationsAction', () => {
     })
 
     it('connects evaluations and templates to a document', async () => {
-      const evaluation = await factories.createLlmAsJudgeEvaluation({
+      const evaluation = await factories.createLegacyLlmAsJudgeEvaluation({
         workspace,
         user,
         name: 'Test Evaluation',

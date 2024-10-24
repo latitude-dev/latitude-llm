@@ -78,7 +78,7 @@ describe('runEvaluationJob', () => {
       document: documentVersion,
       commit: setup.commit,
     })
-    const llmEval = await factories.createLlmAsJudgeEvaluation({
+    const llmEval = await factories.createLegacyLlmAsJudgeEvaluation({
       user: setup.user,
       workspace: setup.workspace,
       name: 'Test Evaluation',

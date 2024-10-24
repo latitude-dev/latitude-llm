@@ -30,7 +30,7 @@ describe('destroyEvaluationAction', () => {
         name: 'Test Provider',
         user: userData,
       })
-      const evaluation = await factories.createLlmAsJudgeEvaluation({
+      const evaluation = await factories.createLegacyLlmAsJudgeEvaluation({
         workspace,
         user: userData,
         prompt: factories.helpers.createPrompt({ provider }),
@@ -67,7 +67,7 @@ describe('destroyEvaluationAction', () => {
         name: 'Test Provider',
         user,
       })
-      evaluation = await factories.createLlmAsJudgeEvaluation({
+      evaluation = await factories.createLegacyLlmAsJudgeEvaluation({
         workspace,
         user,
         prompt: factories.helpers.createPrompt({ provider }),

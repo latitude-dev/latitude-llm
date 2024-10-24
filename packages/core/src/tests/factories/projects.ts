@@ -14,7 +14,10 @@ import { updateProject } from '../../services/projects'
 import { createProject as createProjectFn } from '../../services/projects/create'
 import { createApiKey } from './apiKeys'
 import { createDraft } from './commits'
-import { createLlmAsJudgeEvaluation, IEvaluationData } from './evaluations'
+import {
+  createLegacyLlmAsJudgeEvaluation,
+  IEvaluationData,
+} from './evaluations'
 import {
   createProviderApiKey,
   defaultProviderFakeData,
@@ -107,7 +110,7 @@ export async function createProject(projectData: Partial<ICreateProject> = {}) {
 
   const evaluations = await Promise.all(
     projectData.evaluations?.map((evaluationData) =>
-      createLlmAsJudgeEvaluation({ workspace, user, ...evaluationData }),
+      createLegacyLlmAsJudgeEvaluation({ workspace, user, ...evaluationData }),
     ) ?? [],
   )
 

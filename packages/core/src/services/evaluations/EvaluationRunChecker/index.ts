@@ -6,6 +6,7 @@ import {
   ErrorableEntity,
   EvaluationDto,
   EvaluationResultableType,
+  getEvaluationResultableType,
   RunErrorCodes,
   WorkspaceDto,
 } from '../../../browser'
@@ -84,7 +85,9 @@ export class EvaluationRunChecker {
   }
 
   private async buildSchema() {
-    const resultSchema = getResultSchema(this.evaluation.configuration.type)
+    const resultSchema = getResultSchema(
+      getEvaluationResultableType(this.evaluation),
+    )
 
     if (resultSchema.error) {
       await this.saveError(resultSchema.error)
