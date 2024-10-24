@@ -18,7 +18,7 @@ import {
 import nodeFetch, { Response } from 'node-fetch'
 
 const MAX_RETRIES = 2
-type BaseRunOptions = StreamResponseCallbacks & {
+export type BaseRunOptions = StreamResponseCallbacks & {
   projectId?: number
   versionUuid?: string
   customIdentifier?: string
@@ -124,12 +124,17 @@ export class LatitudeSdk {
       projectId,
       versionUuid,
       parameters,
+      stream,
       customIdentifier,
       onEvent,
       onFinished,
       onError,
-    }: BaseRunOptions,
+    }: BaseRunOptions & { stream?: boolean },
   ) {
+
+    console.log('this.projectId', this.projectId)
+    console.log('projectId', projectId)
+
     projectId = projectId ?? this.projectId
 
     if (!projectId) {
@@ -145,6 +150,7 @@ export class LatitudeSdk {
         handler: HandlerType.RunDocument,
         params: { projectId, versionUuid },
         body: {
+          stream,
           path,
           parameters,
           customIdentifier,

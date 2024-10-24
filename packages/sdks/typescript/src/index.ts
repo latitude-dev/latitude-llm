@@ -8,9 +8,9 @@ import {
   SdkApiVersion,
   StreamChainResponse,
 } from '$sdk/utils/types'
-import { LatitudeSdk } from '$sdk/versions/LatitudeSdk'
+import { BaseRunOptions, LatitudeSdk } from '$sdk/versions/LatitudeSdk'
 import { LatitudeSdkV1 } from '$sdk/versions/LatitudeSdkV1'
-import { LatitudeSdkV2 } from '$sdk/versions/LatitudeSdkV2'
+import { LatitudeSdkV2, V2RunOptions } from '$sdk/versions/LatitudeSdkV2'
 
 const WAIT_IN_MS_BEFORE_RETRY = 1000
 
@@ -39,8 +39,15 @@ function getKlass(apiVersion: SdkApiVersion) {
   throw new LatitudeWrongSdkVersion(apiVersion)
 }
 
-class Latitude {
-  sdk: LatitudeSdk
+type RunOptions<V extends SdkApiVersion> = V extends 'v1'
+  ? BaseRunOptions
+  : V extends 'v2'
+  ? V2RunOptions
+  : {}
+
+class Latitude<V extends SdkApiVersion> {
+  sdk: V extends 'v1' ? LatitudeSdkV1 : LatitudeSdkV2
+  apiVersion: V
 
   constructor(
     apiKey: string,
@@ -51,10 +58,11 @@ class Latitude {
       __internal,
       apiVersion = 'v1',
     }: Options = {
-      apiVersion: 'v1',
-      gateway: DEFAULT_GAWATE_WAY,
-    },
+        apiVersion: 'v1',
+        gateway: DEFAULT_GAWATE_WAY,
+      },
   ) {
+    this.apiVersion = apiVersion as V
     const SDKlass = getKlass(apiVersion)
     const { source, retryMs } = { ...DEFAULT_INTERNAL, ...__internal }
     this.sdk = new SDKlass({
@@ -69,17 +77,20 @@ class Latitude {
           apiVersion,
         }),
       },
-    })
+    }) as V extends 'v1' ? LatitudeSdkV1 : LatitudeSdkV2
   }
 
-  async get(...args: Parameters<LatitudeSdk['get']>) {
-    return this.sdk.get(...args)
+  async get(path: string, options: Parameters<LatitudeSdk['get']>[1] = {}) {
+    return this.sdk.get(path, options)
   }
 
-  run = async (
-    ...args: Parameters<LatitudeSdk['run']>
-  ): ReturnType<LatitudeSdk['run']> => {
-    return this.sdk.run(...args)
+  run = async (path: string, opts?: RunOptions<V>) => {
+    const options = opts ?? {}
+    if (this.sdk instanceof LatitudeSdkV1) {
+      return this.sdk.run(path, options as RunOptions<'v1'>)
+    } else if (this.sdk instanceof LatitudeSdkV2) {
+      return this.sdk.run(path, options as RunOptions<'v2'>)
+    }
   }
 
   chat = async (
