@@ -1,20 +1,8 @@
-import {
-  mock500Error,
-  mockAuthHeader,
-  mockGetBody,
-} from '$sdk/tests/common/helpers/get'
+import { Latitude } from '$sdk/index'
 import { setupServer } from 'msw/node'
-import {
-  afterAll,
-  afterEach,
-  beforeAll,
-  describe,
-  expect,
-  it,
-  vi,
-} from 'vitest'
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
 
-import { Latitude } from '../../index'
+import { mock500Error, mockAuthHeader, mockGetBody } from './helpers/get'
 
 let FAKE_API_KEY = 'fake-api-key'
 let projectId = 123

@@ -54,6 +54,7 @@ export const runHandler = factory.createHandlers(
       source: __internal?.source ?? LogSources.API,
     }).then((r) => r.unwrap())
 
+    let exception: Error | undefined = undefined
     if (useSSE) {
       return streamSSE(
         c,
@@ -70,6 +71,7 @@ export const runHandler = factory.createHandlers(
           }
         },
         (error: Error) => {
+          exception = error
           captureException(error)
 
           return Promise.resolve()

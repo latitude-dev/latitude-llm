@@ -1,10 +1,6 @@
 import { LogSources } from '@latitude-data/core/browser'
-import {
-  mock502Response,
-  mockAuthHeader,
-  mockBodyResponse,
-  mockChatMessage,
-} from '$sdk/tests/common/helpers/chat'
+import { Latitude } from '$sdk/index'
+import { parseSSE } from '$sdk/utils/parseSSE'
 import { setupServer } from 'msw/node'
 import {
   afterAll,
@@ -16,8 +12,12 @@ import {
   vi,
 } from 'vitest'
 
-import { Latitude } from '../../index'
-import { parseSSE } from '../../utils/parseSSE'
+import {
+  mock502Response,
+  mockAuthHeader,
+  mockBodyResponse,
+  mockChatMessage,
+} from './helpers/chat'
 
 let FAKE_LATITUDE_SDK_KEY = 'fake-api-key'
 let sdk: Latitude
