@@ -12,11 +12,13 @@ import { LatitudeSdk } from '$sdk/versions/LatitudeSdk'
 import { LatitudeSdkV1 } from '$sdk/versions/LatitudeSdkV1'
 import { LatitudeSdkV2 } from '$sdk/versions/LatitudeSdkV2'
 
+const WAIT_IN_MS_BEFORE_RETRY = 1000
+
 type Options = {
   versionUuid?: string
   projectId?: number
   gateway?: GatewayApiConfig
-  __internal?: { source: LogSources }
+  __internal?: { source?: LogSources; retryMs?: number }
   apiVersion?: SdkApiVersion
 }
 
@@ -25,7 +27,10 @@ const DEFAULT_GAWATE_WAY = {
   port: env.GATEWAY_PORT,
   ssl: env.GATEWAY_SSL,
 }
-const DEFAULT_INTERNAL = { source: LogSources.API }
+const DEFAULT_INTERNAL = {
+  source: LogSources.API,
+  retryMs: WAIT_IN_MS_BEFORE_RETRY,
+}
 
 function getKlass(apiVersion: SdkApiVersion) {
   if (apiVersion === 'v1') return LatitudeSdkV1
@@ -43,24 +48,27 @@ class Latitude {
       projectId,
       versionUuid,
       gateway = DEFAULT_GAWATE_WAY,
-      __internal = DEFAULT_INTERNAL,
+      __internal,
       apiVersion = 'v1',
     }: Options = {
         apiVersion: 'v1',
         gateway: DEFAULT_GAWATE_WAY,
-        __internal: DEFAULT_INTERNAL,
       },
   ) {
     const SDKlass = getKlass(apiVersion)
+    const { source, retryMs } = { ...DEFAULT_INTERNAL, ...__internal }
     this.sdk = new SDKlass({
       apiKey,
       projectId,
       versionUuid,
-      source: __internal.source,
-      routeResolver: new RouteResolver({
-        gateway,
-        apiVersion,
-      }),
+      options: {
+        source,
+        retryMs,
+        routeResolver: new RouteResolver({
+          gateway,
+          apiVersion,
+        }),
+      },
     })
   }
 

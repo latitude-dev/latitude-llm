@@ -13,8 +13,8 @@ import {
   vi,
 } from 'vitest'
 
-import { Latitude } from './index'
-import { parseSSE } from './utils/parseSSE'
+import { Latitude } from '../../index'
+import { parseSSE } from '../../utils/parseSSE'
 
 const encoder = new TextEncoder()
 let latitudeApiKey = 'fake-api-key'

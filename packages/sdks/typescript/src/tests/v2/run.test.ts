@@ -12,8 +12,8 @@ import {
   vi,
 } from 'vitest'
 
-import { Latitude } from './index'
-import { parseSSE } from './utils/parseSSE'
+import { Latitude } from '../../index'
+import { parseSSE } from '../../utils/parseSSE'
 import { LatitudeMissingStreamOption } from '$sdk/utils/errors'
 
 const encoder = new TextEncoder()

@@ -10,7 +10,7 @@ import {
   vi,
 } from 'vitest'
 
-import { Latitude } from './index'
+import { Latitude } from '../../index'
 
 let latitudeApiKey = 'fake-api-key'
 let projectId = 123

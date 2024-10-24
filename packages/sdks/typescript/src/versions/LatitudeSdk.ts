@@ -18,7 +18,6 @@ import {
 import nodeFetch, { Response } from 'node-fetch'
 
 const MAX_RETRIES = 2
-const WAIT_IN_MS_BEFORE_RETRY = 1000
 type BaseRunOptions = StreamResponseCallbacks & {
   projectId?: number
   versionUuid?: string
@@ -26,32 +25,33 @@ type BaseRunOptions = StreamResponseCallbacks & {
   parameters?: Record<string, unknown>
 }
 type BaseChatOptions = StreamResponseCallbacks
+type SDKOptions = {
+  retryMs: number
+  source: LogSources
+  routeResolver: RouteResolver
+}
 
 export class LatitudeSdk {
   protected projectId?: number
   protected versionUuid?: string
   protected apiKey: string
-  protected routeResolver: RouteResolver
-  protected source: LogSources
+  protected options: SDKOptions
 
   constructor({
     apiKey,
     projectId,
     versionUuid,
-    source,
-    routeResolver,
+    options,
   }: {
     apiKey: string
     versionUuid?: string
     projectId?: number
-    source: LogSources
-    routeResolver: RouteResolver
+    options: SDKOptions
   }) {
     this.projectId = projectId
     this.versionUuid = versionUuid
     this.apiKey = apiKey
-    this.source = source
-    this.routeResolver = routeResolver
+    this.options = options
   }
   async get(
     path: string,
@@ -182,7 +182,7 @@ export class LatitudeSdk {
     retries?: number
   }): Promise<Response> {
     const response = await nodeFetch(
-      this.routeResolver.resolve({ handler, params }),
+      this.options.routeResolver.resolve({ handler, params }),
       {
         method,
         headers: this.authHeader,
@@ -190,7 +190,7 @@ export class LatitudeSdk {
           method === 'POST'
             ? this.bodyToString({
               ...body,
-              __internal: { source: this.source },
+              __internal: { source: this.options.source },
             })
             : undefined,
       },
@@ -198,7 +198,7 @@ export class LatitudeSdk {
 
     if (!response.ok && response.status > 500 && retries < MAX_RETRIES) {
       await new Promise((resolve) =>
-        setTimeout(resolve, WAIT_IN_MS_BEFORE_RETRY),
+        setTimeout(resolve, this.options.retryMs),
       )
 
       return this.request({
