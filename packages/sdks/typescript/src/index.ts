@@ -42,8 +42,8 @@ function getKlass(apiVersion: SdkApiVersion) {
 type RunOptions<V extends SdkApiVersion> = V extends 'v1'
   ? BaseRunOptions
   : V extends 'v2'
-  ? V2RunOptions
-  : {}
+    ? V2RunOptions
+    : {}
 
 class Latitude<V extends SdkApiVersion> {
   sdk: V extends 'v1' ? LatitudeSdkV1 : LatitudeSdkV2
@@ -58,9 +58,9 @@ class Latitude<V extends SdkApiVersion> {
       __internal,
       apiVersion = 'v1',
     }: Options = {
-        apiVersion: 'v1',
-        gateway: DEFAULT_GAWATE_WAY,
-      },
+      apiVersion: 'v1',
+      gateway: DEFAULT_GAWATE_WAY,
+    },
   ) {
     this.apiVersion = apiVersion as V
     const SDKlass = getKlass(apiVersion)

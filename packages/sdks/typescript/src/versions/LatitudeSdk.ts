@@ -131,7 +131,6 @@ export class LatitudeSdk {
       onError,
     }: BaseRunOptions & { stream?: boolean },
   ) {
-
     console.log('this.projectId', this.projectId)
     console.log('projectId', projectId)
 
