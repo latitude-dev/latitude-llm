@@ -1,0 +1,15 @@
+{
+  "name": "nodejs-sdk-usage-example",
+  "version": "0.0.1",
+  "license": "LGPL-3.0",
+  "description": "",
+  "license": "LGPL-3.0",
+  "author": "Latitude Data SL <hello@latitude.so>",
+  "scripts": {
+    "runDocument": "tsx --env-file=.env.local ./src/run"
+  },
+  "devDependencies": {
+    "tsx": "^4.16.2",
+    "@latitude-data/sdk": "workspace:^"
+  }
+}

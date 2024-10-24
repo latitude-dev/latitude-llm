@@ -6,7 +6,6 @@ import type {
   ChainEventTypes,
   StreamEventTypes,
 } from '@latitude-data/core/browser'
-import { GatewayApiConfig } from '$sdk/utils'
 
 export type RunUrlParams = {
   projectId: number

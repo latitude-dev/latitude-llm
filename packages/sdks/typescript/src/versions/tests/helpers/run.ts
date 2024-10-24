@@ -1,4 +1,4 @@
-import { CHUNKS, FINAL_RESPONSE } from '$sdk/test/chunks-example'
+import { CHUNKS } from '$sdk/test/chunks-example'
 import { parseSSE } from '$sdk/utils/parseSSE'
 import { SdkApiVersion } from '$sdk/utils/types'
 import { http, HttpResponse } from 'msw'
