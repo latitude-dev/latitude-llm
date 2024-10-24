@@ -56,6 +56,9 @@ class Latitude<V extends SdkApiVersion = 'v1'> {
       gateway: DEFAULT_GAWATE_WAY,
     },
   ) {
+
+    console.log("GATEAWAY_SDK", gateway)
+
     const SDKlass = getKlass(apiVersion)
     const { source, retryMs } = { ...DEFAULT_INTERNAL, ...__internal }
     const sdk = new SDKlass({

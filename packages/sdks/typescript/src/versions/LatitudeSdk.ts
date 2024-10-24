@@ -37,14 +37,14 @@ type SDKOptions = {
 export type RunOptions<V extends SdkApiVersion> = V extends 'v1'
   ? Parameters<typeof LatitudeSdkV1.prototype.run>[1]
   : V extends 'v2'
-    ? Parameters<typeof LatitudeSdkV2.prototype.run>[1]
-    : never
+  ? Parameters<typeof LatitudeSdkV2.prototype.run>[1]
+  : never
 
 type RunReturnType<V extends SdkApiVersion> = V extends 'v1'
   ? ReturnType<typeof LatitudeSdkV1.prototype.run>
   : V extends 'v2'
-    ? ReturnType<typeof LatitudeSdkV2.prototype.run>
-    : never
+  ? ReturnType<typeof LatitudeSdkV2.prototype.run>
+  : never
 
 export interface ILatitudeSdk<V extends SdkApiVersion = 'v1'> {
   run(path: string, options?: RunOptions<V>): RunReturnType<V>
@@ -199,20 +199,22 @@ export class LatitudeSdk {
     body?: BodyParams<H>
     retries?: number
   }): Promise<Response> {
-    const response = await nodeFetch(
-      this.options.routeResolver.resolve({ handler, params }),
-      {
-        method,
-        headers: this.authHeader,
-        body:
-          method === 'POST'
-            ? this.bodyToString({
-                ...body,
-                __internal: { source: this.options.source },
-              })
-            : undefined,
-      },
-    )
+    const url = this.options.routeResolver.resolve({ handler, params })
+
+    console.log("URL", url)
+    console.log("METHOD", method)
+
+    const response = await nodeFetch(url, {
+      method,
+      headers: this.authHeader,
+      body:
+        method === 'POST'
+          ? this.bodyToString({
+            ...body,
+            __internal: { source: this.options.source },
+          })
+          : undefined,
+    })
 
     if (!response.ok && response.status > 500 && retries < MAX_RETRIES) {
       await new Promise((resolve) => setTimeout(resolve, this.options.retryMs))
