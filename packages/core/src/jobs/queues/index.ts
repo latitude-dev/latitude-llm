@@ -18,7 +18,7 @@ type JobEnqueueFn = {
   ) => Promise<Job<JobDefinition[Queues][Jobs]['data']>>
 }
 
-const attempts = process.env.NODE_ENV === 'production' ? 100 : 3
+const attempts = process.env.NODE_ENV === 'production' ? 15 : 3
 
 export const DEFAULT_JOB_OPTIONS: JobsOptions = {
   attempts,
