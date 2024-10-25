@@ -29,8 +29,8 @@ import { Result } from '../../lib'
 import * as generateUUIDModule from '../../lib/generateUUID'
 import {
   documentLogs,
+  evaluationMetadataLlmAsJudgeLegacy,
   evaluationResults,
-  evaluations,
   providerApiKeys,
   providerLogs,
   runErrors,
@@ -204,7 +204,8 @@ describe('run', () => {
 
       expect(evaluationResult).toMatchObject({
         uuid: FAKE_GENERATED_UUID,
-        resultableType: evaluation.configuration.type,
+        resultableType: (evaluation.configuration ??
+          evaluation.metadata.configuration)!.type,
         source: LogSources.API,
       })
     })
@@ -324,7 +325,7 @@ describe('run', () => {
 
     it('fails evaluation type is not recognized', async () => {
       const evals = await database
-        .update(evaluations)
+        .update(evaluationMetadataLlmAsJudgeLegacy)
         .set({
           configuration: {
             ...evaluation.configuration,
@@ -332,7 +333,7 @@ describe('run', () => {
             type: 'unknown',
           },
         })
-        .where(eq(evaluations.id, evaluation.id))
+        .where(eq(evaluationMetadataLlmAsJudgeLegacy.id, evaluation.metadataId))
         .returning()
       const updatedEvaluation = evals[0]!
 
@@ -342,7 +343,7 @@ describe('run', () => {
         evaluation: {
           ...updatedEvaluation,
           metadata: { prompt: 'foo' },
-        } as EvaluationDto,
+        } as unknown as EvaluationDto,
       })
       const error = await findError(
         RunErrorCodes.EvaluationRunUnsupportedResultTypeError,

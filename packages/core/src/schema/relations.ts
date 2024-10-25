@@ -1,6 +1,9 @@
 import { relations } from 'drizzle-orm'
 
-import { evaluationTemplates, llmAsJudgeEvaluationMetadatas } from '.'
+import {
+  evaluationLegacyTemplates,
+  evaluationMetadataLlmAsJudgeLegacy,
+} from '.'
 import { apiKeys } from './models/apiKeys'
 import { commits } from './models/commits'
 import { connectedEvaluations } from './models/connectedEvaluations'
@@ -132,21 +135,18 @@ export const evaluationRelations = relations(evaluations, ({ one }) => ({
     fields: [evaluations.workspaceId],
     references: [workspaces.id],
   }),
-  llmAsJudgeEvaluationMetadata: one(llmAsJudgeEvaluationMetadatas, {
-    fields: [evaluations.metadataId, evaluations.metadataType],
-    references: [
-      llmAsJudgeEvaluationMetadatas.id,
-      llmAsJudgeEvaluationMetadatas.metadataType,
-    ],
-  }),
 }))
 
 export const llmAsJudgeEvaluationMetadataRelations = relations(
-  llmAsJudgeEvaluationMetadatas,
+  evaluationMetadataLlmAsJudgeLegacy,
   ({ one }) => ({
-    template: one(evaluationTemplates, {
-      fields: [llmAsJudgeEvaluationMetadatas.templateId],
-      references: [evaluationTemplates.id],
+    template: one(evaluationLegacyTemplates, {
+      fields: [evaluationMetadataLlmAsJudgeLegacy.templateId],
+      references: [evaluationLegacyTemplates.id],
+    }),
+    evaluation: one(evaluations, {
+      fields: [evaluationMetadataLlmAsJudgeLegacy.id],
+      references: [evaluations.metadataId],
     }),
   }),
 )
