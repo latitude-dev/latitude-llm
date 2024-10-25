@@ -25,9 +25,7 @@ describe('applyGoogleRules', () => {
 
     const rules = applyCustomRules({ providerType, messages })
 
-    expect(rules.didApplyCustomRules).toBe(false)
-    expect(rules.messages).toEqual(messages)
-    expect(rules.ruleMessage).toBeUndefined()
+    expect(rules).toBeUndefined()
   })
 
   it('does not modify the conversation when all system messages are at the beggining', () => {
@@ -51,7 +49,7 @@ describe('applyGoogleRules', () => {
     ] as Message[]
 
     const rules = applyCustomRules({ providerType, messages })
-    expect(rules.didApplyCustomRules).toBe(false)
+    expect(rules).toBeUndefined()
   })
 
   it('only modifies system messages that are not at the beggining', () => {
@@ -80,16 +78,15 @@ describe('applyGoogleRules', () => {
 
     const rules = applyCustomRules({ providerType, messages })
 
-    expect(rules.didApplyCustomRules).toBe(true)
-    expect(rules.messages.length).toBe(messages.length)
+    expect(rules?.messages.length).toBe(messages.length)
 
-    expect(rules.messages[0]).toEqual(messages[0])
-    expect(rules.messages[1]).toEqual(messages[1])
-    expect(rules.messages[2]).toEqual(messages[2])
-    expect(rules.messages[4]).toEqual(messages[4])
+    expect(rules?.messages[0]).toEqual(messages[0])
+    expect(rules?.messages[1]).toEqual(messages[1])
+    expect(rules?.messages[2]).toEqual(messages[2])
+    expect(rules?.messages[4]).toEqual(messages[4])
 
-    expect(rules.messages[3]!.role).toBe('user')
-    expect((rules.messages[3]!.content[0] as TextContent)?.text).toEqual(
+    expect(rules?.messages[3]!.role).toBe('user')
+    expect((rules?.messages[3]!.content[0] as TextContent)?.text).toEqual(
       messages[3]!.content,
     )
   })

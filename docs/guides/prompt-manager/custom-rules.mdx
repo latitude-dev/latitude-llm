@@ -1,0 +1,33 @@
+---
+title: Provider rules
+description: Some providers have specific rules that you need to follow when using them in your prompts.
+---
+
+## Overview
+
+Some providers have specific rules that you need to follow when using them in your prompts. These rules are called "custom rules" and are enforced by the Latitude engine.
+
+## Anthropic
+
+Anthropic only supports system messages at the beginning of the conversation. All other system messages get converted to user messages.
+
+![](/assets/provider_rules_1.png)
+
+You can add the system message via a property in the front matter of your prompt:
+
+```
+---
+provider: Anthropic
+model: claude-3-5-sonnet-latest
+system: |
+  This is a multi-line system prompt
+  that spans multiple lines
+---
+
+...
+
+```
+
+## Google
+
+Google only supports system messages at the beginning of the conversation. All other system messages are converted to user messages.

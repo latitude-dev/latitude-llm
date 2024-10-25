@@ -89,7 +89,7 @@ export async function ai({
     ...(aiSdkProvider || {}),
   }
   try {
-    const { messages } = applyCustomRules({
+    const rule = applyCustomRules({
       providerType: apiProvider.provider,
       messages: originalMessages,
     })
@@ -97,6 +97,7 @@ export async function ai({
     const { provider, token: apiKey, url } = apiProvider
     const model = config.model
 
+    const messages = rule?.messages ?? originalMessages
     const languageModelResult = createProvider({
       messages,
       provider,

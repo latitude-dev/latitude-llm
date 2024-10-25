@@ -1,5 +1,6 @@
 import { ReactNode } from 'react'
 
+import { TextColor } from '../../tokens'
 import { Icon } from '../Icons'
 import {
   AlertDescription,
@@ -15,6 +16,14 @@ type Props = {
   cta?: ReactNode
   showIcon?: boolean
 }
+
+const IconColor: Record<string, TextColor> = {
+  destructive: 'destructive',
+  success: 'success',
+  warning: 'warningForeground',
+  default: 'foreground',
+}
+
 export function Alert({
   title,
   description,
@@ -24,8 +33,13 @@ export function Alert({
 }: Props) {
   return (
     <AlertRoot variant={variant}>
-      {showIcon && <Icon name='alert' />}
-      <div className='flex flex-row items-center gap-4 justify-between'>
+      {showIcon && (
+        <Icon
+          name='alert'
+          color={variant ? IconColor[variant] || 'foreground' : 'foreground'}
+        />
+      )}
+      <div className='flex flex-row items-center gap-4 lg:gap-8 justify-between'>
         <div className='flex flex-col gap-2'>
           {title && <AlertTitle>{title}</AlertTitle>}
           {description && <AlertDescription>{description}</AlertDescription>}
