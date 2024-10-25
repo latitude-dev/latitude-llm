@@ -4,28 +4,20 @@ import { AppliedRules, ApplyCustomRulesProps } from '.'
 
 export function applyGoogleRules({
   messages,
-}: ApplyCustomRulesProps): AppliedRules {
-  const noChanges = {
-    didApplyCustomRules: false,
-    messages,
-  }
-
+}: ApplyCustomRulesProps): AppliedRules | undefined {
   const firstNonSystemMessageIndex = messages.findIndex(
     (m) => m.role !== 'system',
   )
-
-  if (firstNonSystemMessageIndex === -1) return noChanges
+  if (firstNonSystemMessageIndex === -1) return
 
   const messagesAfterFirstNonSystemMessage = messages.slice(
     firstNonSystemMessageIndex,
   )
-
-  if (!messagesAfterFirstNonSystemMessage.some((m) => m.role === 'system')) {
-    return noChanges
-  }
+  if (!messagesAfterFirstNonSystemMessage.some((m) => m.role === 'system'))
+    return
 
   return {
-    didApplyCustomRules: true,
+    rule: 'GoogleSingleStartingSystemMessageSupported',
     ruleMessage:
       'Google only supports system messages at the beggining of the conversation. All other system messages have been converted to user messages.',
     messages: messages.map((m, i) => {

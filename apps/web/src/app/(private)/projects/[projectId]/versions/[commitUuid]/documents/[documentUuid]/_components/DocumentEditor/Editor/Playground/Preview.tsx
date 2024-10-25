@@ -6,7 +6,11 @@ import {
   Message as ConversationMessage,
   ConversationMetadata,
 } from '@latitude-data/compiler'
-import { applyCustomRules } from '@latitude-data/core/browser'
+import {
+  AppliedRules,
+  applyCustomRules,
+  LATITUDE_DOCS_URL,
+} from '@latitude-data/core/browser'
 import {
   Alert,
   Button,
@@ -45,7 +49,7 @@ export default function Preview({
     return providers.find((p) => p.name === providerName)
   }, [conversation, providers])
   const [fixedMessages, setFixedMessages] = useState<ConversationMessage[]>()
-  const [warningMessage, setWarningMessage] = useState<string>()
+  const [warningRule, setWarningRule] = useState<AppliedRules | undefined>()
 
   const [completed, setCompleted] = useState(true)
   const [error, setError] = useState<Error | undefined>(undefined)
@@ -79,27 +83,21 @@ export default function Preview({
     if (!conversation) return
     if (!provider) {
       setFixedMessages(conversation.messages)
-      setWarningMessage(undefined)
+      setWarningRule(undefined)
       return
     }
 
-    const { messages, ruleMessage } = applyCustomRules({
+    const rule = applyCustomRules({
       providerType: provider.provider,
       messages: conversation.messages,
     })
-    setFixedMessages(messages)
-    setWarningMessage(ruleMessage)
+    setFixedMessages(rule?.messages)
+    setWarningRule(rule)
   }, [provider, conversation])
 
   return (
     <div className='flex flex-col flex-1 gap-2 h-full overflow-hidden'>
-      {warningMessage && (
-        <Alert
-          variant='warning'
-          description={warningMessage}
-          showIcon={false}
-        />
-      )}
+      <WarningMessage rule={warningRule} />
       <div
         ref={containerRef}
         className='flex flex-col gap-3 flex-grow flex-shrink min-h-0 custom-scrollbar'
@@ -157,4 +155,33 @@ export default function Preview({
       </div>
     </div>
   )
+}
+
+function WarningMessage({ rule }: { rule: AppliedRules | undefined }) {
+  if (!rule) return null
+
+  switch (rule.rule) {
+    case 'AnthropicMultipleSystemMessagesUnsupported':
+      return (
+        <Alert
+          variant='warning'
+          description={rule.ruleMessage}
+          cta={
+            <Link
+              target='_blank'
+              href={`${LATITUDE_DOCS_URL}/guides/prompt-manager/custom-rules`}
+              className='flex-nowrap'
+            >
+              <Text.H5B underline noWrap color='warningMutedForeground'>
+                Learn more
+              </Text.H5B>
+            </Link>
+          }
+        />
+      )
+    case 'GoogleSingleStartingSystemMessageSupported':
+      return <Alert variant='warning' description={rule.ruleMessage} />
+    default:
+      return null
+  }
 }

@@ -2,20 +2,15 @@ import type { ContentType, MessageRole } from '@latitude-data/compiler'
 
 import { AppliedRules, ApplyCustomRulesProps } from '.'
 
-export function applyAntrhopicRules({
+export function applyAnthropicRules({
   messages,
-}: ApplyCustomRulesProps): AppliedRules {
-  if (!messages.some((m) => m.role === 'system')) {
-    return {
-      didApplyCustomRules: false,
-      messages,
-    }
-  }
+}: ApplyCustomRulesProps): AppliedRules | undefined {
+  if (!messages.some((m) => m.role === 'system')) return
 
   return {
-    didApplyCustomRules: true,
+    rule: 'AnthropicMultipleSystemMessagesUnsupported',
     ruleMessage:
-      'Anthropic does not support system messages. All system messages have been converted to user messages.',
+      'Anthropic does not support multiple system messages. All system messages have been converted to user messages. If you want to add a system prompt please include it in the prompt frontmatter.',
     messages: messages.map((m) => {
       if (m.role !== 'system') return m
       return {

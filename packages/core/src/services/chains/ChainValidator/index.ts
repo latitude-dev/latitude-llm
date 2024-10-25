@@ -70,7 +70,7 @@ export class ChainValidator {
     })
     if (freeQuota.error) return freeQuota
 
-    const { messages } = applyCustomRules({
+    const rule = applyCustomRules({
       providerType: provider.provider,
       messages: conversation.messages,
     })
@@ -81,7 +81,7 @@ export class ChainValidator {
       chainCompleted,
       conversation: {
         ...conversation,
-        messages,
+        messages: rule?.messages ?? conversation.messages,
       },
       schema: this.getInputSchema(chainCompleted, config),
       output: this.getOutputType(chainCompleted, config),

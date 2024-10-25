@@ -17,6 +17,7 @@ export const colors = {
     successForeground: 'text-success-foreground',
     accentForeground: 'text-accent-foreground',
     secondaryForeground: 'text-secondary-foreground',
+    warningForeground: 'text-warning-foreground',
     warningMutedForeground: 'text-warning-muted-foreground',
   },
   borderColors: {
