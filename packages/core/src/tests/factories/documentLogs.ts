@@ -64,6 +64,7 @@ async function generateProviderLogs({
     }, 0)
     const completionTokens = mockedResponse.length
     const log = await createProviderLog({
+      workspace,
       uuid: uuid(),
       generatedAt: new Date(),
       documentLogUuid,

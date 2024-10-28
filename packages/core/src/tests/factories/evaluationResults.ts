@@ -102,6 +102,7 @@ export async function createEvaluationResult({
     }
 
     const log = await createProviderLog({
+      workspace,
       uuid: generateUUIDIdentifier(),
       generatedAt: new Date(),
       documentLogUuid: documentLog.uuid,

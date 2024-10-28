@@ -120,6 +120,7 @@ async function iterate({
     }).then((r) => r.unwrap())
 
     const providerProcessor = new ProviderProcessor({
+      workspace,
       source,
       errorableUuid: documentLogUuid,
       config,

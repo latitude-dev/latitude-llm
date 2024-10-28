@@ -3,7 +3,7 @@ import * as factories from '@latitude-data/core/factories'
 import { LanguageModelUsage, TextStreamPart } from 'ai'
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import { ProviderApiKey } from '../../../browser'
+import { ProviderApiKey, Workspace } from '../../../browser'
 import { LogSources, Providers, RunErrorCodes } from '../../../constants'
 import { generateUUIDIdentifier } from '../../../lib'
 import { ChainError } from '../ChainErrors'
@@ -16,6 +16,7 @@ import { LogData } from './saveOrPublishProviderLogs'
 
 let data: LogData<'text'>
 let apiProvider: ProviderApiKey
+let workspace: Workspace
 describe('ProviderProcessor', () => {
   beforeEach(async () => {
     const prompt = factories.helpers.createPrompt({
@@ -40,6 +41,7 @@ describe('ProviderProcessor', () => {
       commit,
     })
     apiProvider = setup.providers[0]!
+    workspace = setup.workspace
     data = {
       workspaceId: setup.workspace.id,
       uuid: generateUUIDIdentifier(),
@@ -65,6 +67,7 @@ describe('ProviderProcessor', () => {
 
   it('process AI provider result', async () => {
     const processor = new ProviderProcessor({
+      workspace,
       apiProvider,
       source: data.source,
       config: data.config,
@@ -123,6 +126,7 @@ describe('ProviderProcessor', () => {
 
   it('fails if type is not text or object', async () => {
     const processor = new ProviderProcessor({
+      workspace,
       apiProvider,
       source: data.source,
       config: data.config,

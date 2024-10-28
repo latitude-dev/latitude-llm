@@ -1,6 +1,7 @@
 import * as factories from '@latitude-data/core/factories'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { Workspace } from '../../../browser'
 import { LogSources, Providers } from '../../../constants'
 import { publisher } from '../../../events/publisher'
 import * as jobsModule from '../../../jobs'
@@ -28,6 +29,7 @@ const setupJobsSpy = vi.spyOn(jobsModule, 'setupJobs')
 setupJobsSpy.mockResolvedValue(mocks.queues)
 
 let data: LogData<'text'>
+let workspace: Workspace
 describe('saveOrPublishProviderLogs', () => {
   beforeEach(async () => {
     const prompt = factories.helpers.createPrompt({
@@ -51,6 +53,7 @@ describe('saveOrPublishProviderLogs', () => {
       document: setup.documents[0]!,
       commit,
     })
+    workspace = setup.workspace
     data = {
       workspaceId: setup.workspace.id,
       uuid: generateUUIDIdentifier(),
@@ -71,6 +74,7 @@ describe('saveOrPublishProviderLogs', () => {
 
   it('publishes event', async () => {
     await saveOrPublishProviderLogs({
+      workspace,
       data,
       streamType: 'text',
       saveSyncProviderLogs: true,
@@ -87,12 +91,14 @@ describe('saveOrPublishProviderLogs', () => {
     await saveOrPublishProviderLogs({
       data,
       streamType: 'text',
+      workspace,
       saveSyncProviderLogs: true,
       finishReason: 'stop',
     })
 
     expect(createProviderLogSpy).toHaveBeenCalledWith({
       ...data,
+      workspace,
       finishReason: 'stop',
     })
   })
@@ -103,12 +109,14 @@ describe('saveOrPublishProviderLogs', () => {
       streamType: 'text',
       saveSyncProviderLogs: false,
       finishReason: 'stop',
+      workspace,
     })
 
     expect(
       mocks.queues.defaultQueue.jobs.enqueueCreateProviderLogJob,
     ).toHaveBeenCalledWith({
       ...data,
+      workspace,
       generatedAt: data.generatedAt.toISOString(),
       finishReason: 'stop',
     })

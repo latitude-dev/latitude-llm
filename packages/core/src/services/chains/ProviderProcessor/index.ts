@@ -5,6 +5,7 @@ import {
   ProviderApiKey,
   RunErrorCodes,
   StreamType,
+  Workspace,
 } from '../../../browser'
 import { StreamCommonData } from '../../../events/events'
 import { generateUUIDIdentifier, Result } from '../../../lib'
@@ -18,13 +19,14 @@ import { saveOrPublishProviderLogs } from './saveOrPublishProviderLogs'
 export class ProviderProcessor {
   private apiProvider: ProviderApiKey
   private source: LogSources
-  private workspaceId: number
+  private workspace: Workspace
   private config: PartialConfig
   private messages: Message[]
   private saveSyncProviderLogs: boolean
   private errorableUuid: string | undefined
 
   constructor({
+    workspace,
     apiProvider,
     source,
     config,
@@ -32,6 +34,7 @@ export class ProviderProcessor {
     saveSyncProviderLogs,
     errorableUuid,
   }: {
+    workspace: Workspace
     apiProvider: ProviderApiKey
     source: LogSources
     config: PartialConfig
@@ -40,7 +43,7 @@ export class ProviderProcessor {
     errorableUuid?: string
   }) {
     this.apiProvider = apiProvider
-    this.workspaceId = apiProvider.workspaceId
+    this.workspace = workspace
     this.source = source
     this.config = config
     this.messages = messages
@@ -73,6 +76,7 @@ export class ProviderProcessor {
     })
 
     const providerLog = await saveOrPublishProviderLogs({
+      workspace: this.workspace,
       streamType: aiResult.type,
       finishReason,
       data: providerLogsData,
@@ -111,7 +115,7 @@ export class ProviderProcessor {
       uuid: generateUUIDIdentifier(),
 
       // AI Provider Data
-      workspaceId: this.workspaceId,
+      workspaceId: this.workspace.id,
       source: this.source,
       providerId: this.apiProvider.id,
       providerType: this.apiProvider.provider,

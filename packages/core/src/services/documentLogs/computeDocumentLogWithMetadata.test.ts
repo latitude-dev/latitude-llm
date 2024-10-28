@@ -1,11 +1,17 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import { DocumentLog, ProviderApiKey, ProviderLog } from '../../browser'
+import {
+  DocumentLog,
+  ProviderApiKey,
+  ProviderLog,
+  Workspace,
+} from '../../browser'
 import { NotFoundError } from '../../lib'
 import * as factories from '../../tests/factories'
 import { computeDocumentLogWithMetadata } from './computeDocumentLogWithMetadata'
 
 describe('computeDocumentLogWithMetadata', () => {
+  let workspace: Workspace
   let documentLog: DocumentLog
   let provider: ProviderApiKey
   let providerLogs: ProviderLog[]
@@ -30,12 +36,14 @@ describe('computeDocumentLogWithMetadata', () => {
         commit,
       })
 
+    workspace = setup.workspace
     documentLog = dl
     providerLogs = _providerLogs
   })
 
   it('returns DocumentLogWithMetadata when successful', async () => {
     const providerLog1 = await factories.createProviderLog({
+      workspace,
       documentLogUuid: documentLog.uuid,
       providerId: provider.id,
       providerType: provider.provider,
@@ -44,6 +52,7 @@ describe('computeDocumentLogWithMetadata', () => {
       costInMillicents: 1250,
     })
     const providerLog2 = await factories.createProviderLog({
+      workspace,
       documentLogUuid: documentLog.uuid,
       providerId: provider.id,
       providerType: provider.provider,

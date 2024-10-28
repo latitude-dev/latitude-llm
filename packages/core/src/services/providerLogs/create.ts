@@ -1,7 +1,7 @@
 import { Message, ToolCall } from '@latitude-data/compiler'
 import { LanguageModelUsage } from 'ai'
 
-import { LogSources, ProviderLog, Providers } from '../../browser'
+import { LogSources, ProviderLog, Providers, Workspace } from '../../browser'
 import { database } from '../../client'
 import { publisher } from '../../events/publisher'
 import { Result, Transaction } from '../../lib'
@@ -14,6 +14,7 @@ import { touchProviderApiKey } from '../providerApiKeys/touch'
 const TO_MILLICENTS_FACTOR = 100_000
 
 export type CreateProviderLogProps = {
+  workspace: Workspace
   uuid: string
   generatedAt: Date
   providerId: number
@@ -35,6 +36,7 @@ export type CreateProviderLogProps = {
 
 export async function createProviderLog(
   {
+    workspace,
     uuid,
     providerId,
     providerType,
@@ -65,6 +67,7 @@ export async function createProviderLog(
     const inserts = await trx
       .insert(providerLogs)
       .values({
+        workspaceId: workspace.id,
         generatedAt: generatedAt,
         uuid,
         documentLogUuid,

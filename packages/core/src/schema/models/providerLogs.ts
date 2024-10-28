@@ -29,6 +29,7 @@ export const providerLogs = latitudeSchema.table(
   'provider_logs',
   {
     id: bigserial('id', { mode: 'number' }).notNull().primaryKey(),
+    workspaceId: bigint('workspace_id', { mode: 'number' }),
     uuid: uuid('uuid').notNull().unique(),
     documentLogUuid: uuid('document_log_uuid'),
     providerId: bigint('provider_id', { mode: 'number' })
@@ -61,5 +62,6 @@ export const providerLogs = latitudeSchema.table(
   (table) => ({
     providerIdx: index('provider_idx').on(table.providerId),
     createdAtIdx: index('provider_logs_created_at_idx').on(table.createdAt),
+    workspaceIdx: index().on(table.workspaceId),
   }),
 )

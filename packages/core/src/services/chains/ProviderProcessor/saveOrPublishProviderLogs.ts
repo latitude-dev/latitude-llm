@@ -1,3 +1,4 @@
+import { Workspace } from '../../../browser'
 import { StreamType } from '../../../constants'
 import { AIProviderCallCompletedData } from '../../../events/events'
 import { publisher } from '../../../events/publisher'
@@ -14,11 +15,13 @@ export type LogData<T extends StreamType> = T extends 'text'
     : unknown
 
 export async function saveOrPublishProviderLogs<T extends StreamType>({
+  workspace,
   data,
   streamType,
   saveSyncProviderLogs,
   finishReason,
 }: {
+  workspace: Workspace
   streamType: T
   data: LogData<T>
   saveSyncProviderLogs: boolean
@@ -31,6 +34,7 @@ export async function saveOrPublishProviderLogs<T extends StreamType>({
 
   const providerLogsData = {
     ...data,
+    workspace,
     finishReason,
   }
 
