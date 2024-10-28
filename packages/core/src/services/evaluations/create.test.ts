@@ -191,17 +191,17 @@ describe('createEvaluation', () => {
         ...evaluation,
         name,
         description,
-        configuration: {
-          type: EvaluationResultableType.Number,
-          detail: {
-            range: {
-              from: 0,
-              to: 100,
-            },
-          },
-        },
         metadata: {
           ...evaluation.metadata,
+          configuration: {
+            type: EvaluationResultableType.Number,
+            detail: {
+              range: {
+                from: 0,
+                to: 100,
+              },
+            },
+          },
           prompt: `
 ---
 provider: ${provider!.name}

@@ -74,6 +74,7 @@ ${meta.prompt}
         metadataTable = await tx
           .insert(evaluationMetadataLlmAsJudgeLegacy)
           .values({
+            configuration,
             prompt: promptWithProvider,
             templateId: meta.templateId,
           })
@@ -90,7 +91,6 @@ ${meta.prompt}
       .insert(evaluations)
       .values([
         {
-          configuration,
           description,
           metadataId: metadataTable[0]!.id,
           metadataType: type,
