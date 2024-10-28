@@ -76,6 +76,7 @@ export const env = createEnv({
     NEXT_PUBLIC_POSTHOG_HOST: z.string(),
     NEXT_PUBLIC_POSTHOG_KEY: z.string(),
     SUPPORT_APP_SECRET_KEY: z.string().optional(),
+    LOOPS_API_KEY: z.string().optional(),
     NEXT_PUBLIC_SUPPORT_APP_ID: z.string().optional(),
     NODE_ENV: z.string(),
     QUEUE_HOST: z.string(),
@@ -124,5 +125,6 @@ export const env = createEnv({
     QUEUE_PORT: process.env.QUEUE_PORT ?? '6379',
     SUPPORT_APP_ID: process.env.SUPPORT_APP_ID ?? '',
     SUPPORT_APP_SECRET_KEY: process.env.SUPPORT_APP_SECRET_KEY ?? '',
+    LOOPS_API_KEY: process.env.LOOPS_API_KEY ?? '',
   },
 })

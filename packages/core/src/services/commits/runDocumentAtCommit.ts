@@ -1,4 +1,5 @@
 import {
+  ChainStepResponse,
   Commit,
   ErrorableEntity,
   LogSources,
@@ -8,7 +9,7 @@ import {
 } from '../../browser'
 import { publisher } from '../../events/publisher'
 import { generateUUIDIdentifier, Result } from '../../lib'
-import { ChainResponse, runChain } from '../chains/run'
+import { runChain } from '../chains/run'
 import { createDocumentLog } from '../documentLogs'
 import { getResolvedContent } from '../documents'
 import { buildProvidersMap } from '../providerApiKeys/buildMap'
@@ -37,7 +38,7 @@ export async function createDocumentRunResult({
   publishEvent: boolean
   customIdentifier?: string
   duration?: number
-  response?: ChainResponse<StreamType>
+  response?: ChainStepResponse<StreamType>
 }) {
   const durantionInMs = duration ?? 0
   if (publishEvent) {
@@ -148,7 +149,7 @@ export async function runDocumentAtCommit({
         resolvedContent: result.value,
         customIdentifier,
         source,
-        response,
+        response: response.value,
         duration: await run.duration,
         publishEvent: !response.error,
       })

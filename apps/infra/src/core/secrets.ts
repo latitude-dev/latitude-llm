@@ -101,6 +101,11 @@ const supportAppSecretKey = createSecretWithVersion(
   'SUPPORT_APP_SECRET_KEY',
   'Support app secret key for the support chat',
 )
+
+const loopsSecretApiKey = createSecretWithVersion(
+  'LOOPS_API_KEY',
+  'Marketing tool loops app secret key',
+)
 export const mailerApiKeyArn = mailerApiKey.arn
 export const mailgunMailerApiKeyArn = mailgunMailerApiKey.arn
 export const sentryDsnArn = sentryDsn.arn
@@ -116,5 +121,6 @@ export const defaultProviderApiKeyArn = defaultProviderApiKey.arn
 export const postHogApiKeyArn = postHogApiKey.arn
 export const supportAppIdArn = supportAppId.arn
 export const supportAppSecretKeyArn = supportAppSecretKey.arn
+export const loopsSecretApiKeyArn = loopsSecretApiKey.arn
 export const datasetGeneratorWorkspaceApiKeyArn =
   datasetGeneratorWorkspaceApiKey.arn

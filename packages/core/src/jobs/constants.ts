@@ -47,6 +47,7 @@ export const QUEUES = {
       'sendInvitationToUserJob',
       'sendMagicLinkJob',
       'sendReferralInvitationJob',
+      'createLoopsContact',
     ],
   },
   [Queues.liveEvaluationsQueue]: {

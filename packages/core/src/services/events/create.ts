@@ -5,7 +5,7 @@ import { events } from '../../schema'
 
 export async function createEvent(event: LatitudeEvent, db = database) {
   return Transaction.call(async (tx) => {
-    let workspaceId: number | undefined
+    let workspaceId: number | undefined | null
     if ('workspaceId' in event.data) {
       workspaceId = event.data.workspaceId
     }
