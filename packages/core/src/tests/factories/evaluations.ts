@@ -32,7 +32,7 @@ export async function createLlmAsJudgeEvaluation({
     workspace,
     user,
     metadata: { prompt: prompt ?? faker.lorem.sentence() },
-    type: EvaluationMetadataType.LlmAsJudge,
+    type: EvaluationMetadataType.LlmAsJudgeLegacy,
     name: name ?? faker.company.catchPhrase(),
     description: description ?? faker.lorem.sentence(),
     configuration,

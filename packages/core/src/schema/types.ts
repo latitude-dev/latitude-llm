@@ -8,11 +8,11 @@ import { connectedEvaluations } from './models/connectedEvaluations'
 import { datasets } from './models/datasets'
 import { documentLogs } from './models/documentLogs'
 import { documentVersions } from './models/documentVersions'
+import { evaluationLegacyTemplates } from './models/evaluationLegacyTemplates'
+import { evaluationMetadataLlmAsJudgeLegacy } from './models/evaluationMetadataLlmAsJudgeLegacy'
 import { evaluationResults } from './models/evaluationResults'
 import { evaluations } from './models/evaluations'
 import { evaluationTemplateCategories } from './models/evaluationTemplateCategories'
-import { evaluationTemplates } from './models/evaluationTemplates'
-import { llmAsJudgeEvaluationMetadatas } from './models/llmAsJudgeEvaluationMetadatas'
 import { magicLinkTokens } from './models/magicLinkTokens'
 import { memberships } from './models/memberships'
 import { projects } from './models/projects'
@@ -44,18 +44,21 @@ export type RunErrorInsert = InferInsertModel<typeof runErrors>
 export type Evaluation = InferSelectModel<typeof evaluations>
 export type ConnectedEvaluation = InferSelectModel<typeof connectedEvaluations>
 export type EvaluationResult = InferSelectModel<typeof evaluationResults>
-export type EvaluationTemplate = InferSelectModel<typeof evaluationTemplates>
+export type EvaluationTemplate = InferSelectModel<
+  typeof evaluationLegacyTemplates
+>
 export type MagicLinkToken = InferSelectModel<typeof magicLinkTokens>
 export type ClaimedReward = InferSelectModel<typeof claimedRewards>
 export type EvaluationTemplateCategory = InferSelectModel<
   typeof evaluationTemplateCategories
 >
 export type LlmAsJudgeEvaluationMetadata = InferSelectModel<
-  typeof llmAsJudgeEvaluationMetadatas
+  typeof evaluationMetadataLlmAsJudgeLegacy
 >
 export type Subscription = InferSelectModel<typeof subscriptions>
 
 export type EvaluationDto = Evaluation & {
+  configuration?: LlmAsJudgeEvaluationMetadata['configuration']
   metadata: Omit<
     LlmAsJudgeEvaluationMetadata,
     'metadataType' | 'createdAt' | 'updatedAt'

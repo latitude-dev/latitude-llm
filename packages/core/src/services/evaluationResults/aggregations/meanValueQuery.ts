@@ -3,7 +3,7 @@ import { and, eq, sql } from 'drizzle-orm'
 import { getCommitFilter } from '../_createEvaluationResultQuery'
 import {
   Commit,
-  Evaluation,
+  EvaluationDto,
   EvaluationResultConfiguration,
 } from '../../../browser'
 import { database } from '../../../client'
@@ -18,7 +18,7 @@ export async function getEvaluationMeanValueQuery(
     commit,
   }: {
     workspaceId: number
-    evaluation: Evaluation
+    evaluation: EvaluationDto
     documentUuid: string
     commit: Commit
   },
@@ -47,7 +47,8 @@ export async function getEvaluationMeanValueQuery(
       ),
     )
   const value = results[0]
-  const config = evaluation.configuration as EvaluationResultConfiguration
+  const config = (evaluation.configuration ??
+    evaluation.metadata.configuration)! as EvaluationResultConfiguration
   const { from: minValue, to: maxValue } = config.detail!.range
   return {
     minValue,

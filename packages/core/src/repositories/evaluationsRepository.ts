@@ -7,8 +7,8 @@ import { EvaluationMetadataType } from '../constants'
 import { NotFoundError, PromisedResult, Result } from '../lib'
 import {
   connectedEvaluations,
+  evaluationMetadataLlmAsJudgeLegacy,
   evaluations,
-  llmAsJudgeEvaluationMetadatas,
 } from '../schema'
 import RepositoryLegacy from './repository'
 
@@ -18,11 +18,15 @@ const tt = {
     id: sql<number>`llm_as_judge_evaluation_metadatas.id`.as(
       'metadata_metadata_id',
     ),
-    ...omit(getTableColumns(llmAsJudgeEvaluationMetadatas), [
+    configuration:
+      sql<object>`llm_as_judge_evaluation_metadatas.configuration`.as(
+        'metadata_metadata_configuration',
+      ),
+    ...omit(getTableColumns(evaluationMetadataLlmAsJudgeLegacy), [
       'id',
-      'metadataType',
       'createdAt',
       'updatedAt',
+      'configuration',
     ]),
   },
 }
@@ -36,15 +40,15 @@ export class EvaluationsRepository extends RepositoryLegacy<
       .select(tt)
       .from(evaluations)
       .innerJoin(
-        llmAsJudgeEvaluationMetadatas,
+        evaluationMetadataLlmAsJudgeLegacy,
         and(
           isNull(evaluations.deletedAt),
-          eq(evaluations.metadataId, llmAsJudgeEvaluationMetadatas.id),
-          eq(evaluations.metadataType, EvaluationMetadataType.LlmAsJudge),
+          eq(evaluations.metadataId, evaluationMetadataLlmAsJudgeLegacy.id),
+          eq(evaluations.metadataType, EvaluationMetadataType.LlmAsJudgeLegacy),
         ),
       )
       .where(eq(evaluations.workspaceId, this.workspaceId))
-      .as('evaluationsScope')
+      .as('evaluations_scope')
   }
 
   async findByName(name: string) {
@@ -57,7 +61,7 @@ export class EvaluationsRepository extends RepositoryLegacy<
       return Result.error(new NotFoundError('Evaluation not found'))
     }
 
-    return Result.ok(result[0]!)
+    return Result.ok(result[0]! as EvaluationDto)
   }
 
   async findByUuid(uuid: string) {
@@ -72,7 +76,7 @@ export class EvaluationsRepository extends RepositoryLegacy<
       )
     }
 
-    return Result.ok(result[0]!)
+    return Result.ok(result[0]! as EvaluationDto)
   }
 
   async findByDocumentUuid(documentUuid: string) {
@@ -97,7 +101,7 @@ export class EvaluationsRepository extends RepositoryLegacy<
       .from(this.scope)
       .where(inArray(this.scope.uuid, uuids))
 
-    return Result.ok(result)
+    return Result.ok(result as EvaluationDto[])
   }
 
   async filterById(ids: number[]) {
@@ -106,6 +110,6 @@ export class EvaluationsRepository extends RepositoryLegacy<
       .from(this.scope)
       .where(inArray(this.scope.id, ids))
 
-    return Result.ok(result)
+    return Result.ok(result as EvaluationDto[])
   }
 }

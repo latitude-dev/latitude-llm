@@ -6,6 +6,7 @@ import {
   EvaluationResultableType,
   Providers,
 } from '../../constants'
+import { EvaluationsRepository } from '../../repositories'
 import * as factories from '../../tests/factories'
 import { createEvaluation } from './create'
 
@@ -26,7 +27,7 @@ describe('createEvaluation', () => {
       user,
       name: 'Test Evaluation',
       description: 'Test Description',
-      type: EvaluationMetadataType.LlmAsJudge,
+      type: EvaluationMetadataType.LlmAsJudgeLegacy,
       configuration: {
         type: EvaluationResultableType.Text,
         detail: {
@@ -63,7 +64,7 @@ describe('createEvaluation', () => {
         user,
         name: 'Test Evaluation',
         description: 'Test Description',
-        type: EvaluationMetadataType.LlmAsJudge,
+        type: EvaluationMetadataType.LlmAsJudgeLegacy,
         configuration: {
           type: EvaluationResultableType.Text,
           detail: {
@@ -100,7 +101,7 @@ describe('createEvaluation', () => {
         user,
         name: 'Test Evaluation',
         description: 'Test Description',
-        type: EvaluationMetadataType.LlmAsJudge,
+        type: EvaluationMetadataType.LlmAsJudgeLegacy,
         configuration: {
           type: EvaluationResultableType.Text,
           detail: {
@@ -135,7 +136,7 @@ describe('createEvaluation', () => {
         user,
         name: 'Test Evaluation',
         description: 'Test Description',
-        type: EvaluationMetadataType.LlmAsJudge,
+        type: EvaluationMetadataType.LlmAsJudgeLegacy,
         configuration: {
           type: EvaluationResultableType.Number,
           detail: {
@@ -172,7 +173,7 @@ describe('createEvaluation', () => {
         user,
         name,
         description,
-        type: EvaluationMetadataType.LlmAsJudge,
+        type: EvaluationMetadataType.LlmAsJudgeLegacy,
         configuration: {
           type: EvaluationResultableType.Number,
           detail: {
@@ -210,7 +211,6 @@ ${metadata.prompt}
 `.trim(),
         },
         workspaceId: workspace.id,
-        metadataType: EvaluationMetadataType.LlmAsJudge,
       })
     })
 
@@ -227,13 +227,18 @@ ${metadata.prompt}
         configuration: {
           type: EvaluationResultableType.Text,
         },
-        type: EvaluationMetadataType.LlmAsJudge,
+        type: EvaluationMetadataType.LlmAsJudgeLegacy,
         metadata,
       })
 
       expect(result.ok).toBe(true)
-      const evaluation = result.value!
-      expect(evaluation.configuration.type).toBe(EvaluationResultableType.Text)
+      const repo = new EvaluationsRepository(workspace.id)
+      const evaluation = await repo
+        .find(result.value!.id)
+        .then((r) => r.unwrap())
+      expect(
+        (evaluation.configuration ?? evaluation.metadata.configuration)!.type,
+      ).toBe(EvaluationResultableType.Text)
     })
 
     it('creates an LLM as Judge evaluation with boolean configuration', async () => {
@@ -246,7 +251,7 @@ ${metadata.prompt}
         user,
         name,
         description,
-        type: EvaluationMetadataType.LlmAsJudge,
+        type: EvaluationMetadataType.LlmAsJudgeLegacy,
         configuration: {
           type: EvaluationResultableType.Boolean,
         },
@@ -254,12 +259,14 @@ ${metadata.prompt}
       })
 
       expect(result.ok).toBe(true)
-      if (result.ok) {
-        const evaluation = result.value!
-        expect(evaluation.configuration.type).toBe(
-          EvaluationResultableType.Boolean,
-        )
-      }
+      const repo = new EvaluationsRepository(workspace.id)
+      const evaluation = await repo
+        .find(result.value!.id)
+        .then((r) => r.unwrap())
+
+      expect(
+        (evaluation.configuration ?? evaluation.metadata.configuration)!.type,
+      ).toBe(EvaluationResultableType.Boolean)
     })
 
     it('returns an error for invalid evaluation type', async () => {
@@ -296,7 +303,7 @@ ${metadata.prompt}
         user,
         name: 'Test Evaluation',
         description: 'Test Description',
-        type: EvaluationMetadataType.LlmAsJudge,
+        type: EvaluationMetadataType.LlmAsJudgeLegacy,
         configuration: {
           type: EvaluationResultableType.Text,
         },
@@ -304,10 +311,11 @@ ${metadata.prompt}
       })
 
       expect(result.ok).toBe(true)
-      if (result.ok) {
-        const evaluation = result.value!
-        expect(evaluation.metadata.templateId).toBe(template.id)
-      }
+      const repo = new EvaluationsRepository(workspace.id)
+      const evaluation = await repo
+        .find(result.value!.id)
+        .then((r) => r.unwrap())
+      expect(evaluation.metadata.templateId).toBe(template.id)
     })
 
     it('does not allow to create a number type evaluation without proper configuration', async () => {
@@ -316,7 +324,7 @@ ${metadata.prompt}
         user,
         name: 'Test Evaluation',
         description: 'Test Description',
-        type: EvaluationMetadataType.LlmAsJudge,
+        type: EvaluationMetadataType.LlmAsJudgeLegacy,
         configuration: {
           type: EvaluationResultableType.Number,
         },
@@ -337,7 +345,7 @@ ${metadata.prompt}
         user,
         name: 'Test Evaluation',
         description: 'Test Description',
-        type: EvaluationMetadataType.LlmAsJudge,
+        type: EvaluationMetadataType.LlmAsJudgeLegacy,
         configuration: {
           type: EvaluationResultableType.Number,
           detail: {
@@ -364,7 +372,7 @@ ${metadata.prompt}
         user,
         name: 'Test Evaluation',
         description: 'Test Description',
-        type: EvaluationMetadataType.LlmAsJudge,
+        type: EvaluationMetadataType.LlmAsJudgeLegacy,
         configuration: {
           type: EvaluationResultableType.Number,
           detail: {

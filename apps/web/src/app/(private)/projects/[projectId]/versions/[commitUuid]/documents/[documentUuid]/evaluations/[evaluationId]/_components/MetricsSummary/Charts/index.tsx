@@ -13,7 +13,8 @@ export function EvaluationResultsCharts({
   documentUuid: string
 }) {
   const isNumerical =
-    evaluation.configuration.type === EvaluationResultableType.Number
+    (evaluation.configuration ?? evaluation.metadata.configuration)!.type ===
+    EvaluationResultableType.Number
 
   if (!isNumerical) return null
 

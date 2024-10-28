@@ -2,7 +2,7 @@ import { eq } from 'drizzle-orm'
 
 import { database } from '../../client'
 import { Result, Transaction } from '../../lib'
-import { evaluationTemplates } from '../../schema'
+import { evaluationLegacyTemplates } from '../../schema'
 
 export function destroyEvaluationTemplate(
   { id }: { id: number },
@@ -10,8 +10,8 @@ export function destroyEvaluationTemplate(
 ) {
   return Transaction.call(async (tx) => {
     const result = await tx
-      .delete(evaluationTemplates)
-      .where(eq(evaluationTemplates.id, id))
+      .delete(evaluationLegacyTemplates)
+      .where(eq(evaluationLegacyTemplates.id, id))
       .returning()
     const deleted = result[0]
 

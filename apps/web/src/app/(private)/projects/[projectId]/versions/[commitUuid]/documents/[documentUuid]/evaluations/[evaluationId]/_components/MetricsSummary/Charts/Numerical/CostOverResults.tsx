@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo } from 'react'
 
-import { Evaluation } from '@latitude-data/core/browser'
+import { EvaluationDto } from '@latitude-data/core/browser'
 import {
   Badge,
   ScatterChart,
@@ -20,7 +20,7 @@ export function CostOverResultsChart({
   evaluation,
   documentUuid,
 }: {
-  evaluation: Evaluation
+  evaluation: EvaluationDto
   documentUuid: string
 }) {
   const { project } = useCurrentProject()
@@ -75,8 +75,10 @@ export function CostOverResultsChart({
             xAxis: {
               label: 'Average result',
               type: 'number',
-              min: evaluation.configuration.detail!.range.from,
-              max: evaluation.configuration.detail!.range.to,
+              min: (evaluation.configuration ??
+                evaluation.metadata.configuration)!.detail!.range.from,
+              max: (evaluation.configuration ??
+                evaluation.metadata.configuration)!.detail!.range.to,
             },
             yAxis: {
               label: 'Average cost',
