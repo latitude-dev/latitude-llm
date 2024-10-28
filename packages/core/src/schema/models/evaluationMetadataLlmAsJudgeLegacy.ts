@@ -10,8 +10,9 @@ export const evaluationMetadataLlmAsJudgeLegacy = latitudeSchema.table(
   {
     id: bigserial('id', { mode: 'number' }).notNull().primaryKey(),
     prompt: text('prompt').notNull(),
-    configuration:
-      jsonb('configuration').$type<EvaluationResultConfiguration>(),
+    configuration: jsonb('configuration')
+      .$type<EvaluationResultConfiguration>()
+      .notNull(),
     templateId: bigint('template_id', { mode: 'number' }).references(
       () => evaluationLegacyTemplates.id,
     ),
