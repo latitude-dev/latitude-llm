@@ -2,12 +2,7 @@ import { asc, desc, eq, getTableColumns } from 'drizzle-orm'
 
 import { ProviderLog } from '../browser'
 import { NotFoundError, Result } from '../lib'
-import {
-  documentLogs,
-  providerApiKeys,
-  providerLogs,
-  workspaces,
-} from '../schema'
+import { documentLogs, providerLogs } from '../schema'
 import { QueryOptions } from './repository'
 import Repository from './repositoryV2'
 
@@ -18,11 +13,7 @@ export class ProviderLogsRepository extends Repository<ProviderLog> {
     return this.db
       .select(tt)
       .from(providerLogs)
-      .innerJoin(
-        providerApiKeys,
-        eq(providerApiKeys.id, providerLogs.providerId),
-      )
-      .innerJoin(workspaces, eq(workspaces.id, providerApiKeys.workspaceId))
+      .where(eq(providerLogs.workspaceId, this.workspaceId))
       .$dynamic()
   }
 
