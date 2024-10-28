@@ -101,6 +101,7 @@ describe('EvaluationResultsRepository', () => {
       })
 
       await createProviderLog({
+        workspace,
         documentLogUuid: documentLog2.documentLog.uuid,
         providerId: provider2!.id,
         providerType: Providers.OpenAI,

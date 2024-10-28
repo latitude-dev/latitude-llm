@@ -97,12 +97,14 @@ describe('run', () => {
     })
     documentLog = docLog
     await factories.createProviderLog({
+      workspace,
       documentLogUuid: documentLog.uuid,
       providerId: provider.id,
       providerType: Providers.OpenAI,
       generatedAt: new Date('2024-10-12T10:00:00'),
     })
     await factories.createProviderLog({
+      workspace,
       documentLogUuid: documentLog.uuid,
       providerId: provider.id,
       providerType: Providers.OpenAI,
@@ -118,6 +120,7 @@ describe('run', () => {
   describe('happy path', () => {
     beforeEach(async () => {
       const resultProviderLog = await factories.createProviderLog({
+        workspace,
         documentLogUuid: documentLog.uuid,
         providerId: provider.id,
         providerType: Providers.OpenAI,
@@ -371,6 +374,7 @@ describe('run', () => {
 
     it('fails when chain response without object', async () => {
       const resultProviderLog = await factories.createProviderLog({
+        workspace,
         documentLogUuid: documentLog.uuid,
         providerId: provider.id,
         providerType: Providers.OpenAI,

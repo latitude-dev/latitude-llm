@@ -52,6 +52,7 @@ describe('deleteCommitDraft', () => {
     })
 
     await factories.createProviderLog({
+      workspace,
       documentLogUuid: documentLog.uuid,
       providerId: provider.id,
       providerType: Providers.OpenAI,

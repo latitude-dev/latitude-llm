@@ -1,7 +1,7 @@
 import { faker } from '@faker-js/faker'
 import { v4 as uuid } from 'uuid'
 
-import { LogSources, ProviderLog, Providers } from '../../browser'
+import { LogSources, ProviderLog, Providers, Workspace } from '../../browser'
 import { createProviderLog as createProviderLogService } from '../../services/providerLogs'
 
 export type IProviderLogData = {
@@ -14,6 +14,7 @@ export type IProviderLogData = {
   source?: LogSources
   costInMillicents?: number
   generatedAt?: Date
+  workspace: Workspace
 }
 
 export async function createProviderLog(
@@ -21,6 +22,7 @@ export async function createProviderLog(
 ): Promise<ProviderLog> {
   const providerLog = await createProviderLogService({
     uuid: uuid(),
+    workspace: data.workspace,
     generatedAt: data.generatedAt ?? new Date(),
     documentLogUuid: data.documentLogUuid,
     providerId: data.providerId,

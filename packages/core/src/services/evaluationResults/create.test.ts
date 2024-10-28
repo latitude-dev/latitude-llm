@@ -46,6 +46,7 @@ async function setupTest(configurationType: EvaluationResultableType) {
     commit,
   })
   const providerLog = await factories.createProviderLog({
+    workspace,
     providerId: provider!.id,
     providerType: provider!.provider,
     documentLogUuid: documentLog.uuid,

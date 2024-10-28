@@ -30,6 +30,7 @@ describe('create provider', () => {
       user: userData,
     })
     providerProps = {
+      workspace,
       uuid: generateUUIDIdentifier(),
       generatedAt: new Date(),
       providerId: provider.id,

@@ -163,6 +163,7 @@ async function runStep({
     const step = await chainValidator.call().then((r) => r.unwrap())
     const { messageCount, stepStartTime } = streamConsumer.setup(step)
     const providerProcessor = new ProviderProcessor({
+      workspace,
       source,
       errorableUuid,
       config: step.config,
