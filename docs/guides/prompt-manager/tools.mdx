@@ -1,0 +1,34 @@
+---
+title: Tools
+description: Learn how to define tools in your prompts.
+---
+
+## Overview
+
+Latitude's prompt editor allows you to define tools in your prompts. Tools are function calls that are made available to the AI model during the conversation. This feature enables you to leverage AI capabilities beyond the capabilities of the model itself.
+
+## Defining Tools
+
+You can define tools as an array of json schemas. Here's an example of how you might define a tool to get the current weather for a specified location:
+
+```mdx
+---
+provider: OpenAI
+model: gpt-4o
+tools:
+  - type: function
+    function:
+      name: get_weather
+      description: Get the current weather for a specified location.
+      parameters:
+        type: object
+        properties:
+          location:
+            type: string
+            description: The name of the location to get the weather for.
+        required: [location]
+        additionalProperties: false
+---
+```
+
+Once defined in your prompt, the model AI might answer with a tool call request. Check out how to handle tool call requests with Latitude's SDK, [here](/guides/sdk/javascript-typescript-sdk).
