@@ -85,8 +85,7 @@ export class EvaluationRunChecker {
 
   private async buildSchema() {
     const resultSchema = getResultSchema(
-      (this.evaluation.configuration ?? this.evaluation.metadata.configuration)!
-        .type,
+      this.evaluation.metadata.configuration.type,
     )
 
     if (resultSchema.error) {

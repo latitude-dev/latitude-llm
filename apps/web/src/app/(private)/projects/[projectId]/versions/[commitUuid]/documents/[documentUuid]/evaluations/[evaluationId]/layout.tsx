@@ -48,8 +48,7 @@ export default async function ConnectedEvaluationLayout({
     uuid: params.commitUuid,
   })
   const isNumeric =
-    (evaluation.configuration ?? evaluation.metadata.configuration)!.type ==
-    EvaluationResultableType.Number
+    evaluation.metadata.configuration.type == EvaluationResultableType.Number
 
   let provider
   if (evaluation.metadata.prompt) {
@@ -93,12 +92,7 @@ export default async function ConnectedEvaluationLayout({
                 {evaluation.name}
               </Text.H4M>
               <Text.H4M color='foregroundMuted'>
-                {
-                  TYPE_TEXT[
-                    (evaluation.configuration ??
-                      evaluation.metadata.configuration)!.type
-                  ]
-                }
+                {TYPE_TEXT[evaluation.metadata.configuration.type]}
               </Text.H4M>
               <Tooltip
                 asChild

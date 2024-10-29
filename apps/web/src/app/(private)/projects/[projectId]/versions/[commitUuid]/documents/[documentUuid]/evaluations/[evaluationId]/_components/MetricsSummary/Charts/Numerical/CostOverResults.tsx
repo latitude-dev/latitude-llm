@@ -75,10 +75,8 @@ export function CostOverResultsChart({
             xAxis: {
               label: 'Average result',
               type: 'number',
-              min: (evaluation.configuration ??
-                evaluation.metadata.configuration)!.detail!.range.from,
-              max: (evaluation.configuration ??
-                evaluation.metadata.configuration)!.detail!.range.to,
+              min: evaluation.metadata.configuration.detail!.range.from,
+              max: evaluation.metadata.configuration.detail!.range.to,
             },
             yAxis: {
               label: 'Average cost',

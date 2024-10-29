@@ -236,9 +236,9 @@ ${metadata.prompt}
       const evaluation = await repo
         .find(result.value!.id)
         .then((r) => r.unwrap())
-      expect(
-        (evaluation.configuration ?? evaluation.metadata.configuration)!.type,
-      ).toBe(EvaluationResultableType.Text)
+      expect(evaluation.metadata.configuration.type).toBe(
+        EvaluationResultableType.Text,
+      )
     })
 
     it('creates an LLM as Judge evaluation with boolean configuration', async () => {
@@ -264,9 +264,9 @@ ${metadata.prompt}
         .find(result.value!.id)
         .then((r) => r.unwrap())
 
-      expect(
-        (evaluation.configuration ?? evaluation.metadata.configuration)!.type,
-      ).toBe(EvaluationResultableType.Boolean)
+      expect(evaluation.metadata.configuration.type).toBe(
+        EvaluationResultableType.Boolean,
+      )
     })
 
     it('returns an error for invalid evaluation type', async () => {

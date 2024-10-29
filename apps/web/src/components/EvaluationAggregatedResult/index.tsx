@@ -137,8 +137,7 @@ export default function EvaluationAggregatedResult({
   commitUuid: string
 }) {
   if (
-    (evaluation.configuration ?? evaluation.metadata.configuration)!.type ===
-    EvaluationResultableType.Number
+    evaluation.metadata.configuration.type === EvaluationResultableType.Number
   ) {
     return (
       <EvaluationMeanValue
@@ -150,8 +149,7 @@ export default function EvaluationAggregatedResult({
   }
 
   if (
-    (evaluation.configuration ?? evaluation.metadata.configuration)!.type ===
-    EvaluationResultableType.Boolean
+    evaluation.metadata.configuration.type === EvaluationResultableType.Boolean
   ) {
     return (
       <EvaluationBooleanValue
