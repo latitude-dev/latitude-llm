@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useCallback, useMemo, useState } from 'react'
+import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 
 import {
   promptConfigSchema,
@@ -43,11 +43,15 @@ export default function EvaluationEditor({
     () => promptConfigSchema({ providers: providers ?? [] }),
     [providers],
   )
-  const { metadata } = useMetadata({
-    prompt: value,
-    withParameters: SERIALIZED_DOCUMENT_LOG_FIELDS,
-    configSchema,
-  })
+  const { metadata, runReadMetadata } = useMetadata()
+
+  useEffect(() => {
+    runReadMetadata({
+      prompt: value,
+      withParameters: SERIALIZED_DOCUMENT_LOG_FIELDS,
+      configSchema,
+    })
+  }, [])
 
   const save = useCallback(
     (val: string) => {
@@ -62,8 +66,13 @@ export default function EvaluationEditor({
   const onChange = useCallback(
     (value: string) => {
       setValue(value)
+      runReadMetadata({
+        prompt: value,
+        withParameters: SERIALIZED_DOCUMENT_LOG_FIELDS,
+        configSchema,
+      })
     },
-    [setValue],
+    [setValue, runReadMetadata],
   )
 
   if (!evaluation) return null

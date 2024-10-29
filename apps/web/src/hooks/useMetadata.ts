@@ -1,41 +1,26 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 
 import { ConversationMetadata, readMetadata } from '@latitude-data/compiler'
 import { useDebouncedCallback } from 'use-debounce'
 
 type Props = Parameters<typeof readMetadata>[0]
-export function useMetadata(props: Props) {
-  const [propsQueue, setPropsQueue] = useState<Props | null>(props)
 
-  useEffect(() => {
-    setPropsQueue(props)
-  }, Object.values(props))
-
-  const [isLoading, setIsLoading] = useState(false)
+export function useMetadata() {
   const [metadata, setMetadata] = useState<ConversationMetadata>()
+  const [isLoading, setIsLoading] = useState(false)
 
   const runReadMetadata = useDebouncedCallback(
-    (props: Props, onSuccess: (data: ConversationMetadata) => void) => {
-      readMetadata(props).then(onSuccess)
+    async (props: Props) => {
+      setIsLoading(true)
+      const metadata = await readMetadata(props)
+      setMetadata(metadata)
+      setIsLoading(false)
     },
     500,
     { trailing: true },
   )
 
-  useEffect(() => {
-    if (isLoading) return
-    if (!propsQueue) return
-
-    setIsLoading(true)
-    setPropsQueue(null)
-
-    runReadMetadata(propsQueue, (m) => {
-      setMetadata(m)
-      setIsLoading(false)
-    })
-  }, [isLoading, propsQueue])
-
-  return { metadata, isLoading }
+  return { metadata, runReadMetadata, isLoading }
 }
