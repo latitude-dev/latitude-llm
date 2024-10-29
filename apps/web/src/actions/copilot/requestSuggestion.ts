@@ -1,6 +1,7 @@
 'use server'
 
 import { ChainStepResponse, PROVIDER_MODELS } from '@latitude-data/core/browser'
+import { publisher } from '@latitude-data/core/events/publisher'
 import { BadRequestError } from '@latitude-data/core/lib/errors'
 import {
   DocumentVersionsRepository,
@@ -71,6 +72,17 @@ export const requestSuggestionAction = authProcedure
     })
 
     if (!result) throw new Error('Failed to request prompt suggestion')
+
+    publisher.publishLater({
+      type: 'copilotSuggestionGenerated',
+      data: {
+        userEmail: ctx.user.email,
+        workspaceId: ctx.workspace.id,
+        projectId,
+        commitUuid,
+        documentUuid,
+      },
+    })
 
     const resultResponse = result.response as ChainStepResponse<'object'>
     return resultResponse.object

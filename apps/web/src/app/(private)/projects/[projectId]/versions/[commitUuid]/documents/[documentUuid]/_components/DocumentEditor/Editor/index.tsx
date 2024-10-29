@@ -26,6 +26,7 @@ import {
 } from '@latitude-data/web-ui'
 import { createDraftWithContentAction } from '$/actions/commits/createDraftWithContentAction'
 import { requestSuggestionAction } from '$/actions/copilot/requestSuggestion'
+import { publishEventAction } from '$/actions/events/publishEventAction'
 import { type AddMessagesActionFn } from '$/actions/sdk/addMessagesAction'
 import type { RunDocumentActionFn } from '$/actions/sdk/runDocumentAction'
 import EditorHeader from '$/components/EditorHeader'
@@ -64,6 +65,7 @@ export default function DocumentEditor({
   providerApiKeys?: ProviderApiKey[]
   freeRunsCount?: number
 }) {
+  const { execute: publishEvent } = useLatitudeAction(publishEventAction)
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
   const router = useRouter()
@@ -101,6 +103,15 @@ export default function DocumentEditor({
     (suggestion: string) => {
       const onAccept = (newValue: string) => {
         setDiff(undefined)
+        publishEvent({
+          eventType: 'copilotRefinerApplied',
+          payload: {
+            projectId: project.id,
+            commitUuid: commit.uuid,
+            documentUuid: document.documentUuid,
+          },
+        })
+
         if (!commit.mergedAt) {
           onChange(newValue)
           return
@@ -123,7 +134,14 @@ export default function DocumentEditor({
         },
       })
     },
-    [document.documentUuid, document.path, commit.mergedAt],
+    [
+      document.documentUuid,
+      document.path,
+      commit.mergedAt,
+      publishEvent,
+      project.id,
+      commit.uuid,
+    ],
   )
 
   const debouncedSave = useDebouncedCallback(
@@ -207,6 +225,14 @@ export default function DocumentEditor({
         description: suggestion.response,
         onAccept: (newValue: string) => {
           setDiff(undefined)
+          publishEvent({
+            eventType: 'copilotSuggestionApplied',
+            payload: {
+              projectId: project.id,
+              commitUuid: commit.uuid,
+              documentUuid: document.documentUuid,
+            },
+          })
           onChange(newValue)
         },
         onReject: () => {
