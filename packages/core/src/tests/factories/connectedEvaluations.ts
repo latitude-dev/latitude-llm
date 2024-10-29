@@ -29,12 +29,12 @@ export async function createConnectedEvaluation({
       workspace,
       name: faker.company.name(),
       description: faker.lorem.sentence(),
-      type: EvaluationMetadataType.LlmAsJudgeLegacy,
+      type: EvaluationMetadataType.LlmAsJudgeAdvanced,
       configuration: {
         type: EvaluationResultableType.Boolean,
       },
       metadata: {
-        type: EvaluationMetadataType.LlmAsJudgeLegacy,
+        type: EvaluationMetadataType.LlmAsJudgeAdvanced,
         prompt: faker.lorem.sentence(),
       },
     }).then((r) => r.unwrap())

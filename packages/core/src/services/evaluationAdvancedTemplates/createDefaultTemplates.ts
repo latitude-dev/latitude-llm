@@ -1,4 +1,4 @@
-import { evaluationLegacyTemplates } from '../../assets/evaluationLegacyTemplates'
+import { evaluationAdvancedTemplates } from '../../assets/evaluationAdvancedTemplates'
 import { database } from '../../client'
 import { EvaluationResultableType } from '../../constants'
 import { Result, Transaction } from '../../lib'
@@ -12,7 +12,7 @@ export function createDefaultEvaluationTemplates(db = database) {
   }
 
   Transaction.call(async (tx) => {
-    const promises = evaluationLegacyTemplates.map((template) => {
+    const promises = evaluationAdvancedTemplates.map((template) => {
       const type = mapTypes[
         template.type as keyof typeof mapTypes
       ] as EvaluationResultableType

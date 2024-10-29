@@ -27,7 +27,7 @@ describe('createEvaluation', () => {
       user,
       name: 'Test Evaluation',
       description: 'Test Description',
-      type: EvaluationMetadataType.LlmAsJudgeLegacy,
+      type: EvaluationMetadataType.LlmAsJudgeAdvanced,
       configuration: {
         type: EvaluationResultableType.Text,
         detail: {
@@ -64,7 +64,7 @@ describe('createEvaluation', () => {
         user,
         name: 'Test Evaluation',
         description: 'Test Description',
-        type: EvaluationMetadataType.LlmAsJudgeLegacy,
+        type: EvaluationMetadataType.LlmAsJudgeAdvanced,
         configuration: {
           type: EvaluationResultableType.Text,
           detail: {
@@ -101,7 +101,7 @@ describe('createEvaluation', () => {
         user,
         name: 'Test Evaluation',
         description: 'Test Description',
-        type: EvaluationMetadataType.LlmAsJudgeLegacy,
+        type: EvaluationMetadataType.LlmAsJudgeAdvanced,
         configuration: {
           type: EvaluationResultableType.Text,
           detail: {
@@ -136,7 +136,7 @@ describe('createEvaluation', () => {
         user,
         name: 'Test Evaluation',
         description: 'Test Description',
-        type: EvaluationMetadataType.LlmAsJudgeLegacy,
+        type: EvaluationMetadataType.LlmAsJudgeAdvanced,
         configuration: {
           type: EvaluationResultableType.Number,
           detail: {
@@ -173,7 +173,7 @@ describe('createEvaluation', () => {
         user,
         name,
         description,
-        type: EvaluationMetadataType.LlmAsJudgeLegacy,
+        type: EvaluationMetadataType.LlmAsJudgeAdvanced,
         configuration: {
           type: EvaluationResultableType.Number,
           detail: {
@@ -227,7 +227,7 @@ ${metadata.prompt}
         configuration: {
           type: EvaluationResultableType.Text,
         },
-        type: EvaluationMetadataType.LlmAsJudgeLegacy,
+        type: EvaluationMetadataType.LlmAsJudgeAdvanced,
         metadata,
       })
 
@@ -251,7 +251,7 @@ ${metadata.prompt}
         user,
         name,
         description,
-        type: EvaluationMetadataType.LlmAsJudgeLegacy,
+        type: EvaluationMetadataType.LlmAsJudgeAdvanced,
         configuration: {
           type: EvaluationResultableType.Boolean,
         },
@@ -303,7 +303,7 @@ ${metadata.prompt}
         user,
         name: 'Test Evaluation',
         description: 'Test Description',
-        type: EvaluationMetadataType.LlmAsJudgeLegacy,
+        type: EvaluationMetadataType.LlmAsJudgeAdvanced,
         configuration: {
           type: EvaluationResultableType.Text,
         },
@@ -324,7 +324,7 @@ ${metadata.prompt}
         user,
         name: 'Test Evaluation',
         description: 'Test Description',
-        type: EvaluationMetadataType.LlmAsJudgeLegacy,
+        type: EvaluationMetadataType.LlmAsJudgeAdvanced,
         configuration: {
           type: EvaluationResultableType.Number,
         },
@@ -345,7 +345,7 @@ ${metadata.prompt}
         user,
         name: 'Test Evaluation',
         description: 'Test Description',
-        type: EvaluationMetadataType.LlmAsJudgeLegacy,
+        type: EvaluationMetadataType.LlmAsJudgeAdvanced,
         configuration: {
           type: EvaluationResultableType.Number,
           detail: {
@@ -372,7 +372,7 @@ ${metadata.prompt}
         user,
         name: 'Test Evaluation',
         description: 'Test Description',
-        type: EvaluationMetadataType.LlmAsJudgeLegacy,
+        type: EvaluationMetadataType.LlmAsJudgeAdvanced,
         configuration: {
           type: EvaluationResultableType.Number,
           detail: {

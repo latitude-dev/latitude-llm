@@ -26,7 +26,7 @@ import * as generateUUIDModule from '../../lib/generateUUID'
 import { EvaluationsRepository } from '../../repositories'
 import {
   documentLogs,
-  evaluationMetadataLlmAsJudgeLegacy,
+  evaluationMetadataLlmAsJudgeAdvanced,
   evaluationResults,
   providerApiKeys,
   providerLogs,
@@ -321,7 +321,7 @@ describe('run', () => {
 
     it('fails evaluation type is not recognized', async () => {
       await database
-        .update(evaluationMetadataLlmAsJudgeLegacy)
+        .update(evaluationMetadataLlmAsJudgeAdvanced)
         .set({
           configuration: {
             ...evaluation.metadata.configuration,
@@ -329,7 +329,9 @@ describe('run', () => {
             type: 'unknown',
           },
         })
-        .where(eq(evaluationMetadataLlmAsJudgeLegacy.id, evaluation.metadataId))
+        .where(
+          eq(evaluationMetadataLlmAsJudgeAdvanced.id, evaluation.metadataId),
+        )
 
       const evalRepo = new EvaluationsRepository(workspace.id)
       const updatedEvaluation = await evalRepo

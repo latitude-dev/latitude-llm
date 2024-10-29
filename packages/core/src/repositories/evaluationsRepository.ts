@@ -7,7 +7,7 @@ import { EvaluationMetadataType } from '../constants'
 import { NotFoundError, PromisedResult, Result } from '../lib'
 import {
   connectedEvaluations,
-  evaluationMetadataLlmAsJudgeLegacy,
+  evaluationMetadataLlmAsJudgeAdvanced,
   evaluations,
 } from '../schema'
 import RepositoryLegacy from './repository'
@@ -22,7 +22,7 @@ const tt = {
       sql<object>`llm_as_judge_evaluation_metadatas.configuration`.as(
         'metadata_metadata_configuration',
       ),
-    ...omit(getTableColumns(evaluationMetadataLlmAsJudgeLegacy), [
+    ...omit(getTableColumns(evaluationMetadataLlmAsJudgeAdvanced), [
       'id',
       'createdAt',
       'updatedAt',
@@ -40,11 +40,14 @@ export class EvaluationsRepository extends RepositoryLegacy<
       .select(tt)
       .from(evaluations)
       .innerJoin(
-        evaluationMetadataLlmAsJudgeLegacy,
+        evaluationMetadataLlmAsJudgeAdvanced,
         and(
           isNull(evaluations.deletedAt),
-          eq(evaluations.metadataId, evaluationMetadataLlmAsJudgeLegacy.id),
-          eq(evaluations.metadataType, EvaluationMetadataType.LlmAsJudgeLegacy),
+          eq(evaluations.metadataId, evaluationMetadataLlmAsJudgeAdvanced.id),
+          eq(
+            evaluations.metadataType,
+            EvaluationMetadataType.LlmAsJudgeAdvanced,
+          ),
         ),
       )
       .where(eq(evaluations.workspaceId, this.workspaceId))

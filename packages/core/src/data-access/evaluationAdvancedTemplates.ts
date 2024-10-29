@@ -5,7 +5,7 @@ import { database } from '../client'
 import { NotFoundError } from '../lib/errors'
 import { Result, TypedResult } from '../lib/Result'
 import {
-  evaluationLegacyTemplates,
+  evaluationAdvancedTemplates,
   evaluationTemplateCategories,
 } from '../schema'
 
@@ -14,17 +14,20 @@ export async function findAllEvaluationTemplates(): Promise<
 > {
   const result = await database
     .select({
-      ...getTableColumns(evaluationLegacyTemplates),
+      ...getTableColumns(evaluationAdvancedTemplates),
       category: evaluationTemplateCategories.name,
     })
-    .from(evaluationLegacyTemplates)
+    .from(evaluationAdvancedTemplates)
     .innerJoin(
       evaluationTemplateCategories,
-      eq(evaluationLegacyTemplates.categoryId, evaluationTemplateCategories.id),
+      eq(
+        evaluationAdvancedTemplates.categoryId,
+        evaluationTemplateCategories.id,
+      ),
     )
     .orderBy(
       asc(evaluationTemplateCategories.name),
-      asc(evaluationLegacyTemplates.name),
+      asc(evaluationAdvancedTemplates.name),
     )
   return Result.ok(result)
 }
@@ -33,8 +36,8 @@ export async function findEvaluationTemplateById(
   id: number,
   db = database,
 ): Promise<TypedResult<EvaluationTemplate, Error>> {
-  const result = await db.query.evaluationLegacyTemplates.findFirst({
-    where: eq(evaluationLegacyTemplates.id, id),
+  const result = await db.query.evaluationAdvancedTemplates.findFirst({
+    where: eq(evaluationAdvancedTemplates.id, id),
   })
 
   if (!result) {
@@ -49,18 +52,21 @@ export async function filterEvaluationTemplatesById(
 ): Promise<TypedResult<EvaluationTemplateWithCategory[], Error>> {
   const result = await database
     .select({
-      ...getTableColumns(evaluationLegacyTemplates),
+      ...getTableColumns(evaluationAdvancedTemplates),
       category: evaluationTemplateCategories.name,
     })
-    .from(evaluationLegacyTemplates)
+    .from(evaluationAdvancedTemplates)
     .innerJoin(
       evaluationTemplateCategories,
-      eq(evaluationLegacyTemplates.categoryId, evaluationTemplateCategories.id),
+      eq(
+        evaluationAdvancedTemplates.categoryId,
+        evaluationTemplateCategories.id,
+      ),
     )
-    .where(inArray(evaluationLegacyTemplates.id, ids))
+    .where(inArray(evaluationAdvancedTemplates.id, ids))
     .orderBy(
       asc(evaluationTemplateCategories.name),
-      asc(evaluationLegacyTemplates.name),
+      asc(evaluationAdvancedTemplates.name),
     )
 
   return Result.ok(result)

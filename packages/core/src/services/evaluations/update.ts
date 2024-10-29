@@ -6,7 +6,7 @@ import { EvaluationDto } from '../../browser'
 import { database } from '../../client'
 import { Result, Transaction } from '../../lib'
 import { compactObject } from '../../lib/compactObject'
-import { evaluationMetadataLlmAsJudgeLegacy, evaluations } from '../../schema'
+import { evaluationMetadataLlmAsJudgeAdvanced, evaluations } from '../../schema'
 
 export async function updateEvaluation(
   {
@@ -37,10 +37,10 @@ export async function updateEvaluation(
     values = compactObject(metadata)
     if (!isEmpty(values)) {
       updatedMetadata = await tx
-        .update(evaluationMetadataLlmAsJudgeLegacy)
+        .update(evaluationMetadataLlmAsJudgeAdvanced)
         .set(values)
         .where(
-          eq(evaluationMetadataLlmAsJudgeLegacy.id, evaluation.metadata.id),
+          eq(evaluationMetadataLlmAsJudgeAdvanced.id, evaluation.metadata.id),
         )
         .returning()
     }

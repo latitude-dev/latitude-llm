@@ -1,8 +1,8 @@
 import { relations } from 'drizzle-orm'
 
 import {
-  evaluationLegacyTemplates,
-  evaluationMetadataLlmAsJudgeLegacy,
+  evaluationAdvancedTemplates,
+  evaluationMetadataLlmAsJudgeAdvanced,
 } from '.'
 import { apiKeys } from './models/apiKeys'
 import { commits } from './models/commits'
@@ -138,14 +138,14 @@ export const evaluationRelations = relations(evaluations, ({ one }) => ({
 }))
 
 export const llmAsJudgeEvaluationMetadataRelations = relations(
-  evaluationMetadataLlmAsJudgeLegacy,
+  evaluationMetadataLlmAsJudgeAdvanced,
   ({ one }) => ({
-    template: one(evaluationLegacyTemplates, {
-      fields: [evaluationMetadataLlmAsJudgeLegacy.templateId],
-      references: [evaluationLegacyTemplates.id],
+    template: one(evaluationAdvancedTemplates, {
+      fields: [evaluationMetadataLlmAsJudgeAdvanced.templateId],
+      references: [evaluationAdvancedTemplates.id],
     }),
     evaluation: one(evaluations, {
-      fields: [evaluationMetadataLlmAsJudgeLegacy.id],
+      fields: [evaluationMetadataLlmAsJudgeAdvanced.id],
       references: [evaluations.metadataId],
     }),
   }),

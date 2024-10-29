@@ -32,7 +32,7 @@ export const createEvaluationFromPromptAction = withDocument
       workspace: ctx.workspace,
       name: input.name,
       description: 'AI-generated evaluation',
-      type: EvaluationMetadataType.LlmAsJudgeLegacy,
+      type: EvaluationMetadataType.LlmAsJudgeAdvanced,
       configuration: {
         type:
           input.type === 'number'

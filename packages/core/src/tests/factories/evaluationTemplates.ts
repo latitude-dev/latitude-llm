@@ -1,7 +1,7 @@
 import { faker } from '@faker-js/faker'
 
 import { EvaluationResultableType } from '../../constants'
-import { createEvaluationTemplate as createEvaluationTemplateService } from '../../services/evaluationLegacyTemplates/create'
+import { createEvaluationTemplate as createEvaluationTemplateService } from '../../services/evaluationAdvancedTemplates/create'
 
 export type IEvaluationTemplateData = {
   name?: string

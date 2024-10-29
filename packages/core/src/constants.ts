@@ -142,7 +142,8 @@ export type ChainEvent =
     }
 
 export enum EvaluationMetadataType {
-  LlmAsJudgeLegacy = 'llm_as_judge',
+  LlmAsJudgeAdvanced = 'llm_as_judge',
+  LlmAsJudgeSimple = 'llm_as_judge_simple',
 }
 
 export enum EvaluationMode {

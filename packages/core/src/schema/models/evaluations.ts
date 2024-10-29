@@ -12,9 +12,10 @@ import { EvaluationMetadataType } from '../../constants'
 import { latitudeSchema } from '../db-schema'
 import { workspaces } from '../models/workspaces'
 import { timestamps } from '../schemaHelpers'
+import { evaluationResultTypes } from './evaluationResults'
 
 export const metadataTypesEnum = latitudeSchema.enum('metadata_type', [
-  EvaluationMetadataType.LlmAsJudgeLegacy,
+  EvaluationMetadataType.LlmAsJudgeAdvanced,
 ])
 
 export const evaluations = latitudeSchema.table(

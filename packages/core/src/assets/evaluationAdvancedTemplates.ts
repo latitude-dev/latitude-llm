@@ -1,4 +1,4 @@
-export const evaluationLegacyTemplates = [
+export const evaluationAdvancedTemplates = [
   {
     title: 'Factuality',
     template:
