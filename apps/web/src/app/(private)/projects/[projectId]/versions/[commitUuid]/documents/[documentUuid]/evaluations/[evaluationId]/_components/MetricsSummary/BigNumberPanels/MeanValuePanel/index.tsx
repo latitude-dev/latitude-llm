@@ -41,8 +41,7 @@ export default function MeanValuePanel({
     documentUuid,
     onStatusChange,
   })
-  const config = (evaluation.configuration ??
-    evaluation.metadata.configuration)!.detail!
+  const config = evaluation.metadata.configuration.detail!
   const defaultMinValue = config.range.from
   const defaultMaxValue = config.range.to
   return (

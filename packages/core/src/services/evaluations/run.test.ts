@@ -27,6 +27,7 @@ import {
 import { publisher } from '../../events/publisher'
 import { Result } from '../../lib'
 import * as generateUUIDModule from '../../lib/generateUUID'
+import { EvaluationsRepository } from '../../repositories'
 import {
   documentLogs,
   evaluationMetadataLlmAsJudgeLegacy,
@@ -204,8 +205,7 @@ describe('run', () => {
 
       expect(evaluationResult).toMatchObject({
         uuid: FAKE_GENERATED_UUID,
-        resultableType: (evaluation.configuration ??
-          evaluation.metadata.configuration)!.type,
+        resultableType: evaluation.metadata.configuration.type,
         source: LogSources.API,
       })
     })
@@ -324,26 +324,31 @@ describe('run', () => {
     })
 
     it('fails evaluation type is not recognized', async () => {
-      const evals = await database
+      await database
         .update(evaluationMetadataLlmAsJudgeLegacy)
         .set({
           configuration: {
-            ...evaluation.configuration,
+            ...evaluation.metadata.configuration,
             // @ts-expect-error - intentionally setting invalid type
             type: 'unknown',
           },
         })
         .where(eq(evaluationMetadataLlmAsJudgeLegacy.id, evaluation.metadataId))
-        .returning()
-      const updatedEvaluation = evals[0]!
+
+      const evalRepo = new EvaluationsRepository(workspace.id)
+      const updatedEvaluation = await evalRepo
+        .find(evaluation.id)
+        .then((r) => r.unwrap())
+
+      updatedEvaluation.metadata = {
+        ...updatedEvaluation.metadata,
+        prompt: 'foo',
+      }
 
       const result = await runEvaluation({
         documentLog,
         documentUuid,
-        evaluation: {
-          ...updatedEvaluation,
-          metadata: { prompt: 'foo' },
-        } as unknown as EvaluationDto,
+        evaluation: updatedEvaluation,
       })
       const error = await findError(
         RunErrorCodes.EvaluationRunUnsupportedResultTypeError,

@@ -97,10 +97,8 @@ export function ResultOverTimeChart({
             yAxis: {
               label: 'Average result',
               type: 'number',
-              min: (evaluation.configuration ??
-                evaluation.metadata.configuration)!.detail!.range.from,
-              max: (evaluation.configuration ??
-                evaluation.metadata.configuration)!.detail!.range.to,
+              min: evaluation.metadata.configuration.detail!.range.from,
+              max: evaluation.metadata.configuration.detail!.range.to,
             },
             data: parsedData,
             tooltipLabel: (item) => {
