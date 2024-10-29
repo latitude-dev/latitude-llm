@@ -37,9 +37,9 @@ curl -X POST \\
   https://gateway.latitude.so/api/v2/projects/${projectId}/versions/${commitUuid}/documents/run \\
   -H 'Authorization: Bearer ${apiKey ?? 'YOUR_API_KEY'}' \\
   -H 'Content-Type: application/json' \\
-  -d '{
+  -d '
 ${getRequestBodyContent()}
-  }'
+  '
 `
 
   return (
