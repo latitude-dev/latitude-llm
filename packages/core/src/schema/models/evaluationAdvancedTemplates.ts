@@ -5,7 +5,7 @@ import { evaluationTemplateCategories, latitudeSchema } from '..'
 import { timestamps } from '../schemaHelpers'
 import { EvaluationResultConfiguration } from '../types'
 
-export const evaluationLegacyTemplates = latitudeSchema.table(
+export const evaluationAdvancedTemplates = latitudeSchema.table(
   'evaluations_templates',
   {
     id: bigserial('id', { mode: 'number' }).notNull().primaryKey(),
@@ -23,11 +23,11 @@ export const evaluationLegacyTemplates = latitudeSchema.table(
   },
 )
 
-export const evaluationLegacyTemplatesRelations = relations(
-  evaluationLegacyTemplates,
+export const evaluationAdvancedTemplatesRelations = relations(
+  evaluationAdvancedTemplates,
   ({ one }) => ({
     category: one(evaluationTemplateCategories, {
-      fields: [evaluationLegacyTemplates.categoryId],
+      fields: [evaluationAdvancedTemplates.categoryId],
       references: [evaluationTemplateCategories.id],
     }),
   }),

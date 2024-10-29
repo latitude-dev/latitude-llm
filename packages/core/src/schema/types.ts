@@ -8,8 +8,8 @@ import { connectedEvaluations } from './models/connectedEvaluations'
 import { datasets } from './models/datasets'
 import { documentLogs } from './models/documentLogs'
 import { documentVersions } from './models/documentVersions'
-import { evaluationLegacyTemplates } from './models/evaluationLegacyTemplates'
-import { evaluationMetadataLlmAsJudgeLegacy } from './models/evaluationMetadataLlmAsJudgeLegacy'
+import { evaluationAdvancedTemplates } from './models/evaluationAdvancedTemplates'
+import { evaluationMetadataLlmAsJudgeAdvanced } from './models/evaluationMetadataLlmAsJudgeAdvanced'
 import { evaluationResults } from './models/evaluationResults'
 import { evaluations } from './models/evaluations'
 import { evaluationTemplateCategories } from './models/evaluationTemplateCategories'
@@ -45,7 +45,7 @@ export type Evaluation = InferSelectModel<typeof evaluations>
 export type ConnectedEvaluation = InferSelectModel<typeof connectedEvaluations>
 export type EvaluationResult = InferSelectModel<typeof evaluationResults>
 export type EvaluationTemplate = InferSelectModel<
-  typeof evaluationLegacyTemplates
+  typeof evaluationAdvancedTemplates
 >
 export type MagicLinkToken = InferSelectModel<typeof magicLinkTokens>
 export type ClaimedReward = InferSelectModel<typeof claimedRewards>
@@ -53,7 +53,7 @@ export type EvaluationTemplateCategory = InferSelectModel<
   typeof evaluationTemplateCategories
 >
 export type LlmAsJudgeEvaluationMetadata = InferSelectModel<
-  typeof evaluationMetadataLlmAsJudgeLegacy
+  typeof evaluationMetadataLlmAsJudgeAdvanced
 >
 export type Subscription = InferSelectModel<typeof subscriptions>
 

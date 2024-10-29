@@ -16,7 +16,7 @@ import { BadRequestError, NotFoundError, Result, Transaction } from '../../lib'
 import { ProviderApiKeysRepository } from '../../repositories'
 import {
   connectedEvaluations,
-  evaluationMetadataLlmAsJudgeLegacy,
+  evaluationMetadataLlmAsJudgeAdvanced,
   evaluations,
 } from '../../schema'
 
@@ -70,9 +70,9 @@ ${meta.prompt}
 
     let metadataTable
     switch (type) {
-      case EvaluationMetadataType.LlmAsJudgeLegacy:
+      case EvaluationMetadataType.LlmAsJudgeAdvanced:
         metadataTable = await tx
-          .insert(evaluationMetadataLlmAsJudgeLegacy)
+          .insert(evaluationMetadataLlmAsJudgeAdvanced)
           .values({
             configuration,
             prompt: promptWithProvider,
@@ -150,7 +150,7 @@ export async function importLlmAsJudgeEvaluation(
       workspace,
       name: template.name,
       description: template.description,
-      type: EvaluationMetadataType.LlmAsJudgeLegacy,
+      type: EvaluationMetadataType.LlmAsJudgeAdvanced,
       configuration: template.configuration,
       metadata: {
         prompt: template.prompt,

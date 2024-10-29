@@ -24,10 +24,17 @@ export * from './models/providerLogs'
 // Evaluations tables
 export * from './models/datasets'
 export * from './models/evaluations'
-export * from './models/evaluationMetadataLlmAsJudgeLegacy'
+
+export * from './models/evaluationMetadataLlmAsJudgeAdvanced'
+export * from './models/evaluationMetadataLlmAsJudgeSimple'
+
+export * from './models/evaluationConfigurationBoolean'
+export * from './models/evaluationConfigurationNumerical'
+export * from './models/evaluationConfigurationText'
+
 export * from './models/connectedEvaluations'
 export * from './models/evaluationResults'
-export * from './models/evaluationLegacyTemplates'
+export * from './models/evaluationAdvancedTemplates'
 export * from './models/evaluationTemplateCategories'
 
 export * from './models/magicLinkTokens'

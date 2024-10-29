@@ -1,7 +1,7 @@
 'use server'
 
 import { UnauthorizedError } from '@latitude-data/core/lib/errors'
-import { destroyEvaluationTemplate } from '@latitude-data/core/services/evaluationLegacyTemplates/destroy'
+import { destroyEvaluationTemplate } from '@latitude-data/core/services/evaluationAdvancedTemplates/destroy'
 import { z } from 'zod'
 
 import { authProcedure } from '../procedures'
