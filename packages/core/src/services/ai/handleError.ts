@@ -1,6 +1,6 @@
+import { RunErrorCodes } from '@latitude-data/constants/errors'
 import { APICallError } from 'ai'
 
-import { RunErrorCodes } from '../../constants'
 import { Result } from '../../lib'
 import { ChainError } from '../chains/ChainErrors'
 

@@ -1,4 +1,5 @@
 import { Chain } from '@latitude-data/compiler'
+import { RunErrorCodes } from '@latitude-data/constants/errors'
 
 import { ProviderApiKey, Workspace } from '../../browser'
 import {
@@ -6,7 +7,6 @@ import {
   ChainStepResponse,
   ErrorableEntity,
   LogSources,
-  RunErrorCodes,
   StreamType,
 } from '../../constants'
 import { Result, TypedResult } from '../../lib'

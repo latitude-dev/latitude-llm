@@ -1,0 +1,21 @@
+{
+  "name": "@latitude-data/constants",
+  "author": "Latitude Data <hello@latitude.so>",
+  "license": "LGPL-3.0",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Common constants without any dependencies",
+  "type": "module",
+  "scripts": {
+    "lint": "eslint src",
+    "tc": "tsc --noEmit",
+    "prettier": "prettier --write src/**/*.ts"
+  },
+  "exports": {
+    "./errors": "./src/errors.ts"
+  },
+  "devDependencies": {
+    "@latitude-data/eslint-config": "workspace:*",
+    "@latitude-data/typescript-config": "workspace:*"
+  }
+}

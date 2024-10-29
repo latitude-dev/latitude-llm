@@ -1,9 +1,9 @@
+import { RunErrorCodes } from '@latitude-data/constants/errors'
 import { env } from '@latitude-data/env'
 
 import {
   DEFAULT_PROVIDER_MAX_FREE_RUNS,
   ProviderApiKey,
-  RunErrorCodes,
   Workspace,
 } from '../../../browser'
 import { Result } from '../../../lib'

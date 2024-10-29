@@ -1,7 +1,8 @@
+import { RunErrorCodes } from '@latitude-data/constants/errors'
 import { CoreTool, LanguageModelUsage, TextStreamPart } from 'ai'
 import { describe, expect, it } from 'vitest'
 
-import { ChainEvent, RunErrorCodes, StreamType } from '../../../constants'
+import { ChainEvent, StreamType } from '../../../constants'
 import { AIReturn } from '../../ai'
 import { ChainError } from '../ChainErrors'
 import { consumeStream } from './consumeStream'

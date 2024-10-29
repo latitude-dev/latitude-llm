@@ -1,9 +1,9 @@
 import { Chain, CompileError, Conversation } from '@latitude-data/compiler'
+import { RunErrorCodes } from '@latitude-data/constants/errors'
 import { JSONSchema7 } from 'json-schema'
 import { z } from 'zod'
 
 import { applyCustomRules, ProviderApiKey, Workspace } from '../../../browser'
-import { RunErrorCodes } from '../../../constants'
 import { Result, TypedResult } from '../../../lib'
 import { Config } from '../../ai'
 import { googleConfig } from '../../ai/helpers'

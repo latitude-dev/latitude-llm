@@ -1,9 +1,10 @@
+import { RunErrorCodes } from '@latitude-data/constants/errors'
+
 import {
   DocumentLog,
   ErrorableEntity,
   EvaluationDto,
   ProviderLog,
-  RunErrorCodes,
 } from '../../../browser'
 import { publisher } from '../../../events/publisher'
 import { Result } from '../../../lib'

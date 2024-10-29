@@ -1,0 +1,22 @@
+{
+  "name": "nodejs-sdk-usage-example",
+  "version": "0.0.1",
+  "license": "LGPL-3.0",
+  "description": "",
+  "author": "Latitude Data SL <hello@latitude.so>",
+  "type": "module",
+  "scripts": {
+    "rollup": "rollup -c",
+    "dev": "pnpm run rollup --watch",
+    "build": "pnpm run rollup",
+    "runDocument": "node --env-file=.env.local ./dist/run.js"
+  },
+  "devDependencies": {
+    "@latitude-data/typescript-config": "workspace:^",
+    "@latitude-data/sdk": "workspace:^",
+    "@rollup/plugin-commonjs": "^28.0.1",
+    "@rollup/plugin-node-resolve": "^15.3.0",
+    "@rollup/plugin-typescript": "^11.1.6",
+    "rollup": "^4.24.0"
+  }
+}

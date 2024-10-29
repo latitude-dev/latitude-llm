@@ -1,5 +1,6 @@
+import { RunErrorCodes, RunErrorDetails } from '@latitude-data/constants/errors'
+
 import { RunError } from '../../../browser'
-import { RunErrorCodes, RunErrorDetails } from '../../../constants'
 import { LatitudeErrorDetails, UnprocessableEntityError } from '../../../lib'
 
 export class ChainError<

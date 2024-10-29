@@ -1,6 +1,7 @@
 import { omit } from 'lodash-es'
 
 import { Message } from '@latitude-data/compiler'
+import { RunErrorCodes } from '@latitude-data/constants/errors'
 import {
   CoreMessage,
   CoreTool,
@@ -15,7 +16,7 @@ import {
 } from 'ai'
 import { JSONSchema7 } from 'json-schema'
 
-import { ProviderApiKey, RunErrorCodes, StreamType } from '../../browser'
+import { ProviderApiKey, StreamType } from '../../browser'
 import { Result, TypedResult } from '../../lib'
 import { ChainError } from '../chains/ChainErrors'
 import { buildTools } from './buildTools'

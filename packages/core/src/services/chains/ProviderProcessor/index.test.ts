@@ -1,10 +1,11 @@
 import { ContentType, MessageRole } from '@latitude-data/compiler'
+import { RunErrorCodes } from '@latitude-data/constants/errors'
 import * as factories from '@latitude-data/core/factories'
 import { LanguageModelUsage, TextStreamPart } from 'ai'
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import { ProviderApiKey, Workspace } from '../../../browser'
-import { LogSources, Providers, RunErrorCodes } from '../../../constants'
+import { LogSources, Providers } from '../../../constants'
 import { generateUUIDIdentifier } from '../../../lib'
 import { ChainError } from '../ChainErrors'
 import {

@@ -1,6 +1,6 @@
+import { RunErrorCodes } from '@latitude-data/constants/errors'
 import { CoreTool, jsonSchema } from 'ai'
 
-import { RunErrorCodes } from '../../../constants'
 import { Result } from '../../../lib'
 import { compactObject } from '../../../lib/compactObject'
 import { ChainError } from '../../chains/ChainErrors'

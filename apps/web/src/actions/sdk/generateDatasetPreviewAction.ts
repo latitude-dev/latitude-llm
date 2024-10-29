@@ -41,6 +41,7 @@ export async function generateDatasetPreviewAction({
     __internal: { source: LogSources.Playground },
   }).then((r) => r.unwrap())
   const response = await sdk.run(env.DATASET_GENERATOR_DOCUMENT_PATH, {
+    stream: true,
     parameters: {
       row_count: 10,
       parameters,

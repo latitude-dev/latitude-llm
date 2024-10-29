@@ -4,10 +4,11 @@ import { createGoogleGenerativeAI } from '@ai-sdk/google'
 import { createMistral } from '@ai-sdk/mistral'
 import { createOpenAI } from '@ai-sdk/openai'
 import { Message, MessageRole } from '@latitude-data/compiler'
+import { RunErrorCodes } from '@latitude-data/constants/errors'
 import { JSONSchema7 } from 'json-schema'
 import { z } from 'zod'
 
-import { Providers, RunErrorCodes } from '../../constants'
+import { Providers } from '../../constants'
 import { Result } from '../../lib'
 import { ChainError } from '../chains/ChainErrors'
 

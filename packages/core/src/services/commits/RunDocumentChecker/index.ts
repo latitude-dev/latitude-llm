@@ -1,10 +1,7 @@
 import { createChain as createChainFn } from '@latitude-data/compiler'
+import { RunErrorCodes } from '@latitude-data/constants/errors'
 
-import {
-  DocumentVersion,
-  ErrorableEntity,
-  RunErrorCodes,
-} from '../../../browser'
+import { DocumentVersion, ErrorableEntity } from '../../../browser'
 import { Result } from '../../../lib'
 import { ChainError } from '../../chains/ChainErrors'
 import { createRunError } from '../../runErrors/create'

@@ -1,4 +1,5 @@
 import { createChain as createChainFn } from '@latitude-data/compiler'
+import { RunErrorCodes } from '@latitude-data/constants/errors'
 import { JSONSchema7 } from 'json-schema'
 
 import {
@@ -6,7 +7,6 @@ import {
   ErrorableEntity,
   EvaluationDto,
   EvaluationResultableType,
-  RunErrorCodes,
   WorkspaceDto,
 } from '../../../browser'
 import { Database } from '../../../client'

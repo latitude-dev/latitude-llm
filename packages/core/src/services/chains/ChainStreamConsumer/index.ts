@@ -1,10 +1,10 @@
 import { MessageRole } from '@latitude-data/compiler'
+import { RunErrorCodes } from '@latitude-data/constants/errors'
 
 import {
   ChainEvent,
   ChainEventTypes,
   ChainStepResponse,
-  RunErrorCodes,
   StreamEventTypes,
   StreamType,
 } from '../../../constants'

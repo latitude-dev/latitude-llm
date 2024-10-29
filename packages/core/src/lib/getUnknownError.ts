@@ -1,4 +1,5 @@
-import { RunErrorCodes } from '../constants'
+import { RunErrorCodes } from '@latitude-data/constants/errors'
+
 import { isChainError } from '../services/chains/ChainStreamConsumer'
 
 /**

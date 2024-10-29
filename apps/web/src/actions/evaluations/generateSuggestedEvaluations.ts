@@ -50,6 +50,7 @@ export const generateSuggestedEvaluationsAction = authProcedure
     const result = await sdk.run(
       env.COPILOT_EVALUATION_SUGGESTION_PROMPT_PATH,
       {
+        stream: false,
         parameters: {
           user_prompt: input.documentContent,
         },

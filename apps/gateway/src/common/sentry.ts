@@ -10,7 +10,7 @@ Sentry.init({
 export const captureException = (error: Error) => {
   if (env.NODE_ENV === 'production') {
     Sentry.captureException(error)
-  } else {
+  } else if (env.NODE_ENV === 'development') {
     console.error(error)
   }
 }

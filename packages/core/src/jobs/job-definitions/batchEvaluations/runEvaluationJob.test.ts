@@ -1,8 +1,9 @@
+import { RunErrorCodes } from '@latitude-data/constants/errors'
 import { Job } from 'bullmq'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { DocumentLog, EvaluationDto, Workspace } from '../../../browser'
-import { Providers, RunErrorCodes } from '../../../constants'
+import { Providers } from '../../../constants'
 import { Result } from '../../../lib'
 import * as queues from '../../../queues'
 import { EvaluationsRepository } from '../../../repositories'

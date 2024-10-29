@@ -1,10 +1,11 @@
 import { ContentType, Message, MessageRole } from '@latitude-data/compiler'
+import { RunErrorCodes } from '@latitude-data/constants/errors'
 import { APICallError, CoreTool, ObjectStreamPart, TextStreamPart } from 'ai'
 import { MockLanguageModelV1 } from 'ai/test'
 import { JSONSchema7 } from 'json-schema'
 import { describe, expect, it, vi } from 'vitest'
 
-import { ProviderApiKey, Providers, RunErrorCodes } from '../../browser'
+import { ProviderApiKey, Providers } from '../../browser'
 import { streamToGenerator } from '../../lib/streamToGenerator'
 import { ChainError } from '../chains/ChainErrors'
 import { ai } from './index'

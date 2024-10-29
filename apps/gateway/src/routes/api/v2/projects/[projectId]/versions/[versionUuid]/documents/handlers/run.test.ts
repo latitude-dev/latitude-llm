@@ -1,8 +1,11 @@
+import { MessageRole } from '@latitude-data/compiler'
+import { RunErrorCodes } from '@latitude-data/constants/errors'
 import {
   ChainEventTypes,
   Commit,
   LogSources,
   Project,
+  ProviderLog,
   StreamEventTypes,
   Workspace,
 } from '@latitude-data/core/browser'
@@ -13,7 +16,10 @@ import {
   createProject,
   helpers,
 } from '@latitude-data/core/factories'
+import { LatitudeError } from '@latitude-data/core/lib/errors'
 import { Result } from '@latitude-data/core/lib/Result'
+import { ChainError } from '@latitude-data/core/services/chains/ChainErrors/index'
+import { ChainResponse } from '@latitude-data/core/services/chains/run'
 import { mergeCommit } from '@latitude-data/core/services/commits/merge'
 import { parseSSEvent } from '$/common/parseSSEEvent'
 import app from '$/routes/app'
@@ -22,6 +28,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const mocks = vi.hoisted(() => ({
   runDocumentAtCommit: vi.fn(),
+  captureExceptionMock: vi.fn(),
   queues: {
     defaultQueue: {
       jobs: {
@@ -31,6 +38,15 @@ const mocks = vi.hoisted(() => ({
     },
   },
 }))
+
+vi.mock('$/common/sentry', async (importOriginal) => {
+  const original = (await importOriginal()) as typeof importOriginal
+
+  return {
+    ...original,
+    captureException: mocks.captureExceptionMock,
+  }
+})
 
 vi.mock(
   '@latitude-data/core/services/commits/runDocumentAtCommit',
@@ -322,7 +338,7 @@ describe('POST /run', () => {
       })
     })
 
-    it('returns last response', async () => {
+    it('returns response', async () => {
       const stream = new ReadableStream({
         start(controller) {
           controller.enqueue({
@@ -340,8 +356,25 @@ describe('POST /run', () => {
         },
       })
 
-      const response = new Promise((resolve) => {
-        resolve({ text: 'Hello', usage: {} })
+      const response = new Promise<ChainResponse<'object'>>((resolve) => {
+        resolve(
+          Result.ok({
+            streamType: 'object',
+            object: { something: { else: 'here' } },
+            text: 'Hello',
+            usage: { promptTokens: 4, completionTokens: 6, totalTokens: 10 },
+            documentLogUuid: 'fake-document-log-uuid',
+            providerLog: {
+              messages: [
+                {
+                  role: MessageRole.assistant,
+                  toolCalls: [],
+                  content: 'Hello',
+                },
+              ],
+            } as unknown as ProviderLog,
+          }),
+        )
       })
 
       mocks.runDocumentAtCommit.mockReturnValue(
@@ -363,11 +396,150 @@ describe('POST /run', () => {
 
       expect(res.status).toBe(200)
       expect(await res.json()).toEqual({
-        type: ChainEventTypes.Complete,
+        uuid: 'fake-document-log-uuid',
+        conversation: [
+          {
+            role: MessageRole.assistant,
+            toolCalls: [],
+            content: 'Hello',
+          },
+        ],
         response: {
+          streamType: 'object',
+          usage: { promptTokens: 4, completionTokens: 6, totalTokens: 10 },
           text: 'Hello',
-          usage: {},
+          object: { something: { else: 'here' } },
+          toolCalls: [],
         },
+      })
+    })
+
+    it('returns error when runDocumentAtCommit has an error', async () => {
+      const response = new Promise<ChainResponse<'object'>>((resolve) => {
+        resolve(
+          Result.error(
+            new ChainError({
+              code: RunErrorCodes.ChainCompileError,
+              message: 'Error compiling prompt for document uuid',
+            }),
+          ),
+        )
+      })
+
+      mocks.runDocumentAtCommit.mockReturnValue(
+        new Promise((resolve) => {
+          resolve(
+            Result.ok({
+              stream: new ReadableStream(),
+              response,
+            }),
+          )
+        }),
+      )
+
+      const res = await app.request(route, {
+        method: 'POST',
+        body,
+        headers,
+      })
+
+      expect(res.status).toBe(422)
+      expect(await res.json()).toEqual({
+        name: 'DocumentRunError',
+        errorCode: RunErrorCodes.ChainCompileError,
+        message: 'Error compiling prompt for document uuid',
+        details: {
+          errorCode: RunErrorCodes.ChainCompileError,
+        },
+      })
+    })
+
+    it('returns error if runDocumentAtCommit has not documentLogUuid', async () => {
+      const response = new Promise<ChainResponse<'object'>>((resolve) => {
+        resolve(
+          Result.ok({
+            streamType: 'object',
+            object: { something: { else: 'here' } },
+            text: 'Hello',
+            usage: { promptTokens: 4, completionTokens: 6, totalTokens: 10 },
+            providerLog: {
+              messages: [
+                {
+                  role: MessageRole.assistant,
+                  toolCalls: [],
+                  content: 'Hello',
+                },
+              ],
+            } as unknown as ProviderLog,
+          }),
+        )
+      })
+
+      mocks.runDocumentAtCommit.mockReturnValue(
+        new Promise((resolve) => {
+          resolve(
+            Result.ok({
+              stream: new ReadableStream(),
+              response,
+            }),
+          )
+        }),
+      )
+
+      const res = await app.request(route, {
+        method: 'POST',
+        body,
+        headers,
+      })
+
+      expect(res.status).toBe(500)
+      expect(await res.json()).toEqual({
+        name: 'LatitudeError',
+        errorCode: 'LatitudeError',
+        message: 'Document Log uuid not found in response',
+        details: {},
+      })
+      expect(mocks.captureExceptionMock).toHaveBeenCalledWith(
+        new LatitudeError('Document Log uuid not found in response'),
+      )
+    })
+
+    it('returns error if runDocumentAtCommit has not providerLog', async () => {
+      const response = new Promise<ChainResponse<'object'>>((resolve) => {
+        resolve(
+          Result.ok({
+            streamType: 'object',
+            object: { something: { else: 'here' } },
+            text: 'Hello',
+            usage: { promptTokens: 4, completionTokens: 6, totalTokens: 10 },
+            documentLogUuid: 'fake-document-log-uuid',
+          }),
+        )
+      })
+
+      mocks.runDocumentAtCommit.mockReturnValue(
+        new Promise((resolve) => {
+          resolve(
+            Result.ok({
+              stream: new ReadableStream(),
+              response,
+            }),
+          )
+        }),
+      )
+
+      const res = await app.request(route, {
+        method: 'POST',
+        body,
+        headers,
+      })
+
+      expect(res.status).toBe(500)
+      expect(await res.json()).toEqual({
+        name: 'LatitudeError',
+        errorCode: 'LatitudeError',
+        message: 'Conversation messages not found in response',
+        details: {},
       })
     })
   })
