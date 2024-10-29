@@ -18,15 +18,10 @@ const tt = {
     id: sql<number>`llm_as_judge_evaluation_metadatas.id`.as(
       'metadata_metadata_id',
     ),
-    configuration:
-      sql<object>`llm_as_judge_evaluation_metadatas.configuration`.as(
-        'metadata_metadata_configuration',
-      ),
     ...omit(getTableColumns(evaluationMetadataLlmAsJudgeAdvanced), [
       'id',
       'createdAt',
       'updatedAt',
-      'configuration',
     ]),
   },
 }

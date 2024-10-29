@@ -1,15 +1,17 @@
 import { relations } from 'drizzle-orm'
 
-import {
-  evaluationAdvancedTemplates,
-  evaluationMetadataLlmAsJudgeAdvanced,
-} from '.'
 import { apiKeys } from './models/apiKeys'
 import { commits } from './models/commits'
 import { connectedEvaluations } from './models/connectedEvaluations'
 import { datasets } from './models/datasets'
 import { documentLogs } from './models/documentLogs'
 import { documentVersions } from './models/documentVersions'
+import { evaluationAdvancedTemplates } from './models/evaluationAdvancedTemplates'
+// import { evaluationConfigurationBoolean } from './models/evaluationConfigurationBoolean'
+// import { evaluationConfigurationNumerical } from './models/evaluationConfigurationNumerical'
+// import { evaluationConfigurationText } from './models/evaluationConfigurationText'
+import { evaluationMetadataLlmAsJudgeAdvanced } from './models/evaluationMetadataLlmAsJudgeAdvanced'
+import { evaluationMetadataLlmAsJudgeSimple } from './models/evaluationMetadataLlmAsJudgeSimple'
 import { evaluationResults } from './models/evaluationResults'
 import { evaluations } from './models/evaluations'
 import { events } from './models/events'
@@ -137,7 +139,7 @@ export const evaluationRelations = relations(evaluations, ({ one }) => ({
   }),
 }))
 
-export const llmAsJudgeEvaluationMetadataRelations = relations(
+export const EvaluationMetadatallmAsJudgeAdvancedRelations = relations(
   evaluationMetadataLlmAsJudgeAdvanced,
   ({ one }) => ({
     template: one(evaluationAdvancedTemplates, {
@@ -150,6 +152,48 @@ export const llmAsJudgeEvaluationMetadataRelations = relations(
     }),
   }),
 )
+
+export const EvaluationMetadatallmAsJudgeSimpleRelations = relations(
+  evaluationMetadataLlmAsJudgeSimple,
+  ({ one }) => ({
+    evaluation: one(evaluations, {
+      fields: [evaluationMetadataLlmAsJudgeSimple.id],
+      references: [evaluations.metadataId],
+    }),
+  }),
+)
+
+// TODO: This has been applied in the migration, but not added in the code yet to avoid errors during the deployment. Will be added in the next PR
+
+// export const EvaluationConfigurationBooleanRelations = relations(
+//   evaluationConfigurationBoolean,
+//   ({ one }) => ({
+//     evaluation: one(evaluations, {
+//       fields: [evaluationConfigurationBoolean.id],
+//       references: [evaluations.resultConfigurationId],
+//     }),
+//   }),
+// )
+
+// export const EvaluationConfigurationNumericalRelations = relations(
+//   evaluationConfigurationNumerical,
+//   ({ one }) => ({
+//     evaluation: one(evaluations, {
+//       fields: [evaluationConfigurationNumerical.id],
+//       references: [evaluations.resultConfigurationId],
+//     }),
+//   }),
+// )
+
+// export const EvaluationConfigurationTextRelations = relations(
+//   evaluationConfigurationText,
+//   ({ one }) => ({
+//     evaluation: one(evaluations, {
+//       fields: [evaluationConfigurationText.id],
+//       references: [evaluations.resultConfigurationId],
+//     }),
+//   }),
+// )
 
 export const membershipRelations = relations(memberships, ({ one }) => ({
   workspace: one(workspaces, {

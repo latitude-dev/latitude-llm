@@ -624,6 +624,13 @@
       "when": 1730198912637,
       "tag": "0089_giant_maverick",
       "breakpoints": true
+    },
+    {
+      "idx": 90,
+      "version": "7",
+      "when": 1730210128632,
+      "tag": "0090_simple_evaluations",
+      "breakpoints": true
     }
   ]
 }
