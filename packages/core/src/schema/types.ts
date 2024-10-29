@@ -58,7 +58,7 @@ export type LlmAsJudgeEvaluationMetadata = InferSelectModel<
 export type Subscription = InferSelectModel<typeof subscriptions>
 
 export type EvaluationDto = Evaluation & {
-  configuration?: LlmAsJudgeEvaluationMetadata['configuration']
+  configuration: LlmAsJudgeEvaluationMetadata['configuration'] | null
   metadata: Omit<
     LlmAsJudgeEvaluationMetadata,
     'metadataType' | 'createdAt' | 'updatedAt'
