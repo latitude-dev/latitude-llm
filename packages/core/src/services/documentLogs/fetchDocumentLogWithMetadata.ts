@@ -32,31 +32,21 @@ export async function fetchDocumentLogWithMetadata(
 ): Promise<TypedResult<DocumentLogWithMetadataAndError, Error>> {
   const identifier = documentLogUuid || documentLogId
   const type = documentLogUuid ? 'uuid' : 'id'
-
   if (identifier === undefined) return throwNotFound({ identifier, type })
 
-  const { baseQuery } = computeDocumentLogsWithMetadataQuery(
-    {
-      workspaceId,
-      allowAnyDraft: true,
-    },
+  const scope = computeDocumentLogsWithMetadataQuery(
+    { workspaceId, allowAnyDraft: true },
     db,
   )
   let logs: DocumentLogWithMetadataAndError[] = []
-
   if (documentLogUuid) {
-    logs = await baseQuery
-      .where(eq(documentLogs.uuid, documentLogUuid))
-      .limit(1)
+    logs = await scope.where(eq(documentLogs.uuid, documentLogUuid)).limit(1)
   } else if (documentLogId) {
-    logs = await baseQuery.where(eq(documentLogs.id, documentLogId)).limit(1)
+    logs = await scope.where(eq(documentLogs.id, documentLogId)).limit(1)
   }
 
   const documentLog = logs[0]
-
-  if (!documentLog) {
-    return throwNotFound({ identifier, type })
-  }
+  if (!documentLog) return throwNotFound({ identifier, type })
 
   return Result.ok(documentLog)
 }

@@ -30,14 +30,13 @@ export const GET = errorHandler(
 
       const page = searchParams.get('page') ?? '1'
       const pageSize = searchParams.get('pageSize') ?? '25'
-      const { baseQuery } = computeDocumentLogsWithMetadataQuery({
+      const rows = await computeDocumentLogsWithMetadataQuery({
         workspaceId: workspace.id,
         documentUuid,
         draft: commit,
         page,
         pageSize,
       })
-      const rows = await baseQuery
 
       return NextResponse.json(rows, { status: 200 })
     },

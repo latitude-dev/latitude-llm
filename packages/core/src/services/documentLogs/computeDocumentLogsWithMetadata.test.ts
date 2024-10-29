@@ -82,12 +82,11 @@ describe('getDocumentLogsWithMetadata', () => {
     })
 
     it('return all logs from merged commits', async () => {
-      const { baseQuery } = computeDocumentLogsWithMetadataQuery({
+      const result = await computeDocumentLogsWithMetadataQuery({
         workspaceId: project.workspaceId,
         documentUuid: doc.documentUuid,
         draft,
       })
-      const result = await baseQuery
 
       expect(result.find((l) => l.uuid === log1.uuid)).toBeDefined()
       expect(result.find((l) => l.uuid === log2.uuid)).toBeDefined()
@@ -108,12 +107,10 @@ describe('getDocumentLogsWithMetadata', () => {
         document: doc2,
         commit,
       })
-      const { baseQuery } = computeDocumentLogsWithMetadataQuery({
+      const result = await computeDocumentLogsWithMetadataQuery({
         workspaceId: project.workspaceId,
         draft,
       })
-
-      const result = await baseQuery
 
       expect(result.find((l) => l.uuid === log1.uuid)).toBeDefined()
       expect(result.find((l) => l.uuid === log2.uuid)).toBeDefined()
@@ -121,15 +118,13 @@ describe('getDocumentLogsWithMetadata', () => {
     })
 
     it('paginate logs', async () => {
-      const { baseQuery } = computeDocumentLogsWithMetadataQuery({
+      const result = await computeDocumentLogsWithMetadataQuery({
         workspaceId: project.workspaceId,
         documentUuid: doc.documentUuid,
         draft,
         page: '1',
         pageSize: '1',
       })
-
-      const result = await baseQuery
       expect(result.length).toBe(1)
     })
 
@@ -195,12 +190,11 @@ describe('getDocumentLogsWithMetadata', () => {
       commit: draft,
     })
 
-    const { baseQuery } = computeDocumentLogsWithMetadataQuery({
+    const result = await computeDocumentLogsWithMetadataQuery({
       workspaceId: project.workspaceId,
       documentUuid: doc.documentUuid,
       draft,
     })
-    const result = await baseQuery
 
     expect(result.find((l) => l.uuid === log1.uuid)).toBeDefined()
     expect(result.find((l) => l.uuid === log2.uuid)).toBeDefined()
@@ -256,12 +250,11 @@ describe('getDocumentLogsWithMetadata', () => {
       commit: draft2,
     })
 
-    const { baseQuery } = computeDocumentLogsWithMetadataQuery({
+    const result = await computeDocumentLogsWithMetadataQuery({
       workspaceId: project.workspaceId,
       documentUuid: doc.documentUuid,
       draft: draft1,
     })
-    const result = await baseQuery
 
     expect(result.find((l) => l.uuid === log1.uuid)).toBeDefined()
     expect(result.find((l) => l.uuid === log2.uuid)).toBeDefined()
@@ -289,12 +282,11 @@ describe('getDocumentLogsWithMetadata', () => {
       commit,
     })
 
-    const { baseQuery } = computeDocumentLogsWithMetadataQuery({
+    const result = await computeDocumentLogsWithMetadataQuery({
       workspaceId: project.workspaceId,
       documentUuid: doc.documentUuid,
       draft: commit,
     })
-    const result = await baseQuery
 
     expect(result.find((l) => l.uuid === log.uuid)).toBeDefined()
     expect(result.find((l) => l.uuid === log.uuid)?.tokens).toBeTypeOf('number')
@@ -325,12 +317,11 @@ describe('getDocumentLogsWithMetadata', () => {
       skipProviderLogs: true,
     })
 
-    const { baseQuery } = computeDocumentLogsWithMetadataQuery({
+    const result = await computeDocumentLogsWithMetadataQuery({
       workspaceId: project.workspaceId,
       documentUuid: doc.documentUuid,
       draft: commit1,
     })
-    const result = await baseQuery
 
     expect(result.find((l) => l.uuid === log1.uuid)).toBeDefined()
   })
