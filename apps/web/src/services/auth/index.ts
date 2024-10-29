@@ -1,6 +1,7 @@
 import { database } from '@latitude-data/core/client'
 import { sessions, users } from '@latitude-data/core/schema'
 import { DrizzlePostgreSQLAdapter } from '@lucia-auth/adapter-drizzle'
+import { AUTH_COOKIE_NAME } from '$/services/auth/constants'
 import { Lucia } from 'lucia'
 
 const adapter = new DrizzlePostgreSQLAdapter(
@@ -28,6 +29,7 @@ declare module 'lucia' {
 
 export const lucia = new Lucia(adapter, {
   sessionCookie: {
+    name: AUTH_COOKIE_NAME,
     expires: false,
     attributes: {
       secure: process.env.NODE_ENV === 'production',

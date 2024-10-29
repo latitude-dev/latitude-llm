@@ -18,6 +18,24 @@ export enum BackofficeRoutes {
   rewards = 'rewards',
 }
 
+const PUBLIC_ROOT_PATHS = {
+  setup: '/setup',
+  login: '/login',
+  magicLinks: '/magic-links',
+  invitations: '/invitations',
+}
+
+export function isPublicPath(pathname: string) {
+  const publicPaths = [
+    PUBLIC_ROOT_PATHS.setup,
+    PUBLIC_ROOT_PATHS.login,
+    PUBLIC_ROOT_PATHS.magicLinks,
+    PUBLIC_ROOT_PATHS.invitations,
+  ]
+
+  return publicPaths.some((publicPath) => pathname.startsWith(publicPath))
+}
+
 export const ROUTES = {
   root: '/',
   backoffice: {
@@ -145,14 +163,13 @@ export const ROUTES = {
     },
   },
   auth: {
-    setup: '/setup',
-    login: '/login',
-    magicLinkSent: (email: string) => `/magic-links/sent?email=${email}`,
+    setup: PUBLIC_ROOT_PATHS.setup,
+    login: PUBLIC_ROOT_PATHS.login,
+    magicLinkSent: (email: string) =>
+      `${PUBLIC_ROOT_PATHS.magicLinks}/sent?email=${email}`,
     magicLinks: {
-      confirm: (token: string) => `/magic-links/confirm/${token}`,
+      confirm: (token: string) =>
+        `${PUBLIC_ROOT_PATHS.magicLinks}/confirm/${token}`,
     },
-  },
-  public: {
-    errorTest: '/error-test',
   },
 } as const
