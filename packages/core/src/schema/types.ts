@@ -58,7 +58,7 @@ export type LlmAsJudgeEvaluationMetadata = InferSelectModel<
 export type Subscription = InferSelectModel<typeof subscriptions>
 
 export type EvaluationDto = Evaluation & {
-  configuration: LlmAsJudgeEvaluationMetadata['configuration'] | null
+  configuration?: LlmAsJudgeEvaluationMetadata['configuration'] | null // Added for backward compatibility while the schema transition is being processed. Will be removed on next PR
   metadata: Omit<
     LlmAsJudgeEvaluationMetadata,
     'metadataType' | 'createdAt' | 'updatedAt'

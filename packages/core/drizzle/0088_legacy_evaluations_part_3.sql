@@ -1,0 +1,1 @@
+ALTER TABLE "latitude"."evaluations" DROP COLUMN IF EXISTS "configuration";
