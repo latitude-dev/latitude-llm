@@ -91,16 +91,10 @@ Run a specific document (prompt) with optional parameters.
     "provider": string,
     "model": string
   },
-  "messages": [
-    {
-      "role": "system" | "user" | "assistant",
-      "content": string,
-      "toolCalls": []
-    }
-  ],
+  "messages": Message[],
   "response": {
     "text": string,
-    "toolCalls": [],
+    "toolCalls": ToolCall[],
     "usage": {
       "promptTokens": number,
       "completionTokens": number,
@@ -114,30 +108,36 @@ Run a specific document (prompt) with optional parameters.
 
 ```json
 {
-  "type": "chain-complete" | "error",
   "uuid": string,
-  "config": {
-    "provider": string,
-    "model": string
-  },
-  "messages": [
-    {
-      "role": "system" | "user" | "assistant",
-      "content": string,
-      "toolCalls": []
-    }
-  ],
+  "conversation": Message[],
   "response": {
-    "text": string,
-    "toolCalls": [],
+    "streamType": "text" | "object",
     "usage": {
       "promptTokens": number,
       "completionTokens": number,
       "totalTokens": number
-    }
-  }
+    },
+    "text": string,
+    "object": object | undefined,
+    "toolCalls": ToolCall[]
 }
 ```
+
+<Note>
+  Message follows [OpenAI's format](https://platform.openai.com/docs/guides/text-generation/building-prompts).
+</Note>
+
+<Note>
+ToolCall has the following format:
+
+```typescript
+type ToolCall = {
+  id: string
+  name: string
+  arguments: Record<string, unknown>
+}
+```
+</Note>
 
 #### 2. Chat
 
