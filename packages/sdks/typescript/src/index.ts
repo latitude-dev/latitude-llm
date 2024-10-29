@@ -1,6 +1,11 @@
 import { Readable } from 'stream'
 
-import type { Config, Message } from '@latitude-data/compiler'
+import type {
+  Config,
+  ContentType,
+  Message,
+  MessageRole,
+} from '@latitude-data/compiler'
 import {
   DocumentVersion,
   type ChainEventDto,
@@ -190,4 +195,11 @@ class Latitude {
 }
 
 export { Latitude, LatitudeApiError, LogSources }
-export type { ChainEventDto, Message, StreamChainResponse }
+
+export type {
+  ChainEventDto,
+  Message,
+  MessageRole,
+  ContentType,
+  StreamChainResponse,
+}
