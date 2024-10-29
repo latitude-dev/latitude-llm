@@ -1,6 +1,6 @@
 import { LanguageModelUsage } from 'ai'
 
-import {
+import type {
   ChainStepResponse,
   Commit,
   Dataset,
@@ -19,7 +19,7 @@ import {
   StreamType,
   User,
   Workspace,
-} from '../../browser'
+} from '../browser'
 import { PartialConfig } from '../services/ai'
 
 export type Events =

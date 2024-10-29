@@ -39,7 +39,8 @@
     "SUPPORT_APP_ID",
     "SUPPORT_APP_SECRET_KEY",
     "DEFAULT_PROVIDER_API_KEY",
-    "KEEP_ALIVE_TIMEOUT"
+    "KEEP_ALIVE_TIMEOUT",
+    "LOOPS_API_KEY"
   ],
   "$schema": "https://turbo.build/schema.json",
   "globalDependencies": ["**/.env.*local"],

@@ -1,4 +1,4 @@
-import { MessageRole } from '@latitude-data/compiler'
+import { ContentType, MessageRole } from '@latitude-data/compiler'
 import * as factories from '@latitude-data/core/factories'
 import { LanguageModelUsage, TextStreamPart } from 'ai'
 import { beforeEach, describe, expect, it } from 'vitest'
@@ -57,7 +57,7 @@ describe('ProviderProcessor', () => {
       messages: [
         {
           role: MessageRole.user,
-          content: 'MY TEXT',
+          content: [{ text: 'Hello', type: ContentType.text }],
         },
       ],
       toolCalls: [],

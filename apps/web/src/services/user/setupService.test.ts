@@ -1,5 +1,6 @@
 import { Providers, RewardType } from '@latitude-data/core/browser'
 import { database } from '@latitude-data/core/client'
+import { publisher } from '@latitude-data/core/events/publisher'
 import { createProject, helpers } from '@latitude-data/core/factories'
 import { Result } from '@latitude-data/core/lib/Result'
 import {
@@ -21,6 +22,7 @@ import setupService from './setupService'
 const mocks = vi.hoisted(() => ({
   claimReward: vi.fn(),
 }))
+const publisherSpy = vi.spyOn(publisher, 'publishLater')
 
 vi.mock('@latitude-data/core/services/claimedRewards/claim', () => ({
   claimReward: mocks.claimReward,
@@ -81,6 +83,24 @@ describe('setupService', () => {
       })
     expect(createdProviderApiKey).toBeDefined()
     expect(createdProviderApiKey?.authorId).toBe(user.id)
+  })
+
+  it('publishes userCreated event', async () => {
+    const result = await setupService({
+      email: 'test@example.com',
+      name: 'Test User',
+      companyName: 'Test Company',
+    })
+
+    const user = result.value?.user!
+    expect(publisherSpy).toHaveBeenCalledWith({
+      type: 'userCreated',
+      data: {
+        ...user,
+        userEmail: user.email,
+        workspaceId: result.value?.workspace.id,
+      },
+    })
   })
 
   it('should import the default project when calling setup service', async () => {

@@ -1,5 +1,6 @@
 import { Providers, RewardType } from '@latitude-data/core/browser'
 import { SessionData } from '@latitude-data/core/data-access'
+import { publisher } from '@latitude-data/core/events/publisher'
 import { Result } from '@latitude-data/core/lib/Result'
 import Transaction, {
   PromisedResult,
@@ -88,6 +89,15 @@ export default function setupService({
 
     const result = Result.findError(results)
     if (result) return result
+
+    publisher.publishLater({
+      type: 'userCreated',
+      data: {
+        ...user,
+        workspaceId: workspace.id,
+        userEmail: user.email,
+      },
+    })
 
     return Result.ok({
       user,

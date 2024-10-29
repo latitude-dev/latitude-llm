@@ -1,5 +1,6 @@
 import { IEventsHandlers } from '../events'
 import { createClaimInvitationReferralJob } from './createClaimInvitationReferralJob'
+import { createLoopsContact } from './createLoopsContact'
 import { notifyToClientDocumentLogCreatedJob } from './notifyToClientDocumentLogCreatedJob'
 import { notifyToClientEvaluationResultCreatedJob } from './notifyToClientEvaluationResultCreatedJob'
 import { runLiveEvaluationsJob } from './runLiveEvaluationsJob'
@@ -30,7 +31,7 @@ export const EventHandlers: IEventsHandlers = {
   providerApiKeyCreated: [],
   providerLogCreated: [],
   sendReferralInvitation: [sendReferralInvitationJob],
-  userCreated: [],
+  userCreated: [createLoopsContact],
   userInvited: [],
   workspaceCreated: [],
   documentRunRequested: [],
