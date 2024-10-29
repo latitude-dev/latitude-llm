@@ -15,20 +15,13 @@ import Text from '../Text'
 import { Tooltip } from '../Tooltip'
 
 export function FormDescription({
-  id,
   children,
-  ...props
 }: {
-  id: string
   children: string | ReactNode
-} & HTMLAttributes<HTMLParagraphElement>) {
+}) {
   if (typeof children !== 'string') return children
 
-  return (
-    <p id={id} className='text-[0.8rem] text-muted-foreground' {...props}>
-      {children}
-    </p>
-  )
+  return <Text.H6 color='foregroundMuted'>{children}</Text.H6>
 }
 
 function TooltipMessage({ error }: { error: string | undefined }) {
@@ -155,10 +148,7 @@ function FormField({
         {children}
       </FormControl>
 
-      {description && (
-        <FormDescription id={formDescriptionId}>{description}</FormDescription>
-      )}
-
+      {description && <FormDescription>{description}</FormDescription>}
       {errorStyle === 'inline' ? (
         <InlineFormErrorMessage error={error} id={formMessageId} />
       ) : null}

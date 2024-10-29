@@ -9,6 +9,7 @@ import type { RunBatchEvaluationJobParams } from './batchEvaluations/runBatchEva
 import type { RunEvaluationJobData } from './batchEvaluations/runEvaluationJob'
 import type { RunDocumentInBatchJobProps } from './documents/runDocumentInBatchJob'
 import type { RunDocumentJobData } from './documents/runDocumentJob'
+import type { UploadDocumentLogsJobData } from './documents/uploadDocumentLogsJob'
 import type { RunLiveEvaluationJobData } from './liveEvaluations/runLiveEvaluationJob'
 
 export type JobDataMap = {
@@ -23,6 +24,7 @@ export type JobDataMap = {
   [Jobs.runEvaluationJob]: RunEvaluationJobData
   [Jobs.publishToAnalyticsJob]: LatitudeEvent
   [Jobs.runLiveEvaluationJob]: RunLiveEvaluationJobData
+  [Jobs.uploadDocumentLogsJob]: UploadDocumentLogsJobData
 }
 
 type JobData<J extends Jobs> = J extends keyof JobDataMap

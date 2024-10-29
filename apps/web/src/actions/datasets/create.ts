@@ -1,27 +1,17 @@
 'use server'
 
+import {
+  DELIMITER_VALUES,
+  DELIMITERS_KEYS,
+  MAX_SIZE,
+  MAX_UPLOAD_SIZE_IN_MB,
+} from '@latitude-data/core/browser'
 import { DatasetsRepository } from '@latitude-data/core/repositories'
 import { createDataset } from '@latitude-data/core/services/datasets/create'
 import { z } from 'zod'
 
 import { authProcedure } from '../procedures'
 
-const DELIMITERS_KEYS = [
-  'comma',
-  'semicolon',
-  'tab',
-  'space',
-  'custom',
-] as const
-const DELIMITER_VALUES = {
-  comma: ',',
-  semicolon: ';',
-  tab: '\t',
-  space: ' ',
-}
-
-const MAX_SIZE = 15
-const MAX_UPLOAD_SIZE_IN_MB = MAX_SIZE * 1024 * 1024
 export const createDatasetAction = authProcedure
   .createServerAction()
   .input(

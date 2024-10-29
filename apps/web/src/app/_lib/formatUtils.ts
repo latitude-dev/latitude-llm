@@ -15,7 +15,8 @@ export function relativeTime(date: Date | null) {
   return format(date, 'PPpp')
 }
 
-export function formatDuration(duration: number) {
+export function formatDuration(duration?: number | null) {
+  if (!duration) return '-'
   if (duration < MINUTES) return `${(duration / SECONDS).toFixed(3)}s`
 
   const hours = Math.floor(duration / HOURS)

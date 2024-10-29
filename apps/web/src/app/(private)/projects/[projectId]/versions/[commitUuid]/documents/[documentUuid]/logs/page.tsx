@@ -1,8 +1,10 @@
 import { QueryParams } from '@latitude-data/core/lib/pagination/buildPaginatedUrl'
 import { computeDocumentLogsWithMetadataQuery } from '@latitude-data/core/services/documentLogs/computeDocumentLogsWithMetadata'
-import { TableWithHeader } from '@latitude-data/web-ui'
+import { Button, TableWithHeader } from '@latitude-data/web-ui'
 import { findCommitCached } from '$/app/(private)/_data-access'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
+import { ROUTES } from '$/services/routes'
+import Link from 'next/link'
 
 import { DocumentLogs } from './_components/DocumentLogs'
 
@@ -29,6 +31,20 @@ export default async function DocumentPage({
       <TableWithHeader
         title='Logs'
         table={<DocumentLogs documentLogs={rows} />}
+        actions={
+          <Link
+            href={
+              ROUTES.projects
+                .detail({ id: projectId })
+                .commits.detail({ uuid: params.commitUuid })
+                .documents.detail({ uuid: params.documentUuid }).logs.upload
+            }
+          >
+            <Button fancy variant='outline'>
+              Upload logs
+            </Button>
+          </Link>
+        }
       />
     </div>
   )

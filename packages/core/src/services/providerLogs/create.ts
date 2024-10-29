@@ -17,13 +17,13 @@ export type CreateProviderLogProps = {
   workspace: Workspace
   uuid: string
   generatedAt: Date
-  providerId: number
-  providerType: Providers
-  model: string
-  config: PartialConfig
+  providerId?: number
+  providerType?: Providers
+  model?: string
+  config?: PartialConfig
   messages: Message[]
-  usage: LanguageModelUsage
-  duration: number
+  usage?: LanguageModelUsage
+  duration?: number
   source: LogSources
   finishReason?: StreamConsumeReturn['finishReason']
   apiKeyId?: number
@@ -60,10 +60,15 @@ export async function createProviderLog(
   return await Transaction.call<ProviderLog>(async (trx) => {
     const cost =
       costInMillicents ??
-      Math.floor(
-        estimateCost({ provider: providerType, model, usage }) *
-          TO_MILLICENTS_FACTOR,
-      )
+      (providerType && model && usage
+        ? Math.floor(
+            estimateCost({
+              provider: providerType!,
+              model: model!,
+              usage: usage!,
+            }) * TO_MILLICENTS_FACTOR,
+          )
+        : undefined)
     const inserts = await trx
       .insert(providerLogs)
       .values({
@@ -78,7 +83,11 @@ export async function createProviderLog(
         responseText,
         responseObject,
         toolCalls,
-        tokens: isNaN(usage.totalTokens) ? 0 : (usage.totalTokens ?? 0),
+        tokens: usage
+          ? isNaN(usage.totalTokens)
+            ? 0
+            : (usage.totalTokens ?? 0)
+          : undefined,
         costInMillicents: cost,
         duration,
         source,
@@ -88,8 +97,7 @@ export async function createProviderLog(
       .returning()
 
     const log = inserts[0]! as ProviderLog
-    await touchProviderApiKey(providerId, trx)
-
+    if (providerId) await touchProviderApiKey(providerId, trx)
     if (apiKeyId) await touchApiKey(apiKeyId, trx)
 
     publisher.publishLater({

@@ -1,12 +1,13 @@
-import ROUTES from '$/common/routes'
 import { Hono } from 'hono'
 
 import { getHandler } from './handlers/get'
 import { runHandler } from './handlers/run'
+import { logsRouterV1 } from './logs'
 
 const router = new Hono()
 
-router.get(ROUTES.Api.V1.Documents.Get, ...getHandler)
-router.post(ROUTES.Api.V1.Documents.Run, ...runHandler)
+router.get('/:documentPath{.+}', ...getHandler)
+router.post('/run', ...runHandler)
+router.route('/logs', logsRouterV1)
 
 export { router as documentsRouter }

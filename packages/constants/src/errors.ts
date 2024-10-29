@@ -33,7 +33,7 @@ export type RunErrorDetails<C extends RunErrorCodes> =
     : never
 
 export enum ApiErrorCodes {
-  HTTPExeption = 'http_exception',
+  HTTPException = 'http_exception',
   InternalServerError = 'internal_server_error',
 }
 

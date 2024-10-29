@@ -98,10 +98,13 @@ export default async function ConnectedEvaluationLayout({
                 asChild
                 trigger={
                   <Link
-                    href={
-                      ROUTES.evaluations.detail({ uuid: evaluation.uuid })
-                        .editor.root
-                    }
+                    href={`${ROUTES.evaluations.detail({ uuid: evaluation.uuid }).editor.root}?back=${
+                      ROUTES.projects
+                        .detail({ id: Number(params.projectId) })
+                        .commits.detail({ uuid: params.commitUuid })
+                        .documents.detail({ uuid: params.documentUuid })
+                        .evaluations.detail(evaluation.id).root
+                    }`}
                   >
                     <Icon name='externalLink' />
                   </Link>

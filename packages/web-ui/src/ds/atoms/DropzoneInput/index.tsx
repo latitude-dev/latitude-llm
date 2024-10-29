@@ -56,7 +56,7 @@ export function DropzoneInput({
             <div
               className={cn(
                 'cursor-pointer flex min-w-0 border',
-                'rounded-md p-5 gap-x-5 flex items-center justify-center',
+                'rounded-md p-5 gap-x-2 flex items-center justify-center',
                 {
                   'border-border': !isDragging,
                   'border-dashed border-current': isDragging,

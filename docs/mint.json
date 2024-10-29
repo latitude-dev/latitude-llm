@@ -65,7 +65,10 @@
     },
     {
       "group": "Logs",
-      "pages": ["guides/logs/overview"]
+      "pages": [
+        "guides/logs/overview",
+        "guides/logs/upload-logs"
+      ]
     },
     {
       "group": "Datasets",

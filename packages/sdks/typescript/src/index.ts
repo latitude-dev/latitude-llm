@@ -7,7 +7,11 @@ import {
 } from '@latitude-data/core/browser'
 import env from '$sdk/env'
 import { GatewayApiConfig, RouteResolver } from '$sdk/utils'
-import { ApiErrorJsonResponse, LatitudeApiError } from '$sdk/utils/errors'
+import {
+  ApiErrorCodes,
+  ApiErrorJsonResponse,
+  LatitudeApiError,
+} from '$sdk/utils/errors'
 import { handleStream } from '$sdk/utils/handleStream'
 import { makeRequest } from '$sdk/utils/request'
 import { streamRun } from '$sdk/utils/streamRun'
@@ -109,6 +113,45 @@ class Latitude {
     if (args.stream) return streamRun(path, options)
 
     return syncRun(path, options)
+  }
+
+  async log(
+    path: string,
+    messages: Message[],
+    {
+      response,
+      projectId,
+      versionUuid,
+    }: {
+      projectId?: number
+      versionUuid?: string
+      response?: string
+    } = {},
+  ) {
+    projectId = projectId ?? this.options.projectId
+    if (!projectId) {
+      throw new Error('Project ID is required')
+    }
+    versionUuid = versionUuid ?? this.options.versionUuid
+
+    const httpResponse = await makeRequest({
+      method: 'POST',
+      handler: HandlerType.Log,
+      params: { projectId, versionUuid },
+      body: { path, messages, response },
+      options: this.options,
+    })
+
+    if (!httpResponse.ok) {
+      throw new LatitudeApiError({
+        status: httpResponse.status,
+        message: httpResponse.statusText,
+        serverResponse: await httpResponse.text(),
+        errorCode: ApiErrorCodes.HTTPException,
+      })
+    }
+
+    return await httpResponse.json()
   }
 
   async chat(

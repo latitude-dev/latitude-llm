@@ -1,9 +1,8 @@
 import { zValidator } from '@hono/zod-validator'
-import { LogSources } from '@latitude-data/core/browser'
+import { LogSources, messagesSchema } from '@latitude-data/core/browser'
 import { streamToGenerator } from '@latitude-data/core/lib/streamToGenerator'
 import { addMessages } from '@latitude-data/core/services/documentLogs/index'
 import { captureException } from '@sentry/node'
-import { messageSchema } from '$/common/messageSchema'
 import { Factory } from 'hono/factory'
 import { streamSSE } from 'hono/streaming'
 import { z } from 'zod'
@@ -13,7 +12,7 @@ import { chainEventPresenter } from '../../../projects/[projectId]/versions/[ver
 const factory = new Factory()
 
 const schema = z.object({
-  messages: z.array(messageSchema),
+  messages: messagesSchema,
   __internal: z
     .object({
       source: z.nativeEnum(LogSources).optional(),

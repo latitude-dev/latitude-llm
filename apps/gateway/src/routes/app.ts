@@ -1,10 +1,8 @@
-import ROUTES from '$/common/routes'
 import authMiddleware from '$/middlewares/auth'
 import errorHandlerMiddleware from '$/middlewares/errorHandler'
 import rateLimitMiddleware from '$/middlewares/rateLimit'
 import { Hono } from 'hono'
 import { logger } from 'hono/logger'
-import jetPaths from 'jet-paths'
 
 import { chatsRouter as chatsRouterV1 } from './api/v1/conversations/[conversationUuid]'
 import { documentsRouter as documentsRouterV1 } from './api/v1/projects/[projectId]/versions/[versionUuid]/documents'
@@ -26,10 +24,19 @@ app.use(rateLimitMiddleware())
 app.use(authMiddleware())
 
 // Routers
-app.route(jetPaths(ROUTES).Api.V1.Documents.Base, documentsRouterV1)
-app.route(jetPaths(ROUTES).Api.V1.Conversations.Base, chatsRouterV1)
-app.route(jetPaths(ROUTES).Api.V2.Documents.Base, documentsRouterV2)
-app.route(jetPaths(ROUTES).Api.V2.Conversations.Base, chatsRouterV2)
+// v1
+app.route(
+  '/api/v1/projects/:projectId/versions/:versionUuid/documents',
+  documentsRouterV1,
+)
+app.route('/api/v1/conversations', chatsRouterV1)
+
+// v2
+app.route(
+  '/api/v2/projects/:projectId/versions/:versionUuid/documents',
+  documentsRouterV2,
+)
+app.route('/api/v2/conversations', chatsRouterV2)
 
 // Must be the last one!
 app.onError(errorHandlerMiddleware)

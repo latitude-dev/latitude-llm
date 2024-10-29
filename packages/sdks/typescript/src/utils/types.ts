@@ -27,6 +27,12 @@ type RunDocumentBodyParam = {
 type ChatBodyParams = {
   messages: Message[]
 }
+export type LogUrlParams = RunUrlParams
+type LogBodyParams = {
+  path: string
+  messages: Message[]
+  response?: string
+}
 
 export type GetDocumentUrlParams = {
   projectId: number
@@ -38,6 +44,7 @@ export enum HandlerType {
   Chat = 'chat',
   GetDocument = 'get-document',
   RunDocument = 'run-document',
+  Log = 'log',
 }
 
 export type UrlParams<T extends HandlerType> = T extends HandlerType.RunDocument
@@ -46,14 +53,18 @@ export type UrlParams<T extends HandlerType> = T extends HandlerType.RunDocument
     ? GetDocumentUrlParams
     : T extends HandlerType.Chat
       ? ChatUrlParams
-      : never
+      : T extends HandlerType.Log
+        ? LogUrlParams
+        : never
 
 export type BodyParams<T extends HandlerType> =
   T extends HandlerType.RunDocument
     ? RunDocumentBodyParam
     : T extends HandlerType.Chat
       ? ChatBodyParams
-      : never
+      : T extends HandlerType.Log
+        ? LogBodyParams
+        : never
 
 export type StreamChainResponse = {
   conversation: Message[]

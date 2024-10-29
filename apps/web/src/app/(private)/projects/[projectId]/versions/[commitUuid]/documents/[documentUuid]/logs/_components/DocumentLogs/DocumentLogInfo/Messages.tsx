@@ -13,6 +13,7 @@ export function DocumentLogMessages({
 
   const messages = useMemo<Message[]>(() => {
     if (!providerLog) return [] as Message[]
+    if (!providerLog.response) return providerLog.messages
 
     const responseMessage = {
       role: MessageRole.assistant,

@@ -2,6 +2,7 @@ import {
   ChatUrlParams,
   GetDocumentUrlParams,
   HandlerType,
+  LogUrlParams,
   RunUrlParams,
   UrlParams,
 } from '$sdk/utils/types'
@@ -46,6 +47,8 @@ export class RouteResolver {
         return this.conversations().chat(
           (params as ChatUrlParams).conversationUuid,
         )
+      case HandlerType.Log:
+        return this.documents(params as LogUrlParams).log
       default:
         throw new Error(`Unknown handler: ${handler satisfies never}`)
     }
@@ -63,6 +66,7 @@ export class RouteResolver {
     return {
       run: `${base}/run`,
       document: (path: string) => `${base}/${path}`,
+      log: `${base}/logs`,
     }
   }
 

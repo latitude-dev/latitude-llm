@@ -16,7 +16,7 @@ function getErrorMessage({
   message: string
   errorCode: ApiResponseCode
 }) {
-  const httpExeception = ApiErrorCodes.HTTPExeption
+  const httpExeception = ApiErrorCodes.HTTPException
   const internalServerError = ApiErrorCodes.InternalServerError
   const isUnexpectedError =
     errorCode === httpExeception || errorCode === internalServerError

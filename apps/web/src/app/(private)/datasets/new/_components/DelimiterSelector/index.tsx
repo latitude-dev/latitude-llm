@@ -13,16 +13,22 @@ export enum DelimiterEnum {
 }
 
 const DELIMITERS = [
-  { value: DelimiterEnum.Comma, label: 'Comma (ex.: column1,column2,column3)' },
+  {
+    value: DelimiterEnum.Comma,
+    label: 'Comma (e.g.: column1,column2,column3)',
+  },
   {
     value: DelimiterEnum.Semicolon,
-    label: 'Semicolon (ex.: column1;column2;column3)',
+    label: 'Semicolon (e.g.: column1;column2;column3)',
   },
   {
     value: DelimiterEnum.Tab,
-    label: 'Tab (ex.: column1 \\t column2 \\t column3)',
+    label: 'Tab (e.g.: column1 \\t column2 \\t column3)',
   },
-  { value: DelimiterEnum.Space, label: 'Space (ex.: column1 column2 column3)' },
+  {
+    value: DelimiterEnum.Space,
+    label: 'Space (e.g.: column1 column2 column3)',
+  },
   { value: DelimiterEnum.Custom, label: 'Custom' },
 ]
 export const DELIMITER_KEYS = DELIMITERS.map(({ value }) => value)
@@ -32,15 +38,15 @@ export default function DelimiterSelector({
   customDelimiterInputName,
   delimiterErrors,
   customDelimiterErrors,
-  delimiterValue,
+  delimiterDefaultValue,
   customDelimiterValue,
 }: {
   delimiterInputName: string
-  delimiterValue: string | undefined
-  delimiterErrors: string[] | undefined
+  delimiterDefaultValue?: string | undefined
+  delimiterErrors?: string[] | undefined
   customDelimiterInputName: string
-  customDelimiterValue: string
-  customDelimiterErrors: string[] | undefined
+  customDelimiterValue?: string
+  customDelimiterErrors?: string[] | undefined
 }) {
   const inputRef = useRef<HTMLInputElement>(null)
   const [isCustom, setIsCustom] = useState(false)
@@ -60,7 +66,7 @@ export default function DelimiterSelector({
       <Select
         name={delimiterInputName}
         options={DELIMITERS}
-        defaultValue={delimiterValue}
+        defaultValue={delimiterDefaultValue}
         onChange={onSelectChange}
         errors={delimiterErrors}
       />
