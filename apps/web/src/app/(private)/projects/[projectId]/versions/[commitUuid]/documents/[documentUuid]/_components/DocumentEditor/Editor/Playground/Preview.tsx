@@ -54,6 +54,7 @@ export default function Preview({
   const [completed, setCompleted] = useState(true)
   const [error, setError] = useState<Error | undefined>(undefined)
   const containerRef = useRef<HTMLDivElement>(null)
+
   useAutoScroll(containerRef, { startAtBottom: true })
 
   useEffect(() => {
@@ -91,7 +92,8 @@ export default function Preview({
       providerType: provider.provider,
       messages: conversation.messages,
     })
-    setFixedMessages(rule?.messages)
+
+    setFixedMessages(rule?.messages ?? conversation.messages)
     setWarningRule(rule)
   }, [provider, conversation])
 
