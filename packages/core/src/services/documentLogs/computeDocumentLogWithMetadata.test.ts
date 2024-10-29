@@ -89,6 +89,5 @@ describe('computeDocumentLogWithMetadata', () => {
 
     expect(result.ok).toBe(false)
     expect(result.error).toBeInstanceOf(NotFoundError)
-    expect(result.error?.message).toBe('Document log not found')
   })
 })

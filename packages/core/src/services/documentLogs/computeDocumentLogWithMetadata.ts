@@ -1,12 +1,9 @@
-import { eq } from 'drizzle-orm'
-
 import { DocumentLog } from '../../browser'
 import { database } from '../../client'
 import { findWorkspaceFromDocumentLog } from '../../data-access'
 import { NotFoundError, Result, TypedResult } from '../../lib'
 import { DocumentLogWithMetadataAndError } from '../../repositories'
-import { documentLogs } from '../../schema'
-import { computeDocumentLogsWithMetadataQuery } from './computeDocumentLogsWithMetadata'
+import { DocumentLogsWithMetadataAndErrorsRepository } from '../../repositories/documentLogsWithMetadataAndErrorsRepository'
 
 export async function computeDocumentLogWithMetadata(
   documentLog: DocumentLog,
@@ -15,22 +12,10 @@ export async function computeDocumentLogWithMetadata(
   const workspace = await findWorkspaceFromDocumentLog(documentLog, db)
   if (!workspace) return Result.error(new NotFoundError('Workspace not found'))
 
-  const { baseQuery } = computeDocumentLogsWithMetadataQuery(
-    {
-      workspaceId: workspace.id,
-      documentUuid: documentLog.documentUuid,
-      allowAnyDraft: true,
-    },
-    db,
-  )
+  const repo = new DocumentLogsWithMetadataAndErrorsRepository(workspace.id, db)
 
-  const result = await baseQuery
-    .where(eq(documentLogs.id, documentLog.id))
-    .limit(1)
+  const result = await repo.find(documentLog.id)
+  if (result.error) return result
 
-  if (result.length === 0) {
-    return Result.error(new NotFoundError('Document log not found'))
-  }
-
-  return Result.ok(result[0]!)
+  return result
 }

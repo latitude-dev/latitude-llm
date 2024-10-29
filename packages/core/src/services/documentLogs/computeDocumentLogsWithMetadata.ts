@@ -1,31 +1,10 @@
-import {
-  and,
-  desc,
-  eq,
-  getTableColumns,
-  isNotNull,
-  or,
-  sql,
-  sum,
-} from 'drizzle-orm'
+import { and, desc, eq, isNotNull, or, sql } from 'drizzle-orm'
 
 import { Commit } from '../../browser'
 import { database } from '../../client'
 import { calculateOffset } from '../../lib/pagination/calculateOffset'
-import { DocumentLogsWithErrorsRepository } from '../../repositories'
-import {
-  commits,
-  documentLogs,
-  projects,
-  providerLogs,
-  workspaces,
-} from '../../schema'
-
-function getRepositoryScopes(workspaceId: number, db = database) {
-  const scope = new DocumentLogsWithErrorsRepository(workspaceId, db).scope
-
-  return { scope }
-}
+import { DocumentLogsWithMetadataAndErrorsRepository } from '../../repositories/documentLogsWithMetadataAndErrorsRepository'
+import { commits, documentLogs, projects, workspaces } from '../../schema'
 
 function getCommitFilter(draft?: Commit) {
   return draft
@@ -71,9 +50,9 @@ export function computeDocumentLogsWithMetadataQuery(
   },
   db = database,
 ) {
-  const { scope } = getRepositoryScopes(workspaceId, db)
+  const repo = new DocumentLogsWithMetadataAndErrorsRepository(workspaceId, db)
   const offset = calculateOffset(page, pageSize)
-  const filteredSubQuery = scope
+  return repo.scope
     .where(
       getCommonQueryConditions({
         scope: documentLogs,
@@ -85,44 +64,6 @@ export function computeDocumentLogsWithMetadataQuery(
     .orderBy(desc(documentLogs.createdAt))
     .limit(parseInt(pageSize))
     .offset(offset)
-    .as('filteredDocumentLogsSubQuery')
-
-  const aggregatedFieldsSubQuery = db
-    .select({
-      id: filteredSubQuery.id,
-      tokens: sum(providerLogs.tokens).mapWith(Number).as('tokens'),
-      duration: sum(providerLogs.duration).mapWith(Number).as('duration_in_ms'),
-      costInMillicents: sum(providerLogs.costInMillicents)
-        .mapWith(Number)
-        .as('cost_in_millicents'),
-    })
-    .from(filteredSubQuery)
-    .leftJoin(
-      providerLogs,
-      eq(providerLogs.documentLogUuid, filteredSubQuery.uuid),
-    )
-    .groupBy(filteredSubQuery.id)
-    .as('aggregatedFieldsSubQuery')
-
-  return {
-    scope,
-    baseQuery: db
-      .select({
-        ...filteredSubQuery._.selectedFields,
-        commit: getTableColumns(commits),
-        tokens: aggregatedFieldsSubQuery.tokens,
-        duration: aggregatedFieldsSubQuery.duration,
-        costInMillicents: aggregatedFieldsSubQuery.costInMillicents,
-      })
-      .from(documentLogs)
-      .innerJoin(filteredSubQuery, eq(filteredSubQuery.id, documentLogs.id))
-      .innerJoin(commits, eq(commits.id, filteredSubQuery.commitId))
-      .innerJoin(
-        aggregatedFieldsSubQuery,
-        eq(aggregatedFieldsSubQuery.id, filteredSubQuery.id),
-      )
-      .orderBy(desc(documentLogs.createdAt)),
-  }
 }
 
 export async function computeDocumentLogsWithMetadataCount(

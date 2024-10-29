@@ -17,14 +17,13 @@ export default async function DocumentPage({
   const projectId = Number(params.projectId)
   const commitUuid = params.commitUuid
   const commit = await findCommitCached({ projectId, uuid: commitUuid })
-  const { baseQuery } = computeDocumentLogsWithMetadataQuery({
+  const rows = await computeDocumentLogsWithMetadataQuery({
     workspaceId: workspace.id,
     documentUuid: params.documentUuid,
     draft: commit,
     page: searchParams.page as string | undefined,
     pageSize: searchParams.pageSize as string | undefined,
   })
-  const rows = await baseQuery
   return (
     <div className='flex flex-col w-full h-full overflow-x-auto p-6 gap-2 min-w-0'>
       <TableWithHeader
