@@ -19,15 +19,23 @@
     "prettier": "prettier --write \"**/*.{ts,tsx,md}\""
   },
   "type": "module",
-  "files": [
-    "dist"
-  ],
+  "files": ["dist"],
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
   "exports": {
     ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs"
+      "import": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "require": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.cjs"
+      }
     }
+  },
+  "types": {
+    "index.d.ts": "./dist/index.d.ts"
   },
   "dependencies": {
     "@t3-oss/env-core": "^0.10.1",

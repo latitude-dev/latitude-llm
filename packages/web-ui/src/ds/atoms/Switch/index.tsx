@@ -96,9 +96,7 @@ function SwitchInput({
           </Label>
         ) : null}
       </div>
-      {description && (
-        <FormDescription id={formDescriptionId}>{description}</FormDescription>
-      )}
+      {description && <FormDescription>{description}</FormDescription>}
 
       <InlineFormErrorMessage error={error} id={formMessageId} />
     </div>

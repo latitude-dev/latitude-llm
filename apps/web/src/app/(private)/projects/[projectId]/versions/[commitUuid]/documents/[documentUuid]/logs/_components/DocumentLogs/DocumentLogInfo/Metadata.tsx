@@ -24,17 +24,19 @@ function ProviderLogsMetadata({
   providerLogs: ProviderLogDto[]
 }) {
   const { data: providers, isLoading: providersLoading } = useProviderApiKeys()
-  const tokensByModel = useMemo(
-    () =>
+  const tokensByModel = useMemo(() => {
+    return (
       providerLogs?.reduce(
         (acc, log) => {
-          acc[log.model!] = (acc[log.model!] ?? 0) + log.tokens
+          if (!log.model) return acc
+
+          acc[log.model!] = (acc[log.model!] ?? 0) + (log.tokens ?? 0)
           return acc
         },
         {} as Record<string, number>,
-      ) ?? {},
-    [providerLogs],
-  )
+      ) ?? {}
+    )
+  }, [providerLogs])
 
   const costByModel = useMemo(
     () =>
@@ -56,74 +58,91 @@ function ProviderLogsMetadata({
         value={format(documentLog.createdAt, 'PPp')}
       />
       <FinishReasonItem providerLog={providerLog} />
-      <MetadataItemTooltip
-        label='Tokens'
-        loading={providersLoading}
-        trigger={
-          <Text.H5 color='foregroundMuted'>{documentLog.tokens}</Text.H5>
-        }
-        tooltipContent={
-          <div className='flex flex-col justify-between'>
-            {Object.entries(tokensByModel).map(([model, tokens]) => (
-              <div
-                key={model}
-                className='flex flex-row w-full justify-between items-center gap-4'
-              >
-                <Text.H6B color='foregroundMuted'>{model}</Text.H6B>
-                <Text.H6 color='foregroundMuted'>{tokens}</Text.H6>
-              </div>
-            ))}
-            {Object.values(tokensByModel).some((t) => t === 0) && (
-              <div className='pt-4'>
-                <Text.H6 color='foregroundMuted'>
-                  Note: Number of tokens is provided by your LLM Provider. Some
-                  providers may return 0 tokens.
-                </Text.H6>
-              </div>
-            )}
-          </div>
-        }
-      />
-      <MetadataItemTooltip
-        label='Cost'
-        loading={providersLoading}
-        trigger={
-          <Text.H5 color='foregroundMuted'>
-            {formatCostInMillicents(documentLog.costInMillicents ?? 0)}
-          </Text.H5>
-        }
-        tooltipContent={
-          <div className='flex flex-col justify-between'>
-            {Object.entries(costByModel).map(
-              ([providerId, cost_in_millicents]) => (
+      {Object.keys(tokensByModel).length > 0 ? (
+        <MetadataItemTooltip
+          label='Tokens'
+          loading={providersLoading}
+          trigger={
+            <Text.H5 color='foregroundMuted'>
+              {documentLog.tokens ?? '-'}
+            </Text.H5>
+          }
+          tooltipContent={
+            <div className='flex flex-col justify-between'>
+              {Object.entries(tokensByModel).map(([model, tokens]) => (
                 <div
-                  key={providerId}
+                  key={model}
                   className='flex flex-row w-full justify-between items-center gap-4'
                 >
-                  <Text.H6B color='foregroundMuted'>
-                    {providers?.find((p) => p.id === Number(providerId))
-                      ?.name ?? 'Unknown'}
-                  </Text.H6B>
+                  {model && (
+                    <Text.H6B color='foregroundMuted'>{model}</Text.H6B>
+                  )}
+                  {tokens && (
+                    <Text.H6 color='foregroundMuted'>{tokens}</Text.H6>
+                  )}
+                </div>
+              ))}
+              {Object.values(tokensByModel).some((t) => t === 0) && (
+                <div className='pt-4'>
                   <Text.H6 color='foregroundMuted'>
-                    {formatCostInMillicents(cost_in_millicents)}
+                    Note: Number of tokens is provided by your LLM Provider.
+                    Some providers may return 0 tokens.
                   </Text.H6>
                 </div>
-              ),
-            )}
-            <div className='pt-4'>
-              <Text.H6 color='foregroundMuted'>
-                Note: This is just an estimate based on the token usage and your
-                provider's pricing. Actual cost may vary.
-              </Text.H6>
+              )}
             </div>
-          </div>
-        }
-      />
+          }
+        />
+      ) : (
+        <MetadataItem
+          label='Tokens'
+          value={documentLog.tokens ? String(documentLog.tokens) : '-'}
+        />
+      )}
+      {documentLog.costInMillicents ? (
+        <MetadataItemTooltip
+          loading={providersLoading}
+          label='Cost'
+          trigger={
+            <Text.H5 color='foregroundMuted'>
+              {formatCostInMillicents(documentLog.costInMillicents ?? 0)}
+            </Text.H5>
+          }
+          tooltipContent={
+            <div className='flex flex-col justify-between'>
+              {Object.entries(costByModel).map(
+                ([providerId, cost_in_millicents]) => (
+                  <div
+                    key={providerId}
+                    className='flex flex-row w-full justify-between items-center gap-4'
+                  >
+                    <Text.H6B color='foregroundMuted'>
+                      {providers?.find((p) => p.id === Number(providerId))
+                        ?.name ?? 'Unknown'}
+                    </Text.H6B>
+                    <Text.H6 color='foregroundMuted'>
+                      {formatCostInMillicents(cost_in_millicents)}
+                    </Text.H6>
+                  </div>
+                ),
+              )}
+              <div className='pt-4'>
+                <Text.H6 color='foregroundMuted'>
+                  Note: This is just an estimate based on the token usage and
+                  your provider's pricing. Actual cost may vary.
+                </Text.H6>
+              </div>
+            </div>
+          }
+        />
+      ) : (
+        <MetadataItem label='Cost' value='-' />
+      )}
       {(providerLogs?.length ?? 0) > 0 && (
         <MetadataItem
           label='Time until last message'
           value={formatDuration(
-            documentLog.duration - (providerLog.duration ?? 0),
+            (documentLog.duration ?? 0) - (providerLog.duration ?? 0),
           )}
           loading={providersLoading}
         />

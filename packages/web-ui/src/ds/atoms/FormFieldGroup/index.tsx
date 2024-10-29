@@ -34,11 +34,7 @@ export function FormFieldGroup({
       >
         {children}
       </div>
-      {description ? (
-        <FormDescription id={`form-field-group-description-${id}`}>
-          {description}
-        </FormDescription>
-      ) : null}
+      {description ? <FormDescription>{description}</FormDescription> : null}
     </div>
   )
 }

@@ -1,9 +1,9 @@
-import type {
-  AssistantMessage,
-  Message as CompilerMessage,
-  SystemMessage,
-  ToolCall,
-  UserMessage,
+import {
+  type AssistantMessage,
+  type Message as CompilerMessage,
+  type SystemMessage,
+  type ToolCall,
+  type UserMessage,
 } from '@latitude-data/compiler'
 import {
   CoreTool,
@@ -11,6 +11,7 @@ import {
   ObjectStreamPart,
   TextStreamPart,
 } from 'ai'
+import { z } from 'zod'
 
 import { ProviderLog } from './browser'
 import { Config } from './services/ai'
@@ -78,6 +79,7 @@ export enum LogSources {
   API = 'api',
   Playground = 'playground',
   Evaluation = 'evaluation',
+  User = 'user',
 }
 
 export enum ErrorableEntity {
@@ -264,8 +266,8 @@ export type SerializedProviderLog = {
   messages: SerializedConversation
   context: string
   response: string | null
-  config: object
-  duration: number
+  config: object | null
+  duration: number | null
   cost: number
 }
 
@@ -296,3 +298,88 @@ export type SerializedEvaluationResult = Omit<
 }
 
 export const ULTRA_LARGE_PAGE_SIZE = 1000
+export const DELIMITER_VALUES = {
+  comma: ',',
+  semicolon: ';',
+  tab: '\t',
+  space: ' ',
+}
+export const DELIMITERS_KEYS = [
+  'comma',
+  'semicolon',
+  'tab',
+  'space',
+  'custom',
+] as const
+export const MAX_SIZE = 15
+export const MAX_UPLOAD_SIZE_IN_MB = MAX_SIZE * 1024 * 1024
+
+const userContentSchema = z.array(
+  z
+    .object({
+      type: z.literal('text'),
+      text: z.string(),
+    })
+    .or(
+      z.object({
+        type: z.literal('image'),
+        image: z
+          .string()
+          .or(z.instanceof(Uint8Array))
+          .or(z.instanceof(Buffer))
+          .or(z.instanceof(ArrayBuffer))
+          .or(z.instanceof(URL)),
+      }),
+    ),
+)
+
+export const messageSchema = z
+  .object({
+    role: z.literal('system'),
+    content: z.string(),
+  })
+  .or(
+    z.object({
+      role: z.literal('user'),
+      name: z.string().optional(),
+      content: userContentSchema,
+    }),
+  )
+  .or(
+    z.object({
+      role: z.literal('assistant'),
+      content: z.string().or(
+        z.array(
+          z.object({
+            type: z.literal('tool-call'),
+            toolCallId: z.string(),
+            toolName: z.string(),
+            args: z.record(z.any()),
+          }),
+        ),
+      ),
+      toolCalls: z.array(
+        z.object({
+          id: z.string(),
+          name: z.string(),
+          arguments: z.record(z.any()),
+        }),
+      ),
+    }),
+  )
+  .or(
+    z.object({
+      role: z.literal('tool'),
+      content: z.array(
+        z.object({
+          type: z.literal('tool-result'),
+          toolCallId: z.string(),
+          toolName: z.string(),
+          result: z.string(),
+          isError: z.boolean().optional(),
+        }),
+      ),
+    }),
+  )
+
+export const messagesSchema = z.array(z.any(messageSchema))

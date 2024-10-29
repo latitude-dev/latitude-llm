@@ -16,6 +16,7 @@ type ParseCsvOptions = {
   // https://csv.js.org/parse/options/to_line/
   toLine?: number
   fromLine?: number
+  columns?: boolean
 }
 type ParseResult = {
   record: Record<string, string>
@@ -28,7 +29,7 @@ export type CsvParsedData = {
 }
 export async function syncReadCsv(
   file: File | string,
-  { delimiter, toLine, fromLine }: ParseCsvOptions,
+  { delimiter, toLine, fromLine, columns = true }: ParseCsvOptions,
 ) {
   try {
     const data = await getData(file)
@@ -37,7 +38,7 @@ export async function syncReadCsv(
       relax_column_count: true,
       skip_empty_lines: true,
       relax_quotes: true,
-      columns: true,
+      columns,
       trim: true,
       info: true,
     }
@@ -58,7 +59,8 @@ export async function syncReadCsv(
       return Result.ok({ headers: [], rowCount: 0, data: [] })
 
     const firstRecord = records[0]!
-    const headers = firstRecord.info.columns.map((column) => column.name)
+    const headers =
+      firstRecord.info?.columns?.map?.((column) => column.name) ?? []
     return Result.ok({ rowCount: records.length, headers, data: records })
   } catch (e) {
     const error = e as CsvError

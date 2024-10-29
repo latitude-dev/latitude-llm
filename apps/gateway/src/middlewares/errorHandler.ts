@@ -40,8 +40,8 @@ const errorHandlerMiddleware = (err: Error) => {
   if (err instanceof HTTPException) {
     return Response.json(
       {
-        name: ApiErrorCodes.HTTPExeption,
-        errorCode: ApiErrorCodes.HTTPExeption,
+        name: ApiErrorCodes.HTTPException,
+        errorCode: ApiErrorCodes.HTTPException,
         message: err.message,
         details: { cause: err.cause },
       },

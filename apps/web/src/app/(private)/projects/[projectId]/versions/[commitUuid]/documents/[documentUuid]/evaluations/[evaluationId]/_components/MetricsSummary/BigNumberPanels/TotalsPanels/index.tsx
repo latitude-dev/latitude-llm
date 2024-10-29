@@ -27,7 +27,6 @@ export default function TotalsPanels({
     {
       revalidateIfStale: false,
       revalidateOnFocus: false,
-      revalidateOnMount: false,
     },
   )
   const onStatusChange = useDebouncedCallback(

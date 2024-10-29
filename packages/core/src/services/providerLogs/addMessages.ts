@@ -38,6 +38,21 @@ export async function addMessages({
   messages: Message[]
   source: LogSources
 }) {
+  if (!providerLog.providerId) {
+    return Result.error(
+      new NotFoundError(
+        `Cannot add messages to a conversation that has no associated provider`,
+      ),
+    )
+  }
+  if (!providerLog.config) {
+    return Result.error(
+      new NotFoundError(
+        `Cannot add messages to a conversation that has no associated configuration`,
+      ),
+    )
+  }
+
   const provider = await unsafelyFindProviderApiKey(providerLog.providerId)
   if (!provider) {
     return Result.error(
@@ -78,7 +93,7 @@ export async function addMessages({
       iterate({
         workspace,
         source,
-        config: providerLog.config,
+        config: providerLog.config!,
         provider,
         controller,
         documentLogUuid: providerLog.documentLogUuid!,

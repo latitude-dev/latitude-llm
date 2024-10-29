@@ -29,10 +29,6 @@ export class ProviderLogsRepository extends Repository<ProviderLog> {
 
   async findByDocumentUuid(documentUuid: string, opts: QueryOptions = {}) {
     const query = this.scope
-      .innerJoin(
-        documentLogs,
-        eq(documentLogs.uuid, providerLogs.documentLogUuid),
-      )
       .where(eq(documentLogs.documentUuid, documentUuid))
       .orderBy(asc(providerLogs.generatedAt))
 

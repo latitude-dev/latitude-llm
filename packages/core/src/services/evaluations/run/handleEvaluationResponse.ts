@@ -82,7 +82,7 @@ export async function handleEvaluationResponse({
     if (!response.object) {
       error = new ChainError({
         code: RunErrorCodes.EvaluationRunResponseJsonFormatError,
-        message: `Provider with model [${providerLog.config.model}] did not return a valid JSON object`,
+        message: `Provider with model [${providerLog?.config?.model ?? 'unknown'}] did not return a valid JSON object`,
       })
     } else {
       result = response.object

@@ -35,7 +35,10 @@ function ProviderLogItems({
         value={format(evaluationResult.createdAt, 'PPp')}
       />
       <FinishReasonItem providerLog={providerLog} />
-      <MetadataItem label='Tokens' value={providerLog.tokens.toString()} />
+      <MetadataItem
+        label='Tokens'
+        value={providerLog?.tokens?.toString() ?? '-'}
+      />
       <MetadataItem label='Model' value={providerLog.model ?? 'Unknown'} />
       <MetadataItem label='Provider' value={providerName} />
       <MetadataItemTooltip

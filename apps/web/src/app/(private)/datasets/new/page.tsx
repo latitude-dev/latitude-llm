@@ -55,7 +55,6 @@ export default function NewDataset() {
             placeholder='Amazing dataset'
           />
           <DelimiterSelector
-            delimiterValue={undefined}
             delimiterInputName='csvDelimiter'
             delimiterErrors={errors?.csvDelimiter}
             customDelimiterInputName='csvCustomDelimiter'

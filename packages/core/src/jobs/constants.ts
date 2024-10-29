@@ -19,6 +19,7 @@ export enum Jobs {
   runEvaluationJob = 'runEvaluationJob',
   publishToAnalyticsJob = 'publishToAnalyticsJob',
   runLiveEvaluationJob = 'runLiveEvaluationJob',
+  uploadDocumentLogsJob = 'uploadDocumentLogsJob',
 }
 
 export const QUEUES = {
@@ -31,6 +32,8 @@ export const QUEUES = {
       'runDocumentInBatchJob',
       'runDocumentJob',
       'runEvaluationJob',
+      'uploadDocumentLogsJob',
+      'createDocumentLogJob',
     ],
   },
   [Queues.eventsQueue]: {

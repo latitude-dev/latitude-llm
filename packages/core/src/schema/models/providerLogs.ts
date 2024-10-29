@@ -23,6 +23,7 @@ export const logSourcesEnum = latitudeSchema.enum('log_source', [
   LogSources.Playground,
   LogSources.API,
   LogSources.Evaluation,
+  LogSources.User,
 ])
 
 export const providerLogs = latitudeSchema.table(
@@ -32,22 +33,23 @@ export const providerLogs = latitudeSchema.table(
     workspaceId: bigint('workspace_id', { mode: 'number' }),
     uuid: uuid('uuid').notNull().unique(),
     documentLogUuid: uuid('document_log_uuid'),
-    providerId: bigint('provider_id', { mode: 'number' })
-      .notNull()
-      .references(() => providerApiKeys.id, {
+    providerId: bigint('provider_id', { mode: 'number' }).references(
+      () => providerApiKeys.id,
+      {
         onDelete: 'restrict',
         onUpdate: 'cascade',
-      }),
+      },
+    ),
     model: varchar('model'),
-    finishReason: varchar('finish_reason').notNull().default('stop'),
-    config: json('config').$type<PartialConfig>().notNull(),
+    finishReason: varchar('finish_reason').default('stop'),
+    config: json('config').$type<PartialConfig>(),
     messages: json('messages').$type<Message[]>().notNull(),
     responseObject: jsonb('response_object').$type<unknown>(),
     responseText: text('response_text').$type<string>(),
     toolCalls: json('tool_calls').$type<ToolCall[]>().notNull().default([]),
-    tokens: bigint('tokens', { mode: 'number' }).notNull(),
+    tokens: bigint('tokens', { mode: 'number' }),
     costInMillicents: integer('cost_in_millicents').notNull().default(0),
-    duration: bigint('duration', { mode: 'number' }).notNull(), // in milliseconds!
+    duration: bigint('duration', { mode: 'number' }), // in milliseconds!
     source: logSourcesEnum('source').notNull(),
     apiKeyId: bigint('apiKeyId', { mode: 'number' }).references(
       () => apiKeys.id,
@@ -56,7 +58,7 @@ export const providerLogs = latitudeSchema.table(
         onUpdate: 'cascade',
       },
     ),
-    generatedAt: timestamp('generated_at', { mode: 'date' }).notNull(),
+    generatedAt: timestamp('generated_at', { mode: 'date' }),
     ...timestamps(),
   },
   (table) => ({

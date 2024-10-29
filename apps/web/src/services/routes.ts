@@ -134,6 +134,7 @@ export const ROUTES = {
                     },
                     [DocumentRoutes.logs]: {
                       root: `${root}/${DocumentRoutes.logs}`,
+                      upload: `${root}/${DocumentRoutes.logs}/upload`,
                     },
                   }
                 },

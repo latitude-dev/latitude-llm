@@ -120,7 +120,7 @@ export async function createDocumentLog({
 
   const duration =
     Math.floor(Math.random() * 100) +
-    providerLogs.reduce((acc, log) => acc + log.duration, 0)
+    providerLogs.reduce((acc, log) => acc + (log?.duration ?? 0), 0)
 
   const documentLog = await ogCreateDocumentLog({
     commit,

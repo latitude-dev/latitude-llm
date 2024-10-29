@@ -28,7 +28,7 @@ export const documentLogs = latitudeSchema.table(
     contentHash: text('content_hash').notNull(),
     parameters: jsonb('parameters').$type<Record<string, unknown>>().notNull(),
     customIdentifier: text('custom_identifier'),
-    duration: bigint('duration', { mode: 'number' }).notNull(),
+    duration: bigint('duration', { mode: 'number' }),
     source: logSourcesEnum('source'),
     ...timestamps(),
   },

@@ -125,7 +125,53 @@ onError: (error) => {
 ```
 **IMPORTANT**: If you don't provide `onError` callback `await sdk.run` will throw an error.
 
-## More examples
+## Pushing a log to Latitude
+
+You can push a log to Latitude in order to evaluate it, using the `log` method:
+
+```typescript
+const sdk = new Latitude(process.env.LATITUDE_API_KEY, {
+  projectId: 1,
+})
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+})
+
+const messages = [
+  {
+    role: 'user' as MessageRole.user,
+    content: [
+      {
+        type: 'text' as ContentType.text,
+        text: 'Please tell me a joke about doctors',
+      },
+    ],
+  },
+]
+const chatCompletion = await openai.chat.completions.create({
+  messages,
+  model: 'gpt-4o-mini',
+})
+
+// Push the log to the live version of our prompt called 'joker'
+sdk.log('joker', messages, {
+  response: chatCompletion.choices[0].message.content,
+})
+```
+
+<Note>
+  Logs follow OpenAI's
+  [format](https://platform.openai.com/docs/guides/text-generation/building-prompts).
+  If you're using a different method to run your prompts, you'll need to format
+  your logs accordingly.
+</Note>
+
+<Note>
+  If you include the assistant response in the optional `response` parameter,
+  make sure to not include it in the log so it isn't included twice.
+</Note>
+
+## Common examples
 
 ### Executing tool calls
 
