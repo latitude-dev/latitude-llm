@@ -38,4 +38,8 @@ export const EventHandlers: IEventsHandlers = {
   chatMessageRequested: [],
   batchEvaluationRunRequested: [],
   runDocumentInBatchRequested: [],
+  copilotRefinerGenerated: [],
+  copilotRefinerApplied: [],
+  copilotSuggestionGenerated: [],
+  copilotSuggestionApplied: [],
 }

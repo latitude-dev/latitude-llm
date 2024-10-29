@@ -28,20 +28,23 @@ export function GenerateSuggestion({
 }) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
-
   const [suggestion, setSuggestion] = useState<string>()
   const [isLoading, setIsLoading] = useState(true)
-
-  const { execute, error } = useLatitudeAction(refinePromptAction, {
-    onSuccess: ({ data }) => {
-      setIsLoading(false)
-      setSuggestion(data)
+  const { execute: refinePrompt, error } = useLatitudeAction(
+    refinePromptAction,
+    {
+      onSuccess: ({ data }) => {
+        setIsLoading(false)
+        setSuggestion(data)
+      },
+      onError: () => {
+        setIsLoading(false)
+      },
     },
-    onError: () => setIsLoading(false),
-  })
+  )
 
   useEffect(() => {
-    execute({
+    refinePrompt({
       projectId: project.id,
       commitUuid: commit.uuid,
       documentUuid: documentVersion.documentUuid,

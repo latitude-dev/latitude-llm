@@ -49,6 +49,10 @@ export type Events =
   | 'chatMessageRequested'
   | 'batchEvaluationRunRequested'
   | 'runDocumentInBatchRequested'
+  | 'copilotRefinerGenerated'
+  | 'copilotRefinerApplied'
+  | 'copilotSuggestionGenerated'
+  | 'copilotSuggestionApplied'
 
 export type LatitudeEventGeneric<
   U extends Events,
@@ -322,6 +326,49 @@ export type RunDocumentInBatchRequestedEvent = LatitudeEventGeneric<
   }
 >
 
+export type CopilotRefinerGenerated = LatitudeEventGeneric<
+  'copilotRefinerGenerated',
+  {
+    userEmail: string
+    workspaceId: number
+    projectId: number
+    commitUuid: string
+    documentUuid: string
+    evaluationId: number
+  }
+>
+export type CopilotRefinerApplied = LatitudeEventGeneric<
+  'copilotRefinerApplied',
+  {
+    userEmail: string
+    workspaceId: number
+    projectId: number
+    commitUuid: string
+    documentUuid: string
+  }
+>
+
+export type CopilotSuggestionGenerated = LatitudeEventGeneric<
+  'copilotSuggestionGenerated',
+  {
+    userEmail: string
+    workspaceId: number
+    projectId: number
+    commitUuid: string
+    documentUuid: string
+  }
+>
+export type CopilotSuggestionApplied = LatitudeEventGeneric<
+  'copilotSuggestionApplied',
+  {
+    userEmail: string
+    workspaceId: number
+    projectId: number
+    commitUuid: string
+    documentUuid: string
+  }
+>
+
 export type LatitudeEvent =
   | MembershipCreatedEvent
   | UserCreatedEvent
@@ -349,6 +396,10 @@ export type LatitudeEvent =
   | ChatMessageRequestedEvent
   | BatchEvaluationRunRequestedEvent
   | RunDocumentInBatchRequestedEvent
+  | CopilotRefinerGenerated
+  | CopilotRefinerApplied
+  | CopilotSuggestionGenerated
+  | CopilotSuggestionApplied
 
 export interface IEventsHandlers {
   magicLinkTokenCreated: EventHandler<MagicLinkTokenCreated>[]
@@ -377,4 +428,8 @@ export interface IEventsHandlers {
   chatMessageRequested: EventHandler<ChatMessageRequestedEvent>[]
   batchEvaluationRunRequested: EventHandler<BatchEvaluationRunRequestedEvent>[]
   runDocumentInBatchRequested: EventHandler<RunDocumentInBatchRequestedEvent>[]
+  copilotRefinerGenerated: EventHandler<CopilotRefinerGenerated>[]
+  copilotRefinerApplied: EventHandler<CopilotRefinerApplied>[]
+  copilotSuggestionGenerated: EventHandler<CopilotSuggestionGenerated>[]
+  copilotSuggestionApplied: EventHandler<CopilotSuggestionApplied>[]
 }

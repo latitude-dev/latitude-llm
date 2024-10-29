@@ -1,5 +1,6 @@
 'use server'
 
+import { publisher } from '@latitude-data/core/events/publisher'
 import { BadRequestError } from '@latitude-data/core/lib/errors'
 import {
   DocumentVersionsRepository,
@@ -85,5 +86,18 @@ export const refinePromptAction = authProcedure
     })
 
     if (!result) throw new Error('Failed to refine prompt')
+
+    publisher.publishLater({
+      type: 'copilotRefinerGenerated',
+      data: {
+        userEmail: ctx.user.email,
+        workspaceId: ctx.workspace.id,
+        projectId,
+        commitUuid,
+        documentUuid: document.documentUuid,
+        evaluationId: evaluation.id,
+      },
+    })
+
     return result.response.text
   })
