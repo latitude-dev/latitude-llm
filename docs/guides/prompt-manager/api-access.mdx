@@ -191,7 +191,7 @@ The response contains the document details along with its configuration.
 
 **Response Body:**
 
-````json
+```json
 {
   "id": "document-id",
   "name": "Document Name",
@@ -226,7 +226,7 @@ The API uses standard HTTP status codes. In case of an error, the response body 
     "message": "Error description"
   }
 }
-````
+```
 
 3. #### Get a Document
 
@@ -284,5 +284,31 @@ curl -X GET "https://gateway.latitude.so/api/v2/projects/123/versions/live/docum
     "provider": "Provider name",
     "model": "Model name"
   }
+}
+```
+
+#### 4. Evaluate a Conversation
+
+Evaluate a conversation using configured evaluations.
+
+**Endpoint:** `POST /conversations/{conversationUuid}/evaluate`
+
+**Path Parameters:**
+
+- `conversationUuid`: UUID of the conversation to evaluate
+
+**Request Body:**
+
+```json
+{
+  "evaluationUuids": ["evaluation-uuid-1", "evaluation-uuid-2"] // optional, defaults to all evaluations connected to the conversation prompt
+}
+```
+
+**Response:**
+
+```json
+{
+  "evaluations": ["evaluation-uuid-1", "evaluation-uuid-2"] // array of evaluation UUIDs that will be run
 }
 ```

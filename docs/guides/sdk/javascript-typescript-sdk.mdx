@@ -171,7 +171,51 @@ sdk.log('joker', messages, {
   make sure to not include it in the log so it isn't included twice.
 </Note>
 
-## Common examples
+## Evaluating Conversations
+
+To evaluate a conversation using configured evaluators, use the `eval` method:
+
+```typescript
+import { Latitude } from '@latitude-data/sdk'
+
+// Initialize SDK
+const sdk = new Latitude(process.env.LATITUDE_API_KEY, {
+  projectId: 1,
+})
+
+// 1. Run the document
+const { uuid } = await sdk.run('joker', {
+  parameters: {
+    topic: 'police',
+  },
+  stream: false,
+})
+
+// 2. Chat with the model
+await sdk.chat(uuid, [
+  {
+    role: 'user',
+    content: [
+      {
+        type: 'text',
+        text: 'Tell me another joke about doctors',
+      },
+    ],
+  },
+])
+
+// 3. Evaluate the full conversation
+await sdk.eval(uuid, {
+  evaluationUuids: ['evaluator-uuid-1', 'evaluator-uuid-2'], // Optional: You can specify evaluators by their UUIDs. It defaults to running all evaluators connected to the prompt.
+})
+```
+
+This allows you to evaluate a conversation at any point in time. Specially
+helpful when building agents that have multiple interactions with users, and you
+intend to evaluate the agent's performance after the interaction is fully
+completed, or at particular points in time.
+
+## Common Examples
 
 ### Executing tool calls
 

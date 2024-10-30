@@ -4,9 +4,9 @@ import rateLimitMiddleware from '$/middlewares/rateLimit'
 import { Hono } from 'hono'
 import { logger } from 'hono/logger'
 
-import { chatsRouter as chatsRouterV1 } from './api/v1/conversations/[conversationUuid]'
+import { chatsRouter as conversationsRouterV1 } from './api/v1/conversations/[conversationUuid]'
 import { documentsRouter as documentsRouterV1 } from './api/v1/projects/[projectId]/versions/[versionUuid]/documents'
-import { chatsRouter as chatsRouterV2 } from './api/v2/conversations/[conversationUuid]'
+import { conversationsRouter as conversationsRouterV2 } from './api/v2/conversations/[conversationUuid]'
 import { documentsRouter as documentsRouterV2 } from './api/v2/projects/[projectId]/versions/[versionUuid]/documents'
 
 const app = new Hono()
@@ -29,14 +29,14 @@ app.route(
   '/api/v1/projects/:projectId/versions/:versionUuid/documents',
   documentsRouterV1,
 )
-app.route('/api/v1/conversations', chatsRouterV1)
+app.route('/api/v1/conversations', conversationsRouterV1)
 
 // v2
 app.route(
   '/api/v2/projects/:projectId/versions/:versionUuid/documents',
   documentsRouterV2,
 )
-app.route('/api/v2/conversations', chatsRouterV2)
+app.route('/api/v2/conversations', conversationsRouterV2)
 
 // Must be the last one!
 app.onError(errorHandlerMiddleware)

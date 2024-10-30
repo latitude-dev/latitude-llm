@@ -22,6 +22,7 @@ import { makeRequest } from '$sdk/utils/request'
 import { streamRun } from '$sdk/utils/streamRun'
 import { syncRun } from '$sdk/utils/syncRun'
 import {
+  EvalOptions,
   HandlerType,
   LogSources,
   RunOptions,
@@ -191,6 +192,29 @@ class Latitude {
       onFinished,
       onError,
     })
+  }
+
+  async eval(uuid: string, options: EvalOptions = {}) {
+    const response = await makeRequest({
+      method: 'POST',
+      handler: HandlerType.Evaluate,
+      params: { conversationUuid: uuid },
+      body: { evaluationUuids: options.evaluationUuids },
+      options: this.options,
+    })
+
+    if (!response.ok) {
+      const json = (await response.json()) as ApiErrorJsonResponse
+      throw new LatitudeApiError({
+        status: response.status,
+        serverResponse: JSON.stringify(json),
+        message: json.message,
+        errorCode: json.errorCode,
+        dbErrorRef: json.dbErrorRef,
+      })
+    }
+
+    return (await response.json()) as { uuid: string }
   }
 }
 

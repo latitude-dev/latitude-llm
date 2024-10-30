@@ -45,6 +45,7 @@ export enum HandlerType {
   GetDocument = 'get-document',
   RunDocument = 'run-document',
   Log = 'log',
+  Evaluate = 'evaluate',
 }
 
 export type UrlParams<T extends HandlerType> = T extends HandlerType.RunDocument
@@ -55,7 +56,9 @@ export type UrlParams<T extends HandlerType> = T extends HandlerType.RunDocument
       ? ChatUrlParams
       : T extends HandlerType.Log
         ? LogUrlParams
-        : never
+        : T extends HandlerType.Evaluate
+          ? { conversationUuid: string }
+          : never
 
 export type BodyParams<T extends HandlerType> =
   T extends HandlerType.RunDocument
@@ -64,7 +67,9 @@ export type BodyParams<T extends HandlerType> =
       ? ChatBodyParams
       : T extends HandlerType.Log
         ? LogBodyParams
-        : never
+        : T extends HandlerType.Evaluate
+          ? { evaluationUuids?: string[] }
+          : never
 
 export type StreamChainResponse = {
   conversation: Message[]
@@ -113,4 +118,8 @@ export type SDKOptions = {
   routeResolver: RouteResolver
   versionUuid?: string
   projectId?: number
+}
+
+export interface EvalOptions {
+  evaluationUuids?: string[]
 }

@@ -64,7 +64,7 @@ export async function syncRun(
     })
 
     onError?.(error)
-    return !onError ? Promise.reject(error) : Promise.resolve()
+    return !onError ? Promise.reject(error) : Promise.resolve(undefined)
   }
 
   const json = (await response.json()) as RunSyncAPIResponse
