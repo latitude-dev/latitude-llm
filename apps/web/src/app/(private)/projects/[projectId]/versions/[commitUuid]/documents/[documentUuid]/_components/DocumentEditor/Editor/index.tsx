@@ -5,6 +5,7 @@ import React, {
   createContext,
   Suspense,
   useCallback,
+  useEffect,
   useMemo,
   useState,
 } from 'react'
@@ -159,12 +160,6 @@ export default function DocumentEditor({
     { trailing: true },
   )
 
-  const onChange = useCallback((value: string) => {
-    setIsSaved(false)
-    setValue(value)
-    debouncedSave(value)
-  }, [])
-
   const readDocumentContent = useCallback(
     async (path: string) => {
       return _documents.find((d) => d.path === path)?.content
@@ -204,12 +199,31 @@ export default function DocumentEditor({
     [providers],
   )
 
-  const { metadata } = useMetadata({
-    prompt: value,
-    fullPath: document.path,
-    referenceFn: readDocument,
-    configSchema,
-  })
+  const { metadata, runReadMetadata } = useMetadata()
+
+  useEffect(() => {
+    runReadMetadata({
+      prompt: value,
+      fullPath: document.path,
+      referenceFn: readDocument,
+      configSchema,
+    })
+  }, [])
+
+  const onChange = useCallback(
+    (newValue: string) => {
+      setIsSaved(false)
+      setValue(newValue)
+      debouncedSave(newValue)
+      runReadMetadata({
+        prompt: newValue,
+        fullPath: document.path,
+        referenceFn: readDocument,
+        configSchema,
+      })
+    },
+    [runReadMetadata, readDocument, configSchema, document.path],
+  )
 
   const {
     execute: executeRequestSuggestionAction,

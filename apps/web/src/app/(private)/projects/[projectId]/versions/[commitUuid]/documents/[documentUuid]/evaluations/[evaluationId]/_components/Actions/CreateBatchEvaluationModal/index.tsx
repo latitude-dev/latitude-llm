@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, useEffect } from 'react'
 
 import { DocumentVersion, EvaluationDto } from '@latitude-data/core/browser'
 import { Button, CloseTrigger, Modal } from '@latitude-data/web-ui'
@@ -32,10 +32,14 @@ export default function CreateBatchEvaluationModal({
     },
   })
 
-  const { metadata } = useMetadata({
-    prompt: document.content ?? '',
-    fullPath: document.path,
-  })
+  const { metadata, runReadMetadata } = useMetadata()
+
+  useEffect(() => {
+    runReadMetadata({
+      prompt: document.content ?? '',
+      fullPath: document.path,
+    })
+  }, [])
 
   const form = useRunBatchForm({ documentMetadata: metadata })
   const onRunBatch = useCallback(() => {
