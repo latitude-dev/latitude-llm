@@ -1,6 +1,9 @@
 import { chatHandler } from '$/routes/api/v1/conversations/[conversationUuid]/handlers/chat'
 import { Hono } from 'hono'
 
-export const chatsRouter = new Hono()
+import { evaluateHandler } from './handlers/evaluate'
 
-chatsRouter.post('/:conversationUuid/chat', ...chatHandler)
+export const conversationsRouter = new Hono()
+
+conversationsRouter.post('/:conversationUuid/chat', ...chatHandler)
+conversationsRouter.post('/:conversationUuid/evaluate', ...evaluateHandler)

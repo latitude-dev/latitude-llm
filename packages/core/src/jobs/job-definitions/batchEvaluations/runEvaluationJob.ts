@@ -39,7 +39,7 @@ export type RunEvaluationJobData = {
   documentUuid: string
   documentLogUuid: string
   evaluationId: number
-  batchId: string
+  batchId?: string
 }
 
 async function isSuccessful(run: Awaited<ReturnType<typeof runEvaluation>>) {
@@ -55,7 +55,10 @@ export async function runEvaluationJob(job: Job<RunEvaluationJobData>) {
   const { workspaceId, batchId, documentUuid, documentLogUuid, evaluationId } =
     job.data
   const websockets = await WebsocketClient.getSocket()
-  const progressTracker = new ProgressTracker(await queues(), batchId)
+  let progressTracker: ProgressTracker | undefined
+  if (batchId) {
+    progressTracker = new ProgressTracker(await queues(), batchId)
+  }
   const { documentLog, evaluation } = await fetchData({
     workspaceId,
     evaluationId,
@@ -71,22 +74,24 @@ export async function runEvaluationJob(job: Job<RunEvaluationJobData>) {
   const { ok, error } = await isSuccessful(run)
 
   if (ok) {
-    await progressTracker.incrementCompleted()
+    await progressTracker?.incrementCompleted()
   } else {
-    await progressTracker.incrementErrors()
+    await progressTracker?.incrementErrors()
   }
 
-  const progress = await progressTracker.getProgress()
+  const progress = await progressTracker?.getProgress()
 
-  websockets.emit('evaluationStatus', {
-    workspaceId,
-    data: {
-      batchId,
-      evaluationId,
-      documentUuid,
-      ...progress,
-    },
-  })
+  if (batchId && progress) {
+    websockets.emit('evaluationStatus', {
+      workspaceId,
+      data: {
+        batchId,
+        evaluationId,
+        documentUuid,
+        ...progress,
+      },
+    })
+  }
 
   const unknownError = getUnknownError(error)
 

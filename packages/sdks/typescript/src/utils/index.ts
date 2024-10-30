@@ -49,6 +49,10 @@ export class RouteResolver {
         )
       case HandlerType.Log:
         return this.documents(params as LogUrlParams).log
+      case HandlerType.Evaluate:
+        return this.conversations().evaluate(
+          (params as ChatUrlParams).conversationUuid,
+        )
       default:
         throw new Error(`Unknown handler: ${handler satisfies never}`)
     }
@@ -58,6 +62,7 @@ export class RouteResolver {
     const base = `${this.baseUrl}/conversations`
     return {
       chat: (uuid: string) => `${base}/${uuid}/chat`,
+      evaluate: (uuid: string) => `${base}/${uuid}/evaluate`,
     }
   }
 
