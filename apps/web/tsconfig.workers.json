@@ -1,6 +1,9 @@
 {
   "extends": "@latitude-data/typescript-config/base.json",
   "compilerOptions": {
+    "outDir": "./public/workers",
+    "module": "es2022",
+    "noEmit": false,
     "plugins": [
       {
         "name": "next"
@@ -8,19 +11,21 @@
     ],
     "moduleResolution": "Bundler",
     "jsx": "preserve",
-    "typeRoots": ["./node_modules/@types"],
+    "typeRoots": [
+      "./node_modules/@types"
+    ],
     "baseUrl": ".",
     "paths": {
-      "$/*": ["./src/*"]
+      "$/*": [
+        "./src/*"
+      ]
     }
   },
   "include": [
-    "./src/**/*.test.ts",
-    "./src/**/*.ts",
-    "./src/**/*.tsx",
-    "next-env.d.ts",
-    "next.config.js",
-    ".next/types/**/*.ts"
+    "./src/workers/**/*.ts"
   ],
-  "exclude": ["node_modules", "./src/workers"]
+  "exclude": [
+    "node_modules",
+    ""
+  ]
 }

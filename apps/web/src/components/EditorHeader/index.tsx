@@ -23,6 +23,7 @@ import { envClient } from '$/envClient'
 import { ROUTES } from '$/services/routes'
 import useProviderApiKeys from '$/stores/providerApiKeys'
 import Link from 'next/link'
+import { parse, stringify } from 'yaml'
 
 function useModelsOptions({
   provider,
@@ -70,6 +71,54 @@ function selectModel({
   return undefined
 }
 
+function extractFrontMatter(content: string) {
+  const match = content.match(/(?:\/\*[\s\S]*?\*\/\s*)?---\n([\s\S]*?)\n---/)
+  return match ? match[1] : null
+}
+
+export function updatePromptMetadata(
+  prompt: string,
+  updates: Record<string, any>,
+) {
+  // Check if the prompt has frontmatter
+  if (!prompt.match(/(?:\/\*[\s\S]*?\*\/\s*)?---/)) {
+    // If no frontmatter exists, create one with the updates
+    const newFrontMatter = stringify(updates)
+    return `---\n${newFrontMatter}---\n\n${prompt}`
+  }
+
+  try {
+    const frontMatter = extractFrontMatter(prompt)
+    if (!frontMatter) {
+      // Invalid frontmatter format, create new one
+      const newFrontMatter = stringify(updates)
+      return `---\n${newFrontMatter}---\n\n${prompt.replace(/(?:\/\*[\s\S]*?\*\/\s*)?---\n[\s\S]*?\n---\n/, '')}`
+    }
+
+    // Parse existing frontmatter
+    const parsed = parse(frontMatter) || {}
+
+    // Merge updates with existing frontmatter
+    const updated = {
+      ...parsed,
+      ...updates,
+    }
+
+    // Stringify the updated frontmatter
+    const newFrontMatter = stringify(updated)
+
+    // Replace old frontmatter with new one, preserving any leading comments
+    return prompt.replace(
+      /((?:\/\*[\s\S]*?\*\/\s*)?---\n)[\s\S]*?\n---/,
+      `$1${newFrontMatter}---`,
+    )
+  } catch (error) {
+    // If parsing fails, create new frontmatter
+    const newFrontMatter = stringify(updates)
+    return `---\n${newFrontMatter}---\n\n${prompt.replace(/(?:\/\*[\s\S]*?\*\/\s*)?---\n[\s\S]*?\n---\n/, '')}`
+  }
+}
+
 export default function EditorHeader({
   title,
   metadata,
@@ -79,6 +128,7 @@ export default function EditorHeader({
   providers,
   freeRunsCount,
   showCopilotSetting,
+  prompt,
 }: {
   title: string
   metadata: ConversationMetadata | undefined
@@ -178,8 +228,6 @@ export default function EditorHeader({
 
   const onSelectProvider = useCallback(
     (value: string) => {
-      if (!metadata) return
-
       const provider = providersByName[value]!
       if (!provider) return
 
@@ -187,25 +235,26 @@ export default function EditorHeader({
       const firstModel = findFirstModelForProvider(provider.provider)
       setModel(firstModel)
 
-      const config = metadata.config
-      config.provider = provider.name
-      config.model = firstModel
-      onChangePrompt(metadata.setConfig(config))
+      const updatedPrompt = updatePromptMetadata(prompt, {
+        provider: provider.name,
+        model: firstModel,
+      })
+      onChangePrompt(updatedPrompt)
     },
-    [providersByName, metadata],
+    [providersByName, prompt],
   )
 
   const onModelChange = useCallback(
     (value: string) => {
-      if (!metadata) return
       if (!selectedProvider) return
 
       setModel(value)
-      const config = metadata.config
-      config.model = value
-      onChangePrompt(metadata.setConfig(config))
+      const updatedPrompt = updatePromptMetadata(prompt, {
+        model: value,
+      })
+      onChangePrompt(updatedPrompt)
     },
-    [selectedProvider, metadata],
+    [selectedProvider, prompt],
   )
 
   return (

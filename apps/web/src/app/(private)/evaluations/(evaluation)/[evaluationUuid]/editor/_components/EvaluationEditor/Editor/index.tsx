@@ -3,7 +3,6 @@
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 
 import {
-  promptConfigSchema,
   ProviderApiKey,
   SERIALIZED_DOCUMENT_LOG_FIELDS,
 } from '@latitude-data/core/browser'
@@ -39,19 +38,14 @@ export default function EvaluationEditor({
     fallbackData: providerApiKeys,
   })
   const [value, setValue] = useState(defaultPrompt)
-  const configSchema = useMemo(
-    () => promptConfigSchema({ providers: providers ?? [] }),
-    [providers],
-  )
   const { metadata, runReadMetadata } = useMetadata()
 
   useEffect(() => {
     runReadMetadata({
       prompt: value,
       withParameters: SERIALIZED_DOCUMENT_LOG_FIELDS,
-      configSchema,
     })
-  }, [])
+  }, [providers, runReadMetadata])
 
   const save = useCallback(
     (val: string) => {
@@ -69,10 +63,9 @@ export default function EvaluationEditor({
       runReadMetadata({
         prompt: value,
         withParameters: SERIALIZED_DOCUMENT_LOG_FIELDS,
-        configSchema,
       })
     },
-    [setValue, runReadMetadata],
+    [setValue, runReadMetadata, providers],
   )
 
   if (!evaluation) return null

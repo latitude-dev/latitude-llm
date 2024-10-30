@@ -1,26 +1,35 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
-import { ConversationMetadata, readMetadata } from '@latitude-data/compiler'
+import { ConversationMetadata } from '@latitude-data/compiler'
 import { useDebouncedCallback } from 'use-debounce'
 
-type Props = Parameters<typeof readMetadata>[0]
+import type { ReadMetadataWorkerProps } from '../workers/readMetadata'
 
 export function useMetadata() {
   const [metadata, setMetadata] = useState<ConversationMetadata>()
-  const [isLoading, setIsLoading] = useState(false)
+  const workerRef = useRef<Worker | null>(null)
+
+  useEffect(() => {
+    workerRef.current = new Worker('/workers/readMetadata.js')
+
+    workerRef.current.onmessage = (event: { data: ConversationMetadata }) => {
+      setMetadata(event.data)
+    }
+
+    return () => {
+      workerRef.current?.terminate()
+    }
+  }, [])
 
   const runReadMetadata = useDebouncedCallback(
-    async (props: Props) => {
-      setIsLoading(true)
-      const metadata = await readMetadata(props)
-      setMetadata(metadata)
-      setIsLoading(false)
+    async (props: ReadMetadataWorkerProps) => {
+      workerRef.current?.postMessage(props)
     },
     500,
     { trailing: true },
   )
 
-  return { metadata, runReadMetadata, isLoading }
+  return { metadata, runReadMetadata }
 }
