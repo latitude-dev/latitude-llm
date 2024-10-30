@@ -25,7 +25,8 @@ export async function createLoopsContact({
 
   const client = new LoopsClient(apiKey)
   const data = event.data
-  const response = await client.createContact(data.userEmail, {
+  const userEmail = data.userEmail
+  const response = await client.createContact(userEmail, {
     userId: data.id,
     firstName: data.name,
     workspaceId: data.workspaceId,
@@ -36,7 +37,7 @@ export async function createLoopsContact({
 
   if (!response.success) {
     // This will be capture by Workers Sentry
-    throw new Error(response.message)
+    throw new Error(`For email: ${userEmail}: ${response.message}`)
   }
 
   return Result.ok(response.id)
