@@ -1,69 +1,122 @@
-import { Message, TextContent } from '@latitude-data/compiler'
-import { describe, expect, it } from 'vitest'
+import { Message, MessageRole } from '@latitude-data/compiler'
+import { beforeAll, describe, expect, it } from 'vitest'
 
-import { applyCustomRules } from '.'
+import { PartialConfig } from '../../helpers'
 import { Providers } from '../models'
+import { applyCustomRules, ProviderRules } from './index'
 
 const providerType = Providers.Anthropic
 
-describe('applyAntrhopicRules', () => {
-  it('does not modify the conversation when there are no system messages', () => {
-    const messages = [
-      {
-        role: 'user',
-        content: [{ type: 'text', text: 'Hello' }],
-      },
-      {
-        role: 'assistant',
-        content: 'Hello! How are you?',
-      },
-      {
-        role: 'user',
-        content: [{ type: 'text', text: 'I am good' }],
-      },
-    ] as Message[]
+let config = {} as PartialConfig
+let messages: Message[]
+describe('applyAnthropicRules', () => {
+  describe('with system messages not at the beggining', () => {
+    beforeAll(() => {
+      messages = [
+        {
+          role: 'system',
+          content: 'You are a helpful chatbot',
+        },
+        {
+          role: 'system',
+          content: 'Respond to the user',
+        },
+        {
+          role: 'user',
+          content: [{ type: 'text', text: 'Hello' }],
+        },
+        {
+          role: 'system',
+          content: 'Use a short response',
+        },
+        {
+          role: 'assistant',
+          content: 'Hi! How are you doing today?',
+        },
+        {
+          role: 'system',
+          content: [
+            {
+              type: 'text',
+              text: 'Use a short response',
+            },
+            {
+              type: 'text',
+              text: 'Second a short response',
+            },
+          ],
+        },
+      ] as Message[]
+    })
 
-    const rules = applyCustomRules({ providerType, messages })
+    it('only modifies system messages that are not at the beggining', () => {
+      const rules = applyCustomRules({ providerType, messages, config })
 
-    expect(rules).toBeUndefined()
+      const appliedMessages = rules.messages
+
+      expect(appliedMessages.length).toBe(messages.length)
+      expect(appliedMessages[0]).toEqual(messages[0])
+      expect(appliedMessages[1]).toEqual(messages[1])
+      expect(appliedMessages[2]).toEqual(messages[2])
+      expect(appliedMessages[4]).toEqual({
+        role: MessageRole.assistant,
+        content: [{ type: 'text', text: messages[4]!.content }],
+      })
+
+      expect(appliedMessages[3]).toEqual({
+        role: MessageRole.user,
+        content: [{ type: 'text', text: messages[3]!.content }],
+      })
+
+      expect(appliedMessages[3]).toEqual({
+        role: MessageRole.user,
+        content: [{ type: 'text', text: messages[3]!.content }],
+      })
+
+      expect(appliedMessages[5]).toEqual({
+        role: MessageRole.user,
+        content: [
+          { type: 'text', text: 'Use a short response' },
+          { type: 'text', text: 'Second a short response' },
+        ],
+      })
+    })
+
+    it('generates warning when system messages are not at the beggining', () => {
+      const rules = applyCustomRules({ providerType, messages, config })
+
+      expect(rules.rules).toEqual([
+        {
+          rule: ProviderRules.Anthropic,
+          ruleMessage:
+            'Anthropic only supports system messages at the beggining of the conversation. All other system messages have been converted to user messages.',
+        },
+      ])
+    })
   })
 
-  it('converts any system message to user messages', () => {
-    const messages = [
+  it('Warns when only system messages are present', () => {
+    const theMessages = [
       {
-        role: 'system',
-        content: 'You are a helpful chatbot',
+        role: MessageRole.system,
+        content: [{ type: 'text', text: 'You are a helpful chatbot' }],
       },
       {
-        role: 'user',
-        content: [{ type: 'text', text: 'Hello' }],
-      },
-      {
-        role: 'system',
-        content: 'Respond to the user',
-      },
-      {
-        role: 'assistant',
-        content: 'Hi! How are you doing today?',
+        role: MessageRole.system,
+        content: [{ type: 'text', text: 'Respond to the user' }],
       },
     ] as Message[]
-
-    const rules = applyCustomRules({ providerType, messages })
-
-    expect(rules?.messages.length).toBe(messages.length)
-
-    expect(rules?.messages[0]!.role).toBe('user')
-    expect((rules?.messages[0]!.content[0] as TextContent)?.text).toEqual(
-      messages[0]!.content,
-    )
-
-    expect(rules?.messages[1]).toEqual(messages[1])
-
-    expect(rules?.messages[2]!.role).toBe('user')
-    expect((rules?.messages[2]!.content[0] as TextContent)?.text).toEqual(
-      messages[2]!.content,
-    )
-
-    expect(rules?.messages[3]).toEqual(messages[3])
+    const rules = applyCustomRules({
+      providerType,
+      messages: theMessages,
+      config,
+    })
+    expect(rules.rules).toEqual([
+      {
+        rule: ProviderRules.Anthropic,
+        ruleMessage:
+          'Only system messages are present. You at least need one <user>your message</user> or <assistant>your message</message> in Anthropic.',
+      },
+    ])
   })
 })

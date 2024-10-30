@@ -170,7 +170,7 @@ This is a test document
             { role: 'system', content: 'This is a test document' },
             {
               role: 'assistant',
-              content: 'Fake AI generated text',
+              content: [{ type: 'text', text: 'Fake AI generated text' }],
               toolCalls: [],
             },
           ],
@@ -243,7 +243,7 @@ This is a test document
             messages: [
               {
                 role: 'assistant',
-                content: 'Fake AI generated text',
+                content: [{ type: 'text', text: 'Fake AI generated text' }],
                 toolCalls: [],
               },
             ],

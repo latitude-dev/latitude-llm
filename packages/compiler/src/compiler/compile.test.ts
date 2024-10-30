@@ -1,11 +1,11 @@
+import { getExpectedError } from '$compiler/compiler/test/helpers'
 import { CUSTOM_TAG_END, CUSTOM_TAG_START } from '$compiler/constants'
 import CompileError from '$compiler/error/error'
 import {
   AssistantMessage,
-  ImageContent,
   Message,
   MessageContent,
-  SystemMessage,
+  MessageRole,
   TextContent,
   UserMessage,
 } from '$compiler/types'
@@ -13,19 +13,6 @@ import { describe, expect, it, vi } from 'vitest'
 
 import { render } from '.'
 import { removeCommonIndent } from './utils'
-
-const getExpectedError = async <T>(
-  action: () => Promise<unknown>,
-  errorClass: new () => T,
-): Promise<T> => {
-  try {
-    await action()
-  } catch (err) {
-    expect(err).toBeInstanceOf(errorClass)
-    return err as T
-  }
-  throw new Error('Expected an error to be thrown')
-}
 
 async function getCompiledText(
   prompt: string,
@@ -86,8 +73,15 @@ describe('comments', async () => {
     expect(result.messages.length).toBe(1)
     const message = result.messages[0]!
 
-    const text = message.content
-    expect(text).toBe('anna\nbob\n\ncharlie')
+    expect(message).toEqual({
+      role: MessageRole.system,
+      content: [
+        {
+          type: 'text',
+          text: 'anna\nbob\n\ncharlie',
+        },
+      ],
+    })
   })
 
   it('also allows using tag comments', async () => {
@@ -105,188 +99,12 @@ describe('comments', async () => {
     expect(result.messages.length).toBe(1)
 
     const message = result.messages[0]!
-    expect(message.content).toBe('Test message')
-  })
-})
-
-describe('messages', async () => {
-  it('allows creating system, user, assistant', async () => {
-    const prompt = `
-      <system>system message</system>
-      <user>user message</user>
-      <assistant>assistant message</assistant>
-    `
-    const result = await render({
-      prompt: removeCommonIndent(prompt),
-      parameters: {},
-    })
-
-    expect(result.messages.length).toBe(3)
-    const systemMessage = result.messages[0]!
-    const userMessage = result.messages[1]! as UserMessage
-    const assistantMessage = result.messages[2]! as AssistantMessage
-
-    expect(systemMessage.role).toBe('system')
-    expect(systemMessage.content).toBe('system message')
-
-    expect(userMessage.role).toBe('user')
-    expect((userMessage.content[0]! as TextContent).text).toBe('user message')
-
-    expect(assistantMessage.role).toBe('assistant')
-    expect(assistantMessage.content).toBe('assistant message')
-  })
-
-  it('fails when using an unknown tag', async () => {
-    const prompt = `
-      <foo>message</foo>
-    `
-    const action = () =>
-      render({
-        prompt: removeCommonIndent(prompt),
-        parameters: {},
-      })
-    const error = await getExpectedError(action, CompileError)
-    expect(error.code).toBe('unknown-tag')
-  })
-
-  it('can create messages with the common message tag', async () => {
-    const prompt = `
-      <message role=${CUSTOM_TAG_START}role${CUSTOM_TAG_END}>message</message>
-    `
-    const result1 = await render({
-      prompt: removeCommonIndent(prompt),
-      parameters: {
-        role: 'system',
+    expect(message.content).toEqual([
+      {
+        type: 'text',
+        text: 'Test message',
       },
-    })
-    const result2 = await render({
-      prompt: removeCommonIndent(prompt),
-      parameters: {
-        role: 'user',
-      },
-    })
-
-    expect(result1.messages.length).toBe(1)
-    const message1 = result1.messages[0]!
-    expect(message1.role).toBe('system')
-    expect(message1.content).toBe('message')
-
-    expect(result2.messages.length).toBe(1)
-    const message2 = result2.messages[0]!
-    expect(message2.role).toBe('user')
-    expect((message2.content[0] as TextContent)!.text).toBe('message')
-  })
-
-  it('raises an error when using an invalid message role', async () => {
-    const prompt = `
-      <message role="foo">message</message>
-    `
-    const action = () =>
-      render({
-        prompt: removeCommonIndent(prompt),
-        parameters: {},
-      })
-    const error = await getExpectedError(action, CompileError)
-    expect(error.code).toBe('invalid-message-role')
-  })
-
-  it('throws an error when a message tag is inside another message', async () => {
-    const prompt = `
-      <system>
-        <user>user message</user>
-      </system>
-    `
-    const action = () =>
-      render({
-        prompt: removeCommonIndent(prompt),
-        parameters: {},
-      })
-    const error = await getExpectedError(action, CompileError)
-    expect(error.code).toBe('message-tag-inside-message')
-  })
-
-  it('creates a system message when no message tag is present', async () => {
-    const prompt = `
-      Test message
-      <user>user message</user>
-    `
-    const result = await render({
-      prompt: removeCommonIndent(prompt),
-      parameters: {},
-    })
-
-    expect(result.messages.length).toBe(2)
-    const systemMessage = result.messages[0]! as SystemMessage
-    const userMessage = result.messages[1]! as UserMessage
-
-    expect(systemMessage.role).toBe('system')
-    expect(systemMessage.content).toBe('Test message')
-
-    expect(userMessage.role).toBe('user')
-    expect((userMessage.content[0]! as TextContent).text).toBe('user message')
-  })
-})
-
-describe('message contents', async () => {
-  it('all messages can have multiple content tags', async () => {
-    const prompt = `
-      <user>
-        <text>text content</text>
-        <image>image content</image>
-        <text>another text content</text>
-      </user>
-    `
-    const result = await render({
-      prompt: removeCommonIndent(prompt),
-      parameters: {},
-    })
-
-    expect(result.messages.length).toBe(1)
-    const message = result.messages[0]! as UserMessage
-    expect(message.content.length).toBe(3)
-
-    expect(message.content[0]!.type).toBe('text')
-    expect((message.content[0]! as TextContent).text).toBe('text content')
-
-    expect(message.content[1]!.type).toBe('image')
-    expect((message.content[1]! as ImageContent).image).toBe('image content')
-
-    expect(message.content[2]!.type).toBe('text')
-    expect((message.content[2]! as TextContent).text).toBe(
-      'another text content',
-    )
-  })
-
-  it('fails when using an invalid content type', async () => {
-    const prompt = `
-      <system>
-        <foo>text content</foo>
-      </system>
-    `
-    const action = () =>
-      render({
-        prompt: removeCommonIndent(prompt),
-        parameters: {},
-      })
-    const error = await getExpectedError(action, CompileError)
-    expect(error.code).toBe('unknown-tag')
-  })
-
-  it('creates a text content when no content tag is present', async () => {
-    const prompt = `
-      <system>
-        Test message
-      </system>
-    `
-    const result = await render({
-      prompt: removeCommonIndent(prompt),
-      parameters: {},
-    })
-
-    expect(result.messages.length).toBe(1)
-    const message = result.messages[0]!
-
-    expect(message.content).toBe('Test message')
+    ])
   })
 })
 
@@ -545,12 +363,12 @@ describe('conditional expressions', async () => {
     expect(message1.role).toBe('user')
     expect(message1.content.length).toBe(1)
     expect(message1.content[0]!.type).toBe('text')
-    expect((message1.content[0]! as TextContent).text).toBe('Foo!')
+    expect(message1.content).toEqual([{ type: 'text', text: 'Foo!' }])
 
     expect(result2.messages.length).toBe(1)
     const message2 = result2.messages[0]! as AssistantMessage
     expect(message2.role).toBe('assistant')
-    expect(message2.content).toBe('Bar!')
+    expect(message2.content).toEqual([{ type: 'text', text: 'Bar!' }])
   })
 
   it('adds message contents conditionally', async () => {
@@ -563,15 +381,40 @@ describe('conditional expressions', async () => {
         ${CUSTOM_TAG_START}/if${CUSTOM_TAG_END}
       </user>
     `
-    const result1 = await getCompiledText(prompt, {
-      foo: true,
+
+    const result1 = await render({
+      prompt: removeCommonIndent(prompt),
+      parameters: { foo: true },
     })
-    const result2 = await getCompiledText(prompt, {
-      foo: false,
+    const result2 = await render({
+      prompt: removeCommonIndent(prompt),
+      parameters: { foo: false },
     })
 
-    expect(result1).toBe('Foo!')
-    expect(result2).toBe('Bar!')
+    expect(result1.messages).toEqual([
+      {
+        role: MessageRole.user,
+        name: undefined,
+        content: [
+          {
+            type: 'text',
+            text: 'Foo!',
+          },
+        ],
+      },
+    ])
+    expect(result2.messages).toEqual([
+      {
+        role: MessageRole.user,
+        name: undefined,
+        content: [
+          {
+            type: 'text',
+            text: 'Bar!',
+          },
+        ],
+      },
+    ])
   })
 })
 

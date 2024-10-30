@@ -101,7 +101,12 @@ describe('chain', async () => {
 
     const systemMessage = conversation.messages[0]!
     expect(systemMessage.role).toBe('system')
-    expect(systemMessage.content).toBe('System message')
+    expect(systemMessage.content).toEqual([
+      {
+        type: 'text',
+        text: 'System message',
+      },
+    ])
 
     const userMessage = conversation.messages[1]! as UserMessage
     expect(userMessage.role).toBe('user')
@@ -123,7 +128,12 @@ describe('chain', async () => {
 
     const assistantMessage = conversation.messages[4]! as AssistantMessage
     expect(assistantMessage.role).toBe('assistant')
-    expect(assistantMessage.content).toBe('Assistant message: foo')
+    expect(assistantMessage.content).toEqual([
+      {
+        type: 'text',
+        text: 'Assistant message: foo',
+      },
+    ])
   })
 
   it('stops at a step tag', async () => {
@@ -145,16 +155,40 @@ describe('chain', async () => {
 
     expect(completed1).toBe(false)
     expect(conversation1.messages.length).toBe(1)
-    expect(conversation1.messages[0]!.content).toBe('Message 1')
+    expect(conversation1.messages[0]).toEqual({
+      role: MessageRole.system,
+      content: [
+        {
+          type: 'text',
+          text: 'Message 1',
+        },
+      ],
+    })
 
     const { completed: completed2, conversation: conversation2 } =
       await chain.step('response')
 
     expect(completed2).toBe(true)
     expect(conversation2.messages.length).toBe(3)
-    expect(conversation2.messages[0]!.content).toBe('Message 1')
+    expect(conversation2.messages[0]).toEqual({
+      role: MessageRole.system,
+      content: [
+        {
+          type: 'text',
+          text: 'Message 1',
+        },
+      ],
+    })
     expect(conversation2.messages[1]!.content).toBe('response')
-    expect(conversation2.messages[2]!.content).toBe('Message 2')
+    expect(conversation2.messages[2]!).toEqual({
+      role: MessageRole.system,
+      content: [
+        {
+          type: 'text',
+          text: 'Message 2',
+        },
+      ],
+    })
   })
 
   it('fails when an assistant message is not provided in followup steps', async () => {
@@ -239,9 +273,29 @@ describe('chain', async () => {
     })
 
     const conversation = await complete({ chain })
-    expect(conversation.messages[0]!.content).toBe('1')
-    expect(conversation.messages[1]!.content).toBe('')
-    expect(conversation.messages[2]!.content).toBe('2')
+    expect(conversation.messages[0]!).toEqual({
+      role: MessageRole.system,
+      content: [
+        {
+          type: 'text',
+          text: '1',
+        },
+      ],
+    })
+    expect(conversation.messages[1]).toEqual({
+      role: MessageRole.assistant,
+      toolCalls: [],
+      content: '',
+    })
+    expect(conversation.messages[2]).toEqual({
+      role: MessageRole.system,
+      content: [
+        {
+          type: 'text',
+          text: '2',
+        },
+      ],
+    })
     expect(func1).toHaveBeenCalledTimes(1)
     expect(func2).toHaveBeenCalledTimes(1)
   })
@@ -265,9 +319,15 @@ describe('chain', async () => {
     })
 
     const conversation = await complete({ chain })
-    expect(
-      conversation.messages[conversation.messages.length - 1]!.content,
-    ).toBe('6')
+    expect(conversation.messages[conversation.messages.length - 1]).toEqual({
+      role: MessageRole.system,
+      content: [
+        {
+          type: 'text',
+          text: '6',
+        },
+      ],
+    })
   })
 
   it('maintains the scope in if statements', async () => {
@@ -299,9 +359,15 @@ describe('chain', async () => {
     })
 
     const conversation = await complete({ chain: correctChain })
-    expect(
-      conversation.messages[conversation.messages.length - 1]!.content,
-    ).toBe('6')
+    expect(conversation.messages[conversation.messages.length - 1]!).toEqual({
+      role: MessageRole.system,
+      content: [
+        {
+          type: 'text',
+          text: '6',
+        },
+      ],
+    })
 
     const incorrectChain = new Chain({
       prompt: incorrectPrompt,
@@ -346,7 +412,15 @@ describe('chain', async () => {
     expect((conversation.messages[4]!.content[0]! as TextContent).text).toBe(
       '2',
     )
-    expect(conversation.messages[6]!.content).toBe('3')
+    expect(conversation.messages[6]).toEqual({
+      role: MessageRole.system,
+      content: [
+        {
+          type: 'text',
+          text: '3',
+        },
+      ],
+    })
   })
 
   it('cannot access variables created in a loop outside its scope', async () => {
@@ -414,9 +488,16 @@ describe('chain', async () => {
       3.3
     `),
     )
-    expect(
-      conversation.messages[conversation.messages.length - 1]!.content,
-    ).toBe('9')
+
+    expect(conversation.messages[conversation.messages.length - 1]).toEqual({
+      role: MessageRole.system,
+      content: [
+        {
+          type: 'text',
+          text: '9',
+        },
+      ],
+    })
   })
 
   it('saves the response in a variable', async () => {
@@ -436,7 +517,12 @@ describe('chain', async () => {
 
     expect(conversation.messages.length).toBe(2)
     expect(conversation.messages[0]!.content).toBe('foo')
-    expect(conversation.messages[1]!.content).toBe('foo')
+    expect(conversation.messages[1]!.content).toEqual([
+      {
+        type: 'text',
+        text: 'foo',
+      },
+    ])
   })
 
   it('returns the correct configuration in all steps', async () => {

@@ -81,7 +81,7 @@ const ContentValue = ({
       wordBreak='breakAll'
       key={`${index}-${lineIndex}`}
     >
-      {line}
+      {line ? line : '\n'}
     </TextComponent>
   ))
 }

@@ -1,4 +1,4 @@
-import { MessageRole } from '@latitude-data/compiler'
+import { ContentType, MessageRole } from '@latitude-data/compiler'
 
 import {
   Message,
@@ -52,7 +52,8 @@ export function formatContext(
       Array.isArray(message.content) &&
       message.content &&
       message.content[0] &&
-      'text' in message.content[0]
+      'text' in message.content[0] &&
+      message.content[0].type === ContentType.text
     ) {
       content = message.content[0].text
     } else if (

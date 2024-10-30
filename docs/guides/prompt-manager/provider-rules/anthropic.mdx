@@ -1,0 +1,69 @@
+1. [Not only system messages](#rule-1-no-only-system-messages)
+2. [No system messages after assistant or user messages](#rule-2-no-system-messages-after-assistant-or-user-messages)
+
+### Rule 1: No Only System Messages
+System messages must be followed by at least one user or assistant message. Anthropic does not consider system messages as part of the main messages. They separate messages as follows:
+```json
+{
+    "system": [
+      {
+        "type": "text",
+        "text": "You are an AI assistant tasked with analyzing literary works. Your goal is to provide insightful commentary on themes, characters, and writing style.\n"
+      },
+      {
+        "type": "text",
+        "text": "<the entire contents of Pride and Prejudice>",
+        "cache_control": {"type": "ephemeral"}
+      }
+    ],
+    "messages": [
+      {
+        "role": "user",
+        "content": "Analyze the major themes in Pride and Prejudice."
+      }
+    ]
+}
+```
+
+In Latitude, text not wrapped in a `<user>` or `<assistant>` tag is considered a system message.
+This prompt would be invalid for Anthropic:
+
+```
+---
+provider: Anthropic
+model: claude-3-5-sonnet-latest
+---
+This is a system message
+```
+
+This would generate the following warning:
+
+![](/assets/provider_rules_1.png)
+
+
+The following would be valid:
+```
+---
+provider: Anthropic
+model: claude-3-5-sonnet-latest
+---
+This is a system message
+<assistant>This is an assistant message</assistant>
+```
+
+### Rule 2: No System Messages After Assistant or User Messages
+In an Anthropic prompt in Latitude, only the initial section can include system messages. This rule connects to Rule 1: any subsequent system messages are converted into user messages.
+
+Here’s an example of an invalid prompt:
+
+```
+---
+provider: Anthropic
+model: claude-3-5-sonnet-latest
+---
+This is a system message
+<assistant>This is a assistant message</assistant>
+
+/* This is not permitted. This message will be converted to a user message */
+<system>This is another system message</system>
+```

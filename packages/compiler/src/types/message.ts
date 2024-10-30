@@ -14,6 +14,7 @@ export enum MessageRole {
 
 interface IMessageContent {
   type: ContentType
+  [key: string]: unknown
 }
 
 export type TextContent = IMessageContent & {
@@ -56,11 +57,11 @@ export type ToolCall = {
 interface IMessage {
   role: MessageRole
   content: MessageContent[]
+  [key: string]: unknown
 }
 
-export type SystemMessage = {
+export type SystemMessage = IMessage & {
   role: MessageRole.system
-  content: string
 }
 
 export type UserMessage = IMessage & {
@@ -71,12 +72,13 @@ export type UserMessage = IMessage & {
 export type AssistantMessage = {
   role: MessageRole.assistant
   toolCalls: ToolCall[]
-  content: string | ToolRequestContent[]
+  content: string | ToolRequestContent[] | MessageContent[]
 }
 
-export type ToolMessage = IMessage & {
+export type ToolMessage = {
   role: MessageRole.tool
   content: ToolContent[]
+  [key: string]: unknown
 }
 
 export type Message =

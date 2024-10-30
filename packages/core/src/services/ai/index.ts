@@ -61,7 +61,7 @@ export async function ai({
   provider: apiProvider,
   prompt,
   messages: originalMessages,
-  config,
+  config: originalConfig,
   schema,
   output,
   customLanguageModel,
@@ -93,13 +93,15 @@ export async function ai({
     const rule = applyCustomRules({
       providerType: apiProvider.provider,
       messages: originalMessages,
+      config: originalConfig,
     })
 
     const { provider, token: apiKey, url } = apiProvider
+    const config = rule.config as PartialConfig
+    const messages = rule.messages
     const model = config.model
-
-    const messages = rule?.messages ?? originalMessages
-    const languageModelResult = createProvider({
+    const tools = config.tools
+    const llmProvider = createProvider({
       messages,
       provider,
       apiKey,
@@ -107,12 +109,12 @@ export async function ai({
       ...(url ? { url } : {}),
     })
 
-    if (languageModelResult.error) return languageModelResult
+    if (llmProvider.error) return llmProvider
 
     const languageModel = customLanguageModel
       ? customLanguageModel
-      : languageModelResult.value(model)
-    const toolsResult = buildTools(config.tools)
+      : llmProvider.value(model, { cacheControl: config.cacheControl })
+    const toolsResult = buildTools(tools)
     if (toolsResult.error) return toolsResult
 
     const commonOptions = {

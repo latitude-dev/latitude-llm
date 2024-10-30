@@ -77,6 +77,7 @@ export default function Preview({
         {error || (metadata?.errors.length ?? 0) > 0 ? (
           <Tooltip
             side='bottom'
+            asChild
             trigger={
               <Button fancy disabled>
                 Run prompt

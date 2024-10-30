@@ -1,3 +1,4 @@
+import { removeCommonIndent } from '$compiler/compiler/utils'
 import errors from '$compiler/error/errors'
 import { ContentTag } from '$compiler/parser/interfaces'
 import { ContentType } from '$compiler/types'
@@ -15,7 +16,7 @@ export async function compile(
     popStrayText,
     addContent,
   }: CompileNodeContext<ContentTag>,
-  _: Record<string, unknown>,
+  attributes: Record<string, unknown>,
 ) {
   if (isInsideContentTag) {
     baseNodeError(errors.contentTagInsideContent, node)
@@ -29,17 +30,19 @@ export async function compile(
       isInsideContentTag: true,
     })
   }
-  const textContent = popStrayText()
+  const textContent = removeCommonIndent(popStrayText())
 
   // TODO: This if else is probably not required but the types enforce it.
   // Improve types.
   if (node.name === 'text') {
     addContent({
+      ...attributes,
       type: ContentType.text,
       text: textContent,
     })
   } else {
     addContent({
+      ...attributes,
       type: ContentType.image,
       image: textContent,
     })
