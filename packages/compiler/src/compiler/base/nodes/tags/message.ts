@@ -93,7 +93,7 @@ function buildMessage<R extends MessageRole>(
   if (role === MessageRole.system) {
     return {
       role,
-      content: (content[0]! as TextContent).text,
+      content: (content[0] as TextContent)?.text ?? '',
     } as SystemMessage
   }
 

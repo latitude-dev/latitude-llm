@@ -1,20 +1,16 @@
 'use client'
 
-import path from 'path'
 import React, {
   createContext,
   Suspense,
   useCallback,
   useEffect,
-  useMemo,
   useState,
 } from 'react'
 
-import { Document as RefDocument } from '@latitude-data/compiler'
 import {
   Commit,
   DocumentVersion,
-  promptConfigSchema,
   ProviderApiKey,
 } from '@latitude-data/core/browser'
 import {
@@ -160,53 +156,14 @@ export default function DocumentEditor({
     { trailing: true },
   )
 
-  const readDocumentContent = useCallback(
-    async (path: string) => {
-      return _documents.find((d) => d.path === path)?.content
-    },
-    [_documents],
-  )
-
-  const readDocument = useCallback(
-    async (
-      refPath: string,
-      from?: string,
-    ): Promise<RefDocument | undefined> => {
-      const fullPath = path
-        .resolve(path.dirname(`/${from ?? ''}`), refPath)
-        .replace(/^\//, '')
-
-      if (fullPath === document.path) {
-        return {
-          path: fullPath,
-          content: value,
-        }
-      }
-
-      const content = await readDocumentContent(fullPath)
-      if (content === undefined) return undefined
-
-      return {
-        path: fullPath,
-        content,
-      }
-    },
-    [readDocumentContent, value],
-  )
-
-  const configSchema = useMemo(
-    () => promptConfigSchema({ providers }),
-    [providers],
-  )
-
   const { metadata, runReadMetadata } = useMetadata()
 
   useEffect(() => {
     runReadMetadata({
       prompt: value,
+      documents: _documents,
+      document,
       fullPath: document.path,
-      referenceFn: readDocument,
-      configSchema,
     })
   }, [])
 
@@ -217,12 +174,12 @@ export default function DocumentEditor({
       debouncedSave(newValue)
       runReadMetadata({
         prompt: newValue,
+        documents: _documents,
+        document,
         fullPath: document.path,
-        referenceFn: readDocument,
-        configSchema,
       })
     },
-    [runReadMetadata, readDocument, configSchema, document.path],
+    [runReadMetadata, document.path],
   )
 
   const {
