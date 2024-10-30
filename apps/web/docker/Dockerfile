@@ -91,7 +91,9 @@ COPY --from=builder /app/apps/web/public ./apps/web/public
 
 # Set the correct permission for prerender cache
 RUN mkdir -p apps/web/.next
+RUN mkdir -p apps/web/.next/cache
 RUN chown nextjs:nodejs apps/web/.next
+RUN chown nextjs:nodejs apps/web/.next/cache
 
 COPY --from=builder --chown=nodejs:nextjs /app/apps/web/.next/standalone ./
 COPY --from=builder --chown=nodejs:nextjs /app/apps/web/.next/static ./apps/web/.next/static
