@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import { ProviderApiKey, User } from '../../browser'
+import { ProviderApiKey, User, Workspace } from '../../browser'
 import {
   EvaluationMetadataType,
   EvaluationResultableType,
@@ -8,9 +8,9 @@ import {
 } from '../../constants'
 import { EvaluationsRepository } from '../../repositories'
 import * as factories from '../../tests/factories'
-import { createEvaluation } from './create'
+import { createAdvancedEvaluation, createEvaluation } from './create'
 
-describe('createEvaluation', () => {
+describe('createAdvancedEvaluation', () => {
   let workspace: any
   let user: User
   let provider: ProviderApiKey
@@ -22,12 +22,12 @@ describe('createEvaluation', () => {
   })
 
   it('should throw an error when no provider API key is found', async () => {
-    const result = await createEvaluation({
+    const result = await createAdvancedEvaluation({
       workspace: workspace,
       user,
       name: 'Test Evaluation',
       description: 'Test Description',
-      type: EvaluationMetadataType.LlmAsJudgeAdvanced,
+
       configuration: {
         type: EvaluationResultableType.Text,
         detail: {
@@ -59,12 +59,12 @@ describe('createEvaluation', () => {
     })
 
     it('should fail because the provider is not supported', async () => {
-      const result = await createEvaluation({
+      const result = await createAdvancedEvaluation({
         workspace,
         user,
         name: 'Test Evaluation',
         description: 'Test Description',
-        type: EvaluationMetadataType.LlmAsJudgeAdvanced,
+
         configuration: {
           type: EvaluationResultableType.Text,
           detail: {
@@ -96,12 +96,12 @@ describe('createEvaluation', () => {
       })
     })
     it('creates an LLM as Judge evaluation with text configuration', async () => {
-      const result = await createEvaluation({
+      const result = await createAdvancedEvaluation({
         workspace,
         user,
         name: 'Test Evaluation',
         description: 'Test Description',
-        type: EvaluationMetadataType.LlmAsJudgeAdvanced,
+
         configuration: {
           type: EvaluationResultableType.Text,
           detail: {
@@ -117,6 +117,9 @@ describe('createEvaluation', () => {
       })
 
       expect(result.ok).toBe(true)
+
+      expect(result.value!.metadata.configuration).toBeDefined()
+      expect(result.value!.resultConfiguration).toBeDefined()
     })
   })
 
@@ -131,12 +134,12 @@ describe('createEvaluation', () => {
     })
 
     it('creates an LLM as Judge evaluation with number configuration', async () => {
-      const result = await createEvaluation({
+      const result = await createAdvancedEvaluation({
         workspace,
         user,
         name: 'Test Evaluation',
         description: 'Test Description',
-        type: EvaluationMetadataType.LlmAsJudgeAdvanced,
+
         configuration: {
           type: EvaluationResultableType.Number,
           detail: {
@@ -152,6 +155,20 @@ describe('createEvaluation', () => {
       })
 
       expect(result.ok).toBe(true)
+
+      expect(result.value!.metadata.configuration).toEqual({
+        type: EvaluationResultableType.Number,
+        detail: {
+          range: {
+            from: 0,
+            to: 100,
+          },
+        },
+      })
+      expect(result.value!.resultConfiguration).toMatchObject({
+        minValue: 0,
+        maxValue: 100,
+      })
     })
   })
 
@@ -168,12 +185,12 @@ describe('createEvaluation', () => {
       const name = 'Test Evaluation'
       const description = 'Test Description'
       const metadata = { prompt: 'Test prompt' }
-      const result = await createEvaluation({
+      const result = await createAdvancedEvaluation({
         workspace,
         user,
         name,
         description,
-        type: EvaluationMetadataType.LlmAsJudgeAdvanced,
+
         configuration: {
           type: EvaluationResultableType.Number,
           detail: {
@@ -219,7 +236,7 @@ ${metadata.prompt}
       const description = 'Test Description'
       const metadata = { prompt: 'Test prompt' }
 
-      const result = await createEvaluation({
+      const result = await createAdvancedEvaluation({
         workspace,
         user,
         name,
@@ -227,7 +244,7 @@ ${metadata.prompt}
         configuration: {
           type: EvaluationResultableType.Text,
         },
-        type: EvaluationMetadataType.LlmAsJudgeAdvanced,
+
         metadata,
       })
 
@@ -239,6 +256,7 @@ ${metadata.prompt}
       expect(evaluation.metadata.configuration.type).toBe(
         EvaluationResultableType.Text,
       )
+      expect(evaluation.resultType).toBe(EvaluationResultableType.Text)
     })
 
     it('creates an LLM as Judge evaluation with boolean configuration', async () => {
@@ -246,12 +264,12 @@ ${metadata.prompt}
       const description = 'Test Description'
       const metadata = { prompt: 'Test prompt' }
 
-      const result = await createEvaluation({
+      const result = await createAdvancedEvaluation({
         workspace,
         user,
         name,
         description,
-        type: EvaluationMetadataType.LlmAsJudgeAdvanced,
+
         configuration: {
           type: EvaluationResultableType.Boolean,
         },
@@ -267,25 +285,7 @@ ${metadata.prompt}
       expect(evaluation.metadata.configuration.type).toBe(
         EvaluationResultableType.Boolean,
       )
-    })
-
-    it('returns an error for invalid evaluation type', async () => {
-      const result = await createEvaluation({
-        workspace,
-        user,
-        name: 'Test Evaluation',
-        description: 'Test Description',
-        type: 'InvalidType' as EvaluationMetadataType,
-        configuration: {
-          type: EvaluationResultableType.Text,
-        },
-        metadata: {},
-      })
-
-      expect(result.ok).toBe(false)
-      if (result.error) {
-        expect(result.error.message).toContain('Invalid evaluation type')
-      }
+      expect(evaluation.resultType).toBe(EvaluationResultableType.Boolean)
     })
 
     it('creates an evaluation with a template', async () => {
@@ -298,12 +298,11 @@ ${metadata.prompt}
       })
       const metadata = { prompt: 'Test prompt', templateId: template.id }
 
-      const result = await createEvaluation({
+      const result = await createAdvancedEvaluation({
         workspace,
         user,
         name: 'Test Evaluation',
         description: 'Test Description',
-        type: EvaluationMetadataType.LlmAsJudgeAdvanced,
         configuration: {
           type: EvaluationResultableType.Text,
         },
@@ -319,12 +318,12 @@ ${metadata.prompt}
     })
 
     it('does not allow to create a number type evaluation without proper configuration', async () => {
-      const result = await createEvaluation({
+      const result = await createAdvancedEvaluation({
         workspace,
         user,
         name: 'Test Evaluation',
         description: 'Test Description',
-        type: EvaluationMetadataType.LlmAsJudgeAdvanced,
+
         configuration: {
           type: EvaluationResultableType.Number,
         },
@@ -340,12 +339,12 @@ ${metadata.prompt}
     })
 
     it('does not allow to create a number type evaluation with invalid range', async () => {
-      const result = await createEvaluation({
+      const result = await createAdvancedEvaluation({
         workspace,
         user,
         name: 'Test Evaluation',
         description: 'Test Description',
-        type: EvaluationMetadataType.LlmAsJudgeAdvanced,
+
         configuration: {
           type: EvaluationResultableType.Number,
           detail: {
@@ -367,12 +366,12 @@ ${metadata.prompt}
     })
 
     it('should return an error when the range is of length 0', async () => {
-      const result = await createEvaluation({
+      const result = await createAdvancedEvaluation({
         workspace,
         user,
         name: 'Test Evaluation',
         description: 'Test Description',
-        type: EvaluationMetadataType.LlmAsJudgeAdvanced,
+
         configuration: {
           type: EvaluationResultableType.Number,
           detail: {
@@ -391,6 +390,282 @@ ${metadata.prompt}
       expect(result.error!.message).toContain(
         'Invalid range to has to be greater than from',
       )
+    })
+  })
+})
+
+describe('createEvaluation', () => {
+  let workspace: Workspace
+  let user: User
+  let provider: ProviderApiKey
+  let repo: EvaluationsRepository
+
+  beforeEach(async () => {
+    const setup = await factories.createWorkspace()
+    workspace = setup.workspace
+    user = setup.userData
+
+    provider = await factories.createProviderApiKey({
+      workspace,
+      user,
+      name: 'Test Provider',
+      type: Providers.Groq,
+    })
+
+    repo = new EvaluationsRepository(workspace.id)
+  })
+
+  describe('create simple evaluations', () => {
+    it('creates a simple evaluation with text configuration', async () => {
+      const evaluationResult = await createEvaluation({
+        workspace,
+        user,
+        name: 'Test Evaluation',
+        description: 'Test Description',
+        metadataType: EvaluationMetadataType.LlmAsJudgeSimple,
+        metadata: {
+          providerApiKeyId: provider.id,
+          model: 'test-model',
+          objective: 'Test Objective',
+          additionalInstructions: 'Test Instructions',
+        },
+        resultType: EvaluationResultableType.Text,
+        resultConfiguration: {
+          valueDescription: 'Test Value Description',
+        },
+      })
+
+      expect(evaluationResult.ok).toBe(true)
+      const evaluation = await repo
+        .find(evaluationResult.value!.id)
+        .then((r) => r.unwrap())
+
+      expect(evaluation.metadata).toMatchObject({
+        providerApiKeyId: provider.id,
+        model: 'test-model',
+        objective: 'Test Objective',
+        additionalInstructions: 'Test Instructions',
+      })
+
+      expect(evaluation.resultConfiguration).toMatchObject({
+        valueDescription: 'Test Value Description',
+      })
+    })
+
+    it('creates a simple evaluation with numeric configuration', async () => {
+      const evaluationResult = await createEvaluation({
+        workspace,
+        user,
+        name: 'Test Evaluation',
+        description: 'Test Description',
+        metadataType: EvaluationMetadataType.LlmAsJudgeSimple,
+        metadata: {
+          providerApiKeyId: provider.id,
+          model: 'test-model',
+          objective: 'Test Objective',
+          additionalInstructions: 'Test Instructions',
+        },
+        resultType: EvaluationResultableType.Number,
+        resultConfiguration: {
+          minValue: 0,
+          maxValue: 100,
+          minValueDescription: 'Test Min Value Description',
+          maxValueDescription: 'Test Max Value Description',
+        },
+      })
+
+      expect(evaluationResult.ok).toBe(true)
+      const evaluation = await repo
+        .find(evaluationResult.value!.id)
+        .then((r) => r.unwrap())
+
+      expect(evaluation.metadata).toMatchObject({
+        providerApiKeyId: provider.id,
+        model: 'test-model',
+        objective: 'Test Objective',
+        additionalInstructions: 'Test Instructions',
+      })
+
+      expect(evaluation.resultConfiguration).toMatchObject({
+        minValue: 0,
+        maxValue: 100,
+        minValueDescription: 'Test Min Value Description',
+        maxValueDescription: 'Test Max Value Description',
+      })
+    })
+
+    it('creates a simple evaluation with boolean configuration', async () => {
+      const evaluationResult = await createEvaluation({
+        workspace,
+        user,
+        name: 'Test Evaluation',
+        description: 'Test Description',
+        metadataType: EvaluationMetadataType.LlmAsJudgeSimple,
+        metadata: {
+          providerApiKeyId: provider.id,
+          model: 'test-model',
+          objective: 'Test Objective',
+          additionalInstructions: 'Test Instructions',
+        },
+        resultType: EvaluationResultableType.Boolean,
+        resultConfiguration: {
+          trueValueDescription: 'Test True Value Description',
+          falseValueDescription: 'Test False Value Description',
+        },
+      })
+
+      expect(evaluationResult.ok).toBe(true)
+      const evaluation = await repo
+        .find(evaluationResult.value!.id)
+        .then((r) => r.unwrap())
+
+      expect(evaluation.metadata).toMatchObject({
+        providerApiKeyId: provider.id,
+        model: 'test-model',
+        objective: 'Test Objective',
+        additionalInstructions: 'Test Instructions',
+      })
+
+      expect(evaluation.resultConfiguration).toMatchObject({
+        trueValueDescription: 'Test True Value Description',
+        falseValueDescription: 'Test False Value Description',
+      })
+    })
+  })
+
+  describe('create advanced evaluations', () => {
+    it('creates an advanced evaluation with text configuration', async () => {
+      const evaluationResult = await createEvaluation({
+        workspace,
+        user,
+        name: 'Test Evaluation',
+        description: 'Test Description',
+        metadataType: EvaluationMetadataType.LlmAsJudgeAdvanced,
+        metadata: {
+          prompt: 'Test Prompt',
+          configuration: {
+            type: EvaluationResultableType.Text,
+          },
+          templateId: null,
+        },
+        resultType: EvaluationResultableType.Text,
+        resultConfiguration: {
+          valueDescription: 'Test Value Description',
+        },
+      })
+
+      expect(evaluationResult.ok).toBe(true)
+      const evaluation = await repo
+        .find(evaluationResult.value!.id)
+        .then((r) => r.unwrap())
+
+      expect(evaluation.metadata).toMatchObject({
+        prompt: 'Test Prompt',
+        templateId: null,
+        configuration: {
+          type: EvaluationResultableType.Text,
+        },
+      })
+
+      expect(evaluation.resultConfiguration).toMatchObject({
+        valueDescription: 'Test Value Description',
+      })
+    })
+
+    it('creates an advanced evaluation with numeric configuration', async () => {
+      const evaluationResult = await createEvaluation({
+        workspace,
+        user,
+        name: 'Test Evaluation',
+        description: 'Test Description',
+        metadataType: EvaluationMetadataType.LlmAsJudgeAdvanced,
+        metadata: {
+          prompt: 'Test Prompt',
+          configuration: {
+            type: EvaluationResultableType.Number,
+            detail: {
+              range: {
+                from: 0,
+                to: 100,
+              },
+            },
+          },
+          templateId: null,
+        },
+        resultType: EvaluationResultableType.Number,
+        resultConfiguration: {
+          minValue: 0,
+          maxValue: 100,
+          minValueDescription: 'Test Min Value Description',
+          maxValueDescription: 'Test Max Value Description',
+        },
+      })
+
+      expect(evaluationResult.ok).toBe(true)
+      const evaluation = await repo
+        .find(evaluationResult.value!.id)
+        .then((r) => r.unwrap())
+
+      expect(evaluation.metadata).toMatchObject({
+        prompt: 'Test Prompt',
+        templateId: null,
+        configuration: {
+          type: EvaluationResultableType.Number,
+          detail: {
+            range: {
+              from: 0,
+              to: 100,
+            },
+          },
+        },
+      })
+
+      expect(evaluation.resultConfiguration).toMatchObject({
+        minValue: 0,
+        maxValue: 100,
+        minValueDescription: 'Test Min Value Description',
+        maxValueDescription: 'Test Max Value Description',
+      })
+    })
+
+    it('creates an advanced evaluation with boolean configuration', async () => {
+      const evaluationResult = await createEvaluation({
+        workspace,
+        user,
+        name: 'Test Evaluation',
+        description: 'Test Description',
+        metadataType: EvaluationMetadataType.LlmAsJudgeAdvanced,
+        metadata: {
+          prompt: 'Test Prompt',
+          configuration: {
+            type: EvaluationResultableType.Boolean,
+          },
+          templateId: null,
+        },
+        resultType: EvaluationResultableType.Boolean,
+        resultConfiguration: {
+          trueValueDescription: 'Test True Value Description',
+          falseValueDescription: 'Test False Value Description',
+        },
+      })
+
+      expect(evaluationResult.ok).toBe(true)
+      const evaluation = await repo
+        .find(evaluationResult.value!.id)
+        .then((r) => r.unwrap())
+
+      expect(evaluation.metadata).toMatchObject({
+        prompt: 'Test Prompt',
+        templateId: null,
+        configuration: {
+          type: EvaluationResultableType.Boolean,
+        },
+      })
+
+      expect(evaluation.resultConfiguration).toMatchObject({
+        trueValueDescription: 'Test True Value Description',
+        falseValueDescription: 'Test False Value Description',
+      })
     })
   })
 })

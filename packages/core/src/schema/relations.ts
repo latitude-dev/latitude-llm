@@ -7,9 +7,9 @@ import { datasets } from './models/datasets'
 import { documentLogs } from './models/documentLogs'
 import { documentVersions } from './models/documentVersions'
 import { evaluationAdvancedTemplates } from './models/evaluationAdvancedTemplates'
-// import { evaluationConfigurationBoolean } from './models/evaluationConfigurationBoolean'
-// import { evaluationConfigurationNumerical } from './models/evaluationConfigurationNumerical'
-// import { evaluationConfigurationText } from './models/evaluationConfigurationText'
+import { evaluationConfigurationBoolean } from './models/evaluationConfigurationBoolean'
+import { evaluationConfigurationNumerical } from './models/evaluationConfigurationNumerical'
+import { evaluationConfigurationText } from './models/evaluationConfigurationText'
 import { evaluationMetadataLlmAsJudgeAdvanced } from './models/evaluationMetadataLlmAsJudgeAdvanced'
 import { evaluationMetadataLlmAsJudgeSimple } from './models/evaluationMetadataLlmAsJudgeSimple'
 import { evaluationResults } from './models/evaluationResults'
@@ -163,37 +163,35 @@ export const EvaluationMetadatallmAsJudgeSimpleRelations = relations(
   }),
 )
 
-// TODO: This has been applied in the migration, but not added in the code yet to avoid errors during the deployment. Will be added in the next PR
+export const EvaluationConfigurationBooleanRelations = relations(
+  evaluationConfigurationBoolean,
+  ({ one }) => ({
+    evaluation: one(evaluations, {
+      fields: [evaluationConfigurationBoolean.id],
+      references: [evaluations.resultConfigurationId],
+    }),
+  }),
+)
 
-// export const EvaluationConfigurationBooleanRelations = relations(
-//   evaluationConfigurationBoolean,
-//   ({ one }) => ({
-//     evaluation: one(evaluations, {
-//       fields: [evaluationConfigurationBoolean.id],
-//       references: [evaluations.resultConfigurationId],
-//     }),
-//   }),
-// )
+export const EvaluationConfigurationNumericalRelations = relations(
+  evaluationConfigurationNumerical,
+  ({ one }) => ({
+    evaluation: one(evaluations, {
+      fields: [evaluationConfigurationNumerical.id],
+      references: [evaluations.resultConfigurationId],
+    }),
+  }),
+)
 
-// export const EvaluationConfigurationNumericalRelations = relations(
-//   evaluationConfigurationNumerical,
-//   ({ one }) => ({
-//     evaluation: one(evaluations, {
-//       fields: [evaluationConfigurationNumerical.id],
-//       references: [evaluations.resultConfigurationId],
-//     }),
-//   }),
-// )
-
-// export const EvaluationConfigurationTextRelations = relations(
-//   evaluationConfigurationText,
-//   ({ one }) => ({
-//     evaluation: one(evaluations, {
-//       fields: [evaluationConfigurationText.id],
-//       references: [evaluations.resultConfigurationId],
-//     }),
-//   }),
-// )
+export const EvaluationConfigurationTextRelations = relations(
+  evaluationConfigurationText,
+  ({ one }) => ({
+    evaluation: one(evaluations, {
+      fields: [evaluationConfigurationText.id],
+      references: [evaluations.resultConfigurationId],
+    }),
+  }),
+)
 
 export const membershipRelations = relations(memberships, ({ one }) => ({
   workspace: one(workspaces, {

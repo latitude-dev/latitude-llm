@@ -1,7 +1,7 @@
 'use server'
 
 import { EvaluationsRepository } from '@latitude-data/core/repositories'
-import { updateEvaluation } from '@latitude-data/core/services/evaluations/update'
+import { updateAdvancedEvaluationPrompt } from '@latitude-data/core/services/evaluations/update'
 import { z } from 'zod'
 
 import { authProcedure } from '../procedures'
@@ -21,9 +21,9 @@ export const updateEvaluationContentAction = authProcedure
     const scope = new EvaluationsRepository(ctx.workspace.id)
     const evaluation = await scope.find(input.id).then((r) => r.unwrap())
 
-    const result = await updateEvaluation({
+    const result = await updateAdvancedEvaluationPrompt({
       evaluation,
-      metadata: input.metadata,
+      prompt: input.metadata.prompt,
     })
 
     return result.unwrap()
