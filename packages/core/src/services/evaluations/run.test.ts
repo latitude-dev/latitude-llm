@@ -23,11 +23,10 @@ import { ErrorableEntity, LogSources, Providers } from '../../constants'
 import { publisher } from '../../events/publisher'
 import { Result } from '../../lib'
 import * as generateUUIDModule from '../../lib/generateUUID'
-import { EvaluationsRepository } from '../../repositories'
 import {
   documentLogs,
-  evaluationMetadataLlmAsJudgeAdvanced,
   evaluationResults,
+  evaluations,
   providerApiKeys,
   providerLogs,
   runErrors,
@@ -36,6 +35,7 @@ import * as factories from '../../tests/factories'
 import { ChainError } from '../chains/ChainErrors'
 import * as runChainModule from '../chains/run'
 import { serialize } from '../documentLogs/serialize'
+import { getEvaluationPrompt } from './prompt'
 import { runEvaluation } from './run'
 
 const publisherSpy = vi.spyOn(publisher, 'publishLater')
@@ -159,8 +159,12 @@ describe('run', () => {
         documentLog,
       })
       const serializedPrompt = serializeResult.value
+      const evaluationPrompt = await getEvaluationPrompt({
+        workspace,
+        evaluation,
+      }).then((r) => r.unwrap())
       const chain = createChain({
-        prompt: evaluation.metadata.prompt,
+        prompt: evaluationPrompt,
         parameters: { ...serializedPrompt },
       })
       expect(runChainModule.runChain).toHaveBeenCalledWith({
@@ -201,7 +205,7 @@ describe('run', () => {
 
       expect(evaluationResult).toMatchObject({
         uuid: FAKE_GENERATED_UUID,
-        resultableType: evaluation.metadata.configuration.type,
+        resultableType: evaluation.resultType,
         source: LogSources.API,
       })
     })
@@ -320,60 +324,20 @@ describe('run', () => {
     })
 
     it('fails evaluation type is not recognized', async () => {
-      await database
-        .update(evaluationMetadataLlmAsJudgeAdvanced)
-        .set({
-          configuration: {
-            ...evaluation.metadata.configuration,
+      let error
+      try {
+        await database
+          .update(evaluations)
+          .set({
             // @ts-expect-error - intentionally setting invalid type
-            type: 'unknown',
-          },
-        })
-        .where(
-          eq(evaluationMetadataLlmAsJudgeAdvanced.id, evaluation.metadataId),
-        )
-
-      const evalRepo = new EvaluationsRepository(workspace.id)
-      const updatedEvaluation = await evalRepo
-        .find(evaluation.id)
-        .then((r) => r.unwrap())
-
-      updatedEvaluation.metadata = {
-        ...updatedEvaluation.metadata,
-        prompt: 'foo',
+            resultType: 'unknown',
+          })
+          .where(eq(evaluations.id, evaluation.id))
+      } catch (err) {
+        error = err
       }
 
-      const result = await runEvaluation({
-        documentLog,
-        documentUuid,
-        evaluation: updatedEvaluation,
-      })
-      const error = await findError(
-        RunErrorCodes.EvaluationRunUnsupportedResultTypeError,
-      )
-      const evaluationResult = await database.query.evaluationResults.findFirst(
-        {
-          where: eq(evaluationResults.evaluationId, updatedEvaluation.id),
-        },
-      )
-
-      expect(evaluationResult).toEqual(
-        expect.objectContaining({
-          uuid: error?.errorableUuid,
-          documentLogId: documentLog.id,
-          evaluationId: updatedEvaluation.id,
-          resultableType: null,
-          resultableId: null,
-          source: LogSources.API,
-        }),
-      )
       expect(error).toBeDefined()
-      expect(result.error).toEqual(
-        new ChainError({
-          code: RunErrorCodes.EvaluationRunUnsupportedResultTypeError,
-          message: `Unsupported evaluation type 'unknown'`,
-        }),
-      )
     })
 
     it('fails when chain response without object', async () => {

@@ -62,7 +62,7 @@ export async function createEvaluation<
     metadata: M extends EvaluationMetadataType.LlmAsJudgeSimple
       ? Omit<EvaluationMetadataLlmAsJudgeSimple, 'id'>
       : M extends EvaluationMetadataType.LlmAsJudgeAdvanced
-        ? Omit<EvaluationMetadataLlmAsJudgeAdvanced, 'id'>
+        ? Omit<EvaluationMetadataLlmAsJudgeAdvanced, 'id' | 'configuration'>
         : never
     resultType: R
     resultConfiguration: R extends EvaluationResultableType.Boolean
@@ -102,10 +102,31 @@ export async function createEvaluation<
     )
   }
 
+  const legacyConfiguration =
+    metadataType === EvaluationMetadataType.LlmAsJudgeAdvanced
+      ? {
+          configuration: {
+            type: resultType,
+            ...(resultType === EvaluationResultableType.Number && {
+              detail: {
+                range: {
+                  from: (
+                    resultConfiguration as EvaluationConfigurationNumerical
+                  ).minValue,
+                  to: (resultConfiguration as EvaluationConfigurationNumerical)
+                    .maxValue,
+                },
+              },
+            }),
+          },
+        }
+      : undefined
+
   return await Transaction.call(async (tx) => {
     const metadataRow = (await tx
       .insert(metadataTables[metadataType])
-      .values([metadata])
+      // @ts-expect-error — The configuration type is being manually added here, although drizzle does not like it. It will be removed in the next PR.
+      .values([{ ...metadata, ...legacyConfiguration }])
       .returning()
       .then((r) => r[0]!)) as IEvaluationMetadata
 

@@ -212,10 +212,17 @@ export const getApiKeysCached = cache(async () => {
   return result.unwrap()
 })
 
-export const getProviderApiKeyCached = cache(async (name: string) => {
+export const getProviderApiKeyByNameCached = cache(async (name: string) => {
   const { workspace } = await getCurrentUser()
   const scope = new ProviderApiKeysRepository(workspace.id)
   const result = await scope.findByName(name)
+  return result.unwrap()
+})
+
+export const getProviderApiKeyByIdCached = cache(async (id: number) => {
+  const { workspace } = await getCurrentUser()
+  const scope = new ProviderApiKeysRepository(workspace.id)
+  const result = await scope.find(id)
   return result.unwrap()
 })
 

@@ -12,10 +12,6 @@ export function EvaluationResultsCharts({
   evaluation: EvaluationDto
   documentUuid: string
 }) {
-  const isNumerical =
-    evaluation.metadata.configuration.type === EvaluationResultableType.Number
-
-  if (!isNumerical) return null
-
+  if (evaluation.resultType != EvaluationResultableType.Number) return null
   return <NumericalCharts evaluation={evaluation} documentUuid={documentUuid} />
 }

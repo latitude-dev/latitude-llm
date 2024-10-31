@@ -2,7 +2,10 @@
 
 import { useCallback, useMemo } from 'react'
 
-import { EvaluationDto } from '@latitude-data/core/browser'
+import {
+  EvaluationConfigurationNumerical,
+  EvaluationDto,
+} from '@latitude-data/core/browser'
 import {
   AreaChart,
   Text,
@@ -29,6 +32,8 @@ export function ResultOverTimeChart({
   evaluation: EvaluationDto
   documentUuid: string
 }) {
+  const evaluationConfiguration =
+    evaluation.resultConfiguration as EvaluationConfigurationNumerical
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
   const { isLoading, error, data, refetch } = useAverageResultOverTime(
@@ -97,8 +102,8 @@ export function ResultOverTimeChart({
             yAxis: {
               label: 'Average result',
               type: 'number',
-              min: evaluation.metadata.configuration.detail!.range.from,
-              max: evaluation.metadata.configuration.detail!.range.to,
+              min: evaluationConfiguration.minValue,
+              max: evaluationConfiguration.maxValue,
             },
             data: parsedData,
             tooltipLabel: (item) => {

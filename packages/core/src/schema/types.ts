@@ -99,35 +99,35 @@ export type EvaluationDto = Evaluation &
         metadataType: EvaluationMetadataType.LlmAsJudgeAdvanced
         metadata: EvaluationMetadataLlmAsJudgeAdvanced
         resultType: EvaluationResultableType.Boolean
-        resultConfiguration?: EvaluationConfigurationBoolean // TODO: This is nullable by default, but will be changed in the future.
-      }
-    | {
-        metadataType: EvaluationMetadataType.LlmAsJudgeAdvanced
-        metadata: EvaluationMetadataLlmAsJudgeAdvanced
-        resultType: EvaluationResultableType.Number
-        resultConfiguration?: EvaluationConfigurationNumerical
-      }
-    | {
-        metadataType: EvaluationMetadataType.LlmAsJudgeAdvanced
-        metadata: EvaluationMetadataLlmAsJudgeAdvanced
-        resultType: EvaluationResultableType.Text
-        resultConfiguration?: EvaluationConfigurationText
-      }
-    | {
-        metadataType: EvaluationMetadataType.LlmAsJudgeSimple
-        metadata: EvaluationMetadataLlmAsJudgeAdvanced
-        resultType: EvaluationResultableType.Boolean
         resultConfiguration: EvaluationConfigurationBoolean
       }
     | {
-        metadataType: EvaluationMetadataType.LlmAsJudgeSimple
+        metadataType: EvaluationMetadataType.LlmAsJudgeAdvanced
         metadata: EvaluationMetadataLlmAsJudgeAdvanced
         resultType: EvaluationResultableType.Number
         resultConfiguration: EvaluationConfigurationNumerical
       }
     | {
-        metadataType: EvaluationMetadataType.LlmAsJudgeSimple
+        metadataType: EvaluationMetadataType.LlmAsJudgeAdvanced
         metadata: EvaluationMetadataLlmAsJudgeAdvanced
+        resultType: EvaluationResultableType.Text
+        resultConfiguration: EvaluationConfigurationText
+      }
+    | {
+        metadataType: EvaluationMetadataType.LlmAsJudgeSimple
+        metadata: EvaluationMetadataLlmAsJudgeSimple
+        resultType: EvaluationResultableType.Boolean
+        resultConfiguration: EvaluationConfigurationBoolean
+      }
+    | {
+        metadataType: EvaluationMetadataType.LlmAsJudgeSimple
+        metadata: EvaluationMetadataLlmAsJudgeSimple
+        resultType: EvaluationResultableType.Number
+        resultConfiguration: EvaluationConfigurationNumerical
+      }
+    | {
+        metadataType: EvaluationMetadataType.LlmAsJudgeSimple
+        metadata: EvaluationMetadataLlmAsJudgeSimple
         resultType: EvaluationResultableType.Text
         resultConfiguration: EvaluationConfigurationText
       }

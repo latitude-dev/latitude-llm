@@ -3,7 +3,10 @@
 import { useEffect, useState } from 'react'
 
 import { readMetadata } from '@latitude-data/compiler'
-import { EvaluationDto } from '@latitude-data/core/browser'
+import {
+  EvaluationDto,
+  EvaluationMetadataType,
+} from '@latitude-data/core/browser'
 import { ConnectedDocumentWithMetadata } from '@latitude-data/core/repositories'
 import { Skeleton, Text } from '@latitude-data/web-ui'
 import { formatCostInMillicents } from '$/app/_lib/formatUtils'
@@ -34,10 +37,14 @@ export default function EvaluationStats({
     useConnectedDocuments({ evaluation })
 
   useEffect(() => {
-    readMetadata({ prompt: evaluation.metadata.prompt }).then((metadata) => {
-      const metadataModel = (metadata.config['model'] as string) ?? 'Unknown'
-      setModel(metadataModel)
-    })
+    if (evaluation.metadataType === EvaluationMetadataType.LlmAsJudgeAdvanced) {
+      readMetadata({ prompt: evaluation.metadata.prompt }).then((metadata) => {
+        const metadataModel = (metadata.config['model'] as string) ?? 'Unknown'
+        setModel(metadataModel)
+      })
+    } else {
+      setModel(evaluation.metadata.model)
+    }
   }, [evaluation.metadata])
 
   return (
