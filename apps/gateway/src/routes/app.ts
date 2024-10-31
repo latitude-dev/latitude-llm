@@ -38,7 +38,6 @@ app.route(
 )
 app.route('/api/v2/conversations', conversationsRouterV2)
 
-// Must be the last one!
 app.onError(errorHandlerMiddleware)
 
 export default app

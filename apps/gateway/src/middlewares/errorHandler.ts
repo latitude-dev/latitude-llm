@@ -3,7 +3,6 @@ import {
   LatitudeError,
   UnprocessableEntityError,
 } from '@latitude-data/core/lib/errors'
-import { getUnknownError } from '@latitude-data/core/lib/getUnknownError'
 import { ChainError } from '@latitude-data/core/services/chains/ChainErrors/index'
 import { captureException } from '$/common/sentry'
 import { HTTPException } from 'hono/http-exception'
@@ -29,14 +28,6 @@ function unprocessableExtraParameters(error: UnprocessableEntityError) {
 }
 
 const errorHandlerMiddleware = (err: Error) => {
-  if (process.env.NODE_ENV !== 'test') {
-    const unknownError = getUnknownError(err)
-
-    if (unknownError) {
-      captureException(err)
-    }
-  }
-
   if (err instanceof HTTPException) {
     return Response.json(
       {
@@ -67,6 +58,10 @@ const errorHandlerMiddleware = (err: Error) => {
       { status: err.statusCode, headers: err.headers },
     )
   } else {
+    if (process.env.NODE_ENV !== 'test') {
+      captureException(err)
+    }
+
     return Response.json(
       {
         name: 'InternalServerError',

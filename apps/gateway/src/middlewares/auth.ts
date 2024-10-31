@@ -15,18 +15,22 @@ declare module 'hono' {
 const authMiddleware = () =>
   bearerAuth({
     verifyToken: async (token: string, c) => {
-      const apiKeyResult = await unsafelyGetApiKeyByToken({ token })
-      if (apiKeyResult.error) return false
+      try {
+        const apiKeyResult = await unsafelyGetApiKeyByToken({ token })
+        if (apiKeyResult.error) return false
 
-      const workspace = await unsafelyFindWorkspace(
-        apiKeyResult.value.workspaceId,
-      )
-      if (!workspace) return false
+        const workspace = await unsafelyFindWorkspace(
+          apiKeyResult.value.workspaceId,
+        )
+        if (!workspace) return false
 
-      c.set('workspace', workspace)
-      c.set('apiKey', apiKeyResult.value)
+        c.set('workspace', workspace)
+        c.set('apiKey', apiKeyResult.value)
 
-      return true
+        return true
+      } catch (error) {
+        return false
+      }
     },
   })
 
