@@ -638,6 +638,13 @@
       "when": 1730293939726,
       "tag": "0091_bigint_evaluations_result_config",
       "breakpoints": true
+    },
+    {
+      "idx": 92,
+      "version": "7",
+      "when": 1730370347985,
+      "tag": "0092_migrate_legacy_evaluations",
+      "breakpoints": true
     }
   ]
 }
