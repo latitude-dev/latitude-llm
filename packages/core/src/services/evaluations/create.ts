@@ -1,10 +1,18 @@
 import { env } from '@latitude-data/env'
 
 import {
+  EvaluationConfigurationBoolean,
+  EvaluationConfigurationNumerical,
+  EvaluationConfigurationText,
+  EvaluationDto,
+  EvaluationMetadataLlmAsJudgeAdvanced,
+  EvaluationMetadataLlmAsJudgeSimple,
   EvaluationMetadataType,
   EvaluationResultableType,
   EvaluationResultConfiguration,
   findFirstModelForProvider,
+  IEvaluationConfiguration,
+  IEvaluationMetadata,
   Providers,
   User,
   Workspace,
@@ -12,106 +20,124 @@ import {
 import { Database, database } from '../../client'
 import { findEvaluationTemplateById } from '../../data-access'
 import { publisher } from '../../events/publisher'
-import { BadRequestError, NotFoundError, Result, Transaction } from '../../lib'
+import {
+  BadRequestError,
+  NotFoundError,
+  PromisedResult,
+  Result,
+  Transaction,
+} from '../../lib'
 import { ProviderApiKeysRepository } from '../../repositories'
 import {
-  connectedEvaluations,
+  evaluationConfigurationBoolean,
+  evaluationConfigurationNumerical,
+  evaluationConfigurationText,
   evaluationMetadataLlmAsJudgeAdvanced,
+  evaluationMetadataLlmAsJudgeSimple,
   evaluations,
 } from '../../schema'
+import { connectEvaluations } from './connect'
 
-type Props = {
-  workspace: Workspace
-  name: string
-  description: string
-  type: EvaluationMetadataType
-  configuration: EvaluationResultConfiguration
-  metadata?: Record<string, unknown>
-  user: User
-  projectId?: number
-  documentUuid?: string
-}
-
-export async function createEvaluation(
+export async function createEvaluation<
+  M extends EvaluationMetadataType,
+  R extends EvaluationResultableType,
+>(
   {
     workspace,
+    user,
     name,
     description,
-    type,
-    configuration,
-    user,
-    metadata = {},
+    metadataType,
+    metadata,
+    resultType,
+    resultConfiguration,
     projectId,
     documentUuid,
-  }: Props,
+  }: {
+    workspace: Workspace
+    user: User
+    name: string
+    description: string
+    metadataType: M
+    metadata: M extends EvaluationMetadataType.LlmAsJudgeSimple
+      ? Omit<EvaluationMetadataLlmAsJudgeSimple, 'id'>
+      : M extends EvaluationMetadataType.LlmAsJudgeAdvanced
+        ? Omit<EvaluationMetadataLlmAsJudgeAdvanced, 'id'>
+        : never
+    resultType: R
+    resultConfiguration: R extends EvaluationResultableType.Boolean
+      ? Omit<EvaluationConfigurationBoolean, 'id'>
+      : R extends EvaluationResultableType.Number
+        ? Omit<EvaluationConfigurationNumerical, 'id'>
+        : R extends EvaluationResultableType.Text
+          ? Omit<EvaluationConfigurationText, 'id'>
+          : never
+    projectId?: number
+    documentUuid?: string
+  },
   db = database,
-) {
-  const provider = await findProvider(workspace, db)
-  if (!provider) {
+): PromisedResult<EvaluationDto> {
+  const metadataTables = {
+    [EvaluationMetadataType.LlmAsJudgeAdvanced]:
+      evaluationMetadataLlmAsJudgeAdvanced,
+    [EvaluationMetadataType.LlmAsJudgeSimple]:
+      evaluationMetadataLlmAsJudgeSimple,
+  } as const
+
+  if (!metadataTables[metadataType]) {
     return Result.error(
-      new NotFoundError(
-        'In order to create an evaluation you need to first create a provider API key from OpenAI or Anthropic',
-      ),
+      new BadRequestError(`Invalid metadata type ${metadataType}`),
     )
   }
 
-  const meta = metadata as { prompt: string; templateId?: number }
-  const promptWithProvider = provider
-    ? `---
-provider: ${provider.name}
-model: ${findFirstModelForProvider(provider.provider)}
----
-${meta.prompt}
-`.trim()
-    : meta.prompt
+  const configurationTables = {
+    [EvaluationResultableType.Boolean]: evaluationConfigurationBoolean,
+    [EvaluationResultableType.Number]: evaluationConfigurationNumerical,
+    [EvaluationResultableType.Text]: evaluationConfigurationText,
+  } as const
+
+  if (!configurationTables[resultType]) {
+    return Result.error(
+      new BadRequestError(`Invalid result type ${resultType}`),
+    )
+  }
 
   return await Transaction.call(async (tx) => {
-    validateConfiguration(configuration)
+    const metadataRow = (await tx
+      .insert(metadataTables[metadataType])
+      .values([metadata])
+      .returning()
+      .then((r) => r[0]!)) as IEvaluationMetadata
 
-    let metadataTable
-    switch (type) {
-      case EvaluationMetadataType.LlmAsJudgeAdvanced:
-        metadataTable = await tx
-          .insert(evaluationMetadataLlmAsJudgeAdvanced)
-          .values({
-            configuration,
-            prompt: promptWithProvider,
-            templateId: meta.templateId,
-          })
-          .returning()
+    const configurationRow = (await tx
+      .insert(configurationTables[resultType])
+      .values([resultConfiguration])
+      .returning()
+      .then((r) => r[0]!)) as IEvaluationConfiguration
 
-        break
-      default:
-        return Result.error(
-          new BadRequestError(`Invalid evaluation type ${type}`),
-        )
-    }
-
-    const result = await tx
+    const evaluation = await tx
       .insert(evaluations)
       .values([
         {
-          description,
-          metadataId: metadataTable[0]!.id,
-          metadataType: type,
-          name,
           workspaceId: workspace.id,
+          name,
+          description,
+          metadataType,
+          metadataId: metadataRow.id,
+          resultType,
+          resultConfigurationId: configurationRow.id,
         },
       ])
       .returning()
+      .then((r) => r[0]!)
 
-    const evaluation = result[0]!
-
-    // If projectId and documentUuid are provided, connect the evaluation
     if (projectId && documentUuid) {
-      // TODO: Move to a connectEvaluation service
-      await tx
-        .insert(connectedEvaluations)
-        .values({
-          documentUuid,
-          evaluationId: evaluation.id,
-        })
-        .returning()
+      await connectEvaluations({
+        workspace,
+        documentUuid,
+        evaluationUuids: [evaluation.uuid],
+        user,
+      })
     }
 
     publisher.publishLater({
@@ -125,10 +151,13 @@ ${meta.prompt}
       },
     })
 
-    return Result.ok({
+    const evaluationDto = {
       ...evaluation,
-      metadata: metadataTable[0]!,
-    })
+      metadata: metadataRow,
+      resultConfiguration: configurationRow,
+    } as EvaluationDto
+
+    return Result.ok(evaluationDto)
   }, db)
 }
 
@@ -144,13 +173,12 @@ export async function importLlmAsJudgeEvaluation(
   if (templateResult.error) return templateResult
   const template = templateResult.unwrap()
 
-  return await createEvaluation(
+  return await createAdvancedEvaluation(
     {
       user,
       workspace,
       name: template.name,
       description: template.description,
-      type: EvaluationMetadataType.LlmAsJudgeAdvanced,
       configuration: template.configuration,
       metadata: {
         prompt: template.prompt,
@@ -164,16 +192,19 @@ export async function importLlmAsJudgeEvaluation(
 function validateConfiguration(config: EvaluationResultConfiguration) {
   if (config.type === EvaluationResultableType.Number) {
     if (!config.detail?.range) {
-      throw new BadRequestError('Range is required for number evaluations')
+      return Result.error(
+        new BadRequestError('Range is required for number evaluations'),
+      )
     } else {
       const { from, to } = config.detail.range
       if (from >= to) {
-        throw new BadRequestError(
-          'Invalid range to has to be greater than from',
+        return Result.error(
+          new BadRequestError('Invalid range to has to be greater than from'),
         )
       }
     }
   }
+  return Result.nil()
 }
 
 async function findProvider(workspace: Workspace, db: Database) {
@@ -193,4 +224,69 @@ async function findProvider(workspace: Workspace, db: Database) {
   if (found) return found
 
   return providers.find((p) => p.token === env.DEFAULT_PROVIDER_API_KEY)
+}
+
+export async function createAdvancedEvaluation(
+  {
+    workspace,
+    configuration,
+    metadata,
+    ...props
+  }: {
+    workspace: Workspace
+    user: User
+    name: string
+    description: string
+    configuration: EvaluationResultConfiguration
+    metadata: { prompt: string; templateId?: number }
+    projectId?: number
+    documentUuid?: string
+  },
+  db = database,
+): PromisedResult<EvaluationDto> {
+  const validConfig = validateConfiguration(configuration)
+  if (validConfig.error) return validConfig
+
+  const provider = await findProvider(workspace, db)
+  if (!provider) {
+    return Result.error(
+      new NotFoundError(
+        'In order to create an evaluation you need to first create a provider API key from OpenAI or Anthropic',
+      ),
+    )
+  }
+
+  const promptWithProvider = provider
+    ? `---
+provider: ${provider.name}
+model: ${findFirstModelForProvider(provider.provider)}
+---
+${metadata.prompt}
+`.trim()
+    : metadata.prompt
+
+  const resultConfiguration = (
+    configuration.type === EvaluationResultableType.Number
+      ? {
+          minValue: configuration.detail!.range.from,
+          maxValue: configuration.detail!.range.to,
+        }
+      : {}
+  ) as IEvaluationConfiguration
+
+  return createEvaluation(
+    {
+      workspace,
+      ...props,
+      metadataType: EvaluationMetadataType.LlmAsJudgeAdvanced,
+      metadata: {
+        prompt: promptWithProvider,
+        configuration,
+        templateId: metadata.templateId ?? null,
+      } as Omit<EvaluationMetadataLlmAsJudgeAdvanced, 'id'>,
+      resultType: configuration.type,
+      resultConfiguration,
+    },
+    db,
+  )
 }

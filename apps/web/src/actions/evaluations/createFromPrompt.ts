@@ -1,10 +1,7 @@
 'use server'
 
-import {
-  EvaluationMetadataType,
-  EvaluationResultableType,
-} from '@latitude-data/core/browser'
-import { createEvaluation } from '@latitude-data/core/services/evaluations/create'
+import { EvaluationResultableType } from '@latitude-data/core/browser'
+import { createAdvancedEvaluation } from '@latitude-data/core/services/evaluations/create'
 import { z } from 'zod'
 
 import { withDocument } from '../procedures'
@@ -28,11 +25,10 @@ export const createEvaluationFromPromptAction = withDocument
     { type: 'json' },
   )
   .handler(async ({ input, ctx }) => {
-    const result = await createEvaluation({
+    const result = await createAdvancedEvaluation({
       workspace: ctx.workspace,
       name: input.name,
       description: 'AI-generated evaluation',
-      type: EvaluationMetadataType.LlmAsJudgeAdvanced,
       configuration: {
         type:
           input.type === 'number'

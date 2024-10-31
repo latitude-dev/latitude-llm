@@ -1,6 +1,6 @@
 import { type InferInsertModel, type InferSelectModel } from 'drizzle-orm'
 
-import { EvaluationResultableType } from '../constants'
+import { EvaluationMetadataType, EvaluationResultableType } from '../constants'
 import { apiKeys } from './models/apiKeys'
 import { claimedRewards } from './models/claimedRewards'
 import { commits } from './models/commits'
@@ -9,7 +9,11 @@ import { datasets } from './models/datasets'
 import { documentLogs } from './models/documentLogs'
 import { documentVersions } from './models/documentVersions'
 import { evaluationAdvancedTemplates } from './models/evaluationAdvancedTemplates'
+import { evaluationConfigurationBoolean } from './models/evaluationConfigurationBoolean'
+import { evaluationConfigurationNumerical } from './models/evaluationConfigurationNumerical'
+import { evaluationConfigurationText } from './models/evaluationConfigurationText'
 import { evaluationMetadataLlmAsJudgeAdvanced } from './models/evaluationMetadataLlmAsJudgeAdvanced'
+import { evaluationMetadataLlmAsJudgeSimple } from './models/evaluationMetadataLlmAsJudgeSimple'
 import { evaluationResults } from './models/evaluationResults'
 import { evaluations } from './models/evaluations'
 import { evaluationTemplateCategories } from './models/evaluationTemplateCategories'
@@ -52,17 +56,82 @@ export type ClaimedReward = InferSelectModel<typeof claimedRewards>
 export type EvaluationTemplateCategory = InferSelectModel<
   typeof evaluationTemplateCategories
 >
-export type LlmAsJudgeEvaluationMetadata = InferSelectModel<
-  typeof evaluationMetadataLlmAsJudgeAdvanced
->
 export type Subscription = InferSelectModel<typeof subscriptions>
 
-export type EvaluationDto = Evaluation & {
-  metadata: Omit<
-    LlmAsJudgeEvaluationMetadata,
-    'metadataType' | 'createdAt' | 'updatedAt'
-  >
-}
+export type EvaluationMetadataLlmAsJudgeAdvanced = Omit<
+  InferSelectModel<typeof evaluationMetadataLlmAsJudgeAdvanced>,
+  'createdAt' | 'updatedAt'
+>
+export type EvaluationMetadataLlmAsJudgeSimple = Omit<
+  InferSelectModel<typeof evaluationMetadataLlmAsJudgeSimple>,
+  'createdAt' | 'updatedAt'
+>
+
+export type IEvaluationMetadata =
+  | EvaluationMetadataLlmAsJudgeAdvanced
+  | EvaluationMetadataLlmAsJudgeSimple
+
+export type EvaluationConfigurationBoolean = Omit<
+  InferSelectModel<typeof evaluationConfigurationBoolean>,
+  'createdAt' | 'updatedAt'
+>
+export type EvaluationConfigurationNumerical = Omit<
+  InferSelectModel<typeof evaluationConfigurationNumerical>,
+  'createdAt' | 'updatedAt'
+>
+export type EvaluationConfigurationText = Omit<
+  InferSelectModel<typeof evaluationConfigurationText>,
+  'createdAt' | 'updatedAt'
+>
+
+export type IEvaluationConfiguration =
+  | EvaluationConfigurationBoolean
+  | EvaluationConfigurationNumerical
+  | EvaluationConfigurationText
+
+// TODO: EvaluationDto now has two polimorphic attributes. There's two ways to define it:
+// 1. Use generic types, which is way prettier, but Typescript won't infer the type automatically.
+// 2. Use union types, which requires to explicitly define every combination, but works flawlesly with Typescript.
+// As you can see, I've decided to go with the second option, but feel free to change it if you want to.
+export type EvaluationDto = Evaluation &
+  (
+    | {
+        metadataType: EvaluationMetadataType.LlmAsJudgeAdvanced
+        metadata: EvaluationMetadataLlmAsJudgeAdvanced
+        resultType: EvaluationResultableType.Boolean
+        resultConfiguration?: EvaluationConfigurationBoolean // TODO: This is nullable by default, but will be changed in the future.
+      }
+    | {
+        metadataType: EvaluationMetadataType.LlmAsJudgeAdvanced
+        metadata: EvaluationMetadataLlmAsJudgeAdvanced
+        resultType: EvaluationResultableType.Number
+        resultConfiguration?: EvaluationConfigurationNumerical
+      }
+    | {
+        metadataType: EvaluationMetadataType.LlmAsJudgeAdvanced
+        metadata: EvaluationMetadataLlmAsJudgeAdvanced
+        resultType: EvaluationResultableType.Text
+        resultConfiguration?: EvaluationConfigurationText
+      }
+    | {
+        metadataType: EvaluationMetadataType.LlmAsJudgeSimple
+        metadata: EvaluationMetadataLlmAsJudgeAdvanced
+        resultType: EvaluationResultableType.Boolean
+        resultConfiguration: EvaluationConfigurationBoolean
+      }
+    | {
+        metadataType: EvaluationMetadataType.LlmAsJudgeSimple
+        metadata: EvaluationMetadataLlmAsJudgeAdvanced
+        resultType: EvaluationResultableType.Number
+        resultConfiguration: EvaluationConfigurationNumerical
+      }
+    | {
+        metadataType: EvaluationMetadataType.LlmAsJudgeSimple
+        metadata: EvaluationMetadataLlmAsJudgeAdvanced
+        resultType: EvaluationResultableType.Text
+        resultConfiguration: EvaluationConfigurationText
+      }
+  )
 
 export type Dataset = InferSelectModel<typeof datasets> & {
   author: Pick<User, 'id' | 'name'> | undefined

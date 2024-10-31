@@ -1,29 +1,41 @@
 import { omit } from 'lodash-es'
 
-import { and, eq, getTableColumns, inArray, isNull, sql } from 'drizzle-orm'
+import { and, eq, getTableColumns, inArray, isNull } from 'drizzle-orm'
 
 import { EvaluationDto } from '../browser'
-import { EvaluationMetadataType } from '../constants'
+import { EvaluationMetadataType, EvaluationResultableType } from '../constants'
 import { NotFoundError, PromisedResult, Result } from '../lib'
 import {
   connectedEvaluations,
+  evaluationConfigurationBoolean,
+  evaluationConfigurationNumerical,
+  evaluationConfigurationText,
   evaluationMetadataLlmAsJudgeAdvanced,
+  evaluationMetadataLlmAsJudgeSimple,
   evaluations,
 } from '../schema'
+import { getSharedTableColumns } from '../schema/schemaHelpers'
 import RepositoryLegacy from './repository'
 
 const tt = {
   ...getTableColumns(evaluations),
-  metadata: {
-    id: sql<number>`llm_as_judge_evaluation_metadatas.id`.as(
-      'metadata_metadata_id',
-    ),
-    ...omit(getTableColumns(evaluationMetadataLlmAsJudgeAdvanced), [
-      'id',
-      'createdAt',
-      'updatedAt',
-    ]),
-  },
+  metadata: omit(
+    getSharedTableColumns(evaluations.metadataType, {
+      [EvaluationMetadataType.LlmAsJudgeAdvanced]:
+        evaluationMetadataLlmAsJudgeAdvanced,
+      [EvaluationMetadataType.LlmAsJudgeSimple]:
+        evaluationMetadataLlmAsJudgeSimple,
+    }),
+    ['id', 'createdAt', 'updatedAt'],
+  ),
+  resultConfiguration: omit(
+    getSharedTableColumns(evaluations.resultType, {
+      [EvaluationResultableType.Boolean]: evaluationConfigurationBoolean,
+      [EvaluationResultableType.Number]: evaluationConfigurationNumerical,
+      [EvaluationResultableType.Text]: evaluationConfigurationText,
+    }),
+    ['id', 'createdAt', 'updatedAt'],
+  ),
 }
 
 export class EvaluationsRepository extends RepositoryLegacy<
@@ -34,10 +46,9 @@ export class EvaluationsRepository extends RepositoryLegacy<
     return this.db
       .select(tt)
       .from(evaluations)
-      .innerJoin(
+      .leftJoin(
         evaluationMetadataLlmAsJudgeAdvanced,
         and(
-          isNull(evaluations.deletedAt),
           eq(evaluations.metadataId, evaluationMetadataLlmAsJudgeAdvanced.id),
           eq(
             evaluations.metadataType,
@@ -45,7 +56,46 @@ export class EvaluationsRepository extends RepositoryLegacy<
           ),
         ),
       )
-      .where(eq(evaluations.workspaceId, this.workspaceId))
+      .leftJoin(
+        evaluationMetadataLlmAsJudgeSimple,
+        and(
+          eq(evaluations.metadataId, evaluationMetadataLlmAsJudgeSimple.id),
+          eq(evaluations.metadataType, EvaluationMetadataType.LlmAsJudgeSimple),
+        ),
+      )
+      .leftJoin(
+        evaluationConfigurationBoolean,
+        and(
+          eq(
+            evaluations.resultConfigurationId,
+            evaluationConfigurationBoolean.id,
+          ),
+          eq(evaluations.resultType, EvaluationResultableType.Boolean),
+        ),
+      )
+      .leftJoin(
+        evaluationConfigurationNumerical,
+        and(
+          eq(
+            evaluations.resultConfigurationId,
+            evaluationConfigurationNumerical.id,
+          ),
+          eq(evaluations.resultType, EvaluationResultableType.Number),
+        ),
+      )
+      .leftJoin(
+        evaluationConfigurationText,
+        and(
+          eq(evaluations.resultConfigurationId, evaluationConfigurationText.id),
+          eq(evaluations.resultType, EvaluationResultableType.Text),
+        ),
+      )
+      .where(
+        and(
+          isNull(evaluations.deletedAt),
+          eq(evaluations.workspaceId, this.workspaceId),
+        ),
+      )
       .as('evaluations_scope')
   }
 

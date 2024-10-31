@@ -1,52 +1,33 @@
-import { isEmpty, omit } from 'lodash-es'
-
 import { eq } from 'drizzle-orm'
 
-import { EvaluationDto } from '../../browser'
+import { EvaluationDto, EvaluationMetadataType } from '../../browser'
 import { database } from '../../client'
-import { Result, Transaction } from '../../lib'
-import { compactObject } from '../../lib/compactObject'
-import { evaluationMetadataLlmAsJudgeAdvanced, evaluations } from '../../schema'
+import { BadRequestError, Result, Transaction } from '../../lib'
+import { evaluationMetadataLlmAsJudgeAdvanced } from '../../schema'
 
-export async function updateEvaluation(
+export async function updateAdvancedEvaluationPrompt(
   {
     evaluation,
-    name,
-    description,
-    metadata = {},
+    prompt,
   }: {
     evaluation: EvaluationDto
-    name?: string
-    description?: string
-    metadata: Record<string, unknown>
+    prompt: string
   },
   trx = database,
 ) {
-  return await Transaction.call(async (tx) => {
-    let updatedEvals = [omit(evaluation, 'metadata')]
-    let values = compactObject({ name, description })
-    if (!isEmpty(values)) {
-      updatedEvals = await tx
-        .update(evaluations)
-        .set(values)
-        .where(eq(evaluations.id, evaluation.id))
-        .returning()
-    }
+  if (evaluation.metadataType != EvaluationMetadataType.LlmAsJudgeAdvanced) {
+    return Result.error(new BadRequestError('Invalid evaluation type'))
+  }
 
-    let updatedMetadata = [evaluation.metadata]
-    values = compactObject(metadata)
-    if (!isEmpty(values)) {
-      updatedMetadata = await tx
-        .update(evaluationMetadataLlmAsJudgeAdvanced)
-        .set(values)
-        .where(
-          eq(evaluationMetadataLlmAsJudgeAdvanced.id, evaluation.metadata.id),
-        )
-        .returning()
-    }
+  return await Transaction.call(async (tx) => {
+    const updatedMetadata = await tx
+      .update(evaluationMetadataLlmAsJudgeAdvanced)
+      .set({ prompt })
+      .where(eq(evaluationMetadataLlmAsJudgeAdvanced.id, evaluation.metadataId))
+      .returning()
 
     return Result.ok({
-      ...updatedEvals[0]!,
+      ...evaluation,
       metadata: updatedMetadata[0]!,
     })
   }, trx)

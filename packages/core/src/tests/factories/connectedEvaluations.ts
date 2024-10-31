@@ -2,14 +2,13 @@ import { faker } from '@faker-js/faker'
 
 import {
   ConnectedEvaluation,
-  EvaluationMetadataType,
   EvaluationResultableType,
   User,
   Workspace,
 } from '../../browser'
 import {
   connectEvaluations,
-  createEvaluation,
+  createAdvancedEvaluation,
 } from '../../services/evaluations'
 
 export async function createConnectedEvaluation({
@@ -24,17 +23,15 @@ export async function createConnectedEvaluation({
   documentUuid: string
 }): Promise<ConnectedEvaluation> {
   if (!evaluationUuid) {
-    const evaluation = await createEvaluation({
+    const evaluation = await createAdvancedEvaluation({
       user,
       workspace,
       name: faker.company.name(),
       description: faker.lorem.sentence(),
-      type: EvaluationMetadataType.LlmAsJudgeAdvanced,
       configuration: {
         type: EvaluationResultableType.Boolean,
       },
       metadata: {
-        type: EvaluationMetadataType.LlmAsJudgeAdvanced,
         prompt: faker.lorem.sentence(),
       },
     }).then((r) => r.unwrap())

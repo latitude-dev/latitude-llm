@@ -1,13 +1,12 @@
 import { faker } from '@faker-js/faker'
 
 import {
-  EvaluationMetadataType,
   EvaluationResultableType,
   EvaluationResultConfiguration,
   User,
   Workspace,
 } from '../../browser'
-import { createEvaluation as createEvaluationService } from '../../services/evaluations'
+import { createAdvancedEvaluation as createEvaluationService } from '../../services/evaluations'
 
 export type IEvaluationData = {
   workspace: Workspace
@@ -32,7 +31,6 @@ export async function createLlmAsJudgeEvaluation({
     workspace,
     user,
     metadata: { prompt: prompt ?? faker.lorem.sentence() },
-    type: EvaluationMetadataType.LlmAsJudgeAdvanced,
     name: name ?? faker.company.catchPhrase(),
     description: description ?? faker.lorem.sentence(),
     configuration,

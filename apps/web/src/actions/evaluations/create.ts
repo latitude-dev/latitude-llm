@@ -1,10 +1,7 @@
 'use server'
 
-import {
-  EvaluationMetadataType,
-  EvaluationResultableType,
-} from '@latitude-data/core/browser'
-import { createEvaluation } from '@latitude-data/core/services/evaluations/create'
+import { EvaluationResultableType } from '@latitude-data/core/browser'
+import { createAdvancedEvaluation } from '@latitude-data/core/services/evaluations/create'
 import { z } from 'zod'
 
 import { authProcedure } from '../procedures'
@@ -15,10 +12,6 @@ export const createEvaluationAction = authProcedure
     z.object({
       name: z.string(),
       description: z.string(),
-      type: z
-        .nativeEnum(EvaluationMetadataType)
-        .optional()
-        .default(EvaluationMetadataType.LlmAsJudgeAdvanced),
       configuration: z.object({
         type: z.nativeEnum(EvaluationResultableType),
         detail: z
@@ -34,13 +27,12 @@ export const createEvaluationAction = authProcedure
     { type: 'json' },
   )
   .handler(async ({ input, ctx }) => {
-    const result = await createEvaluation({
+    const result = await createAdvancedEvaluation({
       workspace: ctx.workspace,
       name: input.name,
       description: input.description,
-      metadata: input.metadata,
+      metadata: input.metadata ?? { prompt: '' },
       configuration: input.configuration,
-      type: input.type,
       user: ctx.user,
     })
 
