@@ -12,6 +12,7 @@ import {
 import { Result, TypedResult } from '../../lib'
 import { generateUUIDIdentifier } from '../../lib/generateUUID'
 import { ai } from '../ai'
+import { getCachedResponse, setCachedResponse } from '../commits/promptCache'
 import { createRunError } from '../runErrors/create'
 import { ChainError } from './ChainErrors'
 import { ChainStreamConsumer } from './ChainStreamConsumer'
@@ -162,6 +163,35 @@ async function runStep({
   try {
     const step = await chainValidator.call().then((r) => r.unwrap())
     const { messageCount, stepStartTime } = streamConsumer.setup(step)
+    const cachedResponse = await getCachedResponse({
+      workspace,
+      config: step.config,
+      conversation: step.conversation,
+    })
+
+    if (cachedResponse) {
+      if (step.chainCompleted) {
+        streamConsumer.chainCompleted({ step, response: cachedResponse })
+
+        return cachedResponse
+      } else {
+        streamConsumer.stepCompleted(cachedResponse)
+
+        return runStep({
+          workspace,
+          source,
+          chain,
+          providersMap,
+          controller,
+          errorableUuid,
+          errorableType,
+          previousCount: previousCount + 1,
+          previousResponse: cachedResponse,
+          configOverrides,
+        })
+      }
+    }
+
     const providerProcessor = new ProviderProcessor({
       workspace,
       source,
@@ -193,12 +223,21 @@ async function runStep({
       .then((r) => r.unwrap())
 
     if (consumedStream.error) throw consumedStream.error
+
+    await setCachedResponse({
+      workspace,
+      config: step.config,
+      conversation: step.conversation,
+      response,
+    })
+
     if (step.chainCompleted) {
       streamConsumer.chainCompleted({ step, response })
 
       return response
     } else {
       streamConsumer.stepCompleted(response)
+
       return runStep({
         workspace,
         source,
