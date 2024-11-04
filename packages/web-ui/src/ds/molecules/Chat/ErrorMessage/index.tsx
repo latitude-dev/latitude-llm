@@ -13,7 +13,13 @@ export function ErrorMessage({ error }: { error: Error }) {
             .split('\n')
             .map((line, index) => (
               <div key={index} className='inline-block leading-none'>
-                <Text.Mono color='destructive'>{line}</Text.Mono>
+                <Text.Mono
+                  color='destructive'
+                  whiteSpace='preWrap'
+                  wordBreak='breakAll'
+                >
+                  {line}
+                </Text.Mono>
               </div>
             ))}
         </div>
