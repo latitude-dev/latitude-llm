@@ -1,7 +1,10 @@
 import { ReactNode } from 'react'
 
 import { readMetadata } from '@latitude-data/compiler'
-import { EvaluationResultableType } from '@latitude-data/core/browser'
+import {
+  EvaluationMetadataType,
+  EvaluationResultableType,
+} from '@latitude-data/core/browser'
 import { env } from '@latitude-data/env'
 import {
   Breadcrumb,
@@ -14,7 +17,8 @@ import {
 } from '@latitude-data/web-ui'
 import {
   findCommitCached,
-  getProviderApiKeyCached,
+  getProviderApiKeyByIdCached,
+  getProviderApiKeyByNameCached,
 } from '$/app/(private)/_data-access'
 import BreadcrumbLink from '$/components/BreadcrumbLink'
 import { ROUTES } from '$/services/routes'
@@ -47,11 +51,9 @@ export default async function ConnectedEvaluationLayout({
     projectId: Number(params.projectId),
     uuid: params.commitUuid,
   })
-  const isNumeric =
-    evaluation.metadata.configuration.type == EvaluationResultableType.Number
 
   let provider
-  if (evaluation.metadata.prompt) {
+  if (evaluation.metadataType == EvaluationMetadataType.LlmAsJudgeAdvanced) {
     const metadata = await readMetadata({
       prompt: evaluation.metadata.prompt,
     })
@@ -61,12 +63,16 @@ export default async function ConnectedEvaluationLayout({
       typeof metadata.config.provider === 'string'
     ) {
       try {
-        provider = await getProviderApiKeyCached(metadata.config.provider)
+        provider = await getProviderApiKeyByNameCached(metadata.config.provider)
       } catch (error) {
         // do nothing, it could be that the provider name does not match any
         // provider in the workspace
       }
     }
+  } else {
+    provider = await getProviderApiKeyByIdCached(
+      evaluation.metadata.providerApiKeyId,
+    )
   }
   return (
     <div className='flex flex-col w-full h-full gap-6 p-6'>
@@ -92,7 +98,7 @@ export default async function ConnectedEvaluationLayout({
                 {evaluation.name}
               </Text.H4M>
               <Text.H4M color='foregroundMuted'>
-                {TYPE_TEXT[evaluation.metadata.configuration.type]}
+                {TYPE_TEXT[evaluation.resultType]}
               </Text.H4M>
               <Tooltip
                 asChild
@@ -131,7 +137,6 @@ export default async function ConnectedEvaluationLayout({
         commit={commit}
         evaluation={evaluation}
         documentUuid={params.documentUuid}
-        isNumeric={isNumeric}
       />
       {children}
     </div>

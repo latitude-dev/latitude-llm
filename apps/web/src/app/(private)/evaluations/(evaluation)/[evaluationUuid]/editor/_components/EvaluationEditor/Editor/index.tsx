@@ -3,6 +3,7 @@
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 
 import {
+  EvaluationMetadataLlmAsJudgeAdvanced,
   ProviderApiKey,
   SERIALIZED_DOCUMENT_LOG_FIELDS,
 } from '@latitude-data/core/browser'
@@ -70,6 +71,10 @@ export default function EvaluationEditor({
 
   if (!evaluation) return null
 
+  // TODO: Only advanced evaluations are available right now. Next PR will add saparate components for each evaluation type
+  const prompt = (evaluation.metadata as EvaluationMetadataLlmAsJudgeAdvanced)
+    .prompt
+
   return (
     <div className='flex flex-row w-full h-full gap-8'>
       <div className='flex flex-col flex-1 flex-grow flex-shrink gap-2 min-w-0'>
@@ -82,7 +87,7 @@ export default function EvaluationEditor({
           onChangePrompt={onChange}
           rightActions={
             <>
-              {value !== evaluation.metadata.prompt && (
+              {value !== prompt && (
                 <Button
                   fancy
                   disabled={isUpdating || isLoading}

@@ -51,14 +51,12 @@ export async function createEvaluationResult(
   }: CreateEvaluationResultProps,
   db = database,
 ) {
-  const resultableTable = getResultable(evaluation.metadata.configuration.type)
+  const resultableTable = getResultable(evaluation.resultType)
   let resultableId: number | undefined
 
   if (!resultableTable && result) {
     return Result.error(
-      new BadRequestError(
-        `Unsupported result type: ${evaluation.metadata.configuration.type}`,
-      ),
+      new BadRequestError(`Unsupported result type: ${evaluation.resultType}`),
     )
   }
 
@@ -80,7 +78,7 @@ export async function createEvaluationResult(
         evaluationId: evaluation.id,
         documentLogId: documentLog.id,
         providerLogId: providerLog?.id,
-        resultableType: result ? evaluation.metadata.configuration.type : null,
+        resultableType: result ? evaluation.resultType : null,
         resultableId,
         source: documentLog.source,
       })

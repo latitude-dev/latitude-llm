@@ -15,6 +15,7 @@ import { Result } from '../../../lib'
 import { ChainError } from '../../chains/ChainErrors'
 import { serialize } from '../../documentLogs/serialize'
 import { createRunError } from '../../runErrors/create'
+import { getEvaluationPrompt } from '../prompt'
 
 type EvaluationRunErrorCheckerCodes =
   | RunErrorCodes.EvaluationRunMissingProviderLogError
@@ -84,9 +85,7 @@ export class EvaluationRunChecker {
   }
 
   private async buildSchema() {
-    const resultSchema = getResultSchema(
-      this.evaluation.metadata.configuration.type,
-    )
+    const resultSchema = getResultSchema(this.evaluation.resultType)
 
     if (resultSchema.error) {
       await this.saveError(resultSchema.error)
@@ -109,9 +108,14 @@ export class EvaluationRunChecker {
     if (serializedLogResult.error) return serializedLogResult
 
     try {
+      const evaluationPrompt = await getEvaluationPrompt({
+        workspace,
+        evaluation: this.evaluation,
+      }).then((r) => r.unwrap())
+
       return Result.ok(
         createChainFn({
-          prompt: this.evaluation.metadata.prompt,
+          prompt: evaluationPrompt,
           parameters: {
             ...serializedLogResult.value,
           },

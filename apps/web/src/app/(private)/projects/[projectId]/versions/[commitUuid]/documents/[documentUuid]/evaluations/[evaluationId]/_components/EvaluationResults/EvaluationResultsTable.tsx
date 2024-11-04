@@ -39,9 +39,7 @@ export const ResultCellContent = ({
   evaluation: EvaluationDto
   value: unknown
 }) => {
-  if (
-    evaluation.metadata.configuration.type === EvaluationResultableType.Boolean
-  ) {
+  if (evaluation.resultType === EvaluationResultableType.Boolean) {
     return (
       <Badge variant={value === 'true' ? 'success' : 'destructive'}>
         {String(value)}
@@ -49,11 +47,9 @@ export const ResultCellContent = ({
     )
   }
 
-  if (
-    evaluation.metadata.configuration.type === EvaluationResultableType.Number
-  ) {
-    const minValue = evaluation.metadata.configuration.detail?.range.from ?? 0
-    const maxValue = evaluation.metadata.configuration.detail?.range.to ?? 10
+  if (evaluation.resultType === EvaluationResultableType.Number) {
+    const minValue = evaluation.resultConfiguration.minValue
+    const maxValue = evaluation.resultConfiguration.maxValue
 
     return (
       <RangeBadge

@@ -1,16 +1,18 @@
-import { Commit, EvaluationDto } from '@latitude-data/core/browser'
+import {
+  Commit,
+  EvaluationDto,
+  EvaluationResultableType,
+} from '@latitude-data/core/browser'
 
 import MeanValuePanel from './MeanValuePanel'
 import ModalValuePanel from './ModalValuePanel'
 import TotalsPanels from './TotalsPanels'
 
-export function BigNumberPanels<T extends boolean>({
+export function BigNumberPanels({
   commit,
   evaluation,
   documentUuid,
-  isNumeric,
 }: {
-  isNumeric: T
   commit: Commit
   evaluation: EvaluationDto
   documentUuid: string
@@ -23,15 +25,13 @@ export function BigNumberPanels<T extends boolean>({
         evaluationId={evaluation.id}
       />
 
-      {isNumeric && (
+      {evaluation.resultType == EvaluationResultableType.Number ? (
         <MeanValuePanel
           evaluation={evaluation}
           commitUuid={commit.uuid}
           documentUuid={documentUuid}
         />
-      )}
-
-      {!isNumeric && (
+      ) : (
         <ModalValuePanel
           evaluationId={evaluation.id}
           commitUuid={commit.uuid}

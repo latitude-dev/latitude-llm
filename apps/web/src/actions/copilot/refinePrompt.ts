@@ -8,6 +8,7 @@ import {
   EvaluationsRepository,
 } from '@latitude-data/core/repositories'
 import { serialize as serializeEvaluationResult } from '@latitude-data/core/services/evaluationResults/serialize'
+import { getEvaluationPrompt } from '@latitude-data/core/services/evaluations/index'
 import { env } from '@latitude-data/env'
 import { createSdk } from '$/app/(private)/_lib/createSdk'
 import { z } from 'zod'
@@ -76,11 +77,16 @@ export const refinePromptAction = authProcedure
       projectId: env.COPILOT_PROJECT_ID,
     }).then((r) => r.unwrap())
 
+    const evaluationPrompt = await getEvaluationPrompt({
+      workspace: ctx.workspace,
+      evaluation,
+    }).then((r) => r.unwrap())
+
     const result = await sdk.run(env.COPILOT_REFINE_PROMPT_PATH, {
       stream: false,
       parameters: {
         prompt: document.content,
-        evaluation: evaluation.metadata.prompt,
+        evaluation: evaluationPrompt,
         results: serializedEvaluationResults,
       },
     })

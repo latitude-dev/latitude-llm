@@ -14,6 +14,7 @@ import { generateUUIDIdentifier } from '../../lib'
 import { ProviderApiKeysRepository } from '../../repositories'
 import { Config } from '../../services/ai'
 import { createEvaluationResult as createEvaluationResultService } from '../../services/evaluationResults'
+import { getEvaluationPrompt } from '../../services/evaluations'
 import { createProviderLog } from '../../services/providerLogs'
 
 export type IEvaluationResultData = {
@@ -44,9 +45,13 @@ export async function createEvaluationResult({
   )
   const workspace = (await findWorkspaceFromCommit(commit))!
   const providerScope = new ProviderApiKeysRepository(workspace.id)
+  const evaluationPrompt = await getEvaluationPrompt({
+    workspace,
+    evaluation,
+  }).then((r) => r.unwrap())
 
   const chain = createChain({
-    prompt: evaluation.metadata.prompt,
+    prompt: evaluationPrompt,
     parameters: {}, // TODO: Generate parameters from documentLog
   })
 

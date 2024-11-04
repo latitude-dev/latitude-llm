@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import { ProviderApiKey, User, Workspace } from '../../browser'
+import {
+  EvaluationMetadataLlmAsJudgeAdvanced,
+  ProviderApiKey,
+  User,
+  Workspace,
+} from '../../browser'
 import {
   EvaluationMetadataType,
   EvaluationResultableType,
@@ -118,7 +123,6 @@ describe('createAdvancedEvaluation', () => {
 
       expect(result.ok).toBe(true)
 
-      expect(result.value!.metadata.configuration).toBeDefined()
       expect(result.value!.resultConfiguration).toBeDefined()
     })
   })
@@ -155,16 +159,6 @@ describe('createAdvancedEvaluation', () => {
       })
 
       expect(result.ok).toBe(true)
-
-      expect(result.value!.metadata.configuration).toEqual({
-        type: EvaluationResultableType.Number,
-        detail: {
-          range: {
-            from: 0,
-            to: 100,
-          },
-        },
-      })
       expect(result.value!.resultConfiguration).toMatchObject({
         minValue: 0,
         maxValue: 100,
@@ -253,9 +247,6 @@ ${metadata.prompt}
       const evaluation = await repo
         .find(result.value!.id)
         .then((r) => r.unwrap())
-      expect(evaluation.metadata.configuration.type).toBe(
-        EvaluationResultableType.Text,
-      )
       expect(evaluation.resultType).toBe(EvaluationResultableType.Text)
     })
 
@@ -282,9 +273,6 @@ ${metadata.prompt}
         .find(result.value!.id)
         .then((r) => r.unwrap())
 
-      expect(evaluation.metadata.configuration.type).toBe(
-        EvaluationResultableType.Boolean,
-      )
       expect(evaluation.resultType).toBe(EvaluationResultableType.Boolean)
     })
 
@@ -314,7 +302,11 @@ ${metadata.prompt}
       const evaluation = await repo
         .find(result.value!.id)
         .then((r) => r.unwrap())
-      expect(evaluation.metadata.templateId).toBe(template.id)
+
+      expect(
+        (evaluation.metadata as EvaluationMetadataLlmAsJudgeAdvanced)
+          .templateId,
+      ).toBe(template.id)
     })
 
     it('does not allow to create a number type evaluation without proper configuration', async () => {
@@ -543,9 +535,6 @@ describe('createEvaluation', () => {
         metadataType: EvaluationMetadataType.LlmAsJudgeAdvanced,
         metadata: {
           prompt: 'Test Prompt',
-          configuration: {
-            type: EvaluationResultableType.Text,
-          },
           templateId: null,
         },
         resultType: EvaluationResultableType.Text,
@@ -581,15 +570,6 @@ describe('createEvaluation', () => {
         metadataType: EvaluationMetadataType.LlmAsJudgeAdvanced,
         metadata: {
           prompt: 'Test Prompt',
-          configuration: {
-            type: EvaluationResultableType.Number,
-            detail: {
-              range: {
-                from: 0,
-                to: 100,
-              },
-            },
-          },
           templateId: null,
         },
         resultType: EvaluationResultableType.Number,
@@ -637,9 +617,6 @@ describe('createEvaluation', () => {
         metadataType: EvaluationMetadataType.LlmAsJudgeAdvanced,
         metadata: {
           prompt: 'Test Prompt',
-          configuration: {
-            type: EvaluationResultableType.Boolean,
-          },
           templateId: null,
         },
         resultType: EvaluationResultableType.Boolean,

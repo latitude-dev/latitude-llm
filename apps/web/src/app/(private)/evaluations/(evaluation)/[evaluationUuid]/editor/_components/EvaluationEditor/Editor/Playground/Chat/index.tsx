@@ -7,6 +7,7 @@ import {
 import {
   ChainEventTypes,
   EvaluationDto,
+  EvaluationMetadataLlmAsJudgeAdvanced,
   StreamEventTypes,
 } from '@latitude-data/core/browser'
 import {
@@ -52,6 +53,10 @@ export default function Chat({
   const [responseStream, setResponseStream] = useState<string | undefined>()
   const [isStreaming, setIsStreaming] = useState(false)
 
+  // TODO: Only advanced evaluations are available right now. Next PR will add saparate components for each evaluation type
+  const prompt = (evaluation.metadata as EvaluationMetadataLlmAsJudgeAdvanced)
+    .prompt
+
   const addMessageToConversation = useCallback(
     (message: ConversationMessage) => {
       let newConversation: Conversation
@@ -75,7 +80,7 @@ export default function Chat({
     let messagesCount = 0
 
     const [data, error] = await runPromptAction({
-      prompt: evaluation.metadata.prompt,
+      prompt,
       parameters,
     })
     if (error) {

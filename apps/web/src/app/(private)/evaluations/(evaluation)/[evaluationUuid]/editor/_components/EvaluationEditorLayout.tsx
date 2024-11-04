@@ -2,7 +2,11 @@
 
 import { ReactNode } from 'react'
 
-import { EvaluationDto, ProviderApiKey } from '@latitude-data/core/browser'
+import {
+  EvaluationDto,
+  EvaluationMetadataLlmAsJudgeAdvanced,
+  ProviderApiKey,
+} from '@latitude-data/core/browser'
 import { Button, Icon } from '@latitude-data/web-ui'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
@@ -28,6 +32,10 @@ export default function EvaluationEditorLayout({
   const searchParams = useSearchParams()
   const backUrl = searchParams.get('back')
 
+  // TODO: Only advanced evaluations are available right now. Next PR will add saparate components for each evaluation type
+  const prompt = (evaluation.metadata as EvaluationMetadataLlmAsJudgeAdvanced)
+    .prompt
+
   return (
     <div className='h-full flex flex-col gap-y-4 p-6'>
       {backUrl && (
@@ -42,7 +50,7 @@ export default function EvaluationEditorLayout({
         <EvaluationEditor
           providerApiKeys={providerApiKeys}
           evaluationUuid={evaluationUuid}
-          defaultPrompt={evaluation.metadata.prompt}
+          defaultPrompt={prompt}
           freeRunsCount={freeRunsCount ? Number(freeRunsCount) : undefined}
         />
       </div>
