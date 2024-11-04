@@ -106,7 +106,6 @@ describe('createAdvancedEvaluation', () => {
         user,
         name: 'Test Evaluation',
         description: 'Test Description',
-
         configuration: {
           type: EvaluationResultableType.Text,
           detail: {
@@ -143,7 +142,6 @@ describe('createAdvancedEvaluation', () => {
         user,
         name: 'Test Evaluation',
         description: 'Test Description',
-
         configuration: {
           type: EvaluationResultableType.Number,
           detail: {
@@ -184,7 +182,6 @@ describe('createAdvancedEvaluation', () => {
         user,
         name,
         description,
-
         configuration: {
           type: EvaluationResultableType.Number,
           detail: {
@@ -204,15 +201,6 @@ describe('createAdvancedEvaluation', () => {
         description,
         metadata: {
           ...evaluation.metadata,
-          configuration: {
-            type: EvaluationResultableType.Number,
-            detail: {
-              range: {
-                from: 0,
-                to: 100,
-              },
-            },
-          },
           prompt: `
 ---
 provider: ${provider!.name}
@@ -551,9 +539,6 @@ describe('createEvaluation', () => {
       expect(evaluation.metadata).toMatchObject({
         prompt: 'Test Prompt',
         templateId: null,
-        configuration: {
-          type: EvaluationResultableType.Text,
-        },
       })
 
       expect(evaluation.resultConfiguration).toMatchObject({
@@ -589,15 +574,6 @@ describe('createEvaluation', () => {
       expect(evaluation.metadata).toMatchObject({
         prompt: 'Test Prompt',
         templateId: null,
-        configuration: {
-          type: EvaluationResultableType.Number,
-          detail: {
-            range: {
-              from: 0,
-              to: 100,
-            },
-          },
-        },
       })
 
       expect(evaluation.resultConfiguration).toMatchObject({
@@ -634,9 +610,6 @@ describe('createEvaluation', () => {
       expect(evaluation.metadata).toMatchObject({
         prompt: 'Test Prompt',
         templateId: null,
-        configuration: {
-          type: EvaluationResultableType.Boolean,
-        },
       })
 
       expect(evaluation.resultConfiguration).toMatchObject({
