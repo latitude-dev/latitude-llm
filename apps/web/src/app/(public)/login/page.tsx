@@ -1,4 +1,4 @@
-import { Card, CardContent, FocusFooter, FocusHeader } from '@latitude-data/web-ui'
+import { Card, CardContent, FocusHeader } from '@latitude-data/web-ui'
 import AuthFooter from '$/app/(public)/_components/Footer'
 import LoginFooter from '$/app/(public)/login/_components/LoginFooter'
 import { FocusLayout } from '$/components/layouts'
@@ -17,7 +17,7 @@ export default async function LoginPage() {
   return (
     <FocusLayout
       header={<FocusHeader title='Welcome to Latitude' />}
-      footer={<FocusFooter content={<LoginFooter />} />}
+      footer={<LoginFooter />}
     >
       <Card>
         <CardContent standalone>
