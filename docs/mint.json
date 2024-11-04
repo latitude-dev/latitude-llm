@@ -50,7 +50,8 @@
         "guides/prompt-manager/version-control",
         "guides/prompt-manager/json-output",
         "guides/prompt-manager/tools",
-        "guides/prompt-manager/custom-rules"
+        "guides/prompt-manager/custom-rules",
+        "guides/prompt-manager/cache"
       ]
     },
     {
