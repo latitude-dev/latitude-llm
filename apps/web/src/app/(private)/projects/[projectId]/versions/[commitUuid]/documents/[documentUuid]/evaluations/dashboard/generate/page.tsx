@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 
+import { EvaluationResultableType } from '@latitude-data/core/browser'
 import {
   Button,
   cn,
@@ -98,9 +99,18 @@ export default function GenerateEvaluationPage() {
       documentUuid: document.documentUuid,
       commitUuid: commit.uuid,
       prompt: generatedSuggestion.eval_prompt,
-      type: generatedSuggestion.eval_type,
       name: generatedSuggestion.eval_name,
-      metadata: generatedSuggestion.metadata,
+      resultType:
+        generatedSuggestion.eval_type === 'number'
+          ? EvaluationResultableType.Number
+          : EvaluationResultableType.Boolean,
+      metadata:
+        generatedSuggestion.eval_type === 'number'
+          ? {
+              minValue: generatedSuggestion.metadata.range.from as number,
+              maxValue: generatedSuggestion.metadata.range.to as number,
+            }
+          : undefined,
     })
 
     if (newEvaluation) {

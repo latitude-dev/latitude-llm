@@ -1,7 +1,10 @@
 'use server'
 
-import { EvaluationResultableType } from '@latitude-data/core/browser'
-import { createAdvancedEvaluation } from '@latitude-data/core/services/evaluations/create'
+import {
+  EvaluationMetadataType,
+  EvaluationResultableType,
+} from '@latitude-data/core/browser'
+import { createEvaluation } from '@latitude-data/core/services/evaluations/create'
 import { z } from 'zod'
 
 import { withDocument } from '../procedures'
@@ -12,30 +15,32 @@ export const createEvaluationFromPromptAction = withDocument
     z.object({
       name: z.string(),
       prompt: z.string(),
-      type: z.union([z.literal('number'), z.literal('boolean')]),
+      resultType: z.nativeEnum(EvaluationResultableType),
       metadata: z
         .object({
-          range: z.object({
-            from: z.number(),
-            to: z.number(),
-          }),
+          minValue: z.number(),
+          maxValue: z.number(),
+          minValueDescription: z.string().optional(),
+          maxValueDescription: z.string().optional(),
         })
         .optional(),
     }),
     { type: 'json' },
   )
   .handler(async ({ input, ctx }) => {
-    const result = await createAdvancedEvaluation({
+    const result = await createEvaluation({
       workspace: ctx.workspace,
       name: input.name,
       description: 'AI-generated evaluation',
-      configuration: {
-        type:
-          input.type === 'number'
-            ? EvaluationResultableType.Number
-            : EvaluationResultableType.Boolean,
-        detail: input.type === 'number' ? input.metadata : undefined,
-      },
+      resultType:
+        input.resultType === EvaluationResultableType.Number
+          ? EvaluationResultableType.Number
+          : EvaluationResultableType.Boolean,
+      resultConfiguration:
+        input.resultType === EvaluationResultableType.Number && input.metadata
+          ? input.metadata
+          : {},
+      metadataType: EvaluationMetadataType.LlmAsJudgeAdvanced,
       metadata: {
         prompt: input.prompt,
       },

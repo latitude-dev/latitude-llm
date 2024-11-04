@@ -1,6 +1,7 @@
 import { ChangeEvent, useCallback, useEffect, useMemo, useState } from 'react'
 
 import {
+  EvaluationMetadataType,
   EvaluationResultableType,
   EvaluationResultConfiguration,
 } from '@latitude-data/core/browser'
@@ -65,9 +66,20 @@ export default function CreateEvaluationModal({
     create({
       name: title,
       description,
+      metadataType: EvaluationMetadataType.LlmAsJudgeAdvanced,
       metadata: { prompt },
-      configuration,
+      resultConfiguration:
+        configuration.type === EvaluationResultableType.Number
+          ? {
+              type: configuration.type,
+              minValue: configuration.detail!.range.from,
+              maxValue: configuration.detail!.range.to,
+            }
+          : {
+              type: configuration.type,
+            },
     })
+
     onClose(null)
   }, [create, onClose, title, description, prompt, configuration])
 

@@ -1,7 +1,10 @@
 'use server'
 
-import { EvaluationResultableType } from '@latitude-data/core/browser'
-import { createAdvancedEvaluation } from '@latitude-data/core/services/evaluations/create'
+import {
+  EvaluationMetadataType,
+  resultConfigurationSchema,
+} from '@latitude-data/core/browser'
+import { createEvaluation } from '@latitude-data/core/services/evaluations/create'
 import { z } from 'zod'
 
 import { authProcedure } from '../procedures'
@@ -12,28 +15,34 @@ export const createEvaluationAction = authProcedure
     z.object({
       name: z.string(),
       description: z.string(),
-      configuration: z.object({
-        type: z.nativeEnum(EvaluationResultableType),
-        detail: z
-          .object({ range: z.object({ from: z.number(), to: z.number() }) })
-          .optional(),
-      }),
-      metadata: z
-        .object({
+      resultConfiguration: resultConfigurationSchema,
+      metadataType: z.nativeEnum(EvaluationMetadataType),
+      metadata: z.union([
+        z.object({
+          // EvaluationMetadataType.LlmAsJudgeAdvanced
           prompt: z.string(),
-        })
-        .optional(),
+        }),
+        z.object({
+          // EvaluationMetadataType.LlmAsJudgeSimple
+          providerApiKeyId: z.number(),
+          model: z.string(),
+          objective: z.string(),
+          additionalInstructions: z.string(),
+        }),
+      ]),
     }),
     { type: 'json' },
   )
   .handler(async ({ input, ctx }) => {
-    const result = await createAdvancedEvaluation({
+    const result = await createEvaluation({
       workspace: ctx.workspace,
+      user: ctx.user,
       name: input.name,
       description: input.description,
-      metadata: input.metadata ?? { prompt: '' },
-      configuration: input.configuration,
-      user: ctx.user,
+      metadataType: input.metadataType,
+      metadata: input.metadata,
+      resultType: input.resultConfiguration.type,
+      resultConfiguration: input.resultConfiguration,
     })
 
     return result.unwrap()

@@ -2,17 +2,14 @@
 
 import { ReactNode } from 'react'
 
-import {
-  EvaluationDto,
-  EvaluationMetadataLlmAsJudgeAdvanced,
-  ProviderApiKey,
-} from '@latitude-data/core/browser'
+import { EvaluationDto, ProviderApiKey } from '@latitude-data/core/browser'
 import { Button, Icon } from '@latitude-data/web-ui'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 
 import { EvaluationTabSelector } from '../../_components/EvaluationTabs'
-import EvaluationEditor from './EvaluationEditor/Editor'
+import EvaluationEditor from './Editor'
+import Playground from './Playground'
 
 interface EvaluationEditorLayoutProps {
   children: ReactNode
@@ -32,10 +29,6 @@ export default function EvaluationEditorLayout({
   const searchParams = useSearchParams()
   const backUrl = searchParams.get('back')
 
-  // TODO: Only advanced evaluations are available right now. Next PR will add saparate components for each evaluation type
-  const prompt = (evaluation.metadata as EvaluationMetadataLlmAsJudgeAdvanced)
-    .prompt
-
   return (
     <div className='h-full flex flex-col gap-y-4 p-6'>
       {backUrl && (
@@ -47,12 +40,19 @@ export default function EvaluationEditorLayout({
       )}
       <EvaluationTabSelector evaluation={evaluation} />
       <div className='flex-grow'>
-        <EvaluationEditor
-          providerApiKeys={providerApiKeys}
-          evaluationUuid={evaluationUuid}
-          defaultPrompt={prompt}
-          freeRunsCount={freeRunsCount ? Number(freeRunsCount) : undefined}
-        />
+        <div className='flex flex-row w-full h-full gap-8'>
+          <div className='flex flex-col flex-1 flex-grow flex-shrink gap-2 min-w-0'>
+            <EvaluationEditor
+              evaluation={evaluation}
+              providerApiKeys={providerApiKeys}
+              evaluationUuid={evaluationUuid}
+              freeRunsCount={freeRunsCount}
+            />
+          </div>
+          <div className='flex flex-col flex-1 gap-2 min-w-0 max-w-1/2 overflow-y-auto max-h-[calc(100vh-150px)]'>
+            <Playground evaluation={evaluation} />
+          </div>
+        </div>
       </div>
       {children}
     </div>
