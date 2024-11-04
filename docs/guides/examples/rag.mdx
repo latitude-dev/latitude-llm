@@ -1,0 +1,137 @@
+---
+title: RAG Implementation
+description: Learn how to implement a Retrieval-Augmented Generation (RAG) workflow with Latitude
+---
+
+This guide demonstrates how to implement a RAG (Retrieval-Augmented Generation) workflow using Latitude, OpenAI, and Pinecone.
+
+## Overview
+
+RAG is a technique that enhances LLM responses by providing relevant context from your data. The workflow consists of:
+
+1. Receiving a query from the LLM
+2. Converting the query into an embedding using OpenAI
+3. Finding relevant documents in Pinecone using vector similarity search
+4. Sending the retrieved context back to the LLM
+
+## Implementation
+
+The example uses three main services:
+
+- Latitude for LLM orchestration
+- OpenAI for generating embeddings
+- Pinecone as the vector database
+
+## Prerequisites
+
+You'll need:
+
+- A Latitude API key and project ID
+- An OpenAI API key
+- A Pinecone API key and index
+- Node.js and npm/yarn/pnpm installed
+
+## Implementation
+
+### Environment Variables
+
+Set up these environment variables:
+
+```bash
+LATITUDE_API_KEY=your_latitude_key
+OPENAI_API_KEY=your_openai_key
+PINECONE_API_KEY=your_pinecone_key
+```
+
+### Initialize the services
+
+First, initialize the services:
+
+```typescript
+import { ContentType, Latitude, MessageRole } from '@latitude-data/sdk'
+import { Pinecone } from '@pinecone-database/pinecone'
+import OpenAI from 'openai'
+
+const sdk = new Latitude(process.env.LATITUDE_API_KEY, {
+  projectId: 1,
+})
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+})
+const pinecone = new Pinecone({ apiKey: process.env.PINECONE_API_KEY })
+const pc = pinecone.Index('your-index-name')
+```
+
+### The RAG Query Tool
+
+The `ragQueryTool` function handles the core RAG functionality:
+
+```typescript
+const ragQueryTool = async (query: string) => {
+  // 1. Generate embedding from the query
+  const embedding = await openai.embeddings
+    .create({
+      input: query,
+      model: 'text-embedding-3-small',
+    })
+    .then((res) => res.data[0].embedding)
+  // 2. Search Pinecone for similar vectors
+  const queryResponse = await pc.query({
+    vector: embedding,
+    topK: 10,
+    includeMetadata: true,
+  })
+  // 3. Format and return the results
+  return queryResponse.matches.map((match) => ({
+    title: match.metadata?.title,
+    content: match.metadata?.content,
+  }))
+}
+```
+
+This function:
+
+1. Takes a query string and converts it to an embedding using OpenAI's text-embedding-3-small model
+2. Searches Pinecone for the 10 most similar vectors
+3. Returns the matching documents' metadata (title and content)
+
+### Handling the Conversation Flow
+
+The conversation flow is managed through Latitude:
+
+```typescript
+const result = await sdk.run('geography-quizz', {
+  projectId: 1,
+})
+const uuid = result.uuid
+const conversation = result.conversation
+const last = conversation[conversation.length - 1]!
+if (last.role === MessageRole.assistant && last.toolCalls.length > 0) {
+  const tool = last.toolCalls[0]! // we assume a single tool call for this example
+  const { query } = tool.arguments
+  const result = await ragQueryTool(query as string)
+  sdk.chat(uuid, [
+    {
+      role: MessageRole.tool,
+      content: [
+        {
+          type: ContentType.toolResult,
+          toolCallId: tool.id,
+          toolName: tool.name,
+          result,
+          isError: false,
+        },
+      ],
+    },
+  ])
+}
+```
+
+This section:
+
+1. Runs a Latitude document (in this case, 'geography-quizz')
+2. Gets the conversation history and latest message
+3. If the last message is from the assistant and includes tool calls:
+   - Extracts the query from the tool call
+   - Runs the RAG query tool
+   - Sends the results back to the conversation using Latitude's chat API
