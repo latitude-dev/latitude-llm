@@ -11,8 +11,7 @@ export const evaluationMetadataLlmAsJudgeAdvanced = latitudeSchema.table(
     id: bigserial('id', { mode: 'number' }).notNull().primaryKey(),
     prompt: text('prompt').notNull(),
     configuration: jsonb('configuration') // TODO: Will be removed on next PR
-      .$type<EvaluationResultConfiguration>()
-      .notNull(),
+      .$type<EvaluationResultConfiguration>(),
     templateId: bigint('template_id', { mode: 'number' }).references(
       () => evaluationAdvancedTemplates.id,
     ),
