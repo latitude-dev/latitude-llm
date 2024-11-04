@@ -282,6 +282,7 @@ namespace Text {
     size?: FontSize
     textTransform?: 'none' | 'uppercase' | 'lowercase'
     whiteSpace?: WhiteSpace
+    wordBreak?: WordBreak
   }
 
   export const Mono = forwardRef<HTMLSpanElement, MonoProps>(function MonoFont(
@@ -290,6 +291,7 @@ namespace Text {
       color = 'foreground',
       overflow = 'auto',
       whiteSpace = 'pre',
+      wordBreak = 'normal',
       underline = false,
       lineThrough = false,
       size = 'h6',
@@ -312,6 +314,7 @@ namespace Text {
           font.weight[weight],
           colors.textColors[color],
           overflowOptions[overflow],
+          wordBreakOptions[wordBreak],
           {
             [display]: !ellipsis,
             [whiteSpaceOptions[whiteSpace]]: !!whiteSpace,

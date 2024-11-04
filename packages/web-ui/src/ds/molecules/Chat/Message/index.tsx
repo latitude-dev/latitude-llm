@@ -78,6 +78,7 @@ const ContentValue = ({
     <TextComponent
       color={color}
       whiteSpace='preWrap'
+      wordBreak='breakAll'
       key={`${index}-${lineIndex}`}
     >
       {line}
