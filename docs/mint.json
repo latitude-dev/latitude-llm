@@ -84,6 +84,10 @@
       "pages": ["guides/sdk/javascript-typescript-sdk"]
     },
     {
+      "group": "Examples",
+      "pages": ["guides/examples/overview"]
+    },
+    {
       "group": "Self-hosting",
       "pages": ["guides/self-hosted/development"]
     }
