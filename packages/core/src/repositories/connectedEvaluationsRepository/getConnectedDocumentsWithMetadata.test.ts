@@ -39,13 +39,11 @@ async function generateDocumentLogs({
 }) {
   return await Promise.all(
     Array.from({ length: quantity }).map(async () => {
-      return factories
-        .createDocumentLog({
-          document,
-          commit,
-          parameters,
-        })
-        .then((r) => r.documentLog)
+      return factories.createDocumentLog({
+        document,
+        commit,
+        parameters,
+      })
     }),
   )
 }
@@ -222,10 +220,11 @@ describe('getConnectedDocumentsWithMetadata', () => {
       quantity: 5,
     })
     const results = await Promise.all(
-      logs.map((documentLog) => {
+      logs.map(({ documentLog, providerLogs }) => {
         return factories.createEvaluationResult({
           evaluation,
           documentLog,
+          evaluatedProviderLog: providerLogs[0]!,
         })
       }),
     )
@@ -266,10 +265,11 @@ describe('getConnectedDocumentsWithMetadata', () => {
       quantity: 10,
     })
     await Promise.all(
-      logs.map((documentLog, index) => {
+      logs.map(({ documentLog, providerLogs }, index) => {
         return factories.createEvaluationResult({
           evaluation,
           documentLog,
+          evaluatedProviderLog: providerLogs[0]!,
           result: index < 6 ? 'yes' : 'no', // yes should appear 6 times, while no should appear 4 times
         })
       }),

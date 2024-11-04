@@ -65,7 +65,7 @@ describe('createEvaluationResult', () => {
       uuid: generateUUIDIdentifier(),
       evaluation,
       documentLog,
-      providerLog,
+      evaluatedProviderLog: providerLog,
       result: {
         result: true,
         reason: 'This is a boolean result',
@@ -82,7 +82,7 @@ describe('createEvaluationResult', () => {
         uuid: expect.any(String),
         evaluationId: evaluation.id,
         documentLogId: documentLog.id,
-        providerLogId: providerLog.id,
+        evaluatedProviderLogId: providerLog.id,
         resultableType: EvaluationResultableType.Boolean,
         result: true,
         source: documentLog.source,
@@ -115,7 +115,7 @@ describe('createEvaluationResult', () => {
       uuid: generateUUIDIdentifier(),
       evaluation,
       documentLog,
-      providerLog,
+      evaluatedProviderLog: providerLog,
       result: {
         result: 75,
         reason: 'This is a number result',
@@ -127,7 +127,7 @@ describe('createEvaluationResult', () => {
 
     expect(result.value.evaluationId).toBe(evaluation.id)
     expect(result.value.documentLogId).toBe(documentLog.id)
-    expect(result.value.providerLogId).toBe(providerLog.id)
+    expect(result.value.evaluatedProviderLogId).toBe(providerLog.id)
     expect(result.value.resultableType).toBe(EvaluationResultableType.Number)
     expect(result.value.result).toBe(75)
     // Verify in database
@@ -156,7 +156,7 @@ describe('createEvaluationResult', () => {
       uuid: generateUUIDIdentifier(),
       evaluation,
       documentLog,
-      providerLog,
+      evaluatedProviderLog: providerLog,
       result: {
         result: 'This is a text result',
         reason: 'Explanation for the text result',
@@ -168,7 +168,7 @@ describe('createEvaluationResult', () => {
 
     expect(result.value.evaluationId).toBe(evaluation.id)
     expect(result.value.documentLogId).toBe(documentLog.id)
-    expect(result.value.providerLogId).toBe(providerLog.id)
+    expect(result.value.evaluatedProviderLogId).toBe(providerLog.id)
     expect(result.value.resultableType).toBe(EvaluationResultableType.Text)
     expect(result.value.result).toBe('This is a text result')
     // Verify in database

@@ -31,13 +31,14 @@ describe('destroyEvaluation', () => {
       user,
     })
 
-    const { documentLog } = await factories.createDocumentLog({
+    const { documentLog, providerLogs } = await factories.createDocumentLog({
       document,
       commit,
     })
 
     await factories.createEvaluationResult({
       documentLog,
+      evaluatedProviderLog: providerLogs[0]!,
       evaluation,
     })
 

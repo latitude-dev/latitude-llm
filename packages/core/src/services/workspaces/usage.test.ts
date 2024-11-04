@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { DocumentLog, WorkspaceDto } from '../../browser'
+import { WorkspaceDto } from '../../browser'
 import { Providers } from '../../constants'
 import { deleteCommitDraft } from '../commits'
 import { connectEvaluations, destroyEvaluation } from '../evaluations'
@@ -32,16 +32,14 @@ describe('computeWorkspaceUsage', () => {
     })
 
     // Create document logs
-    const documentLogs: DocumentLog[] = await Promise.all(
+    const documentLogs = await Promise.all(
       Array(NUM_DOC_LOGS)
         .fill(null)
         .map(() =>
-          ctx.factories
-            .createDocumentLog({
-              document,
-              commit,
-            })
-            .then((r) => r.documentLog),
+          ctx.factories.createDocumentLog({
+            document,
+            commit,
+          }),
         ),
     )
 
@@ -51,7 +49,9 @@ describe('computeWorkspaceUsage', () => {
         .map((_, idx) =>
           ctx.factories
             .createEvaluationResult({
-              documentLog: documentLogs[idx % documentLogs.length]!,
+              documentLog: documentLogs[idx % documentLogs.length]!.documentLog,
+              evaluatedProviderLog:
+                documentLogs[idx % documentLogs.length]!.providerLogs[0]!,
               evaluation,
             })
             .then((r) => r.evaluationResult),
@@ -122,16 +122,14 @@ describe('computeWorkspaceUsage', () => {
     })
 
     // Create document logs
-    const documentLogs1: DocumentLog[] = await Promise.all(
+    const documentLogs1 = await Promise.all(
       Array(NUM_DOC_LOGS)
         .fill(null)
         .map(() =>
-          ctx.factories
-            .createDocumentLog({
-              document: document1,
-              commit: commit1,
-            })
-            .then((r) => r.documentLog),
+          ctx.factories.createDocumentLog({
+            document: document1,
+            commit: commit1,
+          }),
         ),
     )
 
@@ -141,23 +139,24 @@ describe('computeWorkspaceUsage', () => {
         .map((_, idx) =>
           ctx.factories
             .createEvaluationResult({
-              documentLog: documentLogs1[idx % documentLogs1.length]!,
+              documentLog:
+                documentLogs1[idx % documentLogs1.length]!.documentLog,
+              evaluatedProviderLog:
+                documentLogs1[idx % documentLogs1.length]!.providerLogs[0]!,
               evaluation: evaluations1[0]!,
             })
             .then((r) => r.evaluationResult),
         ),
     )
 
-    const documentLogs2: DocumentLog[] = await Promise.all(
+    const documentLogs2 = await Promise.all(
       Array(NUM_DOC_LOGS)
         .fill(null)
         .map(() =>
-          ctx.factories
-            .createDocumentLog({
-              document: document2,
-              commit: commit2,
-            })
-            .then((r) => r.documentLog),
+          ctx.factories.createDocumentLog({
+            document: document2,
+            commit: commit2,
+          }),
         ),
     )
 
@@ -167,7 +166,10 @@ describe('computeWorkspaceUsage', () => {
         .map((_, idx) =>
           ctx.factories
             .createEvaluationResult({
-              documentLog: documentLogs2[idx % documentLogs2.length]!,
+              documentLog:
+                documentLogs2[idx % documentLogs2.length]!.documentLog,
+              evaluatedProviderLog:
+                documentLogs2[idx % documentLogs2.length]!.providerLogs[0]!,
               evaluation: evaluations2[0]!,
             })
             .then((r) => r.evaluationResult),
@@ -258,29 +260,25 @@ describe('computeWorkspaceUsage', () => {
       evaluationUuids: [evaluation.uuid],
     })
 
-    const document1Logs: DocumentLog[] = await Promise.all(
+    const document1Logs = await Promise.all(
       Array(NUM_DOC_LOGS_PER_PROJECT)
         .fill(null)
         .map(() =>
-          ctx.factories
-            .createDocumentLog({
-              document: document1,
-              commit: commit1,
-            })
-            .then((r) => r.documentLog),
+          ctx.factories.createDocumentLog({
+            document: document1,
+            commit: commit1,
+          }),
         ),
     )
 
-    const document2Logs: DocumentLog[] = await Promise.all(
+    const document2Logs = await Promise.all(
       Array(NUM_DOC_LOGS_PER_PROJECT)
         .fill(null)
         .map(() =>
-          ctx.factories
-            .createDocumentLog({
-              document: document2,
-              commit: commit2,
-            })
-            .then((r) => r.documentLog),
+          ctx.factories.createDocumentLog({
+            document: document2,
+            commit: commit2,
+          }),
         ),
     )
 
@@ -290,7 +288,10 @@ describe('computeWorkspaceUsage', () => {
         .map((_, idx) =>
           ctx.factories
             .createEvaluationResult({
-              documentLog: document1Logs[idx % document1Logs.length]!,
+              documentLog:
+                document1Logs[idx % document1Logs.length]!.documentLog,
+              evaluatedProviderLog:
+                document1Logs[idx % document1Logs.length]!.providerLogs[0]!,
               evaluation,
             })
             .then((r) => r.evaluationResult),
@@ -303,7 +304,10 @@ describe('computeWorkspaceUsage', () => {
         .map((_, idx) =>
           ctx.factories
             .createEvaluationResult({
-              documentLog: document2Logs[idx % document2Logs.length]!,
+              documentLog:
+                document2Logs[idx % document2Logs.length]!.documentLog,
+              evaluatedProviderLog:
+                document2Logs[idx % document2Logs.length]!.providerLogs[0]!,
               evaluation,
             })
             .then((r) => r.evaluationResult),
@@ -347,16 +351,14 @@ describe('computeWorkspaceUsage', () => {
     })
 
     // Create document logs
-    const documentLogs: DocumentLog[] = await Promise.all(
+    const documentLogs = await Promise.all(
       Array(NUM_DOC_LOGS)
         .fill(null)
         .map(() =>
-          ctx.factories
-            .createDocumentLog({
-              document,
-              commit: draft,
-            })
-            .then((r) => r.documentLog),
+          ctx.factories.createDocumentLog({
+            document,
+            commit: draft,
+          }),
         ),
     )
 
@@ -366,7 +368,9 @@ describe('computeWorkspaceUsage', () => {
         .map((_, idx) =>
           ctx.factories
             .createEvaluationResult({
-              documentLog: documentLogs[idx % documentLogs.length]!,
+              documentLog: documentLogs[idx % documentLogs.length]!.documentLog,
+              evaluatedProviderLog:
+                documentLogs[idx % documentLogs.length]!.providerLogs[0]!,
               evaluation,
             })
             .then((r) => r.evaluationResult),

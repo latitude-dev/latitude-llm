@@ -42,6 +42,7 @@ function getResultSchema(type: EvaluationResultableType) {
   }
 }
 
+// TODO: Convert to regular functions
 export class EvaluationRunChecker {
   private errorableUuid: string
   private documentLog: DocumentLog

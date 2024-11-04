@@ -34,7 +34,8 @@ export type CreateEvaluationResultProps = {
   uuid: string
   evaluation: EvaluationDto
   documentLog: DocumentLog
-  providerLog?: ProviderLog
+  evaluatedProviderLog: ProviderLog
+  evaluationProviderLog?: ProviderLog
   result: EvaluationResultObject | undefined
 }
 
@@ -46,7 +47,8 @@ export async function createEvaluationResult(
     uuid,
     evaluation,
     documentLog,
-    providerLog,
+    evaluationProviderLog,
+    evaluatedProviderLog,
     result,
   }: CreateEvaluationResultProps,
   db = database,
@@ -77,7 +79,9 @@ export async function createEvaluationResult(
         uuid,
         evaluationId: evaluation.id,
         documentLogId: documentLog.id,
-        providerLogId: providerLog?.id,
+        evaluationProviderLogId: evaluationProviderLog?.id,
+        evaluatedProviderLogId: evaluatedProviderLog.id,
+        providerLogId: evaluationProviderLog?.id,
         resultableType: result ? evaluation.resultType : null,
         resultableId,
         source: documentLog.source,

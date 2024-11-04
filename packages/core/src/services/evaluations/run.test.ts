@@ -15,6 +15,7 @@ import {
   DocumentLog,
   EvaluationDto,
   ProviderApiKey,
+  ProviderLog,
   User,
   Workspace,
 } from '../../browser'
@@ -26,15 +27,14 @@ import * as generateUUIDModule from '../../lib/generateUUID'
 import {
   documentLogs,
   evaluationResults,
-  evaluations,
   providerApiKeys,
-  providerLogs,
   runErrors,
 } from '../../schema'
 import * as factories from '../../tests/factories'
 import { ChainError } from '../chains/ChainErrors'
 import * as runChainModule from '../chains/run'
 import { serialize } from '../documentLogs/serialize'
+import * as createRunErrorModule from '../runErrors/create'
 import { getEvaluationPrompt } from './prompt'
 import { runEvaluation } from './run'
 
@@ -59,6 +59,7 @@ async function findError(errorCode: RunErrorCodes) {
 }
 
 let documentLog: DocumentLog
+let providerLog: ProviderLog
 let documentUuid: string
 let workspace: Workspace
 let user: User
@@ -93,13 +94,14 @@ describe('run', () => {
       commit: setup.commit,
     })
     documentLog = docLog
-    await factories.createProviderLog({
+    const pl = await factories.createProviderLog({
       workspace,
       documentLogUuid: documentLog.uuid,
       providerId: provider.id,
       providerType: Providers.OpenAI,
       generatedAt: new Date('2024-10-12T10:00:00'),
     })
+    providerLog = pl
     await factories.createProviderLog({
       workspace,
       documentLogUuid: documentLog.uuid,
@@ -145,7 +147,7 @@ describe('run', () => {
 
     it('calls runChain', async () => {
       await runEvaluation({
-        documentLog,
+        providerLog,
         documentUuid,
         evaluation,
       })
@@ -190,7 +192,7 @@ describe('run', () => {
 
     it('creates evaluation result', async () => {
       await runEvaluation({
-        documentLog,
+        providerLog,
         documentUuid,
         evaluation,
       })
@@ -212,7 +214,7 @@ describe('run', () => {
 
     it('returns run chain result', async () => {
       const result = await runEvaluation({
-        documentLog,
+        providerLog,
         documentUuid,
         evaluation,
       })
@@ -230,7 +232,7 @@ describe('run', () => {
 
     it('publishes evaluation result created event', async () => {
       const run = await runEvaluation({
-        documentLog,
+        providerLog,
         documentUuid,
         evaluation,
       })
@@ -263,7 +265,7 @@ describe('run', () => {
         .returning()
       const updatedDocumentLog = docLogs[0]!
       const result = await runEvaluation({
-        documentLog: updatedDocumentLog,
+        providerLog,
         documentUuid,
         evaluation,
       })
@@ -302,45 +304,7 @@ describe('run', () => {
       expect(evaluationResult).toBeDefined()
     })
 
-    it('fails when provider logs are not found', async () => {
-      await database
-        .delete(providerLogs)
-        .where(eq(providerLogs.documentLogUuid, documentLog.uuid))
-      const result = await runEvaluation({
-        documentLog,
-        documentUuid,
-        evaluation,
-      })
-      const error = await findError(
-        RunErrorCodes.EvaluationRunMissingProviderLogError,
-      )
-      expect(error).toBeDefined()
-      expect(result.error).toEqual(
-        new ChainError({
-          code: RunErrorCodes.EvaluationRunMissingProviderLogError,
-          message: `Could not serialize documentLog ${documentLog.uuid}. No provider logs found.`,
-        }),
-      )
-    })
-
-    it('fails evaluation type is not recognized', async () => {
-      let error
-      try {
-        await database
-          .update(evaluations)
-          .set({
-            // @ts-expect-error - intentionally setting invalid type
-            resultType: 'unknown',
-          })
-          .where(eq(evaluations.id, evaluation.id))
-      } catch (err) {
-        error = err
-      }
-
-      expect(error).toBeDefined()
-    })
-
-    it('fails when chain response without object', async () => {
+    it('fails when chain responds without object', async () => {
       const resultProviderLog = await factories.createProviderLog({
         workspace,
         documentLogUuid: documentLog.uuid,
@@ -365,7 +329,7 @@ describe('run', () => {
       })
 
       const result = await runEvaluation({
-        documentLog,
+        providerLog,
         documentUuid,
         evaluation,
       })
@@ -392,21 +356,21 @@ describe('run', () => {
           model: gpt-4o-mini
           ---
           {{#if condition}}
-            It fail because "condition" is not defined
+            It fails because "condition" is not defined
           {{/if}}
         `,
         },
       )
+      const spy = vi.spyOn(createRunErrorModule, 'createRunError')
+      expect(spy).not.toHaveBeenCalled()
+
       await runEvaluation({
-        documentLog,
+        providerLog,
         documentUuid,
         evaluation: brokenPromptEvaluation,
       })
-      const errors = await database.query.runErrors.findMany({
-        where: eq(runErrors.errorableUuid, FAKE_GENERATED_UUID),
-      })
 
-      expect(errors.length).toEqual(1)
+      expect(spy).toHaveBeenCalledOnce()
     })
   })
 })
