@@ -21,12 +21,20 @@ export const evaluationResults = latitudeSchema.table(
     evaluationId: bigint('evaluation_id', { mode: 'number' })
       .notNull()
       .references(() => evaluations.id, { onDelete: 'cascade' }),
+    // TODO: remove
     documentLogId: bigint('document_log_id', { mode: 'number' })
       .notNull()
       .references(() => documentLogs.id),
+    // TODO: remove
     providerLogId: bigint('provider_log_id', { mode: 'number' }).references(
       () => providerLogs.id,
     ),
+    evaluatedProviderLogId: bigint('evaluated_provider_log_id', {
+      mode: 'number',
+    }).references(() => providerLogs.id),
+    evaluationProviderLogId: bigint('evaluation_provider_log_id', {
+      mode: 'number',
+    }).references(() => providerLogs.id),
     resultableType: evaluationResultTypes('resultable_type'),
     resultableId: bigint('resultable_id', { mode: 'number' }),
     source: logSourcesEnum('source'),
@@ -34,9 +42,17 @@ export const evaluationResults = latitudeSchema.table(
   },
   (table) => ({
     evaluationIdx: index('evaluation_idx').on(table.evaluationId),
+    evaluationProviderLogIdx: index('evaluation_provider_log_idx').on(
+      table.evaluationProviderLogId,
+    ),
+    evaluatedProviderLogIdx: index('evaluated_provider_log_idx').on(
+      table.evaluatedProviderLogId,
+    ),
+    // TODO: remove
     evaluationResultDocumentLogIdx: index('document_log_idx').on(
       table.documentLogId,
     ),
+    // TODO: remove
     evaluationResultProviderLogIdx: index('provider_log_idx').on(
       table.providerLogId,
     ),
