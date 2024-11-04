@@ -1,4 +1,5 @@
 export { default as FocusHeader } from './FocusHeader'
+export { default as FocusFooter } from './FocusFooter'
 export * from './DocumentTextEditor'
 export * from './Chat'
 export * from './ClicktoCopy'

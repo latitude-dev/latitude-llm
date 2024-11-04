@@ -1,5 +1,6 @@
-import { Card, CardContent, FocusHeader } from '@latitude-data/web-ui'
+import { Card, CardContent, FocusFooter, FocusHeader } from '@latitude-data/web-ui'
 import AuthFooter from '$/app/(public)/_components/Footer'
+import LoginFooter from '$/app/(public)/login/_components/LoginFooter'
 import { FocusLayout } from '$/components/layouts'
 import { getSession } from '$/services/auth/getSession'
 import { ROUTES } from '$/services/routes'
@@ -14,7 +15,10 @@ export default async function LoginPage() {
   if (data.session) return redirect(ROUTES.dashboard.root)
 
   return (
-    <FocusLayout header={<FocusHeader title='Welcome to Latitude' />}>
+    <FocusLayout
+      header={<FocusHeader title='Welcome to Latitude' />}
+      footer={<FocusFooter content={<LoginFooter />} />}
+    >
       <Card>
         <CardContent standalone>
           <LoginForm footer={<AuthFooter />} />

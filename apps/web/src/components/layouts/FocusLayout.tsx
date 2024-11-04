@@ -2,9 +2,11 @@ import { ReactNode } from 'react'
 
 export default function FocusLayout({
   header,
+  footer,
   children,
 }: {
   header: ReactNode
+  footer: ReactNode
   children?: ReactNode
 }) {
   return (
@@ -12,6 +14,7 @@ export default function FocusLayout({
       <div className='flex flex-col gap-y-6 max-w-[22rem]'>
         <div>{header}</div>
         {children}
+        <div>{footer}</div>
       </div>
     </div>
   )
