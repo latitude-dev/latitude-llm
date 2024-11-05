@@ -1,4 +1,5 @@
 import { CHUNKS } from '$sdk/test/chunks-example'
+import { ApiErrorCodes } from '$sdk/utils/errors'
 import { parseSSE } from '$sdk/utils/parseSSE'
 import { SdkApiVersion } from '$sdk/utils/types'
 import { http, HttpResponse } from 'msw'
@@ -116,7 +117,8 @@ export function mock502Response({
         return HttpResponse.json(
           {
             name: 'LatitudeError',
-            errorCode: 'LatitudeError',
+            message: 'Something bad happened',
+            errorCode: ApiErrorCodes.InternalServerError,
           },
           { status: 502 },
         )

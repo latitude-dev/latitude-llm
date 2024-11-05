@@ -4,6 +4,7 @@ import {
   type ChainEvent,
   type ChainEventDto,
   type ChainEventTypes,
+  type ChatSyncAPIResponse,
   type RunSyncAPIResponse,
   type StreamEventTypes,
 } from '@latitude-data/core/browser'
@@ -26,6 +27,7 @@ type RunDocumentBodyParam = {
 }
 type ChatBodyParams = {
   messages: Message[]
+  stream?: boolean
 }
 export type LogUrlParams = RunUrlParams
 type LogBodyParams = {
@@ -100,6 +102,7 @@ export type {
   ChainEvent,
   StreamEventTypes,
   ChainEventTypes,
+  ChatSyncAPIResponse,
   RunSyncAPIResponse,
 }
 
@@ -108,6 +111,11 @@ export type RunOptions = StreamResponseCallbacks & {
   versionUuid?: string
   customIdentifier?: string
   parameters?: Record<string, unknown>
+  stream?: boolean
+}
+
+export type ChatOptions = StreamResponseCallbacks & {
+  messages: Message[]
   stream?: boolean
 }
 

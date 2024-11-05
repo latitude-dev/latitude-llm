@@ -1,5 +1,3 @@
-import { Readable } from 'stream'
-
 import type {
   Config,
   ContentType,
@@ -17,18 +15,19 @@ import {
   ApiErrorJsonResponse,
   LatitudeApiError,
 } from '$sdk/utils/errors'
-import { handleStream } from '$sdk/utils/handleStream'
 import { makeRequest } from '$sdk/utils/request'
+import { streamChat } from '$sdk/utils/streamChat'
 import { streamRun } from '$sdk/utils/streamRun'
+import { syncChat } from '$sdk/utils/syncChat'
 import { syncRun } from '$sdk/utils/syncRun'
 import {
+  ChatOptions,
   EvalOptions,
   HandlerType,
   LogSources,
   RunOptions,
   SDKOptions,
   StreamChainResponse,
-  StreamResponseCallbacks,
 } from '$sdk/utils/types'
 
 const WAIT_IN_MS_BEFORE_RETRY = 1000
@@ -117,7 +116,6 @@ class Latitude {
     const options = { ...args, options: this.options }
 
     if (args.stream) return streamRun(path, options)
-
     return syncRun(path, options)
   }
 
@@ -163,35 +161,13 @@ class Latitude {
   async chat(
     uuid: string,
     messages: Message[],
-    { onEvent, onFinished, onError }: StreamResponseCallbacks = {},
+    args?: Omit<ChatOptions, 'messages'>,
   ) {
-    const response = await makeRequest({
-      method: 'POST',
-      handler: HandlerType.Chat,
-      params: { conversationUuid: uuid },
-      body: { messages },
-      options: this.options,
-    })
+    // Note: Args is optional and messages is omitted to maintain backwards compatibility
+    const options = { ...(args || {}), messages, options: this.options }
 
-    if (!response.ok) {
-      const json = (await response.json()) as ApiErrorJsonResponse
-      const error = new LatitudeApiError({
-        status: response.status,
-        serverResponse: JSON.stringify(json),
-        message: json.message,
-        errorCode: json.errorCode,
-        dbErrorRef: json.dbErrorRef,
-      })
-      onError?.(error)
-      return
-    }
-
-    return handleStream({
-      body: response.body! as Readable,
-      onEvent,
-      onFinished,
-      onError,
-    })
+    if (args?.stream) return streamChat(uuid, options)
+    return syncChat(uuid, options)
   }
 
   async eval(uuid: string, options: EvalOptions = {}) {

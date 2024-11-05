@@ -165,6 +165,10 @@ The previously described `POST /projects/{projectId}/versions/{versionUuid}/docu
 
 - `stream`: Optional boolean parameter (defaults to `false`). When set to true, the response will be a stream of Server-Sent Events (SSE). If false, a single JSON response containing the last event is returned.
 
+<Note>
+  Message follows [OpenAI's format](https://platform.openai.com/docs/guides/text-generation/building-prompts).
+</Note>
+
 **Response:**
 The response is a stream of Server-Sent Events (SSE) or a single JSON response containing the final event, similar to the "Run a Document" endpoint.
 
