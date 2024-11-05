@@ -5,6 +5,7 @@ import {
   DocumentLog,
   ErrorableEntity,
   EvaluationDto,
+  ProviderLog,
   Providers,
   Workspace,
 } from '../../../browser'
@@ -21,19 +22,23 @@ import { EvaluationResultsWithErrorsRepository } from './index'
 
 let workspace: Workspace
 let documentLog: DocumentLog
+let evaluatedProviderLog: ProviderLog
 let evaluation: EvaluationDto
 
 async function createEvaluationResultWithError({
   documentLog,
+  evaluatedProviderLog,
   evaluation,
   result,
 }: {
   documentLog: DocumentLog
+  evaluatedProviderLog: ProviderLog
   evaluation: EvaluationDto
   result?: string | undefined
 }) {
   const { evaluationResult } = await createEvaluationResult({
     documentLog,
+    evaluatedProviderLog,
     evaluation,
     result,
     skipEvaluationResultCreation: result === undefined,
@@ -63,11 +68,12 @@ describe('EvaluationResultsRepository', () => {
       })
       workspace = wps
       const document = doc!
-      const { documentLog: docLog } = await createDocumentLog({
+      const { documentLog: docLog, providerLogs } = await createDocumentLog({
         document,
         commit: commit1,
       })
       documentLog = docLog
+      evaluatedProviderLog = providerLogs[0]!
       evaluation = await createLlmAsJudgeEvaluation({
         user: user,
         workspace: workspace,
@@ -110,6 +116,7 @@ describe('EvaluationResultsRepository', () => {
       const { evaluationResult: evaluationResult2 } =
         await createEvaluationResult({
           documentLog: documentLog2.documentLog,
+          evaluatedProviderLog: documentLog2.providerLogs[0]!,
           evaluation: evaluation2,
           result: 'Result 2',
         })
@@ -122,6 +129,7 @@ describe('EvaluationResultsRepository', () => {
 
       await createEvaluationResultWithError({
         documentLog,
+        evaluatedProviderLog,
         evaluation,
         result: 'Result 1',
       })
@@ -138,6 +146,7 @@ describe('EvaluationResultsRepository', () => {
     it('show evaluation result without result', async () => {
       await createEvaluationResultWithError({
         documentLog,
+        evaluatedProviderLog,
         evaluation,
       })
       const repo = new EvaluationResultsWithErrorsRepository(workspace.id)
@@ -163,12 +172,14 @@ describe('EvaluationResultsRepository', () => {
     it('does return evaluation results with out errors', async () => {
       await createEvaluationResultWithError({
         documentLog,
+        evaluatedProviderLog,
         evaluation,
         result: 'Result 1',
       })
 
       await createEvaluationResult({
         documentLog,
+        evaluatedProviderLog,
         evaluation,
         result: 'Result 2',
       })

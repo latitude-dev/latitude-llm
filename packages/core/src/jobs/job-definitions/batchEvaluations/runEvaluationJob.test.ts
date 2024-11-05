@@ -2,7 +2,12 @@ import { RunErrorCodes } from '@latitude-data/constants/errors'
 import { Job } from 'bullmq'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { DocumentLog, EvaluationDto, Workspace } from '../../../browser'
+import {
+  DocumentLog,
+  EvaluationDto,
+  ProviderLog,
+  Workspace,
+} from '../../../browser'
 import { Providers } from '../../../constants'
 import { Result } from '../../../lib'
 import * as queues from '../../../queues'
@@ -50,7 +55,7 @@ function buildJobData(
   return {
     workspaceId: data.workspaceId || 1,
     documentUuid: data.documentUuid || 'doc-uuid',
-    documentLogUuid: data.documentLogUuid || 'log-uuid',
+    providerLogUuid: data.providerLogUuid || 'log-uuid',
     evaluationId: data.evaluationId || 2,
     batchId: 'batch-123',
   }
@@ -58,6 +63,7 @@ function buildJobData(
 let workspace: Workspace
 let documentUuid: string
 let documentLog: DocumentLog
+let providerLog: ProviderLog
 let evaluation: EvaluationDto
 let runChainResponse: ChainResponse<'object'>
 
@@ -79,6 +85,12 @@ describe('runEvaluationJob', () => {
       document: documentVersion,
       commit: setup.commit,
     })
+    const pl = await factories.createProviderLog({
+      workspace: setup.workspace,
+      providerId: setup.providers[0]!.id,
+      providerType: setup.providers[0]!.provider,
+      documentLogUuid: docLog.uuid,
+    })
     const llmEval = await factories.createLlmAsJudgeEvaluation({
       user: setup.user,
       workspace: setup.workspace,
@@ -89,6 +101,7 @@ describe('runEvaluationJob', () => {
     evaluation = await evaluationsScope.find(llmEval.id).then((r) => r.unwrap())
     documentUuid = documentVersion.documentUuid
     documentLog = docLog
+    providerLog = pl
   })
 
   describe('with valid data', () => {
@@ -98,7 +111,7 @@ describe('runEvaluationJob', () => {
         data: buildJobData({
           workspaceId: workspace.id,
           documentUuid,
-          documentLogUuid: documentLog.uuid,
+          providerLogUuid: providerLog.uuid,
           evaluationId: evaluation.id,
         }),
       } as Job<RunEvaluationJobData>
@@ -107,14 +120,7 @@ describe('runEvaluationJob', () => {
     it('calls runEvaluation', async () => {
       await runEvaluationJob(jobData)
       expect(runEvaluationSpy).toHaveBeenCalledWith({
-        documentLog: {
-          ...documentLog,
-          error: {
-            code: null,
-            message: null,
-            details: null,
-          },
-        },
+        providerLog,
         evaluation,
         documentUuid: documentUuid,
       })
@@ -248,13 +254,13 @@ describe('runEvaluationJob', () => {
           data: buildJobData({
             workspaceId: workspace.id,
             documentUuid,
-            documentLogUuid: '12345678-1234-1234-1234-123456789034',
+            providerLogUuid: '12345678-1234-1234-1234-123456789034',
             evaluationId: evaluation.id,
           }),
         } as Job<RunEvaluationJobData>),
       ).rejects.toThrowError(
         new Error(
-          'DocumentLog not found with uuid 12345678-1234-1234-1234-123456789034',
+          'ProviderLog with uuid 12345678-1234-1234-1234-123456789034 not found',
         ),
       )
     })

@@ -19,6 +19,7 @@ import { createProviderLog } from '../../services/providerLogs'
 
 export type IEvaluationResultData = {
   documentLog: DocumentLog
+  evaluatedProviderLog: ProviderLog
   evaluation: EvaluationDto
   result?: string
   stepCosts?: {
@@ -34,6 +35,7 @@ export type IEvaluationResultData = {
 export async function createEvaluationResult({
   evaluationResultUuid,
   documentLog,
+  evaluatedProviderLog,
   evaluation,
   result,
   stepCosts,
@@ -139,7 +141,8 @@ export async function createEvaluationResult({
     uuid: evaluationResultUuid ?? generateUUIDIdentifier(),
     evaluation,
     documentLog,
-    providerLog: skipProviderLogCreation
+    evaluatedProviderLog,
+    evaluationProviderLog: skipProviderLogCreation
       ? undefined
       : providerLogs[providerLogs.length - 1]!,
     result: skipEvaluationResultCreation

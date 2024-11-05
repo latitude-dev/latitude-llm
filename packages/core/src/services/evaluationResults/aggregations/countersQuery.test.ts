@@ -59,12 +59,14 @@ describe('evaluation results aggregations', () => {
           },
         },
       })
-      const { documentLog: log1 } = await factories.createDocumentLog({
-        document: documentVersion,
-        commit,
-      })
+      const { documentLog: log1, providerLogs } =
+        await factories.createDocumentLog({
+          document: documentVersion,
+          commit,
+        })
       await factories.createEvaluationResult({
         documentLog: log1,
+        evaluatedProviderLog: providerLogs[0]!,
         evaluation,
         stepCosts: [
           {
@@ -74,12 +76,14 @@ describe('evaluation results aggregations', () => {
           },
         ],
       })
-      const { documentLog: log2 } = await factories.createDocumentLog({
-        document: documentVersion,
-        commit,
-      })
+      const { documentLog: log2, providerLogs: providerLogs2 } =
+        await factories.createDocumentLog({
+          document: documentVersion,
+          commit,
+        })
       await factories.createEvaluationResult({
         documentLog: log2,
+        evaluatedProviderLog: providerLogs2[0]!,
         evaluation,
         stepCosts: [
           {
@@ -157,32 +161,38 @@ describe('evaluation results aggregations', () => {
 
     describe('with results', () => {
       beforeEach(async () => {
-        const { documentLog: log1 } = await factories.createDocumentLog({
-          document: documentVersion,
-          commit,
-        })
+        const { documentLog: log1, providerLogs: providerLogs1 } =
+          await factories.createDocumentLog({
+            document: documentVersion,
+            commit,
+          })
         await factories.createEvaluationResult({
           result: 'apple',
           documentLog: log1,
+          evaluatedProviderLog: providerLogs1[0]!,
           evaluation,
         })
-        const { documentLog: log2 } = await factories.createDocumentLog({
-          document: documentVersion,
-          commit,
-        })
+        const { documentLog: log2, providerLogs: providerLogs2 } =
+          await factories.createDocumentLog({
+            document: documentVersion,
+            commit,
+          })
         await factories.createEvaluationResult({
           result: 'apple',
           documentLog: log2,
+          evaluatedProviderLog: providerLogs2[0]!,
           evaluation,
         })
 
-        const { documentLog: log3 } = await factories.createDocumentLog({
-          document: documentVersion,
-          commit,
-        })
+        const { documentLog: log3, providerLogs: providerLogs3 } =
+          await factories.createDocumentLog({
+            document: documentVersion,
+            commit,
+          })
         await factories.createEvaluationResult({
           result: 'orange',
           documentLog: log3,
+          evaluatedProviderLog: providerLogs3[0]!,
           evaluation,
         })
       })

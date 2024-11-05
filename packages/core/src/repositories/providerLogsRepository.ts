@@ -21,7 +21,9 @@ export class ProviderLogsRepository extends Repository<ProviderLog> {
     const result = await this.scope.where(eq(providerLogs.uuid, uuid)).limit(1)
 
     if (!result.length) {
-      return Result.error(new NotFoundError('ProviderLog not found'))
+      return Result.error(
+        new NotFoundError(`ProviderLog with uuid ${uuid} not found`),
+      )
     }
 
     return Result.ok(result[0]!)

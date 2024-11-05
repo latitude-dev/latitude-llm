@@ -5,6 +5,7 @@ import {
   DocumentLog,
   ErrorableEntity,
   EvaluationDto,
+  ProviderLog,
   Providers,
   Workspace,
 } from '../../browser'
@@ -21,6 +22,7 @@ import { EvaluationResultsRepository } from './index'
 
 let workspace: Workspace
 let documentLog: DocumentLog
+let providerLogs: ProviderLog[]
 let evaluation: EvaluationDto
 
 describe('EvaluationResultsRepository', () => {
@@ -41,11 +43,13 @@ describe('EvaluationResultsRepository', () => {
       })
       workspace = wps
       const document = doc!
-      const { documentLog: docLog } = await createDocumentLog({
-        document,
-        commit: commit1,
-      })
+      const { documentLog: docLog, providerLogs: pls } =
+        await createDocumentLog({
+          document,
+          commit: commit1,
+        })
       documentLog = docLog
+      providerLogs = pls
       evaluation = await createLlmAsJudgeEvaluation({
         user: user,
         workspace: workspace,
@@ -53,6 +57,7 @@ describe('EvaluationResultsRepository', () => {
 
       await createEvaluationResult({
         documentLog,
+        evaluatedProviderLog: providerLogs[0]!,
         evaluation,
         result: 'Result 1',
       })
@@ -79,20 +84,22 @@ describe('EvaluationResultsRepository', () => {
         workspace: workspace2,
       })
 
-      const documentLog2 = await createDocumentLog({
-        document: document2!,
-        commit: commit2,
-      })
+      const { documentLog: documentLog2, providerLogs: providerLogs2 } =
+        await createDocumentLog({
+          document: document2!,
+          commit: commit2,
+        })
 
       await createProviderLog({
         workspace,
-        documentLogUuid: documentLog2.documentLog.uuid,
+        documentLogUuid: documentLog2.uuid,
         providerId: provider2!.id,
         providerType: Providers.OpenAI,
       })
 
       await createEvaluationResult({
-        documentLog: documentLog2.documentLog,
+        documentLog: documentLog2,
+        evaluatedProviderLog: providerLogs2[0]!,
         evaluation: evaluation2,
         result: 'Result 2',
       })
@@ -109,6 +116,7 @@ describe('EvaluationResultsRepository', () => {
     it('does not return evaluation results with errors', async () => {
       const { evaluationResult } = await createEvaluationResult({
         documentLog,
+        evaluatedProviderLog: providerLogs[0]!,
         evaluation,
         result: 'Result 2',
       })
@@ -131,6 +139,7 @@ describe('EvaluationResultsRepository', () => {
     it('filter evaluation results without provider log', async () => {
       await createEvaluationResult({
         documentLog,
+        evaluatedProviderLog: providerLogs[0]!,
         evaluation,
         result: 'Result 2',
         skipProviderLogCreation: true,
@@ -148,6 +157,7 @@ describe('EvaluationResultsRepository', () => {
     it('filter evaluation results without result', async () => {
       await createEvaluationResult({
         documentLog,
+        evaluatedProviderLog: providerLogs[0]!,
         evaluation,
         skipEvaluationResultCreation: true,
       })

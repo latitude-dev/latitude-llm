@@ -3,8 +3,8 @@ import { Job } from 'bullmq'
 import { getUnknownError, Result } from '../../../lib'
 import { queues } from '../../../queues'
 import {
-  DocumentLogsWithErrorsRepository,
   EvaluationsRepository,
+  ProviderLogsRepository,
 } from '../../../repositories'
 import { runEvaluation } from '../../../services/evaluations/run'
 import { WebsocketClient } from '../../../websockets/workers'
@@ -13,23 +13,23 @@ import { ProgressTracker } from '../../utils/progressTracker'
 async function fetchData({
   workspaceId,
   evaluationId,
-  documentLogUuid,
+  providerLogUuid,
 }: {
   workspaceId: number
   evaluationId: number
-  documentLogUuid: string
+  providerLogUuid: string
 }) {
-  const documentLogsScope = new DocumentLogsWithErrorsRepository(workspaceId)
-  const evaluationsScope = new EvaluationsRepository(workspaceId)
-  const docLogResult = await documentLogsScope.findByUuid(documentLogUuid)
+  const providerLogsRepository = new ProviderLogsRepository(workspaceId)
+  const evaluationsRepository = new EvaluationsRepository(workspaceId)
+  const providerLogResult =
+    await providerLogsRepository.findByUuid(providerLogUuid)
+  if (providerLogResult.error) return providerLogResult
 
-  if (docLogResult.error) return docLogResult
-
-  const result = await evaluationsScope.find(evaluationId)
+  const result = await evaluationsRepository.find(evaluationId)
   if (result.error) return result
 
   return Result.ok({
-    documentLog: docLogResult.value,
+    providerLog: providerLogResult.value,
     evaluation: result.value,
   })
 }
@@ -37,7 +37,7 @@ async function fetchData({
 export type RunEvaluationJobData = {
   workspaceId: number
   documentUuid: string
-  documentLogUuid: string
+  providerLogUuid: string
   evaluationId: number
   batchId?: string
 }
@@ -52,21 +52,21 @@ async function isSuccessful(run: Awaited<ReturnType<typeof runEvaluation>>) {
 }
 
 export async function runEvaluationJob(job: Job<RunEvaluationJobData>) {
-  const { workspaceId, batchId, documentUuid, documentLogUuid, evaluationId } =
+  const { workspaceId, batchId, documentUuid, providerLogUuid, evaluationId } =
     job.data
   const websockets = await WebsocketClient.getSocket()
   let progressTracker: ProgressTracker | undefined
   if (batchId) {
     progressTracker = new ProgressTracker(await queues(), batchId)
   }
-  const { documentLog, evaluation } = await fetchData({
+  const { providerLog, evaluation } = await fetchData({
     workspaceId,
     evaluationId,
-    documentLogUuid,
+    providerLogUuid,
   }).then((r) => r.unwrap())
 
   const run = await runEvaluation({
-    documentLog,
+    providerLog,
     evaluation,
     documentUuid,
   })
