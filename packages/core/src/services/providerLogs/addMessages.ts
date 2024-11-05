@@ -107,7 +107,6 @@ export async function addMessages({
           responseResolve(Result.ok(res))
         })
         .catch((err) => {
-          // TODO: createRunError in DB?
           responseResolve(Result.error(err))
         })
     },
