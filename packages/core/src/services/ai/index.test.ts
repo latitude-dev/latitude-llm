@@ -39,7 +39,10 @@ describe('ai function', () => {
     }
 
     const messages: Message[] = [
-      { role: MessageRole.system, content: 'System message' },
+      {
+        role: MessageRole.system,
+        content: [{ type: ContentType.text, text: 'System message' }],
+      },
     ]
 
     await expect(
@@ -151,7 +154,10 @@ describe('ai function', () => {
       }
 
       const messages: Message[] = [
-        { role: MessageRole.system, content: 'System message' },
+        {
+          role: MessageRole.system,
+          content: [{ type: ContentType.text, text: 'System message' }],
+        },
         {
           role: MessageRole.user,
           content: [{ type: ContentType.text, text: 'Hello' }],
@@ -226,7 +232,10 @@ describe('ai function', () => {
       }
 
       const messages: Message[] = [
-        { role: MessageRole.system, content: 'System message' },
+        {
+          role: MessageRole.system,
+          content: [{ type: ContentType.text, text: 'System message' }],
+        },
         {
           role: MessageRole.user,
           content: [{ type: ContentType.text, text: 'Hello' }],

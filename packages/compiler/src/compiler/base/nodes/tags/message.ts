@@ -11,7 +11,6 @@ import {
   MessageContent,
   MessageRole,
   SystemMessage,
-  TextContent,
   ToolMessage,
   UserMessage,
 } from '$compiler/types'
@@ -92,13 +91,15 @@ function buildMessage<R extends MessageRole>(
 
   if (role === MessageRole.system) {
     return {
+      ...attributes,
       role,
-      content: (content[0] as TextContent)?.text ?? '',
+      content,
     } as SystemMessage
   }
 
   if (role === MessageRole.user) {
     return {
+      ...attributes,
       role,
       name: attributes.name ? String(attributes.name) : undefined,
       content,
@@ -107,9 +108,10 @@ function buildMessage<R extends MessageRole>(
 
   if (role === MessageRole.assistant) {
     return {
+      ...attributes,
       role,
       toolCalls: toolCalls.map(({ value }) => value),
-      content: (content[0]! as TextContent).text,
+      content,
     } as AssistantMessage
   }
 

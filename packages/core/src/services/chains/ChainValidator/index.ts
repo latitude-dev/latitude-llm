@@ -73,11 +73,12 @@ export class ChainValidator {
     const rule = applyCustomRules({
       providerType: provider.provider,
       messages: conversation.messages,
+      config,
     })
 
     return Result.ok({
       provider,
-      config,
+      config: rule.config as Config,
       chainCompleted,
       conversation: {
         ...conversation,

@@ -48,6 +48,7 @@ export type Config = {
   provider: string
   model: string
   url?: string
+  cacheControl?: boolean
   schema?: JSONSchema7
   azure?: { resourceName: string }
   google?: GoogleConfig

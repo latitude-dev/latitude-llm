@@ -13,7 +13,6 @@ import {
   MessageContent,
   MessageRole,
   SystemMessage,
-  TextContent,
 } from '$compiler/types'
 import type { Node as LogicalExpression } from 'estree'
 
@@ -157,14 +156,14 @@ export class Compile {
       this.baseNodeError(errors.invalidToolCallPlacement, toolNode)
     })
 
-    if (content.length > 0) {
-      const message = {
-        role: MessageRole.system,
-        content: (content[0] as TextContent).text,
-      } as SystemMessage
+    if (!content.length) return
 
-      this.addMessage(message)
-    }
+    const message = {
+      role: MessageRole.system,
+      content,
+    } as SystemMessage
+
+    this.addMessage(message)
   }
 
   private popContent(): MessageContent[] {
@@ -187,7 +186,7 @@ export class Compile {
   private popStepResponse() {
     if (this.stepResponse === undefined) return undefined
 
-    const response = {
+    const response: AssistantMessage = {
       role: MessageRole.assistant,
       content: this.stepResponse,
       toolCalls: [],
@@ -195,7 +194,7 @@ export class Compile {
 
     this.stepResponse = undefined
 
-    return response as AssistantMessage
+    return response
   }
 
   private async resolveExpression(

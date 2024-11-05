@@ -7,7 +7,7 @@
   "scripts": {
     "dev": "tsx watch src/server",
     "build": "tsup --config tsup.config.ts && pnpm run sentry:sourcemaps",
-    "dev:debug": "tsx watch --inspect-brk src/server",
+    "dev:debug": "tsx watch --inspect src/server",
     "lint": "eslint src/",
     "prettier": "prettier --write \"**/*.{ts,tsx,md}\"",
     "tc": "tsc --noEmit",
@@ -38,7 +38,7 @@
     "@types/node": "^22.5.1",
     "@types/uuid": "^10.0.0",
     "tsup": "^8.2.4",
-    "tsx": "^4.16.2",
+    "tsx": "^4.19.2",
     "vitest": "^2.0.4"
   }
 }

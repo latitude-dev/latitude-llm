@@ -257,7 +257,7 @@ describe('runChain', () => {
         messages: [
           {
             role: MessageRole.system,
-            content: 'System instruction',
+            content: [{ type: ContentType.text, text: 'System instruction' }],
           },
           {
             role: MessageRole.user,

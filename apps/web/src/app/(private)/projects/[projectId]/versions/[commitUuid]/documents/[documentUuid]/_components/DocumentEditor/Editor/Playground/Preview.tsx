@@ -10,6 +10,7 @@ import {
   AppliedRules,
   applyCustomRules,
   LATITUDE_DOCS_URL,
+  ProviderRules,
 } from '@latitude-data/core/browser'
 import {
   Alert,
@@ -26,6 +27,34 @@ import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { ROUTES } from '$/services/routes'
 import useProviderApiKeys from '$/stores/providerApiKeys'
 import Link from 'next/link'
+
+function WarningLink({ providerRule }: { providerRule: ProviderRules }) {
+  return (
+    <Link
+      target='_blank'
+      href={`${LATITUDE_DOCS_URL}/guides/prompt-manager/custom-rules/${providerRule}`}
+      className='flex-nowrap'
+    >
+      <Text.H5B underline noWrap color='warningMutedForeground'>
+        Learn more
+      </Text.H5B>
+    </Link>
+  )
+}
+
+function Warnings({ warnings }: { warnings: AppliedRules }) {
+  const rules = warnings.rules
+  if (!rules.length) return null
+
+  return rules.map((rule, index) => (
+    <Alert
+      key={index}
+      variant='warning'
+      description={rule.ruleMessage}
+      cta={<WarningLink providerRule={rule.rule} />}
+    />
+  ))
+}
 
 export default function Preview({
   metadata,
@@ -91,6 +120,7 @@ export default function Preview({
     const rule = applyCustomRules({
       providerType: provider.provider,
       messages: conversation.messages,
+      config: conversation.config,
     })
 
     setFixedMessages(rule?.messages ?? conversation.messages)
@@ -99,7 +129,7 @@ export default function Preview({
 
   return (
     <div className='flex flex-col flex-1 gap-2 h-full overflow-hidden'>
-      <WarningMessage rule={warningRule} />
+      {warningRule ? <Warnings warnings={warningRule} /> : null}
       <div
         ref={containerRef}
         className='flex flex-col gap-3 flex-grow flex-shrink min-h-0 custom-scrollbar'
@@ -128,6 +158,7 @@ export default function Preview({
         {error || (metadata?.errors.length ?? 0) > 0 ? (
           <Tooltip
             side='bottom'
+            asChild
             trigger={
               <Button fancy disabled>
                 Run prompt
@@ -157,33 +188,4 @@ export default function Preview({
       </div>
     </div>
   )
-}
-
-function WarningMessage({ rule }: { rule: AppliedRules | undefined }) {
-  if (!rule) return null
-
-  switch (rule.rule) {
-    case 'AnthropicMultipleSystemMessagesUnsupported':
-      return (
-        <Alert
-          variant='warning'
-          description={rule.ruleMessage}
-          cta={
-            <Link
-              target='_blank'
-              href={`${LATITUDE_DOCS_URL}/guides/prompt-manager/custom-rules`}
-              className='flex-nowrap'
-            >
-              <Text.H5B underline noWrap color='warningMutedForeground'>
-                Learn more
-              </Text.H5B>
-            </Link>
-          }
-        />
-      )
-    case 'GoogleSingleStartingSystemMessageSupported':
-      return <Alert variant='warning' description={rule.ruleMessage} />
-    default:
-      return null
-  }
 }

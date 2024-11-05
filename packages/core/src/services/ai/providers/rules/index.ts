@@ -1,34 +1,48 @@
-import type { Message } from '@latitude-data/compiler'
+import type { Config, Message } from '@latitude-data/compiler'
 
+import { PartialConfig } from '../../helpers'
 import { Providers } from '../models'
 import { applyAnthropicRules } from './anthropic'
 import { applyGoogleRules } from './google'
+import { vercelSdkRules } from './vercel'
 
-export type ProviderRules =
-  | 'AnthropicMultipleSystemMessagesUnsupported'
-  | 'GoogleSingleStartingSystemMessageSupported'
-
-export type AppliedRules = {
-  rule: ProviderRules
-  ruleMessage?: string
-  messages: Message[]
+export enum ProviderRules {
+  Anthropic = 'anthropic',
+  Google = 'google',
+  VercelSDK = 'latitude',
 }
 
-export type ApplyCustomRulesProps = {
+type ProviderRule = { rule: ProviderRules; ruleMessage: string }
+
+export type AppliedRules = {
+  rules: ProviderRule[]
   messages: Message[]
+  config: Config
+}
+
+type Props = {
+  providerType: Providers
+  messages: Message[]
+  config: Config | PartialConfig
 }
 
 export function applyCustomRules({
   providerType,
   messages,
-}: ApplyCustomRulesProps & { providerType: Providers }):
-  | AppliedRules
-  | undefined {
+  config,
+}: Props): AppliedRules {
+  let rules: AppliedRules = {
+    rules: [],
+    messages,
+    config,
+  }
   if (providerType === Providers.Anthropic) {
-    return applyAnthropicRules({ messages })
+    rules = applyAnthropicRules(rules)
   }
 
   if (providerType === Providers.Google) {
-    return applyGoogleRules({ messages })
+    rules = applyGoogleRules(rules)
   }
+
+  return vercelSdkRules(rules, providerType)
 }

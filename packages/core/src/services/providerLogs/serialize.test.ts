@@ -91,7 +91,12 @@ describe('serialize', () => {
     // @ts-expect-error
     const providerLog: ProviderLog = {
       messages: [
-        { role: MessageRole.system, content: 'You are an AI assistant' },
+        {
+          role: MessageRole.system,
+          content: [
+            { type: ContentType.text, text: 'You are an AI assistant' },
+          ],
+        },
         {
           role: MessageRole.user,
           content: [
@@ -109,7 +114,9 @@ describe('serialize', () => {
       all: [
         {
           role: MessageRole.system,
-          content: 'You are an AI assistant',
+          content: [
+            { type: ContentType.text, text: 'You are an AI assistant' },
+          ],
         },
         {
           role: MessageRole.user,
@@ -125,7 +132,7 @@ describe('serialize', () => {
       ],
       first: {
         role: MessageRole.system,
-        content: 'You are an AI assistant',
+        content: [{ type: ContentType.text, text: 'You are an AI assistant' }],
       },
       last: {
         role: MessageRole.assistant,
@@ -158,16 +165,22 @@ describe('serialize', () => {
         all: [
           {
             role: MessageRole.system,
-            content: 'You are an AI assistant',
+            content: [
+              { type: ContentType.text, text: 'You are an AI assistant' },
+            ],
           },
         ],
         first: {
           role: MessageRole.system,
-          content: 'You are an AI assistant',
+          content: [
+            { type: ContentType.text, text: 'You are an AI assistant' },
+          ],
         },
         last: {
           role: MessageRole.system,
-          content: 'You are an AI assistant',
+          content: [
+            { type: ContentType.text, text: 'You are an AI assistant' },
+          ],
         },
       },
       assistant: {
@@ -319,7 +332,12 @@ describe('formatContext', () => {
     // @ts-expect-error
     const providerLog: ProviderLog = {
       messages: [
-        { role: MessageRole.system, content: 'You are an AI assistant' },
+        {
+          role: MessageRole.system,
+          content: [
+            { type: ContentType.text, text: 'You are an AI assistant' },
+          ],
+        },
         {
           role: MessageRole.user,
           content: [

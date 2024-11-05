@@ -33,7 +33,13 @@
         "guides/getting-started/introduction",
         "guides/getting-started/concepts",
         "guides/getting-started/quick-start",
-        "guides/getting-started/providers",
+        {
+          "group": "Providers",
+          "pages": [
+            "guides/getting-started/providers",
+            "guides/getting-started/providers/anthropic"
+          ]
+        },
         "guides/getting-started/invite-your-team"
       ]
     },
@@ -50,7 +56,14 @@
         "guides/prompt-manager/version-control",
         "guides/prompt-manager/json-output",
         "guides/prompt-manager/tools",
-        "guides/prompt-manager/custom-rules",
+        {
+          "group": "Custom Rules",
+          "pages": [
+            "guides/prompt-manager/custom-rules",
+            "guides/prompt-manager/provider-rules/anthropic",
+            "guides/prompt-manager/provider-rules/google"
+          ]
+        },
         "guides/prompt-manager/cache"
       ]
     },
@@ -66,10 +79,7 @@
     },
     {
       "group": "Logs",
-      "pages": [
-        "guides/logs/overview",
-        "guides/logs/upload-logs"
-      ]
+      "pages": ["guides/logs/overview", "guides/logs/upload-logs"]
     },
     {
       "group": "Datasets",

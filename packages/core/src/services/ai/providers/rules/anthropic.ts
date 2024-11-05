@@ -1,23 +1,29 @@
-import type { ContentType, MessageRole } from '@latitude-data/compiler'
+import { MessageRole } from '@latitude-data/compiler'
 
-import { AppliedRules, ApplyCustomRulesProps } from '.'
+import { AppliedRules, ProviderRules } from '.'
+import { enforceAllSystemMessagesFirst } from './helpers/enforceAllSystemMessagesFirst'
 
-export function applyAnthropicRules({
-  messages,
-}: ApplyCustomRulesProps): AppliedRules | undefined {
-  if (!messages.some((m) => m.role === 'system')) return
+export function applyAnthropicRules(appliedRule: AppliedRules): AppliedRules {
+  const rule = enforceAllSystemMessagesFirst(appliedRule, {
+    provider: ProviderRules.Anthropic,
+    message:
+      'Anthropic only supports system messages at the beggining of the conversation. All other system messages have been converted to user messages.',
+  })
 
+  const roles = rule.messages.map((m) => m.role)
+  const onlySystemMessages = roles.every((r) => r === MessageRole.system)
+  if (!onlySystemMessages) return rule
+
+  const rules = [
+    ...rule.rules,
+    {
+      rule: ProviderRules.Anthropic,
+      ruleMessage:
+        'Only system messages are present. You at least need one <user>your message</user> or <assistant>your message</message> in Anthropic.',
+    },
+  ]
   return {
-    rule: 'AnthropicMultipleSystemMessagesUnsupported',
-    ruleMessage:
-      'Anthropic does not support multiple system messages. All system messages have been converted to user messages. If you want to add a system prompt please include it in the prompt frontmatter.',
-    messages: messages.map((m) => {
-      if (m.role !== 'system') return m
-      return {
-        ...m,
-        role: 'user' as MessageRole.user,
-        content: [{ type: 'text' as ContentType.text, text: m.content }],
-      }
-    }),
+    ...rule,
+    rules,
   }
 }
