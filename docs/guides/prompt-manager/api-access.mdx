@@ -156,7 +156,10 @@ The previously described `POST /projects/{projectId}/versions/{versionUuid}/docu
   "messages": [
     {
       "role": "user" | "system" | "assistant",
-      "content": string
+        {
+          "type": "text", //atm only text is supported
+          "content": string
+        }
     }
   ]
 }
@@ -252,21 +255,32 @@ Evaluate a conversation using configured evaluations.
 }
 ```
 
-#### 4. Evaluate a Conversation
+#### 5. Create Log Entry
 
-Evaluate a conversation using configured evaluations.
+Create a log entry for a document.
 
-**Endpoint:** `POST /conversations/{conversationUuid}/evaluate`
+**Endpoint:** `POST /projects/{projectId}/versions/{versionUuid}/documents/logs`
 
 **Path Parameters:**
 
-- `conversationUuid`: UUID of the conversation to evaluate
+- `projectId`: Your project ID (required)
+- `versionUuid`: Version UUID (required, optional for SDK's defaults to 'live')
 
 **Request Body:**
 
 ```json
 {
-  "evaluationUuids": ["evaluation-uuid-1", "evaluation-uuid-2"] // optional, defaults to all evaluations connected to the conversation prompt
+  "path": "path/to/document",
+  "messages": [
+    {
+      "role": "user" | "system" | "assistant",
+        {
+          "type": "text", //atm only text is supported
+          "content": string
+        }
+    }
+  ],
+  "response": string
 }
 ```
 
@@ -274,6 +288,17 @@ Evaluate a conversation using configured evaluations.
 
 ```json
 {
-  "evaluations": ["evaluation-uuid-1", "evaluation-uuid-2"] // array of evaluation UUIDs that will be run
+  "id": "document-id",
+  "uuid": "log-uuid",
+  "documentUuid": "document-uuid",
+  "commitId": "commit-id",
+  "resolvedContent": "Document content without comments",
+  "contentHash": "content-hash",
+  "parameters": {},
+  "customIdentifier": "custom-identifier",
+  "duration": "duration",
+  "source": "source",
+  "createdAt": "created-at",
+  "updatedAt": "updated-at",
 }
 ```
