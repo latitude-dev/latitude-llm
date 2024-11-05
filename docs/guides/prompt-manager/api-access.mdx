@@ -61,7 +61,7 @@ Run a specific document (prompt) with optional parameters.
 **Path Parameters:**
 
 - `projectId`: Your project ID (required)
-- `versionUuid`: Version UUID (optional, defaults to 'live')
+- `versionUuid`: Version UUID (required, optional for SDK's defaults to 'live')
 
 **Request Body:**
 
@@ -237,7 +237,7 @@ Retrieve a specific prompt by its path.
 **Path Parameters:**
 
 - `projectId`: Your project ID (required)
-- `versionUuid`: Version UUID (optional, defaults to 'live')
+- `versionUuid`: Version UUID (required, optional for SDK's defaults to 'live')
 - `path`: Path to the document (required)
 
 **Request Headers:**
