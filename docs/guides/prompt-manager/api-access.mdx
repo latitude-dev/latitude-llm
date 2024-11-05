@@ -151,13 +151,15 @@ The previously described `POST /projects/{projectId}/versions/{versionUuid}/docu
 
 **Request Body:**
 
+- follows OpenAI's format or the [vercel's ai sdk](https://sdk.vercel.ai/docs/reference/ai-sdk-core/stream-text#api-signature)
+
 ```json
 {
   "messages": [
     {
       "role": "user" | "system" | "assistant",
         {
-          "type": "text", //atm only text is supported
+          "type": "text",
           "content": string
         }
     }
@@ -268,6 +270,8 @@ Create a log entry for a document.
 
 **Request Body:**
 
+- follows OpenAI's format or the [vercel's ai sdk](https://sdk.vercel.ai/docs/reference/ai-sdk-core/stream-text#api-signature)
+
 ```json
 {
   "path": "path/to/document",
@@ -275,7 +279,7 @@ Create a log entry for a document.
     {
       "role": "user" | "system" | "assistant",
         {
-          "type": "text", //atm only text is supported
+          "type": "text",
           "content": string
         }
     }
