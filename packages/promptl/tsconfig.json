@@ -1,0 +1,19 @@
+{
+  "extends": "@latitude-data/typescript-config/base.json",
+  "compilerOptions": {
+    "typeRoots": [
+      "node_modules/@types",
+      "node_modules/@latitude-data/typescript-config/types"
+    ],
+    "baseUrl": ".",
+    "rootDir": "./src",
+    "outDir": "dist",
+    "noEmit": false,
+    "paths": {
+      "$compiler/*": ["./src/*"],
+      "acorn": ["node_modules/@latitude-data/typescript-config/types/acorn"]
+    }
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
+}
