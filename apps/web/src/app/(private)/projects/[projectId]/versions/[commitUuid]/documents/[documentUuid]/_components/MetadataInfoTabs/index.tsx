@@ -1,41 +1,48 @@
-import { ReactNode, useState } from 'react'
+import { forwardRef, ReactNode, useState } from 'react'
 
 import { cn, TabSelector, TabSelectorOption } from '@latitude-data/web-ui'
 
 type RenderProps = { selectedTab: string }
-export function MetadataInfoTabs({
-  className,
-  tabs = [
-    { label: 'Metadata', value: 'metadata' },
-    { label: 'Messages', value: 'messages' },
-  ],
-  children,
-}: {
+type Props = {
   children: (args: RenderProps) => ReactNode
   tabs?: TabSelectorOption<string>[]
   className?: string
-}) {
-  const [selectedTab, setSelectedTab] = useState<string>('metadata')
-  return (
-    <div
-      className={cn(
-        'flex-shrink-0 flex flex-col',
-        'border border-border rounded-lg items-center',
-        className,
-      )}
-    >
-      <div className='pt-6'>
-        <TabSelector
-          options={tabs}
-          selected={selectedTab}
-          onSelect={setSelectedTab}
-        />
-      </div>
-      <div className='my-5 px-4 flex flex-col gap-y-5 relative w-full'>
-        <div className='flex flex-col gap-4 w-full overflow-x-auto'>
-          {children({ selectedTab })}
+}
+export const MetadataInfoTabs = forwardRef<HTMLDivElement, Props>(
+  function MetadataInfoTabs(
+    {
+      className,
+      tabs = [
+        { label: 'Metadata', value: 'metadata' },
+        { label: 'Messages', value: 'messages' },
+      ],
+      children,
+    },
+    ref,
+  ) {
+    const [selectedTab, setSelectedTab] = useState<string>('metadata')
+    return (
+      <div
+        ref={ref}
+        className={cn(
+          'flex flex-col flex-grow min-h-0 bg-background',
+          'border border-border rounded-lg items-center relative',
+          className,
+        )}
+      >
+        <div className='pt-6 pb-2'>
+          <TabSelector
+            options={tabs}
+            selected={selectedTab}
+            onSelect={setSelectedTab}
+          />
+        </div>
+        <div className='w-full custom-scrollbar overflow-y-auto'>
+          <div className='flex px-4 py-5 flex-col gap-4 w-full overflow-x-auto'>
+            {children({ selectedTab })}
+          </div>
         </div>
       </div>
-    </div>
-  )
-}
+    )
+  },
+)

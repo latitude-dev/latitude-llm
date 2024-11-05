@@ -1,30 +1,39 @@
 import { useMemo } from 'react'
 
-import { AssistantMessage, Message, MessageRole } from '@latitude-data/compiler'
+import { Message, MessageRole } from '@latitude-data/compiler'
 import { ProviderLogDto } from '@latitude-data/core/browser'
 import { MessageList, Text } from '@latitude-data/web-ui'
 
-export function DocumentLogMessages({
+export function useGetProviderLogMessages({
   providerLogs,
 }: {
   providerLogs?: ProviderLogDto[]
 }) {
   const providerLog = providerLogs?.[providerLogs.length - 1]
+  return useMemo(() => {
+    if (!providerLog) return { messages: [] as Message[], lastResponse: null }
+    if (!providerLog.response) {
+      return { messages: providerLog.messages, lastResponse: null }
+    }
 
-  const messages = useMemo<Message[]>(() => {
-    if (!providerLog) return [] as Message[]
-    if (!providerLog.response) return providerLog.messages
-
-    const responseMessage = {
+    const lastResponse = {
       role: MessageRole.assistant,
-      content: providerLog.response,
-      toolCalls: providerLog.toolCalls,
-    } as AssistantMessage
+      content: providerLog!.response,
+      toolCalls: providerLog!.toolCalls,
+    }
 
-    return [...(providerLog.messages as Message[]), responseMessage]
+    return {
+      lastResponse,
+      messages: [
+        ...(providerLog!.messages as Message[]),
+        lastResponse as unknown as Message,
+      ],
+    }
   }, [providerLog])
+}
 
-  if (!providerLog) {
+export function DocumentLogMessages({ messages }: { messages: Message[] }) {
+  if (!messages.length) {
     return (
       <Text.H5 color='foregroundMuted' centered>
         There are no messages generated for this log

@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react'
+import { RefObject, useCallback, useEffect, useRef, useState } from 'react'
 
 import { EvaluationDto, ProviderLogDto } from '@latitude-data/core/browser'
 import {
@@ -7,8 +7,10 @@ import {
 } from '@latitude-data/core/repositories'
 import { Button, Icon, Modal, ReactStateDispatch } from '@latitude-data/web-ui'
 import useFetcher from '$/hooks/useFetcher'
+import { useStickyNested } from '$/hooks/useStickyNested'
 import { ROUTES } from '$/services/routes'
 import useProviderLogs from '$/stores/providerLogs'
+import { usePanelDomRef } from 'node_modules/@latitude-data/web-ui/src/ds/atoms/SplitPane'
 import useSWR from 'swr'
 
 import { MetadataInfoTabs } from '../../../../../_components/MetadataInfoTabs'
@@ -67,17 +69,37 @@ export function EvaluationResultInfo({
   evaluation,
   evaluationResult,
   providerLog,
+  tableRef,
+  sidebarWrapperRef,
 }: {
   evaluation: EvaluationDto
   evaluationResult: EvaluationResultWithMetadataAndErrors
   providerLog?: ProviderLogDto
+  tableRef: RefObject<HTMLTableElement>
+  sidebarWrapperRef: RefObject<HTMLDivElement>
 }) {
   const [selected, setSelected] = useState<MaybeDocumentLog>(null)
   const onClickOpen = useCallback(async () => {
     setSelected(evaluationResult.documentLogId)
   }, [evaluationResult.documentLogId])
+  const ref = useRef<HTMLDivElement | null>(null)
+  const [target, setTarget] = useState<HTMLDivElement | null>(null)
+  useEffect(() => {
+    if (!ref.current) return
+
+    setTarget(ref.current)
+  }, [ref.current])
+  const scrollableArea = usePanelDomRef({ selfRef: target })
+  const beacon = tableRef.current
+  useStickyNested({
+    scrollableArea,
+    beacon,
+    target,
+    targetContainer: sidebarWrapperRef.current,
+    offset: 24,
+  })
   return (
-    <>
+    <div ref={ref} className='flex flex-col'>
       <MetadataInfoTabs className='w-full'>
         {({ selectedTab }) => (
           <>
@@ -106,6 +128,6 @@ export function EvaluationResultInfo({
           onOpenChange={setSelected}
         />
       ) : null}
-    </>
+    </div>
   )
 }

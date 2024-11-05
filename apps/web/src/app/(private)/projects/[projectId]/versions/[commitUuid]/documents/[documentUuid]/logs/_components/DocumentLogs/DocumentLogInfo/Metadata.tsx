@@ -1,8 +1,9 @@
 import { useMemo } from 'react'
 
+import { MessageRole, ToolCall } from '@latitude-data/compiler'
 import { ProviderLogDto } from '@latitude-data/core/browser'
 import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
-import { ClickToCopy, Text } from '@latitude-data/web-ui'
+import { ClickToCopy, Message, Text } from '@latitude-data/web-ui'
 import { formatCostInMillicents, formatDuration } from '$/app/_lib/formatUtils'
 import { RunErrorMessage } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/_components/RunErrorMessage'
 import useProviderApiKeys from '$/stores/providerApiKeys'
@@ -154,8 +155,14 @@ function ProviderLogsMetadata({
 export function DocumentLogMetadata({
   documentLog,
   providerLogs = [],
+  lastResponse,
 }: {
   documentLog: DocumentLogWithMetadataAndError
+  lastResponse: {
+    role: MessageRole
+    content: string
+    toolCalls: ToolCall[]
+  } | null
   providerLogs?: ProviderLogDto[]
 }) {
   const providerLog = providerLogs[providerLogs.length - 1]
@@ -186,6 +193,12 @@ export function DocumentLogMetadata({
           providerLogs={providerLogs}
           documentLog={documentLog}
         />
+      ) : null}
+      {lastResponse ? (
+        <div className='flex flex-col gap-y-2'>
+          <Text.H5M color='foreground'>Last Response</Text.H5M>
+          <Message role={lastResponse.role} content={lastResponse.content} />
+        </div>
       ) : null}
     </>
   )

@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 
 import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
 import {
@@ -71,6 +71,8 @@ export function DocumentLogs({
 }: {
   documentLogs: DocumentLogWithMetadataAndError[]
 }) {
+  const tableRef = useRef<HTMLTableElement>(null)
+  const sidebarWrapperRef = useRef<HTMLDivElement>(null)
   const searchParams = useSearchParams()
   const page = searchParams.get('page')
   const pageSize = searchParams.get('pageSize')
@@ -106,20 +108,25 @@ export function DocumentLogs({
   }
 
   return (
-    <div className='flex flex-row w-full h-full gap-4 min-w-[1024px] overflow-x-auto'>
+    <div className='flex flex-row flex-grow min-h-0 w-full gap-4 min-w-[1024px] overflow-x-auto'>
       <div className='flex flex-col flex-grow h-full gap-y-4 min-w-0 lg:w-1/2 2xl:w-2/3'>
-        <DocumentLogsTable
-          documentLogs={documentLogs}
-          selectedLog={selectedLog}
-          setSelectedLog={setSelectedLog}
-        />
+        <div className='flex-1 mb-6'>
+          <DocumentLogsTable
+            ref={tableRef}
+            documentLogs={documentLogs}
+            selectedLog={selectedLog}
+            setSelectedLog={setSelectedLog}
+          />
+        </div>
       </div>
       {selectedLog && (
-        <div className='lg:w-1/2 2xl:w-1/3'>
+        <div className='lg:w-1/2 2xl:w-1/3' ref={sidebarWrapperRef}>
           <DocumentLogInfo
             documentLog={selectedLog}
             providerLogs={providerLogs}
             isLoading={isProviderLogsLoading}
+            tableRef={tableRef}
+            sidebarWrapperRef={sidebarWrapperRef}
           />
         </div>
       )}
