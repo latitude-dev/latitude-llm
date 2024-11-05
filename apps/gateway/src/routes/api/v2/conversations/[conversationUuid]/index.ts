@@ -1,6 +1,6 @@
-import { chatHandler } from '$/routes/api/v1/conversations/[conversationUuid]/handlers/chat'
 import { Hono } from 'hono'
 
+import { chatHandler } from './handlers/chat'
 import { evaluateHandler } from './handlers/evaluate'
 
 export const conversationsRouter = new Hono()

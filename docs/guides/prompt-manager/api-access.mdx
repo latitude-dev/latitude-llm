@@ -158,12 +158,15 @@ The previously described `POST /projects/{projectId}/versions/{versionUuid}/docu
       "role": "user" | "system" | "assistant",
       "content": string
     }
-  ]
+  ],
+  "stream": true
 }
 ```
 
+- `stream`: Optional boolean parameter (defaults to `false`). When set to true, the response will be a stream of Server-Sent Events (SSE). If false, a single JSON response containing the last event is returned.
+
 **Response:**
-The response is a stream of Server-Sent Events (SSE), similar to the "Run a Document" endpoint.
+The response is a stream of Server-Sent Events (SSE) or a single JSON response containing the final event, similar to the "Run a Document" endpoint.
 
 #### 3. Get a Prompt
 
