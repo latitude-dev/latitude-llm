@@ -208,8 +208,17 @@ The response contains the document details along with its configuration.
 ```json
 {
   "id": "document-id",
-  "name": "Document Name",
+  "documentUuid": "document-uuid",
+  "path": "path/to/document",
   "content": "Document content",
+  "resolvedContent": "Document content without comments",
+  "contentHash": "content-hash",
+  "commitId": "commit-id",
+  "deletedAt": "deleted-at",
+  "createdAt": "created-at",
+  "updatedAt": "updated-at",
+  "mergedAt": "merged-at",
+  "projectId": "project-id",
   "config": {
     "provider": "Provider name",
     "model": "Model name"
