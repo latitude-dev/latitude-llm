@@ -191,12 +191,14 @@ This is a test document
         parameters: {},
         source: LogSources.API,
       }).then((r) => r.unwrap())
+
       await response
       await duration
 
       const { value } = await testConsumeStream(stream)
       const repo = new ProviderLogsRepository(workspace.id)
       const logs = await repo.findAll().then((r) => r.unwrap())
+
       expect(value).toEqual([
         {
           data: {

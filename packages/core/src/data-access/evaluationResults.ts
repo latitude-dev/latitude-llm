@@ -1,8 +1,7 @@
 import { eq } from 'drizzle-orm'
 
-import { EvaluationResult } from '../browser'
 import { database } from '../client'
-import { workspacesDtoColumns } from '../repositories'
+import { EvaluationResultDto, workspacesDtoColumns } from '../repositories'
 import {
   evaluationResults,
   evaluations,
@@ -11,7 +10,7 @@ import {
 } from '../schema'
 
 export const findWorkspaceFromEvaluationResult = async (
-  evaluationResult: EvaluationResult,
+  evaluationResult: EvaluationResultDto,
   db = database,
 ) => {
   const result = await db

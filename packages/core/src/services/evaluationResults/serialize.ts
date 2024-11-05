@@ -31,7 +31,7 @@ export async function serialize(
 
   const providerLogsScope = new ProviderLogsRepository(workspace.id, db)
   const providerLogResult = await providerLogsScope.find(
-    evaluationResult.providerLogId,
+    evaluationResult.evaluationProviderLogId,
   )
   if (providerLogResult.error) return Result.error(providerLogResult.error)
   if (!providerLogResult.value) {

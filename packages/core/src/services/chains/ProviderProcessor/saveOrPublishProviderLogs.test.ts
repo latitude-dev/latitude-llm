@@ -7,7 +7,10 @@ import { publisher } from '../../../events/publisher'
 import * as jobsModule from '../../../jobs'
 import { generateUUIDIdentifier } from '../../../lib'
 import * as createProviderLogService from '../../providerLogs/create'
-import { LogData, saveOrPublishProviderLogs } from './saveOrPublishProviderLogs'
+import {
+  buildProviderLogDto,
+  saveOrPublishProviderLogs,
+} from './saveOrPublishProviderLogs'
 
 const publisherSpy = vi.spyOn(publisher, 'publishLater')
 const createProviderLogSpy = vi.spyOn(
@@ -28,8 +31,9 @@ const setupJobsSpy = vi.spyOn(jobsModule, 'setupJobs')
 // @ts-expect-error - mock implementation
 setupJobsSpy.mockResolvedValue(mocks.queues)
 
-let data: LogData<'text'>
+let data: ReturnType<typeof buildProviderLogDto>
 let workspace: Workspace
+
 describe('saveOrPublishProviderLogs', () => {
   beforeEach(async () => {
     const prompt = factories.helpers.createPrompt({
@@ -54,6 +58,7 @@ describe('saveOrPublishProviderLogs', () => {
       commit,
     })
     workspace = setup.workspace
+    // @ts-expect-error - mock implementation
     data = {
       workspaceId: setup.workspace.id,
       uuid: generateUUIDIdentifier(),

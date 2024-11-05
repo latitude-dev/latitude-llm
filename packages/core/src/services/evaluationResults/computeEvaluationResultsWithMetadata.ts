@@ -54,7 +54,7 @@ export async function computeEvaluationResultsWithMetadata(
   const filteredResultsSubQuery = db
     .select({
       id: evaluationResultsScope.id,
-      providerLogId: evaluationResultsScope.providerLogId,
+      evaluationProviderLogId: evaluationResultsScope.evaluationProviderLogId,
       error: evaluationResultsScope.error,
     })
     .from(evaluationResultsScope)
@@ -92,7 +92,7 @@ export async function computeEvaluationResultsWithMetadata(
     )
     .leftJoin(
       providerLogs,
-      eq(providerLogs.id, filteredResultsSubQuery.providerLogId),
+      eq(providerLogs.id, filteredResultsSubQuery.evaluationProviderLogId),
     )
     .groupBy(evaluationResultsScope.id)
     .as('aggregatedFieldsSubQuery')

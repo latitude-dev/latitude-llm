@@ -28,7 +28,7 @@ export function createEvaluationResultQuery(
     .from(evaluationResultsScope)
     .innerJoin(
       providerLogs,
-      eq(providerLogs.id, evaluationResultsScope.providerLogId),
+      eq(providerLogs.id, evaluationResultsScope.evaluationProviderLogId),
     )
     .groupBy(evaluationResultsScope.id)
     .as('aggregatedFieldsSubQuery')

@@ -122,6 +122,7 @@ export async function runDocumentAtCommit({
       source,
       publishEvent: false,
     })
+
     return checkerResult
   }
 

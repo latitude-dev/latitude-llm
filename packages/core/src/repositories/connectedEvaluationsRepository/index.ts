@@ -146,7 +146,7 @@ export class ConnectedEvaluationsRepository extends RepositoryLegacy<
           )
           .innerJoin(
             providerLogs,
-            eq(providerLogs.id, evaluationResultsScope.providerLogId),
+            eq(providerLogs.id, evaluationResultsScope.evaluationProviderLogId),
           )
           .where(eq(evaluationResultsScope.evaluationId, evaluationId)),
       )

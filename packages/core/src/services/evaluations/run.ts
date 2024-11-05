@@ -91,6 +91,7 @@ export async function runEvaluation(
       message: `Provider with model [${response?.providerLog?.config?.model ?? 'unknown'}] did not return a valid JSON object`,
     })
     await handleEvaluationError(error, errorableUuid)
+
     return Result.error(error)
   }
 
