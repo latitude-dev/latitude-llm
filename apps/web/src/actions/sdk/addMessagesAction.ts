@@ -49,6 +49,7 @@ export async function addMessagesAction({
   >()
 
   const response = sdk.chat(documentLogUuid, messages, {
+    stream: true,
     onEvent: (event) => {
       stream.update(event)
     },
