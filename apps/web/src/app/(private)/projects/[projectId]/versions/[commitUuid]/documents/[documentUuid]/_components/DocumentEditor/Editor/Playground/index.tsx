@@ -1,47 +1,41 @@
 'use client'
 
-import {
-  Dispatch,
-  SetStateAction,
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
 import { ConversationMetadata } from '@latitude-data/compiler'
 import { DocumentVersion } from '@latitude-data/core/browser'
-import { Badge, Input, Text } from '@latitude-data/web-ui'
+import { Badge, Input, Text, useCurrentCommit } from '@latitude-data/web-ui'
+import {
+  PlaygroundInputs,
+  useDocumentParameters,
+} from '$/hooks/useDocumentParameters'
 
 import { Header } from '../Header'
 import Chat from './Chat'
 import Preview from './Preview'
 
-export function convertParams(inputs: Record<string, string>) {
-  return Object.fromEntries(
-    Object.entries(inputs).map(([key, value]) => {
-      try {
-        return [key, JSON.parse(value)]
-      } catch (e) {
-        return [key, value]
-      }
-    }),
-  )
-}
-
 function InputParams({
   inputs,
   setInputs,
 }: {
-  inputs: Record<string, string>
-  setInputs: Dispatch<SetStateAction<Record<string, string>>>
+  inputs: PlaygroundInputs
+  setInputs: (inputs: PlaygroundInputs) => void
 }) {
+  const [ssr, setSsr] = useState(true)
   const setInput = useCallback(
     (param: string, value: string) => {
       setInputs({ ...inputs, [param]: value })
     },
-    [inputs],
+    [inputs, setInputs],
   )
+  useEffect(() => {
+    setSsr(false)
+  }, [])
+
+  // Avoid rendering inputs on server
+  // We have a Hydration issue with the inputs because
+  // they come from localStorage and are not available on the server
+  if (ssr) return null
 
   return (
     <div className='flex flex-col gap-3 flex-shrink-0 pb-1 pr-1 max-h-[33%] custom-scrollbar'>
@@ -75,24 +69,11 @@ export default function Playground({
   metadata: ConversationMetadata
 }) {
   const [mode, setMode] = useState<'preview' | 'chat'>('preview')
-  const [inputs, setInputs] = useState<Record<string, string>>({})
-  const parameters = useMemo(() => convertParams(inputs), [inputs])
-
-  useEffect(() => {
-    if (!metadata) return
-
-    // Remove only inputs that are no longer in the metadata, and add new ones
-    // Leave existing inputs as they are
-    setInputs(
-      Object.fromEntries(
-        Array.from(metadata.parameters).map((param) => {
-          if (param in inputs) return [param, inputs[param]!]
-          return [param, '']
-        }),
-      ),
-    )
-  }, [metadata])
-
+  const { commit } = useCurrentCommit()
+  const { parameters, inputs, setInputs } = useDocumentParameters({
+    documentVersionUuid: document.documentUuid,
+    commitVersionUuid: commit.uuid,
+  })
   return (
     <div className='flex flex-col gap-2 max-h-full h-full'>
       <Header title='Playground' />
