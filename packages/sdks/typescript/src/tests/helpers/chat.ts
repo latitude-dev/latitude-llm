@@ -12,11 +12,11 @@ const encoder = new TextEncoder()
 export function mockRequest({
   server,
   apiVersion,
-  docPath,
+  conversationUuid,
 }: {
   server: Server
   apiVersion: SdkApiVersion
-  docPath: string
+  conversationUuid: string
 }) {
   const mockAuthHeader = vi.fn()
   const mockUrl = vi.fn()
@@ -24,7 +24,7 @@ export function mockRequest({
   let body = {}
   server.use(
     http.post(
-      `http://localhost:8787/api/${apiVersion}/conversations/${docPath}/chat`,
+      `http://localhost:8787/api/${apiVersion}/conversations/${conversationUuid}/chat`,
       async (info) => {
         mockAuthHeader(info.request.headers.get('Authorization'))
         mockUrl(info.request.url)
@@ -42,22 +42,22 @@ export function mockRequest({
       },
     ),
   )
-  return { mockAuthHeader, mockUrl, mockBody, docPath }
+  return { mockAuthHeader, mockUrl, mockBody, conversationUuid }
 }
 
 export function mockStreamResponse({
   server,
   apiVersion,
-  docPath,
+  conversationUuid,
 }: {
   server: Server
-  docPath: string
+  conversationUuid: string
   apiVersion: SdkApiVersion
 }) {
   let stream: ReadableStream
   server.use(
     http.post(
-      `http://localhost:8787/api/${apiVersion}/conversations/${docPath}/chat`,
+      `http://localhost:8787/api/${apiVersion}/conversations/${conversationUuid}/chat`,
       async () => {
         stream = new ReadableStream({
           start(controller) {
@@ -81,40 +81,40 @@ export function mockStreamResponse({
       },
     ),
   )
-  return { chunks: CHUNKS, finalResponse: FINAL_RESPONSE, docPath }
+  return { chunks: CHUNKS, finalResponse: FINAL_RESPONSE, conversationUuid }
 }
 
 export function mockNonStreamResponse({
   server,
   apiVersion,
-  docPath,
+  conversationUuid,
 }: {
   server: Server
-  docPath: string
+  conversationUuid: string
   apiVersion: SdkApiVersion
 }) {
   server.use(
     http.post(
-      `http://localhost:8787/api/${apiVersion}/conversations/${docPath}/chat`,
+      `http://localhost:8787/api/${apiVersion}/conversations/${conversationUuid}/chat`,
       () => HttpResponse.json(FINAL_RESPONSE),
     ),
   )
-  return { finalResponse: FINAL_RESPONSE, docPath }
+  return { finalResponse: FINAL_RESPONSE, conversationUuid }
 }
 
 export function mock502Response({
   server,
   apiVersion,
-  docPath,
+  conversationUuid,
 }: {
   server: Server
   apiVersion: SdkApiVersion
-  docPath: string
+  conversationUuid: string
 }) {
   const mockFn = vi.fn()
   server.use(
     http.post(
-      `http://localhost:8787/api/${apiVersion}/conversations/${docPath}/chat`,
+      `http://localhost:8787/api/${apiVersion}/conversations/${conversationUuid}/chat`,
       () => {
         mockFn('called!')
         return HttpResponse.json(
@@ -128,5 +128,5 @@ export function mock502Response({
       },
     ),
   )
-  return { mockFn, docPath }
+  return { mockFn, conversationUuid }
 }

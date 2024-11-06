@@ -41,14 +41,15 @@ describe('/chat', () => {
     it(
       'makes request',
       server.boundary(async () => {
-        const { mockAuthHeader, mockUrl, mockBody, docPath } = mockRequest({
-          server,
-          apiVersion: 'v2',
-          docPath: 'fake-document-log-uuid',
-        })
+        const { mockAuthHeader, mockUrl, mockBody, conversationUuid } =
+          mockRequest({
+            server,
+            apiVersion: 'v2',
+            conversationUuid: 'fake-document-log-uuid',
+          })
 
         await sdk.chat(
-          docPath,
+          conversationUuid,
           [
             {
               role: MessageRole.user,
@@ -65,7 +66,7 @@ describe('/chat', () => {
 
         expect(mockAuthHeader).toHaveBeenCalledWith('Bearer fake-api-key')
         expect(mockUrl).toHaveBeenCalledWith(
-          `http://localhost:8787/api/v2/conversations/${docPath}/chat`,
+          `http://localhost:8787/api/v2/conversations/${conversationUuid}/chat`,
         )
         expect(mockBody).toHaveBeenCalledWith({
           body: {
@@ -93,14 +94,14 @@ describe('/chat', () => {
         const onMessageMock = vi.fn()
         const onFinishMock = vi.fn()
         const onErrorMock = vi.fn()
-        const { chunks, finalResponse, docPath } = mockStreamResponse({
+        const { chunks, finalResponse, conversationUuid } = mockStreamResponse({
           server,
-          docPath: 'fake-document-log-uuid',
+          conversationUuid: 'fake-document-log-uuid',
           apiVersion: 'v2',
         })
 
         const response = await sdk.chat(
-          docPath,
+          conversationUuid,
           [
             {
               role: MessageRole.user,
@@ -136,14 +137,14 @@ describe('/chat', () => {
 
     it('retries 3 times if gateway is not available', async () => {
       const onErrorMock = vi.fn()
-      const { mockFn, docPath } = mock502Response({
+      const { mockFn, conversationUuid } = mock502Response({
         server,
         apiVersion: 'v2',
-        docPath: 'fake-document-log-uuid',
+        conversationUuid: 'fake-document-log-uuid',
       })
 
       await sdk.chat(
-        docPath,
+        conversationUuid,
         [
           {
             role: MessageRole.user,
@@ -176,14 +177,14 @@ describe('/chat', () => {
 
     it('does not throw error if onError option is present', async () => {
       const onErrorMock = vi.fn()
-      const { mockFn, docPath } = mock502Response({
+      const { mockFn, conversationUuid } = mock502Response({
         server,
         apiVersion: 'v2',
-        docPath: 'fake-document-log-uuid',
+        conversationUuid: 'fake-document-log-uuid',
       })
 
       await sdk.chat(
-        docPath,
+        conversationUuid,
         [
           {
             role: MessageRole.user,
@@ -215,15 +216,15 @@ describe('/chat', () => {
     })
 
     it('throws error if onError option is not present', async () => {
-      const { mockFn, docPath } = mock502Response({
+      const { mockFn, conversationUuid } = mock502Response({
         server,
         apiVersion: 'v2',
-        docPath: 'fake-document-log-uuid',
+        conversationUuid: 'fake-document-log-uuid',
       })
 
       await expect(
         sdk.chat(
-          docPath,
+          conversationUuid,
           [
             {
               role: MessageRole.user,
@@ -258,14 +259,15 @@ describe('/chat', () => {
     it(
       'makes request',
       server.boundary(async () => {
-        const { mockAuthHeader, mockUrl, mockBody, docPath } = mockRequest({
-          server,
-          apiVersion: 'v2',
-          docPath: 'fake-document-log-uuid',
-        })
+        const { mockAuthHeader, mockUrl, mockBody, conversationUuid } =
+          mockRequest({
+            server,
+            apiVersion: 'v2',
+            conversationUuid: 'fake-document-log-uuid',
+          })
 
         await sdk.chat(
-          docPath,
+          conversationUuid,
           [
             {
               role: MessageRole.user,
@@ -282,7 +284,7 @@ describe('/chat', () => {
 
         expect(mockAuthHeader).toHaveBeenCalledWith('Bearer fake-api-key')
         expect(mockUrl).toHaveBeenCalledWith(
-          `http://localhost:8787/api/v2/conversations/${docPath}/chat`,
+          `http://localhost:8787/api/v2/conversations/${conversationUuid}/chat`,
         )
         expect(mockBody).toHaveBeenCalledWith({
           body: {
@@ -309,14 +311,14 @@ describe('/chat', () => {
       server.boundary(async () => {
         const onFinishMock = vi.fn()
         const onErrorMock = vi.fn()
-        const { finalResponse, docPath } = mockNonStreamResponse({
+        const { finalResponse, conversationUuid } = mockNonStreamResponse({
           server,
-          docPath: 'fake-document-log-uuid',
+          conversationUuid: 'fake-document-log-uuid',
           apiVersion: 'v2',
         })
 
         const response = await sdk.chat(
-          docPath,
+          conversationUuid,
           [
             {
               role: MessageRole.user,
@@ -343,14 +345,14 @@ describe('/chat', () => {
 
     it('retries 3 times if gateway is not available', async () => {
       const onErrorMock = vi.fn()
-      const { mockFn, docPath } = mock502Response({
+      const { mockFn, conversationUuid } = mock502Response({
         server,
         apiVersion: 'v2',
-        docPath: 'fake-document-log-uuid',
+        conversationUuid: 'fake-document-log-uuid',
       })
 
       await sdk.chat(
-        docPath,
+        conversationUuid,
         [
           {
             role: MessageRole.user,
@@ -383,14 +385,14 @@ describe('/chat', () => {
 
     it('does not throw error if onError option is present', async () => {
       const onErrorMock = vi.fn()
-      const { mockFn, docPath } = mock502Response({
+      const { mockFn, conversationUuid } = mock502Response({
         server,
         apiVersion: 'v2',
-        docPath: 'fake-document-log-uuid',
+        conversationUuid: 'fake-document-log-uuid',
       })
 
       await sdk.chat(
-        docPath,
+        conversationUuid,
         [
           {
             role: MessageRole.user,
@@ -422,15 +424,15 @@ describe('/chat', () => {
     })
 
     it('throws error if onError option is not present', async () => {
-      const { mockFn, docPath } = mock502Response({
+      const { mockFn, conversationUuid } = mock502Response({
         server,
         apiVersion: 'v2',
-        docPath: 'fake-document-log-uuid',
+        conversationUuid: 'fake-document-log-uuid',
       })
 
       await expect(
         sdk.chat(
-          docPath,
+          conversationUuid,
           [
             {
               role: MessageRole.user,
