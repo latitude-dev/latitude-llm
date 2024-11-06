@@ -18,18 +18,22 @@ import { DocumentLogInfo } from '../../../../../logs/_components/DocumentLogs/Do
 import { EvaluationResultMessages } from './Messages'
 import { EvaluationResultMetadata } from './Metadata'
 
-type MaybeDocumentLog = number | null | undefined
+type MaybeProviderLog = number | null | undefined
 
-function useFetchDocumentLog({ documentLogId }: { documentLogId: number }) {
+function useFetchDocumentLog({
+  documentLogId: providerLogId,
+}: {
+  documentLogId: number
+}) {
   const fetcher = useFetcher(
-    ROUTES.api.documentLogs.detail({ id: documentLogId }).root,
+    ROUTES.api.documentLogs.detail({ id: providerLogId }).root,
   )
   const {
     data: documentLog,
     isLoading,
     error,
   } = useSWR<DocumentLogWithMetadataAndError>(
-    ['documentLogs', documentLogId],
+    ['documentLogs', providerLogId],
     fetcher,
   )
   return { documentLog, isLoading, error }
@@ -37,17 +41,27 @@ function useFetchDocumentLog({ documentLogId }: { documentLogId: number }) {
 
 function DocumentLogInfoModal({
   documentLogId,
+  providerLogId,
   onOpenChange,
 }: {
   documentLogId: number
-  onOpenChange: ReactStateDispatch<MaybeDocumentLog>
+  providerLogId: number
+  onOpenChange: ReactStateDispatch<MaybeProviderLog>
 }) {
-  const { documentLog, isLoading, error } = useFetchDocumentLog({
+  const {
+    documentLog,
+    isLoading: isLoadingDocumentLog,
+    error: errorDocumentLog,
+  } = useFetchDocumentLog({
     documentLogId,
   })
-  const { data: providerLogs } = useProviderLogs({
+  const { data: _providerLogs } = useProviderLogs({
     documentLogUuid: documentLog?.uuid,
   })
+
+  const idx = _providerLogs?.findIndex((p) => p.id === providerLogId)
+  const providerLogs = _providerLogs?.slice(0, idx + 1)
+
   return (
     <Modal
       defaultOpen
@@ -58,8 +72,8 @@ function DocumentLogInfoModal({
       <DocumentLogInfo
         documentLog={documentLog!}
         providerLogs={providerLogs}
-        isLoading={isLoading}
-        error={error}
+        isLoading={isLoadingDocumentLog}
+        error={errorDocumentLog}
       />
     </Modal>
   )
@@ -78,10 +92,10 @@ export function EvaluationResultInfo({
   tableRef: RefObject<HTMLTableElement>
   sidebarWrapperRef: RefObject<HTMLDivElement>
 }) {
-  const [selected, setSelected] = useState<MaybeDocumentLog>(null)
+  const [selected, setSelected] = useState<MaybeProviderLog>(null)
   const onClickOpen = useCallback(async () => {
-    setSelected(evaluationResult.documentLogId)
-  }, [evaluationResult.documentLogId])
+    setSelected(evaluationResult.evaluatedProviderLogId)
+  }, [evaluationResult.evaluatedProviderLogId])
   const ref = useRef<HTMLDivElement | null>(null)
   const [target, setTarget] = useState<HTMLDivElement | null>(null)
   useEffect(() => {
@@ -113,21 +127,24 @@ export function EvaluationResultInfo({
             {selectedTab === 'messages' && (
               <EvaluationResultMessages providerLog={providerLog} />
             )}
-            <div className='w-full flex justify-center'>
-              <Button variant='link' onClick={onClickOpen}>
-                Check original log
-                <Icon name='arrowRight' widthClass='w-4' heightClass='h-4' />
-              </Button>
-            </div>
+            {evaluationResult.evaluatedProviderLogId && (
+              <div className='w-full flex justify-center'>
+                <Button variant='link' onClick={onClickOpen}>
+                  Check original log
+                  <Icon name='arrowRight' widthClass='w-4' heightClass='h-4' />
+                </Button>
+              </div>
+            )}
           </>
         )}
       </MetadataInfoTabs>
-      {selected ? (
+      {!!selected && (
         <DocumentLogInfoModal
-          documentLogId={selected}
+          providerLogId={selected}
+          documentLogId={evaluationResult.documentLogId}
           onOpenChange={setSelected}
         />
-      ) : null}
+      )}
     </div>
   )
 }
