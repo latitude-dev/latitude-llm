@@ -7,7 +7,11 @@ import { useDebouncedCallback } from 'use-debounce'
 
 import type { ReadMetadataWorkerProps } from '../workers/readMetadata'
 
-export function useMetadata() {
+export function useMetadata({
+  onMetadataProcessed,
+}: {
+  onMetadataProcessed?: (metadata: Set<string>) => void
+} = {}) {
   const [metadata, setMetadata] = useState<ConversationMetadata>()
   const workerRef = useRef<Worker | null>(null)
 
@@ -16,12 +20,13 @@ export function useMetadata() {
 
     workerRef.current.onmessage = (event: { data: ConversationMetadata }) => {
       setMetadata(event.data)
+      onMetadataProcessed?.(event.data.parameters)
     }
 
     return () => {
       workerRef.current?.terminate()
     }
-  }, [])
+  }, [onMetadataProcessed])
 
   const runReadMetadata = useDebouncedCallback(
     async (props: ReadMetadataWorkerProps) => {

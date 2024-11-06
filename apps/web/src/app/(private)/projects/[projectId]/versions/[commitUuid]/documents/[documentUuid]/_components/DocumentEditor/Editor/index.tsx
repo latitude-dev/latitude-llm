@@ -27,6 +27,7 @@ import { publishEventAction } from '$/actions/events/publishEventAction'
 import { type AddMessagesActionFn } from '$/actions/sdk/addMessagesAction'
 import type { RunDocumentActionFn } from '$/actions/sdk/runDocumentAction'
 import EditorHeader from '$/components/EditorHeader'
+import { useDocumentParameters } from '$/hooks/useDocumentParameters'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { useMetadata } from '$/hooks/useMetadata'
 import { ROUTES } from '$/services/routes'
@@ -156,7 +157,11 @@ export default function DocumentEditor({
     { trailing: true },
   )
 
-  const { metadata, runReadMetadata } = useMetadata()
+  const { onMetadataProcessed } = useDocumentParameters({
+    commitVersionUuid: commit.uuid,
+    documentVersionUuid: document.documentUuid,
+  })
+  const { metadata, runReadMetadata } = useMetadata({ onMetadataProcessed })
 
   useEffect(() => {
     runReadMetadata({
