@@ -5,11 +5,16 @@ import {
   ChainCallResponseDto,
   ChainEventDto,
   ChainEventTypes,
+  Commit,
+  DocumentVersion,
   LatitudeEventData,
+  Project,
   StreamEventTypes,
   type ChainEvent,
   type Workspace,
 } from '@latitude-data/core/browser'
+import { findFirstUserInWorkspace } from '@latitude-data/core/data-access'
+import { publisher } from '@latitude-data/core/events/publisher'
 import { BadRequestError } from '@latitude-data/core/lib/errors'
 import { Result } from '@latitude-data/core/lib/Result'
 import {
@@ -104,5 +109,34 @@ function latitudeEventPresenter(event: {
       throw new BadRequestError(
         `Unknown event type in chainEventPresenter ${JSON.stringify(event)}`,
       )
+  }
+}
+
+export async function publishDocumentRunRequestedEvent({
+  workspace,
+  project,
+  commit,
+  document,
+  parameters,
+}: {
+  workspace: Workspace
+  project: Project
+  commit: Commit
+  document: DocumentVersion
+  parameters: Record<string, any>
+}) {
+  const user = await findFirstUserInWorkspace(workspace)
+  if (user) {
+    publisher.publishLater({
+      type: 'documentRunRequested',
+      data: {
+        parameters,
+        projectId: project.id,
+        commitUuid: commit.uuid,
+        documentPath: document.path,
+        workspaceId: workspace.id,
+        userEmail: user.email,
+      },
+    })
   }
 }
