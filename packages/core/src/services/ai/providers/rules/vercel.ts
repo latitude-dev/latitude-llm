@@ -1,7 +1,6 @@
-import {
+import type {
   ContentType,
   Message,
-  MessageRole,
   SystemMessage,
   TextContent,
 } from '@latitude-data/compiler'
@@ -72,7 +71,7 @@ function groupContentMetadata({
   const key = getProviderMetadataKey(provider)
 
   if (typeof content === 'string') {
-    const baseMsg = { type: ContentType.text, text: content }
+    const baseMsg = { type: 'text' as ContentType, text: content }
     if (!messageMetadata) return [baseMsg]
 
     return [
@@ -108,7 +107,7 @@ export function vercelSdkRules(
   provider: Providers,
 ): AppliedRules {
   const messages = rules.messages.flatMap((message) => {
-    if (message.role === MessageRole.system) {
+    if (message.role === 'system') {
       return flattenSystemMessage({ message, provider })
     }
 

@@ -1,8 +1,8 @@
-import { ContentType, MessageRole } from '@latitude-data/compiler'
+import type { ContentType, Message, MessageRole } from '@latitude-data/compiler'
 
 import { AppliedRules, ProviderRules } from '../index'
 
-const system = MessageRole.system
+const SYSTEM_ROLE = 'system'
 
 export function enforceAllSystemMessagesFirst(
   appliedRule: AppliedRules,
@@ -13,7 +13,7 @@ export function enforceAllSystemMessagesFirst(
 ): AppliedRules {
   const messages = appliedRule.messages
   const firstNonSystemMessageIndex = messages.findIndex(
-    (m) => m.role !== system,
+    (m) => m.role !== SYSTEM_ROLE,
   )
 
   if (firstNonSystemMessageIndex === -1) {
@@ -23,7 +23,7 @@ export function enforceAllSystemMessagesFirst(
   const messagesAfterFirstNonSystemMessage = messages.slice(
     firstNonSystemMessageIndex,
   )
-  if (!messagesAfterFirstNonSystemMessage.some((m) => m.role === system)) {
+  if (!messagesAfterFirstNonSystemMessage.some((m) => m.role === SYSTEM_ROLE)) {
     return appliedRule
   }
 
@@ -39,15 +39,15 @@ export function enforceAllSystemMessagesFirst(
     rules,
     messages: messages.map((m, i) => {
       if (i < firstNonSystemMessageIndex) return m
-      if (m.role !== system) return m
+      if (m.role !== SYSTEM_ROLE) return m
 
       return {
         ...m,
-        role: MessageRole.user,
+        role: 'user' as MessageRole,
         content: Array.isArray(m.content)
           ? m.content
-          : [{ type: ContentType.text, text: m.content }],
-      }
+          : [{ type: 'text' as ContentType, text: m.content }],
+      } as Message
     }),
   }
 }
