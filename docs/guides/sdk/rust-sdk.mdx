@@ -1,0 +1,288 @@
+---
+title: Rust SDK
+description: Learn how to use the SDKs to interact with the Latitude API.
+---
+
+## Latitude Community SDK Documentation
+
+The Latitude Rust SDK provides an easy way to interact with the Latitude API, allowing you to run documents and chat with AI models.
+
+<Note>
+This SDK is community-maintained and not officially supported by Latitude. If you have any questions or requests, please reach out to the community on their [GitHub repository](https://github.com/NewtTheWolf/latitude-rs).
+</Note>
+
+
+To install the Latitude SDK:
+[Crates.io](https://crates.io/crates/latitude-sdk)
+
+```bash
+cargo add latitude-sdk
+```
+
+### Getting Started
+
+First, import the Client Struct from the SDK:
+
+```rust
+use latitude_sdk::{Client};
+```
+
+Then, create an instance of the Latitude class with your API key:
+
+```rust
+let client = Client::builder("your-api-key-here".into()).project_id(12345).build();
+```
+
+### Running a Document
+
+To run a document, use the `run` method:
+
+```rust
+use latitude_sdk::{models::document::RunDocument, Client};
+use serde::{Deserialize, Serialize};
+
+//only needed when the prompt has parameters
+#[derive(Debug, Deserialize, Serialize, Default)]
+struct Params {
+    user_message: String,
+}
+
+#[tokio::main]
+async fn main() {
+    let client = Client::builder("<api_key>".into()).project_id(12345).build();
+
+    //only needed when the prompt has parameters
+    let params = Params {
+        user_message: "".into(),
+    };
+
+    let document = RunDocument::builder()
+        .path("<document_path>".to_owned())
+        .parameters(params)
+        .build()
+        .unwrap();
+
+    //in case the prompt has no parameters
+    let document_without_params = RunDocument::<()>::builder()
+        .path("<document_path>".to_owned())
+        .build()
+        .unwrap();
+
+    let result = client.run(document).await.unwrap();
+    let result_without_params = client.run(document_without_params).await.unwrap();
+}
+```
+
+## Chatting with an AI Model
+
+The document run method previously described returns events which all contain a
+singular `uuid` field. This field can be used to further continue the
+conversation with the document, including the context from the document run.
+Here's how to do it.
+
+To continue a chat conversation, use the `chat` method:
+
+<Note>
+  The Chat Method currently only Supports Stream Response!
+</Note>
+
+```rust
+use latitude_sdk::models::chat::Chat;
+use latitude_sdk::models::event::Event;
+use latitude_sdk::models::message::{Message, Role};
+use latitude_sdk::models::response::Response;
+use latitude_sdk::Client;
+use std::error::Error;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn Error>> {
+    let client = Client::builder("<api_key>".into())
+        .project_id(12345)
+        .build();
+
+    let chat = Chat::builder()
+        .conversation_id("30cf5e50-978c-4c6b-9d61-e278e8d38692".into())
+        .add_message(
+            Message::builder()
+                .role(Role::User)
+                .add_content("text", "Another Joke!")
+                .build()
+                .unwrap(),
+        )
+        .stream()
+        .build()
+        .unwrap();
+
+    match client.chat(chat).await {
+        Ok(res) => match res {
+            Response::Json(response) => {
+                println!("JSON Response: {:?}", response);
+            }
+            Response::Stream(mut event_stream) => {
+                while let Some(event) = event_stream.recv().await {
+                    match event {
+                        Event::LatitudeEvent(data) => {
+                            println!("Latitude Event: {:?}", data);
+                        }
+                        Event::ProviderEvent(data) => {
+                            println!("Provider Event: {:?}", data);
+                        }
+                        Event::UnknownEvent => todo!(),
+                    }
+                }
+            }
+        },
+        Err(e) => eprintln!("Error executing the Chat: {:?}", e),
+    }
+
+    Ok(())
+}
+```
+
+## Stream Handling
+
+The `run` and `chat` methods in this library both support streaming responses. When using these methods, the response can be handled as a stream of events in real-time. Here’s how you can work with streaming in Rust:
+
+- **Stream Responses**: By calling `.stream()` on your chat or run request, the library will return events as they are received. The stream can be iterated over asynchronously, allowing you to handle each event as it arrives.
+
+Example:
+```rust
+let document_request = RunDocument::builder()
+    .stream()
+    .unwrap();
+
+let chat_request = Chat::builder()
+    .stream()
+    .unwrap();
+```
+
+```rust
+//chat or run request
+match client.chat(chat).await {
+    Ok(Response::Stream(mut event_stream)) => {
+        while let Some(event) = event_stream.recv().await {
+            match event {
+                Event::LatitudeEvent(data) => {
+                    println!("Latitude Event: {:?}", data);
+                }
+                Event::ProviderEvent(data) => {
+                    println!("Provider Event: {:?}", data);
+                }
+                Event::UnknownEvent => {
+                    println!("Received an unknown event.");
+                }
+            }
+        }
+    }
+    _ => {}
+}
+```
+
+## Error Handling
+
+Errors can occur during both the initialization of a chat or run request and while handling streamed events. It’s recommended to handle errors using Rust's standard `Result` and `match` pattern.
+
+- **Error Callback**: If an error occurs, the library returns an `Err` variant containing the error details. It is good practice to handle errors immediately after calling `run` or `chat`.
+
+Example:
+```rust
+match client.chat(chat).await {
+    Ok(res) => match res {
+        Response::Json(response) => {
+            println!("JSON Response: {:?}", response);
+        }
+        Response::Stream(mut event_stream) => {
+            while let Some(event) = event_stream.recv().await {
+                match event {
+                    Event::LatitudeEvent(data) => println!("Latitude Event: {:?}", data),
+                    Event::ProviderEvent(data) => println!("Provider Event: {:?}", data),
+                    Event::UnknownEvent => println!("Received an unknown event."),
+                }
+            }
+        }
+    },
+    Err(e) => eprintln!("Error executing the Chat: {:?}", e),
+}
+```
+
+In both cases, error messages can be logged or handled as needed. This ensures stability and gives insight into issues when handling streaming data.
+
+## Pushing a log to Latitude
+
+You can push a log to Latitude in order to evaluate it, using the `log` method:
+
+```rust
+use latitude_sdk::models::log::Log;
+use latitude_sdk::models::message::{Message, Role};
+use latitude_sdk::Client;
+
+#[tokio::main]
+async fn main() {
+    let client = Client::builder("<api_key>".into())
+        .project_id(12345)
+        .build();
+
+    //do stuff with any OpenAI Lib you wish, i recommend using async-openai https://crates.io/crates/async-openai
+
+    let log = Log::builder()
+        .path("joker")
+        .response("response-from-ai")
+        .add_message(
+            Message::builder()
+                .role(Role::User)
+                .add_content("text", "Please tell me a joke about doctors")
+                .build()
+                .unwrap(),
+        )
+        .build()
+        .unwrap();
+
+    let log = client.log(log).await.unwrap();
+}
+```
+
+<Note>
+  Logs follow OpenAI's
+  [format](https://platform.openai.com/docs/guides/text-generation/building-prompts).
+  If you're using a different method to run your prompts, you'll need to format
+  your logs accordingly.
+</Note>
+
+<Note>
+  If you include the assistant response in the optional `response` parameter,
+  make sure to not include it in the log so it isn't included twice.
+</Note>
+
+## Evaluating Conversations
+
+To evaluate a conversation using configured evaluators, use the `eval` method:
+
+```rust
+use latitude_sdk::models::evaluate::Evaluation;
+use latitude_sdk::Client;
+
+#[tokio::main]
+async fn main() {
+    let client = Client::builder("<api_key>".into())
+        .project_id(12345)
+        .build();
+
+    let eval = client
+        .eval(
+            "chat-uuid",
+            Some(Evaluation {
+                evaluation_uuids: vec![
+                    Some("evaluator-uuid-1".into()),
+                    Some("evaluator-uuid-2".into()),
+                ],
+            }),
+        )
+        .await
+        .unwrap();
+}
+```
+
+This allows you to evaluate a conversation at any point in time. Specially
+helpful when building agents that have multiple interactions with users, and you
+intend to evaluate the agent's performance after the interaction is fully
+completed, or at particular points in time.
