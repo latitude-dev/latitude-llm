@@ -1,12 +1,16 @@
 'use client'
 
+import { RefObject, useEffect, useRef, useState } from 'react'
+
 import { ProviderLogDto } from '@latitude-data/core/browser'
 import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
 import { Alert } from '@latitude-data/web-ui'
+import { useStickyNested } from '$/hooks/useStickyNested'
+import { usePanelDomRef } from 'node_modules/@latitude-data/web-ui/src/ds/atoms/SplitPane'
 
 import { MetadataInfoTabs } from '../../../../_components/MetadataInfoTabs'
 import { MetadataItem } from '../../../../../[documentUuid]/_components/MetadataItem'
-import { DocumentLogMessages } from './Messages'
+import { DocumentLogMessages, useGetProviderLogMessages } from './Messages'
 import { DocumentLogMetadata } from './Metadata'
 
 function DocumentLogMetadataLoading() {
@@ -28,15 +32,36 @@ export function DocumentLogInfo({
   isLoading = false,
   error,
   className,
+  tableRef,
+  sidebarWrapperRef,
 }: {
   documentLog: DocumentLogWithMetadataAndError
   providerLogs?: ProviderLogDto[]
   isLoading?: boolean
   error?: Error
   className?: string
+  tableRef?: RefObject<HTMLTableElement>
+  sidebarWrapperRef?: RefObject<HTMLDivElement>
 }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [target, setTarget] = useState<HTMLDivElement | null>(null)
+  useEffect(() => {
+    if (!ref.current) return
+
+    setTarget(ref.current)
+  }, [ref.current])
+  const scrollableArea = usePanelDomRef({ selfRef: target })
+  const beacon = tableRef?.current
+  useStickyNested({
+    scrollableArea,
+    beacon,
+    target,
+    targetContainer: sidebarWrapperRef?.current,
+    offset: 24,
+  })
+  const { lastResponse, messages } = useGetProviderLogMessages({ providerLogs })
   return (
-    <MetadataInfoTabs className={className}>
+    <MetadataInfoTabs ref={ref} className={className}>
       {({ selectedTab }) =>
         isLoading ? (
           <DocumentLogMetadataLoading />
@@ -48,10 +73,11 @@ export function DocumentLogInfo({
                   <DocumentLogMetadata
                     documentLog={documentLog}
                     providerLogs={providerLogs}
+                    lastResponse={lastResponse}
                   />
                 )}
                 {selectedTab === 'messages' && (
-                  <DocumentLogMessages providerLogs={providerLogs} />
+                  <DocumentLogMessages messages={messages} />
                 )}
               </>
             ) : (

@@ -1,3 +1,4 @@
+import { forwardRef } from 'react'
 import { capitalize } from 'lodash-es'
 
 import {
@@ -66,152 +67,158 @@ export const ResultCellContent = ({
 export type EvaluationResultRow = EvaluationResultWithMetadataAndErrors & {
   realtimeAdded?: boolean
 }
-export const EvaluationResultsTable = ({
-  evaluation,
-  evaluationResults,
-  selectedResult,
-  setSelectedResult,
-}: {
+type Props = {
   evaluation: EvaluationDto
   evaluationResults: EvaluationResultRow[]
   selectedResult: EvaluationResultRow | undefined
   setSelectedResult: (
     log: EvaluationResultWithMetadataAndErrors | undefined,
   ) => void
-}) => {
-  const searchParams = useSearchParams()
-  const page = searchParams.get('page') ?? '1'
-  const pageSize = searchParams.get('pageSize') ?? '25'
-  const document = useCurrentDocument()
-  const { commit } = useCurrentCommit()
-  const { project } = useCurrentProject()
-  const { data: pagination, isLoading } = useEvaluationResultsPagination({
-    evaluationId: evaluation.id,
-    documentUuid: document.documentUuid,
-    commitUuid: commit.uuid,
-    projectId: project.id,
-    page,
-    pageSize,
-  })
-
-  return (
-    <Table
-      className='table-auto'
-      externalFooter={
-        <LinkableTablePaginationFooter
-          isLoading={isLoading}
-          pagination={
-            pagination
-              ? buildPagination({
-                  baseUrl: ROUTES.projects
-                    .detail({ id: project.id })
-                    .commits.detail({ uuid: commit.uuid })
-                    .documents.detail({ uuid: document.documentUuid })
-                    .evaluations.detail(evaluation.id).root,
-                  count: pagination.count,
-                  page: Number(page),
-                  pageSize: Number(pageSize),
-                })
-              : undefined
-          }
-          countLabel={countLabel}
-        />
-      }
-    >
-      <TableHeader className='sticky top-0 z-10'>
-        <TableRow>
-          <TableHead>Time</TableHead>
-          <TableHead>Version</TableHead>
-          <TableHead>Origin</TableHead>
-          <TableHead>Result</TableHead>
-          <TableHead>Cost</TableHead>
-          <TableHead>Tokens</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {evaluationResults.map((evaluationResult) => {
-          const error = getRunErrorFromErrorable(evaluationResult.error)
-          const cellColor = error ? 'destructiveMutedForeground' : 'foreground'
-          return (
-            <TableRow
-              key={evaluationResult.id}
-              onClick={() =>
-                setSelectedResult(
-                  selectedResult?.id === evaluationResult.id
-                    ? undefined
-                    : evaluationResult,
-                )
-              }
-              className={cn(
-                'cursor-pointer border-b-[0.5px] h-12 max-h-12 border-border',
-                {
-                  'bg-secondary': selectedResult?.id === evaluationResult.id,
-                  'animate-flash': evaluationResult.realtimeAdded,
-                },
-              )}
-            >
-              <TableCell>
-                <Text.H5 noWrap color={cellColor}>
-                  <time
-                    dateTime={evaluationResult.createdAt.toISOString()}
-                    suppressHydrationWarning
-                  >
-                    {relativeTime(evaluationResult.createdAt)}
-                  </time>
-                </Text.H5>
-              </TableCell>
-              <TableCell>
-                <div className='flex flex-row gap-2 items-center'>
-                  <Badge
-                    variant={
-                      evaluationResult.commit.version ? 'accent' : 'muted'
-                    }
-                    shape='square'
-                  >
-                    <Text.H6 noWrap>
-                      {evaluationResult.commit.version
-                        ? `v${evaluationResult.commit.version}`
-                        : 'Draft'}
-                    </Text.H6>
-                  </Badge>
-                  <Text.H5 color={cellColor}>
-                    {evaluationResult.commit.title}
-                  </Text.H5>
-                </div>
-              </TableCell>
-              <TableCell>
-                <Text.H5 noWrap color={cellColor}>
-                  {evaluationResult.source
-                    ? capitalize(evaluationResult.source)
-                    : '-'}
-                </Text.H5>
-              </TableCell>
-              <TableCell>
-                {evaluationResult.result !== null ? (
-                  <ResultCellContent
-                    evaluation={evaluation}
-                    value={evaluationResult.result}
-                  />
-                ) : (
-                  <Text.H5 color={cellColor}> - </Text.H5>
-                )}
-              </TableCell>
-              <TableCell>
-                <Text.H5 noWrap color={cellColor}>
-                  {typeof evaluationResult.costInMillicents === 'number'
-                    ? formatCostInMillicents(evaluationResult.costInMillicents)
-                    : '-'}
-                </Text.H5>
-              </TableCell>
-              <TableCell>
-                <Text.H5 noWrap color={cellColor}>
-                  {evaluationResult.tokens ?? '-'}
-                </Text.H5>
-              </TableCell>
-            </TableRow>
-          )
-        })}
-      </TableBody>
-    </Table>
-  )
 }
+export const EvaluationResultsTable = forwardRef<HTMLTableElement, Props>(
+  function EvaluationResultsTable(
+    { evaluation, evaluationResults, selectedResult, setSelectedResult },
+    ref,
+  ) {
+    const searchParams = useSearchParams()
+    const page = searchParams.get('page') ?? '1'
+    const pageSize = searchParams.get('pageSize') ?? '25'
+    const document = useCurrentDocument()
+    const { commit } = useCurrentCommit()
+    const { project } = useCurrentProject()
+    const { data: pagination, isLoading } = useEvaluationResultsPagination({
+      evaluationId: evaluation.id,
+      documentUuid: document.documentUuid,
+      commitUuid: commit.uuid,
+      projectId: project.id,
+      page,
+      pageSize,
+    })
+
+    return (
+      <Table
+        ref={ref}
+        className='table-auto'
+        externalFooter={
+          <LinkableTablePaginationFooter
+            isLoading={isLoading}
+            pagination={
+              pagination
+                ? buildPagination({
+                    baseUrl: ROUTES.projects
+                      .detail({ id: project.id })
+                      .commits.detail({ uuid: commit.uuid })
+                      .documents.detail({ uuid: document.documentUuid })
+                      .evaluations.detail(evaluation.id).root,
+                    count: pagination.count,
+                    page: Number(page),
+                    pageSize: Number(pageSize),
+                  })
+                : undefined
+            }
+            countLabel={countLabel}
+          />
+        }
+      >
+        <TableHeader className='sticky top-0 z-10'>
+          <TableRow>
+            <TableHead>Time</TableHead>
+            <TableHead>Version</TableHead>
+            <TableHead>Origin</TableHead>
+            <TableHead>Result</TableHead>
+            <TableHead>Cost</TableHead>
+            <TableHead>Tokens</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {evaluationResults.map((evaluationResult) => {
+            const error = getRunErrorFromErrorable(evaluationResult.error)
+            const cellColor = error
+              ? 'destructiveMutedForeground'
+              : 'foreground'
+            return (
+              <TableRow
+                key={evaluationResult.id}
+                onClick={() =>
+                  setSelectedResult(
+                    selectedResult?.id === evaluationResult.id
+                      ? undefined
+                      : evaluationResult,
+                  )
+                }
+                className={cn(
+                  'cursor-pointer border-b-[0.5px] h-12 max-h-12 border-border',
+                  {
+                    'bg-secondary': selectedResult?.id === evaluationResult.id,
+                    'animate-flash': evaluationResult.realtimeAdded,
+                  },
+                )}
+              >
+                <TableCell>
+                  <Text.H5 noWrap color={cellColor}>
+                    <time
+                      dateTime={evaluationResult.createdAt.toISOString()}
+                      suppressHydrationWarning
+                    >
+                      {relativeTime(evaluationResult.createdAt)}
+                    </time>
+                  </Text.H5>
+                </TableCell>
+                <TableCell>
+                  <div className='flex flex-row gap-2 items-center'>
+                    <Badge
+                      variant={
+                        evaluationResult.commit.version ? 'accent' : 'muted'
+                      }
+                      shape='square'
+                    >
+                      <Text.H6 noWrap>
+                        {evaluationResult.commit.version
+                          ? `v${evaluationResult.commit.version}`
+                          : 'Draft'}
+                      </Text.H6>
+                    </Badge>
+                    <Text.H5 color={cellColor}>
+                      {evaluationResult.commit.title}
+                    </Text.H5>
+                  </div>
+                </TableCell>
+                <TableCell>
+                  <Text.H5 noWrap color={cellColor}>
+                    {evaluationResult.source
+                      ? capitalize(evaluationResult.source)
+                      : '-'}
+                  </Text.H5>
+                </TableCell>
+                <TableCell>
+                  {evaluationResult.result !== null ? (
+                    <ResultCellContent
+                      evaluation={evaluation}
+                      value={evaluationResult.result}
+                    />
+                  ) : (
+                    <Text.H5 color={cellColor}> - </Text.H5>
+                  )}
+                </TableCell>
+                <TableCell>
+                  <Text.H5 noWrap color={cellColor}>
+                    {typeof evaluationResult.costInMillicents === 'number'
+                      ? formatCostInMillicents(
+                          evaluationResult.costInMillicents,
+                        )
+                      : '-'}
+                  </Text.H5>
+                </TableCell>
+                <TableCell>
+                  <Text.H5 noWrap color={cellColor}>
+                    {evaluationResult.tokens ?? '-'}
+                  </Text.H5>
+                </TableCell>
+              </TableRow>
+            )
+          })}
+        </TableBody>
+      </Table>
+    )
+  },
+)

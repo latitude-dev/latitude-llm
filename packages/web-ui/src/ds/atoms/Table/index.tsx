@@ -30,7 +30,7 @@ const Table = forwardRef<HTMLTableElement, TableProps>(
         maxHeight:
           maxHeight && typeof maxHeight === 'number'
             ? `${maxHeight}px`
-            : 'auto',
+            : 'unset',
       }}
       className='flex flex-col relative w-full rounded-lg border overflow-hidden'
     >

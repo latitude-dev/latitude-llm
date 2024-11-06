@@ -6,6 +6,7 @@ import {
   RefObject,
   SyntheticEvent,
   useCallback,
+  useEffect,
   useState,
 } from 'react'
 
@@ -13,8 +14,27 @@ import { ResizableBox, ResizeCallbackData, ResizeHandle } from 'react-resizable'
 
 import { cn } from '../../../lib/utils'
 
+const JS_PANEL_CLASS = 'js-pane'
 function Pane({ children }: { children: ReactNode }) {
-  return <div className='flex flex-col h-full relative'>{children}</div>
+  return <div className={'flex flex-col h-full relative'}>{children}</div>
+}
+
+export function usePanelDomRef({
+  selfRef,
+}: {
+  selfRef: HTMLElement | null | undefined
+}) {
+  const [panelRef, setPanelRef] = useState<HTMLDivElement | undefined | null>(
+    undefined,
+  )
+  useEffect(() => {
+    if (!selfRef) return
+
+    const pane = selfRef.closest(`.${JS_PANEL_CLASS}`) as HTMLDivElement
+    setPanelRef(pane)
+  }, [selfRef])
+
+  return panelRef
 }
 
 const PaneWrapper = ({
@@ -31,6 +51,7 @@ const PaneWrapper = ({
     <div
       className={cn(
         'h-full max-h-full custom-scrollbar w-full relative min-h-0',
+        JS_PANEL_CLASS,
         {
           'flex-grow min-w-0': !isResizable,
         },

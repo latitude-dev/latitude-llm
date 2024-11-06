@@ -27,7 +27,7 @@ export default async function DocumentPage({
     pageSize: searchParams.pageSize as string | undefined,
   })
   return (
-    <div className='flex flex-col w-full h-full overflow-x-auto p-6 gap-2 min-w-0'>
+    <div className='flex flex-grow min-h-0 flex-col w-full p-6 gap-2 min-w-0'>
       <TableWithHeader
         title='Logs'
         table={<DocumentLogs documentLogs={rows} />}

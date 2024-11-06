@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
 
 import { EvaluationDto } from '@latitude-data/core/browser'
 import { type EvaluationResultWithMetadataAndErrors } from '@latitude-data/core/repositories'
@@ -81,6 +81,8 @@ export function EvaluationResults({
   evaluation: EvaluationDto
   evaluationResults: EvaluationResultWithMetadataAndErrors[]
 }) {
+  const tabelRef = useRef<HTMLTableElement | null>(null)
+  const sidebarWrapperRef = useRef<HTMLDivElement | null>(null)
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
   const document = useCurrentDocument()
@@ -105,18 +107,16 @@ export function EvaluationResults({
       fallbackData: serverData,
     },
   )
-
   useEvaluationResultsSocket(evaluation, document, mutate)
-
   return (
-    <div className='flex flex-col gap-4'>
+    <div className='flex flex-col gap-4 flex-grow min-h-0'>
       <Text.H4>Evaluation Results</Text.H4>
       <EvaluationStatusBanner
         documentUuid={document.documentUuid}
         evaluationId={evaluation.id}
       />
-      <div className='relative flex flex-row w-full gap-4 overflow-x-auto min-w-[1024px]'>
-        <div className='flex-1'>
+      <div className='flex flex-row flex-grow gap-4 min-w-[1024px]'>
+        <div className='flex-1 mb-6'>
           {evaluationResults.length === 0 && (
             <TableBlankSlate
               description='There are no evaluation results yet. Run the evaluation or, if you already have, wait a few seconds for the first results to stream in.'
@@ -129,6 +129,7 @@ export function EvaluationResults({
           )}
           {evaluationResults.length > 0 && (
             <EvaluationResultsTable
+              ref={tabelRef}
               evaluation={evaluation}
               evaluationResults={evaluationResults}
               selectedResult={selectedResult}
@@ -136,16 +137,18 @@ export function EvaluationResults({
             />
           )}
         </div>
-        {selectedResult && (
-          <div className='lg:w-1/2 2xl:w-1/3'>
+        {selectedResult ? (
+          <div ref={sidebarWrapperRef} className='lg:w-1/2 2xl:w-1/3'>
             <EvaluationResultInfo
               key={selectedResult.id}
               evaluation={evaluation}
               evaluationResult={selectedResult}
               providerLog={providerLog}
+              sidebarWrapperRef={sidebarWrapperRef}
+              tableRef={tabelRef}
             />
           </div>
-        )}
+        ) : null}
       </div>
       <CreateBatchEvaluationModal
         open={open}

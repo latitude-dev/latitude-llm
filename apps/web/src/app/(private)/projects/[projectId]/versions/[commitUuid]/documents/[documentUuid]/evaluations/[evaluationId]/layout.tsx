@@ -75,7 +75,7 @@ export default async function ConnectedEvaluationLayout({
     )
   }
   return (
-    <div className='flex flex-col w-full h-full gap-6 p-6'>
+    <div className='flex flex-grow min-h-0 flex-col w-full gap-6 p-6'>
       <TableWithHeader
         title={
           <Breadcrumb>
