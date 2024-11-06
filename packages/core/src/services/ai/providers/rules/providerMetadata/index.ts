@@ -1,4 +1,4 @@
-import { Message, MessageRole } from '@latitude-data/compiler'
+import type { Message } from '@latitude-data/compiler'
 
 import { Providers } from '../../models'
 
@@ -121,7 +121,7 @@ export function extractMessageMetadata({
 
   if (Object.keys(rest).length === 0) return common
 
-  if (role === MessageRole.user && Object.hasOwnProperty.call(rest, 'name')) {
+  if (role === 'user' && Object.hasOwnProperty.call(rest, 'name')) {
     // @ts-ignore
     const name = rest.name
     common = {

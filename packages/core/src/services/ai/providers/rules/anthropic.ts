@@ -1,5 +1,3 @@
-import { MessageRole } from '@latitude-data/compiler'
-
 import { AppliedRules, ProviderRules } from '.'
 import { enforceAllSystemMessagesFirst } from './helpers/enforceAllSystemMessagesFirst'
 
@@ -11,7 +9,7 @@ export function applyAnthropicRules(appliedRule: AppliedRules): AppliedRules {
   })
 
   const roles = rule.messages.map((m) => m.role)
-  const onlySystemMessages = roles.every((r) => r === MessageRole.system)
+  const onlySystemMessages = roles.every((r) => r === 'system')
   if (!onlySystemMessages) return rule
 
   const rules = [

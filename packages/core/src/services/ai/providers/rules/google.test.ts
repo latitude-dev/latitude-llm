@@ -1,4 +1,4 @@
-import { Message, MessageRole } from '@latitude-data/compiler'
+import type { Message } from '@latitude-data/compiler'
 import { beforeAll, describe, expect, it } from 'vitest'
 
 import { applyCustomRules, ProviderRules } from '.'
@@ -59,22 +59,22 @@ describe('applyGoogleRules', () => {
       expect(appliedMessages[1]).toEqual(messages[1])
       expect(appliedMessages[2]).toEqual(messages[2])
       expect(appliedMessages[4]).toEqual({
-        role: MessageRole.assistant,
+        role: 'assistant',
         content: [{ type: 'text', text: messages[4]!.content }],
       })
 
       expect(appliedMessages[3]).toEqual({
-        role: MessageRole.user,
+        role: 'user',
         content: [{ type: 'text', text: messages[3]!.content }],
       })
 
       expect(appliedMessages[3]).toEqual({
-        role: MessageRole.user,
+        role: 'user',
         content: [{ type: 'text', text: messages[3]!.content }],
       })
 
       expect(appliedMessages[5]).toEqual({
-        role: MessageRole.user,
+        role: 'user',
         content: [
           { type: 'text', text: 'Use a short response' },
           { type: 'text', text: 'Second a short response' },
