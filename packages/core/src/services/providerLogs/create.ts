@@ -1,5 +1,5 @@
 import { Message, ToolCall } from '@latitude-data/compiler'
-import { LanguageModelUsage } from 'ai'
+import { FinishReason, LanguageModelUsage } from 'ai'
 
 import { LogSources, ProviderLog, Providers, Workspace } from '../../browser'
 import { database } from '../../client'
@@ -8,7 +8,6 @@ import { Result, Transaction } from '../../lib'
 import { providerLogs } from '../../schema'
 import { estimateCost, PartialConfig } from '../ai'
 import { touchApiKey } from '../apiKeys'
-import { StreamConsumeReturn } from '../chains/ChainStreamConsumer/consumeStream'
 import { touchProviderApiKey } from '../providerApiKeys/touch'
 
 const TO_MILLICENTS_FACTOR = 100_000
@@ -25,7 +24,7 @@ export type CreateProviderLogProps = {
   usage?: LanguageModelUsage
   duration?: number
   source: LogSources
-  finishReason?: StreamConsumeReturn['finishReason']
+  finishReason?: FinishReason
   apiKeyId?: number
   responseText?: string
   responseObject?: unknown
@@ -97,6 +96,7 @@ export async function createProviderLog(
       .returning()
 
     const log = inserts[0]! as ProviderLog
+
     if (providerId) await touchProviderApiKey(providerId, trx)
     if (apiKeyId) await touchApiKey(apiKeyId, trx)
 

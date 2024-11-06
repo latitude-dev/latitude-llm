@@ -26,7 +26,11 @@ import {
 } from '../chains/ChainStreamConsumer'
 import { consumeStream } from '../chains/ChainStreamConsumer/consumeStream'
 import { checkFreeProviderQuota } from '../chains/checkFreeProviderQuota'
-import { ProviderProcessor } from '../chains/ProviderProcessor'
+import { processResponse } from '../chains/ProviderProcessor'
+import {
+  buildProviderLogDto,
+  saveOrPublishProviderLogs,
+} from '../chains/ProviderProcessor/saveOrPublishProviderLogs'
 
 export type ChainResponse<T extends StreamType> = TypedResult<
   ChainStepResponse<T>,
@@ -138,30 +142,43 @@ async function iterate({
       provider,
     }).then((r) => r.unwrap())
 
-    const providerProcessor = new ProviderProcessor({
-      workspace,
-      source,
-      errorableUuid: documentLogUuid,
-      config,
-      apiProvider: provider,
-      messages,
-      saveSyncProviderLogs: true,
-    })
     const stepStartTime = Date.now()
     const result = await ai({
       messages,
       config,
       provider,
     }).then((r) => r.unwrap())
-    const streamConsumedResult = await consumeStream({ controller, result })
-    const response = await providerProcessor
-      .call({
-        aiResult: result,
-        startTime: stepStartTime,
-        finishReason: streamConsumedResult.finishReason,
-      })
-      .then((r) => r.unwrap())
-    const providerLog = response.providerLog!
+    const consumedStream = await consumeStream({
+      controller,
+      result,
+    })
+    const response = await processResponse({
+      aiResult: result,
+      workspace,
+      source,
+      errorableUuid: documentLogUuid,
+      config,
+      apiProvider: provider,
+      messages,
+      startTime: stepStartTime,
+    })
+
+    const providerLog = await saveOrPublishProviderLogs({
+      workspace,
+      streamType: result.type,
+      finishReason: consumedStream.finishReason,
+      data: buildProviderLogDto({
+        workspace,
+        source,
+        provider,
+        conversation: { messages, config },
+        stepStartTime,
+        errorableUuid: documentLogUuid,
+        response,
+      }),
+      saveSyncProviderLogs: true,
+    })
+
     const text = parseResponseText(response)
     ChainStreamConsumer.chainCompleted({
       controller,

@@ -37,7 +37,7 @@ export async function getEvaluationTotalsQuery(
     )
     .innerJoin(
       providerLogs,
-      eq(providerLogs.id, evaluationResultsScope.providerLogId),
+      eq(providerLogs.id, evaluationResultsScope.evaluationProviderLogId),
     )
     .where(
       and(

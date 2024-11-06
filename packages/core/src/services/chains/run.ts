@@ -11,18 +11,22 @@ import {
 } from '../../constants'
 import { Result, TypedResult } from '../../lib'
 import { generateUUIDIdentifier } from '../../lib/generateUUID'
-import { ai } from '../ai'
+import { ai, AIReturn } from '../ai'
 import { getCachedResponse, setCachedResponse } from '../commits/promptCache'
-import { createRunError } from '../runErrors/create'
+import { createRunError as createRunErrorFn } from '../runErrors/create'
 import { ChainError } from './ChainErrors'
 import { ChainStreamConsumer } from './ChainStreamConsumer'
 import { consumeStream } from './ChainStreamConsumer/consumeStream'
-import { ChainValidator, ConfigOverrides } from './ChainValidator'
-import { ProviderProcessor } from './ProviderProcessor'
+import { ConfigOverrides, validateChain } from './ChainValidator'
+import { processResponse } from './ProviderProcessor'
+import {
+  buildProviderLogDto,
+  saveOrPublishProviderLogs,
+} from './ProviderProcessor/saveOrPublishProviderLogs'
 
 export type CachedApiKeys = Map<string, ProviderApiKey>
 
-async function handleError({
+async function createRunError({
   error,
   errorableUuid,
   errorableType,
@@ -35,7 +39,7 @@ async function handleError({
 }) {
   if (!persistErrors || !errorableType) return error
 
-  const dbError = await createRunError({
+  const dbError = await createRunErrorFn({
     data: {
       errorableUuid,
       errorableType,
@@ -46,6 +50,7 @@ async function handleError({
   }).then((r) => r.unwrap())
 
   error.dbError = dbError
+
   return error
 }
 
@@ -103,12 +108,13 @@ export async function runChain<T extends boolean>({
           responseResolve(Result.ok(okResponse))
         })
         .catch(async (e: ChainError<RunErrorCodes>) => {
-          const error = await handleError({
+          const error = await createRunError({
             error: e,
             errorableUuid,
             errorableType,
             persistErrors,
           })
+
           responseResolve(Result.error(error))
         })
     },
@@ -147,13 +153,6 @@ async function runStep({
   configOverrides?: ConfigOverrides
 }) {
   const prevText = previousResponse?.text
-  const chainValidator = new ChainValidator({
-    workspace,
-    prevText,
-    chain,
-    providersMap,
-    configOverrides,
-  })
   const streamConsumer = new ChainStreamConsumer({
     controller,
     previousCount,
@@ -161,8 +160,16 @@ async function runStep({
   })
 
   try {
-    const step = await chainValidator.call().then((r) => r.unwrap())
+    const step = await validateChain({
+      workspace,
+      prevText,
+      chain,
+      providersMap,
+      configOverrides,
+    }).then((r) => r.unwrap())
+
     const { messageCount, stepStartTime } = streamConsumer.setup(step)
+
     const cachedResponse = await getCachedResponse({
       workspace,
       config: step.config,
@@ -170,10 +177,29 @@ async function runStep({
     })
 
     if (cachedResponse) {
-      if (step.chainCompleted) {
-        streamConsumer.chainCompleted({ step, response: cachedResponse })
+      const providerLog = await saveOrPublishProviderLogs({
+        workspace,
+        streamType: cachedResponse.streamType,
+        finishReason: 'stop', // TODO: we probably should add a cached reason here
+        data: buildProviderLogDto({
+          workspace,
+          source,
+          provider: step.provider,
+          conversation: step.conversation,
+          stepStartTime,
+          errorableUuid,
+          response: cachedResponse,
+        }),
+        saveSyncProviderLogs: step.chainCompleted,
+      })
 
-        return cachedResponse
+      if (step.chainCompleted) {
+        streamConsumer.chainCompleted({
+          step,
+          response: { ...cachedResponse, providerLog },
+        })
+
+        return { ...cachedResponse, providerLog }
       } else {
         streamConsumer.stepCompleted(cachedResponse)
 
@@ -192,16 +218,6 @@ async function runStep({
       }
     }
 
-    const providerProcessor = new ProviderProcessor({
-      workspace,
-      source,
-      errorableUuid,
-      config: step.config,
-      apiProvider: step.provider,
-      messages: step.conversation.messages,
-      saveSyncProviderLogs: step.chainCompleted,
-    })
-
     const aiResult = await ai({
       messages: step.conversation.messages,
       config: step.config,
@@ -210,19 +226,41 @@ async function runStep({
       output: step.output,
     }).then((r) => r.unwrap())
 
+    const checkResult = checkValidType(aiResult)
+    if (checkResult.error) throw checkResult.error
+
     const consumedStream = await consumeStream({
       controller,
       result: aiResult,
     })
-    const response = await providerProcessor
-      .call({
-        aiResult,
-        finishReason: consumedStream.finishReason,
-        startTime: stepStartTime,
-      })
-      .then((r) => r.unwrap())
-
     if (consumedStream.error) throw consumedStream.error
+
+    const response = await processResponse({
+      aiResult,
+      apiProvider: step.provider,
+      config: step.config,
+      errorableUuid,
+      messages: step.conversation.messages,
+      source,
+      workspace,
+      startTime: stepStartTime,
+    })
+
+    const providerLog = await saveOrPublishProviderLogs({
+      workspace,
+      streamType: aiResult.type,
+      finishReason: consumedStream.finishReason,
+      data: buildProviderLogDto({
+        workspace,
+        source,
+        provider: step.provider,
+        conversation: step.conversation,
+        stepStartTime,
+        errorableUuid,
+        response,
+      }),
+      saveSyncProviderLogs: step.chainCompleted,
+    })
 
     await setCachedResponse({
       workspace,
@@ -232,9 +270,12 @@ async function runStep({
     })
 
     if (step.chainCompleted) {
-      streamConsumer.chainCompleted({ step, response })
+      streamConsumer.chainCompleted({
+        step,
+        response: { ...response, providerLog },
+      })
 
-      return response
+      return { ...response, providerLog }
     } else {
       streamConsumer.stepCompleted(response)
 
@@ -255,4 +296,17 @@ async function runStep({
     const error = streamConsumer.chainError(e)
     throw error
   }
+}
+
+function checkValidType(aiResult: AIReturn<StreamType>) {
+  const { type } = aiResult
+  const invalidType = type !== 'text' && type !== 'object'
+  if (!invalidType) return Result.nil()
+
+  return Result.error(
+    new ChainError({
+      code: RunErrorCodes.UnsupportedProviderResponseTypeError,
+      message: `Invalid stream type ${type} result is not a textStream or objectStream`,
+    }),
+  )
 }

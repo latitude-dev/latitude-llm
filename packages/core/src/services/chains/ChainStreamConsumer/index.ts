@@ -67,6 +67,7 @@ export class ChainStreamConsumer {
     config: Config
   }) {
     const content = parseResponseText(response)
+
     enqueueChainEvent(controller, {
       event: StreamEventTypes.Latitude,
       data: {
@@ -96,6 +97,7 @@ export class ChainStreamConsumer {
     e: unknown
   }) {
     const error = parseError(e)
+
     enqueueChainEvent(controller, {
       event: StreamEventTypes.Latitude,
       data: {
@@ -108,6 +110,7 @@ export class ChainStreamConsumer {
       },
     })
     controller.close()
+
     return error
   }
 
@@ -128,6 +131,7 @@ export class ChainStreamConsumer {
   setup(step: ValidatedStep) {
     const newMessages = step.conversation.messages.slice(this.previousCount)
     const messageCount = this.previousCount + newMessages.length
+
     enqueueChainEvent(this.controller, {
       data: {
         type: ChainEventTypes.Step,
@@ -138,6 +142,7 @@ export class ChainStreamConsumer {
       },
       event: StreamEventTypes.Latitude,
     })
+
     return { messageCount, stepStartTime: Date.now() }
   }
 

@@ -14,6 +14,7 @@ import * as factories from '../../tests/factories'
 import * as aiModule from '../ai'
 import { setCachedResponse } from '../commits/promptCache'
 import * as chainValidatorModule from './ChainValidator'
+import * as saveOrPublishProviderLogsModule from './ProviderProcessor/saveOrPublishProviderLogs'
 import { runChain } from './run'
 
 // Mock other dependencies
@@ -602,20 +603,16 @@ describe('runChain', () => {
         conversation,
       })
 
-      vi.spyOn(chainValidatorModule, 'ChainValidator').mockImplementation(
-        () => {
-          return {
-            call: vi.fn().mockResolvedValue(
-              Result.ok({
-                chainCompleted: true,
-                config,
-                conversation,
+      vi.spyOn(chainValidatorModule, 'validateChain').mockImplementation(
+        vi.fn().mockResolvedValue(
+          Result.ok({
+            chainCompleted: true,
+            config,
+            conversation,
 
-                provider: providersMap.get('openai'),
-              }),
-            ),
-          } as any
-        },
+            provider: providersMap.get('openai'),
+          }),
+        ),
       )
     })
 
@@ -643,11 +640,19 @@ describe('runChain', () => {
         errorableType: ErrorableEntity.DocumentLog,
       })
       const spy = vi.spyOn(aiModule, 'ai')
+      const saveOrPublishProviderLogSpy = vi
+        .spyOn(saveOrPublishProviderLogsModule, 'saveOrPublishProviderLogs')
+        // @ts-expect-error - mock
+        .mockResolvedValue({ id: 'fake-provider-log-id' })
       const res = await run.response
 
       expect(spy).not.toHaveBeenCalled()
+      expect(saveOrPublishProviderLogSpy).toHaveBeenCalledTimes(1)
       expect(res.value).toEqual(
-        expect.objectContaining({ text: 'cached response' }),
+        expect.objectContaining({
+          text: 'cached response',
+          providerLog: { id: 'fake-provider-log-id' },
+        }),
       )
     })
 
@@ -657,7 +662,7 @@ describe('runChain', () => {
         config.temperature = 0.5
       })
 
-      it('returns the cached response', async () => {
+      it('does not return the cached response', async () => {
         await setCachedResponse({
           workspace,
           config,
@@ -698,24 +703,20 @@ describe('runChain', () => {
 
     describe('with conversation having multiple steps', () => {
       beforeEach(() => {
-        vi.spyOn(chainValidatorModule, 'ChainValidator').mockImplementation(
-          () => {
-            return {
-              call: vi
-                .fn()
-                .mockResolvedValue(
-                  Result.ok({ chainCompleted: false, config, conversation }),
-                )
-                .mockResolvedValue(
-                  Result.ok({
-                    chainCompleted: true,
-                    config,
-                    conversation,
-                    provider: providersMap.get('openai'),
-                  }),
-                ),
-            } as any
-          },
+        vi.spyOn(chainValidatorModule, 'validateChain').mockImplementation(
+          vi
+            .fn()
+            .mockResolvedValue(
+              Result.ok({ chainCompleted: false, config, conversation }),
+            )
+            .mockResolvedValue(
+              Result.ok({
+                chainCompleted: true,
+                config,
+                conversation,
+                provider: providersMap.get('openai'),
+              }),
+            ),
         )
       })
 

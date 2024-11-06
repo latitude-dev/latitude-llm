@@ -1,23 +1,22 @@
 import { ContentType, MessageRole } from '@latitude-data/compiler'
-import { RunErrorCodes } from '@latitude-data/constants/errors'
 import * as factories from '@latitude-data/core/factories'
 import { LanguageModelUsage, TextStreamPart } from 'ai'
 import { beforeEach, describe, expect, it } from 'vitest'
 
+import { processResponse } from '.'
 import { ProviderApiKey, Workspace } from '../../../browser'
 import { LogSources, Providers } from '../../../constants'
 import { generateUUIDIdentifier } from '../../../lib'
-import { ChainError } from '../ChainErrors'
 import {
   AsyncStreamIteable,
   TOOLS,
 } from '../ChainStreamConsumer/consumeStream.test'
-import { ProviderProcessor } from './index'
-import { LogData } from './saveOrPublishProviderLogs'
+import { buildProviderLogDto } from './saveOrPublishProviderLogs'
 
-let data: LogData<'text'>
+let data: ReturnType<typeof buildProviderLogDto>
 let apiProvider: ProviderApiKey
 let workspace: Workspace
+
 describe('ProviderProcessor', () => {
   beforeEach(async () => {
     const prompt = factories.helpers.createPrompt({
@@ -43,6 +42,7 @@ describe('ProviderProcessor', () => {
     })
     apiProvider = setup.providers[0]!
     workspace = setup.workspace
+    // @ts-expect-error - mock implementation
     data = {
       workspaceId: setup.workspace.id,
       uuid: generateUUIDIdentifier(),
@@ -67,81 +67,20 @@ describe('ProviderProcessor', () => {
   })
 
   it('process AI provider result', async () => {
-    const processor = new ProviderProcessor({
+    const result = await processResponse({
       workspace,
       apiProvider,
       source: data.source,
       config: data.config,
       messages: data.messages,
-      saveSyncProviderLogs: true,
       errorableUuid: data.documentLogUuid!,
-    })
-    const result = await processor
-      .call({
-        aiResult: {
-          type: 'text' as 'text',
-          data: {
-            toolCalls: new Promise((resolve) => resolve([])),
-            text: new Promise<string>((resolve) => resolve(data.responseText)),
-            usage: new Promise<LanguageModelUsage>((resolve) =>
-              resolve(data.usage),
-            ),
-            fullStream: new AsyncStreamIteable<TextStreamPart<TOOLS>>({
-              start: (controller) => {
-                controller.close()
-              },
-            }),
-          },
-        },
-        startTime: Date.now(),
-        finishReason: 'stop',
-      })
-      .then((r) => r.unwrap())
-
-    expect(result).toEqual({
-      streamType: 'text',
-      text: 'MY TEXT',
-      toolCalls: [],
-      usage: {
-        promptTokens: 3,
-        completionTokens: 7,
-        totalTokens: 10,
-      },
-      documentLogUuid: data.documentLogUuid,
-      providerLog: expect.objectContaining({
-        id: expect.any(Number),
-        costInMillicents: 7,
-        tokens: 10,
-        finishReason: 'stop',
-        messages: data.messages,
-        toolCalls: [],
-        model: data.model,
-        config: data.config,
-        responseObject: null,
-        responseText: 'MY TEXT',
-        source: 'api',
-        documentLogUuid: data.documentLogUuid,
-      }),
-    })
-  })
-
-  it('fails if type is not text or object', async () => {
-    const processor = new ProviderProcessor({
-      workspace,
-      apiProvider,
-      source: data.source,
-      config: data.config,
-      messages: data.messages,
-      saveSyncProviderLogs: true,
-      errorableUuid: data.documentLogUuid!,
-    })
-    const result = await processor.call({
       aiResult: {
-        // @ts-expect-error - invalid type
-        type: 'another_invalid_type',
+        type: 'text' as 'text',
         data: {
           toolCalls: new Promise((resolve) => resolve([])),
-          text: new Promise<string>((resolve) => resolve(data.responseText)),
+          text: new Promise<string>((resolve) =>
+            resolve(data.responseText as string),
+          ),
           usage: new Promise<LanguageModelUsage>((resolve) =>
             resolve(data.usage),
           ),
@@ -153,15 +92,18 @@ describe('ProviderProcessor', () => {
         },
       },
       startTime: Date.now(),
-      finishReason: 'stop',
     })
 
-    expect(result.error).toEqual(
-      new ChainError({
-        code: RunErrorCodes.UnsupportedProviderResponseTypeError,
-        message:
-          'Invalid stream type another_invalid_type result is not a textStream or objectStream',
-      }),
-    )
+    expect(result).toEqual({
+      streamType: 'text',
+      text: 'MY TEXT',
+      toolCalls: [],
+      usage: {
+        promptTokens: 3,
+        completionTokens: 7,
+        totalTokens: 10,
+      },
+      documentLogUuid: data.documentLogUuid,
+    })
   })
 })

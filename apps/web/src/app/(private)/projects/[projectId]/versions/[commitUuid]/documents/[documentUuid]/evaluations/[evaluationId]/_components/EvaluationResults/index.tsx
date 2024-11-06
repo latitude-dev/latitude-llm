@@ -90,7 +90,9 @@ export function EvaluationResults({
     EvaluationResultWithMetadataAndErrors | undefined
   >(undefined)
   const { open, onClose, onOpen } = useToggleModal()
-  const { data: providerLog } = useProviderLog(selectedResult?.providerLogId)
+  const { data: providerLog } = useProviderLog(
+    selectedResult?.evaluationProviderLogId,
+  )
   const searchParams = useSearchParams()
   const page = searchParams.get('page')
   const pageSize = searchParams.get('pageSize')

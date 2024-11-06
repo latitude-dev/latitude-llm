@@ -19,7 +19,7 @@ import {
   PARTIAL_FINISH_CHUNK,
   TOOLS,
 } from './ChainStreamConsumer/consumeStream.test'
-import { ChainValidator } from './ChainValidator'
+import * as ChainValidator from './ChainValidator'
 import { runChain } from './run'
 
 let providersMap: Map<string, any>
@@ -81,18 +81,19 @@ describe('run chain error handling', () => {
   })
 
   it('stores error when default provider quota is exceeded', async () => {
-    const chainValidatorCall = vi.spyOn(ChainValidator.prototype, 'call')
-    chainValidatorCall.mockImplementation(() =>
-      Promise.resolve(
-        Result.error(
-          new ChainError({
-            code: RunErrorCodes.DefaultProviderExceededQuota,
-            message:
-              'You have exceeded your maximum number of free runs for today',
-          }),
+    const chainValidatorCall = vi
+      .spyOn(ChainValidator, 'validateChain')
+      .mockImplementation(() =>
+        Promise.resolve(
+          Result.error(
+            new ChainError({
+              code: RunErrorCodes.DefaultProviderExceededQuota,
+              message:
+                'You have exceeded your maximum number of free runs for today',
+            }),
+          ),
         ),
-      ),
-    )
+      )
     const run = await runChain({
       errorableType: ErrorableEntity.DocumentLog,
       workspace,
@@ -124,11 +125,14 @@ describe('run chain error handling', () => {
   })
 
   it('store error as unknown when something undefined happens', async () => {
-    const chainValidatorCall = vi.spyOn(ChainValidator.prototype, 'call')
-    chainValidatorCall.mockImplementation(() =>
-      // @ts-expect-error - Error is not valid here but we fake an unknown error
-      Promise.resolve(Result.error(new Error('Something undefined happened'))),
-    )
+    const chainValidatorCall = vi
+      .spyOn(ChainValidator, 'validateChain')
+      .mockImplementation(() =>
+        // @ts-expect-error - Error is not valid here but we fake an unknown error
+        Promise.resolve(
+          Result.error(new Error('Something undefined happened')),
+        ),
+      )
     const run = await runChain({
       errorableType: ErrorableEntity.DocumentLog,
       workspace,

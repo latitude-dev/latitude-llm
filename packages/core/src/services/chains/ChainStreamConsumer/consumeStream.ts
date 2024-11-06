@@ -3,67 +3,71 @@ import { CoreTool, FinishReason, ObjectStreamPart, TextStreamPart } from 'ai'
 
 import { ChainEvent, StreamEventTypes, StreamType } from '../../../constants'
 import { streamToGenerator } from '../../../lib/streamToGenerator'
-import { AIReturn, StreamChunk } from '../../ai'
+import { AIReturn } from '../../ai'
 import { ChainError } from '../ChainErrors'
 
-export function enqueueChainEvent(
+type StreamChunk =
+  | TextStreamPart<Record<string, CoreTool>>
+  | ObjectStreamPart<unknown>
+
+interface ConsumeStreamParams {
+  result: AIReturn<StreamType>
+  controller: ReadableStreamDefaultController
+}
+
+interface ConsumeStreamResult {
+  error?: ChainError<RunErrorCodes.AIRunError>
+  finishReason: FinishReason
+}
+
+function enqueueChainEvent(
   controller: ReadableStreamDefaultController,
   event: ChainEvent,
 ) {
   controller.enqueue(event)
 }
 
-function getErrorMessage(e: unknown) {
-  return e instanceof Error ? e.message : null
+function createAIError(message: string): ChainError<RunErrorCodes.AIRunError> {
+  return new ChainError({
+    code: RunErrorCodes.AIRunError,
+    message,
+  })
 }
 
-function parseChunks(chunks: StreamChunk[]) {
-  let error: ChainError<RunErrorCodes.AIRunError> | undefined
-  let finishReason: FinishReason = 'stop'
-
-  for (const chunk of chunks) {
-    if (chunk.type === 'error') {
-      finishReason = 'error'
-      error = new ChainError({
-        code: RunErrorCodes.AIRunError,
-        message: getErrorMessage(chunk.error) || 'Unknown AI chunk error',
-      })
-      break
-    } else if (chunk.type === 'finish') {
-      finishReason = chunk.finishReason
-      if (chunk.finishReason === 'error') {
-        chunk
-        error = new ChainError({
-          code: RunErrorCodes.AIRunError,
-          message: 'AI run finished with error',
-        })
-        break
-      }
-    }
-  }
-
-  return { error, finishReason }
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : 'Unknown AI chunk error'
 }
-
-export type StreamConsumeReturn = ReturnType<typeof parseChunks>
 
 export async function consumeStream({
   controller,
   result,
-}: {
-  result: AIReturn<StreamType>
-  controller: ReadableStreamDefaultController
-}) {
-  const chunks: StreamChunk[] = []
-  for await (const value of streamToGenerator<
-    TextStreamPart<Record<string, CoreTool>> | ObjectStreamPart<unknown>
-  >(result.data.fullStream)) {
-    chunks.push(value)
+}: ConsumeStreamParams): Promise<ConsumeStreamResult> {
+  let error: ChainError<RunErrorCodes.AIRunError> | undefined
+  let finishReason: FinishReason = 'stop'
+
+  for await (const chunk of streamToGenerator<StreamChunk>(
+    result.data.fullStream,
+  )) {
+    if (chunk.type === 'error') {
+      finishReason = 'error'
+      error = createAIError(getErrorMessage(chunk.error))
+      break
+    }
+
+    if (chunk.type === 'finish') {
+      finishReason = chunk.finishReason
+
+      if (chunk.finishReason === 'error') {
+        error = createAIError('AI run finished with error')
+        break
+      }
+    }
+
     enqueueChainEvent(controller, {
       event: StreamEventTypes.Provider,
-      data: value,
+      data: chunk,
     })
   }
 
-  return parseChunks(chunks)
+  return { error, finishReason }
 }

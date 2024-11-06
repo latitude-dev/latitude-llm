@@ -28,8 +28,11 @@ import {
 } from '../../schema'
 import Repository from '../repositoryV2'
 
+const { providerLogId: _providerLogId, ...tt } =
+  getTableColumns(evaluationResults)
+
 export const evaluationResultDto = {
-  ...getTableColumns(evaluationResults),
+  ...tt,
   result: sql<string>`
     CASE
       WHEN ${evaluationResults.resultableType} = ${EvaluationResultableType.Boolean} THEN ${evaluationResultableBooleans.result}::text
@@ -39,7 +42,7 @@ export const evaluationResultDto = {
   `.as('result'),
 }
 
-export type EvaluationResultDto = EvaluationResult & {
+export type EvaluationResultDto = Omit<EvaluationResult, 'providerLogId'> & {
   result: string | number | boolean | undefined
 }
 
@@ -154,7 +157,7 @@ export class EvaluationResultsRepository extends Repository<EvaluationResultDto>
     return result[0]?.count ?? 0
   }
 
-  private parseResult(row: EvaluationResult & { result: string }) {
+  private parseResult(row: EvaluationResultDto & { result: string }) {
     const { result, resultableType, ...rest } = row
 
     let parsedResult

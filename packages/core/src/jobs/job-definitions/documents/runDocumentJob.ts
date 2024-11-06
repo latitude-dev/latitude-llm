@@ -64,6 +64,7 @@ export const runDocumentJob = async (job: Job<RunDocumentJobData>) => {
     const commit = await commitsScope
       .getCommitByUuid({ projectId, uuid: commitUuid })
       .then((r) => r.unwrap())
+
     await runDocumentAtCommit({
       workspace,
       document,
@@ -73,6 +74,7 @@ export const runDocumentJob = async (job: Job<RunDocumentJobData>) => {
     }).then((r) => r.unwrap())
 
     await progressTracker.incrementCompleted()
+
     await emitDocumentBatchRunStatus(
       websockets,
       workspaceId,
