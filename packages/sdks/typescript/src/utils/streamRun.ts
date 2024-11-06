@@ -56,11 +56,10 @@ export async function streamRun(
     })
 
     if (!response.ok) {
-      const serverResponse = await response.text()
       const json = (await response.json()) as ApiErrorJsonResponse
       const error = new LatitudeApiError({
         status: response.status,
-        serverResponse,
+        serverResponse: response.statusText,
         message: json.message,
         errorCode: json.errorCode,
         dbErrorRef: json.dbErrorRef,
