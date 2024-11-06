@@ -190,7 +190,7 @@ describe('addMessages', () => {
     )
   })
 
-  it('send documentLogUuid when chain is completed', async () => {
+  it('returns chain stream', async () => {
     const { addMessages } = await import('./index')
     const { stream } = await addMessages({
       workspace,
@@ -249,5 +249,40 @@ describe('addMessages', () => {
         },
       },
     ])
+  })
+
+  it('returns chain response', async () => {
+    const { addMessages } = await import('./index')
+    const result = (
+      await addMessages({
+        workspace,
+        documentLogUuid: providerLog.documentLogUuid!,
+        messages: [
+          {
+            role: MessageRole.user,
+            content: [
+              {
+                type: ContentType.text,
+                text: 'This is a user message',
+              },
+            ],
+          },
+        ],
+        source: LogSources.API,
+      })
+    ).unwrap()
+
+    const response = (await result.response).unwrap()
+    const repo = new ProviderLogsRepository(workspace.id)
+    const logs = (await repo.findAll()).unwrap()
+
+    expect(response).toEqual({
+      streamType: 'text',
+      text: 'Fake AI generated text',
+      usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+      toolCalls: [],
+      documentLogUuid: providerLog.documentLogUuid,
+      providerLog: logs[logs.length - 1],
+    })
   })
 })

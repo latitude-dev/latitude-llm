@@ -211,6 +211,9 @@ export type RunSyncAPIResponse = {
   response: ChainCallResponseDto
 }
 
+// FIXME: Move to @latitude-data/constants
+export type ChatSyncAPIResponse = RunSyncAPIResponse
+
 export type ChainEventDto =
   | ProviderData
   | {

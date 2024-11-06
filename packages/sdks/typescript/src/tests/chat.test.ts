@@ -1,5 +1,7 @@
+import { ContentType, MessageRole } from '@latitude-data/compiler'
 import { LogSources } from '@latitude-data/core/browser'
 import { Latitude } from '$sdk/index'
+import { ApiErrorCodes, LatitudeApiError } from '$sdk/utils/errors'
 import { parseSSE } from '$sdk/utils/parseSSE'
 import { setupServer } from 'msw/node'
 import {
@@ -14,9 +16,9 @@ import {
 
 import {
   mock502Response,
-  mockAuthHeader,
-  mockBodyResponse,
-  mockChatMessage,
+  mockNonStreamResponse,
+  mockRequest,
+  mockStreamResponse,
 } from './helpers/chat'
 
 let FAKE_LATITUDE_SDK_KEY = 'fake-api-key'
@@ -35,65 +37,429 @@ describe('/chat', () => {
     })
   })
 
-  it(
-    'sends auth header',
-    server.boundary(async () => {
-      const mockFn = mockAuthHeader({ server, apiVersion: 'v2' })
-      await sdk.chat('fake-document-log-uuid', [])
-      expect(mockFn).toHaveBeenCalledWith('Bearer fake-api-key')
-    }),
-  )
+  describe('with streaming', () => {
+    it(
+      'makes request',
+      server.boundary(async () => {
+        const { mockAuthHeader, mockUrl, mockBody, conversationUuid } =
+          mockRequest({
+            server,
+            apiVersion: 'v2',
+            conversationUuid: 'fake-document-log-uuid',
+          })
 
-  it(
-    'send data onMessage callback',
-    server.boundary(async () => {
-      const onMessageMock = vi.fn()
-      const { chunks, docPath } = mockChatMessage({
-        server,
-        docPath: 'fake-document-log-uuid',
-        apiVersion: 'v2',
-      })
+        await sdk.chat(
+          conversationUuid,
+          [
+            {
+              role: MessageRole.user,
+              content: [
+                {
+                  type: ContentType.text,
+                  text: 'fake-user-content',
+                },
+              ],
+            },
+          ],
+          { stream: true },
+        )
 
-      await sdk.chat(docPath, [], { onEvent: onMessageMock })
-
-      chunks.forEach((chunk, index) => {
-        // @ts-expect-error
-        const { event, data } = parseSSE(chunk)
-        expect(onMessageMock).toHaveBeenNthCalledWith(index + 1, {
-          event,
-          data: JSON.parse(data),
+        expect(mockAuthHeader).toHaveBeenCalledWith('Bearer fake-api-key')
+        expect(mockUrl).toHaveBeenCalledWith(
+          `http://localhost:8787/api/v2/conversations/${conversationUuid}/chat`,
+        )
+        expect(mockBody).toHaveBeenCalledWith({
+          body: {
+            __internal: { source: LogSources.API },
+            messages: [
+              {
+                role: MessageRole.user,
+                content: [
+                  {
+                    type: ContentType.text,
+                    text: 'fake-user-content',
+                  },
+                ],
+              },
+            ],
+            stream: true,
+          },
         })
-      })
-    }),
-  )
+      }),
+    )
 
-  it(
-    'calls endpoint with body and headers',
-    server.boundary(async () => {
-      const { mockBody, docPath } = mockBodyResponse({
+    it(
+      'sends data to onMessage and returns final response and onFinish',
+      server.boundary(async () => {
+        const onMessageMock = vi.fn()
+        const onFinishMock = vi.fn()
+        const onErrorMock = vi.fn()
+        const { chunks, finalResponse, conversationUuid } = mockStreamResponse({
+          server,
+          conversationUuid: 'fake-document-log-uuid',
+          apiVersion: 'v2',
+        })
+
+        const response = await sdk.chat(
+          conversationUuid,
+          [
+            {
+              role: MessageRole.user,
+              content: [
+                {
+                  type: ContentType.text,
+                  text: 'fake-user-content',
+                },
+              ],
+            },
+          ],
+          {
+            stream: true,
+            onEvent: onMessageMock,
+            onFinished: onFinishMock,
+            onError: onErrorMock,
+          },
+        )
+
+        chunks.forEach((chunk, index) => {
+          // @ts-expect-error
+          const { event, data } = parseSSE(chunk)
+          expect(onMessageMock).toHaveBeenNthCalledWith(index + 1, {
+            event,
+            data: JSON.parse(data),
+          })
+        })
+        expect(onFinishMock).toHaveBeenCalledWith(finalResponse)
+        expect(response).toEqual(finalResponse)
+        expect(onErrorMock).not.toHaveBeenCalled()
+      }),
+    )
+
+    it('retries 3 times if gateway is not available', async () => {
+      const onErrorMock = vi.fn()
+      const { mockFn, conversationUuid } = mock502Response({
         server,
         apiVersion: 'v2',
-        docPath: 'fake-document-log-uuid',
+        conversationUuid: 'fake-document-log-uuid',
       })
-      await sdk.chat(docPath, [])
 
-      expect(mockBody).toHaveBeenCalledWith({
-        body: {
-          __internal: { source: LogSources.API },
-          messages: [],
-        },
-      })
-    }),
-  )
+      await sdk.chat(
+        conversationUuid,
+        [
+          {
+            role: MessageRole.user,
+            content: [
+              {
+                type: ContentType.text,
+                text: 'fake-user-content',
+              },
+            ],
+          },
+        ],
+        { stream: true, onError: onErrorMock },
+      )
 
-  it('should retry 3 times if gateway is not available', async () => {
-    const { mockFn, docPath } = mock502Response({
-      server,
-      apiVersion: 'v2',
-      docPath: 'fake-document-log-uuid',
+      expect(mockFn).toHaveBeenCalledTimes(3)
+      expect(onErrorMock).toHaveBeenCalledWith(
+        new LatitudeApiError({
+          status: 502,
+          serverResponse: JSON.stringify({
+            name: 'LatitudeError',
+            message: 'Something bad happened',
+            errorCode: 'LatitudeError',
+          }),
+          message: 'Something bad happened',
+          errorCode: ApiErrorCodes.InternalServerError,
+          dbErrorRef: undefined,
+        }),
+      )
     })
 
-    await sdk.chat(docPath, [])
-    expect(mockFn).toHaveBeenCalledTimes(3)
+    it('does not throw error if onError option is present', async () => {
+      const onErrorMock = vi.fn()
+      const { mockFn, conversationUuid } = mock502Response({
+        server,
+        apiVersion: 'v2',
+        conversationUuid: 'fake-document-log-uuid',
+      })
+
+      await sdk.chat(
+        conversationUuid,
+        [
+          {
+            role: MessageRole.user,
+            content: [
+              {
+                type: ContentType.text,
+                text: 'fake-user-content',
+              },
+            ],
+          },
+        ],
+        { stream: true, onError: onErrorMock },
+      )
+
+      expect(mockFn).toHaveBeenCalledTimes(3)
+      expect(onErrorMock).toHaveBeenCalledWith(
+        new LatitudeApiError({
+          status: 502,
+          serverResponse: JSON.stringify({
+            name: 'LatitudeError',
+            message: 'Something bad happened',
+            errorCode: 'LatitudeError',
+          }),
+          message: 'Something bad happened',
+          errorCode: ApiErrorCodes.InternalServerError,
+          dbErrorRef: undefined,
+        }),
+      )
+    })
+
+    it('throws error if onError option is not present', async () => {
+      const { mockFn, conversationUuid } = mock502Response({
+        server,
+        apiVersion: 'v2',
+        conversationUuid: 'fake-document-log-uuid',
+      })
+
+      await expect(
+        sdk.chat(
+          conversationUuid,
+          [
+            {
+              role: MessageRole.user,
+              content: [
+                {
+                  type: ContentType.text,
+                  text: 'fake-user-content',
+                },
+              ],
+            },
+          ],
+          { stream: true },
+        ),
+      ).rejects.toThrowError(
+        new LatitudeApiError({
+          status: 502,
+          serverResponse: JSON.stringify({
+            name: 'LatitudeError',
+            message: 'Something bad happened',
+            errorCode: 'LatitudeError',
+          }),
+          message: 'Something bad happened',
+          errorCode: ApiErrorCodes.InternalServerError,
+          dbErrorRef: undefined,
+        }),
+      )
+      expect(mockFn).toHaveBeenCalledTimes(3)
+    })
+  })
+
+  describe('without streaming', () => {
+    it(
+      'makes request',
+      server.boundary(async () => {
+        const { mockAuthHeader, mockUrl, mockBody, conversationUuid } =
+          mockRequest({
+            server,
+            apiVersion: 'v2',
+            conversationUuid: 'fake-document-log-uuid',
+          })
+
+        await sdk.chat(
+          conversationUuid,
+          [
+            {
+              role: MessageRole.user,
+              content: [
+                {
+                  type: ContentType.text,
+                  text: 'fake-user-content',
+                },
+              ],
+            },
+          ],
+          { stream: false },
+        )
+
+        expect(mockAuthHeader).toHaveBeenCalledWith('Bearer fake-api-key')
+        expect(mockUrl).toHaveBeenCalledWith(
+          `http://localhost:8787/api/v2/conversations/${conversationUuid}/chat`,
+        )
+        expect(mockBody).toHaveBeenCalledWith({
+          body: {
+            __internal: { source: LogSources.API },
+            messages: [
+              {
+                role: MessageRole.user,
+                content: [
+                  {
+                    type: ContentType.text,
+                    text: 'fake-user-content',
+                  },
+                ],
+              },
+            ],
+            stream: false,
+          },
+        })
+      }),
+    )
+
+    it(
+      'returns final response and onFinish',
+      server.boundary(async () => {
+        const onFinishMock = vi.fn()
+        const onErrorMock = vi.fn()
+        const { finalResponse, conversationUuid } = mockNonStreamResponse({
+          server,
+          conversationUuid: 'fake-document-log-uuid',
+          apiVersion: 'v2',
+        })
+
+        const response = await sdk.chat(
+          conversationUuid,
+          [
+            {
+              role: MessageRole.user,
+              content: [
+                {
+                  type: ContentType.text,
+                  text: 'fake-user-content',
+                },
+              ],
+            },
+          ],
+          {
+            stream: false,
+            onFinished: onFinishMock,
+            onError: onErrorMock,
+          },
+        )
+
+        expect(onFinishMock).toHaveBeenCalledWith(finalResponse)
+        expect(response).toEqual(finalResponse)
+        expect(onErrorMock).not.toHaveBeenCalled()
+      }),
+    )
+
+    it('retries 3 times if gateway is not available', async () => {
+      const onErrorMock = vi.fn()
+      const { mockFn, conversationUuid } = mock502Response({
+        server,
+        apiVersion: 'v2',
+        conversationUuid: 'fake-document-log-uuid',
+      })
+
+      await sdk.chat(
+        conversationUuid,
+        [
+          {
+            role: MessageRole.user,
+            content: [
+              {
+                type: ContentType.text,
+                text: 'fake-user-content',
+              },
+            ],
+          },
+        ],
+        { stream: false, onError: onErrorMock },
+      )
+
+      expect(mockFn).toHaveBeenCalledTimes(3)
+      expect(onErrorMock).toHaveBeenCalledWith(
+        new LatitudeApiError({
+          status: 502,
+          serverResponse: JSON.stringify({
+            name: 'LatitudeError',
+            message: 'Something bad happened',
+            errorCode: 'LatitudeError',
+          }),
+          message: 'Something bad happened',
+          errorCode: ApiErrorCodes.InternalServerError,
+          dbErrorRef: undefined,
+        }),
+      )
+    })
+
+    it('does not throw error if onError option is present', async () => {
+      const onErrorMock = vi.fn()
+      const { mockFn, conversationUuid } = mock502Response({
+        server,
+        apiVersion: 'v2',
+        conversationUuid: 'fake-document-log-uuid',
+      })
+
+      await sdk.chat(
+        conversationUuid,
+        [
+          {
+            role: MessageRole.user,
+            content: [
+              {
+                type: ContentType.text,
+                text: 'fake-user-content',
+              },
+            ],
+          },
+        ],
+        { stream: false, onError: onErrorMock },
+      )
+
+      expect(mockFn).toHaveBeenCalledTimes(3)
+      expect(onErrorMock).toHaveBeenCalledWith(
+        new LatitudeApiError({
+          status: 502,
+          serverResponse: JSON.stringify({
+            name: 'LatitudeError',
+            message: 'Something bad happened',
+            errorCode: 'LatitudeError',
+          }),
+          message: 'Something bad happened',
+          errorCode: ApiErrorCodes.InternalServerError,
+          dbErrorRef: undefined,
+        }),
+      )
+    })
+
+    it('throws error if onError option is not present', async () => {
+      const { mockFn, conversationUuid } = mock502Response({
+        server,
+        apiVersion: 'v2',
+        conversationUuid: 'fake-document-log-uuid',
+      })
+
+      await expect(
+        sdk.chat(
+          conversationUuid,
+          [
+            {
+              role: MessageRole.user,
+              content: [
+                {
+                  type: ContentType.text,
+                  text: 'fake-user-content',
+                },
+              ],
+            },
+          ],
+          { stream: false },
+        ),
+      ).rejects.toThrowError(
+        new LatitudeApiError({
+          status: 502,
+          serverResponse: JSON.stringify({
+            name: 'LatitudeError',
+            message: 'Something bad happened',
+            errorCode: 'LatitudeError',
+          }),
+          message: 'Something bad happened',
+          errorCode: ApiErrorCodes.InternalServerError,
+          dbErrorRef: undefined,
+        }),
+      )
+      expect(mockFn).toHaveBeenCalledTimes(3)
+    })
   })
 })

@@ -4,6 +4,7 @@ import {
   Message,
   MessageRole,
 } from '@latitude-data/compiler'
+import { RunErrorCodes } from '@latitude-data/constants/errors'
 
 import {
   ChainEvent,
@@ -16,9 +17,9 @@ import {
   Workspace,
 } from '../../browser'
 import { unsafelyFindProviderApiKey } from '../../data-access'
-import { NotFoundError, Result } from '../../lib'
-import debug from '../../lib/debug'
+import { NotFoundError, Result, TypedResult } from '../../lib'
 import { ai, PartialConfig } from '../ai'
+import { ChainError } from '../chains/ChainErrors'
 import {
   ChainStreamConsumer,
   parseResponseText,
@@ -26,6 +27,11 @@ import {
 import { consumeStream } from '../chains/ChainStreamConsumer/consumeStream'
 import { checkFreeProviderQuota } from '../chains/checkFreeProviderQuota'
 import { ProviderProcessor } from '../chains/ProviderProcessor'
+
+export type ChainResponse<T extends StreamType> = TypedResult<
+  ChainStepResponse<T>,
+  ChainError<RunErrorCodes>
+>
 
 export async function addMessages({
   workspace,
@@ -62,13 +68,11 @@ export async function addMessages({
     )
   }
 
-  let responseResolve: (value?: ChainStepResponse<StreamType>) => void
+  let responseResolve: (value: ChainResponse<StreamType>) => void
 
-  const response = new Promise<ChainStepResponse<StreamType> | undefined>(
-    (resolve) => {
-      responseResolve = resolve
-    },
-  )
+  const response = new Promise<ChainResponse<StreamType>>((resolve) => {
+    responseResolve = resolve
+  })
 
   const fmessages = [
     ...providerLog.messages,
@@ -99,11 +103,11 @@ export async function addMessages({
         documentLogUuid: providerLog.documentLogUuid!,
         messages: fmessages,
       })
-        .then(responseResolve)
-        .catch((e) => {
-          debug(`Error in addMessages: ${e}`)
-
-          responseResolve()
+        .then((res) => {
+          responseResolve(Result.ok(res))
+        })
+        .catch((err) => {
+          responseResolve(Result.error(err))
         })
     },
   })
