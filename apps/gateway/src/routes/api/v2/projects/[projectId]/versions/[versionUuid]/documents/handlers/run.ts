@@ -7,6 +7,7 @@ import { captureException } from '$/common/sentry'
 import {
   chainEventPresenter,
   getData,
+  publishDocumentRunRequestedEvent,
 } from '$/routes/api/v1/projects/[projectId]/versions/[versionUuid]/documents/handlers/_shared'
 import { Factory } from 'hono/factory'
 import { streamSSE } from 'hono/streaming'
@@ -40,12 +41,22 @@ export const runHandler = factory.createHandlers(
       __internal,
     } = c.req.valid('json')
     const workspace = c.get('workspace')
-    const { document, commit } = await getData({
+    const { document, commit, project } = await getData({
       workspace,
       projectId: Number(projectId!),
       commitUuid: versionUuid!,
       documentPath: path!,
     }).then((r) => r.unwrap())
+
+    if (__internal?.source === LogSources.API) {
+      await publishDocumentRunRequestedEvent({
+        workspace,
+        project,
+        commit,
+        document,
+        parameters,
+      })
+    }
 
     const result = await runDocumentAtCommit({
       workspace,

@@ -8,7 +8,11 @@ import { Factory } from 'hono/factory'
 import { streamSSE } from 'hono/streaming'
 import { z } from 'zod'
 
-import { chainEventPresenter, getData } from './_shared'
+import {
+  chainEventPresenter,
+  getData,
+  publishDocumentRunRequestedEvent,
+} from './_shared'
 
 const factory = new Factory()
 
@@ -32,13 +36,25 @@ export const runHandler = factory.createHandlers(
         const { projectId, versionUuid } = c.req.param()
         const { path, parameters, customIdentifier, __internal } =
           c.req.valid('json')
+
         const workspace = c.get('workspace')
-        const { document, commit } = await getData({
+        const { document, commit, project } = await getData({
           workspace,
           projectId: Number(projectId!),
           commitUuid: versionUuid!,
           documentPath: path!,
         }).then((r) => r.unwrap())
+
+        if (__internal?.source === LogSources.API) {
+          await publishDocumentRunRequestedEvent({
+            workspace,
+            project,
+            commit,
+            document,
+            parameters,
+          })
+        }
+
         const result = await runDocumentAtCommit({
           workspace,
           document,

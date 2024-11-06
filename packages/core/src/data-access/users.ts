@@ -1,12 +1,26 @@
-import { eq } from 'drizzle-orm'
+import { asc, eq, getTableColumns } from 'drizzle-orm'
 
-import { User, WorkspaceDto } from '../browser'
+import { User, Workspace, WorkspaceDto } from '../browser'
 import { database } from '../client'
-import { users } from '../schema'
+import { memberships, users } from '../schema'
 
 export type SessionData = {
   user: User
   workspace: WorkspaceDto
+}
+
+export async function findFirstUserInWorkspace(
+  workspace: WorkspaceDto | Workspace,
+) {
+  const results = await database
+    .select(getTableColumns(users))
+    .from(users)
+    .innerJoin(memberships, eq(users.id, memberships.userId))
+    .where(eq(memberships.workspaceId, workspace.id))
+    .orderBy(asc(users.createdAt))
+    .limit(1)
+
+  return results[0]
 }
 
 export function unsafelyGetUser(id?: string) {
