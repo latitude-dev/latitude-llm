@@ -1,4 +1,4 @@
-import { CHUNKS } from '$sdk/test/chunks-example'
+import { CHUNKS, FINAL_RESPONSE } from '$sdk/test/chunks-example'
 import { ApiErrorCodes } from '$sdk/utils/errors'
 import { parseSSE } from '$sdk/utils/parseSSE'
 import { SdkApiVersion } from '$sdk/utils/types'
@@ -9,27 +9,43 @@ import { vi } from 'vitest'
 type Server = ReturnType<typeof setupServer>
 const encoder = new TextEncoder()
 
-export function mockAuthHeader({
+export function mockRequest({
   server,
   apiVersion,
+  docPath,
 }: {
   server: Server
   apiVersion: SdkApiVersion
+  docPath: string
 }) {
-  const mockFn = vi.fn()
+  const mockAuthHeader = vi.fn()
+  const mockUrl = vi.fn()
+  const mockBody = vi.fn()
+  let body = {}
   server.use(
     http.post(
-      `http://localhost:8787/api/${apiVersion}/conversations/fake-document-log-uuid/chat`,
-      (info) => {
-        mockFn(info.request.headers.get('Authorization'))
+      `http://localhost:8787/api/${apiVersion}/conversations/${docPath}/chat`,
+      async (info) => {
+        mockAuthHeader(info.request.headers.get('Authorization'))
+        mockUrl(info.request.url)
+
+        const reader = info.request.body!.getReader()
+        while (true) {
+          const { done, value } = await reader.read()
+          if (done) break
+          const chunks = new TextDecoder('utf-8').decode(value).trim()
+          body = JSON.parse(chunks)
+        }
+
+        mockBody({ body })
         return HttpResponse.json({})
       },
     ),
   )
-  return mockFn
+  return { mockAuthHeader, mockUrl, mockBody, docPath }
 }
 
-export function mockChatMessage({
+export function mockStreamResponse({
   server,
   apiVersion,
   docPath,
@@ -65,38 +81,25 @@ export function mockChatMessage({
       },
     ),
   )
-  return { chunks: CHUNKS, docPath }
+  return { chunks: CHUNKS, finalResponse: FINAL_RESPONSE, docPath }
 }
 
-export function mockBodyResponse({
+export function mockNonStreamResponse({
   server,
   apiVersion,
   docPath,
 }: {
   server: Server
-  apiVersion: SdkApiVersion
   docPath: string
+  apiVersion: SdkApiVersion
 }) {
-  const mockBody = vi.fn()
-  let body = {}
   server.use(
     http.post(
       `http://localhost:8787/api/${apiVersion}/conversations/${docPath}/chat`,
-      async (info) => {
-        const reader = info.request.body!.getReader()
-        while (true) {
-          const { done, value } = await reader.read()
-          if (done) break
-          const chunks = new TextDecoder('utf-8').decode(value).trim()
-          body = JSON.parse(chunks)
-        }
-
-        mockBody({ body })
-        return HttpResponse.json({})
-      },
+      () => HttpResponse.json(FINAL_RESPONSE),
     ),
   )
-  return { mockBody, docPath }
+  return { finalResponse: FINAL_RESPONSE, docPath }
 }
 
 export function mock502Response({
