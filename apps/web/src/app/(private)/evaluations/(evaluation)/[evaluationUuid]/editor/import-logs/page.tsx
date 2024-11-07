@@ -52,6 +52,7 @@ export default function ImportLogs({
   return (
     <Modal
       open
+      dismissible
       onOpenChange={() => {
         navigate.push(
           ROUTES.evaluations.detail({ uuid: evaluationUuid }).editor.root,

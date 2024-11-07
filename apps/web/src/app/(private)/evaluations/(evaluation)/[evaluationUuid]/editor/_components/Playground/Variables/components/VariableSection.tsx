@@ -58,7 +58,8 @@ export const VariableSection = ({
     {isPinned && popoverContent && <PinnedDocumentation isPinned />}
     <textarea
       className={cn(
-        `w-full p-2 rounded-lg border bg-secondary resize-y text-xs`,
+        'w-full p-2 rounded-lg border bg-secondary resize-y text-xs',
+        'custom-scrollbar',
         {
           'h-36': height === '36',
           'h-24': height === '24',
