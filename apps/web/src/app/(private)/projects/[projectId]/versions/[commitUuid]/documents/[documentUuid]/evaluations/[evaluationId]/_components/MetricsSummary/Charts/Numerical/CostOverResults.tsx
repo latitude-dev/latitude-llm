@@ -82,12 +82,24 @@ export function CostOverResultsChart({
               type: 'number',
               min: evaluationConfiguration.minValue,
               max: evaluationConfiguration.maxValue,
+              tickFormatter: (value) =>
+                Intl.NumberFormat('en-US', {
+                  style: 'decimal',
+                  maximumFractionDigits: 2,
+                }).format(Number(value)),
             },
             yAxis: {
               label: 'Average cost',
               type: 'number',
               min: 0,
               max: 'auto',
+              tickFormatter: (value) =>
+                Intl.NumberFormat('en-US', {
+                  style: 'currency',
+                  currency: 'USD',
+                  minimumFractionDigits: 0,
+                  maximumFractionDigits: 6,
+                }).format(Number(value)),
             },
             data: parsedData,
             tooltipLabel: (item) => (
