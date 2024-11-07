@@ -38,6 +38,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
   {
     className,
     label,
+    info,
     errors,
     errorStyle,
     description,
@@ -66,6 +67,7 @@ const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
   return (
     <FormField
       label={label}
+      info={info}
       description={description}
       errors={errors}
       errorStyle={errorStyle}

@@ -2,7 +2,7 @@
 
 import { ReactNode, useCallback } from 'react'
 
-import { Icon, Text, Tooltip } from '../../atoms'
+import { Icon, Tooltip } from '../../atoms'
 
 export function ClickToCopy({
   copyValue,
@@ -31,7 +31,7 @@ export function ClickToCopy({
         </div>
       }
     >
-      <Text.H6 color='foregroundMuted'>Click to copy: {copyValue}</Text.H6>
+      Click to copy: {copyValue}
     </Tooltip>
   )
 }

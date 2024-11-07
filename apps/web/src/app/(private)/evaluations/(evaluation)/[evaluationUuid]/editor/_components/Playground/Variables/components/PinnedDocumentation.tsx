@@ -34,14 +34,12 @@ export const PinnedDocumentation = ({ isPinned }: { isPinned: boolean }) => {
         You can access these properties in your prompt template using JavaScript
         object accessor syntax. E.g:
       </Text.H6>
-      <div className='bg-backgroundCode p-4 rounded-lg relative overflow-x-auto'>
-        <Text.H6 noWrap>
-          {`{{messages.user.first}}`}{' '}
-          <Text.H6 noWrap color='foregroundMuted'>
-            /* This will print the first message from the user in the
-            conversation */
-          </Text.H6>
+      <div className='flex flex-col gap-2 bg-backgroundCode p-4 rounded-lg relative overflow-x-auto'>
+        <Text.H6 noWrap color='foregroundMuted'>
+          /* This will print the first message from the user in the conversation
+          */
         </Text.H6>
+        <Text.H6 noWrap>{`{{messages.user.first}}`} </Text.H6>
         <div className='absolute top-4 right-2 bg-backgroundCode'>
           <CopyButton content={`{{messages.user.first}}`} />
         </div>

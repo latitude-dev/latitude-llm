@@ -94,9 +94,7 @@ export function DatasetsTable({
                       />
                     }
                   >
-                    <Text.H6B color='white'>
-                      Show file preview (first 100 rows)
-                    </Text.H6B>
+                    Show file preview (first 100 rows)
                   </Tooltip>
                   <Button
                     onClick={() => setDeletable(dataset)}

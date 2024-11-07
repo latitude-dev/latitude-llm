@@ -87,13 +87,11 @@ export function MetadataItemTooltip({
           </div>
         }
       >
-        <div className='flex flex-col justify-between'>
-          {typeof tooltipContent === 'string' ? (
-            <Text.H6>{tooltipContent}</Text.H6>
-          ) : (
-            tooltipContent
-          )}
-        </div>
+        {typeof tooltipContent === 'string' ? (
+          tooltipContent
+        ) : (
+          <div className='flex flex-col justify-between'>{tooltipContent}</div>
+        )}
       </Tooltip>
     </MetadataItem>
   )
