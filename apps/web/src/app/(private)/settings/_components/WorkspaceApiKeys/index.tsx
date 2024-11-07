@@ -69,6 +69,7 @@ export default function WorkspaceApiKeys() {
                     </TableCell>
                     <TableCell align='right'>
                       <Tooltip
+                        asChild
                         trigger={
                           <div className='px-2'>
                             <Button

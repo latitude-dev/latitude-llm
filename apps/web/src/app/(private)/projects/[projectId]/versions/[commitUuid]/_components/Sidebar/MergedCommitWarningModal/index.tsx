@@ -11,6 +11,7 @@ export default function MergedCommitWarningModal({
 }) {
   return (
     <ConfirmModal
+      dismissible
       type='default'
       open={open}
       onConfirm={() => {

@@ -19,21 +19,6 @@ import {
 
 export const ModalTrigger = DialogTrigger
 
-export type ModalProps = {
-  title?: string
-  defaultOpen?: boolean
-  onOpenChange?: (open: boolean) => void
-  open?: boolean
-  description?: string
-  children: ReactNode
-  footer?: ReactNode
-  size?: 'regular' | 'large'
-  steps?: {
-    total: number
-    current: number
-  }
-}
-
 function StepSelector({ total, current }: { total: number; current: number }) {
   return (
     <div className='flex flex-row items-center w-full gap-2 pt-4 pr-6'>
@@ -51,6 +36,22 @@ function StepSelector({ total, current }: { total: number; current: number }) {
   )
 }
 
+export type ModalProps = {
+  title?: string
+  defaultOpen?: boolean
+  onOpenChange?: (open: boolean) => void
+  open?: boolean
+  description?: string
+  children: ReactNode
+  footer?: ReactNode
+  size?: 'regular' | 'large'
+  steps?: {
+    total: number
+    current: number
+  }
+  dismissible?: boolean
+}
+
 export function Modal({
   open,
   defaultOpen,
@@ -61,29 +62,41 @@ export function Modal({
   description,
   size = 'regular',
   steps,
+  dismissible = false,
 }: ModalProps) {
   return (
     <Dialog open={open} defaultOpen={defaultOpen} onOpenChange={onOpenChange}>
       <DialogContent
-        className={cn({
+        dismissible={dismissible}
+        className={cn('flex flex-col', {
           'max-w-modal': size === 'regular',
           'max-w-modal-lg': size === 'large',
         })}
       >
-        {steps && <StepSelector total={steps.total} current={steps.current} />}
-
-        {(title || description) && (
-          <DialogHeader>
-            {title && <DialogTitle>{title}</DialogTitle>}
-            {description && (
-              <DialogDescription>{description}</DialogDescription>
+        <div className='flex flex-col gap-y-4 overflow-y-auto custom-scrollbar relative'>
+          <div className='sticky top-0 flex flex-col gap-y-4'>
+            {steps && (
+              <StepSelector total={steps.total} current={steps.current} />
             )}
-          </DialogHeader>
-        )}
 
-        {children}
+            {(title || description) && (
+              <DialogHeader>
+                {title && <DialogTitle>{title}</DialogTitle>}
+                {description && (
+                  <DialogDescription>{description}</DialogDescription>
+                )}
+              </DialogHeader>
+            )}
+          </div>
 
-        {footer ? <DialogFooter>{footer}</DialogFooter> : null}
+          {children}
+
+          {footer ? (
+            <div className='sticky bottom-0'>
+              <DialogFooter>{footer}</DialogFooter>
+            </div>
+          ) : null}
+        </div>
       </DialogContent>
     </Dialog>
   )

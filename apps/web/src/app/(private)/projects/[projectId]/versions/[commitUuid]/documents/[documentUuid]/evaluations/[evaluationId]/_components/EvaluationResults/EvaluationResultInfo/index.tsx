@@ -64,6 +64,7 @@ function DocumentLogInfoModal({
 
   return (
     <Modal
+      dismissible
       defaultOpen
       onOpenChange={() => onOpenChange(null)}
       title='Document Log Info'

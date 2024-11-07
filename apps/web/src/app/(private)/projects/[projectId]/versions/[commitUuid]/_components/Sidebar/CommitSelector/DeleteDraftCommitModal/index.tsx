@@ -31,6 +31,7 @@ export default function DeleteDraftCommitModal({
   const router = useRouter()
   return (
     <ConfirmModal
+      dismissible={!isDestroying}
       open={!!commit}
       title={`Delete ${commit?.title} version`}
       type='destructive'
