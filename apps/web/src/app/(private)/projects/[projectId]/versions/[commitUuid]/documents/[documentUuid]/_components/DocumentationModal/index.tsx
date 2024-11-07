@@ -62,6 +62,7 @@ export default function DocumentationModal({
 
   return (
     <Modal
+      dismissible
       title='Deploy this prompt'
       description="Deploying this prompt in your application is straightforward. Here's what you need to do."
       size='large'
