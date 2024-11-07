@@ -30,6 +30,7 @@ function PreviewModal({ dataset }: { dataset: Dataset }) {
   const rowCount = Math.min(dataset.fileMetadata.rowCount, VISIBLE_ROWS)
   return (
     <Modal
+      dismissible
       size='large'
       open
       title={`${dataset.name} preview`}

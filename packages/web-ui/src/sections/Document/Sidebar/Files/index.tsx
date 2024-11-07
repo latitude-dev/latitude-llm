@@ -220,6 +220,7 @@ export function FilesTree({
 
       {deletableNode ? (
         <ConfirmModal
+          dismissible={!isDestroying}
           type='destructive'
           open={!!deletableNode}
           onConfirm={() => onConfirmDelete(deletableNode)}

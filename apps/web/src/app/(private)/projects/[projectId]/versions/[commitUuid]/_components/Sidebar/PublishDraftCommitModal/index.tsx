@@ -306,6 +306,7 @@ export default function PublishDraftCommitModal({
   const hasErrors = !anyChanges || groups.errors.length > 0
   return (
     <ConfirmModal
+      dismissible={!isPublishing}
       type={!isLoading && hasErrors ? 'destructive' : 'default'}
       open={!!commit}
       title='Publish new version'

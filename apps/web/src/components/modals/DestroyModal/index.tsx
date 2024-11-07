@@ -46,6 +46,7 @@ export default function DestroyModal<
 
   return (
     <Modal
+      dismissible
       open
       onOpenChange={onOpenChange}
       title={title}
