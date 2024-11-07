@@ -61,12 +61,10 @@ const result = await sdk.run('${documentPath}'${getRunOptions() ? `, ${getRunOpt
       <CodeBlock language='typescript'>{sdkCode}</CodeBlock>
       <Text.H5>
         Check out{' '}
-        <a
-          target='_blank'
-          className='text-primary-foreground underline'
-          href='https://docs.latitude.so'
-        >
-          our docs
+        <a target='_blank' href='https://docs.latitude.so'>
+          <Text.H5 underline color='primary'>
+            our docs
+          </Text.H5>
         </a>{' '}
         for more details.
       </Text.H5>
