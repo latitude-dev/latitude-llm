@@ -4,6 +4,7 @@ import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 
 import {
   EvaluationMetadataLlmAsJudgeAdvanced,
+  EvaluationMetadataType,
   ProviderApiKey,
   SERIALIZED_DOCUMENT_LOG_FIELDS,
 } from '@latitude-data/core/browser'
@@ -17,9 +18,7 @@ import { useMetadata } from '$/hooks/useMetadata'
 import useEvaluations from '$/stores/evaluations'
 import useProviderApiKeys from '$/stores/providerApiKeys'
 
-import Playground from './Playground'
-
-export default function EvaluationEditor({
+export default function AdvancedEvaluationEditor({
   evaluationUuid,
   defaultPrompt,
   providerApiKeys,
@@ -34,6 +33,10 @@ export default function EvaluationEditor({
   const evaluation = useMemo(
     () => data.find((e) => e.uuid === evaluationUuid),
     [evaluationUuid, data],
+  )
+  const evaluationMetadata = useMemo(
+    () => evaluation?.metadata as EvaluationMetadataLlmAsJudgeAdvanced,
+    [evaluation],
   )
   const { data: providers } = useProviderApiKeys({
     fallbackData: providerApiKeys,
@@ -52,7 +55,10 @@ export default function EvaluationEditor({
     (val: string) => {
       update({
         id: evaluation!.id,
-        metadata: { prompt: val },
+        metadata: {
+          type: EvaluationMetadataType.LlmAsJudgeAdvanced,
+          prompt: val,
+        },
       })
     },
     [update, evaluation],
@@ -71,45 +77,36 @@ export default function EvaluationEditor({
 
   if (!evaluation) return null
 
-  // TODO: Only advanced evaluations are available right now. Next PR will add saparate components for each evaluation type
-  const prompt = (evaluation.metadata as EvaluationMetadataLlmAsJudgeAdvanced)
-    .prompt
-
   return (
-    <div className='flex flex-row w-full h-full gap-8'>
-      <div className='flex flex-col flex-1 flex-grow flex-shrink gap-2 min-w-0'>
-        <EditorHeader
-          freeRunsCount={freeRunsCount}
-          providers={providers}
-          title='Evaluation editor'
+    <>
+      <EditorHeader
+        freeRunsCount={freeRunsCount}
+        providers={providers}
+        title='Evaluation editor'
+        metadata={metadata}
+        prompt={value}
+        onChangePrompt={onChange}
+        rightActions={
+          <>
+            {value !== evaluationMetadata.prompt && (
+              <Button
+                fancy
+                disabled={isUpdating || isLoading}
+                onClick={() => save(value)}
+              >
+                Save changes
+              </Button>
+            )}
+          </>
+        }
+      />
+      <Suspense fallback={<DocumentTextEditorFallback />}>
+        <DocumentTextEditor
+          value={value}
           metadata={metadata}
-          prompt={value}
-          onChangePrompt={onChange}
-          rightActions={
-            <>
-              {value !== prompt && (
-                <Button
-                  fancy
-                  disabled={isUpdating || isLoading}
-                  onClick={() => save(value)}
-                >
-                  Save changes
-                </Button>
-              )}
-            </>
-          }
+          onChange={onChange}
         />
-        <Suspense fallback={<DocumentTextEditorFallback />}>
-          <DocumentTextEditor
-            value={value}
-            metadata={metadata}
-            onChange={onChange}
-          />
-        </Suspense>
-      </div>
-      <div className='flex flex-col flex-1 gap-2 min-w-0 max-w-1/2 overflow-y-auto max-h-[calc(100vh-150px)]'>
-        <Playground evaluation={evaluation} metadata={metadata!} />
-      </div>
-    </div>
+      </Suspense>
+    </>
   )
 }

@@ -62,15 +62,25 @@ export async function createEvaluation<
     metadata: M extends EvaluationMetadataType.LlmAsJudgeSimple
       ? Omit<EvaluationMetadataLlmAsJudgeSimple, 'id'>
       : M extends EvaluationMetadataType.LlmAsJudgeAdvanced
-        ? Omit<EvaluationMetadataLlmAsJudgeAdvanced, 'id' | 'configuration'>
+        ? { prompt: string } & Partial<
+            Omit<
+              EvaluationMetadataLlmAsJudgeAdvanced,
+              'id' | 'configuration' | 'prompt'
+            >
+          >
         : never
     resultType: R
     resultConfiguration: R extends EvaluationResultableType.Boolean
-      ? Omit<EvaluationConfigurationBoolean, 'id'>
+      ? Partial<Omit<EvaluationConfigurationBoolean, 'id'>>
       : R extends EvaluationResultableType.Number
-        ? Omit<EvaluationConfigurationNumerical, 'id'>
+        ? { minValue: number; maxValue: number } & Partial<
+            Omit<
+              EvaluationConfigurationNumerical,
+              'id' | 'minValue' | 'maxValue'
+            >
+          >
         : R extends EvaluationResultableType.Text
-          ? Omit<EvaluationConfigurationText, 'id'>
+          ? Partial<Omit<EvaluationConfigurationText, 'id'>>
           : never
     projectId?: number
     documentUuid?: string

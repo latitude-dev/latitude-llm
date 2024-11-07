@@ -387,3 +387,22 @@ export const messageSchema = z
   )
 
 export const messagesSchema = z.array(z.any(messageSchema))
+
+export const resultConfigurationSchema = z.discriminatedUnion('type', [
+  z.object({
+    type: z.literal(EvaluationResultableType.Boolean),
+    falseValueDescription: z.string().optional(),
+    trueValueDescription: z.string().optional(),
+  }),
+  z.object({
+    type: z.literal(EvaluationResultableType.Number),
+    minValue: z.number(),
+    maxValue: z.number(),
+    minValueDescription: z.string().optional(),
+    maxValueDescription: z.string().optional(),
+  }),
+  z.object({
+    type: z.literal(EvaluationResultableType.Text),
+    valueDescription: z.string().optional(),
+  }),
+])

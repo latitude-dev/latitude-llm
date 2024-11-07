@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from 'react'
 
-import { ConversationMetadata } from '@latitude-data/compiler'
 import { EvaluationDto } from '@latitude-data/core/browser'
 import {
   formatContext,
@@ -15,8 +14,8 @@ import { useProviderLog } from '$/stores/providerLogs'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 
-import { Header } from '../Header'
 import Chat from './Chat'
+import { Header } from './Header'
 import Preview from './Preview'
 import { Variables } from './Variables'
 
@@ -41,10 +40,8 @@ const BlankSlate = ({ evaluation }: { evaluation: EvaluationDto }) => (
 
 export default function Playground({
   evaluation,
-  metadata,
 }: {
   evaluation: EvaluationDto
-  metadata: ConversationMetadata
 }) {
   const [mode, setMode] = useState<'preview' | 'chat'>('preview')
   const searchParams = useSearchParams()
@@ -106,11 +103,7 @@ export default function Playground({
         <div className='flex flex-col flex-grow'>
           <div className='flex flex-col flex-grow flex-shrink relative h-full overflow-y-auto custom-scrollbar'>
             {mode === 'preview' ? (
-              <Preview
-                metadata={metadata}
-                parameters={parameters}
-                runPrompt={() => setMode('chat')}
-              />
+              <Preview runPrompt={() => setMode('chat')} />
             ) : (
               <Chat
                 evaluation={evaluation}
