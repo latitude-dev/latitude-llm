@@ -256,6 +256,20 @@ export default function EditorHeader({
     },
     [selectedProvider, prompt],
   )
+  const newProviderLink = (
+    <Link
+      href={ROUTES.settings.root}
+      className='flex-noWrap inline-block text-accent-foreground'
+    >
+      Set up new provider{' '}
+      <Icon name='arrowRight' color='accentForeground' className='inline' />
+    </Link>
+  )
+  const tooltipContent =
+    'We include the Latitude provider by default with 100 free runs to allow you to test the product.'
+  const newProviderOutro = (
+    <>We highly recommend switching to your own provider. {newProviderLink}</>
+  )
 
   return (
     <div className='flex flex-col gap-y-2'>
@@ -339,19 +353,9 @@ export default function EditorHeader({
                   </Text.H6M>
                 }
               >
-                We include the Latitude provider by default with 100 free runs
-                to allow you to test the product.
-                <br />
-                <br />
-                <Link
-                  href={ROUTES.settings.root}
-                  className='flex flex-row items-center gap-1'
-                >
-                  Set up new provider{' '}
-                  <Icon name='arrowRight' color='foregroundMuted' />{' '}
-                </Link>
+                {tooltipContent}
               </Tooltip>{' '}
-              We highly recommend switching to your own provider.
+              {newProviderOutro}
             </Text.H6>
           ) : (
             <Text.H6 color='foregroundMuted'>
@@ -363,18 +367,9 @@ export default function EditorHeader({
                   </Text.H6M>
                 }
               >
-                We include the Latitude provider by default with 100 free runs
-                to allow you to test the product.
-                <br />
-                <br />
-                <Link
-                  href={ROUTES.settings.root}
-                  className='flex flex-row items-center gap-1'
-                >
-                  Set up new provider <Icon name='arrowRight' color='white' />{' '}
-                </Link>
+                {tooltipContent}
               </Tooltip>{' '}
-              We highly recommend switching to your own provider.
+              {newProviderOutro}
             </Text.H6>
           )}
         </div>
