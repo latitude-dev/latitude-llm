@@ -1,9 +1,9 @@
 import type {
   ResolveNodeProps,
   UpdateScopeContextProps,
-} from '$compiler/compiler/logic/types'
-import CompileError from '$compiler/error/error'
-import errors from '$compiler/error/errors'
+} from '$promptl/compiler/logic/types'
+import CompileError from '$promptl/error/error'
+import errors from '$promptl/error/errors'
 import type { SimpleCallExpression } from 'estree'
 
 import { resolveLogicNode, updateScopeContextForNode } from '..'

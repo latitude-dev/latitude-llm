@@ -1,6 +1,6 @@
-import { CUSTOM_TAG_START } from '$compiler/constants'
-import { type Parser } from '$compiler/parser'
-import type { Text } from '$compiler/parser/interfaces'
+import { CUSTOM_TAG_START } from '$promptl/constants'
+import { type Parser } from '$promptl/parser'
+import type { Text } from '$promptl/parser/interfaces'
 
 const ENDS_WITH_ESCAPE_REGEX = /(?<!\\)(\\\\)*\\$/
 const RESERVED_DELIMITERS = [CUSTOM_TAG_START, '/*', '<']

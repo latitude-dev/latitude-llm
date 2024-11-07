@@ -1,14 +1,14 @@
-import { CUSTOM_TAG_END, CUSTOM_TAG_START, KEYWORDS } from '$compiler/constants'
-import PARSER_ERRORS from '$compiler/error/errors'
-import { type Parser } from '$compiler/parser'
+import { CUSTOM_TAG_END, CUSTOM_TAG_START, KEYWORDS } from '$promptl/constants'
+import PARSER_ERRORS from '$promptl/error/errors'
+import { type Parser } from '$promptl/parser'
 import type {
   BaseNode,
   ElseBlock,
   ForBlock,
   IfBlock,
-} from '$compiler/parser/interfaces'
-import readContext from '$compiler/parser/read/context'
-import readExpression from '$compiler/parser/read/expression'
+} from '$promptl/parser/interfaces'
+import readContext from '$promptl/parser/read/context'
+import readExpression from '$promptl/parser/read/expression'
 
 export function mustache(parser: Parser) {
   if (parser.match(CUSTOM_TAG_END)) {

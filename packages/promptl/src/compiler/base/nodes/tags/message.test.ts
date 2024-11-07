@@ -1,15 +1,15 @@
-import { render } from '$compiler/compiler'
-import { getExpectedError } from '$compiler/compiler/test/helpers'
-import { removeCommonIndent } from '$compiler/compiler/utils'
-import { CUSTOM_TAG_END, CUSTOM_TAG_START } from '$compiler/constants'
-import CompileError from '$compiler/error/error'
+import { render } from '$promptl/compiler'
+import { removeCommonIndent } from '$promptl/compiler/utils'
+import { CUSTOM_TAG_END, CUSTOM_TAG_START } from '$promptl/constants'
+import CompileError from '$promptl/error/error'
+import { getExpectedError } from '$promptl/test/helpers'
 import {
   AssistantMessage,
   ImageContent,
   SystemMessage,
   TextContent,
   UserMessage,
-} from '$compiler/types'
+} from '$promptl/types'
 import { describe, expect, it } from 'vitest'
 
 describe('messages', async () => {
@@ -171,7 +171,6 @@ describe('messages', async () => {
           },
         ],
         foo: 'assistant_bar',
-        toolCalls: [],
       },
       {
         role: 'system',
@@ -191,9 +190,9 @@ describe('message contents', async () => {
   it('all messages can have multiple content tags', async () => {
     const prompt = `
       <user>
-        <text>text content</text>
-        <image>image content</image>
-        <text>another text content</text>
+        <content-text>text content</content-text>
+        <content-image>image content</content-image>
+        <content-text>another text content</content-text>
       </user>
     `
     const result = await render({
@@ -256,10 +255,10 @@ describe('message contents', async () => {
   it('allows content tag to have extra attributes', async () => {
     const prompt = `
       <user>
-        <text cache_control={{ { type: 'ephimeral' } }}>
+        <content-text cache_control={{ { type: 'ephimeral' } }}>
           Long text cached...
-        </text>
-        <text>Short text not cached</text>
+        </content-text>
+        <content-text>Short text not cached</content-text>
       </user>
     `
     const result = await render({

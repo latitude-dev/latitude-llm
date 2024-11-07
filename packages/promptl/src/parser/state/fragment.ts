@@ -1,4 +1,4 @@
-import { CUSTOM_TAG_END, CUSTOM_TAG_START } from '$compiler/constants'
+import { CUSTOM_TAG_END, CUSTOM_TAG_START } from '$promptl/constants'
 
 import { Parser } from '..'
 import { config } from './config'

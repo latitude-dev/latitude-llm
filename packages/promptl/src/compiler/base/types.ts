@@ -1,14 +1,14 @@
-import Scope, { ScopePointers } from '$compiler/compiler/scope'
-import { TemplateNode } from '$compiler/parser/interfaces'
+import Scope, { ScopePointers } from '$promptl/compiler/scope'
+import { TemplateNode } from '$promptl/parser/interfaces'
 import {
   AssistantMessage,
   Config,
   Message,
   MessageContent,
-} from '$compiler/types'
+} from '$promptl/types'
 import type { Node as LogicalExpression } from 'estree'
 
-import { ResolveBaseNodeProps, ToolCallReference } from '../types'
+import { ResolveBaseNodeProps } from '../types'
 
 export enum NodeType {
   Literal = 'Literal',
@@ -61,11 +61,9 @@ export type CompileNodeContext<N extends TemplateNode> = {
   addStrayText: (text: string) => void
   popStrayText: () => string
   groupStrayText: () => void
-  addContent: (content: MessageContent) => void
-  popContent: () => MessageContent[]
+  addContent: (item: { node?: TemplateNode; content: MessageContent }) => void
+  popContent: () => { node?: TemplateNode; content: MessageContent }[]
   groupContent: () => void
-  addToolCall: (toolCallRef: ToolCallReference) => void
-  popToolCalls: () => ToolCallReference[]
   popStepResponse: () => AssistantMessage | undefined
 
   stop: (config?: Config) => void

@@ -3,24 +3,21 @@ import {
   isContentTag,
   isMessageTag,
   isRefTag,
-  isToolCallTag,
-} from '$compiler/compiler/utils'
-import errors from '$compiler/error/errors'
+} from '$promptl/compiler/utils'
+import errors from '$promptl/error/errors'
 import {
   ChainStepTag,
   ContentTag,
   ElementTag,
   MessageTag,
   ReferenceTag,
-  ToolCallTag,
-} from '$compiler/parser/interfaces'
+} from '$promptl/parser/interfaces'
 
 import { CompileNodeContext } from '../types'
 import { compile as resolveChainStep } from './tags/chainStep'
 import { compile as resolveContent } from './tags/content'
 import { compile as resolveMessage } from './tags/message'
 import { compile as resolveRef } from './tags/ref'
-import { compile as resolveToolCall } from './tags/toolCall'
 
 async function resolveTagAttributes({
   node: tagNode,
@@ -80,11 +77,6 @@ export async function compile(props: CompileNodeContext<ElementTag>) {
   groupStrayText()
 
   const attributes = await resolveTagAttributes(props)
-
-  if (isToolCallTag(node)) {
-    await resolveToolCall(props as CompileNodeContext<ToolCallTag>, attributes)
-    return
-  }
 
   if (isContentTag(node)) {
     await resolveContent(props as CompileNodeContext<ContentTag>, attributes)

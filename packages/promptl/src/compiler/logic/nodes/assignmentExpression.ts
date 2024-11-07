@@ -1,9 +1,9 @@
-import { ASSIGNMENT_OPERATOR_METHODS } from '$compiler/compiler/logic/operators'
+import { ASSIGNMENT_OPERATOR_METHODS } from '$promptl/compiler/logic/operators'
 import type {
   ResolveNodeProps,
   UpdateScopeContextProps,
-} from '$compiler/compiler/logic/types'
-import errors from '$compiler/error/errors'
+} from '$promptl/compiler/logic/types'
+import errors from '$promptl/error/errors'
 import type {
   AssignmentExpression,
   AssignmentOperator,

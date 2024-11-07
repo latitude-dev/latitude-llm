@@ -1,4 +1,4 @@
-import { AssistantMessage, MessageRole, UserMessage } from '$compiler/types'
+import { AssistantMessage, MessageRole, UserMessage } from '$promptl/types'
 import { describe, expect, it, vi } from 'vitest'
 
 import { render } from '../..'

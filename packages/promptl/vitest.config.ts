@@ -9,7 +9,7 @@ const root = dirname(filename)
 export default defineConfig({
   resolve: {
     alias: {
-      $compiler: `${root}/src`,
+      $promptl: `${root}/src`,
     },
   },
   test: {

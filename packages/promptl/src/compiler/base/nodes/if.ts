@@ -1,4 +1,4 @@
-import { IfBlock } from '$compiler/parser/interfaces'
+import { IfBlock } from '$promptl/parser/interfaces'
 
 import { CompileNodeContext } from '../types'
 

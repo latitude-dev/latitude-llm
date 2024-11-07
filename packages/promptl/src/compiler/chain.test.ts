@@ -1,29 +1,18 @@
-import { CHAIN_STEP_TAG } from '$compiler/constants'
-import CompileError from '$compiler/error/error'
+import { CHAIN_STEP_TAG } from '$promptl/constants'
+import CompileError from '$promptl/error/error'
+import { getExpectedError } from '$promptl/test/helpers'
 import {
   AssistantMessage,
+  ContentType,
   Conversation,
   MessageRole,
   TextContent,
   UserMessage,
-} from '$compiler/types'
+} from '$promptl/types'
 import { describe, expect, it, vi } from 'vitest'
 
 import { Chain } from './chain'
 import { removeCommonIndent } from './utils'
-
-const getExpectedError = async <T>(
-  action: () => Promise<unknown>,
-  errorClass: new () => T,
-): Promise<T> => {
-  try {
-    await action()
-  } catch (err) {
-    expect(err).toBeInstanceOf(errorClass)
-    return err as T
-  }
-  throw new Error('Expected an error to be thrown')
-}
 
 async function defaultCallback(): Promise<string> {
   return ''
@@ -179,7 +168,12 @@ describe('chain', async () => {
         },
       ],
     })
-    expect(conversation2.messages[1]!.content).toBe('response')
+    expect(conversation2.messages[1]!.content.length).toBe(1)
+    expect(conversation2.messages[1]!.content[0]!.type).toBe(ContentType.text)
+    expect((conversation2.messages[1]!.content[0] as TextContent).text).toBe(
+      'response',
+    )
+
     expect(conversation2.messages[2]!).toEqual({
       role: MessageRole.system,
       content: [
@@ -243,6 +237,7 @@ describe('chain', async () => {
 
     let { completed: stop } = await chain.step()
     while (!stop) {
+      await new Promise((resolve) => setTimeout(resolve, 100))
       const { completed } = await chain.step('')
       stop = completed
     }
@@ -284,8 +279,12 @@ describe('chain', async () => {
     })
     expect(conversation.messages[1]).toEqual({
       role: MessageRole.assistant,
-      toolCalls: [],
-      content: '',
+      content: [
+        {
+          type: 'text',
+          text: '',
+        },
+      ],
     })
     expect(conversation.messages[2]).toEqual({
       role: MessageRole.system,
@@ -503,7 +502,7 @@ describe('chain', async () => {
   it('saves the response in a variable', async () => {
     const prompt = removeCommonIndent(`
       <${CHAIN_STEP_TAG} as="response" />
-
+      
       {{response}}
     `)
 
@@ -516,13 +515,18 @@ describe('chain', async () => {
     const { conversation } = await chain.step('foo')
 
     expect(conversation.messages.length).toBe(2)
-    expect(conversation.messages[0]!.content).toBe('foo')
-    expect(conversation.messages[1]!.content).toEqual([
-      {
-        type: 'text',
-        text: 'foo',
-      },
-    ])
+
+    const responseMessage = conversation.messages[0]!
+    expect(responseMessage.role).toBe(MessageRole.assistant)
+    expect(responseMessage.content.length).toBe(1)
+    expect((responseMessage.content[0] as TextContent).text).toBe('foo')
+
+    const additionalMessage = conversation.messages[1]!
+    expect(additionalMessage.role).toBe(MessageRole.system)
+    expect(additionalMessage.content.length).toBe(1)
+    expect((additionalMessage.content[0] as TextContent).text).toBe(
+      JSON.stringify(responseMessage.content),
+    )
   })
 
   it('returns the correct configuration in all steps', async () => {

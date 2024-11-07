@@ -1,15 +1,16 @@
+/* Message Content */
+
 export enum ContentType {
   text = 'text',
   image = 'image',
   toolCall = 'tool-call',
-  toolResult = 'tool-result',
 }
 
-export enum MessageRole {
-  system = 'system',
-  user = 'user',
-  assistant = 'assistant',
-  tool = 'tool',
+export enum ContentTypeTagName {
+  // This is used to translate between the tag name and the actual tag value
+  text = 'content-text',
+  image = 'content-image',
+  toolCall = 'tool-call',
 }
 
 interface IMessageContent {
@@ -27,31 +28,22 @@ export type ImageContent = IMessageContent & {
   image: string | Uint8Array | Buffer | ArrayBuffer | URL
 }
 
-export type ToolContent = {
-  type: ContentType.toolResult
-  toolCallId: string
-  toolName: string
-  result: unknown
-  isError?: boolean
-}
-
-export type ToolRequestContent = {
+export type ToolCallContent = {
   type: ContentType.toolCall
   toolCallId: string
   toolName: string
-  args: Record<string, unknown>
+  toolArguments: Record<string, unknown>
 }
 
-export type MessageContent =
-  | TextContent
-  | ImageContent
-  | ToolContent
-  | ToolRequestContent
+export type MessageContent = TextContent | ImageContent | ToolCallContent
 
-export type ToolCall = {
-  id: string
-  name: string
-  arguments: Record<string, unknown>
+/* Message */
+
+export enum MessageRole {
+  system = 'system',
+  user = 'user',
+  assistant = 'assistant',
+  tool = 'tool',
 }
 
 interface IMessage {
@@ -69,16 +61,13 @@ export type UserMessage = IMessage & {
   name?: string
 }
 
-export type AssistantMessage = {
+export type AssistantMessage = IMessage & {
   role: MessageRole.assistant
-  toolCalls: ToolCall[]
-  content: string | ToolRequestContent[] | MessageContent[]
 }
 
-export type ToolMessage = {
+export type ToolMessage = IMessage & {
   role: MessageRole.tool
-  content: ToolContent[]
-  [key: string]: unknown
+  toolId: string
 }
 
 export type Message =

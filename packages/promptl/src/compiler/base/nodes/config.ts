@@ -1,4 +1,4 @@
-import { Config as ConfigNode } from '$compiler/parser/interfaces'
+import { Config as ConfigNode } from '$promptl/parser/interfaces'
 import yaml from 'yaml'
 
 import { CompileNodeContext } from '../types'

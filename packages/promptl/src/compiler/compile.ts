@@ -1,10 +1,10 @@
-import { error } from '$compiler/error/error'
-import errors from '$compiler/error/errors'
+import { error } from '$promptl/error/error'
+import errors from '$promptl/error/errors'
 import type {
   BaseNode,
   Fragment,
   TemplateNode,
-} from '$compiler/parser/interfaces'
+} from '$promptl/parser/interfaces'
 import {
   AssistantMessage,
   Config,
@@ -13,7 +13,7 @@ import {
   MessageContent,
   MessageRole,
   SystemMessage,
-} from '$compiler/types'
+} from '$promptl/types'
 import type { Node as LogicalExpression } from 'estree'
 
 import { compile as resolveComment } from './base/nodes/comment'
@@ -27,7 +27,7 @@ import { compile as resolveText } from './base/nodes/text'
 import { CompileNodeContext, TemplateNodeWithStatus } from './base/types'
 import { resolveLogicNode } from './logic'
 import Scope, { ScopeStash } from './scope'
-import type { ResolveBaseNodeProps, ToolCallReference } from './types'
+import type { CompileOptions, ResolveBaseNodeProps } from './types'
 import { removeCommonIndent } from './utils'
 
 export type CompilationStatus = {
@@ -51,30 +51,35 @@ export class Compile {
   private ast: Fragment
   private rawText: string
   private globalScope: Scope
+  private defaultRole: MessageRole
 
   private messages: Message[] = []
   private config: Config | undefined
-  private stepResponse: string | undefined
+  private stepResponse: MessageContent[] | undefined
 
   private accumulatedText: string = ''
-  private accumulatedContent: MessageContent[] = []
-  private accumulatedToolCalls: ToolCallReference[] = []
+  private accumulatedContent: {
+    node?: TemplateNode
+    content: MessageContent
+  }[] = []
 
   constructor({
     ast,
     rawText,
     globalScope,
     stepResponse,
+    defaultRole = MessageRole.system,
   }: {
     rawText: string
     globalScope: Scope
     ast: Fragment
-    stepResponse?: string
-  }) {
+    stepResponse?: MessageContent[]
+  } & CompileOptions) {
     this.rawText = rawText
     this.globalScope = globalScope
     this.ast = ast
     this.stepResponse = stepResponse
+    this.defaultRole = defaultRole
   }
 
   async run(): Promise<CompilationStatus> {
@@ -126,61 +131,50 @@ export class Compile {
     this.accumulatedText += text
   }
 
-  private groupStrayText(): void {
-    if (this.accumulatedText.trim() !== '') {
-      this.accumulatedContent.push({
-        type: ContentType.text,
-        text: removeCommonIndent(this.accumulatedText).trim(),
-      })
-    }
-    this.accumulatedText = ''
-  }
-
   private popStrayText(): string {
     const text = this.accumulatedText
     this.accumulatedText = ''
     return text
   }
 
-  private addContent(content: MessageContent): void {
-    this.groupStrayText()
-    this.accumulatedContent.push(content)
+  private groupStrayText(): void {
+    if (this.accumulatedText.trim() !== '') {
+      this.accumulatedContent.push({
+        content: {
+          type: ContentType.text,
+          text: removeCommonIndent(this.accumulatedText).trim(),
+        },
+      })
+    }
+    this.accumulatedText = ''
   }
 
-  private groupContent(): void {
+  private addContent(item: {
+    node?: TemplateNode
+    content: MessageContent
+  }): void {
     this.groupStrayText()
-    const toolCalls = this.popToolCalls()
-    const content = this.popContent()
-
-    toolCalls.forEach(({ node: toolNode }) => {
-      this.baseNodeError(errors.invalidToolCallPlacement, toolNode)
-    })
-
-    if (!content.length) return
-
-    const message = {
-      role: MessageRole.system,
-      content,
-    } as SystemMessage
-
-    this.addMessage(message)
+    this.accumulatedContent.push(item)
   }
 
-  private popContent(): MessageContent[] {
-    const content = this.accumulatedContent
+  private popContent(): { node?: TemplateNode; content: MessageContent }[] {
+    const content = [...this.accumulatedContent]
     this.accumulatedContent = []
     return content
   }
 
-  private addToolCall(toolCallRef: ToolCallReference): void {
+  private groupContent(): void {
     this.groupStrayText()
-    this.accumulatedToolCalls.push(toolCallRef)
-  }
+    const contentItems = this.popContent()
 
-  private popToolCalls(): ToolCallReference[] {
-    const toolCalls = this.accumulatedToolCalls
-    this.accumulatedToolCalls = []
-    return toolCalls
+    if (!contentItems.length) return
+
+    const message = {
+      role: this.defaultRole,
+      content: contentItems.map((item) => item.content),
+    } as SystemMessage
+
+    this.addMessage(message)
   }
 
   private popStepResponse() {
@@ -189,7 +183,6 @@ export class Compile {
     const response: AssistantMessage = {
       role: MessageRole.assistant,
       content: this.stepResponse,
-      toolCalls: [],
     }
 
     this.stepResponse = undefined
@@ -253,8 +246,6 @@ export class Compile {
       addContent: this.addContent.bind(this),
       popContent: this.popContent.bind(this),
       groupContent: this.groupContent.bind(this),
-      addToolCall: this.addToolCall.bind(this),
-      popToolCalls: this.popToolCalls.bind(this),
       popStepResponse: this.popStepResponse.bind(this),
       stop: this.stop.bind(this),
     }

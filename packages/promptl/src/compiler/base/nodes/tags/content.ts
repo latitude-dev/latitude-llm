@@ -1,7 +1,11 @@
-import { removeCommonIndent } from '$compiler/compiler/utils'
-import errors from '$compiler/error/errors'
-import { ContentTag } from '$compiler/parser/interfaces'
-import { ContentType } from '$compiler/types'
+import { removeCommonIndent } from '$promptl/compiler/utils'
+import {
+  CUSTOM_CONTENT_TAG,
+  CUSTOM_CONTENT_TYPE_ATTR,
+} from '$promptl/constants'
+import errors from '$promptl/error/errors'
+import { ContentTag } from '$promptl/parser/interfaces'
+import { ContentType, ContentTypeTagName } from '$promptl/types'
 
 import { CompileNodeContext } from '../../types'
 
@@ -32,19 +36,64 @@ export async function compile(
   }
   const textContent = removeCommonIndent(popStrayText())
 
-  // TODO: This if else is probably not required but the types enforce it.
-  // Improve types.
-  if (node.name === 'text') {
-    addContent({
-      ...attributes,
-      type: ContentType.text,
-      text: textContent,
-    })
+  let type: ContentType
+  if (node.name === CUSTOM_CONTENT_TAG) {
+    if (attributes[CUSTOM_CONTENT_TYPE_ATTR] === undefined) {
+      baseNodeError(errors.messageTagWithoutRole, node)
+    }
+    type = attributes[CUSTOM_CONTENT_TYPE_ATTR] as ContentType
+    delete attributes[CUSTOM_CONTENT_TYPE_ATTR]
   } else {
-    addContent({
-      ...attributes,
-      type: ContentType.image,
-      image: textContent,
-    })
+    const contentTypeKeysFromTagName = Object.fromEntries(
+      Object.entries(ContentTypeTagName).map(([k, v]) => [v, k]),
+    )
+    type =
+      ContentType[
+        contentTypeKeysFromTagName[node.name] as keyof typeof ContentType
+      ]
   }
+
+  if (type === ContentType.text) {
+    addContent({
+      node,
+      content: {
+        ...attributes,
+        type: ContentType.text,
+        text: textContent,
+      },
+    })
+    return
+  }
+
+  if (type === ContentType.image) {
+    addContent({
+      node,
+      content: {
+        ...attributes,
+        type: ContentType.image,
+        image: textContent,
+      },
+    })
+    return
+  }
+
+  if (type == ContentType.toolCall) {
+    const { id, name, ...rest } = attributes
+    if (!id) baseNodeError(errors.toolCallTagWithoutId, node)
+    if (!name) baseNodeError(errors.toolCallWithoutName, node)
+
+    addContent({
+      node,
+      content: {
+        ...rest,
+        type: ContentType.toolCall,
+        toolCallId: String(id),
+        toolName: String(name),
+        toolArguments: {}, // TODO: Issue for a future PR
+      },
+    })
+    return
+  }
+
+  baseNodeError(errors.invalidContentType(type), node)
 }

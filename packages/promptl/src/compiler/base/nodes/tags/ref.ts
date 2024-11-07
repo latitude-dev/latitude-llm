@@ -1,5 +1,5 @@
-import errors from '$compiler/error/errors'
-import { ReferenceTag } from '$compiler/parser/interfaces'
+import errors from '$promptl/error/errors'
+import { ReferenceTag } from '$promptl/parser/interfaces'
 
 import { CompileNodeContext } from '../../types'
 

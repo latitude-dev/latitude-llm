@@ -1,4 +1,4 @@
-import Scope, { ScopeContext } from '$compiler/compiler/scope'
+import Scope, { ScopeContext } from '$promptl/compiler/scope'
 import { Node } from 'estree'
 
 export enum NodeType {

@@ -1,4 +1,4 @@
-import CompileError from '$compiler/error/error'
+import CompileError from '$promptl/error/error'
 import { describe, expect, it } from 'vitest'
 
 import { readMetadata, render } from '.'
@@ -140,28 +140,15 @@ describe(`all compilation errors that don't require value resolution are caught 
 
   it('content-tag-inside-content', async () => {
     const prompt = `
-      <text>
-        <text>
+      <content-text>
+        <content-text>
           Foo
-        </text>
-      </text>
+        </content-text>
+      </content-text>
     `
 
     await expectBothErrors({
       code: 'content-tag-inside-content',
-      prompt,
-    })
-  })
-
-  it('tool-call-tag-inside-content', async () => {
-    const prompt = `
-      <text>
-        <tool-call id="foo" name="bar" />
-      </text>
-    `
-
-    await expectBothErrors({
-      code: 'tool-call-tag-inside-content',
       prompt,
     })
   })
