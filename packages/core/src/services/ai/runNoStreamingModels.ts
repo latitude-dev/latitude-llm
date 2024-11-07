@@ -10,11 +10,13 @@ import { JSONSchema7 } from 'json-schema'
 import { Result } from '../../lib'
 import { AITools } from './buildTools'
 import { ObjectOutput, StreamChunk } from './index'
+import { Providers } from './providers/models'
 
 export async function runNoStreamingModels({
   schema,
   output,
   commonOptions,
+  provider,
 }: {
   schema: JSONSchema7 | undefined
   output: ObjectOutput | undefined
@@ -24,6 +26,7 @@ export async function runNoStreamingModels({
     messages: CoreMessage[]
     tools: AITools | undefined
   }
+  provider: Providers
 }) {
   if (output && schema) {
     const result = await generateObject({
@@ -60,6 +63,7 @@ export async function runNoStreamingModels({
         fullStream: fullStream as any,
         object: Promise.resolve(result.object),
         usage: Promise.resolve(result.usage),
+        providerName: provider,
       },
     })
   }
@@ -102,6 +106,7 @@ export async function runNoStreamingModels({
       text: Promise.resolve(result.text),
       usage: Promise.resolve(result.usage),
       toolCalls: Promise.resolve(toolCalls),
+      providerName: provider,
     },
   })
 }

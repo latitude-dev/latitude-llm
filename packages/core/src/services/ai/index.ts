@@ -22,7 +22,7 @@ import { ChainError } from '../chains/ChainErrors'
 import { buildTools } from './buildTools'
 import { handleAICallAPIError } from './handleError'
 import { createProvider, PartialConfig } from './helpers'
-import { UNSUPPORTED_STREAM_MODELS } from './providers/models'
+import { Providers, UNSUPPORTED_STREAM_MODELS } from './providers/models'
 import { applyCustomRules } from './providers/rules'
 import { runNoStreamingModels } from './runNoStreamingModels'
 
@@ -36,14 +36,18 @@ type AIReturnObject = {
   data: Pick<
     StreamObjectResult<unknown, unknown, never>,
     'fullStream' | 'object' | 'usage'
-  >
+  > & {
+    providerName: Providers
+  }
 }
 type AIReturnText = {
   type: 'text'
   data: Pick<
     StreamTextResult<Record<string, CoreTool<any, any>>>,
     'fullStream' | 'text' | 'usage' | 'toolCalls'
-  >
+  > & {
+    providerName: Providers
+  }
 }
 
 export type AIReturn<T extends StreamType> = T extends 'object'
@@ -130,6 +134,7 @@ export async function ai({
         schema,
         output,
         commonOptions,
+        provider,
       })
     }
 
@@ -149,6 +154,7 @@ export async function ai({
           fullStream: result.fullStream,
           object: result.object,
           usage: result.usage,
+          providerName: provider,
         },
       })
     }
@@ -161,6 +167,7 @@ export async function ai({
         text: result.text,
         usage: result.usage,
         toolCalls: result.toolCalls,
+        providerName: provider,
       },
     })
   } catch (e) {

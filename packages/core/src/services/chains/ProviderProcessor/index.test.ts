@@ -89,6 +89,7 @@ describe('ProviderProcessor', () => {
               controller.close()
             },
           }),
+          providerName: Providers.OpenAI,
         },
       },
       startTime: Date.now(),

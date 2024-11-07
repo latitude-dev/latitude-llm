@@ -2,7 +2,7 @@ import { RunErrorCodes } from '@latitude-data/constants/errors'
 import { CoreTool, LanguageModelUsage, TextStreamPart } from 'ai'
 import { describe, expect, it } from 'vitest'
 
-import { ChainEvent, StreamType } from '../../../constants'
+import { ChainEvent, Providers, StreamType } from '../../../constants'
 import { AIReturn } from '../../ai'
 import { ChainError } from '../ChainErrors'
 import { consumeStream } from './consumeStream'
@@ -53,6 +53,7 @@ function buildFakeChain({
       text: new Promise<string>(() => 'text'),
       usage: new Promise<LanguageModelUsage>(() => DEFAULT_USAGE),
       fullStream,
+      providerName: Providers.OpenAI,
     },
   }
   return new Promise<void>((resolve) => {
@@ -126,7 +127,7 @@ describe('consumeStream', () => {
           finishReason: 'error',
           error: new ChainError({
             code: RunErrorCodes.AIRunError,
-            message: 'an error happened',
+            message: 'Openai returned this error: an error happened',
           }),
         })
       },
