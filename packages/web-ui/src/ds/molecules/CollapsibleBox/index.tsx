@@ -33,7 +33,7 @@ export const CollapsibleBox: React.FC<CollapsibleBoxProps> = ({
         {!isExpanded && <div className='px-4 pb-4'>{collapsedContent}</div>}
       </div>
       <div
-        className={`transition-all duration-300 ease-in-out overflow-y-auto`}
+        className='transition-all duration-300 ease-in-out overflow-y-auto custom-scrollbar'
         style={{
           maxHeight: isExpanded ? expandedHeight : '0',
           opacity: isExpanded ? 1 : 0,

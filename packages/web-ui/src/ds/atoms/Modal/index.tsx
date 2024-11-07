@@ -73,7 +73,7 @@ export function Modal({
           'max-w-modal-lg': size === 'large',
         })}
       >
-        <div className='flex flex-col gap-y-4 overflow-y-auto custom-scrollbar relative'>
+        <div className='flex flex-col p-6 gap-y-4 overflow-y-auto custom-scrollbar relative'>
           <div className='sticky top-0 flex flex-col gap-y-4'>
             {steps && (
               <StepSelector total={steps.total} current={steps.current} />

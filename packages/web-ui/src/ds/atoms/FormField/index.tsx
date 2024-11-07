@@ -111,7 +111,10 @@ function FormField({
       {label ? (
         info ? (
           <Tooltip
+            variant={error ? 'destructive' : 'inverse'}
             asChild
+            side='top'
+            align='start'
             trigger={
               <div className='inline-block'>
                 <div className='flex flex-row gap-1 items-center'>
@@ -121,7 +124,10 @@ function FormField({
                   >
                     {label}
                   </LabelComponent>
-                  <Icon name='info' />
+                  <Icon
+                    name='info'
+                    color={error ? 'destructive' : 'foregroundMuted'}
+                  />
                 </div>
               </div>
             }

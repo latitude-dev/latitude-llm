@@ -9,6 +9,8 @@ import {
 import * as TooltipPrimitive from '@radix-ui/react-tooltip'
 
 import { cn } from '../../../lib/utils'
+import Text from '../../atoms/Text'
+import { TextColor } from '../../tokens'
 
 const TooltipProvider = TooltipPrimitive.Provider
 
@@ -58,11 +60,22 @@ const TooltipContent = forwardRef<
 )
 TooltipContent.displayName = TooltipPrimitive.Content.displayName
 
+function useTextContentColor(variant: TooltipVariant): TextColor {
+  switch (variant) {
+    case 'default':
+      return 'foreground'
+    case 'destructive':
+      return 'destructiveForeground'
+    case 'inverse':
+      return 'background'
+  }
+}
+
 type Props = PropviderProps &
   RootProps &
   ContentProps & {
     trigger: ReactNode
-    children: ReactNode
+    children?: ReactNode
   }
 function Tooltip({
   children,
@@ -77,7 +90,8 @@ function Tooltip({
   onOpenChange,
 
   // Content
-  variant,
+  // Black tooltip by defaul. In dark mode, it will be white
+  variant = 'inverse',
   side,
   sideOffset,
   align,
@@ -92,6 +106,8 @@ function Tooltip({
   maxWidth,
   asChild = false,
 }: Props) {
+  const textColor = useTextContentColor(variant)
+  const isChildrenString = typeof children === 'string'
   return (
     <TooltipRoot
       open={open}
@@ -117,7 +133,11 @@ function Tooltip({
           hideWhenDetached={hideWhenDetached}
           updatePositionStrategy={updatePositionStrategy}
         >
-          {children}
+          {isChildrenString ? (
+            <Text.H6B color={textColor}>{children}</Text.H6B>
+          ) : (
+            children
+          )}
         </TooltipContent>
       </TooltipPrimitive.Portal>
     </TooltipRoot>
