@@ -44,6 +44,7 @@ function buildMockAIresponse(chunks: TextStreamPart<TOOLS>[]) {
           controller.close()
         },
       }),
+      providerName: Providers.OpenAI,
     },
   } as aiModule.AIReturn<'text'>)
 }
@@ -320,7 +321,7 @@ describe('run chain error handling', () => {
       errorableUuid: expect.any(String),
       errorableType: ErrorableEntity.DocumentLog,
       code: RunErrorCodes.AIRunError,
-      message: 'AI stream finished with error',
+      message: 'Openai returned this error: AI stream finished with error',
       details: {
         errorCode: RunErrorCodes.AIRunError,
       },

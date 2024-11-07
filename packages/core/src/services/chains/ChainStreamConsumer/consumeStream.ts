@@ -1,7 +1,14 @@
+import { capitalize } from 'lodash-es'
+
 import { RunErrorCodes } from '@latitude-data/constants/errors'
 import { CoreTool, FinishReason, ObjectStreamPart, TextStreamPart } from 'ai'
 
-import { ChainEvent, StreamEventTypes, StreamType } from '../../../constants'
+import {
+  ChainEvent,
+  Providers,
+  StreamEventTypes,
+  StreamType,
+} from '../../../constants'
 import { streamToGenerator } from '../../../lib/streamToGenerator'
 import { AIReturn } from '../../ai'
 import { ChainError } from '../ChainErrors'
@@ -34,8 +41,21 @@ function createAIError(message: string): ChainError<RunErrorCodes.AIRunError> {
   })
 }
 
-function getErrorMessage(error: unknown): string {
-  return error instanceof Error ? error.message : 'Unknown AI chunk error'
+function getErrorMessage({
+  error,
+  providerName,
+}: {
+  error: unknown
+  providerName: Providers
+}): string {
+  const intro = `${capitalize(providerName)} returned this error`
+  if (error instanceof Error) return `${intro}: ${error.message}`
+
+  try {
+    return `${intro}: ${JSON.stringify(error)}`
+  } catch (e) {
+    return `${intro}: Unknown error`
+  }
 }
 
 export async function consumeStream({
@@ -50,7 +70,12 @@ export async function consumeStream({
   )) {
     if (chunk.type === 'error') {
       finishReason = 'error'
-      error = createAIError(getErrorMessage(chunk.error))
+      error = createAIError(
+        getErrorMessage({
+          error: chunk.error,
+          providerName: result.data.providerName,
+        }),
+      )
       break
     }
 
