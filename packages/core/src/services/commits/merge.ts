@@ -57,6 +57,7 @@ export async function mergeCommit(commit: Commit, db = database) {
         ),
       )
     }
+
     if (Object.keys(recomputedResults.value.changedDocuments).length === 0) {
       return Result.error(
         new UnprocessableEntityError(

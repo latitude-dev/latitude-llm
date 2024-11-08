@@ -146,6 +146,7 @@ export class DocumentVersionsRepository extends RepositoryLegacy<
    */
   async getDocumentsAtCommit(commit?: Commit) {
     const result = await this.getAllDocumentsAtCommit({ commit })
+
     if (result.error) return result
 
     return Result.ok(result.value.filter((d) => d.deletedAt === null))
