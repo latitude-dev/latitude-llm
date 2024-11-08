@@ -6,6 +6,7 @@ import {
 } from '@latitude-data/core/browser'
 
 import AdvancedEvaluationEditor from './Advanced'
+import SimpleEvaluationEditor from './Simple'
 
 export default function EvaluationEditor({
   evaluation,
@@ -21,15 +22,16 @@ export default function EvaluationEditor({
   if (evaluation.metadataType === EvaluationMetadataType.LlmAsJudgeAdvanced) {
     const evaluationMetadata =
       evaluation.metadata as EvaluationMetadataLlmAsJudgeAdvanced
+
     return (
       <AdvancedEvaluationEditor
-        providerApiKeys={providerApiKeys}
+        defaultPrompt={evaluationMetadata.prompt}
         evaluationUuid={evaluationUuid}
         freeRunsCount={freeRunsCount}
-        defaultPrompt={evaluationMetadata.prompt}
+        providerApiKeys={providerApiKeys}
       />
     )
   }
 
-  return null
+  return <SimpleEvaluationEditor evaluation={evaluation} />
 }

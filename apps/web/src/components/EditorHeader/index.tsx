@@ -25,7 +25,7 @@ import useProviderApiKeys from '$/stores/providerApiKeys'
 import Link from 'next/link'
 import { parse, stringify } from 'yaml'
 
-function useModelsOptions({
+export function useModelsOptions({
   provider,
   isDefaultProvider = false,
 }: {
@@ -48,7 +48,7 @@ function useModelsOptions({
 }
 
 type PromptMeta = { providerName: string; model: string }
-type IProviderByName = Record<string, ProviderApiKey>
+export type IProviderByName = Record<string, ProviderApiKey>
 /**
  * @returns the selected model when it exists on the provider's model list,
  * `undefined` when it does not, and `null` when it is not configured.
@@ -309,38 +309,26 @@ export default function EditorHeader({
           />
         </div>
       </div>
-      <FormFieldGroup>
-        <Select
-          name='provider'
-          label='Provider'
-          placeholder='Select a provider'
-          options={providerOptions}
-          value={selectedProvider}
-          disabled={
-            disabledMetadataSelectors ||
-            isLoading ||
-            !providerOptions.length ||
-            !metadata
-          }
-          onChange={onSelectProvider}
-        />
-        <Select
-          disabled={
-            isLoading ||
-            disabledMetadataSelectors ||
-            !selectedProvider ||
-            !metadata
-          }
-          name='model'
-          label='Model'
-          placeholder={
-            selectedModel === undefined ? 'Custom model' : 'Select a model'
-          }
-          options={modelOptions}
-          value={selectedModel || ''}
-          onChange={onModelChange}
-        />
-      </FormFieldGroup>
+      <ProviderModelSelector
+        providerOptions={providerOptions}
+        selectedProvider={selectedProvider}
+        onProviderChange={onSelectProvider}
+        modelOptions={modelOptions}
+        selectedModel={selectedModel}
+        onModelChange={onModelChange}
+        providerDisabled={
+          disabledMetadataSelectors ||
+          isLoading ||
+          !providerOptions.length ||
+          !metadata
+        }
+        modelDisabled={
+          isLoading ||
+          disabledMetadataSelectors ||
+          !selectedProvider ||
+          !metadata
+        }
+      />
       {isDefaultProvider && (
         <div>
           {freeRunsCount !== undefined ? (
@@ -375,5 +363,50 @@ export default function EditorHeader({
         </div>
       )}
     </div>
+  )
+}
+
+export function ProviderModelSelector({
+  providerOptions,
+  selectedProvider,
+  onProviderChange,
+  modelOptions,
+  selectedModel,
+  onModelChange,
+  providerDisabled = false,
+  modelDisabled = false,
+}: {
+  providerOptions: { label: string; value: string }[]
+  selectedProvider: string | undefined
+  onProviderChange: (value: string) => void
+  modelOptions: { label: string; value: string }[]
+  selectedModel: string | undefined | null
+  onModelChange: (value: string) => void
+  providerDisabled?: boolean
+  modelDisabled?: boolean
+}) {
+  return (
+    <FormFieldGroup>
+      <Select
+        name='provider'
+        label='Provider'
+        placeholder='Select a provider'
+        options={providerOptions}
+        value={selectedProvider}
+        disabled={providerDisabled}
+        onChange={onProviderChange}
+      />
+      <Select
+        disabled={modelDisabled}
+        name='model'
+        label='Model'
+        placeholder={
+          selectedModel === undefined ? 'Custom model' : 'Select a model'
+        }
+        options={modelOptions}
+        value={selectedModel ?? undefined}
+        onChange={onModelChange}
+      />
+    </FormFieldGroup>
   )
 }
