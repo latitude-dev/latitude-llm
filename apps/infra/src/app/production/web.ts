@@ -113,6 +113,8 @@ const taskDefinition = pulumi
           {
             name: 'db-migrate',
             image: coreImageName,
+            cpu: 128,
+            memory: 256,
             command: ['pnpm', '--prefix', 'packages/core', 'db:migrate'],
             essential: false,
             environment,
