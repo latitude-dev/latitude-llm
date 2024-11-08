@@ -369,6 +369,44 @@ describe('createEvaluation', () => {
       })
     })
 
+    it('connects the evaluation to the document', async () => {
+      const prompt = factories.helpers.createPrompt({
+        provider: 'Latitude',
+        model: 'gpt-4o',
+      })
+      const { project, documents } = await factories.createProject({
+        workspace,
+        providers: [{ type: Providers.OpenAI, name: 'Latitude' }],
+        documents: {
+          foo: prompt,
+        },
+      })
+      const projectId = project.id
+      const documentUuid = documents[0]!.documentUuid
+
+      const evaluationResult = await createEvaluation({
+        workspace,
+        user,
+        name: 'Test Evaluation',
+        description: 'Test Description',
+        metadataType: EvaluationMetadataType.LlmAsJudgeSimple,
+        metadata: {
+          providerApiKeyId: provider.id,
+          model: 'test-model',
+          objective: 'Test Objective',
+          additionalInstructions: 'Test Instructions',
+        },
+        resultType: EvaluationResultableType.Text,
+        resultConfiguration: {
+          valueDescription: 'Test Value Description',
+        },
+        projectId,
+        documentUuid,
+      })
+
+      expect(evaluationResult.ok).toBe(true)
+    })
+
     it('creates a simple evaluation with numeric configuration', async () => {
       const evaluationResult = await createEvaluation({
         workspace,
