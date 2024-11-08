@@ -66,8 +66,10 @@ export default function CreateEvaluationModal({
     create({
       name: title,
       description,
-      metadataType: EvaluationMetadataType.LlmAsJudgeAdvanced,
-      metadata: { prompt },
+      metadata: {
+        type: EvaluationMetadataType.LlmAsJudgeAdvanced,
+        prompt,
+      },
       resultConfiguration:
         configuration.type === EvaluationResultableType.Number
           ? {

@@ -1,5 +1,3 @@
-import { env } from '@latitude-data/env'
-
 import {
   EvaluationConfigurationBoolean,
   EvaluationConfigurationNumerical,
@@ -12,11 +10,10 @@ import {
   findFirstModelForProvider,
   IEvaluationConfiguration,
   IEvaluationMetadata,
-  Providers,
   User,
   Workspace,
 } from '../../browser'
-import { Database, database } from '../../client'
+import { database } from '../../client'
 import { findEvaluationTemplateById } from '../../data-access'
 import { publisher } from '../../events/publisher'
 import {
@@ -26,7 +23,6 @@ import {
   Result,
   Transaction,
 } from '../../lib'
-import { ProviderApiKeysRepository } from '../../repositories'
 import {
   evaluationConfigurationBoolean,
   evaluationConfigurationNumerical,
@@ -35,6 +31,7 @@ import {
   evaluationMetadataLlmAsJudgeSimple,
   evaluations,
 } from '../../schema'
+import { findDefaultProvider } from '../providerApiKeys/findDefaultProvider'
 import { connectEvaluations } from './connect'
 
 type EvaluationResultConfigurationNumerical = {
@@ -220,25 +217,6 @@ export async function importLlmAsJudgeEvaluation(
   )
 }
 
-async function findProvider(workspace: Workspace, db: Database) {
-  const providerScope = new ProviderApiKeysRepository(workspace!.id, db)
-  const providers = await providerScope.findAll().then((r) => r.unwrap())
-  const found = providers.find((p) => {
-    if (
-      [Providers.OpenAI, Providers.Anthropic].includes(p.provider) &&
-      p.token !== env.DEFAULT_PROVIDER_API_KEY
-    ) {
-      return true
-    }
-
-    return false
-  })
-
-  if (found) return found
-
-  return providers.find((p) => p.token === env.DEFAULT_PROVIDER_API_KEY)
-}
-
 export async function createAdvancedEvaluation<
   R extends EvaluationResultableType,
 >(
@@ -273,7 +251,7 @@ export async function createAdvancedEvaluation<
   })
   if (validConfig.error) return validConfig
 
-  const provider = await findProvider(workspace, db)
+  const provider = await findDefaultProvider(workspace, db)
   if (!provider) {
     return Result.error(
       new NotFoundError(
