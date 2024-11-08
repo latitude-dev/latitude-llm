@@ -25,11 +25,12 @@ function useJoinWorkspace({ connection }: { connection: IWebsocketConfig }) {
   const { currentUser } = useSession()
   const { data: workspace } = useCurrentWorkspace()
   return useCallback(() => {
+    if (!workspace?.id) return
     connection.socket.emit('joinWorkspace', {
       workspaceId: workspace.id,
       userId: currentUser.id,
     })
-  }, [workspace.id, connection.socket, connection.connected])
+  }, [workspace?.id, connection.socket, connection.connected])
 }
 
 export function useSocketConnection({

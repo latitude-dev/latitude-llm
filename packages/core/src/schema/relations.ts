@@ -49,6 +49,10 @@ export const workspaceRelations = relations(workspaces, ({ one, many }) => ({
     references: [subscriptions.id],
   }),
   subscriptions: many(subscriptions),
+  defaultProvider: one(providerApiKeys, {
+    fields: [workspaces.defaultProviderId],
+    references: [providerApiKeys.id],
+  }),
 }))
 
 export const sessionRelations = relations(sessions, ({ one }) => ({

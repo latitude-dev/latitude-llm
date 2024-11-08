@@ -32,9 +32,9 @@ export enum CommitStatus {
 }
 
 export {
-  Providers,
+  DEFAULT_PROVIDER_UNSUPPORTED_MODELS,
   PROVIDER_MODELS,
-  findFirstModelForProvider,
+  Providers,
 } from './services/ai/providers/models'
 export { PARAMETERS_FROM_LOG } from './services/evaluations/compiler/constants'
 

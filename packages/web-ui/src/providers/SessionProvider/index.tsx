@@ -7,10 +7,9 @@ export type SessionUser = {
   name: string | null | undefined
   email: string
 }
-export type SessionWorkspace = { id: number; name: string }
+
 interface ISessionContext {
   currentUser: SessionUser
-  workspace: SessionWorkspace
 }
 
 const SessionContext = createContext<ISessionContext>({} as ISessionContext)

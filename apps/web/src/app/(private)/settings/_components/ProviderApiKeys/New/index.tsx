@@ -1,16 +1,20 @@
-import { useState } from 'react'
+'use client'
+
+import { FormEvent, useCallback, useState } from 'react'
 
 import { Providers } from '@latitude-data/core/browser'
 import {
   Button,
   CloseTrigger,
-  FormField,
   FormWrapper,
   Input,
   Modal,
   Select,
 } from '@latitude-data/web-ui'
-import { useFormAction } from '$/hooks/useFormAction'
+import { formDataToAction } from '$/helpers/forms'
+import useModelOptions from '$/hooks/useModelOptions'
+import { useNavigate } from '$/hooks/useNavigate'
+import { ROUTES } from '$/services/routes'
 import useProviderApiKeys from '$/stores/providerApiKeys'
 
 const PROVIDER_OPTIONS = Object.entries(Providers).map(([key, value]) => ({
@@ -18,28 +22,47 @@ const PROVIDER_OPTIONS = Object.entries(Providers).map(([key, value]) => ({
   label: key,
 }))
 
-export default function NewApiKey({
-  open,
-  setOpen,
-}: {
-  open: boolean
-  setOpen: (open: boolean) => void
-}) {
+export default function NewProviderApiKey() {
+  const navigate = useNavigate()
+  const onOpenChange = useCallback(
+    (open: boolean) => !open && navigate.push(ROUTES.settings.root),
+    [navigate],
+  )
   const { create } = useProviderApiKeys()
-  const { data, action } = useFormAction(create, {
-    onSuccess: () => setOpen(false),
-  })
+  const onSubmit = useCallback(
+    async (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault()
 
-  const [providerType, setProviderType] = useState(PROVIDER_OPTIONS[0]!.label)
+      const payload = formDataToAction<typeof create>(
+        new FormData(event.currentTarget),
+      )
 
-  const isCustom = providerType == 'custom'
+      const [_, error] = await create({
+        ...payload,
+        defaultModel: payload.defaultModel || undefined, // Ensure defaultModel is either non-empty or undefined
+      })
+      if (!error) onOpenChange(false)
+    },
+    [create],
+  )
+
+  const [provider, setProvider] = useState<string | undefined>()
+
+  const isCustom = provider == Providers.Custom
+  const MODEL_OPTIONS = useModelOptions({ provider })
+
+  const defaultModelInputInfo = {
+    label: 'Default model',
+    description:
+      'The model selected by default when using this provider in the prompt or evaluation. You can choose another one at any time in the editor.',
+  }
 
   return (
     <Modal
-      open={open}
-      onOpenChange={setOpen}
-      title='Add new Provider'
-      description='Providers allow you to work with a specific LLM models in your prompts and evaluations.'
+      open
+      onOpenChange={onOpenChange}
+      title='Create Provider'
+      description='Providers allow you to add an API Key and work with a specific LLM model in your prompts or evaluations.'
       footer={
         <>
           <CloseTrigger />
@@ -49,45 +72,53 @@ export default function NewApiKey({
         </>
       }
     >
-      <form id='createApiKeyForm' action={action}>
+      <form id='createApiKeyForm' onSubmit={onSubmit}>
         <FormWrapper>
-          <FormField label='Provider'>
-            <Select
-              required
-              name='provider'
-              onChange={(newValue) => setProviderType(newValue)}
-              defaultValue={data?.provider}
-              options={PROVIDER_OPTIONS}
-            />
-          </FormField>
-          <FormField label='Name'>
-            <Input
-              required
-              type='text'
-              name='name'
-              defaultValue={data?.name}
-              placeholder='My API Key'
-            />
-          </FormField>
-          <FormField label='Token'>
-            <Input
-              required
-              type='text'
-              name='token'
-              defaultValue={data?.token}
-              placeholder='sk-0dfdsn23bm4m23n4MfB'
-            />
-          </FormField>
+          <Input
+            required
+            type='text'
+            name='name'
+            label='Provider'
+            description="This is the name you'll use in the prompt editor to refer to use this provider and model."
+            placeholder='My Provider'
+          />
+          <Select
+            required
+            name='provider'
+            options={PROVIDER_OPTIONS}
+            onChange={(value) => setProvider(value as Providers)}
+            label='Source'
+          />
+          <Input
+            required
+            type='text'
+            name='token'
+            label='API Key'
+            placeholder='sk-0dfdsn23bm4m23n4MfB'
+          />
           {isCustom && (
-            <FormField label='URL' info='URL to an OpenAI compatible API'>
-              <Input
-                required
-                type='text'
-                name='url'
-                defaultValue={data?.url}
-                placeholder='http://localhost:11434/v1'
-              />
-            </FormField>
+            <Input
+              required
+              type='text'
+              name='url'
+              label='URL'
+              description='URL to your OpenAI compatible API.'
+              placeholder='http://localhost:11434/v1'
+            />
+          )}
+          {!isCustom && MODEL_OPTIONS.length ? (
+            <Select
+              name='defaultModel'
+              options={MODEL_OPTIONS}
+              {...defaultModelInputInfo}
+            />
+          ) : (
+            <Input
+              type='text'
+              name='defaultModel'
+              {...defaultModelInputInfo}
+              placeholder='llama3.2-8b'
+            />
           )}
         </FormWrapper>
       </form>

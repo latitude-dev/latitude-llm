@@ -17,15 +17,20 @@ export type Props = {
   token: string
   url?: string
   name: string
+  defaultModel?: string
   author: User
 }
 export function createProviderApiKey(
-  { workspace, provider, token, url, name, author }: Props,
+  { workspace, provider, token, url, name, defaultModel, author }: Props,
   db = database,
 ) {
   return Transaction.call(async (tx) => {
     if (provider === Providers.Custom && !url) {
       return Result.error(new BadRequestError('Custom provider requires a URL'))
+    }
+
+    if (defaultModel === '') {
+      return Result.error(new BadRequestError('Default model cannot be empty'))
     }
 
     try {
@@ -37,6 +42,7 @@ export function createProviderApiKey(
           token,
           url,
           name,
+          defaultModel,
           authorId: author.id,
         })
         .returning()

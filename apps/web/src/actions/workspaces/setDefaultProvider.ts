@@ -6,12 +6,12 @@ import { z } from 'zod'
 
 import { authProcedure } from '../procedures'
 
-export const updateWorkspaceAction = authProcedure
+export const setDefaultProviderAction = authProcedure
   .createServerAction()
   .input(
     z.object({
       workspaceId: z.number(),
-      name: z.string(),
+      defaultProviderId: z.number().nullable(),
     }),
   )
   .handler(async ({ input, ctx }) => {
@@ -22,7 +22,7 @@ export const updateWorkspaceAction = authProcedure
       .then((r) => r.unwrap())
 
     const updatedWorkspace = await updateWorkspace(workspace, {
-      name: input.name,
+      defaultProviderId: input.defaultProviderId,
     }).then((r) => r.unwrap())
 
     return updatedWorkspace

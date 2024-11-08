@@ -11,7 +11,7 @@ import {
   EvaluationResultableType,
   Providers,
 } from '../../constants'
-import { EvaluationsRepository } from '../../repositories'
+import { EvaluationsRepository, WorkspacesRepository } from '../../repositories'
 import * as factories from '../../tests/factories'
 import { createAdvancedEvaluation, createEvaluation } from './create'
 
@@ -87,6 +87,7 @@ describe('createAdvancedEvaluation', () => {
         type: Providers.OpenAI,
       })
     })
+
     it('creates an LLM as Judge evaluation with text configuration', async () => {
       const result = await createAdvancedEvaluation({
         workspace,
@@ -136,6 +137,63 @@ describe('createAdvancedEvaluation', () => {
       expect(result.value!.resultConfiguration).toMatchObject({
         minValue: 0,
         maxValue: 100,
+      })
+    })
+  })
+
+  describe('with default provider', () => {
+    beforeEach(async () => {
+      await factories.createProviderApiKey({
+        workspace,
+        user,
+        name: 'First Provider',
+        type: Providers.Anthropic,
+      })
+      provider = await factories.createProviderApiKey({
+        workspace,
+        user,
+        name: 'Default Provider',
+        type: Providers.OpenAI,
+        defaultModel: 'gpt-4o-mini',
+      })
+      await factories.setProviderAsDefault(workspace, provider)
+      const workspacesScope = new WorkspacesRepository(user.id)
+      workspace = await workspacesScope
+        .find(workspace.id)
+        .then((r) => r.unwrap())
+    })
+
+    it('creates an LLM as Judge evaluation with number configuration', async () => {
+      const name = 'Test Evaluation'
+      const description = 'Test Description'
+      const metadata = { prompt: 'Test prompt' }
+      const result = await createAdvancedEvaluation({
+        workspace,
+        user,
+        name,
+        description,
+        resultType: EvaluationResultableType.Number,
+        resultConfiguration: {
+          minValue: 0,
+          maxValue: 100,
+        },
+        metadata,
+      })
+
+      const evaluation = result.unwrap()
+      expect(evaluation).toEqual({
+        ...evaluation,
+        name,
+        description,
+        metadata: {
+          ...evaluation.metadata,
+          prompt: `---
+provider: ${provider.name}
+model: ${provider.defaultModel}
+---
+${metadata.prompt}`.trim(),
+        },
+        workspaceId: workspace.id,
       })
     })
   })
@@ -518,6 +576,61 @@ describe('createEvaluation', () => {
         falseValueDescription: 'Test False Value Description',
       })
     })
+
+    it('creates a simple evaluation with default provider', async () => {
+      await factories.createProviderApiKey({
+        workspace,
+        user,
+        name: 'First Provider',
+        type: Providers.OpenAI,
+      })
+      provider = await factories.createProviderApiKey({
+        workspace,
+        user,
+        name: 'Default Provider',
+        type: Providers.Anthropic,
+        defaultModel: 'claude-3-5-sonnet-latest',
+      })
+      await factories.setProviderAsDefault(workspace, provider)
+      const workspacesScope = new WorkspacesRepository(user.id)
+      workspace = await workspacesScope
+        .find(workspace.id)
+        .then((r) => r.unwrap())
+
+      const evaluationResult = await createEvaluation({
+        workspace,
+        user,
+        name: 'Test Evaluation',
+        description: 'Test Description',
+        metadataType: EvaluationMetadataType.LlmAsJudgeSimple,
+        metadata: {
+          objective: 'Test Objective',
+          additionalInstructions: 'Test Instructions',
+        },
+        resultType: EvaluationResultableType.Boolean,
+        resultConfiguration: {
+          trueValueDescription: 'Test True Value Description',
+          falseValueDescription: 'Test False Value Description',
+        },
+      })
+
+      expect(evaluationResult.ok).toBe(true)
+      const evaluation = await repo
+        .find(evaluationResult.value!.id)
+        .then((r) => r.unwrap())
+
+      expect(evaluation.metadata).toMatchObject({
+        providerApiKeyId: provider.id,
+        model: provider.defaultModel,
+        objective: 'Test Objective',
+        additionalInstructions: 'Test Instructions',
+      })
+
+      expect(evaluation.resultConfiguration).toMatchObject({
+        trueValueDescription: 'Test True Value Description',
+        falseValueDescription: 'Test False Value Description',
+      })
+    })
   })
 
   describe('create advanced evaluations', () => {
@@ -634,6 +747,61 @@ Test Prompt`.trim(),
       expect(evaluation.resultConfiguration).toMatchObject({
         trueValueDescription: 'Test True Value Description',
         falseValueDescription: 'Test False Value Description',
+      })
+    })
+
+    it('creates an advanced evaluation with default provider', async () => {
+      await factories.createProviderApiKey({
+        workspace,
+        user,
+        name: 'First Provider',
+        type: Providers.OpenAI,
+      })
+      provider = await factories.createProviderApiKey({
+        workspace,
+        user,
+        name: 'Default Provider',
+        type: Providers.Anthropic,
+        defaultModel: 'claude-3-5-sonnet-latest',
+      })
+      await factories.setProviderAsDefault(workspace, provider)
+      const workspacesScope = new WorkspacesRepository(user.id)
+      workspace = await workspacesScope
+        .find(workspace.id)
+        .then((r) => r.unwrap())
+
+      const evaluationResult = await createEvaluation({
+        workspace,
+        user,
+        name: 'Test Evaluation',
+        description: 'Test Description',
+        metadataType: EvaluationMetadataType.LlmAsJudgeAdvanced,
+        metadata: {
+          prompt: 'Test Prompt',
+          templateId: null,
+        },
+        resultType: EvaluationResultableType.Text,
+        resultConfiguration: {
+          valueDescription: 'Test Value Description',
+        },
+      })
+
+      expect(evaluationResult.ok).toBe(true)
+      const evaluation = await repo
+        .find(evaluationResult.value!.id)
+        .then((r) => r.unwrap())
+
+      expect(evaluation.metadata).toMatchObject({
+        prompt: `---
+provider: ${provider.name}
+model: ${provider.defaultModel}
+---
+Test Prompt`.trim(),
+        templateId: null,
+      })
+
+      expect(evaluation.resultConfiguration).toMatchObject({
+        valueDescription: 'Test Value Description',
       })
     })
   })

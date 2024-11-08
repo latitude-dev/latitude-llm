@@ -1,10 +1,11 @@
 import { faker } from '@faker-js/faker'
 
-import { Providers, User, Workspace } from '../../browser'
+import { ProviderApiKey, Providers, User, Workspace } from '../../browser'
 import {
   createProviderApiKey as createFn,
   destroyProviderApiKey,
 } from '../../services/providerApiKeys'
+import { updateWorkspace } from '../../services/workspaces'
 
 export function defaultProviderFakeData() {
   return { type: Providers.OpenAI, name: faker.internet.domainName() }
@@ -17,6 +18,8 @@ export type ICreateProvider = {
   user: User
   deletedAt?: Date
   token?: string
+  url?: string
+  defaultModel?: string
 }
 export async function createProviderApiKey({
   workspace,
@@ -25,6 +28,8 @@ export async function createProviderApiKey({
   user,
   deletedAt,
   token = `sk-${faker.string.alphanumeric(48)}`,
+  defaultModel,
+  url,
 }: ICreateProvider) {
   let providerApiKey = await createFn({
     workspace,
@@ -32,6 +37,8 @@ export async function createProviderApiKey({
     name,
     token,
     author: user,
+    defaultModel,
+    url,
   }).then((r) => r.unwrap())
 
   if (deletedAt) {
@@ -41,4 +48,11 @@ export async function createProviderApiKey({
   }
 
   return providerApiKey
+}
+
+export async function setProviderAsDefault(
+  workspace: Workspace,
+  provider: ProviderApiKey,
+) {
+  await updateWorkspace(workspace, { defaultProviderId: provider.id })
 }

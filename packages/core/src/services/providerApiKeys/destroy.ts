@@ -4,7 +4,7 @@ import { eq } from 'drizzle-orm'
 import { ProviderApiKey } from '../../browser'
 import { database } from '../../client'
 import { BadRequestError, Result, Transaction } from '../../lib'
-import { providerApiKeys } from '../../schema'
+import { providerApiKeys, workspaces } from '../../schema'
 
 export async function destroyProviderApiKey(
   providerApiKey: ProviderApiKey,
@@ -17,6 +17,11 @@ export async function destroyProviderApiKey(
   }
 
   return Transaction.call(async (tx) => {
+    await tx
+      .update(workspaces)
+      .set({ defaultProviderId: null })
+      .where(eq(workspaces.defaultProviderId, providerApiKey.id))
+
     const result = await tx
       .update(providerApiKeys)
       .set({ deletedAt: new Date(), token: `<removed-${providerApiKey.id}>` })

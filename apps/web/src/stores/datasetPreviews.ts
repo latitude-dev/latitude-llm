@@ -2,7 +2,6 @@ import type { Dataset } from '@latitude-data/core/browser'
 import { CsvParsedData } from '@latitude-data/core/lib/readCsv'
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
-import useCurrentWorkspace from '$/stores/currentWorkspace'
 import { SWRConfiguration } from 'swr'
 import useSWRImmutable from 'swr/immutable'
 
@@ -16,7 +15,6 @@ export default function useDatasetPreview(
   },
   opts?: SWRConfiguration,
 ) {
-  const { data: workspace } = useCurrentWorkspace()
   const fetcher = useFetcher(
     dataset ? ROUTES.api.datasets.detail(dataset.id).preview.root : undefined,
     {
@@ -25,7 +23,7 @@ export default function useDatasetPreview(
   )
 
   const { data = [], ...rest } = useSWRImmutable<CsvParsedData>(
-    ['workspace', workspace.id, 'datasets_preview', dataset?.id],
+    ['datasets_preview', dataset?.id],
     fetcher,
     {
       ...opts,

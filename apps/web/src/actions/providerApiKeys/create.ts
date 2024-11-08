@@ -15,6 +15,7 @@ export const createProviderApiKeyAction = authProcedure
       token: z.string(),
       url: z.string().optional(),
       name: z.string(),
+      defaultModel: z.string().optional(),
     }),
   )
   .handler(async ({ input, ctx }) => {
@@ -24,6 +25,7 @@ export const createProviderApiKeyAction = authProcedure
       token: input.token,
       url: input.url,
       name: input.name,
+      defaultModel: input.defaultModel,
       author: ctx.user,
     })
       .then((r) => r.unwrap())

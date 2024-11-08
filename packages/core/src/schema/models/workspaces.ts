@@ -1,8 +1,15 @@
-import { bigint, bigserial, text, varchar } from 'drizzle-orm/pg-core'
+import {
+  AnyPgColumn,
+  bigint,
+  bigserial,
+  text,
+  varchar,
+} from 'drizzle-orm/pg-core'
 
 import { latitudeSchema } from '../db-schema'
 import { users } from '../models/users'
 import { timestamps } from '../schemaHelpers'
+import { providerApiKeys } from './providerApiKeys'
 import { subscriptions } from './subscriptions'
 
 export const workspaces = latitudeSchema.table('workspaces', {
@@ -12,6 +19,11 @@ export const workspaces = latitudeSchema.table('workspaces', {
     mode: 'number',
   }).references(() => subscriptions.id),
   creatorId: text('creator_id').references(() => users.id, {
+    onDelete: 'set null',
+  }),
+  defaultProviderId: bigint('default_provider_id', {
+    mode: 'number',
+  }).references((): AnyPgColumn => providerApiKeys.id, {
     onDelete: 'set null',
   }),
   ...timestamps(),

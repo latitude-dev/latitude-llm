@@ -5,7 +5,6 @@ import { destroyDatasetAction } from '$/actions/datasets/destroy'
 import useFetcher from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
-import useCurrentWorkspace from '$/stores/currentWorkspace'
 import useSWR, { SWRConfiguration } from 'swr'
 
 export default function useDatasets(
@@ -18,7 +17,6 @@ export default function useDatasets(
   } = {},
   opts?: SWRConfiguration,
 ) {
-  const { data: workspace } = useCurrentWorkspace()
   const { toast } = useToast()
   const fetcher = useFetcher(ROUTES.api.datasets.root, {
     serializer: (rows) => rows.map(deserialize),
@@ -27,7 +25,7 @@ export default function useDatasets(
     data = [],
     mutate,
     ...rest
-  } = useSWR<Dataset[]>(['workspace', workspace.id, 'datasets'], fetcher, {
+  } = useSWR<Dataset[]>(['datasets'], fetcher, {
     ...opts,
     onSuccess: (data) => {
       onFetched?.(data)

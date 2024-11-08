@@ -1,3 +1,4 @@
+import { env } from '@latitude-data/env'
 import { eq } from 'drizzle-orm'
 
 import {
@@ -11,11 +12,9 @@ import { database } from '../../client'
 import { publisher } from '../../events/publisher'
 import { Result, Transaction, TypedResult } from '../../lib'
 import { BadRequestError } from '../../lib/errors'
-import {
-  DocumentVersionsRepository,
-  ProviderApiKeysRepository,
-} from '../../repositories'
+import { DocumentVersionsRepository } from '../../repositories'
 import { documentVersions } from '../../schema'
+import { findDefaultProvider } from '../providerApiKeys/findDefaultProvider'
 
 export async function createNewDocument(
   {
@@ -50,23 +49,29 @@ export async function createNewDocument(
       )
     }
 
-    const providerScope = new ProviderApiKeysRepository(workspace!.id, tx)
-    const provider = await providerScope.findFirst().then((r) => r.unwrap())
+    let metadata = ''
+
+    const provider = await findDefaultProvider(workspace, tx).then((r) =>
+      r.unwrap(),
+    )
+    if (provider) metadata += `provider: ${provider.name}`
+
+    const model = provider
+      ? findFirstModelForProvider({
+          provider,
+          latitudeProvider: env.DEFAULT_PROVIDER_ID,
+        })
+      : undefined
+    if (model) metadata += `\nmodel: ${model}`
+
+    const defaultContent = metadata ? `---\n${metadata}\n---` : ''
+
     const newDoc = await tx
       .insert(documentVersions)
       .values({
         commitId: commit.id,
         path,
-        content:
-          content ??
-          (provider
-            ? `
----
-provider: ${provider.name}
-model: ${findFirstModelForProvider(provider.provider)}
----
-        `.trim()
-            : ''),
+        content: content ?? defaultContent,
       })
       .returning()
 

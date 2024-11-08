@@ -6,7 +6,7 @@ import {
   forwardRef,
   ReactNode,
   useEffect,
-  useRef,
+  useMemo,
   useState,
 } from 'react'
 import {
@@ -65,15 +65,18 @@ const SelectValue = ({
   placeholder?: string
   selected: unknown
 }) => {
-  const flatOptions = useRef<SelectOption[]>(flattenOption(options))
-  const [option, setOption] = useState(
-    findSelected(flatOptions.current, selected),
-  )
+  const flatOptions = useMemo(() => flattenOption(options), [options])
+  const [option, setOption] = useState(findSelected(flatOptions, selected))
   useEffect(() => {
-    setOption(findSelected(flatOptions.current, selected))
-  }, [selected])
+    setOption(findSelected(flatOptions, selected))
+  }, [selected, flatOptions])
 
-  if (!option) return <SelectValuePrimitive placeholder={placeholder} />
+  if (!option)
+    return (
+      <SelectValuePrimitive placeholder={placeholder}>
+        {placeholder}
+      </SelectValuePrimitive>
+    )
 
   return (
     <SelectValueWithIcon icon={option.icon}>{option.label}</SelectValueWithIcon>
