@@ -9,7 +9,6 @@ import {
   EvaluationMetadataLlmAsJudgeSimple,
   EvaluationMetadataType,
   EvaluationResultableType,
-  EvaluationResultConfiguration,
   findFirstModelForProvider,
   IEvaluationConfiguration,
   IEvaluationMetadata,
@@ -37,6 +36,21 @@ import {
   evaluations,
 } from '../../schema'
 import { connectEvaluations } from './connect'
+
+type EvaluationResultConfigurationNumerical = {
+  minValue: number
+  maxValue: number
+} & Partial<
+  Omit<EvaluationConfigurationNumerical, 'id' | 'minValue' | 'maxValue'>
+>
+
+type EvaluationResultConfigurationText = Partial<
+  Omit<EvaluationConfigurationText, 'id'>
+>
+
+type EvaluationResultConfigurationBoolean = Partial<
+  Omit<EvaluationConfigurationBoolean, 'id'>
+>
 
 export async function createEvaluation<
   M extends EvaluationMetadataType,
@@ -71,16 +85,11 @@ export async function createEvaluation<
         : never
     resultType: R
     resultConfiguration: R extends EvaluationResultableType.Boolean
-      ? Partial<Omit<EvaluationConfigurationBoolean, 'id'>>
+      ? EvaluationResultConfigurationBoolean
       : R extends EvaluationResultableType.Number
-        ? { minValue: number; maxValue: number } & Partial<
-            Omit<
-              EvaluationConfigurationNumerical,
-              'id' | 'minValue' | 'maxValue'
-            >
-          >
+        ? EvaluationResultConfigurationNumerical
         : R extends EvaluationResultableType.Text
-          ? Partial<Omit<EvaluationConfigurationText, 'id'>>
+          ? EvaluationResultConfigurationText
           : never
     projectId?: number
     documentUuid?: string
@@ -181,7 +190,15 @@ export async function importLlmAsJudgeEvaluation(
 ) {
   const templateResult = await findEvaluationTemplateById(templateId, db)
   if (templateResult.error) return templateResult
+
   const template = templateResult.unwrap()
+  const resultConfiguration =
+    template.configuration.type === EvaluationResultableType.Number
+      ? {
+          minValue: template.configuration.detail!.range.from,
+          maxValue: template.configuration.detail!.range.to,
+        }
+      : undefined
 
   return await createAdvancedEvaluation(
     {
@@ -189,7 +206,8 @@ export async function importLlmAsJudgeEvaluation(
       workspace,
       name: template.name,
       description: template.description,
-      configuration: template.configuration,
+      resultType: template.configuration.type,
+      resultConfiguration: resultConfiguration ?? {},
       metadata: {
         prompt: template.prompt,
         templateId: template.id,
@@ -197,24 +215,6 @@ export async function importLlmAsJudgeEvaluation(
     },
     db,
   )
-}
-
-function validateConfiguration(config: EvaluationResultConfiguration) {
-  if (config.type === EvaluationResultableType.Number) {
-    if (!config.detail?.range) {
-      return Result.error(
-        new BadRequestError('Range is required for number evaluations'),
-      )
-    } else {
-      const { from, to } = config.detail.range
-      if (from >= to) {
-        return Result.error(
-          new BadRequestError('Invalid range to has to be greater than from'),
-        )
-      }
-    }
-  }
-  return Result.nil()
 }
 
 async function findProvider(workspace: Workspace, db: Database) {
@@ -236,10 +236,13 @@ async function findProvider(workspace: Workspace, db: Database) {
   return providers.find((p) => p.token === env.DEFAULT_PROVIDER_API_KEY)
 }
 
-export async function createAdvancedEvaluation(
+export async function createAdvancedEvaluation<
+  R extends EvaluationResultableType,
+>(
   {
     workspace,
-    configuration,
+    resultType,
+    resultConfiguration,
     metadata,
     ...props
   }: {
@@ -247,14 +250,24 @@ export async function createAdvancedEvaluation(
     user: User
     name: string
     description: string
-    configuration: EvaluationResultConfiguration
+    resultType: R
+    resultConfiguration: R extends EvaluationResultableType.Boolean
+      ? EvaluationResultConfigurationBoolean
+      : R extends EvaluationResultableType.Number
+        ? EvaluationResultConfigurationNumerical
+        : typeof resultType extends EvaluationResultableType.Text
+          ? EvaluationResultConfigurationText
+          : never
     metadata: { prompt: string; templateId?: number }
     projectId?: number
     documentUuid?: string
   },
   db = database,
 ): PromisedResult<EvaluationDto> {
-  const validConfig = validateConfiguration(configuration)
+  const validConfig = validateResultConfiguration({
+    resultType,
+    resultConfiguration,
+  })
   if (validConfig.error) return validConfig
 
   const provider = await findProvider(workspace, db)
@@ -275,15 +288,6 @@ ${metadata.prompt}
 `.trim()
     : metadata.prompt
 
-  const resultConfiguration = (
-    configuration.type === EvaluationResultableType.Number
-      ? {
-          minValue: configuration.detail!.range.from,
-          maxValue: configuration.detail!.range.to,
-        }
-      : {}
-  ) as IEvaluationConfiguration
-
   return createEvaluation(
     {
       workspace,
@@ -291,12 +295,36 @@ ${metadata.prompt}
       metadataType: EvaluationMetadataType.LlmAsJudgeAdvanced,
       metadata: {
         prompt: promptWithProvider,
-        configuration,
+        configuration: resultConfiguration,
         templateId: metadata.templateId ?? null,
       } as Omit<EvaluationMetadataLlmAsJudgeAdvanced, 'id'>,
-      resultType: configuration.type,
+      resultType,
       resultConfiguration,
     },
     db,
   )
+}
+
+function validateResultConfiguration({
+  resultType,
+  resultConfiguration,
+}: {
+  resultType: EvaluationResultableType
+  resultConfiguration:
+    | EvaluationResultConfigurationNumerical
+    | EvaluationResultConfigurationBoolean
+    | EvaluationResultConfigurationText
+}) {
+  if (resultType !== EvaluationResultableType.Number) {
+    return Result.ok(resultConfiguration)
+  }
+
+  const conf = resultConfiguration as EvaluationResultConfigurationNumerical
+  if (conf.minValue >= conf.maxValue) {
+    return Result.error(
+      new BadRequestError('Invalid range to has to be greater than from'),
+    )
+  }
+
+  return Result.ok(resultConfiguration)
 }

@@ -40,7 +40,9 @@ export default function GenerateEvaluationPage() {
       },
     },
   )
-  const { execute } = useLatitudeAction(createEvaluationFromPromptAction)
+  const { execute: createEvaluation } = useLatitudeAction(
+    createEvaluationFromPromptAction,
+  )
   const [generatedSuggestion, setGeneratedSuggestion] = useState<any>(null)
   const validateSuggestion = (suggestion: SuggestedEvaluation) => {
     if (
@@ -94,7 +96,7 @@ export default function GenerateEvaluationPage() {
 
     setIsCreating(true)
 
-    const [newEvaluation, error] = await execute({
+    const [newEvaluation, error] = await createEvaluation({
       projectId: project.id,
       documentUuid: document.documentUuid,
       commitUuid: commit.uuid,

@@ -32,15 +32,10 @@ describe('createAdvancedEvaluation', () => {
       user,
       name: 'Test Evaluation',
       description: 'Test Description',
-
-      configuration: {
-        type: EvaluationResultableType.Text,
-        detail: {
-          range: {
-            from: 0,
-            to: 100,
-          },
-        },
+      resultType: EvaluationResultableType.Number,
+      resultConfiguration: {
+        minValue: 0,
+        maxValue: 100,
       },
       metadata: {
         prompt: 'miau',
@@ -69,16 +64,8 @@ describe('createAdvancedEvaluation', () => {
         user,
         name: 'Test Evaluation',
         description: 'Test Description',
-
-        configuration: {
-          type: EvaluationResultableType.Text,
-          detail: {
-            range: {
-              from: 0,
-              to: 100,
-            },
-          },
-        },
+        resultType: EvaluationResultableType.Text,
+        resultConfiguration: {},
         metadata: {
           prompt: 'miau',
         },
@@ -106,15 +93,8 @@ describe('createAdvancedEvaluation', () => {
         user,
         name: 'Test Evaluation',
         description: 'Test Description',
-        configuration: {
-          type: EvaluationResultableType.Text,
-          detail: {
-            range: {
-              from: 0,
-              to: 100,
-            },
-          },
-        },
+        resultType: EvaluationResultableType.Text,
+        resultConfiguration: {},
         metadata: {
           prompt: 'miau',
         },
@@ -142,14 +122,10 @@ describe('createAdvancedEvaluation', () => {
         user,
         name: 'Test Evaluation',
         description: 'Test Description',
-        configuration: {
-          type: EvaluationResultableType.Number,
-          detail: {
-            range: {
-              from: 0,
-              to: 100,
-            },
-          },
+        resultType: EvaluationResultableType.Number,
+        resultConfiguration: {
+          minValue: 0,
+          maxValue: 100,
         },
         metadata: {
           prompt: 'miau',
@@ -182,14 +158,10 @@ describe('createAdvancedEvaluation', () => {
         user,
         name,
         description,
-        configuration: {
-          type: EvaluationResultableType.Number,
-          detail: {
-            range: {
-              from: 0,
-              to: 100,
-            },
-          },
+        resultType: EvaluationResultableType.Number,
+        resultConfiguration: {
+          minValue: 0,
+          maxValue: 100,
         },
         metadata,
       })
@@ -223,9 +195,8 @@ ${metadata.prompt}
         user,
         name,
         description,
-        configuration: {
-          type: EvaluationResultableType.Text,
-        },
+        resultType: EvaluationResultableType.Text,
+        resultConfiguration: {},
 
         metadata,
       })
@@ -248,10 +219,8 @@ ${metadata.prompt}
         user,
         name,
         description,
-
-        configuration: {
-          type: EvaluationResultableType.Boolean,
-        },
+        resultType: EvaluationResultableType.Boolean,
+        resultConfiguration: {},
         metadata,
       })
 
@@ -279,9 +248,8 @@ ${metadata.prompt}
         user,
         name: 'Test Evaluation',
         description: 'Test Description',
-        configuration: {
-          type: EvaluationResultableType.Text,
-        },
+        resultType: EvaluationResultableType.Text,
+        resultConfiguration: {},
         metadata,
       })
 
@@ -297,42 +265,16 @@ ${metadata.prompt}
       ).toBe(template.id)
     })
 
-    it('does not allow to create a number type evaluation without proper configuration', async () => {
-      const result = await createAdvancedEvaluation({
-        workspace,
-        user,
-        name: 'Test Evaluation',
-        description: 'Test Description',
-
-        configuration: {
-          type: EvaluationResultableType.Number,
-        },
-        metadata: {
-          prompt: 'miau',
-        },
-      })
-
-      expect(result.ok).toBe(false)
-      expect(result.error!.message).toContain(
-        'Range is required for number evaluations',
-      )
-    })
-
     it('does not allow to create a number type evaluation with invalid range', async () => {
       const result = await createAdvancedEvaluation({
         workspace,
         user,
         name: 'Test Evaluation',
         description: 'Test Description',
-
-        configuration: {
-          type: EvaluationResultableType.Number,
-          detail: {
-            range: {
-              from: 100,
-              to: 0,
-            },
-          },
+        resultType: EvaluationResultableType.Number,
+        resultConfiguration: {
+          minValue: 100,
+          maxValue: 0,
         },
         metadata: {
           prompt: 'miau',
@@ -351,15 +293,10 @@ ${metadata.prompt}
         user,
         name: 'Test Evaluation',
         description: 'Test Description',
-
-        configuration: {
-          type: EvaluationResultableType.Number,
-          detail: {
-            range: {
-              from: 0,
-              to: 0,
-            },
-          },
+        resultType: EvaluationResultableType.Number,
+        resultConfiguration: {
+          minValue: 0,
+          maxValue: 0,
         },
         metadata: {
           prompt: 'miau',

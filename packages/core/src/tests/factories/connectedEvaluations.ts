@@ -28,9 +28,8 @@ export async function createConnectedEvaluation({
       workspace,
       name: faker.company.name(),
       description: faker.lorem.sentence(),
-      configuration: {
-        type: EvaluationResultableType.Boolean,
-      },
+      resultType: EvaluationResultableType.Boolean,
+      resultConfiguration: {},
       metadata: {
         prompt: faker.lorem.sentence(),
       },

@@ -27,13 +27,22 @@ export async function createLlmAsJudgeEvaluation({
     type: EvaluationResultableType.Text,
   },
 }: IEvaluationData) {
+  const resultConfiguration =
+    configuration.type === EvaluationResultableType.Number
+      ? {
+          minValue: configuration.detail!.range.from,
+          maxValue: configuration.detail!.range.to,
+        }
+      : undefined
+
   const evaluationResult = await createEvaluationService({
     workspace,
     user,
     metadata: { prompt: prompt ?? faker.lorem.sentence() },
     name: name ?? faker.company.catchPhrase(),
     description: description ?? faker.lorem.sentence(),
-    configuration,
+    resultType: configuration.type,
+    resultConfiguration: resultConfiguration ?? {},
   })
 
   return evaluationResult.unwrap()
