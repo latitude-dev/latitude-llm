@@ -18,10 +18,7 @@ export async function render({
   parameters?: Record<string, unknown>
 } & CompileOptions): Promise<Conversation> {
   const iterator = new Chain({ prompt, parameters, ...compileOptions })
-  const { conversation, completed } = await iterator.step()
-  if (!completed) {
-    throw new Error('Use a Chain to render prompts with multiple steps')
-  }
+  const { conversation } = await iterator.step()
   return conversation
 }
 

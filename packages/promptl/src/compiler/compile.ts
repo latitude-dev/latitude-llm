@@ -54,7 +54,7 @@ export class Compile {
   private defaultRole: MessageRole
 
   private messages: Message[] = []
-  private config: Config | undefined
+  private globalConfig: Config | undefined
   private stepResponse: MessageContent[] | undefined
 
   private accumulatedText: string = ''
@@ -90,6 +90,7 @@ export class Compile {
       await this.resolveBaseNode({
         node: this.ast,
         scope: this.globalScope,
+        isInsideStepTag: false,
         isInsideMessageTag: false,
         isInsideContentTag: false,
       })
@@ -107,8 +108,8 @@ export class Compile {
     return {
       ast: this.ast,
       scopeStash: this.globalScope.getStash(),
+      globalConfig: this.globalConfig,
       messages: this.messages,
-      globalConfig: this.config,
       stepConfig,
       completed,
     }
@@ -123,8 +124,8 @@ export class Compile {
   }
 
   private setConfig(config: Config): void {
-    if (this.config !== undefined) return
-    this.config = config
+    if (this.globalConfig !== undefined) return
+    this.globalConfig = config
   }
 
   private addStrayText(text: string) {
@@ -204,6 +205,7 @@ export class Compile {
   private async resolveBaseNode({
     node,
     scope,
+    isInsideStepTag,
     isInsideMessageTag,
     isInsideContentTag,
     completedValue = true,
@@ -232,6 +234,7 @@ export class Compile {
     const context: CompileNodeContext<TemplateNode> = {
       node,
       scope,
+      isInsideStepTag,
       isInsideMessageTag,
       isInsideContentTag,
       resolveBaseNode: resolveBaseNodeFn.bind(this),

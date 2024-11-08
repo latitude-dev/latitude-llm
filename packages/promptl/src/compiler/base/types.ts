@@ -35,7 +35,7 @@ type RaiseErrorFn<T = void | never, N = TemplateNode | LogicalExpression> = (
 type NodeStatus = {
   completedAs?: unknown
   scopePointers?: ScopePointers | undefined
-  eachIterationIndex?: number
+  loopIterationIndex?: number
 }
 
 export type TemplateNodeWithStatus = TemplateNode & {
@@ -53,11 +53,12 @@ export type CompileNodeContext<N extends TemplateNode> = {
   baseNodeError: RaiseErrorFn<never, TemplateNode>
   expressionError: RaiseErrorFn<never, LogicalExpression>
 
+  isInsideStepTag: boolean
   isInsideMessageTag: boolean
   isInsideContentTag: boolean
 
   setConfig: (config: Config) => void
-  addMessage: (message: Message) => void
+  addMessage: (message: Message, global?: boolean) => void
   addStrayText: (text: string) => void
   popStrayText: () => string
   groupStrayText: () => void

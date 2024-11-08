@@ -117,6 +117,7 @@ export class ReadMetadata {
     await this.readBaseMetadata({
       node: fragment,
       scopeContext,
+      isInsideStepTag: false,
       isInsideMessageTag: false,
       isInsideContentTag: false,
       isRoot: true,
@@ -223,12 +224,14 @@ export class ReadMetadata {
   private async readBaseMetadata({
     node,
     scopeContext,
+    isInsideStepTag,
     isInsideMessageTag,
     isInsideContentTag,
     isRoot = false,
   }: {
     node: TemplateNode
     scopeContext: ScopeContext
+    isInsideStepTag: boolean
     isInsideMessageTag: boolean
     isInsideContentTag: boolean
     isRoot?: boolean
@@ -238,6 +241,7 @@ export class ReadMetadata {
         await this.readBaseMetadata({
           node: childNode,
           scopeContext,
+          isInsideStepTag,
           isInsideMessageTag,
           isInsideContentTag,
           isRoot,
@@ -345,6 +349,7 @@ export class ReadMetadata {
         await this.readBaseMetadata({
           node: childNode,
           scopeContext: ifScope,
+          isInsideStepTag,
           isInsideMessageTag,
           isInsideContentTag,
         })
@@ -353,6 +358,7 @@ export class ReadMetadata {
         await this.readBaseMetadata({
           node: childNode,
           scopeContext: elseScope,
+          isInsideStepTag,
           isInsideMessageTag,
           isInsideContentTag,
         })
@@ -368,6 +374,7 @@ export class ReadMetadata {
         await this.readBaseMetadata({
           node: childNode,
           scopeContext: elseScope,
+          isInsideStepTag,
           isInsideMessageTag,
           isInsideContentTag,
         })
@@ -399,6 +406,7 @@ export class ReadMetadata {
         await this.readBaseMetadata({
           node: childNode,
           scopeContext: iterableScope,
+          isInsideStepTag,
           isInsideMessageTag,
           isInsideContentTag,
         })
@@ -412,7 +420,6 @@ export class ReadMetadata {
       if (isContentTag(node)) {
         if (isInsideContentTag) {
           this.baseNodeError(errors.contentTagInsideContent, node)
-          return
         }
 
         if (node.name === ContentTypeTagName.toolCall) {
@@ -436,6 +443,7 @@ export class ReadMetadata {
           await this.readBaseMetadata({
             node: childNode,
             scopeContext,
+            isInsideStepTag,
             isInsideMessageTag,
             isInsideContentTag: true,
           })
@@ -446,7 +454,6 @@ export class ReadMetadata {
       if (isMessageTag(node)) {
         if (isInsideContentTag || isInsideMessageTag) {
           this.baseNodeError(errors.messageTagInsideMessage, node)
-          return
         }
 
         const attributes = await this.listTagAttributes({
@@ -480,6 +487,7 @@ export class ReadMetadata {
           await this.readBaseMetadata({
             node: childNode,
             scopeContext,
+            isInsideStepTag,
             isInsideMessageTag: true,
             isInsideContentTag,
           })
@@ -610,11 +618,25 @@ export class ReadMetadata {
       }
 
       if (isChainStepTag(node)) {
+        if (isInsideStepTag) {
+          this.baseNodeError(errors.stepTagInsideStep, node)
+        }
+
         const attributes = await this.listTagAttributes({
           tagNode: node,
           scopeContext,
           literalAttributes: ['as'],
         })
+
+        for await (const childNode of node.children ?? []) {
+          await this.readBaseMetadata({
+            node: childNode,
+            scopeContext,
+            isInsideStepTag: true,
+            isInsideMessageTag: true,
+            isInsideContentTag,
+          })
+        }
 
         if (attributes.has('as')) {
           const asAttribute = node.attributes.find((a) => a.name === 'as')!
@@ -622,10 +644,6 @@ export class ReadMetadata {
             const asValue = asAttribute.value.map((n) => n.data).join('')
             scopeContext.definedVariables.add(asValue)
           }
-        }
-
-        if (node.children.length) {
-          this.baseNodeError(errors.invalidStepChildren, node)
         }
 
         return

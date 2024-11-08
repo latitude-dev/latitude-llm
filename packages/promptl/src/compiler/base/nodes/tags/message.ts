@@ -20,6 +20,7 @@ export async function compile(
   const {
     node,
     scope,
+    isInsideStepTag,
     isInsideMessageTag,
     isInsideContentTag,
     resolveBaseNode,
@@ -49,6 +50,7 @@ export async function compile(
     await resolveBaseNode({
       node: childNode,
       scope,
+      isInsideStepTag,
       isInsideMessageTag: true,
       isInsideContentTag,
     })

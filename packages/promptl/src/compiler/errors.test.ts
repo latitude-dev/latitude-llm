@@ -123,6 +123,21 @@ describe(`all compilation errors that don't require value resolution are caught 
     })
   })
 
+  it('step-tag-inside-step', async () => {
+    const prompt = `
+      <step>
+        <step>
+          Foo
+        </step>
+      </step>
+    `
+
+    await expectBothErrors({
+      code: 'step-tag-inside-step',
+      prompt,
+    })
+  })
+
   it('message-tag-inside-message', async () => {
     const prompt = `
       <system>

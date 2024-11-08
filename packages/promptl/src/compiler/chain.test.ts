@@ -2,20 +2,18 @@ import { CHAIN_STEP_TAG } from '$promptl/constants'
 import CompileError from '$promptl/error/error'
 import { getExpectedError } from '$promptl/test/helpers'
 import {
-  AssistantMessage,
-  ContentType,
   Conversation,
+  MessageContent,
   MessageRole,
   TextContent,
-  UserMessage,
 } from '$promptl/types'
 import { describe, expect, it, vi } from 'vitest'
 
-import { Chain } from './chain'
+import { buildStepResponseContent, Chain } from './chain'
 import { removeCommonIndent } from './utils'
 
 async function defaultCallback(): Promise<string> {
-  return ''
+  return 'RESPONSE'
 }
 
 async function complete({
@@ -26,20 +24,39 @@ async function complete({
   chain: Chain
   callback?: (convo: Conversation) => Promise<string>
   maxSteps?: number
-}): Promise<Conversation> {
+}): Promise<{
+  response: MessageContent[]
+  conversation: Conversation
+  steps: number
+}> {
   let steps = 0
-  let response: string | undefined = undefined
-  while (true) {
-    const { completed, conversation } = await chain.step(response)
-    if (completed) return conversation
-    response = await (callback ?? defaultCallback)(conversation)
+  let conversation: Conversation
 
+  let responseContent: MessageContent[] | undefined
+  while (true) {
+    const { completed, conversation: _conversation } =
+      await chain.step(responseContent)
+
+    conversation = _conversation
+
+    if (completed) return { conversation, steps, response: responseContent! }
+
+    const response = await (callback ?? defaultCallback)(conversation)
+    responseContent = buildStepResponseContent(response)
     steps++
+
     if (steps > maxSteps) throw new Error('too many chain steps')
   }
 }
 
 describe('chain', async () => {
+  it('does not return "completed" in the first iteration', async () => {
+    const prompt = 'Hello world'
+    const chain = new Chain({ prompt })
+    const { completed } = await chain.step()
+    expect(completed).toBe(false)
+  })
+
   it('computes in a single iteration when there is no step tag', async () => {
     const prompt = removeCommonIndent(`
       {{ foo = 'foo' }}
@@ -60,200 +77,225 @@ describe('chain', async () => {
       prompt: removeCommonIndent(prompt),
       parameters: {},
     })
-    const { completed } = await chain.step()
-    expect(completed).toBe(true)
+    const { steps, conversation } = await complete({ chain })
+    expect(steps).toBe(1)
+    expect(conversation.messages.length).toBe(6) // This conversation includes the assistant response
+    expect(conversation.messages[0]!.role).toBe(MessageRole.system)
+    expect(conversation.messages[1]!.role).toBe(MessageRole.user)
+    expect(conversation.messages[2]!.role).toBe(MessageRole.user)
+    expect(conversation.messages[3]!.role).toBe(MessageRole.user)
+    expect(conversation.messages[4]!.role).toBe(MessageRole.assistant) // manually set
+    expect(conversation.messages[5]!.role).toBe(MessageRole.assistant)
   })
 
-  it('correctly computes the whole prompt in a single iteration', async () => {
+  it('fails when nesting steps', async () => {
     const prompt = removeCommonIndent(`
-      {{foo = 'foo'}}
-      System message
-
-      {{for element in [1, 2, 3]}}
-        <user>
-          User message: {{element}}
-        </user>
-      {{endfor}}
-
-      <assistant>
-        Assistant message: {{foo}}
-      </assistant>
+      <step>
+        <step>
+          Hello World!
+        </step>
+      </step>
     `)
 
-    const chain = new Chain({
-      prompt: removeCommonIndent(prompt),
-      parameters: {},
-    })
-
-    const { conversation } = await chain.step()
-    expect(conversation.messages.length).toBe(5)
-
-    const systemMessage = conversation.messages[0]!
-    expect(systemMessage.role).toBe('system')
-    expect(systemMessage.content).toEqual([
-      {
-        type: 'text',
-        text: 'System message',
-      },
-    ])
-
-    const userMessage = conversation.messages[1]! as UserMessage
-    expect(userMessage.role).toBe('user')
-    expect((userMessage.content[0]! as TextContent).text).toBe(
-      'User message: 1',
-    )
-
-    const userMessage2 = conversation.messages[2]! as UserMessage
-    expect(userMessage2.role).toBe('user')
-    expect((userMessage2.content[0]! as TextContent).text).toBe(
-      'User message: 2',
-    )
-
-    const userMessage3 = conversation.messages[3]! as UserMessage
-    expect(userMessage3.role).toBe('user')
-    expect((userMessage3.content[0]! as TextContent).text).toBe(
-      'User message: 3',
-    )
-
-    const assistantMessage = conversation.messages[4]! as AssistantMessage
-    expect(assistantMessage.role).toBe('assistant')
-    expect(assistantMessage.content).toEqual([
-      {
-        type: 'text',
-        text: 'Assistant message: foo',
-      },
-    ])
+    const chain = new Chain({ prompt })
+    const action = () => chain.step()
+    const error = await getExpectedError(action, CompileError)
+    expect(error.code).toBe('step-tag-inside-step')
   })
 
   it('stops at a step tag', async () => {
     const prompt = removeCommonIndent(`
-      Message 1
+      <step>
+        Message 1
+      </step>
 
-      <${CHAIN_STEP_TAG} />
-
-      Message 2
+      <step>
+        Message 2
+      </step>
     `)
 
-    const chain = new Chain({
-      prompt,
-      parameters: {},
-    })
+    const chain = new Chain({ prompt })
 
-    const { completed: completed1, conversation: conversation1 } =
-      await chain.step()
-
+    const { completed: completed1, conversation: step1 } = await chain.step()
     expect(completed1).toBe(false)
-    expect(conversation1.messages.length).toBe(1)
-    expect(conversation1.messages[0]).toEqual({
-      role: MessageRole.system,
-      content: [
-        {
-          type: 'text',
-          text: 'Message 1',
-        },
-      ],
-    })
+    expect(step1.messages.length).toBe(1) // The message in the first step
 
-    const { completed: completed2, conversation: conversation2 } =
-      await chain.step('response')
-
-    expect(completed2).toBe(true)
-    expect(conversation2.messages.length).toBe(3)
-    expect(conversation2.messages[0]).toEqual({
-      role: MessageRole.system,
-      content: [
-        {
-          type: 'text',
-          text: 'Message 1',
-        },
-      ],
-    })
-    expect(conversation2.messages[1]!.content.length).toBe(1)
-    expect(conversation2.messages[1]!.content[0]!.type).toBe(ContentType.text)
-    expect((conversation2.messages[1]!.content[0] as TextContent).text).toBe(
-      'response',
+    const { completed: completed2, conversation: step2 } = await chain.step(
+      'Response from step 1',
     )
+    expect(completed2).toBe(false)
+    expect(step2.messages.length).toBe(3) // Message in the first step, response, and message from second step
 
-    expect(conversation2.messages[2]!).toEqual({
-      role: MessageRole.system,
-      content: [
-        {
-          type: 'text',
-          text: 'Message 2',
-        },
-      ],
-    })
+    const { completed: completed3, conversation: step3 } = await chain.step(
+      'Response from step 2',
+    )
+    expect(completed3).toBe(true) // The chain has completed
+    expect(step3.messages.length).toBe(4) // Same as before + response from step 2
   })
 
   it('fails when an assistant message is not provided in followup steps', async () => {
     const prompt = removeCommonIndent(`
-      Before step
-      <${CHAIN_STEP_TAG} />
-      After step
+      <step>
+        Before step
+      </step>
+      <step>
+        After step
+      </step>
     `)
 
-    const chain = new Chain({
-      prompt,
-      parameters: {},
-    })
+    const chain = new Chain({ prompt })
 
     await chain.step()
     const action = () => chain.step()
     const error = await getExpectedError(action, Error)
-    expect(error.message).toBe('A response is required to continue a chain')
+    expect(error.message).toBe('A response is required to continue the chain')
   })
 
-  it('fails when an assistant message is provided in the initial step', async () => {
+  it('fails when an assistant message "response" is provided before compiling the first step', async () => {
     const prompt = removeCommonIndent(`
-      Before step
-      <${CHAIN_STEP_TAG} />
-      After step
+      <step>
+        Before step
+      </step>
+      <step>
+        After step
+      </step>
     `)
 
-    const chain = new Chain({
-      prompt,
-      parameters: {},
-    })
+    const chain = new Chain({ prompt })
 
-    const action = () => chain.step('')
+    const action = () => chain.step('Made up response')
     const error = await getExpectedError(action, Error)
     expect(error.message).toBe(
       'A response is not allowed before the chain has started',
     )
   })
 
-  it('fails when calling step after the chain has completed', async () => {
+  it('fails when calling chain.step after the chain has completed', async () => {
     const prompt = removeCommonIndent(`
-      <${CHAIN_STEP_TAG} />
-      <${CHAIN_STEP_TAG} />
-      <${CHAIN_STEP_TAG} />
-      <${CHAIN_STEP_TAG} />
+      <step />
+      <step />
+      <step />
+      <step />
     `)
 
-    const chain = new Chain({
-      prompt,
-      parameters: {},
-    })
+    const chain = new Chain({ prompt })
 
-    let { completed: stop } = await chain.step()
-    while (!stop) {
-      await new Promise((resolve) => setTimeout(resolve, 100))
-      const { completed } = await chain.step('')
-      stop = completed
-    }
-
+    await complete({ chain })
     const action = () => chain.step()
     const error = await getExpectedError(action, Error)
     expect(error.message).toBe('The chain has already completed')
   })
 
+  it('allows adding steps conditionally', async () => {
+    const prompt = removeCommonIndent(`
+      <step>
+        Step 1
+      </step>
+
+      {{ if false }}
+        <step>
+          Step 2
+        </step>
+      {{ endif }}
+
+      {{ if true }}
+        <step>
+          Step 3
+        </step>
+      {{ endif }}
+
+      <step>
+        Step 4
+      </step>
+    `)
+
+    const chain = new Chain({ prompt })
+    const { steps, conversation } = await complete({ chain })
+    expect(steps).toBe(3)
+    const stepMessages = conversation.messages.filter(
+      (m) => m.role === MessageRole.system,
+    )
+    expect(stepMessages.length).toBe(3)
+    expect((stepMessages[0]!.content[0] as TextContent).text).toBe('Step 1')
+    expect((stepMessages[1]!.content[0] as TextContent).text).toBe('Step 3')
+    expect((stepMessages[2]!.content[0] as TextContent).text).toBe('Step 4')
+  })
+
+  it('allows the last step to be conditional', async () => {
+    const prompt = removeCommonIndent(`
+      <step>
+        Step 1
+      </step>
+
+      {{ if false }}
+        <step>
+          Step 2
+        </step>
+      {{ endif }}
+    `)
+
+    const chain = new Chain({ prompt })
+    const { steps, conversation } = await complete({ chain })
+    expect(steps).toBe(1)
+    expect(conversation.messages.length).toBe(2)
+    expect((conversation.messages[0]!.content[0] as TextContent).text).toBe(
+      'Step 1',
+    )
+  })
+
+  it('isolated steps do not include previous messages', async () => {
+    const prompt = removeCommonIndent(`
+      <step>
+        First step
+      </step>
+
+      <step isolated>
+        Isolated step
+      </step>
+
+      <step>
+        Last step
+      </step>
+    `)
+
+    const chain = new Chain({ prompt })
+
+    const { conversation: step1 } = await chain.step()
+    expect(step1.messages.length).toBe(1)
+    expect((step1.messages[0]!.content[0] as TextContent).text).toBe(
+      'First step',
+    )
+
+    const { conversation: step2 } = await chain.step('First step response')
+    expect(step2.messages.length).toBe(1)
+    expect((step2.messages[0]!.content[0] as TextContent).text).toBe(
+      'Isolated step',
+    )
+
+    const { conversation: step3 } = await chain.step('Isolated step response')
+    expect(step3.messages.length).toBe(3) // First step, first response, and last step
+    expect((step3.messages[0]!.content[0] as TextContent).text).toBe(
+      'First step',
+    )
+    expect((step3.messages[1]!.content[0] as TextContent).text).toBe(
+      'First step response',
+    )
+    expect((step3.messages[2]!.content[0] as TextContent).text).toBe(
+      'Last step',
+    )
+
+    const { completed } = await chain.step('Last step response')
+    expect(completed).toBe(true)
+  })
+
   it('does not reevaluate nodes', async () => {
     const prompt = removeCommonIndent(`
-      {{func1()}}
-
-      <${CHAIN_STEP_TAG} />
-
-      {{func2()}}
+      <step>
+        {{func1()}}
+      </step>
+      <step>
+        {{func2()}}
+      </step>
     `)
 
     const func1 = vi.fn().mockReturnValue('1')
@@ -267,7 +309,8 @@ describe('chain', async () => {
       },
     })
 
-    const conversation = await complete({ chain })
+    const { conversation } = await complete({ chain })
+
     expect(conversation.messages[0]!).toEqual({
       role: MessageRole.system,
       content: [
@@ -282,7 +325,7 @@ describe('chain', async () => {
       content: [
         {
           type: 'text',
-          text: '',
+          text: 'RESPONSE',
         },
       ],
     })
@@ -301,24 +344,23 @@ describe('chain', async () => {
 
   it('maintains the scope on simple structures', async () => {
     const prompt = removeCommonIndent(`
-      {{foo = 5}}
+      <step>
+        {{foo = 5}}
+      </step>
 
-      <${CHAIN_STEP_TAG} />
+      <step>
+        {{foo += 1}}
+      </step>
 
-      {{foo += 1}}
-
-      <${CHAIN_STEP_TAG} />
-
-      {{foo}}
+      <step>
+        {{foo}}
+      </step>
     `)
 
-    const chain = new Chain({
-      prompt,
-      parameters: {},
-    })
+    const chain = new Chain({ prompt })
+    const { conversation } = await complete({ chain })
 
-    const conversation = await complete({ chain })
-    expect(conversation.messages[conversation.messages.length - 1]).toEqual({
+    expect(conversation.messages[conversation.messages.length - 2]).toEqual({
       role: MessageRole.system,
       content: [
         {
@@ -334,8 +376,10 @@ describe('chain', async () => {
       {{foo = 5}}
 
       {{if true}}
-        <${CHAIN_STEP_TAG} />
         {{foo += 1}}
+        <step>
+          {{ foo += 2 }}
+        </step>
       {{endif}}
 
       {{foo}}
@@ -346,24 +390,23 @@ describe('chain', async () => {
 
       {{if true}}
         {{bar = 1}}
-        <${CHAIN_STEP_TAG} />
+        <step>
+          {{ bar++}}
+        </step>
       {{endif}}
 
       {{bar}}
     `)
 
-    const correctChain = new Chain({
-      prompt: correctPrompt,
-      parameters: {},
-    })
+    const correctChain = new Chain({ prompt: correctPrompt })
+    const { conversation } = await complete({ chain: correctChain })
 
-    const conversation = await complete({ chain: correctChain })
-    expect(conversation.messages[conversation.messages.length - 1]!).toEqual({
+    expect(conversation.messages[conversation.messages.length - 2]!).toEqual({
       role: MessageRole.system,
       content: [
         {
           type: 'text',
-          text: '6',
+          text: '8',
         },
       ],
     })
@@ -378,16 +421,17 @@ describe('chain', async () => {
     expect(error.code).toBe('variable-not-declared')
   })
 
-  it('maintains the scope in each blocks', async () => {
+  it('maintains the scope in for loops', async () => {
     const prompt = removeCommonIndent(`
       {{ foo = 0 }}
 
       {{for element in [1, 2, 3]}}
-        <user>
-          {{foo}}
-        </user>
-
-        <${CHAIN_STEP_TAG} />
+      
+        <step>
+          <user>
+            {{foo}}
+          </user>
+        </step>
 
         {{foo = element}}
       {{endfor}}
@@ -395,13 +439,10 @@ describe('chain', async () => {
       {{foo}}
     `)
 
-    const chain = new Chain({
-      prompt,
-      parameters: {},
-    })
+    const chain = new Chain({ prompt })
 
-    const conversation = await complete({ chain, maxSteps: 5 })
-    expect(conversation.messages.length).toBe(7)
+    const { conversation } = await complete({ chain, maxSteps: 6 })
+    expect(conversation.messages.length).toBe(8)
     expect((conversation.messages[0]!.content[0]! as TextContent).text).toBe(
       '0',
     )
@@ -426,16 +467,13 @@ describe('chain', async () => {
     const prompt = removeCommonIndent(`
       {{for i in [1, 2, 3]}}
         {{foo = i}}
-        <${CHAIN_STEP_TAG} />
+        <step />
       {{endfor}}
 
       {{foo}}
     `)
 
-    const chain = new Chain({
-      prompt,
-      parameters: {},
-    })
+    const chain = new Chain({ prompt })
 
     const action = () => complete({ chain })
     const error = await getExpectedError(action, CompileError)
@@ -462,12 +500,9 @@ describe('chain', async () => {
       {{endfor}}
     `)
 
-    const chain = new Chain({
-      prompt,
-      parameters: {},
-    })
+    const chain = new Chain({ prompt })
 
-    const conversation = await complete({ chain })
+    const { conversation } = await complete({ chain })
     const userMessages = conversation.messages.filter(
       (m) => m.role === MessageRole.user,
     )
@@ -488,7 +523,7 @@ describe('chain', async () => {
     `),
     )
 
-    expect(conversation.messages[conversation.messages.length - 1]).toEqual({
+    expect(conversation.messages[conversation.messages.length - 2]).toEqual({
       role: MessageRole.system,
       content: [
         {
@@ -506,10 +541,7 @@ describe('chain', async () => {
       {{response}}
     `)
 
-    const chain = new Chain({
-      prompt,
-      parameters: {},
-    })
+    const chain = new Chain({ prompt })
 
     await chain.step()
     const { conversation } = await chain.step('foo')
@@ -535,15 +567,12 @@ describe('chain', async () => {
       model: foo-1
       temperature: 0.5
       ---
-      <response />                /* step1 */
-      <response model="foo-2" />  /* step2 */
-      <response temperature={{1}} />  /* step3 */
+      <step />                /* step1 */
+      <step model="foo-2" />  /* step2 */
+      <step temperature={{1}} />  /* step3 */
     `)
 
-    const chain = new Chain({
-      prompt,
-      parameters: {},
-    })
+    const chain = new Chain({ prompt })
 
     const { conversation: step1 } = await chain.step()
     expect(step1.config.model).toBe('foo-1')
