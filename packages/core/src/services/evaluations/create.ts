@@ -151,12 +151,15 @@ export async function createEvaluation<
       .then((r) => r[0]!)
 
     if (projectId && documentUuid) {
-      await connectEvaluations({
-        workspace,
-        documentUuid,
-        evaluationUuids: [evaluation.uuid],
-        user,
-      })
+      await connectEvaluations(
+        {
+          workspace,
+          documentUuid,
+          evaluationUuids: [evaluation.uuid],
+          user,
+        },
+        tx,
+      ).then((r) => r.unwrap())
     }
 
     publisher.publishLater({
