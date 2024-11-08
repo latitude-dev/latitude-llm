@@ -36,7 +36,8 @@ export async function createLoopsContact({
   })
 
   if (!response.success) {
-    // This will be capture by Workers Sentry
+    if (!!response.message.match('Email or userId is already on list')) return
+
     throw new Error(`For email: ${userEmail}: ${response.message}`)
   }
 
