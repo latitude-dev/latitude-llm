@@ -94,6 +94,7 @@
   }
 
   .dark {
+    --background-code: 0 0% 11%;
     --background-gray: 0 0% 10%;
     --background: 0 0% 7%;
     --foreground: 0 0% 98%;

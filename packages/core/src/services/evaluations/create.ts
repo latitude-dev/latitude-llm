@@ -93,6 +93,12 @@ export async function createEvaluation<
   },
   db = database,
 ): PromisedResult<EvaluationDto> {
+  const validConfig = validateResultConfiguration({
+    resultType,
+    resultConfiguration,
+  })
+  if (validConfig.error) return validConfig
+
   const metadataTables = {
     [EvaluationMetadataType.LlmAsJudgeAdvanced]:
       evaluationMetadataLlmAsJudgeAdvanced,
@@ -245,12 +251,6 @@ export async function createAdvancedEvaluation<
   },
   db = database,
 ): PromisedResult<EvaluationDto> {
-  const validConfig = validateResultConfiguration({
-    resultType,
-    resultConfiguration,
-  })
-  if (validConfig.error) return validConfig
-
   const provider = await findDefaultProvider(workspace, db)
   if (!provider) {
     return Result.error(
@@ -303,7 +303,9 @@ function validateResultConfiguration({
   const conf = resultConfiguration as EvaluationResultConfigurationNumerical
   if (conf.minValue >= conf.maxValue) {
     return Result.error(
-      new BadRequestError('Invalid range to has to be greater than from'),
+      new BadRequestError(
+        'Invalid range min value has to be less than max value',
+      ),
     )
   }
 
