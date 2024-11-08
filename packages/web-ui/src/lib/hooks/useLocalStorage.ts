@@ -13,6 +13,8 @@ export enum AppLocalStorage {
   editorMinimap = 'editorMinimap',
   editorCopilot = 'editorCopilot',
   playgroundInputs = 'playgroundInputs',
+  playgroundParameterSource = 'playgroundParameterSource',
+  playgroundParamsSelectedDatasetRow = 'playgroundParamsSelectedDatasetRow',
 }
 
 const isLocalStorageAvailable = (() => {

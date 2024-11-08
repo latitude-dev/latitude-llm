@@ -18,7 +18,7 @@ const TooltipRoot = TooltipPrimitive.Root
 
 const TooltipTrigger = TooltipPrimitive.Trigger
 
-type TooltipVariant = 'default' | 'destructive' | 'inverse'
+export type TooltipVariant = 'default' | 'destructive' | 'inverse'
 type PropviderProps = ComponentPropsWithoutRef<typeof TooltipProvider>
 type RootProps = ComponentPropsWithoutRef<typeof TooltipRoot>
 type ContentProps = ComponentPropsWithoutRef<
@@ -60,7 +60,7 @@ const TooltipContent = forwardRef<
 )
 TooltipContent.displayName = TooltipPrimitive.Content.displayName
 
-function useTextContentColor(variant: TooltipVariant): TextColor {
+function useTooltipTextContentColor(variant: TooltipVariant): TextColor {
   switch (variant) {
     case 'default':
       return 'foreground'
@@ -106,7 +106,7 @@ function Tooltip({
   maxWidth,
   asChild = false,
 }: Props) {
-  const textColor = useTextContentColor(variant)
+  const textColor = useTooltipTextContentColor(variant)
   const isChildrenString = typeof children === 'string'
   return (
     <TooltipRoot
