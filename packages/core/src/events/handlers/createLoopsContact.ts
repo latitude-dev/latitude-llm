@@ -36,7 +36,7 @@ export async function createLoopsContact({
   })
 
   if (!response.success) {
-    if (!!response.message.match('Email or userId is already on list')) return
+    if (response.message.match('Email or userId is already on list')) return
 
     throw new Error(`For email: ${userEmail}: ${response.message}`)
   }
