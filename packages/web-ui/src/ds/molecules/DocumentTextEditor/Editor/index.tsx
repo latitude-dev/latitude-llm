@@ -84,10 +84,12 @@ export function DocumentTextEditor({
 
   const errorFixFn = useMemo(() => {
     if (!copilot) return undefined
+
     return (errors: DocumentError[]) => {
       const request =
         'Please, fix the following errors from the prompt:\n' +
         errors.map((error) => ` - ${JSON.stringify(error)}`).join('\n')
+
       return copilot.requestSuggestion(request)
     }
   }, [copilot])

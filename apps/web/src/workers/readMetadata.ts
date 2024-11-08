@@ -8,15 +8,35 @@ export type ReadMetadataWorkerProps = Parameters<typeof readMetadata>[0] & {
 
 self.onmessage = async function (event: { data: ReadMetadataWorkerProps }) {
   const { document, documents, prompt, ...rest } = event.data
+
   const referenceFn = readDocument(document, documents, prompt)
   const metadata = await readMetadata({
     ...rest,
     prompt,
     referenceFn: referenceFn ?? undefined,
   })
-  const { setConfig: _, ...returnedMetadata } = metadata
 
-  self.postMessage(returnedMetadata)
+  const { setConfig: _, errors: errors, ...returnedMetadata } = metadata
+
+  const errorsWithPositions = errors.map((error) => {
+    return {
+      start: {
+        line: error.start?.line ?? 0,
+        column: error.start?.column ?? 0,
+      },
+      end: {
+        line: error.end?.line ?? 0,
+        column: error.end?.column ?? 0,
+      },
+      message: error.message,
+      name: error.name,
+    }
+  })
+
+  self.postMessage({
+    ...returnedMetadata,
+    errors: errorsWithPositions,
+  })
 }
 
 function readDocument(
