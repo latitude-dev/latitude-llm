@@ -79,6 +79,7 @@ export async function updateDocument(
         set: newVersion,
       })
       .returning()
+
     if (updatedDocs.length === 0) {
       return Result.error(new NotFoundError('Document does not exist'))
     }

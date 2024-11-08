@@ -12,6 +12,7 @@ import {
 import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
 import { commits } from './commits'
+import { datasets } from './datasets'
 
 export const documentVersions = latitudeSchema.table(
   'document_versions',
@@ -25,6 +26,10 @@ export const documentVersions = latitudeSchema.table(
     commitId: bigint('commit_id', { mode: 'number' })
       .notNull()
       .references(() => commits.id, { onDelete: 'cascade' }),
+    datasetId: bigint('dataset_id', { mode: 'number' }).references(
+      () => datasets.id,
+      { onDelete: 'set null' },
+    ),
     deletedAt: timestamp('deleted_at'),
     ...timestamps(),
   },
