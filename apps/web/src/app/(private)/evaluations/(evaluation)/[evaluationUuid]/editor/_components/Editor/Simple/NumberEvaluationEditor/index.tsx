@@ -12,11 +12,10 @@ import {
 } from '@latitude-data/core/browser'
 import {
   Button,
-  FormField,
   FormFieldGroup,
   Input,
-  Label,
   Text,
+  TextArea,
   useToast,
 } from '@latitude-data/web-ui'
 import {
@@ -142,66 +141,57 @@ export default function NumberEvaluationEditor({
         id='simple-number-evaluation-editor'
         onSubmit={onSubmit}
       >
-        <FormField>
-          <ProviderModelSelector
-            modelDisabled={!selectedProvider}
-            modelOptions={modelOptions}
-            onModelChange={onModelChange}
-            onProviderChange={onProviderChange}
-            providerDisabled={!providerOptions.length}
-            providerOptions={providerOptions}
-            selectedModel={selectedModel}
-            selectedProvider={selectedProvider}
-          />
-        </FormField>
-        <FormField label='Evaluation objective'>
+        <ProviderModelSelector
+          modelDisabled={!selectedProvider}
+          modelOptions={modelOptions}
+          onModelChange={onModelChange}
+          onProviderChange={onProviderChange}
+          providerDisabled={!providerOptions.length}
+          providerOptions={providerOptions}
+          selectedModel={selectedModel}
+          selectedProvider={selectedProvider}
+        />
+        <Input
+          name='objective'
+          label='Evaluation objective'
+          defaultValue={metadata.objective}
+          placeholder='The main objective of the evaluation'
+        />
+        <FormFieldGroup>
           <Input
-            name='objective'
-            defaultValue={metadata.objective}
-            placeholder='The main objective of the evaluation'
+            label='Min Value'
+            type='number'
+            name='minValue'
+            defaultValue={resultConfiguration.minValue}
           />
-        </FormField>
-        <FormFieldGroup>
-          <FormField label='Min Value'>
-            <Input
-              type='number'
-              name='minValue'
-              defaultValue={resultConfiguration.minValue}
-            />
-          </FormField>
-          <FormField label='Min value description'>
-            <Input
-              name='minValueDescription'
-              defaultValue={resultConfiguration.minValueDescription ?? ''}
-              placeholder='Description of the min value'
-            />
-          </FormField>
+          <Input
+            label='Min value description'
+            name='minValueDescription'
+            defaultValue={resultConfiguration.minValueDescription ?? ''}
+            placeholder='Description of the min value'
+          />
         </FormFieldGroup>
         <FormFieldGroup>
-          <FormField label='Max Value'>
-            <Input
-              type='number'
-              name='maxValue'
-              defaultValue={resultConfiguration.maxValue}
-            />
-          </FormField>
-          <FormField label='Max value description'>
-            <Input
-              name='maxValueDescription'
-              defaultValue={resultConfiguration.maxValueDescription ?? ''}
-              placeholder='Description of the max value'
-            />
-          </FormField>
-        </FormFieldGroup>
-        <div className='flex flex-col gap-2 flex-grow'>
-          <Label>Additional instructions</Label>
-          <textarea
-            name='additionalInstructions'
-            className='w-full h-full border rounded-lg p-2 text-sm text-foreground'
-            defaultValue={metadata.additionalInstructions ?? ''}
-            placeholder='Additional instructions the eval should take into account...'
+          <Input
+            label='Max Value'
+            type='number'
+            name='maxValue'
+            defaultValue={resultConfiguration.maxValue}
           />
-        </div>
+          <Input
+            label='Max value description'
+            name='maxValueDescription'
+            defaultValue={resultConfiguration.maxValueDescription ?? ''}
+            placeholder='Description of the max value'
+          />
+        </FormFieldGroup>
+        <TextArea
+          autoGrow
+          label='Additional instructions'
+          name='additionalInstructions'
+          placeholder='Additional instructions the eval should take into account...'
+          defaultValue={metadata.additionalInstructions ?? ''}
+        />
       </form>
     </div>
   )

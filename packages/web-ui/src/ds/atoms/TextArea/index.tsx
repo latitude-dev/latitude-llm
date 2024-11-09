@@ -24,7 +24,9 @@ const inputVariants = cva(cn(INPUT_BASE_CLASSES), {
 export type TextAreaProps = TextareaAutosizeProps &
   Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, 'height'> &
   VariantProps<typeof inputVariants> &
-  Omit<FormFieldProps, 'children'>
+  Omit<FormFieldProps, 'children'> & {
+    autoGrow?: boolean
+  }
 const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(
   function TextArea(
     {
@@ -37,6 +39,7 @@ const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(
       minRows = 5,
       maxRows,
       placeholder,
+      autoGrow = false,
       ...props
     },
     ref,
@@ -47,6 +50,7 @@ const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(
         description={description}
         errors={errors}
         errorStyle={errorStyle}
+        autoGrow={autoGrow}
       >
         <TextareaAutosize
           ref={ref}
@@ -55,6 +59,8 @@ const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(
           placeholder={placeholder}
           className={cn(inputVariants({ size }), className, {
             'border-red-500 focus-visible:ring-red-500': errors,
+            // Account for inner textara padding
+            '!min-h-[calc(100%-theme(spacing.6))]': autoGrow,
           })}
           {...props}
         />
