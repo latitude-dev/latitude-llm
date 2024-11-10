@@ -91,7 +91,7 @@
     },
     {
       "group": "SDKs",
-      "pages": ["guides/sdk/javascript-typescript-sdk"]
+      "pages": ["guides/sdk/javascript-typescript-sdk", "guides/sdk/rust-sdk"]
     },
     {
       "group": "Examples",
