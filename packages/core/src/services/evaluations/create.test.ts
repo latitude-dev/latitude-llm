@@ -283,7 +283,7 @@ ${metadata.prompt}
 
       expect(result.ok).toBe(false)
       expect(result.error!.message).toContain(
-        'Invalid range to has to be greater than from',
+        'Invalid range min value has to be less than max value',
       )
     })
 
@@ -305,7 +305,7 @@ ${metadata.prompt}
 
       expect(result.ok).toBe(false)
       expect(result.error!.message).toContain(
-        'Invalid range to has to be greater than from',
+        'Invalid range min value has to be less than max value',
       )
     })
   })

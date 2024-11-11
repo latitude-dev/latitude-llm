@@ -33,7 +33,7 @@ export default async function DashboardPage({
                 ROUTES.evaluations.detail({ uuid: evaluation.uuid }).editor.root
               }
             >
-              <Button>Edit the evaluation prompt</Button>
+              <Button fancy>Edit the evaluation prompt</Button>
             </Link>
           }
         />

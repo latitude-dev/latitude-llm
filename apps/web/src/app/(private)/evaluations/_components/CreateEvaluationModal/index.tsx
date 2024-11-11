@@ -57,7 +57,9 @@ export default function CreateEvaluationModal({
     isCreating,
   } = useEvaluations({
     onSuccessCreate: (newEvaluation) => {
-      router.push(ROUTES.evaluations.detail({ uuid: newEvaluation.uuid }).root)
+      router.push(
+        ROUTES.evaluations.detail({ uuid: newEvaluation.uuid }).editor.root,
+      )
       onClose(null)
     },
   })
@@ -67,8 +69,9 @@ export default function CreateEvaluationModal({
       name: title,
       description,
       metadata: {
-        type: EvaluationMetadataType.LlmAsJudgeAdvanced,
-        prompt,
+        type: EvaluationMetadataType.LlmAsJudgeSimple,
+        objective: '',
+        additionalInstructions: '',
       },
       resultConfiguration:
         configuration.type === EvaluationResultableType.Number
