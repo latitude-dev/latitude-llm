@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react'
 
 import { ConversationMetadata } from '@latitude-data/compiler'
 import { DocumentVersion } from '@latitude-data/core/browser'
-import { Badge, Input, Text, useCurrentCommit } from '@latitude-data/web-ui'
+import { Badge, Text, TextArea, useCurrentCommit } from '@latitude-data/web-ui'
 import {
   PlaygroundInputs,
   useDocumentParameters,
@@ -45,9 +45,10 @@ function InputParams({
           <div className='flex flex-row gap-4 w-full items-center' key={idx}>
             <Badge variant='accent'>&#123;&#123;{param}&#125;&#125;</Badge>
             <div className='flex flex-grow w-full'>
-              <Input
+              <TextArea
                 value={value}
                 onChange={(e) => setInput(param, e.target.value)}
+                minRows={1}
               />
             </div>
           </div>
