@@ -81,6 +81,7 @@ export type FormFieldProps = Omit<
   info?: string
   errors?: string[] | null | undefined
   errorStyle?: 'inline' | 'tooltip'
+  autoGrow?: boolean
 }
 function FormField({
   children,
@@ -91,6 +92,7 @@ function FormField({
   errors,
   errorStyle = 'inline',
   info,
+  autoGrow = false,
 }: FormFieldProps) {
   const error = errors?.[0]
   const id = useId()
@@ -100,7 +102,7 @@ function FormField({
   const LabelComponent = badgeLabel ? BatchLabel : Label
   const input = (
     <div
-      className={cn('space-y-2 w-full', className)}
+      className={cn('space-y-2 w-full', { 'h-full': autoGrow }, className)}
       aria-describedby={
         !error
           ? `${formDescriptionId}`
