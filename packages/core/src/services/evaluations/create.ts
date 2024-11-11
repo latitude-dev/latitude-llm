@@ -13,7 +13,7 @@ import {
   User,
   Workspace,
 } from '../../browser'
-import { database } from '../../client'
+import { Database, database } from '../../client'
 import { findEvaluationTemplateById } from '../../data-access'
 import { publisher } from '../../events/publisher'
 import {
@@ -49,6 +49,29 @@ type EvaluationResultConfigurationBoolean = Partial<
   Omit<EvaluationConfigurationBoolean, 'id'>
 >
 
+type CreateEvaluationMetadata<M extends EvaluationMetadataType> =
+  M extends EvaluationMetadataType.LlmAsJudgeSimple
+    ? { objective: string } & Partial<
+        Omit<EvaluationMetadataLlmAsJudgeSimple, 'id'>
+      >
+    : M extends EvaluationMetadataType.LlmAsJudgeAdvanced
+      ? { prompt: string } & Partial<
+          Omit<
+            EvaluationMetadataLlmAsJudgeAdvanced,
+            'id' | 'configuration' | 'prompt'
+          >
+        >
+      : never
+
+type CreateEvaluationResultConfiguration<R extends EvaluationResultableType> =
+  R extends EvaluationResultableType.Boolean
+    ? EvaluationResultConfigurationBoolean
+    : R extends EvaluationResultableType.Number
+      ? EvaluationResultConfigurationNumerical
+      : R extends EvaluationResultableType.Text
+        ? EvaluationResultConfigurationText
+        : never
+
 export async function createEvaluation<
   M extends EvaluationMetadataType,
   R extends EvaluationResultableType,
@@ -70,24 +93,9 @@ export async function createEvaluation<
     name: string
     description: string
     metadataType: M
-    metadata: M extends EvaluationMetadataType.LlmAsJudgeSimple
-      ? Omit<EvaluationMetadataLlmAsJudgeSimple, 'id'>
-      : M extends EvaluationMetadataType.LlmAsJudgeAdvanced
-        ? { prompt: string } & Partial<
-            Omit<
-              EvaluationMetadataLlmAsJudgeAdvanced,
-              'id' | 'configuration' | 'prompt'
-            >
-          >
-        : never
+    metadata: CreateEvaluationMetadata<M>
     resultType: R
-    resultConfiguration: R extends EvaluationResultableType.Boolean
-      ? EvaluationResultConfigurationBoolean
-      : R extends EvaluationResultableType.Number
-        ? EvaluationResultConfigurationNumerical
-        : R extends EvaluationResultableType.Text
-          ? EvaluationResultConfigurationText
-          : never
+    resultConfiguration: CreateEvaluationResultConfiguration<R>
     projectId?: number
     documentUuid?: string
   },
@@ -125,9 +133,18 @@ export async function createEvaluation<
   }
 
   return await Transaction.call(async (tx) => {
+    const enrichedMetadata = await enrichWithProvider<M>(
+      {
+        metadata,
+        metadataType,
+        workspace,
+      },
+      tx,
+    )
+
     const metadataRow = (await tx
       .insert(metadataTables[metadataType])
-      .values([metadata])
+      .values([enrichedMetadata])
       .returning()
       .then((r) => r[0]!)) as IEvaluationMetadata
 
@@ -251,31 +268,13 @@ export async function createAdvancedEvaluation<
   },
   db = database,
 ): PromisedResult<EvaluationDto> {
-  const provider = await findDefaultProvider(workspace, db)
-  if (!provider) {
-    return Result.error(
-      new NotFoundError(
-        'In order to create an evaluation you need to first create a provider API key from OpenAI or Anthropic',
-      ),
-    )
-  }
-
-  const promptWithProvider = provider
-    ? `---
-provider: ${provider.name}
-model: ${findFirstModelForProvider(provider.provider)}
----
-${metadata.prompt}
-`.trim()
-    : metadata.prompt
-
   return createEvaluation(
     {
       workspace,
       ...props,
       metadataType: EvaluationMetadataType.LlmAsJudgeAdvanced,
       metadata: {
-        prompt: promptWithProvider,
+        prompt: metadata.prompt,
         configuration: resultConfiguration,
         templateId: metadata.templateId ?? null,
       } as Omit<EvaluationMetadataLlmAsJudgeAdvanced, 'id'>,
@@ -310,4 +309,73 @@ function validateResultConfiguration({
   }
 
   return Result.ok(resultConfiguration)
+}
+
+async function enrichWithProvider<M extends EvaluationMetadataType>(
+  {
+    metadata,
+    metadataType,
+    workspace,
+  }: {
+    metadata: CreateEvaluationMetadata<M>
+    metadataType: M
+    workspace: Workspace
+  },
+  db: Database,
+) {
+  if (
+    metadataType === EvaluationMetadataType.LlmAsJudgeSimple &&
+    // @ts-expect-error - Metadata is a union type and providerApiKeyId is not defined for the other types
+    !metadata.providerApiKeyId
+  ) {
+    const provider = await findDefaultProvider(workspace, db)
+    if (!provider) {
+      throw new NotFoundError(
+        `In order to create an evaluation you need to first create a provider API key from OpenAI or Anthropic`,
+      )
+    }
+    const model =
+      // @ts-expect-error - Metadata is a union type and model is not defined for the other types
+      metadata.model || findFirstModelForProvider(provider.provider)
+    if (!model)
+      throw new NotFoundError(
+        `In order to create an evaluation you need to first create a provider API key from OpenAI or Anthropic`,
+      )
+
+    metadata = {
+      ...metadata,
+      model,
+      providerApiKeyId: provider.id,
+    }
+  }
+
+  if (metadataType === EvaluationMetadataType.LlmAsJudgeAdvanced) {
+    const provider = await findDefaultProvider(workspace, db)
+    if (!provider) {
+      throw new NotFoundError(
+        `In order to create an evaluation you need to first create a provider API key from OpenAI or Anthropic`,
+      )
+    }
+
+    const promptWithProvider = provider
+      ? `---
+provider: ${provider.name}
+model: ${findFirstModelForProvider(provider.provider)}
+---
+${
+  // @ts-expect-error - Metadata is a union type and prompt is not defined for the other types
+  metadata.prompt
+}`.trim()
+      : // @ts-expect-error - Metadata is a union type and prompt is not defined for the other types
+        metadata.prompt
+
+    metadata = {
+      ...metadata,
+      prompt: promptWithProvider,
+    }
+  }
+
+  return metadata as M extends EvaluationMetadataType.LlmAsJudgeSimple
+    ? Omit<EvaluationMetadataLlmAsJudgeSimple, 'id'>
+    : Omit<EvaluationMetadataLlmAsJudgeAdvanced, 'id'>
 }

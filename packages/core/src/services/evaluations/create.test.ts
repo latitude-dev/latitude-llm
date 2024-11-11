@@ -173,13 +173,11 @@ describe('createAdvancedEvaluation', () => {
         description,
         metadata: {
           ...evaluation.metadata,
-          prompt: `
----
+          prompt: `---
 provider: ${provider!.name}
 model: gpt-4o-mini
 ---
-${metadata.prompt}
-`.trim(),
+${metadata.prompt}`.trim(),
         },
         workspaceId: workspace.id,
       })
@@ -326,7 +324,7 @@ describe('createEvaluation', () => {
       workspace,
       user,
       name: 'Test Provider',
-      type: Providers.Groq,
+      type: Providers.OpenAI,
     })
 
     repo = new EvaluationsRepository(workspace.id)
@@ -360,6 +358,40 @@ describe('createEvaluation', () => {
       expect(evaluation.metadata).toMatchObject({
         providerApiKeyId: provider.id,
         model: 'test-model',
+        objective: 'Test Objective',
+        additionalInstructions: 'Test Instructions',
+      })
+
+      expect(evaluation.resultConfiguration).toMatchObject({
+        valueDescription: 'Test Value Description',
+      })
+    })
+
+    it('adds the provider api key id and model to the metadata if they are not provided', async () => {
+      const evaluationResult = await createEvaluation({
+        workspace,
+        user,
+        name: 'Test Evaluation',
+        description: 'Test Description',
+        metadataType: EvaluationMetadataType.LlmAsJudgeSimple,
+        metadata: {
+          objective: 'Test Objective',
+          additionalInstructions: 'Test Instructions',
+        },
+        resultType: EvaluationResultableType.Text,
+        resultConfiguration: {
+          valueDescription: 'Test Value Description',
+        },
+      })
+
+      expect(evaluationResult.ok).toBe(true)
+      const evaluation = await repo
+        .find(evaluationResult.value!.id)
+        .then((r) => r.unwrap())
+
+      expect(evaluation.metadata).toMatchObject({
+        providerApiKeyId: provider.id,
+        model: 'gpt-4o-mini',
         objective: 'Test Objective',
         additionalInstructions: 'Test Instructions',
       })
@@ -512,7 +544,11 @@ describe('createEvaluation', () => {
         .then((r) => r.unwrap())
 
       expect(evaluation.metadata).toMatchObject({
-        prompt: 'Test Prompt',
+        prompt: `---
+provider: Test Provider
+model: gpt-4o-mini
+---
+Test Prompt`.trim(),
         templateId: null,
       })
 
@@ -547,7 +583,11 @@ describe('createEvaluation', () => {
         .then((r) => r.unwrap())
 
       expect(evaluation.metadata).toMatchObject({
-        prompt: 'Test Prompt',
+        prompt: `---
+provider: Test Provider
+model: gpt-4o-mini
+---
+Test Prompt`.trim(),
         templateId: null,
       })
 
@@ -583,7 +623,11 @@ describe('createEvaluation', () => {
         .then((r) => r.unwrap())
 
       expect(evaluation.metadata).toMatchObject({
-        prompt: 'Test Prompt',
+        prompt: `---
+provider: Test Provider
+model: gpt-4o-mini
+---
+Test Prompt`.trim(),
         templateId: null,
       })
 

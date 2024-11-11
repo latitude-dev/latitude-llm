@@ -39,7 +39,10 @@ export const TypewriterText: React.FC<TypewriterTextProps> = ({
 
   return (
     <span
-      className={cn('whitespace-pre-wrap', isGenerating && 'animate-pulse')}
+      className={cn(
+        'whitespace-pre-wrap text-sm font-normal text-foreground',
+        isGenerating && 'animate-pulse',
+      )}
     >
       {displayedText}
     </span>

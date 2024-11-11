@@ -65,25 +65,37 @@ export default function CreateEvaluationModal({
   })
 
   const onConfirm = useCallback(() => {
-    create({
-      name: title,
-      description,
-      metadata: {
-        type: EvaluationMetadataType.LlmAsJudgeSimple,
-        objective: '',
-        additionalInstructions: '',
-      },
-      resultConfiguration:
-        configuration.type === EvaluationResultableType.Number
-          ? {
-              type: configuration.type,
-              minValue: configuration.detail!.range.from,
-              maxValue: configuration.detail!.range.to,
-            }
-          : {
-              type: configuration.type,
-            },
-    })
+    const resultConfiguration =
+      configuration.type === EvaluationResultableType.Number
+        ? {
+            type: configuration.type,
+            minValue: configuration.detail!.range.from,
+            maxValue: configuration.detail!.range.to,
+          }
+        : { type: configuration.type }
+
+    if (prompt) {
+      create({
+        name: title,
+        description,
+        metadata: {
+          type: EvaluationMetadataType.LlmAsJudgeAdvanced,
+          prompt,
+        },
+        resultConfiguration,
+      })
+    } else {
+      create({
+        name: title,
+        description,
+        metadata: {
+          type: EvaluationMetadataType.LlmAsJudgeSimple,
+          objective: '',
+          additionalInstructions: '',
+        },
+        resultConfiguration,
+      })
+    }
 
     onClose(null)
   }, [create, onClose, title, description, prompt, configuration])

@@ -51,6 +51,7 @@ export const generateSuggestedEvaluationsAction = authProcedure
       env.COPILOT_EVALUATION_SUGGESTION_PROMPT_PATH,
       {
         stream: false,
+        versionUuid: 'da47b89d-2bde-4c6c-92ee-11a17241eb73', // TODO: remove
         parameters: {
           user_prompt: input.documentContent,
         },

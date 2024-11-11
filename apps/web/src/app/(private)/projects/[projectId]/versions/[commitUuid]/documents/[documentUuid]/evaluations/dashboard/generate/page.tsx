@@ -43,12 +43,14 @@ export default function GenerateEvaluationPage() {
   const { execute: createEvaluation } = useLatitudeAction(
     createEvaluationFromPromptAction,
   )
-  const [generatedSuggestion, setGeneratedSuggestion] = useState<any>(null)
+  const [generatedSuggestion, setGeneratedSuggestion] =
+    useState<SuggestedEvaluation | null>(null)
   const validateSuggestion = (suggestion: SuggestedEvaluation) => {
     if (
       !suggestion.eval_name ||
       !suggestion.eval_description ||
-      !suggestion.eval_prompt
+      !suggestion.eval_objective ||
+      !suggestion.metadata
     ) {
       return false
     }
@@ -100,19 +102,14 @@ export default function GenerateEvaluationPage() {
       projectId: project.id,
       documentUuid: document.documentUuid,
       commitUuid: commit.uuid,
-      prompt: generatedSuggestion.eval_prompt,
+      objective: generatedSuggestion.eval_objective,
+      additionalInstructions: generatedSuggestion.eval_additional_instructions,
       name: generatedSuggestion.eval_name,
       resultType:
         generatedSuggestion.eval_type === 'number'
           ? EvaluationResultableType.Number
           : EvaluationResultableType.Boolean,
-      metadata:
-        generatedSuggestion.eval_type === 'number'
-          ? {
-              minValue: generatedSuggestion.metadata.range.from as number,
-              maxValue: generatedSuggestion.metadata.range.to as number,
-            }
-          : undefined,
+      metadata: generatedSuggestion.metadata,
     })
 
     if (newEvaluation) {
@@ -144,6 +141,69 @@ export default function GenerateEvaluationPage() {
         variant: 'destructive',
       })
     }
+  }
+
+  const renderMetadata = (suggestion: SuggestedEvaluation) => {
+    if (suggestion.eval_type === 'number') {
+      const metadata = suggestion.metadata as {
+        minValue: number
+        maxValue: number
+        minValueDescription?: string
+        maxValueDescription?: string
+      }
+
+      return (
+        <div className='grid grid-cols-2 gap-3'>
+          <div className='flex flex-col gap-1'>
+            <Text.H6M color='foregroundMuted'>Min Value</Text.H6M>
+            <Text.H5M>{metadata.minValue}</Text.H5M>
+            {metadata.minValueDescription && (
+              <Text.H6M color='foregroundMuted'>
+                {metadata.minValueDescription}
+              </Text.H6M>
+            )}
+          </div>
+          <div className='flex flex-col gap-1'>
+            <Text.H6M color='foregroundMuted'>Max Value</Text.H6M>
+            <Text.H5M>{metadata.maxValue}</Text.H5M>
+            {metadata.maxValueDescription && (
+              <Text.H6M color='foregroundMuted'>
+                {metadata.maxValueDescription}
+              </Text.H6M>
+            )}
+          </div>
+        </div>
+      )
+    }
+
+    // Boolean type
+    const metadata = suggestion.metadata as {
+      falseValueDescription?: string
+      trueValueDescription?: string
+    }
+
+    return (
+      <div className='grid grid-cols-2 gap-3'>
+        <div className='flex flex-col gap-1'>
+          <Text.H6M color='foregroundMuted'>True Value</Text.H6M>
+          <Text.H5M>True</Text.H5M>
+          {metadata.trueValueDescription && (
+            <Text.H6M color='foregroundMuted'>
+              {metadata.trueValueDescription}
+            </Text.H6M>
+          )}
+        </div>
+        <div className='flex flex-col gap-1'>
+          <Text.H6M color='foregroundMuted'>False Value</Text.H6M>
+          <Text.H5M>False</Text.H5M>
+          {metadata.falseValueDescription && (
+            <Text.H6M color='foregroundMuted'>
+              {metadata.falseValueDescription}
+            </Text.H6M>
+          )}
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -190,7 +250,7 @@ export default function GenerateEvaluationPage() {
           <>
             <div className='w-full flex flex-col gap-4'>
               <div className='w-full flex flex-col gap-2'>
-                <Text.H6M color='foregroundMuted'>Evaluation Name</Text.H6M>
+                <Text.H6M color='foregroundMuted'>Name</Text.H6M>
                 <Text.H5M>
                   <TypewriterText
                     text={generatedSuggestion.eval_name}
@@ -199,9 +259,7 @@ export default function GenerateEvaluationPage() {
                 </Text.H5M>
               </div>
               <div className='w-full flex flex-col gap-2'>
-                <Text.H6M color='foregroundMuted'>
-                  Evaluation Description
-                </Text.H6M>
+                <Text.H6M color='foregroundMuted'>Description</Text.H6M>
                 <Text.H5M>
                   <TypewriterText
                     text={generatedSuggestion.eval_description}
@@ -210,12 +268,45 @@ export default function GenerateEvaluationPage() {
                 </Text.H5M>
               </div>
               <div className='w-full flex flex-col gap-2'>
-                <Text.H6M color='foregroundMuted'>Evaluation Prompt</Text.H6M>
-                <div className='w-full h-80 p-2 bg-background text-foreground border border-border rounded-md resize-none focus:outline-none focus:ring-2 focus:ring-primary text-sm bg-secondary overflow-auto'>
+                <Text.H6M color='foregroundMuted'>Objective</Text.H6M>
+                <Text.H5M>
                   <TypewriterText
-                    text={generatedSuggestion.eval_prompt}
+                    text={generatedSuggestion.eval_objective}
                     speed={0}
                   />
+                </Text.H5M>
+              </div>
+              {generatedSuggestion.eval_additional_instructions && (
+                <div className='w-full flex flex-col gap-2'>
+                  <Text.H6M color='foregroundMuted'>
+                    Additional Instructions
+                  </Text.H6M>
+                  <Text.H5M>
+                    <TypewriterText
+                      text={generatedSuggestion.eval_additional_instructions}
+                      speed={0}
+                    />
+                  </Text.H5M>
+                </div>
+              )}
+              <div className='w-full flex flex-col gap-2'>
+                <Text.H6M color='foregroundMuted'>Result Type</Text.H6M>
+                <Text.H5M>
+                  <TypewriterText
+                    text={
+                      generatedSuggestion.eval_type === 'number'
+                        ? 'Numeric Score'
+                        : 'Boolean (Pass/Fail)'
+                    }
+                    speed={0}
+                  />
+                </Text.H5M>
+              </div>
+
+              <div className='w-full flex flex-col gap-2'>
+                <Text.H6M color='foregroundMuted'>Expected Values</Text.H6M>
+                <div className='rounded-lg border bg-card p-4'>
+                  {renderMetadata(generatedSuggestion)}
                 </div>
               </div>
             </div>
