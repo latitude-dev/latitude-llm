@@ -1,3 +1,4 @@
+import { TAG_NAMES } from '$promptl/constants'
 import CompileError from '$promptl/error/error'
 import { describe, expect, it } from 'vitest'
 import { z } from 'zod'
@@ -595,8 +596,8 @@ describe('syntax errors', async () => {
       `),
       child: removeCommonIndent(`
         This is the child prompt.
-        Error:
-        <unknownTag />
+        Error: (close unopened tag)
+        </${TAG_NAMES.message}>
       `),
     }
 
@@ -611,6 +612,8 @@ describe('syntax errors', async () => {
     expect(metadata.errors[0]!.message).contains(
       'The referenced prompt contains an error:',
     )
-    expect(metadata.errors[0]!.message).contains(`Unknown tag: 'unknownTag'`)
+    expect(metadata.errors[0]!.message).contains(
+      `Unexpected closing tag for ${TAG_NAMES.message}`,
+    )
   })
 })

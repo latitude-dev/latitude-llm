@@ -1,4 +1,4 @@
-import { CUSTOM_TAG_END, CUSTOM_TAG_START } from '$promptl/constants'
+import { CUSTOM_TAG_END, CUSTOM_TAG_START, TAG_NAMES } from '$promptl/constants'
 import CompileError from '$promptl/error/error'
 import { getExpectedError } from '$promptl/test/helpers'
 import { describe, expect, it } from 'vitest'
@@ -85,68 +85,79 @@ world */
 })
 
 describe('Tags', async () => {
-  it('parses any HTML-like tag', async () => {
-    const fragment = parse('<custom-tag></custom-tag>')
+  it('parses HTML-like tags with known tag names', async () => {
+    const fragment = parse(`<${TAG_NAMES.message}></${TAG_NAMES.message}>`)
     expect(fragment.children.length).toBe(1)
 
     const tag = fragment.children[0]!
     expect(tag.type).toBe('ElementTag')
-    expect(tag.name).toBe('custom-tag')
+    expect(tag.name).toBe(TAG_NAMES.message)
   })
 
   it('parses self closing tags', async () => {
-    const fragment = parse('<custom-tag />')
+    const fragment = parse(`<${TAG_NAMES.content} />`)
     expect(fragment.children.length).toBe(1)
 
     const tag = fragment.children[0]!
     expect(tag.type).toBe('ElementTag')
-    expect(tag.name).toBe('custom-tag')
+    expect(tag.name).toBe(TAG_NAMES.content)
+  })
+
+  it('parses tags with unknown tag names as plain text', async () => {
+    const fragment = parse('<custom-tag></custom-tag>')
+    expect(fragment.children.length).toBe(1)
+
+    const node = fragment.children[0]!
+    expect(node.type).toBe('Text')
+    expect(node.data).toBe('<custom-tag></custom-tag>')
   })
 
   it('fails if there is no closing tag', async () => {
-    const action = () => parse('<custom-tag>')
+    const action = () => parse(`<${TAG_NAMES.message}>`)
 
     const error = await getExpectedError(action, CompileError)
     expect(error.code).toBe('unclosed-block')
   })
 
   it('fails if the tag is not opened', async () => {
-    const action = () => parse('</custom-tag>')
+    const action = () => parse(`</${TAG_NAMES.message}>`)
 
     const error = await getExpectedError(action, CompileError)
     expect(error.code).toBe('unexpected-tag-close')
   })
 
   it('fails if the tag is not closed', async () => {
-    const action = () => parse('<custom-tag')
+    const action = () => parse(`<${TAG_NAMES.message}`)
 
     const error = await getExpectedError(action, CompileError)
     expect(error.code).toBe('unexpected-eof')
   })
 
   it('Parses tags within tags', async () => {
-    const fragment = parse('<parent><child/></parent>')
+    const fragment = parse(
+      `<${TAG_NAMES.message}><${TAG_NAMES.content}/></${TAG_NAMES.message}>`,
+    )
     expect(fragment.children.length).toBe(1)
 
     const parent = fragment.children[0]!
     expect(parent.type).toBe('ElementTag')
-    expect(parent.name).toBe('parent')
+    expect(parent.name).toBe(TAG_NAMES.message)
     expect(parent.children?.length).toBe(1)
 
     const child = parent.children![0]!
     expect(child.type).toBe('ElementTag')
-    expect(child.name).toBe('child')
+    expect(child.name).toBe(TAG_NAMES.content)
   })
 
   it('parses all attributes', async () => {
     const fragment = parse(
-      '<custom-tag attr1="value1" attr2="value2"></custom-tag>',
+      `<${TAG_NAMES.message} attr1="value1" attr2="value2" />`,
     )
     expect(fragment.children.length).toBe(1)
 
     const tag = fragment.children[0]!
     expect(tag.type).toBe('ElementTag')
-    expect(tag.name).toBe('custom-tag')
+    expect(tag.name).toBe(TAG_NAMES.message)
     expect(tag.attributes.length).toBe(2)
 
     const attr1 = tag.attributes[0]!
@@ -168,13 +179,13 @@ describe('Tags', async () => {
 
   it('Parses attribute vales as expressions when interpolated', async () => {
     const fragment = parse(
-      `<custom-tag attr=${CUSTOM_TAG_START}value${CUSTOM_TAG_END} />`,
+      `<${TAG_NAMES.message} attr=${CUSTOM_TAG_START}value${CUSTOM_TAG_END} />`,
     )
     expect(fragment.children.length).toBe(1)
 
     const tag = fragment.children[0]!
     expect(tag.type).toBe('ElementTag')
-    expect(tag.name).toBe('custom-tag')
+    expect(tag.name).toBe(TAG_NAMES.message)
     expect(tag.attributes.length).toBe(1)
 
     const attr = tag.attributes[0]!
@@ -187,12 +198,12 @@ describe('Tags', async () => {
   })
 
   it('Parses attributes with no value as true', async () => {
-    const fragment = parse(`<custom-tag attr />`)
+    const fragment = parse(`<${TAG_NAMES.message} attr />`)
     expect(fragment.children.length).toBe(1)
 
     const tag = fragment.children[0]!
     expect(tag.type).toBe('ElementTag')
-    expect(tag.name).toBe('custom-tag')
+    expect(tag.name).toBe(TAG_NAMES.message)
     expect(tag.attributes.length).toBe(1)
 
     const attr = tag.attributes[0]!
@@ -202,7 +213,8 @@ describe('Tags', async () => {
   })
 
   it('Fails when adding a duplicate attribute', async () => {
-    const action = () => parse(`<custom-tag attr="value1" attr="value2" />`)
+    const action = () =>
+      parse(`<${TAG_NAMES.message} attr="value1" attr="value2" />`)
 
     const error = await getExpectedError(action, CompileError)
     expect(error.code).toBe('duplicate-attribute')

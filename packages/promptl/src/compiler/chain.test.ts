@@ -1,4 +1,4 @@
-import { CHAIN_STEP_TAG } from '$promptl/constants'
+import { TAG_NAMES } from '$promptl/constants'
 import CompileError from '$promptl/error/error'
 import { getExpectedError } from '$promptl/test/helpers'
 import {
@@ -491,7 +491,7 @@ describe('chain', async () => {
             {{i}}.{{j}}
           </user>
 
-          <${CHAIN_STEP_TAG} />
+          <${TAG_NAMES.step} />
 
           {{foo = i * j}}
         {{endfor}}
@@ -536,7 +536,7 @@ describe('chain', async () => {
 
   it('saves the response in a variable', async () => {
     const prompt = removeCommonIndent(`
-      <${CHAIN_STEP_TAG} as="response" />
+      <${TAG_NAMES.step} as="response" />
       
       {{response}}
     `)

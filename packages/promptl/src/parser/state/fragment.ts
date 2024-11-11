@@ -1,4 +1,8 @@
-import { CUSTOM_TAG_END, CUSTOM_TAG_START } from '$promptl/constants'
+import {
+  CUSTOM_TAG_END,
+  CUSTOM_TAG_START,
+  RESERVED_TAGS,
+} from '$promptl/constants'
 
 import { Parser } from '..'
 import { config } from './config'
@@ -8,7 +12,10 @@ import { tag } from './tag'
 import { text } from './text'
 
 export default function fragment(parser: Parser): (parser: Parser) => void {
-  if (parser.match('<')) {
+  if (
+    parser.matchRegex(new RegExp(`^</?(${RESERVED_TAGS.join('|')})`)) ||
+    parser.match('<!--')
+  ) {
     return tag
   }
   if (parser.match(CUSTOM_TAG_START) || parser.match(CUSTOM_TAG_END)) {

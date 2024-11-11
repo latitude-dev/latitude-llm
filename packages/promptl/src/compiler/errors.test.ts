@@ -110,19 +110,6 @@ describe(`all compilation errors that don't require value resolution are caught 
     })
   })
 
-  it('unknown-tag', async () => {
-    const prompt = `
-      <foo>
-        Foo
-      </foo>
-    `
-
-    await expectBothErrors({
-      code: 'unknown-tag',
-      prompt,
-    })
-  })
-
   it('step-tag-inside-step', async () => {
     const prompt = `
       <step>
