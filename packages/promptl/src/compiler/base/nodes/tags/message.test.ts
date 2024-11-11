@@ -49,19 +49,6 @@ describe('messages', async () => {
     ])
   })
 
-  it('fails when using an unknown tag', async () => {
-    const prompt = `
-      <foo>message</foo>
-    `
-    const action = () =>
-      render({
-        prompt: removeCommonIndent(prompt),
-        parameters: {},
-      })
-    const error = await getExpectedError(action, CompileError)
-    expect(error.code).toBe('unknown-tag')
-  })
-
   it('can create messages with the common message tag', async () => {
     const prompt = `
       <message role=${CUSTOM_TAG_START}role${CUSTOM_TAG_END}>message</message>
@@ -213,21 +200,6 @@ describe('message contents', async () => {
     expect((message.content[2]! as TextContent).text).toBe(
       'another text content',
     )
-  })
-
-  it('fails when using an invalid content type', async () => {
-    const prompt = `
-      <system>
-        <foo>text content</foo>
-      </system>
-    `
-    const action = () =>
-      render({
-        prompt: removeCommonIndent(prompt),
-        parameters: {},
-      })
-    const error = await getExpectedError(action, CompileError)
-    expect(error.code).toBe('unknown-tag')
   })
 
   it('creates a text content when no content tag is present', async () => {

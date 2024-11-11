@@ -1,20 +1,26 @@
+import { ContentTypeTagName, MessageRole } from './types'
+
 export const CUSTOM_TAG_START = '{{'
 export const CUSTOM_TAG_END = '}}'
 
-// <message role="…">
-export const CUSTOM_MESSAGE_TAG = 'message' as const
+export enum TAG_NAMES {
+  message = 'message',
+  system = MessageRole.system,
+  user = MessageRole.user,
+  assistant = MessageRole.assistant,
+  tool = MessageRole.tool,
+  content = 'content',
+  text = ContentTypeTagName.text,
+  image = ContentTypeTagName.image,
+  toolCall = ContentTypeTagName.toolCall,
+  prompt = 'prompt',
+  step = 'step',
+}
+
 export const CUSTOM_MESSAGE_ROLE_ATTR = 'role' as const
-
-export const CUSTOM_CONTENT_TAG = 'content' as const
 export const CUSTOM_CONTENT_TYPE_ATTR = 'type' as const
-
-// <prompt path="…" />
-export const REFERENCE_PROMPT_TAG = 'prompt' as const
 export const REFERENCE_PROMPT_ATTR = 'path' as const
 export const REFERENCE_DEPTH_LIMIT = 50
-
-// <response as="…" />
-export const CHAIN_STEP_TAG = 'step' as const
 export const CHAIN_STEP_ISOLATED_ATTR = 'isolated' as const
 
 export enum KEYWORDS {
@@ -31,3 +37,4 @@ export enum KEYWORDS {
 }
 
 export const RESERVED_KEYWORDS = Object.values(KEYWORDS)
+export const RESERVED_TAGS = Object.values(TAG_NAMES)

@@ -1,8 +1,5 @@
 import { removeCommonIndent } from '$promptl/compiler/utils'
-import {
-  CUSTOM_CONTENT_TAG,
-  CUSTOM_CONTENT_TYPE_ATTR,
-} from '$promptl/constants'
+import { CUSTOM_CONTENT_TYPE_ATTR, TAG_NAMES } from '$promptl/constants'
 import errors from '$promptl/error/errors'
 import { ContentTag } from '$promptl/parser/interfaces'
 import { ContentType, ContentTypeTagName } from '$promptl/types'
@@ -39,7 +36,7 @@ export async function compile(
   const textContent = removeCommonIndent(popStrayText())
 
   let type: ContentType
-  if (node.name === CUSTOM_CONTENT_TAG) {
+  if (node.name === TAG_NAMES.content) {
     if (attributes[CUSTOM_CONTENT_TYPE_ATTR] === undefined) {
       baseNodeError(errors.messageTagWithoutRole, node)
     }

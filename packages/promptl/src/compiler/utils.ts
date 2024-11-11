@@ -1,9 +1,4 @@
-import {
-  CHAIN_STEP_TAG,
-  CUSTOM_CONTENT_TAG,
-  CUSTOM_MESSAGE_TAG,
-  REFERENCE_PROMPT_TAG,
-} from '$promptl/constants'
+import { TAG_NAMES } from '$promptl/constants'
 import {
   ChainStepTag,
   ContentTag,
@@ -43,23 +38,23 @@ export function removeCommonIndent(text: string): string {
 }
 
 export function isMessageTag(tag: ElementTag): tag is MessageTag {
-  if (tag.name === CUSTOM_MESSAGE_TAG) return true
+  if (tag.name === TAG_NAMES.message) return true
   return Object.values(MessageRole).includes(tag.name as MessageRole)
 }
 
 export function isContentTag(tag: ElementTag): tag is ContentTag {
-  if (tag.name === CUSTOM_CONTENT_TAG) return true
+  if (tag.name === TAG_NAMES.content) return true
   return Object.values(ContentTypeTagName).includes(
     tag.name as ContentTypeTagName,
   )
 }
 
 export function isRefTag(tag: ElementTag): tag is ReferenceTag {
-  return tag.name === REFERENCE_PROMPT_TAG
+  return tag.name === TAG_NAMES.prompt
 }
 
 export function isChainStepTag(tag: ElementTag): tag is ChainStepTag {
-  return tag.name === CHAIN_STEP_TAG
+  return tag.name === TAG_NAMES.step
 }
 
 export function tagAttributeIsLiteral(tag: ElementTag, name: string): boolean {

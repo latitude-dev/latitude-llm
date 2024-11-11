@@ -1,7 +1,4 @@
-import {
-  CUSTOM_MESSAGE_ROLE_ATTR,
-  CUSTOM_MESSAGE_TAG,
-} from '$promptl/constants'
+import { CUSTOM_MESSAGE_ROLE_ATTR, TAG_NAMES } from '$promptl/constants'
 import errors from '$promptl/error/errors'
 import { MessageTag, TemplateNode } from '$promptl/parser/interfaces'
 import {
@@ -38,7 +35,7 @@ export async function compile(
   groupContent()
 
   let role = node.name as MessageRole
-  if (node.name === CUSTOM_MESSAGE_TAG) {
+  if (node.name === TAG_NAMES.message) {
     if (attributes[CUSTOM_MESSAGE_ROLE_ATTR] === undefined) {
       baseNodeError(errors.messageTagWithoutRole, node)
     }

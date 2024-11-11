@@ -1,9 +1,8 @@
 import {
   CUSTOM_MESSAGE_ROLE_ATTR,
-  CUSTOM_MESSAGE_TAG,
   REFERENCE_DEPTH_LIMIT,
   REFERENCE_PROMPT_ATTR,
-  REFERENCE_PROMPT_TAG,
+  TAG_NAMES,
 } from '$promptl/constants'
 import CompileError, { error } from '$promptl/error/error'
 import errors from '$promptl/error/errors'
@@ -462,7 +461,7 @@ export class ReadMetadata {
         })
 
         const role = node.name as MessageRole
-        if (node.name === CUSTOM_MESSAGE_TAG) {
+        if (node.name === TAG_NAMES.message) {
           if (!attributes.has(CUSTOM_MESSAGE_ROLE_ATTR)) {
             this.baseNodeError(errors.messageTagWithoutRole, node)
             return
@@ -542,7 +541,7 @@ export class ReadMetadata {
           .map((node) => node.data)
           .join('')
 
-        let resolvedRefPrompt = `/* <${REFERENCE_PROMPT_TAG} ${REFERENCE_PROMPT_ATTR}="${refPromptPath}" /> */`
+        let resolvedRefPrompt = `/* <${TAG_NAMES.prompt} ${REFERENCE_PROMPT_ATTR}="${refPromptPath}" /> */`
         const currentReferences = this.references[this.fullPath] ?? []
 
         const resolveRef = async () => {
@@ -649,6 +648,7 @@ export class ReadMetadata {
         return
       }
 
+      // Should not be reachable, as non-recognized tags are caught by the parser
       this.baseNodeError(errors.unknownTag(node.name), node)
       return
     }

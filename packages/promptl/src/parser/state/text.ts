@@ -1,9 +1,9 @@
-import { CUSTOM_TAG_START } from '$promptl/constants'
+import { CUSTOM_TAG_START, RESERVED_TAGS } from '$promptl/constants'
 import { type Parser } from '$promptl/parser'
 import type { Text } from '$promptl/parser/interfaces'
 
 const ENDS_WITH_ESCAPE_REGEX = /(?<!\\)(\\\\)*\\$/
-const RESERVED_DELIMITERS = [CUSTOM_TAG_START, '/*', '<']
+const RESERVED_DELIMITERS = [CUSTOM_TAG_START, '/*', '<!--']
 
 export function text(parser: Parser) {
   const start = parser.index
@@ -13,11 +13,20 @@ export function text(parser: Parser) {
     const isEscaping = ENDS_WITH_ESCAPE_REGEX.test(data)
     if (isEscaping) data = data.slice(0, -1) // Remove the escape character
 
+    // Config section
     if (!isEscaping && parser.matchRegex(/-{3}(?!-)/)) {
-      // Detecting ONLY 3 consecutive dashes
       break
     }
 
+    // Reserved tags
+    if (
+      !isEscaping &&
+      parser.matchRegex(new RegExp(`^</?(${RESERVED_TAGS.join('|')})`))
+    ) {
+      break
+    }
+
+    // Other (logic block and comments)
     if (
       !isEscaping &&
       RESERVED_DELIMITERS.some((sample) => parser.match(sample))

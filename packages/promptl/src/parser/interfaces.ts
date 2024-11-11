@@ -1,9 +1,4 @@
-import {
-  CHAIN_STEP_TAG,
-  CUSTOM_CONTENT_TAG,
-  CUSTOM_MESSAGE_TAG,
-  REFERENCE_PROMPT_TAG,
-} from '$promptl/constants'
+import { TAG_NAMES } from '$promptl/constants'
 import { ContentTypeTagName, MessageRole } from '$promptl/types'
 import { Identifier, type Node as LogicalExpression } from 'estree'
 
@@ -45,13 +40,13 @@ type IElementTag<T extends string> = BaseNode & {
 
 export type MessageTag =
   | IElementTag<MessageRole>
-  | IElementTag<typeof CUSTOM_MESSAGE_TAG>
+  | IElementTag<typeof TAG_NAMES.message>
 export type ContentTag =
   | IElementTag<ContentTypeTagName>
-  | IElementTag<typeof CUSTOM_CONTENT_TAG>
+  | IElementTag<typeof TAG_NAMES.content>
 
-export type ReferenceTag = IElementTag<typeof REFERENCE_PROMPT_TAG>
-export type ChainStepTag = IElementTag<typeof CHAIN_STEP_TAG>
+export type ReferenceTag = IElementTag<typeof TAG_NAMES.prompt>
+export type ChainStepTag = IElementTag<typeof TAG_NAMES.step>
 export type ElementTag =
   | ContentTag
   | MessageTag
