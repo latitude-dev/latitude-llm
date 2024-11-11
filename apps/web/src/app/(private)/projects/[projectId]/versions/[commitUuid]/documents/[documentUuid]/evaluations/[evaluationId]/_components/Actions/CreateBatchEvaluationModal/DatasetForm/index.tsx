@@ -114,6 +114,11 @@ export default function DatasetForm({
     () => datasets.map((ds) => ({ value: ds.id, label: ds.name })),
     [datasets],
   )
+  const urlParameter = new URLSearchParams()
+  urlParameter.set('name', `Dataset for prompt: ${document.path}`)
+  urlParameter.set('parameters', parametersList.join(','))
+  urlParameter.set('backUrl', window.location.href)
+
   return (
     <>
       <NumeredList>
@@ -130,7 +135,7 @@ export default function DatasetForm({
               />
             </div>
             <Link
-              href={`${ROUTES.datasets.generate.root}?name='${document.path}'&parameters=${parametersList.join(',')}&backUrl=${window.location.href}`}
+              href={`${ROUTES.datasets.generate.root}?${urlParameter.toString()}`}
               className='flex flex-row items-center gap-1'
             >
               <Button variant='link'>

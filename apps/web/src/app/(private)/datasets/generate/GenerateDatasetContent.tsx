@@ -170,7 +170,7 @@ export function GenerateDatasetContent({
             {backUrl && (
               <Link href={backUrl}>
                 <Button variant='link'>
-                  <Icon name='arrowLeft' /> Back to evaluation
+                  <Icon name='arrowLeft' /> Go back
                 </Button>
               </Link>
             )}
