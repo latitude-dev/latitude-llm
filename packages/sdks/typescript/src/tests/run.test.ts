@@ -390,6 +390,32 @@ describe('/run', () => {
       )
     })
 
+    it('handles 502/504 errors', async () => {
+      const failedResponse = '<html>Not json!</html>'
+
+      mockNonStreamResponse({
+        server,
+        expectedBody: failedResponse,
+        expectedStatus: 502,
+      })
+
+      await expect(
+        sdk.run('path/to/document', {
+          projectId,
+          parameters: { foo: 'bar', lol: 'foo' },
+          stream: false,
+        }),
+      ).rejects.toThrowError(
+        new LatitudeApiError({
+          status: 502,
+          serverResponse: failedResponse,
+          message: 'Bad Gateway',
+          errorCode: ApiErrorCodes.InternalServerError,
+          dbErrorRef: undefined,
+        }),
+      )
+    })
+
     it('should retry 3 times if gateway is not available', async () => {
       const onErrorMock = vi.fn()
       const { mockFn } = mock502Response({

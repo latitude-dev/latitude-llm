@@ -1,4 +1,5 @@
 import {
+  ApiErrorCodes,
   ApiErrorJsonResponse,
   LatitudeErrorCodes,
 } from '@latitude-data/constants/errors'
@@ -54,13 +55,19 @@ export async function syncRun(
   })
 
   if (!response.ok) {
-    const json = (await response.json()) as ApiErrorJsonResponse
+    let json: ApiErrorJsonResponse | undefined
+    try {
+      json = (await response.json()) as ApiErrorJsonResponse
+    } catch (error) {
+      // Do nothing, sometimes gateway returns html instead of json (502/504 errors)
+    }
+
     const error = new LatitudeApiError({
       status: response.status,
-      serverResponse: JSON.stringify(json),
-      message: json.message,
-      errorCode: json.errorCode,
-      dbErrorRef: json.dbErrorRef,
+      serverResponse: json ? JSON.stringify(json) : response.statusText,
+      message: json?.message ?? response.statusText,
+      errorCode: json?.errorCode ?? ApiErrorCodes.InternalServerError,
+      dbErrorRef: json?.dbErrorRef,
     })
 
     onError?.(error)
