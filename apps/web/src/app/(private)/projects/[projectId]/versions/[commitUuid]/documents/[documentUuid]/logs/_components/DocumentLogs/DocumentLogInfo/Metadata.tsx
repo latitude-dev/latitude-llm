@@ -51,6 +51,12 @@ function ProviderLogsMetadata({
       ) ?? {},
     [providerLogs],
   )
+  const duration = useMemo(() => {
+    const timeInMs = (documentLog.duration ?? 0) - (providerLog.duration ?? 0)
+    if (timeInMs <= 0) return
+
+    return formatDuration(timeInMs)
+  }, [documentLog.duration, providerLog.duration])
 
   return (
     <>
@@ -139,12 +145,10 @@ function ProviderLogsMetadata({
       ) : (
         <MetadataItem label='Cost' value='-' />
       )}
-      {(providerLogs?.length ?? 0) > 0 && (
+      {duration && (
         <MetadataItem
           label='Time until last message'
-          value={formatDuration(
-            (documentLog.duration ?? 0) - (providerLog.duration ?? 0),
-          )}
+          value={duration}
           loading={providersLoading}
         />
       )}
