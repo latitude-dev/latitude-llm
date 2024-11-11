@@ -57,7 +57,8 @@ describe('getEvaluationPrompt', () => {
       evaluation,
     }).then((r) => r.unwrap())
 
-    expect(obtainedPrompt).toBe(prompt)
+    // @ts-expect-error - Metadata is a union type and prompt is not defined for the other types
+    expect(obtainedPrompt).toBe(evaluation.metadata.prompt)
   })
 
   it('Creates a compilable prompt for a simple evaluation', async () => {

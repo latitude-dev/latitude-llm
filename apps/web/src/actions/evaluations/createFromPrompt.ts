@@ -1,7 +1,10 @@
 'use server'
 
-import { EvaluationResultableType } from '@latitude-data/core/browser'
-import { createAdvancedEvaluation } from '@latitude-data/core/services/evaluations/create'
+import {
+  EvaluationMetadataType,
+  EvaluationResultableType,
+} from '@latitude-data/core/browser'
+import { createEvaluation } from '@latitude-data/core/services/evaluations/create'
 import { z } from 'zod'
 
 import { withDocument } from '../procedures'
@@ -11,21 +14,26 @@ export const createEvaluationFromPromptAction = withDocument
   .input(
     z.object({
       name: z.string(),
-      prompt: z.string(),
+      objective: z.string(),
+      additionalInstructions: z.string().optional(),
       resultType: z.nativeEnum(EvaluationResultableType),
-      metadata: z
-        .object({
+      metadata: z.union([
+        z.object({
           minValue: z.number(),
           maxValue: z.number(),
           minValueDescription: z.string().optional(),
           maxValueDescription: z.string().optional(),
-        })
-        .optional(),
+        }),
+        z.object({
+          falseValueDescription: z.string().optional(),
+          trueValueDescription: z.string().optional(),
+        }),
+      ]),
     }),
     { type: 'json' },
   )
   .handler(async ({ input, ctx }) => {
-    const result = await createAdvancedEvaluation({
+    const result = await createEvaluation({
       workspace: ctx.workspace,
       name: input.name,
       description: 'AI-generated evaluation',
@@ -33,13 +41,12 @@ export const createEvaluationFromPromptAction = withDocument
         input.resultType === EvaluationResultableType.Number
           ? EvaluationResultableType.Number
           : EvaluationResultableType.Boolean,
-      resultConfiguration:
-        input.resultType === EvaluationResultableType.Number && input.metadata
-          ? input.metadata
-          : {},
+      resultConfiguration: input.metadata,
       metadata: {
-        prompt: input.prompt,
+        objective: input.objective,
+        additionalInstructions: input.additionalInstructions ?? null,
       },
+      metadataType: EvaluationMetadataType.LlmAsJudgeSimple,
       user: ctx.user,
       projectId: ctx.project.id,
       documentUuid: ctx.document.documentUuid,

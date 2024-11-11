@@ -7,13 +7,19 @@ export interface SuggestedEvaluation {
   eval_name: string
   eval_description: string
   eval_type: 'number' | 'boolean'
-  eval_prompt: string
-  metadata?: {
-    range: {
-      from: number
-      to: number
-    }
-  }
+  eval_objective: string
+  eval_additional_instructions?: string
+  metadata:
+    | {
+        minValue: number
+        maxValue: number
+        minValueDescription?: string
+        maxValueDescription?: string
+      }
+    | {
+        falseValueDescription?: string
+        trueValueDescription?: string
+      }
 }
 
 export default function useSuggestedEvaluation(
