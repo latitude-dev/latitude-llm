@@ -189,15 +189,14 @@ export default {
     code: 'circular-reference',
     message: 'There is a circular reference',
   },
-  didNotResolveReferences: {
-    code: 'did-not-resolve-references',
-    message:
-      'Cannot compile reference tags. Make sure you have resolved the references before compiling.',
-  },
   referenceNotFound: {
     code: 'reference-not-found',
     message: 'The referenced document does not exist',
   },
+  referenceMissingParameter: (name: string) => ({
+    code: 'reference-missing-parameter',
+    message: `The referenced prompt requires a '${name}' parameter. Add it as an attribute to the tag.`,
+  }),
   referenceDepthLimit: {
     code: 'reference-depth-limit',
     message: 'The reference depth limit has been reached',
@@ -231,6 +230,10 @@ export default {
     code: 'invalid-content-type',
     message: `Invalid content type: ${name}`,
   }),
+  invalidReferencePath: {
+    code: 'invalid-reference-path',
+    message: 'Reference path must be a string',
+  },
   variableNotDeclared: (name: string) => ({
     code: 'variable-not-declared',
     message: `Variable '${name}' is not declared`,

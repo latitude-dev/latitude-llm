@@ -1,53 +1,12 @@
 import { TAG_NAMES } from '$promptl/constants'
 import CompileError from '$promptl/error/error'
 import { getExpectedError } from '$promptl/test/helpers'
-import {
-  Conversation,
-  MessageContent,
-  MessageRole,
-  TextContent,
-} from '$promptl/types'
+import { MessageRole, TextContent } from '$promptl/types'
 import { describe, expect, it, vi } from 'vitest'
 
-import { buildStepResponseContent, Chain } from './chain'
+import { Chain } from './chain'
+import { complete } from './test/helpers'
 import { removeCommonIndent } from './utils'
-
-async function defaultCallback(): Promise<string> {
-  return 'RESPONSE'
-}
-
-async function complete({
-  chain,
-  callback,
-  maxSteps = 50,
-}: {
-  chain: Chain
-  callback?: (convo: Conversation) => Promise<string>
-  maxSteps?: number
-}): Promise<{
-  response: MessageContent[]
-  conversation: Conversation
-  steps: number
-}> {
-  let steps = 0
-  let conversation: Conversation
-
-  let responseContent: MessageContent[] | undefined
-  while (true) {
-    const { completed, conversation: _conversation } =
-      await chain.step(responseContent)
-
-    conversation = _conversation
-
-    if (completed) return { conversation, steps, response: responseContent! }
-
-    const response = await (callback ?? defaultCallback)(conversation)
-    responseContent = buildStepResponseContent(response)
-    steps++
-
-    if (steps > maxSteps) throw new Error('too many chain steps')
-  }
-}
 
 describe('chain', async () => {
   it('does not return "completed" in the first iteration', async () => {

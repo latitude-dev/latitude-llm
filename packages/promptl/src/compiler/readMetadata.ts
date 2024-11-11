@@ -1,3 +1,5 @@
+import { createHash } from 'crypto'
+
 import {
   CUSTOM_MESSAGE_ROLE_ATTR,
   REFERENCE_DEPTH_LIMIT,
@@ -27,6 +29,7 @@ import { z } from 'zod'
 
 import { updateScopeContextForNode } from './logic'
 import { ScopeContext } from './scope'
+import { Document, ReferencePromptFn } from './types'
 import {
   findYAMLItemPosition,
   isChainStepTag,
@@ -42,15 +45,6 @@ function copyScopeContext(scopeContext: ScopeContext): ScopeContext {
   }
 }
 
-export type Document = {
-  path: string
-  content: string
-}
-export type ReferencePromptFn = (
-  path: string,
-  from?: string,
-) => Promise<Document | undefined>
-
 export class ReadMetadata {
   private rawText: string
   private referenceFn?: ReferencePromptFn
@@ -60,14 +54,13 @@ export class ReadMetadata {
 
   private config?: Config
   private configPosition?: { start: number; end: number }
-  private resolvedPrompt: string
-  private resolvedPromptOffset: number = 0
   private hasContent: boolean = false
 
   private accumulatedToolCalls: ContentTag[] = []
   private errors: CompileError[] = []
 
   private references: { [from: string]: string[] } = {}
+  private referencedHashes: string[] = []
   private referenceDepth: number = 0
 
   constructor({
@@ -86,8 +79,6 @@ export class ReadMetadata {
     this.fullPath = document.path
     this.withParameters = withParameters
     this.configSchema = configSchema
-
-    this.resolvedPrompt = document.content
   }
 
   async run(): Promise<ConversationMetadata> {
@@ -126,14 +117,6 @@ export class ReadMetadata {
       this.baseNodeError(errors.missingConfig, fragment, { start: 0, end: 0 })
     }
 
-    const resolvedPrompt =
-      Object.keys(this.config ?? {}).length > 0
-        ? '---\n' +
-          yaml.stringify(this.config, { indent: 2 }) +
-          '---\n' +
-          this.resolvedPrompt
-        : this.resolvedPrompt
-
     const setConfig = (config: Config) => {
       const start = this.configPosition?.start ?? 0
       const end = this.configPosition?.end ?? 0
@@ -151,12 +134,15 @@ export class ReadMetadata {
       )
     }
 
+    const contentToHash = [this.rawText, ...this.referencedHashes].join('')
+    const hash = createHash('sha256').update(contentToHash).digest('hex')
+
     return {
       parameters: new Set([
         ...scopeContext.usedUndefinedVariables,
         ...(scopeContext.onlyPredefinedVariables ?? new Set([])),
       ]),
-      resolvedPrompt,
+      hash,
       config: this.config ?? {},
       errors: this.errors,
       setConfig,
@@ -249,13 +235,8 @@ export class ReadMetadata {
       return
     }
 
-    if (node.type === 'Comment' || node.type === 'Config') {
-      /* Remove from the resolved prompt */
-      const start = node.start! + this.resolvedPromptOffset
-      const end = node.end! + this.resolvedPromptOffset
-      this.resolvedPrompt =
-        this.resolvedPrompt.slice(0, start) + this.resolvedPrompt.slice(end)
-      this.resolvedPromptOffset -= end - start
+    if (node.type === 'Comment') {
+      // do nothing
     }
 
     if (node.type === 'Config') {
@@ -541,7 +522,8 @@ export class ReadMetadata {
           .map((node) => node.data)
           .join('')
 
-        let resolvedRefPrompt = `/* <${TAG_NAMES.prompt} ${REFERENCE_PROMPT_ATTR}="${refPromptPath}" /> */`
+        attributes.delete(REFERENCE_PROMPT_ATTR) // The rest of the attributes are used as parameters
+
         const currentReferences = this.references[this.fullPath] ?? []
 
         const resolveRef = async () => {
@@ -577,9 +559,12 @@ export class ReadMetadata {
           refReadMetadata.referenceDepth = this.referenceDepth + 1
 
           const refPromptMetadata = await refReadMetadata.run()
-          refPromptMetadata.parameters.forEach((param: string) => {
-            if (!scopeContext.definedVariables.has(param)) {
-              scopeContext.usedUndefinedVariables.add(param)
+          refPromptMetadata.parameters.forEach((paramName: string) => {
+            if (!attributes.has(paramName)) {
+              this.baseNodeError(
+                errors.referenceMissingParameter(paramName),
+                node,
+              )
             }
           })
           refPromptMetadata.errors.forEach((error: CompileError) => {
@@ -596,7 +581,7 @@ export class ReadMetadata {
             this.baseNodeError(errors.referenceError(error), node)
           })
           this.accumulatedToolCalls = refReadMetadata.accumulatedToolCalls
-          resolvedRefPrompt = refReadMetadata.resolvedPrompt
+          this.referencedHashes.push(refPromptMetadata.hash)
         }
 
         try {
@@ -604,14 +589,6 @@ export class ReadMetadata {
         } catch (error: unknown) {
           this.baseNodeError(errors.referenceError(error), node)
         }
-
-        /* Replace the reference tag with the actual referenced prompt */
-        const start = node.start! + this.resolvedPromptOffset
-        const end = node.end! + this.resolvedPromptOffset
-        const pretext = this.resolvedPrompt.slice(0, start)
-        const posttext = this.resolvedPrompt.slice(end)
-        this.resolvedPrompt = pretext + resolvedRefPrompt + posttext
-        this.resolvedPromptOffset += resolvedRefPrompt.length - (end - start)
 
         return
       }

@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 import { z } from 'zod'
 
 import { readMetadata } from '.'
-import { Document } from './readMetadata'
+import { Document } from './types'
 import { removeCommonIndent } from './utils'
 
 type PromptTree = {
@@ -21,69 +21,35 @@ const referenceFn = (prompts: PromptTree) => {
   }
 }
 
-describe('resolvedPrompt', async () => {
-  it('replaces reference tags with the referenced prompt', async () => {
-    const prompts = {
-      parent: removeCommonIndent(`
-        This is the parent prompt.
-        <prompt path="child" />
-        The end.
-      `),
-      child: removeCommonIndent('Lorem ipsum'),
-    }
+describe('hash', async () => {
+  it('always returns the same hash for the same prompt', async () => {
+    const prompt1 = 'This is a prompt'
+    const prompt2 = 'This is a prompt'
+    const prompt3 = 'This is another prompt'
 
-    const cleanParentMetadata = await readMetadata({
-      prompt: prompts['parent']!,
-      referenceFn: referenceFn(prompts),
-    })
+    const metadata1 = await readMetadata({ prompt: prompt1 })
+    const metadata2 = await readMetadata({ prompt: prompt2 })
+    const metadata3 = await readMetadata({ prompt: prompt3 })
 
-    expect(cleanParentMetadata.resolvedPrompt).toBe(
-      removeCommonIndent(`
-      This is the parent prompt.
-      Lorem ipsum
-      The end.
-    `),
-    )
+    expect(metadata1.hash).toBe(metadata2.hash)
+    expect(metadata1.hash).not.toBe(metadata3.hash)
   })
 
-  it('ignores any other tag and logic', async () => {
-    const prompts = {
-      parent: removeCommonIndent(`
-        This is the parent prompt.
-        {{ unknownVariable }}
-        <user name={{ username }}>
-          Test
-        </user>
-        <prompt path="child" />
-        <foo>
-          This tag does not even exist
-        </foo>
-        The end.
-      `),
-      child: removeCommonIndent(`
-        foo!
-      `),
-    }
+  it('includes the content from referenced tags into account when calculating the hash', async () => {
+    const parent = 'This is the parent prompt. <prompt path="child" /> The end.'
+    const child1 = 'ABCDEFG'
+    const child2 = '1234567'
 
-    const cleanParentMetadata = await readMetadata({
-      prompt: prompts['parent']!,
-      referenceFn: referenceFn(prompts),
+    const metadata1 = await readMetadata({
+      prompt: parent,
+      referenceFn: referenceFn({ child: child1 }),
+    })
+    const metadata2 = await readMetadata({
+      prompt: parent,
+      referenceFn: referenceFn({ child: child2 }),
     })
 
-    expect(cleanParentMetadata.resolvedPrompt).toBe(
-      removeCommonIndent(`
-        This is the parent prompt.
-        {{ unknownVariable }}
-        <user name={{ username }}>
-          Test
-        </user>
-        foo!
-        <foo>
-          This tag does not even exist
-        </foo>
-        The end.
-    `),
-    )
+    expect(metadata1.hash).not.toBe(metadata2.hash)
   })
 
   it('works with multiple levels of nesting', async () => {
@@ -96,26 +62,34 @@ describe('resolvedPrompt', async () => {
         Child:
         <prompt path="grandchild" />
       `),
-      grandchild: removeCommonIndent(`
-        Grandchild.
+      grandchild1: removeCommonIndent(`
+        Grandchild 1.
+      `),
+      grandchild2: removeCommonIndent(`
+        Grandchild 2.
       `),
     }
 
-    const cleanParentMetadata = await readMetadata({
+    const parentMetadata1 = await readMetadata({
       prompt: prompts['parent']!,
-      referenceFn: referenceFn(prompts),
+      referenceFn: referenceFn({
+        ...prompts,
+        grandchild: prompts['grandchild1'],
+      }),
     })
 
-    expect(cleanParentMetadata.resolvedPrompt).toBe(
-      removeCommonIndent(`
-      Parent:
-      Child:
-      Grandchild.
-    `),
-    )
+    const parentMetadata2 = await readMetadata({
+      prompt: prompts['parent']!,
+      referenceFn: referenceFn({
+        ...prompts,
+        grandchild: prompts['grandchild2'],
+      }),
+    })
+
+    expect(parentMetadata1.hash).not.toBe(parentMetadata2.hash)
   })
 
-  it('workes with nested tags', async () => {
+  it('works with nested tags', async () => {
     const prompts = {
       parent: removeCommonIndent(`
         {{if foo}}
@@ -127,110 +101,31 @@ describe('resolvedPrompt', async () => {
       child1: removeCommonIndent(`
         foo!
       `),
-      child2: removeCommonIndent(`
+      child2v1: removeCommonIndent(`
         bar!
       `),
-    }
-
-    const cleanParentMetadata = await readMetadata({
-      prompt: prompts['parent']!,
-      referenceFn: referenceFn(prompts),
-    })
-
-    expect(cleanParentMetadata.resolvedPrompt).toBe(
-      removeCommonIndent(`
-      {{if foo}}
-        foo!
-      {{else}}
-        bar!
-      {{endif}}
-    `),
-    )
-  })
-
-  it('failed references are replaced with a comment', async () => {
-    const prompts = {
-      parent: removeCommonIndent(`
-        This is the parent prompt.
-        <prompt path="child" />
-        The end.
+      child2v2: removeCommonIndent(`
+        baz!
       `),
     }
 
-    const cleanParentMetadata = await readMetadata({
+    const parentMetadatav1 = await readMetadata({
       prompt: prompts['parent']!,
-      referenceFn: referenceFn(prompts),
+      referenceFn: referenceFn({
+        ...prompts,
+        child2: prompts['child2v1'],
+      }),
     })
 
-    expect(cleanParentMetadata.resolvedPrompt).toBe(
-      removeCommonIndent(`
-      This is the parent prompt.
-      /* <prompt path="child" /> */
-      The end.
-    `),
-    )
-  })
-
-  it('returns only the parent config', async () => {
-    const prompts = {
-      parent: removeCommonIndent(`
-        ---
-        config: parent
-        ---
-        Parent.
-        <prompt path="child" />
-      `),
-      child: removeCommonIndent(`
-        ---
-        config: child
-        foo: bar
-        ---
-        Child.
-      `),
-    }
-
-    const cleanParentMetadata = await readMetadata({
+    const parentMetadatav2 = await readMetadata({
       prompt: prompts['parent']!,
-      referenceFn: referenceFn(prompts),
+      referenceFn: referenceFn({
+        ...prompts,
+        child2: prompts['child2v2'],
+      }),
     })
 
-    expect(cleanParentMetadata.resolvedPrompt).toBe(
-      removeCommonIndent(`
-      ---
-      config: parent
-      ---
-      Parent.
-      Child.
-    `),
-    )
-  })
-
-  it('removes comments', async () => {
-    const prompts = {
-      parent: removeCommonIndent(`
-        Parent. /* This is the parent document */
-        <prompt path="child" />
-        The end.
-      `),
-      child: removeCommonIndent(`
-        /* This is the child document */
-        Child.
-      `),
-    }
-
-    const cleanParentMetadata = await readMetadata({
-      prompt: prompts['parent']!,
-      referenceFn: referenceFn(prompts),
-    })
-
-    expect(cleanParentMetadata.resolvedPrompt).toBe(
-      removeCommonIndent(`
-      Parent. 
-
-      Child.
-      The end.
-    `),
-    )
+    expect(parentMetadatav1.hash).not.toBe(parentMetadatav2.hash)
   })
 })
 
@@ -497,43 +392,16 @@ describe('parameters', async () => {
 })
 
 describe('referenced prompts', async () => {
-  it('changes the parent resolvedPrompt with the referenced prompt has changed', async () => {
-    const prompts = {
-      parent: removeCommonIndent(`
-        This is the parent prompt.
-        <prompt path="child" />
-        The end.
-      `),
-      child: removeCommonIndent('Lorem ipsum'),
-    }
-
-    const metadata1 = await readMetadata({
-      prompt: prompts['parent']!,
-      referenceFn: referenceFn(prompts),
-    })
-
-    prompts['child'] = 'Latitude Rocks' // Modify child prompt
-
-    const metadata2 = await readMetadata({
-      prompt: prompts['parent']!,
-      referenceFn: referenceFn(prompts),
-    })
-
-    expect(metadata1.resolvedPrompt).not.toBe(metadata2.resolvedPrompt)
-  })
-
-  it('includes parameters from referenced prompts', async () => {
+  it('does not include parameters from referenced prompts', async () => {
     const prompts = {
       parent: removeCommonIndent(`
         This is the parent prompt.
         {{ parentParam }}
-        {{ parentDefinedVar = 5 }}
         <prompt path="child" />
         The end.
       `),
       child: removeCommonIndent(`
         {{ childParam }}
-        {{ parentDefinedVar }}
       `),
     }
 
@@ -542,8 +410,40 @@ describe('referenced prompts', async () => {
       referenceFn: referenceFn(prompts),
     })
 
-    // parentDefinedVar should not be included as parameter
-    expect(metadata.parameters).toEqual(new Set(['parentParam', 'childParam']))
+    expect(metadata.parameters).toContain('parentParam')
+    expect(metadata.parameters).not.toContain('childParam')
+  })
+
+  it('returns an error if a child param is not included in the reference tag', async () => {
+    const prompts = {
+      child: removeCommonIndent(`
+        {{ childParam }}
+      `),
+      parentCorrect: removeCommonIndent(`
+        This is the parent prompt.
+        <prompt path="child" childParam={{foo}} />
+        The end.
+      `),
+      parentWrong: removeCommonIndent(`
+        This is the parent prompt.
+        <prompt path="child" />
+        The end.
+      `),
+    }
+
+    const metadataCorrect = await readMetadata({
+      prompt: prompts['parentCorrect']!,
+      referenceFn: referenceFn(prompts),
+    })
+
+    expect(metadataCorrect.errors.length).toBe(0)
+
+    const metadataWrong = await readMetadata({
+      prompt: prompts['parentWrong']!,
+      referenceFn: referenceFn(prompts),
+    })
+
+    expect(metadataWrong.errors.length).toBe(1)
   })
 })
 

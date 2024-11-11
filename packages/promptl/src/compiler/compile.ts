@@ -27,7 +27,11 @@ import { compile as resolveText } from './base/nodes/text'
 import { CompileNodeContext, TemplateNodeWithStatus } from './base/types'
 import { resolveLogicNode } from './logic'
 import Scope, { ScopeStash } from './scope'
-import type { CompileOptions, ResolveBaseNodeProps } from './types'
+import type {
+  CompileOptions,
+  ReferencePromptFn,
+  ResolveBaseNodeProps,
+} from './types'
 import { removeCommonIndent } from './utils'
 
 export type CompilationStatus = {
@@ -50,6 +54,8 @@ class StopIteration extends Error {
 export class Compile {
   private ast: Fragment
   private rawText: string
+  private fullPath: string | undefined
+  private referenceFn: ReferencePromptFn | undefined
   private globalScope: Scope
   private defaultRole: MessageRole
 
@@ -68,6 +74,8 @@ export class Compile {
     rawText,
     globalScope,
     stepResponse,
+    referenceFn,
+    fullPath,
     defaultRole = MessageRole.system,
   }: {
     rawText: string
@@ -80,6 +88,8 @@ export class Compile {
     this.ast = ast
     this.stepResponse = stepResponse
     this.defaultRole = defaultRole
+    this.referenceFn = referenceFn
+    this.fullPath = fullPath
   }
 
   async run(): Promise<CompilationStatus> {
@@ -93,6 +103,7 @@ export class Compile {
         isInsideStepTag: false,
         isInsideMessageTag: false,
         isInsideContentTag: false,
+        fullPath: this.fullPath,
       })
     } catch (e) {
       if (e instanceof StopIteration) {
@@ -208,6 +219,7 @@ export class Compile {
     isInsideStepTag,
     isInsideMessageTag,
     isInsideContentTag,
+    fullPath,
     completedValue = true,
   }: ResolveBaseNodeProps<TemplateNode>): Promise<void> {
     const nodeWithStatus = node as TemplateNodeWithStatus
@@ -237,6 +249,8 @@ export class Compile {
       isInsideStepTag,
       isInsideMessageTag,
       isInsideContentTag,
+      fullPath,
+      referencePromptFn: this.referenceFn,
       resolveBaseNode: resolveBaseNodeFn.bind(this),
       resolveExpression: this.resolveExpression.bind(this),
       baseNodeError: this.baseNodeError.bind(this),

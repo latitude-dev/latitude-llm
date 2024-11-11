@@ -13,6 +13,7 @@ export async function compile(
     isInsideStepTag,
     isInsideMessageTag,
     isInsideContentTag,
+    fullPath,
     resolveBaseNode,
     baseNodeError,
     popStrayText,
@@ -31,6 +32,7 @@ export async function compile(
       isInsideStepTag,
       isInsideMessageTag,
       isInsideContentTag: true,
+      fullPath,
     })
   }
   const textContent = removeCommonIndent(popStrayText())
