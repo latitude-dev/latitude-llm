@@ -1,11 +1,17 @@
 import path from 'path'
 
 import slugify from '@sindresorhus/slugify'
+import { DatabaseError } from 'pg'
 
 import { User, Workspace } from '../../browser'
 import { database } from '../../client'
 import { publisher } from '../../events/publisher'
-import { Result, Transaction } from '../../lib'
+import {
+  BadRequestError,
+  databaseErrorCodes,
+  Result,
+  Transaction,
+} from '../../lib'
 import { diskFactory, DiskWrapper } from '../../lib/disk'
 import { syncReadCsv } from '../../lib/readCsv'
 import { datasets } from '../../schema'
@@ -46,42 +52,54 @@ export const createDataset = async (
   const { headers, rowCount } = readCsvResult.value
 
   return Transaction.call(async (trx) => {
-    const inserts = await trx
-      .insert(datasets)
-      .values({
-        name: data.name,
-        csvDelimiter: data.csvDelimiter,
-        workspaceId: workspace.id,
-        authorId: author.id,
-        fileKey: key,
-        fileMetadata: {
-          ...fileMetadata,
-          headers,
-          rowCount,
+    try {
+      const inserts = await trx
+        .insert(datasets)
+        .values({
+          name: data.name,
+          csvDelimiter: data.csvDelimiter,
+          workspaceId: workspace.id,
+          authorId: author.id,
+          fileKey: key,
+          fileMetadata: {
+            ...fileMetadata,
+            headers,
+            rowCount,
+          },
+        })
+        .returning()
+
+      const dataset = inserts[0]!
+
+      publisher.publishLater({
+        type: 'datasetCreated',
+        data: {
+          dataset: {
+            ...dataset,
+            author,
+          },
+          workspaceId: workspace.id,
+          userEmail: author.email,
         },
       })
-      .returning()
 
-    const dataset = inserts[0]!
-
-    publisher.publishLater({
-      type: 'datasetCreated',
-      data: {
-        dataset: {
-          ...dataset,
-          author,
+      return Result.ok({
+        ...dataset,
+        author: {
+          id: author.id,
+          name: author.name,
         },
-        workspaceId: workspace.id,
-        userEmail: author.email,
-      },
-    })
+      })
+    } catch (error) {
+      if (error instanceof DatabaseError) {
+        if (error.code === databaseErrorCodes.uniqueViolation) {
+          if (error.constraint?.includes('name')) {
+            throw new BadRequestError('A dataset with this name already exists')
+          }
+        }
+      }
 
-    return Result.ok({
-      ...dataset,
-      author: {
-        id: author.id,
-        name: author.name,
-      },
-    })
+      throw error
+    }
   }, db)
 }
