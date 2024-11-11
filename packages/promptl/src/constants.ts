@@ -14,7 +14,8 @@ export const REFERENCE_PROMPT_ATTR = 'path' as const
 export const REFERENCE_DEPTH_LIMIT = 50
 
 // <response as="…" />
-export const CHAIN_STEP_TAG = 'response' as const
+export const CHAIN_STEP_TAG = 'step' as const
+export const CHAIN_STEP_ISOLATED_ATTR = 'isolated' as const
 
 export enum KEYWORDS {
   if = 'if',

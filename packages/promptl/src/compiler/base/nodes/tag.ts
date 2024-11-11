@@ -14,10 +14,10 @@ import {
 } from '$promptl/parser/interfaces'
 
 import { CompileNodeContext } from '../types'
-import { compile as resolveChainStep } from './tags/chainStep'
 import { compile as resolveContent } from './tags/content'
 import { compile as resolveMessage } from './tags/message'
 import { compile as resolveRef } from './tags/ref'
+import { compile as resolveChainStep } from './tags/step'
 
 async function resolveTagAttributes({
   node: tagNode,
@@ -68,6 +68,7 @@ export async function compile(props: CompileNodeContext<ElementTag>) {
   const {
     node,
     scope,
+    isInsideStepTag,
     isInsideContentTag,
     isInsideMessageTag,
     resolveBaseNode,
@@ -109,6 +110,7 @@ export async function compile(props: CompileNodeContext<ElementTag>) {
     await resolveBaseNode({
       node: childNode,
       scope,
+      isInsideStepTag,
       isInsideMessageTag,
       isInsideContentTag,
     })

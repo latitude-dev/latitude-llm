@@ -145,6 +145,10 @@ export default {
     code: 'invalid-tool-call-placement',
     message: 'Only assistant messages can contain tool calls',
   },
+  stepTagInsideStep: {
+    code: 'step-tag-inside-step',
+    message: 'Step tags cannot be inside of another step tag',
+  },
   messageTagInsideMessage: {
     code: 'message-tag-inside-message',
     message: 'Message tags cannot be inside of another message',

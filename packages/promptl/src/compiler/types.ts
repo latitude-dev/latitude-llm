@@ -6,6 +6,7 @@ import type Scope from './scope'
 export type ResolveBaseNodeProps<N extends TemplateNode> = {
   node: N
   scope: Scope
+  isInsideStepTag: boolean
   isInsideMessageTag: boolean
   isInsideContentTag: boolean
   completedValue?: unknown

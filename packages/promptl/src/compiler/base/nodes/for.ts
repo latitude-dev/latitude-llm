@@ -13,6 +13,7 @@ type ForNodeWithStatus = TemplateNodeWithStatus & {
 export async function compile({
   node,
   scope,
+  isInsideStepTag,
   isInsideContentTag,
   isInsideMessageTag,
   resolveBaseNode,
@@ -32,6 +33,7 @@ export async function compile({
       await resolveBaseNode({
         node: childNode,
         scope: childScope,
+        isInsideStepTag,
         isInsideMessageTag,
         isInsideContentTag,
       })
@@ -72,6 +74,7 @@ export async function compile({
       await resolveBaseNode({
         node: childNode,
         scope: localScope,
+        isInsideStepTag,
         isInsideMessageTag,
         isInsideContentTag,
         completedValue: `step_${i}`,

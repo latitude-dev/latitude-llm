@@ -5,6 +5,7 @@ import { CompileNodeContext } from '../types'
 export async function compile({
   node,
   scope,
+  isInsideStepTag,
   isInsideContentTag,
   isInsideMessageTag,
   resolveBaseNode,
@@ -13,6 +14,7 @@ export async function compile({
     await resolveBaseNode({
       node: childNode,
       scope,
+      isInsideStepTag,
       isInsideMessageTag,
       isInsideContentTag,
     })
