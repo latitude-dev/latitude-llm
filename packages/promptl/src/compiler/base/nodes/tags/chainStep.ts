@@ -1,7 +1,7 @@
-import { tagAttributeIsLiteral } from '$compiler/compiler/utils'
-import errors from '$compiler/error/errors'
-import { ChainStepTag } from '$compiler/parser/interfaces'
-import { Config } from '$compiler/types'
+import { tagAttributeIsLiteral } from '$promptl/compiler/utils'
+import errors from '$promptl/error/errors'
+import { ChainStepTag } from '$promptl/parser/interfaces'
+import { Config } from '$promptl/types'
 
 import { CompileNodeContext } from '../../types'
 

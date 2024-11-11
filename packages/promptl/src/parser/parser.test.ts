@@ -1,32 +1,20 @@
-import { CUSTOM_TAG_END, CUSTOM_TAG_START } from '$compiler/constants'
-import CompileError from '$compiler/error/error'
+import { CUSTOM_TAG_END, CUSTOM_TAG_START } from '$promptl/constants'
+import CompileError from '$promptl/error/error'
+import { getExpectedError } from '$promptl/test/helpers'
 import { describe, expect, it } from 'vitest'
 
 import parse from '.'
 import { TemplateNode } from './interfaces'
 
-const getExpectedError = <T>(
-  action: () => void,
-  errorClass: new () => T,
-): T => {
-  try {
-    action()
-  } catch (err) {
-    expect(err).toBeInstanceOf(errorClass)
-    return err as T
-  }
-  throw new Error('Expected an error to be thrown')
-}
-
-describe('Fragment', () => {
-  it('parses any string as a fragment', () => {
+describe('Fragment', async () => {
+  it('parses any string as a fragment', async () => {
     const fragment = parse('hello world')
     expect(fragment.type).toBe('Fragment')
   })
 })
 
-describe('Text Block', () => {
-  it('parses any regular string as a text block', () => {
+describe('Text Block', async () => {
+  it('parses any regular string as a text block', async () => {
     const text = 'hello world'
     const fragment = parse(text)
     expect(fragment.children.length).toBe(1)
@@ -36,7 +24,7 @@ describe('Text Block', () => {
     expect(textBlock.data).toBe(text)
   })
 
-  it('keeps line breaks', () => {
+  it('keeps line breaks', async () => {
     const text = 'hello\nworld'
     const fragment = parse(text)
     expect(fragment.children.length).toBe(1)
@@ -46,7 +34,7 @@ describe('Text Block', () => {
     expect(textBlock.data).toBe(text)
   })
 
-  it('parses escaped brackets as text', () => {
+  it('parses escaped brackets as text', async () => {
     const text = `hello \\${CUSTOM_TAG_START} world`
     const expected = `hello ${CUSTOM_TAG_START} world`
     const fragment = parse(text)
@@ -58,8 +46,8 @@ describe('Text Block', () => {
   })
 })
 
-describe('Comments', () => {
-  it('parses a multiline comment block', () => {
+describe('Comments', async () => {
+  it('parses a multiline comment block', async () => {
     const fragment = parse('/* hello\nworld */')
     expect(fragment.children.length).toBe(1)
 
@@ -69,7 +57,7 @@ describe('Comments', () => {
     expect(commentBlock.raw).toBe('/* hello\nworld */')
   })
 
-  it('ignores brackets and any other block within a comment', () => {
+  it('ignores brackets and any other block within a comment', async () => {
     const fragment = parse(
       `
 /* hello
@@ -86,7 +74,7 @@ world */
     )
   })
 
-  it('Allows tag comments', () => {
+  it('Allows tag comments', async () => {
     const fragment = parse('<!-- hello -->')
     expect(fragment.children.length).toBe(1)
 
@@ -96,8 +84,8 @@ world */
   })
 })
 
-describe('Tags', () => {
-  it('parses any HTML-like tag', () => {
+describe('Tags', async () => {
+  it('parses any HTML-like tag', async () => {
     const fragment = parse('<custom-tag></custom-tag>')
     expect(fragment.children.length).toBe(1)
 
@@ -106,7 +94,7 @@ describe('Tags', () => {
     expect(tag.name).toBe('custom-tag')
   })
 
-  it('parses self closing tags', () => {
+  it('parses self closing tags', async () => {
     const fragment = parse('<custom-tag />')
     expect(fragment.children.length).toBe(1)
 
@@ -115,28 +103,28 @@ describe('Tags', () => {
     expect(tag.name).toBe('custom-tag')
   })
 
-  it('fails if there is no closing tag', () => {
+  it('fails if there is no closing tag', async () => {
     const action = () => parse('<custom-tag>')
 
-    const error = getExpectedError(action, CompileError)
+    const error = await getExpectedError(action, CompileError)
     expect(error.code).toBe('unclosed-block')
   })
 
-  it('fails if the tag is not opened', () => {
+  it('fails if the tag is not opened', async () => {
     const action = () => parse('</custom-tag>')
 
-    const error = getExpectedError(action, CompileError)
+    const error = await getExpectedError(action, CompileError)
     expect(error.code).toBe('unexpected-tag-close')
   })
 
-  it('fails if the tag is not closed', () => {
+  it('fails if the tag is not closed', async () => {
     const action = () => parse('<custom-tag')
 
-    const error = getExpectedError(action, CompileError)
+    const error = await getExpectedError(action, CompileError)
     expect(error.code).toBe('unexpected-eof')
   })
 
-  it('Parses tags within tags', () => {
+  it('Parses tags within tags', async () => {
     const fragment = parse('<parent><child/></parent>')
     expect(fragment.children.length).toBe(1)
 
@@ -150,7 +138,7 @@ describe('Tags', () => {
     expect(child.name).toBe('child')
   })
 
-  it('parses all attributes', () => {
+  it('parses all attributes', async () => {
     const fragment = parse(
       '<custom-tag attr1="value1" attr2="value2"></custom-tag>',
     )
@@ -178,7 +166,7 @@ describe('Tags', () => {
     expect(value2[0]!.data).toBe('value2')
   })
 
-  it('Parses attribute vales as expressions when interpolated', () => {
+  it('Parses attribute vales as expressions when interpolated', async () => {
     const fragment = parse(
       `<custom-tag attr=${CUSTOM_TAG_START}value${CUSTOM_TAG_END} />`,
     )
@@ -198,7 +186,7 @@ describe('Tags', () => {
     expect(value[0]!.expression).toBeTruthy()
   })
 
-  it('Parses attributes with no value as true', () => {
+  it('Parses attributes with no value as true', async () => {
     const fragment = parse(`<custom-tag attr />`)
     expect(fragment.children.length).toBe(1)
 
@@ -213,10 +201,10 @@ describe('Tags', () => {
     expect(attr.value).toBe(true)
   })
 
-  it('Fails when adding a duplicate attribute', () => {
+  it('Fails when adding a duplicate attribute', async () => {
     const action = () => parse(`<custom-tag attr="value1" attr="value2" />`)
 
-    const error = getExpectedError(action, CompileError)
+    const error = await getExpectedError(action, CompileError)
     expect(error.code).toBe('duplicate-attribute')
   })
 })

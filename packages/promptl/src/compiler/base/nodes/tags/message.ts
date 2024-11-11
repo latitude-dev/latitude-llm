@@ -1,19 +1,15 @@
-import { ToolCallReference } from '$compiler/compiler/types'
 import {
   CUSTOM_MESSAGE_ROLE_ATTR,
   CUSTOM_MESSAGE_TAG,
-} from '$compiler/constants'
-import errors from '$compiler/error/errors'
-import { MessageTag } from '$compiler/parser/interfaces'
+} from '$promptl/constants'
+import errors from '$promptl/error/errors'
+import { MessageTag, TemplateNode } from '$promptl/parser/interfaces'
 import {
-  AssistantMessage,
+  ContentType,
   Message,
   MessageContent,
   MessageRole,
-  SystemMessage,
-  ToolMessage,
-  UserMessage,
-} from '$compiler/types'
+} from '$promptl/types'
 
 import { CompileNodeContext } from '../../types'
 
@@ -31,7 +27,6 @@ export async function compile(
     groupContent,
     groupStrayText,
     popContent,
-    popToolCalls,
     addMessage,
   } = props
 
@@ -60,14 +55,12 @@ export async function compile(
   }
 
   groupStrayText()
-  const messageContent = popContent()
-  const toolCalls = popToolCalls()
+  const content = popContent()
 
   const message = buildMessage(props as CompileNodeContext<MessageTag>, {
     role,
     attributes,
-    content: messageContent,
-    toolCalls,
+    content,
   })!
   addMessage(message)
 }
@@ -75,44 +68,33 @@ export async function compile(
 type BuildProps<R extends MessageRole> = {
   role: R
   attributes: Record<string, unknown>
-  content: R extends MessageRole.user ? MessageContent[] : string
-  toolCalls: ToolCallReference[]
+  content: { node?: TemplateNode; content: MessageContent }[]
 }
 
 function buildMessage<R extends MessageRole>(
   { node, baseNodeError }: CompileNodeContext<MessageTag>,
-  { role, attributes, content, toolCalls }: BuildProps<R>,
+  { role, attributes, content }: BuildProps<R>,
 ): Message | undefined {
+  if (!Object.values(MessageRole).includes(role)) {
+    baseNodeError(errors.invalidMessageRole(role), node)
+  }
+
   if (role !== MessageRole.assistant) {
-    toolCalls.forEach(({ node: toolNode }) => {
-      baseNodeError(errors.invalidToolCallPlacement, toolNode)
+    content.forEach((item) => {
+      if (item.content.type === ContentType.toolCall) {
+        baseNodeError(errors.invalidToolCallPlacement, item.node ?? node)
+      }
     })
   }
 
-  if (role === MessageRole.system) {
-    return {
-      ...attributes,
-      role,
-      content,
-    } as SystemMessage
-  }
+  const message = {
+    ...attributes,
+    role,
+    content: content.map((item) => item.content),
+  } as Message
 
   if (role === MessageRole.user) {
-    return {
-      ...attributes,
-      role,
-      name: attributes.name ? String(attributes.name) : undefined,
-      content,
-    } as UserMessage
-  }
-
-  if (role === MessageRole.assistant) {
-    return {
-      ...attributes,
-      role,
-      toolCalls: toolCalls.map(({ value }) => value),
-      content,
-    } as AssistantMessage
+    message.name = attributes.name ? String(attributes.name) : undefined
   }
 
   if (role === MessageRole.tool) {
@@ -120,11 +102,8 @@ function buildMessage<R extends MessageRole>(
       baseNodeError(errors.toolMessageWithoutId, node)
     }
 
-    return {
-      role,
-      content,
-    } as ToolMessage
+    message.toolId = String(attributes.id)
   }
 
-  baseNodeError(errors.invalidMessageRole(role), node)
+  return message
 }

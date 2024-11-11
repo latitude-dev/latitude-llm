@@ -1,4 +1,4 @@
-import { Fragment } from '$compiler/parser/interfaces'
+import { Fragment } from '$promptl/parser/interfaces'
 import { locate } from 'locate-character'
 
 export interface Position {

@@ -1,4 +1,4 @@
-import CompileError from '$compiler/error/error'
+import CompileError from '$promptl/error/error'
 import { describe, expect, it } from 'vitest'
 import { z } from 'zod'
 

@@ -1,11 +1,12 @@
-import { getExpectedError } from '$compiler/compiler/test/helpers'
-import CompileError from '$compiler/error/error'
+import CompileError from '$promptl/error/error'
+import { getExpectedError } from '$promptl/test/helpers'
 import {
+  ContentType,
   Message,
   MessageContent,
   MessageRole,
   TextContent,
-} from '$compiler/types'
+} from '$promptl/types'
 import { describe, expect, it } from 'vitest'
 
 import { render } from '.'
@@ -31,6 +32,48 @@ async function getCompiledText(
     return acc + content
   }, '')
 }
+
+describe('automatic message grouping', async () => {
+  it('returns system messages by default', async () => {
+    const prompt = 'Hello world!'
+    const result = await render({ prompt })
+    const message = result.messages[0]!
+    expect(message.role).toBe(MessageRole.system)
+  })
+
+  it('groups consecutive contents with the same role', async () => {
+    const prompt = `
+      Hello world
+      <content-text>
+        This is
+      </content-text>
+      your
+      <content-image>
+        Captain
+      </content-image>
+      speaking
+    `
+    const result = await render({ prompt })
+    const messages = result.messages
+
+    expect(messages.length).toBe(1)
+    const message = messages[0]!
+    expect(message.role).toBe(MessageRole.system)
+    expect(message.content.length).toBe(5)
+    expect(message.content[0]!.type).toBe(ContentType.text)
+    expect(message.content[1]!.type).toBe(ContentType.text)
+    expect(message.content[2]!.type).toBe(ContentType.text)
+    expect(message.content[3]!.type).toBe(ContentType.image)
+    expect(message.content[4]!.type).toBe(ContentType.text)
+  })
+
+  it('allows defining the default role', async () => {
+    const prompt = 'Hello world!'
+    const result = await render({ prompt, defaultRole: MessageRole.user })
+    const message = result.messages[0]!
+    expect(message.role).toBe(MessageRole.user)
+  })
+})
 
 describe('config section', async () => {
   it('compiles the YAML written in the config section and returns it as the config attribute in the result', async () => {

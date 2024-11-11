@@ -4,19 +4,24 @@ import {
   REFERENCE_DEPTH_LIMIT,
   REFERENCE_PROMPT_ATTR,
   REFERENCE_PROMPT_TAG,
-} from '$compiler/constants'
-import CompileError, { error } from '$compiler/error/error'
-import errors from '$compiler/error/errors'
-import parse from '$compiler/parser/index'
+} from '$promptl/constants'
+import CompileError, { error } from '$promptl/error/error'
+import errors from '$promptl/error/errors'
+import parse from '$promptl/parser/index'
 import type {
   Attribute,
   BaseNode,
+  ContentTag,
   ElementTag,
   Fragment,
   TemplateNode,
-  ToolCallTag,
-} from '$compiler/parser/interfaces'
-import { Config, ConversationMetadata, MessageRole } from '$compiler/types'
+} from '$promptl/parser/interfaces'
+import {
+  Config,
+  ContentTypeTagName,
+  ConversationMetadata,
+  MessageRole,
+} from '$promptl/types'
 import { Node as LogicalExpression } from 'estree'
 import yaml, { Node as YAMLItem } from 'yaml'
 import { z } from 'zod'
@@ -29,7 +34,6 @@ import {
   isContentTag,
   isMessageTag,
   isRefTag,
-  isToolCallTag,
 } from './utils'
 
 function copyScopeContext(scopeContext: ScopeContext): ScopeContext {
@@ -61,7 +65,7 @@ export class ReadMetadata {
   private resolvedPromptOffset: number = 0
   private hasContent: boolean = false
 
-  private accumulatedToolCalls: ToolCallTag[] = []
+  private accumulatedToolCalls: ContentTag[] = []
   private errors: CompileError[] = []
 
   private references: { [from: string]: string[] } = {}
@@ -404,44 +408,28 @@ export class ReadMetadata {
 
     if (node.type === 'ElementTag') {
       this.hasContent = true
-      if (isToolCallTag(node)) {
-        if (isInsideContentTag) {
-          this.baseNodeError(errors.toolCallTagInsideContent, node)
-          return
-        }
-
-        const attributes = await this.listTagAttributes({
-          tagNode: node,
-          scopeContext,
-        })
-
-        if (!attributes.has('id')) {
-          this.baseNodeError(errors.toolCallTagWithoutId, node)
-          return
-        }
-
-        if (!attributes.has('name')) {
-          this.baseNodeError(errors.toolCallWithoutName, node)
-          return
-        }
-
-        for await (const childNode of node.children ?? []) {
-          await this.readBaseMetadata({
-            node: childNode,
-            scopeContext,
-            isInsideMessageTag,
-            isInsideContentTag: true,
-          })
-        }
-
-        this.accumulatedToolCalls.push(node as ToolCallTag)
-        return
-      }
 
       if (isContentTag(node)) {
         if (isInsideContentTag) {
           this.baseNodeError(errors.contentTagInsideContent, node)
           return
+        }
+
+        if (node.name === ContentTypeTagName.toolCall) {
+          this.accumulatedToolCalls.push(node)
+
+          const attributes = await this.listTagAttributes({
+            tagNode: node,
+            scopeContext,
+          })
+
+          if (!attributes.has('id')) {
+            this.baseNodeError(errors.toolCallTagWithoutId, node)
+          }
+
+          if (!attributes.has('name')) {
+            this.baseNodeError(errors.toolCallWithoutName, node)
+          }
         }
 
         for await (const childNode of node.children ?? []) {

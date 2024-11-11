@@ -1,6 +1,6 @@
-import { getExpectedError } from '$compiler/compiler/test/helpers'
-import CompileError from '$compiler/error/error'
-import { Message, MessageContent, TextContent } from '$compiler/types'
+import CompileError from '$promptl/error/error'
+import { getExpectedError } from '$promptl/test/helpers'
+import { Message, MessageContent, TextContent } from '$promptl/types'
 import { describe, expect, it } from 'vitest'
 
 import { render } from '../..'

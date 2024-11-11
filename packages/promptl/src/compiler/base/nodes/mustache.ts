@@ -1,4 +1,4 @@
-import { MustacheTag } from '$compiler/parser/interfaces'
+import { MustacheTag } from '$promptl/parser/interfaces'
 
 import { CompileNodeContext } from '../types'
 

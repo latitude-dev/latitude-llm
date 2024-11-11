@@ -5,13 +5,13 @@ export const CUSTOM_TAG_END = '}}'
 export const CUSTOM_MESSAGE_TAG = 'message' as const
 export const CUSTOM_MESSAGE_ROLE_ATTR = 'role' as const
 
+export const CUSTOM_CONTENT_TAG = 'content' as const
+export const CUSTOM_CONTENT_TYPE_ATTR = 'type' as const
+
 // <prompt path="…" />
 export const REFERENCE_PROMPT_TAG = 'prompt' as const
 export const REFERENCE_PROMPT_ATTR = 'path' as const
 export const REFERENCE_DEPTH_LIMIT = 50
-
-// <tool_call id="…" name="…">{ content }</tool_call>
-export const TOOL_CALL_TAG = 'tool-call' as const
 
 // <response as="…" />
 export const CHAIN_STEP_TAG = 'response' as const

@@ -1,8 +1,8 @@
-import { MEMBER_EXPRESSION_METHOD } from '$compiler/compiler/logic/operators'
+import { MEMBER_EXPRESSION_METHOD } from '$promptl/compiler/logic/operators'
 import type {
   ResolveNodeProps,
   UpdateScopeContextProps,
-} from '$compiler/compiler/logic/types'
+} from '$promptl/compiler/logic/types'
 import type { Identifier, MemberExpression } from 'estree'
 
 import { resolveLogicNode, updateScopeContextForNode } from '..'

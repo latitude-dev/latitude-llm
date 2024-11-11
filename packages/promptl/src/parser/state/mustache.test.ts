@@ -1,50 +1,38 @@
-import CompileError from '$compiler/error/error'
+import CompileError from '$promptl/error/error'
+import { getExpectedError } from '$promptl/test/helpers'
 import { describe, expect, it } from 'vitest'
 
 import parse from '..'
 import { TemplateNode } from '../interfaces'
 
-const getExpectedError = <T>(
-  action: () => void,
-  errorClass: new () => T,
-): T => {
-  try {
-    action()
-  } catch (err) {
-    expect(err).toBeInstanceOf(errorClass)
-    return err as T
-  }
-  throw new Error('Expected an error to be thrown')
-}
-
-describe('Mustache', () => {
-  it('parses content between the mustache tag delimiters as mustage nodes', () => {
+describe('Mustache', async () => {
+  it('parses content between the mustache tag delimiters as mustage nodes', async () => {
     const prompt = '{{ test }}'
     const fragment = parse(prompt)
     expect(fragment.children.length).toBe(1)
     expect(fragment.children[0]!.type).toBe('MustacheTag')
   })
 
-  it('throws an error if the mustache tag is not closed', () => {
+  it('throws an error if the mustache tag is not closed', async () => {
     const prompt = '{{ test'
-    const error = getExpectedError(() => parse(prompt), CompileError)
+    const error = await getExpectedError(() => parse(prompt), CompileError)
     expect(error.code).toBe('unexpected-eof')
   })
 
-  it('returns an IfBlock node if the mustache tag contains an if statement', () => {
+  it('returns an IfBlock node if the mustache tag contains an if statement', async () => {
     const prompt = '{{ if test }} something {{ endif }}'
     const fragment = parse(prompt)
     expect(fragment.children.length).toBe(1)
     expect(fragment.children[0]!.type).toBe('IfBlock')
   })
 
-  it('fails if an IfBlock has not been closed', () => {
+  it('fails if an IfBlock has not been closed', async () => {
     const prompt = '{{ if test }} something'
-    const error = getExpectedError(() => parse(prompt), CompileError)
+    const error = await getExpectedError(() => parse(prompt), CompileError)
     expect(error.code).toBe('unclosed-block')
   })
 
-  it('returns the correct expression', () => {
+  it('returns the correct expression', async () => {
     const prompt = '{{ if test == 3 }} something {{ endif }}'
     const fragment = parse(prompt)
     const ifBlock = fragment.children[0] as TemplateNode
@@ -59,7 +47,7 @@ describe('Mustache', () => {
     expect(right.value).toBe(3)
   })
 
-  it('returns an ElseBlock node if the mustache tag contains an else statement', () => {
+  it('returns an ElseBlock node if the mustache tag contains an else statement', async () => {
     const prompt =
       '{{ if test }} something {{ else }} something else {{ endif }}'
     const fragment = parse(prompt)
@@ -70,13 +58,13 @@ describe('Mustache', () => {
     expect(ifBlock.else!.type).toBe('ElseBlock')
   })
 
-  it('fails if an else statement is not within an if block', () => {
+  it('fails if an else statement is not within an if block', async () => {
     const prompt = '{{ else }}'
-    const error = getExpectedError(() => parse(prompt), CompileError)
+    const error = await getExpectedError(() => parse(prompt), CompileError)
     expect(error.code).toBe('invalid-else-placement')
   })
 
-  it('ElseBlock has a condition when followed by an if', () => {
+  it('ElseBlock has a condition when followed by an if', async () => {
     const prompt =
       '{{ if test }} something {{ else if test2 }} something else {{ endif }}'
     const fragment = parse(prompt)
@@ -93,7 +81,7 @@ describe('Mustache', () => {
     expect(elseBlock.expression).toBeDefined()
   })
 
-  it('returns a chain of else if as a family of IfBlocks', () => {
+  it('returns a chain of else if as a family of IfBlocks', async () => {
     const prompt =
       '{{ if a }} a {{ else if b }} b {{ else if c }} c {{ else if d }} d {{ endif }}'
     const fragment = parse(prompt)
@@ -119,35 +107,35 @@ describe('Mustache', () => {
     expect(dBlock.else).toBeUndefined()
   })
 
-  it('fails if there is another else statement after an else statement without an if', () => {
+  it('fails if there is another else statement after an else statement without an if', async () => {
     const prompt = '{{ if test }} a {{ else }} b {{ else }} c {{ endif }}'
-    const error = getExpectedError(() => parse(prompt), CompileError)
+    const error = await getExpectedError(() => parse(prompt), CompileError)
     expect(error.code).toBe('invalid-else-placement')
   })
 
-  it('returns a ForBlock node if the mustache tag contains a for statement', () => {
+  it('returns a ForBlock node if the mustache tag contains a for statement', async () => {
     const prompt = '{{ for item in items }} something {{ endfor }}'
     const fragment = parse(prompt)
     expect(fragment.children.length).toBe(1)
     expect(fragment.children[0]!.type).toBe('ForBlock')
   })
 
-  it('fails if a ForBlock has not been closed', () => {
+  it('fails if a ForBlock has not been closed', async () => {
     const prompt = '{{ for item in items }} something'
-    const error = getExpectedError(() => parse(prompt), CompileError)
+    const error = await getExpectedError(() => parse(prompt), CompileError)
     expect(error.code).toBe('unclosed-block')
   })
 
-  it('fails when an IfBlock is closed with an endfor, and the other way around', () => {
+  it('fails when an IfBlock is closed with an endfor, and the other way around', async () => {
     const prompt1 = '{{ if test }} something {{ endfor }}'
     const prompt2 = '{{ for item in items }} something {{ endif }}'
-    const error1 = getExpectedError(() => parse(prompt1), CompileError)
-    const error2 = getExpectedError(() => parse(prompt2), CompileError)
+    const error1 = await getExpectedError(() => parse(prompt1), CompileError)
+    const error2 = await getExpectedError(() => parse(prompt2), CompileError)
     expect(error1.code).toBe('unexpected-block-close')
     expect(error2.code).toBe('unexpected-block-close')
   })
 
-  it('returns the correct expression, index and context', () => {
+  it('returns the correct expression, index and context', async () => {
     const prompt = '{{ for item, i in list }} something {{ endfor }}'
     const fragment = parse(prompt)
     const forBlock = fragment.children[0] as TemplateNode
@@ -166,7 +154,7 @@ describe('Mustache', () => {
     expect(forBlock.expression!.name).toBe('list')
   })
 
-  it('returns an else block within a for block', () => {
+  it('returns an else block within a for block', async () => {
     const prompt =
       '{{ for item in list }} content {{ else }} empty {{ endfor }}'
     const fragment = parse(prompt)

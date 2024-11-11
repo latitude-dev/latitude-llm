@@ -1,13 +1,13 @@
 import {
   resolveLogicNode,
   updateScopeContextForNode,
-} from '$compiler/compiler/logic'
+} from '$promptl/compiler/logic'
 import type {
   ResolveNodeProps,
   UpdateScopeContextProps,
-} from '$compiler/compiler/logic/types'
-import { isIterable } from '$compiler/compiler/utils'
-import errors from '$compiler/error/errors'
+} from '$promptl/compiler/logic/types'
+import { isIterable } from '$promptl/compiler/utils'
+import errors from '$promptl/error/errors'
 import type { ArrayExpression } from 'estree'
 
 /**

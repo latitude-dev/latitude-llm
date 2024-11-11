@@ -1,4 +1,4 @@
-import { Fragment } from '$compiler/parser/interfaces'
+import { Fragment } from '$promptl/parser/interfaces'
 
 import { CompileNodeContext } from '../types'
 

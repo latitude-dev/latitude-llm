@@ -1,18 +1,17 @@
 import {
   CHAIN_STEP_TAG,
+  CUSTOM_CONTENT_TAG,
   CUSTOM_MESSAGE_TAG,
   REFERENCE_PROMPT_TAG,
-  TOOL_CALL_TAG,
-} from '$compiler/constants'
+} from '$promptl/constants'
 import {
   ChainStepTag,
   ContentTag,
   ElementTag,
   MessageTag,
   ReferenceTag,
-  ToolCallTag,
-} from '$compiler/parser/interfaces'
-import { ContentType, MessageRole } from '$compiler/types'
+} from '$promptl/parser/interfaces'
+import { ContentTypeTagName, MessageRole } from '$promptl/types'
 import { Scalar, Node as YAMLItem, YAMLMap, YAMLSeq } from 'yaml'
 
 export function isIterable(obj: unknown): obj is Iterable<unknown> {
@@ -49,7 +48,10 @@ export function isMessageTag(tag: ElementTag): tag is MessageTag {
 }
 
 export function isContentTag(tag: ElementTag): tag is ContentTag {
-  return Object.values(ContentType).includes(tag.name as ContentType)
+  if (tag.name === CUSTOM_CONTENT_TAG) return true
+  return Object.values(ContentTypeTagName).includes(
+    tag.name as ContentTypeTagName,
+  )
 }
 
 export function isRefTag(tag: ElementTag): tag is ReferenceTag {
@@ -58,10 +60,6 @@ export function isRefTag(tag: ElementTag): tag is ReferenceTag {
 
 export function isChainStepTag(tag: ElementTag): tag is ChainStepTag {
   return tag.name === CHAIN_STEP_TAG
-}
-
-export function isToolCallTag(tag: ElementTag): tag is ToolCallTag {
-  return tag.name === TOOL_CALL_TAG
 }
 
 export function tagAttributeIsLiteral(tag: ElementTag, name: string): boolean {

@@ -1,4 +1,4 @@
-import CompileError from '$compiler/error/error'
+import CompileError from '$promptl/error/error'
 
 import { Message } from './message'
 

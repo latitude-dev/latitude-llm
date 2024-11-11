@@ -1,10 +1,10 @@
 import {
   CHAIN_STEP_TAG,
+  CUSTOM_CONTENT_TAG,
   CUSTOM_MESSAGE_TAG,
   REFERENCE_PROMPT_TAG,
-  TOOL_CALL_TAG,
-} from '$compiler/constants'
-import { ContentType, MessageRole } from '$compiler/types'
+} from '$promptl/constants'
+import { ContentTypeTagName, MessageRole } from '$promptl/types'
 import { Identifier, type Node as LogicalExpression } from 'estree'
 
 export type BaseNode = {
@@ -43,13 +43,15 @@ type IElementTag<T extends string> = BaseNode & {
   children: TemplateNode[]
 }
 
-export type ContentTag = IElementTag<ContentType>
 export type MessageTag =
   | IElementTag<MessageRole>
   | IElementTag<typeof CUSTOM_MESSAGE_TAG>
+export type ContentTag =
+  | IElementTag<ContentTypeTagName>
+  | IElementTag<typeof CUSTOM_CONTENT_TAG>
+
 export type ReferenceTag = IElementTag<typeof REFERENCE_PROMPT_TAG>
 export type ChainStepTag = IElementTag<typeof CHAIN_STEP_TAG>
-export type ToolCallTag = IElementTag<typeof TOOL_CALL_TAG>
 export type ElementTag =
   | ContentTag
   | MessageTag
@@ -81,7 +83,6 @@ export type ForBlock = BaseNode & {
   expression: LogicalExpression
   context: Identifier
   index: Identifier | null
-  key: LogicalExpression
   else: ElseBlock | null
 }
 

@@ -1,6 +1,6 @@
-import { hasContent, isIterable } from '$compiler/compiler/utils'
-import errors from '$compiler/error/errors'
-import { ForBlock } from '$compiler/parser/interfaces'
+import { hasContent, isIterable } from '$promptl/compiler/utils'
+import errors from '$promptl/error/errors'
+import { ForBlock } from '$promptl/parser/interfaces'
 
 import { CompileNodeContext, TemplateNodeWithStatus } from '../types'
 

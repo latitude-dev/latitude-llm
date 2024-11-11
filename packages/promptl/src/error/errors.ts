@@ -1,4 +1,4 @@
-import { CUSTOM_TAG_END, CUSTOM_TAG_START } from '$compiler/constants'
+import { CUSTOM_TAG_END, CUSTOM_TAG_START } from '$promptl/constants'
 
 import CompileError from './error'
 
@@ -143,7 +143,7 @@ export default {
   }),
   invalidToolCallPlacement: {
     code: 'invalid-tool-call-placement',
-    message: 'All tool calls must be inside of an assistant message',
+    message: 'Only assistant messages can contain tool calls',
   },
   messageTagInsideMessage: {
     code: 'message-tag-inside-message',
@@ -152,10 +152,6 @@ export default {
   contentTagInsideContent: {
     code: 'content-tag-inside-content',
     message: 'Content tags must be directly inside message tags',
-  },
-  toolCallTagInsideContent: {
-    code: 'tool-call-tag-inside-content',
-    message: 'Tool calls must be directly inside message tags',
   },
   toolCallTagWithoutId: {
     code: 'tool-call-tag-without-id',
@@ -226,6 +222,10 @@ export default {
   invalidMessageRole: (name: string) => ({
     code: 'invalid-message-role',
     message: `Invalid message role: ${name}`,
+  }),
+  invalidContentType: (name: string) => ({
+    code: 'invalid-content-type',
+    message: `Invalid content type: ${name}`,
   }),
   variableNotDeclared: (name: string) => ({
     code: 'variable-not-declared',

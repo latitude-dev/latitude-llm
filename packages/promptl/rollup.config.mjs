@@ -22,7 +22,7 @@ function isInternalCircularDependency(warning) {
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url))
 const aliasEntries = {
-  entries: [{ find: '$compiler', replacement: path.resolve(__dirname, 'src') }],
+  entries: [{ find: '$promptl', replacement: path.resolve(__dirname, 'src') }],
 }
 
 /** @type {import('rollup').RollupOptions} */
@@ -54,7 +54,7 @@ export default [
       'node:crypto',
       'yaml',
       'crypto',
-      'zod'
+      'zod',
     ],
   },
   {

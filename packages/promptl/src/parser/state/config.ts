@@ -1,6 +1,6 @@
-import PARSER_ERRORS from '$compiler/error/errors'
-import { Parser } from '$compiler/parser'
-import type { Config } from '$compiler/parser/interfaces'
+import PARSER_ERRORS from '$promptl/error/errors'
+import { Parser } from '$promptl/parser'
+import type { Config } from '$promptl/parser/interfaces'
 
 export function config(parser: Parser) {
   const start = parser.index

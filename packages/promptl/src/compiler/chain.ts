@@ -1,9 +1,16 @@
-import parse from '$compiler/parser'
-import { Fragment } from '$compiler/parser/interfaces'
-import { Config, Conversation, Message } from '$compiler/types'
+import parse from '$promptl/parser'
+import { Fragment } from '$promptl/parser/interfaces'
+import {
+  Config,
+  ContentType,
+  Conversation,
+  Message,
+  MessageContent,
+} from '$promptl/types'
 
 import { Compile } from './compile'
 import Scope from './scope'
+import { CompileOptions } from './types'
 
 type ChainStep = {
   conversation: Conversation
@@ -13,6 +20,7 @@ type ChainStep = {
 export class Chain {
   public rawText: string
 
+  private compileOptions: CompileOptions
   private ast: Fragment
   private scope: Scope
   private didStart: boolean = false
@@ -24,16 +32,18 @@ export class Chain {
   constructor({
     prompt,
     parameters,
+    ...compileOptions
   }: {
     prompt: string
     parameters: Record<string, unknown>
-  }) {
+  } & CompileOptions) {
     this.rawText = prompt
     this.ast = parse(prompt)
     this.scope = new Scope(parameters)
+    this.compileOptions = compileOptions
   }
 
-  async step(response?: string): Promise<ChainStep> {
+  async step(response?: MessageContent[] | string): Promise<ChainStep> {
     if (this._completed) {
       throw new Error('The chain has already completed')
     }
@@ -49,7 +59,8 @@ export class Chain {
       ast: this.ast,
       rawText: this.rawText,
       globalScope: this.scope,
-      stepResponse: response,
+      stepResponse: buildStepResponseContent(response),
+      ...this.compileOptions,
     })
 
     const { completed, scopeStash, ast, messages, globalConfig, stepConfig } =
@@ -78,4 +89,18 @@ export class Chain {
   get completed(): boolean {
     return this._completed
   }
+}
+
+function buildStepResponseContent(
+  response?: MessageContent[] | string,
+): MessageContent[] | undefined {
+  if (response == undefined) return response
+  if (Array.isArray(response)) return response
+
+  return [
+    {
+      type: ContentType.text,
+      text: response,
+    },
+  ]
 }

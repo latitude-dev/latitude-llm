@@ -1,6 +1,6 @@
-import CompileError, { error } from '$compiler/error/error'
-import PARSER_ERRORS from '$compiler/error/errors'
-import { reserved } from '$compiler/utils/names'
+import CompileError, { error } from '$promptl/error/error'
+import PARSER_ERRORS from '$promptl/error/errors'
+import { reserved } from '$promptl/utils/names'
 import { isIdentifierChar, isIdentifierStart } from 'acorn'
 
 import type { BaseNode, Fragment } from './interfaces'

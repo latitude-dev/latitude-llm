@@ -1,4 +1,4 @@
-import { Comment } from '$compiler/parser/interfaces'
+import { Comment } from '$promptl/parser/interfaces'
 
 import { CompileNodeContext } from '../types'
 
