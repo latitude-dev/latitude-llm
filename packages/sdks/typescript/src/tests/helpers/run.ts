@@ -82,13 +82,16 @@ export function mockNonStreamResponse({
   expectedStatus = 200,
 }: {
   server: Server
-  expectedBody: object
+  expectedBody: object | string
   expectedStatus?: number
 }) {
   server.use(
     http.post(
       'http://localhost:8787/api/v2/projects/123/versions/live/documents/run',
-      () => HttpResponse.json(expectedBody, { status: expectedStatus }),
+      () =>
+        typeof expectedBody === 'object'
+          ? HttpResponse.json(expectedBody, { status: expectedStatus })
+          : HttpResponse.text(expectedBody, { status: expectedStatus }),
     ),
   )
 }
