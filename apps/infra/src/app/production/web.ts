@@ -162,12 +162,13 @@ const blueTargetGroup = new aws.lb.TargetGroup('LatitudeLLMAppBlueTg', {
 })
 
 const defaultListenerArn = coreStack.requireOutput('defaultListenerArn')
+
 new aws.lb.ListenerRule('LatitudeLLMAppListenerRule', {
   listenerArn: defaultListenerArn,
   actions: [
     {
       type: 'forward',
-      targetGroupArn: blueTargetGroup.arn,
+      targetGroupArn: greenTargetGroup.arn,
     },
   ],
   conditions: [
@@ -187,7 +188,6 @@ const ecsService = new aws.ecs.Service(
     cluster: cluster.arn,
     taskDefinition: taskDefinition.arn,
     desiredCount: 2,
-    launchType: 'FARGATE',
     forceNewDeployment: false,
     enableExecuteCommand: true,
     deploymentController: {
@@ -200,16 +200,66 @@ const ecsService = new aws.ecs.Service(
     },
     loadBalancers: [
       {
-        targetGroupArn: blueTargetGroup.arn,
+        targetGroupArn: greenTargetGroup.arn,
         containerName,
         containerPort: 8080,
       },
     ],
+    capacityProviderStrategies: [
+      {
+        capacityProvider: 'FARGATE',
+        weight: 1,
+      },
+    ],
   },
   {
-    ignoreChanges: ['taskDefinition'], // CodeDeploy controls the task definition that is deployed
+    ignoreChanges: ['taskDefinition', 'desiredCount'],
   },
 )
+
+// Add Auto Scaling configuration
+const scalableTarget = new aws.appautoscaling.Target(
+  'LatitudeLLMAppScalableTarget',
+  {
+    maxCapacity: 4,
+    minCapacity: 2,
+    resourceId: pulumi.interpolate`service/${cluster.name}/${ecsService.name}`,
+    scalableDimension: 'ecs:service:DesiredCount',
+    serviceNamespace: 'ecs',
+  },
+)
+
+// CPU-based auto scaling policy
+new aws.appautoscaling.Policy('LatitudeLLMAppScalingPolicy', {
+  policyType: 'TargetTrackingScaling',
+  resourceId: scalableTarget.resourceId,
+  scalableDimension: scalableTarget.scalableDimension,
+  serviceNamespace: scalableTarget.serviceNamespace,
+  targetTrackingScalingPolicyConfiguration: {
+    predefinedMetricSpecification: {
+      predefinedMetricType: 'ECSServiceAverageCPUUtilization',
+    },
+    targetValue: 80.0, // Target CPU utilization of 70%
+    scaleInCooldown: 120, // 2 minutes
+    scaleOutCooldown: 300, // 5 minutes
+  },
+})
+
+// Memory-based auto scaling policy
+new aws.appautoscaling.Policy('LatitudeLLMAppMemoryScalingPolicy', {
+  policyType: 'TargetTrackingScaling',
+  resourceId: scalableTarget.resourceId,
+  scalableDimension: scalableTarget.scalableDimension,
+  serviceNamespace: scalableTarget.serviceNamespace,
+  targetTrackingScalingPolicyConfiguration: {
+    predefinedMetricSpecification: {
+      predefinedMetricType: 'ECSServiceAverageMemoryUtilization',
+    },
+    targetValue: 80.0, // Target memory utilization of 80%
+    scaleInCooldown: 300,
+    scaleOutCooldown: 300,
+  },
+})
 
 const codeDeployApp = new aws.codedeploy.Application(
   'LatitudeLLMCodeDeployApp',
