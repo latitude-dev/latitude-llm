@@ -81,9 +81,13 @@ export const _API_ROUTES = {
       root: `/api/documentLogs/${id}`,
     }),
     uuids: {
-      detail: ({ uuid }: { uuid: string }) => ({
-        root: `/api/documentLogs/uuids/${uuid}`,
-      }),
+      detail: ({ uuid }: { uuid: string }) => {
+        const root = `/api/documentLogs/uuids/${uuid}`
+        return {
+          root,
+          withPosition: `${root}/with-position`,
+        }
+      },
     },
   },
   evaluations: {

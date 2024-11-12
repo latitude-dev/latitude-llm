@@ -13,9 +13,9 @@ import { PinnedDocumentation } from '../components/PinnedDocumentation'
 
 export const useVariablesData = (providerLog: ProviderLogDto) => {
   const [config, setConfig] = useState<Config>()
-  const { data: documentLogWithMetadata } = useDocumentLogWithMetadata(
-    providerLog.documentLogUuid,
-  )
+  const { data: documentLogWithMetadata } = useDocumentLogWithMetadata({
+    documentLogUuid: providerLog.documentLogUuid,
+  })
   const [isMessagesPinned, setIsMessagesPinned] = useState(false)
   const [isPopoverOpen, setIsPopoverOpen] = useState(false)
 

@@ -1,6 +1,6 @@
 import { and, desc, eq, isNotNull, or, sql } from 'drizzle-orm'
 
-import { Commit } from '../../browser'
+import { Commit, DEFAULT_PAGINATION_SIZE } from '../../browser'
 import { database } from '../../client'
 import { calculateOffset } from '../../lib/pagination/calculateOffset'
 import { DocumentLogsWithMetadataAndErrorsRepository } from '../../repositories/documentLogsWithMetadataAndErrorsRepository'
@@ -39,7 +39,7 @@ export function computeDocumentLogsWithMetadataQuery(
     draft,
     allowAnyDraft,
     page = '1',
-    pageSize = '25',
+    pageSize = String(DEFAULT_PAGINATION_SIZE),
   }: {
     workspaceId: number
     documentUuid?: string

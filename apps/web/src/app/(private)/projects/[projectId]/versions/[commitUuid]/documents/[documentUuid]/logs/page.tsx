@@ -26,11 +26,19 @@ export default async function DocumentPage({
     page: searchParams.page as string | undefined,
     pageSize: searchParams.pageSize as string | undefined,
   })
+  const documentLogUuid = searchParams.logUuid?.toString()
+  const selectedLog = rows.find((r) => r.uuid === documentLogUuid)
   return (
     <div className='flex flex-grow min-h-0 flex-col w-full p-6 gap-2 min-w-0'>
       <TableWithHeader
         title='Logs'
-        table={<DocumentLogs documentLogs={rows} />}
+        table={
+          <DocumentLogs
+            documentLogs={rows}
+            documentLogUuid={documentLogUuid}
+            selectedLog={selectedLog}
+          />
+        }
         actions={
           <Link
             href={

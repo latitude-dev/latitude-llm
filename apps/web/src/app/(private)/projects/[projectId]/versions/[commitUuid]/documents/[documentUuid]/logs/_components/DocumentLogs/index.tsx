@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
 import {
@@ -13,7 +13,9 @@ import {
   EventArgs,
   useSockets,
 } from '$/components/Providers/WebsocketsProvider/useSockets'
+import { useGenerateDocumentLogDetailUrl } from '$/hooks/useGenerateDocumentLogDetailUrl'
 import useDocumentLogs, { documentLogPresenter } from '$/stores/documentLogs'
+import useDocumentLogWithPaginationPosition from '$/stores/documentLogWithPaginationPosition'
 import useProviderLogs from '$/stores/providerLogs'
 import { useSearchParams } from 'next/navigation'
 
@@ -66,10 +68,46 @@ const useDocumentLogSocket = (
   useSockets({ event: 'documentLogCreated', onMessage })
 }
 
+/**
+ * When this page receive ?logUuid=some-uuid it can happen 2 things
+ *
+ *   1. The `page=NUMBER` is correct and `selectedLog` is there.
+ *   2. There is no `page` param or is incorrect `selectedLog` is not there.
+ *
+ * We handle (2) here by looking the right page for the `logUuid` in the URL
+ */
+function useRedirectToLogDetail({
+  selectedLog,
+  documentLogUuid,
+}: {
+  selectedLog: DocumentLogWithMetadataAndError | undefined
+  documentLogUuid: string | undefined
+}) {
+  const mounted = useRef(false)
+  const { data: position, isLoading } = useDocumentLogWithPaginationPosition({
+    documentLogUuid: selectedLog ? undefined : documentLogUuid,
+  })
+  const { url } = useGenerateDocumentLogDetailUrl({
+    documentLogUuid,
+    page: position?.page,
+  })
+  useEffect(() => {
+    if (mounted.current) return
+    if (isLoading || !url) return
+
+    mounted.current = true
+    window.location.href = url
+  }, [url, isLoading])
+}
+
 export function DocumentLogs({
   documentLogs: serverDocumentLogs,
+  selectedLog: serverSelectedLog,
+  documentLogUuid,
 }: {
   documentLogs: DocumentLogWithMetadataAndError[]
+  selectedLog: DocumentLogWithMetadataAndError | undefined
+  documentLogUuid: string | undefined
 }) {
   const tableRef = useRef<HTMLTableElement>(null)
   const sidebarWrapperRef = useRef<HTMLDivElement>(null)
@@ -81,7 +119,7 @@ export function DocumentLogs({
   const { project } = useCurrentProject()
   const [selectedLog, setSelectedLog] = useState<
     DocumentLogWithMetadataAndError | undefined
-  >()
+  >(serverSelectedLog)
   const { data: providerLogs, isLoading: isProviderLogsLoading } =
     useProviderLogs({
       documentLogUuid: selectedLog?.uuid,
@@ -100,6 +138,7 @@ export function DocumentLogs({
   )
 
   useDocumentLogSocket(document.documentUuid, mutate)
+  useRedirectToLogDetail({ selectedLog, documentLogUuid })
 
   if (!documentLogs.length) {
     return (

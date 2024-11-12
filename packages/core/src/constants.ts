@@ -406,3 +406,5 @@ export const resultConfigurationSchema = z.discriminatedUnion('type', [
     valueDescription: z.string().optional(),
   }),
 ])
+
+export const DEFAULT_PAGINATION_SIZE = 25

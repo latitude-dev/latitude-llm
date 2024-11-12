@@ -29,9 +29,7 @@ export default function useDatasetPreview(
     fetcher,
     {
       ...opts,
-      onSuccess: (data) => {
-        onSuccess?.(data)
-      },
+      onSuccess,
     },
   )
 

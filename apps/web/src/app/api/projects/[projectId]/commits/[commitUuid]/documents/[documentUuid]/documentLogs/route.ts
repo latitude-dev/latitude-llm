@@ -1,4 +1,4 @@
-import { Workspace } from '@latitude-data/core/browser'
+import { DEFAULT_PAGINATION_SIZE, Workspace } from '@latitude-data/core/browser'
 import { CommitsRepository } from '@latitude-data/core/repositories'
 import { computeDocumentLogsWithMetadataQuery } from '@latitude-data/core/services/documentLogs/computeDocumentLogsWithMetadata'
 import { authHandler } from '$/middlewares/authHandler'
@@ -29,7 +29,8 @@ export const GET = errorHandler(
         .then((r) => r.unwrap())
 
       const page = searchParams.get('page') ?? '1'
-      const pageSize = searchParams.get('pageSize') ?? '25'
+      const pageSize =
+        searchParams.get('pageSize') ?? String(DEFAULT_PAGINATION_SIZE)
       const rows = await computeDocumentLogsWithMetadataQuery({
         workspaceId: workspace.id,
         documentUuid,
