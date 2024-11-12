@@ -1,6 +1,6 @@
 import { forwardRef, ReactNode, useState } from 'react'
 
-import { cn, TabSelector, TabSelectorOption } from '@latitude-data/web-ui'
+import { cn, TabSelector, type TabSelectorOption } from '@latitude-data/web-ui'
 
 type RenderProps = { selectedTab: string }
 type Props = {

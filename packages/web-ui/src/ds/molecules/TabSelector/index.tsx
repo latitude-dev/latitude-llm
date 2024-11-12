@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { cn } from '../../../lib/utils'
 import { Button, Text } from '../../atoms'
@@ -9,6 +9,7 @@ export type TabSelectorOption<T> = {
   label: string
   value: T
   route?: string
+  disabled?: boolean
 }
 
 export function TabSelector<T extends string>({
@@ -16,11 +17,13 @@ export function TabSelector<T extends string>({
   selected: originalSelected,
   showSelectedOnSubroutes = false,
   onSelect,
+  width = 'fit',
 }: {
   options: TabSelectorOption<T>[]
   selected?: T | null
   onSelect?: (value: T) => void
   showSelectedOnSubroutes?: boolean
+  width?: 'fit' | 'full'
 }) {
   const selectedOptionButtonRef = useRef<HTMLButtonElement>(null)
   const selectedOptionBackgroundRef = useRef<HTMLDivElement>(null)
@@ -30,10 +33,15 @@ export function TabSelector<T extends string>({
     setSelected(originalSelected)
   }, [originalSelected])
 
-  const handleSelect = (value: T) => {
-    setSelected(value)
-    onSelect?.(value)
-  }
+  const handleSelect = useCallback(
+    (option: TabSelectorOption<T>) => () => {
+      if (option.disabled) return
+
+      setSelected(option.value)
+      onSelect?.(option.value)
+    },
+    [onSelect],
+  )
 
   useEffect(() => {
     if (!selectedOptionBackgroundRef.current) return
@@ -64,8 +72,23 @@ export function TabSelector<T extends string>({
   }, [selected])
 
   return (
-    <div className='flex flex-row h-11 w-fit pb-1 bg-secondary rounded-xl border border-border'>
-      <div className='flex flex-row relative bg-background rounded-xl border border-border -m-px p-1 gap-2'>
+    <div
+      className={cn(
+        'flex flex-row h-11 pb-1 bg-secondary',
+        'rounded-xl border border-border',
+        {
+          'w-fit': width === 'fit',
+          'w-full': width === 'full',
+        },
+      )}
+    >
+      <div
+        className={cn(
+          'flex flex-row justify-between gap-2 ',
+          'bg-background rounded-xl border border-border',
+          'relative -m-px p-1 w-[calc(100%+2px)]',
+        )}
+      >
         <div
           className='absolute hidden bg-secondary rounded-lg border border-border -m-px p-1 gap-2 transition-all duration-200 ease-in-out'
           ref={selectedOptionBackgroundRef}
@@ -76,8 +99,10 @@ export function TabSelector<T extends string>({
             : selected === option.value
           return (
             <Button
+              fullWidth
               ref={isSelected ? selectedOptionButtonRef : null}
               type='button'
+              disabled={option.disabled}
               variant='ghost'
               size='none'
               key={idx}
@@ -85,7 +110,7 @@ export function TabSelector<T extends string>({
               className={cn(
                 'flex px-3 h-8 rounded-lg cursor-pointer items-center justify-center gap-1',
               )}
-              onClick={() => handleSelect(option.value)}
+              onClick={handleSelect(option)}
             >
               <Text.H5M color={isSelected ? 'foreground' : 'foregroundMuted'}>
                 {option.label}

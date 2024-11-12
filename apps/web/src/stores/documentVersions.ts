@@ -4,6 +4,7 @@ import { useCallback } from 'react'
 
 import { HEAD_COMMIT, type DocumentVersion } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui'
+import { assignDatasetAction } from '$/actions/documents/assignDatasetAction'
 import { createDocumentVersionAction } from '$/actions/documents/create'
 import { destroyDocumentAction } from '$/actions/documents/destroyDocumentAction'
 import { destroyFolderAction } from '$/actions/documents/destroyFolderAction'
@@ -215,6 +216,17 @@ export default function useDocumentVersions(
     },
   )
 
+  const { execute: assignDataset } = useLatitudeAction(assignDatasetAction, {
+    onSuccess: ({ data: document }) => {
+      const prevDocuments = data || []
+      mutate(
+        prevDocuments.map((d) =>
+          d.documentUuid === document.documentUuid ? document : d,
+        ),
+      )
+    },
+  })
+
   return {
     data,
     isValidating: isValidating,
@@ -225,6 +237,7 @@ export default function useDocumentVersions(
     destroyFile,
     destroyFolder,
     updateContent,
+    assignDataset,
     isDestroying: isDestroyingFile || isDestroyingFolder,
   }
 }

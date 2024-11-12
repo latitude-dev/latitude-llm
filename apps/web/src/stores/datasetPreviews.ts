@@ -7,21 +7,32 @@ import { SWRConfiguration } from 'swr'
 import useSWRImmutable from 'swr/immutable'
 
 export default function useDatasetPreview(
-  { dataset }: { dataset: Dataset },
+  {
+    dataset,
+    onSuccess,
+  }: {
+    dataset: Dataset | undefined
+    onSuccess?: (data: CsvParsedData) => void
+  },
   opts?: SWRConfiguration,
 ) {
   const { data: workspace } = useCurrentWorkspace()
   const fetcher = useFetcher(
-    ROUTES.api.datasets.detail(dataset.id).preview.root,
+    dataset ? ROUTES.api.datasets.detail(dataset.id).preview.root : undefined,
     {
       fallback: { headers: [], rows: [], rowCount: 0 },
     },
   )
 
-  const { data = [], ...rest } = useSWRImmutable(
+  const { data = [], ...rest } = useSWRImmutable<CsvParsedData>(
     ['workspace', workspace.id, 'datasets_preview', dataset?.id],
     fetcher,
-    opts,
+    {
+      ...opts,
+      onSuccess: (data) => {
+        onSuccess?.(data)
+      },
+    },
   )
 
   return {

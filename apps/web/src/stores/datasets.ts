@@ -9,7 +9,13 @@ import useCurrentWorkspace from '$/stores/currentWorkspace'
 import useSWR, { SWRConfiguration } from 'swr'
 
 export default function useDatasets(
-  { onCreateSuccess }: { onCreateSuccess?: (dataset: Dataset) => void } = {},
+  {
+    onCreateSuccess,
+    onFetched,
+  }: {
+    onCreateSuccess?: (dataset: Dataset) => void
+    onFetched?: (datasets: Dataset[]) => void
+  } = {},
   opts?: SWRConfiguration,
 ) {
   const { data: workspace } = useCurrentWorkspace()
@@ -21,7 +27,12 @@ export default function useDatasets(
     data = [],
     mutate,
     ...rest
-  } = useSWR<Dataset[]>(['workspace', workspace.id, 'datasets'], fetcher, opts)
+  } = useSWR<Dataset[]>(['workspace', workspace.id, 'datasets'], fetcher, {
+    ...opts,
+    onSuccess: (data) => {
+      onFetched?.(data)
+    },
+  })
   const {
     isPending: isCreating,
     error: createError,

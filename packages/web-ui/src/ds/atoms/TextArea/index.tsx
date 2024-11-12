@@ -57,11 +57,16 @@ const TextArea = forwardRef<HTMLTextAreaElement, TextAreaProps>(
           minRows={minRows}
           maxRows={maxRows}
           placeholder={placeholder}
-          className={cn(inputVariants({ size }), className, {
-            'border-red-500 focus-visible:ring-red-500': errors,
-            // Account for inner textara padding
-            '!min-h-[calc(100%-theme(spacing.6))]': autoGrow,
-          })}
+          className={cn(
+            inputVariants({ size }),
+            className,
+            'custom-scrollbar',
+            {
+              'border-red-500 focus-visible:ring-red-500': errors,
+              // Account for inner textara padding
+              '!min-h-[calc(100%-theme(spacing.6))]': autoGrow,
+            },
+          )}
           {...props}
         />
       </FormField>

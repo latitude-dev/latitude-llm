@@ -31,9 +31,7 @@ export default function CreateBatchEvaluationModal({
       onClose()
     },
   })
-
   const { metadata, runReadMetadata } = useMetadata()
-
   useEffect(() => {
     runReadMetadata({
       prompt: document.content ?? '',
