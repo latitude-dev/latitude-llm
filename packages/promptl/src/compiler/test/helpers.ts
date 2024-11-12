@@ -1,7 +1,12 @@
-import { Conversation, MessageContent } from '$promptl/types'
+import {
+  AssistantMessage,
+  ContentType,
+  Conversation,
+  MessageContent,
+} from '$promptl/types'
 import { expect } from 'vitest'
 
-import { buildStepResponseContent, Chain } from '../chain'
+import { Chain } from '../chain'
 
 export async function getExpectedError<T>(
   action: () => Promise<unknown>,
@@ -32,17 +37,22 @@ export async function complete({
   let steps = 0
   let conversation: Conversation
 
-  let responseContent: MessageContent[] | undefined
+  let responseMessage: Omit<AssistantMessage, 'role'> | undefined
   while (true) {
     const { completed, conversation: _conversation } =
-      await chain.step(responseContent)
+      await chain.step(responseMessage)
 
     conversation = _conversation
 
-    if (completed) return { conversation, steps, response: responseContent! }
+    if (completed)
+      return {
+        conversation,
+        steps,
+        response: responseMessage!.content as MessageContent[],
+      }
 
     const response = callback ? await callback(conversation) : 'RESPONSE'
-    responseContent = buildStepResponseContent(response)
+    responseMessage = { content: [{ type: ContentType.text, text: response }] }
     steps++
 
     if (steps > maxSteps) throw new Error('too many chain steps')
