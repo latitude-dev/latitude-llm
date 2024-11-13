@@ -1,5 +1,3 @@
-import { omit } from 'lodash-es'
-
 import { ProviderApiKey } from '../../../../schema/types'
 
 export enum Providers {
@@ -111,7 +109,11 @@ export function listModelsForProvider({
   if (!models) return {}
 
   if (name && name === latitudeProvider) {
-    return omit(models, DEFAULT_PROVIDER_UNSUPPORTED_MODELS)
+    return Object.fromEntries(
+      Object.entries(models).filter(
+        ([key]) => !DEFAULT_PROVIDER_UNSUPPORTED_MODELS.includes(key),
+      ),
+    )
   }
 
   return models
