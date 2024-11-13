@@ -2,18 +2,18 @@
 
 import React from 'react'
 
-import { Input } from '@latitude-data/web-ui'
+import { FormField, Input, Skeleton } from '@latitude-data/web-ui'
 import useCurrentWorkspace from '$/stores/currentWorkspace'
 import { useDebouncedCallback } from 'use-debounce'
 
 export default function WorkspaceName() {
-  const { data: workspace, update } = useCurrentWorkspace()
+  const { data: workspace, isLoading, updateName } = useCurrentWorkspace()
 
   const onChange = async (ev: React.ChangeEvent<HTMLInputElement>) => {
     const name = ev.target.value
     if (!name) return
 
-    return update({ name: ev.target.value })
+    return updateName({ name: ev.target.value })
   }
   const debouncedChange = useDebouncedCallback(onChange, 500, {
     trailing: true,
@@ -21,11 +21,18 @@ export default function WorkspaceName() {
 
   return (
     <div className='flex flex-col gap-4 max-w-[50%]'>
-      <Input
-        defaultValue={workspace.name}
-        label='Workspace name'
-        onChange={debouncedChange}
-      />
+      {isLoading && (
+        <FormField label='Workspace name'>
+          <Skeleton className='h-8 w-full px-2 py-1' />
+        </FormField>
+      )}
+      {!isLoading && workspace && (
+        <Input
+          defaultValue={workspace.name}
+          label='Workspace name'
+          onChange={debouncedChange}
+        />
+      )}
     </div>
   )
 }

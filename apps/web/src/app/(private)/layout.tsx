@@ -35,7 +35,7 @@ export default async function PrivateLayout({
       <IdentifyUser user={user} workspace={workspace}>
         <SupportChat identity={supportIdentity} />
         <SocketIOProvider>
-          <SessionProvider currentUser={user} workspace={workspace}>
+          <SessionProvider currentUser={user}>
             <LatitudeWebsocketsProvider socketServer={env.WEBSOCKETS_SERVER}>
               <AppLayout currentUser={user} navigationLinks={NAV_LINKS}>
                 {children}

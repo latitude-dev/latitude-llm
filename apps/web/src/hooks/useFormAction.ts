@@ -1,19 +1,12 @@
 import { useCallback, useState, useTransition } from 'react'
 
+import { formDataToAction } from '$/helpers/forms'
 import {
   inferServerActionError,
   inferServerActionInput,
   inferServerActionReturnData,
   TAnyZodSafeFunctionHandler,
 } from 'zsa'
-
-function formDataToJson(data: FormData) {
-  const json: { [key: string]: unknown } = {}
-  data.forEach((value, key) => {
-    json[key] = value
-  })
-  return json
-}
 
 export function useFormAction<
   const TServerAction extends TAnyZodSafeFunctionHandler,
@@ -58,9 +51,7 @@ export function useFormAction<
 
   const action = useCallback(
     async (formData: FormData) => {
-      const json = formDataToJson(
-        formData,
-      ) as inferServerActionInput<TServerAction>
+      const json = formDataToAction<typeof exec>(formData)
 
       startTransition(() => {
         setData(json)

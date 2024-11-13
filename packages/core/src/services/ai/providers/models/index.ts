@@ -1,3 +1,7 @@
+import { omit } from 'lodash-es'
+
+import { ProviderApiKey } from '../../../../schema/types'
+
 export enum Providers {
   OpenAI = 'openai',
   Anthropic = 'anthropic',
@@ -94,6 +98,49 @@ export const UNSUPPORTED_STREAM_MODELS = [
   'o1-mini-2024-09-12',
 ]
 
-export function findFirstModelForProvider(provider: Providers) {
-  return Object.keys(PROVIDER_MODELS[provider] ?? {})[0]
+export function listModelsForProvider({
+  provider,
+  name,
+  latitudeProvider,
+}: {
+  provider: Providers
+  name?: string
+  latitudeProvider?: string
+}) {
+  const models = PROVIDER_MODELS[provider]
+  if (!models) return {}
+
+  if (name && name === latitudeProvider) {
+    return omit(models, DEFAULT_PROVIDER_UNSUPPORTED_MODELS)
+  }
+
+  return models
+}
+
+export function findFirstModelForProvider({
+  provider,
+  latitudeProvider,
+}: {
+  provider?: ProviderApiKey
+  latitudeProvider?: string
+}) {
+  if (!provider) return undefined
+
+  if (provider.provider === Providers.Custom) {
+    return provider.defaultModel || undefined
+  }
+
+  const models = Object.values(
+    listModelsForProvider({
+      provider: provider.provider,
+      name: provider.name,
+      latitudeProvider: latitudeProvider,
+    }),
+  )
+
+  if (models.find((model) => model === provider.defaultModel)) {
+    return provider.defaultModel || undefined
+  }
+
+  return models[0]
 }

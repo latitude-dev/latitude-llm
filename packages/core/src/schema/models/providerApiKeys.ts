@@ -32,6 +32,7 @@ export const providerApiKeys = latitudeSchema.table(
     token: varchar('token').notNull(),
     provider: providersEnum('provider').notNull(),
     url: varchar('url'),
+    defaultModel: varchar('default_model'),
     authorId: text('author_id')
       .notNull()
       .references(() => users.id),

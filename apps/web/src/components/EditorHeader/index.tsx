@@ -1,14 +1,10 @@
 import { ReactNode, useCallback, useEffect, useMemo, useState } from 'react'
-import { omit } from 'lodash-es'
 
 import { ConversationMetadata } from '@latitude-data/compiler'
 import {
   findFirstModelForProvider,
-  PROVIDER_MODELS,
   ProviderApiKey,
-  Providers,
 } from '@latitude-data/core/browser'
-import { DEFAULT_PROVIDER_UNSUPPORTED_MODELS } from '@latitude-data/core/services/ai/providers/models/index'
 import {
   AppLocalStorage,
   DropdownMenu,
@@ -20,56 +16,14 @@ import {
   useLocalStorage,
 } from '@latitude-data/web-ui'
 import { envClient } from '$/envClient'
+import useModelOptions from '$/hooks/useModelOptions'
 import { ROUTES } from '$/services/routes'
 import useProviderApiKeys from '$/stores/providerApiKeys'
 import Link from 'next/link'
 import { parse, stringify } from 'yaml'
 
-export function useModelsOptions({
-  provider,
-  isDefaultProvider = false,
-}: {
-  provider: Providers | undefined
-  isDefaultProvider?: boolean
-}) {
-  return useMemo(() => {
-    let models = provider ? PROVIDER_MODELS[provider] : null
-    if (!models) return []
-
-    if (isDefaultProvider) {
-      models = omit(models, DEFAULT_PROVIDER_UNSUPPORTED_MODELS)
-    }
-
-    return Object.keys(models).map((model) => ({
-      label: model,
-      value: model,
-    }))
-  }, [provider, isDefaultProvider])
-}
-
-type PromptMeta = { providerName: string; model: string }
+type PromptMetadata = { provider?: string; model?: string }
 export type IProviderByName = Record<string, ProviderApiKey>
-/**
- * @returns the selected model when it exists on the provider's model list,
- * `undefined` when it does not, and `null` when it is not configured.
- */
-function selectModel({
-  promptMetadata,
-  providersByName,
-}: {
-  promptMetadata: PromptMeta
-  providersByName: IProviderByName
-}) {
-  const inputModel = promptMetadata?.model
-  if (!inputModel) return null
-  const provider = providersByName[promptMetadata?.providerName]
-  const providerModels = provider
-    ? PROVIDER_MODELS[provider.provider]
-    : undefined
-  const selectedModel = providerModels?.[inputModel]
-  if (selectedModel) return selectedModel
-  return undefined
-}
 
 function extractFrontMatter(content: string) {
   const match = content.match(/(?:\/\*[\s\S]*?\*\/\s*)?---\n([\s\S]*?)\n---/)
@@ -140,13 +94,6 @@ export default function EditorHeader({
   freeRunsCount?: number
   showCopilotSetting?: boolean
 }) {
-  const promptMetadata = useMemo<PromptMeta>(() => {
-    const config = metadata?.config
-    const providerName = config?.provider as string
-    const model = config?.model as string
-    return { providerName, model }
-  }, [metadata?.config])
-
   const { data: providerApiKeys, isLoading } = useProviderApiKeys({
     fallbackData: providers,
   })
@@ -156,21 +103,29 @@ export default function EditorHeader({
       key: AppLocalStorage.editorLineNumbers,
       defaultValue: true,
     })
-
   const { value: wrapText, setValue: setWrapText } = useLocalStorage({
     key: AppLocalStorage.editorWrapText,
     defaultValue: true,
   })
-
   const { value: showMinimap, setValue: setShowMinimap } = useLocalStorage({
     key: AppLocalStorage.editorMinimap,
     defaultValue: false,
   })
-
   const { value: showCopilot, setValue: setShowCopilot } = useLocalStorage({
     key: AppLocalStorage.editorCopilot,
     defaultValue: true,
   })
+
+  const [provider, setProvider] = useState<string | undefined>()
+  const [model, setModel] = useState<string | undefined | null>()
+
+  const promptMetadata = useMemo<PromptMetadata | undefined>(() => {
+    if (!metadata?.config) return undefined
+    return {
+      provider: metadata.config.provider as PromptMetadata['provider'],
+      model: metadata.config.model as PromptMetadata['model'],
+    }
+  }, [metadata?.config])
 
   const providersByName = useMemo(() => {
     return providerApiKeys.reduce((acc, data) => {
@@ -179,83 +134,67 @@ export default function EditorHeader({
     }, {} as IProviderByName)
   }, [isLoading, providerApiKeys])
 
-  const [selectedProvider, setProvider] = useState<string | undefined>()
-  const [selectedModel, setModel] = useState<string | undefined | null>(() =>
-    selectModel({
-      promptMetadata,
-      providersByName,
-    }),
-  )
-
   const providerOptions = useMemo(() => {
     return providerApiKeys.map((apiKey) => ({
       label: apiKey.name,
       value: apiKey.name,
     }))
   }, [providerApiKeys])
-  const isDefaultProvider =
-    selectedProvider === envClient.NEXT_PUBLIC_DEFAULT_PROJECT_ID
-  const modelOptions = useModelsOptions({
-    provider: selectedProvider
-      ? providersByName[selectedProvider]?.provider
-      : undefined,
-    isDefaultProvider,
+  const modelOptions = useModelOptions({
+    provider: provider ? providersByName[provider]?.provider : undefined,
+    name: provider ? providersByName[provider]?.name : undefined,
   })
 
+  // onPromptMetadataChange
   useEffect(() => {
-    const foundProvider = providersByName[promptMetadata?.providerName]
-    if (foundProvider?.name === selectedProvider) return
+    if (!promptMetadata) return
 
-    setProvider(foundProvider?.name)
-    setModel(undefined)
-  }, [selectedProvider, providersByName, promptMetadata?.providerName])
+    if (promptMetadata.provider !== provider) {
+      setProvider(promptMetadata.provider)
+    }
 
-  useEffect(() => {
-    const model = selectModel({
-      promptMetadata,
-      providersByName,
-    })
-
-    if (selectedModel === model) return
-
-    setModel(model)
-  }, [
-    providersByName,
-    selectedModel,
-    promptMetadata?.providerName,
-    promptMetadata?.model,
-  ])
+    if (!promptMetadata.model || promptMetadata.model !== model) {
+      setModel(promptMetadata.model ?? null)
+    }
+  }, [promptMetadata])
 
   const onSelectProvider = useCallback(
-    (value: string) => {
-      const provider = providersByName[value]!
-      if (!provider) return
+    (selectedProvider: string) => {
+      if (!selectedProvider) return
+      if (selectedProvider === provider) return
 
-      setProvider(provider.name)
-      const firstModel = findFirstModelForProvider(provider.provider)
+      const firstModel = findFirstModelForProvider({
+        provider: providersByName[selectedProvider],
+        latitudeProvider: envClient.NEXT_PUBLIC_DEFAULT_PROJECT_ID,
+      })
+
+      setProvider(selectedProvider)
       setModel(firstModel)
 
       const updatedPrompt = updatePromptMetadata(prompt, {
-        provider: provider.name,
+        provider: selectedProvider,
         model: firstModel,
       })
       onChangePrompt(updatedPrompt)
     },
-    [providersByName, prompt],
+    [provider, providersByName, prompt],
   )
 
-  const onModelChange = useCallback(
-    (value: string) => {
-      if (!selectedProvider) return
+  const onSelectModel = useCallback(
+    (selectedModel: string) => {
+      if (!selectedModel) return
+      if (selectedModel === model) return
 
-      setModel(value)
+      setModel(selectedModel)
+
       const updatedPrompt = updatePromptMetadata(prompt, {
-        model: value,
+        model: selectedModel,
       })
       onChangePrompt(updatedPrompt)
     },
-    [selectedProvider, prompt],
+    [model, prompt],
   )
+
   const newProviderLink = (
     <Link
       href={ROUTES.settings.root}
@@ -270,6 +209,9 @@ export default function EditorHeader({
   const newProviderOutro = (
     <>We highly recommend switching to your own provider. {newProviderLink}</>
   )
+
+  const isLatitudeProvider =
+    provider === envClient.NEXT_PUBLIC_DEFAULT_PROJECT_ID
 
   return (
     <div className='flex flex-col gap-y-2'>
@@ -311,11 +253,11 @@ export default function EditorHeader({
       </div>
       <ProviderModelSelector
         providerOptions={providerOptions}
-        selectedProvider={selectedProvider}
+        selectedProvider={provider}
         onProviderChange={onSelectProvider}
         modelOptions={modelOptions}
-        selectedModel={selectedModel}
-        onModelChange={onModelChange}
+        selectedModel={model}
+        onModelChange={onSelectModel}
         providerDisabled={
           disabledMetadataSelectors ||
           isLoading ||
@@ -323,13 +265,14 @@ export default function EditorHeader({
           !metadata
         }
         modelDisabled={
-          isLoading ||
           disabledMetadataSelectors ||
-          !selectedProvider ||
+          isLoading ||
+          !modelOptions.length ||
+          !provider ||
           !metadata
         }
       />
-      {isDefaultProvider && (
+      {isLatitudeProvider && (
         <div>
           {freeRunsCount !== undefined ? (
             <Text.H6 color='foregroundMuted'>
@@ -385,6 +328,11 @@ export function ProviderModelSelector({
   providerDisabled?: boolean
   modelDisabled?: boolean
 }) {
+  const isModelOption = useMemo(
+    () => modelOptions.some((opt) => opt.value === selectedModel),
+    [modelOptions, selectedModel],
+  )
+
   return (
     <FormFieldGroup>
       <Select
@@ -397,14 +345,16 @@ export function ProviderModelSelector({
         onChange={onProviderChange}
       />
       <Select
-        disabled={modelDisabled}
         name='model'
         label='Model'
         placeholder={
-          selectedModel === undefined ? 'Custom model' : 'Select a model'
+          isModelOption || selectedModel === null
+            ? 'Select a model'
+            : 'Custom model'
         }
         options={modelOptions}
         value={selectedModel ?? undefined}
+        disabled={modelDisabled}
         onChange={onModelChange}
       />
     </FormFieldGroup>

@@ -1,27 +1,29 @@
 import { useCallback } from 'react'
 
-import { SessionWorkspace, useSession, useToast } from '@latitude-data/web-ui'
+import { Workspace } from '@latitude-data/core/browser'
+import { useToast } from '@latitude-data/web-ui'
+import { setDefaultProviderAction } from '$/actions/workspaces/setDefaultProvider'
 import { updateWorkspaceAction } from '$/actions/workspaces/update'
-import useSWR, { SWRConfiguration } from 'swr'
+import useFetcher from '$/hooks/useFetcher'
+import { ROUTES } from '$/services/routes'
+import useSWR from 'swr'
 import { useServerAction } from 'zsa-react'
 
-export default function useCurrentWorkspace(opts?: SWRConfiguration) {
-  const key = '/api/workspaces/current'
-  const session = useSession()
+export default function useCurrentWorkspace() {
   const { toast } = useToast()
-  const { mutate, data, ...rest } = useSWR<SessionWorkspace>(
-    key,
-    async (_) => session.workspace,
-    {
-      ...opts,
-      fallbackData: session.workspace,
-    },
+  const fetcher = useFetcher(ROUTES.api.workspaces.current)
+
+  const { mutate, data, ...rest } = useSWR<Workspace>(
+    'api/workspaces/current',
+    fetcher,
   )
 
-  const { execute } = useServerAction(updateWorkspaceAction)
-  const update = useCallback(
+  const { execute: updateWorkspace } = useServerAction(updateWorkspaceAction)
+  const updateName = useCallback(
     async (payload: { name: string }) => {
-      const [workspace, error] = await execute({
+      if (!data) return
+
+      const [workspace, error] = await updateWorkspace({
         workspaceId: data!.id,
         name: payload.name,
       })
@@ -42,8 +44,39 @@ export default function useCurrentWorkspace(opts?: SWRConfiguration) {
       mutate(workspace)
       return workspace
     },
-    [mutate],
+    [mutate, data],
   )
 
-  return { data: data!, update, ...rest }
+  const { execute: setDefaultProvider } = useServerAction(
+    setDefaultProviderAction,
+  )
+  const updateDefaultProvider = useCallback(
+    async (payload: { defaultProviderId: number | null }) => {
+      if (!data) return
+
+      const [workspace, error] = await setDefaultProvider({
+        workspaceId: data!.id,
+        defaultProviderId: payload.defaultProviderId,
+      })
+      if (error) {
+        toast({
+          title: 'Failed to update workspace default provider',
+          description: error.message,
+          variant: 'destructive',
+        })
+
+        return
+      }
+
+      toast({
+        title: 'Default provider updated',
+      })
+
+      mutate(workspace)
+      return workspace
+    },
+    [mutate, data],
+  )
+
+  return { data, updateName, updateDefaultProvider, ...rest }
 }

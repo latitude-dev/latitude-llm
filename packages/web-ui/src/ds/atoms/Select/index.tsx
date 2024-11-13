@@ -1,6 +1,6 @@
 'use client'
 
-import { ReactNode, useState } from 'react'
+import { ReactNode, useEffect, useState } from 'react'
 
 import { FormField, type FormFieldProps } from '../FormField'
 import {
@@ -60,6 +60,9 @@ export function Select({
   required = false,
 }: SelectProps) {
   const [selectedValue, setSelected] = useState(value ?? defaultValue)
+  useEffect(() => {
+    setSelected(value ?? defaultValue)
+  }, [value, defaultValue])
   const _onChange = (newValue: string) => {
     setSelected(newValue)
     if (onChange) onChange(newValue)

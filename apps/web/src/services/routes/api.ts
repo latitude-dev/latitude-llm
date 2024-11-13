@@ -1,5 +1,6 @@
 export const _API_ROUTES = {
   workspaces: {
+    current: '/api/workspaces/current',
     usage: '/api/workspaces/usage',
   },
   apiKeys: {

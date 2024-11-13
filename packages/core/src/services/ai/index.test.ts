@@ -19,6 +19,7 @@ const PROVIDER_PAYLOAD: ProviderApiKey = {
   name: 'openai',
   token: 'fake-openai-api-key',
   url: 'https://api.openai.com',
+  defaultModel: null,
   lastUsedAt: null,
   createdAt: new Date(),
   updatedAt: new Date(),

@@ -51,6 +51,9 @@ export const ROUTES = {
   settings: {
     root: '/settings',
     providerApiKeys: {
+      new: {
+        root: '/settings/apikeys/new',
+      },
       destroy: (id: number) => {
         return { root: `/settings/apikeys/${id}/destroy` }
       },

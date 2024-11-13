@@ -3,11 +3,11 @@ import { env } from '@latitude-data/env'
 
 import {
   DEFAULT_PROVIDER_MAX_FREE_RUNS,
+  DEFAULT_PROVIDER_UNSUPPORTED_MODELS,
   ProviderApiKey,
   Workspace,
 } from '../../../browser'
 import { Result } from '../../../lib'
-import { DEFAULT_PROVIDER_UNSUPPORTED_MODELS } from '../../ai/providers/models'
 import { incrFreeRuns } from '../../freeRunsManager'
 import { ChainError } from '../ChainErrors'
 

@@ -1,3 +1,5 @@
+import { env } from '@latitude-data/env'
+
 import {
   EvaluationConfigurationBoolean,
   EvaluationConfigurationNumerical,
@@ -31,7 +33,7 @@ import {
   evaluationMetadataLlmAsJudgeSimple,
   evaluations,
 } from '../../schema'
-import { findDefaultProvider } from '../providerApiKeys/findDefaultProvider'
+import { findDefaultEvaluationProvider } from '../providerApiKeys/findDefaultProvider'
 import { connectEvaluations } from './connect'
 
 type EvaluationResultConfigurationNumerical = {
@@ -328,19 +330,27 @@ async function enrichWithProvider<M extends EvaluationMetadataType>(
     // @ts-expect-error - Metadata is a union type and providerApiKeyId is not defined for the other types
     !metadata.providerApiKeyId
   ) {
-    const provider = await findDefaultProvider(workspace, db)
+    const provider = await findDefaultEvaluationProvider(workspace, db).then(
+      (r) => r.unwrap(),
+    )
     if (!provider) {
       throw new NotFoundError(
         `In order to create an evaluation you need to first create a provider API key from OpenAI or Anthropic`,
       )
     }
+
     const model =
       // @ts-expect-error - Metadata is a union type and model is not defined for the other types
-      metadata.model || findFirstModelForProvider(provider.provider)
-    if (!model)
+      metadata.model ||
+      findFirstModelForProvider({
+        provider: provider,
+        latitudeProvider: env.DEFAULT_PROVIDER_ID,
+      })
+    if (!model) {
       throw new NotFoundError(
         `In order to create an evaluation you need to first create a provider API key from OpenAI or Anthropic`,
       )
+    }
 
     metadata = {
       ...metadata,
@@ -350,24 +360,33 @@ async function enrichWithProvider<M extends EvaluationMetadataType>(
   }
 
   if (metadataType === EvaluationMetadataType.LlmAsJudgeAdvanced) {
-    const provider = await findDefaultProvider(workspace, db)
+    const provider = await findDefaultEvaluationProvider(workspace, db).then(
+      (r) => r.unwrap(),
+    )
     if (!provider) {
       throw new NotFoundError(
         `In order to create an evaluation you need to first create a provider API key from OpenAI or Anthropic`,
       )
     }
 
-    const promptWithProvider = provider
-      ? `---
+    const model = findFirstModelForProvider({
+      provider: provider,
+      latitudeProvider: env.DEFAULT_PROVIDER_ID,
+    })
+    if (!model) {
+      throw new NotFoundError(
+        `In order to create an evaluation you need to first create a provider API key from OpenAI or Anthropic`,
+      )
+    }
+
+    const promptWithProvider = `---
 provider: ${provider.name}
-model: ${findFirstModelForProvider(provider.provider)}
+model: ${model}
 ---
 ${
   // @ts-expect-error - Metadata is a union type and prompt is not defined for the other types
   metadata.prompt
 }`.trim()
-      : // @ts-expect-error - Metadata is a union type and prompt is not defined for the other types
-        metadata.prompt
 
     metadata = {
       ...metadata,

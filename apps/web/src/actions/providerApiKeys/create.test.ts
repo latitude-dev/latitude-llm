@@ -8,16 +8,11 @@ import { createProviderApiKeyAction } from './create'
 const mocks = vi.hoisted(() => {
   return {
     getSession: vi.fn(),
-    providerApiKeyPresenter: vi.fn(),
   }
 })
 
 vi.mock('$/services/auth/getSession', () => ({
   getSession: mocks.getSession,
-}))
-
-vi.mock('$/presenters/providerApiKeyPresenter', () => ({
-  default: mocks.providerApiKeyPresenter,
 }))
 
 describe('createProviderApiKeyAction', () => {
@@ -53,21 +48,38 @@ describe('createProviderApiKeyAction', () => {
     })
 
     it('successfully creates a provider API key', async () => {
-      const mockPresentedApiKey = {
-        id: 'presented-id',
-        name: 'Presented Test API Key',
-      }
-      mocks.providerApiKeyPresenter.mockReturnValue(mockPresentedApiKey)
-
-      const [data, error] = await createProviderApiKeyAction({
+      const [result, error] = await createProviderApiKeyAction({
         provider: Providers.OpenAI,
         token: 'test-token',
         name: 'Test API Key',
       })
 
       expect(error).toBeNull()
-      expect(data).toEqual(mockPresentedApiKey)
-      expect(mocks.providerApiKeyPresenter).toHaveBeenCalled()
+
+      const provider = result!
+
+      expect(provider.provider).toEqual(Providers.OpenAI)
+      expect(provider.name).toEqual('Test API Key')
+      expect(provider.token).toEqual('tes********oken')
+      expect(provider.defaultModel).toEqual(null)
+    })
+
+    it('successfully creates a provider API key with a default model', async () => {
+      const [result, error] = await createProviderApiKeyAction({
+        provider: Providers.OpenAI,
+        token: 'test-token',
+        name: 'Test API Key',
+        defaultModel: 'gpt-4o',
+      })
+
+      expect(error).toBeNull()
+
+      const provider = result!
+
+      expect(provider.provider).toEqual(Providers.OpenAI)
+      expect(provider.name).toEqual('Test API Key')
+      expect(provider.token).toEqual('tes********oken')
+      expect(provider.defaultModel).toEqual('gpt-4o')
     })
 
     it('handles errors when creating a provider API key fails', async () => {
@@ -113,7 +125,7 @@ describe('createProviderApiKeyAction', () => {
       expect(error).toBeDefined()
     })
 
-    it('allows creating to providers with same name if one is deleted', async () => {
+    it('allows creating two providers with same name if one is deleted', async () => {
       await factories.createProviderApiKey({
         workspace,
         type: Providers.OpenAI,

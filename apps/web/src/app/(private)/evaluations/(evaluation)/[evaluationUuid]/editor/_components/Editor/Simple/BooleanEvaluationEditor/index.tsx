@@ -22,9 +22,9 @@ import {
 import {
   IProviderByName,
   ProviderModelSelector,
-  useModelsOptions,
 } from '$/components/EditorHeader'
 import { envClient } from '$/envClient'
+import useModelOptions from '$/hooks/useModelOptions'
 import useEvaluations from '$/stores/evaluations'
 import useProviderApiKeys from '$/stores/providerApiKeys'
 
@@ -66,30 +66,28 @@ export default function BooleanEvaluationEditor({
       return acc
     }, {} as IProviderByName)
   }, [providerApiKeys])
-  const modelOptions = useModelsOptions({
-    provider: selectedProvider
-      ? providersByName[selectedProvider]?.provider
-      : undefined,
-    isDefaultProvider:
-      selectedProvider === envClient.NEXT_PUBLIC_DEFAULT_PROJECT_ID,
+  const provider = selectedProvider
+    ? providersByName[selectedProvider]
+    : undefined
+  const modelOptions = useModelOptions({
+    provider: provider?.provider,
+    name: provider?.name,
   })
   const onProviderChange = async (value: string) => {
     if (!value) return
+    if (value === selectedProvider) return
 
-    const provider = providersByName[value]!
-    if (!provider) return
-    if (selectedProvider === provider.name) return
+    const firstModel = findFirstModelForProvider({
+      provider: providersByName[value],
+      latitudeProvider: envClient.NEXT_PUBLIC_DEFAULT_PROJECT_ID,
+    })
 
-    setSelectedProvider(provider.name)
-
-    const firstModel = findFirstModelForProvider(provider.provider)
-    if (!firstModel) return
-
+    setSelectedProvider(value)
     setSelectedModel(firstModel)
   }
   const onModelChange = async (value: string) => {
     if (!value) return
-    if (selectedModel === value) return
+    if (value === selectedModel) return
 
     setSelectedModel(value)
   }
@@ -97,9 +95,6 @@ export default function BooleanEvaluationEditor({
     e.preventDefault()
 
     const formData = new FormData(e.currentTarget)
-    const provider = selectedProvider
-      ? providersByName[selectedProvider]
-      : undefined
 
     const [_, error] = await update({
       id: evaluation.id,
@@ -142,7 +137,7 @@ export default function BooleanEvaluationEditor({
       >
         <FormField>
           <ProviderModelSelector
-            modelDisabled={!selectedProvider}
+            modelDisabled={!modelOptions.length || !selectedProvider}
             modelOptions={modelOptions}
             onModelChange={onModelChange}
             onProviderChange={onProviderChange}
