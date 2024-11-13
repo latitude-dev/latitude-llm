@@ -48,7 +48,7 @@ export async function addMessagesAction({
     Error
   >()
 
-  const response = sdk.chat(documentLogUuid, messages, {
+  const response = sdk.prompts.chat(documentLogUuid, messages, {
     stream: true,
     onEvent: (event) => {
       stream.update(event)

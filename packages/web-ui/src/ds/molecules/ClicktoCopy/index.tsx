@@ -2,7 +2,7 @@
 
 import { ReactNode, useCallback } from 'react'
 
-import { Icon, Tooltip } from '../../atoms'
+import { Icon, toast, Tooltip } from '../../atoms'
 
 export function ClickToCopy({
   copyValue,
@@ -13,6 +13,10 @@ export function ClickToCopy({
 }) {
   const onCopy = useCallback(() => {
     navigator.clipboard.writeText(copyValue)
+    toast({
+      title: 'Copied to clipboard',
+      description: 'The snippet has been copied to your clipboard',
+    })
   }, [copyValue])
 
   return (
@@ -24,7 +28,7 @@ export function ClickToCopy({
       trigger={
         <div
           onClick={onCopy}
-          className='cursor-pointer flex flex-row items-center gap-x-1'
+          className='cursor-pointer flex flex-row items-center gap-x-2'
         >
           {children}
           <Icon name='clipboard' className='text-muted-foreground' />

@@ -47,7 +47,7 @@ export const generateSuggestedEvaluationsAction = authProcedure
       apiKey: env.COPILOT_WORKSPACE_API_KEY,
       projectId: env.COPILOT_PROJECT_ID,
     }).then((r) => r.unwrap())
-    const result = await sdk.run(
+    const result = await sdk.prompts.run(
       env.COPILOT_EVALUATION_SUGGESTION_PROMPT_PATH,
       {
         stream: false,

@@ -62,14 +62,17 @@ export const requestSuggestionAction = authProcedure
       projectId: env.COPILOT_PROJECT_ID,
     }).then((r) => r.unwrap())
 
-    const result = await sdk.run(env.COPILOT_CODE_SUGGESTION_PROMPT_PATH, {
-      stream: false,
-      parameters: {
-        prompt: document.content,
-        request,
-        providers,
+    const result = await sdk.prompts.run(
+      env.COPILOT_CODE_SUGGESTION_PROMPT_PATH,
+      {
+        stream: false,
+        parameters: {
+          prompt: document.content,
+          request,
+          providers,
+        },
       },
-    })
+    )
 
     if (!result) throw new Error('Failed to request prompt suggestion')
 

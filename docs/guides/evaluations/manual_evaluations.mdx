@@ -1,0 +1,38 @@
+---
+title: Manual evaluations
+description: 'Evaluate your LLM output with human feedback or code-based evaluations, and push the results to Latitude.'
+---
+
+## What are manual evaluations?
+
+Manual evaluations give you full control over how you evaluate your LLM outputs. You can use them to evaluate your LLM outputs with human feedback or code-based evaluations, and push the results to Latitude.
+
+## How do they work?
+
+A Latitude project can have any number of evaluations that will be available to
+connect to prompts. You can create evaluations in the **Evaluations** tab of
+your workspace.
+
+Once you've created an evaluation, you can connect it to a prompt by navigating
+to the prompt and clicking on the **Evaluations** tab. Then you can select the
+evaluation you want to connect to the prompt.
+
+## How do I create a manual evaluation?
+
+Go to the **Evaluations** tab of your project and click on the **Create
+evaluation** button. You'll have to provide a name for the evaluation, a
+description, select the manual evaluation type, andand select the type of
+evaluation result you expect. We support three result types of, depending on
+the output you expect:
+
+- **Number**: This is helpful when you want to score outputs on a range, for example a score between 0 and 10. You'll have to provide a minimum and maximum value for the evaluation.
+- **Boolean**: Useful for true/false questions. For example, you can use this to evaluate if the output contains harmful content.
+- **Text**: A free-form text evaluation. For example, you can use this to generate feedback on the output of a prompt.
+
+## How do I push the results to Latitude?
+
+Once you've created a manual evaluation, you can push the results to Latitude
+with our SDKs or our HTTP API. You can find more information about how to push
+the results to Latitude in our [SDK
+documentation](/guides/sdk/javascript-typescript-sdk) and/or [API
+section](/guides/prompt-manager/api-access)

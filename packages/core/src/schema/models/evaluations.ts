@@ -17,6 +17,7 @@ import { evaluationResultTypes } from './evaluationResults'
 export const metadataTypesEnum = latitudeSchema.enum('metadata_type', [
   EvaluationMetadataType.LlmAsJudgeAdvanced,
   EvaluationMetadataType.LlmAsJudgeSimple,
+  EvaluationMetadataType.Manual,
 ])
 
 export const evaluations = latitudeSchema.table(

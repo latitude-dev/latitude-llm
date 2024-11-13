@@ -20,6 +20,9 @@ const simpleEvaluationMetadataSchema = z.object({
   objective: z.string(),
   additionalInstructions: z.string(),
 })
+const defaultEvaluationMetadataSchema = z.object({
+  type: z.literal(EvaluationMetadataType.Manual),
+})
 
 export const createEvaluationAction = authProcedure
   .createServerAction()
@@ -28,9 +31,10 @@ export const createEvaluationAction = authProcedure
       name: z.string(),
       description: z.string(),
       resultConfiguration: resultConfigurationSchema,
-      metadata: z.union([
+      metadata: z.discriminatedUnion('type', [
         advancedEvaluationMetadataSchema,
         simpleEvaluationMetadataSchema,
+        defaultEvaluationMetadataSchema,
       ]),
     }),
     { type: 'json' },

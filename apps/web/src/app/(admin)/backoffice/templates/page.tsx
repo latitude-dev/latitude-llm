@@ -23,9 +23,8 @@ import {
   Text,
   TextArea,
 } from '@latitude-data/web-ui'
+import { useEvaluationConfiguration } from '$/app/(private)/evaluations/_components/CreateEvaluationModal/useEvaluationConfiguration'
 import useEvaluationTemplates from '$/stores/evaluationTemplates'
-
-import { useEvaluationConfiguration } from '../../../(private)/evaluations/_components/CreateEvaluationModal'
 
 export default function AdminPage() {
   const { data: evaluationTemplates } = useEvaluationTemplates()

@@ -48,7 +48,7 @@ ${parameterEntries}
 // Do not expose the API key in client-side code
 const sdk = new Latitude('${apiKey ?? 'YOUR_API_KEY'}', { projectId: ${projectId} })
 
-const result = await sdk.run('${documentPath}'${getRunOptions() ? `, ${getRunOptions()}` : ''})
+const result = await sdk.prompts.run('${documentPath}'${getRunOptions() ? `, ${getRunOptions()}` : ''})
 `
 
   return (

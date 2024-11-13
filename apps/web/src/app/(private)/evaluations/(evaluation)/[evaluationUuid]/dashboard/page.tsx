@@ -1,4 +1,9 @@
-import { Button, Container, TableBlankSlate } from '@latitude-data/web-ui'
+import {
+  EvaluationDto,
+  EvaluationMetadataType,
+  LATITUDE_DOCS_URL,
+} from '@latitude-data/core/browser'
+import { Button, Container, Icon, TableBlankSlate } from '@latitude-data/web-ui'
 import {
   getConnectedDocumentsWithMetadataCached,
   getEvaluationByUuidCached,
@@ -23,20 +28,11 @@ export default async function DashboardPage({
 
   return (
     <Container>
-      <EvaluationTabSelector evaluation={evaluation} />
+      {evaluation.metadataType !== EvaluationMetadataType.Manual && (
+        <EvaluationTabSelector evaluation={evaluation} />
+      )}
       {connectedDocumentsWithMetadata.length === 0 && (
-        <TableBlankSlate
-          description='There are no evaluation results yet. Connect your evaluation with a document and run it to start generating them.'
-          link={
-            <Link
-              href={
-                ROUTES.evaluations.detail({ uuid: evaluation.uuid }).editor.root
-              }
-            >
-              <Button fancy>Edit the evaluation prompt</Button>
-            </Link>
-          }
-        />
+        <EvaluationBlankslate evaluation={evaluation} />
       )}
       {connectedDocumentsWithMetadata.length > 0 && (
         <>
@@ -50,5 +46,37 @@ export default async function DashboardPage({
         </>
       )}
     </Container>
+  )
+}
+
+function EvaluationBlankslate({ evaluation }: { evaluation: EvaluationDto }) {
+  if (evaluation.metadataType === EvaluationMetadataType.Manual) {
+    return (
+      <TableBlankSlate
+        description='There are no evaluation results yet. Learn how to submit evaluation results with our SDK or HTTP API.'
+        link={
+          <Link href={LATITUDE_DOCS_URL}>
+            <Button variant='link'>
+              Check out the docs <Icon name='externalLink' />
+            </Button>
+          </Link>
+        }
+      />
+    )
+  }
+
+  return (
+    <TableBlankSlate
+      description='There are no evaluation results yet. Connect your evaluation with a document and run it to start generating them.'
+      link={
+        <Link
+          href={
+            ROUTES.evaluations.detail({ uuid: evaluation.uuid }).editor.root
+          }
+        >
+          <Button fancy>Edit the evaluation prompt</Button>
+        </Link>
+      }
+    />
   )
 }

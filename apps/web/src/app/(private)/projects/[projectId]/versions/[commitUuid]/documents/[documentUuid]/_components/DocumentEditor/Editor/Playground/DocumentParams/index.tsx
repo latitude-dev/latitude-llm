@@ -47,7 +47,7 @@ function ParamsTabs({ inputs, setInput, setInputs }: Props) {
   return (
     <div className='w-full flex flex-col gap-4'>
       <TabSelector<ParamsSource>
-        width='full'
+        fullWidth
         options={TABS}
         selected={selectedTab}
         onSelect={setSelectedTab}

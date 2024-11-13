@@ -49,7 +49,7 @@ describe('/run', () => {
           version: 'live',
           projectId: '123',
         })
-        await sdk.run('path/to/document', {
+        await sdk.prompts.run('path/to/document', {
           projectId,
           stream: true,
         })
@@ -67,7 +67,7 @@ describe('/run', () => {
           version: 'live',
           projectId: '123',
         })
-        await sdk.run('path/to/document', {
+        await sdk.prompts.run('path/to/document', {
           projectId,
           stream: true,
         })
@@ -88,7 +88,7 @@ describe('/run', () => {
         version: 'live',
         projectId: '345',
       })
-      await sdk.run('path/to/document', {
+      await sdk.prompts.run('path/to/document', {
         stream: true,
       })
       expect(mockUrl).toHaveBeenCalledWith(
@@ -105,7 +105,7 @@ describe('/run', () => {
           version: 'SOME_UUID',
           projectId: '123',
         })
-        await sdk.run('path/to/document', {
+        await sdk.prompts.run('path/to/document', {
           projectId,
           versionUuid: version,
           stream: true,
@@ -125,7 +125,7 @@ describe('/run', () => {
           version: 'SOME_UUID',
           projectId: '123',
         })
-        await sdk.run('path/to/document', {
+        await sdk.prompts.run('path/to/document', {
           projectId,
           versionUuid: 'SOME_UUID',
           parameters: { foo: 'bar', lol: 'foo' },
@@ -150,7 +150,7 @@ describe('/run', () => {
           server,
           apiVersion: 'v2',
         })
-        await sdk.run('path/to/document', {
+        await sdk.prompts.run('path/to/document', {
           projectId,
           parameters: { foo: 'bar', lol: 'foo' },
           stream: true,
@@ -176,7 +176,7 @@ describe('/run', () => {
           server,
           apiVersion: 'v2',
         })
-        const final = await sdk.run('path/to/document', {
+        const final = await sdk.prompts.run('path/to/document', {
           projectId,
           parameters: { foo: 'bar', lol: 'foo' },
           stream: true,
@@ -200,7 +200,7 @@ describe('/run', () => {
           version: 'live',
           projectId: '123',
         })
-        await sdk.run('path/to/document', {
+        await sdk.prompts.run('path/to/document', {
           projectId,
           stream: false,
         })
@@ -218,7 +218,7 @@ describe('/run', () => {
           version: 'live',
           projectId: '123',
         })
-        await sdk.run('path/to/document', {
+        await sdk.prompts.run('path/to/document', {
           projectId,
           stream: false,
         })
@@ -239,7 +239,7 @@ describe('/run', () => {
         version: 'live',
         projectId: '345',
       })
-      await sdk.run('path/to/document', {
+      await sdk.prompts.run('path/to/document', {
         stream: false,
       })
       expect(mockUrl).toHaveBeenCalledWith(
@@ -257,7 +257,7 @@ describe('/run', () => {
           version: 'SOME_UUID',
           projectId: '123',
         })
-        await sdk.run('path/to/document', {
+        await sdk.prompts.run('path/to/document', {
           projectId,
           versionUuid: version,
           stream: false,
@@ -277,7 +277,7 @@ describe('/run', () => {
           version: 'SOME_UUID',
           projectId: '123',
         })
-        await sdk.run('path/to/document', {
+        await sdk.prompts.run('path/to/document', {
           projectId,
           versionUuid: 'SOME_UUID',
           parameters: { foo: 'bar', lol: 'foo' },
@@ -299,7 +299,7 @@ describe('/run', () => {
       server.boundary(async () => {
         const onMessageMock = vi.fn()
         mockNonStreamResponse({ server, expectedBody: FINAL_RESPONSE })
-        await sdk.run('path/to/document', {
+        await sdk.prompts.run('path/to/document', {
           projectId,
           parameters: { foo: 'bar', lol: 'foo' },
           stream: false,
@@ -318,7 +318,7 @@ describe('/run', () => {
           server,
           expectedBody: FINAL_RESPONSE,
         })
-        const response = await sdk.run('path/to/document', {
+        const response = await sdk.prompts.run('path/to/document', {
           projectId,
           parameters: { foo: 'bar', lol: 'foo' },
           stream: false,
@@ -344,7 +344,7 @@ describe('/run', () => {
         expectedBody: failedResponse,
         expectedStatus: 402,
       })
-      await sdk.run('path/to/document', {
+      await sdk.prompts.run('path/to/document', {
         projectId,
         parameters: { foo: 'bar', lol: 'foo' },
         stream: false,
@@ -374,7 +374,7 @@ describe('/run', () => {
         expectedStatus: 402,
       })
       await expect(
-        sdk.run('path/to/document', {
+        sdk.prompts.run('path/to/document', {
           projectId,
           parameters: { foo: 'bar', lol: 'foo' },
           stream: false,
@@ -400,7 +400,7 @@ describe('/run', () => {
       })
 
       await expect(
-        sdk.run('path/to/document', {
+        sdk.prompts.run('path/to/document', {
           projectId,
           parameters: { foo: 'bar', lol: 'foo' },
           stream: false,
@@ -422,7 +422,7 @@ describe('/run', () => {
         server,
       })
 
-      await sdk.run('path/to/document', {
+      await sdk.prompts.run('path/to/document', {
         projectId,
         parameters: { foo: 'bar', lol: 'foo' },
         stream: false,

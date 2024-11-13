@@ -1,4 +1,11 @@
-import { bigint, bigserial, index, pgEnum, uuid } from 'drizzle-orm/pg-core'
+import {
+  bigint,
+  bigserial,
+  index,
+  pgEnum,
+  text,
+  uuid,
+} from 'drizzle-orm/pg-core'
 
 import { EvaluationResultableType } from '../../constants'
 import { latitudeSchema } from '../db-schema'
@@ -38,6 +45,7 @@ export const evaluationResults = latitudeSchema.table(
     resultableType: evaluationResultTypes('resultable_type'),
     resultableId: bigint('resultable_id', { mode: 'number' }),
     source: logSourcesEnum('source'),
+    reason: text('reason'),
     ...timestamps(),
   },
   (table) => ({

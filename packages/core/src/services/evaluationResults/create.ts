@@ -85,6 +85,7 @@ export async function createEvaluationResult(
         resultableType: result ? evaluation.resultType : null,
         resultableId,
         source: documentLog.source,
+        reason: result?.reason,
       })
       .returning()
 

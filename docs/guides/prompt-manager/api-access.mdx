@@ -124,7 +124,8 @@ Run a specific document (prompt) with optional parameters.
 ```
 
 <Note>
-  Message follows [OpenAI's format](https://platform.openai.com/docs/guides/text-generation/building-prompts).
+  Message follows [OpenAI's
+  format](https://platform.openai.com/docs/guides/text-generation/building-prompts).
 </Note>
 
 <Note>
@@ -137,6 +138,7 @@ type ToolCall = {
   arguments: Record<string, unknown>
 }
 ```
+
 </Note>
 
 #### 2. Chat
@@ -171,7 +173,8 @@ The previously described `POST /projects/{projectId}/versions/{versionUuid}/docu
 - `stream`: Optional boolean parameter (defaults to `false`). When set to true, the response will be a stream of Server-Sent Events (SSE). If false, a single JSON response containing the last event is returned.
 
 <Note>
-  Message follows [OpenAI's format](https://platform.openai.com/docs/guides/text-generation/building-prompts).
+  Message follows [OpenAI's
+  format](https://platform.openai.com/docs/guides/text-generation/building-prompts).
 </Note>
 
 **Response:**
@@ -310,6 +313,38 @@ Create a log entry for a document.
   "duration": "duration",
   "source": "source",
   "createdAt": "created-at",
-  "updatedAt": "updated-at",
+  "updatedAt": "updated-at"
+}
+```
+
+#### 6. Create Evaluation Result
+
+Create an evaluation result for a conversation using a configured evaluation.
+
+**Endpoint:** `POST /conversations/{conversationUuid}/evaluations/{evaluationUuid}/results`
+
+**Path Parameters:**
+
+- `conversationUuid`: UUID of the conversation to evaluate
+- `evaluationUuid`: UUID of the evaluation to use
+
+**Request Body:**
+
+```json
+{
+  "result": 2,
+  "reason": "The output is not relevant to the prompt"
+}
+```
+
+**Response:**
+
+```json
+{
+  "id": "evaluation-result-id",
+  "result": 2,
+  "reason": "The output is not relevant to the prompt",
+  "createdAt": "created-at",
+  "updatedAt": "updated-at"
 }
 ```

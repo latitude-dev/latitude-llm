@@ -53,14 +53,17 @@ export async function generateDatasetAction({
   }).then((r) => r.unwrap())
 
   try {
-    const sdkResponse = await sdk.run(env.DATASET_GENERATOR_DOCUMENT_PATH, {
-      stream: false,
-      parameters: {
-        row_count: rowCount,
-        parameters,
-        user_message: description,
+    const sdkResponse = await sdk.prompts.run(
+      env.DATASET_GENERATOR_DOCUMENT_PATH,
+      {
+        stream: false,
+        parameters: {
+          row_count: rowCount,
+          parameters,
+          user_message: description,
+        },
       },
-    })
+    )
     const sdkResult = sdkResponse
     const csv = (sdkResult?.response! as ChainStepResponse<'object'>).object.csv
     const result = await createDataset({

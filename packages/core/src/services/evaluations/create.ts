@@ -7,6 +7,7 @@ import {
   EvaluationDto,
   EvaluationMetadataLlmAsJudgeAdvanced,
   EvaluationMetadataLlmAsJudgeSimple,
+  EvaluationMetadataManual,
   EvaluationMetadataType,
   EvaluationResultableType,
   findFirstModelForProvider,
@@ -33,6 +34,7 @@ import {
   evaluationMetadataLlmAsJudgeSimple,
   evaluations,
 } from '../../schema'
+import { evaluationMetadataManual } from '../../schema/models/evaluationMetadataDefault'
 import { findDefaultEvaluationProvider } from '../providerApiKeys/findDefaultProvider'
 import { connectEvaluations } from './connect'
 
@@ -63,7 +65,9 @@ type CreateEvaluationMetadata<M extends EvaluationMetadataType> =
             'id' | 'configuration' | 'prompt'
           >
         >
-      : never
+      : M extends EvaluationMetadataType.Manual
+        ? Omit<EvaluationMetadataManual, 'id'>
+        : never
 
 type CreateEvaluationResultConfiguration<R extends EvaluationResultableType> =
   R extends EvaluationResultableType.Boolean
@@ -84,7 +88,7 @@ export async function createEvaluation<
     name,
     description,
     metadataType,
-    metadata,
+    metadata = {} as CreateEvaluationMetadata<M>,
     resultType,
     resultConfiguration,
     projectId,
@@ -114,9 +118,11 @@ export async function createEvaluation<
       evaluationMetadataLlmAsJudgeAdvanced,
     [EvaluationMetadataType.LlmAsJudgeSimple]:
       evaluationMetadataLlmAsJudgeSimple,
+    [EvaluationMetadataType.Manual]: evaluationMetadataManual,
   } as const
+  const metadataTable = metadataTables[metadataType]
 
-  if (!metadataTables[metadataType]) {
+  if (!metadataTable) {
     return Result.error(
       new BadRequestError(`Invalid metadata type ${metadataType}`),
     )
@@ -145,7 +151,7 @@ export async function createEvaluation<
     )
 
     const metadataRow = (await tx
-      .insert(metadataTables[metadataType])
+      .insert(metadataTable)
       .values([enrichedMetadata])
       .returning()
       .then((r) => r[0]!)) as IEvaluationMetadata

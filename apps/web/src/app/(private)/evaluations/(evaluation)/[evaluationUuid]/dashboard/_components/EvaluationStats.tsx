@@ -42,7 +42,9 @@ export default function EvaluationStats({
         const metadataModel = (metadata.config['model'] as string) ?? 'Unknown'
         setModel(metadataModel)
       })
-    } else {
+    } else if (
+      evaluation.metadataType === EvaluationMetadataType.LlmAsJudgeSimple
+    ) {
       setModel(evaluation.metadata.model)
     }
   }, [evaluation.metadata])

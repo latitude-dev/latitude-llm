@@ -14,7 +14,7 @@ import { ROUTES } from '$/services/routes'
 import useEvaluations from '$/stores/evaluations'
 import Link from 'next/link'
 
-import BatchEvaluationsTable from './BatchEvaluationsTable'
+import ConnectedEvaluationsTable from './BatchEvaluationsTable'
 
 function SuggestedEvaluations() {
   const { project } = useCurrentProject()
@@ -74,7 +74,7 @@ export default function EvaluationsLayoutClient({
     return <TableSkeleton cols={2} rows={3} />
   }
   if (evaluations.length) {
-    return <BatchEvaluationsTable evaluations={evaluations} />
+    return <ConnectedEvaluationsTable evaluations={evaluations} />
   }
 
   return (

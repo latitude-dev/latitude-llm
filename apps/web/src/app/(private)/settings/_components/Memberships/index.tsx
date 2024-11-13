@@ -56,7 +56,7 @@ function UsersTable({ users }: { users: User[] }) {
       </TableHeader>
       <TableBody>
         {users.map((user) => (
-          <TableRow key={user.id} verticalPadding>
+          <TableRow key={user.id} verticalPadding hoverable={false}>
             <TableCell>
               <Text.H4>{user.name}</Text.H4>
             </TableCell>

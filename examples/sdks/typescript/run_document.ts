@@ -9,7 +9,7 @@ async function makeDocumentRequest() {
     },
   })
   try {
-    const response = await sdk.run('file-test', {
+    const response = await sdk.prompts.run('file-test', {
       projectId: 1,
       parameters: { username: 'mario82', name: 'Mario' },
       versionUuid: '08c60d53-2701-4349-9e98-f811e4ffd8ab',

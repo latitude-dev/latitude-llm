@@ -805,4 +805,127 @@ Test Prompt`.trim(),
       })
     })
   })
+
+  describe('create default evaluations', () => {
+    it('creates a default evaluation with text configuration', async () => {
+      const evaluationResult = await createEvaluation({
+        workspace,
+        user,
+        name: 'Test Default Evaluation',
+        description: 'Test Description',
+        metadataType: EvaluationMetadataType.Manual,
+        metadata: {},
+        resultType: EvaluationResultableType.Text,
+        resultConfiguration: {
+          valueDescription: 'Test Value Description',
+        },
+      })
+
+      expect(evaluationResult.ok).toBe(true)
+      const evaluation = await repo
+        .find(evaluationResult.value!.id)
+        .then((r) => r.unwrap())
+
+      expect(evaluation.metadataType).toBe(EvaluationMetadataType.Manual)
+      expect(evaluation.resultConfiguration).toMatchObject({
+        valueDescription: 'Test Value Description',
+      })
+    })
+
+    it('creates a default evaluation with numeric configuration', async () => {
+      const evaluationResult = await createEvaluation({
+        workspace,
+        user,
+        name: 'Test Default Evaluation',
+        description: 'Test Description',
+        metadataType: EvaluationMetadataType.Manual,
+        metadata: {},
+        resultType: EvaluationResultableType.Number,
+        resultConfiguration: {
+          minValue: 0,
+          maxValue: 100,
+          minValueDescription: 'Test Min Value Description',
+          maxValueDescription: 'Test Max Value Description',
+        },
+      })
+
+      expect(evaluationResult.ok).toBe(true)
+      const evaluation = await repo
+        .find(evaluationResult.value!.id)
+        .then((r) => r.unwrap())
+
+      expect(evaluation.metadataType).toBe(EvaluationMetadataType.Manual)
+      expect(evaluation.resultConfiguration).toMatchObject({
+        minValue: 0,
+        maxValue: 100,
+        minValueDescription: 'Test Min Value Description',
+        maxValueDescription: 'Test Max Value Description',
+      })
+    })
+
+    it('creates a default evaluation with boolean configuration', async () => {
+      const evaluationResult = await createEvaluation({
+        workspace,
+        user,
+        name: 'Test Default Evaluation',
+        description: 'Test Description',
+        metadataType: EvaluationMetadataType.Manual,
+        metadata: {},
+        resultType: EvaluationResultableType.Boolean,
+        resultConfiguration: {
+          trueValueDescription: 'Test True Value Description',
+          falseValueDescription: 'Test False Value Description',
+        },
+      })
+
+      expect(evaluationResult.ok).toBe(true)
+      const evaluation = await repo
+        .find(evaluationResult.value!.id)
+        .then((r) => r.unwrap())
+
+      expect(evaluation.metadataType).toBe(EvaluationMetadataType.Manual)
+      expect(evaluation.resultConfiguration).toMatchObject({
+        trueValueDescription: 'Test True Value Description',
+        falseValueDescription: 'Test False Value Description',
+      })
+    })
+
+    it('connects the default evaluation to the document', async () => {
+      const prompt = factories.helpers.createPrompt({
+        provider: 'Latitude',
+        model: 'gpt-4o',
+      })
+      const { project, documents } = await factories.createProject({
+        workspace,
+        providers: [{ type: Providers.OpenAI, name: 'Latitude' }],
+        documents: {
+          foo: prompt,
+        },
+      })
+      const projectId = project.id
+      const documentUuid = documents[0]!.documentUuid
+
+      const evaluationResult = await createEvaluation({
+        workspace,
+        user,
+        name: 'Test Default Evaluation',
+        description: 'Test Description',
+        metadataType: EvaluationMetadataType.Manual,
+        metadata: {},
+        resultType: EvaluationResultableType.Text,
+        resultConfiguration: {
+          valueDescription: 'Test Value Description',
+        },
+        projectId,
+        documentUuid,
+      })
+
+      expect(evaluationResult.ok).toBe(true)
+      const evaluation = await repo
+        .find(evaluationResult.value!.id)
+        .then((r) => r.unwrap())
+
+      expect(evaluation.metadataType).toBe(EvaluationMetadataType.Manual)
+    })
+  })
 })

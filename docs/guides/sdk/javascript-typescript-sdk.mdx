@@ -123,7 +123,8 @@ onError: (error) => {
   // Perform any necessary error handling or logging
 }
 ```
-**IMPORTANT**: If you don't provide `onError` callback `await sdk.run` will throw an error.
+
+**IMPORTANT**: If you don't provide `onError` callback `await sdk.prompts.run` will throw an error.
 
 ## Pushing a log to Latitude
 
@@ -154,7 +155,7 @@ const chatCompletion = await openai.chat.completions.create({
 })
 
 // Push the log to the live version of our prompt called 'joker'
-sdk.log('joker', messages, {
+sdk.logs.create('joker', messages, {
   response: chatCompletion.choices[0].message.content,
 })
 ```
@@ -173,44 +174,25 @@ sdk.log('joker', messages, {
 
 ## Evaluating Conversations
 
-To evaluate a conversation using configured evaluators, use the `eval` method:
+The SDK provides two methods for evaluations:
+
+### Trigger Evaluations for a Conversation
+
+Use `evaluations.trigger` to evaluate an existing conversation:
 
 ```typescript
-import { Latitude } from '@latitude-data/sdk'
-
-// Initialize SDK
-const sdk = new Latitude(process.env.LATITUDE_API_KEY, {
-  projectId: 1,
-})
-
-// 1. Run the document
-const { uuid } = await sdk.run('joker', {
-  parameters: {
-    topic: 'police',
-  },
-  stream: false,
-})
-
-// 2. Chat with the model
-await sdk.chat(uuid, [
-  {
-    role: 'user',
-    content: [
-      {
-        type: 'text',
-        text: 'Tell me another joke about doctors',
-      },
-    ],
-  },
-])
-
-// 3. Evaluate the full conversation
-await sdk.eval(uuid, {
-  evaluationUuids: ['evaluator-uuid-1', 'evaluator-uuid-2'], // Optional: You can specify evaluators by their UUIDs. It defaults to running all evaluators connected to the prompt.
+await sdk.evaluations.trigger(conversationUuid, {
+  evaluationUuids: ['evaluator-uuid-1', 'evaluator-uuid-2'], // Optional: specify which evaluators to run
 })
 ```
 
-This allows you to evaluate a conversation at any point in time. Specially
-helpful when building agents that have multiple interactions with users, and you
-intend to evaluate the agent's performance after the interaction is fully
-completed, or at particular points in time.
+## Pushing evaluation results to Latitude
+
+You can push evaluation results to Latitude using the `evaluations.createResult` method:
+
+```typescript
+await sdk.evaluations.createResult(conversationUuid, evaluationUuid, {
+  result: 2,
+  reason: 'The output is not relevant to the prompt',
+})
+```

@@ -7,47 +7,5 @@ description: 'Learn how to create and connect evaluations to your prompts.'
 
 Evaluations help you assess the quality of your LLM outputs. Latitude supports two types of evaluations:
 
-- **LLM evaluations**: You can use LLM evaluators to score your LLM outputs.
-- **Human evaluations (HITL) [Coming soon]**: You can manually review the logs and score them based on your criteria.
-
-## How do they work?
-
-A Latitude project can have any number of evaluations that will be available to connect to prompts. You can create evaluations in the **Evaluations** tab of your workspace. Latitude comes with a set of built-in evaluations that you can use to get started, it's as simple as importing them into your project.
-
-Once you've created an evaluation, you can connect it to a prompt by navigating to the prompt and clicking on the **Evaluations** tab. Then you can select the evaluation you want to connect to the prompt.
-
-After connecting an evaluation to a prompt, you can:
-
-- Activate a live evaluation: This will start evaluating the prompt in real-time. For every new log, the evaluation will be run and the result will be displayed in the evaluation's page.
-- Run in batch: You can choose whether to run the evaluation on existing logs or automatically generate a batch of logs to run the evaluation on.
-
-To learn more about how to connect and run evaluations, check out the [Running evaluations](/guides/evaluations/running-evaluations) guide.
-
-## How do I create an evaluation?
-
-You can create an evaluation from scratch or import an existing one and edit it.
-
-### Creating an evaluation from scratch
-
-Go to the **Evaluations** tab of your project and click on the **Create evaluation** button. You'll have to provide a name for the evaluation and select the type of evaluation you want to create. We support three types of evaluations, depending on the output you expect:
-
-- **Number**: This is helpful when you want to score outputs on a range, for example a score between 0 and 10. You'll have to provide a minimum and maximum value for the evaluation.
-- **Boolean**: Useful for true/false questions. For example, you can use this to evaluate if the output contains harmful content.
-- **Text**: A free-form text evaluation. For example, you can use this to generate feedback on the output of a prompt.
-
-Number and Boolean evaluations expect a specific format for the evaluation result. You have to make sure your evaluation prompt returns either a score or a boolean value (true/false) and that the output is a JSON object with the following format:
-
-```json
-{
-  "result": <result>,
-  "reason": <reason>
-}
-```
-
-We use this format to parse the evaluation result and display aggregated metrics in the evaluations page. Make sure to include this format in your evaluation prompt. If you're not sure how to do this, all of our templates include this format, so you can use them as a reference.
-
-### Importing an evaluation
-
-Importing an evaluation is really simple, just navigate to the **Evaluations** tab of your project and you'll see a few templates to get you started. Simply click on the template you want to import and the evaluation will be created for you.
-
-You can edit an imported evaluation just like you would edit an evaluation from scratch, so feel free to customize it to your needs.
+- [**LLM evaluations**](/guides/evaluations/llm_as_judge_evaluations): Use LLM evaluators to score your LLM outputs.
+- [**Manual evaluations (HITL)**](/guides/evaluations/manual_evaluations): Evaluate your LLM output with human feedback or code-based evaluations, and push the results to Latitude.
