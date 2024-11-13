@@ -343,7 +343,7 @@ async function enrichWithProvider<M extends EvaluationMetadataType>(
       // @ts-expect-error - Metadata is a union type and model is not defined for the other types
       metadata.model ||
       findFirstModelForProvider({
-        provider,
+        provider: provider,
         latitudeProvider: env.DEFAULT_PROVIDER_ID,
       })
     if (!model) {
@@ -370,7 +370,7 @@ async function enrichWithProvider<M extends EvaluationMetadataType>(
     }
 
     const model = findFirstModelForProvider({
-      provider,
+      provider: provider,
       latitudeProvider: env.DEFAULT_PROVIDER_ID,
     })
     if (!model) {

@@ -23,6 +23,12 @@ describe('findFirstModelForProvider', () => {
     }
   })
 
+  it('returns no model for no provider', async () => {
+    const result = findFirstModelForProvider({})
+
+    expect(result).toBeUndefined()
+  })
+
   it('returns default model for provider with default model set', async () => {
     provider.provider = Providers.OpenAI
     provider.defaultModel = 'gpt-4'

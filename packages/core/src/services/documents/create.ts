@@ -56,12 +56,10 @@ export async function createNewDocument(
     )
     if (provider) metadata += `provider: ${provider.name}`
 
-    const model = provider
-      ? findFirstModelForProvider({
-          provider,
-          latitudeProvider: env.DEFAULT_PROVIDER_ID,
-        })
-      : undefined
+    const model = findFirstModelForProvider({
+      provider: provider,
+      latitudeProvider: env.DEFAULT_PROVIDER_ID,
+    })
     if (model) metadata += `\nmodel: ${model}`
 
     const defaultContent = metadata ? `---\n${metadata}\n---` : ''

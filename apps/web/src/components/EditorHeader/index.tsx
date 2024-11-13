@@ -163,13 +163,10 @@ export default function EditorHeader({
       if (!selectedProvider) return
       if (selectedProvider === provider) return
 
-      let firstModel
-      if (providersByName[selectedProvider]) {
-        firstModel = findFirstModelForProvider({
-          provider: providersByName[selectedProvider],
-          latitudeProvider: envClient.NEXT_PUBLIC_DEFAULT_PROJECT_ID,
-        })
-      }
+      const firstModel = findFirstModelForProvider({
+        provider: providersByName[selectedProvider],
+        latitudeProvider: envClient.NEXT_PUBLIC_DEFAULT_PROJECT_ID,
+      })
 
       setProvider(selectedProvider)
       setModel(firstModel)

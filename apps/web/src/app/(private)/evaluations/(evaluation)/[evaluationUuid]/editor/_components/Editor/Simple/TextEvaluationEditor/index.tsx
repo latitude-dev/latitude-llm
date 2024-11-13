@@ -76,13 +76,10 @@ export default function TextEvaluationEditor({
     if (!value) return
     if (value === selectedProvider) return
 
-    let firstModel
-    if (providersByName[value]) {
-      firstModel = findFirstModelForProvider({
-        provider: providersByName[value],
-        latitudeProvider: envClient.NEXT_PUBLIC_DEFAULT_PROJECT_ID,
-      })
-    }
+    const firstModel = findFirstModelForProvider({
+      provider: providersByName[value],
+      latitudeProvider: envClient.NEXT_PUBLIC_DEFAULT_PROJECT_ID,
+    })
 
     setSelectedProvider(value)
     setSelectedModel(firstModel)

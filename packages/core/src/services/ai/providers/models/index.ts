@@ -121,9 +121,11 @@ export function findFirstModelForProvider({
   provider,
   latitudeProvider,
 }: {
-  provider: ProviderApiKey
+  provider?: ProviderApiKey
   latitudeProvider?: string
 }) {
+  if (!provider) return undefined
+
   if (provider.provider === Providers.Custom) {
     return provider.defaultModel || undefined
   }
