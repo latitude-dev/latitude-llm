@@ -38,6 +38,7 @@ export function SelectEvaluation({
   const ActionButtons = () => (
     <div className='w-full flex justify-end'>
       <Button
+        fancy
         disabled={!evaluations?.length || !selectedEvaluation}
         onClick={confirmSelection}
       >
