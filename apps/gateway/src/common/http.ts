@@ -6,7 +6,7 @@
  * Hypertext Transfer Protocol (HTTP) response status codes.
  * @see {@link https://en.wikipedia.org/wiki/List_of_HTTP_status_codes}
  */
-enum HttpStatusCodes {
+enum Status {
   /**
    * The server has received the request headers and the client should proceed to send the request body
    * (in the case of a request for which a body needs to be sent; for example, a POST request).
@@ -381,4 +381,96 @@ enum HttpStatusCodes {
   NETWORK_AUTHENTICATION_REQUIRED = 511,
 }
 
-export default HttpStatusCodes
+/**
+ * Hypertext Transfer Protocol (HTTP) request methods.
+ * @see {@link https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods}
+ */
+enum Methods {
+  /**
+   * The GET method requests a representation of the specified resource.
+   * Requests using GET should only retrieve data and should not have any other effect.
+   */
+  GET = 'get',
+
+  /**
+   * The HEAD method asks for a response identical to a GET request, but without the response body.
+   * Useful for retrieving meta-information about the resource without transferring the content itself.
+   */
+  HEAD = 'head',
+
+  /**
+   * The POST method submits an entity to the specified resource,
+   * often causing a change in state or side effects on the server.
+   */
+  POST = 'post',
+
+  /**
+   * The PUT method replaces all current representations of the target resource with the request content.
+   * The difference between PUT and POST is that PUT is idempotent.
+   */
+  PUT = 'put',
+
+  /**
+   * The DELETE method deletes the specified resource.
+   */
+  DELETE = 'delete',
+
+  /**
+   * The CONNECT method establishes a tunnel to the server identified by the target resource.
+   * Typically used to create an HTTP tunnel through a proxy for secure communications.
+   */
+  CONNECT = 'connect',
+
+  /**
+   * The OPTIONS method describes the communication options for the target resource.
+   * Used to describe the communication options for the target resource.
+   */
+  OPTIONS = 'options',
+
+  /**
+   * The TRACE method performs a message loop-back test along the path to the target resource.
+   * Provides a useful debugging mechanism.
+   */
+  TRACE = 'trace',
+
+  /**
+   * The PATCH method applies partial modifications to a resource.
+   * Unlike PUT, which replaces the entire resource, PATCH applies a set of changes described in the request payload.
+   */
+  PATCH = 'patch',
+}
+
+/**
+ * Common HTTP Media Types (MIME Types)
+ * @see {@link https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types}
+ */
+enum MediaTypes {
+  /**
+   * JavaScript Object Notation (JSON) format.
+   * Used for API responses and requests containing JSON data.
+   */
+  JSON = 'application/json',
+
+  /**
+   * Server-Sent Events.
+   * Used for server-to-client streaming of text-based event data.
+   */
+  SSE = 'text/event-stream',
+
+  /**
+   * Plain text without any formatting.
+   */
+  TEXT = 'text/plain',
+
+  /**
+   * HTML content.
+   */
+  HTML = 'text/html',
+
+  /**
+   * XML data.
+   */
+  XML = 'application/xml',
+}
+
+export default { Status, Methods, MediaTypes }

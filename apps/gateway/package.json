@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@hono/node-server": "^1.12.0",
+    "@hono/zod-openapi": "^0.17.0",
     "@hono/zod-validator": "^0.2.2",
     "@latitude-data/compiler": "workspace:^",
     "@latitude-data/constants": "workspace:^",
@@ -34,6 +35,7 @@
     "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@hono/swagger-ui": "^0.4.1",
     "@latitude-data/eslint-config": "workspace:^",
     "@latitude-data/typescript-config": "workspace:^",
     "@types/lodash-es": "^4.17.12",
