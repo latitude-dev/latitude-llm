@@ -42,7 +42,7 @@ function SelectValueWithIcon({
 }
 
 function findSelected(options: SelectOption[], selected: unknown) {
-  return options.find((option) => option.value === selected)
+  return options.find((option) => option.value == selected)
 }
 
 export function flattenOption(
