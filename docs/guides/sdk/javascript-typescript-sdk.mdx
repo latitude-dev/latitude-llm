@@ -32,7 +32,7 @@ import { Latitude } from '@latitude-data/sdk'
 Then, create an instance of the Latitude class with your API key:
 
 ```typescript
-const latitude = new Latitude('your-api-key-here', {
+const sdk = new Latitude('your-api-key-here', {
   projectId: 12345, // Optional: You can specify a default project ID here
   versionUuid: 'optional-version-uuid', // Optional: You can specify a default version UUID here
 })
@@ -43,7 +43,7 @@ const latitude = new Latitude('your-api-key-here', {
 To run a document, use the `run` method:
 
 ```typescript
-latitude.run('path/to/your/document', {
+sdk.prompts.run('path/to/your/document', {
   projectId: 12345, // Optional if you provided it in the constructor
   versionUuid: 'optional-version-uuid', // Optional, by default it targets latest live version
   stream: false, // Optional, by default it's false
@@ -81,7 +81,7 @@ const messages = [
 ]
 
 // conversation-uuid is the uuid from the document run
-latitude.chat('conversation-uuid', messages, {
+sdk.prompts.chat('conversation-uuid', messages, {
   stream: true, // This send the request from Latitude API as a stream
   onEvent: ({ event, data }) => {
     // Handle events during the chat
