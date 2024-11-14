@@ -42,6 +42,8 @@ function SelectValueWithIcon({
 }
 
 function findSelected(options: SelectOption[], selected: unknown) {
+  // Performing a non-strict comparison to avoid problems with different
+  // types between the options values and the selected value
   return options.find((option) => option.value == selected)
 }
 
@@ -257,15 +259,15 @@ const SelectSeparator = forwardRef<
 SelectSeparator.displayName = SelectPrimitive.Separator.displayName
 
 export {
-  SelectValueWithIcon,
-  SelectRoot,
-  SelectGroup,
-  SelectValue,
-  SelectTrigger,
   SelectContent,
-  SelectLabel,
+  SelectGroup,
   SelectItem,
-  SelectSeparator,
-  SelectScrollUpButton,
+  SelectLabel,
+  SelectRoot,
   SelectScrollDownButton,
+  SelectScrollUpButton,
+  SelectSeparator,
+  SelectTrigger,
+  SelectValue,
+  SelectValueWithIcon,
 }
