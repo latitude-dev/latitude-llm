@@ -126,7 +126,7 @@
         "promptl/syntax/configuration",
         "promptl/syntax/messages",
         "promptl/syntax/variables",
-        "promptl/syntax/conditions",
+        "promptl/syntax/conditionals",
         "promptl/syntax/loops"
       ]
     }
