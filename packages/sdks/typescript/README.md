@@ -68,6 +68,7 @@ sdk.prompts.run('path/to/prompt', {
   projectId: 123, // optional, defaults to the projectId provided during initialization
   versionUuid: 'version-uuid', // optional, defaults to the live version
   parameters: { key: 'value' }, // optional, depends on whether the prompt expects parameters
+  stream: true, // optional, depends on whether you want all events through SSEs or the final event as JSON
   onEvent: ({ event, data }) => {
     console.log('Event:', event, 'Data:', data)
   },
@@ -91,6 +92,7 @@ const messages: Message[] = [
 ]
 
 sdk.prompts.chat('prompt-uuid', messages, {
+  stream: true, // optional, depends on whether you want all events through SSEs or the final event as JSON
   onEvent: ({ event, data }) => {
     console.log('Event:', event, 'Data:', data)
   },

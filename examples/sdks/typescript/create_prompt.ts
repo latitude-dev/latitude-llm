@@ -22,7 +22,6 @@ const chatCompletion = await openai.chat.completions.create({
   model: 'gpt-4o-mini',
 })
 
-// @ts-expect-error - Not implemented yet
 const prompt = await sdk.prompts.getOrCreate('my-prompt-path')
 
 // Push the log to the live version of our prompt called 'joker'

@@ -1,14 +1,5 @@
-import type {
-  Config,
-  ContentType,
-  Message,
-  MessageRole,
-} from '@latitude-data/compiler'
-import {
-  DocumentLog,
-  DocumentVersion,
-  type ChainEventDto,
-} from '@latitude-data/core/browser'
+import type { ContentType, Message, MessageRole } from '@latitude-data/compiler'
+import { DocumentLog, type ChainEventDto } from '@latitude-data/core/browser'
 import { EvaluationResultDto } from '@latitude-data/core/repositories'
 import env from '$sdk/env'
 import { GatewayApiConfig, RouteResolver } from '$sdk/utils'
@@ -25,9 +16,12 @@ import { syncRun } from '$sdk/utils/syncRun'
 import {
   ChatOptions,
   EvalOptions,
+  GetOrCreatePromptOptions,
+  GetPromptOptions,
   HandlerType,
   LogSources,
-  RunOptions as RunPromptOptions,
+  Prompt,
+  RunPromptOptions,
   SDKOptions,
   StreamChainResponse,
 } from '$sdk/utils/types'
@@ -50,13 +44,9 @@ type Options = {
   __internal?: { source?: LogSources; retryMs?: number }
 }
 
-type GetPromptOptions = {
-  projectId?: number
-  versionUuid?: string
-}
-
 class Latitude {
   protected options: SDKOptions
+
   public evaluations: {
     trigger: (uuid: string, options?: EvalOptions) => Promise<{ uuid: string }>
     createResult: (
@@ -65,6 +55,7 @@ class Latitude {
       options: { result: string | boolean | number; reason: string },
     ) => Promise<{ uuid: string }>
   }
+
   public logs: {
     create: (
       path: string,
@@ -76,9 +67,14 @@ class Latitude {
       },
     ) => Promise<DocumentLog>
   }
+
   public prompts: {
+    get: (path: string, args: GetPromptOptions) => Promise<Prompt>
+    getOrCreate: (
+      path: string,
+      args: GetOrCreatePromptOptions,
+    ) => Promise<Prompt>
     run: (path: string, args: RunPromptOptions) => Promise<any>
-    get: (path: string, args: GetPromptOptions) => Promise<any>
     chat: (
       uuid: string,
       messages: Message[],
@@ -123,9 +119,10 @@ class Latitude {
 
     // Initialize prompts namespace
     this.prompts = {
+      get: this.getPrompt.bind(this),
+      getOrCreate: this.getOrCreatePrompt.bind(this),
       run: this.runPrompt.bind(this),
       chat: this.chat.bind(this),
-      get: this.getPrompt.bind(this),
     }
   }
 
@@ -156,7 +153,38 @@ class Latitude {
       })
     }
 
-    return (await response.json()) as DocumentVersion & { config: Config }
+    return (await response.json()) as Prompt
+  }
+
+  async getOrCreatePrompt(
+    path: string,
+    { projectId, versionUuid, prompt }: GetOrCreatePromptOptions = {},
+  ) {
+    projectId = projectId ?? this.options.projectId
+    if (!projectId) {
+      throw new Error('Project ID is required')
+    }
+
+    const response = await makeRequest({
+      method: 'POST',
+      handler: HandlerType.GetOrCreateDocument,
+      params: { projectId, versionUuid },
+      options: this.options,
+      body: { path, prompt },
+    })
+
+    if (!response.ok) {
+      const json = (await response.json()) as ApiErrorJsonResponse
+      json.errorCode
+      throw new LatitudeApiError({
+        status: response.status,
+        message: response.statusText,
+        serverResponse: JSON.stringify(json),
+        errorCode: json.errorCode,
+      })
+    }
+
+    return (await response.json()) as Prompt
   }
 
   private async runPrompt(path: string, args: RunPromptOptions) {
@@ -284,8 +312,9 @@ export { Latitude, LatitudeApiError, LogSources }
 
 export type {
   ChainEventDto,
+  ContentType,
   Message,
   MessageRole,
-  ContentType,
+  Options,
   StreamChainResponse,
 }

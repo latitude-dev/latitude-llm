@@ -25,7 +25,7 @@ export async function createNewDocument(
     content,
   }: {
     workspace: Workspace
-    user: User
+    user?: User
     commit: Commit
     path: string
     content?: string
@@ -84,7 +84,7 @@ export async function createNewDocument(
       data: {
         document: newDoc[0]!,
         workspaceId: workspace.id,
-        userEmail: user.email,
+        userEmail: user?.email,
       },
     })
 
