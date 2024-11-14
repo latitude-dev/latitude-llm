@@ -129,6 +129,10 @@
         "promptl/syntax/conditionals",
         "promptl/syntax/loops"
       ]
+    },
+    {
+      "group": "Implementation",
+      "pages": ["promptl/implementation/quick-start"]
     }
   ],
   "footerSocials": {

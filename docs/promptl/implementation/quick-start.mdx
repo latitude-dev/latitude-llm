@@ -1,0 +1,41 @@
+---
+title: Quick Start
+description: Learn how to install and use PromptL on your project
+---
+
+## Install
+
+You can get PromptL via npm:
+
+```bash
+$ npm install @latitude-data/promptl
+```
+
+## Usage
+
+Below is a quick example of how you can use PromptL in your project:
+
+```javascript
+import { render } from '@latitude-data/promptl'
+import OpenAI from 'openai'
+
+const prompt = `
+---
+model: gpt-4o
+temperature: 0.6
+---
+
+Generate a joke about {{ topic }}.
+`
+
+const { messages, config } = await render({
+  prompt,
+  parameters: { topic: 'chickens' },
+})
+
+const client = new OpenAI()
+const response = await client.chat.completions.create({
+  ...config,
+  messages,
+})
+```
