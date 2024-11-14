@@ -694,6 +694,20 @@
       "when": 1731086206687,
       "tag": "0099_even_justin_hammer",
       "breakpoints": true
+    },
+    {
+      "idx": 100,
+      "version": "7",
+      "when": 1731574230244,
+      "tag": "0100_spicy_korg",
+      "breakpoints": true
+    },
+    {
+      "idx": 101,
+      "version": "7",
+      "when": 1731575676862,
+      "tag": "0101_special_scarlet_witch",
+      "breakpoints": true
     }
   ]
 }
