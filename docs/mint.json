@@ -109,8 +109,8 @@
       "pages": ["guides/sdk/javascript-typescript-sdk", "guides/sdk/rust-sdk"]
     },
     {
-      "group": "Examples",
-      "pages": ["guides/examples/overview"]
+      "group": "Cookbook",
+      "pages": ["guides/cookbook/overview"]
     },
     {
       "group": "Self-hosting",
