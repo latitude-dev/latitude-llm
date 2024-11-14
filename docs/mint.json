@@ -84,6 +84,8 @@
       "group": "Evaluations",
       "pages": [
         "guides/evaluations/overview",
+        "guides/evaluations/llm_as_judge_evaluations",
+        "guides/evaluations/manual_evaluations",
         "guides/evaluations/running-evaluations",
         "guides/evaluations/numeric-evals",
         "guides/evaluations/boolean-evals",
