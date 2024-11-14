@@ -1,0 +1,18 @@
+---
+title: Configuration
+description: Learn how to configure your PromptL prompts
+---
+
+## Overview
+
+The configuration section of a PromptL prompt is an optional section that defines how the prompt will be generated. It is enclosed in three dashes (`---`) at the beginning and end of the section. The config section is a YAML object and can contain any number of key-value pairs.
+
+```yaml
+---
+model: gpt-4o
+temperature: 0.6
+top_p: 0.9
+---
+```
+
+To know what options you can define in your configuration, check out the documentation for your LLM provider!

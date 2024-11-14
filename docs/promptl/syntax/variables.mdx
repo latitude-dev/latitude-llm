@@ -1,0 +1,47 @@
+---
+title: Variables
+description: Learn how to define, interpret and interpolate variables in PromptL
+---
+
+PromptL provides a simple way to define variables in your prompts. Variables can be used to store and reuse values across your prompt, making it easier to manage and maintain your prompts.
+
+Variables can be defined with logic expressions by wrapping it in double curly braces (`{{ }}`).
+
+```
+{{ name = "Alice" }}
+
+<user>
+  Hi! My name is {{ name }}.
+</user>
+```
+
+In this example, we define a variable `name` with the value `"Alice"`. We then use the variable in a `user` message to greet the user. Variables will be interpolated in the prompt as plain text.
+
+## Input Parameters
+
+Variables can also be used without being defined in the prompt. In this case, the value for the variable can be provided as a dynamic input parameter when executing the prompt.
+
+```
+<user>
+  Hi! My name is {{ name }}.
+</user>
+```
+
+## Default Values
+
+You can also define default values for variables. If a variable is not defined in the prompt or provided as an input parameter, the default value will be used.
+
+```
+Hi! My name is {{ name || "Alice" }}
+```
+
+## Expressions
+
+Variables can be used in expressions to perform calculations or transformations in your prompt, which you can use to generate dynamic content.
+
+```
+{{ age = 30 }}
+{{ ageInMonths = age * 12 }}
+
+I am {{ age }} years old, which is {{ ageInMonths }} months.
+```

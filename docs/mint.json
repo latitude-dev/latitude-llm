@@ -26,6 +26,19 @@
     "url": "https://github.com/latitude-dev/latitude-llm"
   },
   "anchors": [],
+  "tabs": [
+    {
+      "name": "Latitude",
+      "url": "guides"
+    },
+    {
+      "name": "Promptl",
+      "url": "promptl"
+    }
+  ],
+  "primaryTab": {
+    "name": "Latitude"
+  },
   "navigation": [
     {
       "group": "Getting started",
@@ -100,6 +113,22 @@
     {
       "group": "Self-hosting",
       "pages": ["guides/self-hosted/development"]
+    },
+
+    {
+      "group": "Getting Started",
+      "pages": ["promptl/getting-started/introduction"]
+    },
+    {
+      "group": "Syntax",
+      "pages": [
+        "promptl/syntax/structure",
+        "promptl/syntax/configuration",
+        "promptl/syntax/messages",
+        "promptl/syntax/variables",
+        "promptl/syntax/conditionals",
+        "promptl/syntax/loops"
+      ]
     }
   ],
   "footerSocials": {

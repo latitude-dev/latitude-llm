@@ -1,0 +1,47 @@
+---
+title: Conditional Statements
+description: Learn how to add content based on conditions in your prompts
+---
+
+## Overview
+
+Conditional statements allow you to add content to your prompts based on certain conditions. This can be useful to create dynamic prompts that adapt to the user's input or context.
+
+In PromptL, you can use conditional statements to define logic that will be evaluated at runtime. You can use these statements to control the flow of the conversation, generate dynamic content, or provide different responses based on specific conditions.
+
+## Syntax
+
+Conditional statements in PromptL are defined using the `if`, `else` and `endif` keywords, wrapped in `{{ }}` tags. The contents of the conditional blocks will only be resolved if the condition evaluates to `true`.
+
+```plaintext
+{{ if condition }}
+  Content to display if the condition is true
+{{ else }}
+  Content to display if the condition is false
+{{ endif }}
+```
+
+### Example
+
+```plaintext
+
+{{ if age < 18 }}
+  The user is under the minimum required age. Respond with a kind message explaining to the user that you cannot provide certain information.
+{{ else }}
+  <user>
+    {{ question }}
+  </user>
+{{ endif}}
+```
+
+You can also use conditions to perform tranformation expressions conditionally. For example, you can use the `if` statement to check if a variable is defined before using it in an expression.
+
+```plaintext
+{{ if last_name }}
+  {{ name = name + " " + last_name }}
+{{ endif }}
+
+<user>
+  Hi! My name is {{ name }}.
+</user>
+```
