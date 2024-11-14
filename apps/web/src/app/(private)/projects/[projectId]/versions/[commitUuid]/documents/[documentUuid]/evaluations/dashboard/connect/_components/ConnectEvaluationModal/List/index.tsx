@@ -68,19 +68,43 @@ export function EvaluationList({
           </Link>
         </div>
         {items.length > 0 && (
-          <div className='flex flex-col gap-2'>
-            <Text.H6M color='foregroundMuted'>Templates</Text.H6M>
-            <ul className='space-y-2'>
-              {items.map((item) => (
-                <SelectableCard
-                  key={item.uuid}
-                  title={item.name}
-                  description={item.description}
-                  selected={item.uuid === selectedItem}
-                  onClick={() => onSelectItem(item.uuid)}
-                />
-              ))}
-            </ul>
+          <div className='flex flex-col gap-4'>
+            {items.some((item) => item.type === 'evaluation') && (
+              <div className='flex flex-col gap-2'>
+                <Text.H6M color='foregroundMuted'>Evaluations</Text.H6M>
+                <ul className='space-y-2'>
+                  {items
+                    .filter((item) => item.type === 'evaluation')
+                    .map((item) => (
+                      <SelectableCard
+                        key={item.uuid}
+                        title={item.name}
+                        description={item.description}
+                        selected={item.uuid === selectedItem}
+                        onClick={() => onSelectItem(item.uuid)}
+                      />
+                    ))}
+                </ul>
+              </div>
+            )}
+            {items.some((item) => item.type === 'template') && (
+              <div className='flex flex-col gap-2'>
+                <Text.H6M color='foregroundMuted'>Templates</Text.H6M>
+                <ul className='space-y-2'>
+                  {items
+                    .filter((item) => item.type === 'template')
+                    .map((item) => (
+                      <SelectableCard
+                        key={item.uuid}
+                        title={item.name}
+                        description={item.description}
+                        selected={item.uuid === selectedItem}
+                        onClick={() => onSelectItem(item.uuid)}
+                      />
+                    ))}
+                </ul>
+              </div>
+            )}
           </div>
         )}
       </div>

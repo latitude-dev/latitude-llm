@@ -100,7 +100,7 @@ This function:
 The conversation flow is managed through Latitude:
 
 ```typescript
-const result = await sdk.run('geography-quizz', {
+const result = await sdk.prompts.run('geography-quizz', {
   projectId: 1,
 })
 const uuid = result.uuid
@@ -110,7 +110,7 @@ if (last.role === MessageRole.assistant && last.toolCalls.length > 0) {
   const tool = last.toolCalls[0]! // we assume a single tool call for this example
   const { query } = tool.arguments
   const result = await ragQueryTool(query as string)
-  sdk.chat(uuid, [
+  sdk.prompts.chat(uuid, [
     {
       role: MessageRole.tool,
       content: [

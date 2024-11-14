@@ -41,6 +41,7 @@ export function EvaluationStatusBanner({
 }) {
   const timeoutRef = useRef<number | null>(null)
   const [jobs, setJobs] = useState<EventArgs<'evaluationStatus'>[]>([])
+
   useEvaluationStatusEvent({
     evaluationId,
     documentUuid,

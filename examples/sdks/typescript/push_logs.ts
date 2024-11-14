@@ -25,6 +25,6 @@ const chatCompletion = await openai.chat.completions.create({
 })
 
 // Push the log to the live version of our prompt called 'joker'
-sdk.log('joker', messages, {
+sdk.logs.create('joker', messages, {
   response: chatCompletion.choices[0].message.content,
 })

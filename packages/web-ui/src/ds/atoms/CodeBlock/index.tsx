@@ -20,7 +20,7 @@ export function CodeBlock({
   className,
 }: CodeBlockProps) {
   return (
-    <div className='relative max-w-full'>
+    <div className='relative max-w-full overflow-x-auto'>
       {copy && (
         <div className='absolute top-4 right-2 bg-backgroundCode'>
           <CopyButton content={children} color='foregroundMuted' />

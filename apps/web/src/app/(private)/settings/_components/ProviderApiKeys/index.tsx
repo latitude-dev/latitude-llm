@@ -123,7 +123,7 @@ const ProviderApiKeysTable = ({
       </TableHeader>
       <TableBody>
         {providerApiKeys.map((apiKey) => (
-          <TableRow key={apiKey.id} verticalPadding>
+          <TableRow key={apiKey.id} hoverable={false} verticalPadding>
             <TableCell>
               <Text.H4>
                 {apiKey.name}
@@ -175,7 +175,7 @@ const ProviderApiKeysTable = ({
                 side='bottom'
                 align='end'
                 triggerButtonProps={{
-                  className: 'border-none justify-end',
+                  className: 'border-none justify-end cursor-pointer',
                 }}
               />
             </TableCell>

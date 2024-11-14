@@ -27,6 +27,7 @@ export * from './models/evaluations'
 
 export * from './models/evaluationMetadataLlmAsJudgeAdvanced'
 export * from './models/evaluationMetadataLlmAsJudgeSimple'
+export * from './models/evaluationMetadataDefault'
 
 export * from './models/evaluationConfigurationBoolean'
 export * from './models/evaluationConfigurationNumerical'

@@ -1,5 +1,6 @@
 import {
   ChatUrlParams,
+  EvaluationResultUrlParams,
   GetDocumentUrlParams,
   HandlerType,
   LogUrlParams,
@@ -53,6 +54,11 @@ export class RouteResolver {
         return this.conversations().evaluate(
           (params as ChatUrlParams).conversationUuid,
         )
+      case HandlerType.EvaluationResult:
+        return this.conversations().evaluationResult(
+          (params as ChatUrlParams).conversationUuid,
+          (params as EvaluationResultUrlParams).evaluationUuid,
+        )
       default:
         throw new Error(`Unknown handler: ${handler satisfies never}`)
     }
@@ -63,6 +69,8 @@ export class RouteResolver {
     return {
       chat: (uuid: string) => `${base}/${uuid}/chat`,
       evaluate: (uuid: string) => `${base}/${uuid}/evaluate`,
+      evaluationResult: (uuid: string, evaluationUuid: string) =>
+        `${base}/${uuid}/evaluations/${evaluationUuid}/evaluation-results`,
     }
   }
 

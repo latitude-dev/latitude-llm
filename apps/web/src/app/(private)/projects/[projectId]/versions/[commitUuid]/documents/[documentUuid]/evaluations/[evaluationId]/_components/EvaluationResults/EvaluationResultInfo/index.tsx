@@ -1,11 +1,21 @@
 import { RefObject, useCallback, useEffect, useRef, useState } from 'react'
 
-import { EvaluationDto, ProviderLogDto } from '@latitude-data/core/browser'
+import {
+  EvaluationDto,
+  EvaluationMetadataType,
+  ProviderLogDto,
+} from '@latitude-data/core/browser'
 import {
   DocumentLogWithMetadataAndError,
   type EvaluationResultWithMetadataAndErrors,
 } from '@latitude-data/core/repositories'
-import { Button, Icon, Modal, ReactStateDispatch } from '@latitude-data/web-ui'
+import {
+  Button,
+  cn,
+  Icon,
+  Modal,
+  ReactStateDispatch,
+} from '@latitude-data/web-ui'
 import useFetcher from '$/hooks/useFetcher'
 import { useStickyNested } from '$/hooks/useStickyNested'
 import { ROUTES } from '$/services/routes'
@@ -115,30 +125,12 @@ export function EvaluationResultInfo({
   })
   return (
     <div ref={ref} className='flex flex-col'>
-      <MetadataInfoTabs className='w-full'>
-        {({ selectedTab }) => (
-          <>
-            {selectedTab === 'metadata' && (
-              <EvaluationResultMetadata
-                evaluation={evaluation}
-                evaluationResult={evaluationResult}
-                providerLog={providerLog}
-              />
-            )}
-            {selectedTab === 'messages' && (
-              <EvaluationResultMessages providerLog={providerLog} />
-            )}
-            {evaluationResult.evaluatedProviderLogId && (
-              <div className='w-full flex justify-center'>
-                <Button variant='link' onClick={onClickOpen}>
-                  Check original log
-                  <Icon name='arrowRight' widthClass='w-4' heightClass='h-4' />
-                </Button>
-              </div>
-            )}
-          </>
-        )}
-      </MetadataInfoTabs>
+      <MetadataInfo
+        evaluation={evaluation}
+        evaluationResult={evaluationResult}
+        providerLog={providerLog}
+        onClickOpen={onClickOpen}
+      />
       {!!selected && (
         <DocumentLogInfoModal
           providerLogId={selected}
@@ -148,4 +140,75 @@ export function EvaluationResultInfo({
       )}
     </div>
   )
+}
+
+function MetadataInfo({
+  evaluation,
+  evaluationResult,
+  providerLog,
+  onClickOpen,
+}: {
+  evaluation: EvaluationDto
+  evaluationResult: EvaluationResultWithMetadataAndErrors
+  providerLog?: ProviderLogDto
+  onClickOpen: () => void
+}) {
+  switch (evaluation.metadataType) {
+    case EvaluationMetadataType.Manual:
+      return (
+        <div
+          className={cn(
+            'flex flex-col flex-grow min-h-0 bg-background',
+            'border border-border rounded-lg items-center relative w-full',
+          )}
+        >
+          <div className='flex px-4 py-5 flex-col gap-4 w-full overflow-x-auto'>
+            <EvaluationResultMetadata
+              evaluation={evaluation}
+              evaluationResult={evaluationResult}
+              providerLog={providerLog}
+            />
+            {evaluationResult.evaluatedProviderLogId && (
+              <div className='w-full flex justify-center'>
+                <Button variant='link' onClick={onClickOpen}>
+                  Check original log
+                  <Icon name='arrowRight' widthClass='w-4' heightClass='h-4' />
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+      )
+    default:
+      return (
+        <MetadataInfoTabs className='w-full'>
+          {({ selectedTab }) => (
+            <>
+              {selectedTab === 'metadata' && (
+                <EvaluationResultMetadata
+                  evaluation={evaluation}
+                  evaluationResult={evaluationResult}
+                  providerLog={providerLog}
+                />
+              )}
+              {selectedTab === 'messages' && (
+                <EvaluationResultMessages providerLog={providerLog} />
+              )}
+              {evaluationResult.evaluatedProviderLogId && (
+                <div className='w-full flex justify-center'>
+                  <Button variant='link' onClick={onClickOpen}>
+                    Check original log
+                    <Icon
+                      name='arrowRight'
+                      widthClass='w-4'
+                      heightClass='h-4'
+                    />
+                  </Button>
+                </div>
+              )}
+            </>
+          )}
+        </MetadataInfoTabs>
+      )
+  }
 }

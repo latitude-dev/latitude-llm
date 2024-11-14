@@ -40,7 +40,7 @@ export async function generateDatasetPreviewAction({
     projectId: env.DATASET_GENERATOR_PROJECT_ID,
     __internal: { source: LogSources.Playground },
   }).then((r) => r.unwrap())
-  const response = await sdk.run(env.DATASET_GENERATOR_DOCUMENT_PATH, {
+  const response = await sdk.prompts.run(env.DATASET_GENERATOR_DOCUMENT_PATH, {
     stream: true,
     parameters: {
       row_count: 10,

@@ -1,6 +1,7 @@
 export * from './ds/tokens'
 export * from './ds/atoms'
 export * from './ds/molecules'
+export * from './ds/organisms'
 export * from './providers'
 export * from './sections'
 export { cn } from './lib/utils'

@@ -27,7 +27,7 @@ describe('/get', () => {
         apiVersion: 'v2',
         docPath: 'fake-document-id',
       })
-      await sdk.get(docPath, { projectId })
+      await sdk.prompts.get(docPath, { projectId })
       expect(mockFn).toHaveBeenCalledWith('Bearer fake-api-key')
     }),
   )
@@ -41,7 +41,7 @@ describe('/get', () => {
         version: 'live',
         docPath: 'fake-document-id',
       })
-      const response = await sdk.get(docPath, { projectId })
+      const response = await sdk.prompts.get(docPath, { projectId })
       expect(response).toEqual(mockResponse)
     }),
   )
@@ -55,7 +55,7 @@ describe('/get', () => {
         docPath: 'fake-document-id',
       })
       try {
-        await sdk.get(docPath, { projectId })
+        await sdk.prompts.get(docPath, { projectId })
       } catch (error) {
         // @ts-expect-error - mock error
         expect(error.message).toEqual(
@@ -72,7 +72,7 @@ describe('/get', () => {
       version: 'fake-version-uuid',
       docPath: 'fake-document-id',
     })
-    const response = await sdk.get(docPath, {
+    const response = await sdk.prompts.get(docPath, {
       projectId,
       versionUuid: version,
     })

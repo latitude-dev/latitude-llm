@@ -10,6 +10,7 @@ import {
   Breadcrumb,
   BreadcrumbItem,
   BreadcrumbSeparator,
+  ClickToCopyUuid,
   Icon,
   TableWithHeader,
   Text,
@@ -69,11 +70,22 @@ export default async function ConnectedEvaluationLayout({
         // provider in the workspace
       }
     }
-  } else {
+  } else if (
+    evaluation.metadataType === EvaluationMetadataType.LlmAsJudgeSimple
+  ) {
     provider = await getProviderApiKeyByIdCached(
       evaluation.metadata.providerApiKeyId,
     )
   }
+
+  let evaluationRoute
+  if (evaluation.metadataType !== EvaluationMetadataType.Manual) {
+    evaluationRoute = ROUTES.evaluations.detail({ uuid: evaluation.uuid })
+      .editor.root
+  } else {
+    evaluationRoute = ROUTES.evaluations.detail({ uuid: evaluation.uuid }).root
+  }
+
   return (
     <div className='flex flex-grow min-h-0 flex-col w-full gap-6 p-6'>
       <TableWithHeader
@@ -97,40 +109,45 @@ export default async function ConnectedEvaluationLayout({
               <Text.H4M noWrap ellipsis>
                 {evaluation.name}
               </Text.H4M>
-              <Text.H4M color='foregroundMuted'>
-                {TYPE_TEXT[evaluation.resultType]}
-              </Text.H4M>
-              <Tooltip
-                asChild
-                trigger={
-                  <Link
-                    href={`${ROUTES.evaluations.detail({ uuid: evaluation.uuid }).editor.root}?back=${
-                      ROUTES.projects
-                        .detail({ id: Number(params.projectId) })
-                        .commits.detail({ uuid: params.commitUuid })
-                        .documents.detail({ uuid: params.documentUuid })
-                        .evaluations.detail(evaluation.id).root
-                    }`}
-                  >
-                    <Icon name='externalLink' />
-                  </Link>
-                }
-              >
-                Go to evaluation
-              </Tooltip>
+              <div className='flex flex-row items-center gap-x-2'>
+                <Text.H4M color='foregroundMuted'>
+                  {TYPE_TEXT[evaluation.resultType]}
+                </Text.H4M>
+                <Tooltip
+                  asChild
+                  trigger={
+                    <Link
+                      href={`${evaluationRoute}?back=${
+                        ROUTES.projects
+                          .detail({ id: Number(params.projectId) })
+                          .commits.detail({ uuid: params.commitUuid })
+                          .documents.detail({ uuid: params.documentUuid })
+                          .evaluations.detail(evaluation.id).root
+                      }`}
+                    >
+                      <Icon name='externalLink' color='foregroundMuted' />
+                    </Link>
+                  }
+                >
+                  Go to evaluation
+                </Tooltip>
+              </div>
+              <ClickToCopyUuid uuid={evaluation.uuid} />
             </BreadcrumbItem>
           </Breadcrumb>
         }
         actions={
-          <Actions
-            isUsingDefaultProvider={
-              provider && provider.token === env.DEFAULT_PROVIDER_API_KEY
-            }
-            evaluation={evaluation}
-            projectId={params.projectId}
-            commitUuid={params.commitUuid}
-            documentUuid={params.documentUuid}
-          />
+          evaluation.metadataType !== EvaluationMetadataType.Manual && (
+            <Actions
+              isUsingDefaultProvider={
+                provider && provider.token === env.DEFAULT_PROVIDER_API_KEY
+              }
+              evaluation={evaluation}
+              projectId={params.projectId}
+              commitUuid={params.commitUuid}
+              documentUuid={params.documentUuid}
+            />
+          )
         }
       />
       <MetricsSummary

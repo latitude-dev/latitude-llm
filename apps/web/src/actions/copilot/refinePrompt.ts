@@ -82,7 +82,7 @@ export const refinePromptAction = authProcedure
       evaluation,
     }).then((r) => r.unwrap())
 
-    const result = await sdk.run(env.COPILOT_REFINE_PROMPT_PATH, {
+    const result = await sdk.prompts.run(env.COPILOT_REFINE_PROMPT_PATH, {
       stream: false,
       parameters: {
         prompt: document.content,

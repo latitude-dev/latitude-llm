@@ -1,3 +1,6 @@
+// TODO: Right now it takes a lot of work to add a simple new route to this file
+// We should refactor this to make it easier to add new routes
+
 import type { Message } from '@latitude-data/compiler'
 import {
   type ChainCallResponseDto,
@@ -17,6 +20,9 @@ export type RunUrlParams = {
 }
 export type ChatUrlParams = {
   conversationUuid: string
+}
+export type EvaluationResultUrlParams = {
+  evaluationUuid: string
 }
 
 type RunDocumentBodyParam = {
@@ -48,6 +54,7 @@ export enum HandlerType {
   RunDocument = 'run-document',
   Log = 'log',
   Evaluate = 'evaluate',
+  EvaluationResult = 'evaluationResult',
 }
 
 export type UrlParams<T extends HandlerType> = T extends HandlerType.RunDocument
@@ -60,7 +67,9 @@ export type UrlParams<T extends HandlerType> = T extends HandlerType.RunDocument
         ? LogUrlParams
         : T extends HandlerType.Evaluate
           ? { conversationUuid: string }
-          : never
+          : T extends HandlerType.EvaluationResult
+            ? { conversationUuid: string; evaluationUuid: string }
+            : never
 
 export type BodyParams<T extends HandlerType> =
   T extends HandlerType.RunDocument
@@ -71,7 +80,12 @@ export type BodyParams<T extends HandlerType> =
         ? LogBodyParams
         : T extends HandlerType.Evaluate
           ? { evaluationUuids?: string[] }
-          : never
+          : T extends HandlerType.EvaluationResult
+            ? {
+                result: string | boolean | number
+                reason: string
+              }
+            : never
 
 export type StreamChainResponse = {
   conversation: Message[]
@@ -130,4 +144,9 @@ export type SDKOptions = {
 
 export interface EvalOptions {
   evaluationUuids?: string[]
+}
+
+export type EvalPromptOptions = {
+  projectId?: number
+  versionUuid?: string
 }

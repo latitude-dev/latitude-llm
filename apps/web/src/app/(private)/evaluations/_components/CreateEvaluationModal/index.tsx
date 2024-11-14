@@ -1,4 +1,4 @@
-import { ChangeEvent, useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import {
   EvaluationMetadataType,
@@ -10,12 +10,16 @@ import {
   FormField,
   Input,
   ReactStateDispatch,
+  SelectableCard,
   TabSelector,
+  Text,
   TextArea,
 } from '@latitude-data/web-ui'
 import { ROUTES } from '$/services/routes'
 import useEvaluations from '$/stores/evaluations'
 import { useRouter } from 'next/navigation'
+
+import { useEvaluationConfiguration } from './useEvaluationConfiguration'
 
 export type CreateEvaluationData = {
   title: string
@@ -34,6 +38,9 @@ export default function CreateEvaluationModal({
   const [title, setTitle] = useState(initialData?.title ?? '')
   const [description, setDescription] = useState(initialData?.description ?? '')
   const [prompt, setPrompt] = useState(initialData?.prompt ?? '')
+  const [metadataType, setMetadataType] = useState(
+    EvaluationMetadataType.LlmAsJudgeSimple,
+  )
   const {
     configuration,
     handleTypeChange,
@@ -57,9 +64,15 @@ export default function CreateEvaluationModal({
     isCreating,
   } = useEvaluations({
     onSuccessCreate: (newEvaluation) => {
-      router.push(
-        ROUTES.evaluations.detail({ uuid: newEvaluation.uuid }).editor.root,
-      )
+      if (newEvaluation.metadataType === EvaluationMetadataType.Manual) {
+        router.push(
+          ROUTES.evaluations.detail({ uuid: newEvaluation.uuid }).root,
+        )
+      } else {
+        router.push(
+          ROUTES.evaluations.detail({ uuid: newEvaluation.uuid }).editor.root,
+        )
+      }
       onClose(null)
     },
   })
@@ -84,7 +97,7 @@ export default function CreateEvaluationModal({
         },
         resultConfiguration,
       })
-    } else {
+    } else if (metadataType === EvaluationMetadataType.LlmAsJudgeSimple) {
       create({
         name: title,
         description,
@@ -95,10 +108,19 @@ export default function CreateEvaluationModal({
         },
         resultConfiguration,
       })
+    } else {
+      create({
+        name: title,
+        description,
+        resultConfiguration,
+        metadata: {
+          type: EvaluationMetadataType.Manual,
+        },
+      })
     }
 
     onClose(null)
-  }, [create, onClose, title, description, prompt, configuration])
+  }, [create, onClose, title, description, prompt, configuration, metadataType])
 
   const titleError = useMemo<string | undefined>(() => {
     if (!title) return 'Please enter a name for your evaluation.'
@@ -143,15 +165,37 @@ export default function CreateEvaluationModal({
             className='w-full'
           />
         </FormField>
-        <FormField label='Type'>
-          <TabSelector
-            options={[
-              { label: 'Text', value: EvaluationResultableType.Text },
-              { label: 'Number', value: EvaluationResultableType.Number },
-              { label: 'Boolean', value: EvaluationResultableType.Boolean },
-            ]}
-            onSelect={handleTypeChange}
-            selected={configuration.type}
+        <FormField className='w-full'>
+          <div className='flex flex-col gap-2'>
+            <TabSelector
+              fullWidth
+              options={[
+                {
+                  label: 'LLM as judge',
+                  value: EvaluationMetadataType.LlmAsJudgeSimple,
+                },
+                {
+                  label: 'Code / Manual',
+                  value: EvaluationMetadataType.Manual,
+                },
+              ]}
+              selected={metadataType}
+              onSelect={setMetadataType}
+            />
+            <Text.H6M color='foregroundMuted'>
+              {metadataType === EvaluationMetadataType.LlmAsJudgeSimple
+                ? 'Use AI to automatically evaluate your logs based on predefined criteria'
+                : 'Use your own evaluation logic and push evaluation results to Latitude with our SDK or HTTP API'}
+            </Text.H6M>
+          </div>
+        </FormField>
+        <FormField>
+          <SelectableCard
+            key={EvaluationResultableType.Number}
+            title='Number'
+            description='Allows numbers as results, ideal for quantitative data analysis like averages, totals, or other calculations'
+            selected={configuration.type === EvaluationResultableType.Number}
+            onClick={() => handleTypeChange(EvaluationResultableType.Number)}
           />
         </FormField>
         {configuration.type === EvaluationResultableType.Number && (
@@ -160,118 +204,41 @@ export default function CreateEvaluationModal({
               <Input
                 type='number'
                 min={0}
-                value={configuration.detail?.range.from.toString() || ''}
+                value={configuration.detail?.range.from.toString() || 1}
+                defaultValue={1}
                 placeholder='From'
                 onChange={handleRangeFromChange}
               />
               <Input
                 type='number'
                 min={0}
-                value={configuration.detail?.range.to.toString() || ''}
+                value={configuration.detail?.range.to.toString() || 5}
+                defaultValue={5}
                 placeholder='To'
                 onChange={handleRangeToChange}
               />
             </div>
           </FormField>
         )}
+        <FormField>
+          <SelectableCard
+            key={EvaluationResultableType.Boolean}
+            title='Boolean'
+            description='Only allows true or false results, ideal for categorization and binary data such as pass/fail, yes/no, or 0/1 values'
+            selected={configuration.type === EvaluationResultableType.Boolean}
+            onClick={() => handleTypeChange(EvaluationResultableType.Boolean)}
+          />
+        </FormField>
+        <FormField>
+          <SelectableCard
+            key={EvaluationResultableType.Text}
+            title='Text'
+            description="It allows strings as results, making it ideal for any other evaluation that doesn't fit the other two types"
+            selected={configuration.type === EvaluationResultableType.Text}
+            onClick={() => handleTypeChange(EvaluationResultableType.Text)}
+          />
+        </FormField>
       </div>
     </ConfirmModal>
   )
-}
-
-export function useEvaluationConfiguration(
-  init?: EvaluationResultConfiguration,
-) {
-  const [configuration, setConfiguration] =
-    useState<EvaluationResultConfiguration>(
-      init || {
-        type: EvaluationResultableType.Text,
-      },
-    )
-
-  const handleTypeChange = useCallback((value: EvaluationResultableType) => {
-    if (value === EvaluationResultableType.Number) {
-      setConfiguration({
-        type: value,
-        detail: { range: { from: 0, to: 1 } },
-      })
-    } else {
-      setConfiguration({ type: value })
-    }
-  }, [])
-
-  const handleRangeFromChange = useCallback(
-    (e: ChangeEvent<HTMLInputElement>) => {
-      setConfiguration((prev) => {
-        const next = { ...prev }
-        const value = e.target.value
-
-        if (value === '') {
-          next.detail = {
-            range: { from: 0, to: next.detail?.range.to || 0 },
-          }
-          return next
-        }
-
-        const from = parseInt(value)
-        if (next.detail?.range) {
-          next.detail.range.from = from
-          if (from > next.detail.range.to) {
-            next.detail.range.to = from + 1
-          }
-        } else {
-          next.detail = {
-            range: { from, to: from + 1 },
-          }
-        }
-
-        return next
-      })
-    },
-    [],
-  )
-
-  const handleRangeToChange = useCallback(
-    (e: ChangeEvent<HTMLInputElement>) => {
-      setConfiguration((prev) => {
-        const next = { ...prev }
-        const value = e.target.value
-
-        if (value === '') {
-          next.detail = {
-            range: { from: 0, to: 0 },
-          }
-          return next
-        }
-
-        const to = parseInt(value)
-        if (next.detail?.range) {
-          next.detail.range.to = to
-          if (to < next.detail.range.from) {
-            next.detail.range.from = to - 1
-          }
-        } else {
-          next.detail = {
-            range: { from: to - 1, to },
-          }
-        }
-
-        return next
-      })
-    },
-    [],
-  )
-
-  useEffect(() => {
-    if (!init) return
-
-    setConfiguration(init)
-  }, [init])
-
-  return {
-    configuration,
-    handleTypeChange,
-    handleRangeFromChange,
-    handleRangeToChange,
-  }
 }

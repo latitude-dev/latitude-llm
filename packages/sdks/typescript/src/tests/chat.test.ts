@@ -48,7 +48,7 @@ describe('/chat', () => {
             conversationUuid: 'fake-document-log-uuid',
           })
 
-        await sdk.chat(
+        await sdk.prompts.chat(
           conversationUuid,
           [
             {
@@ -100,7 +100,7 @@ describe('/chat', () => {
           apiVersion: 'v2',
         })
 
-        const response = await sdk.chat(
+        const response = await sdk.prompts.chat(
           conversationUuid,
           [
             {
@@ -143,7 +143,7 @@ describe('/chat', () => {
         conversationUuid: 'fake-document-log-uuid',
       })
 
-      await sdk.chat(
+      await sdk.prompts.chat(
         conversationUuid,
         [
           {
@@ -183,7 +183,7 @@ describe('/chat', () => {
         conversationUuid: 'fake-document-log-uuid',
       })
 
-      await sdk.chat(
+      await sdk.prompts.chat(
         conversationUuid,
         [
           {
@@ -223,7 +223,7 @@ describe('/chat', () => {
       })
 
       await expect(
-        sdk.chat(
+        sdk.prompts.chat(
           conversationUuid,
           [
             {
@@ -266,7 +266,7 @@ describe('/chat', () => {
             conversationUuid: 'fake-document-log-uuid',
           })
 
-        await sdk.chat(
+        await sdk.prompts.chat(
           conversationUuid,
           [
             {
@@ -317,7 +317,7 @@ describe('/chat', () => {
           apiVersion: 'v2',
         })
 
-        const response = await sdk.chat(
+        const response = await sdk.prompts.chat(
           conversationUuid,
           [
             {
@@ -351,7 +351,7 @@ describe('/chat', () => {
         conversationUuid: 'fake-document-log-uuid',
       })
 
-      await sdk.chat(
+      await sdk.prompts.chat(
         conversationUuid,
         [
           {
@@ -391,7 +391,7 @@ describe('/chat', () => {
         conversationUuid: 'fake-document-log-uuid',
       })
 
-      await sdk.chat(
+      await sdk.prompts.chat(
         conversationUuid,
         [
           {
@@ -431,7 +431,7 @@ describe('/chat', () => {
       })
 
       await expect(
-        sdk.chat(
+        sdk.prompts.chat(
           conversationUuid,
           [
             {

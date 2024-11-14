@@ -5,9 +5,11 @@ import type {
   MessageRole,
 } from '@latitude-data/compiler'
 import {
+  DocumentLog,
   DocumentVersion,
   type ChainEventDto,
 } from '@latitude-data/core/browser'
+import { EvaluationResultDto } from '@latitude-data/core/repositories'
 import env from '$sdk/env'
 import { GatewayApiConfig, RouteResolver } from '$sdk/utils'
 import {
@@ -25,7 +27,7 @@ import {
   EvalOptions,
   HandlerType,
   LogSources,
-  RunOptions,
+  RunOptions as RunPromptOptions,
   SDKOptions,
   StreamChainResponse,
 } from '$sdk/utils/types'
@@ -48,8 +50,41 @@ type Options = {
   __internal?: { source?: LogSources; retryMs?: number }
 }
 
+type GetPromptOptions = {
+  projectId?: number
+  versionUuid?: string
+}
+
 class Latitude {
   protected options: SDKOptions
+  public evaluations: {
+    trigger: (uuid: string, options?: EvalOptions) => Promise<{ uuid: string }>
+    createResult: (
+      uuid: string,
+      evaluationUuid: string,
+      options: { result: string | boolean | number; reason: string },
+    ) => Promise<{ uuid: string }>
+  }
+  public logs: {
+    create: (
+      path: string,
+      messages: Message[],
+      options?: {
+        projectId?: number
+        versionUuid?: string
+        response?: string
+      },
+    ) => Promise<DocumentLog>
+  }
+  public prompts: {
+    run: (path: string, args: RunPromptOptions) => Promise<any>
+    get: (path: string, args: GetPromptOptions) => Promise<any>
+    chat: (
+      uuid: string,
+      messages: Message[],
+      args?: Omit<ChatOptions, 'messages'>,
+    ) => Promise<StreamChainResponse | undefined>
+  }
 
   constructor(
     apiKey: string,
@@ -74,17 +109,29 @@ class Latitude {
         apiVersion: 'v2',
       }),
     }
+
+    // Initialize evaluations namespace
+    this.evaluations = {
+      trigger: this.triggerEvaluation.bind(this),
+      createResult: this.createResult.bind(this),
+    }
+
+    // Initialize logs namespace
+    this.logs = {
+      create: this.createLog.bind(this),
+    }
+
+    // Initialize prompts namespace
+    this.prompts = {
+      run: this.runPrompt.bind(this),
+      chat: this.chat.bind(this),
+      get: this.getPrompt.bind(this),
+    }
   }
 
-  async get(
+  async getPrompt(
     path: string,
-    {
-      projectId,
-      versionUuid,
-    }: {
-      projectId?: number
-      versionUuid?: string
-    } = {},
+    { projectId, versionUuid }: GetPromptOptions = {},
   ) {
     projectId = projectId ?? this.options.projectId
     if (!projectId) {
@@ -112,14 +159,14 @@ class Latitude {
     return (await response.json()) as DocumentVersion & { config: Config }
   }
 
-  async run(path: string, args: RunOptions) {
+  private async runPrompt(path: string, args: RunPromptOptions) {
     const options = { ...args, options: this.options }
 
     if (args.stream) return streamRun(path, options)
     return syncRun(path, options)
   }
 
-  async log(
+  private async createLog(
     path: string,
     messages: Message[],
     {
@@ -155,10 +202,10 @@ class Latitude {
       })
     }
 
-    return await httpResponse.json()
+    return (await httpResponse.json()) as DocumentLog
   }
 
-  async chat(
+  private async chat(
     uuid: string,
     messages: Message[],
     args?: Omit<ChatOptions, 'messages'>,
@@ -170,7 +217,7 @@ class Latitude {
     return syncChat(uuid, options)
   }
 
-  async eval(uuid: string, options: EvalOptions = {}) {
+  private async triggerEvaluation(uuid: string, options: EvalOptions = {}) {
     const response = await makeRequest({
       method: 'POST',
       handler: HandlerType.Evaluate,
@@ -191,6 +238,45 @@ class Latitude {
     }
 
     return (await response.json()) as { uuid: string }
+  }
+
+  private async createResult(
+    uuid: string,
+    evaluationUuid: string,
+    {
+      result,
+      reason,
+    }: {
+      result: string | boolean | number
+      reason: string
+    },
+  ) {
+    const response = await makeRequest({
+      method: 'POST',
+      handler: HandlerType.EvaluationResult,
+      params: {
+        conversationUuid: uuid,
+        evaluationUuid,
+      },
+      body: {
+        result,
+        reason,
+      },
+      options: this.options,
+    })
+
+    if (!response.ok) {
+      const json = (await response.json()) as ApiErrorJsonResponse
+      throw new LatitudeApiError({
+        status: response.status,
+        serverResponse: JSON.stringify(json),
+        message: json.message,
+        errorCode: json.errorCode,
+        dbErrorRef: json.dbErrorRef,
+      })
+    }
+
+    return (await response.json()) as EvaluationResultDto
   }
 }
 

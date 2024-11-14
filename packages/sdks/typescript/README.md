@@ -64,7 +64,7 @@ const sdk = new Latitude('your-api-key', {
 To run a prompt, use the `run` method. You can provide a path, project ID, version UUID, parameters, and callbacks for handling events, completion, and errors:
 
 ```typescript
-sdk.run('path/to/prompt', {
+sdk.prompts.run('path/to/prompt', {
   projectId: 123, // optional, defaults to the projectId provided during initialization
   versionUuid: 'version-uuid', // optional, defaults to the live version
   parameters: { key: 'value' }, // optional, depends on whether the prompt expects parameters
@@ -90,7 +90,7 @@ const messages: Message[] = [
   { role: 'assistant', content: 'I am fine, thank you!' },
 ]
 
-sdk.chat('prompt-uuid', messages, {
+sdk.prompts.chat('prompt-uuid', messages, {
   onEvent: ({ event, data }) => {
     console.log('Event:', event, 'Data:', data)
   },

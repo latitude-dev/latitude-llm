@@ -5,14 +5,14 @@ const sdk = new Latitude(process.env.LATITUDE_API_KEY, {
   projectId: 1,
 })
 
-const { uuid } = await sdk.run('joker', {
+const { uuid } = await sdk.prompts.run('joker', {
   parameters: {
     topic: 'firefighters',
   },
 })
 
 // 2. Chat with the model
-await sdk.chat(uuid, [
+await sdk.prompts.chat(uuid, [
   {
     role: 'user' as MessageRole.user,
     content: [
@@ -25,4 +25,4 @@ await sdk.chat(uuid, [
 ])
 
 // 3. Evaluate the full conversation
-await sdk.eval(uuid)
+await sdk.evaluations.trigger(uuid)

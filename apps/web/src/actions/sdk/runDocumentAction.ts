@@ -15,7 +15,7 @@ type RunDocumentActionProps = {
 }
 type RunDocumentResponse = Promise<{
   output: StreamableValue<{ event: StreamEventTypes; data: ChainEventDto }>
-  response: ReturnType<typeof Latitude.prototype.run>
+  response: ReturnType<typeof Latitude.prototype.prompts.run>
 }>
 export type RunDocumentActionFn = (
   _: RunDocumentActionProps,
@@ -50,7 +50,7 @@ export async function runDocumentAction({
     { event: StreamEventTypes; data: ChainEventDto },
     Error
   >()
-  const response = sdk.run(documentPath, {
+  const response = sdk.prompts.run(documentPath, {
     stream: true,
     versionUuid: commitUuid,
     parameters,

@@ -14,6 +14,7 @@ import {
   evaluationMetadataLlmAsJudgeSimple,
   evaluations,
 } from '../schema'
+import { evaluationMetadataManual } from '../schema/models/evaluationMetadataDefault'
 import { getSharedTableColumns } from '../schema/schemaHelpers'
 import RepositoryLegacy from './repository'
 
@@ -25,6 +26,7 @@ const tt = {
         evaluationMetadataLlmAsJudgeAdvanced,
       [EvaluationMetadataType.LlmAsJudgeSimple]:
         evaluationMetadataLlmAsJudgeSimple,
+      [EvaluationMetadataType.Manual]: evaluationMetadataManual,
     }),
     ['id', 'createdAt', 'updatedAt'],
   ),
@@ -61,6 +63,13 @@ export class EvaluationsRepository extends RepositoryLegacy<
         and(
           eq(evaluations.metadataId, evaluationMetadataLlmAsJudgeSimple.id),
           eq(evaluations.metadataType, EvaluationMetadataType.LlmAsJudgeSimple),
+        ),
+      )
+      .leftJoin(
+        evaluationMetadataManual,
+        and(
+          eq(evaluations.metadataId, evaluationMetadataManual.id),
+          eq(evaluations.metadataType, EvaluationMetadataType.Manual),
         ),
       )
       .leftJoin(

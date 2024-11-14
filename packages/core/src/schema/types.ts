@@ -12,6 +12,7 @@ import { evaluationAdvancedTemplates } from './models/evaluationAdvancedTemplate
 import { evaluationConfigurationBoolean } from './models/evaluationConfigurationBoolean'
 import { evaluationConfigurationNumerical } from './models/evaluationConfigurationNumerical'
 import { evaluationConfigurationText } from './models/evaluationConfigurationText'
+import { evaluationMetadataManual } from './models/evaluationMetadataDefault'
 import { evaluationMetadataLlmAsJudgeAdvanced } from './models/evaluationMetadataLlmAsJudgeAdvanced'
 import { evaluationMetadataLlmAsJudgeSimple } from './models/evaluationMetadataLlmAsJudgeSimple'
 import { evaluationResults } from './models/evaluationResults'
@@ -64,6 +65,10 @@ export type EvaluationMetadataLlmAsJudgeAdvanced = Omit<
 >
 export type EvaluationMetadataLlmAsJudgeSimple = Omit<
   InferSelectModel<typeof evaluationMetadataLlmAsJudgeSimple>,
+  'createdAt' | 'updatedAt'
+>
+export type EvaluationMetadataManual = Omit<
+  InferSelectModel<typeof evaluationMetadataManual>,
   'createdAt' | 'updatedAt'
 >
 
@@ -128,6 +133,24 @@ export type EvaluationDto = Evaluation &
     | {
         metadataType: EvaluationMetadataType.LlmAsJudgeSimple
         metadata: EvaluationMetadataLlmAsJudgeSimple
+        resultType: EvaluationResultableType.Text
+        resultConfiguration: EvaluationConfigurationText
+      }
+    | {
+        metadataType: EvaluationMetadataType.Manual
+        metadata: EvaluationMetadataManual
+        resultType: EvaluationResultableType.Boolean
+        resultConfiguration: EvaluationConfigurationBoolean
+      }
+    | {
+        metadataType: EvaluationMetadataType.Manual
+        metadata: EvaluationMetadataManual
+        resultType: EvaluationResultableType.Number
+        resultConfiguration: EvaluationConfigurationNumerical
+      }
+    | {
+        metadataType: EvaluationMetadataType.Manual
+        metadata: EvaluationMetadataManual
         resultType: EvaluationResultableType.Text
         resultConfiguration: EvaluationConfigurationText
       }

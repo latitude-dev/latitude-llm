@@ -17,6 +17,7 @@ import {
   evaluationConfigurationText,
   evaluationMetadataLlmAsJudgeAdvanced,
   evaluationMetadataLlmAsJudgeSimple,
+  evaluationMetadataManual,
 } from '../../schema'
 
 export async function updateEvaluation({
@@ -38,6 +39,7 @@ export async function updateEvaluation({
       evaluationMetadataLlmAsJudgeAdvanced,
     [EvaluationMetadataType.LlmAsJudgeSimple]:
       evaluationMetadataLlmAsJudgeSimple,
+    [EvaluationMetadataType.Manual]: evaluationMetadataManual,
   } as const
 
   if (metadata && !metadataTables[evaluation.metadataType]) {

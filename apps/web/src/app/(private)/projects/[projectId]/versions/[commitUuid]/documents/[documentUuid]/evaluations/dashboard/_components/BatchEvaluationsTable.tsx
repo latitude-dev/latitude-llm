@@ -1,5 +1,6 @@
 import { EvaluationDto } from '@latitude-data/core/browser'
 import {
+  ClickToCopyUuid,
   Table,
   TableBody,
   TableCell,
@@ -14,7 +15,7 @@ import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
 
-export default function BatchEvaluationsTable({
+export default function ConnectedEvaluationsTable({
   evaluations,
 }: {
   evaluations: EvaluationDto[]
@@ -48,6 +49,9 @@ export default function BatchEvaluationsTable({
           >
             <TableCell>
               <Text.H4 noWrap>{evaluation.name}</Text.H4>
+              <div onClick={(e) => e.stopPropagation()}>
+                <ClickToCopyUuid uuid={evaluation.uuid} />
+              </div>
             </TableCell>
             <TableCell>
               <Text.H4>{evaluation.description}</Text.H4>

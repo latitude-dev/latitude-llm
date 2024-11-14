@@ -31,7 +31,7 @@ const ragQueryTool = async (query: string) => {
   }))
 }
 
-const result = await sdk.run('geography-quizz', {
+const result = await sdk.prompts.run('geography-quizz', {
   projectId: 1,
 })
 
@@ -44,7 +44,7 @@ if (last.role === MessageRole.assistant && last.toolCalls.length > 0) {
   const { query } = tool.arguments
   const result = await ragQueryTool(query as string)
 
-  sdk.chat(uuid, [
+  sdk.prompts.chat(uuid, [
     {
       role: MessageRole.tool,
       content: [

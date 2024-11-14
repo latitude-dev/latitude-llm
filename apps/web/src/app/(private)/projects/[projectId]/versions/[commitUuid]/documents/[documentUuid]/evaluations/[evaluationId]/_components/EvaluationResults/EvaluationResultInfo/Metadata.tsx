@@ -64,31 +64,22 @@ export function EvaluationResultMetadata({
   evaluationResult: EvaluationResultWithMetadataAndErrors
   providerLog?: ProviderLogDto
 }) {
-  const reasoning = useMemo(() => {
-    if (!providerLog) return '-'
+  const reason = useMemo(() => {
+    if (evaluationResult.reason) return evaluationResult.reason
+    if (!providerLog) return
 
     try {
       const response = JSON.parse(providerLog?.response)
 
-      if (response) {
-        return response.reason || '-'
-      }
-      return '-'
+      if (response) return response.reason
     } catch (e) {
-      return '-'
+      // do nothing
     }
   }, [providerLog])
 
   return (
     <>
       <RunErrorMessage error={evaluationResult.error} />
-      <MetadataItem label='Result id'>
-        <ClickToCopy copyValue={evaluationResult.id.toString()}>
-          <Text.H5 align='right' color='foregroundMuted'>
-            {evaluationResult.id}
-          </Text.H5>
-        </ClickToCopy>
-      </MetadataItem>
       <MetadataItem
         label='Timestamp'
         value={format(evaluationResult.createdAt, 'PPp')}
@@ -114,7 +105,9 @@ export function EvaluationResultMetadata({
           />
         </MetadataItem>
       ) : null}
-      <MetadataItem stacked label='Result reasoning' value={reasoning} />
+      {reason && (
+        <MetadataItem stacked label='Result reasoning' value={reason} />
+      )}
     </>
   )
 }

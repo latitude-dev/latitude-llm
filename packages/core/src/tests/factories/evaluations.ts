@@ -1,12 +1,17 @@
 import { faker } from '@faker-js/faker'
 
 import {
+  EvaluationDto,
+  EvaluationMetadataType,
   EvaluationResultableType,
   EvaluationResultConfiguration,
   User,
   Workspace,
 } from '../../browser'
-import { createAdvancedEvaluation as createEvaluationService } from '../../services/evaluations'
+import {
+  createAdvancedEvaluation,
+  createEvaluation as createEvaluationService,
+} from '../../services/evaluations'
 
 export type IEvaluationData = {
   workspace: Workspace
@@ -35,7 +40,7 @@ export async function createLlmAsJudgeEvaluation({
         }
       : undefined
 
-  const evaluationResult = await createEvaluationService({
+  const evaluationResult = await createAdvancedEvaluation({
     workspace,
     user,
     metadata: { prompt: prompt ?? faker.lorem.sentence() },
@@ -46,4 +51,35 @@ export async function createLlmAsJudgeEvaluation({
   })
 
   return evaluationResult.unwrap()
+}
+
+export async function createEvaluation({
+  workspace,
+  user,
+  name = faker.company.catchPhrase(),
+  description = faker.lorem.sentence(),
+  metadataType,
+  metadata = {},
+  resultType = EvaluationResultableType.Text,
+  resultConfiguration = {},
+}: {
+  workspace: Workspace
+  user: User
+  metadataType: EvaluationMetadataType
+  name?: string
+  description?: string
+  metadata?: Record<string, unknown>
+  resultType?: EvaluationResultableType
+  resultConfiguration?: Record<string, unknown>
+}): Promise<EvaluationDto> {
+  return createEvaluationService({
+    workspace,
+    user,
+    name,
+    description,
+    metadataType,
+    metadata,
+    resultType,
+    resultConfiguration,
+  }).then((r) => r.unwrap())
 }
