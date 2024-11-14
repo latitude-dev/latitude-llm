@@ -49,9 +49,9 @@ export default function Playground({
   const { data: providerLog } = useProviderLog(
     providerLogId ? Number(providerLogId) : undefined,
   )
-  const { data: documentLogWithMetadata } = useDocumentLogWithMetadata(
-    providerLog?.documentLogUuid,
-  )
+  const { data: documentLogWithMetadata } = useDocumentLogWithMetadata({
+    documentLogUuid: providerLog?.documentLogUuid,
+  })
   const parameters = useMemo(() => {
     if (!providerLog || !documentLogWithMetadata) {
       return {

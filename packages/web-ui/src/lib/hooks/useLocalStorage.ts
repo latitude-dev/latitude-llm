@@ -15,6 +15,7 @@ export enum AppLocalStorage {
   playgroundInputs = 'playgroundInputs',
   playgroundParameterSource = 'playgroundParameterSource',
   playgroundParamsSelectedDatasetRow = 'playgroundParamsSelectedDatasetRow',
+  playgroundParamsSelectedLogRow = 'playgroundParamsSelectedLogRow',
 }
 
 const isLocalStorageAvailable = (() => {

@@ -12,20 +12,24 @@ export default function useDocumentLogs(
     projectId,
     page,
     pageSize,
+    onFetched,
   }: {
-    documentUuid: string
+    documentUuid?: string
     commitUuid: string
     projectId: number
-    page: string | null
+    page: string | null | undefined
     pageSize: string | null
+    onFetched?: (logs: DocumentLogWithMetadataAndError[]) => void
   },
   { fallbackData }: SWRConfiguration = {},
 ) {
   const fetcher = useFetcher(
-    ROUTES.api.projects
-      .detail(projectId)
-      .commits.detail(commitUuid)
-      .documents.detail(documentUuid).documentLogs.root,
+    documentUuid
+      ? ROUTES.api.projects
+          .detail(projectId)
+          .commits.detail(commitUuid)
+          .documents.detail(documentUuid).documentLogs.root
+      : undefined,
     {
       serializer: (rows) => rows.map(documentLogPresenter),
       searchParams: compactObject({
@@ -35,15 +39,22 @@ export default function useDocumentLogs(
     },
   )
 
-  const { data = EMPTY_ARRAY, mutate } = useSWR<
-    DocumentLogWithMetadataAndError[]
-  >(
+  const {
+    data = EMPTY_ARRAY,
+    isLoading,
+    mutate,
+  } = useSWR<DocumentLogWithMetadataAndError[]>(
     ['documentLogs', documentUuid, commitUuid, projectId, page, pageSize],
     fetcher,
-    { fallbackData },
+    {
+      fallbackData,
+      onSuccess: (logs) => {
+        onFetched?.(logs)
+      },
+    },
   )
 
-  return { data, mutate }
+  return { data, mutate, isLoading }
 }
 
 export function documentLogPresenter(

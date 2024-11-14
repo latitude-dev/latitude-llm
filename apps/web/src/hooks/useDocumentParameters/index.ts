@@ -37,7 +37,12 @@ function convertInput(
     return { value: input, includedInPrompt: true }
   }
 
-  return input
+  if (!newParams) return input
+
+  return {
+    value: typeof input === 'string' ? input : input.value,
+    includedInPrompt: typeof input === 'string' ? true : input.includedInPrompt,
+  }
 }
 
 export function recalculateInputs({

@@ -1,3 +1,4 @@
+import { DEFAULT_PAGINATION_SIZE } from '../../constants'
 import {
   buildPaginatedUrl,
   parseSearchParams,
@@ -27,7 +28,7 @@ export function getPaginationParamsWithDefaults({
     page: parsePage(params?.page),
     pageSize: params?.pageSize
       ? Number(params.pageSize)
-      : (defaultPaginate?.pageSize ?? 25),
+      : (defaultPaginate?.pageSize ?? DEFAULT_PAGINATION_SIZE),
   }
 }
 

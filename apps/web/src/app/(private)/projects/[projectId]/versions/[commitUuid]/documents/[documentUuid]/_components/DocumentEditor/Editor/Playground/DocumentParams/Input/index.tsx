@@ -51,7 +51,7 @@ export function InputParams({
                   </div>
                   <div className='flex flex-grow w-full'>
                     <TextArea
-                      value={value}
+                      value={value ?? ''}
                       minRows={1}
                       maxRows={6}
                       onChange={(e) => {

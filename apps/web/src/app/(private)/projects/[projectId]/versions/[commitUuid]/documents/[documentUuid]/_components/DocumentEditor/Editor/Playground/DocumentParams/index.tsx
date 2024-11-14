@@ -28,7 +28,7 @@ export type ParamsSource = (typeof PARAMS_SOURCE)[keyof typeof PARAMS_SOURCE]
 const TABS: TabSelectorOption<ParamsSource>[] = [
   { label: 'Manual', value: PARAMS_SOURCE.manual },
   { label: 'Dataset', value: PARAMS_SOURCE.dataset },
-  { label: 'History (soon)', value: PARAMS_SOURCE.history, disabled: true },
+  { label: 'History', value: PARAMS_SOURCE.history },
 ]
 
 type Props = {
@@ -63,7 +63,11 @@ function ParamsTabs({ inputs, setInput, setInputs }: Props) {
         />
       )}
       {selectedTab === PARAMS_SOURCE.history && (
-        <HistoryLogParams inputs={inputs} setInput={setInput} />
+        <HistoryLogParams
+          inputs={inputs}
+          setInput={setInput}
+          setInputs={setInputs}
+        />
       )}
     </div>
   )
