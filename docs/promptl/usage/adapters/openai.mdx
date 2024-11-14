@@ -27,9 +27,11 @@ const { messages, config } = await render({
   parameters: { topic: 'chickens' },
 })
 
-const client = new OpenAI()
+const client = new OpenAI({ apiKey: YOUR_OPENAI_API_KEY })
 const response = await client.chat.completions.create({
   ...config,
   messages,
 })
+
+console.log(response.choices[0].message.content)
 ```

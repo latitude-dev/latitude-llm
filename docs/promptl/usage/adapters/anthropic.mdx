@@ -7,6 +7,14 @@ description: Learn how to use PromptL with Anthropic
 
 You can specify the `Anthropic` adapter when rendering a prompt to automatically format the output for Anthropic's API.
 
+<Note>
+  Anthropic does not support system messages in the messages array. PromptL will
+  automatically move the first system message to the `config` object, as
+  Anthropic recommends, but that means that:
+  - You can only have system messages at the beggining of your prompt.
+  - You must define non-system messages (the messages array cannot be empty).
+</Note>
+
 ## Example
 
 ```typescript
@@ -19,7 +27,9 @@ model: claude-3-opus-20240229
 max_tokens: 1024
 ---
 
-Generate a joke about {{ topic }}.
+<user>
+  Generate a joke about {{ topic }}.
+</user>
 `
 
 const { messages, config } = await render({
@@ -28,11 +38,11 @@ const { messages, config } = await render({
   adapter: Adapters.anthropic,
 })
 
-const client = new Anthropic()
+const client = new Anthropic({ apiKey: YOUR_ANTHROPIC_API_KEY })
 const response = await client.messages.create({
   ...config,
   messages,
 })
 
-console.log(response)
+console.log(response.content[0].text)
 ```
