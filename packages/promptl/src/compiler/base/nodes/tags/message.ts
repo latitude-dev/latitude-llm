@@ -104,6 +104,7 @@ function buildMessage<R extends MessageRole>(
     }
 
     message.toolId = String(attributes.id)
+    delete message['id']
   }
 
   return message

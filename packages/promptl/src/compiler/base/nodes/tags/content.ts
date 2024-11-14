@@ -83,6 +83,16 @@ export async function compile(
     if (!id) baseNodeError(errors.toolCallTagWithoutId, node)
     if (!name) baseNodeError(errors.toolCallWithoutName, node)
 
+    let toolArguments = rest['arguments']
+    delete rest['arguments']
+    if (toolArguments && typeof toolArguments === 'string') {
+      try {
+        rest['arguments'] = JSON.parse(toolArguments)
+      } catch (e) {
+        baseNodeError(errors.invalidToolCallArguments, node)
+      }
+    }
+
     addContent({
       node,
       content: {
@@ -90,7 +100,7 @@ export async function compile(
         type: ContentType.toolCall,
         toolCallId: String(id),
         toolName: String(name),
-        toolArguments: {}, // TODO: Issue for a future PR
+        toolArguments: (toolArguments ?? {}) as Record<string, unknown>,
       },
     })
     return

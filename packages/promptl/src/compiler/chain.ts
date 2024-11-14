@@ -2,9 +2,14 @@ import { CHAIN_STEP_ISOLATED_ATTR } from '$promptl/constants'
 import parse from '$promptl/parser'
 import { Fragment } from '$promptl/parser/interfaces'
 import {
+  AdapterMessageType,
+  Adapters,
+  ProviderAdapter,
+} from '$promptl/providers'
+import { ProviderConversation } from '$promptl/providers/adapter'
+import {
   Config,
   ContentType,
-  Conversation,
   Message,
   MessageContent,
   MessageRole,
@@ -14,12 +19,18 @@ import { Compile } from './compile'
 import Scope from './scope'
 import { CompileOptions } from './types'
 
-type ChainStep = {
-  conversation: Conversation
+type ChainStep<M extends AdapterMessageType> = {
+  conversation: ProviderConversation<M>
   completed: boolean
 }
 
-export class Chain {
+type StepResponse<M extends AdapterMessageType> =
+  | string
+  | (Omit<M, 'role'> & {
+      role?: M['role']
+    })
+
+export class Chain<M extends AdapterMessageType = Message> {
   public rawText: string
 
   private compileOptions: CompileOptions
@@ -28,6 +39,7 @@ export class Chain {
   private didStart: boolean = false
   private _completed: boolean = false
 
+  private adapter: ProviderAdapter<M>
   private globalMessages: Message[] = []
   private globalConfig: Config | undefined
   private wasLastStepIsolated: boolean = false
@@ -35,18 +47,43 @@ export class Chain {
   constructor({
     prompt,
     parameters = {},
+    adapter = Adapters.default as ProviderAdapter<M>,
     ...compileOptions
   }: {
     prompt: string
     parameters?: Record<string, unknown>
+    adapter?: ProviderAdapter<M>
   } & CompileOptions) {
     this.rawText = prompt
     this.ast = parse(prompt)
     this.scope = new Scope(parameters)
     this.compileOptions = compileOptions
+    this.adapter = adapter
   }
 
-  async step(response?: MessageContent[] | string): Promise<ChainStep> {
+  private buildStepResponseContent(
+    response?: StepResponse<M>,
+  ): MessageContent[] | undefined {
+    if (response == undefined) return response
+
+    if (typeof response === 'string') {
+      return [{ type: ContentType.text, text: response }]
+    }
+
+    const responseMessage = {
+      ...response,
+      role: response.role ?? MessageRole.assistant,
+    } as M
+
+    const convertedMessages = this.adapter.toPromptl({
+      config: this.globalConfig ?? {},
+      messages: [responseMessage],
+    })
+
+    return convertedMessages.messages[0]!.content
+  }
+
+  async step(response?: StepResponse<M>): Promise<ChainStep<M>> {
     if (this._completed) {
       throw new Error('The chain has already completed')
     }
@@ -58,7 +95,7 @@ export class Chain {
     }
     this.didStart = true
 
-    const responseContent = buildStepResponseContent(response)
+    const responseContent = this.buildStepResponseContent(response)
     if (responseContent && !this.wasLastStepIsolated) {
       this.globalMessages.push({
         role: MessageRole.assistant,
@@ -104,10 +141,10 @@ export class Chain {
     if (!this.wasLastStepIsolated) this.globalMessages.push(...messages)
 
     return {
-      conversation: {
+      conversation: this.adapter.fromPromptl({
         messages: stepMessages,
         config,
-      },
+      }),
       completed: this._completed,
     }
   }
@@ -115,18 +152,4 @@ export class Chain {
   get completed(): boolean {
     return this._completed
   }
-}
-
-export function buildStepResponseContent(
-  response?: MessageContent[] | string,
-): MessageContent[] | undefined {
-  if (response == undefined) return response
-  if (Array.isArray(response)) return response
-
-  return [
-    {
-      type: ContentType.text,
-      text: response,
-    },
-  ]
 }
