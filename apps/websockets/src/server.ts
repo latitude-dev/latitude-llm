@@ -80,6 +80,7 @@ web.use(async (socket, next) => {
     }
 
     const payload = result.value.payload
+
     socket.data = {
       userId: payload.userId,
       workspaceId: payload.workspaceId,
@@ -135,6 +136,7 @@ workers.on('connection', (socket) => {
   socket.on('evaluationResultCreated', (args) => {
     const { workspaceId, data } = args
     const workspace = buildWorkspaceRoom({ workspaceId })
+
     web.to(workspace).emit('evaluationResultCreated', data)
   })
 

@@ -11,10 +11,10 @@ import {
 import {
   WebClientToServerEvents,
   WebServerToClientEvents,
+  Workspace,
 } from '@latitude-data/core/browser'
 import { useSession, useToast } from '@latitude-data/web-ui'
 import { refreshWebesocketTokenAction } from '$/actions/user/refreshWebsocketTokenAction'
-import useCurrentWorkspace from '$/stores/currentWorkspace'
 import { IoProvider, useSocket } from 'socket.io-react-hook'
 
 export const SocketIOProvider = ({ children }: { children: ReactNode }) => {
@@ -23,14 +23,16 @@ export const SocketIOProvider = ({ children }: { children: ReactNode }) => {
 
 function useJoinWorkspace({ connection }: { connection: IWebsocketConfig }) {
   const { currentUser } = useSession()
-  const { data: workspace } = useCurrentWorkspace()
-  return useCallback(() => {
-    if (!workspace?.id) return
-    connection.socket.emit('joinWorkspace', {
-      workspaceId: workspace.id,
-      userId: currentUser.id,
-    })
-  }, [workspace?.id, connection.socket, connection.connected])
+
+  return useCallback(
+    (workspace: Workspace) => {
+      connection.socket.emit('joinWorkspace', {
+        workspaceId: workspace.id,
+        userId: currentUser.id,
+      })
+    },
+    [connection.socket, connection.connected],
+  )
 }
 
 export function useSocketConnection({
@@ -76,9 +78,11 @@ const WebsocketConfigContext = createContext<IWebsocketConfig>(
 )
 
 export const LatitudeWebsocketsProvider = ({
+  workspace,
   children,
   socketServer,
 }: {
+  workspace: Workspace
   children: ReactNode
   socketServer: string
 }) => {
@@ -87,8 +91,8 @@ export const LatitudeWebsocketsProvider = ({
   useEffect(() => {
     if (connection.connected) return
 
-    joinWorkspace()
-  }, [connection.connected, joinWorkspace])
+    joinWorkspace(workspace)
+  }, [connection.connected, joinWorkspace, workspace])
   return (
     <WebsocketConfigContext.Provider value={connection}>
       {children}
