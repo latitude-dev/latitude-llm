@@ -10,7 +10,7 @@ export type Conversation = {
 }
 
 export type ConversationMetadata = {
-  resolvedPrompt: string
+  hash: string
   config: Config
   errors: CompileError[]
   parameters: Set<string> // Variables used in the prompt that have not been defined in runtime

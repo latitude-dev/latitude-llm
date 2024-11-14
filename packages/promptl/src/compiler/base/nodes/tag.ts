@@ -71,6 +71,7 @@ export async function compile(props: CompileNodeContext<ElementTag>) {
     isInsideStepTag,
     isInsideContentTag,
     isInsideMessageTag,
+    fullPath,
     resolveBaseNode,
     baseNodeError,
     groupStrayText,
@@ -113,6 +114,7 @@ export async function compile(props: CompileNodeContext<ElementTag>) {
       isInsideStepTag,
       isInsideMessageTag,
       isInsideContentTag,
+      fullPath,
     })
   }
 }

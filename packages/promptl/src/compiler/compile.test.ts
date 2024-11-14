@@ -148,34 +148,6 @@ describe('comments', async () => {
   })
 })
 
-describe('reference tags', async () => {
-  it('always fails', async () => {
-    const prompts = {
-      main: removeCommonIndent(`
-        This is the main prompt.
-        <prompt path="user_messages" />
-        The end.
-      `),
-      user_messages: removeCommonIndent(`
-        <user>
-          User 1
-        </user>
-        <user>
-          User 2
-        </user>
-      `),
-    } as Record<string, string>
-
-    const action = () =>
-      render({
-        prompt: prompts['main']!,
-        parameters: {},
-      })
-    const error = await getExpectedError(action, CompileError)
-    expect(error.code).toBe('did-not-resolve-references')
-  })
-})
-
 describe('variable assignment', async () => {
   it('can define variables', async () => {
     const prompt = `

@@ -8,7 +8,7 @@ import {
 } from '$promptl/types'
 import type { Node as LogicalExpression } from 'estree'
 
-import { ResolveBaseNodeProps } from '../types'
+import { ReferencePromptFn, ResolveBaseNodeProps } from '../types'
 
 export enum NodeType {
   Literal = 'Literal',
@@ -56,6 +56,9 @@ export type CompileNodeContext<N extends TemplateNode> = {
   isInsideStepTag: boolean
   isInsideMessageTag: boolean
   isInsideContentTag: boolean
+
+  fullPath: string | undefined
+  referencePromptFn: ReferencePromptFn | undefined
 
   setConfig: (config: Config) => void
   addMessage: (message: Message, global?: boolean) => void

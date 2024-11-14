@@ -19,6 +19,7 @@ export async function compile({
   resolveBaseNode,
   resolveExpression,
   expressionError,
+  fullPath,
 }: CompileNodeContext<ForBlock>) {
   const nodeWithStatus = node as ForNodeWithStatus
   nodeWithStatus.status = {
@@ -36,6 +37,7 @@ export async function compile({
         isInsideStepTag,
         isInsideMessageTag,
         isInsideContentTag,
+        fullPath,
       })
     }
     return
@@ -77,6 +79,7 @@ export async function compile({
         isInsideStepTag,
         isInsideMessageTag,
         isInsideContentTag,
+        fullPath,
         completedValue: `step_${i}`,
       })
     }

@@ -8,6 +8,7 @@ export async function compile({
   isInsideStepTag,
   isInsideContentTag,
   isInsideMessageTag,
+  fullPath,
   resolveBaseNode,
   resolveExpression,
 }: CompileNodeContext<IfBlock>) {
@@ -21,6 +22,7 @@ export async function compile({
       isInsideStepTag,
       isInsideMessageTag,
       isInsideContentTag,
+      fullPath,
     })
   }
 }

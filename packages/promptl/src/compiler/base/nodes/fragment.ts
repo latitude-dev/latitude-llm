@@ -8,6 +8,7 @@ export async function compile({
   isInsideStepTag,
   isInsideContentTag,
   isInsideMessageTag,
+  fullPath,
   resolveBaseNode,
 }: CompileNodeContext<Fragment>) {
   for await (const childNode of node.children ?? []) {
@@ -17,6 +18,7 @@ export async function compile({
       isInsideStepTag,
       isInsideMessageTag,
       isInsideContentTag,
+      fullPath,
     })
   }
 }

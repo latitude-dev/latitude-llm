@@ -2,12 +2,8 @@ import { Conversation, ConversationMetadata } from '$promptl/types'
 import { z } from 'zod'
 
 import { Chain } from './chain'
-import {
-  ReadMetadata,
-  type Document,
-  type ReferencePromptFn,
-} from './readMetadata'
-import { CompileOptions } from './types'
+import { ReadMetadata } from './readMetadata'
+import type { CompileOptions, Document, ReferencePromptFn } from './types'
 
 export async function render({
   prompt,

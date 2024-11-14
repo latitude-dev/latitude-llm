@@ -20,6 +20,7 @@ export async function compile(
     isInsideStepTag,
     isInsideMessageTag,
     isInsideContentTag,
+    fullPath,
     resolveBaseNode,
     baseNodeError,
     groupContent,
@@ -50,6 +51,7 @@ export async function compile(
       isInsideStepTag,
       isInsideMessageTag: true,
       isInsideContentTag,
+      fullPath,
     })
   }
 
