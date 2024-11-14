@@ -1,16 +1,17 @@
-import authMiddleware from '$/middlewares/auth'
-import errorHandlerMiddleware from '$/middlewares/errorHandler'
-import rateLimitMiddleware from '$/middlewares/rateLimit'
-import { Hono } from 'hono'
 import { logger } from 'hono/logger'
 
-import { chatsRouter as conversationsRouterV1 } from './api/v1/conversations/[conversationUuid]'
-import { documentsRouter as documentsRouterV1 } from './api/v1/projects/[projectId]/versions/[versionUuid]/documents'
-import { conversationsRouter as conversationsRouterV2 } from './api/v2/conversations/[conversationUuid]'
-import { otlpTracesRouter } from './api/v2/otlp/traces'
-import { documentsRouter as documentsRouterV2 } from './api/v2/projects/[projectId]/versions/[versionUuid]/documents'
+import authMiddleware from '$/middlewares/auth'
+import rateLimitMiddleware from '$/middlewares/rateLimit'
 
-const app = new Hono()
+import createApp from '$/openApi/createApp'
+import configureOpenAPI from '$/openApi/configureOpenAPI'
+
+// Routes
+import documents from '$/routes/v2/documents'
+
+const ROUTES = [documents] as const
+
+const app = createApp()
 
 // Middlewares
 if (process.env.NODE_ENV !== 'test') {
@@ -21,25 +22,26 @@ app.get('/health', (c) => {
   return c.json({ status: 'ok' })
 })
 
+configureOpenAPI(app)
+
 app.use(rateLimitMiddleware())
+
 app.use(authMiddleware())
 
-// Routers
-// v1
-app.route(
-  '/api/v1/projects/:projectId/versions/:versionUuid/documents',
-  documentsRouterV1,
-)
-app.route('/api/v1/conversations', conversationsRouterV1)
+/* app.route( */
+/*   '/api/v1/projects/:projectId/versions/:versionUuid/documents', */
+/*   documentsRouterV1, */
+/* ) */
+/* app.route('/api/v1/conversations', conversationsRouterV1) */
+/* app.route( */
+/*   '/api/v2/projects/:projectId/versions/:versionUuid/documents', */
+/*   documentsRouterV2, */
+/* ) */
+/* app.route('/api/v2/conversations', conversationsRouterV2) */
+/* app.route('/api/v2/otlp', otlpTracesRouter) */
 
-// v2
-app.route(
-  '/api/v2/projects/:projectId/versions/:versionUuid/documents',
-  documentsRouterV2,
-)
-app.route('/api/v2/conversations', conversationsRouterV2)
-app.route('/api/v2/otlp', otlpTracesRouter)
-
-app.onError(errorHandlerMiddleware)
+ROUTES.forEach((route) => {
+  app.route('/', route)
+})
 
 export default app

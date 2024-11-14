@@ -6,6 +6,15 @@ import {
 } from '@latitude-data/core/browser'
 import { ProviderApiKeysRepository } from '@latitude-data/core/repositories'
 import { scanDocumentContent } from '@latitude-data/core/services/documents/scan'
+import { z } from '@hono/zod-openapi'
+
+export const documentPresenterSchema = z.object({
+  uuid: z.string(),
+  path: z.string(),
+  content: z.string(),
+  config: z.object({}).passthrough(),
+  provider: z.nativeEnum(Providers).optional(),
+})
 
 export async function documentPresenter({
   document,
