@@ -89,6 +89,7 @@ export function useSelectDataset({
     rows: [],
     rowCount: 0,
   })
+
   const { isLoading: isLoadingPreviewDataset } = useDatasetPreview({
     dataset: selectedDataset,
     onSuccess: (csv) => {

@@ -127,3 +127,5 @@ export function useLogHistoryParams({
     onPrevPage,
   }
 }
+
+export type UseLogHistoryParams = ReturnType<typeof useLogHistoryParams>

@@ -92,12 +92,14 @@ function useRedirectToLogDetail({
     page: position?.page,
   })
   useEffect(() => {
+    if (selectedLog) return
     if (mounted.current) return
     if (isLoading || !url) return
 
     mounted.current = true
+
     window.location.href = url
-  }, [url, isLoading])
+  }, [url, isLoading, selectedLog])
 }
 
 export function DocumentLogs({

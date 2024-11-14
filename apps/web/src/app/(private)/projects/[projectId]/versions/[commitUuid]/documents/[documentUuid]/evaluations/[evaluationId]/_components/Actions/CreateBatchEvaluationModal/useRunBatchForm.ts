@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from 'react'
 
 import { ConversationMetadata } from '@latitude-data/compiler'
-import { Dataset } from '@latitude-data/core/browser'
+import { Dataset, DocumentVersion } from '@latitude-data/core/browser'
 import { SelectOption } from '@latitude-data/web-ui'
 import useDatasets from '$/stores/datasets'
 
@@ -15,16 +15,25 @@ export function buildEmptyParameters(parameters: string[]) {
 }
 
 export function useRunBatchForm({
+  document,
   documentMetadata,
 }: {
+  document: DocumentVersion
   documentMetadata?: ConversationMetadata
 }) {
   const parametersList = useMemo(
     () => Array.from(documentMetadata?.parameters ?? []),
     [documentMetadata?.parameters],
   )
-  const { data: datasets, isLoading: isLoadingDatasets } = useDatasets()
   const [selectedDataset, setSelectedDataset] = useState<Dataset | null>(null)
+  const { data: datasets, isLoading: isLoadingDatasets } = useDatasets({
+    onFetched: (ds) => {
+      const selected = ds.find((d) => d.id === document.datasetId)
+      if (!selected) return
+
+      setSelectedDataset(selected)
+    },
+  })
   const [headers, setHeaders] = useState<SelectOption[]>([])
   const [wantAllLines, setAllRows] = useState(true)
   const [fromLine, setFromLine] = useState<number | undefined>(undefined)
