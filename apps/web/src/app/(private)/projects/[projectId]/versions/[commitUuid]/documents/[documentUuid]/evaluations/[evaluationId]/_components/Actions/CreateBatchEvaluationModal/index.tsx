@@ -39,7 +39,7 @@ export default function CreateBatchEvaluationModal({
     })
   }, [])
 
-  const form = useRunBatchForm({ documentMetadata: metadata })
+  const form = useRunBatchForm({ document, documentMetadata: metadata })
   const onRunBatch = useCallback(() => {
     runBatch({
       datasetId: form.selectedDataset?.id,

@@ -1,5 +1,6 @@
 import { isNumber } from 'lodash-es'
 
+import { Dataset } from '@latitude-data/core/browser'
 import {
   Badge,
   Button,
@@ -39,6 +40,7 @@ export function InputMapper({
   isLoading,
   onSelectHeader,
   setSelectedTab,
+  selectedDataset,
 }: {
   inputs: PlaygroundInputs
   mappedInputs: SelectedDatasetRow['mappedInputs']
@@ -46,6 +48,7 @@ export function InputMapper({
   onSelectHeader: UseSelectDataset['onSelectHeader']
   isLoading: boolean
   setSelectedTab: ReactStateDispatch<ParamsSource>
+  selectedDataset: Dataset | undefined
 }) {
   return (
     <ClientOnly>
@@ -57,6 +60,7 @@ export function InputMapper({
               const selectedValue = isNumber(value) ? String(value) : undefined
               const inputTooltipValue = getTooltipValue(input)
               const isMapped = mappedInputs[param] !== undefined
+              const disabled = isLoading || !selectedDataset
               return (
                 <div
                   className='grid col-span-2 grid-cols-subgrid gap-3 w-full items-start'
@@ -79,17 +83,15 @@ export function InputMapper({
                         placeholder={
                           isLoading ? 'Loading...' : 'Choose row header'
                         }
-                        disabled={isLoading}
+                        disabled={disabled}
                         options={headersOptions}
                         onChange={onSelectHeader(param)}
                         value={selectedValue}
                       />
                       <div className='flex flex-row items-center gap-x-2 flex-grow min-w-0'>
-                        <div className='flex-shrink truncate'>
-                          <Text.H6 color='foregroundMuted' ellipsis noWrap>
-                            {inputTooltipValue.value}
-                          </Text.H6>
-                        </div>
+                        <Text.H6 color='foregroundMuted' ellipsis noWrap>
+                          {inputTooltipValue.value}
+                        </Text.H6>
                       </div>
                     </div>
                     <div className='min-h-8 flex flex-row items-center'>
@@ -98,6 +100,7 @@ export function InputMapper({
                         trigger={
                           <Button
                             variant='ghost'
+                            disabled={disabled}
                             onClick={() => {
                               setSelectedTab('manual')
                             }}

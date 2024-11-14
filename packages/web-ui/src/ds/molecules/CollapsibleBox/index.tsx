@@ -7,12 +7,14 @@ import { Icon, Text } from '@latitude-data/web-ui'
 export function CollapsibleBox({
   title,
   collapsedContent,
+  collapsedContentHeader,
   expandedContent,
   expandedHeight,
   initialExpanded = false,
 }: {
   title: string
   collapsedContent: ReactNode
+  collapsedContentHeader?: ReactNode
   expandedContent?: ReactNode
   expandedHeight?: string
   initialExpanded?: boolean
@@ -31,7 +33,17 @@ export function CollapsibleBox({
       >
         <div className='flex justify-between items-center py-3.5 px-4'>
           <Text.H5M>{title}</Text.H5M>
-          <Icon name={isExpanded ? 'chevronUp' : 'chevronDown'} />
+          <div className='flex flex-row items-center gap-x-2'>
+            {!isExpanded ? (
+              <div onClick={(e) => e.stopPropagation()}>
+                {collapsedContentHeader}
+              </div>
+            ) : null}
+            <Icon
+              className='flex-none'
+              name={isExpanded ? 'chevronUp' : 'chevronDown'}
+            />
+          </div>
         </div>
         {!isExpanded && collapsedContent ? (
           <div className='px-4 pb-4'>{collapsedContent}</div>

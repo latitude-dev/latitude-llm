@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react'
-
 import {
   AppLocalStorage,
+  ClientOnly,
   CollapsibleBox,
+  ReactStateDispatch,
   TabSelector,
   useLocalStorage,
   type TabSelectorOption,
@@ -13,9 +13,17 @@ import {
 } from '$/hooks/useDocumentParameters'
 
 import { DatasetParams } from './DatasetParams'
-import { useSelectDataset } from './DatasetParams/useSelectDataset'
+import {
+  UseSelectDataset,
+  useSelectDataset,
+} from './DatasetParams/useSelectDataset'
 import { HistoryLogParams } from './HistoryLogParams'
+import {
+  UseLogHistoryParams,
+  useLogHistoryParams,
+} from './HistoryLogParams/useLogHistoryParams'
 import { ManualParams } from './ManualParams'
+import { ParametersPaginationNav } from './PaginationNav'
 
 const PARAMS_SOURCE = {
   manual: 'manual',
@@ -37,13 +45,21 @@ type Props = {
   setInputs: (newInputs: PlaygroundInputs) => void
 }
 
-function ParamsTabs({ inputs, setInput, setInputs }: Props) {
-  const { value: selectedTab, setValue: setSelectedTab } =
-    useLocalStorage<ParamsSource>({
-      key: AppLocalStorage.playgroundParameterSource,
-      defaultValue: PARAMS_SOURCE.manual,
-    })
-  const datasetInfo = useSelectDataset({ inputs, setInputs })
+type ContentProps = Props & {
+  setSelectedTab: ReactStateDispatch<ParamsSource>
+  selectedTab: ParamsSource
+  datasetInfo: UseSelectDataset
+  historyInfo: UseLogHistoryParams
+}
+
+function ParamsTabs({
+  inputs,
+  setInput,
+  setSelectedTab,
+  selectedTab,
+  datasetInfo,
+  historyInfo,
+}: ContentProps) {
   return (
     <div className='w-full flex flex-col gap-4'>
       <TabSelector<ParamsSource>
@@ -58,15 +74,55 @@ function ParamsTabs({ inputs, setInput, setInputs }: Props) {
       {selectedTab === PARAMS_SOURCE.dataset && (
         <DatasetParams
           inputs={inputs}
-          datasetInfo={datasetInfo}
           setSelectedTab={setSelectedTab}
+          data={datasetInfo}
         />
       )}
       {selectedTab === PARAMS_SOURCE.history && (
         <HistoryLogParams
           inputs={inputs}
           setInput={setInput}
-          setInputs={setInputs}
+          data={historyInfo}
+        />
+      )}
+    </div>
+  )
+}
+
+function CollapsedContentHeader({
+  selectedTab,
+  datasetInfo,
+  historyInfo,
+}: ContentProps) {
+  const src = PARAMS_SOURCE
+
+  if (selectedTab === src.manual) return null
+  const isDataset =
+    selectedTab === PARAMS_SOURCE.dataset && datasetInfo.selectedDataset
+  const isHistory = selectedTab === src.history && historyInfo.count > 0
+
+  const onPrevDatasetPage = (page: number) => datasetInfo.onRowChange(page - 1)
+  const onNextDatasetPage = (page: number) => datasetInfo.onRowChange(page + 1)
+
+  return (
+    <div className='w-full flex flex-col gap-4'>
+      {isDataset && (
+        <ParametersPaginationNav
+          zeroIndex
+          label='rows in dataset'
+          currentIndex={datasetInfo.selectedRowIndex}
+          totalCount={datasetInfo.totalRows}
+          onPrevPage={onPrevDatasetPage}
+          onNextPage={onNextDatasetPage}
+        />
+      )}
+      {isHistory && (
+        <ParametersPaginationNav
+          label='history logs'
+          currentIndex={historyInfo.position}
+          totalCount={historyInfo.count}
+          onPrevPage={historyInfo.onPrevPage}
+          onNextPage={historyInfo.onNextPage}
         />
       )}
     </div>
@@ -74,19 +130,31 @@ function ParamsTabs({ inputs, setInput, setInputs }: Props) {
 }
 
 export function DocumentParams(props: Props) {
-  const [ssr, setSsr] = useState(true)
-  useEffect(() => {
-    setSsr(false)
-  }, [])
-
-  if (ssr) return null
+  const { value: selectedTab, setValue: setSelectedTab } =
+    useLocalStorage<ParamsSource>({
+      key: AppLocalStorage.playgroundParameterSource,
+      defaultValue: PARAMS_SOURCE.manual,
+    })
+  const { inputs, setInputs } = props
+  const datasetInfo = useSelectDataset({ inputs, setInputs })
+  const historyInfo = useLogHistoryParams({ inputs, setInputs })
+  const contentProps = {
+    ...props,
+    setSelectedTab,
+    selectedTab,
+    datasetInfo,
+    historyInfo,
+  }
 
   return (
-    <CollapsibleBox
-      title='Variables'
-      initialExpanded
-      collapsedContent={null}
-      expandedContent={<ParamsTabs {...props} />}
-    />
+    <ClientOnly>
+      <CollapsibleBox
+        title='Variables'
+        initialExpanded
+        collapsedContent={null}
+        collapsedContentHeader={<CollapsedContentHeader {...contentProps} />}
+        expandedContent={<ParamsTabs {...contentProps} />}
+      />
+    </ClientOnly>
   )
 }
