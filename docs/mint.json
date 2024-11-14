@@ -131,8 +131,12 @@
       ]
     },
     {
-      "group": "Implementation",
-      "pages": ["promptl/implementation/quick-start"]
+      "group": "Usage",
+      "pages": ["promptl/usage/quick-start"]
+    },
+    {
+      "group": "Advanced",
+      "pages": ["promptl/advanced/chains"]
     }
   ],
   "footerSocials": {
