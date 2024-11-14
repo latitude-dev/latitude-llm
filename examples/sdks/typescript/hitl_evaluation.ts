@@ -32,6 +32,6 @@ const { uuid } = await sdk.logs.create('joker', messages, {
 // Push the evaluation result to the evaluation with the UUID 'evaluationUuid'
 const evaluationUuid = '53975dcb-2a86-4ea1-ab53-b54587e01231'
 await sdk.evaluations.createResult(uuid, evaluationUuid, {
-  result: 5,
+  result: 5, // This result would be computed on your end and is just an example
   reason: 'This is a good joke',
 })
