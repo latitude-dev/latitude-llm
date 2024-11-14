@@ -4,10 +4,9 @@ import {
   UnprocessableEntityError,
 } from '@latitude-data/core/lib/errors'
 import { ChainError } from '@latitude-data/core/services/chains/ChainErrors/index'
+import http from '$/common/http'
 import { captureException } from '$/common/sentry'
 import { HTTPException } from 'hono/http-exception'
-
-import HttpStatusCodes from '../common/httpStatusCodes'
 
 function unprocessableExtraParameters(error: UnprocessableEntityError) {
   const isChainError = error instanceof ChainError
@@ -69,7 +68,7 @@ const errorHandlerMiddleware = (err: Error) => {
         message: err.message,
         details: { cause: err.cause },
       },
-      { status: HttpStatusCodes.INTERNAL_SERVER_ERROR },
+      { status: http.Status.INTERNAL_SERVER_ERROR },
     )
   }
 }

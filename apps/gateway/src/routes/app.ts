@@ -1,18 +1,19 @@
-import authMiddleware from '$/middlewares/auth'
-import errorHandlerMiddleware from '$/middlewares/errorHandler'
-import rateLimitMiddleware from '$/middlewares/rateLimit'
-import { Hono } from 'hono'
 import { logger } from 'hono/logger'
 
-import { chatsRouter as conversationsRouterV1 } from './api/v1/conversations/[conversationUuid]'
-import { documentsRouter as documentsRouterV1 } from './api/v1/projects/[projectId]/versions/[versionUuid]/documents'
-import { conversationsRouter as conversationsRouterV2 } from './api/v2/conversations/[conversationUuid]'
-import { otlpTracesRouter } from './api/v2/otlp/traces'
-import { documentsRouter as documentsRouterV2 } from './api/v2/projects/[projectId]/versions/[versionUuid]/documents'
+import authMiddleware from '$/middlewares/auth'
+import rateLimitMiddleware from '$/middlewares/rateLimit'
+import errorHandlerMiddleware from '$/middlewares/errorHandler'
 
-const app = new Hono()
+import createApp from '$/openApi/createApp'
+import configureOpenAPI from '$/openApi/configureOpenAPI'
 
-// Middlewares
+import v1Routes from '$/routes/v1'
+import documents from '$/routes/v2/documents'
+import conversations from '$/routes/v2/conversations'
+import telemetry from '$/routes/v2/otlp'
+
+const app = createApp()
+
 if (process.env.NODE_ENV !== 'test') {
   app.use(logger())
 }
@@ -21,24 +22,16 @@ app.get('/health', (c) => {
   return c.json({ status: 'ok' })
 })
 
+configureOpenAPI(app)
+
+// Middlewares
 app.use(rateLimitMiddleware())
 app.use(authMiddleware())
 
-// Routers
-// v1
-app.route(
-  '/api/v1/projects/:projectId/versions/:versionUuid/documents',
-  documentsRouterV1,
-)
-app.route('/api/v1/conversations', conversationsRouterV1)
-
-// v2
-app.route(
-  '/api/v2/projects/:projectId/versions/:versionUuid/documents',
-  documentsRouterV2,
-)
-app.route('/api/v2/conversations', conversationsRouterV2)
-app.route('/api/v2/otlp', otlpTracesRouter)
+app.route('/', v1Routes)
+app.route('/', documents)
+app.route('/', conversations)
+app.route('/', telemetry)
 
 app.onError(errorHandlerMiddleware)
 
