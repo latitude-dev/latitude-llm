@@ -134,7 +134,17 @@
     },
     {
       "group": "Usage",
-      "pages": ["promptl/usage/quick-start"]
+      "pages": [
+        "promptl/usage/quick-start",
+        {
+          "group": "Adapters",
+          "pages": [
+            "promptl/usage/adapters/overview",
+            "promptl/usage/adapters/openai",
+            "promptl/usage/adapters/anthropic"
+          ]
+        }
+      ]
     },
     {
       "group": "Advanced",

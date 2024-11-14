@@ -1,0 +1,38 @@
+---
+title: Anthropic
+description: Learn how to use PromptL with Anthropic
+---
+
+## Overview
+
+You can specify the `Anthropic` adapter when rendering a prompt to automatically format the output for Anthropic's API.
+
+## Example
+
+```typescript
+import Anthropic from '@anthropic-ai/sdk'
+import { Adapters, render } from '@latitude-data/promptl'
+
+const prompt = `
+---
+model: claude-3-opus-20240229
+max_tokens: 1024
+---
+
+Generate a joke about {{ topic }}.
+`
+
+const { messages, config } = await render({
+  prompt,
+  parameters: { topic: 'chickens' },
+  adapter: Adapters.anthropic,
+})
+
+const client = new Anthropic()
+const response = await client.messages.create({
+  ...config,
+  messages,
+})
+
+console.log(response)
+```

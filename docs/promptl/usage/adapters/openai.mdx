@@ -1,0 +1,35 @@
+---
+title: OpenAI
+description: Learn how to use PromptL with OpenAI
+---
+
+## Overview
+
+By default, PromptL will resolve prompts in the OpenAI format. This means you can use the output from PromptL directly with OpenAI's API.
+
+## Example
+
+```typescript
+import { render } from '@latitude-data/promptl'
+import OpenAI from 'openai'
+
+const prompt = `
+---
+model: gpt-4o
+temperature: 0.6
+---
+
+Generate a joke about {{ topic }}.
+`
+
+const { messages, config } = await render({
+  prompt,
+  parameters: { topic: 'chickens' },
+})
+
+const client = new OpenAI()
+const response = await client.chat.completions.create({
+  ...config,
+  messages,
+})
+```

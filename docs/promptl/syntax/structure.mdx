@@ -23,6 +23,8 @@ top_p: 0.9
 
 PromptL will not modify the config section in any way, so you can define any configuration that your LLM supports.
 
+[Learn more about the configuration section](/promptl/syntax/config).
+
 ## Messages
 
 The rest of the prompt is defined by a series of messages, in a chat based format. Each message can be of type `system`, `user`, `assistant` or `tool`. By default, all plain text will be included as `system` messages.
@@ -37,6 +39,4 @@ You are a playful AI assistant that knows a lot about animals. Respond to the us
 
 In this example, the prompt will contain two messages: a `system` message and a `user` message. The `system` message will be displayed first, followed by the `user` message.
 
-### Message content
-
-Some providers allow to add additional content to the messages, such as images.
+[Learn more about Messages](/promptl/syntax/messages).
