@@ -1,0 +1,37 @@
+---
+title: Loop conditions
+description: Learn how to add multiple messages based on loop conditions in your prompts
+---
+
+## Overview
+
+Loop conditions allow you to add multiple messages or contents to your prompts based on certain conditions. This can be useful to create dynamic prompts that adapt to the user's input or context.
+
+In PromptL, you can use loop conditions to define logic that will be evaluated at runtime. You can use these statements to control the flow of the conversation, generate dynamic content, or provide different responses based on specific conditions.
+
+## Syntax
+
+Loop conditions in PromptL are defined using the `for`, `endfor` keywords, wrapped in `{{ }}` tags. The contents of the loop block will be resolved for each iteration of the loop.
+
+```plaintext
+{{ for item in list }}
+  - {{ item }}
+{{ endfor }}
+```
+
+You can also add an index parameter, which will be a number, starting by 0, that will be incremented by 1 for each iteration.
+
+```plaintext
+{{ for item, index in list }}
+  {{ index }}: {{ item }}
+{{ endfor }}
+```
+
+### Example
+
+```plaintext
+
+{{ for fruit in ["apple", "banana", "cherry"] }}
+  - {{ fruit }}
+{{ endfor }}
+```

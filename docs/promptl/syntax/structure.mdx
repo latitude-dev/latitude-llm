@@ -1,0 +1,42 @@
+---
+title: Structure
+description: Learn about the general structure of a PromptL prompt
+---
+
+## Overview
+
+A PromptL prompt is divided into two sections: The **config** section, and the **messages**.
+
+## Config Section
+
+The prompt configuration can be defined in an optional section, which must be defined at the beginning of the prompt. Here, you can configure all option parameters that define how the prompt will be generated, such as the `model`, `temperature`, and more.
+
+This section is enclosed in three dashes (`---`) at the beginning and end of the section. The config section is a YAML object and can contain any number of key-value pairs.
+
+```yaml
+---
+model: gpt-4o
+temperature: 0.6
+top_p: 0.9
+---
+```
+
+PromptL will not modify the config section in any way, so you can define any configuration that your LLM supports.
+
+## Messages
+
+The rest of the prompt is defined by a series of messages, in a chat based format. Each message can be of type `system`, `user`, `assistant` or `tool`. By default, all plain text will be included as `system` messages.
+
+```plaintext
+You are a playful AI assistant that knows a lot about animals. Respond to the user's questions with fun facts about animals.
+
+<user>
+  What is the largest mammal in the world?
+</user>
+```
+
+In this example, the prompt will contain two messages: a `system` message and a `user` message. The `system` message will be displayed first, followed by the `user` message.
+
+### Message content
+
+Some providers allow to add additional content to the messages, such as images.
