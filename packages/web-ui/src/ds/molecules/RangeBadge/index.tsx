@@ -38,7 +38,7 @@ export function RangeBadge({
         borderColor: borderColor,
       }}
     >
-      {children ? children : <Text.H4 noWrap>{formattedValue}</Text.H4>}
+      {children ? children : <Text.H6 noWrap>{formattedValue}</Text.H6>}
     </Badge>
   )
 }
