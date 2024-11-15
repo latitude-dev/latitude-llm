@@ -316,7 +316,7 @@ export const DELIMITERS_KEYS = [
   'space',
   'custom',
 ] as const
-export const MAX_SIZE = 15
+export const MAX_SIZE = 25
 export const MAX_UPLOAD_SIZE_IN_MB = MAX_SIZE * 1024 * 1024
 
 const userContentSchema = z.array(

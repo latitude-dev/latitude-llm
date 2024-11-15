@@ -26,7 +26,7 @@ const nextConfig = {
     // different because in local environment we would need to upload the file to
     // the nextjs server as we do now.
     serverActions: {
-      bodySizeLimit: '15mb',
+      bodySizeLimit: '25mb',
     },
   },
   webpack: (config) => {

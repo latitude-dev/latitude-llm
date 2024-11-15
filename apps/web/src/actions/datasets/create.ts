@@ -40,7 +40,7 @@ export const createDatasetAction = authProcedure
             .instanceof(File)
             .refine((file) => {
               return !file || file.size <= MAX_UPLOAD_SIZE_IN_MB
-            }, `Your dataset must be less than ${MAX_SIZE}MB in size`)
+            }, `Your dataset must be less than ${MAX_SIZE}MB in size. You can split it into smaller files and upload them separately.`)
             .refine(
               (file) => file.type === 'text/csv',
               'Your dataset must be a CSV file',
