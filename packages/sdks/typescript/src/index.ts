@@ -144,13 +144,13 @@ class Latitude {
     })
 
     if (!response.ok) {
-      const json = (await response.json()) as ApiErrorJsonResponse
-      json.errorCode
+      const error = (await response.json()) as ApiErrorJsonResponse
       throw new LatitudeApiError({
         status: response.status,
-        message: response.statusText,
-        serverResponse: JSON.stringify(json),
-        errorCode: json.errorCode,
+        serverResponse: JSON.stringify(error),
+        message: error.message,
+        errorCode: error.errorCode,
+        dbErrorRef: error.dbErrorRef,
       })
     }
 
@@ -176,13 +176,13 @@ class Latitude {
     })
 
     if (!response.ok) {
-      const json = (await response.json()) as ApiErrorJsonResponse
-      json.errorCode
+      const error = (await response.json()) as ApiErrorJsonResponse
       throw new LatitudeApiError({
         status: response.status,
-        message: response.statusText,
-        serverResponse: JSON.stringify(json),
-        errorCode: json.errorCode,
+        serverResponse: JSON.stringify(error),
+        message: error.message,
+        errorCode: error.errorCode,
+        dbErrorRef: error.dbErrorRef,
       })
     }
 

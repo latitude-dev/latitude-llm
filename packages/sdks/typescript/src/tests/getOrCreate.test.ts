@@ -133,10 +133,10 @@ describe('/get-or-create', () => {
           status: 502,
           serverResponse: JSON.stringify({
             name: 'LatitudeError',
-            message: 'Bad Gateway',
+            message: 'Something bad happened',
             errorCode: 'LatitudeError',
           }),
-          message: 'Bad Gateway',
+          message: 'Something bad happened',
           errorCode: ApiErrorCodes.InternalServerError,
           dbErrorRef: undefined,
         }),
