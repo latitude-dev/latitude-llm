@@ -5,13 +5,18 @@ description: Learn about the general structure of a PromptL prompt
 
 ## Overview
 
-A PromptL prompt is divided into two sections: The **config** section, and the **messages**.
+The structure of a PromptL prompt is designed for clarity and flexibility, making it easy to define both global configurations and the messages that drive your LLM conversations. A PromptL prompt is divided into two main sections:
+
+1. The **Config Section**, where you define global options for the prompt.
+2. The **Messages**, which define the conversational flow between the user, assistant, and other roles.
+
+---
 
 ## Config Section
 
-The prompt configuration can be defined in an optional section, which must be defined at the beginning of the prompt. Here, you can configure all option parameters that define how the prompt will be generated, such as the `model`, `temperature`, and more.
+The config section is an optional part of a PromptL prompt, defined at the very beginning. It allows you to specify global settings for your LLM, such as the `model`, `temperature`, or any other configuration supported by your provider.
 
-This section is enclosed in three dashes (`---`) at the beginning and end of the section. The config section is a YAML object and can contain any number of key-value pairs.
+This section is enclosed between triple dashes (`---`) and uses YAML format for key-value pairs:
 
 ```yaml
 ---
@@ -21,15 +26,22 @@ top_p: 0.9
 ---
 ```
 
-PromptL will not modify the config section in any way, so you can define any configuration that your LLM supports.
+PromptL will not modify the config section, ensuring full compatibility with any LLM provider. This flexibility allows you to include custom configurations tailored to your needs.
 
-[Learn more about the configuration section](/promptl/syntax/config).
+---
 
 ## Messages
 
-The rest of the prompt is defined by a series of messages, in a chat based format. Each message can be of type `system`, `user`, `assistant` or `tool`. By default, all plain text will be included as `system` messages.
+The messages section defines the conversational flow of your prompt. Messages are structured in a chat-based format and can represent one of the following types:
 
-```plaintext
+- **System**: Sets the context or rules for the conversation.
+- **User**: Represents messages from the user to the assistant.
+- **Assistant**: Represents messages from the assistant to the user.
+- **Tool**: Used for interactions with external tools or APIs.
+
+[Learn more about the configuration section](/promptl/syntax/config).
+
+```xml
 You are a playful AI assistant that knows a lot about animals. Respond to the user's questions with fun facts about animals.
 
 <user>
@@ -37,6 +49,15 @@ You are a playful AI assistant that knows a lot about animals. Respond to the us
 </user>
 ```
 
-In this example, the prompt will contain two messages: a `system` message and a `user` message. The `system` message will be displayed first, followed by the `user` message.
+In the example above:
+
+- The first line is a system message that establishes the assistant's behavior.
+- The <user> block defines a user message.
 
 [Learn more about Messages](/promptl/syntax/messages).
+
+---
+
+## Bringing it together
+
+This two-part structure —**Config** for global settings and **Messages** for conversational flow— keeps your prompts organized and easy to understand. Whether you're crafting simple interactions or complex, dynamic workflows, PromptL's structure makes it straightforward.

@@ -5,7 +5,7 @@ description: Get started with PromptL
 
 ## What is PromptL?
 
-[PromptL](https://promptl.ai/) offers a common, easy-to-use syntax for defining dynamic prompts for LLMs. It is a simple, yet powerful language that allows you to define prompts in a human-readable format, while still being able to leverage the full power of LLMs.
+[PromptL](https://promptl.ai/) is a versatile, user-friendly language that simplifies defining and managing dynamic prompts for LLMs. Whether you’re a developer or a non-technical user, PromptL offers a human-readable format that doesn’t compromise on power or flexibility.
 
 ## Why PromptL?
 
@@ -20,35 +20,48 @@ This structure looks something like this:
   "messages": [
     {
       "type": "system",
-      "content": "You are a useful AI assistant expert in geography."
+      "content": "You are an AI assistant that writes personalized birthday messages."
     },
     {
       "type": "user",
-      "content": "Hi! What's the capital of Spain?"
+      "content": "Write a birthday message for Tom, who loves programming!"
     }
   ]
 }
 ```
 
-This structure may be simple, but it can be tough for non-techy users to grasp or write it from scratch. In addition to this, creating a single static prompt is not that useful. Typically, users need to define conversations dynamically, where the flow changes based on user input or event parameters. The problem is, adding code to modify the conversation based on these parameters can get confusing and repetitive – it needs to be done for each prompt individually.
+This structure, while straightforward, presents challenges:
 
-This is how the PromptL syntax steps in. It defines a language simple enough for any user to use and understand. And, at the same time, it offers immense power for users who want to maximize its potential. It allows users to define the same structure they would build before, but in a more readable way. Plus, they can add custom dynamic logic to create anything they need, all in just a single file.
+- **Difficult to Write**: Non-technical users find JSON hard to write and understand.
+- **Static and Rigid**: Simple structures aren't ideal for dynamic, user-driven conversations.
+- **Code Overhead**: Customizing prompts requires repetitive, often messy code.
 
-Take a look at the same prompt as before, using the PromptL syntax:
+**PromptL** solves these issues by offering:
 
-```plaintext
+**Readable and Maintainable Syntax**: Easily write and manage prompts.
+**Dynamic Flexibility**: Add dynamic variables to adapt prompts to different scenarios.
+**Powerful Logic in a Single File**: Incorporate logic to handle complex workflows with ease.
+
+Here's the same prompt using PromptL:
+
+```markdown
 ---
 model: <your-model>
 temperature: 0.6
 ---
 
-You are a useful AI assistant expert in geography.
+You are an AI assistant that writes personalized birthday messages.
 
 <user>
-  Hi! What's the capital of {{ country_name }}?
+  Write a birthday message for {{ name }} who loves {{ hobby }}!
 </user>
 ```
 
-In this case, not only the syntax is way more readable and maintainable, but it also allows for dynamic generation of prompts by using variables like `{{ country_name }}`.
+In this case, not only the syntax is way more readable and maintainable, but it also allows for dynamic generation of prompts by using variables like `{{ name }}` and `{{ hobby }}`!
 
-This is just a small example of what PromptL can do. It is a powerful tool that can help you define dynamic prompts for your LLMs in a simple and easy way, without giving up any feature or functionality from the original structure.
+## What’s Next?
+
+This is just a small example of what PromptL can do. It’s a powerful tool to help you define smarter, more dynamic prompts for your LLMs. Ready to learn more? Let’s dive in!
+
+- [Learn about PromptL syntax](/promptl/syntax/structure)
+- [Try PromptL in your project](/promptl/usage/quick-start)

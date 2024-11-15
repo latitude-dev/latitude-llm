@@ -5,162 +5,152 @@ description: Learn how to define messages in PromptL
 
 ## Overview
 
-Messages are the core of LLM prompting. They define the conversation between the user and the assistant. Messages can have different roles, such as `system`, `user`, `assistant`, or `tool`. Each message role has a different meaning and purpose in the conversation.
+Messages are the building blocks of PromptL prompts. They define the flow of conversations between the user, the assistant, and other entities like tools. Each message is associated with a **role** that determines its purpose in the conversation.
 
-- [Message Tags](#message-tags)
-  - [Message Content](#message-content)
-    - [Image Content](#image-content)
-    - [Tool Call Content](#tool-call-content)
-  - [Roles](#roles)
-    - [System Messages](#system-messages)
-    - [User Messages](#user-messages)
-    - [Assistant Messages](#assistant-messages)
-    - [Tool Messages](#tool-messages)
+PromptL supports the following message roles:
+- **System**: Sets the context and rules for the assistant.
+- **User**: Represents user input in the conversation.
+- **Assistant**: Captures assistant responses or provides context for the LLM's output.
+- **Tool**: Represents interactions with external tools or APIs.
 
-# Message Tags
-
-To define a message, you can use the `<message>` tag, followed by a `role` attribute to define the role:
-
-```plaintext
-<message role="system">
-  This is a system message.
-</message>
-```
-
-By default, all text not wrapped into a message tag will be considered a `system` message, although this can be changed in the implementation.
-
-```plaintext
-This is a system message.
-```
-
-For convenience, there are tags for each specific role: `<system>`, `<user>`, `<assistant>`, and `<tool>`. These tags are equivalent to the `<message>` tag with the corresponding role attribute.
-
-```plaintext
-<system>
-  You are an expert content writer with deep knowledge of {{ industry }}.
-  Always write in a clear, engaging style.
-</system>
-
-<user>
-  Write a blog post about {{ topic }}. Use a {{ tone }} tone.
-</user>
-
-<assistant>
-  Here's a draft blog post about {{ topic }}...
-</assistant>
-```
-
-## Message Content
-
-Depending on the provider, some messages can contain more than just text. For example, user messages may contain images, and assistant messages may contain tool call requests. Read more about the capabilities of your LLM provider to know what kind of content you can include in your messages.
-
-Similar to `<message>` tags, you can add `<content>` tags to define the content of a message, followed with a `type` attribute to define the type of the content, which can be `text`, `image`, `tool-call`, or any other type supported by your LLM provider.
-
-```
-<user>
-  <content type="text">Take a look at this image:</content>
-  <content type="image">[image url]</content>
-</user>
-
-<assistant>
-  <content
-    type="tool-call"
-    id="123"
-    name="get-weather"
-    arguments={{ { location: "Barcelona" } }}
-  />
-</assistant>
-```
-
-All plain text inside a message not wrapped into a content tag will automatically be considered a text content.
-
-You can also use `<content-text>`, `<content-image>` and `<tool-call>` tags as shortcuts for the `<content>` tag with the corresponding type.
-
-```
-<user>
-  Take a look at this image:
-  <content-image>[image url]</content-image>
-</user>
-<assistant>
-  <tool-call
-    id="123"
-    name="get-weather"
-    arguments={{ { location: "Barcelona" } }}
-  />
-</assistant>
-```
-
-### Image Content
-
-Images can be included by either using `<content type="image">` or `<content-image>`. The content of the image should contain the image as a string encoded in base64, or directly as a URL if the provider supports it.
-
-### Tool Call Content
-
-Tool calls can only be included inside assistant messages, and they must contain the following attributes:
-
-- `id`: A unique identifier for the tool call.
-- `name`: The name of the tool to call.
-- `arguments` (optional): An object containing the arguments to pass to the tool.
+---
 
 ## Roles
 
 ### System Messages
+System messages provide high-level instructions and context for the assistant.
 
-System messages define instructions and provide general context to the assistant.
-
-Although the this can also be used with user messages, it is recommended to use the `<system>` tag to define a clear separation between the two, where system messages have a higher authority.
-
-```plaintext
+```xml
 <system>
-  You are an expert content writer with deep knowledge of {{ industry }}.
-  Always write in a clear, engaging style.
+  You are a personal finance advisor. Provide actionable insights in a friendly tone.
 </system>
 ```
 
 ### User Messages
+User messages simulate user input in the conversation.
 
-User messages can be used to include user input in the conversation. When including parameters straight from the user, it is recommended to use the `<user>` tag so that the assistant can understand the user's input, and it can prioritize instructions accordingly.
-
-```plaintext
+```xml
 <user>
-  Write a blog post about {{ topic }}. Use a {{ tone }} tone.
+  How can I save more money each month?
 </user>
 ```
 
 ### Assistant Messages
+Assistant messages represent LLM responses or "fake" previous outputs to guide the conversation.
 
-LLMs always generate responses as assistant messages. These messages will be generated by the LLM, so you do not need to define them in your prompt, but sometimes it can be useful to fake a previous assistant response to guide the conversation. This way, when generating the response, the LLM will think it has already responded to the user, so it will follow the conversation flow.
-
-```plaintext
+```xml
 <user>
-  Hello, I am {{ name }}.
+  What's your name?
 </user>
 
 <assistant>
-  Hi, {{ name }}! I am HistoryBot, your personal history assistant. What do you want to learn about today?
+  I’m BudgetBot, your personal finance assistant. How can I help you today?
 </assistant>
-
-<user>
-  {{ question }}
-</user>
 ```
 
 ### Tool Messages
+Tool messages represent the output of external tools or APIs called by the assistant during the conversation. They require a unique `id` attribute to match the tool call.
 
-When defining tools in the configuration, the assistant may respond with tool requests. This is usually done when the assistant needs to execute a tool to gather more information or perform actions, which should be responded with the tool's output as a tool message. Read more about tools in your LLM's documentation.
-
-Like with Assistant messages, this is not usually defined in the prompt, but it can be useful to fake previous tool responses to guide the conversation.
-
-```plaintext
-<user>
-  What's the weather like in Barcelona?
-</user>
-
+```xml
 <assistant>
   <tool-call id="123" name="get-weather" arguments={{ location: "Barcelona" }} />
 </assistant>
 
 <tool id="123">
-  17ºC
+  It's 17ºC in Barcelona.
 </tool>
 ```
+
+---
+
+## Tags
+
+### The `<message>` Tag
+Messages can be defined using the `<message>` tag with a `role` attribute:
+
+```xml
+<message role="system">
+  This is a system message.
+</message>
+```
+
+### Shortcut Tags
+For convenience, you can use specific tags for each role:
+- `<system>`: Equivalent to `<message role="system">`.
+- `<user>`: Equivalent to `<message role="user">`.
+- `<assistant>`: Equivalent to `<message role="assistant">`.
+- `<tool>`: Equivalent to `<message role="tool">`.
+
+```xml
+<system>
+  You are a friendly chatbot.
+</system>
+<user>
+  What’s the weather today in Barcelona?
+</user>
+<assistant>
+  Let me check for you!
+  <tool-call id="123" name="get-weather" arguments={{ location: "Barcelona" }} />
+</assistant>
+<tool id="123">
+  23ºC, sunny.
+</tool>
+```
+
+---
+
+## Content Types
+
+Messages can contain different types of content. By default, all plain text is considered `text` content, but you can specify other types using the `<content>` tag or its shorthand equivalents.
+
+- **Text (default)**: `<content type="text">` or `<content-text>`.
+- **Image**: `<content type="image">` or `<content-image>`. Add the image URL or base64-encoded string – depending on your provider's requirements – as the content inside the tag.
+- **Tool Call**: `<content type="tool-call">` or `<tool-call>`. Represents a tool invocation with attributes like `id`, `name`, and `arguments` (optional). Only allowed inside assistant messages.
+
+<Note>
+  Not all providers and all models will support all content types. Check your provider's documentation for compatibility.
+</Note>
+
+### Examples
+```tsx
+<user>
+  Take a look at this image:
+  <content-image>[image url]</content>
+</user>
+
+<assistant>
+  <tool-call id="123" name="get-weather" arguments={{ { location: "Barcelona" } }} />
+</assistant>
+```
+
+---
+
+## Best Practices
+
+- **Use System Messages for Context**: Define clear rules for the assistant to guide its behavior.
+- **Leverage User Messages for Dynamic Input**: Use uncontrolled user variables inside user messages to define a clear difference authority between the user and the system rules.
+
+---
+
+## Advanced Examples
+
+Here’s how multiple message roles and content types can work together:
+
+```tsx
+<system>
+  You are a helpful assistant for travel planning.
+</system>
+
+<user>
+  Find me a good restaurant in {{ city }}.
+</user>
+
+<assistant>
+  Let me check for you.
+  <tool-call id="456" name="find-restaurant" arguments={{ location: city }} />
+</assistant>
+
+<tool id="456">
+  The best-rated restaurant in {{ city }} is Gourmet Central.
+</tool>
+````
