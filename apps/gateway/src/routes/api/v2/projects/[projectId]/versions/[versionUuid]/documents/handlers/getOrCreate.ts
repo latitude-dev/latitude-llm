@@ -3,7 +3,6 @@ import {
   CommitsRepository,
   DocumentVersionsRepository,
   ProjectsRepository,
-  UsersRepository,
 } from '@latitude-data/core/repositories'
 import { createNewDocument } from '@latitude-data/core/services/documents/create'
 import { documentPresenter } from '$/presenters/documentPresenter'
@@ -24,7 +23,6 @@ export const getOrCreateHandler = factory.createHandlers(
     const { projectId, versionUuid } = c.req.param()
     const { path, prompt } = c.req.valid('json')
 
-    const usersScope = new UsersRepository(workspace.id)
     const projectsScope = new ProjectsRepository(workspace.id)
     const commitsScope = new CommitsRepository(workspace.id)
     const docsScope = new DocumentVersionsRepository(workspace.id)
@@ -43,13 +41,8 @@ export const getOrCreateHandler = factory.createHandlers(
     const docResult = await docsScope.getDocumentByPath({ commit, path: path })
     if (docResult.ok) return c.json(await documentPresenter(docResult.value!))
 
-    // We create the document as the first user in the workspace,
-    // because on the API we don't have a user actor.
-    const user = await usersScope.findFirst().then((r) => r.unwrap())
-
     const document = await createNewDocument({
       workspace,
-      user: user!,
       commit: commit,
       path,
       content: prompt,
