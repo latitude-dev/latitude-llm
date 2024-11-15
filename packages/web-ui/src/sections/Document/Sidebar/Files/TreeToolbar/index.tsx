@@ -1,4 +1,6 @@
-import { useCallback, useState } from 'react'
+import { useCallback } from 'react'
+
+import { create } from 'zustand'
 
 import { Button, Text } from '../../../../../ds/atoms'
 import { DocumentIcon } from '../DocumentHeader'
@@ -7,17 +9,29 @@ import { FolderIcons } from '../FolderHeader'
 import NodeHeaderWrapper from '../NodeHeaderWrapper'
 import { useTempNodes } from '../useTempNodes'
 
-enum EntityType {
+export enum EntityType {
   File = 'file',
   Folder = 'folder',
 }
+
+interface NodeInputState {
+  nodeInput: EntityType | undefined
+  setNodeInput: (type: EntityType | undefined) => void
+}
+
+export const useNodeInput = create<NodeInputState>((set) => ({
+  nodeInput: undefined,
+  setNodeInput: (type) => set({ nodeInput: type }),
+}))
+
 export function TreeToolbar() {
   const { addToRootFolder } = useTempNodes((s) => ({
     addToRootFolder: s.addToRootFolder,
   }))
   const { isMerged, onMergeCommitClick, onCreateFile } = useFileTreeContext()
-  const [nodeInput, setNodeInput] = useState<EntityType | undefined>()
+  const { nodeInput, setNodeInput } = useNodeInput()
   const isFile = nodeInput === EntityType.File
+
   const onClick = useCallback(
     (entityType: EntityType) => () => {
       if (isMerged) {
@@ -28,6 +42,7 @@ export function TreeToolbar() {
     },
     [setNodeInput, isMerged, onMergeCommitClick],
   )
+
   return (
     <>
       <div className='bg-background sticky top-0 flex flex-row items-center justify-between px-4 mb-2'>
@@ -61,7 +76,7 @@ export function TreeToolbar() {
           indentation={[{ isLast: true }]}
           onSaveValue={async ({ path }) => {
             if (isFile) {
-              await onCreateFile(path)
+              onCreateFile(path)
             } else {
               addToRootFolder({ path })
             }

@@ -1,3 +1,5 @@
+'use client'
+
 import { ReactNode, useEffect, useRef, useState } from 'react'
 
 import { Button } from '../../../../../ds/atoms'

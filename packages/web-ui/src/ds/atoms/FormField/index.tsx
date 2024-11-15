@@ -27,7 +27,7 @@ export function FormDescription({
 function TooltipMessage({ error }: { error: string | undefined }) {
   if (!error) return null
 
-  return <Text.H6B color='foreground'>{error}</Text.H6B>
+  return error
 }
 
 export function InlineFormErrorMessage({

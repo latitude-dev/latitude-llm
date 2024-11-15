@@ -1,9 +1,17 @@
+'use client'
+
 import React from 'react'
 
+import { useTheme } from 'next-themes'
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
-import { oneLight } from 'react-syntax-highlighter/dist/esm/styles/prism'
+import {
+  oneDark,
+  oneLight,
+} from 'react-syntax-highlighter/dist/esm/styles/prism'
 
+import { CurrentTheme } from '../../../constants'
 import { cn } from '../../../lib/utils'
+import { ClientOnly } from '../ClientOnly'
 import { CopyButton } from '../CopyButton'
 
 interface CodeBlockProps {
@@ -13,27 +21,38 @@ interface CodeBlockProps {
   className?: string
 }
 
-export function CodeBlock({
+export function CodeBlock(props: CodeBlockProps) {
+  return (
+    <ClientOnly>
+      <Content {...props} />
+    </ClientOnly>
+  )
+}
+
+function Content({
   language,
   children,
   copy = true,
   className,
 }: CodeBlockProps) {
+  const { resolvedTheme } = useTheme()
+
   return (
     <div className='relative max-w-full overflow-x-auto'>
       {copy && (
-        <div className='absolute top-4 right-2 bg-backgroundCode'>
+        <div className='absolute top-4 right-2 bg-transparent'>
           <CopyButton content={children} color='foregroundMuted' />
         </div>
       )}
       <SyntaxHighlighter
         className={cn('text-sm', className)}
         language={language}
-        style={oneLight}
+        style={resolvedTheme === CurrentTheme.Dark ? oneDark : oneLight}
         customStyle={{
           borderRadius: '0.375rem',
           padding: '1rem',
           lineHeight: '1.25rem',
+          margin: '0',
         }}
       >
         {children}

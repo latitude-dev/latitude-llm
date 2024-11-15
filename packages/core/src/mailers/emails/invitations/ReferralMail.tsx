@@ -20,7 +20,7 @@ export default function InvitationMail({ invitee }: Props) {
       <Link
         href={`${env.LATITUDE_URL}/setup`}
         target='_blank'
-        className='text-blue-500 font-medium text-normal mb-4 underline'
+        className='text-blue-500 font-medium text-base mb-4 underline'
       >
         Click here to set up your account
       </Link>
