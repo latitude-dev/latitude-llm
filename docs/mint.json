@@ -148,7 +148,7 @@
     },
     {
       "group": "Advanced",
-      "pages": ["promptl/advanced/chains"]
+      "pages": ["promptl/advanced/chains", "promptl/advanced/snippets"]
     }
   ],
   "footerSocials": {

@@ -1,0 +1,74 @@
+---
+title: Prompt references
+description: Learn how to reference other prompts in PromptL
+---
+
+## Overview
+
+You can configure your prompts to reference other prompts in your project. This is really useful when dealing with large projects that have really large or reusable prompts.
+
+## Syntax
+
+To reference another prompt, you can use the `<prompt path="..." />` tag. The `path` attribute should be the path to the prompt you want to reference.
+
+Referenced prompts will not have access to the variables from the parent prompt, but you can pass variables to the referenced prompt using attributes in the tag.
+
+For example:
+
+<CodeGroup>
+```tsx main.promptl
+<prompt path='policies' assistant_name={{ assistant_name }} />
+
+<user>{{ user_question }}</user>
+
+````
+
+```tsx policies.promptl
+You are {{ assistant_name }}, an AI assistant created to help users.
+
+Before answering any questions, make sure to follow these rules and policies:
+
+  - Be respectful to all users.
+  - Do not share any personal information.
+  - Do not use inappropriate language.
+  ...
+
+````
+
+</CodeGroup>
+
+## Setup
+
+Prompt references do not work by default, as PromptL does not know how prompts are structured in your project. To enable prompt references, you need to define a `resolveFn` function in the `render` function.
+
+First, create a function that resolves prompt contents based on the path provided:
+
+```tsx
+function getPrompt(path: string) {
+  return fs.readFileSync(path, 'utf8')
+}
+```
+
+To enable relative references, you can also use the second argument as the full path to the current prompt:
+
+```tsx
+function getPrompt(relativePath: string, currentPath: string) {
+  const fullPath = path.resolve(path.dirname(currentPath), relativePath)
+  return fs.readFileSync(fullPath, 'utf8')
+}
+```
+
+You can use any structure you want to store your prompts. For example, you can have them defined as files in a `prompts` directory, rows in a database, or even in a JSON object.
+
+Then, pass this function to the `render` function:
+
+```tsx
+import { render } from '@latitude-data/promptl'
+
+import getPrompt from './getPrompt' // Import the function you created
+
+const { messages, config } = await render({
+  prompt: yourMainPrompt,
+  resolveFn: getPrompt, // Pass the function to the render function
+})
+```
