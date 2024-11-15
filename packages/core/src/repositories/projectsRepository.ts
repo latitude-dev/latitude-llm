@@ -1,13 +1,4 @@
-import {
-  and,
-  count,
-  eq,
-  getTableColumns,
-  isNotNull,
-  isNull,
-  max,
-  sql,
-} from 'drizzle-orm'
+import { desc, eq, getTableColumns, isNull, max, sql } from 'drizzle-orm'
 
 import { Project } from '../browser'
 import { NotFoundError, Result } from '../lib'
@@ -58,38 +49,17 @@ export class ProjectsRepository extends RepositoryLegacy<typeof tt, Project> {
     return Result.ok(result)
   }
 
-  async findAllActiveDocumentsWithAgreggatedData() {
-    const lastMergedCommit = this.db.$with('lastMergedCommit').as(
-      this.db
-        .select({
-          projectId: commits.projectId,
-          maxVersion: max(commits.version).as('maxVersion'),
-        })
-        .from(commits)
-        .where(and(isNull(commits.deletedAt), isNotNull(commits.mergedAt)))
-        .groupBy(commits.projectId),
-    )
+  async findAllActiveWithAgreggatedData() {
     const aggredatedData = this.db.$with('aggredatedData').as(
       this.db
-        .with(lastMergedCommit)
         .select({
           id: this.scope.id,
-          documentCount: count(documentVersions.id).as('documentCount'),
-          lastCreatedAtDocument: max(documentVersions.createdAt).as(
-            'lastCreatedAtDocument',
-          ),
+          lastEditedAt: max(documentVersions.updatedAt).as('lastEditedAt'),
         })
         .from(this.scope)
         .innerJoin(commits, eq(commits.projectId, this.scope.id))
-        .innerJoin(
-          lastMergedCommit,
-          and(
-            eq(lastMergedCommit.projectId, this.scope.id),
-            eq(commits.version, lastMergedCommit.maxVersion),
-          ),
-        )
-        .innerJoin(documentVersions, eq(documentVersions.commitId, commits.id))
         .where(isNull(this.scope.deletedAt))
+        .innerJoin(documentVersions, eq(documentVersions.commitId, commits.id))
         .groupBy(this.scope.id),
     )
 
@@ -97,15 +67,16 @@ export class ProjectsRepository extends RepositoryLegacy<typeof tt, Project> {
       .with(aggredatedData)
       .select({
         ...this.scope._.selectedFields,
-        documentCount:
-          sql<number>`CAST(CASE WHEN ${aggredatedData.documentCount} IS NULL THEN 0 ELSE ${aggredatedData.documentCount} END AS INTEGER)`.as(
-            'documentCount',
-          ),
-        lastCreatedAtDocument: aggredatedData.lastCreatedAtDocument,
+        lastEditedAt: aggredatedData.lastEditedAt,
       })
       .from(this.scope)
       .leftJoin(aggredatedData, eq(aggredatedData.id, this.scope.id))
       .where(isNull(this.scope.deletedAt))
+      .orderBy(
+        desc(
+          sql`COALESCE(${aggredatedData.lastEditedAt}, ${this.scope.createdAt})`,
+        ),
+      )
 
     return Result.ok(result)
   }
