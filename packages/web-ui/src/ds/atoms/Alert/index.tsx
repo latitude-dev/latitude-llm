@@ -35,6 +35,7 @@ export function Alert({
     <AlertRoot variant={variant}>
       {showIcon && (
         <Icon
+          className='mt-0.5' // To align with the Title leading
           name='alert'
           color={variant ? IconColor[variant] || 'foreground' : 'foreground'}
         />

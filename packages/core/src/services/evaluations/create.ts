@@ -78,6 +78,12 @@ type CreateEvaluationResultConfiguration<R extends EvaluationResultableType> =
         ? EvaluationResultConfigurationText
         : never
 
+export const configurationTables = {
+  [EvaluationResultableType.Boolean]: evaluationConfigurationBoolean,
+  [EvaluationResultableType.Number]: evaluationConfigurationNumerical,
+  [EvaluationResultableType.Text]: evaluationConfigurationText,
+} as const
+
 export async function createEvaluation<
   M extends EvaluationMetadataType,
   R extends EvaluationResultableType,
@@ -127,12 +133,6 @@ export async function createEvaluation<
       new BadRequestError(`Invalid metadata type ${metadataType}`),
     )
   }
-
-  const configurationTables = {
-    [EvaluationResultableType.Boolean]: evaluationConfigurationBoolean,
-    [EvaluationResultableType.Number]: evaluationConfigurationNumerical,
-    [EvaluationResultableType.Text]: evaluationConfigurationText,
-  } as const
 
   if (!configurationTables[resultType]) {
     return Result.error(
