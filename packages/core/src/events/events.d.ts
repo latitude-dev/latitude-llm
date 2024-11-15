@@ -271,7 +271,7 @@ export type DocumentCreatedEvent = LatitudeEventGeneric<
   {
     document: DocumentVersion
     workspaceId: number
-    userEmail?: string
+    userEmail: string
   }
 >
 
