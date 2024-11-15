@@ -1,11 +1,16 @@
+import { DocumentLog } from '@latitude-data/core/browser'
 import { compactObject } from '@latitude-data/core/lib/compactObject'
 import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'
 
+type MaybeBoolean = boolean | undefined
 const EMPTY_ARRAY: [] = []
-export default function useDocumentLogs(
+type LogResult<T extends MaybeBoolean> = T extends true
+  ? DocumentLog
+  : DocumentLogWithMetadataAndError
+export default function useDocumentLogs<T extends MaybeBoolean = false>(
   {
     documentUuid,
     commitUuid,
@@ -13,13 +18,15 @@ export default function useDocumentLogs(
     page,
     pageSize,
     onFetched,
+    excludeErrors = false,
   }: {
     documentUuid?: string
     commitUuid: string
     projectId: number
     page: string | null | undefined
     pageSize: string | null
-    onFetched?: (logs: DocumentLogWithMetadataAndError[]) => void
+    onFetched?: (logs: LogResult<T>[]) => void
+    excludeErrors?: T
   },
   { fallbackData }: SWRConfiguration = {},
 ) {
@@ -35,6 +42,7 @@ export default function useDocumentLogs(
       searchParams: compactObject({
         page: page ? String(page) : undefined,
         pageSize: pageSize ? String(pageSize) : undefined,
+        excludeErrors: excludeErrors ? 'true' : undefined,
       }) as Record<string, string>,
     },
   )
@@ -43,7 +51,7 @@ export default function useDocumentLogs(
     data = EMPTY_ARRAY,
     isLoading,
     mutate,
-  } = useSWR<DocumentLogWithMetadataAndError[]>(
+  } = useSWR<LogResult<T>[]>(
     ['documentLogs', documentUuid, commitUuid, projectId, page, pageSize],
     fetcher,
     {
