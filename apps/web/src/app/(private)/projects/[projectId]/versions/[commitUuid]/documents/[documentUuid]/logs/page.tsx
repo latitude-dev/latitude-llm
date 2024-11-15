@@ -4,13 +4,13 @@ import { computeDocumentLogsWithMetadataQuery } from '@latitude-data/core/servic
 import { fetchDocumentLogWithPosition } from '@latitude-data/core/services/documentLogs/fetchDocumentLogWithPosition'
 import { Button, TableWithHeader } from '@latitude-data/web-ui'
 import { findCommitCached } from '$/app/(private)/_data-access'
-import { DocumentLogBlankSlate } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/logs/_components/DocumentLogs/DocumentLogBlankSlate'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
 import { DocumentLogs } from './_components/DocumentLogs'
+import { DocumentLogBlankSlate } from './_components/DocumentLogs/DocumentLogBlankSlate'
 
 async function fetchDocumentLogPage({
   workspace,
@@ -77,7 +77,6 @@ export default async function DocumentPage({
   })
 
   const selectedLog = rows.find((r) => r.uuid === documentLogUuid)
-
   return (
     <div className='flex flex-grow min-h-0 flex-col w-full p-6 gap-2 min-w-0'>
       {!rows.length && (

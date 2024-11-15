@@ -1,23 +1,13 @@
-import { Workspace } from '@latitude-data/core/browser'
+import { ConnectedEvaluation } from '@latitude-data/core/browser'
 import { ConnectedEvaluationsRepository } from '@latitude-data/core/repositories'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'
 
-export const GET = errorHandler(
-  authHandler(
-    async (
-      _: NextRequest,
-      {
-        params,
-        workspace,
-      }: {
-        params: {
-          documentUuid: string
-        }
-        workspace: Workspace
-      },
-    ) => {
+type IParam = { documentUuid: string }
+export const GET = errorHandler<IParam, ConnectedEvaluation[]>(
+  authHandler<IParam, ConnectedEvaluation[]>(
+    async (_: NextRequest, { params, workspace }) => {
       const { documentUuid } = params
       const scope = new ConnectedEvaluationsRepository(workspace.id)
       const connectedEvaluations = await scope

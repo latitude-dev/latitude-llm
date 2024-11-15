@@ -32,12 +32,8 @@ function countLabel(count: number) {
   return `${count} logs`
 }
 
-type DocumentLogRow = DocumentLogWithMetadataAndError & {
-  realtimeAdded?: boolean
-}
-
 type Props = {
-  documentLogs: DocumentLogRow[]
+  documentLogs: DocumentLogWithMetadataAndError[]
   selectedLog: DocumentLogWithMetadataAndError | undefined
   setSelectedLog: (log: DocumentLogWithMetadataAndError | undefined) => void
 }
@@ -101,6 +97,8 @@ export const DocumentLogsTable = forwardRef<HTMLTableElement, Props>(
             const cellColor = error
               ? 'destructiveMutedForeground'
               : 'foreground'
+            const realtimeAdded =
+              'realtimeAdded' in documentLog ? documentLog.realtimeAdded : false
             return (
               <TableRow
                 key={documentLog.uuid}
@@ -115,7 +113,7 @@ export const DocumentLogsTable = forwardRef<HTMLTableElement, Props>(
                   'cursor-pointer border-b-[0.5px] h-12 max-h-12 border-border',
                   {
                     'bg-secondary': selectedLog?.uuid === documentLog.uuid,
-                    'animate-flash': documentLog.realtimeAdded,
+                    'animate-flash': realtimeAdded,
                   },
                 )}
               >

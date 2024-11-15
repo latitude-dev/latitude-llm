@@ -3,17 +3,9 @@ import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'
 
-export const GET = errorHandler(
-  authHandler(
-    async (
-      _: NextRequest,
-      {
-        workspace,
-      }: {
-        workspace: WorkspaceDto
-      },
-    ) => {
-      return NextResponse.json(workspace, { status: 200 })
-    },
-  ),
+type IParam = {}
+export const GET = errorHandler<IParam, WorkspaceDto>(
+  authHandler<IParam, WorkspaceDto>(async (_: NextRequest, { workspace }) => {
+    return NextResponse.json(workspace, { status: 200 })
+  }),
 )

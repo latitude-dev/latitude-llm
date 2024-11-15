@@ -1,35 +1,20 @@
-import { Workspace } from '@latitude-data/core/browser'
+import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
 import { fetchDocumentLogWithMetadata } from '@latitude-data/core/services/documentLogs/fetchDocumentLogWithMetadata'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'
 
-export const GET = errorHandler(
-  authHandler(
-    async (
-      _: NextRequest,
-      {
-        params,
-        workspace,
-      }: {
-        params: { uuid: string }
-        workspace: Workspace
-      },
-    ) => {
+type IParam = { uuid: string }
+export const GET = errorHandler<IParam, DocumentLogWithMetadataAndError>(
+  authHandler<IParam, DocumentLogWithMetadataAndError>(
+    async (_: NextRequest, { params, workspace }) => {
       const uuid = params.uuid
-      const result = await fetchDocumentLogWithMetadata({
+      const log = await fetchDocumentLogWithMetadata({
         workspaceId: workspace.id,
         documentLogUuid: uuid,
-      })
+      }).then((r) => r.unwrap())
 
-      if (result.error) {
-        return NextResponse.json(
-          { message: `Document Log not found with uuid: ${uuid}` },
-          { status: 404 },
-        )
-      }
-
-      return NextResponse.json(result.value, { status: 200 })
+      return NextResponse.json(log, { status: 200 })
     },
   ),
 )

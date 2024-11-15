@@ -1,4 +1,4 @@
-import { User, Workspace } from '@latitude-data/core/browser'
+import { User, WorkspaceDto } from '@latitude-data/core/browser'
 import { createWorkspace } from '@latitude-data/core/factories'
 import { NextRequest } from 'next/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -16,7 +16,7 @@ vi.mock('$/services/auth/getSession', () => ({
 
 describe('GET handler for users', () => {
   let mockRequest: NextRequest
-  let mockWorkspace: Workspace
+  let mockWorkspace: WorkspaceDto
   let mockUser: User
 
   beforeEach(async () => {
@@ -36,6 +36,7 @@ describe('GET handler for users', () => {
 
       expect(response.status).toBe(401)
       expect(await response.json()).toEqual({
+        details: {},
         message: 'Unauthorized',
       })
     })
@@ -48,8 +49,10 @@ describe('GET handler for users', () => {
 
     it('should return all users when authenticated', async () => {
       const response = await GET(mockRequest, {
+        params: {},
         workspace: mockWorkspace,
-      } as any)
+        user: mockUser,
+      })
 
       expect(response.status).toBe(200)
       const data = await response.json()

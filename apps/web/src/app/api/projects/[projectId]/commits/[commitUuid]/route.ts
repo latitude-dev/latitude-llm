@@ -1,6 +1,7 @@
 'use server'
 
-import { Workspace } from '@latitude-data/core/browser'
+import { DocumentVersion } from '@latitude-data/core/browser'
+import { BadRequestError } from '@latitude-data/core/lib/errors'
 import {
   CommitsRepository,
   DocumentVersionsRepository,
@@ -9,26 +10,15 @@ import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'
 
-export const GET = errorHandler(
-  authHandler(
-    async (
-      _: NextRequest,
-      {
-        params,
-        workspace,
-      }: {
-        params: { projectId: string; commitUuid: string }
-        workspace: Workspace
-      },
-    ) => {
+type IParam = { projectId: string; commitUuid: string }
+export const GET = errorHandler<IParam, DocumentVersion[]>(
+  authHandler<IParam, DocumentVersion[]>(
+    async (_: NextRequest, { params, workspace }) => {
       const projectId = params.projectId
       const commitUuid = params.commitUuid
 
       if (!projectId || !commitUuid) {
-        return NextResponse.json(
-          { message: 'Project ID and Commit UUID are required' },
-          { status: 400 },
-        )
+        throw new BadRequestError('Project ID and Commit UUID are required')
       }
 
       const commit = await new CommitsRepository(workspace.id)
