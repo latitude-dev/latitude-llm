@@ -29,10 +29,10 @@ const ActiveEvaluationsTableRow = ({
       onClick={onSelect}
     >
       <TableCell>
-        <Text.H4 noWrap>{evaluation.name}</Text.H4>
+        <Text.H5 noWrap>{evaluation.name}</Text.H5>
       </TableCell>
       <TableCell>
-        <Text.H4>{evaluation.description}</Text.H4>
+        <Text.H5>{evaluation.description}</Text.H5>
       </TableCell>
       <TableCell onClick={(e) => e.stopPropagation()}>
         <Link href={ROUTES.evaluations.destroy(evaluation.uuid)}>

@@ -58,15 +58,15 @@ function UsersTable({ users }: { users: User[] }) {
         {users.map((user) => (
           <TableRow key={user.id} verticalPadding hoverable={false}>
             <TableCell>
-              <Text.H4>{user.name}</Text.H4>
+              <Text.H5>{user.name}</Text.H5>
             </TableCell>
             <TableCell>
-              <Text.H4 color='foregroundMuted'>{user.email}</Text.H4>
+              <Text.H5 color='foregroundMuted'>{user.email}</Text.H5>
             </TableCell>
             <TableCell>
-              <Text.H4 color='foregroundMuted'>
+              <Text.H5 color='foregroundMuted'>
                 {relativeTime(user.confirmedAt ? user.confirmedAt : null)}
-              </Text.H4>
+              </Text.H5>
             </TableCell>
             <TableCell>
               <Link href={ROUTES.settings.users.destroy(user.id).root}>

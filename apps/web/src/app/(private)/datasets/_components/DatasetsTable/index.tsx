@@ -65,21 +65,21 @@ export function DatasetsTable({
           {datasets.map((dataset) => (
             <TableRow key={dataset.id} verticalPadding hoverable={false}>
               <TableCell>
-                <Text.H4>{dataset.name}</Text.H4>
+                <Text.H5>{dataset.name}</Text.H5>
               </TableCell>
               <TableCell>
-                <Text.H4>{dataset.fileMetadata.rowCount}</Text.H4>
+                <Text.H5>{dataset.fileMetadata.rowCount}</Text.H5>
               </TableCell>
               <TableCell>
-                <Text.H4>{dataset.fileMetadata.headers.length}</Text.H4>
+                <Text.H5>{dataset.fileMetadata.headers.length}</Text.H5>
               </TableCell>
               <TableCell>
-                <Text.H4>{dataset.author?.name}</Text.H4>
+                <Text.H5>{dataset.author?.name}</Text.H5>
               </TableCell>
               <TableCell>
-                <Text.H4 color='foregroundMuted'>
+                <Text.H5 color='foregroundMuted'>
                   {dateFormatter.formatDate(dataset.createdAt)}
-                </Text.H4>
+                </Text.H5>
               </TableCell>
               <TableCell align='center'>
                 <div className='flex flex-row gap-4'>

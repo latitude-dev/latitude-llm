@@ -31,9 +31,9 @@ export const ResultCellContent = ({
 }) => {
   if (evaluation.resultType === EvaluationResultableType.Boolean) {
     return (
-      <Text.H4 color={(value as boolean) ? 'success' : 'destructive'}>
+      <Text.H5 color={(value as boolean) ? 'success' : 'destructive'}>
         {String(value)}
-      </Text.H4>
+      </Text.H5>
     )
   }
 
@@ -50,7 +50,7 @@ export const ResultCellContent = ({
     )
   }
 
-  return <Text.H4 noWrap>{String(value)}</Text.H4>
+  return <Text.H5 noWrap>{String(value)}</Text.H5>
 }
 
 type EvaluationResultRow = EvaluationResultByDocument & {

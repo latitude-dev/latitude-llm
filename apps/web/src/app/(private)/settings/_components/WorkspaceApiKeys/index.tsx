@@ -40,7 +40,7 @@ export default function WorkspaceApiKeys() {
                 {apiKeys.map((apiKey) => (
                   <TableRow key={apiKey.id} verticalPadding hoverable={false}>
                     <TableCell>
-                      <Text.H4>{apiKey.name || 'Latitude API Key'}</Text.H4>
+                      <Text.H5>{apiKey.name || 'Latitude API Key'}</Text.H5>
                     </TableCell>
                     <TableCell>
                       <Tooltip
@@ -56,9 +56,9 @@ export default function WorkspaceApiKeys() {
                             }}
                           >
                             <div className='flex flex-row items-center gap-2'>
-                              <Text.H4 color='foregroundMuted'>
+                              <Text.H5 color='foregroundMuted'>
                                 {apiKey.token}
-                              </Text.H4>
+                              </Text.H5>
                               <Icon name='clipboard' color='foregroundMuted' />
                             </div>
                           </Button>

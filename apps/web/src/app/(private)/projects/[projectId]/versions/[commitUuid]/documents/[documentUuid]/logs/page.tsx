@@ -94,11 +94,11 @@ export default async function DocumentPage({
                 ROUTES.projects
                   .detail({ id: projectId })
                   .commits.detail({ uuid: params.commitUuid })
-                  .documents.detail({ uuid: params.documentUuid }).logs.root
+                  .documents.detail({ uuid: params.documentUuid }).logs.upload
               }
             >
               <Button fancy variant='outline'>
-                Go to logs
+                Upload logs
               </Button>
             </Link>
           }

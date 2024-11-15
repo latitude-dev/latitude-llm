@@ -58,10 +58,10 @@ export default function EvaluationsTable({
             onClick={() => handleSelect(evaluation)}
           >
             <TableCell>
-              <Text.H4 noWrap>{evaluation.name}</Text.H4>
+              <Text.H5 noWrap>{evaluation.name}</Text.H5>
             </TableCell>
             <TableCell>
-              <Text.H4 ellipsis>{evaluation.description}</Text.H4>
+              <Text.H5 ellipsis>{evaluation.description}</Text.H5>
             </TableCell>
             <TableCell>
               <div className='flex w-full items-center justify-center'>

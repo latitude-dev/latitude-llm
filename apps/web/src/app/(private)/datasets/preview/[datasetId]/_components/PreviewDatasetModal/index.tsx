@@ -57,11 +57,11 @@ function PreviewModal({ dataset }: { dataset: Dataset }) {
           <TableHeader>
             <TableRow verticalPadding hoverable={false}>
               <TableHead>
-                <Text.H4>#</Text.H4>
+                <Text.H5>#</Text.H5>
               </TableHead>
               {data.headers.map((header, i) => (
                 <TableHead key={`${header}-${i}`}>
-                  <Text.H4>{header}</Text.H4>
+                  <Text.H5>{header}</Text.H5>
                 </TableHead>
               ))}
             </TableRow>

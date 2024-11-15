@@ -125,25 +125,25 @@ const ProviderApiKeysTable = ({
         {providerApiKeys.map((apiKey) => (
           <TableRow key={apiKey.id} hoverable={false} verticalPadding>
             <TableCell>
-              <Text.H4>
+              <Text.H5>
                 {apiKey.name}
                 {apiKey.id === workspace.defaultProviderId && (
                   <DefaultProviderBadge provider={apiKey} className='ml-2' />
                 )}
-              </Text.H4>
+              </Text.H5>
             </TableCell>
             <TableCell>
-              <Text.H4 color='foregroundMuted'>
+              <Text.H5 color='foregroundMuted'>
                 {findProvider(apiKey.provider)}
-              </Text.H4>
+              </Text.H5>
             </TableCell>
             <TableCell>
-              <Text.H4 color='foregroundMuted'>{apiKey.token}</Text.H4>
+              <Text.H5 color='foregroundMuted'>{apiKey.token}</Text.H5>
             </TableCell>
             <TableCell>
-              <Text.H4 color='foregroundMuted'>
+              <Text.H5 color='foregroundMuted'>
                 {relativeTime(apiKey.lastUsedAt ? apiKey.lastUsedAt : null)}
-              </Text.H4>
+              </Text.H5>
             </TableCell>
             <TableCell>
               <DropdownMenu

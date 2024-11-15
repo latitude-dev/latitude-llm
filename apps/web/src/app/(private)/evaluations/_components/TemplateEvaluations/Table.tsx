@@ -32,15 +32,15 @@ export const TemplateEvaluationsTableRow = ({
       onMouseLeave={() => setIsHovered(false)}
     >
       <TableCell>
-        <Text.H4 noWrap>{template.name}</Text.H4>
+        <Text.H5 noWrap>{template.name}</Text.H5>
       </TableCell>
       <TableCell>
-        <Text.H4 noWrap>{template.category}</Text.H4>
+        <Text.H5 noWrap>{template.category}</Text.H5>
       </TableCell>
       <TableCell>
         <div className='flex flex-row gap-1 justify-between items-center'>
           <div className='flex-auto'>
-            <Text.H4>{template.description}</Text.H4>
+            <Text.H5>{template.description}</Text.H5>
           </div>
         </div>
       </TableCell>

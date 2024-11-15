@@ -66,7 +66,7 @@ function EvaluationBooleanValue({
   if (isLoading || data == null) {
     return (
       <div className='flex flex-col items-center gap-1'>
-        <Skeleton height='h4' className='w-14 rounded-sm' />
+        <Skeleton height='h5' className='w-14 rounded-sm' />
         <Skeleton className='h-0.5 w-full' />
       </div>
     )
@@ -74,7 +74,7 @@ function EvaluationBooleanValue({
 
   return (
     <div className='flex flex-col items-center gap-1'>
-      <Text.H4 noWrap>{data.percentage}%</Text.H4>
+      <Text.H5 noWrap>{data.percentage}%</Text.H5>
       <div className='w-full min-h-0.5 rounded-sm overflow-hidden relative bg-destructive'>
         <div
           className='absolute top-0 left-0 h-full w-full bg-success border-r-[1px] border-white'
@@ -119,10 +119,10 @@ function EvaluationModalValue({
 
   return (
     <div className='flex flex-wrap items-center gap-1'>
-      <Text.H4 noWrap>{data.mostCommon}</Text.H4>
-      <Text.H4 noWrap color='foregroundMuted'>
+      <Text.H5 noWrap>{data.mostCommon}</Text.H5>
+      <Text.H5 noWrap color='foregroundMuted'>
         ({data.percentage}%)
-      </Text.H4>
+      </Text.H5>
     </div>
   )
 }

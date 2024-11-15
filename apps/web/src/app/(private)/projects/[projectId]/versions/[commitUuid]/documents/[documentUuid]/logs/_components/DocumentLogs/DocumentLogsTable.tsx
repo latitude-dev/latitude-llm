@@ -120,9 +120,9 @@ export const DocumentLogsTable = forwardRef<HTMLTableElement, Props>(
                 )}
               >
                 <TableCell>
-                  <Text.H4 noWrap color={cellColor}>
+                  <Text.H5 noWrap color={cellColor}>
                     {relativeTime(documentLog.createdAt)}
-                  </Text.H4>
+                  </Text.H5>
                 </TableCell>
                 <TableCell>
                   <div className='flex flex-row gap-2 items-center min-w-0 max-w-xs'>
@@ -142,33 +142,33 @@ export const DocumentLogsTable = forwardRef<HTMLTableElement, Props>(
                   </div>
                 </TableCell>
                 <TableCell>
-                  <Text.H4 color={cellColor}>
+                  <Text.H5 color={cellColor}>
                     {capitalize(documentLog.source || '')}
-                  </Text.H4>
+                  </Text.H5>
                 </TableCell>
                 <TableCell>
-                  <Text.H4 color={cellColor}>
+                  <Text.H5 color={cellColor}>
                     {documentLog.customIdentifier}
-                  </Text.H4>
+                  </Text.H5>
                 </TableCell>
                 <TableCell>
-                  <Text.H4 noWrap color={cellColor}>
+                  <Text.H5 noWrap color={cellColor}>
                     {formatDuration(documentLog.duration)}
-                  </Text.H4>
+                  </Text.H5>
                 </TableCell>
                 <TableCell>
-                  <Text.H4 noWrap color={cellColor}>
+                  <Text.H5 noWrap color={cellColor}>
                     {typeof documentLog.tokens === 'number'
                       ? documentLog.tokens
                       : '-'}
-                  </Text.H4>
+                  </Text.H5>
                 </TableCell>
                 <TableCell>
-                  <Text.H4 noWrap color={cellColor}>
+                  <Text.H5 noWrap color={cellColor}>
                     {typeof documentLog.costInMillicents === 'number'
                       ? formatCostInMillicents(documentLog.costInMillicents)
                       : '-'}
-                  </Text.H4>
+                  </Text.H5>
                 </TableCell>
               </TableRow>
             )

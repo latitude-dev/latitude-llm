@@ -48,7 +48,7 @@ export default function ConnectedEvaluationsTable({
             }
           >
             <TableCell>
-              <Text.H4 noWrap>{evaluation.name}</Text.H4>
+              <Text.H5 noWrap>{evaluation.name}</Text.H5>
               <div onClick={(e) => e.stopPropagation()}>
                 <ClickToCopyUuid uuid={evaluation.uuid} />
               </div>

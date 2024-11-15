@@ -48,22 +48,22 @@ export function ProjectsTable({
             }
           >
             <TableCell>
-              <Text.H4>{project.name}</Text.H4>
+              <Text.H5>{project.name}</Text.H5>
             </TableCell>
             <TableCell>
-              <Text.H4 color='foregroundMuted'>
+              <Text.H5 color='foregroundMuted'>
                 {project.documentCount || '-'}
-              </Text.H4>
+              </Text.H5>
             </TableCell>
             <TableCell>
-              <Text.H4 color='foregroundMuted'>
+              <Text.H5 color='foregroundMuted'>
                 {relativeTime(project.lastCreatedAtDocument)}
-              </Text.H4>
+              </Text.H5>
             </TableCell>
             <TableCell>
-              <Text.H4 color='foregroundMuted'>
+              <Text.H5 color='foregroundMuted'>
                 {relativeTime(project.createdAt)}
-              </Text.H4>
+              </Text.H5>
             </TableCell>
             <TableCell>
               <Link
