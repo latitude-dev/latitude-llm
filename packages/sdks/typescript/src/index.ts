@@ -134,6 +134,7 @@ class Latitude {
     if (!projectId) {
       throw new Error('Project ID is required')
     }
+    versionUuid = versionUuid ?? this.options.versionUuid
 
     const response = await makeRequest({
       method: 'GET',
@@ -164,6 +165,7 @@ class Latitude {
     if (!projectId) {
       throw new Error('Project ID is required')
     }
+    versionUuid = versionUuid ?? this.options.versionUuid
 
     const response = await makeRequest({
       method: 'POST',
