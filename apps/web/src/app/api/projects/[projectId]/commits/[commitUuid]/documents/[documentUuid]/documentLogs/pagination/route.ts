@@ -1,6 +1,7 @@
 import { Workspace } from '@latitude-data/core/browser'
 import { buildPagination } from '@latitude-data/core/lib/pagination/buildPagination'
 import { CommitsRepository } from '@latitude-data/core/repositories'
+import { computeDocumentLogsCount } from '@latitude-data/core/services/documentLogs/computeDocumentLogs'
 import { computeDocumentLogsWithMetadataCount } from '@latitude-data/core/services/documentLogs/computeDocumentLogsWithMetadata'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
@@ -37,13 +38,17 @@ export const GET = errorHandler(
     ) => {
       const searchParams = req.nextUrl.searchParams
       const commitsScope = new CommitsRepository(workspace.id)
+      const excludeErrors = searchParams.get('excludeErrors') === 'true'
       const commit = await commitsScope
         .getCommitByUuid({
           uuid: params.commitUuid,
           projectId: params.projectId,
         })
         .then((r) => r.unwrap())
-      const count = await computeDocumentLogsWithMetadataCount({
+      const queryFn = excludeErrors
+        ? computeDocumentLogsCount
+        : computeDocumentLogsWithMetadataCount
+      const count = await queryFn({
         workspaceId: workspace.id,
         documentUuid: params.documentUuid,
         draft: commit,

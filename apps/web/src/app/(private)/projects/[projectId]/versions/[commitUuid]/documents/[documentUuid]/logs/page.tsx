@@ -1,4 +1,4 @@
-import { Workspace } from '@latitude-data/core/browser'
+import { Commit, Workspace } from '@latitude-data/core/browser'
 import { QueryParams } from '@latitude-data/core/lib/pagination/buildPaginatedUrl'
 import { computeDocumentLogsWithMetadataQuery } from '@latitude-data/core/services/documentLogs/computeDocumentLogsWithMetadata'
 import { fetchDocumentLogWithPosition } from '@latitude-data/core/services/documentLogs/fetchDocumentLogWithPosition'
@@ -13,8 +13,10 @@ import { DocumentLogs } from './_components/DocumentLogs'
 
 async function fetchDocumentLogPage({
   workspace,
+  commit,
   documentLogUuid,
 }: {
+  commit: Commit
   workspace: Workspace
   documentLogUuid: string | undefined
 }) {
@@ -22,6 +24,7 @@ async function fetchDocumentLogPage({
 
   const result = await fetchDocumentLogWithPosition({
     workspace,
+    commit,
     documentLogUuid,
   })
 
@@ -46,6 +49,7 @@ export default async function DocumentPage({
   const page = searchParams.page?.toString?.()
   const currentLogPage = await fetchDocumentLogPage({
     workspace,
+    commit,
     documentLogUuid,
   })
 

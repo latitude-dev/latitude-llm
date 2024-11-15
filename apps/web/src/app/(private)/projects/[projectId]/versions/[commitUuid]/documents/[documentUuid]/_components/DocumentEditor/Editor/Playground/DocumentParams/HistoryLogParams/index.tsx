@@ -1,5 +1,5 @@
 import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
-import { Badge, cn, Icon, Skeleton, Text, Tooltip } from '@latitude-data/web-ui'
+import { Badge, cn, Icon, Skeleton, Text } from '@latitude-data/web-ui'
 import {
   PlaygroundInput,
   PlaygroundInputs,
@@ -35,7 +35,6 @@ function usePaginatedDocumentLogUrl({
     url,
     shortCode,
     createdAt,
-    hasError: !!selectedLog.error.message,
   }
 }
 
@@ -76,19 +75,12 @@ export function HistoryLogParams({
                   <Text.H5 ellipsis noWrap>
                     {urlData.createdAt}
                   </Text.H5>
-                  {urlData.hasError ? (
-                    <Tooltip
-                      variant='destructive'
-                      trigger={
-                        <Badge variant='destructive'>{urlData.shortCode}</Badge>
-                      }
-                    >
-                      This log has an error
-                    </Tooltip>
-                  ) : (
-                    <Badge variant='accent'>{urlData.shortCode}</Badge>
-                  )}
-                  <Icon name='externalLink' color='foregroundMuted' />
+                  <Badge variant='accent'>{urlData.shortCode}</Badge>
+                  <Icon
+                    name='externalLink'
+                    color='foregroundMuted'
+                    className='flex-none'
+                  />
                 </Link>
               ) : null}
             </div>

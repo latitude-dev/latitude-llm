@@ -6,13 +6,13 @@ import { calculateOffset } from '../../lib/pagination/calculateOffset'
 import { DocumentLogsWithMetadataAndErrorsRepository } from '../../repositories/documentLogsWithMetadataAndErrorsRepository'
 import { commits, documentLogs, projects, workspaces } from '../../schema'
 
-function getCommitFilter(draft?: Commit) {
+export function getCommitFilter(draft?: Commit) {
   return draft
     ? or(isNotNull(commits.mergedAt), eq(commits.id, draft.id))
     : isNotNull(commits.mergedAt)
 }
 
-function getCommonQueryConditions({
+export function getCommonQueryConditions({
   scope,
   documentUuid,
   draft,

@@ -37,6 +37,11 @@ export const _API_ROUTES = {
                 documentLogs: {
                   root: `${documentRoot}/documentLogs`,
                   pagination: `${documentRoot}/documentLogs/pagination`,
+                  detail: (documentLogUuid: string) => {
+                    return {
+                      position: `${documentRoot}/documentLogs/${documentLogUuid}/position`,
+                    }
+                  },
                 },
                 evaluations: {
                   root: `${documentRoot}/evaluations`,
@@ -86,7 +91,6 @@ export const _API_ROUTES = {
         const root = `/api/documentLogs/uuids/${uuid}`
         return {
           root,
-          withPosition: `${root}/with-position`,
         }
       },
     },

@@ -11,12 +11,14 @@ export default function useDocumentLogsPagination(
     projectId,
     page,
     pageSize,
+    excludeErrors = false,
   }: {
     documentUuid: string
     commitUuid: string
     projectId: number
     page: string | null
     pageSize: string | null
+    excludeErrors?: boolean
   },
   opts?: SWRConfiguration,
 ) {
@@ -29,6 +31,7 @@ export default function useDocumentLogsPagination(
       searchParams: compactObject({
         page: page ? String(page) : undefined,
         pageSize: pageSize ? String(pageSize) : undefined,
+        excludeErrors: excludeErrors ? 'true' : undefined,
       }) as Record<string, string>,
       fallback: null,
     },

@@ -58,6 +58,7 @@ export function useLogHistoryParams({
       documentUuid: document.documentUuid,
       page: '1', // Not used really. This is only for the counter.
       pageSize: ONLY_ONE_PAGE,
+      excludeErrors: true,
     })
 
   const [position, setPosition] = useState<LogWithPosition | undefined>(
@@ -71,8 +72,12 @@ export function useLogHistoryParams({
   )
   const { isLoading: isLoadingPosition } = useDocumentLogWithPaginationPosition(
     {
+      projectId: project.id,
+      commitUuid: commit.uuid,
+      document,
       documentLogUuid: selectedLogUuid,
       onFetched: onFetchCurrentLog,
+      excludeErrors: true,
     },
   )
 
@@ -82,6 +87,7 @@ export function useLogHistoryParams({
     projectId: project.id,
     page: position === undefined ? undefined : String(position.position),
     pageSize: ONLY_ONE_PAGE,
+    excludeErrors: true,
     onFetched: (logs) => {
       const log = logs[0]
       if (!log) return
