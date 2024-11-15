@@ -4,7 +4,7 @@ export const font = {
     h7: 'text-[10px] leading-4', // 10px/16px
     h6: 'text-xs leading-4', // 12px/16px
     h5: 'text-sm leading-5', // 14px/20px
-    h4: 'text-normal leading-6', // 16px/24px
+    h4: 'text-base leading-6', // 16px/24px
     h3: 'text-xl leading-8', // 20px/32px
     h2: 'text-h2 leading-10', // 26px/40px
     h1: 'text-4xl leading-h1 ', // 36px/48px

@@ -21,7 +21,7 @@ export default function MagicLinkMail({ user, magicLinkToken }: Props) {
       <Link
         href={createMagicLink(magicLinkToken)}
         target='_blank'
-        className='text-blue-500 font-medium text-normal mb-4'
+        className='text-blue-500 font-medium text-base mb-4'
       >
         Click here to log in
       </Link>
