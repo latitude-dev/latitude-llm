@@ -5,9 +5,13 @@ description: Learn how to use PromptL with OpenAI
 
 ## Overview
 
-By default, PromptL will resolve prompts in the OpenAI format. This means you can use the output from PromptL directly with OpenAI's API.
+PromptL seamlessly integrates with OpenAI's API. By default, PromptL formats prompts in the structure required by OpenAI, so you can use the output directly without additional processing.
 
-## Example
+---
+
+## Basic Example
+
+Here’s how to generate a response from OpenAI using PromptL:
 
 ```typescript
 import { render } from '@latitude-data/promptl'
@@ -35,3 +39,38 @@ const response = await client.chat.completions.create({
 
 console.log(response.choices[0].message.content)
 ```
+
+---
+
+## Key Features
+
+1. **Default Adapter**: PromptL automatically uses the OpenAI adapter for correct formatting.
+2. **Role-Based Messages**: OpenAI expects a `role` field (`system`, `user`, `assistant`) in messages, which PromptL handles for you.
+3. **Configuration Pass-Through**: Configuration options (e.g., `temperature`, `model`) are passed directly to OpenAI’s API.
+
+---
+
+## Error Handling
+
+When working with OpenAI, ensure you handle potential API errors gracefully:
+
+```typescript
+try {
+  const response = await client.chat.completions.create({
+    ...config,
+    messages,
+  })
+  console.log(response.choices[0].message.content)
+} catch (error) {
+  console.error('Error with OpenAI API:', error)
+}
+```
+
+---
+
+## Next Steps
+
+- [Learn More About OpenAI’s API](https://platform.openai.com/docs/api-reference/chat)
+- Explore advanced PromptL features:
+  - [Chains and Steps](syntax/chains)
+  - [Prompt References](syntax/prompt-references)

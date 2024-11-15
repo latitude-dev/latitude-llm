@@ -1,13 +1,21 @@
 ---
 title: Variables
-description: Learn how to define, interpret and interpolate variables in PromptL
+description: Learn how to define, interpret, and interpolate variables in PromptL
 ---
 
-PromptL provides a simple way to define variables in your prompts. Variables can be used to store and reuse values across your prompt, making it easier to manage and maintain your prompts.
+## Overview
 
-Variables can be defined with logic expressions by wrapping it in double curly braces (`{{ }}`).
+Variables in PromptL allow you to store and reuse dynamic values across your prompt. They make your prompts more maintainable and adaptable by eliminating repetitive text and enabling dynamic content generation.
 
-```
+Variables are defined using double curly braces (`{{ }}`) and can be used directly in text or as part of logic expressions.
+
+---
+
+## Defining Variables
+
+You can define a variable by assigning a value inside `{{ }}`:
+
+```tsx
 {{ name = "Alice" }}
 
 <user>
@@ -15,33 +23,117 @@ Variables can be defined with logic expressions by wrapping it in double curly b
 </user>
 ```
 
-In this example, we define a variable `name` with the value `"Alice"`. We then use the variable in a `user` message to greet the user. Variables will be interpolated in the prompt as plain text.
+In this example:
+- The variable `name` is assigned the value `"Alice"`.
+- The variable is interpolated into the text when the prompt is processed.
+
+---
+
+## Interpolating Variables
+
+Variables can be used anywhere in your prompt. When interpolated, their value replaces the placeholder in the text.
+
+```tsx
+{{ city = "Barcelona" }}
+
+Welcome to {{ city }}! Let me guide you through the best attractions here.
+```
+
+---
 
 ## Input Parameters
 
-Variables can also be used without being defined in the prompt. In this case, the value for the variable can be provided as a dynamic input parameter when executing the prompt.
+Variables don’t have to be defined in the prompt. Instead, their values can be provided as dynamic input parameters when the prompt is executed.
 
-```
+```tsx
 <user>
   Hi! My name is {{ name }}.
 </user>
 ```
 
+In this example, the `name` variable can be defined in the code when running this prompt, allowing you to dynamically customize the output without modifying the prompt.
+
+---
+
 ## Default Values
 
-You can also define default values for variables. If a variable is not defined in the prompt or provided as an input parameter, the default value will be used.
+You can define default values for variables using the `||` operator. If the variable is not defined in the prompt or provided as an input parameter, the default value will be used.
 
+```tsx
+Hi! My name is {{ name || "Alice" }}.
 ```
-Hi! My name is {{ name || "Alice" }}
-```
+
+Here, the `name` variable will default to `"Alice"` if no value is provided.
+
+<Tip>
+ **Tip**: Use default values to ensure your prompts remain functional even if some parameters are missing.
+</Tip>
+
+---
 
 ## Expressions
 
-Variables can be used in expressions to perform calculations or transformations in your prompt, which you can use to generate dynamic content.
+PromptL supports logic expressions, enabling you to perform calculations or transformations directly in the prompt.
 
-```
+### Simple Expressions
+```tsx
 {{ age = 30 }}
 {{ ageInMonths = age * 12 }}
 
 I am {{ age }} years old, which is {{ ageInMonths }} months.
 ```
+
+### Conditional Expressions
+You can use ternary-like conditions to modify variable values dynamically:
+```tsx
+{{ isAdmin = role == "admin" ? "Yes" : "No" }}
+
+Is this user an admin? {{ isAdmin }}.
+```
+
+---
+
+## Advanced Examples
+
+### Combining Input Parameters, Defaults, and Expressions
+```tsx
+{{ city = input.city || "Unknown" }}
+{{ weather = input.weather || "clear" }}
+
+The weather in {{ city }} is currently {{ weather }}.
+```
+
+### Nested or Structured Variables
+Variables can represent objects or arrays, making it easy to handle structured data:
+
+```tsx
+{{ user = { name: "Alice", age: 30, hobbies: ["reading", "cycling"] } }}
+
+Hello, {{ user.name }}! You are {{ user.age }} years old and enjoy {{ user.hobbies[0] }}.
+```
+
+---
+
+## Best Practices
+
+- **Use Clear Variable Names**: Choose descriptive names to make your prompts easy to understand.
+  - Good: `user.name`, `weather.currentTemp`
+  - Bad: `x`, `temp`
+- **Avoid Redefinition**: Define variables once and reuse them instead of redefining them unnecessarily.
+- **Default Values for Robustness**: Use default values to handle missing inputs gracefully.
+- **Combine with Logic**: Use expressions to preprocess data directly in the prompt, reducing complexity elsewhere.
+
+---
+
+## Debugging Variables
+
+If a variable isn’t working as expected:
+- **Check Scope**: Ensure the variable is defined or provided as an input parameter.
+- **Validate Expressions**: Double-check calculations or transformations.
+- **Use Defaults**: Add default values to catch undefined variables.
+
+---
+
+## Summary
+
+Variables in PromptL enable dynamic and reusable prompts. By combining definitions, input parameters, defaults, and expressions, you can create highly flexible and maintainable conversations tailored to any use case.

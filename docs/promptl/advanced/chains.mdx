@@ -5,155 +5,206 @@ description: Chains and Steps are used to create multi-step prompts that can int
 
 ## Overview
 
-LLMs have been observed to perform complex operations better when broken down into smaller steps.
+Chains in PromptL allow you to break complex workflows into smaller, manageable steps. Each step generates a response, which can then be used in subsequent steps. This approach improves the model's ability to perform complex tasks and provides greater control over dynamic conversations.
 
-Chains allow you to create multi-step prompts that can interact with the AI model in stages. You can pass the result of one step to the next one. This enables more complex workflows and dynamic conversations.
+With Chains, you can:
+- Process tasks incrementally to guide the model step-by-step.
+- Store and reuse intermediate results dynamically.
+- Customize step-specific configurations for more efficient execution.
+- Isolate steps to minimize context overhead or confusion.
+
+---
 
 ## Syntax
 
-Use the `<step>` tag in your prompt to add a step. The engine will pause at that step, wait for a generated response, and add it to the conversation as an assistant message, before continuing with the prompt.
+Define steps in your prompt using the `<step>` tag. The engine pauses after each step, waits for the model's response, and adds it as an assistant message before continuing.
 
-```
+### Basic Syntax
+```xml
 <step>
-  Analyze the following sentence and identify the subject, verb, and object:
+  Analyze the following text and identify the main idea:
 
   <user>
-    "The curious cat chased the playful mouse."
+    "The quick brown fox jumps over the lazy dog."
   </user>
 </step>
 
 <step>
-  Now, using this information, create a new sentence by
-  replacing each part of speech with a different word, but keep the same structure.
-</step>
-
-<step>
-  Finally, translate the new sentence you created into French and return just the sentence.
+  Now, summarize the identified main idea in one sentence.
 </step>
 ```
 
-## Configuration
-
-All steps will use the configuration defined at the beginning of the prompt by default. However, you can override the configuration for each step by adding attributes to the `<step>` tag:
-
-```
----
-model: gpt-4o
----
-
-<step model="gpt-4o-mini" temperature={{0.1}}>
-  /* This step will use a smaller model and lower temperature */
-
-  Analyze the following sentence and identify the subject, verb, and object:
+### Step with Custom Configuration
+Override the default configuration by adding attributes to the `<step>` tag:
+```tsx
+<step model="gpt-3.5-turbo" temperature={{0.5}}>
+  Rewrite the following paragraph in simpler language:
 
   <user>
-    "The curious cat chased the playful mouse."
+    "Quantum mechanics explains the behavior of particles on a microscopic scale."
   </user>
 </step>
 ```
 
-## Store step responses
+---
 
-You can store the text of the response to a variable by adding an `as` attribute, followed by the variable name. This allows you to reuse the response later in your prompt or use it in conditionals or other logic.
+## Advanced Features
 
-```
-<step as="result">
-  Is this statement correct?
-  {{ statement }}
+### Storing Step Responses
+You can store the text response of a step in a variable using the `as` attribute. This allows you to reuse the response in later steps or logic blocks.
 
+```xml
+<step as="analysis">
+  Is this statement correct? {{ statement }}
   Respond only with "correct" or "incorrect".
 </step>
 
-{{ if result == "correct" }}
-  Great, now respond with an explanation about the statement.
+{{ if analysis == "correct" }}
+  Provide additional details about why the statement is correct.
 {{ else }}
-  Now, provide an explanation of why the statement is incorrect, and give the correct answer.
+  Explain why the statement is incorrect and provide the correct answer.
 {{ endif }}
 ```
 
-### Store the whole message
+### Storing Raw Messages
+Some providers will return additional metadata along with the response. To store the entire message object, instead of just the text response (e.g., role, content, and additional metadata), use the `raw` attribute:
 
-The `⁠as` attribute stores the text of the generated response. However, the response often contains additional relevant information that can be useful in the prompt.
-To store the entire message object, use the ⁠raw attribute. This attribute stores the whole message object in a variable, which can then be accessed later.
-
-```
-<step raw="generatedMessage">
-  ...
+```xml
+<step raw="detailedMessage">
+  Summarize the following text:
+  {{ text }}
 </step>
 ```
 
-The ⁠generatedMessage variable will contain attributes like `⁠role` and `⁠content`, as well as any additional data provided by your LLM provider. The ⁠`content` attribute is always an array of objects, each with a ⁠`type` such as `text`, `image`, or `tool-call`.
+The raw response will return an object with the full message details, which contains the `role`, `content`, and other metadata provided by the model.
+The `content` attribute will always be defined as an array of content objects, which can include text, images, or other types of content.
 
-If you want to debug the contents of the message, you can interpolate it into the prompt and run the chain to see what it contains.
+---
 
-## Isolating steps
+### Isolating Steps
+Use the `isolated` attribute to prevent a step from inheriting context from previous steps. This can reduce unnecessary costs or confusion for the model.
 
-All steps will automatically receive all the messages from previous steps as context. In some cases, some steps may not need context from previous steps, and including them would be and unnecessary cost and even confuse the model.
-
-If you want to isolate a step from the general context, you can add the `isolated` attribute to the `<step>` tag. Isolated steps will not receive any context from previous steps, and future steps will not receive the context from isolated steps either.
-
-```
+```xml
 <step isolated as="summary1">
-  Generate a summary of the following text:
-  {{ text1 }} /* Long text */
+  Summarize the following text:
+  {{ text1 }}
 </step>
 
 <step isolated as="summary2">
-  Generate a summary of the following text:
-  {{ text2 }} /* Long text */
+  Summarize the following text:
+  {{ text2 }}
 </step>
 
 <step>
-  Compare these two summaries and provide a conclusion.
+  Compare these summaries and provide a conclusion:
   {{ summary1 }}
   {{ summary2 }}
 </step>
 ```
 
-# Implementation
+In this example, the final step does not need to conside the full texts used in previous steps, so isolating the first two steps can help reduce context overhead, resulting in cheaper and more efficient processing.
 
-In order to run chains, PromptL will evaluate the prompt in steps, and wait for the response of each step before continuing to the next one. To do this, you must use the `Chain` class to define an instance with the prompt, parameters, and the rest of the configuration, and run the `.step()` method to generate the strucure for each step.
+---
 
-The first time `step` is called, it must be called without any response, as there has not been any input yet. After that, you can call `step` with the response of the previous step. For each step, the method will return an object with both `messages` and `config`, as usual, but also with a `completed` boolean, which will be `true` when the chain is finished and no more responses are required to continue.
+## Real-World Use Cases
 
-Let's see an example of how to use the `Chain` class with the `openai` provider:
+### Multi-Step Workflow
+Chains are ideal for breaking down tasks like:
+1. Analyzing data.
+2. Generating intermediate results.
+3. Combining results for a final output.
 
+```xml
+<step as="analysis">
+  Analyze the following data and provide key insights:
+  {{ data }}
+</step>
+
+<step>
+  Based on the insights:
+  {{ analysis }}
+  Provide recommendations for improvement.
+</step>
+```
+
+### Decision Trees
+Use logic to adapt workflows based on intermediate results:
+```xml
+<step as="classification">
+  Classify this document into one of the following categories: A, B, or C.
+</step>
+
+{{ if classification == "A" }}
+<step>
+  Generate detailed content for Category A.
+</step>
+{{ else if classification == "B" }}
+<step>
+  Generate detailed content for Category B.
+</step>
+{{ else }}
+<step>
+  Generate detailed content for Category C.
+</step>
+{{ endif }}
+```
+
+---
+
+## Implementation
+
+To execute chains, use the `Chain` class. The chain evaluates the prompt step-by-step, waiting for the model's response at each step.
+
+To run a step, execute the `step` method of the chain instance. The first time `step` is called, it should not include any arguments. Subsequent calls must always pass the model response message from the previous step.
+
+### Example: Using the Chain Class
 ```javascript
 import { Chain } from '@latitude-data/promptl';
 import OpenAI from 'openai';
 
-// Create the OpenAI client
+// Initialize the OpenAI client
 const client = new OpenAI();
 
-// Create a function to generate a response based on the step messages and config
+// Generate a response based on step messages and configuration
 async function generateResponse({ config, messages }) {
   const response = await client.chat.completions.create({
     ...config,
     messages,
-  })
-
-  // return the response message
-  return resopnse.choices[0]!.message;
+  });
+  return response.choices[0].message;
 }
 
 // Create a new chain
 const chain = new Chain({
   prompt: '...', // Your PromptL prompt as a string
   parameters: {...} // Your prompt parameters
-})
+});
 
-// Compile the first step
-let result = chain.step()
-let last_response
+// Process the chain step-by-step
+let result = chain.step(); // The first step does not require any arguments
+let lastResponse;
 
-// Iterate over the chain until it is completed
 while (!result.completed) {
-  // Generate the response
-  last_response = await generateResponse(result)
-
-  // Compile the next step
-  result = chain.step(last_response)
+  lastResponse = await generateResponse(result);
+  result = chain.step(lastResponse); // Pass the model response to the next step
 }
 
-console.log(last_response)
+console.log('Final Output:', lastResponse.content);
 ```
+
+---
+
+## Debugging Chains
+
+1. **Log Intermediate Steps**:
+   - Use the `raw` attribute to inspect full responses for debugging.
+2. **Handle Errors Gracefully**:
+   - Implement fallback logic for unexpected responses or failures.
+3. **Test Edge Cases**:
+   - Ensure your chains handle empty inputs, invalid configurations, or incomplete data.
+
+---
+
+## Summary
+
+Chains and Steps provide powerful tools for breaking complex tasks into manageable parts. With features like custom configurations, variable storage, and step isolation, you can design robust, dynamic workflows tailored to any use case.
