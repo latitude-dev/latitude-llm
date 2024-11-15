@@ -1,8 +1,9 @@
 // TODO: Right now it takes a lot of work to add a simple new route to this file
 // We should refactor this to make it easier to add new routes
 
-import type { Message } from '@latitude-data/compiler'
+import type { Config, Message } from '@latitude-data/compiler'
 import {
+  DocumentVersion,
   type ChainCallResponseDto,
   type ChainEvent,
   type ChainEventDto,
@@ -14,78 +15,98 @@ import {
 import { RouteResolver } from '$sdk/utils'
 import { LatitudeApiError } from '$sdk/utils/errors'
 
-export type RunUrlParams = {
-  projectId: number
-  versionUuid?: string
-}
-export type ChatUrlParams = {
-  conversationUuid: string
-}
-export type EvaluationResultUrlParams = {
-  evaluationUuid: string
-}
-
-type RunDocumentBodyParam = {
-  path: string
-  parameters?: Record<string, unknown>
-  customIdentifier?: string
-  stream?: boolean
-}
-type ChatBodyParams = {
-  messages: Message[]
-  stream?: boolean
-}
-export type LogUrlParams = RunUrlParams
-type LogBodyParams = {
-  path: string
-  messages: Message[]
-  response?: string
-}
-
 export type GetDocumentUrlParams = {
   projectId: number
   versionUuid?: string
   path: string
 }
 
+export type GetOrCreateDocumentUrlParams = {
+  projectId: number
+  versionUuid?: string
+}
+
+type GetOrCreateDocumentBodyParams = {
+  path: string
+  prompt?: string
+}
+
+export type RunDocumentUrlParams = {
+  projectId: number
+  versionUuid?: string
+}
+
+type RunDocumentBodyParams = {
+  path: string
+  parameters?: Record<string, unknown>
+  customIdentifier?: string
+  stream?: boolean
+}
+
+export type ChatUrlParams = {
+  conversationUuid: string
+}
+
+type ChatBodyParams = {
+  messages: Message[]
+  stream?: boolean
+}
+
+export type EvaluationResultUrlParams = {
+  evaluationUuid: string
+}
+
+export type LogUrlParams = RunDocumentUrlParams
+
+type LogBodyParams = {
+  path: string
+  messages: Message[]
+  response?: string
+}
+
 export enum HandlerType {
-  Chat = 'chat',
   GetDocument = 'get-document',
+  GetOrCreateDocument = 'get-or-create-document',
   RunDocument = 'run-document',
+  Chat = 'chat',
   Log = 'log',
   Evaluate = 'evaluate',
   EvaluationResult = 'evaluationResult',
 }
 
-export type UrlParams<T extends HandlerType> = T extends HandlerType.RunDocument
-  ? RunUrlParams
-  : T extends HandlerType.GetDocument
-    ? GetDocumentUrlParams
-    : T extends HandlerType.Chat
-      ? ChatUrlParams
-      : T extends HandlerType.Log
-        ? LogUrlParams
-        : T extends HandlerType.Evaluate
-          ? { conversationUuid: string }
-          : T extends HandlerType.EvaluationResult
-            ? { conversationUuid: string; evaluationUuid: string }
-            : never
+export type UrlParams<T extends HandlerType> = T extends HandlerType.GetDocument
+  ? GetDocumentUrlParams
+  : T extends HandlerType.GetOrCreateDocument
+    ? GetOrCreateDocumentUrlParams
+    : T extends HandlerType.RunDocument
+      ? RunDocumentUrlParams
+      : T extends HandlerType.Chat
+        ? ChatUrlParams
+        : T extends HandlerType.Log
+          ? LogUrlParams
+          : T extends HandlerType.Evaluate
+            ? { conversationUuid: string }
+            : T extends HandlerType.EvaluationResult
+              ? { conversationUuid: string; evaluationUuid: string }
+              : never
 
 export type BodyParams<T extends HandlerType> =
-  T extends HandlerType.RunDocument
-    ? RunDocumentBodyParam
-    : T extends HandlerType.Chat
-      ? ChatBodyParams
-      : T extends HandlerType.Log
-        ? LogBodyParams
-        : T extends HandlerType.Evaluate
-          ? { evaluationUuids?: string[] }
-          : T extends HandlerType.EvaluationResult
-            ? {
-                result: string | boolean | number
-                reason: string
-              }
-            : never
+  T extends HandlerType.GetOrCreateDocument
+    ? GetOrCreateDocumentBodyParams
+    : T extends HandlerType.RunDocument
+      ? RunDocumentBodyParams
+      : T extends HandlerType.Chat
+        ? ChatBodyParams
+        : T extends HandlerType.Log
+          ? LogBodyParams
+          : T extends HandlerType.Evaluate
+            ? { evaluationUuids?: string[] }
+            : T extends HandlerType.EvaluationResult
+              ? {
+                  result: string | boolean | number
+                  reason: string
+                }
+              : never
 
 export type StreamChainResponse = {
   conversation: Message[]
@@ -114,13 +135,24 @@ export type SdkApiVersion = 'v1' | 'v2'
 
 export type {
   ChainEvent,
-  StreamEventTypes,
   ChainEventTypes,
   ChatSyncAPIResponse,
   RunSyncAPIResponse,
+  StreamEventTypes,
 }
 
-export type RunOptions = StreamResponseCallbacks & {
+export type GetPromptOptions = {
+  projectId?: number
+  versionUuid?: string
+}
+
+export type GetOrCreatePromptOptions = {
+  projectId?: number
+  versionUuid?: string
+  prompt?: string
+}
+
+export type RunPromptOptions = StreamResponseCallbacks & {
   projectId?: number
   versionUuid?: string
   customIdentifier?: string
@@ -149,4 +181,8 @@ export interface EvalOptions {
 export type EvalPromptOptions = {
   projectId?: number
   versionUuid?: string
+}
+
+export type Prompt = DocumentVersion & {
+  config: Config
 }

@@ -67,7 +67,7 @@ export function mock500Error({
       () => {
         return HttpResponse.json(
           {
-            message: 'something went wrong',
+            message: 'Something went wrong',
             errorCode: ApiErrorCodes.InternalServerError,
           },
           { status: 500 },

@@ -8,7 +8,7 @@ import {
 import { LatitudeApiError } from '$sdk/utils/errors'
 import { handleStream } from '$sdk/utils/handleStream'
 import { makeRequest } from '$sdk/utils/request'
-import { HandlerType, RunOptions, SDKOptions } from '$sdk/utils/types'
+import { HandlerType, RunPromptOptions, SDKOptions } from '$sdk/utils/types'
 
 export async function streamRun(
   path: string,
@@ -22,7 +22,7 @@ export async function streamRun(
     onFinished,
     onError,
     options,
-  }: RunOptions & {
+  }: RunPromptOptions & {
     options: SDKOptions
   },
 ) {

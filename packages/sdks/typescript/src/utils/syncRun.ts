@@ -7,7 +7,7 @@ import { LatitudeApiError } from '$sdk/utils/errors'
 import { makeRequest } from '$sdk/utils/request'
 import {
   HandlerType,
-  RunOptions,
+  RunPromptOptions,
   RunSyncAPIResponse,
   SDKOptions,
 } from '$sdk/utils/types'
@@ -22,7 +22,7 @@ export async function syncRun(
     onFinished,
     onError,
     options,
-  }: RunOptions & {
+  }: RunPromptOptions & {
     options: SDKOptions
   },
 ) {

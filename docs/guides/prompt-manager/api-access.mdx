@@ -52,7 +52,94 @@ These headers are sent with every request to help you monitor and adjust your re
 
 ### Endpoints
 
-#### 1. Run a Document
+#### 1. Get a Document
+
+Retrieve a specific prompt by its path.
+
+**Endpoint:** `GET /projects/{projectId}/versions/{versionUuid}/documents/{path}`
+
+**Path Parameters:**
+
+- `projectId`: Your project ID (required)
+- `versionUuid`: Version UUID (required, optional for SDK's defaults to 'live')
+- `path`: Path to the document (required)
+
+**Response:**
+
+The response contains the existing document details along with its configuration.
+
+**Response Body:**
+
+```json
+{
+  "id": "document-id",
+  "documentUuid": "document-uuid",
+  "path": "path/to/document",
+  "content": "Document content",
+  "resolvedContent": "Document content without comments",
+  "contentHash": "content-hash",
+  "commitId": "commit-id",
+  "deletedAt": "deleted-at",
+  "createdAt": "created-at",
+  "updatedAt": "updated-at",
+  "mergedAt": "merged-at",
+  "projectId": "project-id",
+  "config": {
+    "provider": "Provider name",
+    "model": "Model name"
+  }
+}
+```
+
+#### 2. Get or Create a Document
+
+**Endpoint:** `POST /projects/{projectId}/versions/{versionUuid}/documents/get-or-create`
+
+**Path Parameters:**
+
+- `projectId`: Your project ID (required)
+- `versionUuid`: Version UUID (required, optional for SDK's defaults to 'live')
+
+**Request Body:**
+
+```json
+{
+  "path": "path/to/document",
+  "prompt": "Your prompt here"
+}
+```
+
+- `path`: Path to the document (required)
+- `prompt`: Prompt to use for the document (optional, defaults to empty)
+
+**Response:**
+
+The response contains the created (or existing) document details along with its configuration.
+
+**Response Body:**
+
+```json
+{
+  "id": "document-id",
+  "documentUuid": "document-uuid",
+  "path": "path/to/document",
+  "content": "Document content",
+  "resolvedContent": "Document content without comments",
+  "contentHash": "content-hash",
+  "commitId": "commit-id",
+  "deletedAt": "deleted-at",
+  "createdAt": "created-at",
+  "updatedAt": "updated-at",
+  "mergedAt": "merged-at",
+  "projectId": "project-id",
+  "config": {
+    "provider": "Provider name",
+    "model": "Model name"
+  }
+}
+```
+
+#### 3. Run a Document
 
 Run a specific document (prompt) with optional parameters.
 
@@ -141,7 +228,7 @@ type ToolCall = {
 
 </Note>
 
-#### 2. Chat
+#### 4. Chat
 
 The previously described `POST /projects/{projectId}/versions/{versionUuid}/documents/run` endpoint can also be used to continue a conversation. Notice all events contain a `uuid` field that represents that conversation with the AI. You can use this uuid to continue the conversation.
 
@@ -180,7 +267,7 @@ The previously described `POST /projects/{projectId}/versions/{versionUuid}/docu
 **Response:**
 The response is a stream of Server-Sent Events (SSE) or a single JSON response containing the final event, similar to the "Run a Document" endpoint.
 
-### Handling Server-Sent Events (SSE)
+##### Handling Server-Sent Events (SSE)
 
 The API uses SSE for real-time updates. Here's how to handle SSE responses:
 
@@ -190,7 +277,7 @@ The API uses SSE for real-time updates. Here's how to handle SSE responses:
    - `latitude-event`: Contains information about the chain progress and results.
    - `provider-event`: Contains real-time updates from the AI provider.
 
-### Error Handling
+##### Error Handling
 
 The API uses standard HTTP status codes. In case of an error, the response body will contain an error message:
 
@@ -202,46 +289,7 @@ The API uses standard HTTP status codes. In case of an error, the response body 
 }
 ```
 
-#### 3. Get a Document
-
-Retrieve a specific prompt by its path.
-
-**Endpoint:** `GET /projects/{projectId}/versions/{versionUuid}/documents/{path}`
-
-**Path Parameters:**
-
-- `projectId`: Your project ID (required)
-- `versionUuid`: Version UUID (required, optional for SDK's defaults to 'live')
-- `path`: Path to the document (required)
-
-**Response:**
-
-The response contains the document details along with its configuration.
-
-**Response Body:**
-
-```json
-{
-  "id": "document-id",
-  "documentUuid": "document-uuid",
-  "path": "path/to/document",
-  "content": "Document content",
-  "resolvedContent": "Document content without comments",
-  "contentHash": "content-hash",
-  "commitId": "commit-id",
-  "deletedAt": "deleted-at",
-  "createdAt": "created-at",
-  "updatedAt": "updated-at",
-  "mergedAt": "merged-at",
-  "projectId": "project-id",
-  "config": {
-    "provider": "Provider name",
-    "model": "Model name"
-  }
-}
-```
-
-#### 4. Evaluate a Conversation
+#### 5. Evaluate a Conversation
 
 Evaluate a conversation using configured evaluations.
 
@@ -267,7 +315,7 @@ Evaluate a conversation using configured evaluations.
 }
 ```
 
-#### 5. Create Log Entry
+#### 6. Create Log Entry
 
 Create a log entry for a document.
 
@@ -317,7 +365,7 @@ Create a log entry for a document.
 }
 ```
 
-#### 6. Create Evaluation Result
+#### 7. Create Evaluation Result
 
 Create an evaluation result for a conversation using a configured evaluation.
 

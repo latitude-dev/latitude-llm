@@ -59,7 +59,7 @@ describe('/get', () => {
       } catch (error) {
         // @ts-expect-error - mock error
         expect(error.message).toEqual(
-          'Unexpected API Error: 500 Internal Server Error',
+          'Unexpected API Error: 500 Something went wrong',
         )
       }
     }),

@@ -38,7 +38,30 @@ const sdk = new Latitude('your-api-key-here', {
 })
 ```
 
-### Running a Document
+## Getting a Document
+
+To get a document created before, use the `get` method:
+
+```typescript
+sdk.prompts.get('path/to/your/document', {
+  projectId: 12345, // Optional if you provided it in the constructor
+  versionUuid: 'optional-version-uuid', // Optional, by default it targets latest live version
+})
+```
+
+## Getting or Creating a Document
+
+To create a document on an unpublished version, use the `getOrCreate` method:
+
+```typescript
+sdk.prompts.getOrCreate('path/to/your/document', {
+  projectId: 12345, // Optional if you provided it in the constructor
+  versionUuid: 'optional-version-uuid', // Optional, by default it targets latest live version
+  prompt: 'Your prompt here', // Optional, by default it's empty
+})
+```
+
+## Running a Document
 
 To run a document, use the `run` method:
 
@@ -186,7 +209,7 @@ await sdk.evaluations.trigger(conversationUuid, {
 })
 ```
 
-## Pushing evaluation results to Latitude
+### Pushing evaluation results to Latitude
 
 You can push evaluation results to Latitude using the `evaluations.createResult` method:
 

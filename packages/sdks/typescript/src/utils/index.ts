@@ -2,9 +2,10 @@ import {
   ChatUrlParams,
   EvaluationResultUrlParams,
   GetDocumentUrlParams,
+  GetOrCreateDocumentUrlParams,
   HandlerType,
   LogUrlParams,
-  RunUrlParams,
+  RunDocumentUrlParams,
   UrlParams,
 } from '$sdk/utils/types'
 
@@ -38,12 +39,16 @@ export class RouteResolver {
 
   resolve<T extends HandlerType>({ handler, params }: ResolveParams<T>) {
     switch (handler) {
-      case HandlerType.RunDocument:
-        return this.documents(params as RunUrlParams).run
       case HandlerType.GetDocument: {
         const getParams = params as GetDocumentUrlParams
         return this.documents(getParams).document(getParams.path)
       }
+      case HandlerType.GetOrCreateDocument: {
+        return this.documents(params as GetOrCreateDocumentUrlParams)
+          .getOrCreate
+      }
+      case HandlerType.RunDocument:
+        return this.documents(params as RunDocumentUrlParams).run
       case HandlerType.Chat:
         return this.conversations().chat(
           (params as ChatUrlParams).conversationUuid,
@@ -77,8 +82,9 @@ export class RouteResolver {
   private documents(params: { projectId: number; versionUuid?: string }) {
     const base = `${this.commitsUrl(params)}/documents`
     return {
-      run: `${base}/run`,
       document: (path: string) => `${base}/${path}`,
+      getOrCreate: `${base}/get-or-create`,
+      run: `${base}/run`,
       log: `${base}/logs`,
     }
   }
