@@ -61,7 +61,7 @@ export function HistoryLogParams({
       <div className='flex flex-row gap-x-4 justify-between items-center border-border border-b pb-4'>
         {data.isLoading || hasLogs ? (
           <>
-            <div className='flex-grow'>
+            <div className='flex flex-grow min-w-0'>
               {data.isLoadingLog ? (
                 <div className='flex flex-row gap-x-2 w-full'>
                   <Skeleton height='h3' className='w-2/3' />
@@ -69,38 +69,41 @@ export function HistoryLogParams({
                 </div>
               ) : null}
               {!data.isLoadingLog && urlData ? (
-                <Link href={urlData.url}>
-                  <div className='flex flex-row items-center gap-x-2'>
-                    <Text.H5>{urlData.createdAt}</Text.H5>
-                    {urlData.hasError ? (
-                      <Tooltip
-                        variant='destructive'
-                        trigger={
-                          <Badge variant='destructive'>
-                            {urlData.shortCode}
-                          </Badge>
-                        }
-                      >
-                        This log has an error
-                      </Tooltip>
-                    ) : (
-                      <Badge variant='accent'>{urlData.shortCode}</Badge>
-                    )}
-                    <Icon name='externalLink' color='foregroundMuted' />
-                  </div>
+                <Link
+                  href={urlData.url}
+                  className='flex-grow min-w-0 flex flex-row items-center gap-x-2'
+                >
+                  <Text.H5 ellipsis noWrap>
+                    {urlData.createdAt}
+                  </Text.H5>
+                  {urlData.hasError ? (
+                    <Tooltip
+                      variant='destructive'
+                      trigger={
+                        <Badge variant='destructive'>{urlData.shortCode}</Badge>
+                      }
+                    >
+                      This log has an error
+                    </Tooltip>
+                  ) : (
+                    <Badge variant='accent'>{urlData.shortCode}</Badge>
+                  )}
+                  <Icon
+                    name='externalLink'
+                    color='foregroundMuted'
+                    className='flex-none'
+                  />
                 </Link>
               ) : null}
             </div>
-            <div>
-              <ParametersPaginationNav
-                disabled={data.isLoadingLog}
-                label='history logs'
-                currentIndex={data.position}
-                totalCount={data.count}
-                onPrevPage={data.onPrevPage}
-                onNextPage={data.onNextPage}
-              />
-            </div>
+            <ParametersPaginationNav
+              disabled={data.isLoadingLog}
+              label='history logs'
+              currentIndex={data.position}
+              totalCount={data.count}
+              onPrevPage={data.onPrevPage}
+              onNextPage={data.onNextPage}
+            />
           </>
         ) : (
           <div className='w-full flex justify-center'>

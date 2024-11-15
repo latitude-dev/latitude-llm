@@ -98,11 +98,16 @@ export function useLogHistoryParams({
     },
   })
 
-  const updatePosition = useCallback((position: number) => {
-    setPosition((prev) =>
-      prev ? { ...prev, position } : { position, page: 1 },
-    )
-  }, [])
+  const updatePosition = useCallback(
+    (position: number) => {
+      if (isLoadingLog) return
+
+      setPosition((prev) =>
+        prev ? { ...prev, position } : { position, page: 1 },
+      )
+    },
+    [isLoadingLog],
+  )
 
   const onNextPage = useCallback(
     (position: number) => updatePosition(position + 1),

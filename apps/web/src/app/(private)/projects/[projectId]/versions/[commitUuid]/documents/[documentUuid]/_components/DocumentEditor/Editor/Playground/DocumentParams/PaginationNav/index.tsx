@@ -21,7 +21,7 @@ export function ParametersPaginationNav({
   if (currentIndex === undefined || totalCount === undefined) return null
 
   return (
-    <div className='flex items-center'>
+    <div className='flex items-center min-w-0'>
       <Button
         size='default'
         variant='ghost'
@@ -31,13 +31,10 @@ export function ParametersPaginationNav({
         }}
         onClick={() => onPrevPage(currentIndex)}
       />
-      <div className='flex flex-row items-center gap-x-1'>
-        <Text.H5M color='foregroundMuted'>
-          {zeroIndex ? currentIndex + INDEX_ZERO_LIST : currentIndex}
-        </Text.H5M>
-        <div className='max-w-14' />
-        <Text.H5M color='foregroundMuted'>
-          of {totalCount} {label}
+      <div className='flex flex-row justify-center items-center flex-grow min-w-0'>
+        <Text.H5M color='foregroundMuted' ellipsis noWrap>
+          {zeroIndex ? currentIndex + INDEX_ZERO_LIST : currentIndex} of{' '}
+          {totalCount} {label}
         </Text.H5M>
       </div>
       <Button

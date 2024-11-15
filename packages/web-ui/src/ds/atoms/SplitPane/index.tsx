@@ -12,6 +12,7 @@ import {
 
 import { ResizableBox, ResizeCallbackData, ResizeHandle } from 'react-resizable'
 
+import { useMeasure } from '../../../browser'
 import { cn } from '../../../lib/utils'
 
 const JS_PANEL_CLASS = 'js-pane'
@@ -88,7 +89,7 @@ function ResizablePane({
   children: ReactNode
   paneWidth: number
   onResizePane: (width: number) => void
-  onResizeStop: (width: number) => void
+  onResizeStop?: (width: number) => void
 }) {
   const onResize = (_: SyntheticEvent, data: ResizeCallbackData) => {
     const lessThanMinWidth = minWidth ? data.size.width < minWidth : false
@@ -100,7 +101,7 @@ function ResizablePane({
   }
   const onStop = useCallback(
     (_e: SyntheticEvent, data: ResizeCallbackData) => {
-      onResizeStop(data.size.width)
+      onResizeStop?.(data.size.width)
     },
     [onResizeStop],
   )
@@ -125,20 +126,40 @@ function HorizontalSplit({
   leftPane,
   rightPane,
   initialWidth,
+  initialPercentage,
   minWidth,
   onResizeStop,
   cssPanelHeight,
+  className,
 }: {
   leftPane: ReactNode
   rightPane: ReactNode
-  initialWidth: number
+  initialWidth?: number
+  initialPercentage?: number
   minWidth: number
-  onResizeStop: (width: number) => void
+  onResizeStop?: (width: number) => void
   cssPanelHeight?: string
+  className?: string
 }) {
-  const [paneWidth, setPaneWidth] = useState<number>(initialWidth)
+  const [ref, { width: initialWidthFromRef }] = useMeasure<HTMLDivElement>()
+  const [paneWidth, setPaneWidth] = useState<number>(initialWidth ?? 0)
+  useEffect(() => {
+    if (paneWidth > 0) return
+
+    if (!initialPercentage) return
+
+    const percentage = initialPercentage / 100
+    setPaneWidth(initialWidthFromRef * percentage)
+  }, [initialWidth, initialWidthFromRef, initialPercentage])
+
   return (
-    <div className='flex flex-row w-full relative h-full max-h-full min-h-full'>
+    <div
+      ref={ref}
+      className={cn(
+        'flex flex-row w-full relative h-full max-h-full min-h-full',
+        className,
+      )}
+    >
       <ResizablePane
         minWidth={minWidth}
         paneWidth={paneWidth}
@@ -158,23 +179,29 @@ const SplitPane = ({
   leftPane,
   rightPane,
   initialWidth,
+  initialPercentage,
   minWidth,
   onResizeStop,
   cssPanelHeight,
+  className,
 }: {
   leftPane: ReactNode
   rightPane: ReactNode
-  initialWidth: number
+  initialWidth?: number
+  initialPercentage?: number
   minWidth: number
-  onResizeStop: (width: number) => void
+  onResizeStop?: (width: number) => void
   cssPanelHeight?: string
+  className?: string
 }) => {
   return (
     <HorizontalSplit
+      className={className}
       cssPanelHeight={cssPanelHeight}
       leftPane={leftPane}
       rightPane={rightPane}
       initialWidth={initialWidth}
+      initialPercentage={initialPercentage}
       minWidth={minWidth}
       onResizeStop={onResizeStop}
     />
