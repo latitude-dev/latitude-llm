@@ -22,7 +22,7 @@ import { DocumentLogsTable } from './DocumentLogsTable'
 
 const useDocumentLogSocket = (
   documentUuid: string,
-  mutate: ReturnType<typeof useDocumentLogs>['mutate'],
+  mutate: ReturnType<typeof useDocumentLogs<false>>['mutate'],
 ) => {
   const onMessage = useCallback(
     (args: EventArgs<'documentLogCreated'>) => {
@@ -95,6 +95,7 @@ export function DocumentLogs({
       projectId: project.id,
       page,
       pageSize,
+      excludeErrors: false,
     },
     {
       fallbackData: serverDocumentLogs,

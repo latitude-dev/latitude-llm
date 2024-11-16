@@ -1,16 +1,10 @@
 import { and, desc, eq, isNull, sql } from 'drizzle-orm'
 
-import { Commit, DEFAULT_PAGINATION_SIZE, ErrorableEntity } from '../../browser'
+import { Commit, DEFAULT_PAGINATION_SIZE } from '../../browser'
 import { database } from '../../client'
 import { calculateOffset } from '../../lib/pagination/calculateOffset'
 import { DocumentLogsRepository } from '../../repositories'
-import {
-  commits,
-  documentLogs,
-  projects,
-  runErrors,
-  workspaces,
-} from '../../schema'
+import { commits, documentLogs } from '../../schema'
 import { getCommonQueryConditions } from './computeDocumentLogsWithMetadata'
 
 export function computeDocumentLogsQuery(

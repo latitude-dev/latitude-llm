@@ -1,17 +1,37 @@
+import { User, WorkspaceDto } from '@latitude-data/core/browser'
+import { UnauthorizedError } from '@latitude-data/core/lib/errors'
 import { getCurrentUserOrError } from '$/services/auth/getCurrentUser'
 import { NextRequest, NextResponse } from 'next/server'
 
-export function authHandler(handler: any) {
-  return async (req: NextRequest, { ...rest }) => {
-    let user, workspace
+export type DefaultParams = Record<string, unknown>
+export type AuthContext<IReq extends DefaultParams> = {
+  user: User
+  workspace: WorkspaceDto
+  params: IReq
+}
+
+export type HandlerFn<IReq extends DefaultParams, IResp extends object = {}> = (
+  req: NextRequest,
+  context: AuthContext<IReq>,
+) => Promise<NextResponse<IResp>>
+
+export function authHandler<
+  IReq extends DefaultParams,
+  IResp extends object = {},
+>(handler: HandlerFn<IReq, IResp>) {
+  return async (req: NextRequest, { ...rest }: AuthContext<IReq>) => {
     try {
       const { user: uzer, workspace: workzpace } = await getCurrentUserOrError()
-      user = uzer
-      workspace = workzpace
+      const user = uzer
+      const workspace = workzpace
+      return await handler(req, {
+        ...rest,
+        params: rest.params ?? {},
+        user,
+        workspace,
+      })
     } catch (error) {
-      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
+      throw new UnauthorizedError('Unauthorized')
     }
-
-    return await handler(req, { ...rest, user, workspace })
   }
 }

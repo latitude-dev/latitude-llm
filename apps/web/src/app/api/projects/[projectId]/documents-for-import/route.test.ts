@@ -2,13 +2,14 @@ import {
   DocumentVersion,
   Providers,
   User,
-  Workspace,
+  WorkspaceDto,
 } from '@latitude-data/core/browser'
 import { createProject, helpers } from '@latitude-data/core/factories'
 import { NextRequest } from 'next/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { GET } from './route'
+import { SubscriptionPlan } from 'node_modules/@latitude-data/core/src/plans'
 
 const mocks = vi.hoisted(() => {
   return {
@@ -22,7 +23,7 @@ vi.mock('$/services/auth/getSession', () => ({
 describe('GET handler for documents/[projectId]/for-import', () => {
   let mockRequest: NextRequest
   let mockParams: { projectId: string }
-  let mockWorkspace: Workspace
+  let mockWorkspace: WorkspaceDto
   let mockDocuments: DocumentVersion[]
   let mockUser: User
 
@@ -39,7 +40,16 @@ describe('GET handler for documents/[projectId]/for-import', () => {
     mockParams = { projectId: String(project.id) }
 
     mockUser = user
-    mockWorkspace = workspace
+    mockWorkspace = {
+      ...workspace,
+      currentSubscription: {
+        id: 1,
+        workspaceId: workspace.id,
+        plan: SubscriptionPlan.HobbyV1,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }
+    }
     mockDocuments = documents
   })
 
@@ -77,8 +87,8 @@ describe('GET handler for documents/[projectId]/for-import', () => {
 
     it('should return documents for import when valid params are provided', async () => {
       const response = await GET(mockRequest, {
-        // @ts-expect-error
         params: mockParams,
+        user: mockUser,
         workspace: mockWorkspace,
       })
 

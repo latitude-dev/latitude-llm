@@ -5,11 +5,12 @@ import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'
 
+type MaybeBoolean = boolean | undefined
 const EMPTY_ARRAY: [] = []
-type LogResult<T extends boolean> = T extends true
+type LogResult<T extends MaybeBoolean> = T extends true
   ? DocumentLog
   : DocumentLogWithMetadataAndError
-export default function useDocumentLogs<T extends boolean>(
+export default function useDocumentLogs<T extends MaybeBoolean = false>(
   {
     documentUuid,
     commitUuid,

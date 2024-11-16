@@ -1,4 +1,3 @@
-import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
 import { Badge, cn, Icon, Skeleton, Text } from '@latitude-data/web-ui'
 import {
   PlaygroundInput,
@@ -11,13 +10,14 @@ import Link from 'next/link'
 import { InputParams } from '../Input'
 import { ParametersPaginationNav } from '../PaginationNav'
 import { UseLogHistoryParams } from './useLogHistoryParams'
+import { DocumentLog } from '@latitude-data/core/browser'
 
 function usePaginatedDocumentLogUrl({
   page,
   selectedLog,
   isLoading,
 }: {
-  selectedLog: DocumentLogWithMetadataAndError | undefined
+  selectedLog: DocumentLog | undefined
   page: number | undefined
   isLoading: boolean
 }) {
