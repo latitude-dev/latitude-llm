@@ -1,110 +1,161 @@
+import { and, eq } from 'drizzle-orm'
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import { Workspace } from '../browser'
+import { ProviderApiKey, User, Workspace } from '../browser'
+import { database } from '../client'
 import { Providers } from '../constants'
-import { createProject, createWorkspace, helpers } from '../tests/factories'
+import { documentVersions } from '../schema'
+import { mergeCommit } from '../services/commits'
+import {
+  createDocumentVersion,
+  createDraft,
+  createProject,
+  createProviderApiKey,
+  createWorkspace,
+  destroyDocumentVersion,
+  helpers,
+  updateDocumentVersion,
+} from '../tests/factories'
 import { ProjectsRepository } from './projectsRepository'
 
 describe('ProjectsRepository', async () => {
   let repository: ProjectsRepository
   let workspace: Workspace
-
-  const provider = { type: Providers.OpenAI, name: 'OpenAI' }
+  let user: User
+  let provider: ProviderApiKey
 
   beforeEach(async () => {
-    const { workspace: newWorkspace } = await createWorkspace()
-    workspace = newWorkspace
+    const { workspace: w, userData: u } = await createWorkspace()
+    workspace = w
+    user = u
+    provider = await createProviderApiKey({
+      workspace,
+      type: Providers.OpenAI,
+      name: 'OpenAI',
+      user,
+    })
     repository = new ProjectsRepository(workspace.id)
   })
 
-  describe('findAllActiveDocumentsWithAgreggatedData', () => {
-    it('should return active projects with aggregated data', async () => {
-      // Create test data
-      const { project: project1 } = await createProject({
-        workspace,
-        providers: [provider],
-        documents: {
-          foo: helpers.createPrompt({ provider: provider.name }),
-        },
-      })
-
-      const { project: project2 } = await createProject({
-        workspace,
-        documents: {
-          bar: helpers.createPrompt({ provider: provider.name }),
-        },
-      })
-
-      // Execute the method
-      const result = await repository.findAllActiveDocumentsWithAgreggatedData()
-
-      // Assert the result
-      expect(result.ok).toBe(true)
-      const projects = result.unwrap()
-
-      expect(projects).toHaveLength(2)
-
-      const project1Result = projects.find((p) => p.id === project1.id)
-      expect(project1Result).toBeDefined()
-      expect(project1Result?.documentCount).toBe(1)
-      expect(project1Result?.lastCreatedAtDocument).toBeDefined()
-
-      const project2Result = projects.find((p) => p.id === project2.id)
-      expect(project2Result).toBeDefined()
-      expect(project2Result?.documentCount).toBe(1)
-      expect(project2Result?.lastCreatedAtDocument).toBeDefined()
-    })
-
-    it('should return projects with zero document count when no documents exist', async () => {
-      const { project } = await createProject({
-        workspace,
-        providers: [provider],
-      })
-
-      const result = await repository.findAllActiveDocumentsWithAgreggatedData()
+  describe('findAllActiveWithAgreggatedData', () => {
+    it('returns active projects ordered by lastEditedAt and createdAt', async () => {
+      // When there are no projects
+      let result = await repository.findAllActiveWithAgreggatedData()
 
       expect(result.ok).toBe(true)
-      const projects = result.unwrap()
+      expect(result.unwrap()).toEqual([])
 
-      expect(projects).toHaveLength(1)
-      expect(projects[0]?.id).toBe(project.id)
-      expect(projects[0]?.documentCount).toBe(0)
-      expect(projects[0]?.lastCreatedAtDocument).toBeNull()
-    })
-
-    it('should include projects without merged commits', async () => {
-      await createProject({
+      // After creating project0 and project1
+      let { project: project0, commit: commit0 } = await createProject({
+        name: 'project0',
         workspace,
-        providers: [provider],
+        documents: {},
+        skipMerge: true,
+      })
+      let { project: project1, commit: commit1 } = await createProject({
+        name: 'project1',
+        workspace,
+        documents: {},
         skipMerge: true,
       })
 
-      const result = await repository.findAllActiveDocumentsWithAgreggatedData()
+      result = await repository.findAllActiveWithAgreggatedData()
 
       expect(result.ok).toBe(true)
-      const projects = result.unwrap()
+      expect(result.unwrap()).toEqual([
+        { ...project1, lastEditedAt: null },
+        { ...project0, lastEditedAt: null },
+      ])
 
-      expect(projects).toHaveLength(1)
-    })
+      // After adding a document to project1 and modifying it
+      let { documentVersion: document1 } = await createDocumentVersion({
+        workspace,
+        user,
+        commit: commit1,
+        path: 'document1',
+        content: helpers.createPrompt({ provider, content: 'content1' }),
+      })
+      document1 = await updateDocumentVersion({
+        document: document1,
+        commit: commit1,
+        content: helpers.createPrompt({ provider, content: 'newContent1' }),
+      })
 
-    it('should not include deleted projects', async () => {
-      const { project: deletedProject } = await createProject({
+      result = await repository.findAllActiveWithAgreggatedData()
+
+      expect(result.ok).toBe(true)
+      expect(result.unwrap()).toEqual([
+        { ...project1, lastEditedAt: document1.updatedAt },
+        { ...project0, lastEditedAt: null },
+      ])
+
+      // After publishing project1 and adding a document to project0
+      commit1 = await mergeCommit(commit1).then((r) => r.unwrap())
+      document1 = await database
+        .select()
+        .from(documentVersions)
+        .where(
+          and(
+            eq(documentVersions.documentUuid, document1.documentUuid),
+            eq(documentVersions.commitId, commit1.id),
+          ),
+        )
+        .then((d) => d[0]!)
+      let { documentVersion: document0 } = await createDocumentVersion({
+        workspace,
+        user,
+        commit: commit0,
+        path: 'document0',
+        content: helpers.createPrompt({ provider, content: 'content0' }),
+      })
+
+      result = await repository.findAllActiveWithAgreggatedData()
+
+      expect(result.ok).toBe(true)
+      expect(result.unwrap()).toEqual([
+        { ...project0, lastEditedAt: document0.updatedAt },
+        { ...project1, lastEditedAt: document1.updatedAt },
+      ])
+
+      // After creating project2 and deleting a document from project1
+      commit1 = await createDraft({ project: project1, user }).then(
+        (c) => c.commit,
+      )
+      let { project: project2 } = await createProject({
+        name: 'project2',
+        workspace,
+        documents: {},
+        skipMerge: true,
+      })
+      document1 = await destroyDocumentVersion({
+        document: document1,
+        commit: commit1,
+      }).then((d) => d!)
+
+      result = await repository.findAllActiveWithAgreggatedData()
+
+      expect(result.ok).toBe(true)
+      expect(result.unwrap()).toEqual([
+        { ...project1, lastEditedAt: document1.updatedAt },
+        { ...project2, lastEditedAt: null },
+        { ...project0, lastEditedAt: document0.updatedAt },
+      ])
+
+      // After creating project3 and deleting it
+      await createProject({
+        name: 'project3',
         workspace,
         deletedAt: new Date(),
       })
 
-      const { project: activeProject } = await createProject({
-        workspace,
-      })
-
-      const result = await repository.findAllActiveDocumentsWithAgreggatedData()
+      result = await repository.findAllActiveWithAgreggatedData()
 
       expect(result.ok).toBe(true)
-      const projects = result.unwrap()
-
-      expect(projects).toHaveLength(1)
-      expect(projects[0]?.id).toBe(activeProject.id)
-      expect(projects.find((p) => p.id === deletedProject.id)).toBeUndefined()
+      expect(result.unwrap()).toEqual([
+        { ...project1, lastEditedAt: document1.updatedAt },
+        { ...project2, lastEditedAt: null },
+        { ...project0, lastEditedAt: document0.updatedAt },
+      ])
     })
   })
 })

@@ -1,4 +1,4 @@
-import { desc, eq, getTableColumns, isNull, max, sql } from 'drizzle-orm'
+import { and, desc, eq, getTableColumns, isNull, max, sql } from 'drizzle-orm'
 
 import { Project } from '../browser'
 import { NotFoundError, Result } from '../lib'
@@ -58,8 +58,8 @@ export class ProjectsRepository extends RepositoryLegacy<typeof tt, Project> {
         })
         .from(this.scope)
         .innerJoin(commits, eq(commits.projectId, this.scope.id))
-        .where(isNull(this.scope.deletedAt))
         .innerJoin(documentVersions, eq(documentVersions.commitId, commits.id))
+        .where(and(isNull(this.scope.deletedAt), isNull(commits.deletedAt)))
         .groupBy(this.scope.id),
     )
 
@@ -76,6 +76,7 @@ export class ProjectsRepository extends RepositoryLegacy<typeof tt, Project> {
         desc(
           sql`COALESCE(${aggredatedData.lastEditedAt}, ${this.scope.createdAt})`,
         ),
+        desc(this.scope.id),
       )
 
     return Result.ok(result)
