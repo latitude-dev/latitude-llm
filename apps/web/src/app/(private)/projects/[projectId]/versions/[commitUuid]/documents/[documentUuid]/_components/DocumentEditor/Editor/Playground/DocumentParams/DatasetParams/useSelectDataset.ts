@@ -1,21 +1,15 @@
 import { useCallback, useMemo, useState } from 'react'
 
-import { Dataset } from '@latitude-data/core/browser'
+import { Dataset, DocumentVersion } from '@latitude-data/core/browser'
 import {
   SelectOption,
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui'
-import { useCurrentDocument } from '$/app/providers/DocumentProvider'
-import {
-  PlaygroundInput,
-  PlaygroundInputs,
-} from '$/hooks/useDocumentParameters'
+import { Inputs, useDocumentParameters } from '$/hooks/useDocumentParameters'
 import useDatasetPreview from '$/stores/datasetPreviews'
 import useDatasets from '$/stores/datasets'
 import useDocumentVersions from '$/stores/documentVersions'
-
-import { useSelectedDatasetRow } from './useSelectedRow'
 
 export type DatasetPreview = {
   headers: Record<number, string>
@@ -29,7 +23,7 @@ function mappedToInputs({
   mappedInputs,
   rowIndex,
 }: {
-  inputs: PlaygroundInputs
+  inputs: Inputs<'dataset'>
   datasetPreview: DatasetPreview
   mappedInputs: Record<string, number>
   rowIndex: number
@@ -37,35 +31,45 @@ function mappedToInputs({
   const rows = datasetPreview.rows
   const row = rows[rowIndex] ?? []
   const cleanRow = row.slice(1)
-  const mapped = Object.entries(mappedInputs).reduce(
-    (acc, [key, value]) => {
-      const cell = cleanRow[value] ?? ''
-      acc[key] = {
-        value: cell,
-        includedInPrompt: true,
-      }
-      return acc
-    },
-    {} as { [key: string]: PlaygroundInput },
-  )
+  const mapped = Object.entries(mappedInputs).reduce((acc, [key, value]) => {
+    const cell = cleanRow[value] ?? ''
+    acc[key] = {
+      value: cell,
+      metadata: {
+        includeInPrompt: true,
+      },
+    }
+    return acc
+  }, {} as Inputs<'dataset'>)
 
   // Recalculate inputs
   return Object.entries(inputs).reduce((acc, [key, value]) => {
     const newInput = mapped[key]
     acc[key] = newInput ?? value // If not found let existing
     return acc
-  }, {} as PlaygroundInputs)
+  }, {} as Inputs<'dataset'>)
+}
+const EMPTY_PREVIEW = {
+  headers: {},
+  headersOptions: [],
+  rows: [],
+  rowCount: 0,
 }
 
 export function useSelectDataset({
-  inputs,
-  setInputs,
+  document,
+  commitVersionUuid,
 }: {
-  inputs: PlaygroundInputs
-  setInputs: (newInputs: PlaygroundInputs) => void
+  document: DocumentVersion
+  commitVersionUuid: string
 }) {
-  const document = useCurrentDocument()
   const [selectedDataset, setSelectedDataset] = useState<Dataset | undefined>()
+  const {
+    dataset: { inputs, mappedInputs, rowIndex, setInputs, setDataset },
+  } = useDocumentParameters({
+    documentVersionUuid: document.documentUuid,
+    commitVersionUuid,
+  })
   const { data: datasets, isLoading: isLoadingDatasets } = useDatasets({
     onFetched: (data) => {
       setSelectedDataset(data.find((ds) => ds.id === document.datasetId))
@@ -78,41 +82,32 @@ export function useSelectDataset({
     () => datasets.map((ds) => ({ value: ds.id, label: ds.name })),
     [datasets],
   )
-  const { selectedRow, saveRowInfo } = useSelectedDatasetRow({
-    document,
+
+  const { data: csv, isLoading: isLoadingPreviewDataset } = useDatasetPreview({
     dataset: selectedDataset,
   })
 
-  const [datasetPreview, setDatasetPreview] = useState<DatasetPreview>({
-    headers: {},
-    headersOptions: [],
-    rows: [],
-    rowCount: 0,
-  })
+  const datasetPreview = useMemo<DatasetPreview>(() => {
+    if (!selectedDataset) return EMPTY_PREVIEW
 
-  const { isLoading: isLoadingPreviewDataset } = useDatasetPreview({
-    dataset: selectedDataset,
-    onSuccess: (csv) => {
-      const headers = csv?.headers ?? []
-      const headersByIndex = headers.reduce(
-        (acc, header, i) => {
-          acc[i] = header
-          return acc
-        },
-        {} as DatasetPreview['headers'],
-      )
-      const options = headers.map((header, i) => ({ value: i, label: header }))
-      const preview = {
-        headers: headersByIndex,
-        headersOptions: options,
-        rows: csv?.rows ?? [],
-        rowCount: csv?.rowCount ?? 0,
-      }
-      if (!selectedDataset) return
+    const headers = csv?.headers ?? []
+    const headersByIndex = headers.reduce(
+      (acc, header, i) => {
+        acc[i] = header
+        return acc
+      },
+      {} as DatasetPreview['headers'],
+    )
+    const options = headers.map((header, i) => ({ value: i, label: header }))
+    const preview = {
+      headers: headersByIndex,
+      headersOptions: options,
+      rows: csv?.rows ?? [],
+      rowCount: csv?.rowCount ?? 0,
+    }
+    return preview
+  }, [csv, selectedDataset])
 
-      setDatasetPreview(preview)
-    },
-  })
   const onSelectDataset = useCallback(
     async (value: string) => {
       const ds = datasets.find((ds) => ds.id === Number(value))
@@ -126,7 +121,7 @@ export function useSelectDataset({
       })
 
       setSelectedDataset(ds)
-      saveRowInfo({ rowIndex: 0, datasetId: ds.id, mappedInputs: {} })
+      setDataset({ rowIndex: 0, datasetId: ds.id, mappedInputs: {} })
     },
     [
       datasets,
@@ -134,7 +129,7 @@ export function useSelectDataset({
       project.id,
       document.documentUuid,
       commit.uuid,
-      saveRowInfo,
+      setDataset,
     ],
   )
   const isLoading = isLoadingDatasets || isLoadingPreviewDataset
@@ -143,7 +138,7 @@ export function useSelectDataset({
     (rowIndex: number) => {
       if (!datasetPreview || !selectedDataset) return
 
-      const mapped = selectedRow?.mappedInputs ?? {}
+      const mapped = mappedInputs ?? {}
       const newInputs = mappedToInputs({
         inputs,
         datasetPreview,
@@ -151,7 +146,7 @@ export function useSelectDataset({
         rowIndex,
       })
       setInputs(newInputs)
-      saveRowInfo({
+      setDataset({
         rowIndex,
         datasetId: selectedDataset.id,
         mappedInputs: mapped,
@@ -160,25 +155,25 @@ export function useSelectDataset({
     [
       inputs,
       setInputs,
-      saveRowInfo,
+      setDataset,
       datasetPreview.rows,
       selectedDataset,
-      selectedRow?.mappedInputs,
+      mappedInputs,
     ],
   )
 
   const onSelectHeader = useCallback(
     (param: string) => (headerIndex: string) => {
-      const prevMapped = selectedRow?.mappedInputs ?? {}
+      const prevMapped = mappedInputs ?? {}
       const mapped = { ...prevMapped, [param]: Number(headerIndex) }
       const newInputs = mappedToInputs({
         inputs,
         datasetPreview,
         mappedInputs: mapped,
-        rowIndex: selectedRow?.rowIndex ?? 0,
+        rowIndex: rowIndex ?? 0,
       })
-      saveRowInfo({
-        rowIndex: selectedRow?.rowIndex ?? 0,
+      setDataset({
+        rowIndex: rowIndex ?? 0,
         datasetId: selectedDataset?.id,
         mappedInputs: mapped,
       })
@@ -187,9 +182,9 @@ export function useSelectDataset({
     [
       inputs,
       setInputs,
-      saveRowInfo,
-      selectedRow?.rowIndex,
-      selectedRow?.mappedInputs,
+      setDataset,
+      rowIndex,
+      mappedInputs,
       datasetPreview?.rows,
       selectedDataset?.id,
     ],
@@ -197,8 +192,8 @@ export function useSelectDataset({
 
   return {
     selectedRow: {
-      rowIndex: selectedRow?.rowIndex ?? 0,
-      mappedInputs: selectedRow?.mappedInputs ?? {},
+      rowIndex: rowIndex ?? 0,
+      mappedInputs: mappedInputs ?? {},
     },
     datasetPreview,
     isLoading,
@@ -206,7 +201,7 @@ export function useSelectDataset({
     selectedDataset,
     onSelectDataset,
     onRowChange,
-    selectedRowIndex: selectedRow?.rowIndex,
+    selectedRowIndex: rowIndex,
     totalRows: datasetPreview?.rowCount,
     onSelectHeader,
   }

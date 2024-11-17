@@ -29,6 +29,8 @@ import { type AddMessagesActionFn } from '$/actions/sdk/addMessagesAction'
 import type { RunDocumentActionFn } from '$/actions/sdk/runDocumentAction'
 import EditorHeader from '$/components/EditorHeader'
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
+import { useDocumentParameters as useDocumentParametersOld } from '$/hooks/useDocumentParameters/oldHook'
+import { useFeatureFlag } from '$/hooks/useFeatureFlag'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { useMetadata } from '$/hooks/useMetadata'
 import { ROUTES } from '$/services/routes'
@@ -158,20 +160,35 @@ export default function DocumentEditor({
     { trailing: true },
   )
 
+  // FIXME: Remove oldParameters when we remove feature flag
+  const newParams = useFeatureFlag()
+  const { onMetadataProcessed: onMetadataProcessedOld } =
+    useDocumentParametersOld({
+      commitVersionUuid: commit.uuid,
+      documentVersionUuid: document.documentUuid,
+    })
+
   const { onMetadataProcessed } = useDocumentParameters({
     commitVersionUuid: commit.uuid,
     documentVersionUuid: document.documentUuid,
   })
-  const { metadata, runReadMetadata } = useMetadata({ onMetadataProcessed })
+  const { metadata, runReadMetadata } = useMetadata({
+    onMetadataProcessed: newParams
+      ? onMetadataProcessed
+      : onMetadataProcessedOld,
+  })
 
   useEffect(() => {
+    // Wait for feature flag to load
+    if (newParams === undefined) return
+
     runReadMetadata({
       prompt: value,
       documents: _documents,
       document,
       fullPath: document.path,
     })
-  }, [])
+  }, [newParams])
 
   const onChange = useCallback(
     (newValue: string) => {

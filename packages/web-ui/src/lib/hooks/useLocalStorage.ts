@@ -12,10 +12,10 @@ export enum AppLocalStorage {
   editorWrapText = 'editorWrapText',
   editorMinimap = 'editorMinimap',
   editorCopilot = 'editorCopilot',
+  playgroundParameters = 'playgroundParameters',
+
+  // FIXME: Remove when new parameters are fully implemented
   playgroundInputs = 'playgroundInputs',
-  playgroundParameterSource = 'playgroundParameterSource',
-  playgroundParamsSelectedDatasetRow = 'playgroundParamsSelectedDatasetRow',
-  playgroundParamsSelectedLogRow = 'playgroundParamsSelectedLogRow',
 }
 
 const isLocalStorageAvailable = (() => {

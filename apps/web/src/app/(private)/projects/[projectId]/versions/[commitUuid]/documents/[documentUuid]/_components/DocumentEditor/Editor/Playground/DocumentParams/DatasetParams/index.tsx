@@ -1,15 +1,8 @@
-import {
-  Button,
-  cn,
-  Icon,
-  ReactStateDispatch,
-  Select,
-} from '@latitude-data/web-ui'
-import { PlaygroundInputs } from '$/hooks/useDocumentParameters'
+import { DocumentVersion } from '@latitude-data/core/browser'
+import { Button, cn, Icon, Select } from '@latitude-data/web-ui'
 import { ROUTES } from '$/services/routes'
 import Link from 'next/link'
 
-import { ParamsSource } from '../index'
 import { ParametersPaginationNav } from '../PaginationNav'
 import { InputMapper } from './InputsMapper'
 import { type UseSelectDataset } from './useSelectDataset'
@@ -28,13 +21,13 @@ function BlankSlate() {
 }
 
 export function DatasetParams({
-  inputs,
   data,
-  setSelectedTab,
+  commitVersionUuid,
+  document,
 }: {
+  document: DocumentVersion
+  commitVersionUuid: string
   data: UseSelectDataset
-  inputs: PlaygroundInputs
-  setSelectedTab: ReactStateDispatch<ParamsSource>
 }) {
   const selectedId = data.selectedDataset?.id
     ? String(data.selectedDataset.id)
@@ -53,7 +46,7 @@ export function DatasetParams({
           value={selectedId}
         />
         <div className='flex-none'>
-          {data.selectedDataset && data.selectedRowIndex ? (
+          {data.selectedDataset && data.selectedRowIndex !== undefined ? (
             <ParametersPaginationNav
               zeroIndex
               currentIndex={data.selectedRowIndex}
@@ -69,12 +62,12 @@ export function DatasetParams({
       </div>
       <div className={cn({ 'opacity-50': data.isLoading })}>
         <InputMapper
-          inputs={inputs}
+          document={document}
+          commitVersionUuid={commitVersionUuid}
           isLoading={data.isLoading}
           mappedInputs={data.selectedRow.mappedInputs}
           headersOptions={data.datasetPreview.headersOptions}
           onSelectHeader={data.onSelectHeader}
-          setSelectedTab={setSelectedTab}
           selectedDataset={data.selectedDataset}
         />
       </div>

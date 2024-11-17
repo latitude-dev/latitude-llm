@@ -1,99 +1,80 @@
 import { useCallback, useMemo } from 'react'
 
 import { AppLocalStorage, useLocalStorage } from '@latitude-data/web-ui'
-import { useFeatureFlag } from '$/hooks/useFeatureFlag'
+import { recalculateInputs } from '$/hooks/useDocumentParameters/recalculateInputs'
 
-function convertToParams(inputs: PlaygroundInputs, newParams: boolean) {
+export const INPUT_SOURCE = {
+  manual: 'manual',
+  dataset: 'dataset',
+  history: 'history',
+} as const
+
+export type InputSource = (typeof INPUT_SOURCE)[keyof typeof INPUT_SOURCE]
+export type PlaygroundInput<S extends InputSource> = S extends 'dataset'
+  ? {
+      value: string
+      metadata: { includeInPrompt: boolean }
+    }
+  : { value: string; metadata: { includeInPrompt?: boolean } }
+
+type ManualInput = PlaygroundInput<'manual'>
+type DatasetInput = PlaygroundInput<'dataset'>
+type HistoryInput = PlaygroundInput<'history'>
+
+export type Inputs<S extends InputSource> = Record<string, PlaygroundInput<S>>
+
+export type PlaygroundInputs<S extends InputSource> = {
+  source: S
+  manual: {
+    inputs: Record<string, ManualInput>
+  }
+  dataset: {
+    datasetId: number | undefined
+    rowIndex: number | undefined
+    inputs: Record<string, DatasetInput>
+    mappedInputs: Record<string, number>
+  }
+  history: {
+    logUuid: string | undefined
+    inputs: Record<string, HistoryInput>
+  }
+}
+
+export type DatasetSource = Omit<
+  PlaygroundInputs<'dataset'>['dataset'],
+  'inputs'
+>
+const EMPTY_INPUTS: PlaygroundInputs<'manual'> = {
+  source: INPUT_SOURCE.manual,
+  manual: { inputs: {} },
+  dataset: {
+    datasetId: undefined,
+    rowIndex: undefined,
+    inputs: {},
+    mappedInputs: {},
+  },
+  history: { logUuid: undefined, inputs: {} },
+}
+
+function convertToParams(inputs: Inputs<InputSource>) {
   return Object.fromEntries(
-    Object.entries(inputs).map(([key, value]) => {
-      const input =
-        typeof value === 'string' && newParams
-          ? { value, includedInPrompt: true }
-          : value
+    Object.entries(inputs).map(([key, input]) => {
       try {
-        return [
-          key,
-          JSON.parse(typeof input === 'string' ? input : input.value),
-        ]
+        return [key, JSON.parse(input.value)]
       } catch (e) {
-        return [key, typeof input === 'string' ? input : input.value]
+        return [key, input?.value?.toString?.()]
       }
     }),
   )
 }
 
-export type PlaygroundInput =
-  | { value: string; includedInPrompt: boolean }
-  | string
-export type PlaygroundInputs = Record<string, PlaygroundInput>
-function convertInput(
-  input: PlaygroundInput | undefined,
-  newParams: boolean,
-): PlaygroundInput {
-  if (!input && newParams) return { value: '', includedInPrompt: true }
-  if (!input) return ''
-
-  if (typeof input === 'string' && newParams) {
-    return { value: input, includedInPrompt: true }
-  }
-
-  if (!newParams) return input
-
-  return {
-    value: typeof input === 'string' ? input : input.value,
-    includedInPrompt: typeof input === 'string' ? true : input.includedInPrompt,
-  }
+function getDocState(oldState: InputsByDocument | null, key: string) {
+  const state = oldState ?? {}
+  const doc = state[key] ?? EMPTY_INPUTS
+  return { state, doc }
 }
 
-export function recalculateInputs({
-  inputs,
-  metadataParameters,
-  newParams,
-}: {
-  inputs: PlaygroundInputs
-  metadataParameters: Set<string>
-  newParams: boolean
-}) {
-  return Object.fromEntries(
-    Array.from(metadataParameters).map((param) => {
-      if (param in inputs) {
-        return [param, convertInput(inputs[param], newParams)]
-      }
-
-      const availableInputKey = Object.keys(inputs).find(
-        (key) => !metadataParameters.has(key),
-      )
-      if (availableInputKey) {
-        return [param, convertInput(inputs[availableInputKey], newParams)]
-      }
-
-      return [param, { value: '', includedInPrompt: true }]
-    }),
-  )
-}
-
-// TODO: Remove after new params has being in producting
-// for at least 3 months.
-// This is here because before we stored the inputs as a string
-// now we store them as { value: string; includedInPrompt: boolean }
-// To show this informating in params editor
-function convertToNewInputsInputs(
-  oldInputs: PlaygroundInputs,
-  newParams: boolean,
-) {
-  if (!newParams) return oldInputs
-
-  return Object.fromEntries(
-    Object.entries(oldInputs).map(([key, value]) => {
-      return [
-        key,
-        typeof value === 'string' ? { value, includedInPrompt: true } : value,
-      ]
-    }),
-  ) as PlaygroundInputs
-}
-
-type InputsByCommitVersionAndDocumentUuid = Record<string, PlaygroundInputs>
+type InputsByDocument = Record<string, PlaygroundInputs<InputSource>>
 export function useDocumentParameters({
   documentVersionUuid,
   commitVersionUuid,
@@ -101,39 +82,211 @@ export function useDocumentParameters({
   documentVersionUuid: string
   commitVersionUuid: string
 }) {
-  // FIXME: Remove after new params is fully implemented
-  const newParams = useFeatureFlag()
-  const { value: allInputs, setValue } =
-    useLocalStorage<InputsByCommitVersionAndDocumentUuid>({
-      key: AppLocalStorage.playgroundInputs,
-      defaultValue: {},
-    })
+  const { value: allInputs, setValue } = useLocalStorage<InputsByDocument>({
+    key: AppLocalStorage.playgroundParameters,
+    defaultValue: {},
+  })
   const key = `${commitVersionUuid}:${documentVersionUuid}`
-  const inputs = useMemo(
-    () => convertToNewInputsInputs(allInputs[key] ?? {}, newParams),
-    [allInputs, key, newParams],
-  )
-  const parameters = useMemo(() => convertToParams(inputs, newParams), [inputs])
+  const inputs = allInputs[key] ?? EMPTY_INPUTS
+  const source = inputs.source
+  const inputsBySource = inputs[source].inputs
 
   const setInputs = useCallback(
-    (newInputs: PlaygroundInputs) => {
-      setValue((prev) => ({ ...prev, [key]: newInputs }))
+    <S extends InputSource>(source: S, newInputs: Inputs<S>) => {
+      setValue((oldState) => {
+        const { state, doc } = getDocState(oldState, key)
+        const prevSource = doc[source]
+        return {
+          ...state,
+          [key]: {
+            ...doc,
+            [source]: {
+              ...prevSource,
+              inputs: newInputs,
+            },
+          },
+        }
+      })
     },
-    [allInputs, key],
+    [allInputs, key, source, setValue],
+  )
+
+  const setManualInputs = useCallback(
+    (newInputs: Inputs<'manual'>) => setInputs(INPUT_SOURCE.manual, newInputs),
+    [setInputs],
+  )
+
+  const setDatasetInputs = useCallback(
+    (newInputs: Inputs<'dataset'>) =>
+      setInputs(INPUT_SOURCE.dataset, newInputs),
+    [setInputs],
+  )
+  const setHistoryInputs = useCallback(
+    (newInputs: Inputs<'history'>) =>
+      setInputs(INPUT_SOURCE.history, newInputs),
+    [setInputs],
+  )
+
+  const setInput = useCallback(
+    <S extends InputSource>(
+      source: S,
+      value: PlaygroundInput<S>,
+      param: string,
+    ) => {
+      inputs
+      switch (source) {
+        case INPUT_SOURCE.manual:
+          setManualInputs({ ...inputsBySource, [param]: value })
+          break
+        case INPUT_SOURCE.history:
+          setHistoryInputs({ ...inputsBySource, [param]: value })
+          break
+        case INPUT_SOURCE.dataset:
+          setDatasetInputs({
+            ...(inputsBySource as unknown as Inputs<'dataset'>),
+            [param]: value as PlaygroundInput<'dataset'>,
+          })
+          break
+      }
+    },
+    [source, inputsBySource, setInputs],
+  )
+
+  const setManualInput = useCallback(
+    (param: string, value: PlaygroundInput<'manual'>) => {
+      setInput(source, value, param)
+    },
+    [setInput],
+  )
+
+  const setHistoryInput = useCallback(
+    (param: string, value: PlaygroundInput<'history'>) => {
+      setInput(source, value, param)
+    },
+    [setInput, source],
+  )
+
+  const setDatasetInput = useCallback(
+    (param: string, value: PlaygroundInput<'dataset'>) => {
+      setInput(source, value, param)
+    },
+    [setInput, source],
+  )
+
+  const setSource = useCallback(
+    (source: InputSource) => {
+      setValue((prev) => {
+        const { state, doc } = getDocState(prev, key)
+        return {
+          ...state,
+          [key]: {
+            ...doc,
+            source,
+          },
+        }
+      })
+    },
+    [key, setValue],
+  )
+
+  const setDataset = useCallback(
+    (selected: DatasetSource) => {
+      setValue((old) => {
+        const { state, doc } = getDocState(old, key)
+        return {
+          ...state,
+          [key]: {
+            ...doc,
+            dataset: {
+              ...doc.dataset,
+              ...selected,
+            },
+          },
+        }
+      })
+    },
+    [allInputs, key, setValue],
+  )
+
+  const copyDatasetInputsToManual = useCallback(() => {
+    setManualInputs(inputs['dataset'].inputs)
+  }, [inputs])
+
+  const setHistoryLog = useCallback(
+    (logUuid: string) => {
+      setValue((old) => {
+        const { state, doc } = getDocState(old, key)
+        return {
+          ...state,
+          [key]: {
+            ...doc,
+            history: {
+              ...doc.history,
+              logUuid,
+            },
+          },
+        }
+      })
+    },
+    [allInputs, key, setValue],
   )
 
   const onMetadataProcessed = useCallback(
     (metadataParameters: Set<string>) => {
-      const newInputs = recalculateInputs({
-        inputs,
-        metadataParameters,
-        newParams,
-      })
-
-      setInputs(newInputs)
+      setInputs(
+        'manual',
+        recalculateInputs({ inputs: inputs.manual.inputs, metadataParameters }),
+      )
+      setInputs(
+        'dataset',
+        recalculateInputs({
+          inputs: inputs.dataset.inputs,
+          metadataParameters,
+        }),
+      )
+      setInputs(
+        'history',
+        recalculateInputs({
+          inputs: inputs.history.inputs,
+          metadataParameters,
+        }),
+      )
     },
-    [inputs, newParams, setInputs],
+    [inputs, setInputs, source],
   )
 
-  return { parameters, inputs, setInputs, onMetadataProcessed }
+  const parameters = useMemo(
+    () => convertToParams(inputsBySource),
+    [inputsBySource],
+  )
+
+  return {
+    parameters,
+    onMetadataProcessed,
+    source,
+    setSource,
+    setInput,
+    manual: {
+      inputs: inputs['manual'].inputs,
+      setInput: setManualInput,
+      setInputs: setManualInputs,
+    },
+    dataset: {
+      datasetId: inputs['dataset'].datasetId,
+      rowIndex: inputs['dataset'].rowIndex,
+      inputs: inputs['dataset'].inputs,
+      mappedInputs: inputs['dataset'].mappedInputs,
+      setInput: setDatasetInput,
+      setInputs: setDatasetInputs,
+      copyToManual: copyDatasetInputsToManual,
+      setDataset,
+    },
+    history: {
+      logUuid: inputs['history'].logUuid,
+      inputs: inputs['history'].inputs,
+      setInput: setHistoryInput,
+      setInputs: setHistoryInputs,
+      setHistoryLog,
+    },
+  }
 }

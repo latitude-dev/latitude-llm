@@ -7,30 +7,28 @@ import {
   Tooltip,
 } from '@latitude-data/web-ui'
 import {
-  Inputs,
-  InputSource,
   PlaygroundInput,
-} from '$/hooks/useDocumentParameters'
+  PlaygroundInputs,
+} from '$/hooks/useDocumentParameters/oldHook'
 
-export function InputParams({
+// FIXME: Remove this when source inputs are enabled.
+export function OldInputs({
   inputs,
   setInput,
 }: {
-  inputs: Inputs<InputSource>
-  setInput: (param: string, value: PlaygroundInput<InputSource>) => void
+  inputs: PlaygroundInputs
+  setInput: (param: string, value: PlaygroundInput) => void
 }) {
   return (
     <ClientOnly>
       <div className='flex flex-col gap-3'>
+        <Text.H6M>Inputs</Text.H6M>
         {Object.keys(inputs).length > 0 ? (
           <div className='grid grid-cols-[auto_1fr] gap-y-3'>
             {Object.entries(inputs).map(([param, input], idx) => {
-              const value = input.value
-              const metadata = input.metadata
+              const value = typeof input === 'string' ? input : input.value
               const includedInPrompt =
-                metadata.includeInPrompt === undefined
-                  ? true
-                  : metadata.includeInPrompt
+                typeof input === 'string' ? true : input.includedInPrompt
               return (
                 <div
                   className='grid col-span-2 grid-cols-subgrid gap-3 w-full items-start'
@@ -52,7 +50,7 @@ export function InputParams({
                       minRows={1}
                       maxRows={6}
                       onChange={(e) => {
-                        setInput(param, { ...input, value: e.target.value })
+                        setInput(param, e.target.value)
                       }}
                     />
                   </div>

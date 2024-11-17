@@ -1,15 +1,14 @@
+import { DocumentVersion } from '@latitude-data/core/browser'
 import {
-  AppLocalStorage,
   ClientOnly,
   CollapsibleBox,
-  ReactStateDispatch,
   TabSelector,
-  useLocalStorage,
   type TabSelectorOption,
 } from '@latitude-data/web-ui'
 import {
-  PlaygroundInput,
-  PlaygroundInputs,
+  INPUT_SOURCE,
+  InputSource,
+  useDocumentParameters,
 } from '$/hooks/useDocumentParameters'
 
 import { DatasetParams } from './DatasetParams'
@@ -25,64 +24,58 @@ import {
 import { ManualParams } from './ManualParams'
 import { ParametersPaginationNav } from './PaginationNav'
 
-const PARAMS_SOURCE = {
-  manual: 'manual',
-  dataset: 'dataset',
-  history: 'history',
-} as const
-
-export type ParamsSource = (typeof PARAMS_SOURCE)[keyof typeof PARAMS_SOURCE]
-
-const TABS: TabSelectorOption<ParamsSource>[] = [
-  { label: 'Manual', value: PARAMS_SOURCE.manual },
-  { label: 'Dataset', value: PARAMS_SOURCE.dataset },
-  { label: 'History', value: PARAMS_SOURCE.history },
+const TABS: TabSelectorOption<InputSource>[] = [
+  { label: 'Manual', value: INPUT_SOURCE.manual },
+  { label: 'Dataset', value: INPUT_SOURCE.dataset },
+  { label: 'History', value: INPUT_SOURCE.history },
 ]
 
-type Props = {
-  inputs: PlaygroundInputs
-  setInput: (param: string, value: PlaygroundInput) => void
-  setInputs: (newInputs: PlaygroundInputs) => void
+export type Props = {
+  document: DocumentVersion
+  commitVersionUuid: string
 }
-
 type ContentProps = Props & {
-  setSelectedTab: ReactStateDispatch<ParamsSource>
-  selectedTab: ParamsSource
   datasetInfo: UseSelectDataset
   historyInfo: UseLogHistoryParams
 }
 
 function ParamsTabs({
-  inputs,
-  setInput,
-  setSelectedTab,
-  selectedTab,
+  document,
+  commitVersionUuid,
   datasetInfo,
   historyInfo,
 }: ContentProps) {
+  const { source, setSource } = useDocumentParameters({
+    documentVersionUuid: document.documentUuid,
+    commitVersionUuid,
+  })
+
   return (
     <div className='w-full flex flex-col gap-4'>
-      <TabSelector<ParamsSource>
+      <TabSelector<InputSource>
         fullWidth
         options={TABS}
-        selected={selectedTab}
-        onSelect={setSelectedTab}
+        selected={source}
+        onSelect={setSource}
       />
-      {selectedTab === PARAMS_SOURCE.manual && (
-        <ManualParams inputs={inputs} setInput={setInput} />
-      )}
-      {selectedTab === PARAMS_SOURCE.dataset && (
-        <DatasetParams
-          inputs={inputs}
-          setSelectedTab={setSelectedTab}
-          data={datasetInfo}
+      {source === INPUT_SOURCE.manual && (
+        <ManualParams
+          document={document}
+          commitVersionUuid={commitVersionUuid}
         />
       )}
-      {selectedTab === PARAMS_SOURCE.history && (
+      {source === INPUT_SOURCE.dataset && (
+        <DatasetParams
+          data={datasetInfo}
+          document={document}
+          commitVersionUuid={commitVersionUuid}
+        />
+      )}
+      {source === INPUT_SOURCE.history && (
         <HistoryLogParams
-          inputs={inputs}
-          setInput={setInput}
           data={historyInfo}
+          document={document}
+          commitVersionUuid={commitVersionUuid}
         />
       )}
     </div>
@@ -90,16 +83,21 @@ function ParamsTabs({
 }
 
 function CollapsedContentHeader({
-  selectedTab,
+  document,
+  commitVersionUuid,
   datasetInfo,
   historyInfo,
 }: ContentProps) {
-  const src = PARAMS_SOURCE
+  const src = INPUT_SOURCE
+  const { source } = useDocumentParameters({
+    documentVersionUuid: document.documentUuid,
+    commitVersionUuid,
+  })
 
-  if (selectedTab === src.manual) return null
+  if (source === src.manual) return null
   const isDataset =
-    selectedTab === PARAMS_SOURCE.dataset && datasetInfo.selectedDataset
-  const isHistory = selectedTab === src.history && historyInfo.count > 0
+    source === INPUT_SOURCE.dataset && datasetInfo.selectedDataset
+  const isHistory = source === src.history && historyInfo.count > 0
 
   const onPrevDatasetPage = (page: number) => datasetInfo.onRowChange(page - 1)
   const onNextDatasetPage = (page: number) => datasetInfo.onRowChange(page + 1)
@@ -130,18 +128,17 @@ function CollapsedContentHeader({
 }
 
 export function DocumentParams(props: Props) {
-  const { value: selectedTab, setValue: setSelectedTab } =
-    useLocalStorage<ParamsSource>({
-      key: AppLocalStorage.playgroundParameterSource,
-      defaultValue: PARAMS_SOURCE.manual,
-    })
-  const { inputs, setInputs } = props
-  const datasetInfo = useSelectDataset({ inputs, setInputs })
-  const historyInfo = useLogHistoryParams({ inputs, setInputs })
+  const datasetInfo = useSelectDataset({
+    document: props.document,
+    commitVersionUuid: props.commitVersionUuid,
+  })
+  const historyInfo = useLogHistoryParams({
+    document: props.document,
+    commitVersionUuid: props.commitVersionUuid,
+  })
+
   const contentProps = {
     ...props,
-    setSelectedTab,
-    selectedTab,
     datasetInfo,
     historyInfo,
   }

@@ -6,6 +6,8 @@ import useCurrentWorkspace from '$/stores/currentWorkspace'
 export function useFeatureFlag() {
   const { data } = useCurrentWorkspace()
 
+  if (!data) return undefined
+
   // If your workspace in develop is not 1, you are not a developer
   return data?.id === 1
 }
