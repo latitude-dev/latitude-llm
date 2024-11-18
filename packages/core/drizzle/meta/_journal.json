@@ -708,6 +708,13 @@
       "when": 1731575676862,
       "tag": "0101_special_scarlet_witch",
       "breakpoints": true
+    },
+    {
+      "idx": 102,
+      "version": "7",
+      "when": 1731923073817,
+      "tag": "0102_flashy_puff_adder",
+      "breakpoints": true
     }
   ]
 }
