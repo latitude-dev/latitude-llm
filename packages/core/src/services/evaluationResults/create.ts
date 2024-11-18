@@ -28,7 +28,7 @@ function getResultable(type: EvaluationResultableType) {
 
 export type EvaluationResultObject = {
   result: number | string | boolean
-  reason: string
+  reason?: string
 }
 export type CreateEvaluationResultProps = {
   uuid: string

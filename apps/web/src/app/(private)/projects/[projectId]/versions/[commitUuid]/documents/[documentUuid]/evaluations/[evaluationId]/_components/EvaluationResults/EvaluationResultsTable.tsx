@@ -62,7 +62,13 @@ export const ResultCellContent = ({
     )
   }
 
-  return <Text.H4 noWrap>{value as string}</Text.H4>
+  return (
+    <Text.H4 noWrap>
+      {typeof value === 'string' && value.length > 30
+        ? `${value.slice(0, 30)}...`
+        : (value as string)}
+    </Text.H4>
+  )
 }
 
 export type EvaluationResultRow = EvaluationResultWithMetadataAndErrors & {

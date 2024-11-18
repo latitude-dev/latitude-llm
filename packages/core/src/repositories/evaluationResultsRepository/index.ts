@@ -100,7 +100,7 @@ export class EvaluationResultsRepository extends Repository<EvaluationResultDto>
         and(
           isNull(runErrors.id),
           isNotNull(evaluationResults.resultableId),
-          isNotNull(evaluationResults.providerLogId),
+          isNotNull(evaluationResults.evaluatedProviderLogId),
           eq(evaluations.workspaceId, this.workspaceId),
         ),
       )

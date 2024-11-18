@@ -2,48 +2,16 @@
 
 import { useState } from 'react'
 
-import {
-  EvaluationDto,
-  EvaluationMetadataType,
-} from '@latitude-data/core/browser'
+import { EvaluationDto } from '@latitude-data/core/browser'
 import {
   CodeBlock,
-  TableBlankSlate,
   TabSelector,
   useCurrentProject,
 } from '@latitude-data/web-ui'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import useApiKeys from '$/stores/apiKeys'
 
-export function EvaluationBlankSlate({
-  evaluation,
-  onOpen,
-}: {
-  evaluation: EvaluationDto
-  onOpen: () => void
-}) {
-  if (evaluation.metadataType === EvaluationMetadataType.Manual) {
-    return (
-      <TableBlankSlate
-        description="There are no evaluation results yet. Submit the first evaluation result using Latitude's SDK or HTTP API."
-        link={<SubmitEvaluationDocumentation evaluation={evaluation} />}
-      />
-    )
-  }
-
-  return (
-    <TableBlankSlate
-      description='There are no evaluation results yet. Run the evaluation or, if you already have, wait a few seconds for the first results to stream in.'
-      link={
-        <TableBlankSlate.Button onClick={onOpen}>
-          Run the evaluation
-        </TableBlankSlate.Button>
-      }
-    />
-  )
-}
-
-function SubmitEvaluationDocumentation({
+export function SubmitEvaluationDocumentation({
   evaluation,
 }: {
   evaluation: EvaluationDto

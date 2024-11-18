@@ -1,12 +1,12 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { ReactNode, useCallback, useEffect, useRef, useState } from 'react'
 
 import { cn } from '../../../lib/utils'
 import { Button, Text } from '../../atoms'
 
 export type TabSelectorOption<T> = {
-  label: string
+  label: ReactNode | string
   value: T
   route?: string
   disabled?: boolean
@@ -110,9 +110,15 @@ export function TabSelector<T extends string>({
                 onClick={handleSelect(option)}
                 fullWidth={fullWidth}
               >
-                <Text.H5M color={isSelected ? 'foreground' : 'foregroundMuted'}>
-                  {option.label}
-                </Text.H5M>
+                {typeof option.label === 'string' ? (
+                  <Text.H5M
+                    color={isSelected ? 'foreground' : 'foregroundMuted'}
+                  >
+                    {option.label}
+                  </Text.H5M>
+                ) : (
+                  option.label
+                )}
               </Button>
             </div>
           )

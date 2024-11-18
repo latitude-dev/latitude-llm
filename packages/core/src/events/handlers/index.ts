@@ -23,6 +23,7 @@ export const EventHandlers: IEventsHandlers = {
   documentRun: [],
   evaluationCreated: [],
   evaluationResultCreated: [notifyToClientEvaluationResultCreatedJob],
+  evaluationResultUpdated: [],
   evaluationRun: [],
   evaluationsConnected: [],
   magicLinkTokenCreated: [sendMagicLinkJob],

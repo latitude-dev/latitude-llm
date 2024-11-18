@@ -28,7 +28,7 @@ export const MetadataInfoTabs = forwardRef<HTMLDivElement, Props>(
         ref={ref}
         className={cn(
           'flex flex-col flex-grow min-h-0 bg-background',
-          'border border-border rounded-lg items-center relative',
+          'items-center relative',
           className,
         )}
       >

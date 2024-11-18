@@ -20,6 +20,7 @@ import type {
   User,
   Workspace,
 } from '../browser'
+import { EvaluationResultDto } from '../repositories'
 import { PartialConfig } from '../services/ai'
 
 export type Events =
@@ -53,6 +54,7 @@ export type Events =
   | 'copilotRefinerApplied'
   | 'copilotSuggestionGenerated'
   | 'copilotSuggestionApplied'
+  | 'evaluationResultUpdated'
 
 export type LatitudeEventGeneric<
   U extends Events,
@@ -369,6 +371,14 @@ export type CopilotSuggestionApplied = LatitudeEventGeneric<
   }
 >
 
+export type EvaluationResultUpdatedEvent = LatitudeEventGeneric<
+  'evaluationResultUpdated',
+  {
+    evaluationResult: EvaluationResultDto
+    workspaceId: number
+  }
+>
+
 export type LatitudeEvent =
   | MembershipCreatedEvent
   | UserCreatedEvent
@@ -400,6 +410,7 @@ export type LatitudeEvent =
   | CopilotRefinerApplied
   | CopilotSuggestionGenerated
   | CopilotSuggestionApplied
+  | EvaluationResultUpdatedEvent
 
 export interface IEventsHandlers {
   magicLinkTokenCreated: EventHandler<MagicLinkTokenCreated>[]
@@ -432,4 +443,5 @@ export interface IEventsHandlers {
   copilotRefinerApplied: EventHandler<CopilotRefinerApplied>[]
   copilotSuggestionGenerated: EventHandler<CopilotSuggestionGenerated>[]
   copilotSuggestionApplied: EventHandler<CopilotSuggestionApplied>[]
+  evaluationResultUpdated: EventHandler<EvaluationResultUpdatedEvent>[]
 }

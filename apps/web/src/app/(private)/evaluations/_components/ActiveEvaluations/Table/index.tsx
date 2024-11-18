@@ -1,6 +1,10 @@
 'use client'
 
-import { Evaluation } from '@latitude-data/core/browser'
+import {
+  Evaluation,
+  EvaluationMetadataType,
+  EvaluationResultableType,
+} from '@latitude-data/core/browser'
 import {
   Icon,
   Table,
@@ -14,6 +18,18 @@ import {
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
 import Link from 'next/link'
+
+export const evaluationMetadataTypes = {
+  [EvaluationMetadataType.LlmAsJudgeSimple]: 'LLM as judge',
+  [EvaluationMetadataType.LlmAsJudgeAdvanced]: 'LLM as judge',
+  [EvaluationMetadataType.Manual]: 'Code / Manual',
+}
+
+export const evaluationResultTypes = {
+  [EvaluationResultableType.Boolean]: 'Boolean',
+  [EvaluationResultableType.Number]: 'Number',
+  [EvaluationResultableType.Text]: 'Text',
+}
 
 const ActiveEvaluationsTableRow = ({
   evaluation,
@@ -32,7 +48,13 @@ const ActiveEvaluationsTableRow = ({
         <Text.H5 noWrap>{evaluation.name}</Text.H5>
       </TableCell>
       <TableCell>
-        <Text.H5>{evaluation.description}</Text.H5>
+        <Text.H5>{evaluation.description || '-'}</Text.H5>
+      </TableCell>
+      <TableCell>
+        <Text.H5>{evaluationMetadataTypes[evaluation.metadataType]}</Text.H5>
+      </TableCell>
+      <TableCell>
+        <Text.H5>{evaluationResultTypes[evaluation.resultType!]}</Text.H5>
       </TableCell>
       <TableCell onClick={(e) => e.stopPropagation()}>
         <Link href={ROUTES.evaluations.destroy(evaluation.uuid)}>
@@ -55,6 +77,8 @@ export default function ActiveEvaluationsTable({
         <TableRow>
           <TableHead>Name</TableHead>
           <TableHead>Description</TableHead>
+          <TableHead>Type</TableHead>
+          <TableHead>Result Type</TableHead>
           <TableHead>Actions</TableHead>
         </TableRow>
       </TableHeader>

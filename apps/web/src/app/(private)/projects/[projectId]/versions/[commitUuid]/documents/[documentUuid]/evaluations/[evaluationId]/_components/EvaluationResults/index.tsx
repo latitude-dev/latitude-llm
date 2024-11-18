@@ -5,6 +5,7 @@ import { useCallback, useRef, useState } from 'react'
 import { EvaluationDto } from '@latitude-data/core/browser'
 import { type EvaluationResultWithMetadataAndErrors } from '@latitude-data/core/repositories'
 import {
+  TableBlankSlate,
   Text,
   useCurrentCommit,
   useCurrentProject,
@@ -20,7 +21,6 @@ import { useProviderLog } from '$/stores/providerLogs'
 import { useSearchParams } from 'next/navigation'
 
 import CreateBatchEvaluationModal from '../Actions/CreateBatchEvaluationModal'
-import { EvaluationBlankSlate } from './EvaluationBlankSlate'
 import { EvaluationResultInfo } from './EvaluationResultInfo'
 import {
   EvaluationResultRow,
@@ -122,7 +122,14 @@ export function EvaluationResults({
       <div className='flex flex-row flex-grow gap-4 min-w-[1024px]'>
         <div className='flex-1 mb-6'>
           {evaluationResults.length === 0 && (
-            <EvaluationBlankSlate evaluation={evaluation} onOpen={onOpen} />
+            <TableBlankSlate
+              description='There are no evaluation results yet. Run the evaluation or, if you already have, wait a few seconds for the first results to stream in.'
+              link={
+                <TableBlankSlate.Button onClick={onOpen}>
+                  Run the evaluation
+                </TableBlankSlate.Button>
+              }
+            />
           )}
           {evaluationResults.length > 0 && (
             <EvaluationResultsTable

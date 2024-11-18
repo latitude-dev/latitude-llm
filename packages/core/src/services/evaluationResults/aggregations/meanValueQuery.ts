@@ -49,6 +49,7 @@ export async function getEvaluationMeanValueQuery(
   const value = results[0]
   const config =
     evaluation.resultConfiguration as EvaluationConfigurationNumerical
+
   return {
     minValue: config.minValue,
     maxValue: config.maxValue,
