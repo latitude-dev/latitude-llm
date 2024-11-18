@@ -80,8 +80,12 @@ export function TabSelector<T extends string>({
     >
       <div
         className={cn(
-          'flex flex-row relative bg-background rounded-xl border border-border -m-px p-1 gap-2',
-          fullWidth && 'w-full',
+          'flex flex-row justify-between gap-2 ',
+          'bg-background rounded-xl border border-border',
+          'relative -m-px p-1',
+          {
+            'w-[calc(100%+2px)]': fullWidth,
+          },
         )}
       >
         <div

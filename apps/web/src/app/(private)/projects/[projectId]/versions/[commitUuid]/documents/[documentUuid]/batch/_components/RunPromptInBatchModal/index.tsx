@@ -23,28 +23,20 @@ import useDatasets from '$/stores/datasets'
 import DatasetForm from '../../../evaluations/[evaluationId]/_components/Actions/CreateBatchEvaluationModal/DatasetForm'
 import { RunBatchParameters } from '../../../evaluations/[evaluationId]/_components/Actions/CreateBatchEvaluationModal/useRunBatch'
 import { buildEmptyParameters } from '../../../evaluations/[evaluationId]/_components/Actions/CreateBatchEvaluationModal/useRunBatchForm'
+import { useMappedParametersFromLocalStorage } from './useMappedParametersFromLocalStorage'
 
-function useRunDocumentInBatchForm(document: DocumentVersion) {
+function useRunDocumentInBatchForm({
+  document,
+  commitVersionUuid,
+}: {
+  document: DocumentVersion
+  commitVersionUuid: string
+}) {
   const [metadata, setMetadata] = useState<ConversationMetadata | undefined>()
-  useEffect(() => {
-    const fn = async () => {
-      if (!document || !document.content) return
-
-      const metadata = await readMetadata({
-        prompt: document.content,
-      })
-
-      setMetadata(metadata)
-    }
-
-    fn()
-  }, [document])
-
   const parametersList = useMemo(
     () => Array.from(metadata?.parameters ?? []),
     [metadata?.parameters],
   )
-  const { data: datasets, isLoading: isLoadingDatasets } = useDatasets()
   const [selectedDataset, setSelectedDataset] = useState<Dataset | null>(null)
   const [headers, setHeaders] = useState<SelectOption[]>([])
   const [wantAllLines, setAllRows] = useState(true)
@@ -53,7 +45,6 @@ function useRunDocumentInBatchForm(document: DocumentVersion) {
   const [parameters, setParameters] = useState(() =>
     buildEmptyParameters(parametersList),
   )
-
   const onParameterChange = useCallback(
     (param: string) => (header: string) => {
       setParameters((prev: RunBatchParameters) => ({
@@ -64,6 +55,20 @@ function useRunDocumentInBatchForm(document: DocumentVersion) {
     [selectedDataset],
   )
 
+  const buildHeaders = useCallback(
+    (dataset: Dataset) => {
+      setHeaders([
+        { value: '-1', label: '-- Leave this parameter empty' },
+        ...dataset.fileMetadata.headers.map((header) => ({
+          value: header,
+          label: header,
+        })),
+      ])
+    },
+    [setHeaders, selectedDataset],
+  )
+
+  const { data: datasets, isLoading: isLoadingDatasets } = useDatasets()
   const onSelectDataset = useCallback(
     async (value: string) => {
       const ds = datasets.find((ds) => ds.id === Number(value))
@@ -73,16 +78,44 @@ function useRunDocumentInBatchForm(document: DocumentVersion) {
       setParameters(buildEmptyParameters(parametersList))
       setFromLine(1)
       setToLine(ds.fileMetadata.rowCount)
-      setHeaders([
-        { value: '-1', label: '-- Leave this parameter empty' },
-        ...ds.fileMetadata.headers.map((header) => ({
-          value: header,
-          label: header,
-        })),
-      ])
+      buildHeaders(ds)
     },
-    [parametersList, datasets],
+    [parametersList, datasets, buildHeaders],
   )
+
+  useEffect(() => {
+    const fn = async () => {
+      if (!document || !document.content) return
+
+      const metadata = await readMetadata({
+        prompt: document.content,
+      })
+
+      setMetadata(metadata)
+
+      // Only choose the dataset if it's not already selected
+      const ds = selectedDataset
+        ? undefined
+        : datasets.find((ds) => ds.id === document.datasetId)
+
+      if (!ds) return
+
+      setSelectedDataset(ds)
+      buildHeaders(ds)
+    }
+
+    fn()
+  }, [document, selectedDataset, setSelectedDataset, buildHeaders, datasets])
+
+  useMappedParametersFromLocalStorage({
+    document,
+    commitVersionUuid,
+    parametersList,
+    selectedDataset,
+    onDatasetReady: ({ mapped }) => {
+      setParameters(mapped)
+    },
+  })
   return {
     datasets,
     isLoadingDatasets,
@@ -159,7 +192,10 @@ export default function RunPromptInBatchModal() {
   const { commit } = useCurrentCommit()
   const { toast } = useToast()
 
-  const form = useRunDocumentInBatchForm(document)
+  const form = useRunDocumentInBatchForm({
+    document,
+    commitVersionUuid: commit.uuid,
+  })
   const { runBatch, errors, isRunningBatch } = useRunDocumentInBatch({
     document,
     projectId: project.id,
@@ -224,6 +260,7 @@ export default function RunPromptInBatchModal() {
         headers={form.headers}
         parametersList={form.parametersList}
         onParametersChange={form.onParameterChange}
+        parameters={form.parameters}
       />
     </Modal>
   )

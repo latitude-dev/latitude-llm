@@ -34,6 +34,7 @@ import {
   Pin,
   PinOff,
   RefreshCcw,
+  ScrollTextIcon,
   Sparkles,
   SquareDot,
   SquareMinus,
@@ -100,6 +101,7 @@ const Icons = {
   trash: Trash,
   twitter: Twitter,
   undo: Undo,
+  rollText: ScrollTextIcon,
 }
 
 export type IconName = keyof typeof Icons

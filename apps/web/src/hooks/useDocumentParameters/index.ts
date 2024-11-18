@@ -1,5 +1,6 @@
 import { useCallback, useMemo } from 'react'
 
+import { DocumentLog } from '@latitude-data/core/browser'
 import { AppLocalStorage, useLocalStorage } from '@latitude-data/web-ui'
 import { recalculateInputs } from '$/hooks/useDocumentParameters/recalculateInputs'
 
@@ -72,6 +73,33 @@ function getDocState(oldState: InputsByDocument | null, key: string) {
   const state = oldState ?? {}
   const doc = state[key] ?? EMPTY_INPUTS
   return { state, doc }
+}
+
+function getValue({ paramValue }: { paramValue: unknown | undefined }) {
+  try {
+    const value =
+      typeof paramValue === 'string' ? paramValue : JSON.stringify(paramValue)
+    return { value, metadata: { includeInPrompt: paramValue !== undefined } }
+  } catch {
+    return { value: '', metadata: { includeInPrompt: false } }
+  }
+}
+
+function mapLogParametersToInputs({
+  inputs,
+  parameters,
+}: {
+  inputs: Inputs<'history'>
+  parameters: DocumentLog['parameters'] | undefined
+}): Inputs<'history'> | undefined {
+  const params = parameters ?? {}
+  // No parameters
+  if (!Object.keys(params).length) return undefined
+
+  return Object.entries(inputs).reduce((acc, [key]) => {
+    acc[key] = getValue({ paramValue: params[key] })
+    return acc
+  }, {} as Inputs<'history'>)
 }
 
 type InputsByDocument = Record<string, PlaygroundInputs<InputSource>>
@@ -231,6 +259,30 @@ export function useDocumentParameters({
     [allInputs, key, setValue],
   )
 
+  const mapDocParametersToInputs = useCallback(
+    ({
+      parameters,
+      source,
+    }: {
+      parameters: DocumentLog['parameters']
+      source: InputSource
+    }) => {
+      const state = allInputs[key]
+      if (!state) return
+
+      const docState = state[source]
+      const sourceInputs = docState.inputs
+      const newInputs = mapLogParametersToInputs({
+        inputs: sourceInputs,
+        parameters,
+      })
+      if (!newInputs) return
+
+      setInputs(source, newInputs)
+    },
+    [inputs, key, setInputs],
+  )
+
   const onMetadataProcessed = useCallback(
     (metadataParameters: Set<string>) => {
       setInputs(
@@ -266,6 +318,7 @@ export function useDocumentParameters({
     source,
     setSource,
     setInput,
+    mapDocParametersToInputs,
     manual: {
       inputs: inputs['manual'].inputs,
       setInput: setManualInput,

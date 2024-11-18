@@ -1,39 +1,13 @@
 import { useCallback, useState } from 'react'
 
-import { DocumentLog, DocumentVersion } from '@latitude-data/core/browser'
+import { DocumentVersion } from '@latitude-data/core/browser'
 import { useCurrentCommit, useCurrentProject } from '@latitude-data/web-ui'
-import { Inputs, useDocumentParameters } from '$/hooks/useDocumentParameters'
+import { useDocumentParameters } from '$/hooks/useDocumentParameters'
 import useDocumentLogs from '$/stores/documentLogs'
 import useDocumentLogWithPaginationPosition, {
   LogWithPosition,
 } from '$/stores/documentLogWithPaginationPosition'
 import useDocumentLogsPagination from '$/stores/useDocumentLogsPagination'
-
-function getValue({ paramValue }: { paramValue: unknown | undefined }) {
-  try {
-    const value = JSON.stringify(paramValue)
-    return { value, metadata: { includeInPrompt: paramValue !== undefined } }
-  } catch {
-    return { value: '', metadata: { includeInPrompt: false } }
-  }
-}
-
-function mapLogParametersToInputs({
-  inputs,
-  parameters,
-}: {
-  inputs: Inputs<'history'>
-  parameters: DocumentLog['parameters'] | undefined
-}): Inputs<'history'> | undefined {
-  const params = parameters ?? {}
-  // No parameters
-  if (!Object.keys(params).length) return undefined
-
-  return Object.entries(inputs).reduce((acc, [key]) => {
-    acc[key] = getValue({ paramValue: params[key] })
-    return acc
-  }, {} as Inputs<'history'>)
-}
 
 const ONLY_ONE_PAGE = '1'
 export function useLogHistoryParams({
@@ -44,7 +18,8 @@ export function useLogHistoryParams({
   commitVersionUuid: string
 }) {
   const {
-    history: { inputs, setInputs, setHistoryLog, logUuid },
+    mapDocParametersToInputs,
+    history: { setHistoryLog, logUuid },
   } = useDocumentParameters({
     documentVersionUuid: document.documentUuid,
     commitVersionUuid,
@@ -92,14 +67,10 @@ export function useLogHistoryParams({
       const log = logs[0]
       if (!log) return
 
-      const newInputs = mapLogParametersToInputs({
-        inputs,
+      mapDocParametersToInputs({
+        source: 'history',
         parameters: log.parameters,
       })
-
-      if (!newInputs) return
-
-      setInputs(newInputs)
       setHistoryLog(log.uuid)
     },
   })

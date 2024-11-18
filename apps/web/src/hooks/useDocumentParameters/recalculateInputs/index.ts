@@ -11,7 +11,8 @@ export function recalculateInputs<S extends InputSource>({
     Array.from(metadataParameters).map((param) => {
       if (param in inputs) {
         const value = inputs[param]?.value ?? ''
-        return [param, { value, metadata: { includeInPrompt: true } }]
+        const includeInPrompt = inputs[param]?.metadata.includeInPrompt ?? true
+        return [param, { value, metadata: { includeInPrompt } }]
       }
 
       const availableInputKey = Object.keys(inputs).find(
@@ -19,8 +20,10 @@ export function recalculateInputs<S extends InputSource>({
       )
 
       if (availableInputKey) {
-        const value = inputs[availableInputKey]?.value ?? ''
-        return [param, { value, metadata: { includeInPrompt: true } }]
+        const input = inputs[availableInputKey]
+        const value = input?.value ?? ''
+        const includeInPrompt = input?.metadata.includeInPrompt ?? true
+        return [param, { value, metadata: { includeInPrompt } }]
       }
 
       return [param, { value: '', metadata: { includeInPrompt: true } }]

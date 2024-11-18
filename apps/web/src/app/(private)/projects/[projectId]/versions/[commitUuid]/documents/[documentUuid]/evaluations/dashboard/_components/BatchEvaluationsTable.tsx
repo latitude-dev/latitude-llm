@@ -54,7 +54,7 @@ export default function ConnectedEvaluationsTable({
               </div>
             </TableCell>
             <TableCell>
-              <Text.H4>{evaluation.description}</Text.H4>
+              <Text.H5>{evaluation.description}</Text.H5>
             </TableCell>
           </TableRow>
         ))}
