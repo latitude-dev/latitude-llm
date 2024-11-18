@@ -154,6 +154,7 @@ export const environment = pulumi
       { name: 'DEFAULT_PROVIDER_API_KEY', value: defaultProviderApiKey },
       { name: 'NEXT_PUBLIC_POSTHOG_KEY', value: postHogApiKey },
       { name: 'NEXT_PUBLIC_POSTHOG_HOST', value: 'https://eu.i.posthog.com' },
+      { name: 'NEXT_PUBLIC_SENTRY_DSN', value: sentryDsn },
       {
         name: 'DATASET_GENERATOR_WORKSPACE_APIKEY',
         value: datasetGeneratorWorkspaceApiKey,
