@@ -38,6 +38,8 @@ const nextConfig = {
 
 let config
 if (process.env.SENTRY_ORG && process.env.SENTRY_PROJECT) {
+  console.log('configuring sentry...')
+
   config = withSentryConfig(nextConfig, {
     // For all available options, see:
     // https://github.com/getsentry/sentry-webpack-plugin#options
@@ -63,7 +65,7 @@ if (process.env.SENTRY_ORG && process.env.SENTRY_PROJECT) {
     // This can increase your server load as well as your hosting bill.
     // Note: Check that the configured route will not match with your Next.js middleware, otherwise reporting of client-
     // side errors will fail.
-    // tunnelRoute: '/monitoring',
+    tunnelRoute: '/monitoring',
 
     // Hides source maps from generated client bundles
     hideSourceMaps: false,
