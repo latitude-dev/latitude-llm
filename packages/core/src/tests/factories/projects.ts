@@ -1,4 +1,5 @@
 import { faker } from '@faker-js/faker'
+import { eq } from 'drizzle-orm'
 
 import {
   DocumentVersion,
@@ -7,7 +8,9 @@ import {
   Workspace,
   WorkspaceDto,
 } from '../../browser'
+import { database } from '../../client'
 import { unsafelyGetUser } from '../../data-access'
+import { projects } from '../../schema'
 import { mergeCommit } from '../../services/commits'
 import { createNewDocument, updateDocument } from '../../services/documents'
 import { updateProject } from '../../services/projects'
@@ -85,6 +88,16 @@ export async function createProject(projectData: Partial<ICreateProject> = {}) {
   })
   let { project, commit } = result.unwrap()
 
+  // Tests run within a transaction and the NOW() PostgreSQL function returns
+  // the transaction start time. Therefore, all projects would be created
+  // at the same time, messing with tests. This code patches this.
+  project = await database
+    .update(projects)
+    .set({ createdAt: new Date() })
+    .where(eq(projects.id, project.id))
+    .returning()
+    .then((p) => p[0]!)
+
   if (projectData.deletedAt)
     await updateProject(project, { deletedAt: projectData.deletedAt }).then(
       (r) => r.unwrap(),
@@ -144,7 +157,7 @@ export async function createProject(projectData: Partial<ICreateProject> = {}) {
     workspace,
     providers,
     documents,
-    commit: commit,
+    commit,
     evaluations,
   }
 }

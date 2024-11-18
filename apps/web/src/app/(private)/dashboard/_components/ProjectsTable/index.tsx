@@ -17,8 +17,7 @@ import { ROUTES } from '$/services/routes'
 import Link from 'next/link'
 
 type ProjectWithAgreggatedData = Project & {
-  documentCount: number
-  lastCreatedAtDocument: Date | null
+  lastEditedAt: Date | null
 }
 export function ProjectsTable({
   projects,
@@ -31,7 +30,6 @@ export function ProjectsTable({
       <TableHeader>
         <TableRow verticalPadding>
           <TableHead>Name</TableHead>
-          <TableHead>Prompts</TableHead>
           <TableHead>Edited</TableHead>
           <TableHead>Created</TableHead>
           <TableHead />
@@ -52,12 +50,7 @@ export function ProjectsTable({
             </TableCell>
             <TableCell>
               <Text.H5 color='foregroundMuted'>
-                {project.documentCount || '-'}
-              </Text.H5>
-            </TableCell>
-            <TableCell>
-              <Text.H5 color='foregroundMuted'>
-                {relativeTime(project.lastCreatedAtDocument)}
+                {relativeTime(project.lastEditedAt)}
               </Text.H5>
             </TableCell>
             <TableCell>
