@@ -1,10 +1,15 @@
 import { Card, CardContent, FocusHeader } from '@latitude-data/web-ui'
 import AuthFooter from '$/app/(public)/_components/Footer'
 import { FocusLayout } from '$/components/layouts'
+import { useMetatags } from '$/hooks/useMetatags'
 
 import SetupForm from './SetupForm'
 
 export const dynamic = 'force-dynamic'
+
+export const metadata = useMetatags({
+  title: 'Create an account',
+})
 
 export default async function SetupPage({
   searchParams,

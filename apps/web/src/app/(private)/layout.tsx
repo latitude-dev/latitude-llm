@@ -9,6 +9,7 @@ import {
   SocketIOProvider,
 } from '$/components/Providers/WebsocketsProvider'
 import env from '$/env'
+import { useMetatags } from '$/hooks/useMetatags'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
 import { getSession } from '$/services/auth/getSession'
 import { ROUTES } from '$/services/routes'
@@ -16,6 +17,10 @@ import { redirect } from 'next/navigation'
 
 import { CSPostHogProvider, IdentifyUser } from '../providers'
 import { NAV_LINKS } from './_lib/constants'
+
+export const metadata = useMetatags({
+  title: 'Home',
+})
 
 export default async function PrivateLayout({
   children,

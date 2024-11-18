@@ -1,6 +1,6 @@
 import { ReactNode } from 'react'
 
-import type { Metadata } from 'next'
+import { useMetatags } from '$/hooks/useMetatags'
 import NextTopLoader from 'nextjs-toploader'
 
 import '@latitude-data/web-ui/styles.css'
@@ -12,10 +12,9 @@ import {
 } from '@latitude-data/web-ui'
 import { fontMono, fontSans } from '$/helpers/fonts'
 
-export const metadata: Metadata = {
-  title: 'Latitude App',
-  description: 'LLM - Latitude App',
-}
+export const metadata = useMetatags({
+  title: 'The Open-Source LLM Development Platform',
+})
 
 export default function RootLayout({
   children,

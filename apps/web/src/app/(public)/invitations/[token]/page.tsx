@@ -1,6 +1,7 @@
 import { NotFoundError } from '@latitude-data/core/lib/errors'
 import { Card, CardContent, FocusHeader } from '@latitude-data/web-ui'
 import { FocusLayout } from '$/components/layouts'
+import { useMetatags } from '$/hooks/useMetatags'
 import { ROUTES } from '$/services/routes'
 import { redirect } from 'next/navigation'
 
@@ -13,6 +14,10 @@ import {
 import InvitationForm from './InvitationForm'
 
 export const dynamic = 'force-dynamic'
+
+export const metadata = useMetatags({
+  title: 'You have been invited to join a workspace',
+})
 
 export default async function InvitationPage({
   params,

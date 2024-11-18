@@ -2,11 +2,16 @@ import { ReactNode } from 'react'
 
 import { Container, TitleWithActions } from '@latitude-data/web-ui'
 import { AppTabs } from '$/app/(private)/AppTabs'
+import { useMetatags } from '$/hooks/useMetatags'
 
 import Memberships from './_components/Memberships'
 import ProviderApiKeys from './_components/ProviderApiKeys'
 import WorkspaceApiKeys from './_components/WorkspaceApiKeys'
 import WorkspaceName from './_components/WorkspaceName'
+
+export const metadata = useMetatags({
+  title: 'Settings',
+})
 
 export default async function SettingsLayout({
   children,
