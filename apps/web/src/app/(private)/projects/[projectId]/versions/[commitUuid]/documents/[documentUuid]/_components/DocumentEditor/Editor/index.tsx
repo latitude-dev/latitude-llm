@@ -17,6 +17,7 @@ import {
   Button,
   DocumentTextEditor,
   DocumentTextEditorFallback,
+  SplitPane,
   Text,
   useCurrentCommit,
   useCurrentProject,
@@ -244,53 +245,64 @@ export default function DocumentEditor({
           addMessagesAction: addMessagesAction as AddMessagesActionFn,
         }}
       >
-        <div className='flex flex-row w-full h-full gap-8 p-6'>
-          <div className='flex flex-col flex-1 flex-grow flex-shrink gap-2 min-w-0'>
-            <EditorHeader
-              providers={providers}
-              disabledMetadataSelectors={isMerged}
-              title='Prompt editor'
-              metadata={metadata}
-              prompt={value}
-              onChangePrompt={onChange}
-              freeRunsCount={freeRunsCount}
-              showCopilotSetting
-            />
-            <Suspense fallback={<DocumentTextEditorFallback />}>
-              <DocumentTextEditor
-                value={value}
-                metadata={metadata}
-                onChange={onChange}
-                diff={diff}
-                readOnlyMessage={
-                  isMerged ? 'Create a draft to edit documents.' : undefined
-                }
-                isSaved={isSaved}
-                actionButtons={
-                  <Button
-                    className='bg-background'
-                    variant='outline'
-                    size='small'
-                    iconProps={{
-                      name: 'sparkles',
-                      size: 'small',
+        <SplitPane
+          className='p-6'
+          initialPercentage={55}
+          minWidth={300}
+          leftPane={
+            <SplitPane.Pane>
+              <div className='pr-4 flex flex-col flex-1 flex-grow flex-shrink gap-2 min-w-0'>
+                <EditorHeader
+                  providers={providers}
+                  disabledMetadataSelectors={isMerged}
+                  title='Prompt editor'
+                  metadata={metadata}
+                  prompt={value}
+                  onChangePrompt={onChange}
+                  freeRunsCount={freeRunsCount}
+                  showCopilotSetting
+                />
+                <Suspense fallback={<DocumentTextEditorFallback />}>
+                  <DocumentTextEditor
+                    value={value}
+                    metadata={metadata}
+                    onChange={onChange}
+                    diff={diff}
+                    readOnlyMessage={
+                      isMerged ? 'Create a draft to edit documents.' : undefined
+                    }
+                    isSaved={isSaved}
+                    actionButtons={
+                      <Button
+                        className='bg-background'
+                        variant='outline'
+                        size='small'
+                        iconProps={{
+                          name: 'sparkles',
+                          size: 'small',
+                        }}
+                        onClick={() => setRefineDocumentModalOpen(true)}
+                      >
+                        <Text.H6>Refine</Text.H6>
+                      </Button>
+                    }
+                    copilot={{
+                      isLoading: isCopilotLoading,
+                      requestSuggestion,
                     }}
-                    onClick={() => setRefineDocumentModalOpen(true)}
-                  >
-                    <Text.H6>Refine</Text.H6>
-                  </Button>
-                }
-                copilot={{
-                  isLoading: isCopilotLoading,
-                  requestSuggestion,
-                }}
-              />
-            </Suspense>
-          </div>
-          <div className='flex-1 relative'>
-            <Playground document={document} metadata={metadata!} />
-          </div>
-        </div>
+                  />
+                </Suspense>
+              </div>
+            </SplitPane.Pane>
+          }
+          rightPane={
+            <SplitPane.Pane>
+              <div className='pl-4 flex-1 relative max-h-full'>
+                <Playground document={document} metadata={metadata!} />
+              </div>
+            </SplitPane.Pane>
+          }
+        />
       </DocumentEditorContext.Provider>
     </>
   )
