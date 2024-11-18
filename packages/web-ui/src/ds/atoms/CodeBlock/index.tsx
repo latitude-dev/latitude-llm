@@ -40,7 +40,12 @@ function Content({
   return (
     <div className='relative max-w-full overflow-x-auto'>
       {copy && (
-        <div className='absolute top-4 right-2 bg-transparent'>
+        <div
+          className={cn('absolute top-4 right-2', {
+            'bg-backgroundCode': resolvedTheme === CurrentTheme.Light,
+            'bg-[#282c34]': resolvedTheme === CurrentTheme.Dark,
+          })}
+        >
           <CopyButton content={children} color='foregroundMuted' />
         </div>
       )}
