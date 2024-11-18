@@ -1,23 +1,20 @@
 import { useCallback, useState } from 'react'
 
-import { DocumentLog } from '@latitude-data/core/browser'
+import { DocumentLog, DocumentVersion } from '@latitude-data/core/browser'
 import { useCurrentCommit, useCurrentProject } from '@latitude-data/web-ui'
-import { useCurrentDocument } from '$/app/providers/DocumentProvider'
-import { PlaygroundInputs } from '$/hooks/useDocumentParameters'
+import { Inputs, useDocumentParameters } from '$/hooks/useDocumentParameters'
 import useDocumentLogs from '$/stores/documentLogs'
 import useDocumentLogWithPaginationPosition, {
   LogWithPosition,
 } from '$/stores/documentLogWithPaginationPosition'
 import useDocumentLogsPagination from '$/stores/useDocumentLogsPagination'
 
-import { useSelectedLogRow } from './useSelectedRow'
-
 function getValue({ paramValue }: { paramValue: unknown | undefined }) {
   try {
     const value = JSON.stringify(paramValue)
-    return { value, includedInPrompt: paramValue !== undefined }
+    return { value, metadata: { includeInPrompt: paramValue !== undefined } }
   } catch {
-    return { value: '', includedInPrompt: false }
+    return { value: '', metadata: { includeInPrompt: false } }
   }
 }
 
@@ -25,9 +22,9 @@ function mapLogParametersToInputs({
   inputs,
   parameters,
 }: {
-  inputs: PlaygroundInputs
+  inputs: Inputs<'history'>
   parameters: DocumentLog['parameters'] | undefined
-}): PlaygroundInputs | undefined {
+}): Inputs<'history'> | undefined {
   const params = parameters ?? {}
   // No parameters
   if (!Object.keys(params).length) return undefined
@@ -35,20 +32,23 @@ function mapLogParametersToInputs({
   return Object.entries(inputs).reduce((acc, [key]) => {
     acc[key] = getValue({ paramValue: params[key] })
     return acc
-  }, {} as PlaygroundInputs)
+  }, {} as Inputs<'history'>)
 }
 
 const ONLY_ONE_PAGE = '1'
 export function useLogHistoryParams({
-  inputs,
-  setInputs,
+  document,
+  commitVersionUuid,
 }: {
-  inputs: PlaygroundInputs
-  setInputs: (newInputs: PlaygroundInputs) => void
+  document: DocumentVersion
+  commitVersionUuid: string
 }) {
-  const document = useCurrentDocument()
-  const { saveRowInfo, selectedRow } = useSelectedLogRow({ document })
-  const selectedLogUuid = selectedRow?.documentLogUuid
+  const {
+    history: { inputs, setInputs, setHistoryLog, logUuid },
+  } = useDocumentParameters({
+    documentVersionUuid: document.documentUuid,
+    commitVersionUuid,
+  })
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
   const { data: pagination, isLoading: isLoadingCounter } =
@@ -61,17 +61,17 @@ export function useLogHistoryParams({
     })
 
   const [position, setPosition] = useState<LogWithPosition | undefined>(
-    selectedLogUuid ? undefined : { position: 1, page: 1 },
+    logUuid ? undefined : { position: 1, page: 1 },
   )
   const onFetchCurrentLog = useCallback(
     (data: LogWithPosition) => {
       setPosition(data)
     },
-    [selectedLogUuid],
+    [logUuid],
   )
   const { isLoading: isLoadingPosition } = useDocumentLogWithPaginationPosition(
     {
-      documentLogUuid: selectedLogUuid,
+      documentLogUuid: logUuid,
       onFetched: onFetchCurrentLog,
     },
   )
@@ -94,7 +94,7 @@ export function useLogHistoryParams({
       if (!newInputs) return
 
       setInputs(newInputs)
-      saveRowInfo({ documentLogUuid: log.uuid })
+      setHistoryLog(log.uuid)
     },
   })
 

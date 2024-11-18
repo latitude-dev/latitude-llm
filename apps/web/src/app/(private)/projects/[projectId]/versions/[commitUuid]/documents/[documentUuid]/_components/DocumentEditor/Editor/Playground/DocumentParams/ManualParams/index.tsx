@@ -1,16 +1,14 @@
-import {
-  PlaygroundInput,
-  PlaygroundInputs,
-} from '$/hooks/useDocumentParameters'
+import { useDocumentParameters } from '$/hooks/useDocumentParameters'
 
+import { Props } from '../index'
 import { InputParams } from '../Input'
 
-export function ManualParams({
-  inputs,
-  setInput,
-}: {
-  inputs: PlaygroundInputs
-  setInput: (param: string, value: PlaygroundInput) => void
-}) {
+export function ManualParams({ document, commitVersionUuid }: Props) {
+  const {
+    manual: { inputs, setInput },
+  } = useDocumentParameters({
+    documentVersionUuid: document.documentUuid,
+    commitVersionUuid,
+  })
   return <InputParams inputs={inputs} setInput={setInput} />
 }

@@ -1,9 +1,7 @@
+import { DocumentVersion } from '@latitude-data/core/browser'
 import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
 import { Badge, cn, Icon, Skeleton, Text, Tooltip } from '@latitude-data/web-ui'
-import {
-  PlaygroundInput,
-  PlaygroundInputs,
-} from '$/hooks/useDocumentParameters'
+import { useDocumentParameters } from '$/hooks/useDocumentParameters'
 import { useGenerateDocumentLogDetailUrl } from '$/hooks/useGenerateDocumentLogDetailUrl'
 import { format } from 'date-fns'
 import Link from 'next/link'
@@ -40,14 +38,20 @@ function usePaginatedDocumentLogUrl({
 }
 
 export function HistoryLogParams({
-  inputs,
-  setInput,
   data,
+  commitVersionUuid,
+  document,
 }: {
-  inputs: PlaygroundInputs
-  setInput: (param: string, value: PlaygroundInput) => void
+  document: DocumentVersion
+  commitVersionUuid: string
   data: UseLogHistoryParams
 }) {
+  const {
+    history: { inputs, setInput },
+  } = useDocumentParameters({
+    documentVersionUuid: document.documentUuid,
+    commitVersionUuid,
+  })
   const urlData = usePaginatedDocumentLogUrl({
     selectedLog: data.selectedLog,
     page: data.page,

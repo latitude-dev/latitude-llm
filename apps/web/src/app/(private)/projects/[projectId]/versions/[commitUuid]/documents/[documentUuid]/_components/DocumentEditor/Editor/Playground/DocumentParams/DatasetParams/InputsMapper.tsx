@@ -1,26 +1,24 @@
 import { isNumber } from 'lodash-es'
 
-import { Dataset } from '@latitude-data/core/browser'
+import { Dataset, DocumentVersion } from '@latitude-data/core/browser'
 import {
   Badge,
   Button,
   ClientOnly,
   Icon,
-  ReactStateDispatch,
   Select,
   Text,
   Tooltip,
 } from '@latitude-data/web-ui'
 import {
+  DatasetSource,
   PlaygroundInput,
-  PlaygroundInputs,
+  useDocumentParameters,
 } from '$/hooks/useDocumentParameters'
 
-import { ParamsSource } from '../index'
 import { UseSelectDataset, type DatasetPreview } from './useSelectDataset'
-import { SelectedDatasetRow } from './useSelectedRow'
 
-function getTooltipValue(input: PlaygroundInput) {
+function getTooltipValue(input: PlaygroundInput<'dataset'>) {
   if (input === undefined || input === null) {
     return { isEmpty: true, value: 'No value found' }
   }
@@ -34,22 +32,29 @@ function getTooltipValue(input: PlaygroundInput) {
 }
 
 export function InputMapper({
-  inputs,
+  document,
+  commitVersionUuid,
   mappedInputs,
   headersOptions,
   isLoading,
   onSelectHeader,
-  setSelectedTab,
   selectedDataset,
 }: {
-  inputs: PlaygroundInputs
-  mappedInputs: SelectedDatasetRow['mappedInputs']
+  document: DocumentVersion
+  commitVersionUuid: string
+  mappedInputs: DatasetSource['mappedInputs']
   headersOptions: DatasetPreview['headersOptions']
   onSelectHeader: UseSelectDataset['onSelectHeader']
   isLoading: boolean
-  setSelectedTab: ReactStateDispatch<ParamsSource>
   selectedDataset: Dataset | undefined
 }) {
+  const {
+    setSource,
+    dataset: { inputs, copyToManual },
+  } = useDocumentParameters({
+    documentVersionUuid: document.documentUuid,
+    commitVersionUuid,
+  })
   return (
     <ClientOnly>
       <div className='flex flex-col gap-3'>
@@ -100,9 +105,10 @@ export function InputMapper({
                         trigger={
                           <Button
                             variant='ghost'
-                            disabled={disabled}
+                            disabled={disabled || !selectedValue}
                             onClick={() => {
-                              setSelectedTab('manual')
+                              copyToManual()
+                              setSource('manual')
                             }}
                             iconProps={{ name: 'pencil' }}
                           />
