@@ -15,12 +15,13 @@ import { getRedirectUrl } from './utils'
 const PROJECT_ROUTE = ROUTES.projects.detail
 
 export type ProjectPageParams = {
-  params: { projectId: string }
+  params: Promise<{ projectId: string }>
 }
 
 export default async function ProjectPage({ params }: ProjectPageParams) {
+  const { projectId } = await params
   const { commitUuid: lastSeenCommitUuid, documentUuid: lastSeenDocumentUuid } =
-    getLastSeenDataFromCookie(params.projectId)
+    await getLastSeenDataFromCookie(projectId)
 
   let session: SessionData
   let project: Project
@@ -29,7 +30,7 @@ export default async function ProjectPage({ params }: ProjectPageParams) {
   try {
     session = await getCurrentUser()
     project = await findProjectCached({
-      projectId: Number(params.projectId),
+      projectId: Number(projectId),
       workspaceId: session.workspace.id,
     })
     const commits = await findCommitsByProjectCached({
@@ -54,8 +55,8 @@ export default async function ProjectPage({ params }: ProjectPageParams) {
   return redirect(url)
 }
 
-function getLastSeenDataFromCookie(projectId: string) {
-  const cookieStore = cookies()
+async function getLastSeenDataFromCookie(projectId: string) {
+  const cookieStore = await cookies()
   const data = cookieStore.get(lastSeenCommitCookieName(Number(projectId)))
   if (!data?.value) return {}
 

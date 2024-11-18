@@ -27,10 +27,11 @@ import useDocumentsForImport from '$/stores/documentsForImport'
 import useProviderLogs from '$/stores/providerLogs'
 
 export default function ImportLogs({
-  params: { evaluationUuid },
+  params,
 }: {
   params: { evaluationUuid: string }
 }) {
+  const { evaluationUuid } = params
   const navigate = useNavigate()
   const [documentUuid, setDocumentUuid] = useState<string | undefined>()
   const [providerLogId, setProviderLogId] = useState<number | undefined>()

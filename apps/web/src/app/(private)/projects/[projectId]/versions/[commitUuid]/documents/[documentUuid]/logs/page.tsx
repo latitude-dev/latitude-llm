@@ -38,16 +38,20 @@ export default async function DocumentPage({
   params,
   searchParams,
 }: {
-  params: { projectId: string; commitUuid: string; documentUuid: string }
-  searchParams: QueryParams
+  params: Promise<{
+    projectId: string
+    commitUuid: string
+    documentUuid: string
+  }>
+  searchParams: Promise<QueryParams>
 }) {
   const { workspace } = await getCurrentUser()
-  const projectId = Number(params.projectId)
-  const commitUuid = params.commitUuid
-  const documentUuid = params.documentUuid
+  const { projectId: pjid, commitUuid, documentUuid } = await params
+  const projectId = Number(pjid)
   const commit = await findCommitCached({ projectId, uuid: commitUuid })
-  const documentLogUuid = searchParams.logUuid?.toString()
-  const page = searchParams.page?.toString?.()
+  const { logUuid, pageSize, page: pg } = await searchParams
+  const documentLogUuid = logUuid?.toString()
+  const page = pg?.toString?.()
   const currentLogPage = await fetchDocumentLogPage({
     workspace,
     commit,
@@ -69,7 +73,7 @@ export default async function DocumentPage({
     documentUuid,
     draft: commit,
     page,
-    pageSize: searchParams.pageSize as string | undefined,
+    pageSize: pageSize as string | undefined,
   })
 
   const selectedLog = rows.find((r) => r.uuid === documentLogUuid)
@@ -92,8 +96,8 @@ export default async function DocumentPage({
               href={
                 ROUTES.projects
                   .detail({ id: projectId })
-                  .commits.detail({ uuid: params.commitUuid })
-                  .documents.detail({ uuid: params.documentUuid }).logs.upload
+                  .commits.detail({ uuid: commitUuid })
+                  .documents.detail({ uuid: documentUuid }).logs.upload
               }
             >
               <Button fancy variant='outline'>

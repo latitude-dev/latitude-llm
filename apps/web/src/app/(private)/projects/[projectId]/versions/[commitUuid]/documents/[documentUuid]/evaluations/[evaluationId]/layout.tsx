@@ -40,17 +40,18 @@ export default async function ConnectedEvaluationLayout({
   children,
 }: {
   children: ReactNode
-  params: {
+  params: Promise<{
+    evaluationId: string
     projectId: string
     commitUuid: string
     documentUuid: string
-    evaluationId: string
-  }
+  }>
 }) {
-  const evaluation = await fetchEvaluationCached(Number(params.evaluationId))
+  const { evaluationId, projectId, commitUuid, documentUuid } = await params
+  const evaluation = await fetchEvaluationCached(Number(evaluationId))
   const commit = await findCommitCached({
-    projectId: Number(params.projectId),
-    uuid: params.commitUuid,
+    projectId: Number(projectId),
+    uuid: commitUuid,
   })
 
   let provider
@@ -97,10 +98,9 @@ export default async function ConnectedEvaluationLayout({
                 name='Evaluations'
                 href={
                   ROUTES.projects
-                    .detail({ id: Number(params.projectId) })
-                    .commits.detail({ uuid: params.commitUuid })
-                    .documents.detail({ uuid: params.documentUuid }).evaluations
-                    .root
+                    .detail({ id: Number(projectId) })
+                    .commits.detail({ uuid: commitUuid })
+                    .documents.detail({ uuid: documentUuid }).evaluations.root
                 }
               />
             </BreadcrumbItem>
@@ -119,9 +119,9 @@ export default async function ConnectedEvaluationLayout({
                     <Link
                       href={`${evaluationRoute}?back=${
                         ROUTES.projects
-                          .detail({ id: Number(params.projectId) })
-                          .commits.detail({ uuid: params.commitUuid })
-                          .documents.detail({ uuid: params.documentUuid })
+                          .detail({ id: Number(projectId) })
+                          .commits.detail({ uuid: commitUuid })
+                          .documents.detail({ uuid: documentUuid })
                           .evaluations.detail(evaluation.id).root
                       }`}
                     >
@@ -143,9 +143,9 @@ export default async function ConnectedEvaluationLayout({
                 provider && provider.token === env.DEFAULT_PROVIDER_API_KEY
               }
               evaluation={evaluation}
-              projectId={params.projectId}
-              commitUuid={params.commitUuid}
-              documentUuid={params.documentUuid}
+              projectId={projectId}
+              commitUuid={commitUuid}
+              documentUuid={documentUuid}
             />
           )
         }
@@ -153,7 +153,7 @@ export default async function ConnectedEvaluationLayout({
       <MetricsSummary
         commit={commit}
         evaluation={evaluation}
-        documentUuid={params.documentUuid}
+        documentUuid={documentUuid}
       />
       {children}
     </div>

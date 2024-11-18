@@ -1,11 +1,16 @@
 import { ROUTES } from '$/services/routes'
 import { redirect } from 'next/navigation'
 
-export default function EvaluationsPage({
-  params: { projectId, documentUuid, commitUuid },
+export default async function EvaluationsPage({
+  params,
 }: {
-  params: { projectId: string; documentUuid: string; commitUuid: string }
+  params: Promise<{
+    projectId: string
+    documentUuid: string
+    commitUuid: string
+  }>
 }) {
+  const { projectId, documentUuid, commitUuid } = await params
   redirect(
     ROUTES.projects
       .detail({ id: Number(projectId) })

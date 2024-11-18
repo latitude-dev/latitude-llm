@@ -13,6 +13,7 @@ export async function setWebsocketSessionCookie({
   name: TokenType
   sessionData: PartialSession
 }) {
+  const cks = await cookies()
   const { token, cookiesOptions } = await generateWebsocketToken({
     name,
     payload: {
@@ -20,7 +21,7 @@ export async function setWebsocketSessionCookie({
       workspaceId: sessionData.workspace.id,
     },
   })
-  cookies().set(name, token, {
+  cks.set(name, token, {
     ...cookiesOptions,
     httpOnly: true,
     sameSite: 'lax',
@@ -36,12 +37,9 @@ export async function setSession({
     currentWorkspaceId: workspace.id,
   })
   const sessionCookie = lucia.createSessionCookie(session.id)
+  const cks = await cookies()
 
-  cookies().set(
-    sessionCookie.name,
-    sessionCookie.value,
-    sessionCookie.attributes,
-  )
+  cks.set(sessionCookie.name, sessionCookie.value, sessionCookie.attributes)
 
   setWebsocketSessionCookie({
     name: 'websocket',

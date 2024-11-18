@@ -7,10 +7,11 @@ import { ROUTES } from '$/services/routes'
 import useEvaluations from '$/stores/evaluations'
 
 export default function DestroyEvaluation({
-  params: { evaluationUuid },
+  params,
 }: {
   params: { evaluationUuid: string }
 }) {
+  const { evaluationUuid } = params
   const navigate = useNavigate()
   const { data, destroy } = useEvaluations()
   const evaluation = data.find((e: EvaluationDto) => e.uuid === evaluationUuid)

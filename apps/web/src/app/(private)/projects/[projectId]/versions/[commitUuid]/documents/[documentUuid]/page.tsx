@@ -18,11 +18,15 @@ import DocumentEditor from './_components/DocumentEditor/Editor'
 export default async function DocumentPage({
   params,
 }: {
-  params: { projectId: string; commitUuid: string; documentUuid: string }
+  params: Promise<{
+    projectId: string
+    commitUuid: string
+    documentUuid: string
+  }>
 }) {
+  const { projectId: pjid, commitUuid, documentUuid } = await params
+  const projectId = Number(pjid)
   const { workspace } = await getCurrentUser()
-  const projectId = Number(params.projectId)
-  const commitUuid = params.commitUuid
 
   let commit
   try {
@@ -37,7 +41,7 @@ export default async function DocumentPage({
     throw error
   }
   const document = await getDocumentByUuidCached({
-    documentUuid: params.documentUuid,
+    documentUuid: documentUuid,
     projectId,
     commitUuid,
   })

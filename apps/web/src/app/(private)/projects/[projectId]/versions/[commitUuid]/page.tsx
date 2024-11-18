@@ -4,11 +4,12 @@ import { redirect } from 'next/navigation'
 export default async function CommitRoot({
   params,
 }: {
-  params: { projectId: string; commitUuid: string }
+  params: Promise<{ projectId: string; commitUuid: string }>
 }) {
+  const { projectId, commitUuid } = await params
   redirect(
     ROUTES.projects
-      .detail({ id: Number(params.projectId) })
-      .commits.detail({ uuid: params.commitUuid }).documents.root,
+      .detail({ id: Number(projectId) })
+      .commits.detail({ uuid: commitUuid }).documents.root,
   )
 }

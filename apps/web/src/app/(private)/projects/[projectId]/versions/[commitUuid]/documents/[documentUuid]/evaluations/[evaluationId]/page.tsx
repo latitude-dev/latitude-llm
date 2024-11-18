@@ -9,26 +9,28 @@ export default async function ConnectedEvaluationPage({
   params,
   searchParams,
 }: {
-  params: {
+  params: Promise<{
     projectId: string
     commitUuid: string
     documentUuid: string
     evaluationId: string
-  }
-  searchParams: QueryParams
+  }>
+  searchParams: Promise<QueryParams>
 }) {
-  const evaluation = await fetchEvaluationCached(Number(params.evaluationId))
+  const { projectId, commitUuid, documentUuid, evaluationId } = await params
+  const { pageSize, page } = await searchParams
+  const evaluation = await fetchEvaluationCached(Number(evaluationId))
   const commit = await findCommitCached({
-    projectId: Number(params.projectId),
-    uuid: params.commitUuid,
+    projectId: Number(projectId),
+    uuid: commitUuid,
   })
   const rows = await computeEvaluationResultsWithMetadata({
     workspaceId: evaluation.workspaceId,
     evaluation,
-    documentUuid: params.documentUuid,
+    documentUuid: documentUuid,
     draft: commit,
-    page: searchParams.page as string | undefined,
-    pageSize: searchParams.pageSize as string | undefined,
+    page: page as string | undefined,
+    pageSize: pageSize as string | undefined,
   })
 
   return <EvaluationResults evaluation={evaluation} evaluationResults={rows} />

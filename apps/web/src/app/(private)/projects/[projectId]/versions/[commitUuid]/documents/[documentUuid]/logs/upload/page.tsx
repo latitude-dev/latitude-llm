@@ -1,19 +1,20 @@
 import UploadLogModal from './UploadLogModal'
 
-export default function UploadLogModalPage({
+export default async function UploadLogModalPage({
   params,
 }: {
-  params: {
+  params: Promise<{
     documentUuid: string
     projectId: string
     commitUuid: string
-  }
+  }>
 }) {
+  const { documentUuid, projectId, commitUuid } = await params
   return (
     <UploadLogModal
-      documentUuid={params.documentUuid}
-      commitUuid={params.commitUuid}
-      projectId={params.projectId}
+      documentUuid={documentUuid}
+      commitUuid={commitUuid}
+      projectId={projectId}
     />
   )
 }

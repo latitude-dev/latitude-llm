@@ -18,9 +18,10 @@ import EvaluationStats from './_components/EvaluationStats'
 export default async function DashboardPage({
   params,
 }: {
-  params: { evaluationUuid: string }
+  params: Promise<{ evaluationUuid: string }>
 }) {
-  const evaluation = await getEvaluationByUuidCached(params.evaluationUuid)
+  const { evaluationUuid } = await params
+  const evaluation = await getEvaluationByUuidCached(evaluationUuid)
 
   // TODO: Use regular connectedDocuments. Metadata aggregations will be calculated automatically when using <EvaluationAggregatedResult /> component.
   const connectedDocumentsWithMetadata =

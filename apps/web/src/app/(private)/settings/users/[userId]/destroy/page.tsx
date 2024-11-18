@@ -6,10 +6,11 @@ import { ROUTES } from '$/services/routes'
 import useUsers from '$/stores/users'
 
 export default function DestroyUserMembership({
-  params: { userId },
+  params,
 }: {
   params: { userId: string }
 }) {
+  const { userId } = params
   const navigate = useNavigate()
   const { data, destroy } = useUsers()
   const user = data.find((u) => u.id === userId)

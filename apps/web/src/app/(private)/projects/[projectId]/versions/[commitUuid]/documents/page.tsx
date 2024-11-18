@@ -10,14 +10,14 @@ import { DocumentsClient } from './_components/DocumentsClient'
 export default async function DocumentsPage({
   params,
 }: {
-  params: { projectId: string; commitUuid: string }
+  params: Promise<{ projectId: string; commitUuid: string }>
 }) {
+  const { projectId, commitUuid } = await params
   const { workspace } = await getCurrentUser()
   const project = await findProjectCached({
-    projectId: Number(params.projectId),
+    projectId: Number(projectId),
     workspaceId: workspace.id,
   })
-  const commitUuid = params.commitUuid
 
   return (
     <DocumentsLayout projectId={project.id} commitUuid={commitUuid}>

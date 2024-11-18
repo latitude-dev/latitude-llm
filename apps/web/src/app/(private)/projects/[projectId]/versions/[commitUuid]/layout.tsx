@@ -19,7 +19,7 @@ import { notFound } from 'next/navigation'
 
 export type CommitPageParams = {
   children: ReactNode
-  params: ProjectPageParams['params'] & { commitUuid: string }
+  params: Promise<Awaited<ProjectPageParams['params']> & { commitUuid: string }>
 }
 
 export default async function CommitLayout({
@@ -30,18 +30,19 @@ export default async function CommitLayout({
   let project: Project
   let commit: Commit | undefined
   let isHead = false
+  const { projectId, commitUuid } = await params
   try {
     session = await getCurrentUser()
     project = await findProjectCached({
-      projectId: Number(params.projectId),
+      projectId: Number(projectId),
       workspaceId: session.workspace.id,
     })
     const commits = await findCommitsByProjectCached({ projectId: project.id })
-    if (params.commitUuid === HEAD_COMMIT) {
+    if (commitUuid === HEAD_COMMIT) {
       isHead = true
       commit = commits.find((c) => !!c.mergedAt)
     } else {
-      commit = commits.find((c) => c.uuid === params.commitUuid)
+      commit = commits.find((c) => c.uuid === commitUuid)
     }
 
     if (!commit) throw new NotFoundError('Commit not found')

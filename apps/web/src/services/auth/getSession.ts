@@ -6,9 +6,10 @@ import { lucia } from '.'
 export async function getSession(): Promise<
   { user: User; session: Session } | { user: null; session: null }
 > {
+  const cks = await cookies()
   // NOTE: We dynamically import the cookies function to make Nextjs happy
   // Info: https://github.com/vercel/next.js/issues/49757
-  const sessionId = cookies().get(lucia.sessionCookieName)?.value ?? null
+  const sessionId = cks.get(lucia.sessionCookieName)?.value ?? null
   if (!sessionId) {
     return {
       user: null,
@@ -21,7 +22,7 @@ export async function getSession(): Promise<
   try {
     if (result.session && result.session.fresh) {
       const sessionCookie = lucia.createSessionCookie(result.session.id)
-      cookies().set(
+      await cks.set(
         sessionCookie.name,
         sessionCookie.value,
         sessionCookie.attributes,
@@ -31,7 +32,7 @@ export async function getSession(): Promise<
     if (!result.session) {
       const sessionCookie = lucia.createBlankSessionCookie()
 
-      cookies().set(
+      await cks.set(
         sessionCookie.name,
         sessionCookie.value,
         sessionCookie.attributes,

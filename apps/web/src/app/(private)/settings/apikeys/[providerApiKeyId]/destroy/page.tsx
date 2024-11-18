@@ -6,10 +6,11 @@ import { ROUTES } from '$/services/routes'
 import useProviderApiKeys from '$/stores/providerApiKeys'
 
 export default function DestroyProviderApiKey({
-  params: { providerApiKeyId },
+  params,
 }: {
   params: { providerApiKeyId: string }
 }) {
+  const { providerApiKeyId } = params
   const navigate = useNavigate()
   const { data, destroy } = useProviderApiKeys()
   const apiKey = data.find((p) => p.id === Number(providerApiKeyId))
