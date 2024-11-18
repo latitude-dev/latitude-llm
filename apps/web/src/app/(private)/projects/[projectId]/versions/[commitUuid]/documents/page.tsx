@@ -21,7 +21,7 @@ export default async function DocumentsPage({
 
   return (
     <DocumentsLayout projectId={project.id} commitUuid={commitUuid}>
-      <DocumentBlankSlateLayout>
+      <DocumentBlankSlateLayout className='p-6'>
         <div className='flex flex-col gap-4 items-center'>
           <Text.H4M>{project.name}</Text.H4M>
           <Text.H5>
