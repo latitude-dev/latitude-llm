@@ -321,6 +321,9 @@ importers:
       '@latitude-data/compiler':
         specifier: workspace:^
         version: link:../../packages/compiler
+      '@latitude-data/constants':
+        specifier: workspace:*
+        version: link:../../packages/constants
       '@latitude-data/core':
         specifier: workspace:*
         version: link:../../packages/core

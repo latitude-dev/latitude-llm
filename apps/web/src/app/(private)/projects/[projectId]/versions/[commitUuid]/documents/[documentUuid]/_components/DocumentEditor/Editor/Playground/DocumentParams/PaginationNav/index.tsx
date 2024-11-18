@@ -32,7 +32,7 @@ export function ParametersPaginationNav({
         onClick={() => onPrevPage(currentIndex)}
       />
       <div className='flex flex-row justify-center items-center flex-grow min-w-0'>
-        <Text.H5M color='foregroundMuted' ellipsis noWrap>
+        <Text.H5M userSelect={false} color='foregroundMuted' ellipsis noWrap>
           {zeroIndex ? currentIndex + INDEX_ZERO_LIST : currentIndex} of{' '}
           {totalCount} {label}
         </Text.H5M>
