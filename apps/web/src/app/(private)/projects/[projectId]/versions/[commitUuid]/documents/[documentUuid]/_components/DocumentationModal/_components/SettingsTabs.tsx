@@ -37,7 +37,7 @@ export function SettingsTabs({
       onChange={(tabId) => setActiveTab(tabId)}
     >
       {(activeTab) => (
-        <>
+        <div className='p-6'>
           {activeTab === 'sdk' && (
             <JavascriptUsage
               apiKey={apiKeys[0]?.token}
@@ -56,7 +56,7 @@ export function SettingsTabs({
               parameters={parameters}
             />
           )}
-        </>
+        </div>
       )}
     </Tabs>
   )
