@@ -57,51 +57,51 @@ const ConnectedDocumentTableRow = ({
       <TableCell className='nowrap max-w-[350px]'>
         {promptPath && (
           <>
-            <Text.H4
+            <Text.H5
               color='foregroundMuted'
               noWrap
               ellipsis
               wordBreak='breakAll'
             >
               {promptPath}
-            </Text.H4>
-            <Text.H4 color='foregroundMuted' noWrap>
+            </Text.H5>
+            <Text.H5 color='foregroundMuted' noWrap>
               {'/'}
-            </Text.H4>
+            </Text.H5>
           </>
         )}
-        <Text.H4 noWrap>{promptName}</Text.H4>
+        <Text.H5 noWrap>{promptName}</Text.H5>
       </TableCell>
       <TableCell>
         {isProjectsLoading ? (
           <Skeleton className='w-full h-4 bg-muted animate-pulse' />
         ) : (
-          <Text.H4 noWrap>{projectName}</Text.H4>
+          <Text.H5 noWrap>{projectName}</Text.H5>
         )}
       </TableCell>
       <TableCell>
         {document.evaluationLogs ? (
           <>
-            <Text.H4 noWrap>{document.modalValue}</Text.H4>
+            <Text.H5 noWrap>{document.modalValue}</Text.H5>
             <div className='w-2'></div>
-            <Text.H4 color='foregroundMuted' noWrap>
+            <Text.H5 color='foregroundMuted' noWrap>
               ({modalValuePercentage}%)
-            </Text.H4>
+            </Text.H5>
           </>
         ) : (
-          <Text.H4 color='foregroundMuted'>—</Text.H4>
+          <Text.H5 color='foregroundMuted'>—</Text.H5>
         )}
       </TableCell>
       <TableCell>
-        <Text.H4 noWrap>{document.evaluationLogs}</Text.H4>
+        <Text.H5 noWrap>{document.evaluationLogs}</Text.H5>
       </TableCell>
       <TableCell>
-        <Text.H4 noWrap>{document.totalTokens}</Text.H4>
+        <Text.H5 noWrap>{document.totalTokens}</Text.H5>
       </TableCell>
       <TableCell>
-        <Text.H4 noWrap>
+        <Text.H5 noWrap>
           {formatCostInMillicents(document.costInMillicents ?? 0)}
-        </Text.H4>
+        </Text.H5>
       </TableCell>
     </TableRow>
   )

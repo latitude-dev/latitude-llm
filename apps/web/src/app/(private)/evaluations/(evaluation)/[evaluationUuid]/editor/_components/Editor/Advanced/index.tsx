@@ -29,11 +29,8 @@ export default function AdvancedEvaluationEditor({
   providerApiKeys?: ProviderApiKey[]
   freeRunsCount?: number
 }) {
-  const { data, isLoading, update, isUpdating } = useEvaluations()
-  const evaluation = useMemo(
-    () => data.find((e) => e.uuid === evaluationUuid),
-    [evaluationUuid, data],
-  )
+  const { findEvaluation, isLoading, update, isUpdating } = useEvaluations()
+  const evaluation = findEvaluation(evaluationUuid)!
   const evaluationMetadata = useMemo(
     () => evaluation?.metadata as EvaluationMetadataLlmAsJudgeAdvanced,
     [evaluation],
