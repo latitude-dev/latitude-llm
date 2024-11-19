@@ -1,16 +1,18 @@
 'use client'
 
+import { use } from 'react'
+
 import DestroyModal from '$/components/modals/DestroyModal'
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
 import useProjects from '$/stores/projects'
 
-export default async function DestroyProject({
+export default function DestroyProject({
   params,
 }: {
   params: Promise<{ projectId: string }>
 }) {
-  const { projectId } = await params
+  const { projectId } = use(params)
   const navigate = useNavigate()
   const { data, destroy } = useProjects()
   const project = data.find((p) => p.id === Number(projectId))
