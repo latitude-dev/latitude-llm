@@ -1,7 +1,12 @@
 import { Button } from '@latitude-data/web-ui'
 import { ErrorComponent } from '@latitude-data/web-ui/browser'
+import buildMetatags from '$/app/_lib/buildMetatags'
 import { ROUTES } from '$/services/routes'
 import Link from 'next/link'
+
+export const metadata = buildMetatags({
+  title: 'Not found',
+})
 
 export default async function GlobalNoFound() {
   return (
