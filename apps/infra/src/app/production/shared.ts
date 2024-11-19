@@ -62,6 +62,7 @@ const workersWebsocketsSecretToken = getSecretString(
 )
 const defaultProjectId = getSecretString(defaultProjectIdArn)
 
+export const latitudeUrl = 'https://app.latitude.so'
 export const sentryDsn = getSecretString(sentryDsnArn)
 export const sentryOrg = getSecretString(sentryOrgArn)
 export const sentryProject = getSecretString(sentryProjectArn)
@@ -95,6 +96,7 @@ export const environment = pulumi
     awsAccessSecret,
     queueEndpoint,
     cacheEndpoint,
+    latitudeUrl,
     dbUrl,
     mailerApiKey,
     sentryDsn,
@@ -124,7 +126,7 @@ export const environment = pulumi
       { name: 'GATEWAY_SSL', value: 'true' },
       { name: 'LATITUDE_DOMAIN', value: 'latitude.so' },
       { name: 'LATITUDE_EMAIL_DOMAIN', value: 'mail.latitude.so' },
-      { name: 'LATITUDE_URL', value: 'https://app.latitude.so' },
+      { name: 'LATITUDE_URL', value: latitudeUrl },
       { name: 'WEBSOCKETS_SERVER', value: 'https://ws.latitude.so' },
       { name: 'WEBSOCKETS_SERVER_PORT', value: '8080' },
       { name: 'WEBSOCKET_SECRET_TOKEN_KEY', value: websocketSecretToken },

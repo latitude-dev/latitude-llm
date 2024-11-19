@@ -7,6 +7,7 @@ import {
   sentryDsn,
   sentryOrg,
   sentryProject,
+  latitudeUrl,
 } from '../../app/production/shared'
 import { resolve } from '../../shared'
 
@@ -39,6 +40,7 @@ pulumi
         SENTRY_AUTH_TOKEN: process.env.SENTRY_AUTH_TOKEN!,
         NEXT_PUBLIC_POSTHOG_KEY: postHogApiKey,
         NEXT_PUBLIC_POSTHOG_HOST: 'https://eu.i.posthog.com',
+        LATITUDE_URL: latitudeUrl,
       },
     }
 
