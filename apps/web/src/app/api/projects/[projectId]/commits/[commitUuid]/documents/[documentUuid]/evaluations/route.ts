@@ -7,7 +7,7 @@ import { NextRequest, NextResponse } from 'next/server'
 type IParam = { documentUuid: string }
 export const GET = errorHandler<IParam, ConnectedEvaluation[]>(
   authHandler<IParam, ConnectedEvaluation[]>(
-    async (_: NextRequest, { params, workspace }) => {
+    async (_: NextRequest, _res: NextResponse, { params, workspace }) => {
       const { documentUuid } = params
       const scope = new ConnectedEvaluationsRepository(workspace.id)
       const connectedEvaluations = await scope

@@ -5,11 +5,13 @@ import {
   WorkspaceDto,
 } from '@latitude-data/core/browser'
 import { createProject, helpers } from '@latitude-data/core/factories'
-import { NextRequest } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { SubscriptionPlan } from 'node_modules/@latitude-data/core/src/plans'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { GET } from './route'
+import { DocumentsImported, GET } from './route'
+
+type Response = NextResponse<DocumentsImported>
 
 const mocks = vi.hoisted(() => {
   return {
@@ -23,6 +25,7 @@ vi.mock('$/services/auth/getSession', () => ({
 describe('GET handler for documents/[projectId]/for-import', () => {
   let mockRequest: NextRequest
   let mockParams: { projectId: string }
+  let mockedResponse: Response = {} as Response
   let mockWorkspace: WorkspaceDto
   let mockDocuments: DocumentVersion[]
   let user: User
@@ -60,7 +63,7 @@ describe('GET handler for documents/[projectId]/for-import', () => {
 
   describe('unauthorized', () => {
     it('should return 401 if user is not authenticated', async () => {
-      const response = await GET(mockRequest, {
+      const response = await GET(mockRequest, mockedResponse, {
         params: mockParams,
         workspace: mockWorkspace,
         user: {
@@ -88,7 +91,7 @@ describe('GET handler for documents/[projectId]/for-import', () => {
     })
 
     it('should return 400 if projectId is missing', async () => {
-      const response = await GET(mockRequest, {
+      const response = await GET(mockRequest, mockedResponse, {
         params: {},
         workspace: mockWorkspace,
         user,
@@ -102,7 +105,7 @@ describe('GET handler for documents/[projectId]/for-import', () => {
     })
 
     it('should return documents for import when valid params are provided', async () => {
-      const response = await GET(mockRequest, {
+      const response = await GET(mockRequest, mockedResponse, {
         params: mockParams,
         user,
         workspace: mockWorkspace,

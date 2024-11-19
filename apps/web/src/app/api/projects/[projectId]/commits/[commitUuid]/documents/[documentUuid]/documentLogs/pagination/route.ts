@@ -27,7 +27,7 @@ type IParam = {
 type IPagination = ReturnType<typeof buildPagination>
 export const GET = errorHandler<IParam, IPagination>(
   authHandler<IParam, IPagination>(
-    async (req: NextRequest, { params, workspace }) => {
+    async (req: NextRequest, _res: NextResponse, { params, workspace }) => {
       const searchParams = req.nextUrl.searchParams
       const commitsScope = new CommitsRepository(workspace.id)
       const excludeErrors = searchParams.get('excludeErrors') === 'true'

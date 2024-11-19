@@ -1,22 +1,17 @@
-import { Workspace } from '@latitude-data/core/browser'
+import { Ok } from '@latitude-data/core/lib/Result'
 import { DatasetsRepository } from '@latitude-data/core/repositories'
 import { previewDataset } from '@latitude-data/core/services/datasets/preview'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'
 
-export const GET = errorHandler(
-  authHandler(
-    async (
-      _: NextRequest,
-      {
-        params,
-        workspace,
-      }: {
-        params: { datasetId: number }
-        workspace: Workspace
-      },
-    ) => {
+type IParam = { datasetId: string }
+type ResponseResult = Awaited<ReturnType<typeof previewDataset>>
+type PreviewResponse = ResponseResult extends Ok<infer T> ? T : never
+
+export const GET = errorHandler<IParam, PreviewResponse>(
+  authHandler<IParam, PreviewResponse>(
+    async (_req: NextRequest, _res: NextResponse, { params, workspace }) => {
       const { datasetId } = params
       const repo = new DatasetsRepository(workspace.id)
       const dataset = await repo.find(datasetId).then((r) => r.unwrap())

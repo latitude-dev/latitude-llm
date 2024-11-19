@@ -13,7 +13,7 @@ import { NextRequest, NextResponse } from 'next/server'
 type IParam = { projectId: string; commitUuid: string }
 export const GET = errorHandler<IParam, DocumentVersion[]>(
   authHandler<IParam, DocumentVersion[]>(
-    async (_: NextRequest, { params, workspace }) => {
+    async (_: NextRequest, _res: NextResponse, { params, workspace }) => {
       const projectId = params.projectId
       const commitUuid = params.commitUuid
 

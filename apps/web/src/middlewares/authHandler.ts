@@ -4,7 +4,7 @@ import { getCurrentUserOrError } from '$/services/auth/getCurrentUser'
 import { NextRequest, NextResponse } from 'next/server'
 
 export type DefaultParams = Record<string, unknown>
-export type AuthContext<IReq extends DefaultParams> = {
+export type Context<IReq extends DefaultParams> = {
   user: User
   workspace: WorkspaceDto
   params: IReq
@@ -21,24 +21,28 @@ async function getUserOrUnauthorized() {
 
 export type HandlerFn<IReq extends DefaultParams, IResp extends object = {}> = (
   req: NextRequest,
-  context: AuthContext<IReq>,
+  res: NextResponse<IResp>,
+  context: Context<IReq>,
 ) => Promise<NextResponse<IResp>>
 
 export function authHandler<
   IReq extends DefaultParams,
   IResp extends object = {},
 >(handler: HandlerFn<IReq, IResp>) {
-  return async (req: NextRequest, { ...rest }: AuthContext<IReq>) => {
+  return async (
+    req: NextRequest,
+    res: NextResponse<IResp>,
+    _context: Context<IReq>,
+  ) => {
     const { user, workspace } = await getUserOrUnauthorized()
+    // This is Typescript lie, we know that res is NextResponse<IResp>
+    // But because we want the return signature of the handler to be
+    // (req: NextRequest, res: NextResponse<IResp>)
+    // So in runtime we know params is a Promise<IReq>
+    const requestContext = res as unknown as { params: Promise<IReq> }
+    const params = await requestContext.params
 
-    // We lie to TypeScript here because we know
-    // that the params are actually a promise
-    // But we want to pass the params resolved to the rest of the middlewares
-    // and routes
-    const promiseParams = rest.params as unknown as Promise<IReq>
-    const params = await promiseParams
-    return await handler(req, {
-      ...rest,
+    return await handler(req, res, {
       params,
       user,
       workspace,

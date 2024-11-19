@@ -1,4 +1,3 @@
-import { Workspace } from '@latitude-data/core/browser'
 import {
   CommitsRepository,
   EvaluationsRepository,
@@ -8,26 +7,20 @@ import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'
 
-// FIXME: Use generic types. Check other routes for examples.
-export const GET = errorHandler(
-  authHandler(
-    async (
-      _: NextRequest,
-      {
-        params,
-        workspace,
-      }: {
-        params: {
-          evaluationId: number
-          documentUuid: string
-          commitUuid: string
-          projectId: number
-          page: string | null
-          pageSize: string | null
-        }
-        workspace: Workspace
-      },
-    ) => {
+type IParam = {
+  evaluationId: string
+  documentUuid: string
+  commitUuid: string
+  projectId: string
+  page: string | null
+  pageSize: string | null
+}
+
+type ResponseResult = Awaited<ReturnType<typeof getEvaluationMeanValueQuery>>
+
+export const GET = errorHandler<IParam, ResponseResult>(
+  authHandler<IParam, ResponseResult>(
+    async (_: NextRequest, _res: NextResponse, { params, workspace }) => {
       const { evaluationId, documentUuid } = params
       const evaluationScope = new EvaluationsRepository(workspace.id)
       const commitsScope = new CommitsRepository(workspace.id)

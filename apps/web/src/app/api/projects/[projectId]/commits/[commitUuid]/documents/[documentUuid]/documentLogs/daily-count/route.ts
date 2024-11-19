@@ -1,26 +1,15 @@
-import { Workspace } from '@latitude-data/core/browser'
 import { CommitsRepository } from '@latitude-data/core/repositories'
 import { computeDocumentLogsDailyCount } from '@latitude-data/core/services/documentLogs/computeDocumentLogsDailyCount'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'
 
-export const GET = errorHandler(
-  authHandler(
-    async (
-      req: NextRequest,
-      {
-        params,
-        workspace,
-      }: {
-        params: {
-          projectId: string
-          commitUuid: string
-          documentUuid: string
-        }
-        workspace: Workspace
-      },
-    ) => {
+type IParam = { projectId: string; commitUuid: string; documentUuid: string }
+type ResponseResult = Awaited<ReturnType<typeof computeDocumentLogsDailyCount>>
+
+export const GET = errorHandler<IParam, ResponseResult>(
+  authHandler<IParam, ResponseResult>(
+    async (req: NextRequest, _res: NextResponse, { params, workspace }) => {
       const { projectId, commitUuid, documentUuid } = params
       const searchParams = req.nextUrl.searchParams
       const days = searchParams.get('days')

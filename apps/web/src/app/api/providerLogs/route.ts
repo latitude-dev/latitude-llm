@@ -1,20 +1,14 @@
-import { Workspace } from '@latitude-data/core/browser'
 import { ProviderLogsRepository } from '@latitude-data/core/repositories'
 import serializeProviderLog from '@latitude-data/core/services/providerLogs/serialize'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'
 
-export const GET = errorHandler(
-  authHandler(
-    async (
-      req: NextRequest,
-      {
-        workspace,
-      }: {
-        workspace: Workspace
-      },
-    ) => {
+type IResult = ReturnType<typeof serializeProviderLog>
+
+export const GET = errorHandler<{}, IResult[]>(
+  authHandler<{}, IResult[]>(
+    async (req: NextRequest, _res: NextResponse, { workspace }) => {
       const searchParams = req.nextUrl.searchParams
       const documentUuid = searchParams.get('documentUuid')
       const documentLogUuid = searchParams.get('documentLogUuid')

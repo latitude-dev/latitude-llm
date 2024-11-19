@@ -5,7 +5,7 @@ import providerApiKeyPresenter from '$/presenters/providerApiKeyPresenter'
 import { NextRequest, NextResponse } from 'next/server'
 
 export const GET = errorHandler(
-  authHandler(async (_: NextRequest, { workspace }) => {
+  authHandler(async (_: NextRequest, _res: NextResponse, { workspace }) => {
     const providerApiKeysScope = new ProviderApiKeysRepository(workspace.id)
     const rows = await providerApiKeysScope
       .findAll()

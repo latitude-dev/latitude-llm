@@ -21,7 +21,7 @@ function parsePage(page: string | null): string {
   return parsed < 1 ? '1' : parsed.toString()
 }
 
-type ResponseResult<T extends boolean> = T extends true
+export type ResponseResult<T extends boolean> = T extends true
   ? DocumentLogWithMetadataAndError[]
   : DocumentLog[]
 
@@ -33,7 +33,7 @@ type IParams = {
 
 export const GET = errorHandler<IParams, ResponseResult<boolean>>(
   authHandler<IParams, ResponseResult<boolean>>(
-    async (req: NextRequest, { params, workspace }) => {
+    async (req: NextRequest, _res: NextResponse, { params, workspace }) => {
       const { projectId, commitUuid, documentUuid } = params
       const searchParams = req.nextUrl.searchParams
       const excludeErrors = searchParams.get('excludeErrors') === 'true'

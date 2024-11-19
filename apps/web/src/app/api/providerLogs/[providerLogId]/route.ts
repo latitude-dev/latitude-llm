@@ -6,10 +6,11 @@ import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'
 
 type IParam = { providerLogId: string }
-type ReturnResponse = ReturnType<typeof providerLogPresenter>
+type ReturnResponse = ReturnType<typeof serializeProviderLog>
+
 export const GET = errorHandler<IParam, ReturnResponse>(
   authHandler<IParam, ReturnResponse>(
-    async (_: NextRequest, { params, workspace }) => {
+    async (_: NextRequest, _res: NextResponse, { params, workspace }) => {
       const { providerLogId } = params
 
       if (!providerLogId) {

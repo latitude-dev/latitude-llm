@@ -1,9 +1,11 @@
 import { CommitStatus, User, Workspace } from '@latitude-data/core/browser'
 import * as factories from '@latitude-data/core/factories'
-import { NextRequest } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { GET } from './route'
+import { GET, IResult } from './route'
+
+type Response = NextResponse<IResult>
 
 const mocks = vi.hoisted(() => {
   return {
@@ -16,6 +18,7 @@ vi.mock('$/services/auth/getSession', () => ({
 
 describe('GET handler for commits', () => {
   let mockRequest: NextRequest
+  let mockResponse: Response = {} as Response
   let mockWorkspace: Workspace
   let mockUser: User
 
@@ -34,7 +37,7 @@ describe('GET handler for commits', () => {
     it('should return 401 if user is not authenticated', async () => {
       mocks.getSession.mockReturnValue(null)
 
-      const response = await GET(mockRequest, {
+      const response = await GET(mockRequest, mockResponse, {
         params: { projectId: '1', status: CommitStatus.Draft },
         workspace: mockWorkspace,
       } as any)
@@ -53,7 +56,7 @@ describe('GET handler for commits', () => {
     })
 
     it('should return 404 when project is not found', async () => {
-      const response = await GET(mockRequest, {
+      const response = await GET(mockRequest, mockResponse, {
         params: { projectId: '999', status: CommitStatus.Draft },
         workspace: mockWorkspace,
       } as any)
@@ -74,7 +77,7 @@ describe('GET handler for commits', () => {
         workspace: otherWorkspace,
       })
 
-      const response = await GET(mockRequest, {
+      const response = await GET(mockRequest, mockResponse, {
         params: {
           projectId: project.id.toString(),
           status: CommitStatus.Draft,
@@ -99,7 +102,7 @@ describe('GET handler for commits', () => {
         user: mockUser,
       })
 
-      const response = await GET(mockRequest, {
+      const response = await GET(mockRequest, mockResponse, {
         params: {
           projectId: project.id.toString(),
           status: CommitStatus.Draft,

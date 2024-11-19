@@ -1,4 +1,3 @@
-import { Workspace } from '@latitude-data/core/browser'
 import {
   CommitsRepository,
   EvaluationsRepository,
@@ -8,24 +7,16 @@ import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'
 
-// FIXME: Use generic types. Check other routes for examples.
-export const GET = errorHandler(
-  authHandler(
-    async (
-      req: NextRequest,
-      {
-        params,
-        workspace,
-      }: {
-        params: {
-          evaluationId: number
-          documentUuid: string
-          commitUuid: string
-          projectId: number
-        }
-        workspace: Workspace
-      },
-    ) => {
+type IParam = {
+  evaluationId: string
+  documentUuid: string
+  commitUuid: string
+  projectId: string
+}
+type IResult = Awaited<ReturnType<typeof computeEvaluationResultsWithMetadata>>
+export const GET = errorHandler<IParam, IResult>(
+  authHandler<IParam, IResult>(
+    async (req: NextRequest, _res: NextResponse, { params, workspace }) => {
       const { documentUuid, commitUuid, evaluationId, projectId } = params
 
       const searchParams = req.nextUrl.searchParams
@@ -34,10 +25,10 @@ export const GET = errorHandler(
       const commitsScope = new CommitsRepository(workspace.id)
       const evaluationScope = new EvaluationsRepository(workspace.id)
       const evaluation = await evaluationScope
-        .find(evaluationId)
+        .find(Number(evaluationId))
         .then((r) => r.unwrap())
       const commit = await commitsScope
-        .getCommitByUuid({ projectId, uuid: commitUuid })
+        .getCommitByUuid({ projectId: Number(projectId), uuid: commitUuid })
         .then((r) => r.unwrap())
 
       const rows = await computeEvaluationResultsWithMetadata({

@@ -10,10 +10,12 @@ import {
 } from '@latitude-data/core/browser'
 import * as factories from '@latitude-data/core/factories'
 import { createRunError } from '@latitude-data/core/services/runErrors/create'
-import { NextRequest } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { GET } from './route'
+import { GET, type ResponseResult } from './route'
+
+type GetResponse = NextResponse<ResponseResult<true>>
 
 const mocks = vi.hoisted(() => {
   return {
@@ -29,6 +31,7 @@ describe('GET logs', () => {
   let commit: Commit
   let document: DocumentVersion
   let workspace: WorkspaceDto
+  let mockResponse: GetResponse = {} as unknown as GetResponse
   let mockRequest: NextRequest
   let user: User
 
@@ -69,7 +72,7 @@ describe('GET logs', () => {
 
   describe('unauthorized', () => {
     it('should return 401 if user is not authenticated', async () => {
-      const response = await GET(mockRequest, {
+      const response = await GET(mockRequest, mockResponse, {
         workspace,
       } as any)
 
@@ -87,7 +90,7 @@ describe('GET logs', () => {
     })
 
     it('should return all logs', async () => {
-      const response = await GET(mockRequest, {
+      const response = await GET(mockRequest, mockResponse, {
         params: {
           projectId: String(project.id),
           commitUuid: commit.uuid,
@@ -112,7 +115,7 @@ describe('GET logs', () => {
 
     it('should should not fail with page=0', async () => {
       mockRequest = new NextRequest('http://localhost:3000?page=0')
-      const response = await GET(mockRequest, {
+      const response = await GET(mockRequest, mockResponse, {
         params: {
           projectId: String(project.id),
           commitUuid: commit.uuid,
@@ -145,7 +148,7 @@ describe('GET logs', () => {
         commit: commit2,
       })
 
-      const response = await GET(mockRequest, {
+      const response = await GET(mockRequest, mockResponse, {
         params: {
           projectId: String(project.id),
           commitUuid: commit.uuid,
@@ -162,7 +165,7 @@ describe('GET logs', () => {
 
     it('should exclude logs with errors', async () => {
       mockRequest = new NextRequest('http://localhost:3000?excludeErrors=true')
-      const response = await GET(mockRequest, {
+      const response = await GET(mockRequest, mockResponse, {
         params: {
           projectId: String(project.id),
           commitUuid: commit.uuid,

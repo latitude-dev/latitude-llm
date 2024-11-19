@@ -12,7 +12,7 @@ type Position = ResponseResult extends Ok<infer T> ? T : never
 
 export const GET = errorHandler<IParam, Position>(
   authHandler<IParam, Position>(
-    async (req: NextRequest, { params, workspace }) => {
+    async (req: NextRequest, _res: NextResponse, { params, workspace }) => {
       const { projectId, commitUuid, documentLogUuid } = params
       const commitsScope = new CommitsRepository(workspace.id)
       const searchParams = req.nextUrl.searchParams

@@ -15,6 +15,7 @@ export class Ok<V> {
     return true
   }
 }
+export type ExtractOk<T> = T extends Ok<infer V> ? V : never
 
 export class ErrorResult<E extends Error> {
   public readonly value: undefined = undefined

@@ -1,10 +1,11 @@
 import { User, WorkspaceDto } from '@latitude-data/core/browser'
 import { createWorkspace } from '@latitude-data/core/factories'
-import { NextRequest } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { GET } from './route'
 
+type Response = NextResponse<User[]>
 const mocks = vi.hoisted(() => {
   return {
     getSession: vi.fn(),
@@ -16,6 +17,7 @@ vi.mock('$/services/auth/getSession', () => ({
 
 describe('GET handler for users', () => {
   let mockRequest: NextRequest
+  let mockResponse: Response = {} as Response
   let mockWorkspace: WorkspaceDto
   let mockUser: User
 
@@ -30,7 +32,7 @@ describe('GET handler for users', () => {
 
   describe('unauthorized', () => {
     it('should return 401 if user is not authenticated', async () => {
-      const response = await GET(mockRequest, {
+      const response = await GET(mockRequest, mockResponse, {
         workspace: mockWorkspace,
       } as any)
 
@@ -48,7 +50,7 @@ describe('GET handler for users', () => {
     })
 
     it('should return all users when authenticated', async () => {
-      const response = await GET(mockRequest, {
+      const response = await GET(mockRequest, mockResponse, {
         params: {},
         workspace: mockWorkspace,
         user: mockUser,

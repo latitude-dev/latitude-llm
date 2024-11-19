@@ -1,4 +1,3 @@
-import { Workspace } from '@latitude-data/core/browser'
 import {
   CommitsRepository,
   EvaluationsRepository,
@@ -8,23 +7,19 @@ import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'
 
-export const GET = errorHandler(
-  authHandler(
-    async (
-      req: NextRequest,
-      {
-        params,
-        workspace,
-      }: {
-        params: {
-          evaluationId: number
-          documentUuid: string
-          commitUuid: string
-          projectId: number
-        }
-        workspace: Workspace
-      },
-    ) => {
+type IParam = {
+  evaluationId: string
+  documentUuid: string
+  commitUuid: string
+  projectId: string
+}
+type IResult = Awaited<
+  ReturnType<typeof fetchDocumentLogsWithEvaluationResults>
+>
+
+export const GET = errorHandler<IParam, IResult>(
+  authHandler<IParam, IResult>(
+    async (req: NextRequest, _res: NextResponse, { params, workspace }) => {
       const searchParams = new URL(req.url).searchParams
       const page = searchParams.get('page') ?? '1'
       const pageSize = searchParams.get('pageSize') ?? '25'

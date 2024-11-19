@@ -7,9 +7,12 @@ import { NextRequest, NextResponse } from 'next/server'
 type IParam = {}
 
 export const GET = errorHandler<IParam, WorkspaceUsage>(
-  authHandler<IParam, WorkspaceUsage>(async (_: NextRequest, { workspace }) => {
-    const usage = await computeWorkspaceUsage(workspace).then((r) => r.unwrap())
-
-    return NextResponse.json(usage, { status: 200 })
-  }),
+  authHandler<IParam, WorkspaceUsage>(
+    async (_: NextRequest, _res: NextResponse, { workspace }) => {
+      const usage = await computeWorkspaceUsage(workspace).then((r) =>
+        r.unwrap(),
+      )
+      return NextResponse.json(usage, { status: 200 })
+    },
+  ),
 )

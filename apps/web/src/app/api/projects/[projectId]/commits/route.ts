@@ -1,7 +1,6 @@
 import {
   CommitStatus,
   ULTRA_LARGE_PAGE_SIZE,
-  Workspace,
 } from '@latitude-data/core/browser'
 import {
   BadRequestError,
@@ -16,24 +15,19 @@ import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'
 
-// FIXME: Use generic types. Check other routes for examples.
-export const GET = errorHandler(
-  authHandler(
-    async (
-      req: NextRequest,
-      {
-        params,
-        workspace,
-      }: {
-        params: {
-          projectId: number
-          page?: number
-          pageSize?: number
-        }
-        workspace: Workspace
-      },
-    ) => {
+type IParam = {
+  projectId: number
+  page?: number
+  pageSize?: number
+}
+export type IResult = Awaited<
+  ReturnType<typeof CommitsRepository.prototype.getCommitsByProjectQuery>
+>
+export const GET = errorHandler<IParam, IResult>(
+  authHandler<IParam, IResult>(
+    async (req: NextRequest, _res: NextResponse, { params, workspace }) => {
       const { projectId } = params
+
       if (!projectId) {
         throw new BadRequestError('Project ID is required')
       }

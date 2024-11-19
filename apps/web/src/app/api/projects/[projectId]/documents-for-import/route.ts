@@ -1,5 +1,5 @@
 import { BadRequestError } from '@latitude-data/core/lib/errors'
-import { Ok } from '@latitude-data/core/lib/Result'
+import { ExtractOk } from '@latitude-data/core/lib/Result'
 import { DocumentVersionsRepository } from '@latitude-data/core/repositories'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
@@ -10,11 +10,11 @@ type IParam = { projectId?: string }
 type ResponseResult = Awaited<
   ReturnType<typeof DocumentVersionsRepository.prototype.getDocumentsForImport>
 >
-type DocumentsImported = ResponseResult extends Ok<infer T> ? T : never
+export type DocumentsImported = ExtractOk<ResponseResult>
 
 export const GET = errorHandler<IParam, DocumentsImported>(
   authHandler<IParam, DocumentsImported>(
-    async (_: NextRequest, { params, workspace }) => {
+    async (_: NextRequest, _res: NextResponse, { params, workspace }) => {
       const { projectId } = params
 
       if (!projectId) {

@@ -7,7 +7,7 @@ import { NextRequest, NextResponse } from 'next/server'
 type IParam = { uuid: string }
 export const GET = errorHandler<IParam, DocumentLogWithMetadataAndError>(
   authHandler<IParam, DocumentLogWithMetadataAndError>(
-    async (_: NextRequest, { params, workspace }) => {
+    async (_: NextRequest, _res: NextResponse, { params, workspace }) => {
       const uuid = params.uuid
       const log = await fetchDocumentLogWithMetadata({
         workspaceId: workspace.id,

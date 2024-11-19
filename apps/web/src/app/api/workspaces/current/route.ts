@@ -5,7 +5,9 @@ import { NextRequest, NextResponse } from 'next/server'
 
 type IParam = {}
 export const GET = errorHandler<IParam, WorkspaceDto>(
-  authHandler<IParam, WorkspaceDto>(async (_: NextRequest, { workspace }) => {
-    return NextResponse.json(workspace, { status: 200 })
-  }),
+  authHandler<IParam, WorkspaceDto>(
+    async (_: NextRequest, _res: NextResponse, { workspace }) => {
+      return NextResponse.json(workspace, { status: 200 })
+    },
+  ),
 )

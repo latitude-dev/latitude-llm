@@ -1,10 +1,17 @@
-import { Providers, User, Workspace } from '@latitude-data/core/browser'
+import {
+  ProviderApiKey,
+  Providers,
+  User,
+  Workspace,
+} from '@latitude-data/core/browser'
 import * as factories from '@latitude-data/core/factories'
 import { createProviderApiKey } from '@latitude-data/core/services/providerApiKeys/create'
-import { NextRequest } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { GET } from './route'
+
+type Response = NextResponse<ProviderApiKey[]>
 
 const mocks = vi.hoisted(() => {
   return {
@@ -17,6 +24,7 @@ vi.mock('$/services/auth/getSession', () => ({
 
 describe('GET handler for provider API keys', () => {
   let mockRequest: NextRequest
+  let mockResponse: Response = {} as Response
   let mockWorkspace: Workspace
   let mockUser: User
 
@@ -33,7 +41,7 @@ describe('GET handler for provider API keys', () => {
     it('should return 401 if user is not authenticated', async () => {
       mocks.getSession.mockReturnValue(null)
 
-      const response = await GET(mockRequest, {
+      const response = await GET(mockRequest, mockResponse, {
         workspace: mockWorkspace,
       } as any)
 
@@ -51,7 +59,7 @@ describe('GET handler for provider API keys', () => {
     })
 
     it('should return empty array when no provider API keys exist', async () => {
-      const response = await GET(mockRequest, {
+      const response = await GET(mockRequest, mockResponse, {
         workspace: mockWorkspace,
       } as any)
 
@@ -69,7 +77,7 @@ describe('GET handler for provider API keys', () => {
         name: 'foo',
       })
 
-      const response = await GET(mockRequest, {
+      const response = await GET(mockRequest, mockResponse, {
         workspace: mockWorkspace,
       } as any)
 

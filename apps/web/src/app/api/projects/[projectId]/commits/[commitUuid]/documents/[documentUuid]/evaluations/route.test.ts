@@ -1,4 +1,8 @@
-import { Providers, User } from '@latitude-data/core/browser'
+import {
+  ConnectedEvaluation,
+  Providers,
+  User,
+} from '@latitude-data/core/browser'
 import * as factories from '@latitude-data/core/factories'
 import { Result } from '@latitude-data/core/lib/Result'
 import { ConnectedEvaluationsRepository } from '@latitude-data/core/repositories'
@@ -6,6 +10,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { GET } from './route'
+
+type Response = NextResponse<ConnectedEvaluation[]>
 
 vi.mock('@latitude-data/core/repositories', async (importOriginal) => {
   const original = await importOriginal()
@@ -23,6 +29,7 @@ describe('GET /api/documents/[projectId]/[commitUuid]/[documentUuid]/evaluations
   let workspace: any
   let documents: any
   let mockEvaluations: any
+  let mockResponse: Response = {} as Response
 
   beforeEach(async () => {
     vi.resetAllMocks()
@@ -72,7 +79,7 @@ describe('GET /api/documents/[projectId]/[commitUuid]/[documentUuid]/evaluations
     const request = new NextRequest(
       'http://localhost/api/documents/test-project/test-commit/test-document-uuid/evaluations',
     )
-    const response = await GET(request, {
+    const response = await GET(request, mockResponse, {
       params: { documentUuid: documents[0]?.documentUuid },
       user: { id: 'test-user-id' } as unknown as User,
       workspace,
@@ -106,7 +113,7 @@ describe('GET /api/documents/[projectId]/[commitUuid]/[documentUuid]/evaluations
     const request = new NextRequest(
       'http://localhost/api/documents/test-project/test-commit/test-document-uuid/evaluations',
     )
-    const response = await GET(request, {
+    const response = await GET(request, mockResponse, {
       params: { documentUuid: documents[0]!.documentUuid },
       user: { id: 'test-user-id' } as unknown as User,
       workspace,

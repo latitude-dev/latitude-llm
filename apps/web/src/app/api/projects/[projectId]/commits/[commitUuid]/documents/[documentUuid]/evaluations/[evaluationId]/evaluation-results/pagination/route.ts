@@ -1,4 +1,3 @@
-import { Workspace } from '@latitude-data/core/browser'
 import { buildPagination } from '@latitude-data/core/lib/pagination/buildPagination'
 import {
   CommitsRepository,
@@ -23,24 +22,17 @@ function pageUrl(params: {
     .evaluations.detail(Number(params.evaluationId)).root
 }
 
-// FIXME: Use generic types. Check other routes for examples.
-export const GET = errorHandler(
-  authHandler(
-    async (
-      req: NextRequest,
-      {
-        params,
-        workspace,
-      }: {
-        params: {
-          evaluationId: number
-          documentUuid: string
-          commitUuid: string
-          projectId: number
-        }
-        workspace: Workspace
-      },
-    ) => {
+type IParam = {
+  evaluationId: string
+  documentUuid: string
+  commitUuid: string
+  projectId: string
+}
+
+type IPagination = ReturnType<typeof buildPagination>
+export const GET = errorHandler<IParam, IPagination>(
+  authHandler<IParam, IPagination>(
+    async (req: NextRequest, _res: NextResponse, { params, workspace }) => {
       const searchParams = req.nextUrl.searchParams
       const evaluationsScope = new EvaluationsRepository(workspace.id)
       const evaluation = await evaluationsScope
@@ -50,7 +42,7 @@ export const GET = errorHandler(
       const commit = await commitsScope
         .getCommitByUuid({
           uuid: params.commitUuid,
-          projectId: params.projectId,
+          projectId: Number(params.projectId),
         })
         .then((r) => r.unwrap())
       const countResult = await computeEvaluationResultsWithMetadataCount({

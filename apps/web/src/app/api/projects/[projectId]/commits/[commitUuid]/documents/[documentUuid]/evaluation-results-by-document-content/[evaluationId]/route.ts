@@ -1,4 +1,4 @@
-import { Workspace } from '@latitude-data/core/browser'
+import { ExtractOk } from '@latitude-data/core/lib/Result'
 import {
   CommitsRepository,
   EvaluationsRepository,
@@ -8,24 +8,21 @@ import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'
 
-// FIXME: Use generic types. Check other routes for examples.
-export const GET = errorHandler(
-  authHandler(
-    async (
-      req: NextRequest,
-      {
-        params,
-        workspace,
-      }: {
-        params: {
-          evaluationId: number
-          documentUuid: string
-          commitUuid: string
-          projectId: number
-        }
-        workspace: Workspace
-      },
-    ) => {
+type IParam = {
+  evaluationId: string
+  documentUuid: string
+  commitUuid: string
+  projectId: number
+}
+
+type ResponseResult = Awaited<
+  ReturnType<typeof computeEvaluationResultsByDocumentContent>
+>
+type EvalsByDocumentContent = ExtractOk<ResponseResult>
+
+export const GET = errorHandler<IParam, EvalsByDocumentContent>(
+  authHandler<IParam, EvalsByDocumentContent>(
+    async (req: NextRequest, _res: NextResponse, { params, workspace }) => {
       const { evaluationId, documentUuid, commitUuid, projectId } = params
       const { searchParams } = new URL(req.url)
       const page = Number(searchParams.get('page')) || 1
@@ -38,7 +35,7 @@ export const GET = errorHandler(
 
       const evaluationsScope = new EvaluationsRepository(workspace.id)
       const evaluation = await evaluationsScope
-        .find(evaluationId)
+        .find(Number(evaluationId))
         .then((r) => r.unwrap())
 
       const result = await computeEvaluationResultsByDocumentContent({

@@ -3,20 +3,20 @@ import { debuglog } from 'util'
 import { LatitudeError } from '@latitude-data/core/lib/errors'
 import env from '$/env'
 import { captureException } from '$/helpers/captureException'
-import {
-  AuthContext,
-  DefaultParams,
-  HandlerFn,
-} from '$/middlewares/authHandler'
+import { Context, DefaultParams, HandlerFn } from '$/middlewares/authHandler'
 import { NextRequest, NextResponse } from 'next/server'
 
 export function errorHandler<
   IReq extends DefaultParams,
   IResp extends object = {},
 >(handler: HandlerFn<IReq, IResp>) {
-  return async (req: NextRequest, context: AuthContext<IReq>) => {
+  return async (
+    req: NextRequest,
+    res: NextResponse<IResp>,
+    context: Context<IReq>,
+  ) => {
     try {
-      return await handler(req, context)
+      return await handler(req, res, context)
     } catch (error) {
       if (env.NODE_ENV === 'development') {
         debuglog((error as Error).message)
