@@ -28,42 +28,44 @@ if (!process.env.IMAGE_TAG) {
 
 pulumi
   .all([sentryDsn, sentryOrg, sentryProject, postHogApiKey, latitudeUrl])
-  .apply(([sentryDsn, sentryOrg, sentryProject, postHogApiKey, latitudeUrl]) => {
-    const webImageBuild = {
-      platform: 'linux/amd64',
-      context: resolve('../../../'),
-      dockerfile: resolve('../../../apps/web/docker/Dockerfile'),
-      args: {
-        SENTRY_DSN: sentryDsn,
-        SENTRY_ORG: sentryOrg,
-        SENTRY_PROJECT: sentryProject,
-        SENTRY_AUTH_TOKEN: process.env.SENTRY_AUTH_TOKEN!,
-        NEXT_PUBLIC_POSTHOG_KEY: postHogApiKey,
-        NEXT_PUBLIC_POSTHOG_HOST: 'https://eu.i.posthog.com',
-        LATITUDE_URL: latitudeUrl,
-      },
-    }
+  .apply(
+    ([sentryDsn, sentryOrg, sentryProject, postHogApiKey, latitudeUrl]) => {
+      const webImageBuild = {
+        platform: 'linux/amd64',
+        context: resolve('../../../'),
+        dockerfile: resolve('../../../apps/web/docker/Dockerfile'),
+        args: {
+          SENTRY_DSN: sentryDsn,
+          SENTRY_ORG: sentryOrg,
+          SENTRY_PROJECT: sentryProject,
+          SENTRY_AUTH_TOKEN: process.env.SENTRY_AUTH_TOKEN!,
+          NEXT_PUBLIC_POSTHOG_KEY: postHogApiKey,
+          NEXT_PUBLIC_POSTHOG_HOST: 'https://eu.i.posthog.com',
+          LATITUDE_URL: latitudeUrl,
+        },
+      }
 
-    const registryConfig = {
-      server: repo.repositoryUrl,
-      username: token.userName,
-      password: pulumi.secret(token.password),
-    }
+      const registryConfig = {
+        server: repo.repositoryUrl,
+        username: token.userName,
+        password: pulumi.secret(token.password),
+      }
 
-    // Create image with specific tag
-    new docker.Image('LatitudeLLMAppImage', {
-      build: webImageBuild,
-      imageName: pulumi.interpolate`${repo.repositoryUrl}:${process.env.IMAGE_TAG}`,
-      registry: registryConfig,
-    })
+      // Create image with specific tag
+      new docker.Image('LatitudeLLMAppImage', {
+        build: webImageBuild,
+        imageName: pulumi.interpolate`${repo.repositoryUrl}:${process.env.IMAGE_TAG}`,
+        registry: registryConfig,
+      })
 
-    // Create image with latest tag
-    new docker.Image('LatitudeLLMAppImageLatest', {
-      build: webImageBuild,
-      imageName: pulumi.interpolate`${repo.repositoryUrl}:latest`,
-      registry: registryConfig,
-    })
-  })
+      // Create image with latest tag
+      new docker.Image('LatitudeLLMAppImageLatest', {
+        build: webImageBuild,
+        imageName: pulumi.interpolate`${repo.repositoryUrl}:latest`,
+        registry: registryConfig,
+      })
+    },
+  )
 
 // Similarly for the core image
 const coreImageBuild = {
