@@ -16,12 +16,22 @@ export function useMetadata({
   const workerRef = useRef<Worker | null>(null)
 
   useEffect(() => {
-    workerRef.current = new Worker('/workers/readMetadata.js')
+    if (typeof window === 'undefined') return
 
-    workerRef.current.onmessage = (event: { data: ConversationMetadata }) => {
-      setMetadata(event.data)
-      onMetadataProcessed?.(event.data.parameters)
+    // Dynamic import for the worker
+    const createWorker = async () => {
+      const worker = new Worker(
+        new URL('../../public/workers/readMetadata', import.meta.url),
+      )
+      workerRef.current = worker
+
+      worker.onmessage = (event: { data: ConversationMetadata }) => {
+        setMetadata(event.data)
+        onMetadataProcessed?.(event.data.parameters)
+      }
     }
+
+    createWorker()
 
     return () => {
       workerRef.current?.terminate()

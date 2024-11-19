@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { Usable, use, useEffect } from 'react'
 
 import { FocusHeader } from '@latitude-data/web-ui'
 import { confirmMagicLinkTokenAction } from '$/actions/magicLinkTokens/confirm'
@@ -10,9 +10,9 @@ import useLatitudeAction from '$/hooks/useLatitudeAction'
 export default function ConfirmMagicLink({
   params,
 }: {
-  params: { token: string }
+  params: Usable<{ token: string }>
 }) {
-  const { token } = params
+  const { token } = use(params)
   const { execute } = useLatitudeAction(confirmMagicLinkTokenAction, {
     onSuccess: () => {}, // We don't want the default toast message in this case
   })

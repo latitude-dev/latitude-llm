@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { Usable, use, useMemo, useState } from 'react'
 import { capitalize } from 'lodash-es'
 
 import { MessageContent, TextContent } from '@latitude-data/compiler'
@@ -29,9 +29,9 @@ import useProviderLogs from '$/stores/providerLogs'
 export default function ImportLogs({
   params,
 }: {
-  params: { evaluationUuid: string }
+  params: Usable<{ evaluationUuid: string }>
 }) {
-  const { evaluationUuid } = params
+  const { evaluationUuid } = use(params)
   const navigate = useNavigate()
   const [documentUuid, setDocumentUuid] = useState<string | undefined>()
   const [providerLogId, setProviderLogId] = useState<number | undefined>()

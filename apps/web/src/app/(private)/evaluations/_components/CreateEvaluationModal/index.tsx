@@ -205,7 +205,6 @@ export default function CreateEvaluationModal({
                 type='number'
                 min={0}
                 value={configuration.detail?.range.from.toString() || 1}
-                defaultValue={1}
                 placeholder='From'
                 onChange={handleRangeFromChange}
               />
@@ -213,7 +212,6 @@ export default function CreateEvaluationModal({
                 type='number'
                 min={0}
                 value={configuration.detail?.range.to.toString() || 5}
-                defaultValue={5}
                 placeholder='To'
                 onChange={handleRangeToChange}
               />

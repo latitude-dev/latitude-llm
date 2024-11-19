@@ -26,7 +26,7 @@ export const setupAction = errorHandlingProcedure
             { message: 'Email is already in use' },
           )
           .refine(
-            (email) =>
+            async (email) =>
               !email.match(/^[A-Z0-9_!#$%&'*+/=?`{|}~^.-]+@[A-Z0-9.-]+$/) &&
               !email.match(/^[^+]+\+\d+@[A-Z0-9.-]+$/i),
             { message: 'Email is not valid' },
