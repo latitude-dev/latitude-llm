@@ -37,6 +37,7 @@ services:
         - NEXT_PUBLIC_POSTHOG_HOST=$NEXT_PUBLIC_POSTHOG_HOST
         - SUPPORT_APP_ID=$SUPPORT_APP_ID
         - SUPPORT_APP_SECRET_KEY=$SUPPORT_APP_SECRET_KEY
+        - LATITUDE_URL=$LATITUDE_URL
     profiles: [building]
     ports:
       - '8080:8080'

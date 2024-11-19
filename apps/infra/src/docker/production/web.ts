@@ -3,11 +3,11 @@ import * as docker from '@pulumi/docker'
 import * as pulumi from '@pulumi/pulumi'
 
 import {
+  latitudeUrl,
   postHogApiKey,
   sentryDsn,
   sentryOrg,
   sentryProject,
-  latitudeUrl,
 } from '../../app/production/shared'
 import { resolve } from '../../shared'
 
@@ -27,8 +27,8 @@ if (!process.env.IMAGE_TAG) {
 }
 
 pulumi
-  .all([sentryDsn, sentryOrg, sentryProject, postHogApiKey])
-  .apply(([sentryDsn, sentryOrg, sentryProject, postHogApiKey]) => {
+  .all([sentryDsn, sentryOrg, sentryProject, postHogApiKey, latitudeUrl])
+  .apply(([sentryDsn, sentryOrg, sentryProject, postHogApiKey, latitudeUrl]) => {
     const webImageBuild = {
       platform: 'linux/amd64',
       context: resolve('../../../'),
