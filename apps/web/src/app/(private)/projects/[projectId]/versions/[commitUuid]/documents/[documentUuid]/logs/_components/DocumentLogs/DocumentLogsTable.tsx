@@ -16,14 +16,11 @@ import {
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui'
-import {
-  formatCostInMillicents,
-  formatDuration,
-  relativeTime,
-} from '$/app/_lib/formatUtils'
+import { formatCostInMillicents, formatDuration } from '$/app/_lib/formatUtils'
 import { getRunErrorFromErrorable } from '$/app/(private)/_lib/getRunErrorFromErrorable'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { LinkableTablePaginationFooter } from '$/components/TablePaginationFooter'
+import { relativeTime } from '$/lib/relativeTime'
 import { ROUTES } from '$/services/routes'
 import useDocumentLogsPagination from '$/stores/useDocumentLogsPagination'
 import { useSearchParams } from 'next/navigation'
