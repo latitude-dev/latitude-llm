@@ -1,6 +1,7 @@
 import { ReactNode } from 'react'
 
 import { SessionProvider } from '@latitude-data/web-ui/browser'
+import buildMetatags from '$/app/_lib/buildMetatags'
 import { createSupportUserIdentity } from '$/app/(private)/_lib/createSupportUserIdentity'
 import { SupportChat } from '$/components/IntercomSupportChat'
 import { AppLayout } from '$/components/layouts'
@@ -16,6 +17,10 @@ import { redirect } from 'next/navigation'
 
 import { CSPostHogProvider, IdentifyUser } from '../providers'
 import { NAV_LINKS } from './_lib/constants'
+
+export const metadata = buildMetatags({
+  title: 'Home',
+})
 
 export default async function PrivateLayout({
   children,
