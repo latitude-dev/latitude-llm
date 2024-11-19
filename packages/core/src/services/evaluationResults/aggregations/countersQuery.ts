@@ -1,4 +1,4 @@
-import { and, count, eq, sql } from 'drizzle-orm'
+import { and, count, eq, sum } from 'drizzle-orm'
 
 import { getCommitFilter } from '../_createEvaluationResultQuery'
 import { Commit, Evaluation } from '../../../browser'
@@ -24,10 +24,8 @@ export async function getEvaluationTotalsQuery(
 ) {
   const result = await db
     .select({
-      tokens: sql`COALESCE(provider_logs.tokens, 0)`
-        .mapWith(Number)
-        .as('tokens'),
-      costInMillicents: sql`COALESCE(provider_logs.cost_in_millicents, 0)`
+      tokens: sum(providerLogs.tokens).mapWith(Number).as('tokens'),
+      costInMillicents: sum(providerLogs.costInMillicents)
         .mapWith(Number)
         .as('cost_in_millicents'),
     })
