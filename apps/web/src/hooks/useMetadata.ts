@@ -21,7 +21,7 @@ export function useMetadata({
     // Dynamic import for the worker
     const createWorker = async () => {
       const worker = new Worker(
-        new URL('../../public/workers/readMetadata', import.meta.url),
+        new URL('public/workers/readMetadata', import.meta.url),
       )
       workerRef.current = worker
 

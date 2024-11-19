@@ -80,14 +80,14 @@ export default async function DocumentPage({
 
   return (
     <div className='flex flex-grow min-h-0 flex-col w-full p-6 gap-2 min-w-0'>
-      {!rows.length ? (
+      {!rows.length && (
         <DocumentLogBlankSlate
           commit={commit}
           projectId={projectId}
           documentUuid={documentUuid}
         />
-      ) : null}
-      {rows.length ? (
+      )}
+      {!!rows.length && (
         <TableWithHeader
           title='Logs'
           table={<DocumentLogs documentLogs={rows} selectedLog={selectedLog} />}
@@ -96,7 +96,7 @@ export default async function DocumentPage({
               href={
                 ROUTES.projects
                   .detail({ id: projectId })
-                  .commits.detail({ uuid: commitUuid })
+                  .commits.detail({ uuid: commit.uuid })
                   .documents.detail({ uuid: documentUuid }).logs.upload
               }
             >
@@ -106,7 +106,7 @@ export default async function DocumentPage({
             </Link>
           }
         />
-      ) : null}
+      )}
     </div>
   )
 }

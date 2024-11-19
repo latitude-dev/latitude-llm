@@ -1,8 +1,31 @@
-import {
-  createRunError as createFn,
-  CreateRunErrorProps,
-} from '../../services/runErrors/create'
+import { RunErrorCodes } from '@latitude-data/constants/errors'
 
-export async function createRunError(data: CreateRunErrorProps['data']) {
-  return createFn({ data }).then((r) => r.unwrap())
+import { ErrorableEntity } from '../../browser'
+import { createRunError as createRunErrorService } from '../../services/runErrors/create'
+
+interface CreateRunErrorProps {
+  errorableType: ErrorableEntity
+  errorableUuid: string
+  code: RunErrorCodes
+  message: string
+  details?: object
+}
+
+export async function createRunError({
+  errorableType,
+  errorableUuid,
+  code,
+  message,
+  details,
+}: CreateRunErrorProps) {
+  return createRunErrorService({
+    data: {
+      errorableType,
+      errorableUuid,
+      code,
+      message,
+      // @ts-expect-error - mock
+      details: details ?? { errorCode: code },
+    },
+  }).then((r) => r.unwrap())
 }

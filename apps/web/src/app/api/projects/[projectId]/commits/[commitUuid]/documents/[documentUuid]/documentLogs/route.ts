@@ -45,6 +45,7 @@ export const GET = errorHandler(
       const buildQueryFn = excludeErrors
         ? computeDocumentLogsQuery
         : computeDocumentLogsWithMetadataQuery
+
       const rows = await buildQueryFn({
         workspaceId: workspace.id,
         documentUuid,

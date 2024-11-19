@@ -149,6 +149,7 @@ describe('EvaluationResultsRepository', () => {
         evaluatedProviderLog,
         evaluation,
       })
+
       const repo = new EvaluationResultsWithErrorsRepository(workspace.id)
       const results = await repo.findAll()
       const data = results.unwrap()
@@ -159,7 +160,9 @@ describe('EvaluationResultsRepository', () => {
           error: {
             code: RunErrorCodes.Unknown,
             message: 'Error message',
-            details: null,
+            details: {
+              errorCode: RunErrorCodes.Unknown,
+            },
           },
           evaluationId: evaluation.id,
           documentLogId: documentLog.id,

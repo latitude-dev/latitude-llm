@@ -27,5 +27,5 @@ export function formatDuration(duration?: number | null) {
 }
 
 export function formatCostInMillicents(cost_in_millicents: number) {
-  return `$ ${cost_in_millicents / 100_000}`
+  return `$${(cost_in_millicents / 100_000).toFixed(6)}`
 }

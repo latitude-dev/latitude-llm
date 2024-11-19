@@ -14,11 +14,14 @@ import {
   useSockets,
 } from '$/components/Providers/WebsocketsProvider/useSockets'
 import useDocumentLogs, { documentLogPresenter } from '$/stores/documentLogs'
+import useDocumentLogsAggregations from '$/stores/documentLogsAggregations'
 import useProviderLogs from '$/stores/providerLogs'
 import { useSearchParams } from 'next/navigation'
 
+import { AggregationPanels } from './AggregationPanels'
 import { DocumentLogInfo } from './DocumentLogInfo'
 import { DocumentLogsTable } from './DocumentLogsTable'
+import { LogsOverTimeChart } from './LogsOverTime'
 
 const useDocumentLogSocket = (
   documentUuid: string,
@@ -101,6 +104,12 @@ export function DocumentLogs({
       fallbackData: serverDocumentLogs,
     },
   )
+  const { data: aggregations, isLoading: isAggregationsLoading } =
+    useDocumentLogsAggregations({
+      documentUuid: document.documentUuid,
+      commitUuid: commit.uuid,
+      projectId: project.id,
+    })
 
   useDocumentLogSocket(document.documentUuid, mutate)
 
@@ -113,14 +122,27 @@ export function DocumentLogs({
   return (
     <div className='flex flex-row flex-grow min-h-0 w-full gap-4 min-w-[1024px] overflow-x-auto'>
       <div className='flex flex-col flex-grow h-full gap-y-4 min-w-0 lg:w-1/2 2xl:w-2/3'>
-        <div className='flex-1 mb-6'>
-          <DocumentLogsTable
-            ref={tableRef}
-            documentLogs={documentLogs}
-            selectedLog={selectedLog}
-            setSelectedLog={setSelectedLog}
-          />
+        <div className='flex flex-row gap-4 flex-grow'>
+          <div className='flex-grow max-w-3xl'>
+            <LogsOverTimeChart
+              documentUuid={document.documentUuid}
+              commitUuid={commit.uuid}
+              projectId={project.id}
+            />
+          </div>
+          <div className='max-w-1/2'>
+            <AggregationPanels
+              aggregations={aggregations}
+              isLoading={isAggregationsLoading}
+            />
+          </div>
         </div>
+        <DocumentLogsTable
+          ref={tableRef}
+          documentLogs={documentLogs}
+          selectedLog={selectedLog}
+          setSelectedLog={setSelectedLog}
+        />
       </div>
       {selectedLog && (
         <div className='lg:w-1/2 2xl:w-1/3' ref={sidebarWrapperRef}>
