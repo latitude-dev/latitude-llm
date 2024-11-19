@@ -1,3 +1,4 @@
+import { compactObject } from '@latitude-data/core/lib/compactObject'
 import { DocumentLogWithMetadataAndErrorAndEvaluationResult } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/evaluations/[evaluationId]/_components/ManualEvaluationResults'
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
@@ -5,6 +6,7 @@ import useSWR, { SWRConfiguration } from 'swr'
 
 import { documentLogPresenter } from './documentLogs'
 
+const EMPTY_LIST: DocumentLogWithMetadataAndErrorAndEvaluationResult[] = []
 export function useDocumentLogsWithEvaluationResults(
   {
     evaluationId,
@@ -31,10 +33,16 @@ export function useDocumentLogsWithEvaluationResults(
       .evaluations.detail({ evaluationId }).logs.root,
     {
       serializer: (rows) => rows.map(documentLogPresenter),
+      searchParams: compactObject({
+        page: page ? String(page) : undefined,
+        pageSize: pageSize ? String(pageSize) : undefined,
+      }) as Record<string, string>,
     },
   )
 
-  return useSWR<DocumentLogWithMetadataAndErrorAndEvaluationResult[]>(
+  const { data = EMPTY_LIST, ...rest } = useSWR<
+    DocumentLogWithMetadataAndErrorAndEvaluationResult[]
+  >(
     [
       'documentLogsWithEvaluationResults',
       evaluationId,
@@ -51,4 +59,6 @@ export function useDocumentLogsWithEvaluationResults(
       revalidateOnFocus: false,
     },
   )
+
+  return { data, ...rest }
 }

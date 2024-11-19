@@ -8,6 +8,7 @@ type Props = {
   tabs?: TabSelectorOption<string>[]
   className?: string
   tabsActions?: ReactNode
+  bottomActions?: ReactNode
 }
 export const MetadataInfoTabs = forwardRef<HTMLDivElement, Props>(
   function MetadataInfoTabs(
@@ -18,6 +19,7 @@ export const MetadataInfoTabs = forwardRef<HTMLDivElement, Props>(
         { label: 'Messages', value: 'messages' },
       ],
       tabsActions,
+      bottomActions,
       children,
     },
     ref,
@@ -27,8 +29,8 @@ export const MetadataInfoTabs = forwardRef<HTMLDivElement, Props>(
       <div
         ref={ref}
         className={cn(
-          'flex flex-col flex-grow min-h-0 bg-background',
-          'items-center relative',
+          'flex flex-col flex-grow min-h-0 bg-background overflow-hidden',
+          'border border-border rounded-lg items-center relative',
           className,
         )}
       >
@@ -49,6 +51,9 @@ export const MetadataInfoTabs = forwardRef<HTMLDivElement, Props>(
             {children({ selectedTab })}
           </div>
         </div>
+        {bottomActions ? (
+          <div className='w-full bg-card rounded-b-lg'>{bottomActions}</div>
+        ) : null}
       </div>
     )
   },

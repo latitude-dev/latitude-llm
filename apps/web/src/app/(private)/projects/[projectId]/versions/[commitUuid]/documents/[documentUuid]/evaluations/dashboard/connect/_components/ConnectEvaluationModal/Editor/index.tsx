@@ -84,8 +84,8 @@ export default function EvaluationEditor({
           className='w-full h-full p-4 bg-muted text-foregound text-sm resize-none overflow-x-auto '
           value={
             items[0]!.type === 'evaluation'
-              ? items[0]!.data.metadata.prompt
-              : items[0]!.data.prompt
+              ? (items[0]!.data.metadata.prompt ?? '')
+              : (items[0]!.data.prompt ?? '')
           }
           readOnly
           disabled

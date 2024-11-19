@@ -56,8 +56,11 @@ const ActiveEvaluationsTableRow = ({
       <TableCell>
         <Text.H5>{evaluationResultTypes[evaluation.resultType!]}</Text.H5>
       </TableCell>
-      <TableCell onClick={(e) => e.stopPropagation()}>
-        <Link href={ROUTES.evaluations.destroy(evaluation.uuid)}>
+      <TableCell>
+        <Link
+          href={ROUTES.evaluations.destroy(evaluation.uuid)}
+          onClick={(e) => e.stopPropagation()}
+        >
           <Icon name='trash' />
         </Link>
       </TableCell>

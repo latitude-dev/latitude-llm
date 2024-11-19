@@ -7,8 +7,11 @@ import {
   EvaluationDto,
   EvaluationResultableType,
 } from '@latitude-data/core/browser'
+import { EvaluationResultByDocument } from '@latitude-data/core/repositories'
 import {
+  Checkbox,
   cn,
+  Icon,
   RangeBadge,
   Table,
   TableBody,
@@ -20,7 +23,6 @@ import {
 } from '@latitude-data/web-ui'
 import { LogicTablePaginationFooterWithoutCount } from '$/components/TablePaginationFooter/TablePaginationFooterWithoutCount'
 import { relativeTime } from '$/lib/relativeTime'
-import { EvaluationResultByDocument } from '$/stores/evaluationResultsByDocumentContent'
 
 export const ResultCellContent = ({
   evaluation,
@@ -103,6 +105,7 @@ export const SelectableEvaluationResultsTable = ({
         <TableRow>
           <TableHead />
           <TableHead>Time</TableHead>
+          <TableHead tooltipMessage='The logs with ≠ sign were generated with a different version of the prompt.' />
           <TableHead>Origin</TableHead>
           <TableHead>Result</TableHead>
         </TableRow>
@@ -126,10 +129,9 @@ export const SelectableEvaluationResultsTable = ({
               )}
             >
               <TableCell>
-                <input
-                  type='checkbox'
+                <Checkbox
                   checked={isSelected}
-                  onChange={toggleSelection(evaluationResult)}
+                  onCheckedChange={toggleSelection(evaluationResult)}
                 />
               </TableCell>
               <TableCell>
@@ -141,6 +143,11 @@ export const SelectableEvaluationResultsTable = ({
                     {relativeTime(evaluationResult.createdAt)}
                   </time>
                 </Text.H5>
+              </TableCell>
+              <TableCell>
+                {!evaluationResult.sameContent ? (
+                  <Icon name='notEqual' />
+                ) : null}
               </TableCell>
               <TableCell>
                 <Text.H5 noWrap>

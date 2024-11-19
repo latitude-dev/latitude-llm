@@ -7,7 +7,9 @@ import {
 } from 'react'
 
 import { cn } from '../../../lib/utils'
+import { Icon } from '../Icons'
 import Text from '../Text'
+import { Tooltip } from '../Tooltip'
 
 type TableProps = HTMLAttributes<HTMLTableElement> & {
   maxHeight?: number | string
@@ -117,28 +119,55 @@ const TableRow = forwardRef<
 ))
 TableRow.displayName = 'TableRow'
 
-const TableHead = forwardRef<
-  HTMLTableCellElement,
-  ThHTMLAttributes<HTMLTableCellElement>
->(({ className, ...props }, ref) => (
-  <th
-    ref={ref}
-    className={cn(
-      'h-10 px-4 text-left align-middle font-medium bg-secondary [&:has([role=checkbox])]:pr-0',
-      className,
-    )}
-    {...props}
-  >
-    <Text.H5M noWrap>{props.children}</Text.H5M>
-  </th>
-))
+type THeadProps = ThHTMLAttributes<HTMLTableCellElement> & {
+  tooltipMessage?: string
+}
+const TableHead = forwardRef<HTMLTableCellElement, THeadProps>(
+  ({ className, tooltipMessage, ...props }, ref) => (
+    <th
+      ref={ref}
+      className={cn(
+        'h-10 px-4 text-left align-middle font-medium bg-secondary [&:has([role=checkbox])]:pr-0',
+        className,
+      )}
+      {...props}
+    >
+      <div
+        className={cn('flex items-center', {
+          'justify-start': props.align === 'left',
+          'justify-center': props.align === 'center',
+          'justify-end': props.align === 'right',
+        })}
+      >
+        {tooltipMessage ? (
+          <Tooltip
+            trigger={
+              <div className='flex flex-row gap-x-1 items-center'>
+                <Icon name='info' />
+                <Text.H5M noWrap>{props.children}</Text.H5M>
+              </div>
+            }
+          >
+            {tooltipMessage}
+          </Tooltip>
+        ) : (
+          <Text.H5M noWrap>{props.children}</Text.H5M>
+        )}
+      </div>
+    </th>
+  ),
+)
 TableHead.displayName = 'TableHead'
 
 type CellProps = TdHTMLAttributes<HTMLTableCellElement> & {
   align?: 'left' | 'center' | 'right'
+  preventDefault?: boolean
 }
 const TableCell = forwardRef<HTMLTableCellElement, CellProps>(
-  ({ className, children, align = 'left', ...props }, ref) => (
+  (
+    { className, children, align = 'left', preventDefault = false, ...props },
+    ref,
+  ) => (
     <td
       ref={ref}
       className={cn(
@@ -146,6 +175,11 @@ const TableCell = forwardRef<HTMLTableCellElement, CellProps>(
         className,
       )}
       {...props}
+      onClick={(e) => {
+        if (!preventDefault) return
+        e.preventDefault()
+        e.stopPropagation()
+      }}
     >
       <div
         className={cn('flex', {

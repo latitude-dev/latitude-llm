@@ -7,6 +7,8 @@ import * as LabelPrimitive from '@radix-ui/react-label'
 import { cn } from '../../../lib/utils'
 import { font } from '../../tokens'
 import { Badge } from '../Badge'
+import { Icon } from '../Icons'
+import { Tooltip } from '../Tooltip'
 
 const labelVariants = cva(
   cn(
@@ -47,5 +49,54 @@ const BatchLabel = ({ children, ...rest }: LabelProps) => (
     <Badge variant='accent'>&#123;&#123;{children}&#125;&#125;</Badge>
   </Label>
 )
+
+type TooltipLabelProps = LabelProps & {
+  badgeLabel?: boolean
+  info?: string
+  error?: string | undefined
+}
+export function TooltipLabel({
+  badgeLabel,
+  info,
+  error,
+  children,
+  ...rest
+}: TooltipLabelProps) {
+  const LabelComponent = badgeLabel ? BatchLabel : Label
+  if (!info) {
+    return (
+      <div className='flex flex-row gap-1 items-center'>
+        <LabelComponent {...rest}>{children}</LabelComponent>
+      </div>
+    )
+  }
+
+  return (
+    <Tooltip
+      variant={error ? 'destructive' : 'inverse'}
+      asChild
+      side='top'
+      align='start'
+      trigger={
+        <div className='inline-block'>
+          <div className='flex flex-row gap-1 items-center'>
+            <LabelComponent
+              variant={error ? 'destructive' : 'default'}
+              {...rest}
+            >
+              {children}
+            </LabelComponent>
+            <Icon
+              name='info'
+              color={error ? 'destructive' : 'foregroundMuted'}
+            />
+          </div>
+        </div>
+      }
+    >
+      {info}
+    </Tooltip>
+  )
+}
 
 export { Label, BatchLabel }

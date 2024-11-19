@@ -4,6 +4,7 @@ import { useCallback, useRef, useState } from 'react'
 
 import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
 import {
+  cn,
   TableBlankSlate,
   useCurrentCommit,
   useCurrentProject,
@@ -76,7 +77,7 @@ export function DocumentLogs({
   documentLogs: DocumentLogWithMetadataAndError[]
   selectedLog: DocumentLogWithMetadataAndError | undefined
 }) {
-  const tableRef = useRef<HTMLTableElement>(null)
+  const stickyRef = useRef<HTMLTableElement>(null)
   const sidebarWrapperRef = useRef<HTMLDivElement>(null)
   const searchParams = useSearchParams()
   const page = searchParams.get('page')
@@ -120,41 +121,44 @@ export function DocumentLogs({
   }
 
   return (
-    <div className='flex flex-row flex-grow min-h-0 w-full gap-4 min-w-[1024px] overflow-x-auto'>
-      <div className='flex flex-col flex-grow h-full gap-y-4 min-w-0 lg:w-1/2 2xl:w-2/3'>
-        <div className='flex flex-row gap-4 flex-grow'>
-          <div className='flex-grow max-w-3xl'>
-            <LogsOverTimeChart
-              documentUuid={document.documentUuid}
-              commitUuid={commit.uuid}
-              projectId={project.id}
-            />
-          </div>
-          <div className='max-w-1/2'>
-            <AggregationPanels
-              aggregations={aggregations}
-              isLoading={isAggregationsLoading}
-            />
-          </div>
-        </div>
+    <div className='flex flex-col flex-grow min-h-0 w-full gap-4'>
+      <div className='grid xl:grid-cols-2 gap-4 flex-grow'>
+        <LogsOverTimeChart
+          documentUuid={document.documentUuid}
+          commitUuid={commit.uuid}
+          projectId={project.id}
+        />
+        <AggregationPanels
+          aggregations={aggregations}
+          isLoading={isAggregationsLoading}
+        />
+      </div>
+
+      <div
+        className={cn('gap-x-4 grid pb-6', {
+          'grid-cols-1': !selectedLog,
+          'grid-cols-2 xl:grid-cols-[2fr_1fr]': selectedLog,
+        })}
+      >
         <DocumentLogsTable
-          ref={tableRef}
+          ref={stickyRef}
           documentLogs={documentLogs}
           selectedLog={selectedLog}
           setSelectedLog={setSelectedLog}
         />
+        {selectedLog && (
+          <div ref={sidebarWrapperRef}>
+            <DocumentLogInfo
+              documentLog={selectedLog}
+              providerLogs={providerLogs}
+              isLoading={isProviderLogsLoading}
+              stickyRef={stickyRef}
+              sidebarWrapperRef={sidebarWrapperRef}
+              offset={{ top: 12, bottom: 12 }}
+            />
+          </div>
+        )}
       </div>
-      {selectedLog && (
-        <div className='lg:w-1/2 2xl:w-1/3' ref={sidebarWrapperRef}>
-          <DocumentLogInfo
-            documentLog={selectedLog}
-            providerLogs={providerLogs}
-            isLoading={isProviderLogsLoading}
-            tableRef={tableRef}
-            sidebarWrapperRef={sidebarWrapperRef}
-          />
-        </div>
-      )}
     </div>
   )
 }

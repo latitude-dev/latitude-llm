@@ -7,7 +7,7 @@ import {
   EvaluationResultsRepository,
   EvaluationsRepository,
 } from '@latitude-data/core/repositories'
-import { serialize as serializeEvaluationResult } from '@latitude-data/core/services/evaluationResults/serialize'
+import { serialize } from '@latitude-data/core/services/evaluationResults/serialize'
 import { getEvaluationPrompt } from '@latitude-data/core/services/evaluations/index'
 import { env } from '@latitude-data/env'
 import { createSdk } from '$/app/(private)/_lib/createSdk'
@@ -62,12 +62,16 @@ export const refinePromptAction = authProcedure
     const evaluationResultsScope = new EvaluationResultsRepository(
       ctx.workspace.id,
     )
+
     const evaluationResults = await evaluationResultsScope
       .findMany(evaluationResultIds)
       .then((r) => r.unwrap())
     const serializedEvaluationResults = await Promise.all(
       evaluationResults.map((r) =>
-        serializeEvaluationResult(r).then((r) => r.unwrap()),
+        serialize({
+          workspace: ctx.workspace,
+          evaluationResult: r,
+        }).then((r) => r.unwrap()),
       ),
     )
 

@@ -46,6 +46,13 @@ export type EvaluationResultDto = Omit<EvaluationResult, 'providerLogId'> & {
   result: string | number | boolean | undefined
 }
 
+export type EvaluationResultByDocument = Pick<
+  EvaluationResultDto,
+  'id' | 'result' | 'createdAt' | 'source'
+> & {
+  sameContent: boolean
+}
+
 export type EvaluationResultWithMetadata = EvaluationResultDto & {
   commit: Commit
   tokens: number | null

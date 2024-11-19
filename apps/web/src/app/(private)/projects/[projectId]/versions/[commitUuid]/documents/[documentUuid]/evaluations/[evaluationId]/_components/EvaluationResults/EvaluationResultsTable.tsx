@@ -10,6 +10,7 @@ import { buildPagination } from '@latitude-data/core/lib/pagination/buildPaginat
 import { EvaluationResultWithMetadataAndErrors } from '@latitude-data/core/repositories'
 import {
   Badge,
+  Checkbox,
   cn,
   RangeBadge,
   Table,
@@ -26,13 +27,16 @@ import { formatCostInMillicents } from '$/app/_lib/formatUtils'
 import { getRunErrorFromErrorable } from '$/app/(private)/_lib/getRunErrorFromErrorable'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { LinkableTablePaginationFooter } from '$/components/TablePaginationFooter'
+import { SelectableRowsHook } from '$/hooks/useSelectableRows'
 import { relativeTime } from '$/lib/relativeTime'
 import { ROUTES } from '$/services/routes'
 import useEvaluationResultsPagination from '$/stores/useEvaluationResultsCount'
 import { useSearchParams } from 'next/navigation'
 
-function countLabel(count: number) {
-  return `${count} evaluation results`
+const countLabel = (selected: number) => (count: number) => {
+  return selected
+    ? `${selected} of ${count} evaluation results selected`
+    : `${count} evaluation results`
 }
 
 export const ResultCellContent = ({
@@ -82,10 +86,23 @@ type Props = {
   setSelectedResult: (
     log: EvaluationResultWithMetadataAndErrors | undefined,
   ) => void
+  selectableState: SelectableRowsHook
 }
 export const EvaluationResultsTable = forwardRef<HTMLTableElement, Props>(
   function EvaluationResultsTable(
-    { evaluation, evaluationResults, selectedResult, setSelectedResult },
+    {
+      evaluation,
+      evaluationResults,
+      selectedResult,
+      setSelectedResult,
+      selectableState: {
+        headerState,
+        isSelected,
+        toggleRow,
+        toggleAll,
+        selectedCount,
+      },
+    },
     ref,
   ) {
     const searchParams = useSearchParams()
@@ -125,12 +142,15 @@ export const EvaluationResultsTable = forwardRef<HTMLTableElement, Props>(
                   })
                 : undefined
             }
-            countLabel={countLabel}
+            countLabel={countLabel(selectedCount)}
           />
         }
       >
-        <TableHeader className='sticky top-0 z-10'>
+        <TableHeader className='isolate sticky top-0 z-10'>
           <TableRow>
+            <TableHead>
+              <Checkbox checked={headerState} onCheckedChange={toggleAll} />
+            </TableHead>
             <TableHead>Time</TableHead>
             <TableHead>Version</TableHead>
             <TableHead>Origin</TableHead>
@@ -163,6 +183,16 @@ export const EvaluationResultsTable = forwardRef<HTMLTableElement, Props>(
                   },
                 )}
               >
+                <TableCell preventDefault align='left'>
+                  <Checkbox
+                    fullWidth={false}
+                    disabled={!!error}
+                    checked={error ? false : isSelected(evaluationResult.id)}
+                    onCheckedChange={(checked) =>
+                      toggleRow(evaluationResult.id, checked)
+                    }
+                  />
+                </TableCell>
                 <TableCell>
                   <Text.H5 noWrap color={cellColor}>
                     <time

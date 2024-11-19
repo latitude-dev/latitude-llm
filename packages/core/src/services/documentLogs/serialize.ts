@@ -30,7 +30,6 @@ export async function serialize(
     0,
   )
   const lastProviderLog = providerLogs.pop()!
-
   return Result.ok({
     ...serializeProviderLog(lastProviderLog),
     parameters: documentLog.parameters,

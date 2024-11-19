@@ -2,6 +2,7 @@ import {
   ArrowLeft,
   ArrowRightIcon,
   CheckCircle2,
+  CheckIcon,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -15,6 +16,7 @@ import {
   Copy,
   Ellipsis,
   EllipsisVertical,
+  EqualNotIcon,
   ExternalLink,
   Eye,
   File,
@@ -29,6 +31,7 @@ import {
   ListOrdered,
   LoaderCircle,
   Lock,
+  MinusIcon,
   Moon,
   Pencil,
   Pin,
@@ -59,6 +62,7 @@ const Icons = {
   arrowLeft: ArrowLeft,
   arrowRight: ArrowRightIcon,
   check: CheckCircle2,
+  checkClean: CheckIcon,
   chevronUp: ChevronUp,
   chevronDown: ChevronDown,
   chevronRight: ChevronRight,
@@ -69,6 +73,7 @@ const Icons = {
   code: Code,
   code2: Code2,
   deletion: SquareMinus,
+  minus: MinusIcon,
   ellipsis: Ellipsis,
   ellipsisVertical: EllipsisVertical,
   externalLink: ExternalLink,
@@ -102,6 +107,7 @@ const Icons = {
   twitter: Twitter,
   undo: Undo,
   rollText: ScrollTextIcon,
+  notEqual: EqualNotIcon,
 }
 
 export type IconName = keyof typeof Icons

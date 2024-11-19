@@ -121,7 +121,7 @@ export function EvaluationResultInfo({
     beacon,
     target,
     targetContainer: sidebarWrapperRef.current,
-    offset: 24,
+    offset: { top: 12, bottom: 12 },
   })
   return (
     <div ref={ref} className='flex flex-col'>

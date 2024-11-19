@@ -11,8 +11,10 @@ import React, {
 import {
   Commit,
   DocumentVersion,
+  EvaluationDto,
   ProviderApiKey,
 } from '@latitude-data/core/browser'
+import { type EvaluationResultByDocument } from '@latitude-data/core/repositories'
 import {
   Button,
   DocumentTextEditor,
@@ -40,6 +42,7 @@ import { useDebouncedCallback } from 'use-debounce'
 
 import Playground from './Playground'
 import RefineDocumentModal from './RefineModal'
+import { useRefinement } from './useRefinement'
 
 export const DocumentEditorContext = createContext<
   | {
@@ -56,6 +59,8 @@ export default function DocumentEditor({
   documents,
   providerApiKeys,
   freeRunsCount,
+  evaluation: serverEvaluation,
+  evaluationResults: serverEvaluationResults,
 }: {
   runDocumentAction: Function
   addMessagesAction: Function
@@ -63,11 +68,20 @@ export default function DocumentEditor({
   documents: DocumentVersion[]
   providerApiKeys?: ProviderApiKey[]
   freeRunsCount?: number
+  evaluation: EvaluationDto | undefined
+  evaluationResults: EvaluationResultByDocument[]
 }) {
   const { execute: publishEvent } = useLatitudeAction(publishEventAction)
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
   const router = useRouter()
+  const refinement = useRefinement({
+    projectId: project.id,
+    commitUuid: commit.uuid,
+    document,
+    serverEvaluation,
+    serverEvaluationResults,
+  })
   const { execute: createDraftWithContent } = useLatitudeAction(
     createDraftWithContentAction,
     {
@@ -95,7 +109,6 @@ export default function DocumentEditor({
   )
   const [value, setValue] = useState(document.content)
   const [isSaved, setIsSaved] = useState(true)
-  const [refineDocumentModalOpen, setRefineDocumentModalOpen] = useState(false)
 
   const [diff, setDiff] = useState<DiffOptions>()
   const handleSuggestion = useCallback(
@@ -237,12 +250,15 @@ export default function DocumentEditor({
   const isMerged = commit.mergedAt !== null
   return (
     <>
-      <RefineDocumentModal
-        open={refineDocumentModalOpen}
-        onOpenChange={setRefineDocumentModalOpen}
-        documentVersion={document}
-        setDocumentContent={handleSuggestion}
-      />
+      {refinement.modal.open ? (
+        <RefineDocumentModal
+          onClose={refinement.modal.onClose}
+          serverEvaluation={refinement.server.evaluation}
+          serverEvaluationResults={refinement.server.evaluationResults}
+          documentVersion={document}
+          setDocumentContent={handleSuggestion}
+        />
+      ) : null}
       <DocumentEditorContext.Provider
         value={{
           runDocumentAction: runDocumentAction as RunDocumentActionFn,
@@ -285,7 +301,7 @@ export default function DocumentEditor({
                           name: 'sparkles',
                           size: 'small',
                         }}
-                        onClick={() => setRefineDocumentModalOpen(true)}
+                        onClick={refinement.modal.onOpen}
                       >
                         <Text.H6>Refine</Text.H6>
                       </Button>

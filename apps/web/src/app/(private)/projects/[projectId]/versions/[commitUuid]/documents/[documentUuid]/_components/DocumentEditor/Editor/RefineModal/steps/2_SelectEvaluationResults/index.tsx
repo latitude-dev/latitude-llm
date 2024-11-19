@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react'
 
 import { DocumentVersion, EvaluationDto } from '@latitude-data/core/browser'
+import { type EvaluationResultByDocument } from '@latitude-data/core/repositories'
 import {
   Button,
   TableBlankSlate,
@@ -9,9 +10,7 @@ import {
   useCurrentProject,
 } from '@latitude-data/web-ui'
 import { DocumentRoutes, ROUTES } from '$/services/routes'
-import useEvaluationResultsByDocumentContent, {
-  EvaluationResultByDocument,
-} from '$/stores/evaluationResultsByDocumentContent'
+import useEvaluationResultsByDocumentContent from '$/stores/evaluationResultsByDocumentContent'
 import Link from 'next/link'
 
 import { SelectableEvaluationResultsTable } from './SelectableEvaluationResultsTable'

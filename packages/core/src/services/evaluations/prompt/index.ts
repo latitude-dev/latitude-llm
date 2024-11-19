@@ -5,12 +5,7 @@ import {
   Workspace,
 } from '../../../browser'
 import { database } from '../../../client'
-import {
-  BadRequestError,
-  LatitudeError,
-  PromisedResult,
-  Result,
-} from '../../../lib'
+import { LatitudeError, PromisedResult, Result } from '../../../lib'
 import { ProviderApiKeysRepository } from '../../../repositories'
 
 function valueInformation(evaluation: EvaluationDto) {
@@ -57,9 +52,7 @@ export async function getEvaluationPrompt(
   db = database,
 ): PromisedResult<string, LatitudeError> {
   if (evaluation.metadataType === EvaluationMetadataType.Manual) {
-    return Result.error(
-      new BadRequestError('Default evaluation metadata type is not supported'),
-    )
+    return Result.ok(evaluation.description)
   }
 
   if (evaluation.metadataType === EvaluationMetadataType.LlmAsJudgeAdvanced) {
