@@ -1,12 +1,7 @@
 import { FocusHeader } from '@latitude-data/web-ui'
-import buildMetatags from '$/app/_lib/buildMetatags'
 import { FocusLayout } from '$/components/layouts'
 import { ROUTES } from '$/services/routes'
 import { redirect } from 'next/navigation'
-
-export const metadata = buildMetatags({
-  title: 'Login to your account',
-})
 
 export default async function MagicLinkSent({
   searchParams,

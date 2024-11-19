@@ -5,7 +5,6 @@ import {
   TableBlankSlate,
   TableWithHeader,
 } from '@latitude-data/web-ui'
-import buildMetatags from '$/app/_lib/buildMetatags'
 import { AppTabs } from '$/app/(private)/AppTabs'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
@@ -13,10 +12,6 @@ import Link from 'next/link'
 
 import { getActiveProjectsCached } from '../_data-access'
 import { ProjectsTable } from './_components/ProjectsTable'
-
-export const metadata = buildMetatags({
-  title: 'Dashboard',
-})
 
 export default async function DashboardLayout({
   children,
