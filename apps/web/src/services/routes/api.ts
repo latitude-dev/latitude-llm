@@ -37,6 +37,8 @@ export const _API_ROUTES = {
                 documentLogs: {
                   root: `${documentRoot}/documentLogs`,
                   pagination: `${documentRoot}/documentLogs/pagination`,
+                  aggregations: `${documentRoot}/documentLogs/aggregations`,
+                  dailyCount: `${documentRoot}/documentLogs/daily-count`,
                   detail: (documentLogUuid: string) => {
                     return {
                       position: `${documentRoot}/documentLogs/${documentLogUuid}/position`,

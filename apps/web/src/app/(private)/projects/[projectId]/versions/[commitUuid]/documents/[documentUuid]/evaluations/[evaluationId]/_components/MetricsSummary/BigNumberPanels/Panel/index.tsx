@@ -2,7 +2,7 @@
 
 import { ReactNode, useCallback, useState } from 'react'
 
-import { Icon, Skeleton, Text, Tooltip } from '@latitude-data/web-ui'
+import { cn, Icon, Skeleton, Text, Tooltip } from '@latitude-data/web-ui'
 
 export default function Panel({
   label,
@@ -34,7 +34,10 @@ export default function Panel({
       align='end'
       trigger={
         <div
-          className='min-w-44 flex-1 flex flex-col gap-1 p-4 rounded-lg border border-border'
+          className={cn(
+            'min-w-44 flex-1 flex flex-col gap-1 p-4 rounded-lg border border-border',
+            { 'cursor-default': !additionalInfo },
+          )}
           onMouseEnter={onMouseEnter}
           onMouseLeave={onMouseLeave}
         >
