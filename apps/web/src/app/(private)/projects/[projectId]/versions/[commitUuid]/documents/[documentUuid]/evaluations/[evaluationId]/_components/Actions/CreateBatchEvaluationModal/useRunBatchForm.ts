@@ -2,7 +2,8 @@ import { useCallback, useMemo, useState } from 'react'
 
 import { ConversationMetadata } from '@latitude-data/compiler'
 import { Dataset, DocumentVersion } from '@latitude-data/core/browser'
-import { SelectOption } from '@latitude-data/web-ui'
+import { SelectOption, useCurrentCommit } from '@latitude-data/web-ui'
+import { useMappedParametersFromLocalStorage } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/batch/_components/RunPromptInBatchModal/useMappedParametersFromLocalStorage'
 import useDatasets from '$/stores/datasets'
 
 import { RunBatchParameters } from './useRunBatch'
@@ -26,15 +27,28 @@ export function useRunBatchForm({
     [documentMetadata?.parameters],
   )
   const [selectedDataset, setSelectedDataset] = useState<Dataset | null>(null)
+  const [headers, setHeaders] = useState<SelectOption[]>([])
+  const buildHeaders = useCallback(
+    (dataset: Dataset) => {
+      setHeaders([
+        { value: '-1', label: '-- Leave this parameter empty' },
+        ...dataset.fileMetadata.headers.map((header) => ({
+          value: header,
+          label: header,
+        })),
+      ])
+    },
+    [setHeaders, selectedDataset],
+  )
   const { data: datasets, isLoading: isLoadingDatasets } = useDatasets({
     onFetched: (ds) => {
       const selected = ds.find((d) => d.id === document.datasetId)
       if (!selected) return
 
       setSelectedDataset(selected)
+      buildHeaders(selected)
     },
   })
-  const [headers, setHeaders] = useState<SelectOption[]>([])
   const [wantAllLines, setAllRows] = useState(true)
   const [fromLine, setFromLine] = useState<number | undefined>(undefined)
   const [toLine, setToLine] = useState<number | undefined>(undefined)
@@ -61,16 +75,21 @@ export function useRunBatchForm({
       setParameters(buildEmptyParameters(parametersList))
       setFromLine(1)
       setToLine(ds.fileMetadata.rowCount)
-      setHeaders([
-        { value: '-1', label: '-- Leave this parameter empty' },
-        ...ds.fileMetadata.headers.map((header) => ({
-          value: header,
-          label: header,
-        })),
-      ])
+      buildHeaders(ds)
     },
-    [parametersList, datasets],
+    [parametersList, datasets, buildHeaders],
   )
+
+  const { commit } = useCurrentCommit()
+  useMappedParametersFromLocalStorage({
+    document,
+    commitVersionUuid: commit.uuid,
+    parametersList,
+    selectedDataset,
+    onDatasetReady: ({ mapped }) => {
+      setParameters(mapped)
+    },
+  })
   return {
     datasets,
     isLoadingDatasets,

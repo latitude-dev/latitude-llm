@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { isNumber } from 'lodash-es'
 
 import { Dataset, DocumentVersion } from '@latitude-data/core/browser'
 import {
@@ -12,8 +13,23 @@ import {
   SelectOption,
   SwitchInput,
 } from '@latitude-data/web-ui'
+import { RunBatchParameters } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/evaluations/[evaluationId]/_components/Actions/CreateBatchEvaluationModal/useRunBatch'
 import { ROUTES } from '$/services/routes'
 import Link from 'next/link'
+
+function findValue({
+  headers,
+  parameters,
+  param,
+}: {
+  headers: SelectOption[]
+  parameters: RunBatchParameters
+  param: string
+}) {
+  const index = parameters?.[param]
+  const header = isNumber(index) ? headers[index + 1] : undefined
+  return header ? String(header.value) : ''
+}
 
 function LineRangeInputs({
   disabled,
@@ -60,6 +76,7 @@ function LineRangeInputs({
 export default function DatasetForm({
   document,
   onParametersChange,
+  parameters,
   selectedDataset,
   headers,
   wantAllLines,
@@ -75,6 +92,7 @@ export default function DatasetForm({
 }: {
   document: DocumentVersion
   onParametersChange: (param: string) => (header: string) => void
+  parameters: RunBatchParameters
   parametersList: string[]
   wantAllLines: boolean
   fromLine: number | undefined
@@ -171,19 +189,22 @@ export default function DatasetForm({
         >
           {selectedDataset ? (
             <div className='flex flex-col gap-y-3'>
-              {parametersList.map((param) => (
-                <Select
-                  key={param}
-                  name={`parameter[${param}]`}
-                  disabled={headers.length === 0}
-                  errors={paramaterErrors[param]}
-                  badgeLabel
-                  label={param}
-                  options={headers}
-                  onChange={onParametersChange(param)}
-                  placeholder='Select csv column'
-                />
-              ))}
+              {parametersList.map((param) => {
+                return (
+                  <Select
+                    key={param}
+                    name={`parameter[${param}]`}
+                    disabled={headers.length === 0}
+                    errors={paramaterErrors[param]}
+                    badgeLabel
+                    label={param}
+                    options={headers}
+                    value={findValue({ headers, parameters, param })}
+                    onChange={onParametersChange(param)}
+                    placeholder='Select csv column'
+                  />
+                )
+              })}
             </div>
           ) : null}
         </NumeredList.Item>

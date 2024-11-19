@@ -41,6 +41,24 @@ describe('recalculateInputs', () => {
     })
   })
 
+  it('respect metadata', () => {
+    const newInputs = recalculateInputs({
+      inputs: {
+        param1: { value: 'value1', metadata: { includeInPrompt: false } },
+      },
+      metadataParameters: new Set(['param1']),
+    })
+
+    expect(newInputs).toEqual({
+      param1: {
+        value: 'value1',
+        metadata: {
+          includeInPrompt: false,
+        },
+      },
+    })
+  })
+
   it('replace existing parameter if only one changed and keep value', () => {
     const newInputs = recalculateInputs({
       inputs: {

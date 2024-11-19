@@ -129,11 +129,13 @@ export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> &
     fancy?: boolean
     lookDisabled?: boolean
     ellipsis?: boolean
+    containerClassName?: string
   }
 
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
   {
     className,
+    containerClassName,
     variant,
     size,
     fancy,
@@ -163,6 +165,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
       className={cn(
         'group relative',
         buttonContainerVariants({ fanciness, variant }),
+        containerClassName,
         {
           'w-full': fullWidth,
           'opacity-50': lookDisabled,

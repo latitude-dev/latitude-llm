@@ -7,6 +7,7 @@ type Props = {
   children: (args: RenderProps) => ReactNode
   tabs?: TabSelectorOption<string>[]
   className?: string
+  tabsActions?: ReactNode
 }
 export const MetadataInfoTabs = forwardRef<HTMLDivElement, Props>(
   function MetadataInfoTabs(
@@ -16,6 +17,7 @@ export const MetadataInfoTabs = forwardRef<HTMLDivElement, Props>(
         { label: 'Metadata', value: 'metadata' },
         { label: 'Messages', value: 'messages' },
       ],
+      tabsActions,
       children,
     },
     ref,
@@ -30,12 +32,17 @@ export const MetadataInfoTabs = forwardRef<HTMLDivElement, Props>(
           className,
         )}
       >
-        <div className='pt-6 pb-2'>
+        <div className='pt-6 pb-2 relative flex justify-center w-full'>
           <TabSelector
             options={tabs}
             selected={selectedTab}
             onSelect={setSelectedTab}
           />
+          {tabsActions ? (
+            <div className='absolute right-4 top-6 flex items-center justify-end w-full min-h-11 pointer-events-none'>
+              {tabsActions}
+            </div>
+          ) : null}
         </div>
         <div className='w-full custom-scrollbar overflow-y-auto'>
           <div className='flex px-4 py-5 flex-col gap-4 w-full overflow-x-auto'>

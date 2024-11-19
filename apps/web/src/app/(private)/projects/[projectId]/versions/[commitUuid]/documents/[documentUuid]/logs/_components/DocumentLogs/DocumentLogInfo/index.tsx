@@ -1,11 +1,20 @@
 'use client'
 
-import { RefObject, useEffect, useRef, useState } from 'react'
+import { RefObject, useCallback, useEffect, useRef, useState } from 'react'
 
 import { ProviderLogDto } from '@latitude-data/core/browser'
 import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
-import { Alert } from '@latitude-data/web-ui'
+import {
+  Alert,
+  Button,
+  Tooltip,
+  useCurrentCommit,
+  useCurrentProject,
+} from '@latitude-data/web-ui'
+import { useDocumentParameters } from '$/hooks/useDocumentParameters'
 import { useStickyNested } from '$/hooks/useStickyNested'
+import { ROUTES } from '$/services/routes'
+import { useRouter } from 'next/navigation'
 import { usePanelDomRef } from 'node_modules/@latitude-data/web-ui/src/ds/atoms/SplitPane'
 
 import { MetadataInfoTabs } from '../../../../_components/MetadataInfoTabs'
@@ -52,6 +61,15 @@ export function DocumentLogInfo({
   }, [ref.current])
   const scrollableArea = usePanelDomRef({ selfRef: target })
   const beacon = tableRef?.current
+  const { commit } = useCurrentCommit()
+  const { project } = useCurrentProject()
+  const {
+    setSource,
+    history: { setHistoryLog },
+  } = useDocumentParameters({
+    documentVersionUuid: documentLog.documentUuid,
+    commitVersionUuid: commit.uuid,
+  })
   useStickyNested({
     scrollableArea,
     beacon,
@@ -60,8 +78,50 @@ export function DocumentLogInfo({
     offset: 24,
   })
   const { lastResponse, messages } = useGetProviderLogMessages({ providerLogs })
+  const navigate = useRouter()
+  const employLogAsDocumentParameters = useCallback(() => {
+    setSource('history')
+    setHistoryLog(documentLog.uuid)
+    navigate.push(
+      ROUTES.projects
+        .detail({ id: project.id })
+        .commits.detail({
+          uuid: commit.uuid,
+        })
+        .documents.detail({ uuid: documentLog.documentUuid }).root,
+    )
+  }, [
+    setHistoryLog,
+    setSource,
+    navigate,
+    project.id,
+    commit.uuid,
+    documentLog.documentUuid,
+    documentLog.uuid,
+  ])
   return (
-    <MetadataInfoTabs ref={ref} className={className}>
+    <MetadataInfoTabs
+      ref={ref}
+      className={className}
+      tabsActions={
+        <Tooltip
+          asChild
+          trigger={
+            <Button
+              onClick={employLogAsDocumentParameters}
+              fancy
+              iconProps={{ name: 'rollText', color: 'foregroundMuted' }}
+              variant='outline'
+              size='icon'
+              containerClassName='rounded-xl pointer-events-auto'
+              className='rounded-xl'
+            />
+          }
+        >
+          Use this log in the playground
+        </Tooltip>
+      }
+    >
       {({ selectedTab }) =>
         isLoading ? (
           <DocumentLogMetadataLoading />

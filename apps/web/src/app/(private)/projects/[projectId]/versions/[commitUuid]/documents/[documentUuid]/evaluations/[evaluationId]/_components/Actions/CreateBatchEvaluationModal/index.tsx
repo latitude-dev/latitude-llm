@@ -94,6 +94,7 @@ export default function CreateBatchEvaluationModal({
         headers={form.headers}
         parametersList={form.parametersList}
         onParametersChange={form.onParameterChange}
+        parameters={form.parameters}
       />
     </Modal>
   )

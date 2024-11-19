@@ -27,6 +27,7 @@ export default function Panel({
   const onMouseLeave = useCallback(() => {
     setOpen(false)
   }, [])
+
   return (
     <Tooltip
       open={open}
@@ -52,7 +53,7 @@ export default function Panel({
         </div>
       }
     >
-      <Text.H5 color='foreground'>{additionalInfo}</Text.H5>
+      {additionalInfo}
     </Tooltip>
   )
 }
