@@ -1,3 +1,4 @@
+import { Workspace } from '@latitude-data/core/browser'
 import { buildPagination } from '@latitude-data/core/lib/pagination/buildPagination'
 import { CommitsRepository } from '@latitude-data/core/repositories'
 import { computeDocumentLogsCount } from '@latitude-data/core/services/documentLogs/computeDocumentLogs'
@@ -17,17 +18,24 @@ function pageUrl(params: {
     .commits.detail({ uuid: params.commitUuid })
     .documents.detail({ uuid: params.documentUuid }).logs.root
 }
-type IParam = {
-  evaluationId: number
-  documentUuid: string
-  commitUuid: string
-  projectId: number
-}
 
-type IPagination = ReturnType<typeof buildPagination>
-export const GET = errorHandler<IParam, IPagination>(
-  authHandler<IParam, IPagination>(
-    async (req: NextRequest, { params, workspace }) => {
+export const GET = errorHandler(
+  authHandler(
+    async (
+      req: NextRequest,
+      {
+        params,
+        workspace,
+      }: {
+        params: {
+          evaluationId: number
+          documentUuid: string
+          commitUuid: string
+          projectId: number
+        }
+        workspace: Workspace
+      },
+    ) => {
       const searchParams = req.nextUrl.searchParams
       const commitsScope = new CommitsRepository(workspace.id)
       const excludeErrors = searchParams.get('excludeErrors') === 'true'

@@ -1,11 +1,5 @@
-import {
-  DEFAULT_PAGINATION_SIZE,
-  DocumentLog,
-} from '@latitude-data/core/browser'
-import {
-  CommitsRepository,
-  DocumentLogWithMetadataAndError,
-} from '@latitude-data/core/repositories'
+import { DEFAULT_PAGINATION_SIZE, Workspace } from '@latitude-data/core/browser'
+import { CommitsRepository } from '@latitude-data/core/repositories'
 import { computeDocumentLogsQuery } from '@latitude-data/core/services/documentLogs/computeDocumentLogs'
 import { computeDocumentLogsWithMetadataQuery } from '@latitude-data/core/services/documentLogs/computeDocumentLogsWithMetadata'
 import { authHandler } from '$/middlewares/authHandler'
@@ -21,28 +15,28 @@ function parsePage(page: string | null): string {
   return parsed < 1 ? '1' : parsed.toString()
 }
 
-type ResponseResult<T extends boolean> = T extends true
-  ? DocumentLogWithMetadataAndError[]
-  : DocumentLog[]
-
-type IParams = {
-  projectId: string
-  commitUuid: string
-  documentUuid: string
-}
-
-export const GET = errorHandler<IParams, ResponseResult<boolean>>(
-  authHandler<IParams, ResponseResult<boolean>>(
-    async (req: NextRequest, { params, workspace }) => {
+export const GET = errorHandler(
+  authHandler(
+    async (
+      req: NextRequest,
+      {
+        params,
+        workspace,
+      }: {
+        params: {
+          projectId: string
+          commitUuid: string
+          documentUuid: string
+        }
+        workspace: Workspace
+      },
+    ) => {
       const { projectId, commitUuid, documentUuid } = params
       const searchParams = req.nextUrl.searchParams
       const excludeErrors = searchParams.get('excludeErrors') === 'true'
       const commitsScope = new CommitsRepository(workspace.id)
       const commit = await commitsScope
-        .getCommitByUuid({
-          projectId: Number(projectId),
-          uuid: commitUuid ?? '',
-        })
+        .getCommitByUuid({ projectId: Number(projectId), uuid: commitUuid })
         .then((r) => r.unwrap())
 
       const page = parsePage(searchParams.get('page'))
@@ -51,6 +45,7 @@ export const GET = errorHandler<IParams, ResponseResult<boolean>>(
       const buildQueryFn = excludeErrors
         ? computeDocumentLogsQuery
         : computeDocumentLogsWithMetadataQuery
+
       const rows = await buildQueryFn({
         workspaceId: workspace.id,
         documentUuid,
@@ -59,9 +54,7 @@ export const GET = errorHandler<IParams, ResponseResult<boolean>>(
         pageSize,
       })
 
-      return NextResponse.json(rows, {
-        status: 200,
-      })
+      return NextResponse.json(rows, { status: 200 })
     },
   ),
 )

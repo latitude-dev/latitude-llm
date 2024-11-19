@@ -1,15 +1,24 @@
-import { WorkspaceUsage } from '@latitude-data/core/browser'
+import { WorkspaceDto } from '@latitude-data/core/browser'
 import { computeWorkspaceUsage } from '@latitude-data/core/services/workspaces/usage'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'
 
-type IParam = {}
+export const GET = errorHandler(
+  authHandler(
+    async (
+      _: NextRequest,
+      {
+        workspace,
+      }: {
+        workspace: WorkspaceDto
+      },
+    ) => {
+      const usage = await computeWorkspaceUsage(workspace).then((r) =>
+        r.unwrap(),
+      )
 
-export const GET = errorHandler<IParam, WorkspaceUsage>(
-  authHandler<IParam, WorkspaceUsage>(async (_: NextRequest, { workspace }) => {
-    const usage = await computeWorkspaceUsage(workspace).then((r) => r.unwrap())
-
-    return NextResponse.json(usage, { status: 200 })
-  }),
+      return NextResponse.json(usage)
+    },
+  ),
 )

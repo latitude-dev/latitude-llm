@@ -8,7 +8,6 @@ import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'
 
-// FIXME: Use generic types. Check other routes for examples.
 export const GET = errorHandler(
   authHandler(
     async (

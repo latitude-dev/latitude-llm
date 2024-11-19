@@ -77,6 +77,7 @@ export default async function DocumentPage({
   })
 
   const selectedLog = rows.find((r) => r.uuid === documentLogUuid)
+
   return (
     <div className='flex flex-grow min-h-0 flex-col w-full p-6 gap-2 min-w-0'>
       {!rows.length && (

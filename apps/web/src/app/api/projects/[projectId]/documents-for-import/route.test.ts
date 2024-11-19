@@ -2,11 +2,10 @@ import {
   DocumentVersion,
   Providers,
   User,
-  WorkspaceDto,
+  Workspace,
 } from '@latitude-data/core/browser'
 import { createProject, helpers } from '@latitude-data/core/factories'
 import { NextRequest } from 'next/server'
-import { SubscriptionPlan } from 'node_modules/@latitude-data/core/src/plans'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { GET } from './route'
@@ -23,18 +22,13 @@ vi.mock('$/services/auth/getSession', () => ({
 describe('GET handler for documents/[projectId]/for-import', () => {
   let mockRequest: NextRequest
   let mockParams: { projectId: string }
-  let mockWorkspace: WorkspaceDto
+  let mockWorkspace: Workspace
   let mockDocuments: DocumentVersion[]
-  let user: User
+  let mockUser: User
 
   beforeEach(async () => {
     mockRequest = new NextRequest('http://localhost:3000')
-    const {
-      workspace,
-      documents,
-      project,
-      user: usr,
-    } = await createProject({
+    const { workspace, documents, project, user } = await createProject({
       providers: [{ type: Providers.OpenAI, name: 'openai' }],
       documents: {
         foo: {
@@ -44,17 +38,8 @@ describe('GET handler for documents/[projectId]/for-import', () => {
     })
     mockParams = { projectId: String(project.id) }
 
-    user = usr
-    mockWorkspace = {
-      ...workspace,
-      currentSubscription: {
-        id: 1,
-        workspaceId: workspace.id,
-        plan: SubscriptionPlan.HobbyV1,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-    }
+    mockUser = user
+    mockWorkspace = workspace
     mockDocuments = documents
   })
 
@@ -63,20 +48,10 @@ describe('GET handler for documents/[projectId]/for-import', () => {
       const response = await GET(mockRequest, {
         params: mockParams,
         workspace: mockWorkspace,
-        user: {
-          id: 'bla',
-          name: 'bla',
-          admin: false,
-          email: 'nonexisting@example.com',
-          createdAt: new Date(),
-          confirmedAt: null,
-          updatedAt: new Date(),
-        },
-      })
+      } as any)
 
       expect(response.status).toBe(401)
       expect(await response.json()).toEqual({
-        details: {},
         message: 'Unauthorized',
       })
     })
@@ -84,15 +59,14 @@ describe('GET handler for documents/[projectId]/for-import', () => {
 
   describe('authorized', () => {
     beforeEach(async () => {
-      mocks.getSession.mockReturnValue({ user })
+      mocks.getSession.mockReturnValue({ user: mockUser })
     })
 
     it('should return 400 if projectId is missing', async () => {
       const response = await GET(mockRequest, {
         params: {},
         workspace: mockWorkspace,
-        user,
-      })
+      } as any)
 
       expect(response.status).toBe(400)
       expect(await response.json()).toEqual({
@@ -104,7 +78,6 @@ describe('GET handler for documents/[projectId]/for-import', () => {
     it('should return documents for import when valid params are provided', async () => {
       const response = await GET(mockRequest, {
         params: mockParams,
-        user,
         workspace: mockWorkspace,
       })
 
