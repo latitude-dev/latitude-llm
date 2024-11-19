@@ -10,6 +10,7 @@ import {
 import { Button, Icon, TableBlankSlate, Text } from '@latitude-data/web-ui'
 import { ROUTES } from '$/services/routes'
 import useDocumentLogWithMetadata from '$/stores/documentLogWithMetadata'
+import useEvaluations from '$/stores/evaluations'
 import { useProviderLog } from '$/stores/providerLogs'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
@@ -39,10 +40,12 @@ const BlankSlate = ({ evaluation }: { evaluation: EvaluationDto }) => (
 )
 
 export default function Playground({
-  evaluation,
+  evaluation: serverEvaluation,
 }: {
   evaluation: EvaluationDto
 }) {
+  const { findEvaluation } = useEvaluations()
+  const evaluation = findEvaluation(serverEvaluation.uuid)!
   const [mode, setMode] = useState<'preview' | 'chat'>('preview')
   const searchParams = useSearchParams()
   const providerLogId = searchParams.get('providerLogId')
