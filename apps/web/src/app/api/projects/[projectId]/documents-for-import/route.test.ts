@@ -77,7 +77,6 @@ describe('GET handler for documents/[projectId]/for-import', () => {
 
     it('should return documents for import when valid params are provided', async () => {
       const response = await GET(mockRequest, {
-        // @ts-expect-error
         params: mockParams,
         workspace: mockWorkspace,
       })

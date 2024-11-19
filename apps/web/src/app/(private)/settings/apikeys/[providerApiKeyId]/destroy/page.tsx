@@ -1,6 +1,6 @@
 'use client'
 
-import { Usable, use } from 'react'
+import { use } from 'react'
 
 import DestroyModal from '$/components/modals/DestroyModal'
 import { useNavigate } from '$/hooks/useNavigate'
@@ -10,7 +10,7 @@ import useProviderApiKeys from '$/stores/providerApiKeys'
 export default function DestroyProviderApiKey({
   params,
 }: {
-  params: Usable<{ providerApiKeyId: string }>
+  params: Promise<{ providerApiKeyId: string }>
 }) {
   const { providerApiKeyId } = use(params)
   const navigate = useNavigate()

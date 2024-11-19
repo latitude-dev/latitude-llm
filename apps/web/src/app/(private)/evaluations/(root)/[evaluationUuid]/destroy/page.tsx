@@ -1,6 +1,6 @@
 'use client'
 
-import { Usable, use } from 'react'
+import { use } from 'react'
 
 import { EvaluationDto } from '@latitude-data/core/browser'
 import DestroyModal from '$/components/modals/DestroyModal'
@@ -11,7 +11,7 @@ import useEvaluations from '$/stores/evaluations'
 export default function DestroyEvaluation({
   params,
 }: {
-  params: Usable<{ evaluationUuid: string }>
+  params: Promise<{ evaluationUuid: string }>
 }) {
   const { evaluationUuid } = use(params)
   const navigate = useNavigate()

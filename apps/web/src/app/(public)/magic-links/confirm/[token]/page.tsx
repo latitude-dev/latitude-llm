@@ -1,6 +1,6 @@
 'use client'
 
-import { Usable, use, useEffect } from 'react'
+import { use, useEffect } from 'react'
 
 import { FocusHeader } from '@latitude-data/web-ui'
 import { confirmMagicLinkTokenAction } from '$/actions/magicLinkTokens/confirm'
@@ -10,7 +10,7 @@ import useLatitudeAction from '$/hooks/useLatitudeAction'
 export default function ConfirmMagicLink({
   params,
 }: {
-  params: Usable<{ token: string }>
+  params: Promise<{ token: string }>
 }) {
   const { token } = use(params)
   const { execute } = useLatitudeAction(confirmMagicLinkTokenAction, {

@@ -73,7 +73,6 @@ describe('GET /api/documents/[projectId]/[commitUuid]/[documentUuid]/evaluations
       'http://localhost/api/documents/test-project/test-commit/test-document-uuid/evaluations',
     )
     const response = await GET(request, {
-      // @ts-expect-error
       params: { documentUuid: documents[0]!.documentUuid },
       workspace,
     })
@@ -107,7 +106,6 @@ describe('GET /api/documents/[projectId]/[commitUuid]/[documentUuid]/evaluations
       'http://localhost/api/documents/test-project/test-commit/test-document-uuid/evaluations',
     )
     const response = await GET(request, {
-      // @ts-expect-error
       params: { documentUuid: documents[0]!.documentUuid },
       workspace,
     })

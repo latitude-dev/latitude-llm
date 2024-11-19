@@ -87,7 +87,6 @@ describe('GET logs', () => {
 
     it('should return all logs', async () => {
       const response = await GET(mockRequest, {
-        // @ts-expect-error - Not properly typed
         params: {
           projectId: project.id,
           commitUuid: commit.uuid,
@@ -113,7 +112,6 @@ describe('GET logs', () => {
     it('should should not fail with page=0', async () => {
       mockRequest = new NextRequest('http://localhost:3000?page=0')
       const response = await GET(mockRequest, {
-        // @ts-expect-error - Not properly typed
         params: {
           projectId: project.id,
           commitUuid: commit.uuid,
@@ -147,7 +145,6 @@ describe('GET logs', () => {
       })
 
       const response = await GET(mockRequest, {
-        // @ts-expect-error - Not properly typed
         params: {
           projectId: project.id,
           commitUuid: commit.uuid,
@@ -165,7 +162,6 @@ describe('GET logs', () => {
     it('should exclude logs with errors', async () => {
       mockRequest = new NextRequest('http://localhost:3000?excludeErrors=true')
       const response = await GET(mockRequest, {
-        // @ts-expect-error - Not properly typed
         params: {
           projectId: project.id,
           commitUuid: commit.uuid,

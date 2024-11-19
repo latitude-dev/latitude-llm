@@ -6,7 +6,7 @@ import { captureException } from '$/helpers/captureException'
 import { NextRequest, NextResponse } from 'next/server'
 
 export function errorHandler(handler: any) {
-  return async (req: NextRequest, res: NextResponse) => {
+  return async (req: NextRequest, res: any) => {
     try {
       return await handler(req, res)
     } catch (error) {
