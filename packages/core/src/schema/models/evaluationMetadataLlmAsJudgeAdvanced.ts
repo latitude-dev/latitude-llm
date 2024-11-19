@@ -1,4 +1,4 @@
-import { bigint, bigserial, index, text } from 'drizzle-orm/pg-core'
+import { bigint, bigserial, index, integer, text } from 'drizzle-orm/pg-core'
 
 import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
@@ -9,6 +9,7 @@ export const evaluationMetadataLlmAsJudgeAdvanced = latitudeSchema.table(
   {
     id: bigserial('id', { mode: 'number' }).notNull().primaryKey(),
     prompt: text('prompt').notNull(),
+    promptlVersion: integer('promptl_version').notNull().default(0),
     templateId: bigint('template_id', { mode: 'number' }).references(
       () => evaluationAdvancedTemplates.id,
     ),
