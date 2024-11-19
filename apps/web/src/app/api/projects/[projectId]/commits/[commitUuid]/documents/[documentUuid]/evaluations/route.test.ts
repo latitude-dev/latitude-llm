@@ -1,4 +1,4 @@
-import { Providers } from '@latitude-data/core/browser'
+import { Providers, User } from '@latitude-data/core/browser'
 import * as factories from '@latitude-data/core/factories'
 import { Result } from '@latitude-data/core/lib/Result'
 import { ConnectedEvaluationsRepository } from '@latitude-data/core/repositories'
@@ -73,7 +73,8 @@ describe('GET /api/documents/[projectId]/[commitUuid]/[documentUuid]/evaluations
       'http://localhost/api/documents/test-project/test-commit/test-document-uuid/evaluations',
     )
     const response = await GET(request, {
-      params: { documentUuid: documents[0]!.documentUuid },
+      params: { documentUuid: documents[0]?.documentUuid },
+      user: { id: 'test-user-id' } as unknown as User,
       workspace,
     })
 
@@ -107,6 +108,7 @@ describe('GET /api/documents/[projectId]/[commitUuid]/[documentUuid]/evaluations
     )
     const response = await GET(request, {
       params: { documentUuid: documents[0]!.documentUuid },
+      user: { id: 'test-user-id' } as unknown as User,
       workspace,
     })
 

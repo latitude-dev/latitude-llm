@@ -1,4 +1,4 @@
-import { Workspace } from '@latitude-data/core/browser'
+import { DocumentVersion, Workspace } from '@latitude-data/core/browser'
 import {
   CommitsRepository,
   DocumentVersionsRepository,
@@ -7,8 +7,9 @@ import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'
 
-export const GET = errorHandler(
-  authHandler(
+type IParam = { projectId: number; commitUuid: string }
+export const GET = errorHandler<IParam, DocumentVersion[]>(
+  authHandler<IParam, DocumentVersion[]>(
     async (
       _: NextRequest,
       {

@@ -75,6 +75,7 @@ describe('GET logs', () => {
 
       expect(response.status).toBe(401)
       expect(await response.json()).toEqual({
+        details: {},
         message: 'Unauthorized',
       })
     })
@@ -88,7 +89,7 @@ describe('GET logs', () => {
     it('should return all logs', async () => {
       const response = await GET(mockRequest, {
         params: {
-          projectId: project.id,
+          projectId: String(project.id),
           commitUuid: commit.uuid,
           documentUuid: document.documentUuid,
         },
@@ -113,7 +114,7 @@ describe('GET logs', () => {
       mockRequest = new NextRequest('http://localhost:3000?page=0')
       const response = await GET(mockRequest, {
         params: {
-          projectId: project.id,
+          projectId: String(project.id),
           commitUuid: commit.uuid,
           documentUuid: document.documentUuid,
         },
@@ -146,7 +147,7 @@ describe('GET logs', () => {
 
       const response = await GET(mockRequest, {
         params: {
-          projectId: project.id,
+          projectId: String(project.id),
           commitUuid: commit.uuid,
           documentUuid: document.documentUuid,
         },
@@ -163,7 +164,7 @@ describe('GET logs', () => {
       mockRequest = new NextRequest('http://localhost:3000?excludeErrors=true')
       const response = await GET(mockRequest, {
         params: {
-          projectId: project.id,
+          projectId: String(project.id),
           commitUuid: commit.uuid,
           documentUuid: document.documentUuid,
         },

@@ -39,6 +39,7 @@ describe('GET handler for provider API keys', () => {
 
       expect(response.status).toBe(401)
       expect(await response.json()).toEqual({
+        details: {},
         message: 'Unauthorized',
       })
     })
