@@ -1,6 +1,13 @@
 'use client'
 
-import { RefObject, useCallback, useEffect, useRef, useState } from 'react'
+import {
+  ReactNode,
+  RefObject,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react'
 
 import { ProviderLogDto } from '@latitude-data/core/browser'
 import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
@@ -43,6 +50,7 @@ export function DocumentLogInfo({
   className,
   tableRef,
   sidebarWrapperRef,
+  children,
 }: {
   documentLog: DocumentLogWithMetadataAndError
   providerLogs?: ProviderLogDto[]
@@ -51,9 +59,11 @@ export function DocumentLogInfo({
   className?: string
   tableRef?: RefObject<HTMLTableElement>
   sidebarWrapperRef?: RefObject<HTMLDivElement>
+  children?: ReactNode
 }) {
   const ref = useRef<HTMLDivElement>(null)
   const [target, setTarget] = useState<HTMLDivElement | null>(null)
+
   useEffect(() => {
     if (!ref.current) return
 
@@ -77,6 +87,7 @@ export function DocumentLogInfo({
     targetContainer: sidebarWrapperRef?.current,
     offset: 24,
   })
+
   const { lastResponse, messages } = useGetProviderLogMessages({ providerLogs })
   const navigate = useRouter()
   const employLogAsDocumentParameters = useCallback(() => {
@@ -100,56 +111,59 @@ export function DocumentLogInfo({
     documentLog.uuid,
   ])
   return (
-    <MetadataInfoTabs
-      ref={ref}
-      className={className}
-      tabsActions={
-        <Tooltip
-          asChild
-          trigger={
-            <Button
-              onClick={employLogAsDocumentParameters}
-              fancy
-              iconProps={{ name: 'rollText', color: 'foregroundMuted' }}
-              variant='outline'
-              size='icon'
-              containerClassName='rounded-xl pointer-events-auto'
-              className='rounded-xl'
-            />
-          }
-        >
-          Use this log in the playground
-        </Tooltip>
-      }
-    >
-      {({ selectedTab }) =>
-        isLoading ? (
-          <DocumentLogMetadataLoading />
-        ) : (
-          <>
-            {!error ? (
-              <>
-                {selectedTab === 'metadata' && (
-                  <DocumentLogMetadata
-                    documentLog={documentLog}
-                    providerLogs={providerLogs}
-                    lastResponse={lastResponse}
-                  />
-                )}
-                {selectedTab === 'messages' && (
-                  <DocumentLogMessages messages={messages} />
-                )}
-              </>
-            ) : (
-              <Alert
-                variant='destructive'
-                title='Error loading'
-                description={error.message}
+    <div className='relative border border-border rounded-lg overflow-hidden'>
+      <MetadataInfoTabs
+        ref={ref}
+        className={className}
+        tabsActions={
+          <Tooltip
+            asChild
+            trigger={
+              <Button
+                onClick={employLogAsDocumentParameters}
+                fancy
+                iconProps={{ name: 'rollText', color: 'foregroundMuted' }}
+                variant='outline'
+                size='icon'
+                containerClassName='rounded-xl pointer-events-auto'
+                className='rounded-xl'
               />
-            )}
-          </>
-        )
-      }
-    </MetadataInfoTabs>
+            }
+          >
+            Use this log in the playground
+          </Tooltip>
+        }
+      >
+        {({ selectedTab }) =>
+          isLoading ? (
+            <DocumentLogMetadataLoading />
+          ) : (
+            <>
+              {!error ? (
+                <>
+                  {selectedTab === 'metadata' && (
+                    <DocumentLogMetadata
+                      documentLog={documentLog}
+                      providerLogs={providerLogs}
+                      lastResponse={lastResponse}
+                    />
+                  )}
+                  {selectedTab === 'messages' && (
+                    <DocumentLogMessages messages={messages} />
+                  )}
+                </>
+              ) : (
+                <Alert
+                  variant='destructive'
+                  title='Error loading'
+                  description={error.message}
+                />
+              )}
+            </>
+          )
+        }
+      </MetadataInfoTabs>
+      {children}
+    </div>
   )
 }

@@ -38,7 +38,7 @@ type Props = {
   setSelectedLog: (log: DocumentLogWithMetadataAndError | undefined) => void
 }
 export const DocumentLogsTable = forwardRef<HTMLTableElement, Props>(
-  function DocomentLogsTable(
+  function DocumentLogsTable(
     { documentLogs, selectedLog, setSelectedLog },
     ref,
   ) {

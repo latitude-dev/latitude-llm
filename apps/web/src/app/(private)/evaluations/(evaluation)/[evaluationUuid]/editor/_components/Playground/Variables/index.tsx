@@ -51,7 +51,7 @@ export const Variables = ({ providerLog }: { providerLog: ProviderLogDto }) => {
 
   return (
     <CollapsibleBox
-      title='Variables'
+      title='Parameters'
       collapsedContent={collapsedContent}
       expandedContent={expandedContent}
       expandedHeight='720px'

@@ -1,8 +1,8 @@
 import { BadRequestError } from '@latitude-data/core/lib/errors'
 import { ProviderLogsRepository } from '@latitude-data/core/repositories'
+import serializeProviderLog from '@latitude-data/core/services/providerLogs/serialize'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
-import providerLogPresenter from '$/presenters/providerLogPresenter'
 import { NextRequest, NextResponse } from 'next/server'
 
 type IParam = { providerLogId: string }
@@ -21,7 +21,7 @@ export const GET = errorHandler<IParam, ReturnResponse>(
         .find(Number(providerLogId))
         .then((r) => r.unwrap())
 
-      return NextResponse.json(providerLogPresenter(providerLog), {
+      return NextResponse.json(serializeProviderLog(providerLog), {
         status: 200,
       })
     },

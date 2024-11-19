@@ -146,7 +146,7 @@ export function DocumentParams(props: Props) {
   return (
     <ClientOnly>
       <CollapsibleBox
-        title='Variables'
+        title='Parameters'
         initialExpanded
         collapsedContent={null}
         collapsedContentHeader={<CollapsedContentHeader {...contentProps} />}

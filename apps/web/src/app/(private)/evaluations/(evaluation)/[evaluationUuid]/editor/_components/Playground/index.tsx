@@ -6,7 +6,7 @@ import { EvaluationDto } from '@latitude-data/core/browser'
 import {
   formatContext,
   formatConversation,
-} from '@latitude-data/core/services/providerLogs/serialize'
+} from '@latitude-data/core/services/providerLogs/serializeForEvaluation'
 import { Button, Icon, TableBlankSlate, Text } from '@latitude-data/web-ui'
 import { ROUTES } from '$/services/routes'
 import useDocumentLogWithMetadata from '$/stores/documentLogWithMetadata'

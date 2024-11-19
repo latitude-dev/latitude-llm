@@ -49,6 +49,9 @@ export const _API_ROUTES = {
                   root: `${documentRoot}/evaluations`,
                   detail: ({ evaluationId }: { evaluationId: number }) => ({
                     root: `${documentRoot}/evaluations/${evaluationId}`,
+                    logs: {
+                      root: `${documentRoot}/evaluations/${evaluationId}/logs`,
+                    },
                     evaluationResults: {
                       root: `${documentRoot}/evaluations/${evaluationId}/evaluation-results`,
                       pagination: `${documentRoot}/evaluations/${evaluationId}/evaluation-results/pagination`,

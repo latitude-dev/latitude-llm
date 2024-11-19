@@ -11,6 +11,10 @@ import {
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui'
+import {
+  evaluationMetadataTypes,
+  evaluationResultTypes,
+} from '$/app/(private)/evaluations/_components/ActiveEvaluations/Table'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
@@ -30,6 +34,8 @@ export default function ConnectedEvaluationsTable({
         <TableRow>
           <TableHead>Name</TableHead>
           <TableHead>Description</TableHead>
+          <TableHead>Type</TableHead>
+          <TableHead>Result Type</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody className='max-h-full overflow-y-auto'>
@@ -54,7 +60,15 @@ export default function ConnectedEvaluationsTable({
               </div>
             </TableCell>
             <TableCell>
-              <Text.H5>{evaluation.description}</Text.H5>
+              <Text.H5>{evaluation.description || '-'}</Text.H5>
+            </TableCell>
+            <TableCell>
+              <Text.H5>
+                {evaluationMetadataTypes[evaluation.metadataType]}
+              </Text.H5>
+            </TableCell>
+            <TableCell>
+              <Text.H5>{evaluationResultTypes[evaluation.resultType]}</Text.H5>
             </TableCell>
           </TableRow>
         ))}

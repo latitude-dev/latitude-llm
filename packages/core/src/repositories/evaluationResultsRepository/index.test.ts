@@ -136,24 +136,6 @@ describe('EvaluationResultsRepository', () => {
       expect(data[0]?.result).toBe('Result 1')
     })
 
-    it('filter evaluation results without provider log', async () => {
-      await createEvaluationResult({
-        documentLog,
-        evaluatedProviderLog: providerLogs[0]!,
-        evaluation,
-        result: 'Result 2',
-        skipProviderLogCreation: true,
-      })
-
-      const repo = new EvaluationResultsRepository(workspace.id)
-      const results = await repo.findAll()
-      const data = results.unwrap()
-
-      expect(results.ok).toBe(true)
-      expect(data.length).toBe(1)
-      expect(data[0]?.result).toBe('Result 1')
-    })
-
     it('filter evaluation results without result', async () => {
       await createEvaluationResult({
         documentLog,

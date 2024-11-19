@@ -11,7 +11,7 @@ import {
   ProviderLogsRepository,
 } from '../../repositories'
 import { serialize as serializeDocumentLog } from '../documentLogs/serialize'
-import { serialize as serializeProviderLog } from '../providerLogs/serialize'
+import { serializeForEvaluation } from '../providerLogs'
 
 export async function serialize(
   evaluationResult: EvaluationResultDto,
@@ -40,7 +40,7 @@ export async function serialize(
     )
   }
 
-  const serializedProviderLog = serializeProviderLog(providerLogResult.value)
+  const serializedProviderLog = serializeForEvaluation(providerLogResult.value)
 
   const responseObject = providerLogResult.value.responseObject as {
     reason?: string

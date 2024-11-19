@@ -1,8 +1,8 @@
 import { Workspace } from '@latitude-data/core/browser'
 import { ProviderLogsRepository } from '@latitude-data/core/repositories'
+import serializeProviderLog from '@latitude-data/core/services/providerLogs/serialize'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
-import providerLogPresenter from '$/presenters/providerLogPresenter'
 import { NextRequest, NextResponse } from 'next/server'
 
 export const GET = errorHandler(
@@ -33,7 +33,7 @@ export const GET = errorHandler(
         result = await scope.findAll({ limit: 1000 }).then((r) => r.unwrap())
       }
 
-      return NextResponse.json(result.map(providerLogPresenter), {
+      return NextResponse.json(result.map(serializeProviderLog), {
         status: 200,
       })
     },

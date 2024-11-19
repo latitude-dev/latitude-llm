@@ -3,26 +3,25 @@ import { and, count, eq, sum } from 'drizzle-orm'
 import { getCommitFilter } from '../_createEvaluationResultQuery'
 import { Commit, Evaluation } from '../../../browser'
 import { database } from '../../../client'
-import { EvaluationResultsRepository } from '../../../repositories'
-import { commits, documentLogs, providerLogs } from '../../../schema'
+import {
+  commits,
+  documentLogs,
+  evaluationResults,
+  providerLogs,
+} from '../../../schema'
 
 export async function getEvaluationTotalsQuery(
   {
-    workspaceId,
     evaluation,
     documentUuid,
     commit,
   }: {
-    workspaceId: number
     evaluation: Evaluation
     documentUuid: string
     commit: Commit
   },
   db = database,
 ) {
-  const { scope } = new EvaluationResultsRepository(workspaceId, db)
-  const evaluationResultsScope = scope.as('evaluation_results_scope')
-
   const result = await db
     .select({
       tokens: sum(providerLogs.tokens).mapWith(Number).as('tokens'),
@@ -30,18 +29,18 @@ export async function getEvaluationTotalsQuery(
         .mapWith(Number)
         .as('cost_in_millicents'),
     })
-    .from(evaluationResultsScope)
+    .from(evaluationResults)
     .innerJoin(
       documentLogs,
-      eq(documentLogs.id, evaluationResultsScope.documentLogId),
+      eq(documentLogs.id, evaluationResults.documentLogId),
     )
-    .innerJoin(
+    .leftJoin(
       providerLogs,
-      eq(providerLogs.id, evaluationResultsScope.evaluationProviderLogId),
+      eq(providerLogs.id, evaluationResults.evaluationProviderLogId),
     )
     .where(
       and(
-        eq(evaluationResultsScope.evaluationId, evaluation.id),
+        eq(evaluationResults.evaluationId, evaluation.id),
         eq(documentLogs.documentUuid, documentUuid),
       ),
     )
@@ -49,26 +48,26 @@ export async function getEvaluationTotalsQuery(
 
   const resultCount = await db
     .select({
-      totalCount: count(evaluationResultsScope.id),
+      totalCount: count(evaluationResults.id),
     })
-    .from(evaluationResultsScope)
+    .from(evaluationResults)
     .innerJoin(
       documentLogs,
-      eq(documentLogs.id, evaluationResultsScope.documentLogId),
+      eq(documentLogs.id, evaluationResults.documentLogId),
     )
     .innerJoin(commits, eq(commits.id, documentLogs.commitId))
     .where(
       and(
-        eq(evaluationResultsScope.evaluationId, evaluation.id),
+        eq(evaluationResults.evaluationId, evaluation.id),
         eq(documentLogs.documentUuid, documentUuid),
         getCommitFilter(commit),
       ),
     )
     .limit(1)
 
-  const costsQuery = result[0]!
-  const tokens = costsQuery.tokens
-  const costInMillicents = costsQuery.costInMillicents
+  const costsQuery = result[0]
+  const tokens = costsQuery?.tokens ?? 0
+  const costInMillicents = costsQuery?.costInMillicents ?? 0
   const totalCount = resultCount[0]!.totalCount
 
   return {

@@ -14,7 +14,7 @@ import { ROUTES } from '$/services/routes'
 import useEvaluations from '$/stores/evaluations'
 import Link from 'next/link'
 
-import ConnectedEvaluationsTable from './BatchEvaluationsTable'
+import ConnectedEvaluationsTable from './ConnectedEvaluationsTable'
 
 function SuggestedEvaluations() {
   const { project } = useCurrentProject()

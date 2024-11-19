@@ -41,7 +41,6 @@ export class DocumentLogsRepository extends Repository<DocumentLog> {
       .where(and(isNull(runErrors.id), eq(workspaces.id, this.workspaceId)))
       .$dynamic()
   }
-
   async findByUuid(uuid: string) {
     const result = await this.scope.where(eq(documentLogs.uuid, uuid))
 

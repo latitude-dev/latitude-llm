@@ -28,7 +28,7 @@ export default function Playground({
 
   return (
     <div className='flex flex-col gap-2 max-h-full h-full'>
-      <Header title='Variables' />
+      <Header title='Parameters' />
       <div className='max-h-[33%] flex flex-col'>
         <DocumentParams commitVersionUuid={commit.uuid} document={document} />
       </div>

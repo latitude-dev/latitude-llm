@@ -97,7 +97,6 @@ describe('evaluation results aggregations', () => {
 
     it('aggregate counters for evaluation', async () => {
       const result = await getEvaluationTotalsQuery({
-        workspaceId: workspace.id,
         documentUuid: documentVersion.documentUuid,
         evaluation,
         commit,
