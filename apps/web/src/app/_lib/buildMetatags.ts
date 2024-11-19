@@ -1,4 +1,3 @@
-import { env } from '@latitude-data/env'
 import type { Metadata, ResolvedMetadata } from 'next'
 
 const DEFAULT_TITLE = 'The Open-Source LLM Development Platform'
@@ -26,7 +25,8 @@ export default function buildMetatags({
   const metaDescription = description || DEFAULT_DESCRIPTION
 
   return {
-    metadataBase: new URL(env.LATITUDE_URL),
+    // FIXME: use env.LATITUDE_URL (is broken when building production) instead
+    metadataBase: new URL('https://app.latitude.so'),
     title: metaTitle,
     description: metaDescription,
     openGraph: {
