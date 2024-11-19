@@ -5,9 +5,9 @@ import PreviewDatasetModal from './_components/PreviewDatasetModal'
 export default async function DatasetPreviewPage({
   params,
 }: {
-  params: { datasetId: string }
+  params: Promise<{ datasetId: string }>
 }) {
-  const dataset = await getDatasetCached(params.datasetId)
+  const dataset = await getDatasetCached((await params).datasetId)
 
   return <PreviewDatasetModal dataset={dataset} />
 }

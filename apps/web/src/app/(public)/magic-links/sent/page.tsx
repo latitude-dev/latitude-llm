@@ -3,12 +3,12 @@ import { FocusLayout } from '$/components/layouts'
 import { ROUTES } from '$/services/routes'
 import { redirect } from 'next/navigation'
 
-export default function MagicLinkSent({
+export default async function MagicLinkSent({
   searchParams,
 }: {
-  searchParams: { email?: string }
+  searchParams: Promise<{ email?: string }>
 }) {
-  const { email } = searchParams
+  const { email } = await searchParams
   if (!email) return redirect(ROUTES.root)
 
   return (

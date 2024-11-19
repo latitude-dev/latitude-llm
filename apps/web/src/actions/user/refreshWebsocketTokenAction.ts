@@ -9,7 +9,8 @@ import { authProcedure } from '../procedures'
 export const refreshWebesocketTokenAction = authProcedure
   .createServerAction()
   .handler(async ({ ctx: { user, workspace } }) => {
-    const refreshWebsocketCookie = cookies().get('websocketRefresh')
+    const cks = await cookies()
+    const refreshWebsocketCookie = cks.get('websocketRefresh')
     const refreshToken = refreshWebsocketCookie?.value
     const result = await verifyWebsocketToken({
       token: refreshToken,

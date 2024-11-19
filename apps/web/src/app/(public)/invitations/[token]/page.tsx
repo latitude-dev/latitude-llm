@@ -17,9 +17,9 @@ export const dynamic = 'force-dynamic'
 export default async function InvitationPage({
   params,
 }: {
-  params: { token: string }
+  params: Promise<{ token: string }>
 }) {
-  const { token } = params
+  const { token } = await params
   let workspace, user, membership
   try {
     membership = await findMembershipByTokenCache(token as string)

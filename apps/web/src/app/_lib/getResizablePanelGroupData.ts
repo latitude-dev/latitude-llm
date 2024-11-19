@@ -8,12 +8,13 @@ export const MIN_SIDEBAR_WIDTH_PX = 280
 /**
  * This method is meant to be used in a nextjs page with access to the cookies object.
  */
-export function getResizablePanelGroupData({
+export async function getResizablePanelGroupData({
   group,
 }: {
   group: ResizableGroups
-}): number | undefined {
-  const layout = cookies().get(`react-resizable-panels:${group}`)
+}): Promise<number | undefined> {
+  const cks = await cookies()
+  const layout = cks.get(`react-resizable-panels:${group}`)
   let layoutData = undefined
 
   try {

@@ -2,9 +2,10 @@ import { ROUTES } from '$/services/routes'
 import { redirect } from 'next/navigation'
 
 export default async function DocumentPage({
-  params: { evaluationUuid },
+  params,
 }: {
-  params: { evaluationUuid: string }
+  params: Promise<{ evaluationUuid: string }>
 }) {
+  const { evaluationUuid } = await params
   redirect(ROUTES.evaluations.detail({ uuid: evaluationUuid }).dashboard.root)
 }

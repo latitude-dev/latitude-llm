@@ -38,16 +38,16 @@ export const createDatasetAction = authProcedure
           csvCustomDelimiter: z.string(),
           dataset_file: z
             .instanceof(File)
-            .refine((file) => {
+            .refine(async (file) => {
               return !file || file.size <= MAX_UPLOAD_SIZE_IN_MB
             }, `Your dataset must be less than ${MAX_SIZE}MB in size. You can split it into smaller files and upload them separately.`)
             .refine(
-              (file) => file.type === 'text/csv',
+              async (file) => file.type === 'text/csv',
               'Your dataset must be a CSV file',
             ),
         })
         .refine(
-          (schema) => {
+          async (schema) => {
             if (schema.csvDelimiter !== 'custom') return true
             return schema.csvCustomDelimiter.length > 0
           },

@@ -1,15 +1,18 @@
 'use client'
 
+import { Usable, use } from 'react'
+
 import DestroyModal from '$/components/modals/DestroyModal'
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
 import useUsers from '$/stores/users'
 
 export default function DestroyUserMembership({
-  params: { userId },
+  params,
 }: {
-  params: { userId: string }
+  params: Usable<{ userId: string }>
 }) {
+  const { userId } = use(params)
   const navigate = useNavigate()
   const { data, destroy } = useUsers()
   const user = data.find((u) => u.id === userId)

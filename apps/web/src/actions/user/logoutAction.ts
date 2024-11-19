@@ -23,7 +23,7 @@ export const logoutAction = authProcedure
   .handler(async ({ ctx }) => {
     removeSession({ session: ctx.session })
 
-    const cookies = getCookies()
+    const cookies = await getCookies()
     removeSocketCookie({ name: 'websocket', cookies })
     removeSocketCookie({ name: 'websocketRefresh', cookies })
 

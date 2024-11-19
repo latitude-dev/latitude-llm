@@ -18,10 +18,10 @@ export default async function DocumentPage({
   params,
 }: {
   children: ReactNode
-  params: { evaluationUuid: string }
+  params: Promise<{ evaluationUuid: string }>
 }) {
   const { workspace } = await getCurrentUser()
-  const evaluationUuid = params.evaluationUuid
+  const evaluationUuid = (await params).evaluationUuid
   const evaluation = await getEvaluationByUuidCached(evaluationUuid)
   const providerApiKeys = await getProviderApiKeysCached()
   const freeRunsCount = await getFreeRuns(workspace.id)

@@ -5,11 +5,12 @@ import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
 import useProjects from '$/stores/projects'
 
-export default function DestroyProject({
-  params: { projectId },
+export default async function DestroyProject({
+  params,
 }: {
-  params: { projectId: string }
+  params: Promise<{ projectId: string }>
 }) {
+  const { projectId } = await params
   const navigate = useNavigate()
   const { data, destroy } = useProjects()
   const project = data.find((p) => p.id === Number(projectId))

@@ -8,11 +8,16 @@ import EvaluationsLayoutClient from './_components/Layout'
 
 export default async function EvaluationsLayout({
   children,
-  params: { projectId, commitUuid, documentUuid },
+  params,
 }: {
   children: ReactNode
-  params: { projectId: string; commitUuid: string; documentUuid: string }
+  params: Promise<{
+    projectId: string
+    commitUuid: string
+    documentUuid: string
+  }>
 }) {
+  const { projectId, commitUuid, documentUuid } = await params
   const evaluations = await getEvaluationsByDocumentUuidCached(documentUuid)
   return (
     <div className='w-full p-6'>

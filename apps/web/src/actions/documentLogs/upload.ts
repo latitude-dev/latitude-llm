@@ -20,11 +20,11 @@ export const uploadDocumentLogsAction = withDocument
       }),
       logsFile: z
         .instanceof(File)
-        .refine((file) => {
+        .refine(async (file) => {
           return !file || file.size <= MAX_UPLOAD_SIZE_IN_MB
         }, `Your file must be less than ${MAX_SIZE}MB in size`)
         .refine(
-          (file) => file.type === 'text/csv',
+          async (file) => file.type === 'text/csv',
           'Your file must be a CSV file',
         ),
     }),

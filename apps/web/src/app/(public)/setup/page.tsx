@@ -6,11 +6,16 @@ import SetupForm from './SetupForm'
 
 export const dynamic = 'force-dynamic'
 
-export default function SetupPage({
+export default async function SetupPage({
   searchParams,
 }: {
-  searchParams?: { email: string; name: string; companyName: string }
+  searchParams: Promise<
+    { email: string; name: string; companyName: string } | undefined
+  >
 }) {
+  const result = await searchParams
+  const { email, name, companyName } = result ?? {}
+
   return (
     <FocusLayout
       header={
@@ -23,9 +28,9 @@ export default function SetupPage({
       <Card>
         <CardContent standalone>
           <SetupForm
-            email={searchParams?.email}
-            name={searchParams?.name}
-            companyName={searchParams?.companyName}
+            email={email}
+            name={name}
+            companyName={companyName}
             footer={<AuthFooter />}
           />
         </CardContent>

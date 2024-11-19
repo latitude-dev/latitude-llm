@@ -18,12 +18,15 @@ export default async function DocumentPage({
   params,
   children,
 }: {
-  params: { projectId: string; commitUuid: string; documentUuid: string }
+  params: Promise<{
+    projectId: string
+    commitUuid: string
+    documentUuid: string
+  }>
   children: ReactNode
 }) {
-  const projectId = Number(params.projectId)
-  const documentUuid = params.documentUuid
-  const commitUuid = params.commitUuid
+  const { projectId: pjid, commitUuid, documentUuid } = await params
+  const projectId = Number(pjid)
 
   try {
     const apiKeys = await getApiKeysCached()
@@ -47,11 +50,11 @@ export default async function DocumentPage({
         >
           <DocumentationModalProvider>
             <DocumentationModal
-              projectId={params.projectId}
-              commitUuid={params.commitUuid}
+              projectId={String(projectId)}
+              commitUuid={commitUuid}
               apiKeys={apiKeys}
             />
-            <DocumentTabs params={params}>{children}</DocumentTabs>
+            <DocumentTabs params={await params}>{children}</DocumentTabs>
           </DocumentationModalProvider>
         </DocumentsLayout>
       </DocumentVersionProvider>
@@ -59,8 +62,8 @@ export default async function DocumentPage({
   } catch (error) {
     return redirect(
       ROUTES.projects
-        .detail({ id: Number(params.projectId) })
-        .commits.detail({ uuid: params.commitUuid }).documents.root,
+        .detail({ id: Number(projectId) })
+        .commits.detail({ uuid: commitUuid }).documents.root,
     )
   }
 }
