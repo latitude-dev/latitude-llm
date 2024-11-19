@@ -6,6 +6,7 @@ import {
   Document as RefDocument,
   type CompileError,
 } from '@latitude-data/compiler'
+import { scan } from '@latitude-data/promptl'
 import { eq } from 'drizzle-orm'
 
 import {
@@ -55,20 +56,38 @@ async function resolveDocumentChanges({
 
   const newDocumentsWithUpdatedHash = await Promise.all(
     newDocuments.map(async (d) => {
-      const metadata = await readMetadata({
+      if (d.promptlVersion === 0) {
+        const metadata = await readMetadata({
+          prompt: d.content ?? '',
+          fullPath: d.path,
+          referenceFn: getDocumentContent,
+          configSchema,
+        })
+        if (metadata.errors.length > 0) {
+          errors[d.documentUuid] = metadata.errors
+        }
+
+        return {
+          ...d,
+          resolvedContent: metadata.resolvedPrompt,
+          contentHash: hashContent(metadata.resolvedPrompt),
+        }
+      }
+      const metadata = await scan({
         prompt: d.content ?? '',
         fullPath: d.path,
         referenceFn: getDocumentContent,
         configSchema,
       })
+
       if (metadata.errors.length > 0) {
-        errors[d.documentUuid] = metadata.errors
+        errors[d.documentUuid] = metadata.errors as CompileError[]
       }
 
       return {
         ...d,
         resolvedContent: metadata.resolvedPrompt,
-        contentHash: hashContent(metadata.resolvedPrompt),
+        contentHash: metadata.hash,
       }
     }),
   )
@@ -78,8 +97,8 @@ async function resolveDocumentChanges({
       !originalDocuments.find(
         (oldDoc) =>
           oldDoc.documentUuid === newDoc.documentUuid &&
-          oldDoc.resolvedContent === newDoc.resolvedContent &&
           oldDoc.contentHash === newDoc.contentHash &&
+          oldDoc.promptlVersion === newDoc.promptlVersion &&
           oldDoc.path === newDoc.path &&
           oldDoc.deletedAt === newDoc.deletedAt,
       ),

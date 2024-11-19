@@ -107,6 +107,9 @@ export const _API_ROUTES = {
       connectedDocuments: {
         root: `/api/evaluations/${id}/connected-documents`,
       },
+      prompt: {
+        root: `/api/evaluations/${id}/prompt`,
+      },
     }),
   },
 }

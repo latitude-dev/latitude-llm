@@ -107,11 +107,11 @@ Now, evaluate the assistant response for the following conversation, based on yo
 
 {{ messages.all }}
 
-{{#if cost || duration }}
+{{if cost || duration }}
   Also, here is some aditional metadata about the LLM response. It may or may not be relevant to your objective.
-  {{#if cost }} - Cost: {{ cost }} cents. {{/if}}
-  {{#if duration }} - Duration: {{ duration }} milliseconds. {{/if}}
-{{/if}}
+  {{if cost }} - Cost: {{ cost }} cents. {{endif}}
+  {{if duration }} - Duration: {{ duration }} milliseconds. {{endif}}
+{{endif}}
 
 You must respond with a JSON object with the following properties:
  - value: ${valueInformation(evaluation)}

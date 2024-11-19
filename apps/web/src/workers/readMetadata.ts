@@ -1,20 +1,26 @@
 import { readMetadata } from '@latitude-data/compiler'
 import { type DocumentVersion } from '@latitude-data/core/browser'
+import { scan } from '@latitude-data/promptl'
 
 export type ReadMetadataWorkerProps = Parameters<typeof readMetadata>[0] & {
+  promptlVersion: number
   document?: DocumentVersion
   documents?: DocumentVersion[]
 }
 
 self.onmessage = async function (event: { data: ReadMetadataWorkerProps }) {
-  const { document, documents, prompt, ...rest } = event.data
+  const { document, documents, prompt, promptlVersion, ...rest } = event.data
 
   const referenceFn = readDocument(document, documents, prompt)
-  const metadata = await readMetadata({
+
+  const props = {
     ...rest,
     prompt,
-    referenceFn: referenceFn ?? undefined,
-  })
+    referenceFn,
+  }
+
+  const metadata =
+    promptlVersion === 0 ? await readMetadata(props) : await scan(props)
 
   const { setConfig: _, errors: errors, ...returnedMetadata } = metadata
 

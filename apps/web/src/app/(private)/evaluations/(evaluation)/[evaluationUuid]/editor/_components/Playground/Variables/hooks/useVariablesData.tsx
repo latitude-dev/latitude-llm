@@ -1,6 +1,5 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 
-import { Config, readMetadata } from '@latitude-data/compiler'
 import { ProviderLogDto } from '@latitude-data/core/browser'
 import {
   formatContext,
@@ -12,25 +11,11 @@ import useDocumentLogWithMetadata from '$/stores/documentLogWithMetadata'
 import { PinnedDocumentation } from '../components/PinnedDocumentation'
 
 export const useVariablesData = (providerLog: ProviderLogDto) => {
-  const [config, setConfig] = useState<Config>()
   const { data: documentLogWithMetadata } = useDocumentLogWithMetadata({
     documentLogUuid: providerLog.documentLogUuid,
   })
   const [isMessagesPinned, setIsMessagesPinned] = useState(false)
   const [isPopoverOpen, setIsPopoverOpen] = useState(false)
-
-  useEffect(() => {
-    const fn = async () => {
-      if (!documentLogWithMetadata) return
-
-      const metadata = await readMetadata({
-        prompt: documentLogWithMetadata!.resolvedContent,
-      })
-      setConfig(metadata.config)
-    }
-
-    fn()
-  }, [documentLogWithMetadata])
 
   const variableSections = [
     {
@@ -83,7 +68,7 @@ export const useVariablesData = (providerLog: ProviderLogDto) => {
     },
     {
       title: 'config',
-      content: config ? JSON.stringify(config, null, 2) : '',
+      content: JSON.stringify(providerLog.config, null, 2),
       tooltip: 'The prompt configuration used to generate the prompt',
       height: '24',
     },

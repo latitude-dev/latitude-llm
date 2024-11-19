@@ -99,6 +99,7 @@ describe('run chain error handling', () => {
       errorableType: ErrorableEntity.DocumentLog,
       workspace,
       chain: mockChain as Chain,
+      promptlVersion: 0,
       providersMap,
       source: LogSources.API,
     })
@@ -138,6 +139,7 @@ describe('run chain error handling', () => {
       errorableType: ErrorableEntity.DocumentLog,
       workspace,
       chain: mockChain as Chain,
+      promptlVersion: 0,
       providersMap,
       source: LogSources.API,
     })
@@ -167,6 +169,7 @@ describe('run chain error handling', () => {
       errorableType: ErrorableEntity.DocumentLog,
       workspace,
       chain,
+      promptlVersion: 0,
       providersMap,
       source: LogSources.API,
     })
@@ -201,6 +204,7 @@ describe('run chain error handling', () => {
       errorableType: ErrorableEntity.DocumentLog,
       workspace,
       chain,
+      promptlVersion: 0,
       providersMap,
       source: LogSources.API,
     })
@@ -236,6 +240,7 @@ describe('run chain error handling', () => {
       errorableType: ErrorableEntity.DocumentLog,
       workspace,
       chain,
+      promptlVersion: 0,
       providersMap,
       source: LogSources.API,
     })
@@ -271,6 +276,7 @@ describe('run chain error handling', () => {
       errorableType: ErrorableEntity.DocumentLog,
       workspace,
       chain,
+      promptlVersion: 0,
       providersMap,
       source: LogSources.API,
     })
@@ -312,6 +318,7 @@ describe('run chain error handling', () => {
       errorableType: ErrorableEntity.DocumentLog,
       workspace,
       chain,
+      promptlVersion: 0,
       providersMap,
       source: LogSources.API,
     })
@@ -353,6 +360,7 @@ describe('run chain error handling', () => {
       errorableType: ErrorableEntity.DocumentLog,
       workspace,
       chain,
+      promptlVersion: 0,
       providersMap,
       source: LogSources.API,
     })

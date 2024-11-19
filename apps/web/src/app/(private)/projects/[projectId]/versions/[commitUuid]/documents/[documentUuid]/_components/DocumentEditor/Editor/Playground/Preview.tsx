@@ -1,10 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 
 import {
-  Chain,
   Conversation,
   Message as ConversationMessage,
   ConversationMetadata,
+  Chain as LegacyChain,
 } from '@latitude-data/compiler'
 import {
   AppliedRules,
@@ -12,6 +12,7 @@ import {
   LATITUDE_DOCS_URL,
   ProviderRules,
 } from '@latitude-data/core/browser'
+import { Adapters, Chain as PromptlChain } from '@latitude-data/promptl'
 import {
   Alert,
   Button,
@@ -87,17 +88,29 @@ export default function Preview({
   useAutoScroll(containerRef, { startAtBottom: true })
 
   useEffect(() => {
+    if (!document) return
     if (!metadata) return
     if (metadata.errors.length > 0) return
 
-    const chain = new Chain({
-      prompt: metadata.resolvedPrompt,
-      parameters,
-    })
+    const usePromptl = document.promptlVersion !== 0
+    const chain = usePromptl
+      ? new PromptlChain({
+          prompt: metadata.resolvedPrompt,
+          parameters,
+          adapter: Adapters.default,
+        })
+      : new LegacyChain({
+          prompt: metadata.resolvedPrompt,
+          parameters,
+        })
 
     chain
       .step()
-      .then(({ conversation, completed }) => {
+      .then(({ completed, ...rest }) => {
+        const conversation =
+          document.promptlVersion === 0
+            ? (rest as { conversation: Conversation }).conversation
+            : (rest as unknown as Conversation)
         setError(undefined)
         setConversation(conversation)
         setCompleted(completed)

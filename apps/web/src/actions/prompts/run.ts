@@ -15,16 +15,18 @@ export const runPromptAction = authProcedure
     z.object({
       prompt: z.string(),
       parameters: z.record(z.any()),
+      promptlVersion: z.number(),
     }),
   )
   .handler(async ({ ctx, input }) => {
-    const { prompt, parameters } = input
+    const { prompt, parameters, promptlVersion } = input
     const stream = createStreamableValue()
     try {
       const run = await runPrompt({
         workspace: ctx.workspace,
         source: LogSources.Evaluation,
         prompt,
+        promptlVersion,
         parameters,
         providersMap: await buildProvidersMap({
           workspaceId: ctx.workspace.id,

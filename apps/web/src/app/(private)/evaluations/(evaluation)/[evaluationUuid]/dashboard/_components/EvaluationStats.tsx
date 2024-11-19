@@ -8,6 +8,7 @@ import {
   EvaluationMetadataType,
 } from '@latitude-data/core/browser'
 import { ConnectedDocumentWithMetadata } from '@latitude-data/core/repositories'
+import { scan } from '@latitude-data/promptl'
 import { Skeleton, Text } from '@latitude-data/web-ui'
 import { formatCostInMillicents } from '$/app/_lib/formatUtils'
 import useConnectedDocuments from '$/stores/connectedDocuments'
@@ -38,10 +39,21 @@ export default function EvaluationStats({
 
   useEffect(() => {
     if (evaluation.metadataType === EvaluationMetadataType.LlmAsJudgeAdvanced) {
-      readMetadata({ prompt: evaluation.metadata.prompt }).then((metadata) => {
-        const metadataModel = (metadata.config['model'] as string) ?? 'Unknown'
-        setModel(metadataModel)
-      })
+      if (evaluation.metadata.promptlVersion === 0) {
+        readMetadata({ prompt: evaluation.metadata.prompt }).then(
+          (metadata) => {
+            const metadataModel =
+              (metadata.config['model'] as string) ?? 'Unknown'
+            setModel(metadataModel)
+          },
+        )
+      } else {
+        scan({ prompt: evaluation.metadata.prompt }).then((metadata) => {
+          const metadataModel =
+            (metadata.config['model'] as string) ?? 'Unknown'
+          setModel(metadataModel)
+        })
+      }
     } else if (
       evaluation.metadataType === EvaluationMetadataType.LlmAsJudgeSimple
     ) {

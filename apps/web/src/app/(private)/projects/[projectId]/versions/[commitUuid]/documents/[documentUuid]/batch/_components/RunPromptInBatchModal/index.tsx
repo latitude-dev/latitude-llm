@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { ConversationMetadata, readMetadata } from '@latitude-data/compiler'
 import { Dataset, DocumentVersion } from '@latitude-data/core/browser'
+import { scan } from '@latitude-data/promptl'
 import {
   Button,
   CloseTrigger,
@@ -87,11 +88,15 @@ function useRunDocumentInBatchForm({
     const fn = async () => {
       if (!document || !document.content) return
 
-      const metadata = await readMetadata({
-        prompt: document.content,
-      })
+      // TODO: Include referenceFn, otherwise it will fail if the prompt contains references
+      const metadata =
+        document.promptlVersion === 0
+          ? await readMetadata({
+              prompt: document.content,
+            })
+          : await scan({ prompt: document.content })
 
-      setMetadata(metadata)
+      setMetadata(metadata as ConversationMetadata)
 
       // Only choose the dataset if it's not already selected
       const ds = selectedDataset

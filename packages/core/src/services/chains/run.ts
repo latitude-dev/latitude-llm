@@ -1,5 +1,6 @@
-import { Chain } from '@latitude-data/compiler'
+import { Chain as LegacyChain } from '@latitude-data/compiler'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
+import { Chain as PromptlChain } from '@latitude-data/promptl'
 
 import { ProviderApiKey, Workspace } from '../../browser'
 import {
@@ -25,6 +26,7 @@ import {
 } from './ProviderProcessor/saveOrPublishProviderLogs'
 
 export type CachedApiKeys = Map<string, ProviderApiKey>
+type SomeChain = LegacyChain | PromptlChain
 
 async function createRunError({
   error,
@@ -58,31 +60,33 @@ export type ChainResponse<T extends StreamType> = TypedResult<
   ChainStepResponse<T>,
   ChainError<RunErrorCodes>
 >
-type CommonArgs<T extends boolean = true> = {
+type CommonArgs<T extends boolean = true, C extends SomeChain = LegacyChain> = {
   workspace: Workspace
-  chain: Chain
+  chain: C
+  promptlVersion: number
   source: LogSources
   providersMap: CachedApiKeys
   configOverrides?: ConfigOverrides
   generateUUID?: () => string
   persistErrors?: T
 }
-type RunChainArgs<T extends boolean> = T extends true
-  ? CommonArgs<T> & {
+type RunChainArgs<T extends boolean, C extends SomeChain> = T extends true
+  ? CommonArgs<T, C> & {
       errorableType: ErrorableEntity
     }
-  : CommonArgs<T> & { errorableType?: undefined }
+  : CommonArgs<T, C> & { errorableType?: undefined }
 
-export async function runChain<T extends boolean>({
+export async function runChain<T extends boolean, C extends SomeChain>({
   workspace,
   chain,
+  promptlVersion,
   providersMap,
   source,
   errorableType,
   configOverrides,
   persistErrors = true,
   generateUUID = generateUUIDIdentifier,
-}: RunChainArgs<T>) {
+}: RunChainArgs<T, C>) {
   const errorableUuid = generateUUID()
 
   let responseResolve: (value: ChainResponse<StreamType>) => void
@@ -98,6 +102,7 @@ export async function runChain<T extends boolean>({
         workspace,
         source,
         chain,
+        promptlVersion,
         providersMap,
         controller,
         errorableUuid,
@@ -133,6 +138,7 @@ async function runStep({
   workspace,
   source,
   chain,
+  promptlVersion,
   providersMap,
   controller,
   previousCount = 0,
@@ -143,7 +149,8 @@ async function runStep({
 }: {
   workspace: Workspace
   source: LogSources
-  chain: Chain
+  chain: SomeChain
+  promptlVersion: number
   providersMap: CachedApiKeys
   controller: ReadableStreamDefaultController
   errorableUuid: string
@@ -164,9 +171,19 @@ async function runStep({
       workspace,
       prevText,
       chain,
+      promptlVersion,
       providersMap,
       configOverrides,
     }).then((r) => r.unwrap())
+
+    if (chain instanceof PromptlChain && step.chainCompleted) {
+      streamConsumer.chainCompleted({
+        step,
+        response: previousResponse!,
+      })
+
+      return previousResponse!
+    }
 
     const { messageCount, stepStartTime } = streamConsumer.setup(step)
 
@@ -207,6 +224,7 @@ async function runStep({
           workspace,
           source,
           chain,
+          promptlVersion,
           providersMap,
           controller,
           errorableUuid,
@@ -283,6 +301,7 @@ async function runStep({
         workspace,
         source,
         chain,
+        promptlVersion,
         errorableUuid,
         errorableType,
         providersMap,

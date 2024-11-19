@@ -6,6 +6,7 @@ import {
   EvaluationResultableType,
 } from '@latitude-data/core/browser'
 import { env } from '@latitude-data/env'
+import { scan } from '@latitude-data/promptl'
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -56,9 +57,14 @@ export default async function ConnectedEvaluationLayout({
 
   let provider
   if (evaluation.metadataType == EvaluationMetadataType.LlmAsJudgeAdvanced) {
-    const metadata = await readMetadata({
-      prompt: evaluation.metadata.prompt,
-    })
+    const metadata =
+      evaluation.metadata.promptlVersion === 0
+        ? await readMetadata({
+            prompt: evaluation.metadata.prompt,
+          })
+        : await scan({
+            prompt: evaluation.metadata.prompt,
+          })
 
     if (
       metadata.config.provider &&
