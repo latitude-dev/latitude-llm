@@ -1,8 +1,8 @@
 import { ReactNode } from 'react'
 
 import { NotFoundError } from '@latitude-data/core/lib/errors'
+import buildMetatags from '$/app/_lib/buildMetatags'
 import { getEvaluationByUuidCached } from '$/app/(private)/_data-access'
-import { useMetatags } from '$/hooks/useMetatags'
 import type { ResolvingMetadata } from 'next'
 import { notFound } from 'next/navigation'
 
@@ -19,7 +19,7 @@ export async function generateMetadata(
   try {
     const evaluation = await getEvaluationByUuidCached(evaluationUuid)
 
-    return useMetatags({
+    return buildMetatags({
       title: evaluation.name,
       parent: await parent,
     })

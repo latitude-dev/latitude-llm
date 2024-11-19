@@ -1,8 +1,8 @@
 import { ReactNode } from 'react'
 
 import { NotFoundError } from '@latitude-data/core/lib/errors'
+import buildMetatags from '$/app/_lib/buildMetatags'
 import { findProjectCached } from '$/app/(private)/_data-access'
-import { useMetatags } from '$/hooks/useMetatags'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
 import type { ResolvingMetadata } from 'next'
 import { notFound } from 'next/navigation'
@@ -24,7 +24,7 @@ export async function generateMetadata(
       workspaceId: session.workspace.id,
     })
 
-    return useMetatags({
+    return buildMetatags({
       title: project.name,
       parent: await parent,
     })

@@ -1,6 +1,7 @@
 import { ReactNode } from 'react'
 
 import { SessionProvider } from '@latitude-data/web-ui/browser'
+import buildMetatags from '$/app/_lib/buildMetatags'
 import { createSupportUserIdentity } from '$/app/(private)/_lib/createSupportUserIdentity'
 import { SupportChat } from '$/components/IntercomSupportChat'
 import { AppLayout } from '$/components/layouts'
@@ -9,7 +10,6 @@ import {
   SocketIOProvider,
 } from '$/components/Providers/WebsocketsProvider'
 import env from '$/env'
-import { useMetatags } from '$/hooks/useMetatags'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
 import { getSession } from '$/services/auth/getSession'
 import { ROUTES } from '$/services/routes'
@@ -18,7 +18,7 @@ import { redirect } from 'next/navigation'
 import { CSPostHogProvider, IdentifyUser } from '../providers'
 import { NAV_LINKS } from './_lib/constants'
 
-export const metadata = useMetatags({
+export const metadata = buildMetatags({
   title: 'Home',
 })
 

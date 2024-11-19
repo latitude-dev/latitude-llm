@@ -1,7 +1,7 @@
 import { ReactNode } from 'react'
 
 import { SessionProvider } from '@latitude-data/web-ui'
-import { useMetatags } from '$/hooks/useMetatags'
+import buildMetatags from '$/app/_lib/buildMetatags'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
 import { getSession } from '$/services/auth/getSession'
 import { ROUTES } from '$/services/routes'
@@ -9,7 +9,7 @@ import { redirect } from 'next/navigation'
 
 import { BackofficeTabs } from './_components/BackofficeTabs'
 
-export const metadata = useMetatags({
+export const metadata = buildMetatags({
   title: 'Backoffice',
 })
 

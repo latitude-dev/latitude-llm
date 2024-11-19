@@ -1,6 +1,6 @@
 import { ReactNode } from 'react'
 
-import { useMetatags } from '$/hooks/useMetatags'
+import buildMetatags from '$/app/_lib/buildMetatags'
 import NextTopLoader from 'nextjs-toploader'
 
 import '@latitude-data/web-ui/styles.css'
@@ -12,7 +12,7 @@ import {
 } from '@latitude-data/web-ui'
 import { fontMono, fontSans } from '$/helpers/fonts'
 
-export const metadata = useMetatags({
+export const metadata = buildMetatags({
   title: 'The Open-Source LLM Development Platform',
 })
 

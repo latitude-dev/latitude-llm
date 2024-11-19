@@ -1,6 +1,6 @@
 import { NotFoundError } from '@latitude-data/core/lib/errors'
+import buildMetatags from '$/app/_lib/buildMetatags'
 import { getDatasetCached } from '$/app/(private)/_data-access'
-import { useMetatags } from '$/hooks/useMetatags'
 import type { ResolvingMetadata } from 'next'
 import { notFound } from 'next/navigation'
 
@@ -19,7 +19,7 @@ export async function generateMetadata(
   try {
     const dataset = await getDatasetCached(datasetId)
 
-    return useMetatags({
+    return buildMetatags({
       title: `${dataset.name} (preview)`,
       parent: await parent,
     })

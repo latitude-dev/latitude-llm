@@ -5,9 +5,9 @@ const DEFAULT_TITLE = 'The Open-Source LLM Development Platform'
 const DEFAULT_DESCRIPTION =
   'Latitude is an end-to-end platform for prompt engineering where domain experts can collaborate with engineers to ship and maintain production-grade LLM features.'
 
-// This hook is necessary to define default metadata correctly, because
-// Next metadata merging would overwrite the nested objects totally.
-export function useMetatags({
+// This function is necessary to define default metadata correctly, because
+// Nextjs metadata merging would overwrite the nested objects totally.
+export default function buildMetatags({
   title,
   description,
   parent,
