@@ -10,12 +10,14 @@ export async function generateMetadata(
   {
     params,
   }: {
-    params: { evaluationUuid: string }
+    params: Promise<{ evaluationUuid: string }>
   },
   parent: ResolvingMetadata,
 ) {
+  const { evaluationUuid } = await params
+
   try {
-    const evaluation = await getEvaluationByUuidCached(params.evaluationUuid)
+    const evaluation = await getEvaluationByUuidCached(evaluationUuid)
 
     return useMetatags({
       title: evaluation.name,

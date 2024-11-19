@@ -11,14 +11,16 @@ export async function generateMetadata(
   {
     params,
   }: {
-    params: { projectId: string }
+    params: Promise<{ projectId: string }>
   },
   parent: ResolvingMetadata,
 ) {
+  const { projectId } = await params
+
   try {
     const session = await getCurrentUser()
     const project = await findProjectCached({
-      projectId: Number(params.projectId),
+      projectId: Number(projectId),
       workspaceId: session.workspace.id,
     })
 
