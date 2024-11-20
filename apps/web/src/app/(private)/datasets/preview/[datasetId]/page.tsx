@@ -14,6 +14,9 @@ export async function generateMetadata(
   },
   parent: ResolvingMetadata,
 ) {
+  // Wait for parent metadata to resolve to ensure auth middleware is executed
+  const parentMetadata = await parent
+
   const { datasetId } = await params
 
   try {
@@ -21,7 +24,7 @@ export async function generateMetadata(
 
     return buildMetatags({
       title: `${dataset.name} (preview)`,
-      parent: await parent,
+      parent: parentMetadata,
     })
   } catch (error) {
     if (error instanceof NotFoundError) return notFound()
