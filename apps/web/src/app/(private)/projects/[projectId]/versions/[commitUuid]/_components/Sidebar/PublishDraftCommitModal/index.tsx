@@ -10,11 +10,14 @@ import {
   cn,
   colors,
   ConfirmModal,
+  FormWrapper,
   Icon,
   IconName,
+  Input,
   ReactStateDispatch,
   Skeleton,
   Text,
+  TextArea,
   useCurrentProject,
   useToast,
   type TextColor,
@@ -267,6 +270,15 @@ export default function PublishDraftCommitModal({
     errors: [],
     clean: [],
   })
+  const [title, setTitle] = useState('')
+  const [description, setDescription] = useState('')
+
+  useEffect(() => {
+    if (commit) {
+      setTitle(commit.title || '')
+      setDescription(commit.description || '')
+    }
+  }, [commit])
 
   useEffect(() => {
     async function load() {
@@ -304,6 +316,7 @@ export default function PublishDraftCommitModal({
   }, [commitId, project.id])
   const anyChanges = changes.length > 0
   const hasErrors = !anyChanges || groups.errors.length > 0
+
   return (
     <ConfirmModal
       dismissible={!isPublishing}
@@ -312,7 +325,14 @@ export default function PublishDraftCommitModal({
       title='Publish new version'
       description='Publishing the version will publish all changes in your prompts to production. Review the changes carefully before publishing.'
       onOpenChange={() => onClose(null)}
-      onConfirm={() => publishDraft({ projectId: project.id, id: commitId! })}
+      onConfirm={() =>
+        publishDraft({
+          projectId: project.id,
+          id: commitId!,
+          title,
+          description,
+        })
+      }
       confirm={{
         label: isLoading ? 'Validating...' : 'Publish to production',
         description: confirmDescription({ isLoading, anyChanges, hasErrors }),
@@ -320,15 +340,33 @@ export default function PublishDraftCommitModal({
         isConfirming: isPublishing,
       }}
     >
-      <ChangesList
-        anyChanges={anyChanges}
-        commit={commit}
-        projectId={project.id}
-        isLoading={isLoading}
-        groups={groups}
-        hasErrors={!isLoading && hasErrors}
-        onClose={onClose}
-      />
+      <div className='flex flex-col gap-4'>
+        <FormWrapper>
+          <Input
+            label='Version name'
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder='Enter version name'
+          />
+          <TextArea
+            label='Description'
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder='Enter version description'
+            rows={3}
+          />
+        </FormWrapper>
+
+        <ChangesList
+          anyChanges={anyChanges}
+          commit={commit}
+          projectId={project.id}
+          isLoading={isLoading}
+          groups={groups}
+          hasErrors={!isLoading && hasErrors}
+          onClose={onClose}
+        />
+      </div>
     </ConfirmModal>
   )
 }
