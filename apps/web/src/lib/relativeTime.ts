@@ -1,19 +1,29 @@
-import { format, formatDistanceToNow, formatRelative } from 'date-fns'
+import {
+  differenceInDays,
+  differenceInHours,
+  format,
+  formatDistanceToNow,
+  formatRelative,
+} from 'date-fns'
 
-const HOURS = 1000 * 60 * 60
-const DAYS = HOURS * 24
+function capitalize(str: string) {
+  return str.replace(/^\w/, (c) => c.toUpperCase())
+}
 
-export function relativeTime(date?: Date | null) {
-  if (date == null) return '-'
+export function relativeTime(date: Date | null | undefined) {
+  if (!date) return '-'
+  // NOTE: This is a dummy defense to avoid crashing on the frontend
+  if (!(date instanceof Date)) return '-'
 
   const now = new Date()
-  const diff = now.getTime() - date.getTime()
-  const capitalize = (str: string) => str.replace(/^\w/, (c) => c.toUpperCase())
 
-  if (diff < 1 * HOURS) {
+  if (differenceInHours(now, date) < 1) {
     return capitalize(formatDistanceToNow(date, { addSuffix: true }))
   }
-  if (diff < 7 * DAYS) return capitalize(formatRelative(date, new Date()))
+
+  if (differenceInDays(now, date) < 6) {
+    return capitalize(formatRelative(date, now))
+  }
 
   return capitalize(format(date, 'PPpp'))
 }

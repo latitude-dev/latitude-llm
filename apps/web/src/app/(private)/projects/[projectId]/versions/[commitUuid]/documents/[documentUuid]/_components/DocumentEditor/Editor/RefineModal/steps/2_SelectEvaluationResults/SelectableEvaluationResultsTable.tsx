@@ -18,8 +18,8 @@ import {
   TableRow,
   Text,
 } from '@latitude-data/web-ui'
-import { relativeTime } from '$/app/_lib/formatUtils'
 import { LogicTablePaginationFooterWithoutCount } from '$/components/TablePaginationFooter/TablePaginationFooterWithoutCount'
+import { relativeTime } from '$/lib/relativeTime'
 import { EvaluationResultByDocument } from '$/stores/evaluationResultsByDocumentContent'
 
 export const ResultCellContent = ({
