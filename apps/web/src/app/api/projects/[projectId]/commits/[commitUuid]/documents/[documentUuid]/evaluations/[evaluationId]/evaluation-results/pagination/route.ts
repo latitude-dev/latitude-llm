@@ -23,7 +23,6 @@ function pageUrl(params: {
     .evaluations.detail(Number(params.evaluationId)).root
 }
 
-// FIXME: Use generic types. Check other routes for examples.
 export const GET = errorHandler(
   authHandler(
     async (

@@ -41,7 +41,6 @@ describe('GET handler for commits', () => {
 
       expect(response.status).toBe(401)
       expect(await response.json()).toEqual({
-        details: {},
         message: 'Unauthorized',
       })
     })

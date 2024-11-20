@@ -1,20 +1,22 @@
+import { Workspace } from '@latitude-data/core/browser'
 import { BadRequestError } from '@latitude-data/core/lib/errors'
-import { Ok } from '@latitude-data/core/lib/Result'
 import { DocumentVersionsRepository } from '@latitude-data/core/repositories'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'
 
-type IParam = { projectId?: string }
-
-type ResponseResult = Awaited<
-  ReturnType<typeof DocumentVersionsRepository.prototype.getDocumentsForImport>
->
-type DocumentsImported = ResponseResult extends Ok<infer T> ? T : never
-
-export const GET = errorHandler<IParam, DocumentsImported>(
-  authHandler<IParam, DocumentsImported>(
-    async (_: NextRequest, { params, workspace }) => {
+export const GET = errorHandler(
+  authHandler(
+    async (
+      _: NextRequest,
+      {
+        params,
+        workspace,
+      }: {
+        params: { projectId: string }
+        workspace: Workspace
+      },
+    ) => {
       const { projectId } = params
 
       if (!projectId) {
