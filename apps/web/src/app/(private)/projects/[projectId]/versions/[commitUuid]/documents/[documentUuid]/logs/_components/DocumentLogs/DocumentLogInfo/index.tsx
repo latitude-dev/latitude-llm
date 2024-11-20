@@ -42,6 +42,62 @@ function DocumentLogMetadataLoading() {
   )
 }
 
+function UseDocumentLogInPlaygroundButton({
+  documentLog,
+}: {
+  documentLog: DocumentLogWithMetadataAndError
+}) {
+  const { commit } = useCurrentCommit()
+  const { project } = useCurrentProject()
+  const documentUuid = documentLog.documentUuid
+  const {
+    setSource,
+    history: { setHistoryLog },
+  } = useDocumentParameters({
+    documentVersionUuid: documentUuid,
+    commitVersionUuid: commit.uuid,
+  })
+  const navigate = useRouter()
+  const employLogAsDocumentParameters = useCallback(() => {
+    setSource('history')
+    setHistoryLog(documentLog.uuid)
+    navigate.push(
+      ROUTES.projects
+        .detail({ id: project.id })
+        .commits.detail({
+          uuid: commit.uuid,
+        })
+        .documents.detail({ uuid: documentUuid }).root,
+    )
+  }, [
+    setHistoryLog,
+    setSource,
+    navigate,
+    project.id,
+    commit.uuid,
+    documentUuid,
+    documentLog.uuid,
+  ])
+  return (
+    <Tooltip
+      asChild
+      trigger={
+        <Button
+          onClick={employLogAsDocumentParameters}
+          fancy
+          iconProps={{ name: 'rollText', color: 'foregroundMuted' }}
+          variant='outline'
+          size='icon'
+          containerClassName='rounded-xl pointer-events-auto'
+          className='rounded-xl'
+        />
+      }
+    >
+      Use this log in the playground
+    </Tooltip>
+  )
+}
+
 export function DocumentLogInfo({
   documentLog,
   providerLogs,
@@ -63,7 +119,6 @@ export function DocumentLogInfo({
 }) {
   const ref = useRef<HTMLDivElement>(null)
   const [target, setTarget] = useState<HTMLDivElement | null>(null)
-
   useEffect(() => {
     if (!ref.current) return
 
@@ -71,15 +126,6 @@ export function DocumentLogInfo({
   }, [ref.current])
   const scrollableArea = usePanelDomRef({ selfRef: target })
   const beacon = tableRef?.current
-  const { commit } = useCurrentCommit()
-  const { project } = useCurrentProject()
-  const {
-    setSource,
-    history: { setHistoryLog },
-  } = useDocumentParameters({
-    documentVersionUuid: documentLog.documentUuid,
-    commitVersionUuid: commit.uuid,
-  })
   useStickyNested({
     scrollableArea,
     beacon,
@@ -89,49 +135,17 @@ export function DocumentLogInfo({
   })
 
   const { lastResponse, messages } = useGetProviderLogMessages({ providerLogs })
-  const navigate = useRouter()
-  const employLogAsDocumentParameters = useCallback(() => {
-    setSource('history')
-    setHistoryLog(documentLog.uuid)
-    navigate.push(
-      ROUTES.projects
-        .detail({ id: project.id })
-        .commits.detail({
-          uuid: commit.uuid,
-        })
-        .documents.detail({ uuid: documentLog.documentUuid }).root,
-    )
-  }, [
-    setHistoryLog,
-    setSource,
-    navigate,
-    project.id,
-    commit.uuid,
-    documentLog.documentUuid,
-    documentLog.uuid,
-  ])
   return (
     <div className='relative border border-border rounded-lg overflow-hidden'>
       <MetadataInfoTabs
         ref={ref}
         className={className}
         tabsActions={
-          <Tooltip
-            asChild
-            trigger={
-              <Button
-                onClick={employLogAsDocumentParameters}
-                fancy
-                iconProps={{ name: 'rollText', color: 'foregroundMuted' }}
-                variant='outline'
-                size='icon'
-                containerClassName='rounded-xl pointer-events-auto'
-                className='rounded-xl'
-              />
-            }
-          >
-            Use this log in the playground
-          </Tooltip>
+          <>
+            {documentLog ? (
+              <UseDocumentLogInPlaygroundButton documentLog={documentLog} />
+            ) : null}
+          </>
         }
       >
         {({ selectedTab }) =>
