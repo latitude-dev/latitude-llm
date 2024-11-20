@@ -59,8 +59,7 @@ export async function fetchDocumentLogsWithEvaluationResults(
     ),
   )
 
-  const providerLogsResult = await providerLogsRepo.scope.innerJoin(
-    documentLogs,
+  const providerLogsResult = await providerLogsRepo.scope.where(
     inArray(
       providerLogs.documentLogUuid,
       logs.map((l) => l.uuid),
