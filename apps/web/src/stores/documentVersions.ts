@@ -207,6 +207,7 @@ export default function useDocumentVersions(
     {
       onSuccess: ({ data: document }) => {
         const prevDocuments = data || []
+
         mutate(
           prevDocuments.map((d) =>
             d.documentUuid === document.documentUuid ? document : d,

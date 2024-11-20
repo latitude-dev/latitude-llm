@@ -1,5 +1,6 @@
 'use server'
 
+import { BadRequestError } from '@latitude-data/core/lib/errors'
 import {
   CommitsRepository,
   DocumentVersionsRepository,
@@ -38,6 +39,14 @@ export const updateDocumentContentAction = withProject
       document,
       content: input.content,
     })
+    const updatedDocument = result.unwrap()
 
-    return result.unwrap()
+    // This should never happen but it does happen sometimes
+    if (!updatedDocument) {
+      throw new BadRequestError(
+        'Could not update document, if the issue persists please contact support.',
+      )
+    }
+
+    return updatedDocument
   })
