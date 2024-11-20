@@ -14,6 +14,7 @@ import {
   Workspace,
 } from '@latitude-data/core/browser'
 import { useSession, useToast } from '@latitude-data/web-ui'
+import * as Sentry from '@sentry/nextjs'
 import { refreshWebesocketTokenAction } from '$/actions/user/refreshWebsocketTokenAction'
 import { IoProvider, useSocket } from 'socket.io-react-hook'
 
@@ -55,16 +56,20 @@ export function useSocketConnection({
 
   connection.socket.on('connect_error', async (error) => {
     if (error.message.startsWith('AUTH_ERROR')) {
-      const [data] = await refreshWebesocketTokenAction()
+      try {
+        const [data] = await refreshWebesocketTokenAction()
 
-      if (data && data.success) {
-        connection.socket.connect()
-      } else {
-        toast({
-          title: 'We have a problem reconnecting to the server',
-          description: 'Try logout and login again',
-          variant: 'destructive',
-        })
+        if (data && data.success) {
+          connection.socket.connect()
+        } else {
+          toast({
+            title: 'We have a problem reconnecting to the server',
+            description: 'Try logout and login again',
+            variant: 'destructive',
+          })
+        }
+      } catch (e) {
+        Sentry.captureException(e as Error)
       }
     }
   })
