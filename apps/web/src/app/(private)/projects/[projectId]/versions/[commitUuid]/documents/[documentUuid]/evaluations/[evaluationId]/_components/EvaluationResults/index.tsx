@@ -37,6 +37,7 @@ const useEvaluationResultsSocket = (
     (args: EventArgs<'evaluationResultCreated'>) => {
       if (evaluation.id !== args.evaluationId) return
       if (document.documentUuid !== args.documentUuid) return
+      if (!args.row) return
 
       const createdAt = new Date(args.row.createdAt)
 
