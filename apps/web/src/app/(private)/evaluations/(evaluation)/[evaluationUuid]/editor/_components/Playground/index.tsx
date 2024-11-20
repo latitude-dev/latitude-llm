@@ -74,7 +74,7 @@ export default function Playground({
       context: formatContext(providerLog),
       response: providerLog.response,
       config: providerLog.config,
-      prompt: documentLogWithMetadata.resolvedContent,
+      prompt: documentLogWithMetadata.originalPrompt,
       duration: documentLogWithMetadata.duration,
       parameters: documentLogWithMetadata.parameters,
       cost: (documentLogWithMetadata.costInMillicents || 0) / 1000,

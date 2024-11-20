@@ -9,10 +9,10 @@ import {
   Workspace,
 } from '../../browser'
 import { findWorkspaceFromCommit } from '../../data-access'
+import { hashContent } from '../../lib'
 import { ProviderApiKeysRepository } from '../../repositories'
 import { Config } from '../../services/ai'
 import { createDocumentLog as ogCreateDocumentLog } from '../../services/documentLogs'
-import { getResolvedContent } from '../../services/documents'
 import { createProviderLog } from '../../services/providerLogs'
 import { helpers } from './helpers'
 
@@ -101,11 +101,6 @@ export async function createDocumentLog({
   skipProviderLogs,
 }: IDocumentLogData) {
   const workspace = (await findWorkspaceFromCommit(commit))!
-  const documentContent = await getResolvedContent({
-    workspaceId: workspace.id,
-    document,
-    commit,
-  }).then((r) => r.unwrap())
   const documentLogUuid = uuid()
   let providerLogs: ProviderLog[] = []
 
@@ -113,7 +108,7 @@ export async function createDocumentLog({
     providerLogs = await generateProviderLogs({
       workspace,
       parameters,
-      documentContent,
+      documentContent: document.content,
       documentLogUuid,
     })
   }
@@ -127,7 +122,8 @@ export async function createDocumentLog({
     data: {
       uuid: documentLogUuid,
       documentUuid: document.documentUuid,
-      resolvedContent: documentContent,
+      originalPrompt: document.content,
+      contentHash: document.contentHash ?? hashContent(document.content),
       parameters: parameters ?? {},
       customIdentifier,
       source: LogSources.API,

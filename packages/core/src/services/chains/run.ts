@@ -123,7 +123,6 @@ export async function runChain<T extends boolean>({
   return {
     stream,
     response,
-    resolvedContent: chain.rawText,
     errorableUuid,
     duration: response.then(() => Date.now() - chainStartTime),
   }

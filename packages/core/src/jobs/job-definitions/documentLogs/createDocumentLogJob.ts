@@ -3,7 +3,7 @@ import { Job } from 'bullmq'
 
 import { Commit } from '../../../browser'
 import { LogSources } from '../../../constants'
-import { generateUUIDIdentifier } from '../../../lib'
+import { generateUUIDIdentifier, hashContent } from '../../../lib'
 import { DocumentVersionsRepository } from '../../../repositories'
 import { createDocumentLog } from '../../../services/documentLogs'
 
@@ -33,7 +33,8 @@ export const createDocumentLogJob = async (
     data: {
       uuid: generateUUIDIdentifier(),
       documentUuid: document.documentUuid,
-      resolvedContent: document.resolvedContent || '',
+      originalPrompt: document.content,
+      contentHash: document.contentHash ?? hashContent(document.content),
       source,
       parameters: {},
       providerLog: {

@@ -67,7 +67,6 @@ async function resolveDocumentChanges({
 
       return {
         ...d,
-        resolvedContent: metadata.resolvedPrompt,
         contentHash: hashContent(metadata.resolvedPrompt),
       }
     }),
@@ -78,7 +77,7 @@ async function resolveDocumentChanges({
       !originalDocuments.find(
         (oldDoc) =>
           oldDoc.documentUuid === newDoc.documentUuid &&
-          oldDoc.resolvedContent === newDoc.resolvedContent &&
+          oldDoc.content === newDoc.content &&
           oldDoc.contentHash === newDoc.contentHash &&
           oldDoc.path === newDoc.path &&
           oldDoc.deletedAt === newDoc.deletedAt,

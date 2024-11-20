@@ -84,10 +84,10 @@ export async function updateDocument(
       return Result.error(new NotFoundError('Document does not exist'))
     }
 
-    // Invalidate all resolvedContent for this commit
+    // Invalidate all contentHash for this commit
     await tx
       .update(documentVersions)
-      .set({ resolvedContent: null })
+      .set({ contentHash: null })
       .where(eq(documentVersions.commitId, commit.id))
 
     return Result.ok(updatedDocs[0]!)

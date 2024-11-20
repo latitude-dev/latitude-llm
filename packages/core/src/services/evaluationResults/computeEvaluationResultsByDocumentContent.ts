@@ -1,3 +1,4 @@
+import { readMetadata } from '@latitude-data/compiler'
 import { and, desc, eq, isNotNull, isNull, or, sql } from 'drizzle-orm'
 
 import {
@@ -18,7 +19,7 @@ import {
   evaluationResults,
 } from '../../schema'
 import { runErrors } from '../../schema/models/runErrors'
-import { getResolvedContent } from '../documents'
+import { getReferenceFn } from '../documents/getReferenceFn'
 
 async function getDocumentContent(
   {
@@ -36,11 +37,19 @@ async function getDocumentContent(
   })
   if (documentResult.error) return documentResult
 
-  return getResolvedContent({
-    workspaceId,
-    document: documentResult.unwrap(),
-    commit,
+  const referenceFnResult = await getReferenceFn({ workspaceId, commit })
+  if (referenceFnResult.error) return referenceFnResult
+
+  const document = documentResult.unwrap()
+  const referenceFn = referenceFnResult.unwrap()
+
+  const metadata = await readMetadata({
+    prompt: document.content,
+    fullPath: document.path,
+    referenceFn,
   })
+
+  return Result.ok(metadata.resolvedPrompt)
 }
 
 export async function computeEvaluationResultsByDocumentContent(

@@ -73,10 +73,10 @@ export async function createNewDocument(
       })
       .returning()
 
-    // Invalidate all resolvedContent for this commit
+    // Invalidate all contentHash for this commit
     await tx
       .update(documentVersions)
-      .set({ resolvedContent: null })
+      .set({ contentHash: null })
       .where(eq(documentVersions.commitId, commit.id))
 
     publisher.publishLater({

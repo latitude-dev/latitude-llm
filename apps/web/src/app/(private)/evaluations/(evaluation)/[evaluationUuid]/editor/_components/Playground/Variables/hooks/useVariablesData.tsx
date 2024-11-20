@@ -23,8 +23,9 @@ export const useVariablesData = (providerLog: ProviderLogDto) => {
     const fn = async () => {
       if (!documentLogWithMetadata) return
 
+      // TODO: Include ReferenceFn
       const metadata = await readMetadata({
-        prompt: documentLogWithMetadata!.resolvedContent,
+        prompt: documentLogWithMetadata!.originalPrompt,
       })
       setConfig(metadata.config)
     }
@@ -78,7 +79,7 @@ export const useVariablesData = (providerLog: ProviderLogDto) => {
     },
     {
       title: 'prompt',
-      content: documentLogWithMetadata?.resolvedContent || '',
+      content: documentLogWithMetadata?.originalPrompt || '',
       tooltip: 'The original prompt',
     },
     {

@@ -3,7 +3,6 @@ export const RESPONSE = {
   documentUuid: 'e01a1035-6ed3-4edc-88e6-c0748ea300c7',
   path: 'prompt',
   content: '---\nprovider: Latitude\nmodel: gpt-4o-mini\n---',
-  resolvedContent: '---\nprovider: Latitude\nmodel: gpt-4o-mini\n---\n',
   contentHash: 'b912acbafb25af5fbab08f946fc272e4',
   commitId: 4,
   datasetId: null,

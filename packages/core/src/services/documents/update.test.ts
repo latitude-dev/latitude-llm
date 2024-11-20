@@ -313,7 +313,7 @@ describe('updateDocument', () => {
     expect(result.error!.message).toBe('Cannot modify a merged commit')
   })
 
-  it('invalidates the resolvedContent for all documents in the commit', async (ctx) => {
+  it('invalidates the contentHash for all documents in the commit', async (ctx) => {
     const { workspace, project, user, documents } =
       await ctx.factories.createProject({
         providers: [
@@ -363,11 +363,7 @@ describe('updateDocument', () => {
       .getDocumentsAtCommit(commit)
       .then((r) => r.unwrap())
 
-    expect(commitDocs.find((d) => d.path === 'doc1')!.resolvedContent).toBe(
-      null,
-    )
-    expect(commitDocs.find((d) => d.path === 'doc2')!.resolvedContent).toBe(
-      null,
-    )
+    expect(commitDocs.find((d) => d.path === 'doc1')!.contentHash).toBe(null)
+    expect(commitDocs.find((d) => d.path === 'doc2')!.contentHash).toBe(null)
   })
 })

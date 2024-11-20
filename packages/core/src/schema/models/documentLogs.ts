@@ -24,7 +24,7 @@ export const documentLogs = latitudeSchema.table(
         onDelete: 'restrict',
         onUpdate: 'cascade',
       }),
-    resolvedContent: text('resolved_content').notNull(),
+    originalPrompt: text('original_prompt').notNull(),
     contentHash: text('content_hash').notNull(),
     parameters: jsonb('parameters').$type<Record<string, unknown>>().notNull(),
     customIdentifier: text('custom_identifier'),

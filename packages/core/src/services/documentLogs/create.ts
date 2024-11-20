@@ -6,7 +6,6 @@ import { findWorkspaceFromCommit } from '../../data-access'
 import { publisher } from '../../events/publisher'
 import {
   generateUUIDIdentifier,
-  hashContent,
   NotFoundError,
   Result,
   Transaction,
@@ -19,8 +18,9 @@ export type CreateDocumentLogProps = {
   data: {
     uuid: string
     documentUuid: string
+    originalPrompt: string
     parameters: Record<string, unknown>
-    resolvedContent: string
+    contentHash: string
     duration?: number
     source: LogSources
     customIdentifier?: string
@@ -37,7 +37,8 @@ export async function createDocumentLog(
     data: {
       uuid,
       documentUuid,
-      resolvedContent,
+      originalPrompt,
+      contentHash,
       parameters,
       customIdentifier,
       duration,
@@ -56,8 +57,8 @@ export async function createDocumentLog(
         uuid,
         documentUuid,
         commitId: commit.id,
-        resolvedContent,
-        contentHash: hashContent(resolvedContent),
+        originalPrompt,
+        contentHash,
         parameters,
         customIdentifier,
         duration,

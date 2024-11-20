@@ -217,16 +217,16 @@ describe('removing folders', () => {
     expect(draftDocuments.length).toBe(2)
     const deletedData = draftDocuments.map((d) => ({
       deletedAt: d.deletedAt,
-      resolvedContent: d.resolvedContent,
+      contentHash: d.contentHash,
     }))
     expect(deletedData).toEqual([
       {
         deletedAt: expect.any(Date),
-        resolvedContent: null,
+        contentHash: null,
       },
       {
         deletedAt: expect.any(Date),
-        resolvedContent: null,
+        contentHash: null,
       },
     ])
   })

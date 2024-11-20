@@ -1,6 +1,7 @@
 import { zValidator } from '@hono/zod-validator'
 import { LogSources, messagesSchema } from '@latitude-data/core/browser'
 import { generateUUIDIdentifier } from '@latitude-data/core/lib/generateUUID'
+import { hashContent } from '@latitude-data/core/lib/hashContent'
 import { createDocumentLog } from '@latitude-data/core/services/documentLogs/create'
 import { getData } from '$/routes/api/v1/projects/[projectId]/versions/[versionUuid]/documents/handlers/_shared'
 import { Factory } from 'hono/factory'
@@ -31,7 +32,8 @@ export const postHandler = factory.createHandlers(
       data: {
         uuid: generateUUIDIdentifier(),
         documentUuid: document.documentUuid,
-        resolvedContent: document.content,
+        originalPrompt: document.content,
+        contentHash: document.contentHash ?? hashContent(document.content),
         source: LogSources.API,
         parameters: {},
         providerLog: {

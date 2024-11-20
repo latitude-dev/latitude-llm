@@ -111,7 +111,7 @@ async function invalidateDocumentsCacheInCommit(
 ) {
   return tx
     .update(documentVersions)
-    .set({ resolvedContent: null })
+    .set({ contentHash: null })
     .where(eq(documentVersions.commitId, commitId))
 }
 

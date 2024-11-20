@@ -1,3 +1,5 @@
+import { readMetadata } from '@latitude-data/compiler'
+
 import {
   ChainStepResponse,
   Commit,
@@ -8,10 +10,10 @@ import {
   type Workspace,
 } from '../../browser'
 import { publisher } from '../../events/publisher'
-import { generateUUIDIdentifier, Result } from '../../lib'
+import { generateUUIDIdentifier, hashContent, Result } from '../../lib'
 import { runChain } from '../chains/run'
 import { createDocumentLog } from '../documentLogs'
-import { getResolvedContent } from '../documents'
+import { getReferenceFn } from '../documents/getReferenceFn'
 import { buildProvidersMap } from '../providerApiKeys/buildMap'
 import { RunDocumentChecker } from './RunDocumentChecker'
 
@@ -21,7 +23,7 @@ export async function createDocumentRunResult({
   commit,
   errorableUuid,
   parameters,
-  resolvedContent,
+  contentHash,
   customIdentifier,
   publishEvent,
   source,
@@ -34,7 +36,7 @@ export async function createDocumentRunResult({
   source: LogSources
   errorableUuid: string
   parameters: Record<string, unknown>
-  resolvedContent: string
+  contentHash: string
   publishEvent: boolean
   customIdentifier?: string
   duration?: number
@@ -51,7 +53,7 @@ export async function createDocumentRunResult({
         commitUuid: commit.uuid,
         documentLogUuid: errorableUuid,
         response,
-        resolvedContent,
+        contentHash,
         parameters,
         duration: durantionInMs,
         source,
@@ -65,8 +67,9 @@ export async function createDocumentRunResult({
       documentUuid: document.documentUuid,
       customIdentifier,
       duration: durantionInMs,
+      originalPrompt: document.content,
       parameters,
-      resolvedContent,
+      contentHash,
       uuid: errorableUuid,
       source,
     },
@@ -93,20 +96,23 @@ export async function runDocumentAtCommit({
   const providersMap = await buildProvidersMap({
     workspaceId: workspace.id,
   })
-  const result = await getResolvedContent({
+  const referenceFnResult = await getReferenceFn({
     workspaceId: workspace.id,
-    document,
     commit,
   })
 
-  // NOTE: We don't log these errors. If something happen
-  // in getResolvedContent it will not appear in Latitude
-  if (result.error) return result
+  if (referenceFnResult.error) return referenceFnResult
+
+  const metadata = await readMetadata({
+    prompt: document.content,
+    fullPath: document.path,
+    referenceFn: referenceFnResult.unwrap(),
+  })
 
   const checker = new RunDocumentChecker({
     document,
     errorableUuid,
-    prompt: result.value,
+    prompt: document.content,
     parameters,
   })
   const checkerResult = await checker.call()
@@ -118,7 +124,7 @@ export async function runDocumentAtCommit({
       commit,
       errorableUuid,
       parameters,
-      resolvedContent: result.value,
+      contentHash: hashContent(metadata.resolvedPrompt),
       source,
       publishEvent: false,
     })
@@ -138,7 +144,6 @@ export async function runDocumentAtCommit({
   return Result.ok({
     stream: run.stream,
     duration: run.duration,
-    resolvedContent: result.value,
     errorableUuid,
     response: run.response.then(async (response) => {
       await createDocumentRunResult({
@@ -147,7 +152,7 @@ export async function runDocumentAtCommit({
         commit,
         errorableUuid,
         parameters,
-        resolvedContent: result.value,
+        contentHash: document.contentHash ?? hashContent(document.content),
         customIdentifier,
         source,
         response: response.value,

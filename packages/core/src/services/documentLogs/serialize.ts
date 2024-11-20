@@ -34,7 +34,7 @@ export async function serialize(
   return Result.ok({
     ...serializeProviderLog(lastProviderLog),
     parameters: documentLog.parameters,
-    prompt: documentLog.resolvedContent,
+    prompt: documentLog.originalPrompt,
     duration: documentLog.duration,
     cost: totalCostInMillicents / 1000,
   })
