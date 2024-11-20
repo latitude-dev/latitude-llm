@@ -1,0 +1,157 @@
+---
+title: Changelog
+description: All notable changes to Latitude.
+---
+
+<Update label='2024-11-20'>
+  ## Human / Code evaluations
+
+We have released a new type of evaluations: manual / code evaluations. This new
+evaluation type allows users to evaluate their LLM outputs with human feedback or
+code-based evaluations, and push the results to Latitude using our SDKs/API.
+
+You can also submit results directly from Latitude's UI.
+
+![](/assets/changelog/241120/hitl-evaluation-1.png)
+
+[docs](https://docs.latitude.so/guides/sdk/javascript-typescript-sdk#pushing-evaluation-results-to-latitude)
+
+## New prompt template syntax
+
+We have open sourced the new version of our prompt templating syntax and we've
+even given it a new name: [PromptL](https://promptl.ai/). This new syntax
+introduces some highly requested features such as support for html/xml tags
+without needing to escape them, chain steps with custom contexts, and more.
+
+```mdx
+<step as='researchPhase' provider='OpenAI' model='gpt-4'>
+  <user>Research key points about {{ topic }} and create an outline.</user>
+</step>
+
+<step as='writing' isolated='true' temperature='0.7'>
+    <user>
+        Using this outline: {{ researchPhase.outline }}
+        Write a detailed article.
+    </user>
+</step>
+```
+
+The new syntax will be enabled to all new prompts in Latitude by default starting Monday 25th
+November. Since the new syntax is not compatible with the old one, existing
+prompts will not get automatically upgraded to the new syntax and users will be
+in charge of updating them.
+
+## New parameters section for prompts
+
+We have revamped our parameters section in prompts and introduced some highly
+requested features. Users can now choose between inputing parameters manually,
+from datasets, or from existing prompt logs. Moreover, any choice they make in
+any of these sections gets automatically stored in session so that you don't
+lose track of the latest inputs you chose if you ever navigate to another
+section and later come back.
+
+![](/assets/changelog/241120/parameters-1.png)
+![](/assets/changelog/241120/parameters-2.png)
+![](/assets/changelog/241120/parameters-3.png)
+
+## Prompt analytics
+
+We have added some key metrics to the logs section of your prompts. You can now
+see at a glance the number of prompt runs, average latency and cost, and more.
+
+![](/assets/changelog/241120/metrics-1.png)
+
+## Default provider and models
+
+We have added a new section in the settings page where you can set default
+providers and models for your prompts. This allows you to quickly change the
+default settings for your prompts without having to go through the prompt
+creation flow every time.
+
+![](/assets/changelog/241120/default-settings-1.png)
+![](/assets/changelog/241120/default-settings-2.png)
+
+## More improvements
+
+- You can now get and create prompts from the SDK/API docs
+- You can now eject from simple LLM-as-judge evaluations into more complete
+  advanced evaluations that give you complete control over the evaluation prompt
+- Updated UI code snippets on how to push logs and evaluations to Latitude
+- Several improvements in infrastructure stability and performance
+- Several improvements and fixes to UI/UX
+
+</Update>
+
+<Update label='2024-11-13'>
+## New evaluations playground
+
+We have completely revamped our evaluations to make it super simple to create
+new evaluations from scratch. From now on you’ll only need to worry about typing
+the goal of your evaluation—as well as any additional instructions that might be
+useful.
+
+![](/assets/changelog/241113/simple-evaluations-1.png)
+
+## Latitude Cookbook
+
+We’ve started work on Latitude’s Cookbook showcasing common use cases with
+Latitude’s SDK. Here you can find the first examples.
+
+## Anthropic cache
+
+We have added support for Anthropic’s prompt caching beta feature.
+
+## Rust SDK
+
+Our community member @Dominik Spitzli has implemented a Rust port of Latitude’s SDK!
+
+## Latitude Typescript SDK v1 released
+
+We’ve released the first major version of Latitude’s SDK, v1.0.0, currently in
+beta. It adds support for evaluations, pushing logs, JSON API, and more.
+
+## Other improvements
+
+- Dramatically improved performance of the prompt editor on large prompts
+- Improved error reporting in the prompt editor
+- Long-lived modals no longer close on click-outside or hitting ESC key
+- Prompt input parameters are now stored in memory so that you can navigate to
+  other sections and come back without losing the latest inputs you used in a
+  specific prompt
+
+</Update>
+
+<Update label='2024-11-06'>
+## Upload external logs
+
+Users have long asked us to evaluate their prompts without having to run them
+via Latitude’s Gateway. Well, we now support this use case. You can now upload
+external logs to Latitude for evaluation so that, even if you run your prompts
+outside of Latitude, you can keep tracking their performance. We support
+uploading logs to Latitude both [from the
+UI](https://docs.latitude.so/guides/logs/upload-logs#upload-logs) and our
+[SDK/HTTP
+API](https://docs.latitude.so/guides/sdk/javascript-typescript-sdk#pushing-a-log-to-latitude).
+
+## Trigger evaluations from SDK
+
+In cases where AI agents have long running conversations with users users only
+want to evaluate the agent’s performance at particular points in time (i.e when
+the conversation has finished). You can now trigger evaluations from our [SDK /
+HTTP
+API](https://docs.latitude.so/guides/sdk/javascript-typescript-sdk#evaluating-conversations),
+giving you the tools to trigger evaluations at the precise moment you require
+it.
+
+## JSON API
+
+We’ve released the [v2 version of our Gateway API](https://docs.latitude.so/guides/prompt-manager/api-access#api-access), which supports non-streaming responses for the `run` and `chat` endpoints. We've also released the v1 major version of our SDK, which introduces support for the new HTTP API version, as well as the features above described.
+
+## Other improvements
+
+- Improved performance of prompt editor in large prompts
+- Added code examples on how to use the SDK to the OSS repository
+- Improved and fixed documentation in several places
+- Several performance and stability improvements
+
+</Update>

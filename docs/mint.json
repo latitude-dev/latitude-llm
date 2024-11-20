@@ -34,6 +34,10 @@
     {
       "name": "PromptL",
       "url": "promptl"
+    },
+    {
+      "name": "Changelog",
+      "url": "changelog"
     }
   ],
   "primaryTab": {
@@ -149,6 +153,10 @@
     {
       "group": "Advanced",
       "pages": ["promptl/advanced/chains", "promptl/advanced/snippets"]
+    },
+    {
+      "group": "Changelog",
+      "pages": ["changelog/changelog"]
     }
   ],
   "footerSocials": {
