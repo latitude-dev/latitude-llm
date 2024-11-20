@@ -224,14 +224,16 @@ function confirmDescription({
   isLoading,
   anyChanges,
   hasErrors,
+  title,
 }: {
   anyChanges: boolean
   hasErrors: boolean
   isLoading: boolean
+  title: string
 }) {
   if (isLoading) return undefined
   if (!anyChanges) return 'No changes to publish.'
-
+  if (!title.trim()) return 'Please provide a version name.'
   if (hasErrors)
     return 'Some documents has errors, please click on those documents to see the errors.'
   return 'Publishing a new version will update all your prompts in production.'
@@ -335,14 +337,20 @@ export default function PublishDraftCommitModal({
       }
       confirm={{
         label: isLoading ? 'Validating...' : 'Publish to production',
-        description: confirmDescription({ isLoading, anyChanges, hasErrors }),
-        disabled: isLoading || hasErrors,
+        description: confirmDescription({
+          isLoading,
+          anyChanges,
+          hasErrors,
+          title,
+        }),
+        disabled: isLoading || hasErrors || !title.trim(),
         isConfirming: isPublishing,
       }}
     >
       <div className='flex flex-col gap-4'>
         <FormWrapper>
           <Input
+            required
             label='Version name'
             value={title}
             onChange={(e) => setTitle(e.target.value)}
