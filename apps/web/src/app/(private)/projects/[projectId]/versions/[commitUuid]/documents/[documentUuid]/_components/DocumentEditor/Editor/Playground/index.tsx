@@ -7,7 +7,6 @@ import { DocumentVersion } from '@latitude-data/core/browser'
 import { useCurrentCommit } from '@latitude-data/web-ui'
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
 
-import { Header } from '../Header'
 import Chat from './Chat'
 import { DocumentParams } from './DocumentParams'
 import Preview from './Preview'
@@ -28,7 +27,6 @@ export default function Playground({
 
   return (
     <div className='flex flex-col gap-2 max-h-full h-full'>
-      <Header title='Parameters' />
       <div className='max-h-[33%] flex flex-col'>
         <DocumentParams commitVersionUuid={commit.uuid} document={document} />
       </div>
