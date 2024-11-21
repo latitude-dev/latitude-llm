@@ -13,6 +13,7 @@ import { getCurrentUser } from '$/services/auth/getCurrentUser'
 
 import ClientFilesTree from './ClientFilesTree'
 import CommitSelector from './CommitSelector'
+import ProjectSidebar from './projectSidebar'
 
 export default async function Sidebar({
   project,
@@ -45,12 +46,15 @@ export default async function Sidebar({
   return (
     <DocumentSidebar
       header={
-        <CommitSelector
-          headCommit={headCommit}
-          currentCommit={commit}
-          currentDocument={currentDocument}
-          draftCommits={rows}
-        />
+        <div className='flex flex-col gap-4'>
+          <CommitSelector
+            headCommit={headCommit}
+            currentCommit={commit}
+            currentDocument={currentDocument}
+            draftCommits={rows}
+          />
+          <ProjectSidebar />
+        </div>
       }
       tree={
         <ClientFilesTree

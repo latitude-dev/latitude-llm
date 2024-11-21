@@ -17,6 +17,8 @@ import { ProjectPageParams } from '$/app/(private)/projects/[projectId]/page'
 import { getCurrentUser, SessionData } from '$/services/auth/getCurrentUser'
 import { notFound } from 'next/navigation'
 
+import DocumentsLayout from './_components/DocumentsLayout'
+
 export type CommitPageParams = {
   children: ReactNode
   params: Promise<Awaited<ProjectPageParams['params']> & { commitUuid: string }>
@@ -54,7 +56,9 @@ export default async function CommitLayout({
   return (
     <ProjectProvider project={project}>
       <CommitProvider commit={commit} isHead={isHead}>
-        {children}
+        <DocumentsLayout projectId={project.id} commitUuid={commitUuid}>
+          {children}
+        </DocumentsLayout>
       </CommitProvider>
     </ProjectProvider>
   )

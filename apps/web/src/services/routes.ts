@@ -119,6 +119,9 @@ export const ROUTES = {
             const rootDocuments = `${root}/documents`
             return {
               root,
+              logs: {
+                root: `${root}/logs`,
+              },
               documents: {
                 root: rootDocuments,
                 detail: ({ uuid }: { uuid: string }) => {
