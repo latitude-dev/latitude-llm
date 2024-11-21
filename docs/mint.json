@@ -81,7 +81,8 @@
             "guides/prompt-manager/provider-rules/google"
           ]
         },
-        "guides/prompt-manager/cache"
+        "guides/prompt-manager/cache",
+        "guides/prompt-manager/migrate-to-promptl"
       ]
     },
     {
