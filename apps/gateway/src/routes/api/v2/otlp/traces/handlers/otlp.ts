@@ -1,10 +1,11 @@
 import { chunk } from 'lodash-es'
 
 import { zValidator } from '@hono/zod-validator'
-import { Project, SpanMetadataTypes } from '@latitude-data/core/browser'
+import { Project, Providers, SpanKind } from '@latitude-data/core/browser'
 import { ProjectsRepository } from '@latitude-data/core/repositories'
-import { bulkCreateSpans } from '@latitude-data/core/services/spans/bulkCreate'
-import { bulkCreateTraces } from '@latitude-data/core/services/traces/bulkCreate'
+import { spans } from '@latitude-data/core/schema'
+import { estimateCost } from '@latitude-data/core/services/ai/index'
+import { bulkCreateTracesAndSpans } from '@latitude-data/core/services/traces/bulkCreateTracesAndSpans'
 import { Factory } from 'hono/factory'
 import { z } from 'zod'
 
@@ -192,8 +193,8 @@ async function processBatch({
     >,
   )
 
-  // Create all traces in a single operation
-  await bulkCreateTraces({
+  // Create all traces and spans in a single transaction
+  await bulkCreateTracesAndSpans({
     project,
     traces: Object.values(traceGroups).map(
       ({ traceId, startTime, endTime, attributes }) => ({
@@ -203,52 +204,7 @@ async function processBatch({
         attributes,
       }),
     ),
-  })
-
-  // Create all spans in a single operation
-  await bulkCreateSpans({
-    spans: spans.map(({ span }) => {
-      const startTime = new Date(parseInt(span.startTimeUnixNano) / 1_000_000)
-      const endTime = span.endTimeUnixNano
-        ? new Date(parseInt(span.endTimeUnixNano) / 1_000_000)
-        : undefined
-
-      const { status, statusMessage } = convertOtlpStatus({
-        status: span.status,
-      })
-
-      return {
-        traceId: span.traceId,
-        spanId: span.spanId,
-        parentSpanId: span.parentSpanId,
-        name: span.name,
-        kind: convertOtlpSpanKind({ kind: span.kind }) as
-          | 'internal'
-          | 'server'
-          | 'client'
-          | 'producer'
-          | 'consumer',
-        startTime,
-        endTime,
-        attributes: convertOtlpAttributes({ attributes: span.attributes }),
-        status,
-        statusMessage,
-        events: span.events?.map((event) => ({
-          name: event.name,
-          timestamp: new Date(
-            parseInt(event.timeUnixNano) / 1_000_000,
-          ).toISOString(),
-          attributes: convertOtlpAttributes({ attributes: event.attributes }),
-        })),
-        links: span.links?.map((link) => ({
-          traceId: link.traceId,
-          spanId: link.spanId,
-          attributes: convertOtlpAttributes({ attributes: link.attributes }),
-        })),
-        metadataType: SpanMetadataTypes.Default,
-        metadataId: 1,
-      }
-    }),
+    spans: spans.map(({ span }) => processSpan({ span })),
   })
 }
 
@@ -276,7 +232,7 @@ function convertOtlpAttributes({
   )
 }
 
-function convertOtlpSpanKind({ kind }: { kind: number }): string {
+function convertOtlpSpanKind({ kind }: { kind: number }): SpanKind {
   // Based on OpenTelemetry SpanKind enum
   const kinds = {
     0: 'internal', // SPAN_KIND_UNSPECIFIED
@@ -285,7 +241,7 @@ function convertOtlpSpanKind({ kind }: { kind: number }): string {
     3: 'producer', // SPAN_KIND_PRODUCER
     4: 'consumer', // SPAN_KIND_CONSUMER
   }
-  return kinds[kind as keyof typeof kinds] || 'internal'
+  return (kinds[kind as keyof typeof kinds] as SpanKind) || SpanKind.Internal
 }
 
 function convertOtlpStatus({
@@ -308,6 +264,131 @@ function convertOtlpStatus({
   return {
     status: statusMap[status.code as keyof typeof statusMap],
     statusMessage: status.message,
+  }
+}
+
+function processGenerationSpan(
+  span: OtlpSpan,
+): Partial<typeof spans.$inferInsert> {
+  const attrs = convertOtlpAttributes({ attributes: span.attributes })
+
+  // Check if this is a generation span
+  if (!attrs['gen_ai.system'] || !attrs['llm.request.type']) {
+    return {}
+  }
+
+  // Map provider names to our enum
+  const providerMap: Record<string, Providers> = {
+    OpenAI: Providers.OpenAI,
+    Anthropic: Providers.Anthropic,
+    Groq: Providers.Groq,
+    Mistral: Providers.Mistral,
+    Google: Providers.Google,
+    // Add other providers as needed
+  }
+
+  const provider = providerMap[attrs['gen_ai.system'] as string]
+  if (!provider) {
+    return {}
+  }
+
+  // Extract model information
+  const model = attrs['gen_ai.response.model'] || attrs['gen_ai.request.model']
+  if (!model) {
+    return {}
+  }
+
+  // Extract model parameters from request attributes
+  const modelParameters = Object.entries(attrs)
+    .filter(
+      ([key, value]) =>
+        key.startsWith('gen_ai.request.') &&
+        key !== 'gen_ai.request.model' &&
+        value !== undefined,
+    )
+    .reduce(
+      (acc, [key, value]) => {
+        // Remove the 'gen_ai.request.' prefix
+        const paramName = key.replace('gen_ai.request.', '')
+        acc[paramName] = value
+        return acc
+      },
+      {} as Record<string, any>,
+    )
+
+  // Extract usage information
+  const usage = {
+    promptTokens: parseInt(attrs['gen_ai.usage.prompt_tokens'] as string) || 0,
+    completionTokens:
+      parseInt(attrs['gen_ai.usage.completion_tokens'] as string) || 0,
+    totalTokens: parseInt(attrs['gen_ai.usage.total_tokens'] as string) || 0,
+  }
+
+  // Calculate costs
+  const totalCost = estimateCost({ usage, provider, model: model as string })
+  const costInMillicents = Math.round(totalCost * 100_000) // Convert to millicents
+
+  // Extract input/output content
+  const input = attrs['gen_ai.prompt.0.content'] as string | undefined
+  const output = attrs['gen_ai.completion.0.content'] as string | undefined
+
+  return {
+    internalType: 'generation',
+    model: model as string,
+    modelParameters:
+      Object.keys(modelParameters).length > 0
+        ? JSON.stringify(modelParameters)
+        : null,
+    input,
+    output,
+    inputTokens: usage.promptTokens,
+    outputTokens: usage.completionTokens,
+    totalTokens: parseInt(attrs['llm.usage.total_tokens'] as string) || 0,
+    inputCostInMillicents: Math.round(
+      (costInMillicents * usage.promptTokens) /
+        (usage.promptTokens + usage.completionTokens),
+    ),
+    outputCostInMillicents: Math.round(
+      (costInMillicents * usage.completionTokens) /
+        (usage.promptTokens + usage.completionTokens),
+    ),
+    totalCostInMillicents: costInMillicents,
+  }
+}
+
+function processSpan({ span }: { span: OtlpSpan }) {
+  const startTime = new Date(parseInt(span.startTimeUnixNano) / 1_000_000)
+  const endTime = span.endTimeUnixNano
+    ? new Date(parseInt(span.endTimeUnixNano) / 1_000_000)
+    : undefined
+
+  const { status, statusMessage } = convertOtlpStatus({ status: span.status })
+
+  return {
+    traceId: span.traceId,
+    spanId: span.spanId,
+    parentSpanId: span.parentSpanId,
+    name: span.name,
+    kind: convertOtlpSpanKind({ kind: span.kind }),
+    startTime,
+    endTime,
+    attributes: convertOtlpAttributes({ attributes: span.attributes }),
+    status,
+    statusMessage,
+    events: span.events?.map((event) => ({
+      name: event.name,
+      timestamp: new Date(
+        parseInt(event.timeUnixNano) / 1_000_000,
+      ).toISOString(),
+      attributes: convertOtlpAttributes({ attributes: event.attributes }),
+    })),
+    links: span.links?.map((link) => ({
+      traceId: link.traceId,
+      spanId: link.spanId,
+      attributes: convertOtlpAttributes({ attributes: link.attributes }),
+    })),
+    // Add generation-specific fields
+    ...processGenerationSpan(span),
   }
 }
 

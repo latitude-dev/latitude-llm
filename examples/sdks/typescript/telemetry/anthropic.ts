@@ -22,7 +22,11 @@ sdk.instrument({
 class AnthropicClient implements LLMClient {
   async makeCompletion(message: string): Promise<void> {
     await anthropic.messages.create({
-      messages: [{ role: 'user', content: message }],
+      system: 'You are a helpful assistant that makes great jokes.',
+      messages: [
+        { role: 'user', content: 'I will ask you for a joke ok?' },
+        { role: 'user', content: message },
+      ],
       model: 'claude-3-5-sonnet-latest',
       max_tokens: 1024,
     })

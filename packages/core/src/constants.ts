@@ -410,7 +410,24 @@ export const resultConfigurationSchema = z.discriminatedUnion('type', [
 
 export const DEFAULT_PAGINATION_SIZE = 25
 
-export enum SpanMetadataTypes {
-  Default = 'default',
-  Generation = 'generation',
+export enum SpanKind {
+  // Default type. Represents operations that happen within a service
+  // Example: Database queries, file I/O, or business logic processing
+  Internal = 'internal',
+
+  // Represents the handling of an incoming request from a client
+  // Example: HTTP server handling a request, gRPC service receiving a call
+  Server = 'server',
+
+  // Represents outgoing requests to a remote service
+  // Example: HTTP client making an API call, gRPC client initiating a call
+  Client = 'client',
+
+  // Represents the creation/enqueuing of a message to be processed later
+  // Example: Publishing a message to a message queue, sending to a stream
+  Producer = 'producer',
+
+  // Represents the processing of a message from a message queue/stream
+  // Example: Processing a message from RabbitMQ, handling a Kafka message
+  Consumer = 'consumer',
 }

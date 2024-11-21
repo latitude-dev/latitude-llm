@@ -14,7 +14,6 @@ const sdk = new Latitude(process.env.LATITUDE_API_KEY, {
 sdk.instrument({
   disableBatch: true,
   instrumentModules: {
-    // @ts-expect-error
     openAI: OpenAI,
   },
 })
@@ -22,7 +21,11 @@ sdk.instrument({
 class OpenAIClient implements LLMClient {
   async makeCompletion(message: string): Promise<void> {
     await openai.chat.completions.create({
-      messages: [{ role: 'user', content: message }],
+      temperature: 0.7,
+      messages: [
+        { role: 'system', content: 'You are a helpful assistant.' },
+        { role: 'user', content: message },
+      ],
       model: 'gpt-4-turbo-preview',
     })
   }

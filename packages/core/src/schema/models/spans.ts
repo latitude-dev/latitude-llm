@@ -2,33 +2,42 @@ import {
   bigint,
   bigserial,
   index,
+  integer,
   jsonb,
   text,
   timestamp,
   varchar,
 } from 'drizzle-orm/pg-core'
 
+import { SpanKind } from '../../constants'
 import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
 import { traces } from './traces'
 
+// SpanKind describes the relationship between the Span, its parents, and its children in a Trace
 export const spanKindsEnum = latitudeSchema.enum('span_kinds', [
-  'internal',
-  'server',
-  'client',
-  'producer',
-  'consumer',
+  SpanKind.Internal,
+  SpanKind.Server,
+  SpanKind.Client,
+  SpanKind.Producer,
+  SpanKind.Consumer,
 ])
 
-export const spanMetadataTypesEnum = latitudeSchema.enum(
-  'span_metadata_types',
-  ['default', 'generation'],
+// Represents specific internal span types for more detailed categorization
+export const spanInternalTypesEnum = latitudeSchema.enum(
+  'span_internal_types',
+  [
+    // Used for AI/LLM generation operations
+    'generation',
+  ],
 )
 
 export const spans = latitudeSchema.table(
   'spans',
   {
     id: bigserial('id', { mode: 'number' }).notNull().primaryKey(),
+
+    // OTLP default schema
     traceId: varchar('trace_id', { length: 32 })
       .notNull()
       .references(() => traces.traceId, { onDelete: 'cascade' }),
@@ -42,6 +51,10 @@ export const spans = latitudeSchema.table(
       jsonb('attributes').$type<Record<string, string | number | boolean>>(),
     status: varchar('status', { length: 64 }),
     statusMessage: text('status_message'),
+
+    // Events represent timestamped activities that occurred during the span's lifetime
+    // Examples: checkpoints, state changes, or significant operations
+    // Each event has a name, timestamp, and optional attributes for additional context
     events: jsonb('events').$type<
       Array<{
         name: string
@@ -49,6 +62,10 @@ export const spans = latitudeSchema.table(
         attributes?: Record<string, string | number | boolean>
       }>
     >(),
+
+    // Links establish connections between spans across different traces
+    // Useful for tracking relationships between distributed operations
+    // Example: A job processor linking to the trace that created the job
     links: jsonb('links').$type<
       Array<{
         traceId: string
@@ -56,8 +73,21 @@ export const spans = latitudeSchema.table(
         attributes?: Record<string, string | number | boolean>
       }>
     >(),
-    metadataType: spanMetadataTypesEnum('metadata_type').notNull(),
-    metadataId: bigint('metadata_id', { mode: 'number' }).notNull(),
+
+    // Generation metadata
+    model: varchar('model'),
+    modelParameters: text('model_parameters'),
+    input: text('input'),
+    output: text('output'),
+    inputTokens: bigint('prompt_tokens', { mode: 'number' }).default(0),
+    outputTokens: bigint('completion_tokens', { mode: 'number' }).default(0),
+    totalTokens: bigint('total_tokens', { mode: 'number' }).default(0),
+    inputCostInMillicents: integer('input_cost_in_millicents').default(0),
+    outputCostInMillicents: integer('output_cost_in_millicents').default(0),
+    totalCostInMillicents: integer('total_cost_in_millicents').default(0),
+
+    // Internal Latitude enum to identify generation spans from other spans
+    internalType: spanInternalTypesEnum('internal_type'),
     ...timestamps(),
   },
   (table) => ({
@@ -65,9 +95,5 @@ export const spans = latitudeSchema.table(
     spanIdIdx: index('spans_span_id_idx').on(table.spanId),
     parentSpanIdIdx: index('spans_parent_span_id_idx').on(table.parentSpanId),
     startTimeIdx: index('spans_start_time_idx').on(table.startTime),
-    metadataIdx: index('spans_metadata_idx').on(
-      table.metadataId,
-      table.metadataType,
-    ),
   }),
 )
