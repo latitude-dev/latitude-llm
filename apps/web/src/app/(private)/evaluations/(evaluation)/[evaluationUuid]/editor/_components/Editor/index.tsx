@@ -11,12 +11,10 @@ import SimpleEvaluationEditor from './Simple'
 export default function EvaluationEditor({
   evaluation,
   providerApiKeys,
-  evaluationUuid,
   freeRunsCount,
 }: {
   evaluation: EvaluationDto
   providerApiKeys: ProviderApiKey[]
-  evaluationUuid: string
   freeRunsCount: number | undefined
 }) {
   if (evaluation.metadataType === EvaluationMetadataType.LlmAsJudgeAdvanced) {
@@ -26,7 +24,7 @@ export default function EvaluationEditor({
     return (
       <AdvancedEvaluationEditor
         defaultPrompt={evaluationMetadata.prompt}
-        evaluationUuid={evaluationUuid}
+        evaluation={evaluation}
         freeRunsCount={freeRunsCount}
         providerApiKeys={providerApiKeys}
       />

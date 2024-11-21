@@ -89,7 +89,7 @@ export default function useEvaluations(
 
   const findEvaluation = useMemo(
     () => (evaluationUuid: string) =>
-      data.find((e) => e.uuid === evaluationUuid)!,
+      data.find((e) => e.uuid === evaluationUuid),
     [data],
   )
 

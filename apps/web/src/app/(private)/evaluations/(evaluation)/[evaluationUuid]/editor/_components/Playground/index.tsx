@@ -44,8 +44,10 @@ export default function Playground({
 }: {
   evaluation: EvaluationDto
 }) {
-  const { findEvaluation } = useEvaluations()
-  const evaluation = findEvaluation(serverEvaluation.uuid)!
+  const { findEvaluation } = useEvaluations({
+    fallbackData: [serverEvaluation],
+  })
+  const evaluation = findEvaluation(serverEvaluation.uuid)
   const [mode, setMode] = useState<'preview' | 'chat'>('preview')
   const searchParams = useSearchParams()
   const providerLogId = searchParams.get('providerLogId')
@@ -80,6 +82,9 @@ export default function Playground({
       cost: (documentLogWithMetadata.costInMillicents || 0) / 1000,
     }
   }, [documentLogWithMetadata, providerLog])
+
+  // Server returns 404 but Typescript doesn't know that
+  if (!evaluation) return null
 
   if (!providerLog) {
     return <BlankSlate evaluation={evaluation} />

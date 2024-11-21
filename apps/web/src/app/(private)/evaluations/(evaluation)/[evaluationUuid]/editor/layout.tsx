@@ -34,7 +34,6 @@ export default async function DocumentPage({
     <EvaluationEditorLayout
       evaluation={evaluation}
       providerApiKeys={providerApiKeys.map(providerApiKeyPresenter)}
-      evaluationUuid={evaluationUuid}
       freeRunsCount={freeRunsCount ? Number(freeRunsCount) : undefined}
     >
       {children}

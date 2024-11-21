@@ -3,6 +3,7 @@
 import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 
 import {
+  EvaluationDto,
   EvaluationMetadataLlmAsJudgeAdvanced,
   EvaluationMetadataType,
   ProviderApiKey,
@@ -19,18 +20,20 @@ import useEvaluations from '$/stores/evaluations'
 import useProviderApiKeys from '$/stores/providerApiKeys'
 
 export default function AdvancedEvaluationEditor({
-  evaluationUuid,
+  evaluation: serverEvaluation,
   defaultPrompt,
   providerApiKeys,
   freeRunsCount,
 }: {
-  evaluationUuid: string
+  evaluation: EvaluationDto
   defaultPrompt: string
   providerApiKeys?: ProviderApiKey[]
   freeRunsCount?: number
 }) {
-  const { findEvaluation, isLoading, update, isUpdating } = useEvaluations()
-  const evaluation = findEvaluation(evaluationUuid)!
+  const { findEvaluation, isLoading, update, isUpdating } = useEvaluations({
+    fallbackData: [serverEvaluation],
+  })
+  const evaluation = findEvaluation(serverEvaluation.uuid)
   const evaluationMetadata = useMemo(
     () => evaluation?.metadata as EvaluationMetadataLlmAsJudgeAdvanced,
     [evaluation],
