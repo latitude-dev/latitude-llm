@@ -15,7 +15,6 @@ interface EvaluationEditorLayoutProps {
   children: ReactNode
   evaluation: EvaluationDto
   providerApiKeys: ProviderApiKey[]
-  evaluationUuid: string
   freeRunsCount: number | undefined
 }
 
@@ -23,7 +22,6 @@ export default function EvaluationEditorLayout({
   children,
   evaluation,
   providerApiKeys,
-  evaluationUuid,
   freeRunsCount,
 }: EvaluationEditorLayoutProps) {
   const searchParams = useSearchParams()
@@ -45,7 +43,6 @@ export default function EvaluationEditorLayout({
             <EvaluationEditor
               evaluation={evaluation}
               providerApiKeys={providerApiKeys}
-              evaluationUuid={evaluationUuid}
               freeRunsCount={freeRunsCount}
             />
           </div>
