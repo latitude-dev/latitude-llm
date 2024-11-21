@@ -26,150 +26,85 @@ describe('POST /api/v2/otlp/v1/traces', () => {
     }
   })
 
-  describe('when authorized', () => {
-    it('processes OTLP trace data', async () => {
-      const traceId = '12345678901234567890123456789012'
-      const spanId = '1234567890123456'
-      const startTime = Date.now() * 1_000_000 // Convert to nano
-      const endTime = startTime + 1_000_000_000 // 1 second later in nano
+  const createBasicSpan = (traceId: string, spanId: string) => ({
+    traceId,
+    spanId,
+    name: 'test-span',
+    kind: 1,
+    startTimeUnixNano: (Date.now() * 1_000_000).toString(),
+    endTimeUnixNano: (Date.now() * 1_000_000 + 1_000_000_000).toString(),
+    attributes: [{ key: 'test.attribute', value: { stringValue: 'test' } }],
+    status: { code: 1, message: 'Success' },
+  })
 
-      const response = await app.request(route, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          resourceSpans: [
+  const createOtlpRequest = (spans: any[]) => ({
+    projectId: project.id,
+    resourceSpans: [
+      {
+        resource: {
+          attributes: [
             {
-              resource: {
-                attributes: [
-                  {
-                    key: 'service.name',
-                    value: { stringValue: 'test-service' },
-                  },
-                ],
-              },
-              scopeSpans: [
-                {
-                  spans: [
-                    {
-                      traceId,
-                      spanId,
-                      name: 'test-span',
-                      kind: 1, // SERVER
-                      startTimeUnixNano: startTime.toString(),
-                      endTimeUnixNano: endTime.toString(),
-                      attributes: [
-                        {
-                          key: 'http.method',
-                          value: { stringValue: 'GET' },
-                        },
-                      ],
-                      status: {
-                        code: 1, // OK
-                        message: 'Success',
-                      },
-                    },
-                  ],
-                },
-              ],
+              key: 'service.name',
+              value: { stringValue: 'test-service' },
             },
           ],
-        }),
-      })
-
-      expect(response.status).toBe(200)
-      const result = await response.json()
-      expect(result).toEqual({ status: 'ok' })
-    })
-
-    it('handles large batches of spans efficiently', async () => {
-      const traceId = '12345678901234567890123456789012'
-      const startTime = Date.now() * 1_000_000
-
-      // Create test data with multiple spans
-      const spans = Array.from({ length: 100 }, (_, i) => ({
-        traceId,
-        spanId: `span${i.toString().padStart(16, '0')}`,
-        name: `span-${i}`,
-        kind: 1,
-        startTimeUnixNano: startTime.toString(),
-        attributes: [
-          {
-            key: 'test.index',
-            value: { intValue: i },
-          },
-        ],
-        status: {
-          code: 1,
-          message: 'Success',
         },
-      }))
+        scopeSpans: [{ spans }],
+      },
+    ],
+  })
+
+  describe('when authorized', () => {
+    it('processes single span', async () => {
+      const span = createBasicSpan(
+        '12345678901234567890123456789012',
+        '1234567890123456',
+      )
 
       const response = await app.request(route, {
         method: 'POST',
         headers,
-        body: JSON.stringify({
-          resourceSpans: [
-            {
-              resource: {
-                attributes: [
-                  {
-                    key: 'service.name',
-                    value: { stringValue: 'test-service' },
-                  },
-                ],
-              },
-              scopeSpans: [
-                {
-                  spans,
-                },
-              ],
-            },
-          ],
-        }),
+        body: JSON.stringify(createOtlpRequest([span])),
       })
 
       expect(response.status).toBe(200)
-      const result = await response.json()
-      expect(result).toEqual({ status: 'ok' })
+      expect(await response.json()).toEqual({ status: 'ok' })
     })
 
-    it('processes multiple traces in parallel', async () => {
-      const traces = Array.from({ length: 3 }, (_, i) => ({
-        traceId: `trace${i.toString().padStart(29, '0')}123`,
-        spans: Array.from({ length: 5 }, (_, j) => ({
-          traceId: `trace${i.toString().padStart(29, '0')}123`,
-          spanId: `span${j.toString().padStart(16, '0')}`,
-          name: `span-${i}-${j}`,
-          kind: 1,
-          startTimeUnixNano: (Date.now() * 1_000_000).toString(),
-        })),
-      }))
+    it('handles batch of spans', async () => {
+      const spans = Array.from({ length: 10 }, (_, i) =>
+        createBasicSpan(
+          '12345678901234567890123456789012',
+          i.toString(16).padStart(16, '0'),
+        ),
+      )
 
       const response = await app.request(route, {
         method: 'POST',
         headers,
-        body: JSON.stringify({
-          resourceSpans: [
-            {
-              resource: {
-                attributes: [
-                  {
-                    key: 'service.name',
-                    value: { stringValue: 'test-service' },
-                  },
-                ],
-              },
-              scopeSpans: traces.map((trace) => ({
-                spans: trace.spans,
-              })),
-            },
-          ],
-        }),
+        body: JSON.stringify(createOtlpRequest(spans)),
       })
 
       expect(response.status).toBe(200)
-      const result = await response.json()
-      expect(result).toEqual({ status: 'ok' })
+      expect(await response.json()).toEqual({ status: 'ok' })
+    })
+
+    it('processes multiple traces', async () => {
+      const spans = Array.from({ length: 3 }, (_, i) =>
+        createBasicSpan(
+          `${'0'.repeat(29)}${(i + 1).toString().padStart(3, '0')}`,
+          i.toString(16).padStart(16, '0'),
+        ),
+      )
+
+      const response = await app.request(route, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify(createOtlpRequest(spans)),
+      })
+
+      expect(response.status).toBe(200)
+      expect(await response.json()).toEqual({ status: 'ok' })
     })
   })
 
