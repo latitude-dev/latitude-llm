@@ -409,3 +409,8 @@ export const resultConfigurationSchema = z.discriminatedUnion('type', [
 ])
 
 export const DEFAULT_PAGINATION_SIZE = 25
+
+export enum SpanMetadataTypes {
+  Default = 'default',
+  Generation = 'generation',
+}
