@@ -1,5 +1,8 @@
 import { ExportResultCode, hrTimeToNanoseconds } from '@opentelemetry/core'
-import { OTLPExporterConfigBase } from '@opentelemetry/otlp-exporter-base'
+import {
+  OTLPExporterBase,
+  OTLPExporterConfigBase,
+} from '@opentelemetry/otlp-exporter-base'
 import { ReadableSpan, SpanExporter } from '@opentelemetry/sdk-trace-base'
 
 interface OTLPHttpExporterConfig extends OTLPExporterConfigBase {
@@ -8,17 +11,79 @@ interface OTLPHttpExporterConfig extends OTLPExporterConfigBase {
   endpoint?: string
 }
 
-export class LatitudeExporter implements SpanExporter {
+export class LatitudeExporter
+  extends OTLPExporterBase<any, any, any>
+  implements SpanExporter
+{
+  url: string
   private headers: Record<string, string>
-  private url: string
   private projectId: number
 
   constructor(config: OTLPHttpExporterConfig) {
+    super(config)
+
     this.projectId = config.projectId
-    this.url = this.getDefaultUrl(config)
+    this.url = config.endpoint || 'http://localhost:8787/api/v2/otlp/v1/traces'
     this.headers = {
-      ...this.headers,
       Authorization: `Bearer ${config.apiKey}`,
+    }
+  }
+
+  async export(
+    spans: ReadableSpan[],
+    resultCallback: (result: any) => void,
+  ): Promise<void> {
+    await this.send(
+      spans,
+      () => resultCallback({ code: ExportResultCode.SUCCESS }),
+      (error) => {
+        resultCallback({ code: ExportResultCode.FAILED, error })
+      },
+    )
+  }
+
+  async shutdown(): Promise<void> {
+    // No-op
+  }
+
+  async onShutdown(): Promise<void> {
+    // No-op
+  }
+
+  async onInit(): Promise<void> {
+    // No-op
+  }
+
+  async send(
+    spans: ReadableSpan[],
+    onSuccess: () => void,
+    onError: (error: Error) => void,
+  ): Promise<void> {
+    if (spans.length === 0) {
+      onSuccess()
+      return
+    }
+
+    const serviceRequest = this.convert(spans)
+    const body = JSON.stringify(serviceRequest)
+
+    try {
+      const response = await fetch(this.url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...this.headers,
+        },
+        body,
+      })
+
+      if (!response.ok) {
+        throw new Error(`${response.status} ${response.statusText}`)
+      }
+
+      onSuccess()
+    } catch (error) {
+      onError(error as Error)
     }
   }
 
@@ -39,7 +104,7 @@ export class LatitudeExporter implements SpanExporter {
                 spanId: span.spanContext().spanId,
                 parentSpanId: span.parentSpanId,
                 name: span.name,
-                kind: this.convertKind(span.kind),
+                kind: span.kind,
                 startTimeUnixNano: hrTimeToNanoseconds(
                   span.startTime,
                 ).toString(),
@@ -69,7 +134,11 @@ export class LatitudeExporter implements SpanExporter {
     }
   }
 
-  private convertAttributes(attributes: Record<string, unknown>): Array<{
+  getDefaultUrl(config: any): string {
+    return config.endpoint || 'http://localhost:8787/api/v2/otlp/v1/traces'
+  }
+
+  private convertAttributes(attributes: Record<string, unknown> = {}): Array<{
     key: string
     value: { stringValue?: string; intValue?: number; boolValue?: boolean }
   }> {
@@ -88,61 +157,5 @@ export class LatitudeExporter implements SpanExporter {
     if (typeof value === 'number') return { intValue: value }
     if (typeof value === 'boolean') return { boolValue: value }
     return { stringValue: String(value) }
-  }
-
-  private convertKind(kind: number): number {
-    // OpenTelemetry SpanKind enum matches our expected values
-    return kind
-  }
-
-  getDefaultUrl(config: OTLPHttpExporterConfig): string {
-    return config.endpoint || 'http://localhost:3000/api/v2/otlp/v1/traces'
-  }
-
-  async send(
-    spans: ReadableSpan[],
-    onSuccess: () => void,
-    onError: (error: Error) => void,
-  ): Promise<void> {
-    if (spans.length === 0) {
-      onSuccess()
-      return
-    }
-
-    const serviceRequest = this.convert(spans)
-    const body = JSON.stringify(serviceRequest)
-
-    try {
-      const response = await fetch(this.url, {
-        method: 'POST',
-        headers: this.headers,
-        body,
-      })
-
-      if (!response.ok) {
-        throw new Error(`${response.status} ${response.statusText}`)
-      }
-
-      onSuccess()
-    } catch (error) {
-      onError(error as Error)
-    }
-  }
-
-  async export(
-    spans: ReadableSpan[],
-    resultCallback: (result) => void,
-  ): Promise<void> {
-    await this.send(
-      spans,
-      () => resultCallback({ code: ExportResultCode.SUCCESS }),
-      (error) => {
-        resultCallback({ code: ExportResultCode.FAILED, error })
-      },
-    )
-  }
-
-  async shutdown(): Promise<void> {
-    // No-op
   }
 }

@@ -8,6 +8,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.32.1",
     "@latitude-data/sdk": "workspace:^",
     "@pinecone-database/pinecone": "^4.0.0",
     "openai": "^4.68.4"

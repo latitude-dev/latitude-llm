@@ -1,1 +1,1 @@
-export { LatitudeExporter } from './exporters/otlp-http'
+export { LatitudeExporter } from './exporters/latitudeExporter'

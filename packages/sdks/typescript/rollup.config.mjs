@@ -28,6 +28,8 @@ const EXTERNALS = [
   'node-fetch',
   'stream',
   'eventsource-parser/stream',
+  '@latitude-data/telemetry-js',
+  '@traceloop/node-server-sdk',
 ]
 const config = [
   {

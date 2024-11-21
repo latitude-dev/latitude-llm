@@ -1,6 +1,8 @@
 import type { ContentType, Message, MessageRole } from '@latitude-data/compiler'
 import { DocumentLog, type ChainEventDto } from '@latitude-data/core/browser'
 import { EvaluationResultDto } from '@latitude-data/core/repositories'
+import { LatitudeExporter } from '@latitude-data/telemetry-js'
+import * as traceloop from '@traceloop/node-server-sdk'
 import env from '$sdk/env'
 import { GatewayApiConfig, RouteResolver } from '$sdk/utils'
 import {
@@ -124,6 +126,16 @@ class Latitude {
       run: this.runPrompt.bind(this),
       chat: this.chat.bind(this),
     }
+  }
+
+  instrument(config: Omit<traceloop.InitializeOptions, 'exporter'>) {
+    traceloop.initialize({
+      ...config,
+      exporter: new LatitudeExporter({
+        apiKey: this.options.apiKey,
+        projectId: this.options.projectId!,
+      }),
+    })
   }
 
   async getPrompt(
