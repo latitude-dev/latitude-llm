@@ -13,7 +13,7 @@ import {
 } from 'ai'
 import { z } from 'zod'
 
-import { ProviderLog } from './browser'
+import { ProviderLog, Span, Trace } from './browser'
 import { Config } from './services/ai'
 
 export const LATITUDE_EVENT = 'latitudeEventsChannel'
@@ -430,4 +430,8 @@ export enum SpanKind {
   // Represents the processing of a message from a message queue/stream
   // Example: Processing a message from RabbitMQ, handling a Kafka message
   Consumer = 'consumer',
+}
+
+export type TraceWithSpans = Trace & {
+  spans: Span[]
 }

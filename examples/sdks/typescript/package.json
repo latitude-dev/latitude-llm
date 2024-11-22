@@ -8,9 +8,11 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@ai-sdk/openai": "^0.0.54",
     "@anthropic-ai/sdk": "^0.32.1",
     "@latitude-data/sdk": "workspace:^",
     "@pinecone-database/pinecone": "^4.0.0",
+    "ai": "^4.0.3",
     "openai": "^4.68.4"
   }
 }

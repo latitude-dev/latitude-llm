@@ -12,7 +12,6 @@ const sdk = new Latitude(process.env.LATITUDE_API_KEY, {
 })
 
 sdk.instrument({
-  disableBatch: true,
   instrumentModules: {
     openAI: OpenAI,
   },

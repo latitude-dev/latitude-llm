@@ -29,6 +29,7 @@ import {
   ListOrdered,
   LoaderCircle,
   Lock,
+  Logs,
   Moon,
   Pencil,
   Pin,
@@ -102,6 +103,7 @@ const Icons = {
   twitter: Twitter,
   undo: Undo,
   rollText: ScrollTextIcon,
+  logs: Logs,
 }
 
 export type IconName = keyof typeof Icons

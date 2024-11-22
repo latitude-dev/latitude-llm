@@ -170,7 +170,7 @@ export async function runSequentialRequests(client: LLMClient) {
   const shuffledTopics = [...topics].sort(() => Math.random() - 0.5)
 
   for (let i = 0; i < shuffledTopics.length; i++) {
-    await new Promise((resolve) => setTimeout(resolve, 1000)) // Wait 1 second
+    await new Promise((resolve) => setTimeout(resolve, 250)) // Wait 250ms
     await makeJokeRequest(shuffledTopics[i], client)
   }
 

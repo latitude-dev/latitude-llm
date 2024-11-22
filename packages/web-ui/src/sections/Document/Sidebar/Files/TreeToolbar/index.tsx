@@ -45,7 +45,7 @@ export function TreeToolbar() {
 
   return (
     <>
-      <div className='bg-background sticky top-0 flex flex-row items-center justify-between px-4 mb-2'>
+      <div className='bg-background sticky top-0 flex flex-row items-center justify-between px-4'>
         <Text.H5M>Files</Text.H5M>
         <div className='flex flex-row space-x-2'>
           <Button

@@ -76,9 +76,9 @@ export const spans = latitudeSchema.table(
 
     // Generation metadata
     model: varchar('model'),
-    modelParameters: text('model_parameters'),
-    input: text('input'),
-    output: text('output'),
+    modelParameters: jsonb('model_parameters'),
+    input: jsonb('input'),
+    output: jsonb('output'),
     inputTokens: bigint('prompt_tokens', { mode: 'number' }).default(0),
     outputTokens: bigint('completion_tokens', { mode: 'number' }).default(0),
     totalTokens: bigint('total_tokens', { mode: 'number' }).default(0),

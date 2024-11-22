@@ -1,3 +1,5 @@
+import { inArray } from 'drizzle-orm'
+
 import { Project } from '../../browser'
 import { database } from '../../client'
 import { SpanKind } from '../../constants'
@@ -38,9 +40,9 @@ export type BulkCreateTracesAndSpansProps = {
     }> | null
     internalType?: 'generation' | null
     model?: string | null
-    modelParameters?: string | null
-    input?: string | null
-    output?: string | null
+    modelParameters?: unknown | null
+    input?: unknown | null
+    output?: unknown | null
     inputTokens?: number | null
     outputTokens?: number | null
     totalTokens?: number | null
@@ -48,6 +50,7 @@ export type BulkCreateTracesAndSpansProps = {
     outputCostInMillicents?: number | null
     totalCostInMillicents?: number | null
   }>
+  skipExistingTraces?: boolean
 }
 
 export async function bulkCreateTracesAndSpans(
@@ -55,31 +58,69 @@ export async function bulkCreateTracesAndSpans(
     project,
     traces: tracesToCreate,
     spans: spansToCreate,
+    skipExistingTraces,
   }: BulkCreateTracesAndSpansProps,
   db = database,
 ) {
-  return Transaction.call(async (tx) => {
-    // Create all traces first
-    const createdTraces = await tx
-      .insert(traces)
-      .values(
-        tracesToCreate.map((trace) => ({
-          projectId: project.id,
-          traceId: trace.traceId,
-          name: trace.name,
-          startTime: trace.startTime,
-          endTime: trace.endTime,
-          attributes: trace.attributes,
-          status: trace.status,
-        })),
-      )
-      .returning()
+  // First, find existing traces outside the transaction
+  let existingTraceIds = new Set<string>()
+  if (tracesToCreate.length > 0) {
+    const existingTraces = await db.query.traces.findMany({
+      where: inArray(
+        traces.traceId,
+        tracesToCreate.map((t) => t.traceId),
+      ),
+    })
+    existingTraceIds = new Set(existingTraces.map((t) => t.traceId))
+  }
 
-    // Then create all spans
+  // Filter out traces that already exist if skipExistingTraces is true
+  const tracesToInsert = skipExistingTraces
+    ? tracesToCreate.filter((trace) => !existingTraceIds.has(trace.traceId))
+    : tracesToCreate
+
+  return Transaction.call(async (tx) => {
+    // Create new traces if any
+    let createdTraces: (typeof traces.$inferSelect)[] = []
+    if (tracesToInsert.length > 0) {
+      createdTraces = await tx
+        .insert(traces)
+        .values(
+          tracesToInsert.map((trace) => ({
+            projectId: project.id,
+            traceId: trace.traceId,
+            name: trace.name,
+            startTime: trace.startTime,
+            endTime: trace.endTime,
+            attributes: trace.attributes,
+            status: trace.status,
+          })),
+        )
+        .onConflictDoUpdate({
+          target: [traces.traceId],
+          set: {
+            updatedAt: new Date(),
+          },
+        })
+        .returning()
+    }
+
+    // Get all valid trace IDs (both existing and newly created)
+    const validTraceIds = new Set([
+      ...existingTraceIds,
+      ...createdTraces.map((t) => t.traceId),
+    ])
+
+    // Filter spans to only include those associated with valid traces
+    const validSpans = spansToCreate.filter((span) =>
+      validTraceIds.has(span.traceId),
+    )
+
+    // Create all valid spans
     const createdSpans = await tx
       .insert(spans)
       .values(
-        spansToCreate.map((span) => ({
+        validSpans.map((span) => ({
           traceId: span.traceId,
           spanId: span.spanId,
           parentSpanId: span.parentSpanId,

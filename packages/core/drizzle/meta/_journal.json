@@ -726,22 +726,8 @@
     {
       "idx": 104,
       "version": "7",
-      "when": 1732187081700,
-      "tag": "0104_careful_gambit",
-      "breakpoints": true
-    },
-    {
-      "idx": 105,
-      "version": "7",
-      "when": 1732197306657,
-      "tag": "0105_ancient_starjammers",
-      "breakpoints": true
-    },
-    {
-      "idx": 106,
-      "version": "7",
-      "when": 1732198949696,
-      "tag": "0106_bitter_butterfly",
+      "when": 1732212834291,
+      "tag": "0104_icy_warhawk",
       "breakpoints": true
     }
   ]

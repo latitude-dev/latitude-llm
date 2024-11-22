@@ -1,5 +1,5 @@
 {
-  "id": "5813f21a-8f1e-40df-b53a-7f60265b8e0c",
+  "id": "33faa4c7-e6f1-4e66-a117-6051a13d5569",
   "prevId": "32775b5e-072b-48a5-8fb7-fc770fc46faa",
   "version": "7",
   "dialect": "postgresql",
@@ -3478,18 +3478,78 @@
           "primaryKey": false,
           "notNull": false
         },
-        "metadata_type": {
-          "name": "metadata_type",
-          "type": "span_metadata_types",
-          "typeSchema": "latitude",
+        "model": {
+          "name": "model",
+          "type": "varchar",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false
         },
-        "metadata_id": {
-          "name": "metadata_id",
+        "model_parameters": {
+          "name": "model_parameters",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "input": {
+          "name": "input",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "output": {
+          "name": "output",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "prompt_tokens": {
+          "name": "prompt_tokens",
           "type": "bigint",
           "primaryKey": false,
-          "notNull": true
+          "notNull": false,
+          "default": 0
+        },
+        "completion_tokens": {
+          "name": "completion_tokens",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false,
+          "default": 0
+        },
+        "total_tokens": {
+          "name": "total_tokens",
+          "type": "bigint",
+          "primaryKey": false,
+          "notNull": false,
+          "default": 0
+        },
+        "input_cost_in_millicents": {
+          "name": "input_cost_in_millicents",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "default": 0
+        },
+        "output_cost_in_millicents": {
+          "name": "output_cost_in_millicents",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "default": 0
+        },
+        "total_cost_in_millicents": {
+          "name": "total_cost_in_millicents",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "default": 0
+        },
+        "internal_type": {
+          "name": "internal_type",
+          "type": "span_internal_types",
+          "typeSchema": "latitude",
+          "primaryKey": false,
+          "notNull": false
         },
         "created_at": {
           "name": "created_at",
@@ -3557,27 +3617,6 @@
           "columns": [
             {
               "expression": "start_time",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "spans_metadata_idx": {
-          "name": "spans_metadata_idx",
-          "columns": [
-            {
-              "expression": "metadata_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "metadata_type",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -3708,6 +3747,13 @@
         "evaluation_resultable_numbers"
       ]
     },
+    "latitude.span_internal_types": {
+      "name": "span_internal_types",
+      "schema": "latitude",
+      "values": [
+        "generation"
+      ]
+    },
     "latitude.span_kinds": {
       "name": "span_kinds",
       "schema": "latitude",
@@ -3717,14 +3763,6 @@
         "client",
         "producer",
         "consumer"
-      ]
-    },
-    "latitude.span_metadata_types": {
-      "name": "span_metadata_types",
-      "schema": "latitude",
-      "values": [
-        "default",
-        "generation"
       ]
     }
   },

@@ -119,8 +119,8 @@ export const ROUTES = {
             const rootDocuments = `${root}/documents`
             return {
               root,
-              logs: {
-                root: `${root}/logs`,
+              traces: {
+                root: `${root}/traces`,
               },
               documents: {
                 root: rootDocuments,

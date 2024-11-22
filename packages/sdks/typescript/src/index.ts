@@ -138,6 +138,14 @@ class Latitude {
     })
   }
 
+  workflow(...args: Parameters<typeof traceloop.withWorkflow>) {
+    return traceloop.withWorkflow(...args)
+  }
+
+  task(...args: Parameters<typeof traceloop.withTask>) {
+    return traceloop.withTask(...args)
+  }
+
   async getPrompt(
     path: string,
     { projectId, versionUuid }: GetPromptOptions = {},
