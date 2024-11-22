@@ -4,6 +4,7 @@ import { ReactNode, useCallback, useState } from 'react'
 
 import { Icon, Text } from '@latitude-data/web-ui'
 
+export type OnExpandFn = (expanded: boolean) => void
 export function CollapsibleBox({
   title,
   collapsedContent,
@@ -11,6 +12,7 @@ export function CollapsibleBox({
   expandedContent,
   expandedHeight,
   initialExpanded = false,
+  onExpand,
 }: {
   title: string
   collapsedContent: ReactNode
@@ -18,15 +20,20 @@ export function CollapsibleBox({
   expandedContent?: ReactNode
   expandedHeight?: string
   initialExpanded?: boolean
+  onExpand?: OnExpandFn
 }) {
   const [isExpanded, setIsExpanded] = useState(initialExpanded)
 
   const toggleExpand = useCallback(() => {
-    setIsExpanded((prevExpanded) => !prevExpanded)
+    setIsExpanded((prevExpanded) => {
+      const nextExpanded = !prevExpanded
+      onExpand?.(nextExpanded)
+      return nextExpanded
+    })
   }, [])
 
   return (
-    <div className='border rounded-lg custom-scrollbar relative'>
+    <div className='w-full border rounded-lg custom-scrollbar relative'>
       <div
         className='flex flex-col cursor-pointer sticky top-0 z-10 bg-background'
         onClick={toggleExpand}

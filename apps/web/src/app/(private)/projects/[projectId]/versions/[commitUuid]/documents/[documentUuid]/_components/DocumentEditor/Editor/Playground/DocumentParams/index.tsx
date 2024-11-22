@@ -2,6 +2,7 @@ import { DocumentVersion } from '@latitude-data/core/browser'
 import {
   ClientOnly,
   CollapsibleBox,
+  OnExpandFn,
   TabSelector,
   type TabSelectorOption,
 } from '@latitude-data/web-ui'
@@ -33,6 +34,7 @@ const TABS: TabSelectorOption<InputSource>[] = [
 export type Props = {
   document: DocumentVersion
   commitVersionUuid: string
+  onExpand?: OnExpandFn
 }
 type ContentProps = Props & {
   datasetInfo: UseSelectDataset
@@ -127,7 +129,7 @@ function CollapsedContentHeader({
   )
 }
 
-export function DocumentParams(props: Props) {
+export function DocumentParams({ onExpand, ...props }: Props) {
   const datasetInfo = useSelectDataset({
     document: props.document,
     commitVersionUuid: props.commitVersionUuid,
@@ -151,6 +153,7 @@ export function DocumentParams(props: Props) {
         collapsedContent={null}
         collapsedContentHeader={<CollapsedContentHeader {...contentProps} />}
         expandedContent={<ParamsTabs {...contentProps} />}
+        onExpand={onExpand}
       />
     </ClientOnly>
   )
