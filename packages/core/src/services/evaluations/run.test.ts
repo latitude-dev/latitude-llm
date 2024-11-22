@@ -174,6 +174,7 @@ describe('run', () => {
         errorableType: ErrorableEntity.EvaluationResult,
         workspace,
         chain,
+        promptlVersion: 0,
         source: LogSources.Evaluation,
         providersMap: new Map().set(provider.name, providerUsed),
         configOverrides: {

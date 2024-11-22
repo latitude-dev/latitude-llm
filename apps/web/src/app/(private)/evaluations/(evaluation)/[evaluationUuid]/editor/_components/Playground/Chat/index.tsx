@@ -7,7 +7,7 @@ import {
 import {
   ChainEventTypes,
   EvaluationDto,
-  EvaluationMetadataLlmAsJudgeAdvanced,
+  EvaluationMetadataType,
   StreamEventTypes,
 } from '@latitude-data/core/browser'
 import {
@@ -23,6 +23,7 @@ import {
   Timer,
   TokenUsage,
 } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/DocumentEditor/Editor/Playground/Chat'
+import useEvaluationPrompt from '$/stores/evaluationPrompt'
 import { LanguageModelUsage } from 'ai'
 import { readStreamableValue } from 'ai/rsc'
 
@@ -41,6 +42,11 @@ export default function Chat({
   const [startTime, _] = useState(performance.now())
   const [endTime, setEndTime] = useState<number>()
   const containerRef = useRef<HTMLDivElement>(null)
+
+  const { data: prompt, isLoading } = useEvaluationPrompt({
+    evaluationId: evaluation.id,
+  })
+
   useAutoScroll(containerRef, {
     startAtBottom: true,
     onScrollChange: setIsScrolledToBottom,
@@ -53,9 +59,9 @@ export default function Chat({
   const [responseStream, setResponseStream] = useState<string | undefined>()
   const [isStreaming, setIsStreaming] = useState(false)
 
-  // TODO: Only advanced evaluations are available right now. Next PR will add saparate components for each evaluation type
-  const prompt = (evaluation.metadata as EvaluationMetadataLlmAsJudgeAdvanced)
-    .prompt
+  const usePromptl =
+    evaluation.metadataType !== EvaluationMetadataType.LlmAsJudgeAdvanced ||
+    evaluation.metadata.promptlVersion !== 0
 
   const addMessageToConversation = useCallback(
     (message: ConversationMessage) => {
@@ -73,6 +79,7 @@ export default function Chat({
   )
 
   const runEvaluation = useCallback(async () => {
+    if (!prompt) return
     setError(undefined)
     setResponseStream(undefined)
     setIsStreaming(true)
@@ -82,6 +89,7 @@ export default function Chat({
     const [data, error] = await runPromptAction({
       prompt,
       parameters,
+      promptlVersion: usePromptl ? 1 : 0,
     })
     if (error) {
       setError(error)
@@ -128,14 +136,15 @@ export default function Chat({
       }
     }
     setIsStreaming(false)
-  }, [parameters, runPromptAction])
+  }, [prompt, parameters, runPromptAction])
 
   useEffect(() => {
+    if (isLoading) return
     if (runChainOnce.current) return
 
     runChainOnce.current = true // Prevent double-running when StrictMode is enabled
     runEvaluation()
-  }, [runEvaluation])
+  }, [runEvaluation, isLoading])
 
   return (
     <div className='flex flex-col h-full'>

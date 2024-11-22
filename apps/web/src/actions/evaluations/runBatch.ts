@@ -4,6 +4,7 @@ import { readMetadata } from '@latitude-data/compiler'
 import { publisher } from '@latitude-data/core/events/publisher'
 import { setupJobs } from '@latitude-data/core/jobs'
 import { EvaluationsRepository } from '@latitude-data/core/repositories'
+import { scan } from '@latitude-data/promptl'
 import { nanoid } from 'nanoid'
 import { z } from 'zod'
 
@@ -24,10 +25,10 @@ export const runBatchEvaluationAction = withDataset
         .record(z.number().optional())
         .optional()
         .superRefine(async (parameters = {}, refineCtx) => {
-          const metadata = await readMetadata({
-            prompt: ctx.document.content ?? '',
-            fullPath: ctx.document.path,
-          })
+          const metadata =
+            ctx.document.promptlVersion === 0
+              ? await readMetadata({ prompt: ctx.document.content })
+              : await scan({ prompt: ctx.document.content })
           const docParams = metadata.parameters
           const headers = ctx.dataset.fileMetadata.headers
           const paramKeys = Object.keys(parameters)

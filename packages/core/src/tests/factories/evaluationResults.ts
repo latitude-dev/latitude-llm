@@ -1,10 +1,12 @@
 import { faker } from '@faker-js/faker'
-import { ContentType, createChain } from '@latitude-data/compiler'
+import { ContentType, Conversation, createChain } from '@latitude-data/compiler'
+import { Adapters, Chain as PromptlChain } from '@latitude-data/promptl'
 import { LanguageModelUsage } from 'ai'
 
 import {
   DocumentLog,
   EvaluationDto,
+  EvaluationMetadataType,
   LogSources,
   ProviderLog,
 } from '../../browser'
@@ -52,16 +54,31 @@ export async function createEvaluationResult({
     evaluation,
   }).then((r) => r.unwrap())
 
-  const chain = createChain({
-    prompt: evaluationPrompt,
-    parameters: {}, // TODO: Generate parameters from documentLog
-  })
+  const usePromptl =
+    evaluation.metadataType !== EvaluationMetadataType.LlmAsJudgeAdvanced ||
+    evaluation.metadata.promptlVersion !== 0
+
+  const chain = usePromptl
+    ? new PromptlChain({
+        prompt: evaluationPrompt,
+        parameters: {}, // TODO: Generate parameters from documentLog
+        adapter: Adapters.default,
+      })
+    : createChain({
+        prompt: evaluationPrompt,
+        parameters: {}, // TODO: Generate parameters from documentLog
+      })
 
   const providerLogs: ProviderLog[] = []
   let mockedResponse = undefined
   let steps = 0
   while (true) {
-    const { completed, conversation } = await chain.step(mockedResponse)
+    const { completed, ...rest } = await chain.step(mockedResponse)
+    if (usePromptl && completed) break
+
+    const conversation: Conversation = usePromptl
+      ? (rest as unknown as Conversation)
+      : (rest as { conversation: Conversation }).conversation
 
     const config = conversation.config as Config
     const provider = await providerScope
@@ -148,7 +165,7 @@ export async function createEvaluationResult({
     result: skipEvaluationResultCreation
       ? undefined
       : {
-          result: mockedResponse,
+          result: mockedResponse!,
           reason: 'I do not even know to be honest.',
         },
   })

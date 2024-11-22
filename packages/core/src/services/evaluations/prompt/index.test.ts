@@ -1,4 +1,4 @@
-import { readMetadata } from '@latitude-data/compiler'
+import { scan } from '@latitude-data/promptl'
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import { getEvaluationPrompt } from '.'
@@ -61,7 +61,7 @@ describe('getEvaluationPrompt', () => {
     expect(obtainedPrompt).toBe(evaluation.metadata.prompt)
   })
 
-  it('Creates a compilable prompt for a simple evaluation', async () => {
+  it('Creates a compilable promptl prompt for a simple evaluation', async () => {
     const model = 'custom-model'
 
     const evaluation = await createEvaluation({
@@ -90,7 +90,7 @@ describe('getEvaluationPrompt', () => {
       evaluation,
     }).then((r) => r.unwrap())
 
-    const metadata = await readMetadata({
+    const metadata = await scan({
       prompt: evaluationPrompt,
       withParameters: SERIALIZED_DOCUMENT_LOG_FIELDS,
     })

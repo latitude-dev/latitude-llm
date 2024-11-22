@@ -172,6 +172,7 @@ export default function DocumentEditor({
       documents: _documents,
       document,
       fullPath: document.path,
+      promptlVersion: document.promptlVersion,
     })
   }, [])
 
@@ -185,6 +186,7 @@ export default function DocumentEditor({
         documents: _documents,
         document,
         fullPath: document.path,
+        promptlVersion: document.promptlVersion,
       })
     },
     [runReadMetadata, document.path],

@@ -1,6 +1,7 @@
 import path from 'path'
 
 import { readMetadata, Document as RefDocument } from '@latitude-data/compiler'
+import { scan } from '@latitude-data/promptl'
 
 import { Commit, DocumentVersion, Workspace } from '../../browser'
 import {
@@ -59,11 +60,18 @@ export async function getResolvedContent({
     }
   }
 
-  const metadata = await readMetadata({
-    prompt: document.content,
-    fullPath: document.path,
-    referenceFn,
-  })
+  const metadata =
+    document.promptlVersion === 0
+      ? await readMetadata({
+          prompt: document.content,
+          fullPath: document.path,
+          referenceFn,
+        })
+      : await scan({
+          prompt: document.content,
+          fullPath: document.path,
+          referenceFn,
+        })
 
   return Result.ok(metadata.resolvedPrompt)
 }

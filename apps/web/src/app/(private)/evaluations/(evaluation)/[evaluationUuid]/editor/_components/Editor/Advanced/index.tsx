@@ -19,6 +19,17 @@ import { useMetadata } from '$/hooks/useMetadata'
 import useEvaluations from '$/stores/evaluations'
 import useProviderApiKeys from '$/stores/providerApiKeys'
 
+const promptlVersion = (evaluation?: EvaluationDto) => {
+  if (
+    evaluation?.metadataType === EvaluationMetadataType.LlmAsJudgeAdvanced &&
+    evaluation?.metadata.promptlVersion !== 0
+  ) {
+    return 0
+  }
+
+  return 1
+}
+
 export default function AdvancedEvaluationEditor({
   evaluation: serverEvaluation,
   defaultPrompt,
@@ -48,6 +59,7 @@ export default function AdvancedEvaluationEditor({
     runReadMetadata({
       prompt: value,
       withParameters: SERIALIZED_DOCUMENT_LOG_FIELDS,
+      promptlVersion: promptlVersion(evaluation),
     })
   }, [providers, runReadMetadata])
 
@@ -70,6 +82,7 @@ export default function AdvancedEvaluationEditor({
       runReadMetadata({
         prompt: value,
         withParameters: SERIALIZED_DOCUMENT_LOG_FIELDS,
+        promptlVersion: promptlVersion(evaluation),
       })
     },
     [setValue, runReadMetadata, providers],

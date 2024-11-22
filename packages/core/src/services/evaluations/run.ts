@@ -4,6 +4,7 @@ import {
   DocumentLog,
   ErrorableEntity,
   EvaluationDto,
+  EvaluationMetadataType,
   LogSources,
   ProviderLog,
 } from '../../browser'
@@ -72,11 +73,16 @@ export async function runEvaluation(
     workspaceId: evaluation.workspaceId,
   })
 
+  const usePromptl =
+    evaluation.metadataType !== EvaluationMetadataType.LlmAsJudgeAdvanced ||
+    evaluation.metadata.promptlVersion !== 0
+
   const run = await runChain({
     generateUUID: () => errorableUuid,
     errorableType: ErrorableEntity.EvaluationResult,
     workspace,
     chain,
+    promptlVersion: usePromptl ? 1 : 0,
     source: LogSources.Evaluation,
     providersMap,
     configOverrides: { schema, output: 'object' },

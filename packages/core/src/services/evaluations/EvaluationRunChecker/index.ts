@@ -1,11 +1,13 @@
 import { createChain as createChainFn } from '@latitude-data/compiler'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
+import { Adapters, Chain as PromptlChain } from '@latitude-data/promptl'
 import { JSONSchema7 } from 'json-schema'
 
 import {
   DocumentLog,
   ErrorableEntity,
   EvaluationDto,
+  EvaluationMetadataType,
   EvaluationResultableType,
   WorkspaceDto,
 } from '../../../browser'
@@ -114,14 +116,30 @@ export class EvaluationRunChecker {
         evaluation: this.evaluation,
       }).then((r) => r.unwrap())
 
-      return Result.ok(
-        createChainFn({
-          prompt: evaluationPrompt,
-          parameters: {
-            ...serializedLogResult.value,
-          },
-        }),
-      )
+      const usePromptL =
+        this.evaluation.metadataType !==
+          EvaluationMetadataType.LlmAsJudgeAdvanced ||
+        this.evaluation.metadata.promptlVersion !== 0
+      if (usePromptL) {
+        return Result.ok(
+          new PromptlChain({
+            prompt: evaluationPrompt,
+            parameters: {
+              ...serializedLogResult.value,
+            },
+            adapter: Adapters.default,
+          }),
+        )
+      } else {
+        return Result.ok(
+          createChainFn({
+            prompt: evaluationPrompt,
+            parameters: {
+              ...serializedLogResult.value,
+            },
+          }),
+        )
+      }
     } catch (e) {
       const err = e as Error
       const error = new ChainError({

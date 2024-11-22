@@ -11,6 +11,7 @@ import {
 
 import { ConversationMetadata, readMetadata } from '@latitude-data/compiler'
 import { ApiKey } from '@latitude-data/core/browser'
+import { scan } from '@latitude-data/promptl'
 import { Modal } from '@latitude-data/web-ui'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import useDocumentVersions from '$/stores/documentVersions'
@@ -50,11 +51,19 @@ export default function DocumentationModal({
     const doit = async () => {
       if (!document) return
 
-      const metadata = await readMetadata({
-        prompt: document.content ?? '',
-        fullPath: document.path,
-      })
-      setMetadata(metadata)
+      // TODO: Include referenceFn, otherwise it will fail if the prompt contains references
+      const metadata =
+        document.promptlVersion === 0
+          ? await readMetadata({
+              prompt: document.content ?? '',
+              fullPath: document.path,
+            })
+          : await scan({
+              prompt: document.content ?? '',
+              fullPath: document.path,
+            })
+
+      setMetadata(metadata as ConversationMetadata)
     }
 
     doit()

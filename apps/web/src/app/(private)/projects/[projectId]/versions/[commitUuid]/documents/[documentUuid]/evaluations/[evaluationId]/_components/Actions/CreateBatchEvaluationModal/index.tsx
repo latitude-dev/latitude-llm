@@ -36,6 +36,7 @@ export default function CreateBatchEvaluationModal({
     runReadMetadata({
       prompt: document.content ?? '',
       fullPath: document.path,
+      promptlVersion: document.promptlVersion,
     })
   }, [])
 

@@ -1,5 +1,10 @@
-import { createChain as createChainFn } from '@latitude-data/compiler'
+import {
+  createChain as createLegacyChain,
+  readMetadata,
+  ReferencePromptFn,
+} from '@latitude-data/compiler'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
+import { Adapters, Chain as PromptlChain, scan } from '@latitude-data/promptl'
 
 import { DocumentVersion, ErrorableEntity } from '../../../browser'
 import { Result } from '../../../lib'
@@ -12,22 +17,26 @@ export class RunDocumentChecker {
   private document: DocumentVersion
   private errorableUuid: string
   private prompt: string
+  private referenceFn?: ReferencePromptFn
   private parameters: Record<string, unknown>
 
   constructor({
     document,
     errorableUuid,
     prompt,
+    referenceFn,
     parameters,
   }: {
     document: DocumentVersion
     errorableUuid: string
     prompt: string
+    referenceFn?: ReferencePromptFn
     parameters: Record<string, unknown>
   }) {
     this.document = document
     this.errorableUuid = errorableUuid
     this.prompt = prompt
+    this.referenceFn = referenceFn
     this.parameters = parameters
   }
 
@@ -42,12 +51,34 @@ export class RunDocumentChecker {
 
   private async createChain() {
     try {
-      return Result.ok(
-        createChainFn({
+      if (this.document.promptlVersion === 0) {
+        const metadata = await readMetadata({
           prompt: this.prompt,
-          parameters: this.parameters,
-        }),
-      )
+          fullPath: this.document.path,
+          referenceFn: this.referenceFn,
+        })
+
+        return Result.ok(
+          createLegacyChain({
+            prompt: metadata.resolvedPrompt,
+            parameters: this.parameters,
+          }),
+        )
+      } else {
+        const metadata = await scan({
+          prompt: this.prompt,
+          fullPath: this.document.path,
+          referenceFn: this.referenceFn,
+        })
+
+        return Result.ok(
+          new PromptlChain({
+            prompt: metadata.resolvedPrompt,
+            parameters: this.parameters,
+            adapter: Adapters.default,
+          }),
+        )
+      }
     } catch (e) {
       const err = e as Error
       const error = new ChainError({

@@ -1,7 +1,7 @@
 import {
-  Chain,
   ContentType,
   Conversation,
+  Chain as LegacyChain,
   MessageRole,
 } from '@latitude-data/compiler'
 import { v4 as uuid } from 'uuid'
@@ -22,7 +22,7 @@ vi.mock('@latitude-data/compiler')
 vi.mock('uuid')
 
 describe('runChain', () => {
-  const mockChain: Partial<Chain> = {
+  const mockChain: Partial<LegacyChain> = {
     step: vi.fn(),
     rawText: 'Test raw text',
   }
@@ -83,7 +83,8 @@ describe('runChain', () => {
 
     const run = await runChain({
       workspace,
-      chain: mockChain as Chain,
+      chain: mockChain as LegacyChain,
+      promptlVersion: 0,
       providersMap,
       source: LogSources.API,
       errorableType: ErrorableEntity.DocumentLog,
@@ -155,7 +156,8 @@ describe('runChain', () => {
 
     const run = await runChain({
       workspace,
-      chain: mockChain as Chain,
+      chain: mockChain as LegacyChain,
+      promptlVersion: 0,
       providersMap,
       source: LogSources.API,
       errorableType: ErrorableEntity.DocumentLog,
@@ -229,7 +231,8 @@ describe('runChain', () => {
 
     const run = await runChain({
       workspace,
-      chain: mockChain as Chain,
+      chain: mockChain as LegacyChain,
+      promptlVersion: 0,
       providersMap,
       source: LogSources.API,
       errorableType: ErrorableEntity.DocumentLog,
@@ -271,7 +274,8 @@ describe('runChain', () => {
 
     const run = await runChain({
       workspace,
-      chain: mockChain as Chain,
+      chain: mockChain as LegacyChain,
+      promptlVersion: 0,
       providersMap,
       source: LogSources.API,
       errorableType: ErrorableEntity.DocumentLog,
@@ -347,7 +351,8 @@ describe('runChain', () => {
 
     const run = await runChain({
       workspace,
-      chain: mockChain as Chain,
+      chain: mockChain as LegacyChain,
+      promptlVersion: 0,
       providersMap,
       source: LogSources.API,
       errorableType: ErrorableEntity.DocumentLog,
@@ -437,7 +442,8 @@ describe('runChain', () => {
 
     const run = await runChain({
       workspace,
-      chain: mockChain as Chain,
+      chain: mockChain as LegacyChain,
+      promptlVersion: 0,
       providersMap,
       source: LogSources.API,
       errorableType: ErrorableEntity.DocumentLog,
@@ -493,7 +499,8 @@ describe('runChain', () => {
 
     const run = await runChain({
       workspace,
-      chain: mockChain as Chain,
+      chain: mockChain as LegacyChain,
+      promptlVersion: 0,
       providersMap,
       source: LogSources.API,
       errorableType: ErrorableEntity.DocumentLog,
@@ -564,7 +571,8 @@ describe('runChain', () => {
 
     const run = await runChain({
       workspace,
-      chain: mockChain as Chain,
+      chain: mockChain as LegacyChain,
+      promptlVersion: 0,
       providersMap,
       source: LogSources.API,
       errorableType: ErrorableEntity.DocumentLog,
@@ -634,7 +642,8 @@ describe('runChain', () => {
       })
       const run = await runChain({
         workspace,
-        chain: mockChain as Chain,
+        chain: mockChain as LegacyChain,
+        promptlVersion: 0,
         providersMap,
         source: LogSources.API,
         errorableType: ErrorableEntity.DocumentLog,
@@ -686,7 +695,8 @@ describe('runChain', () => {
 
         const run = await runChain({
           workspace,
-          chain: mockChain as Chain,
+          chain: mockChain as LegacyChain,
+          promptlVersion: 0,
           providersMap,
           source: LogSources.API,
           errorableType: ErrorableEntity.DocumentLog,
@@ -744,7 +754,8 @@ describe('runChain', () => {
 
         const run = await runChain({
           workspace,
-          chain: mockChain as Chain,
+          chain: mockChain as LegacyChain,
+          promptlVersion: 0,
           providersMap,
           source: LogSources.API,
           errorableType: ErrorableEntity.DocumentLog,

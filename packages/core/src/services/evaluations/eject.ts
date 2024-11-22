@@ -34,7 +34,7 @@ export async function ejectEvaluation(
   return Transaction.call(async (tx) => {
     const metadatas = await tx
       .insert(evaluationMetadataLlmAsJudgeAdvanced)
-      .values([{ prompt: promptResult.value }])
+      .values([{ prompt: promptResult.value, promptlVersion: 1 }])
       .returning()
     const metadata = metadatas[0]!
 

@@ -1,5 +1,11 @@
-import { Chain, CompileError, Conversation } from '@latitude-data/compiler'
+import {
+  CompileError,
+  Conversation,
+  Chain as LegacyChain,
+  Message,
+} from '@latitude-data/compiler'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
+import { Chain as PromptlChain } from '@latitude-data/promptl'
 import { JSONSchema7 } from 'json-schema'
 import { z } from 'zod'
 
@@ -10,6 +16,8 @@ import { googleConfig } from '../../ai/helpers'
 import { ChainError } from '../ChainErrors'
 import { checkFreeProviderQuota } from '../checkFreeProviderQuota'
 import { CachedApiKeys } from '../run'
+
+type SomeChain = LegacyChain | PromptlChain
 
 export type ValidatedStep = {
   config: Config
@@ -26,7 +34,8 @@ export type ConfigOverrides = JSONOverride | { output: 'no-schema' }
 type ValidatorContext = {
   workspace: Workspace
   prevText: string | undefined
-  chain: Chain
+  chain: SomeChain
+  promptlVersion: number
   providersMap: CachedApiKeys
   configOverrides?: ConfigOverrides
 }
@@ -60,10 +69,29 @@ const getOutputType = (
   return configSchema.type === 'array' ? 'array' : 'object'
 }
 
-const safeChain = async (chain: Chain, prevText: string | undefined) => {
+const safeChain = async ({
+  promptlVersion,
+  chain,
+  prevText,
+}: {
+  promptlVersion: number
+  chain: SomeChain
+  prevText: string | undefined
+}) => {
   try {
-    const { completed, conversation } = await chain.step(prevText)
-    return Result.ok({ chainCompleted: completed, conversation })
+    if (promptlVersion === 0) {
+      const { completed, conversation } = await (chain as LegacyChain).step(
+        prevText,
+      )
+      return Result.ok({ chainCompleted: completed, conversation })
+    }
+    const { completed, messages, config } = await (chain as PromptlChain).step(
+      prevText,
+    )
+    return Result.ok({
+      chainCompleted: completed,
+      conversation: { messages, config },
+    })
   } catch (e) {
     const error = e as CompileError
     return Result.error(
@@ -137,9 +165,15 @@ const validateConfig = (
 export const validateChain = async (
   context: ValidatorContext,
 ): Promise<TypedResult<ValidatedStep, ChainError<RunErrorCodes>>> => {
-  const { workspace, prevText, chain, providersMap, configOverrides } = context
-
-  const chainResult = await safeChain(chain, prevText)
+  const {
+    workspace,
+    promptlVersion,
+    prevText,
+    chain,
+    providersMap,
+    configOverrides,
+  } = context
+  const chainResult = await safeChain({ promptlVersion, chain, prevText })
   if (chainResult.error) return chainResult
 
   const { chainCompleted, conversation } = chainResult.value
@@ -160,7 +194,7 @@ export const validateChain = async (
 
   const rule = applyCustomRules({
     providerType: provider.provider,
-    messages: conversation.messages,
+    messages: conversation.messages as Message[],
     config,
   })
 
