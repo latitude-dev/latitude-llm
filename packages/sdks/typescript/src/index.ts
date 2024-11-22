@@ -1,6 +1,9 @@
 import type { ContentType, Message, MessageRole } from '@latitude-data/compiler'
-import { DocumentLog, type ChainEventDto } from '@latitude-data/core/browser'
-import { EvaluationResultDto } from '@latitude-data/core/repositories'
+import {
+  DocumentLog,
+  EvaluationResultDto,
+  type ChainEventDto,
+} from '@latitude-data/core/browser'
 import env from '$sdk/env'
 import { GatewayApiConfig, RouteResolver } from '$sdk/utils'
 import {

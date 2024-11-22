@@ -10,7 +10,10 @@ import {
 } from 'react'
 
 import { ProviderLogDto } from '@latitude-data/core/browser'
-import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
+import {
+  DocumentLogWithMetadataAndError,
+  ResultWithEvaluation,
+} from '@latitude-data/core/repositories'
 import {
   Alert,
   Button,
@@ -24,8 +27,12 @@ import { ROUTES } from '$/services/routes'
 import { useRouter } from 'next/navigation'
 import { usePanelDomRef } from 'node_modules/@latitude-data/web-ui/src/ds/atoms/SplitPane'
 
-import { MetadataInfoTabs } from '../../../../_components/MetadataInfoTabs'
+import {
+  DEFAULT_TABS,
+  MetadataInfoTabs,
+} from '../../../../_components/MetadataInfoTabs'
 import { MetadataItem } from '../../../../../[documentUuid]/_components/MetadataItem'
+import { DocumentLogEvaluations } from './Evaluations'
 import { DocumentLogMessages, useGetProviderLogMessages } from './Messages'
 import { DocumentLogMetadata } from './Metadata'
 
@@ -105,6 +112,7 @@ function UseDocumentLogInPlaygroundButton({
 export function DocumentLogInfo({
   documentLog,
   providerLogs,
+  evaluationResults,
   isLoading = false,
   error,
   className,
@@ -115,6 +123,7 @@ export function DocumentLogInfo({
 }: {
   documentLog: DocumentLogWithMetadataAndError
   providerLogs?: ProviderLogDto[]
+  evaluationResults?: ResultWithEvaluation[]
   isLoading?: boolean
   error?: Error
   className?: string
@@ -147,6 +156,11 @@ export function DocumentLogInfo({
       ref={ref}
       className={className}
       bottomActions={children}
+      tabs={
+        evaluationResults
+          ? [...DEFAULT_TABS, { label: 'Evaluations', value: 'evaluations' }]
+          : DEFAULT_TABS
+      }
       tabsActions={
         <>
           {documentLog ? (
@@ -171,6 +185,11 @@ export function DocumentLogInfo({
                 )}
                 {selectedTab === 'messages' && (
                   <DocumentLogMessages messages={messages} />
+                )}
+                {selectedTab === 'evaluations' && (
+                  <DocumentLogEvaluations
+                    evaluationResults={evaluationResults}
+                  />
                 )}
               </>
             ) : (

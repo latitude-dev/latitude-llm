@@ -8,6 +8,7 @@ import type {
   DocumentVersion,
   Evaluation,
   EvaluationResult,
+  EvaluationResultDto,
   LogSources,
   MagicLinkToken,
   Membership,
@@ -20,7 +21,6 @@ import type {
   User,
   Workspace,
 } from '../browser'
-import { EvaluationResultDto } from '../repositories'
 import { PartialConfig } from '../services/ai'
 
 export type Events =

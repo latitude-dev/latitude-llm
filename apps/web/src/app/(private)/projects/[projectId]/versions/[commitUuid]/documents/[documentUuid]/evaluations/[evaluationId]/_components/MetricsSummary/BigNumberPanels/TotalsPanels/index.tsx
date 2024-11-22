@@ -48,7 +48,8 @@ export default function TotalsPanels({
   return (
     <>
       <Panel
-        label='Total logs'
+        label='Total evaluated logs'
+        additionalInfo='The total number of logs evaluated for this document.'
         loading={isLoading}
         value={String(data?.totalCount ?? '-')}
       />

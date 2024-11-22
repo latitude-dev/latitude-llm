@@ -10,13 +10,8 @@ import {
   runErrors,
   workspaces,
 } from '../../schema'
-import { DocumentLogWithMetadata } from '../documentLogsRepository'
 import Repository from '../repositoryV2'
-import { RunErrorField } from '../runErrors/evaluationResultsRepository'
-
-export type DocumentLogWithMetadataAndError = DocumentLogWithMetadata & {
-  error: RunErrorField
-}
+import { DocumentLogWithMetadataAndError } from '../runErrors/documentLogsRepository'
 
 export class DocumentLogsWithMetadataAndErrorsRepository extends Repository<DocumentLogWithMetadataAndError> {
   get scope() {

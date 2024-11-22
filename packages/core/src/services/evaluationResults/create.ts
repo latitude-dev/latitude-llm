@@ -2,12 +2,12 @@ import {
   DocumentLog,
   EvaluationDto,
   EvaluationResultableType,
+  EvaluationResultDto,
   ProviderLog,
 } from '../../browser'
 import { database } from '../../client'
 import { publisher } from '../../events/publisher'
 import { BadRequestError, Result, Transaction } from '../../lib'
-import { EvaluationResultDto } from '../../repositories/evaluationResultsRepository'
 import { evaluationResults } from '../../schema'
 import { evaluationResultableBooleans } from '../../schema/models/evaluationResultableBooleans'
 import { evaluationResultableNumbers } from '../../schema/models/evaluationResultableNumbers'

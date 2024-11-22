@@ -173,6 +173,10 @@ export type EvaluationTemplateWithCategory = EvaluationTemplate & {
   category: string
 }
 
+export type EvaluationResultDto = Omit<EvaluationResult, 'providerLogId'> & {
+  result: string | number | boolean | undefined
+}
+
 export type ProviderLogDto = Omit<
   ProviderLog,
   'responseText' | 'responseObject'

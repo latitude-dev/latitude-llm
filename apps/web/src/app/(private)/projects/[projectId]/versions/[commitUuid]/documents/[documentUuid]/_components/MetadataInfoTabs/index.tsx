@@ -2,6 +2,11 @@ import { forwardRef, ReactNode, useState } from 'react'
 
 import { cn, TabSelector, type TabSelectorOption } from '@latitude-data/web-ui'
 
+export const DEFAULT_TABS = [
+  { label: 'Metadata', value: 'metadata' },
+  { label: 'Messages', value: 'messages' },
+]
+
 type RenderProps = { selectedTab: string }
 type Props = {
   children: (args: RenderProps) => ReactNode
@@ -12,16 +17,7 @@ type Props = {
 }
 export const MetadataInfoTabs = forwardRef<HTMLDivElement, Props>(
   function MetadataInfoTabs(
-    {
-      className,
-      tabs = [
-        { label: 'Metadata', value: 'metadata' },
-        { label: 'Messages', value: 'messages' },
-      ],
-      tabsActions,
-      bottomActions,
-      children,
-    },
+    { className, tabs = DEFAULT_TABS, tabsActions, bottomActions, children },
     ref,
   ) {
     const [selectedTab, setSelectedTab] = useState<string>('metadata')

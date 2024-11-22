@@ -83,9 +83,11 @@ const useEvaluationResultsSocket = (
 export function EvaluationResults({
   evaluation,
   evaluationResults: serverData,
+  selectedResult: serverSelectedResult,
 }: {
   evaluation: EvaluationDto
   evaluationResults: EvaluationResultWithMetadataAndErrors[]
+  selectedResult?: EvaluationResultWithMetadataAndErrors
 }) {
   const tabelRef = useRef<HTMLTableElement | null>(null)
   const sidebarWrapperRef = useRef<HTMLDivElement | null>(null)
@@ -94,7 +96,7 @@ export function EvaluationResults({
   const document = useCurrentDocument()
   const [selectedResult, setSelectedResult] = useState<
     EvaluationResultWithMetadataAndErrors | undefined
-  >(undefined)
+  >(serverSelectedResult)
   const { open, onClose, onOpen } = useToggleModal()
   const { data: providerLog } = useProviderLog(
     selectedResult?.evaluationProviderLogId,

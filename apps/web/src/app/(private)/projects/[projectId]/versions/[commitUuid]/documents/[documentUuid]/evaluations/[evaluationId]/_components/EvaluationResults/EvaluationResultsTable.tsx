@@ -5,6 +5,7 @@ import {
   DEFAULT_PAGINATION_SIZE,
   EvaluationDto,
   EvaluationResultableType,
+  EvaluationResultDto,
 } from '@latitude-data/core/browser'
 import { buildPagination } from '@latitude-data/core/lib/pagination/buildPagination'
 import { EvaluationResultWithMetadataAndErrors } from '@latitude-data/core/repositories'
@@ -44,34 +45,33 @@ export const ResultCellContent = ({
   value,
 }: {
   evaluation: EvaluationDto
-  value: unknown
+  value: EvaluationResultDto['result']
 }) => {
+  if (value === undefined) {
+    return <Badge variant='secondary'>Pending</Badge>
+  }
+
   if (evaluation.resultType === EvaluationResultableType.Boolean) {
+    value = typeof value === 'string' ? value === 'true' : Boolean(value)
+
     return (
-      <Badge variant={value === 'true' ? 'success' : 'destructive'}>
-        {String(value)}
-      </Badge>
+      <Badge variant={value ? 'success' : 'destructive'}>{String(value)}</Badge>
     )
   }
 
   if (evaluation.resultType === EvaluationResultableType.Number) {
+    value = Number(value)
     const minValue = evaluation.resultConfiguration.minValue
     const maxValue = evaluation.resultConfiguration.maxValue
 
-    return (
-      <RangeBadge
-        value={Number(value)}
-        minValue={minValue}
-        maxValue={maxValue}
-      />
-    )
+    return <RangeBadge value={value} minValue={minValue} maxValue={maxValue} />
   }
+
+  value = String(value)
 
   return (
     <Text.H4 noWrap>
-      {typeof value === 'string' && value.length > 30
-        ? `${value.slice(0, 30)}...`
-        : (value as string)}
+      {value.length > 30 ? `${value.slice(0, 30)}...` : value}
     </Text.H4>
   )
 }

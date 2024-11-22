@@ -2,6 +2,7 @@ import { faker } from '@faker-js/faker'
 import { ContentType, Conversation, createChain } from '@latitude-data/compiler'
 import { Adapters, Chain as PromptlChain } from '@latitude-data/promptl'
 import { LanguageModelUsage } from 'ai'
+import { eq } from 'drizzle-orm'
 
 import {
   DocumentLog,
@@ -10,10 +11,15 @@ import {
   LogSources,
   ProviderLog,
 } from '../../browser'
+import { database } from '../../client'
 import { findWorkspaceFromCommit } from '../../data-access'
 import { findCommitById } from '../../data-access/commits'
 import { generateUUIDIdentifier } from '../../lib'
-import { ProviderApiKeysRepository } from '../../repositories'
+import {
+  EvaluationResultsRepository,
+  ProviderApiKeysRepository,
+} from '../../repositories'
+import { evaluationResults } from '../../schema'
 import { Config } from '../../services/ai'
 import { createEvaluationResult as createEvaluationResultService } from '../../services/evaluationResults'
 import { getEvaluationPrompt } from '../../services/evaluations'
@@ -188,7 +194,7 @@ export async function createEvaluationResult({
           stepCosts,
         })
 
-  const evaluationResult = await createEvaluationResultService({
+  let evaluationResult = await createEvaluationResultService({
     uuid: evaluationResultUuid ?? generateUUIDIdentifier(),
     evaluation,
     documentLog,
@@ -207,6 +213,21 @@ export async function createEvaluationResult({
               : 'I do not even know to be honest.',
         },
   }).then((r) => r.unwrap())
+
+  // Tests run within a transaction and the NOW() PostgreSQL function returns
+  // the transaction start time. Therefore, all results would be created
+  // at the same time, messing with tests. This code patches this.
+  await database
+    .update(evaluationResults)
+    .set({ createdAt: new Date() })
+    .where(eq(evaluationResults.id, evaluationResult.id))
+
+  const evaluationResultsRepository = new EvaluationResultsRepository(
+    evaluation.workspaceId,
+  )
+  evaluationResult = await evaluationResultsRepository
+    .find(evaluationResult.id)
+    .then((r) => r.unwrap())
 
   return {
     evaluationResult: evaluationResult,

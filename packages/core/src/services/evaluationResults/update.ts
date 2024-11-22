@@ -1,11 +1,10 @@
 import { eq } from 'drizzle-orm'
 
-import { EvaluationResultableType } from '../../browser'
+import { EvaluationResultableType, EvaluationResultDto } from '../../browser'
 import { database } from '../../client'
 import { findWorkspaceFromEvaluationResult } from '../../data-access'
 import { publisher } from '../../events/publisher'
 import { BadRequestError, NotFoundError, Result, Transaction } from '../../lib'
-import { EvaluationResultDto } from '../../repositories/evaluationResultsRepository'
 import { evaluationResults } from '../../schema'
 import { evaluationResultableBooleans } from '../../schema/models/evaluationResultableBooleans'
 import { evaluationResultableNumbers } from '../../schema/models/evaluationResultableNumbers'
