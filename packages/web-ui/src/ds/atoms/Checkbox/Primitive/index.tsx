@@ -18,14 +18,21 @@ const CheckboxAtom = forwardRef<
     ref={ref}
     className={cn(
       'peer h-4 w-4 shrink-0 rounded-sm',
-      'border border-primary focus-visible:outline-none',
+      'border border-input focus-visible:outline-none',
       'focus-visible:ring-1 focus-visible:ring-ring ',
-      'data-[state=checked]:bg-primary',
+
+      // Checked
+      'data-[state=checked]:bg-primary data-[state=checked]:border-primary',
       'data-[state=checked]:text-primary-foreground',
-      'data-[state=indeterminate]:text-primary',
-      'dark:border-foreground data-[state=checked]:dark:bg-foreground',
-      'dark:data-[state=checked]:text-background',
+      'data-[state=indeterminate]:text-primary data-[state=indeterminate]:border-primary',
+      'data-[state=indeterminate]:text-primary focus-visible:border-primary',
+
+      // Dark mode
+      'dark:border-foreground dark:data-[state=checked]:bg-background',
+      'dark:data-[state=checked]:text-foreground dark:focus-visible:ring-foreground',
       'dark:data-[state=indeterminate]:text-foreground',
+
+      // Disabled
       'disabled:cursor-not-allowed disabled:opacity-20',
       'disabled:border-foreground disabled:bg-gray-200 dark:disabled:bg-gray-900',
       className,

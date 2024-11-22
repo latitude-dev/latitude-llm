@@ -36,7 +36,7 @@ const buttonContainerVariants = cva(
       {
         variant: 'outline',
         fanciness: 'fancy',
-        className: 'shadow-[inset_0px_0px_0px_1px_hsl(var(--border))]',
+        className: 'shadow-[inset_0px_0px_0px_1px_hsl(var(--input))]',
       },
     ],
     defaultVariants: {
@@ -98,7 +98,7 @@ const buttonVariants = cva(
       {
         variant: 'outline',
         fanciness: 'fancy',
-        className: 'shadow-[inset_0px_0px_0px_1px_hsl(var(--border))]',
+        className: 'shadow-[inset_0px_0px_0px_1px_hsl(var(--input))]',
       },
       {
         size: 'default',
