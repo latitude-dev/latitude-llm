@@ -1,10 +1,10 @@
 'use client'
 
-import { ReactNode, useEffect, useMemo, useState } from 'react'
+import { ReactNode, useMemo, useState } from 'react'
 
 import { DocumentVersion, EvaluationDto } from '@latitude-data/core/browser'
+import { type EvaluationResultByDocument } from '@latitude-data/core/repositories'
 import { Modal } from '@latitude-data/web-ui'
-import { EvaluationResultByDocument } from '$/stores/evaluationResultsByDocumentContent'
 
 import { SelectEvaluation } from './steps/1_SelectEvaluation'
 import { SelectEvaluationResults } from './steps/2_SelectEvaluationResults'
@@ -18,29 +18,28 @@ type StepData = {
 }
 
 export default function RefineDocumentModal({
-  open,
-  onOpenChange,
+  onClose,
   documentVersion,
   setDocumentContent,
+  serverEvaluation,
+  serverEvaluationResults,
 }: {
-  open: boolean
-  onOpenChange: (open: boolean) => void
+  onClose: () => void
   documentVersion?: DocumentVersion
   setDocumentContent: (content: string) => void
+  serverEvaluation: EvaluationDto | undefined
+  serverEvaluationResults: EvaluationResultByDocument[]
 }) {
-  const [evaluation, setEvaluation] = useState<EvaluationDto>()
+  const [evaluation, setEvaluation] = useState<EvaluationDto | undefined>(
+    serverEvaluation,
+  )
   const [evaluationResults, setEvaluationResults] = useState<
     EvaluationResultByDocument[]
-  >([])
-
-  useEffect(() => {
-    setEvaluationResults([])
-    setEvaluation(undefined)
-  }, [open, documentVersion])
+  >(serverEvaluationResults)
 
   const applySuggestion = (prompt: string) => {
     setDocumentContent(prompt)
-    onOpenChange(false)
+    onClose()
   }
 
   if (!documentVersion) return null
@@ -96,11 +95,11 @@ export default function RefineDocumentModal({
 
   return (
     <Modal
+      open
       title={title}
       description={description}
       size='large'
-      open={open}
-      onOpenChange={onOpenChange}
+      onOpenChange={onClose}
       steps={{ current: currentStep, total: 3 }}
     >
       {content}

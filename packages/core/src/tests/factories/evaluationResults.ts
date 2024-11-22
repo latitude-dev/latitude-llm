@@ -19,31 +19,24 @@ import { createEvaluationResult as createEvaluationResultService } from '../../s
 import { getEvaluationPrompt } from '../../services/evaluations'
 import { createProviderLog } from '../../services/providerLogs'
 
-export type IEvaluationResultData = {
-  documentLog: DocumentLog
-  evaluatedProviderLog: ProviderLog
+type ProviderLogProps = {
   evaluation: EvaluationDto
-  result?: string
+  documentLog: DocumentLog
   stepCosts?: {
     costInMillicents: number
     promptTokens: number
     completionTokens: number
   }[]
-  skipProviderLogCreation?: boolean
-  skipEvaluationResultCreation?: boolean
-  evaluationResultUuid?: string
+  result?: string
+  reason?: string
 }
-
-export async function createEvaluationResult({
-  evaluationResultUuid,
-  documentLog,
-  evaluatedProviderLog,
+async function generateEvaluationProviderLogs({
   evaluation,
-  result,
+  documentLog,
   stepCosts,
-  skipProviderLogCreation = false,
-  skipEvaluationResultCreation = false,
-}: IEvaluationResultData) {
+  result,
+  reason,
+}: ProviderLogProps) {
   const commit = await findCommitById({ id: documentLog.commitId }).then((r) =>
     r.unwrap(),
   )
@@ -129,13 +122,13 @@ export async function createEvaluationResult({
       workspace,
       uuid: generateUUIDIdentifier(),
       generatedAt: new Date(),
-      documentLogUuid: documentLog.uuid,
       providerId: provider.id,
       providerType: provider.provider,
       model: config.model!,
       config: config,
       messages: conversation.messages,
       responseText: mockedResponse,
+      responseObject: reason ? { reason, result } : undefined,
       toolCalls: [],
       usage,
       costInMillicents,
@@ -154,24 +147,69 @@ export async function createEvaluationResult({
     throw new Error('Number of steps does not match the number of step costs.')
   }
 
+  const evaluationProviderLog = providerLogs[providerLogs.length - 1]!
+
+  return { evaluationProviderLog, providerLogs, mockedResponse: mockedResponse }
+}
+
+export type IEvaluationResultData = ProviderLogProps & {
+  evaluatedProviderLog: ProviderLog
+  skipProviderLogCreation?: boolean
+  skipEvaluationResultCreation?: boolean
+  evaluationResultUuid?: string
+}
+
+export async function createEvaluationResult({
+  evaluationResultUuid,
+  documentLog,
+  evaluatedProviderLog,
+  evaluation,
+  result,
+  reason,
+  stepCosts,
+  skipProviderLogCreation = false,
+  skipEvaluationResultCreation = false,
+}: IEvaluationResultData) {
+  const noEvaluationProvider =
+    evaluation.metadataType === EvaluationMetadataType.Manual ||
+    skipProviderLogCreation
+  const { evaluationProviderLog, providerLogs, mockedResponse } =
+    noEvaluationProvider
+      ? {
+          evaluationProviderLog: undefined,
+          providerLogs: [],
+          mockedResponse: { result: result ?? '', reason: reason ?? '' },
+        }
+      : await generateEvaluationProviderLogs({
+          evaluation,
+          documentLog,
+          result,
+          reason,
+          stepCosts,
+        })
+
   const evaluationResult = await createEvaluationResultService({
     uuid: evaluationResultUuid ?? generateUUIDIdentifier(),
     evaluation,
     documentLog,
     evaluatedProviderLog,
-    evaluationProviderLog: skipProviderLogCreation
-      ? undefined
-      : providerLogs[providerLogs.length - 1]!,
+    evaluationProviderLog,
     result: skipEvaluationResultCreation
       ? undefined
       : {
-          result: mockedResponse!,
-          reason: 'I do not even know to be honest.',
+          result:
+            typeof mockedResponse === 'string'
+              ? mockedResponse
+              : mockedResponse!.result,
+          reason:
+            typeof mockedResponse === 'object' && 'reason' in mockedResponse
+              ? mockedResponse.reason
+              : 'I do not even know to be honest.',
         },
-  })
+  }).then((r) => r.unwrap())
 
   return {
-    evaluationResult: evaluationResult.unwrap(),
+    evaluationResult: evaluationResult,
     providerLogs: providerLogs,
   }
 }

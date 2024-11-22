@@ -1,8 +1,8 @@
 import { useMemo } from 'react'
 
 import {
-  EvaluationResultDto,
   EvaluationResultWithMetadata,
+  type EvaluationResultByDocument,
 } from '@latitude-data/core/repositories'
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
@@ -15,11 +15,6 @@ type SerializedEvaluationResult = Omit<
   createdAt: string
   updatedAt: string
 }
-
-export type EvaluationResultByDocument = Pick<
-  EvaluationResultDto,
-  'id' | 'result' | 'createdAt' | 'source'
->
 
 const EMPTY_ROWS: EvaluationResultByDocument[] = []
 export default function useEvaluationResultsByDocumentContent(

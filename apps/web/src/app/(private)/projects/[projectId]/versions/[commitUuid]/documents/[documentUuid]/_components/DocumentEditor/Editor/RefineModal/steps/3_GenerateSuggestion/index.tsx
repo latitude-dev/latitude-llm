@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react'
 
 import { DocumentVersion, EvaluationDto } from '@latitude-data/core/browser'
+import { type EvaluationResultByDocument } from '@latitude-data/core/repositories'
 import {
   Button,
   FakeProgress,
@@ -13,7 +14,6 @@ import {
 } from '@latitude-data/web-ui'
 import { refinePromptAction } from '$/actions/copilot/refinePrompt'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
-import { EvaluationResultByDocument } from '$/stores/evaluationResultsByDocumentContent'
 
 export function GenerateSuggestion({
   documentVersion,

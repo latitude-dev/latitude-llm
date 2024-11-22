@@ -292,15 +292,16 @@ export const SERIALIZED_DOCUMENT_LOG_FIELDS = [
   'parameters',
 ]
 
-export type SerializedEvaluationResult = Omit<
-  SerializedProviderLog,
-  'response'
-> & {
+export type SerializedEvaluationManualResult = {
   resultableType: EvaluationResultableType
   result: string | number | boolean | undefined
   reason: string | null
   evaluatedLog: SerializedDocumentLog
 }
+type EvaluatedProviderLog = Omit<SerializedProviderLog, 'response'>
+
+export type SerializedEvaluationResult = SerializedEvaluationManualResult &
+  EvaluatedProviderLog
 
 export const ULTRA_LARGE_PAGE_SIZE = 1000
 export const DELIMITER_VALUES = {

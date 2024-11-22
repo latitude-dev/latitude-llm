@@ -1,10 +1,13 @@
 'use client'
 
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 
 import { EvaluationDto } from '@latitude-data/core/browser'
 import { type EvaluationResultWithMetadataAndErrors } from '@latitude-data/core/repositories'
 import {
+  Button,
+  cn,
+  FloatingPanel,
   TableBlankSlate,
   Text,
   useCurrentCommit,
@@ -15,6 +18,8 @@ import {
   EventArgs,
   useSockets,
 } from '$/components/Providers/WebsocketsProvider/useSockets'
+import { useRefineAction } from '$/hooks/useRefineAction'
+import { useSelectableRows } from '$/hooks/useSelectableRows'
 import { useToggleModal } from '$/hooks/useToogleModal'
 import useEvaluationResultsWithMetadata from '$/stores/evaluationResultsWithMetadata'
 import { useProviderLog } from '$/stores/providerLogs'
@@ -110,7 +115,20 @@ export function EvaluationResults({
       fallbackData: serverData,
     },
   )
+  const evaluatedResultIds = useMemo(
+    () => evaluationResults.filter((r) => !r.error.message).map((r) => r.id),
+    [evaluationResults],
+  )
 
+  const selectableState = useSelectableRows({
+    rowIds: evaluatedResultIds,
+  })
+  const onClickRefine = useRefineAction({
+    project,
+    commit,
+    document,
+    getSelectedRowIds: selectableState.getSelectedRowIds,
+  })
   useEvaluationResultsSocket(evaluation, document, mutate)
 
   return (
@@ -120,30 +138,55 @@ export function EvaluationResults({
         documentUuid={document.documentUuid}
         evaluationId={evaluation.id}
       />
-      <div className='flex flex-row flex-grow gap-4 min-w-[1024px]'>
-        <div className='flex-1 mb-6'>
-          {evaluationResults.length === 0 && (
-            <TableBlankSlate
-              description='There are no evaluation results yet. Run the evaluation or, if you already have, wait a few seconds for the first results to stream in.'
-              link={
-                <TableBlankSlate.Button onClick={onOpen}>
-                  Run the evaluation
-                </TableBlankSlate.Button>
-              }
-            />
-          )}
-          {evaluationResults.length > 0 && (
+      <div
+        className={cn('gap-x-4 grid pb-6', {
+          'grid-cols-1': !selectedResult,
+          'grid-cols-2 xl:grid-cols-[2fr_1fr]': selectedResult,
+        })}
+      >
+        {evaluationResults.length > 0 ? (
+          <div className='flex flex-col gap-4'>
             <EvaluationResultsTable
               ref={tabelRef}
               evaluation={evaluation}
               evaluationResults={evaluationResults}
               selectedResult={selectedResult}
               setSelectedResult={setSelectedResult}
+              selectableState={selectableState}
             />
-          )}
-        </div>
+            <div className='flex justify-center sticky bottom-4 pointer-events-none'>
+              <FloatingPanel visible={selectableState.selectedCount > 0}>
+                <div className='flex flex-row justify-between gap-x-4'>
+                  <Button
+                    disabled={selectableState.selectedCount === 0}
+                    fancy
+                    onClick={onClickRefine}
+                  >
+                    Refine prompt
+                  </Button>
+                  <Button
+                    fancy
+                    variant='outline'
+                    onClick={selectableState.clearSelections}
+                  >
+                    Clear selection
+                  </Button>
+                </div>
+              </FloatingPanel>
+            </div>
+          </div>
+        ) : (
+          <TableBlankSlate
+            description='There are no evaluation results yet. Run the evaluation or, if you already have, wait a few seconds for the first results to stream in.'
+            link={
+              <TableBlankSlate.Button onClick={onOpen}>
+                Run the evaluation
+              </TableBlankSlate.Button>
+            }
+          />
+        )}
         {selectedResult ? (
-          <div ref={sidebarWrapperRef} className='lg:w-1/2 2xl:w-1/3'>
+          <div ref={sidebarWrapperRef}>
             <EvaluationResultInfo
               key={selectedResult.id}
               evaluation={evaluation}

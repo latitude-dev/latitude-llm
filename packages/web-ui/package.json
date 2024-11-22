@@ -22,6 +22,7 @@
   "dependencies": {
     "@latitude-data/compiler": "workspace:^",
     "@latitude-data/core": "workspace:^",
+    "@radix-ui/react-checkbox": "^1.1.2",
     "@radix-ui/react-progress": "^1.1.0",
     "hsl-to-hex": "^1.0.0",
     "next-themes": "^0.3.0",

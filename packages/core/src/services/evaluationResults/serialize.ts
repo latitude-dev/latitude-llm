@@ -1,10 +1,11 @@
 import {
   EvaluationResultableType,
+  SerializedEvaluationManualResult,
   SerializedEvaluationResult,
+  Workspace,
 } from '../../browser'
 import { database } from '../../client'
-import { findWorkspaceFromEvaluationResult } from '../../data-access'
-import { NotFoundError, PromisedResult, Result } from '../../lib'
+import { PromisedResult, Result } from '../../lib'
 import {
   DocumentLogsRepository,
   EvaluationResultDto,
@@ -13,56 +14,99 @@ import {
 import { serialize as serializeDocumentLog } from '../documentLogs/serialize'
 import { serializeForEvaluation } from '../providerLogs'
 
-export async function serialize(
-  evaluationResult: EvaluationResultDto,
-  db = database,
-): PromisedResult<SerializedEvaluationResult> {
-  const workspace = await findWorkspaceFromEvaluationResult(
+async function findEvaluationProviderLog(
+  {
     evaluationResult,
-    db,
-  )
-  if (!workspace) return Result.error(new NotFoundError('Workspace not found'))
+    workspace,
+  }: {
+    evaluationResult: EvaluationResultDto
+    workspace: Workspace
+  },
+  db = database,
+) {
+  const id = evaluationResult.evaluationProviderLogId
 
+  if (!id) {
+    // Manual evaluations
+    return Result.ok({
+      serializedProviderLog: undefined,
+      reason: evaluationResult.reason,
+    })
+  }
+
+  const providerLogsScope = new ProviderLogsRepository(workspace.id, db)
+  const providerLogResult = await providerLogsScope.find(
+    evaluationResult.evaluationProviderLogId,
+  )
+
+  if (providerLogResult.error) return providerLogResult
+
+  const providerLog = providerLogResult.value
+  const serializedProviderLog = serializeForEvaluation(providerLog)
+
+  const responseObject = providerLog.responseObject as {
+    reason?: string
+  } | null
+
+  const reason =
+    responseObject && 'reason' in responseObject ? responseObject.reason : null
+
+  return Result.ok({
+    serializedProviderLog,
+    reason: reason ?? evaluationResult.reason,
+  })
+}
+
+export async function serialize(
+  {
+    workspace,
+    evaluationResult,
+  }: {
+    workspace: Workspace
+    evaluationResult: EvaluationResultDto
+  },
+  db = database,
+): PromisedResult<
+  SerializedEvaluationResult | SerializedEvaluationManualResult
+> {
   const documentLogsScope = new DocumentLogsRepository(workspace.id, db)
   const documentLogsResult = await documentLogsScope.find(
     evaluationResult.documentLogId,
   )
   if (documentLogsResult.error) return documentLogsResult
 
-  const providerLogsScope = new ProviderLogsRepository(workspace.id, db)
-  const providerLogResult = await providerLogsScope.find(
-    evaluationResult.evaluationProviderLogId,
-  )
-  if (providerLogResult.error) return Result.error(providerLogResult.error)
-  if (!providerLogResult.value) {
-    return Result.error(
-      new NotFoundError('ProviderLogs not found for DocumentLog'),
-    )
-  }
-
-  const serializedProviderLog = serializeForEvaluation(providerLogResult.value)
-
-  const responseObject = providerLogResult.value.responseObject as {
-    reason?: string
-  } | null
-
-  const reason =
-    responseObject && 'reason' in responseObject
-      ? (responseObject.reason ?? null)
-      : null
+  const providerLogResult = await findEvaluationProviderLog(
+    {
+      evaluationResult,
+      workspace,
+    },
+    db,
+  ).then((r) => r.unwrap())
 
   const serializedDocumentLog = await serializeDocumentLog({
     workspace,
     documentLog: documentLogsResult.value,
   })
+
   if (serializedDocumentLog.error) return serializedDocumentLog
 
-  return Result.ok({
-    ...serializedProviderLog,
-    resultableType:
-      evaluationResult.resultableType ?? EvaluationResultableType.Text,
-    result: evaluationResult.result,
+  const resultableType =
+    evaluationResult.resultableType ?? EvaluationResultableType.Text
+
+  const reason = providerLogResult.reason
+  const serializedProviderLog = providerLogResult.serializedProviderLog
+
+  const baseSerialize = {
     reason,
+    resultableType,
+    result: evaluationResult.result,
     evaluatedLog: serializedDocumentLog.value,
+  }
+
+  if (!serializedProviderLog) return Result.ok(baseSerialize)
+
+  return Result.ok({
+    ...baseSerialize,
+    ...serializedProviderLog,
   })
 }

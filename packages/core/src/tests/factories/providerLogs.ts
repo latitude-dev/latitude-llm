@@ -15,6 +15,7 @@ export type IProviderLogData = {
   costInMillicents?: number
   generatedAt?: Date
   workspace: Workspace
+  responseObject?: unknown
 }
 
 export async function createProviderLog(
@@ -31,6 +32,7 @@ export async function createProviderLog(
     config: { model: 'gpt-4o' },
     messages: [],
     responseText: faker.lorem.sentence(),
+    responseObject: data.responseObject,
     toolCalls: [],
     usage: {
       promptTokens: data.tokens ?? faker.number.int({ min: 10, max: 100 }),

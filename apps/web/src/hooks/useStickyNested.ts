@@ -30,18 +30,20 @@ function useUpdateWidthOnTargetContainerChange({
   }, [target, targetContainer])
 }
 
+export type StickyOffset = { top: number; bottom: number }
+
 export function useStickyNested({
   scrollableArea,
   target,
   targetContainer,
   beacon,
-  offset = 0,
+  offset,
 }: {
   scrollableArea: HTMLElement | null | undefined
   beacon: HTMLElement | null | undefined
   target: HTMLElement | null
   targetContainer: HTMLElement | null | undefined
-  offset?: number
+  offset: StickyOffset
 }) {
   useEffect(() => {
     const ready = scrollableArea && target && beacon
@@ -52,13 +54,16 @@ export function useStickyNested({
       const beaconRect = beacon.getBoundingClientRect()
       const targetRect = target.getBoundingClientRect()
       const targetWidth = targetRect.width
-      const top = containerRect.top + offset
+      const { top: offsetTop = 0, bottom: offsetBottom = 0 } = offset
+      const yOffset = offsetTop + offsetBottom
+      const top = containerRect.top + offsetTop
 
-      let constrainedHeight = containerRect.bottom - beaconRect.top - offset
+      let constrainedHeight =
+        containerRect.bottom - beaconRect.top - offsetBottom * 2
 
       if (top >= beaconRect.top) {
         constrainedHeight =
-          containerRect.bottom - containerRect.top - offset * 2
+          containerRect.bottom - containerRect.top - yOffset - offsetBottom
         target.style.position = 'fixed'
         target.style.top = `${top}px`
         target.style.width = `${targetWidth}px`

@@ -20,6 +20,7 @@ export type IEvaluationData = {
   description?: string
   prompt?: string
   configuration?: EvaluationResultConfiguration
+  metadataType?: EvaluationMetadataType
 }
 
 export async function createLlmAsJudgeEvaluation({

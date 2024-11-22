@@ -78,6 +78,7 @@ export async function computeEvaluationResultsByDocumentContent(
         WHEN ${evaluationResults.resultableType} = ${EvaluationResultableType.Text} THEN ${evaluationResultableTexts.result}
       END`.as('result'),
       createdAt: evaluationResults.createdAt,
+      sameContent: eq(documentLogs.contentHash, content.value).mapWith(Boolean),
     })
     .from(evaluationResults)
     .innerJoin(
@@ -130,13 +131,8 @@ export async function computeEvaluationResultsByDocumentContent(
     .where(
       and(
         eq(evaluationResults.evaluationId, evaluation.id),
-        or(
-          eq(documentLogs.contentHash, content.value),
-          eq(documentLogs.commitId, commit.id),
-        ),
         isNull(runErrors.id),
         isNotNull(evaluationResults.resultableId),
-        isNotNull(evaluationResults.providerLogId),
       ),
     )
     .orderBy(desc(evaluationResults.createdAt), desc(evaluationResults.id))

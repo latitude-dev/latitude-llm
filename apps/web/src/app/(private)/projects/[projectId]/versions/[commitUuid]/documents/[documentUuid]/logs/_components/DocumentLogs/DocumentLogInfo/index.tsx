@@ -19,7 +19,7 @@ import {
   useCurrentProject,
 } from '@latitude-data/web-ui'
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
-import { useStickyNested } from '$/hooks/useStickyNested'
+import { StickyOffset, useStickyNested } from '$/hooks/useStickyNested'
 import { ROUTES } from '$/services/routes'
 import { useRouter } from 'next/navigation'
 import { usePanelDomRef } from 'node_modules/@latitude-data/web-ui/src/ds/atoms/SplitPane'
@@ -78,6 +78,10 @@ function UseDocumentLogInPlaygroundButton({
     documentUuid,
     documentLog.uuid,
   ])
+  const hasError = !!documentLog.error.message
+
+  if (hasError) return null
+
   return (
     <Tooltip
       asChild
@@ -104,80 +108,81 @@ export function DocumentLogInfo({
   isLoading = false,
   error,
   className,
-  tableRef,
+  stickyRef,
   sidebarWrapperRef,
   children,
+  offset,
 }: {
   documentLog: DocumentLogWithMetadataAndError
   providerLogs?: ProviderLogDto[]
   isLoading?: boolean
   error?: Error
   className?: string
-  tableRef?: RefObject<HTMLTableElement>
+  stickyRef?: RefObject<HTMLTableElement>
   sidebarWrapperRef?: RefObject<HTMLDivElement>
   children?: ReactNode
+  offset?: StickyOffset
 }) {
   const ref = useRef<HTMLDivElement>(null)
   const [target, setTarget] = useState<HTMLDivElement | null>(null)
+
   useEffect(() => {
     if (!ref.current) return
 
     setTarget(ref.current)
   }, [ref.current])
   const scrollableArea = usePanelDomRef({ selfRef: target })
-  const beacon = tableRef?.current
+  const beacon = stickyRef?.current
   useStickyNested({
     scrollableArea,
     beacon,
     target,
     targetContainer: sidebarWrapperRef?.current,
-    offset: 24,
+    offset: offset ?? { top: 0, bottom: 0 },
   })
 
   const { lastResponse, messages } = useGetProviderLogMessages({ providerLogs })
   return (
-    <div className='relative border border-border rounded-lg overflow-hidden'>
-      <MetadataInfoTabs
-        ref={ref}
-        className={className}
-        tabsActions={
+    <MetadataInfoTabs
+      ref={ref}
+      className={className}
+      bottomActions={children}
+      tabsActions={
+        <>
+          {documentLog ? (
+            <UseDocumentLogInPlaygroundButton documentLog={documentLog} />
+          ) : null}
+        </>
+      }
+    >
+      {({ selectedTab }) =>
+        isLoading ? (
+          <DocumentLogMetadataLoading />
+        ) : (
           <>
-            {documentLog ? (
-              <UseDocumentLogInPlaygroundButton documentLog={documentLog} />
-            ) : null}
+            {!error ? (
+              <>
+                {selectedTab === 'metadata' && (
+                  <DocumentLogMetadata
+                    documentLog={documentLog}
+                    providerLogs={providerLogs}
+                    lastResponse={lastResponse}
+                  />
+                )}
+                {selectedTab === 'messages' && (
+                  <DocumentLogMessages messages={messages} />
+                )}
+              </>
+            ) : (
+              <Alert
+                variant='destructive'
+                title='Error loading'
+                description={error.message}
+              />
+            )}
           </>
-        }
-      >
-        {({ selectedTab }) =>
-          isLoading ? (
-            <DocumentLogMetadataLoading />
-          ) : (
-            <>
-              {!error ? (
-                <>
-                  {selectedTab === 'metadata' && (
-                    <DocumentLogMetadata
-                      documentLog={documentLog}
-                      providerLogs={providerLogs}
-                      lastResponse={lastResponse}
-                    />
-                  )}
-                  {selectedTab === 'messages' && (
-                    <DocumentLogMessages messages={messages} />
-                  )}
-                </>
-              ) : (
-                <Alert
-                  variant='destructive'
-                  title='Error loading'
-                  description={error.message}
-                />
-              )}
-            </>
-          )
-        }
-      </MetadataInfoTabs>
-      {children}
-    </div>
+        )
+      }
+    </MetadataInfoTabs>
   )
 }

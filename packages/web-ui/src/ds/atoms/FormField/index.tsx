@@ -9,8 +9,7 @@ import {
 import { Slot } from '@radix-ui/react-slot'
 
 import { cn } from '../../../lib/utils'
-import { Icon } from '../Icons'
-import { BatchLabel, Label } from '../Label'
+import { TooltipLabel } from '../Label'
 import Text from '../Text'
 import { Tooltip } from '../Tooltip'
 
@@ -70,6 +69,153 @@ export const FormControl = forwardRef<
   )
 })
 
+function DescriptionAndError({
+  description,
+  error,
+  errorStyle,
+  formMessageId,
+}: {
+  description: ReactNode | string | undefined
+  error: string | undefined
+  formMessageId: string
+  errorStyle: ErrorStyle
+}) {
+  return (
+    <>
+      {description && <FormDescription>{description}</FormDescription>}
+      {errorStyle === 'inline' ? (
+        <InlineFormErrorMessage error={error} id={formMessageId} />
+      ) : null}
+    </>
+  )
+}
+
+type ErrorStyle = 'inline' | 'tooltip'
+type InputWrapperProps = {
+  children: ReactNode
+  description: ReactNode | string | undefined
+  error: string | undefined
+  formItemId: string
+  formDescriptionId: string
+  formMessageId: string
+  label?: string
+  badgeLabel?: boolean
+  info?: string
+  errorStyle?: ErrorStyle
+}
+
+/**
+ * Used for checkbox and radio buttons
+ * where label is inline with the form input element.
+ */
+function InlineInput({
+  children,
+  label,
+  formItemId,
+  badgeLabel,
+  info,
+  error,
+  description,
+  formDescriptionId,
+  formMessageId,
+}: InputWrapperProps) {
+  if (!label) {
+    return (
+      <div className='flex flex-row gap-2 items-center'>
+        <FormControl
+          error={error}
+          formItemId={formItemId}
+          formDescriptionId={formDescriptionId}
+          formMessageId={formMessageId}
+        >
+          {children}
+        </FormControl>
+        <DescriptionAndError
+          description=''
+          error={error}
+          errorStyle='inline'
+          formMessageId={formMessageId}
+        />
+      </div>
+    )
+  }
+
+  const hasSubcontent = error || description
+  return (
+    <TooltipLabel
+      htmlFor={formItemId}
+      badgeLabel={badgeLabel}
+      info={info}
+      error={error}
+    >
+      <div
+        className={cn('flex flex-row gap-x-2', {
+          'items-center': !hasSubcontent,
+        })}
+      >
+        <FormControl
+          className='relative top-0.5'
+          error={error}
+          formItemId={formItemId}
+          formDescriptionId={formDescriptionId}
+          formMessageId={formMessageId}
+        >
+          {children}
+        </FormControl>
+        <div className='flex flex-col gap-y-1'>
+          <div className='cursor-pointer'>{label}</div>
+          <DescriptionAndError
+            description={description}
+            error={error}
+            errorStyle='inline'
+            formMessageId={formMessageId}
+          />
+        </div>
+      </div>
+    </TooltipLabel>
+  )
+}
+
+function StackInput({
+  children,
+  label,
+  formItemId,
+  badgeLabel,
+  info,
+  error,
+  formDescriptionId,
+  formMessageId,
+}: InputWrapperProps) {
+  return (
+    <>
+      {label ? (
+        <TooltipLabel
+          htmlFor={formItemId}
+          badgeLabel={badgeLabel}
+          info={info}
+          error={error}
+        >
+          {label}
+        </TooltipLabel>
+      ) : null}
+      <FormControl
+        error={error}
+        formItemId={formItemId}
+        formDescriptionId={formDescriptionId}
+        formMessageId={formMessageId}
+      >
+        {children}
+      </FormControl>
+      <DescriptionAndError
+        description=''
+        error={error}
+        errorStyle='inline'
+        formMessageId={formMessageId}
+      />
+    </>
+  )
+}
+
 export type FormFieldProps = Omit<
   HTMLAttributes<HTMLDivElement>,
   'onChange'
@@ -79,9 +225,11 @@ export type FormFieldProps = Omit<
   badgeLabel?: boolean
   description?: string | ReactNode
   info?: string
+  inline?: boolean
   errors?: string[] | null | undefined
-  errorStyle?: 'inline' | 'tooltip'
+  errorStyle?: ErrorStyle
   autoGrow?: boolean
+  fullWidth?: boolean
 }
 function FormField({
   children,
@@ -93,16 +241,25 @@ function FormField({
   errorStyle = 'inline',
   info,
   autoGrow = false,
+  fullWidth = true,
+  inline = false,
 }: FormFieldProps) {
   const error = errors?.[0]
   const id = useId()
   const formItemId = `${id}-form-item`
   const formDescriptionId = `${id}-form-item-description`
   const formMessageId = `${id}-form-item-message`
-  const LabelComponent = badgeLabel ? BatchLabel : Label
+  const InputCmp = inline ? InlineInput : StackInput
   const input = (
     <div
-      className={cn('space-y-2 w-full', { 'h-full': autoGrow }, className)}
+      className={cn(
+        'space-y-2',
+        {
+          'h-full': autoGrow,
+          'w-full': fullWidth,
+        },
+        className,
+      )}
       aria-describedby={
         !error
           ? `${formDescriptionId}`
@@ -110,56 +267,18 @@ function FormField({
       }
       aria-invalid={!!error}
     >
-      {label ? (
-        info ? (
-          <Tooltip
-            variant={error ? 'destructive' : 'inverse'}
-            asChild
-            side='top'
-            align='start'
-            trigger={
-              <div className='inline-block'>
-                <div className='flex flex-row gap-1 items-center'>
-                  <LabelComponent
-                    variant={error ? 'destructive' : 'default'}
-                    htmlFor={formItemId}
-                  >
-                    {label}
-                  </LabelComponent>
-                  <Icon
-                    name='info'
-                    color={error ? 'destructive' : 'foregroundMuted'}
-                  />
-                </div>
-              </div>
-            }
-          >
-            {info}
-          </Tooltip>
-        ) : (
-          <div className='flex flex-row gap-1 items-center'>
-            <LabelComponent
-              variant={error ? 'destructive' : 'default'}
-              htmlFor={formItemId}
-            >
-              {label}
-            </LabelComponent>
-          </div>
-        )
-      ) : null}
-      <FormControl
-        error={error}
+      <InputCmp
+        label={label}
         formItemId={formItemId}
+        badgeLabel={badgeLabel}
+        info={info}
+        error={error}
+        description={description}
         formDescriptionId={formDescriptionId}
         formMessageId={formMessageId}
       >
         {children}
-      </FormControl>
-
-      {description && <FormDescription>{description}</FormDescription>}
-      {errorStyle === 'inline' ? (
-        <InlineFormErrorMessage error={error} id={formMessageId} />
-      ) : null}
+      </InputCmp>
     </div>
   )
 

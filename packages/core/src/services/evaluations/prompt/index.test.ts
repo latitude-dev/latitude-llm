@@ -98,4 +98,26 @@ describe('getEvaluationPrompt', () => {
     expect(metadata.errors.length).toBe(0)
     expect(metadata.config.model).toBe(model)
   })
+
+  it('returns evaluation description for manual evaluations', async () => {
+    const evaluation = await createEvaluation({
+      workspace,
+      user,
+      name: 'Test evaluation',
+      description: 'Test description',
+      metadataType: EvaluationMetadataType.Manual,
+      metadata: {},
+      resultType: EvaluationResultableType.Text,
+      resultConfiguration: {
+        valueDescription: 'The result description',
+      },
+    }).then((r) => r.unwrap())
+
+    const obtainedPrompt = await getEvaluationPrompt({
+      workspace,
+      evaluation,
+    }).then((r) => r.unwrap())
+
+    expect(obtainedPrompt).toBe(evaluation.description)
+  })
 })

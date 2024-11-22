@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm'
 
 import {
   DocumentVersion,
+  EvaluationMetadataType,
   Providers,
   User,
   Workspace,
@@ -17,7 +18,11 @@ import { updateProject } from '../../services/projects'
 import { createProject as createProjectFn } from '../../services/projects/create'
 import { createApiKey } from './apiKeys'
 import { createDraft } from './commits'
-import { createLlmAsJudgeEvaluation, IEvaluationData } from './evaluations'
+import {
+  createEvaluation,
+  createLlmAsJudgeEvaluation,
+  IEvaluationData,
+} from './evaluations'
 import {
   createProviderApiKey,
   defaultProviderFakeData,
@@ -119,9 +124,17 @@ export async function createProject(projectData: Partial<ICreateProject> = {}) {
   )
 
   const evaluations = await Promise.all(
-    projectData.evaluations?.map((evaluationData) =>
-      createLlmAsJudgeEvaluation({ workspace, user, ...evaluationData }),
-    ) ?? [],
+    projectData.evaluations?.map((evaluationData) => {
+      if (evaluationData.metadataType === EvaluationMetadataType.Manual) {
+        return createEvaluation({
+          workspace,
+          user,
+          ...evaluationData,
+          metadataType: EvaluationMetadataType.Manual,
+        })
+      }
+      return createLlmAsJudgeEvaluation({ workspace, user, ...evaluationData })
+    }) ?? [],
   )
 
   const documents: DocumentVersion[] = []

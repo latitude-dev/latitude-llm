@@ -1,8 +1,15 @@
-import { describe, expect, it } from 'vitest'
+import { beforeAll, describe, expect, it } from 'vitest'
 
 import { computeEvaluationResultsByDocumentContent } from '.'
-import { Commit, DocumentVersion, EvaluationDto } from '../../browser'
-import { Providers } from '../../constants'
+import {
+  Commit,
+  DocumentVersion,
+  EvaluationDto,
+  User,
+  Workspace,
+} from '../../browser'
+import { EvaluationMetadataType, Providers } from '../../constants'
+import { EvaluationResultByDocument } from '../../repositories'
 import * as factories from '../../tests/factories'
 import { updateDocument } from '../documents'
 import { connectEvaluations } from '../evaluations'
@@ -12,279 +19,148 @@ async function evaluateDocument({
   document,
   evaluation,
   count,
+  sameContent,
 }: {
   document: DocumentVersion
   commit: Commit
   evaluation: EvaluationDto
   count: number
+  sameContent: boolean
 }) {
+  let results: EvaluationResultByDocument[] = []
   for (let i = 0; i < count; i++) {
     const { documentLog, providerLogs } = await factories.createDocumentLog({
       document,
       commit,
     })
 
-    await factories.createEvaluationResult({
+    const { evaluationResult } = await factories.createEvaluationResult({
       documentLog,
       evaluatedProviderLog: providerLogs[0]!,
       evaluation,
     })
+
+    if (evaluationResult) {
+      results.push({
+        id: evaluationResult.id,
+        result: evaluationResult.result,
+        createdAt: evaluationResult.createdAt,
+        source: evaluationResult.source,
+        sameContent,
+      })
+    }
   }
+
+  return results
 }
 
 describe('computeEvaluationResultsByDocumentContent', () => {
-  it('returns all ev results for a document created in a given commit', async () => {
-    const { workspace, commit, documents, evaluations, user } =
-      await factories.createProject({
+  let workspace: Workspace
+  let user: User
+  let draft: Commit
+  let document: DocumentVersion
+  let newDocument: DocumentVersion
+  let llmAsJudgeEvaluation: EvaluationDto
+  let oldDocumentResult: EvaluationResultByDocument
+  let manualEvaluation: EvaluationDto
+
+  describe('with different evaluations', async () => {
+    beforeAll(async () => {
+      const {
+        workspace: wsp,
+        project,
+        evaluations,
+        user: usr,
+        commit,
+        documents,
+      } = await factories.createProject({
         providers: [{ name: 'foo', type: Providers.OpenAI }],
+        evaluations: [
+          {
+            prompt: factories.helpers.createPrompt({
+              provider: 'foo',
+            }),
+          },
+          {
+            metadataType: EvaluationMetadataType.Manual,
+          },
+        ],
         documents: {
           foo: factories.helpers.createPrompt({
             provider: 'foo',
           }),
         },
-        evaluations: [
-          {
-            prompt: factories.helpers.createPrompt({
-              provider: 'foo',
-            }),
-          },
-        ],
       })
-
-    const document = documents[0]!
-    const evaluation = evaluations[0]!
-
-    await connectEvaluations({
-      workspace,
-      documentUuid: document.documentUuid,
-      evaluationUuids: [evaluation.uuid],
-      user,
-    })
-
-    await evaluateDocument({
-      document,
-      commit,
-      evaluation,
-      count: 10,
-    })
-
-    const result = await computeEvaluationResultsByDocumentContent({
-      evaluation,
-      commit,
-      documentUuid: document.documentUuid,
-    })
-
-    expect(result.ok).toBe(true)
-  })
-
-  it('evaluation results from previous commits if the document did not change', async () => {
-    const { workspace, project, commit, documents, evaluations, user } =
-      await factories.createProject({
-        providers: [{ name: 'foo', type: Providers.OpenAI }],
-        documents: {
-          foo: factories.helpers.createPrompt({
-            provider: 'foo',
-            content: 'foo',
-          }),
-          bar: factories.helpers.createPrompt({
-            provider: 'foo',
-            content: 'bar',
-          }),
-        },
-        evaluations: [
-          {
-            prompt: factories.helpers.createPrompt({
-              provider: 'foo',
-            }),
-          },
-        ],
+      workspace = wsp
+      user = usr
+      document = documents[0]!
+      const { commit: cmtDraft } = await factories.createDraft({
+        project,
+        user,
       })
-
-    const fooDocument = documents.find((d) => d.path === 'foo')!
-    const barDocument = documents.find((d) => d.path === 'bar')!
-    const evaluation = evaluations[0]!
-
-    await connectEvaluations({
-      workspace,
-      documentUuid: fooDocument.documentUuid,
-      evaluationUuids: [evaluation.uuid],
-      user,
-    })
-
-    await evaluateDocument({
-      document: fooDocument,
-      commit,
-      evaluation,
-      count: 10,
-    })
-
-    const { commit: newCommit } = await factories.createDraft({
-      project,
-      user,
-    })
-
-    await updateDocument({
-      commit: newCommit,
-      document: barDocument,
-      content: factories.helpers.createPrompt({
-        provider: 'foo',
-        content: 'barv2',
-      }),
-    })
-
-    await evaluateDocument({
-      document: fooDocument,
-      commit: newCommit,
-      evaluation,
-      count: 15,
-    })
-
-    const result = await computeEvaluationResultsByDocumentContent({
-      evaluation,
-      commit: newCommit,
-      documentUuid: fooDocument.documentUuid,
-    })
-
-    expect(result.ok).toBe(true)
-    expect(result.value!.length).toBe(25)
-  })
-
-  it('does not include evaluation results from previous commits if the document changed', async () => {
-    const { workspace, project, commit, documents, evaluations, user } =
-      await factories.createProject({
-        providers: [{ name: 'foo', type: Providers.OpenAI }],
-        documents: {
-          foo: factories.helpers.createPrompt({
-            provider: 'foo',
-            content: 'foo',
-          }),
-          bar: factories.helpers.createPrompt({
-            provider: 'foo',
-            content: 'bar',
-          }),
-        },
-        evaluations: [
-          {
-            prompt: factories.helpers.createPrompt({
-              provider: 'foo',
-            }),
-          },
-        ],
-      })
-
-    const fooDocument = documents.find((d) => d.path === 'foo')!
-    const evaluation = evaluations[0]!
-
-    await connectEvaluations({
-      workspace,
-      documentUuid: fooDocument.documentUuid,
-      evaluationUuids: [evaluation.uuid],
-      user,
-    })
-
-    await evaluateDocument({
-      document: fooDocument,
-      commit,
-      evaluation,
-      count: 10,
-    })
-
-    const { commit: newCommit } = await factories.createDraft({
-      project,
-      user,
-    })
-
-    const newFooDocument = await updateDocument({
-      commit: newCommit,
-      document: fooDocument,
-      content: factories.helpers.createPrompt({
-        provider: 'foo',
-        content: 'foov2',
-      }),
-    }).then((r) => r.unwrap())
-
-    await evaluateDocument({
-      document: newFooDocument,
-      commit: newCommit,
-      evaluation,
-      count: 15,
-    })
-
-    const result = await computeEvaluationResultsByDocumentContent({
-      evaluation,
-      commit: newCommit,
-      documentUuid: fooDocument.documentUuid,
-    })
-
-    expect(result.ok).toBe(true)
-  })
-
-  it('includes evaluation results from the same draft even if the document changed', async () => {
-    const { workspace, project, evaluations, user } =
-      await factories.createProject({
-        providers: [{ name: 'foo', type: Providers.OpenAI }],
-        evaluations: [
-          {
-            prompt: factories.helpers.createPrompt({
-              provider: 'foo',
-            }),
-          },
-        ],
-      })
-
-    const { commit: draft } = await factories.createDraft({ project, user })
-    const evaluation = evaluations[0]!
-
-    const { documentVersion: document } = await factories.createDocumentVersion(
-      {
+      draft = cmtDraft
+      llmAsJudgeEvaluation = evaluations[0]!
+      manualEvaluation = evaluations[1]!
+      newDocument = await updateDocument({
         commit: draft,
-        path: 'foo',
+        document,
         content: factories.helpers.createPrompt({
           provider: 'foo',
-          content: 'foo',
+          content: 'foov2',
         }),
+      }).then((r) => r.unwrap())
+      await connectEvaluations({
         workspace,
+        documentUuid: document.documentUuid,
+        evaluationUuids: [llmAsJudgeEvaluation.uuid, manualEvaluation.uuid],
         user,
-      },
-    )
-
-    await connectEvaluations({
-      workspace,
-      documentUuid: document.documentUuid,
-      evaluationUuids: [evaluation.uuid],
-      user,
+      })
+      const oldDocumentResults = await evaluateDocument({
+        document,
+        commit,
+        evaluation: llmAsJudgeEvaluation,
+        count: 1,
+        sameContent: false,
+      })
+      oldDocumentResult = oldDocumentResults[0]!
     })
 
-    await evaluateDocument({
-      document,
-      commit: draft,
-      evaluation,
-      count: 10,
+    it('returns all evaluation results', async () => {
+      const llmEvaluatedResults = await evaluateDocument({
+        document: newDocument,
+        commit: draft,
+        evaluation: llmAsJudgeEvaluation,
+        count: 1,
+        sameContent: true,
+      })
+      const llmEvaluatedResult = llmEvaluatedResults[0]!
+      const results = await computeEvaluationResultsByDocumentContent({
+        evaluation: llmAsJudgeEvaluation,
+        commit: draft,
+        documentUuid: document.documentUuid,
+      }).then((r) => r.unwrap())
+
+      expect(results).toEqual([llmEvaluatedResult, oldDocumentResult])
     })
 
-    const newDocument = await updateDocument({
-      commit: draft,
-      document,
-      content: factories.helpers.createPrompt({
-        provider: 'foo',
-        content: 'foov2',
-      }),
-    }).then((r) => r.unwrap())
+    it('returns manual evaluation results', async () => {
+      const manualEvaluatedResults = await evaluateDocument({
+        document: newDocument,
+        commit: draft,
+        evaluation: manualEvaluation,
+        count: 1,
+        sameContent: true,
+      })
+      const manualEvaluatedResult = manualEvaluatedResults[0]!
 
-    await evaluateDocument({
-      document: newDocument,
-      commit: draft,
-      evaluation,
-      count: 15,
+      const results = await computeEvaluationResultsByDocumentContent({
+        evaluation: manualEvaluation,
+        commit: draft,
+        documentUuid: document.documentUuid,
+      }).then((r) => r.unwrap())
+
+      expect(results).toEqual([manualEvaluatedResult])
     })
-
-    const result = await computeEvaluationResultsByDocumentContent({
-      evaluation,
-      commit: draft,
-      documentUuid: document.documentUuid,
-    })
-
-    expect(result.value!.length).toBe(25)
   })
 
   it('paginates the results correctly', async () => {
@@ -319,7 +195,8 @@ describe('computeEvaluationResultsByDocumentContent', () => {
       document,
       commit,
       evaluation,
-      count: 10,
+      count: 2,
+      sameContent: true,
     })
 
     const result = await computeEvaluationResultsByDocumentContent({
