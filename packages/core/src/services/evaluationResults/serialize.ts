@@ -5,7 +5,7 @@ import {
   Workspace,
 } from '../../browser'
 import { database } from '../../client'
-import { PromisedResult, Result } from '../../lib'
+import { NotFoundError, PromisedResult, Result } from '../../lib'
 import {
   DocumentLogsRepository,
   EvaluationResultDto,
@@ -73,7 +73,14 @@ export async function serialize(
   const documentLogsResult = await documentLogsScope.find(
     evaluationResult.documentLogId,
   )
-  if (documentLogsResult.error) return documentLogsResult
+
+  if (documentLogsResult.error) {
+    return Result.error(
+      new NotFoundError(
+        `Refine Error: finding document log with id ${evaluationResult.documentLogId} in evaluation result ${evaluationResult.id}`,
+      ),
+    )
+  }
 
   const providerLogResult = await findEvaluationProviderLog(
     {
