@@ -16,6 +16,7 @@ import { ROUTES } from '$/services/routes'
 import { redirect } from 'next/navigation'
 
 import DocumentEditor from './_components/DocumentEditor/Editor'
+import { PromptlNotificationModal } from './_components/PromptlNotificationModal'
 
 export default async function DocumentPage({
   params,
@@ -61,15 +62,18 @@ export default async function DocumentPage({
   const freeRunsCount = await getFreeRuns(workspace.id)
 
   return (
-    <DocumentEditor
-      runDocumentAction={runDocumentAction}
-      addMessagesAction={addMessagesAction}
-      documents={documents}
-      document={document}
-      providerApiKeys={providerApiKeys.map(providerApiKeyPresenter)}
-      freeRunsCount={freeRunsCount ? Number(freeRunsCount) : undefined}
-      evaluationResults={refinementResult.evaluationResults ?? []}
-      evaluation={refinementResult.evaluation}
-    />
+    <>
+      <DocumentEditor
+        runDocumentAction={runDocumentAction}
+        addMessagesAction={addMessagesAction}
+        documents={documents}
+        document={document}
+        providerApiKeys={providerApiKeys.map(providerApiKeyPresenter)}
+        freeRunsCount={freeRunsCount ? Number(freeRunsCount) : undefined}
+        evaluationResults={refinementResult.evaluationResults ?? []}
+        evaluation={refinementResult.evaluation}
+      />
+      <PromptlNotificationModal documents={documents} />
+    </>
   )
 }

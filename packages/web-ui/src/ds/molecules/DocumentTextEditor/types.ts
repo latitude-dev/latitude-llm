@@ -21,6 +21,7 @@ export type DocumentTextEditorProps = {
   copilot?: {
     isLoading: boolean
     requestSuggestion: (_: string) => void
+    disabledMessage?: string
   }
 }
 

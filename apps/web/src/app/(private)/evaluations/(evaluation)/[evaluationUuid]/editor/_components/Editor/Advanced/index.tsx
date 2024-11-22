@@ -1,6 +1,6 @@
 'use client'
 
-import { Suspense, useCallback, useEffect, useMemo, useState } from 'react'
+import { Suspense, useCallback, useEffect, useState } from 'react'
 
 import {
   EvaluationDto,
@@ -19,15 +19,11 @@ import { useMetadata } from '$/hooks/useMetadata'
 import useEvaluations from '$/stores/evaluations'
 import useProviderApiKeys from '$/stores/providerApiKeys'
 
-const promptlVersion = (evaluation?: EvaluationDto) => {
-  if (
-    evaluation?.metadataType === EvaluationMetadataType.LlmAsJudgeAdvanced &&
-    evaluation?.metadata.promptlVersion !== 0
-  ) {
-    return 0
-  }
+import { PromptlNotificationModal } from './PromptlNotificationModal'
+import { UpdateToPromptLButton } from './UpdateToPromptl'
 
-  return 1
+type AdvancedEvaluationDto = EvaluationDto & {
+  metadata: EvaluationMetadataLlmAsJudgeAdvanced
 }
 
 export default function AdvancedEvaluationEditor({
@@ -36,7 +32,7 @@ export default function AdvancedEvaluationEditor({
   providerApiKeys,
   freeRunsCount,
 }: {
-  evaluation: EvaluationDto
+  evaluation: AdvancedEvaluationDto
   defaultPrompt: string
   providerApiKeys?: ProviderApiKey[]
   freeRunsCount?: number
@@ -44,24 +40,29 @@ export default function AdvancedEvaluationEditor({
   const { findEvaluation, isLoading, update, isUpdating } = useEvaluations({
     fallbackData: [serverEvaluation],
   })
-  const evaluation = findEvaluation(serverEvaluation.uuid)
-  const evaluationMetadata = useMemo(
-    () => evaluation?.metadata as EvaluationMetadataLlmAsJudgeAdvanced,
-    [evaluation],
-  )
+  const evaluation = findEvaluation(
+    serverEvaluation.uuid,
+  ) as AdvancedEvaluationDto
   const { data: providers } = useProviderApiKeys({
     fallbackData: providerApiKeys,
   })
   const [value, setValue] = useState(defaultPrompt)
   const { metadata, runReadMetadata } = useMetadata()
 
+  const [promptlVersion, setPromptlVersion] = useState(
+    evaluation.metadata.promptlVersion,
+  )
+  useEffect(() => {
+    setPromptlVersion(evaluation.metadata.promptlVersion)
+  }, [evaluation.metadata.promptlVersion])
+
   useEffect(() => {
     runReadMetadata({
       prompt: value,
       withParameters: SERIALIZED_DOCUMENT_LOG_FIELDS,
-      promptlVersion: promptlVersion(evaluation),
+      promptlVersion,
     })
-  }, [providers, runReadMetadata])
+  }, [providers, runReadMetadata, evaluation?.metadata, promptlVersion])
 
   const save = useCallback(
     (val: string) => {
@@ -70,10 +71,11 @@ export default function AdvancedEvaluationEditor({
         metadata: {
           type: EvaluationMetadataType.LlmAsJudgeAdvanced,
           prompt: val,
+          promptlVersion,
         },
       })
     },
-    [update, evaluation],
+    [update, evaluation, promptlVersion],
   )
 
   const onChange = useCallback(
@@ -82,16 +84,23 @@ export default function AdvancedEvaluationEditor({
       runReadMetadata({
         prompt: value,
         withParameters: SERIALIZED_DOCUMENT_LOG_FIELDS,
-        promptlVersion: promptlVersion(evaluation),
+        promptlVersion,
       })
     },
-    [setValue, runReadMetadata, providers],
+    [
+      setValue,
+      runReadMetadata,
+      providers,
+      evaluation?.metadata,
+      promptlVersion,
+    ],
   )
 
   if (!evaluation) return null
 
   return (
     <>
+      <PromptlNotificationModal evaluation={evaluation} />
       <EditorHeader
         freeRunsCount={freeRunsCount}
         providers={providers}
@@ -101,7 +110,14 @@ export default function AdvancedEvaluationEditor({
         onChangePrompt={onChange}
         rightActions={
           <>
-            {value !== evaluationMetadata.prompt && (
+            {promptlVersion === 0 && (
+              <UpdateToPromptLButton
+                evaluation={evaluation}
+                setPromptlVersion={setPromptlVersion}
+              />
+            )}
+            {(value !== evaluation.metadata.prompt ||
+              promptlVersion !== evaluation.metadata.promptlVersion) && (
               <Button
                 fancy
                 disabled={isUpdating || isLoading}

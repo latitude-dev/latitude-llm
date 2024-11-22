@@ -5,6 +5,7 @@ import React, {
   Suspense,
   useCallback,
   useEffect,
+  useMemo,
   useState,
 } from 'react'
 
@@ -21,6 +22,7 @@ import {
   DocumentTextEditorFallback,
   SplitPane,
   Text,
+  Tooltip,
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui'
@@ -42,6 +44,7 @@ import { useDebouncedCallback } from 'use-debounce'
 
 import Playground from './Playground'
 import RefineDocumentModal from './RefineModal'
+import { UpdateToPromptLButton } from './UpdateToPromptl'
 import { useRefinement } from './useRefinement'
 
 export const DocumentEditorContext = createContext<
@@ -55,8 +58,8 @@ export const DocumentEditorContext = createContext<
 export default function DocumentEditor({
   runDocumentAction,
   addMessagesAction,
-  document,
-  documents,
+  document: _document,
+  documents: _documents,
   providerApiKeys,
   freeRunsCount,
   evaluation: serverEvaluation,
@@ -78,7 +81,7 @@ export default function DocumentEditor({
   const refinement = useRefinement({
     projectId: project.id,
     commitUuid: commit.uuid,
-    document,
+    document: _document,
     serverEvaluation,
     serverEvaluationResults,
   })
@@ -90,7 +93,7 @@ export default function DocumentEditor({
           ROUTES.projects
             .detail({ id: project.id })
             .commits.detail({ uuid: draft.uuid })
-            .documents.detail({ uuid: document.documentUuid }).root,
+            .documents.detail({ uuid: _document.documentUuid }).root,
         )
       },
     },
@@ -98,16 +101,24 @@ export default function DocumentEditor({
   const { data: providers } = useProviderApiKeys({
     fallbackData: providerApiKeys,
   })
-  const { data: _documents, updateContent } = useDocumentVersions(
+  const { data: documents, updateContent } = useDocumentVersions(
     {
       commitUuid: commit.uuid,
       projectId: project.id,
     },
     {
-      fallbackData: documents,
+      fallbackData: _documents,
     },
   )
-  const [value, setValue] = useState(document.content)
+
+  const document = useMemo(
+    () =>
+      documents?.find((d) => d.documentUuid === _document.documentUuid) ??
+      _document,
+    [documents],
+  )
+
+  const [value, setValue] = useState(_document.content)
   const [isSaved, setIsSaved] = useState(true)
 
   const [diff, setDiff] = useState<DiffOptions>()
@@ -120,7 +131,7 @@ export default function DocumentEditor({
           payload: {
             projectId: project.id,
             commitUuid: commit.uuid,
-            documentUuid: document.documentUuid,
+            documentUuid: _document.documentUuid,
           },
         })
 
@@ -182,12 +193,12 @@ export default function DocumentEditor({
   useEffect(() => {
     runReadMetadata({
       prompt: value,
-      documents: _documents,
+      documents,
       document,
       fullPath: document.path,
       promptlVersion: document.promptlVersion,
     })
-  }, [])
+  }, [document.promptlVersion])
 
   const onChange = useCallback(
     (newValue: string) => {
@@ -196,13 +207,13 @@ export default function DocumentEditor({
       debouncedSave(newValue)
       runReadMetadata({
         prompt: newValue,
-        documents: _documents,
+        documents,
         document,
         fullPath: document.path,
         promptlVersion: document.promptlVersion,
       })
     },
-    [runReadMetadata, document.path],
+    [runReadMetadata, document.path, document.promptlVersion],
   )
 
   const {
@@ -248,6 +259,23 @@ export default function DocumentEditor({
   )
 
   const isMerged = commit.mergedAt !== null
+
+  const RefineButton = (
+    <Button
+      disabled={document.promptlVersion === 0}
+      className='bg-background'
+      variant='outline'
+      size='small'
+      iconProps={{
+        name: 'sparkles',
+        size: 'small',
+      }}
+      onClick={refinement.modal.onOpen}
+    >
+      <Text.H6>Refine</Text.H6>
+    </Button>
+  )
+
   return (
     <>
       {refinement.modal.open ? (
@@ -276,6 +304,7 @@ export default function DocumentEditor({
                   providers={providers}
                   disabledMetadataSelectors={isMerged}
                   title='Prompt editor'
+                  rightActions={<UpdateToPromptLButton document={document} />}
                   metadata={metadata}
                   prompt={value}
                   onChangePrompt={onChange}
@@ -293,22 +322,22 @@ export default function DocumentEditor({
                     }
                     isSaved={isSaved}
                     actionButtons={
-                      <Button
-                        className='bg-background'
-                        variant='outline'
-                        size='small'
-                        iconProps={{
-                          name: 'sparkles',
-                          size: 'small',
-                        }}
-                        onClick={refinement.modal.onOpen}
-                      >
-                        <Text.H6>Refine</Text.H6>
-                      </Button>
+                      document.promptlVersion === 0 ? (
+                        <Tooltip trigger={RefineButton}>
+                          Upgrade the syntax of the document to use the Refine
+                          feature.
+                        </Tooltip>
+                      ) : (
+                        RefineButton
+                      )
                     }
                     copilot={{
                       isLoading: isCopilotLoading,
                       requestSuggestion,
+                      disabledMessage:
+                        document.promptlVersion === 0
+                          ? 'Copilot is disabled for prompts using the old syntax. Upgrade to use Copilot.'
+                          : undefined,
                     }}
                   />
                 </Suspense>

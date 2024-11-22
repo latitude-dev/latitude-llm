@@ -82,7 +82,7 @@ describe('mergeCommit', () => {
       path: 'foo',
       content: ctx.factories.helpers.createPrompt({
         provider: providers[0]!,
-        content: '<foo',
+        content: '{{foo',
       }),
     })
 

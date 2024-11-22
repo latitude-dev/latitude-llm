@@ -13,6 +13,8 @@ export enum AppLocalStorage {
   editorMinimap = 'editorMinimap',
   editorCopilot = 'editorCopilot',
   playgroundParameters = 'playgroundParameters',
+  dismissedDocumentPromptlNotification = 'dismissedDocumentPromptlNotification',
+  dismissedEvaluationPromptlNotification = 'dismissedEvaluationPromptlNotification',
 }
 
 const isLocalStorageAvailable = (() => {

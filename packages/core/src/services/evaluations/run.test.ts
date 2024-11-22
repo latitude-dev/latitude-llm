@@ -1,5 +1,5 @@
-import { createChain } from '@latitude-data/compiler'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
+import { Adapters, Chain } from '@latitude-data/promptl'
 import { and, eq, isNull } from 'drizzle-orm'
 import {
   afterEach,
@@ -165,16 +165,17 @@ describe('run', () => {
         workspace,
         evaluation,
       }).then((r) => r.unwrap())
-      const chain = createChain({
+      const chain = new Chain({
         prompt: evaluationPrompt,
         parameters: { ...serializedPrompt },
+        adapter: Adapters.default,
       })
       expect(runChainModule.runChain).toHaveBeenCalledWith({
         generateUUID: expect.any(Function),
         errorableType: ErrorableEntity.EvaluationResult,
         workspace,
         chain,
-        promptlVersion: 0,
+        promptlVersion: 1,
         source: LogSources.Evaluation,
         providersMap: new Map().set(provider.name, providerUsed),
         configOverrides: {
@@ -356,9 +357,9 @@ describe('run', () => {
           provider: openai
           model: gpt-4o-mini
           ---
-          {{#if condition}}
+          {{if condition}}
             It fails because "condition" is not defined
-          {{/if}}
+          {{endif}}
         `,
         },
       )

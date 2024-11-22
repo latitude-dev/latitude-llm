@@ -16,10 +16,11 @@ import useSWR, { SWRConfiguration } from 'swr'
 export default function useEvaluations(
   opts: SWRConfiguration & {
     onSuccessCreate?: (evaluation: EvaluationDto) => void
+    onSuccessUpdate?: (evaluation: EvaluationDto) => void
     params?: { documentUuid: string }
   } = {},
 ) {
-  const { onSuccessCreate, params } = opts
+  const { onSuccessCreate, onSuccessUpdate, params } = opts
   const { toast } = useToast()
   const { documentUuid } = params ?? {}
   const route = useMemo(
@@ -62,16 +63,17 @@ export default function useEvaluations(
       onSuccess: ({ data: newEval }) => {
         const prevEvaluations = data
 
-        toast({
-          title: 'Success',
-          description: `${newEval.name} updated successfully`,
-        })
-
         mutate(
           prevEvaluations.map((prevEval) =>
             prevEval.uuid === newEval.uuid ? newEval : prevEval,
           ),
         )
+        onSuccessUpdate?.(newEval)
+
+        toast({
+          title: 'Success',
+          description: `${newEval.name} updated successfully`,
+        })
       },
     },
   )

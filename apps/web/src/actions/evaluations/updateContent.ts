@@ -20,6 +20,7 @@ export const updateEvaluationContentAction = authProcedure
           z.object({
             type: z.literal(EvaluationMetadataType.LlmAsJudgeAdvanced),
             prompt: z.string(),
+            promptlVersion: z.number(),
           }),
           z.object({
             type: z.literal(EvaluationMetadataType.LlmAsJudgeSimple),
