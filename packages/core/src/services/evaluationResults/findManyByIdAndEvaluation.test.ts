@@ -4,13 +4,13 @@ import {
   Commit,
   DocumentVersion,
   EvaluationDto,
+  EvaluationResultDto,
   ProviderApiKey,
   Providers,
   User,
   Workspace,
 } from '../../browser'
 import {
-  EvaluationResultDto,
   EvaluationResultsRepository,
   EvaluationsRepository,
 } from '../../repositories'
