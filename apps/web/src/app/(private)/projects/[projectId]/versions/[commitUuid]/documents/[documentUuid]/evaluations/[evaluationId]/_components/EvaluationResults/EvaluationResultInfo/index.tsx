@@ -19,6 +19,7 @@ import {
 import useFetcher from '$/hooks/useFetcher'
 import { useStickyNested } from '$/hooks/useStickyNested'
 import { ROUTES } from '$/services/routes'
+import useEvaluationResultsByDocumentLogs from '$/stores/evaluationResultsByDocumentLogs'
 import useProviderLogs from '$/stores/providerLogs'
 import { usePanelDomRef } from 'node_modules/@latitude-data/web-ui/src/ds/atoms/SplitPane'
 import useSWR from 'swr'
@@ -65,12 +66,20 @@ function DocumentLogInfoModal({
   } = useFetchDocumentLog({
     documentLogId,
   })
-  const { data: _providerLogs } = useProviderLogs({
-    documentLogUuid: documentLog?.uuid,
-  })
+  const { data: _providerLogs, isLoading: isProviderLogsLoading } =
+    useProviderLogs({
+      documentLogUuid: documentLog?.uuid,
+    })
+  const { data: evaluationResults, isLoading: isEvaluationResultsLoading } =
+    useEvaluationResultsByDocumentLogs({
+      documentLogIds: [documentLogId],
+    })
 
   const idx = _providerLogs?.findIndex((p) => p.id === providerLogId)
   const providerLogs = _providerLogs?.slice(0, idx + 1)
+
+  const isLoading =
+    isLoadingDocumentLog || isProviderLogsLoading || isEvaluationResultsLoading
 
   return (
     <Modal
@@ -78,12 +87,13 @@ function DocumentLogInfoModal({
       defaultOpen
       onOpenChange={() => onOpenChange(null)}
       title='Document Log Info'
-      description='Detais of original document log'
+      description='Details of original document log'
     >
       <DocumentLogInfo
         documentLog={documentLog!}
         providerLogs={providerLogs}
-        isLoading={isLoadingDocumentLog}
+        evaluationResults={evaluationResults[documentLogId]}
+        isLoading={isLoading}
         error={errorDocumentLog}
       />
     </Modal>

@@ -5,6 +5,7 @@ import {
   eq,
   getTableColumns,
   gte,
+  inArray,
   isNotNull,
   isNull,
   sql,
@@ -13,8 +14,9 @@ import {
 import {
   Commit,
   ErrorableEntity,
-  EvaluationResult,
+  EvaluationDto,
   EvaluationResultableType,
+  EvaluationResultDto,
 } from '../../browser'
 import { Result } from '../../lib'
 import {
@@ -42,10 +44,6 @@ export const evaluationResultDto = {
   `.as('result'),
 }
 
-export type EvaluationResultDto = Omit<EvaluationResult, 'providerLogId'> & {
-  result: string | number | boolean | undefined
-}
-
 export type EvaluationResultByDocument = Pick<
   EvaluationResultDto,
   'id' | 'result' | 'createdAt' | 'source'
@@ -58,6 +56,11 @@ export type EvaluationResultWithMetadata = EvaluationResultDto & {
   tokens: number | null
   costInMillicents: number | null
   documentContentHash: string
+}
+
+export type ResultWithEvaluation = {
+  result: EvaluationResultDto
+  evaluation: EvaluationDto
 }
 
 export class EvaluationResultsRepository extends Repository<EvaluationResultDto> {
@@ -121,7 +124,7 @@ export class EvaluationResultsRepository extends Repository<EvaluationResultDto>
     evaluationId: number
     contentHash: string
   }) {
-    const result = await this.scope
+    const results = await this.scope
       .innerJoin(
         documentLogs,
         eq(documentLogs.id, evaluationResults.documentLogId),
@@ -134,7 +137,23 @@ export class EvaluationResultsRepository extends Repository<EvaluationResultDto>
       )
       .orderBy(desc(evaluationResults.createdAt))
 
-    return Result.ok(result.map(this.parseResult))
+    return Result.ok(results.map(EvaluationResultsRepository.parseResult))
+  }
+
+  async findByDocumentLogIds(documentLogIds: number[]) {
+    const results = await this.scope
+      .where(
+        and(
+          isNull(runErrors.id),
+          isNotNull(evaluationResults.resultableId),
+          isNotNull(evaluationResults.evaluatedProviderLogId),
+          inArray(evaluationResults.documentLogId, documentLogIds),
+          eq(evaluations.workspaceId, this.workspaceId),
+        ),
+      )
+      .orderBy(desc(evaluationResults.updatedAt))
+
+    return Result.ok(results.map(EvaluationResultsRepository.parseResult))
   }
 
   async totalCountSinceDate(minDate: Date) {
@@ -164,7 +183,7 @@ export class EvaluationResultsRepository extends Repository<EvaluationResultDto>
     return result[0]?.count ?? 0
   }
 
-  private parseResult(row: EvaluationResultDto & { result: string }) {
+  static parseResult(row: EvaluationResultDto & { result: string }) {
     const { result, resultableType, ...rest } = row
 
     let parsedResult

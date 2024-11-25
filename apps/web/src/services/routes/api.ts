@@ -99,6 +99,9 @@ export const _API_ROUTES = {
         }
       },
     },
+    evaluationResults: {
+      root: `/api/documentLogs/evaluation-results`,
+    },
   },
   evaluations: {
     root: '/api/evaluations',

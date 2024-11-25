@@ -1,4 +1,5 @@
 import { ContentType, createChain } from '@latitude-data/compiler'
+import { eq } from 'drizzle-orm'
 import { v4 as uuid } from 'uuid'
 
 import {
@@ -8,8 +9,10 @@ import {
   ProviderLog,
   Workspace,
 } from '../../browser'
+import { database } from '../../client'
 import { findWorkspaceFromCommit } from '../../data-access'
 import { ProviderApiKeysRepository } from '../../repositories'
+import { documentLogs } from '../../schema'
 import { Config } from '../../services/ai'
 import { createDocumentLog as ogCreateDocumentLog } from '../../services/documentLogs'
 import { getResolvedContent } from '../../services/documents'
@@ -122,7 +125,7 @@ export async function createDocumentLog({
     Math.floor(Math.random() * 100) +
     providerLogs.reduce((acc, log) => acc + (log?.duration ?? 0), 0)
 
-  const documentLog = await ogCreateDocumentLog({
+  let documentLog = await ogCreateDocumentLog({
     commit,
     data: {
       uuid: documentLogUuid,
@@ -135,6 +138,19 @@ export async function createDocumentLog({
       createdAt,
     },
   }).then((r) => r.unwrap())
+
+  if (!createdAt) {
+    // Tests run within a transaction and the NOW() PostgreSQL function returns
+    // the transaction start time. Therefore, all document logs would be created
+    // at the same time, messing with tests. This code patches this.
+    documentLog = (
+      await database
+        .update(documentLogs)
+        .set({ createdAt: new Date() })
+        .where(eq(documentLogs.id, documentLog.id))
+        .returning()
+    )[0]!
+  }
 
   return {
     providerLogs,

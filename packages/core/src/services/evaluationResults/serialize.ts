@@ -1,5 +1,6 @@
 import {
   EvaluationResultableType,
+  EvaluationResultDto,
   SerializedEvaluationManualResult,
   SerializedEvaluationResult,
   Workspace,
@@ -8,7 +9,6 @@ import { database } from '../../client'
 import { NotFoundError, PromisedResult, Result } from '../../lib'
 import {
   DocumentLogsRepository,
-  EvaluationResultDto,
   ProviderLogsRepository,
 } from '../../repositories'
 import { serialize as serializeDocumentLog } from '../documentLogs/serialize'

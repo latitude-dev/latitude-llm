@@ -2,11 +2,12 @@
 
 import { useMemo, useRef, useState } from 'react'
 
-import { EvaluationDto, ProviderLogDto } from '@latitude-data/core/browser'
 import {
-  DocumentLogWithMetadataAndError,
+  EvaluationDto,
   EvaluationResultDto,
-} from '@latitude-data/core/repositories'
+  ProviderLogDto,
+} from '@latitude-data/core/browser'
+import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
 import { fetchDocumentLogsWithEvaluationResults } from '@latitude-data/core/services/documentLogs/fetchDocumentLogsWithEvaluationResults'
 import {
   Button,
@@ -29,7 +30,7 @@ import { DocumentLogsTable } from './DocumentLogsTable'
 
 type DocumentLogWithEvaluationResults = Awaited<
   ReturnType<typeof fetchDocumentLogsWithEvaluationResults>
->
+>[number]
 
 export type DocumentLogWithMetadataAndErrorAndEvaluationResult =
   DocumentLogWithMetadataAndError & {
@@ -40,14 +41,17 @@ export type DocumentLogWithMetadataAndErrorAndEvaluationResult =
 export function ManualEvaluationResultsClient({
   evaluation,
   documentLogs: fallbackData,
+  selectedLog: serverSelectedLog,
 }: {
   evaluation: EvaluationDto
-  documentLogs: DocumentLogWithEvaluationResults
+  documentLogs: DocumentLogWithEvaluationResults[]
+  selectedLog?: DocumentLogWithEvaluationResults
 }) {
   const stickyRef = useRef<HTMLTableElement | null>(null)
   const sidebarWrapperRef = useRef<HTMLDivElement | null>(null)
-  const [selectedLog, setSelectedLog] =
-    useState<DocumentLogWithMetadataAndErrorAndEvaluationResult>()
+  const [selectedLog, setSelectedLog] = useState<
+    DocumentLogWithMetadataAndErrorAndEvaluationResult | undefined
+  >(serverSelectedLog)
   const searchParams = useSearchParams()
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()

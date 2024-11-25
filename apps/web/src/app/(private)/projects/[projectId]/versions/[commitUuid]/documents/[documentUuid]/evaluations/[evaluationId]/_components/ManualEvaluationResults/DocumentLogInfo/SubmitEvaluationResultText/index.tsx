@@ -3,8 +3,8 @@ import { useState } from 'react'
 import {
   EvaluationDto,
   EvaluationResultableType,
+  EvaluationResultDto,
 } from '@latitude-data/core/browser'
-import { EvaluationResultDto } from '@latitude-data/core/repositories'
 import { TextArea } from '@latitude-data/web-ui'
 
 import { DocumentLogWithMetadataAndErrorAndEvaluationResult } from '../..'

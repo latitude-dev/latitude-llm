@@ -1,16 +1,24 @@
-import { and, desc, eq, inArray } from 'drizzle-orm'
+import { and, desc, eq, inArray, isNull, sql } from 'drizzle-orm'
 
 import { Commit, EvaluationDto, ProviderLogDto } from '../../browser'
 import { database } from '../../client'
 import { calculateOffset } from '../../lib/pagination/calculateOffset'
 import {
+  DocumentLogsRepository,
   EvaluationResultsRepository,
   ProviderLogsRepository,
 } from '../../repositories'
 import { DocumentLogsWithMetadataAndErrorsRepository } from '../../repositories/documentLogsWithMetadataAndErrorsRepository'
-import { documentLogs, evaluationResults, providerLogs } from '../../schema'
+import {
+  commits,
+  documentLogs,
+  evaluationResults,
+  providerLogs,
+} from '../../schema'
 import serializeProviderLog from '../providerLogs/serialize'
 import { getCommitFilter } from './computeDocumentLogsWithMetadata'
+
+const DEFAULT_PAGE_SIZE = '25'
 
 export async function fetchDocumentLogsWithEvaluationResults(
   {
@@ -18,7 +26,7 @@ export async function fetchDocumentLogsWithEvaluationResults(
     documentUuid,
     commit,
     page = '1',
-    pageSize = '25',
+    pageSize = DEFAULT_PAGE_SIZE,
   }: {
     evaluation: EvaluationDto
     documentUuid: string
@@ -47,7 +55,7 @@ export async function fetchDocumentLogsWithEvaluationResults(
     )
     .offset(offset)
     .limit(parseInt(pageSize))
-    .orderBy(desc(documentLogs.createdAt))
+    .orderBy(desc(documentLogs.createdAt), desc(documentLogs.id))
 
   const evaluationResultsResult = await evaluationResultsRepo.scope.where(
     and(
@@ -80,4 +88,50 @@ export async function fetchDocumentLogsWithEvaluationResults(
       providerLogs,
     }
   })
+}
+
+export async function findDocumentLogWithEvaluationResultPage(
+  {
+    workspaceId,
+    documentUuid,
+    commit,
+    documentLogId,
+    pageSize = DEFAULT_PAGE_SIZE,
+  }: {
+    workspaceId: number
+    documentUuid: string
+    commit: Commit
+    documentLogId: string
+    pageSize?: string
+  },
+  db = database,
+) {
+  const documentLogsRepo = new DocumentLogsRepository(workspaceId, db)
+  const result = await documentLogsRepo.find(Number(documentLogId))
+  if (result.error) return undefined
+  const log = result.value
+
+  const position = (
+    await db
+      .select({
+        count: sql`count(*)`.mapWith(Number).as('count'),
+      })
+      .from(documentLogs)
+      .innerJoin(
+        commits,
+        and(eq(commits.id, documentLogs.commitId), isNull(commits.deletedAt)),
+      )
+      .where(
+        and(
+          eq(documentLogs.documentUuid, documentUuid),
+          getCommitFilter(commit),
+          sql`(${documentLogs.createdAt}, ${documentLogs.id}) >= (${new Date(log.createdAt).toISOString()}, ${log.id})`,
+        ),
+      )
+  )[0]?.count
+  if (position === undefined) return undefined
+
+  const page = Math.ceil(position / parseInt(pageSize))
+
+  return page
 }

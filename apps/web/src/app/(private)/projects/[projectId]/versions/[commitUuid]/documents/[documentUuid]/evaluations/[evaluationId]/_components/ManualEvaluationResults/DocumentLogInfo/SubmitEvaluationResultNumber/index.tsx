@@ -4,8 +4,8 @@ import {
   EvaluationConfigurationNumerical,
   EvaluationDto,
   EvaluationResultableType,
+  EvaluationResultDto,
 } from '@latitude-data/core/browser'
-import { EvaluationResultDto } from '@latitude-data/core/repositories'
 import { Input, TabSelector } from '@latitude-data/web-ui'
 
 import { DocumentLogWithMetadataAndErrorAndEvaluationResult } from '../..'

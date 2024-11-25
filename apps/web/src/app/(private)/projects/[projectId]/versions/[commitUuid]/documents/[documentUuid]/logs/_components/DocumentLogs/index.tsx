@@ -16,6 +16,7 @@ import {
 } from '$/components/Providers/WebsocketsProvider/useSockets'
 import useDocumentLogs, { documentLogPresenter } from '$/stores/documentLogs'
 import useDocumentLogsAggregations from '$/stores/documentLogsAggregations'
+import useEvaluationResultsByDocumentLogs from '$/stores/evaluationResultsByDocumentLogs'
 import useProviderLogs from '$/stores/providerLogs'
 import { useSearchParams } from 'next/navigation'
 
@@ -75,7 +76,7 @@ export function DocumentLogs({
   selectedLog: serverSelectedLog,
 }: {
   documentLogs: DocumentLogWithMetadataAndError[]
-  selectedLog: DocumentLogWithMetadataAndError | undefined
+  selectedLog?: DocumentLogWithMetadataAndError
 }) {
   const stickyRef = useRef<HTMLTableElement>(null)
   const sidebarWrapperRef = useRef<HTMLDivElement>(null)
@@ -111,6 +112,10 @@ export function DocumentLogs({
       commitUuid: commit.uuid,
       projectId: project.id,
     })
+  const { data: evaluationResults, isLoading: isEvaluationResultsLoading } =
+    useEvaluationResultsByDocumentLogs({
+      documentLogIds: documentLogs.map((l) => l.id),
+    })
 
   useDocumentLogSocket(document.documentUuid, mutate)
 
@@ -143,15 +148,18 @@ export function DocumentLogs({
         <DocumentLogsTable
           ref={stickyRef}
           documentLogs={documentLogs}
+          evaluationResults={evaluationResults}
           selectedLog={selectedLog}
           setSelectedLog={setSelectedLog}
+          isLoading={isEvaluationResultsLoading}
         />
         {selectedLog && (
           <div ref={sidebarWrapperRef}>
             <DocumentLogInfo
               documentLog={selectedLog}
               providerLogs={providerLogs}
-              isLoading={isProviderLogsLoading}
+              evaluationResults={evaluationResults[selectedLog.id]}
+              isLoading={isProviderLogsLoading || isEvaluationResultsLoading}
               stickyRef={stickyRef}
               sidebarWrapperRef={sidebarWrapperRef}
               offset={{ top: 12, bottom: 12 }}

@@ -3,8 +3,8 @@ import { FormEvent, ReactNode, useState } from 'react'
 import {
   EvaluationDto,
   EvaluationResultableType,
+  EvaluationResultDto,
 } from '@latitude-data/core/browser'
-import { EvaluationResultDto } from '@latitude-data/core/repositories'
 import {
   Button,
   FormField,

@@ -1,11 +1,16 @@
 import { forwardRef } from 'react'
 import { capitalize } from 'lodash-es'
 
+import { EvaluationResultableType } from '@latitude-data/core/browser'
 import { buildPagination } from '@latitude-data/core/lib/pagination/buildPagination'
-import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
+import {
+  DocumentLogWithMetadataAndError,
+  ResultWithEvaluation,
+} from '@latitude-data/core/repositories'
 import {
   Badge,
   cn,
+  Skeleton,
   Table,
   TableBody,
   TableCell,
@@ -13,6 +18,8 @@ import {
   TableHeader,
   TableRow,
   Text,
+  TextColor,
+  Tooltip,
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui'
@@ -25,6 +32,8 @@ import { ROUTES } from '$/services/routes'
 import useDocumentLogsPagination from '$/stores/useDocumentLogsPagination'
 import { useSearchParams } from 'next/navigation'
 
+import { ResultCellContent } from '../../../evaluations/[evaluationId]/_components/EvaluationResults/EvaluationResultsTable'
+
 function countLabel(count: number) {
   return `${count} logs`
 }
@@ -33,14 +42,65 @@ type DocumentLogRow = DocumentLogWithMetadataAndError & {
   realtimeAdded?: boolean
 }
 
+function EvaluationResultItem({ result, evaluation }: ResultWithEvaluation) {
+  if (result.resultableType === EvaluationResultableType.Text) {
+    return <Badge variant='outline'>text</Badge>
+  }
+
+  return <ResultCellContent evaluation={evaluation} value={result.result} />
+}
+
+function EvaluationsColumn({
+  evaluationResults = [],
+  color: cellColor,
+  isLoading,
+}: {
+  evaluationResults?: ResultWithEvaluation[]
+  color: TextColor
+  isLoading: boolean
+}) {
+  if (isLoading) {
+    return <Skeleton className='w-full h-4' />
+  }
+
+  if (!evaluationResults.length) {
+    return <Text.H5 color={cellColor}>-</Text.H5>
+  }
+
+  const resultsToDisplay = evaluationResults.slice(0, 2)
+  const extraResults = evaluationResults.length - resultsToDisplay.length
+
+  return (
+    <div className='flex flex-row gap-2 flex-shrink-0'>
+      {resultsToDisplay.map(({ result, evaluation }) => (
+        <Tooltip
+          key={result.uuid}
+          trigger={
+            <EvaluationResultItem result={result} evaluation={evaluation} />
+          }
+        >
+          {evaluation.name}
+        </Tooltip>
+      ))}
+      {extraResults > 0 && (
+        <Tooltip trigger={<Badge variant='outline'>+{extraResults}</Badge>}>
+          {extraResults} more evaluations
+        </Tooltip>
+      )}
+    </div>
+  )
+}
+
 type Props = {
   documentLogs: DocumentLogRow[]
+  evaluationResults: Record<number, ResultWithEvaluation[]>
   selectedLog: DocumentLogWithMetadataAndError | undefined
   setSelectedLog: (log: DocumentLogWithMetadataAndError | undefined) => void
+  isLoading: boolean
 }
 export const DocumentLogsTable = forwardRef<HTMLTableElement, Props>(
   function DocumentLogsTable(
-    { documentLogs, selectedLog, setSelectedLog },
+    { documentLogs, evaluationResults, selectedLog, setSelectedLog, isLoading },
     ref,
   ) {
     const searchParams = useSearchParams()
@@ -49,13 +109,14 @@ export const DocumentLogsTable = forwardRef<HTMLTableElement, Props>(
     const { commit } = useCurrentCommit()
     const { project } = useCurrentProject()
     const document = useCurrentDocument()
-    const { data: pagination, isLoading } = useDocumentLogsPagination({
-      projectId: project.id,
-      commitUuid: commit.uuid,
-      documentUuid: document.documentUuid,
-      page,
-      pageSize,
-    })
+    const { data: pagination, isLoading: isPaginationLoading } =
+      useDocumentLogsPagination({
+        projectId: project.id,
+        commitUuid: commit.uuid,
+        documentUuid: document.documentUuid,
+        page,
+        pageSize,
+      })
     return (
       <Table
         ref={ref}
@@ -63,7 +124,7 @@ export const DocumentLogsTable = forwardRef<HTMLTableElement, Props>(
         externalFooter={
           <LinkableTablePaginationFooter
             countLabel={countLabel}
-            isLoading={isLoading}
+            isLoading={isPaginationLoading}
             pagination={
               pagination
                 ? buildPagination({
@@ -87,6 +148,7 @@ export const DocumentLogsTable = forwardRef<HTMLTableElement, Props>(
             <TableHead>Version</TableHead>
             <TableHead>Origin</TableHead>
             <TableHead>Custom Identifier</TableHead>
+            <TableHead>Evaluations</TableHead>
             <TableHead>Duration</TableHead>
             <TableHead>Tokens</TableHead>
             <TableHead>Cost</TableHead>
@@ -140,13 +202,20 @@ export const DocumentLogsTable = forwardRef<HTMLTableElement, Props>(
                 </TableCell>
                 <TableCell>
                   <Text.H5 color={cellColor}>
-                    {capitalize(documentLog.source || '')}
+                    {capitalize(documentLog.source || '-')}
                   </Text.H5>
                 </TableCell>
                 <TableCell>
                   <Text.H5 color={cellColor}>
-                    {documentLog.customIdentifier}
+                    {documentLog.customIdentifier || '-'}
                   </Text.H5>
+                </TableCell>
+                <TableCell>
+                  <EvaluationsColumn
+                    color={cellColor}
+                    evaluationResults={evaluationResults[documentLog.id]}
+                    isLoading={isLoading}
+                  />
                 </TableCell>
                 <TableCell>
                   <Text.H5 noWrap color={cellColor}>

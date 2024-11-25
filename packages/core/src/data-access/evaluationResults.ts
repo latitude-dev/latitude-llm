@@ -1,7 +1,8 @@
 import { eq } from 'drizzle-orm'
 
+import { EvaluationResultDto } from '../browser'
 import { database } from '../client'
-import { EvaluationResultDto, workspacesDtoColumns } from '../repositories'
+import { workspacesDtoColumns } from '../repositories'
 import {
   evaluationResults,
   evaluations,
