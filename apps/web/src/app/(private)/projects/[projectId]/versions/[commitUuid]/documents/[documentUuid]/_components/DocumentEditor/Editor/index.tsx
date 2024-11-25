@@ -323,7 +323,7 @@ export default function DocumentEditor({
                     isSaved={isSaved}
                     actionButtons={
                       document.promptlVersion === 0 ? (
-                        <Tooltip trigger={RefineButton}>
+                        <Tooltip trigger={RefineButton} asChild>
                           Upgrade the syntax of the document to use the Refine
                           feature.
                         </Tooltip>
