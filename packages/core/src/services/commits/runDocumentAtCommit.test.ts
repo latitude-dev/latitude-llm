@@ -227,6 +227,7 @@ model: gpt-4o
             response: {
               streamType: 'text',
               documentLogUuid: expect.any(String),
+              providerLog: expect.any(Object),
               text: 'Fake AI generated text',
               toolCalls: [],
               usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
@@ -261,6 +262,7 @@ model: gpt-4o
             documentLogUuid: expect.any(String),
             response: {
               documentLogUuid: expect.any(String),
+              providerLog: expect.any(Object),
               streamType: 'text',
               text: 'Fake AI generated text',
               toolCalls: [],
