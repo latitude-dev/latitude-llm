@@ -41,11 +41,12 @@ export default function DocumentDetailWrapper({
   )
   return (
     <SplitPane
-      initialWidth={sidebarWidth ?? minSidebarWidth}
-      minWidth={minSidebarWidth}
+      direction='horizontal'
+      initialSize={sidebarWidth ?? minSidebarWidth}
+      minSize={minSidebarWidth}
       onResizeStop={onResizeStop}
-      leftPane={<SplitPane.Pane>{sidebar}</SplitPane.Pane>}
-      rightPane={<SplitPane.Pane>{children}</SplitPane.Pane>}
+      firstPane={<SplitPane.Pane>{sidebar}</SplitPane.Pane>}
+      secondPane={<SplitPane.Pane>{children}</SplitPane.Pane>}
     />
   )
 }
