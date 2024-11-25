@@ -139,16 +139,18 @@ export async function createDocumentLog({
     },
   }).then((r) => r.unwrap())
 
-  // Tests run within a transaction and the NOW() PostgreSQL function returns
-  // the transaction start time. Therefore, all document logs would be created
-  // at the same time, messing with tests. This code patches this.
-  documentLog = (
-    await database
-      .update(documentLogs)
-      .set({ createdAt: new Date() })
-      .where(eq(documentLogs.id, documentLog.id))
-      .returning()
-  )[0]!
+  if (!createdAt) {
+    // Tests run within a transaction and the NOW() PostgreSQL function returns
+    // the transaction start time. Therefore, all document logs would be created
+    // at the same time, messing with tests. This code patches this.
+    documentLog = (
+      await database
+        .update(documentLogs)
+        .set({ createdAt: new Date() })
+        .where(eq(documentLogs.id, documentLog.id))
+        .returning()
+    )[0]!
+  }
 
   return {
     providerLogs,
