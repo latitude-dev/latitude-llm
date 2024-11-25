@@ -70,6 +70,7 @@ export async function createNewDocument(
         commitId: commit.id,
         path,
         content: content ?? defaultContent,
+        promptlVersion: 1,
       })
       .returning()
 

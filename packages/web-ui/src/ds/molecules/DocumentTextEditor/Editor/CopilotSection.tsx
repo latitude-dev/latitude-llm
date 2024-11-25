@@ -6,9 +6,11 @@ import { Button, TextArea } from '../../../atoms'
 export function CopilotSection({
   isLoading,
   requestSuggestion,
+  disabledMessage,
 }: {
   isLoading: boolean
   requestSuggestion: (prompt: string) => void
+  disabledMessage?: string
 }) {
   const [value, setValue] = useState('')
   const handleSubmit = () => {
@@ -31,8 +33,8 @@ export function CopilotSection({
               'animate-pulse': isLoading,
             },
           )}
-          disabled={isLoading}
-          placeholder='Ask for changes or suggestions!'
+          disabled={isLoading || !!disabledMessage}
+          placeholder={disabledMessage ?? 'Ask for changes or suggestions!'}
           value={value}
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={handleKeyDown}

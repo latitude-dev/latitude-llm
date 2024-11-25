@@ -155,7 +155,7 @@ describe('publishDraftCommit', () => {
       document: documents['doc2']!,
       content: helpers.createPrompt({
         provider: 'openai',
-        content: '<foo>WRONG</foo>',
+        content: '{{ WRONG ',
       }),
       commit: draftCommit,
     }).then((r) => r.unwrap())

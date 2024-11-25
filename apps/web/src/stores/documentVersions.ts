@@ -239,6 +239,7 @@ export default function useDocumentVersions(
     destroyFolder,
     updateContent,
     assignDataset,
+    mutate,
     isDestroying: isDestroyingFile || isDestroyingFolder,
   }
 }

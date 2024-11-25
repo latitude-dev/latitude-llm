@@ -46,8 +46,12 @@ provider: openai
 model: gpt-4o
 ---
 
-This is a test document
-<response />
+<step>
+  This is a test document
+</step>
+<step>
+  With two steps
+</step>
 `
 
 async function buildData({ doc1Content }: { doc1Content: string }) {
@@ -142,8 +146,12 @@ model: gpt-4o
 ---
 
 
-This is a test document
-<response />`)
+<step>
+  This is a test document
+</step>
+<step>
+  With two steps
+</step>`)
     })
 
     it('pass params to AI', async () => {
@@ -166,14 +174,7 @@ This is a test document
 
       expect(aiSpy).toHaveBeenCalledWith(
         expect.objectContaining({
-          messages: [
-            { role: 'system', content: 'This is a test document' },
-            {
-              role: 'assistant',
-              content: [{ type: 'text', text: 'Fake AI generated text' }],
-              toolCalls: [],
-            },
-          ],
+          messages: [{ role: 'system', content: 'This is a test document' }],
           config: { model: 'gpt-4o', provider: 'openai' },
           provider,
         }),
@@ -228,7 +229,6 @@ This is a test document
               documentLogUuid: expect.any(String),
               text: 'Fake AI generated text',
               toolCalls: [],
-              providerLog: undefined,
               usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
             },
           },
@@ -236,7 +236,7 @@ This is a test document
         {
           data: {
             type: 'chain-step',
-            isLastStep: true,
+            isLastStep: false,
             documentLogUuid: expect.any(String),
             config: {
               provider: 'openai',
@@ -246,9 +246,26 @@ This is a test document
               {
                 role: 'assistant',
                 content: [{ type: 'text', text: 'Fake AI generated text' }],
-                toolCalls: [],
+              },
+              {
+                role: 'system',
+                content: 'With two steps',
               },
             ],
+          },
+          event: 'latitude-event',
+        },
+        {
+          data: {
+            type: 'chain-step-complete',
+            documentLogUuid: expect.any(String),
+            response: {
+              documentLogUuid: expect.any(String),
+              streamType: 'text',
+              text: 'Fake AI generated text',
+              toolCalls: [],
+              usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+            },
           },
           event: 'latitude-event',
         },

@@ -150,6 +150,7 @@ export function DocumentTextEditor({
         <CopilotSection
           isLoading={copilot.isLoading}
           requestSuggestion={copilot.requestSuggestion}
+          disabledMessage={copilot.disabledMessage}
         />
       )}
       <div className='flex flex-row w-full p-2 items-center justify-between gap-2'>

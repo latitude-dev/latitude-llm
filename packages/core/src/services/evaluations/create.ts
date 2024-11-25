@@ -285,7 +285,7 @@ export async function createAdvancedEvaluation<
         prompt: metadata.prompt,
         configuration: resultConfiguration,
         templateId: metadata.templateId ?? null,
-        promptlVersion: 0, // TODO: Will be set to 1 by default on future PR
+        promptlVersion: 1,
       } as Omit<EvaluationMetadataLlmAsJudgeAdvanced, 'id'>,
       resultType,
       resultConfiguration,
