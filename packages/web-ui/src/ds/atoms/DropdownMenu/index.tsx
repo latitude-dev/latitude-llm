@@ -1,6 +1,6 @@
 'use client'
 
-import { ReactNode, useCallback, useState } from 'react'
+import { MouseEvent, ReactNode, useCallback, useState } from 'react'
 import { Check } from 'lucide-react'
 
 import { Button, type ButtonProps } from '../Button'
@@ -46,6 +46,7 @@ export const TriggerButton = ({
 export type MenuOption = {
   label: string
   onClick: () => void
+  onElementClick?: (e: MouseEvent) => void
   type?: 'normal' | 'destructive'
   iconProps?: IconProps
   disabled?: boolean
@@ -55,6 +56,7 @@ export type MenuOption = {
 function DropdownItem({
   iconProps,
   onClick,
+  onElementClick,
   type = 'normal',
   label,
   shortcut,
@@ -63,10 +65,12 @@ function DropdownItem({
 }: MenuOption) {
   const onSelect = useCallback(() => {
     if (disabled) return
+
     onClick()
   }, [disabled, onClick])
   return (
     <DropdownMenuItem
+      onClick={onElementClick}
       onSelect={onSelect}
       disabled={disabled}
       className='gap-2 items-start cursor-pointer'
