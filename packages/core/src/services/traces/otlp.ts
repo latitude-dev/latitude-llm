@@ -111,81 +111,10 @@ function convertOtlpStatus({
   }
 }
 
-function processGenerationSpan(
-  span: OtlpSpan,
-): Partial<typeof spans.$inferInsert> {
-  const attrs = convertOtlpAttributes({ attributes: span.attributes })
-
-  // Check if this is a generation span
-  if (!attrs['gen_ai.system'] || !attrs['llm.request.type']) {
-    return {}
-  }
-
-  // Map provider names to our enum
-  const providerMap: Record<string, Providers> = {
-    OpenAI: Providers.OpenAI,
-    Anthropic: Providers.Anthropic,
-    Groq: Providers.Groq,
-    Mistral: Providers.Mistral,
-    Google: Providers.Google,
-  }
-
-  const provider = providerMap[attrs['gen_ai.system'] as string]
-  if (!provider) {
-    return {}
-  }
-
-  // Extract model information
-  const model = attrs['gen_ai.response.model'] || attrs['gen_ai.request.model']
-  if (!model) {
-    return {}
-  }
-
-  // Collect all prompts and format them as OpenAI messages
-  const prompts: Array<{ role: string; content: unknown }> = []
-  const completions: Array<{ role: string; content: unknown }> = []
-
-  // Helper function to try parsing JSON content
-  const tryParseJSON = (content: string): unknown => {
-    try {
-      return JSON.parse(content)
-    } catch {
-      return content
-    }
-  }
-
-  // Get all attribute keys
-  Object.entries(attrs).forEach(([key, value]) => {
-    // Handle prompts
-    if (key.startsWith('gen_ai.prompt.') && key.endsWith('.content')) {
-      const parts = key.split('.')
-      if (parts[2]) {
-        // Check if index part exists
-        const index = parseInt(parts[2])
-        const role = attrs[`gen_ai.prompt.${index}.role`] as string
-        const content = tryParseJSON(value as string)
-        prompts[index] = { role, content }
-      }
-    }
-    // Handle completions
-    if (key.startsWith('gen_ai.completion.') && key.endsWith('.content')) {
-      const parts = key.split('.')
-      if (parts[2]) {
-        // Check if index part exists
-        const index = parseInt(parts[2])
-        const role = attrs[`gen_ai.completion.${index}.role`] as string
-        const content = tryParseJSON(value as string)
-        completions[index] = { role, content }
-      }
-    }
-  })
-
-  // Filter out any undefined entries and create final arrays
-  const input = prompts.filter(Boolean)
-  const output = completions.filter(Boolean)
-
-  // Extract model parameters from request attributes
-  const modelParameters = Object.entries(attrs)
+function extractModelParameters(
+  attrs: Record<string, string | number | boolean>,
+) {
+  return Object.entries(attrs)
     .filter(
       ([key, value]) =>
         key.startsWith('gen_ai.request.') &&
@@ -200,18 +129,58 @@ function processGenerationSpan(
       },
       {} as Record<string, any>,
     )
+}
 
-  // Extract usage information
-  const usage = {
+function extractUsage(attrs: Record<string, string | number | boolean>) {
+  return {
     promptTokens: parseInt(attrs['gen_ai.usage.prompt_tokens'] as string) || 0,
     completionTokens:
       parseInt(attrs['gen_ai.usage.completion_tokens'] as string) || 0,
     totalTokens: parseInt(attrs['gen_ai.usage.total_tokens'] as string) || 0,
   }
+}
 
-  // Calculate costs
-  const totalCost = estimateCost({ usage, provider, model: model as string })
+function calculateCosts({
+  usage,
+  provider,
+  model,
+}: {
+  usage: { promptTokens: number; completionTokens: number; totalTokens: number }
+  provider: Providers
+  model: string
+}) {
+  const totalCost = estimateCost({ usage, provider, model })
   const costInMillicents = Math.round(totalCost * 100_000)
+
+  return {
+    inputCostInMillicents: Math.round(
+      (costInMillicents * usage.promptTokens) /
+        (usage.promptTokens + usage.completionTokens),
+    ),
+    outputCostInMillicents: Math.round(
+      (costInMillicents * usage.completionTokens) /
+        (usage.promptTokens + usage.completionTokens),
+    ),
+    totalCostInMillicents: costInMillicents,
+  }
+}
+
+function processGenerationSpan(
+  span: OtlpSpan,
+): Partial<typeof spans.$inferInsert> {
+  const attrs = convertOtlpAttributes({ attributes: span.attributes })
+
+  // Check if this is a generation span
+  if (!attrs['gen_ai.system'] || !attrs['llm.request.type']) return {}
+
+  const provider = extractProvider(attrs)
+  if (!provider) return {}
+
+  const model = extractModel(attrs)
+  const { input, output } = extractInputOutput(attrs)
+  const modelParameters = extractModelParameters(attrs)
+  const usage = extractUsage(attrs)
+  const costs = calculateCosts({ usage, provider, model: model as string })
 
   return {
     internalType: 'generation',
@@ -225,15 +194,7 @@ function processGenerationSpan(
     inputTokens: usage.promptTokens,
     outputTokens: usage.completionTokens,
     totalTokens: parseInt(attrs['llm.usage.total_tokens'] as string) || 0,
-    inputCostInMillicents: Math.round(
-      (costInMillicents * usage.promptTokens) /
-        (usage.promptTokens + usage.completionTokens),
-    ),
-    outputCostInMillicents: Math.round(
-      (costInMillicents * usage.completionTokens) /
-        (usage.promptTokens + usage.completionTokens),
-    ),
-    totalCostInMillicents: costInMillicents,
+    ...costs,
   }
 }
 
@@ -271,4 +232,84 @@ export function processSpan({ span }: { span: OtlpSpan }) {
     // Add generation-specific fields
     ...processGenerationSpan(span),
   }
+}
+
+function extractInputOutput(attrs: Record<string, string | number | boolean>) {
+  // Collect all prompts and format them as OpenAI messages
+  const prompts: Array<{ role: string; content: unknown }> = []
+  const completions: Array<{
+    role: string
+    content?: unknown
+    toolCalls?: unknown
+  }> = []
+
+  // Get all attribute keys
+  Object.entries(attrs).forEach(([key, value]) => {
+    // Handle prompts
+    if (key.startsWith('gen_ai.prompt.') && key.endsWith('.content')) {
+      const parts = key.split('.')
+      if (parts[2]) {
+        // Check if index part exists
+        const index = parseInt(parts[2])
+        const role = attrs[`gen_ai.prompt.${index}.role`] as string
+        const content = tryParseJSON(value as string)
+        prompts[index] = { role, content }
+      }
+    }
+    // Handle completions
+    if (
+      key.startsWith('gen_ai.completion.') &&
+      (key.endsWith('.content') || key.endsWith('.tool_calls'))
+    ) {
+      const parts = key.split('.')
+      if (parts[2]) {
+        const index = parseInt(parts[2])
+        const role = attrs[`gen_ai.completion.${index}.role`] as string
+
+        if (key.endsWith('.tool_calls')) {
+          const toolCalls = tryParseJSON(value as string)
+          completions[index] = { role, toolCalls }
+        } else if (key.endsWith('.content')) {
+          const content = tryParseJSON(value as string)
+          completions[index] = { role, content }
+        }
+      }
+    }
+  })
+
+  // Filter out any undefined entries and create final arrays
+  const input = prompts.filter(Boolean)
+  const output = completions.filter(Boolean)
+
+  return { input, output }
+}
+
+// Helper function to try parsing JSON content
+function tryParseJSON(content: string): unknown {
+  try {
+    return JSON.parse(content)
+  } catch {
+    return content
+  }
+}
+
+function extractModel(attrs: Record<string, string | number | boolean>) {
+  return attrs['gen_ai.response.model'] || attrs['gen_ai.request.model']
+}
+
+function extractProvider(attrs: Record<string, string | number | boolean>) {
+  // Map provider names to our enum
+  const providerMap: Record<string, Providers> = {
+    OpenAI: Providers.OpenAI,
+    'openai.chat': Providers.OpenAI,
+    Anthropic: Providers.Anthropic,
+    Groq: Providers.Groq,
+    Mistral: Providers.Mistral,
+    Google: Providers.Google,
+  }
+
+  const provider = providerMap[attrs['gen_ai.system'] as string]
+  if (!provider) return undefined
+
+  return provider
 }

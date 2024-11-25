@@ -11,7 +11,10 @@ export function MessageList({ messages }: { messages: ConversationMessage[] }) {
     <div className='flex flex-col gap-4'>
       {messages.map((message, index) => (
         <Fragment key={index}>
-          <Message role={message.role} content={message.content} />
+          <Message
+            role={message.role}
+            content={message.content || (message.toolCalls as string)}
+          />
         </Fragment>
       ))}
     </div>

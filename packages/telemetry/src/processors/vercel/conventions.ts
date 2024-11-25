@@ -11,7 +11,7 @@ const AIPrefixes = {
   telemetry: 'telemetry',
   prompt: 'prompt',
   toolCall: 'toolCall',
-  result: 'result',
+  response: 'response',
 } as const
 
 const AIUsagePostfixes = {
@@ -48,14 +48,14 @@ const TOKEN_COUNT_COMPLETION =
 const TOKEN_COUNT_PROMPT =
   `${AI_PREFIX}.${AIPrefixes.usage}.${AIUsagePostfixes.promptTokens}` as const
 
-const RESULT_TEXT =
-  `${AI_PREFIX}.${AIPrefixes.result}.${AIResultPostfixes.text}` as const
+const RESPONSE_TEXT =
+  `${AI_PREFIX}.${AIPrefixes.response}.${AIResultPostfixes.text}` as const
 
-const RESULT_TOOL_CALLS =
-  `${AI_PREFIX}.${AIPrefixes.result}.${AIResultPostfixes.toolCalls}` as const
+const RESPONSE_TOOL_CALLS =
+  `${AI_PREFIX}.${AIPrefixes.response}.${AIResultPostfixes.toolCalls}` as const
 
 const RESULT_OBJECT =
-  `${AI_PREFIX}.${AIPrefixes.result}.${AIResultPostfixes.object}` as const
+  `${AI_PREFIX}.${AIPrefixes.response}.${AIResultPostfixes.object}` as const
 
 const PROMPT = `${AI_PREFIX}.${AIPrefixes.prompt}` as const
 
@@ -86,8 +86,8 @@ export const AISemanticConventions = {
   SETTINGS,
   TOKEN_COUNT_COMPLETION,
   TOKEN_COUNT_PROMPT,
-  RESULT_TEXT,
-  RESULT_TOOL_CALLS,
+  RESPONSE_TEXT,
+  RESPONSE_TOOL_CALLS,
   RESULT_OBJECT,
   PROMPT,
   PROMPT_MESSAGES,

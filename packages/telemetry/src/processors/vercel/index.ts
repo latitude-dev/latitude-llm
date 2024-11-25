@@ -1,148 +1,109 @@
-import { Attributes } from '@opentelemetry/api'
 import {
   ReadableSpan,
   SimpleSpanProcessor,
+  SpanExporter,
 } from '@opentelemetry/sdk-trace-base'
 
 import { AISemanticConventions } from './conventions'
 
 export class VercelSpanProcessor extends SimpleSpanProcessor {
+  constructor(config: { exporter: SpanExporter }) {
+    super(config.exporter)
+  }
+
   computeOpenLLMAttributes(span: ReadableSpan) {
-    return Object.values(AISemanticConventions).reduce(
-      (attrs: Attributes, convention) => {
-        if (
-          !(convention in span.attributes) &&
-          convention !== AISemanticConventions.SETTINGS &&
-          convention !== AISemanticConventions.METADATA
-        ) {
-          return attrs
-        }
+    const attrs = span.attributes || {}
+    const result: Record<string, string | number | boolean> = {}
 
-        const openInferenceKey = AISemanticConventions[convention]
+    // Extract model information
+    if (attrs[AISemanticConventions.MODEL_ID]) {
+      result['gen_ai.request.model'] = String(
+        attrs[AISemanticConventions.MODEL_ID],
+      )
+      result['gen_ai.response.model'] = String(
+        attrs[AISemanticConventions.MODEL_ID],
+      )
+    }
 
-        switch (convention) {
-          case AISemanticConventions.METADATA:
-            return {
-              ...attrs,
-              ...safelyGetMetadataAttributes(span.attributes),
-            }
-          case AISemanticConventions.TOKEN_COUNT_COMPLETION:
-          case AISemanticConventions.TOKEN_COUNT_PROMPT:
-            // Do not capture token counts for non LLM spans to avoid double token counts
-            if (span.kind !== OpenInferenceSpanKind.LLM) {
-              return attrs
-            }
-            return {
-              ...attrs,
-              [openInferenceKey]: span.attributes[convention],
-            }
-          case AISemanticConventions.TOOL_CALL_ID:
-            return {
-              ...attrs,
-              [openInferenceKey]: span.attributes[convention],
-            }
-          case AISemanticConventions.TOOL_CALL_NAME:
-            return {
-              ...attrs,
-              [openInferenceKey]: span.attributes[convention],
-            }
-          case AISemanticConventions.TOOL_CALL_ARGS: {
-            let argsAttributes = {
-              [openInferenceKey]: span.attributes[convention],
-            }
-            // For tool spans, capture the arguments as input value
-            // if (span.kind === SpanKind.TOOL) {
-            //   argsAttributes = {
-            //     ...argsAttributes,
-            //     [SemanticConventions.INPUT_VALUE]: span.attributes[convention],
-            //     [SemanticConventions.INPUT_MIME_TYPE]: getMimeTypeFromValue(
-            //       span.attributes[convention],
-            //     ),
-            //   }
-            // }
-            return {
-              ...attrs,
-              ...argsAttributes,
-            }
-          }
-          case AISemanticConventions.TOOL_CALL_RESULT:
-            // For tool spans, capture the result as output value, for non tool spans ignore
-            // if (span.kind !== SpanKind.TOOL) {
-            //   return attrs
-            // }
-            return {
-              ...attrs,
-              [openInferenceKey]: span.attributes[convention],
-              [SemanticConventions.OUTPUT_MIME_TYPE]: getMimeTypeFromValue(
-                span.attributes[convention],
-              ),
-            }
-          case AISemanticConventions.MODEL_ID: {
-            const modelSemanticConvention =
-              span.kind === OpenInferenceSpanKind.EMBEDDING
-                ? SemanticConventions.EMBEDDING_MODEL_NAME
-                : SemanticConventions.LLM_MODEL_NAME
-            return {
-              ...attrs,
-              [modelSemanticConvention]: span.attributes[convention],
-            }
-          }
-          case AISemanticConventions.SETTINGS:
-            return {
-              ...attrs,
-              ...safelyGetInvocationParamAttributes(span.attributes),
-            }
-          case AISemanticConventions.PROMPT:
-          case AISemanticConventions.RESULT_OBJECT:
-          case AISemanticConventions.RESULT_TEXT: {
-            return {
-              ...attrs,
-              ...safelyGetIOValueAttributes({
-                attributeValue: span.attributes[convention],
-                OpenInferenceSemanticConventionKey:
-                  openInferenceKey as OpenInferenceIOConventionKey,
-              }),
-            }
-          }
-          case AISemanticConventions.RESULT_TOOL_CALLS:
-            return {
-              ...attrs,
-              ...safelyGetToolCallMessageAttributes(
-                span.attributes[convention],
-              ),
-            }
-          case AISemanticConventions.PROMPT_MESSAGES:
-            return {
-              ...attrs,
-              ...safelyGetInputMessageAttributes(span.attributes[convention]),
-            }
-            break
-          case AISemanticConventions.EMBEDDING_TEXT:
-          case AISemanticConventions.EMBEDDING_TEXTS:
-          case AISemanticConventions.EMBEDDING_VECTOR:
-          case AISemanticConventions.EMBEDDING_VECTORS:
-            return {
-              ...attrs,
-              ...safelyGetEmbeddingAttributes({
-                attributeValue: span.attributes[convention],
-                OpenInferenceSemanticConventionKey: openInferenceKey,
-              }),
-            }
-          default:
-            // do nothing
-            return { ...attrs }
-        }
-      },
-      span.attributes,
-    )
+    // Extract settings
+    const settings = attrs[AISemanticConventions.SETTINGS]
+      ? JSON.parse(String(attrs[AISemanticConventions.SETTINGS]))
+      : {}
+
+    if (settings) {
+      // Add max tokens if present
+      if (settings.maxTokens) {
+        result['gen_ai.request.max_tokens'] = settings.maxTokens
+      }
+    }
+
+    // Set request type to chat as that's what Vercel AI SDK uses
+    result['llm.request.type'] = 'chat'
+
+    // Extract provider (system)
+    if (settings?.provider) {
+      result['gen_ai.system'] = String(settings.provider)
+    }
+
+    // Extract messages
+    const messages = attrs[AISemanticConventions.PROMPT_MESSAGES]
+      ? JSON.parse(String(attrs[AISemanticConventions.PROMPT_MESSAGES]))
+      : []
+
+    // Process prompt messages
+    messages.forEach((msg: any, index: number) => {
+      result[`gen_ai.prompt.${index}.role`] = msg.role
+      result[`gen_ai.prompt.${index}.content`] =
+        typeof msg.content === 'string'
+          ? msg.content
+          : JSON.stringify(msg.content)
+    })
+
+    // Extract completion/response
+    const responseText = attrs[AISemanticConventions.RESPONSE_TEXT]
+    if (responseText) {
+      result[`gen_ai.completion.0.role`] = 'assistant'
+      result[`gen_ai.completion.0.content`] = String(responseText)
+    }
+
+    const responseToolCalls = attrs[AISemanticConventions.RESPONSE_TOOL_CALLS]
+    if (responseToolCalls) {
+      result[`gen_ai.completion.0.role`] = 'assistant'
+      result[`gen_ai.completion.0.tool_calls`] =
+        JSON.stringify(responseToolCalls)
+    }
+
+    // Extract token usage
+    const completionTokens = attrs[AISemanticConventions.TOKEN_COUNT_COMPLETION]
+    const promptTokens = attrs[AISemanticConventions.TOKEN_COUNT_PROMPT]
+
+    if (typeof completionTokens === 'number') {
+      result['gen_ai.usage.completion_tokens'] = completionTokens
+    }
+    if (typeof promptTokens === 'number') {
+      result['gen_ai.usage.prompt_tokens'] = promptTokens
+    }
+    if (
+      typeof completionTokens === 'number' &&
+      typeof promptTokens === 'number'
+    ) {
+      result['llm.usage.total_tokens'] = completionTokens + promptTokens
+    }
+
+    return result
   }
 
   onEnd(span: ReadableSpan): void {
+    // Skip if the span doesn't have any AI attributes
+    if (!Object.keys(span.attributes).some((k) => k.startsWith('ai.'))) return
+
     try {
       ;(span as any).attributes = {
         ...span.attributes,
         ...this.computeOpenLLMAttributes(span),
       }
+
+      super.onEnd(span)
     } catch (e) {
       // do nothing
     }

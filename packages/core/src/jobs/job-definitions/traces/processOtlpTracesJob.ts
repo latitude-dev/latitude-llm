@@ -68,6 +68,5 @@ export const processOtlpTracesJob = async (
     project,
     traces: tracesToCreate,
     spans: s,
-    skipExistingTraces: true,
   })
 }

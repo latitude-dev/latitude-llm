@@ -1,22 +1,21 @@
 import { openai } from '@ai-sdk/openai'
-import {
-  isOpenInferenceSpan,
-  OpenInferenceSimpleSpanProcessor,
-} from '@arizeai/openinference-vercel'
 import { Latitude } from '@latitude-data/sdk'
-import { LatitudeExporter } from '@latitude-data/telemetry-js'
+import {
+  LatitudeExporter,
+  VercelSpanProcessor,
+} from '@latitude-data/telemetry-js'
 import { registerOTel } from '@vercel/otel'
 import { generateText } from 'ai'
+import { z } from 'zod'
 
 registerOTel({
   serviceName: 'ai-sdk-example',
   spanProcessors: [
-    new OpenInferenceSimpleSpanProcessor({
+    new VercelSpanProcessor({
       exporter: new LatitudeExporter({
         apiKey: process.env.LATITUDE_API_KEY,
         projectId: 6,
       }),
-      spanFilter: (span) => isOpenInferenceSpan(span),
     }),
   ],
 })
@@ -64,4 +63,57 @@ async function chainedJokesWithVercel() {
   }
 }
 
-chainedJokesWithVercel()
+async function generateTextWithTool() {
+  try {
+    const response = await generateText({
+      messages: [
+        {
+          role: 'system',
+          content:
+            'You are a helpful assistant that can get the current weather.',
+        },
+        {
+          role: 'user',
+          content: "What's the weather like in London right now?",
+        },
+      ],
+      model: openai('gpt-4'),
+      experimental_telemetry: {
+        isEnabled: true,
+      },
+      tools: {
+        getCurrentWeather: {
+          description: 'Get the current weather in a given location',
+          parameters: z.object({
+            location: z
+              .string()
+              .describe('The city and state, e.g. San Francisco, CA'),
+            unit: z
+              .enum(['celsius', 'fahrenheit'])
+              .optional()
+              .describe('The unit of temperature to use'),
+          }),
+          execute: async (args) => {
+            // Mock weather data
+            return {
+              temperature: 18,
+              unit: 'celsius',
+              condition: 'partly cloudy',
+            }
+          },
+        },
+      },
+    })
+
+    console.log('Response:', response.text)
+
+    if (response.toolResults) {
+      console.log('Tool results:', response.toolResults)
+    }
+  } catch (error) {
+    console.error('Error:', error)
+  }
+}
+
+// chainedJokesWithVercel()
+generateTextWithTool()

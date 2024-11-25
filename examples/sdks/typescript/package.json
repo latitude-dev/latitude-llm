@@ -16,6 +16,7 @@
     "@pinecone-database/pinecone": "^4.0.0",
     "@vercel/otel": "^1.10.0",
     "ai": "^4.0.3",
-    "openai": "^4.68.4"
+    "openai": "^4.68.4",
+    "zod": "^3.23.8"
   }
 }
