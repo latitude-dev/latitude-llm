@@ -96,6 +96,9 @@ export async function bulkCreateTracesAndSpans(
             status: trace.status,
           })),
         )
+        // If the trace already exists we do a noop. This can happen as
+        // atomicity is not guaranteed (two traces can try to get created at the
+        // same time).
         .onConflictDoUpdate({
           target: [traces.traceId],
           set: {
