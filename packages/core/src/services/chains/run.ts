@@ -207,18 +207,20 @@ async function runStep({
           errorableUuid,
           response: cachedResponse,
         }),
-        saveSyncProviderLogs: step.chainCompleted,
+        saveSyncProviderLogs: true, // TODO: temp bugfix, shuold only save last one syncronously
       })
+
+      const response = { ...cachedResponse, providerLog }
 
       if (step.chainCompleted) {
         streamConsumer.chainCompleted({
           step,
-          response: { ...cachedResponse, providerLog },
+          response,
         })
 
-        return { ...cachedResponse, providerLog }
+        return response
       } else {
-        streamConsumer.stepCompleted(cachedResponse)
+        streamConsumer.stepCompleted(response)
 
         return runStep({
           workspace,
@@ -230,7 +232,7 @@ async function runStep({
           errorableUuid,
           errorableType,
           previousCount: previousCount + 1,
-          previousResponse: cachedResponse,
+          previousResponse: response,
           configOverrides,
         })
       }
@@ -253,7 +255,7 @@ async function runStep({
     })
     if (consumedStream.error) throw consumedStream.error
 
-    const response = await processResponse({
+    const _response = await processResponse({
       aiResult,
       apiProvider: step.provider,
       config: step.config,
@@ -275,10 +277,12 @@ async function runStep({
         conversation: step.conversation,
         stepStartTime,
         errorableUuid,
-        response,
+        response: _response,
       }),
-      saveSyncProviderLogs: step.chainCompleted,
+      saveSyncProviderLogs: true, // TODO: temp bugfix, shuold only save last one syncronously
     })
+
+    const response = { ..._response, providerLog }
 
     await setCachedResponse({
       workspace,
@@ -290,10 +294,10 @@ async function runStep({
     if (step.chainCompleted) {
       streamConsumer.chainCompleted({
         step,
-        response: { ...response, providerLog },
+        response,
       })
 
-      return { ...response, providerLog }
+      return response
     } else {
       streamConsumer.stepCompleted(response)
 
