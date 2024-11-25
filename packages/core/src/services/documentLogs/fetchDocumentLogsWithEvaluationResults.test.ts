@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 
 import {
   Commit,
+  DocumentLog,
   DocumentVersion,
   EvaluationDto,
   ProviderApiKey,
@@ -9,7 +10,10 @@ import {
   Workspace,
 } from '../../browser'
 import * as factories from '../../tests/factories'
-import { fetchDocumentLogsWithEvaluationResults } from './fetchDocumentLogsWithEvaluationResults'
+import {
+  fetchDocumentLogsWithEvaluationResults,
+  findDocumentLogWithEvaluationResultPage,
+} from './fetchDocumentLogsWithEvaluationResults'
 
 describe('fetchDocumentLogsWithEvaluationResults', () => {
   let workspace: Workspace
@@ -147,5 +151,141 @@ describe('fetchDocumentLogsWithEvaluationResults', () => {
     })
 
     expect(logs).toHaveLength(0)
+  })
+})
+
+describe('findDocumentLogWithEvaluationResultPage', () => {
+  let workspace: Workspace
+  let evaluation: EvaluationDto
+  let commit: Commit
+  let document: DocumentVersion
+  let documentLogs: DocumentLog[]
+
+  beforeEach(async () => {
+    const {
+      workspace: w,
+      providers: ps,
+      documents: ds,
+      user,
+      project,
+    } = await factories.createProject({
+      providers: [{ type: Providers.OpenAI, name: 'openai' }],
+      documents: {
+        'test.md': factories.helpers.createPrompt({
+          provider: 'openai',
+          model: 'gpt-4',
+        }),
+      },
+    })
+    workspace = w
+    const provider = ps[0]!
+    document = ds[0]!
+
+    evaluation = await factories.createLlmAsJudgeEvaluation({
+      workspace: workspace,
+      user: user,
+    })
+
+    const { commit: c } = await factories.createDraft({
+      project: project,
+      user: user,
+    })
+    commit = c
+
+    documentLogs = []
+    for (let i = 0; i < 5; i++) {
+      const { documentLog } = await factories.createDocumentLog({
+        document,
+        commit,
+      })
+      documentLogs.unshift(documentLog)
+
+      const providerLog = await factories.createProviderLog({
+        workspace: workspace,
+        documentLogUuid: documentLog.uuid,
+        providerId: provider.id,
+        providerType: provider.provider,
+      })
+
+      await factories.createEvaluationResult({
+        evaluation: evaluation,
+        documentLog: documentLog,
+        evaluatedProviderLog: providerLog,
+      })
+    }
+  })
+
+  it('returns no page when document log not found', async () => {
+    const page = await findDocumentLogWithEvaluationResultPage({
+      workspaceId: workspace.id,
+      documentUuid: '123e4567-e89b-12d3-a456-426614174000',
+      commit: commit,
+      documentLogId: '31',
+      pageSize: '25',
+    })
+
+    expect(page).toBeUndefined()
+  })
+
+  it('returns page where document log is', async () => {
+    let page = await findDocumentLogWithEvaluationResultPage({
+      workspaceId: workspace.id,
+      documentUuid: document.documentUuid,
+      commit: commit,
+      documentLogId: documentLogs[0]!.id.toString(),
+      pageSize: '25',
+    })
+
+    expect(page).toEqual(1)
+
+    page = await findDocumentLogWithEvaluationResultPage({
+      workspaceId: workspace.id,
+      documentUuid: document.documentUuid,
+      commit: commit,
+      documentLogId: documentLogs[2]!.id.toString(),
+      pageSize: '25',
+    })
+
+    expect(page).toEqual(1)
+
+    page = await findDocumentLogWithEvaluationResultPage({
+      workspaceId: workspace.id,
+      documentUuid: document.documentUuid,
+      commit: commit,
+      documentLogId: documentLogs[4]!.id.toString(),
+      pageSize: '25',
+    })
+
+    expect(page).toEqual(1)
+
+    page = await findDocumentLogWithEvaluationResultPage({
+      workspaceId: workspace.id,
+      documentUuid: document.documentUuid,
+      commit: commit,
+      documentLogId: documentLogs[0]!.id.toString(),
+      pageSize: '1',
+    })
+
+    expect(page).toEqual(1)
+
+    page = await findDocumentLogWithEvaluationResultPage({
+      workspaceId: workspace.id,
+      documentUuid: document.documentUuid,
+      commit: commit,
+      documentLogId: documentLogs[2]!.id.toString(),
+      pageSize: '1',
+    })
+
+    expect(page).toEqual(3)
+
+    page = await findDocumentLogWithEvaluationResultPage({
+      workspaceId: workspace.id,
+      documentUuid: document.documentUuid,
+      commit: commit,
+      documentLogId: documentLogs[4]!.id.toString(),
+      pageSize: '1',
+    })
+
+    expect(page).toEqual(5)
   })
 })

@@ -43,12 +43,8 @@ type DocumentLogRow = DocumentLogWithMetadataAndError & {
 }
 
 function EvaluationResultItem({ result, evaluation }: ResultWithEvaluation) {
-  if (result.result === undefined) {
-    return <Badge variant='secondary'>Pending</Badge>
-  }
-
   if (result.resultableType === EvaluationResultableType.Text) {
-    return <Badge variant='outline'>Text</Badge>
+    return <Badge variant='outline'>text</Badge>
   }
 
   return <ResultCellContent evaluation={evaluation} value={result.result} />

@@ -70,9 +70,9 @@ export const ResultCellContent = ({
   value = String(value)
 
   return (
-    <Text.H4 noWrap>
+    <Text.H5 noWrap>
       {value.length > 30 ? `${value.slice(0, 30)}...` : value}
-    </Text.H4>
+    </Text.H5>
   )
 }
 

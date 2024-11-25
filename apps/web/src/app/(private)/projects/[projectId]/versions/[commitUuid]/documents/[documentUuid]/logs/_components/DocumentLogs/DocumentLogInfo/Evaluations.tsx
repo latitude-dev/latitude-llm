@@ -4,9 +4,7 @@ import {
 } from '@latitude-data/core/browser'
 import { ResultWithEvaluation } from '@latitude-data/core/repositories'
 import {
-  Badge,
   Button,
-  cn,
   Icon,
   Text,
   useCurrentCommit,
@@ -24,10 +22,6 @@ import { MetadataItem } from '../../../../_components/MetadataItem'
 import { ResultCellContent } from '../../../../evaluations/[evaluationId]/_components/EvaluationResults/EvaluationResultsTable'
 
 function EvaluationResultItem({ result, evaluation }: ResultWithEvaluation) {
-  if (result.result === undefined) {
-    return <Badge variant='secondary'>Pending</Badge>
-  }
-
   if (result.resultableType === EvaluationResultableType.Text) {
     return (
       <Text.H5 align='left' color='foregroundMuted'>
@@ -71,9 +65,9 @@ export function DocumentLogEvaluations({
   }
 
   return (
-    <ul className='flex flex-col gap-4'>
-      {evaluationResults.map(({ result, evaluation }, index) => (
-        <li key={result.uuid} className='flex flex-col gap-2'>
+    <ul className='flex flex-col gap-4 divide-y divide-border'>
+      {evaluationResults.map(({ result, evaluation }) => (
+        <li key={result.uuid} className='flex flex-col gap-2 pt-4 first:pt-0'>
           <Text.H4M noWrap ellipsis>
             {evaluation.name}
           </Text.H4M>
@@ -92,29 +86,17 @@ export function DocumentLogEvaluations({
               value={result.reason || '-'}
             />
           </div>
-          <div
-            className={cn('w-full flex justify-center', {
-              '-mt-2': !result.reason,
-            })}
-          >
+          <div className={'w-full flex justify-center'}>
             <Link
               href={evaluationResultLink({ result, evaluation })}
               target='_blank'
             >
               <Button variant='link'>
                 Check evaluation result
-                <Icon
-                  name='externalLink'
-                  className='ml-1'
-                  widthClass='w-4'
-                  heightClass='h-4'
-                />
+                <Icon name='externalLink' widthClass='w-4' heightClass='h-4' />
               </Button>
             </Link>
           </div>
-          {index !== evaluationResults.length - 1 && (
-            <hr className='mt-2 border-border w-full mx-auto' />
-          )}
         </li>
       ))}
     </ul>
