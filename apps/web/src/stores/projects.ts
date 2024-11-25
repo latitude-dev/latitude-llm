@@ -36,6 +36,13 @@ export default function useProjects() {
 
       mutate(data.map((p) => (p.id === project.id ? project : p)))
     },
+    onError: (error) => {
+      toast({
+        title: 'Error',
+        variant: 'destructive',
+        description: error.err.message,
+      })
+    },
   })
   const { execute: destroy } = useLatitudeAction(destroyProjectAction, {
     onSuccess: ({ data: project }) => {
