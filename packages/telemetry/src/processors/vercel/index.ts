@@ -4,50 +4,46 @@ import {
   SimpleSpanProcessor,
 } from '@opentelemetry/sdk-trace-base'
 
-import { AISemanticConventions } from './vercel/conventions'
+import { AISemanticConventions } from './conventions'
 
 export class VercelSpanProcessor extends SimpleSpanProcessor {
   computeOpenLLMAttributes(span: ReadableSpan) {
     return Object.values(AISemanticConventions).reduce(
-      (openInferenceAttributes: Attributes, convention) => {
-        /**
-         *  Both settings and metadata are not full attribute paths but prefixes
-         * @example ai.settings.<paramName> or ai.metadata.<metadataKey>
-         */
+      (attrs: Attributes, convention) => {
         if (
           !(convention in span.attributes) &&
           convention !== AISemanticConventions.SETTINGS &&
           convention !== AISemanticConventions.METADATA
         ) {
-          return openInferenceAttributes
+          return attrs
         }
 
-        const openInferenceKey = AISemConvToOISemConvMap[convention]
+        const openInferenceKey = AISemanticConventions[convention]
 
         switch (convention) {
           case AISemanticConventions.METADATA:
             return {
-              ...openInferenceAttributes,
+              ...attrs,
               ...safelyGetMetadataAttributes(span.attributes),
             }
           case AISemanticConventions.TOKEN_COUNT_COMPLETION:
           case AISemanticConventions.TOKEN_COUNT_PROMPT:
             // Do not capture token counts for non LLM spans to avoid double token counts
             if (span.kind !== OpenInferenceSpanKind.LLM) {
-              return openInferenceAttributes
+              return attrs
             }
             return {
-              ...openInferenceAttributes,
+              ...attrs,
               [openInferenceKey]: span.attributes[convention],
             }
           case AISemanticConventions.TOOL_CALL_ID:
             return {
-              ...openInferenceAttributes,
+              ...attrs,
               [openInferenceKey]: span.attributes[convention],
             }
           case AISemanticConventions.TOOL_CALL_NAME:
             return {
-              ...openInferenceAttributes,
+              ...attrs,
               [openInferenceKey]: span.attributes[convention],
             }
           case AISemanticConventions.TOOL_CALL_ARGS: {
@@ -55,27 +51,27 @@ export class VercelSpanProcessor extends SimpleSpanProcessor {
               [openInferenceKey]: span.attributes[convention],
             }
             // For tool spans, capture the arguments as input value
-            if (span.kind === OpenInferenceSpanKind.TOOL) {
-              argsAttributes = {
-                ...argsAttributes,
-                [SemanticConventions.INPUT_VALUE]: span.attributes[convention],
-                [SemanticConventions.INPUT_MIME_TYPE]: getMimeTypeFromValue(
-                  span.attributes[convention],
-                ),
-              }
-            }
+            // if (span.kind === SpanKind.TOOL) {
+            //   argsAttributes = {
+            //     ...argsAttributes,
+            //     [SemanticConventions.INPUT_VALUE]: span.attributes[convention],
+            //     [SemanticConventions.INPUT_MIME_TYPE]: getMimeTypeFromValue(
+            //       span.attributes[convention],
+            //     ),
+            //   }
+            // }
             return {
-              ...openInferenceAttributes,
+              ...attrs,
               ...argsAttributes,
             }
           }
           case AISemanticConventions.TOOL_CALL_RESULT:
             // For tool spans, capture the result as output value, for non tool spans ignore
-            if (span.kind !== OpenInferenceSpanKind.TOOL) {
-              return openInferenceAttributes
-            }
+            // if (span.kind !== SpanKind.TOOL) {
+            //   return attrs
+            // }
             return {
-              ...openInferenceAttributes,
+              ...attrs,
               [openInferenceKey]: span.attributes[convention],
               [SemanticConventions.OUTPUT_MIME_TYPE]: getMimeTypeFromValue(
                 span.attributes[convention],
@@ -87,20 +83,20 @@ export class VercelSpanProcessor extends SimpleSpanProcessor {
                 ? SemanticConventions.EMBEDDING_MODEL_NAME
                 : SemanticConventions.LLM_MODEL_NAME
             return {
-              ...openInferenceAttributes,
+              ...attrs,
               [modelSemanticConvention]: span.attributes[convention],
             }
           }
           case AISemanticConventions.SETTINGS:
             return {
-              ...openInferenceAttributes,
+              ...attrs,
               ...safelyGetInvocationParamAttributes(span.attributes),
             }
           case AISemanticConventions.PROMPT:
           case AISemanticConventions.RESULT_OBJECT:
           case AISemanticConventions.RESULT_TEXT: {
             return {
-              ...openInferenceAttributes,
+              ...attrs,
               ...safelyGetIOValueAttributes({
                 attributeValue: span.attributes[convention],
                 OpenInferenceSemanticConventionKey:
@@ -110,14 +106,14 @@ export class VercelSpanProcessor extends SimpleSpanProcessor {
           }
           case AISemanticConventions.RESULT_TOOL_CALLS:
             return {
-              ...openInferenceAttributes,
+              ...attrs,
               ...safelyGetToolCallMessageAttributes(
                 span.attributes[convention],
               ),
             }
           case AISemanticConventions.PROMPT_MESSAGES:
             return {
-              ...openInferenceAttributes,
+              ...attrs,
               ...safelyGetInputMessageAttributes(span.attributes[convention]),
             }
             break
@@ -126,23 +122,22 @@ export class VercelSpanProcessor extends SimpleSpanProcessor {
           case AISemanticConventions.EMBEDDING_VECTOR:
           case AISemanticConventions.EMBEDDING_VECTORS:
             return {
-              ...openInferenceAttributes,
+              ...attrs,
               ...safelyGetEmbeddingAttributes({
                 attributeValue: span.attributes[convention],
                 OpenInferenceSemanticConventionKey: openInferenceKey,
               }),
             }
           default:
-            return assertUnreachable(convention)
+            // do nothing
+            return { ...attrs }
         }
       },
-      openInferenceAttributes,
+      span.attributes,
     )
   }
 
   onEnd(span: ReadableSpan): void {
-    const attributes = { ...span.attributes }
-
     try {
       ;(span as any).attributes = {
         ...span.attributes,
