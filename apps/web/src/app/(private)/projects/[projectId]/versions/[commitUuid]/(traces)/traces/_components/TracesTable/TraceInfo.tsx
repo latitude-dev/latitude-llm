@@ -1,7 +1,6 @@
 'use client'
 
 import { useMemo } from 'react'
-import { toUpper } from 'lodash-es'
 
 import { TraceWithSpans, Workspace } from '@latitude-data/core/browser'
 import { Badge, ClickToCopyUuid, Text } from '@latitude-data/web-ui'
@@ -20,29 +19,70 @@ type Props = {
   trace: TraceWithSpans
 }
 
-function TraceMetadata({ trace }: { trace: TraceWithSpans }) {
-  const duration = trace.endTime
-    ? new Date(trace.endTime).getTime() - new Date(trace.startTime).getTime()
+function calculateGenerationMetrics(spans?: TraceWithSpans['spans']) {
+  if (!spans) return { totalTokens: 0, totalCost: 0 }
+
+  return spans.reduce(
+    (acc, span) => {
+      if (span.internalType === 'generation') {
+        const cost = span.totalCostInMillicents ?? 0
+        const tokens = span.totalTokens ?? 0
+
+        return {
+          totalCost: acc.totalCost + cost,
+          totalTokens: acc.totalTokens + tokens,
+        }
+      }
+      return acc
+    },
+    { totalTokens: 0, totalCost: 0 },
+  )
+}
+
+function getUniqueSpanAttributes(
+  spans: TraceWithSpans['spans'],
+  attribute: string,
+) {
+  if (!spans) return []
+
+  const uniqueValues = new Set(
+    spans.map((span) => span.attributes?.[attribute]).filter(Boolean),
+  )
+
+  return Array.from(uniqueValues)
+}
+
+function calculateTraceMetrics(trace: TraceWithSpans) {
+  const totalDuration = trace.spans?.length
+    ? Math.max(
+        ...trace.spans.map((s) =>
+          s.endTime ? new Date(s.endTime).getTime() : 0,
+        ),
+      ) - Math.min(...trace.spans.map((s) => new Date(s.startTime).getTime()))
     : undefined
 
-  const generationSpan = useMemo(() => {
-    if (trace.spans.length !== 1) return null
-    const span = trace.spans[0]
-    return span?.internalType === 'generation' ? span : null
-  }, [trace.spans])
+  const { totalCost, totalTokens } = calculateGenerationMetrics(trace.spans)
+
+  const providers = getUniqueSpanAttributes(trace.spans, 'gen_ai.system')
+  const models = getUniqueSpanAttributes(trace.spans, 'gen_ai.request.model')
+
+  return {
+    totalDuration,
+    totalCost,
+    totalTokens,
+    providers,
+    models,
+  }
+}
+
+function TraceMetadata({ trace }: { trace: TraceWithSpans }) {
+  const { totalDuration, totalCost, totalTokens, providers, models } =
+    calculateTraceMetrics(trace)
 
   return (
     <div className='flex flex-col gap-4'>
       <MetadataItem label='Trace ID'>
         <ClickToCopyUuid uuid={trace.traceId} />
-      </MetadataItem>
-      <MetadataItem label='Status'>
-        <Badge
-          variant={trace.status === 'error' ? 'destructive' : 'success'}
-          shape='square'
-        >
-          <Text.H6 noWrap>{toUpper(trace.status || 'ok')}</Text.H6>
-        </Badge>
       </MetadataItem>
       <MetadataItem
         label='Start Time'
@@ -50,24 +90,42 @@ function TraceMetadata({ trace }: { trace: TraceWithSpans }) {
       />
       <MetadataItem
         label='Duration'
-        value={duration ? formatDuration(duration) : '-'}
+        value={totalDuration ? formatDuration(totalDuration) : '-'}
       />
-
-      {generationSpan && (
-        <>
-          {generationSpan.model && (
-            <MetadataItem label='Model' value={generationSpan.model} />
+      <MetadataItem label='Providers'>
+        <div className='flex flex-wrap gap-1'>
+          {providers.length > 0 ? (
+            providers.map((provider) => (
+              <Badge key={provider as string} variant='secondary' size='sm'>
+                <Text.H6 noWrap>{provider}</Text.H6>
+              </Badge>
+            ))
+          ) : (
+            <Text.H5 noWrap>-</Text.H5>
           )}
-          {generationSpan.totalCostInMillicents && (
-            <MetadataItem
-              label='Cost'
-              value={formatCostInMillicents(
-                generationSpan.totalCostInMillicents,
-              )}
-            />
+        </div>
+      </MetadataItem>
+      <MetadataItem label='Models'>
+        <div className='flex flex-wrap gap-1'>
+          {models.length > 0 ? (
+            models.map((model) => (
+              <Badge key={model as string} variant='secondary' size='sm'>
+                <Text.H6 noWrap>{model}</Text.H6>
+              </Badge>
+            ))
+          ) : (
+            <Text.H5 noWrap>-</Text.H5>
           )}
-        </>
-      )}
+        </div>
+      </MetadataItem>
+      <MetadataItem
+        label='Total Tokens'
+        value={totalTokens ? totalTokens.toString() : '-'}
+      />
+      <MetadataItem
+        label='Total Cost'
+        value={totalCost ? formatCostInMillicents(totalCost) : '-'}
+      />
     </div>
   )
 }

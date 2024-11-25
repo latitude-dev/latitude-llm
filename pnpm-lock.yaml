@@ -598,12 +598,21 @@ importers:
       '@anthropic-ai/sdk':
         specifier: ^0.32.1
         version: 0.32.1(encoding@0.1.13)
+      '@arizeai/openinference-vercel':
+        specifier: ^1.2.0
+        version: 1.2.0(@opentelemetry/api@1.9.0)
       '@latitude-data/sdk':
         specifier: workspace:^
         version: link:../../../packages/sdks/typescript
+      '@latitude-data/telemetry-js':
+        specifier: workspace:^
+        version: link:../../../packages/telemetry
       '@pinecone-database/pinecone':
         specifier: ^4.0.0
         version: 4.0.0
+      '@vercel/otel':
+        specifier: ^1.10.0
+        version: 1.10.0(@opentelemetry/api@1.9.0)(@opentelemetry/resources@1.27.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-metrics@1.27.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@1.27.0(@opentelemetry/api@1.9.0))
       ai:
         specifier: ^4.0.3
         version: 4.0.3(react@19.0.0-rc-5d19e1c8-20240923)(zod@3.23.8)
@@ -1333,6 +1342,15 @@ packages:
 
   '@anthropic-ai/sdk@0.32.1':
     resolution: {integrity: sha512-U9JwTrDvdQ9iWuABVsMLj8nJVwAyQz6QXvgLsVhryhCEPkLsbcP/MXxm+jYcAwLoV8ESbaTTjnD4kuAFa+Hyjg==}
+
+  '@arizeai/openinference-core@0.3.1':
+    resolution: {integrity: sha512-kEhcGoPY2eFQEDkd7FA+d/hlSeTgN5kasq0GR8NOUbfrZk6ROETIKUWbx696OoSC6K/fZVwmuf15RdBdgKcaPw==}
+
+  '@arizeai/openinference-semantic-conventions@0.12.0':
+    resolution: {integrity: sha512-lplj9yJSCJo0JD7VrOf1J2PEnC6B/y6t9fJUqD1dDkPoexBojk5kQQBjPJ0Claa/IMO3xuojEsXsuCheQ5ki9g==}
+
+  '@arizeai/openinference-vercel@1.2.0':
+    resolution: {integrity: sha512-RIO+UidCmzZltk/J4e28u4ETtgRghsiCuoRDimmO0qTkeIXN4a6OOSMTmDBc44kuYYjeNCD2cXmB+cXWOJqxBA==}
 
   '@aws-crypto/crc32@5.2.0':
     resolution: {integrity: sha512-nLbCWqQNgUiwwtFsen1AdzAtvuLRsQS8rYgMuxCrdKf9kOssamGLuPwyTY9wyYblNr9+1XM8v6zoDTPPSIeANg==}
@@ -5408,6 +5426,18 @@ packages:
 
   '@ungap/structured-clone@1.2.0':
     resolution: {integrity: sha512-zuVdFrMJiuCDQUMCzQaD6KL28MjnqqN8XnAqiEq9PNm/hCPTSGfrXCOfwj1ow4LFb/tNymJPwsNbVePc1xFqrQ==}
+
+  '@vercel/otel@1.10.0':
+    resolution: {integrity: sha512-bv1FXbFZlFbB89vyA2P9/kr6eZ42bMtXgqBJpgi+8yOrZU8rkg9wMi0TL//AgAf/qKtaryDm1sbCnkLHgCI3PQ==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      '@opentelemetry/api': ^1.7.0
+      '@opentelemetry/api-logs': '>=0.46.0 && <1.0.0'
+      '@opentelemetry/instrumentation': '>=0.46.0 && <1.0.0'
+      '@opentelemetry/resources': ^1.19.0
+      '@opentelemetry/sdk-logs': '>=0.46.0 && <1.0.0'
+      '@opentelemetry/sdk-metrics': ^1.19.0
+      '@opentelemetry/sdk-trace-base': ^1.19.0
 
   '@vercel/style-guide@5.2.0':
     resolution: {integrity: sha512-fNSKEaZvSkiBoF6XEefs8CcgAV9K9e+MbcsDZjUsktHycKdA0jvjAzQi1W/FzLS+Nr5zZ6oejCwq/97dHUKe0g==}
@@ -11778,6 +11808,22 @@ snapshots:
     transitivePeerDependencies:
       - encoding
 
+  '@arizeai/openinference-core@0.3.1':
+    dependencies:
+      '@arizeai/openinference-semantic-conventions': 0.12.0
+      '@opentelemetry/api': 1.9.0
+      '@opentelemetry/core': 1.27.0(@opentelemetry/api@1.9.0)
+
+  '@arizeai/openinference-semantic-conventions@0.12.0': {}
+
+  '@arizeai/openinference-vercel@1.2.0(@opentelemetry/api@1.9.0)':
+    dependencies:
+      '@arizeai/openinference-core': 0.3.1
+      '@arizeai/openinference-semantic-conventions': 0.12.0
+      '@opentelemetry/core': 1.27.0(@opentelemetry/api@1.9.0)
+    transitivePeerDependencies:
+      - '@opentelemetry/api'
+
   '@aws-crypto/crc32@5.2.0':
     dependencies:
       '@aws-crypto/util': 5.2.0
@@ -17082,6 +17128,13 @@ snapshots:
       eslint-visitor-keys: 3.4.3
 
   '@ungap/structured-clone@1.2.0': {}
+
+  '@vercel/otel@1.10.0(@opentelemetry/api@1.9.0)(@opentelemetry/resources@1.27.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-metrics@1.27.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@1.27.0(@opentelemetry/api@1.9.0))':
+    dependencies:
+      '@opentelemetry/api': 1.9.0
+      '@opentelemetry/resources': 1.27.0(@opentelemetry/api@1.9.0)
+      '@opentelemetry/sdk-metrics': 1.27.0(@opentelemetry/api@1.9.0)
+      '@opentelemetry/sdk-trace-base': 1.27.0(@opentelemetry/api@1.9.0)
 
   '@vercel/style-guide@5.2.0(@next/eslint-plugin-next@14.2.16)(eslint@8.57.1)(prettier@3.3.3)(typescript@5.6.3)':
     dependencies:

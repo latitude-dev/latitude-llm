@@ -61,6 +61,29 @@ function getUniqueSpanAttributes(
   return Array.from(uniqueValues)
 }
 
+function calculateTraceMetrics(trace: TraceWithSpans) {
+  const totalDuration = trace.spans?.length
+    ? Math.max(
+        ...trace.spans.map((s) =>
+          s.endTime ? new Date(s.endTime).getTime() : 0,
+        ),
+      ) - Math.min(...trace.spans.map((s) => new Date(s.startTime).getTime()))
+    : undefined
+
+  const { totalCost, totalTokens } = calculateGenerationMetrics(trace.spans)
+
+  const providers = getUniqueSpanAttributes(trace.spans, 'gen_ai.system')
+  const models = getUniqueSpanAttributes(trace.spans, 'gen_ai.request.model')
+
+  return {
+    totalDuration,
+    totalCost,
+    totalTokens,
+    providers,
+    models,
+  }
+}
+
 type Props = {
   projectId: number
   commit: Commit
@@ -100,23 +123,13 @@ export function TracesTable({ projectId, commit, workspace }: Props) {
           </TableHeader>
           <TableBody>
             {traces?.items.map((trace: TraceWithSpans) => {
-              const totalDuration = trace.endTime
-                ? new Date(trace.endTime).getTime() -
-                  new Date(trace.startTime).getTime()
-                : undefined
-
-              const { totalCost, totalTokens } = calculateGenerationMetrics(
-                trace.spans,
-              )
-
-              const providers = getUniqueSpanAttributes(
-                trace.spans,
-                'gen_ai.system',
-              )
-              const models = getUniqueSpanAttributes(
-                trace.spans,
-                'gen_ai.request.model',
-              )
+              const {
+                totalDuration,
+                totalCost,
+                totalTokens,
+                providers,
+                models,
+              } = calculateTraceMetrics(trace)
 
               return (
                 <TableRow

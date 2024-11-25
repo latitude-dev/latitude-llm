@@ -1,4 +1,4 @@
-import { inArray } from 'drizzle-orm'
+import { eq, getTableColumns, inArray } from 'drizzle-orm'
 
 import { Project } from '../../browser'
 import { database } from '../../client'
@@ -50,7 +50,6 @@ export type BulkCreateTracesAndSpansProps = {
     outputCostInMillicents?: number | null
     totalCostInMillicents?: number | null
   }>
-  skipExistingTraces?: boolean
 }
 
 export async function bulkCreateTracesAndSpans(
@@ -58,7 +57,6 @@ export async function bulkCreateTracesAndSpans(
     project,
     traces: tracesToCreate,
     spans: spansToCreate,
-    skipExistingTraces,
   }: BulkCreateTracesAndSpansProps,
   db = database,
 ) {
@@ -75,13 +73,34 @@ export async function bulkCreateTracesAndSpans(
   }
 
   // Filter out traces that already exist if skipExistingTraces is true
-  const tracesToInsert = skipExistingTraces
-    ? tracesToCreate.filter((trace) => !existingTraceIds.has(trace.traceId))
-    : tracesToCreate
+  const tracesToInsert = tracesToCreate.filter(
+    (trace) => !existingTraceIds.has(trace.traceId),
+  )
+  const tracesToUpdate = tracesToCreate.filter((trace) =>
+    existingTraceIds.has(trace.traceId),
+  )
 
   return Transaction.call(async (tx) => {
     // Create new traces if any
     let createdTraces: (typeof traces.$inferSelect)[] = []
+    let updatedTraces: (typeof traces.$inferSelect)[] = []
+
+    if (tracesToUpdate.length > 0) {
+      tracesToUpdate.forEach(async (trace) => {
+        const updatedTrace = await tx
+          .update(traces)
+          .set({
+            startTime: trace.startTime,
+            endTime: trace.endTime,
+            attributes: trace.attributes,
+            status: trace.status,
+          })
+          .where(eq(traces.traceId, trace.traceId))
+          .returning()
+
+        updatedTraces.push(updatedTrace[0]!)
+      })
+    }
     if (tracesToInsert.length > 0) {
       createdTraces = await tx
         .insert(traces)
