@@ -84,5 +84,5 @@ export function useStickyNested({
     }
   }, [scrollableArea, beacon, target, offset])
 
-  useUpdateWidthOnTargetContainerChange({ target, targetContainer })
+  // useUpdateWidthOnTargetContainerChange({ target, targetContainer })
 }

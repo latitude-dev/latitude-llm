@@ -158,7 +158,7 @@ export function DocumentLogs({
             <DocumentLogInfo
               documentLog={selectedLog}
               providerLogs={providerLogs}
-              evaluationResults={evaluationResults[selectedLog.id]}
+              evaluationResults={evaluationResults[selectedLog.id] || []}
               isLoading={isProviderLogsLoading || isEvaluationResultsLoading}
               stickyRef={stickyRef}
               sidebarWrapperRef={sidebarWrapperRef}
