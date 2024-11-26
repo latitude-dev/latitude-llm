@@ -76,6 +76,18 @@ export function ProjectsTable({
                         e.stopPropagation()
                       },
                     },
+                    {
+                      label: 'Delete',
+                      type: 'destructive',
+                      onElementClick(e) {
+                        e.stopPropagation()
+                      },
+                      onClick: () => {
+                        navigate.push(
+                          ROUTES.dashboard.projects.destroy(project.id).root,
+                        )
+                      },
+                    },
                   ]}
                   side='bottom'
                   align='end'
