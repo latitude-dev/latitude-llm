@@ -2,7 +2,6 @@ import { Job } from 'bullmq'
 
 import { DocumentLog, EvaluationDto } from '../../../browser'
 import { findLastProviderLogFromDocumentLogUuid } from '../../../data-access'
-import { NotFoundError } from '../../../lib'
 import { runEvaluation } from '../../../services/evaluations'
 
 export type RunLiveEvaluationJobData = {
@@ -18,10 +17,8 @@ export const runLiveEvaluationJob = async (
   const providerLog = await findLastProviderLogFromDocumentLogUuid(
     documentLog.uuid,
   )
-  if (!providerLog)
-    throw new NotFoundError(
-      `Provider log not found for document log ${documentLog.uuid}`,
-    )
+  // Document logs can be generated without a provider log (in case of error), so we don't want to fail the job
+  if (!providerLog) return
 
   const { response } = await runEvaluation({
     providerLog,
