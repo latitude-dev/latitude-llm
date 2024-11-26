@@ -2,6 +2,7 @@ import {
   EvaluationDto,
   EvaluationMetadataType,
   EvaluationResultableType,
+  Providers,
   Workspace,
 } from '../../../browser'
 import { database } from '../../../client'
@@ -72,8 +73,7 @@ export async function getEvaluationPrompt(
     [EvaluationResultableType.Text]: 'string',
   } as const
 
-  return Result.ok(
-    `
+  const frontmatter = `
 ---
 provider: ${provider.name}
 model: ${evaluation.metadata.model}
@@ -88,9 +88,10 @@ schema:
   required:
     - value
     - reason
----
+---`.trim()
 
-You’re an expert LLM evaluator. Your objective is to evaluate the response from an LLM model based on this goal:
+  const content = `
+You're an expert LLM evaluator. Your objective is to evaluate the response from an LLM model based on this goal:
 
 ${evaluation.metadata.objective}
 
@@ -109,6 +110,12 @@ Now, evaluate the assistant response for the following conversation, based on yo
 You must respond with a JSON object with the following properties:
  - value: ${valueInformation(evaluation)}
  - reason: A string explaining your evaluation decision.
-`.trim(),
-  )
+`.trim()
+
+  const wrappedContent =
+    provider.provider === Providers.Anthropic
+      ? `<user>${content}</user>`
+      : content
+
+  return Result.ok(`${frontmatter}\n\n${wrappedContent}`)
 }

@@ -120,4 +120,69 @@ describe('getEvaluationPrompt', () => {
 
     expect(obtainedPrompt).toBe(evaluation.description)
   })
+
+  it('wraps only content (not frontmatter) in user tags for Anthropic provider', async () => {
+    const { workspace, user, providers } = await factories.createProject({
+      providers: [{ name: 'anthropic', type: Providers.Anthropic }],
+    })
+    const anthropicProvider = providers[0]!
+    const evaluation = await createEvaluation({
+      workspace,
+      user,
+      name: 'Test evaluation',
+      description: 'Test description',
+      metadataType: EvaluationMetadataType.LlmAsJudgeSimple,
+      metadata: {
+        providerApiKeyId: anthropicProvider.id,
+        model: 'claude-3',
+        objective: 'Test objective',
+      },
+      resultType: EvaluationResultableType.Boolean,
+      resultConfiguration: {
+        trueValueDescription: 'True case',
+        falseValueDescription: 'False case',
+      },
+    }).then((r) => r.unwrap())
+
+    const result = await getEvaluationPrompt({ workspace, evaluation })
+
+    console.log(result.error)
+
+    expect(result.ok).toBe(true)
+    const prompt = result.unwrap()
+
+    // Frontmatter should not be wrapped
+    expect(prompt).toMatch(/^---[\s\S]*---/)
+
+    // Content after frontmatter should be wrapped
+    expect(prompt).toMatch(/---\n\n<user>[\s\S]*<\/user>$/)
+  })
+
+  it('does not wrap content in user tags for other providers', async () => {
+    const evaluation = await createEvaluation({
+      workspace,
+      user,
+      name: 'Test evaluation',
+      description: 'Test description',
+      metadataType: EvaluationMetadataType.LlmAsJudgeSimple,
+      metadata: {
+        providerApiKeyId: provider.id,
+        model: 'gpt-4',
+        objective: 'Test objective',
+      },
+      resultType: EvaluationResultableType.Boolean,
+      resultConfiguration: {
+        trueValueDescription: 'True case',
+        falseValueDescription: 'False case',
+      },
+    }).then((r) => r.unwrap())
+
+    const result = await getEvaluationPrompt({ workspace, evaluation })
+
+    expect(result.ok).toBe(true)
+    const prompt = result.unwrap()
+
+    // Should not have user tags
+    expect(prompt).not.toMatch(/<user>[\s\S]*<\/user>/)
+  })
 })
