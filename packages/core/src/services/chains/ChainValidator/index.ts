@@ -40,12 +40,16 @@ type ValidatorContext = {
   configOverrides?: ConfigOverrides
 }
 
-const getInputSchema = (
-  chainCompleted: boolean,
-  config: Config,
-  configOverrides?: ConfigOverrides,
-): JSONSchema7 | undefined => {
-  if (!chainCompleted) return undefined
+const getInputSchema = ({
+  config,
+  configOverrides,
+  ignoreSchema = false,
+}: {
+  config: Config
+  configOverrides?: ConfigOverrides
+  ignoreSchema?: boolean
+}): JSONSchema7 | undefined => {
+  if (ignoreSchema) return undefined
   const overrideSchema =
     configOverrides && 'schema' in configOverrides
       ? configOverrides.schema
@@ -53,13 +57,16 @@ const getInputSchema = (
   return overrideSchema || config.schema
 }
 
-const getOutputType = (
-  chainCompleted: boolean,
-  config: Config,
-  configOverrides?: ConfigOverrides,
-): 'object' | 'array' | 'no-schema' | undefined => {
-  if (!chainCompleted) return undefined
-
+const getOutputType = ({
+  config,
+  configOverrides,
+  ignoreSchema = false,
+}: {
+  config: Config
+  configOverrides?: ConfigOverrides
+  ignoreSchema?: boolean
+}): 'object' | 'array' | 'no-schema' | undefined => {
+  if (ignoreSchema) return undefined
   if (configOverrides?.output) return configOverrides.output
 
   const configSchema = config.schema
@@ -198,6 +205,17 @@ export const validateChain = async (
     config,
   })
 
+  const schema = getInputSchema({
+    config,
+    configOverrides,
+    ignoreSchema: promptlVersion === 0 && !chainCompleted,
+  })
+  const output = getOutputType({
+    config,
+    configOverrides,
+    ignoreSchema: promptlVersion === 0 && !chainCompleted,
+  })
+
   return Result.ok({
     provider,
     config: rule.config as Config,
@@ -206,7 +224,7 @@ export const validateChain = async (
       ...conversation,
       messages: rule?.messages ?? conversation.messages,
     },
-    schema: getInputSchema(chainCompleted, config, configOverrides),
-    output: getOutputType(chainCompleted, config, configOverrides),
+    schema,
+    output,
   })
 }
