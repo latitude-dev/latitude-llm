@@ -93,7 +93,7 @@ export function EvaluationResults({
   const sidebarWrapperRef = useRef<HTMLDivElement | null>(null)
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
-  const document = useCurrentDocument()
+  const { document } = useCurrentDocument()
   const [selectedResult, setSelectedResult] = useState<
     EvaluationResultWithMetadataAndErrors | undefined
   >(serverSelectedResult)

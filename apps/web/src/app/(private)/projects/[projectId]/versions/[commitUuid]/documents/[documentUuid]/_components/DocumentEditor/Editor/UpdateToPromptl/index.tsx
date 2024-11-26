@@ -30,7 +30,7 @@ function UpgradeToPromptlModal({
   const router = useRouter()
 
   const { commit } = useCurrentCommit()
-  const document = useCurrentDocument()
+  const { document } = useCurrentDocument()
   const { project } = useCurrentProject()
 
   const { mutate } = useDocumentVersions({

@@ -19,7 +19,7 @@ import ConnectedEvaluationsTable from './ConnectedEvaluationsTable'
 function SuggestedEvaluations() {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
-  const document = useCurrentDocument()
+  const { document } = useCurrentDocument()
   return (
     <BlankSlateStep
       number={2}
@@ -31,7 +31,7 @@ function SuggestedEvaluations() {
         <div className='max-h-[272px] overflow-hidden'>
           <span className='whitespace-pre-wrap text-sm leading-1 text-muted-foreground'>
             {`---
-  provider: OpenAI 
+  provider: OpenAI
   model: gpt-4o
 ---
 This is just a placeholder for the evaluation prompt because generating it takes a bit longer than we'd like. Click the button to actually generate the evaluation, it's free as this one is on us.
@@ -64,7 +64,7 @@ export default function EvaluationsLayoutClient({
 }: {
   evaluations: EvaluationDto[]
 }) {
-  const document = useCurrentDocument()
+  const { document } = useCurrentDocument()
   const { data: evaluations, isLoading } = useEvaluations({
     fallbackData,
     params: { documentUuid: document.documentUuid },

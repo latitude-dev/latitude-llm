@@ -65,7 +65,7 @@ export const DocumentLogsTable = forwardRef<HTMLTableElement, Props>(
     const pageSize = searchParams.get('pageSize') ?? '25'
     const { commit } = useCurrentCommit()
     const { project } = useCurrentProject()
-    const document = useCurrentDocument()
+    const { document } = useCurrentDocument()
     const { data: pagination, isLoading } = useDocumentLogsPagination({
       projectId: project.id,
       commitUuid: commit.uuid,

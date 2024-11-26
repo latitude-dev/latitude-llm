@@ -9,7 +9,7 @@ export function useGenerateDocumentLogDetailUrl({
   documentLogUuid: string | undefined
   page: number | undefined
 }) {
-  const document = useCurrentDocument()
+  const { document } = useCurrentDocument()
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
   const queryParams = `page=${page}&logUuid=${documentLogUuid}`

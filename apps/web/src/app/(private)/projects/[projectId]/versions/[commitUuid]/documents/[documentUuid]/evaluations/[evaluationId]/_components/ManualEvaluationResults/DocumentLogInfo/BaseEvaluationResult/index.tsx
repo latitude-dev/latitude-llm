@@ -42,7 +42,7 @@ export function BaseEvaluationResult({
 }: BaseEvaluationResultProps) {
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
-  const document = useCurrentDocument()
+  const { document } = useCurrentDocument()
   const searchParams = useSearchParams()
   const page = searchParams.get('page')
   const pageSize = searchParams.get('pageSize')

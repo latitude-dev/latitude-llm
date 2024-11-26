@@ -35,7 +35,7 @@ export function SubmitEvaluationDocumentation({
 }
 
 function SdkDocumentation({ evaluation }: { evaluation: EvaluationDto }) {
-  const document = useCurrentDocument()
+  const { document } = useCurrentDocument()
   const { project } = useCurrentProject()
   const { data: apiKeys } = useApiKeys()
   const apiKey = apiKeys?.[0]?.token

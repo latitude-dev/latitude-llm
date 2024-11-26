@@ -2,14 +2,19 @@
 
 import { ReactNode, useCallback } from 'react'
 
+import { cn } from '../../../lib/utils'
 import { Icon, toast, Tooltip } from '../../atoms'
 
 export function ClickToCopy({
   copyValue,
   children,
+  fullWidth = false,
+  showIcon = true,
 }: {
   copyValue: string
   children: ReactNode
+  fullWidth?: boolean
+  showIcon?: boolean
 }) {
   const onCopy = useCallback(() => {
     navigator.clipboard.writeText(copyValue)
@@ -25,13 +30,18 @@ export function ClickToCopy({
       align='center'
       delayDuration={250}
       variant='inverse'
+      asChild
       trigger={
         <div
           onClick={onCopy}
-          className='cursor-pointer flex flex-row items-center gap-x-2'
+          className={cn('cursor-pointer flex flex-row items-center gap-x-2', {
+            'w-full': fullWidth,
+          })}
         >
           {children}
-          <Icon name='clipboard' className='text-muted-foreground' />
+          {showIcon && (
+            <Icon name='clipboard' className='text-muted-foreground' />
+          )}
         </div>
       }
     >

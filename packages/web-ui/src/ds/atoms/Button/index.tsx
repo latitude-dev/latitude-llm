@@ -3,6 +3,7 @@ import { cva, type VariantProps } from 'class-variance-authority'
 import { Slot, Slottable } from '@radix-ui/react-slot'
 
 import { cn } from '../../../lib/utils'
+import { DotIndicator, DotIndicatorProps } from '../DotIndicator'
 import { Icon, IconProps } from '../Icons'
 
 const buttonContainerVariants = cva(
@@ -57,7 +58,7 @@ const buttonVariants = cva(
     variants: {
       variant: {
         default:
-          'bg-primary text-primary-foreground group-hover:bg-primary/90 shadow-[inset_0px_2px_2px_rgba(255,255,255,0.25),inset_0px_-1px_4px_rgba(0,0,0,0.04)]',
+          'bg-primary text-primary-foreground group-hover:bg-primary/90 shadow-[inset_0px_2px_2px_rgba(255,255,255,0.25),inset_0px_-1px_4px_rgba(0,0,0,0.04)]  disabled:cursor-default',
         nope: 'bg-transparent text-primary-foreground group-hover:bg-transparent',
         destructive:
           'bg-destructive text-destructive-foreground group-hover:bg-destructive/90 shadow-[inset_0px_2px_2px_rgba(255,255,255,0.25),inset_0px_-1px_4px_rgba(0,0,0,0.04)]',
@@ -119,10 +120,13 @@ const buttonVariants = cva(
   },
 )
 
+type ButtonIconProps = IconProps & {
+  placement?: 'left' | 'right'
+}
 export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> &
   VariantProps<typeof buttonVariants> & {
     children?: ReactNode
-    iconProps?: IconProps
+    iconProps?: ButtonIconProps
     fullWidth?: boolean
     asChild?: boolean
     isLoading?: boolean
@@ -130,6 +134,7 @@ export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> &
     lookDisabled?: boolean
     ellipsis?: boolean
     containerClassName?: string
+    indicator?: DotIndicatorProps
   }
 
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
@@ -147,6 +152,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
     disabled,
     lookDisabled,
     ellipsis,
+    indicator,
     ...props
   },
   ref,
@@ -158,6 +164,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
   }
 
   const fanciness = fancy ? 'fancy' : 'default'
+  const iconPlacement = iconProps?.placement || 'left'
 
   return (
     <Comp
@@ -195,13 +202,19 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
             ></span>
           )}
           <div
-            className={cn('flex flex-row items-center gap-x-1', {
+            className={cn('flex flex-row items-center gap-x-2 cursor-pointer', {
               'w-full justify-center': fullWidth,
               'overflow-hidden': ellipsis,
             })}
           >
-            {iconProps ? <Icon {...iconProps} /> : null}
+            {indicator ? <DotIndicator {...indicator} /> : null}
+            {iconProps && iconPlacement === 'left' ? (
+              <Icon {...iconProps} />
+            ) : null}
             {children}
+            {iconProps && iconPlacement === 'right' ? (
+              <Icon {...iconProps} />
+            ) : null}
           </div>
         </div>
       </Slottable>

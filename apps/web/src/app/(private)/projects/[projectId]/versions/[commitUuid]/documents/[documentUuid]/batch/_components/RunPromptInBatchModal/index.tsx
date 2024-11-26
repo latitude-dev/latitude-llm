@@ -192,7 +192,7 @@ function useRunDocumentInBatch({
 
 export default function RunPromptInBatchModal() {
   const navigate = useNavigate()
-  const document = useCurrentDocument()
+  const { document } = useCurrentDocument()
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
   const { toast } = useToast()

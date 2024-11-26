@@ -36,7 +36,7 @@ export default function DocumentationModal({
   apiKeys: ApiKey[]
 }) {
   const { open, toggleDocumentation } = useContext(DocumentationContext)
-  const serverDocument = useCurrentDocument()
+  const { document: serverDocument } = useCurrentDocument()
   const { data } = useDocumentVersions(
     { projectId: Number(projectId), commitUuid },
     { fallbackData: [serverDocument] },

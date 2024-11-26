@@ -34,7 +34,7 @@ export function EvaluationList({
 }: EvaluationListProps) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
-  const document = useCurrentDocument()
+  const { document } = useCurrentDocument()
 
   return (
     <div className='w-1/2 max-h-[520px] overflow-y-auto'>

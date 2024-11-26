@@ -179,4 +179,9 @@ export const ROUTES = {
         `${PUBLIC_ROOT_PATHS.magicLinks}/confirm/${token}`,
     },
   },
+  share: {
+    document: (publishedDocumentUuid: string) => ({
+      root: `/share/${publishedDocumentUuid}`,
+    }),
+  },
 } as const

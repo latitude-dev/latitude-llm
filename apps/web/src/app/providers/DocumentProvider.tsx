@@ -5,7 +5,12 @@ import { createContext, ReactNode, useContext, useMemo } from 'react'
 import { DocumentVersion } from '@latitude-data/core/browser'
 import useDocumentVersions from '$/stores/documentVersions'
 
-const DocumentContext = createContext<DocumentVersion | undefined>(undefined)
+type DocumentVersionContext = {
+  document: DocumentVersion
+}
+const DocumentContext = createContext<DocumentVersionContext>(
+  {} as DocumentVersionContext,
+)
 
 const DocumentVersionProvider = ({
   children,
@@ -32,7 +37,11 @@ const DocumentVersionProvider = ({
   }, [documents, documentUuid, fallbackDocument])
 
   return (
-    <DocumentContext.Provider value={document || fallbackDocument}>
+    <DocumentContext.Provider
+      value={{
+        document: document || fallbackDocument,
+      }}
+    >
       {children}
     </DocumentContext.Provider>
   )
@@ -40,6 +49,7 @@ const DocumentVersionProvider = ({
 
 const useCurrentDocument = () => {
   const context = useContext(DocumentContext)
+
   if (!context) {
     throw new Error(
       'useCurrentDocument must be used within a DocumentVersionProvider',

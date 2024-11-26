@@ -23,6 +23,7 @@ import { memberships } from './models/memberships'
 import { projects } from './models/projects'
 import { providerApiKeys } from './models/providerApiKeys'
 import { providerLogs } from './models/providerLogs'
+import { publishedDocuments } from './models/publishedDocuments'
 import { runErrors } from './models/runErrors'
 import { sessions } from './models/sessions'
 import { subscriptions } from './models/subscriptions'
@@ -162,6 +163,8 @@ export type EvaluationDto = Evaluation &
 export type Dataset = InferSelectModel<typeof datasets> & {
   author: Pick<User, 'id' | 'name'> | undefined
 }
+
+export type PublishedDocument = InferInsertModel<typeof publishedDocuments>
 
 type EvaluationResultNumberConfiguration = {
   range: { from: number; to: number }

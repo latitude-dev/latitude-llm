@@ -27,7 +27,7 @@ import { SuggestedEvaluation } from '$/stores/suggestedEvaluations'
 export default function GenerateEvaluationPage() {
   const [isCreating, setIsCreating] = useState(false)
   const { toast } = useToast()
-  const document = useCurrentDocument()
+  const { document } = useCurrentDocument()
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
   const navigate = useNavigate()
