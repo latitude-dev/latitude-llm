@@ -39,19 +39,24 @@ async function chainedJokes() {
     console.log('First joke:', firstJoke)
 
     // Second call - use the first joke to ask for a related joke
-    const secondResponse = await openai.chat.completions.create({
-      temperature: 0.7,
-      messages: [
-        { role: 'system', content: 'You are a funny comedian.' },
-        { role: 'assistant', content: firstJoke },
-        {
-          role: 'user',
-          content:
-            "That was funny! Now tell me another joke that's somehow related to the theme of your first joke.",
-        },
-      ],
-      model: 'gpt-4o',
-    })
+    const secondResponse = await sdk.workflow(
+      { name: 'second-openai-call' },
+      async () => {
+        return await openai.chat.completions.create({
+          temperature: 0.7,
+          messages: [
+            { role: 'system', content: 'You are a funny comedian.' },
+            { role: 'assistant', content: firstJoke },
+            {
+              role: 'user',
+              content:
+                "That was funny! Now tell me another joke that's somehow related to the theme of your first joke.",
+            },
+          ],
+          model: 'gpt-4o',
+        })
+      },
+    )
 
     const secondJoke = secondResponse.choices[0].message.content
     sdk.workflow({ name: 'anthropic-evaluates' }, async () => {
@@ -85,7 +90,22 @@ async function chainedJokes() {
   }
 }
 
-// Run the chained jokopenai-calls
-sdk.workflow({ name: 'openai-calls' }, async () => {
-  await chainedJokes()
+const { path } = await sdk.prompts.getOrCreate('foo')
+const { uuid: evaluationUuid } = await sdk.evaluations.getOrCreate({
+  name: 'openai-chained-calls',
+  description: 'Evaluate the jokes made by the assistant',
+  promptPath: path,
+  resultConfiguration: {
+    type: 'number',
+    minValue: 1,
+    maxValue: 5,
+  },
+  metadata: {
+    type: 'llm_as_judge_simple',
+    objective: 'Evaluate the jokes made by the assistant',
+    additionalInstructions:
+      'Give a score from 0 to 100 in terms of how funny they are.',
+  },
 })
+
+await chainedJokes()

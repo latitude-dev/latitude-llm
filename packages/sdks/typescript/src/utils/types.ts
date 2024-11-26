@@ -15,6 +15,8 @@ import {
 import { RouteResolver } from '$sdk/utils'
 import { LatitudeApiError } from '$sdk/utils/errors'
 
+import { CreateEvaluationOptions } from '..'
+
 export type GetDocumentUrlParams = {
   projectId: number
   versionUuid?: string
@@ -64,6 +66,11 @@ type LogBodyParams = {
   response?: string
 }
 
+export type GetOrCreateEvaluationUrlParams = {
+  projectId: number
+  versionUuid?: string
+}
+
 export enum HandlerType {
   GetDocument = 'get-document',
   GetOrCreateDocument = 'get-or-create-document',
@@ -72,6 +79,7 @@ export enum HandlerType {
   Log = 'log',
   Evaluate = 'evaluate',
   EvaluationResult = 'evaluationResult',
+  GetOrCreateEvaluation = 'evaluations/get-or-create',
 }
 
 export type UrlParams<T extends HandlerType> = T extends HandlerType.GetDocument
@@ -88,7 +96,9 @@ export type UrlParams<T extends HandlerType> = T extends HandlerType.GetDocument
             ? { conversationUuid: string }
             : T extends HandlerType.EvaluationResult
               ? { conversationUuid: string; evaluationUuid: string }
-              : never
+              : T extends HandlerType.GetOrCreateEvaluation
+                ? GetOrCreateEvaluationUrlParams
+                : never
 
 export type BodyParams<T extends HandlerType> =
   T extends HandlerType.GetOrCreateDocument
@@ -106,7 +116,9 @@ export type BodyParams<T extends HandlerType> =
                   result: string | boolean | number
                   reason: string
                 }
-              : never
+              : T extends HandlerType.GetOrCreateEvaluation
+                ? CreateEvaluationOptions & { prompt?: string }
+                : never
 
 export type StreamChainResponse = {
   conversation: Message[]

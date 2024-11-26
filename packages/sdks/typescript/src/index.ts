@@ -1,5 +1,11 @@
 import type { ContentType, Message, MessageRole } from '@latitude-data/compiler'
-import { DocumentLog, type ChainEventDto } from '@latitude-data/core/browser'
+import {
+  DocumentLog,
+  EvaluationDto,
+  EvaluationMetadataType,
+  EvaluationResultableType,
+  type ChainEventDto,
+} from '@latitude-data/core/browser'
 import { EvaluationResultDto } from '@latitude-data/core/repositories'
 import { LatitudeExporter } from '@latitude-data/telemetry-js'
 import * as traceloop from '@traceloop/node-server-sdk'
@@ -46,6 +52,30 @@ type Options = {
   __internal?: { source?: LogSources; retryMs?: number }
 }
 
+type CreateEvaluationOptions = {
+  name: string
+  description: string
+  resultConfiguration: {
+    type: EvaluationResultableType
+    minValue?: number
+    maxValue?: number
+    minValueDescription?: string
+    maxValueDescription?: string
+    falseValueDescription?: string
+    trueValueDescription?: string
+  }
+  metadata: {
+    type: EvaluationMetadataType
+    prompt?: string
+    objective?: string
+    additionalInstructions?: string
+    providerApiKeyId?: number
+    model?: string
+  }
+  projectId?: number
+  promptPath?: string
+}
+
 class Latitude {
   protected options: SDKOptions
 
@@ -56,6 +86,7 @@ class Latitude {
       evaluationUuid: string,
       options: { result: string | boolean | number; reason: string },
     ) => Promise<{ uuid: string }>
+    getOrCreate: (options: CreateEvaluationOptions) => Promise<EvaluationDto>
   }
 
   public logs: {
@@ -74,7 +105,7 @@ class Latitude {
     get: (path: string, args: GetPromptOptions) => Promise<Prompt>
     getOrCreate: (
       path: string,
-      args: GetOrCreatePromptOptions,
+      args?: GetOrCreatePromptOptions,
     ) => Promise<Prompt>
     run: (path: string, args: RunPromptOptions) => Promise<any>
     chat: (
@@ -112,6 +143,7 @@ class Latitude {
     this.evaluations = {
       trigger: this.triggerEvaluation.bind(this),
       createResult: this.createResult.bind(this),
+      getOrCreate: this.getOrCreateEvaluation.bind(this),
     }
 
     // Initialize logs namespace
@@ -328,6 +360,37 @@ class Latitude {
 
     return (await response.json()) as EvaluationResultDto
   }
+
+  private async getOrCreateEvaluation(
+    options: CreateEvaluationOptions,
+  ): Promise<EvaluationDto> {
+    const projectId = options.projectId ?? this.options.projectId
+    if (!projectId) {
+      throw new Error('Project ID is required')
+    }
+
+    const response = await makeRequest({
+      method: 'POST',
+      handler: HandlerType.GetOrCreateEvaluation,
+      options: this.options,
+      params: { projectId },
+      body: options,
+    })
+
+    if (!response.ok) {
+      const json = (await response.json()) as ApiErrorJsonResponse
+
+      throw new LatitudeApiError({
+        status: response.status,
+        serverResponse: JSON.stringify(json),
+        message: json.message,
+        errorCode: json.errorCode,
+        dbErrorRef: json.dbErrorRef,
+      })
+    }
+
+    return (await response.json()) as EvaluationDto
+  }
 }
 
 export { Latitude, LatitudeApiError, LogSources }
@@ -335,6 +398,7 @@ export { Latitude, LatitudeApiError, LogSources }
 export type {
   ChainEventDto,
   ContentType,
+  CreateEvaluationOptions,
   Message,
   MessageRole,
   Options,
