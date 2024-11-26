@@ -1,73 +1,55 @@
 ---
-title: Overview Prompt Editor 
+title: Prompt Editor
 description: Learn about the powerful features of the Latitude prompt editor.
 ---
 
-## Prompt Editor
+## Overview
+
 The Latitude prompt editor allows you to define and structure your prompts with precision.
 
-## Model Configuration
-At the top of the prompt editor you can specify the default provider and AI model to use in your prompt. You can modify it using the input or directly in the code. 
+![Prompt Editor](/assets/prompt_editor.png)
 
-To add a provider, you can check the [Providers](/guides/getting-started/providers) page.
+The editor allows to define prompts using [PromptL](/promptl/getting-started/introduction), a simple and intuitive language that enables you to create dynamic yet easy-to-understand prompts.
 
-For example:
+## Syntax
 
-```
+The language syntax is easy to understand and use, making it simple to create dynamic and engaging prompts. However, it also supports advanced features like parameters, snippets, and logic to create more complex and dynamic prompts.
+
+To learn more about it, take a look at the [PromptL documentation](/promptl/getting-started/introduction):
+
+- [Structure](/promptl/syntax/structure)
+- [Messages](/promptl/syntax/messages)
+- [Configuration](/guides/prompt-manager/configuration)
+- [Variables](/promptl/syntax/variables)
+- [Conditional statements](/promptl/syntax/conditionals)
+- [Loops and Iteration](/promptl/syntax/loops)
+- [Snippets and references](/promptl/advanced/snippets)
+- [Chains and Steps](/promptl/advanced/chains)
+
 ---
-provider: openai
-model: gpt-4
-temperature: 0.7
----
-```
-You can check [Prompt config section](/guides/prompt-manager/parameters) to learn more details.
 
-## Defining Conversation Structure
+### Example of a Prompt
 
-The Latitude prompt editor uses different roles to structure conversations and define the behavior of the AI model. The main roles include:
-
-- [**System**](/guides/prompt-manager/roles#system-role): Sets the overall context and behavior for the AI model.
-- [**User**](/guides/prompt-manager/roles#user-role): Represents the input or questions from the end-user.
-- [**Assistant**](/guides/prompt-manager/roles#assistant-role): Represents the AI model's responses.
-
-To learn more about how to use these roles effectively in your prompts, please visit our [Roles in Prompt Editor](/guides/prompt-manager/roles) page.
-
-
-### Advanced features
-The Latitude prompt editor also offers advanced features to create more dynamic and complex prompts:
-
-- [**Parameters**](/guides/prompt-manager/parameters): Use `{{parameter}}` syntax to include dynamic values in your prompts.
-- [**Snippets**](/guides/prompt-manager/snippets): Reuse common prompt elements with the `<prompt />` tag.
-- [**Chains and steps**](/guides/prompt-manager/chains): Create multi-step prompts using the `<response />` tag.
-- [**Logic**](/guides/prompt-manager/logic): Implement conditional statements and loops in your prompts.
-
-### Example
-
-```
+```markdown
 ---
 provider: openai
 model: gpt-4o
 ---
 
+<system>
+  <prompt path="system_instructions" />
+</system>
+
 <user>
-Hello, I'd like to know about {{topic}}.
+  Hello, I'd like to know about {{ topic }}.
 </user>
 
 <assistant>
-Certainly! I'd be happy to provide information about {{topic}}. 
-What specific aspect would you like to know?
+  Certainly! I'd be happy to provide information about {{ topic }}. What
+  specific aspect would you like to know?
 </assistant>
 
 <user>
-Tell me about its history.
+  Tell me about its history.
 </user>
-
-<assistant>
-Of course! I'll give you an overview of the history of {{topic}}.
-
-<prompt path="history_template" />
-
-Is there anything specific about the history of {{topic}} you'd like me to elaborate on?
-</assistant>```
-
-
+```
