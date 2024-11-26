@@ -1,0 +1,56 @@
+---
+title: Playground
+description: Learn how to use the Prompt Playground
+---
+
+## Overview
+
+The Prompt Playground is a powerful tool that allows you to test and refine your prompts before deploying them in your Latitude workspace. It provides a real-time preview of how your prompts will be executed, allowing you to fine-tune the configuration and content to achieve the desired results.
+
+![Prompt Playground](/assets/prompt_playground.png)
+
+---
+
+## Testing the Prompt
+
+In the Playground, you will see a Preview of your prompt messages in real-time, displayed in a conversation format. This allows you to see how the prompt will be executed and what roles each participant will play.
+
+![Prompt Preview](/assets/prompt_preview.png)
+
+You can run the prompt by clicking on the "Run prompt" button. This will send the displayed messages to your LLM provider and generate a response based on the configuration and content of the prompt, which will be included in the previewed conversation in real time.
+
+After running the prompt, the preview will enter in Chat mode, where you will be able to follow the conversation flow and interact with the assistant as if it were a real conversation.
+
+![Chat Mode](/assets/prompt_chat.png)
+
+To leave Chat mode and rerun the prompt, click on the "Reset Chat" button.
+
+---
+
+## Parameters
+
+Your prompts can include input parameters that will be interpolated into the messages at runtime. This allows you to create dynamic prompts that can respond to user input or external data.
+
+[Learn more about using parameters in your prompts](/promptl/syntax/variables#input-parameters).
+
+When parameters are present in your prompt, they will automatically appear in the Parameters section of the Playground. Here, you can provide values for the parameters and run the prompt to see how they affect the conversation.
+
+![Parameters](/assets/prompt_parameters.png)
+
+There are three ways to populate the parameters:
+
+### Manual
+
+Manually enter values for the parameters in the input fields.
+![Manual Parameters](/assets/parameters_manual.png)
+
+### Dataset
+
+Load data from a dataset to populate the parameters, where each row in the dataset corresponds to a set of values for the parameters.
+![Dataset Parameters](/assets/parameters_dataset.png)
+[Learn more about using datasets in Latitude](/guides/datasets/overview)
+
+### History
+
+Load values from previous runs of the prompt to populate the parameters.
+![History Parameters](/assets/parameters_history.png)
