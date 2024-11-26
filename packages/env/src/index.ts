@@ -43,12 +43,11 @@ if (environment === 'development' || environment === 'test') {
       DEFAULT_PROJECT_ID: '1',
       NEXT_PUBLIC_POSTHOG_KEY: '',
       NEXT_PUBLIC_POSTHOG_HOST: '',
-      COPILOT_WORKSPACE_API_KEY: 'e2c21df6-4e2d-4703-9b65-5f4dee0add23', // fake
       DEFAULT_PROVIDER_API_KEY: '33275751-f0c4-46f3-bc9a-cd2fb22d86ca', // fake
       DATASET_GENERATOR_DOCUMENT_PATH: 'generator',
       TEMPLATES_SUGGESTION_PROJECT_ID: '10',
       TEMPLATES_SUGGESTION_PROMPT_PATH: 'generator',
-      COPILOT_EVALUATION_SUGGESTION_PROMPT_PATH: 'generator',
+      COPILOT_EVALUATION_SUGGESTION_PROMPT_PATH: 'evaluation-generator',
     },
     { path: pathToEnv },
   )
