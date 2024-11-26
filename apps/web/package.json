@@ -22,7 +22,7 @@
     "@latitude-data/compiler": "workspace:^",
     "@latitude-data/core": "workspace:*",
     "@latitude-data/env": "workspace:^",
-    "@latitude-data/promptl": "^0.1.1",
+    "@latitude-data/promptl": "^0.1.2",
     "@latitude-data/sdk": "workspace:*",
     "@latitude-data/web-ui": "workspace:*",
     "@lucia-auth/adapter-drizzle": "^1.0.7",

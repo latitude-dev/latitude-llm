@@ -4,6 +4,7 @@ import { Config, Conversation, Message } from '$compiler/types'
 
 import { Compile } from './compile'
 import Scope from './scope'
+import { CompileOptions } from './types'
 
 type ChainStep = {
   conversation: Conversation
@@ -13,6 +14,7 @@ type ChainStep = {
 export class Chain {
   public rawText: string
 
+  private options: CompileOptions
   private ast: Fragment
   private scope: Scope
   private didStart: boolean = false
@@ -24,13 +26,15 @@ export class Chain {
   constructor({
     prompt,
     parameters,
+    ...options
   }: {
     prompt: string
     parameters: Record<string, unknown>
-  }) {
+  } & CompileOptions) {
     this.rawText = prompt
     this.ast = parse(prompt)
     this.scope = new Scope(parameters)
+    this.options = options
   }
 
   async step(response?: string): Promise<ChainStep> {
@@ -50,6 +54,7 @@ export class Chain {
       rawText: this.rawText,
       globalScope: this.scope,
       stepResponse: response,
+      ...this.options,
     })
 
     const { completed, scopeStash, ast, messages, globalConfig, stepConfig } =

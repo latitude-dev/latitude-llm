@@ -12,8 +12,15 @@ export enum MessageRole {
   tool = 'tool',
 }
 
+export type PromptlSourceRef = {
+  start: number
+  end: number
+  identifier?: string
+}
+
 interface IMessageContent {
   type: ContentType
+  _promptlSourceMap?: PromptlSourceRef[]
   [key: string]: unknown
 }
 

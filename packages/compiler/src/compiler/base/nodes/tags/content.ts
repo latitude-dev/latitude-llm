@@ -30,7 +30,7 @@ export async function compile(
       isInsideContentTag: true,
     })
   }
-  const textContent = removeCommonIndent(popStrayText())
+  const textContent = removeCommonIndent(popStrayText().text)
 
   // TODO: This if else is probably not required but the types enforce it.
   // Improve types.

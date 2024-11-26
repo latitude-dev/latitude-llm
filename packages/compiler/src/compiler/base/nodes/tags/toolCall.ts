@@ -37,7 +37,7 @@ export async function compile(
     })
   }
 
-  const textContent = popStrayText()
+  const textContent = popStrayText().text
 
   let jsonContent: Record<string, unknown> = {}
   if (textContent) {
