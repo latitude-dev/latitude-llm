@@ -224,9 +224,14 @@ const ProviderLogMessages = ({
 
 const printMessageContent = (content: string | MessageContent[]) => {
   if (typeof content === 'string') return content
-  if (content[0]!.type === 'text') return (content[0] as TextContent).text
+  if (!content.length) return '-'
 
-  return '-'
+  return content
+    .map((c) => {
+      if (c.type === 'text') return c.text
+      if (c.type === 'image') return '[Image]'
+    })
+    .join('\n')
 }
 
 function ellipsis(str: string) {
