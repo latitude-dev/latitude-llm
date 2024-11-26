@@ -343,6 +343,24 @@ describe('run', () => {
             'Provider with model [gpt-4o] did not return a valid JSON object',
         }),
       )
+      const evaluationResult = await database.query.evaluationResults.findFirst(
+        {
+          where: and(
+            eq(evaluationResults.evaluationId, evaluation.id),
+            eq(evaluationResults.documentLogId, documentLog.id),
+            isNull(evaluationResults.resultableId),
+          ),
+        },
+      )
+      const error = await database.query.runErrors.findFirst({
+        where: and(
+          eq(runErrors.errorableUuid, evaluationResult!.uuid),
+          eq(runErrors.errorableType, ErrorableEntity.EvaluationResult),
+        ),
+      })
+
+      expect(error).toBeDefined()
+      expect(evaluationResult).toBeDefined()
       runChainSpy.mockRestore()
     })
 
