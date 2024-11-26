@@ -7,15 +7,17 @@ import {
   type Document,
   type ReferencePromptFn,
 } from './readMetadata'
+import type { CompileOptions } from './types'
 
 export async function render({
   prompt,
   parameters = {},
+  ...options
 }: {
   prompt: string
   parameters?: Record<string, unknown>
-}): Promise<Conversation> {
-  const iterator = new Chain({ prompt, parameters })
+} & CompileOptions): Promise<Conversation> {
+  const iterator = new Chain({ prompt, parameters, ...options })
   const { conversation, completed } = await iterator.step()
   if (!completed) {
     throw new Error('Use a Chain to render prompts with multiple steps')

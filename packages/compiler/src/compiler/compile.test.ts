@@ -3,6 +3,7 @@ import { CUSTOM_TAG_END, CUSTOM_TAG_START } from '$compiler/constants'
 import CompileError from '$compiler/error/error'
 import {
   AssistantMessage,
+  ContentType,
   Message,
   MessageContent,
   MessageRole,
@@ -608,5 +609,221 @@ describe('operators', async () => {
       const result = await getCompiledText(prompt)
       expect(result).toBe(`${expression} = ${expected}`)
     }
+  })
+})
+
+describe('source map', async () => {
+  it('does not include source map when not specified', async () => {
+    const prompt = `
+Given a context, answer questions succintly yet complete.
+<system>{{ context }}</system>
+<user>Please, help me with {{ question }}!</user>
+    `
+    const { messages } = await render({
+      prompt,
+      parameters: {
+        context: 'context',
+        question: 'question',
+      },
+    })
+    expect(messages).toEqual([
+      {
+        role: MessageRole.system,
+        content: [
+          {
+            type: ContentType.text,
+            text: 'Given a context, answer questions succintly yet complete.',
+          },
+        ],
+      },
+      {
+        role: MessageRole.system,
+        content: [{ type: ContentType.text, text: 'context' }],
+      },
+      {
+        role: MessageRole.user,
+        content: [
+          { type: ContentType.text, text: 'Please, help me with question!' },
+        ],
+      },
+    ])
+  })
+
+  describe('includes source map when specified', async () => {
+    it('returns empty source map when no identifiers', async () => {
+      const prompt = `
+  Given a context, answer questions succintly yet complete.
+  <system>context</system>
+  <user>Please, help me with question!</user>
+      `
+      const { messages } = await render({
+        prompt,
+        includeSourceMap: true,
+      })
+      expect(messages).toEqual([
+        {
+          role: MessageRole.system,
+          content: [
+            {
+              type: ContentType.text,
+              text: 'Given a context, answer questions succintly yet complete.',
+              _promptlSourceMap: [],
+            },
+          ],
+        },
+        {
+          role: MessageRole.system,
+          content: [
+            {
+              type: ContentType.text,
+              text: 'context',
+              _promptlSourceMap: [],
+            },
+          ],
+        },
+        {
+          role: MessageRole.user,
+          content: [
+            {
+              type: ContentType.text,
+              text: 'Please, help me with question!',
+              _promptlSourceMap: [],
+            },
+          ],
+        },
+      ])
+    })
+
+    it('returns source map when single identifiers per content', async () => {
+      const prompt = `
+  Given a context, answer questions succintly yet complete.
+  <system>{{ context }}</system>
+  <user>Please, help me with {{ question }}!</user>
+      `
+      const { messages } = await render({
+        prompt,
+        parameters: {
+          context: 'context',
+          question: 'question',
+        },
+        includeSourceMap: true,
+      })
+      expect(messages).toEqual([
+        {
+          role: MessageRole.system,
+          content: [
+            {
+              type: ContentType.text,
+              text: 'Given a context, answer questions succintly yet complete.',
+              _promptlSourceMap: [],
+            },
+          ],
+        },
+        {
+          role: MessageRole.system,
+          content: [
+            {
+              type: ContentType.text,
+              text: 'context',
+              _promptlSourceMap: [
+                {
+                  start: 0,
+                  end: 7,
+                  identifier: 'context',
+                },
+              ],
+            },
+          ],
+        },
+        {
+          role: MessageRole.user,
+          content: [
+            {
+              type: ContentType.text,
+              text: 'Please, help me with question!',
+              _promptlSourceMap: [
+                {
+                  start: 21,
+                  end: 29,
+                  identifier: 'question',
+                },
+              ],
+            },
+          ],
+        },
+      ])
+    })
+
+    it('returns source map when multiple identifiers per content', async () => {
+      const prompt = `
+  Given some context, answer questions succintly yet complete.
+  <system>{{ context_1 }} and {{ context_2 }}</system>
+  <user>Please, help me with {{ question_1 }} and {{ question_2 }}!</user>
+      `
+      const { messages } = await render({
+        prompt,
+        parameters: {
+          context_1: 'context_1',
+          context_2: 'context_2',
+          question_1: 'question_1',
+          question_2: 'question_2',
+        },
+        includeSourceMap: true,
+      })
+      expect(messages).toEqual([
+        {
+          role: MessageRole.system,
+          content: [
+            {
+              type: ContentType.text,
+              text: 'Given some context, answer questions succintly yet complete.',
+              _promptlSourceMap: [],
+            },
+          ],
+        },
+        {
+          role: MessageRole.system,
+          content: [
+            {
+              type: ContentType.text,
+              text: 'context_1 and context_2',
+              _promptlSourceMap: [
+                {
+                  start: 0,
+                  end: 9,
+                  identifier: 'context_1',
+                },
+                {
+                  start: 14,
+                  end: 23,
+                  identifier: 'context_2',
+                },
+              ],
+            },
+          ],
+        },
+        {
+          role: MessageRole.user,
+          content: [
+            {
+              type: ContentType.text,
+              text: 'Please, help me with question_1 and question_2!',
+              _promptlSourceMap: [
+                {
+                  start: 21,
+                  end: 31,
+                  identifier: 'question_1',
+                },
+                {
+                  start: 36,
+                  end: 46,
+                  identifier: 'question_2',
+                },
+              ],
+            },
+          ],
+        },
+      ])
+    })
   })
 })

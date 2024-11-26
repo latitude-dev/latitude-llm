@@ -12,3 +12,7 @@ export type ResolveBaseNodeProps<N extends TemplateNode> = {
 }
 
 export type ToolCallReference = { node: ToolCallTag; value: ToolCall }
+
+export type CompileOptions = {
+  includeSourceMap?: boolean
+}

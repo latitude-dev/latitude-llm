@@ -6,5 +6,5 @@ export async function compile({
   node,
   addStrayText,
 }: CompileNodeContext<Text>) {
-  addStrayText(node.data)
+  addStrayText(node.data, node)
 }

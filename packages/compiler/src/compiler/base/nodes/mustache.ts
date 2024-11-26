@@ -13,9 +13,9 @@ export async function compile({
   if (value === undefined) return
 
   if (typeof value === 'object' && value !== null) {
-    addStrayText(JSON.stringify(value))
+    addStrayText(JSON.stringify(value), node)
     return
   }
 
-  addStrayText(String(value))
+  addStrayText(String(value), node)
 }
