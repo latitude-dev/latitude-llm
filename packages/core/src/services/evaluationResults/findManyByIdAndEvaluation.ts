@@ -2,14 +2,14 @@ import { uniq } from 'lodash-es'
 
 import { and, eq, inArray } from 'drizzle-orm'
 
-import { Commit, Workspace } from '../../browser'
+import { Workspace } from '../../browser'
 import { database } from '../../client'
 import {
+  ConnectedEvaluationsRepository,
   EvaluationResultsRepository,
   EvaluationsRepository,
 } from '../../repositories'
 import { evaluations } from '../../schema'
-import { computeEvaluationResultsByDocumentContent } from './computeEvaluationResultsByDocumentContent'
 
 function getIds(evalResults: string[] | string | undefined): number[] {
   if (!evalResults) return []
@@ -17,6 +17,7 @@ function getIds(evalResults: string[] | string | undefined): number[] {
   return [Number(evalResults)]
 }
 
+const MAX_ALLOWED_IDS = 100
 /**
  * Given a list of IDs that can be undefined,
  * return a list of evaluation results and their evaluation
@@ -27,16 +28,10 @@ export async function findManyByIdAndEvaluation(
     workspace,
     ids,
     documentUuid,
-    commit,
-    page = 1,
-    pageSize = 100,
   }: {
     ids: string[] | string | undefined
     workspace: Workspace
     documentUuid: string
-    commit: Commit
-    page?: number
-    pageSize?: number
   },
   db = database,
 ) {
@@ -51,16 +46,16 @@ export async function findManyByIdAndEvaluation(
 
   // NOTE: Drizzle does not allow to extends where
   // so here we are checking tenary by workspace
-  const results = await repo.scope
+  const evaluationResults = await repo.scope
     .where(
       and(
         eq(evaluations.workspaceId, workspace.id),
         inArray(fields.id, safeIds),
       ),
     )
-    .limit(safeIds.length)
+    .limit(Math.max(safeIds.length, MAX_ALLOWED_IDS))
 
-  const evaluationIds = uniq(results.map((r) => r.evaluationId))
+  const evaluationIds = uniq(evaluationResults.map((r) => r.evaluationId))
 
   if (evaluationIds.length > 1) {
     return { evaluation: undefined, evaluationResults: undefined }
@@ -71,13 +66,16 @@ export async function findManyByIdAndEvaluation(
     .find(evaluationIds[0])
     .then((r) => r.unwrap())
 
-  const evaluationResults = await computeEvaluationResultsByDocumentContent({
-    evaluation,
-    commit,
-    documentUuid,
-    page,
-    pageSize,
-  }).then((r) => r.unwrap())
+  const connectedRepo = new ConnectedEvaluationsRepository(workspace.id, db)
+  const connected = await connectedRepo
+    .filterByDocumentUuid(documentUuid)
+    .then((r) => r.unwrap())
+
+  const isConnected = !!connected.find((c) => c.evaluationId === evaluation.id)
+
+  if (!isConnected) {
+    return { evaluation: undefined, evaluationResults: undefined }
+  }
 
   return {
     evaluation,

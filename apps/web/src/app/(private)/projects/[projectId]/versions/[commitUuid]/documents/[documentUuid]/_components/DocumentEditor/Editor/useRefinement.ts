@@ -1,6 +1,10 @@
 import { useCallback, useState } from 'react'
 
-import { DocumentVersion, EvaluationDto } from '@latitude-data/core/browser'
+import {
+  DocumentVersion,
+  EvaluationDto,
+  EvaluationResult,
+} from '@latitude-data/core/browser'
 import { type EvaluationResultByDocument } from '@latitude-data/core/repositories'
 import { useToggleModal } from '$/hooks/useToogleModal'
 import { ROUTES } from '$/services/routes'
@@ -24,7 +28,7 @@ export function useRefinement({
   commitUuid: string
   document: DocumentVersion
   serverEvaluation: EvaluationDto | undefined
-  serverEvaluationResults: EvaluationResultByDocument[]
+  serverEvaluationResults: EvaluationResult[]
 }) {
   const navigate = useRouter()
   const openRefinementFromServer =
@@ -34,7 +38,12 @@ export function useRefinement({
   )
   const [evaluationResults, setEvaluationResults] = useState<
     EvaluationResultByDocument[]
-  >(serverEvaluationResults)
+    // NOTE: We lie here. From server we receive EvaluationResult[],
+    // but we need EvaluationResultByDocument[] for the second step.
+    // The thing is that when a refine comes from a evaluation we jump to step
+    // 3 directly and we don't need `evaluationResult.result` field which is
+    // not present in basic EvaluationResult.
+  >(serverEvaluationResults as unknown as EvaluationResultByDocument[])
   const modal = useToggleModal({ initialState: openRefinementFromServer })
 
   const cleanServer = useCallback(() => {
