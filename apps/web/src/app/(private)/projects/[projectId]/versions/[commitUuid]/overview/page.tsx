@@ -12,7 +12,7 @@ import Overview from './_components/Overview'
 export default async function OverviewPage({
   params,
 }: {
-  params: { projectId: string; commitUuid: string }
+  params: Promise<{ projectId: string; commitUuid: string }>
 }) {
   const { projectId, commitUuid } = await params
   const session = await getCurrentUser()
