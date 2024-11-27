@@ -1,4 +1,5 @@
 import { zValidator } from '@hono/zod-validator'
+import { Commit, Workspace } from '@latitude-data/core/browser'
 import {
   CommitsRepository,
   DocumentVersionsRepository,
@@ -16,6 +17,29 @@ const runSchema = z.object({
   prompt: z.string().optional(),
 })
 
+async function getOrCreateDocument({
+  workspace,
+  commit,
+  path,
+  content,
+}: {
+  workspace: Workspace
+  commit: Commit
+  path: string
+  content?: string
+}) {
+  const docsScope = new DocumentVersionsRepository(workspace.id)
+  const docResult = await docsScope.getDocumentByPath({ commit, path: path })
+  if (docResult.ok) return docResult.unwrap()
+
+  return await createNewDocument({
+    workspace,
+    commit,
+    path,
+    content,
+  }).then((r) => r.unwrap())
+}
+
 export const getOrCreateHandler = factory.createHandlers(
   zValidator('json', runSchema),
   async (c) => {
@@ -25,7 +49,6 @@ export const getOrCreateHandler = factory.createHandlers(
 
     const projectsScope = new ProjectsRepository(workspace.id)
     const commitsScope = new CommitsRepository(workspace.id)
-    const docsScope = new DocumentVersionsRepository(workspace.id)
 
     const project = await projectsScope
       .getProjectById(Number(projectId!))
@@ -38,16 +61,19 @@ export const getOrCreateHandler = factory.createHandlers(
       })
       .then((r) => r.unwrap())
 
-    const docResult = await docsScope.getDocumentByPath({ commit, path: path })
-    if (docResult.ok) return c.json(await documentPresenter(docResult.value!))
-
-    const document = await createNewDocument({
+    const document = await getOrCreateDocument({
       workspace,
-      commit: commit,
+      commit,
       path,
       content: prompt,
-    }).then((r) => r.unwrap())
+    })
 
-    return c.json(await documentPresenter(document))
+    return c.json(
+      await documentPresenter({
+        document,
+        commit,
+        workspace,
+      }),
+    )
   },
 )

@@ -1,8 +1,3 @@
-import path from 'path'
-
-import { readMetadata, Document as RefDocument } from '@latitude-data/compiler'
-import { scan } from '@latitude-data/promptl'
-
 import { Commit, DocumentVersion, Workspace } from '../../browser'
 import {
   LatitudeError,
@@ -11,6 +6,7 @@ import {
   UnprocessableEntityError,
 } from '../../lib'
 import { DocumentVersionsRepository } from '../../repositories'
+import { scanDocumentContent } from './scan'
 
 /**
  * This is an internal method. It should always receives
@@ -43,35 +39,12 @@ export async function getResolvedContent({
     return Result.ok(document.resolvedContent!)
   }
 
-  const referenceFn = async (
-    refPath: string,
-    from?: string,
-  ): Promise<RefDocument | undefined> => {
-    const fullPath = path
-      .resolve(path.dirname(`/${from ?? ''}`), refPath)
-      .replace(/^\//, '')
+  const metadataResult = await scanDocumentContent({
+    workspaceId,
+    document,
+    commit,
+  })
 
-    const doc = docs.find((d) => d.path === fullPath)
-    if (!doc) return undefined
-
-    return {
-      path: fullPath,
-      content: doc.content,
-    }
-  }
-
-  const metadata =
-    document.promptlVersion === 0
-      ? await readMetadata({
-          prompt: document.content,
-          fullPath: document.path,
-          referenceFn,
-        })
-      : await scan({
-          prompt: document.content,
-          fullPath: document.path,
-          referenceFn,
-        })
-
-  return Result.ok(metadata.resolvedPrompt)
+  if (metadataResult.error) return metadataResult
+  return Result.ok(metadataResult.unwrap().resolvedPrompt)
 }

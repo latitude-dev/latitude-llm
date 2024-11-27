@@ -61,7 +61,7 @@ sdk.prompts.getOrCreate('path/to/your/document', {
 })
 ```
 
-## Running a Document
+## Running a Document through Latitude
 
 To run a document, use the `run` method:
 
@@ -86,6 +86,72 @@ sdk.prompts.run('path/to/your/document', {
     console.error('Error:', error)
   },
 })
+```
+
+## Running a Document locally
+
+You can also use your own logic to run documents from Latitude. Here's an example of running a Latitude document locally using the OpenAI package:
+
+```typescript
+import { Latitude } from '@latitude-data/sdk'
+import { OpenAI } from 'openai'
+
+const sdk = new Latitude('your-api-key-here', {
+  projectId: 12345, // Optional: You can specify a default project ID here
+  versionUuid: 'optional-version-uuid', // Optional: You can specify a default version UUID here
+})
+
+const prompt = sdk.prompts.get('path/to/your/document, {
+  projectId: 12345, // Optional if you provided it in the constructor
+  versionUuid: 'optional-version-uuid', // Optional, by default it targets latest live version
+})
+
+const openai = new OpenAI({ apiKey: 'your-openai-api-key' })
+
+const { config, messages } = await sdk.prompts.render({
+  prompt,
+  parameters: {
+    // Any parameters your document expects
+  }
+})
+
+const response = await openai.chat.completions.create({
+  ...config,
+  messages,
+})
+
+console.log(response)
+```
+
+You can also execute chains by providing an `onStep` callback to the `renderChain` method, which will be run for each step of the chain to generate the response. Here's an example:
+
+```typescript
+import { Latitude } from '@latitude-data/sdk'
+import { OpenAI } from 'openai'
+
+const prompt = (sdk = new Latitude('your-api-key-here', {
+  projectId: 12345, // Optional: You can specify a default project ID here
+  versionUuid: 'optional-version-uuid', // Optional: You can specify a default version UUID here
+}))
+
+const openai = new OpenAI({ apiKey: 'your-openai-api-key' })
+
+const completeConversation = sdk.prompts.renderChain({
+  prompt,
+  parameters: {
+    // Any parameters your document expects
+  },
+  onStep: async ({ config, messages }) => {
+    const response = await openai.chat.completions.create({
+      ...config,
+      messages,
+    })
+
+    return response
+  },
+})
+
+console.log(completeConversation.messages)
 ```
 
 ## Chatting with an AI Model
