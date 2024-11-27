@@ -214,8 +214,10 @@ export function FilesTree({
           setDeletable({ type: DeletableType.Folder, path, name: node.name })
         }}
       >
-        <TreeToolbar />
-        <FileNode node={rootNode} />
+        <div className='flex flex-col gap-2'>
+          <TreeToolbar />
+          <FileNode node={rootNode} />
+        </div>
       </FileTreeProvider>
 
       {deletableNode ? (
