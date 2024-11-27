@@ -2,8 +2,8 @@
 
 import { useState } from 'react'
 
-import { ConversationMetadata } from '@latitude-data/compiler'
 import { DocumentVersion } from '@latitude-data/core/browser'
+import type { ConversationMetadata } from '@latitude-data/promptl'
 import { SplitPane, useCurrentCommit } from '@latitude-data/web-ui'
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
 

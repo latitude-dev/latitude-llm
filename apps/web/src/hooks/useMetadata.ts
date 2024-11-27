@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 
-import { ConversationMetadata } from '@latitude-data/compiler'
+import type { ConversationMetadata } from '@latitude-data/promptl'
 import { useDebouncedCallback } from 'use-debounce'
 
 import type { ReadMetadataWorkerProps } from '../workers/readMetadata'

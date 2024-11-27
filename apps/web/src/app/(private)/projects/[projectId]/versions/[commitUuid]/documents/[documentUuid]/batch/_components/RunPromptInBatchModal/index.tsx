@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
-import { ConversationMetadata, readMetadata } from '@latitude-data/compiler'
+import { readMetadata } from '@latitude-data/compiler'
 import { Dataset, DocumentVersion } from '@latitude-data/core/browser'
-import { scan } from '@latitude-data/promptl'
+import { scan, type ConversationMetadata } from '@latitude-data/promptl'
 import {
   Button,
   CloseTrigger,
