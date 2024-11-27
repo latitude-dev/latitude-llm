@@ -25,13 +25,15 @@ export const TriggerButton = ({
   label,
   variant = 'outline',
   iconProps = { name: 'ellipsis', color: 'foregroundMuted' },
-  className = 'w-8 px-1',
+  className: cln,
   ...buttonProps
 }: TriggerButtonProps) => {
+  const className = !buttonProps.indicator ? (cln ?? 'w-8 px-1') : cln
   return (
     <DropdownMenuTrigger asChild className='flex focus:outline-none'>
       <Button
         asChild
+        fullWidth={false}
         className={className}
         variant={variant}
         iconProps={iconProps}

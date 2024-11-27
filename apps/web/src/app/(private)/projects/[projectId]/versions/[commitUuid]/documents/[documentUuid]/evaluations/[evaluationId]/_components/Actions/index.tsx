@@ -22,7 +22,7 @@ export function Actions({
   documentUuid: string
   isUsingDefaultProvider?: boolean
 }) {
-  const document = useCurrentDocument()
+  const { document } = useCurrentDocument()
   const { open, onClose, onOpen } = useToggleModal()
   return (
     <div className='flex flex-row items-center gap-4'>

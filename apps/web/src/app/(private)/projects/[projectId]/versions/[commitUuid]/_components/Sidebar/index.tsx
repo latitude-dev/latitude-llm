@@ -28,6 +28,8 @@ export default async function Sidebar({
   const documents = await getDocumentsAtCommitCached({ commit })
 
   const commitsScope = new CommitsRepository(workspace.id)
+  const headCommitResult = await commitsScope.getHeadCommit(project.id)
+  const headCommit = headCommitResult.value
   const { rows } = await paginateQuery({
     dynamicQuery: commitsScope
       .getCommitsByProjectQuery({
@@ -39,9 +41,6 @@ export default async function Sidebar({
       pageSize: ULTRA_LARGE_PAGE_SIZE,
     },
   })
-
-  const headCommitResult = await commitsScope.getHeadCommit(project.id)
-  const headCommit = headCommitResult.value
 
   return (
     <DocumentSidebar

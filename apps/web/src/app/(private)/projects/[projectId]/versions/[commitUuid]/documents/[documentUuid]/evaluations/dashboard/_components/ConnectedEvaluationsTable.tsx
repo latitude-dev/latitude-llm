@@ -27,7 +27,7 @@ export default function ConnectedEvaluationsTable({
   const navigate = useNavigate()
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
-  const document = useCurrentDocument()
+  const { document } = useCurrentDocument()
   return (
     <Table className='table-auto'>
       <TableHeader className='sticky top-0 z-10'>

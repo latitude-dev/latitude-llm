@@ -36,7 +36,7 @@ function EvaluationResultItem({ result, evaluation }: ResultWithEvaluation) {
 function evaluationResultLink({ result, evaluation }: ResultWithEvaluation) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
-  const document = useCurrentDocument()
+  const { document } = useCurrentDocument()
 
   const route = ROUTES.projects
     .detail({ id: project.id })

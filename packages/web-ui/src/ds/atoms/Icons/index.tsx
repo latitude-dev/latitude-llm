@@ -39,6 +39,7 @@ import {
   PinOff,
   RefreshCcw,
   ScrollTextIcon,
+  SettingsIcon,
   Sparkles,
   SquareDot,
   SquareMinus,
@@ -110,6 +111,7 @@ const Icons = {
   undo: Undo,
   rollText: ScrollTextIcon,
   notEqual: EqualNotIcon,
+  settings: SettingsIcon,
 }
 
 export type IconName = keyof typeof Icons

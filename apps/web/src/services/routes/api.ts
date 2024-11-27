@@ -20,64 +20,70 @@ export const _API_ROUTES = {
   },
   projects: {
     root: '/api/projects',
-    detail: (id: number) => ({
-      forImport: {
-        root: `/api/projects/${id}/documents-for-import`,
-      },
-      stats: {
-        root: `/api/projects/${id}/stats`,
-      },
-      commits: {
-        root: `/api/projects/${id}/commits`,
-        detail: (commitUuid: string) => ({
-          root: `/api/projects/${id}/commits/${commitUuid}`,
-          documents: {
-            root: `/api/projects/${id}/commits/${commitUuid}/documents`,
-            detail: (documentUuid: string) => {
-              const documentRoot = `/api/projects/${id}/commits/${commitUuid}/documents/${documentUuid}`
-              return {
-                root: documentRoot,
-                documentLogs: {
-                  root: `${documentRoot}/documentLogs`,
-                  pagination: `${documentRoot}/documentLogs/pagination`,
-                  aggregations: `${documentRoot}/documentLogs/aggregations`,
-                  dailyCount: `${documentRoot}/documentLogs/daily-count`,
-                  detail: (documentLogUuid: string) => {
-                    return {
-                      position: `${documentRoot}/documentLogs/${documentLogUuid}/position`,
-                    }
+    detail: (id: number) => {
+      const projectRoot = `/api/projects/${id}`
+      return {
+        forImport: {
+          root: `${projectRoot}/documents-for-import`,
+        },
+        stats: {
+          root: `${projectRoot}/stats`,
+        },
+        commits: {
+          root: `${projectRoot}/commits`,
+          detail: (commitUuid: string) => ({
+            root: `${projectRoot}/commits/${commitUuid}`,
+            documents: {
+              root: `${projectRoot}/commits/${commitUuid}/documents`,
+              detail: (documentUuid: string) => {
+                const documentRoot = `${projectRoot}/commits/${commitUuid}/documents/${documentUuid}`
+                return {
+                  root: documentRoot,
+                  documentLogs: {
+                    root: `${documentRoot}/documentLogs`,
+                    pagination: `${documentRoot}/documentLogs/pagination`,
+                    aggregations: `${documentRoot}/documentLogs/aggregations`,
+                    dailyCount: `${documentRoot}/documentLogs/daily-count`,
+                    detail: (documentLogUuid: string) => {
+                      return {
+                        position: `${documentRoot}/documentLogs/${documentLogUuid}/position`,
+                      }
+                    },
                   },
-                },
-                evaluations: {
-                  root: `${documentRoot}/evaluations`,
-                  detail: ({ evaluationId }: { evaluationId: number }) => ({
-                    root: `${documentRoot}/evaluations/${evaluationId}`,
-                    logs: {
-                      root: `${documentRoot}/evaluations/${evaluationId}/logs`,
-                    },
-                    evaluationResults: {
-                      root: `${documentRoot}/evaluations/${evaluationId}/evaluation-results`,
-                      pagination: `${documentRoot}/evaluations/${evaluationId}/evaluation-results/pagination`,
-                      counters: `${documentRoot}/evaluations/${evaluationId}/evaluation-results/counters`,
-                      mean: `${documentRoot}/evaluations/${evaluationId}/evaluation-results/mean`,
-                      modal: `${documentRoot}/evaluations/${evaluationId}/evaluation-results/modal`,
-                      average: `${documentRoot}/evaluations/${evaluationId}/evaluation-results/average`,
-                      averageAndCost: `${documentRoot}/evaluations/${evaluationId}/evaluation-results/average-and-cost`,
-                    },
-                  }),
-                },
-                evaluationResultsByDocumentContent: {
-                  detail: ({ evaluationId }: { evaluationId: number }) => ({
-                    root: `${documentRoot}/evaluation-results-by-document-content/${evaluationId}`,
-                    pagination: `${documentRoot}/evaluation-results-by-document-content/${evaluationId}/pagination`,
-                  }),
-                },
-              }
+                  evaluations: {
+                    root: `${documentRoot}/evaluations`,
+                    detail: ({ evaluationId }: { evaluationId: number }) => ({
+                      root: `${documentRoot}/evaluations/${evaluationId}`,
+                      logs: {
+                        root: `${documentRoot}/evaluations/${evaluationId}/logs`,
+                      },
+                      evaluationResults: {
+                        root: `${documentRoot}/evaluations/${evaluationId}/evaluation-results`,
+                        pagination: `${documentRoot}/evaluations/${evaluationId}/evaluation-results/pagination`,
+                        counters: `${documentRoot}/evaluations/${evaluationId}/evaluation-results/counters`,
+                        mean: `${documentRoot}/evaluations/${evaluationId}/evaluation-results/mean`,
+                        modal: `${documentRoot}/evaluations/${evaluationId}/evaluation-results/modal`,
+                        average: `${documentRoot}/evaluations/${evaluationId}/evaluation-results/average`,
+                        averageAndCost: `${documentRoot}/evaluations/${evaluationId}/evaluation-results/average-and-cost`,
+                      },
+                    }),
+                  },
+                  evaluationResultsByDocumentContent: {
+                    detail: ({ evaluationId }: { evaluationId: number }) => ({
+                      root: `${documentRoot}/evaluation-results-by-document-content/${evaluationId}`,
+                      pagination: `${documentRoot}/evaluation-results-by-document-content/${evaluationId}/pagination`,
+                    }),
+                  },
+                }
+              },
             },
-          },
-        }),
-      },
-    }),
+          }),
+        },
+        publishedDocuments: {
+          root: `${projectRoot}/published-documents`,
+        },
+      }
+    },
   },
   datasets: {
     root: '/api/datasets',

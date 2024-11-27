@@ -55,7 +55,7 @@ export function ManualEvaluationResultsClient({
   const searchParams = useSearchParams()
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
-  const document = useCurrentDocument()
+  const { document } = useCurrentDocument()
 
   const page = searchParams.get('page')
   const pageSize = searchParams.get('pageSize')

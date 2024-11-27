@@ -83,7 +83,7 @@ export function DocumentLogs({
   const searchParams = useSearchParams()
   const page = searchParams.get('page')
   const pageSize = searchParams.get('pageSize')
-  const document = useCurrentDocument()
+  const { document } = useCurrentDocument()
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
   const [selectedLog, setSelectedLog] = useState<

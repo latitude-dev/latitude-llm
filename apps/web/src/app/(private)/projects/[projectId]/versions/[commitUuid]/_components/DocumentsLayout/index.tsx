@@ -21,14 +21,14 @@ import Sidebar from '../Sidebar'
 
 export default async function DocumentsLayout({
   children,
-  document,
   commitUuid,
   projectId,
+  document,
 }: {
   children: ReactNode
-  document?: DocumentVersion
   projectId: number
   commitUuid: string
+  document?: DocumentVersion
 }) {
   const session = await getCurrentUser()
   let project

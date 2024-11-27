@@ -68,7 +68,7 @@ export default function Preview({
 }) {
   const { data: providers } = useProviderApiKeys()
   const { commit } = useCurrentCommit()
-  const document = useCurrentDocument()
+  const { document } = useCurrentDocument()
   const { project } = useCurrentProject()
   const [conversation, setConversation] = useState<Conversation>()
   const provider = useMemo(() => {

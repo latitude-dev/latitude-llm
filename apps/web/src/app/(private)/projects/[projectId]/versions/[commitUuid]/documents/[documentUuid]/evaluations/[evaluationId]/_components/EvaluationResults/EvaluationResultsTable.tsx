@@ -109,7 +109,7 @@ export const EvaluationResultsTable = forwardRef<HTMLTableElement, Props>(
     const page = searchParams.get('page') ?? '1'
     const pageSize =
       searchParams.get('pageSize') ?? String(DEFAULT_PAGINATION_SIZE)
-    const document = useCurrentDocument()
+    const { document } = useCurrentDocument()
     const { commit } = useCurrentCommit()
     const { project } = useCurrentProject()
     const { data: pagination, isLoading } = useEvaluationResultsPagination({
