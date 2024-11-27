@@ -48,7 +48,10 @@ export type RunError = InferSelectModel<typeof runErrors>
 export type RunErrorInsert = InferInsertModel<typeof runErrors>
 export type Evaluation = InferSelectModel<typeof evaluations>
 export type ConnectedEvaluation = InferSelectModel<typeof connectedEvaluations>
-export type EvaluationResult = InferSelectModel<typeof evaluationResults>
+export type EvaluationResult = Omit<
+  InferSelectModel<typeof evaluationResults>,
+  'providerLogId'
+>
 export type EvaluationTemplate = InferSelectModel<
   typeof evaluationAdvancedTemplates
 >

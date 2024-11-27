@@ -50,8 +50,8 @@ export default async function DocumentPage({
     ids: query.reval,
     workspace,
     documentUuid,
-    commit,
   })
+
   const document = await getDocumentByUuidCached({
     documentUuid: documentUuid,
     projectId,

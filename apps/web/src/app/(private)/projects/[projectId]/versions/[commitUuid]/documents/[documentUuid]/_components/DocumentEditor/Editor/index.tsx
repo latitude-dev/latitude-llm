@@ -13,9 +13,9 @@ import {
   Commit,
   DocumentVersion,
   EvaluationDto,
+  EvaluationResult,
   ProviderApiKey,
 } from '@latitude-data/core/browser'
-import { type EvaluationResultByDocument } from '@latitude-data/core/repositories'
 import {
   Button,
   DocumentTextEditor,
@@ -72,7 +72,7 @@ export default function DocumentEditor({
   providerApiKeys?: ProviderApiKey[]
   freeRunsCount?: number
   evaluation: EvaluationDto | undefined
-  evaluationResults: EvaluationResultByDocument[]
+  evaluationResults: EvaluationResult[]
 }) {
   const { execute: publishEvent } = useLatitudeAction(publishEventAction)
   const { commit } = useCurrentCommit()
