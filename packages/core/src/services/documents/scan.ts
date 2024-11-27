@@ -12,6 +12,45 @@ import {
 } from '../../lib'
 import { DocumentVersionsRepository } from '../../repositories'
 
+export async function getDocumentMetadata({
+  document,
+  getDocumentByPath,
+}: {
+  document: DocumentVersion
+  getDocumentByPath: (path: string) => DocumentVersion | undefined
+}) {
+  const referenceFn = async (
+    refPath: string,
+    from?: string,
+  ): Promise<RefDocument | undefined> => {
+    const fullPath = path
+      .resolve(path.dirname(`/${from ?? ''}`), refPath)
+      .replace(/^\//, '')
+
+    const doc = getDocumentByPath(fullPath)
+    if (!doc) return undefined
+
+    return {
+      path: fullPath,
+      content: doc.content,
+    }
+  }
+
+  const metadata =
+    document.promptlVersion === 0
+      ? ((await readMetadata({
+          prompt: document.content,
+          fullPath: document.path,
+          referenceFn,
+        })) as ConversationMetadata)
+      : await scan({
+          prompt: document.content,
+          fullPath: document.path,
+          referenceFn,
+        })
+  return metadata
+}
+
 /**
  * This is an internal method. It should always receives
  * workspaceId from a trusted source. Like for example API gateway that validates
@@ -39,35 +78,10 @@ export async function scanDocumentContent({
     )
   }
 
-  const referenceFn = async (
-    refPath: string,
-    from?: string,
-  ): Promise<RefDocument | undefined> => {
-    const fullPath = path
-      .resolve(path.dirname(`/${from ?? ''}`), refPath)
-      .replace(/^\//, '')
-
-    const doc = docs.find((d) => d.path === fullPath)
-    if (!doc) return undefined
-
-    return {
-      path: fullPath,
-      content: doc.content,
-    }
-  }
-
-  const metadata =
-    document.promptlVersion === 0
-      ? ((await readMetadata({
-          prompt: document.content,
-          fullPath: document.path,
-          referenceFn,
-        })) as ConversationMetadata)
-      : await scan({
-          prompt: document.content,
-          fullPath: document.path,
-          referenceFn,
-        })
+  const metadata = await getDocumentMetadata({
+    document: docInCommit,
+    getDocumentByPath: (path) => docs.find((d) => d.path === path),
+  })
 
   return Result.ok(metadata)
 }

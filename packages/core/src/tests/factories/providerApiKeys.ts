@@ -54,5 +54,5 @@ export async function setProviderAsDefault(
   workspace: Workspace,
   provider: ProviderApiKey,
 ) {
-  await updateWorkspace(workspace, { defaultProviderId: provider.id })
+  return await updateWorkspace(workspace, { defaultProviderId: provider.id })
 }

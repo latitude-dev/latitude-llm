@@ -49,6 +49,8 @@ export type ReferencePromptFn = (
 ) => Promise<Document | undefined>
 
 export class ReadMetadata {
+  includedPromptPaths: Set<string>
+
   private rawText: string
   private referenceFn?: ReferencePromptFn
   private fullPath: string
@@ -85,6 +87,7 @@ export class ReadMetadata {
     this.configSchema = configSchema
 
     this.resolvedPrompt = document.content
+    this.includedPromptPaths = new Set([this.fullPath])
   }
 
   async run(): Promise<ConversationMetadata> {
@@ -156,6 +159,7 @@ export class ReadMetadata {
       config: this.config ?? {},
       errors: this.errors,
       setConfig,
+      includedPromptPaths: this.includedPromptPaths,
     }
   }
 
@@ -570,6 +574,8 @@ export class ReadMetadata {
             return
           }
 
+          this.includedPromptPaths.add(refDocument.path)
+
           const refReadMetadata = new ReadMetadata({
             document: refDocument,
             referenceFn: this.referenceFn,
@@ -580,6 +586,9 @@ export class ReadMetadata {
             [this.fullPath]: [...currentReferences, refPromptPath],
           }
           refReadMetadata.referenceDepth = this.referenceDepth + 1
+          refReadMetadata.includedPromptPaths.forEach((path) => {
+            this.includedPromptPaths.add(path)
+          })
 
           const refPromptMetadata = await refReadMetadata.run()
           refPromptMetadata.parameters.forEach((param: string) => {

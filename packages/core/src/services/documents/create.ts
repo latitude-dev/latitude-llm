@@ -23,12 +23,14 @@ export async function createNewDocument(
     commit,
     path,
     content,
+    promptlVersion = 1,
   }: {
     workspace: Workspace
     user?: User
     commit: Commit
     path: string
     content?: string
+    promptlVersion?: number
   },
   db = database,
 ): Promise<TypedResult<DocumentVersion, Error>> {
@@ -70,7 +72,7 @@ export async function createNewDocument(
         commitId: commit.id,
         path,
         content: content ?? defaultContent,
-        promptlVersion: 1,
+        promptlVersion,
       })
       .returning()
 
