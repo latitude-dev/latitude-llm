@@ -4,6 +4,13 @@ import {
   EvaluationResultDto,
   type ChainEventDto,
 } from '@latitude-data/core/browser'
+import {
+  AdapterMessageType,
+  Chain,
+  Config,
+  render,
+  type Message as PromptlMessage,
+} from '@latitude-data/promptl'
 import env from '$sdk/env'
 import { GatewayApiConfig, RouteResolver } from '$sdk/utils'
 import {
@@ -24,10 +31,15 @@ import {
   HandlerType,
   LogSources,
   Prompt,
+  RenderChainOptions,
+  RenderPromptOptions,
   RunPromptOptions,
   SDKOptions,
   StreamChainResponse,
 } from '$sdk/utils/types'
+
+import { adaptPromptConfigToProvider } from './utils/adapters/adaptPromptConfigToProvider'
+import { getPromptlAdapterFromProvider } from './utils/adapters/getAdapterFromProvider'
 
 const WAIT_IN_MS_BEFORE_RETRY = 1000
 const DEFAULT_GAWATE_WAY = {
@@ -83,6 +95,12 @@ class Latitude {
       messages: Message[],
       args?: Omit<ChatOptions, 'messages'>,
     ) => Promise<StreamChainResponse | undefined>
+    render: <M extends AdapterMessageType = PromptlMessage>(
+      args: RenderPromptOptions<M>,
+    ) => Promise<{ config: Config; messages: M[] }>
+    renderChain: <M extends AdapterMessageType = PromptlMessage>(
+      args: RenderChainOptions<M>,
+    ) => Promise<{ config: Config; messages: M[] }>
   }
 
   constructor(
@@ -126,6 +144,8 @@ class Latitude {
       getOrCreate: this.getOrCreatePrompt.bind(this),
       run: this.runPrompt.bind(this),
       chat: this.chat.bind(this),
+      render: this.renderPrompt.bind(this),
+      renderChain: this.renderChain.bind(this),
     }
   }
 
@@ -250,6 +270,81 @@ class Latitude {
     return syncChat(uuid, options)
   }
 
+  private async renderPrompt<M extends AdapterMessageType = PromptlMessage>({
+    prompt,
+    parameters,
+    adapter: _adapter,
+  }: RenderPromptOptions<M>) {
+    if (prompt.promptlVersion !== 1) {
+      throw new Error(
+        'The prompt is defined with the Legacy syntax. Please update it to the new syntax. Learn more: https://docs.latitude.so/guides/prompt-manager/migrate-to-promptl',
+      )
+    }
+    const content = prompt.resolvedContent ?? prompt.content
+    const adapter = _adapter ?? getPromptlAdapterFromProvider(prompt.provider)
+    const { config, messages } = await render({
+      prompt: content,
+      parameters,
+      adapter,
+    })
+
+    return {
+      config: adaptPromptConfigToProvider(config, adapter),
+      messages,
+    }
+  }
+
+  private async renderChain<M extends AdapterMessageType = PromptlMessage>({
+    prompt,
+    parameters,
+    adapter: _adapter,
+    onStep,
+    logResponses,
+  }: RenderChainOptions<M>) {
+    if (prompt.promptlVersion !== 1) {
+      throw new Error(
+        'The prompt is defined with the Legacy syntax. Please update it to the new syntax. Learn more: https://docs.latitude.so/guides/prompt-manager/migrate-to-promptl',
+      )
+    }
+    const content = prompt.resolvedContent ?? prompt.content
+    const adapter = _adapter ?? getPromptlAdapterFromProvider(prompt.provider)
+    const chain = new Chain({
+      prompt: content,
+      parameters,
+      adapter,
+    })
+
+    let lastResponse: string | Omit<M, 'role'> | undefined = undefined
+    let step: { completed: boolean; messages: M[]; config: Config } = {
+      completed: false,
+      messages: [],
+      config: {},
+    }
+
+    while (true) {
+      step = await chain.step(lastResponse)
+
+      if (step.completed) {
+        if (logResponses) {
+          await this.logs.create(
+            prompt.path,
+            step.messages as unknown as Message[], // Inexistent types incompatibilities between legacy messages and promptl messages
+          )
+        }
+
+        return {
+          config: adaptPromptConfigToProvider(step.config, adapter),
+          messages: step.messages,
+        }
+      }
+
+      lastResponse = await onStep({
+        messages: step.messages,
+        config: adaptPromptConfigToProvider(step.config, adapter),
+      })
+    }
+  }
+
   private async triggerEvaluation(uuid: string, options: EvalOptions = {}) {
     const response = await makeRequest({
       method: 'POST',
@@ -314,6 +409,8 @@ class Latitude {
 }
 
 export { Latitude, LatitudeApiError, LogSources }
+
+export { Adapters } from '@latitude-data/promptl'
 
 export type {
   ChainEventDto,

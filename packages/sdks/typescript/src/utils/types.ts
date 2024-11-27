@@ -4,6 +4,7 @@
 import type { Config, Message } from '@latitude-data/compiler'
 import {
   DocumentVersion,
+  Providers,
   type ChainCallResponseDto,
   type ChainEvent,
   type ChainEventDto,
@@ -12,6 +13,11 @@ import {
   type RunSyncAPIResponse,
   type StreamEventTypes,
 } from '@latitude-data/core/browser'
+import {
+  AdapterMessageType,
+  ProviderAdapter,
+  type Message as PromptlMessage,
+} from '@latitude-data/promptl'
 import { RouteResolver } from '$sdk/utils'
 import { LatitudeApiError } from '$sdk/utils/errors'
 
@@ -160,6 +166,25 @@ export type RunPromptOptions = StreamResponseCallbacks & {
   stream?: boolean
 }
 
+export type RenderPromptOptions<M extends AdapterMessageType = PromptlMessage> =
+  {
+    prompt: Prompt
+    parameters: Record<string, unknown>
+    adapter?: ProviderAdapter<M>
+  }
+
+export type RenderChainOptions<M extends AdapterMessageType = PromptlMessage> =
+  {
+    prompt: Prompt
+    parameters: Record<string, unknown>
+    adapter?: ProviderAdapter<M>
+    onStep: (args: {
+      config: Config
+      messages: M[]
+    }) => Promise<string | Omit<M, 'role'>>
+    logResponses?: boolean
+  }
+
 export type ChatOptions = StreamResponseCallbacks & {
   messages: Message[]
   stream?: boolean
@@ -185,4 +210,5 @@ export type EvalPromptOptions = {
 
 export type Prompt = DocumentVersion & {
   config: Config
+  provider?: Providers
 }
