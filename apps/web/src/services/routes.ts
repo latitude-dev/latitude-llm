@@ -38,6 +38,7 @@ export function isPublicPath(pathname: string) {
 
 export const ROUTES = {
   root: '/',
+  api: _API_ROUTES,
   backoffice: {
     root: '/backoffice',
     [BackofficeRoutes.templates]: {
@@ -47,7 +48,6 @@ export const ROUTES = {
       root: '/backoffice/rewards',
     },
   },
-  api: _API_ROUTES,
   settings: {
     root: '/settings',
     providerApiKeys: {
@@ -119,6 +119,9 @@ export const ROUTES = {
             const rootDocuments = `${root}/documents`
             return {
               root,
+              overview: {
+                root: `${root}/overview`,
+              },
               documents: {
                 root: rootDocuments,
                 detail: ({ uuid }: { uuid: string }) => {

@@ -61,17 +61,13 @@ function JavascriptUsage({
 // Initialize the SDK
 const sdk = new Latitude('${apiKey ?? 'YOUR_API_KEY'}', { projectId: ${projectId} })
 
-// Call your AI provider
-const messages = [
-    { role: "system", content: "You are a helpful assistant." },
-    {
-        role: "user",
-        content: "Write a haiku about recursion in programming.",
-    },
-]
+// Call the LLM provider, replace with a real implementation
 const completion = await openai.chat.completions.create({
     model: "gpt-4o-mini",
-    messages
+    messages: [{
+      role: "user",
+      content: "Write a haiku about recursion in programming.",
+    }]
 });
 
 // Log the response to Latitude

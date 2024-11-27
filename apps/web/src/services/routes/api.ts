@@ -24,6 +24,9 @@ export const _API_ROUTES = {
       forImport: {
         root: `/api/projects/${id}/documents-for-import`,
       },
+      stats: {
+        root: `/api/projects/${id}/stats`,
+      },
       commits: {
         root: `/api/projects/${id}/commits`,
         detail: (commitUuid: string) => ({

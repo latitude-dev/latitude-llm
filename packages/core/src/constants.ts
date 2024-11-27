@@ -410,3 +410,18 @@ export const resultConfigurationSchema = z.discriminatedUnion('type', [
 ])
 
 export const DEFAULT_PAGINATION_SIZE = 25
+
+export interface ProjectStats {
+  totalTokens: number
+  totalRuns: number
+  totalDocuments: number
+  runsPerModel: Record<string, number>
+  costPerModel: Record<string, number>
+  rollingDocumentLogs: Array<{ date: string; count: number }>
+  totalEvaluations: number
+  totalEvaluationRuns: number
+  evaluationCosts: Array<{
+    evaluationName: string
+    cost: number
+  }>
+}
