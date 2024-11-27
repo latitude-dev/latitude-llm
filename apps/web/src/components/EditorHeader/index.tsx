@@ -1,10 +1,10 @@
 import { ReactNode, useCallback, useEffect, useMemo, useState } from 'react'
 
-import { ConversationMetadata } from '@latitude-data/compiler'
 import {
   findFirstModelForProvider,
   ProviderApiKey,
 } from '@latitude-data/core/browser'
+import type { ConversationMetadata } from '@latitude-data/promptl'
 import {
   AppLocalStorage,
   DropdownMenu,

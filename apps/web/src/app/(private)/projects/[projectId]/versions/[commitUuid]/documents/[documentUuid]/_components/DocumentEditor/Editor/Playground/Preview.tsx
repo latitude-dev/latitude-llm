@@ -3,7 +3,6 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Conversation,
   Message as ConversationMessage,
-  ConversationMetadata,
   Chain as LegacyChain,
 } from '@latitude-data/compiler'
 import {
@@ -12,7 +11,11 @@ import {
   LATITUDE_DOCS_URL,
   ProviderRules,
 } from '@latitude-data/core/browser'
-import { Adapters, Chain as PromptlChain } from '@latitude-data/promptl'
+import {
+  Adapters,
+  ConversationMetadata,
+  Chain as PromptlChain,
+} from '@latitude-data/promptl'
 import {
   Alert,
   Button,
@@ -158,7 +161,7 @@ export default function Preview({
           ))}
         </div>
         {error !== undefined && <ErrorMessage error={error} />}
-        {!completed && (
+        {!completed && metadata?.isChain && (
           <div className='w-full py-1 px-4 bg-secondary rounded-lg'>
             <Text.H6 color='foregroundMuted'>
               Showing the first step. Other steps will show after running.

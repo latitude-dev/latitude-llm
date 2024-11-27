@@ -1,6 +1,6 @@
 import { ReactNode } from 'react'
 
-import { ConversationMetadata } from '@latitude-data/compiler'
+import type { ConversationMetadata } from '@latitude-data/promptl'
 
 export type DiffOptions = {
   newValue: string

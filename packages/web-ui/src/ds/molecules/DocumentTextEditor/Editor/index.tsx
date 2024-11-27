@@ -3,7 +3,7 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { AlertCircle, CheckCircle2, LoaderCircle } from 'lucide-react'
 
-import { CompileError } from '@latitude-data/compiler'
+import { CompileError } from '@latitude-data/promptl'
 import { MarkerSeverity, type editor } from 'monaco-editor'
 
 import {

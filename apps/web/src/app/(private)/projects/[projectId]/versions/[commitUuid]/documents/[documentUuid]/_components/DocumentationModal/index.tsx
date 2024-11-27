@@ -9,9 +9,9 @@ import {
   useState,
 } from 'react'
 
-import { ConversationMetadata, readMetadata } from '@latitude-data/compiler'
+import { readMetadata } from '@latitude-data/compiler'
 import { ApiKey } from '@latitude-data/core/browser'
-import { scan } from '@latitude-data/promptl'
+import { scan, type ConversationMetadata } from '@latitude-data/promptl'
 import { Modal } from '@latitude-data/web-ui'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import useDocumentVersions from '$/stores/documentVersions'
