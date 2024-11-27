@@ -1,6 +1,7 @@
 import {
   ArrowLeft,
   ArrowRightIcon,
+  BarChart4,
   CheckCircle2,
   CheckIcon,
   ChevronDown,
@@ -61,6 +62,7 @@ const Icons = {
   alert: CircleAlert,
   arrowLeft: ArrowLeft,
   arrowRight: ArrowRightIcon,
+  barChart4: BarChart4,
   check: CheckCircle2,
   checkClean: CheckIcon,
   chevronUp: ChevronUp,

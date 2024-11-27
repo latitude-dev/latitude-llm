@@ -37,7 +37,7 @@ export default function ProjectSection({
       >
         <Text.H5M color={selected ? 'accentForeground' : 'foreground'}>
           <div className='flex flex-row items-center gap-2'>
-            <Icon name='folderOpen' />
+            <Icon name='barChart4' />
             Overview
           </div>
         </Text.H5M>
