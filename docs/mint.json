@@ -85,42 +85,69 @@
       "group": "Evaluations",
       "pages": [
         "guides/evaluations/overview",
-        "guides/evaluations/llm_as_judge_evaluations",
+        {
+          "group": "LLM as judge evaluations",
+          "pages": [
+            "guides/evaluations/llm_as_judge_evaluations",
+            "guides/evaluations/evaluation-templates",
+            {
+              "group": "Custom Evaluations",
+              "pages": [
+                "guides/evaluations/custom-evaluations",
+                "guides/evaluations/numeric-evals",
+                "guides/evaluations/text-evals",
+                "guides/evaluations/boolean-evals"
+              ]
+            }
+          ]
+        },
         "guides/evaluations/manual_evaluations",
-        "guides/evaluations/running-evaluations",
-        "guides/evaluations/numeric-evals",
-        "guides/evaluations/boolean-evals",
-        "guides/evaluations/text-evals"
+        "guides/evaluations/running-evaluations"
       ]
     },
     {
       "group": "Logs",
-      "pages": ["guides/logs/overview", "guides/logs/upload-logs"]
+      "pages": [
+        "guides/logs/overview",
+        "guides/logs/upload-logs"
+      ]
     },
     {
       "group": "Datasets",
-      "pages": ["guides/datasets/overview"]
+      "pages": [
+        "guides/datasets/overview"
+      ]
     },
     {
       "group": "HTTP API",
-      "pages": ["guides/prompt-manager/api-access"]
+      "pages": [
+        "guides/prompt-manager/api-access"
+      ]
     },
     {
       "group": "SDKs",
-      "pages": ["guides/sdk/javascript-typescript-sdk", "guides/sdk/rust-sdk"]
+      "pages": [
+        "guides/sdk/javascript-typescript-sdk",
+        "guides/sdk/rust-sdk"
+      ]
     },
     {
       "group": "Cookbook",
-      "pages": ["guides/cookbook/overview"]
+      "pages": [
+        "guides/cookbook/overview"
+      ]
     },
     {
       "group": "Self-hosting",
-      "pages": ["guides/self-hosted/development"]
+      "pages": [
+        "guides/self-hosted/development"
+      ]
     },
-
     {
       "group": "Getting Started",
-      "pages": ["promptl/getting-started/introduction"]
+      "pages": [
+        "promptl/getting-started/introduction"
+      ]
     },
     {
       "group": "Syntax",
@@ -149,11 +176,16 @@
     },
     {
       "group": "Advanced",
-      "pages": ["promptl/advanced/chains", "promptl/advanced/snippets"]
+      "pages": [
+        "promptl/advanced/chains",
+        "promptl/advanced/snippets"
+      ]
     },
     {
       "group": "Changelog",
-      "pages": ["changelog/changelog"]
+      "pages": [
+        "changelog/changelog"
+      ]
     }
   ],
   "footerSocials": {
