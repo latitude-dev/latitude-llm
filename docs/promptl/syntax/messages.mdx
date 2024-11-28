@@ -53,7 +53,7 @@ Tool messages represent the output of external tools or APIs called by the assis
 
 ```xml
 <assistant>
-  <tool-call id="123" name="get-weather" arguments={{ location: "Barcelona" }} />
+  <tool-call id="123" name="get-weather" arguments={{ { location: "Barcelona" } }} />
 </assistant>
 
 <tool id="123">
@@ -90,7 +90,7 @@ For convenience, you can use specific tags for each role:
 </user>
 <assistant>
   Let me check for you!
-  <tool-call id="123" name="get-weather" arguments={{ location: "Barcelona" }} />
+  <tool-call id="123" name="get-weather" arguments={{ { location: "Barcelona" } }} />
 </assistant>
 <tool id="123">
   23ºC, sunny.
@@ -147,10 +147,10 @@ Here’s how multiple message roles and content types can work together:
 
 <assistant>
   Let me check for you.
-  <tool-call id="456" name="find-restaurant" arguments={{ location: city }} />
+  <tool-call id="456" name="find-restaurant" arguments={{ { location: city } }} />
 </assistant>
 
 <tool id="456">
   The best-rated restaurant in {{ city }} is Gourmet Central.
 </tool>
-````
+```
