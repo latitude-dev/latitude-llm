@@ -181,7 +181,7 @@ export const ROUTES = {
   },
   share: {
     document: (publishedDocumentUuid: string) => ({
-      root: `/share/${publishedDocumentUuid}`,
+      root: `/share/d/${publishedDocumentUuid}`,
     }),
   },
 } as const

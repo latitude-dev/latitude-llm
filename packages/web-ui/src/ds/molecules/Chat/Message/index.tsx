@@ -7,7 +7,7 @@ import {
 } from '@latitude-data/compiler'
 
 import { cn } from '../../../../lib/utils'
-import { Badge, CodeBlock, Text } from '../../../atoms'
+import { Badge, CodeBlock, Skeleton, Text } from '../../../atoms'
 import { TextColor } from '../../../tokens'
 import { roleVariant } from './helpers'
 
@@ -54,6 +54,25 @@ export function Message({
               />
             ))
           )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export function MessageSkeleton({ role }: { role: string }) {
+  return (
+    <div className='flex flex-col gap-1 w-full items-start animate-pulse'>
+      <div>
+        <Badge variant={roleVariant(role)}>
+          <div className='w-16' />
+        </Badge>
+      </div>
+      <div className='flex flex-row items-stretch gap-4 pl-4 w-full'>
+        <div className='flex-shrink-0 bg-muted w-1 rounded-lg' />
+        <div className='flex flex-col gap-1 flex-grow min-w-0'>
+          <Skeleton height='h5' className='w-1/2' />
+          <Skeleton height='h5' className='w-3/4' />
         </div>
       </div>
     </div>

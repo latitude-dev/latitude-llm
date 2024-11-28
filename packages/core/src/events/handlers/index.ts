@@ -36,6 +36,7 @@ export const EventHandlers: IEventsHandlers = {
   userInvited: [],
   workspaceCreated: [],
   documentRunRequested: [],
+  publicDocumentRunRequested: [],
   chatMessageRequested: [],
   batchEvaluationRunRequested: [],
   runDocumentInBatchRequested: [],

@@ -13,7 +13,7 @@ type RunDocumentActionProps = {
   commitUuid: string
   parameters: Record<string, unknown>
 }
-type RunDocumentResponse = Promise<{
+export type RunDocumentResponse = Promise<{
   output: StreamableValue<{ event: StreamEventTypes; data: ChainEventDto }>
   response: ReturnType<typeof Latitude.prototype.prompts.run>
 }>

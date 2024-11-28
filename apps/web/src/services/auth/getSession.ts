@@ -7,8 +7,6 @@ export async function getSession(): Promise<
   { user: User; session: Session } | { user: null; session: null }
 > {
   const cks = await cookies()
-  // NOTE: We dynamically import the cookies function to make Nextjs happy
-  // Info: https://github.com/vercel/next.js/issues/49757
   const sessionId = cks.get(lucia.sessionCookieName)?.value ?? null
   if (!sessionId) {
     return {
