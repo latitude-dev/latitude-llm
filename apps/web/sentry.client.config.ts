@@ -4,11 +4,9 @@
 
 import * as Sentry from '@sentry/nextjs'
 
-import { envClient } from './src/envClient'
-
 Sentry.init({
   // TODO: This should be the process.env.SENTRY_DSN env var
-  dsn: envClient.NEXT_PUBLIC_SENTRY_DSN,
+  dsn: 'https://6e31ecebeab94c81ef6be3b0b8ab5773@o1153048.ingest.us.sentry.io/4507922531418112',
 
   // Add optional integrations for additional features
   integrations: [Sentry.replayIntegration()],
