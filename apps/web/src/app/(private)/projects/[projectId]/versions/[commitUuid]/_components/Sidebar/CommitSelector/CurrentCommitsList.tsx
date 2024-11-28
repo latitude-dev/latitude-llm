@@ -1,5 +1,7 @@
 'use client'
 
+import { compact } from 'lodash-es'
+
 import {
   CommitStatus,
   DocumentVersion,
@@ -53,7 +55,7 @@ export function CurrentCommitsList({
           onCommitDelete={onCommitDelete}
         />
       )}
-      {drafts.map((commit) => (
+      {compact(drafts).map((commit) => (
         <li key={commit.id}>
           <CommitItem
             commit={commit}

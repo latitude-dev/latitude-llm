@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { compact } from 'lodash-es'
 
 import { Dataset } from '@latitude-data/core/browser'
 import {
@@ -62,7 +63,7 @@ export function DatasetsTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {datasets.map((dataset) => (
+          {compact(datasets).map((dataset) => (
             <TableRow key={dataset.id} verticalPadding hoverable={false}>
               <TableCell>
                 <Text.H5>{dataset.name}</Text.H5>

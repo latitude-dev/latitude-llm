@@ -15,7 +15,8 @@ import {
 } from '$/app/(private)/_data-access'
 import { ProjectPageParams } from '$/app/(private)/projects/[projectId]/page'
 import { getCurrentUser, SessionData } from '$/services/auth/getCurrentUser'
-import { notFound } from 'next/navigation'
+import { ROUTES } from '$/services/routes'
+import { notFound, redirect } from 'next/navigation'
 
 export type CommitPageParams = {
   children: ReactNode
@@ -33,6 +34,8 @@ export default async function CommitLayout({
   const { projectId, commitUuid } = await params
   try {
     session = await getCurrentUser()
+    if (!session.workspace) return redirect(ROUTES.root)
+
     project = await findProjectCached({
       projectId: Number(projectId),
       workspaceId: session.workspace.id,

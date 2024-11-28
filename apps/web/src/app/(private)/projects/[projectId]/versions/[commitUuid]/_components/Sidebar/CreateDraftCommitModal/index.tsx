@@ -23,6 +23,8 @@ export default function DraftCommitModal({
   const { createDraft, isCreating } = useCommits({
     commitStatus: CommitStatus.Draft,
     onSuccessCreate: (draft) => {
+      if (!draft) return // should never happen but it does
+
       router.push(
         ROUTES.projects
           .detail({ id: project.id })

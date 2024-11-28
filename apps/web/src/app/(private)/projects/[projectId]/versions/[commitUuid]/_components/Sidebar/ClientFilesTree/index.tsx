@@ -54,6 +54,8 @@ export default function ClientFilesTree({
     {
       fallbackData: serverDocuments,
       onSuccessCreate: (document) => {
+        if (!document) return // should never happen but it does
+
         navigateToDocument(document.documentUuid)
       },
     },
