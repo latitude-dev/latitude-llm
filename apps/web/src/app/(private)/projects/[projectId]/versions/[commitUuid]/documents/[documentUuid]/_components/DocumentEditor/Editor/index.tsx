@@ -223,8 +223,10 @@ export default function DocumentEditor({
     onSuccess: ({
       data: suggestion,
     }: {
-      data: { code: string; response: string }
+      data: { code: string; response: string } | null
     }) => {
+      if (!suggestion) return
+
       setDiff({
         newValue: suggestion.code,
         description: suggestion.response,
