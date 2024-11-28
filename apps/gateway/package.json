@@ -22,7 +22,7 @@
     "@latitude-data/constants": "workspace:^",
     "@latitude-data/core": "workspace:^",
     "@latitude-data/env": "workspace:^",
-    "@latitude-data/promptl": "^0.3.0",
+    "@latitude-data/promptl": "^0.3.1",
     "@sentry/cli": "^2.37.0",
     "@sentry/node": "^8.30.0",
     "@t3-oss/env-core": "^0.10.1",

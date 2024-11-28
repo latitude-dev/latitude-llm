@@ -31,7 +31,7 @@
   "devDependencies": {
     "@faker-js/faker": "^8.4.1",
     "@latitude-data/eslint-config": "workspace:*",
-    "@latitude-data/promptl": "^0.3.0",
+    "@latitude-data/promptl": "^0.3.1",
     "@latitude-data/typescript-config": "workspace:*",
     "@monaco-editor/react": "^4.6.0",
     "@radix-ui/react-avatar": "^1.1.0",
