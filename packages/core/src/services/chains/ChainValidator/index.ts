@@ -9,7 +9,7 @@ import { Chain as PromptlChain } from '@latitude-data/promptl'
 import { JSONSchema7 } from 'json-schema'
 import { z } from 'zod'
 
-import { applyCustomRules, ProviderApiKey, Workspace } from '../../../browser'
+import { applyProviderRules, ProviderApiKey, Workspace } from '../../../browser'
 import { Result, TypedResult } from '../../../lib'
 import { Config } from '../../ai'
 import { googleConfig } from '../../ai/helpers'
@@ -199,7 +199,7 @@ export const validateChain = async (
   })
   if (freeQuota.error) return freeQuota
 
-  const rule = applyCustomRules({
+  const rule = applyProviderRules({
     providerType: provider.provider,
     messages: conversation.messages as Message[],
     config,

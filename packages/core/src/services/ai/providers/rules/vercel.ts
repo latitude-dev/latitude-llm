@@ -23,7 +23,7 @@ function flattenSystemMessage({
 }): Message[] {
   const content = message.content as TextContent[] | string
 
-  // NOTO: `applyCustomRules` can be invoked multiple times
+  // NOTE: `applyAllRules` can be invoked multiple times
   // during a chain. if system message.content is already
   // a string we consider it already processed.
   if (typeof content === 'string') return [message]

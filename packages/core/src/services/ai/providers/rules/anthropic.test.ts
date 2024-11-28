@@ -3,7 +3,7 @@ import { beforeAll, describe, expect, it } from 'vitest'
 
 import { PartialConfig } from '../../helpers'
 import { Providers } from '../models'
-import { applyCustomRules, ProviderRules } from './index'
+import { applyProviderRules, ProviderRules } from './index'
 
 const providerType = Providers.Anthropic
 
@@ -50,7 +50,7 @@ describe('applyAnthropicRules', () => {
     })
 
     it('only modifies system messages that are not at the beggining', () => {
-      const rules = applyCustomRules({ providerType, messages, config })
+      const rules = applyProviderRules({ providerType, messages, config })
 
       const appliedMessages = rules.messages
 
@@ -58,21 +58,11 @@ describe('applyAnthropicRules', () => {
       expect(appliedMessages[0]).toEqual(messages[0])
       expect(appliedMessages[1]).toEqual(messages[1])
       expect(appliedMessages[2]).toEqual(messages[2])
-      expect(appliedMessages[4]).toEqual({
-        role: MessageRole.assistant,
-        content: [{ type: 'text', text: messages[4]!.content }],
-      })
-
       expect(appliedMessages[3]).toEqual({
         role: MessageRole.user,
         content: [{ type: 'text', text: messages[3]!.content }],
       })
-
-      expect(appliedMessages[3]).toEqual({
-        role: MessageRole.user,
-        content: [{ type: 'text', text: messages[3]!.content }],
-      })
-
+      expect(appliedMessages[4]).toEqual(messages[4])
       expect(appliedMessages[5]).toEqual({
         role: MessageRole.user,
         content: [
@@ -83,7 +73,7 @@ describe('applyAnthropicRules', () => {
     })
 
     it('generates warning when system messages are not at the beggining', () => {
-      const rules = applyCustomRules({ providerType, messages, config })
+      const rules = applyProviderRules({ providerType, messages, config })
 
       expect(rules.rules).toEqual([
         {
@@ -106,7 +96,7 @@ describe('applyAnthropicRules', () => {
         content: [{ type: 'text', text: 'Respond to the user' }],
       },
     ] as Message[]
-    const rules = applyCustomRules({
+    const rules = applyProviderRules({
       providerType,
       messages: theMessages,
       config,

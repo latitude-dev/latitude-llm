@@ -27,6 +27,44 @@ const PROVIDER_PAYLOAD: ProviderApiKey = {
 }
 
 describe('ai function', () => {
+  it('should throw an error if rules are violated', async () => {
+    // @ts-expect-error
+    const provider: ProviderApiKey = {
+      provider: Providers.OpenAI,
+      token: 'openai-api-key',
+      url: 'https://api.openai.com',
+    }
+
+    const config = {
+      model: 'test-model',
+    }
+
+    const messages: Message[] = [
+      {
+        role: MessageRole.system,
+        content: [{ type: ContentType.text, text: 'System message' }],
+      },
+      {
+        role: MessageRole.assistant,
+        toolCalls: [],
+        content: [
+          { type: ContentType.image, image: 'https://example.com/image.png' },
+        ],
+      },
+    ]
+
+    await expect(
+      ai({ provider, config, messages }).then((r) => r.unwrap()),
+    ).rejects.toThrowError(
+      new ChainError({
+        code: RunErrorCodes.AIRunError,
+        message: `
+There are rule violations:
+- Assistant messages cannot have images.`.trim(),
+      }),
+    )
+  })
+
   it('should throw an error if Google provider is used without a user message', async () => {
     // @ts-expect-error
     const provider: ProviderApiKey = {

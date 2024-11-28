@@ -6,9 +6,11 @@ import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositorie
 import { ClickToCopy, Message, Text } from '@latitude-data/web-ui'
 import { formatCostInMillicents, formatDuration } from '$/app/_lib/formatUtils'
 import { RunErrorMessage } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/_components/RunErrorMessage'
+import { Inputs } from '$/hooks/useDocumentParameters'
 import useProviderApiKeys from '$/stores/providerApiKeys'
 import { format } from 'date-fns'
 
+import { InputParams } from '../../../../_components/DocumentEditor/Editor/Playground/DocumentParams/Input/index'
 import {
   FinishReasonItem,
   MetadataItem,
@@ -156,6 +158,32 @@ function ProviderLogsMetadata({
   )
 }
 
+function DocumentLogParameters({
+  documentLog,
+}: {
+  documentLog: DocumentLogWithMetadataAndError
+}) {
+  const parameters = useMemo(() => {
+    return Object.entries(documentLog.parameters).reduce(
+      (acc, [key, value]) => {
+        acc[key] = {
+          value: String(value),
+          metadata: { includeInPrompt: true },
+        }
+        return acc
+      },
+      {} as Inputs<'manual'>,
+    )
+  }, [documentLog.uuid, documentLog.parameters])
+
+  return (
+    <>
+      <Text.H5M color='foreground'>Parameters</Text.H5M>
+      <InputParams inputs={parameters} disabled />
+    </>
+  )
+}
+
 export function DocumentLogMetadata({
   documentLog,
   providerLogs = [],
@@ -198,6 +226,9 @@ export function DocumentLogMetadata({
           documentLog={documentLog}
         />
       ) : null}
+      {Object.keys(documentLog.parameters).length > 0 && (
+        <DocumentLogParameters documentLog={documentLog} />
+      )}
       {lastResponse ? (
         <div className='flex flex-col gap-y-2'>
           <Text.H5M color='foreground'>Last Response</Text.H5M>

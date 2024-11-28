@@ -7,7 +7,7 @@ import {
 } from '@latitude-data/compiler'
 import {
   AppliedRules,
-  applyCustomRules,
+  applyProviderRules,
   LATITUDE_DOCS_URL,
   ProviderRules,
 } from '@latitude-data/core/browser'
@@ -31,6 +31,8 @@ import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { ROUTES } from '$/services/routes'
 import useProviderApiKeys from '$/stores/providerApiKeys'
 import Link from 'next/link'
+
+import Actions, { ActionsState } from './Actions'
 
 function WarningLink({ providerRule }: { providerRule: ProviderRules }) {
   return (
@@ -64,11 +66,13 @@ export default function Preview({
   metadata,
   parameters,
   runPrompt,
+  expandParameters,
+  setExpandParameters,
 }: {
   metadata: ConversationMetadata | undefined
   parameters: Record<string, unknown>
   runPrompt: () => void
-}) {
+} & ActionsState) {
   const { data: providers } = useProviderApiKeys()
   const { commit } = useCurrentCommit()
   const { document } = useCurrentDocument()
@@ -101,10 +105,12 @@ export default function Preview({
           prompt: metadata.resolvedPrompt,
           parameters,
           adapter: Adapters.default,
+          includeSourceMap: true,
         })
       : new LegacyChain({
           prompt: metadata.resolvedPrompt,
           parameters,
+          includeSourceMap: true,
         })
 
     chain
@@ -133,7 +139,7 @@ export default function Preview({
       return
     }
 
-    const rule = applyCustomRules({
+    const rule = applyProviderRules({
       providerType: provider.provider,
       messages: conversation.messages,
       config: conversation.config,
@@ -151,12 +157,20 @@ export default function Preview({
         className='flex flex-col gap-3 flex-grow flex-shrink min-h-0 custom-scrollbar'
       >
         <div className='flex flex-col gap-2'>
-          <Text.H6M>Preview</Text.H6M>
+          <div className='flex flex-row items-center justify-between w-full'>
+            <Text.H6M>Preview</Text.H6M>
+            <Actions
+              expandParameters={expandParameters}
+              setExpandParameters={setExpandParameters}
+            />
+          </div>
           {(fixedMessages ?? []).map((message, index) => (
             <Message
               key={index}
               role={message.role}
               content={message.content}
+              parameters={parameters}
+              collapseParameters={!expandParameters}
             />
           ))}
         </div>

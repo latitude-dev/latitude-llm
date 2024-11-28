@@ -29,6 +29,8 @@ export default function Playground({
     documentVersionUuid: document.documentUuid,
   })
   const [forcedSize, setForcedSize] = useState<number | undefined>()
+  const [expandParameters, setExpandParameters] = useState(false)
+
   return (
     <SplitPane
       direction='vertical'
@@ -54,12 +56,16 @@ export default function Playground({
               metadata={metadata}
               parameters={parameters}
               runPrompt={() => setMode('chat')}
+              expandParameters={expandParameters}
+              setExpandParameters={setExpandParameters}
             />
           ) : (
             <Chat
-              clearChat={() => setMode('preview')}
               document={document}
               parameters={parameters}
+              clearChat={() => setMode('preview')}
+              expandParameters={expandParameters}
+              setExpandParameters={setExpandParameters}
             />
           )}
         </div>

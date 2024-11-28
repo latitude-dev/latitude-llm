@@ -174,7 +174,20 @@ model: gpt-4o
 
       expect(aiSpy).toHaveBeenCalledWith(
         expect.objectContaining({
-          messages: [{ role: 'system', content: 'This is a test document' }],
+          messages: [
+            {
+              role: 'system',
+              content: [
+                {
+                  type: 'text',
+                  text: 'This is a test document',
+                  // The source map is deleted after applying
+                  // the vercel rules inside the ai service
+                  _promptlSourceMap: [],
+                },
+              ],
+            },
+          ],
           config: { model: 'gpt-4o', provider: 'openai' },
           provider,
         }),
@@ -213,7 +226,15 @@ model: gpt-4o
             messages: [
               {
                 role: 'system',
-                content: 'This is a test document',
+                content: [
+                  {
+                    type: 'text',
+                    text: 'This is a test document',
+                    // The source map is deleted after applying
+                    // the vercel rules inside the ai service
+                    _promptlSourceMap: [],
+                  },
+                ],
               },
             ],
           },
@@ -250,7 +271,15 @@ model: gpt-4o
               },
               {
                 role: 'system',
-                content: 'With two steps',
+                content: [
+                  {
+                    type: 'text',
+                    text: 'With two steps',
+                    // The source map is deleted after applying
+                    // the vercel rules inside the ai service
+                    _promptlSourceMap: [],
+                  },
+                ],
               },
             ],
           },

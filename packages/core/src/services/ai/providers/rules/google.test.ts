@@ -1,7 +1,7 @@
 import type { Message } from '@latitude-data/compiler'
 import { beforeAll, describe, expect, it } from 'vitest'
 
-import { applyCustomRules, ProviderRules } from '.'
+import { applyProviderRules, ProviderRules } from '.'
 import { PartialConfig } from '../../helpers'
 import { Providers } from '../models'
 
@@ -50,7 +50,7 @@ describe('applyGoogleRules', () => {
     })
 
     it('only modifies system messages that are not at the beggining', () => {
-      const rules = applyCustomRules({ providerType, messages, config })
+      const rules = applyProviderRules({ providerType, messages, config })
 
       const appliedMessages = rules.messages
 
@@ -58,21 +58,11 @@ describe('applyGoogleRules', () => {
       expect(appliedMessages[0]).toEqual(messages[0])
       expect(appliedMessages[1]).toEqual(messages[1])
       expect(appliedMessages[2]).toEqual(messages[2])
-      expect(appliedMessages[4]).toEqual({
-        role: 'assistant',
-        content: [{ type: 'text', text: messages[4]!.content }],
-      })
-
       expect(appliedMessages[3]).toEqual({
         role: 'user',
         content: [{ type: 'text', text: messages[3]!.content }],
       })
-
-      expect(appliedMessages[3]).toEqual({
-        role: 'user',
-        content: [{ type: 'text', text: messages[3]!.content }],
-      })
-
+      expect(appliedMessages[4]).toEqual(messages[4])
       expect(appliedMessages[5]).toEqual({
         role: 'user',
         content: [
@@ -83,7 +73,7 @@ describe('applyGoogleRules', () => {
     })
 
     it('generates warning when system messages are not at the beggining', () => {
-      const rules = applyCustomRules({ providerType, messages, config })
+      const rules = applyProviderRules({ providerType, messages, config })
 
       expect(rules.rules).toEqual([
         {

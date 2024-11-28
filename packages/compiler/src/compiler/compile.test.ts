@@ -652,9 +652,9 @@ Given a context, answer questions succintly yet complete.
   describe('includes source map when specified', async () => {
     it('returns empty source map when no identifiers', async () => {
       const prompt = `
-  Given a context, answer questions succintly yet complete.
-  <system>context</system>
-  <user>Please, help me with question!</user>
+Given a context, answer questions succintly yet complete.
+<system>context</system>
+<user>Please, help me with question!</user>
       `
       const { messages } = await render({
         prompt,
@@ -696,9 +696,9 @@ Given a context, answer questions succintly yet complete.
 
     it('returns source map when single identifiers per content', async () => {
       const prompt = `
-  Given a context, answer questions succintly yet complete.
-  <system>{{ context }}</system>
-  <user>Please, help me with {{ question }}!</user>
+Given a context, answer questions succintly yet complete.
+<system>{{ context }}</system>
+<user>Please, help me with {{ question }}!</user>
       `
       const { messages } = await render({
         prompt,
@@ -756,9 +756,9 @@ Given a context, answer questions succintly yet complete.
 
     it('returns source map when multiple identifiers per content', async () => {
       const prompt = `
-  Given some context, answer questions succintly yet complete.
-  <system>{{ context_1 }} and {{ context_2 }}</system>
-  <user>Please, help me with {{ question_1 }} and {{ question_2 }}!</user>
+Given some context, answer questions succintly yet complete.
+<system>{{ context_1 }} and {{ context_2 }}</system>
+<user>Please, help me with {{ question_1 }} and {{ question_2 }}!</user>
       `
       const { messages } = await render({
         prompt,
@@ -818,6 +818,194 @@ Given a context, answer questions succintly yet complete.
                   start: 36,
                   end: 46,
                   identifier: 'question_2',
+                },
+              ],
+            },
+          ],
+        },
+      ])
+    })
+
+    it('returns source map when duplicated identifiers', async () => {
+      const prompt = `
+Given a context, answer questions succintly yet complete.
+<system>{{ context }} and {{ context }}</system>
+<user>Please, help me with {{ question }} and {{ question }}!</user>
+      `
+      const { messages } = await render({
+        prompt,
+        parameters: {
+          context: 'context',
+          question: 'question',
+        },
+        includeSourceMap: true,
+      })
+      expect(messages).toEqual([
+        {
+          role: MessageRole.system,
+          content: [
+            {
+              type: ContentType.text,
+              text: 'Given a context, answer questions succintly yet complete.',
+              _promptlSourceMap: [],
+            },
+          ],
+        },
+        {
+          role: MessageRole.system,
+          content: [
+            {
+              type: ContentType.text,
+              text: 'context and context',
+              _promptlSourceMap: [
+                {
+                  start: 0,
+                  end: 7,
+                  identifier: 'context',
+                },
+                {
+                  start: 12,
+                  end: 19,
+                  identifier: 'context',
+                },
+              ],
+            },
+          ],
+        },
+        {
+          role: MessageRole.user,
+          content: [
+            {
+              type: ContentType.text,
+              text: 'Please, help me with question and question!',
+              _promptlSourceMap: [
+                {
+                  start: 21,
+                  end: 29,
+                  identifier: 'question',
+                },
+                {
+                  start: 34,
+                  end: 42,
+                  identifier: 'question',
+                },
+              ],
+            },
+          ],
+        },
+      ])
+    })
+
+    it('returns source map when multiple new lines and indents', async () => {
+      const prompt = `
+  Given a context, answer questions succintly yet complete.
+  <system>
+
+
+    {{ context }}
+
+
+  </system>
+      <user>
+
+  Please, help me
+    with {{ question }}!
+  </user>
+<user>
+  Is this the real life?
+  
+  <text>
+    Is this just fantasy?
+      {{ lyrics }}
+      
+      
+  </text>
+<image>{{image}}</image>
+</user>
+
+    {{empty}}{{empty}}
+      `
+      const { messages } = await render({
+        prompt,
+        parameters: {
+          context: 'context',
+          question: 'question',
+          lyrics: 'lyrics',
+          image: 'image',
+          empty: '   ',
+        },
+        includeSourceMap: true,
+      })
+      expect(messages).toEqual([
+        {
+          role: MessageRole.system,
+          content: [
+            {
+              type: ContentType.text,
+              text: 'Given a context, answer questions succintly yet complete.',
+              _promptlSourceMap: [],
+            },
+          ],
+        },
+        {
+          role: MessageRole.system,
+          content: [
+            {
+              type: ContentType.text,
+              text: 'context',
+              _promptlSourceMap: [
+                {
+                  start: 0,
+                  end: 7,
+                  identifier: 'context',
+                },
+              ],
+            },
+          ],
+        },
+        {
+          role: MessageRole.user,
+          content: [
+            {
+              type: ContentType.text,
+              text: 'Please, help me\n  with question!',
+              _promptlSourceMap: [
+                {
+                  start: 23,
+                  end: 31,
+                  identifier: 'question',
+                },
+              ],
+            },
+          ],
+        },
+        {
+          role: MessageRole.user,
+          content: [
+            {
+              type: ContentType.text,
+              text: 'Is this the real life?',
+              _promptlSourceMap: [],
+            },
+            {
+              type: ContentType.text,
+              text: 'Is this just fantasy?\n  lyrics',
+              _promptlSourceMap: [
+                {
+                  start: 24,
+                  end: 30,
+                  identifier: 'lyrics',
+                },
+              ],
+            },
+            {
+              type: ContentType.image,
+              image: 'image',
+              _promptlSourceMap: [
+                {
+                  start: 0,
+                  end: 5,
+                  identifier: 'image',
                 },
               ],
             },
