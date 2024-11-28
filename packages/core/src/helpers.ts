@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-import { ProviderApiKey } from './browser'
+import { CsvData, ProviderApiKey } from './browser'
 
 const DEFAULT_OBJECT_TO_STRING_MESSAGE =
   'Error: Provider returned an object that could not be stringified'
@@ -37,4 +37,11 @@ export function promptConfigSchema({
     }),
     temperature: z.number().min(0).max(2).optional(),
   })
+}
+
+export function buildCsvFile(csvData: CsvData, name: string): File {
+  const headers = csvData.headers.map((h) => JSON.stringify(h)).join(',')
+  const rows = csvData.data.map((row) => Object.values(row.record).join(','))
+  const csv = [headers, ...rows].join('\n')
+  return new File([csv], `${name}.csv`, { type: 'text/csv' })
 }

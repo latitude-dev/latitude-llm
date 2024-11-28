@@ -1,10 +1,12 @@
 'use client'
 
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 
 import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
 import {
+  Button,
   cn,
+  FloatingPanel,
   TableBlankSlate,
   useCurrentCommit,
   useCurrentProject,
@@ -14,6 +16,7 @@ import {
   EventArgs,
   useSockets,
 } from '$/components/Providers/WebsocketsProvider/useSockets'
+import { useSelectableRows } from '$/hooks/useSelectableRows'
 import useDocumentLogs, { documentLogPresenter } from '$/stores/documentLogs'
 import useDocumentLogsAggregations from '$/stores/documentLogsAggregations'
 import useEvaluationResultsByDocumentLogs from '$/stores/evaluationResultsByDocumentLogs'
@@ -23,6 +26,7 @@ import { useSearchParams } from 'next/navigation'
 import { AggregationPanels } from './AggregationPanels'
 import { DocumentLogInfo } from './DocumentLogInfo'
 import { DocumentLogsTable } from './DocumentLogsTable'
+import { ExportLogsModal } from './ExportLogsModal'
 import { LogsOverTimeChart } from './LogsOverTime'
 
 const useDocumentLogSocket = (
@@ -119,6 +123,17 @@ export function DocumentLogs({
 
   useDocumentLogSocket(document.documentUuid, mutate)
 
+  const documentLogIds = useMemo(
+    () => documentLogs.map((r) => r.id),
+    [documentLogs],
+  )
+
+  const [selectedLogsIds, setSelectedLogsIds] = useState<number[]>([])
+
+  const selectableState = useSelectableRows({
+    rowIds: documentLogIds,
+  })
+
   if (!documentLogs.length) {
     return (
       <TableBlankSlate description='There are no logs for this prompt yet. Logs will appear here when you run the prompt for the first time.' />
@@ -152,6 +167,7 @@ export function DocumentLogs({
           selectedLog={selectedLog}
           setSelectedLog={setSelectedLog}
           isLoading={isEvaluationResultsLoading}
+          selectableState={selectableState}
         />
         {selectedLog && (
           <div ref={sidebarWrapperRef}>
@@ -166,6 +182,32 @@ export function DocumentLogs({
             />
           </div>
         )}
+        <div className='flex justify-center sticky bottom-4 pointer-events-none'>
+          <FloatingPanel visible={selectableState.selectedCount > 0}>
+            <div className='flex flex-row justify-between gap-x-4'>
+              <Button
+                disabled={selectableState.selectedCount === 0}
+                fancy
+                onClick={() =>
+                  setSelectedLogsIds(selectableState.getSelectedRowIds())
+                }
+              >
+                Export selected logs
+              </Button>
+              <Button
+                fancy
+                variant='outline'
+                onClick={selectableState.clearSelections}
+              >
+                Clear selection
+              </Button>
+            </div>
+          </FloatingPanel>
+        </div>
+        <ExportLogsModal
+          selectedLogsIds={selectedLogsIds}
+          close={() => setSelectedLogsIds([])}
+        />
       </div>
     </div>
   )

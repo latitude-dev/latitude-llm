@@ -111,6 +111,13 @@ export const _API_ROUTES = {
     evaluationResults: {
       root: `/api/documentLogs/evaluation-results`,
     },
+    generateCsv: {
+      detail: ({ documentLogIds }: { documentLogIds: number[] }) => {
+        return {
+          root: `/api/documentLogs/generate-csv?ids=${documentLogIds.join(',')}`,
+        }
+      },
+    },
   },
   evaluations: {
     root: '/api/evaluations',

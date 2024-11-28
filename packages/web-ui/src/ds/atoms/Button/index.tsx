@@ -177,6 +177,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
           'w-full': fullWidth,
           'opacity-50': lookDisabled,
           'overflow-hidden': ellipsis,
+          'animate-pulse': isLoading,
         },
       )}
       ref={ref}
@@ -189,6 +190,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
             buttonVariants({ variant, size, className, fanciness }),
             {
               'overflow-hidden': ellipsis,
+              'animate-pulse': isLoading,
             },
           )}
         >
@@ -205,6 +207,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
             className={cn('flex flex-row items-center gap-x-2 cursor-pointer', {
               'w-full justify-center': fullWidth,
               'overflow-hidden': ellipsis,
+              'animate-pulse': isLoading,
             })}
           >
             {indicator ? <DotIndicator {...indicator} /> : null}
