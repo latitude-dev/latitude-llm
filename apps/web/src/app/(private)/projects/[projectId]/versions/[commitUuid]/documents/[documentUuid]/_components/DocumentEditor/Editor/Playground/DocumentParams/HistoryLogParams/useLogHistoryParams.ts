@@ -1,6 +1,6 @@
-import { useCallback, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 
-import { DocumentVersion } from '@latitude-data/core/browser'
+import { DocumentVersion, LogSources } from '@latitude-data/core/browser'
 import { useCurrentCommit, useCurrentProject } from '@latitude-data/web-ui'
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
 import useDocumentLogs from '$/stores/documentLogs'
@@ -8,6 +8,7 @@ import useDocumentLogWithPaginationPosition, {
   LogWithPosition,
 } from '$/stores/documentLogWithPaginationPosition'
 import useDocumentLogsPagination from '$/stores/useDocumentLogsPagination'
+import { useCommits } from '$/stores/commitsStore'
 
 const ONLY_ONE_PAGE = '1'
 export function useLogHistoryParams({
@@ -17,6 +18,9 @@ export function useLogHistoryParams({
   document: DocumentVersion
   commitVersionUuid: string
 }) {
+  const { project } = useCurrentProject()
+  const { commit } = useCurrentCommit()
+  const { data: commits } = useCommits()
   const {
     mapDocParametersToInputs,
     history: { setHistoryLog, logUuid },
@@ -24,13 +28,21 @@ export function useLogHistoryParams({
     documentVersionUuid: document.documentUuid,
     commitVersionUuid,
   })
-  const { project } = useCurrentProject()
-  const { commit } = useCurrentCommit()
+
+  const filterOptions = useMemo(() => {
+    return {
+      commitIds: commits
+        ?.filter((c) => !!c.mergedAt || c.uuid === commit.uuid)
+        .map((c) => c.id),
+      logSources: Object.values(LogSources),
+    }
+  }, [commits, commit])
+
   const { data: pagination, isLoading: isLoadingCounter } =
     useDocumentLogsPagination({
+      documentUuid: commits ? document.documentUuid : undefined, // Delay the fetch until we have the commits
       projectId: project.id,
-      commitUuid: commit.uuid,
-      documentUuid: document.documentUuid,
+      filterOptions,
       page: '1', // Not used really. This is only for the counter.
       pageSize: ONLY_ONE_PAGE,
       excludeErrors: true,
@@ -47,18 +59,18 @@ export function useLogHistoryParams({
   )
   const { isLoading: isLoadingPosition } = useDocumentLogWithPaginationPosition(
     {
-      projectId: project.id,
-      commitUuid: commit.uuid,
+      documentLogUuid: commits ? logUuid : undefined,
       document,
-      documentLogUuid: logUuid,
+      projectId: project.id,
+      filterOptions,
       onFetched: onFetchCurrentLog,
       excludeErrors: true,
     },
   )
 
   const { data: logs, isLoading: isLoadingLog } = useDocumentLogs({
-    documentUuid: position === undefined ? undefined : document.documentUuid,
-    commitUuid: commit.uuid,
+    documentUuid: commits && !!position ? document.documentUuid : undefined, // Delay the fetch until we have the commits
+    filterOptions,
     projectId: project.id,
     page: position === undefined ? undefined : String(position.position),
     pageSize: ONLY_ONE_PAGE,

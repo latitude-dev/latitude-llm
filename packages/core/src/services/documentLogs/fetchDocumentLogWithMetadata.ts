@@ -34,10 +34,7 @@ export async function fetchDocumentLogWithMetadata(
   const type = documentLogUuid ? 'uuid' : 'id'
   if (identifier === undefined) return throwNotFound({ identifier, type })
 
-  const scope = computeDocumentLogsWithMetadataQuery(
-    { workspaceId, allowAnyDraft: true },
-    db,
-  )
+  const scope = computeDocumentLogsWithMetadataQuery({ workspaceId }, db)
   let logs: DocumentLogWithMetadataAndError[] = []
   if (documentLogUuid) {
     logs = await scope.where(eq(documentLogs.uuid, documentLogUuid)).limit(1)
