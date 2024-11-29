@@ -1,5 +1,7 @@
 'use client'
 
+import { compact } from 'lodash-es'
+
 import {
   Evaluation,
   EvaluationMetadataType,
@@ -86,7 +88,7 @@ export default function ActiveEvaluationsTable({
         </TableRow>
       </TableHeader>
       <TableBody className='max-h-full overflow-y-auto'>
-        {evaluations.map((template) => (
+        {compact(evaluations).map((template) => (
           <ActiveEvaluationsTableRow
             key={template.id}
             evaluation={template}

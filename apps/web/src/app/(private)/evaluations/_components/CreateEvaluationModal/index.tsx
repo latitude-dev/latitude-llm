@@ -64,6 +64,8 @@ export default function CreateEvaluationModal({
     isCreating,
   } = useEvaluations({
     onSuccessCreate: (newEvaluation) => {
+      if (!newEvaluation) return // should never happen but it does
+
       if (newEvaluation.metadataType === EvaluationMetadataType.Manual) {
         router.push(
           ROUTES.evaluations.detail({ uuid: newEvaluation.uuid }).root,
