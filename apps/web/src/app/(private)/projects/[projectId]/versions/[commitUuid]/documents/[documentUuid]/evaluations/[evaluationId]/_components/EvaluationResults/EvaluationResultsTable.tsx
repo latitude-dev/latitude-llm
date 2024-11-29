@@ -183,14 +183,20 @@ export const EvaluationResultsTable = forwardRef<HTMLTableElement, Props>(
                   },
                 )}
               >
-                <TableCell preventDefault align='left'>
+                <TableCell
+                  preventDefault
+                  align='left'
+                  onClick={() =>
+                    toggleRow(
+                      evaluationResult.id,
+                      !isSelected(evaluationResult.id),
+                    )
+                  }
+                >
                   <Checkbox
                     fullWidth={false}
                     disabled={!!error}
                     checked={error ? false : isSelected(evaluationResult.id)}
-                    onCheckedChange={(checked) =>
-                      toggleRow(evaluationResult.id, checked)
-                    }
                   />
                 </TableCell>
                 <TableCell>

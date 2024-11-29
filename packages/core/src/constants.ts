@@ -425,3 +425,11 @@ export interface ProjectStats {
     cost: number
   }>
 }
+
+export type CsvData = {
+  headers: string[]
+  data: {
+    record: Record<string, string>
+    info: { columns: { name: string }[] }
+  }[]
+}

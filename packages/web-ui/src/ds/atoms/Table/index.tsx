@@ -165,7 +165,14 @@ type CellProps = TdHTMLAttributes<HTMLTableCellElement> & {
 }
 const TableCell = forwardRef<HTMLTableCellElement, CellProps>(
   (
-    { className, children, align = 'left', preventDefault = false, ...props },
+    {
+      className,
+      children,
+      align = 'left',
+      preventDefault = false,
+      onClick,
+      ...props
+    },
     ref,
   ) => (
     <td
@@ -179,6 +186,7 @@ const TableCell = forwardRef<HTMLTableCellElement, CellProps>(
         if (!preventDefault) return
         e.preventDefault()
         e.stopPropagation()
+        onClick?.(e)
       }}
     >
       <div

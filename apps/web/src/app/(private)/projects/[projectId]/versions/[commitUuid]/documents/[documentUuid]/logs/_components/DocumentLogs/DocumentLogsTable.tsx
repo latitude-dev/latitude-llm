@@ -9,6 +9,7 @@ import {
 } from '@latitude-data/core/repositories'
 import {
   Badge,
+  Checkbox,
   cn,
   Skeleton,
   Table,
@@ -27,6 +28,7 @@ import { formatCostInMillicents, formatDuration } from '$/app/_lib/formatUtils'
 import { getRunErrorFromErrorable } from '$/app/(private)/_lib/getRunErrorFromErrorable'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { LinkableTablePaginationFooter } from '$/components/TablePaginationFooter'
+import { SelectableRowsHook } from '$/hooks/useSelectableRows'
 import { relativeTime } from '$/lib/relativeTime'
 import { ROUTES } from '$/services/routes'
 import useDocumentLogsPagination from '$/stores/useDocumentLogsPagination'
@@ -34,8 +36,8 @@ import { useSearchParams } from 'next/navigation'
 
 import { ResultCellContent } from '../../../evaluations/[evaluationId]/_components/EvaluationResults/EvaluationResultsTable'
 
-function countLabel(count: number) {
-  return `${count} logs`
+const countLabel = (selected: number) => (count: number) => {
+  return selected ? `${selected} of ${count} logs selected` : `${count} logs`
 }
 
 type DocumentLogRow = DocumentLogWithMetadataAndError & {
@@ -97,10 +99,24 @@ type Props = {
   selectedLog: DocumentLogWithMetadataAndError | undefined
   setSelectedLog: (log: DocumentLogWithMetadataAndError | undefined) => void
   isLoading: boolean
+  selectableState: SelectableRowsHook
 }
 export const DocumentLogsTable = forwardRef<HTMLTableElement, Props>(
   function DocumentLogsTable(
-    { documentLogs, evaluationResults, selectedLog, setSelectedLog, isLoading },
+    {
+      documentLogs,
+      evaluationResults,
+      selectedLog,
+      setSelectedLog,
+      isLoading,
+      selectableState: {
+        headerState,
+        isSelected,
+        toggleRow,
+        toggleAll,
+        selectedCount,
+      },
+    },
     ref,
   ) {
     const searchParams = useSearchParams()
@@ -123,7 +139,7 @@ export const DocumentLogsTable = forwardRef<HTMLTableElement, Props>(
         className='table-auto'
         externalFooter={
           <LinkableTablePaginationFooter
-            countLabel={countLabel}
+            countLabel={countLabel(selectedCount)}
             isLoading={isPaginationLoading}
             pagination={
               pagination
@@ -144,6 +160,9 @@ export const DocumentLogsTable = forwardRef<HTMLTableElement, Props>(
       >
         <TableHeader className='sticky top-0 z-10'>
           <TableRow>
+            <TableHead>
+              <Checkbox checked={headerState} onCheckedChange={toggleAll} />
+            </TableHead>
             <TableHead>Time</TableHead>
             <TableHead>Version</TableHead>
             <TableHead>Origin</TableHead>
@@ -178,6 +197,19 @@ export const DocumentLogsTable = forwardRef<HTMLTableElement, Props>(
                   },
                 )}
               >
+                <TableCell
+                  preventDefault
+                  align='left'
+                  onClick={() =>
+                    toggleRow(documentLog.id, !isSelected(documentLog.id))
+                  }
+                >
+                  <Checkbox
+                    fullWidth={false}
+                    disabled={!!error}
+                    checked={error ? false : isSelected(documentLog.id)}
+                  />
+                </TableCell>
                 <TableCell>
                   <Text.H5 noWrap color={cellColor}>
                     {relativeTime(documentLog.createdAt)}

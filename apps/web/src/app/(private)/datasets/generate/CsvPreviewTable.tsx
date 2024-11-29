@@ -1,3 +1,4 @@
+import { CsvData } from '@latitude-data/core/browser'
 import {
   Table,
   TableBody,
@@ -9,13 +10,7 @@ import {
 } from '@latitude-data/web-ui'
 
 interface CsvPreviewTableProps {
-  csvData: {
-    headers: string[]
-    data: {
-      record: Record<string, string>
-      info: { columns: { name: string }[] }
-    }[]
-  }
+  csvData: CsvData
 }
 
 export function CsvPreviewTable({ csvData }: CsvPreviewTableProps) {
