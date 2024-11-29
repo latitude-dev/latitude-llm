@@ -1,16 +1,16 @@
-import { Workspace } from '@latitude-data/core/browser'
-import { CommitsRepository } from '@latitude-data/core/repositories'
+import { LogSources, Workspace } from '@latitude-data/core/browser'
 import { fetchDocumentLogWithPosition } from '@latitude-data/core/services/documentLogs/fetchDocumentLogWithPosition'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'
+import { decodeParameters } from '$/services/helpers'
 
 export const GET = errorHandler(
   authHandler(
     async (
       req: NextRequest,
       {
-        params: { projectId, commitUuid, documentLogUuid },
+        params: { documentLogUuid },
         workspace,
       }: {
         params: {
@@ -22,15 +22,19 @@ export const GET = errorHandler(
         workspace: Workspace
       },
     ) => {
-      const commitsScope = new CommitsRepository(workspace.id)
       const searchParams = req.nextUrl.searchParams
       const excludeErrors = searchParams.get('excludeErrors') === 'true'
-      const commit = await commitsScope
-        .getCommitByUuid({ uuid: commitUuid, projectId: Number(projectId) })
-        .then((r) => r.unwrap())
+      const { commitIds, logSources } = decodeParameters(req.nextUrl.search)
+      const filterOptions = {
+        commitIds: Array.isArray(commitIds) ? commitIds.map(Number) : [],
+        logSources: (Array.isArray(logSources)
+          ? logSources
+          : []) as LogSources[],
+      }
+
       const result = await fetchDocumentLogWithPosition({
         workspace,
-        commit,
+        filterOptions,
         documentLogUuid,
         excludeErrors,
       })

@@ -1,15 +1,17 @@
 import { useCallback, useState } from 'react'
 
 import { DocumentVersion } from '@latitude-data/core/browser'
-import { useCurrentCommit, useCurrentProject } from '@latitude-data/web-ui'
+import { useCurrentProject } from '@latitude-data/web-ui'
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
 import useDocumentLogs from '$/stores/documentLogs'
 import useDocumentLogWithPaginationPosition, {
   LogWithPosition,
 } from '$/stores/documentLogWithPaginationPosition'
 import useDocumentLogsPagination from '$/stores/useDocumentLogsPagination'
+import { useFilterOptions } from '$/hooks/useLogFilterOptions'
 
 const ONLY_ONE_PAGE = '1'
+
 export function useLogHistoryParams({
   document,
   commitVersionUuid,
@@ -17,6 +19,7 @@ export function useLogHistoryParams({
   document: DocumentVersion
   commitVersionUuid: string
 }) {
+  const { project } = useCurrentProject()
   const {
     mapDocParametersToInputs,
     history: { setHistoryLog, logUuid },
@@ -24,13 +27,13 @@ export function useLogHistoryParams({
     documentVersionUuid: document.documentUuid,
     commitVersionUuid,
   })
-  const { project } = useCurrentProject()
-  const { commit } = useCurrentCommit()
+
+  const filterOptions = useFilterOptions()
   const { data: pagination, isLoading: isLoadingCounter } =
     useDocumentLogsPagination({
-      projectId: project.id,
-      commitUuid: commit.uuid,
       documentUuid: document.documentUuid,
+      projectId: project.id,
+      filterOptions,
       page: '1', // Not used really. This is only for the counter.
       pageSize: ONLY_ONE_PAGE,
       excludeErrors: true,
@@ -47,10 +50,10 @@ export function useLogHistoryParams({
   )
   const { isLoading: isLoadingPosition } = useDocumentLogWithPaginationPosition(
     {
-      projectId: project.id,
-      commitUuid: commit.uuid,
-      document,
       documentLogUuid: logUuid,
+      document,
+      projectId: project.id,
+      filterOptions,
       onFetched: onFetchCurrentLog,
       excludeErrors: true,
     },
@@ -58,7 +61,7 @@ export function useLogHistoryParams({
 
   const { data: logs, isLoading: isLoadingLog } = useDocumentLogs({
     documentUuid: position === undefined ? undefined : document.documentUuid,
-    commitUuid: commit.uuid,
+    filterOptions,
     projectId: project.id,
     page: position === undefined ? undefined : String(position.position),
     pageSize: ONLY_ONE_PAGE,

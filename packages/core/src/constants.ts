@@ -82,6 +82,8 @@ export enum LogSources {
   SharedPrompt = 'shared_prompt',
 }
 
+export const LOG_SOURCES = Object.values(LogSources)
+
 export enum ErrorableEntity {
   DocumentLog = 'document_log',
   EvaluationResult = 'evaluation_result',
@@ -442,4 +444,9 @@ export enum SpanKind {
   Client = 'client',
   Producer = 'producer',
   Consumer = 'consumer',
+}
+
+export type DocumentLogFilterOptions = {
+  commitIds: number[]
+  logSources: LogSources[]
 }

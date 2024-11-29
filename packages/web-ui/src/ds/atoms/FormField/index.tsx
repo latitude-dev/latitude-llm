@@ -98,7 +98,7 @@ type InputWrapperProps = {
   formItemId: string
   formDescriptionId: string
   formMessageId: string
-  label?: string
+  label?: string | ReactNode
   badgeLabel?: boolean
   info?: string
   errorStyle?: ErrorStyle
@@ -140,7 +140,7 @@ function InlineInput({
     )
   }
 
-  const hasSubcontent = error || description
+  const hasSubcontent = error || description || label
   return (
     <TooltipLabel
       htmlFor={formItemId}
@@ -162,7 +162,7 @@ function InlineInput({
         >
           {children}
         </FormControl>
-        <div className='flex flex-col gap-y-1'>
+        <div className='flex flex-col gap-y-1 w-full items-center'>
           <div className='cursor-pointer'>{label}</div>
           <DescriptionAndError
             description={description}
@@ -221,7 +221,7 @@ export type FormFieldProps = Omit<
   'onChange'
 > & {
   children: ReactNode
-  label?: string
+  label?: string | ReactNode
   badgeLabel?: boolean
   description?: string | ReactNode
   info?: string

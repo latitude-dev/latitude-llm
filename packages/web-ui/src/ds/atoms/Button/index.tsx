@@ -5,6 +5,7 @@ import { Slot, Slottable } from '@radix-ui/react-slot'
 import { cn } from '../../../lib/utils'
 import { DotIndicator, DotIndicatorProps } from '../DotIndicator'
 import { Icon, IconProps } from '../Icons'
+import { font } from '../../tokens'
 
 const buttonContainerVariants = cva(
   cn(
@@ -49,10 +50,11 @@ const buttonContainerVariants = cva(
 
 const buttonVariants = cva(
   cn(
-    'w-full inline-flex items-center justify-center rounded-md text-sm font-sans font-medium transition-colors',
+    'w-full inline-flex items-center justify-center rounded-md font-sans font-medium transition-colors',
     'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2',
     'ring-offset-background',
     'group-disabled:opacity-50 group-disabled:pointer-events-none',
+    font.size.h5,
   ),
   {
     variants: {
@@ -76,7 +78,7 @@ const buttonVariants = cva(
         ),
       },
       size: {
-        default: 'py-1.5 px-3',
+        default: 'py-buttonDefaultVertical px-3',
         small: 'py-1 px-1.5',
         none: 'py-0 px-0',
         icon: 'h-6 w-6',
@@ -104,7 +106,7 @@ const buttonVariants = cva(
       {
         size: 'default',
         fanciness: 'fancy',
-        className: 'py-1',
+        className: '!py-1',
       },
       {
         size: 'small',
@@ -206,7 +208,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
           <div
             className={cn('flex flex-row items-center gap-x-2 cursor-pointer', {
               'w-full justify-center': fullWidth,
-              'overflow-hidden': ellipsis,
+              'overflow-hidden flex-grow min-w-0': ellipsis,
               'animate-pulse': isLoading,
             })}
           >
@@ -214,7 +216,15 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
             {iconProps && iconPlacement === 'left' ? (
               <Icon {...iconProps} />
             ) : null}
-            {children}
+            {children ? (
+              <div
+                className={cn('flex flex-row items-center', {
+                  'flex-grow flex-shrink truncate': ellipsis,
+                })}
+              >
+                {children}
+              </div>
+            ) : null}
             {iconProps && iconPlacement === 'right' ? (
               <Icon {...iconProps} />
             ) : null}

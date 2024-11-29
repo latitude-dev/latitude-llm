@@ -31,7 +31,7 @@ export function RewardsContent() {
   }
 
   return (
-    <div className='flex flex-col p-4 gap-2'>
+    <>
       <Text.H5>
         Get rewards and extend your runs limit forever by completing these
         actions
@@ -67,6 +67,6 @@ export function RewardsContent() {
           type={RewardType.SignupLaunchDay}
         />
       )}
-    </div>
+    </>
   )
 }

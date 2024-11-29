@@ -5,14 +5,17 @@ import {
   Commit,
   DocumentVersion,
   ErrorableEntity,
+  LOG_SOURCES,
   Project,
   Providers,
   User,
+  Workspace,
 } from '../../browser'
 import * as factories from '../../tests/factories'
 import { computeDocumentLogsAggregations } from './computeDocumentLogsAggregations'
 
 describe('computeDocumentLogsAggregations', () => {
+  let workspace: Workspace
   let user: User
   let project: Project
   let document: DocumentVersion
@@ -38,6 +41,7 @@ describe('computeDocumentLogsAggregations', () => {
     project = setup.project
     commit = setup.commit
     document = setup.documents[0]!
+    workspace = setup.workspace
   })
 
   it('computes correct aggregations for document logs', async () => {
@@ -51,8 +55,8 @@ describe('computeDocumentLogsAggregations', () => {
     })
 
     const result = await computeDocumentLogsAggregations({
+      workspace,
       documentUuid: document.documentUuid,
-      draft: commit,
     })
 
     expect(result.totalCount).toBe(2)
@@ -78,8 +82,12 @@ describe('computeDocumentLogsAggregations', () => {
     await factories.createDocumentLog({ document, commit: otherCommit })
 
     const result = await computeDocumentLogsAggregations({
+      workspace,
       documentUuid: document.documentUuid,
-      draft: commit,
+      filterOptions: {
+        commitIds: [commit.id],
+        logSources: LOG_SOURCES,
+      },
     })
 
     expect(result.totalCount).toBe(1)
@@ -101,8 +109,8 @@ describe('computeDocumentLogsAggregations', () => {
     await factories.createDocumentLog({ document, commit })
 
     const result = await computeDocumentLogsAggregations({
+      workspace,
       documentUuid: document.documentUuid,
-      draft: commit,
     })
 
     expect(result.totalCount).toBe(1)
@@ -110,8 +118,8 @@ describe('computeDocumentLogsAggregations', () => {
 
   it('returns zero values when no logs exist', async () => {
     const result = await computeDocumentLogsAggregations({
+      workspace,
       documentUuid: document.documentUuid,
-      draft: commit,
     })
 
     expect(result).toEqual({
@@ -134,8 +142,8 @@ describe('computeDocumentLogsAggregations', () => {
     })
 
     const result = await computeDocumentLogsAggregations({
+      workspace,
       documentUuid: document.documentUuid,
-      draft: commit,
     })
 
     expect(result.totalCount).toBe(1)

@@ -3,7 +3,7 @@
 import { ReactNode, useState } from 'react'
 import { isString } from 'lodash-es'
 
-import { Button, Icon, Popover, Text } from '@latitude-data/web-ui'
+import { Button, Popover, Text } from '@latitude-data/web-ui'
 import Link from 'next/link'
 
 export type BreadcrumbSelectorOption = {
@@ -22,26 +22,10 @@ export function BreadcrumbSelector({
 
   return (
     <Popover.Root open={isOpen} onOpenChange={setIsOpen}>
-      <Popover.Trigger asChild className='overflow-hidden'>
-        <Button variant='ghost' className='hover:bg-muted' ellipsis>
-          {isString(label) ? (
-            <Text.H5 color='foregroundMuted' noWrap ellipsis>
-              {label}
-            </Text.H5>
-          ) : (
-            label
-          )}
-          <Icon
-            name='chevronsUpDown'
-            color='foregroundMuted'
-            className='min-w-4'
-          />
-        </Button>
-      </Popover.Trigger>
-      <Popover.Content
-        align='start'
-        className='bg-background shadow-lg rounded-lg p-2 max-w-xl mt-4 border border-border z-20'
-      >
+      <Popover.ButtonTrigger buttonVariant='ghost' className='hover:bg-muted'>
+        {label}
+      </Popover.ButtonTrigger>
+      <Popover.Content align='start' size='small'>
         <ul className='flex flex-col gap-2'>
           {options.map(({ href, label: optionLabel }, idx) => (
             <li key={idx}>
