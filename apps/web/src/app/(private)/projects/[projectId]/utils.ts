@@ -24,9 +24,9 @@ export function getRedirectUrl({
   })
 
   if (!lastSeenDocumentUuid) {
-    return url.root
+    return url.overview.root
   } else {
-    return url.detail({ uuid: lastSeenDocumentUuid }).root
+    return url.documents.detail({ uuid: lastSeenDocumentUuid }).root
   }
 }
 
@@ -47,7 +47,7 @@ function getCommitUrl({
   ) {
     return PROJECT_ROUTE({ id: projectId }).commits.detail({
       uuid: HEAD_COMMIT,
-    }).documents
+    })
   }
 
   if (lastSeenCommitUuid) {
@@ -55,20 +55,20 @@ function getCommitUrl({
     if (commit) {
       return PROJECT_ROUTE({ id: projectId }).commits.detail({
         uuid: commit.uuid,
-      }).documents
+      })
     }
   }
 
   if (headCommit) {
     return PROJECT_ROUTE({ id: projectId }).commits.detail({
       uuid: HEAD_COMMIT,
-    }).documents
+    })
   }
 
   if (firstCommit) {
     return PROJECT_ROUTE({ id: projectId }).commits.detail({
       uuid: firstCommit.uuid,
-    }).documents
+    })
   }
 
   throw new NotFoundError('No commits found')

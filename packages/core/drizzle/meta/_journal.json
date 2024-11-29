@@ -736,6 +736,13 @@
       "when": 1732907858941,
       "tag": "0105_bouncy_queen_noir",
       "breakpoints": true
+    },
+    {
+      "idx": 106,
+      "version": "7",
+      "when": 1733237488948,
+      "tag": "0106_fat_silverclaw",
+      "breakpoints": true
     }
   ]
 }

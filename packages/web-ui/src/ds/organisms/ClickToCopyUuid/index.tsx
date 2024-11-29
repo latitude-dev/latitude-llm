@@ -11,7 +11,7 @@ export function ClickToCopyUuid({
   return (
     <ClickToCopy copyValue={uuid}>
       <Badge variant={variant} className='ml-2'>
-        {uuid.split('-')[0]}
+        {uuid.slice(-8)}
       </Badge>
     </ClickToCopy>
   )

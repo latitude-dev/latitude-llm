@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { Providers, Workspace } from '../../browser'
 import { NotFoundError } from '../../lib'
 import * as factories from '../../tests/factories'
-import { generateCsvFromDocumentLogs } from './generateCsvFromDocumentLogs'
+import { generateCsvFromDocumentLogs } from './generateCsvFromDocumentLogs.1'
 
 describe('generateCsvFromDocumentLogs', () => {
   let workspace: Workspace

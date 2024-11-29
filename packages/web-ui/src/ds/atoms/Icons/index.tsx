@@ -33,6 +33,7 @@ import {
   ListOrdered,
   LoaderCircle,
   Lock,
+  Logs,
   MinusIcon,
   MonitorIcon,
   Moon,
@@ -116,6 +117,7 @@ const Icons = {
   rollText: ScrollTextIcon,
   notEqual: EqualNotIcon,
   settings: SettingsIcon,
+  logs: Logs,
 }
 
 export type IconName = keyof typeof Icons

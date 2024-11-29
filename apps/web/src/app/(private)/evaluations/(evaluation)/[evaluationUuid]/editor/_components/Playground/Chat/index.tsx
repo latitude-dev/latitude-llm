@@ -18,14 +18,14 @@ import {
   useAutoScroll,
 } from '@latitude-data/web-ui'
 import { runPromptAction } from '$/actions/prompts/run'
+import useEvaluationPrompt from '$/stores/evaluationPrompt'
+import { LanguageModelUsage } from 'ai'
+import { readStreamableValue } from 'ai/rsc'
 import {
   StreamMessage,
   Timer,
   TokenUsage,
-} from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/DocumentEditor/Editor/Playground/Chat'
-import useEvaluationPrompt from '$/stores/evaluationPrompt'
-import { LanguageModelUsage } from 'ai'
-import { readStreamableValue } from 'ai/rsc'
+} from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/(commit)/documents/[documentUuid]/_components/DocumentEditor/Editor/Playground/Chat'
 
 export default function Chat({
   clearChat,

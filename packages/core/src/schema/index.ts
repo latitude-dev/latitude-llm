@@ -45,5 +45,8 @@ export * from './models/evaluationResultableNumbers'
 export * from './models/evaluationResultableTexts'
 export * from './models/evaluationResultableBooleans'
 
+export * from './models/traces'
+export * from './models/spans'
+
 // Public sharing
 export * from './models/publishedDocuments'

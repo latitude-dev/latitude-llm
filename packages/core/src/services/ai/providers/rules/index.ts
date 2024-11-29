@@ -5,22 +5,8 @@ import { Providers } from '../models'
 import { applyAnthropicRules } from './anthropic'
 import { applyCustomRules } from './custom'
 import { applyGoogleRules } from './google'
+import { AppliedRules } from './types'
 import { vercelSdkRules } from './vercel'
-
-export enum ProviderRules {
-  Anthropic = 'anthropic',
-  Google = 'google',
-  VercelSDK = 'latitude',
-  Custom = 'custom',
-}
-
-type ProviderRule = { rule: ProviderRules; ruleMessage: string }
-
-export type AppliedRules = {
-  rules: ProviderRule[]
-  messages: Message[]
-  config: Config
-}
 
 type Props = {
   providerType: Providers

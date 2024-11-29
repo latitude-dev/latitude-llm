@@ -25,6 +25,7 @@ export type JobDataMap = {
   [Jobs.publishToAnalyticsJob]: LatitudeEvent
   [Jobs.runLiveEvaluationJob]: RunLiveEvaluationJobData
   [Jobs.uploadDocumentLogsJob]: UploadDocumentLogsJobData
+  [Jobs.createDocumentLogFromSpanJob]: CreateDocumentLogFromSpanJobData
 }
 
 type JobData<J extends Jobs> = J extends keyof JobDataMap

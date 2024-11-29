@@ -1,4 +1,3 @@
-import { ContentType, MessageRole } from '@latitude-data/compiler'
 import { LogSources } from '@latitude-data/core/browser'
 import { Latitude } from '$sdk/index'
 import { ApiErrorCodes, LatitudeApiError } from '$sdk/utils/errors'
@@ -52,10 +51,10 @@ describe('/chat', () => {
           conversationUuid,
           [
             {
-              role: MessageRole.user,
+              role: 'user',
               content: [
                 {
-                  type: ContentType.text,
+                  type: 'text',
                   text: 'fake-user-content',
                 },
               ],
@@ -73,10 +72,10 @@ describe('/chat', () => {
             __internal: { source: LogSources.API },
             messages: [
               {
-                role: MessageRole.user,
+                role: 'user',
                 content: [
                   {
-                    type: ContentType.text,
+                    type: 'text',
                     text: 'fake-user-content',
                   },
                 ],
@@ -104,10 +103,10 @@ describe('/chat', () => {
           conversationUuid,
           [
             {
-              role: MessageRole.user,
+              role: 'user',
               content: [
                 {
-                  type: ContentType.text,
+                  type: 'text',
                   text: 'fake-user-content',
                 },
               ],
@@ -147,10 +146,10 @@ describe('/chat', () => {
         conversationUuid,
         [
           {
-            role: MessageRole.user,
+            role: 'user',
             content: [
               {
-                type: ContentType.text,
+                type: 'text',
                 text: 'fake-user-content',
               },
             ],
@@ -187,10 +186,10 @@ describe('/chat', () => {
         conversationUuid,
         [
           {
-            role: MessageRole.user,
+            role: 'user',
             content: [
               {
-                type: ContentType.text,
+                type: 'text',
                 text: 'fake-user-content',
               },
             ],
@@ -227,10 +226,10 @@ describe('/chat', () => {
           conversationUuid,
           [
             {
-              role: MessageRole.user,
+              role: 'user',
               content: [
                 {
-                  type: ContentType.text,
+                  type: 'text',
                   text: 'fake-user-content',
                 },
               ],
@@ -270,10 +269,10 @@ describe('/chat', () => {
           conversationUuid,
           [
             {
-              role: MessageRole.user,
+              role: 'user',
               content: [
                 {
-                  type: ContentType.text,
+                  type: 'text',
                   text: 'fake-user-content',
                 },
               ],
@@ -291,10 +290,10 @@ describe('/chat', () => {
             __internal: { source: LogSources.API },
             messages: [
               {
-                role: MessageRole.user,
+                role: 'user',
                 content: [
                   {
-                    type: ContentType.text,
+                    type: 'text',
                     text: 'fake-user-content',
                   },
                 ],
@@ -321,10 +320,10 @@ describe('/chat', () => {
           conversationUuid,
           [
             {
-              role: MessageRole.user,
+              role: 'user',
               content: [
                 {
-                  type: ContentType.text,
+                  type: 'text',
                   text: 'fake-user-content',
                 },
               ],
@@ -355,10 +354,10 @@ describe('/chat', () => {
         conversationUuid,
         [
           {
-            role: MessageRole.user,
+            role: 'user',
             content: [
               {
-                type: ContentType.text,
+                type: 'text',
                 text: 'fake-user-content',
               },
             ],
@@ -395,10 +394,10 @@ describe('/chat', () => {
         conversationUuid,
         [
           {
-            role: MessageRole.user,
+            role: 'user',
             content: [
               {
-                type: ContentType.text,
+                type: 'text',
                 text: 'fake-user-content',
               },
             ],
@@ -435,10 +434,10 @@ describe('/chat', () => {
           conversationUuid,
           [
             {
-              role: MessageRole.user,
+              role: 'user',
               content: [
                 {
-                  type: ContentType.text,
+                  type: 'text',
                   text: 'fake-user-content',
                 },
               ],

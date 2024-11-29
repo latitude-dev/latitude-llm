@@ -124,6 +124,9 @@ export const ROUTES = {
               overview: {
                 root: `${root}/overview`,
               },
+              traces: {
+                root: `${root}/traces`,
+              },
               documents: {
                 root: rootDocuments,
                 detail: ({ uuid }: { uuid: string }) => {

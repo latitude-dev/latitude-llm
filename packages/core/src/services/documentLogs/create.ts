@@ -1,4 +1,4 @@
-import { Message } from '@latitude-data/compiler'
+import { Message, ToolCall } from '@latitude-data/compiler'
 
 import { Commit, DocumentLog, LogSources } from '../../browser'
 import { database } from '../../client'
@@ -28,6 +28,7 @@ export type CreateDocumentLogProps = {
     providerLog?: {
       messages: Message[]
       responseText?: string
+      toolCalls?: ToolCall[]
     }
   }
 }
@@ -78,6 +79,7 @@ export async function createDocumentLog(
         documentLogUuid: documentLog.uuid,
         messages: providerLog.messages,
         responseText: providerLog.responseText,
+        toolCalls: providerLog.toolCalls,
         generatedAt: new Date(),
         source,
         workspace,

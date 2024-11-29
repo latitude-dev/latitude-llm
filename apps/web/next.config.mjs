@@ -12,10 +12,13 @@ const nextConfig = {
   output: 'standalone',
   transpilePackages: INTERNAL_PACKAGES,
   serverExternalPackages: [
+    '@latitude-data/sdk',
+    '@latitude-data/promptl',
+    '@latitude-data/compiler',
+    '@sentry/nextjs',
     'bullmq',
     'jose',
     'nodemailer-mailgun-transport',
-    '@sentry/nextjs',
   ],
   experimental: {
     // Dear developer,
@@ -32,7 +35,7 @@ const nextConfig = {
     // the nextjs server as we do now.
     serverActions: {
       bodySizeLimit: '25mb',
-    },
+    }
   },
   webpack: (config) => {
     config.ignoreWarnings = [{ module: /@opentelemetry\/instrumentation/ }]
