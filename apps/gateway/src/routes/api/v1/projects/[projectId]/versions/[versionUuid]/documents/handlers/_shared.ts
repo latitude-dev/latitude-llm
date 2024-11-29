@@ -39,7 +39,12 @@ export const getData = async ({
   const commitsScope = new CommitsRepository(workspace.id)
   const docsScope = new DocumentVersionsRepository(workspace.id)
 
-  const projectResult = await projectsScope.getProjectById(projectId)
+  const pid = Number(projectId)
+  if (isNaN(pid)) {
+    return Result.error(new BadRequestError(`Invalid project id ${projectId}`))
+  }
+
+  const projectResult = await projectsScope.getProjectById(pid)
   if (projectResult.error) return projectResult
   const project = projectResult.value
 
