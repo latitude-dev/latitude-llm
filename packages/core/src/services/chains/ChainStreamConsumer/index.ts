@@ -1,4 +1,4 @@
-import { MessageRole } from '@latitude-data/compiler'
+import { ContentType, MessageRole, ToolRequestContent } from '@latitude-data/compiler'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
 
 import {
@@ -8,7 +8,6 @@ import {
   StreamEventTypes,
   StreamType,
 } from '../../../constants'
-import { objectToString } from '../../../helpers'
 import { Config } from '../../ai'
 import { ChainError } from '../ChainErrors'
 import { ValidatedStep } from '../ChainValidator'
@@ -17,16 +16,16 @@ export function parseResponseText(response: ChainStepResponse<StreamType>) {
   if (response.streamType === 'object') return response.text || ''
 
   const text = response.text
-  const hasTextResponse = text && text.length > 0
-  if (hasTextResponse) return text
+  if (text && text.length > 0) return text
 
-  if (!response?.toolCalls?.length) return text ?? ''
-
-  const toolsString = objectToString(
-    response.toolCalls,
-    'Error parsing tool calls',
-  )
-  return `Tool calls requested: ${toolsString}`
+  return response.toolCalls.map((toolCall) => {
+    return {
+      type: ContentType.toolCall,
+      toolCallId: toolCall.id,
+      toolName: toolCall.name,
+      args: toolCall.arguments,
+    } as ToolRequestContent
+  })
 }
 
 export function enqueueChainEvent(
