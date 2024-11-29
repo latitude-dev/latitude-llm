@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useRef } from 'react'
 
-import { Monaco } from '@monaco-editor/react'
-import { languages } from 'monaco-editor'
+import { loader, type Monaco } from '@monaco-editor/react'
+import * as monaco from 'monaco-editor'
 
 import { DocumentError } from '../types'
 import { themeRules, tokenizer, useThemeColors } from './language'
+
+loader.config({ monaco })
 
 export function useMonacoSetup({
   errorFixFn,
@@ -56,7 +58,7 @@ export function useMonacoSetup({
     })
 
     if (errorFixFn) {
-      const codeActionProvider: languages.CodeActionProvider = {
+      const codeActionProvider: monaco.languages.CodeActionProvider = {
         provideCodeActions: function (_model, _range, context, _token) {
           const actions = [
             {
