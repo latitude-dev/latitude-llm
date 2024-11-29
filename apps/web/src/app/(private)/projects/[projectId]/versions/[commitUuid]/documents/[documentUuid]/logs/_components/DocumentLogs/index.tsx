@@ -1,8 +1,12 @@
 'use client'
 
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 
-import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
+import {
+  DocumentLogWithMetadataAndError,
+  ResultWithEvaluation,
+} from '@latitude-data/core/repositories'
+import { DocumentLogsAggregations } from '@latitude-data/core/services/documentLogs/computeDocumentLogsAggregations'
 import {
   Button,
   cn,
@@ -12,16 +16,8 @@ import {
   useCurrentProject,
 } from '@latitude-data/web-ui'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
-import {
-  EventArgs,
-  useSockets,
-} from '$/components/Providers/WebsocketsProvider/useSockets'
 import { useSelectableRows } from '$/hooks/useSelectableRows'
-import useDocumentLogs, { documentLogPresenter } from '$/stores/documentLogs'
-import useDocumentLogsAggregations from '$/stores/documentLogsAggregations'
-import useEvaluationResultsByDocumentLogs from '$/stores/evaluationResultsByDocumentLogs'
 import useProviderLogs from '$/stores/providerLogs'
-import { useSearchParams } from 'next/navigation'
 
 import { AggregationPanels } from './AggregationPanels'
 import { DocumentLogInfo } from './DocumentLogInfo'
@@ -29,64 +25,23 @@ import { DocumentLogsTable } from './DocumentLogsTable'
 import { ExportLogsModal } from './ExportLogsModal'
 import { LogsOverTimeChart } from './LogsOverTime'
 
-const useDocumentLogSocket = (
-  documentUuid: string,
-  mutate: ReturnType<typeof useDocumentLogs<false>>['mutate'],
-) => {
-  const onMessage = useCallback(
-    (args: EventArgs<'documentLogCreated'>) => {
-      if (documentUuid !== args.documentUuid) return
-
-      mutate(
-        (data) => {
-          if (!data) return [args.documentLogWithMetadata]
-
-          return [
-            {
-              ...documentLogPresenter(args.documentLogWithMetadata),
-              realtimeAdded: true,
-            },
-            ...data,
-          ]
-        },
-        { revalidate: false },
-      )
-
-      setTimeout(() => {
-        mutate(
-          (data) => {
-            if (!data) return data
-
-            return data.map((d) => {
-              if (d.uuid === args.documentLogWithMetadata.uuid) {
-                return { ...d, realtimeAdded: false }
-              }
-
-              return d
-            })
-          },
-          { revalidate: false },
-        )
-      }, 1000)
-    },
-    [documentUuid, mutate],
-  )
-
-  useSockets({ event: 'documentLogCreated', onMessage })
-}
-
 export function DocumentLogs({
-  documentLogs: serverDocumentLogs,
+  documentLogs,
   selectedLog: serverSelectedLog,
+  aggregations,
+  isAggregationsLoading,
+  evaluationResults,
+  isEvaluationResultsLoading,
 }: {
   documentLogs: DocumentLogWithMetadataAndError[]
   selectedLog?: DocumentLogWithMetadataAndError
+  aggregations?: DocumentLogsAggregations
+  isAggregationsLoading: boolean
+  evaluationResults: Record<number, ResultWithEvaluation[]>
+  isEvaluationResultsLoading: boolean
 }) {
   const stickyRef = useRef<HTMLTableElement>(null)
   const sidebarWrapperRef = useRef<HTMLDivElement>(null)
-  const searchParams = useSearchParams()
-  const page = searchParams.get('page')
-  const pageSize = searchParams.get('pageSize')
   const { document } = useCurrentDocument()
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
@@ -97,31 +52,6 @@ export function DocumentLogs({
     useProviderLogs({
       documentLogUuid: selectedLog?.uuid,
     })
-  const { data: documentLogs, mutate } = useDocumentLogs(
-    {
-      documentUuid: document.documentUuid,
-      commitUuid: commit.uuid,
-      projectId: project.id,
-      page,
-      pageSize,
-      excludeErrors: false,
-    },
-    {
-      fallbackData: serverDocumentLogs,
-    },
-  )
-  const { data: aggregations, isLoading: isAggregationsLoading } =
-    useDocumentLogsAggregations({
-      documentUuid: document.documentUuid,
-      commitUuid: commit.uuid,
-      projectId: project.id,
-    })
-  const { data: evaluationResults, isLoading: isEvaluationResultsLoading } =
-    useEvaluationResultsByDocumentLogs({
-      documentLogIds: documentLogs.map((l) => l.id),
-    })
-
-  useDocumentLogSocket(document.documentUuid, mutate)
 
   const documentLogIds = useMemo(
     () => documentLogs.map((r) => r.id),

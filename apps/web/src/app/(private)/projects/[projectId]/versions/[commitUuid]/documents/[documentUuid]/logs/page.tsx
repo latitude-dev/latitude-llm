@@ -1,16 +1,21 @@
-import { Commit, Workspace } from '@latitude-data/core/browser'
+import {
+  Commit,
+  DocumentLogFilterOptions,
+  LogSources,
+  Workspace,
+} from '@latitude-data/core/browser'
 import { QueryParams } from '@latitude-data/core/lib/pagination/buildPaginatedUrl'
 import { computeDocumentLogsWithMetadataQuery } from '@latitude-data/core/services/documentLogs/computeDocumentLogsWithMetadata'
 import { fetchDocumentLogWithPosition } from '@latitude-data/core/services/documentLogs/fetchDocumentLogWithPosition'
-import { Button, TableWithHeader } from '@latitude-data/web-ui'
-import { findCommitCached } from '$/app/(private)/_data-access'
+import {
+  findCommitCached,
+  findCommitsByProjectCached,
+} from '$/app/(private)/_data-access'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
-import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
-import { DocumentLogs } from './_components/DocumentLogs'
-import { DocumentLogBlankSlate } from './_components/DocumentLogs/DocumentLogBlankSlate'
+import { DocumentLogsPage } from './_components'
 
 async function fetchDocumentLogPage({
   workspace,
@@ -49,7 +54,14 @@ export default async function DocumentPage({
   const { projectId: pjid, commitUuid, documentUuid } = await params
   const projectId = Number(pjid)
   const commit = await findCommitCached({ projectId, uuid: commitUuid })
-  const { logUuid, pageSize, page: pg } = await searchParams
+  const commits = await findCommitsByProjectCached({ projectId })
+  const {
+    logUuid,
+    pageSize,
+    page: pg,
+    versions: _selectedCommitsIds,
+    origins: _selectedLogSources,
+  } = await searchParams
   const documentLogUuid = logUuid?.toString()
   const page = pg?.toString?.()
   const currentLogPage = await fetchDocumentLogPage({
@@ -68,6 +80,28 @@ export default async function DocumentPage({
     )
   }
 
+  const originalSelectedCommitsIds = [
+    ...commits.filter((c) => !!c.mergedAt).map((c) => c.id),
+    ...(!commit.mergedAt ? [commit.id] : []),
+  ]
+
+  const selectedCommitsIds = (
+    Array.isArray(_selectedCommitsIds)
+      ? _selectedCommitsIds
+      : (_selectedCommitsIds?.split(',') ?? originalSelectedCommitsIds)
+  ).map(Number)
+
+  const selectedSources = (
+    Array.isArray(_selectedLogSources)
+      ? _selectedLogSources
+      : (_selectedLogSources?.split(',') ?? Object.values(LogSources))
+  ) as LogSources[]
+
+  const logsFilterOptions: DocumentLogFilterOptions = {
+    commitIds: selectedCommitsIds,
+    logSources: selectedSources,
+  }
+
   const rows = await computeDocumentLogsWithMetadataQuery({
     workspaceId: workspace.id,
     documentUuid,
@@ -79,34 +113,11 @@ export default async function DocumentPage({
   const selectedLog = rows.find((r) => r.uuid === documentLogUuid)
 
   return (
-    <div className='flex flex-grow min-h-0 flex-col w-full p-6 gap-2 min-w-0'>
-      {!rows.length && (
-        <DocumentLogBlankSlate
-          commit={commit}
-          projectId={projectId}
-          documentUuid={documentUuid}
-        />
-      )}
-      {!!rows.length && (
-        <TableWithHeader
-          title='Logs'
-          table={<DocumentLogs documentLogs={rows} selectedLog={selectedLog} />}
-          actions={
-            <Link
-              href={
-                ROUTES.projects
-                  .detail({ id: projectId })
-                  .commits.detail({ uuid: commit.uuid })
-                  .documents.detail({ uuid: documentUuid }).logs.upload
-              }
-            >
-              <Button fancy variant='outline'>
-                Upload logs
-              </Button>
-            </Link>
-          }
-        />
-      )}
-    </div>
+    <DocumentLogsPage
+      documentLogs={rows}
+      selectedLog={selectedLog}
+      originalSelectedCommitsIds={originalSelectedCommitsIds}
+      documengLogFilterOptions={logsFilterOptions}
+    />
   )
 }
