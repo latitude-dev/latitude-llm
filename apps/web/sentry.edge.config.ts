@@ -8,6 +8,7 @@ import * as Sentry from '@sentry/nextjs'
 Sentry.init({
   // TODO: This should be the process.env.SENTRY_DSN env var
   dsn: process.env.SENTRY_DSN,
+  enabled: process.env.NODE_ENV === 'production',
 
   // Setting this option to true will print useful information to the console while you're setting up Sentry.
   debug: false,

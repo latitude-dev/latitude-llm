@@ -5,6 +5,8 @@ Sentry.init({
   dsn: env.SENTRY_DSN,
 
   tracesSampleRate: 1.0,
+
+  enabled: env.NODE_ENV === 'production',
 })
 
 export const captureException = (error: Error) => {
