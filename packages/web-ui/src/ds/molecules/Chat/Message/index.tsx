@@ -103,24 +103,22 @@ const ContentValue = ({
       return <div>Image content not implemented yet</div>
 
     case ContentType.toolCall:
-      const toolCall = value as ToolRequestContent
       return (
         <div className='pt-2 w-full'>
           <div className='overflow-hidden rounded-lg w-full'>
             <CodeBlock language='json'>
-              {JSON.stringify(toolCall, null, 2)}
+              {JSON.stringify(value as ToolRequestContent, null, 2)}
             </CodeBlock>
           </div>
         </div>
       )
 
     case ContentType.toolResult:
-      const toolResult = value as ToolContent
       return (
         <div className='pt-2 w-full'>
           <div className='overflow-hidden rounded-lg w-full'>
             <CodeBlock language='json'>
-              {JSON.stringify(toolResult, null, 2)}
+              {JSON.stringify(value as ToolContent, null, 2)}
             </CodeBlock>
           </div>
         </div>

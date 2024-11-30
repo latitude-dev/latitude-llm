@@ -1,4 +1,8 @@
-import { ContentType, MessageRole, ToolRequestContent } from '@latitude-data/compiler'
+import {
+  ContentType,
+  MessageRole,
+  ToolRequestContent,
+} from '@latitude-data/compiler'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
 
 import {
@@ -11,6 +15,7 @@ import {
 import { Config } from '../../ai'
 import { ChainError } from '../ChainErrors'
 import { ValidatedStep } from '../ChainValidator'
+import { objectToString } from '../../../helpers'
 
 export function parseResponseText(response: ChainStepResponse<StreamType>) {
   if (response.streamType === 'object') return response.text || ''
@@ -18,14 +23,16 @@ export function parseResponseText(response: ChainStepResponse<StreamType>) {
   const text = response.text
   if (text && text.length > 0) return text
 
-  return response.toolCalls.map((toolCall) => {
-    return {
-      type: ContentType.toolCall,
-      toolCallId: toolCall.id,
-      toolName: toolCall.name,
-      args: toolCall.arguments,
-    } as ToolRequestContent
-  })
+  return objectToString(
+    response.toolCalls.map((toolCall) => {
+      return {
+        type: ContentType.toolCall,
+        toolCallId: toolCall.id,
+        toolName: toolCall.name,
+        args: toolCall.arguments,
+      } as ToolRequestContent
+    }),
+  )
 }
 
 export function enqueueChainEvent(
