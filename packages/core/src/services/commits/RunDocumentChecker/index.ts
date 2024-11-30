@@ -74,7 +74,7 @@ export class RunDocumentChecker {
         return Result.ok(
           new PromptlChain({
             prompt: metadata.resolvedPrompt,
-            parameters: this.parameters,
+            parameters: this.processParameters(this.parameters),
             adapter: Adapters.default,
           }),
         )
@@ -100,5 +100,28 @@ export class RunDocumentChecker {
         details: error.details,
       },
     }).then((r) => r.unwrap())
+  }
+
+  private processParameters(
+    parameters: Record<string, unknown>,
+  ): Record<string, unknown> {
+    const result = Object.entries(parameters).reduce(
+      (acc, [key, value]) => {
+        if (typeof value === 'string') {
+          try {
+            acc[key] = JSON.parse(value as string)
+          } catch (e) {
+            acc[key] = value
+          }
+        } else {
+          acc[key] = value
+        }
+
+        return acc
+      },
+      {} as Record<string, unknown>,
+    )
+
+    return result
   }
 }
