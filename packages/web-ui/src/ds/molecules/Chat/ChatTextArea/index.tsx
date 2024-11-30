@@ -37,7 +37,7 @@ export function ChatTextArea({
   )
 
   return (
-    <div className='flex relative w-full border border-border bg-secondary rounded-md'>
+    <div className='flex relative w-full border border-border bg-secondary dark:bg-foreground/10 rounded-md'>
       <TextareaAutosize
         className='bg-transparent w-full px-2 pt-2 pb-14 resize-none text-sm'
         disabled={disabled}

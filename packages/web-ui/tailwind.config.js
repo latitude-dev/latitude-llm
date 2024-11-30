@@ -5,7 +5,11 @@ export default {
   theme: {
     container: {
       center: true,
-      padding: '2rem',
+      padding: {
+        DEFAULT: '1rem',
+        sm: '2rem',
+        lg: '2rem',
+      },
       screens: {
         '2xl': '1400px',
       },
@@ -110,9 +114,18 @@ export default {
         'text-gradient': 'gradient-animation 3s linear infinite',
         shine: 'shine 12s linear infinite',
       },
+      width: {
+        modal: '580px',
+        'modal-lg': '720px',
+      },
+      minWidth: {
+        modal: '580px',
+        'modal-lg': '720px',
+      },
       maxWidth: {
         modal: '580px',
         'modal-lg': '720px',
+        chat: '1024px'
       },
       transitionDelay: {
         250: '250ms',

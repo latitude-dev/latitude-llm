@@ -1,11 +1,34 @@
 'use client'
 
-import { SessionUser, Text, ThemeButton } from '@latitude-data/web-ui'
+import { ReactNode } from 'react'
+
+import { cn, SessionUser, Text, ThemeButton } from '@latitude-data/web-ui'
 
 import AvatarDropdown from './AvatarDropdown'
 import { HeaderBreadcrumb } from './Breadcrumb'
 import { RewardsButton } from './Rewards'
 import { UsageIndicator } from './UsageIndicator'
+
+export function AppHeaderWrapper({
+  children,
+  xPadding = 'normal',
+}: {
+  children: ReactNode
+  xPadding?: 'normal' | 'none'
+}) {
+  return (
+    <header
+      className={cn(
+        'flex flex-row items-center justify-between',
+        'border-b border-b-border bg-background',
+        'sticky top-0 isolate px-6 py-3 z-10',
+        { 'px-6': xPadding === 'normal', 'px-0': xPadding === 'none' },
+      )}
+    >
+      {children}
+    </header>
+  )
+}
 
 type INavigationLink = {
   label: string
@@ -34,7 +57,7 @@ export default function AppHeader({
   currentUser,
 }: AppHeaderProps) {
   return (
-    <header className='flex flex-row items-center justify-between border-b border-b-border bg-background sticky top-0 isolate px-6 py-3 z-10'>
+    <AppHeaderWrapper>
       <HeaderBreadcrumb />
       <div className='flex flex-row items-center gap-x-6 pl-6'>
         <nav className='flex flex-row gap-x-4 items-center'>
@@ -47,6 +70,6 @@ export default function AppHeader({
         <AvatarDropdown currentUser={currentUser} />
         <ThemeButton />
       </div>
-    </header>
+    </AppHeaderWrapper>
   )
 }

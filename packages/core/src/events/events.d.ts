@@ -47,6 +47,7 @@ export type Events =
   | 'documentCreated'
   | 'evaluationResultCreated'
   | 'documentRunRequested'
+  | 'publicDocumentRunRequested'
   | 'chatMessageRequested'
   | 'batchEvaluationRunRequested'
   | 'runDocumentInBatchRequested'
@@ -287,14 +288,23 @@ export type EvaluationResultCreatedEvent = LatitudeEventGeneric<
   }
 >
 
+type CommonDataDocumentRunRequestedEvent = {
+  projectId: number
+  commitUuid: string
+  documentPath: string
+  parameters: Record<string, unknown>
+  workspaceId: number
+}
+export type PublicDocumentRunRequestedEvent = LatitudeEventGeneric<
+  'publicDocumentRunRequested',
+  CommonDataDocumentRunRequestedEvent & {
+    publishedDocumentUuid: string
+  }
+>
+
 export type DocumentRunRequestedEvent = LatitudeEventGeneric<
   'documentRunRequested',
-  {
-    projectId: number
-    commitUuid: string
-    documentPath: string
-    parameters: Record<string, unknown>
-    workspaceId: number
+  CommonDataDocumentRunRequestedEvent & {
     userEmail: string
   }
 >
@@ -403,6 +413,7 @@ export type LatitudeEvent =
   | DocumentCreatedEvent
   | EvaluationResultCreatedEvent
   | DocumentRunRequestedEvent
+  | PublicDocumentRunRequestedEvent
   | ChatMessageRequestedEvent
   | BatchEvaluationRunRequestedEvent
   | RunDocumentInBatchRequestedEvent
@@ -436,6 +447,7 @@ export interface IEventsHandlers {
   documentCreated: EventHandler<DocumentCreatedEvent>[]
   evaluationResultCreated: EventHandler<EvaluationResultCreatedEvent>[]
   documentRunRequested: EventHandler<DocumentRunRequestedEvent>[]
+  publicDocumentRunRequested: EventHandler<PublicDocumentRunRequestedEvent>[]
   chatMessageRequested: EventHandler<ChatMessageRequestedEvent>[]
   batchEvaluationRunRequested: EventHandler<BatchEvaluationRunRequestedEvent>[]
   runDocumentInBatchRequested: EventHandler<RunDocumentInBatchRequestedEvent>[]

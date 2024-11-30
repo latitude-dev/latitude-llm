@@ -80,6 +80,7 @@ export enum LogSources {
   Playground = 'playground',
   Evaluation = 'evaluation',
   User = 'user',
+  SharedPrompt = 'shared_prompt',
 }
 
 export enum ErrorableEntity {
