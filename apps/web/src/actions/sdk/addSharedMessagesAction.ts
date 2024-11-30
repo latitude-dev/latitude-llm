@@ -2,46 +2,46 @@
 
 import { LogSources, StreamEventTypes } from '@latitude-data/core/browser'
 import { publisher } from '@latitude-data/core/events/publisher'
-import {
-  type ChainEventDto,
-  type Message,
-  type StreamChainResponse,
-} from '@latitude-data/sdk'
+import { type ChainEventDto, type Message } from '@latitude-data/sdk'
 import { createSdk } from '$/app/(private)/_lib/createSdk'
-import { getCurrentUserOrError } from '$/services/auth/getCurrentUser'
-import { createStreamableValue, StreamableValue } from 'ai/rsc'
+import { createStreamableValue } from 'ai/rsc'
+import { findSharedDocumentCached } from '$/app/(public)/_data_access'
+import { AddMessagesResponse } from '$/actions/sdk/addMessagesAction'
 
 type AddMessagesActionProps = {
+  publishedDocumentUuid: string
   documentLogUuid: string
   messages: Message[]
 }
-export type AddMessagesResponse = Promise<{
-  output: StreamableValue<{ event: StreamEventTypes; data: ChainEventDto }>
-  response: Promise<StreamChainResponse | undefined>
-}>
 export type AddMessagesActionFn = (
   _: AddMessagesActionProps,
 ) => AddMessagesResponse
 
-export async function addMessagesAction({
+export async function addSharedMessagesAction({
+  publishedDocumentUuid,
   documentLogUuid,
   messages,
 }: AddMessagesActionProps) {
-  const { workspace, user } = await getCurrentUserOrError()
+  const result = await findSharedDocumentCached(publishedDocumentUuid)
 
+  if (result.error) {
+    throw result.error
+  }
+
+  const { workspace } = result.value
   publisher.publishLater({
-    type: 'chatMessageRequested',
+    type: 'sharedChatMessageRequested',
     data: {
+      workspaceId: workspace.id,
+      publishedDocumentUuid,
       documentLogUuid,
       messages,
-      workspaceId: workspace.id,
-      userEmail: user.email,
     },
   })
 
   const sdk = await createSdk({
     workspace,
-    __internal: { source: LogSources.Playground },
+    __internal: { source: LogSources.SharedPrompt },
   }).then((r) => r.unwrap())
   const stream = createStreamableValue<
     { event: StreamEventTypes; data: ChainEventDto },

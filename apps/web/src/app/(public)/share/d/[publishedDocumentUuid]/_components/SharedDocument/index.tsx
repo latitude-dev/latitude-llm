@@ -11,6 +11,7 @@ import { Container } from '../Container'
 import { PromptHeader } from '../Header'
 import { Messages } from '../Messages'
 import { usePrompt } from './usePrompt'
+import { useChat } from './useChat'
 
 // Sync with the CSS transition duration
 const DURATION_CLASS = 'duration-100 ease-in-out'
@@ -31,11 +32,9 @@ type ServerClientMetadata = Omit<ConversationMetadata, 'setConfig'>
 function PromptForm({
   metadata,
   onSubmit,
-  hasErrors,
 }: {
   metadata: ServerClientMetadata
   onSubmit: (event: FormEvent<HTMLFormElement>) => void
-  hasErrors: boolean
 }) {
   const parameters = useParameters({ parameters: metadata.parameters })
   return (
@@ -49,13 +48,7 @@ function PromptForm({
           />
         )
       })}
-      <Button
-        fancy
-        fullWidth
-        type='submit'
-        variant='default'
-        disabled={hasErrors}
-      >
+      <Button fancy fullWidth type='submit' variant='default'>
         Run prompt
       </Button>
     </form>
@@ -77,8 +70,6 @@ export function SharedDocument({
   const [isFormVisible, setFormVisible] = useState(true)
   const [isChatVisible, setChatVisible] = useState(false)
   const prompt = usePrompt({ shared })
-  // TODO: Show if the prompt has errors and don't allow to run it
-  const hasErrors = metadata.errors.length > 0
 
   const onSubmit = useCallback(
     async (event: FormEvent<HTMLFormElement>) => {
@@ -108,7 +99,13 @@ export function SharedDocument({
     prompt.resetPrompt()
   }, [prompt.resetPrompt])
 
-  const onChat = useCallback(() => {}, [])
+  const { onChat } = useChat({
+    shared,
+    documentLogUuid: prompt.documentLogUuid,
+    addMessageToConversation: prompt.addMessageToConversation,
+    setResponseStream: prompt.setResponseStream,
+    setError: prompt.setError,
+  })
 
   useEffect(() => {
     if (!formRef.current) return
@@ -162,11 +159,7 @@ export function SharedDocument({
                   },
                 )}
               >
-                <PromptForm
-                  metadata={metadata}
-                  onSubmit={onSubmit}
-                  hasErrors={hasErrors}
-                />
+                <PromptForm metadata={metadata} onSubmit={onSubmit} />
               </div>
               <div
                 className={cn(

@@ -9,7 +9,11 @@ import {
 } from '../../repositories'
 import { publishedDocuments } from '../../schema'
 
-const NotFound = Result.error(new NotFoundError('Published document not found'))
+const NotFound = Result.error(
+  new NotFoundError(
+    'Prompt not found, check with the person that shared it to you',
+  ),
+)
 
 async function findByUuid(uuid: string, db = database) {
   try {

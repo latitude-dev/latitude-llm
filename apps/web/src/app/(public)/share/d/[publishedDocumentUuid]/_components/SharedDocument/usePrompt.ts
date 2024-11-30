@@ -22,6 +22,7 @@ function convertFormDataToInputs(formData: FormData) {
 
 export function usePrompt({ shared }: { shared: PublishedDocument }) {
   // Local state
+  const [documentLogUuid, setDocumentLogUuid] = useState<string>()
   const isLoadingPrompt = useRef<boolean>(false)
   const [error, setError] = useState<Error | undefined>()
   const [time, setTime] = useState<number>()
@@ -44,6 +45,7 @@ export function usePrompt({ shared }: { shared: PublishedDocument }) {
     },
     [],
   )
+
   const runPrompt = useCallback(
     async (formData: FormData) => {
       const start = performance.now()
@@ -55,9 +57,14 @@ export function usePrompt({ shared }: { shared: PublishedDocument }) {
 
       try {
         const parameters = convertFormDataToInputs(formData)
-        const { output } = await runSharedPromptAction({
-          publishedDocumentUuid: shared.uuid!,
-          parameters,
+        const { response: actionResponse, output } =
+          await runSharedPromptAction({
+            publishedDocumentUuid: shared.uuid!,
+            parameters,
+          })
+
+        actionResponse.then((r) => {
+          setDocumentLogUuid(r?.uuid)
         })
 
         isLoadingPrompt.current = false
@@ -130,5 +137,9 @@ export function usePrompt({ shared }: { shared: PublishedDocument }) {
     chainLength,
     time,
     resetPrompt,
+    documentLogUuid,
+    addMessageToConversation,
+    setResponseStream,
+    setError,
   }
 }
