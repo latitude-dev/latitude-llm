@@ -66,6 +66,7 @@ export default function Playground({
         config: {},
         prompt: '',
         duration: 0,
+        toolCalls: [],
         parameters: {},
         cost: 0,
       }
@@ -75,6 +76,7 @@ export default function Playground({
       messages: formatConversation(providerLog),
       context: formatContext(providerLog),
       response: providerLog.response,
+      toolCalls: providerLog.toolCalls,
       config: providerLog.config,
       prompt: documentLogWithMetadata.resolvedContent,
       duration: documentLogWithMetadata.duration,

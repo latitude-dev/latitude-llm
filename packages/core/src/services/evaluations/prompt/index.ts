@@ -101,6 +101,12 @@ Now, evaluate the assistant response for the following conversation, based on yo
 
 {{ messages.all }}
 
+{{if toolCalls }}
+  Also, here are the tool calls that the assistant requested:
+
+  {{toolCalls}}
+{{endif}}
+
 {{if cost || duration }}
   Also, here is some aditional metadata about the LLM response. It may or may not be relevant to your objective.
   {{if cost }} - Cost: {{ cost }} cents. {{endif}}

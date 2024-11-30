@@ -103,6 +103,7 @@ export function serializeForEvaluation(
   return {
     messages: formatConversation(providerLog),
     context: formatContext(providerLog),
+    toolCalls: providerLog.toolCalls,
     response,
     config: providerLog.config,
     duration: providerLog.duration,
