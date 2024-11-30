@@ -80,6 +80,12 @@ export const useVariablesData = (providerLog: ProviderLogDto) => {
       tooltip: 'The parameters that were used to build the prompt for this log',
       height: '24',
     },
+    {
+      title: 'toolCalls',
+      content: JSON.stringify(providerLog.toolCalls, null, 2),
+      tooltip: 'The tool call requests that assistant requested',
+      height: '24',
+    },
   ]
 
   const inputSections = [

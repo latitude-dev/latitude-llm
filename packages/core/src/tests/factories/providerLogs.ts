@@ -3,6 +3,7 @@ import { v4 as uuid } from 'uuid'
 
 import { LogSources, ProviderLog, Providers, Workspace } from '../../browser'
 import { createProviderLog as createProviderLogService } from '../../services/providerLogs'
+import { ToolCall } from '@latitude-data/compiler'
 
 export type IProviderLogData = {
   documentLogUuid: string
@@ -16,6 +17,7 @@ export type IProviderLogData = {
   generatedAt?: Date
   workspace: Workspace
   responseObject?: unknown
+  toolCalls?: ToolCall[]
 }
 
 export async function createProviderLog(

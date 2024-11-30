@@ -7,4 +7,5 @@ export const PARAMETERS = [
   'config',
   'duration',
   'cost',
+  'toolCalls',
 ]

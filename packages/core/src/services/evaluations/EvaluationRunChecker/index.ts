@@ -107,7 +107,6 @@ export class EvaluationRunChecker {
 
   private async createChain(workspace: WorkspaceDto) {
     const serializedLogResult = await this.serializeDocumentLog(workspace)
-
     if (serializedLogResult.error) return serializedLogResult
 
     try {
@@ -120,6 +119,7 @@ export class EvaluationRunChecker {
         this.evaluation.metadataType !==
           EvaluationMetadataType.LlmAsJudgeAdvanced ||
         this.evaluation.metadata.promptlVersion !== 0
+
       if (usePromptL) {
         return Result.ok(
           new PromptlChain({

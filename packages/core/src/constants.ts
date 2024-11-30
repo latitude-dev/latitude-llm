@@ -270,6 +270,7 @@ export type SerializedConversation = {
 export type SerializedProviderLog = {
   messages: SerializedConversation
   context: string
+  toolCalls: ToolCall[]
   response: string | null
   config: object | null
   duration: number | null
@@ -290,6 +291,7 @@ export const SERIALIZED_DOCUMENT_LOG_FIELDS = [
   'cost',
   'prompt',
   'parameters',
+  'toolCalls',
 ]
 
 export type SerializedEvaluationManualResult = {
