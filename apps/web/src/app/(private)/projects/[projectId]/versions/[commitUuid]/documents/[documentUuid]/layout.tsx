@@ -25,7 +25,8 @@ export default async function DocumentPage({
   }>
   children: ReactNode
 }) {
-  const { projectId: pjid, commitUuid, documentUuid } = await params
+  const paramsAwaited = await params
+  const { projectId: pjid, commitUuid, documentUuid } = paramsAwaited
   const projectId = Number(pjid)
 
   try {
@@ -54,7 +55,9 @@ export default async function DocumentPage({
               commitUuid={commitUuid}
               apiKeys={apiKeys}
             />
-            <DocumentTabs params={await params}>{children}</DocumentTabs>
+            <DocumentTabs document={document} params={paramsAwaited}>
+              {children}
+            </DocumentTabs>
           </DocumentationModalProvider>
         </DocumentsLayout>
       </DocumentVersionProvider>

@@ -1,6 +1,7 @@
 import { FormEvent, useCallback, useState } from 'react'
 
 import {
+  Alert,
   Button,
   Card,
   CardContent,
@@ -20,6 +21,7 @@ import { APP_DOMAIN } from '$/app/(private)/_lib/constants'
 import { ROUTES } from '$/services/routes'
 import usePublishedDocuments from '$/stores/publishedDocuments'
 import { DialogClose } from 'node_modules/@latitude-data/web-ui/src/ds/atoms/Modal/Primitives'
+import { DocumentVersion } from '@latitude-data/core/browser'
 
 type Data = Omit<UpdatePublishedDocumentInput, 'uuid'>
 type OnUpdateFn = (data: Data) => Promise<void>
@@ -28,12 +30,15 @@ function VisibilitySwitch({
   uuid,
   isPublished,
   onUpdate,
+  documentInOldSyntax,
 }: {
   uuid: string
   isPublished: boolean
   onUpdate: OnUpdateFn
+  documentInOldSyntax: boolean
 }) {
   const url = `${APP_DOMAIN}${ROUTES.share.document(uuid).root}`
+  const canUpdate = isPublished ? true : !documentInOldSyntax
   const [isUpdating, setIsUpdating] = useState(false)
   return (
     <Card>
@@ -53,7 +58,7 @@ function VisibilitySwitch({
         <div className='flex flex-col gap-y-4'>
           <SwitchInput
             checked={isPublished}
-            disabled={isUpdating}
+            disabled={!canUpdate || isUpdating}
             label={
               isUpdating ? 'Updating...' : isPublished ? 'Public' : 'Private'
             }
@@ -63,6 +68,14 @@ function VisibilitySwitch({
               setIsUpdating(false)
             }}
           />
+          {documentInOldSyntax ? (
+            <Alert
+              showIcon={false}
+              variant='warning'
+              title='Syntax update required'
+              description='You need to update prompt syntaxt to Promptl to enable sharing.'
+            />
+          ) : null}
           {isPublished ? (
             <ClickToCopy fullWidth copyValue={url} showIcon={false}>
               <div className='relative w-full'>
@@ -126,6 +139,7 @@ function FollowConversationSwitch({
 }
 
 export function ShareDocumentModal({
+  document,
   uuid,
   projectId,
   commitUuid,
@@ -133,6 +147,7 @@ export function ShareDocumentModal({
   open,
   onClose,
 }: {
+  document: DocumentVersion
   uuid: string
   projectId: number
   commitUuid: string
@@ -140,6 +155,7 @@ export function ShareDocumentModal({
   open: boolean
   onClose: () => void
 }) {
+  const documentInOldSyntax = document.promptlVersion === 0
   const [isUpdating, setIsUpdating] = useState(false)
   const { find, update } = usePublishedDocuments({
     projectId,
@@ -224,6 +240,7 @@ export function ShareDocumentModal({
           uuid={uuid}
           isPublished={isPublished}
           onUpdate={onUpdate}
+          documentInOldSyntax={documentInOldSyntax}
         />
         <FollowConversationSwitch
           canFollowConversation={canFollowConversation}

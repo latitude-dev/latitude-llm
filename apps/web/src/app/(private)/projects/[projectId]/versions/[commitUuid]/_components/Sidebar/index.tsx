@@ -8,7 +8,10 @@ import {
 import { paginateQuery } from '@latitude-data/core/lib/index'
 import { CommitsRepository } from '@latitude-data/core/repositories/index'
 import { DocumentSidebar } from '@latitude-data/web-ui'
-import { getDocumentsAtCommitCached } from '$/app/(private)/_data-access'
+import {
+  getDocumentsAtCommitCached,
+  getHeadCommitCached,
+} from '$/app/(private)/_data-access'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
 
 import ClientFilesTree from './ClientFilesTree'
@@ -26,10 +29,12 @@ export default async function Sidebar({
 }) {
   const { workspace } = await getCurrentUser()
   const documents = await getDocumentsAtCommitCached({ commit })
-
   const commitsScope = new CommitsRepository(workspace.id)
-  const headCommitResult = await commitsScope.getHeadCommit(project.id)
-  const headCommit = headCommitResult.value
+  const headCommit = await getHeadCommitCached({
+    workspace,
+    projectId: project.id,
+  })
+
   const { rows } = await paginateQuery({
     dynamicQuery: commitsScope
       .getCommitsByProjectQuery({

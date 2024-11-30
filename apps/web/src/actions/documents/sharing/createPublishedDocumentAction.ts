@@ -11,5 +11,6 @@ export const createPublishedDocumentAction = withDocument
       workspace: ctx.workspace,
       project: ctx.project,
       document: ctx.document,
+      commitUuid: ctx.currentCommitUuid,
     }).then((r) => r.unwrap())
   })

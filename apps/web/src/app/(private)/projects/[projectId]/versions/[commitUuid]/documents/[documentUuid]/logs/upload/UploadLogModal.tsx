@@ -51,6 +51,7 @@ export default function UploadLogModal({
 
   return (
     <Modal
+      dismissible
       open
       onOpenChange={(open) => !open && navigate.push(returnRoute)}
       title='Upload external logs'
@@ -70,10 +71,10 @@ export default function UploadLogModal({
       }
     >
       <form className='min-w-0' id='uploadLogsForm' action={action}>
+        <input type='hidden' name='documentUuid' value={documentUuid} />
+        <input type='hidden' name='commitUuid' value={commitUuid} />
+        <input type='hidden' name='projectId' value={projectId} />
         <FormWrapper>
-          <input type='hidden' name='documentUuid' value={documentUuid} />
-          <input type='hidden' name='commitUuid' value={commitUuid} />
-          <input type='hidden' name='projectId' value={projectId} />
           <DelimiterSelector
             delimiterDefaultValue='comma'
             delimiterErrors={errors?.csvDelimiter}
@@ -102,24 +103,24 @@ export default function UploadLogModal({
               </Text.H6>
             </div>
           </div>
+          <article>
+            <Alert
+              description='The file should be a single-column CSV where each row is a log in JSON format.'
+              cta={
+                <span>
+                  <a
+                    target='_blank'
+                    className='text-sm whitespace-nowrap text-accent-foreground underline'
+                    href='https://docs.google.com/spreadsheets/d/1uxmUW2XhcqRB_cK0SBmHzUfa9xMqVzKZ0eT8umO8pr8/edit?usp=sharing'
+                  >
+                    Example csv
+                  </a>
+                </span>
+              }
+            />
+          </article>
         </FormWrapper>
       </form>
-      <article>
-        <Alert
-          description='The file should be a single-column CSV where each row is a log in JSON format.'
-          cta={
-            <span>
-              <a
-                target='_blank'
-                className='text-sm whitespace-nowrap text-accent-foreground underline'
-                href='https://docs.google.com/spreadsheets/d/1uxmUW2XhcqRB_cK0SBmHzUfa9xMqVzKZ0eT8umO8pr8/edit?usp=sharing'
-              >
-                Example csv
-              </a>
-            </span>
-          }
-        />
-      </article>
     </Modal>
   )
 }

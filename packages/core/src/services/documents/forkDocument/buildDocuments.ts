@@ -23,6 +23,7 @@ export async function buildDocuments({
       })
       delete config.model
       delete config.provider
+
       let newConfig = config
       const providerData = destination.providerData
 

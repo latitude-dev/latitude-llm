@@ -121,6 +121,7 @@ export function ExportLogsModal({
   return (
     <Modal
       title='Export Logs parameters'
+      description='Export the parameters used for each log'
       size='large'
       open={!!selectedLogsIds.length}
       dismissible

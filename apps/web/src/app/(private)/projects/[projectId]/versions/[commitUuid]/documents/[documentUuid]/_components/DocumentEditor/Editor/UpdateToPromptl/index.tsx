@@ -4,10 +4,9 @@ import { useCallback, useState } from 'react'
 
 import { DocumentVersion } from '@latitude-data/core/browser'
 import {
-  Alert,
   Button,
+  ConfirmModal,
   Icon,
-  Modal,
   Text,
   useCurrentCommit,
   useCurrentProject,
@@ -98,12 +97,21 @@ function UpgradeToPromptlModal({
   )
 
   return (
-    <Modal
+    <ConfirmModal
       dismissible
       open={open}
       onOpenChange={onOpenChange}
       title='Upgrade syntax'
       description='We have updated the syntax for Latitude prompts!'
+      confirm={{
+        label: 'Upgrade this prompt',
+        isConfirming: isUpgrading,
+        title: 'Upgrade this prompt',
+        description: `If you choose to upgrade, ${upgradeConsequences}. You may have to edit the prompts in order to make them compatible with the new syntax.`,
+      }}
+      cancel={{ label: 'Upgrade all prompts (recommended)' }}
+      onCancel={() => upgradeDocument()}
+      onConfirm={() => upgradeDocument(document.documentUuid)}
     >
       <Text.H5>
         Since Latitude launched, we have been working on improving the syntax,
@@ -133,31 +141,7 @@ function UpgradeToPromptlModal({
           <Icon name='externalLink' />
         </Button>
       </Link>
-
-      <Alert
-        variant='default'
-        description={`If you choose to upgrade, ${upgradeConsequences}. You may have to edit the prompts in order to make them compatible with the new syntax.`}
-      />
-
-      <div className='flex flex-row w-full justify-end gap-2'>
-        <Button
-          variant='outline'
-          fancy
-          disabled={isUpgrading}
-          onClick={() => upgradeDocument()}
-        >
-          Upgrade all prompts (recommended)
-        </Button>
-        <Button
-          variant='default'
-          fancy
-          disabled={isUpgrading}
-          onClick={() => upgradeDocument(document.documentUuid)}
-        >
-          Upgrade this prompt
-        </Button>
-      </div>
-    </Modal>
+    </ConfirmModal>
   )
 }
 

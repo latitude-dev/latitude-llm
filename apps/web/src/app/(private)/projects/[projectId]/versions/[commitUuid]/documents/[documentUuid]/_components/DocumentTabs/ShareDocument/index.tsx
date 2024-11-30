@@ -1,4 +1,4 @@
-import { PublishedDocument } from '@latitude-data/core/browser'
+import { DocumentVersion, PublishedDocument } from '@latitude-data/core/browser'
 import { Button, Icon, Skeleton, Tooltip } from '@latitude-data/web-ui'
 import { useToggleModal } from '$/hooks/useToogleModal'
 import usePublishedDocuments from '$/stores/publishedDocuments'
@@ -82,11 +82,13 @@ function PublishedDocumentButton({
 }
 
 export function ShareDocument({
+  document,
   projectId,
   commitUuid,
   documentUuid,
   canShare,
 }: {
+  document: DocumentVersion
   commitUuid: string
   projectId: number
   documentUuid: string
@@ -132,6 +134,7 @@ export function ShareDocument({
       )}
       {publishedDocument && (
         <ShareDocumentModal
+          document={document}
           uuid={publishedDocument.uuid!}
           projectId={projectId}
           commitUuid={commitUuid}

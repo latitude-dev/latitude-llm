@@ -8,12 +8,15 @@ import { useFeatureFlag } from '$/hooks/useFeatureFlag'
 import { DocumentationContext } from '../DocumentationModal'
 import { ShareDocument } from './ShareDocument'
 import { DocumentTabSelector } from './tabs'
+import { DocumentVersion } from '@latitude-data/core/browser'
 
 export default function DocumentTabs({
   params,
   children,
+  document,
 }: {
   params: { documentUuid: string; projectId: string; commitUuid: string }
+  document: DocumentVersion
   children: ReactNode
 }) {
   const { toggleDocumentation } = useContext(DocumentationContext)
@@ -33,6 +36,7 @@ export default function DocumentTabs({
           </Button>
           {hasFeature && (
             <ShareDocument
+              document={document}
               projectId={Number(params.projectId)}
               commitUuid={params.commitUuid}
               documentUuid={params.documentUuid}

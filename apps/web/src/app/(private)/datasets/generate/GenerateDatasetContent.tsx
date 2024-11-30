@@ -160,7 +160,7 @@ export function GenerateDatasetContent({
       title='Generate new dataset'
       description='Generate a dataset of parameters using AI. Datasets can be used to run batch evaluations over prompts.'
       footer={
-        <div className='flex flex-col gap-2 w-full'>
+        <div className='flex flex-col w-full'>
           <div
             className={cn('w-full flex flex-row flex-grow gap-4', {
               'justify-between': !!backUrl,

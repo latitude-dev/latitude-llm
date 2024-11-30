@@ -59,6 +59,7 @@ export default function NewProviderApiKey() {
 
   return (
     <Modal
+      dismissible
       open
       onOpenChange={onOpenChange}
       title='Create Provider'

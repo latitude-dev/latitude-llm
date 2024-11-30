@@ -133,6 +133,7 @@ export default function CreateEvaluationModal({
 
   return (
     <ConfirmModal
+      dismissible
       open={!!initialData}
       title='Create New Evaluation'
       description='Evaluations allow you to analyze logs and assign them metrics such as scores, categories, or boolean values.'
