@@ -21,6 +21,7 @@ export default function NewUser({
   })
   return (
     <Modal
+      dismissible
       open={open}
       onOpenChange={setOpen}
       title='Add New User'

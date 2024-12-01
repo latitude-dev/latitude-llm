@@ -12,6 +12,7 @@ import { CommitProvider, ProjectProvider } from '@latitude-data/web-ui'
 import {
   findCommitsByProjectCached,
   findProjectCached,
+  getHeadCommitCached,
 } from '$/app/(private)/_data-access'
 import { ProjectPageParams } from '$/app/(private)/projects/[projectId]/page'
 import { getCurrentUser, SessionData } from '$/services/auth/getCurrentUser'
@@ -36,17 +37,28 @@ export default async function CommitLayout({
     session = await getCurrentUser()
     if (!session.workspace) return redirect(ROUTES.root)
 
+    const workspace = session.workspace
     project = await findProjectCached({
       projectId: Number(projectId),
-      workspaceId: session.workspace.id,
+      workspaceId: workspace.id,
     })
-    const commits = await findCommitsByProjectCached({ projectId: project.id })
+
+    const headCommit = await getHeadCommitCached({
+      workspace,
+      projectId: project.id,
+    })
+
     if (commitUuid === HEAD_COMMIT) {
       isHead = true
-      commit = commits.find((c) => !!c.mergedAt)
+      commit = headCommit
     } else {
+      const commits = await findCommitsByProjectCached({
+        projectId: project.id,
+      })
       commit = commits.find((c) => c.uuid === commitUuid)
     }
+
+    isHead = commit?.id === headCommit?.id
 
     if (!commit) throw new NotFoundError('Commit not found')
   } catch (error) {

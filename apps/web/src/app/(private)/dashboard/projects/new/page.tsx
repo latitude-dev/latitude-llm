@@ -30,6 +30,7 @@ export default function NewProject() {
 
   return (
     <Modal
+      dismissible
       open
       onOpenChange={(open) => !open && navigate.push(ROUTES.dashboard.root)}
       title='Add New Project'

@@ -53,6 +53,9 @@ export default function DestroyModal<
       description={description}
       footer={
         <>
+          <form id='destroyProjectForm' action={actionFn}>
+            <input type='hidden' name='id' value={model.id} />
+          </form>
           <CloseTrigger />
           <Button
             fancy
@@ -64,10 +67,6 @@ export default function DestroyModal<
           </Button>
         </>
       }
-    >
-      <form id='destroyProjectForm' action={actionFn}>
-        <input type='hidden' name='id' value={model.id} />
-      </form>
-    </Modal>
+    />
   )
 }

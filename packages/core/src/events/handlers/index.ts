@@ -39,6 +39,7 @@ export const EventHandlers: IEventsHandlers = {
   publicDocumentRunRequested: [],
   chatMessageRequested: [],
   sharedChatMessageRequested: [],
+  forkDocumentRequested: [],
   batchEvaluationRunRequested: [],
   runDocumentInBatchRequested: [],
   copilotRefinerGenerated: [],

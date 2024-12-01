@@ -4,13 +4,17 @@ import {
   findFirstModelForProvider,
   User,
   Workspace,
-} from '../../../browser'
-import { Result } from '../../../lib'
-import { createProject } from '../../projects/create'
-import { findDefaultProvider } from '../../providerApiKeys/findDefaultProvider'
-import { createNewDocument } from '../create'
-import { buildDocuments } from './buildDocuments'
-import { getIncludedDocuments } from './getIncludedDocuments'
+} from '../../browser'
+import { eq } from 'drizzle-orm'
+import { database } from '../../client'
+import { publisher } from '../../events/publisher'
+import { Result } from '../../lib'
+import { ProjectsRepository } from '../../repositories'
+import { createProject } from '../projects/create'
+import { findDefaultProvider } from '../providerApiKeys/findDefaultProvider'
+import { createNewDocument } from './create'
+import { buildDocuments } from './forkDocument/buildDocuments'
+import { getIncludedDocuments } from './forkDocument/getIncludedDocuments'
 
 type ForkProps = {
   origin: {
@@ -24,7 +28,7 @@ type ForkProps = {
   }
   defaultProviderId?: string
 }
-
+const ATTEMPTS_BEFORE_RANDOM_SUFFIX = 4
 async function createProjectFromDocument({
   workspace,
   user,
@@ -34,7 +38,29 @@ async function createProjectFromDocument({
   workspace: Workspace
   user: User
 }) {
-  const name = `Copy of ${document.path}`
+  const baseName = `Copy of ${document.path}`
+  let name = baseName
+  const repo = new ProjectsRepository(workspace.id)
+  let attempts = 0
+
+  while (attempts < ATTEMPTS_BEFORE_RANDOM_SUFFIX) {
+    const result = await database
+      .select()
+      .from(repo.scope)
+      .where(eq(repo.scope._.selectedFields.name, name))
+      .limit(1)
+
+    if (result.length === 0) {
+      return createProject({ name, workspace, user })
+    }
+
+    attempts++
+    name = `${baseName} (${attempts})`
+  }
+
+  const randomSuffix = Math.floor(Math.random() * 1000)
+  name = `${baseName} #${randomSuffix}`
+
   return createProject({ name, workspace, user })
 }
 
@@ -86,7 +112,10 @@ async function createDocuments({
     )
   }
 
-  return Result.ok(newDocs.map((r) => r.unwrap()))
+  const docs = newDocs.map((r) => r.value).filter((d) => d !== undefined)
+  const copiedDocument = docs.find((d) => d.path === origin.document.path)!
+
+  return Result.ok({ documents: docs, copiedDocument })
 }
 
 export async function forkDocument({
@@ -108,7 +137,22 @@ export async function forkDocument({
     latitudeProvider: defaultProviderId,
   })
 
-  await createDocuments({
+  publisher.publishLater({
+    type: 'forkDocumentRequested',
+    data: {
+      origin: {
+        workspaceId: origin.workspace.id,
+        commitUuid: origin.commit.uuid,
+        documentUuid: origin.document.documentUuid,
+      },
+      destination: {
+        workspaceId: destination.workspace.id,
+        userEmail: destination.user.email,
+      },
+    },
+  })
+
+  const { copiedDocument } = await createDocuments({
     origin,
     destination: {
       workspace: destination.workspace,
@@ -121,5 +165,5 @@ export async function forkDocument({
     },
   }).then((r) => r.unwrap())
 
-  return project
+  return Result.ok({ project, commit, document: copiedDocument })
 }

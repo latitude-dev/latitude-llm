@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm'
-import { beforeAll, describe, expect, it } from 'vitest'
+import { beforeAll, describe, expect, it, vi } from 'vitest'
 
 import {
   Commit,
@@ -13,9 +13,14 @@ import { database } from '../../../client'
 import { providerApiKeys } from '../../../schema'
 import * as factories from '../../../tests/factories'
 import setupService from '../../users/setupService'
-import { forkDocument } from './index'
+import { forkDocument } from '../forkDocument'
 import { buildProjects } from './testHelpers/buildProjects'
 import { generateDocumentsOutput } from './testHelpers/generateDocumentsOutput'
+
+const publisherSpy = vi.spyOn(
+  await import('../../../events/publisher').then((f) => f.publisher),
+  'publishLater',
+)
 
 let fromWorkspace: Workspace
 let toWorkspace: Workspace
@@ -73,194 +78,317 @@ describe('forkDocument', () => {
             .then((r) => r.unwrap())
         })
 
-        it('fork document with default provider', async () => {
-          const targetProject = await forkDocument({
-            origin: { workspace: fromWorkspace, commit, document },
+        it('publish event', async () => {
+          await forkDocument({
+            origin: {
+              workspace: fromWorkspace,
+              commit,
+              document,
+            },
             destination: { workspace: toWorkspace, user },
+          }).then((r) => r.unwrap())
+          expect(publisherSpy).toHaveBeenCalledWith({
+            type: 'forkDocumentRequested',
+            data: {
+              origin: {
+                workspaceId: fromWorkspace.id,
+                commitUuid: commit.uuid,
+                documentUuid: document.documentUuid,
+              },
+              destination: {
+                workspaceId: toWorkspace.id,
+                userEmail: user.email,
+              },
+            },
           })
-          const { commitCount, documents } = await generateDocumentsOutput({
-            project: targetProject,
-          })
+        })
+      })
 
-          expect(targetProject.name).toBe('Copy of some-folder/parent')
-          expect(commitCount).toBe(1)
-          expect(documents).toEqual([
-            {
-              path: 'some-folder/parent',
-              provider: 'google',
-              model: 'gemini-1.5-flash',
+      describe('project name', () => {
+        it('add copy of to prompt name as project name', async () => {
+          const anotherDoc = originDocuments.find(
+            (d) => d.path === 'some-folder/children/grandchildren/grandchild2',
+          )!
+          const { project } = await forkDocument({
+            origin: {
+              workspace: fromWorkspace,
+              commit,
+              document: anotherDoc,
             },
-            {
-              path: 'siblingParent/sibling',
-              provider: 'google',
-              model: 'gemini-1.5-flash',
-            },
-            {
-              path: 'some-folder/children/child1',
-              provider: 'google',
-              model: 'gemini-1.5-flash',
-            },
-            {
-              path: 'some-folder/children/child2',
-              provider: 'google',
-              model: 'gemini-1.5-flash',
-            },
-            {
-              path: 'some-folder/children/childSibling',
-              provider: 'google',
-              model: 'gemini-1.5-flash',
-            },
-            {
-              path: 'some-folder/children/grandchildren/grandchild1',
-              provider: 'google',
-              model: 'gemini-1.5-flash',
-            },
-            {
-              path: 'some-folder/children/grandchildren/grandchild2',
-              provider: 'google',
-              model: 'gemini-1.5-flash',
-            },
-            {
-              path: 'some-folder/children/grandchildren/grand-grand-grandChildren/deepestGrandChild',
-              provider: 'google',
-              model: 'gemini-1.5-flash',
-            },
-          ])
+            destination: { workspace: toWorkspace, user },
+          }).then((r) => r.unwrap())
+
+          expect(project.name).toBe(
+            'Copy of some-folder/children/grandchildren/grandchild2',
+          )
         })
 
-        it('fork document with default model', async () => {
-          const [_, provider] = destProviders
-          await database
-            .update(providerApiKeys)
-            .set({
-              defaultModel: 'gemini-1.0-pro',
-            })
-            .where(eq(providerApiKeys.id, provider!.id))
-          const targetProject = await forkDocument({
-            origin: { workspace: fromWorkspace, commit, document },
+        it('add copy of and (1) when a project name exists with that name', async () => {
+          const anotherDoc = originDocuments.find(
+            (d) => d.path === 'some-folder/children/grandchildren/grandchild2',
+          )!
+          await factories.createProject({
+            workspace: toWorkspace,
+            name: 'Copy of some-folder/children/grandchildren/grandchild2',
+          })
+          const { project } = await forkDocument({
+            origin: {
+              workspace: fromWorkspace,
+              commit,
+              document: anotherDoc,
+            },
             destination: { workspace: toWorkspace, user },
-          })
-          const { commitCount, documents } = await generateDocumentsOutput({
-            project: targetProject,
-          })
+          }).then((r) => r.unwrap())
 
-          expect(commitCount).toBe(1)
-          expect(documents[0]).toEqual({
+          expect(project.name).toBe(
+            'Copy of some-folder/children/grandchildren/grandchild2 (1)',
+          )
+        })
+
+        it('add copy of and (2) when a project name exists with that name', async () => {
+          const anotherDoc = originDocuments.find(
+            (d) => d.path === 'some-folder/children/grandchildren/grandchild2',
+          )!
+          await factories.createProject({
+            workspace: toWorkspace,
+            name: 'Copy of some-folder/children/grandchildren/grandchild2',
+          })
+          await factories.createProject({
+            workspace: toWorkspace,
+            name: 'Copy of some-folder/children/grandchildren/grandchild2 (1)',
+          })
+          const { project } = await forkDocument({
+            origin: {
+              workspace: fromWorkspace,
+              commit,
+              document: anotherDoc,
+            },
+            destination: { workspace: toWorkspace, user },
+          }).then((r) => r.unwrap())
+
+          expect(project.name).toBe(
+            'Copy of some-folder/children/grandchildren/grandchild2 (2)',
+          )
+        })
+
+        it('add copy of and (3) when a project name exists with that name', async () => {
+          const anotherDoc = originDocuments.find(
+            (d) => d.path === 'some-folder/children/grandchildren/grandchild2',
+          )!
+          await factories.createProject({
+            workspace: toWorkspace,
+            name: 'Copy of some-folder/children/grandchildren/grandchild2',
+          })
+          await factories.createProject({
+            workspace: toWorkspace,
+            name: 'Copy of some-folder/children/grandchildren/grandchild2 (1)',
+          })
+          await factories.createProject({
+            workspace: toWorkspace,
+            name: 'Copy of some-folder/children/grandchildren/grandchild2 (2)',
+          })
+          const { project } = await forkDocument({
+            origin: {
+              workspace: fromWorkspace,
+              commit,
+              document: anotherDoc,
+            },
+            destination: { workspace: toWorkspace, user },
+          }).then((r) => r.unwrap())
+
+          expect(project.name).toBe(
+            'Copy of some-folder/children/grandchildren/grandchild2 (3)',
+          )
+        })
+      })
+
+      it('fork document with default provider', async () => {
+        const { project } = await forkDocument({
+          origin: { workspace: fromWorkspace, commit, document },
+          destination: { workspace: toWorkspace, user },
+        }).then((r) => r.unwrap())
+        const { commitCount, documents } = await generateDocumentsOutput({
+          project,
+        })
+
+        expect(project.name).toBe('Copy of some-folder/parent')
+        expect(commitCount).toBe(1)
+        expect(documents).toEqual([
+          {
             path: 'some-folder/parent',
             provider: 'google',
-            model: 'gemini-1.0-pro',
+            model: 'gemini-1.5-flash',
+          },
+          {
+            path: 'siblingParent/sibling',
+            provider: 'google',
+            model: 'gemini-1.5-flash',
+          },
+          {
+            path: 'some-folder/children/child1',
+            provider: 'google',
+            model: 'gemini-1.5-flash',
+          },
+          {
+            path: 'some-folder/children/child2',
+            provider: 'google',
+            model: 'gemini-1.5-flash',
+          },
+          {
+            path: 'some-folder/children/childSibling',
+            provider: 'google',
+            model: 'gemini-1.5-flash',
+          },
+          {
+            path: 'some-folder/children/grandchildren/grandchild1',
+            provider: 'google',
+            model: 'gemini-1.5-flash',
+          },
+          {
+            path: 'some-folder/children/grandchildren/grandchild2',
+            provider: 'google',
+            model: 'gemini-1.5-flash',
+          },
+          {
+            path: 'some-folder/children/grandchildren/grand-grand-grandChildren/deepestGrandChild',
+            provider: 'google',
+            model: 'gemini-1.5-flash',
+          },
+        ])
+      })
+
+      it('fork document with default model', async () => {
+        const [_, provider] = destProviders
+        await database
+          .update(providerApiKeys)
+          .set({
+            defaultModel: 'gemini-1.0-pro',
           })
+          .where(eq(providerApiKeys.id, provider!.id))
+        const { project } = await forkDocument({
+          origin: { workspace: fromWorkspace, commit, document },
+          destination: { workspace: toWorkspace, user },
+        }).then((r) => r.unwrap())
+        const { commitCount, documents } = await generateDocumentsOutput({
+          project,
         })
 
-        it('fork a nested document', async () => {
-          const anotherDoc = originDocuments.find(
-            (d) => d.path === 'some-folder/children/child1',
-          )!
-          const targetProject = await forkDocument({
-            origin: { workspace: fromWorkspace, commit, document: anotherDoc },
-            destination: { workspace: toWorkspace, user },
-          })
-          const { documents } = await generateDocumentsOutput({
-            project: targetProject,
-          })
-          expect(documents).toEqual([
-            {
-              path: 'some-folder/children/child1',
-              provider: 'google',
-              model: 'gemini-1.5-flash',
-            },
-            {
-              path: 'some-folder/children/childSibling',
-              provider: 'google',
-              model: 'gemini-1.5-flash',
-            },
-            {
-              path: 'some-folder/children/grandchildren/grandchild1',
-              provider: 'google',
-              model: 'gemini-1.5-flash',
-            },
-            {
-              path: 'some-folder/children/grandchildren/grandchild2',
-              provider: 'google',
-              model: 'gemini-1.5-flash',
-            },
-            {
-              path: 'some-folder/children/grandchildren/grand-grand-grandChildren/deepestGrandChild',
-              provider: 'google',
-              model: 'gemini-1.5-flash',
-            },
-          ])
+        expect(commitCount).toBe(1)
+        expect(documents[0]).toEqual({
+          path: 'some-folder/parent',
+          provider: 'google',
+          model: 'gemini-1.0-pro',
         })
+      })
+
+      it('fork a nested document', async () => {
+        const anotherDoc = originDocuments.find(
+          (d) => d.path === 'some-folder/children/child1',
+        )!
+        const { project } = await forkDocument({
+          origin: { workspace: fromWorkspace, commit, document: anotherDoc },
+          destination: { workspace: toWorkspace, user },
+        }).then((r) => r.unwrap())
+        const { documents } = await generateDocumentsOutput({
+          project,
+        })
+        expect(documents).toEqual([
+          {
+            path: 'some-folder/children/child1',
+            provider: 'google',
+            model: 'gemini-1.5-flash',
+          },
+          {
+            path: 'some-folder/children/childSibling',
+            provider: 'google',
+            model: 'gemini-1.5-flash',
+          },
+          {
+            path: 'some-folder/children/grandchildren/grandchild1',
+            provider: 'google',
+            model: 'gemini-1.5-flash',
+          },
+          {
+            path: 'some-folder/children/grandchildren/grandchild2',
+            provider: 'google',
+            model: 'gemini-1.5-flash',
+          },
+          {
+            path: 'some-folder/children/grandchildren/grand-grand-grandChildren/deepestGrandChild',
+            provider: 'google',
+            model: 'gemini-1.5-flash',
+          },
+        ])
       })
     })
   })
+})
 
-  describe('New workspace', () => {
-    beforeAll(async () => {
-      const { user: usr, workspace: wsp } = await setupService({
-        name: 'Alice',
-        email: 'alice@example.com',
-        companyName: 'Alice Company',
-        defaultProviderId: 'Latitude',
-        defaultProviderApiKey: 'some-key',
-      }).then((r) => r.unwrap())
-      user = usr
-      toWorkspace = wsp
+describe('New workspace', () => {
+  beforeAll(async () => {
+    const { user: usr, workspace: wsp } = await setupService({
+      name: 'Alice',
+      email: 'alice@example.com',
+      companyName: 'Alice Company',
+      defaultProviderId: 'Latitude',
+      defaultProviderApiKey: 'some-key',
+    }).then((r) => r.unwrap())
+    user = usr
+    toWorkspace = wsp
+  })
+
+  it('fork document with Latitude provider', async () => {
+    const { project } = await forkDocument({
+      origin: { workspace: fromWorkspace, commit, document },
+      destination: { workspace: toWorkspace, user },
+    }).then((r) => r.unwrap())
+    const { commitCount, documents } = await generateDocumentsOutput({
+      project,
     })
 
-    it('fork document with Latitude provider', async () => {
-      const targetProject = await forkDocument({
-        origin: { workspace: fromWorkspace, commit, document },
-        destination: { workspace: toWorkspace, user },
-      })
-      const { commitCount, documents } = await generateDocumentsOutput({
-        project: targetProject,
-      })
-
-      expect(targetProject.name).toBe('Copy of some-folder/parent')
-      expect(commitCount).toBe(1)
-      expect(documents).toEqual([
-        {
-          path: 'some-folder/parent',
-          provider: 'Latitude',
-          model: 'gpt-4o-mini',
-        },
-        {
-          path: 'siblingParent/sibling',
-          provider: 'Latitude',
-          model: 'gpt-4o-mini',
-        },
-        {
-          path: 'some-folder/children/child1',
-          provider: 'Latitude',
-          model: 'gpt-4o-mini',
-        },
-        {
-          path: 'some-folder/children/child2',
-          provider: 'Latitude',
-          model: 'gpt-4o-mini',
-        },
-        {
-          path: 'some-folder/children/childSibling',
-          provider: 'Latitude',
-          model: 'gpt-4o-mini',
-        },
-        {
-          path: 'some-folder/children/grandchildren/grandchild1',
-          provider: 'Latitude',
-          model: 'gpt-4o-mini',
-        },
-        {
-          path: 'some-folder/children/grandchildren/grandchild2',
-          provider: 'Latitude',
-          model: 'gpt-4o-mini',
-        },
-        {
-          path: 'some-folder/children/grandchildren/grand-grand-grandChildren/deepestGrandChild',
-          provider: 'Latitude',
-          model: 'gpt-4o-mini',
-        },
-      ])
-    })
+    expect(project.name).toBe('Copy of some-folder/parent')
+    expect(commitCount).toBe(1)
+    expect(documents).toEqual([
+      {
+        path: 'some-folder/parent',
+        provider: 'Latitude',
+        model: 'gpt-4o-mini',
+      },
+      {
+        path: 'siblingParent/sibling',
+        provider: 'Latitude',
+        model: 'gpt-4o-mini',
+      },
+      {
+        path: 'some-folder/children/child1',
+        provider: 'Latitude',
+        model: 'gpt-4o-mini',
+      },
+      {
+        path: 'some-folder/children/child2',
+        provider: 'Latitude',
+        model: 'gpt-4o-mini',
+      },
+      {
+        path: 'some-folder/children/childSibling',
+        provider: 'Latitude',
+        model: 'gpt-4o-mini',
+      },
+      {
+        path: 'some-folder/children/grandchildren/grandchild1',
+        provider: 'Latitude',
+        model: 'gpt-4o-mini',
+      },
+      {
+        path: 'some-folder/children/grandchildren/grandchild2',
+        provider: 'Latitude',
+        model: 'gpt-4o-mini',
+      },
+      {
+        path: 'some-folder/children/grandchildren/grand-grand-grandChildren/deepestGrandChild',
+        provider: 'Latitude',
+        model: 'gpt-4o-mini',
+      },
+    ])
   })
 })

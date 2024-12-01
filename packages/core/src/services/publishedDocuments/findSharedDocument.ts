@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm'
+import { eq, and } from 'drizzle-orm'
 
 import { database } from '../../client'
 import { unsafelyFindWorkspace } from '../../data-access'
@@ -18,7 +18,10 @@ const NotFound = Result.error(
 async function findByUuid(uuid: string, db = database) {
   try {
     const shared = await db.query.publishedDocuments.findFirst({
-      where: eq(publishedDocuments.uuid, uuid),
+      where: and(
+        eq(publishedDocuments.uuid, uuid),
+        eq(publishedDocuments.isPublished, true),
+      ),
     })
     return Result.ok(shared)
   } catch {
@@ -41,7 +44,7 @@ export async function findSharedDocument(
   if (sharedResult.error) return NotFound
 
   const shared = sharedResult.value
-  if (!shared || !shared.isPublished) return NotFound
+  if (!shared) return NotFound
 
   const workspace = await unsafelyFindWorkspace(shared.workspaceId)
   if (!workspace) return NotFound
@@ -54,8 +57,9 @@ export async function findSharedDocument(
   if (!commit) return NotFound
 
   const repo = new DocumentVersionsRepository(shared.workspaceId, db)
-  const result = await repo.getDocumentByUuid({
-    commit,
+  const result = await repo.getDocumentAtCommit({
+    projectId: shared.projectId,
+    commitUuid: commit.uuid,
     documentUuid: shared.documentUuid,
   })
 

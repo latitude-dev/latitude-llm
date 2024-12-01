@@ -16,22 +16,29 @@ export async function createPublishedDocument(
     project,
     workspace,
     document,
+    commitUuid,
   }: {
     project: Project
     workspace: Workspace
     document: DocumentVersion
+    commitUuid: string
   },
   db = database,
 ) {
   const commitRepo = new CommitsRepository(workspace.id)
   const liveCommit = await commitRepo
-    .getCommitByUuid({
-      uuid: HEAD_COMMIT,
-      projectId: project.id,
-    })
+    .getHeadCommit(project.id)
     .then((r) => r.unwrap())
 
-  if (liveCommit.id !== document.commitId) {
+  if (!liveCommit) {
+    return Result.error(
+      new UnprocessableEntityError('Project has no commits.', {
+        projectId: 'Project has no commits.',
+      }),
+    )
+  }
+
+  if (liveCommit.uuid !== commitUuid && commitUuid !== HEAD_COMMIT) {
     return Result.error(
       new UnprocessableEntityError('Only live documents can be shared.', {
         documentUuid: 'Only live documents can be shared.',

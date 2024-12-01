@@ -32,6 +32,7 @@ export async function generateMetadata(
     return buildMetatags({ title: 'Not Found', parent: parentMetadata })
   }
 }
+
 export default async function SharedDocumentPage({
   params,
 }: {

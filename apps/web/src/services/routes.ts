@@ -23,6 +23,7 @@ const PUBLIC_ROOT_PATHS = {
   login: '/login',
   magicLinks: '/magic-links',
   invitations: '/invitations',
+  share: '/share',
 }
 
 export function isPublicPath(pathname: string) {
@@ -31,6 +32,7 @@ export function isPublicPath(pathname: string) {
     PUBLIC_ROOT_PATHS.login,
     PUBLIC_ROOT_PATHS.magicLinks,
     PUBLIC_ROOT_PATHS.invitations,
+    PUBLIC_ROOT_PATHS.share,
   ]
 
   return publicPaths.some((publicPath) => pathname.startsWith(publicPath))
@@ -180,8 +182,25 @@ export const ROUTES = {
     },
   },
   share: {
-    document: (publishedDocumentUuid: string) => ({
-      root: `/share/d/${publishedDocumentUuid}`,
-    }),
+    document: (publishedDocumentUuid: string) => {
+      const shareDocRoot = `/share/d/${publishedDocumentUuid}`
+      return {
+        root: shareDocRoot,
+        fork: `${shareDocRoot}/fork`,
+        forked: ({
+          projectId,
+          documentUuid,
+          commitUuid,
+        }: {
+          projectId: number
+          documentUuid: string
+          commitUuid: string
+        }) => {
+          return {
+            root: `${shareDocRoot}/forked/${projectId}?documentUuid=${documentUuid}&commitUuid=${commitUuid}`,
+          }
+        },
+      }
+    },
   },
 } as const

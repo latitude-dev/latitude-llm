@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, it } from 'vitest'
 
 import {
+  Commit,
   DocumentVersion,
   Project,
   Providers,
@@ -14,6 +15,7 @@ import { createPublishedDocument } from './create'
 let workspace: Workspace
 let user: User
 let document: DocumentVersion
+let commit: Commit
 let project: Project
 describe('findOrCreate', () => {
   beforeAll(async () => {
@@ -22,6 +24,7 @@ describe('findOrCreate', () => {
       user: usr,
       documents,
       project: prj,
+      commit: cmt,
     } = await factories.createProject({
       providers: [{ name: 'openai', type: Providers.OpenAI }],
       documents: {
@@ -35,6 +38,7 @@ describe('findOrCreate', () => {
     workspace = wsp
     document = documents[0]!
     project = prj
+    commit = cmt
   })
 
   it('creates a new published document', async () => {
@@ -42,6 +46,7 @@ describe('findOrCreate', () => {
       workspace,
       project,
       document,
+      commitUuid: commit.uuid,
     })
     expect(result.value).toEqual(
       expect.objectContaining({
@@ -60,11 +65,14 @@ describe('findOrCreate', () => {
       workspace,
       project,
       document,
+      commitUuid: commit.uuid,
     })
+
     const result = await createPublishedDocument({
       workspace,
       project,
       document,
+      commitUuid: commit.uuid,
     })
 
     expect(result.error).toEqual(
@@ -94,6 +102,7 @@ describe('findOrCreate', () => {
       workspace,
       project,
       document: drafDoc,
+      commitUuid: draft.uuid,
     })
 
     expect(result.error).toEqual(

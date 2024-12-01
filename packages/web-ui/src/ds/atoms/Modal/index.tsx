@@ -21,7 +21,7 @@ export const ModalTrigger = DialogTrigger
 
 function StepSelector({ total, current }: { total: number; current: number }) {
   return (
-    <div className='flex flex-row items-center w-full gap-2 pt-4 pr-6'>
+    <div className='flex flex-row items-center w-full gap-2'>
       {Array.from({ length: total }, (_, i) => (
         <div
           key={i}
@@ -42,7 +42,7 @@ export type ModalProps = {
   onOpenChange?: (open: boolean) => void
   open?: boolean
   description?: string
-  children: ReactNode
+  children?: ReactNode
   footer?: ReactNode
   size?: 'regular' | 'large'
   steps?: {
@@ -73,29 +73,41 @@ export function Modal({
           'max-w-modal-lg': size === 'large',
         })}
       >
-        <div className='flex flex-col p-6 gap-y-4 overflow-y-auto custom-scrollbar relative'>
-          <div className='sticky top-0 flex flex-col gap-y-4'>
-            {steps && (
-              <StepSelector total={steps.total} current={steps.current} />
-            )}
+        <div className='flex flex-col relative max-h-full sm:rounded-lg overflow-hidden'>
+          {steps || title || description ? (
+            <div className='flex flex-col gap-y-4 pb-6'>
+              {steps && (
+                <div className='pl-6 pt-6 pr-12'>
+                  <StepSelector total={steps.total} current={steps.current} />
+                </div>
+              )}
 
-            {(title || description) && (
-              <DialogHeader>
-                {title && <DialogTitle>{title}</DialogTitle>}
-                {description && (
-                  <DialogDescription>{description}</DialogDescription>
-                )}
-              </DialogHeader>
-            )}
-          </div>
-
-          {children}
-
-          {footer ? (
-            <div className='sticky bottom-0'>
-              <DialogFooter>{footer}</DialogFooter>
+              {(title || description) && (
+                <div className={cn('px-6', { 'pt-6': !steps })}>
+                  <DialogHeader>
+                    {title && <DialogTitle>{title}</DialogTitle>}
+                    {description && (
+                      <DialogDescription>{description}</DialogDescription>
+                    )}
+                  </DialogHeader>
+                </div>
+              )}
             </div>
           ) : null}
+
+          {children ? (
+            <div className='px-6 pb-6 overflow-y-auto custom-scrollbar'>
+              {children}
+            </div>
+          ) : null}
+
+          <div
+            className={cn('px-6 border-border border-t', {
+              'bg-background-gray py-6': !!footer,
+            })}
+          >
+            {footer ? <DialogFooter>{footer}</DialogFooter> : null}
+          </div>
         </div>
       </DialogContent>
     </Dialog>
@@ -147,14 +159,16 @@ export function ConfirmModal({
         </div>
       }
     >
-      {children}
-      {confirm.description || confirm.title ? (
-        <Alert
-          variant={type}
-          title={confirm.title}
-          description={confirm.description}
-        />
-      ) : null}
+      <div className='flex flex-col gap-y-4'>
+        {children}
+        {confirm.description || confirm.title ? (
+          <Alert
+            variant={type}
+            title={confirm.title}
+            description={confirm.description}
+          />
+        ) : null}
+      </div>
     </Modal>
   )
 }

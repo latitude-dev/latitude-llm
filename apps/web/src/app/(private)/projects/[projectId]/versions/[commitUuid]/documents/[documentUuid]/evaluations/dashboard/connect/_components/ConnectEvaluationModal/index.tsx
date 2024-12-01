@@ -126,6 +126,7 @@ export default function ConnectionEvaluationModal({
   const item = selectableItems.find((item) => item.uuid === selectedItem)
   return (
     <Modal
+      dismissible
       open
       size='large'
       title='Which evaluations do you want to connect?'

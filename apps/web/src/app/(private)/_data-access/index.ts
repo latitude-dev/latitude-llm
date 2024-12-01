@@ -1,6 +1,6 @@
 import { cache } from 'react'
 
-import { type Commit } from '@latitude-data/core/browser'
+import { Workspace, type Commit } from '@latitude-data/core/browser'
 import { findAllEvaluationTemplates } from '@latitude-data/core/data-access'
 import { NotFoundError } from '@latitude-data/core/lib/errors'
 import { ApiKeysRepository } from '@latitude-data/core/repositories/apiKeysRepository'
@@ -128,6 +128,20 @@ export const getDocumentsAtCommitCached = cache(
     const documents = result.unwrap()
 
     return documents
+  },
+)
+
+export const getHeadCommitCached = cache(
+  async ({
+    workspace,
+    projectId,
+  }: {
+    workspace: Workspace
+    projectId: number
+  }) => {
+    const commitsScope = new CommitsRepository(workspace.id)
+    const headCommitResult = await commitsScope.getHeadCommit(projectId)
+    return headCommitResult.value
   },
 )
 

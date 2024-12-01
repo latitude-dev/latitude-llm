@@ -50,6 +50,7 @@ export type Events =
   | 'publicDocumentRunRequested'
   | 'chatMessageRequested'
   | 'sharedChatMessageRequested'
+  | 'forkDocumentRequested'
   | 'batchEvaluationRunRequested'
   | 'runDocumentInBatchRequested'
   | 'copilotRefinerGenerated'
@@ -330,6 +331,21 @@ export type SharedChatMessageRequestedEvent = LatitudeEventGeneric<
   }
 >
 
+export type ForkDocumentRequestedEvent = LatitudeEventGeneric<
+  'forkDocumentRequested',
+  {
+    origin: {
+      workspaceId: number
+      commitUuid: string
+      documentUuid: string
+    }
+    destination: {
+      workspaceId: number
+      userEmail: string
+    }
+  }
+>
+
 export type BatchEvaluationRunRequestedEvent = LatitudeEventGeneric<
   'batchEvaluationRunRequested',
   {
@@ -427,6 +443,7 @@ export type LatitudeEvent =
   | PublicDocumentRunRequestedEvent
   | ChatMessageRequestedEvent
   | SharedChatMessageRequestedEvent
+  | ForkDocumentRequestedEvent
   | BatchEvaluationRunRequestedEvent
   | RunDocumentInBatchRequestedEvent
   | CopilotRefinerGenerated
@@ -462,6 +479,7 @@ export interface IEventsHandlers {
   publicDocumentRunRequested: EventHandler<PublicDocumentRunRequestedEvent>[]
   chatMessageRequested: EventHandler<ChatMessageRequestedEvent>[]
   sharedChatMessageRequested: EventHandler<SharedChatMessageRequestedEvent>[]
+  forkDocumentRequested: EventHandler<ForkDocumentRequestedEvent>[]
   batchEvaluationRunRequested: EventHandler<BatchEvaluationRunRequestedEvent>[]
   runDocumentInBatchRequested: EventHandler<RunDocumentInBatchRequestedEvent>[]
   copilotRefinerGenerated: EventHandler<CopilotRefinerGenerated>[]
