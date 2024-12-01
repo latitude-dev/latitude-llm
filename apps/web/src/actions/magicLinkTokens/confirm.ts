@@ -14,6 +14,7 @@ export const confirmMagicLinkTokenAction = createServerAction()
   .input(
     z.object({
       token: z.string(),
+      returnTo: z.string().optional(),
     }),
   )
   .handler(async ({ input }) => {
@@ -35,5 +36,5 @@ export const confirmMagicLinkTokenAction = createServerAction()
       },
     })
 
-    redirect(ROUTES.root)
+    redirect(input.returnTo ? input.returnTo : ROUTES.root)
   })

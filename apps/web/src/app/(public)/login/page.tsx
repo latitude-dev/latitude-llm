@@ -24,7 +24,7 @@ export default async function LoginPage() {
       header={<FocusHeader title='Welcome to Latitude' />}
       footer={<LoginFooter />}
     >
-      <Card>
+      <Card background='light'>
         <CardContent standalone>
           <LoginForm footer={<AuthFooter />} />
         </CardContent>

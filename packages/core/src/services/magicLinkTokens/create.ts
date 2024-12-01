@@ -5,7 +5,7 @@ import { Result, Transaction } from '../../lib'
 import { magicLinkTokens } from '../../schema/models/magicLinkTokens'
 
 export async function createMagicLinkToken(
-  { user }: { user: User },
+  { user, returnTo }: { user: User; returnTo?: string },
   db = database,
 ) {
   return Transaction.call(async (tx) => {
@@ -19,6 +19,7 @@ export async function createMagicLinkToken(
       data: {
         ...magicLinkToken[0]!,
         userEmail: user.email,
+        returnTo,
       },
     })
 

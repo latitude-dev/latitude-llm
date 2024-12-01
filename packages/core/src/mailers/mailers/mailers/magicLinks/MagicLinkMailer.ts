@@ -9,15 +9,21 @@ import Mailer from '../../Mailer'
 export class MagicLinkMailer extends Mailer {
   user: string
   magicLinkToken: string
+  returnTo?: string
 
   constructor(
     options: Mail.Options,
-    { user, magicLinkToken }: { user: string; magicLinkToken: string },
+    {
+      user,
+      magicLinkToken,
+      returnTo,
+    }: { user: string; magicLinkToken: string; returnTo?: string },
   ) {
     super(options)
 
     this.user = user
     this.magicLinkToken = magicLinkToken
+    this.returnTo = returnTo
   }
 
   async send(): Promise<TypedResult<SMTPTransport.SentMessageInfo, Error>> {
@@ -29,6 +35,7 @@ export class MagicLinkMailer extends Mailer {
         MagicLinkMail({
           user: this.user,
           magicLinkToken: this.magicLinkToken,
+          returnTo: this.returnTo,
         }),
       ),
     })

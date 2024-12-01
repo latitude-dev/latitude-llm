@@ -79,7 +79,7 @@ const buttonVariants = cva(
         default: 'py-1.5 px-3',
         small: 'py-1 px-1.5',
         none: 'py-0 px-0',
-        icon: 'h-10 w-10',
+        icon: 'h-6 w-6',
       },
       fanciness: {
         default: '',
