@@ -41,6 +41,8 @@ export function useCommitsFromProject(
     createDraftCommitAction,
     {
       onSuccess: async ({ data: draft }) => {
+        if (!draft) return
+
         mutate([...data, draft])
         onSuccessCreate?.(draft)
 
