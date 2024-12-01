@@ -37,7 +37,13 @@ export const generateSuggestedEvaluationsAction = authProcedure
       .update(input.documentContent)
       .digest('hex')
     const cacheKey = `suggested_evaluations:v2:${contentHash}`
-    const cachedResult = await cacheInstance.get(cacheKey)
+    let cachedResult: string | undefined | null
+    try {
+      cachedResult = await cacheInstance.get(cacheKey)
+    } catch (e) {
+      // do nothing
+    }
+
     if (cachedResult) {
       return JSON.parse(cachedResult) as SuggestedEvaluation
     }
@@ -63,7 +69,11 @@ export const generateSuggestedEvaluationsAction = authProcedure
 
     const suggestedEvaluation = res.object
 
-    await cacheInstance.set(cacheKey, JSON.stringify(suggestedEvaluation))
+    try {
+      await cacheInstance.set(cacheKey, JSON.stringify(suggestedEvaluation))
+    } catch (e) {
+      // do nothing
+    }
 
     return suggestedEvaluation
   })

@@ -13,12 +13,20 @@ export async function getFreeRuns(workspaceId: number) {
   const c = await cache()
   const key = buildFreeRunCacheKey(workspaceId)
 
-  return await c.get(key)
+  try {
+    return await c.get(key)
+  } catch (e) {
+    // do nothing
+  }
 }
 
 export async function incrFreeRuns(workspaceId: number) {
   const c = await cache()
   const key = buildFreeRunCacheKey(workspaceId)
 
-  return await c.incr(key)
+  try {
+    return await c.incr(key)
+  } catch (e) {
+    // do nothing
+  }
 }

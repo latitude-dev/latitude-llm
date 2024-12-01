@@ -1,6 +1,7 @@
 import { cache } from '@latitude-data/core/cache'
 import { RateLimitError } from '@latitude-data/core/lib/errors'
 import { createMiddleware } from 'hono/factory'
+import { ReplyError } from 'ioredis'
 import { RateLimiterRedis, RateLimiterRes } from 'rate-limiter-flexible'
 
 const RATE_LIMIT_POINTS = 2000
@@ -35,10 +36,12 @@ const rateLimitMiddleware = () =>
 
       const result = await rateLimiter.consume(token as string)
       handleRateLimitHeaders(result)
+
       await next()
     } catch (error) {
       if (error instanceof RateLimiterRes) {
         const res = error as RateLimiterRes
+
         throw new RateLimitError(
           'Too many requests',
           res.msBeforeNext / 1000,
@@ -47,6 +50,11 @@ const rateLimitMiddleware = () =>
           Date.now() + res.msBeforeNext,
         )
       }
+
+      if (error instanceof ReplyError) {
+        return await next()
+      }
+
       throw error
     }
   })
