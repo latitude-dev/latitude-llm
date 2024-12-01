@@ -24,14 +24,29 @@ const SecurityGroup = new aws.ec2.SecurityGroup('LatitudeLLMCacheSg', {
   ],
 })
 
+const cacheParameterGroup = new aws.elasticache.ParameterGroup(
+  'cacheparametergroup',
+  {
+    family: 'redis7',
+    description: 'Custom parameter group for cache cluster',
+    parameters: [
+      {
+        name: 'maxmemory-policy',
+        value: 'allkeys-lru',
+      },
+    ],
+  },
+)
+
 // Create an ElastiCache cluster
 const cacheCluster = new aws.elasticache.Cluster('LatitudeLLMCacheCluster', {
   engine: 'redis',
-  nodeType: 'cache.t3.micro',
+  nodeType: 'cache.t4g.small',
   numCacheNodes: 1,
   port: 6379,
   subnetGroupName: subnetGroup.name,
   securityGroupIds: [SecurityGroup.id],
+  parameterGroupName: cacheParameterGroup.name,
 })
 
 const queueParameterGroup = new aws.elasticache.ParameterGroup(
@@ -50,7 +65,7 @@ const queueParameterGroup = new aws.elasticache.ParameterGroup(
 
 const queueCluster = new aws.elasticache.Cluster('LatitudeLLMQueueCluster', {
   engine: 'redis',
-  nodeType: 'cache.t3.micro',
+  nodeType: 'cache.t4g.small',
   numCacheNodes: 1,
   engineVersion: '6.x',
   port: 6379,

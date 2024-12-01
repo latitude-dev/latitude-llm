@@ -34,7 +34,7 @@ export async function checkFreeProviderQuota({
   }
 
   const value = await incrFreeRuns(workspace.id)
-  if (value <= DEFAULT_PROVIDER_MAX_FREE_RUNS) return Result.ok(true)
+  if (!value || value <= DEFAULT_PROVIDER_MAX_FREE_RUNS) return Result.ok(true)
 
   return Result.error(
     new ChainError({

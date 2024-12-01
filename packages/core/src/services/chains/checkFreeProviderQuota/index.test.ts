@@ -55,7 +55,7 @@ describe('checkFreeProviderQuota', () => {
     })
 
     it('return an error if free runs exceed the limit', async () => {
-      const prevCount = await getFreeRuns(workspace.id)
+      const prevCount = (await getFreeRuns(workspace.id)) || 0
       await incrFreeRunsBy(workspace.id, 1000)
       const result = await checkFreeProviderQuota({
         workspace,
