@@ -26,19 +26,22 @@ export async function hasContent(iterable: Iterable<unknown>) {
   return false
 }
 
-export function removeCommonIndent(text: string): string {
-  const lines = text.split('\n')
-  const commonIndent =
-    lines.reduce((acc: number | null, line: string) => {
+export function getCommonIndent(text: string): number {
+  return (
+    text.split('\n').reduce((acc: number | null, line: string) => {
       if (line.trim() === '') return acc
       const indent = line.match(/^\s*/)![0]
       if (acc === null) return indent.length
       return indent.length < acc ? indent.length : acc
     }, null) ?? 0
-  return lines
-    .map((line) => {
-      return line.slice(commonIndent)
-    })
+  )
+}
+
+export function removeCommonIndent(text: string): string {
+  const indent = getCommonIndent(text)
+  return text
+    .split('\n')
+    .map((line) => line.slice(indent))
     .join('\n')
     .trim()
 }

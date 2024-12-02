@@ -23,7 +23,7 @@ import { buildTools } from './buildTools'
 import { handleAICallAPIError } from './handleError'
 import { createProvider, PartialConfig } from './helpers'
 import { Providers, UNSUPPORTED_STREAM_MODELS } from './providers/models'
-import { applyCustomRules } from './providers/rules'
+import { applyAllRules } from './providers/rules'
 import { runNoStreamingModels } from './runNoStreamingModels'
 
 const DEFAULT_AI_SDK_PROVIDER = {
@@ -94,11 +94,22 @@ export async function ai({
     ...(aiSdkProvider || {}),
   }
   try {
-    const rule = applyCustomRules({
+    const rule = applyAllRules({
       providerType: apiProvider.provider,
       messages: originalMessages,
       config: originalConfig,
     })
+
+    if (rule.rules.length > 0) {
+      return Result.error(
+        new ChainError({
+          code: RunErrorCodes.AIRunError,
+          message:
+            'There are rule violations:\n' +
+            rule.rules.map((rule) => `- ${rule.ruleMessage}`).join('\n'),
+        }),
+      )
+    }
 
     const { provider, token: apiKey, url } = apiProvider
     const config = rule.config as PartialConfig

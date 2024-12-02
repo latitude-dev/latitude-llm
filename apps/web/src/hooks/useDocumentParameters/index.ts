@@ -16,7 +16,10 @@ export type PlaygroundInput<S extends InputSource> = S extends 'dataset'
       value: string
       metadata: { includeInPrompt: boolean }
     }
-  : { value: string; metadata: { includeInPrompt?: boolean } }
+  : {
+      value: string
+      metadata: { includeInPrompt?: boolean }
+    }
 
 type ManualInput = PlaygroundInput<'manual'>
 type DatasetInput = PlaygroundInput<'dataset'>

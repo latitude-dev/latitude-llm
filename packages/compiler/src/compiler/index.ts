@@ -28,11 +28,12 @@ export async function render({
 export function createChain({
   prompt,
   parameters,
+  ...options
 }: {
   prompt: string
   parameters: Record<string, unknown>
-}): Chain {
-  return new Chain({ prompt, parameters })
+} & CompileOptions): Chain {
+  return new Chain({ prompt, parameters, ...options })
 }
 
 export function readMetadata({

@@ -19,7 +19,9 @@
     "prettier": "prettier --write \"**/*.{ts,tsx,md}\""
   },
   "type": "module",
-  "files": ["dist"],
+  "files": [
+    "dist"
+  ],
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "exports": {
@@ -42,7 +44,7 @@
     "eventsource-parser": "^2.0.1",
     "node-fetch": "3.3.2",
     "zod": "^3.23.8",
-    "@latitude-data/promptl": "^0.3.1"
+    "@latitude-data/promptl": "^0.3.2"
   },
   "devDependencies": {
     "@latitude-data/constants": "workspace:*",

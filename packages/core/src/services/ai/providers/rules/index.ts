@@ -3,6 +3,7 @@ import type { Config, Message } from '@latitude-data/compiler'
 import { PartialConfig } from '../../helpers'
 import { Providers } from '../models'
 import { applyAnthropicRules } from './anthropic'
+import { applyCustomRules } from './custom'
 import { applyGoogleRules } from './google'
 import { vercelSdkRules } from './vercel'
 
@@ -10,6 +11,7 @@ export enum ProviderRules {
   Anthropic = 'anthropic',
   Google = 'google',
   VercelSDK = 'latitude',
+  Custom = 'custom',
 }
 
 type ProviderRule = { rule: ProviderRules; ruleMessage: string }
@@ -26,7 +28,7 @@ type Props = {
   config: Config | PartialConfig
 }
 
-export function applyCustomRules({
+export function applyProviderRules({
   providerType,
   messages,
   config,
@@ -36,6 +38,7 @@ export function applyCustomRules({
     messages,
     config,
   }
+
   if (providerType === Providers.Anthropic) {
     rules = applyAnthropicRules(rules)
   }
@@ -44,5 +47,24 @@ export function applyCustomRules({
     rules = applyGoogleRules(rules)
   }
 
-  return vercelSdkRules(rules, providerType)
+  rules = applyCustomRules(rules)
+
+  return rules
+}
+
+export function applyAllRules({
+  providerType,
+  messages,
+  config,
+}: Props): AppliedRules {
+  let rules: AppliedRules = {
+    rules: [],
+    messages,
+    config,
+  }
+
+  rules = applyProviderRules({ providerType, messages, config })
+  rules = vercelSdkRules(rules, providerType)
+
+  return rules
 }

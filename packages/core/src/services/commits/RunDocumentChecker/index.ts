@@ -62,6 +62,7 @@ export class RunDocumentChecker {
           createLegacyChain({
             prompt: metadata.resolvedPrompt,
             parameters: this.parameters,
+            includeSourceMap: true,
           }),
         )
       } else {
@@ -76,6 +77,7 @@ export class RunDocumentChecker {
             prompt: metadata.resolvedPrompt,
             parameters: this.processParameters(this.parameters),
             adapter: Adapters.default,
+            includeSourceMap: true,
           }),
         )
       }

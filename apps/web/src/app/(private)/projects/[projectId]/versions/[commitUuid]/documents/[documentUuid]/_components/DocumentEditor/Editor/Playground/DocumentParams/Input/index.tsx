@@ -15,9 +15,11 @@ import {
 export function InputParams({
   inputs,
   setInput,
+  disabled = false,
 }: {
   inputs: Inputs<InputSource>
-  setInput: (param: string, value: PlaygroundInput<InputSource>) => void
+  setInput?: (param: string, value: PlaygroundInput<InputSource>) => void
+  disabled?: boolean
 }) {
   return (
     <ClientOnly>
@@ -51,8 +53,9 @@ export function InputParams({
                       value={value ?? ''}
                       minRows={1}
                       maxRows={6}
+                      disabled={disabled}
                       onChange={(e) => {
-                        setInput(param, { ...input, value: e.target.value })
+                        setInput?.(param, { ...input, value: e.target.value })
                       }}
                     />
                   </div>

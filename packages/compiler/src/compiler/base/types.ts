@@ -59,7 +59,7 @@ export type CompileNodeContext<N extends TemplateNode> = {
 
   setConfig: (config: Config) => void
   addMessage: (message: Message) => void
-  addStrayText: (text: string, node: TemplateNode) => void
+  addStrayText: (text: string, node?: TemplateNode) => void
   popStrayText: () => { text: string; sourceMap: PromptlSourceRef[] }
   groupStrayText: () => void
   addContent: (content: MessageContent) => void

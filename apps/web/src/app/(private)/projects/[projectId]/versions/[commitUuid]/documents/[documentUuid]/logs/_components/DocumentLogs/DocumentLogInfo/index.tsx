@@ -184,7 +184,10 @@ export function DocumentLogInfo({
                   />
                 )}
                 {selectedTab === 'messages' && (
-                  <DocumentLogMessages messages={messages} />
+                  <DocumentLogMessages
+                    documentLog={documentLog}
+                    messages={messages}
+                  />
                 )}
                 {selectedTab === 'evaluations' && (
                   <DocumentLogEvaluations

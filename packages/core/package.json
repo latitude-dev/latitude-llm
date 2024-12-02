@@ -141,6 +141,6 @@
     "zod": "^3.23.8"
   },
   "dependencies": {
-    "@latitude-data/promptl": "^0.3.1"
+    "@latitude-data/promptl": "^0.3.2"
   }
 }

@@ -29,16 +29,19 @@ import { LanguageModelUsage } from 'ai'
 import { readStreamableValue } from 'ai/rsc'
 
 import { DocumentEditorContext } from '..'
+import Actions, { ActionsState } from './Actions'
 
 export default function Chat({
   document,
   parameters,
   clearChat,
+  expandParameters,
+  setExpandParameters,
 }: {
   document: DocumentVersion
   parameters: Record<string, unknown>
   clearChat: () => void
-}) {
+} & ActionsState) {
   const [documentLogUuid, setDocumentLogUuid] = useState<string>()
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
@@ -231,9 +234,17 @@ export default function Chat({
         ref={containerRef}
         className='flex flex-col gap-3 flex-grow flex-shrink min-h-0 custom-scrollbar pb-12'
       >
-        <Text.H6M>Prompt</Text.H6M>
+        <div className='flex flex-row items-center justify-between w-full'>
+          <Text.H6M>Prompt</Text.H6M>
+          <Actions
+            expandParameters={expandParameters}
+            setExpandParameters={setExpandParameters}
+          />
+        </div>
         <MessageList
           messages={conversation?.messages.slice(0, chainLength - 1) ?? []}
+          parameters={parameters}
+          collapseParameters={!expandParameters}
         />
         {(conversation?.messages.length ?? 0) >= chainLength && (
           <>

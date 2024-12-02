@@ -294,7 +294,10 @@ describe('runChain', () => {
     expect(aiModule.ai).toHaveBeenCalledWith(
       expect.objectContaining({
         messages: [
-          { role: MessageRole.system, content: 'System instruction' },
+          {
+            role: MessageRole.system,
+            content: [{ type: ContentType.text, text: 'System instruction' }],
+          },
           {
             role: MessageRole.user,
             content: [{ type: ContentType.text, text: 'User message' }],
