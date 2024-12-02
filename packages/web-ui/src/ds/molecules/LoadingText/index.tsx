@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 
 import { Text } from '../../atoms'
+import { cn } from '../../../lib/utils'
 
 const loadingTexts = [
   'Convincing AI to work overtime...',
@@ -14,7 +15,11 @@ const loadingTexts = [
   'Herding cats... I mean, data points...',
 ]
 
-export function LoadingText() {
+export function LoadingText({
+  alignX = 'right',
+}: {
+  alignX?: 'left' | 'center' | 'right'
+}) {
   const [currentTextIndex, setCurrentTextIndex] = useState(0)
   const [isVisible, setIsVisible] = useState(true)
 
@@ -34,9 +39,16 @@ export function LoadingText() {
 
   return (
     <div
-      className={`flex flex-row justify-end transition-opacity duration-500 ${
-        isVisible ? 'opacity-100' : 'opacity-0'
-      }`}
+      className={cn(
+        'flex flex-row justify-end transition-opacity duration-500',
+        {
+          'justify-start': alignX === 'left',
+          'justify-center': alignX === 'center',
+          'justify-end': alignX === 'right',
+          'opacity-0': !isVisible,
+          'opacity-100': isVisible,
+        },
+      )}
     >
       <Text.H6 animate>{loadingTexts[currentTextIndex]}</Text.H6>
     </div>

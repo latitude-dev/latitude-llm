@@ -103,7 +103,7 @@ export function Modal({
           ) : null}
 
           <div
-            className={cn('px-6 border-border border-t', {
+            className={cn('px-6 border-border border-t rounded-b-lg', {
               'bg-background-gray py-6': !!footer,
             })}
           >
