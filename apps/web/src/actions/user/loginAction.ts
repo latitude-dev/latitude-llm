@@ -13,12 +13,15 @@ export const loginAction = errorHandlingProcedure
   .input(
     z.object({
       email: z.string().email(),
+      returnTo: z.string().optional(),
     }),
     { type: 'formData' },
   )
   .handler(async ({ input }) => {
     const { user } = await getUserFromCredentials(input).then((r) => r.unwrap())
-    await createMagicLinkToken({ user }).then((r) => r.unwrap())
+    await createMagicLinkToken({ user, returnTo: input.returnTo }).then((r) =>
+      r.unwrap(),
+    )
 
     redirect(ROUTES.auth.magicLinkSent(user.email))
   })

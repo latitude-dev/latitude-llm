@@ -33,6 +33,7 @@ import {
   LoaderCircle,
   Lock,
   MinusIcon,
+  MonitorIcon,
   Moon,
   Pencil,
   Pin,
@@ -54,7 +55,7 @@ import {
 } from 'lucide-react'
 
 import { cn } from '../../../lib/utils'
-import { colors, type TextColor } from '../../tokens'
+import { colors, DarkTextColor, type TextColor } from '../../tokens'
 import { LatitudeLogo, LatitudeLogoMonochrome } from './custom-icons'
 
 const Icons = {
@@ -97,6 +98,7 @@ const Icons = {
   logoMonochrome: LatitudeLogoMonochrome,
   modification: SquareDot,
   moon: Moon,
+  monitor: MonitorIcon,
   pencil: Pencil,
   pin: Pin,
   pinOff: PinOff,
@@ -119,6 +121,7 @@ export type IconName = keyof typeof Icons
 export type IconProps = {
   name: IconName
   color?: TextColor
+  darkColor?: DarkTextColor
   spin?: boolean
   size?: Size
   widthClass?: string
@@ -131,6 +134,7 @@ type Size = 'small' | 'normal' | 'large' | 'xlarge' | 'xxxlarge'
 export function Icon({
   name,
   color,
+  darkColor,
   spin,
   size = 'normal',
   className,
@@ -141,6 +145,7 @@ export function Icon({
       className={cn(
         {
           [colors.textColors[color!]]: color,
+          [colors.darkTextColors[darkColor!]]: darkColor,
           'w-3 h-3': size === 'small',
           'w-4 h-4': size === 'normal',
           'w-6 h-6': size === 'large',

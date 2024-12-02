@@ -7,6 +7,7 @@ import '@latitude-data/web-ui/styles.css'
 
 import {
   ThemeProvider,
+  THEMES,
   ToastProvider,
   TooltipProvider,
 } from '@latitude-data/web-ui'
@@ -33,6 +34,7 @@ export default function RootLayout({
         <ThemeProvider
           attribute='class'
           defaultTheme='light'
+          themes={THEMES as unknown as string[]}
           enableSystem
           disableTransitionOnChange
         >

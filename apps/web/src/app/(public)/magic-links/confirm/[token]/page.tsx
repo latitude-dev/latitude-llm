@@ -9,17 +9,20 @@ import useLatitudeAction from '$/hooks/useLatitudeAction'
 
 export default function ConfirmMagicLink({
   params,
+  searchParams,
 }: {
   params: Promise<{ token: string }>
+  searchParams: Promise<{ returnTo?: string }>
 }) {
   const { token } = use(params)
+  const { returnTo } = use(searchParams)
   const { execute } = useLatitudeAction(confirmMagicLinkTokenAction, {
     onSuccess: () => {}, // We don't want the default toast message in this case
   })
 
   useEffect(() => {
-    setTimeout(() => execute({ token }), 1000)
-  }, [execute])
+    setTimeout(() => execute({ token, returnTo }), 1000)
+  }, [execute, returnTo, token])
 
   return (
     <FocusLayout

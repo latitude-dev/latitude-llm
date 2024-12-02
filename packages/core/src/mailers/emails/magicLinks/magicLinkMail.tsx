@@ -5,12 +5,15 @@ import { Link, Text } from '@react-email/components'
 
 import Layout from '../_components/Layout'
 
-type Props = {
+export default function MagicLinkMail({
+  user,
+  magicLinkToken,
+  returnTo,
+}: {
   user: string
   magicLinkToken: string
-}
-
-export default function MagicLinkMail({ user, magicLinkToken }: Props) {
+  returnTo?: string
+}) {
   return (
     <Layout title='Login' previewText='Log in with this magic link'>
       <Text>Hi {user},</Text>
@@ -19,7 +22,7 @@ export default function MagicLinkMail({ user, magicLinkToken }: Props) {
         in.
       </Text>
       <Link
-        href={createMagicLink(magicLinkToken)}
+        href={createMagicLink(magicLinkToken, returnTo)}
         target='_blank'
         className='text-blue-500 font-medium text-base mb-4'
       >
@@ -29,8 +32,9 @@ export default function MagicLinkMail({ user, magicLinkToken }: Props) {
   )
 }
 
-const createMagicLink = (token: string) => {
-  return `${env.LATITUDE_URL}/magic-links/confirm/${token}`
+const createMagicLink = (token: string, returnTo?: string) => {
+  const goTo = returnTo ? `?returnTo=${returnTo}` : ''
+  return `${env.LATITUDE_URL}/magic-links/confirm/${token}${goTo}`
 }
 
 MagicLinkMail.PreviewProps = {

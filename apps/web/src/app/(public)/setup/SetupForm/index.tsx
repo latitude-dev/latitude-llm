@@ -12,11 +12,13 @@ export default function SetupForm({
   name,
   companyName,
   footer,
+  returnTo,
 }: {
+  footer: ReactNode
   email?: string
   name?: string
   companyName?: string
-  footer: ReactNode
+  returnTo?: string
 }) {
   const { toast } = useToast()
   const { execute, isPending } = useLatitudeAction(setupAction)
@@ -34,6 +36,7 @@ export default function SetupForm({
   const errors = error?.fieldErrors
   return (
     <form action={action}>
+      <input type='hidden' name='returnTo' value={returnTo} />
       <FormWrapper>
         <Input
           autoFocus

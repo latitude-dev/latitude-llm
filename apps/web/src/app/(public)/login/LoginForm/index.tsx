@@ -6,7 +6,13 @@ import { Button, FormWrapper, Input, useToast } from '@latitude-data/web-ui'
 import { loginAction } from '$/actions/user/loginAction'
 import { useServerAction } from 'zsa-react'
 
-export default function LoginForm({ footer }: { footer: ReactNode }) {
+export default function LoginForm({
+  footer,
+  returnTo,
+}: {
+  footer: ReactNode
+  returnTo?: string
+}) {
   const { toast } = useToast()
   const { isPending, error, executeFormAction } = useServerAction(loginAction, {
     onError: ({ err }) => {
@@ -22,6 +28,7 @@ export default function LoginForm({ footer }: { footer: ReactNode }) {
   const errors = error?.fieldErrors
   return (
     <form action={executeFormAction}>
+      <input type='hidden' name='returnTo' value={returnTo} />
       <FormWrapper>
         <Input
           autoFocus

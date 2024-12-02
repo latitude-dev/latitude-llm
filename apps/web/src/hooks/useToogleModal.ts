@@ -6,6 +6,10 @@ export function useToggleModal({
   const [open, setOpen] = useState(initialState)
   const onClose = useCallback(() => setOpen(false), [])
   const onOpen = useCallback(() => setOpen(true), [])
+  const onOpenChange = useCallback(
+    (newOpen?: boolean) => setOpen((prev) => newOpen ?? !prev),
+    [],
+  )
 
-  return { open, onClose, onOpen }
+  return { open, onClose, onOpen, onOpenChange }
 }

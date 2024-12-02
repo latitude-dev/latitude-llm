@@ -14,6 +14,7 @@ export const setupAction = errorHandlingProcedure
   .input(
     async () => {
       return z.object({
+        returnTo: z.string().optional(),
         name: z.string().min(1, { message: 'Name is a required field' }),
         email: z
           .string()
@@ -49,5 +50,5 @@ export const setupAction = errorHandlingProcedure
       },
     })
 
-    redirect(ROUTES.root)
+    redirect(input.returnTo ? input.returnTo : ROUTES.root)
   })

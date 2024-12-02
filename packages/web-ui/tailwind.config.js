@@ -123,9 +123,10 @@ export default {
         'modal-lg': '720px',
       },
       maxWidth: {
+        'modal-sm': '360px',
         modal: '580px',
         'modal-lg': '720px',
-        chat: '1024px'
+        chat: '1024px',
       },
       transitionDelay: {
         250: '250ms',

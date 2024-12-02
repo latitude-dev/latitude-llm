@@ -10,14 +10,18 @@ export const metadata = buildMetatags({
 
 export default async function GlobalNoFound() {
   return (
-    <ErrorComponent
-      type='gray'
-      message="We couldn't find what you are looking for. Please make sure that the page exists and try again."
-      submit={
-        <Link href={ROUTES.root}>
-          <Button>Go to Homepage</Button>
-        </Link>
-      }
-    />
+    <div className='h-screen flex items-center justify-center'>
+      <ErrorComponent
+        type='gray'
+        message="We couldn't find what you are looking for. Please make sure that the page exists and try again."
+        submit={
+          <Link href={ROUTES.root}>
+            <Button fancy variant='outline'>
+              Go to Homepage
+            </Button>
+          </Link>
+        }
+      />
+    </div>
   )
 }

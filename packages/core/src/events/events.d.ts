@@ -75,7 +75,7 @@ export type EventHandler<E extends LatitudeEvent> = ({
 
 export type MagicLinkTokenCreated = LatitudeEventGeneric<
   'magicLinkTokenCreated',
-  MagicLinkToken & { userEmail: string }
+  MagicLinkToken & { userEmail: string; returnTo?: string }
 >
 export type UserCreatedEvent = LatitudeEventGeneric<
   'userCreated',
