@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import {
   ContentType,
@@ -211,8 +211,11 @@ const ContentText = ({
   // Sort source map to ensure references are ordered
   sourceMap = sourceMap.sort((a, b) => a.start - b.start)
 
-  const segments = segmentMessage(message, sourceMap, parameters)
-  const groups = groupSegmentsByNewLine(segments)
+  const segments = useMemo(
+    () => segmentMessage(message, sourceMap, parameters),
+    [message, sourceMap, parameters],
+  )
+  const groups = useMemo(() => groupSegmentsByNewLine(segments), [segments])
 
   return groups.map((group, groupIndex) => (
     <TextComponent
