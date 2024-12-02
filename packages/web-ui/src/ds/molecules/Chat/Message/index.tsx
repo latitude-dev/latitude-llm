@@ -1,6 +1,6 @@
 'use client'
 
-import { ReactNode, useState } from 'react'
+import { useEffect, useState } from 'react'
 
 import {
   ContentType,
@@ -12,7 +12,7 @@ import {
 
 import { cn } from '../../../../lib/utils'
 import { Badge, CodeBlock, Skeleton, Text, Tooltip } from '../../../atoms'
-import { colors, TextColor } from '../../../tokens'
+import { colors, font, TextColor } from '../../../tokens'
 import { roleVariant } from './helpers'
 
 export { roleVariant } from './helpers'
@@ -178,6 +178,12 @@ const Content = ({
   }
 }
 
+type SourceRef = {
+  identifier?: string
+  text: string
+}
+type Segment = string | SourceRef
+
 const ContentText = ({
   index = 0,
   color,
@@ -205,12 +211,7 @@ const ContentText = ({
   // Sort source map to ensure references are ordered
   sourceMap = sourceMap.sort((a, b) => a.start - b.start)
 
-  const segments = segmentMessage(
-    message,
-    sourceMap,
-    parameters,
-    collapseParameters,
-  )
+  const segments = segmentMessage(message, sourceMap, parameters)
   const groups = groupSegmentsByNewLine(segments)
 
   return groups.map((group, groupIndex) => (
@@ -223,7 +224,7 @@ const ContentText = ({
       {group.length > 0
         ? group.map((segment, segmentIndex) => (
             <span key={`${index}-group-${groupIndex}-segment-${segmentIndex}`}>
-              {segment}
+              {RenderSegment(segment, collapseParameters)}
             </span>
           ))
         : '\n'}
@@ -231,26 +232,39 @@ const ContentText = ({
   ))
 }
 
-type Segment = string | ReactNode
+function RenderSegment(segment: Segment, collapseParameters: boolean) {
+  if (typeof segment === 'string') {
+    return segment
+  }
 
-function identifierSegment(
-  message: string,
-  sourceRef: PromptlSourceRef,
-  collapseParameters: boolean,
-) {
-  if (collapseParameters) {
+  if (segment.identifier) {
+    return IdentifierSegment(segment, collapseParameters)
+  }
+
+  return DynamicSegment(segment, collapseParameters)
+}
+
+function IdentifierSegment(segment: SourceRef, collapseParameters: boolean) {
+  const [collapseSegment, setCollapseSegment] = useState(collapseParameters)
+  useEffect(() => {
+    setCollapseSegment(collapseParameters)
+  }, [collapseParameters])
+
+  if (collapseSegment) {
     return (
       <Tooltip
         asChild
         trigger={
-          <Badge variant='accent'>
-            &#123;&#123;{sourceRef.identifier}&#125;&#125;
+          <Badge
+            variant='accent'
+            className='cursor-pointer'
+            onClick={() => setCollapseSegment(!collapseSegment)}
+          >
+            &#123;&#123;{segment.identifier}&#125;&#125;
           </Badge>
         }
       >
-        <div className='line-clamp-6'>
-          {message.slice(sourceRef.start, sourceRef.end)}
-        </div>
+        <div className='line-clamp-6'>{segment.text}</div>
       </Tooltip>
     )
   }
@@ -259,32 +273,43 @@ function identifierSegment(
     <Tooltip
       asChild
       trigger={
-        <span className={colors.textColors.accentForeground}>
-          {message.slice(sourceRef.start, sourceRef.end)}
+        <span
+          className={cn(
+            colors.textColors.accentForeground,
+            font.weight.semibold,
+            'cursor-pointer',
+          )}
+          onClick={() => setCollapseSegment(!collapseSegment)}
+        >
+          {segment.text}
         </span>
       }
     >
-      <div className='line-clamp-6'>{sourceRef.identifier}</div>
+      <div className='line-clamp-6'>{segment.identifier}</div>
     </Tooltip>
   )
 }
 
-function dynamicSegment(
-  message: string,
-  sourceRef: PromptlSourceRef,
-  collapseParameters: boolean,
-) {
-  if (collapseParameters) {
+function DynamicSegment(segment: SourceRef, collapseParameters: boolean) {
+  const [collapseSegment, setCollapseSegment] = useState(collapseParameters)
+  useEffect(() => {
+    setCollapseSegment(collapseParameters)
+  }, [collapseParameters])
+
+  if (collapseSegment) {
     return (
       <Tooltip
         asChild
         trigger={
-          <Badge variant='yellow'>&#123;&#123;dynamic&#125;&#125;</Badge>
+          <span
+            className={cn(colors.textColors.accentForeground, 'cursor-pointer')}
+            onClick={() => setCollapseSegment(!collapseSegment)}
+          >
+            (...)
+          </span>
         }
       >
-        <div className='line-clamp-6'>
-          {message.slice(sourceRef.start, sourceRef.end)}
-        </div>
+        <div className='line-clamp-6'>{segment.text}</div>
       </Tooltip>
     )
   }
@@ -293,8 +318,11 @@ function dynamicSegment(
     <Tooltip
       asChild
       trigger={
-        <span className={colors.textColors.warningMutedForeground}>
-          {message.slice(sourceRef.start, sourceRef.end)}
+        <span
+          className={cn(colors.textColors.accentForeground, 'cursor-pointer')}
+          onClick={() => setCollapseSegment(!collapseSegment)}
+        >
+          {segment.text}
         </span>
       }
     >
@@ -307,7 +335,6 @@ function segmentMessage(
   message: string,
   sourceMap: PromptlSourceRef[],
   parameters: Record<string, unknown>,
-  collapseParameters: boolean,
 ): Segment[] {
   let segments: Segment[] = []
 
@@ -315,13 +342,13 @@ function segmentMessage(
   if (firstSegment.length > 0) segments.push(firstSegment)
 
   for (let i = 0; i < sourceMap.length; i++) {
-    if (sourceMap[i]!.identifier && !!parameters[sourceMap[i]!.identifier!]) {
-      segments.push(
-        identifierSegment(message, sourceMap[i]!, collapseParameters),
-      )
-    } else {
-      segments.push(dynamicSegment(message, sourceMap[i]!, collapseParameters))
-    }
+    segments.push({
+      identifier:
+        sourceMap[i]!.identifier && !!parameters[sourceMap[i]!.identifier!]
+          ? sourceMap[i]!.identifier!
+          : undefined,
+      text: message.slice(sourceMap[i]!.start, sourceMap[i]!.end),
+    })
 
     const nextSegment = message.slice(
       sourceMap[i]!.end,
@@ -341,7 +368,7 @@ function groupSegmentsByNewLine(segments: Segment[]) {
     if (typeof segment === 'string') {
       const subsegments = segment.split('\n')
       for (let i = 0; i < subsegments.length; i++) {
-        if (subsegments[i]!.length > 0) currentGroup.push(subsegments[i])
+        if (subsegments[i]!.length > 0) currentGroup.push(subsegments[i]!)
         if (i < subsegments.length - 1) {
           groups.push(currentGroup)
           currentGroup = []

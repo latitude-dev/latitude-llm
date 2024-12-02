@@ -63,8 +63,6 @@ export function extractContentMetadata({
   content: Record<string, unknown>
   provider: Providers
 }) {
-  delete content._promptlSourceMap
-
   const definedAttributes = Object.keys(content).filter((key) =>
     CONTENT_DEFINED_ATTRIBUTES.includes(
       key as (typeof CONTENT_DEFINED_ATTRIBUTES)[number],
