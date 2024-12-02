@@ -224,7 +224,10 @@ const ContentText = ({
       {group.length > 0
         ? group.map((segment, segmentIndex) => (
             <span key={`${index}-group-${groupIndex}-segment-${segmentIndex}`}>
-              {RenderSegment(segment, collapseParameters)}
+              <SegmentComponent
+                segment={segment}
+                collapseParameters={collapseParameters}
+              />
             </span>
           ))
         : '\n'}
@@ -232,7 +235,13 @@ const ContentText = ({
   ))
 }
 
-function RenderSegment(segment: Segment, collapseParameters: boolean) {
+function SegmentComponent({
+  segment,
+  collapseParameters,
+}: {
+  segment: Segment
+  collapseParameters: boolean
+}) {
   if (typeof segment === 'string') {
     return segment
   }
