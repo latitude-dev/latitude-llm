@@ -1,9 +1,15 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 
 import { Message, MessageRole } from '@latitude-data/compiler'
 import { ProviderLogDto } from '@latitude-data/core/browser'
 import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
-import { MessageList, SwitchToogle, Text } from '@latitude-data/web-ui'
+import {
+  AppLocalStorage,
+  MessageList,
+  SwitchToogle,
+  Text,
+  useLocalStorage,
+} from '@latitude-data/web-ui'
 
 export function useGetProviderLogMessages({
   providerLogs,
@@ -46,7 +52,12 @@ export function DocumentLogMessages({
       return message.content.some((content) => '_promptlSourceMap' in content)
     })
   }, [documentLog.uuid, messages])
-  const [expandParameters, setExpandParameters] = useState(!sourceMapAvailable)
+
+  const { value: expandParameters, setValue: setExpandParameters } =
+    useLocalStorage({
+      key: AppLocalStorage.expandParameters,
+      defaultValue: false,
+    })
 
   if (!messages.length) {
     return (
@@ -57,23 +68,24 @@ export function DocumentLogMessages({
   }
 
   return (
-    <div className='flex flex-col gap-3 flex-grow flex-shrink min-h-0'>
-      <div className='flex flex-row items-center justify-between w-full'>
+    <>
+      <div className='flex flex-row items-center justify-between w-full sticky top-0 bg-background pb-2'>
         <Text.H6M>Messages</Text.H6M>
-        <div className='flex flex-row gap-2 items-center'>
-          <Text.H6M>Expand parameters</Text.H6M>
-          <SwitchToogle
-            checked={expandParameters}
-            onCheckedChange={setExpandParameters}
-            disabled={!sourceMapAvailable}
-          />
-        </div>
+        {sourceMapAvailable && (
+          <div className='flex flex-row gap-2 items-center'>
+            <Text.H6M>Expand parameters</Text.H6M>
+            <SwitchToogle
+              checked={expandParameters}
+              onCheckedChange={setExpandParameters}
+            />
+          </div>
+        )}
       </div>
       <MessageList
         messages={messages}
         parameters={documentLog.parameters}
         collapseParameters={!expandParameters}
       />
-    </div>
+    </>
   )
 }

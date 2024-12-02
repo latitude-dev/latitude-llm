@@ -15,6 +15,7 @@ export enum AppLocalStorage {
   playgroundParameters = 'playgroundParameters',
   dismissedDocumentPromptlNotification = 'dismissedDocumentPromptlNotification',
   dismissedEvaluationPromptlNotification = 'dismissedEvaluationPromptlNotification',
+  expandParameters = 'expandParameters',
 }
 
 const isLocalStorageAvailable = (() => {

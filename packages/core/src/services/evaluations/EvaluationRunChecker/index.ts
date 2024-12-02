@@ -128,6 +128,7 @@ export class EvaluationRunChecker {
               ...serializedLogResult.value,
             },
             adapter: Adapters.default,
+            includeSourceMap: true,
           }),
         )
       } else {
@@ -137,6 +138,7 @@ export class EvaluationRunChecker {
             parameters: {
               ...serializedLogResult.value,
             },
+            includeSourceMap: true,
           }),
         )
       }

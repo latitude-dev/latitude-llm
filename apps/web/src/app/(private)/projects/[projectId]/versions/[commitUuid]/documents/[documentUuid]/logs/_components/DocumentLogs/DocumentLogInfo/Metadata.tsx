@@ -1,21 +1,21 @@
 import { useMemo } from 'react'
 
+import { RunErrorMessage } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/_components/RunErrorMessage'
+import { formatCostInMillicents, formatDuration } from '$/app/_lib/formatUtils'
+import { Inputs } from '$/hooks/useDocumentParameters'
+import useProviderApiKeys from '$/stores/providerApiKeys'
 import { MessageRole, ToolCall } from '@latitude-data/compiler'
 import { ProviderLogDto } from '@latitude-data/core/browser'
 import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
 import { ClickToCopy, Message, Text } from '@latitude-data/web-ui'
-import { formatCostInMillicents, formatDuration } from '$/app/_lib/formatUtils'
-import { RunErrorMessage } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/_components/RunErrorMessage'
-import { Inputs } from '$/hooks/useDocumentParameters'
-import useProviderApiKeys from '$/stores/providerApiKeys'
 import { format } from 'date-fns'
 
-import { InputParams } from '../../../../_components/DocumentEditor/Editor/Playground/DocumentParams/Input/index'
 import {
   FinishReasonItem,
   MetadataItem,
   MetadataItemTooltip,
 } from '../../../../../[documentUuid]/_components/MetadataItem'
+import { InputParams } from '../../../../_components/DocumentEditor/Editor/Playground/DocumentParams/Input/index'
 
 function ProviderLogsMetadata({
   providerLog,
@@ -199,7 +199,7 @@ export function DocumentLogMetadata({
 }) {
   const providerLog = providerLogs[providerLogs.length - 1]
   return (
-    <>
+    <div className='flex flex-col gap-4'>
       <RunErrorMessage error={documentLog.error} />
       <MetadataItem label='Log uuid'>
         <ClickToCopy copyValue={documentLog.uuid}>
@@ -235,6 +235,6 @@ export function DocumentLogMetadata({
           <Message role={lastResponse.role} content={lastResponse.content} />
         </div>
       ) : null}
-    </>
+    </div>
   )
 }

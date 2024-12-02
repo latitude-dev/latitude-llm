@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 
+import { useCurrentDocument } from '$/app/providers/DocumentProvider'
+import { ROUTES } from '$/services/routes'
+import useProviderApiKeys from '$/stores/providerApiKeys'
 import {
   Conversation,
   Message as ConversationMessage,
@@ -27,9 +30,6 @@ import {
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui'
-import { useCurrentDocument } from '$/app/providers/DocumentProvider'
-import { ROUTES } from '$/services/routes'
-import useProviderApiKeys from '$/stores/providerApiKeys'
 import Link from 'next/link'
 
 import Actions, { ActionsState } from './Actions'
@@ -152,18 +152,18 @@ export default function Preview({
   return (
     <div className='flex flex-col flex-1 gap-2 h-full overflow-hidden'>
       {warningRule ? <Warnings warnings={warningRule} /> : null}
+      <div className='flex flex-row items-center justify-between w-full'>
+        <Text.H6M>Preview</Text.H6M>
+        <Actions
+          expandParameters={expandParameters}
+          setExpandParameters={setExpandParameters}
+        />
+      </div>
       <div
         ref={containerRef}
         className='flex flex-col gap-3 flex-grow flex-shrink min-h-0 custom-scrollbar'
       >
         <div className='flex flex-col gap-2'>
-          <div className='flex flex-row items-center justify-between w-full'>
-            <Text.H6M>Preview</Text.H6M>
-            <Actions
-              expandParameters={expandParameters}
-              setExpandParameters={setExpandParameters}
-            />
-          </div>
           {(fixedMessages ?? []).map((message, index) => (
             <Message
               key={index}

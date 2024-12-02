@@ -230,17 +230,17 @@ export default function Chat({
 
   return (
     <div className='flex flex-col flex-1 gap-2 h-full overflow-hidden'>
+      <div className='flex flex-row items-center justify-between w-full'>
+        <Text.H6M>Prompt</Text.H6M>
+        <Actions
+          expandParameters={expandParameters}
+          setExpandParameters={setExpandParameters}
+        />
+      </div>
       <div
         ref={containerRef}
         className='flex flex-col gap-3 flex-grow flex-shrink min-h-0 custom-scrollbar pb-12'
       >
-        <div className='flex flex-row items-center justify-between w-full'>
-          <Text.H6M>Prompt</Text.H6M>
-          <Actions
-            expandParameters={expandParameters}
-            setExpandParameters={setExpandParameters}
-          />
-        </div>
         <MessageList
           messages={conversation?.messages.slice(0, chainLength - 1) ?? []}
           parameters={parameters}

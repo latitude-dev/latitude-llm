@@ -1,8 +1,25 @@
 import { useMemo } from 'react'
 
 import { AssistantMessage, Message, MessageRole } from '@latitude-data/compiler'
-import { ProviderLogDto } from '@latitude-data/core/browser'
-import { MessageList, Text } from '@latitude-data/web-ui'
+import {
+  ProviderLogDto,
+  SERIALIZED_DOCUMENT_LOG_FIELDS,
+} from '@latitude-data/core/browser'
+import {
+  AppLocalStorage,
+  MessageList,
+  SwitchToogle,
+  Text,
+  useLocalStorage,
+} from '@latitude-data/web-ui'
+
+const EVALUATION_PARAMETERS = SERIALIZED_DOCUMENT_LOG_FIELDS.reduce(
+  (acc, field) => {
+    acc[field] = true
+    return acc
+  },
+  {} as Record<string, boolean>,
+)
 
 export function EvaluationResultMessages({
   providerLog,
@@ -21,6 +38,19 @@ export function EvaluationResultMessages({
     return [...(providerLog.messages as Message[]), responseMessage]
   }, [providerLog])
 
+  const sourceMapAvailable = useMemo(() => {
+    return messages.some((message) => {
+      if (typeof message.content !== 'object') return false
+      return message.content.some((content) => '_promptlSourceMap' in content)
+    })
+  }, [providerLog?.documentLogUuid, messages])
+
+  const { value: expandParameters, setValue: setExpandParameters } =
+    useLocalStorage({
+      key: AppLocalStorage.expandParameters,
+      defaultValue: false,
+    })
+
   if (!providerLog) {
     return (
       <Text.H5 color='foregroundMuted' centered>
@@ -29,5 +59,25 @@ export function EvaluationResultMessages({
     )
   }
 
-  return <MessageList messages={messages} />
+  return (
+    <>
+      <div className='flex flex-row items-center justify-between w-full sticky top-0 bg-background pb-2'>
+        <Text.H6M>Messages</Text.H6M>
+        {sourceMapAvailable && (
+          <div className='flex flex-row gap-2 items-center'>
+            <Text.H6M>Expand parameters</Text.H6M>
+            <SwitchToogle
+              checked={expandParameters}
+              onCheckedChange={setExpandParameters}
+            />
+          </div>
+        )}
+      </div>
+      <MessageList
+        messages={messages}
+        parameters={EVALUATION_PARAMETERS}
+        collapseParameters={!expandParameters}
+      />
+    </>
+  )
 }
