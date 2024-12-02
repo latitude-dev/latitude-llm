@@ -2,10 +2,15 @@
 
 import { useState } from 'react'
 
+import { useDocumentParameters } from '$/hooks/useDocumentParameters'
 import { DocumentVersion } from '@latitude-data/core/browser'
 import type { ConversationMetadata } from '@latitude-data/promptl'
-import { SplitPane, useCurrentCommit } from '@latitude-data/web-ui'
-import { useDocumentParameters } from '$/hooks/useDocumentParameters'
+import {
+  AppLocalStorage,
+  SplitPane,
+  useCurrentCommit,
+  useLocalStorage,
+} from '@latitude-data/web-ui'
 
 import Chat from './Chat'
 import { DocumentParams } from './DocumentParams'
@@ -29,7 +34,11 @@ export default function Playground({
     documentVersionUuid: document.documentUuid,
   })
   const [forcedSize, setForcedSize] = useState<number | undefined>()
-  const [expandParameters, setExpandParameters] = useState(false)
+  const { value: expandParameters, setValue: setExpandParameters } =
+    useLocalStorage({
+      key: AppLocalStorage.expandParameters,
+      defaultValue: false,
+    })
 
   return (
     <SplitPane
