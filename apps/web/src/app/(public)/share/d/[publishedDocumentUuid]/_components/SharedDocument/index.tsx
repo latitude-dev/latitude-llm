@@ -3,48 +3,92 @@
 import { FormEvent, useCallback, useEffect, useRef, useState } from 'react'
 import { capitalize } from 'lodash-es'
 
-import { Commit, PublishedDocument } from '@latitude-data/core/browser'
+import { PublishedDocument } from '@latitude-data/core/browser'
 import { ConversationMetadata } from '@latitude-data/promptl'
-import { Button, Card, CardContent, cn, Input } from '@latitude-data/web-ui'
+import { Button, Card, CardContent, cn, TextArea } from '@latitude-data/web-ui'
 
 import { Container } from '../Container'
 import { PromptHeader } from '../Header'
 import { Messages } from '../Messages'
 import { usePrompt } from './usePrompt'
 import { useChat } from './useChat'
+import { useNavigate } from '$/hooks/useNavigate'
+import { ROUTES } from '$/services/routes'
 
 // Sync with the CSS transition duration
 const DURATION_CLASS = 'duration-100 ease-in-out'
 const DURATION_MS_RUN = 100
 const DURATION_MS_RESET = 100
+const CARD_Y_PADDING = 24 // 12px padding top and bottom
 
-function useParameters({ parameters }: { parameters: Set<string> }) {
+function convertFormDataToParameters(formData: FormData) {
+  const entries = Array.from(formData.entries())
+  return entries.reduce<Record<string, string>>((acc, [key, value]) => {
+    acc[key] = value.toString()
+    return acc
+  }, {})
+}
+
+function convertParametersToUrlSearchParams(
+  parameters: Record<string, string>,
+) {
+  const clean = Object.entries(parameters).reduce<Record<string, string>>(
+    (acc, [key, value]) => {
+      const cleanValue = value.trim()
+      if (cleanValue.length > 0) {
+        acc[encodeURIComponent(key)] = encodeURIComponent(cleanValue)
+      }
+      return acc
+    },
+    {},
+  )
+  return new URLSearchParams(clean).toString()
+}
+
+function useParameters({
+  parameters,
+  queryParams,
+}: {
+  parameters: Set<string>
+  queryParams: Record<string, string>
+}) {
   return useRef(
-    Array.from(parameters).map((parameter) => ({
-      label: capitalize(parameter),
-      value: parameter,
-    })),
+    Array.from(parameters).map((parameter) => {
+      const value = queryParams[parameter] ?? ''
+      return {
+        name: parameter,
+        label: capitalize(parameter),
+        value,
+      }
+    }),
   ).current
 }
 
 type ServerClientMetadata = Omit<ConversationMetadata, 'setConfig'>
-
 function PromptForm({
   metadata,
   onSubmit,
+  queryParams,
 }: {
   metadata: ServerClientMetadata
   onSubmit: (event: FormEvent<HTMLFormElement>) => void
+  queryParams: Record<string, string>
 }) {
-  const parameters = useParameters({ parameters: metadata.parameters })
+  const parameters = useParameters({
+    parameters: metadata.parameters,
+    queryParams,
+  })
   return (
     <form className='h-full flex flex-col gap-y-4' onSubmit={onSubmit}>
-      {parameters.map((parameter) => {
+      {parameters.map((parameter, index) => {
         return (
-          <Input
-            key={parameter.value}
-            name={parameter.value}
+          <TextArea
+            minRows={1}
+            maxRows={6}
+            key={`${parameter.name}-${index}`}
+            name={parameter.name}
             label={parameter.label}
+            defaultValue={parameter.value}
           />
         )
       })}
@@ -55,14 +99,28 @@ function PromptForm({
   )
 }
 
+function useSearchParams({ shared }: { shared: PublishedDocument }) {
+  const router = useNavigate()
+  const promptPath = ROUTES.share.document(shared.uuid!).root
+  return useCallback(
+    (parameters: Record<string, string>) => {
+      const search = convertParametersToUrlSearchParams(parameters)
+      router.replace(`${promptPath}?${search}`)
+    },
+    [router, promptPath],
+  )
+}
+
 export function SharedDocument({
   metadata,
   shared,
+  queryParams,
 }: {
   metadata: ServerClientMetadata
   shared: PublishedDocument
-  commit: Commit
+  queryParams: Record<string, string>
 }) {
+  const updateSearchParams = useSearchParams({ shared })
   const formRef = useRef<HTMLDivElement>(null)
   const originalFormHeight = useRef<number | undefined>(undefined)
   const originalFormWidth = useRef<number | undefined>(undefined)
@@ -70,20 +128,21 @@ export function SharedDocument({
   const [isFormVisible, setFormVisible] = useState(true)
   const [isChatVisible, setChatVisible] = useState(false)
   const prompt = usePrompt({ shared })
-
   const onSubmit = useCallback(
     async (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault()
       const form = event.currentTarget
+      const formData = new FormData(form)
+      const parameters = convertFormDataToParameters(formData)
 
       setFormVisible(false)
       setFormHeight(undefined)
+      updateSearchParams(parameters)
 
       // Give time to animation to finish
       setTimeout(async () => {
-        const formData = new FormData(form)
         setChatVisible(true)
-        await prompt.runPrompt(formData)
+        await prompt.runPrompt(parameters)
       }, DURATION_MS_RUN)
     },
     [prompt.runPrompt],
@@ -117,7 +176,6 @@ export function SharedDocument({
     originalFormWidth.current = form.clientWidth
     setFormHeight(height)
   }, [formHeight])
-
   return (
     <div className='h-screen bg-background-gray flex flex-col pb-4 sm:pb-8 gap-y-4 sm:gap-y-8 custom-scrollbar'>
       <PromptHeader shared={shared} />
@@ -133,7 +191,10 @@ export function SharedDocument({
             'w-full': isChatVisible,
             'w-full sm:w-modal': isFormVisible,
           })}
-          style={{ minWidth: originalFormWidth.current }}
+          style={{
+            minWidth: originalFormWidth.current,
+            minHeight: formHeight ? formHeight + CARD_Y_PADDING : undefined,
+          }}
         >
           <CardContent standalone spacing='small' className='h-full'>
             <div
@@ -144,7 +205,6 @@ export function SharedDocument({
                   'h-full': originalFormHeight.current !== undefined,
                 },
               )}
-              style={{ height: formHeight }}
             >
               <div
                 ref={formRef}
@@ -152,14 +212,16 @@ export function SharedDocument({
                   'transform transition-transform',
                   DURATION_CLASS,
                   {
-                    'absolute inset-0':
-                      originalFormHeight.current !== undefined,
-                    'translate-y-0': isFormVisible,
+                    'absolute inset-0 translate-y-0': !isFormVisible,
                     '-translate-y-full': !isFormVisible,
                   },
                 )}
               >
-                <PromptForm metadata={metadata} onSubmit={onSubmit} />
+                <PromptForm
+                  metadata={metadata}
+                  onSubmit={onSubmit}
+                  queryParams={queryParams}
+                />
               </div>
               <div
                 className={cn(

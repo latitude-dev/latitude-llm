@@ -12,14 +12,6 @@ import {
 import { runSharedPromptAction } from '$/actions/sdk/runSharedPromptAction'
 import { readStreamableValue } from 'ai/rsc'
 
-function convertFormDataToInputs(formData: FormData) {
-  const entries = Array.from(formData.entries())
-  return entries.reduce<Record<string, string>>((acc, [key, value]) => {
-    acc[key] = value.toString()
-    return acc
-  }, {})
-}
-
 export function usePrompt({ shared }: { shared: PublishedDocument }) {
   // Local state
   const [documentLogUuid, setDocumentLogUuid] = useState<string>()
@@ -47,7 +39,7 @@ export function usePrompt({ shared }: { shared: PublishedDocument }) {
   )
 
   const runPrompt = useCallback(
-    async (formData: FormData) => {
+    async (parameters: Record<string, string>) => {
       const start = performance.now()
 
       isLoadingPrompt.current = true
@@ -56,7 +48,6 @@ export function usePrompt({ shared }: { shared: PublishedDocument }) {
       let messagesCount = 0
 
       try {
-        const parameters = convertFormDataToInputs(formData)
         const { response: actionResponse, output } =
           await runSharedPromptAction({
             publishedDocumentUuid: shared.uuid!,
