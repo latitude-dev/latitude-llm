@@ -299,6 +299,7 @@ export default function PublishDraftCommitModal({
         })
         return
       }
+      if (!data) return // should not happen but it does
 
       setGroups(
         data.reduce(
