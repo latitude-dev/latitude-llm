@@ -169,6 +169,7 @@ describe('run', () => {
         prompt: evaluationPrompt,
         parameters: { ...serializedPrompt },
         adapter: Adapters.default,
+        includeSourceMap: true,
       })
       expect(runChainModule.runChain).toHaveBeenCalledWith({
         generateUUID: expect.any(Function),
