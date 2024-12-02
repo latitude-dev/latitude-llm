@@ -1,11 +1,11 @@
 import { useMemo } from 'react'
 
+import { RunErrorMessage } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/_components/RunErrorMessage'
+import { formatCostInMillicents } from '$/app/_lib/formatUtils'
+import useProviderApiKeys from '$/stores/providerApiKeys'
 import { EvaluationDto, ProviderLogDto } from '@latitude-data/core/browser'
 import { EvaluationResultWithMetadataAndErrors } from '@latitude-data/core/repositories'
 import { ClickToCopy, Text } from '@latitude-data/web-ui'
-import { formatCostInMillicents } from '$/app/_lib/formatUtils'
-import { RunErrorMessage } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/_components/RunErrorMessage'
-import useProviderApiKeys from '$/stores/providerApiKeys'
 import { format } from 'date-fns'
 
 import {
@@ -78,7 +78,7 @@ export function EvaluationResultMetadata({
   }, [providerLog])
 
   return (
-    <>
+    <div className='flex flex-col gap-4'>
       <RunErrorMessage error={evaluationResult.error} />
       <MetadataItem
         label='Timestamp'
@@ -108,6 +108,6 @@ export function EvaluationResultMetadata({
       {reason && (
         <MetadataItem stacked label='Result reasoning' value={reason} />
       )}
-    </>
+    </div>
   )
 }

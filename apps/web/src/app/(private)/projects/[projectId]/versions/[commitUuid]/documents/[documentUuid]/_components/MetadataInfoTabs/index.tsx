@@ -42,7 +42,7 @@ export const MetadataInfoTabs = forwardRef<HTMLDivElement, Props>(
             </div>
           ) : null}
         </div>
-        <div className='w-full flex px-4 pb-5 mt-5 flex-col gap-4 custom-scrollbar overflow-auto relative'>
+        <div className='w-full px-4 pb-5 mt-5 custom-scrollbar overflow-auto relative'>
           {children({ selectedTab })}
         </div>
         {bottomActions ? (

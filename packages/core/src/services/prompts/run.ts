@@ -37,11 +37,16 @@ export async function runPrompt({
       return Result.error(error as Error)
     }
 
-    chain = createChain({ prompt: metadata.resolvedPrompt, parameters })
+    chain = createChain({
+      prompt: metadata.resolvedPrompt,
+      parameters,
+      includeSourceMap: true,
+    })
   } else {
     chain = new PromptlChain({
       prompt,
       parameters,
+      includeSourceMap: true,
     })
   }
 
