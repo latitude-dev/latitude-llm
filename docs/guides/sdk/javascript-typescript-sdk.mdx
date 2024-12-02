@@ -267,7 +267,7 @@ The SDK provides two methods for evaluations:
 
 ### Trigger Evaluations for a Conversation
 
-Use `evaluations.trigger` to evaluate an existing conversation:
+Use `evaluations.trigger` to trigger evaluations for an existing conversation:
 
 ```typescript
 await sdk.evaluations.trigger(conversationUuid, {
@@ -277,7 +277,7 @@ await sdk.evaluations.trigger(conversationUuid, {
 
 ### Pushing evaluation results to Latitude
 
-You can push evaluation results to Latitude using the `evaluations.createResult` method:
+Use `evaluations.createResult` to push evaluation results for conversation to Latitude:
 
 ```typescript
 await sdk.evaluations.createResult(conversationUuid, evaluationUuid, {
