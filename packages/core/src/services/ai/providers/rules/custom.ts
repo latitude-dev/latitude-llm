@@ -1,13 +1,11 @@
-import { ContentType, MessageRole } from '@latitude-data/compiler'
-
 import { AppliedRules, ProviderRules } from '.'
 
 export function applyCustomRules(rules: AppliedRules): AppliedRules {
   const hasNonTextSystemMessage = rules.messages.some(
     (message) =>
-      message.role === MessageRole.system &&
+      message.role === 'system' &&
       Array.isArray(message.content) &&
-      message.content.some((content) => content.type !== ContentType.text),
+      message.content.some((content) => content.type !== 'text'),
   )
 
   if (hasNonTextSystemMessage) {
@@ -22,9 +20,9 @@ export function applyCustomRules(rules: AppliedRules): AppliedRules {
 
   const hasAssistantMessageWithImage = rules.messages.some(
     (message) =>
-      message.role === MessageRole.assistant &&
+      message.role === 'assistant' &&
       Array.isArray(message.content) &&
-      message.content.some((content) => content.type === ContentType.image),
+      message.content.some((content) => content.type === 'image'),
   )
 
   if (hasAssistantMessageWithImage) {
