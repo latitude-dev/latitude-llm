@@ -7,14 +7,15 @@ import { ChainError } from '../../chains/ChainErrors'
 
 export type AITools = Record<
   string,
-  { description?: string; parameters: Record<string, any> }
+  { name: string; description?: string; parameters: Record<string, any> }
 >
 export const buildTools = (tools: AITools | undefined) => {
   if (!tools) return Result.ok(undefined)
   try {
     const data = Object.entries(tools).reduce<Record<string, CoreTool>>(
       (acc, [key, value]) => {
-        acc[key] = compactObject({
+        const toolName = value.name ?? key
+        acc[toolName] = compactObject({
           ...value,
           parameters: jsonSchema(value.parameters),
         }) as unknown as CoreTool

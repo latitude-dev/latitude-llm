@@ -54,7 +54,7 @@ export type Config = {
   google?: GoogleConfig
   tools?: Record<
     string,
-    { description?: string; parameters: Record<string, any> }
+    { name: string; description?: string; parameters: Record<string, any> }
   >
 }
 
