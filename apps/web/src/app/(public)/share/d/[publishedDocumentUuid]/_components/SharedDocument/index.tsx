@@ -155,7 +155,6 @@ export function SharedDocument({
       setFormVisible(true)
       prompt.resetPrompt()
     }, DURATION_MS_RESET)
-    prompt.resetPrompt()
   }, [prompt.resetPrompt])
 
   const { onChat } = useChat({
@@ -233,18 +232,20 @@ export function SharedDocument({
                   },
                 )}
               >
-                <Messages
-                  isStreaming={prompt.isStreaming}
-                  isLoadingPrompt={prompt.isLoadingPrompt}
-                  responseStream={prompt.responseStream}
-                  conversation={prompt.conversation}
-                  chainLength={prompt.chainLength}
-                  time={prompt.time}
-                  error={prompt.error}
-                  onChat={onChat}
-                  onReset={onReset}
-                  canChat={shared.canFollowConversation}
-                />
+                {isChatVisible ? (
+                  <Messages
+                    isStreaming={prompt.isStreaming}
+                    isLoadingPrompt={prompt.isLoadingPrompt}
+                    responseStream={prompt.responseStream}
+                    conversation={prompt.conversation}
+                    chainLength={prompt.chainLength}
+                    error={prompt.error}
+                    onChat={onChat}
+                    onReset={onReset}
+                    canChat={shared.canFollowConversation}
+                    lastMessage={prompt.lastMessage}
+                  />
+                ) : null}
               </div>
             </div>
           </CardContent>

@@ -104,7 +104,7 @@ export function ShareDocument({
 
   if (!canShare) {
     return (
-      <Tooltip asChild trigger={<FakeButton />}>
+      <Tooltip trigger={<FakeButton />}>
         You can only share the live version of the prompt. Drafts cannot be
         shared.
       </Tooltip>

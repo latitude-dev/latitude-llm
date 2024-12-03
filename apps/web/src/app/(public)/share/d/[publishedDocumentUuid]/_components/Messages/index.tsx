@@ -5,18 +5,13 @@ import {
   Button,
   ChatTextArea,
   cn,
-  ErrorMessage,
-  MessageList,
-  MessageSkeleton,
-  Text,
   useAutoScroll,
-} from '@latitude-data/web-ui'
-import {
   AnimatedDots,
-  StreamMessage,
-  Timer,
-} from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/DocumentEditor/Editor/Playground/Chat'
-import { randomRoleVariant } from 'node_modules/@latitude-data/web-ui/src/ds/molecules/Chat/Message/helpers'
+} from '@latitude-data/web-ui'
+import { LastMessage } from '../SharedDocument/usePrompt'
+import { AllMessages } from './AllMessages'
+import { ChatMessages } from './ChatMessages'
+import { LastMessageOnly, useFakeStream } from './LastMessageOnly'
 
 export function StreamingIndicator({
   isScrolledToBottom,
@@ -37,42 +32,34 @@ export function StreamingIndicator({
   )
 }
 
-// <Skeleton height='h6'>
-export function SkeletonMessageList({ messages }: { messages: number }) {
-  return (
-    <div className='flex flex-col gap-4'>
-      {Array.from({ length: messages }).map((_, index) => (
-        <MessageSkeleton key={index} role={randomRoleVariant()} />
-      ))}
-    </div>
-  )
-}
-
 export function Messages({
   isStreaming,
   isLoadingPrompt,
   responseStream,
   conversation,
   chainLength,
-  time,
   error,
   onChat,
   onReset,
   canChat = false,
+  lastMessage,
 }: {
   responseStream: string | undefined
   isLoadingPrompt: boolean
   isStreaming: boolean
   conversation: Conversation | undefined
   chainLength: number
-  time: number | undefined
   error: Error | undefined
   onChat: (value: string) => void
   onReset: () => void
   canChat: boolean | undefined
+  lastMessage: LastMessage | undefined
 }) {
+  const [showPromptMessages, setPromptVisibility] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
   const [isScrolledToBottom, setIsScrolledToBottom] = useState(false)
+  const { fakeIsStreaming, fakeResponseStream } = useFakeStream({ lastMessage })
+  const streaming = showPromptMessages ? isStreaming : fakeIsStreaming
   useAutoScroll(containerRef, {
     startAtBottom: true,
     onScrollChange: setIsScrolledToBottom,
@@ -84,41 +71,40 @@ export function Messages({
         ref={containerRef}
         className='flex flex-col gap-3 flex-grow flex-shrink min-h-0 custom-scrollbar pb-4'
       >
-        {isLoadingPrompt && <SkeletonMessageList messages={5} />}
-
-        <MessageList
-          messages={conversation?.messages.slice(0, chainLength - 1) ?? []}
-        />
-        {(conversation?.messages.length ?? 0) >= chainLength && (
-          <>
-            <MessageList
-              messages={
-                conversation?.messages.slice(chainLength - 1, chainLength) ?? []
-              }
-            />
-            {time && <Timer timeMs={time} />}
-          </>
-        )}
-        {(conversation?.messages.length ?? 0) > chainLength && (
-          <>
-            <Text.H6M>Chat</Text.H6M>
-            <MessageList messages={conversation!.messages.slice(chainLength)} />
-          </>
-        )}
-        {error ? (
-          <ErrorMessage error={error} />
-        ) : (
-          <StreamMessage
+        {showPromptMessages ? (
+          <AllMessages
+            isLoadingPrompt={isLoadingPrompt}
+            messages={conversation?.messages ?? []}
+            error={error}
             responseStream={responseStream}
             conversation={conversation}
             chainLength={chainLength}
+            setPromptVisibility={setPromptVisibility}
+          />
+        ) : (
+          <LastMessageOnly
+            isLoadingPrompt={isLoadingPrompt}
+            lastMessage={lastMessage}
+            responseStream={fakeResponseStream}
+            isStreaming={fakeIsStreaming}
+            error={error}
+            setPromptVisibility={setPromptVisibility}
           />
         )}
+
+        <ChatMessages
+          conversation={conversation}
+          responseStream={responseStream}
+          chainLength={chainLength}
+          error={error}
+        />
       </div>
+
       <div className='sticky bottom-0 flex flex-row w-full items-center justify-center'>
-        {isStreaming ? (
+        {streaming ? (
           <StreamingIndicator isScrolledToBottom={isScrolledToBottom} />
         ) : null}
+
         {canChat ? (
           <ChatTextArea
             clearChat={onReset}

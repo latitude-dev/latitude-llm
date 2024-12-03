@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useState } from 'react'
+import { ReactNode, useEffect, useMemo, useState } from 'react'
 
 import {
   ContentType,
@@ -11,11 +11,18 @@ import {
 } from '@latitude-data/compiler'
 
 import { cn } from '../../../../lib/utils'
-import { Badge, CodeBlock, Skeleton, Text, Tooltip } from '../../../atoms'
+import {
+  Badge,
+  BadgeProps,
+  CodeBlock,
+  Skeleton,
+  Text,
+  Tooltip,
+} from '../../../atoms'
 import { colors, font, TextColor } from '../../../tokens'
-import { roleVariant } from './helpers'
+import { roleToString, roleVariant } from './helpers'
 
-export { roleVariant } from './helpers'
+export { roleVariant, roleToString } from './helpers'
 
 export type MessageProps = {
   role: string
@@ -27,15 +34,18 @@ export type MessageProps = {
   collapseParameters?: boolean
 }
 
-export function Message({
-  role,
-  content,
-  animatePulse,
-  size = 'default',
-  parameters = {},
-  collapseParameters = false,
-}: MessageProps) {
-  const [collapseMessage, setCollapseMessage] = useState(false)
+export function MessageItem({
+  children,
+  badgeLabel,
+  badgeVariant,
+  animatePulse = false,
+}: {
+  children: (renderProps: { collapsedMessage: boolean }) => ReactNode
+  badgeLabel: string
+  badgeVariant: BadgeProps['variant']
+  animatePulse?: boolean
+}) {
+  const [collapsedMessage, setCollapseMessage] = useState(false)
   return (
     <div
       className={cn('flex flex-col gap-1 w-full items-start', {
@@ -43,37 +53,81 @@ export function Message({
       })}
     >
       <div>
-        <Badge variant={roleVariant(role)}>
-          {role.charAt(0).toUpperCase() + role.slice(1)}
-        </Badge>
+        <Badge variant={badgeVariant}>{badgeLabel}</Badge>
       </div>
       <div className='flex w-full flex-row items-stretch gap-4 pl-4'>
         <div
           className='flex-shrink-0 bg-muted w-1 rounded-lg cursor-pointer hover:bg-primary transition-colors'
-          onClick={() => setCollapseMessage(!collapseMessage)}
+          onClick={() => setCollapseMessage(!collapsedMessage)}
         />
-        <div className={cn('flex flex-1 flex-col gap-1')}>
-          {collapseMessage ? (
-            <Content value='...' color='foregroundMuted' size={size} />
-          ) : typeof content === 'string' ? (
-            <Content value={content} color='foregroundMuted' size={size} />
-          ) : (
-            content.map((c, idx) => (
-              <Content
-                key={idx}
-                index={idx}
-                color='foregroundMuted'
-                value={c}
-                size={size}
-                parameters={parameters}
-                collapseParameters={collapseParameters}
-                sourceMap={(c as any)?._promptlSourceMap}
-              />
-            ))
-          )}
+        <div className='flex flex-1 flex-col gap-1'>
+          {children({ collapsedMessage })}
         </div>
       </div>
     </div>
+  )
+}
+
+export function Message({
+  role,
+  content,
+  animatePulse = false,
+  size = 'default',
+  parameters = {},
+  collapseParameters = false,
+}: MessageProps) {
+  return (
+    <MessageItem
+      animatePulse={animatePulse}
+      badgeLabel={roleToString(role)}
+      badgeVariant={roleVariant(role)}
+    >
+      {({ collapsedMessage }) => (
+        <MessageItemContent
+          content={content}
+          size={size}
+          parameters={parameters}
+          collapseParameters={collapseParameters}
+          collapsedMessage={collapsedMessage}
+        />
+      )}
+    </MessageItem>
+  )
+}
+
+export function MessageItemContent({
+  content,
+  size = 'default',
+  parameters = {},
+  collapseParameters = false,
+  collapsedMessage,
+}: {
+  content: MessageProps['content']
+  size?: MessageProps['size']
+  parameters?: MessageProps['parameters']
+  collapseParameters?: MessageProps['collapseParameters']
+  collapsedMessage: boolean
+}) {
+  if (collapsedMessage)
+    return <Content value='...' color='foregroundMuted' size={size} />
+  if (typeof content === 'string')
+    return <Content value={content} color='foregroundMuted' size={size} />
+
+  return (
+    <>
+      {content.map((c, idx) => (
+        <Content
+          key={idx}
+          index={idx}
+          color='foregroundMuted'
+          value={c}
+          size={size}
+          parameters={parameters}
+          collapseParameters={collapseParameters}
+          sourceMap={(c as any)?._promptlSourceMap}
+        />
+      ))}
+    </>
   )
 }
 
@@ -81,9 +135,7 @@ export function MessageSkeleton({ role }: { role: string }) {
   return (
     <div className='flex flex-col gap-1 w-full items-start animate-pulse'>
       <div>
-        <Badge variant={roleVariant(role)}>
-          <div className='w-16' />
-        </Badge>
+        <Badge variant={roleVariant(role)}>{roleToString(role)}</Badge>
       </div>
       <div className='flex flex-row items-stretch gap-4 pl-4 w-full'>
         <div className='flex-shrink-0 bg-muted w-1 rounded-lg' />

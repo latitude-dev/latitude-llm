@@ -41,6 +41,15 @@ export function PromptlNotificationModal({
       onOpenChange={() => dismissNotification(true)}
       title='Syntax Update Available'
       description='We have updated the syntax for Latitude prompts!'
+      footer={
+        <Button
+          variant='default'
+          fancy
+          onClick={() => dismissNotification(true)}
+        >
+          Understood
+        </Button>
+      }
     >
       <Text.H5>
         Since Latitude launched, we have been working on improving the syntax.
@@ -85,16 +94,6 @@ export function PromptlNotificationModal({
           <Icon name='externalLink' />
         </Button>
       </Link>
-
-      <div className='flex flex-row w-full justify-end gap-2'>
-        <Button
-          variant='default'
-          fancy
-          onClick={() => dismissNotification(true)}
-        >
-          Understood
-        </Button>
-      </div>
     </Modal>
   )
 }

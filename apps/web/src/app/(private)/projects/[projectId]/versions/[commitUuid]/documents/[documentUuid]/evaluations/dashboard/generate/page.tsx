@@ -223,6 +223,28 @@ export default function GenerateEvaluationPage() {
           ? 'Please review the generated evaluation and confirm if you want to create it.'
           : 'We are generating an evaluation based on your prompt. This may take a few seconds.'
       }
+      footer={
+        <>
+          <Tooltip
+            trigger={
+              <Button
+                fancy
+                variant='outline'
+                disabled={isCreating}
+                onClick={() => onConfirm(true)}
+              >
+                {isCreating ? 'Creating...' : 'Create and Edit'}
+              </Button>
+            }
+          >
+            Create the evaluation and go directly to the edit page so that you
+            can further improve it.
+          </Tooltip>
+          <Button fancy disabled={isCreating} onClick={() => onConfirm(false)}>
+            {isCreating ? 'Creating...' : 'Create Evaluation'}
+          </Button>
+        </>
+      }
     >
       <div
         className={cn(
@@ -309,30 +331,6 @@ export default function GenerateEvaluationPage() {
                   {renderMetadata(generatedSuggestion)}
                 </div>
               </div>
-            </div>
-            <div className='flex justify-end w-full mt-4 space-x-4'>
-              <Tooltip
-                trigger={
-                  <Button
-                    fancy
-                    variant='outline'
-                    disabled={isCreating}
-                    onClick={() => onConfirm(true)}
-                  >
-                    {isCreating ? 'Creating...' : 'Create and Edit'}
-                  </Button>
-                }
-              >
-                Create the evaluation and go directly to the edit page so that
-                you can further improve it.
-              </Tooltip>
-              <Button
-                fancy
-                disabled={isCreating}
-                onClick={() => onConfirm(false)}
-              >
-                {isCreating ? 'Creating...' : 'Create Evaluation'}
-              </Button>
             </div>
           </>
         )}

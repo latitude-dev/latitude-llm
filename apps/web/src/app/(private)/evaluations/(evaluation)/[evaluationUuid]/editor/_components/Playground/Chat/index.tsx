@@ -110,9 +110,8 @@ export default function Chat({
 
       switch (event) {
         case StreamEventTypes.Latitude: {
-          if (data.type === ChainEventTypes.Step) {
-            if (data.isLastStep) setChainLength(messagesCount + 1)
-          } else if (data.type === ChainEventTypes.Complete) {
+          if (data.type === ChainEventTypes.Complete) {
+            setChainLength(messagesCount)
             setResponseStream(undefined)
             setUsage(data.response.usage)
             setIsStreaming(false)

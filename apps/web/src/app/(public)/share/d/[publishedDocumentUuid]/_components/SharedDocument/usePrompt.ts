@@ -12,15 +12,22 @@ import {
 import { runSharedPromptAction } from '$/actions/sdk/runSharedPromptAction'
 import { readStreamableValue } from 'ai/rsc'
 
+type AccoumulatedDeltaMessage = { deltas: string[] }
+export type LastMessage = {
+  lastMessage: ConversationMessage | undefined
+  deltas: string[]
+}
 export function usePrompt({ shared }: { shared: PublishedDocument }) {
   // Local state
   const [documentLogUuid, setDocumentLogUuid] = useState<string>()
   const isLoadingPrompt = useRef<boolean>(false)
   const [error, setError] = useState<Error | undefined>()
-  const [time, setTime] = useState<number>()
   const [responseStream, setResponseStream] = useState<string | undefined>()
   const [isStreaming, setIsStreaming] = useState(false)
   const [conversation, setConversation] = useState<Conversation | undefined>()
+  const [lastMessage, setLastMessage] = useState<LastMessage | undefined>(
+    undefined,
+  )
   const [chainLength, setChainLength] = useState<number>(Infinity)
 
   const addMessageToConversation = useCallback(
@@ -40,11 +47,11 @@ export function usePrompt({ shared }: { shared: PublishedDocument }) {
 
   const runPrompt = useCallback(
     async (parameters: Record<string, string>) => {
-      const start = performance.now()
-
       isLoadingPrompt.current = true
       setIsStreaming(true)
       let response = ''
+      let accomulateIndex = 0
+      let accomulatedDeltas: AccoumulatedDeltaMessage[] = [{ deltas: [] }]
       let messagesCount = 0
 
       try {
@@ -55,6 +62,7 @@ export function usePrompt({ shared }: { shared: PublishedDocument }) {
           })
 
         actionResponse.then((r) => {
+          // Follow up conversation log ID
           setDocumentLogUuid(r?.uuid)
         })
 
@@ -73,12 +81,20 @@ export function usePrompt({ shared }: { shared: PublishedDocument }) {
 
           switch (event) {
             case StreamEventTypes.Latitude: {
-              if (data.type === ChainEventTypes.Step) {
-                if (data.isLastStep) setChainLength(messagesCount + 1)
-              } else if (data.type === ChainEventTypes.StepComplete) {
+              if (data.type === ChainEventTypes.StepComplete) {
                 response = ''
+                accomulatedDeltas.push({ deltas: [] })
+                accomulateIndex++
               } else if (data.type === ChainEventTypes.Complete) {
-                setTime(performance.now() - start)
+                // Last completed step is the previous one
+                const deltas =
+                  accomulatedDeltas[accomulateIndex - 1]?.deltas ?? []
+                setLastMessage({
+                  lastMessage:
+                    conversation?.messages[conversation?.messages.length - 1],
+                  deltas,
+                })
+                setChainLength(messagesCount)
               } else if (data.type === ChainEventTypes.Error) {
                 setError(new Error(data.error.message))
               }
@@ -88,7 +104,9 @@ export function usePrompt({ shared }: { shared: PublishedDocument }) {
 
             case StreamEventTypes.Provider: {
               if (data.type === 'text-delta') {
+                accomulatedDeltas[accomulateIndex]!.deltas.push(data.textDelta)
                 response += data.textDelta
+
                 setResponseStream(response)
               }
               break
@@ -114,7 +132,8 @@ export function usePrompt({ shared }: { shared: PublishedDocument }) {
     setIsStreaming(false)
     setConversation(undefined)
     setChainLength(Infinity)
-    setTime(undefined)
+    setConversation(undefined)
+    setLastMessage(undefined)
     isLoadingPrompt.current = false
   }, [])
 
@@ -125,8 +144,8 @@ export function usePrompt({ shared }: { shared: PublishedDocument }) {
     isLoadingPrompt: isLoadingPrompt.current,
     responseStream,
     conversation,
+    lastMessage,
     chainLength,
-    time,
     resetPrompt,
     documentLogUuid,
     addMessageToConversation,

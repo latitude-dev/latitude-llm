@@ -24,6 +24,8 @@ import {
   useAutoScroll,
   useCurrentCommit,
   useCurrentProject,
+  AnimatedDots,
+  LineSeparator,
 } from '@latitude-data/web-ui'
 import { LanguageModelUsage } from 'ai'
 import { readStreamableValue } from 'ai/rsc'
@@ -109,6 +111,7 @@ export default function Chat({
         if (!serverEvent) continue
 
         const { event, data } = serverEvent
+
         if ('messages' in data) {
           setResponseStream(undefined)
           data.messages!.forEach(addMessageToConversation)
@@ -117,12 +120,11 @@ export default function Chat({
 
         switch (event) {
           case StreamEventTypes.Latitude: {
-            if (data.type === ChainEventTypes.Step) {
-              if (data.isLastStep) setChainLength(messagesCount + 1)
-            } else if (data.type === ChainEventTypes.StepComplete) {
+            if (data.type === ChainEventTypes.StepComplete) {
               response = ''
             } else if (data.type === ChainEventTypes.Complete) {
               setUsage(data.response.usage)
+              setChainLength(messagesCount)
               setTime(performance.now() - start)
             } else if (data.type === ChainEventTypes.Error) {
               setError(new Error(data.error.message))
@@ -289,22 +291,6 @@ export default function Chat({
   )
 }
 
-export function AnimatedDots() {
-  return (
-    <span className='flex flex-row items-center gap-1'>
-      <Text.H6M color='foregroundMuted'>
-        <span className='animate-pulse'>•</span>
-      </Text.H6M>
-      <Text.H6M color='foregroundMuted'>
-        <span className='animate-pulse delay-250'>•</span>
-      </Text.H6M>
-      <Text.H6M color='foregroundMuted'>
-        <span className='animate-pulse delay-500'>•</span>
-      </Text.H6M>
-    </span>
-  )
-}
-
 export function TokenUsage({
   isScrolledToBottom,
   usage,
@@ -376,14 +362,6 @@ export function StreamMessage({
       />
     )
   }
-  if (conversation.messages.length === chainLength - 1) {
-    return (
-      <Message
-        role={MessageRole.assistant}
-        content={[{ type: ContentType.text, text: responseStream }]}
-      />
-    )
-  }
 
   return (
     <Message
@@ -394,15 +372,5 @@ export function StreamMessage({
 }
 
 export function Timer({ timeMs }: { timeMs: number }) {
-  return (
-    <div className='flex flex-row items-center'>
-      <div className='flex-grow h-px bg-muted-foreground/40' />
-      <div className='flex px-2 items-center'>
-        <Text.H6 color='foregroundMuted'>
-          {`${(timeMs / 1_000).toFixed(2)} s`}
-        </Text.H6>
-      </div>
-      <div className='flex-grow h-px bg-muted-foreground/40' />
-    </div>
-  )
+  return <LineSeparator text={`${(timeMs / 1_000).toFixed(2)} s`} />
 }
