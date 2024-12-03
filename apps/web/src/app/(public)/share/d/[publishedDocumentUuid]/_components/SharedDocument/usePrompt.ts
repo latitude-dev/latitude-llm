@@ -134,6 +134,7 @@ export function usePrompt({ shared }: { shared: PublishedDocument }) {
     setChainLength(Infinity)
     setConversation(undefined)
     setLastMessage(undefined)
+    setDocumentLogUuid(undefined)
     isLoadingPrompt.current = false
   }, [])
 
