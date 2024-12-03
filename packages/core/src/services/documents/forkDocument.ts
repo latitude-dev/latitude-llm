@@ -17,6 +17,7 @@ import { buildDocuments } from './forkDocument/buildDocuments'
 import { getIncludedDocuments } from './forkDocument/getIncludedDocuments'
 
 type ForkProps = {
+  title: string
   origin: {
     workspace: Workspace
     commit: Commit
@@ -30,15 +31,15 @@ type ForkProps = {
 }
 const ATTEMPTS_BEFORE_RANDOM_SUFFIX = 4
 async function createProjectFromDocument({
+  title,
   workspace,
   user,
-  document,
 }: {
-  document: DocumentVersion
+  title: string
   workspace: Workspace
   user: User
 }) {
-  const baseName = `Copy of ${document.path}`
+  const baseName = `Copy of ${title}`
   let name = baseName
   const repo = new ProjectsRepository(workspace.id)
   let attempts = 0
@@ -119,12 +120,13 @@ async function createDocuments({
 }
 
 export async function forkDocument({
+  title,
   origin,
   destination,
   defaultProviderId,
 }: ForkProps) {
   const { commit, project } = await createProjectFromDocument({
-    document: origin.document,
+    title,
     workspace: destination.workspace,
     user: destination.user,
   }).then((r) => r.unwrap())

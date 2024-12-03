@@ -105,8 +105,7 @@ export function ShareDocument({
   if (!canShare) {
     return (
       <Tooltip trigger={<FakeButton />}>
-        You can only share the live version of the prompt. Drafts cannot be
-        shared.
+        Publish the prompt first to share it.
       </Tooltip>
     )
   }

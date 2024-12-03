@@ -207,7 +207,7 @@ async function runStep({
           errorableUuid,
           response: cachedResponse,
         }),
-        saveSyncProviderLogs: true, // TODO: temp bugfix, shuold only save last one syncronously
+        saveSyncProviderLogs: true, // TODO: temp bugfix, it should only save last one syncronously
       })
 
       const response = { ...cachedResponse, providerLog }

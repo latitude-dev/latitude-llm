@@ -1,6 +1,13 @@
 'use client'
 
-import { FormEvent, useCallback, useEffect, useRef, useState } from 'react'
+import {
+  FormEvent,
+  KeyboardEvent,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react'
 import { capitalize } from 'lodash-es'
 
 import { PublishedDocument } from '@latitude-data/core/browser'
@@ -21,7 +28,8 @@ const DURATION_MS_RUN = 100
 const DURATION_MS_RESET = 100
 const CARD_Y_PADDING = 24 // 12px padding top and bottom
 
-function convertFormDataToParameters(formData: FormData) {
+function convertFormDataToParameters(form: HTMLFormElement) {
+  const formData = new FormData(form)
   const entries = Array.from(formData.entries())
   return entries.reduce<Record<string, string>>((acc, [key, value]) => {
     acc[key] = value.toString()
@@ -71,15 +79,42 @@ function PromptForm({
   queryParams,
 }: {
   metadata: ServerClientMetadata
-  onSubmit: (event: FormEvent<HTMLFormElement>) => void
+  onSubmit: (parameters: Record<string, string>) => void
   queryParams: Record<string, string>
 }) {
   const parameters = useParameters({
     parameters: metadata.parameters,
     queryParams,
   })
+
+  const onFormSubmit = useCallback(
+    async (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault()
+
+      onSubmit(convertFormDataToParameters(event.currentTarget))
+    },
+    [onSubmit],
+  )
+
+  const handleKeyDown = useCallback(
+    (event: KeyboardEvent<HTMLTextAreaElement>) => {
+      const cmdOrCtrl = event.metaKey || event.ctrlKey
+
+      if (event.key === 'Enter' && cmdOrCtrl) {
+        event.preventDefault()
+        event.stopPropagation()
+
+        const form = event.currentTarget.form
+
+        if (!form) return
+
+        onSubmit(convertFormDataToParameters(form))
+      }
+    },
+    [onSubmit],
+  )
   return (
-    <form className='h-full flex flex-col gap-y-4' onSubmit={onSubmit}>
+    <form className='h-full flex flex-col gap-y-4' onSubmit={onFormSubmit}>
       {parameters.map((parameter, index) => {
         return (
           <TextArea
@@ -89,6 +124,7 @@ function PromptForm({
             name={parameter.name}
             label={parameter.label}
             defaultValue={parameter.value}
+            onKeyDown={handleKeyDown}
           />
         )
       })}
@@ -129,12 +165,7 @@ export function SharedDocument({
   const [isChatVisible, setChatVisible] = useState(false)
   const prompt = usePrompt({ shared })
   const onSubmit = useCallback(
-    async (event: FormEvent<HTMLFormElement>) => {
-      event.preventDefault()
-      const form = event.currentTarget
-      const formData = new FormData(form)
-      const parameters = convertFormDataToParameters(formData)
-
+    async (parameters: Record<string, string>) => {
       setFormVisible(false)
       setFormHeight(undefined)
       updateSearchParams(parameters)
@@ -147,7 +178,6 @@ export function SharedDocument({
     },
     [prompt.runPrompt],
   )
-
   const onReset = useCallback(() => {
     setFormHeight(originalFormHeight.current)
     setChatVisible(false)
