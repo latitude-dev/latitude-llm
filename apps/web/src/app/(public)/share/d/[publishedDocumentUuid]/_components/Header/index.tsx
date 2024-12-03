@@ -1,7 +1,14 @@
 'use client'
 
 import { PublishedDocument } from '@latitude-data/core/browser'
-import { Icon, Text, TripleThemeToggle } from '@latitude-data/web-ui'
+import {
+  Avatar,
+  getUserInfoFromSession,
+  Icon,
+  Text,
+  TripleThemeToggle,
+  useMaybeSession,
+} from '@latitude-data/web-ui'
 import { AppHeaderWrapper } from '$/components/layouts/AppLayout/Header'
 import { ROUTES } from '$/services/routes'
 import Link from 'next/link'
@@ -19,6 +26,8 @@ export function PromptHeader({
   showShare?: boolean
   beforeShareInfo?: ReactNode
 }) {
+  const { currentUser } = useMaybeSession()
+  const info = currentUser ? getUserInfoFromSession(currentUser) : null
   return (
     <>
       <AppHeaderWrapper xPadding='none'>
@@ -35,8 +44,20 @@ export function PromptHeader({
               </div>
             </Link>
             {showShare && <ForkButton shared={shared} />}
-            <div className='min-w-20'>
-              <TripleThemeToggle />
+            <div className='flex flex-row gap-x-4'>
+              {info ? (
+                <div className='hidden sm:flex flex-row items-center gap-x-2'>
+                  <Text.H6M>{info.name}</Text.H6M>
+                  <Avatar
+                    alt={info.name}
+                    fallback={info.fallback}
+                    className='w-6 h-6'
+                  />
+                </div>
+              ) : null}
+              <div className='min-w-20'>
+                <TripleThemeToggle />
+              </div>
             </div>
           </div>
         </Container>

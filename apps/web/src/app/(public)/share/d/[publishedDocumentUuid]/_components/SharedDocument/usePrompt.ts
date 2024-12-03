@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState } from 'react'
 
 import {
+  ContentType,
   Conversation,
   Message as ConversationMessage,
 } from '@latitude-data/compiler'
@@ -17,6 +18,46 @@ export type LastMessage = {
   lastMessage: ConversationMessage | undefined
   deltas: string[]
 }
+
+function splitInWords(text: string) {
+  return text.split(' ').map((word, index) => (index === 0 ? word : ` ${word}`))
+}
+
+function getDeltas({
+  accomulatedDeltas,
+  accomulateIndex,
+  lastMessage,
+}: {
+  accomulatedDeltas: AccoumulatedDeltaMessage[]
+  accomulateIndex: number
+  lastMessage: ConversationMessage | undefined
+}) {
+  try {
+    // -1 because last message is the current one
+    const deltas = accomulatedDeltas[accomulateIndex - 1]?.deltas
+
+    if ((deltas?.length ?? 0) > 0) return deltas ?? []
+
+    const content = lastMessage?.content
+
+    if (content === undefined) return []
+
+    if (typeof content === 'string') return splitInWords(content)
+
+    return content.flatMap((c) => {
+      if (c.type === ContentType.image) return []
+      if (c.type === ContentType.toolCall)
+        return splitInWords(JSON.stringify(c))
+      if (c.type === ContentType.toolResult)
+        return splitInWords(JSON.stringify(c))
+
+      return splitInWords(c.text)
+    })
+  } catch (error) {
+    return []
+  }
+}
+
 export function usePrompt({ shared }: { shared: PublishedDocument }) {
   // Local state
   const [documentLogUuid, setDocumentLogUuid] = useState<string>()
@@ -53,6 +94,7 @@ export function usePrompt({ shared }: { shared: PublishedDocument }) {
       let accomulateIndex = 0
       let accomulatedDeltas: AccoumulatedDeltaMessage[] = [{ deltas: [] }]
       let messagesCount = 0
+      let lastMessage: ConversationMessage | undefined
 
       try {
         const { response: actionResponse, output } =
@@ -73,9 +115,10 @@ export function usePrompt({ shared }: { shared: PublishedDocument }) {
 
           const { event, data } = serverEvent
 
-          if ('messages' in data) {
+          if ('messages' in data && data.messages) {
             setResponseStream(undefined)
-            data.messages!.forEach(addMessageToConversation)
+            data.messages.forEach(addMessageToConversation)
+            lastMessage = data.messages[data.messages.length - 1]
             messagesCount += data.messages!.length
           }
 
@@ -86,14 +129,12 @@ export function usePrompt({ shared }: { shared: PublishedDocument }) {
                 accomulatedDeltas.push({ deltas: [] })
                 accomulateIndex++
               } else if (data.type === ChainEventTypes.Complete) {
-                // Last completed step is the previous one
-                const deltas =
-                  accomulatedDeltas[accomulateIndex - 1]?.deltas ?? []
-                setLastMessage({
-                  lastMessage:
-                    conversation?.messages[conversation?.messages.length - 1],
-                  deltas,
+                const deltas = getDeltas({
+                  accomulatedDeltas,
+                  accomulateIndex,
+                  lastMessage,
                 })
+                setLastMessage({ lastMessage, deltas })
                 setChainLength(messagesCount)
               } else if (data.type === ChainEventTypes.Error) {
                 setError(new Error(data.error.message))

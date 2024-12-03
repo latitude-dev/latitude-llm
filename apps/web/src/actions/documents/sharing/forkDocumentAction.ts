@@ -11,11 +11,12 @@ export const forkDocumentAction = authProcedure
   .createServerAction()
   .input(z.object({ publishedDocumentUuid: z.string() }))
   .handler(async ({ ctx, input }) => {
-    const { workspace, commit, document } = await findSharedDocument({
+    const { workspace, commit, document, shared } = await findSharedDocument({
       publishedDocumentUuid: input.publishedDocumentUuid,
     }).then((r) => r.unwrap())
 
     return forkDocument({
+      title: shared.title ?? 'Copied Prompt',
       origin: {
         workspace,
         commit,

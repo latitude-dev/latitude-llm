@@ -80,6 +80,7 @@ describe('forkDocument', () => {
 
         it('publish event', async () => {
           await forkDocument({
+            title: 'Copied Prompt',
             origin: {
               workspace: fromWorkspace,
               commit,
@@ -104,12 +105,13 @@ describe('forkDocument', () => {
         })
       })
 
-      describe('project name', () => {
+      describe('project title', () => {
         it('add copy of to prompt name as project name', async () => {
           const anotherDoc = originDocuments.find(
             (d) => d.path === 'some-folder/children/grandchildren/grandchild2',
           )!
           const { project } = await forkDocument({
+            title: 'Original Prompt',
             origin: {
               workspace: fromWorkspace,
               commit,
@@ -118,9 +120,7 @@ describe('forkDocument', () => {
             destination: { workspace: toWorkspace, user },
           }).then((r) => r.unwrap())
 
-          expect(project.name).toBe(
-            'Copy of some-folder/children/grandchildren/grandchild2',
-          )
+          expect(project.name).toBe('Copy of Original Prompt')
         })
 
         it('add copy of and (1) when a project name exists with that name', async () => {
@@ -129,9 +129,10 @@ describe('forkDocument', () => {
           )!
           await factories.createProject({
             workspace: toWorkspace,
-            name: 'Copy of some-folder/children/grandchildren/grandchild2',
+            name: 'Copy of Original Prompt',
           })
           const { project } = await forkDocument({
+            title: 'Original Prompt',
             origin: {
               workspace: fromWorkspace,
               commit,
@@ -140,9 +141,7 @@ describe('forkDocument', () => {
             destination: { workspace: toWorkspace, user },
           }).then((r) => r.unwrap())
 
-          expect(project.name).toBe(
-            'Copy of some-folder/children/grandchildren/grandchild2 (1)',
-          )
+          expect(project.name).toBe('Copy of Original Prompt (1)')
         })
 
         it('add copy of and (2) when a project name exists with that name', async () => {
@@ -151,13 +150,14 @@ describe('forkDocument', () => {
           )!
           await factories.createProject({
             workspace: toWorkspace,
-            name: 'Copy of some-folder/children/grandchildren/grandchild2',
+            name: 'Copy of Original Prompt',
           })
           await factories.createProject({
             workspace: toWorkspace,
-            name: 'Copy of some-folder/children/grandchildren/grandchild2 (1)',
+            name: 'Copy of Original Prompt (1)',
           })
           const { project } = await forkDocument({
+            title: 'Original Prompt',
             origin: {
               workspace: fromWorkspace,
               commit,
@@ -166,9 +166,7 @@ describe('forkDocument', () => {
             destination: { workspace: toWorkspace, user },
           }).then((r) => r.unwrap())
 
-          expect(project.name).toBe(
-            'Copy of some-folder/children/grandchildren/grandchild2 (2)',
-          )
+          expect(project.name).toBe('Copy of Original Prompt (2)')
         })
 
         it('add copy of and (3) when a project name exists with that name', async () => {
@@ -177,17 +175,18 @@ describe('forkDocument', () => {
           )!
           await factories.createProject({
             workspace: toWorkspace,
-            name: 'Copy of some-folder/children/grandchildren/grandchild2',
+            name: 'Copy of Original Prompt',
           })
           await factories.createProject({
             workspace: toWorkspace,
-            name: 'Copy of some-folder/children/grandchildren/grandchild2 (1)',
+            name: 'Copy of Original Prompt (1)',
           })
           await factories.createProject({
             workspace: toWorkspace,
-            name: 'Copy of some-folder/children/grandchildren/grandchild2 (2)',
+            name: 'Copy of Original Prompt (2)',
           })
           const { project } = await forkDocument({
+            title: 'Original Prompt',
             origin: {
               workspace: fromWorkspace,
               commit,
@@ -196,14 +195,13 @@ describe('forkDocument', () => {
             destination: { workspace: toWorkspace, user },
           }).then((r) => r.unwrap())
 
-          expect(project.name).toBe(
-            'Copy of some-folder/children/grandchildren/grandchild2 (3)',
-          )
+          expect(project.name).toBe('Copy of Original Prompt (3)')
         })
       })
 
       it('fork document with default provider', async () => {
         const { project } = await forkDocument({
+          title: 'Original Prompt',
           origin: { workspace: fromWorkspace, commit, document },
           destination: { workspace: toWorkspace, user },
         }).then((r) => r.unwrap())
@@ -211,7 +209,7 @@ describe('forkDocument', () => {
           project,
         })
 
-        expect(project.name).toBe('Copy of some-folder/parent')
+        expect(project.name).toBe('Copy of Original Prompt')
         expect(commitCount).toBe(1)
         expect(documents).toEqual([
           {
@@ -266,6 +264,7 @@ describe('forkDocument', () => {
           })
           .where(eq(providerApiKeys.id, provider!.id))
         const { project } = await forkDocument({
+          title: 'Copied Prompt',
           origin: { workspace: fromWorkspace, commit, document },
           destination: { workspace: toWorkspace, user },
         }).then((r) => r.unwrap())
@@ -286,6 +285,7 @@ describe('forkDocument', () => {
           (d) => d.path === 'some-folder/children/child1',
         )!
         const { project } = await forkDocument({
+          title: 'Copied Prompt',
           origin: { workspace: fromWorkspace, commit, document: anotherDoc },
           destination: { workspace: toWorkspace, user },
         }).then((r) => r.unwrap())
@@ -339,6 +339,7 @@ describe('New workspace', () => {
 
   it('fork document with Latitude provider', async () => {
     const { project } = await forkDocument({
+      title: 'Original Prompt',
       origin: { workspace: fromWorkspace, commit, document },
       destination: { workspace: toWorkspace, user },
     }).then((r) => r.unwrap())
@@ -346,7 +347,7 @@ describe('New workspace', () => {
       project,
     })
 
-    expect(project.name).toBe('Copy of some-folder/parent')
+    expect(project.name).toBe('Copy of Original Prompt')
     expect(commitCount).toBe(1)
     expect(documents).toEqual([
       {

@@ -88,20 +88,16 @@ export function LastMessageOnly({
         >
           {({ collapsedMessage }) => (
             <>
-              {!message && !responseStream ? (
+              {!responseStream ? (
                 <LoadingText alignX='left' />
               ) : (
                 <MessageItemContent
-                  content={
-                    !message?.content
-                      ? [
-                          {
-                            type: ContentType.text,
-                            text: responseStream ?? '',
-                          },
-                        ]
-                      : message.content
-                  }
+                  content={[
+                    {
+                      type: ContentType.text,
+                      text: responseStream ?? '',
+                    },
+                  ]}
                   collapsedMessage={collapsedMessage}
                 />
               )}
