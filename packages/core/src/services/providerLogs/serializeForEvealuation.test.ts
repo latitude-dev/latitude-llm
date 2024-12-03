@@ -325,10 +325,98 @@ describe('serialize', () => {
       },
     })
   })
+
+  it('should format a ProviderLogDto removing source map correctly', () => {
+    // @ts-expect-error
+    const providerLogDto: ProviderLogDto = {
+      messages: [
+        {
+          role: MessageRole.user,
+          content: [
+            {
+              type: ContentType.text,
+              text: 'Hello',
+              _promptlSourceMap: [{ start: 0, end: 4, identifier: 'text' }],
+            },
+          ],
+        },
+        { role: MessageRole.assistant, content: 'Hi there', toolCalls: [] },
+      ],
+      response: 'How can I help you?',
+      toolCalls: [],
+    }
+
+    const result = formatConversation(providerLogDto)
+
+    expect(result).toEqual({
+      all: [
+        {
+          role: MessageRole.user,
+          content: [{ type: ContentType.text, text: 'Hello' }],
+        },
+        { role: MessageRole.assistant, content: 'Hi there', toolCalls: [] },
+        {
+          role: MessageRole.assistant,
+          content: 'How can I help you?',
+          toolCalls: [],
+        },
+      ],
+      first: {
+        role: MessageRole.user,
+        content: [{ type: ContentType.text, text: 'Hello' }],
+      },
+      last: {
+        role: MessageRole.assistant,
+        content: 'How can I help you?',
+        toolCalls: [],
+      },
+      user: {
+        all: [
+          {
+            role: MessageRole.user,
+            content: [{ type: ContentType.text, text: 'Hello' }],
+          },
+        ],
+        first: {
+          role: MessageRole.user,
+          content: [{ type: ContentType.text, text: 'Hello' }],
+        },
+        last: {
+          role: MessageRole.user,
+          content: [{ type: ContentType.text, text: 'Hello' }],
+        },
+      },
+      system: {
+        all: [],
+        first: null,
+        last: null,
+      },
+      assistant: {
+        all: [
+          { role: MessageRole.assistant, content: 'Hi there', toolCalls: [] },
+          {
+            role: MessageRole.assistant,
+            content: 'How can I help you?',
+            toolCalls: [],
+          },
+        ],
+        first: {
+          role: MessageRole.assistant,
+          content: 'Hi there',
+          toolCalls: [],
+        },
+        last: {
+          role: MessageRole.assistant,
+          content: 'How can I help you?',
+          toolCalls: [],
+        },
+      },
+    })
+  })
 })
 
 describe('formatContext', () => {
-  it('should format a conversation with text messages correctly', () => {
+  it('should format a conversation with text content correctly', () => {
     // @ts-expect-error
     const providerLog: ProviderLog = {
       messages: [
@@ -336,6 +424,7 @@ describe('formatContext', () => {
           role: MessageRole.system,
           content: [
             { type: ContentType.text, text: 'You are an AI assistant' },
+            { type: ContentType.text, text: 'Answer succinctly yet complete' },
           ],
         },
         {
@@ -357,7 +446,7 @@ describe('formatContext', () => {
     const result = formatContext(providerLog)
 
     expect(result).toBe(
-      'System:\nYou are an AI assistant\n\n' +
+      'System:\nYou are an AI assistant\nAnswer succinctly yet complete\n\n' +
         "User:\nWhat's the weather like?\n\n" +
         'Assistant:\nThe weather is sunny today.',
     )
@@ -390,7 +479,7 @@ describe('formatContext', () => {
     const result = formatContext(providerLog)
 
     expect(result).toBe(
-      'User:\nWhat can you see in this image?\n\n' +
+      'User:\nWhat can you see in this image?\n[IMAGE]\n\n' +
         'Assistant:\nI see a beautiful landscape.',
     )
   })

@@ -49,21 +49,17 @@ export function formatContext(
     let content = ''
     if (typeof message.content === 'string') {
       content = message.content
-    } else if (
-      Array.isArray(message.content) &&
-      message.content &&
-      message.content[0] &&
-      'text' in message.content[0] &&
-      message.content[0].type === ContentType.text
-    ) {
-      content = message.content[0].text
-    } else if (
-      Array.isArray(message.content) &&
-      message.content &&
-      message.content[0] &&
-      'image' in message.content[0]
-    ) {
-      content = '[IMAGE]'
+    } else if (Array.isArray(message.content)) {
+      content = message.content
+        .map((item) => {
+          switch (item.type) {
+            case ContentType.text:
+              return item.text
+            case ContentType.image:
+              return '[IMAGE]'
+          }
+        })
+        .join('\n')
     }
 
     formattedConversation += `${speaker}:\n${content}\n\n`
@@ -73,6 +69,16 @@ export function formatContext(
 }
 
 function formatMessages(messages: Message[]) {
+  messages = messages.map((message) => {
+    if (Array.isArray(message.content)) {
+      message.content = message.content.map((content) => {
+        delete (content as any)?._promptlSourceMap
+        return content
+      })
+    }
+    return message
+  })
+
   const filterMessages = (role: MessageRole) =>
     messages.filter((m) => m.role === role)
 
