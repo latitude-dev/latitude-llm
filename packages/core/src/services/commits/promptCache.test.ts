@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import * as cacheModule from '../../cache'
 import { createProject } from '../../tests/factories'
 import { getCachedResponse, setCachedResponse } from './promptCache'
+import { LogSources } from '../../constants'
 
 describe('promptCache', async () => {
   const mockCache = {
@@ -20,7 +21,7 @@ describe('promptCache', async () => {
   const config = { temperature: 0 }
   const conversation = { messages: [], config }
   const response = {
-    streamType: 'text',
+    streamType: 'text' as 'text',
     text: 'cached response',
     usage: {
       promptTokens: 0,
@@ -28,6 +29,30 @@ describe('promptCache', async () => {
       totalTokens: 0,
     },
     toolCalls: [],
+    // This should not be cached
+    documentLogUuid: 'document-log-uuid',
+    providerLog: {
+      messages: [],
+      id: 2565,
+      workspaceId: 1,
+      uuid: '0df332f6-8c70-4888-a381-63114818d7bf',
+      documentLogUuid: 'c242aee1-084e-4b52-b837-06e6983fcc4b',
+      providerId: 2,
+      model: 'gpt-4o-mini',
+      finishReason: 'stop',
+      config: { provider: 'openai', model: 'gpt-4o-mini' },
+      responseObject: null,
+      responseText: 'We do not care',
+      toolCalls: [],
+      tokens: 399,
+      costInMillicents: 13,
+      duration: 2392,
+      source: LogSources.SharedPrompt,
+      apiKeyId: null,
+      generatedAt: new Date(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    },
   }
 
   describe('getCachedResponse', () => {
@@ -51,7 +76,15 @@ describe('promptCache', async () => {
         conversation,
       })
 
-      expect(result).toEqual(response)
+      expect(result).toEqual({
+        ...response,
+        providerLog: {
+          ...response.providerLog,
+          generatedAt: response.providerLog.generatedAt.toISOString(),
+          createdAt: response.providerLog.createdAt.toISOString(),
+          updatedAt: response.providerLog.updatedAt.toISOString(),
+        },
+      })
       expect(mockCache.get).toHaveBeenCalledTimes(1)
     })
 
@@ -74,7 +107,6 @@ describe('promptCache', async () => {
         workspace,
         config: { temperature: 0.5 },
         conversation,
-        // @ts-expect-error - mock
         response,
       })
 
@@ -86,14 +118,39 @@ describe('promptCache', async () => {
         workspace,
         config,
         conversation,
-        // @ts-expect-error - mock
         response,
       })
 
       expect(mockCache.set).toHaveBeenCalledTimes(1)
       expect(mockCache.set).toHaveBeenCalledWith(
         expect.stringContaining(`workspace:${workspace.id}:prompt:`),
-        JSON.stringify(response),
+        JSON.stringify({
+          streamType: 'text',
+          text: 'cached response',
+          usage: {
+            promptTokens: 0,
+            completionTokens: 0,
+            totalTokens: 0,
+          },
+          toolCalls: [],
+        }),
+      )
+    })
+
+    it('throws error when streamType is invalid', async () => {
+      await expect(
+        setCachedResponse({
+          workspace,
+          config,
+          conversation,
+          response: {
+            ...response,
+            // @ts-expect-error - invalid streamType
+            streamType: 'invalid',
+          },
+        }),
+      ).rejects.toThrowError(
+        'Invalid "streamType" response, it should be "text" or "object"',
       )
     })
 
@@ -105,7 +162,6 @@ describe('promptCache', async () => {
           workspace,
           config,
           conversation,
-          // @ts-expect-error - mock
           response,
         }),
       ).resolves.toBeUndefined()

@@ -205,12 +205,16 @@ async function runStep({
           conversation: step.conversation,
           stepStartTime,
           errorableUuid,
-          response: cachedResponse,
+          response: cachedResponse as ChainStepResponse<StreamType>,
         }),
         saveSyncProviderLogs: true, // TODO: temp bugfix, it should only save last one syncronously
       })
 
-      const response = { ...cachedResponse, providerLog }
+      const response = {
+        ...cachedResponse,
+        providerLog,
+        documentLogUuid: errorableUuid,
+      } as ChainStepResponse<StreamType>
 
       if (step.chainCompleted) {
         streamConsumer.chainCompleted({
