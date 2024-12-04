@@ -64,7 +64,7 @@ describe('POST /run', () => {
         {
           method: 'POST',
           body: JSON.stringify({
-            documentPath: '/path/to/document',
+            documentPath: 'path/to/document',
           }),
         },
       )
@@ -87,7 +87,7 @@ describe('POST /run', () => {
         workspaceId: workspace.id,
       }).then((r) => r.unwrap())
       token = apikey?.token!
-      const path = '/path/to/document'
+      const path = 'path/to/document'
       const { commit: cmt } = await createDraft({
         project,
         user,
@@ -150,7 +150,7 @@ describe('POST /run', () => {
       const res = await app.request(route, {
         method: 'POST',
         body: JSON.stringify({
-          path: '/path/to/document',
+          path: 'path/to/document',
           parameters: {},
           __internal: { source: LogSources.Playground },
         }),

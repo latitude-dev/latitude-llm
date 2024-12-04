@@ -2,6 +2,7 @@ import { env } from '@latitude-data/env'
 import { eq } from 'drizzle-orm'
 
 import {
+  DOCUMENT_PATH_REGEXP,
   findFirstModelForProvider,
   User,
   Workspace,
@@ -39,6 +40,14 @@ export async function createNewDocument(
       return Result.error(new BadRequestError('Cannot modify a merged commit'))
     }
 
+    if (!DOCUMENT_PATH_REGEXP.test(path)) {
+      return Result.error(
+        new BadRequestError(
+          "Invalid path, no spaces. Only letters, numbers, '.', '-' and '_'",
+        ),
+      )
+    }
+
     const docsScope = new DocumentVersionsRepository(workspace!.id, tx)
 
     const currentDocs = await docsScope
@@ -51,27 +60,14 @@ export async function createNewDocument(
       )
     }
 
-    let metadata = ''
-
-    const provider = await findDefaultProvider(workspace, tx).then((r) =>
-      r.unwrap(),
-    )
-    if (provider) metadata += `provider: ${provider.name}`
-
-    const model = findFirstModelForProvider({
-      provider: provider,
-      latitudeProvider: env.DEFAULT_PROVIDER_ID,
-    })
-    if (model) metadata += `\nmodel: ${model}`
-
-    const defaultContent = metadata ? `---\n${metadata}\n---` : ''
+    const defaultContent = await defaultDocumentContent({ workspace }, tx)
 
     const newDoc = await tx
       .insert(documentVersions)
       .values({
         commitId: commit.id,
         path,
-        content: content ?? defaultContent,
+        content: content ?? defaultContent.metadata + defaultContent.content,
         promptlVersion,
       })
       .returning()
@@ -93,4 +89,33 @@ export async function createNewDocument(
 
     return Result.ok(newDoc[0]!)
   }, db)
+}
+
+export async function defaultDocumentContent(
+  {
+    workspace,
+  }: {
+    workspace: Workspace
+  },
+  db = database,
+) {
+  let metadata = ''
+
+  const provider = await findDefaultProvider(workspace, db).then((r) =>
+    r.unwrap(),
+  )
+  if (provider) metadata += `provider: ${provider.name}`
+
+  const model = findFirstModelForProvider({
+    provider: provider,
+    latitudeProvider: env.DEFAULT_PROVIDER_ID,
+  })
+  if (model) metadata += `\nmodel: ${model}`
+
+  let content = ''
+
+  return {
+    metadata: metadata ? `---\n${metadata}\n---\n\n` : '',
+    content: content,
+  }
 }

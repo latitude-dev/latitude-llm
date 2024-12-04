@@ -30,6 +30,32 @@ describe('createNewDocument', () => {
     expect(commitChanges.value[0]!.path).toBe(document.path)
   })
 
+  it('fails if document path is invalid', async (ctx) => {
+    const { project, user, workspace } = await ctx.factories.createProject()
+    const { commit } = await ctx.factories.createDraft({ project, user })
+
+    const paths = [
+      'invalid path',
+      '/invalid/path',
+      'invalid:path',
+      'invalid**path||ªªª!!!',
+    ]
+
+    for (const path of paths) {
+      const result = await createNewDocument({
+        workspace,
+        user,
+        commit,
+        path,
+      })
+
+      expect(result.ok).toBe(false)
+      expect(result.error!.message).toBe(
+        "Invalid path, no spaces. Only letters, numbers, '.', '-' and '_'",
+      )
+    }
+  })
+
   it('fails if there is another document with the same path', async (ctx) => {
     const { project, user, workspace } = await ctx.factories.createProject()
     const { commit } = await ctx.factories.createDraft({ project, user })
@@ -117,7 +143,8 @@ describe('createNewDocument', () => {
 provider: ${provider.name}
 model: ${provider.defaultModel}
 ---
-`.trim(),
+
+`.trimStart(),
     )
   })
 
@@ -163,7 +190,8 @@ model: ${provider.defaultModel}
 ---
 provider: ${provider.name}
 ---
-`.trim(),
+
+`.trimStart(),
     )
   })
 

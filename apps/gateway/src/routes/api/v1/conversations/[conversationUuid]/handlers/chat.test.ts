@@ -77,7 +77,7 @@ describe('POST /add-message', () => {
         {
           method: 'POST',
           body: JSON.stringify({
-            path: '/path/to/document',
+            path: 'path/to/document',
           }),
         },
       )

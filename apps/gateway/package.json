@@ -9,7 +9,6 @@
     "build": "tsup --config tsup.config.ts && pnpm run sentry:sourcemaps",
     "dev:debug": "tsx watch --inspect src/server",
     "lint": "eslint src/",
-    "prettier": "prettier --write \"**/*.{ts,tsx,md}\"",
     "tc": "tsc --noEmit",
     "test": "vitest --run",
     "test:watch": "vitest",

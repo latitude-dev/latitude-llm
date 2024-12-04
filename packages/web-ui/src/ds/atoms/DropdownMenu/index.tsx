@@ -52,6 +52,7 @@ export type MenuOption = {
   type?: 'normal' | 'destructive'
   iconProps?: IconProps
   disabled?: boolean
+  lookDisabled?: boolean
   shortcut?: string
   checked?: boolean | undefined
 }

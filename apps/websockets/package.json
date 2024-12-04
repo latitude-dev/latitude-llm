@@ -9,7 +9,6 @@
     "dev": "DEBUG=socket* tsx watch src/server",
     "dev:debug": "tsx watch --inspect-brk src/server",
     "lint": "eslint src/",
-    "prettier": "prettier --write \"**/*.{ts,tsx,md}\"",
     "start": "node -r module-alias/register ./dist --env=production",
     "tc": "tsc --noEmit"
   },

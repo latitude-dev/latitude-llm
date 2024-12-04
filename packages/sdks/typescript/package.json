@@ -15,8 +15,7 @@
     "test": "vitest run --pool=forks",
     "test:watch": "vitest",
     "tc": "tsc --noEmit",
-    "lint": "eslint src",
-    "prettier": "prettier --write \"**/*.{ts,tsx,md}\""
+    "lint": "eslint src"
   },
   "type": "module",
   "files": [

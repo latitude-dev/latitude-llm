@@ -2,16 +2,17 @@
 
 import { useCallback } from 'react'
 
-import { HEAD_COMMIT, type DocumentVersion } from '@latitude-data/core/browser'
-import { useToast } from '@latitude-data/web-ui'
 import { assignDatasetAction } from '$/actions/documents/assignDatasetAction'
 import { createDocumentVersionAction } from '$/actions/documents/create'
 import { destroyDocumentAction } from '$/actions/documents/destroyDocumentAction'
 import { destroyFolderAction } from '$/actions/documents/destroyFolderAction'
 import { renameDocumentPathsAction } from '$/actions/documents/renamePathsAction'
 import { updateDocumentContentAction } from '$/actions/documents/updateContent'
+import { uploadDocumentAction } from '$/actions/documents/upload'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
+import { HEAD_COMMIT, type DocumentVersion } from '@latitude-data/core/browser'
+import { useToast } from '@latitude-data/web-ui'
 import { useRouter } from 'next/navigation'
 import useSWR, { SWRConfiguration } from 'swr'
 import { useServerAction } from 'zsa-react'
@@ -30,6 +31,14 @@ export default function useDocumentVersions(
   const router = useRouter()
   const { execute: executeCreateDocument } = useServerAction(
     createDocumentVersionAction,
+    {
+      onSuccess: ({ data: document }) => {
+        onSuccessCreate?.(document)
+      },
+    },
+  )
+  const { execute: executeUploadDocument } = useServerAction(
+    uploadDocumentAction,
     {
       onSuccess: ({ data: document }) => {
         onSuccessCreate?.(document)
@@ -71,6 +80,7 @@ export default function useDocumentVersions(
     }, [projectId, commitUuid]),
     opts,
   )
+
   const createFile = useCallback(
     async ({ path }: { path: string }) => {
       if (!projectId) return
@@ -102,6 +112,40 @@ export default function useDocumentVersions(
       }
     },
     [executeCreateDocument, mutate, data, commitUuid],
+  )
+
+  const uploadFile = useCallback(
+    async ({ path, file }: { path: string; file: File }) => {
+      if (!projectId) return
+
+      const [document, error] = await executeUploadDocument({
+        path,
+        projectId,
+        commitUuid,
+        file,
+      })
+
+      if (error) {
+        toast({
+          title: 'Error uploading document',
+          description: error.formErrors?.[0] || error.message,
+          variant: 'destructive',
+        })
+      } else if (document) {
+        const prevDocuments = data || []
+
+        if (document) {
+          mutate([...prevDocuments, document])
+          router.push(
+            ROUTES.projects
+              .detail({ id: projectId! })
+              .commits.detail({ uuid: commitUuid })
+              .documents.detail({ uuid: document.documentUuid }).root,
+          )
+        }
+      }
+    },
+    [executeUploadDocument, mutate, data, commitUuid],
   )
 
   const renamePaths = useCallback(
@@ -234,6 +278,7 @@ export default function useDocumentVersions(
     isLoading: isLoading,
     error: swrError,
     createFile,
+    uploadFile,
     renamePaths,
     destroyFile,
     destroyFolder,

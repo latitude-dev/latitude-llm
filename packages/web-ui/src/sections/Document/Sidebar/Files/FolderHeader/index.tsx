@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useMemo, useState } from 'react'
+import { ChangeEvent, useCallback, useMemo, useRef, useState } from 'react'
 
 import { Icon } from '../../../../../ds/atoms'
 import { MenuOption } from '../../../../../ds/atoms/DropdownMenu'
@@ -34,8 +34,14 @@ export default function FolderHeader({
   indentation: IndentType[]
   onToggleOpen: () => void
 }) {
-  const { isMerged, onMergeCommitClick, onDeleteFolder, onRenameFile } =
-    useFileTreeContext()
+  const {
+    isLoading,
+    isMerged,
+    onMergeCommitClick,
+    onUploadFile,
+    onDeleteFolder,
+    onRenameFile,
+  } = useFileTreeContext()
   const { openPaths, togglePath } = useOpenPaths((state) => ({
     togglePath: state.togglePath,
     openPaths: state.openPaths,
@@ -94,12 +100,33 @@ export default function FolderHeader({
     [node.id, updateFolder, isMerged, onMergeCommitClick],
   )
 
+  const fileUploadInputRef = useRef<HTMLInputElement>(null)
+  const onClickFileUploadInput = useCallback(() => {
+    if (isMerged) onMergeCommitClick()
+    else fileUploadInputRef.current?.click()
+  }, [isMerged, onMergeCommitClick])
+  const onFileUploadChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0]
+      if (!file) return
+
+      if (!node.isPersisted) deleteTmpFolder({ id: node.id })
+
+      const filename = file.name.replace(/\.promptl$/, '').replace(/\s+/g, '_')
+      onUploadFile({ path: `${node.path}/${filename}`, file })
+
+      event.target.value = ''
+    },
+    [node, deleteTmpFolder, onUploadFile],
+  )
+
   const [isEditing, setIsEditing] = useState(node.name === ' ')
   const actions = useMemo<MenuOption[]>(
     () => [
       {
-        label: 'Rename',
-        disabled: isMerged,
+        label: 'Rename folder',
+        lookDisabled: isMerged,
+        disabled: isLoading,
         iconProps: { name: 'pencil' },
         onClick: () => {
           if (isMerged) {
@@ -112,20 +139,30 @@ export default function FolderHeader({
       },
       {
         label: 'New folder',
-        disabled: isMerged,
+        lookDisabled: isMerged,
+        disabled: isLoading,
         iconProps: { name: 'folderPlus' },
         onClick: onAddNode({ isFile: false }),
       },
       {
-        label: 'New Prompt',
-        disabled: isMerged,
+        label: 'New prompt',
+        lookDisabled: isMerged,
+        disabled: isLoading,
         iconProps: { name: 'filePlus' },
         onClick: onAddNode({ isFile: true }),
       },
       {
+        label: 'Upload document',
+        lookDisabled: isMerged,
+        disabled: isLoading,
+        iconProps: { name: 'paperclip' },
+        onClick: onClickFileUploadInput,
+      },
+      {
         label: 'Delete folder',
         type: 'destructive',
-        disabled: isMerged,
+        lookDisabled: isMerged,
+        disabled: isLoading,
         iconProps: { name: 'trash' },
         onClick: () => {
           if (isMerged) {
@@ -142,9 +179,11 @@ export default function FolderHeader({
       },
     ],
     [
+      isLoading,
       isMerged,
       onMergeCommitClick,
       addFolder,
+      onClickFileUploadInput,
       onDeleteFolder,
       deleteTmpFolder,
       node.path,
@@ -154,21 +193,30 @@ export default function FolderHeader({
     ],
   )
   return (
-    <NodeHeaderWrapper
-      name={node.name}
-      isEditing={isEditing}
-      setIsEditing={setIsEditing}
-      hasChildren={node.children.length > 0}
-      onClick={onToggleOpen}
-      onSaveValue={({ path }) => onSaveValue({ path })}
-      onSaveValueAndTab={({ path }) =>
-        onUpdateFolderAndAddOther({ id: node.id, path })
-      }
-      onLeaveWithoutSave={() => deleteTmpFolder({ id: node.id })}
-      open={open}
-      actions={actions}
-      indentation={indentation}
-      icons={<FolderIcons open={open} />}
-    />
+    <>
+      <input
+        ref={fileUploadInputRef}
+        type='file'
+        multiple={false}
+        className='hidden'
+        onChange={onFileUploadChange}
+      />
+      <NodeHeaderWrapper
+        name={node.name}
+        isEditing={isEditing}
+        setIsEditing={setIsEditing}
+        hasChildren={node.children.length > 0}
+        onClick={onToggleOpen}
+        onSaveValue={({ path }) => onSaveValue({ path })}
+        onSaveValueAndTab={({ path }) =>
+          onUpdateFolderAndAddOther({ id: node.id, path })
+        }
+        onLeaveWithoutSave={() => deleteTmpFolder({ id: node.id })}
+        open={open}
+        actions={actions}
+        indentation={indentation}
+        icons={<FolderIcons open={open} />}
+      />
+    </>
   )
 }

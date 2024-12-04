@@ -8,8 +8,7 @@
   "type": "module",
   "scripts": {
     "lint": "eslint src",
-    "tc": "tsc --noEmit",
-    "prettier": "prettier --write src/**/*.ts"
+    "tc": "tsc --noEmit"
   },
   "exports": {
     "./errors": "./src/errors.ts"

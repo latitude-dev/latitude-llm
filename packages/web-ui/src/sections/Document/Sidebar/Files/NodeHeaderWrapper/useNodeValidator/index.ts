@@ -1,3 +1,4 @@
+import { DOCUMENT_PATH_REGEXP } from '@latitude-data/core/browser'
 import {
   ChangeEventHandler,
   KeyboardEvent,
@@ -38,9 +39,9 @@ function useOnClickOutside<E extends HTMLElement>({
   }, [ref, handler, enabled])
 }
 
-const PATH_REGEXP = /^([\w-]+\/)*([\w-.])+$/
 const INVALID_MSG =
-  "Invalid path, no spaces. Only letters, numbers, '-' and '_'"
+  "Invalid path, no spaces. Only letters, numbers, '.', '-' and '_'"
+
 export function useNodeValidator({
   name,
   inputRef,
@@ -65,7 +66,7 @@ export function useNodeValidator({
   const onInputChange: ChangeEventHandler<HTMLInputElement> = useCallback(
     (event) => {
       const value = event.target.value
-      const isValid = PATH_REGEXP.test(value)
+      const isValid = DOCUMENT_PATH_REGEXP.test(value)
 
       let error = undefined
 
@@ -87,7 +88,7 @@ export function useNodeValidator({
       return
     }
 
-    const isValid = PATH_REGEXP.test(value)
+    const isValid = DOCUMENT_PATH_REGEXP.test(value)
     if (!isValid) return
 
     await saveValue({ path: value })
@@ -104,7 +105,7 @@ export function useNodeValidator({
     async (event: KeyboardEvent<HTMLInputElement>) => {
       const val = inputRef.current?.value ?? ''
       const value = val.trim()
-      const isValid = PATH_REGEXP.test(value)
+      const isValid = DOCUMENT_PATH_REGEXP.test(value)
       const key = event.key
 
       if (key === 'Escape') {

@@ -36,6 +36,7 @@ import {
   MinusIcon,
   MonitorIcon,
   Moon,
+  Paperclip,
   Pencil,
   Pin,
   PinOff,
@@ -116,6 +117,7 @@ const Icons = {
   rollText: ScrollTextIcon,
   notEqual: EqualNotIcon,
   settings: SettingsIcon,
+  paperclip: Paperclip,
 }
 
 export type IconName = keyof typeof Icons
