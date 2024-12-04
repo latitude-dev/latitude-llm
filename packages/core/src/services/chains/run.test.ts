@@ -650,6 +650,7 @@ describe('runChain', () => {
         providersMap,
         source: LogSources.API,
         errorableType: ErrorableEntity.DocumentLog,
+        generateUUID: () => 'new-document-log-uuid',
       })
       const spy = vi.spyOn(aiModule, 'ai')
       const saveOrPublishProviderLogSpy = vi
@@ -666,6 +667,7 @@ describe('runChain', () => {
           providerLog: { id: 'fake-provider-log-id' },
         }),
       )
+      expect(res.value?.documentLogUuid).toEqual('new-document-log-uuid')
     })
 
     describe('with config having temperature != 0', () => {

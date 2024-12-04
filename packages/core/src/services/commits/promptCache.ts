@@ -1,9 +1,22 @@
 import { hash } from 'crypto'
+import { omit } from 'lodash-es'
 
 import { Config, Conversation } from '@latitude-data/compiler'
 
 import { ChainStepResponse, StreamType, type Workspace } from '../../browser'
 import { cache } from '../../cache'
+
+function cleanResponse<T extends StreamType>(response: ChainStepResponse<T>) {
+  return omit<ChainStepResponse<T>, ['documentLogUuid', 'providerLog']>(
+    response,
+    'documentLogUuid',
+    'providerLog',
+  )
+}
+
+type CachedChainResponse<T extends StreamType> = ReturnType<
+  typeof cleanResponse<T>
+>
 
 function generateCacheKey(
   workspace: Workspace,
@@ -25,7 +38,7 @@ function shouldCache(config: Config): boolean {
 
 async function getFromCache(
   key: string,
-): Promise<ChainStepResponse<StreamType> | undefined> {
+): Promise<CachedChainResponse<StreamType> | undefined> {
   try {
     const c = await cache()
     const cachedResponseStr = await c.get(key)
@@ -35,10 +48,10 @@ async function getFromCache(
   }
 }
 
-async function setToCache(
+async function setToCache<T extends StreamType>(
   key: string,
-  response: ChainStepResponse<StreamType>,
-): Promise<void> {
+  response: CachedChainResponse<T>,
+) {
   try {
     const c = await cache()
     await c.set(key, JSON.stringify(response))
@@ -62,7 +75,7 @@ export async function getCachedResponse({
   return await getFromCache(key)
 }
 
-export async function setCachedResponse({
+export async function setCachedResponse<T extends StreamType>({
   workspace,
   config,
   conversation,
@@ -71,10 +84,17 @@ export async function setCachedResponse({
   workspace: Workspace
   config: Config
   conversation: Conversation
-  response: ChainStepResponse<StreamType>
+  response: ChainStepResponse<T>
 }) {
   if (!shouldCache(config)) return
 
   const key = generateCacheKey(workspace, config, conversation)
-  await setToCache(key, response)
+
+  if (response.streamType !== 'text' && response.streamType !== 'object') {
+    throw new Error(
+      'Invalid "streamType" response, it should be "text" or "object"',
+    )
+  }
+  const data = cleanResponse(response)
+  await setToCache(key, data)
 }

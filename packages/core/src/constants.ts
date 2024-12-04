@@ -51,22 +51,21 @@ export const HELP_CENTER = {
 }
 
 export type StreamType = 'object' | 'text'
-export type ChainStepTextResponse = {
-  streamType: 'text'
+type BaseResponse = {
   text: string
   usage: LanguageModelUsage
-  toolCalls: ToolCall[]
   documentLogUuid?: string
   providerLog?: ProviderLog
 }
 
-export type ChainStepObjectResponse = {
+export type ChainStepTextResponse = BaseResponse & {
+  streamType: 'text'
+  toolCalls: ToolCall[]
+}
+
+export type ChainStepObjectResponse = BaseResponse & {
   streamType: 'object'
   object: any
-  text: string
-  usage: LanguageModelUsage
-  documentLogUuid?: string
-  providerLog?: ProviderLog
 }
 
 export type ChainStepResponse<T extends StreamType> = T extends 'text'
