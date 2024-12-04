@@ -435,3 +435,8 @@ export type CsvData = {
     info: { columns: { name: string }[] }
   }[]
 }
+
+export type DocumentLogFilterOptions = {
+  commitIds: number[]
+  logSources: LogSources[]
+}

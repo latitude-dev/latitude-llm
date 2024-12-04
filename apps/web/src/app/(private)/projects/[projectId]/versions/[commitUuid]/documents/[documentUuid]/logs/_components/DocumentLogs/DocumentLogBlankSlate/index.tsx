@@ -1,26 +1,21 @@
-import { Commit } from '@latitude-data/core/browser'
-import { Button, Text } from '@latitude-data/web-ui'
-import { getDocumentByUuidCached } from '$/app/(private)/_data-access'
+import {
+  Button,
+  Text,
+  useCurrentCommit,
+  useCurrentProject,
+} from '@latitude-data/web-ui'
+import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { ROUTES } from '$/services/routes'
 import Link from 'next/link'
 
 import { DocumentBlankSlateLayout } from '../../../../../_components/DocumentBlankSlateLayout'
 import { DocumentsClient } from '../../../../../_components/DocumentsClient'
 
-export async function DocumentLogBlankSlate({
-  commit,
-  projectId,
-  documentUuid,
-}: {
-  commit: Commit
-  documentUuid: string
-  projectId: number
-}) {
-  const document = await getDocumentByUuidCached({
-    documentUuid,
-    projectId,
-    commitUuid: commit.uuid,
-  })
+export async function DocumentLogBlankSlate() {
+  const { project } = useCurrentProject()
+  const { commit } = useCurrentCommit()
+  const { document } = useCurrentDocument()
+
   return (
     <DocumentBlankSlateLayout>
       <div className='flex flex-col gap-4 items-center'>
@@ -31,9 +26,9 @@ export async function DocumentLogBlankSlate({
       <Link
         href={
           ROUTES.projects
-            .detail({ id: projectId })
+            .detail({ id: project.id })
             .commits.detail({ uuid: commit.uuid })
-            .documents.detail({ uuid: documentUuid }).logs.upload
+            .documents.detail({ uuid: document.documentUuid }).logs.upload
         }
       >
         <Button fullWidth variant='outline'>

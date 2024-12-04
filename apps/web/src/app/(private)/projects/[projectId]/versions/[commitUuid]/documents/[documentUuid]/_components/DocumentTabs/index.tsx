@@ -20,7 +20,7 @@ export default function DocumentTabs({
   children: ReactNode
 }) {
   const { toggleDocumentation } = useContext(DocumentationContext)
-  const hasFeature = useFeatureFlag()
+  const { data: hasFeature } = useFeatureFlag()
   const { isHead } = useCurrentCommit()
   return (
     <>
