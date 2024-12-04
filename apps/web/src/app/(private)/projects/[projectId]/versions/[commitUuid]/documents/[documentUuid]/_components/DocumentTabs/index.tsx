@@ -3,7 +3,6 @@
 import { ReactNode, useContext } from 'react'
 
 import { Button, Icon, useCurrentCommit } from '@latitude-data/web-ui'
-import { useFeatureFlag } from '$/hooks/useFeatureFlag'
 
 import { DocumentationContext } from '../DocumentationModal'
 import { ShareDocument } from './ShareDocument'
@@ -20,7 +19,6 @@ export default function DocumentTabs({
   children: ReactNode
 }) {
   const { toggleDocumentation } = useContext(DocumentationContext)
-  const hasFeature = useFeatureFlag()
   const { isHead } = useCurrentCommit()
   return (
     <>
@@ -34,15 +32,13 @@ export default function DocumentTabs({
           <Button variant='ghost' onClick={toggleDocumentation}>
             Deploy this prompt <Icon name='code2' />
           </Button>
-          {hasFeature && (
-            <ShareDocument
-              document={document}
-              projectId={Number(params.projectId)}
-              commitUuid={params.commitUuid}
-              documentUuid={params.documentUuid}
-              canShare={isHead}
-            />
-          )}
+          <ShareDocument
+            document={document}
+            projectId={Number(params.projectId)}
+            commitUuid={params.commitUuid}
+            documentUuid={params.documentUuid}
+            canShare={isHead}
+          />
         </div>
       </div>
       <div className='flex-grow min-h-0 flex flex-col w-full relative'>
