@@ -38,14 +38,14 @@ import { DocumentLogMetadata } from './Metadata'
 
 function DocumentLogMetadataLoading() {
   return (
-    <>
+    <div className='flex flex-col gap-4'>
       <MetadataItem label='Log uuid' loading />
       <MetadataItem label='Timestamp' loading />
       <MetadataItem label='Tokens' loading />
       <MetadataItem label='Cost' loading />
       <MetadataItem label='Duration' loading />
       <MetadataItem label='Version' loading />
-    </>
+    </div>
   )
 }
 
