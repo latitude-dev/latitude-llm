@@ -30,19 +30,33 @@ are automatically collapsed and can be expanded with a simple click.
 
 ![](/assets/changelog/241204/collapsible-parameters-1.png)
 
-## Proxyless Latitude prompts
-
-You can now compile latitude prompts straight from your code using our SDK.
-This allows you to still use Latitude's prompt editor for iterating and
-evaluating your prompts at scale, but not have to rely on Latitude's Gateway
-in order to run your prompts from your code. [docs](https://docs.latitude.so/guides/sdk/javascript-typescript-sdk#running-a-document-locally).
-
 ## Overivew page
 
 We have added a new project overview page that gives you a quick overview of
 the project's overall cost, prompts, and evaluations.
 
 ![](/assets/changelog/241204/overview-1.png)
+
+## Compile Latitude prompts locally
+
+You can now compile latitude prompts straight from your code using our SDK.
+This allows you to still use Latitude's prompt editor, for iterating and
+evaluating your prompts at scale, while maintaining your existing provider
+integrations to run the prompts from your code. [docs](https://docs.latitude.so/guides/sdk/javascript-typescript-sdk#running-a-document-locally).
+
+```typescript
+const { config, messages } = await latitude.prompts.render({
+	prompt,
+	parameters: {
+		// Any parameters your document expects
+	},
+})
+
+const response = await openai.chat.completions.create({
+	...config,
+	messages,
+})
+```
 
 ## Other improvements
 
@@ -242,5 +256,4 @@ We’ve released the [v2 version of our Gateway API](https://docs.latitude.so/gu
 - Improved and fixed documentation in several places
 - Several performance and stability improvements
 
-</Update>
 </Update>
