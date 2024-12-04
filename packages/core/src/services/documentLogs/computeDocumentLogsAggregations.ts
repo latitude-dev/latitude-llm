@@ -1,9 +1,19 @@
 import { and, avg, count, eq, isNull, sql, sum } from 'drizzle-orm'
 
-import { Commit, ErrorableEntity } from '../../browser'
+import {
+  DocumentLogFilterOptions,
+  ErrorableEntity,
+  Workspace,
+} from '../../browser'
 import { database } from '../../client'
-import { commits, documentLogs, providerLogs, runErrors } from '../../schema'
-import { getCommonQueryConditions } from './computeDocumentLogsWithMetadata'
+import {
+  commits,
+  documentLogs,
+  projects,
+  providerLogs,
+  runErrors,
+} from '../../schema'
+import { getDocumentLogFilters } from './computeDocumentLogsWithMetadata'
 
 export type DocumentLogsAggregations = {
   totalCount: number
@@ -18,14 +28,22 @@ export type DocumentLogsAggregations = {
 
 export async function computeDocumentLogsAggregations(
   {
+    workspace,
     documentUuid,
-    draft,
+    filterOptions,
   }: {
+    workspace: Workspace
     documentUuid: string
-    draft?: Commit
+    filterOptions?: DocumentLogFilterOptions
   },
   db = database,
 ): Promise<DocumentLogsAggregations> {
+  const conditions = [
+    eq(projects.workspaceId, workspace.id),
+    isNull(runErrors.id),
+    documentUuid ? eq(documentLogs.documentUuid, documentUuid) : undefined,
+    filterOptions ? getDocumentLogFilters(filterOptions) : undefined,
+  ].filter(Boolean)
   const baseQuery = db
     .select({
       totalCount: count(documentLogs.id),
@@ -48,6 +66,10 @@ export async function computeDocumentLogsAggregations(
       commits,
       and(isNull(commits.deletedAt), eq(commits.id, documentLogs.commitId)),
     )
+    .leftJoin(
+      projects,
+      and(isNull(projects.deletedAt), eq(projects.id, commits.projectId)),
+    )
     .leftJoin(providerLogs, eq(providerLogs.documentLogUuid, documentLogs.uuid))
     .leftJoin(
       runErrors,
@@ -56,16 +78,7 @@ export async function computeDocumentLogsAggregations(
         eq(runErrors.errorableType, ErrorableEntity.DocumentLog),
       ),
     )
-    .where(
-      and(
-        isNull(runErrors.id),
-        getCommonQueryConditions({
-          scope: documentLogs,
-          documentUuid,
-          draft,
-        }),
-      ),
-    )
+    .where(and(...conditions))
 
   const result = await baseQuery.limit(1)
 

@@ -1,7 +1,7 @@
 import { forwardRef } from 'react'
 import { capitalize } from 'lodash-es'
 
-import { EvaluationDto } from '@latitude-data/core/browser'
+import { EvaluationDto, LogSources } from '@latitude-data/core/browser'
 import { buildPagination } from '@latitude-data/core/lib/pagination/buildPagination'
 import {
   Badge,
@@ -29,6 +29,7 @@ import { useSearchParams } from 'next/navigation'
 
 import { DocumentLogWithMetadataAndErrorAndEvaluationResult } from '..'
 import { ResultCellContent } from '../../EvaluationResults/EvaluationResultsTable'
+import { useCommits } from '$/stores/commitsStore'
 
 const countLabel = (selected: number) => (count: number) => {
   return selected ? `${selected} of ${count} logs selected` : `${count} logs`
@@ -63,13 +64,19 @@ export const DocumentLogsTable = forwardRef<HTMLTableElement, Props>(
     const searchParams = useSearchParams()
     const page = searchParams.get('page') ?? '1'
     const pageSize = searchParams.get('pageSize') ?? '25'
-    const { commit } = useCurrentCommit()
     const { project } = useCurrentProject()
+    const { commit } = useCurrentCommit()
     const { document } = useCurrentDocument()
+    const { data: commits } = useCommits()
     const { data: pagination, isLoading } = useDocumentLogsPagination({
+      documentUuid: commits ? document.documentUuid : undefined,
       projectId: project.id,
-      commitUuid: commit.uuid,
-      documentUuid: document.documentUuid,
+      filterOptions: {
+        commitIds: commits
+          .filter((c) => !!c.mergedAt || c.uuid === commit.uuid)
+          .map((c) => c.id),
+        logSources: Object.values(LogSources),
+      },
       page,
       pageSize,
     })

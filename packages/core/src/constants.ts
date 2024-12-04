@@ -82,6 +82,8 @@ export enum LogSources {
   SharedPrompt = 'shared_prompt',
 }
 
+export const LOG_SOURCES = Object.values(LogSources)
+
 export enum ErrorableEntity {
   DocumentLog = 'document_log',
   EvaluationResult = 'evaluation_result',
@@ -434,4 +436,9 @@ export type CsvData = {
     record: Record<string, string>
     info: { columns: { name: string }[] }
   }[]
+}
+
+export type DocumentLogFilterOptions = {
+  commitIds: number[]
+  logSources: LogSources[]
 }

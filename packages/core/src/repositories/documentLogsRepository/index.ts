@@ -41,6 +41,7 @@ export class DocumentLogsRepository extends Repository<DocumentLog> {
       .where(and(isNull(runErrors.id), eq(workspaces.id, this.workspaceId)))
       .$dynamic()
   }
+
   async findByUuid(uuid: string) {
     const result = await this.scope.where(eq(documentLogs.uuid, uuid))
 
@@ -51,6 +52,17 @@ export class DocumentLogsRepository extends Repository<DocumentLog> {
     }
 
     return Result.ok(result[0]!)
+  }
+
+  async hasLogs(documentUuid: string) {
+    const result = await this.db
+      .select({
+        count: count(documentLogs.id),
+      })
+      .from(documentLogs)
+      .where(eq(documentLogs.uuid, documentUuid))
+
+    return result[0]?.count ?? 0 > 0
   }
 
   async totalCountSinceDate(minDate: Date) {

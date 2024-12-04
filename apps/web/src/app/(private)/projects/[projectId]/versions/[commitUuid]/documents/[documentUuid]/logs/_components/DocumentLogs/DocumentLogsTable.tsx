@@ -1,7 +1,10 @@
 import { forwardRef } from 'react'
 import { capitalize } from 'lodash-es'
 
-import { EvaluationResultableType } from '@latitude-data/core/browser'
+import {
+  DocumentLogFilterOptions,
+  EvaluationResultableType,
+} from '@latitude-data/core/browser'
 import { buildPagination } from '@latitude-data/core/lib/pagination/buildPagination'
 import {
   DocumentLogWithMetadataAndError,
@@ -95,6 +98,7 @@ function EvaluationsColumn({
 
 type Props = {
   documentLogs: DocumentLogRow[]
+  documentLogFilterOptions: DocumentLogFilterOptions
   evaluationResults: Record<number, ResultWithEvaluation[]>
   selectedLog: DocumentLogWithMetadataAndError | undefined
   setSelectedLog: (log: DocumentLogWithMetadataAndError | undefined) => void
@@ -105,6 +109,7 @@ export const DocumentLogsTable = forwardRef<HTMLTableElement, Props>(
   function DocumentLogsTable(
     {
       documentLogs,
+      documentLogFilterOptions,
       evaluationResults,
       selectedLog,
       setSelectedLog,
@@ -128,11 +133,12 @@ export const DocumentLogsTable = forwardRef<HTMLTableElement, Props>(
     const { data: pagination, isLoading: isPaginationLoading } =
       useDocumentLogsPagination({
         projectId: project.id,
-        commitUuid: commit.uuid,
+        filterOptions: documentLogFilterOptions,
         documentUuid: document.documentUuid,
         page,
         pageSize,
       })
+    const queryParams = window.location.search
     return (
       <Table
         ref={ref}
@@ -150,6 +156,7 @@ export const DocumentLogsTable = forwardRef<HTMLTableElement, Props>(
                       .documents.detail({ uuid: document.documentUuid }).logs
                       .root,
                     count: pagination.count,
+                    queryParams,
                     page: Number(page),
                     pageSize: Number(pageSize),
                   })

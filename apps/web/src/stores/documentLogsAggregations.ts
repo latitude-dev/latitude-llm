@@ -2,28 +2,31 @@ import { DocumentLogsAggregations } from '@latitude-data/core/services/documentL
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'
+import { DocumentLogFilterOptions } from '@latitude-data/core/browser'
 
 export default function useDocumentLogsAggregations(
   {
     documentUuid,
-    commitUuid,
+    filterOptions,
     projectId,
   }: {
-    documentUuid: string
-    commitUuid: string
+    documentUuid?: string
+    filterOptions: DocumentLogFilterOptions
     projectId: number
   },
   opts?: SWRConfiguration,
 ) {
   const fetcher = useFetcher(
-    ROUTES.api.projects
-      .detail(projectId)
-      .commits.detail(commitUuid)
-      .documents.detail(documentUuid).documentLogs.aggregations,
+    documentUuid
+      ? ROUTES.api.projects
+          .detail(projectId)
+          .documents.detail(documentUuid)
+          .logs.aggregations(filterOptions)
+      : undefined,
   )
 
   const { data, isLoading, error, mutate } = useSWR<DocumentLogsAggregations>(
-    ['documentLogsAggregations', documentUuid, commitUuid, projectId],
+    ['documentLogsAggregations', documentUuid, filterOptions, projectId],
     fetcher,
     {
       ...opts,

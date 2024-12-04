@@ -1,9 +1,9 @@
-import { Workspace } from '@latitude-data/core/browser'
-import { CommitsRepository } from '@latitude-data/core/repositories'
+import { LogSources, Workspace } from '@latitude-data/core/browser'
 import { computeDocumentLogsDailyCount } from '@latitude-data/core/services/documentLogs/computeDocumentLogsDailyCount'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'
+import { decodeParameters } from '$/services/helpers'
 
 export const GET = errorHandler(
   authHandler(
@@ -21,20 +21,23 @@ export const GET = errorHandler(
         workspace: Workspace
       },
     ) => {
-      const { projectId, commitUuid, documentUuid } = params
+      const { documentUuid } = params
       const searchParams = req.nextUrl.searchParams
       const days = searchParams.get('days')
         ? parseInt(searchParams.get('days')!, 10)
         : undefined
-
-      const commitsScope = new CommitsRepository(workspace.id)
-      const commit = await commitsScope
-        .getCommitByUuid({ projectId: Number(projectId), uuid: commitUuid })
-        .then((r) => r.unwrap())
+      const { commitIds, logSources } = decodeParameters(req.nextUrl.search)
+      const filterOptions = {
+        commitIds: Array.isArray(commitIds) ? commitIds.map(Number) : [],
+        logSources: (Array.isArray(logSources)
+          ? logSources
+          : []) as LogSources[],
+      }
 
       const result = await computeDocumentLogsDailyCount({
+        workspace,
         documentUuid,
-        draft: commit,
+        filterOptions,
         days,
       })
 

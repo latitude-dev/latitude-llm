@@ -1,4 +1,4 @@
-import { compactObject } from '@latitude-data/core/lib/compactObject'
+import { DocumentLogFilterOptions } from '@latitude-data/core/browser'
 import { IPagination } from '@latitude-data/core/lib/pagination/buildPagination'
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
@@ -7,15 +7,15 @@ import useSWR, { SWRConfiguration } from 'swr'
 export default function useDocumentLogsPagination(
   {
     documentUuid,
-    commitUuid,
     projectId,
+    filterOptions,
     page,
     pageSize,
     excludeErrors = false,
   }: {
-    documentUuid: string
-    commitUuid: string
+    documentUuid?: string
     projectId: number
+    filterOptions: DocumentLogFilterOptions
     page: string | null
     pageSize: string | null
     excludeErrors?: boolean
@@ -23,22 +23,24 @@ export default function useDocumentLogsPagination(
   opts?: SWRConfiguration,
 ) {
   const fetcher = useFetcher(
-    ROUTES.api.projects
-      .detail(projectId)
-      .commits.detail(commitUuid)
-      .documents.detail(documentUuid).documentLogs.pagination,
+    documentUuid
+      ? ROUTES.api.projects
+          .detail(projectId)
+          .documents.detail(documentUuid)
+          .logs.pagination({
+            page: Number(page ?? 1),
+            pageSize: Number(pageSize ?? 10),
+            filterOptions,
+            excludeErrors,
+          })
+      : undefined,
     {
-      searchParams: compactObject({
-        page: page ? String(page) : undefined,
-        pageSize: pageSize ? String(pageSize) : undefined,
-        excludeErrors: excludeErrors ? 'true' : undefined,
-      }) as Record<string, string>,
       fallback: null,
     },
   )
 
   const { data, isLoading, error, mutate } = useSWR<IPagination>(
-    ['documentLogsCount', documentUuid, commitUuid, projectId],
+    ['documentLogsCount', documentUuid, projectId, filterOptions],
     fetcher,
     opts,
   )
