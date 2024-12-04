@@ -322,6 +322,8 @@ export const DELIMITERS_KEYS = [
 export const MAX_SIZE = 25
 export const MAX_UPLOAD_SIZE_IN_MB = MAX_SIZE * 1024 * 1024
 
+export const DOCUMENT_PATH_REGEXP = /^([\w-]+\/)*([\w-.])+$/
+
 const userContentSchema = z.array(
   z
     .object({

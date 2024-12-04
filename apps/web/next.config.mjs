@@ -16,6 +16,7 @@ const nextConfig = {
     'jose',
     'nodemailer-mailgun-transport',
     '@sentry/nextjs',
+    'pdfjs-dist',
   ],
   experimental: {
     // Dear developer,

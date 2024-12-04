@@ -35,6 +35,7 @@ export default function DocumentHeader({
   indentation: IndentType[]
 }) {
   const {
+    isLoading,
     isMerged,
     onMergeCommitClick,
     onNavigateToDocument,
@@ -70,8 +71,9 @@ export default function DocumentHeader({
   const actions = useMemo<MenuOption[]>(
     () => [
       {
-        label: 'Rename',
-        disabled: isMerged,
+        label: 'Rename file',
+        lookDisabled: isMerged,
+        disabled: isLoading,
         iconProps: { name: 'pencil' },
         onClick: () => {
           if (isMerged) {
@@ -85,7 +87,8 @@ export default function DocumentHeader({
       {
         label: 'Delete file',
         type: 'destructive',
-        disabled: isMerged,
+        lookDisabled: isMerged,
+        disabled: isLoading,
         iconProps: { name: 'trash' },
         onClick: () => {
           if (isMerged) {
@@ -96,7 +99,13 @@ export default function DocumentHeader({
         },
       },
     ],
-    [node.doc!.documentUuid, onDeleteFile, isMerged, onMergeCommitClick],
+    [
+      node.doc!.documentUuid,
+      onDeleteFile,
+      isLoading,
+      isMerged,
+      onMergeCommitClick,
+    ],
   )
   return (
     <NodeHeaderWrapper

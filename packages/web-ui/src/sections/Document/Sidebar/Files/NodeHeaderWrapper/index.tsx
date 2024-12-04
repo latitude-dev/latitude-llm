@@ -2,7 +2,7 @@
 
 import { ReactNode, useEffect, useRef, useState } from 'react'
 
-import { Button } from '../../../../../ds/atoms'
+import { Button, Tooltip } from '../../../../../ds/atoms'
 import { MenuOption } from '../../../../../ds/atoms/DropdownMenu'
 import { Input } from '../../../../../ds/atoms/Input'
 import Text from '../../../../../ds/atoms/Text'
@@ -171,17 +171,25 @@ function NodeHeaderWrapper({
           )}
         >
           {actions.map((action, index) => (
-            <Button
+            <Tooltip
               key={index}
-              variant='ghost'
-              size='none'
-              lookDisabled={action.disabled}
-              onClick={action.onClick}
-              iconProps={{
-                color: selected ? 'accentForeground' : 'foregroundMuted',
-                name: action.iconProps?.name!,
-              }}
-            />
+              asChild
+              trigger={
+                <Button
+                  variant='ghost'
+                  size='none'
+                  lookDisabled={action.lookDisabled}
+                  disabled={action.disabled}
+                  onClick={action.onClick}
+                  iconProps={{
+                    color: selected ? 'accentForeground' : 'foregroundMuted',
+                    name: action.iconProps?.name!,
+                  }}
+                />
+              }
+            >
+              {action.label}
+            </Tooltip>
           ))}
         </div>
       ) : null}
