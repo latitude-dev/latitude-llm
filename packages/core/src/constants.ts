@@ -435,3 +435,11 @@ export type CsvData = {
     info: { columns: { name: string }[] }
   }[]
 }
+
+export enum SpanKind {
+  Internal = 'internal',
+  Server = 'server',
+  Client = 'client',
+  Producer = 'producer',
+  Consumer = 'consumer',
+}

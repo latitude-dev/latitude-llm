@@ -18,8 +18,8 @@
   },
   "dependencies": {
     "@intercom/messenger-js-sdk": "^0.0.14",
-    "@latitude-data/constants": "workspace:*",
     "@latitude-data/compiler": "workspace:^",
+    "@latitude-data/constants": "workspace:*",
     "@latitude-data/core": "workspace:*",
     "@latitude-data/env": "workspace:^",
     "@latitude-data/promptl": "^0.3.2",
@@ -81,6 +81,7 @@
     "postcss": "^8.4.39",
     "rollup": "^4.24.2",
     "tailwindcss": "^3.4.4",
+    "typescript": "^5.5.4",
     "vitest": "^2.0.3"
   },
   "optionalDependencies": {

@@ -19,7 +19,9 @@
       }
     }
   },
-  "files": ["src"],
+  "files": [
+    "src"
+  ],
   "scripts": {
     "dev": "rollup -c -w",
     "build": "rollup -c",
@@ -45,6 +47,7 @@
     "@types/node": "^20.12.12",
     "rollup": "^4.10.0",
     "rollup-plugin-dts": "^6.1.1",
+    "typescript": "^5.7.2",
     "vitest": "^1.2.2"
   }
 }
