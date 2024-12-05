@@ -1,0 +1,1 @@
+ALTER TABLE "latitude"."spans" ADD COLUMN "parameters" jsonb;
