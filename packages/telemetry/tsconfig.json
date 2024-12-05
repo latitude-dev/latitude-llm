@@ -1,0 +1,18 @@
+{
+  "extends": "@latitude-data/typescript-config/base.json",
+  "include": [
+    "src"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ],
+  "compilerOptions": {
+    "outDir": "dist",
+    "paths": {
+      "$telemetry/*": [
+        "./src/*"
+      ]
+    }
+  }
+}

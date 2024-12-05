@@ -6,13 +6,13 @@ import type {
 } from '@latitude-data/compiler'
 
 import { Providers } from '../models'
-import { AppliedRules } from './index'
 import {
   extractContentMetadata,
   extractMessageMetadata,
   getProviderMetadataKey,
   type ProviderMetadata,
 } from './providerMetadata'
+import { AppliedRules } from './types'
 
 function flattenSystemMessage({
   message,

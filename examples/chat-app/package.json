@@ -1,0 +1,31 @@
+{
+  "name": "chat-app",
+  "version": "1.0.0",
+  "description": "Simple chat application using OpenAI GPT-4",
+  "main": "server.ts",
+  "type": "module",
+  "scripts": {
+    "start": "tsx server.ts",
+    "dev": "tsx watch server.ts"
+  },
+  "dependencies": {
+    "@ai-sdk/openai": "^0.0.54",
+    "@anthropic-ai/sdk": "^0.32.1",
+    "@latitude-data/sdk": "workspace:^",
+    "@latitude-data/telemetry-js": "workspace:^",
+    "@types/morgan": "^1.9.9",
+    "@vercel/otel": "^1.10.0",
+    "ai": "^4.0.9",
+    "axios": "^1.7.8",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.1",
+    "morgan": "^1.10.0",
+    "openai": "^4.73.1"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^20.17.9",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  }
+}
