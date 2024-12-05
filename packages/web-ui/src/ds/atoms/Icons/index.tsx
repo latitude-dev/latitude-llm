@@ -33,6 +33,7 @@ import {
   ListOrdered,
   LoaderCircle,
   Lock,
+  Logs,
   MinusIcon,
   MonitorIcon,
   Moon,
@@ -54,6 +55,7 @@ import {
   Trash,
   Twitter,
   Undo,
+  X,
 } from 'lucide-react'
 
 import { cn } from '../../../lib/utils'
@@ -118,6 +120,8 @@ const Icons = {
   notEqual: EqualNotIcon,
   settings: SettingsIcon,
   paperclip: Paperclip,
+  logs: Logs,
+  x: X,
 }
 
 export type IconName = keyof typeof Icons

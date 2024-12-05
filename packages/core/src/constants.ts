@@ -13,7 +13,7 @@ import {
 } from 'ai'
 import { z } from 'zod'
 
-import { ProviderLog } from './browser'
+import { ProviderLog, Span, Trace } from './browser'
 import { Config } from './services/ai'
 
 export const LATITUDE_EVENT = 'latitudeEventsChannel'
@@ -430,6 +430,35 @@ export interface ProjectStats {
   }>
 }
 
+export enum SpanKind {
+  // Default type. Represents operations that happen within a service
+  // Example: Database queries, file I/O, or business logic processing
+  Internal = 'internal',
+
+  // Represents the handling of an incoming request from a client
+  // Example: HTTP server handling a request, gRPC service receiving a call
+  Server = 'server',
+
+  // Represents outgoing requests to a remote service
+  // Example: HTTP client making an API call, gRPC client initiating a call
+  Client = 'client',
+
+  // Represents the creation/enqueuing of a message to be processed later
+  // Example: Publishing a message to a message queue, sending to a stream
+  Producer = 'producer',
+
+  // Represents the processing of a message from a message queue/stream
+  // Example: Processing a message from RabbitMQ, handling a Kafka message
+  Consumer = 'consumer',
+}
+
+export type TraceWithSpans = Trace & {
+  spans: Span[]
+  realtimeAdded?: boolean
+}
+
+export type SpanMetadataTypes = 'default' | 'generation'
+
 export type CsvData = {
   headers: string[]
   data: {
@@ -438,10 +467,13 @@ export type CsvData = {
   }[]
 }
 
-export enum SpanKind {
-  Internal = 'internal',
-  Server = 'server',
-  Client = 'client',
-  Producer = 'producer',
-  Consumer = 'consumer',
+export type {
+  AppliedRules,
+  ProviderRules,
+} from './services/ai/providers/rules/types'
+
+export type SearchFilter = {
+  field: string
+  operator: string
+  value: string
 }

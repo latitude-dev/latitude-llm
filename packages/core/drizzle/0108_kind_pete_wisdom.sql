@@ -1,0 +1,1 @@
+ALTER TABLE "latitude"."spans" RENAME COLUMN "tool_calls" TO "tools";

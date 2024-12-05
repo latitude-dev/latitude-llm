@@ -8,3 +8,11 @@ export const captureException = (error: Error) => {
     console.error(error)
   }
 }
+
+export const captureMessage = (message: string) => {
+  if (env.NODE_ENV === 'production') {
+    Sentry.captureMessage(message)
+  } else {
+    console.log(message)
+  }
+}

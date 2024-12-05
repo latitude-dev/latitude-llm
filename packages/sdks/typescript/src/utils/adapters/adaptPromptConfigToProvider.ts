@@ -1,4 +1,4 @@
-import { Config } from '@latitude-data/compiler'
+import type { Config } from '@latitude-data/compiler'
 import { Adapters, ProviderAdapter } from '@latitude-data/promptl'
 
 /**

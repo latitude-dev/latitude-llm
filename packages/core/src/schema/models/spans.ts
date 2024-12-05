@@ -84,7 +84,7 @@ export const spans = latitudeSchema.table(
     inputCostInMillicents: integer('input_cost_in_millicents').default(0),
     outputCostInMillicents: integer('output_cost_in_millicents').default(0),
     totalCostInMillicents: integer('total_cost_in_millicents').default(0),
-    toolCalls: jsonb('tool_calls').$type<ToolCall[]>(),
+    tools: jsonb('tools').$type<ToolCall[]>(),
 
     // Internal Latitude enum to identify generation spans from other spans
     internalType: spanInternalTypesEnum('internal_type'),
@@ -93,6 +93,7 @@ export const spans = latitudeSchema.table(
       jsonb('metadata').$type<Record<string, string | number | boolean>>(),
     promptPath: varchar('prompt_path', { length: 256 }),
     commitUuid: uuid('commit_uuid'),
+    parameters: jsonb('parameters').$type<Record<string, unknown>>(),
     ...timestamps(),
   },
   (table) => ({

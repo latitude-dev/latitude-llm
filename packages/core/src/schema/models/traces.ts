@@ -9,16 +9,16 @@ import {
 
 import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
-import { projects } from './projects'
+import { workspaces } from './workspaces'
 
 export const traces = latitudeSchema.table(
   'traces',
   {
     id: bigserial('id', { mode: 'number' }).notNull().primaryKey(),
     traceId: varchar('trace_id', { length: 32 }).notNull().unique(),
-    projectId: bigint('project_id', { mode: 'number' })
+    workspaceId: bigint('workspace_id', { mode: 'number' })
       .notNull()
-      .references(() => projects.id, { onDelete: 'cascade' }),
+      .references(() => workspaces.id, { onDelete: 'cascade' }),
     name: varchar('name', { length: 256 }),
     startTime: timestamp('start_time').notNull(),
     endTime: timestamp('end_time'),
@@ -28,7 +28,7 @@ export const traces = latitudeSchema.table(
     ...timestamps(),
   },
   (table) => ({
-    projectIdIdx: index('traces_project_id_idx').on(table.projectId),
+    workspaceIdIdx: index('traces_workspace_id_idx').on(table.workspaceId),
     traceIdIdx: index('traces_trace_id_idx').on(table.traceId),
     startTimeIdx: index('traces_start_time_idx').on(table.startTime),
   }),

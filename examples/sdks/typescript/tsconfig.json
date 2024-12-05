@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "module": "node16",
-    "moduleResolution": "node16"
+    "module": "nodenext",
+    "moduleResolution": "bundler"
   }
 }
