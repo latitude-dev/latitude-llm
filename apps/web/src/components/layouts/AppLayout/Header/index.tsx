@@ -2,7 +2,7 @@
 
 import { ReactNode } from 'react'
 
-import { cn, SessionUser, Text, ThemeButton } from '@latitude-data/web-ui'
+import { cn, SessionUser, Text, TripleThemeToggle } from '@latitude-data/web-ui'
 
 import AvatarDropdown from './AvatarDropdown'
 import { HeaderBreadcrumb } from './Breadcrumb'
@@ -68,7 +68,7 @@ export default function AppHeader({
           ))}
         </nav>
         <AvatarDropdown currentUser={currentUser} />
-        <ThemeButton />
+        <TripleThemeToggle />
       </div>
     </AppHeaderWrapper>
   )
