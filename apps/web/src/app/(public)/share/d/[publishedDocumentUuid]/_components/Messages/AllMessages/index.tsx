@@ -8,8 +8,8 @@ import {
   Conversation,
   Message as ConversationMessage,
 } from '@latitude-data/compiler'
-import { StreamMessage } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/DocumentEditor/Editor/Playground/Chat'
 import { ExpandMessages } from '../ExpandMessages'
+import { StreamMessage } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/(commit)/documents/[documentUuid]/_components/DocumentEditor/Editor/Playground/Chat'
 
 export function AllMessages({
   messages,

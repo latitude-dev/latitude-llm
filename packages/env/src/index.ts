@@ -45,9 +45,11 @@ if (environment === 'development' || environment === 'test') {
       NEXT_PUBLIC_POSTHOG_HOST: '',
       DEFAULT_PROVIDER_API_KEY: '33275751-f0c4-46f3-bc9a-cd2fb22d86ca', // fake
       DATASET_GENERATOR_DOCUMENT_PATH: 'generator',
+      DATASET_GENERATOR_PROJECT_ID: '74',
       TEMPLATES_SUGGESTION_PROJECT_ID: '10',
       TEMPLATES_SUGGESTION_PROMPT_PATH: 'generator',
       COPILOT_EVALUATION_SUGGESTION_PROMPT_PATH: 'evaluation-generator',
+      COPILOT_PROMPT_FROM_TRACE_PROMPT_PATH: 'prompt-from-trace',
     },
     { path: pathToEnv },
   )
@@ -111,6 +113,7 @@ export const env = createEnv({
     TEMPLATES_SUGGESTION_PROJECT_ID: z.coerce.number().optional(),
     TEMPLATES_SUGGESTION_PROMPT_PATH: z.string().optional(),
     COPILOT_EVALUATION_SUGGESTION_PROMPT_PATH: z.string().optional(),
+    COPILOT_PROMPT_FROM_TRACE_PROMPT_PATH: z.string().optional(),
   },
   runtimeEnv: {
     ...process.env,

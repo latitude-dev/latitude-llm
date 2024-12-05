@@ -76,5 +76,6 @@ export async function syncRun(
 
   const json = (await response.json()) as RunSyncAPIResponse
   onFinished?.(json)
+
   return Promise.resolve(json)
 }

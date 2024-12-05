@@ -1,5 +1,5 @@
 import { enforceAllSystemMessagesFirst } from './helpers/enforceAllSystemMessagesFirst'
-import { AppliedRules, ProviderRules } from './index'
+import { AppliedRules, ProviderRules } from './types'
 
 export function applyGoogleRules(appliedRule: AppliedRules): AppliedRules {
   return enforceAllSystemMessagesFirst(appliedRule, {

@@ -1,0 +1,6 @@
+{
+  "compilerOptions": {
+    "moduleResolution": "bundler",
+    "esModuleInterop": true
+  }
+}

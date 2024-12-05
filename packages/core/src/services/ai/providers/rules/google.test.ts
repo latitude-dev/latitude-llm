@@ -1,9 +1,10 @@
 import type { Message } from '@latitude-data/compiler'
 import { beforeAll, describe, expect, it } from 'vitest'
 
-import { applyProviderRules, ProviderRules } from '.'
 import { PartialConfig } from '../../helpers'
 import { Providers } from '../models'
+import { ProviderRules } from './types'
+import { applyProviderRules } from '.'
 
 const providerType = Providers.Google
 
