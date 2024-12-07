@@ -118,7 +118,6 @@ export default function useDocumentVersions(
     async ({ path, file }: { path: string; file: File }) => {
       if (!projectId) return
 
-      // TODO: Fix and understand this lint issue
       const [document, error] = await executeUploadDocument({
         path,
         projectId,

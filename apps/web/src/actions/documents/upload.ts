@@ -21,7 +21,6 @@ export const uploadDocumentAction = withProject
         return file?.size <= MAX_UPLOAD_SIZE_IN_MB
       }, `Your file must be less than ${MAX_SIZE}MB in size. You can split it into smaller files and upload them separately.`),
     }),
-    { type: 'formData' },
   )
   .handler(async ({ input, ctx }) => {
     const commitsScope = new CommitsRepository(ctx.project.workspaceId)

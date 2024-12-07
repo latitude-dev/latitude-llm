@@ -112,7 +112,7 @@ export default function FolderHeader({
 
       if (!node.isPersisted) deleteTmpFolder({ id: node.id })
 
-      const filename = file.name.replace(/\.promptl$/, '')
+      const filename = file.name.replace(/\.promptl$/, '').replace(/\s+/g, '_')
       onUploadFile({ path: `${node.path}/${filename}`, file })
 
       event.target.value = ''

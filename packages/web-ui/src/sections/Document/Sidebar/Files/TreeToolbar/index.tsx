@@ -61,7 +61,7 @@ export function TreeToolbar() {
       const file = event.target.files?.[0]
       if (!file) return
 
-      const filename = file.name.replace(/\.promptl$/, '')
+      const filename = file.name.replace(/\.promptl$/, '').replace(/\s+/g, '_')
       onUploadFile({ path: filename, file })
 
       event.target.value = ''
