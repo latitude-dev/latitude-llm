@@ -241,7 +241,7 @@ export default function Chat({
       </div>
       <div
         ref={containerRef}
-        className='flex flex-col gap-3 flex-grow flex-shrink min-h-0 custom-scrollbar pb-12'
+        className='flex flex-col gap-3 flex-grow flex-shrink min-h-0 custom-scrollbar scrollable-indicator pb-12'
       >
         <MessageList
           messages={conversation?.messages.slice(0, chainLength - 1) ?? []}
