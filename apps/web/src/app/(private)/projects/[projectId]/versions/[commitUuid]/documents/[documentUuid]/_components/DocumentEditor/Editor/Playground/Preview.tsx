@@ -161,7 +161,7 @@ export default function Preview({
       </div>
       <div
         ref={containerRef}
-        className='flex flex-col gap-3 flex-grow flex-shrink min-h-0 custom-scrollbar'
+        className='flex flex-col gap-3 flex-grow flex-shrink min-h-0 custom-scrollbar scrollable-indicator'
       >
         <div className='flex flex-col gap-2'>
           {(fixedMessages ?? []).map((message, index) => (
