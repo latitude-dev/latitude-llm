@@ -21,7 +21,9 @@ import { projects } from './models/projects'
 import { providerApiKeys } from './models/providerApiKeys'
 import { providerLogs } from './models/providerLogs'
 import { sessions } from './models/sessions'
+import { spans } from './models/spans'
 import { subscriptions } from './models/subscriptions'
+import { traces } from './models/traces'
 import { users } from './models/users'
 import { workspaces } from './models/workspaces'
 
@@ -265,5 +267,20 @@ export const subscriptionRelations = relations(subscriptions, ({ one }) => ({
   workspace: one(workspaces, {
     fields: [subscriptions.workspaceId],
     references: [workspaces.id],
+  }),
+}))
+
+export const traceRelations = relations(traces, ({ one, many }) => ({
+  project: one(projects, {
+    fields: [traces.projectId],
+    references: [projects.id],
+  }),
+  spans: many(spans),
+}))
+
+export const spansRelations = relations(spans, ({ one }) => ({
+  trace: one(traces, {
+    fields: [spans.traceId],
+    references: [traces.id],
   }),
 }))

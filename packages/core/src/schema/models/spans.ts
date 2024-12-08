@@ -93,6 +93,7 @@ export const spans = latitudeSchema.table(
       jsonb('metadata').$type<Record<string, string | number | boolean>>(),
     promptPath: varchar('prompt_path', { length: 256 }),
     commitUuid: uuid('commit_uuid'),
+    parameters: jsonb('parameters').$type<Record<string, unknown>>(),
     ...timestamps(),
   },
   (table) => ({

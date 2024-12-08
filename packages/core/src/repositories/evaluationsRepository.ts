@@ -110,15 +110,16 @@ export class EvaluationsRepository extends RepositoryLegacy<
 
   async findByName(name: string) {
     const result = await this.db
-      .select()
-      .from(this.scope)
-      .where(eq(this.scope.name, name))
+      .select(tt)
+      .from(evaluations)
+      .where(eq(evaluations.name, name))
+      .limit(1)
 
     if (!result.length) {
-      return Result.error(new NotFoundError('Evaluation not found'))
+      return Result.error(new NotFoundError(`Evaluation ${name} not found`))
     }
 
-    return Result.ok(result[0]! as EvaluationDto)
+    return Result.ok(result[0] as EvaluationDto)
   }
 
   async findByUuid(uuid: string) {

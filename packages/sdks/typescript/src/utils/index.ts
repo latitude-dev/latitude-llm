@@ -3,6 +3,7 @@ import {
   EvaluationResultUrlParams,
   GetDocumentUrlParams,
   GetOrCreateDocumentUrlParams,
+  GetOrCreateEvaluationUrlParams,
   HandlerType,
   LogUrlParams,
   RunDocumentUrlParams,
@@ -64,8 +65,20 @@ export class RouteResolver {
           (params as ChatUrlParams).conversationUuid,
           (params as EvaluationResultUrlParams).evaluationUuid,
         )
+      case HandlerType.GetOrCreateEvaluation:
+        return this.evaluations().getOrCreate(
+          params as GetOrCreateEvaluationUrlParams,
+        )
       default:
         throw new Error(`Unknown handler: ${handler satisfies never}`)
+    }
+  }
+
+  private evaluations() {
+    const base = `${this.baseUrl}/evaluations`
+    return {
+      getOrCreate: (params: GetOrCreateEvaluationUrlParams) =>
+        `${base}/projects/${params.projectId}/versions/${params.versionUuid ?? 'live'}/evaluations/get-or-create`,
     }
   }
 

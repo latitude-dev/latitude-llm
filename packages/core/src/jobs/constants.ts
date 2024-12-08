@@ -20,20 +20,25 @@ export enum Jobs {
   publishToAnalyticsJob = 'publishToAnalyticsJob',
   runLiveEvaluationJob = 'runLiveEvaluationJob',
   uploadDocumentLogsJob = 'uploadDocumentLogsJob',
+  processOtlpTracesJob = 'processOtlpTracesJob',
+  createDocumentLogFromSpanJob = 'createDocumentLogFromSpanJob',
+  createDocumentLogsFromSpansJob = 'createDocumentLogsFromSpansJob',
 }
 
 export const QUEUES = {
   [Queues.defaultQueue]: {
     name: Queues.defaultQueue,
     jobs: [
+      'createDocumentLogFromSpanJob',
+      'createDocumentLogJob',
       'createProviderLogJob',
+      'processOtlpTracesJob',
       'runBatchEvaluationJob',
       'runDocumentForEvaluationJob',
       'runDocumentInBatchJob',
       'runDocumentJob',
       'runEvaluationJob',
       'uploadDocumentLogsJob',
-      'createDocumentLogJob',
     ],
   },
   [Queues.eventsQueue]: {
@@ -44,13 +49,15 @@ export const QUEUES = {
     name: Queues.eventHandlersQueue,
     jobs: [
       'createClaimInvitationReferralJob',
+      'createDocumentLogsFromSpansJob',
+      'createLoopsContact',
+      'notifyClientOfBulkCreateTracesAndSpans',
       'notifyToClientDocumentLogCreatedJob',
       'notifyToClientEvaluationResultCreatedJob',
       'runLiveEvaluationsJob',
       'sendInvitationToUserJob',
       'sendMagicLinkJob',
       'sendReferralInvitationJob',
-      'createLoopsContact',
     ],
   },
   [Queues.liveEvaluationsQueue]: {
