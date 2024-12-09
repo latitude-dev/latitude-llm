@@ -11,7 +11,12 @@ import { updateDocumentContentAction } from '$/actions/documents/updateContent'
 import { uploadDocumentAction } from '$/actions/documents/upload'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
-import { HEAD_COMMIT, type DocumentVersion } from '@latitude-data/core/browser'
+import {
+  HEAD_COMMIT,
+  MAX_SIZE,
+  MAX_UPLOAD_SIZE_IN_MB,
+  type DocumentVersion,
+} from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui'
 import { useRouter } from 'next/navigation'
 import useSWR, { SWRConfiguration } from 'swr'
@@ -118,6 +123,15 @@ export default function useDocumentVersions(
     async ({ path, file }: { path: string; file: File }) => {
       if (!projectId) return
 
+      if (file.size > MAX_UPLOAD_SIZE_IN_MB) {
+        toast({
+          title: 'Error uploading document',
+          description: `Your file must be less than ${MAX_SIZE}MB in size. You can split it into smaller files and upload them separately.`,
+          variant: 'destructive',
+        })
+        return
+      }
+
       const [document, error] = await executeUploadDocument({
         path,
         projectId,
@@ -131,19 +145,19 @@ export default function useDocumentVersions(
           description: error.formErrors?.[0] || error.message,
           variant: 'destructive',
         })
-      } else if (document) {
-        const prevDocuments = data || []
-
-        if (document) {
-          mutate([...prevDocuments, document])
-          router.push(
-            ROUTES.projects
-              .detail({ id: projectId! })
-              .commits.detail({ uuid: commitUuid })
-              .documents.detail({ uuid: document.documentUuid }).root,
-          )
-        }
+        return
       }
+
+      if (!document) return
+
+      const prevDocuments = data || []
+      mutate([...prevDocuments, document])
+      router.push(
+        ROUTES.projects
+          .detail({ id: projectId! })
+          .commits.detail({ uuid: commitUuid })
+          .documents.detail({ uuid: document.documentUuid }).root,
+      )
     },
     [executeUploadDocument, mutate, data, commitUuid],
   )
