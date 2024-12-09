@@ -16,21 +16,17 @@
 
   .scrollable-indicator {
     background:
-      linear-gradient(white 30%, rgba(255, 255, 255, 0)),
-      linear-gradient(rgba(255, 255, 255, 0), white 0%) 0 100%,
-      radial-gradient(
-        farthest-side at 50% 0,
-        rgba(0, 0, 0, 0.2),
-        rgba(0, 0, 0, 0)
-      ),
+      linear-gradient(hsl(var(--background)) 30%, hsl(var(--background) / 0)),
+      linear-gradient(hsl(var(--background)), hsl(var(--background)) 0%) 0 100%,
+      radial-gradient(farthest-side at 50% 0, rgba(0, 0, 0, 0.2), transparent),
       radial-gradient(
           farthest-side at 50% 100%,
-          rgba(0, 0, 0, 0.2),
+          hsl(var(--background-shadow) / 0.2),
           rgba(0, 0, 0, 0)
         )
         0 100%;
     background-repeat: no-repeat;
-    background-color: white;
+    background-color: hsl(var(--background));
     background-size:
       100% 60px,
       100% 60px,
@@ -71,6 +67,7 @@
 @layer base {
   :root {
     --background: 0 0% 100%;
+    --background-shadow: 0 0% 0%;
     --background-code: 0 0% 98%;
     --background-gray: 0 0% 99%;
     --foreground: 223 70% 4%;
@@ -124,6 +121,7 @@
     --background-code: 0 0% 11%;
     --background-gray: 0 0% 10%;
     --background: 0 0% 7%;
+    --background-shadow: 0 0% 100%;
     --foreground: 0 0% 98%;
 
     --card: 0 0% 3.9%;
