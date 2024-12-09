@@ -19,10 +19,22 @@
     "./tailwind.config.js": "./tailwind.config.js"
   },
   "dependencies": {
+    "@internationalized/date": "^3.6.0",
     "@latitude-data/compiler": "workspace:^",
     "@latitude-data/core": "workspace:^",
     "@radix-ui/react-checkbox": "^1.1.2",
     "@radix-ui/react-progress": "^1.1.0",
+    "@react-aria/button": "^3.11.0",
+    "@react-aria/calendar": "^3.6.0",
+    "@react-aria/datepicker": "^3.12.0",
+    "@react-aria/focus": "^3.19.0",
+    "@react-aria/i18n": "^3.12.4",
+    "@react-aria/utils": "^3.26.0",
+    "@react-stately/calendar": "^3.6.0",
+    "@react-stately/datepicker": "^3.11.0",
+    "@react-types/shared": "^3.26.0",
+    "date-fns": "^3.6.0",
+    "date-fns-tz": "^3.2.0",
     "hsl-to-hex": "^1.0.0",
     "next-themes": "^0.3.0",
     "react-syntax-highlighter": "^15.5.0"

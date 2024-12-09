@@ -5,6 +5,7 @@ import { ReactNode, useEffect, useState } from 'react'
 import { FormField, type FormFieldProps } from '../FormField'
 import {
   SelectContent,
+  SelectContentInner,
   SelectGroup,
   SelectItem,
   SelectRoot,
@@ -22,7 +23,7 @@ export type SelectOptionGroup = {
   label: string
   options: SelectOption[]
 }
-function Options({ options }: { options: SelectOption[] }) {
+export function Options({ options }: { options: SelectOption[] }) {
   return options.map((option) => (
     <SelectItem
       key={option.label}
@@ -34,7 +35,7 @@ function Options({ options }: { options: SelectOption[] }) {
   ))
 }
 
-type SelectProps = Omit<FormFieldProps, 'children'> & {
+export type SelectProps = Omit<FormFieldProps, 'children'> & {
   name: string
   options: SelectOption[] | SelectOptionGroup[]
   defaultValue?: string
@@ -102,5 +103,40 @@ export function Select({
         </SelectRoot>
       </div>
     </FormField>
+  )
+}
+
+export function StandaloneSelectContent({
+  name,
+  options,
+  required,
+  disabled,
+  value,
+  defaultValue,
+  onChange,
+}: {
+  name?: string
+  required?: boolean
+  disabled?: boolean
+  options: SelectOption[]
+  defaultValue?: string
+  value?: string
+  onChange?: (value: string) => void
+}) {
+  return (
+    <SelectRoot
+      name={name}
+      required={required}
+      disabled={disabled}
+      value={value}
+      defaultValue={defaultValue}
+      onValueChange={onChange}
+    >
+      <SelectContentInner>
+        <SelectGroup>
+          <Options options={options} />
+        </SelectGroup>
+      </SelectContentInner>
+    </SelectRoot>
   )
 }
