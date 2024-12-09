@@ -111,50 +111,43 @@ export function UsageIndicator() {
           </div>
         </Button>
       </Popover.Trigger>
-      <Popover.Content
-        side='bottom'
-        sideOffset={8}
-        align='center'
-        className='bg-background rounded-md w-80 p-4 shadow-lg border border-border'
-      >
-        <div className='flex flex-col gap-4'>
-          <div className='flex flex-row items-center gap-2'>
-            <UsageIndicatorCircle
-              data={data}
-              size={20}
-              isLoading={isLoading}
-              className='overflow-clip'
-              showBackground
-            />
-            <LoadingText isLoading={isLoading}>
-              <div className='flex flex-row w-full items-center gap-2'>
-                <Text.H4 color='foreground'>{data?.usage}</Text.H4>
-                <Text.H4 color='foregroundMuted' noWrap>
-                  {' '}
-                  / {data?.max} runs
-                </Text.H4>
-                <div className='w-full flex items-center justify-end'>
-                  <Badge variant='muted'>
-                    <Text.H6 color='foregroundMuted'>Team Plan</Text.H6>
-                  </Badge>
-                </div>
+      <Popover.Content side='bottom' align='end' size='medium'>
+        <div className='flex flex-row items-center gap-2'>
+          <UsageIndicatorCircle
+            data={data}
+            size={20}
+            isLoading={isLoading}
+            className='overflow-clip'
+            showBackground
+          />
+          <LoadingText isLoading={isLoading}>
+            <div className='flex flex-row w-full items-center gap-2'>
+              <Text.H4 color='foreground'>{data?.usage}</Text.H4>
+              <Text.H4 color='foregroundMuted' noWrap>
+                {' '}
+                / {data?.max} runs
+              </Text.H4>
+              <div className='w-full flex items-center justify-end'>
+                <Badge variant='muted'>
+                  <Text.H6 color='foregroundMuted'>Team Plan</Text.H6>
+                </Badge>
               </div>
-            </LoadingText>
-          </div>
-          {data ? (
-            <Text.H6>{descriptionText(data)}</Text.H6>
-          ) : (
-            <div className='w-full flex flex-col gap-1'>
-              <Skeleton className='w-full h-3 animate-pulse' />
-              <Skeleton className='w-full h-3 animate-pulse' />
-              <Skeleton className='w-[40%] h-3 animate-pulse' />
             </div>
-          )}
-          <div className='flex flex-row'>
-            <Link href='mailto:hello@latitude.so'>
-              <Button fancy>Contact us to upgrade</Button>
-            </Link>
+          </LoadingText>
+        </div>
+        {data ? (
+          <Text.H6>{descriptionText(data)}</Text.H6>
+        ) : (
+          <div className='w-full flex flex-col gap-1'>
+            <Skeleton className='w-full h-3 animate-pulse' />
+            <Skeleton className='w-full h-3 animate-pulse' />
+            <Skeleton className='w-[40%] h-3 animate-pulse' />
           </div>
+        )}
+        <div className='flex flex-row'>
+          <Link href='mailto:hello@latitude.so'>
+            <Button fancy>Contact us to upgrade</Button>
+          </Link>
         </div>
       </Popover.Content>
     </Popover.Root>

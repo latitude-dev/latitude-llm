@@ -4,6 +4,7 @@ import {
   Commit,
   DocumentLog,
   DocumentVersion,
+  LOG_SOURCES,
   Project,
   ProviderApiKey,
   User,
@@ -25,8 +26,8 @@ describe('getDocumentLogsWithMetadata', () => {
     let log1: DocumentLog
     let log2: DocumentLog
     let project: Project
-    let draft: Commit
     let commit: Commit
+    let commit2: Commit
     let provider: ProviderApiKey
 
     beforeEach(async () => {
@@ -54,11 +55,11 @@ describe('getDocumentLogsWithMetadata', () => {
       doc = docVersion
       await mergeCommit(commit1).then((r) => r.unwrap())
 
-      const { commit: commit2 } = await factories.createDraft({
+      const { commit: cmt2 } = await factories.createDraft({
         project,
         user: setup.user,
       })
-      draft = commit2
+      commit2 = cmt2
       await updateDocument({
         commit: commit2,
         document: doc,
@@ -85,7 +86,10 @@ describe('getDocumentLogsWithMetadata', () => {
       const result = await computeDocumentLogsWithMetadataQuery({
         workspaceId: project.workspaceId,
         documentUuid: doc.documentUuid,
-        draft,
+        filterOptions: {
+          commitIds: [commit.id, commit2.id],
+          logSources: LOG_SOURCES,
+        },
       })
 
       expect(result.find((l) => l.uuid === log1.uuid)).toBeDefined()
@@ -109,7 +113,10 @@ describe('getDocumentLogsWithMetadata', () => {
       })
       const result = await computeDocumentLogsWithMetadataQuery({
         workspaceId: project.workspaceId,
-        draft,
+        filterOptions: {
+          commitIds: [commit.id, commit2.id],
+          logSources: LOG_SOURCES,
+        },
       })
 
       expect(result.find((l) => l.uuid === log1.uuid)).toBeDefined()
@@ -121,7 +128,10 @@ describe('getDocumentLogsWithMetadata', () => {
       const result = await computeDocumentLogsWithMetadataQuery({
         workspaceId: project.workspaceId,
         documentUuid: doc.documentUuid,
-        draft,
+        filterOptions: {
+          commitIds: [commit.id, commit2.id],
+          logSources: LOG_SOURCES,
+        },
         page: '1',
         pageSize: '1',
       })
@@ -132,7 +142,10 @@ describe('getDocumentLogsWithMetadata', () => {
       const result = await computeDocumentLogsWithMetadataCount({
         workspaceId: project.workspaceId,
         documentUuid: doc.documentUuid,
-        draft,
+        filterOptions: {
+          commitIds: [commit.id, commit2.id],
+          logSources: LOG_SOURCES,
+        },
       })
 
       expect(result).toBe(2)
@@ -193,7 +206,10 @@ describe('getDocumentLogsWithMetadata', () => {
     const result = await computeDocumentLogsWithMetadataQuery({
       workspaceId: project.workspaceId,
       documentUuid: doc.documentUuid,
-      draft,
+      filterOptions: {
+        commitIds: [commit1.id, commit2.id, draft.id],
+        logSources: LOG_SOURCES,
+      },
     })
 
     expect(result.find((l) => l.uuid === log1.uuid)).toBeDefined()
@@ -253,7 +269,10 @@ describe('getDocumentLogsWithMetadata', () => {
     const result = await computeDocumentLogsWithMetadataQuery({
       workspaceId: project.workspaceId,
       documentUuid: doc.documentUuid,
-      draft: draft1,
+      filterOptions: {
+        commitIds: [commit1.id, draft1.id],
+        logSources: LOG_SOURCES,
+      },
     })
 
     expect(result.find((l) => l.uuid === log1.uuid)).toBeDefined()
@@ -285,7 +304,10 @@ describe('getDocumentLogsWithMetadata', () => {
     const result = await computeDocumentLogsWithMetadataQuery({
       workspaceId: project.workspaceId,
       documentUuid: doc.documentUuid,
-      draft: commit,
+      filterOptions: {
+        commitIds: [commit.id],
+        logSources: LOG_SOURCES,
+      },
     })
 
     expect(result.find((l) => l.uuid === log.uuid)).toBeDefined()
@@ -295,9 +317,46 @@ describe('getDocumentLogsWithMetadata', () => {
     ).toBeTypeOf('number')
   })
 
-  it('returns logs without provider logs', async () => {
+  it('does not include logs from non-specified log source', async () => {
     const { project, user, workspace, providers } =
       await factories.createProject()
+    const { commit } = await factories.createDraft({ project, user })
+    const { documentVersion: doc } = await factories.createDocumentVersion({
+      workspace,
+      user,
+      commit,
+      path: 'folder1/doc1',
+      content: factories.helpers.createPrompt({
+        provider: providers[0]!,
+        content: '<response/>\n<response/>',
+      }),
+    })
+    await mergeCommit(commit).then((r) => r.unwrap())
+    await factories.createDocumentLog({
+      document: doc,
+      commit,
+    })
+
+    const result = await computeDocumentLogsWithMetadataQuery({
+      workspaceId: project.workspaceId,
+      documentUuid: doc.documentUuid,
+      filterOptions: {
+        commitIds: [commit.id],
+        logSources: [],
+      },
+    })
+
+    expect(result.length).toBe(0)
+  })
+
+  it('returns logs without provider logs', async () => {
+    const {
+      project,
+      user,
+      workspace,
+      providers,
+      commit: commit0,
+    } = await factories.createProject()
     const { commit: commit1 } = await factories.createDraft({ project, user })
     const { documentVersion: doc } = await factories.createDocumentVersion({
       workspace,
@@ -320,7 +379,10 @@ describe('getDocumentLogsWithMetadata', () => {
     const result = await computeDocumentLogsWithMetadataQuery({
       workspaceId: project.workspaceId,
       documentUuid: doc.documentUuid,
-      draft: commit1,
+      filterOptions: {
+        commitIds: [commit0.id, commit1.id],
+        logSources: LOG_SOURCES,
+      },
     })
 
     expect(result.find((l) => l.uuid === log1.uuid)).toBeDefined()

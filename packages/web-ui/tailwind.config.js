@@ -131,6 +131,9 @@ export default {
       transitionDelay: {
         250: '250ms',
       },
+      padding: {
+        buttonDefaultVertical: '5px',
+      },
     },
   },
   plugins: [require('tailwindcss-animate')],

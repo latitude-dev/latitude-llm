@@ -35,7 +35,7 @@ export const TableWithHeader = ({
       <TitleWithActions title={title} actions={actions} />
       <div
         className={cn('flex', {
-          'flex-grow min-h-0': takeVertialSpace,
+          'flex-grow min-h-0 min-w-0': takeVertialSpace,
         })}
       >
         {table}

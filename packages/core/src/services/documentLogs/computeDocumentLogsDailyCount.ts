@@ -1,9 +1,13 @@
 import { and, count, eq, isNull, sql } from 'drizzle-orm'
 
-import { Commit, ErrorableEntity } from '../../browser'
+import {
+  DocumentLogFilterOptions,
+  ErrorableEntity,
+  Workspace,
+} from '../../browser'
 import { database } from '../../client'
-import { commits, documentLogs, runErrors } from '../../schema'
-import { getCommonQueryConditions } from './computeDocumentLogsWithMetadata'
+import { commits, documentLogs, projects, runErrors } from '../../schema'
+import { getDocumentLogFilters } from './computeDocumentLogsWithMetadata'
 
 export type DailyCount = {
   date: string
@@ -13,15 +17,27 @@ export type DailyCount = {
 export async function computeDocumentLogsDailyCount(
   {
     documentUuid,
-    draft,
+    filterOptions,
+    workspace,
     days = 30,
   }: {
     documentUuid: string
-    draft?: Commit
+    filterOptions?: DocumentLogFilterOptions
+    workspace: Workspace
     days?: number
   },
   db = database,
 ): Promise<DailyCount[]> {
+  const conditions = [
+    eq(projects.workspaceId, workspace.id),
+    isNull(runErrors.id),
+    sql`${documentLogs.createdAt} >= NOW() - INTERVAL '${sql.raw(
+      String(days),
+    )} days'`,
+    documentUuid ? eq(documentLogs.documentUuid, documentUuid) : undefined,
+    filterOptions ? getDocumentLogFilters(filterOptions) : undefined,
+  ].filter(Boolean)
+
   const result = await db
     .select({
       date: sql<string>`DATE(${documentLogs.createdAt})`.as('date'),
@@ -32,6 +48,7 @@ export async function computeDocumentLogsDailyCount(
       commits,
       and(isNull(commits.deletedAt), eq(commits.id, documentLogs.commitId)),
     )
+    .leftJoin(projects, eq(projects.id, commits.projectId))
     .leftJoin(
       runErrors,
       and(
@@ -39,19 +56,7 @@ export async function computeDocumentLogsDailyCount(
         eq(runErrors.errorableType, ErrorableEntity.DocumentLog),
       ),
     )
-    .where(
-      and(
-        isNull(runErrors.id),
-        sql`${documentLogs.createdAt} >= NOW() - INTERVAL '${sql.raw(
-          String(days),
-        )} days'`,
-        getCommonQueryConditions({
-          scope: documentLogs,
-          documentUuid,
-          draft,
-        }),
-      ),
-    )
+    .where(and(...conditions))
     .groupBy(sql`DATE(${documentLogs.createdAt})`)
     .orderBy(sql`DATE(${documentLogs.createdAt})`)
 

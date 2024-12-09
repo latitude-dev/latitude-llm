@@ -12,12 +12,7 @@ export function RewardsButton() {
           </Text.H6>
         </Button>
       </Popover.Trigger>
-      <Popover.Content
-        side='bottom'
-        sideOffset={8}
-        align='center'
-        className='bg-background rounded-lg w-[400px] shadow-lg border border-border'
-      >
+      <Popover.Content side='bottom' align='end' size='medium'>
         <RewardsContent />
       </Popover.Content>
     </Popover.Root>

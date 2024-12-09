@@ -2,7 +2,7 @@
 
 import { ReactNode, useContext } from 'react'
 
-import { Button, Icon, useCurrentCommit } from '@latitude-data/web-ui'
+import { Button, useCurrentCommit } from '@latitude-data/web-ui'
 
 import { DocumentationContext } from '../DocumentationModal'
 import { ShareDocument } from './ShareDocument'
@@ -29,8 +29,12 @@ export default function DocumentTabs({
           documentUuid={params.documentUuid}
         />
         <div className='flex flex-row items-center gap-x-4'>
-          <Button variant='ghost' onClick={toggleDocumentation}>
-            Deploy this prompt <Icon name='code2' />
+          <Button
+            variant='ghost'
+            onClick={toggleDocumentation}
+            iconProps={{ name: 'code2', placement: 'right' }}
+          >
+            Deploy this prompt
           </Button>
           <ShareDocument
             document={document}

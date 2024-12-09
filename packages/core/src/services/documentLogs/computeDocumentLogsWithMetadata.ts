@@ -1,6 +1,10 @@
-import { and, desc, eq, isNotNull, or, sql } from 'drizzle-orm'
+import { and, desc, eq, isNotNull, or, sql, inArray } from 'drizzle-orm'
 
-import { Commit, DEFAULT_PAGINATION_SIZE } from '../../browser'
+import {
+  Commit,
+  DEFAULT_PAGINATION_SIZE,
+  DocumentLogFilterOptions,
+} from '../../browser'
 import { database } from '../../client'
 import { calculateOffset } from '../../lib/pagination/calculateOffset'
 import { DocumentLogsWithMetadataAndErrorsRepository } from '../../repositories/documentLogsWithMetadataAndErrorsRepository'
@@ -12,55 +16,41 @@ export function getCommitFilter(draft?: Commit) {
     : isNotNull(commits.mergedAt)
 }
 
-export function getCommonQueryConditions({
-  scope,
-  documentUuid,
-  draft,
-  allowAnyDraft,
-}: {
-  scope: any
-  documentUuid?: string
-  allowAnyDraft?: boolean
-  draft?: Commit
-}) {
-  const byDocumentUuid = documentUuid
-    ? eq(scope.documentUuid, documentUuid)
-    : sql`1 = 1`
-
-  if (allowAnyDraft) return byDocumentUuid
-
-  return and(byDocumentUuid, getCommitFilter(draft))
+export function getDocumentLogFilters(options: DocumentLogFilterOptions) {
+  return and(
+    options.commitIds.length
+      ? or(inArray(documentLogs.commitId, options.commitIds))
+      : sql`1 = 0`,
+    options.logSources.length
+      ? or(inArray(documentLogs.source, options.logSources))
+      : sql`1 = 0`,
+  )
 }
 
 export function computeDocumentLogsWithMetadataQuery(
   {
     workspaceId,
     documentUuid,
-    draft,
-    allowAnyDraft,
     page = '1',
     pageSize = String(DEFAULT_PAGINATION_SIZE),
+    filterOptions,
   }: {
     workspaceId: number
     documentUuid?: string
-    draft?: Commit
-    allowAnyDraft?: boolean
     page?: string
     pageSize?: string
+    filterOptions?: DocumentLogFilterOptions
   },
   db = database,
 ) {
   const repo = new DocumentLogsWithMetadataAndErrorsRepository(workspaceId, db)
   const offset = calculateOffset(page, pageSize)
+  const conditions = [
+    documentUuid ? eq(documentLogs.documentUuid, documentUuid) : undefined,
+    filterOptions ? getDocumentLogFilters(filterOptions) : undefined,
+  ].filter(Boolean)
   return repo.scope
-    .where(
-      getCommonQueryConditions({
-        scope: documentLogs,
-        documentUuid,
-        draft,
-        allowAnyDraft,
-      }),
-    )
+    .where(and(...conditions))
     .orderBy(desc(documentLogs.createdAt))
     .limit(parseInt(pageSize))
     .offset(offset)
@@ -70,14 +60,19 @@ export async function computeDocumentLogsWithMetadataCount(
   {
     workspaceId,
     documentUuid,
-    draft,
+    filterOptions,
   }: {
     workspaceId: number
     documentUuid: string
-    draft?: Commit
+    filterOptions?: DocumentLogFilterOptions
   },
   db = database,
 ) {
+  const conditions = [
+    eq(workspaces.id, workspaceId),
+    documentUuid ? eq(documentLogs.documentUuid, documentUuid) : undefined,
+    filterOptions ? getDocumentLogFilters(filterOptions) : undefined,
+  ].filter(Boolean)
   const countList = await db
     .select({
       count: sql<number>`count(*)`.as('total_count'),
@@ -86,12 +81,7 @@ export async function computeDocumentLogsWithMetadataCount(
     .innerJoin(commits, eq(commits.id, documentLogs.commitId))
     .innerJoin(projects, eq(projects.id, commits.projectId))
     .innerJoin(workspaces, eq(workspaces.id, projects.workspaceId))
-    .where(
-      and(
-        eq(workspaces.id, workspaceId),
-        getCommonQueryConditions({ scope: documentLogs, documentUuid, draft }),
-      ),
-    )
+    .where(and(...conditions))
 
   return countList?.[0]?.count ? Number(countList[0].count) : 0
 }
