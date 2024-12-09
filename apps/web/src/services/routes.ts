@@ -16,6 +16,7 @@ export enum EvaluationRoutes {
 export enum BackofficeRoutes {
   templates = 'templates',
   rewards = 'rewards',
+  users = 'users',
 }
 
 const PUBLIC_ROOT_PATHS = {
@@ -37,17 +38,21 @@ export function isPublicPath(pathname: string) {
 
   return publicPaths.some((publicPath) => pathname.startsWith(publicPath))
 }
+const BACKOFFICE_ROOT = '/backoffice'
 
 export const ROUTES = {
   root: '/',
   api: _API_ROUTES,
   backoffice: {
-    root: '/backoffice',
+    root: BACKOFFICE_ROOT,
     [BackofficeRoutes.templates]: {
-      root: '/backoffice/templates',
+      root: `${BACKOFFICE_ROOT}/templates`,
     },
     [BackofficeRoutes.rewards]: {
-      root: '/backoffice/rewards',
+      root: `${BACKOFFICE_ROOT}/rewards`,
+    },
+    [BackofficeRoutes.users]: {
+      root: `${BACKOFFICE_ROOT}/users`,
     },
   },
   settings: {
