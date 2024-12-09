@@ -57,13 +57,10 @@ export async function transformFile(
         break
     }
   } catch (error) {
-    console.error(error)
     return Result.error(
       new UnprocessableEntityError(
         `Failed to transform ${extension} file to text`,
-        {
-          error: String(error),
-        },
+        {},
       ),
     )
   }

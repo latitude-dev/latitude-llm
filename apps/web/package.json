@@ -47,7 +47,7 @@
     "nextjs-toploader": "^1.6.12",
     "nprogress": "^0.2.0",
     "oslo": "1.2.0",
-    "pdfjs-dist": "^4.9.124",
+    "pdfjs-dist": "^4.9.155",
     "posthog-js": "^1.161.6",
     "react": "19.0.0-rc-5d19e1c8-20240923",
     "react-dom": "19.0.0-rc-5d19e1c8-20240923",
