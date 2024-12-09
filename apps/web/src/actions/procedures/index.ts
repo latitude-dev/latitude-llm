@@ -68,3 +68,11 @@ export const withDocument = createServerActionProcedure(withProject)
 
     return { ...ctx, document, currentCommitUuid: input.commitUuid }
   })
+
+export const withAdmin = createServerActionProcedure(authProcedure).handler(
+  async ({ ctx }) => {
+    if (!ctx.user.admin) throw new UnauthorizedError('Unauthorized')
+
+    return ctx
+  },
+)
