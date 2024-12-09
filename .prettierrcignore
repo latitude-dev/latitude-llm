@@ -2,3 +2,4 @@
 dist
 build
 .next
+**/tests/fixtures

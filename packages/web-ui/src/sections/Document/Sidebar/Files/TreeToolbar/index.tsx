@@ -1,8 +1,10 @@
-import { useCallback } from 'react'
+'use client'
+
+import { ChangeEvent, useCallback, useRef } from 'react'
 
 import { create } from 'zustand'
 
-import { Button, Text } from '../../../../../ds/atoms'
+import { Button, Text, Tooltip } from '../../../../../ds/atoms'
 import { DocumentIcon } from '../DocumentHeader'
 import { useFileTreeContext } from '../FilesProvider'
 import { FolderIcons } from '../FolderHeader'
@@ -28,7 +30,13 @@ export function TreeToolbar() {
   const { addToRootFolder } = useTempNodes((s) => ({
     addToRootFolder: s.addToRootFolder,
   }))
-  const { isMerged, onMergeCommitClick, onCreateFile } = useFileTreeContext()
+  const {
+    isLoading,
+    isMerged,
+    onMergeCommitClick,
+    onCreateFile,
+    onUploadFile,
+  } = useFileTreeContext()
   const { nodeInput, setNodeInput } = useNodeInput()
   const isFile = nodeInput === EntityType.File
 
@@ -43,24 +51,80 @@ export function TreeToolbar() {
     [setNodeInput, isMerged, onMergeCommitClick],
   )
 
+  const fileUploadInputRef = useRef<HTMLInputElement>(null)
+  const onClickFileUploadInput = useCallback(() => {
+    if (isMerged) onMergeCommitClick()
+    else fileUploadInputRef.current?.click()
+  }, [isMerged, onMergeCommitClick])
+  const onFileUploadChange = useCallback(
+    (event: ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0]
+      if (!file) return
+
+      const filename = file.name.replace(/\.promptl$/, '').replace(/\s+/g, '_')
+      onUploadFile({ path: filename, file })
+
+      event.target.value = ''
+    },
+    [onUploadFile],
+  )
+
   return (
     <>
       <div className='bg-background sticky top-0 flex flex-row items-center justify-between px-4'>
         <Text.H5M>Files</Text.H5M>
         <div className='flex flex-row space-x-2'>
-          <Button
-            variant='ghost'
-            size='none'
-            lookDisabled={isMerged}
-            iconProps={{ name: 'folderPlus' }}
-            onClick={onClick(EntityType.Folder)}
-          />
-          <Button
-            variant='ghost'
-            size='none'
-            lookDisabled={isMerged}
-            iconProps={{ name: 'filePlus' }}
-            onClick={onClick(EntityType.File)}
+          <Tooltip
+            asChild
+            trigger={
+              <Button
+                variant='ghost'
+                size='none'
+                lookDisabled={isMerged}
+                disabled={isLoading}
+                iconProps={{ name: 'folderPlus' }}
+                onClick={onClick(EntityType.Folder)}
+              />
+            }
+          >
+            New folder
+          </Tooltip>
+          <Tooltip
+            asChild
+            trigger={
+              <Button
+                variant='ghost'
+                size='none'
+                lookDisabled={isMerged}
+                disabled={isLoading}
+                iconProps={{ name: 'filePlus' }}
+                onClick={onClick(EntityType.File)}
+              />
+            }
+          >
+            New prompt
+          </Tooltip>
+          <Tooltip
+            asChild
+            trigger={
+              <Button
+                variant='ghost'
+                size='none'
+                lookDisabled={isMerged}
+                disabled={isLoading}
+                iconProps={{ name: 'paperclip' }}
+                onClick={onClickFileUploadInput}
+              />
+            }
+          >
+            Upload document
+          </Tooltip>
+          <input
+            ref={fileUploadInputRef}
+            type='file'
+            multiple={false}
+            className='hidden'
+            onChange={onFileUploadChange}
           />
         </div>
       </div>

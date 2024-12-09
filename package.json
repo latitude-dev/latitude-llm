@@ -7,8 +7,8 @@
     "lint": "turbo lint",
     "docs": "cd docs && mintlify dev",
     "tc": "turbo tc",
-    "prettier": "prettier --write \"**/*.{ts,tsx,md}\"",
-    "prettier:check": "prettier --check \"**/*.{ts,tsx,md}\"",
+    "prettier": "prettier --write \"**/*.{ts,tsx,md}\" --ignore-path .prettierrcignore",
+    "prettier:check": "prettier --check \"**/*.{ts,tsx,md}\" --ignore-path .prettierrcignore",
     "test": "turbo test",
     "catchup": "pnpm i && pnpm build --filter=\"./packages/**/*\" && pnpm --filter \"@latitude-data/core\" db:migrate"
   },

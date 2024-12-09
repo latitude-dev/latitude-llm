@@ -133,19 +133,23 @@ type DeletableElement<T extends DeletableType> = T extends DeletableType.File
     }
 
 export function FilesTree({
+  isLoading,
   isMerged,
   currentUuid,
   documents,
   onMergeCommitClick,
   navigateToDocument,
   createFile,
+  uploadFile,
   renamePaths,
   destroyFile,
   destroyFolder,
   isDestroying,
 }: {
+  isLoading: boolean
   isMerged: boolean
   createFile: (args: { path: string }) => Promise<void>
+  uploadFile: (args: { path: string; file: File }) => Promise<void>
   renamePaths: (args: { oldPath: string; newPath: string }) => Promise<void>
   destroyFile: (documentUuid: string) => Promise<void>
   onMergeCommitClick: () => void
@@ -191,12 +195,16 @@ export function FilesTree({
   return (
     <>
       <FileTreeProvider
+        isLoading={isLoading}
         isMerged={isMerged}
         onMergeCommitClick={onMergeCommitClick}
         currentUuid={currentUuid}
         onNavigateToDocument={navigateToDocument}
         onCreateFile={(path) => {
           createFile({ path })
+        }}
+        onUploadFile={({ path, file }) => {
+          uploadFile({ path, file })
         }}
         onRenameFile={({ node, path }) => {
           const oldPath = node.path + (node.isFile ? '' : '/')

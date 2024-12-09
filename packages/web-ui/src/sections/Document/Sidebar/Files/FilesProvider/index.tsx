@@ -5,8 +5,10 @@ import { createContext, ReactNode, useContext } from 'react'
 import { Node } from '../useTree'
 
 type IFilesContext = {
+  isLoading: boolean
   isMerged: boolean
   onCreateFile: (path: string) => void
+  onUploadFile: (args: { path: string; file: File }) => void
   onRenameFile: (args: { node: Node; path: string }) => void
   onDeleteFile: (args: { node: Node; documentUuid: string }) => void
   onMergeCommitClick: () => void
@@ -17,11 +19,13 @@ type IFilesContext = {
 const FileTreeContext = createContext({} as IFilesContext)
 
 const FileTreeProvider = ({
+  isLoading,
   isMerged,
   onMergeCommitClick,
   children,
   currentUuid,
   onCreateFile,
+  onUploadFile,
   onRenameFile,
   onDeleteFile,
   onDeleteFolder,
@@ -30,10 +34,12 @@ const FileTreeProvider = ({
   return (
     <FileTreeContext.Provider
       value={{
+        isLoading,
         isMerged,
         onMergeCommitClick,
         currentUuid,
         onCreateFile,
+        onUploadFile,
         onRenameFile,
         onDeleteFile,
         onDeleteFolder,

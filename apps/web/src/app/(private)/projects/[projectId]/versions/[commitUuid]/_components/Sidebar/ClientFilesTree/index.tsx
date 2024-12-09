@@ -2,16 +2,17 @@
 
 import { useCallback, useState } from 'react'
 
+import { useNavigate } from '$/hooks/useNavigate'
+import { ROUTES } from '$/services/routes'
+import useDocumentVersions from '$/stores/documentVersions'
 import { HEAD_COMMIT } from '@latitude-data/core/browser'
 import {
   FilesTree,
   useCurrentCommit,
   useCurrentProject,
+  useToast,
   type SidebarDocument,
 } from '@latitude-data/web-ui'
-import { useNavigate } from '$/hooks/useNavigate'
-import { ROUTES } from '$/services/routes'
-import useDocumentVersions from '$/stores/documentVersions'
 
 import CreateDraftCommitModal from '../CreateDraftCommitModal'
 import MergedCommitWarningModal from '../MergedCommitWarningModal'
@@ -41,9 +42,12 @@ export default function ClientFilesTree({
     },
     [project.id, commit.uuid, isHead],
   )
+  const { toast } = useToast()
 
   const {
+    isLoading,
     createFile,
+    uploadFile,
     destroyFile,
     destroyFolder,
     renamePaths,
@@ -56,6 +60,11 @@ export default function ClientFilesTree({
       onSuccessCreate: (document) => {
         if (!document) return // should never happen but it does
 
+        toast({
+          title: 'Success',
+          description: 'Document created! 🎉',
+        })
+
         navigateToDocument(document.documentUuid)
       },
     },
@@ -67,12 +76,14 @@ export default function ClientFilesTree({
   return (
     <>
       <FilesTree
+        isLoading={isLoading}
         isMerged={isMerged}
         documents={data}
         currentUuid={documentUuid}
         navigateToDocument={navigateToDocument}
         onMergeCommitClick={onMergeCommitClick}
         createFile={createFile}
+        uploadFile={uploadFile}
         renamePaths={renamePaths}
         destroyFile={destroyFile}
         destroyFolder={destroyFolder}

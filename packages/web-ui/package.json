@@ -6,7 +6,6 @@
   "scripts": {
     "lint": "eslint ./src",
     "tc": "tsc --noEmit",
-    "prettier": "prettier --write src/**/*.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:debug": "pnpm run test:watch --inspect-brk --pool threads --poolOptions.threads.singleThread"

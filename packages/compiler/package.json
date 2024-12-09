@@ -27,7 +27,6 @@
     "build": "rollup -c",
     "test": "vitest run",
     "test:watch": "vitest",
-    "prettier": "prettier --write src/**/*.ts",
     "lint": "eslint src",
     "tc": "tsc --noEmit"
   },
