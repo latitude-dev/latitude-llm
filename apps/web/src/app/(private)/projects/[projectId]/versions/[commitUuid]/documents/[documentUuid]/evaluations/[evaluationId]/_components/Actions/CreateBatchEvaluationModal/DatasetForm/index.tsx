@@ -22,7 +22,7 @@ function findValue({
   parameters,
   param,
 }: {
-  headers: SelectOption[]
+  headers: SelectOption<string>[]
   parameters: RunBatchParameters
   param: string
 }) {
@@ -98,11 +98,11 @@ export default function DatasetForm({
   fromLine: number | undefined
   toLine: number | undefined
   onChangeToLine: ReactStateDispatch<number | undefined>
-  headers: SelectOption[]
+  headers: SelectOption<string>[]
   selectedDataset: Dataset | null
   datasets: Dataset[]
   isLoadingDatasets: boolean
-  onSelectDataset: (value: string) => void
+  onSelectDataset: (value: number) => void
   onToggleAllLines: (checked: boolean) => void
   errors: Record<string, string[] | undefined> | undefined
 }) {
@@ -149,7 +149,7 @@ export default function DatasetForm({
                 disabled={isLoadingDatasets}
                 options={datasetOptions}
                 onChange={onSelectDataset}
-                defaultValue={selectedDataset?.id?.toString()}
+                defaultValue={selectedDataset?.id}
               />
             </div>
             <Link

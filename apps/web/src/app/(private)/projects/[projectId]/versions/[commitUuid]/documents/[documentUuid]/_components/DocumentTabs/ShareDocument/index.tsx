@@ -1,5 +1,5 @@
 import { DocumentVersion, PublishedDocument } from '@latitude-data/core/browser'
-import { Button, Icon, Skeleton, Tooltip } from '@latitude-data/web-ui'
+import { Button, Skeleton, Tooltip } from '@latitude-data/web-ui'
 import { useToggleModal } from '$/hooks/useToogleModal'
 import usePublishedDocuments from '$/stores/publishedDocuments'
 
@@ -10,8 +10,13 @@ const SHARE_COPY = 'Share prompt'
 function FakeButton() {
   return (
     <div>
-      <Button fancy variant='outline' disabled>
-        {SHARE_COPY} <Icon name='externalLink' />
+      <Button
+        fancy
+        variant='outline'
+        disabled
+        iconProps={{ name: 'externalLink', placement: 'right' }}
+      >
+        {SHARE_COPY}
       </Button>
     </div>
   )
@@ -104,7 +109,7 @@ export function ShareDocument({
 
   if (!canShare) {
     return (
-      <Tooltip trigger={<FakeButton />}>
+      <Tooltip asChild trigger={<FakeButton />}>
         Publish the prompt first to share it.
       </Tooltip>
     )

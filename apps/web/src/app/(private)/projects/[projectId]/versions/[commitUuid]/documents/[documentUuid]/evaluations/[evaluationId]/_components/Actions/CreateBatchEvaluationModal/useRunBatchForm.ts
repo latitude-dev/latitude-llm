@@ -27,7 +27,7 @@ export function useRunBatchForm({
     [documentMetadata?.parameters],
   )
   const [selectedDataset, setSelectedDataset] = useState<Dataset | null>(null)
-  const [headers, setHeaders] = useState<SelectOption[]>([])
+  const [headers, setHeaders] = useState<SelectOption<string>[]>([])
   const buildHeaders = useCallback(
     (dataset: Dataset) => {
       setHeaders([
@@ -67,7 +67,7 @@ export function useRunBatchForm({
   )
 
   const onSelectDataset = useCallback(
-    async (value: string) => {
+    async (value: number) => {
       const ds = datasets.find((ds) => ds.id === Number(value))
       if (!ds) return
 

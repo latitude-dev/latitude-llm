@@ -1,5 +1,3 @@
-import { isNumber } from 'lodash-es'
-
 import { Dataset, DocumentVersion } from '@latitude-data/core/browser'
 import {
   Badge,
@@ -62,7 +60,6 @@ export function InputMapper({
           <div className='grid grid-cols-[auto_1fr] gap-y-3'>
             {Object.entries(inputs).map(([param, input], idx) => {
               const value = mappedInputs[param]
-              const selectedValue = isNumber(value) ? String(value) : undefined
               const inputTooltipValue = getTooltipValue(input)
               const isMapped = mappedInputs[param] !== undefined
               const disabled = isLoading || !selectedDataset
@@ -91,7 +88,7 @@ export function InputMapper({
                         disabled={disabled}
                         options={headersOptions}
                         onChange={onSelectHeader(param)}
-                        value={selectedValue}
+                        value={value}
                       />
                       <div className='flex flex-row items-center gap-x-2 flex-grow min-w-0'>
                         <Text.H6 color='foregroundMuted' ellipsis noWrap>
@@ -105,7 +102,7 @@ export function InputMapper({
                         trigger={
                           <Button
                             variant='ghost'
-                            disabled={disabled || !selectedValue}
+                            disabled={disabled || !value}
                             onClick={() => {
                               copyToManual()
                               setSource('manual')

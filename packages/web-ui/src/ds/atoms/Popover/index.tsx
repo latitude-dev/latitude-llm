@@ -1,19 +1,20 @@
 'use client'
 
-import { isString } from 'lodash-es'
 import { forwardRef, ReactNode, Ref } from 'react'
 import * as RadixPopover from '@radix-ui/react-popover'
 
 import { cn } from '../../../lib/utils'
 import { Button, ButtonProps } from '../Button'
 import { Icon, IconProps } from '../Icons'
-import { TextColor } from '../../tokens'
 import Text from '../Text'
+import { TextColor } from '../../tokens'
+import { isString } from 'lodash-es'
 
 type Props = RadixPopover.PopoverContentProps & {
   inPortal?: boolean
   size?: 'small' | 'medium' | 'large'
   scrollable?: boolean
+  maxHeight?: 'normal' | 'none'
 }
 const PopoverContent = forwardRef<HTMLDivElement, Props>(function Content(
   {
@@ -21,6 +22,7 @@ const PopoverContent = forwardRef<HTMLDivElement, Props>(function Content(
     scrollable = true,
     size = 'small',
     className = '',
+    maxHeight = 'normal',
     ...rest
   },
   ref,
@@ -32,12 +34,13 @@ const PopoverContent = forwardRef<HTMLDivElement, Props>(function Content(
       'animate-in fade-in-0 slide-in-from-top-2',
       'bg-background shadow-lg rounded-md',
       'mt-1 border border-border z-20',
-      'max-h-96 gap-y-4 flex flex-col',
+      'gap-y-4 flex flex-col',
       {
         'custom-scrollbar': scrollable,
         'max-w-80 p-2': size === 'small',
         'max-w-96 p-4': size === 'medium',
         'max-w-xl p-4': size === 'large',
+        'max-h-96': maxHeight === 'normal',
       },
     ),
   }

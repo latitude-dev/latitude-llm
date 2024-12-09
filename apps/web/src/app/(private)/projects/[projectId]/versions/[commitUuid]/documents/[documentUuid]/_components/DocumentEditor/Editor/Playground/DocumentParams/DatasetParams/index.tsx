@@ -30,8 +30,6 @@ export function DatasetParams({
   data: UseSelectDataset
 }) {
   const selectedId = data.selectedDataset?.id
-    ? String(data.selectedDataset.id)
-    : undefined
   const onPrevPage = (page: number) => data.onRowChange(page - 1)
   const onNextPage = (page: number) => data.onRowChange(page + 1)
   return (

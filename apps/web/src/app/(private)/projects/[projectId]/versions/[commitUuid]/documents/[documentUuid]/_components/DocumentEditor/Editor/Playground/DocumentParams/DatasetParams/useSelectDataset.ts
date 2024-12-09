@@ -13,7 +13,7 @@ import useDocumentVersions from '$/stores/documentVersions'
 
 export type DatasetPreview = {
   headers: Record<number, string>
-  headersOptions: SelectOption[]
+  headersOptions: SelectOption<number>[]
   rows: string[][]
   rowCount: number
 }
@@ -109,7 +109,7 @@ export function useSelectDataset({
   }, [csv, selectedDataset])
 
   const onSelectDataset = useCallback(
-    async (value: string) => {
+    async (value: number) => {
       const ds = datasets.find((ds) => ds.id === Number(value))
       if (!ds) return
 
@@ -163,7 +163,7 @@ export function useSelectDataset({
   )
 
   const onSelectHeader = useCallback(
-    (param: string) => (headerIndex: string) => {
+    (param: string) => (headerIndex: number) => {
       const prevMapped = mappedInputs ?? {}
       const mapped = { ...prevMapped, [param]: Number(headerIndex) }
       const newInputs = mappedToInputs({
