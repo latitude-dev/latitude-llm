@@ -3,6 +3,10 @@ import { isText } from 'istextorbinary'
 import { parseOfficeAsync } from 'officeparser'
 import path from 'path'
 import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs'
+// @ts-expect-error force webpack to include the sandbox
+import * as _pdfjsSandbox from 'pdfjs-dist/legacy/build/pdf.sandbox.mjs'
+// @ts-expect-error force webpack to include the worker
+import * as _pdfjsWorker from 'pdfjs-dist/legacy/build/pdf.worker.mjs'
 import type { TextItem } from 'pdfjs-dist/types/src/display/api'
 import {
   BadRequestError,
@@ -12,6 +16,11 @@ import {
 } from '../../lib'
 
 import { MAX_UPLOAD_SIZE_IN_MB } from '../../constants'
+
+// @ts-expect-error force webpack to include the sandbox
+const __pdfjsSandbox = _pdfjsSandbox
+// @ts-expect-error force webpack to include the worker
+const __pdfjsWorker = _pdfjsWorker
 
 export async function transformFile(
   file: File,

@@ -26,6 +26,7 @@
     "@latitude-data/web-ui": "workspace:*",
     "@lucia-auth/adapter-drizzle": "^1.0.7",
     "@monaco-editor/react": "^4.6.0",
+    "@napi-rs/canvas": "^0.1.65",
     "@sentry/nextjs": "^8.34.0",
     "@sentry/utils": "^8.30.0",
     "@sindresorhus/slugify": "^2.2.1",

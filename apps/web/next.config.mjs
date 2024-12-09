@@ -16,6 +16,7 @@ const nextConfig = {
     'jose',
     'nodemailer-mailgun-transport',
     '@sentry/nextjs',
+    '@napi-rs/canvas',
     'pdfjs-dist',
   ],
   experimental: {

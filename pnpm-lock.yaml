@@ -345,6 +345,9 @@ importers:
       '@monaco-editor/react':
         specifier: ^4.6.0
         version: 4.6.0(monaco-editor@0.50.0)(react-dom@19.0.0-rc-5d19e1c8-20240923(react@19.0.0-rc-5d19e1c8-20240923))(react@19.0.0-rc-5d19e1c8-20240923)
+      '@napi-rs/canvas':
+        specifier: ^0.1.65
+        version: 0.1.65
       '@sentry/nextjs':
         specifier: ^8.34.0
         version: 8.35.0(@opentelemetry/api@1.9.0)(@opentelemetry/core@1.27.0(@opentelemetry/api@1.9.0))(@opentelemetry/instrumentation@0.53.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@1.27.0(@opentelemetry/api@1.9.0))(encoding@0.1.13)(next@15.0.3(@opentelemetry/api@1.9.0)(react-dom@19.0.0-rc-5d19e1c8-20240923(react@19.0.0-rc-5d19e1c8-20240923))(react@19.0.0-rc-5d19e1c8-20240923))(react@19.0.0-rc-5d19e1c8-20240923)(webpack@5.95.0)
@@ -711,6 +714,9 @@ importers:
       '@latitude-data/typescript-config':
         specifier: workspace:*
         version: link:../../tools/typescript
+      '@napi-rs/canvas':
+        specifier: ^0.1.65
+        version: 0.1.65
       '@plunk/node':
         specifier: ^3.0.2
         version: 3.0.3
@@ -13350,7 +13356,6 @@ snapshots:
       '@napi-rs/canvas-linux-x64-gnu': 0.1.65
       '@napi-rs/canvas-linux-x64-musl': 0.1.65
       '@napi-rs/canvas-win32-x64-msvc': 0.1.65
-    optional: true
 
   '@next/env@14.2.16': {}
 
