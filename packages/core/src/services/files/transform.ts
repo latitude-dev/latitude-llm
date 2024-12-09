@@ -2,7 +2,7 @@
 import { isText } from 'istextorbinary'
 import { parseOfficeAsync } from 'officeparser'
 import path from 'path'
-import * as pdfjs from 'pdfjs-dist'
+import * as pdfjs from 'pdfjs-dist/legacy/build/pdf.mjs'
 import type { TextItem } from 'pdfjs-dist/types/src/display/api'
 import {
   BadRequestError,
