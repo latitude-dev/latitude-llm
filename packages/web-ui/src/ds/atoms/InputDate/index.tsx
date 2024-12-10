@@ -165,7 +165,8 @@ export function InputDate({
           <Icon
             name='calendar'
             size='normal'
-            color={isOpen ? 'primary dark:foreground' : 'foregroundMuted'}
+            color={isOpen ? 'primary' : 'foregroundMuted'}
+            darkColor={isOpen ? 'foreground' : 'foregroundMuted'}
             className='cursor-pointer flex-none'
           />
         ) : null}

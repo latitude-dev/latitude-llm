@@ -10,7 +10,7 @@ import { useEffect, useRef, useState } from 'react'
 
 import { safeParseDate, safeParseValue } from './utils'
 import DatePickerInput, { Props as InputProps } from './Input'
-import DateTypePicker from './DateTypePicker'
+import { DateTypePicker } from './DateTypePicker'
 import Content from './Content'
 
 export const DATE_PICKER_POPOVER_STYLES =
@@ -116,17 +116,19 @@ export function DatePicker({
       }}
     >
       <Popover.Trigger asChild>
-        <div ref={ref} className='flex flex-row items-center gap-x-2'>
-          <DatePickerInput
-            {...inputProps}
-            isOpen={state.isOpen}
-            onEnter={() => {
-              commitChange()
-            }}
-          />
-          {onTypeChange && (
-            <DateTypePicker type={type} toggleType={onTypeChange} />
-          )}
+        <div
+          ref={ref}
+          className='flex flex-row items-center gap-x-2 bg-backgroundCode rounded-md'
+        >
+          <DateTypePicker ref={ref} type={type} onTypeChange={onTypeChange}>
+            <DatePickerInput
+              {...inputProps}
+              isOpen={state.isOpen}
+              onEnter={() => {
+                commitChange()
+              }}
+            />
+          </DateTypePicker>
         </div>
       </Popover.Trigger>
       <Popover.Content align='end' scrollable={false} avoidCollisions={false}>

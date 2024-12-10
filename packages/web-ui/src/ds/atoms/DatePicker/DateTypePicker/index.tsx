@@ -2,6 +2,7 @@ import { Icon, IconProps } from '../../Icons'
 
 import { DatePickerType } from '../index'
 import { cn } from '../../../../lib/utils'
+import { ReactNode, Ref } from 'react'
 
 type DatePickerIconProps = {
   selected: boolean
@@ -19,21 +20,30 @@ const DatePickerIcon = ({ selected, icon, toggle }: DatePickerIconProps) => (
 
 type Props = {
   type: DatePickerType
-  toggleType: (type: DatePickerType) => void
+  onTypeChange?: (type: DatePickerType) => void | undefined
+  input: ReactNode
+  ref: Ref<HTMLDivElement>
 }
-export default function DateTypePicker({ type, toggleType }: Props) {
+export function DateTypePicker({ ref, type, onTypeChange }: Props) {
   return (
-    <div className='flex flex-row gap-1 pr-1 items-center justify-center'>
-      <DatePickerIcon
-        icon='eye'
-        selected={type === DatePickerType.relative}
-        toggle={() => toggleType(DatePickerType.relative)}
-      />
-      <DatePickerIcon
-        icon='filePlus'
-        selected={type === DatePickerType.absolute}
-        toggle={() => toggleType(DatePickerType.absolute)}
-      />
+    <div
+      ref={ref}
+      className='flex flex-row items-center gap-x-2 bg-backgroundCode rounded-md'
+    >
+      {onTypeChange ? (
+        <div>
+          <DatePickerIcon
+            icon='eye'
+            selected={type === DatePickerType.relative}
+            toggle={() => onTypeChange(DatePickerType.relative)}
+          />
+          <DatePickerIcon
+            icon='filePlus'
+            selected={type === DatePickerType.absolute}
+            toggle={() => onTypeChange(DatePickerType.absolute)}
+          />
+        </div>
+      ) : null}
     </div>
   )
 }

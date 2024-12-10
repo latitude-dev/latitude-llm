@@ -32,8 +32,6 @@ export default function DatePickerInput({
   onEnter,
 }: Props) {
   const { locale } = useLocale()
-
-  console.log("IS_OPEN_INPIUT", isOpen)
   if (type === DatePickerType.absolute) {
     return (
       <InputDate
