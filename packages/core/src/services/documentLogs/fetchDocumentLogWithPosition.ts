@@ -1,8 +1,8 @@
 import { and, eq, isNull, sql } from 'drizzle-orm'
 
 import {
-  Commit,
   DEFAULT_PAGINATION_SIZE,
+  DocumentLogFilterOptions,
   ErrorableEntity,
   Workspace,
 } from '../../browser'
@@ -15,19 +15,26 @@ import {
   runErrors,
   workspaces,
 } from '../../schema'
-import { getCommonQueryConditions } from './computeDocumentLogsWithMetadata'
+import { getDocumentLogFilters } from './computeDocumentLogsWithMetadata'
 import { fetchDocumentLogWithMetadata } from './fetchDocumentLogWithMetadata'
 
 type QueryArgs = {
   targetCreatedAtUTC: string
   documentUuid: string
   workspace: Workspace
-  commit: Commit
+  filterOptions?: DocumentLogFilterOptions
 }
 async function getDocumentLogsQuery(
-  { workspace, commit, documentUuid, targetCreatedAtUTC }: QueryArgs,
+  { workspace, filterOptions, documentUuid, targetCreatedAtUTC }: QueryArgs,
   db = database,
 ) {
+  const conditions = [
+    isNull(runErrors.id),
+    eq(workspaces.id, workspace.id),
+    sql`${documentLogs.createdAt} >= ${targetCreatedAtUTC}`,
+    documentUuid ? eq(documentLogs.documentUuid, documentUuid) : undefined,
+    filterOptions ? getDocumentLogFilters(filterOptions) : undefined,
+  ].filter(Boolean)
   return db
     .select({
       count: sql`count(*)`.mapWith(Number).as('total_count'),
@@ -46,25 +53,20 @@ async function getDocumentLogsQuery(
         eq(runErrors.errorableType, ErrorableEntity.DocumentLog),
       ),
     )
-    .where(
-      and(
-        isNull(runErrors.id),
-        eq(workspaces.id, workspace.id),
-        getCommonQueryConditions({
-          scope: documentLogs,
-          documentUuid,
-          draft: commit,
-          allowAnyDraft: false,
-        }),
-        sql`${documentLogs.createdAt} >= ${targetCreatedAtUTC}`,
-      ),
-    )
+    .where(and(...conditions))
 }
 
 async function getDocumentLogsWithErrorsQuery(
-  { workspace, commit, documentUuid, targetCreatedAtUTC }: QueryArgs,
+  { workspace, filterOptions, documentUuid, targetCreatedAtUTC }: QueryArgs,
   db = database,
 ) {
+  const conditions = [
+    eq(workspaces.id, workspace.id),
+    sql`${documentLogs.createdAt} >= ${targetCreatedAtUTC}`,
+    documentUuid ? eq(documentLogs.documentUuid, documentUuid) : undefined,
+    filterOptions ? getDocumentLogFilters(filterOptions) : undefined,
+  ].filter(Boolean)
+
   return db
     .select({
       count: sql`count(*)`.mapWith(Number).as('total_count'),
@@ -83,29 +85,18 @@ async function getDocumentLogsWithErrorsQuery(
         eq(runErrors.errorableType, ErrorableEntity.DocumentLog),
       ),
     )
-    .where(
-      and(
-        eq(workspaces.id, workspace.id),
-        getCommonQueryConditions({
-          scope: documentLogs,
-          documentUuid,
-          draft: commit,
-          allowAnyDraft: false,
-        }),
-        sql`${documentLogs.createdAt} >= ${targetCreatedAtUTC}`,
-      ),
-    )
+    .where(and(...conditions))
 }
 
 export async function fetchDocumentLogWithPosition(
   {
     workspace,
-    commit,
+    filterOptions,
     documentLogUuid,
     excludeErrors = false,
   }: {
     workspace: Workspace
-    commit: Commit
+    filterOptions?: DocumentLogFilterOptions
     documentLogUuid: string | undefined
     excludeErrors?: boolean
   },
@@ -122,12 +113,13 @@ export async function fetchDocumentLogWithPosition(
   const queryFn = excludeErrors
     ? getDocumentLogsQuery
     : getDocumentLogsWithErrorsQuery
+
   const result = await queryFn(
     {
       documentUuid,
       targetCreatedAtUTC,
       workspace,
-      commit,
+      filterOptions,
     },
     db,
   )

@@ -3,6 +3,7 @@ import {
   Commit,
   DocumentVersion,
   ErrorableEntity,
+  LOG_SOURCES,
   Project,
   Providers,
   User,
@@ -15,6 +16,7 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { GET } from './route'
 
+const LOG_SOURCES_LIST = LOG_SOURCES.join(',')
 const mocks = vi.hoisted(() => {
   return {
     getSession: vi.fn(),
@@ -86,7 +88,9 @@ describe('GET logs', () => {
     })
 
     it('should return all logs', async () => {
-      const response = await GET(mockRequest, {
+      const qp = `commitIds=${commit.id}&logSources=${LOG_SOURCES_LIST}`
+      const mockURL = new NextRequest(`http://localhost:3000?${qp}`)
+      const response = await GET(mockURL, {
         params: {
           projectId: project.id,
           commitUuid: commit.uuid,
@@ -110,8 +114,9 @@ describe('GET logs', () => {
     })
 
     it('should should not fail with page=0', async () => {
-      mockRequest = new NextRequest('http://localhost:3000?page=0')
-      const response = await GET(mockRequest, {
+      const qp = `page=0&commitIds=${commit.id}&logSources=${LOG_SOURCES_LIST}`
+      const mockURL = new NextRequest(`http://localhost:3000?${qp}`)
+      const response = await GET(mockURL, {
         params: {
           projectId: project.id,
           commitUuid: commit.uuid,
@@ -144,7 +149,9 @@ describe('GET logs', () => {
         commit: commit2,
       })
 
-      const response = await GET(mockRequest, {
+      const qp = `commitIds=${commit.id}&logSources=${LOG_SOURCES_LIST}`
+      const mockURL = new NextRequest(`http://localhost:3000?${qp}`)
+      const response = await GET(mockURL, {
         params: {
           projectId: project.id,
           commitUuid: commit.uuid,

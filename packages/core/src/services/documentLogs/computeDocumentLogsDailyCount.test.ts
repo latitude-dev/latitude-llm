@@ -5,14 +5,17 @@ import {
   Commit,
   DocumentVersion,
   ErrorableEntity,
+  LOG_SOURCES,
   Project,
   Providers,
   User,
+  Workspace,
 } from '../../browser'
 import * as factories from '../../tests/factories'
 import { computeDocumentLogsDailyCount } from './computeDocumentLogsDailyCount'
 
 describe('computeDocumentLogsDailyCount', () => {
+  let workspace: Workspace
   let user: User
   let project: Project
   let document: DocumentVersion
@@ -37,6 +40,7 @@ describe('computeDocumentLogsDailyCount', () => {
     project = setup.project
     commit = setup.commit
     document = setup.documents[0]!
+    workspace = setup.workspace
   })
 
   it('returns daily counts for document logs', async () => {
@@ -88,8 +92,12 @@ describe('computeDocumentLogsDailyCount', () => {
     ])
 
     const result = await computeDocumentLogsDailyCount({
+      workspace,
       documentUuid: document.documentUuid,
-      draft: commit,
+      filterOptions: {
+        commitIds: [commit.id],
+        logSources: LOG_SOURCES,
+      },
       days: 3,
     })
 
@@ -126,8 +134,12 @@ describe('computeDocumentLogsDailyCount', () => {
     ])
 
     const result = await computeDocumentLogsDailyCount({
+      workspace,
       documentUuid: document.documentUuid,
-      draft: commit,
+      filterOptions: {
+        commitIds: [commit.id],
+        logSources: LOG_SOURCES,
+      },
     })
 
     expect(result[0]?.count).toBe(2)
@@ -149,8 +161,12 @@ describe('computeDocumentLogsDailyCount', () => {
     await factories.createDocumentLog({ document, commit })
 
     const result = await computeDocumentLogsDailyCount({
+      workspace,
       documentUuid: document.documentUuid,
-      draft: commit,
+      filterOptions: {
+        commitIds: [commit.id],
+        logSources: LOG_SOURCES,
+      },
     })
 
     expect(result[0]?.count).toBe(1)
@@ -173,8 +189,12 @@ describe('computeDocumentLogsDailyCount', () => {
     })
 
     const result = await computeDocumentLogsDailyCount({
+      workspace,
       documentUuid: document.documentUuid,
-      draft: commit,
+      filterOptions: {
+        commitIds: [commit.id],
+        logSources: LOG_SOURCES,
+      },
       days: 30,
     })
 

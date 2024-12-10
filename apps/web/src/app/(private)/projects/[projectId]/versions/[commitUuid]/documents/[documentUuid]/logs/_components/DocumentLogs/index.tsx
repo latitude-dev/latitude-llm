@@ -1,127 +1,70 @@
 'use client'
 
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 
-import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
+import {
+  DocumentLogWithMetadataAndError,
+  ResultWithEvaluation,
+} from '@latitude-data/core/repositories'
+import { DocumentLogsAggregations } from '@latitude-data/core/services/documentLogs/computeDocumentLogsAggregations'
 import {
   Button,
   cn,
   FloatingPanel,
   TableBlankSlate,
-  useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
-import {
-  EventArgs,
-  useSockets,
-} from '$/components/Providers/WebsocketsProvider/useSockets'
 import { useSelectableRows } from '$/hooks/useSelectableRows'
-import useDocumentLogs, { documentLogPresenter } from '$/stores/documentLogs'
-import useDocumentLogsAggregations from '$/stores/documentLogsAggregations'
-import useEvaluationResultsByDocumentLogs from '$/stores/evaluationResultsByDocumentLogs'
 import useProviderLogs from '$/stores/providerLogs'
-import { useSearchParams } from 'next/navigation'
 
 import { AggregationPanels } from './AggregationPanels'
 import { DocumentLogInfo } from './DocumentLogInfo'
 import { DocumentLogsTable } from './DocumentLogsTable'
 import { ExportLogsModal } from './ExportLogsModal'
-import { LogsOverTimeChart } from './LogsOverTime'
-
-const useDocumentLogSocket = (
-  documentUuid: string,
-  mutate: ReturnType<typeof useDocumentLogs<false>>['mutate'],
-) => {
-  const onMessage = useCallback(
-    (args: EventArgs<'documentLogCreated'>) => {
-      if (documentUuid !== args.documentUuid) return
-
-      mutate(
-        (data) => {
-          if (!data) return [args.documentLogWithMetadata]
-
-          return [
-            {
-              ...documentLogPresenter(args.documentLogWithMetadata),
-              realtimeAdded: true,
-            },
-            ...data,
-          ]
-        },
-        { revalidate: false },
-      )
-
-      setTimeout(() => {
-        mutate(
-          (data) => {
-            if (!data) return data
-
-            return data.map((d) => {
-              if (d.uuid === args.documentLogWithMetadata.uuid) {
-                return { ...d, realtimeAdded: false }
-              }
-
-              return d
-            })
-          },
-          { revalidate: false },
-        )
-      }, 1000)
-    },
-    [documentUuid, mutate],
-  )
-
-  useSockets({ event: 'documentLogCreated', onMessage })
-}
+import { DocumentLogFilterOptions } from '@latitude-data/core/browser'
+import { LogsOverTime } from '../../../../../overview/_components/Overview/LogsOverTime'
+import useDocumentLogsDailyCount from '$/stores/documentLogsDailyCount'
 
 export function DocumentLogs({
-  documentLogs: serverDocumentLogs,
+  documentLogFilterOptions,
+  documentLogs,
   selectedLog: serverSelectedLog,
+  aggregations,
+  isAggregationsLoading,
+  evaluationResults,
+  isEvaluationResultsLoading,
 }: {
+  documentLogFilterOptions: DocumentLogFilterOptions
   documentLogs: DocumentLogWithMetadataAndError[]
   selectedLog?: DocumentLogWithMetadataAndError
+  aggregations?: DocumentLogsAggregations
+  isAggregationsLoading: boolean
+  evaluationResults: Record<number, ResultWithEvaluation[]>
+  isEvaluationResultsLoading: boolean
 }) {
   const stickyRef = useRef<HTMLTableElement>(null)
   const sidebarWrapperRef = useRef<HTMLDivElement>(null)
-  const searchParams = useSearchParams()
-  const page = searchParams.get('page')
-  const pageSize = searchParams.get('pageSize')
   const { document } = useCurrentDocument()
-  const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
   const [selectedLog, setSelectedLog] = useState<
     DocumentLogWithMetadataAndError | undefined
   >(serverSelectedLog)
+
   const { data: providerLogs, isLoading: isProviderLogsLoading } =
     useProviderLogs({
       documentLogUuid: selectedLog?.uuid,
     })
-  const { data: documentLogs, mutate } = useDocumentLogs(
-    {
-      documentUuid: document.documentUuid,
-      commitUuid: commit.uuid,
-      projectId: project.id,
-      page,
-      pageSize,
-      excludeErrors: false,
-    },
-    {
-      fallbackData: serverDocumentLogs,
-    },
-  )
-  const { data: aggregations, isLoading: isAggregationsLoading } =
-    useDocumentLogsAggregations({
-      documentUuid: document.documentUuid,
-      commitUuid: commit.uuid,
-      projectId: project.id,
-    })
-  const { data: evaluationResults, isLoading: isEvaluationResultsLoading } =
-    useEvaluationResultsByDocumentLogs({
-      documentLogIds: documentLogs.map((l) => l.id),
-    })
 
-  useDocumentLogSocket(document.documentUuid, mutate)
+  const {
+    data: dailyCount,
+    isLoading: isDailyCountLoading,
+    error: dailyCountError,
+  } = useDocumentLogsDailyCount({
+    documentUuid: document.documentUuid,
+    filterOptions: documentLogFilterOptions,
+    projectId: project.id,
+  })
 
   const documentLogIds = useMemo(
     () => documentLogs.map((r) => r.id),
@@ -134,19 +77,28 @@ export function DocumentLogs({
     rowIds: documentLogIds,
   })
 
+  if (
+    !documentLogFilterOptions.logSources.length &&
+    !documentLogFilterOptions.logSources.length
+  ) {
+    return (
+      <TableBlankSlate description='Select one or more log sources and commits to see logs.' />
+    )
+  }
+
   if (!documentLogs.length) {
     return (
-      <TableBlankSlate description='There are no logs for this prompt yet. Logs will appear here when you run the prompt for the first time.' />
+      <TableBlankSlate description='There are no logs that match the selected filters. Change the filters to see more logs.' />
     )
   }
 
   return (
     <div className='flex flex-col flex-grow min-h-0 w-full gap-4'>
       <div className='grid xl:grid-cols-2 gap-4 flex-grow'>
-        <LogsOverTimeChart
-          documentUuid={document.documentUuid}
-          commitUuid={commit.uuid}
-          projectId={project.id}
+        <LogsOverTime
+          data={dailyCount}
+          isLoading={isDailyCountLoading}
+          error={dailyCountError}
         />
         <AggregationPanels
           aggregations={aggregations}
@@ -163,6 +115,7 @@ export function DocumentLogs({
         <DocumentLogsTable
           ref={stickyRef}
           documentLogs={documentLogs}
+          documentLogFilterOptions={documentLogFilterOptions}
           evaluationResults={evaluationResults}
           selectedLog={selectedLog}
           setSelectedLog={setSelectedLog}

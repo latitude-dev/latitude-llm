@@ -1,5 +1,7 @@
-import { DocumentVersion } from '@latitude-data/core/browser'
-import { compactObject } from '@latitude-data/core/lib/compactObject'
+import {
+  DocumentLogFilterOptions,
+  DocumentVersion,
+} from '@latitude-data/core/browser'
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'
@@ -12,14 +14,14 @@ export type LogWithPosition = {
 export default function useDocumentLogWithPaginationPosition(
   {
     projectId,
-    commitUuid,
+    filterOptions,
     document,
     documentLogUuid,
     onFetched,
     excludeErrors = false,
   }: {
     projectId: number
-    commitUuid: string
+    filterOptions: DocumentLogFilterOptions
     document: DocumentVersion
     documentLogUuid?: string | null
     onFetched?: (data: LogWithPosition) => void
@@ -31,18 +33,19 @@ export default function useDocumentLogWithPaginationPosition(
     documentLogUuid
       ? ROUTES.api.projects
           .detail(projectId)
-          .commits.detail(commitUuid)
           .documents.detail(document.documentUuid)
-          .documentLogs.detail(documentLogUuid).position
+          .logs.detail(documentLogUuid)
+          .position({ filterOptions, excludeErrors })
       : undefined,
-    {
-      searchParams: compactObject({
-        excludeErrors: excludeErrors ? 'true' : undefined,
-      }) as Record<string, string>,
-    },
   )
   const { data, isLoading } = useSWR<LogWithPosition>(
-    ['documentLogWithPosition', documentLogUuid],
+    [
+      'documentLogWithPosition',
+      documentLogUuid,
+      projectId,
+      filterOptions,
+      excludeErrors,
+    ],
     fetcher,
     {
       ...opts,

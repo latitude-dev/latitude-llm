@@ -1,3 +1,9 @@
+import { DocumentLogFilterOptions } from '@latitude-data/core/browser'
+
+import { addParameters } from '../helpers'
+
+type PaginationParameters = { page: number; pageSize: number }
+
 export const _API_ROUTES = {
   workspaces: {
     current: '/api/workspaces/current',
@@ -39,17 +45,6 @@ export const _API_ROUTES = {
                 const documentRoot = `${projectRoot}/commits/${commitUuid}/documents/${documentUuid}`
                 return {
                   root: documentRoot,
-                  documentLogs: {
-                    root: `${documentRoot}/documentLogs`,
-                    pagination: `${documentRoot}/documentLogs/pagination`,
-                    aggregations: `${documentRoot}/documentLogs/aggregations`,
-                    dailyCount: `${documentRoot}/documentLogs/daily-count`,
-                    detail: (documentLogUuid: string) => {
-                      return {
-                        position: `${documentRoot}/documentLogs/${documentLogUuid}/position`,
-                      }
-                    },
-                  },
                   evaluations: {
                     root: `${documentRoot}/evaluations`,
                     detail: ({ evaluationId }: { evaluationId: number }) => ({
@@ -81,6 +76,81 @@ export const _API_ROUTES = {
         },
         publishedDocuments: {
           root: `${projectRoot}/published-documents`,
+        },
+        documents: {
+          detail: (documentUuid: string) => {
+            const documentRoot = `${projectRoot}/documents/${documentUuid}`
+            return {
+              logs: {
+                root: ({
+                  page,
+                  pageSize,
+                  filterOptions,
+                  excludeErrors,
+                }: Partial<PaginationParameters> & {
+                  excludeErrors?: boolean
+                  filterOptions: DocumentLogFilterOptions
+                }) =>
+                  addParameters(`${documentRoot}/logs`, {
+                    page,
+                    pageSize,
+                    excludeErrors,
+                    ...filterOptions,
+                  }),
+
+                pagination: ({
+                  page,
+                  pageSize,
+                  excludeErrors,
+                  filterOptions,
+                }: PaginationParameters & {
+                  excludeErrors?: boolean
+                  filterOptions: DocumentLogFilterOptions
+                }) =>
+                  addParameters(`${documentRoot}/logs/pagination`, {
+                    page,
+                    pageSize,
+                    excludeErrors,
+                    ...filterOptions,
+                  }),
+
+                aggregations: (filterOptions: DocumentLogFilterOptions) =>
+                  addParameters(
+                    `${documentRoot}/logs/aggregations`,
+                    filterOptions,
+                  ),
+                dailyCount: ({
+                  filterOptions,
+                  days,
+                }: {
+                  filterOptions: DocumentLogFilterOptions
+                  days?: number
+                }) =>
+                  addParameters(`${documentRoot}/logs/daily-count`, {
+                    days,
+                    ...filterOptions,
+                  }),
+                detail: (documentLogUuid: string) => {
+                  return {
+                    position: ({
+                      excludeErrors,
+                      filterOptions,
+                    }: {
+                      excludeErrors?: boolean
+                      filterOptions: DocumentLogFilterOptions
+                    }) =>
+                      addParameters(
+                        `${documentRoot}/logs/${documentLogUuid}/position`,
+                        {
+                          excludeErrors,
+                          ...filterOptions,
+                        },
+                      ),
+                  }
+                },
+              },
+            }
+          },
         },
       }
     },

@@ -1,31 +1,37 @@
-import { Commit, Workspace } from '@latitude-data/core/browser'
+import {
+  DocumentLogFilterOptions,
+  LogSources,
+  Workspace,
+} from '@latitude-data/core/browser'
 import { QueryParams } from '@latitude-data/core/lib/pagination/buildPaginatedUrl'
 import { computeDocumentLogsWithMetadataQuery } from '@latitude-data/core/services/documentLogs/computeDocumentLogsWithMetadata'
 import { fetchDocumentLogWithPosition } from '@latitude-data/core/services/documentLogs/fetchDocumentLogWithPosition'
-import { Button, TableWithHeader } from '@latitude-data/web-ui'
-import { findCommitCached } from '$/app/(private)/_data-access'
+import {
+  findCommitCached,
+  findCommitsByProjectCached,
+} from '$/app/(private)/_data-access'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
-import Link from 'next/link'
 import { redirect } from 'next/navigation'
 
-import { DocumentLogs } from './_components/DocumentLogs'
+import { DocumentLogsPage } from './_components'
+import { DocumentLogsRepository } from '@latitude-data/core/repositories'
 import { DocumentLogBlankSlate } from './_components/DocumentLogs/DocumentLogBlankSlate'
 
 async function fetchDocumentLogPage({
   workspace,
-  commit,
+  filterOptions,
   documentLogUuid,
 }: {
-  commit: Commit
   workspace: Workspace
+  filterOptions: DocumentLogFilterOptions
   documentLogUuid: string | undefined
 }) {
   if (!documentLogUuid) return undefined
 
   const result = await fetchDocumentLogWithPosition({
     workspace,
-    commit,
+    filterOptions,
     documentLogUuid,
   })
 
@@ -48,13 +54,52 @@ export default async function DocumentPage({
   const { workspace } = await getCurrentUser()
   const { projectId: pjid, commitUuid, documentUuid } = await params
   const projectId = Number(pjid)
+
+  const documentLogsRepo = new DocumentLogsRepository(workspace.id)
+  if (!documentLogsRepo.hasLogs(documentUuid)) {
+    return <DocumentLogBlankSlate />
+  }
+
   const commit = await findCommitCached({ projectId, uuid: commitUuid })
-  const { logUuid, pageSize, page: pg } = await searchParams
+  const commits = await findCommitsByProjectCached({ projectId })
+
+  const {
+    logUuid,
+    pageSize,
+    page: pageString,
+    versions: _selectedCommitsIds,
+    origins: _selectedLogSources,
+  } = await searchParams
+
+  const originalSelectedCommitsIds = [
+    ...commits.filter((c) => !!c.mergedAt).map((c) => c.id),
+    ...(!commit.mergedAt ? [commit.id] : []),
+  ]
+
+  const selectedCommitsIds = (
+    Array.isArray(_selectedCommitsIds)
+      ? _selectedCommitsIds
+      : (_selectedCommitsIds?.split(',') ?? originalSelectedCommitsIds)
+  ).map(Number)
+
+  const selectedSources = (
+    Array.isArray(_selectedLogSources)
+      ? _selectedLogSources
+      : (_selectedLogSources?.split(',') ?? Object.values(LogSources))
+  ).filter((s) =>
+    Object.values(LogSources).includes(s as LogSources),
+  ) as LogSources[]
+
+  const logsFilterOptions: DocumentLogFilterOptions = {
+    commitIds: selectedCommitsIds,
+    logSources: selectedSources,
+  }
+
   const documentLogUuid = logUuid?.toString()
-  const page = pg?.toString?.()
+  const page = pageString?.toString?.()
   const currentLogPage = await fetchDocumentLogPage({
     workspace,
-    commit,
+    filterOptions: logsFilterOptions,
     documentLogUuid,
   })
 
@@ -62,16 +107,22 @@ export default async function DocumentPage({
     const route = ROUTES.projects
       .detail({ id: projectId })
       .commits.detail({ uuid: commit.uuid })
-      .documents.detail({ uuid: documentUuid }).logs.root
-    return redirect(
-      `${route}?page=${currentLogPage}&logUuid=${documentLogUuid}`,
-    )
+      .documents.detail({ uuid: documentUuid }).logs
+
+    const parameters = [
+      `page=${currentLogPage}`,
+      `logUuid=${documentLogUuid}`,
+      _selectedCommitsIds ? `versions=${_selectedCommitsIds}` : undefined,
+      _selectedLogSources ? `origins=${_selectedLogSources}` : undefined,
+    ].filter(Boolean)
+
+    return redirect(`${route}?${parameters.join('&')}`)
   }
 
   const rows = await computeDocumentLogsWithMetadataQuery({
     workspaceId: workspace.id,
     documentUuid,
-    draft: commit,
+    filterOptions: logsFilterOptions,
     page,
     pageSize: pageSize as string | undefined,
   })
@@ -79,34 +130,11 @@ export default async function DocumentPage({
   const selectedLog = rows.find((r) => r.uuid === documentLogUuid)
 
   return (
-    <div className='flex flex-grow min-h-0 flex-col w-full p-6 gap-2 min-w-0'>
-      {!rows.length && (
-        <DocumentLogBlankSlate
-          commit={commit}
-          projectId={projectId}
-          documentUuid={documentUuid}
-        />
-      )}
-      {!!rows.length && (
-        <TableWithHeader
-          title='Logs'
-          table={<DocumentLogs documentLogs={rows} selectedLog={selectedLog} />}
-          actions={
-            <Link
-              href={
-                ROUTES.projects
-                  .detail({ id: projectId })
-                  .commits.detail({ uuid: commit.uuid })
-                  .documents.detail({ uuid: documentUuid }).logs.upload
-              }
-            >
-              <Button fancy variant='outline'>
-                Upload logs
-              </Button>
-            </Link>
-          }
-        />
-      )}
-    </div>
+    <DocumentLogsPage
+      documentLogs={rows}
+      selectedLog={selectedLog}
+      originalSelectedCommitsIds={originalSelectedCommitsIds}
+      documengLogFilterOptions={logsFilterOptions}
+    />
   )
 }

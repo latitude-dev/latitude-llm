@@ -1,5 +1,7 @@
-import { DocumentLog } from '@latitude-data/core/browser'
-import { compactObject } from '@latitude-data/core/lib/compactObject'
+import {
+  DocumentLog,
+  DocumentLogFilterOptions,
+} from '@latitude-data/core/browser'
 import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
@@ -10,19 +12,19 @@ const EMPTY_ARRAY: [] = []
 type LogResult<T extends MaybeBoolean> = T extends true
   ? DocumentLog
   : DocumentLogWithMetadataAndError
-export default function useDocumentLogs<T extends MaybeBoolean = false>(
+export default function useDocumentLogs<T extends MaybeBoolean = boolean>(
   {
-    documentUuid,
-    commitUuid,
     projectId,
+    documentUuid,
+    filterOptions,
     page,
     pageSize,
     onFetched,
     excludeErrors = false,
   }: {
-    documentUuid?: string
-    commitUuid: string
     projectId: number
+    documentUuid?: string
+    filterOptions: DocumentLogFilterOptions
     page: string | null | undefined
     pageSize: string | null
     onFetched?: (logs: LogResult<T>[]) => void
@@ -34,16 +36,16 @@ export default function useDocumentLogs<T extends MaybeBoolean = false>(
     documentUuid
       ? ROUTES.api.projects
           .detail(projectId)
-          .commits.detail(commitUuid)
-          .documents.detail(documentUuid).documentLogs.root
+          .documents.detail(documentUuid)
+          .logs.root({
+            page: page ? Number(page) : undefined,
+            pageSize: pageSize ? Number(pageSize) : undefined,
+            excludeErrors,
+            filterOptions,
+          })
       : undefined,
     {
       serializer: (rows) => rows.map(documentLogPresenter),
-      searchParams: compactObject({
-        page: page ? String(page) : undefined,
-        pageSize: pageSize ? String(pageSize) : undefined,
-        excludeErrors: excludeErrors ? 'true' : undefined,
-      }) as Record<string, string>,
     },
   )
 
@@ -52,7 +54,7 @@ export default function useDocumentLogs<T extends MaybeBoolean = false>(
     isLoading,
     mutate,
   } = useSWR<LogResult<T>[]>(
-    ['documentLogs', documentUuid, commitUuid, projectId, page, pageSize],
+    ['documentLogs', projectId, documentUuid, filterOptions, page, pageSize],
     fetcher,
     {
       fallbackData,
