@@ -13,7 +13,7 @@ serve(
     serverOptions: {
       keepAliveTimeout: process.env.KEEP_ALIVE_TIMEOUT
         ? Number(process.env.KEEP_ALIVE_TIMEOUT)
-        : 121000,
+        : 601000,
     },
   },
   (info) => {
