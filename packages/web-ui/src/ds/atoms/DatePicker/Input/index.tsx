@@ -5,6 +5,7 @@ import { InputDate, type DateInputProps } from '../../InputDate'
 import { SelectOption } from '../../Select'
 import { RelativeOptionsTrigger } from '../RelativeOptions/Trigger'
 import { DatePickerType } from '../index'
+import { SelectGenericTrigger } from '../../SelectGenericTrigger'
 
 export type Props = {
   name: string
@@ -46,10 +47,8 @@ export default function DatePickerInput({
       />
     )
   }
-  return (
-    <RelativeOptionsTrigger
-      selected={options.find((option) => option.value === relativeValue)}
-      size={size}
-    />
-  )
+
+  const selectedValue = options.find((option) => option.value === relativeValue)
+  const label = selectedValue?.label ?? 'Select a relative date'
+  return <SelectGenericTrigger>{label}</SelectGenericTrigger>
 }

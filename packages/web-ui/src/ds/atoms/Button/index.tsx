@@ -131,6 +131,7 @@ export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> &
     iconProps?: ButtonIconProps
     fullWidth?: boolean
     asChild?: boolean
+    htmlTag?: string
     isLoading?: boolean
     fancy?: boolean
     lookDisabled?: boolean
@@ -155,11 +156,12 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
     lookDisabled,
     ellipsis,
     indicator,
+    htmlTag = 'button',
     ...props
   },
   ref,
 ) {
-  const Comp = asChild ? Slot : 'button'
+  const Comp = asChild ? Slot : htmlTag
 
   if (!children && !iconProps) {
     throw new Error('Button must have children or iconProps')
@@ -170,6 +172,8 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
 
   return (
     <Comp
+      ref={ref}
+      // @ts-expect-error - It can be another thing other than button
       disabled={disabled || isLoading}
       className={cn(
         'group relative',
@@ -182,7 +186,6 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
           'animate-pulse': isLoading,
         },
       )}
-      ref={ref}
       {...props}
     >
       <Slottable>

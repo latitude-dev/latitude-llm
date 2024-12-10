@@ -6,9 +6,9 @@ import { DateValue, useDatePicker } from '@react-aria/datepicker'
 import { InputProps as GenericInputProps } from '../Input'
 import { SelectOption } from '../Select'
 import { useDatePickerState } from '@react-stately/datepicker'
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
-import { safeParseDate, safeParseValue } from './utils'
+import { RELATIVE_DATES_OPTIONS, safeParseDate, safeParseValue } from './utils'
 import DatePickerInput, { Props as InputProps } from './Input'
 import { DateTypePicker } from './DateTypePicker'
 import Content from './Content'
@@ -41,14 +41,15 @@ export function DatePicker({
   name,
   onChange,
   onOpenChange,
-  onTypeChange,
-  options = [],
+  onTypeChange: onTypeChangeProp,
+  options = RELATIVE_DATES_OPTIONS,
   relativeValue,
   size = 'normal',
   value: inputValue,
-  type = DatePickerType.absolute,
+  type: initialType = DatePickerType.absolute,
 }: Props) {
   const ref = useRef<HTMLDivElement>(null)
+  const [type, setType] = useState(initialType)
   const [value, setValue] = useState(safeParseValue(inputValue))
   const [relative, setRelative] = useState(relativeValue)
   const state = useDatePickerState({ value })
@@ -98,9 +99,13 @@ export function DatePicker({
       commitRelativeChange(relative)
     }
   }
-
-  console.log('DATE_PICKER_IS_OPEN', state.isOpen)
-
+  const onTypeChange = useCallback(
+    (newType: DatePickerType) => {
+      setType(newType)
+      onTypeChangeProp?.(newType)
+    },
+    [onTypeChangeProp],
+  )
   return (
     <Popover.Root
       open={state.isOpen}
@@ -115,12 +120,12 @@ export function DatePicker({
         state.setOpen(newOpen)
       }}
     >
-      <Popover.Trigger asChild>
-        <div
-          ref={ref}
-          className='flex flex-row items-center gap-x-2 bg-backgroundCode rounded-md'
-        >
-          <DateTypePicker ref={ref} type={type} onTypeChange={onTypeChange}>
+      <DateTypePicker
+        ref={ref}
+        type={type}
+        onTypeChange={onTypeChange}
+        input={
+          <Popover.Trigger>
             <DatePickerInput
               {...inputProps}
               isOpen={state.isOpen}
@@ -128,10 +133,15 @@ export function DatePicker({
                 commitChange()
               }}
             />
-          </DateTypePicker>
-        </div>
-      </Popover.Trigger>
-      <Popover.Content align='end' scrollable={false} avoidCollisions={false}>
+          </Popover.Trigger>
+        }
+      />
+      <Popover.Content
+        align='start'
+        scrollable={false}
+        avoidCollisions={false}
+        sideOffset={type === DatePickerType.absolute ? 4 : 1}
+      >
         <Content
           maxWidth={maxWidth}
           options={options}

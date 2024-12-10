@@ -93,6 +93,9 @@ export function DocumentLogFilters({
     [],
   )
 
+  const onTypeChange = useCallback((_type: string) => {
+    // console.log('TYPE', type)
+  }, [])
   return (
     <>
       <DatePicker
@@ -100,9 +103,7 @@ export function DocumentLogFilters({
         onChange={(value) => {
           console.log('VAL', value)
         }}
-        onTypeChange={(type) => {
-          console.log('TYPE', type)
-        }}
+        onTypeChange={onTypeChange}
       />
       <CommitFilter
         selectedCommitsIds={documentLogFilterOptions.commitIds}

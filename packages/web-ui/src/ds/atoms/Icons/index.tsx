@@ -55,6 +55,7 @@ import {
   Trash,
   Twitter,
   Undo,
+  ZapIcon,
 } from 'lucide-react'
 
 import { cn } from '../../../lib/utils'
@@ -120,6 +121,7 @@ const Icons = {
   notEqual: EqualNotIcon,
   settings: SettingsIcon,
   paperclip: Paperclip,
+  flash: ZapIcon,
 }
 
 export type IconName = keyof typeof Icons

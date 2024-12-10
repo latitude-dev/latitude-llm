@@ -31,7 +31,7 @@ export function RelativeOptionsTrigger({
     className,
     hideNativeAppearance,
   })
-  const text = selected?.label || placeholder || '---'
+  const text = selected?.label || placeholder || 'Select a relative option'
   return (
     <FormField label={label} errors={errors}>
       <div className={cn(styles, 'pr-8')}>

@@ -2,6 +2,23 @@ import { DateValue } from '@react-aria/datepicker'
 import { parseDate } from '@internationalized/date'
 import { format, parseISO, isDate } from 'date-fns'
 import { toZonedTime } from 'date-fns-tz'
+import { SelectOption } from '../Select'
+import { RelativeDate } from '@latitude-data/core/browser'
+
+export const RELATIVE_DATES_OPTIONS: SelectOption<RelativeDate>[] = [
+  { value: 'current_week', label: 'Current week' },
+  { value: 'current_month', label: 'Current month' },
+  { value: 'current_year', label: 'Current year' },
+  { value: 'last_week', label: 'Last week' },
+  { value: 'last_month', label: 'Last month' },
+  { value: 'last_3_days', label: 'Last 3 days' },
+  { value: 'last_7_days', label: 'Last 7 days' },
+  { value: 'last_14_days', label: 'Last 14 days' },
+  { value: 'last_30_days', label: 'Last 30 days' },
+  { value: 'last_60_days', label: 'Last 60 days' },
+  { value: 'last_90_days', label: 'Last 90 days' },
+  { value: 'last_12_months', label: 'Last 12 months' },
+]
 
 export function safeParseValue(
   value: string | undefined,

@@ -8,14 +8,15 @@ import {
   SelectContentInner,
   SelectGroup,
   SelectItem,
+  SelectPrimitiveContent,
   SelectRoot,
   SelectTrigger,
   SelectValue,
 } from './Primitives'
 
-export type SelectOption = {
+export type SelectOption<V extends unknown = unknown> = {
   label: string
-  value: unknown
+  value: V
   icon?: ReactNode
 }
 
@@ -114,7 +115,9 @@ export function StandaloneSelectContent({
   value,
   defaultValue,
   onChange,
+  open = true,
 }: {
+  open?: boolean
   name?: string
   required?: boolean
   disabled?: boolean
@@ -125,6 +128,7 @@ export function StandaloneSelectContent({
 }) {
   return (
     <SelectRoot
+      open={open}
       name={name}
       required={required}
       disabled={disabled}
@@ -132,11 +136,14 @@ export function StandaloneSelectContent({
       defaultValue={defaultValue}
       onValueChange={onChange}
     >
-      <SelectContentInner>
+      <SelectPrimitiveContent position='item-aligned'
+        className='max-h-96 text-popover-foreground bg-popover !block'
+        style={{ display: 'block !important' }}
+      >
         <SelectGroup>
           <Options options={options} />
         </SelectGroup>
-      </SelectContentInner>
+      </SelectPrimitiveContent>
     </SelectRoot>
   )
 }

@@ -39,8 +39,10 @@ export default function Content<T extends DateValue>({
 
   return (
     <StandaloneSelectContent
+      open
       options={options}
       value={relativeValue}
+      defaultValue={relativeValue}
       onChange={onChangeOption}
     />
   )
