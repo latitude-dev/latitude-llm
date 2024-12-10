@@ -1,3 +1,5 @@
+'use client'
+
 import { forwardRef } from 'react'
 import { capitalize } from 'lodash-es'
 
@@ -138,7 +140,8 @@ export const DocumentLogsTable = forwardRef<HTMLTableElement, Props>(
         page,
         pageSize,
       })
-    const queryParams = window.location.search
+    const queryParams =
+      typeof window !== 'undefined' ? window.location.search : ''
     return (
       <Table
         ref={ref}
