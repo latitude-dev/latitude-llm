@@ -41,6 +41,7 @@ type UseStylesProps = InputVariants & {
   className?: string
   hideNativeAppearance?: boolean
   hidden?: boolean
+  forceFocusVisible?: boolean
 }
 
 export function useInputStyles({
@@ -49,11 +50,15 @@ export function useInputStyles({
   hidden,
   className,
   hideNativeAppearance = false,
+  forceFocusVisible = false,
 }: UseStylesProps) {
   return cn(inputVariants({ size }), className, {
     'border-red-500 focus-visible:ring-red-500': errors,
     hidden,
     'appearance-none': hideNativeAppearance,
+    'outline-none ring-ring ring-2': forceFocusVisible,
+    'ring-offset-2': size === 'normal' && forceFocusVisible,
+    'ring-offset-1': size === 'small' && forceFocusVisible,
   })
 }
 

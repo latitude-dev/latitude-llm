@@ -14,6 +14,7 @@ import { colors } from '../../tokens/colors'
 import { cn } from '../../../lib/utils'
 import { FormField, FormFieldProps } from '../FormField'
 import { safeParseDate } from '../DatePicker/utils'
+import { Icon } from '../Icons'
 
 // Load only atm Gregorian calendar to reduce bundle size
 // https://react-spectrum.adobe.com/react-aria/useDateField.html#reducing-bundle-size
@@ -62,7 +63,10 @@ function DateSegmentItem({ segment, state, onSegmentEnter }: SegmentProps) {
   )
 }
 
-export type DateInputProps = Omit<DateFieldStateOptions<DateValue>, 'createCalendar'> &
+export type DateInputProps = Omit<
+  DateFieldStateOptions<DateValue>,
+  'createCalendar'
+> &
   InputVariants &
   Omit<FormFieldProps, 'children'> & {
     hideNativeAppearance?: boolean
@@ -74,6 +78,8 @@ export type DateInputProps = Omit<DateFieldStateOptions<DateValue>, 'createCalen
     inputSize?: InputProps['size']
     maxGranularity?: 'year' | 'month'
     onEnter?: () => void
+    isOpen?: boolean
+    standalone?: boolean
   }
 
 export function InputDate({
@@ -88,6 +94,8 @@ export function InputDate({
   label,
   info,
   description,
+  isOpen,
+  standalone = false,
   ...rest
 }: DateInputProps) {
   const ref = useRef<HTMLDivElement>(null)
@@ -112,6 +120,7 @@ export function InputDate({
     hidden: rest.hidden,
     className,
     hideNativeAppearance,
+    forceFocusVisible: isOpen,
   })
   const state = useDateFieldState({
     locale,
@@ -125,6 +134,7 @@ export function InputDate({
     state,
     ref,
   )
+
   return (
     <FormField
       label={label}
@@ -133,25 +143,32 @@ export function InputDate({
       errors={errors}
       errorStyle={errorStyle}
     >
-      <div
-        ref={ref}
-        {...fieldProps}
-        className={cn(
-          styles,
-          'w-full focus:z-10 focus-within:z-10 focus-visible:outline-0',
-        )}
-      >
-        <ul className='flex space-x-0.5 overflow-hidden'>
-          {state.segments.map((segment, i) => (
-            <li key={i}>
-              <DateSegmentItem
-                segment={segment}
-                state={state}
-                onSegmentEnter={() => onEnter?.()}
-              />
-            </li>
-          ))}
-        </ul>
+      <div className={cn(styles, 'flex flex-row items-center gap-x-2')}>
+        <div
+          ref={ref}
+          {...fieldProps}
+          className='w-full focus:z-10 focus-within:z-10 focus-visible:outline-0'
+        >
+          <ul className='flex space-x-0.5 overflow-hidden'>
+            {state.segments.map((segment, i) => (
+              <li key={i}>
+                <DateSegmentItem
+                  segment={segment}
+                  state={state}
+                  onSegmentEnter={() => onEnter?.()}
+                />
+              </li>
+            ))}
+          </ul>
+        </div>
+        {!standalone ? (
+          <Icon
+            name='calendar'
+            size='normal'
+            color={isOpen ? 'primary dark:foreground' : 'foregroundMuted'}
+            className='cursor-pointer flex-none'
+          />
+        ) : null}
       </div>
     </FormField>
   )

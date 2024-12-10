@@ -16,9 +16,11 @@ export type Props = {
   onChange: DateInputProps['onChange']
   autoFocus?: boolean
   onEnter?: () => void
+  isOpen?: boolean | undefined
 }
 
 export default function DatePickerInput({
+  isOpen,
   size,
   type,
   name,
@@ -31,9 +33,11 @@ export default function DatePickerInput({
 }: Props) {
   const { locale } = useLocale()
 
+  console.log("IS_OPEN_INPIUT", isOpen)
   if (type === DatePickerType.absolute) {
     return (
       <InputDate
+        isOpen={isOpen}
         locale={locale}
         autoFocus={autoFocus}
         inputSize={size}

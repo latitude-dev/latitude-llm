@@ -13,7 +13,6 @@ type Props<T extends DateValue> = {
   relativeValue: string | undefined
   onChangeCalendar: (value: DateValue) => void
   onChangeOption: (value: string) => void
-  onEscape: () => void
   maxWidth?: number
 }
 

@@ -23,7 +23,6 @@ export function RelativeOptionsTrigger({
   errors,
   label,
   hidden,
-  description,
 }: Props) {
   const styles = useInputStyles({
     size: inputSize,
@@ -34,7 +33,7 @@ export function RelativeOptionsTrigger({
   })
   const text = selected?.label || placeholder || '---'
   return (
-    <FormField label={label} description={description} errors={errors}>
+    <FormField label={label} errors={errors}>
       <div className={cn(styles, 'pr-8')}>
         <div
           className={cn(
