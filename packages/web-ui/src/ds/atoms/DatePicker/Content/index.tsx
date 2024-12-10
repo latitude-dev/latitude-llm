@@ -3,16 +3,55 @@ import { CalendarProps } from '@react-aria/calendar'
 
 import { Calendar } from '../../Calendar'
 import { DatePickerType } from '../index'
-import { SelectOption, StandaloneSelectContent } from '../../Select'
+import { SelectOption } from '../../Select'
+import { useSelectItemStyles } from '../../Select/Primitives'
+import { useCallback } from 'react'
 
-type Props<T extends DateValue> = {
-  calendarProps: CalendarProps<T>
+function RelativeOptionItem({
+  value,
+  label,
+  onClick,
+}: {
+  label: string
+  value: unknown
+  onClick: (value: string) => void
+}) {
+  const styles = useSelectItemStyles()
+  const onClickItem = useCallback(() => {
+    onClick(String(value))
+  }, [onClick, value])
+  return (
+    <button onClick={onClickItem} className={styles}>
+      {label}
+    </button>
+  )
+}
+
+type RelativeProps = {
   options: SelectOption[]
+  onChangeOption: (value: string) => void
+  relativeValue: string | undefined
+}
+function RelativeOptions({ options, onChangeOption }: RelativeProps) {
+  return (
+    <ul className='max-h-80 w-72 custom-scrollbar'>
+      {options.map((option) => (
+        <RelativeOptionItem
+          key={option.value?.toString()}
+          value={option.value}
+          label={option.label}
+          onClick={onChangeOption}
+        />
+      ))}
+    </ul>
+  )
+}
+
+type Props<T extends DateValue> = RelativeProps & {
+  calendarProps: CalendarProps<T>
   type: DatePickerType
   name: string
-  relativeValue: string | undefined
   onChangeCalendar: (value: DateValue) => void
-  onChangeOption: (value: string) => void
   maxWidth?: number
 }
 
@@ -38,12 +77,10 @@ export default function Content<T extends DateValue>({
   }
 
   return (
-    <StandaloneSelectContent
-      open
+    <RelativeOptions
       options={options}
-      value={relativeValue}
-      defaultValue={relativeValue}
-      onChange={onChangeOption}
+      onChangeOption={onChangeOption}
+      relativeValue={relativeValue}
     />
   )
 }

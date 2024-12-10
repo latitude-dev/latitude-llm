@@ -5,10 +5,8 @@ import { ReactNode, useEffect, useState } from 'react'
 import { FormField, type FormFieldProps } from '../FormField'
 import {
   SelectContent,
-  SelectContentInner,
   SelectGroup,
   SelectItem,
-  SelectPrimitiveContent,
   SelectRoot,
   SelectTrigger,
   SelectValue,
@@ -104,46 +102,5 @@ export function Select({
         </SelectRoot>
       </div>
     </FormField>
-  )
-}
-
-export function StandaloneSelectContent({
-  name,
-  options,
-  required,
-  disabled,
-  value,
-  defaultValue,
-  onChange,
-  open = true,
-}: {
-  open?: boolean
-  name?: string
-  required?: boolean
-  disabled?: boolean
-  options: SelectOption[]
-  defaultValue?: string
-  value?: string
-  onChange?: (value: string) => void
-}) {
-  return (
-    <SelectRoot
-      open={open}
-      name={name}
-      required={required}
-      disabled={disabled}
-      value={value}
-      defaultValue={defaultValue}
-      onValueChange={onChange}
-    >
-      <SelectPrimitiveContent position='item-aligned'
-        className='max-h-96 text-popover-foreground bg-popover !block'
-        style={{ display: 'block !important' }}
-      >
-        <SelectGroup>
-          <Options options={options} />
-        </SelectGroup>
-      </SelectPrimitiveContent>
-    </SelectRoot>
   )
 }
