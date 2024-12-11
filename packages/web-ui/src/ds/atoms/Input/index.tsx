@@ -29,11 +29,39 @@ const inputVariants = cva(cn(INPUT_BASE_CLASSES), {
   },
 })
 
+export type InputVariants = VariantProps<typeof inputVariants>
 export type InputProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'size'> &
-  VariantProps<typeof inputVariants> &
+  InputVariants &
   Omit<FormFieldProps, 'children'> & {
     hideNativeAppearance?: boolean
   }
+
+type UseStylesProps = InputVariants & {
+  errors: FormFieldProps['errors']
+  className?: string
+  hideNativeAppearance?: boolean
+  hidden?: boolean
+  forceFocusVisible?: boolean
+}
+
+export function useInputStyles({
+  errors,
+  size,
+  hidden,
+  className,
+  hideNativeAppearance = false,
+  forceFocusVisible = false,
+}: UseStylesProps) {
+  return cn(inputVariants({ size }), className, {
+    'border-red-500 focus-visible:ring-red-500': errors,
+    hidden,
+    'appearance-none': hideNativeAppearance,
+    'outline-none ring-ring ring-2': forceFocusVisible,
+    'ring-offset-2': size === 'normal' && forceFocusVisible,
+    'ring-offset-1': size === 'small' && forceFocusVisible,
+  })
+}
+
 const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
   {
     className,
@@ -49,17 +77,15 @@ const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
   },
   ref,
 ) {
+  const styles = useInputStyles({
+    errors,
+    size,
+    className,
+    hideNativeAppearance,
+  })
+
   const inputComp = (
-    <input
-      ref={ref}
-      type={type}
-      className={cn(inputVariants({ size }), className, {
-        'border-red-500 focus-visible:ring-red-500': errors,
-        hidden: !!props.hidden,
-        'appearance-none': hideNativeAppearance,
-      })}
-      {...props}
-    />
+    <input ref={ref} type={type} className={styles} {...props} />
   )
 
   if (props.hidden) return inputComp

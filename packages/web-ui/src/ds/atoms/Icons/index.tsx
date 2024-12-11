@@ -2,6 +2,7 @@ import {
   ArrowLeft,
   ArrowRightIcon,
   BarChart4,
+  CalendarIcon,
   CheckCircle2,
   CheckIcon,
   ChevronDown,
@@ -54,6 +55,7 @@ import {
   Trash,
   Twitter,
   Undo,
+  ZapIcon,
 } from 'lucide-react'
 
 import { cn } from '../../../lib/utils'
@@ -67,6 +69,7 @@ const Icons = {
   arrowLeft: ArrowLeft,
   arrowRight: ArrowRightIcon,
   barChart4: BarChart4,
+  calendar: CalendarIcon,
   check: CheckCircle2,
   checkClean: CheckIcon,
   chevronUp: ChevronUp,
@@ -118,6 +121,7 @@ const Icons = {
   notEqual: EqualNotIcon,
   settings: SettingsIcon,
   paperclip: Paperclip,
+  flash: ZapIcon,
 }
 
 export type IconName = keyof typeof Icons

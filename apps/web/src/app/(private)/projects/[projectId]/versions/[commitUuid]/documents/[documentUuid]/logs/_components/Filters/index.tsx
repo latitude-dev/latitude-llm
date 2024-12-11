@@ -9,7 +9,7 @@ import { usePathname, useRouter } from 'next/navigation'
 
 import { CommitFilter } from './CommitFilter'
 import { LogSourceFilter } from './LogSourceFilter'
-import { ReactStateDispatch } from '@latitude-data/web-ui'
+import { ReactStateDispatch, DatePicker } from '@latitude-data/web-ui'
 
 function useEditableSearchParams() {
   const router = useRouter()
@@ -93,8 +93,18 @@ export function DocumentLogFilters({
     [],
   )
 
+  const onTypeChange = useCallback((_type: string) => {
+    // console.log('TYPE', type)
+  }, [])
   return (
     <>
+      <DatePicker
+        name='createdAt'
+        onChange={(value) => {
+          console.log('VAL', value)
+        }}
+        onTypeChange={onTypeChange}
+      />
       <CommitFilter
         selectedCommitsIds={documentLogFilterOptions.commitIds}
         setSelectedCommitsIds={setSelectedCommitsIds}

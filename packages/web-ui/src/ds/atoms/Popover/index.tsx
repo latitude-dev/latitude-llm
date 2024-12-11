@@ -1,14 +1,13 @@
 'use client'
 
-import { isString } from 'lodash-es'
 import { forwardRef, ReactNode, Ref } from 'react'
 import * as RadixPopover from '@radix-ui/react-popover'
 
 import { cn } from '../../../lib/utils'
-import { Button, ButtonProps } from '../Button'
-import { Icon, IconProps } from '../Icons'
+import { ButtonProps } from '../Button'
+import { IconProps } from '../Icons'
 import { TextColor } from '../../tokens'
-import Text from '../Text'
+import { SelectGenericTrigger } from '../SelectGenericTrigger'
 
 type Props = RadixPopover.PopoverContentProps & {
   inPortal?: boolean
@@ -67,26 +66,17 @@ export const ButtonTrigger = ({
   color?: TextColor
   ref?: Ref<HTMLButtonElement>
 }) => {
-  const iconName = iconProps?.name ?? 'chevronsUpDown'
-  const iconColor = iconProps?.color ?? 'foregroundMuted'
   return (
-    <Popover.Trigger ref={ref} asChild>
-      <Button variant={buttonVariant} ellipsis className={cn(className)}>
-        <div className='flex flex-row justify-between items-center w-full gap-x-2'>
-          {isString(children) ? (
-            <Text.H5 color={color} noWrap ellipsis>
-              {children}
-            </Text.H5>
-          ) : (
-            children
-          )}
-          {showIcon ? (
-            <div className='flex-none'>
-              <Icon name={iconName} color={iconColor} />
-            </div>
-          ) : null}
-        </div>
-      </Button>
+    <Popover.Trigger ref={ref}>
+      <SelectGenericTrigger
+        ref={ref}
+        color={color}
+        showIcon={showIcon}
+        buttonVariant={buttonVariant}
+        className={className}
+        iconProps={iconProps}
+        label={children}
+      />
     </Popover.Trigger>
   )
 }
