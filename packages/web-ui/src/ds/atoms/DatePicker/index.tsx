@@ -1,158 +1,64 @@
 'use client'
 
+import { useState } from 'react'
+import { addDays, format } from 'date-fns'
+
+import { cn } from '../../../lib/utils'
+import { Button } from '../Button'
+import { Calendar } from './Primitives'
 import { Popover } from '../Popover'
-import { CalendarDate } from '@internationalized/date'
-import { DateValue, useDatePicker } from '@react-aria/datepicker'
-import { InputProps as GenericInputProps } from '../Input'
-import { SelectOption } from '../Select'
-import { useDatePickerState } from '@react-stately/datepicker'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { Select, SelectOption } from '../Select'
+import { RELATIVE_DATES_OPTIONS } from './utils'
+import { DateRange } from 'react-day-picker'
+import { Icon } from '../Icons'
+import { usePresets } from './usePresets'
 
-import { RELATIVE_DATES_OPTIONS, safeParseDate, safeParseValue } from './utils'
-import DatePickerInput, { Props as InputProps } from './Input'
-import { DateTypePicker } from './DateTypePicker'
-import Content from './Content'
+export type DatePickerMode = 'single' | 'range'
+export function DatePicker({ presets }: { presets?: SelectOption[]; mode: DatePickerMode }) {
+  const { options } = usePresets({ mode: 'range' })
+  const [date, setDate] = useState<DateRange | undefined>({
+    from: new Date(2022, 0, 20),
+    to: addDays(new Date(2022, 0, 20), 20),
+  })
 
-export const DATE_PICKER_POPOVER_STYLES =
-  'outline-none flex flex-col gap-2 p-2 bg-white rounded-2xl shadow-2p animate-slideDownAndFade'
-export const TRIGGER_STYLES = 'w-0 flex-1 focus-visible:outline-0'
-
-type Props = {
-  options?: SelectOption[]
-  name: string
-  value?: string
-  relativeValue?: string
-  onChange: (value: string) => void
-  onTypeChange?: (type: DatePickerType) => void
-  size?: GenericInputProps['size']
-  type?: DatePickerType
-  onOpenChange?: (open: boolean) => void
-  maxWidth?: number
-}
-
-export const CALENDAR_WIDTH = 220
-export enum DatePickerType {
-  absolute = 'absolute_date',
-  relative = 'relative_date',
-}
-
-export function DatePicker({
-  maxWidth,
-  name,
-  onChange,
-  onOpenChange,
-  onTypeChange: onTypeChangeProp,
-  options = RELATIVE_DATES_OPTIONS,
-  relativeValue,
-  size = 'normal',
-  value: inputValue,
-  type: initialType = DatePickerType.relative,
-}: Props) {
-  const ref = useRef<HTMLDivElement>(null)
-  const [type, setType] = useState(initialType)
-  const [value, setValue] = useState(safeParseValue(inputValue))
-  const [relative, setRelative] = useState(relativeValue)
-  const state = useDatePickerState({ value })
-  const { calendarProps, fieldProps } = useDatePicker(
-    { 'aria-label': name },
-    state,
-    ref,
-  )
-  useEffect(() => {
-    if (relative === relativeValue) return
-
-    setRelative(relativeValue)
-  }, [relativeValue, relative])
-  const inputProps: InputProps = {
-    ...fieldProps,
-    size,
-    name,
-    type,
-    value,
-    relativeValue: relative,
-    options,
-    onChange: (date: DateValue | null) => {
-      setValue(date as CalendarDate)
-    },
-  }
-  const commitDateChange = (date: DateValue) => {
-    setValue(date)
-    const parsed = safeParseDate(date)
-
-    if (!parsed) return
-    onChange(parsed)
-  }
-  const commitRelativeChange = (value: string) => {
-    setRelative(value)
-    onChange(value)
-  }
-  const onChangeCalendar = (date: DateValue) => {
-    commitDateChange(date)
-  }
-  const onChangeOption = (value: string) => {
-    commitRelativeChange(value)
-  }
-  const commitChange = () => {
-    if (type === DatePickerType.absolute && value) {
-      commitDateChange(value)
-    } else if (type === DatePickerType.relative && relative) {
-      commitRelativeChange(relative)
-    }
-  }
-  const onTypeChange = useCallback(
-    (newType: DatePickerType) => {
-      console.log("NEW_TYPE", newType)
-      setType(newType)
-      onTypeChangeProp?.(newType)
-    },
-    [onTypeChangeProp],
-  )
   return (
-    <Popover.Root
-      open={state.isOpen}
-      onOpenChange={(newOpen: boolean) => {
-        // When closing the popover we call `onChange` prop so the user
-        // of this DatePicker receive final date picked by the person
-        if (!newOpen) {
-          commitChange()
-        }
+    <Popover.Root>
+      <Popover.Trigger asChild>
+        <Button
+          variant={'outline'}
+          className={cn(
+            'w-[240px] justify-start text-left font-normal',
+            !date && 'text-muted-foreground',
+          )}
+        >
+          <Icon name='calendar' />
 
-        onOpenChange?.(newOpen)
-        state.setOpen(newOpen)
-      }}
-    >
-      <DateTypePicker
-        ref={ref}
-        type={type}
-        onTypeChange={onTypeChange}
-        input={
-          <Popover.Trigger>
-            <DatePickerInput
-              {...inputProps}
-              isOpen={state.isOpen}
-              onEnter={() => {
-                commitChange()
-              }}
-            />
-          </Popover.Trigger>
-        }
-      />
+          {date?.from ? (
+            date.to ? (
+              <>
+                {format(date.from, 'LLL dd, y')} -{' '}
+                {format(date.to, 'LLL dd, y')}
+              </>
+            ) : (
+              format(date.from, 'LLL dd, y')
+            )
+          ) : (
+            <span>Pick a date</span>
+          )}
+        </Button>
+      </Popover.Trigger>
       <Popover.Content
         align='start'
-        scrollable={false}
-        avoidCollisions={false}
-        sideOffset={type === DatePickerType.absolute ? 4 : 1}
+        className='flex w-auto flex-col space-y-2 p-2'
       >
-        <Content
-          maxWidth={maxWidth}
-          options={options}
-          calendarProps={calendarProps}
-          type={type}
-          name={name}
-          onChangeCalendar={onChangeCalendar}
-          onChangeOption={onChangeOption}
-          relativeValue={relative}
+        <Select
+          name='date-preset'
+          onChange={(value) => setDate(addDays(new Date(), parseInt(value)))}
+          options={presets ?? RELATIVE_DATES_OPTIONS}
         />
+        <div className='rounded-md border'>
+          <Calendar mode='range' selected={date} onSelect={setDate} />
+        </div>
       </Popover.Content>
     </Popover.Root>
   )
