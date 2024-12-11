@@ -214,7 +214,7 @@ export function SearchBox({ onSearch }: SearchBoxProps) {
             >
               {search.column.label} {search.operator.label} {search.value}
               <Button variant='nope' onClick={() => removeSearch(index)}>
-                <Icon name='x' size='small' color='primary' />
+                <Icon name='close' size='small' color='primary' />
               </Button>
             </Badge>
           ))}

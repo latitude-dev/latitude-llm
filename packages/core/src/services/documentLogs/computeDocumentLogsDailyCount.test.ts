@@ -97,6 +97,7 @@ describe('computeDocumentLogsDailyCount', () => {
       filterOptions: {
         commitIds: [commit.id],
         logSources: LOG_SOURCES,
+        createdAt: undefined,
       },
       days: 3,
     })
@@ -139,6 +140,7 @@ describe('computeDocumentLogsDailyCount', () => {
       filterOptions: {
         commitIds: [commit.id],
         logSources: LOG_SOURCES,
+        createdAt: undefined,
       },
     })
 
@@ -166,6 +168,7 @@ describe('computeDocumentLogsDailyCount', () => {
       filterOptions: {
         commitIds: [commit.id],
         logSources: LOG_SOURCES,
+        createdAt: undefined,
       },
     })
 
@@ -194,6 +197,7 @@ describe('computeDocumentLogsDailyCount', () => {
       filterOptions: {
         commitIds: [commit.id],
         logSources: LOG_SOURCES,
+        createdAt: undefined,
       },
       days: 30,
     })

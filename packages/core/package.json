@@ -148,6 +148,7 @@
     "zod": "^3.23.8"
   },
   "dependencies": {
-    "@latitude-data/promptl": "^0.3.2"
+    "@latitude-data/promptl": "^0.3.2",
+    "date-fns": "^3.6.0"
   }
 }

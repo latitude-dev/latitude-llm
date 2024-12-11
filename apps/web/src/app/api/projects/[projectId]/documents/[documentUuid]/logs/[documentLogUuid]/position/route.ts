@@ -1,9 +1,9 @@
-import { LogSources, Workspace } from '@latitude-data/core/browser'
+import { Workspace } from '@latitude-data/core/browser'
 import { fetchDocumentLogWithPosition } from '@latitude-data/core/services/documentLogs/fetchDocumentLogWithPosition'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'
-import { decodeParameters } from '$/services/helpers'
+import { parseApiDocumentLogParams } from '@latitude-data/core/services/documentLogs/index'
 
 export const GET = errorHandler(
   authHandler(
@@ -23,20 +23,12 @@ export const GET = errorHandler(
       },
     ) => {
       const searchParams = req.nextUrl.searchParams
-      const excludeErrors = searchParams.get('excludeErrors') === 'true'
-      const { commitIds, logSources } = decodeParameters(req.nextUrl.search)
-      const filterOptions = {
-        commitIds: Array.isArray(commitIds) ? commitIds.map(Number) : [],
-        logSources: (Array.isArray(logSources)
-          ? logSources
-          : []) as LogSources[],
-      }
-
+      const queryParams = parseApiDocumentLogParams({ searchParams })
       const result = await fetchDocumentLogWithPosition({
         workspace,
-        filterOptions,
         documentLogUuid,
-        excludeErrors,
+        filterOptions: queryParams.filterOptions,
+        excludeErrors: queryParams.excludeErrors,
       })
 
       if (result.error) {

@@ -30,7 +30,7 @@ import { useSearchParams } from 'next/navigation'
 import { DocumentLogWithMetadataAndErrorAndEvaluationResult } from '..'
 import { ResultCellContent } from '../../EvaluationResults/EvaluationResultsTable'
 import { useCommits } from '$/stores/commitsStore'
-import { useFilterOptions } from '$/hooks/useLogFilterOptions'
+import { useDefaultLogFilterOptions } from '$/hooks/logFilters/useDefaultLogFilterOptions'
 
 const countLabel = (selected: number) => (count: number) => {
   return selected ? `${selected} of ${count} logs selected` : `${count} logs`
@@ -69,7 +69,7 @@ export const DocumentLogsTable = forwardRef<HTMLTableElement, Props>(
     const { commit } = useCurrentCommit()
     const { document } = useCurrentDocument()
     const { data: commits } = useCommits()
-    const filterOptions = useFilterOptions()
+    const filterOptions = useDefaultLogFilterOptions()
     const { data: pagination, isLoading } = useDocumentLogsPagination({
       documentUuid: commits ? document.documentUuid : undefined,
       projectId: project.id,

@@ -1,9 +1,9 @@
-import { LogSources, Workspace } from '@latitude-data/core/browser'
+import { Workspace } from '@latitude-data/core/browser'
 import { computeDocumentLogsAggregations } from '@latitude-data/core/services/documentLogs/computeDocumentLogsAggregations'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'
-import { decodeParameters } from '$/services/helpers'
+import { parseApiDocumentLogParams } from '@latitude-data/core/services/documentLogs/index'
 
 export const GET = errorHandler(
   authHandler(
@@ -22,18 +22,12 @@ export const GET = errorHandler(
       },
     ) => {
       const { documentUuid } = params
-      const { commitIds, logSources } = decodeParameters(req.nextUrl.search)
-      const filterOptions = {
-        commitIds: Array.isArray(commitIds) ? commitIds.map(Number) : [],
-        logSources: (Array.isArray(logSources)
-          ? logSources
-          : []) as LogSources[],
-      }
-
+      const searchParams = req.nextUrl.searchParams
+      const queryParams = parseApiDocumentLogParams({ searchParams })
       const result = await computeDocumentLogsAggregations({
         workspace,
         documentUuid,
-        filterOptions,
+        filterOptions: queryParams.filterOptions,
       })
 
       return NextResponse.json(result, { status: 200 })

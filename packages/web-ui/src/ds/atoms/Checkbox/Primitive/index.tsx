@@ -43,7 +43,7 @@ const CheckboxAtom = forwardRef<
       className={cn('flex items-center justify-center text-current')}
     >
       {props.checked === 'indeterminate' && (
-        <Icon name='minus' className='relative -top-[0.3px]' />
+        <Icon name='minus' className='relative -top-[0.7px]' />
       )}
       {props.checked === true && <Icon name='checkClean' />}
     </CheckboxPrimitive.Indicator>

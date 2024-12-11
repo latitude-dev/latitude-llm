@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
+import { eq } from 'drizzle-orm'
 
 import {
   Commit,
@@ -7,6 +8,7 @@ import {
   LOG_SOURCES,
   Project,
   ProviderApiKey,
+  Providers,
   User,
   Workspace,
 } from '../../browser'
@@ -17,9 +19,21 @@ import {
   computeDocumentLogsWithMetadataCount,
   computeDocumentLogsWithMetadataQuery,
 } from './computeDocumentLogsWithMetadata'
+import { database } from '../../client'
+import { documentLogs } from '../../schema'
+import { parseSafeCreatedAtRange } from './logsFilterUtils'
+
+async function updateLogCreatedAt(date: Date, log: DocumentLog) {
+  const result = await database
+    .update(documentLogs)
+    .set({ createdAt: date })
+    .where(eq(documentLogs.id, log.id))
+    .returning()
+  return result[0]!
+}
 
 describe('getDocumentLogsWithMetadata', () => {
-  describe('logs from merged commits', () => {
+  describe('merged commits', () => {
     let workspace: Workspace
     let user: User
     let doc: DocumentVersion
@@ -89,6 +103,7 @@ describe('getDocumentLogsWithMetadata', () => {
         filterOptions: {
           commitIds: [commit.id, commit2.id],
           logSources: LOG_SOURCES,
+          createdAt: undefined,
         },
       })
 
@@ -116,12 +131,128 @@ describe('getDocumentLogsWithMetadata', () => {
         filterOptions: {
           commitIds: [commit.id, commit2.id],
           logSources: LOG_SOURCES,
+          createdAt: undefined,
         },
       })
 
       expect(result.find((l) => l.uuid === log1.uuid)).toBeDefined()
       expect(result.find((l) => l.uuid === log2.uuid)).toBeDefined()
       expect(result.find((l) => l.uuid === log3.uuid)).toBeDefined()
+    })
+
+    describe('filter logs by createdAt', () => {
+      let anotherWorkspace: Workspace
+      let anotherWorkspaceLog: DocumentLog
+      let log3: DocumentLog
+      let anotherCommit: Commit
+      let log1Before: DocumentLog
+      let log2Between: DocumentLog
+      let log3InAfter: DocumentLog
+      let anotherWorkspacelogBetween: DocumentLog
+
+      beforeEach(async () => {
+        const { workspace: anotherWp } = await factories.createWorkspace()
+        anotherWorkspace = anotherWp
+
+        const another = await factories.createProject({
+          workspace: anotherWorkspace,
+          providers: [
+            {
+              name: 'openai',
+              type: Providers.OpenAI,
+            },
+          ],
+          documents: {
+            foo: factories.helpers.createPrompt({
+              provider: 'openai',
+            }),
+          },
+        })
+        anotherCommit = another.commit
+        const { documentVersion: doc2 } = await factories.createDocumentVersion(
+          {
+            workspace,
+            user,
+            commit,
+            path: 'folder1/doc2',
+            content: factories.helpers.createPrompt({
+              provider,
+              content: 'DOC_2_VERSION_1',
+            }),
+          },
+        )
+        const { documentLog: lg3 } = await factories.createDocumentLog({
+          document: doc2,
+          commit,
+        })
+        log3 = lg3
+
+        const { documentLog: awlog } = await factories.createDocumentLog({
+          document: another.documents[0]!,
+          commit: another.commit,
+        })
+
+        anotherWorkspaceLog = awlog
+        log1Before = await updateLogCreatedAt(
+          new Date('2024-12-10T22:59:59Z'),
+          log1,
+        )
+        log2Between = await updateLogCreatedAt(
+          new Date('2024-12-10T23:00:01Z'),
+          log2,
+        )
+        anotherWorkspacelogBetween = await updateLogCreatedAt(
+          new Date('2024-12-10T23:00:01Z'),
+          anotherWorkspaceLog,
+        )
+        log3InAfter = await updateLogCreatedAt(
+          new Date('2024-12-11T23:00:01Z'),
+          log3,
+        )
+      })
+
+      it('filter logs by createdAt', async () => {
+        // We pass datetimes with timezone offset to ensure that the function
+        const createdAt = parseSafeCreatedAtRange(
+          '2024-12-11T00:00:00 01:00,2024-12-11T23:59:59 01:00',
+        )
+        const result = await computeDocumentLogsWithMetadataQuery({
+          workspaceId: workspace.id,
+          filterOptions: {
+            commitIds: [commit.id, commit2.id, anotherCommit.id],
+            logSources: LOG_SOURCES,
+            createdAt,
+          },
+        })
+
+        expect(result.length).toBe(1)
+        expect(result.find((l) => l.uuid === log1Before.uuid)).toBeUndefined()
+        expect(result.find((l) => l.uuid === log2Between.uuid)).toBeDefined()
+        expect(
+          result.find((l) => l.uuid === anotherWorkspacelogBetween.uuid),
+        ).toBeUndefined()
+        expect(result.find((l) => l.uuid === log3InAfter.uuid)).toBeUndefined()
+      })
+
+      it('filter logs by createdAt only with from', async () => {
+        const createdAt = parseSafeCreatedAtRange('2024-12-11T00:00:00 01:00')
+        const result = await computeDocumentLogsWithMetadataQuery({
+          workspaceId: workspace.id,
+          filterOptions: {
+            commitIds: [commit.id, commit2.id, anotherCommit.id],
+            logSources: LOG_SOURCES,
+            createdAt,
+          },
+        })
+
+        expect(result.length).toBe(1)
+        expect(result.find((l) => l.uuid === log1Before.uuid)).toBeUndefined()
+        expect(result.find((l) => l.uuid === log2Between.uuid)).toBeDefined()
+        expect(
+          result.find((l) => l.uuid === anotherWorkspacelogBetween.uuid),
+        ).toBeUndefined()
+        expect(result.find((l) => l.uuid === log3InAfter.uuid)).toBeUndefined()
+      })
     })
 
     it('paginate logs', async () => {
@@ -131,6 +262,7 @@ describe('getDocumentLogsWithMetadata', () => {
         filterOptions: {
           commitIds: [commit.id, commit2.id],
           logSources: LOG_SOURCES,
+          createdAt: undefined,
         },
         page: '1',
         pageSize: '1',
@@ -145,6 +277,7 @@ describe('getDocumentLogsWithMetadata', () => {
         filterOptions: {
           commitIds: [commit.id, commit2.id],
           logSources: LOG_SOURCES,
+          createdAt: undefined,
         },
       })
 
@@ -209,6 +342,7 @@ describe('getDocumentLogsWithMetadata', () => {
       filterOptions: {
         commitIds: [commit1.id, commit2.id, draft.id],
         logSources: LOG_SOURCES,
+        createdAt: undefined,
       },
     })
 
@@ -272,6 +406,7 @@ describe('getDocumentLogsWithMetadata', () => {
       filterOptions: {
         commitIds: [commit1.id, draft1.id],
         logSources: LOG_SOURCES,
+        createdAt: undefined,
       },
     })
 
@@ -307,6 +442,7 @@ describe('getDocumentLogsWithMetadata', () => {
       filterOptions: {
         commitIds: [commit.id],
         logSources: LOG_SOURCES,
+        createdAt: undefined,
       },
     })
 
@@ -343,6 +479,7 @@ describe('getDocumentLogsWithMetadata', () => {
       filterOptions: {
         commitIds: [commit.id],
         logSources: [],
+        createdAt: undefined,
       },
     })
 
@@ -382,6 +519,7 @@ describe('getDocumentLogsWithMetadata', () => {
       filterOptions: {
         commitIds: [commit0.id, commit1.id],
         logSources: LOG_SOURCES,
+        createdAt: undefined,
       },
     })
 

@@ -15,7 +15,7 @@ import {
   runErrors,
   workspaces,
 } from '../../schema'
-import { getDocumentLogFilters } from './computeDocumentLogsWithMetadata'
+import { buildLogsFilterSQLConditions } from './logsFilterUtils'
 
 export function computeDocumentLogsQuery(
   {
@@ -39,7 +39,7 @@ export function computeDocumentLogsQuery(
     isNull(runErrors.id),
     eq(workspaces.id, workspaceId),
     documentUuid ? eq(documentLogs.documentUuid, documentUuid) : undefined,
-    filterOptions ? getDocumentLogFilters(filterOptions) : undefined,
+    filterOptions ? buildLogsFilterSQLConditions(filterOptions) : undefined,
   ].filter(Boolean)
   return repo.scope
     .where(and(...conditions))
@@ -64,7 +64,7 @@ export async function computeDocumentLogsCount(
     isNull(runErrors.id),
     eq(workspaces.id, workspaceId),
     documentUuid ? eq(documentLogs.documentUuid, documentUuid) : undefined,
-    filterOptions ? getDocumentLogFilters(filterOptions) : undefined,
+    filterOptions ? buildLogsFilterSQLConditions(filterOptions) : undefined,
   ].filter(Boolean)
 
   const countList = await db

@@ -8,7 +8,7 @@ import useDocumentLogWithPaginationPosition, {
   LogWithPosition,
 } from '$/stores/documentLogWithPaginationPosition'
 import useDocumentLogsPagination from '$/stores/useDocumentLogsPagination'
-import { useFilterOptions } from '$/hooks/useLogFilterOptions'
+import { useDefaultLogFilterOptions } from '$/hooks/logFilters/useDefaultLogFilterOptions'
 
 const ONLY_ONE_PAGE = '1'
 
@@ -28,7 +28,7 @@ export function useLogHistoryParams({
     commitVersionUuid,
   })
 
-  const filterOptions = useFilterOptions()
+  const filterOptions = useDefaultLogFilterOptions()
   const { data: pagination, isLoading: isLoadingCounter } =
     useDocumentLogsPagination({
       documentUuid: document.documentUuid,

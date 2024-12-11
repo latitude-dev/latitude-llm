@@ -131,24 +131,13 @@ export function DocumentLogsPage({
     <div className='flex flex-grow min-h-0 flex-col w-full p-6 gap-2 min-w-0'>
       <TableWithHeader
         title='Logs'
-        table={
-          <DocumentLogs
-            documentLogFilterOptions={debouncedFilterOptions}
-            documentLogs={documentLogs}
-            selectedLog={selectedLog}
-            aggregations={aggregations}
-            isAggregationsLoading={isAggregationsLoading}
-            evaluationResults={evaluationResults}
-            isEvaluationResultsLoading={isEvaluationResultsLoading}
-          />
-        }
         actions={
           <>
             {showLogFilters && (
               <DocumentLogFilters
                 originalSelectedCommitsIds={originalSelectedCommitsIds}
-                documentLogFilterOptions={documentLogFilterOptions}
-                setDocumentLogFilterOptions={setDocumentLogFilterOptions}
+                filterOptions={documentLogFilterOptions}
+                onFiltersChanged={setDocumentLogFilterOptions}
               />
             )}
             <Link
@@ -164,6 +153,17 @@ export function DocumentLogsPage({
               </Button>
             </Link>
           </>
+        }
+        table={
+          <DocumentLogs
+            documentLogFilterOptions={debouncedFilterOptions}
+            documentLogs={documentLogs}
+            selectedLog={selectedLog}
+            aggregations={aggregations}
+            isAggregationsLoading={isAggregationsLoading}
+            evaluationResults={evaluationResults}
+            isEvaluationResultsLoading={isEvaluationResultsLoading}
+          />
         }
       />
     </div>

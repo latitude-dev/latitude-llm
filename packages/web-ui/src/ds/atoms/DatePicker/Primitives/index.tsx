@@ -24,7 +24,7 @@ function Calendar({
       captionLayout='dropdown'
       showOutsideDays={showOutsideDays}
       modifiersClassNames={{
-        today: '!bg-primary text-primary-foreground',
+        today: '!bg-primary !text-primary-foreground',
         range_start: RANGE_SELECTED_CLASS,
         range_end: RANGE_SELECTED_CLASS,
       }}
