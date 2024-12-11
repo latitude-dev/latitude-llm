@@ -9,7 +9,7 @@ import { usePathname, useRouter } from 'next/navigation'
 
 import { CommitFilter } from './CommitFilter'
 import { LogSourceFilter } from './LogSourceFilter'
-import { ReactStateDispatch } from '@latitude-data/web-ui'
+import { ReactStateDispatch, DatePickerRange } from '@latitude-data/web-ui'
 
 function useEditableSearchParams() {
   const router = useRouter()
@@ -95,6 +95,12 @@ export function DocumentLogFilters({
 
   return (
     <>
+      <DatePickerRange
+        showPresets
+        onCloseChange={(value) => {
+          console.log('VAL', value)
+        }}
+      />
       <CommitFilter
         selectedCommitsIds={documentLogFilterOptions.commitIds}
         setSelectedCommitsIds={setSelectedCommitsIds}

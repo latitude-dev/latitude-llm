@@ -39,7 +39,7 @@ function useRunDocumentInBatchForm({
     [metadata?.parameters],
   )
   const [selectedDataset, setSelectedDataset] = useState<Dataset | null>(null)
-  const [headers, setHeaders] = useState<SelectOption[]>([])
+  const [headers, setHeaders] = useState<SelectOption<string>[]>([])
   const [wantAllLines, setAllRows] = useState(true)
   const [fromLine, setFromLine] = useState<number | undefined>(undefined)
   const [toLine, setToLine] = useState<number | undefined>(undefined)
@@ -71,7 +71,7 @@ function useRunDocumentInBatchForm({
 
   const { data: datasets, isLoading: isLoadingDatasets } = useDatasets()
   const onSelectDataset = useCallback(
-    async (value: string) => {
+    async (value: number) => {
       const ds = datasets.find((ds) => ds.id === Number(value))
       if (!ds) return
 

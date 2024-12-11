@@ -1,6 +1,6 @@
 'use client'
 
-import { FormField, Select } from '@latitude-data/web-ui'
+import { Select } from '@latitude-data/web-ui'
 import useProjects from '$/stores/projects'
 
 interface ProjectDocumentSelectorProps {
@@ -20,7 +20,7 @@ export function ProjectDocumentSelector({
 }: ProjectDocumentSelectorProps) {
   const { data: projects } = useProjects()
 
-  const handleProjectChange = (value: string) => {
+  const handleProjectChange = (value: number) => {
     const newProjectId = Number(value)
     onProjectChange(newProjectId)
   }
@@ -31,27 +31,26 @@ export function ProjectDocumentSelector({
 
   return (
     <div className='flex flex-row gap-4'>
-      <FormField label='Project'>
-        <Select
-          name='projectId'
-          options={projects.map((p) => ({ label: p.name, value: p.id }))}
-          onChange={handleProjectChange}
-          defaultValue={defaultProjectId ? String(defaultProjectId) : undefined}
-          placeholder='Select a project'
-        />
-      </FormField>
-      <FormField label='Prompt' info={labelInfo}>
-        <Select
-          placeholder='Select a prompt'
-          disabled={!documents.length}
-          name='documentUuid'
-          options={documents.map((d) => ({
-            label: d.path,
-            value: d.documentUuid,
-          }))}
-          onChange={handleDocumentChange}
-        />
-      </FormField>
+      <Select
+        label='Project'
+        name='projectId'
+        options={projects.map((p) => ({ label: p.name, value: p.id }))}
+        onChange={handleProjectChange}
+        defaultValue={defaultProjectId}
+        placeholder='Select a project'
+      />
+      <Select
+        label='Prompt'
+        info={labelInfo}
+        placeholder='Select a prompt'
+        disabled={!documents.length}
+        name='documentUuid'
+        options={documents.map((d) => ({
+          label: d.path,
+          value: d.documentUuid,
+        }))}
+        onChange={handleDocumentChange}
+      />
     </div>
   )
 }

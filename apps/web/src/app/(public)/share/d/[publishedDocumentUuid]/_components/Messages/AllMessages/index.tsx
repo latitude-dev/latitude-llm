@@ -32,18 +32,16 @@ export function AllMessages({
 
   return (
     <>
-      <div className='opacity-60'>
-        <MessageList messages={messages.slice(0, chainLength - 1)} />
-        {error ? (
-          <ErrorMessage error={error} />
-        ) : (
-          <StreamMessage
-            responseStream={responseStream}
-            conversation={conversation}
-            chainLength={chainLength}
-          />
-        )}
-      </div>
+      <MessageList messages={messages.slice(0, chainLength - 1)} />
+      {error ? (
+        <ErrorMessage error={error} />
+      ) : (
+        <StreamMessage
+          responseStream={responseStream}
+          conversation={conversation}
+          chainLength={chainLength}
+        />
+      )}
 
       {error ? (
         <ErrorMessage error={error} />

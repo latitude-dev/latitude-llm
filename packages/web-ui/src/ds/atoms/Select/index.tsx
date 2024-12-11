@@ -12,17 +12,17 @@ import {
   SelectValue,
 } from './Primitives'
 
-export type SelectOption = {
+export type SelectOption<V extends unknown = unknown> = {
   label: string
-  value: unknown
+  value: V
   icon?: ReactNode
 }
 
-export type SelectOptionGroup = {
+export type SelectOptionGroup<V extends unknown = unknown> = {
   label: string
-  options: SelectOption[]
+  options: SelectOption<V>[]
 }
-function Options({ options }: { options: SelectOption[] }) {
+export function Options({ options }: { options: SelectOption[] }) {
   return options.map((option) => (
     <SelectItem
       key={option.label}
@@ -34,17 +34,20 @@ function Options({ options }: { options: SelectOption[] }) {
   ))
 }
 
-type SelectProps = Omit<FormFieldProps, 'children'> & {
+export type SelectProps<V extends unknown = unknown> = Omit<
+  FormFieldProps,
+  'children'
+> & {
   name: string
-  options: SelectOption[] | SelectOptionGroup[]
-  defaultValue?: string
-  value?: string
+  options: SelectOption<V>[]
+  defaultValue?: V
+  value?: V
   placeholder?: string
   disabled?: boolean
   required?: boolean
-  onChange?: (value: string) => void
+  onChange?: (value: V) => void
 }
-export function Select({
+export function Select<V extends unknown = unknown>({
   name,
   label,
   badgeLabel,
@@ -58,14 +61,16 @@ export function Select({
   onChange,
   disabled = false,
   required = false,
-}: SelectProps) {
-  const [selectedValue, setSelected] = useState(value ?? defaultValue)
+}: SelectProps<V>) {
+  const [selectedValue, setSelected] = useState<V | undefined>(
+    value ?? defaultValue,
+  )
   useEffect(() => {
     setSelected(value ?? defaultValue)
   }, [value, defaultValue])
   const _onChange = (newValue: string) => {
-    setSelected(newValue)
-    if (onChange) onChange(newValue)
+    setSelected(newValue as V)
+    if (onChange) onChange(newValue as V)
   }
   return (
     <FormField
@@ -79,8 +84,8 @@ export function Select({
           required={required}
           disabled={disabled}
           name={name}
-          value={value}
-          defaultValue={defaultValue}
+          value={value as string}
+          defaultValue={defaultValue as string}
           onValueChange={_onChange}
         >
           <SelectTrigger autoFocus={autoFocus}>
@@ -91,13 +96,9 @@ export function Select({
             />
           </SelectTrigger>
           <SelectContent>
-            {'options' in options ? (
-              <div>Grouping</div>
-            ) : (
-              <SelectGroup>
-                <Options options={options as SelectOption[]} />
-              </SelectGroup>
-            )}
+            <SelectGroup>
+              <Options options={options as SelectOption<V>[]} />
+            </SelectGroup>
           </SelectContent>
         </SelectRoot>
       </div>
