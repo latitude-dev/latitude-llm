@@ -218,7 +218,7 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
             ) : null}
             {children ? (
               <div
-                className={cn('flex flex-row items-center', {
+                className={cn('flex flex-row items-center w-full', {
                   'flex-grow flex-shrink truncate': ellipsis,
                 })}
               >
