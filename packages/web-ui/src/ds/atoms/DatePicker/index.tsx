@@ -46,7 +46,7 @@ export function DatePicker({
   relativeValue,
   size = 'normal',
   value: inputValue,
-  type: initialType = DatePickerType.absolute,
+  type: initialType = DatePickerType.relative,
 }: Props) {
   const ref = useRef<HTMLDivElement>(null)
   const [type, setType] = useState(initialType)
@@ -101,6 +101,7 @@ export function DatePicker({
   }
   const onTypeChange = useCallback(
     (newType: DatePickerType) => {
+      console.log("NEW_TYPE", newType)
       setType(newType)
       onTypeChangeProp?.(newType)
     },

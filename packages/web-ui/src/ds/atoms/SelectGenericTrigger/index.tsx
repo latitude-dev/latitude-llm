@@ -7,15 +7,17 @@ import Text from '../Text'
 import { Icon, type IconProps } from '../Icons'
 
 export function SelectGenericTrigger({
-  children,
-  color,
+  label,
+  color = 'foreground',
   showIcon = true,
+  placeholder = 'Select an option',
   buttonVariant = 'outline',
   className,
   iconProps,
 }: {
-  children: string | ReactNode
+  label: string | ReactNode | undefined
   showIcon?: boolean
+  placeholder?: string
   buttonVariant?: ButtonProps['variant']
   className?: string
   iconProps?: Pick<IconProps, 'name' | 'color'>
@@ -32,12 +34,12 @@ export function SelectGenericTrigger({
       htmlTag='span'
     >
       <div className='flex flex-row justify-between items-center w-full gap-x-2'>
-        {isString(children) ? (
-          <Text.H5 color={color} noWrap ellipsis>
-            {children}
+        {!label || isString(label) ? (
+          <Text.H5 color={label ? color : 'foregroundMuted'} noWrap ellipsis>
+            {label ?? placeholder}
           </Text.H5>
         ) : (
-          children
+          label
         )}
         {showIcon ? (
           <div className='flex-none'>

@@ -49,6 +49,10 @@ export default function DatePickerInput({
   }
 
   const selectedValue = options.find((option) => option.value === relativeValue)
-  const label = selectedValue?.label ?? 'Select a relative date'
-  return <SelectGenericTrigger>{label}</SelectGenericTrigger>
+  return (
+    <SelectGenericTrigger
+      label={selectedValue?.label}
+      placeholder='Select time'
+    />
+  )
 }

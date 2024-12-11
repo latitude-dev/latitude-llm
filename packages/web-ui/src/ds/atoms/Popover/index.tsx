@@ -75,9 +75,8 @@ export const ButtonTrigger = ({
         buttonVariant={buttonVariant}
         className={className}
         iconProps={iconProps}
-      >
-        {children}
-      </SelectGenericTrigger>
+        label={children}
+      />
     </Popover.Trigger>
   )
 }
