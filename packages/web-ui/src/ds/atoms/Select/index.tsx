@@ -42,10 +42,12 @@ export type SelectProps<V extends unknown = unknown> = Omit<
   options: SelectOption<V>[]
   defaultValue?: V
   value?: V
+  trigger?: ReactNode
   placeholder?: string
   disabled?: boolean
   required?: boolean
   onChange?: (value: V) => void
+  width?: 'auto' | 'full'
 }
 export function Select<V extends unknown = unknown>({
   name,
@@ -54,11 +56,13 @@ export function Select<V extends unknown = unknown>({
   description,
   errors,
   autoFocus,
+  trigger,
   placeholder,
   options,
   defaultValue,
   value,
   onChange,
+  width = 'full',
   disabled = false,
   required = false,
 }: SelectProps<V>) {
@@ -78,8 +82,9 @@ export function Select<V extends unknown = unknown>({
       label={label}
       description={description}
       errors={errors}
+      className={width === 'full' ? 'w-full' : 'w-auto'}
     >
-      <div className='w-full'>
+      <div className={width === 'full' ? 'w-full' : 'w-auto'}>
         <SelectRoot
           required={required}
           disabled={disabled}
@@ -88,13 +93,17 @@ export function Select<V extends unknown = unknown>({
           defaultValue={defaultValue as string}
           onValueChange={_onChange}
         >
-          <SelectTrigger autoFocus={autoFocus}>
-            <SelectValue
-              selected={selectedValue}
-              options={options}
-              placeholder={placeholder ?? 'Select an option'}
-            />
-          </SelectTrigger>
+          {trigger ? (
+            trigger
+          ) : (
+            <SelectTrigger autoFocus={autoFocus}>
+              <SelectValue
+                selected={selectedValue}
+                options={options}
+                placeholder={placeholder ?? 'Select an option'}
+              />
+            </SelectTrigger>
+          )}
           <SelectContent>
             <SelectGroup>
               <Options options={options as SelectOption<V>[]} />

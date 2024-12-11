@@ -18,7 +18,7 @@ const TooltipRoot = TooltipPrimitive.Root
 
 const TooltipTrigger = TooltipPrimitive.Trigger
 
-export type TooltipVariant = 'default' | 'destructive' | 'inverse'
+export type TooltipVariant = 'default' | 'destructive' | 'inverse' | 'ghost'
 type PropviderProps = ComponentPropsWithoutRef<typeof TooltipProvider>
 type RootProps = ComponentPropsWithoutRef<typeof TooltipRoot>
 type ContentProps = ComponentPropsWithoutRef<
@@ -52,6 +52,7 @@ const TooltipContent = forwardRef<
           'bg-background border': variant === 'default',
           'bg-destructive': variant === 'destructive',
           'bg-foreground text-background': variant === 'inverse',
+          'bg-transparent p-0 rounded-none': variant === 'ghost',
         },
       )}
       {...props}
@@ -68,6 +69,8 @@ function useTooltipTextContentColor(variant: TooltipVariant): TextColor {
       return 'destructiveForeground'
     case 'inverse':
       return 'background'
+    case 'ghost':
+      return 'foreground'
   }
 }
 

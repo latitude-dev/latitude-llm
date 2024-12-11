@@ -21,9 +21,13 @@ const GAP_PADDING = 16
 
 export default function Playground({
   document,
+  prompt,
+  setPrompt,
   metadata,
 }: {
   document: DocumentVersion
+  prompt: string
+  setPrompt: (prompt: string) => void
   metadata: ConversationMetadata
 }) {
   const [mode, setMode] = useState<'preview' | 'chat'>('preview')
@@ -50,8 +54,10 @@ export default function Playground({
       dragDisabled={!expanded}
       firstPane={
         <DocumentParams
-          commitVersionUuid={commit.uuid}
+          commit={commit}
           document={document}
+          prompt={prompt}
+          setPrompt={setPrompt}
           onExpand={(expand) => {
             setForcedSize(expand ? undefined : COLLAPSED_SIZE)
             setExpanded(expand)

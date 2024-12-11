@@ -1,3 +1,8 @@
+import {
+  DatasetSource,
+  PlaygroundInput,
+  useDocumentParameters,
+} from '$/hooks/useDocumentParameters'
 import { Dataset, DocumentVersion } from '@latitude-data/core/browser'
 import {
   Badge,
@@ -7,12 +12,8 @@ import {
   Select,
   Text,
   Tooltip,
+  type ICommitContextType,
 } from '@latitude-data/web-ui'
-import {
-  DatasetSource,
-  PlaygroundInput,
-  useDocumentParameters,
-} from '$/hooks/useDocumentParameters'
 
 import { UseSelectDataset, type DatasetPreview } from './useSelectDataset'
 
@@ -31,7 +32,7 @@ function getTooltipValue(input: PlaygroundInput<'dataset'>) {
 
 export function InputMapper({
   document,
-  commitVersionUuid,
+  commit,
   mappedInputs,
   headersOptions,
   isLoading,
@@ -39,7 +40,7 @@ export function InputMapper({
   selectedDataset,
 }: {
   document: DocumentVersion
-  commitVersionUuid: string
+  commit: ICommitContextType['commit']
   mappedInputs: DatasetSource['mappedInputs']
   headersOptions: DatasetPreview['headersOptions']
   onSelectHeader: UseSelectDataset['onSelectHeader']
@@ -51,7 +52,7 @@ export function InputMapper({
     dataset: { inputs, copyToManual },
   } = useDocumentParameters({
     documentVersionUuid: document.documentUuid,
-    commitVersionUuid,
+    commitVersionUuid: commit.uuid,
   })
   return (
     <ClientOnly>
@@ -68,7 +69,7 @@ export function InputMapper({
                   className='grid col-span-2 grid-cols-subgrid gap-3 w-full items-start'
                   key={idx}
                 >
-                  <div className='flex flex-row items-center gap-x-1 min-h-8'>
+                  <div className='flex flex-row items-center gap-x-2 min-h-8'>
                     <Badge variant={isMapped ? 'accent' : 'muted'}>
                       &#123;&#123;{param}&#125;&#125;
                     </Badge>
@@ -121,7 +122,7 @@ export function InputMapper({
           </div>
         ) : (
           <Text.H6 color='foregroundMuted'>
-            No inputs. Use &#123;&#123; input_name &#125;&#125; to insert.
+            No inputs. Use &#123;&#123;input_name&#125;&#125; to insert.
           </Text.H6>
         )}
       </div>

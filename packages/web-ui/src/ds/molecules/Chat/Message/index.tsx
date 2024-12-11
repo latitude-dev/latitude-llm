@@ -4,8 +4,10 @@ import { ReactNode, useEffect, useMemo, useState } from 'react'
 
 import {
   ContentType,
+  ImageContent,
   MessageContent,
   PromptlSourceRef,
+  TextContent,
   ToolContent,
   ToolRequestContent,
 } from '@latitude-data/compiler'
@@ -15,6 +17,7 @@ import {
   Badge,
   BadgeProps,
   CodeBlock,
+  Image,
   Skeleton,
   Text,
   Tooltip,
@@ -22,7 +25,7 @@ import {
 import { colors, font, TextColor } from '../../../tokens'
 import { roleToString, roleVariant } from './helpers'
 
-export { roleVariant, roleToString } from './helpers'
+export { roleToString, roleVariant } from './helpers'
 
 export type MessageProps = {
   role: string
@@ -30,7 +33,7 @@ export type MessageProps = {
   className?: string
   size?: 'default' | 'small'
   animatePulse?: boolean
-  parameters?: Record<string, unknown>
+  parameters?: string[]
   collapseParameters?: boolean
 }
 
@@ -73,7 +76,7 @@ export function Message({
   content,
   animatePulse = false,
   size = 'default',
-  parameters = {},
+  parameters = [],
   collapseParameters = false,
 }: MessageProps) {
   return (
@@ -98,7 +101,7 @@ export function Message({
 export function MessageItemContent({
   content,
   size = 'default',
-  parameters = {},
+  parameters = [],
   collapseParameters = false,
   collapsedMessage,
 }: {
@@ -110,25 +113,22 @@ export function MessageItemContent({
 }) {
   if (collapsedMessage)
     return <Content value='...' color='foregroundMuted' size={size} />
+
   if (typeof content === 'string')
     return <Content value={content} color='foregroundMuted' size={size} />
 
-  return (
-    <>
-      {content.map((c, idx) => (
-        <Content
-          key={idx}
-          index={idx}
-          color='foregroundMuted'
-          value={c}
-          size={size}
-          parameters={parameters}
-          collapseParameters={collapseParameters}
-          sourceMap={(c as any)?._promptlSourceMap}
-        />
-      ))}
-    </>
-  )
+  return content.map((c, idx) => (
+    <Content
+      key={idx}
+      index={idx}
+      color='foregroundMuted'
+      value={c}
+      size={size}
+      parameters={parameters}
+      collapseParameters={collapseParameters}
+      sourceMap={(c as any)?._promptlSourceMap}
+    />
+  ))
 }
 
 export function MessageSkeleton({ role }: { role: string }) {
@@ -153,7 +153,7 @@ const Content = ({
   color,
   value,
   size,
-  parameters = {},
+  parameters = [],
   collapseParameters = false,
   sourceMap = [],
 }: {
@@ -161,7 +161,7 @@ const Content = ({
   color: TextColor
   value: string | MessageContent
   size?: 'default' | 'small'
-  parameters?: Record<string, unknown>
+  parameters?: string[]
   collapseParameters?: boolean
   sourceMap?: PromptlSourceRef[]
 }) => {
@@ -170,8 +170,8 @@ const Content = ({
       <ContentText
         index={index}
         color={color}
-        message={value}
         size={size}
+        message={value}
         parameters={parameters}
         collapseParameters={collapseParameters}
         sourceMap={sourceMap}
@@ -185,8 +185,8 @@ const Content = ({
         <ContentText
           index={index}
           color={color}
-          message={value.text}
           size={size}
+          message={value.text}
           parameters={parameters}
           collapseParameters={collapseParameters}
           sourceMap={sourceMap}
@@ -195,17 +195,20 @@ const Content = ({
 
     case ContentType.image:
       return (
-        <ContentText
+        <ContentImage
           index={index}
           color={color}
-          message={'<Image content not implemented yet>'}
           size={size}
+          image={value.image}
+          parameters={parameters}
+          collapseParameters={collapseParameters}
+          sourceMap={sourceMap}
         />
       )
 
     case ContentType.toolCall:
       return (
-        <div className='pt-2 w-full'>
+        <div key={`${index}`} className='pt-2 w-full'>
           <div className='overflow-hidden rounded-lg w-full'>
             <CodeBlock language='json'>
               {JSON.stringify(value as ToolRequestContent, null, 2)}
@@ -216,7 +219,7 @@ const Content = ({
 
     case ContentType.toolResult:
       return (
-        <div className='pt-2 w-full'>
+        <div key={`${index}`} className='pt-2 w-full'>
           <div className='overflow-hidden rounded-lg w-full'>
             <CodeBlock language='json'>
               {JSON.stringify(value as ToolContent, null, 2)}
@@ -226,48 +229,48 @@ const Content = ({
       )
 
     default:
-      return null
+      return (
+        <ContentText
+          index={index}
+          color={color}
+          size={size}
+          message={'<Content type not supported>'}
+        />
+      )
   }
 }
 
-type SourceRef = {
+type Reference = {
   identifier?: string
-  text: string
+  content: string
+  type: ContentType
 }
-type Segment = string | SourceRef
+type Segment = string | Reference
 
 const ContentText = ({
   index = 0,
   color,
-  message,
   size,
-  parameters = {},
+  message,
+  parameters = [],
   collapseParameters = false,
   sourceMap = [],
 }: {
   index?: number
   color: TextColor
-  message: string
   size?: 'default' | 'small'
-  parameters?: Record<string, unknown>
+  message: TextContent['text']
+  parameters?: string[]
   collapseParameters?: boolean
   sourceMap?: PromptlSourceRef[]
 }) => {
   const TextComponent = size === 'small' ? Text.H6 : Text.H5
 
-  // Filter source map references without value
-  sourceMap = sourceMap.filter(
-    (ref) => message.slice(ref.start, ref.end).trim().length > 0,
-  )
-
-  // Sort source map to ensure references are ordered
-  sourceMap = sourceMap.sort((a, b) => a.start - b.start)
-
   const segments = useMemo(
-    () => segmentMessage(message, sourceMap, parameters),
+    () => computeSegments(ContentType.text, message, sourceMap, parameters),
     [message, sourceMap, parameters],
   )
-  const groups = useMemo(() => groupSegmentsByNewLine(segments), [segments])
+  const groups = useMemo(() => groupSegments(segments), [segments])
 
   return groups.map((group, groupIndex) => (
     <TextComponent
@@ -308,7 +311,7 @@ function SegmentComponent({
   return DynamicSegment(segment, collapseParameters)
 }
 
-function IdentifierSegment(segment: SourceRef, collapseParameters: boolean) {
+function IdentifierSegment(segment: Reference, collapseParameters: boolean) {
   const [collapseSegment, setCollapseSegment] = useState(collapseParameters)
   useEffect(() => {
     setCollapseSegment(collapseParameters)
@@ -318,6 +321,7 @@ function IdentifierSegment(segment: SourceRef, collapseParameters: boolean) {
     return (
       <Tooltip
         asChild
+        variant={segment.type === ContentType.image ? 'ghost' : 'inverse'}
         trigger={
           <Badge
             variant='accent'
@@ -328,7 +332,12 @@ function IdentifierSegment(segment: SourceRef, collapseParameters: boolean) {
           </Badge>
         }
       >
-        <div className='line-clamp-6'>{segment.text}</div>
+        {segment.type === ContentType.text && (
+          <div className='line-clamp-6'>{segment.content}</div>
+        )}
+        {segment.type === ContentType.image && (
+          <Image src={segment.content} className='max-h-72 rounded-xl' />
+        )}
       </Tooltip>
     )
   }
@@ -342,10 +351,17 @@ function IdentifierSegment(segment: SourceRef, collapseParameters: boolean) {
             colors.textColors.accentForeground,
             font.weight.semibold,
             'cursor-pointer',
+            {
+              inline: segment.type === ContentType.text,
+              'inline-flex py-2': segment.type === ContentType.image,
+            },
           )}
           onClick={() => setCollapseSegment(!collapseSegment)}
         >
-          {segment.text}
+          {segment.type === ContentType.text && <>{segment.content}</>}
+          {segment.type === ContentType.image && (
+            <Image src={segment.content} className='max-h-72 rounded-xl' />
+          )}
         </span>
       }
     >
@@ -354,7 +370,7 @@ function IdentifierSegment(segment: SourceRef, collapseParameters: boolean) {
   )
 }
 
-function DynamicSegment(segment: SourceRef, collapseParameters: boolean) {
+function DynamicSegment(segment: Reference, collapseParameters: boolean) {
   const [collapseSegment, setCollapseSegment] = useState(collapseParameters)
   useEffect(() => {
     setCollapseSegment(collapseParameters)
@@ -364,6 +380,7 @@ function DynamicSegment(segment: SourceRef, collapseParameters: boolean) {
     return (
       <Tooltip
         asChild
+        variant={segment.type === ContentType.image ? 'ghost' : 'inverse'}
         trigger={
           <span
             className={cn(colors.textColors.accentForeground, 'cursor-pointer')}
@@ -373,7 +390,12 @@ function DynamicSegment(segment: SourceRef, collapseParameters: boolean) {
           </span>
         }
       >
-        <div className='line-clamp-6'>{segment.text}</div>
+        {segment.type === ContentType.text && (
+          <div className='line-clamp-6'>{segment.content}</div>
+        )}
+        {segment.type === ContentType.image && (
+          <Image src={segment.content} className='max-h-72 rounded-xl' />
+        )}
       </Tooltip>
     )
   }
@@ -383,10 +405,16 @@ function DynamicSegment(segment: SourceRef, collapseParameters: boolean) {
       asChild
       trigger={
         <span
-          className={cn(colors.textColors.accentForeground, 'cursor-pointer')}
+          className={cn(colors.textColors.accentForeground, 'cursor-pointer', {
+            inline: segment.type === ContentType.text,
+            'inline-flex py-2': segment.type === ContentType.image,
+          })}
           onClick={() => setCollapseSegment(!collapseSegment)}
         >
-          {segment.text}
+          {segment.type === ContentType.text && <>{segment.content}</>}
+          {segment.type === ContentType.image && (
+            <Image src={segment.content} className='max-h-72 rounded-xl' />
+          )}
         </span>
       }
     >
@@ -395,28 +423,39 @@ function DynamicSegment(segment: SourceRef, collapseParameters: boolean) {
   )
 }
 
-function segmentMessage(
-  message: string,
+function computeSegments(
+  type: ContentType,
+  source: string,
   sourceMap: PromptlSourceRef[],
-  parameters: Record<string, unknown>,
+  parameters: string[],
 ): Segment[] {
   let segments: Segment[] = []
 
-  const firstSegment = message.slice(0, sourceMap[0]?.start ?? message.length)
+  // Filter source map references without value
+  sourceMap = sourceMap.filter(
+    (ref) => source.slice(ref.start, ref.end).trim().length > 0,
+  )
+
+  // Sort source map to ensure references are ordered
+  sourceMap = sourceMap.sort((a, b) => a.start - b.start)
+
+  const firstSegment = source.slice(0, sourceMap[0]?.start ?? source.length)
   if (firstSegment.length > 0) segments.push(firstSegment)
 
   for (let i = 0; i < sourceMap.length; i++) {
     segments.push({
       identifier:
-        sourceMap[i]!.identifier && !!parameters[sourceMap[i]!.identifier!]
+        sourceMap[i]!.identifier &&
+        parameters.includes(sourceMap[i]!.identifier!)
           ? sourceMap[i]!.identifier!
           : undefined,
-      text: message.slice(sourceMap[i]!.start, sourceMap[i]!.end),
+      content: source.slice(sourceMap[i]!.start, sourceMap[i]!.end),
+      type: type,
     })
 
-    const nextSegment = message.slice(
+    const nextSegment = source.slice(
       sourceMap[i]!.end,
-      sourceMap[i + 1]?.start ?? message.length,
+      sourceMap[i + 1]?.start ?? source.length,
     )
     if (nextSegment.length > 0) segments.push(nextSegment)
   }
@@ -424,7 +463,7 @@ function segmentMessage(
   return segments
 }
 
-function groupSegmentsByNewLine(segments: Segment[]) {
+function groupSegments(segments: Segment[]) {
   let groups: Segment[][] = []
   let currentGroup: Segment[] = []
 
@@ -446,4 +485,66 @@ function groupSegmentsByNewLine(segments: Segment[]) {
   if (currentGroup.length > 0) groups.push(currentGroup)
 
   return groups
+}
+
+const ContentImage = ({
+  index = 0,
+  color,
+  size,
+  image,
+  parameters = [],
+  collapseParameters = false,
+  sourceMap = [],
+}: {
+  index?: number
+  color: TextColor
+  size?: 'default' | 'small'
+  image: ImageContent['image']
+  parameters?: string[]
+  collapseParameters?: boolean
+  sourceMap?: PromptlSourceRef[]
+}) => {
+  if (
+    (typeof image !== 'string' && !(image instanceof URL)) ||
+    (!image.toString().startsWith('https') &&
+      !image.toString().startsWith('http://localhost'))
+  ) {
+    return (
+      <ContentText
+        index={index}
+        color={color}
+        size={size}
+        message={'<Image preview unavailable>'}
+      />
+    )
+  }
+
+  const TextComponent = size === 'small' ? Text.H6 : Text.H5
+
+  const segment = useMemo(
+    () =>
+      computeSegments(
+        ContentType.image,
+        image.toString(),
+        sourceMap,
+        parameters,
+      ),
+    [image, sourceMap, parameters],
+  )[0]
+
+  if (!segment) return null
+
+  return (
+    <TextComponent
+      color={color}
+      whiteSpace='preWrap'
+      wordBreak='breakAll'
+      key={`${index}`}
+    >
+      <SegmentComponent
+        segment={segment}
+        collapseParameters={collapseParameters}
+      />
+    </TextComponent>
+  )
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import React, {
+import {
   createContext,
   Suspense,
   useCallback,
@@ -9,6 +9,18 @@ import React, {
   useState,
 } from 'react'
 
+import { createDraftWithContentAction } from '$/actions/commits/createDraftWithContentAction'
+import { requestSuggestionAction } from '$/actions/copilot/requestSuggestion'
+import { publishEventAction } from '$/actions/events/publishEventAction'
+import { type AddMessagesActionFn } from '$/actions/sdk/addMessagesAction'
+import type { RunDocumentActionFn } from '$/actions/sdk/runDocumentAction'
+import EditorHeader from '$/components/EditorHeader'
+import { useDocumentParameters } from '$/hooks/useDocumentParameters'
+import useLatitudeAction from '$/hooks/useLatitudeAction'
+import { useMetadata } from '$/hooks/useMetadata'
+import { ROUTES } from '$/services/routes'
+import useDocumentVersions from '$/stores/documentVersions'
+import useProviderApiKeys from '$/stores/providerApiKeys'
 import {
   Commit,
   DocumentVersion,
@@ -26,18 +38,6 @@ import {
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui'
-import { createDraftWithContentAction } from '$/actions/commits/createDraftWithContentAction'
-import { requestSuggestionAction } from '$/actions/copilot/requestSuggestion'
-import { publishEventAction } from '$/actions/events/publishEventAction'
-import { type AddMessagesActionFn } from '$/actions/sdk/addMessagesAction'
-import type { RunDocumentActionFn } from '$/actions/sdk/runDocumentAction'
-import EditorHeader from '$/components/EditorHeader'
-import { useDocumentParameters } from '$/hooks/useDocumentParameters'
-import useLatitudeAction from '$/hooks/useLatitudeAction'
-import { useMetadata } from '$/hooks/useMetadata'
-import { ROUTES } from '$/services/routes'
-import useDocumentVersions from '$/stores/documentVersions'
-import useProviderApiKeys from '$/stores/providerApiKeys'
 import { useRouter } from 'next/navigation'
 import { DiffOptions } from 'node_modules/@latitude-data/web-ui/src/ds/molecules/DocumentTextEditor/types'
 import { useDebouncedCallback } from 'use-debounce'
@@ -351,7 +351,12 @@ export default function DocumentEditor({
           secondPane={
             <SplitPane.Pane>
               <div className='flex-1 relative max-h-full'>
-                <Playground document={document} metadata={metadata!} />
+                <Playground
+                  document={document}
+                  prompt={value}
+                  setPrompt={onChange}
+                  metadata={metadata!}
+                />
               </div>
             </SplitPane.Pane>
           }

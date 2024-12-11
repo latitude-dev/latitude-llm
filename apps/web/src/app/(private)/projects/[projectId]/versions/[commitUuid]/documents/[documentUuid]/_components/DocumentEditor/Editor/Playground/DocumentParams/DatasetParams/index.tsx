@@ -1,6 +1,12 @@
-import { DocumentVersion } from '@latitude-data/core/browser'
-import { Button, cn, Icon, Select } from '@latitude-data/web-ui'
 import { ROUTES } from '$/services/routes'
+import { DocumentVersion } from '@latitude-data/core/browser'
+import {
+  Button,
+  cn,
+  Icon,
+  Select,
+  type ICommitContextType,
+} from '@latitude-data/web-ui'
 import Link from 'next/link'
 
 import { ParametersPaginationNav } from '../PaginationNav'
@@ -22,11 +28,11 @@ function BlankSlate() {
 
 export function DatasetParams({
   data,
-  commitVersionUuid,
+  commit,
   document,
 }: {
   document: DocumentVersion
-  commitVersionUuid: string
+  commit: ICommitContextType['commit']
   data: UseSelectDataset
 }) {
   const selectedId = data.selectedDataset?.id
@@ -61,7 +67,7 @@ export function DatasetParams({
       <div className={cn({ 'opacity-50': data.isLoading })}>
         <InputMapper
           document={document}
-          commitVersionUuid={commitVersionUuid}
+          commit={commit}
           isLoading={data.isLoading}
           mappedInputs={data.selectedRow.mappedInputs}
           headersOptions={data.datasetPreview.headersOptions}

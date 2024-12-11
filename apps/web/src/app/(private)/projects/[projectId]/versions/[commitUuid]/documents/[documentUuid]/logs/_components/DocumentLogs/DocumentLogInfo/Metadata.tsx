@@ -2,12 +2,17 @@ import { useMemo } from 'react'
 
 import { RunErrorMessage } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/_components/RunErrorMessage'
 import { formatCostInMillicents, formatDuration } from '$/app/_lib/formatUtils'
-import { Inputs } from '$/hooks/useDocumentParameters'
 import useProviderApiKeys from '$/stores/providerApiKeys'
 import { MessageRole, ToolCall } from '@latitude-data/compiler'
 import { ProviderLogDto } from '@latitude-data/core/browser'
 import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
-import { ClickToCopy, Message, Text } from '@latitude-data/web-ui'
+import {
+  Badge,
+  ClickToCopy,
+  Message,
+  Text,
+  TextArea,
+} from '@latitude-data/web-ui'
 import { format } from 'date-fns'
 
 import {
@@ -15,7 +20,6 @@ import {
   MetadataItem,
   MetadataItemTooltip,
 } from '../../../../../[documentUuid]/_components/MetadataItem'
-import { InputParams } from '../../../../_components/DocumentEditor/Editor/Playground/DocumentParams/Input/index'
 
 function ProviderLogsMetadata({
   providerLog,
@@ -163,23 +167,33 @@ function DocumentLogParameters({
 }: {
   documentLog: DocumentLogWithMetadataAndError
 }) {
-  const parameters = useMemo(() => {
-    return Object.entries(documentLog.parameters).reduce(
-      (acc, [key, value]) => {
-        acc[key] = {
-          value: String(value),
-          metadata: { includeInPrompt: true },
-        }
-        return acc
-      },
-      {} as Inputs<'manual'>,
-    )
-  }, [documentLog.uuid, documentLog.parameters])
-
   return (
     <>
       <Text.H5M color='foreground'>Parameters</Text.H5M>
-      <InputParams inputs={parameters} disabled />
+      <div className='grid grid-cols-[auto_1fr] gap-y-3'>
+        {Object.entries(documentLog.parameters).map(
+          ([parameter, value], index) => (
+            <div
+              key={index}
+              className='grid col-span-2 grid-cols-subgrid gap-3 w-full items-start'
+            >
+              <div className='flex flex-row items-center gap-x-2 min-h-8'>
+                <Badge variant='accent'>
+                  &#123;&#123;{parameter}&#125;&#125;
+                </Badge>
+              </div>
+              <div className='flex flex-grow w-full min-w-0'>
+                <TextArea
+                  value={String(value || '')}
+                  minRows={1}
+                  maxRows={6}
+                  disabled={true}
+                />
+              </div>
+            </div>
+          ),
+        )}
+      </div>
     </>
   )
 }

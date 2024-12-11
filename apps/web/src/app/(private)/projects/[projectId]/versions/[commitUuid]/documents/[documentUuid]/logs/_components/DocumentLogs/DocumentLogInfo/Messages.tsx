@@ -83,7 +83,7 @@ export function DocumentLogMessages({
       </div>
       <MessageList
         messages={messages}
-        parameters={documentLog.parameters}
+        parameters={Object.keys(documentLog.parameters)}
         collapseParameters={!expandParameters}
       />
     </>

@@ -1,13 +1,22 @@
-import { DocumentLog, DocumentVersion } from '@latitude-data/core/browser'
-import { Badge, cn, Icon, Skeleton, Text } from '@latitude-data/web-ui'
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
 import { useGenerateDocumentLogDetailUrl } from '$/hooks/useGenerateDocumentLogDetailUrl'
+import { DocumentLog, DocumentVersion } from '@latitude-data/core/browser'
+import {
+  Badge,
+  ClientOnly,
+  cn,
+  Icon,
+  Skeleton,
+  Text,
+  TextArea,
+  Tooltip,
+  type ICommitContextType,
+} from '@latitude-data/web-ui'
 import { format } from 'date-fns'
 import Link from 'next/link'
 
-import { InputParams } from '../Input'
 import { ParametersPaginationNav } from '../PaginationNav'
-import { UseLogHistoryParams } from './useLogHistoryParams'
+import { type UseLogHistoryParams } from './useLogHistoryParams'
 
 function usePaginatedDocumentLogUrl({
   page,
@@ -37,18 +46,18 @@ function usePaginatedDocumentLogUrl({
 
 export function HistoryLogParams({
   data,
-  commitVersionUuid,
+  commit,
   document,
 }: {
   document: DocumentVersion
-  commitVersionUuid: string
+  commit: ICommitContextType['commit']
   data: UseLogHistoryParams
 }) {
   const {
     history: { inputs, setInput },
   } = useDocumentParameters({
     documentVersionUuid: document.documentUuid,
-    commitVersionUuid,
+    commitVersionUuid: commit.uuid,
   })
   const urlData = usePaginatedDocumentLogUrl({
     selectedLog: data.selectedLog,
@@ -103,7 +112,53 @@ export function HistoryLogParams({
         )}
       </div>
       <div className={cn({ 'opacity-50': data.isLoading })}>
-        <InputParams inputs={inputs} setInput={setInput} />
+        <ClientOnly>
+          <div className='flex flex-col gap-3'>
+            {Object.keys(inputs).length > 0 ? (
+              <div className='grid grid-cols-[auto_1fr] gap-y-3'>
+                {Object.entries(inputs).map(([param, input], idx) => {
+                  const includedInPrompt =
+                    input.metadata.includeInPrompt ?? true
+                  return (
+                    <div
+                      className='grid col-span-2 grid-cols-subgrid gap-3 w-full items-start'
+                      key={idx}
+                    >
+                      <div className='flex flex-row items-center gap-x-2 min-h-8'>
+                        <Badge variant={includedInPrompt ? 'accent' : 'muted'}>
+                          &#123;&#123;{param}&#125;&#125;
+                        </Badge>
+                        {!includedInPrompt && (
+                          <Tooltip trigger={<Icon name='info' />}>
+                            This variable is not included in the current prompt
+                          </Tooltip>
+                        )}
+                      </div>
+                      <div className='flex flex-grow w-full min-w-0'>
+                        <TextArea
+                          value={input.value ?? ''}
+                          minRows={1}
+                          maxRows={6}
+                          onChange={(e) => {
+                            setInput?.(param, {
+                              ...input,
+                              value: e.target.value,
+                            })
+                          }}
+                          disabled={data.isLoading}
+                        />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            ) : (
+              <Text.H6 color='foregroundMuted'>
+                No inputs. Use &#123;&#123;input_name&#125;&#125; to insert.
+              </Text.H6>
+            )}
+          </div>
+        </ClientOnly>
       </div>
     </div>
   )

@@ -22,7 +22,7 @@ const __pdfjsSandbox = _pdfjsSandbox
 // @ts-expect-error force webpack to include the worker
 const __pdfjsWorker = _pdfjsWorker
 
-export async function transformFile(
+export async function convertFile(
   file: File,
 ): Promise<TypedResult<string, Error>> {
   const extension = path.extname(file.name).toLowerCase()
@@ -41,7 +41,7 @@ export async function transformFile(
   try {
     switch (extension) {
       case '.pdf':
-        content = await transformPdfFile(buffer)
+        content = await convertPdfFile(buffer)
         break
       case '.docx':
       case '.xlsx':
@@ -68,7 +68,7 @@ export async function transformFile(
   } catch (error) {
     return Result.error(
       new UnprocessableEntityError(
-        `Failed to transform ${extension} file to text`,
+        `Failed to convert ${extension} file to text`,
         {},
       ),
     )
@@ -83,7 +83,7 @@ export async function transformFile(
 // Copied from officeParser. The version of pdfjs in officeParser is too old and buggy.
 // The dependency cannot be force-bumped because officeParser bundles the whole library.
 // https://github.com/harshankur/officeParser/blob/c969c7ae1d4dc66c65eb2f5345b9d849fd309a09/officeParser.js#L447
-async function transformPdfFile(buffer: Buffer) {
+async function convertPdfFile(buffer: Buffer) {
   return pdfjs
     .getDocument(new Uint8Array(buffer))
     .promise.then((document) =>

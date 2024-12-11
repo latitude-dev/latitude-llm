@@ -26,6 +26,8 @@ const SelectGroup = SelectPrimitive.Group
 
 const SelectValuePrimitive = SelectPrimitive.Value
 
+const SelectTriggerPrimitive = SelectPrimitive.Trigger
+
 function SelectValueWithIcon({
   icon,
   children,
@@ -264,6 +266,7 @@ export {
   SelectGroup,
   SelectValue,
   SelectTrigger,
+  SelectTriggerPrimitive,
   SelectContent,
   SelectLabel,
   SelectItem,

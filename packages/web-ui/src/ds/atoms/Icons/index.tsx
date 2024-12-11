@@ -30,7 +30,10 @@ import {
   FolderOpen,
   FolderPlus,
   Github,
+  Image,
+  ImageUp,
   InfoIcon,
+  LetterText,
   ListOrdered,
   LoaderCircle,
   Lock,
@@ -55,6 +58,7 @@ import {
   Trash,
   Twitter,
   Undo,
+  X,
 } from 'lucide-react'
 
 import { cn } from '../../../lib/utils'
@@ -120,6 +124,10 @@ const Icons = {
   notEqual: EqualNotIcon,
   settings: SettingsIcon,
   paperclip: Paperclip,
+  letterText: LetterText,
+  image: Image,
+  imageUp: ImageUp,
+  x: X,
 }
 
 export type IconName = keyof typeof Icons

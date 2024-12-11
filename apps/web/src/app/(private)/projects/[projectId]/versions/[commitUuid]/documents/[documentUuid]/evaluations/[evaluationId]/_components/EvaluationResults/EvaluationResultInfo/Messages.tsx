@@ -13,13 +13,7 @@ import {
   useLocalStorage,
 } from '@latitude-data/web-ui'
 
-const EVALUATION_PARAMETERS = SERIALIZED_DOCUMENT_LOG_FIELDS.reduce(
-  (acc, field) => {
-    acc[field] = true
-    return acc
-  },
-  {} as Record<string, boolean>,
-)
+const EVALUATION_PARAMETERS = SERIALIZED_DOCUMENT_LOG_FIELDS
 
 export function EvaluationResultMessages({
   providerLog,
