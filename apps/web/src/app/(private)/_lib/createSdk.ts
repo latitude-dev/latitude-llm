@@ -44,6 +44,16 @@ export async function createSdk({
     ssl: env.GATEWAY_SSL,
   }
   return Result.ok(
-    new Latitude(apiKey, compactObject({ gateway, projectId, __internal })),
+    new Latitude(
+      apiKey,
+      compactObject({
+        gateway,
+        projectId,
+        __internal: {
+          ...__internal,
+          gateway,
+        },
+      }),
+    ),
   )
 }

@@ -30,6 +30,7 @@ export default function EditorHeader({
   metadata,
   onChangePrompt,
   rightActions,
+  leftActions,
   disabledMetadataSelectors = false,
   providers,
   freeRunsCount,
@@ -41,6 +42,7 @@ export default function EditorHeader({
   prompt: string
   onChangePrompt: (prompt: string) => void
   rightActions?: ReactNode
+  leftActions?: ReactNode
   disabledMetadataSelectors?: boolean
   providers?: ProviderApiKey[]
   freeRunsCount?: number
@@ -168,8 +170,11 @@ export default function EditorHeader({
   return (
     <div className='flex flex-col gap-y-2'>
       <div className='flex flex-row h-8 justify-between items-center'>
-        <Text.H4M>{title}</Text.H4M>
-        <div className='flex flex-row gap-2'>
+        <div className='flex flex-row items-center gap-2'>
+          <Text.H4M>{title}</Text.H4M>
+          {leftActions}
+        </div>
+        <div className='flex flex-row items-center gap-2'>
           {rightActions}
           <DropdownMenu
             options={[

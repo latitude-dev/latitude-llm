@@ -1,4 +1,4 @@
-import { AppliedRules, ProviderRules } from '.'
+import { AppliedRules, ProviderRules } from './types'
 
 export function applyCustomRules(rules: AppliedRules): AppliedRules {
   const hasNonTextSystemMessage = rules.messages.some(

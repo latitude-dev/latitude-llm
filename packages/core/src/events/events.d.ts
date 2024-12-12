@@ -17,7 +17,9 @@ import type {
   ProviderApiKey,
   ProviderLog,
   Providers,
+  Span,
   StreamType,
+  Trace,
   User,
   Workspace,
 } from '../browser'
@@ -58,6 +60,7 @@ export type Events =
   | 'copilotSuggestionGenerated'
   | 'copilotSuggestionApplied'
   | 'evaluationResultUpdated'
+  | 'bulkCreateTracesAndSpans'
 
 export type LatitudeEventGeneric<
   U extends Events,
@@ -416,6 +419,15 @@ export type EvaluationResultUpdatedEvent = LatitudeEventGeneric<
   }
 >
 
+export type BulkCreateTracesAndSpansEvent = LatitudeEventGeneric<
+  'bulkCreateTracesAndSpans',
+  {
+    workspaceId: number
+    traces: Trace[]
+    spans: Span[]
+  }
+>
+
 export type LatitudeEvent =
   | MembershipCreatedEvent
   | UserCreatedEvent
@@ -451,6 +463,7 @@ export type LatitudeEvent =
   | CopilotSuggestionGenerated
   | CopilotSuggestionApplied
   | EvaluationResultUpdatedEvent
+  | BulkCreateTracesAndSpansEvent
 
 export interface IEventsHandlers {
   magicLinkTokenCreated: EventHandler<MagicLinkTokenCreated>[]
@@ -487,4 +500,5 @@ export interface IEventsHandlers {
   copilotSuggestionGenerated: EventHandler<CopilotSuggestionGenerated>[]
   copilotSuggestionApplied: EventHandler<CopilotSuggestionApplied>[]
   evaluationResultUpdated: EventHandler<EvaluationResultUpdatedEvent>[]
+  bulkCreateTracesAndSpans: EventHandler<BulkCreateTracesAndSpansEvent>[]
 }

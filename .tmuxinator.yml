@@ -1,6 +1,7 @@
 name: latitude-llm
 windows:
-  - web: cd apps/web
-  - apps: pnpm dev --filter='./apps/*' --filter='./packages/sdks/typescript' --filter='./packages/compiler'
+  - web: cd .
+  - apps: pnpm dev --filter='./apps/*'
+  - packages: pnpm dev --filter='./packages/*'
   - docker: docker compose up --menu=false
   - studio: cd packages/core && pnpm db:studio

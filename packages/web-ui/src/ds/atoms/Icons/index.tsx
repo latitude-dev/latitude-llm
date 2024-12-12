@@ -37,6 +37,7 @@ import {
   ListOrdered,
   LoaderCircle,
   Lock,
+  Logs,
   MinusIcon,
   MonitorIcon,
   Moon,
@@ -127,6 +128,7 @@ const Icons = {
   letterText: LetterText,
   image: Image,
   imageUp: ImageUp,
+  logs: Logs,
   x: X,
 }
 

@@ -24,6 +24,14 @@ export const _API_ROUTES = {
   users: {
     root: '/api/users',
   },
+  traces: {
+    root: '/api/traces',
+  },
+  documents: {
+    detail: (documentUuid: string) => ({
+      root: `/api/documents/${documentUuid}`,
+    }),
+  },
   projects: {
     root: '/api/projects',
     detail: (id: number) => {

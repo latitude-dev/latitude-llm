@@ -4,6 +4,7 @@ import { useCallback } from 'react'
 
 import { assignDatasetAction } from '$/actions/documents/assignDatasetAction'
 import { createDocumentVersionAction } from '$/actions/documents/create'
+import { createDocumentVersionFromTraceAction } from '$/actions/documents/createFromTrace'
 import { destroyDocumentAction } from '$/actions/documents/destroyDocumentAction'
 import { destroyFolderAction } from '$/actions/documents/destroyFolderAction'
 import { renameDocumentPathsAction } from '$/actions/documents/renamePathsAction'
@@ -286,6 +287,26 @@ export default function useDocumentVersions(
     },
   })
 
+  const { execute: createFromTrace } = useLatitudeAction(
+    createDocumentVersionFromTraceAction,
+    {
+      onSuccess: ({ data: documentVersion }) => {
+        toast({
+          title: 'Success',
+          description: 'Document successfully created',
+        })
+        mutate([...data, documentVersion])
+      },
+      onError: (error) => {
+        toast({
+          title: 'Error creating document',
+          description: error.err.formErrors?.[0] || error.err.message,
+          variant: 'destructive',
+        })
+      },
+    },
+  )
+
   return {
     data,
     isValidating: isValidating,
@@ -293,6 +314,7 @@ export default function useDocumentVersions(
     error: swrError,
     createFile,
     uploadFile,
+    createFromTrace,
     renamePaths,
     destroyFile,
     destroyFolder,

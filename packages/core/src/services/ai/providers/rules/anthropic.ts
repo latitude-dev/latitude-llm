@@ -1,5 +1,5 @@
-import { AppliedRules, ProviderRules } from '.'
 import { enforceAllSystemMessagesFirst } from './helpers/enforceAllSystemMessagesFirst'
+import { AppliedRules, ProviderRules } from './types'
 
 export function applyAnthropicRules(appliedRule: AppliedRules): AppliedRules {
   const rule = enforceAllSystemMessagesFirst(appliedRule, {

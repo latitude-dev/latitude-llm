@@ -19,6 +19,11 @@ export function RootBreadcrumbItems({ segments }: { segments: string[] }) {
       label: 'Datasets',
       href: ROUTES.datasets.root,
     },
+    // TODO: telemetry - uncomment when we release telemetry
+    // traces: {
+    // label: 'Traces',
+    // href: ROUTES.traces.root,
+    // },
     settings: {
       label: 'Settings',
       href: ROUTES.settings.root,

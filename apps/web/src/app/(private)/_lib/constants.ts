@@ -3,7 +3,7 @@ import {
   LATITUDE_HELP_URL,
 } from '@latitude-data/core/browser'
 import { envClient } from '$/envClient'
-import { DocumentRoutes, ROUTES } from '$/services/routes'
+import { ROUTES } from '$/services/routes'
 
 export const NAV_LINKS = [
   { label: 'Docs', href: LATITUDE_DOCS_URL },
@@ -11,10 +11,12 @@ export const NAV_LINKS = [
 ]
 
 export const MAIN_NAV_LINKS = [
-  { label: 'Projects', value: ROUTES.dashboard.root as DocumentRoutes },
-  { label: 'Evaluations', value: ROUTES.evaluations.root as DocumentRoutes },
-  { label: 'Datasets', value: ROUTES.datasets.root as DocumentRoutes },
-  { label: 'Settings', value: ROUTES.settings.root as DocumentRoutes },
+  { label: 'Projects', value: ROUTES.dashboard.root as string },
+  { label: 'Evaluations', value: ROUTES.evaluations.root as string },
+  { label: 'Datasets', value: ROUTES.datasets.root as string },
+  // TODO: telemetry - uncomment when we release it
+  // { label: 'Traces', value: ROUTES.traces.root as string },
+  { label: 'Settings', value: ROUTES.settings.root as string },
 ]
 
 export const APP_DOMAIN = envClient.NEXT_PUBLIC_APP_DOMAIN

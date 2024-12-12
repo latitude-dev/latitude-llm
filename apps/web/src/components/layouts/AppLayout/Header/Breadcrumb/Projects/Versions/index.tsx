@@ -51,7 +51,10 @@ export function CommitBreadcrumbItems({
             <Text.H5 color='foregroundMuted' noWrap ellipsis>
               {currentCommit?.title ?? commitUuid}
             </Text.H5>
-            <ClickToCopy copyValue={currentCommit?.uuid ?? commitUuid}>
+            <ClickToCopy
+              copyValue={currentCommit?.uuid ?? commitUuid}
+              tooltipContent='Click to copy the version UUID'
+            >
               <Badge
                 variant={currentCommit?.mergedAt ? 'accent' : 'muted'}
                 className='ml-2'

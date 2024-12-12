@@ -1,5 +1,6 @@
 import {
   and,
+  desc,
   eq,
   getTableColumns,
   isNotNull,
@@ -102,20 +103,29 @@ export class DocumentVersionsRepository extends RepositoryLegacy<
     commit,
     documentUuid,
   }: {
-    commit: Commit
+    commit?: Commit
     documentUuid: string
   }) {
-    const document = await this.db
-      .select()
-      .from(this.scope)
-      .where(
-        and(
-          eq(this.scope.commitId, commit.id),
-          eq(this.scope.documentUuid, documentUuid),
-        ),
-      )
-      .limit(1)
-      .then((docs) => docs[0])
+    const conditions = [eq(this.scope.documentUuid, documentUuid)]
+
+    let document
+    if (commit) {
+      conditions.push(eq(this.scope.commitId, commit.id))
+      document = await this.db
+        .select()
+        .from(this.scope)
+        .where(and(...conditions))
+        .limit(1)
+        .then((docs) => docs[0])
+    } else {
+      document = await this.db
+        .select()
+        .from(this.scope)
+        .where(and(...conditions, isNotNull(this.scope.mergedAt)))
+        .orderBy(desc(this.scope.mergedAt))
+        .limit(1)
+        .then((docs) => docs[0])
+    }
 
     if (!document) return Result.error(new NotFoundError('Document not found'))
 

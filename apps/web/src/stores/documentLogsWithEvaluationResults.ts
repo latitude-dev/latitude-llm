@@ -1,10 +1,10 @@
 import { compactObject } from '@latitude-data/core/lib/compactObject'
-import { DocumentLogWithMetadataAndErrorAndEvaluationResult } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/evaluations/[evaluationId]/_components/ManualEvaluationResults'
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'
 
 import { documentLogPresenter } from './documentLogs'
+import { DocumentLogWithMetadataAndErrorAndEvaluationResult } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/evaluations/[evaluationId]/_components/ManualEvaluationResults'
 
 const EMPTY_LIST: DocumentLogWithMetadataAndErrorAndEvaluationResult[] = []
 export function useDocumentLogsWithEvaluationResults(

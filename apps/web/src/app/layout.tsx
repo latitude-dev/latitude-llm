@@ -40,7 +40,7 @@ export default function RootLayout({
         >
           <TooltipProvider>{children}</TooltipProvider>
         </ThemeProvider>
-        <ToastProvider duration={2500} />
+        <ToastProvider duration={5000} />
       </body>
     </html>
   )

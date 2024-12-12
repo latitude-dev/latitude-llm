@@ -1,5 +1,4 @@
 import { omit } from 'lodash-es'
-
 import { and, eq, getTableColumns, inArray, isNull } from 'drizzle-orm'
 
 import { EvaluationDto } from '../browser'
@@ -113,12 +112,13 @@ export class EvaluationsRepository extends RepositoryLegacy<
       .select()
       .from(this.scope)
       .where(eq(this.scope.name, name))
+      .limit(1)
 
     if (!result.length) {
-      return Result.error(new NotFoundError('Evaluation not found'))
+      return Result.error(new NotFoundError(`Evaluation ${name} not found`))
     }
 
-    return Result.ok(result[0]! as EvaluationDto)
+    return Result.ok(result[0] as EvaluationDto)
   }
 
   async findByUuid(uuid: string) {

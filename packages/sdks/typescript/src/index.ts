@@ -1,4 +1,5 @@
 import type { ContentType, Message, MessageRole } from '@latitude-data/compiler'
+
 import {
   DocumentLog,
   EvaluationResultDto,
@@ -11,6 +12,11 @@ import {
   render,
   type Message as PromptlMessage,
 } from '@latitude-data/promptl'
+import {
+  LatitudeExporter,
+  LatitudeTelemetrySDK,
+  LatitudeTelemetrySDKConfig,
+} from '@latitude-data/telemetry-js'
 import env from '$sdk/env'
 import { GatewayApiConfig, RouteResolver } from '$sdk/utils'
 import {
@@ -55,12 +61,20 @@ const DEFAULT_INTERNAL = {
 type Options = {
   versionUuid?: string
   projectId?: number
-  gateway?: GatewayApiConfig
-  __internal?: { source?: LogSources; retryMs?: number }
+  telemetry?: Omit<LatitudeTelemetrySDKConfig, 'exporter'> & {
+    exporter?: any
+  }
+  __internal?: {
+    gateway?: GatewayApiConfig
+    source?: LogSources
+    retryMs?: number
+  }
 }
 
 class Latitude {
   protected options: SDKOptions
+
+  public telemetry?: LatitudeTelemetrySDK
 
   public evaluations: {
     trigger: (uuid: string, options?: EvalOptions) => Promise<{ uuid: string }>
@@ -84,12 +98,15 @@ class Latitude {
   }
 
   public prompts: {
-    get: (path: string, args: GetPromptOptions) => Promise<Prompt>
+    get: (path: string, args?: GetPromptOptions) => Promise<Prompt>
     getOrCreate: (
       path: string,
-      args: GetOrCreatePromptOptions,
+      args?: GetOrCreatePromptOptions,
     ) => Promise<Prompt>
-    run: (path: string, args: RunPromptOptions) => Promise<any>
+    run: (
+      path: string,
+      args: RunPromptOptions,
+    ) => Promise<(StreamChainResponse & { uuid: string }) | undefined>
     chat: (
       uuid: string,
       messages: Message[],
@@ -108,13 +125,19 @@ class Latitude {
     {
       projectId,
       versionUuid,
-      gateway = DEFAULT_GAWATE_WAY,
-      __internal,
+      telemetry,
+      __internal = {
+        gateway: DEFAULT_GAWATE_WAY,
+      },
     }: Options = {
-      gateway: DEFAULT_GAWATE_WAY,
+      __internal: {
+        gateway: DEFAULT_GAWATE_WAY,
+      },
     },
   ) {
     const { source, retryMs } = { ...DEFAULT_INTERNAL, ...__internal }
+    const { gateway = DEFAULT_GAWATE_WAY } = __internal
+
     this.options = {
       apiKey,
       retryMs,
@@ -147,6 +170,20 @@ class Latitude {
       render: this.renderPrompt.bind(this),
       renderChain: this.renderChain.bind(this),
     }
+
+    if (telemetry) {
+      const exporter =
+        telemetry.exporter ??
+        new LatitudeExporter({
+          apiKey: this.options.apiKey,
+        })
+
+      this.telemetry = new LatitudeTelemetrySDK({
+        ...telemetry,
+        exporter,
+        processors: telemetry.processors,
+      })
+    }
   }
 
   async getPrompt(
@@ -154,9 +191,8 @@ class Latitude {
     { projectId, versionUuid }: GetPromptOptions = {},
   ) {
     projectId = projectId ?? this.options.projectId
-    if (!projectId) {
-      throw new Error('Project ID is required')
-    }
+    if (!projectId) throw new Error('Project ID is required')
+
     versionUuid = versionUuid ?? this.options.versionUuid
 
     const response = await makeRequest({
@@ -168,6 +204,7 @@ class Latitude {
 
     if (!response.ok) {
       const error = (await response.json()) as ApiErrorJsonResponse
+
       throw new LatitudeApiError({
         status: response.status,
         serverResponse: JSON.stringify(error),
