@@ -20,7 +20,7 @@ export const LATITUDE_EVENT = 'latitudeEventsChannel'
 export const LATITUDE_DOCS_URL = 'https://docs.latitude.so'
 export const LATITUDE_EMAIL = 'hello@latitude.so'
 export const LATITUDE_SLACK_URL =
-  'https://trylatitude.slack.com/join/shared_invite/zt-17dyj4elt-rwM~h2OorAA3NtgmibhnLA#/shared-invite/email'
+  'https://join.slack.com/t/trylatitude/shared_invite/zt-2vlnnz3xi-mO1DArzBX0lTJJBATVhR7w'
 export const LATITUDE_HELP_URL = LATITUDE_SLACK_URL
 export const HEAD_COMMIT = 'live'
 export const DEFAULT_PROVIDER_MAX_FREE_RUNS = 1000

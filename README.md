@@ -18,7 +18,7 @@
     <br/>
     <a href="https://github.com/latitude-dev/latitude-llm/issues/new">Report Bug</a>
     ·
-  <a href="https://trylatitude.slack.com/join/shared_invite/zt-17dyj4elt-rwM~h2OorAA3NtgmibhnLA#/shared-invite/email">Join Our Slack</a>
+  <a href="https://join.slack.com/t/trylatitude/shared_invite/zt-2vlnnz3xi-mO1DArzBX0lTJJBATVhR7w">Join Our Slack</a>
     ·
     <a href="https://x.com/trylatitude">X</a>
   </p>
@@ -84,7 +84,7 @@ To get started with Latitude, follow these steps:
 
 9. **Collaborate with your team**: Invite team members to your Latitude workspace to collaborate on prompt engineering and evaluations.
 
-For more detailed information on each step, explore our documentation or join our [community](https://join.slack.com/t/trylatitude/shared_invite/zt-17dyj4elt-rwM~h2OorAA3NtgmibhnLA) for support and discussions.
+For more detailed information on each step, explore our documentation or join our [community](https://join.slack.com/t/trylatitude/shared_invite/zt-2vlnnz3xi-mO1DArzBX0lTJJBATVhR7w) for support and discussions.
 
 ### Latitude Self-Hosted
 
@@ -95,7 +95,7 @@ After setting up Latitude Self-Hosted, you can follow the same steps as in the L
 ## 👥 Community
 
 The Latitude community can be found on
-[Slack](https://trylatitude.slack.com/join/shared_invite/zt-17dyj4elt-rwM~h2OorAA3NtgmibhnLA#/shared-invite/email)
+[Slack](https://join.slack.com/t/trylatitude/shared_invite/zt-2vlnnz3xi-mO1DArzBX0lTJJBATVhR7w)
 where you can ask questions, voice ideas, and share your projects with other
 people.
 
@@ -104,7 +104,7 @@ people.
 Contributions to Latitude are welcome and highly appreciated.
 
 If you are interested in contributing, please join us on our [Slack
-community](https://trylatitude.slack.com/join/shared_invite/zt-17dyj4elt-rwM~h2OorAA3NtgmibhnLA#/shared-invite/email),
+community](https://join.slack.com/t/trylatitude/shared_invite/zt-2vlnnz3xi-mO1DArzBX0lTJJBATVhR7w),
 open an [issue](https://github.com/latitude-dev/latitude-llm/issues/new), or
 contribute a pull request.
 
@@ -118,5 +118,5 @@ Alternatively, we offer a more permissive commercial license for those who need 
 
 - [Home page](https://latitude.so?utm_campaign=github-readme)
 - [Documentation](https://docs.latitude.so/)
-- [Slack community](https://trylatitude.slack.com/join/shared_invite/zt-17dyj4elt-rwM~h2OorAA3NtgmibhnLA#/shared-invite/email)
+- [Slack community](https://join.slack.com/t/trylatitude/shared_invite/zt-2vlnnz3xi-mO1DArzBX0lTJJBATVhR7w)
 - [X / Twitter](https://x.com/trylatitude)
