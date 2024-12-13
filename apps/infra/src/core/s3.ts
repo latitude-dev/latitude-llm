@@ -18,3 +18,18 @@ export const bucket = new aws.s3.BucketV2(
 )
 
 export const bucketName = bucket.bucket
+
+export const publicBucket = new aws.s3.BucketV2(
+  'publicLatitudeBucketResource',
+  {
+    acl: 'private', // Only allowing access through signed urls
+    bucket: 'latitude-llm-public-bucket-production',
+    tags: {
+      Name: 'Latitude LLM public bucket',
+      Environment: 'Production',
+    },
+  },
+  { provider: regionProvider },
+)
+
+export const publicBucketName = publicBucket.bucket
