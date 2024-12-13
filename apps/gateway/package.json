@@ -1,6 +1,6 @@
 {
   "name": "@latitude-data/gateway",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "type": "module",
   "description": "Gateway for Latitude Data",
   "private": true,
