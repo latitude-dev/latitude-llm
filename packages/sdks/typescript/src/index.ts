@@ -16,7 +16,7 @@ import {
   LatitudeExporter,
   LatitudeTelemetrySDK,
   LatitudeTelemetrySDKConfig,
-} from '@latitude-data/telemetry-js'
+} from '@latitude-data/telemetry'
 import env from '$sdk/env'
 import { GatewayApiConfig, RouteResolver } from '$sdk/utils'
 import {

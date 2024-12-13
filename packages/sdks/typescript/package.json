@@ -18,9 +18,7 @@
     "lint": "eslint src"
   },
   "type": "module",
-  "files": [
-    "dist"
-  ],
+  "files": ["dist"],
   "main": "./dist/index.cjs",
   "module": "./dist/index.js",
   "exports": {
@@ -36,7 +34,7 @@
     }
   },
   "dependencies": {
-    "@latitude-data/telemetry-js": "workspace:^",
+    "@latitude-data/telemetry": "workspace:^",
     "@t3-oss/env-core": "^0.10.1",
     "eventsource-parser": "^2.0.1",
     "node-fetch": "3.3.2",

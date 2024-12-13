@@ -607,7 +607,7 @@ importers:
       '@latitude-data/sdk':
         specifier: workspace:^
         version: link:../../packages/sdks/typescript
-      '@latitude-data/telemetry-js':
+      '@latitude-data/telemetry':
         specifier: workspace:^
         version: link:../../packages/telemetry
       '@types/morgan':
@@ -659,7 +659,7 @@ importers:
       '@latitude-data/sdk':
         specifier: workspace:^
         version: link:../../../packages/sdks/typescript
-      '@latitude-data/telemetry-js':
+      '@latitude-data/telemetry':
         specifier: workspace:^
         version: link:../../../packages/telemetry
       '@vercel/otel':
@@ -946,7 +946,7 @@ importers:
       '@latitude-data/promptl':
         specifier: ^0.3.2
         version: 0.3.2
-      '@latitude-data/telemetry-js':
+      '@latitude-data/telemetry':
         specifier: workspace:^
         version: link:../../telemetry
       '@t3-oss/env-core':

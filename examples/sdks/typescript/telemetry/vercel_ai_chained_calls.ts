@@ -1,5 +1,5 @@
 import { openai } from '@ai-sdk/openai'
-import { VercelSpanProcessor } from '@latitude-data/telemetry-js'
+import { VercelSpanProcessor } from '@latitude-data/telemetry'
 import { registerOTel } from '@vercel/otel'
 import { generateText } from 'ai'
 import { z } from 'zod'

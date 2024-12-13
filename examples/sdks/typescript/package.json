@@ -11,7 +11,7 @@
     "@ai-sdk/openai": "^0.0.54",
     "@anthropic-ai/sdk": "^0.32.1",
     "@latitude-data/sdk": "workspace:^",
-    "@latitude-data/telemetry-js": "workspace:^",
+    "@latitude-data/telemetry": "workspace:^",
     "@vercel/otel": "^1.10.0",
     "ai": "^4.0.3",
     "openai": "^4.68.4",
