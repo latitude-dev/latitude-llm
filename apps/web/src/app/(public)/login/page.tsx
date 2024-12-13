@@ -12,7 +12,7 @@ import LoginForm from './LoginForm'
 export const dynamic = 'force-dynamic'
 
 export const metadata = buildMetatags({
-  title: 'Login to your account',
+  title: 'The Open-Source LLM Development Platform',
 })
 
 export default async function LoginPage() {
