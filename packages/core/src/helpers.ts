@@ -1,6 +1,6 @@
 import { z } from 'zod'
-
-import { CsvData, ParameterType, ProviderApiKey } from './browser'
+import { ProviderApiKey } from './schema/types'
+import { CsvData, ParameterType } from './constants'
 
 const DEFAULT_OBJECT_TO_STRING_MESSAGE =
   'Error: Provider returned an object that could not be stringified'
