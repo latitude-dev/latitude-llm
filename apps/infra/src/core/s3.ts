@@ -22,12 +22,24 @@ export const bucketName = bucket.bucket
 export const publicBucket = new aws.s3.BucketV2(
   'publicLatitudeBucketResource',
   {
-    acl: 'private', // Keep ACL private to disallow all actions by default
+    acl: 'private',
     bucket: 'latitude-llm-public-bucket-production',
     tags: {
       Name: 'Latitude LLM public bucket',
       Environment: 'Production',
     },
+  },
+  { provider: regionProvider },
+)
+
+new aws.s3.BucketPublicAccessBlock(
+  'publicLatitudeBucketPublicAccess',
+  {
+    bucket: publicBucket.id,
+    blockPublicAcls: false,
+    blockPublicPolicy: false,
+    ignorePublicAcls: false,
+    restrictPublicBuckets: false,
   },
   { provider: regionProvider },
 )
