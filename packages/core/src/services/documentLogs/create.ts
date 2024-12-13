@@ -1,4 +1,4 @@
-import { Message } from '@latitude-data/compiler'
+import { Message, ToolCall } from '@latitude-data/compiler'
 
 import { Commit, DocumentLog, LogSources } from '../../browser'
 import { database } from '../../client'
@@ -13,6 +13,7 @@ import {
 } from '../../lib'
 import { documentLogs } from '../../schema'
 import { createProviderLog } from '../providerLogs'
+import { LanguageModelUsage } from 'ai'
 
 export type CreateDocumentLogProps = {
   commit: Commit
@@ -27,7 +28,12 @@ export type CreateDocumentLogProps = {
     createdAt?: Date
     providerLog?: {
       messages: Message[]
+      model?: string
       responseText?: string
+      toolCalls?: ToolCall[]
+      duration?: number
+      usage?: LanguageModelUsage
+      costInMillicents?: number
     }
   }
 }
@@ -78,7 +84,12 @@ export async function createDocumentLog(
         documentLogUuid: documentLog.uuid,
         messages: providerLog.messages,
         responseText: providerLog.responseText,
+        toolCalls: providerLog.toolCalls,
         generatedAt: new Date(),
+        model: providerLog.model,
+        duration: providerLog.duration,
+        costInMillicents: providerLog.costInMillicents,
+        usage: providerLog.usage,
         source,
         workspace,
       }).then((r) => r.unwrap())

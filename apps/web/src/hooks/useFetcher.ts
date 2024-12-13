@@ -46,7 +46,7 @@ export default function useFetcher(
           description: 'Something went wrong on the server',
           variant: 'destructive',
         })
-      } else {
+      } else if (response.status !== 404) {
         const error = await response.json()
 
         toast({

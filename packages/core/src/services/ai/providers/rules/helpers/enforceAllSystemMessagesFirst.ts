@@ -1,6 +1,6 @@
 import type { ContentType, Message, MessageRole } from '@latitude-data/compiler'
 
-import { AppliedRules, ProviderRules } from '../index'
+import { AppliedRules, ProviderRules } from '../types'
 
 const SYSTEM_ROLE = 'system'
 

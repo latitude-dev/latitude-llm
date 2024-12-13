@@ -9,6 +9,9 @@ describe('getCommitUrl', () => {
     commits: {
       detail: ({ uuid }: { uuid: string }) => {
         return {
+          overview: {
+            root: `/commits/${uuid}/overview`,
+          },
           documents: {
             root: `/commits/${uuid}/documents`,
             detail: ({ uuid: documentUuid }: { uuid: string }) => {
@@ -38,7 +41,7 @@ describe('getCommitUrl', () => {
       lastSeenCommitUuid: HEAD_COMMIT,
       PROJECT_ROUTE: () => mockProjectRoute,
     })
-    expect(result).toBe('/commits/live/documents')
+    expect(result).toBe('/commits/live/overview')
   })
 
   it('returns latest commit URL when lastSeenCommitUuid is not found and there is a head commit', () => {
@@ -48,7 +51,7 @@ describe('getCommitUrl', () => {
       lastSeenCommitUuid: 'non-existent',
       PROJECT_ROUTE: () => mockProjectRoute,
     })
-    expect(result).toBe('/commits/live/documents')
+    expect(result).toBe('/commits/live/overview')
   })
 
   it('returns specific commit URL when lastSeenCommitUuid is found', () => {
@@ -58,7 +61,7 @@ describe('getCommitUrl', () => {
       lastSeenCommitUuid: '2',
       PROJECT_ROUTE: () => mockProjectRoute,
     })
-    expect(result).toBe('/commits/2/documents')
+    expect(result).toBe('/commits/2/overview')
   })
 
   it('returns latest commit URL when there is a head commit and no lastSeenCommitUuid', () => {
@@ -68,7 +71,7 @@ describe('getCommitUrl', () => {
       lastSeenCommitUuid: undefined,
       PROJECT_ROUTE: () => mockProjectRoute,
     })
-    expect(result).toBe('/commits/live/documents')
+    expect(result).toBe('/commits/live/overview')
   })
 
   it('returns first commit URL when there is no head commit and no lastSeenCommitUuid', () => {
@@ -80,7 +83,7 @@ describe('getCommitUrl', () => {
       lastSeenCommitUuid: undefined,
       PROJECT_ROUTE: () => mockProjectRoute,
     })
-    expect(result).toBe('/commits/1/documents')
+    expect(result).toBe('/commits/1/overview')
   })
 
   it('throws NotFoundError when there are no commits', () => {

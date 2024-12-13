@@ -3,7 +3,8 @@ import { beforeAll, describe, expect, it } from 'vitest'
 
 import { PartialConfig } from '../../helpers'
 import { Providers } from '../models'
-import { applyProviderRules, ProviderRules } from './index'
+import { ProviderRules } from './types'
+import { applyProviderRules } from '.'
 
 const providerType = Providers.Anthropic
 

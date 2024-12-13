@@ -7,6 +7,7 @@ import type { Jobs, Queues } from '../constants'
 import type { RunDocumentForEvaluationJobData } from './batchEvaluations'
 import type { RunBatchEvaluationJobParams } from './batchEvaluations/runBatchEvaluationJob'
 import type { RunEvaluationJobData } from './batchEvaluations/runEvaluationJob'
+import type { CreateDocumentLogFromSpanJobData } from './documentLogs/createDocumentLogFromSpanJob'
 import type { RunDocumentInBatchJobProps } from './documents/runDocumentInBatchJob'
 import type { RunDocumentJobData } from './documents/runDocumentJob'
 import type { UploadDocumentLogsJobData } from './documents/uploadDocumentLogsJob'
@@ -25,6 +26,7 @@ export type JobDataMap = {
   [Jobs.publishToAnalyticsJob]: LatitudeEvent
   [Jobs.runLiveEvaluationJob]: RunLiveEvaluationJobData
   [Jobs.uploadDocumentLogsJob]: UploadDocumentLogsJobData
+  [Jobs.createDocumentLogFromSpanJob]: CreateDocumentLogFromSpanJobData
 }
 
 type JobData<J extends Jobs> = J extends keyof JobDataMap

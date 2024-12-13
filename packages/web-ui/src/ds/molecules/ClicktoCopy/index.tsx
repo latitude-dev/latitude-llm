@@ -8,6 +8,7 @@ import { Icon, toast, Tooltip } from '../../atoms'
 export function ClickToCopy({
   copyValue,
   children,
+  tooltipContent,
   fullWidth = false,
   showIcon = true,
 }: {
@@ -15,6 +16,7 @@ export function ClickToCopy({
   children: ReactNode
   fullWidth?: boolean
   showIcon?: boolean
+  tooltipContent?: string
 }) {
   const onCopy = useCallback(() => {
     navigator.clipboard.writeText(copyValue)
@@ -26,7 +28,6 @@ export function ClickToCopy({
 
   return (
     <Tooltip
-      side='right'
       align='center'
       delayDuration={250}
       variant='inverse'
@@ -34,7 +35,7 @@ export function ClickToCopy({
       trigger={
         <div
           onClick={onCopy}
-          className={cn('cursor-pointer flex flex-row items-center gap-x-2', {
+          className={cn('cursor-pointer flex flex-row items-center gap-x-1', {
             'w-full': fullWidth,
           })}
         >
@@ -45,7 +46,7 @@ export function ClickToCopy({
         </div>
       }
     >
-      Click to copy: {copyValue}
+      {tooltipContent ?? `Click to copy: ${copyValue}`}
     </Tooltip>
   )
 }

@@ -21,15 +21,32 @@ export function useCommits(opts: CommitOptions = {}) {
 }
 
 export function useCommitsFromProject(
-  projectId: number,
+  projectId?: number,
   opts: CommitOptions = {},
 ) {
   const { onSuccessCreate, onSuccessDestroy, onSuccessPublish, commitStatus } =
     opts
   const { toast } = useToast()
-  const route = ROUTES.api.projects.detail(projectId).commits.root
+  const route = projectId
+    ? ROUTES.api.projects.detail(projectId).commits.root
+    : undefined
   const fetcher = useFetcher(
-    commitStatus ? `${route}?status=${commitStatus}` : route,
+    route
+      ? commitStatus
+        ? `${route}?status=${commitStatus}`
+        : route
+      : undefined,
+    {
+      // Sort by latest version first
+      serializer: (data) =>
+        data.sort((a: Commit, b: Commit) => {
+          if (a.version === null && b.version === null) return 0
+          if (a.version === null) return 1
+          if (b.version === null) return -1
+
+          return b.version - a.version
+        }),
+    },
   )
 
   const {

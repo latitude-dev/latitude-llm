@@ -3,6 +3,7 @@
 // All this can be seen in the browser. If you want something private
 // put in other place.
 
+import { Span, Trace } from '../browser'
 import {
   type DocumentLogWithMetadataAndError,
   type EvaluationResultWithMetadataAndErrors,
@@ -71,6 +72,11 @@ export type WebServerToClientEvents = {
   evaluationResultCreated: (args: EvaluationResultCreatedArgs) => void
   joinWorkspace: (args: { workspaceId: number; userId: string }) => void
   documentLogCreated: (args: DocumentLogCreatedArgs) => void
+  tracesAndSpansCreated: (args: {
+    workspaceId: number
+    traces: Trace[]
+    spans: Span[]
+  }) => void
 }
 
 export type WebClientToServerEvents = {
@@ -93,5 +99,13 @@ export type WorkersClientToServerEvents = {
   documentLogCreated: (args: {
     workspaceId: number
     data: DocumentLogCreatedArgs
+  }) => void
+  tracesAndSpansCreated: (args: {
+    workspaceId: number
+    data: {
+      workspaceId: number
+      traces: Trace[]
+      spans: Span[]
+    }
   }) => void
 }

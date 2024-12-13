@@ -30,6 +30,7 @@ import {
 } from '@latitude-data/core/browser'
 import {
   Button,
+  ClickToCopyUuid,
   DocumentTextEditor,
   DocumentTextEditorFallback,
   SplitPane,
@@ -309,6 +310,12 @@ export default function DocumentEditor({
                   disabledMetadataSelectors={isMerged}
                   title='Prompt editor'
                   rightActions={<UpdateToPromptLButton document={document} />}
+                  leftActions={
+                    <ClickToCopyUuid
+                      tooltipContent='Click to copy the prompt UUID'
+                      uuid={document.documentUuid}
+                    />
+                  }
                   metadata={metadata}
                   prompt={value}
                   onChangePrompt={onChange}

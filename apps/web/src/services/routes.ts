@@ -43,6 +43,9 @@ const BACKOFFICE_ROOT = '/backoffice'
 export const ROUTES = {
   root: '/',
   api: _API_ROUTES,
+  traces: {
+    root: '/traces',
+  },
   backoffice: {
     root: BACKOFFICE_ROOT,
     [BackofficeRoutes.templates]: {

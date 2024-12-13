@@ -1,8 +1,8 @@
 import type { Message } from '@latitude-data/compiler'
 import { describe, expect, it } from 'vitest'
 
-import { ProviderRules } from '.'
 import { applyCustomRules } from './custom'
+import { ProviderRules } from './types'
 
 describe('applyCustomRules', () => {
   it('not warns when no rules are violated', () => {

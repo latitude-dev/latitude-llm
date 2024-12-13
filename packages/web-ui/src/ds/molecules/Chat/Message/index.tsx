@@ -166,17 +166,30 @@ const Content = ({
   sourceMap?: PromptlSourceRef[]
 }) => {
   if (typeof value === 'string') {
-    return (
-      <ContentText
-        index={index}
-        color={color}
-        size={size}
-        message={value}
-        parameters={parameters}
-        collapseParameters={collapseParameters}
-        sourceMap={sourceMap}
-      />
-    )
+    try {
+      const parsedValue = JSON.parse(value)
+      return (
+        <div className='pt-2 w-full'>
+          <div className='overflow-hidden rounded-lg w-full'>
+            <CodeBlock language='json'>
+              {JSON.stringify(parsedValue, null, 2)}
+            </CodeBlock>
+          </div>
+        </div>
+      )
+    } catch (_) {
+      return (
+        <ContentText
+          index={index}
+          color={color}
+          size={size}
+          message={value}
+          parameters={parameters}
+          collapseParameters={collapseParameters}
+          sourceMap={sourceMap}
+        />
+      )
+    }
   }
 
   switch (value.type) {
