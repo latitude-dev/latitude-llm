@@ -15,8 +15,8 @@ import {
   runErrors,
   workspaces,
 } from '../../schema'
-import { getDocumentLogFilters } from './computeDocumentLogsWithMetadata'
 import { fetchDocumentLogWithMetadata } from './fetchDocumentLogWithMetadata'
+import { buildLogsFilterSQLConditions } from './logsFilterUtils'
 
 type QueryArgs = {
   targetCreatedAtUTC: string
@@ -33,7 +33,7 @@ async function getDocumentLogsQuery(
     eq(workspaces.id, workspace.id),
     sql`${documentLogs.createdAt} >= ${targetCreatedAtUTC}`,
     documentUuid ? eq(documentLogs.documentUuid, documentUuid) : undefined,
-    filterOptions ? getDocumentLogFilters(filterOptions) : undefined,
+    filterOptions ? buildLogsFilterSQLConditions(filterOptions) : undefined,
   ].filter(Boolean)
   return db
     .select({
@@ -64,7 +64,7 @@ async function getDocumentLogsWithErrorsQuery(
     eq(workspaces.id, workspace.id),
     sql`${documentLogs.createdAt} >= ${targetCreatedAtUTC}`,
     documentUuid ? eq(documentLogs.documentUuid, documentUuid) : undefined,
-    filterOptions ? getDocumentLogFilters(filterOptions) : undefined,
+    filterOptions ? buildLogsFilterSQLConditions(filterOptions) : undefined,
   ].filter(Boolean)
 
   return db

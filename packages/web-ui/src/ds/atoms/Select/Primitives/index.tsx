@@ -9,16 +9,11 @@ import {
   useMemo,
   useState,
 } from 'react'
-import {
-  CaretSortIcon,
-  CheckIcon,
-  ChevronDownIcon,
-  ChevronUpIcon,
-} from '@radix-ui/react-icons'
 import * as SelectPrimitive from '@radix-ui/react-select'
 
 import { SelectOption, SelectOptionGroup } from '..'
 import { cn } from '../../../../lib/utils'
+import { Icon } from '../../Icons'
 
 const SelectRoot = SelectPrimitive.Root
 
@@ -36,7 +31,7 @@ function SelectValueWithIcon({
   children: ReactNode
 }) {
   return (
-    <div className='w-full flex flex-row items-center gap-x-2'>
+    <div className='w-full flex flex-row items-center gap-x-2 min-w-0'>
       {icon}
       {children}
     </div>
@@ -77,7 +72,7 @@ const SelectValue = ({
 
   if (!option)
     return (
-      <SelectValuePrimitive placeholder={placeholder}>
+      <SelectValuePrimitive placeholder={placeholder} className='opacity-50'>
         {placeholder}
       </SelectValuePrimitive>
     )
@@ -110,7 +105,7 @@ const SelectTrigger = forwardRef<
     >
       {children}
       <SelectPrimitive.Icon asChild>
-        <CaretSortIcon className='h-4 w-4 opacity-50' />
+        <Icon name='chevronsUpDown' className='min-w-0 flex-none opacity-50' />
       </SelectPrimitive.Icon>
     </SelectPrimitive.Trigger>
   )
@@ -129,7 +124,7 @@ const SelectScrollUpButton = forwardRef<
     )}
     {...props}
   >
-    <ChevronUpIcon />
+    <Icon name='chevronUp' />
   </SelectPrimitive.ScrollUpButton>
 ))
 SelectScrollUpButton.displayName = SelectPrimitive.ScrollUpButton.displayName
@@ -146,7 +141,7 @@ const SelectScrollDownButton = forwardRef<
     )}
     {...props}
   >
-    <ChevronDownIcon />
+    <Icon name='chevronDown' />
   </SelectPrimitive.ScrollDownButton>
 ))
 SelectScrollDownButton.displayName =
@@ -237,7 +232,7 @@ const SelectItem = forwardRef<
   >
     <span className='absolute right-2 flex h-3.5 w-3.5 items-center justify-center'>
       <SelectPrimitive.ItemIndicator>
-        <CheckIcon className='h-4 w-4' />
+        <Icon name='checkClean' />
       </SelectPrimitive.ItemIndicator>
     </span>
 

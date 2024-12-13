@@ -87,6 +87,7 @@ describe('computeDocumentLogsAggregations', () => {
       filterOptions: {
         commitIds: [commit.id],
         logSources: LOG_SOURCES,
+        createdAt: undefined,
       },
     })
 

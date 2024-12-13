@@ -1,4 +1,4 @@
-import { and, desc, eq, isNotNull, or, sql, inArray } from 'drizzle-orm'
+import { and, desc, eq, isNotNull, or, sql } from 'drizzle-orm'
 
 import {
   Commit,
@@ -9,22 +9,12 @@ import { database } from '../../client'
 import { calculateOffset } from '../../lib/pagination/calculateOffset'
 import { DocumentLogsWithMetadataAndErrorsRepository } from '../../repositories/documentLogsWithMetadataAndErrorsRepository'
 import { commits, documentLogs, projects, workspaces } from '../../schema'
+import { buildLogsFilterSQLConditions } from './logsFilterUtils'
 
 export function getCommitFilter(draft?: Commit) {
   return draft
     ? or(isNotNull(commits.mergedAt), eq(commits.id, draft.id))
     : isNotNull(commits.mergedAt)
-}
-
-export function getDocumentLogFilters(options: DocumentLogFilterOptions) {
-  return and(
-    options.commitIds.length
-      ? or(inArray(documentLogs.commitId, options.commitIds))
-      : sql`1 = 0`,
-    options.logSources.length
-      ? or(inArray(documentLogs.source, options.logSources))
-      : sql`1 = 0`,
-  )
 }
 
 export function computeDocumentLogsWithMetadataQuery(
@@ -46,8 +36,9 @@ export function computeDocumentLogsWithMetadataQuery(
   const repo = new DocumentLogsWithMetadataAndErrorsRepository(workspaceId, db)
   const offset = calculateOffset(page, pageSize)
   const conditions = [
+    eq(workspaces.id, workspaceId),
     documentUuid ? eq(documentLogs.documentUuid, documentUuid) : undefined,
-    filterOptions ? getDocumentLogFilters(filterOptions) : undefined,
+    filterOptions ? buildLogsFilterSQLConditions(filterOptions) : undefined,
   ].filter(Boolean)
   return repo.scope
     .where(and(...conditions))
@@ -71,7 +62,7 @@ export async function computeDocumentLogsWithMetadataCount(
   const conditions = [
     eq(workspaces.id, workspaceId),
     documentUuid ? eq(documentLogs.documentUuid, documentUuid) : undefined,
-    filterOptions ? getDocumentLogFilters(filterOptions) : undefined,
+    filterOptions ? buildLogsFilterSQLConditions(filterOptions) : undefined,
   ].filter(Boolean)
   const countList = await db
     .select({

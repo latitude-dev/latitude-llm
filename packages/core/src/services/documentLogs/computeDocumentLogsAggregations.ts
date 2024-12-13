@@ -13,7 +13,7 @@ import {
   providerLogs,
   runErrors,
 } from '../../schema'
-import { getDocumentLogFilters } from './computeDocumentLogsWithMetadata'
+import { buildLogsFilterSQLConditions } from './logsFilterUtils'
 
 export type DocumentLogsAggregations = {
   totalCount: number
@@ -42,7 +42,7 @@ export async function computeDocumentLogsAggregations(
     eq(projects.workspaceId, workspace.id),
     isNull(runErrors.id),
     documentUuid ? eq(documentLogs.documentUuid, documentUuid) : undefined,
-    filterOptions ? getDocumentLogFilters(filterOptions) : undefined,
+    filterOptions ? buildLogsFilterSQLConditions(filterOptions) : undefined,
   ].filter(Boolean)
   const baseQuery = db
     .select({

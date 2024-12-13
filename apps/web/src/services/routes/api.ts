@@ -1,6 +1,5 @@
 import { DocumentLogFilterOptions } from '@latitude-data/core/browser'
-
-import { addParameters } from '../helpers'
+import { generateDocumentLogsApiRouteWithParams } from '@latitude-data/core/services/documentLogs/logsFilterUtils/generateDocumentLogsApiRouteWithParams'
 
 type PaginationParameters = { page: number; pageSize: number }
 
@@ -99,13 +98,15 @@ export const _API_ROUTES = {
                   excludeErrors?: boolean
                   filterOptions: DocumentLogFilterOptions
                 }) =>
-                  addParameters(`${documentRoot}/logs`, {
-                    page,
-                    pageSize,
-                    excludeErrors,
-                    ...filterOptions,
+                  generateDocumentLogsApiRouteWithParams({
+                    path: `${documentRoot}/logs`,
+                    params: {
+                      page,
+                      pageSize,
+                      excludeErrors,
+                      filterOptions,
+                    },
                   }),
-
                 pagination: ({
                   page,
                   pageSize,
@@ -115,18 +116,22 @@ export const _API_ROUTES = {
                   excludeErrors?: boolean
                   filterOptions: DocumentLogFilterOptions
                 }) =>
-                  addParameters(`${documentRoot}/logs/pagination`, {
-                    page,
-                    pageSize,
-                    excludeErrors,
-                    ...filterOptions,
+                  generateDocumentLogsApiRouteWithParams({
+                    path: `${documentRoot}/logs/pagination`,
+                    params: {
+                      page,
+                      pageSize,
+                      excludeErrors,
+                      filterOptions,
+                    },
                   }),
-
                 aggregations: (filterOptions: DocumentLogFilterOptions) =>
-                  addParameters(
-                    `${documentRoot}/logs/aggregations`,
-                    filterOptions,
-                  ),
+                  generateDocumentLogsApiRouteWithParams({
+                    path: `${documentRoot}/logs/aggregations`,
+                    params: {
+                      filterOptions,
+                    },
+                  }),
                 dailyCount: ({
                   filterOptions,
                   days,
@@ -134,9 +139,12 @@ export const _API_ROUTES = {
                   filterOptions: DocumentLogFilterOptions
                   days?: number
                 }) =>
-                  addParameters(`${documentRoot}/logs/daily-count`, {
-                    days,
-                    ...filterOptions,
+                  generateDocumentLogsApiRouteWithParams({
+                    path: `${documentRoot}/logs/daily-count`,
+                    params: {
+                      days,
+                      filterOptions,
+                    },
                   }),
                 detail: (documentLogUuid: string) => {
                   return {
@@ -147,13 +155,13 @@ export const _API_ROUTES = {
                       excludeErrors?: boolean
                       filterOptions: DocumentLogFilterOptions
                     }) =>
-                      addParameters(
-                        `${documentRoot}/logs/${documentLogUuid}/position`,
-                        {
+                      generateDocumentLogsApiRouteWithParams({
+                        path: `${documentRoot}/logs/${documentLogUuid}/position`,
+                        params: {
                           excludeErrors,
-                          ...filterOptions,
+                          filterOptions,
                         },
-                      ),
+                      }),
                   }
                 },
               },

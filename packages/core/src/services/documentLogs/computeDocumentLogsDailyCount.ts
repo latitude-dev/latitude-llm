@@ -7,7 +7,7 @@ import {
 } from '../../browser'
 import { database } from '../../client'
 import { commits, documentLogs, projects, runErrors } from '../../schema'
-import { getDocumentLogFilters } from './computeDocumentLogsWithMetadata'
+import { buildLogsFilterSQLConditions } from './logsFilterUtils'
 
 export type DailyCount = {
   date: string
@@ -35,7 +35,7 @@ export async function computeDocumentLogsDailyCount(
       String(days),
     )} days'`,
     documentUuid ? eq(documentLogs.documentUuid, documentUuid) : undefined,
-    filterOptions ? getDocumentLogFilters(filterOptions) : undefined,
+    filterOptions ? buildLogsFilterSQLConditions(filterOptions) : undefined,
   ].filter(Boolean)
 
   const result = await db

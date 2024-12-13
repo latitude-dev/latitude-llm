@@ -488,9 +488,12 @@ export type DocumentVersionDto = DocumentVersion & {
 export type DocumentLogFilterOptions = {
   commitIds: number[]
   logSources: LogSources[]
+  createdAt: { from: Date | undefined; to?: Date } | undefined
 }
 
 export const RELATIVE_DATES = {
+  today: 'today',
+  yesterday: 'yesterday',
   current_week: 'current_week',
   current_month: 'current_month',
   current_year: 'current_year',
@@ -514,3 +517,4 @@ export enum ParameterType {
 }
 
 export const SUPPORTED_IMAGE_TYPES = ['.jpg', '.jpeg', '.png', '.gif', '.webp']
+export const LOG_FILTERS_ENCODED_PARAMS = ['customIdentifier']

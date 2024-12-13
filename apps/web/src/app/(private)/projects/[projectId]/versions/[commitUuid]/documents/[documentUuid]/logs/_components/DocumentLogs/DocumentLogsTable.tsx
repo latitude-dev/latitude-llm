@@ -6,6 +6,7 @@ import { capitalize } from 'lodash-es'
 import {
   DocumentLogFilterOptions,
   EvaluationResultableType,
+  LOG_FILTERS_ENCODED_PARAMS,
 } from '@latitude-data/core/browser'
 import { buildPagination } from '@latitude-data/core/lib/pagination/buildPagination'
 import {
@@ -142,6 +143,7 @@ export const DocumentLogsTable = forwardRef<HTMLTableElement, Props>(
       })
     const queryParams =
       typeof window !== 'undefined' ? window.location.search : ''
+
     return (
       <Table
         ref={ref}
@@ -160,6 +162,8 @@ export const DocumentLogsTable = forwardRef<HTMLTableElement, Props>(
                       .root,
                     count: pagination.count,
                     queryParams,
+                    encodeQueryParams: false,
+                    paramsToEncode: LOG_FILTERS_ENCODED_PARAMS,
                     page: Number(page),
                     pageSize: Number(pageSize),
                   })

@@ -59,7 +59,7 @@ import {
   Trash,
   Twitter,
   Undo,
-  X,
+  XIcon,
 } from 'lucide-react'
 
 import { cn } from '../../../lib/utils'
@@ -129,7 +129,7 @@ const Icons = {
   image: Image,
   imageUp: ImageUp,
   logs: Logs,
-  x: X,
+  close: XIcon,
 }
 
 export type IconName = keyof typeof Icons

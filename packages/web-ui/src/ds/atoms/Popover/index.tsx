@@ -54,8 +54,9 @@ const PopoverContent = forwardRef<HTMLDivElement, Props>(function Content(
 })
 
 export const ButtonTrigger = ({
-  children,
   color,
+  overrideDarkColor,
+  children,
   showIcon = true,
   buttonVariant = 'outline',
   className,
@@ -67,6 +68,7 @@ export const ButtonTrigger = ({
   buttonVariant?: ButtonProps['variant']
   className?: string
   iconProps?: Pick<IconProps, 'name' | 'color'>
+  overrideDarkColor?: string
   color?: TextColor
   ref?: Ref<HTMLButtonElement>
 }) => {
@@ -78,10 +80,10 @@ export const ButtonTrigger = ({
         <div className='flex flex-row justify-between items-center w-full gap-x-2'>
           {isString(children) ? (
             <Text.H5 color={color} noWrap ellipsis>
-              {children}
+              <div className={overrideDarkColor}>{children}</div>
             </Text.H5>
           ) : (
-            children
+            <div className={overrideDarkColor}>{children}</div>
           )}
           {showIcon ? (
             <div className='flex-none'>

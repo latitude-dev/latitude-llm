@@ -4,17 +4,17 @@ import { Commit } from '@latitude-data/core/browser'
 import { Button, Checkbox, Text } from '@latitude-data/web-ui'
 import { useCommits } from '$/stores/commitsStore'
 
-import { BadgeCommit } from '../../../../../_components/Sidebar/CommitSelector/CommitItem'
-import { FilterButton } from './FilterButton'
+import { BadgeCommit } from '../../../../../../_components/Sidebar/CommitSelector/CommitItem'
+import { FilterButton, useFilterButtonColor } from '../FilterButton'
 
 function CommitCheckbox({
   commit,
   selectedCommitsIds,
-  setSelectedCommitsIds,
+  onSelectCommits,
 }: {
   commit: Commit
   selectedCommitsIds: number[]
-  setSelectedCommitsIds: (selectedCommitsIds: number[]) => void
+  onSelectCommits: (selectedCommitsIds: number[]) => void
 }) {
   const isSelected = useMemo(
     () => selectedCommitsIds.includes(commit.id),
@@ -22,7 +22,7 @@ function CommitCheckbox({
   )
 
   const onSelect = useCallback(() => {
-    setSelectedCommitsIds(
+    onSelectCommits(
       isSelected
         ? selectedCommitsIds.filter((id) => id !== commit.id)
         : [...selectedCommitsIds, commit.id],
@@ -51,12 +51,12 @@ function CommitsList({
   title,
   commits,
   selectedCommitsIds,
-  setSelectedCommitsIds,
+  onSelectCommits,
 }: {
   title: string
   commits: Commit[]
   selectedCommitsIds: number[]
-  setSelectedCommitsIds: (selectedCommitsIds: number[]) => void
+  onSelectCommits: (selectedCommitsIds: number[]) => void
 }) {
   return (
     <div className='flex flex-col gap-2 w-full'>
@@ -67,7 +67,7 @@ function CommitsList({
             <CommitCheckbox
               commit={commit}
               selectedCommitsIds={selectedCommitsIds}
-              setSelectedCommitsIds={setSelectedCommitsIds}
+              onSelectCommits={onSelectCommits}
             />
           </li>
         ))}
@@ -78,12 +78,12 @@ function CommitsList({
 
 export function CommitFilter({
   selectedCommitsIds,
-  setSelectedCommitsIds,
+  onSelectCommits,
   isDefault,
   reset,
 }: {
   selectedCommitsIds: number[]
-  setSelectedCommitsIds: (selectedCommitsIds: number[]) => void
+  onSelectCommits: (selectedCommitsIds: number[]) => void
   isDefault: boolean
   reset: () => void
 }) {
@@ -119,19 +119,22 @@ export function CommitFilter({
     return selectedCommit?.title ?? '1 version'
   }, [isDefault, selectedCommitsIds, commits])
 
-  const filterColor = useMemo(() => {
-    if (isDefault) return 'foregroundMuted'
-    if (selectedCommitsIds.length) return 'primary'
-    return 'destructive'
-  }, [isDefault, selectedCommitsIds])
+  const filterColor = useFilterButtonColor({
+    isDefault,
+    isSelected: selectedCommitsIds.length > 0,
+  })
 
   return (
-    <FilterButton label={filterLabel} color={filterColor}>
+    <FilterButton
+      label={filterLabel}
+      color={filterColor.color}
+      darkColor={filterColor.darkColor}
+    >
       <div className='flex flex-row gap-4 w-full flex-nowrap'>
         <Checkbox
           checked={headerState}
           onClick={() =>
-            setSelectedCommitsIds(headerState ? [] : commits.map((c) => c.id))
+            onSelectCommits(headerState ? [] : commits.map((c) => c.id))
           }
           label={
             <Text.H5 noWrap ellipsis>
@@ -140,29 +143,24 @@ export function CommitFilter({
           }
         />
 
-        <Button
-          variant='link'
-          className='p-0'
-          onClick={reset}
-          disabled={isDefault}
-        >
+        <Button size='none' variant='link' onClick={reset} disabled={isDefault}>
           Reset
         </Button>
       </div>
-      <div className='flex flex-col gap-4 pr-4'>
+      <div className='flex flex-col gap-4'>
         {drafts.length > 0 ? (
           <CommitsList
             title='Drafts'
             commits={drafts}
             selectedCommitsIds={selectedCommitsIds}
-            setSelectedCommitsIds={setSelectedCommitsIds}
+            onSelectCommits={onSelectCommits}
           />
         ) : null}
         <CommitsList
           title='Published versions'
           commits={mergedCommits}
           selectedCommitsIds={selectedCommitsIds}
-          setSelectedCommitsIds={setSelectedCommitsIds}
+          onSelectCommits={onSelectCommits}
         />
       </div>
     </FilterButton>

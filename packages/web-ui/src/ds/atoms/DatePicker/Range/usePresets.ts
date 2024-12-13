@@ -2,6 +2,8 @@ import {
   endOfDay,
   endOfMonth,
   endOfWeek,
+  formatISO,
+  startOfDay,
   startOfMonth,
   startOfWeek,
   startOfYear,
@@ -11,8 +13,12 @@ import {
 } from 'date-fns'
 import { RelativeDate } from '@latitude-data/core/browser'
 import { SelectOption } from '../../Select'
+import { DateRange } from 'react-day-picker'
+import { useMemo } from 'react'
 
 export const RELATIVE_DATES_OPTIONS: SelectOption<RelativeDate>[] = [
+  { value: 'today', label: 'Today' },
+  { value: 'yesterday', label: 'Yesterday' },
   { value: 'current_week', label: 'Current week' },
   { value: 'current_month', label: 'Current month' },
   { value: 'current_year', label: 'Current year' },
@@ -29,6 +35,16 @@ export const RELATIVE_DATES_OPTIONS: SelectOption<RelativeDate>[] = [
 
 function buildPreset(preset: RelativeDate) {
   switch (preset) {
+    case 'today':
+      return {
+        from: startOfDay(new Date()),
+        to: endOfDay(new Date()),
+      }
+    case 'yesterday':
+      return {
+        from: startOfDay(subDays(new Date(), 1)),
+        to: endOfDay(subDays(new Date(), 1)),
+      }
     case 'current_week':
       return {
         from: startOfWeek(new Date(), { weekStartsOn: 1 }),
@@ -56,45 +72,78 @@ function buildPreset(preset: RelativeDate) {
       }
     case 'last_3_days':
       return {
-        from: subDays(new Date(), 3),
-        to: new Date(),
+        from: startOfDay(subDays(new Date(), 3)),
+        to: endOfDay(new Date()),
       }
     case 'last_7_days':
       return {
-        from: subDays(new Date(), 7),
-        to: new Date(),
+        from: startOfDay(subDays(new Date(), 7)),
+        to: endOfDay(new Date()),
       }
     case 'last_14_days':
       return {
-        from: subDays(new Date(), 14),
-        to: new Date(),
+        from: startOfDay(subDays(new Date(), 14)),
+        to: endOfDay(new Date()),
       }
     case 'last_30_days':
       return {
-        from: subDays(new Date(), 30),
-        to: new Date(),
+        from: startOfDay(subDays(new Date(), 30)),
+        to: endOfDay(new Date()),
       }
     case 'last_60_days':
       return {
-        from: subDays(new Date(), 60),
-        to: new Date(),
+        from: startOfDay(subDays(new Date(), 60)),
+        to: endOfDay(new Date()),
       }
     case 'last_90_days':
       return {
-        from: subDays(new Date(), 90),
-        to: new Date(),
+        from: startOfDay(subDays(new Date(), 90)),
+        to: endOfDay(new Date()),
       }
     case 'last_12_months':
       return {
-        from: subMonths(new Date(), 12),
-        to: new Date(),
+        from: startOfDay(subMonths(new Date(), 12)),
+        to: endOfDay(new Date()),
       }
   }
 }
 
-export function usePresets() {
+function buildPresets() {
+  return RELATIVE_DATES_OPTIONS.map((option) => {
+    return {
+      range: buildPreset(option.value),
+      value: option.value,
+      label: option.label,
+    }
+  })
+}
+
+export function usePresets({
+  range,
+  showPresets,
+}: {
+  range: DateRange | undefined
+  showPresets?: boolean
+}) {
+  const selectedPreset = useMemo(() => {
+    if (!showPresets) return undefined
+    if (!range) return undefined
+
+    const presets = buildPresets()
+    const from = range?.from ? formatISO(range.from) : undefined
+    const to = range?.to ? formatISO(range.to) : undefined
+    const preset = presets.find(
+      (preset) =>
+        formatISO(preset.range.from) === from &&
+        formatISO(preset.range.to) === to,
+    )
+
+    return preset
+  }, [range, showPresets])
+
   return {
     options: RELATIVE_DATES_OPTIONS,
     buildPreset,
+    selectedPreset,
   }
 }

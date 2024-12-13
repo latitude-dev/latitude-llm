@@ -103,7 +103,7 @@ export function DropzoneInput({
                       variant='ghost'
                       size='none'
                       iconProps={{
-                        name: 'x',
+                        name: 'close',
                         color: 'foregroundMuted',
                         size: 'normal',
                         className: 'shrink-0',

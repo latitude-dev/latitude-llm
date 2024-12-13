@@ -1,7 +1,7 @@
 'use client'
 
-import { useCallback, useState } from 'react'
-import { format, formatISO } from 'date-fns'
+import { useCallback, useState, useMemo } from 'react'
+import { format } from 'date-fns'
 
 import { cn } from '../../../../lib/utils'
 import { Button } from '../../Button'
@@ -14,64 +14,83 @@ import { RelativeDate } from '@latitude-data/core/browser'
 
 export type DatePickerMode = 'single' | 'range'
 
-type DateRangeValue = {
-  raw: {
-    from: Date
-    to: Date
-  }
-  iso8601: {
-    from: string
-    to: string
-  }
-}
+function renderLabel({
+  range,
+  selectedPreset,
+  placeholder,
+}: {
+  range: DateRange | undefined
+  placeholder: string
+  selectedPreset?: { label: string; value: RelativeDate }
+}) {
+  if (selectedPreset) return { label: selectedPreset.label, selected: true }
 
-type CallbackFn = ((value: DateRangeValue) => void) | undefined
-function formatRange(range: DateRange | undefined, callback: CallbackFn) {
-  if (!range?.to || !range?.from) return
-  const from = range.from
-  const to = range.to
-  const value = {
-    raw: { from, to },
-    iso8601: { from: formatISO(from), to: formatISO(to) },
+  if (range?.from) {
+    const rangeSelection = range.to
+      ? `${format(range.from, 'LLL dd, y')} - ${format(range.to, 'LLL dd, y')}`
+      : format(range.from, 'LLL dd, y')
+    return { label: rangeSelection, selected: true }
   }
-  callback?.(value)
+
+  return { label: placeholder, selected: false }
 }
 
 export function DatePickerRange({
   showPresets,
+  initialRange,
   onCloseChange,
   onChange: onChangeProp,
   placeholder = 'Pick a date',
+  closeOnPresetSelect = true,
 }: {
   showPresets?: boolean
-  onChange?: (range: DateRangeValue) => void
-  onCloseChange?: (range: DateRangeValue) => void
+  initialRange?: DateRange
+  onChange?: (range: DateRange | undefined) => void
+  onCloseChange?: (range: DateRange | undefined) => void
+  closeOnPresetSelect?: boolean
   placeholder?: string
 }) {
-  const { options, buildPreset } = usePresets()
-  const [range, setRange] = useState<DateRange | undefined>()
-
-  const onChange = useCallback(
-    (range: DateRange) => {
-      setRange(range)
-      formatRange(range, onChangeProp)
-    },
-    [onChangeProp],
+  const [open, setOpen] = useState(false)
+  const [range, setRange] = useState<DateRange | undefined>(initialRange)
+  const { options, buildPreset, selectedPreset } = usePresets({
+    range,
+    showPresets,
+  })
+  const selection = useMemo(
+    () => renderLabel({ range, selectedPreset, placeholder }),
+    [range, selectedPreset, placeholder],
   )
 
   const onPresetSelect = useCallback(
     (preset: RelativeDate) => {
-      onChange(buildPreset(preset))
+      const newRange = buildPreset(preset)
+      setRange(newRange)
+
+      if (closeOnPresetSelect) {
+        onCloseChange?.(newRange)
+        setOpen(false)
+      } else {
+        onChangeProp?.(range)
+      }
     },
-    [onChange, buildPreset],
+    [buildPreset, onChangeProp, onCloseChange, closeOnPresetSelect],
   )
+
+  const clearAndClose = useCallback(() => {
+    setRange(undefined)
+    setOpen(false)
+    onCloseChange?.(undefined)
+  }, [onCloseChange])
 
   return (
     <Popover.Root
+      open={open}
       onOpenChange={(isOpen) => {
+        setOpen(isOpen)
+
         if (isOpen) return
 
-        formatRange(range, onCloseChange)
+        onCloseChange?.(range)
       }}
     >
       <Popover.Trigger asChild>
@@ -84,21 +103,17 @@ export function DatePickerRange({
           )}
           iconProps={{
             name: 'calendar',
-            color: range ? 'foreground' : 'foregroundMuted',
+            color: selection.selected ? 'primary' : 'foregroundMuted',
+            darkColor: selection.selected ? 'foreground' : 'foregroundMuted',
           }}
         >
-          {range?.from ? (
-            range.to ? (
-              <>
-                {format(range.from, 'LLL dd, y')} -{' '}
-                {format(range.to, 'LLL dd, y')}
-              </>
-            ) : (
-              format(range.from, 'LLL dd, y')
-            )
-          ) : (
-            <span>{placeholder}</span>
-          )}
+          <span
+            className={cn({
+              'text-primary dark:text-foreground': selection.selected,
+            })}
+          >
+            {selection.label}
+          </span>
         </Button>
       </Popover.Trigger>
       <Popover.Content
@@ -110,10 +125,16 @@ export function DatePickerRange({
           <Select
             name='date-preset'
             onChange={onPresetSelect}
+            value={selectedPreset?.value}
             options={options}
           />
         ) : null}
-        <Calendar mode='range' selected={range} onSelect={setRange} />
+        <div>
+          <Calendar mode='range' selected={range} onSelect={setRange} />
+          <div className='flex justify-end gap-x-2' onClick={clearAndClose}>
+            <Button variant='ghost'>Clear dates</Button>
+          </div>
+        </div>
       </Popover.Content>
     </Popover.Root>
   )

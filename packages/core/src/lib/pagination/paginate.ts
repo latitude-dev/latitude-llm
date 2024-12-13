@@ -59,6 +59,7 @@ export async function paginateQuery<T extends PgSelect>({
     baseUrl: pageUrl?.base ?? '',
     count,
     queryParams: searchParams,
+    encodeQueryParams: false,
     page,
     pageSize,
   })

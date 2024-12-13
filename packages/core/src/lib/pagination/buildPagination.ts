@@ -23,7 +23,10 @@ export function getPaginationParamsWithDefaults({
   defaultPaginate?: Exclude<PaginationArgs, 'page'>
   searchParams?: QueryParams | string
 }) {
-  const params = parseSearchParams(searchParams)
+  const params = parseSearchParams({
+    queryParams: searchParams,
+    encodeQueryParams: false,
+  })
   return {
     page: parsePage(params?.page),
     pageSize: params?.pageSize
@@ -38,10 +41,14 @@ export function buildPagination({
   queryParams,
   page,
   pageSize,
+  encodeQueryParams = true,
+  paramsToEncode = [],
 }: {
   baseUrl: string
   count: number
   queryParams?: QueryParams | string | undefined
+  encodeQueryParams?: boolean
+  paramsToEncode?: string[]
   page: number
   pageSize: number
 }) {
@@ -61,6 +68,8 @@ export function buildPagination({
               page: page - 1,
               pageSize,
               queryParams,
+              encodeQueryParams,
+              paramsToEncode,
             }),
           }
         : undefined,
@@ -73,6 +82,8 @@ export function buildPagination({
               page: page + 1,
               pageSize,
               queryParams,
+              encodeQueryParams,
+              paramsToEncode,
             }),
           }
         : undefined,

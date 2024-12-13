@@ -33,6 +33,7 @@ export function GoToPageInput({
           page: targetPage,
           pageSize,
           queryParams,
+          encodeQueryParams: false,
         }),
       )
     }
