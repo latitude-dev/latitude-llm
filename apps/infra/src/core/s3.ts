@@ -55,3 +55,29 @@ new aws.s3.BucketPolicy(
   },
   { provider: regionProvider },
 )
+
+new aws.s3.BucketCorsConfigurationV2(
+  'publicLatitudeBucketCors',
+  {
+    bucket: publicBucket.id,
+    corsRules: [
+      {
+        allowedHeaders: ['*'],
+        allowedMethods: ['GET', 'HEAD'],
+        allowedOrigins: ['https://latitude.so', 'https://*.latitude.so'],
+        exposeHeaders: [
+          'ETag',
+          'Content-Type',
+          'Content-Length',
+          'Content-Range',
+          'Content-Disposition',
+          'Cache-Control',
+          'Last-Modified',
+          'Expires',
+        ],
+        maxAgeSeconds: 24 * 3600, // 24 hours
+      },
+    ],
+  },
+  { provider: regionProvider },
+)
