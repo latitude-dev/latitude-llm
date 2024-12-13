@@ -3,6 +3,7 @@ import { join } from 'path'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { Workspace } from '../../browser'
 import * as constants from '../../constants'
+import * as lib from '../../lib'
 import { BadRequestError, Result, UnprocessableEntityError } from '../../lib'
 import { diskFactory } from '../../lib/disk'
 import * as factories from '../../tests/factories'
@@ -25,13 +26,14 @@ describe('uploadFile', () => {
     workspace = w
 
     vi.spyOn(disk, 'putFile').mockResolvedValue(Result.ok(undefined))
+    vi.spyOn(lib, 'generateUUIDIdentifier').mockReturnValue('fake-uuid')
   })
 
   it('not uploads empty file', async () => {
     const file = new File([Buffer.from('')], 'file')
 
     await expect(
-      uploadFile(file, workspace, disk).then((r) => r.unwrap()),
+      uploadFile({ file, workspace }, disk).then((r) => r.unwrap()),
     ).rejects.toThrowError(new BadRequestError(`File is empty`))
   })
 
@@ -41,7 +43,7 @@ describe('uploadFile', () => {
     const file = new File([Buffer.from('Too large!')], 'file')
 
     await expect(
-      uploadFile(file, workspace, disk).then((r) => r.unwrap()),
+      uploadFile({ file, workspace }, disk).then((r) => r.unwrap()),
     ).rejects.toThrowError(new BadRequestError(`File too large`))
   })
 
@@ -51,7 +53,7 @@ describe('uploadFile', () => {
     const file = new File([content], name)
 
     await expect(
-      uploadFile(file, workspace, disk).then((r) => r.unwrap()),
+      uploadFile({ file, workspace }, disk).then((r) => r.unwrap()),
     ).rejects.toThrowError(new BadRequestError(`Unsupported file type: .bin`))
   })
 
@@ -65,7 +67,7 @@ describe('uploadFile', () => {
     const file = new File([content], name)
 
     await expect(
-      uploadFile(file, workspace, disk).then((r) => r.unwrap()),
+      uploadFile({ file, workspace }, disk).then((r) => r.unwrap()),
     ).rejects.toThrowError(
       new UnprocessableEntityError(`Failed to upload .png file`, {}),
     )
@@ -80,8 +82,10 @@ describe('uploadFile', () => {
       const file = new File([content], name)
 
       await expect(
-        uploadFile(file, workspace, disk).then((r) => r.unwrap()),
-      ).resolves.toContain(`/workspaces/${workspace.id}/files/${name}`)
+        uploadFile({ file, workspace }, disk).then((r) => r.unwrap()),
+      ).resolves.toContain(
+        `/workspaces/${workspace.id}/files/fake-uuid/${name}`,
+      )
       expect(convertFile).not.toHaveBeenCalled()
     }
   })
@@ -97,9 +101,50 @@ describe('uploadFile', () => {
       const file = new File([content], name)
 
       await expect(
-        uploadFile(file, workspace, disk).then((r) => r.unwrap()),
-      ).resolves.toContain(`/workspaces/${workspace.id}/files/${name}`)
+        uploadFile({ file, workspace }, disk).then((r) => r.unwrap()),
+      ).resolves.toContain(
+        `/workspaces/${workspace.id}/files/fake-uuid/${name}`,
+      )
       expect(convertFile).toHaveBeenCalledWith(file)
     }
+  })
+
+  it('it uploads files with a workspace prefix', async () => {
+    const convertFile = vi.spyOn(convert, 'convertFile')
+
+    const name = 'file.png'
+    const content = await readFile(join(IMAGES_PATH, name))
+    const file = new File([content], name)
+
+    await expect(
+      uploadFile({ file, workspace }, disk).then((r) => r.unwrap()),
+    ).resolves.toContain(`/workspaces/${workspace.id}/files/fake-uuid/${name}`)
+    expect(convertFile).not.toHaveBeenCalled()
+  })
+
+  it('it uploads files with a custom prefix', async () => {
+    const convertFile = vi.spyOn(convert, 'convertFile')
+
+    const name = 'file.png'
+    const content = await readFile(join(IMAGES_PATH, name))
+    const file = new File([content], name)
+
+    await expect(
+      uploadFile({ file, prefix: 'custom' }, disk).then((r) => r.unwrap()),
+    ).resolves.toContain(`/custom/files/fake-uuid/${name}`)
+    expect(convertFile).not.toHaveBeenCalled()
+  })
+
+  it('it uploads files with an unknown prefix', async () => {
+    const convertFile = vi.spyOn(convert, 'convertFile')
+
+    const name = 'file.png'
+    const content = await readFile(join(IMAGES_PATH, name))
+    const file = new File([content], name)
+
+    await expect(
+      uploadFile({ file }, disk).then((r) => r.unwrap()),
+    ).resolves.toContain(`/unknown/files/fake-uuid/${name}`)
+    expect(convertFile).not.toHaveBeenCalled()
   })
 })

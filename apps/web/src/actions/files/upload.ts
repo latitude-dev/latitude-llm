@@ -16,7 +16,10 @@ export const uploadFileAction = authProcedure
     }),
   )
   .handler(async ({ input, ctx }) => {
-    const result = await uploadFile(input.file, ctx.workspace)
+    const result = await uploadFile({
+      file: input.file,
+      workspace: ctx.workspace,
+    })
 
     return result.unwrap()
   })

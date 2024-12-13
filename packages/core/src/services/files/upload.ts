@@ -4,6 +4,7 @@ import { diskFactory, DiskWrapper } from '../../lib/disk'
 
 import {
   BadRequestError,
+  generateUUIDIdentifier,
   Result,
   TypedResult,
   UnprocessableEntityError,
@@ -13,13 +14,40 @@ import { Workspace } from '../../browser'
 import { MAX_UPLOAD_SIZE_IN_MB, SUPPORTED_IMAGE_TYPES } from '../../constants'
 import { convertFile } from './convert'
 
+function generateKey({
+  filename,
+  prefix,
+  workspace,
+}: {
+  filename: string
+  prefix?: string
+  workspace?: Workspace
+}) {
+  let keyPrefix = prefix
+  if (!keyPrefix && workspace) keyPrefix = `workspaces/${workspace.id}`
+  if (!keyPrefix) keyPrefix = 'unknown'
+
+  const keyUuid = generateUUIDIdentifier()
+
+  const keyFilename = slugify(filename, { preserveCharacters: ['.'] })
+
+  return `${keyPrefix}/files/${keyUuid}/${keyFilename}`
+}
+
 export async function uploadFile(
-  file: File,
-  workspace: Workspace,
+  {
+    file,
+    prefix,
+    workspace,
+  }: {
+    file: File
+    prefix?: string
+    workspace?: Workspace
+  },
   disk: DiskWrapper = diskFactory('public'),
 ): Promise<TypedResult<string, Error>> {
+  const key = generateKey({ filename: file.name, prefix, workspace })
   const extension = path.extname(file.name).toLowerCase()
-  const key = `workspaces/${workspace.id}/files/${slugify(file.name, { preserveCharacters: ['.'] })}`
 
   if (file.size === 0) {
     return Result.error(new BadRequestError(`File is empty`))
@@ -38,10 +66,9 @@ export async function uploadFile(
 
   try {
     await disk.putFile(key, file).then((r) => r.unwrap())
-    const url = await disk.getSignedUrl(key, {
-      expiresIn: undefined,
-      contentDisposition: 'inline',
-    })
+    // TODO: Use temporal signed URLs, with a (micro)service
+    // acting as a reverse proxy refreshing the signed urls
+    const url = await disk.getUrl(key)
 
     return Result.ok(url)
   } catch (error) {
