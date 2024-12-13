@@ -1,6 +1,6 @@
 {
   "name": "@latitude-data/telemetry",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "OpenTelemetry exporters for Latitude",
   "author": "Latitude Data SL <hello@latitude.so>",
   "license": "LGPL-3.0",
