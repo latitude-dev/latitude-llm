@@ -152,7 +152,7 @@ export class DiskWrapper {
         region: awsConfig.region,
         bucket: awsConfig.publicBucket,
         supportsACL: false,
-        visibility: 'private',
+        visibility: 'public',
       })
     }
 
