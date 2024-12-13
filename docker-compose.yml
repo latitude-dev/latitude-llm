@@ -62,6 +62,7 @@ services:
       - DRIVE_DISK=local
       - FILE_PUBLIC_PATH='uploads'
       - FILES_STORAGE_PATH='/app'
+      - PUBLIC_FILES_STORAGE_PATH='/app/public'
       - DEFAULT_PROJECT_ID=1
       - DEFAULT_PROVIDER_API_KEY=d32da7c2-94fd-49c3-8dca-b57a5c3bbe27
       - NEXT_PUBLIC_POSTHOG_KEY=''
@@ -100,6 +101,7 @@ services:
       - DRIVE_DISK=local
       - FILE_PUBLIC_PATH='uploads'
       - FILES_STORAGE_PATH='/app'
+      - PUBLIC_FILES_STORAGE_PATH='/app/public'
       - DEFAULT_PROJECT_ID=1
       - DEFAULT_PROVIDER_API_KEY=d32da7c2-94fd-49c3-8dca-b57a5c3bbe27
       - NEXT_PUBLIC_POSTHOG_KEY=''

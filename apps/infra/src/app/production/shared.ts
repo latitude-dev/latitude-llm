@@ -150,6 +150,10 @@ export const environment = pulumi
       { name: 'DRIVE_DISK', value: 's3' },
       { name: 'ASW_REGION', value: 'eu-central-1' },
       { name: 'S3_BUCKET', value: 'latitude-llm-bucket-production' },
+      {
+        name: 'PUBLIC_S3_BUCKET',
+        value: 'latitude-llm-public-bucket-production',
+      },
       { name: 'AWS_ACCESS_KEY', value: awsAccessKey },
       { name: 'AWS_ACCESS_SECRET', value: awsAccessSecret },
       { name: 'DEFAULT_PROJECT_ID', value: defaultProjectId },

@@ -12,9 +12,10 @@ const FILE_PUBLIC_PATH = 'uploads'
 
 if (environment === 'development' || environment === 'test') {
   const pathToEnv = resolve(cwd(), `../../.env.${environment}`)
-  const FILES_STORAGE_PATH = join(
+  const FILES_STORAGE_PATH = join(__dirname, `../../../../${FILE_PUBLIC_PATH}`)
+  const PUBLIC_FILES_STORAGE_PATH = join(
     __dirname,
-    `../../../../tmp/${FILE_PUBLIC_PATH}`,
+    `../../../../public/${FILE_PUBLIC_PATH}`,
   )
 
   dotenv.populate(
@@ -40,6 +41,7 @@ if (environment === 'development' || environment === 'test') {
       DRIVE_DISK: 'local',
       FILE_PUBLIC_PATH,
       FILES_STORAGE_PATH,
+      PUBLIC_FILES_STORAGE_PATH,
       DEFAULT_PROJECT_ID: '1',
       NEXT_PUBLIC_POSTHOG_KEY: '',
       NEXT_PUBLIC_POSTHOG_HOST: '',
@@ -86,12 +88,14 @@ export const env = createEnv({
     CACHE_PORT: z.coerce.number().optional().default(6379),
     DRIVE_DISK: z.union([z.literal('local'), z.literal('s3')]).optional(),
     FILES_STORAGE_PATH: z.string().optional(),
+    PUBLIC_FILES_STORAGE_PATH: z.string().optional(),
     FILE_PUBLIC_PATH: z.string().optional(),
     MAILER_API_KEY: z.string().optional(),
     MAILGUN_MAILER_API_KEY: z.string().optional(),
     QUEUE_PASSWORD: z.string().optional(),
     QUEUE_PORT: z.coerce.number().optional().default(6379),
     S3_BUCKET: z.string().optional(),
+    PUBLIC_S3_BUCKET: z.string().optional(),
     SENTRY_DSN: z.string().optional(),
     SENTRY_ORG: z.string().optional(),
     SENTRY_PROJECT: z.string().optional(),
