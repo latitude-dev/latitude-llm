@@ -1,5 +1,5 @@
 {
-  "name": "@latitude-data/telemetry-js",
+  "name": "@latitude-data/telemetry",
   "version": "1.0.0",
   "description": "OpenTelemetry exporters for Latitude",
   "author": "Latitude Data SL <hello@latitude.so>",
