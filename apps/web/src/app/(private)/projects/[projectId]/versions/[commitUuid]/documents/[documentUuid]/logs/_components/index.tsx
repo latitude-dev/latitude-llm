@@ -15,7 +15,6 @@ import {
   EventArgs,
   useSockets,
 } from '$/components/Providers/WebsocketsProvider/useSockets'
-import { useFeatureFlag } from '$/hooks/useFeatureFlag'
 import { ROUTES } from '$/services/routes'
 import useDocumentLogs, { documentLogPresenter } from '$/stores/documentLogs'
 import useDocumentLogsAggregations from '$/stores/documentLogsAggregations'
@@ -89,9 +88,6 @@ export function DocumentLogsPage({
   const { commit } = useCurrentCommit()
   const { document } = useCurrentDocument()
   const { data: commits } = useCommits()
-
-  const { data: showLogFilters } = useFeatureFlag()
-
   const searchParams = useSearchParams()
   const page = searchParams.get('page')
   const pageSize = searchParams.get('pageSize')
@@ -133,13 +129,11 @@ export function DocumentLogsPage({
         title='Logs'
         actions={
           <>
-            {showLogFilters && (
-              <DocumentLogFilters
-                originalSelectedCommitsIds={originalSelectedCommitsIds}
-                filterOptions={documentLogFilterOptions}
-                onFiltersChanged={setDocumentLogFilterOptions}
-              />
-            )}
+            <DocumentLogFilters
+              originalSelectedCommitsIds={originalSelectedCommitsIds}
+              filterOptions={documentLogFilterOptions}
+              onFiltersChanged={setDocumentLogFilterOptions}
+            />
             <Link
               href={
                 ROUTES.projects
