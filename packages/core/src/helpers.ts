@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-import { CsvData, ProviderApiKey } from './browser'
+import { CsvData, ParameterType, ProviderApiKey } from './browser'
 
 const DEFAULT_OBJECT_TO_STRING_MESSAGE =
   'Error: Provider returned an object that could not be stringified'
@@ -36,6 +36,13 @@ export function promptConfigSchema({
       required_error: `You must select the model.\nFor example: 'model: 'gpt-4o'`,
     }),
     temperature: z.number().min(0).max(2).optional(),
+    parameters: z
+      .record(
+        z.object({
+          type: z.nativeEnum(ParameterType),
+        }),
+      )
+      .optional(),
   })
 }
 

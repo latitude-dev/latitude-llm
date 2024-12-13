@@ -469,3 +469,11 @@ export const RELATIVE_DATES = {
 } as const
 
 export type RelativeDate = keyof typeof RELATIVE_DATES
+
+export enum ParameterType {
+  Text = 'text',
+  Document = 'document',
+  Image = 'image',
+}
+
+export const SUPPORTED_IMAGE_TYPES = ['.jpg', '.jpeg', '.png', '.gif', '.webp']

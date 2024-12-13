@@ -1,16 +1,17 @@
+import {
+  INPUT_SOURCE,
+  InputSource,
+  useDocumentParameters,
+} from '$/hooks/useDocumentParameters'
 import { DocumentVersion } from '@latitude-data/core/browser'
 import {
   ClientOnly,
   CollapsibleBox,
   OnExpandFn,
   TabSelector,
+  type ICommitContextType,
   type TabSelectorOption,
 } from '@latitude-data/web-ui'
-import {
-  INPUT_SOURCE,
-  InputSource,
-  useDocumentParameters,
-} from '$/hooks/useDocumentParameters'
 
 import { DatasetParams } from './DatasetParams'
 import {
@@ -33,7 +34,9 @@ const TABS: TabSelectorOption<InputSource>[] = [
 
 export type Props = {
   document: DocumentVersion
-  commitVersionUuid: string
+  commit: ICommitContextType['commit']
+  prompt: string
+  setPrompt: (prompt: string) => void
   onExpand?: OnExpandFn
 }
 type ContentProps = Props & {
@@ -43,13 +46,15 @@ type ContentProps = Props & {
 
 function ParamsTabs({
   document,
-  commitVersionUuid,
+  commit,
+  prompt,
+  setPrompt,
   datasetInfo,
   historyInfo,
 }: ContentProps) {
   const { source, setSource } = useDocumentParameters({
     documentVersionUuid: document.documentUuid,
-    commitVersionUuid,
+    commitVersionUuid: commit.uuid,
   })
 
   return (
@@ -63,21 +68,19 @@ function ParamsTabs({
       {source === INPUT_SOURCE.manual && (
         <ManualParams
           document={document}
-          commitVersionUuid={commitVersionUuid}
+          commit={commit}
+          prompt={prompt}
+          setPrompt={setPrompt}
         />
       )}
       {source === INPUT_SOURCE.dataset && (
-        <DatasetParams
-          data={datasetInfo}
-          document={document}
-          commitVersionUuid={commitVersionUuid}
-        />
+        <DatasetParams data={datasetInfo} document={document} commit={commit} />
       )}
       {source === INPUT_SOURCE.history && (
         <HistoryLogParams
           data={historyInfo}
           document={document}
-          commitVersionUuid={commitVersionUuid}
+          commit={commit}
         />
       )}
     </div>
@@ -86,14 +89,14 @@ function ParamsTabs({
 
 function CollapsedContentHeader({
   document,
-  commitVersionUuid,
+  commit,
   datasetInfo,
   historyInfo,
 }: ContentProps) {
   const src = INPUT_SOURCE
   const { source } = useDocumentParameters({
     documentVersionUuid: document.documentUuid,
-    commitVersionUuid,
+    commitVersionUuid: commit.uuid,
   })
 
   if (source === src.manual) return null
@@ -132,11 +135,11 @@ function CollapsedContentHeader({
 export function DocumentParams({ onExpand, ...props }: Props) {
   const datasetInfo = useSelectDataset({
     document: props.document,
-    commitVersionUuid: props.commitVersionUuid,
+    commitVersionUuid: props.commit.uuid,
   })
   const historyInfo = useLogHistoryParams({
     document: props.document,
-    commitVersionUuid: props.commitVersionUuid,
+    commitVersionUuid: props.commit.uuid,
   })
 
   const contentProps = {

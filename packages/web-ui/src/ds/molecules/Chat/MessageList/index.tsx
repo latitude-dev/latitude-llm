@@ -10,7 +10,7 @@ export function MessageList({
   collapseParameters,
 }: {
   messages: ConversationMessage[]
-  parameters?: Record<string, unknown>
+  parameters?: string[]
   collapseParameters?: boolean
 }) {
   return (

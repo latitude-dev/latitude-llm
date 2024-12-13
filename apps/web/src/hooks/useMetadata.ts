@@ -10,7 +10,7 @@ import type { ReadMetadataWorkerProps } from '../workers/readMetadata'
 export function useMetadata({
   onMetadataProcessed,
 }: {
-  onMetadataProcessed?: (metadata: Set<string>) => void
+  onMetadataProcessed?: (metadata: ConversationMetadata) => void
 } = {}) {
   const [metadata, setMetadata] = useState<ConversationMetadata>()
   const workerRef = useRef<Worker | null>(null)
@@ -27,7 +27,7 @@ export function useMetadata({
 
       worker.onmessage = (event: { data: ConversationMetadata }) => {
         setMetadata(event.data)
-        onMetadataProcessed?.(event.data.parameters)
+        onMetadataProcessed?.(event.data)
       }
     }
 

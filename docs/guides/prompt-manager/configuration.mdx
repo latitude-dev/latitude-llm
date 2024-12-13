@@ -41,6 +41,15 @@ The `model` key specifies the model to use for the prompt. The available models 
 
 ### Additional Parameters
 
+#### **`parameters`**
+
+The `parameters` key optionally allows you to define advance options for the parameters in the playground and shared prompts.
+You can define the following options for each parameter:
+
+- **`type`** (required): `text`, `document`, `image`. If a parameter, or the whole parameters key, is not set, all types are `text` by default.
+
+[Learn more about prompt parameters](/guides/prompt-manager/playground#parameters)
+
 #### **`schema`**
 
 Define the JSON schema for the response of the prompt.

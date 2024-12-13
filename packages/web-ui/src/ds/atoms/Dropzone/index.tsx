@@ -22,7 +22,7 @@ export type DropzoneProps = Omit<
 }
 
 export const Dropzone = forwardRef<HTMLInputElement, DropzoneProps>(
-  ({ onChange, children, ...props }, ref) => {
+  ({ onChange, children, accept, multiple, ...props }, ref) => {
     const [isDragging, setIsDragging] = useState(false)
     const internalRef = useRef<HTMLInputElement>(null)
     const combineRef = useCombinedRefs(ref, internalRef)
@@ -38,9 +38,20 @@ export const Dropzone = forwardRef<HTMLInputElement, DropzoneProps>(
         e.preventDefault()
         e.stopPropagation()
         setIsDragging(false)
-        onChange?.(e.dataTransfer.files)
-        if (!internalRef.current) return
 
+        if (!e.dataTransfer.files.length) return
+        if (!multiple && e.dataTransfer.files.length > 1) return
+        if (
+          accept &&
+          Array.from(e.dataTransfer.files).some(
+            (file) => !accept.split(',').find((a) => file.name.endsWith(a)),
+          )
+        )
+          return
+
+        onChange?.(e.dataTransfer.files)
+
+        if (!internalRef.current) return
         // Set files in input because then we can submit a real form
         internalRef.current.files = e.dataTransfer.files
       },
@@ -54,6 +65,7 @@ export const Dropzone = forwardRef<HTMLInputElement, DropzoneProps>(
     const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
       onChange?.(e.target.files)
     }
+
     return (
       <div
         onDragOver={handleDragOver}
@@ -66,6 +78,8 @@ export const Dropzone = forwardRef<HTMLInputElement, DropzoneProps>(
           type='file'
           className='hidden'
           onChange={handleChange}
+          accept={accept}
+          multiple={multiple}
           {...props}
         />
       </div>

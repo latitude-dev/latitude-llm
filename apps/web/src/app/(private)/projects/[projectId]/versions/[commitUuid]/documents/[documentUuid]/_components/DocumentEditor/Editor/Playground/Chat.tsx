@@ -13,10 +13,12 @@ import {
   type DocumentVersion,
 } from '@latitude-data/core/browser'
 import {
+  AnimatedDots,
   ChatTextArea,
   cn,
   ErrorMessage,
   Icon,
+  LineSeparator,
   Message,
   MessageList,
   Text,
@@ -24,8 +26,6 @@ import {
   useAutoScroll,
   useCurrentCommit,
   useCurrentProject,
-  AnimatedDots,
-  LineSeparator,
 } from '@latitude-data/web-ui'
 import { LanguageModelUsage } from 'ai'
 import { readStreamableValue } from 'ai/rsc'
@@ -245,7 +245,7 @@ export default function Chat({
       >
         <MessageList
           messages={conversation?.messages.slice(0, chainLength - 1) ?? []}
-          parameters={parameters}
+          parameters={Object.keys(parameters)}
           collapseParameters={!expandParameters}
         />
         {(conversation?.messages.length ?? 0) >= chainLength && (

@@ -38,4 +38,4 @@ const useCurrentCommit = () => {
   return context
 }
 
-export { CommitProvider, useCurrentCommit }
+export { CommitProvider, useCurrentCommit, type ICommitContextType }

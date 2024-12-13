@@ -27,7 +27,7 @@ importers:
         specifier: ^3.645.0
         version: 3.679.0
       '@aws-sdk/s3-request-presigner':
-        specifier: ^3.645.0
+        specifier: ^3.679.0
         version: 3.679.0
       '@monaco-editor/react':
         specifier: ^4.6.0
@@ -117,8 +117,8 @@ importers:
         specifier: ^3.3.0
         version: 3.3.0
       lucide-react:
-        specifier: ^0.403.0
-        version: 0.403.0(react@18.3.1)
+        specifier: ^0.468.0
+        version: 0.468.0(react@18.3.1)
       monaco-editor:
         specifier: ^0.50.0
         version: 0.50.0
@@ -694,7 +694,7 @@ importers:
         specifier: ^3.645.0
         version: 3.679.0
       '@aws-sdk/s3-request-presigner':
-        specifier: ^3.645.0
+        specifier: ^3.679.0
         version: 3.679.0
       '@faker-js/faker':
         specifier: ^8.4.1
@@ -1062,8 +1062,8 @@ importers:
         specifier: ^24.1.0
         version: 24.1.3
       lucide-react:
-        specifier: ^0.403.0
-        version: 0.403.0(react@18.3.0)
+        specifier: ^0.468.0
+        version: 0.468.0(react@18.3.0)
       monaco-editor:
         specifier: ^0.50.0
         version: 0.50.0
@@ -8254,10 +8254,10 @@ packages:
   lucia@3.2.2:
     resolution: {integrity: sha512-P1FlFBGCMPMXu+EGdVD9W4Mjm0DqsusmKgO7Xc33mI5X1bklmsQb0hfzPhXomQr9waWIBDsiOjvr1e6BTaUqpA==}
 
-  lucide-react@0.403.0:
-    resolution: {integrity: sha512-ldD3NT444k4Mi+n+43xC8XaHr88MNdhOIApIE15r7O+PcVYEBXNOOFo904cBC6Hsja+zHc1lqw0mqUgBECeisw==}
+  lucide-react@0.468.0:
+    resolution: {integrity: sha512-6koYRhnM2N0GGZIdXzSeiNwguv1gt/FAjZOiPl76roBi3xKEXa4WmfpxgQwTTL4KipXjefrnf3oV4IsYhi4JFA==}
     peerDependencies:
-      react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
+      react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0-rc
 
   luxon@3.5.0:
     resolution: {integrity: sha512-rh+Zjr6DNfUYR3bPwJEnuwDdqMbxZW7LOQfUN4B54+Cl+0o5zaU9RJ6bcidfDtC1cWCZXQ+nvX8bf6bAji37QQ==}
@@ -20046,11 +20046,11 @@ snapshots:
       '@oslojs/crypto': 1.0.1
       '@oslojs/encoding': 1.1.0
 
-  lucide-react@0.403.0(react@18.3.0):
+  lucide-react@0.468.0(react@18.3.0):
     dependencies:
       react: 18.3.0
 
-  lucide-react@0.403.0(react@18.3.1):
+  lucide-react@0.468.0(react@18.3.1):
     dependencies:
       react: 18.3.1
 

@@ -1,32 +1,57 @@
 import { Inputs, InputSource } from '$/hooks/useDocumentParameters'
+import { ParameterType } from '@latitude-data/core/browser'
+import type { ConversationMetadata } from '@latitude-data/promptl'
+
+const ParameterTypes = Object.values(ParameterType) as string[]
 
 export function recalculateInputs<S extends InputSource>({
   inputs,
-  metadataParameters,
+  metadata: prompt,
 }: {
   inputs: Inputs<S>
-  metadataParameters: Set<string>
+  metadata: ConversationMetadata
 }): Inputs<S> {
+  const config = (prompt.config.parameters || {}) as Record<
+    string,
+    { type?: string }
+  >
+
+  const firstChangedInput = Object.entries(inputs).find(
+    ([key]) => !prompt.parameters.has(key),
+  )?.[1]
+
   return Object.fromEntries(
-    Array.from(metadataParameters).map((param) => {
-      if (param in inputs) {
-        const value = inputs[param]?.value ?? ''
-        const includeInPrompt = inputs[param]?.metadata.includeInPrompt ?? true
-        return [param, { value, metadata: { includeInPrompt } }]
+    Array.from(prompt.parameters).map((param) => {
+      const input = inputs[param] || firstChangedInput
+      let type = config[param]?.type
+      if (type && !ParameterTypes.includes(type)) type = undefined
+
+      if (input) {
+        return [
+          param,
+          {
+            ...input,
+            metadata: {
+              ...input.metadata,
+              includeInPrompt: input.metadata.includeInPrompt ?? true,
+              ...config[param],
+              type: type,
+            },
+          },
+        ]
       }
 
-      const availableInputKey = Object.keys(inputs).find(
-        (key) => !metadataParameters.has(key),
-      )
-
-      if (availableInputKey) {
-        const input = inputs[availableInputKey]
-        const value = input?.value ?? ''
-        const includeInPrompt = input?.metadata.includeInPrompt ?? true
-        return [param, { value, metadata: { includeInPrompt } }]
-      }
-
-      return [param, { value: '', metadata: { includeInPrompt: true } }]
+      return [
+        param,
+        {
+          value: '',
+          metadata: {
+            includeInPrompt: true,
+            ...config[param],
+            type: type,
+          },
+        },
+      ]
     }),
   )
 }

@@ -6,7 +6,7 @@ import {
   createNewDocument,
   defaultDocumentContent,
 } from '@latitude-data/core/services/documents/create'
-import { transformFile } from '@latitude-data/core/services/files/transform'
+import { convertFile } from '@latitude-data/core/services/files/convert'
 import { z } from 'zod'
 
 import { withProject } from '../procedures'
@@ -28,7 +28,7 @@ export const uploadDocumentAction = withProject
       .getCommitByUuid({ uuid: input.commitUuid, projectId: ctx.project.id })
       .then((r) => r.unwrap())
 
-    const content = await transformFile(input.file).then((r) => r.unwrap())
+    const content = await convertFile(input.file).then((r) => r.unwrap())
     const { metadata } = await defaultDocumentContent({
       workspace: ctx.workspace,
     })

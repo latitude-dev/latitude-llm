@@ -1,8 +1,9 @@
 import { useCallback, useMemo } from 'react'
 
-import { DocumentLog } from '@latitude-data/core/browser'
-import { AppLocalStorage, useLocalStorage } from '@latitude-data/web-ui'
 import { recalculateInputs } from '$/hooks/useDocumentParameters/recalculateInputs'
+import { DocumentLog, ParameterType } from '@latitude-data/core/browser'
+import type { ConversationMetadata } from '@latitude-data/promptl'
+import { AppLocalStorage, useLocalStorage } from '@latitude-data/web-ui'
 
 export const INPUT_SOURCE = {
   manual: 'manual',
@@ -11,14 +12,19 @@ export const INPUT_SOURCE = {
 } as const
 
 export type InputSource = (typeof INPUT_SOURCE)[keyof typeof INPUT_SOURCE]
+type PlaygroundInputMetadata = {
+  type?: ParameterType
+  filename?: string
+  includeInPrompt?: boolean
+}
 export type PlaygroundInput<S extends InputSource> = S extends 'dataset'
   ? {
       value: string
-      metadata: { includeInPrompt: boolean }
+      metadata: PlaygroundInputMetadata & { includeInPrompt: boolean }
     }
   : {
       value: string
-      metadata: { includeInPrompt?: boolean }
+      metadata: PlaygroundInputMetadata
     }
 
 type ManualInput = PlaygroundInput<'manual'>
@@ -113,6 +119,7 @@ export function useDocumentParameters({
   documentVersionUuid: string
   commitVersionUuid: string
 }) {
+  // TODO: Delete stale inputs as new inputs could eventually not fit
   const { value: allInputs, setValue } = useLocalStorage<InputsByDocument>({
     key: AppLocalStorage.playgroundParameters,
     defaultValue: {},
@@ -152,6 +159,7 @@ export function useDocumentParameters({
       setInputs(INPUT_SOURCE.dataset, newInputs),
     [setInputs],
   )
+
   const setHistoryInputs = useCallback(
     (newInputs: Inputs<'history'>) =>
       setInputs(INPUT_SOURCE.history, newInputs),
@@ -287,23 +295,26 @@ export function useDocumentParameters({
   )
 
   const onMetadataProcessed = useCallback(
-    (metadataParameters: Set<string>) => {
+    (metadata: ConversationMetadata) => {
       setInputs(
         'manual',
-        recalculateInputs({ inputs: inputs.manual.inputs, metadataParameters }),
+        recalculateInputs({
+          inputs: inputs.manual.inputs,
+          metadata,
+        }),
       )
       setInputs(
         'dataset',
         recalculateInputs({
           inputs: inputs.dataset.inputs,
-          metadataParameters,
+          metadata,
         }),
       )
       setInputs(
         'history',
         recalculateInputs({
           inputs: inputs.history.inputs,
-          metadataParameters,
+          metadata,
         }),
       )
     },

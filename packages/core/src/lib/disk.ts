@@ -4,12 +4,13 @@ import { env } from '@latitude-data/env'
 import { Disk, errors } from 'flydrive'
 import { FSDriver } from 'flydrive/drivers/fs'
 import { S3Driver } from 'flydrive/drivers/s3'
-import { WriteOptions } from 'flydrive/types'
+import { SignedURLOptions, WriteOptions } from 'flydrive/types'
 
 import { Result } from './Result'
 
-const generateUrl = (publicPath: string) => async (key: string) =>
-  `/${publicPath}/${key}`
+const generateUrl =
+  (baseUrl: string, publicPath: string) => async (key: string) =>
+    `${baseUrl}/${publicPath}/${key}`
 
 /**
  * These env variables are set in production.
@@ -17,6 +18,7 @@ const generateUrl = (publicPath: string) => async (key: string) =>
  * Create a .env.development file in packages/env/.env.development and add the following:
  *
  * S3_BUCKET=[your-bucket-name]
+ * PUBLIC_S3_BUCKET=[your-public-bucket-name]
  * AWS_REGION=[your-region]
  * AWS_ACCESS_KEY=[your-key]
  * AWS_ACCESS_SECRET=[your-secret]
@@ -24,16 +26,22 @@ const generateUrl = (publicPath: string) => async (key: string) =>
 function getAwsConfig() {
   const accessKeyId = env.AWS_ACCESS_KEY
   const bucket = env.S3_BUCKET
+  const publicBucket = env.PUBLIC_S3_BUCKET
   const region = env.AWS_REGION
   const secretAccessKey = env.AWS_ACCESS_SECRET
 
-  if (!accessKeyId || !secretAccessKey || !bucket || !region) {
+  if (!accessKeyId || !secretAccessKey || !bucket || !publicBucket || !region) {
     throw new Error(
-      'AWS credentials not configured. Check you setup AWS_ACCESS_KEY, AWS_ACCESS_SECRET, S3_BUCKET and AWS_REGION in your .env file.',
+      'AWS credentials not configured. Check you setup AWS_ACCESS_KEY, AWS_ACCESS_SECRET, (PUBLIC)_S3_BUCKET and AWS_REGION in your .env file.',
     )
   }
 
-  return { region, bucket, credentials: { accessKeyId, secretAccessKey } }
+  return {
+    region,
+    bucket,
+    publicBucket,
+    credentials: { accessKeyId, secretAccessKey },
+  }
 }
 
 async function getReadableStreamFromFile(file: File) {
@@ -49,18 +57,23 @@ async function getReadableStreamFromFile(file: File) {
 export class DiskWrapper {
   private disk: Disk
 
-  constructor() {
-    this.disk = new Disk(this.buildDisk())
+  // TODO: Receive an instance of Disk as a parameter,
+  // otherwise default to the local disk instance
+  constructor(visibility: 'private' | 'public' = 'private') {
+    this.disk = new Disk(this.buildDisk(visibility))
   }
 
   file(key: string) {
     return this.disk.file(key)
   }
 
-  async getUrl(key: string | undefined | null) {
-    if (!key) return null
-
+  async getUrl(key: string) {
     return this.disk.getUrl(key)
+  }
+
+  async getSignedUrl(key: string, options?: SignedURLOptions) {
+    if (this.disk.driver instanceof FSDriver) return this.disk.getUrl(key)
+    return this.disk.getSignedUrl(key, options)
   }
 
   async putFile(key: string, file: File) {
@@ -101,26 +114,47 @@ export class DiskWrapper {
     }
   }
 
-  private buildDisk() {
+  private buildDisk(visibility: 'private' | 'public') {
     const key = env.DRIVE_DISK
+    const baseUrl = env.LATITUDE_URL
     const publicPath = env.FILE_PUBLIC_PATH
     const location = env.FILES_STORAGE_PATH
-
-    if (key === 'local' && !location) {
-      new Error(
-        'FILES_STORAGE_PATH env variable is required when using local disk.',
-      )
-    }
+    const publicLocation = env.PUBLIC_FILES_STORAGE_PATH
 
     if (key === 'local') {
+      if (!location && !publicLocation) {
+        throw new Error(
+          '(PUBLIC)_FILES_STORAGE_PATH env variable is required when using local disk.',
+        )
+      }
+
+      if (visibility === 'public') {
+        return new FSDriver({
+          location: publicLocation!,
+          visibility: 'public',
+          urlBuilder: { generateURL: generateUrl(baseUrl!, publicPath!) },
+        })
+      }
+
       return new FSDriver({
         location: location!,
         visibility: 'private',
-        urlBuilder: { generateURL: generateUrl(publicPath!) },
+        urlBuilder: { generateURL: generateUrl('', publicPath!) },
       })
     }
 
     const awsConfig = getAwsConfig()
+
+    if (visibility === 'public') {
+      return new S3Driver({
+        // @ts-ignore
+        credentials: awsConfig.credentials,
+        region: awsConfig.region,
+        bucket: awsConfig.publicBucket,
+        supportsACL: false,
+        visibility: 'private',
+      })
+    }
 
     return new S3Driver({
       // @ts-ignore
@@ -133,4 +167,6 @@ export class DiskWrapper {
   }
 }
 
-export const diskFactory = () => new DiskWrapper()
+export function diskFactory(visibility: 'private' | 'public' = 'private') {
+  return new DiskWrapper(visibility)
+}

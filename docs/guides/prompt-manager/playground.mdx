@@ -37,20 +37,64 @@ When parameters are present in your prompt, they will automatically appear in th
 
 ![Parameters](/assets/prompt_parameters.png)
 
-There are three ways to populate the parameters:
+### Parameter Types
 
-### Manual
+Parameters can have different types. On the playground, and in shared prompts, this will affect how they are populated and interpolated into the messages. You can either change the parameter types in the configuration section of the prompt, or in the playground.
+
+![Parameter Types](/assets/parameters_types.png)
+
+#### Text
+
+Text parameters allow you to freely input text content.
+
+![Text Parameter](/assets/parameters_text.png)
+
+#### Document
+
+Document parameters allow you to upload a document. The whole document will be passed to the LLM as text content. Currently, the following file types are supported:
+
+- `pdf`: PDF files.
+- `doc`: Microsoft Word files.
+- `docx`: Microsoft Word files.
+- `xls`: Microsoft Excel files.
+- `xlsx`: Microsoft Excel files.
+- `ppt`: Microsoft PowerPoint files.
+- `pptx`: Microsoft PowerPoint files.
+- `odt`: OpenDocument Text files.
+- `ods`: OpenDocument Spreadsheet files.
+- `odp`: OpenDocument Presentation files.
+- + any other file that contains raw text, such as markdown, CSV, JSON, source code...
+
+![Document Parameter](/assets/parameters_document.png)
+
+#### Image
+
+Image parameters allow you to upload an image. The image will be passed to the LLM as a URL. Currently, the following file types are supported:
+
+- `jpg`
+- `jpeg`
+- `png`
+- `gif`
+- `webp`
+
+![Image Parameter](/assets/parameters_image.png)
+
+### Populating Parameters
+
+There are three ways to populate the parameters.
+
+#### Manual
 
 Manually enter values for the parameters in the input fields.
 ![Manual Parameters](/assets/parameters_manual.png)
 
-### Dataset
+#### Dataset
 
 Load data from a dataset to populate the parameters, where each row in the dataset corresponds to a set of values for the parameters.
 ![Dataset Parameters](/assets/parameters_dataset.png)
 [Learn more about using datasets in Latitude](/guides/datasets/overview)
 
-### History
+#### History
 
 Load values from previous runs of the prompt to populate the parameters.
 ![History Parameters](/assets/parameters_history.png)

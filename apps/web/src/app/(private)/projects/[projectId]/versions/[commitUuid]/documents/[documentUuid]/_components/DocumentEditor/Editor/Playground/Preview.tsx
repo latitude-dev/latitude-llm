@@ -169,7 +169,7 @@ export default function Preview({
               key={index}
               role={message.role}
               content={message.content}
-              parameters={parameters}
+              parameters={Object.keys(parameters)}
               collapseParameters={!expandParameters}
             />
           ))}
