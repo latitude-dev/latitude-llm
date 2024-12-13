@@ -22,7 +22,7 @@ export const bucketName = bucket.bucket
 export const publicBucket = new aws.s3.BucketV2(
   'publicLatitudeBucketResource',
   {
-    acl: 'private', // Only allowing access through signed urls
+    acl: 'private', // Keep ACL private to disallow all actions by default
     bucket: 'latitude-llm-public-bucket-production',
     tags: {
       Name: 'Latitude LLM public bucket',
@@ -33,3 +33,51 @@ export const publicBucket = new aws.s3.BucketV2(
 )
 
 export const publicBucketName = publicBucket.bucket
+
+new aws.s3.BucketPolicy(
+  'publicLatitudeBucketPolicy',
+  {
+    bucket: publicBucket.id,
+    policy: publicBucket.arn.apply((bucketArn) =>
+      JSON.stringify({
+        Version: '2012-10-17',
+        Statement: [
+          {
+            Sid: 'PublicReadGetObject',
+            Effect: 'Allow',
+            Principal: '*',
+            Action: 's3:GetObject', // Note: all actions are disallowed by default
+            Resource: `${bucketArn}/*`,
+          },
+        ],
+      }),
+    ),
+  },
+  { provider: regionProvider },
+)
+
+new aws.s3.BucketCorsConfigurationV2(
+  'publicLatitudeBucketCors',
+  {
+    bucket: publicBucket.id,
+    corsRules: [
+      {
+        allowedHeaders: ['*'],
+        allowedMethods: ['GET', 'HEAD'],
+        allowedOrigins: ['https://latitude.so', 'https://*.latitude.so'],
+        exposeHeaders: [
+          'ETag',
+          'Content-Type',
+          'Content-Length',
+          'Content-Range',
+          'Content-Disposition',
+          'Cache-Control',
+          'Last-Modified',
+          'Expires',
+        ],
+        maxAgeSeconds: 24 * 3600, // 24 hours
+      },
+    ],
+  },
+  { provider: regionProvider },
+)
