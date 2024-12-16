@@ -150,7 +150,7 @@
   },
   "dependencies": {
     "promptl-ai": "^0.3.3",
-    "@latitude-data/sdk": "workspace:1.0.0-beta.9",
+    "@latitude-data/sdk": "workspace:^",
     "@latitude-data/telemetry": "workspace:^",
     "date-fns": "^3.6.0"
   }
