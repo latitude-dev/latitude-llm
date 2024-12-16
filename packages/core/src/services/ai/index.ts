@@ -61,6 +61,7 @@ export type StreamChunk =
   | ObjectStreamPart<unknown>
 
 export type ObjectOutput = 'object' | 'array' | 'no-schema' | undefined
+
 export async function ai({
   provider: apiProvider,
   prompt,
@@ -138,6 +139,9 @@ export async function ai({
       prompt,
       messages: messages as CoreMessage[],
       tools: toolsResult.value,
+      experimental_telemetry: {
+        isEnabled: true,
+      },
     }
 
     if (UNSUPPORTED_STREAM_MODELS.includes(model)) {

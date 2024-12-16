@@ -25,6 +25,9 @@ export async function runNoStreamingModels({
     prompt: string | undefined
     messages: CoreMessage[]
     tools: AITools | undefined
+    experimental_telemetry?: {
+      isEnabled: boolean
+    }
   }
   provider: Providers
 }) {

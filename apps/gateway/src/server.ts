@@ -1,3 +1,5 @@
+import './instrumentation'
+
 import { serve } from '@hono/node-server'
 import env from '$/common/env'
 import app from '$/routes/app'
