@@ -1,14 +1,7 @@
 import { ProviderApiKey } from '../../../../schema/types'
+import { Providers } from '@latitude-data/constants'
 
-export enum Providers {
-  OpenAI = 'openai',
-  Anthropic = 'anthropic',
-  Groq = 'groq',
-  Mistral = 'mistral',
-  Azure = 'azure',
-  Google = 'google',
-  Custom = 'custom',
-}
+export { Providers } from '@latitude-data/constants'
 
 export const DEFAULT_PROVIDER_UNSUPPORTED_MODELS = [
   'gpt-4o',

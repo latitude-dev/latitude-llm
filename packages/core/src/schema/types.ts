@@ -6,7 +6,6 @@ import { claimedRewards } from './models/claimedRewards'
 import { commits } from './models/commits'
 import { connectedEvaluations } from './models/connectedEvaluations'
 import { datasets } from './models/datasets'
-import { documentLogs } from './models/documentLogs'
 import { documentVersions } from './models/documentVersions'
 import { evaluationAdvancedTemplates } from './models/evaluationAdvancedTemplates'
 import { evaluationConfigurationBoolean } from './models/evaluationConfigurationBoolean'
@@ -15,7 +14,6 @@ import { evaluationConfigurationText } from './models/evaluationConfigurationTex
 import { evaluationMetadataManual } from './models/evaluationMetadataDefault'
 import { evaluationMetadataLlmAsJudgeAdvanced } from './models/evaluationMetadataLlmAsJudgeAdvanced'
 import { evaluationMetadataLlmAsJudgeSimple } from './models/evaluationMetadataLlmAsJudgeSimple'
-import { evaluationResults } from './models/evaluationResults'
 import { evaluations } from './models/evaluations'
 import { evaluationTemplateCategories } from './models/evaluationTemplateCategories'
 import { magicLinkTokens } from './models/magicLinkTokens'
@@ -32,6 +30,12 @@ import { traces } from './models/traces'
 import { users } from './models/users'
 import { workspaces } from './models/workspaces'
 
+export type {
+  DocumentLog,
+  EvaluationResult,
+  EvaluationResultDto,
+} from '@latitude-data/constants'
+
 // Model types are out of schema files to be able to share with NextJS webpack bundler
 // otherwise, it will throw an error.
 export type Workspace = InferSelectModel<typeof workspaces>
@@ -46,15 +50,10 @@ export type Commit = InferSelectModel<typeof commits>
 export type DocumentVersion = InferSelectModel<typeof documentVersions>
 export type Project = InferSelectModel<typeof projects>
 export type ProviderLog = InferSelectModel<typeof providerLogs>
-export type DocumentLog = InferSelectModel<typeof documentLogs>
 export type RunError = InferSelectModel<typeof runErrors>
 export type RunErrorInsert = InferInsertModel<typeof runErrors>
 export type Evaluation = InferSelectModel<typeof evaluations>
 export type ConnectedEvaluation = InferSelectModel<typeof connectedEvaluations>
-export type EvaluationResult = Omit<
-  InferSelectModel<typeof evaluationResults>,
-  'providerLogId'
->
 export type EvaluationTemplate = InferSelectModel<
   typeof evaluationAdvancedTemplates
 >
@@ -181,10 +180,6 @@ export type EvaluationResultConfiguration = {
 
 export type EvaluationTemplateWithCategory = EvaluationTemplate & {
   category: string
-}
-
-export type EvaluationResultDto = Omit<EvaluationResult, 'providerLogId'> & {
-  result: string | number | boolean | undefined
 }
 
 export type ProviderLogDto = Omit<

@@ -2,11 +2,6 @@ import { Readable } from 'stream'
 
 import type { Message } from '@latitude-data/compiler'
 import {
-  type ChainCallResponseDto,
-  type ChainEventDto,
-  type StreamEventTypes,
-} from '@latitude-data/core/browser'
-import {
   ApiErrorCodes,
   LatitudeApiError,
   RunErrorCodes,
@@ -15,6 +10,11 @@ import { nodeFetchResponseToReadableStream } from '$sdk/utils/nodeFetchResponseT
 import { StreamResponseCallbacks } from '$sdk/utils/types'
 import { ParsedEvent, ReconnectInterval } from 'eventsource-parser'
 import { EventSourceParserStream } from 'eventsource-parser/stream'
+import {
+  ChainCallResponseDto,
+  ChainEventDto,
+  StreamEventTypes,
+} from '@latitude-data/constants/ai'
 
 function parseJSON(line: string) {
   try {

@@ -1,4 +1,4 @@
-import { Providers } from '@latitude-data/core/browser'
+import { Providers } from '@latitude-data/constants'
 import {
   AdapterMessageType,
   Adapters,

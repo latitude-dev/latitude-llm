@@ -183,16 +183,16 @@ export class EvaluationResultsRepository extends Repository<EvaluationResultDto>
     return result[0]?.count ?? 0
   }
 
-  static parseResult(row: EvaluationResultDto & { result: string }) {
+  static parseResult(row: EvaluationResultDto) {
     const { result, resultableType, ...rest } = row
 
     let parsedResult
     switch (resultableType) {
       case EvaluationResultableType.Boolean:
-        parsedResult = result.toLowerCase() === 'true'
+        parsedResult = (result as string).toLowerCase() === 'true'
         break
       case EvaluationResultableType.Number:
-        parsedResult = parseFloat(result)
+        parsedResult = parseFloat(result as string)
         break
       default:
         parsedResult = result

@@ -3,23 +3,23 @@
 
 import type { Config, Message } from '@latitude-data/compiler'
 import {
-  DocumentVersion,
-  Providers,
-  type ChainCallResponseDto,
-  type ChainEvent,
-  type ChainEventDto,
-  type ChainEventTypes,
-  type ChatSyncAPIResponse,
-  type RunSyncAPIResponse,
-  type StreamEventTypes,
-} from '@latitude-data/core/browser'
-import {
   AdapterMessageType,
   ProviderAdapter,
   type Message as PromptlMessage,
 } from '@latitude-data/promptl'
 import { RouteResolver } from '$sdk/utils'
 import { LatitudeApiError } from '$sdk/utils/errors'
+import {
+  ChatSyncAPIResponse,
+  RunSyncAPIResponse,
+  ChainEvent,
+  ChainEventTypes,
+  ChainEventDto,
+  StreamEventTypes,
+  ChainCallResponseDto,
+  Providers,
+  DocumentVersion,
+} from '@latitude-data/constants'
 
 export type GetDocumentUrlParams = {
   projectId: number

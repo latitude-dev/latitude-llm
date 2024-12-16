@@ -1,5 +1,4 @@
-import { LogSources } from '@latitude-data/core/browser'
-import { Latitude } from '$sdk/index'
+import { Latitude, LogSources } from '$sdk/index'
 import { ApiErrorCodes, LatitudeApiError } from '$sdk/utils/errors'
 import { setupServer } from 'msw/node'
 import {

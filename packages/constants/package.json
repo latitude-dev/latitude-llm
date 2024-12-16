@@ -11,10 +11,17 @@
     "tc": "tsc --noEmit"
   },
   "exports": {
+    ".": "./src/index.ts",
     "./errors": "./src/errors.ts"
   },
   "devDependencies": {
     "@latitude-data/eslint-config": "workspace:*",
-    "@latitude-data/typescript-config": "workspace:*"
+    "@latitude-data/typescript-config": "workspace:*",
+    "@types/json-schema": "^7.0.15"
+  },
+  "dependencies": {
+    "@latitude-data/compiler": "workspace:^",
+    "json-schema": "^0.4.0",
+    "zod": "^3.23.8"
   }
 }

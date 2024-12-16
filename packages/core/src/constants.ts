@@ -5,16 +5,23 @@ import {
   type ToolCall,
   type UserMessage,
 } from '@latitude-data/compiler'
-import {
-  CoreTool,
-  LanguageModelUsage,
-  ObjectStreamPart,
-  TextStreamPart,
-} from 'ai'
+import { LanguageModelUsage } from 'ai'
 import { z } from 'zod'
+import {
+  EvaluationResultableType,
+  ProviderData,
+  LogSources,
+} from '@latitude-data/constants'
 
 import { DocumentVersion, ProviderLog, Span, Trace } from './browser'
-import { Config } from './services/ai'
+
+export {
+  type ChainEvent,
+  ChainEventTypes,
+  StreamEventTypes,
+  EvaluationResultableType,
+  LogSources,
+} from '@latitude-data/constants'
 
 export const LATITUDE_EVENT = 'latitudeEventsChannel'
 export const LATITUDE_DOCS_URL = 'https://docs.latitude.so'
@@ -74,14 +81,6 @@ export type ChainStepResponse<T extends StreamType> = T extends 'text'
     ? ChainStepObjectResponse
     : never
 
-export enum LogSources {
-  API = 'api',
-  Playground = 'playground',
-  Evaluation = 'evaluation',
-  User = 'user',
-  SharedPrompt = 'shared_prompt',
-}
-
 export const LOG_SOURCES = Object.values(LogSources)
 
 export enum ErrorableEntity {
@@ -89,59 +88,7 @@ export enum ErrorableEntity {
   EvaluationResult = 'evaluation_result',
 }
 
-export enum StreamEventTypes {
-  Latitude = 'latitude-event',
-  Provider = 'provider-event',
-}
-
-export enum ChainEventTypes {
-  Error = 'chain-error',
-  Step = 'chain-step',
-  Complete = 'chain-complete',
-  StepComplete = 'chain-step-complete',
-}
-
-export type ProviderData =
-  | TextStreamPart<Record<string, CoreTool>>
-  | ObjectStreamPart<Record<string, CoreTool>>
-  | ObjectStreamPart<unknown>
 export type ProviderDataType = ProviderData['type']
-
-export type LatitudeEventData =
-  | {
-      type: ChainEventTypes.Step
-      config: Config
-      isLastStep: boolean
-      messages: Message[]
-      documentLogUuid?: string
-    }
-  | {
-      type: ChainEventTypes.StepComplete
-      response: ChainStepResponse<StreamType>
-      documentLogUuid?: string
-    }
-  | {
-      type: ChainEventTypes.Complete
-      config: Config
-      messages?: Message[]
-      object?: any
-      response: ChainStepResponse<StreamType>
-      documentLogUuid?: string
-    }
-  | {
-      type: ChainEventTypes.Error
-      error: Error
-    }
-
-export type ChainEvent =
-  | {
-      data: LatitudeEventData
-      event: StreamEventTypes.Latitude
-    }
-  | {
-      data: ProviderData
-      event: StreamEventTypes.Provider
-    }
 
 export enum EvaluationMetadataType {
   LlmAsJudgeAdvanced = 'llm_as_judge',
@@ -152,12 +99,6 @@ export enum EvaluationMetadataType {
 export enum EvaluationMode {
   Live = 'live',
   Batch = 'batch',
-}
-
-export enum EvaluationResultableType {
-  Boolean = 'evaluation_resultable_booleans',
-  Text = 'evaluation_resultable_texts',
-  Number = 'evaluation_resultable_numbers',
 }
 
 export enum RewardType {
@@ -202,51 +143,6 @@ export type WorkspaceUsage = {
 export type ChainCallResponseDto =
   | Omit<ChainStepResponse<'object'>, 'documentLogUuid' | 'providerLog'>
   | Omit<ChainStepResponse<'text'>, 'documentLogUuid' | 'providerLog'>
-
-type ChainEventDtoResponse =
-  | Omit<ChainStepResponse<'object'>, 'providerLog'>
-  | Omit<ChainStepResponse<'text'>, 'providerLog'>
-
-// FIXME: Move to @latitude-data/constants
-export type RunSyncAPIResponse = {
-  uuid: string
-  conversation: Message[]
-  response: ChainCallResponseDto
-}
-
-// FIXME: Move to @latitude-data/constants
-export type ChatSyncAPIResponse = RunSyncAPIResponse
-
-export type ChainEventDto =
-  | ProviderData
-  | {
-      type: ChainEventTypes.Step
-      config: Config
-      isLastStep: boolean
-      messages: Message[]
-      uuid?: string
-    }
-  | {
-      type: ChainEventTypes.StepComplete
-      response: ChainEventDtoResponse
-      uuid?: string
-    }
-  | {
-      type: ChainEventTypes.Complete
-      config: Config
-      messages?: Message[]
-      object?: any
-      response: ChainEventDtoResponse
-      uuid?: string
-    }
-  | {
-      type: ChainEventTypes.Error
-      error: {
-        name: string
-        message: string
-        stack?: string
-      }
-    }
 
 export type SerializedConversation = {
   all: Message[]
