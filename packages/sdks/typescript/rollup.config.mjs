@@ -24,6 +24,7 @@ const EXTERNALS = [
   'node-fetch',
   'stream',
   'eventsource-parser/stream',
+  '@latitude-data/constants',
   '@latitude-data/telemetry',
   'promptl-ai',
   '@latitude-data/compiler',

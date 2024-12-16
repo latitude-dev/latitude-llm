@@ -7,8 +7,8 @@ import { ReadableSpan, SpanExporter } from '@opentelemetry/sdk-trace-base'
 
 const DOMAIN =
   process.env.NODE_ENV === 'production'
-    ? 'gateway.latitude.so'
-    : 'localhost:8080'
+    ? 'gateway.latitude.so/api/v2/otlp'
+    : 'localhost:8787/api/v2/otlp'
 const PROTOCOL = process.env.NODE_ENV === 'production' ? 'https' : 'http'
 
 interface OTLPHttpExporterConfig extends OTLPExporterConfigBase {
