@@ -1,11 +1,11 @@
+import { LatitudeError } from '@latitude-data/core/lib/errors'
+import { Result, TypedResult } from '@latitude-data/core/lib/Result'
+import { captureException } from '$/common/sentry'
 import {
   ChainStepObjectResponse,
   ChainStepTextResponse,
   RunSyncAPIResponse,
-} from '@latitude-data/core/browser'
-import { LatitudeError } from '@latitude-data/core/lib/errors'
-import { Result, TypedResult } from '@latitude-data/core/lib/Result'
-import { captureException } from '$/common/sentry'
+} from '@latitude-data/constants'
 
 type DocumentResponse = ChainStepObjectResponse | ChainStepTextResponse
 export function documentRunPresenter(

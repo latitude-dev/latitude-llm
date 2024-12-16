@@ -1,10 +1,10 @@
 import type { ContentType, Message, MessageRole } from '@latitude-data/compiler'
-
-import {
+import type {
+  ChainEventDto,
   DocumentLog,
   EvaluationResultDto,
-  type ChainEventDto,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/constants'
+
 import {
   AdapterMessageType,
   Chain,

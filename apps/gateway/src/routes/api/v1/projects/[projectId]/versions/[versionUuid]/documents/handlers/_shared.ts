@@ -2,15 +2,9 @@ import { omit } from 'lodash-es'
 
 import { Message } from '@latitude-data/compiler'
 import {
-  ChainCallResponseDto,
-  ChainEventDto,
-  ChainEventTypes,
   Commit,
   DocumentVersion,
-  LatitudeEventData,
   Project,
-  StreamEventTypes,
-  type ChainEvent,
   type Workspace,
 } from '@latitude-data/core/browser'
 import { findFirstUserInWorkspace } from '@latitude-data/core/data-access'
@@ -23,6 +17,14 @@ import {
   ProjectsRepository,
 } from '@latitude-data/core/repositories'
 import { Config } from '@latitude-data/core/services/ai/helpers'
+import {
+  ChainCallResponseDto,
+  ChainEvent,
+  ChainEventDto,
+  ChainEventTypes,
+  LatitudeEventData,
+  StreamEventTypes,
+} from '@latitude-data/constants'
 
 export const getData = async ({
   workspace,
