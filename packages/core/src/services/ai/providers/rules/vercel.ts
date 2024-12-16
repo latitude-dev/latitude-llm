@@ -1,9 +1,10 @@
-import type {
+import {
   ContentType,
   Message,
   SystemMessage,
   TextContent,
 } from '@latitude-data/compiler'
+import { FilePart, ToolCallPart } from 'ai'
 
 import { Providers } from '../models'
 import {
@@ -102,6 +103,39 @@ function groupContentMetadata({
   })
 }
 
+function adaptContentFields({ content }: { content: Message['content'] }) {
+  if (typeof content === 'string') return content
+
+  return content.map((c) => {
+    switch (c.type) {
+      case ContentType.file: {
+        const adaptedContent = {
+          ...c,
+          data: (c as any)['file'] as FilePart['data'],
+        }
+
+        delete (adaptedContent as any)['file']
+
+        return adaptedContent
+      }
+
+      case ContentType.toolCall: {
+        const adaptedContent = {
+          ...c,
+          args: (c as any)['toolArguments'] as ToolCallPart['args'],
+        }
+
+        delete (adaptedContent as any)['toolArguments']
+
+        return adaptedContent
+      }
+
+      default:
+        return c
+    }
+  })
+}
+
 export function vercelSdkRules(
   rules: AppliedRules,
   provider: Providers,
@@ -111,17 +145,22 @@ export function vercelSdkRules(
       return flattenSystemMessage({ message, provider })
     }
 
-    const msg = extractMessageMetadata({
-      message,
-      provider,
+    const extracted = extractMessageMetadata({
+      message: message,
+      provider: provider,
     })
-    const content = groupContentMetadata({
-      content: msg.content,
-      provider,
-      messageMetadata: msg.experimental_providerMetadata,
+
+    let content = adaptContentFields({
+      content: extracted.content,
     }) as unknown as Message['content']
 
-    return [{ ...msg, content } as Message]
+    content = groupContentMetadata({
+      content: content,
+      provider: provider,
+      messageMetadata: extracted.experimental_providerMetadata,
+    }) as unknown as Message['content']
+
+    return [{ ...extracted, content } as Message]
   }) as Message[]
 
   return { ...rules, messages }

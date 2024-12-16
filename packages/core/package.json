@@ -41,11 +41,11 @@
     "test:watch": "vitest"
   },
   "devDependencies": {
-    "@ai-sdk/anthropic": "^0.0.48",
-    "@ai-sdk/azure": "^0.0.32",
-    "@ai-sdk/google": "^0.0.51",
-    "@ai-sdk/mistral": "^0.0.38",
-    "@ai-sdk/openai": "^0.0.54",
+    "@ai-sdk/anthropic": "^1.0.5",
+    "@ai-sdk/azure": "^1.0.10",
+    "@ai-sdk/google": "^1.0.10",
+    "@ai-sdk/mistral": "^1.0.5",
+    "@ai-sdk/openai": "^1.0.8",
     "@anthropic-ai/sdk": "^0.32.1",
     "@aws-sdk/client-s3": "^3.645.0",
     "@aws-sdk/s3-request-presigner": "^3.679.0",
@@ -70,7 +70,7 @@
     "@types/react": "18.3.0",
     "@types/react-dom": "18.3.0",
     "@types/uuid": "^10.0.0",
-    "ai": "^3.4.7",
+    "ai": "^4.0.18",
     "argon2": "^0.41.0",
     "csv-parse": "^5.5.6",
     "drizzle-kit": "^0.22.8",
@@ -103,11 +103,11 @@
     "zod": "^3.23.8"
   },
   "peerDependencies": {
-    "@ai-sdk/anthropic": "^0.0.48",
-    "@ai-sdk/azure": "^0.0.32",
-    "@ai-sdk/google": "^0.0.51",
-    "@ai-sdk/mistral": "^0.0.38",
-    "@ai-sdk/openai": "^0.0.54",
+    "@ai-sdk/anthropic": "^1.0.5",
+    "@ai-sdk/azure": "^1.0.10",
+    "@ai-sdk/google": "^1.0.10",
+    "@ai-sdk/mistral": "^1.0.5",
+    "@ai-sdk/openai": "^1.0.8",
     "@aws-sdk/client-s3": "^3.645.0",
     "@aws-sdk/s3-request-presigner": "^3.679.0",
     "@latitude-data/compiler": "workspace:^",
@@ -122,7 +122,7 @@
     "@types/nodemailer-mailgun-transport": "^1.4.6",
     "@types/react": "18.3.0",
     "@types/react-dom": "18.3.0",
-    "ai": "^3.3.3",
+    "ai": "^4.0.18",
     "argon2": "^0.41.0",
     "csv-parse": "^5.5.6",
     "drizzle-orm": "^0.33.0",
@@ -148,7 +148,7 @@
     "zod": "^3.23.8"
   },
   "dependencies": {
-    "@latitude-data/promptl": "^0.3.2",
+    "promptl-ai": "^0.3.3",
     "date-fns": "^3.6.0"
   }
 }

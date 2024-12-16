@@ -1,4 +1,4 @@
-import { scan } from '@latitude-data/promptl'
+import { scan } from 'promptl-ai'
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import { getEvaluationPrompt } from '.'

@@ -11,7 +11,7 @@ import {
   Config,
   render,
   type Message as PromptlMessage,
-} from '@latitude-data/promptl'
+} from 'promptl-ai'
 import {
   LatitudeExporter,
   LatitudeTelemetrySDK,
@@ -447,7 +447,7 @@ class Latitude {
 
 export { Latitude, LatitudeApiError, LogSources }
 
-export { Adapters } from '@latitude-data/promptl'
+export { Adapters } from 'promptl-ai'
 
 export type {
   ChainEventDto,

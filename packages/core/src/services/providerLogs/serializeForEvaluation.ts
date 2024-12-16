@@ -57,6 +57,8 @@ export function formatContext(
               return item.text
             case ContentType.image:
               return '[IMAGE]'
+            case ContentType.file:
+              return '[FILE]'
           }
         })
         .join('\n')

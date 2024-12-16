@@ -3,7 +3,7 @@ import {
   Chain as LegacyChain,
   readMetadata,
 } from '@latitude-data/compiler'
-import { Chain as PromptlChain } from '@latitude-data/promptl'
+import { Chain as PromptlChain } from 'promptl-ai'
 
 import { Workspace } from '../../browser'
 import { LogSources } from '../../constants'

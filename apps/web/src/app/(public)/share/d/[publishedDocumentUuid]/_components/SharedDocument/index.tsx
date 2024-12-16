@@ -11,7 +11,7 @@ import {
 import { capitalize } from 'lodash-es'
 
 import { PublishedDocument } from '@latitude-data/core/browser'
-import { ConversationMetadata } from '@latitude-data/promptl'
+import { ConversationMetadata } from 'promptl-ai'
 import { Button, Card, CardContent, cn, TextArea } from '@latitude-data/web-ui'
 
 import { Container } from '../Container'

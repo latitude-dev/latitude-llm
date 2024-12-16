@@ -1,6 +1,7 @@
 export enum ContentType {
   text = 'text',
   image = 'image',
+  file = 'file', // Not supported but it is here because almost all code uses legacy compiler types
   toolCall = 'tool-call',
   toolResult = 'tool-result',
 }
@@ -34,6 +35,13 @@ export type ImageContent = IMessageContent & {
   image: string | Uint8Array | Buffer | ArrayBuffer | URL
 }
 
+// Not supported but it is here because almost all code uses legacy compiler types
+export type FileContent = IMessageContent & {
+  type: ContentType.file
+  file: string | Uint8Array | Buffer | ArrayBuffer | URL
+  mimeType: string
+}
+
 export type ToolContent = {
   type: ContentType.toolResult
   toolCallId: string
@@ -52,6 +60,7 @@ export type ToolRequestContent = {
 export type MessageContent =
   | TextContent
   | ImageContent
+  | FileContent // Not supported but it is here because almost all code uses legacy compiler types
   | ToolContent
   | ToolRequestContent
 

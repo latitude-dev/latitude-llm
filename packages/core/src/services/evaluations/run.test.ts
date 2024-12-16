@@ -1,5 +1,5 @@
 import { RunErrorCodes } from '@latitude-data/constants/errors'
-import { Adapters, Chain } from '@latitude-data/promptl'
+import { Adapters, Chain } from 'promptl-ai'
 import { and, eq, isNull } from 'drizzle-orm'
 import {
   afterEach,

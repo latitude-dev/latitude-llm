@@ -105,6 +105,7 @@ Messages can contain different types of content. By default, all plain text is c
 
 - **Text (default)**: `<content type="text">` or `<content-text>`.
 - **Image**: `<content type="image">` or `<content-image>`. Add the image URL or base64-encoded string – depending on your provider's requirements – as the content inside the tag.
+- **File**: `<content type="file">` or `<content-file>`. Add the file URL or base64-encoded string – depending on your provider's requirements – as the content inside the tag. Requires a MIME type `mime` attribute to specify the file type.
 - **Tool Call**: `<content type="tool-call">` or `<tool-call>`. Represents a tool invocation with attributes like `id`, `name`, and `arguments` (optional). Only allowed inside assistant messages.
 
 <Note>
@@ -116,6 +117,9 @@ Messages can contain different types of content. By default, all plain text is c
 <user>
   Take a look at this image:
   <content-image>[image url]</content>
+
+  And this PDF:
+  <content-file mime="application/pdf">[file url]</content>
 </user>
 
 <assistant>

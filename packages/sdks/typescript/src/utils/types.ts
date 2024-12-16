@@ -17,7 +17,7 @@ import {
   AdapterMessageType,
   ProviderAdapter,
   type Message as PromptlMessage,
-} from '@latitude-data/promptl'
+} from 'promptl-ai'
 import { RouteResolver } from '$sdk/utils'
 import { LatitudeApiError } from '$sdk/utils/errors'
 

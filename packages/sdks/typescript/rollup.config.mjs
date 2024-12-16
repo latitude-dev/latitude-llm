@@ -29,7 +29,7 @@ const EXTERNALS = [
   'stream',
   'eventsource-parser/stream',
   '@latitude-data/telemetry',
-  '@latitude-data/promptl',
+  'promptl-ai',
   '@latitude-data/compiler',
 ]
 const config = [

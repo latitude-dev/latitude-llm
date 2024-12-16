@@ -6,7 +6,7 @@ import {
   Document as RefDocument,
   type CompileError,
 } from '@latitude-data/compiler'
-import { scan } from '@latitude-data/promptl'
+import { scan } from 'promptl-ai'
 import { eq } from 'drizzle-orm'
 
 import {

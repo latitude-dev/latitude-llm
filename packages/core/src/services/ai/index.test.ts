@@ -60,7 +60,7 @@ describe('ai function', () => {
         code: RunErrorCodes.AIRunError,
         message: `
 There are rule violations:
-- Assistant messages cannot have images.`.trim(),
+- Assistant messages can only have text or tool call content.`.trim(),
       }),
     )
   })

@@ -1,6 +1,6 @@
 import { Inputs, InputSource } from '$/hooks/useDocumentParameters'
 import { ParameterType } from '@latitude-data/core/browser'
-import type { ConversationMetadata } from '@latitude-data/promptl'
+import type { ConversationMetadata } from 'promptl-ai'
 
 const ParameterTypes = Object.values(ParameterType) as string[]
 

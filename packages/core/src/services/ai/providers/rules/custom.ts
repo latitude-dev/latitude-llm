@@ -1,14 +1,14 @@
 import { AppliedRules, ProviderRules } from './types'
 
 export function applyCustomRules(rules: AppliedRules): AppliedRules {
-  const hasNonTextSystemMessage = rules.messages.some(
+  const unsupportedSystemContent = rules.messages.some(
     (message) =>
       message.role === 'system' &&
       Array.isArray(message.content) &&
-      message.content.some((content) => content.type !== 'text'),
+      message.content.some((content) => !['text'].includes(content.type)),
   )
 
-  if (hasNonTextSystemMessage) {
+  if (unsupportedSystemContent) {
     rules.rules = [
       ...rules.rules,
       {
@@ -18,19 +18,22 @@ export function applyCustomRules(rules: AppliedRules): AppliedRules {
     ]
   }
 
-  const hasAssistantMessageWithImage = rules.messages.some(
+  const unsupportedAssistantContent = rules.messages.some(
     (message) =>
       message.role === 'assistant' &&
       Array.isArray(message.content) &&
-      message.content.some((content) => content.type === 'image'),
+      message.content.some(
+        (content) => !['text', 'tool-call'].includes(content.type),
+      ),
   )
 
-  if (hasAssistantMessageWithImage) {
+  if (unsupportedAssistantContent) {
     rules.rules = [
       ...rules.rules,
       {
         rule: ProviderRules.Custom,
-        ruleMessage: 'Assistant messages cannot have images.',
+        ruleMessage:
+          'Assistant messages can only have text or tool call content.',
       },
     ]
   }

@@ -4,7 +4,7 @@ import { useState } from 'react'
 
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
 import { DocumentVersion } from '@latitude-data/core/browser'
-import type { ConversationMetadata } from '@latitude-data/promptl'
+import type { ConversationMetadata } from 'promptl-ai'
 import {
   AppLocalStorage,
   SplitPane,

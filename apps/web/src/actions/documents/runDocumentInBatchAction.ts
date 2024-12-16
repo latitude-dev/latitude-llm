@@ -4,7 +4,7 @@ import { readMetadata } from '@latitude-data/compiler'
 import { publisher } from '@latitude-data/core/events/publisher'
 import { setupJobs } from '@latitude-data/core/jobs'
 import { CommitsRepository } from '@latitude-data/core/repositories'
-import { scan } from '@latitude-data/promptl'
+import { scan } from 'promptl-ai'
 import { z } from 'zod'
 
 import {

@@ -46,6 +46,7 @@ function getDeltas({
 
     return content.flatMap((c) => {
       if (c.type === ContentType.image) return []
+      if (c.type === ContentType.file) return []
       if (c.type === ContentType.toolCall)
         return splitInWords(JSON.stringify(c))
       if (c.type === ContentType.toolResult)

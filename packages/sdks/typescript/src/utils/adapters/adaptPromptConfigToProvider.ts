@@ -1,5 +1,5 @@
 import type { Config } from '@latitude-data/compiler'
-import { Adapters, ProviderAdapter } from '@latitude-data/promptl'
+import { Adapters, ProviderAdapter } from 'promptl-ai'
 
 /**
  * Configuration parameters in Latitude are defined using camelCase,

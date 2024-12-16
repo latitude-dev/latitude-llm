@@ -1,6 +1,6 @@
 import { createChain as createChainFn } from '@latitude-data/compiler'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
-import { Adapters, Chain as PromptlChain } from '@latitude-data/promptl'
+import { Adapters, Chain as PromptlChain } from 'promptl-ai'
 import { JSONSchema7 } from 'json-schema'
 
 import {

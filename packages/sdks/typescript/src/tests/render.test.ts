@@ -1,4 +1,4 @@
-import { Adapters } from '@latitude-data/promptl'
+import { Adapters } from 'promptl-ai'
 import { Latitude } from '$sdk/index'
 import { Prompt } from '$sdk/utils/types'
 import { beforeAll, describe, expect, it, vi } from 'vitest'

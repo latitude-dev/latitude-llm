@@ -18,7 +18,7 @@ import {
   Adapters,
   ConversationMetadata,
   Chain as PromptlChain,
-} from '@latitude-data/promptl'
+} from 'promptl-ai'
 import {
   Alert,
   Button,
