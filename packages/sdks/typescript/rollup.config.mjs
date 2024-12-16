@@ -11,23 +11,21 @@ const aliasEntries = {
   entries: [
     { find: '$sdk', replacement: path.resolve(__dirname, 'src') },
     {
-      find: '@latitude-data/constants/errors',
-      replacement: path.resolve(__dirname, '../../constants/src/errors'),
+      find: '@latitude-data/constants',
+      replacement: path.resolve(__dirname, '../../constants/src'),
     },
   ],
 }
 const EXTERNALS = [
+  '@latitude-data/compiler',
+  '@latitude-data/telemetry',
   '@t3-oss/env-core',
-  'zod',
-  // This fix some circular dependencies from core. Not really needed in prod
+  'eventsource-parser/stream',
   'flydrive/types',
   'node-fetch',
-  'stream',
-  'eventsource-parser/stream',
-  '@latitude-data/constants',
-  '@latitude-data/telemetry',
   'promptl-ai',
-  '@latitude-data/compiler',
+  'stream',
+  'zod',
 ]
 const config = [
   {
