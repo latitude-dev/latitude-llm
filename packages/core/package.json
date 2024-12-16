@@ -25,8 +25,7 @@
     "./schema/*": "./src/schema/*.ts",
     "./services/*": "./src/services/*.ts",
     "./test": "./src/tests/useTestDatabase.ts",
-    "./websockets/*": "./src/websockets/*.ts",
-    "./instrumentation": "./src/instrumentation.ts"
+    "./websockets/*": "./src/websockets/*.ts"
   },
   "scripts": {
     "db:generate": "drizzle-kit generate",
@@ -150,8 +149,6 @@
   },
   "dependencies": {
     "promptl-ai": "^0.3.3",
-    "@latitude-data/sdk": "workspace:^",
-    "@latitude-data/telemetry": "workspace:^",
     "date-fns": "^3.6.0"
   }
 }
