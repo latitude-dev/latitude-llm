@@ -2,7 +2,7 @@
 
 import React, { lazy, useEffect, useState } from 'react'
 
-import { SimpleDiffViewerFallback } from './fallback'
+import { TextEditorPlaceholder } from '../TextEditorPlaceholder'
 import { SimpleDiffViewerProps } from './types'
 
 const DiffViewer = lazy(() =>
@@ -27,10 +27,10 @@ function EditorWrapper(props: SimpleDiffViewerProps) {
   }, [])
 
   if (!isBrowser) {
-    return <SimpleDiffViewerFallback />
+    return <TextEditorPlaceholder />
   }
 
   return <DiffViewer {...props} />
 }
 
-export { EditorWrapper as DiffViewer, SimpleDiffViewerFallback }
+export { EditorWrapper as DiffViewer }

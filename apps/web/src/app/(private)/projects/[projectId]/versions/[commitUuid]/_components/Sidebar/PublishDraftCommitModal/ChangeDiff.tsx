@@ -3,7 +3,7 @@ import { ModifiedDocumentType } from '@latitude-data/core/browser'
 import { ChangedDocument } from '@latitude-data/core/repositories'
 import {
   DiffViewer,
-  SimpleDiffViewerFallback,
+  TextEditorPlaceholder,
   Text,
   useCurrentCommit,
 } from '@latitude-data/web-ui'
@@ -28,7 +28,7 @@ function DocumentDiff({
   if (oldContent === undefined || newContent === undefined) {
     return (
       <div className='flex w-full h-96'>
-        <SimpleDiffViewerFallback />
+        <TextEditorPlaceholder />
       </div>
     )
   }
