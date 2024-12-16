@@ -32,7 +32,7 @@ import {
   Button,
   ClickToCopyUuid,
   DocumentTextEditor,
-  DocumentTextEditorFallback,
+  TextEditorPlaceholder,
   SplitPane,
   Text,
   Tooltip,
@@ -322,7 +322,7 @@ export default function DocumentEditor({
                   freeRunsCount={freeRunsCount}
                   showCopilotSetting
                 />
-                <Suspense fallback={<DocumentTextEditorFallback />}>
+                <Suspense fallback={<TextEditorPlaceholder />}>
                   <DocumentTextEditor
                     value={value}
                     metadata={metadata}

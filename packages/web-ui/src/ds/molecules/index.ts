@@ -1,6 +1,8 @@
 export { default as FocusHeader } from './FocusHeader'
 
+export * from './TextEditorPlaceholder'
 export * from './DocumentTextEditor'
+export * from './DiffViewer'
 export * from './Chat'
 export * from './ClicktoCopy'
 export * from './TabSelector'

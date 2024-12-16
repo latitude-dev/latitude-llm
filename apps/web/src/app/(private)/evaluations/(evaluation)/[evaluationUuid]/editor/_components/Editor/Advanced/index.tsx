@@ -12,7 +12,7 @@ import {
 import {
   Button,
   DocumentTextEditor,
-  DocumentTextEditorFallback,
+  TextEditorPlaceholder,
 } from '@latitude-data/web-ui'
 import EditorHeader from '$/components/EditorHeader'
 import { useMetadata } from '$/hooks/useMetadata'
@@ -129,7 +129,7 @@ export default function AdvancedEvaluationEditor({
           </>
         }
       />
-      <Suspense fallback={<DocumentTextEditorFallback />}>
+      <Suspense fallback={<TextEditorPlaceholder />}>
         <DocumentTextEditor
           value={value}
           metadata={metadata}

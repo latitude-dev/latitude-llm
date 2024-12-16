@@ -1,6 +1,4 @@
-'use client'
-
-export function DocumentTextEditorFallback() {
+export function TextEditorPlaceholder() {
   return (
     <div className='flex flex-grow flex-col relative h-full w-full rounded-lg border border-border overflow-hidden'>
       <div className='w-full h-full bg-secondary p-6 animate-pulse'>
