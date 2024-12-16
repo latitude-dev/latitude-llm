@@ -8,7 +8,7 @@ import {
   EvaluationMetadataType,
 } from '@latitude-data/core/browser'
 import { ConnectedDocumentWithMetadata } from '@latitude-data/core/repositories'
-import { scan } from '@latitude-data/promptl'
+import { scan } from 'promptl-ai'
 import { Skeleton, Text } from '@latitude-data/web-ui'
 import { formatCostInMillicents } from '$/app/_lib/formatUtils'
 import useConnectedDocuments from '$/stores/connectedDocuments'

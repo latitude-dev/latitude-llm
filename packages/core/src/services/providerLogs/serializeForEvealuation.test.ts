@@ -484,6 +484,38 @@ describe('formatContext', () => {
     )
   })
 
+  it('should handle file content in messages', () => {
+    // @ts-expect-error
+    const providerLog: ProviderLog = {
+      messages: [
+        {
+          role: MessageRole.user,
+          content: [
+            { type: ContentType.text, text: 'Summarize this file' },
+            {
+              type: ContentType.file,
+              file: 'https://example.com/file.pdf',
+              mimeType: 'application/pdf',
+            },
+          ],
+        },
+        {
+          role: MessageRole.assistant,
+          content: 'No.',
+          toolCalls: [],
+        },
+      ],
+      responseText: 'Ask me again.',
+      toolCalls: [],
+    }
+
+    const result = formatContext(providerLog)
+
+    expect(result).toBe(
+      'User:\nSummarize this file\n[FILE]\n\n' + 'Assistant:\nNo.',
+    )
+  })
+
   it('should handle empty messages array', () => {
     // @ts-expect-error
     const providerLog: ProviderLog = {

@@ -4,6 +4,7 @@ import { ReactNode, useEffect, useMemo, useState } from 'react'
 
 import {
   ContentType,
+  FileContent,
   ImageContent,
   MessageContent,
   PromptlSourceRef,
@@ -17,6 +18,7 @@ import {
   Badge,
   BadgeProps,
   CodeBlock,
+  Icon,
   Image,
   Skeleton,
   Text,
@@ -169,8 +171,8 @@ const Content = ({
     try {
       const parsedValue = JSON.parse(value)
       return (
-        <div className='pt-2 w-full'>
-          <div className='overflow-hidden rounded-lg w-full'>
+        <div key={`${index}`} className='py-2 w-full'>
+          <div className='overflow-hidden rounded-xl w-full'>
             <CodeBlock language='json'>
               {JSON.stringify(parsedValue, null, 2)}
             </CodeBlock>
@@ -219,10 +221,23 @@ const Content = ({
         />
       )
 
+    case ContentType.file:
+      return (
+        <ContentFile
+          index={index}
+          color={color}
+          size={size}
+          file={value.file}
+          parameters={parameters}
+          collapseParameters={collapseParameters}
+          sourceMap={sourceMap}
+        />
+      )
+
     case ContentType.toolCall:
       return (
-        <div key={`${index}`} className='pt-2 w-full'>
-          <div className='overflow-hidden rounded-lg w-full'>
+        <div key={`${index}`} className='py-2 w-full'>
+          <div className='overflow-hidden rounded-xl w-full'>
             <CodeBlock language='json'>
               {JSON.stringify(value as ToolRequestContent, null, 2)}
             </CodeBlock>
@@ -232,8 +247,8 @@ const Content = ({
 
     case ContentType.toolResult:
       return (
-        <div key={`${index}`} className='pt-2 w-full'>
-          <div className='overflow-hidden rounded-lg w-full'>
+        <div key={`${index}`} className='py-2 w-full'>
+          <div className='overflow-hidden rounded-xl w-full'>
             <CodeBlock language='json'>
               {JSON.stringify(value as ToolContent, null, 2)}
             </CodeBlock>
@@ -295,10 +310,14 @@ const ContentText = ({
       {group.length > 0
         ? group.map((segment, segmentIndex) => (
             <span key={`${index}-group-${groupIndex}-segment-${segmentIndex}`}>
-              <SegmentComponent
-                segment={segment}
-                collapseParameters={collapseParameters}
-              />
+              {typeof segment === 'string' ? (
+                segment
+              ) : (
+                <ReferenceComponent
+                  reference={segment}
+                  collapseParameters={collapseParameters}
+                />
+              )}
             </span>
           ))
         : '\n'}
@@ -306,108 +325,53 @@ const ContentText = ({
   ))
 }
 
-function SegmentComponent({
-  segment,
+function ReferenceComponent({
+  reference,
   collapseParameters,
 }: {
-  segment: Segment
+  reference: Reference
   collapseParameters: boolean
 }) {
-  if (typeof segment === 'string') {
-    return segment
-  }
-
-  if (segment.identifier) {
-    return IdentifierSegment(segment, collapseParameters)
-  }
-
-  return DynamicSegment(segment, collapseParameters)
-}
-
-function IdentifierSegment(segment: Reference, collapseParameters: boolean) {
-  const [collapseSegment, setCollapseSegment] = useState(collapseParameters)
+  const [collapseReference, setCollapseReference] = useState(collapseParameters)
   useEffect(() => {
-    setCollapseSegment(collapseParameters)
+    setCollapseReference(collapseParameters)
   }, [collapseParameters])
 
-  if (collapseSegment) {
+  if (collapseReference) {
     return (
       <Tooltip
         asChild
-        variant={segment.type === ContentType.image ? 'ghost' : 'inverse'}
+        variant={reference.type === ContentType.text ? 'inverse' : 'ghost'}
         trigger={
-          <Badge
-            variant='accent'
-            className='cursor-pointer'
-            onClick={() => setCollapseSegment(!collapseSegment)}
-          >
-            &#123;&#123;{segment.identifier}&#125;&#125;
-          </Badge>
+          reference.identifier ? (
+            <Badge
+              variant='accent'
+              className='cursor-pointer'
+              onClick={() => setCollapseReference(!collapseReference)}
+            >
+              &#123;&#123;{reference.identifier}&#125;&#125;
+            </Badge>
+          ) : (
+            <span
+              className={cn(
+                colors.textColors.accentForeground,
+                'cursor-pointer',
+              )}
+              onClick={() => setCollapseReference(!collapseReference)}
+            >
+              (...)
+            </span>
+          )
         }
       >
-        {segment.type === ContentType.text && (
-          <div className='line-clamp-6'>{segment.content}</div>
+        {reference.type === ContentType.text && (
+          <div className='line-clamp-6'>{reference.content}</div>
         )}
-        {segment.type === ContentType.image && (
-          <Image src={segment.content} className='max-h-72 rounded-xl' />
+        {reference.type === ContentType.image && (
+          <Image src={reference.content} className='max-h-72 rounded-xl' />
         )}
-      </Tooltip>
-    )
-  }
-
-  return (
-    <Tooltip
-      asChild
-      trigger={
-        <span
-          className={cn(
-            colors.textColors.accentForeground,
-            font.weight.semibold,
-            'cursor-pointer',
-            {
-              inline: segment.type === ContentType.text,
-              'inline-flex py-2': segment.type === ContentType.image,
-            },
-          )}
-          onClick={() => setCollapseSegment(!collapseSegment)}
-        >
-          {segment.type === ContentType.text && <>{segment.content}</>}
-          {segment.type === ContentType.image && (
-            <Image src={segment.content} className='max-h-72 rounded-xl' />
-          )}
-        </span>
-      }
-    >
-      <div className='line-clamp-6'>{segment.identifier}</div>
-    </Tooltip>
-  )
-}
-
-function DynamicSegment(segment: Reference, collapseParameters: boolean) {
-  const [collapseSegment, setCollapseSegment] = useState(collapseParameters)
-  useEffect(() => {
-    setCollapseSegment(collapseParameters)
-  }, [collapseParameters])
-
-  if (collapseSegment) {
-    return (
-      <Tooltip
-        asChild
-        variant={segment.type === ContentType.image ? 'ghost' : 'inverse'}
-        trigger={
-          <span
-            className={cn(colors.textColors.accentForeground, 'cursor-pointer')}
-            onClick={() => setCollapseSegment(!collapseSegment)}
-          >
-            (...)
-          </span>
-        }
-      >
-        {segment.type === ContentType.text && (
-          <div className='line-clamp-6'>{segment.content}</div>
-        )}
-        {segment.type === ContentType.image && (
-          <Image src={segment.content} className='max-h-72 rounded-xl' />
+        {reference.type === ContentType.file && (
+          <FileComponent src={reference.content} />
         )}
       </Tooltip>
     )
@@ -419,20 +383,38 @@ function DynamicSegment(segment: Reference, collapseParameters: boolean) {
       trigger={
         <span
           className={cn(colors.textColors.accentForeground, 'cursor-pointer', {
-            inline: segment.type === ContentType.text,
-            'inline-flex py-2': segment.type === ContentType.image,
+            [font.weight.semibold]: !!reference.identifier,
+            inline: reference.type === ContentType.text,
+            'inline-flex py-2': reference.type !== ContentType.text,
           })}
-          onClick={() => setCollapseSegment(!collapseSegment)}
+          onClick={() => setCollapseReference(!collapseReference)}
         >
-          {segment.type === ContentType.text && <>{segment.content}</>}
-          {segment.type === ContentType.image && (
-            <Image src={segment.content} className='max-h-72 rounded-xl' />
+          {reference.type === ContentType.text && <>{reference.content}</>}
+          {reference.type === ContentType.image && (
+            <Image src={reference.content} className='max-h-72 rounded-xl' />
+          )}
+          {reference.type === ContentType.file && (
+            <FileComponent src={reference.content} />
           )}
         </span>
       }
     >
-      <div className='line-clamp-6'>dynamic</div>
+      <div className='line-clamp-6'>{reference.identifier || 'dynamic'}</div>
     </Tooltip>
+  )
+}
+
+function FileComponent({ src }: { src: string }) {
+  return (
+    <a
+      href={src}
+      target='_blank'
+      rel='noopener noreferrer'
+      className='h-auto w-auto text-accent-foreground font-semibold bg-muted flex flex-row items-center justify-center gap-2 py-2 px-3 rounded-xl shadow-sm'
+    >
+      <Icon name='paperclip' size='normal' className='shrink-0' />
+      {src.split('/').at(-1)}
+    </a>
   )
 }
 
@@ -519,6 +501,7 @@ const ContentImage = ({
 }) => {
   if (
     (typeof image !== 'string' && !(image instanceof URL)) ||
+    !URL.canParse(image.toString()) ||
     (!image.toString().startsWith('https') &&
       !image.toString().startsWith('http://localhost'))
   ) {
@@ -554,10 +537,76 @@ const ContentImage = ({
       wordBreak='breakAll'
       key={`${index}`}
     >
-      <SegmentComponent
-        segment={segment}
-        collapseParameters={collapseParameters}
+      {typeof segment === 'string' ? (
+        segment
+      ) : (
+        <ReferenceComponent
+          reference={segment}
+          collapseParameters={collapseParameters}
+        />
+      )}
+    </TextComponent>
+  )
+}
+
+const ContentFile = ({
+  index = 0,
+  color,
+  size,
+  file,
+  parameters = [],
+  collapseParameters = false,
+  sourceMap = [],
+}: {
+  index?: number
+  color: TextColor
+  size?: 'default' | 'small'
+  file: FileContent['file']
+  parameters?: string[]
+  collapseParameters?: boolean
+  sourceMap?: PromptlSourceRef[]
+}) => {
+  if (
+    (typeof file !== 'string' && !(file instanceof URL)) ||
+    !URL.canParse(file.toString()) ||
+    (!file.toString().startsWith('https') &&
+      !file.toString().startsWith('http://localhost'))
+  ) {
+    return (
+      <ContentText
+        index={index}
+        color={color}
+        size={size}
+        message={'<File preview unavailable>'}
       />
+    )
+  }
+
+  const TextComponent = size === 'small' ? Text.H6 : Text.H5
+
+  const segment = useMemo(
+    () =>
+      computeSegments(ContentType.file, file.toString(), sourceMap, parameters),
+    [file, sourceMap, parameters],
+  )[0]
+
+  if (!segment) return null
+
+  return (
+    <TextComponent
+      color={color}
+      whiteSpace='preWrap'
+      wordBreak='breakAll'
+      key={`${index}`}
+    >
+      {typeof segment === 'string' ? (
+        segment
+      ) : (
+        <ReferenceComponent
+          reference={segment}
+          collapseParameters={collapseParameters}
+        />
+      )}
     </TextComponent>
   )
 }

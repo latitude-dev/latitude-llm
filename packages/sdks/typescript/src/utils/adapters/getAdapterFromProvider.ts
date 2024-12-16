@@ -4,7 +4,7 @@ import {
   Adapters,
   Message,
   ProviderAdapter,
-} from '@latitude-data/promptl'
+} from 'promptl-ai'
 
 export function getPromptlAdapterFromProvider<
   M extends AdapterMessageType = Message,

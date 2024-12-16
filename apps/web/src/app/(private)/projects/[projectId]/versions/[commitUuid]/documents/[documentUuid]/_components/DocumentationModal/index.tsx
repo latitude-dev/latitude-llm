@@ -11,7 +11,7 @@ import {
 
 import { readMetadata } from '@latitude-data/compiler'
 import { ApiKey } from '@latitude-data/core/browser'
-import { scan, type ConversationMetadata } from '@latitude-data/promptl'
+import { scan, type ConversationMetadata } from 'promptl-ai'
 import { Modal } from '@latitude-data/web-ui'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import useDocumentVersions from '$/stores/documentVersions'

@@ -1,5 +1,5 @@
 import { ParameterType } from '@latitude-data/core/browser'
-import type { ConversationMetadata } from '@latitude-data/promptl'
+import type { ConversationMetadata } from 'promptl-ai'
 import { describe, expect, it } from 'vitest'
 
 import { recalculateInputs } from './index'

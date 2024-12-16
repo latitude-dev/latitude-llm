@@ -13,7 +13,7 @@ const nextConfig = {
   transpilePackages: INTERNAL_PACKAGES,
   serverExternalPackages: [
     '@latitude-data/sdk',
-    '@latitude-data/promptl',
+    'promptl-ai',
     '@latitude-data/compiler',
     '@sentry/nextjs',
     'bullmq',

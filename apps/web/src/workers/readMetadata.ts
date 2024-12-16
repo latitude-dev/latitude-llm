@@ -1,6 +1,6 @@
 import { readMetadata } from '@latitude-data/compiler'
 import { type DocumentVersion } from '@latitude-data/core/browser'
-import { scan } from '@latitude-data/promptl'
+import { scan } from 'promptl-ai'
 
 export type ReadMetadataWorkerProps = Parameters<typeof readMetadata>[0] & {
   promptlVersion: number

@@ -64,7 +64,7 @@ describe('applyCustomRules', () => {
     })
   })
 
-  it('warns when system messages have non-text content', () => {
+  it('warns when system messages have unsupported content', () => {
     const messages = [
       {
         role: 'system',
@@ -128,7 +128,7 @@ describe('applyCustomRules', () => {
     })
   })
 
-  it('warns when assistant messages have images', () => {
+  it('warns when assistant messages have unsupported content', () => {
     const messages = [
       {
         role: 'system',
@@ -172,6 +172,20 @@ describe('applyCustomRules', () => {
           },
         ],
       },
+      {
+        role: 'assistant',
+        content: [
+          {
+            type: 'text',
+            text: 'Also here is a file',
+          },
+          {
+            type: 'file',
+            file: 'https://example.com/file.pdf',
+            mimeType: 'application/pdf',
+          },
+        ],
+      },
     ] as Message[]
 
     const rules = applyCustomRules({
@@ -186,7 +200,8 @@ describe('applyCustomRules', () => {
       rules: [
         {
           rule: ProviderRules.Custom,
-          ruleMessage: 'Assistant messages cannot have images.',
+          ruleMessage:
+            'Assistant messages can only have text or tool call content.',
         },
       ],
     })
@@ -254,7 +269,8 @@ describe('applyCustomRules', () => {
         },
         {
           rule: ProviderRules.Custom,
-          ruleMessage: 'Assistant messages cannot have images.',
+          ruleMessage:
+            'Assistant messages can only have text or tool call content.',
         },
       ],
     })

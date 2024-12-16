@@ -6,7 +6,7 @@ import {
   EvaluationResultableType,
 } from '@latitude-data/core/browser'
 import { env } from '@latitude-data/env'
-import { scan } from '@latitude-data/promptl'
+import { scan } from 'promptl-ai'
 import {
   Breadcrumb,
   BreadcrumbItem,

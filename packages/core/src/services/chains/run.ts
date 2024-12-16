@@ -1,6 +1,6 @@
 import { Chain as LegacyChain } from '@latitude-data/compiler'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
-import { Chain as PromptlChain } from '@latitude-data/promptl'
+import { Chain as PromptlChain } from 'promptl-ai'
 
 import { ProviderApiKey, Workspace } from '../../browser'
 import {

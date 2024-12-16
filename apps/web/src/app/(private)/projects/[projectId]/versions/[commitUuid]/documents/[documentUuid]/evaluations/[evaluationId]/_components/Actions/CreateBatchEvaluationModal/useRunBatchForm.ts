@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from 'react'
 
 import { Dataset, DocumentVersion } from '@latitude-data/core/browser'
-import type { ConversationMetadata } from '@latitude-data/promptl'
+import type { ConversationMetadata } from 'promptl-ai'
 import { SelectOption, useCurrentCommit } from '@latitude-data/web-ui'
 import { useMappedParametersFromLocalStorage } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/batch/_components/RunPromptInBatchModal/useMappedParametersFromLocalStorage'
 import useDatasets from '$/stores/datasets'

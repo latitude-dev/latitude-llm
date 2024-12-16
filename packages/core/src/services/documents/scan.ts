@@ -1,7 +1,7 @@
 import path from 'path'
 
 import { readMetadata, Document as RefDocument } from '@latitude-data/compiler'
-import { ConversationMetadata, scan } from '@latitude-data/promptl'
+import { ConversationMetadata, scan } from 'promptl-ai'
 
 import { Commit, DocumentVersion, Workspace } from '../../browser'
 import {

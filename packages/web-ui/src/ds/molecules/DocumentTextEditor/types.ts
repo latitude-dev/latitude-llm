@@ -1,6 +1,6 @@
 import { ReactNode } from 'react'
 
-import type { ConversationMetadata } from '@latitude-data/promptl'
+import type { ConversationMetadata } from 'promptl-ai'
 
 export type DiffOptions = {
   newValue: string

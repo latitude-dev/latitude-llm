@@ -9,7 +9,7 @@ import {
   findFirstModelForProvider,
   ProviderApiKey,
 } from '@latitude-data/core/browser'
-import type { ConversationMetadata } from '@latitude-data/promptl'
+import type { ConversationMetadata } from 'promptl-ai'
 import {
   AppLocalStorage,
   DropdownMenu,

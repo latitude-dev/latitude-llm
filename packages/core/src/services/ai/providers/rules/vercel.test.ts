@@ -335,4 +335,78 @@ describe('applyVercelSdkRules', () => {
       },
     ])
   })
+
+  it('adapts file content fields to file part fields', () => {
+    messages = [
+      {
+        role: 'user',
+        content: [
+          {
+            type: 'file',
+            file: 'pdf file content',
+            mimeType: 'application/pdf',
+          },
+        ],
+      },
+    ] as Message[]
+
+    const rules = vercelSdkRules(
+      { rules: [], messages, config },
+      Providers.Anthropic,
+    )
+
+    expect(rules.messages).toEqual([
+      {
+        role: 'user',
+        content: [
+          {
+            type: 'file',
+            data: 'pdf file content',
+            mimeType: 'application/pdf',
+          },
+        ],
+      },
+    ])
+  })
+
+  it('adapts tool call content fields to tool call part fields', () => {
+    messages = [
+      {
+        role: 'assistant',
+        content: [
+          {
+            type: 'tool-call',
+            toolCallId: '123',
+            toolName: 'toolName',
+            toolArguments: {
+              arg1: 'value1',
+              arg2: 'value2',
+            },
+          },
+        ],
+      },
+    ] as unknown as Message[]
+
+    const rules = vercelSdkRules(
+      { rules: [], messages, config },
+      Providers.Anthropic,
+    )
+
+    expect(rules.messages).toEqual([
+      {
+        role: 'assistant',
+        content: [
+          {
+            type: 'tool-call',
+            toolCallId: '123',
+            toolName: 'toolName',
+            args: {
+              arg1: 'value1',
+              arg2: 'value2',
+            },
+          },
+        ],
+      },
+    ])
+  })
 })

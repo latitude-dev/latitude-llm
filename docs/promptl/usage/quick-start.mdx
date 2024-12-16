@@ -41,7 +41,7 @@ Here’s how to use PromptL to generate a dynamic prompt and interact with an LL
 
 ### Example Code
 ```javascript
-import { render } from '@latitude-data/promptl'
+import { render } from 'promptl-ai'
 import OpenAI from 'openai'
 
 // Define your PromptL prompt
@@ -84,7 +84,7 @@ console.log(response.choices[0].message.content)
 For production environments, add error handling to manage unexpected issues:
 
 ```javascript
-import { render } from '@latitude-data/promptl'
+import { render } from 'promptl-ai'
 import OpenAI from 'openai'
 
 async function generateResponse(prompt, parameters) {

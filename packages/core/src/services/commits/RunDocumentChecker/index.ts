@@ -4,7 +4,7 @@ import {
   ReferencePromptFn,
 } from '@latitude-data/compiler'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
-import { Adapters, Chain as PromptlChain, scan } from '@latitude-data/promptl'
+import { Adapters, Chain as PromptlChain, scan } from 'promptl-ai'
 
 import { DocumentVersion, ErrorableEntity } from '../../../browser'
 import { Result } from '../../../lib'

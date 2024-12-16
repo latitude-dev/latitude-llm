@@ -2,7 +2,7 @@ import { useCallback, useMemo } from 'react'
 
 import { recalculateInputs } from '$/hooks/useDocumentParameters/recalculateInputs'
 import { DocumentLog, ParameterType } from '@latitude-data/core/browser'
-import type { ConversationMetadata } from '@latitude-data/promptl'
+import type { ConversationMetadata } from 'promptl-ai'
 import { AppLocalStorage, useLocalStorage } from '@latitude-data/web-ui'
 
 export const INPUT_SOURCE = {
