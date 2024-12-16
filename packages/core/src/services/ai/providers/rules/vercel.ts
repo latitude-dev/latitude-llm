@@ -108,7 +108,7 @@ function adaptContentFields({ content }: { content: Message['content'] }) {
 
   return content.map((c) => {
     switch (c.type) {
-      case ContentType.file: {
+      case "file": {
         const adaptedContent = {
           ...c,
           data: (c as any)['file'] as FilePart['data'],
@@ -119,7 +119,7 @@ function adaptContentFields({ content }: { content: Message['content'] }) {
         return adaptedContent
       }
 
-      case ContentType.toolCall: {
+      case "tool-call": {
         const adaptedContent = {
           ...c,
           args: (c as any)['toolArguments'] as ToolCallPart['args'],

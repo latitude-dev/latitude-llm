@@ -512,8 +512,7 @@ describe('formatContext', () => {
     const result = formatContext(providerLog)
 
     expect(result).toBe(
-      'User:\nSummarize this file\n[FILE]\n\n' +
-        'Assistant:\nNo.',
+      'User:\nSummarize this file\n[FILE]\n\n' + 'Assistant:\nNo.',
     )
   })
 
