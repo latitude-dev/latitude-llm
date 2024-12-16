@@ -91,9 +91,12 @@ function extractContent(value: string | number | boolean) {
   if (typeof value !== 'string') return value
 
   const content = tryParseJSON(value)
-
   if (!content) return value
   if (!Array.isArray(content)) return value
+
+  // NOTE: Most probably a structured output response
+  const unknownType = content.some((c) => !c.type)
+  if (unknownType) return value
 
   return content.map((c) => {
     switch (c.type) {

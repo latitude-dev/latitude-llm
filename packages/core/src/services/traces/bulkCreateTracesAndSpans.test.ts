@@ -97,4 +97,48 @@ describe('bulkCreateTracesAndSpans', () => {
     expect(result.unwrap().traces).toHaveLength(2)
     expect(result.unwrap().spans).toHaveLength(2)
   })
+
+  it('stores structured output with an array as a string in the span output field', async () => {
+    const result = await bulkCreateTracesAndSpans({
+      workspace,
+      traces: [
+        { traceId: 'trace-1', startTime: new Date() },
+        { traceId: 'trace-2', startTime: new Date() },
+      ],
+      spans: [
+        {
+          traceId: 'trace-1',
+          spanId: 'span-1',
+          name: 'span-1',
+          kind: SpanKind.Client,
+          startTime: new Date(),
+          attributes: {},
+          input: [],
+          output: [
+            {
+              // @ts-expect-error - mock data
+              role: 'assistant',
+              content: JSON.stringify([
+                {
+                  header: 'A Warm Welcome Back!',
+                },
+              ]),
+            },
+          ],
+        },
+      ],
+    })
+
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    const value = result.unwrap()
+
+    expect(value.spans).toHaveLength(1)
+    expect(value.spans?.[0]?.output).toEqual([
+      {
+        role: 'assistant',
+        content: JSON.stringify([{ header: 'A Warm Welcome Back!' }]),
+      },
+    ])
+  })
 })
