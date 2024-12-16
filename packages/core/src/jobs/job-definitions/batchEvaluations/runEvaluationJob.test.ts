@@ -118,6 +118,23 @@ describe('runEvaluationJob', () => {
     })
 
     it('calls runEvaluation', async () => {
+      runChainResponse = Result.ok({
+        streamType: 'object' as 'object',
+        object: { result: { result: '42', reason: 'Is always 42' } },
+        text: 'chain resolved text',
+        usage: { promptTokens: 8, completionTokens: 2, totalTokens: 10 },
+        documentLogUuid: documentLog.uuid,
+        providerLog: undefined,
+      })
+      runEvaluationSpy.mockResolvedValueOnce(
+        Result.ok({
+          stream,
+          response: new Promise((resolve) => resolve(runChainResponse)),
+          resolvedContent: 'chain resolved text',
+          errorableUuid: FAKE_ERRORABLE_UUID,
+          duration: new Promise((resolve) => resolve(1000)),
+        }),
+      )
       await runEvaluationJob(jobData)
       expect(runEvaluationSpy).toHaveBeenCalledWith({
         providerLog,
