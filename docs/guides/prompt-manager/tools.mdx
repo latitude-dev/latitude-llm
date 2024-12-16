@@ -5,30 +5,163 @@ description: Learn how to define tools in your prompts.
 
 ## Overview
 
-Latitude's prompt editor allows you to define tools in your prompts. Tools are function calls that are made available to the AI model during the conversation. This feature enables you to leverage AI capabilities beyond the capabilities of the model itself.
+Latitude's prompt editor allows you to define **tools** in your prompts. Tools are function calls made available to the AI model during the conversation, enabling it to perform tasks beyond its built-in capabilities.
+
+<Warning>
+  Tools may not be available for all providers or models. Check the documentation of your provider to see if tools are supported.
+</Warning>
+
+---
 
 ## Defining Tools
 
-You can define tools as an array of json schemas. Here's an example of how you might define a tool to get the current weather for a specified location:
+You can define tools as a list of functions. Each tool must include:
+- A `name`
+- A `description`
+- An optional list of `parameters`
 
-```mdx
+```yaml
+---
+provider: <your-provider-name>
+model: <your-model>
+tools:
+  <tool-name>:
+    description: <tool-description>
+    parameters:
+      type: object
+      properties:
+        <parameter-name>:
+          type: <parameter-type>
+          description: <parameter-description>
+      required: [<required-parameter-name>]
+      additionalProperties: false
+---
+```
+
+When adding parameters to a tool, they must be defined using a [JSON object schema](#object), specifying the structure, type, and constraints.
+
+Once defined, the AI may respond with a tool call request. To handle these requests, refer to the Latitude SDK guide [here](/guides/sdk/javascript-typescript-sdk).
+
+---
+
+## JSON Schema
+
+A JSON schema defines the structure and constraints for tool parameters. It ensures the AI knows what inputs are expected and validates them accordingly.
+
+For more details, refer to the official [JSON Schema documentation](https://tour.json-schema.org/).
+
+### General Guidelines:
+- **Required Properties**: `type` (mandatory), `description` (optional but recommended).
+- **Flexibility**: Additional properties like `minLength`, `enum`, or `pattern` can be added depending on the parameter type.
+
+### Object
+
+An object is a collection of key-value pairs. It is defined with `type: object` and can include:
+
+- **`properties`**: Specifies the expected key-value pairs.
+- **`required`**: Lists required properties.
+- **`additionalProperties`**: Determines if extra properties are allowed (default: `true`).
+
+Example:
+```yaml
+type: object
+properties:
+  name:
+    type: string
+    description: The user’s name.
+  age:
+    type: integer
+    description: The user’s age.
+required: [name]
+additionalProperties: false
+```
+
+### String
+
+A string is a sequence of characters. Optional properties include:
+
+- **`enum`**: Predefined list of acceptable text values.
+- **`minLength`/`maxLength`**: Minimum/maximum string length.
+- **`pattern`**: Regular expression for string validation.
+
+Example:
+```yaml
+type: string
+enum: [red, green, blue]
+```
+
+### Number
+
+A number can include:
+
+- **`enum`**: Predefined list of acceptable numeric values.
+- **`minimum`/`maximum`**: Value constraints.
+
+To define integers, use `type: integer`.
+
+Example:
+```yaml
+type: integer
+minimum: 0
+maximum: 100
+```
+
+### Boolean
+
+A boolean is a true/false value.
+
+Example:
+```yaml
+type: boolean
+```
+
+### Array
+
+An array is a list of values. Properties include:
+
+- **`items`**: Schema for array elements.
+- **`minItems`/`maxItems`**: Minimum/maximum number of elements.
+
+Example:
+```yaml
+type: array
+items:
+  type: string
+minItems: 1
+maxItems: 3
+```
+
+---
+
+## Example
+
+Here's an example of how you might define a tool to get the current weather for a specified location:
+
+```md
 ---
 provider: OpenAI
 model: gpt-4o
 tools:
-  - type: function
-    function:
-      name: get_weather
-      description: Get the current weather for a specified location.
-      parameters:
-        type: object
-        properties:
-          location:
-            type: string
-            description: The name of the location to get the weather for.
-        required: [location]
-        additionalProperties: false
+  get_weather:
+    description: Get the current weather for a specified location.
+    parameters:
+      type: object
+      properties:
+        location:
+          type: string
+          description: The name of the location to get the weather for.
+      required: [location]
+      additionalProperties: false
 ---
+
+You're a weather bot! Respond to any user's request
+about the weather in a specific location.
+
+<user>
+  What's the weather in {{ location }}?
+</user>
 ```
 
-Once defined in your prompt, the model AI might answer with a tool call request. Check out how to handle tool call requests with Latitude's SDK, [here](/guides/sdk/javascript-typescript-sdk).
+## Handling Tool Calls
+
+To handle the tool call response using the Latitude SDK, refer to the [Latitude SDK Guide](/guides/sdk/javascript-typescript-sdk) for implementation details.
