@@ -212,6 +212,54 @@ describe('processSpan', () => {
           "I'm here and ready to assist you with any weather-related questions or forecasts you may have! How can I help you today?",
       })
     })
+
+    it('stores an structured output with an array as a string in the span output field', () => {
+      const aiResponse = '[{"id":108340,"family_id":1021}]'
+      const span = {
+        traceId: '123',
+        spanId: '456',
+        name: 'test',
+        kind: 1,
+        startTimeUnixNano: '1000000000',
+        attributes: [
+          { key: 'gen_ai.system', value: { stringValue: 'OpenAI' } },
+          { key: 'llm.request.type', value: { stringValue: 'chat' } },
+          { key: 'gen_ai.prompt.0.role', value: { stringValue: 'system' } },
+          { key: 'gen_ai.prompt.1.role', value: { stringValue: 'user' } },
+          {
+            key: 'gen_ai.request.model',
+            value: { stringValue: 'gpt-4o-mini' },
+          },
+          {
+            key: 'gen_ai.response.model',
+            value: { stringValue: 'gpt-4o-mini-2024-07-18' },
+          },
+          { key: 'llm.usage.total_tokens', value: { stringValue: '207' } },
+          {
+            key: 'gen_ai.prompt.0.content',
+            value: {
+              stringValue: 'Lorem ipsum dolor sit amet',
+            },
+          },
+          { key: 'gen_ai.completion.0.role', value: { stringValue: 'system' } },
+          {
+            key: 'gen_ai.completion.0.content',
+            value: {
+              stringValue: aiResponse,
+            },
+          },
+        ],
+      }
+
+      const result = processSpan({ span })
+
+      expect(result.output).toEqual([
+        {
+          role: 'system',
+          content: aiResponse,
+        },
+      ])
+    })
   })
 
   describe('Vercel', () => {
