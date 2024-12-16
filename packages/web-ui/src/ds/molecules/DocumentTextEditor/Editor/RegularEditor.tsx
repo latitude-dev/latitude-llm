@@ -5,7 +5,7 @@ import { MutableRefObject, useCallback, useEffect, useState } from 'react'
 import Editor, { Monaco } from '@monaco-editor/react'
 import { MarkerSeverity, type editor } from 'monaco-editor'
 
-import { DocumentTextEditorFallback } from '../fallback'
+import { TextEditorPlaceholder } from '../../TextEditorPlaceholder'
 import type { DocumentError } from '../types'
 import { registerActions } from './actions'
 import { EditorWrapper } from './EditorWrapper'
@@ -82,7 +82,7 @@ export function RegularMonacoEditor({
         language='document'
         keepCurrentModel={!!path}
         path={path}
-        loading={<DocumentTextEditorFallback />}
+        loading={<TextEditorPlaceholder />}
         defaultValue={defaultValue}
         value={value}
         beforeMount={handleEditorWillMount}

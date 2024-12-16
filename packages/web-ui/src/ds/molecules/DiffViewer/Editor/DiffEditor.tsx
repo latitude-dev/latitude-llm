@@ -5,7 +5,7 @@ import { MutableRefObject, useCallback } from 'react'
 import { DiffEditor, Monaco } from '@monaco-editor/react'
 import { type editor } from 'monaco-editor'
 
-import { TextEditorPlaceholder } from '../../TextEditorPlaceholder'
+import { SimpleDiffViewerFallback } from '../fallback'
 import { EditorWrapper } from './EditorWrapper'
 import { useEditorOptions } from './useEditorOptions'
 import { useMonacoSetup } from './useMonacoSetup'
@@ -57,7 +57,7 @@ export function MonacoDiffEditor({
         width='100%'
         theme='latitude'
         language='document'
-        loading={<TextEditorPlaceholder />}
+        loading={<SimpleDiffViewerFallback />}
         original={oldValue}
         modified={newValue}
         beforeMount={handleEditorWillMount}

@@ -43,6 +43,7 @@ export type Message = CompilerMessage
 export enum ModifiedDocumentType {
   Created = 'created',
   Updated = 'updated',
+  UpdatedPath = 'updated_path',
   Deleted = 'deleted',
 }
 

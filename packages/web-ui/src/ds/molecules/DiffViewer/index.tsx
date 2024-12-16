@@ -2,21 +2,21 @@
 
 import React, { lazy, useEffect, useState } from 'react'
 
-import { TextEditorPlaceholder } from '../TextEditorPlaceholder'
-import { DocumentTextEditorProps } from './types'
+import { SimpleDiffViewerFallback } from './fallback'
+import { SimpleDiffViewerProps } from './types'
 
-const DocumentTextEditor = lazy(() =>
+const DiffViewer = lazy(() =>
   import('./Editor/index').then(
     (module) =>
       ({
-        default: module.DocumentTextEditor,
+        default: module.DiffViewer,
       }) as {
-        default: React.ComponentType<DocumentTextEditorProps>
+        default: React.ComponentType<SimpleDiffViewerProps>
       },
   ),
 )
 
-function EditorWrapper(props: DocumentTextEditorProps) {
+function EditorWrapper(props: SimpleDiffViewerProps) {
   // When imported, Monaco automatically tries to use the window object. Since
   // this is not available when rendering on the server, we only render the
   // fallback component for SSR.
@@ -27,10 +27,10 @@ function EditorWrapper(props: DocumentTextEditorProps) {
   }, [])
 
   if (!isBrowser) {
-    return <TextEditorPlaceholder />
+    return <SimpleDiffViewerFallback />
   }
 
-  return <DocumentTextEditor {...props} />
+  return <DiffViewer {...props} />
 }
 
-export { EditorWrapper as DocumentTextEditor, TextEditorPlaceholder }
+export { EditorWrapper as DiffViewer, SimpleDiffViewerFallback }

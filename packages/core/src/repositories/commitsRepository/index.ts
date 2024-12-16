@@ -184,11 +184,14 @@ export class CommitsRepository extends RepositoryLegacy<
 
     return Result.ok(
       changes.changedDocuments.sort(byErrors(changes)).map((changedDoc) => {
-        const changeType = head[changedDoc.documentUuid]
-          ? changedDoc.deletedAt
-            ? ModifiedDocumentType.Deleted
-            : ModifiedDocumentType.Updated
-          : ModifiedDocumentType.Created
+        const changeType = (() => {
+          if (!head[changedDoc.documentUuid])
+            return ModifiedDocumentType.Created
+          if (changedDoc.deletedAt) return ModifiedDocumentType.Deleted
+          if (head[changedDoc.documentUuid]!.path !== changedDoc.path)
+            return ModifiedDocumentType.UpdatedPath
+          return ModifiedDocumentType.Updated
+        })()
 
         return {
           documentUuid: changedDoc.documentUuid,
