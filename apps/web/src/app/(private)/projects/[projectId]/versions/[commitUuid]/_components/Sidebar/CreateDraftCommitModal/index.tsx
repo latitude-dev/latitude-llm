@@ -12,6 +12,7 @@ import { useFormAction } from '$/hooks/useFormAction'
 import { ROUTES } from '$/services/routes'
 import { useCommits } from '$/stores/commitsStore'
 import { useRouter } from 'next/navigation'
+import { useMemo } from 'react'
 
 export default function DraftCommitModal({
   open,
@@ -20,6 +21,7 @@ export default function DraftCommitModal({
   open: boolean
   setOpen: (open: boolean) => void
 }) {
+  const defaultPromptTitle = useMemo(() => new Date().toLocaleString(), [open])
   const { createDraft, isCreating } = useCommits({
     commitStatus: CommitStatus.Draft,
     onSuccessCreate: (draft) => {
@@ -66,7 +68,7 @@ export default function DraftCommitModal({
             label='Title'
             name='title'
             errors={formattedErrors?.title}
-            defaultValue={input?.title ?? undefined}
+            defaultValue={input?.title ?? defaultPromptTitle}
             placeholder='A title for the version'
           />
           <TextArea
