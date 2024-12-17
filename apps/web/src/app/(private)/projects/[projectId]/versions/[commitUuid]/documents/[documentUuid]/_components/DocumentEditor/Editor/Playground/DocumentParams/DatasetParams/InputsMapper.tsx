@@ -1,7 +1,7 @@
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
 import {
   Dataset,
-  DatasetSource,
+  LinkedDataset,
   DocumentVersion,
   PlaygroundInput,
 } from '@latitude-data/core/browser'
@@ -42,7 +42,7 @@ export function InputMapper({
 }: {
   document: DocumentVersion
   commit: ICommitContextType['commit']
-  mappedInputs: DatasetSource['mappedInputs']
+  mappedInputs: LinkedDataset['mappedInputs']
   headersOptions: DatasetPreview['headersOptions']
   onSelectHeader: UseSelectDataset['onSelectHeader']
   isLoading: boolean
@@ -52,7 +52,7 @@ export function InputMapper({
     setSource,
     dataset: { inputs, copyToManual },
   } = useDocumentParameters({
-    documentVersionUuid: document.documentUuid,
+    document,
     commitVersionUuid: commit.uuid,
   })
   return (
@@ -104,7 +104,9 @@ export function InputMapper({
                         trigger={
                           <Button
                             variant='ghost'
-                            disabled={disabled || !value}
+                            disabled={
+                              disabled || value === undefined || value === null
+                            }
                             onClick={() => {
                               copyToManual()
                               setSource('manual')

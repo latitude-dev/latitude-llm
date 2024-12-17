@@ -27,7 +27,7 @@ export function useMappedParametersFromLocalStorage({
   const {
     dataset: { mappedInputs },
   } = useDocumentParameters({
-    documentVersionUuid: document.documentUuid,
+    document,
     commitVersionUuid,
   })
   useEffect(() => {

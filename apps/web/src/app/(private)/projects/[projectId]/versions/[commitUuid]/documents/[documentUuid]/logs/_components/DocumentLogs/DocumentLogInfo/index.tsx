@@ -35,6 +35,7 @@ import { MetadataItem } from '../../../../../[documentUuid]/_components/Metadata
 import { DocumentLogEvaluations } from './Evaluations'
 import { DocumentLogMessages, useGetProviderLogMessages } from './Messages'
 import { DocumentLogMetadata } from './Metadata'
+import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 
 function DocumentLogMetadataLoading() {
   return (
@@ -57,11 +58,12 @@ function UseDocumentLogInPlaygroundButton({
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
   const documentUuid = documentLog.documentUuid
+  const { document } = useCurrentDocument()
   const {
     setSource,
     history: { setHistoryLog },
   } = useDocumentParameters({
-    documentVersionUuid: documentUuid,
+    document,
     commitVersionUuid: commit.uuid,
   })
   const navigate = useRouter()

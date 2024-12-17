@@ -53,7 +53,7 @@ function ParamsTabs({
   historyInfo,
 }: ContentProps) {
   const { source, setSource } = useDocumentParameters({
-    documentVersionUuid: document.documentUuid,
+    document,
     commitVersionUuid: commit.uuid,
   })
 
@@ -95,7 +95,7 @@ function CollapsedContentHeader({
 }: ContentProps) {
   const src = INPUT_SOURCE
   const { source } = useDocumentParameters({
-    documentVersionUuid: document.documentUuid,
+    document,
     commitVersionUuid: commit.uuid,
   })
 

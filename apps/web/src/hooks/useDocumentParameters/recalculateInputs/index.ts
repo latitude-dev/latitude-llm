@@ -15,6 +15,9 @@ export function recalculateInputs<S extends InputSource>({
     { type?: string }
   >
 
+  // We assume users can't never change the parameter
+  // more than once. So when a parameter is renamed it means
+  // it's the old one. We pick the first
   const firstChangedInput = Object.entries(inputs).find(
     ([key]) => !prompt.parameters.has(key),
   )?.[1]
@@ -23,6 +26,7 @@ export function recalculateInputs<S extends InputSource>({
     Array.from(prompt.parameters).map((param) => {
       const input = inputs[param] || firstChangedInput
       let type = config[param]?.type
+
       if (type && !ParameterTypes.includes(type)) {
         type = undefined
       }

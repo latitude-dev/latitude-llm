@@ -7,7 +7,7 @@ export function ManualParams({ document, commit, prompt, setPrompt }: Props) {
   const {
     manual: { inputs, setInput },
   } = useDocumentParameters({
-    documentVersionUuid: document.documentUuid,
+    document,
     commitVersionUuid: commit.uuid,
   })
   return (
