@@ -1,6 +1,6 @@
 import { Request, Response } from 'express'
 import { generateText, jsonSchema } from 'ai'
-import { openai } from '@ai-sdk/openai'
+import { createGoogleGenerativeAI } from '@ai-sdk/google'
 
 import { getWeather } from '../services/weather'
 import { latitude } from '../instrumentation'
@@ -17,35 +17,33 @@ export async function handleVercelChat(req: Request, res: Response) {
       },
     })
 
-    const completion = await latitude.telemetry.span(
-      {
-        prompt: {
-          path: 'weather-prompt',
-          parameters: {
-            user_message: incoming[incoming.length - 1].text,
-          },
+    const google = createGoogleGenerativeAI({
+      apiKey: '<REDACTED>',
+    })
+
+    const completion = await latitude.telemetry.span({}, () =>
+      generateObject({
+        model: google('gemini-1.5-flash-latest'),
+        // model: anthropic('claude-3-5-sonnet-latest')
+        max_tokens: 1000,
+        // @ts-ignore
+        messages,
+        // @ts-ignore
+        tools: config.tools.map((tool: any) => ({
+          ...tool,
+          parameters: jsonSchema(tool.parameters),
+        })),
+        experimental_telemetry: {
+          isEnabled: true,
         },
-      },
-      () =>
-        generateObject({
-          model: openai('gpt-3.5-turbo'),
-          max_tokens: 1000,
-          messages,
-          tools: config.tools.map((tool: any) => ({
-            ...tool,
-            parameters: jsonSchema(tool.parameters),
-          })),
-          experimental_telemetry: {
-            isEnabled: true,
+        schema: jsonSchema({
+          type: 'object',
+          properties: {
+            response: { type: 'string' },
           },
-          schema: jsonSchema({
-            type: 'object',
-            properties: {
-              response: { type: 'string' },
-            },
-            required: ['response'],
-          }),
+          required: ['response'],
         }),
+      }),
     )
 
     const responseMessage = await completion.object

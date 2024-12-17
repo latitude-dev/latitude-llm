@@ -63,11 +63,13 @@ export const processOtlpTracesJob = async (
     }),
   )
 
+  const processedSpans = spans.map(({ span }) => processSpan({ span }))
+
   // Create all traces and spans in a single transaction, skipping existing traces
   await bulkCreateTracesAndSpans({
     workspace,
     traces: tracesToCreate,
     // @ts-expect-error - Fix when we fix types in compiler
-    spans: spans.map(({ span }) => processSpan({ span })),
+    spans: processedSpans,
   })
 }

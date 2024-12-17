@@ -1,26 +1,8 @@
 import { Request, Response } from 'express'
 import OpenAI from 'openai'
-import { zodResponseFormat } from 'openai/helpers/zod'
-import z from 'zod'
 
+import { latitude } from '../instrumentation'
 import { getWeather } from '../services/weather'
-import { Latitude } from '@latitude-data/sdk'
-
-const latitude = new Latitude('9d5a427b-f4db-42c4-ac03-41e30675bac2', {
-  __internal: {
-    gateway: {
-      host: 'localhost',
-      port: 8787,
-      ssl: false,
-    },
-  },
-  telemetry: {
-    modules: {
-      // @ts-ignore
-      openAI: OpenAI,
-    },
-  },
-})
 
 // Initialize OpenAI client
 export const openai = new OpenAI({

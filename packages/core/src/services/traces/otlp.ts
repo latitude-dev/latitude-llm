@@ -177,16 +177,16 @@ function processGenerationSpan(
   span: OtlpSpan,
 ): Partial<typeof spans.$inferInsert> {
   const attrs = convertOtlpAttributes({ attributes: span.attributes })
-  if (!attrs['gen_ai.system']) return {}
-
-  const provider = extractProvider(attrs)
-  if (!provider) return {}
-
-  const model = extractModel(attrs)
   const { input, output } = extractInputOutput(attrs)
+  if (!input.length || !output.length) return {}
+
   const modelParameters = extractModelParameters(attrs)
+  const provider = extractProvider(attrs)
+  const model = extractModel(attrs)
   const usage = extractUsage(attrs)
-  const costs = calculateCosts({ usage, provider, model: model as string })
+  const costs = provider
+    ? calculateCosts({ usage, provider, model: model as string })
+    : {}
   const toolCalls = extractFunctions(attrs)
 
   return {
