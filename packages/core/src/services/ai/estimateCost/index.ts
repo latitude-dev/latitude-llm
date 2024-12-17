@@ -5,6 +5,7 @@ import { getCostPer1MAnthropic } from './anthropic'
 import { getCostPer1MGroq } from './groq'
 import { getCostPer1MMistral } from './mistral'
 import { getCostPer1MOpenAI } from './openai'
+import { getCostPer1MGoogle } from './google'
 
 // FIXME: Unifify models with src/constants.ts
 // The list of supported models for each provider is duplicated.
@@ -29,12 +30,10 @@ function getCostPer1M({
     case Providers.Azure:
       return getCostPer1MOpenAI(model)
     case Providers.Google:
-      // FIXME: Add Google costs
-      return { input: 0, output: 0 }
+      return getCostPer1MGoogle(model)
     case Providers.Custom:
       return { input: 0, output: 0 }
     default:
-      // TODO: Log it to Sentry since this should never happen
       return { input: 0, output: 0 }
   }
 }

@@ -102,16 +102,18 @@ export const PROVIDER_MODELS: Partial<
   },
   [Providers.Azure]: OPEN_AI_MODELS,
   [Providers.Google]: {
-    // 'gemini-2.0-flash': 'gemini-2.0-flash', Not generally available yet
-    // 'gemini-2.0-flash-001': 'gemini-2.0-flash-001', Not generally available yet
     'gemini-1.5-flash': 'gemini-1.5-flash',
+    'gemini-1.5-flash-latest': 'gemini-1.5-flash-latest',
     'gemini-1.5-flash-8b': 'gemini-1.5-flash-8b',
+    'gemini-1.5-flash-8b-latest': 'gemini-1.5-flash-8b-latest',
     'gemini-1.5-flash-002': 'gemini-1.5-flash-002',
     'gemini-1.5-flash-001': 'gemini-1.5-flash-001',
     'gemini-1.5-pro': 'gemini-1.5-pro',
+    'gemini-1.5-pro-latest': 'gemini-1.5-pro-latest',
     'gemini-1.5-pro-002': 'gemini-1.5-pro-002',
     'gemini-1.5-pro-001': 'gemini-1.5-pro-001',
     'gemini-1.0-pro': 'gemini-1.0-pro',
+    'gemini-1.0-pro-latest': 'gemini-1.0-pro-latest',
     'gemini-1.0-pro-002': 'gemini-1.0-pro-002',
     'gemini-1.0-pro-001': 'gemini-1.0-pro-001',
     'gemini-1.0-pro-vision': 'gemini-1.0-pro-vision',

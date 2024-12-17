@@ -1,7 +1,8 @@
 import { Request, Response } from 'express'
 import { generateText, jsonSchema } from 'ai'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
-
+import { anthropic } from '@ai-sdk/anthropic'
+import { openai } from '@ai-sdk/openai'
 import { getWeather } from '../services/weather'
 import { latitude } from '../instrumentation'
 import { generateObject } from 'ai'
@@ -18,13 +19,14 @@ export async function handleVercelChat(req: Request, res: Response) {
     })
 
     const google = createGoogleGenerativeAI({
-      apiKey: '<REDACTED>',
+      apiKey: 'REDACTED',
     })
 
     const completion = await latitude.telemetry.span({}, () =>
       generateObject({
+        //model: openai('gpt-4o-mini'),
         model: google('gemini-1.5-flash-latest'),
-        // model: anthropic('claude-3-5-sonnet-latest')
+        // model: anthropic('claude-3-5-sonnet-latest'),
         max_tokens: 1000,
         // @ts-ignore
         messages,
