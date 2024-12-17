@@ -25,12 +25,6 @@ export function TraceMetadata({ trace }: Props) {
     { commitUuid: latitudeSpan?.commitUuid ?? undefined },
   )
 
-  console.log(
-    documentVersion,
-    latitudeSpan?.documentUuid,
-    latitudeSpan?.commitUuid,
-  )
-
   return (
     <div className='flex flex-col gap-4'>
       <MetadataItem label='Trace ID'>
