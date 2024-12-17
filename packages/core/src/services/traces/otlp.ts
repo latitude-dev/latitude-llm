@@ -1,4 +1,4 @@
-import { Providers, SpanKind } from '../../constants'
+import { PROVIDER_MODELS, Providers, SpanKind } from '../../constants'
 import { spans } from '../../schema'
 import { estimateCost } from '../ai'
 import { extractInputOutput } from './extractInputOutput'
@@ -181,8 +181,8 @@ function processGenerationSpan(
   if (!input.length || !output.length) return {}
 
   const modelParameters = extractModelParameters(attrs)
-  const provider = extractProvider(attrs)
   const model = extractModel(attrs)
+  const provider = extractProvider(model as string)
   const usage = extractUsage(attrs)
   const costs = provider
     ? calculateCosts({ usage, provider, model: model as string })
@@ -242,20 +242,18 @@ function extractModel(attrs: Record<string, string | number | boolean>) {
   return attrs['gen_ai.request.model']
 }
 
-function extractProvider(attrs: Record<string, string | number | boolean>) {
-  const providerMap: Record<string, Providers> = {
-    OpenAI: Providers.OpenAI,
-    'openai.chat': Providers.OpenAI,
-    Anthropic: Providers.Anthropic,
-    Groq: Providers.Groq,
-    Mistral: Providers.Mistral,
-    Google: Providers.Google,
-  }
+function extractProvider(model: string | undefined) {
+  if (!model) return undefined
 
-  const provider = providerMap[attrs['gen_ai.system'] as string]
-  if (!provider) return undefined
+  const [provider] =
+    Object.entries(PROVIDER_MODELS).find(([_, models]) => {
+      const found = models[model]
+      if (found) return true
 
-  return provider
+      return false
+    }) || []
+
+  return provider as Providers
 }
 
 // Utility Functions
