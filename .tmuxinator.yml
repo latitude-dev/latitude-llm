@@ -1,6 +1,6 @@
 name: latitude-llm
 windows:
-  - web: cd .
+  - workspace: cd .
   - apps: pnpm dev --filter='./apps/*'
   - packages: pnpm dev --filter='./packages/*'
   - docker: docker compose up --menu=false

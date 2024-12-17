@@ -11,8 +11,7 @@ import {
 } from '../../lib'
 
 import { Workspace } from '../../browser'
-import { MAX_UPLOAD_SIZE_IN_MB, SUPPORTED_IMAGE_TYPES } from '../../constants'
-import { convertFile } from './convert'
+import { MAX_UPLOAD_SIZE_IN_MB } from '../../constants'
 
 function generateKey({
   filename,
@@ -31,7 +30,7 @@ function generateKey({
 
   const keyFilename = slugify(filename, { preserveCharacters: ['.'] })
 
-  return `${keyPrefix}/files/${keyUuid}/${keyFilename}`
+  return encodeURI(`${keyPrefix}/files/${keyUuid}/${keyFilename}`)
 }
 
 export async function uploadFile(
@@ -55,13 +54,6 @@ export async function uploadFile(
 
   if (file.size > MAX_UPLOAD_SIZE_IN_MB) {
     return Result.error(new BadRequestError(`File too large`))
-  }
-
-  if (!SUPPORTED_IMAGE_TYPES.includes(extension)) {
-    const converted = await convertFile(file)
-    if (converted.error) return converted
-
-    file = new File([converted.value], file.name)
   }
 
   try {

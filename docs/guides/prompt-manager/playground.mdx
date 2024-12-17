@@ -49,27 +49,11 @@ Text parameters allow you to freely input text content.
 
 ![Text Parameter](/assets/parameters_text.png)
 
-#### Document
-
-Document parameters allow you to upload a document. The whole document will be passed to the LLM as text content. Currently, the following file types are supported:
-
-- `pdf`: PDF files.
-- `doc`: Microsoft Word files.
-- `docx`: Microsoft Word files.
-- `xls`: Microsoft Excel files.
-- `xlsx`: Microsoft Excel files.
-- `ppt`: Microsoft PowerPoint files.
-- `pptx`: Microsoft PowerPoint files.
-- `odt`: OpenDocument Text files.
-- `ods`: OpenDocument Spreadsheet files.
-- `odp`: OpenDocument Presentation files.
-- + any other file that contains raw text, such as markdown, CSV, JSON, source code...
-
-![Document Parameter](/assets/parameters_document.png)
-
 #### Image
 
-Image parameters allow you to upload an image. The image will be passed to the LLM as a URL. Currently, the following file types are supported:
+Image parameters allow you to upload an image. The image will be passed to the LLM as a URL. Parameters should be used within a `<content-image>` tag.
+
+Image type support depends on your provider. However, these are common supported types:
 
 - `jpg`
 - `jpeg`
@@ -78,6 +62,14 @@ Image parameters allow you to upload an image. The image will be passed to the L
 - `webp`
 
 ![Image Parameter](/assets/parameters_image.png)
+
+#### File
+
+File parameters allow you to upload any file. The file will be passed to the LLM as a URL. Parameters should be used within a `<content-file>` tag.
+
+File type support depends on your provider.
+
+![File Parameter](/assets/parameters_file.png)
 
 ### Populating Parameters
 

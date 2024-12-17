@@ -409,8 +409,8 @@ export type RelativeDate = keyof typeof RELATIVE_DATES
 
 export enum ParameterType {
   Text = 'text',
-  Document = 'document',
   Image = 'image',
+  File = 'file',
 }
 
 export const SUPPORTED_IMAGE_TYPES = ['.jpg', '.jpeg', '.png', '.gif', '.webp']
