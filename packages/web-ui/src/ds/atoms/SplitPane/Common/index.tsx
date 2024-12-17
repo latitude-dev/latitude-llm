@@ -39,35 +39,38 @@ export const PaneWrapper = ({
   )
 }
 
-const SplitHandle = (
-  resizeHandle: ResizeHandle,
-  ref: RefObject<HTMLDivElement>,
-) => {
-  const direction = resizeHandle === 'e' ? 'horizontal' : 'vertical'
-  return (
-    <div
-      ref={ref}
-      className={cn('group/handler z-10 flex justify-center bg-transparent', {
-        'w-2 h-full -right-0.5 cursor-col-resize absolute':
-          direction === 'horizontal',
-        'h-3 items-center w-full cursor-row-resize': direction === 'vertical',
-      })}
-    >
+const SplitHandle =
+  (visibleHandle: boolean) =>
+  (resizeHandle: ResizeHandle, ref: RefObject<HTMLDivElement>) => {
+    const direction = resizeHandle === 'e' ? 'horizontal' : 'vertical'
+    return (
       <div
-        className={cn(
-          'bg-border duration-200 transition-all group-hover/handler:bg-accent-foreground',
-          {
-            'w-px h-full group-hover/handler:w-0.5': direction === 'horizontal',
-            'h-px w-full group-hover/handler:h-0.5': direction === 'vertical',
-          },
-        )}
-      />
-    </div>
-  )
-}
+        ref={ref}
+        className={cn('group/handler z-10 flex justify-center bg-transparent', {
+          'w-2 h-full -right-0.5 cursor-col-resize absolute':
+            direction === 'horizontal',
+          'h-3 items-center w-full cursor-row-resize': direction === 'vertical',
+        })}
+      >
+        <div
+          className={cn(
+            'bg-border duration-200 transition-all group-hover/handler:bg-accent-foreground',
+            {
+              'bg-border': visibleHandle,
+              'bg-transparent': !visibleHandle,
+              'w-px h-full group-hover/handler:w-0.5':
+                direction === 'horizontal',
+              'h-px w-full group-hover/handler:h-0.5': direction === 'vertical',
+            },
+          )}
+        />
+      </div>
+    )
+  }
 
 export function ResizablePane({
   direction,
+  visibleHandle = true,
   minSize,
   children,
   paneSize,
@@ -76,6 +79,7 @@ export function ResizablePane({
   dragDisabled,
 }: {
   direction: SplitDirection
+  visibleHandle?: boolean
   minSize: number
   children: ReactNode
   paneSize: number
@@ -109,7 +113,7 @@ export function ResizablePane({
         minConstraints={[minSize, Infinity]}
         resizeHandles={dragDisabled ? [] : ['e']}
         className='overflow-hidden flex relative flex-shrink-0 flex-grow-0'
-        handle={SplitHandle}
+        handle={SplitHandle(visibleHandle)}
         onResize={onResize}
         onResizeStop={onStop}
       >
@@ -125,7 +129,7 @@ export function ResizablePane({
       minConstraints={[Infinity, minSize]}
       resizeHandles={dragDisabled ? [] : ['s']}
       className='overflow-hidden flex flex-col relative flex-shrink-0 flex-grow-0 w-full'
-      handle={SplitHandle}
+      handle={SplitHandle(visibleHandle)}
       onResize={onResize}
       onResizeStop={onStop}
     >

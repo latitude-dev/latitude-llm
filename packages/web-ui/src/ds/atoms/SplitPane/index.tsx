@@ -72,6 +72,7 @@ const SplitPane = ({
   onResizeStop,
   classNamePanelWrapper,
   className,
+  visibleHandle = true,
   dragDisabled = false,
 }: {
   direction: SplitDirection
@@ -85,6 +86,7 @@ const SplitPane = ({
   onResizeStop?: (size: number) => void
   classNamePanelWrapper?: string
   className?: string
+  visibleHandle?: boolean
   dragDisabled?: boolean
 }) => {
   if (direction === 'horizontal') {
@@ -92,6 +94,7 @@ const SplitPane = ({
       <HorizontalSplit
         className={className}
         classNamePanelWrapper={classNamePanelWrapper}
+        visibleHandle={visibleHandle}
         leftPane={firstPane}
         rightPane={secondPane}
         initialWidth={initialSize}
@@ -107,6 +110,7 @@ const SplitPane = ({
     <VerticalSplit
       className={className}
       classNamePanelWrapper={classNamePanelWrapper}
+      visibleHandle={visibleHandle}
       topPane={firstPane}
       bottomPane={secondPane}
       initialHeight={initialSize}

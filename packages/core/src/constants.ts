@@ -415,3 +415,8 @@ export enum ParameterType {
 
 export const SUPPORTED_IMAGE_TYPES = ['.jpg', '.jpeg', '.png', '.gif', '.webp']
 export const LOG_FILTERS_ENCODED_PARAMS = ['customIdentifier']
+
+export type DiffValue = {
+  newValue?: string
+  oldValue?: string
+}

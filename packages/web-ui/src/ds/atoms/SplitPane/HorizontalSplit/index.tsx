@@ -8,6 +8,7 @@ import { getGap, getGapWrapperPadding, SplitGap } from '../index'
 export function HorizontalSplit({
   leftPane,
   rightPane,
+  visibleHandle = true,
   initialWidth,
   initialPercentage,
   minWidth,
@@ -19,6 +20,7 @@ export function HorizontalSplit({
 }: {
   leftPane: ReactNode
   rightPane: ReactNode
+  visibleHandle?: boolean
   initialWidth?: number
   initialPercentage?: number
   minWidth: number
@@ -50,6 +52,7 @@ export function HorizontalSplit({
     >
       <ResizablePane
         direction='horizontal'
+        visibleHandle={visibleHandle}
         minSize={minWidth}
         paneSize={forcedWidth !== undefined ? forcedWidth : paneWidth}
         onResizePane={setPaneWidth}

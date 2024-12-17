@@ -1,28 +1,26 @@
-import { and, desc, eq, isNotNull, isNull, or } from 'drizzle-orm'
+import {
+  and,
+  desc,
+  eq,
+  exists,
+  isNotNull,
+  isNull,
+  lt,
+  not,
+  or,
+} from 'drizzle-orm'
 
-import { Commit, DocumentVersion, Project } from '../../browser'
-import { database } from '../../client'
+import { Commit, Project } from '../../browser'
 import {
   CommitStatus,
   HEAD_COMMIT,
   ModifiedDocumentType,
 } from '../../constants'
 import { InferedReturnType, NotFoundError, Result } from '../../lib'
-import { assertCommitIsDraft } from '../../lib/assertCommitIsDraft'
-import {
-  recomputeChanges,
-  RecomputedChanges,
-} from '../../services/documents/recomputeChanges'
 import RepositoryLegacy from '../repository'
 import { buildCommitsScope, columnSelection } from './utils/buildCommitsScope'
 import { getHeadCommitForProject } from './utils/getHeadCommit'
-
-const byErrors =
-  (c: RecomputedChanges) => (a: DocumentVersion, b: DocumentVersion) => {
-    const aErrors = c.errors[a.documentUuid]?.length ?? 0
-    const bErrors = c.errors[b.documentUuid]?.length ?? 0
-    return bErrors - aErrors
-  }
+import { documentVersions } from '../../schema'
 
 export type ChangedDocument = {
   documentUuid: string
@@ -129,6 +127,55 @@ export class CommitsRepository extends RepositoryLegacy<
     return Result.ok(result[0]!)
   }
 
+  getCommitsWithDocumentChanges({
+    project,
+    documentUuid,
+  }: {
+    project: Project
+    documentUuid: string
+  }) {
+    return this.db
+      .select()
+      .from(this.scope)
+      .where(
+        and(
+          eq(this.scope.projectId, project.id),
+          exists(
+            this.db
+              .select()
+              .from(documentVersions)
+              .where(
+                and(
+                  eq(documentVersions.documentUuid, documentUuid),
+                  eq(documentVersions.commitId, this.scope.id),
+                ),
+              ),
+          ),
+        ),
+      )
+      .orderBy(desc(this.scope.createdAt))
+  }
+
+  async getPreviousCommit(commit: Commit): Promise<Commit | undefined> {
+    const mergedAtFilter = commit.mergedAt
+      ? lt(this.scope.mergedAt, commit.mergedAt)
+      : isNotNull(this.scope.mergedAt)
+
+    return this.db
+      .select()
+      .from(this.scope)
+      .where(
+        and(
+          eq(this.scope.projectId, commit.projectId),
+          mergedAtFilter,
+          not(eq(this.scope.id, commit.id)),
+        ),
+      )
+      .orderBy(desc(this.scope.mergedAt))
+      .limit(1)
+      .then((r) => r[0])
+  }
+
   getCommitsByProjectQuery({
     project,
     filterByStatus = CommitStatus.All,
@@ -157,50 +204,6 @@ export class CommitsRepository extends RepositoryLegacy<
       .from(this.scope)
       .where(and(eq(this.scope.projectId, project.id), filter))
       .orderBy(desc(this.scope.createdAt))
-  }
-
-  async getChanges(id: number, tx = database) {
-    const commitResult = await this.getCommitById(id)
-    if (commitResult.error) return commitResult
-
-    const commit = commitResult.value
-    const isDraft = assertCommitIsDraft(commit)
-    if (isDraft.error) return isDraft
-
-    const result = await recomputeChanges(
-      { draft: commit, workspaceId: this.workspaceId },
-      tx,
-    )
-    if (result.error) return result
-
-    const changes = result.value
-    const head = changes.headDocuments.reduce(
-      (acc, doc) => {
-        acc[doc.documentUuid] = doc
-        return acc
-      },
-      {} as Record<string, DocumentVersion>,
-    )
-
-    return Result.ok(
-      changes.changedDocuments.sort(byErrors(changes)).map((changedDoc) => {
-        const changeType = (() => {
-          if (!head[changedDoc.documentUuid])
-            return ModifiedDocumentType.Created
-          if (changedDoc.deletedAt) return ModifiedDocumentType.Deleted
-          if (head[changedDoc.documentUuid]!.path !== changedDoc.path)
-            return ModifiedDocumentType.UpdatedPath
-          return ModifiedDocumentType.Updated
-        })()
-
-        return {
-          documentUuid: changedDoc.documentUuid,
-          path: changedDoc.path,
-          errors: changes.errors[changedDoc.documentUuid]?.length ?? 0,
-          changeType,
-        }
-      }),
-    )
   }
 
   async filterByProject(projectId: number) {
