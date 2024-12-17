@@ -9,7 +9,6 @@ import {
   like,
   notLike,
   exists,
-  not,
   and,
   SQL,
 } from 'drizzle-orm'
@@ -56,7 +55,7 @@ export async function listTraces({
   try {
     where = buildWhereClause({ filters, workspace })
   } catch (e) {
-    return Result.error(e as Error)
+    where = eq(traces.workspaceId, -1) // falsy condition to return no results
   }
 
   // First get the traces
@@ -121,7 +120,6 @@ function buildSpanCondition(
   operator: string,
   value: string,
 ) {
-  const baseCondition = eq(spans.traceId, traces.traceId)
   let fieldCondition: SQL<unknown>
 
   switch (operator) {
@@ -144,11 +142,9 @@ function buildSpanCondition(
   const subquery = database
     .select()
     .from(spans)
-    .where(and(baseCondition, fieldCondition))
+    .where(and(eq(spans.traceId, traces.traceId), fieldCondition))
 
-  return operator.startsWith('not_') || operator === 'neq'
-    ? not(exists(subquery))
-    : exists(subquery)
+  return exists(subquery)
 }
 
 function buildDateCondition(
@@ -224,6 +220,11 @@ function buildWhereClause({
           ),
         )
         break
+      case 'traceId':
+        conditions.push(
+          buildStringCondition(traces.traceId, filter.operator, filter.value),
+        )
+        break
       case 'spans.model':
       case 'spans.distinctId':
       case 'spans.commitUuid':
@@ -232,6 +233,7 @@ function buildWhereClause({
           'spans.',
           '',
         ) as keyof typeof spans.$inferSelect
+
         conditions.push(
           buildSpanCondition(field, filter.operator, filter.value),
         )

@@ -11,18 +11,22 @@ export default async function TracesPage({
   searchParams: Promise<{
     page: string
     pageSize: string
+    filters?: string
   }>
 }) {
   const { workspace } = await getCurrentUser()
-  const { page, pageSize } = await searchParams
+  const { page, pageSize, filters: filtersParam } = await searchParams
+  const filters = filtersParam ? JSON.parse(filtersParam) : []
   const apiKeys = await getApiKeysCached()
+
   const traces = await listTraces({
     workspace,
     page: Number(page ?? '1'),
     pageSize: Number(pageSize ?? '25'),
+    filters,
   }).then((r) => r.unwrap())
 
-  if (!traces?.items.length) {
+  if (!traces?.items.length && !filters.length) {
     return <TracesBlankSlate apiKey={apiKeys[0]?.token} />
   }
 

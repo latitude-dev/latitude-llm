@@ -27,7 +27,8 @@ import { useNavigate } from '$/hooks/useNavigate'
 
 import { TraceInfo } from './TraceInfo'
 import { useRealtimeTraces } from './useRealtimeTraces'
-import { CompletedSearch, SearchBox } from './SearchBox'
+import { SearchBox } from './SearchBox'
+import { CompletedSearch } from './types'
 
 type Props = {
   traces: ListTracesResponse
