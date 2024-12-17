@@ -2,10 +2,10 @@
 
 import { useRef } from 'react'
 import { MonacoDiffEditor } from './DiffEditor'
-import { SimpleDiffViewerProps } from '../types'
 import { editor } from 'monaco-editor'
+import { DiffValue } from '@latitude-data/core/browser'
 
-export function DiffViewer({ newValue, oldValue }: SimpleDiffViewerProps) {
+export function DiffViewer({ newValue, oldValue }: DiffValue) {
   const diffEditorRef = useRef<editor.IStandaloneDiffEditor | null>(null)
 
   return (
@@ -19,8 +19,8 @@ export function DiffViewer({ newValue, oldValue }: SimpleDiffViewerProps) {
       `}</style>
       <MonacoDiffEditor
         editorRef={diffEditorRef}
-        newValue={newValue}
-        oldValue={oldValue}
+        newValue={newValue ?? ''}
+        oldValue={oldValue ?? ''}
       />
     </div>
   )

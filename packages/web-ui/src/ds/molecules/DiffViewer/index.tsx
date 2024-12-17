@@ -3,7 +3,7 @@
 import React, { lazy, useEffect, useState } from 'react'
 
 import { TextEditorPlaceholder } from '../TextEditorPlaceholder'
-import { SimpleDiffViewerProps } from './types'
+import { DiffValue } from '@latitude-data/core/browser'
 
 const DiffViewer = lazy(() =>
   import('./Editor/index').then(
@@ -11,12 +11,12 @@ const DiffViewer = lazy(() =>
       ({
         default: module.DiffViewer,
       }) as {
-        default: React.ComponentType<SimpleDiffViewerProps>
+        default: React.ComponentType<DiffValue>
       },
   ),
 )
 
-function EditorWrapper(props: SimpleDiffViewerProps) {
+function EditorWrapper(props: DiffValue) {
   // When imported, Monaco automatically tries to use the window object. Since
   // this is not available when rendering on the server, we only render the
   // fallback component for SSR.

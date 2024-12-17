@@ -8,6 +8,7 @@ import { getGap, getGapWrapperPadding, SplitGap } from '../index'
 export function VerticalSplit({
   topPane,
   bottomPane,
+  visibleHandle = true,
   initialHeight,
   initialPercentage,
   minHeight,
@@ -20,6 +21,7 @@ export function VerticalSplit({
 }: {
   topPane: ReactNode
   bottomPane: ReactNode
+  visibleHandle?: boolean
   initialHeight?: number
   initialPercentage?: number
   minHeight: number
@@ -51,6 +53,7 @@ export function VerticalSplit({
     >
       <ResizablePane
         direction='vertical'
+        visibleHandle={visibleHandle}
         minSize={minHeight}
         paneSize={forcedHeight !== undefined ? forcedHeight : paneHeight}
         onResizePane={setPaneHeight}

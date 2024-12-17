@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import { CommitsRepository } from '.'
 import {
   Commit,
   DocumentVersion,
@@ -10,19 +9,18 @@ import {
   User,
   Workspace,
 } from '../../browser'
-import { destroyDocument, updateDocument } from '../../services/documents'
+import { destroyDocument, updateDocument } from '../documents'
 import {
   createDocumentVersion,
   createDraft,
   createProject,
   helpers,
 } from '../../tests/factories'
+import { getCommitChanges } from './getChanges'
 
 let project: Project
-let commit: Commit
 let draftCommit: Commit
 let documents: Record<string, DocumentVersion>
-let repo: CommitsRepository
 let workspace: Workspace
 let user: User
 
@@ -30,7 +28,6 @@ describe('publishDraftCommit', () => {
   beforeEach(async () => {
     const {
       project: prj,
-      commit: cmt,
       user: usr,
       workspace: ws,
       documents: docs,
@@ -49,7 +46,6 @@ describe('publishDraftCommit', () => {
     workspace = ws
     user = usr
     project = prj
-    commit = cmt
     const { commit: draft } = await createDraft({ project, user })
     draftCommit = draft
     documents = docs.reduce(
@@ -59,17 +55,6 @@ describe('publishDraftCommit', () => {
       },
       {} as Record<string, DocumentVersion>,
     )
-    repo = new CommitsRepository(project.workspaceId)
-  })
-
-  it('fails if commit is not found', async () => {
-    const result = await repo.getChanges(9999)
-    expect(result.error).toBeTruthy()
-  })
-
-  it('fails if commit is merged', async () => {
-    const result = await repo.getChanges(commit.id)
-    expect(result.error).toBeTruthy()
   })
 
   it('show changed documents', async () => {
@@ -82,9 +67,10 @@ describe('publishDraftCommit', () => {
       commit: draftCommit,
     }).then((r) => r.unwrap())
 
-    const changes = await repo
-      .getChanges(draftCommit.id)
-      .then((r) => r.unwrap())
+    const changes = await getCommitChanges({
+      commit: draftCommit,
+      workspace,
+    }).then((r) => r.unwrap())
 
     expect(changes).toEqual([
       {
@@ -108,9 +94,10 @@ describe('publishDraftCommit', () => {
       }),
     })
 
-    const changes = await repo
-      .getChanges(draftCommit.id)
-      .then((r) => r.unwrap())
+    const changes = await getCommitChanges({
+      commit: draftCommit,
+      workspace,
+    }).then((r) => r.unwrap())
 
     expect(changes).toEqual([
       {
@@ -128,9 +115,10 @@ describe('publishDraftCommit', () => {
       commit: draftCommit,
     }).then((r) => r.unwrap())
 
-    const changes = await repo
-      .getChanges(draftCommit.id)
-      .then((r) => r.unwrap())
+    const changes = await getCommitChanges({
+      commit: draftCommit,
+      workspace,
+    }).then((r) => r.unwrap())
 
     expect(changes).toEqual([
       {
@@ -160,9 +148,10 @@ describe('publishDraftCommit', () => {
       commit: draftCommit,
     }).then((r) => r.unwrap())
 
-    const changes = await repo
-      .getChanges(draftCommit.id)
-      .then((r) => r.unwrap())
+    const changes = await getCommitChanges({
+      commit: draftCommit,
+      workspace,
+    }).then((r) => r.unwrap())
 
     expect(changes).toEqual([
       {

@@ -46,6 +46,14 @@ export const _API_ROUTES = {
           root: `${projectRoot}/commits`,
           detail: (commitUuid: string) => ({
             root: `${projectRoot}/commits/${commitUuid}`,
+            changes: {
+              root: `${projectRoot}/commits/${commitUuid}/changes`,
+              detail: (documentUuid: string) => {
+                return {
+                  root: `${projectRoot}/commits/${commitUuid}/changes/${documentUuid}`,
+                }
+              },
+            },
             documents: {
               root: `${projectRoot}/commits/${commitUuid}/documents`,
               detail: (documentUuid: string) => {

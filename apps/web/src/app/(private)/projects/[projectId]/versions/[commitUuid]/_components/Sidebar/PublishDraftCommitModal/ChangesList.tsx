@@ -185,7 +185,7 @@ function Change({
         <div className='flex-grow overflow-hidden flex flex-row items-center justify-start gap-x-1'>
           <Icon
             name='file'
-            className={cn('flex-shrink-0 w-4 h-4', colors.textColors[color])}
+            className={cn('flex-shrink-0', colors.textColors[color])}
           />
           <div className='flex flex-row flex-grow truncate items-center justify-start'>
             {prevDocument && (

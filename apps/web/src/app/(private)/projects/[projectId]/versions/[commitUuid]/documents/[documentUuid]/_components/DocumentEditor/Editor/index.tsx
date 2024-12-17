@@ -47,6 +47,7 @@ import Playground from './Playground'
 import RefineDocumentModal from './RefineModal'
 import { UpdateToPromptLButton } from './UpdateToPromptl'
 import { useRefinement } from './useRefinement'
+import Link from 'next/link'
 
 export const DocumentEditorContext = createContext<
   | {
@@ -309,7 +310,37 @@ export default function DocumentEditor({
                   providers={providers}
                   disabledMetadataSelectors={isMerged}
                   title='Prompt editor'
-                  rightActions={<UpdateToPromptLButton document={document} />}
+                  rightActions={
+                    <>
+                      <Tooltip
+                        trigger={
+                          <Link
+                            href={
+                              ROUTES.projects
+                                .detail({ id: project.id })
+                                .commits.detail({ uuid: commit.uuid })
+                                .history.detail({
+                                  uuid: document.documentUuid,
+                                }).root
+                            }
+                          >
+                            <Button
+                              variant='outline'
+                              size='small'
+                              className='h-7'
+                              iconProps={{
+                                name: 'history',
+                                color: 'foregroundMuted',
+                              }}
+                            />
+                          </Link>
+                        }
+                      >
+                        View prompt history
+                      </Tooltip>
+                      <UpdateToPromptLButton document={document} />
+                    </>
+                  }
                   leftActions={
                     <ClickToCopyUuid
                       tooltipContent='Click to copy the prompt UUID'
