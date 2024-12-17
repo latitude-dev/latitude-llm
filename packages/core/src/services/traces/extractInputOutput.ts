@@ -164,7 +164,6 @@ function extractOpenAIToolCalls(
   while (true) {
     const toolCallKey = `gen_ai.completion.${completionIndex}.tool_calls.${toolCallIndex}`
     const toolName = attrs[`${toolCallKey}.name`] as string
-
     if (!toolName) break
 
     const args = tryParseJSON(attrs[`${toolCallKey}.arguments`] as string)

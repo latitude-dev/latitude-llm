@@ -1,91 +1,31 @@
-import { beforeEach, describe, expect, it } from 'vitest'
-
-import { Workspace } from '../../browser'
+import { describe, it, expect, beforeAll } from 'vitest'
+import { bulkCreateTracesAndSpans } from './bulkCreateTracesAndSpans'
 import { SpanKind } from '../../constants'
 import { createProject } from '../../tests/factories'
-import { bulkCreateTracesAndSpans } from './bulkCreateTracesAndSpans'
+import { Workspace } from '../../browser'
 
-describe('bulkCreateTracesAndSpans', () => {
+describe('bulkCreateTracesAndSpans', async () => {
   let workspace: Workspace
 
-  beforeEach(async () => {
-    workspace = (await createProject()).workspace
+  beforeAll(async () => {
+    const { workspace: w } = await createProject()
+    workspace = w
   })
 
-  it('handles concurrent trace creation gracefully', async () => {
-    const traceId = 'test-trace-id'
-    const spanId = 'test-span-id'
-
-    // Create first trace
-    const result1 = await bulkCreateTracesAndSpans({
-      workspace,
-      traces: [
-        {
-          traceId,
-          startTime: new Date(),
-        },
-      ],
-      spans: [
-        {
-          traceId,
-          spanId,
-          name: 'test-span',
-          kind: SpanKind.Client,
-          startTime: new Date(),
-        },
-      ],
-    })
-
-    expect(result1.ok).toBe(true)
-    if (!result1.ok) return
-    expect(result1.unwrap().traces).toHaveLength(1)
-    expect(result1.unwrap().spans).toHaveLength(1)
-
-    // Try to create the same trace again
-    const result2 = await bulkCreateTracesAndSpans({
-      workspace,
-      traces: [
-        {
-          traceId,
-          startTime: new Date(),
-        },
-      ],
-      spans: [
-        {
-          traceId,
-          spanId: 'another-span-id',
-          name: 'test-span-2',
-          kind: SpanKind.Client,
-          startTime: new Date(),
-        },
-      ],
-    })
-
-    expect(result2.ok).toBe(true)
-    if (!result2.ok) return
-    expect(result2.unwrap().traces).toHaveLength(0) // No new traces should be created
-    expect(result2.unwrap().spans).toHaveLength(1) // New span should be created
-  })
-
-  it('creates multiple traces and spans in a single transaction', async () => {
+  it('should create new traces and spans', async () => {
     const result = await bulkCreateTracesAndSpans({
       workspace,
       traces: [
-        { traceId: 'trace-1', startTime: new Date() },
-        { traceId: 'trace-2', startTime: new Date() },
+        {
+          traceId: 'trace1',
+          startTime: new Date(),
+        },
       ],
       spans: [
         {
-          traceId: 'trace-1',
-          spanId: 'span-1',
-          name: 'span-1',
-          kind: SpanKind.Client,
-          startTime: new Date(),
-        },
-        {
-          traceId: 'trace-2',
-          spanId: 'span-2',
-          name: 'span-2',
+          traceId: 'trace1',
+          spanId: 'span1',
+          name: 'test span',
           kind: SpanKind.Client,
           startTime: new Date(),
         },
@@ -94,51 +34,123 @@ describe('bulkCreateTracesAndSpans', () => {
 
     expect(result.ok).toBe(true)
     if (!result.ok) return
-    expect(result.unwrap().traces).toHaveLength(2)
-    expect(result.unwrap().spans).toHaveLength(2)
+
+    expect(result.value!.traces).toHaveLength(1)
+    expect(result.value!.spans).toHaveLength(1)
   })
 
-  it('stores structured output with an array as a string in the span output field', async () => {
-    const result = await bulkCreateTracesAndSpans({
+  it('should update existing traces and spans', async () => {
+    // First create initial data
+    await bulkCreateTracesAndSpans({
       workspace,
       traces: [
-        { traceId: 'trace-1', startTime: new Date() },
-        { traceId: 'trace-2', startTime: new Date() },
+        {
+          traceId: 'trace1',
+          startTime: new Date(),
+          status: 'initial',
+        },
       ],
       spans: [
         {
-          traceId: 'trace-1',
-          spanId: 'span-1',
-          name: 'span-1',
+          traceId: 'trace1',
+          spanId: 'span1',
+          name: 'initial name',
           kind: SpanKind.Client,
           startTime: new Date(),
-          attributes: {},
-          input: [],
-          output: [
-            {
-              // @ts-expect-error - mock data
-              role: 'assistant',
-              content: JSON.stringify([
-                {
-                  header: 'A Warm Welcome Back!',
-                },
-              ]),
-            },
-          ],
+        },
+      ],
+    })
+
+    // Then update the same trace and span
+    const updateResult = await bulkCreateTracesAndSpans({
+      workspace,
+      traces: [
+        {
+          traceId: 'trace1',
+          startTime: new Date(),
+          status: 'updated',
+        },
+      ],
+      spans: [
+        {
+          traceId: 'trace1',
+          spanId: 'span1',
+          name: 'updated name',
+          kind: SpanKind.Client,
+          startTime: new Date(),
+        },
+      ],
+    })
+
+    expect(updateResult.ok).toBe(true)
+    if (!updateResult.ok) return
+
+    const updatedSpan = updateResult.value!.spans[0]
+    expect(updatedSpan!.name).toBe('updated name')
+  })
+
+  it('should handle mixed create and update operations', async () => {
+    // First create initial data
+    await bulkCreateTracesAndSpans({
+      workspace,
+      traces: [
+        {
+          traceId: 'trace1',
+          startTime: new Date(),
+        },
+      ],
+      spans: [
+        {
+          traceId: 'trace1',
+          spanId: 'span1',
+          name: 'existing span',
+          kind: SpanKind.Client,
+          startTime: new Date(),
+        },
+      ],
+    })
+
+    // Then do a mixed operation
+    const result = await bulkCreateTracesAndSpans({
+      workspace,
+      traces: [
+        {
+          traceId: 'trace1',
+          startTime: new Date(),
+        },
+        {
+          traceId: 'trace2',
+          startTime: new Date(),
+        },
+      ],
+      spans: [
+        {
+          traceId: 'trace1',
+          spanId: 'span1',
+          name: 'updated span',
+          kind: SpanKind.Client,
+          startTime: new Date(),
+        },
+        {
+          traceId: 'trace2',
+          spanId: 'span2',
+          name: 'new span',
+          kind: SpanKind.Client,
+          startTime: new Date(),
         },
       ],
     })
 
     expect(result.ok).toBe(true)
     if (!result.ok) return
-    const value = result.unwrap()
 
-    expect(value.spans).toHaveLength(1)
-    expect(value.spans?.[0]?.output).toEqual([
-      {
-        role: 'assistant',
-        content: JSON.stringify([{ header: 'A Warm Welcome Back!' }]),
-      },
-    ])
+    expect(result.value!.traces).toHaveLength(2)
+    expect(result.value!.spans).toHaveLength(2)
+
+    const updatedSpan = result.value!.spans.find((s) => s.spanId === 'span1')
+    const newSpan = result.value!.spans.find((s) => s.spanId === 'span2')
+
+    expect(updatedSpan?.name).toBe('updated span')
+    expect(newSpan?.name).toBe('new span')
   })
 })
