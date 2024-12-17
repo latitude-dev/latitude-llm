@@ -1,12 +1,12 @@
 import { useMemo } from 'react'
 
+import { updatePromptMetadata } from '$/lib/promptMetadata'
 import {
   Inputs,
   InputSource,
+  ParameterType,
   PlaygroundInput,
-} from '$/hooks/useDocumentParameters'
-import { updatePromptMetadata } from '$/lib/promptMetadata'
-import { ParameterType } from '@latitude-data/core/browser'
+} from '@latitude-data/core/browser'
 import {
   Icon,
   Select,
