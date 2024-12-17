@@ -1,9 +1,9 @@
+import { useDocumentParameters } from '$/hooks/useDocumentParameters'
 import {
+  DocumentVersion,
   INPUT_SOURCE,
   InputSource,
-  useDocumentParameters,
-} from '$/hooks/useDocumentParameters'
-import { DocumentVersion } from '@latitude-data/core/browser'
+} from '@latitude-data/core/browser'
 import {
   ClientOnly,
   CollapsibleBox,
@@ -137,6 +137,7 @@ export function DocumentParams({ onExpand, ...props }: Props) {
     document: props.document,
     commitVersionUuid: props.commit.uuid,
   })
+
   const historyInfo = useLogHistoryParams({
     document: props.document,
     commitVersionUuid: props.commit.uuid,

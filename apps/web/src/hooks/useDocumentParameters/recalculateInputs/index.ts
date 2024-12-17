@@ -1,5 +1,4 @@
-import { Inputs, InputSource } from '$/hooks/useDocumentParameters'
-import { ParameterType } from '@latitude-data/core/browser'
+import { Inputs, InputSource, ParameterType } from '@latitude-data/core/browser'
 import type { ConversationMetadata } from 'promptl-ai'
 
 const ParameterTypes = Object.values(ParameterType) as string[]
@@ -24,7 +23,9 @@ export function recalculateInputs<S extends InputSource>({
     Array.from(prompt.parameters).map((param) => {
       const input = inputs[param] || firstChangedInput
       let type = config[param]?.type
-      if (type && !ParameterTypes.includes(type)) type = undefined
+      if (type && !ParameterTypes.includes(type)) {
+        type = undefined
+      }
 
       if (input) {
         return [

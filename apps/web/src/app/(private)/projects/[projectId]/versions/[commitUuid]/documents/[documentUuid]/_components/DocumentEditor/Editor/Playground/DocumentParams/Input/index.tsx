@@ -1,14 +1,12 @@
 import { ChangeEvent, useCallback, useMemo } from 'react'
 
-import {
-  Inputs,
-  InputSource,
-  PlaygroundInput,
-} from '$/hooks/useDocumentParameters'
 import { updatePromptMetadata } from '$/lib/promptMetadata'
 import useFiles from '$/stores/files'
 import {
+  Inputs,
+  InputSource,
   ParameterType,
+  PlaygroundInput,
   SUPPORTED_IMAGE_TYPES,
 } from '@latitude-data/core/browser'
 import {

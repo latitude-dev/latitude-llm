@@ -1,0 +1,1 @@
+ALTER TABLE "latitude"."document_versions" ADD COLUMN "linked_dataset_by_dataset_id" jsonb DEFAULT '{}'::jsonb;
