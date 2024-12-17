@@ -1,59 +1,18 @@
 import { useCallback, useMemo } from 'react'
 
 import { recalculateInputs } from '$/hooks/useDocumentParameters/recalculateInputs'
-import { DocumentLog, ParameterType } from '@latitude-data/core/browser'
+import {
+  DatasetSource,
+  DocumentLog,
+  INPUT_SOURCE,
+  Inputs,
+  InputSource,
+  PlaygroundInput,
+  PlaygroundInputs,
+} from '@latitude-data/core/browser'
 import type { ConversationMetadata } from 'promptl-ai'
 import { AppLocalStorage, useLocalStorage } from '@latitude-data/web-ui'
 
-export const INPUT_SOURCE = {
-  manual: 'manual',
-  dataset: 'dataset',
-  history: 'history',
-} as const
-
-export type InputSource = (typeof INPUT_SOURCE)[keyof typeof INPUT_SOURCE]
-type PlaygroundInputMetadata = {
-  type?: ParameterType
-  filename?: string
-  includeInPrompt?: boolean
-}
-export type PlaygroundInput<S extends InputSource> = S extends 'dataset'
-  ? {
-      value: string
-      metadata: PlaygroundInputMetadata & { includeInPrompt: boolean }
-    }
-  : {
-      value: string
-      metadata: PlaygroundInputMetadata
-    }
-
-type ManualInput = PlaygroundInput<'manual'>
-type DatasetInput = PlaygroundInput<'dataset'>
-type HistoryInput = PlaygroundInput<'history'>
-
-export type Inputs<S extends InputSource> = Record<string, PlaygroundInput<S>>
-
-export type PlaygroundInputs<S extends InputSource> = {
-  source: S
-  manual: {
-    inputs: Record<string, ManualInput>
-  }
-  dataset: {
-    datasetId: number | undefined
-    rowIndex: number | undefined
-    inputs: Record<string, DatasetInput>
-    mappedInputs: Record<string, number>
-  }
-  history: {
-    logUuid: string | undefined
-    inputs: Record<string, HistoryInput>
-  }
-}
-
-export type DatasetSource = Omit<
-  PlaygroundInputs<'dataset'>['dataset'],
-  'inputs'
->
 const EMPTY_INPUTS: PlaygroundInputs<'manual'> = {
   source: INPUT_SOURCE.manual,
   manual: { inputs: {} },
@@ -112,6 +71,7 @@ function mapLogParametersToInputs({
 }
 
 type InputsByDocument = Record<string, PlaygroundInputs<InputSource>>
+
 export function useDocumentParameters({
   documentVersionUuid,
   commitVersionUuid,
@@ -156,6 +116,7 @@ export function useDocumentParameters({
 
   const setDatasetInputs = useCallback(
     (newInputs: Inputs<'dataset'>) =>
+      // TODO: Persists in DB
       setInputs(INPUT_SOURCE.dataset, newInputs),
     [setInputs],
   )
@@ -180,12 +141,6 @@ export function useDocumentParameters({
         case INPUT_SOURCE.history:
           setHistoryInputs({ ...inputsBySource, [param]: value })
           break
-        case INPUT_SOURCE.dataset:
-          setDatasetInputs({
-            ...(inputsBySource as unknown as Inputs<'dataset'>),
-            [param]: value as PlaygroundInput<'dataset'>,
-          })
-          break
       }
     },
     [source, inputsBySource, setInputs],
@@ -200,13 +155,6 @@ export function useDocumentParameters({
 
   const setHistoryInput = useCallback(
     (param: string, value: PlaygroundInput<'history'>) => {
-      setInput(source, value, param)
-    },
-    [setInput, source],
-  )
-
-  const setDatasetInput = useCallback(
-    (param: string, value: PlaygroundInput<'dataset'>) => {
       setInput(source, value, param)
     },
     [setInput, source],
@@ -303,6 +251,7 @@ export function useDocumentParameters({
           metadata,
         }),
       )
+      // TODO: Persists in DB
       setInputs(
         'dataset',
         recalculateInputs({
@@ -339,11 +288,11 @@ export function useDocumentParameters({
       setInputs: setManualInputs,
     },
     dataset: {
+      // TODO: Fetch from DB
       datasetId: inputs['dataset'].datasetId,
       rowIndex: inputs['dataset'].rowIndex,
       inputs: inputs['dataset'].inputs,
       mappedInputs: inputs['dataset'].mappedInputs,
-      setInput: setDatasetInput,
       setInputs: setDatasetInputs,
       copyToManual: copyDatasetInputsToManual,
       setDataset,

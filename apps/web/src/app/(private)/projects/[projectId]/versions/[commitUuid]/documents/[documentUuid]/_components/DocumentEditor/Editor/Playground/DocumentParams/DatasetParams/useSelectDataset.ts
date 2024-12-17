@@ -1,12 +1,12 @@
 import { useCallback, useMemo, useState } from 'react'
 
-import { Dataset, DocumentVersion } from '@latitude-data/core/browser'
+import { Inputs, Dataset, DocumentVersion } from '@latitude-data/core/browser'
 import {
   SelectOption,
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui'
-import { Inputs, useDocumentParameters } from '$/hooks/useDocumentParameters'
+import { useDocumentParameters } from '$/hooks/useDocumentParameters'
 import useDatasetPreview from '$/stores/datasetPreviews'
 import useDatasets from '$/stores/datasets'
 import useDocumentVersions from '$/stores/documentVersions'
@@ -64,25 +64,24 @@ export function useSelectDataset({
   commitVersionUuid: string
 }) {
   const [selectedDataset, setSelectedDataset] = useState<Dataset | undefined>()
+  const { project } = useCurrentProject()
+  const { commit } = useCurrentCommit()
+  const { assignDataset } = useDocumentVersions()
+  const { data: datasets, isLoading: isLoadingDatasets } = useDatasets({
+    onFetched: (data) => {
+      setSelectedDataset(data.find((ds) => ds.id === document.datasetId))
+    },
+  })
   const {
     dataset: { inputs, mappedInputs, rowIndex, setInputs, setDataset },
   } = useDocumentParameters({
     documentVersionUuid: document.documentUuid,
     commitVersionUuid,
   })
-  const { data: datasets, isLoading: isLoadingDatasets } = useDatasets({
-    onFetched: (data) => {
-      setSelectedDataset(data.find((ds) => ds.id === document.datasetId))
-    },
-  })
-  const { project } = useCurrentProject()
-  const { commit } = useCurrentCommit()
-  const { assignDataset } = useDocumentVersions()
   const datasetOptions = useMemo(
     () => datasets.map((ds) => ({ value: ds.id, label: ds.name })),
     [datasets],
   )
-
   const { data: csv, isLoading: isLoadingPreviewDataset } = useDatasetPreview({
     dataset: selectedDataset,
   })

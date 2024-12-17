@@ -3,6 +3,7 @@ import {
   bigserial,
   index,
   integer,
+  jsonb,
   text,
   timestamp,
   uniqueIndex,
@@ -14,6 +15,9 @@ import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
 import { commits } from './commits'
 import { datasets } from './datasets'
+import { LinkedDataset } from '../../browser'
+
+type LinkedDatasetByDatasetId = Record<number, LinkedDataset>
 
 export const documentVersions = latitudeSchema.table(
   'document_versions',
@@ -32,6 +36,9 @@ export const documentVersions = latitudeSchema.table(
       () => datasets.id,
       { onDelete: 'set null' },
     ),
+    linkedDataset: jsonb('linked_dataset_by_dataset_id')
+      .$type<LinkedDatasetByDatasetId>()
+      .default({}),
     deletedAt: timestamp('deleted_at'),
     ...timestamps(),
   },
