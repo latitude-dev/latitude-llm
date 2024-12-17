@@ -14,7 +14,7 @@ export default async function SettingsLayout({
   children: ReactNode
 }>) {
   return (
-    <Container>
+    <Container size='2xl'>
       <AppTabs />
       {children}
     </Container>
