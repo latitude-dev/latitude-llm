@@ -55,12 +55,7 @@ export function TracesTable({ traces: serverTraces }: Props) {
     },
   )
 
-  useRealtimeTraces({
-    page: Number(page),
-    pageSize: Number(pageSize),
-    filters,
-    fallbackData: serverTraces,
-  })
+  useRealtimeTraces()
 
   const handleSearch = (completedSearches: CompletedSearch[]) => {
     const params = new URLSearchParams(searchParams)

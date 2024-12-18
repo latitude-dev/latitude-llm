@@ -168,7 +168,9 @@ export type RunPromptOptions = StreamResponseCallbacks & {
 
 export type RenderPromptOptions<M extends AdapterMessageType = PromptlMessage> =
   {
-    prompt: Prompt
+    prompt: {
+      content: string
+    }
     parameters: Record<string, unknown>
     adapter?: ProviderAdapter<M>
   }

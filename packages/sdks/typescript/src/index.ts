@@ -1,8 +1,13 @@
-import type { ContentType, Message, MessageRole } from '@latitude-data/compiler'
-import type {
-  ChainEventDto,
-  DocumentLog,
-  EvaluationResultDto,
+import {
+  type ContentType,
+  type Message,
+  type MessageRole,
+} from '@latitude-data/compiler'
+import {
+  Providers,
+  type ChainEventDto,
+  type DocumentLog,
+  type EvaluationResultDto,
 } from '@latitude-data/constants'
 
 import {
@@ -312,15 +317,9 @@ class Latitude {
     parameters,
     adapter: _adapter,
   }: RenderPromptOptions<M>) {
-    if (prompt.promptlVersion !== 1) {
-      throw new Error(
-        'The prompt is defined with the Legacy syntax. Please update it to the new syntax. Learn more: https://docs.latitude.so/guides/prompt-manager/migrate-to-promptl',
-      )
-    }
-    const content = prompt.resolvedContent ?? prompt.content
-    const adapter = _adapter ?? getPromptlAdapterFromProvider(prompt.provider)
+    const adapter = _adapter ?? getPromptlAdapterFromProvider(Providers.OpenAI)
     const { config, messages } = await render({
-      prompt: content,
+      prompt: prompt.content,
       parameters,
       adapter,
     })
