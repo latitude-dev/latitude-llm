@@ -9,7 +9,6 @@ export const INPUT_SOURCE = {
 export type InputSource = (typeof INPUT_SOURCE)[keyof typeof INPUT_SOURCE]
 type PlaygroundInputMetadata = {
   type?: ParameterType
-  filename?: string
   includeInPrompt?: boolean
 }
 

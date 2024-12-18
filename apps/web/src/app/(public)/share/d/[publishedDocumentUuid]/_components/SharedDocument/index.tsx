@@ -1,41 +1,28 @@
 'use client'
 
-import {
-  FormEvent,
-  KeyboardEvent,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from 'react'
 import { capitalize } from 'lodash-es'
+import { FormEvent, useCallback, useEffect, useRef, useState } from 'react'
 
-import { PublishedDocument } from '@latitude-data/core/browser'
+import { ParameterType, PublishedDocument } from '@latitude-data/core/browser'
+import { Button, Card, CardContent, cn, FormField } from '@latitude-data/web-ui'
 import { ConversationMetadata } from 'promptl-ai'
-import { Button, Card, CardContent, cn, TextArea } from '@latitude-data/web-ui'
 
+import { ParameterInput } from '$/components/ParameterInput'
+import { useNavigate } from '$/hooks/useNavigate'
+import { ROUTES } from '$/services/routes'
 import { Container } from '../Container'
 import { PromptHeader } from '../Header'
 import { Messages } from '../Messages'
-import { usePrompt } from './usePrompt'
 import { useChat } from './useChat'
-import { useNavigate } from '$/hooks/useNavigate'
-import { ROUTES } from '$/services/routes'
+import { usePrompt } from './usePrompt'
+
+const ParameterTypes = Object.values(ParameterType) as string[]
 
 // Sync with the CSS transition duration
 const DURATION_CLASS = 'duration-100 ease-in-out'
 const DURATION_MS_RUN = 100
 const DURATION_MS_RESET = 100
 const CARD_Y_PADDING = 24 // 12px padding top and bottom
-
-function convertFormDataToParameters(form: HTMLFormElement) {
-  const formData = new FormData(form)
-  const entries = Array.from(formData.entries())
-  return entries.reduce<Record<string, string>>((acc, [key, value]) => {
-    acc[key] = value.toString()
-    return acc
-  }, {})
-}
 
 function convertParametersToUrlSearchParams(
   parameters: Record<string, string>,
@@ -53,26 +40,40 @@ function convertParametersToUrlSearchParams(
   return new URLSearchParams(clean).toString()
 }
 
+type Parameters = Record<
+  string,
+  {
+    label: string
+    type: ParameterType
+    value: string
+  }
+>
 function useParameters({
-  parameters,
+  metadata,
   queryParams,
 }: {
-  parameters: Set<string>
+  metadata: ServerClientMetadata
   queryParams: Record<string, string>
 }) {
-  return useRef(
-    Array.from(parameters).map((parameter) => {
-      const value = queryParams[parameter] ?? ''
-      return {
-        name: parameter,
-        label: capitalize(parameter),
-        value,
+  return useState(
+    Array.from(metadata.parameters).reduce<Parameters>((acc, parameter) => {
+      let type = (metadata.config.parameters || {})[parameter]?.type
+      if (!type || !ParameterTypes.includes(type)) type = ParameterType.Text
+
+      acc[parameter] = {
+        label: parameter.split('_').map(capitalize).join(' '),
+        type: type as ParameterType,
+        value: queryParams[parameter] ?? '',
       }
-    }),
-  ).current
+
+      return acc
+    }, {}),
+  )
 }
 
-type ServerClientMetadata = Omit<ConversationMetadata, 'setConfig'>
+type ServerClientMetadata = Omit<ConversationMetadata, 'setConfig'> & {
+  config: { parameters?: Record<string, { type?: string }> }
+}
 function PromptForm({
   metadata,
   onSubmit,
@@ -82,50 +83,37 @@ function PromptForm({
   onSubmit: (parameters: Record<string, string>) => void
   queryParams: Record<string, string>
 }) {
-  const parameters = useParameters({
-    parameters: metadata.parameters,
-    queryParams,
-  })
+  const [parameters, setParameters] = useParameters({ metadata, queryParams })
 
   const onFormSubmit = useCallback(
     async (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault()
-
-      onSubmit(convertFormDataToParameters(event.currentTarget))
+      onSubmit(
+        Object.entries(parameters).reduce(
+          (acc, [parameter, { value }]) => ({ ...acc, [parameter]: value }),
+          {},
+        ),
+      )
     },
-    [onSubmit],
+    [onSubmit, parameters],
   )
 
-  const handleKeyDown = useCallback(
-    (event: KeyboardEvent<HTMLTextAreaElement>) => {
-      const cmdOrCtrl = event.metaKey || event.ctrlKey
-
-      if (event.key === 'Enter' && cmdOrCtrl) {
-        event.preventDefault()
-        event.stopPropagation()
-
-        const form = event.currentTarget.form
-
-        if (!form) return
-
-        onSubmit(convertFormDataToParameters(form))
-      }
-    },
-    [onSubmit],
-  )
   return (
     <form className='h-full flex flex-col gap-y-4' onSubmit={onFormSubmit}>
-      {parameters.map((parameter, index) => {
+      {Object.entries(parameters).map(([name, parameter]) => {
         return (
-          <TextArea
-            minRows={1}
-            maxRows={6}
-            key={`${parameter.name}-${index}`}
-            name={parameter.name}
-            label={parameter.label}
-            defaultValue={parameter.value}
-            onKeyDown={handleKeyDown}
-          />
+          <FormField key={name} label={parameter.label}>
+            <ParameterInput
+              type={parameter.type}
+              value={parameter.value}
+              onChange={(value) => {
+                setParameters({
+                  ...parameters,
+                  [name]: { ...parameter, value },
+                })
+              }}
+            />
+          </FormField>
         )
       })}
       <Button fancy fullWidth type='submit' variant='default'>

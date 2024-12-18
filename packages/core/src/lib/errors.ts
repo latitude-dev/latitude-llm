@@ -59,17 +59,25 @@ export class RateLimitError extends LatitudeError {
 
   constructor(
     message: string,
-    retryAfter: number,
-    limit: number,
-    remaining: number,
-    resetTime: number,
+    retryAfter?: number,
+    limit?: number,
+    remaining?: number,
+    resetTime?: number,
   ) {
     super(message)
-    this.headers = {
-      'Retry-After': retryAfter.toString(),
-      'X-RateLimit-Limit': limit.toString(),
-      'X-RateLimit-Remaining': remaining.toString(),
-      'X-RateLimit-Reset': resetTime.toString(),
+
+    this.headers = {}
+    if (retryAfter !== undefined) {
+      this.headers['Retry-After'] = retryAfter.toString()
+    }
+    if (limit !== undefined) {
+      this.headers['X-RateLimit-Limit'] = limit.toString()
+    }
+    if (remaining !== undefined) {
+      this.headers['X-RateLimit-Remaining'] = remaining.toString()
+    }
+    if (resetTime !== undefined) {
+      this.headers['X-RateLimit-Reset'] = resetTime.toString()
     }
   }
 }

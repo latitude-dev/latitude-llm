@@ -1,12 +1,23 @@
-import { UnauthorizedError } from '@latitude-data/core/lib/errors'
+import { getUnsafeIp } from '$/helpers/ip'
+import { getCurrentUserOrError } from '$/services/auth/getCurrentUser'
+import { cache } from '@latitude-data/core/cache'
+import {
+  RateLimitError,
+  UnauthorizedError,
+} from '@latitude-data/core/lib/errors'
 import {
   DocumentVersionsRepository,
   ProjectsRepository,
 } from '@latitude-data/core/repositories'
 import * as Sentry from '@sentry/nextjs'
-import { getCurrentUserOrError } from '$/services/auth/getCurrentUser'
+import { ReplyError } from 'ioredis'
+import { headers } from 'next/headers'
+import { RateLimiterRedis, RateLimiterRes } from 'rate-limiter-flexible'
 import { z } from 'zod'
-import { createServerActionProcedure } from 'zsa'
+import { createServerActionProcedure, TAnyCompleteProcedure } from 'zsa'
+
+const DEFAULT_RATE_LIMIT_POINTS = 1000
+const DEFAULT_RATE_LIMIT_DURATION = 60
 
 export const errorHandlingProcedure = createServerActionProcedure()
   .onError(async (error) => {
@@ -25,6 +36,22 @@ export const errorHandlingProcedure = createServerActionProcedure()
     }
   })
   .handler((ctx) => ({ ...ctx }))
+
+export const maybeAuthProcedure = createServerActionProcedure(
+  errorHandlingProcedure,
+).handler(async () => {
+  try {
+    const data = await getCurrentUserOrError()
+
+    return {
+      session: data.session!,
+      workspace: data.workspace,
+      user: data.user,
+    }
+  } catch (error) {
+    return {}
+  }
+})
 
 export const authProcedure = createServerActionProcedure(
   errorHandlingProcedure,
@@ -76,3 +103,40 @@ export const withAdmin = createServerActionProcedure(authProcedure).handler(
     return ctx
   },
 )
+
+export async function withRateLimit<T extends TAnyCompleteProcedure>(
+  procedure: T,
+  {
+    limit = DEFAULT_RATE_LIMIT_POINTS,
+    period = DEFAULT_RATE_LIMIT_DURATION,
+  }: {
+    limit?: number
+    period?: number
+  },
+): Promise<T> {
+  const rateLimiter = new RateLimiterRedis({
+    storeClient: await cache(),
+    points: limit,
+    duration: period,
+  })
+
+  return createServerActionProcedure(procedure).handler(
+    async ({ ctx, ...rest }) => {
+      const key = ctx.user?.id || getUnsafeIp(await headers()) || 'unknown'
+
+      try {
+        await rateLimiter.consume(key)
+      } catch (error) {
+        if (error instanceof RateLimiterRes) {
+          throw new RateLimitError('Too many requests')
+        }
+
+        if (!(error instanceof ReplyError)) {
+          throw error
+        }
+      }
+
+      return { ...ctx, ...rest }
+    },
+  ) as T
+}

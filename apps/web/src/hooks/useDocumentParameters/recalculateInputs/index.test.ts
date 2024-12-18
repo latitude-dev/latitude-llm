@@ -10,7 +10,7 @@ describe('recalculateInputs', () => {
       inputs: {
         param1: {
           value: 'value1',
-          metadata: { includeInPrompt: true, type: ParameterType.Document },
+          metadata: { includeInPrompt: true, type: ParameterType.File },
         },
         param2: { value: 'value2', metadata: { includeInPrompt: true } },
       },
@@ -22,7 +22,7 @@ describe('recalculateInputs', () => {
               type: ParameterType.Text,
             },
             param2: {
-              type: ParameterType.Document,
+              type: ParameterType.File,
             },
           },
         },
@@ -50,7 +50,7 @@ describe('recalculateInputs', () => {
         config: {
           parameters: {
             param2: {
-              type: ParameterType.Document,
+              type: ParameterType.File,
             },
           },
         },
@@ -66,7 +66,7 @@ describe('recalculateInputs', () => {
       },
       param2: {
         value: '',
-        metadata: { includeInPrompt: true, type: ParameterType.Document },
+        metadata: { includeInPrompt: true, type: ParameterType.File },
       },
     })
   })
@@ -104,7 +104,7 @@ describe('recalculateInputs', () => {
         param1: { value: 'value1', metadata: { includeInPrompt: true } },
         param2: {
           value: 'value2',
-          metadata: { includeInPrompt: true, type: ParameterType.Document },
+          metadata: { includeInPrompt: true, type: ParameterType.File },
         },
       },
       metadata: {
@@ -229,7 +229,7 @@ describe('recalculateInputs', () => {
         param1: {
           value: 'value1',
           metadata: {
-            type: ParameterType.Document,
+            type: ParameterType.File,
           },
         },
       },
