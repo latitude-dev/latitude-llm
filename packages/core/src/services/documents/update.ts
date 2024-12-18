@@ -26,7 +26,7 @@ export async function updateDocument(
     path?: string
     content?: string | null
     promptlVersion?: number
-    deletedAt?: Date
+    deletedAt?: Date | null
   },
   trx = database,
 ): Promise<TypedResult<DocumentVersion, Error>> {
