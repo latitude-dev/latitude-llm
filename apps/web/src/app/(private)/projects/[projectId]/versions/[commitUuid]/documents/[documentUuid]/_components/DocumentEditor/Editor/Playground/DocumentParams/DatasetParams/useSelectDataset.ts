@@ -73,9 +73,9 @@ export function useSelectDataset({
     },
   })
   const {
-    dataset: { inputs, mappedInputs, rowIndex, setInputs, setDataset },
+    dataset: { inputs, mappedInputs, rowIndex, setDataset },
   } = useDocumentParameters({
-    documentVersionUuid: document.documentUuid,
+    document,
     commitVersionUuid,
   })
   const datasetOptions = useMemo(
@@ -120,16 +120,8 @@ export function useSelectDataset({
       })
 
       setSelectedDataset(ds)
-      setDataset({ rowIndex: 0, datasetId: ds.id, mappedInputs: {} })
     },
-    [
-      datasets,
-      assignDataset,
-      project.id,
-      document.documentUuid,
-      commit.uuid,
-      setDataset,
-    ],
+    [datasets, assignDataset, project.id, document.documentUuid, commit.uuid],
   )
   const isLoading = isLoadingDatasets || isLoadingPreviewDataset
 
@@ -144,25 +136,22 @@ export function useSelectDataset({
         mappedInputs: mapped,
         rowIndex,
       })
-      setInputs(newInputs)
       setDataset({
-        rowIndex,
         datasetId: selectedDataset.id,
-        mappedInputs: mapped,
+        data: {
+          rowIndex,
+          inputs: newInputs,
+          mappedInputs: mapped,
+        },
       })
     },
-    [
-      inputs,
-      setInputs,
-      setDataset,
-      datasetPreview.rows,
-      selectedDataset,
-      mappedInputs,
-    ],
+    [inputs, setDataset, datasetPreview.rows, selectedDataset, mappedInputs],
   )
 
   const onSelectHeader = useCallback(
     (param: string) => (headerIndex: number) => {
+      if (!selectedDataset) return
+
       const prevMapped = mappedInputs ?? {}
       const mapped = { ...prevMapped, [param]: Number(headerIndex) }
       const newInputs = mappedToInputs({
@@ -172,15 +161,16 @@ export function useSelectDataset({
         rowIndex: rowIndex ?? 0,
       })
       setDataset({
-        rowIndex: rowIndex ?? 0,
-        datasetId: selectedDataset?.id,
-        mappedInputs: mapped,
+        datasetId: selectedDataset.id,
+        data: {
+          inputs: newInputs,
+          rowIndex: rowIndex ?? 0,
+          mappedInputs: mapped,
+        },
       })
-      setInputs(newInputs)
     },
     [
       inputs,
-      setInputs,
       setDataset,
       rowIndex,
       mappedInputs,

@@ -186,7 +186,7 @@ export default function DocumentEditor({
 
   const { onMetadataProcessed } = useDocumentParameters({
     commitVersionUuid: commit.uuid,
-    documentVersionUuid: document.documentUuid,
+    document,
   })
   const { metadata, runReadMetadata } = useMetadata({
     onMetadataProcessed: onMetadataProcessed,

@@ -35,7 +35,7 @@ export default function Playground({
   const [expanded, setExpanded] = useState(true)
   const { parameters } = useDocumentParameters({
     commitVersionUuid: commit.uuid,
-    documentVersionUuid: document.documentUuid,
+    document,
   })
   const [forcedSize, setForcedSize] = useState<number | undefined>()
   const { value: expandParameters, setValue: setExpandParameters } =

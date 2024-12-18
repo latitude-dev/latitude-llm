@@ -66,6 +66,7 @@ export function DatasetParams({
       </div>
       <div className={cn({ 'opacity-50': data.isLoading })}>
         <InputMapper
+          key={selectedId}
           document={document}
           commit={commit}
           isLoading={data.isLoading}

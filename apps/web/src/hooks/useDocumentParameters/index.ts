@@ -2,26 +2,34 @@ import { useCallback, useMemo } from 'react'
 
 import { recalculateInputs } from '$/hooks/useDocumentParameters/recalculateInputs'
 import {
-  DatasetSource,
   DocumentLog,
+  DocumentVersion,
   INPUT_SOURCE,
   Inputs,
   InputSource,
+  LinkedDataset,
+  LocalInputs,
+  LocalInputSource,
   PlaygroundInput,
   PlaygroundInputs,
 } from '@latitude-data/core/browser'
 import type { ConversationMetadata } from 'promptl-ai'
-import { AppLocalStorage, useLocalStorage } from '@latitude-data/web-ui'
+import {
+  AppLocalStorage,
+  useCurrentProject,
+  useLocalStorage,
+} from '@latitude-data/web-ui'
+import useDocumentVersions from '$/stores/documentVersions'
 
+const EMPTY_LINKED_DATASET = {
+  rowIndex: 0,
+  inputs: {} as LinkedDataset['inputs'],
+  mappedInputs: {} as LinkedDataset['mappedInputs'],
+}
 const EMPTY_INPUTS: PlaygroundInputs<'manual'> = {
   source: INPUT_SOURCE.manual,
   manual: { inputs: {} },
-  dataset: {
-    datasetId: undefined,
-    rowIndex: undefined,
-    inputs: {},
-    mappedInputs: {},
-  },
+  dataset: { datasetId: undefined, ...EMPTY_LINKED_DATASET },
   history: { logUuid: undefined, inputs: {} },
 }
 
@@ -72,28 +80,70 @@ function mapLogParametersToInputs({
 
 type InputsByDocument = Record<string, PlaygroundInputs<InputSource>>
 
+function getLinkedDataset({
+  document,
+  localInputs,
+}: {
+  document: DocumentVersion
+  localInputs: PlaygroundInputs<'dataset'>['dataset']
+}) {
+  const datasetId = document.datasetId
+  if (!datasetId) return EMPTY_LINKED_DATASET
+
+  const all = document.linkedDataset ?? {}
+  const isEmpty = Object.keys(all).length === 0
+
+  if (isEmpty) {
+    const legacyLocalData = localInputs
+    return {
+      rowIndex: legacyLocalData.rowIndex,
+      inputs: legacyLocalData.inputs,
+      mappedInputs: legacyLocalData.mappedInputs,
+    }
+  }
+
+  return all[datasetId] ? all[datasetId] : EMPTY_LINKED_DATASET
+}
+
 export function useDocumentParameters({
-  documentVersionUuid,
+  document,
   commitVersionUuid,
 }: {
-  documentVersionUuid: string
+  document: DocumentVersion
   commitVersionUuid: string
 }) {
+  const { project } = useCurrentProject()
+  const projectId = project.id
+  const commitUuid = commitVersionUuid
+  const { saveLinkedDataset } = useDocumentVersions({
+    projectId,
+    commitUuid,
+  })
   // TODO: Delete stale inputs as new inputs could eventually not fit
   const { value: allInputs, setValue } = useLocalStorage<InputsByDocument>({
     key: AppLocalStorage.playgroundParameters,
     defaultValue: {},
   })
-  const key = `${commitVersionUuid}:${documentVersionUuid}`
+  const key = `${commitVersionUuid}:${document.documentUuid}`
   const inputs = allInputs[key] ?? EMPTY_INPUTS
   const source = inputs.source
-  const inputsBySource = inputs[source].inputs
+  const linkedDataset = getLinkedDataset({
+    document,
+    localInputs: inputs.dataset,
+  })
+
+  let inputsBySource =
+    source === INPUT_SOURCE.dataset
+      ? linkedDataset.inputs
+      : inputs[source].inputs
 
   const setInputs = useCallback(
-    <S extends InputSource>(source: S, newInputs: Inputs<S>) => {
+    <S extends LocalInputSource>(source: S, newInputs: LocalInputs<S>) => {
       setValue((oldState) => {
         const { state, doc } = getDocState(oldState, key)
+
         const prevSource = doc[source]
+
         return {
           ...state,
           [key]: {
@@ -111,13 +161,6 @@ export function useDocumentParameters({
 
   const setManualInputs = useCallback(
     (newInputs: Inputs<'manual'>) => setInputs(INPUT_SOURCE.manual, newInputs),
-    [setInputs],
-  )
-
-  const setDatasetInputs = useCallback(
-    (newInputs: Inputs<'dataset'>) =>
-      // TODO: Persists in DB
-      setInputs(INPUT_SOURCE.dataset, newInputs),
     [setInputs],
   )
 
@@ -176,28 +219,11 @@ export function useDocumentParameters({
     [key, setValue],
   )
 
-  const setDataset = useCallback(
-    (selected: DatasetSource) => {
-      setValue((old) => {
-        const { state, doc } = getDocState(old, key)
-        return {
-          ...state,
-          [key]: {
-            ...doc,
-            dataset: {
-              ...doc.dataset,
-              ...selected,
-            },
-          },
-        }
-      })
-    },
-    [allInputs, key, setValue],
-  )
-
   const copyDatasetInputsToManual = useCallback(() => {
-    setManualInputs(inputs['dataset'].inputs)
-  }, [inputs])
+    if (!linkedDataset?.inputs) return
+
+    setManualInputs(linkedDataset.inputs)
+  }, [linkedDataset?.inputs, inputs])
 
   const setHistoryLog = useCallback(
     (logUuid: string) => {
@@ -219,27 +245,37 @@ export function useDocumentParameters({
   )
 
   const mapDocParametersToInputs = useCallback(
-    ({
-      parameters,
-      source,
-    }: {
-      parameters: DocumentLog['parameters']
-      source: InputSource
-    }) => {
+    ({ parameters }: { parameters: DocumentLog['parameters'] }) => {
       const state = allInputs[key]
       if (!state) return
 
-      const docState = state[source]
+      const docState = state.history
       const sourceInputs = docState.inputs
       const newInputs = mapLogParametersToInputs({
         inputs: sourceInputs,
         parameters,
       })
+
       if (!newInputs) return
 
-      setInputs(source, newInputs)
+      setInputs('history', newInputs)
     },
     [inputs, key, setInputs],
+  )
+
+  const setDataset = useCallback(
+    async ({ datasetId, data }: { datasetId: number; data: LinkedDataset }) => {
+      await saveLinkedDataset({
+        projectId,
+        commitUuid,
+        documentUuid: document.documentUuid,
+        datasetId,
+        rowIndex: data.rowIndex ?? 0,
+        inputs: data.inputs,
+        mappedInputs: data.mappedInputs,
+      })
+    },
+    [saveLinkedDataset, projectId, commitUuid, document.documentUuid],
   )
 
   const onMetadataProcessed = useCallback(
@@ -251,14 +287,22 @@ export function useDocumentParameters({
           metadata,
         }),
       )
-      // TODO: Persists in DB
-      setInputs(
-        'dataset',
-        recalculateInputs({
-          inputs: inputs.dataset.inputs,
+
+      if (document.datasetId && linkedDataset) {
+        const datasetInputs = recalculateInputs<'dataset'>({
+          inputs: linkedDataset.inputs,
           metadata,
-        }),
-      )
+        })
+        setDataset({
+          datasetId: document.datasetId,
+          data: {
+            rowIndex: linkedDataset.rowIndex,
+            mappedInputs: linkedDataset.mappedInputs,
+            inputs: datasetInputs,
+          },
+        })
+      }
+
       setInputs(
         'history',
         recalculateInputs({
@@ -267,7 +311,7 @@ export function useDocumentParameters({
         }),
       )
     },
-    [inputs, setInputs, source],
+    [inputs, setInputs, source, document.datasetId, linkedDataset],
   )
 
   const parameters = useMemo(
@@ -281,21 +325,18 @@ export function useDocumentParameters({
     source,
     setSource,
     setInput,
-    mapDocParametersToInputs,
     manual: {
       inputs: inputs['manual'].inputs,
       setInput: setManualInput,
       setInputs: setManualInputs,
     },
     dataset: {
-      // TODO: Fetch from DB
-      datasetId: inputs['dataset'].datasetId,
-      rowIndex: inputs['dataset'].rowIndex,
-      inputs: inputs['dataset'].inputs,
-      mappedInputs: inputs['dataset'].mappedInputs,
-      setInputs: setDatasetInputs,
-      copyToManual: copyDatasetInputsToManual,
+      datasetId: document.datasetId,
+      rowIndex: linkedDataset?.rowIndex,
+      inputs: linkedDataset?.inputs,
+      mappedInputs: linkedDataset?.mappedInputs,
       setDataset,
+      copyToManual: copyDatasetInputsToManual,
     },
     history: {
       logUuid: inputs['history'].logUuid,
@@ -303,6 +344,7 @@ export function useDocumentParameters({
       setInput: setHistoryInput,
       setInputs: setHistoryInputs,
       setHistoryLog,
+      mapDocParametersToInputs,
     },
   }
 }

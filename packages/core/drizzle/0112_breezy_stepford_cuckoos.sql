@@ -1,0 +1,2 @@
+ALTER TABLE "latitude"."document_versions" ALTER COLUMN "linked_dataset_by_dataset_id" SET DATA TYPE json;--> statement-breakpoint
+ALTER TABLE "latitude"."document_versions" ALTER COLUMN "linked_dataset_by_dataset_id" SET DEFAULT '{}'::json;

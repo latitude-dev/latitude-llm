@@ -56,7 +56,7 @@ export function HistoryLogParams({
   const {
     history: { inputs, setInput },
   } = useDocumentParameters({
-    documentVersionUuid: document.documentUuid,
+    document,
     commitVersionUuid: commit.uuid,
   })
   const urlData = usePaginatedDocumentLogUrl({
