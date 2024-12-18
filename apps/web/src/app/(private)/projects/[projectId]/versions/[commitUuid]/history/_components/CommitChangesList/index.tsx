@@ -26,6 +26,12 @@ const MODIFICATION_COLORS: Record<ModifiedDocumentType, TextColor> = {
   [ModifiedDocumentType.UpdatedPath]: 'accentForeground',
   [ModifiedDocumentType.Deleted]: 'destructive',
 }
+const MODIFICATION_BACKGROUNDS: Record<ModifiedDocumentType, string> = {
+  [ModifiedDocumentType.Created]: 'bg-success/10',
+  [ModifiedDocumentType.Updated]: 'bg-accent-foreground/10',
+  [ModifiedDocumentType.UpdatedPath]: 'bg-accent-foreground/10',
+  [ModifiedDocumentType.Deleted]: 'bg-destructive/10',
+}
 function LoadingFile({
   changeType,
   width,
@@ -62,7 +68,8 @@ function Change({
   isDimmed?: boolean
 }) {
   const icon = MODIFICATION_ICONS[change.changeType]
-  const color: TextColor = MODIFICATION_COLORS[change.changeType]
+  const color = MODIFICATION_COLORS[change.changeType]
+  const selectedBackground = MODIFICATION_BACKGROUNDS[change.changeType]
   const dimmedClass = isDimmed ? 'opacity-60' : undefined
 
   const { data: prevDocument } = useDocumentVersion(
@@ -79,7 +86,7 @@ function Change({
         onClick={onSelect}
         className={cn('min-h-8 rounded-md', {
           'hover:bg-secondary': !isSelected,
-          'bg-accent': isSelected,
+          [selectedBackground]: isSelected,
         })}
       >
         <div className='flex-grow overflow-hidden flex flex-row items-center justify-start gap-x-1'>
@@ -152,7 +159,7 @@ export function CommitChangesList({
 
   return (
     <div className='w-full h-full overflow-hidden'>
-      <ul className='flex flex-col custom-scrollbar gap-1'>
+      <ul className='flex flex-col custom-scrollbar gap-1 pl-2'>
         {isLoading ? (
           <>
             <LoadingFile width={62} changeType={ModifiedDocumentType.Deleted} />

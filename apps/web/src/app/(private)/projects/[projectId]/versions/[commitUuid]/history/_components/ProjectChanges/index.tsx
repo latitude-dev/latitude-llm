@@ -129,7 +129,8 @@ export function ProjectChanges({
         <SplitPane
           direction='horizontal'
           initialPercentage={30}
-          minSize={300}
+          minSize={150}
+          autoResize
           firstPane={
             <CommitsList
               commits={filteredCommits}
@@ -143,7 +144,8 @@ export function ProjectChanges({
               visibleHandle={false}
               gap={2}
               initialPercentage={30}
-              minSize={300}
+              minSize={150}
+              autoResize
               firstPane={
                 <CommitChangesList
                   commit={selectedCommit!}
