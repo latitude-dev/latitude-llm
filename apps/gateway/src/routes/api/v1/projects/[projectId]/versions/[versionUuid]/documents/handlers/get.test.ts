@@ -67,7 +67,7 @@ describe('GET documents', () => {
 
       const doc = await res.json()
 
-      expect(doc.id).toEqual(documentVersion.id)
+      expect(doc.uuid).toEqual(documentVersion.documentUuid)
       expect(doc.config).toEqual({ model: 'foo', provider: providers[0]!.name })
     })
   })

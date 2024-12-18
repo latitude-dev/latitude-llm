@@ -49,7 +49,7 @@ export function DocumentLogBlankSlate() {
           done, come back to this page, and you'll be able to evaluate both
           existing and incoming logs.
         </Text.H5>
-        <DocumentsClient document={document} />
+        <DocumentsClient />
       </div>
     </DocumentBlankSlateLayout>
   )

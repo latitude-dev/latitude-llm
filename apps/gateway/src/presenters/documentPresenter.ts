@@ -40,7 +40,9 @@ export async function documentPresenter({
   }
 
   return {
-    ...document,
+    uuid: document.documentUuid,
+    path: document.path,
+    content: document.content,
     config: metadata?.config,
     provider,
   }

@@ -97,10 +97,8 @@ describe('POST /get-or-create', () => {
 
       expect(response.status).toBe(200)
       expect(await response.json()).toMatchObject({
-        id: document.id,
-        documentUuid: document.documentUuid,
+        uuid: document.documentUuid,
         path: document.path,
-        commitId: document.commitId,
         content: document.content,
         config: {
           provider: 'fake-provider',
@@ -133,7 +131,6 @@ describe('POST /get-or-create', () => {
       expect(response.status).toBe(200)
       expect(await response.json()).toMatchObject({
         path: 'fake-path',
-        commitId: commit.id,
         content: prompt,
         config: {
           provider: 'fake-provider',
