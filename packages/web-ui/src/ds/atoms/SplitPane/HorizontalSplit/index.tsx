@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useState } from 'react'
+import { ReactNode, useEffect, useRef, useState } from 'react'
 
 import { useMeasure } from '../../../../browser'
 import { cn } from '../../../../lib/utils'
@@ -17,6 +17,7 @@ export function HorizontalSplit({
   classNamePanelWrapper,
   className,
   gap,
+  autoResize,
 }: {
   leftPane: ReactNode
   rightPane: ReactNode
@@ -29,17 +30,37 @@ export function HorizontalSplit({
   classNamePanelWrapper?: string
   className?: string
   gap?: SplitGap
+  autoResize?: boolean
 }) {
   const [ref, { width: initialWidthFromRef }] = useMeasure<HTMLDivElement>()
   const [paneWidth, setPaneWidth] = useState<number>(initialWidth ?? 0)
+
+  const oldWidthRef = useRef<number>(0)
+
   useEffect(() => {
     if (paneWidth > 0) return
 
     if (!initialPercentage) return
 
     const percentage = initialPercentage / 100
-    setPaneWidth(initialWidthFromRef * percentage)
-  }, [initialWidth, initialWidthFromRef, initialPercentage])
+    setPaneWidth(Math.max(initialWidthFromRef * percentage, minWidth))
+  }, [
+    initialWidth,
+    initialWidthFromRef,
+    initialPercentage,
+    paneWidth,
+    minWidth,
+  ])
+
+  useEffect(() => {
+    if (!autoResize) return
+    if (oldWidthRef.current && oldWidthRef.current > 0 && paneWidth > 0) {
+      const ratio = paneWidth / oldWidthRef.current
+      const newPaneWidth = Math.max(initialWidthFromRef * ratio, minWidth)
+      setPaneWidth(newPaneWidth)
+    }
+    oldWidthRef.current = initialWidthFromRef
+  }, [initialWidthFromRef, paneWidth, minWidth])
 
   return (
     <div

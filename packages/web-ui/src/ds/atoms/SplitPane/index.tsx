@@ -74,6 +74,7 @@ const SplitPane = ({
   className,
   visibleHandle = true,
   dragDisabled = false,
+  autoResize,
 }: {
   direction: SplitDirection
   firstPane: ReactNode
@@ -88,6 +89,7 @@ const SplitPane = ({
   className?: string
   visibleHandle?: boolean
   dragDisabled?: boolean
+  autoResize?: boolean
 }) => {
   if (direction === 'horizontal') {
     return (
@@ -102,6 +104,7 @@ const SplitPane = ({
         minWidth={minSize}
         gap={gap}
         onResizeStop={onResizeStop}
+        autoResize={autoResize}
       />
     )
   }
@@ -120,6 +123,7 @@ const SplitPane = ({
       gap={gap}
       onResizeStop={onResizeStop}
       dragDisabled={dragDisabled}
+      autoResize={autoResize}
     />
   )
 }

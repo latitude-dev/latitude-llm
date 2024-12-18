@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useState } from 'react'
+import { ReactNode, useEffect, useRef, useState } from 'react'
 
 import { useMeasure } from '../../../../browser'
 import { cn } from '../../../../lib/utils'
@@ -18,6 +18,7 @@ export function VerticalSplit({
   className,
   gap,
   dragDisabled,
+  autoResize,
 }: {
   topPane: ReactNode
   bottomPane: ReactNode
@@ -26,22 +27,37 @@ export function VerticalSplit({
   initialPercentage?: number
   minHeight: number
   forcedHeight?: number
-  onResizeStop?: (width: number) => void
+  onResizeStop?: (height: number) => void
   classNamePanelWrapper?: string
   className?: string
   gap?: SplitGap
   dragDisabled?: boolean
+  autoResize?: boolean
 }) {
   const [ref, { height: initialHeightFromRef }] = useMeasure<HTMLDivElement>()
   const [paneHeight, setPaneHeight] = useState<number>(initialHeight ?? 0)
+
+  const oldHeightRef = useRef<number>(0)
+
   useEffect(() => {
     if (paneHeight > 0) return
 
     if (!initialPercentage) return
 
     const percentage = initialPercentage / 100
-    setPaneHeight(initialHeightFromRef * percentage)
+    setPaneHeight(Math.max(initialHeightFromRef * percentage, minHeight))
   }, [initialHeight, initialHeightFromRef, initialPercentage])
+
+  useEffect(() => {
+    if (!autoResize) return
+    if (oldHeightRef.current && oldHeightRef.current > 0 && paneHeight > 0) {
+      const ratio = paneHeight / oldHeightRef.current
+      const newPaneHeight = Math.max(initialHeightFromRef * ratio, minHeight)
+      setPaneHeight(newPaneHeight)
+    }
+    oldHeightRef.current = initialHeightFromRef
+  }, [initialHeightFromRef, paneHeight, minHeight])
+
   return (
     <div
       ref={ref}
