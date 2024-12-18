@@ -3,7 +3,7 @@ import { BadgeCommit } from '../../../_components/Sidebar/CommitSelector/CommitI
 import { cn, Text, Tooltip, TruncatedTooltip } from '@latitude-data/web-ui'
 import useUsers from '$/stores/users'
 import { relativeTime } from '$/lib/relativeTime'
-import { useMemo } from 'react'
+import { ReactNode, useMemo } from 'react'
 
 function CommitItem({
   commit,
@@ -81,15 +81,20 @@ export function CommitsList({
   commits,
   selectedCommitId,
   selectCommitId,
+  banner,
 }: {
   commits: Commit[]
   selectedCommitId: number
   selectCommitId: (id: number) => void
+  banner?: ReactNode
 }) {
   const headCommit = commits.find((commit) => !!commit.mergedAt)
 
   return (
-    <div className='flex w-full h-full flex-col custom-scrollbar pr-px'>
+    <div className='flex w-full h-full flex-col custom-scrollbar'>
+      {!!banner && (
+        <div className='py-2 px-2 border-b border-border'>{banner}</div>
+      )}
       {commits.map((commit) => (
         <CommitItem
           key={commit.id}

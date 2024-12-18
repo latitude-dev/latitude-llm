@@ -159,7 +159,7 @@ export function CommitChangesList({
 
   return (
     <div className='w-full h-full overflow-hidden'>
-      <ul className='flex flex-col custom-scrollbar gap-1 pl-2'>
+      <ul className='flex flex-col custom-scrollbar gap-1 pt-4 px-2'>
         {isLoading ? (
           <>
             <LoadingFile width={62} changeType={ModifiedDocumentType.Deleted} />
