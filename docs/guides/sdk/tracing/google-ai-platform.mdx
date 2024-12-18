@@ -1,0 +1,28 @@
+---
+title: Google AI Platform
+description: How to trace Google AI Platform calls with Latitude
+---
+
+## Installation
+
+import Installation from '/snippets/installation.mdx'
+
+<Installation />
+
+## Usage
+
+To trace Google AI Platform calls with Latitude, you need to install the Google AI
+Platform SDK and initialize Latitude with your API key:
+
+```typescript
+import * as GoogleAI from '@google-cloud/aiplatform'
+import { Latitude } from '@latitude-data/sdk'
+
+new Latitude('your-api-key-here', {
+  telemetry: {
+    modules: {
+      google_aiplatform: GoogleAI,
+    },
+  },
+})
+```

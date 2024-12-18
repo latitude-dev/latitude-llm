@@ -1,0 +1,28 @@
+---
+title: OpenAI
+description: How to trace OpenAI calls with Latitude
+---
+
+## Installation
+
+import Installation from '/snippets/installation.mdx'
+
+<Installation />
+
+## Usage
+
+To trace OpenAI calls with Latitude, you need to install the OpenAI SDK and
+initialize Latitude with your API key:
+
+```typescript
+import * as OpenAI from 'openai'
+import { Latitude } from '@latitude-data/sdk'
+
+new Latitude('your-api-key-here', {
+  telemetry: {
+    modules: {
+      openAI: OpenAI,
+    },
+  },
+})
+```

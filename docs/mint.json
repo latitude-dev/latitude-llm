@@ -125,10 +125,28 @@
       ]
     },
     {
-      "group": "SDKs",
+      "group": "Integrations",
       "pages": [
-        "guides/sdk/javascript-typescript-sdk",
-        "guides/sdk/rust-sdk"
+        "guides/sdk/typescript",
+        {
+          "group": "Providers",
+          "pages": [
+            "guides/sdk/tracing/anthropic",
+            "guides/sdk/tracing/aws-bedrock",
+            "guides/sdk/tracing/azure-openai",
+            "guides/sdk/tracing/cohere",
+            "guides/sdk/tracing/google-ai-platform",
+            "guides/sdk/tracing/openai",
+            "guides/sdk/tracing/vercel-ai-sdk",
+            "guides/sdk/tracing/vertex-ai"
+          ]
+        },
+        {
+          "group": "Community Integrations",
+          "pages": [
+            "guides/sdk/rust-sdk"
+          ]
+        }
       ]
     },
     {

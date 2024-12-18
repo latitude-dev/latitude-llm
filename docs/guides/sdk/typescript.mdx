@@ -1,0 +1,167 @@
+---
+title: Typescript
+description: Integrate Latitude's SDK into your Typescript project
+---
+
+Latitude's Typescript integration has the following main features:
+
+- Automatic tracing of LLM calls
+- Interact with Latitude's prompt manager from code: create, update and delete prompts
+- Render Latitude prompts locally and run them against your LLM providers
+- Run prompts with Latitude's high-performing gateway
+
+## Installation
+
+To install the Latitude SDK, use your preferred package manager:
+
+```bash
+npm install @latitude-data/sdk
+# or
+yarn add @latitude-data/sdk
+# or
+pnpm add @latitude-data/sdk
+```
+
+## Getting Started
+
+First, import the Latitude class from the SDK and initialize it with your API key:
+
+```typescript
+import { Latitude } from '@latitude-data/sdk'
+
+const latitude = new Latitude('your-api-key-here')
+```
+
+## Tracing your LLM calls
+
+Latitude can automatically trace all your LLM calls from most major providers
+using our OpenTelemetry integration. We recommend this approach to easily get
+started using Latitude's full capabilities.
+
+Here's how to integrate with the all supported providers:
+
+- [Anthropic](/guides/sdk/tracing/anthropic)
+- [AWS Bedrock](/guides/sdk/tracing/aws-bedrock)
+- [Azure OpenAI](/guides/sdk/tracing/azure-openai)
+- [Cohere](/guides/sdk/tracing/cohere)
+- [Google AI Platform](/guides/sdk/tracing/google-ai-platform)
+- [OpenAI](/guides/sdk/tracing/openai)
+- [Vercel AI SDK](/guides/sdk/tracing/vercel-ai-sdk)
+- [Vertex AI](/guides/sdk/tracing/vertex-ai)
+
+#### A note during development
+
+Latitude's OpenTelemetry integration batches requests automatically in order to
+improve performance. This is helpful in production workloads but during
+development you often want to disable batching. You can do this by setting the
+`disableBatch` option to `true`:
+
+```typescript
+new Latitude('your-api-key-here', {
+  telemetry: {
+    disableBatch: true,
+  },
+})
+```
+
+## Prompt Management
+
+### Get or create a prompt
+
+To get or create a prompt, use the `getOrCreate` method:
+
+```typescript
+sdk.prompts.getOrCreate('path/to/your/prompt', {
+  projectId: 12345, // Optional, if you did not provide it in the constructor
+  versionUuid: 'optional-version-uuid', // Optional, by default it targets latest live version
+  prompt: 'Your prompt here', // Optional, this will be the contents of your prompts if it didn't exist
+})
+```
+
+### Run a prompt with your LLM provider
+
+The `render` method will render your prompt and return the configuration and
+messages to use with your LLM provider. This render step is completely local and
+does not use Latitude's runtime services.
+
+Here's an example of running a Latitude prompt locally using the OpenAI package:
+
+```typescript
+import { Latitude } from '@latitude-data/sdk'
+import { OpenAI } from 'openai'
+
+const sdk = new Latitude('your-api-key-here', {
+  projectId: 12345, // Optional: You can specify a default project ID here
+  versionUuid: 'optional-version-uuid', // Optional: You can specify a default version UUID here
+})
+
+const prompt = sdk.prompts.get('path/to/your/prompt', {
+  projectId: 12345, // Optional if you provided it in the constructor
+  versionUuid: 'optional-version-uuid', // Optional, by default it targets latest live version
+})
+
+const openai = new OpenAI({ apiKey: 'your-openai-api-key' })
+
+const { config, messages } = await sdk.prompts.render({
+  prompt,
+  parameters: {
+    // Any parameters your prompt expects
+  },
+})
+
+const response = await openai.chat.completions.create({
+  ...config,
+  messages,
+})
+```
+
+You can also execute [chains](/promptl/advanced/chains) by providing an `onStep` callback to the
+`renderChain` method, which will be run for each step of the chain to generate
+the response. Here's an example:
+
+```typescript
+sdk.prompts.renderChain({
+  prompt,
+  parameters: {
+    // Any parameters your prompt expects
+  },
+  onStep: async ({ config, messages }) => {
+    // Your call to your LLM provider goes here
+    const response = await openai.chat.completions.create({
+      ...config,
+      messages,
+    })
+
+    return response
+  },
+})
+```
+
+### Run a prompt through Latitude Gateway
+
+Latitude's Gateway is a high-performing gateway that proxies your LLM calls
+between your application and the LLM provider. It includes some additional
+features like automatic prompt caching based on content and prompt
+configuration.
+
+In order to run a prompt through Latitude's Gateway, use the `run` method:
+
+```typescript
+sdk.prompts.run('path/to/your/prompt', {
+  projectId: 12345, // Optional if you provided it in the constructor
+  versionUuid: 'optional-version-uuid', // Optional, by default it targets latest live version
+  stream: false, // Optional, by default it's false
+  parameters: {
+    // Any parameters your prompt expects
+  },
+  onEvent: ({ event, data }) => {
+    // Handle events during execution
+  },
+  onFinished: (result) => {
+    // Handle the final result
+  },
+  onError: (error) => {
+    // Handle any errors
+  },
+})
+```
