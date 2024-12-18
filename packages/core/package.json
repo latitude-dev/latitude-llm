@@ -60,6 +60,7 @@
     "@react-email/components": "^0.0.23",
     "@sindresorhus/slugify": "^2.2.1",
     "@t3-oss/env-core": "^0.11.1",
+    "@types/diff-match-patch": "^1.0.36",
     "@types/json-schema": "^7.0.15",
     "@types/lodash-es": "^4.17.12",
     "@types/node": "^22.5.0",
@@ -148,7 +149,8 @@
     "zod": "^3.23.8"
   },
   "dependencies": {
-    "promptl-ai": "^0.3.3",
-    "date-fns": "^3.6.0"
+    "date-fns": "^3.6.0",
+    "diff-match-patch": "^1.0.5",
+    "promptl-ai": "^0.3.3"
   }
 }
