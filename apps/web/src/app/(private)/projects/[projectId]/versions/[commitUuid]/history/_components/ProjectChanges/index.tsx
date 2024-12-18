@@ -12,7 +12,6 @@ import {
   useCurrentProject,
 } from '@latitude-data/web-ui'
 import Link from 'next/link'
-import { BadgeCommit } from '../../../_components/Sidebar/CommitSelector/CommitItem'
 import { useMemo, useState } from 'react'
 import { CommitsList } from '../CommitsList'
 import { CommitChangesList } from '../CommitChangesList'
@@ -26,15 +25,15 @@ function DocumentFilterBanner({
   removeFilter: () => void
 }) {
   const { project } = useCurrentProject()
-  const { commit, isHead } = useCurrentCommit()
+  const { commit } = useCurrentCommit()
   const { data: document } = useDocumentVersion(documentUuid, {
     commitUuid: commit.uuid,
   })
 
   return (
-    <div className='flex flex-col gap-1'>
-      <div className='flex flex-row items-center gap-1.5'>
-        <Text.H5>Showing only history for</Text.H5>
+    <div className='flex flex-col flex-shrink-0 gap-2 p-2 truncate border border-border rounded-md bg-secondary'>
+      <div className='inline-flex flex-wrap items-center gap-2'>
+        <Text.H6>Showing only history for</Text.H6>
         <Link
           href={
             ROUTES.projects
@@ -42,18 +41,15 @@ function DocumentFilterBanner({
               .commits.detail({ uuid: commit.uuid })
               .documents.detail({ uuid: documentUuid }).root
           }
-          className='flex flex-row items-center gap-1.5 hover:underline'
+          className='inline-flex items-center gap-1.5 hover:underline'
         >
           <Icon name='file' color='primary' />
           {document ? (
-            <Text.H5 color='primary'>{document.path}</Text.H5>
+            <Text.H6 color='primary'>{document.path}</Text.H6>
           ) : (
-            <Skeleton height='h5' className='w-48' />
+            <Skeleton height='h6' className='w-48' />
           )}
         </Link>
-        <Text.H5>on</Text.H5>
-        <BadgeCommit commit={commit as Commit} isLive={isHead} />
-        <Text.H5M>{commit.title}</Text.H5M>
       </div>
       <div className='flex flex-row items-center'>
         <Button variant='link' className='p-0' onClick={removeFilter}>
@@ -116,15 +112,6 @@ export function ProjectChanges({
 
   return (
     <div className='w-full h-full flex flex-col relative'>
-      <div className='py-4 pl-4 w-full flex flex-col gap-2'>
-        <Text.H4M>Project History</Text.H4M>
-        {!!documentCommits && documentUuid && (
-          <DocumentFilterBanner
-            documentUuid={documentUuid}
-            removeFilter={removeFilter}
-          />
-        )}
-      </div>
       <div className='flex flex-row w-full min-h-0 flex-grow max-w-full overflow-hidden'>
         <SplitPane
           direction='horizontal'
@@ -136,13 +123,21 @@ export function ProjectChanges({
               commits={filteredCommits}
               selectedCommitId={selectedCommitId}
               selectCommitId={setSelectedCommitId}
+              banner={
+                !!documentCommits &&
+                documentUuid && (
+                  <DocumentFilterBanner
+                    documentUuid={documentUuid}
+                    removeFilter={removeFilter}
+                  />
+                )
+              }
             />
           }
           secondPane={
             <SplitPane
               direction='horizontal'
               visibleHandle={false}
-              gap={2}
               initialPercentage={40}
               minSize={150}
               autoResize
@@ -155,7 +150,7 @@ export function ProjectChanges({
                 />
               }
               secondPane={
-                <div className='w-full h-full pr-4 pb-4'>
+                <div className='w-full h-full pr-4 py-4'>
                   <ChangeDiffViewer
                     commit={selectedCommit}
                     documentUuid={selectedDocumentUuid}

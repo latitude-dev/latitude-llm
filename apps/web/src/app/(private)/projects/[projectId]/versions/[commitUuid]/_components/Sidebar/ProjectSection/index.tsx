@@ -59,7 +59,7 @@ export default function ProjectSection({
   return (
     <div className='flex flex-col gap-2'>
       <div className='pl-4'>
-        <Text.H5>Project</Text.H5>
+        <Text.H5M>Project</Text.H5M>
       </div>
       <div className='flex flex-col gap-1'>
         {PROJECT_ROUTES.map((item) => (

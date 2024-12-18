@@ -47,7 +47,7 @@ const SplitHandle =
       <div
         ref={ref}
         className={cn('group/handler z-10 flex justify-center bg-transparent', {
-          'w-2 h-full -right-0.5 cursor-col-resize absolute':
+          'w-2 h-full -right-1 cursor-col-resize absolute':
             direction === 'horizontal',
           'h-3 items-center w-full cursor-row-resize': direction === 'vertical',
         })}
@@ -112,7 +112,7 @@ export function ResizablePane({
         axis='x'
         minConstraints={[minSize, Infinity]}
         resizeHandles={dragDisabled ? [] : ['e']}
-        className='overflow-hidden flex relative flex-shrink-0 flex-grow-0'
+        className='flex relative flex-shrink-0 flex-grow-0'
         handle={SplitHandle(visibleHandle)}
         onResize={onResize}
         onResizeStop={onStop}
@@ -128,7 +128,7 @@ export function ResizablePane({
       axis='y'
       minConstraints={[Infinity, minSize]}
       resizeHandles={dragDisabled ? [] : ['s']}
-      className='overflow-hidden flex flex-col relative flex-shrink-0 flex-grow-0 w-full'
+      className='flex flex-col relative flex-shrink-0 flex-grow-0 w-full'
       handle={SplitHandle(visibleHandle)}
       onResize={onResize}
       onResizeStop={onStop}
