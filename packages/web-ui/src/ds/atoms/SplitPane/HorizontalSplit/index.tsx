@@ -38,9 +38,9 @@ export function HorizontalSplit({
   const oldWidthRef = useRef<number>(0)
 
   useEffect(() => {
-    if (paneWidth > 0) return
-
     if (!initialPercentage) return
+    if (paneWidth > 0) return
+    if (initialWidthFromRef === 0) return
 
     const percentage = initialPercentage / 100
     setPaneWidth(Math.max(initialWidthFromRef * percentage, minWidth))

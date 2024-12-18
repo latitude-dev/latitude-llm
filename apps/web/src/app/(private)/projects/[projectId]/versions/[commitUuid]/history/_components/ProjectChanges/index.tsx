@@ -143,7 +143,7 @@ export function ProjectChanges({
               direction='horizontal'
               visibleHandle={false}
               gap={2}
-              initialPercentage={30}
+              initialPercentage={40}
               minSize={150}
               autoResize
               firstPane={
