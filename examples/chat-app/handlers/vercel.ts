@@ -24,8 +24,8 @@ export async function handleVercelChat(req: Request, res: Response) {
 
     const completion = await latitude.telemetry.span({}, () =>
       generateObject({
-        //model: openai('gpt-4o-mini'),
-        model: google('gemini-1.5-flash-latest'),
+        model: openai('gpt-4o-mini'),
+        //model: google('gemini-1.5-flash-latest'),
         // model: anthropic('claude-3-5-sonnet-latest'),
         max_tokens: 1000,
         // @ts-ignore

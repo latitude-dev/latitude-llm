@@ -6,36 +6,16 @@ import {
   EventArgs,
   useSockets,
 } from '$/components/Providers/WebsocketsProvider/useSockets'
-import {
-  SearchFilter,
-  Span,
-  Trace,
-  TraceWithSpans,
-} from '@latitude-data/core/browser'
+import { Span, Trace, TraceWithSpans } from '@latitude-data/core/browser'
 import { reverse, sortBy } from 'lodash-es'
 import { ListTracesResponse } from '@latitude-data/core/services/traces/list'
 
-export function useRealtimeTraces({
-  page,
-  pageSize,
-  filters,
-  fallbackData,
-}: {
-  page: number
-  pageSize: number
-  filters: SearchFilter[]
-  fallbackData: ListTracesResponse
-}) {
-  const { mutate } = useTracesPagination(
-    {
-      page: Number(page),
-      pageSize: Number(pageSize),
-      filters,
-    },
-    {
-      fallbackData,
-    },
-  )
+export function useRealtimeTraces() {
+  const { mutate } = useTracesPagination({
+    page: 1,
+    pageSize: 25,
+    filters: [],
+  })
 
   const onMessage = useCallback(
     (args: EventArgs<'tracesAndSpansCreated'>) => {
@@ -78,8 +58,8 @@ export function useRealtimeTraces({
             return {
               items: newData,
               count: newData.length,
-              page,
-              pageSize,
+              page: 1,
+              pageSize: 25,
             }
           } else {
             return {

@@ -24,7 +24,10 @@ export function GoToPageInput({
     event.preventDefault()
 
     const targetPage = Number(new FormData(event.currentTarget).get('page'))
-    const queryParams = window.location.search
+    const urlParams = new URLSearchParams(window.location.search)
+
+    // Replace or add the page parameter
+    urlParams.set('page', targetPage.toString())
 
     if (baseUrl) {
       router.push(
@@ -32,7 +35,7 @@ export function GoToPageInput({
           baseUrl,
           page: targetPage,
           pageSize,
-          queryParams,
+          queryParams: urlParams.toString(),
           encodeQueryParams: false,
         }),
       )
