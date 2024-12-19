@@ -8,11 +8,13 @@ import {
 
 export const runRoute = createRoute({
   method: http.Methods.POST,
-  path: '/api/v2/projects/:projectId/versions/:versionUuid/documents/run',
+  path: '/api/v2/projects/{projectId}/versions/{versionUuid}/documents/run',
   request: {
     params: z.object({
-      projectId: z.string(),
-      versionUuid: z.string(),
+      projectId: z.string().openapi({ description: 'The project ID' }),
+      versionUuid: z
+        .string()
+        .openapi({ description: 'The version UUID or "live"' }),
     }),
     body: {
       content: {

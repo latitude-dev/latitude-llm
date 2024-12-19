@@ -12,18 +12,19 @@ export const openAPIObjectConfig = {
     version: packageJson.version,
   },
   tags: tags,
+  security: [{ Bearer: [] }],
   externalDocs: {
     url: 'https://docs.latitude.so',
     description: 'Latitude Documentation',
   },
   servers: [
-    { url: 'https://gateway.latitude.so', description: 'Production server' },
+    /* { url: 'https://gateway.latitude.so', description: 'Production server' }, */
     { url: 'http://localhost:8787', description: 'Development server' },
   ],
 }
 
 export default function configureOpenAPI(app: OpenAPIHono) {
-  app.openAPIRegistry.registerComponent('securitySchemes', 'Auth', {
+  app.openAPIRegistry.registerComponent('securitySchemes', 'Bearer', {
     type: 'http',
     scheme: 'bearer',
     bearerFormat: 'token',
