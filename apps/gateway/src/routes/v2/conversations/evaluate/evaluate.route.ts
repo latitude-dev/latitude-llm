@@ -31,7 +31,6 @@ export const evaluateRoute = createRoute({
           schema: z
             .array(z.string())
             .optional()
-            .openapi({ description: 'The UUID of the executed evaluations' }),
         },
       },
     },
