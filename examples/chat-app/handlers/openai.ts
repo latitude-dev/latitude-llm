@@ -3,6 +3,7 @@ import OpenAI from 'openai'
 
 import { latitude } from '../instrumentation'
 import { getWeather } from '../services/weather'
+import { SYSTEM_PROMPT } from '../config'
 
 // Initialize OpenAI client
 export const openai = new OpenAI({
@@ -12,15 +13,16 @@ export const openai = new OpenAI({
 export async function handleChat(req: Request, res: Response) {
   try {
     const { messages: incoming, conversationId = 'default' } = req.body
-    const prompt = await latitude.prompts.get('weather-prompt', {
-      projectId: 21,
-    })
-    const { config, messages } = await latitude.prompts.render({
-      prompt,
-      parameters: {
-        user_message: incoming[incoming.length - 1].text,
+    const messages = [
+      {
+        role: 'system',
+        content: SYSTEM_PROMPT,
       },
-    })
+      ...incoming.map((message) => ({
+        role: message.role,
+        content: message.text,
+      })),
+    ]
 
     const completion = await latitude.telemetry.span(
       {
@@ -36,10 +38,25 @@ export async function handleChat(req: Request, res: Response) {
           // @ts-ignore
           messages,
           // @ts-ignore
-          tools: config.tools.map((tool: any) => ({
-            type: 'function',
-            function: tool,
-          })),
+          tools: [
+            {
+              type: 'function',
+              function: {
+                name: 'getWeather',
+                description: 'Get the weather for a given location',
+                parameters: {
+                  type: 'object',
+                  properties: {
+                    location: {
+                      type: 'string',
+                      description: 'The location to get the weather for',
+                    },
+                  },
+                  required: ['location'],
+                },
+              },
+            },
+          ],
         }),
     )
 
@@ -69,7 +86,11 @@ export async function handleChat(req: Request, res: Response) {
 
       const convo = [
         ...messages,
-        responseMessage,
+        {
+          role: 'assistant',
+          tool_calls: responseMessage.tool_calls,
+          content: JSON.stringify(responseMessage.tool_calls),
+        },
         ...validToolResults.map((result) => result),
       ]
 

@@ -10,6 +10,16 @@ type Message = {
   content: unknown
 }
 
+enum ContentType {
+  text = 'text',
+  image = 'image',
+  file = 'file',
+  toolCall = 'tool-call',
+  toolResult = 'tool-result',
+  anthropicToolUse = 'tool_use', // Anthropic's name for tool calls
+  anthropicToolResult = 'tool_result', // Anthropic's name for tool results
+}
+
 export function extractInputOutput(
   attrs: Record<string, string | number | boolean>,
 ) {
@@ -95,7 +105,9 @@ function extractContent(value: string | number | boolean) {
   if (!Array.isArray(content)) return value
 
   // NOTE: Most probably a structured output response
-  const unknownType = content.some((c) => !c.type)
+  const unknownType = content.some(
+    (c) => !c.type || !Object.values(ContentType).includes(c.type),
+  )
   if (unknownType) return value
 
   return content.map((c) => {

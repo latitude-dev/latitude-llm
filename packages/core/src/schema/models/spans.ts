@@ -6,6 +6,7 @@ import {
   jsonb,
   text,
   timestamp,
+  unique,
   uuid,
   varchar,
 } from 'drizzle-orm/pg-core'
@@ -40,7 +41,7 @@ export const spans = latitudeSchema.table(
     traceId: varchar('trace_id', { length: 32 })
       .notNull()
       .references(() => traces.traceId, { onDelete: 'cascade' }),
-    spanId: varchar('span_id', { length: 16 }).notNull().unique(),
+    spanId: varchar('span_id', { length: 16 }).notNull(),
     parentSpanId: varchar('parent_span_id', { length: 16 }),
     name: varchar('name', { length: 256 }).notNull(),
     kind: spanKindsEnum('kind').notNull(),
@@ -75,11 +76,11 @@ export const spans = latitudeSchema.table(
 
     // Generation metadata
     model: varchar('model'),
-    modelParameters: jsonb('model_parameters'),
+    modelParameters: jsonb('model_parameters').$type<Record<string, unknown>>(),
     input: jsonb('input').$type<unknown>(),
     output: jsonb('output').$type<unknown>(),
-    inputTokens: bigint('prompt_tokens', { mode: 'number' }).default(0),
-    outputTokens: bigint('completion_tokens', { mode: 'number' }).default(0),
+    inputTokens: bigint('input_tokens', { mode: 'number' }).default(0),
+    outputTokens: bigint('output_tokens', { mode: 'number' }).default(0),
     totalTokens: bigint('total_tokens', { mode: 'number' }).default(0),
     inputCostInMillicents: integer('input_cost_in_millicents').default(0),
     outputCostInMillicents: integer('output_cost_in_millicents').default(0),
@@ -99,6 +100,7 @@ export const spans = latitudeSchema.table(
   (table) => ({
     traceIdIdx: index('spans_trace_id_idx').on(table.traceId),
     spanIdIdx: index('spans_span_id_idx').on(table.spanId),
+    spanIdUniqueIdx: unique().on(table.spanId, table.traceId),
     parentSpanIdIdx: index('spans_parent_span_id_idx').on(table.parentSpanId),
     startTimeIdx: index('spans_start_time_idx').on(table.startTime),
   }),

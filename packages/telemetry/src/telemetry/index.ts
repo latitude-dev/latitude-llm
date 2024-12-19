@@ -35,7 +35,7 @@ import { Resource } from '@opentelemetry/resources'
 import { context, trace } from '@opentelemetry/api'
 
 type IModules = {
-  openAI?: typeof openai
+  openAI?: typeof openai.OpenAI
   anthropic?: typeof anthropic
   azureOpenAI?: typeof azure
   cohere?: typeof cohere

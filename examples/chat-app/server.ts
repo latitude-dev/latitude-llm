@@ -6,8 +6,8 @@ import express from 'express'
 import morgan from 'morgan'
 
 import { __dirname, PORT } from './config'
-import { handleChat, handleClearChat } from './handlers/openai'
-import { handleVercelChat, handleVercelClearChat } from './handlers/vercel'
+import { handleChat } from './handlers/openai'
+import { handleVercelChat } from './handlers/vercel'
 import { handleAnthropicChat } from './handlers/anthropic'
 
 const app = express()
