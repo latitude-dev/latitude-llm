@@ -1,7 +1,8 @@
+import { latitude } from '../instrumentation'
+
 import { Request, Response } from 'express'
 import OpenAI from 'openai'
 
-import { latitude } from '../instrumentation'
 import { getWeather } from '../services/weather'
 import { SYSTEM_PROMPT } from '../config'
 
@@ -18,7 +19,7 @@ export async function handleChat(req: Request, res: Response) {
         role: 'system',
         content: SYSTEM_PROMPT,
       },
-      ...incoming.map((message) => ({
+      ...incoming.map((message: { role: string; text: string }) => ({
         role: message.role,
         content: message.text,
       })),

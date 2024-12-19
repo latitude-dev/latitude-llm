@@ -100,20 +100,22 @@ export class DocumentVersionsRepository extends RepositoryLegacy<
   }
 
   async getDocumentByUuid({
-    commit,
+    commitUuid,
     documentUuid,
   }: {
-    commit?: Commit
+    commitUuid?: string
     documentUuid: string
   }) {
     const conditions = [eq(this.scope.documentUuid, documentUuid)]
 
     let document
-    if (commit) {
-      conditions.push(eq(this.scope.commitId, commit.id))
+    if (commitUuid) {
+      conditions.push(eq(commits.uuid, commitUuid))
+
       document = await this.db
-        .select()
+        .select(this.scope._.selectedFields)
         .from(this.scope)
+        .innerJoin(commits, eq(this.scope.commitId, commits.id))
         .where(and(...conditions))
         .limit(1)
         .then((docs) => docs[0])

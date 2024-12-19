@@ -27,18 +27,18 @@ export async function createDocumentLogsFromSpansJob({
     )
     .execute()
 
-  const spansToImport = spansLinkedToPrompts.flatMap((span) =>
+  const spansToImport = spansLinkedToPrompts.flatMap((latitudeSpan) =>
     generationSpans
-      .filter((s) => s.traceId === span.traceId)
+      .filter((s) => s.traceId === latitudeSpan.traceId)
       .map((s) => ({
-        workspaceId,
-        span: s,
-        prompt: {
-          documentUuid: span.documentUuid,
-          commitUuid: span.commitUuid,
-          parameters: span.parameters,
+        span: {
+          ...s,
+          documentUuid: latitudeSpan.documentUuid,
+          commitUuid: latitudeSpan.commitUuid,
+          parameters: latitudeSpan.parameters,
+          distinctId: latitudeSpan.distinctId,
         },
-        distinctId: span.distinctId,
+        workspaceId,
       })),
   )
   if (!spansToImport.length) return

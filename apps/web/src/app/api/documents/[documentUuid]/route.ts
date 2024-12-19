@@ -42,7 +42,7 @@ export const GET = errorHandler(
       const documentVersion = await docsScope
         .getDocumentByUuid({
           documentUuid,
-          commit: commit ?? undefined,
+          commitUuid: commit?.uuid ?? undefined,
         })
         .then((r) => r.unwrap())
 

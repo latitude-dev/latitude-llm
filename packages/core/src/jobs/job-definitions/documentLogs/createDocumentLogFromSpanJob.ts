@@ -14,30 +14,32 @@ import { CoreAssistantMessage, CoreMessage } from 'ai'
 
 export type CreateDocumentLogFromSpanJobData = {
   span: Span
-  distinctId: string | undefined | null
-  prompt: {
-    commitUuid: string | undefined | null
-    documentUuid: string
-    parameters?: Record<string, unknown> | undefined
-  }
+  workspaceId: string
 }
 
 export async function createDocumentLogFromSpanJob(
   job: Job<CreateDocumentLogFromSpanJobData>,
 ) {
-  const { span, distinctId, prompt } = job.data
+  const { span } = job.data
   if (span.internalType !== 'generation') return
-  if (!prompt.documentUuid) return
+  if (!span.documentUuid) return
 
   const workspace = await findWorkspaceFromSpan(span)
   if (!workspace) return
 
   const docsRepo = new DocumentVersionsRepository(workspace.id)
-  const document = await docsRepo
+  let document = await docsRepo
     .getDocumentByUuid({
-      documentUuid: prompt.documentUuid,
+      documentUuid: span.documentUuid,
+      commitUuid: span.commitUuid ?? undefined,
     })
-    .then((r) => r.unwrap())
+    .then((r) => r.value)
+  if (!document) {
+    // Get it from HEAD commit if not found in the provided commit
+    document = await docsRepo
+      .getDocumentByUuid({ documentUuid: span.documentUuid })
+      .then((r) => r.unwrap())
+  }
   if (!document) return
 
   const project = await findProjectFromDocument(document)
@@ -45,7 +47,7 @@ export async function createDocumentLogFromSpanJob(
 
   const commit = await findCommitByUuid({
     projectId: project.id,
-    uuid: prompt.commitUuid ?? HEAD_COMMIT,
+    uuid: span.commitUuid ?? HEAD_COMMIT,
   }).then((r) => r.unwrap())
   if (!commit) return
 
@@ -77,11 +79,11 @@ export async function createDocumentLogFromSpanJob(
     data: {
       uuid: generateUUIDIdentifier(),
       documentUuid: document.documentUuid,
-      parameters: prompt.parameters ?? {},
+      parameters: span.parameters ?? {},
       resolvedContent: '',
       source: LogSources.API,
       duration,
-      customIdentifier: distinctId ?? undefined,
+      customIdentifier: span.distinctId ?? undefined,
       createdAt: new Date(),
       providerLog: {
         toolCalls,
@@ -99,5 +101,5 @@ export async function createDocumentLogFromSpanJob(
           typeof response === 'string' ? response : JSON.stringify(response),
       },
     },
-  })
+  }).then((r) => r.unwrap())
 }

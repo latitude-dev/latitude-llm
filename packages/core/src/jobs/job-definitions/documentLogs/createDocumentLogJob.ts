@@ -25,7 +25,7 @@ export const createDocumentLogJob = async (
   const document = await docsRepo
     .getDocumentByUuid({
       documentUuid,
-      commit,
+      commitUuid: commit.uuid,
     })
     .then((r) => r.unwrap())
 
