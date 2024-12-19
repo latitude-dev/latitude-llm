@@ -1,5 +1,5 @@
 import http from '$/common/http'
-import { ErrorResponseSchema } from '$/openApi/schemas'
+import { GENERIC_ERROR_RESPONSES } from '$/openApi/responses/errorResponses'
 import { createRoute, z } from '@hono/zod-openapi'
 import {
   chainEventDtoSchema,
@@ -36,6 +36,7 @@ export const runRoute = createRoute({
     },
   },
   responses: {
+    ...GENERIC_ERROR_RESPONSES,
     [http.Status.OK]: {
       description:
         'If stream is true, returns a SSE stream. Otherwise, returns the final event as JSON.',

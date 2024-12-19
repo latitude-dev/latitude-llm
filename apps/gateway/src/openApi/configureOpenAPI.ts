@@ -4,7 +4,6 @@ import { swaggerUI } from '@hono/swagger-ui'
 
 import packageJson from '../../package.json'
 import { tags } from '$/openApi/tags'
-import { ErrorResponseSchema } from '$/openApi/schemas'
 
 const isDev = process.env.NODE_ENV === 'development'
 let servers = [
@@ -37,7 +36,6 @@ export default function configureOpenAPI(app: OpenAPIHono) {
     bearerFormat: 'token',
     description: 'Latitude API Key',
   })
-  app.openAPIRegistry.register('ErrorResponseSchema', ErrorResponseSchema)
 
   app.doc31('/doc', openAPIObjectConfig)
   app.get('/ui', swaggerUI({ url: '/doc' }))
