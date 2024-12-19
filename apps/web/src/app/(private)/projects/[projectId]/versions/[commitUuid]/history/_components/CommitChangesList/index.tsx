@@ -1,4 +1,8 @@
-import { Commit, ModifiedDocumentType } from '@latitude-data/core/browser'
+import {
+  Commit,
+  HEAD_COMMIT,
+  ModifiedDocumentType,
+} from '@latitude-data/core/browser'
 import { ChangedDocument } from '@latitude-data/core/repositories'
 import {
   DocumentChange,
@@ -7,96 +11,110 @@ import {
 } from '@latitude-data/web-ui'
 import useDocumentVersion from '$/stores/useDocumentVersion'
 import { useCommitsChanges } from '$/stores/commitChanges'
-import { useCurrentCommit } from '@latitude-data/web-ui/browser'
+import {
+  useCurrentCommit,
+  useCurrentProject,
+} from '@latitude-data/web-ui/browser'
 import { useDocumentDiff } from '$/stores/documentDiff'
 import { useRouter } from 'next/navigation'
 import { ROUTES } from '$/services/routes'
-import { useHistoryActionModalContext } from '../ActionModal'
-import useLatitudeAction from '$/hooks/useLatitudeAction'
-import { getChangesToRevertDocumentAction } from '$/actions/history/revertDocumentVersion/getChangesToRevertDocumentAction'
-import { revertDocumentChangesAction } from '$/actions/history/revertDocumentVersion/revertDocumentAction'
-import { useCallback } from 'react'
+import { useDocumentActions } from './documentActions'
+import useDocumentVersions from '$/stores/documentVersions'
+import { useMemo } from 'react'
 
 function useCanRevert({
-  changeType,
-  commit,
-  documentUuid,
-}: {
-  changeType: ModifiedDocumentType
-  commit: Commit
-  documentUuid: string
-}) {
-  const isUpdate = changeType === ModifiedDocumentType.Updated
-
-  const { data: diff, isLoading: isDiffLoading } = useDocumentDiff({
-    commit: isUpdate ? commit : undefined,
-    documentUuid: isUpdate ? documentUuid : undefined,
-  })
-
-  if (!isUpdate) return true // Can always revert Created, Deleted and Renamed
-  return !isDiffLoading && diff?.newValue !== diff?.oldValue // If there is no diff, the update comes from a reference, which cannot be reverted from here
-}
-
-function useDocumentActions({
   commit,
   change,
 }: {
   commit: Commit
   change: ChangedDocument
 }) {
-  const router = useRouter()
-  const { open, setError, setChanges } = useHistoryActionModalContext()
+  const { project } = useCurrentProject()
   const { commit: currentCommit } = useCurrentCommit()
 
-  const { execute: executeGetChangesToRevert } = useLatitudeAction(
-    getChangesToRevertDocumentAction,
-    {
-      onSuccess: ({ data: changes }) => {
-        setChanges(changes)
-      },
-      onError: ({ err: error }) => setError(error.message),
-    },
-  )
+  const { data: currentDocuments } = useDocumentVersions({
+    projectId: project.id,
+    commitUuid: currentCommit.mergedAt ? HEAD_COMMIT : currentCommit.uuid,
+  })
+  const currentVersionOfDocument = useMemo(() => {
+    return currentDocuments?.find((d) => d.documentUuid === change.documentUuid)
+  }, [currentDocuments, change])
 
-  const { execute: executeRevertChanges } = useLatitudeAction(
-    revertDocumentChangesAction,
-    {
-      onSuccess: ({ data: { commitUuid, documentUuid } }) => {
-        const commitBaseRoute = ROUTES.projects
-          .detail({ id: commit.projectId })
-          .commits.detail({ uuid: commitUuid }).documents
-        const route = documentUuid
-          ? commitBaseRoute.detail({ uuid: documentUuid }).root
-          : commitBaseRoute.root
-        router.push(route)
-      },
-      onError: ({ err: error }) => setError(error.message),
-    },
-  )
+  // The diff will only be relevant if the change is just a simple content Update
+  const requiresDiff = change.changeType === ModifiedDocumentType.Updated
+  const { data: diff } = useDocumentDiff({
+    commit: requiresDiff ? commit : undefined,
+    documentUuid: requiresDiff ? change.documentUuid : undefined,
+  })
 
-  const getChangesToRevert = useCallback(() => {
-    open({
-      title: `Revert changes from ${change.path}`,
-      onConfirm: () =>
-        executeRevertChanges({
-          projectId: commit.projectId,
-          targetDraftId: currentCommit.mergedAt ? undefined : currentCommit.id,
-          documentUuid: change.documentUuid,
-          documentCommitUuid: commit.uuid,
-        }),
-    })
-
-    executeGetChangesToRevert({
-      projectId: commit.projectId,
-      targetDraftId: currentCommit.mergedAt ? undefined : currentCommit.id,
-      documentUuid: change.documentUuid,
-      documentCommitUuid: commit.uuid,
-    })
-  }, [commit, change])
-
-  return {
-    getChangesToRevert,
+  if (change.changeType === ModifiedDocumentType.Deleted) {
+    // If the change was deleting the document, reversing it requires to re-create the document
+    // A document can only be re-created if it does not currently exist in the commit
+    return !currentVersionOfDocument
   }
+
+  if (!currentVersionOfDocument) {
+    // Reversing any of the rest of available changes will require to either modify or remove the document
+    // This can only be done if the document exists in the target commit
+    return false
+  }
+
+  if (change.changeType === ModifiedDocumentType.Created) {
+    // We already know the document exists in the target commit, so it can be removed
+    return true
+  }
+
+  const documentHasChanged =
+    diff?.newValue !== diff?.oldValue ||
+    currentVersionOfDocument.path !== change.path
+
+  // If the document has not changed, there is no change to revert anymore
+  return documentHasChanged
+}
+
+function useCanReset({
+  commit,
+  change,
+  isCurrentDraft,
+}: {
+  commit: Commit
+  change: ChangedDocument
+  isCurrentDraft?: boolean
+}) {
+  const { project } = useCurrentProject()
+  const { commit: currentCommit } = useCurrentCommit()
+
+  const { data: currentDocuments } = useDocumentVersions({
+    projectId: project.id,
+    commitUuid: currentCommit.mergedAt ? HEAD_COMMIT : currentCommit.uuid,
+  })
+  const currentVersionOfDocument = useMemo(() => {
+    return currentDocuments?.find((d) => d.documentUuid === change.documentUuid)
+  }, [currentDocuments, change])
+
+  // The diff will only be relevant if the change is not in the current draft (resetting it means nothing) or if the change was a Deletion
+  const requiresDiff =
+    !isCurrentDraft && change.changeType === ModifiedDocumentType.Deleted
+
+  const { data: diff } = useDocumentDiff({
+    commit: !requiresDiff ? commit : undefined,
+    documentUuid: !requiresDiff ? change.documentUuid : undefined,
+  })
+
+  if (isCurrentDraft) return false
+
+  if (change.changeType === ModifiedDocumentType.Deleted) {
+    // If the change was deleting the document, resetting it means to re-delete it
+    // This only makes sense if the document exists (has been re-created at some point)
+    return !!currentVersionOfDocument
+  }
+
+  const documentHasChanged =
+    diff?.newValue !== diff?.oldValue ||
+    currentVersionOfDocument?.path !== change.path
+
+  // If the document has not changed, there is no change to reset anymore
+  return documentHasChanged
 }
 
 function Change({
@@ -105,6 +123,7 @@ function Change({
   isSelected,
   onSelect,
   isDimmed,
+  isCurrentDraft,
 }: {
   commit: Commit
   change: ChangedDocument
@@ -115,7 +134,10 @@ function Change({
 }) {
   const router = useRouter()
   const { commit: currentCommit } = useCurrentCommit()
-  const { getChangesToRevert } = useDocumentActions({ commit, change })
+  const { getChangesToRevert, getChangesToReset } = useDocumentActions({
+    commit,
+    change,
+  })
 
   const goToDocument = () => {
     router.push(
@@ -142,9 +164,13 @@ function Change({
   )
 
   const canRevert = useCanRevert({
-    changeType: change.changeType,
     commit,
-    documentUuid: change.documentUuid,
+    change,
+  })
+  const canReset = useCanReset({
+    commit,
+    change,
+    isCurrentDraft,
   })
 
   return (
@@ -169,6 +195,11 @@ function Change({
             label: 'Revert changes',
             onClick: getChangesToRevert,
             disabled: !canRevert,
+          },
+          {
+            label: 'Reset prompt to this version',
+            onClick: getChangesToReset,
+            disabled: !canReset,
           },
         ]}
         isDimmed={isDimmed}
