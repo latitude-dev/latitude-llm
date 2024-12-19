@@ -4,23 +4,30 @@ import { swaggerUI } from '@hono/swagger-ui'
 
 import packageJson from '../../package.json'
 import { tags } from '$/openApi/tags'
+import { ErrorResponseSchema } from '$/openApi/schemas'
+
+const isDev = process.env.NODE_ENV === 'development'
+let servers = [
+  { url: 'https://gateway.latitude.so', description: 'Latitude production' },
+]
+
+if (isDev) {
+  servers = [
+    { url: 'http://localhost:8787', description: 'Latitude development' },
+    ...servers,
+  ]
+}
 
 export const openAPIObjectConfig = {
   openapi: '3.1.0',
-  info: {
-    title: 'Latitude API',
-    version: packageJson.version,
-  },
+  info: { title: 'Latitude API', version: packageJson.version },
   tags: tags,
   security: [{ Bearer: [] }],
   externalDocs: {
     url: 'https://docs.latitude.so',
     description: 'Latitude Documentation',
   },
-  servers: [
-    /* { url: 'https://gateway.latitude.so', description: 'Production server' }, */
-    { url: 'http://localhost:8787', description: 'Development server' },
-  ],
+  servers,
 }
 
 export default function configureOpenAPI(app: OpenAPIHono) {
@@ -30,6 +37,8 @@ export default function configureOpenAPI(app: OpenAPIHono) {
     bearerFormat: 'token',
     description: 'Latitude API Key',
   })
+  app.openAPIRegistry.register('ErrorResponseSchema', ErrorResponseSchema)
+
   app.doc31('/doc', openAPIObjectConfig)
   app.get('/ui', swaggerUI({ url: '/doc' }))
 }

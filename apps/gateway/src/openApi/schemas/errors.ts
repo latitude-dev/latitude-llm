@@ -19,7 +19,7 @@ const BaseErrorSchema = z.object({
     .openapi({ description: 'Additional error details' }),
 })
 
-const HTTPExceptionSchema = BaseErrorSchema.extend({
+const HTTPExceptionErrorSchema = BaseErrorSchema.extend({
   details: z.object({ cause: z.any().optional() }).optional(),
 }).openapi({
   description: 'Error response for HTTP exceptions',
@@ -49,7 +49,7 @@ const UnprocessableEntityErrorSchema = BaseErrorSchema.extend({
     },
   })
 
-const LatitudeErrorSchema = BaseErrorSchema.extend({
+const BadRequestErrorSchema = BaseErrorSchema.extend({
   details: z.any().optional(),
 }).openapi({
   description: 'Error response for Latitude-specific errors',
@@ -77,13 +77,9 @@ const InternalServerErrorSchema = BaseErrorSchema.extend({
   },
 })
 
-export const ErrorResponseSchema = z
-  .union([
-    HTTPExceptionSchema,
-    UnprocessableEntityErrorSchema,
-    LatitudeErrorSchema,
-    InternalServerErrorSchema,
-  ])
-  .openapi({
-    description: 'Any error response from the API',
-  })
+export {
+  HTTPExceptionErrorSchema,
+  UnprocessableEntityErrorSchema,
+  BadRequestErrorSchema,
+  InternalServerErrorSchema,
+}

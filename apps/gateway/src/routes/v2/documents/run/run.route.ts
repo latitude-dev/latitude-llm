@@ -1,4 +1,5 @@
 import http from '$/common/http'
+import { ErrorResponseSchema } from '$/openApi/schemas'
 import { createRoute, z } from '@hono/zod-openapi'
 import {
   chainEventDtoSchema,
