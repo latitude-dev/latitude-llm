@@ -1,6 +1,6 @@
 import { createRouter } from '$/openApi/createApp'
-import { runHandler } from '$/routes/v2/documents/run/run.handler'
-import { runRoute } from '$/routes/v2/documents/run/run.route'
+
+import { runHandler, runRoute } from '$/routes/v2/documents/run'
 
 const router = createRouter().openapi(runRoute, runHandler)
 

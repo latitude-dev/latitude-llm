@@ -8,7 +8,7 @@ import {
 } from '@latitude-data/constants'
 
 type DocumentResponse = ChainStepObjectResponse | ChainStepTextResponse
-export function documentRunPresenter(
+export function runPresenter(
   response: DocumentResponse,
 ): TypedResult<RunSyncAPIResponse, LatitudeError> {
   const conversation = response.providerLog?.messages

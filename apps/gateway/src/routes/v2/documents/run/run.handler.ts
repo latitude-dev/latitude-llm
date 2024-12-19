@@ -11,7 +11,7 @@ import {
   getData,
   publishDocumentRunRequestedEvent,
 } from '$/routes/api/v1/projects/[projectId]/versions/[versionUuid]/documents/handlers/_shared'
-import { documentRunPresenter } from './documentPresenter'
+import { runPresenter } from './presenter'
 
 // @ts-expect-error: streamSSE has type issues with zod-openapi
 // https://github.com/honojs/middleware/issues/735
@@ -80,6 +80,6 @@ export const runHandler: AppRouteHandler<RunRoute> = async (c) => {
   }
 
   const response = await result.response.then((r) => r.unwrap())
-  const body = documentRunPresenter(response).unwrap()
+  const body = runPresenter(response).unwrap()
   return c.json(body)
 }
