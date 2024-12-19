@@ -40,6 +40,7 @@ app.use(authMiddleware())
 /* app.route('/api/v2/conversations', conversationsRouterV2) */
 /* app.route('/api/v2/otlp', otlpTracesRouter) */
 
+
 ROUTES.forEach((route) => {
   app.route('/', route)
 })

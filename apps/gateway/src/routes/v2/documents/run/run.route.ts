@@ -1,5 +1,6 @@
 import http from '$/common/http'
 import { GENERIC_ERROR_RESPONSES } from '$/openApi/responses/errorResponses'
+import { ROUTES } from '$/routes'
 import { createRoute, z } from '@hono/zod-openapi'
 import {
   chainEventDtoSchema,
@@ -9,7 +10,7 @@ import {
 
 export const runRoute = createRoute({
   method: http.Methods.POST,
-  path: '/api/v2/projects/{projectId}/versions/{versionUuid}/documents/run',
+  path: ROUTES.v2.documents.run,
   request: {
     params: z.object({
       projectId: z.string().openapi({ description: 'The project ID' }),
