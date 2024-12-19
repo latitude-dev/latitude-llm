@@ -16,6 +16,7 @@ import { useMemo, useState } from 'react'
 import { CommitsList } from '../CommitsList'
 import { CommitChangesList } from '../CommitChangesList'
 import { ChangeDiffViewer } from '../ChangeDiffViewer'
+import { HistoryActionModal, HistoryActionModalProvider } from '../ActionModal'
 
 function DocumentFilterBanner({
   documentUuid,
@@ -41,14 +42,19 @@ function DocumentFilterBanner({
               .commits.detail({ uuid: commit.uuid })
               .documents.detail({ uuid: documentUuid }).root
           }
-          className='inline-flex items-center gap-1.5 hover:underline'
+          className='inline-flex items-center'
         >
-          <Icon name='file' color='primary' />
-          {document ? (
-            <Text.H6 color='primary'>{document.path}</Text.H6>
-          ) : (
-            <Skeleton height='h6' className='w-48' />
-          )}
+          <Button
+            variant='link'
+            className='py-0 bg-primary/10'
+            iconProps={{ name: 'file', color: 'primary' }}
+          >
+            {document ? (
+              <Text.H6 color='primary'>{document.path}</Text.H6>
+            ) : (
+              <Skeleton height='h6' className='w-48' />
+            )}
+          </Button>
         </Link>
       </div>
       <div className='flex flex-row items-center'>
@@ -111,56 +117,59 @@ export function ProjectChanges({
   }, [allCommits, selectedCommitId])
 
   return (
-    <div className='w-full h-full flex flex-col relative'>
-      <div className='flex flex-row w-full min-h-0 flex-grow max-w-full overflow-hidden'>
-        <SplitPane
-          direction='horizontal'
-          initialPercentage={30}
-          minSize={150}
-          autoResize
-          firstPane={
-            <CommitsList
-              commits={filteredCommits}
-              selectedCommitId={selectedCommitId}
-              selectCommitId={setSelectedCommitId}
-              banner={
-                !!documentCommits &&
-                documentUuid && (
-                  <DocumentFilterBanner
-                    documentUuid={documentUuid}
-                    removeFilter={removeFilter}
+    <HistoryActionModalProvider>
+      <div className='w-full h-full flex flex-col relative'>
+        <div className='flex flex-row w-full min-h-0 flex-grow max-w-full overflow-hidden'>
+          <SplitPane
+            direction='horizontal'
+            initialPercentage={30}
+            minSize={150}
+            autoResize
+            firstPane={
+              <CommitsList
+                commits={filteredCommits}
+                selectedCommitId={selectedCommitId}
+                selectCommitId={setSelectedCommitId}
+                banner={
+                  !!documentCommits &&
+                  documentUuid && (
+                    <DocumentFilterBanner
+                      documentUuid={documentUuid}
+                      removeFilter={removeFilter}
+                    />
+                  )
+                }
+              />
+            }
+            secondPane={
+              <SplitPane
+                direction='horizontal'
+                visibleHandle={false}
+                initialPercentage={40}
+                minSize={150}
+                autoResize
+                firstPane={
+                  <CommitChangesList
+                    commit={selectedCommit!}
+                    selectedDocumentUuid={selectedDocumentUuid}
+                    selectDocumentUuid={setSelectedDocumentUuid}
+                    currentDocumentUuid={documentUuid}
                   />
-                )
-              }
-            />
-          }
-          secondPane={
-            <SplitPane
-              direction='horizontal'
-              visibleHandle={false}
-              initialPercentage={40}
-              minSize={150}
-              autoResize
-              firstPane={
-                <CommitChangesList
-                  commit={selectedCommit!}
-                  selectedDocumentUuid={selectedDocumentUuid}
-                  selectDocumentUuid={setSelectedDocumentUuid}
-                  currentDocumentUuid={documentUuid}
-                />
-              }
-              secondPane={
-                <div className='w-full h-full pr-4 py-4'>
-                  <ChangeDiffViewer
-                    commit={selectedCommit}
-                    documentUuid={selectedDocumentUuid}
-                  />
-                </div>
-              }
-            />
-          }
-        />
+                }
+                secondPane={
+                  <div className='w-full h-full pr-4 py-4'>
+                    <ChangeDiffViewer
+                      commit={selectedCommit}
+                      documentUuid={selectedDocumentUuid}
+                    />
+                  </div>
+                }
+              />
+            }
+          />
+        </div>
       </div>
-    </div>
+      <HistoryActionModal />
+    </HistoryActionModalProvider>
   )
 }

@@ -1,76 +1,139 @@
 import { Commit, ModifiedDocumentType } from '@latitude-data/core/browser'
 import { ChangedDocument } from '@latitude-data/core/repositories'
 import {
-  Button,
-  cn,
-  colors,
-  Icon,
-  IconName,
-  Skeleton,
+  DocumentChange,
+  DocumentChangeSkeleton,
   Text,
-  TruncatedTooltip,
-  type TextColor,
 } from '@latitude-data/web-ui'
 import useDocumentVersion from '$/stores/useDocumentVersion'
 import { useCommitsChanges } from '$/stores/commitChanges'
+import { useCurrentCommit } from '@latitude-data/web-ui/browser'
+import { useDocumentDiff } from '$/stores/documentDiff'
+import { useRouter } from 'next/navigation'
+import { ROUTES } from '$/services/routes'
+import { useHistoryActionModalContext } from '../ActionModal'
+import useLatitudeAction from '$/hooks/useLatitudeAction'
+import { getChangesToRevertDocumentAction } from '$/actions/history/revertDocumentVersion/getChangesToRevertDocumentAction'
+import { revertDocumentChangesAction } from '$/actions/history/revertDocumentVersion/revertDocumentAction'
+import { useCallback } from 'react'
 
-const MODIFICATION_ICONS: Record<ModifiedDocumentType, IconName> = {
-  [ModifiedDocumentType.Created]: 'addSquare',
-  [ModifiedDocumentType.Updated]: 'modification',
-  [ModifiedDocumentType.UpdatedPath]: 'squareArrowRight',
-  [ModifiedDocumentType.Deleted]: 'deletion',
-}
-const MODIFICATION_COLORS: Record<ModifiedDocumentType, TextColor> = {
-  [ModifiedDocumentType.Created]: 'success',
-  [ModifiedDocumentType.Updated]: 'accentForeground',
-  [ModifiedDocumentType.UpdatedPath]: 'accentForeground',
-  [ModifiedDocumentType.Deleted]: 'destructive',
-}
-const MODIFICATION_BACKGROUNDS: Record<ModifiedDocumentType, string> = {
-  [ModifiedDocumentType.Created]: 'bg-success/10',
-  [ModifiedDocumentType.Updated]: 'bg-accent-foreground/10',
-  [ModifiedDocumentType.UpdatedPath]: 'bg-accent-foreground/10',
-  [ModifiedDocumentType.Deleted]: 'bg-destructive/10',
-}
-function LoadingFile({
+function useCanRevert({
   changeType,
-  width,
+  commit,
+  documentUuid,
 }: {
   changeType: ModifiedDocumentType
-  width: number
+  commit: Commit
+  documentUuid: string
 }) {
-  const icon = MODIFICATION_ICONS[changeType]
-  return (
-    <li className='w-full flex flex-row items-center gap-x-1 px-2 min-h-8'>
-      <Icon
-        name={icon as IconName}
-        className='flex-shrink-0 w-4 h-4 text-gray-400 animate-pulse'
-      />
-      <div className='flex-grow h-5'>
-        <Skeleton
-          className={'h-full bg-muted rounded-full'}
-          style={{ width: `${width}%` }}
-        />
-      </div>
-    </li>
+  const isUpdate = changeType === ModifiedDocumentType.Updated
+
+  const { data: diff, isLoading: isDiffLoading } = useDocumentDiff({
+    commit: isUpdate ? commit : undefined,
+    documentUuid: isUpdate ? documentUuid : undefined,
+  })
+
+  if (!isUpdate) return true // Can always revert Created, Deleted and Renamed
+  return !isDiffLoading && diff?.newValue !== diff?.oldValue // If there is no diff, the update comes from a reference, which cannot be reverted from here
+}
+
+function useDocumentActions({
+  commit,
+  change,
+}: {
+  commit: Commit
+  change: ChangedDocument
+}) {
+  const router = useRouter()
+  const { open, setError, setChanges } = useHistoryActionModalContext()
+  const { commit: currentCommit } = useCurrentCommit()
+
+  const { execute: executeGetChangesToRevert } = useLatitudeAction(
+    getChangesToRevertDocumentAction,
+    {
+      onSuccess: ({ data: changes }) => {
+        setChanges(changes)
+      },
+      onError: ({ err: error }) => setError(error.message),
+    },
   )
+
+  const { execute: executeRevertChanges } = useLatitudeAction(
+    revertDocumentChangesAction,
+    {
+      onSuccess: ({ data: { commitUuid, documentUuid } }) => {
+        const commitBaseRoute = ROUTES.projects
+          .detail({ id: commit.projectId })
+          .commits.detail({ uuid: commitUuid }).documents
+        const route = documentUuid
+          ? commitBaseRoute.detail({ uuid: documentUuid }).root
+          : commitBaseRoute.root
+        router.push(route)
+      },
+      onError: ({ err: error }) => setError(error.message),
+    },
+  )
+
+  const getChangesToRevert = useCallback(() => {
+    open({
+      title: `Revert changes from ${change.path}`,
+      onConfirm: () =>
+        executeRevertChanges({
+          projectId: commit.projectId,
+          targetDraftId: currentCommit.mergedAt ? undefined : currentCommit.id,
+          documentUuid: change.documentUuid,
+          documentCommitUuid: commit.uuid,
+        }),
+    })
+
+    executeGetChangesToRevert({
+      projectId: commit.projectId,
+      targetDraftId: currentCommit.mergedAt ? undefined : currentCommit.id,
+      documentUuid: change.documentUuid,
+      documentCommitUuid: commit.uuid,
+    })
+  }, [commit, change])
+
+  return {
+    getChangesToRevert,
+  }
 }
 
 function Change({
+  commit,
   change,
   isSelected,
   onSelect,
   isDimmed,
 }: {
+  commit: Commit
   change: ChangedDocument
   isSelected: boolean
   onSelect: () => void
   isDimmed?: boolean
+  isCurrentDraft?: boolean
 }) {
-  const icon = MODIFICATION_ICONS[change.changeType]
-  const color = MODIFICATION_COLORS[change.changeType]
-  const selectedBackground = MODIFICATION_BACKGROUNDS[change.changeType]
-  const dimmedClass = isDimmed ? 'opacity-60' : undefined
+  const router = useRouter()
+  const { commit: currentCommit } = useCurrentCommit()
+  const { getChangesToRevert } = useDocumentActions({ commit, change })
+
+  const goToDocument = () => {
+    router.push(
+      ROUTES.projects
+        .detail({ id: commit.projectId })
+        .commits.detail({ uuid: commit.uuid })
+        .documents.detail({ uuid: change.documentUuid }).root,
+    )
+  }
+
+  const filterDocument = () => {
+    router.push(
+      ROUTES.projects
+        .detail({ id: commit.projectId })
+        .commits.detail({ uuid: currentCommit.uuid })
+        .history.detail({ uuid: change.documentUuid }).root,
+    )
+  }
 
   const { data: prevDocument } = useDocumentVersion(
     change.changeType === ModifiedDocumentType.UpdatedPath
@@ -78,60 +141,38 @@ function Change({
       : null,
   )
 
+  const canRevert = useCanRevert({
+    changeType: change.changeType,
+    commit,
+    documentUuid: change.documentUuid,
+  })
+
   return (
     <li>
-      <Button
-        fullWidth
-        variant='ghost'
+      <DocumentChange
+        path={change.path}
+        changeType={change.changeType}
+        oldPath={prevDocument?.path}
+        isSelected={isSelected}
         onClick={onSelect}
-        className={cn('min-h-8 rounded-md', {
-          'hover:bg-secondary': !isSelected,
-          [selectedBackground]: isSelected,
-        })}
-      >
-        <div className='flex-grow overflow-hidden flex flex-row items-center justify-start gap-x-1'>
-          <Icon
-            name='file'
-            className={cn(
-              'flex-shrink-0 w-4 h-4',
-              colors.textColors[color],
-              dimmedClass,
-            )}
-          />
-          <div className='flex flex-row flex-grow truncate items-center justify-start gap-1'>
-            {prevDocument && (
-              <>
-                <TruncatedTooltip
-                  content={prevDocument.path}
-                  className={dimmedClass}
-                >
-                  <Text.H5M color={color} ellipsis noWrap>
-                    {prevDocument.path}
-                  </Text.H5M>
-                </TruncatedTooltip>
-                <Icon
-                  name='arrowRight'
-                  className={cn('min-w-4 h-4', dimmedClass)}
-                  color={color}
-                />
-              </>
-            )}
-            <TruncatedTooltip content={change.path} className={dimmedClass}>
-              <Text.H5M color={color} ellipsis noWrap>
-                {change.path}
-              </Text.H5M>
-            </TruncatedTooltip>
-          </div>
-          <Icon
-            name={icon}
-            className={cn(
-              'flex-shrink-0 w-4 h-4',
-              colors.textColors[color],
-              dimmedClass,
-            )}
-          />
-        </div>
-      </Button>
+        options={[
+          {
+            label: 'Open in editor',
+            onClick: goToDocument,
+            disabled: change.changeType === ModifiedDocumentType.Deleted,
+          },
+          {
+            label: 'Filter by prompt',
+            onClick: filterDocument,
+          },
+          {
+            label: 'Revert changes',
+            onClick: getChangesToRevert,
+            disabled: !canRevert,
+          },
+        ]}
+        isDimmed={isDimmed}
+      />
     </li>
   )
 }
@@ -148,6 +189,7 @@ export function CommitChangesList({
   currentDocumentUuid?: string
 }) {
   const { data: changes, isLoading } = useCommitsChanges(commit)
+  const { commit: currentCommit } = useCurrentCommit()
 
   if (!commit) {
     return (
@@ -162,10 +204,22 @@ export function CommitChangesList({
       <ul className='flex flex-col custom-scrollbar gap-1 pt-4 px-2'>
         {isLoading ? (
           <>
-            <LoadingFile width={62} changeType={ModifiedDocumentType.Deleted} />
-            <LoadingFile width={87} changeType={ModifiedDocumentType.Updated} />
-            <LoadingFile width={23} changeType={ModifiedDocumentType.Created} />
-            <LoadingFile width={67} changeType={ModifiedDocumentType.Updated} />
+            <DocumentChangeSkeleton
+              width={62}
+              changeType={ModifiedDocumentType.Deleted}
+            />
+            <DocumentChangeSkeleton
+              width={87}
+              changeType={ModifiedDocumentType.Updated}
+            />
+            <DocumentChangeSkeleton
+              width={23}
+              changeType={ModifiedDocumentType.Created}
+            />
+            <DocumentChangeSkeleton
+              width={67}
+              changeType={ModifiedDocumentType.Updated}
+            />
           </>
         ) : (
           <>
@@ -173,12 +227,16 @@ export function CommitChangesList({
               changes.map((change) => (
                 <Change
                   key={change.documentUuid}
+                  commit={commit}
                   change={change}
                   isSelected={selectedDocumentUuid === change.documentUuid}
                   onSelect={() => selectDocumentUuid(change.documentUuid)}
                   isDimmed={
                     currentDocumentUuid !== undefined &&
                     currentDocumentUuid !== change.documentUuid
+                  }
+                  isCurrentDraft={
+                    !commit.mergedAt && commit.id === currentCommit.id
                   }
                 />
               ))
