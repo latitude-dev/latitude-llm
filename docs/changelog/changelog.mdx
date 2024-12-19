@@ -3,6 +3,57 @@ title: Changelog
 description: All notable changes to Latitude.
 ---
 
+<Update label='2024-12-18'>
+## Latitude Telemetry
+
+We've released the 1.0 version of Latitude's Typescript SDK, which ships with
+support for [OpenLLMetry](https://github.com/traceloop/openllmetry). You can
+now trace all your LLM generations with a couple lines of code and start using
+Latitude's powerful prompt manager by creating prompts from your traces.
+
+![](/assets/changelog/241218/telemetry-1.png)
+
+Here's the full list of supported providers/sdks at launch:
+
+- [Anthropic](/guides/sdk/tracing/anthropic)
+- [AWS Bedrock](/guides/sdk/tracing/aws-bedrock)
+- [Azure OpenAI](/guides/sdk/tracing/azure-openai)
+- [Cohere](/guides/sdk/tracing/cohere)
+- [Google AI Platform](/guides/sdk/tracing/google-ai-platform)
+- [OpenAI](/guides/sdk/tracing/openai)
+- [Vercel AI SDK](/guides/sdk/tracing/vercel-ai-sdk)
+- [Vertex AI](/guides/sdk/tracing/vertex-ai)
+
+And here's the documentation to get started with [Telemetry](/guides/sdk/typescript#tracing-your-llm-calls).
+
+## Version history
+
+We've added a new history section in projects. It displays the full history of prior committed versions of your project.
+
+![](/assets/changelog/241218/history-1.png)
+
+From a prompt, you can easily inspect its history by clicking on the history button at the top of the editor.
+
+![](/assets/changelog/241218/history-2.png)
+
+## File / Image prompt parameters
+
+We've introduced support for "file" content-type in PromptL, unlocking OpenAI
+input_audio audio files, Anthropic document PDF files and Google fileData
+audio, video and document files.
+
+And since Latitude uses PromptL, you can now upload files and images to prompts as prompt parameters.
+
+![](/assets/changelog/241218/file-prompt-parameters.png)
+
+Public prompts also support this feature, [btw](https://app.latitude.so/share/d/b8159c08-dddd-4f1d-9348-ede905a38089).
+
+## Other stuff
+
+- General improvements to stability and performance
+
+</Update>
+
 <Update label='2024-12-12'>
 Welcome! A bit of a lighter update as we gear for a last big suprise before
 christmas, next week. Here's this week's highlights:
@@ -82,15 +133,15 @@ integrations to run the prompts from your code. [docs](https://docs.latitude.so/
 
 ```typescript
 const { config, messages } = await latitude.prompts.render({
-	prompt,
-	parameters: {
-		// Any parameters your document expects
-	},
+  prompt,
+  parameters: {
+    // Any parameters your document expects
+  },
 })
 
 const response = await openai.chat.completions.create({
-	...config,
-	messages,
+  ...config,
+  messages,
 })
 ```
 
@@ -163,7 +214,7 @@ without needing to escape them, chain steps with custom contexts, and more.
 
 ```mdx
 <step as='researchPhase' provider='OpenAI' model='gpt-4'>
-	<user>Research key points about {{ topic }} and create an outline.</user>
+  <user>Research key points about {{ topic }} and create an outline.</user>
 </step>
 
 <step as='writing' isolated='true' temperature='0.7'>
