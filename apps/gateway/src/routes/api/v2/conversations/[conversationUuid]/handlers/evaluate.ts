@@ -41,6 +41,7 @@ export const evaluateHandler = factory.createHandlers(
 
     const evaluationsRepo = new EvaluationsRepository(workspace.id)
     let evaluations: EvaluationDto[] | undefined = []
+
     if (evaluationUuids) {
       evaluations = await evaluationsRepo
         .filterByUuids(evaluationUuids)
