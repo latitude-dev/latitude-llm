@@ -12,6 +12,7 @@ import {
 export const runRoute = createRoute({
   method: http.Methods.POST,
   path: ROUTES.v2.documents.run,
+  tags: ['Documents'],
   request: {
     params: documentParamsSchema,
     body: {

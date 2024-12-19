@@ -11,7 +11,10 @@ const DOCUMENTS = `${VERSION_DETAIL}/documents`
 export const ROUTES = {
   v2: {
     documents: {
+      get: `${DOCUMENTS}/{documentPath}`,
+      getOrCreate: `${DOCUMENTS}/get-or-create`,
       run: `${DOCUMENTS}/run`,
+      logs: `${DOCUMENTS}/logs`,
     },
   },
 }

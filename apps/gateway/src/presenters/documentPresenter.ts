@@ -1,6 +1,5 @@
 import {
   Commit,
-  configSchema,
   DocumentVersion,
   Providers,
   Workspace,
@@ -13,8 +12,8 @@ export const documentPresenterSchema = z.object({
   uuid: z.string(),
   path: z.string(),
   content: z.string(),
-  config: configSchema.optional(),
-  provider: z.nativeEnum(Providers).or(z.undefined()),
+  config: z.object({}).passthrough(),
+  provider: z.nativeEnum(Providers).optional()
 })
 
 

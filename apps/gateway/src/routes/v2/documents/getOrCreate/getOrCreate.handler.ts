@@ -32,6 +32,7 @@ async function getOrCreateDocument({
   }).then((r) => r.unwrap())
 }
 
+// @ts-expect-error: Types are not working as expected
 export const getOrCreateHandler: AppRouteHandler<GetOrCreateRoute> = async (
   c,
 ) => {
