@@ -10,7 +10,7 @@ import { withProject } from '../../procedures'
 import { computeDocumentRevertChanges } from '@latitude-data/core/services/documents/computeRevertChanges'
 import { DraftChange } from '../types'
 
-export const getChangesToRevertDocumentAction = withProject
+export const getChangesToResetDocumentAction = withProject
   .createServerAction()
   .input(
     z.object({
@@ -23,50 +23,38 @@ export const getChangesToRevertDocumentAction = withProject
     const { workspace, project } = ctx
     const { targetDraftUuid, documentCommitUuid, documentUuid } = input
 
+    const docsScope = new DocumentVersionsRepository(workspace.id)
+
+    const originalDocument = await docsScope
+      .getDocumentAtCommit({
+        projectId: project.id,
+        commitUuid: documentCommitUuid,
+        documentUuid,
+      })
+      .then((r) => r.value)
+
     const commitScope = new CommitsRepository(workspace.id)
     const headCommit = await commitScope
-      .getHeadCommit(project.id)
+      .getHeadCommit(ctx.project.id)
       .then((r) => r.unwrap()!)
 
-    const targetDraft = targetDraftUuid
+    const targetCommit = targetDraftUuid
       ? await commitScope
           .getCommitByUuid({ uuid: targetDraftUuid, projectId: project.id })
           .then((r) => r.unwrap())
       : headCommit
 
-    const changedCommit = await commitScope
-      .getCommitByUuid({ projectId: project.id, uuid: documentCommitUuid })
-      .then((r) => r.unwrap())
-    const originalCommit = await commitScope.getPreviousCommit(changedCommit)
-
-    const docsScope = new DocumentVersionsRepository(workspace.id)
-
-    const draftDocument = await docsScope
+    const targetDocument = await docsScope
       .getDocumentAtCommit({
-        commitUuid: targetDraft.uuid,
-        documentUuid: documentUuid,
+        commitUuid: targetCommit.uuid,
+        documentUuid: input.documentUuid,
       })
       .then((r) => r.value)
-    const changedDocument = await docsScope
-      .getDocumentAtCommit({
-        commitUuid: changedCommit.uuid,
-        documentUuid: documentUuid,
-      })
-      .then((r) => r.value)
-
-    const originalDocument = originalCommit
-      ? await docsScope
-          .getDocumentAtCommit({
-            commitUuid: originalCommit.uuid,
-            documentUuid: documentUuid,
-          })
-          .then((r) => r.value)
-      : undefined
 
     const change = await computeDocumentRevertChanges({
-      workspace: workspace,
-      draft: targetDraft,
-      changedDocument,
+      workspace: ctx.workspace,
+      draft: targetCommit,
+      changedDocument: targetDocument,
       originalDocument,
     }).then((r) => r.unwrap())
 
@@ -74,21 +62,12 @@ export const getChangesToRevertDocumentAction = withProject
     const isDeleted = !isCreated && change.deletedAt !== undefined
 
     const newDocumentPath =
-      change.path ??
-      draftDocument?.path ??
-      changedDocument?.path ??
-      originalDocument!.path
+      change.path ?? targetDocument?.path ?? originalDocument!.path
 
     const oldDocumentPath =
-      draftDocument?.path ??
-      originalDocument?.path ??
-      changedDocument?.path ??
-      newDocumentPath
+      targetDocument?.path ?? originalDocument?.path ?? newDocumentPath
 
-    const previousContent =
-      draftDocument?.content ??
-      changedDocument?.content ??
-      originalDocument?.content
+    const previousContent = targetDocument?.content ?? originalDocument?.content
 
     const newContent = isDeleted
       ? undefined

@@ -16,6 +16,7 @@ import { NotFoundError, Result } from '../../lib'
 import { commits, documentVersions, projects } from '../../schema'
 import { CommitsRepository } from '../commitsRepository'
 import RepositoryLegacy from '../repository'
+import { database } from '../../client'
 
 function mergeDocuments(
   ...documentsArr: DocumentVersion[][]
@@ -35,6 +36,10 @@ export type GetDocumentAtCommitProps = {
   documentUuid: string
 }
 
+type DocumentVersionsRepositoryOptions = {
+  includeDeleted?: boolean
+}
+
 const tt = {
   ...getTableColumns(documentVersions),
   mergedAt: commits.mergedAt,
@@ -51,6 +56,17 @@ export class DocumentVersionsRepository extends RepositoryLegacy<
   typeof tt,
   DocumentVersion & { mergedAt: Date | null; projectId: number }
 > {
+  private opts: DocumentVersionsRepositoryOptions
+
+  constructor(
+    workspaceId: number,
+    db = database,
+    opts: DocumentVersionsRepositoryOptions = {},
+  ) {
+    super(workspaceId, db)
+    this.opts = opts
+  }
+
   get scope() {
     return this.db
       .select(tt)
@@ -59,7 +75,7 @@ export class DocumentVersionsRepository extends RepositoryLegacy<
         commits,
         and(
           eq(commits.id, documentVersions.commitId),
-          isNull(commits.deletedAt),
+          this.opts.includeDeleted ? undefined : isNull(commits.deletedAt),
         ),
       )
       .innerJoin(projects, eq(projects.id, commits.projectId))
@@ -161,6 +177,7 @@ export class DocumentVersionsRepository extends RepositoryLegacy<
 
     if (result.error) return result
 
+    if (this.opts.includeDeleted) return result
     return Result.ok(result.value.filter((d) => d.deletedAt === null))
   }
 

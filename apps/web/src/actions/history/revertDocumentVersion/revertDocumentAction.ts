@@ -26,22 +26,24 @@ export const revertDocumentChangesAction = withProject
   .createServerAction()
   .input(
     z.object({
-      targetDraftId: z.number().optional(),
+      targetDraftUuid: z.string().optional(),
       documentCommitUuid: z.string(),
       documentUuid: z.string(),
     }),
   )
   .handler(async ({ input, ctx }) => {
     const { user, workspace, project } = ctx
-    const { targetDraftId, documentCommitUuid, documentUuid } = input
+    const { targetDraftUuid, documentCommitUuid, documentUuid } = input
 
     const commitScope = new CommitsRepository(workspace.id)
     const headCommit = await commitScope
       .getHeadCommit(project.id)
       .then((r) => r.unwrap()!)
 
-    const currentCommit = targetDraftId
-      ? await commitScope.getCommitById(targetDraftId).then((r) => r.unwrap())
+    const currentCommit = targetDraftUuid
+      ? await commitScope
+          .getCommitByUuid({ uuid: targetDraftUuid, projectId: project.id })
+          .then((r) => r.unwrap())
       : headCommit
 
     const changedCommit = await commitScope
@@ -78,7 +80,7 @@ export const revertDocumentChangesAction = withProject
       changedDocument?.path ??
       documentVersionChanges.path
 
-    const targetDraft = targetDraftId
+    const targetDraft = targetDraftUuid
       ? currentCommit
       : await createCommit({
           project: project,
