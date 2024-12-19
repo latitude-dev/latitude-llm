@@ -215,11 +215,14 @@ importers:
   apps/gateway:
     dependencies:
       '@hono/node-server':
-        specifier: ^1.12.0
+        specifier: ^1.13.2
         version: 1.13.3(hono@4.6.7)
+      '@hono/swagger-ui':
+        specifier: ^0.4.1
+        version: 0.4.1(hono@4.6.7)
       '@hono/zod-openapi':
-        specifier: ^0.17.0
-        version: 0.17.0(hono@4.6.7)(zod@3.23.8)
+        specifier: ^0.16.4
+        version: 0.16.4(hono@4.6.7)(zod@3.23.8)
       '@hono/zod-validator':
         specifier: ^0.2.2
         version: 0.2.2(hono@4.6.7)(zod@3.23.8)
@@ -254,7 +257,7 @@ importers:
         specifier: ^0.33.0
         version: 0.33.0(@opentelemetry/api@1.9.0)(@types/pg@8.11.10)(@types/react@18.3.0)(pg@8.13.1)(react@18.3.1)
       hono:
-        specifier: ^4.5.3
+        specifier: ^4.6.6
         version: 4.6.7
       lodash-es:
         specifier: ^4.17.21
@@ -269,9 +272,6 @@ importers:
         specifier: ^3.23.8
         version: 3.23.8
     devDependencies:
-      '@hono/swagger-ui':
-        specifier: ^0.4.1
-        version: 0.4.1(hono@4.6.7)
       '@latitude-data/eslint-config':
         specifier: workspace:^
         version: link:../../tools/eslint
@@ -2876,8 +2876,8 @@ packages:
     peerDependencies:
       hono: '*'
 
-  '@hono/zod-openapi@0.17.0':
-    resolution: {integrity: sha512-Ed6U/6cbCOBQYl0N3E94Q9UKAT5eg+x1RtShGU9OERH9ZM/SYMSLk2Biu8Eba2myu7MuzDsne9rVLrUpno1GnA==}
+  '@hono/zod-openapi@0.16.4':
+    resolution: {integrity: sha512-mnF6GthBaKex0D5PsY/4lYNtkaGJNE38bjeUI//EUqq7Ee4TNm2su35IUiFH4HcmJp5fWYMLyOJOpjnkClzEGw==}
     engines: {node: '>=16.0.0'}
     peerDependencies:
       hono: '>=4.3.6'
@@ -15341,7 +15341,7 @@ snapshots:
     dependencies:
       hono: 4.6.7
 
-  '@hono/zod-openapi@0.17.0(hono@4.6.7)(zod@3.23.8)':
+  '@hono/zod-openapi@0.16.4(hono@4.6.7)(zod@3.23.8)':
     dependencies:
       '@asteasolutions/zod-to-openapi': 7.2.0(zod@3.23.8)
       '@hono/zod-validator': 0.3.0(hono@4.6.7)(zod@3.23.8)
