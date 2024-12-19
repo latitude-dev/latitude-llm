@@ -192,10 +192,7 @@ function processGenerationSpan(
   return {
     internalType: 'generation',
     model: model as string,
-    modelParameters:
-      Object.keys(modelParameters).length > 0
-        ? JSON.stringify(modelParameters)
-        : null,
+    modelParameters: modelParameters || null,
     input: input.length > 0 ? input : undefined,
     output: output.length > 0 ? output : undefined,
     inputTokens: usage.promptTokens,

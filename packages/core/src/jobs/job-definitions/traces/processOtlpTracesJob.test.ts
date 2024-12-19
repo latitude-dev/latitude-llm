@@ -9,7 +9,7 @@ import { createProject } from '../../../tests/factories'
 
 // Mock the bulkCreateTracesAndSpans function
 vi.mock('../../../services/traces/bulkCreateTracesAndSpans', () => ({
-  bulkCreateTracesAndSpans: vi.fn(),
+  bulkCreateTracesAndSpans: vi.fn().mockResolvedValue({ unwrap: () => {} }),
 }))
 
 describe('processOtlpTracesJob', () => {

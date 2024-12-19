@@ -65,7 +65,7 @@ export function MessageItem({
           className='flex-shrink-0 bg-muted w-1 rounded-lg cursor-pointer hover:bg-primary transition-colors'
           onClick={() => setCollapseMessage(!collapsedMessage)}
         />
-        <div className='flex flex-1 flex-col gap-1'>
+        <div className='flex flex-grow flex-col gap-1 overflow-x-auto'>
           {children({ collapsedMessage })}
         </div>
       </div>
@@ -171,7 +171,7 @@ const Content = ({
     try {
       const parsedValue = JSON.parse(value)
       return (
-        <div key={`${index}`} className='py-2 w-full'>
+        <div key={`${index}`} className='py-2 max-w-full'>
           <div className='overflow-hidden rounded-xl w-full'>
             <CodeBlock language='json'>
               {JSON.stringify(parsedValue, null, 2)}
@@ -304,7 +304,6 @@ const ContentText = ({
     <TextComponent
       color={color}
       whiteSpace='preWrap'
-      wordBreak='breakAll'
       key={`${index}-group-${groupIndex}`}
     >
       {group.length > 0

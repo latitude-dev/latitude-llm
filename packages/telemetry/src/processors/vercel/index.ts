@@ -111,6 +111,7 @@ function computeOpenLLMAttributes(span: ReadableSpan) {
     })
   } catch (e) {
     console.error('Error parsing messages', e)
+
     return undefined
   }
 

@@ -24,9 +24,8 @@ export async function bulkCreateTracesAndSpans(
   db = database,
 ) {
   // Find existing traces and spans outside the transaction
-  const [existingTraceIds, existingSpanIds] = await Promise.all([
+  const [existingTraceIds] = await Promise.all([
     findExistingTraces(tracesToCreate, db),
-    findExistingSpans(spansToCreate, db),
   ])
 
   // Split items into create and update operations
@@ -44,44 +43,23 @@ export async function bulkCreateTracesAndSpans(
       updateTraces(tracesToUpdate, tx),
     ])
 
-    // Get all valid trace IDs
-    const validTraceIds = new Set([
-      ...existingTraceIds,
-      ...createdTraces.map((t) => t.traceId),
-    ])
-
-    // Filter and split spans
-    const validSpans = spansToCreate.filter((span) =>
-      validTraceIds.has(span.traceId),
-    )
-    const spansToInsert = validSpans.filter(
-      (s) => !existingSpanIds.has(s.spanId),
-    )
-    const spansToUpdate = validSpans.filter((s) =>
-      existingSpanIds.has(s.spanId),
-    )
+    const spans = await createSpans(spansToCreate, tx)
 
     // Handle spans
-    const [createdSpans, updatedSpans] = await Promise.all([
-      createSpans(spansToInsert, tx),
-      updateSpans(spansToUpdate, tx),
-    ])
-
     const allTraces = [...createdTraces, ...updatedTraces]
-    const allSpans = [...createdSpans, ...updatedSpans]
 
     publisher.publishLater({
       type: 'bulkCreateTracesAndSpans',
       data: {
         workspaceId: workspace.id,
         traces: allTraces,
-        spans: allSpans,
+        spans,
       },
     })
 
     return Result.ok({
       traces: allTraces,
-      spans: allSpans,
+      spans,
     })
   }, db)
 }
@@ -110,7 +88,7 @@ type SpanInput = {
   }> | null
   internalType?: SpanMetadataTypes | null
   model?: string | null
-  modelParameters?: unknown | null
+  modelParameters?: Record<string, unknown> | null
   input?: Message[] | null
   output?: Message[] | null
   inputTokens?: number | null
@@ -146,19 +124,6 @@ async function findExistingTraces(tracez: TraceInput[], db: Database) {
   })
 
   return new Set(existingTraces.map((t) => t.traceId))
-}
-
-async function findExistingSpans(spanz: SpanInput[], db: Database) {
-  if (spanz.length === 0) return new Set<string>()
-
-  const existingSpans = await db.query.spans.findMany({
-    where: inArray(
-      spans.spanId,
-      spanz.map((s) => s.spanId),
-    ),
-  })
-
-  return new Set(existingSpans.map((s) => s.spanId))
 }
 
 async function updateTraces(tracesToUpdate: TraceInput[], tx: Database) {
@@ -215,60 +180,140 @@ async function createTraces(
     .returning()
 }
 
-async function updateSpans(spansToUpdate: SpanInput[], tx: Database) {
-  const updatedSpans: (typeof spans.$inferSelect)[] = []
-
-  for (const span of spansToUpdate) {
-    const updated = await tx
-      .update(spans)
-      .set({
-        ...span,
-        // Exclude traceId and spanId as they're part of the primary key
-        traceId: undefined,
-        spanId: undefined,
-      })
-      .where(eq(spans.spanId, span.spanId))
-      .returning()
-    updatedSpans.push(updated[0]!)
-  }
-
-  return updatedSpans
-}
-
 async function createSpans(spansToInsert: SpanInput[], tx: Database) {
   if (spansToInsert.length === 0) return []
-
-  const updateSet: Record<string, unknown> = {
-    parentSpanId: sql`EXCLUDED.parent_span_id`,
-    name: sql`EXCLUDED.name`,
-    kind: sql`EXCLUDED.kind`,
-    startTime: sql`EXCLUDED.start_time`,
-    endTime: sql`EXCLUDED.end_time`,
-    attributes: sql`EXCLUDED.attributes`,
-    status: sql`EXCLUDED.status`,
-    statusMessage: sql`EXCLUDED.status_message`,
-    events: sql`EXCLUDED.events`,
-    links: sql`EXCLUDED.links`,
-    internalType: sql`EXCLUDED.internal_type`,
-    model: sql`EXCLUDED.model`,
-    modelParameters: sql`EXCLUDED.model_parameters`,
-    input: sql`EXCLUDED.input`,
-    output: sql`EXCLUDED.output`,
-    tools: sql`EXCLUDED.tools`,
-    metadata: sql`EXCLUDED.metadata`,
-    documentUuid: sql`EXCLUDED.document_uuid`,
-    parameters: sql`EXCLUDED.parameters`,
-    distinctId: sql`EXCLUDED.distinct_id`,
-    commitUuid: sql`EXCLUDED.commit_uuid`,
-    updatedAt: new Date(),
-  }
 
   return tx
     .insert(spans)
     .values(spansToInsert)
     .onConflictDoUpdate({
-      target: [spans.spanId],
-      set: updateSet,
+      target: [spans.spanId, spans.traceId],
+      set: {
+        // Merge JSON object fields
+        attributes: sql`
+          CASE 
+            WHEN ${spans.attributes} IS NULL THEN EXCLUDED.attributes
+            WHEN EXCLUDED.attributes IS NULL THEN ${spans.attributes}
+            ELSE ${spans.attributes} || EXCLUDED.attributes
+          END
+        `,
+        metadata: sql`
+          CASE 
+            WHEN ${spans.metadata} IS NULL THEN EXCLUDED.metadata
+            WHEN EXCLUDED.metadata IS NULL THEN ${spans.metadata}
+            ELSE ${spans.metadata} || EXCLUDED.metadata
+          END
+        `,
+        modelParameters: sql`
+          CASE 
+            WHEN ${spans.modelParameters} IS NULL THEN EXCLUDED.model_parameters
+            WHEN EXCLUDED.model_parameters IS NULL THEN ${spans.modelParameters}
+            ELSE ${spans.modelParameters} || EXCLUDED.model_parameters
+          END
+        `,
+        parameters: sql`
+          CASE 
+            WHEN ${spans.parameters} IS NULL THEN EXCLUDED.parameters
+            WHEN EXCLUDED.parameters IS NULL THEN ${spans.parameters}
+            ELSE ${spans.parameters} || EXCLUDED.parameters
+          END
+        `,
+        // Merge array fields
+        tools: sql`
+          CASE
+            WHEN ${spans.tools} IS NULL THEN EXCLUDED.tools
+            WHEN EXCLUDED.tools IS NULL THEN ${spans.tools}
+            ELSE (
+              SELECT jsonb_agg(DISTINCT element)
+              FROM jsonb_array_elements(
+                (COALESCE(${spans.tools}, '[]'::jsonb) || COALESCE(EXCLUDED.tools, '[]'::jsonb))
+              ) AS element
+            )
+          END
+        `,
+        events: sql`
+          CASE
+            WHEN ${spans.events} IS NULL THEN EXCLUDED.events
+            WHEN EXCLUDED.events IS NULL THEN ${spans.events}
+            ELSE (
+              SELECT jsonb_agg(DISTINCT element)
+              FROM jsonb_array_elements(
+                (COALESCE(${spans.events}, '[]'::jsonb) || COALESCE(EXCLUDED.events, '[]'::jsonb))
+              ) AS element
+            )
+          END
+        `,
+        links: sql`
+          CASE
+            WHEN ${spans.links} IS NULL THEN EXCLUDED.links
+            WHEN EXCLUDED.links IS NULL THEN ${spans.links}
+            ELSE (
+              SELECT jsonb_agg(DISTINCT element)
+              FROM jsonb_array_elements(
+                (COALESCE(${spans.links}, '[]'::jsonb) || COALESCE(EXCLUDED.links, '[]'::jsonb))
+              ) AS element
+            )
+          END
+        `,
+        // Other fields are not merged unless they were null
+        name: sql`COALESCE(${spans.name}, EXCLUDED.name)`,
+        kind: sql`COALESCE(${spans.kind}, EXCLUDED.kind)`,
+        startTime: sql`COALESCE(${spans.startTime}, EXCLUDED.start_time)`,
+        endTime: sql`COALESCE(${spans.endTime}, EXCLUDED.end_time)`,
+        status: sql`COALESCE(${spans.status}, EXCLUDED.status)`,
+        statusMessage: sql`COALESCE(${spans.statusMessage}, EXCLUDED.status_message)`,
+        internalType: sql`COALESCE(${spans.internalType}, EXCLUDED.internal_type)`,
+        model: sql`COALESCE(${spans.model}, EXCLUDED.model)`,
+        input: sql`COALESCE(${spans.input}, EXCLUDED.input)`,
+        output: sql`COALESCE(${spans.output}, EXCLUDED.output)`,
+        documentUuid: sql`COALESCE(${spans.documentUuid}, EXCLUDED.document_uuid)`,
+        distinctId: sql`COALESCE(${spans.distinctId}, EXCLUDED.distinct_id)`,
+        commitUuid: sql`COALESCE(${spans.commitUuid}, EXCLUDED.commit_uuid)`,
+        // Merge numeric fields if they are different than 0 (the default value)
+        inputTokens: sql`
+          CASE
+            WHEN ${spans.inputTokens} = 0 AND EXCLUDED.input_tokens IS NOT NULL AND EXCLUDED.input_tokens != 0
+            THEN EXCLUDED.input_tokens
+            ELSE ${spans.inputTokens}
+          END
+        `,
+        outputTokens: sql`
+          CASE
+            WHEN ${spans.outputTokens} = 0 AND EXCLUDED.output_tokens IS NOT NULL AND EXCLUDED.output_tokens != 0
+            THEN EXCLUDED.output_tokens
+            ELSE ${spans.outputTokens}
+          END
+        `,
+        totalTokens: sql`
+          CASE
+            WHEN ${spans.totalTokens} = 0 AND EXCLUDED.total_tokens IS NOT NULL AND EXCLUDED.total_tokens != 0
+            THEN EXCLUDED.total_tokens
+            ELSE ${spans.totalTokens}
+          END
+        `,
+        inputCostInMillicents: sql`
+          CASE
+            WHEN ${spans.inputCostInMillicents} = 0 AND EXCLUDED.input_cost_in_millicents IS NOT NULL AND EXCLUDED.input_cost_in_millicents != 0
+            THEN EXCLUDED.input_cost_in_millicents
+            ELSE ${spans.inputCostInMillicents}
+          END
+        `,
+        outputCostInMillicents: sql`
+          CASE
+            WHEN ${spans.outputCostInMillicents} = 0 AND EXCLUDED.output_cost_in_millicents IS NOT NULL AND EXCLUDED.output_cost_in_millicents != 0
+            THEN EXCLUDED.output_cost_in_millicents
+            ELSE ${spans.outputCostInMillicents}
+          END
+        `,
+        totalCostInMillicents: sql`
+          CASE
+            WHEN ${spans.totalCostInMillicents} = 0 AND EXCLUDED.total_cost_in_millicents IS NOT NULL AND EXCLUDED.total_cost_in_millicents != 0
+            THEN EXCLUDED.total_cost_in_millicents
+            ELSE ${spans.totalCostInMillicents}
+          END
+        `,
+        updatedAt: new Date(),
+      },
     })
     .returning()
 }

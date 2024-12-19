@@ -71,5 +71,5 @@ export const processOtlpTracesJob = async (
     traces: tracesToCreate,
     // @ts-expect-error - Fix when we fix types in compiler
     spans: processedSpans,
-  })
+  }).then((r) => r.unwrap())
 }
