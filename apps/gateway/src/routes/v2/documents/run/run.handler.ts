@@ -10,8 +10,8 @@ import {
   chainEventPresenter,
   getData,
   publishDocumentRunRequestedEvent,
-} from '$/routes/api/v1/projects/[projectId]/versions/[versionUuid]/documents/handlers/_shared'
-import { runPresenter } from './presenter'
+} from '$/common/documents/getData'
+import { runPresenter } from '$/presenters/runPresenter'
 
 // @ts-expect-error: streamSSE has type issues with zod-openapi
 // https://github.com/honojs/middleware/issues/735

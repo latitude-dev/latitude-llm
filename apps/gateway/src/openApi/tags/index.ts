@@ -7,4 +7,13 @@ const documentTag = {
   },
 }
 
-export const tags = [documentTag]
+const conversationTag = {
+  name: 'Conversations',
+  description: 'Conversations operations',
+  externalDocs: {
+    description: 'Handle conversations in Latitude',
+    url: 'https://docs.latitude.so',
+  },
+}
+
+export const tags = [documentTag, conversationTag]

@@ -7,7 +7,9 @@ import createApp from '$/openApi/createApp'
 import configureOpenAPI from '$/openApi/configureOpenAPI'
 
 import documents from '$/routes/v2/documents'
+import conversations from '$/routes/v2/conversations'
 
+const routes = [documents, conversations] as const
 const app = createApp()
 
 // Middlewares
@@ -33,8 +35,6 @@ app.use(authMiddleware())
 /* ) */
 /* app.route('/api/v2/conversations', conversationsRouterV2) */
 /* app.route('/api/v2/otlp', otlpTracesRouter) */
-
-const routes = [documents] as const
 
 routes.forEach((route) => {
   app.route('/', route)

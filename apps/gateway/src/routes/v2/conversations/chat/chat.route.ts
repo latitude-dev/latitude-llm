@@ -2,27 +2,27 @@ import http from '$/common/http'
 import { GENERIC_ERROR_RESPONSES } from '$/openApi/responses/errorResponses'
 import { internalInfoSchema } from '$/openApi/schemas'
 import { ROUTES } from '$/routes'
-import { documentParamsSchema } from '$/routes/v2/documents/paramsSchema'
+import { conversationsParamsSchema } from '$/routes/v2/conversations/paramsSchema'
 import { createRoute, z } from '@hono/zod-openapi'
 import {
   chainEventDtoSchema,
+  messageSchema,
   runSyncAPIResponseSchema,
 } from '@latitude-data/core/browser'
 
-export const runRoute = createRoute({
+export const chatRoute = createRoute({
+  operationId: 'createChat',
+  tags: ['Conversations'],
   method: http.Methods.POST,
-  path: ROUTES.v2.documents.run,
-  tags: ['Documents'],
+  path: ROUTES.v2.conversations.chat,
   request: {
-    params: documentParamsSchema,
+    params: conversationsParamsSchema,
     body: {
       content: {
         [http.MediaTypes.JSON]: {
           schema: internalInfoSchema.extend({
-            path: z.string(),
+            messages: z.array(messageSchema),
             stream: z.boolean().default(false),
-            customIdentifier: z.string().optional(),
-            parameters: z.record(z.any()).optional().default({}),
           }),
         },
       },
@@ -31,8 +31,7 @@ export const runRoute = createRoute({
   responses: {
     ...GENERIC_ERROR_RESPONSES,
     [http.Status.OK]: {
-      description:
-        'If stream is true, returns a SSE stream. Otherwise, returns the final event as JSON.',
+      description: 'Chat was created successfully',
       content: {
         [http.MediaTypes.JSON]: { schema: runSyncAPIResponseSchema },
         [http.MediaTypes.SSE]: { schema: chainEventDtoSchema },
@@ -41,4 +40,4 @@ export const runRoute = createRoute({
   },
 })
 
-export type RunRoute = typeof runRoute
+export type ChatRoute = typeof chatRoute
