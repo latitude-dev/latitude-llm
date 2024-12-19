@@ -14,6 +14,9 @@ const V2_DOCUMENTS = `${V2_PATH}/${DOCUMENTS}`
 
 const V1_CONVERSATIONS = `${V1_PATH}/${CONVERSATIONS}`
 const V2_CONVERSATIONS = `${V2_PATH}/${CONVERSATIONS}`
+const V2_CONVERSATION_DETAIL = `${V2_CONVERSATIONS}/{conversationUuid}`
+const V2_EVALUATIONS = `${V2_CONVERSATIONS}/{conversationUuid}/evaluations`
+const V2_EVALUATION_DETAIL = `${V2_EVALUATIONS}/{evaluationUuid}`
 
 export const ROUTES = {
   v1: {
@@ -33,9 +36,9 @@ export const ROUTES = {
       logs: `${V2_DOCUMENTS}/logs`,
     },
     conversations: {
-      chat: `${V2_CONVERSATIONS}/{conversationUuid}/chat`,
-      evaluate: `${V2_CONVERSATIONS}/{conversationUuid}/evaluate`,
-      evaluations: `${V2_CONVERSATIONS}/{conversationUuid}/evaluations`,
+      chat: `${V2_CONVERSATION_DETAIL}/chat`,
+      evaluate: `${V2_CONVERSATION_DETAIL}/evaluate`,
+      createEvaluationResult: `${V2_EVALUATION_DETAIL}/evaluation-results`,
     },
   },
 }
