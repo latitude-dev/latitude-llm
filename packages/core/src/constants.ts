@@ -5,22 +5,22 @@ import {
   type ToolCall,
   type UserMessage,
 } from '@latitude-data/compiler'
-import { LanguageModelUsage } from 'ai'
-import { z } from 'zod'
 import {
   EvaluationResultableType,
-  ProviderData,
   LogSources,
+  ProviderData,
 } from '@latitude-data/constants'
+import { LanguageModelUsage } from 'ai'
+import { z } from 'zod'
 
 import { DocumentVersion, ProviderLog, Span, Trace } from './browser'
 
 export {
-  type ChainEvent,
   ChainEventTypes,
-  StreamEventTypes,
   EvaluationResultableType,
   LogSources,
+  StreamEventTypes,
+  type ChainEvent,
 } from '@latitude-data/constants'
 
 export const LATITUDE_EVENT = 'latitudeEventsChannel'
@@ -223,71 +223,84 @@ export const MAX_UPLOAD_SIZE_IN_MB = MAX_SIZE * 1024 * 1024
 
 export const DOCUMENT_PATH_REGEXP = /^([\w-]+\/)*([\w-.])+$/
 
-const userContentSchema = z.array(
-  z
-    .object({
-      type: z.literal('text'),
-      text: z.string(),
-    })
-    .or(
-      z.object({
-        type: z.literal('image'),
-        image: z
-          .string()
-          .or(z.instanceof(Uint8Array))
-          .or(z.instanceof(Buffer))
-          .or(z.instanceof(ArrayBuffer))
-          .or(z.instanceof(URL)),
-      }),
-    ),
-)
+const textContentSchema = z.object({
+  type: z.literal('text'),
+  text: z.string(),
+})
+
+const imageContentSchema = z.object({
+  type: z.literal('image'),
+  image: z
+    .string()
+    .or(z.instanceof(Uint8Array))
+    .or(z.instanceof(ArrayBuffer))
+    .or(z.instanceof(URL)),
+  mimeType: z.string().optional(),
+})
+
+const fileContentSchema = z.object({
+  type: z.literal('file'),
+  file: z
+    .string()
+    .or(z.instanceof(Uint8Array))
+    .or(z.instanceof(ArrayBuffer))
+    .or(z.instanceof(URL)),
+  mimeType: z.string(),
+})
+
+const toolCallContentSchema = z.object({
+  type: z.literal('tool-call'),
+  toolCallId: z.string(),
+  toolName: z.string(),
+  args: z.record(z.any()),
+})
+
+const toolResultContentSchema = z.object({
+  type: z.literal('tool-result'),
+  toolCallId: z.string(),
+  toolName: z.string(),
+  result: z.string(),
+  isError: z.boolean().optional(),
+})
 
 export const messageSchema = z
   .object({
     role: z.literal('system'),
-    content: z.string(),
+    content: z.string().or(z.array(textContentSchema)),
   })
   .or(
     z.object({
       role: z.literal('user'),
       name: z.string().optional(),
-      content: userContentSchema,
+      content: z
+        .string()
+        .or(z.array(textContentSchema))
+        .or(z.array(imageContentSchema))
+        .or(z.array(fileContentSchema)),
     }),
   )
   .or(
     z.object({
       role: z.literal('assistant'),
-      content: z.string().or(
-        z.array(
+      content: z
+        .string()
+        .or(z.array(textContentSchema))
+        .or(z.array(toolCallContentSchema)),
+      toolCalls: z
+        .array(
           z.object({
-            type: z.literal('tool-call'),
-            toolCallId: z.string(),
-            toolName: z.string(),
-            args: z.record(z.any()),
+            id: z.string(),
+            name: z.string(),
+            arguments: z.record(z.any()),
           }),
-        ),
-      ),
-      toolCalls: z.array(
-        z.object({
-          id: z.string(),
-          name: z.string(),
-          arguments: z.record(z.any()),
-        }),
-      ),
+        )
+        .optional(),
     }),
   )
   .or(
     z.object({
       role: z.literal('tool'),
-      content: z.array(
-        z.object({
-          type: z.literal('tool-result'),
-          toolCallId: z.string(),
-          toolName: z.string(),
-          result: z.string(),
-          isError: z.boolean().optional(),
-        }),
-      ),
+      content: z.array(toolResultContentSchema),
     }),
   )
 
@@ -414,6 +427,7 @@ export enum ParameterType {
 }
 
 export const SUPPORTED_IMAGE_TYPES = ['.jpg', '.jpeg', '.png', '.gif', '.webp']
+
 export const LOG_FILTERS_ENCODED_PARAMS = ['customIdentifier']
 
 export type DiffValue = {
