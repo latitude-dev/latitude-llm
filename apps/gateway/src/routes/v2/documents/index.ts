@@ -5,13 +5,19 @@ import {
   getOrCreateHandler,
   getOrCreateRoute,
 } from '$/routes/v2/documents/getOrCreate'
-import { getHandler, getRoute } from '$/routes/v2/documents/get'
-import { createLogHandler, createLogRoute } from '$/routes/v2/documents/logs'
+import { getHandler, getRouteV1, getRouteV2 } from '$/routes/v2/documents/get'
+import {
+  createLogHandler,
+  createLogRouteV1,
+  createLogRouteV2,
+} from '$/routes/v2/documents/logs'
 
 const router = createRouter()
   .openapi(runRoute, runHandler)
   .openapi(getOrCreateRoute, getOrCreateHandler)
-  .openapi(getRoute, getHandler)
-  .openapi(createLogRoute, createLogHandler)
+  .openapi(getRouteV1, getHandler)
+  .openapi(getRouteV2, getHandler)
+  .openapi(createLogRouteV1, createLogHandler)
+  .openapi(createLogRouteV2, createLogHandler)
 
 export default router

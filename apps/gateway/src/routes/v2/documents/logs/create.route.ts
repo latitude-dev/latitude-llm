@@ -20,34 +20,44 @@ const documentLogSchema = z.object({
   updatedAt: z.date(),
 })
 
-export const createLogRoute = createRoute({
-  operationId: 'createDocumentLog',
-  method: http.Methods.POST,
-  path: ROUTES.v2.documents.logs,
-  tags: ['Documents'],
-  request: {
-    params: documentParamsSchema,
-    body: {
-      content: {
-        [http.MediaTypes.JSON]: {
-          schema: z.object({
-            path: z.string(),
-            messages: z.array(messageSchema),
-            response: z.string().optional(),
-          }),
+function createLogRouteFactory({ path }: { path: string }) {
+  return createRoute({
+    path,
+    operationId: 'createDocumentLog',
+    method: http.Methods.POST,
+    tags: ['Documents'],
+    request: {
+      params: documentParamsSchema,
+      body: {
+        content: {
+          [http.MediaTypes.JSON]: {
+            schema: z.object({
+              path: z.string(),
+              messages: z.array(messageSchema),
+              response: z.string().optional(),
+            }),
+          },
         },
       },
     },
-  },
-  responses: {
-    ...GENERIC_ERROR_RESPONSES,
-    [http.Status.OK]: {
-      description: 'The document log was created successfully',
-      content: {
-        [http.MediaTypes.JSON]: { schema: documentLogSchema },
+    responses: {
+      ...GENERIC_ERROR_RESPONSES,
+      [http.Status.OK]: {
+        description: 'The document log was created successfully',
+        content: {
+          [http.MediaTypes.JSON]: { schema: documentLogSchema },
+        },
       },
     },
-  },
+  })
+}
+
+export const createLogRouteV1 = createLogRouteFactory({
+  path: ROUTES.v1.documents.logs,
 })
 
-export type CreateLogRoute = typeof createLogRoute
+export const createLogRouteV2 = createLogRouteFactory({
+  path: ROUTES.v2.documents.logs,
+})
+
+export type CreateLogRoute = typeof createLogRouteV2

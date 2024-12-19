@@ -5,27 +5,32 @@ import { ROUTES } from '$/routes'
 import { documentParamsSchema } from '$/routes/v2/documents/paramsSchema'
 import { createRoute, z } from '@hono/zod-openapi'
 
-export const getRoute = createRoute({
-  operationId: 'getDocument',
-  method: http.Methods.GET,
-  path: ROUTES.v2.documents.get,
-  tags: ['Documents'],
-  request: {
-    params: documentParamsSchema.extend({
-      documentPath: z.string().openapi({
-        description: 'Prompt path',
+function getRouteFactory({ path }: { path: string }) {
+  return createRoute({
+    operationId: 'getDocument',
+    method: http.Methods.GET,
+    path,
+    tags: ['Documents'],
+    request: {
+      params: documentParamsSchema.extend({
+        documentPath: z.string().openapi({
+          description: 'Prompt path',
+        }),
       }),
-    }),
-  },
-  responses: {
-    ...GENERIC_ERROR_RESPONSES,
-    [http.Status.OK]: {
-      description: 'The document was created or retrieved successfully',
-      content: {
-        [http.MediaTypes.JSON]: { schema: documentPresenterSchema },
+    },
+    responses: {
+      ...GENERIC_ERROR_RESPONSES,
+      [http.Status.OK]: {
+        description: 'The document was created or retrieved successfully',
+        content: {
+          [http.MediaTypes.JSON]: { schema: documentPresenterSchema },
+        },
       },
     },
-  },
-})
+  })
+}
 
-export type GetRoute = typeof getRoute
+export const getRouteV1 = getRouteFactory({ path: ROUTES.v1.documents.get })
+export const getRouteV2 = getRouteFactory({ path: ROUTES.v2.documents.get })
+
+export type GetRoute = typeof getRouteV2

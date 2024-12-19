@@ -17,6 +17,8 @@ export const createLogHandler: AppRouteHandler<CreateLogRoute> = async (c) => {
     documentPath: path!,
   }).then((r) => r.unwrap())
 
+  const last = messages[messages.length - 1]
+  const content = last ? last.content : undefined
   const documentLog = await createDocumentLog({
     data: {
       uuid: generateUUIDIdentifier(),
@@ -25,11 +27,10 @@ export const createLogHandler: AppRouteHandler<CreateLogRoute> = async (c) => {
       source: LogSources.API,
       parameters: {},
       providerLog: {
+        // @ts-expect-error: broken types
         messages,
-        responseText:
-          response ??
-          (messages[messages.length - 1].content?.text ||
-            messages[messages.length - 1].content),
+        // @ts-expect-error: content can be an array of elements or objec or a string
+        responseText: response ?? (content?.text || content),
       },
     },
     commit,

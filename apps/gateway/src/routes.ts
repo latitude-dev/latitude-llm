@@ -1,20 +1,28 @@
 const BASE_PATH = '/api'
+const V1_PATH = `${BASE_PATH}/v1`
 const V2_PATH = `${BASE_PATH}/v2`
 
-const PROJECTS = `${V2_PATH}/projects`
+const PROJECTS = 'projects'
 const PROJECT_DETAIL = `${PROJECTS}/{projectId}`
 const VERSIONS = `${PROJECT_DETAIL}/versions`
 const VERSION_DETAIL = `${VERSIONS}/{versionUuid}`
-
 const DOCUMENTS = `${VERSION_DETAIL}/documents`
 
+const V1_DOCUMENTS = `${V1_PATH}/${DOCUMENTS}`
+const V2_DOCUMENTS = `${V2_PATH}/${DOCUMENTS}`
 export const ROUTES = {
+  v1: {
+    documents: {
+      get: `${V1_DOCUMENTS}/:documentPath{.+}`,
+      logs: `${V1_DOCUMENTS}/logs`,
+    },
+  },
   v2: {
     documents: {
-      get: `${DOCUMENTS}/:documentPath{.+}`,
-      getOrCreate: `${DOCUMENTS}/get-or-create`,
-      run: `${DOCUMENTS}/run`,
-      logs: `${DOCUMENTS}/logs`,
+      get: `${V2_DOCUMENTS}/:documentPath{.+}`,
+      getOrCreate: `${V2_DOCUMENTS}/get-or-create`,
+      run: `${V2_DOCUMENTS}/run`,
+      logs: `${V2_DOCUMENTS}/logs`,
     },
   },
 }

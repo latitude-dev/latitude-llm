@@ -6,10 +6,7 @@ import rateLimitMiddleware from '$/middlewares/rateLimit'
 import createApp from '$/openApi/createApp'
 import configureOpenAPI from '$/openApi/configureOpenAPI'
 
-// Routes
 import documents from '$/routes/v2/documents'
-
-const ROUTES = [documents] as const
 
 const app = createApp()
 
@@ -24,15 +21,12 @@ app.get('/health', (c) => {
 
 configureOpenAPI(app)
 
+// Middlewares
 app.use(rateLimitMiddleware())
-
 app.use(authMiddleware())
 
-/* app.route( */
-/*   '/api/v1/projects/:projectId/versions/:versionUuid/documents', */
-/*   documentsRouterV1, */
-/* ) */
 /* app.route('/api/v1/conversations', conversationsRouterV1) */
+
 /* app.route( */
 /*   '/api/v2/projects/:projectId/versions/:versionUuid/documents', */
 /*   documentsRouterV2, */
@@ -40,7 +34,9 @@ app.use(authMiddleware())
 /* app.route('/api/v2/conversations', conversationsRouterV2) */
 /* app.route('/api/v2/otlp', otlpTracesRouter) */
 
-ROUTES.forEach((route) => {
+const routes = [documents] as const
+
+routes.forEach((route) => {
   app.route('/', route)
 })
 
