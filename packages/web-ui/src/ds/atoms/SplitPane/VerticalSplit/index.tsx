@@ -40,9 +40,9 @@ export function VerticalSplit({
   const oldHeightRef = useRef<number>(0)
 
   useEffect(() => {
-    if (paneHeight > 0) return
-
     if (!initialPercentage) return
+    if (paneHeight > 0) return
+    if (initialHeightFromRef === 0) return
 
     const percentage = initialPercentage / 100
     setPaneHeight(Math.max(initialHeightFromRef * percentage, minHeight))
