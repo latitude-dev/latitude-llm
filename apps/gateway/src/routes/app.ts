@@ -47,7 +47,6 @@ app
     description: 'Latitude API Key',
   })
 
-// TODO: REMOVE
 if (process.env.NODE_ENV === 'development') {
   const { swaggerUI } = await import('@hono/swagger-ui')
   app.get('/ui', swaggerUI({ url: '/doc' }))
