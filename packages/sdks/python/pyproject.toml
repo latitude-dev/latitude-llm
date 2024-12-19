@@ -1,0 +1,48 @@
+[project]
+name = "latitude-sdk"
+version = "0.1.0-beta.1"
+description = "Latitude SDK for Python"
+authors = [{ name = "Latitude Data SL", email = "hello@latitude.so" }]
+maintainers = [{ name = "Latitude Data SL", email = "hello@latitude.so" }]
+license.text = "LGPL-3.0"
+urls.repository = "https://github.com/latitude-dev/latitude-llm/tree/main/packages/sdks/python"
+urls.homepage = "https://github.com/latitude-dev/latitude-llm/tree/main/packages/sdks/python#readme"
+urls.documentation = "https://github.com/latitude-dev/latitude-llm/tree/main/packages/sdks/python#readme"
+requires-python = ">=3.8"
+dependencies = [
+    "pydantic>=2.10.3",
+    "requests>=2.32.3",
+]
+
+[dependency-groups]
+dev = [
+    "pytest-xdist>=3.6.1",
+    "pytest>=8.3.4",
+    "ruff>=0.8.3",
+    "sh>=1.14.3",
+    "pyright>=1.1.391",
+]
+
+[tool.pyright]
+pythonVersion = "3.8"
+typeCheckingMode = "strict"
+reportMissingTypeStubs = false
+reportUnnecessaryIsInstance = false
+reportPrivateUsage = false
+
+[tool.ruff]
+target-version = "py38"
+line-length = 120
+indent-width = 4
+
+[tool.ruff.lint]
+select = ["B", "C4", "E", "F", "I", "W", "UP"]
+ignore = ["F401", "F403"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
