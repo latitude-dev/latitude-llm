@@ -6,7 +6,7 @@
  * Hypertext Transfer Protocol (HTTP) response status codes.
  * @see {@link https://en.wikipedia.org/wiki/List_of_HTTP_status_codes}
  */
-enum HttpStatusCodes {
+enum Status {
   /**
    * The server has received the request headers and the client should proceed to send the request body
    * (in the case of a request for which a body needs to be sent; for example, a POST request).
@@ -381,4 +381,32 @@ enum HttpStatusCodes {
   NETWORK_AUTHENTICATION_REQUIRED = 511,
 }
 
-export default HttpStatusCodes
+/**
+ * Hypertext Transfer Protocol (HTTP) request methods.
+ * @see {@link https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods}
+ */
+enum Methods {
+  GET = 'get',
+  HEAD = 'head',
+  POST = 'post',
+  PUT = 'put',
+  DELETE = 'delete',
+  CONNECT = 'connect',
+  OPTIONS = 'options',
+  TRACE = 'trace',
+  PATCH = 'patch',
+}
+
+/**
+ * Common HTTP Media Types (MIME Types)
+ * @see {@link https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types}
+ */
+enum MediaTypes {
+  JSON = 'application/json',
+  SSE = 'text/event-stream',
+  TEXT = 'text/plain',
+  HTML = 'text/html',
+  XML = 'application/xml',
+}
+
+export default { Status, Methods, MediaTypes }
