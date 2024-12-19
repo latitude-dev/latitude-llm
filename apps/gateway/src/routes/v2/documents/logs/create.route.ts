@@ -20,12 +20,18 @@ const documentLogSchema = z.object({
   updatedAt: z.date(),
 })
 
-function createLogRouteFactory({ path }: { path: string }) {
+function createLogRouteFactory({
+  path,
+  tags,
+}: {
+  path: string
+  tags: string[]
+}) {
   return createRoute({
     path,
     operationId: 'createDocumentLog',
     method: http.Methods.POST,
-    tags: ['Documents'],
+    tags,
     request: {
       params: documentParamsSchema,
       body: {
@@ -54,10 +60,12 @@ function createLogRouteFactory({ path }: { path: string }) {
 
 export const createLogRouteV1 = createLogRouteFactory({
   path: ROUTES.v1.documents.logs,
+  tags: ['V1_DEPRECATED'],
 })
 
 export const createLogRouteV2 = createLogRouteFactory({
   path: ROUTES.v2.documents.logs,
+  tags: ['Documents'],
 })
 
 export type CreateLogRoute = typeof createLogRouteV2

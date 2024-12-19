@@ -16,4 +16,9 @@ const conversationTag = {
   },
 }
 
-export const tags = [documentTag, conversationTag]
+const v1Deprecated = {
+  name: 'V1_DEPRECATED',
+  description: 'V1 of the API is deprecated. Please use V2',
+}
+
+export const tags = [documentTag, conversationTag, v1Deprecated]
