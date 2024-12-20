@@ -12,6 +12,7 @@ requires-python = ">=3.8"
 dependencies = [
     "pydantic>=2.10.3",
     "requests>=2.32.3",
+    "typing-extensions>=4.12.2",
 ]
 
 [dependency-groups]
@@ -21,6 +22,7 @@ dev = [
     "ruff>=0.8.3",
     "sh>=1.14.3",
     "pyright>=1.1.391",
+    "pytest-asyncio>=0.24.0",
 ]
 
 [tool.pyright]
@@ -42,6 +44,12 @@ ignore = ["F401", "F403"]
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"
+
+[tool.pytest.ini_options]
+addopts = "-p no:warnings -n auto"
+xfail_strict = true
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
 
 [build-system]
 requires = ["hatchling"]

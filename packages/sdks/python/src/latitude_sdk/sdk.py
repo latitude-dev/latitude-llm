@@ -37,14 +37,14 @@ DEFAULT_LATITUDE_OPTIONS = LatitudeOptions(internal=DEFAULT_INTERNAL_OPTIONS)
 class Prompts:
     _sdk: "Latitude"
 
-    getPrompt: core.GetPrompt
-    runPrompt: core.RunPrompt
+    _getPrompt: core.GetPrompt
+    _runPrompt: core.RunPrompt
 
     def __init__(self, sdk: "Latitude"):
         self._sdk = sdk
 
-        self.getPrompt = core.GetPrompt(sdk._client)
-        self.runPrompt = core.RunPrompt(sdk._client)
+        self._getPrompt = core.GetPrompt(sdk._client)
+        self._runPrompt = core.RunPrompt(sdk._client)
 
     def _ensure_options(self, options: core.PromptOptions) -> core.PromptOptions:
         project_id = options.project_id or self._sdk._options.project_id
@@ -55,17 +55,17 @@ class Prompts:
 
         return core.PromptOptions(project_id=project_id, version_uuid=version_uuid)
 
-    def get(self, path: str, options: core.GetPromptOptions) -> core.GetPromptResult:
+    async def get(self, path: str, options: core.GetPromptOptions) -> core.GetPromptResult:
         prompt_options = self._ensure_options(options)
         options = core.GetPromptOptions(**{**dict(options), **dict(prompt_options)})
 
-        return self.getPrompt.get(path, options)
+        return self._getPrompt.get(path, options)
 
-    def run(self, path: str, options: core.RunPromptOptions) -> core.RunPromptResult:
+    async def run(self, path: str, options: core.RunPromptOptions) -> core.RunPromptResult:
         prompt_options = self._ensure_options(options)
         options = core.RunPromptOptions(**{**dict(options), **dict(prompt_options)})
 
-        return self.runPrompt.run(path, options)
+        return self._runPrompt.run(path, options)
 
 
 class Latitude:
