@@ -19,9 +19,11 @@ import MergedCommitWarningModal from '../MergedCommitWarningModal'
 
 export default function ClientFilesTree({
   documents: serverDocuments,
+  liveDocuments: serverLiveDocuments,
   currentDocument,
 }: {
   documents: SidebarDocument[]
+  liveDocuments?: SidebarDocument[]
   currentDocument: SidebarDocument | undefined
 }) {
   const router = useNavigate()
@@ -69,6 +71,15 @@ export default function ClientFilesTree({
       },
     },
   )
+  const { data: liveDocuments } = useDocumentVersions(
+    {
+      commitUuid: commit.mergedAt ? undefined : HEAD_COMMIT,
+      projectId: commit.mergedAt ? undefined : project.id,
+    },
+    {
+      fallbackData: serverLiveDocuments,
+    },
+  )
   const onMergeCommitClick = useCallback(() => {
     setWarningOpen(true)
   }, [setWarningOpen])
@@ -88,6 +99,7 @@ export default function ClientFilesTree({
         destroyFile={destroyFile}
         destroyFolder={destroyFolder}
         isDestroying={isDestroying}
+        liveDocuments={commit.mergedAt ? undefined : liveDocuments}
       />
       <CreateDraftCommitModal
         open={createDraftCommitModalOpen}

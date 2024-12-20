@@ -1,15 +1,22 @@
 'use client'
 
-import { ReactNode, useEffect, useRef, useState } from 'react'
+import { RefObject, useEffect, useRef, useState } from 'react'
 
-import { Button, Tooltip } from '../../../../../ds/atoms'
+import { Button, Icon, IconName, Tooltip } from '../../../../../ds/atoms'
 import { MenuOption } from '../../../../../ds/atoms/DropdownMenu'
 import { Input } from '../../../../../ds/atoms/Input'
 import Text from '../../../../../ds/atoms/Text'
 import { cn } from '../../../../../lib/utils'
 import { useNodeValidator } from './useNodeValidator'
+import { ModifiedDocumentType } from '@latitude-data/core/browser'
+import {
+  MODIFICATION_BACKGROUNDS,
+  MODIFICATION_COLORS,
+  MODIFICATION_ICONS,
+} from '../../../../../ds/molecules/DocumentChange/colors'
+import { useHover } from '../../../../../browser'
+import { TruncatedTooltip } from '../../../../../ds/molecules'
 
-export const ICON_CLASS = 'text-muted-foreground'
 export type IndentType = { isLast: boolean }
 function IndentationBar({
   indentation,
@@ -42,6 +49,13 @@ function IndentationBar({
   })
 }
 
+const MODIFICATION_LABELS: Record<ModifiedDocumentType, string> = {
+  [ModifiedDocumentType.Created]: 'Created',
+  [ModifiedDocumentType.Updated]: 'Updated',
+  [ModifiedDocumentType.UpdatedPath]: 'Renamed',
+  [ModifiedDocumentType.Deleted]: 'Deleted',
+}
+
 type Props = {
   open: boolean
   name: string | undefined
@@ -49,10 +63,11 @@ type Props = {
   isFile?: boolean
   selected?: boolean
   isEditing: boolean
+  changeType?: ModifiedDocumentType
   setIsEditing: (isEditing: boolean) => void
   onClick?: () => void
   actions?: MenuOption[]
-  icons: ReactNode
+  icons: IconName[]
   indentation: IndentType[]
   onSaveValue: (args: { path: string }) => void
   onSaveValueAndTab?: (args: { path: string }) => void
@@ -74,14 +89,15 @@ function NodeHeaderWrapper({
   icons,
   indentation,
   actions,
+  changeType,
 }: Props) {
   const [tmpName, setTmpName] = useState(name)
   const inputRef = useRef<HTMLInputElement>(null)
-  const nodeRef = useRef<HTMLDivElement>(null)
+  const [nodeRef, isHovered] = useHover()
   const { error, inputValue, onInputChange, onInputKeyDown } = useNodeValidator(
     {
       name,
-      nodeRef,
+      nodeRef: nodeRef as RefObject<HTMLDivElement>,
       inputRef,
       isEditing,
       setIsEditing,
@@ -106,15 +122,22 @@ function NodeHeaderWrapper({
     }
   }, [inputRef])
   const showActions = !isEditing && actions && actions.length > 0
+
+  const color = changeType ? MODIFICATION_COLORS[changeType] : 'foreground'
+  const selectedBackgroundColor = changeType
+    ? MODIFICATION_BACKGROUNDS[changeType]
+    : 'bg-accent'
+  const changeIcon = changeType ? MODIFICATION_ICONS[changeType] : undefined
   return (
     <div
       tabIndex={0}
-      ref={nodeRef}
+      ref={nodeRef as RefObject<HTMLDivElement>}
       className={cn(
-        'max-w-full group/row flex flex-row my-0.5 cursor-pointer',
+        'max-w-full group/row flex flex-row my-0.5 cursor-pointer items-center gap-2',
         {
           'hover:bg-muted': !selected,
-          'bg-accent': selected,
+          [selectedBackgroundColor]: selected,
+          'pr-2': showActions || !!changeIcon,
         },
       )}
     >
@@ -126,7 +149,11 @@ function NodeHeaderWrapper({
           indentation={indentation}
           hasChildren={open && hasChildren}
         />
-        <div className='flex flex-row items-center gap-x-1 mr-1'>{icons}</div>
+        <div className='flex flex-row items-center gap-x-1 mr-1'>
+          {icons.map((icon, index) => (
+            <Icon key={index} name={icon} color={color} />
+          ))}
+        </div>
         {isEditing ? (
           <div className='pr-1 flex items-center'>
             <Input
@@ -153,23 +180,16 @@ function NodeHeaderWrapper({
           </div>
         ) : (
           <div className='flex-grow flex-shrink truncate'>
-            <Text.H5M
-              ellipsis
-              noWrap
-              userSelect={false}
-              color={selected ? 'accentForeground' : 'foreground'}
-            >
-              {name && name !== ' ' ? name : tmpName}
-            </Text.H5M>
+            <TruncatedTooltip content={name}>
+              <Text.H5M ellipsis noWrap userSelect={false} color={color}>
+                {name && name !== ' ' ? name : tmpName}
+              </Text.H5M>
+            </TruncatedTooltip>
           </div>
         )}
       </div>
-      {showActions ? (
-        <div
-          className={cn(
-            'flex items-center gap-x-2 pr-4 opacity-0 group-hover/row:opacity-100',
-          )}
-        >
+      {showActions && isHovered ? (
+        <div className={cn('flex items-center gap-x-2')}>
           {actions.map((action, index) => (
             <Tooltip
               key={index}
@@ -182,7 +202,7 @@ function NodeHeaderWrapper({
                   disabled={action.disabled}
                   onClick={action.onClick}
                   iconProps={{
-                    color: selected ? 'accentForeground' : 'foregroundMuted',
+                    color: 'foregroundMuted',
                     name: action.iconProps?.name!,
                   }}
                 />
@@ -193,6 +213,11 @@ function NodeHeaderWrapper({
           ))}
         </div>
       ) : null}
+      {changeIcon && (
+        <Tooltip trigger={<Icon name={changeIcon} color={color} />}>
+          {MODIFICATION_LABELS[changeType!]}
+        </Tooltip>
+      )}
     </div>
   )
 }
