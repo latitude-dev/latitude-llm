@@ -1,8 +1,9 @@
 import asyncio
 from contextlib import asynccontextmanager
-from typing import Any, Optional
+from typing import Optional
 
-import aiohttp
+import httpx
+import httpx_sse
 
 from latitude_sdk.core.client.router import Router, RouterOptions
 from latitude_sdk.core.common import LogSources, RequestBody, RequestHandler, RequestParams
@@ -10,7 +11,7 @@ from latitude_sdk.util import BaseModel
 
 RETRIABLE_STATUSES = [429, 500, 502, 503, 504]
 
-ClientResponse = aiohttp.ClientResponse
+ClientResponse = httpx.Response
 
 
 class ClientOptions(BaseModel):
@@ -22,72 +23,69 @@ class ClientOptions(BaseModel):
     router: RouterOptions
 
 
+# TODO: Type return types
 class Client:
     options: ClientOptions
-    client: aiohttp.ClientSession
     router: Router
 
     def __init__(self, options: ClientOptions):
         self.options = options
-        self.client = aiohttp.ClientSession(
-            headers={
-                "Authorization": f"Bearer {options.api_key}",
-                "Content-Type": "application/json",
-            },
-            timeout=aiohttp.ClientTimeout(total=options.timeout),
-        )
         self.router = Router(options.router)
 
     @asynccontextmanager
     async def request(self, handler: RequestHandler, params: RequestParams, body: Optional[RequestBody] = None):
-        response: Optional[ClientResponse] = None
+        client = httpx.AsyncClient(
+            headers={
+                "Authorization": f"Bearer {self.options.api_key}",
+                "Content-Type": "application/json",
+            },
+            timeout=self.options.timeout,
+            follow_redirects=False,
+            max_redirects=0,
+        )
+        response = None
         attempt = 1
 
-        while attempt <= self.options.retries:
-            try:
-                method, url = self.router.resolve(handler, params)
+        try:
+            while attempt <= self.options.retries:
+                try:
+                    method, url = self.router.resolve(handler, params)
 
-                response = await self.client.request(
-                    method=method,
-                    url=url,
-                    json={**body.model_dump(), "__internal": {"source": self.options.source}} if body else None,
-                    allow_redirects=False,
-                )
-                response.raise_for_status()
+                    response = await client.request(
+                        method=method,
+                        url=url,
+                        json={**body.model_dump(), "__internal": {"source": self.options.source}} if body else None,
+                    )
+                    response.raise_for_status()
 
-                yield response
-                break
+                    yield response
+                    break
 
-            # TODO: Raise LatitudeException instead
-            except Exception as exception:
-                if attempt >= self.options.retries:
-                    raise exception
+                # TODO: Raise LatitudeException instead
+                except Exception as exception:
+                    if attempt >= self.options.retries:
+                        raise exception
 
-                if response and response.status in RETRIABLE_STATUSES:
-                    await asyncio.sleep(self.options.delay * (2 ** (attempt - 1)))
-                else:
-                    raise exception
+                    if response and response.status_code in RETRIABLE_STATUSES:
+                        await asyncio.sleep(self.options.delay * (2 ** (attempt - 1)))
+                    else:
+                        raise exception
 
-            finally:
-                if response:
-                    response.close()
+                finally:
+                    if response:
+                        await response.aclose()
 
-                attempt += 1
-
-    @staticmethod
-    async def text(response: ClientResponse):
-        return await response.text()
+                    attempt += 1
+        finally:
+            await client.aclose()
 
     @staticmethod
     async def json(response: ClientResponse):
-        return await response.json()
+        return response.json()
 
     @staticmethod
     async def sse(response: ClientResponse):
-        # TODO
-        async for line in response.content:
-            print(str(line), "\n")
+        source = httpx_sse.EventSource(response)
 
-    # TODO: Instead of manually doing this include it in the request context manager
-    async def close(self):
-        await self.client.close()
+        async for event in source.aiter_sse():
+            yield event

@@ -12,31 +12,27 @@ async def main():
         ),
     )
 
-    try:
-        print("Getting prompt...")
-        result = await sdk.prompts.get("prompt", GetPromptOptions(version_uuid="57502e00-20c2-4411-8b4b-44bc9008079e"))
-        print(result)
+    print("Getting prompt...")
+    result = await sdk.prompts.get("prompt", GetPromptOptions(version_uuid="57502e00-20c2-4411-8b4b-44bc9008079e"))
+    print(result)
 
-        print("-" * 100)
+    print("-" * 100)
 
-        print("Running prompt...")
-        result = await sdk.prompts.run(
-            "prompt",
-            RunPromptOptions(
-                project_id=3,
-                version_uuid="57502e00-20c2-4411-8b4b-44bc9008079e",
-                on_event=lambda event, data: print(event, data),
-                on_finished=lambda data: print(data),
-                on_error=lambda error: print(error),
-                custom_identifier="custom!",
-                parameters={"topic": "Python"},
-                stream=True,
-            ),
-        )
-        print(result)
-
-    finally:
-        await sdk.close()
+    print("Running prompt...")
+    result = await sdk.prompts.run(
+        "prompt",
+        RunPromptOptions(
+            project_id=3,
+            version_uuid="57502e00-20c2-4411-8b4b-44bc9008079e",
+            on_event=lambda event, data: print(event, data),
+            on_finished=lambda data: print(data),
+            on_error=lambda error: print(error),
+            custom_identifier="custom!",
+            parameters={"topic": "Python"},
+            stream=True,
+        ),
+    )
+    print(result)
 
 
 asyncio.run(main())

@@ -34,8 +34,11 @@ class RunPrompt:
         return await self.client.json(response)
 
     async def _run_stream(self, response: ClientResponse) -> RunPromptResult:
+        async for event in self.client.sse(response):
+            print(event)
+
         # TODO: Use RunPromptResponse?
-        return await self.client.sse(response)
+        return None
 
     async def run(self, path: str, options: RunPromptOptions) -> RunPromptResult:
         assert options.project_id is not None

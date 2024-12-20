@@ -101,6 +101,3 @@ class Latitude:
         )
 
         self.prompts = Prompts(self)
-
-    async def close(self):
-        await self._client.close()
