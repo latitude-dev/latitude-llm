@@ -92,7 +92,7 @@ function DocumentLogInfoModal({
       <DocumentLogInfo
         documentLog={documentLog!}
         providerLogs={providerLogs}
-        evaluationResults={evaluationResults[documentLogId]}
+        evaluationResults={evaluationResults[documentLogId] || []}
         isLoading={isLoading}
         error={errorDocumentLog}
       />
