@@ -1,56 +1,75 @@
-from typing import Dict, Optional
+import asyncio
+from contextlib import asynccontextmanager
+from typing import Optional
 
-import requests
-from requests.adapters import HTTPAdapter, Retry
+import aiohttp
 
 from latitude_sdk.core.client.router import Router, RouterOptions
-from latitude_sdk.core.common import HandlerType, LogSources, RequestBody, RequestParams
+from latitude_sdk.core.common import LogSources, RequestBody, RequestHandler, RequestParams
 from latitude_sdk.util import BaseModel
+
+RETRIABLE_STATUSES = [429, 500, 502, 503, 504]
 
 
 class ClientOptions(BaseModel):
     api_key: str
     retries: int
-    timeout: int
+    delay: float
+    timeout: float
     source: LogSources
     router: RouterOptions
 
 
 class Client:
     options: ClientOptions
+    client: aiohttp.ClientSession
     router: Router
-    retrier: Retry
-
-    default_headers: Dict[str, str]
 
     def __init__(self, options: ClientOptions):
         self.options = options
+        self.client = aiohttp.ClientSession(
+            headers={
+                "Authorization": f"Bearer {options.api_key}",
+                "Content-Type": "application/json",
+            },
+            timeout=aiohttp.ClientTimeout(total=options.timeout),
+        )
         self.router = Router(options.router)
-        self.retrier = Retry(total=options.retries, backoff_factor=2, status_forcelist=[429, 500, 502, 503, 504])
 
-        self.default_headers = {
-            "Authorization": f"Bearer {options.api_key}",
-            "Content-Type": "application/json",
-        }
+    @asynccontextmanager
+    async def request(self, handler: RequestHandler, params: RequestParams, body: Optional[RequestBody] = None):
+        response: Optional[aiohttp.ClientResponse] = None
+        attempt = 1
 
-    def request(
-        self, handler: HandlerType, params: RequestParams, body: Optional[RequestBody] = None
-    ) -> requests.Response:
-        with requests.Session() as session:
-            session.mount("https://" if self.options.router.ssl else "http://", HTTPAdapter(max_retries=self.retrier))
+        while attempt <= self.options.retries:
+            try:
+                method, url = self.router.resolve(handler, params)
 
-            method, url = self.router.resolve(handler, params)
+                response = await self.client.request(
+                    method=method,
+                    url=url,
+                    json={**body.model_dump(), "__internal": {"source": self.options.source}} if body else None,
+                    allow_redirects=False,
+                )
+                response.raise_for_status()
 
-            response = session.request(
-                method=method,
-                url=url,
-                headers=self.default_headers,
-                json={**body.model_dump(), "__internal": {"source": self.options.source}} if body else None,
-                timeout=self.options.timeout // 1000,
-                allow_redirects=False,
-                stream=True,
-            )
+                yield response
+                break
 
-        response.raise_for_status()
+            except Exception as exception:
+                if attempt >= self.options.retries:
+                    raise exception
 
-        return response
+                if response and response.status in RETRIABLE_STATUSES:
+                    await asyncio.sleep(self.options.delay * (2 ** (attempt - 1)))
+                else:
+                    raise exception
+
+            finally:
+                if response:
+                    response.close()
+
+                attempt += 1
+
+    async def close(self):
+        await self.client.close()

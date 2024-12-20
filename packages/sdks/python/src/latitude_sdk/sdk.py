@@ -9,7 +9,8 @@ class InternalOptions(BaseModel):
     gateway: Optional[core.GatewayOptions] = None
     source: Optional[core.LogSources] = None
     retries: Optional[int] = None
-    timeout: Optional[int] = None
+    delay: Optional[float] = None
+    timeout: Optional[float] = None
 
 
 class LatitudeOptions(BaseModel):
@@ -27,7 +28,8 @@ DEFAULT_INTERNAL_OPTIONS = InternalOptions(
     ),
     source=core.LogSources.API,
     retries=3,
-    timeout=2000,
+    delay=0.5,
+    timeout=2.0,
 )
 
 
@@ -59,13 +61,13 @@ class Prompts:
         prompt_options = self._ensure_options(options)
         options = core.GetPromptOptions(**{**dict(options), **dict(prompt_options)})
 
-        return self._getPrompt.get(path, options)
+        return await self._getPrompt.get(path, options)
 
     async def run(self, path: str, options: core.RunPromptOptions) -> core.RunPromptResult:
         prompt_options = self._ensure_options(options)
         options = core.RunPromptOptions(**{**dict(options), **dict(prompt_options)})
 
-        return self._runPrompt.run(path, options)
+        return await self._runPrompt.run(path, options)
 
 
 class Latitude:
@@ -83,6 +85,7 @@ class Latitude:
         assert options.internal.gateway is not None
         assert options.internal.source is not None
         assert options.internal.retries is not None
+        assert options.internal.delay is not None
         assert options.internal.timeout is not None
 
         self._options = options
@@ -90,10 +93,14 @@ class Latitude:
             core.ClientOptions(
                 api_key=api_key,
                 retries=options.internal.retries,
+                delay=options.internal.delay,
                 timeout=options.internal.timeout,
                 source=options.internal.source,
-                router=core.RouterOptions(**dict(options.internal.gateway)),
+                router=core.RouterOptions(gateway=options.internal.gateway),
             )
         )
 
         self.prompts = Prompts(self)
+
+    async def close(self):
+        await self._client.close()

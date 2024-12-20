@@ -62,6 +62,11 @@ class ChainEvent(BaseModel):
     pass
 
 
+class RequestHandler(StrEnum):
+    GET_PROMPT = "get-prompt"
+    RUN_PROMPT = "run-prompt"
+
+
 class EventCallbacks(BaseModel):
     class Config:
         arbitrary_types_allowed = True
@@ -84,11 +89,6 @@ class EventCallbacks(BaseModel):
         def __call__(self, error: LatitudeException): ...
 
     on_error: Optional[OnError] = None
-
-
-class HandlerType(StrEnum):
-    GET_PROMPT = "get-prompt"
-    RUN_PROMPT = "run-prompt"
 
 
 class GatewayOptions(BaseModel):

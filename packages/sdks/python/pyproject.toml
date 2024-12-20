@@ -10,8 +10,8 @@ urls.homepage = "https://github.com/latitude-dev/latitude-llm/tree/main/packages
 urls.documentation = "https://github.com/latitude-dev/latitude-llm/tree/main/packages/sdks/python#readme"
 requires-python = ">=3.8"
 dependencies = [
+    "aiohttp[speedups]>=3.10.11",
     "pydantic>=2.10.3",
-    "requests>=2.32.3",
     "typing-extensions>=4.12.2",
 ]
 
@@ -23,6 +23,7 @@ dev = [
     "sh>=1.14.3",
     "pyright>=1.1.391",
     "pytest-asyncio>=0.24.0",
+    "pytest-aiohttp>=1.0.5",
 ]
 
 [tool.pyright]

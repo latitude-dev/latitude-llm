@@ -22,6 +22,6 @@ class RunPrompt:
     def __init__(self, client: Client):
         self.client = client
 
-    def run(self, path: str, options: RunPromptOptions) -> RunPromptResult:
+    async def run(self, path: str, options: RunPromptOptions) -> RunPromptResult:
         # TODO
         return None
