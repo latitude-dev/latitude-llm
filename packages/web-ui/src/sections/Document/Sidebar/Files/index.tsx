@@ -137,6 +137,7 @@ export function FilesTree({
   isMerged,
   currentUuid,
   documents,
+  liveDocuments,
   onMergeCommitClick,
   navigateToDocument,
   createFile,
@@ -155,12 +156,13 @@ export function FilesTree({
   onMergeCommitClick: () => void
   destroyFolder: (path: string) => Promise<void>
   documents: SidebarDocument[]
+  liveDocuments?: SidebarDocument[]
   currentUuid: string | undefined
   navigateToDocument: (documentUuid: string) => void
   isDestroying: boolean
 }) {
   const togglePath = useOpenPaths((state) => state.togglePath)
-  const rootNode = useTree({ documents })
+  const rootNode = useTree({ documents, liveDocuments })
   const [deletableNode, setDeletable] =
     useState<DeletableElement<DeletableType> | null>(null)
 
