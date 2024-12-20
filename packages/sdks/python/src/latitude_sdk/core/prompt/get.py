@@ -29,4 +29,4 @@ class GetPrompt:
                 path=path,
             ),
         ) as response:
-            return await response.json()
+            return await self.client.json(response)

@@ -1,6 +1,6 @@
 import asyncio
 from contextlib import asynccontextmanager
-from typing import Optional
+from typing import Any, Optional
 
 import aiohttp
 
@@ -9,6 +9,8 @@ from latitude_sdk.core.common import LogSources, RequestBody, RequestHandler, Re
 from latitude_sdk.util import BaseModel
 
 RETRIABLE_STATUSES = [429, 500, 502, 503, 504]
+
+ClientResponse = aiohttp.ClientResponse
 
 
 class ClientOptions(BaseModel):
@@ -38,7 +40,7 @@ class Client:
 
     @asynccontextmanager
     async def request(self, handler: RequestHandler, params: RequestParams, body: Optional[RequestBody] = None):
-        response: Optional[aiohttp.ClientResponse] = None
+        response: Optional[ClientResponse] = None
         attempt = 1
 
         while attempt <= self.options.retries:
@@ -56,6 +58,7 @@ class Client:
                 yield response
                 break
 
+            # TODO: Raise LatitudeException instead
             except Exception as exception:
                 if attempt >= self.options.retries:
                     raise exception
@@ -71,5 +74,20 @@ class Client:
 
                 attempt += 1
 
+    @staticmethod
+    async def text(response: ClientResponse):
+        return await response.text()
+
+    @staticmethod
+    async def json(response: ClientResponse):
+        return await response.json()
+
+    @staticmethod
+    async def sse(response: ClientResponse):
+        # TODO
+        async for line in response.content:
+            print(str(line), "\n")
+
+    # TODO: Instead of manually doing this include it in the request context manager
     async def close(self):
         await self.client.close()

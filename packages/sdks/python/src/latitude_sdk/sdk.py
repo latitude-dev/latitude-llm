@@ -29,7 +29,7 @@ DEFAULT_INTERNAL_OPTIONS = InternalOptions(
     source=core.LogSources.API,
     retries=3,
     delay=0.5,
-    timeout=2.0,
+    timeout=30,
 )
 
 
