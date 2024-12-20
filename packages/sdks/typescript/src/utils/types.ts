@@ -18,7 +18,6 @@ import {
   StreamEventTypes,
   ChainCallResponseDto,
   Providers,
-  DocumentVersion,
 } from '@latitude-data/constants'
 
 export type GetDocumentUrlParams = {
@@ -210,7 +209,10 @@ export type EvalPromptOptions = {
   versionUuid?: string
 }
 
-export type Prompt = DocumentVersion & {
+export type Prompt = {
+  uuid: string
+  path: string
+  content: string
   config: Config
   provider?: Providers
 }

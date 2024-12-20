@@ -4,6 +4,7 @@ import {
   BreadcrumbItem,
   BreadcrumbItemSkeleton,
   BreadcrumbSeparator,
+  ClickToCopy,
 } from '@latitude-data/web-ui'
 import { ROUTES } from '$/services/routes'
 import useProjects from '$/stores/projects'
@@ -35,10 +36,18 @@ export function ProjectBreadcrumbItems({ segments }: { segments: string[] }) {
         {isLoading ? (
           <BreadcrumbItemSkeleton />
         ) : (
-          <BreadcrumbSelector
-            label={currentProject?.name || 'Unknown'}
-            options={options}
-          />
+          <div className='flex flex-row items-center gap-x-1'>
+            <BreadcrumbSelector
+              label={currentProject?.name || 'Unknown'}
+              options={options}
+            />
+            {currentProject && (
+              <ClickToCopy
+                tooltipContent='Click to copy the project ID'
+                copyValue={String(currentProject.id)}
+              />
+            )}
+          </div>
         )}
       </BreadcrumbItem>
 

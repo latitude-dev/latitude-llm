@@ -5,7 +5,6 @@ import { beforeAll, describe, expect, it, vi } from 'vitest'
 
 const SIMPLE_PROMPT: Partial<Prompt> = {
   path: 'path/to/prompt',
-  promptlVersion: 1,
   content: `
 ---
 provider: openai
@@ -27,7 +26,6 @@ This is a custom prompt language
 
 const CHAIN_PROMPT: Partial<Prompt> = {
   path: 'path/to/chain',
-  promptlVersion: 1,
   content: `
 ---
 provider: openai

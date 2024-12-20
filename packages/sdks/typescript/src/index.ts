@@ -337,15 +337,9 @@ class Latitude {
     onStep,
     logResponses,
   }: RenderChainOptions<M>) {
-    if (prompt.promptlVersion !== 1) {
-      throw new Error(
-        'The prompt is defined with the Legacy syntax. Please update it to the new syntax. Learn more: https://docs.latitude.so/guides/prompt-manager/migrate-to-promptl',
-      )
-    }
-    const content = prompt.resolvedContent ?? prompt.content
     const adapter = _adapter ?? getPromptlAdapterFromProvider(prompt.provider)
     const chain = new Chain({
-      prompt: content,
+      prompt: prompt.content,
       parameters,
       adapter,
     })

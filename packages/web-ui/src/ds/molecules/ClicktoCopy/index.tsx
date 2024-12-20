@@ -13,7 +13,7 @@ export function ClickToCopy({
   showIcon = true,
 }: {
   copyValue: string
-  children: ReactNode
+  children?: ReactNode
   fullWidth?: boolean
   showIcon?: boolean
   tooltipContent?: string

@@ -280,6 +280,8 @@ export default function DocumentEditor({
     </Button>
   )
 
+  const name = document.path.split('/').pop() ?? document.path
+
   return (
     <>
       {refinement.modal.open ? (
@@ -309,7 +311,7 @@ export default function DocumentEditor({
                 <EditorHeader
                   providers={providers}
                   disabledMetadataSelectors={isMerged}
-                  title='Prompt editor'
+                  title={name.length > 30 ? name.slice(0, 30) + '...' : name}
                   rightActions={
                     <>
                       <Tooltip
