@@ -2,26 +2,12 @@
 
 import { ChangeEvent, useCallback, useMemo, useRef, useState } from 'react'
 
-import { Icon } from '../../../../../ds/atoms'
 import { MenuOption } from '../../../../../ds/atoms/DropdownMenu'
 import { useFileTreeContext } from '../FilesProvider'
-import NodeHeaderWrapper, { ICON_CLASS, IndentType } from '../NodeHeaderWrapper'
+import NodeHeaderWrapper, { IndentType } from '../NodeHeaderWrapper'
 import { useOpenPaths } from '../useOpenPaths'
 import { useTempNodes } from '../useTempNodes'
 import { Node } from '../useTree'
-
-export function FolderIcons({ open }: { open: boolean }) {
-  const folderIcon = open ? 'folderOpen' : 'folderClose'
-  const chevronIcon = open ? 'chevronDown' : 'chevronRight'
-  return (
-    <>
-      <div className='flex items-center justify-center'>
-        <Icon name={chevronIcon} className={ICON_CLASS} />
-      </div>
-      <Icon name={folderIcon} className={ICON_CLASS} />
-    </>
-  )
-}
 
 export default function FolderHeader({
   node,
@@ -192,6 +178,7 @@ export default function FolderHeader({
       togglePath,
     ],
   )
+
   return (
     <>
       <input
@@ -215,7 +202,10 @@ export default function FolderHeader({
         open={open}
         actions={actions}
         indentation={indentation}
-        icons={<FolderIcons open={open} />}
+        icons={
+          open ? ['chevronDown', 'folderOpen'] : ['chevronRight', 'folderClose']
+        }
+        changeType={node.changeType}
       />
     </>
   )

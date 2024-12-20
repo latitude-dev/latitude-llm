@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { Node } from '../useTree'
 import { useTempNodes } from './index'
+import { ModifiedDocumentType } from '@latitude-data/core/browser'
 
 describe('useTempNodes', () => {
   afterEach(() => {
@@ -22,6 +23,7 @@ describe('useTempNodes', () => {
           name: 'some-folder',
           isFile: false,
           isPersisted: false,
+          changeType: ModifiedDocumentType.Created,
         }),
       ],
     })
@@ -45,6 +47,7 @@ describe('useTempNodes', () => {
           name: ' ',
           isFile: false,
           isPersisted: false,
+          changeType: ModifiedDocumentType.Created,
         }),
       ],
     })
@@ -70,6 +73,7 @@ describe('useTempNodes', () => {
           name: 'new-name',
           isFile: false,
           isPersisted: false,
+          changeType: ModifiedDocumentType.Created,
         }),
       ],
     })
@@ -169,6 +173,7 @@ describe('useTempNodes', () => {
       isPersisted: false,
       isFile: false,
       isRoot: false,
+      changeType: ModifiedDocumentType.Created,
     })
     const rootTmpNode = new Node({
       id: expect.any(String),
@@ -177,6 +182,7 @@ describe('useTempNodes', () => {
       isPersisted: false,
       isFile: false,
       children: [child],
+      changeType: undefined,
     })
     child.parent = rootTmpNode
     rootTmpNode.children[0]!.parent = rootTmpNode
@@ -226,6 +232,7 @@ describe('useTempNodes', () => {
       isPersisted: false,
       isFile: false,
       isRoot: false,
+      changeType: ModifiedDocumentType.Created,
     })
     const child = new Node({
       id: expect.any(String),
@@ -235,6 +242,7 @@ describe('useTempNodes', () => {
       isFile: false,
       isRoot: false,
       children: [grandChild],
+      changeType: undefined,
     })
     const rootTmpNode = new Node({
       id: expect.any(String),
@@ -243,6 +251,7 @@ describe('useTempNodes', () => {
       isPersisted: false,
       isFile: false,
       children: [child],
+      changeType: undefined,
     })
 
     child.parent = rootTmpNode
