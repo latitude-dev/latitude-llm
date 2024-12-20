@@ -15,8 +15,9 @@
     "sentry:sourcemaps": "sentry-cli sourcemaps inject --org latitude-l5 --project latitude-llm-app ./dist && sentry-cli sourcemaps upload --org latitude-l5 --project latitude-llm-app ./dist"
   },
   "dependencies": {
-    "@hono/node-server": "^1.12.0",
-    "@hono/zod-validator": "^0.2.2",
+    "@hono/node-server": "^1.13.2",
+    "@hono/swagger-ui": "^0.4.1",
+    "@hono/zod-openapi": "^0.16.4",
     "@latitude-data/compiler": "workspace:^",
     "@latitude-data/constants": "workspace:^",
     "@latitude-data/core": "workspace:^",
@@ -27,7 +28,7 @@
     "@sentry/node": "^8.30.0",
     "@t3-oss/env-core": "^0.10.1",
     "drizzle-orm": "^0.33.0",
-    "hono": "^4.5.3",
+    "hono": "^4.6.6",
     "lodash-es": "^4.17.21",
     "promptl-ai": "^0.3.3",
     "rate-limiter-flexible": "^5.0.3",
