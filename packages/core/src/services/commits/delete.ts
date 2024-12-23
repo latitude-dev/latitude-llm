@@ -12,6 +12,7 @@ import {
 } from '../../lib'
 import { assertCommitIsDraft } from '../../lib/assertCommitIsDraft'
 import { commits } from '../../schema'
+import { pingProjectUpdate } from '../projects'
 
 export async function deleteCommitDraft(commit: Commit, db = database) {
   const assertionResult = assertCommitIsDraft(commit)
@@ -35,8 +36,16 @@ export async function deleteCommitDraft(commit: Commit, db = database) {
         .where(eq(commits.id, commit.id))
         .returning()
 
-      const deletedCommit = deleted[0]
-      return Result.ok(deletedCommit!)
+      const deletedCommit = deleted[0]!
+
+      await pingProjectUpdate(
+        {
+          projectId: commit.projectId,
+        },
+        tx,
+      ).then((r) => r.unwrap())
+
+      return Result.ok(deletedCommit)
     } catch (error) {
       if (
         error instanceof DatabaseError &&
