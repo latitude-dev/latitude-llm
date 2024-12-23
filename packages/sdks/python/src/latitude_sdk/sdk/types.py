@@ -64,7 +64,7 @@ class ToolResultContent(Model):
     tool_call_id: str = Field(alias=str("toolCallId"))
     tool_name: str = Field(alias=str("toolName"))
     result: str
-    is_error: Optional[bool] = Field(None, alias=str("isError"))
+    is_error: Optional[bool] = Field(default=None, alias=str("isError"))
 
 
 MessageContent = Union[
@@ -104,7 +104,7 @@ class ToolCall(Model):
 class AssistantMessage(Model):
     role: MessageRole = MessageRole.Assistant
     content: Union[str, List[Union[TextContent, ToolCallContent]]]
-    tool_calls: Optional[List[ToolCall]] = Field(None, alias=str("toolCalls"))
+    tool_calls: Optional[List[ToolCall]] = Field(default=None, alias=str("toolCalls"))
 
 
 class ToolMessage(Model):
@@ -129,7 +129,7 @@ class StreamTypes(StrEnum):
 class ChainTextResponse(Model):
     type: StreamTypes = StreamTypes.Text
     text: str
-    tool_calls: Optional[List[ToolCall]] = Field(None, alias=str("toolCalls"))
+    tool_calls: Optional[List[ToolCall]] = Field(default=None, alias=str("toolCalls"))
     usage: ModelUsage
 
 
@@ -228,7 +228,7 @@ class Log(Model):
     resolved_content: str = Field(alias=str("resolvedContent"))
     content_hash: str = Field(alias=str("contentHash"))
     parameters: Dict[str, Any]
-    custom_identifier: Optional[str] = Field(None, alias=str("customIdentifier"))
+    custom_identifier: Optional[str] = Field(default=None, alias=str("customIdentifier"))
     duration: Optional[int] = None
     created_at: datetime = Field(alias=str("createdAt"))
     updated_at: datetime = Field(alias=str("updatedAt"))
@@ -245,10 +245,10 @@ class EvaluationResult(Model):
     uuid: str
     evaluation_id: int = Field(alias=str("evaluationId"))
     document_log_id: int = Field(alias=str("documentLogId"))
-    evaluated_provider_log_id: Optional[int] = Field(None, alias=str("evaluatedProviderLogId"))
-    evaluation_provider_log_id: Optional[int] = Field(None, alias=str("evaluationProviderLogId"))
-    resultable_type: Optional[EvaluationResultType] = Field(None, alias=str("resultableType"))
-    resultable_id: Optional[int] = Field(None, alias=str("resultableId"))
+    evaluated_provider_log_id: Optional[int] = Field(default=None, alias=str("evaluatedProviderLogId"))
+    evaluation_provider_log_id: Optional[int] = Field(default=None, alias=str("evaluationProviderLogId"))
+    resultable_type: Optional[EvaluationResultType] = Field(default=None, alias=str("resultableType"))
+    resultable_id: Optional[int] = Field(default=None, alias=str("resultableId"))
     result: Optional[Union[str, bool, int]] = None
     source: Optional[LogSources] = None
     reason: Optional[str] = None
