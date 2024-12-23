@@ -30,7 +30,7 @@ export const getFirstProjectCached = cache(
 export const getActiveProjectsCached = cache(
   async ({ workspaceId }: { workspaceId: number }) => {
     const projectsScope = new ProjectsRepository(workspaceId)
-    const result = await projectsScope.findAllActiveWithAgreggatedData()
+    const result = await projectsScope.findAllActive()
     const projects = result.unwrap()
 
     return projects

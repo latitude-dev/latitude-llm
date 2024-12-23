@@ -10,6 +10,7 @@ import { assertCommitIsDraft } from '../../lib/assertCommitIsDraft'
 import { BadRequestError, NotFoundError } from '../../lib/errors'
 import { DocumentVersionsRepository } from '../../repositories/documentVersionsRepository'
 import { documentVersions } from '../../schema'
+import { pingProjectUpdate } from '../projects'
 
 // TODO: refactor, can be simplified
 export async function updateDocument(
@@ -93,6 +94,13 @@ export async function updateDocument(
       .update(documentVersions)
       .set({ resolvedContent: null })
       .where(eq(documentVersions.commitId, commit.id))
+
+    await pingProjectUpdate(
+      {
+        projectId: commit.projectId,
+      },
+      tx,
+    ).then((r) => r.unwrap())
 
     return Result.ok(updatedDocs[0]!)
   }, trx)

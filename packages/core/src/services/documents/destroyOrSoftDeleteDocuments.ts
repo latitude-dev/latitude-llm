@@ -6,6 +6,7 @@ import { Commit, DocumentVersion } from '../../browser'
 import { database } from '../../client'
 import { Result, Transaction, TypedResult } from '../../lib'
 import { documentVersions } from '../../schema'
+import { pingProjectUpdate } from '../projects'
 
 async function findUuidsInOtherCommits({
   tx,
@@ -148,6 +149,7 @@ export async function destroyOrSoftDeleteDocuments({
       createDocumentsAsSoftDeleted({ toBeCreated, commitId, tx }),
       updateDocumetsAsSoftDeleted({ toBeUpdated, commitId, tx }),
       invalidateDocumentsCacheInCommit(commitId, tx),
+      pingProjectUpdate({ projectId: commit.projectId }, tx),
     ])
 
     return Result.ok(true)
