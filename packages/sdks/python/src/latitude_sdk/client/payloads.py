@@ -9,7 +9,7 @@ class ErrorResponse(Model):
     code: str = Field(alias=str("errorCode"))
     message: str
     details: Dict[str, Any]
-    db_ref: Optional[DbErrorRef] = Field(None, alias=str("dbErrorRef"))
+    db_ref: Optional[DbErrorRef] = Field(default=None, alias=str("dbErrorRef"))
 
 
 class PromptRequestParams(Model):
@@ -37,7 +37,7 @@ class RunPromptRequestParams(PromptRequestParams, Model):
 class RunPromptRequestBody(Model):
     path: str
     parameters: Optional[Dict[str, Any]] = None
-    custom_identifier: Optional[str] = Field(None, alias=str("customIdentifier"))
+    custom_identifier: Optional[str] = Field(default=None, alias=str("customIdentifier"))
     stream: Optional[bool] = None
 
 
@@ -74,7 +74,7 @@ class TriggerEvaluationRequestParams(EvaluationRequestParams, Model):
 
 
 class TriggerEvaluationRequestBody(Model):
-    evaluation_uuids: Optional[List[str]] = Field(None, alias=str("evaluationUuids"))
+    evaluation_uuids: Optional[List[str]] = Field(default=None, alias=str("evaluationUuids"))
 
 
 class CreateEvaluationResultRequestParams(EvaluationRequestParams, Model):
