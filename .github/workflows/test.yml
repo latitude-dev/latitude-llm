@@ -17,6 +17,7 @@ jobs:
     strategy:
       matrix:
         node-version: [20.x]
+        python-version: [3.13.x]
 
     services:
       redis:
@@ -48,8 +49,13 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
 
-      - uses: pnpm/action-setup@v3
-        name: Install pnpm
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
         with:
           version: 9
           run_install: false
@@ -59,19 +65,31 @@ jobs:
         run: |
           echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
 
-      - uses: actions/cache@v3
-        name: Setup pnpm cache
+      - name: Setup pnpm cache
+        uses: actions/cache@v3
         with:
           path: ${{ env.STORE_PATH }}
           key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
             ${{ runner.os }}-pnpm-store-
 
-      - name: Install dependencies
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          version: '0.5.10'
+          enable-cache: true
+
+      - name: Install Node.js dependencies
         run: pnpm install
 
+      - name: Install Python dependencies
+        working-directory: packages/sdks/python
+        run: |
+          uv venv
+          uv sync --all-extras --all-groups
+
       - name: Use Turbo to build affected packages
-        run: pnpm turbo build --cache-dir=.turbo --filter="./packages/*"
+        run: pnpm turbo build --cache-dir=.turbo --filter="./packages/**"
 
       - name: Wait for PostgreSQL to start
         run: until pg_isready -h localhost -p 5432; do sleep 1; done
@@ -82,7 +100,12 @@ jobs:
           DATABASE_URL: postgres://latitude:secret@localhost:5432/latitude_test
         run: cd packages/core && pnpm db:migrate:test
 
-      - name: Test
+      - name: Node.js Test
         env:
           NODE_ENV: test
         run: pnpm test
+
+      - name: Python Test
+        working-directory: packages/sdks/python
+        run: |
+          uv run scripts/test.py
