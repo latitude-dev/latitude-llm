@@ -3,7 +3,6 @@ import { isNumber } from 'lodash-es'
 
 import { Dataset, DocumentVersion } from '@latitude-data/core/browser'
 import {
-  Button,
   FormFieldGroup,
   Icon,
   Input,
@@ -12,6 +11,7 @@ import {
   Select,
   SelectOption,
   SwitchInput,
+  Text,
 } from '@latitude-data/web-ui'
 import { RunBatchParameters } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/evaluations/[evaluationId]/_components/Actions/CreateBatchEvaluationModal/useRunBatch'
 import { ROUTES } from '$/services/routes'
@@ -106,6 +106,10 @@ export default function DatasetForm({
   onToggleAllLines: (checked: boolean) => void
   errors: Record<string, string[] | undefined> | undefined
 }) {
+  const filteredHeaders = useMemo(
+    () => headers.filter((h) => h.value !== ''),
+    [headers],
+  )
   const paramaterErrors = useMemo(() => {
     if (!errors) return {}
     if (!errors.parameters) return {}
@@ -137,29 +141,47 @@ export default function DatasetForm({
   urlParameter.set('parameters', parametersList.join(','))
   urlParameter.set('backUrl', window.location.href)
 
+  const noDatasets = !isLoadingDatasets && datasets.length === 0
+  const selectDatasetComponent = (
+    <Select
+      name='datasetId'
+      placeholder='Select dataset'
+      disabled={noDatasets}
+      options={datasetOptions}
+      onChange={onSelectDataset}
+      defaultValue={selectedDataset?.id}
+    />
+  )
+
   return (
     <>
       <NumeredList>
         <NumeredList.Item title='Pick dataset'>
           <div className='flex flex-row items-center gap-4'>
-            <div className='w-1/2'>
-              <Select
-                name='datasetId'
-                placeholder='Select dataset'
-                disabled={isLoadingDatasets}
-                options={datasetOptions}
-                onChange={onSelectDataset}
-                defaultValue={selectedDataset?.id}
-              />
+            {!noDatasets && (
+              <div className='w-1/2'>{selectDatasetComponent}</div>
+            )}
+            <div className='flex flex-row items-center gap-2'>
+              {noDatasets && (
+                <>
+                  <Link
+                    className='flex flex-row items-center gap-1 hover:underline'
+                    href={ROUTES.datasets.new.root}
+                  >
+                    <Text.H5 color='primary'>Upload dataset</Text.H5>
+                    <Icon color='primary' name='externalLink' />
+                  </Link>
+                  <Text.H6M>or</Text.H6M>
+                </>
+              )}
+              <Link
+                className='flex flex-row items-center gap-1 hover:underline'
+                href={`${ROUTES.datasets.generate.root}?${urlParameter.toString()}`}
+              >
+                <Text.H5 color='primary'>Generate dataset</Text.H5>
+                <Icon color='primary' name='externalLink' />
+              </Link>
             </div>
-            <Link
-              href={`${ROUTES.datasets.generate.root}?${urlParameter.toString()}`}
-              className='flex flex-row items-center gap-1'
-            >
-              <Button variant='link'>
-                Generate dataset <Icon name='externalLink' />
-              </Button>
-            </Link>
           </div>
         </NumeredList.Item>
         <NumeredList.Item title='Select lines from dataset' width='w-1/2'>
@@ -194,12 +216,16 @@ export default function DatasetForm({
                   <Select
                     key={param}
                     name={`parameter[${param}]`}
-                    disabled={headers.length === 0}
+                    disabled={filteredHeaders.length === 0}
                     errors={paramaterErrors[param]}
                     badgeLabel
                     label={param}
-                    options={headers}
-                    value={findValue({ headers, parameters, param })}
+                    options={filteredHeaders}
+                    value={findValue({
+                      headers: filteredHeaders,
+                      parameters,
+                      param,
+                    })}
                     onChange={onParametersChange(param)}
                     placeholder='Select csv column'
                   />

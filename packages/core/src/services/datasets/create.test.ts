@@ -149,4 +149,52 @@ describe('createDataset', () => {
       expect.any(File),
     )
   })
+
+  it('handles CSV with no headers', async () => {
+    vi.spyOn(syncReadCsv, 'syncReadCsv').mockResolvedValue(
+      // @ts-expect-error - Mock
+      Result.ok({
+        headers: [],
+        rowCount: 10,
+      }),
+    )
+
+    const result = await createDataset({
+      author: user,
+      workspace,
+      disk,
+      data: {
+        name: 'Test Dataset',
+        file,
+        csvDelimiter: ',',
+      },
+    })
+
+    expect(result.error).toBeInstanceOf(BadRequestError)
+    expect(result.error?.message).toBe('CSV file must contain headers')
+  })
+
+  it('handles CSV with empty headers', async () => {
+    vi.spyOn(syncReadCsv, 'syncReadCsv').mockResolvedValue(
+      // @ts-expect-error - Mock
+      Result.ok({
+        headers: ['', 'column2', ''],
+        rowCount: 10,
+      }),
+    )
+
+    const result = await createDataset({
+      author: user,
+      workspace,
+      disk,
+      data: {
+        name: 'Test Dataset',
+        file,
+        csvDelimiter: ',',
+      },
+    })
+
+    expect(result.error).toBeInstanceOf(BadRequestError)
+    expect(result.error?.message).toBe('CSV header cannot be an empty string')
+  })
 })

@@ -50,6 +50,12 @@ export const createDataset = async (
   if (readCsvResult.error) return readCsvResult
 
   const { headers, rowCount } = readCsvResult.value
+  if (headers.length === 0)
+    return Result.error(new BadRequestError('CSV file must contain headers'))
+  if (headers.some((h) => h.length === 0))
+    return Result.error(
+      new BadRequestError('CSV header cannot be an empty string'),
+    )
 
   return Transaction.call(async (trx) => {
     try {
