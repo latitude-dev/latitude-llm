@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 
 import { defaultGenerateNodeUuid, Node } from '../useTree'
+import { ModifiedDocumentType } from '@latitude-data/core/browser'
 
 type TmpFoldersState = {
   tmpFolders: Record<string, Node[]>
@@ -49,10 +50,15 @@ function createEmptyNode({
     path: nodePath,
     isPersisted: false,
     doc: isFile
-      ? { path: nodePath, documentUuid: defaultGenerateNodeUuid() }
+      ? {
+          path: nodePath,
+          documentUuid: defaultGenerateNodeUuid(),
+          content: '',
+        }
       : undefined,
     isFile,
     parent,
+    changeType: ModifiedDocumentType.Created,
   })
 }
 

@@ -34,6 +34,9 @@ export default async function Sidebar({
     workspace,
     projectId: project.id,
   })
+  const liveDocuments = commit.mergedAt
+    ? undefined
+    : await getDocumentsAtCommitCached({ commit: headCommit! })
 
   const { rows } = await paginateQuery({
     dynamicQuery: commitsScope
@@ -63,6 +66,7 @@ export default async function Sidebar({
           <ClientFilesTree
             currentDocument={currentDocument}
             documents={documents}
+            liveDocuments={liveDocuments}
           />
         </div>
       }

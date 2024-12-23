@@ -5,11 +5,10 @@ import { ChangeEvent, useCallback, useRef } from 'react'
 import { create } from 'zustand'
 
 import { Button, Text, Tooltip } from '../../../../../ds/atoms'
-import { DocumentIcon } from '../DocumentHeader'
 import { useFileTreeContext } from '../FilesProvider'
-import { FolderIcons } from '../FolderHeader'
 import NodeHeaderWrapper from '../NodeHeaderWrapper'
 import { useTempNodes } from '../useTempNodes'
+import { ModifiedDocumentType } from '@latitude-data/core/browser'
 
 export enum EntityType {
   File = 'file',
@@ -136,7 +135,7 @@ export function TreeToolbar() {
           name=''
           isEditing={true}
           setIsEditing={() => {}}
-          icons={isFile ? <DocumentIcon /> : <FolderIcons open={false} />}
+          icons={isFile ? ['file'] : ['chevronRight', 'folderClose']}
           indentation={[{ isLast: true }]}
           onSaveValue={async ({ path }) => {
             if (isFile) {
@@ -148,6 +147,7 @@ export function TreeToolbar() {
             setNodeInput(undefined)
           }}
           onLeaveWithoutSave={() => setNodeInput(undefined)}
+          changeType={ModifiedDocumentType.Created}
         />
       ) : null}
     </>

@@ -2,26 +2,11 @@
 
 import { useCallback, useMemo, useState } from 'react'
 
-import { Icon } from '../../../../../ds/atoms'
 import { MenuOption } from '../../../../../ds/atoms/DropdownMenu'
-import { cn } from '../../../../../lib/utils'
 import { useFileTreeContext } from '../FilesProvider'
-import NodeHeaderWrapper, { ICON_CLASS, IndentType } from '../NodeHeaderWrapper'
+import NodeHeaderWrapper, { IndentType } from '../NodeHeaderWrapper'
 import { useTempNodes } from '../useTempNodes'
 import { Node } from '../useTree'
-
-export function DocumentIcon(
-  { selected }: { selected?: boolean } = { selected: false },
-) {
-  return (
-    <Icon
-      name='file'
-      className={cn(ICON_CLASS, {
-        'text-accent-foreground': selected,
-      })}
-    />
-  )
-}
 
 export default function DocumentHeader({
   open,
@@ -117,11 +102,12 @@ export default function DocumentHeader({
       hasChildren={false}
       actions={actions}
       selected={selected}
+      changeType={node.changeType}
       indentation={indentation}
       onClick={handleClick}
       onSaveValue={onSaveValue}
       onLeaveWithoutSave={() => deleteTmpFolder({ id: node.id })}
-      icons={<DocumentIcon selected={selected} />}
+      icons={['file']}
     />
   )
 }

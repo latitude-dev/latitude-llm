@@ -1,8 +1,10 @@
+import { ModifiedDocumentType } from '@latitude-data/core/browser'
 import { useMemo } from 'react'
 
 export type SidebarDocument = {
   path: string
   documentUuid: string
+  content: string
 }
 
 export class Node {
@@ -16,6 +18,7 @@ export class Node {
   public children: Node[] = []
   public parent?: Node
   public doc?: SidebarDocument
+  public changeType?: ModifiedDocumentType
 
   constructor({
     id,
@@ -27,6 +30,7 @@ export class Node {
     isFile,
     path,
     name = '',
+    changeType,
   }: {
     id: string
     path: string
@@ -37,6 +41,7 @@ export class Node {
     children?: Node[]
     isRoot?: boolean
     name?: string
+    changeType?: ModifiedDocumentType
   }) {
     this.id = id
     this.path = path
@@ -47,6 +52,7 @@ export class Node {
     this.isFile = isFile
     this.children = children
     this.doc = doc
+    this.changeType = changeType
   }
 }
 
@@ -79,15 +85,51 @@ function findChildrenIndex(node: Node, children: Node[]) {
   })
 }
 
+function getChangeType(
+  doc: SidebarDocument,
+  liveDocuments?: SidebarDocument[],
+): ModifiedDocumentType | undefined {
+  if (!liveDocuments) return undefined
+
+  const liveDoc = liveDocuments.find(
+    (liveDoc) => liveDoc.documentUuid === doc.documentUuid,
+  )
+
+  if (!liveDoc) return ModifiedDocumentType.Created
+  if (liveDoc.path !== doc.path) return ModifiedDocumentType.UpdatedPath
+  if (liveDoc.content !== doc.content) return ModifiedDocumentType.Updated
+  return undefined
+}
+
+function getFolderChangeType(node: Node) {
+  if (!node.isPersisted) return ModifiedDocumentType.Created
+  if (node.isFile || node.changeType) return node.changeType
+
+  let hasNewDocs = false
+  let hasUneditedDocs = false
+
+  for (const child of node.children) {
+    const changeType = getFolderChangeType(child)
+    if (changeType === ModifiedDocumentType.Created) hasNewDocs = true
+    if (changeType) return ModifiedDocumentType.Updated
+    hasUneditedDocs = true
+  }
+
+  if (!hasUneditedDocs && hasNewDocs) return ModifiedDocumentType.Created
+  return undefined
+}
+
 function buildTree({
   root,
   nodeMap,
   documents,
+  liveDocuments,
   generateNodeId,
 }: {
   root: Node
   nodeMap: Map<string, Node>
   documents: SidebarDocument[]
+  liveDocuments?: SidebarDocument[]
   generateNodeId: typeof defaultGenerateNodeUuid
 }) {
   documents.forEach((doc) => {
@@ -110,6 +152,7 @@ function buildTree({
           name: segment,
           path: cumulativePath,
           doc: file,
+          changeType: getChangeType(doc, liveDocuments),
         })
 
         node.depth = currentNode.depth + 1
@@ -136,14 +179,22 @@ function buildTree({
     })
   })
 
+  root.children.forEach((child) => {
+    if (!child.isFile) {
+      child.changeType = getFolderChangeType(child)
+    }
+  })
+
   return root
 }
 
 export function useTree({
   documents,
+  liveDocuments,
   generateNodeId = defaultGenerateNodeUuid,
 }: {
   documents: SidebarDocument[]
+  liveDocuments?: SidebarDocument[]
   generateNodeId?: typeof defaultGenerateNodeUuid
 }) {
   return useMemo(() => {
@@ -164,8 +215,9 @@ export function useTree({
       root,
       nodeMap,
       documents: sorted,
+      liveDocuments,
       generateNodeId,
     })
     return tree
-  }, [documents])
+  }, [documents, liveDocuments])
 }
