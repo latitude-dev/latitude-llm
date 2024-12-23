@@ -271,12 +271,14 @@ export const messageSchema = z
   .or(
     z.object({
       role: z.literal('user'),
-      name: z.string().optional(),
       content: z
         .string()
-        .or(z.array(textContentSchema))
-        .or(z.array(imageContentSchema))
-        .or(z.array(fileContentSchema)),
+        .or(
+          z.array(
+            textContentSchema.or(imageContentSchema).or(fileContentSchema),
+          ),
+        ),
+      name: z.string().optional(),
     }),
   )
   .or(
@@ -284,8 +286,7 @@ export const messageSchema = z
       role: z.literal('assistant'),
       content: z
         .string()
-        .or(z.array(textContentSchema))
-        .or(z.array(toolCallContentSchema)),
+        .or(z.array(textContentSchema.or(toolCallContentSchema))),
       toolCalls: z
         .array(
           z.object({

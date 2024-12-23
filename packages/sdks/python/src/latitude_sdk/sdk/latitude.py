@@ -46,7 +46,7 @@ class Latitude:
     logs: Logs
     evaluations: Evaluations
 
-    def __init__(self, api_key: str, options: LatitudeOptions = DEFAULT_LATITUDE_OPTIONS):
+    def __init__(self, api_key: str, options: LatitudeOptions):
         options.internal = options.internal or DEFAULT_INTERNAL_OPTIONS
         options.internal = InternalOptions(**{**dict(DEFAULT_INTERNAL_OPTIONS), **dict(options.internal)})
         options = LatitudeOptions(**{**dict(DEFAULT_LATITUDE_OPTIONS), **dict(options)})

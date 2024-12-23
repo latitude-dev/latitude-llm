@@ -91,7 +91,7 @@ class SystemMessage(Model):
 
 class UserMessage(Model):
     role: MessageRole = MessageRole.User
-    content: Union[str, List[TextContent], List[ImageContent], List[FileContent]]
+    content: Union[str, List[Union[TextContent, ImageContent, FileContent]]]
     name: Optional[str] = None
 
 
@@ -103,7 +103,7 @@ class ToolCall(Model):
 
 class AssistantMessage(Model):
     role: MessageRole = MessageRole.Assistant
-    content: Union[str, List[TextContent], List[ToolCallContent]]
+    content: Union[str, List[Union[TextContent, ToolCallContent]]]
     tool_calls: Optional[List[ToolCall]] = Field(None, alias=str("toolCalls"))
 
 

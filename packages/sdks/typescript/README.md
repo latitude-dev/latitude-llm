@@ -27,7 +27,7 @@ await sdk.prompts.run('joke-teller', {
 })
 ```
 
-Find more examples [here](https://github.com/latitude-dev/latitude-llm/tree/main/examples/sdks/typescript).
+Find more [examples](https://github.com/latitude-dev/latitude-llm/tree/main/examples/sdks/typescript).
 
 ## Development
 

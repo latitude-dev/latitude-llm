@@ -27,7 +27,7 @@ await sdk.prompts.run("joke-teller", RunPromptOptions(
 ))
 ```
 
-Find more examples [here](https://github.com/latitude-dev/latitude-llm/tree/main/examples/sdks/python).
+Find more [examples](https://github.com/latitude-dev/latitude-llm/tree/main/examples/sdks/python).
 
 ## Development
 
