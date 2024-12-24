@@ -1,5 +1,4 @@
-import { DraftChange } from '$/actions/history/types'
-import { ModifiedDocumentType } from '@latitude-data/core/browser'
+import { ModifiedDocumentType, DraftChange } from '@latitude-data/core/browser'
 import {
   Alert,
   Button,

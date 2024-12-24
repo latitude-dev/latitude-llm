@@ -420,3 +420,9 @@ export type DiffValue = {
   newValue?: string
   oldValue?: string
 }
+
+export type DraftChange = {
+  newDocumentPath: string
+  oldDocumentPath: string
+  content: DiffValue
+}

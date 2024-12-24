@@ -70,6 +70,7 @@ describe('computeDocumentRevertChanges', () => {
     }).then((r) => r.unwrap())
 
     expect(revertChanges).toEqual({
+      documentUuid: document.documentUuid,
       path: 'foo',
     })
   })
@@ -136,6 +137,7 @@ describe('computeDocumentRevertChanges', () => {
     }).then((r) => r.unwrap())
 
     expect(revertChanges).toEqual({
+      documentUuid: document.documentUuid,
       deletedAt: null,
     })
   })
@@ -196,6 +198,7 @@ describe('computeDocumentRevertChanges', () => {
     }).then((r) => r.unwrap())
 
     expect(revertChanges).toEqual({
+      documentUuid: document.documentUuid,
       deletedAt: expect.any(Date),
     })
   })
@@ -308,10 +311,10 @@ describe('computeDocumentRevertChanges', () => {
       draft,
     }).then((r) => r.unwrap())
 
-    expect(Object.keys(revertChanges)).toEqual(['content'])
-    expect(
-      revertChanges.content?.includes(expectedRevertedContent),
-    ).toBeTruthy()
+    expect(revertChanges).toEqual({
+      documentUuid: document.documentUuid,
+      content: expect.stringContaining(expectedRevertedContent),
+    })
   })
 
   it('fails if the document UUIDs do not match', async (ctx) => {
