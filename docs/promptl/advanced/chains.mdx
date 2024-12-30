@@ -66,6 +66,24 @@ You can store the text response of a step in a variable using the `as` attribute
 {{ endif }}
 ```
 
+#### Parse Step Responses as JSON
+The response of a step will be automatically parsed as JSON if the JSON output schema is defined.
+
+```xml
+<step as="analysis" schema={{{type: "object", properties: {correct: {type: "boolean"}}, required: ["correct"]}}}>
+  Is this statement correct? {{ statement }}
+  Respond only with "correct: true" or "correct: false" in a JSON object.
+</step>
+
+{{ if analysis.correct }}
+  Provide additional details about why the statement is correct.
+{{ else }}
+  Explain why the statement is incorrect and provide the correct answer.
+{{ endif }}
+```
+
+[Learn more about JSON Output](/guides/prompt-manager/json-output).
+
 ### Storing Raw Messages
 Some providers will return additional metadata along with the response. To store the entire message object, instead of just the text response (e.g., role, content, and additional metadata), use the `raw` attribute:
 
@@ -168,6 +186,7 @@ const client = new OpenAI();
 // Generate a response based on step messages and configuration
 async function generateResponse({ config, messages }) {
   const response = await client.chat.completions.create({
+    model: "gpt-4o-mini",
     ...config,
     messages,
   });
@@ -181,12 +200,12 @@ const chain = new Chain({
 });
 
 // Process the chain step-by-step
-let result = chain.step(); // The first step does not require any arguments
+let result = await chain.step(); // The first step does not require any arguments
 let lastResponse;
 
 while (!result.completed) {
   lastResponse = await generateResponse(result);
-  result = chain.step(lastResponse); // Pass the model response to the next step
+  result = await chain.step(lastResponse); // Pass the model response to the next step
 }
 
 console.log('Final Output:', lastResponse.content);
