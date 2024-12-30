@@ -5,14 +5,14 @@ import {
   Message,
 } from '@latitude-data/compiler'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
-import { Chain as PromptlChain } from 'promptl-ai'
 import { JSONSchema7 } from 'json-schema'
+import { Chain as PromptlChain } from 'promptl-ai'
 import { z } from 'zod'
 
 import { applyProviderRules, ProviderApiKey, Workspace } from '../../../browser'
 import { Result, TypedResult } from '../../../lib'
 import { Config } from '../../ai'
-import { googleConfig } from '../../ai/helpers'
+import { azureConfig, googleConfig } from '../../ai/helpers'
 import { ChainError } from '../ChainErrors'
 import { checkFreeProviderQuota } from '../checkFreeProviderQuota'
 import { CachedApiKeys } from '../run'
@@ -140,14 +140,8 @@ const validateConfig = (
       provider: z.string({
         message: `"provider" attribute is required. Read more here: ${doc}`,
       }),
-      google: googleConfig,
-      azure: z
-        .object({
-          resourceName: z.string({
-            message: 'Azure resourceName is required',
-          }),
-        })
-        .optional(),
+      google: googleConfig.optional(),
+      azure: azureConfig.optional(),
     })
     .catchall(z.unknown())
 

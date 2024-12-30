@@ -121,8 +121,8 @@ export async function ai({
       messages,
       provider,
       apiKey,
+      url: url ?? undefined,
       config,
-      ...(url ? { url } : {}),
     })
 
     if (llmProvider.error) return llmProvider

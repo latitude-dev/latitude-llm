@@ -1,3 +1,4 @@
+import { Message, ToolCall } from '@latitude-data/compiler'
 import {
   CoreTool,
   LanguageModelUsage,
@@ -5,12 +6,18 @@ import {
   TextStreamPart,
 } from 'ai'
 import { JSONSchema7 } from 'json-schema'
-import { ToolCall, Message } from '@latitude-data/compiler'
 import { z } from 'zod'
 
 import { ProviderLog } from './models'
 
-type GoogleConfig = z.infer<typeof googleConfig>
+export const azureConfig = z.object({
+  resourceName: z.string({
+    message: 'Azure resourceName is required',
+  }),
+  apiVersion: z.string().optional(),
+})
+
+type AzureConfig = z.infer<typeof azureConfig>
 
 const googleCategorySettings = z.union([
   z.literal('HARM_CATEGORY_HATE_SPEECH'),
@@ -26,22 +33,20 @@ const googleThresholdSettings = z.union([
   z.literal('BLOCK_NONE'),
 ])
 
-export const googleConfig = z
-  .object({
-    structuredOutputs: z.boolean().optional(),
-    cachedContent: z.string().optional(),
-    safetySettings: z
-      .array(
-        z
-          .object({
-            category: googleCategorySettings.optional(),
-            threshold: googleThresholdSettings.optional(),
-          })
-          .optional(),
-      )
-      .optional(),
-  })
-  .optional()
+export const googleConfig = z.object({
+  structuredOutputs: z.boolean().optional(),
+  cachedContent: z.string().optional(),
+  safetySettings: z
+    .array(
+      z.object({
+        category: googleCategorySettings,
+        threshold: googleThresholdSettings,
+      }),
+    )
+    .optional(),
+})
+
+type GoogleConfig = z.infer<typeof googleConfig>
 
 export type PartialConfig = Omit<Config, 'provider'>
 
@@ -51,7 +56,7 @@ export type Config = {
   url?: string
   cacheControl?: boolean
   schema?: JSONSchema7
-  azure?: { resourceName: string }
+  azure?: AzureConfig
   google?: GoogleConfig
   tools?: Record<
     string,
