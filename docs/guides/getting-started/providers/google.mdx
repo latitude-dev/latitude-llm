@@ -1,0 +1,23 @@
+---
+title: Google
+description: Common questions about Google provider
+---
+
+## How do I set the Google Gemini safety settings?
+
+The [Google Gemini safety settings](https://ai.google.dev/gemini-api/docs/safety-settings) are opt-in configurations that provide a first layer of security for your prompts.
+
+To do this, add `safetySettings: list-of-safety-settings` to the `google` config in the front matter of your prompt.
+
+```markdown
+---
+provider: name-of-your-google-provider-in-latitude
+model: gemini-1.5-flash
+google:
+  safetySettings:
+    - category: HARM_CATEGORY_HATE_SPEECH
+      threshold: BLOCK_LOW_AND_ABOVE
+    - category: HARM_CATEGORY_DANGEROUS_CONTENT
+      threshold: BLOCK_MEDIUM_AND_ABOVE
+---
+```

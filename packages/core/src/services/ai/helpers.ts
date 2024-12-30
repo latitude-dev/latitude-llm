@@ -15,6 +15,7 @@ export {
   type Config,
   type PartialConfig,
   googleConfig,
+  azureConfig,
 } from '@latitude-data/constants'
 
 const GROQ_API_URL = 'https://api.groq.com/openai/v1'
