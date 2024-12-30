@@ -17,7 +17,7 @@ export function applyAnthropicRules(appliedRule: AppliedRules): AppliedRules {
     {
       rule: ProviderRules.Anthropic,
       ruleMessage:
-        'Only system messages are present. You at least need one <user>your message</user> or <assistant>your message</message> in Anthropic.',
+        'Only system messages are present. You at least need one <user>your message</user> or <assistant>your message</assistant> in Anthropic.',
     },
   ]
   return {

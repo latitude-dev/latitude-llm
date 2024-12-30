@@ -41,7 +41,7 @@
     "eventsource-parser": "^2.0.1",
     "node-fetch": "3.3.2",
     "zod": "^3.23.8",
-    "promptl-ai": "^0.3.3"
+    "promptl-ai": "^0.3.5"
   },
   "devDependencies": {
     "@latitude-data/compiler": "workspace:^",

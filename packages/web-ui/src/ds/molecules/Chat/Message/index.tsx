@@ -196,17 +196,30 @@ const Content = ({
 
   switch (value.type) {
     case ContentType.text:
-      return (
-        <ContentText
-          index={index}
-          color={color}
-          size={size}
-          message={value.text}
-          parameters={parameters}
-          collapseParameters={collapseParameters}
-          sourceMap={sourceMap}
-        />
-      )
+      try {
+        const parsedValue = JSON.parse(value.text)
+        return (
+          <div key={`${index}`} className='py-2 max-w-full'>
+            <div className='overflow-hidden rounded-xl w-full'>
+              <CodeBlock language='json'>
+                {JSON.stringify(parsedValue, null, 2)}
+              </CodeBlock>
+            </div>
+          </div>
+        )
+      } catch (_) {
+        return (
+          <ContentText
+            index={index}
+            color={color}
+            size={size}
+            message={value.text}
+            parameters={parameters}
+            collapseParameters={collapseParameters}
+            sourceMap={sourceMap}
+          />
+        )
+      }
 
     case ContentType.image:
       return (
