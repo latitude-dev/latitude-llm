@@ -54,7 +54,9 @@
           "group": "Providers",
           "pages": [
             "guides/getting-started/providers",
-            "guides/getting-started/providers/anthropic"
+            "guides/getting-started/providers/anthropic",
+            "guides/getting-started/providers/azure",
+            "guides/getting-started/providers/google"
           ]
         },
         "guides/getting-started/invite-your-team"
