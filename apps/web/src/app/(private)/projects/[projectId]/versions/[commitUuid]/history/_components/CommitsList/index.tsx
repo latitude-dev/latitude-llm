@@ -1,9 +1,17 @@
 import { Commit } from '@latitude-data/core/browser'
 import { BadgeCommit } from '../../../_components/Sidebar/CommitSelector/CommitItem'
-import { cn, Text, Tooltip, TruncatedTooltip } from '@latitude-data/web-ui'
+import {
+  cn,
+  DropdownMenu,
+  Text,
+  Tooltip,
+  TruncatedTooltip,
+  useCurrentCommit,
+} from '@latitude-data/web-ui'
 import useUsers from '$/stores/users'
 import { relativeTime } from '$/lib/relativeTime'
 import { ReactNode, useMemo } from 'react'
+import { useCommitActions } from './commitActions'
 
 function CommitItem({
   commit,
@@ -22,6 +30,10 @@ function CommitItem({
       users?.find((user) => user.id === commit.userId)?.name ?? 'Unknown user',
     [users],
   )
+  const { getChangesToRevert, getChangesToReset } = useCommitActions({
+    commit,
+  })
+  const { commit: currentCommit } = useCurrentCommit()
 
   return (
     <div
@@ -41,6 +53,32 @@ function CommitItem({
             {commit.title}
           </Text.H5M>
         </TruncatedTooltip>
+        <div className='flex-grow' />
+        <DropdownMenu
+          onOpenChange={() => {
+            onSelect()
+          }}
+          triggerButtonProps={{
+            variant: 'ghost',
+            size: 'small',
+            iconProps: {
+              name: 'ellipsisVertical',
+            },
+            className: 'p-0 w-fit',
+          }}
+          options={[
+            {
+              label: 'Revert changes',
+              onClick: getChangesToRevert,
+            },
+            {
+              label: 'Reset project to this version',
+              onClick: getChangesToReset,
+              disabled:
+                !currentCommit.mergedAt && commit.id === currentCommit.id,
+            },
+          ]}
+        />
       </div>
       {commit.description && (
         <TruncatedTooltip content={commit.description}>
