@@ -161,17 +161,11 @@ export const environment = pulumi
       { name: 'NEXT_PUBLIC_POSTHOG_KEY', value: postHogApiKey },
       { name: 'NEXT_PUBLIC_POSTHOG_HOST', value: 'https://eu.i.posthog.com' },
       { name: 'NEXT_PUBLIC_SENTRY_DSN', value: sentryDsn },
-      {
-        name: 'DATASET_GENERATOR_WORKSPACE_APIKEY',
-        value: datasetGeneratorWorkspaceApiKey,
-      },
-      { name: 'DATASET_GENERATOR_PROJECT_ID', value: '74' },
-      { name: 'DATASET_GENERATOR_DOCUMENT_PATH', value: 'generator' },
+      { name: 'DATASET_GENERATOR_DOCUMENT_PATH', value: 'dataset-generator' },
       {
         name: 'TEMPLATES_SUGGESTION_PROMPT_PATH',
         value: 'evaluation-template-suggestions',
       },
-      { name: 'TEMPLATES_SUGGESTION_PROJECT_ID', value: '60' },
       { name: 'COPILOT_WORKSPACE_API_KEY', value: copilotWorkspaceApiKey },
       {
         name: 'COPILOT_EVALUATION_SUGGESTION_PROMPT_PATH',
