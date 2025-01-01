@@ -11,6 +11,7 @@ import {
 } from '../../lib/errors'
 import { commits } from '../../schema'
 import { recomputeChanges } from '../documents'
+import { pingProjectUpdate } from '../projects'
 
 export async function mergeCommit(commit: Commit, db = database) {
   return Transaction.call<Commit>(async (tx) => {
@@ -84,6 +85,13 @@ export async function mergeCommit(commit: Commit, db = database) {
       .where(eq(commits.id, commit.id))
       .returning()
     const updatedCommit = result[0]!
+
+    await pingProjectUpdate(
+      {
+        projectId: commit.projectId,
+      },
+      tx,
+    ).then((r) => r.unwrap())
 
     return Result.ok(updatedCommit)
   }, db)

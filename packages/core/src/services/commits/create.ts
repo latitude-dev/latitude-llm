@@ -3,6 +3,7 @@ import { database, Database } from '../../client'
 import { publisher } from '../../events/publisher'
 import { Result, Transaction } from '../../lib'
 import { commits } from '../../schema'
+import { pingProjectUpdate } from '../projects'
 
 export async function createCommit({
   project,
@@ -42,6 +43,13 @@ export async function createCommit({
         workspaceId: project.workspaceId,
       },
     })
+
+    await pingProjectUpdate(
+      {
+        projectId: project.id,
+      },
+      tx,
+    ).then((r) => r.unwrap())
 
     return Result.ok(createdCommit!)
   }, db)
