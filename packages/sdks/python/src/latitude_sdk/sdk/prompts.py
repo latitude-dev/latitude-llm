@@ -1,4 +1,4 @@
-from typing import Any, AsyncGenerator, Dict, List, Optional
+from typing import Any, AsyncGenerator, Dict, Iterable, List, Optional
 
 from latitude_sdk.client import (
     ChatPromptRequestBody,
@@ -247,7 +247,9 @@ class Prompts:
 
             return None
 
-    async def chat(self, uuid: str, messages: List[Message], options: ChatPromptOptions) -> Optional[ChatPromptResult]:
+    async def chat(
+        self, uuid: str, messages: Iterable[Message], options: ChatPromptOptions
+    ) -> Optional[ChatPromptResult]:
         try:
             async with self._client.request(
                 handler=RequestHandler.ChatPrompt,
@@ -255,7 +257,7 @@ class Prompts:
                     conversation_uuid=uuid,
                 ),
                 body=ChatPromptRequestBody(
-                    messages=messages,
+                    messages=list(messages),
                     stream=options.stream,
                 ),
             ) as response:

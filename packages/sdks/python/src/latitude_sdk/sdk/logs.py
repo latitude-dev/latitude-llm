@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Iterable, Optional
 
 from latitude_sdk.client import Client, CreateLogRequestBody, CreateLogRequestParams, RequestHandler
 from latitude_sdk.sdk.errors import ApiError, ApiErrorCodes
@@ -45,7 +45,7 @@ class Logs:
 
         return LogOptions(project_id=project_id, version_uuid=version_uuid)
 
-    async def create(self, path: str, messages: List[Message], options: CreateLogOptions) -> CreateLogResult:
+    async def create(self, path: str, messages: Iterable[Message], options: CreateLogOptions) -> CreateLogResult:
         log_options = self._ensure_options(options)
         options = CreateLogOptions(**{**dict(options), **dict(log_options)})
 
@@ -59,7 +59,7 @@ class Logs:
             ),
             body=CreateLogRequestBody(
                 path=path,
-                messages=messages,
+                messages=list(messages),
                 response=options.response,
             ),
         ) as response:

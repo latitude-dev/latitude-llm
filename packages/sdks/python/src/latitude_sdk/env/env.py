@@ -1,7 +1,7 @@
 from latitude_sdk.util import Model, get_env
 
 DEFAULT_GATEWAY_HOSTNAME = "gateway.latitude.so"
-DEFAULT_GATEWAY_PORT = 8787
+DEFAULT_GATEWAY_PORT = 443
 DEFAULT_GATEWAY_SSL = True
 
 

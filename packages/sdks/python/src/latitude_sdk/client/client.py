@@ -16,7 +16,7 @@ from latitude_sdk.sdk.errors import (
 from latitude_sdk.sdk.types import LogSources
 from latitude_sdk.util import Model
 
-RETRIABLE_STATUSES = [429, 500, 502, 503, 504]
+RETRIABLE_STATUSES = [408, 409, 429, 500, 502, 503, 504]
 
 ClientEvent = httpx_sse.ServerSentEvent
 

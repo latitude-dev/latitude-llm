@@ -56,7 +56,7 @@ class ToolCallContent(Model):
     type: ContentType = ContentType.ToolCall
     tool_call_id: str = Field(alias=str("toolCallId"))
     tool_name: str = Field(alias=str("toolName"))
-    args: Dict[str, Any]
+    tool_arguments: Dict[str, Any] = Field(alias=str("toolArguments"))
 
 
 class ToolResultContent(Model):
