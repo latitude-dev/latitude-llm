@@ -31,6 +31,7 @@ async def main():
             stream=True,
         ),
     )
+    print(result)
 
     assert result is not None
 
@@ -52,6 +53,7 @@ async def main():
             stream=True,
         ),
     )
+    print(result)
 
 
 asyncio.run(main())

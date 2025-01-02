@@ -127,14 +127,14 @@ class StreamTypes(StrEnum):
 
 
 class ChainTextResponse(Model):
-    type: StreamTypes = StreamTypes.Text
+    type: StreamTypes = Field(default=StreamTypes.Text, alias=str("streamType"))
     text: str
     tool_calls: Optional[List[ToolCall]] = Field(default=None, alias=str("toolCalls"))
     usage: ModelUsage
 
 
 class ChainObjectResponse(Model):
-    type: StreamTypes = StreamTypes.Object
+    type: StreamTypes = Field(default=StreamTypes.Object, alias=str("streamType"))
     object: Any
     usage: ModelUsage
 
@@ -167,27 +167,27 @@ class ChainEvents(StrEnum):
 class ChainEventStep(Model):
     event: StreamEvents = StreamEvents.Latitude
     type: ChainEvents = ChainEvents.Step
-    config: Dict[str, Any]
-    is_last_step: bool = Field(alias=str("isLastStep"))
-    messages: List[Message]
     uuid: Optional[str] = None
+    is_last_step: bool = Field(alias=str("isLastStep"))
+    config: Dict[str, Any]
+    messages: List[Message]
 
 
 class ChainEventStepCompleted(Model):
     event: StreamEvents = StreamEvents.Latitude
     type: ChainEvents = ChainEvents.StepCompleted
-    response: ChainResponse
     uuid: Optional[str] = None
+    response: ChainResponse
 
 
 class ChainEventCompleted(Model):
     event: StreamEvents = StreamEvents.Latitude
     type: ChainEvents = ChainEvents.Completed
+    uuid: Optional[str] = None
     config: Dict[str, Any]
     messages: Optional[List[Message]] = None
     object: Optional[Any] = None
     response: ChainResponse
-    uuid: Optional[str] = None
 
 
 class ChainEventError(Model):
