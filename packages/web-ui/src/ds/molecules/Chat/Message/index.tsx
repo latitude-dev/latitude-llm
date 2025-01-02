@@ -9,6 +9,7 @@ import {
   MessageContent,
   PromptlSourceRef,
   TextContent,
+  ToolCall,
   ToolContent,
   ToolRequestContent,
 } from '@latitude-data/compiler'
@@ -26,6 +27,8 @@ import {
 } from '../../../atoms'
 import { colors, font, TextColor } from '../../../tokens'
 import { roleToString, roleVariant } from './helpers'
+import { ToolCallForm } from './ToolCallForm'
+import { AddToolResponseData } from '../types'
 
 export { roleToString, roleVariant } from './helpers'
 
@@ -37,6 +40,7 @@ export type MessageProps = {
   animatePulse?: boolean
   parameters?: string[]
   collapseParameters?: boolean
+  addToolResponseData?: AddToolResponseData
 }
 
 export function MessageItem({
@@ -80,6 +84,7 @@ export function Message({
   size = 'default',
   parameters = [],
   collapseParameters = false,
+  addToolResponseData,
 }: MessageProps) {
   return (
     <MessageItem
@@ -94,6 +99,7 @@ export function Message({
           parameters={parameters}
           collapseParameters={collapseParameters}
           collapsedMessage={collapsedMessage}
+          addToolResponseData={addToolResponseData}
         />
       )}
     </MessageItem>
@@ -106,18 +112,29 @@ export function MessageItemContent({
   parameters = [],
   collapseParameters = false,
   collapsedMessage,
+  addToolResponseData,
 }: {
   content: MessageProps['content']
   size?: MessageProps['size']
   parameters?: MessageProps['parameters']
   collapseParameters?: MessageProps['collapseParameters']
   collapsedMessage: boolean
+  addToolResponseData?: AddToolResponseData
 }) {
-  if (collapsedMessage)
-    return <Content value='...' color='foregroundMuted' size={size} />
+  // if (toolCalls.length > 0 && addToolResponseData) {
+  //   return toolCalls.map((toolCall, idx) => (
+  //     <ToolCallForm key={idx} toolCall={toolCall} {...addToolResponseData} />
+  //   ))
+  // }
+  //
 
-  if (typeof content === 'string')
+  if (collapsedMessage) {
+    return <Content value='...' color='foregroundMuted' size={size} />
+  }
+
+  if (typeof content === 'string') {
     return <Content value={content} color='foregroundMuted' size={size} />
+  }
 
   return content.map((c, idx) => (
     <Content
@@ -129,6 +146,7 @@ export function MessageItemContent({
       parameters={parameters}
       collapseParameters={collapseParameters}
       sourceMap={(c as any)?._promptlSourceMap}
+      addToolResponseData={addToolResponseData}
     />
   ))
 }
@@ -150,76 +168,105 @@ export function MessageSkeleton({ role }: { role: string }) {
   )
 }
 
-const Content = ({
-  index = 0,
-  color,
-  value,
-  size,
-  parameters = [],
-  collapseParameters = false,
-  sourceMap = [],
-}: {
-  index?: number
+function JSONContent({ content }: { content: unknown }) {
+  try {
+    const parsedValue = JSON.stringify(content, null, 2)
+    return (
+      <div className='py-2 max-w-full'>
+        <div className='overflow-hidden rounded-xl w-full'>
+          <CodeBlock language='json'>
+            {JSON.stringify(parsedValue, null, 2)}
+          </CodeBlock>
+        </div>
+      </div>
+    )
+  } catch (_) {
+    return (
+      <ContentText
+        color='foregroundMuted'
+        size='default'
+        message='<Error rendering message>'
+      />
+    )
+  }
+}
+
+type ContentPropsBase = {
   color: TextColor
-  value: string | MessageContent
   size?: 'default' | 'small'
   parameters?: string[]
   collapseParameters?: boolean
   sourceMap?: PromptlSourceRef[]
+  addToolResponseData?: AddToolResponseData
+}
+
+function ParsedJSONContent({
+  text,
+  color,
+  size,
+  parameters,
+  collapseParameters,
+  sourceMap,
+}: ContentPropsBase & { text: string }) {
+  try {
+    const parsedValue = JSON.parse(text)
+    return <JSONContent content={parsedValue} />
+  } catch (_) {
+    return (
+      <ContentText
+        color={color}
+        size={size}
+        message={text}
+        parameters={parameters}
+        collapseParameters={collapseParameters}
+        sourceMap={sourceMap}
+      />
+    )
+  }
+}
+
+const Content = ({
+  index = 0,
+  value,
+  ...rest
+}: ContentPropsBase & {
+  value: string | MessageContent
+  index?: number
 }) => {
+  const {
+    color,
+    size,
+    parameters = [],
+    collapseParameters = false,
+    sourceMap = [],
+    addToolResponseData,
+  } = rest
   if (typeof value === 'string') {
-    try {
-      const parsedValue = JSON.parse(value)
+    return (
+      <ParsedJSONContent
+        text={value}
+        color={color}
+        size={size}
+        parameters={parameters}
+        collapseParameters={collapseParameters}
+        sourceMap={sourceMap}
+      />
+    )
+  }
+
+  switch (value.type) {
+    case ContentType.text:
       return (
-        <div key={`${index}`} className='py-2 max-w-full'>
-          <div className='overflow-hidden rounded-xl w-full'>
-            <CodeBlock language='json'>
-              {JSON.stringify(parsedValue, null, 2)}
-            </CodeBlock>
-          </div>
-        </div>
-      )
-    } catch (_) {
-      return (
-        <ContentText
-          index={index}
+        <ParsedJSONContent
+          key={index}
+          text={value.text}
           color={color}
           size={size}
-          message={value}
           parameters={parameters}
           collapseParameters={collapseParameters}
           sourceMap={sourceMap}
         />
       )
-    }
-  }
-
-  switch (value.type) {
-    case ContentType.text:
-      try {
-        const parsedValue = JSON.parse(value.text)
-        return (
-          <div key={`${index}`} className='py-2 max-w-full'>
-            <div className='overflow-hidden rounded-xl w-full'>
-              <CodeBlock language='json'>
-                {JSON.stringify(parsedValue, null, 2)}
-              </CodeBlock>
-            </div>
-          </div>
-        )
-      } catch (_) {
-        return (
-          <ContentText
-            index={index}
-            color={color}
-            size={size}
-            message={value.text}
-            parameters={parameters}
-            collapseParameters={collapseParameters}
-            sourceMap={sourceMap}
-          />
-        )
-      }
 
     case ContentType.image:
       return (
@@ -247,27 +294,32 @@ const Content = ({
         />
       )
 
-    case ContentType.toolCall:
+    case ContentType.toolCall: {
+      const val = value as ToolRequestContent
+      const canResponseCall =
+        !!addToolResponseData && !!val.toolCallId && !!val.toolName
+      console.log('CAN_RESPONSE_CALL', canResponseCall)
+
+      if (!canResponseCall) {
+        return <JSONContent content={value} />
+      }
+
+      const toolCall = {
+        id: val.toolCallId,
+        name: val.toolName,
+        arguments: val.args,
+      }
       return (
-        <div key={`${index}`} className='py-2 w-full'>
-          <div className='overflow-hidden rounded-xl w-full'>
-            <CodeBlock language='json'>
-              {JSON.stringify(value as ToolRequestContent, null, 2)}
-            </CodeBlock>
-          </div>
-        </div>
+        <ToolCallForm
+          key={index}
+          toolCall={toolCall}
+          {...addToolResponseData}
+        />
       )
+    }
 
     case ContentType.toolResult:
-      return (
-        <div key={`${index}`} className='py-2 w-full'>
-          <div className='overflow-hidden rounded-xl w-full'>
-            <CodeBlock language='json'>
-              {JSON.stringify(value as ToolContent, null, 2)}
-            </CodeBlock>
-          </div>
-        </div>
-      )
+      return <JSONContent key={index} content={value} />
 
     default:
       return (
@@ -321,17 +373,17 @@ const ContentText = ({
     >
       {group.length > 0
         ? group.map((segment, segmentIndex) => (
-            <span key={`${index}-group-${groupIndex}-segment-${segmentIndex}`}>
-              {typeof segment === 'string' ? (
-                segment
-              ) : (
-                <ReferenceComponent
-                  reference={segment}
-                  collapseParameters={collapseParameters}
-                />
-              )}
-            </span>
-          ))
+          <span key={`${index}-group-${groupIndex}-segment-${segmentIndex}`}>
+            {typeof segment === 'string' ? (
+              segment
+            ) : (
+              <ReferenceComponent
+                reference={segment}
+                collapseParameters={collapseParameters}
+              />
+            )}
+          </span>
+        ))
         : '\n'}
     </TextComponent>
   ))
@@ -453,7 +505,7 @@ function computeSegments(
     segments.push({
       identifier:
         sourceMap[i]!.identifier &&
-        parameters.includes(sourceMap[i]!.identifier!)
+          parameters.includes(sourceMap[i]!.identifier!)
           ? sourceMap[i]!.identifier!
           : undefined,
       content: source.slice(sourceMap[i]!.start, sourceMap[i]!.end),

@@ -1,6 +1,7 @@
 import { Message, ToolCall } from '@latitude-data/compiler'
 import {
   CoreTool,
+  FinishReason,
   LanguageModelUsage,
   ObjectStreamPart,
   TextStreamPart,
@@ -93,6 +94,7 @@ export type ChainEventDto =
   | {
       type: ChainEventTypes.Complete
       config: Config
+      finishReason?: FinishReason
       messages?: Message[]
       object?: any
       response: ChainEventDtoResponse
@@ -173,6 +175,7 @@ export type LatitudeEventData =
       messages?: Message[]
       object?: any
       response: ChainStepResponse<StreamType>
+      finishReason: FinishReason
       documentLogUuid?: string
     }
   | {
@@ -180,12 +183,20 @@ export type LatitudeEventData =
       error: Error
     }
 
-// FIXME: Move to @latitude-data/constants
 export type RunSyncAPIResponse = {
   uuid: string
   conversation: Message[]
   response: ChainCallResponseDto
 }
 
-// FIXME: Move to @latitude-data/constants
 export type ChatSyncAPIResponse = RunSyncAPIResponse
+
+export const toolCallResponseSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  result: z.string().or(z.record(z.any())),
+  isError: z.boolean().optional(),
+  text: z.string().optional(),
+})
+
+export type ToolCallResponse = z.infer<typeof toolCallResponseSchema>

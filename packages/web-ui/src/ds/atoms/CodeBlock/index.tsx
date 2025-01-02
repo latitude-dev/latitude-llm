@@ -29,6 +29,12 @@ export function CodeBlock(props: CodeBlockProps) {
   )
 }
 
+export function useCodeBlockBackgroundColor() {
+  const { resolvedTheme } = useTheme()
+  if (resolvedTheme === CurrentTheme.Light) return 'bg-backgroundCode'
+  return 'bg-[#282c34]'
+}
+
 function Content({
   language,
   children,
@@ -36,16 +42,11 @@ function Content({
   className,
 }: CodeBlockProps) {
   const { resolvedTheme } = useTheme()
-
+  const bgColor = useCodeBlockBackgroundColor()
   return (
-    <div className='relative max-w-full overflow-x-auto'>
+    <div className={cn('relative max-w-full overflow-x-auto', bgColor)}>
       {copy && (
-        <div
-          className={cn('absolute top-4 right-2', {
-            'bg-backgroundCode': resolvedTheme === CurrentTheme.Light,
-            'bg-[#282c34]': resolvedTheme === CurrentTheme.Dark,
-          })}
-        >
+        <div className='absolute top-4 right-2'>
           <CopyButton content={children} color='foregroundMuted' />
         </div>
       )}

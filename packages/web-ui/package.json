@@ -21,6 +21,7 @@
   "dependencies": {
     "@latitude-data/compiler": "workspace:^",
     "@latitude-data/core": "workspace:^",
+    "@latitude-data/constants": "workspace:^",
     "@radix-ui/react-checkbox": "^1.1.2",
     "@radix-ui/react-progress": "^1.1.0",
     "date-fns": "^3.6.0",

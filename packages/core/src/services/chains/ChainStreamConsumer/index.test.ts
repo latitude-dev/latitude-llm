@@ -123,7 +123,23 @@ describe('ChainStreamConsumer', () => {
       documentLogUuid: 'errorable-uuid',
     }
 
-    consumer.chainCompleted({ step, response })
+    consumer.chainCompleted({
+      step,
+      response,
+      finishReason: 'stop',
+      responseMessages: [
+        {
+          role: MessageRole.assistant,
+          content: [
+            {
+              type: ContentType.text,
+              text: 'text response',
+            },
+          ],
+          toolCalls: [],
+        },
+      ],
+    })
 
     expect(controller.enqueue).toHaveBeenCalledWith({
       event: StreamEventTypes.Latitude,
@@ -159,7 +175,23 @@ describe('ChainStreamConsumer', () => {
       documentLogUuid: 'errorable-uuid',
     }
 
-    consumer.chainCompleted({ step, response })
+    consumer.chainCompleted({
+      step,
+      response,
+      finishReason: 'stop',
+      responseMessages: [
+        {
+          role: MessageRole.assistant,
+          content: [
+            {
+              type: ContentType.text,
+              text: '{\n  "object": "response"\n}',
+            },
+          ],
+          toolCalls: [],
+        },
+      ],
+    })
 
     expect(controller.enqueue).toHaveBeenCalledWith({
       event: StreamEventTypes.Latitude,
@@ -201,7 +233,31 @@ describe('ChainStreamConsumer', () => {
       documentLogUuid: 'errorable-uuid',
     }
 
-    consumer.chainCompleted({ step, response })
+    consumer.chainCompleted({
+      step,
+      response,
+      finishReason: 'stop',
+      responseMessages: [
+        {
+          role: MessageRole.assistant,
+          content: [
+            {
+              type: ContentType.toolCall,
+              toolCallId: 'tool-call-id',
+              toolName: 'tool-call-name',
+              args: { arg1: 'value1', arg2: 'value2' },
+            },
+          ],
+          toolCalls: [
+            {
+              id: 'tool-call-id',
+              name: 'tool-call-name',
+              arguments: { arg1: 'value1', arg2: 'value2' },
+            },
+          ],
+        },
+      ],
+    })
 
     expect(controller.enqueue).toHaveBeenCalledWith({
       event: StreamEventTypes.Latitude,
@@ -251,7 +307,35 @@ describe('ChainStreamConsumer', () => {
       documentLogUuid: 'errorable-uuid',
     }
 
-    consumer.chainCompleted({ step, response })
+    consumer.chainCompleted({
+      step,
+      response,
+      finishReason: 'stop',
+      responseMessages: [
+        {
+          role: MessageRole.assistant,
+          content: [
+            {
+              type: ContentType.text,
+              text: 'text response',
+            },
+            {
+              type: ContentType.toolCall,
+              toolCallId: 'tool-call-id',
+              toolName: 'tool-call-name',
+              args: { arg1: 'value1', arg2: 'value2' },
+            },
+          ],
+          toolCalls: [
+            {
+              id: 'tool-call-id',
+              name: 'tool-call-name',
+              arguments: { arg1: 'value1', arg2: 'value2' },
+            },
+          ],
+        },
+      ],
+    })
 
     expect(controller.enqueue).toHaveBeenCalledWith({
       event: StreamEventTypes.Latitude,

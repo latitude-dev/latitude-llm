@@ -93,7 +93,7 @@ export type AssistantMessage = {
 
 export type ToolMessage = {
   role: MessageRole.tool
-  content: ToolContent[]
+  content: (TextContent | ToolContent)[]
   [key: string]: unknown
 }
 
