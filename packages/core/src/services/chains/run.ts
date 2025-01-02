@@ -217,6 +217,8 @@ async function runStep({
       } as ChainStepResponse<StreamType>
 
       if (step.chainCompleted) {
+        // TODO: Here in addition of emitting the chainCompleted event we serialize the chain
+        // so user can respond with a function call if there is one or more present in the response.
         streamConsumer.chainCompleted({
           step,
           response,
@@ -226,6 +228,8 @@ async function runStep({
       } else {
         streamConsumer.stepCompleted(response)
 
+        // TODO: Here instead of running the state if the step has
+        // toolCalls we serialize the chain up until this point
         return runStep({
           workspace,
           source,
@@ -251,12 +255,14 @@ async function runStep({
     }).then((r) => r.unwrap())
 
     const checkResult = checkValidType(aiResult)
+
     if (checkResult.error) throw checkResult.error
 
     const consumedStream = await consumeStream({
       controller,
       result: aiResult,
     })
+
     if (consumedStream.error) throw consumedStream.error
 
     const _response = await processResponse({
@@ -296,6 +302,8 @@ async function runStep({
     })
 
     if (step.chainCompleted) {
+      // TODO: Here in addition of emitting the chainCompleted event we serialize the chain
+      // so user can respond with a function call if there is one or more present in the response.
       streamConsumer.chainCompleted({
         step,
         response,
@@ -305,6 +313,8 @@ async function runStep({
     } else {
       streamConsumer.stepCompleted(response)
 
+      // TODO: Here instead of running the state if the step has
+      // toolCalls we serialize the chain up until this point
       return runStep({
         workspace,
         source,

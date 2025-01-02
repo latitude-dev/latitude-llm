@@ -1,6 +1,10 @@
 'use server'
 
-import { LogSources, StreamEventTypes } from '@latitude-data/core/browser'
+import {
+  ChainEventTypes,
+  LogSources,
+  StreamEventTypes,
+} from '@latitude-data/core/browser'
 import { publisher } from '@latitude-data/core/events/publisher'
 import { Latitude, type ChainEventDto } from '@latitude-data/sdk'
 import { createSdk } from '$/app/(private)/_lib/createSdk'
@@ -28,6 +32,7 @@ export async function runDocumentAction({
   parameters,
 }: RunDocumentActionProps) {
   const { workspace, user } = await getCurrentUserOrError()
+  let tools = []
 
   publisher.publishLater({
     type: 'documentRunRequested',
@@ -55,6 +60,22 @@ export async function runDocumentAction({
     versionUuid: commitUuid,
     parameters,
     onEvent: (event) => {
+      const data = event.data
+      const type = data.type
+
+      if (
+        (type === ChainEventTypes.StepComplete ||
+          type === ChainEventTypes.Complete) &&
+        data.response.streamType === 'text'
+      ) {
+        const toolCalls = data.response.toolCalls ?? []
+
+        toolCalls.forEach((toolCall) => {
+          console.log('TYPE', type)
+          console.log('TOOL_CALL', toolCall)
+        })
+      }
+
       stream.update(event)
     },
     onError: (error) => {
