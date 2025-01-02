@@ -93,6 +93,8 @@ describe('ProviderProcessor', () => {
         },
       },
       startTime: Date.now(),
+      chainCompleted: true,
+      finishReason: 'stop',
     })
 
     expect(result).toEqual({

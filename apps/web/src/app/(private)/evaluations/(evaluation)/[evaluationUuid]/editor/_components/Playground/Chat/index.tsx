@@ -176,7 +176,7 @@ export default function Chat({
         ) : (
           <StreamMessage
             responseStream={responseStream}
-            conversation={conversation}
+            messages={conversation?.messages ?? []}
             chainLength={chainLength}
           />
         )}

@@ -289,6 +289,7 @@ model: gpt-4o
             type: 'chain-step-complete',
             documentLogUuid: expect.any(String),
             response: {
+              chainCompleted: true,
               documentLogUuid: expect.any(String),
               providerLog: expect.any(Object),
               streamType: 'text',
@@ -304,6 +305,7 @@ model: gpt-4o
           data: {
             type: 'chain-complete',
             documentLogUuid: expect.any(String),
+            finishReason: 'stop',
             config: {
               provider: 'openai',
               model: 'gpt-4o',
@@ -323,6 +325,7 @@ model: gpt-4o
             response: {
               streamType: 'text',
               text: 'Fake AI generated text',
+              chainCompleted: true,
               toolCalls: [],
               usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
               providerLog: logs[logs.length - 1],

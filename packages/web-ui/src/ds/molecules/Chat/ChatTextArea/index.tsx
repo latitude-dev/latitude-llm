@@ -4,12 +4,16 @@ import { KeyboardEvent, useCallback, useState } from 'react'
 
 import TextareaAutosize from 'react-textarea-autosize'
 
-import { Button } from '../../../atoms'
+import { ToolRequest } from '../../../../lib/versionedMessagesHelpers'
+import { ToolCallForm } from './ToolCallForm'
+import { Message, ToolMessage } from '@latitude-data/compiler'
+import { cn } from '../../../../lib/utils'
+import { ToolBar } from './ToolBar'
 
-export function ChatTextArea({
+function SimpleTextArea({
   placeholder,
   clearChat,
-  onSubmit,
+  onSubmit: onSubmitProp,
   disabled = false,
 }: {
   placeholder: string
@@ -18,26 +22,23 @@ export function ChatTextArea({
   onSubmit?: (value: string) => void
 }) {
   const [value, setValue] = useState('')
-
-  const handleSubmit = useCallback(() => {
+  const onSubmit = useCallback(() => {
     if (disabled) return
     if (value === '') return
     setValue('')
-    onSubmit?.(value)
-  }, [value, onSubmit, disabled])
-
+    onSubmitProp?.(value)
+  }, [value, onSubmitProp, disabled])
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLTextAreaElement>) => {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault()
-        handleSubmit()
+        onSubmit()
       }
     },
-    [handleSubmit],
+    [onSubmit],
   )
-
   return (
-    <div className='flex relative w-full border border-border bg-secondary dark:bg-foreground/10 rounded-md'>
+    <>
       <TextareaAutosize
         className='bg-transparent w-full px-2 pt-2 pb-14 resize-none text-sm'
         disabled={disabled}
@@ -48,14 +49,60 @@ export function ChatTextArea({
         minRows={1}
         maxRows={5}
       />
-      <div className='absolute bottom-4 right-4 flex flex-row gap-2 items-center'>
-        <Button fancy variant='outline' onClick={clearChat}>
-          Reset Chat
-        </Button>
-        <Button fancy disabled={disabled} onClick={handleSubmit}>
-          Send Message
-        </Button>
+      <div className='absolute bottom-4 right-4'>
+        <ToolBar
+          onSubmit={onSubmit}
+          clearChat={clearChat}
+          disabled={disabled}
+        />
       </div>
+    </>
+  )
+}
+
+type OnSubmitWithTools = (value: string | ToolMessage[]) => void
+type OnSubmit = (value: string) => void
+export function ChatTextArea({
+  placeholder,
+  clearChat,
+  onSubmit,
+  disabled = false,
+  toolRequests = [],
+  addMessages,
+}: {
+  placeholder: string
+  clearChat: () => void
+  disabled?: boolean
+  onSubmit?: OnSubmit | OnSubmitWithTools
+  addMessages?: (messages: Message[]) => void
+  toolRequests?: ToolRequest[]
+}) {
+  return (
+    <div
+      className={cn(
+        'flex relative w-full border border-border bg-secondary',
+        'dark:bg-foreground/10 rounded-md',
+        {
+          'overflow-hidden': toolRequests.length > 0,
+        },
+      )}
+    >
+      {toolRequests.length > 0 && addMessages ? (
+        <ToolCallForm
+          placeholder='Fill in the tool call response here... (Cmd+Enter to submit)'
+          toolRequests={toolRequests}
+          sendToServer={onSubmit as OnSubmitWithTools}
+          addLocalMessages={addMessages}
+          clearChat={clearChat}
+        />
+      ) : (
+        <SimpleTextArea
+          placeholder={placeholder}
+          clearChat={clearChat}
+          onSubmit={onSubmit}
+          disabled={disabled}
+        />
+      )}
     </div>
   )
 }

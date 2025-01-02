@@ -8,6 +8,7 @@ import {
   type ChainEventDto,
   type DocumentLog,
   type EvaluationResultDto,
+  type ToolCallResponse,
 } from '@latitude-data/constants'
 
 import {
@@ -358,7 +359,8 @@ class Latitude {
         if (logResponses) {
           await this.logs.create(
             prompt.path,
-            step.messages as unknown as Message[], // Inexistent types incompatibilities between legacy messages and promptl messages
+            // Inexistent types incompatibilities between legacy messages and promptl messages
+            step.messages as unknown as Message[],
           )
         }
 
@@ -449,4 +451,5 @@ export type {
   MessageRole,
   Options,
   StreamChainResponse,
+  ToolCallResponse,
 }

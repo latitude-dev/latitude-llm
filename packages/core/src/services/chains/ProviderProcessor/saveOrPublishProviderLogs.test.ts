@@ -84,11 +84,17 @@ describe('saveOrPublishProviderLogs', () => {
       streamType: 'text',
       saveSyncProviderLogs: true,
       finishReason: 'stop',
+      chainCompleted: true,
     })
 
     expect(publisherSpy).toHaveBeenCalledWith({
       type: 'aiProviderCallCompleted',
-      data: { ...data, streamType: 'text' },
+      data: {
+        ...data,
+        streamType: 'text',
+        finishReason: 'stop',
+        chainCompleted: true,
+      },
     })
   })
 
@@ -99,6 +105,7 @@ describe('saveOrPublishProviderLogs', () => {
       workspace,
       saveSyncProviderLogs: true,
       finishReason: 'stop',
+      chainCompleted: true,
     })
 
     expect(createProviderLogSpy).toHaveBeenCalledWith({
@@ -114,6 +121,7 @@ describe('saveOrPublishProviderLogs', () => {
       streamType: 'text',
       saveSyncProviderLogs: false,
       finishReason: 'stop',
+      chainCompleted: true,
       workspace,
     })
 

@@ -17,7 +17,7 @@ import { getResolvedContent } from '../documents'
 import { buildProvidersMap } from '../providerApiKeys/buildMap'
 import { RunDocumentChecker } from './RunDocumentChecker'
 
-export async function createDocumentRunResult({
+async function createDocumentRunResult({
   workspace,
   document,
   commit,
@@ -43,6 +43,7 @@ export async function createDocumentRunResult({
   response?: ChainStepResponse<StreamType>
 }) {
   const durantionInMs = duration ?? 0
+
   if (publishEvent) {
     publisher.publishLater({
       type: 'documentRun',

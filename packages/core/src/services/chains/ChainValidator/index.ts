@@ -6,7 +6,7 @@ import {
 } from '@latitude-data/compiler'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
 import { JSONSchema7 } from 'json-schema'
-import { Chain as PromptlChain } from 'promptl-ai'
+import { Chain as PromptlChain, Message as PromptlMessage } from 'promptl-ai'
 import { z } from 'zod'
 
 import { applyProviderRules, ProviderApiKey, Workspace } from '../../../browser'
@@ -33,7 +33,7 @@ export type ConfigOverrides = JSONOverride | { output: 'no-schema' }
 
 type ValidatorContext = {
   workspace: Workspace
-  prevText: string | undefined
+  prevContent: Message[] | string | undefined
   chain: SomeChain
   promptlVersion: number
   providersMap: CachedApiKeys
@@ -77,24 +77,48 @@ const getOutputType = ({
   return configSchema.type === 'array' ? 'array' : 'object'
 }
 
+/*
+ * Legacy compiler wants a string as response for the next step
+ * But new Promptl can handle an array of messages
+ */
+function getTextFromMessages(
+  prevContent: Message[] | string | undefined,
+): string | undefined {
+  if (!prevContent) return undefined
+  if (typeof prevContent === 'string') return prevContent
+
+  try {
+    return prevContent
+      .flatMap((message) => {
+        if (typeof message.content === 'string') return message.content
+        return JSON.stringify(message.content)
+      })
+      .join('\n')
+  } catch {
+    return ''
+  }
+}
+
 const safeChain = async ({
   promptlVersion,
   chain,
-  prevText,
+  prevContent,
 }: {
   promptlVersion: number
   chain: SomeChain
-  prevText: string | undefined
+  prevContent: Message[] | string | undefined
 }) => {
   try {
     if (promptlVersion === 0) {
+      let prevText = getTextFromMessages(prevContent)
       const { completed, conversation } = await (chain as LegacyChain).step(
         prevText,
       )
       return Result.ok({ chainCompleted: completed, conversation })
     }
+
     const { completed, messages, config } = await (chain as PromptlChain).step(
-      prevText,
+      prevContent as PromptlMessage[] | undefined | string,
     )
     return Result.ok({
       chainCompleted: completed,
@@ -170,13 +194,13 @@ export const validateChain = async (
   const {
     workspace,
     promptlVersion,
-    prevText,
+    prevContent,
     chain,
     providersMap,
     configOverrides,
     removeSchema,
   } = context
-  const chainResult = await safeChain({ promptlVersion, chain, prevText })
+  const chainResult = await safeChain({ promptlVersion, chain, prevContent })
   if (chainResult.error) return chainResult
 
   const { chainCompleted, conversation } = chainResult.value

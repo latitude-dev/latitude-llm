@@ -38,7 +38,7 @@ export function AllMessages({
       ) : (
         <StreamMessage
           responseStream={responseStream}
-          conversation={conversation}
+          messages={conversation?.messages ?? []}
           chainLength={chainLength}
         />
       )}

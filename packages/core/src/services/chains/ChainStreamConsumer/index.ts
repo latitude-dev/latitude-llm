@@ -1,9 +1,3 @@
-import {
-  ContentType,
-  MessageContent,
-  MessageRole,
-  ToolRequestContent,
-} from '@latitude-data/compiler'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
 
 import {
@@ -14,13 +8,14 @@ import {
   StreamEventTypes,
   StreamType,
 } from '../../../constants'
-import { objectToString } from '../../../helpers'
 import { Config } from '../../ai'
 import { ChainError } from '../ChainErrors'
 import { ValidatedChainStep } from '../ChainValidator'
 import { ValidatedAgentStep } from '../agents/AgentStepValidator'
 
 type ValidatedStep = ValidatedChainStep | ValidatedAgentStep
+import { FinishReason } from 'ai'
+import { buildMessagesFromResponse } from '../../../helpers'
 
 export function enqueueChainEvent(
   controller: ReadableStreamDefaultController,
@@ -54,66 +49,15 @@ export class ChainStreamConsumer {
     response,
     config,
     controller,
+    finishReason,
+    responseMessages,
   }: {
     controller: ReadableStreamDefaultController
     response: ChainStepResponse<StreamType>
     config: Config
+    finishReason: FinishReason
+    responseMessages: Message[]
   }) {
-    let messages: Message[] = []
-    let message: Message | undefined = undefined
-
-    if (response.text.length > 0) {
-      message = {
-        role: MessageRole.assistant,
-        content: [
-          {
-            type: ContentType.text,
-            text: response.text,
-          },
-        ],
-        toolCalls: [],
-      }
-    }
-
-    if (response.streamType === 'object' && response.object) {
-      message = {
-        role: MessageRole.assistant,
-        content: [
-          {
-            type: ContentType.text,
-            text: objectToString(response.object),
-          },
-        ],
-        toolCalls: [],
-      }
-    }
-
-    if (response.streamType === 'text' && response.toolCalls.length > 0) {
-      const content = response.toolCalls.map((toolCall) => {
-        return {
-          type: ContentType.toolCall,
-          toolCallId: toolCall.id,
-          toolName: toolCall.name,
-          args: toolCall.arguments,
-        } as ToolRequestContent
-      })
-
-      if (message) {
-        message.content = (message.content as MessageContent[]).concat(content)
-        message.toolCalls = response.toolCalls
-      } else {
-        message = {
-          role: MessageRole.assistant,
-          content: content,
-          toolCalls: response.toolCalls,
-        }
-      }
-    }
-
-    if (message) {
-      messages.push(message)
-    }
-
     enqueueChainEvent(controller, {
       event: StreamEventTypes.Latitude,
       data: {
@@ -121,7 +65,8 @@ export class ChainStreamConsumer {
         config,
         documentLogUuid: response.documentLogUuid,
         response,
-        messages,
+        messages: responseMessages,
+        finishReason,
       },
     })
 
@@ -199,14 +144,22 @@ export class ChainStreamConsumer {
   chainCompleted({
     step,
     response,
+    finishReason,
+    responseMessages: defaultResponseMessages,
   }: {
     step: ValidatedStep
     response: ChainStepResponse<StreamType>
+    finishReason: FinishReason
+    responseMessages?: Message[]
   }) {
-    ChainStreamConsumer.chainCompleted({
+    const responseMessages =
+      defaultResponseMessages ?? buildMessagesFromResponse({ response })
+    return ChainStreamConsumer.chainCompleted({
       controller: this.controller,
       response,
       config: step.conversation.config as Config,
+      finishReason,
+      responseMessages,
     })
   }
 

@@ -34,7 +34,8 @@ export function RegularMonacoEditor({
   const { monacoRef, handleEditorWillMount } = useMonacoSetup({ errorFixFn })
 
   const [defaultValue, _] = useState(value)
-  const [isEditorMounted, setIsEditorMounted] = useState(false) // to avoid race conditions
+  // to avoid race conditions
+  const [isEditorMounted, setIsEditorMounted] = useState(false)
   const { options } = useEditorOptions({
     tabSize: 2,
     readOnly: !!readOnlyMessage,

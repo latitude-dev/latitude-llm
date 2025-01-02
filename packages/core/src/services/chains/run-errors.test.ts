@@ -370,6 +370,8 @@ describe('run chain error handling', () => {
       streamType: 'text',
       text: 'MY TEXT',
       toolCalls: [],
+      chainCompleted: true,
+      finishReason: 'stop',
       usage: {
         promptTokens: 3,
         completionTokens: 7,

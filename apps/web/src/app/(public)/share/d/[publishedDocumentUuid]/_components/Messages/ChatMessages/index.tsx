@@ -30,7 +30,7 @@ export function ChatMessages({
       ) : (
         <StreamMessage
           responseStream={responseStream}
-          conversation={conversation}
+          messages={conversation.messages}
           chainLength={chainLength}
         />
       )}

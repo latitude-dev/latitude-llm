@@ -41,6 +41,7 @@ export function useMonacoSetup({
 
   useEffect(() => {
     if (!monacoRef.current) return
+
     applyTheme(monacoRef.current)
   }, [applyTheme])
 

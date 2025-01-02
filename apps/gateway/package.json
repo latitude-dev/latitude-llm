@@ -30,7 +30,7 @@
     "drizzle-orm": "^0.33.0",
     "hono": "^4.6.6",
     "lodash-es": "^4.17.21",
-    "promptl-ai": "^0.3.5",
+    "promptl-ai": "^0.4.5",
     "rate-limiter-flexible": "^5.0.3",
     "zod": "^3.23.8"
   },

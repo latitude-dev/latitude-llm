@@ -3,6 +3,7 @@ import { RunErrorCodes } from '@latitude-data/constants/errors'
 
 import {
   buildConversation,
+  buildMessagesFromResponse,
   ChainEvent,
   ChainStepResponse,
   LogSources,
@@ -149,6 +150,8 @@ async function iterate({
       apiProvider: provider,
       messages,
       startTime: stepStartTime,
+      finishReason: consumedStream.finishReason,
+      chainCompleted: true,
     })
 
     const providerLog = await saveOrPublishProviderLogs({
@@ -165,10 +168,12 @@ async function iterate({
         response: _response,
       }),
       saveSyncProviderLogs: true,
+      chainCompleted: true,
     })
 
     const response = { ..._response, providerLog }
 
+    const responseMessages = buildMessagesFromResponse({ response })
     ChainStreamConsumer.chainCompleted({
       controller,
       response,
@@ -177,6 +182,8 @@ async function iterate({
         provider: provider.name,
         model: config.model,
       },
+      finishReason: consumedStream.finishReason,
+      responseMessages,
     })
 
     return response

@@ -125,6 +125,8 @@ describe('runEvaluationJob', () => {
         usage: { promptTokens: 8, completionTokens: 2, totalTokens: 10 },
         documentLogUuid: documentLog.uuid,
         providerLog: undefined,
+        finishReason: 'stop',
+        chainCompleted: true,
       })
       runEvaluationSpy.mockResolvedValueOnce(
         Result.ok({
@@ -151,6 +153,8 @@ describe('runEvaluationJob', () => {
         usage: { promptTokens: 8, completionTokens: 2, totalTokens: 10 },
         documentLogUuid: documentLog.uuid,
         providerLog: undefined,
+        finishReason: 'stop',
+        chainCompleted: true,
       })
       runEvaluationSpy.mockResolvedValueOnce(
         Result.ok({
