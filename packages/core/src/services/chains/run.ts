@@ -23,7 +23,7 @@ import { processResponse } from './ProviderProcessor'
 import { buildStepExecution } from './buildStep'
 
 export type CachedApiKeys = Map<string, ProviderApiKey>
-type SomeChain = LegacyChain | PromptlChain
+export type SomeChain = LegacyChain | PromptlChain
 
 async function createRunError({
   error,

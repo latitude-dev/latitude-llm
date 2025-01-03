@@ -1,13 +1,27 @@
-import { ChainStepResponse, StreamType } from '../../constants'
-import { ChainStreamConsumer } from './ChainStreamConsumer'
-import { ValidatedStep } from './ChainValidator'
 import { Chain as PromptlChain } from 'promptl-ai'
-import { runStep, StepProps } from './run'
 import { FinishReason } from 'ai'
+
+import { ChainStepResponse, StreamType } from '../../../constants'
+import { ChainStreamConsumer } from '../ChainStreamConsumer'
+import { ValidatedStep } from '../ChainValidator'
+import { runStep, StepProps, SomeChain } from '../run'
 import {
   buildProviderLogDto,
   saveOrPublishProviderLogs,
-} from './ProviderProcessor/saveOrPublishProviderLogs'
+} from '../ProviderProcessor/saveOrPublishProviderLogs'
+import { cacheChain } from '../chainCache'
+
+function hasToolCalls({
+  response,
+}: {
+  response: ChainStepResponse<StreamType>
+}) {
+  const type = response.streamType
+  if (type === 'object') return false
+
+  const toolCalls = response.toolCalls ?? []
+  return toolCalls.length > 0
+}
 
 export async function buildStepExecution({
   streamConsumer,
@@ -27,16 +41,18 @@ export async function buildStepExecution({
   }
 }) {
   const { chain } = stepProps
+  const workspace = stepProps.workspace
+  const documentLogUuid = stepProps.errorableUuid
   const providerLog = await saveOrPublishProviderLogs({
-    workspace: stepProps.workspace,
+    workspace,
     streamType,
     finishReason,
     data: buildProviderLogDto({
+      workspace,
       provider: step.provider,
       conversation: step.conversation,
-      workspace: stepProps.workspace,
       source: stepProps.source,
-      errorableUuid: stepProps.errorableUuid,
+      errorableUuid: documentLogUuid,
       stepStartTime,
       response: baseResponse,
     }),
@@ -49,6 +65,13 @@ export async function buildStepExecution({
   }: {
     finalResponse: ChainStepResponse<StreamType>
   }): Promise<ChainStepResponse<StreamType>> {
+    const isPromptl = chain instanceof PromptlChain
+    const hasTools = isPromptl && hasToolCalls({ response: finalResponse })
+
+    if (hasTools) {
+      await cacheChain({ workspace, chain, documentLogUuid })
+    }
+
     if (step.chainCompleted) {
       streamConsumer.chainCompleted({
         step,
@@ -58,18 +81,17 @@ export async function buildStepExecution({
       return finalResponse
     }
 
-    if (chain instanceof PromptlChain) {
-      // TODO: Serialize chain when the response contains tool calls
-      chain.serialize
-    }
-
     streamConsumer.stepCompleted(finalResponse)
 
-    // TODO: Do not run next step if the response contains some tool calls
-    return runStep({
-      ...stepProps,
-      previousResponse: finalResponse,
-    })
+    if (hasTools) {
+      // Stop chain execution if there are tool calls
+      return finalResponse
+    } else {
+      return runStep({
+        ...stepProps,
+        previousResponse: finalResponse,
+      })
+    }
   }
 
   return { providerLog, executeStep }
