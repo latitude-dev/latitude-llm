@@ -1,32 +1,69 @@
-from unittest import IsolatedAsyncioTestCase
+from typing import List, cast
 
-from latitude_sdk import GatewayOptions, InternalOptions, Latitude, LatitudeOptions
+import httpx
+
+from latitude_sdk import GetPromptOptions, GetPromptResult
+from tests.utils import TestCase, fixtures
 
 
-class TestGetPrompt(IsolatedAsyncioTestCase):
-    sdk: Latitude
-
-    async def asyncSetUp(self):
-        print("async setup")
-
-        self.sdk = Latitude(
-            api_key="fake-api-key",
-            options=LatitudeOptions(
-                project_id=3,
-                internal=InternalOptions(
-                    gateway=GatewayOptions(host="localhost", port=8787, ssl=False, api_version="v2")
-                ),
-            ),
+class TestGetPrompt(TestCase):
+    async def test_success_global_options(self):
+        path = "prompt-path"
+        options = GetPromptOptions()
+        endpoint = f"/projects/{self.project_id}/versions/{self.version_uuid}/documents/{path}"
+        endpoint_mock = self.gateway_mock.get(endpoint).mock(
+            return_value=httpx.Response(200, json=fixtures.PROMPT_RESPONSE)
         )
 
-    def setUp(self):
-        print("setup")
+        result = await self.sdk.prompts.get(path, options)
+        request, _ = endpoint_mock.calls.last
 
-    async def asyncTearDown(self):
-        print("async teardown")
+        self.assert_requested(request, method="GET", endpoint=endpoint)
+        self.assertEqual(endpoint_mock.call_count, 1)
+        self.assertEqual(result, GetPromptResult(**dict(fixtures.PROMPT)))
 
-    def tearDown(self):
-        print("teardown")
+    async def test_success_overrides_options(self):
+        path = "prompt-path"
+        options = GetPromptOptions(project_id=21, version_uuid="version-uuid")
+        endpoint = f"/projects/{options.project_id}/versions/{options.version_uuid}/documents/{path}"
+        endpoint_mock = self.gateway_mock.get(endpoint).mock(
+            return_value=httpx.Response(200, json=fixtures.PROMPT_RESPONSE)
+        )
 
-    async def test_success(self):
-        print("test success")
+        result = await self.sdk.prompts.get(path, options)
+        request, _ = endpoint_mock.calls.last
+
+        self.assert_requested(request, method="GET", endpoint=endpoint)
+        self.assertEqual(endpoint_mock.call_count, 1)
+        self.assertEqual(result, GetPromptResult(**dict(fixtures.PROMPT)))
+
+    async def test_success_default_version_uuid(self):
+        self.sdk._options.version_uuid = None  # pyright: ignore [reportPrivateUsage]
+        path = "prompt-path"
+        options = GetPromptOptions()
+        endpoint = f"/projects/{self.project_id}/versions/live/documents/{path}"
+        endpoint_mock = self.gateway_mock.get(endpoint).mock(
+            return_value=httpx.Response(200, json=fixtures.PROMPT_RESPONSE)
+        )
+
+        result = await self.sdk.prompts.get(path, options)
+        request, _ = endpoint_mock.calls.last
+
+        self.assert_requested(request, method="GET", endpoint=endpoint)
+        self.assertEqual(endpoint_mock.call_count, 1)
+        self.assertEqual(result, GetPromptResult(**dict(fixtures.PROMPT)))
+
+    async def test_fails(self):
+        path = "prompt-path"
+        options = GetPromptOptions()
+        endpoint = f"/projects/{self.project_id}/versions/{self.version_uuid}/documents/{path}"
+        endpoint_mock = self.gateway_mock.get(endpoint).mock(
+            return_value=httpx.Response(500, json=fixtures.ERROR_RESPONSE)
+        )
+
+        with self.assertRaisesRegex(type(fixtures.ERROR), fixtures.ERROR.message):
+            await self.sdk.prompts.get(path, options)
+        requests = cast(List[httpx.Request], [request for request, _ in endpoint_mock.calls])  # type: ignore
+
+        [self.assert_requested(request, method="GET", endpoint=endpoint) for request in requests]
+        self.assertEqual(endpoint_mock.call_count, self.internal_options.retries)

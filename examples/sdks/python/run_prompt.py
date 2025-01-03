@@ -19,7 +19,7 @@ async def main():
     assert LATITUDE_API_KEY, "LATITUDE_API_KEY is not set"
     assert LATITUDE_PROJECT_ID, "LATITUDE_PROJECT_ID is not set"
 
-    sdk = Latitude(api_key=LATITUDE_API_KEY, options=LatitudeOptions(project_id=int(LATITUDE_PROJECT_ID)))
+    sdk = Latitude(LATITUDE_API_KEY, LatitudeOptions(project_id=int(LATITUDE_PROJECT_ID)))
 
     result = await sdk.prompts.run(
         "prompt-path",
@@ -31,6 +31,7 @@ async def main():
             stream=True,
         ),
     )
+    print(result)
 
     assert result is not None
 
@@ -52,6 +53,7 @@ async def main():
             stream=True,
         ),
     )
+    print(result)
 
 
 asyncio.run(main())

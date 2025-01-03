@@ -1,4 +1,4 @@
-from typing import Any, AsyncGenerator, Dict, List, Optional
+from typing import Any, AsyncGenerator, Dict, Iterable, List, Optional
 
 from latitude_sdk.client import (
     ChatPromptRequestBody,
@@ -119,7 +119,7 @@ class Prompts:
                 elif type == str(ChainEvents.Error):
                     event = ChainEventError.model_validate_json(stream_event.data)
                     raise ApiError(
-                        status=500,
+                        status=400,
                         code=ApiErrorCodes.AIRunError,
                         message=event.error.message,
                         response=stream_event.data,
@@ -130,7 +130,7 @@ class Prompts:
                         status=500,
                         code=ApiErrorCodes.InternalServerError,
                         message=f"Unknown latitude event: {type}",
-                        response=f"Unknown latitude event: {type}",
+                        response=stream_event.data,
                     )
 
             elif stream_event.event == str(StreamEvents.Provider):
@@ -142,7 +142,7 @@ class Prompts:
                     status=500,
                     code=ApiErrorCodes.InternalServerError,
                     message=f"Unknown stream event: {stream_event.event}",
-                    response=f"Unknown stream event: {stream_event.event}",
+                    response=stream_event.data,
                 )
 
             if callbacks.on_event:
@@ -247,7 +247,9 @@ class Prompts:
 
             return None
 
-    async def chat(self, uuid: str, messages: List[Message], options: ChatPromptOptions) -> Optional[ChatPromptResult]:
+    async def chat(
+        self, uuid: str, messages: Iterable[Message], options: ChatPromptOptions
+    ) -> Optional[ChatPromptResult]:
         try:
             async with self._client.request(
                 handler=RequestHandler.ChatPrompt,
@@ -255,7 +257,7 @@ class Prompts:
                     conversation_uuid=uuid,
                 ),
                 body=ChatPromptRequestBody(
-                    messages=messages,
+                    messages=list(messages),
                     stream=options.stream,
                 ),
             ) as response:
