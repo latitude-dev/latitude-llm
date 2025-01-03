@@ -57,3 +57,13 @@ class ApiError(Exception):
             return f"Unexpected API Error: {status} {message}"
 
         return message
+
+    def __eq__(self, other: object) -> bool:
+        return (
+            isinstance(other, ApiError)
+            and self.status == other.status
+            and self.code == other.code
+            and self.message == other.message
+            and self.response == other.response
+            and self.db_ref == other.db_ref
+        )

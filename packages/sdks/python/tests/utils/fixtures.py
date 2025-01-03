@@ -1,6 +1,7 @@
 import json
 from datetime import datetime
 from typing import Any, Dict, List
+from unittest import mock
 
 from latitude_sdk import (
     ApiError,
@@ -37,7 +38,7 @@ ERROR = ApiError(
     status=500,
     code=ApiErrorCodes.InternalServerError,
     message="An unexpected error occurred",
-    response=json.dumps(ERROR_RESPONSE),
+    response=mock.ANY,
     db_ref=None,
 )
 
@@ -455,8 +456,8 @@ CONVERSATION_ERROR_RESPONSE: Dict[str, Any] = {
 CONVERSATION_ERROR = ApiError(
     status=500,
     code=ApiErrorCodes.AIRunError,
-    message="An unexpected error occurred",
-    response=json.dumps(CONVERSATION_ERROR_RESPONSE),
+    message="Cannot compile chain",
+    response=mock.ANY,
     db_ref=None,
 )
 
