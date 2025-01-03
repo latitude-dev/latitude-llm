@@ -119,3 +119,14 @@ class TestCase(IsolatedAsyncioTestCase):
         ]
 
         return (conversation * messages)[:messages]
+
+    def create_stream(self, status: int, events: List[str]) -> httpx.Response:
+        stream = ""
+        for event in events:
+            stream += event + "\n\n"
+
+        return httpx.Response(
+            status_code=status,
+            headers={"Content-Type": "text/event-stream"},
+            stream=httpx.ByteStream(stream.encode("utf-8")),
+        )

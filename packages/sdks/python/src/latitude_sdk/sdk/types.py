@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Protocol, Union, runtime_checkable
+from typing import Any, Dict, List, Literal, Optional, Protocol, Union, runtime_checkable
 
 from latitude_sdk.sdk.errors import ApiError
 from latitude_sdk.util import Field, Model, StrEnum
@@ -37,30 +37,30 @@ class ContentType(StrEnum):
 
 
 class TextContent(Model):
-    type: ContentType = ContentType.Text
+    type: Literal[ContentType.Text] = ContentType.Text
     text: str
 
 
 class ImageContent(Model):
-    type: ContentType = ContentType.Image
+    type: Literal[ContentType.Image] = ContentType.Image
     image: str
 
 
 class FileContent(Model):
-    type: ContentType = ContentType.File
+    type: Literal[ContentType.File] = ContentType.File
     file: str
     mime_type: str = Field(alias=str("mimeType"))
 
 
 class ToolCallContent(Model):
-    type: ContentType = ContentType.ToolCall
+    type: Literal[ContentType.ToolCall] = ContentType.ToolCall
     tool_call_id: str = Field(alias=str("toolCallId"))
     tool_name: str = Field(alias=str("toolName"))
     tool_arguments: Dict[str, Any] = Field(alias=str("toolArguments"))
 
 
 class ToolResultContent(Model):
-    type: ContentType = ContentType.ToolResult
+    type: Literal[ContentType.ToolResult] = ContentType.ToolResult
     tool_call_id: str = Field(alias=str("toolCallId"))
     tool_name: str = Field(alias=str("toolName"))
     result: str
@@ -85,12 +85,12 @@ class MessageRole(StrEnum):
 
 
 class SystemMessage(Model):
-    role: MessageRole = MessageRole.System
+    role: Literal[MessageRole.System] = MessageRole.System
     content: Union[str, List[TextContent]]
 
 
 class UserMessage(Model):
-    role: MessageRole = MessageRole.User
+    role: Literal[MessageRole.User] = MessageRole.User
     content: Union[str, List[Union[TextContent, ImageContent, FileContent]]]
     name: Optional[str] = None
 
@@ -102,13 +102,13 @@ class ToolCall(Model):
 
 
 class AssistantMessage(Model):
-    role: MessageRole = MessageRole.Assistant
+    role: Literal[MessageRole.Assistant] = MessageRole.Assistant
     content: Union[str, List[Union[TextContent, ToolCallContent]]]
     tool_calls: Optional[List[ToolCall]] = Field(default=None, alias=str("toolCalls"))
 
 
 class ToolMessage(Model):
-    role: MessageRole = MessageRole.Tool
+    role: Literal[MessageRole.Tool] = MessageRole.Tool
     content: List[ToolResultContent]
 
 
@@ -127,14 +127,14 @@ class StreamTypes(StrEnum):
 
 
 class ChainTextResponse(Model):
-    type: StreamTypes = Field(default=StreamTypes.Text, alias=str("streamType"))
+    type: Literal[StreamTypes.Text] = Field(default=StreamTypes.Text, alias=str("streamType"))
     text: str
     tool_calls: Optional[List[ToolCall]] = Field(default=None, alias=str("toolCalls"))
     usage: ModelUsage
 
 
 class ChainObjectResponse(Model):
-    type: StreamTypes = Field(default=StreamTypes.Object, alias=str("streamType"))
+    type: Literal[StreamTypes.Object] = Field(default=StreamTypes.Object, alias=str("streamType"))
     object: Any
     usage: ModelUsage
 
@@ -165,8 +165,8 @@ class ChainEvents(StrEnum):
 
 
 class ChainEventStep(Model):
-    event: StreamEvents = StreamEvents.Latitude
-    type: ChainEvents = ChainEvents.Step
+    event: Literal[StreamEvents.Latitude] = StreamEvents.Latitude
+    type: Literal[ChainEvents.Step] = ChainEvents.Step
     uuid: Optional[str] = None
     is_last_step: bool = Field(alias=str("isLastStep"))
     config: Dict[str, Any]
@@ -174,15 +174,15 @@ class ChainEventStep(Model):
 
 
 class ChainEventStepCompleted(Model):
-    event: StreamEvents = StreamEvents.Latitude
-    type: ChainEvents = ChainEvents.StepCompleted
+    event: Literal[StreamEvents.Latitude] = StreamEvents.Latitude
+    type: Literal[ChainEvents.StepCompleted] = ChainEvents.StepCompleted
     uuid: Optional[str] = None
     response: ChainResponse
 
 
 class ChainEventCompleted(Model):
-    event: StreamEvents = StreamEvents.Latitude
-    type: ChainEvents = ChainEvents.Completed
+    event: Literal[StreamEvents.Latitude] = StreamEvents.Latitude
+    type: Literal[ChainEvents.Completed] = ChainEvents.Completed
     uuid: Optional[str] = None
     config: Dict[str, Any]
     messages: Optional[List[Message]] = None
@@ -191,8 +191,8 @@ class ChainEventCompleted(Model):
 
 
 class ChainEventError(Model):
-    event: StreamEvents = StreamEvents.Latitude
-    type: ChainEvents = ChainEvents.Error
+    event: Literal[StreamEvents.Latitude] = StreamEvents.Latitude
+    type: Literal[ChainEvents.Error] = ChainEvents.Error
     error: ChainError
 
 
@@ -203,7 +203,7 @@ LatitudeEvent = ChainEvent
 
 
 class FinishedEvent(Model):
-    event: StreamEvents = StreamEvents.Finished
+    event: Literal[StreamEvents.Finished] = StreamEvents.Finished
     uuid: str
     conversation: List[Message]
     response: ChainResponse
