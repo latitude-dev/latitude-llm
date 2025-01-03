@@ -65,6 +65,10 @@ export const runDocumentJob = async (job: Job<RunDocumentJobData>) => {
       .getCommitByUuid({ projectId, uuid: commitUuid })
       .then((r) => r.unwrap())
 
+    // TODO: How we do tool calling in this context?
+    // This is invoked when the user run a prompt in batch from a dataset
+    // I think we need to refactor this and we can't use as we do now normal
+    // `runDocumentAtCommit` function
     await runDocumentAtCommit({
       workspace,
       document,
