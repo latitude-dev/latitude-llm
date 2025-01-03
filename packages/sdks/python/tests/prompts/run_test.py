@@ -38,7 +38,6 @@ class TestRunPromptSync(TestCase):
                 "customIdentifier": options.custom_identifier,
                 "parameters": options.parameters,
                 "stream": options.stream,
-                "__internal": {"source": "api"},
             },
         )
         self.assertEqual(endpoint_mock.call_count, 1)
@@ -79,7 +78,6 @@ class TestRunPromptSync(TestCase):
                 "customIdentifier": options.custom_identifier,
                 "parameters": options.parameters,
                 "stream": options.stream,
-                "__internal": {"source": "api"},
             },
         )
         self.assertEqual(endpoint_mock.call_count, 1)
@@ -119,7 +117,6 @@ class TestRunPromptSync(TestCase):
                 "customIdentifier": options.custom_identifier,
                 "parameters": options.parameters,
                 "stream": options.stream,
-                "__internal": {"source": "api"},
             },
         )
         self.assertEqual(endpoint_mock.call_count, 1)
@@ -159,7 +156,6 @@ class TestRunPromptSync(TestCase):
                     "customIdentifier": options.custom_identifier,
                     "parameters": options.parameters,
                     "stream": options.stream,
-                    "__internal": {"source": "api"},
                 },
             )
             for request in requests
@@ -199,7 +195,6 @@ class TestRunPromptSync(TestCase):
                 "customIdentifier": options.custom_identifier,
                 "parameters": options.parameters,
                 "stream": options.stream,
-                "__internal": {"source": "api"},
             },
         )
         self.assertEqual(endpoint_mock.call_count, 1)
@@ -236,7 +231,6 @@ class TestRunPromptSync(TestCase):
                 "customIdentifier": options.custom_identifier,
                 "parameters": options.parameters,
                 "stream": options.stream,
-                "__internal": {"source": "api"},
             },
         )
         self.assertEqual(endpoint_mock.call_count, 1)
@@ -278,7 +272,6 @@ class TestRunPromptStream(TestCase):
                 "customIdentifier": options.custom_identifier,
                 "parameters": options.parameters,
                 "stream": options.stream,
-                "__internal": {"source": "api"},
             },
         )
         self.assertEqual(endpoint_mock.call_count, 1)
@@ -321,7 +314,6 @@ class TestRunPromptStream(TestCase):
                 "customIdentifier": options.custom_identifier,
                 "parameters": options.parameters,
                 "stream": options.stream,
-                "__internal": {"source": "api"},
             },
         )
         self.assertEqual(endpoint_mock.call_count, 1)
@@ -363,7 +355,6 @@ class TestRunPromptStream(TestCase):
                 "customIdentifier": options.custom_identifier,
                 "parameters": options.parameters,
                 "stream": options.stream,
-                "__internal": {"source": "api"},
             },
         )
         self.assertEqual(endpoint_mock.call_count, 1)
@@ -404,7 +395,6 @@ class TestRunPromptStream(TestCase):
                     "customIdentifier": options.custom_identifier,
                     "parameters": options.parameters,
                     "stream": options.stream,
-                    "__internal": {"source": "api"},
                 },
             )
             for request in requests
@@ -444,7 +434,6 @@ class TestRunPromptStream(TestCase):
                 "customIdentifier": options.custom_identifier,
                 "parameters": options.parameters,
                 "stream": options.stream,
-                "__internal": {"source": "api"},
             },
         )
         self.assertEqual(endpoint_mock.call_count, 1)
@@ -481,7 +470,6 @@ class TestRunPromptStream(TestCase):
                 "customIdentifier": options.custom_identifier,
                 "parameters": options.parameters,
                 "stream": options.stream,
-                "__internal": {"source": "api"},
             },
         )
         self.assertEqual(endpoint_mock.call_count, 1)

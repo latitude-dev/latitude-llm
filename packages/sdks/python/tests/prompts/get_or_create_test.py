@@ -25,7 +25,6 @@ class TestGetOrCreatePrompt(TestCase):
             body={
                 "path": path,
                 "prompt": options.prompt,
-                "__internal": {"source": "api"},
             },
         )
         self.assertEqual(endpoint_mock.call_count, 1)
@@ -49,7 +48,6 @@ class TestGetOrCreatePrompt(TestCase):
             body={
                 "path": path,
                 "prompt": options.prompt,
-                "__internal": {"source": "api"},
             },
         )
         self.assertEqual(endpoint_mock.call_count, 1)
@@ -74,7 +72,6 @@ class TestGetOrCreatePrompt(TestCase):
             body={
                 "path": path,
                 "prompt": options.prompt,
-                "__internal": {"source": "api"},
             },
         )
         self.assertEqual(endpoint_mock.call_count, 1)
@@ -100,7 +97,6 @@ class TestGetOrCreatePrompt(TestCase):
                 body={
                     "path": path,
                     "prompt": options.prompt,
-                    "__internal": {"source": "api"},
                 },
             )
             for request in requests

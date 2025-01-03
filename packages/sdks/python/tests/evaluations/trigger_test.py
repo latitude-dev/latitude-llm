@@ -24,7 +24,6 @@ class TestTriggerEvaluation(TestCase):
             endpoint=endpoint,
             body={
                 "evaluationUuids": options.evaluation_uuids,
-                "__internal": {"source": "api"},
             },
         )
         self.assertEqual(endpoint_mock.call_count, 1)
@@ -47,9 +46,7 @@ class TestTriggerEvaluation(TestCase):
                 request,
                 method="POST",
                 endpoint=endpoint,
-                body={
-                    "__internal": {"source": "api"},
-                },
+                body={},
             )
             for request in requests
         ]
