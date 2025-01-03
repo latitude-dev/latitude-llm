@@ -69,8 +69,8 @@ type CommonArgs<T extends boolean = true, C extends SomeChain = LegacyChain> = {
 }
 type RunChainArgs<T extends boolean, C extends SomeChain> = T extends true
   ? CommonArgs<T, C> & {
-    errorableType: ErrorableEntity
-  }
+      errorableType: ErrorableEntity
+    }
   : CommonArgs<T, C> & { errorableType?: undefined }
 
 export async function runChain<T extends boolean, C extends SomeChain>({

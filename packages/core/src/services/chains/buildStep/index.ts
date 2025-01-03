@@ -72,7 +72,7 @@ export async function buildStepExecution({
       await cacheChain({ workspace, chain, documentLogUuid })
     }
 
-    if (step.chainCompleted) {
+    if (step.chainCompleted || hasTools) {
       streamConsumer.chainCompleted({
         step,
         response: finalResponse,
@@ -83,15 +83,10 @@ export async function buildStepExecution({
 
     streamConsumer.stepCompleted(finalResponse)
 
-    if (hasTools) {
-      // Stop chain execution if there are tool calls
-      return finalResponse
-    } else {
-      return runStep({
-        ...stepProps,
-        previousResponse: finalResponse,
-      })
-    }
+    return runStep({
+      ...stepProps,
+      previousResponse: finalResponse,
+    })
   }
 
   return { providerLog, executeStep }

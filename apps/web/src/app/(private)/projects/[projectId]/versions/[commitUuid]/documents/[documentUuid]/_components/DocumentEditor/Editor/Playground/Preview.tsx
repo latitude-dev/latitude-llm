@@ -102,16 +102,16 @@ export default function Preview({
     const usePromptl = document.promptlVersion !== 0
     const chain = usePromptl
       ? new PromptlChain({
-        prompt: metadata.resolvedPrompt,
-        parameters,
-        adapter: Adapters.default,
-        includeSourceMap: true,
-      })
+          prompt: metadata.resolvedPrompt,
+          parameters,
+          adapter: Adapters.default,
+          includeSourceMap: true,
+        })
       : new LegacyChain({
-        prompt: metadata.resolvedPrompt,
-        parameters,
-        includeSourceMap: true,
-      })
+          prompt: metadata.resolvedPrompt,
+          parameters,
+          includeSourceMap: true,
+        })
 
     chain
       .step()
