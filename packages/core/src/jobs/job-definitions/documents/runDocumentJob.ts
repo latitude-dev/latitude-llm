@@ -69,6 +69,21 @@ export const runDocumentJob = async (job: Job<RunDocumentJobData>) => {
     // This is invoked when the user run a prompt in batch from a dataset
     // I think we need to refactor this and we can't use as we do now normal
     // `runDocumentAtCommit` function
+    //
+    // One idea is use SDK and define AI tool calls like this:
+    /* const response = sdk.run( */
+    /*   'mi-prompt',  */
+    /*   { location: "Barcelona" },  */
+    /*   {  */
+    /*     tools: [ */
+    /*     // Same name as in schema */
+    /*     get_weather: (location: string) => { */
+    /*       // Generate this response with AI */
+    /*       return { temperature: 23 } */
+    /*     } */
+    /*   ] */
+    /*   } */
+    /* ) */
     await runDocumentAtCommit({
       workspace,
       document,
