@@ -454,7 +454,7 @@ CONVERSATION_ERROR_RESPONSE: Dict[str, Any] = {
 }
 
 CONVERSATION_ERROR = ApiError(
-    status=500,
+    status=400,
     code=ApiErrorCodes.AIRunError,
     message="Cannot compile chain",
     response=mock.ANY,

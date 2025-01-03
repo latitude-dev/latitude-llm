@@ -119,7 +119,7 @@ class Prompts:
                 elif type == str(ChainEvents.Error):
                     event = ChainEventError.model_validate_json(stream_event.data)
                     raise ApiError(
-                        status=500,
+                        status=400,
                         code=ApiErrorCodes.AIRunError,
                         message=event.error.message,
                         response=stream_event.data,
@@ -130,7 +130,7 @@ class Prompts:
                         status=500,
                         code=ApiErrorCodes.InternalServerError,
                         message=f"Unknown latitude event: {type}",
-                        response=f"Unknown latitude event: {type}",
+                        response=stream_event.data,
                     )
 
             elif stream_event.event == str(StreamEvents.Provider):
@@ -142,7 +142,7 @@ class Prompts:
                     status=500,
                     code=ApiErrorCodes.InternalServerError,
                     message=f"Unknown stream event: {stream_event.event}",
-                    response=f"Unknown stream event: {stream_event.event}",
+                    response=stream_event.data,
                 )
 
             if callbacks.on_event:
