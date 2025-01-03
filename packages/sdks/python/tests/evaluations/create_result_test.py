@@ -26,7 +26,6 @@ class TestCreateEvaluationResult(TestCase):
             body={
                 "result": options.result,
                 "reason": options.reason,
-                "__internal": {"source": "api"},
             },
         )
         self.assertEqual(endpoint_mock.call_count, 1)
@@ -53,7 +52,6 @@ class TestCreateEvaluationResult(TestCase):
                 body={
                     "result": options.result,
                     "reason": options.reason,
-                    "__internal": {"source": "api"},
                 },
             )
             for request in requests

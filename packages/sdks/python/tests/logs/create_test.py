@@ -28,7 +28,6 @@ class TestCreateLog(TestCase):
                 "path": path,
                 "messages": [json.loads(message.model_dump_json()) for message in messages],
                 "response": options.response,
-                "__internal": {"source": "api"},
             },
         )
         self.assertEqual(endpoint_mock.call_count, 1)
@@ -54,7 +53,6 @@ class TestCreateLog(TestCase):
                 "path": path,
                 "messages": [json.loads(message.model_dump_json()) for message in messages],
                 "response": options.response,
-                "__internal": {"source": "api"},
             },
         )
         self.assertEqual(endpoint_mock.call_count, 1)
@@ -81,7 +79,6 @@ class TestCreateLog(TestCase):
                 "path": path,
                 "messages": [json.loads(message.model_dump_json()) for message in messages],
                 "response": options.response,
-                "__internal": {"source": "api"},
             },
         )
         self.assertEqual(endpoint_mock.call_count, 1)
@@ -109,7 +106,6 @@ class TestCreateLog(TestCase):
                     "path": path,
                     "messages": [json.loads(message.model_dump_json()) for message in messages],
                     "response": options.response,
-                    "__internal": {"source": "api"},
                 },
             )
             for request in requests

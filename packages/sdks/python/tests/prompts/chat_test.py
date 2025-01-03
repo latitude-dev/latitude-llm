@@ -36,7 +36,6 @@ class TestChatPromptSync(TestCase):
             body={
                 "messages": [json.loads(message.model_dump_json()) for message in messages],
                 "stream": options.stream,
-                "__internal": {"source": "api"},
             },
         )
         self.assertEqual(endpoint_mock.call_count, 1)
@@ -73,7 +72,6 @@ class TestChatPromptSync(TestCase):
                 body={
                     "messages": [json.loads(message.model_dump_json()) for message in messages],
                     "stream": options.stream,
-                    "__internal": {"source": "api"},
                 },
             )
             for request in requests
@@ -110,7 +108,6 @@ class TestChatPromptSync(TestCase):
             body={
                 "messages": [json.loads(message.model_dump_json()) for message in messages],
                 "stream": options.stream,
-                "__internal": {"source": "api"},
             },
         )
         self.assertEqual(endpoint_mock.call_count, 1)
@@ -144,7 +141,6 @@ class TestChatPromptSync(TestCase):
             body={
                 "messages": [json.loads(message.model_dump_json()) for message in messages],
                 "stream": options.stream,
-                "__internal": {"source": "api"},
             },
         )
         self.assertEqual(endpoint_mock.call_count, 1)
@@ -183,7 +179,6 @@ class TestChatPromptStream(TestCase):
             body={
                 "messages": [json.loads(message.model_dump_json()) for message in messages],
                 "stream": options.stream,
-                "__internal": {"source": "api"},
             },
         )
         self.assertEqual(endpoint_mock.call_count, 1)
@@ -221,7 +216,6 @@ class TestChatPromptStream(TestCase):
                 body={
                     "messages": [json.loads(message.model_dump_json()) for message in messages],
                     "stream": options.stream,
-                    "__internal": {"source": "api"},
                 },
             )
             for request in requests
@@ -258,7 +252,6 @@ class TestChatPromptStream(TestCase):
             body={
                 "messages": [json.loads(message.model_dump_json()) for message in messages],
                 "stream": options.stream,
-                "__internal": {"source": "api"},
             },
         )
         self.assertEqual(endpoint_mock.call_count, 1)
@@ -292,7 +285,6 @@ class TestChatPromptStream(TestCase):
             body={
                 "messages": [json.loads(message.model_dump_json()) for message in messages],
                 "stream": options.stream,
-                "__internal": {"source": "api"},
             },
         )
         self.assertEqual(endpoint_mock.call_count, 1)

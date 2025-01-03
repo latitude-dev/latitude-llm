@@ -13,6 +13,7 @@ from latitude_sdk import (
     InternalOptions,
     Latitude,
     LatitudeOptions,
+    LogSources,
     Message,
     SystemMessage,
     TextContent,
@@ -81,7 +82,10 @@ class TestCase(IsolatedAsyncioTestCase):
             dict(request.headers),
         )
         try:
-            self.assertEqual(json.loads(request.content), body or {})
+            self.assertEqual(
+                json.loads(request.content),
+                {**{"__internal": {"source": LogSources.Api}}, **(body or {})},
+            )
         except json.JSONDecodeError:
             self.assertEqual(None, body)
 
