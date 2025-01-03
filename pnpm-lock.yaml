@@ -260,8 +260,8 @@ importers:
         specifier: ^4.17.21
         version: 4.17.21
       promptl-ai:
-        specifier: link:/Users/andres/code/latitude/promptl
-        version: link:../../../promptl
+        specifier: file:/Users/andres/code/latitude/promptl
+        version: file:../promptl
       rate-limiter-flexible:
         specifier: ^5.0.3
         version: 5.0.4
@@ -353,7 +353,7 @@ importers:
         version: 0.1.65
       '@sentry/nextjs':
         specifier: ^8.34.0
-        version: 8.35.0(@opentelemetry/api@1.9.0)(@opentelemetry/core@1.27.0(@opentelemetry/api@1.9.0))(@opentelemetry/instrumentation@0.53.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@1.27.0(@opentelemetry/api@1.9.0))(encoding@0.1.13)(next@15.0.3(@babel/core@7.26.0)(@opentelemetry/api@1.9.0)(react-dom@19.0.0-rc-5d19e1c8-20240923(react@19.0.0-rc-5d19e1c8-20240923))(react@19.0.0-rc-5d19e1c8-20240923))(react@19.0.0-rc-5d19e1c8-20240923)(webpack@5.95.0(esbuild@0.19.12))
+        version: 8.35.0(@opentelemetry/api@1.9.0)(@opentelemetry/core@1.28.0(@opentelemetry/api@1.9.0))(@opentelemetry/instrumentation@0.55.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@1.28.0(@opentelemetry/api@1.9.0))(encoding@0.1.13)(next@15.0.3(@opentelemetry/api@1.9.0)(react-dom@19.0.0-rc-5d19e1c8-20240923(react@19.0.0-rc-5d19e1c8-20240923))(react@19.0.0-rc-5d19e1c8-20240923))(react@19.0.0-rc-5d19e1c8-20240923)(webpack@5.95.0(esbuild@0.19.12))
       '@sentry/utils':
         specifier: ^8.30.0
         version: 8.35.0
@@ -407,13 +407,13 @@ importers:
         version: 5.0.8
       next:
         specifier: 15.0.3
-        version: 15.0.3(@babel/core@7.26.0)(@opentelemetry/api@1.9.0)(react-dom@19.0.0-rc-5d19e1c8-20240923(react@19.0.0-rc-5d19e1c8-20240923))(react@19.0.0-rc-5d19e1c8-20240923)
+        version: 15.0.3(@opentelemetry/api@1.9.0)(react-dom@19.0.0-rc-5d19e1c8-20240923(react@19.0.0-rc-5d19e1c8-20240923))(react@19.0.0-rc-5d19e1c8-20240923)
       next-themes:
         specifier: ^0.3.0
         version: 0.3.0(react-dom@19.0.0-rc-5d19e1c8-20240923(react@19.0.0-rc-5d19e1c8-20240923))(react@19.0.0-rc-5d19e1c8-20240923)
       nextjs-toploader:
         specifier: ^1.6.12
-        version: 1.6.12(next@15.0.3(@babel/core@7.26.0)(@opentelemetry/api@1.9.0)(react-dom@19.0.0-rc-5d19e1c8-20240923(react@19.0.0-rc-5d19e1c8-20240923))(react@19.0.0-rc-5d19e1c8-20240923))(react-dom@19.0.0-rc-5d19e1c8-20240923(react@19.0.0-rc-5d19e1c8-20240923))(react@19.0.0-rc-5d19e1c8-20240923)
+        version: 1.6.12(next@15.0.3(@opentelemetry/api@1.9.0)(react-dom@19.0.0-rc-5d19e1c8-20240923(react@19.0.0-rc-5d19e1c8-20240923))(react@19.0.0-rc-5d19e1c8-20240923))(react-dom@19.0.0-rc-5d19e1c8-20240923(react@19.0.0-rc-5d19e1c8-20240923))(react@19.0.0-rc-5d19e1c8-20240923)
       nprogress:
         specifier: ^0.2.0
         version: 0.2.0
@@ -427,8 +427,8 @@ importers:
         specifier: ^1.161.6
         version: 1.176.0
       promptl-ai:
-        specifier: link:/Users/andres/code/latitude/promptl
-        version: link:../../../promptl
+        specifier: file:/Users/andres/code/latitude/promptl
+        version: file:../promptl
       rate-limiter-flexible:
         specifier: ^5.0.3
         version: 5.0.4
@@ -773,8 +773,8 @@ importers:
         specifier: ^1.0.5
         version: 1.0.5
       promptl-ai:
-        specifier: link:/Users/andres/code/latitude/promptl
-        version: link:../../../promptl
+        specifier: file:/Users/andres/code/latitude/promptl
+        version: file:../promptl
     devDependencies:
       '@ai-sdk/anthropic':
         specifier: ^1.0.5
@@ -826,7 +826,7 @@ importers:
         version: 3.0.3
       '@react-email/components':
         specifier: ^0.0.23
-        version: 0.0.23(react@18.3.1)
+        version: 0.0.23(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@sindresorhus/slugify':
         specifier: ^2.2.1
         version: 2.2.1
@@ -916,7 +916,7 @@ importers:
         version: 3.2.0
       nodemailer-mailgun-transport:
         specifier: ^2.1.5
-        version: 2.1.5(lodash@4.17.21)(nunjucks@3.2.4(chokidar@3.6.0))(react@18.3.1)(underscore@1.13.7)
+        version: 2.1.5(lodash@4.17.21)(nunjucks@3.2.4(chokidar@3.6.0))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(underscore@1.13.7)
       officeparser:
         specifier: ^5.1.1
         version: 5.1.1
@@ -937,7 +937,7 @@ importers:
         version: 18.3.1
       react-email:
         specifier: ^3.0.1
-        version: 3.0.3(@opentelemetry/api@1.9.0)(react@18.3.1)
+        version: 3.0.3(@opentelemetry/api@1.9.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       socket.io-client:
         specifier: ^4.7.5
         version: 4.8.1
@@ -993,8 +993,8 @@ importers:
         specifier: 3.3.2
         version: 3.3.2
       promptl-ai:
-        specifier: link:/Users/andres/code/latitude/promptl
-        version: link:../../../../promptl
+        specifier: file:/Users/andres/code/latitude/promptl
+        version: file:../promptl
       typescript:
         specifier: ^5.5.4
         version: 5.7.2
@@ -11276,6 +11276,9 @@ packages:
   promptl-ai@0.3.5:
     resolution: {integrity: sha512-g3RtXgCOtMky68rkdalGGApO85DBZvL65gJy7SzZ+D+eEpCB2hR+7q2G67y+s66AHDzG2DM+sU+1WTRbDCrfyg==}
 
+  promptl-ai@file:../promptl:
+    resolution: {directory: ../promptl, type: directory}
+
   prop-types@15.8.1:
     resolution: {integrity: sha512-oj87CgZICdulUohogVAR7AjlC0327U4el4L6eAvOqCeudMDVU0NThNaV+b9Df4dXgSP1gXMTnPdhfe/2qDH5cg==}
 
@@ -18247,32 +18250,6 @@ snapshots:
     transitivePeerDependencies:
       - react-dom
 
-  '@react-email/components@0.0.23(react@18.3.1)':
-    dependencies:
-      '@react-email/body': 0.0.10(react@18.3.1)
-      '@react-email/button': 0.0.17(react@18.3.1)
-      '@react-email/code-block': 0.0.7(react@18.3.1)
-      '@react-email/code-inline': 0.0.4(react@18.3.1)
-      '@react-email/column': 0.0.12(react@18.3.1)
-      '@react-email/container': 0.0.14(react@18.3.1)
-      '@react-email/font': 0.0.8(react@18.3.1)
-      '@react-email/head': 0.0.11(react@18.3.1)
-      '@react-email/heading': 0.0.14(react@18.3.1)
-      '@react-email/hr': 0.0.10(react@18.3.1)
-      '@react-email/html': 0.0.10(react@18.3.1)
-      '@react-email/img': 0.0.10(react@18.3.1)
-      '@react-email/link': 0.0.10(react@18.3.1)
-      '@react-email/markdown': 0.0.12(react@18.3.1)
-      '@react-email/preview': 0.0.11(react@18.3.1)
-      '@react-email/render': 1.0.0(react@18.3.1)
-      '@react-email/row': 0.0.10(react@18.3.1)
-      '@react-email/section': 0.0.14(react@18.3.1)
-      '@react-email/tailwind': 0.1.0(react@18.3.1)
-      '@react-email/text': 0.0.10(react@18.3.1)
-      react: 18.3.1
-    transitivePeerDependencies:
-      - react-dom
-
   '@react-email/container@0.0.14(react@18.3.1)':
     dependencies:
       react: 18.3.1
@@ -18320,13 +18297,6 @@ snapshots:
       js-beautify: 1.15.1
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
-      react-promise-suspense: 0.3.4
-
-  '@react-email/render@1.0.0(react@18.3.1)':
-    dependencies:
-      html-to-text: 9.0.5
-      js-beautify: 1.15.1
-      react: 18.3.1
       react-promise-suspense: 0.3.4
 
   '@react-email/row@0.0.10(react@18.3.1)':
@@ -18566,7 +18536,7 @@ snapshots:
       '@sentry/types': 8.35.0
       '@sentry/utils': 8.35.0
 
-  '@sentry/nextjs@8.35.0(@opentelemetry/api@1.9.0)(@opentelemetry/core@1.27.0(@opentelemetry/api@1.9.0))(@opentelemetry/instrumentation@0.53.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@1.27.0(@opentelemetry/api@1.9.0))(encoding@0.1.13)(next@15.0.3(@babel/core@7.26.0)(@opentelemetry/api@1.9.0)(react-dom@19.0.0-rc-5d19e1c8-20240923(react@19.0.0-rc-5d19e1c8-20240923))(react@19.0.0-rc-5d19e1c8-20240923))(react@19.0.0-rc-5d19e1c8-20240923)(webpack@5.95.0(esbuild@0.19.12))':
+  '@sentry/nextjs@8.35.0(@opentelemetry/api@1.9.0)(@opentelemetry/core@1.28.0(@opentelemetry/api@1.9.0))(@opentelemetry/instrumentation@0.55.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@1.28.0(@opentelemetry/api@1.9.0))(encoding@0.1.13)(next@15.0.3(@opentelemetry/api@1.9.0)(react-dom@19.0.0-rc-5d19e1c8-20240923(react@19.0.0-rc-5d19e1c8-20240923))(react@19.0.0-rc-5d19e1c8-20240923))(react@19.0.0-rc-5d19e1c8-20240923)(webpack@5.95.0(esbuild@0.19.12))':
     dependencies:
       '@opentelemetry/instrumentation-http': 0.53.0(@opentelemetry/api@1.9.0)
       '@opentelemetry/semantic-conventions': 1.27.0
@@ -18574,14 +18544,14 @@ snapshots:
       '@sentry-internal/browser-utils': 8.35.0
       '@sentry/core': 8.35.0
       '@sentry/node': 8.35.0
-      '@sentry/opentelemetry': 8.35.0(@opentelemetry/api@1.9.0)(@opentelemetry/core@1.27.0(@opentelemetry/api@1.9.0))(@opentelemetry/instrumentation@0.53.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@1.27.0(@opentelemetry/api@1.9.0))(@opentelemetry/semantic-conventions@1.27.0)
+      '@sentry/opentelemetry': 8.35.0(@opentelemetry/api@1.9.0)(@opentelemetry/core@1.28.0(@opentelemetry/api@1.9.0))(@opentelemetry/instrumentation@0.55.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@1.28.0(@opentelemetry/api@1.9.0))(@opentelemetry/semantic-conventions@1.27.0)
       '@sentry/react': 8.35.0(react@19.0.0-rc-5d19e1c8-20240923)
       '@sentry/types': 8.35.0
       '@sentry/utils': 8.35.0
       '@sentry/vercel-edge': 8.35.0
       '@sentry/webpack-plugin': 2.22.3(encoding@0.1.13)(webpack@5.95.0(esbuild@0.19.12))
       chalk: 3.0.0
-      next: 15.0.3(@babel/core@7.26.0)(@opentelemetry/api@1.9.0)(react-dom@19.0.0-rc-5d19e1c8-20240923(react@19.0.0-rc-5d19e1c8-20240923))(react@19.0.0-rc-5d19e1c8-20240923)
+      next: 15.0.3(@opentelemetry/api@1.9.0)(react-dom@19.0.0-rc-5d19e1c8-20240923(react@19.0.0-rc-5d19e1c8-20240923))(react@19.0.0-rc-5d19e1c8-20240923)
       resolve: 1.22.8
       rollup: 3.29.5
       stacktrace-parser: 0.1.10
@@ -18642,6 +18612,17 @@ snapshots:
       '@opentelemetry/core': 1.27.0(@opentelemetry/api@1.9.0)
       '@opentelemetry/instrumentation': 0.53.0(@opentelemetry/api@1.9.0)
       '@opentelemetry/sdk-trace-base': 1.27.0(@opentelemetry/api@1.9.0)
+      '@opentelemetry/semantic-conventions': 1.27.0
+      '@sentry/core': 8.35.0
+      '@sentry/types': 8.35.0
+      '@sentry/utils': 8.35.0
+
+  '@sentry/opentelemetry@8.35.0(@opentelemetry/api@1.9.0)(@opentelemetry/core@1.28.0(@opentelemetry/api@1.9.0))(@opentelemetry/instrumentation@0.55.0(@opentelemetry/api@1.9.0))(@opentelemetry/sdk-trace-base@1.28.0(@opentelemetry/api@1.9.0))(@opentelemetry/semantic-conventions@1.27.0)':
+    dependencies:
+      '@opentelemetry/api': 1.9.0
+      '@opentelemetry/core': 1.28.0(@opentelemetry/api@1.9.0)
+      '@opentelemetry/instrumentation': 0.55.0(@opentelemetry/api@1.9.0)
+      '@opentelemetry/sdk-trace-base': 1.28.0(@opentelemetry/api@1.9.0)
       '@opentelemetry/semantic-conventions': 1.27.0
       '@sentry/core': 8.35.0
       '@sentry/types': 8.35.0
@@ -21263,15 +21244,6 @@ snapshots:
       react-dom: 18.3.1(react@18.3.1)
       underscore: 1.13.7
 
-  consolidate@0.15.1(lodash@4.17.21)(nunjucks@3.2.4(chokidar@3.6.0))(react@18.3.1)(underscore@1.13.7):
-    dependencies:
-      bluebird: 3.7.2
-    optionalDependencies:
-      lodash: 4.17.21
-      nunjucks: 3.2.4(chokidar@3.6.0)
-      react: 18.3.1
-      underscore: 1.13.7
-
   content-disposition@0.5.4:
     dependencies:
       safe-buffer: 5.2.1
@@ -23715,7 +23687,7 @@ snapshots:
 
   jest-worker@27.5.1:
     dependencies:
-      '@types/node': 20.17.10
+      '@types/node': 22.10.1
       merge-stream: 2.0.0
       supports-color: 8.1.1
 
@@ -25427,7 +25399,7 @@ snapshots:
       react: 19.0.0-rc-5d19e1c8-20240923
       react-dom: 19.0.0-rc-5d19e1c8-20240923(react@19.0.0-rc-5d19e1c8-20240923)
 
-  next@14.2.16(@babel/core@7.24.5)(@opentelemetry/api@1.9.0)(react@18.3.1):
+  next@14.2.16(@babel/core@7.24.5)(@opentelemetry/api@1.9.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
     dependencies:
       '@next/env': 14.2.16
       '@swc/helpers': 0.5.5
@@ -25436,6 +25408,7 @@ snapshots:
       graceful-fs: 4.2.11
       postcss: 8.4.31
       react: 18.3.1
+      react-dom: 18.3.1(react@18.3.1)
       styled-jsx: 5.1.1(@babel/core@7.24.5)(react@18.3.1)
     optionalDependencies:
       '@next/swc-darwin-arm64': 14.2.16
@@ -25452,7 +25425,7 @@ snapshots:
       - '@babel/core'
       - babel-plugin-macros
 
-  next@15.0.3(@babel/core@7.26.0)(@opentelemetry/api@1.9.0)(react-dom@19.0.0-rc-5d19e1c8-20240923(react@19.0.0-rc-5d19e1c8-20240923))(react@19.0.0-rc-5d19e1c8-20240923):
+  next@15.0.3(@opentelemetry/api@1.9.0)(react-dom@19.0.0-rc-5d19e1c8-20240923(react@19.0.0-rc-5d19e1c8-20240923))(react@19.0.0-rc-5d19e1c8-20240923):
     dependencies:
       '@next/env': 15.0.3
       '@swc/counter': 0.1.3
@@ -25462,7 +25435,7 @@ snapshots:
       postcss: 8.4.31
       react: 19.0.0-rc-5d19e1c8-20240923
       react-dom: 19.0.0-rc-5d19e1c8-20240923(react@19.0.0-rc-5d19e1c8-20240923)
-      styled-jsx: 5.1.6(@babel/core@7.26.0)(react@19.0.0-rc-5d19e1c8-20240923)
+      styled-jsx: 5.1.6(react@19.0.0-rc-5d19e1c8-20240923)
     optionalDependencies:
       '@next/swc-darwin-arm64': 15.0.3
       '@next/swc-darwin-x64': 15.0.3
@@ -25478,9 +25451,9 @@ snapshots:
       - '@babel/core'
       - babel-plugin-macros
 
-  nextjs-toploader@1.6.12(next@15.0.3(@babel/core@7.26.0)(@opentelemetry/api@1.9.0)(react-dom@19.0.0-rc-5d19e1c8-20240923(react@19.0.0-rc-5d19e1c8-20240923))(react@19.0.0-rc-5d19e1c8-20240923))(react-dom@19.0.0-rc-5d19e1c8-20240923(react@19.0.0-rc-5d19e1c8-20240923))(react@19.0.0-rc-5d19e1c8-20240923):
+  nextjs-toploader@1.6.12(next@15.0.3(@opentelemetry/api@1.9.0)(react-dom@19.0.0-rc-5d19e1c8-20240923(react@19.0.0-rc-5d19e1c8-20240923))(react@19.0.0-rc-5d19e1c8-20240923))(react-dom@19.0.0-rc-5d19e1c8-20240923(react@19.0.0-rc-5d19e1c8-20240923))(react@19.0.0-rc-5d19e1c8-20240923):
     dependencies:
-      next: 15.0.3(@babel/core@7.26.0)(@opentelemetry/api@1.9.0)(react-dom@19.0.0-rc-5d19e1c8-20240923(react@19.0.0-rc-5d19e1c8-20240923))(react@19.0.0-rc-5d19e1c8-20240923)
+      next: 15.0.3(@opentelemetry/api@1.9.0)(react-dom@19.0.0-rc-5d19e1c8-20240923(react@19.0.0-rc-5d19e1c8-20240923))(react@19.0.0-rc-5d19e1c8-20240923)
       nprogress: 0.2.0
       prop-types: 15.8.1
       react: 19.0.0-rc-5d19e1c8-20240923
@@ -25578,67 +25551,6 @@ snapshots:
   nodemailer-mailgun-transport@2.1.5(lodash@4.17.21)(nunjucks@3.2.4(chokidar@3.6.0))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(underscore@1.13.7):
     dependencies:
       consolidate: 0.15.1(lodash@4.17.21)(nunjucks@3.2.4(chokidar@3.6.0))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(underscore@1.13.7)
-      form-data: 4.0.1
-      mailgun.js: 8.2.2
-    transitivePeerDependencies:
-      - arc-templates
-      - atpl
-      - babel-core
-      - bracket-template
-      - coffee-script
-      - debug
-      - dot
-      - dust
-      - dustjs-helpers
-      - dustjs-linkedin
-      - eco
-      - ect
-      - ejs
-      - haml-coffee
-      - hamlet
-      - hamljs
-      - handlebars
-      - hogan.js
-      - htmling
-      - jade
-      - jazz
-      - jqtpl
-      - just
-      - liquid-node
-      - liquor
-      - lodash
-      - marko
-      - mote
-      - mustache
-      - nunjucks
-      - plates
-      - pug
-      - qejs
-      - ractive
-      - razor-tmpl
-      - react
-      - react-dom
-      - slm
-      - squirrelly
-      - swig
-      - swig-templates
-      - teacup
-      - templayed
-      - then-jade
-      - then-pug
-      - tinyliquid
-      - toffee
-      - twig
-      - twing
-      - underscore
-      - vash
-      - velocityjs
-      - walrus
-      - whiskers
-
-  nodemailer-mailgun-transport@2.1.5(lodash@4.17.21)(nunjucks@3.2.4(chokidar@3.6.0))(react@18.3.1)(underscore@1.13.7):
-    dependencies:
-      consolidate: 0.15.1(lodash@4.17.21)(nunjucks@3.2.4(chokidar@3.6.0))(react@18.3.1)(underscore@1.13.7)
       form-data: 4.0.1
       mailgun.js: 8.2.2
     transitivePeerDependencies:
@@ -26488,6 +26400,14 @@ snapshots:
       yaml: 2.6.0
       zod: 3.23.8
 
+  promptl-ai@file:../promptl:
+    dependencies:
+      acorn: 8.14.0
+      code-red: 1.0.4
+      locate-character: 3.0.0
+      yaml: 2.6.0
+      zod: 3.23.8
+
   prop-types@15.8.1:
     dependencies:
       loose-envify: 1.4.0
@@ -26683,7 +26603,7 @@ snapshots:
       react: 18.3.1
       react-dom: 18.3.1(react@18.3.1)
 
-  react-email@3.0.3(@opentelemetry/api@1.9.0)(react@18.3.1):
+  react-email@3.0.3(@opentelemetry/api@1.9.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
     dependencies:
       '@babel/core': 7.24.5
       '@babel/parser': 7.24.5
@@ -26695,7 +26615,7 @@ snapshots:
       glob: 10.3.4
       log-symbols: 4.1.0
       mime-types: 2.1.35
-      next: 14.2.16(@babel/core@7.24.5)(@opentelemetry/api@1.9.0)(react@18.3.1)
+      next: 14.2.16(@babel/core@7.24.5)(@opentelemetry/api@1.9.0)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       normalize-path: 3.0.0
       ora: 5.4.1
       socket.io: 4.8.0
@@ -27815,12 +27735,10 @@ snapshots:
     optionalDependencies:
       '@babel/core': 7.24.5
 
-  styled-jsx@5.1.6(@babel/core@7.26.0)(react@19.0.0-rc-5d19e1c8-20240923):
+  styled-jsx@5.1.6(react@19.0.0-rc-5d19e1c8-20240923):
     dependencies:
       client-only: 0.0.1
       react: 19.0.0-rc-5d19e1c8-20240923
-    optionalDependencies:
-      '@babel/core': 7.26.0
 
   sucrase@3.35.0:
     dependencies:

@@ -39,7 +39,7 @@ const nextConfig = {
       bodySizeLimit: '25mb',
     },
   },
-  webpack: (config) => {
+  turbo: (config) => {
     config.ignoreWarnings = [{ module: /@opentelemetry\/instrumentation/ }]
 
     return config

@@ -32,7 +32,6 @@ export async function runDocumentAction({
   parameters,
 }: RunDocumentActionProps) {
   const { workspace, user } = await getCurrentUserOrError()
-  let tools = []
 
   publisher.publishLater({
     type: 'documentRunRequested',

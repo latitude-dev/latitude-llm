@@ -18,7 +18,7 @@ import { createRunError as createRunErrorFn } from '../runErrors/create'
 import { ChainError } from './ChainErrors'
 import { ChainStreamConsumer } from './ChainStreamConsumer'
 import { consumeStream } from './ChainStreamConsumer/consumeStream'
-import { ConfigOverrides, validateChain } from './ChainValidator'
+import { ConfigOverrides, validateChain, ValidatedStep } from './ChainValidator'
 import { processResponse } from './ProviderProcessor'
 import {
   buildProviderLogDto,
@@ -72,8 +72,8 @@ type CommonArgs<T extends boolean = true, C extends SomeChain = LegacyChain> = {
 }
 type RunChainArgs<T extends boolean, C extends SomeChain> = T extends true
   ? CommonArgs<T, C> & {
-      errorableType: ErrorableEntity
-    }
+    errorableType: ErrorableEntity
+  }
   : CommonArgs<T, C> & { errorableType?: undefined }
 
 export async function runChain<T extends boolean, C extends SomeChain>({
@@ -134,6 +134,20 @@ export async function runChain<T extends boolean, C extends SomeChain>({
   }
 }
 
+type StepProps = {
+  workspace: Workspace
+  source: LogSources
+  chain: SomeChain
+  promptlVersion: number
+  providersMap: CachedApiKeys
+  controller: ReadableStreamDefaultController
+  errorableUuid: string
+  errorableType?: ErrorableEntity
+  previousCount?: number
+  previousResponse?: ChainStepResponse<StreamType>
+  configOverrides?: ConfigOverrides
+}
+
 async function runStep({
   workspace,
   source,
@@ -146,19 +160,7 @@ async function runStep({
   errorableUuid,
   errorableType,
   configOverrides,
-}: {
-  workspace: Workspace
-  source: LogSources
-  chain: SomeChain
-  promptlVersion: number
-  providersMap: CachedApiKeys
-  controller: ReadableStreamDefaultController
-  errorableUuid: string
-  errorableType?: ErrorableEntity
-  previousCount?: number
-  previousResponse?: ChainStepResponse<StreamType>
-  configOverrides?: ConfigOverrides
-}) {
+}: StepProps) {
   const prevText = previousResponse?.text
   const streamConsumer = new ChainStreamConsumer({
     controller,
@@ -216,21 +218,11 @@ async function runStep({
         documentLogUuid: errorableUuid,
       } as ChainStepResponse<StreamType>
 
-      if (step.chainCompleted) {
-        // TODO: Here in addition of emitting the chainCompleted event we serialize the chain
-        // so user can respond with a function call if there is one or more present in the response.
-        streamConsumer.chainCompleted({
-          step,
-          response,
-        })
-
-        return response
-      } else {
-        streamConsumer.stepCompleted(response)
-
-        // TODO: Here instead of running the state if the step has
-        // toolCalls we serialize the chain up until this point
-        return runStep({
+      return maybeRunStep({
+        response,
+        step,
+        streamConsumer,
+        stepProps: {
           workspace,
           source,
           chain,
@@ -242,8 +234,8 @@ async function runStep({
           previousCount: previousCount + 1,
           previousResponse: response,
           configOverrides,
-        })
-      }
+        },
+      })
     }
 
     const aiResult = await ai({
@@ -302,21 +294,11 @@ async function runStep({
       response,
     })
 
-    if (step.chainCompleted) {
-      // TODO: Here in addition of emitting the chainCompleted event we serialize the chain
-      // so user can respond with a function call if there is one or more present in the response.
-      streamConsumer.chainCompleted({
-        step,
-        response,
-      })
-
-      return response
-    } else {
-      streamConsumer.stepCompleted(response)
-
-      // TODO: Here instead of running the state if the step has
-      // toolCalls we serialize the chain up until this point
-      return runStep({
+    return maybeRunStep({
+      step,
+      streamConsumer,
+      response,
+      stepProps: {
         workspace,
         source,
         chain,
@@ -328,8 +310,8 @@ async function runStep({
         previousCount: messageCount,
         previousResponse: response,
         configOverrides,
-      })
-    }
+      },
+    })
   } catch (e: unknown) {
     const error = streamConsumer.chainError(e)
     throw error
@@ -347,4 +329,40 @@ function checkValidType(aiResult: AIReturn<StreamType>) {
       message: `Invalid stream type ${type} result is not a textStream or objectStream`,
     }),
   )
+}
+
+async function maybeRunStep({
+  streamConsumer,
+  response,
+  step,
+  stepProps,
+}: {
+  streamConsumer: ChainStreamConsumer
+  response: ChainStepResponse<StreamType>
+  step: ValidatedStep
+  stepProps: StepProps
+}): Promise<ChainStepResponse<StreamType>> {
+  const { chain } = stepProps
+
+  if (step.chainCompleted) {
+    streamConsumer.chainCompleted({
+      step,
+      response,
+    })
+
+    return response
+  }
+
+  if (chain instanceof PromptlChain) {
+    // TODO: Serialize chain when the response contains tool calls
+    chain.serialize
+  }
+
+  streamConsumer.stepCompleted(response)
+
+  // TODO: Do not run next step if the response contains some tool calls
+  return runStep({
+    ...stepProps,
+    previousResponse: response,
+  })
 }
