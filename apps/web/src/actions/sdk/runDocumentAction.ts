@@ -50,6 +50,15 @@ export async function runDocumentAction({
     { event: StreamEventTypes; data: ChainEventDto },
     Error
   >()
+  // TODO: Maybe use this same action for 2 different cases:
+  // 1. Run a document
+  // 2. Continue running a document when the user provide one or more tool calls
+  //
+  // In both cases it generates the stream and the UI keeps the chat messages present in the stream
+  // and add more messages to the same stream session.
+  //
+  // For doing this we need a new gateway endpoint to send the tool calls to the server and run the chain
+  // also the SDK method to be called here
   const response = sdk.prompts.run(documentPath, {
     stream: true,
     versionUuid: commitUuid,

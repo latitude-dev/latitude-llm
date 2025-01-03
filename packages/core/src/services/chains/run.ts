@@ -20,13 +20,10 @@ import { ChainStreamConsumer } from './ChainStreamConsumer'
 import { consumeStream } from './ChainStreamConsumer/consumeStream'
 import { ConfigOverrides, validateChain } from './ChainValidator'
 import { processResponse } from './ProviderProcessor'
-import {
-  buildProviderLogDto,
-  saveOrPublishProviderLogs,
-} from './ProviderProcessor/saveOrPublishProviderLogs'
+import { buildStepExecution } from './buildStep'
 
 export type CachedApiKeys = Map<string, ProviderApiKey>
-type SomeChain = LegacyChain | PromptlChain
+export type SomeChain = LegacyChain | PromptlChain
 
 async function createRunError({
   error,
@@ -134,19 +131,7 @@ export async function runChain<T extends boolean, C extends SomeChain>({
   }
 }
 
-async function runStep({
-  workspace,
-  source,
-  chain,
-  promptlVersion,
-  providersMap,
-  controller,
-  previousCount = 0,
-  previousResponse,
-  errorableUuid,
-  errorableType,
-  configOverrides,
-}: {
+export type StepProps = {
   workspace: Workspace
   source: LogSources
   chain: SomeChain
@@ -158,7 +143,21 @@ async function runStep({
   previousCount?: number
   previousResponse?: ChainStepResponse<StreamType>
   configOverrides?: ConfigOverrides
-}) {
+}
+
+export async function runStep({
+  workspace,
+  source,
+  chain,
+  promptlVersion,
+  providersMap,
+  controller,
+  previousCount = 0,
+  previousResponse,
+  errorableUuid,
+  errorableType,
+  configOverrides,
+}: StepProps) {
   const prevText = previousResponse?.text
   const streamConsumer = new ChainStreamConsumer({
     controller,
@@ -194,39 +193,16 @@ async function runStep({
     })
 
     if (cachedResponse) {
-      const providerLog = await saveOrPublishProviderLogs({
-        workspace,
-        streamType: cachedResponse.streamType,
-        finishReason: 'stop', // TODO: we probably should add a cached reason here
-        data: buildProviderLogDto({
-          workspace,
-          source,
-          provider: step.provider,
-          conversation: step.conversation,
+      const { providerLog, executeStep } = await buildStepExecution({
+        baseResponse: cachedResponse as ChainStepResponse<StreamType>,
+        step,
+        streamConsumer,
+        providerLogProps: {
+          streamType: cachedResponse.streamType,
+          finishReason: 'stop', // TODO: we probably should add a cached reason here
           stepStartTime,
-          errorableUuid,
-          response: cachedResponse as ChainStepResponse<StreamType>,
-        }),
-        saveSyncProviderLogs: true, // TODO: temp bugfix, it should only save last one syncronously
-      })
-
-      const response = {
-        ...cachedResponse,
-        providerLog,
-        documentLogUuid: errorableUuid,
-      } as ChainStepResponse<StreamType>
-
-      if (step.chainCompleted) {
-        streamConsumer.chainCompleted({
-          step,
-          response,
-        })
-
-        return response
-      } else {
-        streamConsumer.stepCompleted(response)
-
-        return runStep({
+        },
+        stepProps: {
           workspace,
           source,
           chain,
@@ -236,10 +212,18 @@ async function runStep({
           errorableUuid,
           errorableType,
           previousCount: previousCount + 1,
-          previousResponse: response,
+          previousResponse: cachedResponse as ChainStepResponse<StreamType>,
           configOverrides,
-        })
-      }
+        },
+      })
+
+      const finalResponse = {
+        ...cachedResponse,
+        providerLog,
+        documentLogUuid: errorableUuid,
+      } as ChainStepResponse<StreamType>
+
+      return executeStep({ finalResponse })
     }
 
     const aiResult = await ai({
@@ -251,12 +235,14 @@ async function runStep({
     }).then((r) => r.unwrap())
 
     const checkResult = checkValidType(aiResult)
+
     if (checkResult.error) throw checkResult.error
 
     const consumedStream = await consumeStream({
       controller,
       result: aiResult,
     })
+
     if (consumedStream.error) throw consumedStream.error
 
     const _response = await processResponse({
@@ -270,42 +256,16 @@ async function runStep({
       startTime: stepStartTime,
     })
 
-    const providerLog = await saveOrPublishProviderLogs({
-      workspace,
-      streamType: aiResult.type,
-      finishReason: consumedStream.finishReason,
-      data: buildProviderLogDto({
-        workspace,
-        source,
-        provider: step.provider,
-        conversation: step.conversation,
+    const { providerLog, executeStep } = await buildStepExecution({
+      step,
+      streamConsumer,
+      baseResponse: _response,
+      providerLogProps: {
+        streamType: aiResult.type,
+        finishReason: consumedStream.finishReason,
         stepStartTime,
-        errorableUuid,
-        response: _response,
-      }),
-      saveSyncProviderLogs: true, // TODO: temp bugfix, shuold only save last one syncronously
-    })
-
-    const response = { ..._response, providerLog }
-
-    await setCachedResponse({
-      workspace,
-      config: step.config,
-      conversation: step.conversation,
-      response,
-    })
-
-    if (step.chainCompleted) {
-      streamConsumer.chainCompleted({
-        step,
-        response,
-      })
-
-      return response
-    } else {
-      streamConsumer.stepCompleted(response)
-
-      return runStep({
+      },
+      stepProps: {
         workspace,
         source,
         chain,
@@ -315,10 +275,20 @@ async function runStep({
         providersMap,
         controller,
         previousCount: messageCount,
-        previousResponse: response,
+        previousResponse: _response,
         configOverrides,
-      })
-    }
+      },
+    })
+
+    const finalResponse = { ..._response, providerLog }
+    await setCachedResponse({
+      workspace,
+      config: step.config,
+      conversation: step.conversation,
+      response: finalResponse,
+    })
+
+    return executeStep({ finalResponse })
   } catch (e: unknown) {
     const error = streamConsumer.chainError(e)
     throw error
