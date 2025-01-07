@@ -9,18 +9,14 @@ Latitude's Typescript integration has the following main features:
 - Interact with Latitude's prompt manager from code: create, update and delete prompts
 - Render Latitude prompts locally and run them against your LLM providers
 - Run prompts with Latitude's high-performing gateway
+- Trigger LLM as judge and human in the loop evaluations
+- Programmatically push external logs to Latitude for evaluation and monitoring
 
 ## Installation
 
-To install the Latitude SDK, use your preferred package manager:
+import Installation from '/snippets/sdks/typescript/installation.mdx'
 
-```bash
-npm install @latitude-data/sdk
-# or
-yarn add @latitude-data/sdk
-# or
-pnpm add @latitude-data/sdk
-```
+<Installation />
 
 ## Getting Started
 
@@ -29,8 +25,15 @@ First, import the Latitude class from the SDK and initialize it with your API ke
 ```typescript
 import { Latitude } from '@latitude-data/sdk'
 
-const latitude = new Latitude('your-api-key-here')
+const sdk = new Latitude('your-api-key-here', {
+  projectId: 12345, // Optional, otherwise you have to provide it in each method
+  versionUuid: 'optional-version-uuid', // Optional, by default it targets the latest live version
+})
 ```
+
+## Examples
+
+Check out our [cookbook](/guides/cookbook/overview#typescript) for more examples of how to use Latitude's SDK.
 
 ## Telemetry
 
@@ -71,10 +74,10 @@ new Latitude('your-api-key-here', {
 To get or create a prompt, use the `getOrCreate` method:
 
 ```typescript
-sdk.prompts.getOrCreate('path/to/your/prompt', {
+await sdk.prompts.getOrCreate('path/to/your/prompt', {
   projectId: 12345, // Optional, if you did not provide it in the constructor
-  versionUuid: 'optional-version-uuid', // Optional, by default it targets latest live version
-  prompt: 'Your prompt here', // Optional, this will be the contents of your prompts if it didn't exist
+  versionUuid: 'optional-version-uuid', // Optional, by default it targets the latest live version
+  prompt: 'Your prompt here', // Optional, this will be the contents of your prompt if it does not exist
 })
 ```
 
@@ -95,9 +98,9 @@ const sdk = new Latitude('your-api-key-here', {
   versionUuid: 'optional-version-uuid', // Optional: You can specify a default version UUID here
 })
 
-const prompt = sdk.prompts.get('path/to/your/prompt', {
+const prompt = await sdk.prompts.get('path/to/your/prompt', {
   projectId: 12345, // Optional if you provided it in the constructor
-  versionUuid: 'optional-version-uuid', // Optional, by default it targets latest live version
+  versionUuid: 'optional-version-uuid', // Optional, by default it targets the latest live version
 })
 
 const openai = new OpenAI({ apiKey: 'your-openai-api-key' })
@@ -120,7 +123,7 @@ You can also execute [chains](/promptl/advanced/chains) by providing an `onStep`
 the response. Here's an example:
 
 ```typescript
-sdk.prompts.renderChain({
+await sdk.prompts.renderChain({
   prompt,
   parameters: {
     // Any parameters your prompt expects
@@ -152,9 +155,9 @@ configuration.
 In order to run a prompt through Latitude's Gateway, use the `run` method:
 
 ```typescript
-sdk.prompts.run('path/to/your/prompt', {
+await sdk.prompts.run('path/to/your/prompt', {
   projectId: 12345, // Optional if you provided it in the constructor
-  versionUuid: 'optional-version-uuid', // Optional, by default it targets latest live version
+  versionUuid: 'optional-version-uuid', // Optional, by default it targets the latest live version
   stream: false, // Optional, by default it's false
   parameters: {
     // Any parameters your prompt expects
@@ -170,3 +173,29 @@ sdk.prompts.run('path/to/your/prompt', {
   },
 })
 ```
+
+## Log Management
+
+### Pushing a log to Latitude
+
+To create a log programmatically, use the `create` method:
+
+```typescript
+const messages = [
+  {
+    role: 'user',
+    content: 'Please tell me a joke about doctors',
+  },
+]
+
+await sdk.logs.create('path/to/your/prompt', messages, {
+  projectId: 12345, // Optional, if you did not provide it in the constructor
+  versionUuid: 'optional-version-uuid', // Optional, by default it targets the latest live version
+  response: 'assistant response',
+})
+```
+
+<Note>
+  Message follows [OpenAI's
+  format](https://platform.openai.com/docs/guides/text-generation/building-prompts).
+</Note>

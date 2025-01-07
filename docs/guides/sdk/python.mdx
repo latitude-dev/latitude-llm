@@ -1,0 +1,100 @@
+---
+title: Python
+description: Integrate Latitude's SDK into your Python project
+---
+
+Latitude's Python integration has the following main features:
+
+- Interact with Latitude's prompt manager from code: create, update and delete prompts
+- Run prompts with Latitude's high-performing gateway
+- Trigger LLM as judge and human in the loop evaluations
+- Programmatically push external logs to Latitude for evaluation and monitoring
+
+## Installation
+
+import Installation from '/snippets/sdks/python/installation.mdx'
+
+<Installation />
+
+## Getting Started
+
+First, import the Latitude class from the SDK and initialize it with your API key:
+
+```python
+from latitude_sdk import Latitude, LatitudeOptions
+
+sdk = Latitude('your-api-key-here', LatitudeOptions(
+    project_id=12345, # Optional, otherwise you have to provide it in each method
+    version_uuid='optional-version-uuid', # Optional, by default it targets the latest live version
+))
+```
+
+## Examples
+
+Check out our [cookbook](/guides/cookbook/overview#python) for more examples of how to use Latitude's SDK.
+
+## Prompt Management
+
+### Get or create a prompt
+
+To get or create a prompt, use the `get_or_create` method:
+
+```python
+from latitude_sdk import GetOrCreatePromptOptions
+
+await sdk.prompts.get_or_create('path/to/your/prompt', GetOrCreatePromptOptions(
+    project_id=12345, # Optional, if you did not provide it in the constructor
+    version_uuid='optional-version-uuid', # Optional, by default it targets the latest live version
+    prompt='Your prompt here', # Optional, this will be the contents of your prompt if it does not exist
+))
+```
+
+### Run a prompt through Latitude Gateway
+
+Latitude's Gateway is a high-performing gateway that proxies your LLM calls
+between your application and the LLM provider. It includes some additional
+features like automatic prompt caching based on content and prompt
+configuration.
+
+In order to run a prompt through Latitude's Gateway, use the `run` method:
+
+```python
+from latitude_sdk import RunPromptOptions
+
+await sdk.prompts.run('path/to/your/prompt', RunPromptOptions(
+    project_id=12345, # Optional if you provided it in the constructor
+    version_uuid='optional-version-uuid', # Optional, by default it targets the latest live version
+    stream=False, # Optional, by default it's false
+    parameters={
+        # Any parameters your prompt expects
+    },
+    on_event=lambda event: print(event), # Handle events during execution
+    on_finished=lambda result: print(result), # Handle the final result
+    on_error=lambda error: print(error), # Handle any errors
+))
+```
+
+## Log Management
+
+### Pushing a log to Latitude
+
+To create a log programmatically, use the `create` method:
+
+```python
+from latitude_sdk import CreateLogOptions, UserMessage
+
+messages = [
+    UserMessage(content='Please tell me a joke about doctors'),
+]
+
+await sdk.logs.create('path/to/your/prompt', messages, CreateLogOptions(
+    project_id=12345, # Optional, if you did not provide it in the constructor
+    version_uuid='optional-version-uuid', # Optional, by default it targets the latest live version
+    response='assistant response',
+))
+```
+
+<Note>
+  Message follows [OpenAI's
+  format](https://platform.openai.com/docs/guides/text-generation/building-prompts).
+</Note>

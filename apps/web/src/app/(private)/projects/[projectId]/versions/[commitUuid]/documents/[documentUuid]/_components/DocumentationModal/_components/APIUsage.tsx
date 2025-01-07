@@ -44,8 +44,22 @@ ${getRequestBodyContent()}
 
   return (
     <div className='flex flex-col gap-4'>
-      <Text.H5>You can use the Latitude API to run this document:</Text.H5>
+      <Text.H5>
+        To run this document programmatically, execute the following command:
+      </Text.H5>
       <CodeBlock language='bash'>{apiCode.trim()}</CodeBlock>
+      <Text.H5>
+        Check out{' '}
+        <a
+          target='_blank'
+          href='https://docs.latitude.so/guides/prompt-manager/api-access'
+        >
+          <Text.H5 underline color='primary'>
+            our docs
+          </Text.H5>
+        </a>{' '}
+        for more details.
+      </Text.H5>
     </div>
   )
 }

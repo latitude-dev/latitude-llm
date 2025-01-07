@@ -1,15 +1,17 @@
 'use client'
 
-import React, { useState } from 'react'
+import { useState } from 'react'
 
 import { ApiKey, DocumentVersion } from '@latitude-data/core/browser'
 import { Tabs, type TabItem } from '@latitude-data/web-ui'
 
 import { APIUsage } from './APIUsage'
 import { JavascriptUsage } from './JavascriptUsage'
+import { PythonUsage } from './PythonUsage'
 
 const tabs: TabItem[] = [
-  { id: 'sdk', label: 'Javascript' },
+  { id: 'javascript', label: 'Javascript' },
+  { id: 'python', label: 'Python' },
   { id: 'api', label: 'HTTP API' },
 ]
 
@@ -28,7 +30,7 @@ export function SettingsTabs({
   apiKeys,
   parameters,
 }: SettingsTabsProps) {
-  const [activeTab, setActiveTab] = useState('sdk')
+  const [activeTab, setActiveTab] = useState(tabs[0]!.id)
 
   return (
     <Tabs
@@ -38,8 +40,17 @@ export function SettingsTabs({
     >
       {(activeTab) => (
         <div className='p-6'>
-          {activeTab === 'sdk' && (
+          {activeTab === 'javascript' && (
             <JavascriptUsage
+              apiKey={apiKeys[0]?.token}
+              projectId={projectId}
+              commitUuid={commitUuid}
+              documentPath={document.path}
+              parameters={parameters}
+            />
+          )}
+          {activeTab === 'python' && (
+            <PythonUsage
               apiKey={apiKeys[0]?.token}
               projectId={projectId}
               commitUuid={commitUuid}
