@@ -127,6 +127,7 @@
       "group": "Integrations",
       "pages": [
         "guides/sdk/typescript",
+        "guides/sdk/python",
         {
           "group": "Providers",
           "pages": [
