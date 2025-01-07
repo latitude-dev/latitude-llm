@@ -104,17 +104,17 @@ class TestCase(IsolatedAsyncioTestCase):
                 content=[
                     TextContent(text="assistant message"),
                     ToolCallContent(
-                        tool_call_id="tool call id",
-                        tool_name="tool name",
-                        tool_arguments={"argument_1": "value 1", "argument_2": "value 2"},
+                        id="tool id",
+                        name="tool name",
+                        arguments={"argument_1": "value 1", "argument_2": "value 2"},
                     ),
                 ],
             ),
             ToolMessage(
                 content=[
                     ToolResultContent(
-                        tool_call_id="tool call id",
-                        tool_name="tool name",
+                        id="tool id",
+                        name="tool name",
                         result="tool result",
                         is_error=False,
                     ),

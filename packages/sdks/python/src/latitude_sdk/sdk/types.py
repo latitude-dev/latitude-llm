@@ -54,15 +54,15 @@ class FileContent(Model):
 
 class ToolCallContent(Model):
     type: Literal[ContentType.ToolCall] = ContentType.ToolCall
-    tool_call_id: str = Field(alias=str("toolCallId"))
-    tool_name: str = Field(alias=str("toolName"))
-    tool_arguments: Dict[str, Any] = Field(alias=str("toolArguments"))
+    id: str = Field(alias=str("toolCallId"))
+    name: str = Field(alias=str("toolName"))
+    arguments: Dict[str, Any] = Field(alias=str("args"))
 
 
 class ToolResultContent(Model):
     type: Literal[ContentType.ToolResult] = ContentType.ToolResult
-    tool_call_id: str = Field(alias=str("toolCallId"))
-    tool_name: str = Field(alias=str("toolName"))
+    id: str = Field(alias=str("toolCallId"))
+    name: str = Field(alias=str("toolName"))
     result: str
     is_error: Optional[bool] = Field(default=None, alias=str("isError"))
 
@@ -95,16 +95,9 @@ class UserMessage(Model):
     name: Optional[str] = None
 
 
-class ToolCall(Model):
-    id: str
-    name: str
-    arguments: Dict[str, Any]
-
-
 class AssistantMessage(Model):
     role: Literal[MessageRole.Assistant] = MessageRole.Assistant
     content: Union[str, List[Union[TextContent, ToolCallContent]]]
-    tool_calls: Optional[List[ToolCall]] = Field(default=None, alias=str("toolCalls"))
 
 
 class ToolMessage(Model):
@@ -121,6 +114,12 @@ class ModelUsage(Model):
     total_tokens: int = Field(alias=str("totalTokens"))
 
 
+class ToolCall(Model):
+    id: str
+    name: str
+    arguments: Dict[str, Any]
+
+
 class StreamTypes(StrEnum):
     Text = "text"
     Object = "object"
@@ -129,7 +128,7 @@ class StreamTypes(StrEnum):
 class ChainTextResponse(Model):
     type: Literal[StreamTypes.Text] = Field(default=StreamTypes.Text, alias=str("streamType"))
     text: str
-    tool_calls: Optional[List[ToolCall]] = Field(default=None, alias=str("toolCalls"))
+    tools: Optional[List[ToolCall]] = Field(default=None, alias=str("toolCalls"))
     usage: ModelUsage
 
 
