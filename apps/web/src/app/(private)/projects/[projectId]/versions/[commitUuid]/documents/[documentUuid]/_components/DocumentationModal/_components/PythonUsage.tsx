@@ -1,7 +1,7 @@
 import { HEAD_COMMIT } from '@latitude-data/core/browser'
 import { CodeBlock, Text } from '@latitude-data/web-ui'
 
-export function JavascriptUsage({
+export function PythonUsage({
   projectId,
   commitUuid,
   documentPath,
@@ -17,20 +17,16 @@ export function JavascriptUsage({
   const getParametersString = () => {
     if (parameters.size === 0) return ''
 
-    const parameterEntries = Array.from(parameters)
-      .map((key) => `     ${key}: ''`)
-      .join(',\n')
+    const entries = Array.from(parameters).map((key) => `\t\t'${key}': ''`)
 
-    return `  parameters: {
-${parameterEntries}
-  }`
+    return `\tparameters={\n${entries.join(',\n')}\n\t}`
   }
 
   const getRunOptions = () => {
     const options = []
 
     if (commitUuid !== HEAD_COMMIT) {
-      options.push(`  versionUuid: '${commitUuid}'`)
+      options.push(`\tversion_uuid='${commitUuid}'`)
     }
 
     const parametersString = getParametersString()
@@ -38,15 +34,15 @@ ${parameterEntries}
       options.push(parametersString)
     }
 
-    return options.length > 0 ? `{\n${options.join(',\n')}\n}` : ''
+    return options.length > 0 ? `\n${options.join(',\n')}\n` : ''
   }
 
-  const sdkCode = `import { Latitude } from '@latitude-data/sdk'
+  const sdkCode = `from latitude_sdk import Latitude, LatitudeOptions, RunPromptOptions
 
-// Do not expose the API key in client-side code
-const sdk = new Latitude('${apiKey ?? 'YOUR_API_KEY'}', { projectId: ${projectId} })
+# Do not expose the API key in client-side code
+sdk = Latitude('${apiKey ?? 'YOUR_API_KEY'}', LatitudeOptions(project_id=${projectId}))
 
-const result = await sdk.prompts.run('${documentPath}'${getRunOptions() ? `, ${getRunOptions()}` : ''})
+result = await sdk.prompts.run('${documentPath}', RunPromptOptions(${getRunOptions()}))
 `
 
   return (
@@ -54,15 +50,12 @@ const result = await sdk.prompts.run('${documentPath}'${getRunOptions() ? `, ${g
       <Text.H5>
         First, to run this document programmatically, install the SDK:
       </Text.H5>
-      <CodeBlock language='bash'>npm install @latitude-data/sdk</CodeBlock>
+      <CodeBlock language='bash'>pip install latitude-sdk</CodeBlock>
       <Text.H5>Then, use the following code to run the document:</Text.H5>
-      <CodeBlock language='typescript'>{sdkCode}</CodeBlock>
+      <CodeBlock language='python'>{sdkCode}</CodeBlock>
       <Text.H5>
         Check out{' '}
-        <a
-          target='_blank'
-          href='https://docs.latitude.so/guides/sdk/typescript'
-        >
+        <a target='_blank' href='https://docs.latitude.so/guides/sdk/python'>
           <Text.H5 underline color='primary'>
             our docs
           </Text.H5>
