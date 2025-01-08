@@ -12,13 +12,14 @@ import {
 } from '../../constants'
 import { Result, TypedResult } from '../../lib'
 import { generateUUIDIdentifier } from '../../lib/generateUUID'
-import { ai, AIReturn } from '../ai'
+import { ai } from '../ai'
 import { getCachedResponse, setCachedResponse } from '../commits/promptCache'
 import { createRunError as createRunErrorFn } from '../runErrors/create'
 import { ChainError } from './ChainErrors'
 import { ChainStreamConsumer } from './ChainStreamConsumer'
 import { consumeStream } from './ChainStreamConsumer/consumeStream'
 import { ConfigOverrides, validateChain } from './ChainValidator'
+import { checkValidStream } from './checkValidStream'
 import { processResponse } from './ProviderProcessor'
 import {
   buildProviderLogDto,
@@ -250,7 +251,7 @@ async function runStep({
       output: step.output,
     }).then((r) => r.unwrap())
 
-    const checkResult = checkValidType(aiResult)
+    const checkResult = checkValidStream(aiResult)
     if (checkResult.error) throw checkResult.error
 
     const consumedStream = await consumeStream({
@@ -323,17 +324,4 @@ async function runStep({
     const error = streamConsumer.chainError(e)
     throw error
   }
-}
-
-function checkValidType(aiResult: AIReturn<StreamType>) {
-  const { type } = aiResult
-  const invalidType = type !== 'text' && type !== 'object'
-  if (!invalidType) return Result.nil()
-
-  return Result.error(
-    new ChainError({
-      code: RunErrorCodes.UnsupportedProviderResponseTypeError,
-      message: `Invalid stream type ${type} result is not a textStream or objectStream`,
-    }),
-  )
 }

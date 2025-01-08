@@ -112,6 +112,8 @@ async function buildData({
   }
 }
 
+// TODO: add tests for tool calls
+
 describe('addMessages', () => {
   beforeEach(async () => {
     vi.resetModules()
@@ -170,6 +172,7 @@ describe('addMessages', () => {
           {
             role: MessageRole.assistant,
             content: providerLog.responseText,
+            toolCalls: [],
           },
           {
             role: MessageRole.user,

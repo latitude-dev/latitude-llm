@@ -409,4 +409,6 @@ describe('applyVercelSdkRules', () => {
       },
     ])
   })
+
+  // TODO: Add more tool call content tests
 })

@@ -1,8 +1,8 @@
 import {
-  AssistantMessage,
   ContentType,
   Message,
   MessageRole,
+  ToolRequestContent,
 } from '@latitude-data/compiler'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
 
@@ -23,11 +23,49 @@ import { ChainError } from '../chains/ChainErrors'
 import { ChainStreamConsumer } from '../chains/ChainStreamConsumer'
 import { consumeStream } from '../chains/ChainStreamConsumer/consumeStream'
 import { checkFreeProviderQuota } from '../chains/checkFreeProviderQuota'
+import { checkValidStream } from '../chains/checkValidStream'
 import { processResponse } from '../chains/ProviderProcessor'
 import {
   buildProviderLogDto,
   saveOrPublishProviderLogs,
 } from '../chains/ProviderProcessor/saveOrPublishProviderLogs'
+
+function rebuildConversation(providerLog: ProviderLog) {
+  let messages = providerLog.messages
+
+  if (providerLog.responseText && providerLog.responseText.length > 0) {
+    messages.push({
+      role: MessageRole.assistant,
+      content: providerLog.responseText,
+      toolCalls: [],
+    })
+  }
+
+  if (providerLog.responseObject) {
+    messages.push({
+      role: MessageRole.assistant,
+      content: objectToString(providerLog.responseObject),
+      toolCalls: [],
+    })
+  }
+
+  if (providerLog.toolCalls.length > 0) {
+    messages.push({
+      role: MessageRole.assistant,
+      content: providerLog.toolCalls.map((toolCall) => {
+        return {
+          type: ContentType.toolCall,
+          toolCallId: toolCall.id,
+          toolName: toolCall.name,
+          args: toolCall.arguments,
+        } as ToolRequestContent
+      }),
+      toolCalls: providerLog.toolCalls,
+    })
+  }
+
+  return messages
+}
 
 export type ChainResponse<T extends StreamType> = TypedResult<
   ChainStepResponse<T>,
@@ -75,23 +113,7 @@ export async function addMessages({
     responseResolve = resolve
   })
 
-  const fmessages = [
-    ...providerLog.messages,
-    {
-      role: MessageRole.assistant,
-      content:
-        providerLog.toolCalls.length > 0
-          ? providerLog.toolCalls.map((t) => ({
-              type: ContentType.toolCall,
-              toolCallId: t.id,
-              toolName: t.name,
-              args: t.arguments,
-            }))
-          : providerLog.responseText ||
-            objectToString(providerLog.responseObject),
-    } as AssistantMessage,
-    ...messages,
-  ]
+  messages = [...rebuildConversation(providerLog), ...messages]
 
   const stream = new ReadableStream<ChainEvent>({
     start(controller) {
@@ -102,7 +124,7 @@ export async function addMessages({
         provider,
         controller,
         documentLogUuid: providerLog.documentLogUuid!,
-        messages: fmessages,
+        messages,
       })
         .then((res) => {
           responseResolve(Result.ok(res))
@@ -140,17 +162,24 @@ async function iterate({
     }).then((r) => r.unwrap())
 
     const stepStartTime = Date.now()
-    const result = await ai({
+
+    const aiResult = await ai({
       messages,
       config,
       provider,
     }).then((r) => r.unwrap())
+
+    const checkResult = checkValidStream(aiResult)
+    if (checkResult.error) throw checkResult.error
+
     const consumedStream = await consumeStream({
       controller,
-      result,
+      result: aiResult,
     })
+    if (consumedStream.error) throw consumedStream.error
+
     const _response = await processResponse({
-      aiResult: result,
+      aiResult,
       workspace,
       source,
       errorableUuid: documentLogUuid,
@@ -162,7 +191,7 @@ async function iterate({
 
     const providerLog = await saveOrPublishProviderLogs({
       workspace,
-      streamType: result.type,
+      streamType: aiResult.type,
       finishReason: consumedStream.finishReason,
       data: buildProviderLogDto({
         workspace,

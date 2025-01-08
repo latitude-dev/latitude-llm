@@ -57,35 +57,35 @@ export class ChainStreamConsumer {
   }) {
     let messages: Message[] = []
 
-    if (response.streamType === 'object') {
+    if (response.text.length > 0) {
       messages.push({
         role: MessageRole.assistant,
-        content: response.text || objectToString(response.object) || '',
+        content: response.text,
         toolCalls: [],
       })
-    } else if (response.streamType === 'text') {
-      if (response.text.length > 0) {
-        messages.push({
-          role: MessageRole.assistant,
-          content: response.text,
-          toolCalls: [],
-        })
-      }
+    }
 
-      if (response.toolCalls.length > 0) {
-        messages.push({
-          role: MessageRole.assistant,
-          content: response.toolCalls.map((toolCall) => {
-            return {
-              type: ContentType.toolCall,
-              toolCallId: toolCall.id,
-              toolName: toolCall.name,
-              args: toolCall.arguments,
-            } as ToolRequestContent
-          }),
-          toolCalls: response.toolCalls,
-        })
-      }
+    if (response.streamType === 'object' && response.object) {
+      messages.push({
+        role: MessageRole.assistant,
+        content: objectToString(response.object),
+        toolCalls: [],
+      })
+    }
+
+    if (response.streamType === 'text' && response.toolCalls.length > 0) {
+      messages.push({
+        role: MessageRole.assistant,
+        content: response.toolCalls.map((toolCall) => {
+          return {
+            type: ContentType.toolCall,
+            toolCallId: toolCall.id,
+            toolName: toolCall.name,
+            args: toolCall.arguments,
+          } as ToolRequestContent
+        }),
+        toolCalls: response.toolCalls,
+      })
     }
 
     enqueueChainEvent(controller, {
