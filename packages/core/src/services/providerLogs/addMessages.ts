@@ -20,10 +20,7 @@ import { unsafelyFindProviderApiKey } from '../../data-access'
 import { NotFoundError, Result, TypedResult } from '../../lib'
 import { ai, PartialConfig } from '../ai'
 import { ChainError } from '../chains/ChainErrors'
-import {
-  ChainStreamConsumer,
-  parseResponseText,
-} from '../chains/ChainStreamConsumer'
+import { ChainStreamConsumer } from '../chains/ChainStreamConsumer'
 import { consumeStream } from '../chains/ChainStreamConsumer/consumeStream'
 import { checkFreeProviderQuota } from '../chains/checkFreeProviderQuota'
 import { processResponse } from '../chains/ProviderProcessor'
@@ -152,7 +149,7 @@ async function iterate({
       controller,
       result,
     })
-    const response = await processResponse({
+    const _response = await processResponse({
       aiResult: result,
       workspace,
       source,
@@ -174,15 +171,16 @@ async function iterate({
         conversation: { messages, config },
         stepStartTime,
         errorableUuid: documentLogUuid,
-        response,
+        response: _response,
       }),
       saveSyncProviderLogs: true,
     })
 
-    const text = parseResponseText(response)
+    const response = { ..._response, providerLog }
+
     ChainStreamConsumer.chainCompleted({
       controller,
-      response: { ...response, providerLog, text },
+      response,
       config: {
         ...config,
         provider: provider.name,
@@ -190,7 +188,7 @@ async function iterate({
       },
     })
 
-    return { ...response, providerLog, text }
+    return response
   } catch (e) {
     const error = ChainStreamConsumer.chainError({
       controller,

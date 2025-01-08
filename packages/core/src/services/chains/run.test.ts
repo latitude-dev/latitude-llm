@@ -529,6 +529,8 @@ describe('runChain', () => {
     )
   })
 
+  // TODO: Add test for tool calls
+
   it('returns a nicely formatted response text when the response contains a tool call', async () => {
     const mockAiResponse = Result.ok({
       type: 'text',

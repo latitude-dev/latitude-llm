@@ -15,24 +15,22 @@ import {
 import { Config } from '../../ai'
 import { ChainError } from '../ChainErrors'
 import { ValidatedStep } from '../ChainValidator'
-import { objectToString } from '../../../helpers'
 
-export function parseResponseText(response: ChainStepResponse<StreamType>) {
+// TODO: Change
+function parseResponseText(response: ChainStepResponse<StreamType>) {
   if (response.streamType === 'object') return response.text || ''
 
   const text = response.text
   if (text && text.length > 0) return text
 
-  return objectToString(
-    response.toolCalls.map((toolCall) => {
-      return {
-        type: ContentType.toolCall,
-        toolCallId: toolCall.id,
-        toolName: toolCall.name,
-        args: toolCall.arguments,
-      } as ToolRequestContent
-    }),
-  )
+  return response.toolCalls.map((toolCall) => {
+    return {
+      type: ContentType.toolCall,
+      toolCallId: toolCall.id,
+      toolName: toolCall.name,
+      args: toolCall.arguments,
+    } as ToolRequestContent
+  })
 }
 
 export function enqueueChainEvent(
@@ -72,6 +70,7 @@ export class ChainStreamConsumer {
     response: ChainStepResponse<StreamType>
     config: Config
   }) {
+    // TODO: Only parse content if its not a tool call response
     const content = parseResponseText(response)
 
     enqueueChainEvent(controller, {
