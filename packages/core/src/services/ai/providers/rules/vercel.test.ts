@@ -369,7 +369,7 @@ describe('applyVercelSdkRules', () => {
     ])
   })
 
-  it('adapts tool call content fields to tool call part fields', () => {
+  it('adapts new tool call content fields to tool call part fields', () => {
     messages = [
       {
         role: 'assistant',
@@ -410,5 +410,44 @@ describe('applyVercelSdkRules', () => {
     ])
   })
 
-  // TODO: Add more tool call content tests
+  it('adapts legacy tool call content fields to tool call part fields', () => {
+    messages = [
+      {
+        role: 'assistant',
+        content: [
+          {
+            type: 'tool-call',
+            toolCallId: '123',
+            toolName: 'toolName',
+            args: {
+              arg1: 'value1',
+              arg2: 'value2',
+            },
+          },
+        ],
+      },
+    ] as unknown as Message[]
+
+    const rules = vercelSdkRules(
+      { rules: [], messages, config },
+      Providers.Anthropic,
+    )
+
+    expect(rules.messages).toEqual([
+      {
+        role: 'assistant',
+        content: [
+          {
+            type: 'tool-call',
+            toolCallId: '123',
+            toolName: 'toolName',
+            args: {
+              arg1: 'value1',
+              arg2: 'value2',
+            },
+          },
+        ],
+      },
+    ])
+  })
 })

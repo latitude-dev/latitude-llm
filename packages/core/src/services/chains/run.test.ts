@@ -7,12 +7,24 @@ import {
 import { v4 as uuid } from 'uuid'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+import {
+  LatitudeErrorCodes,
+  RunErrorCodes,
+} from '@latitude-data/constants/errors'
 import { objectToString, Workspace } from '../../browser'
-import { ErrorableEntity, LogSources, Providers } from '../../constants'
-import { Result } from '../../lib'
+import {
+  ChainEventTypes,
+  ErrorableEntity,
+  LogSources,
+  Providers,
+  StreamEventTypes,
+} from '../../constants'
+import { Result, TypedResult } from '../../lib'
 import * as factories from '../../tests/factories'
+import { testConsumeStream } from '../../tests/helpers'
 import * as aiModule from '../ai'
 import { setCachedResponse } from '../commits/promptCache'
+import { ChainError } from './ChainErrors'
 import * as chainValidatorModule from './ChainValidator'
 import * as saveOrPublishProviderLogsModule from './ProviderProcessor/saveOrPublishProviderLogs'
 import { runChain } from './run'
@@ -529,52 +541,45 @@ describe('runChain', () => {
     )
   })
 
-  // TODO: Add test for tool calls
-
-  it('returns a nicely formatted response text when the response contains a tool call', async () => {
-    const mockAiResponse = Result.ok({
-      type: 'text',
-      data: {
-        text: Promise.resolve(''),
-        usage: Promise.resolve({
-          promptTokens: 0,
-          completionTokens: 0,
-          totalTokens: 0,
-        }),
-        toolCalls: Promise.resolve([
-          {
-            toolCallId: 'tool-call-id',
-            toolName: 'tool-call-name',
-            args: { foo: 'bar' },
-          },
-        ]),
-        providerLog: Promise.resolve({
-          provider: 'openai',
-          model: 'gpt-3.5-turbo',
-        }),
-        fullStream: new ReadableStream({
-          start(controller) {
-            controller.enqueue({ type: 'text', text: '' })
-            controller.close()
-          },
-        }),
-      },
-    })
-    vi.spyOn(aiModule, 'ai').mockResolvedValue(mockAiResponse as any)
+  it('handles error response', async () => {
     vi.mocked(mockChain.step!).mockResolvedValue({
       completed: true,
       conversation: {
         messages: [
           {
             role: MessageRole.user,
-            content: [{ type: ContentType.text, text: 'Test message' }],
+            content: [{ type: ContentType.text, text: 'user message' }],
           },
         ],
         config: { provider: 'openai', model: 'gpt-3.5-turbo' },
       },
     })
+    vi.spyOn(aiModule, 'ai').mockResolvedValue(
+      Result.ok({
+        type: 'text',
+        data: {
+          text: Promise.resolve(''),
+          toolCalls: Promise.resolve([]),
+          usage: Promise.resolve({
+            promptTokens: 0,
+            completionTokens: 0,
+            totalTokens: 0,
+          }),
+          fullStream: new ReadableStream({
+            start(controller) {
+              controller.enqueue({
+                type: 'error',
+                error: new Error('provider error'),
+              })
+              controller.close()
+            },
+          }),
+          providerName: 'openai',
+        },
+      }) as any as TypedResult<aiModule.AIReturn<'text'>, any>,
+    )
 
-    const run = await runChain({
+    const result = await runChain({
       workspace,
       chain: mockChain as LegacyChain,
       promptlVersion: 0,
@@ -582,18 +587,161 @@ describe('runChain', () => {
       source: LogSources.API,
       errorableType: ErrorableEntity.DocumentLog,
     })
+    const { value: stream } = await testConsumeStream(result.stream)
+    const response = await result.response
 
-    const res = await run.response
+    expect(stream.at(-1)).toEqual({
+      event: StreamEventTypes.Latitude,
+      data: {
+        type: ChainEventTypes.Error,
+        error: {
+          name: LatitudeErrorCodes.UnprocessableEntityError,
+          message: 'Openai returned this error: provider error',
+        },
+      },
+    })
+    expect(response.error).toEqual(
+      new ChainError({
+        code: RunErrorCodes.Unknown,
+        message: 'Openai returned this error: provider error',
+      }),
+    )
+  })
 
-    expect(res.value).toEqual(
+  it('handles tool calls response', async () => {
+    vi.mocked(mockChain.step!).mockResolvedValue({
+      completed: true,
+      conversation: {
+        messages: [
+          {
+            role: MessageRole.user,
+            content: [{ type: ContentType.text, text: 'user message' }],
+          },
+        ],
+        config: { provider: 'openai', model: 'gpt-3.5-turbo' },
+      },
+    })
+    vi.spyOn(aiModule, 'ai').mockResolvedValue(
+      Result.ok({
+        type: 'text',
+        data: {
+          text: Promise.resolve('assistant message'),
+          toolCalls: Promise.resolve([
+            {
+              toolCallId: 'tool-call-id',
+              toolName: 'tool-call-name',
+              args: { arg1: 'value1', arg2: 'value2' },
+            },
+          ]),
+          usage: Promise.resolve({
+            promptTokens: 0,
+            completionTokens: 0,
+            totalTokens: 0,
+          }),
+          fullStream: new ReadableStream({
+            start: (controller) => controller.close(),
+          }),
+          providerName: 'openai',
+        },
+      }) as any as TypedResult<aiModule.AIReturn<'text'>, any>,
+    )
+
+    const result = await runChain({
+      workspace,
+      chain: mockChain as LegacyChain,
+      promptlVersion: 0,
+      providersMap,
+      source: LogSources.API,
+      errorableType: ErrorableEntity.DocumentLog,
+    })
+    const { value: stream } = await testConsumeStream(result.stream)
+    const response = await result.response.then((r) => r.unwrap())
+
+    expect(stream.at(-1)).toEqual({
+      event: StreamEventTypes.Latitude,
+      data: expect.objectContaining({
+        type: ChainEventTypes.Complete,
+        messages: [
+          {
+            role: MessageRole.assistant,
+            content: 'assistant message',
+            toolCalls: [],
+          },
+          {
+            role: MessageRole.assistant,
+            content: [
+              {
+                type: ContentType.toolCall,
+                toolCallId: 'tool-call-id',
+                toolName: 'tool-call-name',
+                args: { arg1: 'value1', arg2: 'value2' },
+              },
+            ],
+            toolCalls: [
+              {
+                id: 'tool-call-id',
+                name: 'tool-call-name',
+                arguments: { arg1: 'value1', arg2: 'value2' },
+              },
+            ],
+          },
+        ],
+        response: expect.objectContaining({
+          text: 'assistant message',
+          toolCalls: [
+            {
+              id: 'tool-call-id',
+              name: 'tool-call-name',
+              arguments: { arg1: 'value1', arg2: 'value2' },
+            },
+          ],
+          providerLog: expect.objectContaining({
+            messages: [
+              {
+                role: MessageRole.user,
+                content: [{ type: ContentType.text, text: 'user message' }],
+              },
+            ],
+            responseText: 'assistant message',
+            responseObject: null,
+            toolCalls: [
+              {
+                id: 'tool-call-id',
+                name: 'tool-call-name',
+                arguments: { arg1: 'value1', arg2: 'value2' },
+              },
+            ],
+          }),
+        }),
+      }),
+    })
+    expect(response).toEqual(
       expect.objectContaining({
+        text: 'assistant message',
         toolCalls: [
           {
             id: 'tool-call-id',
             name: 'tool-call-name',
-            arguments: { foo: 'bar' },
+            arguments: { arg1: 'value1', arg2: 'value2' },
           },
         ],
+        providerLog: expect.objectContaining({
+          messages: [
+            {
+              role: MessageRole.user,
+              content: [{ type: ContentType.text, text: 'user message' }],
+            },
+          ],
+          responseText: 'assistant message',
+          responseObject: null,
+          toolCalls: [
+            {
+              id: 'tool-call-id',
+              name: 'tool-call-name',
+              arguments: { arg1: 'value1', arg2: 'value2' },
+            },
+          ],
+        }),
       }),
     )
   })

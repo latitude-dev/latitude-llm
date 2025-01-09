@@ -1,65 +1,30 @@
 import { ContentType, MessageRole } from '@latitude-data/compiler'
 import { v4 as uuid } from 'uuid'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, MockInstance, vi } from 'vitest'
 
 import {
+  LatitudeErrorCodes,
+  RunErrorCodes,
+} from '@latitude-data/constants/errors'
+import {
+  ChainEventTypes,
   Commit,
   DocumentVersion,
   LogSources,
   ProviderApiKey,
   ProviderLog,
   Providers,
+  StreamEventTypes,
   User,
   Workspace,
 } from '../../../browser'
-import { Result } from '../../../lib'
+import { Result, TypedResult } from '../../../lib'
 import { ProviderLogsRepository } from '../../../repositories'
 import { createDocumentLog, createProject } from '../../../tests/factories'
 import { testConsumeStream } from '../../../tests/helpers'
+import * as aiModule from '../../ai'
+import { ChainError } from '../../chains/ChainErrors'
 import { addMessages } from './index'
-
-const mocks = vi.hoisted(() => {
-  return {
-    runAi: vi.fn(async () => {
-      const fullStream = new ReadableStream({
-        start(controller) {
-          controller.enqueue({
-            type: 'text-delta',
-            textDelta: 'AI gener',
-          })
-          controller.enqueue({
-            type: 'text-delta',
-            textDelta: 'ated text',
-          })
-
-          controller.close()
-        },
-      })
-
-      return Result.ok({
-        type: 'text',
-        data: {
-          text: Promise.resolve('Fake AI generated text'),
-          usage: Promise.resolve({
-            promptTokens: 0,
-            completionTokens: 0,
-            totalTokens: 0,
-          }),
-          toolCalls: Promise.resolve([]),
-          fullStream,
-        },
-      })
-    }),
-  }
-})
-
-vi.mock('../../ai', async (importMod) => {
-  const mod = (await importMod()) as typeof import('../../ai')
-  return {
-    ...mod,
-    ai: mocks.runAi,
-  }
-})
 
 const dummyDoc1Content = `
 ---
@@ -112,11 +77,14 @@ async function buildData({
   }
 }
 
-// TODO: add tests for tool calls
-
 describe('addMessages', () => {
+  let mocks: {
+    ai: MockInstance
+  }
+
   beforeEach(async () => {
-    vi.resetModules()
+    vi.resetAllMocks()
+
     const {
       workspace: wsp,
       user: usr,
@@ -131,6 +99,37 @@ describe('addMessages', () => {
     commit = cmt
     workspace = wsp
     providerLog = pl
+
+    mocks = {
+      ai: vi.spyOn(aiModule, 'ai').mockResolvedValue(
+        Result.ok({
+          type: 'text',
+          data: {
+            text: Promise.resolve('Fake AI generated text'),
+            toolCalls: Promise.resolve([]),
+            usage: Promise.resolve({
+              promptTokens: 0,
+              completionTokens: 0,
+              totalTokens: 0,
+            }),
+            fullStream: new ReadableStream({
+              start(controller) {
+                controller.enqueue({
+                  type: 'text-delta',
+                  textDelta: 'AI gener',
+                })
+                controller.enqueue({
+                  type: 'text-delta',
+                  textDelta: 'ated text',
+                })
+                controller.close()
+              },
+            }),
+            providerName: 'openai',
+          },
+        }) as any as TypedResult<aiModule.AIReturn<'text'>, any>,
+      ),
+    }
   })
 
   it('fails if provider log is not found', async () => {
@@ -145,7 +144,6 @@ describe('addMessages', () => {
   })
 
   it('pass arguments to AI service', async () => {
-    const { addMessages } = await import('./index')
     const { stream } = await addMessages({
       workspace,
       documentLogUuid: providerLog.documentLogUuid!,
@@ -165,7 +163,7 @@ describe('addMessages', () => {
 
     await testConsumeStream(stream)
 
-    expect(mocks.runAi).toHaveBeenCalledWith(
+    expect(mocks.ai).toHaveBeenCalledWith(
       expect.objectContaining({
         messages: expect.arrayContaining([
           ...providerLog.messages,
@@ -194,7 +192,6 @@ describe('addMessages', () => {
   })
 
   it('returns chain stream', async () => {
-    const { addMessages } = await import('./index')
     const { stream } = await addMessages({
       workspace,
       documentLogUuid: providerLog.documentLogUuid!,
@@ -255,7 +252,6 @@ describe('addMessages', () => {
   })
 
   it('returns chain response', async () => {
-    const { addMessages } = await import('./index')
     const result = (
       await addMessages({
         workspace,
@@ -287,5 +283,212 @@ describe('addMessages', () => {
       documentLogUuid: providerLog.documentLogUuid,
       providerLog: logs[logs.length - 1],
     })
+  })
+
+  it('handles error response', async () => {
+    mocks.ai = vi.spyOn(aiModule, 'ai').mockResolvedValue(
+      Result.ok({
+        type: 'text',
+        data: {
+          text: Promise.resolve(''),
+          toolCalls: Promise.resolve([]),
+          usage: Promise.resolve({
+            promptTokens: 0,
+            completionTokens: 0,
+            totalTokens: 0,
+          }),
+          fullStream: new ReadableStream({
+            start(controller) {
+              controller.enqueue({
+                type: 'error',
+                error: new Error('provider error'),
+              })
+              controller.close()
+            },
+          }),
+          providerName: 'openai',
+        },
+      }) as any as TypedResult<aiModule.AIReturn<'text'>, any>,
+    )
+
+    const result = await addMessages({
+      workspace,
+      documentLogUuid: providerLog.documentLogUuid!,
+      messages: [
+        {
+          role: MessageRole.user,
+          content: [
+            {
+              type: ContentType.text,
+              text: 'user message',
+            },
+          ],
+        },
+      ],
+      source: LogSources.API,
+    }).then((r) => r.unwrap())
+    const { value: stream } = await testConsumeStream(result.stream)
+    const response = await result.response
+
+    expect(stream).toEqual([
+      {
+        event: StreamEventTypes.Latitude,
+        data: {
+          type: ChainEventTypes.Error,
+          error: {
+            name: LatitudeErrorCodes.UnprocessableEntityError,
+            message: 'Openai returned this error: provider error',
+          },
+        },
+      },
+    ])
+    expect(response.error).toEqual(
+      new ChainError({
+        code: RunErrorCodes.Unknown,
+        message: 'Openai returned this error: provider error',
+      }),
+    )
+  })
+
+  it('handles tool calls response', async () => {
+    mocks.ai = vi.spyOn(aiModule, 'ai').mockResolvedValue(
+      Result.ok({
+        type: 'text',
+        data: {
+          text: Promise.resolve('assistant message'),
+          toolCalls: Promise.resolve([
+            {
+              toolCallId: 'tool-call-id',
+              toolName: 'tool-call-name',
+              args: { arg1: 'value1', arg2: 'value2' },
+            },
+          ]),
+          usage: Promise.resolve({
+            promptTokens: 0,
+            completionTokens: 0,
+            totalTokens: 0,
+          }),
+          fullStream: new ReadableStream({
+            start: (controller) => controller.close(),
+          }),
+          providerName: 'openai',
+        },
+      }) as any as TypedResult<aiModule.AIReturn<'text'>, any>,
+    )
+
+    const result = await addMessages({
+      workspace,
+      documentLogUuid: providerLog.documentLogUuid!,
+      messages: [
+        {
+          role: MessageRole.user,
+          content: [
+            {
+              type: ContentType.text,
+              text: 'user message',
+            },
+          ],
+        },
+      ],
+      source: LogSources.API,
+    }).then((r) => r.unwrap())
+    const { value: stream } = await testConsumeStream(result.stream)
+    const response = await result.response.then((r) => r.unwrap())
+    const log = await new ProviderLogsRepository(workspace.id)
+      .findAll()
+      .then((r) => r.unwrap())
+      .then((r) => r.at(-1)!)
+
+    expect(stream).toEqual([
+      {
+        event: StreamEventTypes.Latitude,
+        data: expect.objectContaining({
+          type: ChainEventTypes.Complete,
+          messages: [
+            {
+              role: MessageRole.assistant,
+              content: 'assistant message',
+              toolCalls: [],
+            },
+            {
+              role: MessageRole.assistant,
+              content: [
+                {
+                  type: ContentType.toolCall,
+                  toolCallId: 'tool-call-id',
+                  toolName: 'tool-call-name',
+                  args: { arg1: 'value1', arg2: 'value2' },
+                },
+              ],
+              toolCalls: [
+                {
+                  id: 'tool-call-id',
+                  name: 'tool-call-name',
+                  arguments: { arg1: 'value1', arg2: 'value2' },
+                },
+              ],
+            },
+          ],
+          response: expect.objectContaining({
+            text: 'assistant message',
+            toolCalls: [
+              {
+                id: 'tool-call-id',
+                name: 'tool-call-name',
+                arguments: { arg1: 'value1', arg2: 'value2' },
+              },
+            ],
+            providerLog: expect.objectContaining({
+              messages: [
+                ...log.messages.slice(0, -1),
+                {
+                  role: MessageRole.user,
+                  content: [{ type: ContentType.text, text: 'user message' }],
+                },
+              ],
+              responseText: 'assistant message',
+              responseObject: null,
+              toolCalls: [
+                {
+                  id: 'tool-call-id',
+                  name: 'tool-call-name',
+                  arguments: { arg1: 'value1', arg2: 'value2' },
+                },
+              ],
+            }),
+          }),
+        }),
+      },
+    ])
+    expect(response).toEqual(
+      expect.objectContaining({
+        text: 'assistant message',
+        toolCalls: [
+          {
+            id: 'tool-call-id',
+            name: 'tool-call-name',
+            arguments: { arg1: 'value1', arg2: 'value2' },
+          },
+        ],
+        providerLog: expect.objectContaining({
+          messages: [
+            ...log.messages.slice(0, -1),
+            {
+              role: MessageRole.user,
+              content: [{ type: ContentType.text, text: 'user message' }],
+            },
+          ],
+          responseText: 'assistant message',
+          responseObject: null,
+          toolCalls: [
+            {
+              id: 'tool-call-id',
+              name: 'tool-call-name',
+              arguments: { arg1: 'value1', arg2: 'value2' },
+            },
+          ],
+        }),
+      }),
+    )
   })
 })
