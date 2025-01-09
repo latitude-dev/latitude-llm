@@ -6,6 +6,7 @@ import {
   LatitudeErrorCodes,
   RunErrorCodes,
 } from '@latitude-data/constants/errors'
+import { eq } from 'drizzle-orm'
 import {
   ChainEventTypes,
   Commit,
@@ -18,8 +19,10 @@ import {
   User,
   Workspace,
 } from '../../../browser'
+import { database } from '../../../client'
 import { Result, TypedResult } from '../../../lib'
 import { ProviderLogsRepository } from '../../../repositories'
+import { providerLogs } from '../../../schema'
 import { createDocumentLog, createProject } from '../../../tests/factories'
 import { testConsumeStream } from '../../../tests/helpers'
 import * as aiModule from '../../ai'
@@ -143,7 +146,18 @@ describe('addMessages', () => {
     expect(result.error).toBeDefined()
   })
 
-  it('pass arguments to AI service', async () => {
+  it('pass arguments to AI service with text response', async () => {
+    providerLog = await database
+      .update(providerLogs)
+      .set({
+        responseText: 'assistant message',
+        responseObject: null,
+        toolCalls: [],
+      })
+      .where(eq(providerLogs.id, providerLog.id))
+      .returning()
+      .then((p) => p[0]!)
+
     const { stream } = await addMessages({
       workspace,
       documentLogUuid: providerLog.documentLogUuid!,
@@ -153,7 +167,7 @@ describe('addMessages', () => {
           content: [
             {
               type: ContentType.text,
-              text: 'This is a user message',
+              text: 'user message',
             },
           ],
         },
@@ -169,7 +183,12 @@ describe('addMessages', () => {
           ...providerLog.messages,
           {
             role: MessageRole.assistant,
-            content: providerLog.responseText,
+            content: [
+              {
+                type: ContentType.text,
+                text: providerLog.responseText,
+              },
+            ],
             toolCalls: [],
           },
           {
@@ -177,7 +196,219 @@ describe('addMessages', () => {
             content: [
               {
                 type: ContentType.text,
-                text: 'This is a user message',
+                text: 'user message',
+              },
+            ],
+          },
+        ]),
+        config: expect.objectContaining({
+          model: 'gpt-4o',
+          provider: 'openai',
+        }),
+        provider: expect.any(Object),
+      }),
+    )
+  })
+
+  it('pass arguments to AI service with object response', async () => {
+    providerLog = await database
+      .update(providerLogs)
+      .set({
+        responseText: null,
+        responseObject: { object: 'response' },
+        toolCalls: [],
+      })
+      .where(eq(providerLogs.id, providerLog.id))
+      .returning()
+      .then((p) => p[0]!)
+
+    const { stream } = await addMessages({
+      workspace,
+      documentLogUuid: providerLog.documentLogUuid!,
+      messages: [
+        {
+          role: MessageRole.user,
+          content: [
+            {
+              type: ContentType.text,
+              text: 'user message',
+            },
+          ],
+        },
+      ],
+      source: LogSources.API,
+    }).then((r) => r.unwrap())
+
+    await testConsumeStream(stream)
+
+    expect(mocks.ai).toHaveBeenCalledWith(
+      expect.objectContaining({
+        messages: expect.arrayContaining([
+          ...providerLog.messages,
+          {
+            role: MessageRole.assistant,
+            content: [
+              {
+                type: ContentType.text,
+                text: '{\n  "object": "response"\n}',
+              },
+            ],
+            toolCalls: [],
+          },
+          {
+            role: MessageRole.user,
+            content: [
+              {
+                type: ContentType.text,
+                text: 'user message',
+              },
+            ],
+          },
+        ]),
+        config: expect.objectContaining({
+          model: 'gpt-4o',
+          provider: 'openai',
+        }),
+        provider: expect.any(Object),
+      }),
+    )
+  })
+
+  it('pass arguments to AI service with tool calls response', async () => {
+    providerLog = await database
+      .update(providerLogs)
+      .set({
+        responseText: null,
+        responseObject: null,
+        toolCalls: [
+          {
+            id: 'tool-call-id',
+            name: 'tool-call-name',
+            arguments: { arg1: 'value1', arg2: 'value2' },
+          },
+        ],
+      })
+      .where(eq(providerLogs.id, providerLog.id))
+      .returning()
+      .then((p) => p[0]!)
+
+    const { stream } = await addMessages({
+      workspace,
+      documentLogUuid: providerLog.documentLogUuid!,
+      messages: [
+        {
+          role: MessageRole.user,
+          content: [
+            {
+              type: ContentType.text,
+              text: 'user message',
+            },
+          ],
+        },
+      ],
+      source: LogSources.API,
+    }).then((r) => r.unwrap())
+
+    await testConsumeStream(stream)
+
+    expect(mocks.ai).toHaveBeenCalledWith(
+      expect.objectContaining({
+        messages: expect.arrayContaining([
+          ...providerLog.messages,
+          {
+            role: MessageRole.assistant,
+            content: [
+              {
+                type: ContentType.toolCall,
+                toolCallId: 'tool-call-id',
+                toolName: 'tool-call-name',
+                args: { arg1: 'value1', arg2: 'value2' },
+              },
+            ],
+            toolCalls: providerLog.toolCalls,
+          },
+          {
+            role: MessageRole.user,
+            content: [
+              {
+                type: ContentType.text,
+                text: 'user message',
+              },
+            ],
+          },
+        ]),
+        config: expect.objectContaining({
+          model: 'gpt-4o',
+          provider: 'openai',
+        }),
+        provider: expect.any(Object),
+      }),
+    )
+  })
+
+  it('pass arguments to AI service with tool calls and text response', async () => {
+    providerLog = await database
+      .update(providerLogs)
+      .set({
+        responseText: 'assistant message',
+        responseObject: null,
+        toolCalls: [
+          {
+            id: 'tool-call-id',
+            name: 'tool-call-name',
+            arguments: { arg1: 'value1', arg2: 'value2' },
+          },
+        ],
+      })
+      .where(eq(providerLogs.id, providerLog.id))
+      .returning()
+      .then((p) => p[0]!)
+
+    const { stream } = await addMessages({
+      workspace,
+      documentLogUuid: providerLog.documentLogUuid!,
+      messages: [
+        {
+          role: MessageRole.user,
+          content: [
+            {
+              type: ContentType.text,
+              text: 'user message',
+            },
+          ],
+        },
+      ],
+      source: LogSources.API,
+    }).then((r) => r.unwrap())
+
+    await testConsumeStream(stream)
+
+    expect(mocks.ai).toHaveBeenCalledWith(
+      expect.objectContaining({
+        messages: expect.arrayContaining([
+          ...providerLog.messages,
+          {
+            role: MessageRole.assistant,
+            content: [
+              {
+                type: ContentType.text,
+                text: providerLog.responseText,
+              },
+              {
+                type: ContentType.toolCall,
+                toolCallId: 'tool-call-id',
+                toolName: 'tool-call-name',
+                args: { arg1: 'value1', arg2: 'value2' },
+              },
+            ],
+            toolCalls: providerLog.toolCalls,
+          },
+          {
+            role: MessageRole.user,
+            content: [
+              {
+                type: ContentType.text,
+                text: 'user message',
               },
             ],
           },
@@ -234,7 +465,12 @@ describe('addMessages', () => {
           messages: [
             {
               role: 'assistant',
-              content: 'Fake AI generated text',
+              content: [
+                {
+                  type: ContentType.text,
+                  text: 'Fake AI generated text',
+                },
+              ],
               toolCalls: [],
             },
           ],
@@ -407,12 +643,11 @@ describe('addMessages', () => {
           messages: [
             {
               role: MessageRole.assistant,
-              content: 'assistant message',
-              toolCalls: [],
-            },
-            {
-              role: MessageRole.assistant,
               content: [
+                {
+                  type: ContentType.text,
+                  text: 'assistant message',
+                },
                 {
                   type: ContentType.toolCall,
                   toolCallId: 'tool-call-id',

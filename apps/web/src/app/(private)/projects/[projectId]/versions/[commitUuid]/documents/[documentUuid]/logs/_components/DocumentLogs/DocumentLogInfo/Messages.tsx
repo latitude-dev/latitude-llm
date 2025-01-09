@@ -1,7 +1,6 @@
 import { useMemo } from 'react'
 
-import { Message, MessageRole } from '@latitude-data/compiler'
-import { ProviderLogDto } from '@latitude-data/core/browser'
+import { Message } from '@latitude-data/compiler'
 import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
 import {
   AppLocalStorage,
@@ -10,34 +9,6 @@ import {
   Text,
   useLocalStorage,
 } from '@latitude-data/web-ui'
-
-export function useGetProviderLogMessages({
-  providerLogs,
-}: {
-  providerLogs?: ProviderLogDto[]
-}) {
-  const providerLog = providerLogs?.[providerLogs.length - 1]
-  return useMemo(() => {
-    if (!providerLog) return { messages: [] as Message[], lastResponse: null }
-    if (!providerLog.response) {
-      return { messages: providerLog.messages, lastResponse: null }
-    }
-
-    const lastResponse = {
-      role: MessageRole.assistant,
-      content: providerLog!.response,
-      toolCalls: providerLog!.toolCalls,
-    }
-
-    return {
-      lastResponse,
-      messages: [
-        ...(providerLog!.messages as Message[]),
-        lastResponse as unknown as Message,
-      ],
-    }
-  }, [providerLog])
-}
 
 export function DocumentLogMessages({
   documentLog,

@@ -1,7 +1,6 @@
 import { useCallback, useContext, useEffect, useRef, useState } from 'react'
 
 import {
-  AssistantMessage,
   ContentType,
   Conversation,
   Message as ConversationMessage,
@@ -175,10 +174,16 @@ export default function Chat({
         content: [{ type: ContentType.text, text: input }],
       }
 
-      setResponseStream('')
-
       addMessageToConversation(message)
 
+      setError(undefined)
+      setResponseStream('')
+      setIsStreaming(true)
+      setUsage({
+        promptTokens: 0,
+        completionTokens: 0,
+        totalTokens: 0,
+      })
       let response = ''
 
       try {
@@ -192,19 +197,17 @@ export default function Chat({
 
           const { event, data } = serverEvent
 
+          if ('messages' in data) {
+            setResponseStream(undefined)
+            data.messages!.forEach(addMessageToConversation)
+          }
+
           switch (event) {
             case StreamEventTypes.Latitude: {
-              if (data.type === ChainEventTypes.Error) {
-                setError(new Error(data.error.message))
-              } else if (data.type === ChainEventTypes.Complete) {
-                addMessageToConversation({
-                  role: MessageRole.assistant,
-                  content: data.response.text,
-                } as AssistantMessage)
-
+              if (data.type === ChainEventTypes.Complete) {
                 setUsage(data.response.usage)
-
-                setResponseStream(undefined)
+              } else if (data.type === ChainEventTypes.Error) {
+                setError(new Error(data.error.message))
               }
 
               break
@@ -224,10 +227,11 @@ export default function Chat({
       } catch (error) {
         setError(error as Error)
       } finally {
+        setIsStreaming(false)
         setResponseStream(undefined)
       }
     },
-    [addMessageToConversation, setError, documentLogUuid],
+    [documentLogUuid, addMessagesAction, addMessageToConversation],
   )
 
   return (
