@@ -314,12 +314,11 @@ data: {json.dumps({
     "messages": [
         {
             "role": "assistant",
-            "content": "Yes, 9.9 is greater than 9.11. Use the calculator if you don't believe me.",
-            "toolCalls": [],
-        },
-        {
-            "role": "assistant",
             "content": [
+                {
+                    "type": "text",
+                    "text": "Yes, 9.9 is greater than 9.11. Use the calculator if you don't believe me.",
+                },
                 {
                     "type": "tool-call",
                     "toolCallId": "toolu_01ARatRfRidTDshkg1UuQhW2",
@@ -327,7 +326,7 @@ data: {json.dumps({
                     "args": {"expression": "9.9 > 9.11 ?"},
                 },
             ],
-            "toolCalls": [
+           "toolCalls": [
                 {
                     "id": "toolu_01ARatRfRidTDshkg1UuQhW2",
                     "name": "calculator",
@@ -492,14 +491,16 @@ CONVERSATION_EVENTS: List[StreamEvent] = [
             },
         },
         messages=[
-            AssistantMessage(content="Yes, 9.9 is greater than 9.11. Use the calculator if you don't believe me."),
             AssistantMessage(
                 content=[
+                    TextContent(
+                        text="Yes, 9.9 is greater than 9.11. Use the calculator if you don't believe me.",
+                    ),
                     ToolCallContent(
                         id="toolu_01ARatRfRidTDshkg1UuQhW2",
                         name="calculator",
                         arguments={"expression": "9.9 > 9.11 ?"},
-                    )
+                    ),
                 ]
             ),
         ],
@@ -562,10 +563,13 @@ CONVERSATION_FINISHED_EVENT_RESPONSE: Dict[str, Any] = {
         {"role": "assistant", "content": [{"type": "text", "text": "I should look at their decimals."}]},
         {"role": "system", "content": [{"type": "text", "text": "Now answer succinctly."}]},
         {"role": "user", "content": [{"type": "text", "text": "My question was: Is 9.9 greater than 9.11?"}]},
-        {"role": "assistant", "content": "Yes, 9.9 is greater than 9.11. Use the calculator if you don't believe me."},
         {
             "role": "assistant",
             "content": [
+                {
+                    "type": "text",
+                    "text": "Yes, 9.9 is greater than 9.11. Use the calculator if you don't believe me.",
+                },
                 {
                     "type": "tool-call",
                     "toolCallId": "toolu_01ARatRfRidTDshkg1UuQhW2",
@@ -604,14 +608,16 @@ CONVERSATION_FINISHED_EVENT = FinishedEvent(
         AssistantMessage(content=[TextContent(text="I should look at their decimals.")]),
         SystemMessage(content=[TextContent(text="Now answer succinctly.")]),
         UserMessage(content=[TextContent(text="My question was: Is 9.9 greater than 9.11?")]),
-        AssistantMessage(content="Yes, 9.9 is greater than 9.11. Use the calculator if you don't believe me."),
         AssistantMessage(
             content=[
+                TextContent(
+                    text="Yes, 9.9 is greater than 9.11. Use the calculator if you don't believe me.",
+                ),
                 ToolCallContent(
                     id="toolu_01ARatRfRidTDshkg1UuQhW2",
                     name="calculator",
                     arguments={"expression": "9.9 > 9.11 ?"},
-                )
+                ),
             ]
         ),
     ],
