@@ -128,7 +128,7 @@ class StreamTypes(StrEnum):
 class ChainTextResponse(Model):
     type: Literal[StreamTypes.Text] = Field(default=StreamTypes.Text, alias=str("streamType"))
     text: str
-    tools: Optional[List[ToolCall]] = Field(default=None, alias=str("toolCalls"))
+    tool_calls: Optional[List[ToolCall]] = Field(default=None, alias=str("toolCalls"))
     usage: ModelUsage
 
 

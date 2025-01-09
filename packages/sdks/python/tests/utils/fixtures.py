@@ -366,7 +366,7 @@ CONVERSATION_EVENTS: List[StreamEvent] = [
         uuid="bf7b0b97-6a3a-4147-b058-2588517dd209",
         response=ChainTextResponse(
             text="I should look at their decimals.",
-            tools=[],
+            tool_calls=[],
             usage=ModelUsage(prompt_tokens=31, completion_tokens=9, total_tokens=40),
         ),
     ),
@@ -406,7 +406,7 @@ CONVERSATION_EVENTS: List[StreamEvent] = [
         uuid="bf7b0b97-6a3a-4147-b058-2588517dd209",
         response=ChainTextResponse(
             text="Yes, 9.9 is greater than 9.11.",
-            tools=[],
+            tool_calls=[],
             usage=ModelUsage(prompt_tokens=61, completion_tokens=9, total_tokens=70),
         ),
     ),
@@ -419,7 +419,7 @@ CONVERSATION_EVENTS: List[StreamEvent] = [
         object=None,
         response=ChainTextResponse(
             text="Yes, 9.9 is greater than 9.11.",
-            tools=[],
+            tool_calls=[],
             usage=ModelUsage(prompt_tokens=61, completion_tokens=9, total_tokens=70),
         ),
     ),
@@ -491,7 +491,7 @@ CONVERSATION_FINISHED_EVENT = FinishedEvent(
     ],
     response=ChainTextResponse(
         text="Yes, 9.9 is greater than 9.11.",
-        tools=[],
+        tool_calls=[],
         usage=ModelUsage(prompt_tokens=61, completion_tokens=9, total_tokens=70),
     ),
 )
