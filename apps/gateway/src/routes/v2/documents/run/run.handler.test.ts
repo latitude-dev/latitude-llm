@@ -1,4 +1,6 @@
-import { MessageRole } from '@latitude-data/compiler'
+import { parseSSEvent } from '$/common/parseSSEEvent'
+import app from '$/routes/app'
+import { ContentType, MessageRole } from '@latitude-data/compiler'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
 import {
   ChainEventTypes,
@@ -21,8 +23,6 @@ import { Result } from '@latitude-data/core/lib/Result'
 import { ChainError } from '@latitude-data/core/services/chains/ChainErrors/index'
 import { ChainResponse } from '@latitude-data/core/services/chains/run'
 import { mergeCommit } from '@latitude-data/core/services/commits/merge'
-import { parseSSEvent } from '$/common/parseSSEEvent'
-import app from '$/routes/app'
 import { testConsumeStream } from 'test/helpers'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -241,6 +241,160 @@ describe('POST /run', () => {
             text: 'Hello',
             usage: {},
           },
+        },
+      })
+    })
+
+    it('stream succeeds with tool calls', async () => {
+      const stream = new ReadableStream({
+        start(controller) {
+          controller.enqueue({
+            event: StreamEventTypes.Latitude,
+            data: {
+              type: ChainEventTypes.Complete,
+              config: {
+                tools: {
+                  get_the_weather: {
+                    description:
+                      'Retrieves the current weather for a specified location.',
+                    parameters: {
+                      type: 'object',
+                      properties: {
+                        location: {
+                          type: 'string',
+                          description:
+                            "The city and country, e.g., 'Valencia, Spain'.",
+                        },
+                      },
+                      required: ['location'],
+                      additionalProperties: false,
+                    },
+                  },
+                },
+              },
+              response: {
+                streamType: 'text',
+                text: '',
+                usage: {},
+                toolCalls: [
+                  {
+                    id: 'fake-tool-call-id',
+                    name: 'get_the_weather',
+                    arguments: { location: 'Barcelona, Spain' },
+                  },
+                ],
+                documentLogUuid: 'fake-uuid',
+              },
+              messages: [
+                {
+                  role: MessageRole.assistant,
+                  toolCalls: [
+                    {
+                      id: 'fake-tool-call-id',
+                      name: 'get_the_weather',
+                      arguments: { location: 'Barcelona, Spain' },
+                    },
+                  ],
+                  content: [
+                    {
+                      type: ContentType.toolCall,
+                      toolCallId: 'fake-tool-call-id',
+                      toolName: 'get_the_weather',
+                      args: { location: 'Barcelona, Spain' },
+                    },
+                  ],
+                },
+              ],
+            },
+          })
+
+          controller.close()
+        },
+      })
+
+      const response = new Promise((resolve) => resolve({}))
+
+      mocks.runDocumentAtCommit.mockReturnValue(
+        new Promise((resolve) => {
+          resolve(
+            Result.ok({
+              stream,
+              response,
+            }),
+          )
+        }),
+      )
+
+      const res = await app.request(route, {
+        method: 'POST',
+        body,
+        headers,
+      })
+
+      let { done, value } = await testConsumeStream(res.body as ReadableStream)
+      const event = parseSSEvent(value)
+      expect(mocks.queues)
+      expect(res.status).toBe(200)
+      expect(res.body).toBeInstanceOf(ReadableStream)
+      expect(done).toBe(true)
+      expect(event).toEqual({
+        id: 0,
+        event: StreamEventTypes.Latitude,
+        data: {
+          type: ChainEventTypes.Complete,
+          uuid: 'fake-uuid',
+          config: {
+            tools: {
+              get_the_weather: {
+                description:
+                  'Retrieves the current weather for a specified location.',
+                parameters: {
+                  type: 'object',
+                  properties: {
+                    location: {
+                      type: 'string',
+                      description:
+                        "The city and country, e.g., 'Valencia, Spain'.",
+                    },
+                  },
+                  required: ['location'],
+                  additionalProperties: false,
+                },
+              },
+            },
+          },
+          response: {
+            streamType: 'text',
+            text: '',
+            usage: {},
+            toolCalls: [
+              {
+                id: 'fake-tool-call-id',
+                name: 'get_the_weather',
+                arguments: { location: 'Barcelona, Spain' },
+              },
+            ],
+          },
+          messages: [
+            {
+              role: MessageRole.assistant,
+              toolCalls: [
+                {
+                  id: 'fake-tool-call-id',
+                  name: 'get_the_weather',
+                  arguments: { location: 'Barcelona, Spain' },
+                },
+              ],
+              content: [
+                {
+                  type: ContentType.toolCall,
+                  toolCallId: 'fake-tool-call-id',
+                  toolName: 'get_the_weather',
+                  args: { location: 'Barcelona, Spain' },
+                },
+              ],
+            },
+          ],
         },
       })
     })

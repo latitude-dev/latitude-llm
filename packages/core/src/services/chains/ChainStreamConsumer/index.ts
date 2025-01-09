@@ -9,31 +9,14 @@ import {
   ChainEvent,
   ChainEventTypes,
   ChainStepResponse,
+  Message,
   StreamEventTypes,
   StreamType,
 } from '../../../constants'
+import { objectToString } from '../../../helpers'
 import { Config } from '../../ai'
 import { ChainError } from '../ChainErrors'
 import { ValidatedStep } from '../ChainValidator'
-import { objectToString } from '../../../helpers'
-
-export function parseResponseText(response: ChainStepResponse<StreamType>) {
-  if (response.streamType === 'object') return response.text || ''
-
-  const text = response.text
-  if (text && text.length > 0) return text
-
-  return objectToString(
-    response.toolCalls.map((toolCall) => {
-      return {
-        type: ContentType.toolCall,
-        toolCallId: toolCall.id,
-        toolName: toolCall.name,
-        args: toolCall.arguments,
-      } as ToolRequestContent
-    }),
-  )
-}
 
 export function enqueueChainEvent(
   controller: ReadableStreamDefaultController,
@@ -72,7 +55,38 @@ export class ChainStreamConsumer {
     response: ChainStepResponse<StreamType>
     config: Config
   }) {
-    const content = parseResponseText(response)
+    let messages: Message[] = []
+
+    if (response.text.length > 0) {
+      messages.push({
+        role: MessageRole.assistant,
+        content: response.text,
+        toolCalls: [],
+      })
+    }
+
+    if (response.streamType === 'object' && response.object) {
+      messages.push({
+        role: MessageRole.assistant,
+        content: objectToString(response.object),
+        toolCalls: [],
+      })
+    }
+
+    if (response.streamType === 'text' && response.toolCalls.length > 0) {
+      messages.push({
+        role: MessageRole.assistant,
+        content: response.toolCalls.map((toolCall) => {
+          return {
+            type: ContentType.toolCall,
+            toolCallId: toolCall.id,
+            toolName: toolCall.name,
+            args: toolCall.arguments,
+          } as ToolRequestContent
+        }),
+        toolCalls: response.toolCalls,
+      })
+    }
 
     enqueueChainEvent(controller, {
       event: StreamEventTypes.Latitude,
@@ -81,14 +95,7 @@ export class ChainStreamConsumer {
         config,
         documentLogUuid: response.documentLogUuid,
         response,
-        messages: [
-          {
-            role: MessageRole.assistant,
-            toolCalls:
-              response.streamType === 'text' ? response.toolCalls || [] : [],
-            content,
-          },
-        ],
+        messages,
       },
     })
 

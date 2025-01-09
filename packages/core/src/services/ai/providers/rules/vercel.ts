@@ -112,7 +112,7 @@ function adaptContentFields({ content }: { content: Message['content'] }) {
         const adaptedContent = {
           ...c,
           data: (c as any)['file'] as FilePart['data'],
-        }
+        } as FilePart
 
         delete (adaptedContent as any)['file']
 
@@ -122,8 +122,8 @@ function adaptContentFields({ content }: { content: Message['content'] }) {
       case 'tool-call': {
         const adaptedContent = {
           ...c,
-          args: (c as any)['toolArguments'] as ToolCallPart['args'],
-        }
+          args: c.args || ((c as any)['toolArguments'] as ToolCallPart['args']),
+        } as ToolCallPart
 
         delete (adaptedContent as any)['toolArguments']
 
