@@ -236,7 +236,7 @@ async function runStep({
           controller,
           errorableUuid,
           errorableType,
-          previousCount: previousCount + 1,
+          previousCount: messageCount,
           previousResponse: response,
           configOverrides,
         })
