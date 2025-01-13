@@ -81,18 +81,27 @@ export default function Chat({
     [],
   )
 
-  const runDocument = useCallback(async () => {
-    const start = performance.now()
+  const startStreaming = useCallback(() => {
     setError(undefined)
-    setResponseStream('')
-    setIsStreaming(true)
     setUsage({
       promptTokens: 0,
       completionTokens: 0,
       totalTokens: 0,
     })
+    setResponseStream('')
+    setIsStreaming(true)
+  }, [setError, setUsage, setResponseStream, setIsStreaming])
+
+  const stopStreaming = useCallback(() => {
+    setIsStreaming(false)
+    setResponseStream(undefined)
+  }, [setIsStreaming, setResponseStream])
+
+  const runDocument = useCallback(async () => {
+    const start = performance.now()
     let response = ''
     let messagesCount = 0
+    startStreaming()
 
     try {
       const { response: actionResponse, output } = await runDocumentAction({
@@ -146,8 +155,7 @@ export default function Chat({
     } catch (error) {
       setError(error as Error)
     } finally {
-      setIsStreaming(false)
-      setResponseStream(undefined)
+      stopStreaming()
     }
   }, [
     project.id,
@@ -156,6 +164,8 @@ export default function Chat({
     parameters,
     runDocumentAction,
     addMessageToConversation,
+    startStreaming,
+    stopStreaming,
   ])
 
   useEffect(() => {
@@ -173,18 +183,10 @@ export default function Chat({
         role: MessageRole.user,
         content: [{ type: ContentType.text, text: input }],
       }
-
       addMessageToConversation(message)
 
-      setError(undefined)
-      setResponseStream('')
-      setIsStreaming(true)
-      setUsage({
-        promptTokens: 0,
-        completionTokens: 0,
-        totalTokens: 0,
-      })
       let response = ''
+      startStreaming()
 
       try {
         const { output } = await addMessagesAction({
@@ -227,11 +229,16 @@ export default function Chat({
       } catch (error) {
         setError(error as Error)
       } finally {
-        setIsStreaming(false)
-        setResponseStream(undefined)
+        stopStreaming()
       }
     },
-    [documentLogUuid, addMessagesAction, addMessageToConversation],
+    [
+      documentLogUuid,
+      addMessagesAction,
+      addMessageToConversation,
+      startStreaming,
+      stopStreaming,
+    ],
   )
 
   return (
@@ -324,7 +331,11 @@ export function TokenUsage({
           trigger={
             <div className='cursor-pointer flex flex-row items-center gap-x-1'>
               <Text.H6M color='foregroundMuted'>
-                {usage?.totalTokens} tokens
+                {usage?.totalTokens ||
+                  usage?.promptTokens ||
+                  usage?.completionTokens ||
+                  0}{' '}
+                tokens
               </Text.H6M>
               <Icon name='info' color='foregroundMuted' />
             </div>
@@ -332,10 +343,10 @@ export function TokenUsage({
         >
           <div className='flex flex-col gap-2'>
             <Text.H6M color='foregroundMuted'>
-              {usage?.promptTokens} prompt tokens
+              {usage?.promptTokens || 0} prompt tokens
             </Text.H6M>
             <Text.H6M color='foregroundMuted'>
-              {usage?.completionTokens} completion tokens
+              {usage?.completionTokens || 0} completion tokens
             </Text.H6M>
           </div>
         </Tooltip>
