@@ -11,9 +11,11 @@ import {
 import {
   DocumentVersionsRepository,
   EvaluationsRepository,
+  ProjectsRepository,
 } from '../../repositories'
 import { connectedEvaluations } from '../../schema'
 import { importLlmAsJudgeEvaluation } from './create'
+import { pingProjectUpdate } from '../projects'
 
 export function connectEvaluations(
   {
@@ -42,6 +44,13 @@ export function connectEvaluations(
       if (!documentExists) {
         return Result.error(new NotFoundError('Document not found'))
       }
+
+      const projectsScope = new ProjectsRepository(workspace.id, tx)
+      const project = await projectsScope
+        .getProjectByDocumentUuid(documentUuid)
+        .then((r) => r.unwrap())
+
+      await pingProjectUpdate({ projectId: project.id }, tx)
 
       // TODO: Creating an evaluation is kind of a pita because of the
       // polymorphic relation with metadata so we use the creation service which

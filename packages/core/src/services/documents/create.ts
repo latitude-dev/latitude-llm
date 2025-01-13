@@ -16,6 +16,7 @@ import { BadRequestError } from '../../lib/errors'
 import { DocumentVersionsRepository } from '../../repositories'
 import { documentVersions } from '../../schema'
 import { findDefaultProvider } from '../providerApiKeys/findDefaultProvider'
+import { pingProjectUpdate } from '../projects'
 
 export async function createNewDocument(
   {
@@ -77,6 +78,8 @@ export async function createNewDocument(
       .update(documentVersions)
       .set({ resolvedContent: null })
       .where(eq(documentVersions.commitId, commit.id))
+
+    await pingProjectUpdate({ projectId: commit.projectId }, tx)
 
     publisher.publishLater({
       type: 'documentCreated',
