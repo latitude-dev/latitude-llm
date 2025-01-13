@@ -1,7 +1,6 @@
 import { useCallback, useContext, useEffect, useRef, useState } from 'react'
 
 import {
-  AssistantMessage,
   ContentType,
   Conversation,
   Message as ConversationMessage,
@@ -82,18 +81,27 @@ export default function Chat({
     [],
   )
 
-  const runDocument = useCallback(async () => {
-    const start = performance.now()
+  const startStreaming = useCallback(() => {
     setError(undefined)
-    setResponseStream('')
-    setIsStreaming(true)
     setUsage({
       promptTokens: 0,
       completionTokens: 0,
       totalTokens: 0,
     })
+    setResponseStream('')
+    setIsStreaming(true)
+  }, [setError, setUsage, setResponseStream, setIsStreaming])
+
+  const stopStreaming = useCallback(() => {
+    setIsStreaming(false)
+    setResponseStream(undefined)
+  }, [setIsStreaming, setResponseStream])
+
+  const runDocument = useCallback(async () => {
+    const start = performance.now()
     let response = ''
     let messagesCount = 0
+    startStreaming()
 
     try {
       const { response: actionResponse, output } = await runDocumentAction({
@@ -147,8 +155,7 @@ export default function Chat({
     } catch (error) {
       setError(error as Error)
     } finally {
-      setIsStreaming(false)
-      setResponseStream(undefined)
+      stopStreaming()
     }
   }, [
     project.id,
@@ -157,6 +164,8 @@ export default function Chat({
     parameters,
     runDocumentAction,
     addMessageToConversation,
+    startStreaming,
+    stopStreaming,
   ])
 
   useEffect(() => {
@@ -174,12 +183,10 @@ export default function Chat({
         role: MessageRole.user,
         content: [{ type: ContentType.text, text: input }],
       }
-
-      setResponseStream('')
-
       addMessageToConversation(message)
 
       let response = ''
+      startStreaming()
 
       try {
         const { output } = await addMessagesAction({
@@ -192,19 +199,17 @@ export default function Chat({
 
           const { event, data } = serverEvent
 
+          if ('messages' in data) {
+            setResponseStream(undefined)
+            data.messages!.forEach(addMessageToConversation)
+          }
+
           switch (event) {
             case StreamEventTypes.Latitude: {
-              if (data.type === ChainEventTypes.Error) {
-                setError(new Error(data.error.message))
-              } else if (data.type === ChainEventTypes.Complete) {
-                addMessageToConversation({
-                  role: MessageRole.assistant,
-                  content: data.response.text,
-                } as AssistantMessage)
-
+              if (data.type === ChainEventTypes.Complete) {
                 setUsage(data.response.usage)
-
-                setResponseStream(undefined)
+              } else if (data.type === ChainEventTypes.Error) {
+                setError(new Error(data.error.message))
               }
 
               break
@@ -224,10 +229,16 @@ export default function Chat({
       } catch (error) {
         setError(error as Error)
       } finally {
-        setResponseStream(undefined)
+        stopStreaming()
       }
     },
-    [addMessageToConversation, setError, documentLogUuid],
+    [
+      documentLogUuid,
+      addMessagesAction,
+      addMessageToConversation,
+      startStreaming,
+      stopStreaming,
+    ],
   )
 
   return (
@@ -320,7 +331,11 @@ export function TokenUsage({
           trigger={
             <div className='cursor-pointer flex flex-row items-center gap-x-1'>
               <Text.H6M color='foregroundMuted'>
-                {usage?.totalTokens} tokens
+                {usage?.totalTokens ||
+                  usage?.promptTokens ||
+                  usage?.completionTokens ||
+                  0}{' '}
+                tokens
               </Text.H6M>
               <Icon name='info' color='foregroundMuted' />
             </div>
@@ -328,10 +343,10 @@ export function TokenUsage({
         >
           <div className='flex flex-col gap-2'>
             <Text.H6M color='foregroundMuted'>
-              {usage?.promptTokens} prompt tokens
+              {usage?.promptTokens || 0} prompt tokens
             </Text.H6M>
             <Text.H6M color='foregroundMuted'>
-              {usage?.completionTokens} completion tokens
+              {usage?.completionTokens || 0} completion tokens
             </Text.H6M>
           </div>
         </Tooltip>

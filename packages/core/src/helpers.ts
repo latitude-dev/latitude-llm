@@ -1,6 +1,14 @@
 import { z } from 'zod'
-import { ProviderApiKey } from './schema/types'
 import { CsvData, ParameterType } from './constants'
+import { ProviderApiKey, ProviderLogDto } from './schema/types'
+
+import {
+  ContentType,
+  Message,
+  MessageContent,
+  MessageRole,
+  ToolRequestContent,
+} from '@latitude-data/compiler'
 
 const DEFAULT_OBJECT_TO_STRING_MESSAGE =
   'Error: Provider returned an object that could not be stringified'
@@ -51,4 +59,50 @@ export function buildCsvFile(csvData: CsvData, name: string): File {
   const rows = csvData.data.map((row) => Object.values(row.record).join(','))
   const csv = [headers, ...rows].join('\n')
   return new File([csv], `${name}.csv`, { type: 'text/csv' })
+}
+
+export function buildConversation(providerLog: ProviderLogDto) {
+  let messages: Message[] = [...providerLog.messages]
+  let message: Message | undefined = undefined
+
+  if (providerLog.response && providerLog.response.length > 0) {
+    message = {
+      role: MessageRole.assistant,
+      content: [
+        {
+          type: ContentType.text,
+          text: providerLog.response,
+        },
+      ],
+      toolCalls: [],
+    }
+  }
+
+  if (providerLog.toolCalls.length > 0) {
+    const content = providerLog.toolCalls.map((toolCall) => {
+      return {
+        type: ContentType.toolCall,
+        toolCallId: toolCall.id,
+        toolName: toolCall.name,
+        args: toolCall.arguments,
+      } as ToolRequestContent
+    })
+
+    if (message) {
+      message.content = (message.content as MessageContent[]).concat(content)
+      message.toolCalls = providerLog.toolCalls
+    } else {
+      message = {
+        role: MessageRole.assistant,
+        content: content,
+        toolCalls: providerLog.toolCalls,
+      }
+    }
+  }
+
+  if (message) {
+    messages.push(message)
+  }
+
+  return messages
 }

@@ -134,7 +134,12 @@ describe('ChainStreamConsumer', () => {
         messages: [
           {
             role: MessageRole.assistant,
-            content: 'text response',
+            content: [
+              {
+                type: ContentType.text,
+                text: 'text response',
+              },
+            ],
             toolCalls: [],
           },
         ],
@@ -165,7 +170,12 @@ describe('ChainStreamConsumer', () => {
         messages: [
           {
             role: MessageRole.assistant,
-            content: '{\n  "object": "response"\n}',
+            content: [
+              {
+                type: ContentType.text,
+                text: '{\n  "object": "response"\n}',
+              },
+            ],
             toolCalls: [],
           },
         ],
@@ -252,12 +262,11 @@ describe('ChainStreamConsumer', () => {
         messages: [
           {
             role: MessageRole.assistant,
-            content: 'text response',
-            toolCalls: [],
-          },
-          {
-            role: MessageRole.assistant,
             content: [
+              {
+                type: ContentType.text,
+                text: 'text response',
+              },
               {
                 type: ContentType.toolCall,
                 toolCallId: 'tool-call-id',

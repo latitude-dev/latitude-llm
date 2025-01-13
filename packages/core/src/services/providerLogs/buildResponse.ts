@@ -1,10 +1,10 @@
-import { ProviderLog } from '../../browser'
+import { ProviderLog, objectToString } from '../../browser'
 
 export function buildProviderLogResponse(providerLog: ProviderLog) {
   return (
     providerLog.responseText ||
     (providerLog.responseObject
-      ? JSON.stringify(providerLog.responseObject)
+      ? objectToString(providerLog.responseObject)
       : '')
   )
 }

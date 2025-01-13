@@ -1,16 +1,11 @@
-import {
-  ContentType,
-  Message,
-  MessageRole,
-  ToolRequestContent,
-} from '@latitude-data/compiler'
+import { Message } from '@latitude-data/compiler'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
 
 import {
+  buildConversation,
   ChainEvent,
   ChainStepResponse,
   LogSources,
-  objectToString,
   ProviderApiKey,
   ProviderLog,
   StreamType,
@@ -29,43 +24,7 @@ import {
   buildProviderLogDto,
   saveOrPublishProviderLogs,
 } from '../chains/ProviderProcessor/saveOrPublishProviderLogs'
-
-function rebuildConversation(providerLog: ProviderLog) {
-  let messages = providerLog.messages
-
-  if (providerLog.responseText && providerLog.responseText.length > 0) {
-    messages.push({
-      role: MessageRole.assistant,
-      content: providerLog.responseText,
-      toolCalls: [],
-    })
-  }
-
-  if (providerLog.responseObject) {
-    messages.push({
-      role: MessageRole.assistant,
-      content: objectToString(providerLog.responseObject),
-      toolCalls: [],
-    })
-  }
-
-  if (providerLog.toolCalls.length > 0) {
-    messages.push({
-      role: MessageRole.assistant,
-      content: providerLog.toolCalls.map((toolCall) => {
-        return {
-          type: ContentType.toolCall,
-          toolCallId: toolCall.id,
-          toolName: toolCall.name,
-          args: toolCall.arguments,
-        } as ToolRequestContent
-      }),
-      toolCalls: providerLog.toolCalls,
-    })
-  }
-
-  return messages
-}
+import serializeProviderLog from './serialize'
 
 export type ChainResponse<T extends StreamType> = TypedResult<
   ChainStepResponse<T>,
@@ -113,7 +72,10 @@ export async function addMessages({
     responseResolve = resolve
   })
 
-  messages = [...rebuildConversation(providerLog), ...messages]
+  messages = [
+    ...buildConversation(serializeProviderLog(providerLog)),
+    ...messages,
+  ]
 
   const stream = new ReadableStream<ChainEvent>({
     start(controller) {

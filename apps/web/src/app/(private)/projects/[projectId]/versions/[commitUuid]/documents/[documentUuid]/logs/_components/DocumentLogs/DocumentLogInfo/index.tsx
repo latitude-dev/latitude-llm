@@ -5,11 +5,15 @@ import {
   RefObject,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from 'react'
 
-import { ProviderLogDto } from '@latitude-data/core/browser'
+import { useDocumentParameters } from '$/hooks/useDocumentParameters'
+import { StickyOffset, useStickyNested } from '$/hooks/useStickyNested'
+import { ROUTES } from '$/services/routes'
+import { ProviderLogDto, buildConversation } from '@latitude-data/core/browser'
 import {
   DocumentLogWithMetadataAndError,
   ResultWithEvaluation,
@@ -21,21 +25,18 @@ import {
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui'
-import { useDocumentParameters } from '$/hooks/useDocumentParameters'
-import { StickyOffset, useStickyNested } from '$/hooks/useStickyNested'
-import { ROUTES } from '$/services/routes'
 import { useRouter } from 'next/navigation'
 import { usePanelDomRef } from 'node_modules/@latitude-data/web-ui/src/ds/atoms/SplitPane'
 
+import { useCurrentDocument } from '$/app/providers/DocumentProvider'
+import { MetadataItem } from '../../../../../[documentUuid]/_components/MetadataItem'
 import {
   DEFAULT_TABS,
   MetadataInfoTabs,
 } from '../../../../_components/MetadataInfoTabs'
-import { MetadataItem } from '../../../../../[documentUuid]/_components/MetadataItem'
 import { DocumentLogEvaluations } from './Evaluations'
-import { DocumentLogMessages, useGetProviderLogMessages } from './Messages'
+import { DocumentLogMessages } from './Messages'
 import { DocumentLogMetadata } from './Metadata'
-import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 
 function DocumentLogMetadataLoading() {
   return (
@@ -152,7 +153,12 @@ export function DocumentLogInfo({
     offset: offset ?? { top: 0, bottom: 0 },
   })
 
-  const { lastResponse, messages } = useGetProviderLogMessages({ providerLogs })
+  const conversation = useMemo(() => {
+    const providerLog = providerLogs?.at(-1)
+    if (!providerLog) return []
+    return buildConversation(providerLog)
+  }, [providerLogs])
+
   return (
     <MetadataInfoTabs
       ref={ref}
@@ -182,13 +188,13 @@ export function DocumentLogInfo({
                   <DocumentLogMetadata
                     documentLog={documentLog}
                     providerLogs={providerLogs}
-                    lastResponse={lastResponse}
+                    lastResponse={conversation.at(-1)}
                   />
                 )}
                 {selectedTab === 'messages' && (
                   <DocumentLogMessages
                     documentLog={documentLog}
-                    messages={messages}
+                    messages={conversation}
                   />
                 )}
                 {selectedTab === 'evaluations' && (

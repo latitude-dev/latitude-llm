@@ -664,12 +664,11 @@ describe('runChain', () => {
         messages: [
           {
             role: MessageRole.assistant,
-            content: 'assistant message',
-            toolCalls: [],
-          },
-          {
-            role: MessageRole.assistant,
             content: [
+              {
+                type: ContentType.text,
+                text: 'assistant message',
+              },
               {
                 type: ContentType.toolCall,
                 toolCallId: 'tool-call-id',
