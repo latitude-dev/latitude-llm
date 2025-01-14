@@ -15,23 +15,31 @@ import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
 import { commits } from './commits'
 import { datasets } from './datasets'
-import { LinkedDataset } from '../../browser'
+import { DocumentType, LinkedDataset } from '../../browser'
 
 type LinkedDatasetByDatasetId = Record<number, LinkedDataset>
+
+export const documentTypesEnum = latitudeSchema.enum('document_type_enum', [
+  DocumentType.Prompt,
+  DocumentType.Agent,
+])
 
 export const documentVersions = latitudeSchema.table(
   'document_versions',
   {
     id: bigserial('id', { mode: 'number' }).notNull().primaryKey(),
     documentUuid: uuid('document_uuid').notNull().defaultRandom(),
+    commitId: bigint('commit_id', { mode: 'number' })
+      .notNull()
+      .references(() => commits.id, { onDelete: 'cascade' }),
     path: varchar('path').notNull(),
     content: text('content').notNull().default(''),
     resolvedContent: text('resolved_content'),
     contentHash: text('content_hash'),
     promptlVersion: integer('promptl_version').notNull().default(0),
-    commitId: bigint('commit_id', { mode: 'number' })
+    documentType: documentTypesEnum('document_type')
       .notNull()
-      .references(() => commits.id, { onDelete: 'cascade' }),
+      .default(DocumentType.Prompt),
     datasetId: bigint('dataset_id', { mode: 'number' }).references(
       () => datasets.id,
       { onDelete: 'set null' },

@@ -2,7 +2,7 @@ import { omit } from 'lodash-es'
 
 import { eq } from 'drizzle-orm'
 
-import { Commit, DocumentVersion } from '../../browser'
+import { Commit, DocumentType, DocumentVersion } from '../../browser'
 import { database } from '../../client'
 import { findWorkspaceFromCommit } from '../../data-access'
 import { Result, Transaction, TypedResult } from '../../lib'
@@ -11,6 +11,33 @@ import { BadRequestError, NotFoundError } from '../../lib/errors'
 import { DocumentVersionsRepository } from '../../repositories/documentVersionsRepository'
 import { documentVersions } from '../../schema'
 import { pingProjectUpdate } from '../projects'
+import { scan } from 'promptl-ai'
+
+export async function getDocumentType({
+  content,
+  promptlVersion,
+}: {
+  content: string
+  promptlVersion: number
+}): Promise<DocumentType> {
+  if (promptlVersion === 0) return DocumentType.Prompt
+  if (!content || !content.trim().length) return DocumentType.Prompt
+
+  try {
+    const metadata = await scan({ prompt: content })
+    const documentTypeConfig = metadata.config['type'] as
+      | DocumentType
+      | undefined
+    if (!documentTypeConfig) return DocumentType.Prompt
+    if (Object.values(DocumentType).includes(documentTypeConfig)) {
+      return documentTypeConfig
+    }
+
+    return DocumentType.Prompt
+  } catch (_) {
+    return DocumentType.Prompt
+  }
+}
 
 // TODO: refactor, can be simplified
 export async function updateDocument(
@@ -69,11 +96,16 @@ export async function updateDocument(
     }
 
     const oldVersion = omit(document, ['id', 'commitId', 'updatedAt'])
+    const documentType = await getDocumentType({
+      content: content || oldVersion.content,
+      promptlVersion: promptlVersion || oldVersion.promptlVersion,
+    })
 
     const newVersion = {
       ...oldVersion,
       ...updatedDocData,
       commitId: commit.id,
+      documentType,
     }
 
     const updatedDocs = await tx

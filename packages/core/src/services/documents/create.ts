@@ -17,6 +17,7 @@ import { DocumentVersionsRepository } from '../../repositories'
 import { documentVersions } from '../../schema'
 import { findDefaultProvider } from '../providerApiKeys/findDefaultProvider'
 import { pingProjectUpdate } from '../projects'
+import { getDocumentType } from './update'
 
 export async function createNewDocument(
   {
@@ -62,14 +63,22 @@ export async function createNewDocument(
     }
 
     const defaultContent = await defaultDocumentContent({ workspace }, tx)
+    const docContent =
+      content ?? defaultContent.metadata + defaultContent.content
+
+    const documentType = await getDocumentType({
+      content: docContent,
+      promptlVersion,
+    })
 
     const newDoc = await tx
       .insert(documentVersions)
       .values({
         commitId: commit.id,
         path,
-        content: content ?? defaultContent.metadata + defaultContent.content,
+        content: docContent,
         promptlVersion,
+        documentType,
       })
       .returning()
 

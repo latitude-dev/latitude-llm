@@ -7,6 +7,8 @@ import { useFileTreeContext } from '../FilesProvider'
 import NodeHeaderWrapper, { IndentType } from '../NodeHeaderWrapper'
 import { useTempNodes } from '../useTempNodes'
 import { Node } from '../useTree'
+import { DocumentType } from '@latitude-data/core/browser'
+import { IconName } from '../../../../../ds/atoms'
 
 export default function DocumentHeader({
   open,
@@ -92,6 +94,13 @@ export default function DocumentHeader({
       onMergeCommitClick,
     ],
   )
+  const icon = useMemo<IconName>(() => {
+    const docType = node.doc?.documentType
+    if (!docType) return 'file'
+
+    if (docType === DocumentType.Agent) return 'bot'
+    return 'file'
+  }, [node.doc?.documentType])
   return (
     <NodeHeaderWrapper
       isFile
@@ -107,7 +116,7 @@ export default function DocumentHeader({
       onClick={handleClick}
       onSaveValue={onSaveValue}
       onLeaveWithoutSave={() => deleteTmpFolder({ id: node.id })}
-      icons={['file']}
+      icons={[icon]}
     />
   )
 }
