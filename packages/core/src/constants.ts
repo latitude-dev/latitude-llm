@@ -102,6 +102,11 @@ export enum EvaluationMode {
   Batch = 'batch',
 }
 
+export enum DocumentType {
+  Prompt = 'prompt',
+  Agent = 'agent',
+}
+
 export enum RewardType {
   GithubStar = 'github_star',
   GithubIssue = 'github_issue',
