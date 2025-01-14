@@ -42,6 +42,7 @@ export const ROUTES = {
       chat: `${V2_CONVERSATION_DETAIL}/chat`,
       evaluate: `${V2_CONVERSATION_DETAIL}/evaluate`,
       createEvaluationResult: `${V2_EVALUATION_DETAIL}/evaluation-results`,
+      resume: `${V2_CONVERSATION_DETAIL}/resume`,
     },
     telemetry: {
       traces: `${V2_TELEMETRY}/v1/traces`,

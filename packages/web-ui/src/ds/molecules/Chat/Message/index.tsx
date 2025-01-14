@@ -9,6 +9,7 @@ import {
   MessageContent,
   PromptlSourceRef,
   TextContent,
+  ToolCall,
   ToolContent,
   ToolRequestContent,
 } from '@latitude-data/compiler'
@@ -26,6 +27,8 @@ import {
 } from '../../../atoms'
 import { colors, font, TextColor } from '../../../tokens'
 import { roleToString, roleVariant } from './helpers'
+import { ToolCallForm } from './ToolCallForm'
+import { AddToolResponseData } from '../types'
 
 export { roleToString, roleVariant } from './helpers'
 
@@ -37,6 +40,8 @@ export type MessageProps = {
   animatePulse?: boolean
   parameters?: string[]
   collapseParameters?: boolean
+  toolCalls?: ToolCall[]
+  addToolResponseData?: AddToolResponseData
 }
 
 export function MessageItem({
@@ -80,6 +85,8 @@ export function Message({
   size = 'default',
   parameters = [],
   collapseParameters = false,
+  toolCalls,
+  addToolResponseData,
 }: MessageProps) {
   return (
     <MessageItem
@@ -94,6 +101,8 @@ export function Message({
           parameters={parameters}
           collapseParameters={collapseParameters}
           collapsedMessage={collapsedMessage}
+          toolCalls={toolCalls}
+          addToolResponseData={addToolResponseData}
         />
       )}
     </MessageItem>
@@ -106,18 +115,30 @@ export function MessageItemContent({
   parameters = [],
   collapseParameters = false,
   collapsedMessage,
+  toolCalls = [],
+  addToolResponseData,
 }: {
   content: MessageProps['content']
   size?: MessageProps['size']
   parameters?: MessageProps['parameters']
   collapseParameters?: MessageProps['collapseParameters']
+  toolCalls?: ToolCall[]
   collapsedMessage: boolean
+  addToolResponseData?: AddToolResponseData
 }) {
-  if (collapsedMessage)
-    return <Content value='...' color='foregroundMuted' size={size} />
+  if (toolCalls.length > 0 && addToolResponseData) {
+    return toolCalls.map((toolCall, idx) => (
+      <ToolCallForm key={idx} toolCall={toolCall} {...addToolResponseData} />
+    ))
+  }
 
-  if (typeof content === 'string')
+  if (collapsedMessage) {
+    return <Content value='...' color='foregroundMuted' size={size} />
+  }
+
+  if (typeof content === 'string') {
     return <Content value={content} color='foregroundMuted' size={size} />
+  }
 
   return content.map((c, idx) => (
     <Content
@@ -129,6 +150,7 @@ export function MessageItemContent({
       parameters={parameters}
       collapseParameters={collapseParameters}
       sourceMap={(c as any)?._promptlSourceMap}
+      addToolResponseData={addToolResponseData}
     />
   ))
 }
@@ -158,6 +180,7 @@ const Content = ({
   parameters = [],
   collapseParameters = false,
   sourceMap = [],
+  addToolResponseData,
 }: {
   index?: number
   color: TextColor
@@ -166,6 +189,7 @@ const Content = ({
   parameters?: string[]
   collapseParameters?: boolean
   sourceMap?: PromptlSourceRef[]
+  addToolResponseData?: AddToolResponseData
 }) => {
   if (typeof value === 'string') {
     try {
@@ -247,16 +271,28 @@ const Content = ({
         />
       )
 
-    case ContentType.toolCall:
-      return (
-        <div key={`${index}`} className='py-2 w-full'>
-          <div className='overflow-hidden rounded-xl w-full'>
-            <CodeBlock language='json'>
-              {JSON.stringify(value as ToolRequestContent, null, 2)}
-            </CodeBlock>
+    case ContentType.toolCall: {
+      const val = value as ToolRequestContent
+
+      if (!addToolResponseData || !val.toolCallId || !val.toolName) {
+        return (
+          <div key={`${index}`} className='py-2 w-full'>
+            <div className='overflow-hidden rounded-xl w-full'>
+              <CodeBlock language='json'>
+                {JSON.stringify(value as ToolRequestContent, null, 2)}
+              </CodeBlock>
+            </div>
           </div>
-        </div>
-      )
+        )
+      }
+
+      const toolCall = {
+        id: val.toolCallId,
+        name: val.toolName,
+        arguments: val.args,
+      }
+      return <ToolCallForm toolCall={toolCall} {...addToolResponseData} />
+    }
 
     case ContentType.toolResult:
       return (

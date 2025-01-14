@@ -1,4 +1,4 @@
-import { Chain as LegacyChain } from '@latitude-data/compiler'
+import { Chain as LegacyChain, Message } from '@latitude-data/compiler'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
 import { Chain as PromptlChain } from 'promptl-ai'
 
@@ -21,13 +21,10 @@ import { consumeStream } from './ChainStreamConsumer/consumeStream'
 import { ConfigOverrides, validateChain } from './ChainValidator'
 import { checkValidStream } from './checkValidStream'
 import { processResponse } from './ProviderProcessor'
-import {
-  buildProviderLogDto,
-  saveOrPublishProviderLogs,
-} from './ProviderProcessor/saveOrPublishProviderLogs'
+import { buildStepExecution } from './buildStep'
 
 export type CachedApiKeys = Map<string, ProviderApiKey>
-type SomeChain = LegacyChain | PromptlChain
+export type SomeChain = LegacyChain | PromptlChain
 
 async function createRunError({
   error,
@@ -70,6 +67,7 @@ type CommonArgs<T extends boolean = true, C extends SomeChain = LegacyChain> = {
   configOverrides?: ConfigOverrides
   generateUUID?: () => string
   persistErrors?: T
+  extraMessages?: Message[]
 }
 type RunChainArgs<T extends boolean, C extends SomeChain> = T extends true
   ? CommonArgs<T, C> & {
@@ -87,6 +85,7 @@ export async function runChain<T extends boolean, C extends SomeChain>({
   configOverrides,
   persistErrors = true,
   generateUUID = generateUUIDIdentifier,
+  extraMessages,
 }: RunChainArgs<T, C>) {
   const errorableUuid = generateUUID()
 
@@ -109,6 +108,7 @@ export async function runChain<T extends boolean, C extends SomeChain>({
         errorableUuid,
         errorableType,
         configOverrides,
+        extraMessages,
       })
         .then((okResponse) => {
           responseResolve(Result.ok(okResponse))
@@ -135,19 +135,7 @@ export async function runChain<T extends boolean, C extends SomeChain>({
   }
 }
 
-async function runStep({
-  workspace,
-  source,
-  chain,
-  promptlVersion,
-  providersMap,
-  controller,
-  previousCount = 0,
-  previousResponse,
-  errorableUuid,
-  errorableType,
-  configOverrides,
-}: {
+export type StepProps = {
   workspace: Workspace
   source: LogSources
   chain: SomeChain
@@ -159,8 +147,29 @@ async function runStep({
   previousCount?: number
   previousResponse?: ChainStepResponse<StreamType>
   configOverrides?: ConfigOverrides
-}) {
-  const prevText = previousResponse?.text
+  extraMessages?: Message[]
+}
+
+export async function runStep({
+  workspace,
+  source,
+  chain,
+  promptlVersion,
+  providersMap,
+  controller,
+  previousCount = 0,
+  previousResponse,
+  errorableUuid,
+  errorableType,
+  configOverrides,
+  extraMessages,
+}: StepProps) {
+  // When passed extra messages it means we are resuming a conversation
+  const prevContent = previousResponse
+    ? previousResponse.text
+    : extraMessages
+      ? extraMessages
+      : undefined
   const streamConsumer = new ChainStreamConsumer({
     controller,
     previousCount,
@@ -170,17 +179,21 @@ async function runStep({
   try {
     const step = await validateChain({
       workspace,
-      prevText,
+      prevContent,
       chain,
       promptlVersion,
       providersMap,
       configOverrides,
     }).then((r) => r.unwrap())
 
+    const messages = step.conversation.messages
+
     if (chain instanceof PromptlChain && step.chainCompleted) {
       streamConsumer.chainCompleted({
         step,
         response: previousResponse!,
+        finishReason: 'stop',
+        responseMessages: [],
       })
 
       return previousResponse!
@@ -195,39 +208,16 @@ async function runStep({
     })
 
     if (cachedResponse) {
-      const providerLog = await saveOrPublishProviderLogs({
-        workspace,
-        streamType: cachedResponse.streamType,
-        finishReason: 'stop', // TODO: we probably should add a cached reason here
-        data: buildProviderLogDto({
-          workspace,
-          source,
-          provider: step.provider,
-          conversation: step.conversation,
+      const { providerLog, executeStep } = await buildStepExecution({
+        baseResponse: cachedResponse as ChainStepResponse<StreamType>,
+        step,
+        streamConsumer,
+        providerLogProps: {
+          streamType: cachedResponse.streamType,
+          finishReason: 'stop', // TODO: we probably should add a cached reason here
           stepStartTime,
-          errorableUuid,
-          response: cachedResponse as ChainStepResponse<StreamType>,
-        }),
-        saveSyncProviderLogs: true, // TODO: temp bugfix, it should only save last one syncronously
-      })
-
-      const response = {
-        ...cachedResponse,
-        providerLog,
-        documentLogUuid: errorableUuid,
-      } as ChainStepResponse<StreamType>
-
-      if (step.chainCompleted) {
-        streamConsumer.chainCompleted({
-          step,
-          response,
-        })
-
-        return response
-      } else {
-        streamConsumer.stepCompleted(response)
-
-        return runStep({
+        },
+        stepProps: {
           workspace,
           source,
           chain,
@@ -237,27 +227,42 @@ async function runStep({
           errorableUuid,
           errorableType,
           previousCount: messageCount,
-          previousResponse: response,
+          previousResponse: cachedResponse as ChainStepResponse<StreamType>,
           configOverrides,
-        })
-      }
+        },
+      })
+
+      const finalResponse = {
+        ...cachedResponse,
+        providerLog,
+        documentLogUuid: errorableUuid,
+      } as ChainStepResponse<StreamType>
+
+      return executeStep({ finalResponse })
     }
 
+    messages.forEach((m) => console.log('Message TO AI:', m))
     const aiResult = await ai({
-      messages: step.conversation.messages,
+      messages,
       config: step.config,
       provider: step.provider,
       schema: step.schema,
       output: step.output,
     }).then((r) => r.unwrap())
 
+    console.log('AI RESULT.TEXT', aiResult.data.object)
+    console.log('AI RESULT.OBJECT', aiResult.data.object)
+    console.log('AI RESULT.TOOL_CALLS', aiResult.data.toolCalls)
+
     const checkResult = checkValidStream(aiResult)
+
     if (checkResult.error) throw checkResult.error
 
     const consumedStream = await consumeStream({
       controller,
       result: aiResult,
     })
+
     if (consumedStream.error) throw consumedStream.error
 
     const _response = await processResponse({
@@ -265,48 +270,22 @@ async function runStep({
       apiProvider: step.provider,
       config: step.config,
       errorableUuid,
-      messages: step.conversation.messages,
+      messages,
       source,
       workspace,
       startTime: stepStartTime,
     })
 
-    const providerLog = await saveOrPublishProviderLogs({
-      workspace,
-      streamType: aiResult.type,
-      finishReason: consumedStream.finishReason,
-      data: buildProviderLogDto({
-        workspace,
-        source,
-        provider: step.provider,
-        conversation: step.conversation,
+    const { providerLog, executeStep } = await buildStepExecution({
+      step,
+      streamConsumer,
+      baseResponse: _response,
+      providerLogProps: {
+        streamType: aiResult.type,
+        finishReason: consumedStream.finishReason,
         stepStartTime,
-        errorableUuid,
-        response: _response,
-      }),
-      saveSyncProviderLogs: true, // TODO: temp bugfix, shuold only save last one syncronously
-    })
-
-    const response = { ..._response, providerLog }
-
-    await setCachedResponse({
-      workspace,
-      config: step.config,
-      conversation: step.conversation,
-      response,
-    })
-
-    if (step.chainCompleted) {
-      streamConsumer.chainCompleted({
-        step,
-        response,
-      })
-
-      return response
-    } else {
-      streamConsumer.stepCompleted(response)
-
-      return runStep({
+      },
+      stepProps: {
         workspace,
         source,
         chain,
@@ -316,10 +295,20 @@ async function runStep({
         providersMap,
         controller,
         previousCount: messageCount,
-        previousResponse: response,
+        previousResponse: _response,
         configOverrides,
-      })
-    }
+      },
+    })
+
+    const finalResponse = { ..._response, providerLog }
+    await setCachedResponse({
+      workspace,
+      config: step.config,
+      conversation: step.conversation,
+      response: finalResponse,
+    })
+
+    return executeStep({ finalResponse })
   } catch (e: unknown) {
     const error = streamConsumer.chainError(e)
     throw error

@@ -31,6 +31,7 @@ import { readStreamableValue } from 'ai/rsc'
 
 import { DocumentEditorContext } from '..'
 import Actions, { ActionsState } from './Actions'
+import { useAddToolResponse } from './hooks/useAddToolResponse'
 
 export default function Chat({
   document,
@@ -80,6 +81,15 @@ export default function Chat({
     },
     [],
   )
+  const { addToolResponseData } = useAddToolResponse({
+    documentLogUuid,
+    streaming: {
+      setError,
+      addMessageToConversation,
+      setResponseStream,
+      setUsage,
+    },
+  })
 
   const startStreaming = useCallback(() => {
     setError(undefined)
@@ -240,7 +250,6 @@ export default function Chat({
       stopStreaming,
     ],
   )
-
   return (
     <div className='flex flex-col flex-1 gap-2 h-full overflow-hidden'>
       <div className='flex flex-row items-center justify-between w-full'>
@@ -258,6 +267,7 @@ export default function Chat({
           messages={conversation?.messages.slice(0, chainLength - 1) ?? []}
           parameters={Object.keys(parameters)}
           collapseParameters={!expandParameters}
+          addToolResponseData={addToolResponseData}
         />
         {(conversation?.messages.length ?? 0) >= chainLength && (
           <>
@@ -265,6 +275,7 @@ export default function Chat({
               messages={
                 conversation?.messages.slice(chainLength - 1, chainLength) ?? []
               }
+              addToolResponseData={addToolResponseData}
             />
             {time && <Timer timeMs={time} />}
           </>
