@@ -1,6 +1,7 @@
 import { Message, ToolCall } from '@latitude-data/compiler'
 import {
   CoreTool,
+  FinishReason,
   LanguageModelUsage,
   ObjectStreamPart,
   TextStreamPart,
@@ -93,14 +94,7 @@ export type ChainEventDto =
   | {
       type: ChainEventTypes.Complete
       config: Config
-      messages?: Message[]
-      object?: any
-      response: ChainEventDtoResponse
-      uuid?: string
-    }
-  | {
-      type: ChainEventTypes.ToolsCalled
-      config: Config
+      finishReason?: FinishReason
       messages?: Message[]
       object?: any
       response: ChainEventDtoResponse
@@ -181,14 +175,7 @@ export type LatitudeEventData =
       messages?: Message[]
       object?: any
       response: ChainStepResponse<StreamType>
-      documentLogUuid?: string
-    }
-  | {
-      type: ChainEventTypes.ToolsCalled
-      config: Config
-      messages?: Message[]
-      object?: any
-      response: ChainStepResponse<StreamType>
+      finishReason: FinishReason
       documentLogUuid?: string
     }
   | {

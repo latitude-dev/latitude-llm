@@ -79,8 +79,7 @@ export async function buildStepExecution({
       streamConsumer.chainCompleted({
         step,
         response: finalResponse,
-        // TODO: Add this
-        finishReason
+        finishReason,
       })
 
       return finalResponse

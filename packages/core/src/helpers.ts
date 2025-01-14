@@ -7,8 +7,10 @@ import {
   Message,
   MessageContent,
   MessageRole,
+  ToolCall,
   ToolRequestContent,
 } from '@latitude-data/compiler'
+import { StreamType } from '@latitude-data/constants'
 
 const DEFAULT_OBJECT_TO_STRING_MESSAGE =
   'Error: Provider returned an object that could not be stringified'
@@ -61,25 +63,53 @@ export function buildCsvFile(csvData: CsvData, name: string): File {
   return new File([csv], `${name}.csv`, { type: 'text/csv' })
 }
 
-export function buildConversation(providerLog: ProviderLogDto) {
-  let messages: Message[] = [...providerLog.messages]
-  let message: Message | undefined = undefined
-
-  if (providerLog.response && providerLog.response.length > 0) {
-    message = {
-      role: MessageRole.assistant,
-      content: [
-        {
-          type: ContentType.text,
-          text: providerLog.response,
-        },
-      ],
-      toolCalls: [],
+type BuildMessageParams<T extends StreamType> = T extends 'object'
+  ? {
+      type: 'object'
+      data?: {
+        object: any | undefined
+        text: string | undefined
+      }
     }
+  : {
+      type: 'text'
+      data?: {
+        text: string
+        toolCalls: ToolCall[]
+      }
+    }
+export function buildResponseMessage<T extends StreamType>({
+  type,
+  data,
+}: BuildMessageParams<T>) {
+  let message: Message = {
+    role: MessageRole.assistant,
+    content: [] as MessageContent[],
+    toolCalls: [],
+  }
+  if (!data) return undefined
+
+  const text = data.text
+  const object = type === 'object' ? data.object : undefined
+  const toolCalls = type === 'text' ? (data.toolCalls ?? []) : []
+  let content: MessageContent[] = []
+
+  if (text && text.length > 0) {
+    content.push({
+      type: ContentType.text,
+      text: text,
+    })
   }
 
-  if (providerLog.toolCalls.length > 0) {
-    const content = providerLog.toolCalls.map((toolCall) => {
+  if (object) {
+    content.push({
+      type: ContentType.text,
+      text: objectToString(object),
+    })
+  }
+
+  if (toolCalls.length > 0) {
+    const toolContents = toolCalls.map((toolCall) => {
       return {
         type: ContentType.toolCall,
         toolCallId: toolCall.id,
@@ -88,17 +118,25 @@ export function buildConversation(providerLog: ProviderLogDto) {
       } as ToolRequestContent
     })
 
-    if (message) {
-      message.content = (message.content as MessageContent[]).concat(content)
-      message.toolCalls = providerLog.toolCalls
-    } else {
-      message = {
-        role: MessageRole.assistant,
-        content: content,
-        toolCalls: providerLog.toolCalls,
-      }
-    }
+    message.toolCalls = toolCalls
+    content = content.concat(toolContents)
   }
+
+  message.content = content
+
+  return content.length > 0 ? message : undefined
+}
+
+export function buildConversation(providerLog: ProviderLogDto) {
+  let messages: Message[] = [...providerLog.messages]
+
+  const message = buildResponseMessage({
+    type: 'text',
+    data: {
+      text: providerLog.response,
+      toolCalls: providerLog.toolCalls,
+    },
+  })
 
   if (message) {
     messages.push(message)

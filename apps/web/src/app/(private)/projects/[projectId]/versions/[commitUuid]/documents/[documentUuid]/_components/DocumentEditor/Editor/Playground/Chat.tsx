@@ -136,14 +136,11 @@ export default function Chat({
           messagesCount += data.messages!.length
         }
 
-        const isComplete =
-          data.type === ChainEventTypes.Complete ||
-          data.type === ChainEventTypes.ToolsCalled
         switch (event) {
           case StreamEventTypes.Latitude: {
             if (data.type === ChainEventTypes.StepComplete) {
               response = ''
-            } else if (isComplete) {
+            } else if (data.type === ChainEventTypes.Complete) {
               setUsage(data.response.usage)
               setChainLength(messagesCount)
               setTime(performance.now() - start)
