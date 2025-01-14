@@ -125,6 +125,7 @@ const safeChain = async ({
     })
   } catch (e) {
     const error = e as CompileError
+    console.log('Error validating chain', error.code, error.message)
     return Result.error(
       new ChainError({
         message: 'Error validating chain',

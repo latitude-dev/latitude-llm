@@ -1,4 +1,4 @@
-import { Chain as PromptlChain } from 'promptl-ai'
+import { Chain as PromptlChain, Message as PromptlMessage } from 'promptl-ai'
 import { FinishReason } from 'ai'
 
 import { ChainStepResponse, StreamType } from '../../../constants'
@@ -10,6 +10,8 @@ import {
   saveOrPublishProviderLogs,
 } from '../ProviderProcessor/saveOrPublishProviderLogs'
 import { cacheChain } from '../chainCache'
+import { buildMessagesFromResponse } from '../../../helpers'
+import { Message } from '@latitude-data/compiler'
 
 function getToolCalls({
   response,
@@ -69,17 +71,27 @@ export async function buildStepExecution({
     const isPromptl = chain instanceof PromptlChain
     const toolCalls = getToolCalls({ response: finalResponse })
     const hasTools = isPromptl && toolCalls.length > 0
+    let responseMessages: Message[] = []
 
-    if (hasTools) {
-      await cacheChain({ workspace, chain, documentLogUuid, toolCalls })
+    if (hasTools || step.chainCompleted) {
+      responseMessages = buildMessagesFromResponse({ response: finalResponse })
     }
 
-    // Instead of ChainCompleted emit chain completed with stop reason tool-call
+    if (hasTools) {
+      await cacheChain({
+        workspace,
+        chain,
+        documentLogUuid,
+        responseMessages: responseMessages as unknown as PromptlMessage[],
+      })
+    }
+
     if (step.chainCompleted || hasTools) {
       streamConsumer.chainCompleted({
         step,
         response: finalResponse,
         finishReason,
+        responseMessages,
       })
 
       return finalResponse

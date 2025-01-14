@@ -187,15 +187,13 @@ export async function runStep({
     }).then((r) => r.unwrap())
 
     const messages = step.conversation.messages
-    console.log(
-      'MESSAGES',
-      messages.map((m) => `${m.role}: ${JSON.stringify(m.content)}`).join('\n'),
-    )
 
     if (chain instanceof PromptlChain && step.chainCompleted) {
       streamConsumer.chainCompleted({
         step,
         response: previousResponse!,
+        finishReason: 'stop',
+        responseMessages: [],
       })
 
       return previousResponse!
@@ -243,6 +241,7 @@ export async function runStep({
       return executeStep({ finalResponse })
     }
 
+    messages.forEach((m) => console.log('Message TO AI:', m))
     const aiResult = await ai({
       messages,
       config: step.config,
@@ -250,6 +249,10 @@ export async function runStep({
       schema: step.schema,
       output: step.output,
     }).then((r) => r.unwrap())
+
+    console.log('AI RESULT.TEXT', aiResult.data.object)
+    console.log('AI RESULT.OBJECT', aiResult.data.object)
+    console.log('AI RESULT.TOOL_CALLS', aiResult.data.toolCalls)
 
     const checkResult = checkValidStream(aiResult)
 

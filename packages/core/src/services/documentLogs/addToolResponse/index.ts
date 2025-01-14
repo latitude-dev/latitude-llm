@@ -25,7 +25,8 @@ export function buildToolResponseMessages(
       type: ContentType.toolResult,
       toolCallId: tool.id,
       toolName: tool.name,
-      result: tool.result,
+      result:
+        typeof tool.result === 'string' ? JSON.parse(tool.result) : tool.result,
       isError: tool.isError || false,
     })
 

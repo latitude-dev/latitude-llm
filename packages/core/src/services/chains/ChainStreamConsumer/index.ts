@@ -1,9 +1,3 @@
-import {
-  ContentType,
-  MessageContent,
-  MessageRole,
-  ToolRequestContent,
-} from '@latitude-data/compiler'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
 
 import {
@@ -14,7 +8,6 @@ import {
   StreamEventTypes,
   StreamType,
 } from '../../../constants'
-import { buildResponseMessage, objectToString } from '../../../helpers'
 import { Config } from '../../ai'
 import { ChainError } from '../ChainErrors'
 import { ValidatedStep } from '../ChainValidator'
@@ -53,29 +46,14 @@ export class ChainStreamConsumer {
     config,
     controller,
     finishReason,
+    responseMessages,
   }: {
     controller: ReadableStreamDefaultController
     response: ChainStepResponse<StreamType>
     config: Config
     finishReason: FinishReason
+    responseMessages: Message[]
   }) {
-    const type = response.streamType
-    const message =
-      type === 'object'
-        ? buildResponseMessage<'object'>({
-            type: 'object',
-            data: {
-              object: response.object,
-              text: response.text,
-            },
-          })
-        : type === 'text'
-          ? buildResponseMessage<'text'>({
-              type: 'text',
-              data: { text: response.text, toolCalls: response.toolCalls },
-            })
-          : undefined
-
     enqueueChainEvent(controller, {
       event: StreamEventTypes.Latitude,
       data: {
@@ -83,7 +61,7 @@ export class ChainStreamConsumer {
         config,
         documentLogUuid: response.documentLogUuid,
         response,
-        messages: message ? [message] : undefined,
+        messages: responseMessages,
         finishReason,
       },
     })
@@ -163,16 +141,19 @@ export class ChainStreamConsumer {
     step,
     response,
     finishReason,
+    responseMessages,
   }: {
     step: ValidatedStep
     response: ChainStepResponse<StreamType>
     finishReason: FinishReason
+    responseMessages: Message[]
   }) {
-    ChainStreamConsumer.chainCompleted({
+    return ChainStreamConsumer.chainCompleted({
       controller: this.controller,
       response,
       config: step.conversation.config as Config,
       finishReason,
+      responseMessages,
     })
   }
 

@@ -38,11 +38,11 @@ const nextConfig = {
     serverActions: {
       bodySizeLimit: '25mb',
     },
-    webpack: (config) => {
-      config.ignoreWarnings = [{ module: /@opentelemetry\/instrumentation/ }]
+  },
+  webpack: (config) => {
+    config.ignoreWarnings = [{ module: /@opentelemetry\/instrumentation/ }]
 
-      return config
-    },
+    return config
   },
 }
 

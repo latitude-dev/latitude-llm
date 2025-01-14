@@ -10,7 +10,7 @@ import {
   ToolCall,
   ToolRequestContent,
 } from '@latitude-data/compiler'
-import { StreamType } from '@latitude-data/constants'
+import { ChainStepResponse, StreamType } from '@latitude-data/constants'
 
 const DEFAULT_OBJECT_TO_STRING_MESSAGE =
   'Error: Provider returned an object that could not be stringified'
@@ -125,6 +125,31 @@ export function buildResponseMessage<T extends StreamType>({
   message.content = content
 
   return content.length > 0 ? message : undefined
+}
+
+export function buildMessagesFromResponse<T extends StreamType>({
+  response,
+}: {
+  response: ChainStepResponse<T>
+}) {
+  const type = response.streamType
+  const message =
+    type === 'object'
+      ? buildResponseMessage<'object'>({
+          type: 'object',
+          data: {
+            object: response.object,
+            text: response.text,
+          },
+        })
+      : type === 'text'
+        ? buildResponseMessage<'text'>({
+            type: 'text',
+            data: { text: response.text, toolCalls: response.toolCalls },
+          })
+        : undefined
+
+  return message ? ([message] as Message[]) : []
 }
 
 export function buildConversation(providerLog: ProviderLogDto) {

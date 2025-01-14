@@ -9,6 +9,7 @@ import { runChain } from '../../chains/run'
 import { buildProvidersMap } from '../../providerApiKeys/buildMap'
 import { ToolCallResponse } from '@latitude-data/constants'
 import { buildToolResponseMessages } from '../addToolResponse/index'
+import { Message } from '@latitude-data/compiler'
 
 export async function resumeConversation({
   workspace,
@@ -27,15 +28,17 @@ export async function resumeConversation({
   const providersMap = await buildProvidersMap({
     workspaceId: workspace.id,
   })
-  const chain = await getCachedChain({ workspace, documentLogUuid })
+  const cachedData = await getCachedChain({ workspace, documentLogUuid })
 
-  if (!chain) {
+  if (!cachedData) {
     return Result.error(
       new NotFoundError(
         `Chain not found in cache for document log with UUID: ${documentLogUuid}`,
       ),
     )
   }
+
+  const { chain, messages } = cachedData
 
   const logRep = new DocumentLogsRepository(workspace.id)
   const logResult = await logRep.findByUuid(documentLogUuid)
@@ -52,6 +55,13 @@ export async function resumeConversation({
   const document = result.value
   const errorableUuid = documentLogUuid
 
+  let extraMessages = messages as unknown as Message[]
+
+  if (toolCallResponses.length > 0) {
+    const responseToolMessages = buildToolResponseMessages(toolCallResponses)
+    extraMessages = extraMessages.concat(responseToolMessages)
+  }
+
   const run = await runChain({
     generateUUID: () => errorableUuid,
     errorableType,
@@ -60,7 +70,7 @@ export async function resumeConversation({
     promptlVersion: document.promptlVersion,
     providersMap,
     source,
-    extraMessages: buildToolResponseMessages(toolCallResponses),
+    extraMessages,
   })
 
   return Result.ok({

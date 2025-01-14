@@ -21,6 +21,8 @@ const CONTENT_DEFINED_ATTRIBUTES = [
   'toolCallId',
   'toolName',
   'args',
+  // TODO: Add a test for this
+  'result',
 ] as const
 
 type AttrArgs = { attributes: string[]; content: Record<string, unknown> }

@@ -7,7 +7,6 @@ import {
 
 import { Workspace } from '../../../browser'
 import { cache } from '../../../cache'
-import { ToolCall } from '@latitude-data/compiler'
 
 type CachedChain = {
   chain: PromptlChain<Message>
@@ -48,12 +47,13 @@ async function getFromCache(key: string): Promise<CachedChain | undefined> {
     const serialized = await c.get(key)
     if (!serialized) return undefined
 
-    const data = JSON.parse(serialized, (k, v) => {
-      if (k === 'chain') return PromptlChain.deserialize(v)
-      return v
-    }) as CachedChain
+    const deserialized = JSON.parse(serialized)
+    const chain = PromptlChain.deserialize({ serialized: deserialized.chain })
 
-    return { chain: data.chain, messages: data.messages }
+    console.log('CHAIN', chain)
+
+    if (!chain || !deserialized.messages) return undefined
+    return { chain, messages: deserialized.messages ?? [] }
   } catch (e) {
     return undefined
   }
@@ -74,16 +74,15 @@ export async function cacheChain({
   workspace,
   documentLogUuid,
   chain,
-  toolCalls,
+  responseMessages,
 }: {
   workspace: Workspace
   chain: PromptlChain<Message>
-  toolCalls: ToolCall[]
+  responseMessages: Message[]
   documentLogUuid: string
 }) {
   const key = generateCacheKey({ documentLogUuid, workspace })
   const serialized = chain.serialize()
 
-  // TODO: Generate the messages from response. DRY method from what Alex did
-  await setToCache({ key, chain: serialized, messages: [] })
+  await setToCache({ key, chain: serialized, messages: responseMessages })
 }

@@ -25379,7 +25379,7 @@ snapshots:
       outvariant: 1.4.3
       path-to-regexp: 6.3.0
       strict-event-emitter: 0.5.1
-      type-fest: 4.26.1
+      type-fest: 4.30.0
       yargs: 17.7.2
     optionalDependencies:
       typescript: 5.7.2
