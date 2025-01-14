@@ -1,7 +1,7 @@
 import {
   createChain as createLegacyChain,
   readMetadata,
-  ReferencePromptFn,
+  type ReferencePromptFn,
 } from '@latitude-data/compiler'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
 import { Adapters, Chain as PromptlChain, scan } from 'promptl-ai'

@@ -6,7 +6,7 @@ import {
 } from '../../browser'
 import { database } from '../../client'
 import { PromisedResult, Result } from '../../lib'
-import { CompileError } from 'promptl-ai'
+import type { CompileError } from 'promptl-ai'
 import { recomputeChanges } from '../documents'
 import {
   ChangedDocument,

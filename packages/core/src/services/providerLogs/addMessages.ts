@@ -1,4 +1,4 @@
-import { Message } from '@latitude-data/compiler'
+import type { Message } from '@latitude-data/compiler'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
 
 import {
