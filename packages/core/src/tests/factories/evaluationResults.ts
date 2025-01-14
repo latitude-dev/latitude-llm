@@ -1,5 +1,9 @@
 import { faker } from '@faker-js/faker'
-import { ContentType, Conversation, createChain } from '@latitude-data/compiler'
+import {
+  ContentType,
+  type Conversation,
+  createChain,
+} from '@latitude-data/compiler'
 import { Adapters, Chain as PromptlChain } from 'promptl-ai'
 import { LanguageModelUsage } from 'ai'
 import { eq } from 'drizzle-orm'

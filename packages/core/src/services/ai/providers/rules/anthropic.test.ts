@@ -1,4 +1,4 @@
-import { Message, MessageRole } from '@latitude-data/compiler'
+import { type Message, MessageRole } from '@latitude-data/compiler'
 import { beforeAll, describe, expect, it } from 'vitest'
 
 import { PartialConfig } from '../../helpers'

@@ -7,7 +7,7 @@ import { publisher } from '../../events/publisher'
 import { Result, Transaction } from '../../lib'
 import { spans } from '../../schema/models/spans'
 import { traces } from '../../schema/models/traces'
-import { Message, ToolCall } from '@latitude-data/compiler'
+import type { Message, ToolCall } from '@latitude-data/compiler'
 
 export type BulkCreateTracesAndSpansProps = {
   workspace: Workspace

@@ -15,7 +15,7 @@ import { SpanKind } from '../../constants'
 import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
 import { traces } from './traces'
-import { ToolCall } from '@latitude-data/compiler'
+import type { ToolCall } from '@latitude-data/compiler'
 
 // SpanKind describes the relationship between the Span, its parents, and its children in a Trace
 export const spanKindsEnum = latitudeSchema.enum('span_kinds', [

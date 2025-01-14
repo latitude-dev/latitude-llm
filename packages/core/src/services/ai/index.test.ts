@@ -1,4 +1,4 @@
-import { ContentType, Message, MessageRole } from '@latitude-data/compiler'
+import { ContentType, type Message, MessageRole } from '@latitude-data/compiler'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
 import { APICallError, CoreTool, ObjectStreamPart, TextStreamPart } from 'ai'
 import { MockLanguageModelV1 } from 'ai/test'

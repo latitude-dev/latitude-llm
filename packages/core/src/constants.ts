@@ -1,9 +1,9 @@
-import {
-  type AssistantMessage,
-  type Message as CompilerMessage,
-  type SystemMessage,
-  type ToolCall,
-  type UserMessage,
+import type {
+  AssistantMessage,
+  Message as CompilerMessage,
+  SystemMessage,
+  ToolCall,
+  UserMessage,
 } from '@latitude-data/compiler'
 import {
   EvaluationResultableType,

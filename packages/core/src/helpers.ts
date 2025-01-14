@@ -2,11 +2,9 @@ import { z } from 'zod'
 import { CsvData, ParameterType } from './constants'
 import { ProviderApiKey, ProviderLogDto } from './schema/types'
 
-import {
-  ContentType,
+import type {
   Message,
   MessageContent,
-  MessageRole,
   ToolRequestContent,
 } from '@latitude-data/compiler'
 
@@ -67,21 +65,21 @@ export function buildConversation(providerLog: ProviderLogDto) {
 
   if (providerLog.response && providerLog.response.length > 0) {
     message = {
-      role: MessageRole.assistant,
+      role: 'assistant',
       content: [
         {
-          type: ContentType.text,
+          type: 'text',
           text: providerLog.response,
         },
       ],
       toolCalls: [],
-    }
+    } as Message
   }
 
   if (providerLog.toolCalls.length > 0) {
     const content = providerLog.toolCalls.map((toolCall) => {
       return {
-        type: ContentType.toolCall,
+        type: 'tool-call',
         toolCallId: toolCall.id,
         toolName: toolCall.name,
         args: toolCall.arguments,
@@ -93,10 +91,10 @@ export function buildConversation(providerLog: ProviderLogDto) {
       message.toolCalls = providerLog.toolCalls
     } else {
       message = {
-        role: MessageRole.assistant,
+        role: 'assistant',
         content: content,
         toolCalls: providerLog.toolCalls,
-      }
+      } as Message
     }
   }
 
