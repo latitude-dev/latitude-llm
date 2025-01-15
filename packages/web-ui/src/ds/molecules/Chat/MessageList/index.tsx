@@ -18,18 +18,16 @@ export function MessageList({
 }) {
   return (
     <div className='flex flex-col gap-4'>
-      {messages.map((message, index) => {
-        return (
-          <Message
-            key={index}
-            role={message.role}
-            content={message.content}
-            parameters={parameters}
-            collapseParameters={collapseParameters}
-            submitToolResponse={submitToolResponse}
-          />
-        )
-      })}
+      {messages.map((message, index) => (
+        <Message
+          key={index}
+          role={message.role}
+          content={message.content}
+          parameters={parameters}
+          collapseParameters={collapseParameters}
+          submitToolResponse={submitToolResponse}
+        />
+      ))}
     </div>
   )
 }

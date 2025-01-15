@@ -18,7 +18,7 @@ export async function findPausedChain({
   if (!cachedData) return undefined
 
   const logsRepo = new DocumentLogsRepository(workspace.id)
-  const logResult = await logsRepo.findByUuid(documentLogUuid ?? '')
+  const logResult = await logsRepo.findByUuid(documentLogUuid)
   if (logResult.error) return logResult
 
   const documentLog = logResult.value
