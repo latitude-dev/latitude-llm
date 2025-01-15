@@ -1,17 +1,27 @@
+import json
 from typing import Any, Dict, Optional, Sequence, Union
 
 from opentelemetry.instrumentation.instrumentor import BaseInstrumentor
 from opentelemetry.instrumentation.threading import ThreadingInstrumentor
 from opentelemetry.sdk import resources as otel
-from opentelemetry.sdk.trace import TracerProvider
+from opentelemetry.sdk.trace import Tracer, TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor, SimpleSpanProcessor
 
 from latitude_telemetry.env import env
 from latitude_telemetry.exporter import Exporter, ExporterOptions
-from latitude_telemetry.telemetry.types import GatewayOptions, Instrumentors
-from latitude_telemetry.util import Model, is_package_installed
+from latitude_telemetry.telemetry.types import (
+    GatewayOptions,
+    Instrumentors,
+    SpanMetadata,
+    SpanPrompt,
+    TelemetryAttributes,
+)
+from latitude_telemetry.util import Model, is_package_installed, returns_like
 
-THREADING_INSTRUMENTOR = "Threading"
+TELEMETRY_INSTRUMENTATION_NAME = "opentelemetry.instrumentation.latitude"
+
+
+_THREADING_INSTRUMENTOR = "Threading"
 
 
 class InternalOptions(Model):
@@ -90,7 +100,7 @@ class Telemetry:
         self._instrumentors = {}
 
         # Threading instrumentor makes sure otel context is propagated
-        self._instrumentors[THREADING_INSTRUMENTOR] = ThreadingInstrumentor()
+        self._instrumentors[_THREADING_INSTRUMENTOR] = ThreadingInstrumentor()
 
         if is_package_installed("aleph_alpha_client"):
             from opentelemetry.instrumentation.alephalpha import AlephAlphaInstrumentor
@@ -190,7 +200,7 @@ class Telemetry:
             self._instrumentors[Instrumentors.Watsonx] = WatsonxInstrumentor()
 
     def instrument(self, instrumentors: Optional[Sequence[Instrumentors]] = None):
-        enabled_instrumentors = [THREADING_INSTRUMENTOR, *(instrumentors or self._options.instrumentors or [])]
+        enabled_instrumentors = [_THREADING_INSTRUMENTOR, *(instrumentors or self._options.instrumentors or [])]
 
         for instrumentor in enabled_instrumentors:
             if (
@@ -204,6 +214,25 @@ class Telemetry:
             if instrumentor.is_instrumented_by_opentelemetry:
                 instrumentor.uninstrument()
 
-    # TODO: Add span() as a context manager
-    def span(self, path: str, options: Any) -> Any:
-        pass
+    @returns_like(Tracer.start_as_current_span)
+    def span(
+        self,
+        name: str,
+        prompt: Optional[SpanPrompt] = None,
+        distinct_id: Optional[str] = None,
+        metadata: Optional[SpanMetadata] = None,
+    ) -> Any:
+        attributes = {}
+
+        if prompt:
+            attributes[TelemetryAttributes.Prompt] = prompt.model_dump_json()
+
+        if distinct_id:
+            attributes[TelemetryAttributes.DistinctID] = distinct_id
+
+        if metadata:
+            attributes[TelemetryAttributes.Metadata] = json.dumps(metadata)
+
+        tracer = self._tracer.get_tracer(TELEMETRY_INSTRUMENTATION_NAME)
+
+        return tracer.start_as_current_span(name, attributes=attributes)  # type: ignore

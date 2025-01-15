@@ -114,10 +114,13 @@ class Exporter(SpanExporter):
 
             if isinstance(value, str):
                 serialized_value = AttributeValue(string=value)
+
             elif isinstance(value, bool):
                 serialized_value = AttributeValue(boolean=value)
+
             elif isinstance(value, int):
                 serialized_value = AttributeValue(integer=value)
+
             elif isinstance(value, float):
                 serialized_value = AttributeValue(integer=int(value))
 
