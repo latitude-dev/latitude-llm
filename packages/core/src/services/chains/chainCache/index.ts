@@ -50,8 +50,6 @@ async function getFromCache(key: string): Promise<CachedChain | undefined> {
     const deserialized = JSON.parse(serialized)
     const chain = PromptlChain.deserialize({ serialized: deserialized.chain })
 
-    console.log('CHAIN', chain)
-
     if (!chain || !deserialized.messages) return undefined
     return { chain, messages: deserialized.messages ?? [] }
   } catch (e) {
@@ -63,11 +61,29 @@ export async function getCachedChain({
   documentLogUuid,
   workspace,
 }: {
+  documentLogUuid: string | undefined
+  workspace: Workspace
+}) {
+  if (!documentLogUuid) return undefined
+
+  const key = generateCacheKey({ documentLogUuid, workspace })
+  return await getFromCache(key)
+}
+
+export async function deleteCachedChain({
+  documentLogUuid,
+  workspace,
+}: {
   documentLogUuid: string
   workspace: Workspace
 }) {
   const key = generateCacheKey({ documentLogUuid, workspace })
-  return await getFromCache(key)
+  try {
+    const c = await cache()
+    await c.del(key)
+  } catch (e) {
+    // Silently fail cache writes
+  }
 }
 
 export async function cacheChain({

@@ -10,7 +10,7 @@ import {
   LogSources,
   ProviderData,
 } from '@latitude-data/constants'
-import { LanguageModelUsage } from 'ai'
+import { FinishReason, LanguageModelUsage } from 'ai'
 import { z } from 'zod'
 
 import { DocumentVersion, ProviderLog, Span, Trace } from './browser'
@@ -62,6 +62,8 @@ export type StreamType = 'object' | 'text'
 type BaseResponse = {
   text: string
   usage: LanguageModelUsage
+  chainCompleted: boolean
+  finishReason: FinishReason
   documentLogUuid?: string
   providerLog?: ProviderLog
 }

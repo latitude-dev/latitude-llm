@@ -94,7 +94,11 @@ export async function buildStepExecution({
         responseMessages,
       })
 
-      return finalResponse
+      return {
+        ...finalResponse,
+        finishReason,
+        chainCompleted: step.chainCompleted,
+      }
     }
 
     streamConsumer.stepCompleted(finalResponse)
