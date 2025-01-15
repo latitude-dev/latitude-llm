@@ -52,10 +52,12 @@ const db = new aws.rds.Instance('latitude-llm-db', {
   engine: 'postgres',
   engineVersion: '15.8',
   instanceClass: 'db.t4g.small',
-  allocatedStorage: 20,
+  allocatedStorage: 100,
+  maxAllocatedStorage: 1000,
   dbName: DATABASE_NAME,
   backupRetentionPeriod: 14,
   username: DATABASE_USERNAME,
+  performanceInsightsEnabled: true,
   password: dbPasswordSecret.arn.apply((arn) =>
     aws.secretsmanager
       .getSecretVersion({ secretId: arn })
