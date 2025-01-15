@@ -150,6 +150,8 @@ async function iterate({
       apiProvider: provider,
       messages,
       startTime: stepStartTime,
+      finishReason: consumedStream.finishReason,
+      chainCompleted: true,
     })
 
     const providerLog = await saveOrPublishProviderLogs({
@@ -166,6 +168,7 @@ async function iterate({
         response: _response,
       }),
       saveSyncProviderLogs: true,
+      chainCompleted: true,
     })
 
     const response = { ..._response, providerLog }

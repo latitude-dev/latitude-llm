@@ -50,6 +50,7 @@ export async function buildStepExecution({
     workspace,
     streamType,
     finishReason,
+    chainCompleted: step.chainCompleted,
     data: buildProviderLogDto({
       workspace,
       provider: step.provider,

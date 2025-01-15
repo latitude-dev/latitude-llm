@@ -1,18 +1,34 @@
-import { resumeConversationAction } from '$/actions/sdk/resumeConversationAction'
+import { addMessagesAction } from '$/actions/sdk/addMessagesAction'
 import {
   AssistantMessage,
   Message as ConversationMessage,
   MessageRole,
 } from '@latitude-data/compiler'
-import { ChainEventTypes, StreamEventTypes } from '@latitude-data/constants'
 import {
-  OnToolCallActionArgs,
-  ReactStateDispatch,
-  useCurrentCommit,
-} from '@latitude-data/web-ui'
+  ChainEventTypes,
+  StreamEventTypes,
+  ToolCallResponse,
+} from '@latitude-data/constants'
+import { buildResponseMessage } from '@latitude-data/core/browser'
+import { OnToolCallActionArgs, ReactStateDispatch } from '@latitude-data/web-ui'
 import { LanguageModelUsage } from 'ai'
 import { readStreamableValue } from 'ai/rsc'
 import { useCallback } from 'react'
+
+function buildToolResponseMessages({
+  toolCallResponses,
+}: {
+  toolCallResponses: ToolCallResponse[]
+}) {
+  return toolCallResponses
+    .map((tool) => {
+      return buildResponseMessage<'text'>({
+        type: 'text',
+        data: { text: tool.text, toolCallResponses: [tool] },
+      })
+    })
+    .filter((m) => !!m)
+}
 
 export function useAddToolResponse({
   documentLogUuid,
@@ -26,7 +42,6 @@ export function useAddToolResponse({
     setUsage: ReactStateDispatch<LanguageModelUsage | undefined>
   }
 }) {
-  const { commit } = useCurrentCommit()
   const addToolResponse = useCallback(
     async ({ toolCallResponse }: OnToolCallActionArgs) => {
       if (!documentLogUuid) return // This should not happen
@@ -35,10 +50,11 @@ export function useAddToolResponse({
       streaming.setResponseStream('')
       let response = ''
       try {
-        const { output } = await resumeConversationAction({
-          versionUuid: commit.uuid,
-          conversationUuid: documentLogUuid,
-          toolCallResponses: [toolCallResponse],
+        const { output } = await addMessagesAction({
+          documentLogUuid,
+          messages: buildToolResponseMessages({
+            toolCallResponses: [toolCallResponse],
+          }),
         })
 
         for await (const serverEvent of readStreamableValue(output)) {
@@ -81,7 +97,6 @@ export function useAddToolResponse({
       }
     },
     [
-      commit.uuid,
       streaming.addMessageToConversation,
       streaming.setError,
       streaming.setResponseStream,

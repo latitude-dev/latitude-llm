@@ -13,22 +13,6 @@ import { Chain as PromptlChain } from 'promptl-ai'
 import { getResolvedContent } from '../../../documents'
 import { deleteCachedChain } from '../../../chains/chainCache'
 
-// FIXME: generate tool response messages in frontend.
-/* function buildToolResponseMessages({ */
-/*   toolCallResponses, */
-/* }: { */
-/*   toolCallResponses: ToolCallResponse[] */
-/* }) { */
-/*   return toolCallResponses */
-/*     .map((tool) => { */
-/*       return buildResponseMessage<'text'>({ */
-/*         type: 'text', */
-/*         data: { text: tool.text, toolCallResponses: [tool] }, */
-/*       }) */
-/*     }) */
-/*     .filter((m) => !!m) */
-/* } */
-
 /**
  * What means resume a converstation
  * ::::::::::::::::::::

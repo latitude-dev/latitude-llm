@@ -1,4 +1,5 @@
 import { Workspace } from '../../../browser'
+import { Result } from '../../../lib'
 import {
   CommitsRepository,
   DocumentLogsRepository,
@@ -33,10 +34,10 @@ export async function findPausedChain({
   })
   if (result.error) return result
 
-  return {
+  return Result.ok({
     document: result.value,
     commit,
     pausedChainMessages: cachedData.messages,
     pausedChain: cachedData.chain,
-  }
+  })
 }

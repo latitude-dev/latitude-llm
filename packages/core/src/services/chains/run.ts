@@ -214,7 +214,8 @@ export async function runStep({
         streamConsumer,
         providerLogProps: {
           streamType: cachedResponse.streamType,
-          finishReason: 'stop', // TODO: we probably should add a cached reason here
+          // NOTE: Before we were hardcoding `stop` when cached.
+          finishReason: cachedResponse.finishReason ?? 'stop',
           stepStartTime,
         },
         stepProps: {
@@ -249,14 +250,6 @@ export async function runStep({
       schema: step.schema,
       output: step.output,
     }).then((r) => r.unwrap())
-
-    // @ts-ignore
-    console.log('AI RESULT.TEXT', aiResult.data.object)
-    // @ts-ignore
-    console.log('AI RESULT.OBJECT', aiResult.data.object)
-    // @ts-ignore
-    console.log('AI RESULT.TOOL_CALLS', aiResult.data.toolCalls)
-
     const checkResult = checkValidStream(aiResult)
 
     if (checkResult.error) throw checkResult.error
@@ -268,6 +261,7 @@ export async function runStep({
 
     if (consumedStream.error) throw consumedStream.error
 
+    step.chainCompleted
     const _response = await processResponse({
       aiResult,
       apiProvider: step.provider,
@@ -277,6 +271,8 @@ export async function runStep({
       source,
       workspace,
       startTime: stepStartTime,
+      finishReason: consumedStream.finishReason,
+      chainCompleted: step.chainCompleted,
     })
 
     const { providerLog, executeStep } = await buildStepExecution({

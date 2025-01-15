@@ -48,14 +48,10 @@ import {
   RunPromptOptions,
   SDKOptions,
   StreamChainResponse,
-  ResumeConversationArguments,
-  ResumeConversationOptions,
 } from '$sdk/utils/types'
 
 import { adaptPromptConfigToProvider } from './utils/adapters/adaptPromptConfigToProvider'
 import { getPromptlAdapterFromProvider } from './utils/adapters/getAdapterFromProvider'
-import { streamResumeConversation } from '$sdk/utils/streamResumeConversation'
-import { syncResumeConversation } from '$sdk/utils/syncResumeConversation'
 
 const WAIT_IN_MS_BEFORE_RETRY = 1000
 const DEFAULT_GAWATE_WAY = {
@@ -128,10 +124,6 @@ class Latitude {
     renderChain: <M extends AdapterMessageType = PromptlMessage>(
       args: RenderChainOptions<M>,
     ) => Promise<{ config: Config; messages: M[] }>
-    resumeConversation: (
-      args: ResumeConversationArguments,
-      options?: ResumeConversationOptions,
-    ) => Promise<StreamChainResponse | undefined>
   }
 
   constructor(
@@ -183,7 +175,6 @@ class Latitude {
       chat: this.chat.bind(this),
       render: this.renderPrompt.bind(this),
       renderChain: this.renderChain.bind(this),
-      resumeConversation: this.resumeConversation.bind(this),
     }
 
     if (telemetry) {
@@ -338,17 +329,6 @@ class Latitude {
       config: adaptPromptConfigToProvider(config, adapter),
       messages,
     }
-  }
-
-  private async resumeConversation(
-    args: ResumeConversationArguments,
-    options?: ResumeConversationOptions,
-  ) {
-    const opts = { ...options, options: this.options }
-
-    if (options?.stream) return streamResumeConversation(args, opts)
-
-    return syncResumeConversation(args, opts)
   }
 
   private async renderChain<M extends AdapterMessageType = PromptlMessage>({

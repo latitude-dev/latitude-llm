@@ -4,6 +4,8 @@ import { LogSources, Workspace } from '../../../browser'
 import { addMessages as addMessagesProviderLog } from '../../providerLogs/addMessages'
 import { ProviderLogsRepository } from '../../../repositories'
 import { findPausedChain } from './findPausedChain'
+import { resumeConversation } from './resumeConversation'
+import { Result } from '../../../lib'
 
 type CommonProps = {
   workspace: Workspace
@@ -39,9 +41,14 @@ export async function addMessages({
   messages: Message[]
   source: LogSources
 }) {
-  const pausedChainData = await findPausedChain({ workspace, documentLogUuid })
+  if (!documentLogUuid) {
+    return Result.error(new Error('documentLogUuid is required'))
+  }
 
-  if (!pausedChainData) {
+  const foundResult = await findPausedChain({ workspace, documentLogUuid })
+
+  if (!foundResult) {
+    // No chain cached found means normal chat behavior
     return addMessagesToCompleteChain({
       workspace,
       documentLogUuid,
@@ -49,4 +56,20 @@ export async function addMessages({
       source,
     })
   }
+
+  if (foundResult.error) return foundResult
+
+  const pausedChainData = foundResult.value
+
+  return resumeConversation({
+    workspace,
+    commit: pausedChainData.commit,
+    document: pausedChainData.document,
+    pausedChain: pausedChainData.pausedChain,
+    pausedChainMessages:
+      pausedChainData.pausedChainMessages as unknown as Message[],
+    documentLogUuid,
+    responseMessages: messages,
+    source,
+  })
 }

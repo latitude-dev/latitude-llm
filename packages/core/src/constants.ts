@@ -62,8 +62,8 @@ export type StreamType = 'object' | 'text'
 type BaseResponse = {
   text: string
   usage: LanguageModelUsage
-  chainCompleted: boolean
-  finishReason: FinishReason
+  finishReason?: FinishReason
+  chainCompleted?: boolean
   documentLogUuid?: string
   providerLog?: ProviderLog
 }

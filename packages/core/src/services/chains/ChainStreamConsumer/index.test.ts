@@ -99,6 +99,8 @@ describe('ChainStreamConsumer', () => {
       toolCalls: [],
       usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
       documentLogUuid: 'errorable-uuid',
+      finishReason: 'stop',
+      chainCompleted: false,
     }
 
     consumer.stepCompleted(response)
@@ -121,6 +123,8 @@ describe('ChainStreamConsumer', () => {
       toolCalls: [],
       usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
       documentLogUuid: 'errorable-uuid',
+      finishReason: 'stop',
+      chainCompleted: true,
     }
 
     consumer.chainCompleted({
@@ -173,6 +177,8 @@ describe('ChainStreamConsumer', () => {
       object: { object: 'response' },
       usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
       documentLogUuid: 'errorable-uuid',
+      finishReason: 'stop',
+      chainCompleted: true,
     }
 
     consumer.chainCompleted({
@@ -231,6 +237,8 @@ describe('ChainStreamConsumer', () => {
       ],
       usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
       documentLogUuid: 'errorable-uuid',
+      finishReason: 'stop',
+      chainCompleted: true,
     }
 
     consumer.chainCompleted({
@@ -305,6 +313,8 @@ describe('ChainStreamConsumer', () => {
       ],
       usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
       documentLogUuid: 'errorable-uuid',
+      finishReason: 'stop',
+      chainCompleted: true,
     }
 
     consumer.chainCompleted({
