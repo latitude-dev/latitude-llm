@@ -1,5 +1,6 @@
 import os
 from enum import Enum
+from importlib.metadata import distributions
 from typing import Any, Callable, List, TypeVar
 
 import pydantic
@@ -26,6 +27,13 @@ def get_env(key: str, default: T) -> T:
         return value.split(",")
 
     raise TypeError(f"Unknown type {type(default)}")
+
+
+_INSTALLED_PACKAGES = {dist.metadata["Name"].lower() for dist in distributions()}
+
+
+def is_package_installed(package: str) -> bool:
+    return package.lower() in _INSTALLED_PACKAGES
 
 
 P = ParamSpec("P")
