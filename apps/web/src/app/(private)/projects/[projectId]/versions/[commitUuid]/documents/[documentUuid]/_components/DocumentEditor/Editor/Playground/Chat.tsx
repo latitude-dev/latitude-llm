@@ -166,6 +166,7 @@ export default function Chat({
             }
             break
           }
+
           default:
             break
         }
@@ -221,6 +222,8 @@ export default function Chat({
 
           switch (event) {
             case StreamEventTypes.Latitude: {
+              console.log('DATA', data)
+
               if (data.type === ChainEventTypes.Complete) {
                 setUsage(data.response.usage)
               } else if (data.type === ChainEventTypes.Error) {
@@ -237,6 +240,7 @@ export default function Chat({
               }
               break
             }
+
             default:
               break
           }

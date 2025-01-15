@@ -11,7 +11,6 @@ import {
 } from '../ProviderProcessor/saveOrPublishProviderLogs'
 import { cacheChain } from '../chainCache'
 import { buildMessagesFromResponse } from '../../../helpers'
-import { Message } from '@latitude-data/compiler'
 
 function getToolCalls({
   response,
@@ -72,11 +71,9 @@ export async function buildStepExecution({
     const isPromptl = chain instanceof PromptlChain
     const toolCalls = getToolCalls({ response: finalResponse })
     const hasTools = isPromptl && toolCalls.length > 0
-    let responseMessages: Message[] = []
-
-    if (hasTools || step.chainCompleted) {
-      responseMessages = buildMessagesFromResponse({ response: finalResponse })
-    }
+    const responseMessages = buildMessagesFromResponse({
+      response: finalResponse,
+    })
 
     if (hasTools) {
       await cacheChain({

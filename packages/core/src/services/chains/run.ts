@@ -192,10 +192,10 @@ export async function runStep({
       streamConsumer.chainCompleted({
         step,
         response: previousResponse!,
-        finishReason: 'stop',
-        responseMessages: [],
+        finishReason: previousResponse?.finishReason ?? 'stop',
       })
 
+      previousResponse!.chainCompleted = true
       return previousResponse!
     }
 
@@ -242,7 +242,6 @@ export async function runStep({
       return executeStep({ finalResponse })
     }
 
-    messages.forEach((m) => console.log('Message TO AI:', m))
     const aiResult = await ai({
       messages,
       config: step.config,
@@ -261,7 +260,6 @@ export async function runStep({
 
     if (consumedStream.error) throw consumedStream.error
 
-    step.chainCompleted
     const _response = await processResponse({
       aiResult,
       apiProvider: step.provider,

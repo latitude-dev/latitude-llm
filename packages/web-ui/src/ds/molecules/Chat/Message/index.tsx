@@ -165,9 +165,7 @@ function JSONContent({ content }: { content: unknown }) {
     return (
       <div className='py-2 max-w-full'>
         <div className='overflow-hidden rounded-xl w-full'>
-          <CodeBlock language='json'>
-            {JSON.stringify(parsedValue, null, 2)}
-          </CodeBlock>
+          <CodeBlock language='json'>{parsedValue}</CodeBlock>
         </div>
       </div>
     )

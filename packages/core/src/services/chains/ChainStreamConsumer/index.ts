@@ -12,6 +12,7 @@ import { Config } from '../../ai'
 import { ChainError } from '../ChainErrors'
 import { ValidatedStep } from '../ChainValidator'
 import { FinishReason } from 'ai'
+import { buildMessagesFromResponse } from '../../../helpers'
 
 export function enqueueChainEvent(
   controller: ReadableStreamDefaultController,
@@ -141,13 +142,15 @@ export class ChainStreamConsumer {
     step,
     response,
     finishReason,
-    responseMessages,
+    responseMessages: defaultResponseMessages,
   }: {
     step: ValidatedStep
     response: ChainStepResponse<StreamType>
     finishReason: FinishReason
-    responseMessages: Message[]
+    responseMessages?: Message[]
   }) {
+    const responseMessages =
+      defaultResponseMessages ?? buildMessagesFromResponse({ response })
     return ChainStreamConsumer.chainCompleted({
       controller: this.controller,
       response,

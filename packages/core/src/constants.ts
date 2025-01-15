@@ -261,7 +261,7 @@ const toolResultContentSchema = z.object({
   type: z.literal('tool-result'),
   toolCallId: z.string(),
   toolName: z.string(),
-  result: z.string(),
+  result: z.any(),
   isError: z.boolean().optional(),
 })
 
