@@ -256,11 +256,6 @@ export default function Chat({
     ],
   )
 
-  const chainMessages = conversation?.messages.slice(0, chainLength - 1) ?? []
-  const chainResponseMessages =
-    conversation?.messages.slice(chainLength - 1, chainLength) ?? []
-  const chatMessages = conversation?.messages.slice(chainLength) ?? []
-
   return (
     <div className='flex flex-col flex-1 gap-2 h-full overflow-hidden'>
       <div className='flex flex-row items-center justify-between w-full'>
@@ -275,7 +270,7 @@ export default function Chat({
         className='flex flex-col gap-3 flex-grow flex-shrink min-h-0 custom-scrollbar scrollable-indicator pb-12'
       >
         <MessageList
-          messages={chainMessages}
+          messages={conversation?.messages.slice(0, chainLength - 1) ?? []}
           parameters={Object.keys(parameters)}
           collapseParameters={!expandParameters}
           submitToolResponse={submitUserMessage}
@@ -283,7 +278,9 @@ export default function Chat({
         {(conversation?.messages.length ?? 0) >= chainLength && (
           <>
             <MessageList
-              messages={chainResponseMessages}
+              messages={
+                conversation?.messages.slice(chainLength - 1, chainLength) ?? []
+              }
               submitToolResponse={submitUserMessage}
             />
             {time && <Timer timeMs={time} />}
@@ -293,7 +290,7 @@ export default function Chat({
           <>
             <Text.H6M>Chat</Text.H6M>
             <MessageList
-              messages={chatMessages}
+              messages={conversation!.messages.slice(chainLength)}
               submitToolResponse={submitUserMessage}
             />
           </>

@@ -363,17 +363,17 @@ const ContentText = ({
     >
       {group.length > 0
         ? group.map((segment, segmentIndex) => (
-          <span key={`${index}-group-${groupIndex}-segment-${segmentIndex}`}>
-            {typeof segment === 'string' ? (
-              segment
-            ) : (
-              <ReferenceComponent
-                reference={segment}
-                collapseParameters={collapseParameters}
-              />
-            )}
-          </span>
-        ))
+            <span key={`${index}-group-${groupIndex}-segment-${segmentIndex}`}>
+              {typeof segment === 'string' ? (
+                segment
+              ) : (
+                <ReferenceComponent
+                  reference={segment}
+                  collapseParameters={collapseParameters}
+                />
+              )}
+            </span>
+          ))
         : '\n'}
     </TextComponent>
   ))
@@ -495,7 +495,7 @@ function computeSegments(
     segments.push({
       identifier:
         sourceMap[i]!.identifier &&
-          parameters.includes(sourceMap[i]!.identifier!)
+        parameters.includes(sourceMap[i]!.identifier!)
           ? sourceMap[i]!.identifier!
           : undefined,
       content: source.slice(sourceMap[i]!.start, sourceMap[i]!.end),
