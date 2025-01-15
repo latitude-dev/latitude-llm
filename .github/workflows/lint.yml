@@ -64,9 +64,13 @@ jobs:
       - name: Install Node.js dependencies
         run: pnpm install
 
+      # TODO: We should probably separate node from python jobs
       - name: Install Python dependencies
-        working-directory: packages/sdks/python
         run: |
+          cd packages/sdks/python
+          uv venv
+          uv sync --all-extras --all-groups
+          cd ../../telemetry/python
           uv venv
           uv sync --all-extras --all-groups
 
@@ -80,8 +84,10 @@ jobs:
         run: pnpm lint
 
       - name: Python Lint
-        working-directory: packages/sdks/python
         run: |
+          cd packages/sdks/python
+          uv run scripts/lint.py
+          cd ../../telemetry/python
           uv run scripts/lint.py
 
       - name: TypeScript
