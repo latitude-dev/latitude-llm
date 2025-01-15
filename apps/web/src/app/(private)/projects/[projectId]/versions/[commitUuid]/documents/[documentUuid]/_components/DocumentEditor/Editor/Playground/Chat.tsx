@@ -9,6 +9,7 @@ import {
 import {
   ChainEventTypes,
   StreamEventTypes,
+  buildResponseMessage,
   type DocumentVersion,
 } from '@latitude-data/core/browser'
 import {
@@ -26,12 +27,29 @@ import {
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui'
+import { ToolCallResponse } from '@latitude-data/constants'
 import { LanguageModelUsage } from 'ai'
 import { readStreamableValue } from 'ai/rsc'
 
 import { DocumentEditorContext } from '..'
 import Actions, { ActionsState } from './Actions'
-import { useAddToolResponse } from './hooks/useAddToolResponse'
+
+function buildMessage({ input }: { input: string | ToolCallResponse }) {
+  if (typeof input === 'string') {
+    return {
+      role: MessageRole.user,
+      content: [{ type: ContentType.text, text: input }],
+    } as ConversationMessage
+  }
+
+  const toolMessage = buildResponseMessage<'text'>({
+    type: 'text',
+    data: { text: input.text, toolCallResponses: [input] },
+  })
+
+  // We asume it can not be null
+  return toolMessage!
+}
 
 export default function Chat({
   document,
@@ -81,16 +99,6 @@ export default function Chat({
     },
     [],
   )
-  const { addToolResponseData } = useAddToolResponse({
-    documentLogUuid,
-    streaming: {
-      setError,
-      addMessageToConversation,
-      setResponseStream,
-      setUsage,
-    },
-  })
-
   const startStreaming = useCallback(() => {
     setError(undefined)
     setUsage({
@@ -186,13 +194,10 @@ export default function Chat({
   }, [runDocument])
 
   const submitUserMessage = useCallback(
-    async (input: string) => {
+    async (input: string | ToolCallResponse) => {
       if (!documentLogUuid) return // This should not happen
 
-      const message: ConversationMessage = {
-        role: MessageRole.user,
-        content: [{ type: ContentType.text, text: input }],
-      }
+      const message = buildMessage({ input })
       addMessageToConversation(message)
 
       let response = ''
@@ -255,9 +260,6 @@ export default function Chat({
   const chainResponseMessages =
     conversation?.messages.slice(chainLength - 1, chainLength) ?? []
   const chatMessages = conversation?.messages.slice(chainLength) ?? []
-  console.log('CHAIN_MESSAGES', chainMessages)
-  console.log('CHAIN_RESPONSE_MESSAGES', chainResponseMessages)
-  console.log('CHAT_MESSAGES', chatMessages)
 
   return (
     <div className='flex flex-col flex-1 gap-2 h-full overflow-hidden'>
@@ -276,13 +278,13 @@ export default function Chat({
           messages={chainMessages}
           parameters={Object.keys(parameters)}
           collapseParameters={!expandParameters}
-          addToolResponseData={addToolResponseData}
+          submitToolResponse={submitUserMessage}
         />
         {(conversation?.messages.length ?? 0) >= chainLength && (
           <>
             <MessageList
               messages={chainResponseMessages}
-              addToolResponseData={addToolResponseData}
+              submitToolResponse={submitUserMessage}
             />
             {time && <Timer timeMs={time} />}
           </>
@@ -292,7 +294,7 @@ export default function Chat({
             <Text.H6M>Chat</Text.H6M>
             <MessageList
               messages={chatMessages}
-              addToolResponseData={addToolResponseData}
+              submitToolResponse={submitUserMessage}
             />
           </>
         )}

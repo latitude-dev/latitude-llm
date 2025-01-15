@@ -26,7 +26,7 @@ import {
 import { colors, font, TextColor } from '../../../tokens'
 import { roleToString, roleVariant } from './helpers'
 import { ToolCallForm } from './ToolCallForm'
-import { AddToolResponseData } from '../types'
+import { ToolCallResponse } from '@latitude-data/constants'
 
 export { roleToString, roleVariant } from './helpers'
 
@@ -38,7 +38,7 @@ export type MessageProps = {
   animatePulse?: boolean
   parameters?: string[]
   collapseParameters?: boolean
-  addToolResponseData?: AddToolResponseData
+  submitToolResponse?: (toolResponse: ToolCallResponse) => void
 }
 
 export function MessageItem({
@@ -82,7 +82,7 @@ export function Message({
   size = 'default',
   parameters = [],
   collapseParameters = false,
-  addToolResponseData,
+  submitToolResponse,
 }: MessageProps) {
   return (
     <MessageItem
@@ -97,7 +97,7 @@ export function Message({
           parameters={parameters}
           collapseParameters={collapseParameters}
           collapsedMessage={collapsedMessage}
-          addToolResponseData={addToolResponseData}
+          submitToolResponse={submitToolResponse}
         />
       )}
     </MessageItem>
@@ -110,22 +110,15 @@ export function MessageItemContent({
   parameters = [],
   collapseParameters = false,
   collapsedMessage,
-  addToolResponseData,
+  submitToolResponse,
 }: {
   content: MessageProps['content']
   size?: MessageProps['size']
   parameters?: MessageProps['parameters']
   collapseParameters?: MessageProps['collapseParameters']
   collapsedMessage: boolean
-  addToolResponseData?: AddToolResponseData
+  submitToolResponse?: (toolResponse: ToolCallResponse) => void
 }) {
-  // if (toolCalls.length > 0 && addToolResponseData) {
-  //   return toolCalls.map((toolCall, idx) => (
-  //     <ToolCallForm key={idx} toolCall={toolCall} {...addToolResponseData} />
-  //   ))
-  // }
-  //
-
   if (collapsedMessage) {
     return <Content value='...' color='foregroundMuted' size={size} />
   }
@@ -144,7 +137,7 @@ export function MessageItemContent({
       parameters={parameters}
       collapseParameters={collapseParameters}
       sourceMap={(c as any)?._promptlSourceMap}
-      addToolResponseData={addToolResponseData}
+      submitToolResponse={submitToolResponse}
     />
   ))
 }
@@ -195,7 +188,7 @@ type ContentPropsBase = {
   parameters?: string[]
   collapseParameters?: boolean
   sourceMap?: PromptlSourceRef[]
-  addToolResponseData?: AddToolResponseData
+  submitToolResponse?: (toolResponse: ToolCallResponse) => void
 }
 
 function ParsedJSONContent({
@@ -237,7 +230,7 @@ const Content = ({
     parameters = [],
     collapseParameters = false,
     sourceMap = [],
-    addToolResponseData,
+    submitToolResponse,
   } = rest
   if (typeof value === 'string') {
     return (
@@ -295,8 +288,7 @@ const Content = ({
     case ContentType.toolCall: {
       const val = value as ToolRequestContent
       const canResponseCall =
-        !!addToolResponseData && !!val.toolCallId && !!val.toolName
-      console.log('CAN_RESPONSE_CALL', canResponseCall)
+        !!submitToolResponse && !!val.toolCallId && !!val.toolName
 
       if (!canResponseCall) {
         return <JSONContent content={value} />
@@ -311,7 +303,7 @@ const Content = ({
         <ToolCallForm
           key={index}
           toolCall={toolCall}
-          {...addToolResponseData}
+          submitToolResponse={submitToolResponse}
         />
       )
     }
@@ -371,17 +363,17 @@ const ContentText = ({
     >
       {group.length > 0
         ? group.map((segment, segmentIndex) => (
-            <span key={`${index}-group-${groupIndex}-segment-${segmentIndex}`}>
-              {typeof segment === 'string' ? (
-                segment
-              ) : (
-                <ReferenceComponent
-                  reference={segment}
-                  collapseParameters={collapseParameters}
-                />
-              )}
-            </span>
-          ))
+          <span key={`${index}-group-${groupIndex}-segment-${segmentIndex}`}>
+            {typeof segment === 'string' ? (
+              segment
+            ) : (
+              <ReferenceComponent
+                reference={segment}
+                collapseParameters={collapseParameters}
+              />
+            )}
+          </span>
+        ))
         : '\n'}
     </TextComponent>
   ))
@@ -503,7 +495,7 @@ function computeSegments(
     segments.push({
       identifier:
         sourceMap[i]!.identifier &&
-        parameters.includes(sourceMap[i]!.identifier!)
+          parameters.includes(sourceMap[i]!.identifier!)
           ? sourceMap[i]!.identifier!
           : undefined,
       content: source.slice(sourceMap[i]!.start, sourceMap[i]!.end),

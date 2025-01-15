@@ -3,18 +3,18 @@
 import { Message as ConversationMessage } from '@latitude-data/compiler'
 
 import { Message } from '../Message'
-import { AddToolResponseData } from '../types'
+import { ToolCallResponse } from '@latitude-data/constants'
 
 export function MessageList({
   messages,
   parameters,
   collapseParameters,
-  addToolResponseData,
+  submitToolResponse,
 }: {
   messages: ConversationMessage[]
   parameters?: string[]
   collapseParameters?: boolean
-  addToolResponseData?: AddToolResponseData | undefined
+  submitToolResponse?: (toolResponse: ToolCallResponse) => void
 }) {
   return (
     <div className='flex flex-col gap-4'>
@@ -26,7 +26,7 @@ export function MessageList({
             content={message.content}
             parameters={parameters}
             collapseParameters={collapseParameters}
-            addToolResponseData={addToolResponseData}
+            submitToolResponse={submitToolResponse}
           />
         )
       })}

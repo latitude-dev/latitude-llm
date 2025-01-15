@@ -10,7 +10,7 @@ import {
   useCodeBlockBackgroundColor,
   ClientOnly,
 } from '../../../../atoms'
-import { OnToolCallActionFn } from '../../types'
+import { ToolCallResponse } from '@latitude-data/constants'
 
 const TextEditor = lazy(() => import('./Editor/index'))
 
@@ -26,12 +26,10 @@ function generateExampleFunctionCall(toolCall: ToolCall) {
 
 export function ToolCallForm({
   toolCall,
-  documentLogUuid,
-  addToolResponse,
+  submitToolResponse,
 }: {
   toolCall: ToolCall
-  addToolResponse: OnToolCallActionFn
-  documentLogUuid: string
+  submitToolResponse: (toolResponse: ToolCallResponse) => void
 }) {
   const functionCall = useMemo(
     () => generateExampleFunctionCall(toolCall),
@@ -46,16 +44,13 @@ export function ToolCallForm({
     (val: string | undefined) => () => {
       if (!val) return // Don't save empty responses
 
-      addToolResponse({
-        documentLogUuid,
-        toolCallResponse: {
-          id: toolCall.id,
-          name: toolCall.name,
-          result: val,
-        },
+      submitToolResponse({
+        id: toolCall.id,
+        name: toolCall.name,
+        result: val,
       })
     },
-    [documentLogUuid, addToolResponse, toolCall],
+    [submitToolResponse, toolCall],
   )
   return (
     <ClientOnly>
