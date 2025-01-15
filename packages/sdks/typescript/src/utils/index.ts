@@ -5,7 +5,6 @@ import {
   GetOrCreateDocumentUrlParams,
   HandlerType,
   LogUrlParams,
-  ResumeConversationParams,
   RunDocumentUrlParams,
   UrlParams,
 } from '$sdk/utils/types'
@@ -65,10 +64,6 @@ export class RouteResolver {
           (params as ChatUrlParams).conversationUuid,
           (params as EvaluationResultUrlParams).evaluationUuid,
         )
-      case HandlerType.ResumeConversation:
-        return this.conversations().resume(
-          (params as ResumeConversationParams).conversationUuid,
-        )
       default:
         throw new Error(`Unknown handler: ${handler satisfies never}`)
     }
@@ -78,7 +73,6 @@ export class RouteResolver {
     const base = `${this.baseUrl}/conversations`
     return {
       chat: (uuid: string) => `${base}/${uuid}/chat`,
-      resume: (uuid: string) => `${base}/${uuid}/resume`,
       evaluate: (uuid: string) => `${base}/${uuid}/evaluate`,
       evaluationResult: (uuid: string, evaluationUuid: string) =>
         `${base}/${uuid}/evaluations/${evaluationUuid}/evaluation-results`,

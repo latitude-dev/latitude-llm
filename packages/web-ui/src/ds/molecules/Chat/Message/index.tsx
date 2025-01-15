@@ -9,8 +9,6 @@ import {
   MessageContent,
   PromptlSourceRef,
   TextContent,
-  ToolCall,
-  ToolContent,
   ToolRequestContent,
 } from '@latitude-data/compiler'
 

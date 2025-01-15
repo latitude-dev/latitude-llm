@@ -1,7 +1,6 @@
 import { createRouter } from '$/openApi/createApp'
 
 import { chatRoute, chatHandler } from '$/routes/v2/conversations/chat'
-import { resumeRoute, resumeHandler } from '$/routes/v2/conversations/resume'
 import {
   createEvaluationResultHandler,
   createEvaluationResultRoute,
@@ -15,6 +14,5 @@ const router = createRouter()
   .openapi(chatRoute, chatHandler)
   .openapi(evaluateRoute, evaluateHandler)
   .openapi(createEvaluationResultRoute, createEvaluationResultHandler)
-  .openapi(resumeRoute, resumeHandler)
 
 export default router

@@ -18,7 +18,6 @@ import {
   StreamEventTypes,
   ChainCallResponseDto,
   Providers,
-  ToolCallResponse,
 } from '@latitude-data/constants'
 
 export type GetDocumentUrlParams = {
@@ -58,16 +57,6 @@ type ChatBodyParams = {
   stream?: boolean
 }
 
-export type ResumeConversationParams = {
-  conversationUuid: string
-}
-
-export type ResumeConversationBodyParams = {
-  toolCallResponses: ResumeConversationArguments['toolCallResponses']
-  versionUuid?: string
-  stream?: boolean
-}
-
 export type EvaluationResultUrlParams = {
   evaluationUuid: string
 }
@@ -88,7 +77,6 @@ export enum HandlerType {
   Log = 'log',
   Evaluate = 'evaluate',
   EvaluationResult = 'evaluationResult',
-  ResumeConversation = 'resume-conversation',
 }
 
 export type UrlParams<T extends HandlerType> = T extends HandlerType.GetDocument
@@ -105,9 +93,7 @@ export type UrlParams<T extends HandlerType> = T extends HandlerType.GetDocument
             ? { conversationUuid: string }
             : T extends HandlerType.EvaluationResult
               ? { conversationUuid: string; evaluationUuid: string }
-              : T extends HandlerType.ResumeConversation
-                ? ResumeConversationParams
-                : never
+              : never
 
 export type BodyParams<T extends HandlerType> =
   T extends HandlerType.GetOrCreateDocument
@@ -125,9 +111,7 @@ export type BodyParams<T extends HandlerType> =
                   result: string | boolean | number
                   reason: string
                 }
-              : T extends HandlerType.ResumeConversation
-                ? ResumeConversationBodyParams
-                : never
+              : never
 
 export type StreamChainResponse = {
   conversation: Message[]
@@ -165,16 +149,6 @@ export type {
 export type GetPromptOptions = {
   projectId?: number
   versionUuid?: string
-}
-
-export type ResumeConversationArguments = {
-  conversationUuid: string
-  toolCallResponses: ToolCallResponse[]
-  versionUuid?: string
-}
-
-export type ResumeConversationOptions = StreamResponseCallbacks & {
-  stream?: boolean
 }
 
 export type GetOrCreatePromptOptions = {
