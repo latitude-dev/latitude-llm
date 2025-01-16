@@ -4,7 +4,7 @@
 pip install latitude-sdk
 ```
 
-Requires Python `3.8` or higher.
+Requires Python `3.9` or higher.
 
 Go to the [documentation](https://docs.latitude.so/guides/sdk/python) to learn more.
 

@@ -223,6 +223,8 @@ class TestInstrument(TestCase):
                     {"key": "llm.input_messages.0.message.content", "value": {"stringValue": "Hello..."}},
                     {"key": "llm.invocation_parameters", "value": {"stringValue": "{}"}},
                     {"key": "output.value", "value": {"stringValue": "World!"}},
+                    {"key": "llm.output_messages.0.message.role", "value": {"stringValue": "assistant"}},
+                    {"key": "llm.output_messages.0.message.content", "value": {"stringValue": "World!"}},
                     {"key": "llm.token_count.prompt", "value": {"intValue": 10}},
                     {"key": "llm.token_count.completion", "value": {"intValue": 20}},
                     {"key": "llm.token_count.total", "value": {"intValue": 30}},
