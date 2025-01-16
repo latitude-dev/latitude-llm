@@ -51,7 +51,7 @@ DEFAULT_INTERNAL_OPTIONS = InternalOptions(
 
 
 DEFAULT_TELEMETRY_OPTIONS = TelemetryOptions(
-    instrumentors=Instrumentors.entries(),
+    instrumentors=[],  # Note: Instrumentation is opt-in
     disable_batch=False,
     internal=DEFAULT_INTERNAL_OPTIONS,
 )
