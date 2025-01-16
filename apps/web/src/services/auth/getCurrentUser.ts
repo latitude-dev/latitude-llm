@@ -22,14 +22,16 @@ export type SessionData = {
  */
 export const getCurrentUser = cache(async () => {
   const sessionData = await getSession()
-  const { user, workspace } = await unsafelyGetCurrentUserFromDb({
-    userId: sessionData?.user?.id,
-  })
+  const { user, workspace, subscriptionPlan } =
+    await unsafelyGetCurrentUserFromDb({
+      userId: sessionData?.user?.id,
+    })
 
   return {
     session: sessionData.session!,
     user: user!,
     workspace: workspace!,
+    subscriptionPlan,
   }
 })
 
