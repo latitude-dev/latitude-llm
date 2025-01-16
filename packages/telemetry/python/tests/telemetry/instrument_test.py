@@ -22,7 +22,7 @@ from tests.utils import TestCase
 
 class TestInstrument(TestCase):
     def create_openai_mock(self):
-        openai = OpenAI()
+        openai = OpenAI(api_key="fake-api-key")
 
         completion = OpenAIChatCompletion(
             object="chat.completion",
@@ -101,7 +101,7 @@ class TestInstrument(TestCase):
         self.assertEqual(endpoint_mock.call_count, 0)
 
     def create_anthropic_mock(self):
-        anthropic = Anthropic()
+        anthropic = Anthropic(api_key="fake-api-key")
 
         completion = AnthropicMessage(
             type="message",

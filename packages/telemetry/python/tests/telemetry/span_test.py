@@ -47,7 +47,7 @@ class TestSpan(TestCase):
                     {
                         "key": "latitude.prompt",
                         "value": {
-                            "stringValue": '{"uuid":"prompt-uuid","versionUuid":"version-uuid","parameters":{"parameter":"value"}}'
+                            "stringValue": '{"uuid":"prompt-uuid","versionUuid":"version-uuid","parameters":{"parameter":"value"}}'  # noqa: E501
                         },
                     },
                     {"key": "latitude.distinctId", "value": {"stringValue": "distinct-id"}},
