@@ -51,7 +51,7 @@ DEFAULT_INTERNAL_OPTIONS = InternalOptions(
 
 
 DEFAULT_TELEMETRY_OPTIONS = TelemetryOptions(
-    instrumentors=Instrumentors.entries(),
+    instrumentors=[],  # Note: Instrumentation is opt-in
     disable_batch=False,
     internal=DEFAULT_INTERNAL_OPTIONS,
 )
@@ -85,7 +85,7 @@ class Telemetry:
             )
         )
         self._tracer = TracerProvider(
-            resource=otel.Resource.create({otel.SERVICE_NAME: __name__}),
+            resource=otel.Resource.create({otel.SERVICE_NAME: __package__ or __name__}),
         )
 
         if options.disable_batch:
