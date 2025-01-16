@@ -11,6 +11,7 @@ import {
   Popover,
   Skeleton,
   Text,
+  useSession,
 } from '@latitude-data/web-ui'
 import useWorkspaceUsage from '$/stores/workspaceUsage'
 import Link from 'next/link'
@@ -92,6 +93,7 @@ function descriptionText({ usage, max }: WorkspaceUsage) {
 
 export function UsageIndicator() {
   const { data, isLoading } = useWorkspaceUsage()
+  const { subscriptionPlan } = useSession()
 
   return (
     <Popover.Root>
@@ -129,7 +131,9 @@ export function UsageIndicator() {
               </Text.H4>
               <div className='w-full flex items-center justify-end'>
                 <Badge variant='muted'>
-                  <Text.H6 color='foregroundMuted'>Team Plan</Text.H6>
+                  <Text.H6 color='foregroundMuted'>
+                    {subscriptionPlan.name}
+                  </Text.H6>
                 </Badge>
               </div>
             </div>

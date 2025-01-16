@@ -1,5 +1,9 @@
 'use client'
 
+import {
+  SubscriptionPlanContent,
+  WorkspaceDto,
+} from '@latitude-data/core/browser'
 import { createContext, ReactNode, useContext } from 'react'
 
 export type SessionUser = {
@@ -10,6 +14,8 @@ export type SessionUser = {
 
 interface ISessionContext {
   currentUser: SessionUser
+  workspace: WorkspaceDto
+  subscriptionPlan: SubscriptionPlanContent
 }
 
 const SessionContext = createContext<ISessionContext>({} as ISessionContext)

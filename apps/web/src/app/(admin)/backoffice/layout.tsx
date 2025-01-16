@@ -21,11 +21,15 @@ export default async function AdminLayout({
   const data = await getSession()
   if (!data.session) redirect(ROUTES.root)
 
-  const { user } = await getCurrentUser()
+  const { user, workspace, subscriptionPlan } = await getCurrentUser()
   if (!user?.admin) redirect(ROUTES.root)
 
   return (
-    <SessionProvider currentUser={user}>
+    <SessionProvider
+      currentUser={user}
+      workspace={workspace}
+      subscriptionPlan={subscriptionPlan}
+    >
       <BackofficeTabs>{children}</BackofficeTabs>
     </SessionProvider>
   )

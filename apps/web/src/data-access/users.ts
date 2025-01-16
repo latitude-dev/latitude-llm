@@ -10,6 +10,10 @@ import { PromisedResult } from '@latitude-data/core/lib/Transaction'
 import { users } from '@latitude-data/core/schema'
 import { getFirstWorkspace } from '$/data-access/workspaces'
 import { eq } from 'drizzle-orm'
+import {
+  SubscriptionPlan,
+  SubscriptionPlans,
+} from '@latitude-data/core/browser'
 
 function notFoundWithEmail(email: string | undefined | null) {
   return Result.error(new NotFoundError(`Not found user with email: ${email}`))
@@ -85,6 +89,10 @@ export async function unsafelyGetCurrentUserFromDb({
   const user = await unsafelyGetUser(userId)
   const workspaces = await unsafelyFindWorkspacesFromUser(userId)
   const workspace = workspaces[0]
+  const plan = workspace?.currentSubscription.plan
+  const subscriptionPlan = plan
+    ? SubscriptionPlans[plan]
+    : SubscriptionPlans[SubscriptionPlan.HobbyV2]
 
-  return { user, workspace }
+  return { user, workspace, subscriptionPlan }
 }

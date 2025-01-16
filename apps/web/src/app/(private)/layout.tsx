@@ -30,17 +30,20 @@ export default async function PrivateLayout({
   const data = await getSession()
   if (!data.session) return redirect(ROUTES.auth.login)
 
-  const { workspace, user } = await getCurrentUser()
+  const { workspace, user, subscriptionPlan } = await getCurrentUser()
   if (!user) return redirect(ROUTES.auth.login)
 
   const supportIdentity = createSupportUserIdentity(user)
-
   return (
     <CSPostHogProvider>
       <IdentifyUser user={user} workspace={workspace}>
         <SupportChat identity={supportIdentity} />
         <SocketIOProvider>
-          <SessionProvider currentUser={user}>
+          <SessionProvider
+            currentUser={user}
+            workspace={workspace}
+            subscriptionPlan={subscriptionPlan}
+          >
             <LatitudeWebsocketsProvider
               workspace={workspace}
               socketServer={env.WEBSOCKETS_SERVER}

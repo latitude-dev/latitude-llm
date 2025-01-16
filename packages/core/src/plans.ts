@@ -27,3 +27,6 @@ export const SubscriptionPlans = {
     users: 1000,
   },
 }
+
+export type SubscriptionPlanContent =
+  (typeof SubscriptionPlans)[keyof typeof SubscriptionPlans]
