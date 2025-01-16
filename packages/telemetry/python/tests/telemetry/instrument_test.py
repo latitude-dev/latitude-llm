@@ -123,7 +123,7 @@ class TestInstrument(TestCase):
         endpoint = "/otlp/v1/traces"
         endpoint_mock = self.gateway_mock.post(endpoint).mock()
 
-        with mock.patch("anthropic.resources.messages.messages.Messages.create", return_value=completion):
+        with mock.patch("anthropic.resources.messages.Messages.create", return_value=completion):
             self.telemetry.instrument([Instrumentors.Anthropic])
             anthropic.messages.create(
                 max_tokens=1000,
@@ -162,7 +162,7 @@ class TestInstrument(TestCase):
         endpoint = "/otlp/v1/traces"
         endpoint_mock = self.gateway_mock.post(endpoint).mock()
 
-        with mock.patch("anthropic.resources.messages.messages.Messages.create", return_value=completion):
+        with mock.patch("anthropic.resources.messages.Messages.create", return_value=completion):
             self.telemetry.uninstrument()
             anthropic.messages.create(
                 max_tokens=1000,

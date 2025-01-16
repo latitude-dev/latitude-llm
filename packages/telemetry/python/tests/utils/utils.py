@@ -48,6 +48,7 @@ class TestCase(unittest.TestCase):
         )
 
     def tearDown(self):
+        self.telemetry.uninstrument()
         self.gateway_mock.stop()
 
     def assert_requested(

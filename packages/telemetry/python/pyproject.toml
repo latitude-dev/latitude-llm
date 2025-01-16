@@ -48,7 +48,9 @@ dev = [
     "ruff>=0.8.3",
     "sh>=1.14.3",
     "openai>=1.59.7",
-    "anthropic>=0.42.0",
+    # Note: 0.41.0 onwards made Prompt Caching generally available
+    # which is not compatible with the instrumentation
+    "anthropic==0.40.0",
     "litellm[proxy]>=1.58.2",
 ]
 
