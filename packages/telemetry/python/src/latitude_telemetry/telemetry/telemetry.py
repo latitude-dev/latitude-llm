@@ -64,31 +64,30 @@ class Telemetry:
     _instrumentors: Dict[Union[Instrumentors, str], BaseInstrumentor]
 
     def __init__(self, api_key: str, options: TelemetryOptions):
-        options.internal = options.internal or DEFAULT_INTERNAL_OPTIONS
-        options.internal = InternalOptions(**{**dict(DEFAULT_INTERNAL_OPTIONS), **dict(options.internal)})
+        options.internal = InternalOptions(**{**dict(DEFAULT_INTERNAL_OPTIONS), **dict(options.internal or {})})
         options = TelemetryOptions(**{**dict(DEFAULT_TELEMETRY_OPTIONS), **dict(options)})
-
-        assert options.internal is not None
-        assert options.internal.gateway is not None
-        assert options.internal.retries is not None
-        assert options.internal.delay is not None
-        assert options.internal.timeout is not None
-
         self._options = options
+
+        assert self._options.internal is not None
+        assert self._options.internal.gateway is not None
+        assert self._options.internal.retries is not None
+        assert self._options.internal.delay is not None
+        assert self._options.internal.timeout is not None
+
         self._exporter = Exporter(
             ExporterOptions(
                 api_key=api_key,
-                gateway=options.internal.gateway,
-                retries=options.internal.retries,
-                delay=options.internal.delay,
-                timeout=options.internal.timeout,
+                gateway=self._options.internal.gateway,
+                retries=self._options.internal.retries,
+                delay=self._options.internal.delay,
+                timeout=self._options.internal.timeout,
             )
         )
         self._tracer = TracerProvider(
             resource=otel.Resource.create({otel.SERVICE_NAME: __package__ or __name__}),
         )
 
-        if options.disable_batch:
+        if self._options.disable_batch:
             self._tracer.add_span_processor(SimpleSpanProcessor(self._exporter))
         else:
             self._tracer.add_span_processor(BatchSpanProcessor(self._exporter))

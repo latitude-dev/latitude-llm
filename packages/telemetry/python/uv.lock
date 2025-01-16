@@ -818,7 +818,7 @@ wheels = [
 
 [[package]]
 name = "latitude-telemetry"
-version = "0.1.0b1"
+version = "0.1.0b4"
 source = { editable = "." }
 dependencies = [
     { name = "httpx" },
