@@ -1,6 +1,6 @@
 [project]
 name = "latitude-telemetry"
-version = "0.1.0-beta.4"
+version = "0.1.0-beta.5"
 description = "Latitude Telemetry for Python"
 authors = [{ name = "Latitude Data SL", email = "hello@latitude.so" }]
 maintainers = [{ name = "Latitude Data SL", email = "hello@latitude.so" }]
@@ -9,7 +9,7 @@ license = "LGPL-3.0"
 urls.repository = "https://github.com/latitude-dev/latitude-llm/tree/main/packages/telemetry/python"
 urls.homepage = "https://github.com/latitude-dev/latitude-llm/tree/main/packages/telemetry/python#readme"
 urls.documentation = "https://github.com/latitude-dev/latitude-llm/tree/main/packages/telemetry/python#readme"
-requires-python = ">=3.9"
+requires-python = ">=3.9, <3.13"
 dependencies = [
     "opentelemetry-api>=1.29.0",
     "opentelemetry-sdk>=1.29.0",
@@ -21,7 +21,7 @@ dependencies = [
     "opentelemetry-instrumentation-groq>=0.36.0",
     "opentelemetry-instrumentation-haystack>=0.36.0",
     "opentelemetry-instrumentation-langchain>=0.36.0",
-    "openinference-instrumentation-litellm>=0.1.5",
+    "openinference-instrumentation-litellm>=0.1.6",
     "opentelemetry-instrumentation-llamaindex>=0.36.0",
     "opentelemetry-instrumentation-mistralai>=0.36.0",
     "opentelemetry-instrumentation-ollama>=0.36.0",

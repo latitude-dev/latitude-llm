@@ -1,6 +1,6 @@
 [project]
 name = "latitude-sdk"
-version = "0.1.0-beta.6"
+version = "0.1.0-beta.7"
 description = "Latitude SDK for Python"
 authors = [{ name = "Latitude Data SL", email = "hello@latitude.so" }]
 maintainers = [{ name = "Latitude Data SL", email = "hello@latitude.so" }]
@@ -9,13 +9,13 @@ license = "LGPL-3.0"
 urls.repository = "https://github.com/latitude-dev/latitude-llm/tree/main/packages/sdks/python"
 urls.homepage = "https://github.com/latitude-dev/latitude-llm/tree/main/packages/sdks/python#readme"
 urls.documentation = "https://github.com/latitude-dev/latitude-llm/tree/main/packages/sdks/python#readme"
-requires-python = ">=3.9"
+requires-python = ">=3.9, <3.13"
 dependencies = [
     "httpx>=0.28.1",
     "httpx-sse>=0.4.0",
     "pydantic>=2.10.3",
     "typing-extensions>=4.12.2",
-    "latitude-telemetry>=0.1.0b4",
+    "latitude-telemetry>=0.1.0b5",
 ]
 
 [dependency-groups]
