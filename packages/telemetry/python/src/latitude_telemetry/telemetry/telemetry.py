@@ -85,7 +85,7 @@ class Telemetry:
             )
         )
         self._tracer = TracerProvider(
-            resource=otel.Resource.create({otel.SERVICE_NAME: __name__}),
+            resource=otel.Resource.create({otel.SERVICE_NAME: __package__ or __name__}),
         )
 
         if options.disable_batch:
