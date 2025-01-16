@@ -446,3 +446,5 @@ export type DraftChange = {
   oldDocumentPath: string
   content: DiffValue
 }
+
+export const AGENT_RETURN_TOOL_NAME = 'agent_finish_task'

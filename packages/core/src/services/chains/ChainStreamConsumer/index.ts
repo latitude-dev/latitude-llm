@@ -17,7 +17,10 @@ import {
 import { objectToString } from '../../../helpers'
 import { Config } from '../../ai'
 import { ChainError } from '../ChainErrors'
-import { ValidatedStep } from '../ChainValidator'
+import { ValidatedChainStep } from '../ChainValidator'
+import { ValidatedAgentStep } from '../agents/AgentStepValidator'
+
+type ValidatedStep = ValidatedChainStep | ValidatedAgentStep
 
 export function enqueueChainEvent(
   controller: ReadableStreamDefaultController,

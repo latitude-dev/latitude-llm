@@ -15,12 +15,12 @@ import {
 } from '../../../constants'
 import * as factories from '../../../tests/factories'
 import { ChainError } from '../ChainErrors'
-import { ValidatedStep } from '../ChainValidator'
+import { ValidatedChainStep } from '../ChainValidator'
 
 describe('ChainStreamConsumer', () => {
   let controller: ReadableStreamDefaultController
   let consumer: ChainStreamConsumer
-  let step: ValidatedStep
+  let step: ValidatedChainStep
 
   beforeEach(async () => {
     const { workspace, userData: user } = await factories.createWorkspace()

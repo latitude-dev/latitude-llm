@@ -7,6 +7,7 @@ import {
   FileContent,
   ImageContent,
   MessageContent,
+  MessageRole,
   PromptlSourceRef,
   TextContent,
   ToolContent,
@@ -19,6 +20,7 @@ import {
   BadgeProps,
   CodeBlock,
   Icon,
+  IconName,
   Image,
   Skeleton,
   Text,
@@ -26,6 +28,7 @@ import {
 } from '../../../atoms'
 import { colors, font, TextColor } from '../../../tokens'
 import { roleToString, roleVariant } from './helpers'
+import { AGENT_RETURN_TOOL_NAME } from '@latitude-data/core/browser'
 
 export { roleToString, roleVariant } from './helpers'
 
@@ -43,11 +46,13 @@ export function MessageItem({
   children,
   badgeLabel,
   badgeVariant,
+  badgeIcon,
   animatePulse = false,
 }: {
   children: (renderProps: { collapsedMessage: boolean }) => ReactNode
   badgeLabel: string
   badgeVariant: BadgeProps['variant']
+  badgeIcon?: IconName
   animatePulse?: boolean
 }) {
   const [collapsedMessage, setCollapseMessage] = useState(false)
@@ -58,7 +63,10 @@ export function MessageItem({
       })}
     >
       <div>
-        <Badge variant={badgeVariant}>{badgeLabel}</Badge>
+        <Badge variant={badgeVariant}>
+          {badgeIcon && <Icon name={badgeIcon} size='small' className='mr-2' />}
+          {badgeLabel}
+        </Badge>
       </div>
       <div className='flex w-full flex-row items-stretch gap-4 pl-4'>
         <div
@@ -81,6 +89,28 @@ export function Message({
   parameters = [],
   collapseParameters = false,
 }: MessageProps) {
+  const isAgentReturnResponse =
+    role === MessageRole.assistant &&
+    Array.isArray(content) &&
+    content.some(
+      (c) =>
+        c.type === ContentType.toolCall &&
+        c.toolName === AGENT_RETURN_TOOL_NAME,
+    )
+
+  if (isAgentReturnResponse) {
+    return (
+      <AgentResponseMessage
+        role={role}
+        content={content}
+        animatePulse={animatePulse}
+        size={size}
+        parameters={parameters}
+        collapseParameters={collapseParameters}
+      />
+    )
+  }
+
   return (
     <MessageItem
       animatePulse={animatePulse}
@@ -620,5 +650,60 @@ const ContentFile = ({
         />
       )}
     </TextComponent>
+  )
+}
+
+function AgentResponseMessage({
+  content,
+  animatePulse = false,
+  size = 'default',
+  parameters = [],
+  collapseParameters = false,
+}: MessageProps) {
+  const [otherContent, returnTool] = Array.isArray(content)
+    ? content.reduce(
+        (acc, c) => {
+          if (c.toolName === AGENT_RETURN_TOOL_NAME) {
+            acc[1] = acc[1] ?? (c as ToolRequestContent)
+          } else {
+            acc[0].push(c)
+          }
+          return acc
+        },
+        [[], undefined] as [MessageContent[], ToolRequestContent | undefined],
+      )
+    : [content, undefined]
+
+  return (
+    <MessageItem
+      animatePulse={animatePulse}
+      badgeLabel='Agent'
+      badgeVariant='default'
+      badgeIcon='bot'
+    >
+      {({ collapsedMessage }) =>
+        collapsedMessage ? (
+          <Content value='...' color='foregroundMuted' size={size} />
+        ) : (
+          <>
+            <MessageItemContent
+              content={otherContent}
+              size={size}
+              parameters={parameters}
+              collapseParameters={collapseParameters}
+              collapsedMessage={collapsedMessage}
+            />
+            <Content
+              index={otherContent.length + 1}
+              color='accent'
+              value={JSON.stringify(returnTool!.args, null, 2)}
+              size={size}
+              parameters={parameters}
+              collapseParameters={collapseParameters}
+            />
+          </>
+        )
+      }
+    </MessageItem>
   )
 }
