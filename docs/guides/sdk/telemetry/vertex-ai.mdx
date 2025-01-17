@@ -1,0 +1,45 @@
+---
+title: Vertex AI
+description: How to trace Vertex AI calls with Latitude
+---
+
+## Installation
+
+import Installation from '/snippets/sdk/installation.mdx'
+
+<Installation />
+
+## Usage
+
+To trace Vertex AI calls with Latitude, you need to install the Vertex AI SDK
+and initialize the Latitude SDK with your API key:
+
+<CodeGroup>
+
+```typescript Javascript
+import * as VertexAI from '@google-cloud/vertexai'
+import { Latitude } from '@latitude-data/sdk'
+
+new Latitude('your-api-key-here', {
+  telemetry: {
+    modules: {
+      google_vertexai: VertexAI,
+    },
+  },
+})
+```
+
+```python Python
+from latitude_sdk import Latitude, LatitudeOptions
+from latitude_telemetry import Instrumentors, TelemetryOptions
+
+Latitude('your-api-key-here', LatitudeOptions(
+  telemetry=TelemetryOptions(
+    instrumentors=[
+      Instrumentors.VertexAI,
+    ],
+  ),
+))
+```
+
+</CodeGroup>

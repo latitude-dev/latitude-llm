@@ -1,0 +1,32 @@
+---
+title: LiteLLM
+description: How to trace LiteLLM calls with Latitude
+---
+
+## Installation
+
+import Installation from '/snippets/sdk/installation.mdx'
+
+<Installation />
+
+## Usage
+
+To trace LiteLLM calls with Latitude, you need to install the LiteLLM SDK
+and initialize the Latitude SDK with your API key:
+
+<CodeGroup>
+
+```python Python
+from latitude_sdk import Latitude, LatitudeOptions
+from latitude_telemetry import Instrumentors, TelemetryOptions
+
+Latitude('your-api-key-here', LatitudeOptions(
+  telemetry=TelemetryOptions(
+    instrumentors=[
+      Instrumentors.LiteLLM,
+    ],
+  ),
+))
+```
+
+</CodeGroup>

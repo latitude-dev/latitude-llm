@@ -1,0 +1,45 @@
+---
+title: AWS Bedrock
+description: How to trace AWS Bedrock calls with Latitude
+---
+
+## Installation
+
+import Installation from '/snippets/sdk/installation.mdx'
+
+<Installation />
+
+## Usage
+
+To trace AWS Bedrock calls with Latitude, you need to install the AWS Bedrock SDK
+and initialize the Latitude SDK with your API key:
+
+<CodeGroup>
+
+```typescript Javascript
+import * as Bedrock from '@aws-sdk/client-bedrock-runtime'
+import { Latitude } from '@latitude-data/sdk'
+
+new Latitude('your-api-key-here', {
+  telemetry: {
+    modules: {
+      bedrock: Bedrock,
+    },
+  },
+})
+```
+
+```python Python
+from latitude_sdk import Latitude, LatitudeOptions
+from latitude_telemetry import Instrumentors, TelemetryOptions
+
+Latitude('your-api-key-here', LatitudeOptions(
+  telemetry=TelemetryOptions(
+    instrumentors=[
+      Instrumentors.Bedrock,
+    ],
+  ),
+))
+```
+
+</CodeGroup>

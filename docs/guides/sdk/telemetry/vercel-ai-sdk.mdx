@@ -1,0 +1,53 @@
+---
+title: Vercel AI SDK
+description: How to trace Vercel AI SDK calls with Latitude
+---
+
+## Installation
+
+import Installation from '/snippets/sdk/installation.mdx'
+
+<Installation />
+
+## Usage
+
+<Note>
+
+Vercel AI SDK is supported through Latitude's custom Vercel integration. To
+use it, you need to install the `@latitude-data/telemetry` package:
+
+```bash
+npm install @latitude-data/telemetry
+# or
+yarn add @latitude-data/telemetry
+# or
+pnpm add @latitude-data/telemetry
+```
+
+</Note>
+
+To trace Vercel AI SDK calls with Latitude, you need to install the Vercel AI SDK
+and initialize the Latitude SDK with your API key and the custom Vercel processor:
+
+<CodeGroup>
+
+```typescript Javascript
+import { VercelBatchSpanProcessor } from '@latitude-data/telemetry'
+import { Latitude } from '@latitude-data/sdk'
+
+new Latitude('your-api-key-here', {
+  telemetry: {
+    processors: [VercelBatchSpanProcessor],
+  },
+})
+```
+
+</CodeGroup>
+
+<Note>
+
+Latitude's Vercel integration already traces all LLM calls made with Vercel's
+AI SDK, you should remove any other Latitude instrumentation from your project
+in order to avoid generating duplicated traces.
+
+</Note>

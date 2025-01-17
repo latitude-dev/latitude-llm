@@ -1,0 +1,32 @@
+---
+title: Replicate
+description: How to trace Replicate calls with Latitude
+---
+
+## Installation
+
+import Installation from '/snippets/sdk/installation.mdx'
+
+<Installation />
+
+## Usage
+
+To trace Replicate calls with Latitude, you need to install the Replicate SDK
+and initialize the Latitude SDK with your API key:
+
+<CodeGroup>
+
+```python Python
+from latitude_sdk import Latitude, LatitudeOptions
+from latitude_telemetry import Instrumentors, TelemetryOptions
+
+Latitude('your-api-key-here', LatitudeOptions(
+  telemetry=TelemetryOptions(
+    instrumentors=[
+      Instrumentors.Replicate,
+    ],
+  ),
+))
+```
+
+</CodeGroup>
