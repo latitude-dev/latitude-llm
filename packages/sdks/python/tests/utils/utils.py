@@ -4,11 +4,12 @@ from unittest import IsolatedAsyncioTestCase
 
 import httpx
 import respx
+from latitude_telemetry import InternalOptions as TelemetryInternalOptions
+from latitude_telemetry import TelemetryOptions
 
 from latitude_sdk import (
     AssistantMessage,
     FileContent,
-    GatewayOptions,
     ImageContent,
     InternalOptions,
     Latitude,
@@ -30,16 +31,23 @@ class TestCase(IsolatedAsyncioTestCase):
     def setUp(self):
         self.maxDiff = None
 
-        self.internal_options = InternalOptions(
-            gateway=GatewayOptions(
-                host="fake-host.com",
-                port=443,
-                ssl=True,
-                api_version="v2",
-            ),
-            retries=3,
-            delay=0,
-            timeout=0.5,
+        internal_options = {
+            "gateway": {
+                "host": "fake-host.com",
+                "port": 443,
+                "ssl": True,
+                "api_version": "v2",
+            },
+            "retries": 3,
+            "delay": 0,
+            "timeout": 0.5,
+        }
+
+        self.internal_options = InternalOptions.model_validate(internal_options)
+        self.telemetry_options = TelemetryOptions(
+            instrumentors=[],
+            disable_batch=True,
+            internal=TelemetryInternalOptions.model_validate(internal_options),
         )
         self.api_key = "fake-api-key"
         self.project_id = 31
@@ -60,6 +68,7 @@ class TestCase(IsolatedAsyncioTestCase):
             LatitudeOptions(
                 project_id=self.project_id,
                 version_uuid=self.version_uuid,
+                telemetry=self.telemetry_options,
                 internal=self.internal_options,
             ),
         )

@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Any, Dict, List, Literal, Optional, Protocol, Union, runtime_checkable
 
 from latitude_sdk.sdk.errors import ApiError
-from latitude_sdk.util import Field, Model, StrEnum
+from latitude_sdk.util import Adapter, Field, Model, StrEnum
 
 
 class DbErrorRef(Model):
@@ -106,6 +106,7 @@ class ToolMessage(Model):
 
 
 Message = Union[SystemMessage, UserMessage, AssistantMessage, ToolMessage]
+_Message = Adapter(Message)
 
 
 class ModelUsage(Model):

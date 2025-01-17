@@ -28,6 +28,7 @@ async def main():
 
     prompt = await sdk.prompts.get_or_create("prompt-path", GetOrCreatePromptOptions())
 
+    # You can also pass a list of dictionaries, but type hinting won't be available
     messages = [
         SystemMessage(content="You are a helpful assistant."),
         UserMessage(content="Tell me a joke about Python!"),
