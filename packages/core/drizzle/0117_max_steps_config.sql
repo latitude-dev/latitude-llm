@@ -1,0 +1,1 @@
+ALTER TYPE "latitude"."run_error_code_enum" ADD VALUE 'max_step_count_exceeded_error';

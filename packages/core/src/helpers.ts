@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { CsvData, ParameterType } from './constants'
+import { CsvData, MAX_STEPS_CONFIG_NAME, ParameterType } from './constants'
 import { ProviderApiKey, ProviderLogDto } from './schema/types'
 
 import type {
@@ -58,6 +58,7 @@ export function promptConfigSchema({
         }),
       )
       .optional(),
+    [MAX_STEPS_CONFIG_NAME]: z.number().min(1).max(150).optional(),
   })
 }
 
