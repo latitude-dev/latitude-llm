@@ -2,15 +2,13 @@ import { z } from 'zod'
 import { CsvData, ParameterType } from './constants'
 import { ProviderApiKey, ProviderLogDto } from './schema/types'
 
-import {
-  ContentType,
+import type {
   Message,
+  AssistantMessage,
   MessageContent,
-  MessageRole,
   ToolCall,
   ToolRequestContent,
   ToolContent,
-  AssistantMessage,
   ToolMessage,
 } from '@latitude-data/compiler'
 import {
@@ -108,22 +106,22 @@ export function buildResponseMessage<T extends StreamType>({
 
   if (text && text.length > 0) {
     content.push({
-      type: ContentType.text,
+      type: 'text',
       text: text,
-    })
+    } as MessageContent)
   }
 
   if (object) {
     content.push({
-      type: ContentType.text,
+      type: 'text',
       text: objectToString(object),
-    })
+    } as MessageContent)
   }
 
   if (toolCalls.length > 0) {
     const toolContents = toolCalls.map((toolCall) => {
       return {
-        type: ContentType.toolCall,
+        type: 'tool-call',
         toolCallId: toolCall.id,
         toolName: toolCall.name,
         args: toolCall.arguments,
@@ -136,7 +134,7 @@ export function buildResponseMessage<T extends StreamType>({
   if (toolCallResponses.length > 0) {
     const toolResponseContents = toolCallResponses.map((toolCallResponse) => {
       return {
-        type: ContentType.toolResult,
+        type: 'tool-result',
         toolCallId: toolCallResponse.id,
         toolName: toolCallResponse.name,
         result:
@@ -154,12 +152,12 @@ export function buildResponseMessage<T extends StreamType>({
 
   if (toolCallResponses.length > 0) {
     return {
-      role: MessageRole.tool,
+      role: 'tool',
       content,
     } as ToolMessage
   }
 
-  return { role: MessageRole.assistant, content, toolCalls } as AssistantMessage
+  return { role: 'assistant', content, toolCalls } as AssistantMessage
 }
 
 export function buildMessagesFromResponse<T extends StreamType>({
