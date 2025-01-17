@@ -1,6 +1,7 @@
 import {
   ChainStepResponse,
   Commit,
+  DocumentType,
   ErrorableEntity,
   LogSources,
   StreamType,
@@ -9,6 +10,7 @@ import {
 } from '../../browser'
 import { publisher } from '../../events/publisher'
 import { generateUUIDIdentifier, Result } from '../../lib'
+import { runAgent } from '../chains/agents/run'
 import { runChain } from '../chains/run'
 import { createDocumentLog } from '../documentLogs'
 import { getResolvedContent } from '../documents'
@@ -126,7 +128,7 @@ export async function runDocumentAtCommit({
     return checkerResult
   }
 
-  const run = await runChain({
+  const runArgs = {
     generateUUID: () => errorableUuid,
     errorableType,
     workspace,
@@ -134,7 +136,12 @@ export async function runDocumentAtCommit({
     promptlVersion: document.promptlVersion,
     providersMap,
     source,
-  })
+  }
+
+  const run =
+    document.documentType === DocumentType.Agent
+      ? await runAgent(runArgs)
+      : await runChain(runArgs)
 
   return Result.ok({
     stream: run.stream,

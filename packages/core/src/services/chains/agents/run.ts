@@ -1,87 +1,53 @@
-import { Chain as LegacyChain } from '@latitude-data/compiler'
-import { RunErrorCodes } from '@latitude-data/constants/errors'
-import { Chain as PromptlChain } from 'promptl-ai'
-
-import { ProviderApiKey, Workspace } from '../../browser'
+import {
+  runChain,
+  SomeChain,
+  RunChainArgs,
+  ChainResponse,
+  CachedApiKeys,
+  createChainRunError,
+} from '../run'
+import { generateUUIDIdentifier } from '../../../lib/generateUUID'
+import {
+  LatitudeChainCompleteEventData,
+  LogSources,
+} from '@latitude-data/constants'
+import { ErrorableEntity } from '../../../constants'
 import {
   ChainEvent,
+  ChainEventTypes,
   ChainStepResponse,
-  ErrorableEntity,
-  LogSources,
+  StreamEventTypes,
   StreamType,
-} from '../../constants'
-import { Result, TypedResult } from '../../lib'
-import { generateUUIDIdentifier } from '../../lib/generateUUID'
-import { ai } from '../ai'
-import { getCachedResponse, setCachedResponse } from '../commits/promptCache'
-import { createRunError as createRunErrorFn } from '../runErrors/create'
-import { ChainError } from './ChainErrors'
-import { ChainStreamConsumer } from './ChainStreamConsumer'
-import { consumeStream } from './ChainStreamConsumer/consumeStream'
-import { ConfigOverrides, validateChain } from './ChainValidator'
-import { checkValidStream } from './checkValidStream'
-import { processResponse } from './ProviderProcessor'
+} from '../../../constants'
+import { Conversation } from '@latitude-data/compiler'
+import { buildMessagesFromResponse, Workspace } from '../../../browser'
+import { ChainStreamConsumer } from '../ChainStreamConsumer'
+import { getCachedResponse, setCachedResponse } from '../../commits/promptCache'
+import { validateAgentStep } from './AgentStepValidator'
 import {
   buildProviderLogDto,
   saveOrPublishProviderLogs,
-} from './ProviderProcessor/saveOrPublishProviderLogs'
+} from '../ProviderProcessor/saveOrPublishProviderLogs'
+import { ai } from '../../ai'
+import { checkValidStream } from '../checkValidStream'
+import { consumeStream } from '../ChainStreamConsumer/consumeStream'
+import { processResponse } from '../ProviderProcessor'
+import { Result } from '../../../lib'
+import { ChainError } from '../ChainErrors'
+import { RunErrorCodes } from '@latitude-data/constants/errors'
 
-export type CachedApiKeys = Map<string, ProviderApiKey>
-export type SomeChain = LegacyChain | PromptlChain
-
-export async function createChainRunError({
-  error,
-  errorableUuid,
-  errorableType,
-  persistErrors,
-}: {
-  errorableUuid: string
-  error: ChainError<RunErrorCodes>
-  persistErrors: boolean
-  errorableType?: ErrorableEntity
-}) {
-  if (!persistErrors || !errorableType) return error
-
-  const dbError = await createRunErrorFn({
-    data: {
-      errorableUuid,
-      errorableType,
-      code: error.errorCode,
-      message: error.message,
-      details: error.details,
-    },
-  }).then((r) => r.unwrap())
-
-  error.dbError = dbError
-
-  return error
+type ChainCompleteEvent = {
+  data: LatitudeChainCompleteEventData
+  event: StreamEventTypes.Latitude
+}
+function isChainComplete(value: ChainEvent): value is ChainCompleteEvent {
+  return (
+    value.event === StreamEventTypes.Latitude &&
+    value.data.type === ChainEventTypes.Complete
+  )
 }
 
-export type ChainResponse<T extends StreamType> = TypedResult<
-  ChainStepResponse<T>,
-  ChainError<RunErrorCodes>
->
-type CommonArgs<T extends boolean = true, C extends SomeChain = LegacyChain> = {
-  workspace: Workspace
-  chain: C
-  promptlVersion: number
-  source: LogSources
-  providersMap: CachedApiKeys
-  configOverrides?: ConfigOverrides
-  generateUUID?: () => string
-  persistErrors?: T
-  removeSchema?: boolean
-}
-export type RunChainArgs<
-  T extends boolean,
-  C extends SomeChain,
-> = T extends true
-  ? CommonArgs<T, C> & {
-      errorableType: ErrorableEntity
-    }
-  : CommonArgs<T, C> & { errorableType?: undefined }
-
-export async function runChain<T extends boolean, C extends SomeChain>({
+export async function runAgent<T extends boolean, C extends SomeChain>({
   workspace,
   chain,
   promptlVersion,
@@ -91,7 +57,6 @@ export async function runChain<T extends boolean, C extends SomeChain>({
   configOverrides,
   persistErrors = true,
   generateUUID = generateUUIDIdentifier,
-  removeSchema = false,
 }: RunChainArgs<T, C>) {
   const errorableUuid = generateUUID()
 
@@ -101,34 +66,74 @@ export async function runChain<T extends boolean, C extends SomeChain>({
     responseResolve = resolve
   })
 
+  const chainResult = await runChain({
+    workspace,
+    chain,
+    promptlVersion,
+    providersMap,
+    source,
+    errorableType: errorableType as ErrorableEntity,
+    configOverrides,
+    persistErrors: persistErrors as true,
+    generateUUID: () => errorableUuid,
+    removeSchema: true, // Removes the schema configuration for the AI generation, as it is reserved for the agent's Return function
+  })
+
+  let conversation: Conversation
+
   const chainStartTime = Date.now()
   const stream = new ReadableStream<ChainEvent>({
     start(controller) {
-      runStep({
-        workspace,
-        source,
-        chain,
-        promptlVersion,
-        providersMap,
-        controller,
-        errorableUuid,
-        errorableType,
-        configOverrides,
-        removeSchema,
-      })
-        .then((okResponse) => {
-          responseResolve(Result.ok(okResponse))
-        })
-        .catch(async (e: ChainError<RunErrorCodes>) => {
-          const error = await createChainRunError({
-            error: e,
+      const chainEventsReader = chainResult.stream.getReader()
+
+      const readNextChainEvent = () => {
+        chainEventsReader.read().then(({ done, value }) => {
+          if (value) {
+            if (isChainComplete(value)) {
+              const messages = buildMessagesFromResponse({
+                response: value.data.response,
+              })
+              conversation = {
+                config: value.data.config,
+                messages,
+              }
+            } else {
+              // Forward all events that are not the ChainComplete event
+              controller.enqueue(value)
+            }
+          }
+
+          if (!done) return readNextChainEvent()
+
+          // Start agent's auntonomous workflow when initial chain is done
+          runAgentStep({
+            workspace,
+            source,
+            conversation,
+            providersMap,
+            controller,
             errorableUuid,
             errorableType,
-            persistErrors,
+            previousCount: conversation.messages.length - 1,
           })
+            .then((okResponse) => {
+              responseResolve(Result.ok(okResponse))
+            })
+            .catch(async (e: ChainError<RunErrorCodes>) => {
+              const error = await createChainRunError({
+                error: e,
+                errorableUuid,
+                errorableType,
+                persistErrors,
+              })
 
-          responseResolve(Result.error(error))
+              responseResolve(Result.error(error))
+            })
         })
+      }
+
+      // Start reading the chain events
+      readNextChainEvent()
     },
   })
 
@@ -141,32 +146,26 @@ export async function runChain<T extends boolean, C extends SomeChain>({
   }
 }
 
-async function runStep({
+async function runAgentStep({
   workspace,
   source,
-  chain,
-  promptlVersion,
+  conversation,
   providersMap,
   controller,
   previousCount = 0,
   previousResponse,
   errorableUuid,
   errorableType,
-  configOverrides,
-  removeSchema,
 }: {
   workspace: Workspace
   source: LogSources
-  chain: SomeChain
-  promptlVersion: number
+  conversation: Conversation
   providersMap: CachedApiKeys
   controller: ReadableStreamDefaultController
   errorableUuid: string
   errorableType?: ErrorableEntity
   previousCount?: number
   previousResponse?: ChainStepResponse<StreamType>
-  configOverrides?: ConfigOverrides
-  removeSchema?: boolean
 }) {
   const prevText = previousResponse?.text
   const streamConsumer = new ChainStreamConsumer({
@@ -176,23 +175,20 @@ async function runStep({
   })
 
   try {
-    const step = await validateChain({
+    const step = await validateAgentStep({
       workspace,
       prevText,
-      chain,
-      promptlVersion,
+      conversation,
       providersMap,
-      configOverrides,
-      removeSchema,
     }).then((r) => r.unwrap())
 
-    if (chain instanceof PromptlChain && step.chainCompleted) {
+    if (previousResponse && step.chainCompleted) {
       streamConsumer.chainCompleted({
         step,
-        response: previousResponse!,
+        response: previousResponse,
       })
 
-      return previousResponse!
+      return previousResponse
     }
 
     const { messageCount, stepStartTime } = streamConsumer.setup(step)
@@ -224,7 +220,7 @@ async function runStep({
         ...cachedResponse,
         providerLog,
         documentLogUuid: errorableUuid,
-      } as ChainStepResponse<StreamType>
+      } as ChainStepResponse<'text'>
 
       if (step.chainCompleted) {
         streamConsumer.chainCompleted({
@@ -236,18 +232,22 @@ async function runStep({
       } else {
         streamConsumer.stepCompleted(response)
 
-        return runStep({
+        const responseMessages = buildMessagesFromResponse({ response })
+        const nextConversation = {
+          ...conversation,
+          messages: responseMessages,
+        }
+
+        return runAgentStep({
           workspace,
           source,
-          chain,
-          promptlVersion,
-          providersMap,
-          controller,
+          conversation: nextConversation,
           errorableUuid,
           errorableType,
+          providersMap,
+          controller,
           previousCount: messageCount,
           previousResponse: response,
-          configOverrides,
         })
       }
     }
@@ -305,30 +305,25 @@ async function runStep({
       response,
     })
 
-    if (step.chainCompleted) {
-      streamConsumer.chainCompleted({
-        step,
-        response,
-      })
+    streamConsumer.stepCompleted(response)
 
-      return response
-    } else {
-      streamConsumer.stepCompleted(response)
-
-      return runStep({
-        workspace,
-        source,
-        chain,
-        promptlVersion,
-        errorableUuid,
-        errorableType,
-        providersMap,
-        controller,
-        previousCount: messageCount,
-        previousResponse: response,
-        configOverrides,
-      })
+    const responseMessages = buildMessagesFromResponse({ response })
+    const nextConversation = {
+      ...conversation,
+      messages: responseMessages,
     }
+
+    return runAgentStep({
+      workspace,
+      source,
+      conversation: nextConversation,
+      errorableUuid,
+      errorableType,
+      providersMap,
+      controller,
+      previousCount: messageCount,
+      previousResponse: response,
+    })
   } catch (e: unknown) {
     const error = streamConsumer.chainError(e)
     throw error

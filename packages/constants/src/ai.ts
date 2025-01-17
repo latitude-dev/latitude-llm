@@ -154,31 +154,39 @@ export type ChainEvent =
       event: StreamEventTypes.Provider
     }
 
+export type LatitudeStepEventData = {
+  type: ChainEventTypes.Step
+  config: Config
+  isLastStep: boolean
+  messages: Message[]
+  documentLogUuid?: string
+}
+
+export type LatitudeStepCompleteEventData = {
+  type: ChainEventTypes.StepComplete
+  response: ChainStepResponse<StreamType>
+  documentLogUuid?: string
+}
+
+export type LatitudeChainCompleteEventData = {
+  type: ChainEventTypes.Complete
+  config: Config
+  messages?: Message[]
+  object?: any
+  response: ChainStepResponse<StreamType>
+  documentLogUuid?: string
+}
+
+export type LatitudeChainErrorEventData = {
+  type: ChainEventTypes.Error
+  error: Error
+}
+
 export type LatitudeEventData =
-  | {
-      type: ChainEventTypes.Step
-      config: Config
-      isLastStep: boolean
-      messages: Message[]
-      documentLogUuid?: string
-    }
-  | {
-      type: ChainEventTypes.StepComplete
-      response: ChainStepResponse<StreamType>
-      documentLogUuid?: string
-    }
-  | {
-      type: ChainEventTypes.Complete
-      config: Config
-      messages?: Message[]
-      object?: any
-      response: ChainStepResponse<StreamType>
-      documentLogUuid?: string
-    }
-  | {
-      type: ChainEventTypes.Error
-      error: Error
-    }
+  | LatitudeStepEventData
+  | LatitudeStepCompleteEventData
+  | LatitudeChainCompleteEventData
+  | LatitudeChainErrorEventData
 
 // FIXME: Move to @latitude-data/constants
 export type RunSyncAPIResponse = {
@@ -189,3 +197,13 @@ export type RunSyncAPIResponse = {
 
 // FIXME: Move to @latitude-data/constants
 export type ChatSyncAPIResponse = RunSyncAPIResponse
+
+export const toolCallResponseSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  result: z.string().or(z.record(z.any())),
+  isError: z.boolean().optional(),
+  text: z.string().optional(),
+})
+
+export type ToolCallResponse = z.infer<typeof toolCallResponseSchema>

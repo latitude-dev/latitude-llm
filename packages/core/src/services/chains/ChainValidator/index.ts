@@ -19,7 +19,7 @@ import { CachedApiKeys } from '../run'
 
 type SomeChain = LegacyChain | PromptlChain
 
-export type ValidatedStep = {
+export type ValidatedChainStep = {
   config: Config
   provider: ProviderApiKey
   conversation: Conversation
@@ -38,6 +38,7 @@ type ValidatorContext = {
   promptlVersion: number
   providersMap: CachedApiKeys
   configOverrides?: ConfigOverrides
+  removeSchema?: boolean
 }
 
 const getInputSchema = ({
@@ -165,7 +166,7 @@ const validateConfig = (
 
 export const validateChain = async (
   context: ValidatorContext,
-): Promise<TypedResult<ValidatedStep, ChainError<RunErrorCodes>>> => {
+): Promise<TypedResult<ValidatedChainStep, ChainError<RunErrorCodes>>> => {
   const {
     workspace,
     promptlVersion,
@@ -173,6 +174,7 @@ export const validateChain = async (
     chain,
     providersMap,
     configOverrides,
+    removeSchema,
   } = context
   const chainResult = await safeChain({ promptlVersion, chain, prevText })
   if (chainResult.error) return chainResult
@@ -218,7 +220,16 @@ export const validateChain = async (
       ...conversation,
       messages: rule?.messages ?? conversation.messages,
     },
-    schema,
-    output,
+
+    ...(removeSchema
+      ? {
+          // Schema is removed when called from an Agent, as this configuration is reserved for the return function.
+          schema: undefined,
+          output: 'no-schema',
+        }
+      : {
+          schema,
+          output,
+        }),
   })
 }
