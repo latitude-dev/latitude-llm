@@ -30,6 +30,27 @@ function handler(event) {
   runtime: 'cloudfront-js-1.0',
 })
 
+const blogOriginFunction = new aws.cloudfront.Function('blogOriginFunction', {
+  code: `
+  function handler(event) {
+    var request = event.request;
+
+    // Extract the path from the original request
+    var originalPath = request.uri;
+
+    // Modify the host and URI to point to the Ghost blog
+    request.headers['host'] = [{ key: 'host', value: 'latitude-blog.ghost.io' }];
+    request.uri = originalPath;
+
+    // Return the modified request
+    return request;
+}
+
+`,
+  name: 'blog-origin',
+  runtime: 'cloudfront-js-1.0',
+})
+
 const distribution = new aws.cloudfront.Distribution('latitudeRedirect', {
   enabled: true,
   isIpv6Enabled: true,
@@ -56,10 +77,44 @@ const distribution = new aws.cloudfront.Distribution('latitudeRedirect', {
       },
     ],
   },
+  orderedCacheBehaviors: [
+    {
+      pathPattern: '/blog/*',
+      allowedMethods: ['GET', 'HEAD'],
+      cachedMethods: ['GET', 'HEAD'],
+      targetOriginId: 'blog',
+      forwardedValues: {
+        queryString: false,
+        cookies: {
+          forward: 'none',
+        },
+      },
+      viewerProtocolPolicy: 'redirect-to-https',
+      minTtl: 0,
+      functionAssociations: [
+        {
+          eventType: 'viewer-request',
+          functionArn: blogOriginFunction.arn,
+        },
+      ],
+      defaultTtl: 300,
+      maxTtl: 1200,
+    },
+  ],
   origins: [
     {
       domainName: 'latitude.so',
       originId: 'latitudeOrigin',
+      customOriginConfig: {
+        httpPort: 80,
+        httpsPort: 443,
+        originSslProtocols: ['TLSv1.2'],
+        originProtocolPolicy: 'https-only',
+      },
+    },
+    {
+      domainName: 'latitude-blog.ghost.io',
+      originId: 'blog',
       customOriginConfig: {
         httpPort: 80,
         httpsPort: 443,
