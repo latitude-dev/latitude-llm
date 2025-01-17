@@ -6,15 +6,28 @@ pip install latitude-telemetry
 
 Requires Python `3.9` or higher.
 
-Go to the [documentation](TODO) to learn more.
+Go to the [documentation](https://docs.latitude.so/guides/sdk/python#telemetry) to learn more.
 
 ## Usage
 
 ```python
-TODO
+from latitude_telemetry import Instrumentors, Telemetry, TelemetryOptions
+from openai import OpenAI
+
+telemetry = Telemetry("my-api-key", TelemetryOptions(
+    instrumentors=[
+        Instrumentors.OpenAI,
+    ],
+))
+
+openai = OpenAI(api_key="my-api-key")
+openai.chat.completions.create(
+    model="gpt-4o-mini",
+    messages=[{"role": "user", "content": "Hello, I'm being instrumented!"}],
+)
 ```
 
-Find more [examples](TODO).
+Find more [examples](https://github.com/latitude-dev/latitude-llm/tree/main/examples/sdks/python/telemetry).
 
 ## Development
 
