@@ -304,7 +304,7 @@ wheels = [
 
 [[package]]
 name = "latitude-sdk"
-version = "0.1.0b7"
+version = "0.1.0b8"
 source = { editable = "." }
 dependencies = [
     { name = "httpx" },
@@ -329,7 +329,7 @@ dev = [
 requires-dist = [
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "httpx-sse", specifier = ">=0.4.0" },
-    { name = "latitude-telemetry", specifier = ">=0.1.0b5" },
+    { name = "latitude-telemetry", specifier = ">=0.1.0b6" },
     { name = "pydantic", specifier = ">=2.10.3" },
     { name = "typing-extensions", specifier = ">=4.12.2" },
 ]
@@ -347,11 +347,13 @@ dev = [
 
 [[package]]
 name = "latitude-telemetry"
-version = "0.1.0b5"
+version = "0.1.0b6"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "httpx" },
+    { name = "openinference-instrumentation-dspy" },
     { name = "openinference-instrumentation-litellm" },
+    { name = "openinference-semantic-conventions" },
     { name = "opentelemetry-api" },
     { name = "opentelemetry-instrumentation-alephalpha" },
     { name = "opentelemetry-instrumentation-anthropic" },
@@ -373,12 +375,13 @@ dependencies = [
     { name = "opentelemetry-instrumentation-vertexai" },
     { name = "opentelemetry-instrumentation-watsonx" },
     { name = "opentelemetry-sdk" },
+    { name = "opentelemetry-semantic-conventions-ai" },
     { name = "pydantic" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f8/6b/8837e03ca37c41dcd89cd7f3a5a5abb1dc53057a582ee34b55e7c640cd77/latitude_telemetry-0.1.0b5.tar.gz", hash = "sha256:dea13dd87e04751007fbf1eb4a1b09a1d446ccadfcc81276d363bd7c2615df6e", size = 124529 }
+sdist = { url = "https://files.pythonhosted.org/packages/87/00/8347857b4d2bb8c66a1a9252c79174ca761b34aa4bfc92dc887dcfea2572/latitude_telemetry-0.1.0b6.tar.gz", hash = "sha256:38f3c7a877d7bdab7ed0e6d71d5f1d2ea23fe6cd7d1231b058ed3b00110f5f99", size = 125748 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/23/4a/5e334a40953b88891731fef5b7158f612a6f7326377eb1191eddda91227e/latitude_telemetry-0.1.0b5-py3-none-any.whl", hash = "sha256:c5becf53c05dc535760c56e0cb2a0f3e7b617c6cff2e3ba23592b12e8e9a2678", size = 9850 },
+    { url = "https://files.pythonhosted.org/packages/e2/f2/888f0ee097a4e10c5b8804954984c2ade96ff300a3707752fa601ee58c47/latitude_telemetry-0.1.0b6-py3-none-any.whl", hash = "sha256:abeecc9cd499dfbcd0cfa4f3f55a5556fcc0b01653b35c431a7c74043ecf2fc1", size = 10790 },
 ]
 
 [[package]]
@@ -402,6 +405,24 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/2c/c5/03ec2b388fcd18e7797d8171a2f4a7732e56cc82e0c062095242f4cb62c8/openinference_instrumentation-0.1.20.tar.gz", hash = "sha256:a318e22937a5553f3072476e99ea7fb8654a9ff7be52714558af2461f3ed6af0", size = 11897 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/98/9e/78eeaa7917fece691c0ee48a9c514382f9cb3af2970d8254ce2a194a5b78/openinference_instrumentation-0.1.20-py3-none-any.whl", hash = "sha256:6e680e0ddb6edd829f797bc9ca82ba4c2f359d5bc64492b9e931fdf2223a1b08", size = 14646 },
+]
+
+[[package]]
+name = "openinference-instrumentation-dspy"
+version = "0.1.14"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "openinference-instrumentation" },
+    { name = "openinference-semantic-conventions" },
+    { name = "opentelemetry-api" },
+    { name = "opentelemetry-instrumentation" },
+    { name = "opentelemetry-semantic-conventions" },
+    { name = "typing-extensions" },
+    { name = "wrapt" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/a7/a9/4f210b49473f5e64fd8466d4e1a0999f8bc152c59e6a27c43af9b316ef51/openinference_instrumentation_dspy-0.1.14.tar.gz", hash = "sha256:d0f4c7a14f85bf79dfcca06923d275b484be7fad1944ff683fab5280a9889378", size = 19254 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/86/06/af72341040dec13d381a51bcdcd8105fd9c491aabab5bb7ce09ca26e7042/openinference_instrumentation_dspy-0.1.14-py3-none-any.whl", hash = "sha256:c67ae94b7b241c62e589b6db25f485683b6b798c10b0fd232adaae7302dacf74", size = 13113 },
 ]
 
 [[package]]

@@ -37,6 +37,7 @@ async def main():
 
     result = await sdk.prompts.chat(
         result.uuid,
+        # You can also pass a list of dictionaries, but type hinting won't be available
         [
             UserMessage(content="Great!"),
             UserMessage(

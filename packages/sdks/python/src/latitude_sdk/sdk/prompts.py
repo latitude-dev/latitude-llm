@@ -1,4 +1,4 @@
-from typing import Any, AsyncGenerator, Dict, Iterable, List, Optional
+from typing import Any, AsyncGenerator, Dict, List, Optional, Sequence, Union
 
 from latitude_sdk.client import (
     ChatPromptRequestBody,
@@ -25,6 +25,7 @@ from latitude_sdk.sdk.types import (
     SdkOptions,
     StreamCallbacks,
     StreamEvents,
+    _Message,
 )
 from latitude_sdk.util import Model
 
@@ -248,16 +249,18 @@ class Prompts:
             return None
 
     async def chat(
-        self, uuid: str, messages: Iterable[Message], options: ChatPromptOptions
+        self, uuid: str, messages: Sequence[Union[Message, Dict[str, Any]]], options: ChatPromptOptions
     ) -> Optional[ChatPromptResult]:
         try:
+            messages = [_Message.validate_python(message) for message in messages]
+
             async with self._client.request(
                 handler=RequestHandler.ChatPrompt,
                 params=ChatPromptRequestParams(
                     conversation_uuid=uuid,
                 ),
                 body=ChatPromptRequestBody(
-                    messages=list(messages),
+                    messages=messages,
                     stream=options.stream,
                 ),
             ) as response:

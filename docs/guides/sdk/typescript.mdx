@@ -14,9 +14,15 @@ Latitude's Typescript integration has the following main features:
 
 ## Installation
 
-import Installation from '/snippets/sdks/typescript/installation.mdx'
+To install the Latitude SDK, use your preferred package manager:
 
-<Installation />
+```bash
+npm install @latitude-data/sdk
+# or
+yarn add @latitude-data/sdk
+# or
+pnpm add @latitude-data/sdk
+```
 
 ## Getting Started
 
@@ -37,26 +43,28 @@ Check out our [cookbook](/guides/cookbook/overview#typescript) for more examples
 
 ## Telemetry
 
-Latitude can automatically trace all your LLM calls from most major providers
+Latitude can automatically trace all your LLM calls from most major providers and frameworks
 using our OpenTelemetry integration. We recommend this approach to easily get
 started using Latitude's full capabilities.
 
-Here's how to integrate with the all supported providers:
+Here's how to integrate with the all supported providers/frameworks:
 
-- [Anthropic](/guides/sdk/tracing/anthropic)
-- [AWS Bedrock](/guides/sdk/tracing/aws-bedrock)
-- [Azure OpenAI](/guides/sdk/tracing/azure-openai)
-- [Cohere](/guides/sdk/tracing/cohere)
-- [Google AI Platform](/guides/sdk/tracing/google-ai-platform)
-- [OpenAI](/guides/sdk/tracing/openai)
-- [Vercel AI SDK](/guides/sdk/tracing/vercel-ai-sdk)
-- [Vertex AI](/guides/sdk/tracing/vertex-ai)
+- [Anthropic](/guides/sdk/telemetry/anthropic)
+- [AWS Bedrock](/guides/sdk/telemetry/aws-bedrock)
+- [Azure OpenAI](/guides/sdk/telemetry/azure-openai)
+- [Cohere](/guides/sdk/telemetry/cohere)
+- [Google AI Platform](/guides/sdk/telemetry/google-ai-platform)
+- [OpenAI](/guides/sdk/telemetry/openai)
+- [Vercel AI SDK](/guides/sdk/telemetry/vercel-ai-sdk)
+- [Vertex AI](/guides/sdk/telemetry/vertex-ai)
+
+Learn more about [traces](/guides/traces/overview) and how to monitor them with Latitude.
 
 #### A note during development
 
 Latitude's OpenTelemetry integration batches requests automatically in order to
-improve performance. This is helpful in production workloads but during
-development you often want to disable batching. You can do this by setting the
+improve performance. This is helpful in production workloads, but during
+development you may want to disable batching. This can be done by setting the
 `disableBatch` option to `true`:
 
 ```typescript

@@ -36,6 +36,7 @@ async def main():
 
     chat_result = await sdk.prompts.chat(
         result.uuid,
+        # You can also pass a list of dictionaries, but type hinting won't be available
         [UserMessage(content="Tell me another joke!")],
         ChatPromptOptions(
             on_event=lambda event: print(event, "\n" * 2),

@@ -1,0 +1,32 @@
+---
+title: Langchain
+description: How to trace Langchain calls with Latitude
+---
+
+## Installation
+
+import Installation from '/snippets/sdk/installation.mdx'
+
+<Installation />
+
+## Usage
+
+To trace Langchain calls with Latitude, you need to install the Langchain SDK
+and initialize the Latitude SDK with your API key:
+
+<CodeGroup>
+
+```python Python
+from latitude_sdk import Latitude, LatitudeOptions
+from latitude_telemetry import Instrumentors, TelemetryOptions
+
+Latitude('your-api-key-here', LatitudeOptions(
+  telemetry=TelemetryOptions(
+    instrumentors=[
+      Instrumentors.Langchain,
+    ],
+  ),
+))
+```
+
+</CodeGroup>

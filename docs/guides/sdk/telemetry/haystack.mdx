@@ -1,0 +1,32 @@
+---
+title: Haystack
+description: How to trace Haystack calls with Latitude
+---
+
+## Installation
+
+import Installation from '/snippets/sdk/installation.mdx'
+
+<Installation />
+
+## Usage
+
+To trace Haystack calls with Latitude, you need to install the Haystack SDK
+and initialize the Latitude SDK with your API key:
+
+<CodeGroup>
+
+```python Python
+from latitude_sdk import Latitude, LatitudeOptions
+from latitude_telemetry import Instrumentors, TelemetryOptions
+
+Latitude('your-api-key-here', LatitudeOptions(
+  telemetry=TelemetryOptions(
+    instrumentors=[
+      Instrumentors.Haystack,
+    ],
+  ),
+))
+```
+
+</CodeGroup>

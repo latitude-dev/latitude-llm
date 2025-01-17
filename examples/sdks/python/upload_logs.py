@@ -21,6 +21,7 @@ async def main():
 
     result = await sdk.logs.create(
         "prompt-path",
+        # You can also pass a list of dictionaries, but type hinting won't be available
         [
             UserMessage(content="Tell me a joke about Python!"),
             AssistantMessage(content="Python is a great language!"),

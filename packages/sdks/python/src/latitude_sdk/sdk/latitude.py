@@ -1,6 +1,5 @@
 from typing import Optional
 
-from latitude_telemetry import InternalOptions as TelemetryInternalOptions
 from latitude_telemetry import Telemetry, TelemetryOptions
 
 from latitude_sdk.client import Client, ClientOptions, RouterOptions
@@ -79,9 +78,6 @@ class Latitude:
         )
 
         if self._options.telemetry:
-            self._options.telemetry.internal = TelemetryInternalOptions(
-                **{**dict(self._options.internal), **dict(self._options.telemetry.internal or {})}
-            )
             self.telemetry = Telemetry(api_key, self._options.telemetry)
 
         self.prompts = Prompts(self._client, self._options)

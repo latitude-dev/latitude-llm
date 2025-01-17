@@ -71,6 +71,7 @@ class StrEnum(str, Enum):
 
 Field = pydantic.Field
 Config = pydantic.ConfigDict
+Adapter = pydantic.TypeAdapter
 
 
 class Model(pydantic.BaseModel):

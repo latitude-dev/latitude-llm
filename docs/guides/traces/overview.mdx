@@ -50,12 +50,14 @@ This process will run your trace through our LLM agent which will generate the b
 
 Spans are a great way to split complex workfows into its individual steps and analyze them individually. Spans can be added to a trace by wrapping the relevant code section in a `telemetry.span` method:
 
-```typescript
+<CodeGroup>
+
+```typescript Javascript
 import { Latitude } from '@latitude-data/sdk'
 
-const latitude = new Latitude('YOUR_API_KEY')
+const sdk = new Latitude('YOUR_API_KEY', { telemetry: {} })
 
-const completion = latitude.telemetry.span(
+const completion = sdk.telemetry.span(
   {
     name: 'handleChat',
   },
@@ -68,6 +70,22 @@ const completion = latitude.telemetry.span(
   },
 )
 ```
+
+```python Python
+from latitude_sdk import Latitude, LatitudeOptions
+from latitude_telemetry import TelemetryOptions
+
+sdk = Latitude('YOUR_API_KEY', LatitudeOptions(telemetry=TelemetryOptions()))
+
+with sdk.telemetry.span("handleChat"):
+  openai.chat.completions.create(
+    model='gpt-4o-mini',
+    max_tokens=1000,
+    # ...
+  )
+```
+
+</CodeGroup>
 
 You can add several attributes to spans such as serializable metadata, a distinct ID, and more.
 
@@ -82,18 +100,20 @@ Spans accept a variety of attributes that can be used to enrich the trace and pr
 
 These attributes can be added to a span by passing them as an object to the `telemetry.span` method:
 
-```typescript
+<CodeGroup>
+
+```typescript Javascript
 import { Latitude } from '@latitude-data/sdk'
 
-const latitude = new Latitude('YOUR_API_KEY')
+const sdk = new Latitude('YOUR_API_KEY', { telemetry: {} })
 
-const completion = latitude.telemetry.span(
+const completion = sdk.telemetry.span(
   {
     name: 'handleChat',
+    distinctId: '123',
     metadata: {
       userId: '123',
     },
-    distinctId: '123',
     // ...
   },
   () => {
@@ -106,6 +126,29 @@ const completion = latitude.telemetry.span(
 )
 ```
 
+```python Python
+from latitude_sdk import Latitude, LatitudeOptions
+from latitude_telemetry import TelemetryOptions
+
+sdk = Latitude('YOUR_API_KEY', LatitudeOptions(telemetry=TelemetryOptions()))
+
+with sdk.telemetry.span(
+  name="handleChat",
+  distinct_id="123",
+  metadata={
+    "userId": "123",
+  },
+  # ...
+):
+  openai.chat.completions.create(
+    model='gpt-4o-mini',
+    max_tokens=1000,
+    # ...
+  )
+```
+
+</CodeGroup>
+
 ## Assigning spans to prompts
 
 If your are using Latitude's prompt manager to iterate a prompt, it is
@@ -116,18 +159,20 @@ evaluations, and more.
 
 You can easily do so by wrapping a generation in a span with a pointer to the prompt:
 
-```typescript
+<CodeGroup>
+
+```typescript Javascript
 import { Latitude } from '@latitude-data/sdk'
 
-const latitude = new Latitude('YOUR_API_KEY')
+const sdk = new Latitude('YOUR_API_KEY', { telemetry: {} })
 
-const completion = latitude.telemetry.span(
+const completion = sdk.telemetry.span(
   {
     name: 'handleChat',
     prompt: {
       uuid: 'YOUR_PROMPT_UUID',
-      versionUuid: 'YOUR_PROMPT_VERSION_UUID','bb // Optiona
-      parameters: { user_message: 'Hello' }, /'bb/ Optional
+      versionUuid: 'YOUR_PROMPT_VERSION_UUID', // Optional
+      parameters: { user_message: 'Hello' }, // Optional
     },
   },
   () => {
@@ -139,3 +184,26 @@ const completion = latitude.telemetry.span(
   },
 )
 ```
+
+```python Python
+from latitude_sdk import Latitude, LatitudeOptions
+from latitude_telemetry import TelemetryOptions, SpanPrompt
+
+sdk = Latitude('YOUR_API_KEY', LatitudeOptions(telemetry=TelemetryOptions()))
+
+with sdk.telemetry.span(
+  name="handleChat",
+  prompt=SpanPrompt(
+    uuid="YOUR_PROMPT_UUID",
+    version_uuid="YOUR_PROMPT_VERSION_UUID", # Optional
+    parameters={ "user_message": "Hello" }, # Optional
+  ),
+):
+  openai.chat.completions.create(
+    model='gpt-4o-mini',
+    max_tokens=1000,
+    # ...
+  )
+```
+
+</CodeGroup>

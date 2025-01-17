@@ -121,6 +121,11 @@ class Telemetry:
 
             self._instrumentors[Instrumentors.Cohere] = CohereInstrumentor()
 
+        if is_package_installed("dspy") or is_package_installed("dspy-ai") or is_package_installed("dsp"):
+            from openinference.instrumentation.dspy import DSPyInstrumentor
+
+            self._instrumentors[Instrumentors.DSPy] = DSPyInstrumentor()
+
         if is_package_installed("google-generativeai"):
             from opentelemetry.instrumentation.google_generativeai import GoogleGenerativeAiInstrumentor
 
@@ -141,8 +146,6 @@ class Telemetry:
 
             self._instrumentors[Instrumentors.Langchain] = LangchainInstrumentor()
 
-        # Note: LiteLLM instrumentor does not work by itself yet, needs the provider instrumentor too
-        # https://github.com/Arize-ai/openinference/issues/604
         if is_package_installed("litellm"):
             from openinference.instrumentation.litellm import LiteLLMInstrumentor
 

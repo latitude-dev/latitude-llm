@@ -1,7 +1,10 @@
+import json
 import time
 from typing import Any, Dict, List, Sequence
 
 import httpx
+from openinference.semconv import trace as oinfsem
+from opentelemetry import semconv_ai as otelsem
 from opentelemetry.sdk import trace as otel
 from opentelemetry.sdk.trace.export import SpanExporter, SpanExportResult
 from opentelemetry.trace import format_span_id, format_trace_id
@@ -109,6 +112,8 @@ class Exporter(SpanExporter):
     def _serialize_attributes(self, attributes: Dict[str, Any]) -> List[Attribute]:
         serialized_attributes: List[Attribute] = []
 
+        attributes = self._enrich_semantics(attributes)
+
         for key, value in attributes.items():
             serialized_value = AttributeValue(string=str(value))
 
@@ -124,9 +129,109 @@ class Exporter(SpanExporter):
             elif isinstance(value, float):
                 serialized_value = AttributeValue(integer=int(value))
 
+            elif isinstance(value, dict):
+                serialized_value = AttributeValue(string=json.dumps(value))
+
             serialized_attributes.append(Attribute(key=key, value=serialized_value))
 
         return serialized_attributes
+
+    def _enrich_semantics(self, attributes: Dict[str, Any]) -> Dict[str, Any]:
+        otel_attributes: Dict[str, Any] = {}
+
+        if oinfsem.SpanAttributes.LLM_SYSTEM in attributes:
+            otel_attributes[otelsem.SpanAttributes.LLM_SYSTEM] = attributes[oinfsem.SpanAttributes.LLM_SYSTEM]
+
+        if (
+            oinfsem.SpanAttributes.LLM_PROVIDER in attributes
+            and otelsem.SpanAttributes.LLM_SYSTEM not in otel_attributes
+        ):
+            otel_attributes[otelsem.SpanAttributes.LLM_SYSTEM] = attributes[oinfsem.SpanAttributes.LLM_PROVIDER]
+
+        if oinfsem.SpanAttributes.LLM_MODEL_NAME in attributes:
+            otel_attributes[otelsem.SpanAttributes.LLM_REQUEST_MODEL] = attributes[
+                oinfsem.SpanAttributes.LLM_MODEL_NAME
+            ]
+            otel_attributes[otelsem.SpanAttributes.LLM_RESPONSE_MODEL] = attributes[
+                oinfsem.SpanAttributes.LLM_MODEL_NAME
+            ]
+
+        if otelsem.SpanAttributes.LLM_REQUEST_TYPE not in attributes and (
+            otelsem.SpanAttributes.LLM_REQUEST_MODEL in attributes
+            or oinfsem.SpanAttributes.LLM_MODEL_NAME in attributes
+        ):
+            otel_attributes[otelsem.SpanAttributes.LLM_REQUEST_TYPE] = otelsem.LLMRequestTypeValues.COMPLETION.value
+
+        if oinfsem.SpanAttributes.LLM_INVOCATION_PARAMETERS in attributes:
+            if "max_tokens" in attributes[oinfsem.SpanAttributes.LLM_INVOCATION_PARAMETERS]:
+                otel_attributes[otelsem.SpanAttributes.LLM_REQUEST_MAX_TOKENS] = attributes[
+                    oinfsem.SpanAttributes.LLM_INVOCATION_PARAMETERS
+                ]["max_tokens"]
+
+            if "temperature" in attributes[oinfsem.SpanAttributes.LLM_INVOCATION_PARAMETERS]:
+                otel_attributes[otelsem.SpanAttributes.LLM_REQUEST_TEMPERATURE] = attributes[
+                    oinfsem.SpanAttributes.LLM_INVOCATION_PARAMETERS
+                ]["temperature"]
+
+            if "top_p" in attributes[oinfsem.SpanAttributes.LLM_INVOCATION_PARAMETERS]:
+                otel_attributes[otelsem.SpanAttributes.LLM_REQUEST_TOP_P] = attributes[
+                    oinfsem.SpanAttributes.LLM_INVOCATION_PARAMETERS
+                ]["top_p"]
+
+            if "top_k" in attributes[oinfsem.SpanAttributes.LLM_INVOCATION_PARAMETERS]:
+                otel_attributes[otelsem.SpanAttributes.LLM_TOP_K] = attributes[
+                    oinfsem.SpanAttributes.LLM_INVOCATION_PARAMETERS
+                ]["top_k"]
+
+            if "frequency_penalty" in attributes[oinfsem.SpanAttributes.LLM_INVOCATION_PARAMETERS]:
+                otel_attributes[otelsem.SpanAttributes.LLM_FREQUENCY_PENALTY] = attributes[
+                    oinfsem.SpanAttributes.LLM_INVOCATION_PARAMETERS
+                ]["frequency_penalty"]
+
+            if "presence_penalty" in attributes[oinfsem.SpanAttributes.LLM_INVOCATION_PARAMETERS]:
+                otel_attributes[otelsem.SpanAttributes.LLM_PRESENCE_PENALTY] = attributes[
+                    oinfsem.SpanAttributes.LLM_INVOCATION_PARAMETERS
+                ]["presence_penalty"]
+
+            if "stop_sequences" in attributes[oinfsem.SpanAttributes.LLM_INVOCATION_PARAMETERS]:
+                otel_attributes[otelsem.SpanAttributes.LLM_CHAT_STOP_SEQUENCES] = attributes[
+                    oinfsem.SpanAttributes.LLM_INVOCATION_PARAMETERS
+                ]["stop_sequences"]
+
+        if oinfsem.SpanAttributes.LLM_TOKEN_COUNT_PROMPT in attributes:
+            otel_attributes[otelsem.SpanAttributes.LLM_USAGE_PROMPT_TOKENS] = attributes[
+                oinfsem.SpanAttributes.LLM_TOKEN_COUNT_PROMPT
+            ]
+
+        if oinfsem.SpanAttributes.LLM_TOKEN_COUNT_COMPLETION in attributes:
+            otel_attributes[otelsem.SpanAttributes.LLM_USAGE_COMPLETION_TOKENS] = attributes[
+                oinfsem.SpanAttributes.LLM_TOKEN_COUNT_COMPLETION
+            ]
+
+        if oinfsem.SpanAttributes.LLM_TOKEN_COUNT_TOTAL in attributes:
+            otel_attributes[otelsem.SpanAttributes.LLM_USAGE_TOTAL_TOKENS] = attributes[
+                oinfsem.SpanAttributes.LLM_TOKEN_COUNT_TOTAL
+            ]
+
+        for message in filter(
+            lambda key: key.startswith(oinfsem.SpanAttributes.LLM_INPUT_MESSAGES),
+            attributes.keys(),
+        ):
+            parts = message.split(".")
+            index = parts[2]
+            fields = ".".join(parts[4:])
+            otel_attributes[f"{otelsem.SpanAttributes.LLM_PROMPTS}.{index}.{fields}"] = attributes[message]
+
+        for message in filter(
+            lambda key: key.startswith(oinfsem.SpanAttributes.LLM_OUTPUT_MESSAGES),
+            attributes.keys(),
+        ):
+            parts = message.split(".")
+            index = parts[2]
+            fields = ".".join(parts[4:])
+            otel_attributes[f"{otelsem.SpanAttributes.LLM_COMPLETIONS}.{index}.{fields}"] = attributes[message]
+
+        return {**attributes, **otel_attributes}
 
     def _send(self, spans: List[ResourceSpan]) -> None:
         client = httpx.Client(

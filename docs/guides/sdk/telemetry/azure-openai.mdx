@@ -5,16 +5,18 @@ description: How to trace Azure OpenAI calls with Latitude
 
 ## Installation
 
-import Installation from '/snippets/sdks/typescript/installation.mdx'
+import Installation from '/snippets/sdk/installation.mdx'
 
 <Installation />
 
 ## Usage
 
-To trace Azure OpenAI calls with Latitude, you need to install the Azure OpenAI
-SDK and initialize Latitude with your API key:
+To trace Azure OpenAI calls with Latitude, you need to install the Azure OpenAI SDK
+and initialize the Latitude SDK with your API key:
 
-```typescript
+<CodeGroup>
+
+```typescript Javascript
 import * as AzureOpenAI from '@azure/openai'
 import { Latitude } from '@latitude-data/sdk'
 
@@ -26,3 +28,5 @@ new Latitude('your-api-key-here', {
   },
 })
 ```
+
+</CodeGroup>
