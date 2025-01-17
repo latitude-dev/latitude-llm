@@ -13,7 +13,8 @@ This section is enclosed between three dashes (`---`) and written in YAML format
 
 ```yaml
 ---
-model: gpt-4o
+provider: OpenAI
+model: gpt-4o-mini
 temperature: 0.6
 top_p: 0.9
 ---
@@ -73,8 +74,16 @@ It is recommended to set either temperature or topP, but not both.
 <Note>
   Not configuring temperature, or setting it to 0 will cache the response for the prompt, and the same response will be returned when the prompt is called again with the same parameters.
 
-  [Learn more about caching in Latitude](/guides/prompt-manager/cache)
+[Learn more about caching in Latitude](/guides/prompt-manager/cache)
+
 </Note>
+
+#### **`maxSteps`**
+
+Maximum number of steps to execute.
+
+When using [Chains](/promptl/advanced/chains), you can configure the maximum number of steps to execute. Reaching this limit will stop the execution of the chain and return an error.
+Defaults to 20, and has a maximum value of 150.
 
 #### **`maxTokens`**
 

@@ -4,10 +4,13 @@ import { Chain as PromptlChain } from 'promptl-ai'
 
 import { ProviderApiKey, Workspace } from '../../browser'
 import {
+  ABSOLUTE_MAX_STEPS,
   ChainEvent,
   ChainStepResponse,
+  DEFAULT_MAX_STEPS,
   ErrorableEntity,
   LogSources,
+  MAX_STEPS_CONFIG_NAME,
   StreamType,
 } from '../../constants'
 import { Result, TypedResult } from '../../lib'
@@ -28,6 +31,9 @@ import {
 
 export type CachedApiKeys = Map<string, ProviderApiKey>
 export type SomeChain = LegacyChain | PromptlChain
+
+export const stepLimitExceededErrorMessage = (maxSteps: number) =>
+  `Limit of ${maxSteps} steps exceeded. Configure the '${MAX_STEPS_CONFIG_NAME}' setting in your prompt configuration to allow for more steps.`
 
 export async function createChainRunError({
   error,
@@ -154,6 +160,7 @@ async function runStep({
   errorableType,
   configOverrides,
   removeSchema,
+  stepCount = 0,
 }: {
   workspace: Workspace
   source: LogSources
@@ -167,6 +174,7 @@ async function runStep({
   previousResponse?: ChainStepResponse<StreamType>
   configOverrides?: ConfigOverrides
   removeSchema?: boolean
+  stepCount?: number
 }) {
   const prevText = previousResponse?.text
   const streamConsumer = new ChainStreamConsumer({
@@ -193,6 +201,22 @@ async function runStep({
       })
 
       return previousResponse!
+    }
+
+    const maxSteps = Math.min(
+      (step.conversation.config[MAX_STEPS_CONFIG_NAME] as number | undefined) ??
+        DEFAULT_MAX_STEPS,
+      ABSOLUTE_MAX_STEPS,
+    )
+    const exceededMaxSteps =
+      chain instanceof PromptlChain
+        ? stepCount >= maxSteps
+        : stepCount > maxSteps
+    if (exceededMaxSteps) {
+      throw new ChainError({
+        message: stepLimitExceededErrorMessage(maxSteps),
+        code: RunErrorCodes.MaxStepCountExceededError,
+      })
     }
 
     const { messageCount, stepStartTime } = streamConsumer.setup(step)
@@ -248,6 +272,7 @@ async function runStep({
           previousCount: messageCount,
           previousResponse: response,
           configOverrides,
+          stepCount: ++stepCount,
         })
       }
     }
@@ -327,6 +352,7 @@ async function runStep({
         previousCount: messageCount,
         previousResponse: response,
         configOverrides,
+        stepCount: ++stepCount,
       })
     }
   } catch (e: unknown) {

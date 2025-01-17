@@ -8,6 +8,7 @@ description: Chains and Steps are used to create multi-step prompts that can int
 Chains in PromptL allow you to break complex workflows into smaller, manageable steps. Each step generates a response, which can then be used in subsequent steps. This approach improves the model's ability to perform complex tasks and provides greater control over dynamic conversations.
 
 With Chains, you can:
+
 - Process tasks incrementally to guide the model step-by-step.
 - Store and reuse intermediate results dynamically.
 - Customize step-specific configurations for more efficient execution.
@@ -20,6 +21,7 @@ With Chains, you can:
 Define steps in your prompt using the `<step>` tag. The engine pauses after each step, waits for the model's response, and adds it as an assistant message before continuing.
 
 ### Basic Syntax
+
 ```xml
 <step>
   Analyze the following text and identify the main idea:
@@ -35,7 +37,9 @@ Define steps in your prompt using the `<step>` tag. The engine pauses after each
 ```
 
 ### Step with Custom Configuration
+
 Override the default configuration by adding attributes to the `<step>` tag:
+
 ```tsx
 <step model="gpt-3.5-turbo" temperature={{0.5}}>
   Rewrite the following paragraph in simpler language:
@@ -51,6 +55,7 @@ Override the default configuration by adding attributes to the `<step>` tag:
 ## Advanced Features
 
 ### Storing Step Responses
+
 You can store the text response of a step in a variable using the `as` attribute. This allows you to reuse the response in later steps or logic blocks.
 
 ```xml
@@ -67,6 +72,7 @@ You can store the text response of a step in a variable using the `as` attribute
 ```
 
 #### Parse Step Responses as JSON
+
 The response of a step will be automatically parsed as JSON if the JSON output schema is defined.
 
 ```xml
@@ -85,6 +91,7 @@ The response of a step will be automatically parsed as JSON if the JSON output s
 [Learn more about JSON Output](/guides/prompt-manager/json-output).
 
 ### Storing Raw Messages
+
 Some providers will return additional metadata along with the response. To store the entire message object, instead of just the text response (e.g., role, content, and additional metadata), use the `raw` attribute:
 
 ```xml
@@ -100,6 +107,7 @@ The `content` attribute will always be defined as an array of content objects, w
 ---
 
 ### Isolating Steps
+
 Use the `isolated` attribute to prevent a step from inheriting context from previous steps. This can reduce unnecessary costs or confusion for the model.
 
 ```xml
@@ -124,10 +132,34 @@ In this example, the final step does not need to conside the full texts used in 
 
 ---
 
+### Limiting the number of steps
+
+<Note>This feature is only available on the Latitude platform.</Note>
+
+You can limit the number of steps executed in a chain by setting a `maxSteps` attribute on the main configuration section. This can help prevent infinite loops or excessive processing in long chains when creating complex workflows with steps within loops.
+
+```xml
+---
+maxSteps: 5
+---
+
+{{ for item in list }}
+  <step>
+    ...
+  </step>
+{{ endfor }}
+```
+
+Read more about this configuration in the [Latitude Prompt Configuration](/guides/prompt-manager/configuration#maxsteps) guide.
+
+---
+
 ## Real-World Use Cases
 
 ### Multi-Step Workflow
+
 Chains are ideal for breaking down tasks like:
+
 1. Analyzing data.
 2. Generating intermediate results.
 3. Combining results for a final output.
@@ -146,7 +178,9 @@ Chains are ideal for breaking down tasks like:
 ```
 
 ### Decision Trees
+
 Use logic to adapt workflows based on intermediate results:
+
 ```xml
 <step as="classification">
   Classify this document into one of the following categories: A, B, or C.
@@ -176,6 +210,7 @@ To execute chains, use the `Chain` class. The chain evaluates the prompt step-by
 To run a step, execute the `step` method of the chain instance. The first time `step` is called, it should not include any arguments. Subsequent calls must always pass the model response message from the previous step.
 
 ### Example: Using the Chain Class
+
 ```javascript
 import { Chain } from 'promptl-ai';
 import OpenAI from 'openai';

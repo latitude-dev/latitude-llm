@@ -5,13 +5,19 @@ import {
   ChainResponse,
   CachedApiKeys,
   createChainRunError,
+  stepLimitExceededErrorMessage,
 } from '../run'
 import { generateUUIDIdentifier } from '../../../lib/generateUUID'
 import {
   LatitudeChainCompleteEventData,
   LogSources,
 } from '@latitude-data/constants'
-import { ErrorableEntity } from '../../../constants'
+import {
+  MAX_STEPS_CONFIG_NAME,
+  ErrorableEntity,
+  DEFAULT_MAX_STEPS,
+  ABSOLUTE_MAX_STEPS,
+} from '../../../constants'
 import {
   ChainEvent,
   ChainEventTypes,
@@ -80,6 +86,7 @@ export async function runAgent<T extends boolean, C extends SomeChain>({
   })
 
   let conversation: Conversation
+  let stepCount = 0
 
   const chainStartTime = Date.now()
   const stream = new ReadableStream<ChainEvent>({
@@ -100,6 +107,16 @@ export async function runAgent<T extends boolean, C extends SomeChain>({
             } else {
               // Forward all events that are not the ChainComplete event
               controller.enqueue(value)
+
+              if (value.data.type === ChainEventTypes.StepComplete) {
+                stepCount++
+              }
+            }
+
+            if (value.data.type === ChainEventTypes.Error) {
+              return responseResolve(
+                Result.error(value.data.error as ChainError<RunErrorCodes>),
+              )
             }
           }
 
@@ -114,6 +131,7 @@ export async function runAgent<T extends boolean, C extends SomeChain>({
             controller,
             errorableUuid,
             errorableType,
+            stepCount,
             previousCount: conversation.messages.length - 1,
           })
             .then((okResponse) => {
@@ -156,6 +174,7 @@ async function runAgentStep({
   previousResponse,
   errorableUuid,
   errorableType,
+  stepCount,
 }: {
   workspace: Workspace
   source: LogSources
@@ -166,6 +185,7 @@ async function runAgentStep({
   errorableType?: ErrorableEntity
   previousCount?: number
   previousResponse?: ChainStepResponse<StreamType>
+  stepCount: number
 }) {
   const prevText = previousResponse?.text
   const streamConsumer = new ChainStreamConsumer({
@@ -189,6 +209,18 @@ async function runAgentStep({
       })
 
       return previousResponse
+    }
+
+    const maxSteps = Math.min(
+      (conversation.config[MAX_STEPS_CONFIG_NAME] as number | undefined) ??
+        DEFAULT_MAX_STEPS,
+      ABSOLUTE_MAX_STEPS,
+    )
+    if (maxSteps && stepCount >= maxSteps) {
+      throw new ChainError({
+        message: stepLimitExceededErrorMessage(maxSteps),
+        code: RunErrorCodes.MaxStepCountExceededError,
+      })
     }
 
     const { messageCount, stepStartTime } = streamConsumer.setup(step)
@@ -248,6 +280,7 @@ async function runAgentStep({
           controller,
           previousCount: messageCount,
           previousResponse: response,
+          stepCount: stepCount + 1,
         })
       }
     }
@@ -323,6 +356,7 @@ async function runAgentStep({
       controller,
       previousCount: messageCount,
       previousResponse: response,
+      stepCount: stepCount + 1,
     })
   } catch (e: unknown) {
     const error = streamConsumer.chainError(e)
