@@ -42,7 +42,11 @@ export class DocumentLogsRepository extends Repository<DocumentLog> {
       .$dynamic()
   }
 
-  async findByUuid(uuid: string) {
+  async findByUuid(uuid: string | undefined) {
+    if (!uuid) {
+      return Result.error(new NotFoundError('DocumentLog not found'))
+    }
+
     const result = await this.scope.where(eq(documentLogs.uuid, uuid))
 
     if (!result.length) {

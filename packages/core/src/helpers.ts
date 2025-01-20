@@ -85,6 +85,7 @@ type BuildMessageParams<T extends StreamType> = T extends 'object'
         toolCallResponses?: ToolCallResponse[]
       }
     }
+
 export function buildResponseMessage<T extends StreamType>({
   type,
   data,
@@ -183,50 +184,30 @@ export function buildMessagesFromResponse<T extends StreamType>({
           })
         : undefined
 
-  const previousMessages = response.providerLog
-    ? response.providerLog.messages
-    : []
-  return [...previousMessages, ...(message ? [message] : [])]
+  return message ? ([message] as Message[]) : []
+}
+
+export function buildAllMessagesFromResponse<T extends StreamType>({
+  response,
+}: {
+  response: ChainStepResponse<T>
+}) {
+  const previousMessages = response.providerLog?.messages ?? []
+  const messages = buildMessagesFromResponse({ response })
+
+  return [...previousMessages, ...messages]
 }
 
 export function buildConversation(providerLog: ProviderLogDto) {
   let messages: Message[] = [...providerLog.messages]
-  let message: Message | undefined = undefined
 
-  if (providerLog.response && providerLog.response.length > 0) {
-    message = {
-      role: 'assistant',
-      content: [
-        {
-          type: 'text',
-          text: providerLog.response,
-        },
-      ],
-      toolCalls: [],
-    } as Message
-  }
-
-  if (providerLog.toolCalls.length > 0) {
-    const content = providerLog.toolCalls.map((toolCall) => {
-      return {
-        type: 'tool-call',
-        toolCallId: toolCall.id,
-        toolName: toolCall.name,
-        args: toolCall.arguments,
-      } as ToolRequestContent
-    })
-
-    if (message) {
-      message.content = (message.content as MessageContent[]).concat(content)
-      message.toolCalls = providerLog.toolCalls
-    } else {
-      message = {
-        role: 'assistant',
-        content: content,
-        toolCalls: providerLog.toolCalls,
-      } as Message
-    }
-  }
+  const message = buildResponseMessage({
+    type: 'text',
+    data: {
+      text: providerLog.response,
+      toolCalls: providerLog.toolCalls,
+    },
+  })
 
   if (message) {
     messages.push(message)

@@ -2,9 +2,9 @@ import { useCallback, useContext, useEffect, useRef, useState } from 'react'
 
 import {
   ContentType,
-  Conversation,
   Message as ConversationMessage,
   MessageRole,
+  ToolMessage,
 } from '@latitude-data/compiler'
 import {
   ChainEventTypes,
@@ -31,15 +31,31 @@ import { readStreamableValue } from 'ai/rsc'
 
 import { DocumentEditorContext } from '..'
 import Actions, { ActionsState } from './Actions'
+import { useMessages } from './useMessages'
+import { type PromptlVersion } from '@latitude-data/web-ui'
 
-export default function Chat({
+function buildMessage({ input }: { input: string | ToolMessage[] }) {
+  if (typeof input === 'string') {
+    return [
+      {
+        role: MessageRole.user,
+        content: [{ type: ContentType.text, text: input }],
+      } as ConversationMessage,
+    ]
+  }
+  return input
+}
+
+export default function Chat<V extends PromptlVersion>({
   document,
+  promptlVersion,
   parameters,
   clearChat,
   expandParameters,
   setExpandParameters,
 }: {
   document: DocumentVersion
+  promptlVersion: V
   parameters: Record<string, unknown>
   clearChat: () => void
 } & ActionsState) {
@@ -62,25 +78,11 @@ export default function Chat({
   const runChainOnce = useRef(false)
   // Index where the chain ends and the chat begins
   const [chainLength, setChainLength] = useState<number>(Infinity)
-  const [conversation, setConversation] = useState<Conversation | undefined>()
   const [responseStream, setResponseStream] = useState<string | undefined>()
   const [isStreaming, setIsStreaming] = useState(false)
-
-  const addMessageToConversation = useCallback(
-    (message: ConversationMessage) => {
-      let newConversation: Conversation
-      setConversation((prevConversation) => {
-        newConversation = {
-          ...prevConversation,
-          messages: [...(prevConversation?.messages ?? []), message],
-        } as Conversation
-        return newConversation
-      })
-      return newConversation!
-    },
-    [],
-  )
-
+  const { messages, addMessages, unresponedToolCalls } = useMessages<V>({
+    version: promptlVersion,
+  })
   const startStreaming = useCallback(() => {
     setError(undefined)
     setUsage({
@@ -122,7 +124,7 @@ export default function Chat({
 
         if ('messages' in data) {
           setResponseStream(undefined)
-          data.messages!.forEach(addMessageToConversation)
+          addMessages(data.messages ?? [])
           messagesCount += data.messages!.length
         }
 
@@ -148,6 +150,7 @@ export default function Chat({
             }
             break
           }
+
           default:
             break
         }
@@ -163,7 +166,7 @@ export default function Chat({
     commit.uuid,
     parameters,
     runDocumentAction,
-    addMessageToConversation,
+    addMessages,
     startStreaming,
     stopStreaming,
   ])
@@ -176,14 +179,15 @@ export default function Chat({
   }, [runDocument])
 
   const submitUserMessage = useCallback(
-    async (input: string) => {
+    async (input: string | ToolMessage[]) => {
       if (!documentLogUuid) return // This should not happen
 
-      const message: ConversationMessage = {
-        role: MessageRole.user,
-        content: [{ type: ContentType.text, text: input }],
+      const newMessages = buildMessage({ input })
+
+      // Only in Chat mode we add optimistically the message
+      if (typeof input === 'string') {
+        addMessages(newMessages)
       }
-      addMessageToConversation(message)
 
       let response = ''
       startStreaming()
@@ -191,7 +195,7 @@ export default function Chat({
       try {
         const { output } = await addMessagesAction({
           documentLogUuid,
-          messages: [message],
+          messages: newMessages,
         })
 
         for await (const serverEvent of readStreamableValue(output)) {
@@ -201,7 +205,7 @@ export default function Chat({
 
           if ('messages' in data) {
             setResponseStream(undefined)
-            data.messages!.forEach(addMessageToConversation)
+            addMessages(data.messages ?? [])
           }
 
           switch (event) {
@@ -222,6 +226,7 @@ export default function Chat({
               }
               break
             }
+
             default:
               break
           }
@@ -235,7 +240,7 @@ export default function Chat({
     [
       documentLogUuid,
       addMessagesAction,
-      addMessageToConversation,
+      addMessages,
       startStreaming,
       stopStreaming,
     ],
@@ -255,24 +260,22 @@ export default function Chat({
         className='flex flex-col gap-3 flex-grow flex-shrink min-h-0 custom-scrollbar scrollable-indicator pb-12'
       >
         <MessageList
-          messages={conversation?.messages.slice(0, chainLength - 1) ?? []}
+          messages={messages.slice(0, chainLength - 1) ?? []}
           parameters={Object.keys(parameters)}
           collapseParameters={!expandParameters}
         />
-        {(conversation?.messages.length ?? 0) >= chainLength && (
+        {(messages.length ?? 0) >= chainLength && (
           <>
             <MessageList
-              messages={
-                conversation?.messages.slice(chainLength - 1, chainLength) ?? []
-              }
+              messages={messages.slice(chainLength - 1, chainLength) ?? []}
             />
             {time && <Timer timeMs={time} />}
           </>
         )}
-        {(conversation?.messages.length ?? 0) > chainLength && (
+        {(messages.length ?? 0) > chainLength && (
           <>
             <Text.H6M>Chat</Text.H6M>
-            <MessageList messages={conversation!.messages.slice(chainLength)} />
+            <MessageList messages={messages.slice(chainLength)} />
           </>
         )}
         {error ? (
@@ -280,7 +283,7 @@ export default function Chat({
         ) : (
           <StreamMessage
             responseStream={responseStream}
-            conversation={conversation}
+            messages={messages}
             chainLength={chainLength}
           />
         )}
@@ -296,6 +299,8 @@ export default function Chat({
           placeholder='Enter followup message...'
           disabled={isStreaming}
           onSubmit={submitUserMessage}
+          toolRequests={unresponedToolCalls}
+          addMessages={addMessages}
         />
       </div>
     </div>
@@ -342,12 +347,8 @@ export function TokenUsage({
           }
         >
           <div className='flex flex-col gap-2'>
-            <Text.H6M color='foregroundMuted'>
-              {usage?.promptTokens || 0} prompt tokens
-            </Text.H6M>
-            <Text.H6M color='foregroundMuted'>
-              {usage?.completionTokens || 0} completion tokens
-            </Text.H6M>
+            <span>{usage?.promptTokens || 0} prompt tokens</span>
+            <span>{usage?.completionTokens || 0} completion tokens</span>
           </div>
         </Tooltip>
       ) : (
@@ -359,16 +360,15 @@ export function TokenUsage({
 
 export function StreamMessage({
   responseStream,
-  conversation,
+  messages,
   chainLength,
 }: {
   responseStream: string | undefined
-  conversation: Conversation | undefined
+  messages: ConversationMessage[]
   chainLength: number
 }) {
   if (responseStream === undefined) return null
-  if (conversation === undefined) return null
-  if (conversation.messages.length < chainLength - 1) {
+  if (messages.length < chainLength - 1) {
     return (
       <Message
         role={MessageRole.assistant}

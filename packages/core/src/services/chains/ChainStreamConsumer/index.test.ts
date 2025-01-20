@@ -99,6 +99,8 @@ describe('ChainStreamConsumer', () => {
       toolCalls: [],
       usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
       documentLogUuid: 'errorable-uuid',
+      finishReason: 'stop',
+      chainCompleted: false,
     }
 
     consumer.stepCompleted(response)
@@ -121,9 +123,27 @@ describe('ChainStreamConsumer', () => {
       toolCalls: [],
       usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
       documentLogUuid: 'errorable-uuid',
+      finishReason: 'stop',
+      chainCompleted: true,
     }
 
-    consumer.chainCompleted({ step, response })
+    consumer.chainCompleted({
+      step,
+      response,
+      finishReason: 'stop',
+      responseMessages: [
+        {
+          role: MessageRole.assistant,
+          content: [
+            {
+              type: ContentType.text,
+              text: 'text response',
+            },
+          ],
+          toolCalls: [],
+        },
+      ],
+    })
 
     expect(controller.enqueue).toHaveBeenCalledWith({
       event: StreamEventTypes.Latitude,
@@ -131,6 +151,7 @@ describe('ChainStreamConsumer', () => {
         type: ChainEventTypes.Complete,
         config: step.conversation.config,
         response: response,
+        finishReason: 'stop',
         messages: [
           {
             role: MessageRole.assistant,
@@ -157,9 +178,27 @@ describe('ChainStreamConsumer', () => {
       object: { object: 'response' },
       usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
       documentLogUuid: 'errorable-uuid',
+      finishReason: 'stop',
+      chainCompleted: true,
     }
 
-    consumer.chainCompleted({ step, response })
+    consumer.chainCompleted({
+      step,
+      response,
+      finishReason: 'stop',
+      responseMessages: [
+        {
+          role: MessageRole.assistant,
+          content: [
+            {
+              type: ContentType.text,
+              text: '{\n  "object": "response"\n}',
+            },
+          ],
+          toolCalls: [],
+        },
+      ],
+    })
 
     expect(controller.enqueue).toHaveBeenCalledWith({
       event: StreamEventTypes.Latitude,
@@ -167,6 +206,7 @@ describe('ChainStreamConsumer', () => {
         type: ChainEventTypes.Complete,
         config: step.conversation.config,
         response: response,
+        finishReason: 'stop',
         messages: [
           {
             role: MessageRole.assistant,
@@ -199,9 +239,35 @@ describe('ChainStreamConsumer', () => {
       ],
       usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
       documentLogUuid: 'errorable-uuid',
+      finishReason: 'stop',
+      chainCompleted: true,
     }
 
-    consumer.chainCompleted({ step, response })
+    consumer.chainCompleted({
+      step,
+      response,
+      finishReason: 'stop',
+      responseMessages: [
+        {
+          role: MessageRole.assistant,
+          content: [
+            {
+              type: ContentType.toolCall,
+              toolCallId: 'tool-call-id',
+              toolName: 'tool-call-name',
+              args: { arg1: 'value1', arg2: 'value2' },
+            },
+          ],
+          toolCalls: [
+            {
+              id: 'tool-call-id',
+              name: 'tool-call-name',
+              arguments: { arg1: 'value1', arg2: 'value2' },
+            },
+          ],
+        },
+      ],
+    })
 
     expect(controller.enqueue).toHaveBeenCalledWith({
       event: StreamEventTypes.Latitude,
@@ -209,6 +275,7 @@ describe('ChainStreamConsumer', () => {
         type: ChainEventTypes.Complete,
         config: step.conversation.config,
         response: response,
+        finishReason: 'stop',
         messages: [
           {
             role: MessageRole.assistant,
@@ -249,15 +316,46 @@ describe('ChainStreamConsumer', () => {
       ],
       usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
       documentLogUuid: 'errorable-uuid',
+      finishReason: 'stop',
+      chainCompleted: true,
     }
 
-    consumer.chainCompleted({ step, response })
+    consumer.chainCompleted({
+      step,
+      response,
+      finishReason: 'stop',
+      responseMessages: [
+        {
+          role: MessageRole.assistant,
+          content: [
+            {
+              type: ContentType.text,
+              text: 'text response',
+            },
+            {
+              type: ContentType.toolCall,
+              toolCallId: 'tool-call-id',
+              toolName: 'tool-call-name',
+              args: { arg1: 'value1', arg2: 'value2' },
+            },
+          ],
+          toolCalls: [
+            {
+              id: 'tool-call-id',
+              name: 'tool-call-name',
+              arguments: { arg1: 'value1', arg2: 'value2' },
+            },
+          ],
+        },
+      ],
+    })
 
     expect(controller.enqueue).toHaveBeenCalledWith({
       event: StreamEventTypes.Latitude,
       data: {
         type: ChainEventTypes.Complete,
         config: step.conversation.config,
+        finishReason: 'stop',
         response: response,
         messages: [
           {

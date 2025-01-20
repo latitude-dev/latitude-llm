@@ -458,6 +458,7 @@ describe('addMessages', () => {
         data: {
           type: 'chain-complete',
           documentLogUuid: providerLog.documentLogUuid!,
+          finishReason: 'stop',
           config: {
             provider: 'openai',
             model: 'gpt-4o',

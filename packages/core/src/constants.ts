@@ -10,7 +10,7 @@ import {
   LogSources,
   ProviderData,
 } from '@latitude-data/constants'
-import { LanguageModelUsage } from 'ai'
+import { FinishReason, LanguageModelUsage } from 'ai'
 import { z } from 'zod'
 
 import { DocumentVersion, ProviderLog, Span, Trace } from './browser'
@@ -62,6 +62,8 @@ export type StreamType = 'object' | 'text'
 type BaseResponse = {
   text: string
   usage: LanguageModelUsage
+  finishReason?: FinishReason
+  chainCompleted?: boolean
   documentLogUuid?: string
   providerLog?: ProviderLog
 }
@@ -264,7 +266,7 @@ const toolResultContentSchema = z.object({
   type: z.literal('tool-result'),
   toolCallId: z.string(),
   toolName: z.string(),
-  result: z.string(),
+  result: z.any(),
   isError: z.boolean().optional(),
 })
 

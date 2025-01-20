@@ -16,18 +16,23 @@ export async function saveOrPublishProviderLogs({
   streamType,
   saveSyncProviderLogs,
   finishReason,
+  chainCompleted,
 }: {
   workspace: Workspace
   streamType: StreamType
   data: ReturnType<typeof buildProviderLogDto>
   saveSyncProviderLogs: boolean
   finishReason: FinishReason
+  chainCompleted: boolean
 }) {
   publisher.publishLater({
     type: 'aiProviderCallCompleted',
-    data: { ...data, streamType } as AIProviderCallCompletedData<
-      typeof streamType
-    >,
+    data: {
+      ...data,
+      finishReason,
+      chainCompleted,
+      streamType,
+    } as AIProviderCallCompletedData<typeof streamType>,
   })
 
   const providerLogsData = {

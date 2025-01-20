@@ -1,4 +1,4 @@
-import { LanguageModelUsage } from 'ai'
+import { FinishReason, LanguageModelUsage } from 'ai'
 
 import type {
   ChainStepResponse,
@@ -134,6 +134,8 @@ export type StreamCommonData = {
   messages: Message[]
   usage: LanguageModelUsage
   duration: number
+  chainCompleted: boolean
+  finishReason: FinishReason
 }
 
 type StreamTextData = {

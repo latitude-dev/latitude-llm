@@ -12,6 +12,7 @@ import { generateUUIDIdentifier } from '../../../lib'
 import { AIReturn, PartialConfig } from '../../ai'
 import { processStreamObject } from './processStreamObject'
 import { processStreamText } from './processStreamText'
+import { FinishReason } from 'ai'
 
 async function buildCommonData({
   aiResult,
@@ -21,6 +22,8 @@ async function buildCommonData({
   apiProvider,
   config,
   messages,
+  chainCompleted,
+  finishReason,
   errorableUuid,
 }: {
   aiResult: Awaited<AIReturn<StreamType>>
@@ -30,6 +33,8 @@ async function buildCommonData({
   apiProvider: ProviderApiKey
   config: PartialConfig
   messages: Message[]
+  chainCompleted: boolean
+  finishReason: FinishReason
   errorableUuid?: string
 }): Promise<StreamCommonData> {
   const endTime = Date.now()
@@ -53,6 +58,8 @@ async function buildCommonData({
     config: config,
     messages: messages,
     usage: await aiResult.data.usage,
+    finishReason,
+    chainCompleted,
   }
 }
 
@@ -67,6 +74,8 @@ export async function processResponse({
   apiProvider,
   config,
   messages,
+  finishReason,
+  chainCompleted,
   errorableUuid,
 }: {
   aiResult: Awaited<AIReturn<StreamType>>
@@ -76,6 +85,8 @@ export async function processResponse({
   apiProvider: ProviderApiKey
   config: PartialConfig
   messages: Message[]
+  finishReason: FinishReason
+  chainCompleted: boolean
   errorableUuid?: string
 }): Promise<ChainStepResponse<StreamType>> {
   const commonData = await buildCommonData({
@@ -87,6 +98,8 @@ export async function processResponse({
     config,
     messages,
     errorableUuid,
+    finishReason,
+    chainCompleted,
   })
 
   if (aiResult.type === 'text') {

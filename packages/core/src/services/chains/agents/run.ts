@@ -26,7 +26,7 @@ import {
   StreamType,
 } from '../../../constants'
 import { Conversation } from '@latitude-data/compiler'
-import { buildMessagesFromResponse, Workspace } from '../../../browser'
+import { buildAllMessagesFromResponse, Workspace } from '../../../browser'
 import { ChainStreamConsumer } from '../ChainStreamConsumer'
 import { getCachedResponse, setCachedResponse } from '../../commits/promptCache'
 import { validateAgentStep } from './AgentStepValidator'
@@ -97,7 +97,7 @@ export async function runAgent<T extends boolean, C extends SomeChain>({
         chainEventsReader.read().then(({ done, value }) => {
           if (value) {
             if (isChainComplete(value)) {
-              const messages = buildMessagesFromResponse({
+              const messages = buildAllMessagesFromResponse({
                 response: value.data.response,
               })
               conversation = {
@@ -206,6 +206,7 @@ async function runAgentStep({
       streamConsumer.chainCompleted({
         step,
         response: previousResponse,
+        finishReason: 'stop',
       })
 
       return previousResponse
@@ -236,6 +237,7 @@ async function runAgentStep({
         workspace,
         streamType: cachedResponse.streamType,
         finishReason: 'stop', // TODO: we probably should add a cached reason here
+        chainCompleted: step.chainCompleted,
         data: buildProviderLogDto({
           workspace,
           source,
@@ -258,13 +260,14 @@ async function runAgentStep({
         streamConsumer.chainCompleted({
           step,
           response,
+          finishReason: 'stop',
         })
 
         return response
       } else {
         streamConsumer.stepCompleted(response)
 
-        const responseMessages = buildMessagesFromResponse({ response })
+        const responseMessages = buildAllMessagesFromResponse({ response })
         const nextConversation = {
           ...conversation,
           messages: responseMessages,
@@ -311,12 +314,15 @@ async function runAgentStep({
       source,
       workspace,
       startTime: stepStartTime,
+      chainCompleted: step.chainCompleted,
+      finishReason: consumedStream.finishReason,
     })
 
     const providerLog = await saveOrPublishProviderLogs({
       workspace,
       streamType: aiResult.type,
       finishReason: consumedStream.finishReason,
+      chainCompleted: step.chainCompleted,
       data: buildProviderLogDto({
         workspace,
         source,
@@ -340,7 +346,7 @@ async function runAgentStep({
 
     streamConsumer.stepCompleted(response)
 
-    const responseMessages = buildMessagesFromResponse({ response })
+    const responseMessages = buildAllMessagesFromResponse({ response })
     const nextConversation = {
       ...conversation,
       messages: responseMessages,
