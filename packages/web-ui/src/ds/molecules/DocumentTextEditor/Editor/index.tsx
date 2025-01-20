@@ -127,30 +127,14 @@ export function DocumentTextEditor({
           errorFixFn={errorFixFn}
         />
       )}
-      {diff && (
-        <div className='flex w-full px-2'>
-          <div className='flex flex-col w-full items-center gap-2 bg-background border border-border rounded-md p-2'>
-            {diff.description && (
-              <div className='w-full max-h-24 overflow-y-auto custom-scrollbar px-2'>
-                <Text.H5 color='foregroundMuted'>{diff.description}</Text.H5>
-              </div>
-            )}
-            <div className='flex flex-row gap-2 w-full justify-end'>
-              <Button variant='outline' fancy onClick={handleRejectDiff}>
-                Discard
-              </Button>
-              <Button onClick={handleAcceptDiff} fancy>
-                Apply
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
-      {showCopilot && !readOnlyMessage && !diff && copilot && (
+      {(diff || (showCopilot && !readOnlyMessage && copilot)) && (
         <CopilotSection
-          isLoading={copilot.isLoading}
-          requestSuggestion={copilot.requestSuggestion}
-          disabledMessage={copilot.disabledMessage}
+          isLoading={copilot?.isLoading ?? false}
+          requestSuggestion={copilot?.requestSuggestion}
+          disabledMessage={copilot?.disabledMessage}
+          suggestion={diff}
+          handleApplySuggestion={handleAcceptDiff}
+          handleRejectSuggestion={handleRejectDiff}
         />
       )}
       <div className='flex flex-row w-full p-2 items-center justify-between gap-2'>
