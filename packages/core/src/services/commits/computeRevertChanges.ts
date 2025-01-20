@@ -1,7 +1,7 @@
 import { omit } from 'lodash-es'
 import { Commit, DocumentVersion, Workspace } from '../../browser'
 import { database } from '../../client'
-import { BadRequestError, ConflictError, Result, TypedResult } from '../../lib'
+import { BadRequestError, Result, TypedResult } from '../../lib'
 import { DocumentVersionsRepository } from '../../repositories'
 import DiffMatchPatch from 'diff-match-patch'
 
@@ -190,10 +190,6 @@ export async function computeChangesToRevertCommit(
     changedDocuments: changedDocs.value,
     targetDraftDocuments: documentsInDraft.value,
   })
-
-  if (changesToRevert.length === 0) {
-    return Result.error(new ConflictError('No changes to revert'))
-  }
 
   return Result.ok(changesToRevert)
 }

@@ -19,6 +19,7 @@ export function useCommitActions({ commit }: { commit: Commit }) {
     getChangesToRevertCommitAction,
     {
       onSuccess: ({ data: changes }) => {
+        if (changes.length === 0) return setError('No changes to reset')
         setChanges(changes)
       },
       onError: ({ err: error }) => setError(error.message),
@@ -29,6 +30,7 @@ export function useCommitActions({ commit }: { commit: Commit }) {
     getChangesToResetCommitAction,
     {
       onSuccess: ({ data: changes }) => {
+        if (changes.length === 0) return setError('No changes to reset')
         setChanges(changes)
       },
       onError: ({ err: error }) => setError(error.message),
