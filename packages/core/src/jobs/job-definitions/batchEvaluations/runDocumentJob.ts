@@ -2,17 +2,12 @@ import { env } from '@latitude-data/env'
 import { Job } from 'bullmq'
 
 import { setupJobs } from '../../'
-import { LogSources } from '../../../browser'
-import { unsafelyFindWorkspace } from '../../../data-access'
 import { NotFoundError } from '../../../lib/errors'
 import { queues } from '../../../queues'
-import {
-  CommitsRepository,
-  DocumentVersionsRepository,
-} from '../../../repositories'
-import { runDocumentAtCommit } from '../../../services/commits/runDocumentAtCommit'
 import { WebsocketClient } from '../../../websockets/workers'
 import { ProgressTracker } from '../../utils/progressTracker'
+import { runDocumentAtCommitWithAutoToolResponses } from '../documents/runDocumentAtCommitWithAutoToolResponses'
+import { LogSources } from '@latitude-data/constants'
 
 export type RunDocumentForEvaluationJobData = {
   workspaceId: number
@@ -40,22 +35,11 @@ export const runDocumentForEvaluationJob = async (
 
   try {
     const jobs = await setupJobs()
-    const workspace = await unsafelyFindWorkspace(workspaceId)
-    if (!workspace) throw new NotFoundError('Workspace not found')
-
-    const documentsScope = new DocumentVersionsRepository(workspaceId)
-    const commitsScope = new CommitsRepository(workspaceId)
-    const document = await documentsScope
-      .getDocumentAtCommit({ projectId, documentUuid, commitUuid })
-      .then((r) => r.unwrap())
-    const commit = await commitsScope
-      .getCommitByUuid({ projectId, uuid: commitUuid })
-      .then((r) => r.unwrap())
-
-    const result = await runDocumentAtCommit({
-      workspace,
-      document,
-      commit,
+    const result = await runDocumentAtCommitWithAutoToolResponses({
+      workspaceId,
+      projectId,
+      documentUuid,
+      commitUuid,
       parameters,
       source: LogSources.Evaluation,
     }).then((r) => r.unwrap())
@@ -70,7 +54,7 @@ export const runDocumentForEvaluationJob = async (
     await jobs.defaultQueue.jobs.enqueueRunEvaluationJob(
       {
         workspaceId,
-        documentUuid: document.documentUuid,
+        documentUuid,
         providerLogUuid,
         evaluationId,
         batchId,

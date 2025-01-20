@@ -69,6 +69,16 @@ export type StreamChunk =
 
 export type ObjectOutput = 'object' | 'array' | 'no-schema' | undefined
 
+export type ToolSchema<
+  T extends Record<string, { type: string; description: string }> = {},
+> = {
+  description: string
+  parameters: {
+    type: 'object'
+    properties: T
+  }
+}
+
 export async function ai({
   provider: apiProvider,
   prompt,

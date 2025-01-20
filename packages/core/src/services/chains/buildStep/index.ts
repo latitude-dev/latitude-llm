@@ -12,7 +12,7 @@ import {
 import { cacheChain } from '../chainCache'
 import { buildMessagesFromResponse } from '../../../helpers'
 
-function getToolCalls({
+export function getToolCalls({
   response,
 }: {
   response: ChainStepResponse<StreamType>
