@@ -439,10 +439,11 @@ describe('addMessages', () => {
       ],
       source: LogSources.API,
     }).then((r) => r.unwrap())
-    const { value } = await testConsumeStream(stream)
 
-    const repo = new ProviderLogsRepository(workspace.id)
-    const logs = await repo.findAll().then((r) => r.unwrap())
+    const { value } = await testConsumeStream(stream)
+    const log = await new ProviderLogsRepository(workspace.id)
+      .findLastByDocumentLogUuid(providerLog.documentLogUuid!)
+      .then((r) => r.unwrap())
 
     expect(value).toEqual([
       {
@@ -478,7 +479,7 @@ describe('addMessages', () => {
           response: {
             streamType: 'text',
             documentLogUuid: providerLog.documentLogUuid,
-            providerLog: logs[logs.length - 1],
+            providerLog: log,
             text: 'Fake AI generated text',
             toolCalls: [],
             usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
@@ -509,8 +510,9 @@ describe('addMessages', () => {
     ).unwrap()
 
     const response = (await result.response).unwrap()
-    const repo = new ProviderLogsRepository(workspace.id)
-    const logs = (await repo.findAll()).unwrap()
+    const log = await new ProviderLogsRepository(workspace.id)
+      .findLastByDocumentLogUuid(providerLog.documentLogUuid!)
+      .then((r) => r.unwrap())
 
     expect(response).toEqual({
       streamType: 'text',
@@ -518,7 +520,7 @@ describe('addMessages', () => {
       usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
       toolCalls: [],
       documentLogUuid: providerLog.documentLogUuid,
-      providerLog: logs[logs.length - 1],
+      providerLog: log,
     })
   })
 
@@ -632,9 +634,8 @@ describe('addMessages', () => {
     const { value: stream } = await testConsumeStream(result.stream)
     const response = await result.response.then((r) => r.unwrap())
     const log = await new ProviderLogsRepository(workspace.id)
-      .findAll()
+      .findLastByDocumentLogUuid(providerLog.documentLogUuid!)
       .then((r) => r.unwrap())
-      .then((r) => r.at(-1)!)
 
     expect(stream).toEqual([
       {
