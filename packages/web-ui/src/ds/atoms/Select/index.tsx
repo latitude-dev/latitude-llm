@@ -61,6 +61,7 @@ export function Select<V extends unknown = unknown>({
   options,
   defaultValue,
   value,
+  info,
   onChange,
   width = 'full',
   disabled = false,
@@ -80,6 +81,7 @@ export function Select<V extends unknown = unknown>({
     <FormField
       badgeLabel={badgeLabel}
       label={label}
+      info={info}
       description={description}
       errors={errors}
       className={width === 'full' ? 'w-full' : 'w-auto'}

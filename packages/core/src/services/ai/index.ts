@@ -10,6 +10,7 @@ import {
   ObjectStreamPart,
   streamObject as originalStreamObject,
   streamText as originalStreamText,
+  smoothStream,
   StreamObjectResult,
   StreamTextResult,
   TextStreamPart,
@@ -40,10 +41,17 @@ type AIReturnObject = {
     providerName: Providers
   }
 }
+
+// A stream of partial outputs. It uses the `experimental_output` specification.
+// This could fix the issue with having a schema and tool calls in the same prompt.
+// But requires more investigation. More info:
+// https://vercel.com/blog/ai-sdk-4-1#structured-output-improvements
+type PARTIAL_OUTPUT = object
+
 type AIReturnText = {
   type: 'text'
   data: Pick<
-    StreamTextResult<Record<string, CoreTool<any, any>>>,
+    StreamTextResult<Record<string, CoreTool<any, any>>, PARTIAL_OUTPUT>,
     'fullStream' | 'text' | 'usage' | 'toolCalls'
   > & {
     providerName: Providers
@@ -154,7 +162,7 @@ export async function ai({
     }
 
     if (schema && output) {
-      const result = await streamObject({
+      const result = streamObject({
         ...commonOptions,
         schema: jsonSchema(schema),
         // output is valid but depending on the type of schema
@@ -174,7 +182,11 @@ export async function ai({
       })
     }
 
-    const result = await streamText(commonOptions)
+    const result = streamText({
+      ...commonOptions,
+      experimental_transform: smoothStream(),
+    })
+
     return Result.ok({
       type: 'text',
       data: {
