@@ -73,6 +73,48 @@ export class ChainStreamConsumer {
     controller.close()
   }
 
+  static startStep({
+    controller,
+    config,
+    messages,
+    documentLogUuid,
+    isLastStep = false,
+  }: {
+    controller: ReadableStreamDefaultController
+    config: Config
+    messages: Message[]
+    documentLogUuid: string
+    isLastStep?: boolean
+  }) {
+    enqueueChainEvent(controller, {
+      data: {
+        type: ChainEventTypes.Step,
+        isLastStep,
+        config,
+        messages,
+        documentLogUuid,
+      },
+      event: StreamEventTypes.Latitude,
+    })
+  }
+
+  static stepCompleted({
+    controller,
+    response,
+  }: {
+    controller: ReadableStreamDefaultController
+    response: ChainStepResponse<StreamType>
+  }) {
+    enqueueChainEvent(controller, {
+      event: StreamEventTypes.Latitude,
+      data: {
+        type: ChainEventTypes.StepComplete,
+        documentLogUuid: response.documentLogUuid,
+        response: response,
+      },
+    })
+  }
+
   static chainError({
     controller,
     e,
@@ -116,28 +158,21 @@ export class ChainStreamConsumer {
     const newMessages = step.conversation.messages.slice(this.previousCount)
     const messageCount = this.previousCount + newMessages.length
 
-    enqueueChainEvent(this.controller, {
-      data: {
-        type: ChainEventTypes.Step,
-        isLastStep: step.chainCompleted,
-        config: step.conversation.config as Config,
-        messages: newMessages,
-        documentLogUuid: this.errorableUuid,
-      },
-      event: StreamEventTypes.Latitude,
+    ChainStreamConsumer.startStep({
+      controller: this.controller,
+      config: step.conversation.config as Config,
+      messages: newMessages,
+      documentLogUuid: this.errorableUuid,
+      isLastStep: step.chainCompleted,
     })
 
     return { messageCount, stepStartTime: Date.now() }
   }
 
   stepCompleted(response: ChainStepResponse<StreamType>) {
-    enqueueChainEvent(this.controller, {
-      event: StreamEventTypes.Latitude,
-      data: {
-        type: ChainEventTypes.StepComplete,
-        documentLogUuid: response.documentLogUuid,
-        response: response,
-      },
+    ChainStreamConsumer.stepCompleted({
+      controller: this.controller,
+      response,
     })
   }
 

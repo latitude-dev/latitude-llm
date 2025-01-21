@@ -1,4 +1,3 @@
-import { hash } from 'crypto'
 import {
   Chain as PromptlChain,
   type SerializedChain,
@@ -7,10 +6,11 @@ import {
 
 import { Workspace } from '../../../browser'
 import { cache } from '../../../cache'
+import { ChainStepResponse, StreamType } from '../../../constants'
 
 type CachedChain = {
   chain: PromptlChain<Message>
-  messages: Message[]
+  previousResponse: ChainStepResponse<StreamType>
 }
 
 function generateCacheKey({
@@ -20,22 +20,21 @@ function generateCacheKey({
   workspace: Workspace
   documentLogUuid: string
 }): string {
-  const k = hash('sha256', `${documentLogUuid}`)
-  return `workspace:${workspace.id}:chain:${k}`
+  return `workspace:${workspace.id}:chain:${documentLogUuid}`
 }
 
 async function setToCache({
   key,
   chain,
-  messages,
+  previousResponse,
 }: {
   key: string
   chain: SerializedChain
-  messages: Message[]
+  previousResponse?: ChainStepResponse<StreamType>
 }) {
   try {
     const c = await cache()
-    await c.set(key, JSON.stringify({ chain, messages }))
+    await c.set(key, JSON.stringify({ chain, previousResponse }))
   } catch (e) {
     // Silently fail cache writes
   }
@@ -50,8 +49,14 @@ async function getFromCache(key: string): Promise<CachedChain | undefined> {
     const deserialized = JSON.parse(serialized)
     const chain = PromptlChain.deserialize({ serialized: deserialized.chain })
 
-    if (!chain || !deserialized.messages) return undefined
-    return { chain, messages: deserialized.messages ?? [] }
+    if (!chain || !deserialized.previousResponse) {
+      return undefined
+    }
+
+    return {
+      chain,
+      previousResponse: deserialized.previousResponse,
+    }
   } catch (e) {
     return undefined
   }
@@ -90,15 +95,19 @@ export async function cacheChain({
   workspace,
   documentLogUuid,
   chain,
-  responseMessages,
+  previousResponse,
 }: {
   workspace: Workspace
   chain: PromptlChain<Message>
-  responseMessages: Message[]
   documentLogUuid: string
+  previousResponse?: ChainStepResponse<StreamType>
 }) {
   const key = generateCacheKey({ documentLogUuid, workspace })
   const serialized = chain.serialize()
 
-  await setToCache({ key, chain: serialized, messages: responseMessages })
+  await setToCache({
+    key,
+    chain: serialized,
+    previousResponse,
+  })
 }

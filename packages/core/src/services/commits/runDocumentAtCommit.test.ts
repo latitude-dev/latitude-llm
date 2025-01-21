@@ -262,15 +262,6 @@ model: gpt-4o
             },
             messages: [
               {
-                role: 'assistant',
-                content: [
-                  {
-                    type: 'text',
-                    text: 'Fake AI generated text',
-                  },
-                ],
-              },
-              {
                 role: 'system',
                 content: [
                   {
