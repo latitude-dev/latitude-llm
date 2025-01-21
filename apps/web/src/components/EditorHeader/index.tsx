@@ -304,6 +304,7 @@ export function ProviderModelSelector({
       <Select
         name='model'
         label='Model'
+        info='Select a model from the list. If you do not find the one you need, write manually a custom one in the prompt configuration.'
         placeholder={
           isModelOption || selectedModel === null
             ? 'Select a model'

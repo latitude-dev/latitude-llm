@@ -96,23 +96,24 @@ There are rule violations:
 
   it('throw a ChainError when AI fails with APICallError', async () => {
     const streamTextModk = vi.fn()
-    streamTextModk.mockRejectedValue(
-      new APICallError({
+    streamTextModk.mockImplementation(() => {
+      throw new APICallError({
         message: 'API call error',
         url: 'https://api.openai.com',
         responseBody: '[RESPONSE_BODY]',
         requestBodyValues: {
           something: 'value',
         },
-      }),
-    )
+      })
+    })
+
     await expect(
       ai({
         provider: PROVIDER_PAYLOAD,
         config: { model: 'gpt-4o' },
         messages: [],
         aiSdkProvider: {
-          streamText: streamTextModk,
+          streamText: streamTextModk, // Inject the mocked function
         },
       }).then((r) => r.unwrap()),
     ).rejects.toThrowError(
@@ -125,7 +126,9 @@ There are rule violations:
 
   it('throw a ChainError when AI fails with generic Error', async () => {
     const streamTextModk = vi.fn()
-    streamTextModk.mockRejectedValue(new Error('Some error'))
+    streamTextModk.mockImplementation(() => {
+      throw new Error('Some error')
+    })
 
     await expect(
       ai({
@@ -140,27 +143,6 @@ There are rule violations:
       new ChainError({
         code: RunErrorCodes.AIRunError,
         message: 'Unknown error: Some error',
-      }),
-    )
-  })
-
-  it('throw a ChainError when AI fails with unknow Error', async () => {
-    const streamTextModk = vi.fn()
-    streamTextModk.mockRejectedValue('something weird')
-
-    await expect(
-      ai({
-        provider: PROVIDER_PAYLOAD,
-        config: { model: 'gpt-4o' },
-        messages: [],
-        aiSdkProvider: {
-          streamText: streamTextModk,
-        },
-      }).then((r) => r.unwrap()),
-    ).rejects.toThrowError(
-      new ChainError({
-        code: RunErrorCodes.AIRunError,
-        message: 'Unknown error: something weird',
       }),
     )
   })

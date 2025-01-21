@@ -5,10 +5,11 @@ const OPENAI_MODEL_COST_PER_1M_TOKENS = {
   'gpt-4o': { input: 2.5, output: 10 },
   'gpt-4o-2024-08-06': { input: 2.5, output: 10.0 },
   'gpt-4o-2024-05-13': { input: 5.0, output: 15.0 },
-
   'gpt-4o-mini': { input: 0.15, output: 0.6 },
   'gpt-4o-mini-2024-07-18': { input: 0.15, output: 0.6 },
 
+  o1: { input: 15.0, output: 60.0 },
+  'o1-2024-12-17': { input: 15.0, output: 60.0 },
   'o1-preview': { input: 15.0, output: 60.0 },
   'o1-preview-2024-09-12': { input: 15.0, output: 60.0 },
   'o1-mini': { input: 3.0, output: 12.0 },
