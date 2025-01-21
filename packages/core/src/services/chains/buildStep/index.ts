@@ -1,4 +1,4 @@
-import { Chain as PromptlChain, Message as PromptlMessage } from 'promptl-ai'
+import { Chain as PromptlChain } from 'promptl-ai'
 import { FinishReason } from 'ai'
 
 import { ChainStepResponse, StreamType } from '../../../constants'
@@ -71,25 +71,28 @@ export async function buildStepExecution({
     const isPromptl = chain instanceof PromptlChain
     const toolCalls = getToolCalls({ response: finalResponse })
     const hasTools = isPromptl && toolCalls.length > 0
-    const responseMessages = buildMessagesFromResponse({
-      response: finalResponse,
-    })
 
     if (hasTools) {
       await cacheChain({
         workspace,
         chain,
         documentLogUuid,
-        responseMessages: responseMessages as unknown as PromptlMessage[],
+        previousResponse: finalResponse,
       })
+    }
+
+    if (!step.chainCompleted) {
+      streamConsumer.stepCompleted(finalResponse)
     }
 
     if (step.chainCompleted || hasTools) {
       streamConsumer.chainCompleted({
         step,
         response: finalResponse,
-        finishReason,
-        responseMessages,
+        finishReason: step.chainCompleted ? finishReason : 'tool-calls',
+        responseMessages: buildMessagesFromResponse({
+          response: finalResponse,
+        }),
       })
 
       return {
@@ -98,8 +101,6 @@ export async function buildStepExecution({
         chainCompleted: step.chainCompleted,
       }
     }
-
-    streamConsumer.stepCompleted(finalResponse)
 
     return runStep({
       ...stepProps,

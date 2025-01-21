@@ -2,7 +2,11 @@ import { Chain as LegacyChain, Message } from '@latitude-data/compiler'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
 import { Chain as PromptlChain } from 'promptl-ai'
 
-import { ProviderApiKey, Workspace } from '../../browser'
+import {
+  buildMessagesFromResponse,
+  ProviderApiKey,
+  Workspace,
+} from '../../browser'
 import {
   ABSOLUTE_MAX_STEPS,
   ChainEvent,
@@ -79,6 +83,7 @@ type CommonArgs<T extends boolean = true, C extends SomeChain = LegacyChain> = {
   persistErrors?: T
   removeSchema?: boolean
   extraMessages?: Message[]
+  previousResponse?: ChainStepResponse<StreamType>
   previousCount?: number
 }
 export type RunChainArgs<
@@ -101,6 +106,7 @@ export async function runChain<T extends boolean, C extends SomeChain>({
   persistErrors = true,
   generateUUID = generateUUIDIdentifier,
   removeSchema = false,
+  previousResponse,
   extraMessages,
   previousCount = 0,
 }: RunChainArgs<T, C>) {
@@ -126,6 +132,7 @@ export async function runChain<T extends boolean, C extends SomeChain>({
         errorableType,
         configOverrides,
         removeSchema,
+        previousResponse,
         extraMessages,
         previousCount,
       })
@@ -194,8 +201,31 @@ export type StepProps = {
   previousResponse?: ChainStepResponse<StreamType>
   removeSchema?: boolean
   stepCount?: number
-  configOverrides?: ConfigOverrides
   extraMessages?: Message[]
+  configOverrides?: ConfigOverrides
+}
+
+export function buildPrevContent({
+  previousResponse,
+  extraMessages,
+  previousCount,
+}: {
+  previousResponse: StepProps['previousResponse']
+  extraMessages: StepProps['extraMessages']
+  previousCount: number
+}) {
+  if (!previousResponse) return { prevContent: undefined, previousCount }
+  if (!extraMessages) {
+    return {
+      prevContent: previousResponse.text,
+      previousCount: previousCount + 1,
+    }
+  }
+
+  const prevContent = buildMessagesFromResponse({
+    response: previousResponse,
+  }).concat(...extraMessages)
+  return { prevContent, previousCount: previousCount + prevContent.length }
 }
 
 export async function runStep({
@@ -205,21 +235,22 @@ export async function runStep({
   promptlVersion,
   providersMap,
   controller,
-  previousCount = 0,
+  previousCount: _prevoiusCount = 0,
   previousResponse,
   errorableUuid,
   errorableType,
   configOverrides,
-  extraMessages,
   removeSchema,
+  extraMessages,
   stepCount = 0,
 }: StepProps) {
   // When passed extra messages it means we are resuming a conversation
-  const prevContent = previousResponse
-    ? previousResponse.text
-    : extraMessages
-      ? extraMessages
-      : undefined
+  const { prevContent, previousCount } = buildPrevContent({
+    previousResponse,
+    extraMessages,
+    previousCount: _prevoiusCount,
+  })
+
   const streamConsumer = new ChainStreamConsumer({
     controller,
     previousCount,

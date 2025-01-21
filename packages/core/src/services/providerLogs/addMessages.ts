@@ -14,7 +14,7 @@ import {
 } from '../../browser'
 import { unsafelyFindProviderApiKey } from '../../data-access'
 import { NotFoundError, Result, TypedResult } from '../../lib'
-import { ai, PartialConfig } from '../ai'
+import { ai, Config, PartialConfig } from '../ai'
 import { ChainError } from '../chains/ChainErrors'
 import { ChainStreamConsumer } from '../chains/ChainStreamConsumer'
 import { consumeStream } from '../chains/ChainStreamConsumer/consumeStream'
@@ -124,6 +124,13 @@ async function iterate({
       provider,
     }).then((r) => r.unwrap())
 
+    ChainStreamConsumer.startStep({
+      controller,
+      config: config as Config,
+      messages: [], // No additional messages added between User message and Assistant response
+      documentLogUuid: documentLogUuid!,
+    })
+
     const stepStartTime = Date.now()
 
     const aiResult = await ai({
@@ -172,6 +179,11 @@ async function iterate({
     })
 
     const response = { ..._response, providerLog }
+
+    ChainStreamConsumer.stepCompleted({
+      controller,
+      response,
+    })
 
     const responseMessages = buildMessagesFromResponse({ response })
     ChainStreamConsumer.chainCompleted({

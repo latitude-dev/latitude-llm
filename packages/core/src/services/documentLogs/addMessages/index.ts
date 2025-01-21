@@ -66,10 +66,9 @@ export async function addMessages({
     commit: pausedChainData.commit,
     document: pausedChainData.document,
     pausedChain: pausedChainData.pausedChain,
-    pausedChainMessages:
-      pausedChainData.pausedChainMessages as unknown as Message[],
     documentLogUuid,
     responseMessages: messages,
+    previousResponse: pausedChainData.previousResponse,
     source,
   })
 }

@@ -12,9 +12,10 @@ import { Message } from '@latitude-data/compiler'
 import { Chain as PromptlChain } from 'promptl-ai'
 import { getResolvedContent } from '../../../documents'
 import { deleteCachedChain } from '../../../chains/chainCache'
+import { ChainStepResponse, StreamType } from '../../../../constants'
 
 /**
- * What means resume a converstation
+ * What means to resume a converstation
  * ::::::::::::::::::::
  * When a paused/cached chain is found in our cache (Redis at the time of writing),
  * we asume is a paused and incompleted conversation.
@@ -32,8 +33,8 @@ export async function resumeConversation({
   commit,
   documentLogUuid,
   pausedChain,
-  pausedChainMessages,
   responseMessages,
+  previousResponse,
   source,
 }: {
   workspace: Workspace
@@ -41,8 +42,8 @@ export async function resumeConversation({
   document: DocumentVersion
   documentLogUuid: string
   pausedChain: PromptlChain
-  pausedChainMessages: Message[]
   responseMessages: Message[]
+  previousResponse: ChainStepResponse<StreamType>
   source: LogSources
 }) {
   const resultResolvedContent = await getResolvedContent({
@@ -60,13 +61,10 @@ export async function resumeConversation({
   })
   const errorableUuid = documentLogUuid
 
-  let extraMessages = pausedChainMessages.concat(responseMessages)
   // These are all the messages that the client
   // already have seen. So we don't want to send them again.
   const previousCount =
-    pausedChain.globalMessagesCount +
-    pausedChainMessages.length +
-    responseMessages.length
+    pausedChain.globalMessagesCount + responseMessages.length
 
   const run = await runChain({
     generateUUID: () => errorableUuid,
@@ -76,8 +74,9 @@ export async function resumeConversation({
     promptlVersion: document.promptlVersion,
     providersMap,
     source,
-    extraMessages,
     previousCount,
+    previousResponse,
+    extraMessages: responseMessages,
   })
 
   return Result.ok({

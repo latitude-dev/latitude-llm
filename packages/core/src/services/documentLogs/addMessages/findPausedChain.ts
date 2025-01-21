@@ -37,7 +37,7 @@ export async function findPausedChain({
   return Result.ok({
     document: result.value,
     commit,
-    pausedChainMessages: cachedData.messages,
     pausedChain: cachedData.chain,
+    previousResponse: cachedData.previousResponse,
   })
 }

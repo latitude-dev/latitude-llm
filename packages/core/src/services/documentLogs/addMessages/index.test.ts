@@ -447,12 +447,24 @@ describe('addMessages', () => {
 
     expect(value).toEqual([
       {
+        event: 'latitude-event',
+        data: expect.objectContaining({
+          type: 'chain-step',
+        }),
+      },
+      {
         event: 'provider-event',
         data: { type: 'text-delta', textDelta: 'AI gener' },
       },
       {
         event: 'provider-event',
         data: { type: 'text-delta', textDelta: 'ated text' },
+      },
+      {
+        event: 'latitude-event',
+        data: expect.objectContaining({
+          type: 'chain-step-complete',
+        }),
       },
       {
         event: 'latitude-event',
@@ -572,6 +584,12 @@ describe('addMessages', () => {
     expect(stream).toEqual([
       {
         event: StreamEventTypes.Latitude,
+        data: expect.objectContaining({
+          type: ChainEventTypes.Step,
+        }),
+      },
+      {
+        event: StreamEventTypes.Latitude,
         data: {
           type: ChainEventTypes.Error,
           error: {
@@ -638,6 +656,18 @@ describe('addMessages', () => {
       .then((r) => r.unwrap())
 
     expect(stream).toEqual([
+      {
+        event: StreamEventTypes.Latitude,
+        data: expect.objectContaining({
+          type: ChainEventTypes.Step,
+        }),
+      },
+      {
+        event: StreamEventTypes.Latitude,
+        data: expect.objectContaining({
+          type: ChainEventTypes.StepComplete,
+        }),
+      },
       {
         event: StreamEventTypes.Latitude,
         data: expect.objectContaining({

@@ -7,6 +7,7 @@ import {
   ToolMessage,
 } from '@latitude-data/compiler'
 import {
+  buildMessagesFromResponse,
   ChainEventTypes,
   StreamEventTypes,
   type DocumentVersion,
@@ -76,6 +77,7 @@ export default function Chat<V extends PromptlVersion>({
   })
 
   const runChainOnce = useRef(false)
+  const isChat = useRef(false)
   // Index where the chain ends and the chat begins
   const [chainLength, setChainLength] = useState<number>(Infinity)
   const [responseStream, setResponseStream] = useState<string | undefined>()
@@ -85,11 +87,6 @@ export default function Chat<V extends PromptlVersion>({
   })
   const startStreaming = useCallback(() => {
     setError(undefined)
-    setUsage({
-      promptTokens: 0,
-      completionTokens: 0,
-      totalTokens: 0,
-    })
     setResponseStream('')
     setIsStreaming(true)
   }, [setError, setUsage, setResponseStream, setIsStreaming])
@@ -186,10 +183,17 @@ export default function Chat<V extends PromptlVersion>({
 
       // Only in Chat mode we add optimistically the message
       if (typeof input === 'string') {
+        isChat.current = true
         addMessages(newMessages)
       }
 
+      if (!isChat.current) {
+        setChainLength((prev) => prev + newMessages.length)
+      }
+
       let response = ''
+      const start = performance.now()
+      let messagesCount = 0
       startStreaming()
 
       try {
@@ -203,15 +207,37 @@ export default function Chat<V extends PromptlVersion>({
 
           const { event, data } = serverEvent
 
-          if ('messages' in data) {
-            setResponseStream(undefined)
+          if (data.type === ChainEventTypes.Step) {
+            setResponseStream('')
             addMessages(data.messages ?? [])
+            messagesCount += data.messages?.length ?? 0
+          }
+
+          if (data.type === ChainEventTypes.StepComplete) {
+            const responseMsgs = buildMessagesFromResponse(data)
+            setResponseStream(undefined)
+            addMessages(responseMsgs)
+            messagesCount += responseMsgs.length
           }
 
           switch (event) {
             case StreamEventTypes.Latitude: {
               if (data.type === ChainEventTypes.Complete) {
-                setUsage(data.response.usage)
+                if (!isChat.current) {
+                  // Update chain statistics
+                  setChainLength((prev) => prev + messagesCount)
+                  setTime((prev) => (prev ?? 0) + (performance.now() - start))
+                }
+                setUsage((prev) => ({
+                  promptTokens:
+                    (prev?.promptTokens ?? 0) +
+                    data.response.usage.promptTokens,
+                  completionTokens:
+                    (prev?.completionTokens ?? 0) +
+                    data.response.usage.completionTokens,
+                  totalTokens:
+                    (prev?.totalTokens ?? 0) + data.response.usage.totalTokens,
+                }))
               } else if (data.type === ChainEventTypes.Error) {
                 setError(new Error(data.error.message))
               }
