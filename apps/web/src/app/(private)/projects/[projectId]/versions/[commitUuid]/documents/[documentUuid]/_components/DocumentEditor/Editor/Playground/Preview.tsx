@@ -38,7 +38,7 @@ function WarningLink({ providerRule }: { providerRule: ProviderRules }) {
   return (
     <Link
       target='_blank'
-      href={`${LATITUDE_DOCS_URL}/guides/prompt-manager/custom-rules/${providerRule}`}
+      href={`${LATITUDE_DOCS_URL}/guides/prompt-manager/provider-rules/${providerRule}`}
       className='flex-nowrap'
     >
       <Text.H5B underline noWrap color='warningMutedForeground'>

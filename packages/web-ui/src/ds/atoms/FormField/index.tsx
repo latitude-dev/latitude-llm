@@ -143,6 +143,7 @@ function InlineInput({
   const hasSubcontent = error || description || label
   return (
     <TooltipLabel
+      inline
       htmlFor={formItemId}
       badgeLabel={badgeLabel}
       info={info}

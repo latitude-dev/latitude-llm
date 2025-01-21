@@ -7,6 +7,7 @@ import { applyCustomRules } from './custom'
 import { applyGoogleRules } from './google'
 import { AppliedRules } from './types'
 import { vercelSdkRules } from './vercel'
+import { applyOpenAiRules } from './openai'
 
 type Props = {
   providerType: Providers
@@ -31,6 +32,10 @@ export function applyProviderRules({
 
   if (providerType === Providers.Google) {
     rules = applyGoogleRules(rules)
+  }
+
+  if (providerType === Providers.OpenAI) {
+    rules = applyOpenAiRules(rules)
   }
 
   rules = applyCustomRules(rules)

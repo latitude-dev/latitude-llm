@@ -112,13 +112,6 @@ export const PROVIDER_MODELS: Partial<
   [Providers.Custom]: {},
 }
 
-export const UNSUPPORTED_STREAM_MODELS = [
-  'o1-preview',
-  'o1-preview-2024-09-12',
-  'o1-mini',
-  'o1-mini-2024-09-12',
-]
-
 export function listModelsForProvider({
   provider,
   name,

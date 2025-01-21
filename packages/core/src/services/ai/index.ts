@@ -23,9 +23,8 @@ import { ChainError } from '../chains/ChainErrors'
 import { buildTools } from './buildTools'
 import { handleAICallAPIError } from './handleError'
 import { createProvider, PartialConfig } from './helpers'
-import { Providers, UNSUPPORTED_STREAM_MODELS } from './providers/models'
+import { Providers } from './providers/models'
 import { applyAllRules } from './providers/rules'
-import { runNoStreamingModels } from './runNoStreamingModels'
 
 const DEFAULT_AI_SDK_PROVIDER = {
   streamText: originalStreamText,
@@ -150,15 +149,6 @@ export async function ai({
       experimental_telemetry: {
         isEnabled: true,
       },
-    }
-
-    if (UNSUPPORTED_STREAM_MODELS.includes(model)) {
-      return runNoStreamingModels({
-        schema,
-        output,
-        commonOptions,
-        provider,
-      })
     }
 
     if (schema && output) {
