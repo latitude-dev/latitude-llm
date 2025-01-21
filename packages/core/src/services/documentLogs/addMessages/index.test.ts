@@ -631,10 +631,19 @@ describe('addMessages', () => {
     }).then((r) => r.unwrap())
     const { value: stream } = await testConsumeStream(result.stream)
     const response = await result.response.then((r) => r.unwrap())
-    const log = await new ProviderLogsRepository(workspace.id)
+
+    // TODO: WIP
+
+    const repo = new ProviderLogsRepository(workspace.id)
+    const log = await repo
       .findAll()
       .then((r) => r.unwrap())
       .then((r) => r.at(-1)!)
+
+    // const repo = new ProviderLogsRepository(workspace.id)
+    // const logs = (await repo.findAll()).unwrap()
+
+    // ----------
 
     expect(stream).toEqual([
       {
