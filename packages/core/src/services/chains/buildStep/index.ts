@@ -12,7 +12,7 @@ import {
 import { cacheChain } from '../chainCache'
 import { buildMessagesFromResponse } from '../../../helpers'
 
-function getToolCalls({
+export function getToolCalls({
   response,
 }: {
   response: ChainStepResponse<StreamType>
@@ -72,6 +72,10 @@ export async function buildStepExecution({
     const toolCalls = getToolCalls({ response: finalResponse })
     const hasTools = isPromptl && toolCalls.length > 0
 
+    if (!step.chainCompleted) {
+      streamConsumer.stepCompleted(finalResponse)
+    }
+
     if (hasTools) {
       await cacheChain({
         workspace,
@@ -79,10 +83,6 @@ export async function buildStepExecution({
         documentLogUuid,
         previousResponse: finalResponse,
       })
-    }
-
-    if (!step.chainCompleted) {
-      streamConsumer.stepCompleted(finalResponse)
     }
 
     if (step.chainCompleted || hasTools) {

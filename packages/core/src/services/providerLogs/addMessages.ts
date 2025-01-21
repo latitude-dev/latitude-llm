@@ -2,7 +2,6 @@ import type { Message } from '@latitude-data/compiler'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
 
 import {
-  buildConversation,
   buildMessagesFromResponse,
   ChainEvent,
   ChainStepResponse,
@@ -25,7 +24,6 @@ import {
   buildProviderLogDto,
   saveOrPublishProviderLogs,
 } from '../chains/ProviderProcessor/saveOrPublishProviderLogs'
-import serializeProviderLog from './serialize'
 
 export type ChainResponse<T extends StreamType> = TypedResult<
   ChainStepResponse<T>,
@@ -72,11 +70,6 @@ export async function addMessages({
   const response = new Promise<ChainResponse<StreamType>>((resolve) => {
     responseResolve = resolve
   })
-
-  messages = [
-    ...buildConversation(serializeProviderLog(providerLog)),
-    ...messages,
-  ]
 
   const stream = new ReadableStream<ChainEvent>({
     start(controller) {

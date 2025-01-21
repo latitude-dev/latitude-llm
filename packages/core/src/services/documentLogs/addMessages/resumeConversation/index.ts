@@ -13,6 +13,7 @@ import { Chain as PromptlChain } from 'promptl-ai'
 import { getResolvedContent } from '../../../documents'
 import { deleteCachedChain } from '../../../chains/chainCache'
 import { ChainStepResponse, StreamType } from '../../../../constants'
+import { runAgent } from '../../../chains/agents/run'
 
 /**
  * What means to resume a converstation
@@ -66,7 +67,9 @@ export async function resumeConversation({
   const previousCount =
     pausedChain.globalMessagesCount + responseMessages.length
 
-  const run = await runChain({
+  const runFn = document.documentType === 'agent' ? runAgent : runChain
+
+  const run = await runFn({
     generateUUID: () => errorableUuid,
     errorableType,
     workspace,
