@@ -105,6 +105,8 @@ export const runBatchEvaluationJob = async (
   for (let i = progress.enqueued; i < parameters.length; i++) {
     progressTracker.incrementEnqueued()
 
+    // NOTE: This is running jobs for the document with different parameters
+    // then the result is evaluated with `runEvaluationJob`
     await jobs.defaultQueue.jobs.enqueueRunDocumentForEvaluationJob({
       workspaceId: workspace.id,
       documentUuid: document.documentUuid,

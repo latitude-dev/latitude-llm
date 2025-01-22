@@ -106,17 +106,15 @@ export function buildResponseMessage<T extends StreamType>({
   const toolCalls = type === 'text' ? (data.toolCalls ?? []) : []
   let content: MessageContent[] = []
 
-  if (text && text.length > 0) {
-    content.push({
-      type: 'text',
-      text: text,
-    } as MessageContent)
-  }
-
   if (object) {
     content.push({
       type: 'text',
       text: objectToString(object),
+    } as MessageContent)
+  } else if (text && text.length > 0) {
+    content.push({
+      type: 'text',
+      text: text,
     } as MessageContent)
   }
 

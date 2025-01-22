@@ -85,9 +85,9 @@ export async function runDocumentAtCommit({
   source,
 }: {
   workspace: Workspace
+  commit: Commit
   document: DocumentVersion
   parameters: Record<string, unknown>
-  commit: Commit
   customIdentifier?: string
   source: LogSources
 }) {

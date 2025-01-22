@@ -26,8 +26,6 @@ export const runDocumentInBatchJob = async (
     toLine,
     parametersMap,
   } = job.data
-  console.log(commit)
-
   const fileMetadata = dataset.fileMetadata
 
   const result = await previewDataset({

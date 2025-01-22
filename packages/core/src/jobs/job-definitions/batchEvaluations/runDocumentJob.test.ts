@@ -1,6 +1,6 @@
 import { env } from '@latitude-data/env'
 import { Job } from 'bullmq'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import * as jobs from '../../'
 import { LogSources, Providers } from '../../../browser'
@@ -10,7 +10,7 @@ import * as commits from '../../../services/commits/runDocumentAtCommit'
 import * as factories from '../../../tests/factories'
 import { WebsocketClient } from '../../../websockets/workers'
 import * as utils from '../../utils/progressTracker'
-import { runDocumentForEvaluationJob } from './runDocumentJob'
+import { mockToolRequestsCopilot } from '../../../tests/helpers'
 
 const incrementErrorsMock = vi.hoisted(() => vi.fn())
 
@@ -21,6 +21,10 @@ describe('runDocumentJob', () => {
   let document: any
   let commit: any
   let evaluation: any
+
+  beforeAll(async () => {
+    await mockToolRequestsCopilot()
+  })
 
   beforeEach(async () => {
     vi.clearAllMocks()
@@ -86,6 +90,8 @@ describe('runDocumentJob', () => {
   })
 
   it('should run document and enqueue evaluation job on success', async () => {
+    const mod = await import('./runDocumentJob')
+    const runDocumentForEvaluationJob = mod.runDocumentForEvaluationJob
     const mockResult = {
       response: Promise.resolve(Result.ok({ providerLog: { uuid: 'log1' } })),
       errorableUuid: 'log1',
@@ -96,7 +102,6 @@ describe('runDocumentJob', () => {
     )
 
     await runDocumentForEvaluationJob(mockJob)
-
     expect(commits.runDocumentAtCommit).toHaveBeenCalledWith(
       expect.objectContaining({
         workspace,
@@ -124,6 +129,9 @@ describe('runDocumentJob', () => {
   })
 
   it('should handle errors and update progress tracker', async () => {
+    const mod = await import('./runDocumentJob')
+    const runDocumentForEvaluationJob = mod.runDocumentForEvaluationJob
+
     vi.mocked(commits.runDocumentAtCommit).mockRejectedValue(
       new Error('Test error'),
     )
@@ -151,6 +159,8 @@ describe('runDocumentJob', () => {
   })
 
   it('should log errors in non-production environment', async () => {
+    const mod = await import('./runDocumentJob')
+    const runDocumentForEvaluationJob = mod.runDocumentForEvaluationJob
     const testError = new Error('Test error')
     vi.mocked(commits.runDocumentAtCommit).mockRejectedValue(testError)
     vi.mocked(env).NODE_ENV = 'development'

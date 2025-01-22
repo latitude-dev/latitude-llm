@@ -3,17 +3,11 @@ import { randomUUID } from 'crypto'
 import { env } from '@latitude-data/env'
 import { Job } from 'bullmq'
 
-import { LogSources } from '../../../browser'
-import { unsafelyFindWorkspace } from '../../../data-access'
-import { NotFoundError } from '../../../lib/errors'
 import { queues } from '../../../queues'
-import {
-  CommitsRepository,
-  DocumentVersionsRepository,
-} from '../../../repositories'
-import { runDocumentAtCommit } from '../../../services/commits/runDocumentAtCommit'
 import { WebsocketClient, WorkerSocket } from '../../../websockets/workers'
 import { ProgressTracker } from '../../utils/progressTracker'
+import { runDocumentAtCommitWithAutoToolResponses } from './runDocumentAtCommitWithAutoToolResponses'
+import { LogSources } from '@latitude-data/constants'
 
 export type RunDocumentJobData = {
   workspaceId: number
@@ -40,6 +34,13 @@ const emitDocumentBatchRunStatus = async (
   })
 }
 
+/**
+ * WARNING: This is for internal use inside Latitude app. Do not
+ * use for users' requests from the API gateway.
+ *
+ * It calls AI to full fill documents with tool calls. This is not what
+ * we want for users' requests from the API gateway.
+ */
 export const runDocumentJob = async (job: Job<RunDocumentJobData>) => {
   const {
     workspaceId,
@@ -53,22 +54,11 @@ export const runDocumentJob = async (job: Job<RunDocumentJobData>) => {
   const progressTracker = new ProgressTracker(await queues(), batchId)
 
   try {
-    const workspace = await unsafelyFindWorkspace(workspaceId)
-    if (!workspace) throw new NotFoundError('Workspace not found')
-
-    const documentsScope = new DocumentVersionsRepository(workspaceId)
-    const commitsScope = new CommitsRepository(workspaceId)
-    const document = await documentsScope
-      .getDocumentAtCommit({ projectId, documentUuid, commitUuid })
-      .then((r) => r.unwrap())
-    const commit = await commitsScope
-      .getCommitByUuid({ projectId, uuid: commitUuid })
-      .then((r) => r.unwrap())
-
-    await runDocumentAtCommit({
-      workspace,
-      document,
-      commit,
+    await runDocumentAtCommitWithAutoToolResponses({
+      workspaceId,
+      projectId,
+      documentUuid,
+      commitUuid,
       parameters,
       source: LogSources.Playground,
     }).then((r) => r.unwrap())
