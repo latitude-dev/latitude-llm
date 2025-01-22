@@ -3,15 +3,12 @@ import crypto from 'crypto'
 import { User } from '@latitude-data/core/browser'
 import env from '$/env'
 
-const APP_ID = env.SUPPORT_APP_ID
-const SECRET_KEY = env.SUPPORT_APP_SECRET_KEY
-
 function getCredentials() {
-  if (!APP_ID || !SECRET_KEY) return
+  if (!env.SUPPORT_APP_ID || !env.SUPPORT_APP_SECRET_KEY) return
 
   return {
-    appId: APP_ID,
-    secretKey: SECRET_KEY,
+    appId: env.SUPPORT_APP_ID,
+    secretKey: env.SUPPORT_APP_SECRET_KEY,
   }
 }
 

@@ -1,11 +1,23 @@
 services:
+  traefik:
+    image: traefik:v2.10
+    command:
+      - '--api.insecure=true'
+      - '--providers.docker=true'
+      - '--providers.docker.exposedbydefault=false'
+      - '--entrypoints.web.address=:80'
+    ports:
+      - '80:80'
+      - '8090:8080'
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
   db:
     image: postgres:15.8
-    environment:
-      - 'POSTGRES_USER=latitude'
-      - 'POSTGRES_PASSWORD=secret'
     ports:
       - '5432:5432'
+    env_file:
+      - .env.example
     volumes:
       - ./docker/init-db.sh:/docker-entrypoint-initdb.d/init-db.sh
       - ./docker/pgdata:/var/lib/postgresql/data
@@ -15,132 +27,71 @@ services:
     ports:
       - '6379:6379'
 
-  mailpit:
-    image: axllent/mailpit
-    ports:
-      - 8025:8025
-      - 1025:1025
-
   web:
+    image: latitude/web:latest
     build:
       platforms:
+        - 'linux/arm64'
         - 'linux/amd64'
       context: .
       dockerfile: apps/web/docker/Dockerfile
-      args:
-        - BUILDING_CONTAINER=true
-        - LATITUDE_URL=$LATITUDE_URL
-        - NEXT_PUBLIC_POSTHOG_HOST=$NEXT_PUBLIC_POSTHOG_HOST
-        - NEXT_PUBLIC_POSTHOG_KEY=$NEXT_PUBLIC_POSTHOG_KEY
-        - SENTRY_AUTH_TOKEN=$SENTRY_AUTH_TOKEN
-        - SENTRY_DSN=$SENTRY_DSN
-        - SENTRY_ORG=$SENTRY_ORG
-        - SENTRY_PROJECT=$SENTRY_PROJECT
-        - SUPPORT_APP_ID=$SUPPORT_APP_ID
-        - SUPPORT_APP_SECRET_KEY=$SUPPORT_APP_SECRET_KEY
-    profiles: [building]
-    ports:
-      - '8080:8080'
-    environment:
-      - NODE_ENV=staging
-      - PORT=8080
-      - FROM_MAILER_EMAIL=hello@latitude.so
-      - DATABASE_URL=postgresql://latitude:secret@db:5432/latitude_development
-      - QUEUE_PORT=6379
-      - QUEUE_HOST=redis
-      - CACHE_PORT=6379
-      - CACHE_HOST=redis
-      - GATEWAY_PORT=8081
-      - GATEWAY_HOSTNAME=gateway
-      - GATEWAY_SSL=false
-      - LATITUDE_DOMAIN=localhost:8080
-      - LATITUDE_URL=http://localhost:8080
-      - WEBSOCKETS_SERVER=http://localhost:4002
-      - WEBSOCKET_SECRET_TOKEN_KEY=secret-token-key
-      - WEBSOCKET_REFRESH_SECRET_TOKEN_KEY=refresh-refresh-token-key
-      - WORKERS_WEBSOCKET_SECRET_TOKEN=workers-secret-token
-      - DRIVE_DISK=local
-      - FILE_PUBLIC_PATH='uploads'
-      - FILES_STORAGE_PATH='/app'
-      - PUBLIC_FILES_STORAGE_PATH='/app/public'
-      - DEFAULT_PROJECT_ID=1
-      - DEFAULT_PROVIDER_API_KEY=d32da7c2-94fd-49c3-8dca-b57a5c3bbe27
-      - NEXT_PUBLIC_POSTHOG_KEY=''
-      - NEXT_PUBLIC_POSTHOG_HOST=''
-      - COPILOT_DATASET_GENERATOR_PROMPT_PATH=generator
-      - COPILOT_TEMPLATES_SUGGESTION_PROMPT_PATH=evaluation-suggestions
-      - SUPPORT_APP_ID=''
-      - SUPPORT_APP_SECRET_KEY=''
+    env_file:
+      - .env.example
+    labels:
+      - 'traefik.enable=true'
+      - 'traefik.http.routers.web.rule=Host(`app.latitude.localhost`)'
+      - 'traefik.http.services.web.loadbalancer.server.port=8080'
     depends_on:
       - db
       - redis
+      - traefik
 
   gateway:
+    image: latitude/gateway:latest
     build:
       platforms:
         - 'linux/amd64'
+        - 'linux/arm64'
       context: .
       dockerfile: apps/gateway/docker/Dockerfile
-    profiles: [building]
-    environment:
-      - HOSTNAME=0.0.0.0
-      - PORT=8081
-      - NODE_ENV=staging
-      - FROM_MAILER_EMAIL=hello@latitude.so
-      - DATABASE_URL=postgresql://latitude:secret@db:5432/latitude_development
-      - QUEUE_PORT=6379
-      - QUEUE_HOST=redis
-      - CACHE_PORT=6379
-      - CACHE_HOST=redis
-      - LATITUDE_DOMAIN=web:8080
-      - LATITUDE_URL=http://web:8080
-      - WEBSOCKETS_SERVER=http://localhost:4002
-      - WEBSOCKET_SECRET_TOKEN_KEY=secret-token-key
-      - WEBSOCKET_REFRESH_SECRET_TOKEN_KEY=refresh-refresh-token-key
-      - WORKERS_WEBSOCKET_SECRET_TOKEN=workers-secret-token
-      - DRIVE_DISK=local
-      - FILE_PUBLIC_PATH='uploads'
-      - FILES_STORAGE_PATH='/app'
-      - PUBLIC_FILES_STORAGE_PATH='/app/public'
-      - DEFAULT_PROJECT_ID=1
-      - DEFAULT_PROVIDER_API_KEY=d32da7c2-94fd-49c3-8dca-b57a5c3bbe27
-      - NEXT_PUBLIC_POSTHOG_KEY=''
-      - NEXT_PUBLIC_POSTHOG_HOST=''
-      - COPILOT_DATASET_GENERATOR_PROMPT_PATH=generator
-      - COPILOT_TEMPLATES_SUGGESTION_PROMPT_PATH=evaluation-suggestions
-      - GATEWAY_PORT=8081
-      - GATEWAY_HOSTNAME=gateway
-      - GATEWAY_SSL=false
-    ports:
-      - '8081:8081'
+    env_file:
+      - .env.example
+    labels:
+      - 'traefik.enable=true'
+      - 'traefik.http.routers.gateway.rule=Host(`gateway.latitude.localhost`)'
+      - 'traefik.http.services.gateway.loadbalancer.server.port=8081'
     depends_on:
       - db
       - redis
 
   workers:
+    image: latitude/workers:latest
     build:
       platforms:
         - 'linux/amd64'
+        - 'linux/arm64'
       context: .
       dockerfile: apps/workers/docker/Dockerfile
-    profiles: [building]
-    environment:
-      - CACHE_HOST=redis
-      - DATABASE_URL=postgresql://latitude:secret@db:5432/latitude_development
-      - DEFAULT_PROJECT_ID=1
-      - DEFAULT_PROVIDER_API_KEY=test
-      - FROM_MAILER_EMAIL=jon@winterfell.com
-      - LATITUDE_DOMAIN=web
-      - LATITUDE_URL=http://web:8080
-      - NODE_ENV=staging
-      - QUEUE_HOST=redis
-      - WEBSOCKETS_SERVER=websockets
-      - WEBSOCKET_REFRESH_SECRET_TOKEN_KEY=test
-      - WEBSOCKET_SECRET_TOKEN_KEY=test
-      - WORKERS_WEBSOCKET_SECRET_TOKEN=test
-      - GATEWAY_HOSTNAME=gateway
-      - NEXT_PUBLIC_POSTHOG_KEY=''
-      - NEXT_PUBLIC_POSTHOG_HOST=''
+    env_file:
+      - .env.example
+    depends_on:
+      - db
+      - redis
+
+  websockets:
+    image: latitude/websockets:latest
+    build:
+      platforms:
+        - 'linux/amd64'
+        - 'linux/arm64'
+      context: .
+      dockerfile: apps/websockets/docker/Dockerfile
+    env_file:
+      - .env.example
+    labels:
+      - 'traefik.enable=true'
+      - 'traefik.http.routers.websockets.rule=Host(`ws.latitude.localhost`)'
+      - 'traefik.http.services.websockets.loadbalancer.server.port=4002'
     depends_on:
       - db
       - redis

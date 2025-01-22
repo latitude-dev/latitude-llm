@@ -22,14 +22,14 @@ ARG PROJECT
 
 WORKDIR /app
 
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json .
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml turbo.json ./
 COPY packages/core/package.json ./packages/core/
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install \
-    --frozen-lockfile \
-    --filter "${PROJECT}..."
+  --frozen-lockfile \
+  --filter "${PROJECT}..."
 
-COPY packages/core ./packages/core
+COPY packages/core/ ./packages/core/
 
-CMD pnpm --prefix packages/core db:migrate
+CMD ["pnpm", "--prefix", "packages/core", "db:migrate"]
 

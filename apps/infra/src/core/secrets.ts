@@ -58,10 +58,6 @@ const websocketsSecretRefreshToken = createSecretWithVersion(
   'WEBSOCKET_REFRESH_SECRET_TOKEN_KEY',
   'Refresh token key for websockets in web',
 )
-const workersWebsocketsSecretToken = createSecretWithVersion(
-  'WORKERS_WEBSOCKET_SECRET_TOKEN',
-  'Secret token key for websockets in workers',
-)
 const defaultProjectId = createSecretWithVersion(
   'DEFAULT_PROJECT_ID',
   'Default project ID',
@@ -115,7 +111,6 @@ export const awsAccessKeyArn = awsAccessKey.arn
 export const awsAccessSecretArn = awsAccessSecret.arn
 export const websocketsSecretTokenArn = websocketsSecretToken.arn
 export const websocketsSecretRefreshTokenArn = websocketsSecretRefreshToken.arn
-export const workersWebsocketsSecretTokenArn = workersWebsocketsSecretToken.arn
 export const defaultProjectIdArn = defaultProjectId.arn
 export const defaultProviderApiKeyArn = defaultProviderApiKey.arn
 export const postHogApiKeyArn = postHogApiKey.arn

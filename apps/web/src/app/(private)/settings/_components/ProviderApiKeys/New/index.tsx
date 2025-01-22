@@ -79,7 +79,7 @@ export default function NewProviderApiKey() {
             required
             type='text'
             name='name'
-            label='Provider'
+            label='Name'
             description="This is the name you'll use in the prompt editor to refer to use this provider and model."
             placeholder='My Provider'
           />
@@ -88,7 +88,7 @@ export default function NewProviderApiKey() {
             name='provider'
             options={PROVIDER_OPTIONS}
             onChange={(value) => setProvider(value as Providers)}
-            label='Source'
+            label='Provider'
           />
           <Input
             required

@@ -1,5 +1,3 @@
-import { env } from 'process'
-
 import { eq } from 'drizzle-orm'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
@@ -41,7 +39,7 @@ describe('destroyProviderApiKey', () => {
       user,
       name: 'Latitude',
       type: Providers.OpenAI,
-      token: env.DEFAULT_PROVIDER_API_KEY,
+      token: 'fake-api-key',
     })
 
     const result = await destroyProviderApiKey(provider)

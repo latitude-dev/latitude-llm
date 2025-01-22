@@ -54,7 +54,7 @@ export async function verifyWebsocketToken({
 }
 
 export async function generateWorkerWebsocketToken() {
-  const secret = new TextEncoder().encode(env.WORKERS_WEBSOCKET_SECRET_TOKEN)
+  const secret = new TextEncoder().encode(env.WEBSOCKET_SECRET_TOKEN_KEY)
   const token = await new SignJWT({})
     .setProtectedHeader({ alg: 'HS256' })
     .setExpirationTime('1h')
@@ -65,7 +65,7 @@ export async function generateWorkerWebsocketToken() {
 
 export async function verifyWorkerWebsocketToken(token: string) {
   try {
-    const secret = new TextEncoder().encode(env.WORKERS_WEBSOCKET_SECRET_TOKEN)
+    const secret = new TextEncoder().encode(env.WEBSOCKET_SECRET_TOKEN_KEY)
     const { payload } = await jwtVerify<{}>(token, secret)
 
     return Result.ok({ payload })

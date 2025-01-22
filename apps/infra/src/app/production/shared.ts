@@ -117,8 +117,6 @@ export const environment = pulumi
   ])
   .apply(() => {
     return [
-      { name: 'HOSTNAME', value: '0.0.0.0' }, // This is the host gateway listens to within its container
-      { name: 'PORT', value: '8080' },
       { name: 'DATABASE_URL', value: dbUrl },
       { name: 'QUEUE_HOST', value: queueEndpoint },
       { name: 'CACHE_HOST', value: cacheEndpoint },
@@ -133,10 +131,6 @@ export const environment = pulumi
       {
         name: 'WEBSOCKET_REFRESH_SECRET_TOKEN_KEY',
         value: websocketSecretRefreshToken,
-      },
-      {
-        name: 'WORKERS_WEBSOCKET_SECRET_TOKEN',
-        value: workersWebsocketsSecretToken,
       },
       { name: 'FROM_MAILER_EMAIL', value: 'hello@latitude.so' },
       { name: 'MAILER_API_KEY', value: mailerApiKey },

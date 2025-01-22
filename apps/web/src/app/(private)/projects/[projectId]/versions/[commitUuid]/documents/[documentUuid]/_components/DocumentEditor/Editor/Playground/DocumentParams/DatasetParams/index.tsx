@@ -20,7 +20,7 @@ function BlankSlate() {
       className='flex flex-row items-center gap-1'
     >
       <Button variant='link'>
-        Manage datasets <Icon name='externalLink' />
+        Manage datasets &nbsp; <Icon name='externalLink' />
       </Button>
     </Link>
   )

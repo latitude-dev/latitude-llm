@@ -24,7 +24,7 @@ export default function Layout({
   title?: string
   previewText: string
 }) {
-  const rootUrl = env.LATITUDE_URL
+  const rootUrl = env.APP_URL
   return (
     <Html>
       <Head>

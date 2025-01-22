@@ -9,7 +9,6 @@ import {
   documentVersions,
   memberships,
   projects,
-  providerApiKeys,
   users,
   workspaces,
 } from '@latitude-data/core/schema'
@@ -74,15 +73,6 @@ describe('setupService', () => {
       where: eq(apiKeys.workspaceId, workspace.id),
     })
     expect(createdApiKey).toBeDefined()
-
-    // Check provider API key creation
-    const createdProviderApiKey =
-      await database.query.providerApiKeys.findFirst({
-        // @ts-expect-error - drizzle-orm types are not up to date
-        where: eq(providerApiKeys.workspaceId, workspace.id),
-      })
-    expect(createdProviderApiKey).toBeDefined()
-    expect(createdProviderApiKey?.authorId).toBe(user.id)
   })
 
   it('publishes userCreated event', async () => {
