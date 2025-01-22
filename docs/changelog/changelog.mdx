@@ -28,6 +28,16 @@ We'll keep iterating on agents based on your feedback, so let us know what you t
 
 Read more about agents in our [docs](/guides/prompt-manager/agents).
 
+## Full support for tool calling
+
+We've added full support for tool calling in Latitude. You can now add tools to your prompts and test them directly on the playground.
+
+Now, when a model calls a tool, the playground will prompt you to fill in the tool response so that the conversation can continue. You can either fill in the tool response manually or use our mock tool responses to test your prompts. These mock tool responses are AI-generated, so they are a great way to test your prompts without having to manually fill in the tool responses.
+
+Running prompts with tool calls in batch mode is also supported, with mock tool responses for each tool call.
+
+![](/assets/changelog/250122/tool-calls.png)
+
 ## Python SDK
 
 We shipped the new Python SDK. Now you can interact with our API from your Python applications.
@@ -40,14 +50,6 @@ It ships with support for:
 We're also working on adding support for compiling prompts locally, so you can run them from your code. Stay tuned!
 
 Here's the documentation to get started with the [Python SDK](/guides/sdk/python).
-
-## Full support for tool calling
-
-We've added full support for tool calling in Latitude. You can now add tools to your prompts and test them directly on the playground.
-
-Now, when a model calls a tool, the playground will prompt you to fill in the tool response so that the conversation can continue. You can either fill in the tool response manually or use our mock tool responses to test your prompts. These mock tool responses are AI-generated, so they are a great way to test your prompts without having to manually fill in the tool responses.
-
-Running prompts with tool calls in batch mode is also supported, with mock tool responses for each tool call.
 
 ## Other stuff
 
