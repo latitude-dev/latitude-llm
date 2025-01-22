@@ -1,0 +1,11 @@
+# syntax=docker/dockerfile:1
+FROM latitude/base-dev:latest
+
+# Set up environment
+ENV PORT=8080
+EXPOSE 8080
+
+# Set working directory to the gateway app
+WORKDIR /app/apps/gateway
+
+CMD pnpm dev

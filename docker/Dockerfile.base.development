@@ -1,0 +1,52 @@
+FROM node:20-alpine
+
+# Install build dependencies
+RUN apk add --no-cache \
+  libc6-compat \
+  curl \
+  python3 \
+  make \
+  g++ \
+  build-base \
+  cairo-dev \
+  jpeg-dev \
+  pango-dev \
+  giflib-dev
+
+# Install pnpm
+ENV PNPM_HOME="/pnpm"
+ENV PATH="$PNPM_HOME:$PATH"
+RUN corepack enable
+
+WORKDIR /app
+
+# Copy the entire monorepo
+COPY package.json ./
+COPY pnpm-lock.yaml ./
+COPY pnpm-workspace.yaml ./
+COPY turbo.json ./
+
+# Apps
+COPY apps/web/package.json apps/web/
+COPY apps/gateway/package.json apps/gateway/
+COPY apps/workers/package.json apps/workers/
+COPY apps/websockets/package.json apps/websockets/
+
+# Packages
+COPY packages/compiler/package.json packages/compiler/
+COPY packages/constants/package.json packages/constants/
+COPY packages/core/package.json packages/core/
+COPY packages/env/package.json packages/env/
+COPY packages/sdks/typescript/package.json packages/sdks/typescript/
+COPY packages/telemetry/typescript/package.json packages/telemetry/typescript/
+COPY packages/web-ui/package.json packages/web-ui/
+
+# Tools
+COPY tools/eslint/package.json tools/eslint/
+COPY tools/typescript/package.json tools/typescript/
+
+# Install dependencies with cache mount
+RUN --mount=type=cache,target=/root/.local/share/pnpm/store pnpm install --no-frozen-lockfile
+
+# Set up environment
+ENV NODE_ENV=development 

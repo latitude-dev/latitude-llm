@@ -1,0 +1,14 @@
+# syntax=docker/dockerfile:1
+FROM latitude/base-dev:latest
+
+# Set up environment
+ENV PORT=8080
+EXPOSE 8080
+
+# Set working directory to the web app
+WORKDIR /app/apps/web
+
+# Verify dependencies and rebuild if necessary
+RUN pnpm install --no-frozen-lockfile && pnpm rebuild
+
+CMD pnpm dev
