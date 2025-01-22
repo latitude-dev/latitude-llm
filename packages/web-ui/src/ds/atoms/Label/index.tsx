@@ -54,12 +54,14 @@ type TooltipLabelProps = LabelProps & {
   badgeLabel?: boolean
   info?: string
   error?: string | undefined
+  inline?: boolean
 }
 export function TooltipLabel({
   badgeLabel,
   info,
   error,
   children,
+  inline = false,
   ...rest
 }: TooltipLabelProps) {
   const LabelComponent = badgeLabel ? BatchLabel : Label
@@ -78,7 +80,7 @@ export function TooltipLabel({
       side='top'
       align='start'
       trigger={
-        <div className='inline-block'>
+        <div className={cn({ 'inline-flex': inline })}>
           <div className='flex flex-row gap-1 items-center'>
             <LabelComponent
               variant={error ? 'destructive' : 'default'}

@@ -4,6 +4,7 @@ export enum ProviderRules {
   Anthropic = 'anthropic',
   Google = 'google',
   VercelSDK = 'latitude',
+  OpenAI = 'openai',
   Custom = 'custom',
 }
 
