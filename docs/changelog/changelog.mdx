@@ -3,6 +3,62 @@ title: Changelog
 description: All notable changes to Latitude.
 ---
 
+<Update label='2025-01-22'>
+## Agents
+
+We're very happy to introduce the first version of Latitude Agents. An agent is a new way to build LLM-powered applications that can interact with the world and perform tasks.
+
+The easiest way to think about agents is as a prompt that runs in a loop and has:
+- Some instructions—including a goal and some context—just like any other prompt
+- A set of tools that it can use to interact with the world
+- A tool the agent can call to signal that it's finished its work
+
+The agent runs in a loop, using the tools available to it to achieve its goal.
+
+![](/assets/changelog/250122/agents.png)
+
+This is the first step in our agent journey. We're already working on:
+- Adding support for using other agents as tools
+- Supporting code execution as a tool
+- Building a library of built-in tools ready to use (web browsing, search, etc.)
+- Agent tracing
+- Triggers
+
+We'll keep iterating on agents based on your feedback, so let us know what you think!
+
+Read more about agents in our [docs](/guides/prompt-manager/agents).
+
+## Python SDK
+
+We shipped the new Python SDK. Now you can interact with our API from your Python applications.
+
+It ships with support for:
+  - Running prompts through our gateway
+  - Pushing logs to Latitude
+  - Telemetry, automatic tracing of your LLM calls
+
+We're also working on adding support for compiling prompts locally, so you can run them from your code. Stay tuned!
+
+Here's the documentation to get started with the [Python SDK](/guides/sdk/python).
+
+## Full support for tool calling
+
+We've added full support for tool calling in Latitude. You can now add tools to your prompts and test them directly on the playground.
+
+Now, when a model calls a tool, the playground will prompt you to fill in the tool response so that the conversation can continue. You can either fill in the tool response manually or use our mock tool responses to test your prompts. These mock tool responses are AI-generated, so they are a great way to test your prompts without having to manually fill in the tool responses.
+
+Running prompts with tool calls in batch mode is also supported, with mock tool responses for each tool call.
+
+## Other stuff
+
+- General improvements to stability and performance
+- Added revert/reset commit actions to the Project's History
+- Added full support for OpenAI's `o1` model family
+- The response of a step now is automatically parsed as JSON if the JSON output schema is defined. 
+- Lots of tool-related fixes
+
+</Update>
+
 <Update label='2024-12-18'>
 ## Latitude Telemetry
 
