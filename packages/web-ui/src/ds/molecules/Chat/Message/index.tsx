@@ -7,11 +7,8 @@ import {
   FileContent,
   ImageContent,
   MessageContent,
-  MessageRole,
   PromptlSourceRef,
   TextContent,
-  ToolContent,
-  ToolRequestContent,
 } from '@latitude-data/compiler'
 
 import { cn } from '../../../../lib/utils'
@@ -29,6 +26,7 @@ import {
 import { colors, font, TextColor } from '../../../tokens'
 import { roleToString, roleVariant } from './helpers'
 import { AGENT_RETURN_TOOL_NAME } from '@latitude-data/core/browser'
+import { TruncatedTooltip } from '../../TruncatedTooltip'
 
 export { roleToString, roleVariant } from './helpers'
 
@@ -89,28 +87,6 @@ export function Message({
   parameters = [],
   collapseParameters = false,
 }: MessageProps) {
-  const isAgentReturnResponse =
-    role === MessageRole.assistant &&
-    Array.isArray(content) &&
-    content.some(
-      (c) =>
-        c.type === ContentType.toolCall &&
-        c.toolName === AGENT_RETURN_TOOL_NAME,
-    )
-
-  if (isAgentReturnResponse) {
-    return (
-      <AgentResponseMessage
-        role={role}
-        content={content}
-        animatePulse={animatePulse}
-        size={size}
-        parameters={parameters}
-        collapseParameters={collapseParameters}
-      />
-    )
-  }
-
   return (
     <MessageItem
       animatePulse={animatePulse}
@@ -224,91 +200,160 @@ const Content = ({
     }
   }
 
-  switch (value.type) {
-    case ContentType.text:
-      try {
-        const parsedValue = JSON.parse(value.text)
-        return (
-          <div key={`${index}`} className='py-2 max-w-full'>
-            <div className='overflow-hidden rounded-xl w-full'>
-              <CodeBlock language='json'>
-                {JSON.stringify(parsedValue, null, 2)}
-              </CodeBlock>
-            </div>
-          </div>
-        )
-      } catch (_) {
-        return (
-          <ContentText
-            index={index}
-            color={color}
-            size={size}
-            message={value.text}
-            parameters={parameters}
-            collapseParameters={collapseParameters}
-            sourceMap={sourceMap}
-          />
-        )
-      }
-
-    case ContentType.image:
+  if (value.type === ContentType.text) {
+    try {
+      const parsedValue = JSON.parse(value.text)
       return (
-        <ContentImage
-          index={index}
-          color={color}
-          size={size}
-          image={value.image}
-          parameters={parameters}
-          collapseParameters={collapseParameters}
-          sourceMap={sourceMap}
-        />
-      )
-
-    case ContentType.file:
-      return (
-        <ContentFile
-          index={index}
-          color={color}
-          size={size}
-          file={value.file}
-          parameters={parameters}
-          collapseParameters={collapseParameters}
-          sourceMap={sourceMap}
-        />
-      )
-
-    case ContentType.toolCall:
-      return (
-        <div key={`${index}`} className='py-2 w-full'>
+        <div key={`${index}`} className='py-2 max-w-full'>
           <div className='overflow-hidden rounded-xl w-full'>
             <CodeBlock language='json'>
-              {JSON.stringify(value as ToolRequestContent, null, 2)}
+              {JSON.stringify(parsedValue, null, 2)}
             </CodeBlock>
           </div>
         </div>
       )
-
-    case ContentType.toolResult:
-      return (
-        <div key={`${index}`} className='py-2 w-full'>
-          <div className='overflow-hidden rounded-xl w-full'>
-            <CodeBlock language='json'>
-              {JSON.stringify(value as ToolContent, null, 2)}
-            </CodeBlock>
-          </div>
-        </div>
-      )
-
-    default:
+    } catch (_) {
       return (
         <ContentText
           index={index}
           color={color}
           size={size}
-          message={'<Content type not supported>'}
+          message={value.text}
+          parameters={parameters}
+          collapseParameters={collapseParameters}
+          sourceMap={sourceMap}
         />
       )
+    }
   }
+
+  if (value.type === ContentType.image) {
+    return (
+      <ContentImage
+        index={index}
+        color={color}
+        size={size}
+        image={value.image}
+        parameters={parameters}
+        collapseParameters={collapseParameters}
+        sourceMap={sourceMap}
+      />
+    )
+  }
+
+  if (value.type === ContentType.file) {
+    return (
+      <ContentFile
+        index={index}
+        color={color}
+        size={size}
+        file={value.file}
+        parameters={parameters}
+        collapseParameters={collapseParameters}
+        sourceMap={sourceMap}
+      />
+    )
+  }
+
+  if (value.type === ContentType.toolCall) {
+    const isAgentResponse = value.toolName === AGENT_RETURN_TOOL_NAME
+
+    const headerBgColor = isAgentResponse ? 'bg-primary' : 'bg-yellow'
+    const headerFgColor = isAgentResponse ? 'accent' : 'warningForeground'
+    const headerIcon = isAgentResponse ? 'bot' : 'puzzle'
+    const headerLabel = isAgentResponse ? 'Agent Response' : 'Tool requested'
+
+    const codeLanguage = isAgentResponse ? 'json' : 'javascript'
+    const codeContent = isAgentResponse
+      ? JSON.stringify(value.args, null, 2)
+      : `${value.toolName}(${JSON.stringify(value.args, null, 2)})`
+
+    return (
+      <div key={`${index}`} className='py-2 w-full'>
+        <div className='overflow-hidden rounded-xl w-full flex-col'>
+          <div
+            className={cn(
+              'flex w-full px-2 py-0.5 items-center gap-2 justify-between',
+              headerBgColor,
+              { 'py-1': isAgentResponse },
+            )}
+          >
+            <div className='flex items-center gap-1.5'>
+              <Icon name={headerIcon} color={headerFgColor} />
+              <Text.H6 noWrap color={headerFgColor}>
+                {headerLabel}
+              </Text.H6>
+            </div>
+            {!isAgentResponse && (
+              <TruncatedTooltip content={value.toolCallId}>
+                <Text.H6 color='warningMutedForeground' ellipsis>
+                  {value.toolCallId}
+                </Text.H6>
+              </TruncatedTooltip>
+            )}
+          </div>
+          <CodeBlock language={codeLanguage}>{codeContent}</CodeBlock>
+        </div>
+      </div>
+    )
+  }
+
+  if (value.type === ContentType.toolResult) {
+    return (
+      <div key={`${index}`} className='py-2 w-full'>
+        <div className='overflow-hidden rounded-xl w-full'>
+          <div
+            className={cn(
+              'flex w-full px-2 py-0.5 items-center gap-2 justify-between',
+              {
+                'bg-muted': !value.isError,
+                'bg-destructive': value.isError,
+              },
+            )}
+          >
+            <div className='flex items-center gap-1.5'>
+              <Icon
+                name={'terminal'}
+                color={
+                  value.isError ? 'destructiveForeground' : 'foregroundMuted'
+                }
+              />
+              <Text.H6
+                noWrap
+                color={
+                  value.isError ? 'destructiveForeground' : 'foregroundMuted'
+                }
+              >
+                {value.toolName}
+              </Text.H6>
+            </div>
+            <TruncatedTooltip content={value.toolCallId}>
+              <Text.H6
+                color={
+                  value.isError ? 'destructiveForeground' : 'foregroundMuted'
+                }
+                ellipsis
+              >
+                {value.toolCallId}
+              </Text.H6>
+            </TruncatedTooltip>
+          </div>
+          <CodeBlock language='json'>
+            {JSON.stringify(value.result, null, 2)}
+          </CodeBlock>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <ContentText
+      index={index}
+      color={color}
+      size={size}
+      message={'<Content type not supported>'}
+    />
+  )
 }
 
 type Reference = {
@@ -650,60 +695,5 @@ const ContentFile = ({
         />
       )}
     </TextComponent>
-  )
-}
-
-function AgentResponseMessage({
-  content,
-  animatePulse = false,
-  size = 'default',
-  parameters = [],
-  collapseParameters = false,
-}: MessageProps) {
-  const [otherContent, returnTool] = Array.isArray(content)
-    ? content.reduce(
-        (acc, c) => {
-          if (c.toolName === AGENT_RETURN_TOOL_NAME) {
-            acc[1] = acc[1] ?? (c as ToolRequestContent)
-          } else {
-            acc[0].push(c)
-          }
-          return acc
-        },
-        [[], undefined] as [MessageContent[], ToolRequestContent | undefined],
-      )
-    : [content, undefined]
-
-  return (
-    <MessageItem
-      animatePulse={animatePulse}
-      badgeLabel='Agent'
-      badgeVariant='default'
-      badgeIcon='bot'
-    >
-      {({ collapsedMessage }) =>
-        collapsedMessage ? (
-          <Content value='...' color='foregroundMuted' size={size} />
-        ) : (
-          <>
-            <MessageItemContent
-              content={otherContent}
-              size={size}
-              parameters={parameters}
-              collapseParameters={collapseParameters}
-              collapsedMessage={collapsedMessage}
-            />
-            <Content
-              index={otherContent.length + 1}
-              color='accent'
-              value={JSON.stringify(returnTool!.args, null, 2)}
-              size={size}
-              parameters={parameters}
-              collapseParameters={collapseParameters}
-            />
-          </>
-        )
-      }
-    </MessageItem>
   )
 }

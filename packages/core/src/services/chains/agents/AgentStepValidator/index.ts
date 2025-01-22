@@ -30,7 +30,7 @@ export type ConfigOverrides = JSONOverride | { output: 'no-schema' }
 
 type ValidatorContext = {
   workspace: Workspace
-  prevText: string | undefined
+  prevContent: Message[] | string | undefined
   conversation: Conversation
   providersMap: CachedApiKeys
 }
@@ -113,7 +113,7 @@ const applyAgentTools = (config: Config): Config => {
 export const validateAgentStep = async (
   context: ValidatorContext,
 ): Promise<TypedResult<ValidatedAgentStep, ChainError<RunErrorCodes>>> => {
-  const { workspace, conversation, providersMap } = context
+  const { workspace, conversation, providersMap, prevContent } = context
 
   const configResult = validateConfig(conversation.config)
   if (configResult.error) return Result.error(configResult.error)
@@ -130,14 +130,19 @@ export const validateAgentStep = async (
   })
   if (freeQuota.error) return freeQuota
 
+  const messages = conversation.messages
+  const assistantResponse = messages[messages.length - 1]
+
+  if (Array.isArray(prevContent)) {
+    const [_assMessage, ...toolResponses] = prevContent
+    messages.push(...toolResponses)
+  }
+
   const rule = applyProviderRules({
     providerType: provider.provider,
-    messages: conversation.messages as Message[],
+    messages,
     config,
   })
-
-  const assistantResponse =
-    conversation.messages[conversation.messages.length - 1]
 
   const lastMessageToolCalls: ToolCall[] | undefined =
     assistantResponse?.toolCalls as ToolCall[]
@@ -153,7 +158,7 @@ export const validateAgentStep = async (
     conversation: {
       ...conversation,
       config: applyAgentTools(config),
-      messages: rule?.messages ?? conversation.messages,
+      messages: rule?.messages ?? messages,
     },
     chainCompleted,
 

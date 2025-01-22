@@ -235,7 +235,7 @@ export async function runStep({
   promptlVersion,
   providersMap,
   controller,
-  previousCount: _prevoiusCount = 0,
+  previousCount: _previousCount = 0,
   previousResponse,
   errorableUuid,
   errorableType,
@@ -248,7 +248,7 @@ export async function runStep({
   const { prevContent, previousCount } = buildPrevContent({
     previousResponse,
     extraMessages,
-    previousCount: _prevoiusCount,
+    previousCount: _previousCount,
   })
 
   const streamConsumer = new ChainStreamConsumer({
