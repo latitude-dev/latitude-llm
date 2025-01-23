@@ -48,10 +48,10 @@ type Props<T extends boolean> = T extends true
  *
  * When (B) this function run recursively until the response is generated
  */
-export async function runDocumentUntilItStops<T extends boolean>({
-  hasToolCalls,
-  data,
-}: Props<T>) {
+export async function runDocumentUntilItStops<T extends boolean>(
+  { hasToolCalls, data }: Props<T>,
+  recursiveFn: typeof runDocumentUntilItStops,
+) {
   const result = !hasToolCalls
     ? await runDocumentAtCommitFn(data)
     : await respondToToolCalls(data)
@@ -66,16 +66,19 @@ export async function runDocumentUntilItStops<T extends boolean>({
   const toolCalls = getToolCalls({ response })
   if (!toolCalls.length) return result
 
-  return runDocumentUntilItStops({
-    hasToolCalls: true,
-    data: {
-      workspace: data.workspace,
-      commit: data.commit,
-      document: data.document,
-      source: data.source,
-      copilot: data.copilot,
-      documentLogUuid: value.errorableUuid,
-      toolCalls,
+  return recursiveFn(
+    {
+      hasToolCalls: true,
+      data: {
+        workspace: data.workspace,
+        commit: data.commit,
+        document: data.document,
+        source: data.source,
+        copilot: data.copilot,
+        documentLogUuid: value.errorableUuid,
+        toolCalls,
+      },
     },
-  })
+    recursiveFn,
+  )
 }

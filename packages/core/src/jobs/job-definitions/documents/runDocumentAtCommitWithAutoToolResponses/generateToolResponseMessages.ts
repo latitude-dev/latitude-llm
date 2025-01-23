@@ -120,6 +120,7 @@ export async function generateToolResponseMessages({
   if (responseResult.error) {
     return Result.error(responseResult.error)
   }
+
   const response = responseResult.value
   if (response.streamType === 'text') {
     return Result.error(

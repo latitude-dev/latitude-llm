@@ -48,6 +48,11 @@ export async function mockToolRequestsCopilot() {
   })
   const mergedCommit = await mergeCommit(commit).then((r) => r.unwrap())
 
+  const copilotData = {
+    workspace,
+    commit: mergedCommit,
+    document: documentVersion,
+  }
   vi.doMock(
     '../../src/jobs/job-definitions/documents/runDocumentAtCommitWithAutoToolResponses/getCopilotData',
     async (originalMod) => {
@@ -55,12 +60,10 @@ export async function mockToolRequestsCopilot() {
       return {
         ...mod,
         getCopilotDataForGenerateToolResponses: async () =>
-          Result.ok({
-            workspace,
-            commit: mergedCommit,
-            document: documentVersion,
-          }),
+          Result.ok(copilotData),
       }
     },
   )
+
+  return copilotData
 }

@@ -86,6 +86,14 @@ type BuildMessageParams<T extends StreamType> = T extends 'object'
       }
     }
 
+function parseToolResponseResult(result: string) {
+  try {
+    return JSON.parse(result)
+  } catch (error) {
+    return { result }
+  }
+}
+
 export function buildResponseMessage<T extends StreamType>({
   type,
   data,
@@ -139,7 +147,7 @@ export function buildResponseMessage<T extends StreamType>({
         toolName: toolCallResponse.name,
         result:
           typeof toolCallResponse.result === 'string'
-            ? JSON.parse(toolCallResponse.result)
+            ? parseToolResponseResult(toolCallResponse.result)
             : toolCallResponse.result,
         isError: toolCallResponse.isError || false,
       }
