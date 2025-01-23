@@ -48,6 +48,7 @@ import {
   RunPromptOptions,
   SDKOptions,
   StreamChainResponse,
+  ToolSpec,
 } from '$sdk/utils/types'
 
 import { adaptPromptConfigToProvider } from './utils/adapters/adaptPromptConfigToProvider'
@@ -109,14 +110,14 @@ class Latitude {
       path: string,
       args?: GetOrCreatePromptOptions,
     ) => Promise<Prompt>
-    run: (
+    run: <Tools extends ToolSpec = {}>(
       path: string,
-      args: RunPromptOptions,
+      args: RunPromptOptions<Tools>,
     ) => Promise<(StreamChainResponse & { uuid: string }) | undefined>
-    chat: (
+    chat: <Tools extends ToolSpec = {}>(
       uuid: string,
       messages: Message[],
-      args?: Omit<ChatOptions, 'messages'>,
+      args?: Omit<ChatOptions<Tools>, 'messages'>,
     ) => Promise<StreamChainResponse | undefined>
     render: <M extends AdapterMessageType = PromptlMessage>(
       args: RenderPromptOptions<M>,
@@ -255,7 +256,10 @@ class Latitude {
     return (await response.json()) as Prompt
   }
 
-  private async runPrompt(path: string, args: RunPromptOptions) {
+  private async runPrompt<Tools extends ToolSpec>(
+    path: string,
+    args: RunPromptOptions<Tools>,
+  ) {
     const options = { ...args, options: this.options }
 
     if (args.stream) return streamRun(path, options)
@@ -301,10 +305,10 @@ class Latitude {
     return (await httpResponse.json()) as DocumentLog
   }
 
-  private async chat(
+  private async chat<Tools extends ToolSpec>(
     uuid: string,
     messages: Message[],
-    args?: Omit<ChatOptions, 'messages'>,
+    args?: Omit<ChatOptions<Tools>, 'messages'>,
   ) {
     // Note: Args is optional and messages is omitted to maintain backwards compatibility
     const options = { ...(args || {}), messages, options: this.options }

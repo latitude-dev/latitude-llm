@@ -4,11 +4,11 @@ import { KeyboardEvent, useCallback, useState } from 'react'
 
 import TextareaAutosize from 'react-textarea-autosize'
 
-import { ToolRequest } from '../../../../lib/versionedMessagesHelpers'
 import { ToolCallForm } from './ToolCallForm'
 import { Message, ToolMessage } from '@latitude-data/compiler'
 import { cn } from '../../../../lib/utils'
 import { ToolBar } from './ToolBar'
+import { ToolRequest } from '@latitude-data/constants'
 
 function SimpleTextArea({
   placeholder,

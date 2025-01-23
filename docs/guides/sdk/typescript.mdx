@@ -182,6 +182,80 @@ await sdk.prompts.run('path/to/your/prompt', {
 })
 ```
 
+#### Running a prompt with tools
+
+When you run a prompt with tools, you can define and supply the corresponding
+tool handlers to the Latitude SDK. These handlers will be called automatically
+when the LLM invokes the tools. The tool results will be returned to the LLM,
+and the conversation will continue.
+
+```typescript
+import { Latitude } from '@latitude-data/sdk'
+
+// If you use TypeScript, you can define the tools you want to use
+// These types will be available in the tools parameter of the run method
+type Tools = {
+  get_coordinates: { location: string }
+  get_weather: { latitude: string; longitude: string }
+}
+
+const response = await sdk.prompts.run<Tools>(documentPath, {
+  projectId,
+  parameters: {
+    my_location: 'Barcelona and Miami',
+    other_location: 'Boston',
+  },
+  versionUuid: commitUuid,
+  stream: true,
+  tools: {
+    get_coordinates: async ({ id, arguments: { location } }) => {
+      const data = fetch('https://api.example.com/coordinates?location=' + location)
+      const { latitude, longitude } = await data.json()
+      return {
+        id,
+        name: 'get_coordinates',
+        result: { latitude, longitude },
+      }
+    },
+    get_weather: async ({ id, arguments: { latitude, longitude } }) => {
+      const data = fetch('https://api.example.com/weather?latitude=' + latitude + '&longitude=' + longitude)
+      const { temperature } = await data.json()
+      return {
+        id,
+        name: 'get_weather',
+        result: { temperature },
+      }
+    },
+  },
+})
+```
+
+#### Pausing tool execution
+When the AI calls one or more tools in your prompt, you can pause the execution. Tools have a second parameter with details.
+
+```typescript
+// ...example of the tools argument in the `sdk.prompts.run` method
+tools: {
+  get_weather: async (
+    { id, arguments: { latitude, longitude } },
+    details: {
+      pauseExecution,
+      messages,
+      conversationUuid,
+      requestedToolCalls,
+    },
+  ) => {
+    // Let's imagine get_weather takes a long time to execute
+    // You can pause the prompt execution, get the weather data, and resume the execution
+    // by using the sdk.prompts.chat method
+    // You will have to store `requestedToolCalls` and `conversationUuid` on your side to resume the execution
+    // If one of the tools is paused, none is sent to your LLM. Because if an LLM requests two tools
+    // and we respond with only one, the LLM will fail, saying a tool response is missing
+    return pauseExecution()
+  },
+},
+```
+
 ## Log Management
 
 ### Pushing a log to Latitude

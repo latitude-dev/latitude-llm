@@ -1,4 +1,5 @@
 import { CodeBlock, Text } from '@latitude-data/web-ui'
+import { UsedToolsDoc } from '../index'
 
 export function APIUsage({
   projectId,
@@ -13,7 +14,7 @@ export function APIUsage({
   documentPath: string
   apiKey: string | undefined
   parameters: Set<string>
-  tools: Set<string>
+  tools: UsedToolsDoc[]
 }) {
   const getRequestBodyContent = () => {
     const body = {
@@ -50,12 +51,12 @@ ${getRequestBodyContent()}
         To run this document programmatically, execute the following command:
       </Text.H5>
       <CodeBlock language='bash'>{apiCode.trim()}</CodeBlock>
-      {tools.size > 0 && (
+      {tools.length > 0 && (
         <Text.H5>
-          You have defined {tools.size} tools in this document. The conversation
-          will stop when assistant messages with tool call content are received.
-          You can continue the conversation by returning the tools results in
-          the chat endpoint.
+          You have defined {tools.length} tools in this document. The
+          conversation will stop when assistant messages with tool call content
+          are received. You can continue the conversation by returning the tools
+          results in the chat endpoint.
         </Text.H5>
       )}
       <Text.H5>

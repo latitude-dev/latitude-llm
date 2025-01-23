@@ -1,7 +1,6 @@
 import { scan } from 'promptl-ai'
 import { ToolCall, readMetadata } from '@latitude-data/compiler'
 import {
-  buildResponseMessage,
   Commit,
   DocumentVersion,
   LogSources,
@@ -10,7 +9,10 @@ import {
 import { Result, UnprocessableEntityError } from '../../../../lib'
 import { AutogenerateToolResponseCopilotData } from './getCopilotData'
 import { runDocumentAtCommit } from '../../../../services/commits/runDocumentAtCommit'
-import { ToolCallResponse } from '@latitude-data/constants'
+import {
+  buildResponseMessage,
+  ToolCallResponse,
+} from '@latitude-data/constants'
 import { ToolSchema } from '../../../../services/ai'
 
 async function buildToolSpecifications({

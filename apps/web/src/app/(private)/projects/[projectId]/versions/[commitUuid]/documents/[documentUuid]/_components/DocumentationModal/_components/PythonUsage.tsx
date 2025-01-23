@@ -1,5 +1,6 @@
 import { HEAD_COMMIT } from '@latitude-data/core/browser'
 import { CodeBlock, Text } from '@latitude-data/web-ui'
+import { UsedToolsDoc } from '../index'
 
 export function PythonUsage({
   projectId,
@@ -14,7 +15,7 @@ export function PythonUsage({
   documentPath: string
   apiKey: string | undefined
   parameters: Set<string>
-  tools: Set<string>
+  tools: UsedToolsDoc[]
 }) {
   const getParametersString = () => {
     if (parameters.size === 0) return ''
@@ -25,11 +26,11 @@ export function PythonUsage({
   }
 
   const getToolsString = () => {
-    if (tools.size === 0) return ''
+    if (tools.length === 0) return ''
 
-    const entries = Array.from(tools).map(
+    const entries = tools.map(
       (tool) =>
-        `\t\t'${tool}': # async def ${tool}(call: ToolCall, details: OnToolCallDetails) -> ToolResult`,
+        `\t\t'${tool.name}': # async def ${tool.name}(call: ToolCall, details: OnToolCallDetails) -> ToolResult`,
     )
 
     return `\ttools={\n${entries.join('\n')}\n\t}`

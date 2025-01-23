@@ -1,4 +1,5 @@
-import { ProviderLog, objectToString } from '../../browser'
+import { objectToString } from '@latitude-data/constants'
+import { ProviderLog } from '../../browser'
 
 export function buildProviderLogResponse(providerLog: ProviderLog) {
   return (
