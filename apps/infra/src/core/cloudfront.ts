@@ -18,6 +18,15 @@ const certificate = new aws.acm.Certificate(
   { provider: usEastProvider },
 )
 
+const blogCertificate = new aws.acm.Certificate(
+  'latitudeBlogCertificate',
+  {
+    domainName: 'blog.latitude.so',
+    validationMethod: 'DNS',
+  },
+  { provider: usEastProvider },
+)
+
 const mainCertificate = new aws.acm.Certificate(
   'latitudeMainCertificate',
   {
@@ -48,6 +57,27 @@ function handler(event) {
   name: 'redirect-to-latitude',
   runtime: 'cloudfront-js-1.0',
 })
+
+// Blog redirect function
+const blogRedirectFunction = new aws.cloudfront.Function(
+  'blogRedirectFunction',
+  {
+    code: `
+function handler(event) {
+    var response = {
+        statusCode: 301,
+        statusDescription: 'Moved Permanently',
+        headers: {
+            'location': { value: 'https://latitude.so/blog' + event.request.uri }
+        }
+    };
+    return response;
+}
+`,
+    name: 'redirect-blog-to-latitude',
+    runtime: 'cloudfront-js-1.0',
+  },
+)
 
 // =========================================
 // CloudFront Distributions
@@ -234,6 +264,60 @@ const mainDistribution = new aws.cloudfront.Distribution('latitudeMain', {
   },
 })
 
+// Blog Redirect Distribution (blog.latitude.so -> latitude.so/blog)
+const blogDistribution = new aws.cloudfront.Distribution(
+  'latitudeBlogRedirect',
+  {
+    enabled: true,
+    isIpv6Enabled: true,
+    httpVersion: 'http2',
+    aliases: ['blog.latitude.so'],
+    defaultCacheBehavior: {
+      allowedMethods: ['GET', 'HEAD'],
+      cachedMethods: ['GET', 'HEAD'],
+      targetOriginId: 'latitudeBlogOrigin',
+      forwardedValues: {
+        queryString: false,
+        cookies: {
+          forward: 'none',
+        },
+      },
+      viewerProtocolPolicy: 'redirect-to-https',
+      minTtl: 0,
+      defaultTtl: 300,
+      maxTtl: 1200,
+      functionAssociations: [
+        {
+          eventType: 'viewer-request',
+          functionArn: blogRedirectFunction.arn,
+        },
+      ],
+    },
+    origins: [
+      {
+        domainName: 'latitude.so',
+        originId: 'latitudeBlogOrigin',
+        customOriginConfig: {
+          httpPort: 80,
+          httpsPort: 443,
+          originSslProtocols: ['TLSv1.2'],
+          originProtocolPolicy: 'https-only',
+        },
+      },
+    ],
+    restrictions: {
+      geoRestriction: {
+        restrictionType: 'none',
+      },
+    },
+    viewerCertificate: {
+      acmCertificateArn: blogCertificate.arn,
+      sslSupportMethod: 'sni-only',
+      minimumProtocolVersion: 'TLSv1.2_2021',
+    },
+  },
+)
+
 // =========================================
 // DNS Records
 // =========================================
@@ -250,9 +334,24 @@ const record = new aws.route53.Record('latitudeRecord', {
   ],
 })
 
+// Blog DNS record
+const blogRecord = new aws.route53.Record('latitudeBlogRecord', {
+  zoneId: 'Z04918046RTZRA6UX0HY',
+  name: 'blog.latitude.so',
+  type: 'A',
+  aliases: [
+    {
+      name: blogDistribution.domainName,
+      zoneId: blogDistribution.hostedZoneId,
+      evaluateTargetHealth: false,
+    },
+  ],
+})
+
 // =========================================
 // Exports
 // =========================================
 export const distributionUrl = distribution.domainName
 export const recordName = record.name
 export const mainDistributionUrl = mainDistribution.domainName
+export const blogDistributionUrl = blogDistribution.domainName
