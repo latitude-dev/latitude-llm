@@ -2,7 +2,6 @@ import { faker } from '@faker-js/faker'
 import { eq } from 'drizzle-orm'
 
 import {
-  DocumentVersion,
   EvaluationMetadataType,
   Providers,
   User,
@@ -28,6 +27,7 @@ import {
   defaultProviderFakeData,
 } from './providerApiKeys'
 import { createWorkspace, type ICreateWorkspace } from './workspaces'
+import { DocumentVersionsRepository } from '../../repositories'
 
 export type IDocumentStructure = { [key: string]: string | IDocumentStructure }
 
@@ -137,8 +137,6 @@ export async function createProject(projectData: Partial<ICreateProject> = {}) {
     }) ?? [],
   )
 
-  const documents: DocumentVersion[] = []
-
   if (projectData.documents) {
     const documentsToCreate = await flattenDocumentStructure({
       documents: projectData.documents,
@@ -151,18 +149,24 @@ export async function createProject(projectData: Partial<ICreateProject> = {}) {
         commit: draft,
         path,
       }).then((r) => r.unwrap())
-      const updatedDoc = await updateDocument({
+      await updateDocument({
         commit: draft,
         document: newDoc,
         content,
       })
-      documents.push(updatedDoc.unwrap())
     }
 
     commit = skipMerge
       ? commit
       : await mergeCommit(draft).then((r) => r.unwrap())
   }
+
+  const docRepo = new DocumentVersionsRepository(workspace.id)
+
+  // Fresh documents after merge
+  const documents = await docRepo
+    .getDocumentsAtCommit(commit)
+    .then((r) => r.unwrap())
 
   return {
     project,

@@ -30,15 +30,24 @@ export async function runDocumentAtCommitWithAutoToolResponses({
 
   const { workspace, document, commit } = dataResult.value
 
-  return await runDocumentUntilItStops({
-    hasToolCalls: false,
-    data: {
-      workspace,
-      document,
-      commit,
-      parameters,
-      source,
-      copilot: copilotResult.value,
+  return await runDocumentUntilItStops(
+    {
+      hasToolCalls: false,
+      data: {
+        workspace,
+        commit,
+        document,
+        parameters,
+        source,
+        copilot: copilotResult.value,
+      },
     },
-  })
+    // This is a recursive function, it call itself. To properly test
+    // that the mocked version is called we need to pass the function
+    // by reference.
+    runDocumentUntilItStops,
+  )
 }
+
+export type RunDocumentAtCommitWithAutoToolResponsesFn =
+  typeof runDocumentAtCommitWithAutoToolResponses

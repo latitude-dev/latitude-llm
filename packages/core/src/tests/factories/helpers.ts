@@ -1,6 +1,8 @@
+import { stringify as stringifyObjectToYaml } from 'yaml'
 import { faker } from '@faker-js/faker'
 
 import { ProviderApiKey } from '../../browser'
+import { Config } from '@latitude-data/constants'
 
 const randomSentence = () => {
   const randomSentenceGenerators = [
@@ -15,21 +17,46 @@ const randomSentence = () => {
   ]!()
 }
 
+function createFrontMatter({
+  provider,
+  model,
+  extraConfig = {},
+}: {
+  provider: ProviderApiKey | string
+  model?: string
+  extraConfig?: Omit<Config, 'provider' | 'model'>
+}) {
+  const providerName = typeof provider === 'string' ? provider : provider.name
+  const modelName = model ?? faker.internet.domainName()
+
+  const base = `
+provider: ${providerName}
+model: ${modelName}
+`
+  if (!Object.keys(extraConfig).length) return base
+
+  const extraConfigYaml = stringifyObjectToYaml(extraConfig)
+
+  return `${base}${extraConfigYaml}`
+}
+
 function createPrompt({
   provider,
   model,
   content,
   steps,
+  extraConfig = {},
 }: {
   provider: ProviderApiKey | string
   model?: string
   content?: string
   steps?: number
+  extraConfig?: Omit<Config, 'provider' | 'model'>
 }) {
+  const frontMatter = createFrontMatter({ provider, model, extraConfig })
   const prompt = `
 ---
-provider: ${typeof provider === 'string' ? provider : provider.name}
-model: ${model ?? faker.internet.domainName()}
+${frontMatter.trim()}
 ---
 ${content ?? ''}
 ${Array.from({ length: steps ?? 1 })
