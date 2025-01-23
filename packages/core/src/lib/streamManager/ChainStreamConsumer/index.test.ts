@@ -15,7 +15,7 @@ import {
 } from '../../../constants'
 import * as factories from '../../../tests/factories'
 import { ChainError } from '../ChainErrors'
-import { ValidatedChainStep } from '../ChainValidator'
+import { ValidatedChainStep } from '../../../services/chains/ChainValidator'
 
 describe('ChainStreamConsumer', () => {
   let controller: ReadableStreamDefaultController

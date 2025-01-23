@@ -13,7 +13,7 @@ import { Chain as PromptlChain } from 'promptl-ai'
 import { getResolvedContent } from '../../../documents'
 import { deleteCachedChain } from '../../../chains/chainCache'
 import { ChainStepResponse, StreamType } from '../../../../constants'
-import { runAgent } from '../../../chains/agents/run'
+import { runAgent } from '../../../agents/run'
 
 /**
  * What means to resume a converstation

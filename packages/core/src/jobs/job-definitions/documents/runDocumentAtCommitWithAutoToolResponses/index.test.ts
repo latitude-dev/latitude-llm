@@ -15,7 +15,7 @@ import { NotFoundError, Result } from '../../../../lib'
 import { AutogenerateToolResponseCopilotData } from './getCopilotData'
 import type { RunDocumentAtCommitWithAutoToolResponsesFn } from './index'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
-import { ChainError } from '../../../../services/chains/ChainErrors'
+import { ChainError } from '../../../../lib/streamManager/ChainErrors'
 
 let workspace: Workspace
 let project: Project

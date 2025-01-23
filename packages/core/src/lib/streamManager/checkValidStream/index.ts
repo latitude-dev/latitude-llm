@@ -1,8 +1,8 @@
 import { RunErrorCodes } from '@latitude-data/constants/errors'
 
 import { StreamType } from '../../../constants'
-import { Result } from '../../../lib'
-import { AIReturn } from '../../ai'
+import { Result } from '../..'
+import { AIReturn } from '../../../services/ai'
 import { ChainError } from '../ChainErrors'
 
 export function checkValidStream({ type }: AIReturn<StreamType>) {

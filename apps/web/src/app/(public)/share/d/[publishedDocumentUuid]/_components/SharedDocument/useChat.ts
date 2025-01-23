@@ -5,6 +5,7 @@ import {
   ContentType,
 } from '@latitude-data/compiler'
 import {
+  buildMessagesFromResponse,
   ChainEventTypes,
   PublishedDocument,
   StreamEventTypes,
@@ -53,32 +54,36 @@ export function useChat({
 
           const { event, data } = serverEvent
 
-          switch (event) {
-            case StreamEventTypes.Latitude: {
-              if (data.type === ChainEventTypes.Error) {
-                setError(new Error(data.error.message))
-              } else if (data.type === ChainEventTypes.Complete) {
-                // @ts-expect-error - Something wrong with the types
-                addMessageToConversation({
-                  role: MessageRole.assistant,
-                  content: data.response.text,
-                })
-
-                setResponseStream(undefined)
-              }
-
-              break
+          // Delta text from the provider
+          if (event === StreamEventTypes.Provider) {
+            if (data.type === 'text-delta') {
+              response += data.textDelta
+              setResponseStream(response)
             }
+            continue
+          }
 
-            case StreamEventTypes.Provider: {
-              if (data.type === 'text-delta') {
-                response += data.textDelta
-                setResponseStream(response)
-              }
-              break
-            }
-            default:
-              break
+          // Step started
+          if (data.type === ChainEventTypes.Step) {
+            setResponseStream('')
+            response = ''
+          }
+
+          // Step finished
+          if (data.type === ChainEventTypes.StepComplete) {
+            const responseMsgs = buildMessagesFromResponse(data)
+            responseMsgs.forEach(addMessageToConversation)
+            setResponseStream(undefined)
+          }
+
+          // Chain finished
+          if (data.type === ChainEventTypes.Complete) {
+            setResponseStream(undefined)
+          }
+
+          // Error
+          if (data.type === ChainEventTypes.Error) {
+            setError(new Error(data.error.message))
           }
         }
       } catch (error) {

@@ -51,11 +51,9 @@ export function AllMessages({
             isExpanded
             onToggleShowPromptMessages={setPromptVisibility}
           />
-          {(messages.length ?? 0) === chainLength && (
-            <MessageList
-              messages={messages.slice(chainLength - 1, chainLength) ?? []}
-            />
-          )}
+          <MessageList
+            messages={messages.slice(chainLength - 1, chainLength) ?? []}
+          />
         </>
       )}
     </>

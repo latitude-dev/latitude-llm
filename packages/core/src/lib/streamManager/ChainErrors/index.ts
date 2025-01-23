@@ -1,7 +1,8 @@
 import { RunErrorCodes, RunErrorDetails } from '@latitude-data/constants/errors'
 
-import { RunError } from '../../../browser'
-import { LatitudeErrorDetails, UnprocessableEntityError } from '../../../lib'
+import { ErrorableEntity, RunError } from '../../../browser'
+import { LatitudeErrorDetails, UnprocessableEntityError } from '../..'
+import { createRunError } from '../../../services/runErrors/create'
 
 export class ChainError<
   T extends RunErrorCodes,
@@ -38,4 +39,32 @@ export class ChainError<
   set dbError(error: RunError) {
     this.runError = error
   }
+}
+
+export async function createChainRunError({
+  error,
+  errorableUuid,
+  errorableType,
+  persistErrors,
+}: {
+  errorableUuid: string
+  error: ChainError<RunErrorCodes>
+  persistErrors: boolean
+  errorableType?: ErrorableEntity
+}) {
+  if (!persistErrors || !errorableType) return error
+
+  const dbError = await createRunError({
+    data: {
+      errorableUuid,
+      errorableType,
+      code: error.errorCode,
+      message: error.message,
+      details: error.details,
+    },
+  }).then((r) => r.unwrap())
+
+  error.dbError = dbError
+
+  return error
 }

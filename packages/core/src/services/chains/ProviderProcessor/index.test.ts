@@ -10,7 +10,7 @@ import { generateUUIDIdentifier } from '../../../lib'
 import {
   AsyncStreamIteable,
   TOOLS,
-} from '../ChainStreamConsumer/consumeStream.test'
+} from '../../../lib/streamManager/ChainStreamConsumer/consumeStream.test'
 import { buildProviderLogDto } from './saveOrPublishProviderLogs'
 
 let data: ReturnType<typeof buildProviderLogDto>

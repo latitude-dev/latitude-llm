@@ -13,12 +13,12 @@ import { ErrorableEntity, LogSources, Providers } from '../../constants'
 import { Result } from '../../lib'
 import * as factories from '../../tests/factories'
 import * as aiModule from '../ai'
-import { ChainError } from './ChainErrors'
+import { ChainError } from '../../lib/streamManager/ChainErrors'
 import {
   AsyncStreamIteable,
   PARTIAL_FINISH_CHUNK,
   TOOLS,
-} from './ChainStreamConsumer/consumeStream.test'
+} from '../../lib/streamManager/ChainStreamConsumer/consumeStream.test'
 import * as ChainValidator from './ChainValidator'
 import { runChain } from './run'
 

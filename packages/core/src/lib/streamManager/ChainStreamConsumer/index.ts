@@ -8,10 +8,10 @@ import {
   StreamEventTypes,
   StreamType,
 } from '../../../constants'
-import { Config } from '../../ai'
+import { Config } from '../../../services/ai'
 import { ChainError } from '../ChainErrors'
-import { ValidatedChainStep } from '../ChainValidator'
-import { ValidatedAgentStep } from '../agents/AgentStepValidator'
+import { ValidatedChainStep } from '../../../services/chains/ChainValidator'
+import { ValidatedAgentStep } from '../../../services/agents/AgentStepValidator'
 
 type ValidatedStep = ValidatedChainStep | ValidatedAgentStep
 import { FinishReason } from 'ai'
@@ -44,34 +44,6 @@ export class ChainStreamConsumer {
   private controller: ReadableStreamDefaultController
   private previousCount: number
   private errorableUuid: string
-
-  static chainCompleted({
-    response,
-    config,
-    controller,
-    finishReason,
-    responseMessages,
-  }: {
-    controller: ReadableStreamDefaultController
-    response: ChainStepResponse<StreamType>
-    config: Config
-    finishReason: FinishReason
-    responseMessages: Message[]
-  }) {
-    enqueueChainEvent(controller, {
-      event: StreamEventTypes.Latitude,
-      data: {
-        type: ChainEventTypes.Complete,
-        config,
-        documentLogUuid: response.documentLogUuid,
-        response,
-        messages: responseMessages,
-        finishReason,
-      },
-    })
-
-    controller.close()
-  }
 
   static startStep({
     controller,
@@ -113,6 +85,34 @@ export class ChainStreamConsumer {
         response: response,
       },
     })
+  }
+
+  static chainCompleted({
+    response,
+    config,
+    controller,
+    finishReason,
+    responseMessages,
+  }: {
+    controller: ReadableStreamDefaultController
+    response: ChainStepResponse<StreamType>
+    config: Config
+    finishReason: FinishReason
+    responseMessages: Message[]
+  }) {
+    enqueueChainEvent(controller, {
+      event: StreamEventTypes.Latitude,
+      data: {
+        type: ChainEventTypes.Complete,
+        config,
+        documentLogUuid: response.documentLogUuid,
+        response,
+        messages: responseMessages,
+        finishReason,
+      },
+    })
+
+    controller.close()
   }
 
   static chainError({

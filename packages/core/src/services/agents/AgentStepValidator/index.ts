@@ -8,13 +8,13 @@ import {
   applyProviderRules,
   ProviderApiKey,
   Workspace,
-} from '../../../../browser'
-import { Result, TypedResult } from '../../../../lib'
-import { Config } from '../../../ai'
-import { azureConfig, googleConfig } from '../../../ai/helpers'
-import { ChainError } from '../../ChainErrors'
-import { checkFreeProviderQuota } from '../../checkFreeProviderQuota'
-import { CachedApiKeys } from '../../run'
+} from '../../../browser'
+import { Result, TypedResult } from '../../../lib'
+import { Config } from '../../ai'
+import { azureConfig, googleConfig } from '../../ai/helpers'
+import { ChainError } from '../../../lib/streamManager/ChainErrors'
+import { checkFreeProviderQuota } from '../../chains/checkFreeProviderQuota'
+import { CachedApiKeys } from '../../chains/run'
 
 export type ValidatedAgentStep = {
   config: Config

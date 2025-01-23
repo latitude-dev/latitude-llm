@@ -10,7 +10,7 @@ import {
 } from '../../browser'
 import { publisher } from '../../events/publisher'
 import { generateUUIDIdentifier, Result } from '../../lib'
-import { runAgent } from '../chains/agents/run'
+import { runAgent } from '../agents/run'
 import { runChain } from '../chains/run'
 import { createDocumentLog } from '../documentLogs'
 import { getResolvedContent } from '../documents'

@@ -8,7 +8,7 @@ import { Adapters, Chain as PromptlChain, scan } from 'promptl-ai'
 
 import { DocumentVersion, ErrorableEntity } from '../../../browser'
 import { Result } from '../../../lib'
-import { ChainError } from '../../chains/ChainErrors'
+import { ChainError } from '../../../lib/streamManager/ChainErrors'
 import { createRunError } from '../../runErrors/create'
 
 type RunDocumentErrorCodes = RunErrorCodes.ChainCompileError

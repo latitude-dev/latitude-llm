@@ -13,7 +13,7 @@ import { applyProviderRules, ProviderApiKey, Workspace } from '../../../browser'
 import { Result, TypedResult } from '../../../lib'
 import { Config } from '../../ai'
 import { azureConfig, googleConfig } from '../../ai/helpers'
-import { ChainError } from '../ChainErrors'
+import { ChainError } from '../../../lib/streamManager/ChainErrors'
 import { checkFreeProviderQuota } from '../checkFreeProviderQuota'
 import { CachedApiKeys } from '../run'
 

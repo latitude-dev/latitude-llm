@@ -3,7 +3,7 @@ import { CoreTool, LanguageModelUsage, TextStreamPart } from 'ai'
 import { describe, expect, it } from 'vitest'
 
 import { ChainEvent, Providers, StreamType } from '../../../constants'
-import { AIReturn } from '../../ai'
+import { AIReturn } from '../../../services/ai'
 import { ChainError } from '../ChainErrors'
 import { consumeStream } from './consumeStream'
 

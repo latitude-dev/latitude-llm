@@ -4,7 +4,7 @@ import { APICallError } from 'ai'
 import { describe, expect, it, vi } from 'vitest'
 
 import { ProviderApiKey, Providers } from '../../browser'
-import { ChainError } from '../chains/ChainErrors'
+import { ChainError } from '../../lib/streamManager/ChainErrors'
 import { ai } from './index'
 
 const PROVIDER_PAYLOAD: ProviderApiKey = {

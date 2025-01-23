@@ -13,17 +13,11 @@ import {
 } from '../../browser'
 import { unsafelyFindProviderApiKey } from '../../data-access'
 import { NotFoundError, Result, TypedResult } from '../../lib'
-import { ai, Config, PartialConfig } from '../ai'
-import { ChainError } from '../chains/ChainErrors'
-import { ChainStreamConsumer } from '../chains/ChainStreamConsumer'
-import { consumeStream } from '../chains/ChainStreamConsumer/consumeStream'
+import { Config, PartialConfig } from '../ai'
+import { ChainError } from '../../lib/streamManager/ChainErrors'
+import { ChainStreamConsumer } from '../../lib/streamManager/ChainStreamConsumer'
 import { checkFreeProviderQuota } from '../chains/checkFreeProviderQuota'
-import { checkValidStream } from '../chains/checkValidStream'
-import { processResponse } from '../chains/ProviderProcessor'
-import {
-  buildProviderLogDto,
-  saveOrPublishProviderLogs,
-} from '../chains/ProviderProcessor/saveOrPublishProviderLogs'
+import { streamAIResponse } from '../../lib/streamManager'
 
 export type ChainResponse<T extends StreamType> = TypedResult<
   ChainStepResponse<T>,
@@ -117,65 +111,15 @@ async function iterate({
       provider,
     }).then((r) => r.unwrap())
 
-    ChainStreamConsumer.startStep({
+    const response = await streamAIResponse({
       controller,
+      workspace,
       config: config as Config,
-      messages: [], // No additional messages added between User message and Assistant response
-      documentLogUuid: documentLogUuid!,
-    })
-
-    const stepStartTime = Date.now()
-
-    const aiResult = await ai({
       messages,
-      config,
+      newMessagesCount: 0,
       provider,
-    }).then((r) => r.unwrap())
-
-    const checkResult = checkValidStream(aiResult)
-    if (checkResult.error) throw checkResult.error
-
-    const consumedStream = await consumeStream({
-      controller,
-      result: aiResult,
-    })
-    if (consumedStream.error) throw consumedStream.error
-
-    const _response = await processResponse({
-      aiResult,
-      workspace,
       source,
-      errorableUuid: documentLogUuid,
-      config,
-      apiProvider: provider,
-      messages,
-      startTime: stepStartTime,
-      finishReason: consumedStream.finishReason,
-      chainCompleted: true,
-    })
-
-    const providerLog = await saveOrPublishProviderLogs({
-      workspace,
-      streamType: aiResult.type,
-      finishReason: consumedStream.finishReason,
-      data: buildProviderLogDto({
-        workspace,
-        source,
-        provider,
-        conversation: { messages, config },
-        stepStartTime,
-        errorableUuid: documentLogUuid,
-        response: _response,
-      }),
-      saveSyncProviderLogs: true,
-      chainCompleted: true,
-    })
-
-    const response = { ..._response, providerLog }
-
-    ChainStreamConsumer.stepCompleted({
-      controller,
-      response,
+      errorableUuid: documentLogUuid!,
     })
 
     const responseMessages = buildMessagesFromResponse({ response })
@@ -187,7 +131,7 @@ async function iterate({
         provider: provider.name,
         model: config.model,
       },
-      finishReason: consumedStream.finishReason,
+      finishReason: response.finishReason ?? 'stop',
       responseMessages,
     })
 
