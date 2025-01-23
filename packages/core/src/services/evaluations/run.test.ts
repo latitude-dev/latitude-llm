@@ -31,7 +31,7 @@ import {
   runErrors,
 } from '../../schema'
 import * as factories from '../../tests/factories'
-import { ChainError } from '../chains/ChainErrors'
+import { ChainError } from '../../lib/streamManager/ChainErrors'
 import * as runChainModule from '../chains/run'
 import { serialize } from '../documentLogs/serialize'
 import * as createRunErrorModule from '../runErrors/create'

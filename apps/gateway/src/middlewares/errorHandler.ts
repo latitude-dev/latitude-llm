@@ -3,7 +3,7 @@ import {
   LatitudeError,
   UnprocessableEntityError,
 } from '@latitude-data/core/lib/errors'
-import { ChainError } from '@latitude-data/core/services/chains/ChainErrors/index'
+import { ChainError } from '@latitude-data/core/lib/streamManager/ChainErrors/index'
 import http from '$/common/http'
 import { captureException } from '$/common/sentry'
 import { HTTPException } from 'hono/http-exception'

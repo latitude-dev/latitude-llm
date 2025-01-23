@@ -26,7 +26,7 @@ import { providerLogs } from '../../../schema'
 import { createDocumentLog, createProject } from '../../../tests/factories'
 import { testConsumeStream } from '../../../tests/helpers'
 import * as aiModule from '../../ai'
-import { ChainError } from '../../chains/ChainErrors'
+import { ChainError } from '../../../lib/streamManager/ChainErrors'
 import { addMessages } from './index'
 
 const dummyDoc1Content = `

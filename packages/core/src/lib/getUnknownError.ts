@@ -1,6 +1,6 @@
 import { RunErrorCodes } from '@latitude-data/constants/errors'
 
-import { isChainError } from '../services/chains/ChainStreamConsumer'
+import { isChainError } from './streamManager/ChainStreamConsumer'
 
 /**
  * We only throw an error if is not a known run error.

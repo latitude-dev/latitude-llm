@@ -12,7 +12,7 @@ import { database } from '../../client'
 import { unsafelyFindDocumentLogByUuid } from '../../data-access'
 import { publisher } from '../../events/publisher'
 import { generateUUIDIdentifier, NotFoundError, Result } from '../../lib'
-import { ChainError } from '../chains/ChainErrors'
+import { ChainError } from '../../lib/streamManager/ChainErrors'
 import { ChainResponse, runChain } from '../chains/run'
 import {
   createEvaluationResult,

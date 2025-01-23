@@ -2,7 +2,7 @@ import { RunErrorCodes } from '@latitude-data/constants/errors'
 import { APICallError } from 'ai'
 
 import { Result } from '../../lib'
-import { ChainError } from '../chains/ChainErrors'
+import { ChainError } from '../../lib/streamManager/ChainErrors'
 
 export function handleAICallAPIError(e: unknown) {
   const isApiError = APICallError.isInstance(e)

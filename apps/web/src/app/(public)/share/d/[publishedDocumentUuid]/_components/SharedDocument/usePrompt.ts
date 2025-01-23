@@ -6,6 +6,7 @@ import {
   Message as ConversationMessage,
 } from '@latitude-data/compiler'
 import {
+  buildMessagesFromResponse,
   ChainEventTypes,
   PublishedDocument,
   StreamEventTypes,
@@ -116,45 +117,53 @@ export function usePrompt({ shared }: { shared: PublishedDocument }) {
 
           const { event, data } = serverEvent
 
-          if ('messages' in data && data.messages) {
-            setResponseStream(undefined)
-            data.messages.forEach(addMessageToConversation)
-            lastMessage = data.messages[data.messages.length - 1]
-            messagesCount += data.messages!.length
+          // Delta text from the provider
+          if (event === StreamEventTypes.Provider) {
+            if (data.type === 'text-delta') {
+              accomulatedDeltas[accomulateIndex]!.deltas.push(data.textDelta)
+              response += data.textDelta
+
+              setResponseStream(response)
+            }
+            continue
           }
 
-          switch (event) {
-            case StreamEventTypes.Latitude: {
-              if (data.type === ChainEventTypes.StepComplete) {
-                response = ''
-                accomulatedDeltas.push({ deltas: [] })
-                accomulateIndex++
-              } else if (data.type === ChainEventTypes.Complete) {
-                const deltas = getDeltas({
-                  accomulatedDeltas,
-                  accomulateIndex,
-                  lastMessage,
-                })
-                setLastMessage({ lastMessage, deltas })
-                setChainLength(messagesCount)
-              } else if (data.type === ChainEventTypes.Error) {
-                setError(new Error(data.error.message))
-              }
+          // Step started
+          if (data.type === ChainEventTypes.Step) {
+            setResponseStream(undefined)
+            data.messages.forEach(addMessageToConversation)
+            messagesCount += data.messages!.length
 
-              break
-            }
+            response = ''
+          }
 
-            case StreamEventTypes.Provider: {
-              if (data.type === 'text-delta') {
-                accomulatedDeltas[accomulateIndex]!.deltas.push(data.textDelta)
-                response += data.textDelta
+          // Step finished
+          if (data.type === ChainEventTypes.StepComplete) {
+            const responseMsgs = buildMessagesFromResponse(data)
+            setResponseStream(undefined)
+            responseMsgs.forEach(addMessageToConversation)
+            messagesCount += responseMsgs.length
+            lastMessage = responseMsgs[responseMsgs.length - 1]
 
-                setResponseStream(response)
-              }
-              break
-            }
-            default:
-              break
+            response = ''
+            accomulatedDeltas.push({ deltas: [] })
+            accomulateIndex++
+          }
+
+          // Chain finished
+          if (data.type === ChainEventTypes.Complete) {
+            const deltas = getDeltas({
+              accomulatedDeltas,
+              accomulateIndex,
+              lastMessage,
+            })
+            setLastMessage({ lastMessage, deltas })
+            setChainLength(messagesCount)
+          }
+
+          // Error
+          if (data.type === ChainEventTypes.Error) {
+            setError(new Error(data.error.message))
           }
         }
       } catch (error) {

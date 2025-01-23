@@ -12,7 +12,7 @@ import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/data-ac
 import { createProject } from '@latitude-data/core/factories'
 import { LatitudeError } from '@latitude-data/core/lib/errors'
 import { Result } from '@latitude-data/core/lib/Result'
-import { ChainError } from '@latitude-data/core/services/chains/ChainErrors/index'
+import { ChainError } from '@latitude-data/core/lib/streamManager/ChainErrors/index'
 import { parseSSEvent } from '$/common/parseSSEEvent'
 import app from '$/routes/app'
 import { testConsumeStream } from 'test/helpers'

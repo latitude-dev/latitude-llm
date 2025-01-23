@@ -4,14 +4,8 @@ import {
   ContentType,
   Message as ConversationMessage,
   MessageRole,
-  ToolMessage,
 } from '@latitude-data/compiler'
-import {
-  buildMessagesFromResponse,
-  ChainEventTypes,
-  StreamEventTypes,
-  type DocumentVersion,
-} from '@latitude-data/core/browser'
+import { type DocumentVersion } from '@latitude-data/core/browser'
 import {
   AnimatedDots,
   ChatTextArea,
@@ -28,24 +22,11 @@ import {
   useCurrentProject,
 } from '@latitude-data/web-ui'
 import { LanguageModelUsage } from 'ai'
-import { readStreamableValue } from 'ai/rsc'
 
 import { DocumentEditorContext } from '..'
 import Actions, { ActionsState } from './Actions'
-import { useMessages } from './useMessages'
 import { type PromptlVersion } from '@latitude-data/web-ui'
-
-function buildMessage({ input }: { input: string | ToolMessage[] }) {
-  if (typeof input === 'string') {
-    return [
-      {
-        role: MessageRole.user,
-        content: [{ type: ContentType.text, text: input }],
-      } as ConversationMessage,
-    ]
-  }
-  return input
-}
+import { usePlaygroundChat } from '$/hooks/playgroundChat/usePlaygroundChat'
 
 export default function Chat<V extends PromptlVersion>({
   document,
@@ -60,217 +41,83 @@ export default function Chat<V extends PromptlVersion>({
   parameters: Record<string, unknown>
   clearChat: () => void
 } & ActionsState) {
-  const [documentLogUuid, setDocumentLogUuid] = useState<string>()
-  const { commit } = useCurrentCommit()
-  const { project } = useCurrentProject()
-  const { runDocumentAction, addMessagesAction } = useContext(
-    DocumentEditorContext,
-  )!
-  const [error, setError] = useState<Error | undefined>()
-  const [usage, setUsage] = useState<LanguageModelUsage | undefined>()
+  const runOnce = useRef(false)
   const [isScrolledToBottom, setIsScrolledToBottom] = useState(false)
-  const [time, setTime] = useState<number>()
   const containerRef = useRef<HTMLDivElement>(null)
   useAutoScroll(containerRef, {
     startAtBottom: true,
     onScrollChange: setIsScrolledToBottom,
   })
 
-  const runChainOnce = useRef(false)
-  const isChat = useRef(false)
-  // Index where the chain ends and the chat begins
-  const [chainLength, setChainLength] = useState<number>(Infinity)
-  const [responseStream, setResponseStream] = useState<string | undefined>()
-  const [isStreaming, setIsStreaming] = useState(false)
-  const { messages, addMessages, unresponedToolCalls } = useMessages<V>({
-    version: promptlVersion,
-  })
-  const startStreaming = useCallback(() => {
-    setError(undefined)
-    setResponseStream('')
-    setIsStreaming(true)
-  }, [setError, setUsage, setResponseStream, setIsStreaming])
+  const { commit } = useCurrentCommit()
+  const { project } = useCurrentProject()
+  const { runDocumentAction, addMessagesAction } = useContext(
+    DocumentEditorContext,
+  )!
 
-  const stopStreaming = useCallback(() => {
-    setIsStreaming(false)
-    setResponseStream(undefined)
-  }, [setIsStreaming, setResponseStream])
+  const runPromptFn = useCallback(async () => {
+    const { response, output } = await runDocumentAction({
+      projectId: project.id,
+      documentPath: document.path,
+      commitUuid: commit.uuid,
+      parameters,
+    })
 
-  const runDocument = useCallback(async () => {
-    const start = performance.now()
-    let response = ''
-    let messagesCount = 0
-    startStreaming()
+    const documentLogUuid = new Promise<string>((resolve, reject) => {
+      response.then((r) => {
+        if (!r) {
+          reject(new Error('No document log uuid'))
+          return
+        }
+        resolve(r.uuid)
+      })
+    })
 
-    try {
-      const { response: actionResponse, output } = await runDocumentAction({
-        projectId: project.id,
-        documentPath: document.path,
-        commitUuid: commit.uuid,
-        parameters,
+    return { stream: output, documentLogUuid }
+  }, [project.id, document.path, commit.uuid, parameters, runDocumentAction])
+
+  const addMessagesFn = useCallback(
+    async ({
+      documentLogUuid,
+      messages,
+    }: {
+      documentLogUuid: string
+      messages: ConversationMessage[]
+    }) => {
+      const { output } = await addMessagesAction({
+        documentLogUuid,
+        messages,
       })
 
-      actionResponse.then((r) => {
-        setDocumentLogUuid(r?.uuid)
-      })
+      return { stream: output }
+    },
+    [],
+  )
 
-      for await (const serverEvent of readStreamableValue(output)) {
-        if (!serverEvent) continue
-
-        const { event, data } = serverEvent
-
-        if ('messages' in data) {
-          setResponseStream(undefined)
-          addMessages(data.messages ?? [])
-          messagesCount += data.messages!.length
-        }
-
-        switch (event) {
-          case StreamEventTypes.Latitude: {
-            if (data.type === ChainEventTypes.StepComplete) {
-              response = ''
-            } else if (data.type === ChainEventTypes.Complete) {
-              setUsage(data.response.usage)
-              setChainLength(messagesCount)
-              setTime(performance.now() - start)
-            } else if (data.type === ChainEventTypes.Error) {
-              setError(new Error(data.error.message))
-            }
-
-            break
-          }
-
-          case StreamEventTypes.Provider: {
-            if (data.type === 'text-delta') {
-              response += data.textDelta
-              setResponseStream(response)
-            }
-            break
-          }
-
-          default:
-            break
-        }
-      }
-    } catch (error) {
-      setError(error as Error)
-    } finally {
-      stopStreaming()
-    }
-  }, [
-    project.id,
-    document.path,
-    commit.uuid,
-    parameters,
-    runDocumentAction,
+  const {
+    start,
+    submitUserMessage,
     addMessages,
-    startStreaming,
-    stopStreaming,
-  ])
+    unresponedToolCalls,
+    error,
+    usage,
+    time,
+    messages,
+    streamingResponse,
+    chainLength,
+    isLoading,
+  } = usePlaygroundChat({
+    promptlVersion,
+    runPromptFn,
+    addMessagesFn,
+  })
 
   useEffect(() => {
-    if (runChainOnce.current) return
-
-    runChainOnce.current = true // Prevent double-running when StrictMode is enabled
-    runDocument()
-  }, [runDocument])
-
-  const submitUserMessage = useCallback(
-    async (input: string | ToolMessage[]) => {
-      if (!documentLogUuid) return // This should not happen
-
-      const newMessages = buildMessage({ input })
-
-      // Only in Chat mode we add optimistically the message
-      if (typeof input === 'string') {
-        isChat.current = true
-        addMessages(newMessages)
-      }
-
-      if (!isChat.current) {
-        setChainLength((prev) => prev + newMessages.length)
-      }
-
-      let response = ''
-      const start = performance.now()
-      let messagesCount = 0
-      startStreaming()
-
-      try {
-        const { output } = await addMessagesAction({
-          documentLogUuid,
-          messages: newMessages,
-        })
-
-        for await (const serverEvent of readStreamableValue(output)) {
-          if (!serverEvent) continue
-
-          const { event, data } = serverEvent
-
-          if (data.type === ChainEventTypes.Step) {
-            setResponseStream('')
-            addMessages(data.messages ?? [])
-            messagesCount += data.messages?.length ?? 0
-          }
-
-          if (data.type === ChainEventTypes.StepComplete) {
-            const responseMsgs = buildMessagesFromResponse(data)
-            setResponseStream(undefined)
-            addMessages(responseMsgs)
-            messagesCount += responseMsgs.length
-          }
-
-          switch (event) {
-            case StreamEventTypes.Latitude: {
-              if (data.type === ChainEventTypes.Complete) {
-                if (!isChat.current) {
-                  // Update chain statistics
-                  setChainLength((prev) => prev + messagesCount)
-                  setTime((prev) => (prev ?? 0) + (performance.now() - start))
-                }
-                setUsage((prev) => ({
-                  promptTokens:
-                    (prev?.promptTokens ?? 0) +
-                    data.response.usage.promptTokens,
-                  completionTokens:
-                    (prev?.completionTokens ?? 0) +
-                    data.response.usage.completionTokens,
-                  totalTokens:
-                    (prev?.totalTokens ?? 0) + data.response.usage.totalTokens,
-                }))
-              } else if (data.type === ChainEventTypes.Error) {
-                setError(new Error(data.error.message))
-              }
-
-              break
-            }
-
-            case StreamEventTypes.Provider: {
-              if (data.type === 'text-delta') {
-                response += data.textDelta
-                setResponseStream(response)
-              }
-              break
-            }
-
-            default:
-              break
-          }
-        }
-      } catch (error) {
-        setError(error as Error)
-      } finally {
-        stopStreaming()
-      }
-    },
-    [
-      documentLogUuid,
-      addMessagesAction,
-      addMessages,
-      startStreaming,
-      stopStreaming,
-    ],
-  )
+    if (!runOnce.current) {
+      runOnce.current = true
+      start()
+    }
+  }, [start])
 
   return (
     <div className='flex flex-col flex-1 gap-2 h-full overflow-hidden'>
@@ -308,7 +155,7 @@ export default function Chat<V extends PromptlVersion>({
           <ErrorMessage error={error} />
         ) : (
           <StreamMessage
-            responseStream={responseStream}
+            responseStream={streamingResponse}
             messages={messages}
             chainLength={chainLength}
           />
@@ -318,12 +165,12 @@ export default function Chat<V extends PromptlVersion>({
         <TokenUsage
           isScrolledToBottom={isScrolledToBottom}
           usage={usage}
-          isStreaming={isStreaming}
+          isStreaming={isLoading}
         />
         <ChatTextArea
           clearChat={clearChat}
           placeholder='Enter followup message...'
-          disabled={isStreaming}
+          disabled={isLoading}
           onSubmit={submitUserMessage}
           toolRequests={unresponedToolCalls}
           addMessages={addMessages}

@@ -10,7 +10,7 @@ import {
   StreamType,
 } from '../../../constants'
 import { streamToGenerator } from '../../../lib/streamToGenerator'
-import { AIReturn } from '../../ai'
+import { AIReturn } from '../../../services/ai'
 import { ChainError } from '../ChainErrors'
 
 type StreamChunk =

@@ -8,7 +8,7 @@ import { RunErrorCodes } from '@latitude-data/constants/errors'
 
 import { Providers } from '../../constants'
 import { Result } from '../../lib'
-import { ChainError } from '../chains/ChainErrors'
+import { ChainError } from '../../lib/streamManager/ChainErrors'
 
 import { PartialConfig } from '@latitude-data/constants'
 export {

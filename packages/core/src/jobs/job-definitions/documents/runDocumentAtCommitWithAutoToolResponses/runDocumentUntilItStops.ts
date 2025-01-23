@@ -3,7 +3,7 @@ import { runDocumentAtCommit as runDocumentAtCommitFn } from '../../../../servic
 import { Commit, Workspace, DocumentVersion } from '../../../../browser'
 import { ChainResponse } from '../../../../services/providerLogs'
 import { ToolCall } from '@latitude-data/compiler'
-import { getToolCalls } from '../../../../services/chains/buildStep'
+import { getToolCalls } from '../../../../services/chains/runStep'
 import { Result } from '../../../../lib'
 import { respondToToolCalls } from './respondToToolCalls'
 import { AutogenerateToolResponseCopilotData } from './getCopilotData'
