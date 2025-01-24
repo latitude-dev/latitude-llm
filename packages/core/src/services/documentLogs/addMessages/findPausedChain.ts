@@ -28,7 +28,7 @@ export async function findPausedChain({
 
   const commit = commitResult.value
   const documentsRepo = new DocumentVersionsRepository(workspace.id)
-  const result = await documentsRepo.getDocumentByUuid({
+  const result = await documentsRepo.getDocumentAtCommit({
     commitUuid: commit?.uuid,
     documentUuid: documentLog.documentUuid,
   })
