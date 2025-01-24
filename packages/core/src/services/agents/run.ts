@@ -9,16 +9,15 @@ import {
   StreamType,
 } from '../../constants'
 import { Result } from '../../lib'
-import { buildAllMessagesFromResponse } from '../../browser'
 import { generateUUIDIdentifier } from '../../lib/generateUUID'
 import { Conversation } from '@latitude-data/compiler'
-import { Chain } from 'promptl-ai'
 import { runChain, SomeChain, RunChainArgs, ChainResponse } from '../chains/run'
 import {
   ChainError,
   createChainRunError,
 } from '../../lib/streamManager/ChainErrors'
 import { runAgentStep } from './runStep'
+import { deleteCachedChain } from '../chains/chainCache'
 
 type ChainCompleteEvent = {
   data: LatitudeChainCompleteEventData
@@ -42,7 +41,7 @@ export async function runAgent<T extends boolean, C extends SomeChain>({
   persistErrors = true,
   generateUUID = generateUUIDIdentifier,
   previousResponse: _previousResponse,
-  extraMessages,
+  extraMessages: _extraMessages,
   ...other
 }: RunChainArgs<T, C>) {
   const errorableUuid = generateUUID()
@@ -56,6 +55,7 @@ export async function runAgent<T extends boolean, C extends SomeChain>({
   let conversation: Conversation
   let stepCount = 0
   let previousResponse = _previousResponse
+  let extraMessages = _extraMessages
 
   const chainResult = await runChain({
     workspace,
@@ -81,14 +81,20 @@ export async function runAgent<T extends boolean, C extends SomeChain>({
       const readNextChainEvent = () => {
         chainEventsReader.read().then(({ done, value }) => {
           if (value) {
+            if (value.data.type === ChainEventTypes.Error) {
+              controller.enqueue(value)
+              return responseResolve(
+                Result.error(value.data.error as ChainError<RunErrorCodes>),
+              )
+            }
+
             if (isChainComplete(value)) {
-              const messages = buildAllMessagesFromResponse({
-                response: value.data.response,
-              })
               conversation = {
                 config: value.data.config,
-                messages,
+                messages: value.data.response.providerLog?.messages ?? [],
               }
+
+              // Pause this process if the chain stopped due to tool calls
               if (value.data.finishReason === 'tool-calls') {
                 controller.enqueue(value)
                 controller.close()
@@ -104,33 +110,30 @@ export async function runAgent<T extends boolean, C extends SomeChain>({
 
               if (value.data.type === ChainEventTypes.StepComplete) {
                 stepCount++
+                extraMessages = undefined // extraMessages has been used by the Chain, so we no longer need it for the agent workflow
                 previousResponse = value.data
                   .response as ChainStepResponse<StreamType>
               }
-            }
-
-            if (value.data.type === ChainEventTypes.Error) {
-              return responseResolve(
-                Result.error(value.data.error as ChainError<RunErrorCodes>),
-              )
             }
           }
 
           if (!done) return readNextChainEvent()
 
+          // Chain has been completed. Remove the cached chain if there was any.
+          deleteCachedChain({ workspace, documentLogUuid: errorableUuid })
+
           // Start agent's auntonomous workflow when initial chain is done
           runAgentStep({
             workspace,
             source,
-            originalChain: chain as Chain,
             conversation,
             providersMap,
             controller,
             errorableUuid,
             stepCount,
-            previousCount: conversation.messages.length - 1,
+            previousCount: conversation.messages.length,
             previousResponse: previousResponse!,
-            extraMessages: stepCount === 0 ? extraMessages : undefined, // Only include extra messages if Chain did not already used them
+            extraMessages,
           })
             .then((okResponse) => {
               responseResolve(Result.ok(okResponse))

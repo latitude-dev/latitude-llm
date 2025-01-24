@@ -126,11 +126,11 @@ describe('respondToToolCalls', () => {
       // @ts-ignore
       Result.ok(mockResult),
     )
-    const resumeConversationMock = vi.fn()
+    const resumePausedPromptMock = vi.fn()
     vi.doMock(
-      '../../../../services/documentLogs/addMessages/resumeConversation',
+      '../../../../services/documentLogs/addMessages/resumePausedPrompt',
       () => ({
-        resumeConversation: resumeConversationMock,
+        resumePausedPrompt: resumePausedPromptMock,
       }),
     )
 
@@ -192,7 +192,7 @@ describe('respondToToolCalls', () => {
       source: LogSources.Playground,
     })
 
-    expect(resumeConversationMock).toHaveBeenCalledWith({
+    expect(resumePausedPromptMock).toHaveBeenCalledWith({
       workspace,
       commit,
       document,
