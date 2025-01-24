@@ -311,7 +311,8 @@ describe('computeChangesToRevertCommit', () => {
       },
     })
 
-    const [fooDocument, barDocument] = documents
+    const fooDocument = documents.find((doc) => doc.path === 'foo')!
+    const barDocument = documents.find((doc) => doc.path === 'bar')!
 
     const { commit: changeCommit } = await ctx.factories.createDraft({
       project,
@@ -385,7 +386,8 @@ describe('computeChangesToRevertCommit', () => {
       },
     })
 
-    const [unchangedDocument, changedDocument] = documents
+    const unchangedDocument = documents.find((d) => d.path === 'unchanged')!
+    const changedDocument = documents.find((d) => d.path === 'changed')!
 
     const { commit: changeCommit } = await ctx.factories.createDraft({
       project,
