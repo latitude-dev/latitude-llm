@@ -198,7 +198,14 @@ class Prompts:
         tool_calls: List[ToolCall],
         options: Union[RunPromptOptions, ChatPromptOptions],
     ) -> Optional[FinishedEvent]:
-        assert options.tools is not None
+        if not options.tools:
+            raise ApiError(
+                status=400,
+                code=ApiErrorCodes.AIRunError,
+                message="Tools not supplied",
+                response="Tools not supplied",
+            )
+
         for tool_call in tool_calls:
             if tool_call.name not in options.tools:
                 raise ApiError(
