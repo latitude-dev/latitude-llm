@@ -1,4 +1,9 @@
-import { Conversation, Message, ToolCall } from '@latitude-data/compiler'
+import {
+  Conversation,
+  Message,
+  ToolCall,
+  MessageRole,
+} from '@latitude-data/compiler'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
 import { JSONSchema7 } from 'json-schema'
 import { z } from 'zod'
@@ -134,8 +139,13 @@ export const validateAgentStep = async (
   const assistantResponse = messages[messages.length - 1]
 
   if (Array.isArray(prevContent)) {
-    const [_assMessage, ...toolResponses] = prevContent
-    messages.push(...toolResponses)
+    messages.push(...prevContent)
+  } else {
+    messages.push({
+      role: MessageRole.assistant,
+      content: prevContent!,
+      toolCalls: [],
+    })
   }
 
   const rule = applyProviderRules({
