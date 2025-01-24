@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any, Dict, List, Literal, Optional, Protocol, Union, runtime_checkable
+from typing import Any, Callable, Dict, List, Literal, Optional, Protocol, Union, runtime_checkable
 
 from latitude_sdk.sdk.errors import ApiError
 from latitude_sdk.util import Adapter, Field, Model, StrEnum
@@ -119,6 +119,13 @@ class ToolCall(Model):
     id: str
     name: str
     arguments: Dict[str, Any]
+
+
+class ToolResult(Model):
+    id: str
+    name: str
+    result: str
+    is_error: Optional[bool] = None
 
 
 class StreamTypes(StrEnum):
@@ -274,6 +281,18 @@ class StreamCallbacks(Model):
         def __call__(self, error: ApiError): ...
 
     on_error: Optional[OnError] = None
+
+
+class OnToolCallDetails(Model):
+    conversation_uuid: str
+    messages: List[Message]
+    pause_execution: Callable[[], None]
+    tool_calls: List[ToolCall]
+
+
+@runtime_checkable
+class OnToolCall(Protocol):
+    async def __call__(self, call: ToolCall, details: OnToolCallDetails) -> ToolResult: ...
 
 
 class SdkOptions(Model):
