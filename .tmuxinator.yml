@@ -2,6 +2,10 @@ name: latitude-llm
 windows:
   - workspace: cd .
   - apps: pnpm dev --filter='./apps/*'
-  - packages: pnpm dev --filter='./packages/*'
+  - packages:
+      layout: main-horizontal
+      panes:
+        - pnpm dev --filter='./packages/*'
+        - cd apps/web && pnpm workers:watch
   - docker: docker compose up --menu=false
   - studio: cd packages/core && pnpm db:studio
