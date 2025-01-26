@@ -286,8 +286,8 @@ class StreamCallbacks(Model):
 class OnToolCallDetails(Model):
     conversation_uuid: str
     messages: List[Message]
-    pause_execution: Callable[[], None]
-    tool_calls: List[ToolCall]
+    pause_execution: Callable[[], ToolResult]
+    requested_tool_calls: List[ToolCall]
 
 
 @runtime_checkable

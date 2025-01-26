@@ -32,10 +32,15 @@ from latitude_sdk.sdk.types import (
     StreamEvents,
     ToolCall,
     ToolMessage,
+    ToolResult,
     ToolResultContent,
     _Message,
 )
 from latitude_sdk.util import Model
+
+
+class OnToolCallPaused(Exception):
+    pass
 
 
 class PromptOptions(Model):
@@ -192,6 +197,9 @@ class Prompts:
 
         return list(tool_calls.values())
 
+    def _pause_tool_execution(self) -> ToolResult:
+        raise OnToolCallPaused()
+
     async def _handle_tool_calls(
         self,
         result: FinishedEvent,
@@ -218,12 +226,13 @@ class Prompts:
         details = OnToolCallDetails(
             conversation_uuid=result.uuid,
             messages=result.conversation,
-            pause_execution=lambda: None,  # TODO: Implement
-            tool_calls=tool_calls,
+            pause_execution=self._pause_tool_execution,
+            requested_tool_calls=tool_calls,
         )
 
         tool_results = await asyncio.gather(
-            *[options.tools[tool_call.name](tool_call, details) for tool_call in tool_calls]
+            *[options.tools[tool_call.name](tool_call, details) for tool_call in tool_calls],
+            return_exceptions=False,
         )
 
         tool_messages = [
@@ -313,9 +322,12 @@ class Prompts:
             if options.tools:
                 tool_calls = self._search_unanswered_tool_calls(result.conversation)
                 if tool_calls:
-                    # NOTE: The last sdk.chat called will already call on_finished
-                    result = await self._handle_tool_calls(result, tool_calls, options)
-                    return RunPromptResult(**dict(result)) if result else None
+                    try:
+                        # NOTE: The last sdk.chat called will already call on_finished
+                        final_result = await self._handle_tool_calls(result, tool_calls, options)
+                        return RunPromptResult(**dict(final_result)) if final_result else None
+                    except OnToolCallPaused:
+                        pass
 
             if options.on_finished:
                 options.on_finished(FinishedEvent(**dict(result)))
@@ -368,9 +380,12 @@ class Prompts:
             if options.tools:
                 tool_calls = self._search_unanswered_tool_calls(result.conversation)
                 if tool_calls:
-                    # NOTE: The last sdk.chat called will already call on_finished
-                    result = await self._handle_tool_calls(result, tool_calls, options)
-                    return ChatPromptResult(**dict(result)) if result else None
+                    try:
+                        # NOTE: The last sdk.chat called will already call on_finished
+                        final_result = await self._handle_tool_calls(result, tool_calls, options)
+                        return ChatPromptResult(**dict(final_result)) if final_result else None
+                    except OnToolCallPaused:
+                        pass
 
             if options.on_finished:
                 options.on_finished(FinishedEvent(**dict(result)))
