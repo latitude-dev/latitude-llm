@@ -6,12 +6,14 @@ export function APIUsage({
   documentPath,
   apiKey,
   parameters,
+  tools,
 }: {
   projectId: number
   commitUuid: string
   documentPath: string
   apiKey: string | undefined
   parameters: Set<string>
+  tools: Set<string>
 }) {
   const getRequestBodyContent = () => {
     const body = {
@@ -48,6 +50,14 @@ ${getRequestBodyContent()}
         To run this document programmatically, execute the following command:
       </Text.H5>
       <CodeBlock language='bash'>{apiCode.trim()}</CodeBlock>
+      {tools.size > 0 && (
+        <Text.H5>
+          You have defined {tools.size} tools in this document. The conversation
+          will stop when assistant messages with tool call content are received.
+          You can continue the conversation by returning the tools results in
+          the chat endpoint.
+        </Text.H5>
+      )}
       <Text.H5>
         Check out{' '}
         <a

@@ -21,6 +21,7 @@ interface SettingsTabsProps {
   document: DocumentVersion
   apiKeys: ApiKey[]
   parameters: Set<string>
+  tools: Set<string>
 }
 
 export function SettingsTabs({
@@ -29,6 +30,7 @@ export function SettingsTabs({
   document,
   apiKeys,
   parameters,
+  tools,
 }: SettingsTabsProps) {
   const [activeTab, setActiveTab] = useState(tabs[0]!.id)
 
@@ -56,6 +58,7 @@ export function SettingsTabs({
               commitUuid={commitUuid}
               documentPath={document.path}
               parameters={parameters}
+              tools={tools}
             />
           )}
           {activeTab === 'api' && (
@@ -65,6 +68,7 @@ export function SettingsTabs({
               commitUuid={commitUuid}
               documentPath={document.path}
               parameters={parameters}
+              tools={tools}
             />
           )}
         </div>

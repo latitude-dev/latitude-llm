@@ -9,12 +9,12 @@ import {
   useState,
 } from 'react'
 
-import { readMetadata } from '@latitude-data/compiler'
-import { ApiKey } from '@latitude-data/core/browser'
-import { scan, type ConversationMetadata } from 'promptl-ai'
-import { Modal } from '@latitude-data/web-ui'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import useDocumentVersions from '$/stores/documentVersions'
+import { readMetadata } from '@latitude-data/compiler'
+import { ApiKey } from '@latitude-data/core/browser'
+import { Modal } from '@latitude-data/web-ui'
+import { scan, type ConversationMetadata } from 'promptl-ai'
 
 import { SettingsTabs } from './_components/SettingsTabs'
 
@@ -69,6 +69,11 @@ export default function DocumentationModal({
     doit()
   }, [document])
 
+  const tools = useMemo(
+    () => new Set(Object.keys(metadata?.config?.tools ?? {})),
+    [metadata],
+  )
+
   return (
     <Modal
       dismissible
@@ -85,6 +90,7 @@ export default function DocumentationModal({
           document={document}
           apiKeys={apiKeys ?? []}
           parameters={metadata?.parameters ?? new Set()}
+          tools={tools}
         />
       )}
     </Modal>
