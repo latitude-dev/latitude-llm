@@ -766,20 +766,8 @@ data: {json.dumps({
     "isLastStep": True,
     "config": {"provider": "OpenAI", "model": "gpt-4o-mini"},
     "messages": [
-        {"role": "tool", "content": [{
-            "type": "tool-result",
-            "toolCallId": "toolu_01ARatRfRidTDshkg1UuQhW2",
-            "toolName": "calculator",
-            "result": "true",
-            "isError": False,
-        }]},
-        {"role": "tool", "content": [{
-            "type": "tool-result",
-            "toolCallId": "toolu_B0398l23AOdTDshkg1UuQhZ3",
-            "toolName": "calculator",
-            "result": {"error": "ERRROR_INVALID_EXPRESSION", "message": "Expression is invalid"},
-            "isError": True,
-        }]},
+        *[json.loads(message.model_dump_json()) for message in CONVERSATION_FINISHED_EVENT.conversation],
+        *[json.loads(message.model_dump_json()) for message in CONVERSATION_TOOL_RESULTS_MESSAGES],
     ],
 })}""",
     f"""
@@ -796,7 +784,7 @@ data: {json.dumps({
     "isContinued": False,
     "experimental_providerMetadata": {"openai": {"reasoningTokens": 0, "cachedPromptTokens": 0}},
     "response": {"timestamp": "2025-01-02T12:29:13.000Z", "modelId": "gpt-4o-mini-latest"},
-    "usage": {"promptTokens": 7, "completionTokens": 3, "totalTokens": 10},
+    "usage": {"promptTokens": 77, "completionTokens": 3, "totalTokens": 80},
 })}""",
     f"""
 event: provider-event
@@ -805,7 +793,7 @@ data: {json.dumps({
     "finishReason": "stop",
     "experimental_providerMetadata": {"openai": {"reasoningTokens": 0, "cachedPromptTokens": 0}},
     "response": {"timestamp": "2025-01-02T12:29:13.000Z", "modelId": "gpt-4o-mini-latest"},
-    "usage": {"promptTokens": 7, "completionTokens": 3, "totalTokens": 10},
+    "usage": {"promptTokens": 77, "completionTokens": 3, "totalTokens": 80},
 })}""",
     f"""
 event: latitude-event
@@ -816,7 +804,7 @@ data: {json.dumps({
         "streamType": "text",
         "text": "Told ya!",
         "toolCalls": [],
-        "usage": {"promptTokens": 7, "completionTokens": 3, "totalTokens": 10},
+        "usage": {"promptTokens": 77, "completionTokens": 3, "totalTokens": 80},
     },
 })}""",
     f"""
@@ -855,7 +843,7 @@ data: {json.dumps({
         "streamType": "text",
         "text": "Told ya!",
         "toolCalls": [],
-        "usage": {"promptTokens": 7, "completionTokens": 3, "totalTokens": 10},
+        "usage": {"promptTokens": 77, "completionTokens": 3, "totalTokens": 80},
     },
 })}""",
 ]
@@ -865,7 +853,10 @@ FOLLOW_UP_CONVERSATION_EVENTS: List[StreamEvent] = [
         uuid="bf7b0b97-6a3a-4147-b058-2588517dd209",
         is_last_step=True,
         config={"provider": "OpenAI", "model": "gpt-4o-mini"},
-        messages=CONVERSATION_TOOL_RESULTS_MESSAGES,
+        messages=[
+            *CONVERSATION_FINISHED_EVENT.conversation,
+            *CONVERSATION_TOOL_RESULTS_MESSAGES,
+        ],
     ),
     {
         "event": StreamEvents.Provider,
@@ -879,7 +870,7 @@ FOLLOW_UP_CONVERSATION_EVENTS: List[StreamEvent] = [
         "isContinued": False,
         "experimental_providerMetadata": {"openai": {"reasoningTokens": 0, "cachedPromptTokens": 0}},
         "response": {"timestamp": "2025-01-02T12:29:13.000Z", "modelId": "gpt-4o-mini-latest"},
-        "usage": {"promptTokens": 7, "completionTokens": 3, "totalTokens": 10},
+        "usage": {"promptTokens": 77, "completionTokens": 3, "totalTokens": 80},
     },
     {
         "event": StreamEvents.Provider,
@@ -887,14 +878,14 @@ FOLLOW_UP_CONVERSATION_EVENTS: List[StreamEvent] = [
         "finishReason": "stop",
         "experimental_providerMetadata": {"openai": {"reasoningTokens": 0, "cachedPromptTokens": 0}},
         "response": {"timestamp": "2025-01-02T12:29:13.000Z", "modelId": "gpt-4o-mini-latest"},
-        "usage": {"promptTokens": 7, "completionTokens": 3, "totalTokens": 10},
+        "usage": {"promptTokens": 77, "completionTokens": 3, "totalTokens": 80},
     },
     ChainEventStepCompleted(
         uuid="bf7b0b97-6a3a-4147-b058-2588517dd209",
         response=ChainTextResponse(
             text="Told ya!",
             tool_calls=[],
-            usage=ModelUsage(prompt_tokens=7, completion_tokens=3, total_tokens=10),
+            usage=ModelUsage(prompt_tokens=77, completion_tokens=3, total_tokens=80),
         ),
     ),
     ChainEventCompleted(
@@ -926,7 +917,7 @@ FOLLOW_UP_CONVERSATION_EVENTS: List[StreamEvent] = [
         response=ChainTextResponse(
             text="Told ya!",
             tool_calls=[],
-            usage=ModelUsage(prompt_tokens=7, completion_tokens=3, total_tokens=10),
+            usage=ModelUsage(prompt_tokens=77, completion_tokens=3, total_tokens=80),
         ),
     ),
 ]
@@ -934,49 +925,28 @@ FOLLOW_UP_CONVERSATION_EVENTS: List[StreamEvent] = [
 FOLLOW_UP_CONVERSATION_FINISHED_EVENT_RESPONSE: Dict[str, Any] = {
     "uuid": "bf7b0b97-6a3a-4147-b058-2588517dd209",
     "conversation": [
-        {
-            "role": "tool",
-            "content": [
-                {
-                    "type": "tool-result",
-                    "toolCallId": "toolu_01ARatRfRidTDshkg1UuQhW2",
-                    "toolName": "calculator",
-                    "result": "true",
-                    "isError": False,
-                }
-            ],
-        },
-        {
-            "role": "tool",
-            "content": [
-                {
-                    "type": "tool-result",
-                    "toolCallId": "toolu_B0398l23AOdTDshkg1UuQhZ3",
-                    "toolName": "calculator",
-                    "result": {"error": "ERRROR_INVALID_EXPRESSION", "message": "Expression is invalid"},
-                    "isError": True,
-                }
-            ],
-        },
+        *[json.loads(message.model_dump_json()) for message in CONVERSATION_FINISHED_EVENT.conversation],
+        *[json.loads(message.model_dump_json()) for message in CONVERSATION_TOOL_RESULTS_MESSAGES],
         {"role": "assistant", "content": [{"type": "text", "text": "Told ya!"}]},
     ],
     "response": {
         "streamType": "text",
         "text": "Told ya!",
         "toolCalls": [],
-        "usage": {"promptTokens": 7, "completionTokens": 3, "totalTokens": 10},
+        "usage": {"promptTokens": 77, "completionTokens": 3, "totalTokens": 80},
     },
 }
 
 FOLLOW_UP_CONVERSATION_FINISHED_EVENT = FinishedEvent(
     uuid="bf7b0b97-6a3a-4147-b058-2588517dd209",
     conversation=[
+        *CONVERSATION_FINISHED_EVENT.conversation,
         *CONVERSATION_TOOL_RESULTS_MESSAGES,
         AssistantMessage(content=[TextContent(text="Told ya!")]),
     ],
     response=ChainTextResponse(
         text="Told ya!",
         tool_calls=[],
-        usage=ModelUsage(prompt_tokens=7, completion_tokens=3, total_tokens=10),
+        usage=ModelUsage(prompt_tokens=77, completion_tokens=3, total_tokens=80),
     ),
 )
