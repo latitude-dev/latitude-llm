@@ -63,7 +63,7 @@ class ToolResultContent(Model):
     type: Literal[ContentType.ToolResult] = ContentType.ToolResult
     id: str = Field(alias=str("toolCallId"))
     name: str = Field(alias=str("toolName"))
-    result: str
+    result: Any
     is_error: Optional[bool] = Field(default=None, alias=str("isError"))
 
 
@@ -124,7 +124,7 @@ class ToolCall(Model):
 class ToolResult(Model):
     id: str
     name: str
-    result: str
+    result: Any
     is_error: Optional[bool] = None
 
 

@@ -1,6 +1,6 @@
 import json
 from datetime import datetime
-from typing import Any, Dict, List
+from typing import Any, Dict, List, cast
 from unittest import mock
 
 from latitude_sdk import (
@@ -18,6 +18,7 @@ from latitude_sdk import (
     FinishedEvent,
     Log,
     LogSources,
+    Message,
     ModelUsage,
     Prompt,
     StreamEvent,
@@ -26,6 +27,9 @@ from latitude_sdk import (
     TextContent,
     ToolCall,
     ToolCallContent,
+    ToolMessage,
+    ToolResult,
+    ToolResultContent,
     UserMessage,
 )
 
@@ -247,7 +251,15 @@ data: {json.dumps({
     "type": "tool-call",
     "toolCallId": "toolu_01ARatRfRidTDshkg1UuQhW2",
     "toolName": "calculator",
-    "args": {"expression": "9.9 > 9.11 ?"},
+    "args": {"expression": "9.9 > 9.11"},
+})}""",
+    f"""
+event: provider-event
+data: {json.dumps({
+    "type": "tool-call",
+    "toolCallId": "toolu_B0398l23AOdTDshkg1UuQhZ3",
+    "toolName": "calculator",
+    "args": {"expression": "9.9 less than 9.11"},
 })}""",
     f"""
 event: provider-event
@@ -280,7 +292,12 @@ data: {json.dumps({
             {
                 "id": "toolu_01ARatRfRidTDshkg1UuQhW2",
                 "name": "calculator",
-                "arguments": {"expression": "9.9 > 9.11 ?"},
+                "arguments": {"expression": "9.9 > 9.11"},
+            },
+            {
+                "id": "toolu_B0398l23AOdTDshkg1UuQhZ3",
+                "name": "calculator",
+                "arguments": {"expression": "9.9 less than 9.11"},
             },
         ],
         "usage": {"promptTokens": 61, "completionTokens": 9, "totalTokens": 70},
@@ -323,14 +340,25 @@ data: {json.dumps({
                     "type": "tool-call",
                     "toolCallId": "toolu_01ARatRfRidTDshkg1UuQhW2",
                     "toolName": "calculator",
-                    "args": {"expression": "9.9 > 9.11 ?"},
+                    "args": {"expression": "9.9 > 9.11"},
+                },
+                {
+                    "type": "tool-call",
+                    "toolCallId": "toolu_B0398l23AOdTDshkg1UuQhZ3",
+                    "toolName": "calculator",
+                    "args": {"expression": "9.9 less than 9.11"},
                 },
             ],
            "toolCalls": [
                 {
                     "id": "toolu_01ARatRfRidTDshkg1UuQhW2",
                     "name": "calculator",
-                    "arguments": {"expression": "9.9 > 9.11 ?"},
+                    "arguments": {"expression": "9.9 > 9.11"},
+                },
+                {
+                    "id": "toolu_B0398l23AOdTDshkg1UuQhZ3",
+                    "name": "calculator",
+                    "arguments": {"expression": "9.9 less than 9.11"},
                 },
             ],
         },
@@ -342,7 +370,12 @@ data: {json.dumps({
             {
                 "id": "toolu_01ARatRfRidTDshkg1UuQhW2",
                 "name": "calculator",
-                "arguments": {"expression": "9.9 > 9.11 ?"},
+                "arguments": {"expression": "9.9 > 9.11"},
+            },
+            {
+                "id": "toolu_B0398l23AOdTDshkg1UuQhZ3",
+                "name": "calculator",
+                "arguments": {"expression": "9.9 less than 9.11"},
             },
         ],
         "usage": {"promptTokens": 61, "completionTokens": 9, "totalTokens": 70},
@@ -435,7 +468,14 @@ CONVERSATION_EVENTS: List[StreamEvent] = [
         "type": "tool-call",
         "toolCallId": "toolu_01ARatRfRidTDshkg1UuQhW2",
         "toolName": "calculator",
-        "args": {"expression": "9.9 > 9.11 ?"},
+        "args": {"expression": "9.9 > 9.11"},
+    },
+    {
+        "event": StreamEvents.Provider,
+        "type": "tool-call",
+        "toolCallId": "toolu_B0398l23AOdTDshkg1UuQhZ3",
+        "toolName": "calculator",
+        "args": {"expression": "9.9 less than 9.11"},
     },
     {
         "event": StreamEvents.Provider,
@@ -462,8 +502,13 @@ CONVERSATION_EVENTS: List[StreamEvent] = [
                 ToolCall(
                     id="toolu_01ARatRfRidTDshkg1UuQhW2",
                     name="calculator",
-                    arguments={"expression": "9.9 > 9.11 ?"},
-                )
+                    arguments={"expression": "9.9 > 9.11"},
+                ),
+                ToolCall(
+                    id="toolu_B0398l23AOdTDshkg1UuQhZ3",
+                    name="calculator",
+                    arguments={"expression": "9.9 less than 9.11"},
+                ),
             ],
             usage=ModelUsage(prompt_tokens=61, completion_tokens=9, total_tokens=70),
         ),
@@ -499,7 +544,12 @@ CONVERSATION_EVENTS: List[StreamEvent] = [
                     ToolCallContent(
                         id="toolu_01ARatRfRidTDshkg1UuQhW2",
                         name="calculator",
-                        arguments={"expression": "9.9 > 9.11 ?"},
+                        arguments={"expression": "9.9 > 9.11"},
+                    ),
+                    ToolCallContent(
+                        id="toolu_B0398l23AOdTDshkg1UuQhZ3",
+                        name="calculator",
+                        arguments={"expression": "9.9 less than 9.11"},
                     ),
                 ]
             ),
@@ -511,8 +561,13 @@ CONVERSATION_EVENTS: List[StreamEvent] = [
                 ToolCall(
                     id="toolu_01ARatRfRidTDshkg1UuQhW2",
                     name="calculator",
-                    arguments={"expression": "9.9 > 9.11 ?"},
-                )
+                    arguments={"expression": "9.9 > 9.11"},
+                ),
+                ToolCall(
+                    id="toolu_B0398l23AOdTDshkg1UuQhZ3",
+                    name="calculator",
+                    arguments={"expression": "9.9 less than 9.11"},
+                ),
             ],
             usage=ModelUsage(prompt_tokens=61, completion_tokens=9, total_tokens=70),
         ),
@@ -574,14 +629,25 @@ CONVERSATION_FINISHED_EVENT_RESPONSE: Dict[str, Any] = {
                     "type": "tool-call",
                     "toolCallId": "toolu_01ARatRfRidTDshkg1UuQhW2",
                     "toolName": "calculator",
-                    "args": {"expression": "9.9 > 9.11 ?"},
+                    "args": {"expression": "9.9 > 9.11"},
+                },
+                {
+                    "type": "tool-call",
+                    "toolCallId": "toolu_B0398l23AOdTDshkg1UuQhZ3",
+                    "toolName": "calculator",
+                    "args": {"expression": "9.9 less than 9.11"},
                 },
             ],
             "toolCalls": [
                 {
                     "id": "toolu_01ARatRfRidTDshkg1UuQhW2",
                     "name": "calculator",
-                    "arguments": {"expression": "9.9 > 9.11 ?"},
+                    "arguments": {"expression": "9.9 > 9.11"},
+                },
+                {
+                    "id": "toolu_B0398l23AOdTDshkg1UuQhZ3",
+                    "name": "calculator",
+                    "arguments": {"expression": "9.9 less than 9.11"},
                 },
             ],
         },
@@ -593,7 +659,12 @@ CONVERSATION_FINISHED_EVENT_RESPONSE: Dict[str, Any] = {
             {
                 "id": "toolu_01ARatRfRidTDshkg1UuQhW2",
                 "name": "calculator",
-                "arguments": {"expression": "9.9 > 9.11 ?"},
+                "arguments": {"expression": "9.9 > 9.11"},
+            },
+            {
+                "id": "toolu_B0398l23AOdTDshkg1UuQhZ3",
+                "name": "calculator",
+                "arguments": {"expression": "9.9 less than 9.11"},
             },
         ],
         "usage": {"promptTokens": 61, "completionTokens": 9, "totalTokens": 70},
@@ -616,7 +687,12 @@ CONVERSATION_FINISHED_EVENT = FinishedEvent(
                 ToolCallContent(
                     id="toolu_01ARatRfRidTDshkg1UuQhW2",
                     name="calculator",
-                    arguments={"expression": "9.9 > 9.11 ?"},
+                    arguments={"expression": "9.9 > 9.11"},
+                ),
+                ToolCallContent(
+                    id="toolu_B0398l23AOdTDshkg1UuQhZ3",
+                    name="calculator",
+                    arguments={"expression": "9.9 less than 9.11"},
                 ),
             ]
         ),
@@ -627,9 +703,280 @@ CONVERSATION_FINISHED_EVENT = FinishedEvent(
             ToolCall(
                 id="toolu_01ARatRfRidTDshkg1UuQhW2",
                 name="calculator",
-                arguments={"expression": "9.9 > 9.11 ?"},
-            )
+                arguments={"expression": "9.9 > 9.11"},
+            ),
+            ToolCall(
+                id="toolu_B0398l23AOdTDshkg1UuQhZ3",
+                name="calculator",
+                arguments={"expression": "9.9 less than 9.11"},
+            ),
         ],
         usage=ModelUsage(prompt_tokens=61, completion_tokens=9, total_tokens=70),
+    ),
+)
+
+CONVERSATION_TOOL_CALLS_MESSAGE = CONVERSATION_FINISHED_EVENT.conversation[-1]
+
+CONVERSATION_TOOL_CALLS = cast(List[ToolCall], CONVERSATION_FINISHED_EVENT.response.tool_calls)  # type: ignore
+
+CONVERSATION_TOOL_RESULTS = [
+    ToolResult(
+        id="toolu_01ARatRfRidTDshkg1UuQhW2",
+        name="calculator",
+        result="true",
+        is_error=False,
+    ),
+    ToolResult(
+        id="toolu_B0398l23AOdTDshkg1UuQhZ3",
+        name="calculator",
+        result={"error": "ERRROR_INVALID_EXPRESSION", "message": "Expression is invalid"},
+        is_error=True,
+    ),
+]
+
+CONVERSATION_TOOL_RESULTS_MESSAGES: List[Message] = [
+    ToolMessage(
+        content=[
+            ToolResultContent(
+                id="toolu_01ARatRfRidTDshkg1UuQhW2",
+                name="calculator",
+                result="true",
+                is_error=False,
+            ),
+        ],
+    ),
+    ToolMessage(
+        content=[
+            ToolResultContent(
+                id="toolu_B0398l23AOdTDshkg1UuQhZ3",
+                name="calculator",
+                result={"error": "ERRROR_INVALID_EXPRESSION", "message": "Expression is invalid"},
+                is_error=True,
+            ),
+        ],
+    ),
+]
+
+FOLLOW_UP_CONVERSATION_EVENTS_STREAM: List[str] = [
+    f"""
+event: latitude-event
+data: {json.dumps({
+    "type": "chain-step",
+    "uuid": "bf7b0b97-6a3a-4147-b058-2588517dd209",
+    "isLastStep": True,
+    "config": {"provider": "OpenAI", "model": "gpt-4o-mini"},
+    "messages": [
+        {"role": "tool", "content": [{
+            "type": "tool-result",
+            "toolCallId": "toolu_01ARatRfRidTDshkg1UuQhW2",
+            "toolName": "calculator",
+            "result": "true",
+            "isError": False,
+        }]},
+        {"role": "tool", "content": [{
+            "type": "tool-result",
+            "toolCallId": "toolu_B0398l23AOdTDshkg1UuQhZ3",
+            "toolName": "calculator",
+            "result": {"error": "ERRROR_INVALID_EXPRESSION", "message": "Expression is invalid"},
+            "isError": True,
+        }]},
+    ],
+})}""",
+    f"""
+event: provider-event
+data: {json.dumps({
+    "type": "text-delta",
+    "textDelta": "Told ya!",
+})}""",
+    f"""
+event: provider-event
+data: {json.dumps({
+    "type": "step-finish",
+    "finishReason": "stop",
+    "isContinued": False,
+    "experimental_providerMetadata": {"openai": {"reasoningTokens": 0, "cachedPromptTokens": 0}},
+    "response": {"timestamp": "2025-01-02T12:29:13.000Z", "modelId": "gpt-4o-mini-latest"},
+    "usage": {"promptTokens": 7, "completionTokens": 3, "totalTokens": 10},
+})}""",
+    f"""
+event: provider-event
+data: {json.dumps({
+    "type": "finish",
+    "finishReason": "stop",
+    "experimental_providerMetadata": {"openai": {"reasoningTokens": 0, "cachedPromptTokens": 0}},
+    "response": {"timestamp": "2025-01-02T12:29:13.000Z", "modelId": "gpt-4o-mini-latest"},
+    "usage": {"promptTokens": 7, "completionTokens": 3, "totalTokens": 10},
+})}""",
+    f"""
+event: latitude-event
+data: {json.dumps({
+    "type": "chain-step-complete",
+    "uuid": "bf7b0b97-6a3a-4147-b058-2588517dd209",
+    "response": {
+        "streamType": "text",
+        "text": "Told ya!",
+        "toolCalls": [],
+        "usage": {"promptTokens": 7, "completionTokens": 3, "totalTokens": 10},
+    },
+})}""",
+    f"""
+event: latitude-event
+data: {json.dumps({
+    "type": "chain-complete",
+    "uuid": "bf7b0b97-6a3a-4147-b058-2588517dd209",
+    "config": {
+        "provider": "OpenAI",
+        "model": "gpt-4o-mini",
+        "tools": {
+            "calculator": {
+                "description": "Calculates an expression.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "expression": {
+                            "type": "string",
+                            "description": "The expression to calculate, e.g., '1 + 1'.",
+                        }
+                    },
+                    "required": ["expression"],
+                    "additionalProperties": False,
+                },
+            },
+        },
+    },
+    "messages": [
+        {
+            "role": "assistant",
+            "content": [{"type": "text", "text": "Told ya!"}],
+            "toolCalls": [],
+        },
+    ],
+    "response": {
+        "streamType": "text",
+        "text": "Told ya!",
+        "toolCalls": [],
+        "usage": {"promptTokens": 7, "completionTokens": 3, "totalTokens": 10},
+    },
+})}""",
+]
+
+FOLLOW_UP_CONVERSATION_EVENTS: List[StreamEvent] = [
+    ChainEventStep(
+        uuid="bf7b0b97-6a3a-4147-b058-2588517dd209",
+        is_last_step=True,
+        config={"provider": "OpenAI", "model": "gpt-4o-mini"},
+        messages=CONVERSATION_TOOL_RESULTS_MESSAGES,
+    ),
+    {
+        "event": StreamEvents.Provider,
+        "type": "text-delta",
+        "textDelta": "Told ya!",
+    },
+    {
+        "event": StreamEvents.Provider,
+        "type": "step-finish",
+        "finishReason": "stop",
+        "isContinued": False,
+        "experimental_providerMetadata": {"openai": {"reasoningTokens": 0, "cachedPromptTokens": 0}},
+        "response": {"timestamp": "2025-01-02T12:29:13.000Z", "modelId": "gpt-4o-mini-latest"},
+        "usage": {"promptTokens": 7, "completionTokens": 3, "totalTokens": 10},
+    },
+    {
+        "event": StreamEvents.Provider,
+        "type": "finish",
+        "finishReason": "stop",
+        "experimental_providerMetadata": {"openai": {"reasoningTokens": 0, "cachedPromptTokens": 0}},
+        "response": {"timestamp": "2025-01-02T12:29:13.000Z", "modelId": "gpt-4o-mini-latest"},
+        "usage": {"promptTokens": 7, "completionTokens": 3, "totalTokens": 10},
+    },
+    ChainEventStepCompleted(
+        uuid="bf7b0b97-6a3a-4147-b058-2588517dd209",
+        response=ChainTextResponse(
+            text="Told ya!",
+            tool_calls=[],
+            usage=ModelUsage(prompt_tokens=7, completion_tokens=3, total_tokens=10),
+        ),
+    ),
+    ChainEventCompleted(
+        uuid="bf7b0b97-6a3a-4147-b058-2588517dd209",
+        config={
+            "provider": "OpenAI",
+            "model": "gpt-4o-mini",
+            "tools": {
+                "calculator": {
+                    "description": "Calculates an expression.",
+                    "parameters": {
+                        "type": "object",
+                        "properties": {
+                            "expression": {
+                                "type": "string",
+                                "description": "The expression to calculate, e.g., '1 + 1'.",
+                            }
+                        },
+                        "required": ["expression"],
+                        "additionalProperties": False,
+                    },
+                },
+            },
+        },
+        messages=[
+            AssistantMessage(content=[TextContent(text="Told ya!")]),
+        ],
+        object=None,
+        response=ChainTextResponse(
+            text="Told ya!",
+            tool_calls=[],
+            usage=ModelUsage(prompt_tokens=7, completion_tokens=3, total_tokens=10),
+        ),
+    ),
+]
+
+FOLLOW_UP_CONVERSATION_FINISHED_EVENT_RESPONSE: Dict[str, Any] = {
+    "uuid": "bf7b0b97-6a3a-4147-b058-2588517dd209",
+    "conversation": [
+        {
+            "role": "tool",
+            "content": [
+                {
+                    "type": "tool-result",
+                    "toolCallId": "toolu_01ARatRfRidTDshkg1UuQhW2",
+                    "toolName": "calculator",
+                    "result": "true",
+                    "isError": False,
+                }
+            ],
+        },
+        {
+            "role": "tool",
+            "content": [
+                {
+                    "type": "tool-result",
+                    "toolCallId": "toolu_B0398l23AOdTDshkg1UuQhZ3",
+                    "toolName": "calculator",
+                    "result": {"error": "ERRROR_INVALID_EXPRESSION", "message": "Expression is invalid"},
+                    "isError": True,
+                }
+            ],
+        },
+        {"role": "assistant", "content": [{"type": "text", "text": "Told ya!"}]},
+    ],
+    "response": {
+        "streamType": "text",
+        "text": "Told ya!",
+        "toolCalls": [],
+        "usage": {"promptTokens": 7, "completionTokens": 3, "totalTokens": 10},
+    },
+}
+
+FOLLOW_UP_CONVERSATION_FINISHED_EVENT = FinishedEvent(
+    uuid="bf7b0b97-6a3a-4147-b058-2588517dd209",
+    conversation=[
+        *CONVERSATION_TOOL_RESULTS_MESSAGES,
+        AssistantMessage(content=[TextContent(text="Told ya!")]),
+    ],
+    response=ChainTextResponse(
+        text="Told ya!",
+        tool_calls=[],
+        usage=ModelUsage(prompt_tokens=7, completion_tokens=3, total_tokens=10),
     ),
 )

@@ -107,7 +107,7 @@ class Prompts:
         return PromptOptions(project_id=project_id, version_uuid=version_uuid)
 
     async def _handle_stream(
-        self, stream: AsyncGenerator[ClientEvent, Any], callbacks: StreamCallbacks
+        self, stream: AsyncGenerator[ClientEvent, Any], on_event: Optional[StreamCallbacks.OnEvent]
     ) -> FinishedEvent:
         uuid = None
         conversation: List[Message] = []
@@ -161,8 +161,8 @@ class Prompts:
                     response=stream_event.data,
                 )
 
-            if callbacks.on_event:
-                callbacks.on_event(event)
+            if on_event:
+                on_event(event)
 
         if not uuid or not response:
             raise ApiError(
@@ -193,7 +193,7 @@ class Prompts:
 
             elif message.role == MessageRole.Tool:
                 for content in message.content:
-                    tool_calls.pop(content.id)
+                    tool_calls.pop(content.id, None)
 
         return list(tool_calls.values())
 
@@ -309,13 +309,7 @@ class Prompts:
                 ),
             ) as response:
                 if options.stream:
-                    result = await self._handle_stream(
-                        response.sse(),
-                        callbacks=StreamCallbacks(
-                            on_event=options.on_event,
-                            on_error=options.on_error,
-                        ),
-                    )
+                    result = await self._handle_stream(response.sse(), options.on_event)
                 else:
                     result = RunPromptResult.model_validate_json(response.content)
 
@@ -367,13 +361,7 @@ class Prompts:
                 ),
             ) as response:
                 if options.stream:
-                    result = await self._handle_stream(
-                        response.sse(),
-                        callbacks=StreamCallbacks(
-                            on_event=options.on_event,
-                            on_error=options.on_error,
-                        ),
-                    )
+                    result = await self._handle_stream(response.sse(), options.on_event)
                 else:
                     result = ChatPromptResult.model_validate_json(response.content)
 

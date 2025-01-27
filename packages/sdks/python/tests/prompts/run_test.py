@@ -125,6 +125,14 @@ class TestRunPromptSync(TestCase):
         on_finished_mock.assert_called_once_with(fixtures.CONVERSATION_FINISHED_EVENT)
         on_error_mock.assert_not_called()
 
+    async def test_success_with_tools(self):
+        # TODO
+        pass
+
+    async def test_success_with_paused_tools(self):
+        # TODO
+        pass
+
     async def test_fails_and_retries(self):
         on_event_mock = Mock()
         on_finished_mock = Mock()
@@ -363,6 +371,14 @@ class TestRunPromptStream(TestCase):
         self.assertEqual(on_event_mock.call_count, len(fixtures.CONVERSATION_EVENTS))
         on_finished_mock.assert_called_once_with(fixtures.CONVERSATION_FINISHED_EVENT)
         on_error_mock.assert_not_called()
+
+    async def test_success_with_tools(self):
+        # TODO
+        pass
+
+    async def test_success_with_paused_tools(self):
+        # TODO
+        pass
 
     async def test_fails_and_retries(self):
         on_event_mock = Mock()
