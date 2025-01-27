@@ -6,7 +6,7 @@ from unittest.mock import AsyncMock, Mock
 
 import httpx
 
-from latitude_sdk import ChatPromptOptions, ChatPromptResult, OnToolCallDetails, StreamEvent
+from latitude_sdk import ChatPromptOptions, ChatPromptResult, OnToolCallDetails, OnToolCallPaused, StreamEvent
 from tests.utils import TestCase, fixtures
 
 
@@ -116,8 +116,62 @@ class TestChatPromptSync(TestCase):
         other_tool.assert_not_awaited()
 
     async def test_success_with_paused_tools(self):
-        # TODO
-        pass
+        on_event_mock = Mock()
+        on_finished_mock = Mock()
+        on_error_mock = Mock()
+        actual_tool = AsyncMock(side_effect=OnToolCallPaused)
+        other_tool = AsyncMock()
+        conversation_uuid = "conversation-uuid"
+        messages = self.create_conversation(4)
+        options = ChatPromptOptions(
+            on_event=on_event_mock,
+            on_finished=on_finished_mock,
+            on_error=on_error_mock,
+            tools={"calculator": actual_tool, "other_tool": other_tool},
+            stream=False,
+        )
+        endpoint = re.compile(r"/conversations/(?P<uuid>[a-zA-Z0-9-]+)/chat")
+        endpoint_mock = self.gateway_mock.post(endpoint).mock(
+            side_effect=[
+                httpx.Response(200, json=fixtures.CONVERSATION_FINISHED_EVENT_RESPONSE),
+                httpx.Response(200, json=fixtures.FOLLOW_UP_CONVERSATION_FINISHED_EVENT_RESPONSE),
+            ]
+        )
+
+        result = await self.sdk.prompts.chat(conversation_uuid, messages, options)
+        request, _ = endpoint_mock.calls.last
+
+        self.assert_requested(
+            request,
+            method="POST",
+            endpoint=f"/conversations/{conversation_uuid}/chat",
+            body={
+                "messages": [json.loads(message.model_dump_json()) for message in messages],
+                "stream": options.stream,
+            },
+        )
+        self.assertEqual(endpoint_mock.call_count, 1)
+        self.assertEqual(result, ChatPromptResult(**dict(fixtures.CONVERSATION_FINISHED_EVENT)))
+        on_event_mock.assert_not_called()
+        on_finished_mock.assert_called_once_with(fixtures.CONVERSATION_FINISHED_EVENT)
+        on_error_mock.assert_not_called()
+        [
+            self.assertEqual(
+                actual_tool.call_args_list[index][0],
+                (
+                    fixtures.CONVERSATION_TOOL_CALLS[index],
+                    OnToolCallDetails.model_construct(
+                        conversation_uuid=fixtures.CONVERSATION_FINISHED_EVENT.uuid,
+                        messages=fixtures.CONVERSATION_FINISHED_EVENT.conversation,
+                        pause_execution=mock.ANY,
+                        requested_tool_calls=fixtures.CONVERSATION_TOOL_CALLS,
+                    ),
+                ),
+            )
+            for index, _ in enumerate(actual_tool.call_args_list)
+        ]
+        self.assertEqual(actual_tool.await_count, len(fixtures.CONVERSATION_TOOL_CALLS))
+        other_tool.assert_not_awaited()
 
     async def test_fails_and_retries(self):
         on_event_mock = Mock()
