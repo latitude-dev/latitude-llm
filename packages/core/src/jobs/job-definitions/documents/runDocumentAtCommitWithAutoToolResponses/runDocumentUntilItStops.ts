@@ -1,7 +1,7 @@
 import { LogSources, StreamType } from '@latitude-data/constants'
 import { runDocumentAtCommit as runDocumentAtCommitFn } from '../../../../services/commits/runDocumentAtCommit'
 import { Commit, Workspace, DocumentVersion } from '../../../../browser'
-import { ChainResponse } from '../../../../services/providerLogs'
+import { ChainResponse } from '../../../../services/chains/run'
 import { ToolCall } from '@latitude-data/compiler'
 import { getToolCalls } from '../../../../services/chains/runStep'
 import { Result } from '../../../../lib'

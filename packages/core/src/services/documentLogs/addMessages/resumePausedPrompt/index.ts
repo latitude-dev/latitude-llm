@@ -16,19 +16,18 @@ import { ChainStepResponse, StreamType } from '../../../../constants'
 import { runAgent } from '../../../agents/run'
 
 /**
- * What means to resume a converstation
+ * Resuming a prompt
  * ::::::::::::::::::::
- * When a paused/cached chain is found in our cache (Redis at the time of writing),
- * we asume is a paused and incompleted conversation.
- * To resume it we re-run it passing `extraMessages` that will be passed down to prompt
- * as response from the previous run.
+ * A prompt can be paused by an unresolved tool call in any chain/agent step. Providing the tool
+ * response will allow the chain to continue from where it was paused.
  *
- * One use case is tool calling:
- * This is helpful for tool calling. Allow users to preprare tool responses when
- * AI returns a tool call. And Latitude add the tool request and tool response to the
- * conversation so next time AI runs have all the info necesary to continue the conversation.
+ * A chain can only be cached if the original chain was not completed. If the chain was completed
+ * but the autonomous workflow was paused, the chain will not be cached.
+ *
+ * A paused chain is cached in Redis. When a chain is resumed, the cached chain is
+ * retrieved and the chain is run from the paused step.
  */
-export async function resumeConversation({
+export async function resumePausedPrompt({
   workspace,
   document,
   commit,
@@ -62,11 +61,6 @@ export async function resumeConversation({
   })
   const errorableUuid = documentLogUuid
 
-  // These are all the messages that the client
-  // already have seen. So we don't want to send them again.
-  const previousCount =
-    pausedChain.globalMessagesCount + responseMessages.length
-
   const runFn = document.documentType === 'agent' ? runAgent : runChain
 
   const run = await runFn({
@@ -77,7 +71,7 @@ export async function resumeConversation({
     promptlVersion: document.promptlVersion,
     providersMap,
     source,
-    previousCount,
+    previousCount: pausedChain.globalMessagesCount,
     previousResponse,
     extraMessages: responseMessages,
   })

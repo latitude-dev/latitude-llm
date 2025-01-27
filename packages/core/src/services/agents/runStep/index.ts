@@ -19,13 +19,10 @@ import { validateAgentStep } from '../AgentStepValidator'
 import { ChainError } from '../../../lib/streamManager/ChainErrors'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
 import { streamAIResponse } from '../../../lib/streamManager'
-import { cacheChain } from '../../chains/chainCache'
-import { Chain } from 'promptl-ai'
 
 export async function runAgentStep({
   workspace,
   source,
-  originalChain,
   conversation,
   providersMap,
   controller,
@@ -38,7 +35,6 @@ export async function runAgentStep({
   workspace: Workspace
   source: LogSources
   conversation: Conversation
-  originalChain: Chain
   providersMap: CachedApiKeys
   controller: ReadableStreamDefaultController
   errorableUuid: string
@@ -107,13 +103,6 @@ export async function runAgentStep({
 
     // Stop the chain if there are tool calls
     if (toolCalls.length) {
-      await cacheChain({
-        workspace,
-        chain: originalChain as Chain,
-        documentLogUuid: errorableUuid,
-        previousResponse: response,
-      })
-
       streamConsumer.chainCompleted({
         step,
         response,
@@ -122,6 +111,8 @@ export async function runAgentStep({
           response,
         }),
       })
+
+      return response
     }
 
     // Stop the chain if completed
@@ -138,7 +129,6 @@ export async function runAgentStep({
     return runAgentStep({
       workspace,
       source,
-      originalChain,
       conversation: step.conversation,
       errorableUuid,
       providersMap,

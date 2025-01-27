@@ -1,77 +1,50 @@
-import {
-  ContentType,
-  MessageRole,
-  type Message,
-  type ToolMessage,
-} from '@latitude-data/compiler'
+import { type Message } from '@latitude-data/compiler'
 
+import { LogSources, Workspace } from '../../../browser'
 import {
-  AGENT_RETURN_TOOL_NAME,
-  buildConversation,
-  LogSources,
-  Workspace,
-} from '../../../browser'
-import { addMessages as addMessagesProviderLog } from '../../providerLogs/addMessages'
-import { ProviderLogsRepository } from '../../../repositories'
+  CommitsRepository,
+  DocumentLogsRepository,
+  DocumentVersionsRepository,
+  ProviderLogsRepository,
+} from '../../../repositories'
 import { findPausedChain } from './findPausedChain'
-import { resumeConversation } from './resumeConversation'
 import { Result } from '../../../lib'
-import serializeProviderLog from '../../providerLogs/serialize'
+import { resumePausedPrompt } from './resumePausedPrompt'
+import { addChatMessage } from './addChatMessage'
+import { resumeAgent } from './resumeAgent'
 
-type CommonProps = {
-  workspace: Workspace
-  documentLogUuid: string | undefined
-  messages: Message[]
-  source: LogSources
-}
-
-function agentResponseMessages(messages: Message[]): Message[] {
-  if (!messages.length) return []
-
-  const lastMessage = messages[messages.length - 1]!
-  if (lastMessage.role !== 'assistant') return []
-
-  const agentFinishToolCall = lastMessage.toolCalls.find(
-    (t) => t.name === AGENT_RETURN_TOOL_NAME,
-  )
-
-  if (!agentFinishToolCall) return []
-  const agentFinishToolResult: ToolMessage = {
-    role: MessageRole.tool,
-    content: [
-      {
-        type: ContentType.toolResult,
-        toolName: AGENT_RETURN_TOOL_NAME,
-        toolCallId: agentFinishToolCall.id,
-        isError: false,
-        result: {},
-      },
-    ],
-  }
-
-  return [agentFinishToolResult]
-}
-
-async function addMessagesToCompleteChain({
+async function retrieveData({
   workspace,
   documentLogUuid,
-  messages,
-  source,
-}: CommonProps) {
+}: {
+  workspace: Workspace
+  documentLogUuid: string | undefined
+}) {
+  const logsRepo = new DocumentLogsRepository(workspace.id)
+  const logResult = await logsRepo.findByUuid(documentLogUuid)
+  if (logResult.error) return logResult
+  const documentLog = logResult.value
+
+  const commitsRepo = new CommitsRepository(workspace.id)
+  const commitResult = await commitsRepo.find(documentLog.commitId)
+  if (commitResult.error) return commitResult
+  const commit = commitResult.value
+
+  const documentsRepo = new DocumentVersionsRepository(workspace.id)
+  const documentResult = await documentsRepo.getDocumentAtCommit({
+    commitUuid: commit?.uuid,
+    documentUuid: documentLog.documentUuid,
+  })
+  if (documentResult.error) return documentResult
+  const document = documentResult.value
+
   const providerLogRepo = new ProviderLogsRepository(workspace.id)
   const providerLogResult =
     await providerLogRepo.findLastByDocumentLogUuid(documentLogUuid)
   if (providerLogResult.error) return providerLogResult
-
   const providerLog = providerLogResult.value
 
-  messages = [
-    ...buildConversation(serializeProviderLog(providerLog)),
-    ...messages,
-    ...agentResponseMessages(messages),
-  ]
-
-  return addMessagesProviderLog({ workspace, providerLog, messages, source })
+  return Result.ok({ commit, document, providerLog })
 }
 
 export async function addMessages({
@@ -89,30 +62,41 @@ export async function addMessages({
     return Result.error(new Error('documentLogUuid is required'))
   }
 
-  const foundResult = await findPausedChain({ workspace, documentLogUuid })
+  const dataResult = await retrieveData({
+    workspace,
+    documentLogUuid,
+  })
+  if (dataResult.error) return dataResult
+  const { commit, document, providerLog } = dataResult.value
 
-  if (!foundResult) {
-    // No chain cached found means normal chat behavior
-    return addMessagesToCompleteChain({
+  const chainCacheData = await findPausedChain({ workspace, documentLogUuid })
+
+  if (chainCacheData) {
+    return resumePausedPrompt({
       workspace,
+      commit,
+      document,
+      pausedChain: chainCacheData.pausedChain,
+      previousResponse: chainCacheData.previousResponse,
+      responseMessages: messages,
       documentLogUuid,
+      source,
+    })
+  }
+
+  if (document.documentType === 'agent') {
+    return resumeAgent({
+      workspace,
+      providerLog,
       messages,
       source,
     })
   }
 
-  if (foundResult.error) return foundResult
-
-  const pausedChainData = foundResult.value
-
-  return resumeConversation({
+  return addChatMessage({
     workspace,
-    commit: pausedChainData.commit,
-    document: pausedChainData.document,
-    pausedChain: pausedChainData.pausedChain,
-    documentLogUuid,
-    responseMessages: messages,
-    previousResponse: pausedChainData.previousResponse,
+    providerLog,
+    messages,
     source,
   })
 }

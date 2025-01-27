@@ -2,33 +2,40 @@ import type { Message } from '@latitude-data/compiler'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
 
 import {
+  buildConversation,
   buildMessagesFromResponse,
   ChainEvent,
   ChainStepResponse,
   LogSources,
   ProviderApiKey,
-  ProviderLog,
   StreamType,
   Workspace,
-} from '../../browser'
-import { unsafelyFindProviderApiKey } from '../../data-access'
-import { NotFoundError, Result, TypedResult } from '../../lib'
-import { Config, PartialConfig } from '../ai'
-import { ChainError } from '../../lib/streamManager/ChainErrors'
-import { ChainStreamConsumer } from '../../lib/streamManager/ChainStreamConsumer'
-import { checkFreeProviderQuota } from '../chains/checkFreeProviderQuota'
-import { streamAIResponse } from '../../lib/streamManager'
+  ProviderLog,
+} from '../../../../browser'
+import { unsafelyFindProviderApiKey } from '../../../../data-access'
+import { NotFoundError, Result, TypedResult } from '../../../../lib'
+import { Config as ValidatedConfig, PartialConfig } from '../../../ai'
+import { ChainError } from '../../../../lib/streamManager/ChainErrors'
+import { ChainStreamConsumer } from '../../../../lib/streamManager/ChainStreamConsumer'
+import { checkFreeProviderQuota } from '../../../chains/checkFreeProviderQuota'
+import { streamAIResponse } from '../../../../lib/streamManager'
+import serializeProviderLog from '../../../providerLogs/serialize'
 
 export type ChainResponse<T extends StreamType> = TypedResult<
   ChainStepResponse<T>,
   ChainError<RunErrorCodes>
 >
-
-export async function addMessages({
+/**
+ * Add chat message
+ * ::::::::::::::::::::
+ * Adds an additional message to a finished conversation, and generates
+ * a single response.
+ */
+export async function addChatMessage({
   workspace,
   providerLog,
-  messages,
   source,
+  messages,
 }: {
   workspace: Workspace
   providerLog: ProviderLog
@@ -65,6 +72,8 @@ export async function addMessages({
     responseResolve = resolve
   })
 
+  const previousMessages = buildConversation(serializeProviderLog(providerLog))
+
   const stream = new ReadableStream<ChainEvent>({
     start(controller) {
       iterate({
@@ -74,7 +83,7 @@ export async function addMessages({
         provider,
         controller,
         documentLogUuid: providerLog.documentLogUuid!,
-        messages,
+        messages: [...previousMessages, ...messages],
       })
         .then((res) => {
           responseResolve(Result.ok(res))
@@ -101,8 +110,8 @@ async function iterate({
   config: PartialConfig
   provider: ProviderApiKey
   controller: ReadableStreamDefaultController
-  messages: Message[]
   source: LogSources
+  messages: Message[]
   documentLogUuid?: string
 }) {
   try {
@@ -114,7 +123,7 @@ async function iterate({
     const response = await streamAIResponse({
       controller,
       workspace,
-      config: config as Config,
+      config: config as ValidatedConfig,
       messages,
       newMessagesCount: 0,
       provider,
@@ -123,6 +132,7 @@ async function iterate({
     })
 
     const responseMessages = buildMessagesFromResponse({ response })
+
     ChainStreamConsumer.chainCompleted({
       controller,
       response,

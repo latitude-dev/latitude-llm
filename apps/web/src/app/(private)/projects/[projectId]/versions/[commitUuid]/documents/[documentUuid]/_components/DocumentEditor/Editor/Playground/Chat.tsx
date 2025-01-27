@@ -63,10 +63,12 @@ export default function Chat<V extends PromptlVersion>({
       parameters,
     })
 
-    const documentLogUuid = new Promise<string>((resolve, reject) => {
+    const documentLogUuid = new Promise<string>((resolve, _reject) => {
       response.then((r) => {
-        if (!r) {
-          reject(new Error('No document log uuid'))
+        if (!r?.uuid) {
+          // TODO: This error is raised when the streaming returns an error
+          // Without the uuid, we can't chat anymore.
+          // reject(new Error('No document log uuid'))
           return
         }
         resolve(r.uuid)
@@ -170,7 +172,7 @@ export default function Chat<V extends PromptlVersion>({
         <ChatTextArea
           clearChat={clearChat}
           placeholder='Enter followup message...'
-          disabled={isLoading}
+          disabled={isLoading || !!error}
           onSubmit={submitUserMessage}
           toolRequests={unresponedToolCalls}
           addMessages={addMessages}

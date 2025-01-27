@@ -8,8 +8,8 @@ import {
 import { Result, UnprocessableEntityError } from '../../../../lib'
 import { getCachedChain } from '../../../../services/chains/chainCache'
 import { generateToolResponseMessages } from './generateToolResponseMessages'
-import { resumeConversation } from '../../../../services/documentLogs/addMessages/resumeConversation'
 import { AutogenerateToolResponseCopilotData } from './getCopilotData'
+import { resumePausedPrompt } from '../../../../services/documentLogs/addMessages/resumePausedPrompt'
 
 export async function respondToToolCalls({
   workspace,
@@ -54,7 +54,7 @@ export async function respondToToolCalls({
 
   if (responseMessagesResult.error) return responseMessagesResult
 
-  return resumeConversation({
+  return resumePausedPrompt({
     workspace,
     commit,
     document,
