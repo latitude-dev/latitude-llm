@@ -12,6 +12,7 @@ import { z } from 'zod'
 import {
   AGENT_RETURN_TOOL_NAME,
   applyProviderRules,
+  LATITUDE_TOOLS_CONFIG_NAME,
   ProviderApiKey,
   Workspace,
 } from '../../../browser'
@@ -21,6 +22,7 @@ import { azureConfig, googleConfig } from '../../ai/helpers'
 import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
 import { checkFreeProviderQuota } from '../../chains/checkFreeProviderQuota'
 import { CachedApiKeys } from '../../chains/run'
+import { injectBuiltInToolsConfig } from '../../builtInTools/injectConfig'
 
 export type ValidatedAgentStep = {
   config: Config
@@ -67,15 +69,16 @@ const validateConfig = (
       provider: z.string({
         message: `"provider" attribute is required. Read more here: ${doc}`,
       }),
+      [LATITUDE_TOOLS_CONFIG_NAME]: z.array(z.string()).optional(),
       google: googleConfig.optional(),
       azure: azureConfig.optional(),
     })
     .catchall(z.unknown())
 
-  const result = schema.safeParse(config)
+  const parseResult = schema.safeParse(config)
 
-  if (!result.success) {
-    const validationError = result.error.errors[0]
+  if (!parseResult.success) {
+    const validationError = parseResult.error.errors[0]
     const message = validationError
       ? validationError.message
       : 'Error validating document configuration'
@@ -87,7 +90,17 @@ const validateConfig = (
     )
   }
 
-  return Result.ok(result.data)
+  const injectResult = injectBuiltInToolsConfig(parseResult.data)
+  if (!injectResult.ok) {
+    return Result.error(
+      new ChainError({
+        message: injectResult.error!.message,
+        code: RunErrorCodes.DocumentConfigError,
+      }),
+    )
+  }
+
+  return Result.ok(injectResult.unwrap() as Config)
 }
 
 const applyAgentTools = (config: Config): Config => {

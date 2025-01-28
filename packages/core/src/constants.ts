@@ -465,3 +465,13 @@ export const CLOUD_MESSAGES = {
   refinePrompt: `Refine prompt is only available on Latitude Cloud. ${CLOUD_INFO}`,
   promptSuggestions: `Prompt suggestions are only available on Latitude Cloud. ${CLOUD_INFO}`,
 }
+
+export {
+  type ToolDefinition,
+  type BuiltInToolCall,
+  LatitudeTool,
+  LatitudeToolInternalName,
+  LATITUDE_TOOLS_DEFINITION,
+} from './services/builtInTools/definitions'
+
+export const LATITUDE_TOOLS_CONFIG_NAME = 'latitudeTools'

@@ -12,6 +12,7 @@ import {
   MAX_STEPS_CONFIG_NAME,
 } from '../../../constants'
 import { Message } from '@latitude-data/compiler'
+import { getBuiltInToolCallsFromResponse } from '../../builtInTools'
 import { getToolCalls } from '../../chains/runStep'
 import { validateAgentStep, ValidatedAgentStep } from '../AgentStepValidator'
 import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
@@ -93,13 +94,22 @@ export async function runAgentStep({
     (tc) => tc.name !== AGENT_RETURN_TOOL_NAME,
   )
 
+  const builtInToolCalls = getBuiltInToolCallsFromResponse(response)
+
+  const clientToolCalls = toolCalls.filter(
+    (toolCall) => !builtInToolCalls.some((b) => b.id === toolCall.id),
+  )
+
   // Stop the chain if there are tool calls
-  if (toolCalls.length) {
-    chainStreamManager.requestTools(toolCalls)
+  if (clientToolCalls.length) {
+    chainStreamManager.requestTools(clientToolCalls)
     return
   }
 
-  await runAgentStep({
+  const latitudeToolResponses =
+    await chainStreamManager.executeLatitudeTools(builtInToolCalls)
+
+  return runAgentStep({
     chainStreamManager,
     workspace,
     source,
@@ -107,6 +117,8 @@ export async function runAgentStep({
     errorableUuid,
     providersMap,
     stepCount: stepCount + 1,
-    newMessages: buildMessagesFromResponse({ response }),
+    newMessages: buildMessagesFromResponse({ response }).concat(
+      latitudeToolResponses,
+    ),
   })
 }

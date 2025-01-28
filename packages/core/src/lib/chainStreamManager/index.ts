@@ -1,4 +1,4 @@
-import { Message, ToolCall } from '@latitude-data/compiler'
+import { Message, ToolCall, ToolMessage } from '@latitude-data/compiler'
 import { StreamEventTypes } from '@latitude-data/constants'
 import {
   ChainEvent,
@@ -6,11 +6,16 @@ import {
   OmittedLatitudeEventData,
 } from '@latitude-data/constants'
 import { ExecuteStepArgs, streamAIResponse } from './step/streamAIResponse'
-import { ChainStepResponse, StreamType } from '../../constants'
+import { BuiltInToolCall, ChainStepResponse, StreamType } from '../../constants'
 import { buildMessagesFromResponse } from '../../helpers'
 import { FinishReason, LanguageModelUsage } from 'ai'
 import { ChainError } from './ChainErrors'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
+import { Result } from '../Result'
+import {
+  buildToolMessage,
+  executeBuiltInToolCall,
+} from '../../services/builtInTools'
 
 const usePromise = <T>(): readonly [Promise<T>, (value: T) => void] => {
   let resolveValue: (value: T) => void
@@ -153,6 +158,48 @@ export class ChainStreamManager {
     this.sendEvent({ type: ChainEventTypes.StepCompleted })
 
     return response
+  }
+
+  /**
+   * Generates the built-in tool responses.
+   *
+   * Sends both ToolsStarted and ToolCompleted events.
+   */
+  async executeLatitudeTools(
+    toolCalls: BuiltInToolCall[],
+  ): Promise<ToolMessage[]> {
+    if (!toolCalls.length) return []
+
+    this.sendEvent({
+      type: ChainEventTypes.ToolsStarted,
+      tools: toolCalls,
+    })
+
+    const toolResponses = await Promise.all(
+      toolCalls.map(async (toolCall) => {
+        let toolMessage: ToolMessage
+        try {
+          const result = await executeBuiltInToolCall(toolCall)
+          toolMessage = buildToolMessage({
+            toolName: toolCall.name,
+            toolId: toolCall.id,
+            result: result,
+          })
+        } catch (error) {
+          toolMessage = buildToolMessage({
+            toolName: toolCall.name,
+            toolId: toolCall.id,
+            result: Result.error(error as Error),
+          })
+        }
+
+        this.messages.push(toolMessage)
+        this.sendEvent({ type: ChainEventTypes.ToolCompleted })
+        return toolMessage
+      }),
+    )
+
+    return toolResponses
   }
 
   /**

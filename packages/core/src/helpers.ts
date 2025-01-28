@@ -1,5 +1,11 @@
 import { z } from 'zod'
-import { CsvData, MAX_STEPS_CONFIG_NAME, ParameterType } from './constants'
+import {
+  CsvData,
+  LATITUDE_TOOLS_CONFIG_NAME,
+  LatitudeTool,
+  MAX_STEPS_CONFIG_NAME,
+  ParameterType,
+} from './constants'
 import { ProviderApiKey, ProviderLogDto } from './schema/types'
 
 import type { Message } from '@latitude-data/compiler'
@@ -36,6 +42,9 @@ export function promptConfigSchema({
       )
       .optional(),
     [MAX_STEPS_CONFIG_NAME]: z.number().min(1).max(150).optional(),
+    [LATITUDE_TOOLS_CONFIG_NAME]: z
+      .array(z.nativeEnum(LatitudeTool))
+      .optional(),
   })
 }
 

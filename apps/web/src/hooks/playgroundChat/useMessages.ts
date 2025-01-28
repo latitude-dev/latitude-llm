@@ -7,7 +7,10 @@ import {
 } from '@latitude-data/web-ui'
 import { Message as CompilerMessage } from '@latitude-data/compiler'
 import { useCallback, useState } from 'react'
-import { AGENT_RETURN_TOOL_NAME } from '@latitude-data/core/browser'
+import {
+  AGENT_RETURN_TOOL_NAME,
+  LatitudeToolInternalName,
+} from '@latitude-data/core/browser'
 
 function isToolRequest(part: ToolPart): part is ToolRequest {
   return 'toolCallId' in part
@@ -42,7 +45,10 @@ function getUnrespondedToolRequests<V extends PromptlVersion>({
     (part): part is ToolRequest =>
       isToolRequest(part) &&
       !toolResponses.has(part.toolCallId) &&
-      part.toolName !== AGENT_RETURN_TOOL_NAME,
+      part.toolName !== AGENT_RETURN_TOOL_NAME &&
+      !Object.values(LatitudeToolInternalName).includes(
+        part.toolName as LatitudeToolInternalName,
+      ),
   )
 }
 

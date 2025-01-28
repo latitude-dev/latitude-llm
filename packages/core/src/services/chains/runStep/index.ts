@@ -1,5 +1,5 @@
 import { Chain as PromptlChain } from 'promptl-ai'
-import type { Message } from '@latitude-data/compiler'
+import { type Message } from '@latitude-data/compiler'
 import {
   ABSOLUTE_MAX_STEPS,
   DEFAULT_MAX_STEPS,
@@ -19,6 +19,7 @@ import { buildMessagesFromResponse, Workspace } from '../../../browser'
 import { ChainStepResponse, StreamType } from '../../../constants'
 import { cacheChain } from '../chainCache'
 import { ChainStreamManager } from '../../../lib/chainStreamManager'
+import { getBuiltInToolCallsFromResponse } from '../../builtInTools'
 
 export function getToolCalls({
   response,
@@ -125,7 +126,13 @@ export async function runStep({
 
   const isPromptl = chain instanceof PromptlChain
   const toolCalls = getToolCalls({ response })
-  const hasTools = isPromptl && toolCalls.length > 0
+
+  const builtInToolCalls = getBuiltInToolCallsFromResponse(response)
+  const clientToolCalls = toolCalls.filter(
+    (toolCall) => !builtInToolCalls.some((b) => b.id === toolCall.id),
+  )
+
+  const hasTools = isPromptl && clientToolCalls.length > 0
 
   // If response has tools, we must cache and stop the chain
   if (hasTools) {
@@ -136,7 +143,7 @@ export async function runStep({
       previousResponse: response,
     })
 
-    chainStreamManager.requestTools(toolCalls)
+    chainStreamManager.requestTools(clientToolCalls)
     return step.conversation
   }
 
@@ -145,6 +152,9 @@ export async function runStep({
     chainStreamManager.done()
     return step.conversation
   }
+
+  const latitudeToolResponses =
+    await chainStreamManager.executeLatitudeTools(builtInToolCalls)
 
   return runStep({
     chainStreamManager,
@@ -155,7 +165,9 @@ export async function runStep({
     providersMap,
     errorableUuid,
     stepCount: stepCount + 1,
-    newMessages: buildMessagesFromResponse({ response }),
+    newMessages: buildMessagesFromResponse({ response }).concat(
+      latitudeToolResponses,
+    ),
     configOverrides,
     removeSchema,
   })

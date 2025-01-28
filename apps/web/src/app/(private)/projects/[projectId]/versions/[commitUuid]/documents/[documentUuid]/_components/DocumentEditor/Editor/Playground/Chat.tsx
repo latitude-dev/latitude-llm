@@ -1,4 +1,11 @@
-import { useCallback, useContext, useEffect, useRef, useState } from 'react'
+import {
+  ReactNode,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from 'react'
 
 import {
   ContentType,
@@ -104,6 +111,7 @@ export default function Chat({
     usage,
     time,
     messages,
+    runningLatitudeTools,
     streamingResponse,
     chainLength,
     isLoading,
@@ -163,9 +171,10 @@ export default function Chat({
         )}
       </div>
       <div className='flex relative flex-row w-full items-center justify-center'>
-        <TokenUsage
+        <StatusIndicator
           isScrolledToBottom={isScrolledToBottom}
           usage={usage}
+          runningLatitudeTools={runningLatitudeTools}
           isStreaming={isLoading}
         />
         <ChatTextArea
@@ -181,17 +190,13 @@ export default function Chat({
   )
 }
 
-export function TokenUsage({
+function FloatingElement({
   isScrolledToBottom,
-  usage,
-  isStreaming,
+  children,
 }: {
   isScrolledToBottom: boolean
-  usage: LanguageModelUsage | undefined
-  isStreaming: boolean
+  children: ReactNode
 }) {
-  if (!usage && isStreaming) return null
-
   return (
     <div
       className={cn(
@@ -201,34 +206,80 @@ export function TokenUsage({
         },
       )}
     >
-      {!isStreaming && usage ? (
-        <Tooltip
-          side='top'
-          align='center'
-          sideOffset={5}
-          delayDuration={250}
-          trigger={
-            <div className='cursor-pointer flex flex-row items-center gap-x-1'>
-              <Text.H6M color='foregroundMuted'>
-                {usage?.totalTokens ||
-                  usage?.promptTokens ||
-                  usage?.completionTokens ||
-                  0}{' '}
-                tokens
-              </Text.H6M>
-              <Icon name='info' color='foregroundMuted' />
-            </div>
-          }
-        >
-          <div className='flex flex-col gap-2'>
-            <span>{usage?.promptTokens || 0} prompt tokens</span>
-            <span>{usage?.completionTokens || 0} completion tokens</span>
-          </div>
-        </Tooltip>
-      ) : (
-        <AnimatedDots />
-      )}
+      {children}
     </div>
+  )
+}
+
+function TokenUsage({ usage }: { usage?: LanguageModelUsage }) {
+  return (
+    <Tooltip
+      side='top'
+      align='center'
+      sideOffset={5}
+      delayDuration={250}
+      trigger={
+        <div className='cursor-pointer flex flex-row items-center gap-x-1'>
+          <Text.H6M color='foregroundMuted'>
+            {usage?.totalTokens ||
+              usage?.promptTokens ||
+              usage?.completionTokens ||
+              0}{' '}
+            tokens
+          </Text.H6M>
+          <Icon name='info' color='foregroundMuted' />
+        </div>
+      }
+    >
+      <div className='flex flex-col gap-2'>
+        <span>{usage?.promptTokens || 0} prompt tokens</span>
+        <span>{usage?.completionTokens || 0} completion tokens</span>
+      </div>
+    </Tooltip>
+  )
+}
+
+export function StatusIndicator({
+  usage,
+  isScrolledToBottom,
+  runningLatitudeTools,
+  isStreaming,
+}: {
+  usage: LanguageModelUsage | undefined
+  isScrolledToBottom: boolean
+  runningLatitudeTools?: number
+  isStreaming: boolean
+}) {
+  if (runningLatitudeTools) {
+    return (
+      <FloatingElement isScrolledToBottom={isScrolledToBottom}>
+        <div className='flex flex-row gap-2'>
+          <Icon
+            name='loader'
+            color='foregroundMuted'
+            className='animate-spin'
+          />
+          <Text.H6 color='foregroundMuted'>
+            Running <Text.H6B color='primary'>{runningLatitudeTools}</Text.H6B>{' '}
+            tools...
+          </Text.H6>
+        </div>
+      </FloatingElement>
+    )
+  }
+
+  if (isStreaming) {
+    return (
+      <FloatingElement isScrolledToBottom={isScrolledToBottom}>
+        <AnimatedDots />
+      </FloatingElement>
+    )
+  }
+
+  return (
+    <FloatingElement isScrolledToBottom={isScrolledToBottom}>
+      <TokenUsage usage={usage} />
+    </FloatingElement>
   )
 }
 
