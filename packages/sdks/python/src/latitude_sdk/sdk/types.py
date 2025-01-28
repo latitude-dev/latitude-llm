@@ -115,6 +115,16 @@ class ModelUsage(Model):
     total_tokens: int = Field(alias=str("totalTokens"))
 
 
+class FinishReason(StrEnum):
+    Stop = "stop"
+    Length = "length"
+    ContentFilter = "content-filter"
+    ToolCalls = "tool-calls"
+    Error = "error"
+    Other = "other"
+    Unknown = "unknown"
+
+
 class ToolCall(Model):
     id: str
     name: str
@@ -191,6 +201,7 @@ class ChainEventCompleted(Model):
     event: Literal[StreamEvents.Latitude] = StreamEvents.Latitude
     type: Literal[ChainEvents.Completed] = ChainEvents.Completed
     uuid: Optional[str] = None
+    finish_reason: FinishReason = Field(alias=str("finishReason"))
     config: Dict[str, Any]
     messages: Optional[List[Message]] = None
     object: Optional[Any] = None

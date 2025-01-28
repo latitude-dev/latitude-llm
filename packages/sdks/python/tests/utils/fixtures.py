@@ -16,6 +16,7 @@ from latitude_sdk import (
     EvaluationResult,
     EvaluationResultType,
     FinishedEvent,
+    FinishReason,
     Log,
     LogSources,
     Message,
@@ -308,6 +309,7 @@ event: latitude-event
 data: {json.dumps({
     "type": "chain-complete",
     "uuid": "bf7b0b97-6a3a-4147-b058-2588517dd209",
+    "finishReason": "tool-calls",
     "config": {
         "provider": "OpenAI",
         "model": "gpt-4o-mini",
@@ -515,6 +517,7 @@ CONVERSATION_EVENTS: List[StreamEvent] = [
     ),
     ChainEventCompleted(
         uuid="bf7b0b97-6a3a-4147-b058-2588517dd209",
+        finish_reason=FinishReason.ToolCalls,
         config={
             "provider": "OpenAI",
             "model": "gpt-4o-mini",
@@ -812,6 +815,7 @@ event: latitude-event
 data: {json.dumps({
     "type": "chain-complete",
     "uuid": "bf7b0b97-6a3a-4147-b058-2588517dd209",
+    "finishReason": "stop",
     "config": {
         "provider": "OpenAI",
         "model": "gpt-4o-mini",
@@ -890,6 +894,7 @@ FOLLOW_UP_CONVERSATION_EVENTS: List[StreamEvent] = [
     ),
     ChainEventCompleted(
         uuid="bf7b0b97-6a3a-4147-b058-2588517dd209",
+        finish_reason=FinishReason.Stop,
         config={
             "provider": "OpenAI",
             "model": "gpt-4o-mini",
