@@ -32,9 +32,8 @@ class Logs:
         self._options = options
         self._client = client
 
-    def _ensure_options(self, options: LogOptions) -> LogOptions:
-        project_id = options.project_id or self._options.project_id
-        if not project_id:
+    def _ensure_log_options(self, options: LogOptions):
+        if not options.project_id:
             raise ApiError(
                 status=404,
                 code=ApiErrorCodes.NotFoundError,
@@ -42,16 +41,11 @@ class Logs:
                 response="Project ID is required",
             )
 
-        version_uuid = options.version_uuid or self._options.version_uuid
-
-        return LogOptions(project_id=project_id, version_uuid=version_uuid)
-
     async def create(
         self, path: str, messages: Sequence[Union[Message, Dict[str, Any]]], options: CreateLogOptions
     ) -> CreateLogResult:
-        log_options = self._ensure_options(options)
-        options = CreateLogOptions(**{**dict(options), **dict(log_options)})
-
+        options = CreateLogOptions(**{**dict(self._options), **dict(options)})
+        self._ensure_log_options(options)
         assert options.project_id is not None
 
         messages = [_Message.validate_python(message) for message in messages]

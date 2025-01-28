@@ -41,6 +41,8 @@ class Evaluations:
         self._client = client
 
     async def trigger(self, uuid: str, options: TriggerEvaluationOptions) -> TriggerEvaluationResult:
+        options = TriggerEvaluationOptions(**{**dict(self._options), **dict(options)})
+
         async with self._client.request(
             handler=RequestHandler.TriggerEvaluation,
             params=TriggerEvaluationRequestParams(
@@ -55,6 +57,8 @@ class Evaluations:
     async def create_result(
         self, uuid: str, evaluation_uuid: str, options: CreateEvaluationResultOptions
     ) -> CreateEvaluationResultResult:
+        options = CreateEvaluationResultOptions(**{**dict(self._options), **dict(options)})
+
         async with self._client.request(
             handler=RequestHandler.CreateEvaluationResult,
             params=CreateEvaluationResultRequestParams(

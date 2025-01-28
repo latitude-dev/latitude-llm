@@ -309,6 +309,7 @@ class OnToolCall(Protocol):
 class SdkOptions(Model):
     project_id: Optional[int] = None
     version_uuid: Optional[str] = None
+    tools: Optional[Dict[str, OnToolCall]] = None
 
 
 class GatewayOptions(Model):

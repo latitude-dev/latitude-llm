@@ -90,19 +90,14 @@ class Prompts:
         self._options = options
         self._client = client
 
-    def _ensure_options(self, options: PromptOptions) -> PromptOptions:
-        project_id = options.project_id or self._options.project_id
-        if not project_id:
+    def _ensure_prompt_options(self, options: PromptOptions):
+        if not options.project_id:
             raise ApiError(
                 status=404,
                 code=ApiErrorCodes.NotFoundError,
                 message="Project ID is required",
                 response="Project ID is required",
             )
-
-        version_uuid = options.version_uuid or self._options.version_uuid
-
-        return PromptOptions(project_id=project_id, version_uuid=version_uuid)
 
     async def _handle_stream(
         self, stream: AsyncGenerator[ClientEvent, Any], on_event: Optional[StreamCallbacks.OnEvent]
@@ -230,9 +225,8 @@ class Prompts:
         return FinishedEvent(**dict(next_result)) if next_result else None
 
     async def get(self, path: str, options: GetPromptOptions) -> GetPromptResult:
-        prompt_options = self._ensure_options(options)
-        options = GetPromptOptions(**{**dict(options), **dict(prompt_options)})
-
+        options = GetPromptOptions(**{**dict(self._options), **dict(options)})
+        self._ensure_prompt_options(options)
         assert options.project_id is not None
 
         async with self._client.request(
@@ -246,9 +240,8 @@ class Prompts:
             return GetPromptResult.model_validate_json(response.content)
 
     async def get_or_create(self, path: str, options: GetOrCreatePromptOptions) -> GetOrCreatePromptResult:
-        prompt_options = self._ensure_options(options)
-        options = GetOrCreatePromptOptions(**{**dict(options), **dict(prompt_options)})
-
+        options = GetOrCreatePromptOptions(**{**dict(self._options), **dict(options)})
+        self._ensure_prompt_options(options)
         assert options.project_id is not None
 
         async with self._client.request(
@@ -266,9 +259,8 @@ class Prompts:
 
     async def run(self, path: str, options: RunPromptOptions) -> Optional[RunPromptResult]:
         try:
-            prompt_options = self._ensure_options(options)
-            options = RunPromptOptions(**{**dict(options), **dict(prompt_options)})
-
+            options = RunPromptOptions(**{**dict(self._options), **dict(options)})
+            self._ensure_prompt_options(options)
             assert options.project_id is not None
 
             async with self._client.request(
@@ -322,6 +314,8 @@ class Prompts:
         self, uuid: str, messages: Sequence[Union[Message, Dict[str, Any]]], options: ChatPromptOptions
     ) -> Optional[ChatPromptResult]:
         try:
+            options = ChatPromptOptions(**{**dict(self._options), **dict(options)})
+
             messages = [_Message.validate_python(message) for message in messages]
 
             async with self._client.request(
