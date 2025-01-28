@@ -20,17 +20,15 @@ from latitude_sdk.sdk.types import (
     ChainEvents,
     ChainEventStep,
     ChainEventStepCompleted,
-    ContentType,
     FinishedEvent,
     Message,
-    MessageRole,
     OnToolCall,
     OnToolCallDetails,
     Prompt,
     SdkOptions,
     StreamCallbacks,
     StreamEvents,
-    ToolCall,
+    StreamTypes,
     ToolMessage,
     ToolResult,
     ToolResultContent,
@@ -175,37 +173,15 @@ class Prompts:
         # NOTE: FinishedEvent not in on_event
         return FinishedEvent(uuid=uuid, conversation=conversation, response=response)
 
-    def _search_unanswered_tool_calls(self, conversation: List[Message]) -> List[ToolCall]:
-        tool_calls: Dict[str, ToolCall] = {}
-
-        for message in conversation:
-            if not isinstance(message.content, list):
-                continue
-
-            if message.role == MessageRole.Assistant:
-                for content in message.content:
-                    if content.type == ContentType.ToolCall:
-                        tool_calls[content.id] = ToolCall(
-                            id=content.id,
-                            name=content.name,
-                            arguments=content.arguments,
-                        )
-
-            elif message.role == MessageRole.Tool:
-                for content in message.content:
-                    tool_calls.pop(content.id, None)
-
-        return list(tool_calls.values())
-
     def _pause_tool_execution(self) -> ToolResult:
         raise OnToolCallPaused()
 
     async def _handle_tool_calls(
-        self,
-        result: FinishedEvent,
-        tool_calls: List[ToolCall],
-        options: Union[RunPromptOptions, ChatPromptOptions],
+        self, result: FinishedEvent, options: Union[RunPromptOptions, ChatPromptOptions]
     ) -> Optional[FinishedEvent]:
+        # Seems Python cannot infer the type
+        assert result.response.type == StreamTypes.Text and result.response.tool_calls is not None
+
         if not options.tools:
             raise ApiError(
                 status=400,
@@ -214,7 +190,7 @@ class Prompts:
                 response="Tools not supplied",
             )
 
-        for tool_call in tool_calls:
+        for tool_call in result.response.tool_calls:
             if tool_call.name not in options.tools:
                 raise ApiError(
                     status=400,
@@ -227,11 +203,11 @@ class Prompts:
             conversation_uuid=result.uuid,
             messages=result.conversation,
             pause_execution=self._pause_tool_execution,
-            requested_tool_calls=tool_calls,
+            requested_tool_calls=result.response.tool_calls,
         )
 
         tool_results = await asyncio.gather(
-            *[options.tools[tool_call.name](tool_call, details) for tool_call in tool_calls],
+            *[options.tools[tool_call.name](tool_call, details) for tool_call in result.response.tool_calls],
             return_exceptions=False,
         )
 
@@ -313,15 +289,13 @@ class Prompts:
                 else:
                     result = RunPromptResult.model_validate_json(response.content)
 
-            if options.tools:
-                tool_calls = self._search_unanswered_tool_calls(result.conversation)
-                if tool_calls:
-                    try:
-                        # NOTE: The last sdk.chat called will already call on_finished
-                        final_result = await self._handle_tool_calls(result, tool_calls, options)
-                        return RunPromptResult(**dict(final_result)) if final_result else None
-                    except OnToolCallPaused:
-                        pass
+            if options.tools and result.response.type == StreamTypes.Text and result.response.tool_calls:
+                try:
+                    # NOTE: The last sdk.chat called will already call on_finished
+                    final_result = await self._handle_tool_calls(result, options)
+                    return RunPromptResult(**dict(final_result)) if final_result else None
+                except OnToolCallPaused:
+                    pass
 
             if options.on_finished:
                 options.on_finished(FinishedEvent(**dict(result)))
@@ -365,15 +339,13 @@ class Prompts:
                 else:
                     result = ChatPromptResult.model_validate_json(response.content)
 
-            if options.tools:
-                tool_calls = self._search_unanswered_tool_calls(result.conversation)
-                if tool_calls:
-                    try:
-                        # NOTE: The last sdk.chat called will already call on_finished
-                        final_result = await self._handle_tool_calls(result, tool_calls, options)
-                        return ChatPromptResult(**dict(final_result)) if final_result else None
-                    except OnToolCallPaused:
-                        pass
+            if options.tools and result.response.type == StreamTypes.Text and result.response.tool_calls:
+                try:
+                    # NOTE: The last sdk.chat called will already call on_finished
+                    final_result = await self._handle_tool_calls(result, options)
+                    return ChatPromptResult(**dict(final_result)) if final_result else None
+                except OnToolCallPaused:
+                    pass
 
             if options.on_finished:
                 options.on_finished(FinishedEvent(**dict(result)))
