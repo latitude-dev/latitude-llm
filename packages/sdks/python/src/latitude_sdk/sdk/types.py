@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Any, Dict, List, Literal, Optional, Protocol, Union, runtime_checkable
+from typing import Any, Callable, Dict, List, Literal, Optional, Protocol, Union, runtime_checkable
 
 from latitude_sdk.sdk.errors import ApiError
 from latitude_sdk.util import Adapter, Field, Model, StrEnum
@@ -63,7 +63,7 @@ class ToolResultContent(Model):
     type: Literal[ContentType.ToolResult] = ContentType.ToolResult
     id: str = Field(alias=str("toolCallId"))
     name: str = Field(alias=str("toolName"))
-    result: str
+    result: Any
     is_error: Optional[bool] = Field(default=None, alias=str("isError"))
 
 
@@ -115,10 +115,27 @@ class ModelUsage(Model):
     total_tokens: int = Field(alias=str("totalTokens"))
 
 
+class FinishReason(StrEnum):
+    Stop = "stop"
+    Length = "length"
+    ContentFilter = "content-filter"
+    ToolCalls = "tool-calls"
+    Error = "error"
+    Other = "other"
+    Unknown = "unknown"
+
+
 class ToolCall(Model):
     id: str
     name: str
     arguments: Dict[str, Any]
+
+
+class ToolResult(Model):
+    id: str
+    name: str
+    result: Any
+    is_error: Optional[bool] = None
 
 
 class StreamTypes(StrEnum):
@@ -184,6 +201,7 @@ class ChainEventCompleted(Model):
     event: Literal[StreamEvents.Latitude] = StreamEvents.Latitude
     type: Literal[ChainEvents.Completed] = ChainEvents.Completed
     uuid: Optional[str] = None
+    finish_reason: FinishReason = Field(alias=str("finishReason"))
     config: Dict[str, Any]
     messages: Optional[List[Message]] = None
     object: Optional[Any] = None
@@ -276,9 +294,22 @@ class StreamCallbacks(Model):
     on_error: Optional[OnError] = None
 
 
+class OnToolCallDetails(Model):
+    conversation_uuid: str
+    messages: List[Message]
+    pause_execution: Callable[[], ToolResult]
+    requested_tool_calls: List[ToolCall]
+
+
+@runtime_checkable
+class OnToolCall(Protocol):
+    async def __call__(self, call: ToolCall, details: OnToolCallDetails) -> ToolResult: ...
+
+
 class SdkOptions(Model):
     project_id: Optional[int] = None
     version_uuid: Optional[str] = None
+    tools: Optional[Dict[str, OnToolCall]] = None
 
 
 class GatewayOptions(Model):

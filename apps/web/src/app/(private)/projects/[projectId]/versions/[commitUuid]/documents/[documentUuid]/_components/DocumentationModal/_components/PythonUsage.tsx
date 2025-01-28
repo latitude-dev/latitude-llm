@@ -7,12 +7,14 @@ export function PythonUsage({
   documentPath,
   apiKey,
   parameters,
+  tools,
 }: {
   projectId: number
   commitUuid: string
   documentPath: string
   apiKey: string | undefined
   parameters: Set<string>
+  tools: Set<string>
 }) {
   const getParametersString = () => {
     if (parameters.size === 0) return ''
@@ -20,6 +22,17 @@ export function PythonUsage({
     const entries = Array.from(parameters).map((key) => `\t\t'${key}': ''`)
 
     return `\tparameters={\n${entries.join(',\n')}\n\t}`
+  }
+
+  const getToolsString = () => {
+    if (tools.size === 0) return ''
+
+    const entries = Array.from(tools).map(
+      (tool) =>
+        `\t\t'${tool}': # async def ${tool}(call: ToolCall, details: OnToolCallDetails) -> ToolResult`,
+    )
+
+    return `\ttools={\n${entries.join('\n')}\n\t}`
   }
 
   const getRunOptions = () => {
@@ -32,6 +45,11 @@ export function PythonUsage({
     const parametersString = getParametersString()
     if (parametersString) {
       options.push(parametersString)
+    }
+
+    const toolsString = getToolsString()
+    if (toolsString) {
+      options.push(toolsString)
     }
 
     return options.length > 0 ? `\n${options.join(',\n')}\n` : ''

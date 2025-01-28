@@ -39,7 +39,7 @@ DEFAULT_INTERNAL_OPTIONS = InternalOptions(
 
 
 DEFAULT_LATITUDE_OPTIONS = LatitudeOptions(
-    telemetry=None,  # Note: Telemetry is opt-in
+    telemetry=None,  # NOTE: Telemetry is opt-in
     internal=DEFAULT_INTERNAL_OPTIONS,
 )
 

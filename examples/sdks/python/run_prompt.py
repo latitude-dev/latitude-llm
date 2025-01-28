@@ -6,13 +6,27 @@ from latitude_sdk import (
     ImageContent,
     Latitude,
     LatitudeOptions,
+    OnToolCallDetails,
     RunPromptOptions,
     TextContent,
+    ToolCall,
+    ToolResult,
     UserMessage,
 )
 
 LATITUDE_API_KEY = os.getenv("LATITUDE_API_KEY")
 LATITUDE_PROJECT_ID = os.getenv("LATITUDE_PROJECT_ID")
+
+
+async def get_weather(call: ToolCall, details: OnToolCallDetails) -> ToolResult:
+    # You could use a Pydantic model to validate the arguments and have type hinting
+    print(call.arguments["location"])
+
+    # You can pause the execution of the tools if you need it, and resume the conversation
+    # later, returning the tool results in the sdk.prompts.chat method
+    # return details.pause_execution()
+
+    return ToolResult(id=call.id, name=call.name, result="20°C", is_error=False)
 
 
 async def main():
@@ -25,6 +39,7 @@ async def main():
         "prompt-path",
         RunPromptOptions(
             parameters={"topic": "Python"},
+            tools={"get_weather": get_weather},
             on_event=lambda event: print(event, "\n" * 2),
             on_finished=lambda event: print(event, "\n" * 2),
             on_error=lambda error: print(error, "\n" * 2),
@@ -48,6 +63,7 @@ async def main():
             ),
         ],
         ChatPromptOptions(
+            tools={"get_weather": get_weather},
             on_event=lambda event: print(event, "\n" * 2),
             on_finished=lambda event: print(event, "\n" * 2),
             on_error=lambda error: print(error, "\n" * 2),

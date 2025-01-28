@@ -1,3 +1,4 @@
+import asyncio
 from typing import Any, AsyncGenerator, Dict, List, Optional, Sequence, Union
 
 from latitude_sdk.client import (
@@ -21,13 +22,23 @@ from latitude_sdk.sdk.types import (
     ChainEventStepCompleted,
     FinishedEvent,
     Message,
+    OnToolCall,
+    OnToolCallDetails,
     Prompt,
     SdkOptions,
     StreamCallbacks,
     StreamEvents,
+    StreamTypes,
+    ToolMessage,
+    ToolResult,
+    ToolResultContent,
     _Message,
 )
 from latitude_sdk.util import Model
+
+
+class OnToolCallPaused(Exception):
+    pass
 
 
 class PromptOptions(Model):
@@ -54,6 +65,7 @@ class GetOrCreatePromptResult(Prompt, Model):
 class RunPromptOptions(StreamCallbacks, PromptOptions, Model):
     custom_identifier: Optional[str] = None
     parameters: Optional[Dict[str, Any]] = None
+    tools: Optional[Dict[str, OnToolCall]] = None
     stream: Optional[bool] = None
 
 
@@ -62,6 +74,7 @@ class RunPromptResult(FinishedEvent, Model):
 
 
 class ChatPromptOptions(StreamCallbacks, Model):
+    tools: Optional[Dict[str, OnToolCall]] = None
     stream: Optional[bool] = None
 
 
@@ -77,9 +90,8 @@ class Prompts:
         self._options = options
         self._client = client
 
-    def _ensure_options(self, options: PromptOptions) -> PromptOptions:
-        project_id = options.project_id or self._options.project_id
-        if not project_id:
+    def _ensure_prompt_options(self, options: PromptOptions):
+        if not options.project_id:
             raise ApiError(
                 status=404,
                 code=ApiErrorCodes.NotFoundError,
@@ -87,12 +99,8 @@ class Prompts:
                 response="Project ID is required",
             )
 
-        version_uuid = options.version_uuid or self._options.version_uuid
-
-        return PromptOptions(project_id=project_id, version_uuid=version_uuid)
-
     async def _handle_stream(
-        self, stream: AsyncGenerator[ClientEvent, Any], callbacks: StreamCallbacks
+        self, stream: AsyncGenerator[ClientEvent, Any], on_event: Optional[StreamCallbacks.OnEvent]
     ) -> FinishedEvent:
         uuid = None
         conversation: List[Message] = []
@@ -146,8 +154,8 @@ class Prompts:
                     response=stream_event.data,
                 )
 
-            if callbacks.on_event:
-                callbacks.on_event(event)
+            if on_event:
+                on_event(event)
 
         if not uuid or not response:
             raise ApiError(
@@ -160,10 +168,65 @@ class Prompts:
         # NOTE: FinishedEvent not in on_event
         return FinishedEvent(uuid=uuid, conversation=conversation, response=response)
 
-    async def get(self, path: str, options: GetPromptOptions) -> GetPromptResult:
-        prompt_options = self._ensure_options(options)
-        options = GetPromptOptions(**{**dict(options), **dict(prompt_options)})
+    def _pause_tool_execution(self) -> ToolResult:
+        raise OnToolCallPaused()
 
+    async def _handle_tool_calls(
+        self, result: FinishedEvent, options: Union[RunPromptOptions, ChatPromptOptions]
+    ) -> Optional[FinishedEvent]:
+        # Seems Python cannot infer the type
+        assert result.response.type == StreamTypes.Text and result.response.tool_calls is not None
+
+        if not options.tools:
+            raise ApiError(
+                status=400,
+                code=ApiErrorCodes.AIRunError,
+                message="Tools not supplied",
+                response="Tools not supplied",
+            )
+
+        for tool_call in result.response.tool_calls:
+            if tool_call.name not in options.tools:
+                raise ApiError(
+                    status=400,
+                    code=ApiErrorCodes.AIRunError,
+                    message=f"Tool {tool_call.name} not supplied",
+                    response=f"Tool {tool_call.name} not supplied",
+                )
+
+        details = OnToolCallDetails(
+            conversation_uuid=result.uuid,
+            messages=result.conversation,
+            pause_execution=self._pause_tool_execution,
+            requested_tool_calls=result.response.tool_calls,
+        )
+
+        tool_results = await asyncio.gather(
+            *[options.tools[tool_call.name](tool_call, details) for tool_call in result.response.tool_calls],
+            return_exceptions=False,
+        )
+
+        tool_messages = [
+            ToolMessage(
+                content=[
+                    ToolResultContent(
+                        id=tool_result.id,
+                        name=tool_result.name,
+                        result=tool_result.result,
+                        is_error=tool_result.is_error,
+                    )
+                ]
+            )
+            for tool_result in tool_results
+        ]
+
+        next_result = await self.chat(result.uuid, tool_messages, ChatPromptOptions(**dict(options)))
+
+        return FinishedEvent(**dict(next_result)) if next_result else None
+
+    async def get(self, path: str, options: GetPromptOptions) -> GetPromptResult:
+        options = GetPromptOptions(**{**dict(self._options), **dict(options)})
+        self._ensure_prompt_options(options)
         assert options.project_id is not None
 
         async with self._client.request(
@@ -177,9 +240,8 @@ class Prompts:
             return GetPromptResult.model_validate_json(response.content)
 
     async def get_or_create(self, path: str, options: GetOrCreatePromptOptions) -> GetOrCreatePromptResult:
-        prompt_options = self._ensure_options(options)
-        options = GetOrCreatePromptOptions(**{**dict(options), **dict(prompt_options)})
-
+        options = GetOrCreatePromptOptions(**{**dict(self._options), **dict(options)})
+        self._ensure_prompt_options(options)
         assert options.project_id is not None
 
         async with self._client.request(
@@ -197,9 +259,8 @@ class Prompts:
 
     async def run(self, path: str, options: RunPromptOptions) -> Optional[RunPromptResult]:
         try:
-            prompt_options = self._ensure_options(options)
-            options = RunPromptOptions(**{**dict(options), **dict(prompt_options)})
-
+            options = RunPromptOptions(**{**dict(self._options), **dict(options)})
+            self._ensure_prompt_options(options)
             assert options.project_id is not None
 
             async with self._client.request(
@@ -216,21 +277,22 @@ class Prompts:
                 ),
             ) as response:
                 if options.stream:
-                    result = await self._handle_stream(
-                        response.sse(),
-                        callbacks=StreamCallbacks(
-                            on_event=options.on_event,
-                            on_finished=options.on_finished,
-                            on_error=options.on_error,
-                        ),
-                    )
+                    result = await self._handle_stream(response.sse(), options.on_event)
                 else:
                     result = RunPromptResult.model_validate_json(response.content)
 
-                if options.on_finished:
-                    options.on_finished(FinishedEvent(**dict(result)))
+            if options.tools and result.response.type == StreamTypes.Text and result.response.tool_calls:
+                try:
+                    # NOTE: The last sdk.chat called will already call on_finished
+                    final_result = await self._handle_tool_calls(result, options)
+                    return RunPromptResult(**dict(final_result)) if final_result else None
+                except OnToolCallPaused:
+                    pass
 
-                return RunPromptResult(**dict(result))
+            if options.on_finished:
+                options.on_finished(FinishedEvent(**dict(result)))
+
+            return RunPromptResult(**dict(result))
 
         except Exception as exception:
             if not isinstance(exception, ApiError):
@@ -252,6 +314,8 @@ class Prompts:
         self, uuid: str, messages: Sequence[Union[Message, Dict[str, Any]]], options: ChatPromptOptions
     ) -> Optional[ChatPromptResult]:
         try:
+            options = ChatPromptOptions(**{**dict(self._options), **dict(options)})
+
             messages = [_Message.validate_python(message) for message in messages]
 
             async with self._client.request(
@@ -265,21 +329,22 @@ class Prompts:
                 ),
             ) as response:
                 if options.stream:
-                    result = await self._handle_stream(
-                        response.sse(),
-                        callbacks=StreamCallbacks(
-                            on_event=options.on_event,
-                            on_finished=options.on_finished,
-                            on_error=options.on_error,
-                        ),
-                    )
+                    result = await self._handle_stream(response.sse(), options.on_event)
                 else:
                     result = ChatPromptResult.model_validate_json(response.content)
 
-                if options.on_finished:
-                    options.on_finished(FinishedEvent(**dict(result)))
+            if options.tools and result.response.type == StreamTypes.Text and result.response.tool_calls:
+                try:
+                    # NOTE: The last sdk.chat called will already call on_finished
+                    final_result = await self._handle_tool_calls(result, options)
+                    return ChatPromptResult(**dict(final_result)) if final_result else None
+                except OnToolCallPaused:
+                    pass
 
-                return ChatPromptResult(**dict(result))
+            if options.on_finished:
+                options.on_finished(FinishedEvent(**dict(result)))
+
+            return ChatPromptResult(**dict(result))
 
         except Exception as exception:
             if not isinstance(exception, ApiError):
