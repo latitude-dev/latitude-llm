@@ -117,6 +117,7 @@ export const env = createEnv({
     TEMPLATES_SUGGESTION_PROMPT_PATH: z.string().optional(),
     DATASET_GENERATOR_DOCUMENT_PATH: z.string().optional(),
     COPILOT_EVALUATION_SUGGESTION_PROMPT_PATH: z.string().optional(),
+    CODESANDBOX_API_KEY: z.string().optional(),
   },
   runtimeEnv: {
     ...process.env,

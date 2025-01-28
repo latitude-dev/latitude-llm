@@ -453,3 +453,12 @@ export const AGENT_RETURN_TOOL_NAME = 'agent_finish_task'
 export const MAX_STEPS_CONFIG_NAME = 'maxSteps'
 export const DEFAULT_MAX_STEPS = 20
 export const ABSOLUTE_MAX_STEPS = 150
+
+export {
+  type ToolDefinition,
+  type BuiltInToolCall,
+  LatitudeBuiltInToolName,
+  LATITUDE_BUILT_IN_TOOLS_DEFINITION,
+} from './services/builtInTools/definitions'
+
+export const BUILT_IN_TOOLS_CONFIG_NAME = 'latitudeTools'

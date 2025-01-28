@@ -78,6 +78,10 @@ const datasetGeneratorWorkspaceApiKey = createSecretWithVersion(
   'DATASET_GENERATOR_WORKSPACE_APIKEY',
   'API key for the dataset generator',
 )
+const codesandboxApiKey = createSecretWithVersion(
+  'CODESANDBOX_API_KEY',
+  'API key for CodeSandbox code execution service',
+)
 
 export const copilotWorkspaceApiKey = config.requireSecret(
   'COPILOT_WORKSPACE_API_KEY',
@@ -124,3 +128,4 @@ export const supportAppSecretKeyArn = supportAppSecretKey.arn
 export const loopsSecretApiKeyArn = loopsSecretApiKey.arn
 export const datasetGeneratorWorkspaceApiKeyArn =
   datasetGeneratorWorkspaceApiKey.arn
+export const codesandboxApiKeyArn = codesandboxApiKey.arn

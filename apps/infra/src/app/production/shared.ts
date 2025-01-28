@@ -37,6 +37,7 @@ const datasetGeneratorWorkspaceApiKeyArn = coreStack.requireOutput(
 const supportAppIdArn = coreStack.requireOutput('supportAppIdArn')
 const supportAppSecretKeyArn = coreStack.requireOutput('supportAppSecretKeyArn')
 const loopsSecretApiKeyArn = coreStack.requireOutput('loopsSecretApiKeyArn')
+const codesandboxApiKeyArn = coreStack.requireOutput('codesandboxApiKeyArn')
 
 const getSecretString = (arn: pulumi.Output<any>) => {
   return arn.apply((secretId) =>
@@ -74,6 +75,7 @@ export const loopsSecretApiKey = getSecretString(loopsSecretApiKeyArn)
 export const datasetGeneratorWorkspaceApiKey = getSecretString(
   datasetGeneratorWorkspaceApiKeyArn,
 )
+export const codesandboxApiKey = getSecretString(codesandboxApiKeyArn)
 
 export const copilotWorkspaceApiKey = coreStack.requireOutput(
   'copilotWorkspaceApiKey',
@@ -111,6 +113,7 @@ export const environment = pulumi
     copilotRefinePromptPath,
     copilotCodeSuggestionPromptPath,
     copilotEvaluationSuggestionPromptPath,
+    codesandboxApiKey,
     supportAppId,
     supportAppSecretKey,
     loopsSecretApiKey,
@@ -183,6 +186,7 @@ export const environment = pulumi
         name: 'COPILOT_CODE_SUGGESTION_PROMPT_PATH',
         value: copilotCodeSuggestionPromptPath,
       },
+      { name: 'CODESANDBOX_API_KEY', value: codesandboxApiKey },
       { name: 'SUPPORT_APP_ID', value: supportAppId },
       { name: 'SUPPORT_APP_SECRET_KEY', value: supportAppSecretKey },
       { name: 'LOOPS_API_KEY', value: loopsSecretApiKey },
