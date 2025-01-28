@@ -67,8 +67,8 @@ services:
       - DEFAULT_PROVIDER_API_KEY=d32da7c2-94fd-49c3-8dca-b57a5c3bbe27
       - NEXT_PUBLIC_POSTHOG_KEY=''
       - NEXT_PUBLIC_POSTHOG_HOST=''
-      - DATASET_GENERATOR_DOCUMENT_PATH=generator
-      - TEMPLATES_SUGGESTION_PROMPT_PATH=evaluation-suggestions
+      - COPILOT_DATASET_GENERATOR_PROMPT_PATH=generator
+      - COPILOT_TEMPLATES_SUGGESTION_PROMPT_PATH=evaluation-suggestions
       - SUPPORT_APP_ID=''
       - SUPPORT_APP_SECRET_KEY=''
     depends_on:
@@ -106,8 +106,8 @@ services:
       - DEFAULT_PROVIDER_API_KEY=d32da7c2-94fd-49c3-8dca-b57a5c3bbe27
       - NEXT_PUBLIC_POSTHOG_KEY=''
       - NEXT_PUBLIC_POSTHOG_HOST=''
-      - DATASET_GENERATOR_DOCUMENT_PATH=generator
-      - TEMPLATES_SUGGESTION_PROMPT_PATH=evaluation-suggestions
+      - COPILOT_DATASET_GENERATOR_PROMPT_PATH=generator
+      - COPILOT_TEMPLATES_SUGGESTION_PROMPT_PATH=evaluation-suggestions
       - GATEWAY_PORT=8081
       - GATEWAY_HOSTNAME=gateway
       - GATEWAY_SSL=false

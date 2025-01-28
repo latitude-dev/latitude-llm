@@ -52,10 +52,10 @@ export const createDocumentVersionFromTraceAction = authProcedure
     if (!span) throw new NotFoundError(`Span with id ${spanId} not found`)
 
     if (!env.COPILOT_PROJECT_ID) {
-      throw new BadRequestError('DATASET_GENERATOR_PROJECT_ID is not set')
+      throw new BadRequestError('COPILOT_PROJECT_ID is not set')
     }
     if (!env.COPILOT_WORKSPACE_API_KEY) {
-      throw new BadRequestError('DATASET_GENERATOR_WORKSPACE_APIKEY is not set')
+      throw new BadRequestError('COPILOT_WORKSPACE_API_KEY is not set')
     }
 
     const providersScope = new ProviderApiKeysRepository(workspace.id)

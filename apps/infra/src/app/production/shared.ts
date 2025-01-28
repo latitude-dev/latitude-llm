@@ -31,9 +31,6 @@ const defaultProviderApiKeyArn = coreStack.requireOutput(
   'defaultProviderApiKeyArn',
 )
 const postHogApiKeyArn = coreStack.requireOutput('postHogApiKeyArn')
-const datasetGeneratorWorkspaceApiKeyArn = coreStack.requireOutput(
-  'datasetGeneratorWorkspaceApiKeyArn',
-)
 const supportAppIdArn = coreStack.requireOutput('supportAppIdArn')
 const supportAppSecretKeyArn = coreStack.requireOutput('supportAppSecretKeyArn')
 const loopsSecretApiKeyArn = coreStack.requireOutput('loopsSecretApiKeyArn')
@@ -71,9 +68,6 @@ export const postHogApiKey = getSecretString(postHogApiKeyArn)
 export const supportAppId = getSecretString(supportAppIdArn)
 export const supportAppSecretKey = getSecretString(supportAppSecretKeyArn)
 export const loopsSecretApiKey = getSecretString(loopsSecretApiKeyArn)
-export const datasetGeneratorWorkspaceApiKey = getSecretString(
-  datasetGeneratorWorkspaceApiKeyArn,
-)
 
 export const copilotWorkspaceApiKey = coreStack.requireOutput(
   'copilotWorkspaceApiKey',
@@ -105,7 +99,6 @@ export const environment = pulumi
     defaultProjectId,
     defaultProviderApiKey,
     postHogApiKey,
-    datasetGeneratorWorkspaceApiKey,
     copilotWorkspaceApiKey,
     copilotProjectId,
     copilotRefinePromptPath,
@@ -162,16 +155,9 @@ export const environment = pulumi
       { name: 'NEXT_PUBLIC_POSTHOG_HOST', value: 'https://eu.i.posthog.com' },
       { name: 'NEXT_PUBLIC_SENTRY_DSN', value: sentryDsn },
       {
-        name: 'DATASET_GENERATOR_WORKSPACE_APIKEY',
-        value: datasetGeneratorWorkspaceApiKey,
-      },
-      { name: 'DATASET_GENERATOR_PROJECT_ID', value: '74' },
-      { name: 'DATASET_GENERATOR_DOCUMENT_PATH', value: 'generator' },
-      {
-        name: 'TEMPLATES_SUGGESTION_PROMPT_PATH',
+        name: 'COPILOT_TEMPLATES_SUGGESTION_PROMPT_PATH',
         value: 'evaluation-template-suggestions',
       },
-      { name: 'TEMPLATES_SUGGESTION_PROJECT_ID', value: '60' },
       { name: 'COPILOT_WORKSPACE_API_KEY', value: copilotWorkspaceApiKey },
       {
         name: 'COPILOT_EVALUATION_SUGGESTION_PROMPT_PATH',
@@ -182,6 +168,10 @@ export const environment = pulumi
       {
         name: 'COPILOT_CODE_SUGGESTION_PROMPT_PATH',
         value: copilotCodeSuggestionPromptPath,
+      },
+      {
+        name: 'COPILOT_DATASET_GENERATOR_PROMPT_PATH',
+        value: 'dataset-generator',
       },
       { name: 'SUPPORT_APP_ID', value: supportAppId },
       { name: 'SUPPORT_APP_SECRET_KEY', value: supportAppSecretKey },
