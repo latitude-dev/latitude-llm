@@ -11,7 +11,7 @@ import {
   LatitudeErrorCodes,
   RunErrorCodes,
 } from '@latitude-data/constants/errors'
-import { objectToString, Workspace } from '../../browser'
+import { Workspace } from '../../browser'
 import {
   ChainEventTypes,
   ErrorableEntity,
@@ -28,6 +28,7 @@ import { ChainError } from '../../lib/streamManager/ChainErrors'
 import * as chainValidatorModule from './ChainValidator'
 import * as saveOrPublishProviderLogsModule from './ProviderProcessor/saveOrPublishProviderLogs'
 import { runChain } from './run'
+import { objectToString } from '@latitude-data/constants'
 
 // Mock other dependencies
 vi.mock('@latitude-data/compiler')

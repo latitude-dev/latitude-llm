@@ -1,7 +1,7 @@
 // TODO: Right now it takes a lot of work to add a simple new route to this file
 // We should refactor this to make it easier to add new routes
 
-import type { Config, Message } from '@latitude-data/compiler'
+import type { Config, Message, ToolCall } from '@latitude-data/compiler'
 import {
   AdapterMessageType,
   ProviderAdapter,
@@ -18,6 +18,7 @@ import {
   StreamEventTypes,
   ChainCallResponseDto,
   Providers,
+  ToolCallResponse,
 } from '@latitude-data/constants'
 
 export type GetDocumentUrlParams = {
@@ -114,6 +115,7 @@ export type BodyParams<T extends HandlerType> =
               : never
 
 export type StreamChainResponse = {
+  uuid: string
   conversation: Message[]
   response: ChainCallResponseDto
 }
@@ -134,6 +136,22 @@ export enum LogSources {
   API = 'api',
   Playground = 'playground',
   Evaluation = 'evaluation',
+}
+
+export type ToolCallDetails = {
+  requestedToolCalls: ToolCall[]
+  conversationUuid: string
+  messages: Message[]
+  pauseExecution: () => void
+}
+
+export type ToolSpec = Record<string, Record<string, unknown>>
+export type ToolHandler<T extends ToolSpec, K extends keyof T> = (
+  toolCall: { id: string; name: K; arguments: T[K] },
+  details: ToolCallDetails,
+) => Promise<void | ToolCallResponse>
+export type ToolCalledFn<Tools extends ToolSpec> = {
+  [K in keyof Tools]: ToolHandler<Tools, K>
 }
 
 export type SdkApiVersion = 'v1' | 'v2'
@@ -157,13 +175,15 @@ export type GetOrCreatePromptOptions = {
   prompt?: string
 }
 
-export type RunPromptOptions = StreamResponseCallbacks & {
-  projectId?: number
-  versionUuid?: string
-  customIdentifier?: string
-  parameters?: Record<string, unknown>
-  stream?: boolean
-}
+export type RunPromptOptions<Tools extends ToolSpec> =
+  StreamResponseCallbacks & {
+    projectId?: number
+    versionUuid?: string
+    customIdentifier?: string
+    parameters?: Record<string, unknown>
+    stream?: boolean
+    tools?: ToolCalledFn<Tools>
+  }
 
 export type RenderPromptOptions<M extends AdapterMessageType = PromptlMessage> =
   {
@@ -186,9 +206,10 @@ export type RenderChainOptions<M extends AdapterMessageType = PromptlMessage> =
     logResponses?: boolean
   }
 
-export type ChatOptions = StreamResponseCallbacks & {
+export type ChatOptions<Tools extends ToolSpec> = StreamResponseCallbacks & {
   messages: Message[]
   stream?: boolean
+  tools?: ToolCalledFn<Tools>
 }
 
 export type SDKOptions = {
@@ -199,6 +220,11 @@ export type SDKOptions = {
   versionUuid?: string
   projectId?: number
 }
+
+export type ChatOptionsWithSDKOptions<Tools extends ToolSpec> =
+  ChatOptions<Tools> & {
+    options: SDKOptions
+  }
 
 export interface EvalOptions {
   evaluationUuids?: string[]

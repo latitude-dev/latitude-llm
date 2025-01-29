@@ -2,13 +2,13 @@ import { ContentType, MessageRole } from '@latitude-data/compiler'
 
 import {
   Message,
-  objectToString,
   ProviderLog,
   ProviderLogDto,
   SerializedConversation,
   SerializedProviderLog,
 } from '../../browser'
 import { buildProviderLogResponse } from './buildResponse'
+import { objectToString } from '@latitude-data/constants'
 
 export function formatConversation(
   providerLog: ProviderLogDto | ProviderLog,

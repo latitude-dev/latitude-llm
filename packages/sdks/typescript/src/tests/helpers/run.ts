@@ -1,7 +1,7 @@
 import { ApiErrorCodes } from '@latitude-data/constants/errors'
 import { CHUNKS } from '$sdk/test/chunks-example'
 import { parseSSE } from '$sdk/utils/parseSSE'
-import { SdkApiVersion } from '$sdk/utils/types'
+import { RunSyncAPIResponse, SdkApiVersion } from '$sdk/utils/types'
 import { http, HttpResponse } from 'msw'
 import { setupServer } from 'msw/node'
 import { vi } from 'vitest'
@@ -14,11 +14,13 @@ export function mockRequest({
   apiVersion,
   version,
   projectId,
+  fakeResponse,
 }: {
   server: Server
   version: string
   projectId: string
   apiVersion: SdkApiVersion
+  fakeResponse?: RunSyncAPIResponse
 }) {
   const mockAuthHeader = vi.fn()
   const mockUrl = vi.fn()
@@ -31,7 +33,7 @@ export function mockRequest({
         mockUrl(info.request.url)
         const body = await info.request.json()
         mockBody(body)
-        return HttpResponse.json({})
+        return HttpResponse.json(fakeResponse ?? {})
       },
     ),
   )

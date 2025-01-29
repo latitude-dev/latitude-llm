@@ -5,22 +5,22 @@ import {
 import { LatitudeApiError } from '$sdk/utils/errors'
 import { makeRequest } from '$sdk/utils/request'
 import {
-  ChatOptions,
+  ChatOptionsWithSDKOptions,
   ChatSyncAPIResponse,
   HandlerType,
-  SDKOptions,
+  ToolSpec,
 } from '$sdk/utils/types'
+import { handleToolRequests, hasToolRequests } from '$sdk/utils/toolHelpers'
 
-export async function syncChat(
+export async function syncChat<Tools extends ToolSpec>(
   uuid: string,
   {
     messages,
     onFinished,
     onError,
+    tools,
     options,
-  }: ChatOptions & {
-    options: SDKOptions
-  },
+  }: ChatOptionsWithSDKOptions<Tools>,
 ) {
   try {
     const response = await makeRequest({
@@ -45,10 +45,22 @@ export async function syncChat(
       return !onError ? Promise.reject(error) : Promise.resolve(undefined)
     }
 
-    const json = (await response.json()) as ChatSyncAPIResponse
-    onFinished?.(json)
+    const finalResponse = (await response.json()) as ChatSyncAPIResponse
 
-    return Promise.resolve(json)
+    if (hasToolRequests({ response: finalResponse, tools })) {
+      return handleToolRequests<Tools, false>({
+        originalResponse: finalResponse,
+        messages: finalResponse.conversation,
+        onFinished,
+        onError,
+        chatFn: syncChat,
+        tools,
+        options,
+      })
+    }
+
+    onFinished?.(finalResponse)
+    return Promise.resolve(finalResponse)
   } catch (e) {
     const err = e as Error
     const error = new LatitudeApiError({

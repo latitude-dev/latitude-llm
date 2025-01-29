@@ -1,5 +1,5 @@
+import { objectToString } from '@latitude-data/constants'
 import { StreamCommonData } from '../../../events/events'
-import { objectToString } from '../../../helpers'
 import { AIReturn } from '../../ai'
 
 export async function processStreamObject({

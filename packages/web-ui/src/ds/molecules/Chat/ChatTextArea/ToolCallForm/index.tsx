@@ -10,9 +10,8 @@ import {
   Tooltip,
   ClientOnly,
 } from '../../../../atoms'
-import { ToolRequest } from '../../../../../lib/versionedMessagesHelpers'
-import { buildResponseMessage } from '@latitude-data/core/browser'
 import { ToolBar } from '../ToolBar'
+import { buildResponseMessage, ToolRequest } from '@latitude-data/constants'
 
 const TextEditor = lazy(() => import('./Editor/index'))
 

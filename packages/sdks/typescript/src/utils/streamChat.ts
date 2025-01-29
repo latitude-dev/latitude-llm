@@ -7,20 +7,25 @@ import {
 import { LatitudeApiError } from '$sdk/utils/errors'
 import { handleStream } from '$sdk/utils/handleStream'
 import { makeRequest } from '$sdk/utils/request'
-import { ChatOptions, HandlerType, SDKOptions } from '$sdk/utils/types'
+import {
+  ChatOptionsWithSDKOptions,
+  ChatSyncAPIResponse,
+  HandlerType,
+  ToolSpec,
+} from '$sdk/utils/types'
+import { handleToolRequests, hasToolRequests } from '$sdk/utils/toolHelpers'
 
-export async function streamChat(
+export async function streamChat<Tools extends ToolSpec>(
   uuid: string,
   {
     messages,
     onEvent,
     onFinished,
     onError,
+    tools,
     options,
-  }: ChatOptions & {
-    options: SDKOptions
-  },
-) {
+  }: ChatOptionsWithSDKOptions<Tools>,
+): Promise<ChatSyncAPIResponse | undefined> {
   try {
     const response = await makeRequest({
       method: 'POST',
@@ -44,12 +49,27 @@ export async function streamChat(
       return !onError ? Promise.reject(error) : Promise.resolve(undefined)
     }
 
-    return handleStream({
+    const finalResponse = await handleStream({
       body: response.body! as Readable,
       onEvent,
-      onFinished,
       onError,
     })
+
+    if (hasToolRequests({ response: finalResponse, tools })) {
+      return handleToolRequests<Tools, false>({
+        originalResponse: finalResponse,
+        messages: finalResponse.conversation,
+        onEvent,
+        onFinished,
+        onError,
+        chatFn: streamChat,
+        tools,
+        options,
+      })
+    }
+
+    onFinished?.(finalResponse)
+    return finalResponse
   } catch (e) {
     const err = e as Error
     const error = new LatitudeApiError({

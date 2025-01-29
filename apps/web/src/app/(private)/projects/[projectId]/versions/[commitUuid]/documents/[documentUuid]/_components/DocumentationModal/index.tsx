@@ -26,6 +26,7 @@ export const DocumentationContext = createContext<{
   toggleDocumentation: () => {},
 })
 
+export type UsedToolsDoc = { name: string; parameters: string[] }
 export default function DocumentationModal({
   projectId,
   commitUuid,
@@ -70,10 +71,16 @@ export default function DocumentationModal({
   }, [document])
 
   const tools = useMemo(
-    () => new Set(Object.keys(metadata?.config?.tools ?? {})),
+    () =>
+      Object.entries((metadata?.config?.tools as object) ?? {}).map(
+        ([name, values]) => ({
+          name,
+          parameters: Object.keys((values?.parameters ?? {}).properties),
+        }),
+      ) as UsedToolsDoc[],
+
     [metadata],
   )
-
   return (
     <Modal
       dismissible

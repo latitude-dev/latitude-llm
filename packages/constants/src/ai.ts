@@ -113,7 +113,7 @@ export type ChainCallResponseDto =
   | Omit<ChainStepResponse<'object'>, 'documentLogUuid' | 'providerLog'>
   | Omit<ChainStepResponse<'text'>, 'documentLogUuid' | 'providerLog'>
 
-type ChainEventDtoResponse =
+export type ChainEventDtoResponse =
   | Omit<ChainStepResponse<'object'>, 'providerLog'>
   | Omit<ChainStepResponse<'text'>, 'providerLog'>
 

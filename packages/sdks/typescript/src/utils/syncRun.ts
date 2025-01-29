@@ -10,9 +10,12 @@ import {
   RunPromptOptions,
   RunSyncAPIResponse,
   SDKOptions,
+  ToolSpec,
 } from '$sdk/utils/types'
+import { handleToolRequests, hasToolRequests } from '$sdk/utils/toolHelpers'
+import { syncChat } from '$sdk/utils/syncChat'
 
-export async function syncRun(
+export async function syncRun<Tools extends ToolSpec>(
   path: string,
   {
     projectId,
@@ -21,8 +24,9 @@ export async function syncRun(
     customIdentifier,
     onFinished,
     onError,
+    tools,
     options,
-  }: RunPromptOptions & {
+  }: RunPromptOptions<Tools> & {
     options: SDKOptions
   },
 ) {
@@ -74,8 +78,20 @@ export async function syncRun(
     return !onError ? Promise.reject(error) : Promise.resolve(undefined)
   }
 
-  const json = (await response.json()) as RunSyncAPIResponse
-  onFinished?.(json)
+  const finalResponse = (await response.json()) as RunSyncAPIResponse
 
-  return Promise.resolve(json)
+  if (hasToolRequests({ response: finalResponse, tools })) {
+    return handleToolRequests<Tools, false>({
+      originalResponse: finalResponse,
+      messages: finalResponse.conversation,
+      onFinished,
+      onError,
+      chatFn: syncChat,
+      tools,
+      options,
+    })
+  }
+
+  onFinished?.(finalResponse)
+  return Promise.resolve(finalResponse)
 }

@@ -8,21 +8,29 @@ import {
 import { LatitudeApiError } from '$sdk/utils/errors'
 import { handleStream } from '$sdk/utils/handleStream'
 import { makeRequest } from '$sdk/utils/request'
-import { HandlerType, RunPromptOptions, SDKOptions } from '$sdk/utils/types'
+import {
+  HandlerType,
+  RunPromptOptions,
+  SDKOptions,
+  ToolSpec,
+} from '$sdk/utils/types'
+import { handleToolRequests, hasToolRequests } from '$sdk/utils/toolHelpers'
+import { streamChat } from '$sdk/utils/streamChat'
 
-export async function streamRun(
+export async function streamRun<Tools extends ToolSpec>(
   path: string,
   {
     projectId,
     versionUuid,
     parameters,
     stream = false,
+    tools,
     customIdentifier,
     onEvent,
     onFinished,
     onError,
     options,
-  }: RunPromptOptions & {
+  }: RunPromptOptions<Tools> & {
     options: SDKOptions
   },
 ) {
@@ -68,12 +76,27 @@ export async function streamRun(
       return
     }
 
-    return handleStream({
+    const finalResponse = await handleStream({
       body: response.body! as Readable,
       onEvent,
-      onFinished,
       onError,
     })
+
+    if (hasToolRequests({ response: finalResponse, tools })) {
+      return handleToolRequests<Tools, false>({
+        originalResponse: finalResponse,
+        messages: finalResponse.conversation,
+        onEvent,
+        onFinished,
+        onError,
+        chatFn: streamChat,
+        tools,
+        options,
+      })
+    }
+
+    onFinished?.(finalResponse)
+    return finalResponse
   } catch (e) {
     const err = e as Error
     const error = new LatitudeApiError({

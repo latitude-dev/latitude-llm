@@ -27,9 +27,8 @@ function parseJSON(line: string) {
 export async function handleStream({
   body,
   onEvent,
-  onFinished,
   onError,
-}: StreamResponseCallbacks & {
+}: Omit<StreamResponseCallbacks, 'onFinished'> & {
   body: Readable
 }) {
   let conversation: Message[] = []
@@ -99,8 +98,6 @@ export async function handleStream({
       response: chainResponse,
     }
 
-    onFinished?.(finalResponse)
-
     return finalResponse
   } catch (e) {
     let error: LatitudeApiError
@@ -117,5 +114,6 @@ export async function handleStream({
       })
     }
     onError?.(error)
+    return Promise.reject(error)
   }
 }

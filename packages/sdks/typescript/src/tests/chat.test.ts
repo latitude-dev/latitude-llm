@@ -19,6 +19,7 @@ import {
   mockRequest,
   mockStreamResponse,
 } from './helpers/chat'
+import { RUN_TEXT_RESPONSE } from '$sdk/test/run-sync-response'
 
 let FAKE_LATITUDE_SDK_KEY = 'fake-api-key'
 let sdk: Latitude
@@ -41,7 +42,7 @@ describe('/chat', () => {
       'makes request',
       server.boundary(async () => {
         const { mockAuthHeader, mockUrl, mockBody, conversationUuid } =
-          mockRequest({
+          mockStreamResponse({
             server,
             apiVersion: 'v2',
             conversationUuid: 'fake-document-log-uuid',
@@ -263,6 +264,7 @@ describe('/chat', () => {
             server,
             apiVersion: 'v2',
             conversationUuid: 'fake-document-log-uuid',
+            fakeResponse: RUN_TEXT_RESPONSE,
           })
 
         await sdk.prompts.chat(

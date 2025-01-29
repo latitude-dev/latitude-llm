@@ -8,21 +8,13 @@ import { Tabs, type TabItem } from '@latitude-data/web-ui'
 import { APIUsage } from './APIUsage'
 import { JavascriptUsage } from './JavascriptUsage'
 import { PythonUsage } from './PythonUsage'
+import { UsedToolsDoc } from '../index'
 
 const tabs: TabItem[] = [
   { id: 'javascript', label: 'Javascript' },
   { id: 'python', label: 'Python' },
   { id: 'api', label: 'HTTP API' },
 ]
-
-interface SettingsTabsProps {
-  projectId: number
-  commitUuid: string
-  document: DocumentVersion
-  apiKeys: ApiKey[]
-  parameters: Set<string>
-  tools: Set<string>
-}
 
 export function SettingsTabs({
   projectId,
@@ -31,7 +23,14 @@ export function SettingsTabs({
   apiKeys,
   parameters,
   tools,
-}: SettingsTabsProps) {
+}: {
+  projectId: number
+  commitUuid: string
+  document: DocumentVersion
+  apiKeys: ApiKey[]
+  parameters: Set<string>
+  tools: UsedToolsDoc[]
+}) {
   const [activeTab, setActiveTab] = useState(tabs[0]!.id)
 
   return (
@@ -49,6 +48,7 @@ export function SettingsTabs({
               commitUuid={commitUuid}
               documentPath={document.path}
               parameters={parameters}
+              tools={tools}
             />
           )}
           {activeTab === 'python' && (
