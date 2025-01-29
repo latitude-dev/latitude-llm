@@ -35,6 +35,11 @@ export function getPaginationParamsWithDefaults({
   }
 }
 
+/**
+ * When count is `Infinity` we assume that there are more pages to come.
+ * and we don't know the total number of pages.
+ * and we display just `< prev` and `next >` buttons.
+ */
 export function buildPagination({
   baseUrl,
   count,
@@ -45,7 +50,7 @@ export function buildPagination({
   paramsToEncode = [],
 }: {
   baseUrl: string
-  count: number
+  count: number | typeof Infinity
   queryParams?: QueryParams | string | undefined
   encodeQueryParams?: boolean
   paramsToEncode?: string[]
@@ -74,7 +79,7 @@ export function buildPagination({
           }
         : undefined,
     nextPage:
-      page < totalPages
+      page < totalPages || count === Infinity
         ? {
             value: page + 1,
             url: buildPaginatedUrl({

@@ -41,9 +41,15 @@ export function LinkableTablePaginationFooter({
       {isLoading ? (
         <Skeleton className='w-20 my-2' height='h4' />
       ) : pagination ? (
-        <Text.H5M color='foregroundMuted'>
-          {countLabel ? countLabel(pagination.count) : pagination.count}{' '}
-        </Text.H5M>
+        <>
+          {countLabel ? (
+            <Text.H5M color='foregroundMuted'>
+              {countLabel ? countLabel(pagination.count) : pagination.count}{' '}
+            </Text.H5M>
+          ) : (
+            <span />
+          )}
+        </>
       ) : null}
 
       {isLoading ? (
@@ -62,9 +68,11 @@ export function LinkableTablePaginationFooter({
                 baseUrl={pagination.baseUrl}
               />
             </div>
-            <Text.H5M color='foregroundMuted'>
-              of {pagination.totalPages}
-            </Text.H5M>
+            {countLabel ? (
+              <Text.H5M color='foregroundMuted'>
+                of {pagination.totalPages}
+              </Text.H5M>
+            ) : null}
           </div>
           <NavLink url={pagination.nextPage?.url} direction='next' />
         </div>

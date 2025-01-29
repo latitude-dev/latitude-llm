@@ -1,7 +1,7 @@
 import { ButtonHTMLAttributes, ReactNode } from 'react'
 
 import { cn } from '../../../lib/utils'
-import { Button } from '../../atoms'
+import { Button, Text } from '../../atoms'
 import { TitleWithActions } from '../TitleWithActions'
 
 export function ListingButton({
@@ -17,11 +17,13 @@ export function ListingButton({
 
 export const TableWithHeader = ({
   title,
+  description,
   actions,
   table,
   takeVertialSpace,
 }: {
   title: string | ReactNode
+  description?: string | ReactNode
   actions?: ReactNode
   table?: ReactNode
   takeVertialSpace?: boolean
@@ -32,7 +34,12 @@ export const TableWithHeader = ({
         'flex-grow min-h-0': takeVertialSpace,
       })}
     >
-      <TitleWithActions title={title} actions={actions} />
+      <div>
+        <TitleWithActions title={title} actions={actions} />
+        {description ? (
+          <Text.H5 color='foregroundMuted'>{description}</Text.H5>
+        ) : null}
+      </div>
       <div
         className={cn('flex', {
           'flex-grow min-h-0 min-w-0': takeVertialSpace,

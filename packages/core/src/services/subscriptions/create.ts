@@ -8,9 +8,11 @@ export function createSubscription(
   {
     workspace,
     plan,
+    createdAt,
   }: {
     workspace: Workspace
     plan: keyof typeof SubscriptionPlans
+    createdAt?: Date
   },
   db = database,
 ) {
@@ -20,6 +22,7 @@ export function createSubscription(
       .values({
         workspaceId: workspace.id,
         plan,
+        createdAt,
       })
       .returning()
 

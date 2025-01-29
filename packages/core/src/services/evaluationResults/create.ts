@@ -37,6 +37,7 @@ export type CreateEvaluationResultProps = {
   evaluatedProviderLog: ProviderLog
   evaluationProviderLog?: ProviderLog
   result: EvaluationResultObject | undefined
+  createdAt?: Date
 }
 
 type MaybeFailedEvaluationResultDto = Omit<EvaluationResultDto, 'result'> & {
@@ -50,6 +51,7 @@ export async function createEvaluationResult(
     evaluationProviderLog,
     evaluatedProviderLog,
     result,
+    createdAt,
   }: CreateEvaluationResultProps,
   db = database,
 ) {
@@ -86,6 +88,7 @@ export async function createEvaluationResult(
         resultableId,
         source: documentLog.source,
         reason: result?.reason,
+        createdAt,
       })
       .returning()
 
