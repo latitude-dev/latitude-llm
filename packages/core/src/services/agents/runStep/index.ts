@@ -1,4 +1,9 @@
-import { Conversation } from '@latitude-data/compiler'
+import {
+  ContentType,
+  Conversation,
+  MessageRole,
+  ToolMessage,
+} from '@latitude-data/compiler'
 import {
   buildMessagesFromResponse,
   LogSources,
@@ -19,6 +24,10 @@ import { validateAgentStep } from '../AgentStepValidator'
 import { ChainError } from '../../../lib/streamManager/ChainErrors'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
 import { streamAIResponse } from '../../../lib/streamManager'
+import {
+  executeBuiltInToolCall,
+  getBuiltInToolCallsFromResponse,
+} from '../../builtInTools'
 
 export async function runAgentStep({
   workspace,
@@ -31,6 +40,7 @@ export async function runAgentStep({
   errorableUuid,
   stepCount,
   extraMessages,
+  builtinToolResponses,
 }: {
   workspace: Workspace
   source: LogSources
@@ -42,11 +52,13 @@ export async function runAgentStep({
   previousResponse: ChainStepResponse<StreamType>
   stepCount: number
   extraMessages?: Message[] // Contains tool responses when a stopped chain is resumed
+  builtinToolResponses?: ToolMessage[]
 }) {
   const { prevContent, previousCount } = buildPrevContent({
     previousResponse,
     extraMessages,
     previousCount: _previousCount,
+    builtinToolResponses,
   })
 
   const streamConsumer = new ChainStreamConsumer({
@@ -100,9 +112,14 @@ export async function runAgentStep({
     })
 
     const toolCalls = getToolCalls({ response })
+    const builtInToolCalls = getBuiltInToolCallsFromResponse(response)
+
+    const clientToolCalls = toolCalls.filter(
+      (toolCall) => !builtInToolCalls.some((b) => b.id === toolCall.id),
+    )
 
     // Stop the chain if there are tool calls
-    if (toolCalls.length) {
+    if (clientToolCalls.length) {
       streamConsumer.chainCompleted({
         step,
         response,
@@ -126,6 +143,27 @@ export async function runAgentStep({
       return response
     }
 
+    const currentCount = step.conversation.messages.length
+    builtinToolResponses = []
+    await Promise.all(
+      builtInToolCalls.map((toolCall) =>
+        executeBuiltInToolCall(toolCall).then((result) => {
+          builtinToolResponses!.push({
+            role: MessageRole.tool,
+            content: [
+              {
+                type: ContentType.toolResult,
+                toolName: toolCall.name,
+                toolCallId: toolCall.id,
+                result: result.value ?? result.error?.message,
+                isError: !result.ok,
+              },
+            ],
+          })
+        }),
+      ),
+    )
+
     return runAgentStep({
       workspace,
       source,
@@ -133,9 +171,10 @@ export async function runAgentStep({
       errorableUuid,
       providersMap,
       controller,
-      previousCount: step.conversation.messages.length,
+      previousCount: currentCount,
       previousResponse: response,
       stepCount: stepCount + 1,
+      builtinToolResponses,
     })
   } catch (e: unknown) {
     const error = streamConsumer.chainError(e)

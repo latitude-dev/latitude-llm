@@ -1,5 +1,10 @@
 import { Chain as PromptlChain } from 'promptl-ai'
-import type { Message } from '@latitude-data/compiler'
+import {
+  ContentType,
+  MessageRole,
+  type Message,
+  type ToolMessage,
+} from '@latitude-data/compiler'
 import {
   ABSOLUTE_MAX_STEPS,
   DEFAULT_MAX_STEPS,
@@ -20,6 +25,10 @@ import { ChainStepResponse, StreamType } from '../../../constants'
 import { ChainStreamConsumer } from '../../../lib/streamManager/ChainStreamConsumer'
 import { streamAIResponse } from '../../../lib/streamManager'
 import { cacheChain } from '../chainCache'
+import {
+  executeBuiltInToolCall,
+  getBuiltInToolCallsFromResponse,
+} from '../../builtInTools'
 
 export function getToolCalls({
   response,
@@ -75,29 +84,41 @@ export type StepProps = {
   stepCount?: number
   extraMessages?: Message[]
   configOverrides?: ConfigOverrides
+  builtinToolResponses?: ToolMessage[]
 }
 
 export function buildPrevContent({
   previousResponse,
   extraMessages,
   previousCount,
+  builtinToolResponses,
 }: {
   previousResponse: StepProps['previousResponse']
   extraMessages: StepProps['extraMessages']
   previousCount: number
+  builtinToolResponses?: ToolMessage[]
 }) {
   if (!previousResponse) return { prevContent: undefined, previousCount }
-  if (!extraMessages) {
+  if (!extraMessages && !builtinToolResponses) {
     return {
       prevContent: previousResponse.text,
       previousCount: previousCount + 1,
     }
   }
 
-  const prevContent = buildMessagesFromResponse({
+  const responseMessages = buildMessagesFromResponse({
     response: previousResponse,
-  }).concat(...extraMessages)
-  return { prevContent, previousCount: previousCount + prevContent.length }
+  })
+  const prevContent = [
+    ...responseMessages,
+    ...(builtinToolResponses ?? []),
+    ...(extraMessages ?? []),
+  ]
+  return {
+    prevContent,
+    previousCount:
+      previousCount + responseMessages.length + (extraMessages?.length ?? 0),
+  }
 }
 
 export async function runStep(stepProps: StepProps) {
@@ -115,12 +136,14 @@ export async function runStep(stepProps: StepProps) {
     removeSchema,
     extraMessages, // Contains tool responses when a stopped chain is resumed
     stepCount = 0,
+    builtinToolResponses,
   } = stepProps
 
   const { prevContent, previousCount } = buildPrevContent({
     previousResponse,
     extraMessages,
     previousCount: _previousCount,
+    builtinToolResponses,
   })
 
   const streamConsumer = new ChainStreamConsumer({
@@ -171,7 +194,13 @@ export async function runStep(stepProps: StepProps) {
 
     const isPromptl = chain instanceof PromptlChain
     const toolCalls = getToolCalls({ response })
-    const hasTools = isPromptl && toolCalls.length > 0
+
+    const builtInToolCalls = getBuiltInToolCallsFromResponse(response)
+    const clientToolCalls = toolCalls.filter(
+      (toolCall) => !builtInToolCalls.some((b) => b.id === toolCall.id),
+    )
+
+    const hasTools = isPromptl && clientToolCalls.length > 0
 
     // If response has tools, we must cache and stop the chain
     if (hasTools) {
@@ -218,12 +247,33 @@ export async function runStep(stepProps: StepProps) {
       } as ChainStepResponse<StreamType>
     }
 
+    const currentBuiltInToolResponses: ToolMessage[] = []
+    await Promise.all(
+      builtInToolCalls.map((toolCall) =>
+        executeBuiltInToolCall(toolCall).then((result) => {
+          currentBuiltInToolResponses!.push({
+            role: MessageRole.tool,
+            content: [
+              {
+                type: ContentType.toolResult,
+                toolName: toolCall.name,
+                toolCallId: toolCall.id,
+                result: result.value ?? result.error?.message,
+                isError: !result.ok,
+              },
+            ],
+          })
+        }),
+      ),
+    )
+
     return runStep({
       ...stepProps,
       previousResponse: response,
       previousCount: step.conversation.messages.length,
       stepCount: nextStepCount,
       extraMessages: undefined,
+      builtinToolResponses: currentBuiltInToolResponses,
     })
   } catch (e: unknown) {
     const error = streamConsumer.chainError(e)

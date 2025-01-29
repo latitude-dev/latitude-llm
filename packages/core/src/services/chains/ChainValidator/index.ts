@@ -16,6 +16,7 @@ import { azureConfig, googleConfig } from '../../ai/helpers'
 import { ChainError } from '../../../lib/streamManager/ChainErrors'
 import { checkFreeProviderQuota } from '../checkFreeProviderQuota'
 import { CachedApiKeys } from '../run'
+import { injectBuiltInTools } from '../../builtInTools/injectBuiltInTools'
 
 type SomeChain = LegacyChain | PromptlChain
 
@@ -170,10 +171,10 @@ const validateConfig = (
     })
     .catchall(z.unknown())
 
-  const result = schema.safeParse(config)
+  const parseResult = schema.safeParse(config)
 
-  if (!result.success) {
-    const validationError = result.error.errors[0]
+  if (!parseResult.success) {
+    const validationError = parseResult.error.errors[0]
     const message = validationError
       ? validationError.message
       : 'Error validating document configuration'
@@ -185,7 +186,17 @@ const validateConfig = (
     )
   }
 
-  return Result.ok(result.data)
+  const injectResult = injectBuiltInTools(parseResult.data)
+  if (!injectResult.ok) {
+    return Result.error(
+      new ChainError({
+        message: injectResult.error!.message,
+        code: RunErrorCodes.DocumentConfigError,
+      }),
+    )
+  }
+
+  return Result.ok(injectResult.unwrap() as Config)
 }
 
 export const validateChain = async (
