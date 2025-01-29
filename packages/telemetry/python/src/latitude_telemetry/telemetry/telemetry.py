@@ -51,7 +51,7 @@ DEFAULT_INTERNAL_OPTIONS = InternalOptions(
 
 
 DEFAULT_TELEMETRY_OPTIONS = TelemetryOptions(
-    instrumentors=[],  # Note: Instrumentation is opt-in
+    instrumentors=[],  # NOTE: Instrumentation is opt-in
     disable_batch=False,
     internal=DEFAULT_INTERNAL_OPTIONS,
 )
@@ -63,9 +63,9 @@ class Telemetry:
     _tracer: TracerProvider
     _instrumentors: Dict[Union[Instrumentors, str], BaseInstrumentor]
 
-    def __init__(self, api_key: str, options: TelemetryOptions):
+    def __init__(self, api_key: str, options: Optional[TelemetryOptions] = None):
+        options = TelemetryOptions(**{**dict(DEFAULT_TELEMETRY_OPTIONS), **dict(options or {})})
         options.internal = InternalOptions(**{**dict(DEFAULT_INTERNAL_OPTIONS), **dict(options.internal or {})})
-        options = TelemetryOptions(**{**dict(DEFAULT_TELEMETRY_OPTIONS), **dict(options)})
         self._options = options
 
         assert self._options.internal is not None

@@ -50,15 +50,15 @@ class TestChatPromptSync(TestCase):
         on_event_mock = Mock()
         on_finished_mock = Mock()
         on_error_mock = Mock()
-        actual_tool = AsyncMock(side_effect=fixtures.CONVERSATION_TOOL_RESULTS)
-        other_tool = AsyncMock()
+        actual_tool_mock = AsyncMock(side_effect=fixtures.CONVERSATION_TOOL_RESULTS)
+        other_tool_mock = AsyncMock()
         conversation_uuid = "conversation-uuid"
         messages = self.create_conversation(4)
         options = ChatPromptOptions(
             on_event=on_event_mock,
             on_finished=on_finished_mock,
             on_error=on_error_mock,
-            tools={"calculator": actual_tool, "other_tool": other_tool},
+            tools={"calculator": actual_tool_mock, "other_tool": other_tool_mock},
             stream=False,
         )
         endpoint = re.compile(r"/conversations/(?P<uuid>[a-zA-Z0-9-]+)/chat")
@@ -99,7 +99,7 @@ class TestChatPromptSync(TestCase):
         on_error_mock.assert_not_called()
         [
             self.assertEqual(
-                actual_tool.call_args_list[index][0],
+                actual_tool_mock.call_args_list[index][0],
                 (
                     fixtures.CONVERSATION_TOOL_CALLS[index],
                     OnToolCallDetails.model_construct(
@@ -110,24 +110,24 @@ class TestChatPromptSync(TestCase):
                     ),
                 ),
             )
-            for index, _ in enumerate(actual_tool.call_args_list)
+            for index, _ in enumerate(actual_tool_mock.call_args_list)
         ]
-        self.assertEqual(actual_tool.await_count, len(fixtures.CONVERSATION_TOOL_CALLS))
-        other_tool.assert_not_awaited()
+        self.assertEqual(actual_tool_mock.await_count, len(fixtures.CONVERSATION_TOOL_CALLS))
+        other_tool_mock.assert_not_awaited()
 
     async def test_success_with_paused_tools(self):
         on_event_mock = Mock()
         on_finished_mock = Mock()
         on_error_mock = Mock()
-        actual_tool = AsyncMock(side_effect=OnToolCallPaused)
-        other_tool = AsyncMock()
+        actual_tool_mock = AsyncMock(side_effect=OnToolCallPaused)
+        other_tool_mock = AsyncMock()
         conversation_uuid = "conversation-uuid"
         messages = self.create_conversation(4)
         options = ChatPromptOptions(
             on_event=on_event_mock,
             on_finished=on_finished_mock,
             on_error=on_error_mock,
-            tools={"calculator": actual_tool, "other_tool": other_tool},
+            tools={"calculator": actual_tool_mock, "other_tool": other_tool_mock},
             stream=False,
         )
         endpoint = re.compile(r"/conversations/(?P<uuid>[a-zA-Z0-9-]+)/chat")
@@ -157,7 +157,7 @@ class TestChatPromptSync(TestCase):
         on_error_mock.assert_not_called()
         [
             self.assertEqual(
-                actual_tool.call_args_list[index][0],
+                actual_tool_mock.call_args_list[index][0],
                 (
                     fixtures.CONVERSATION_TOOL_CALLS[index],
                     OnToolCallDetails.model_construct(
@@ -168,10 +168,10 @@ class TestChatPromptSync(TestCase):
                     ),
                 ),
             )
-            for index, _ in enumerate(actual_tool.call_args_list)
+            for index, _ in enumerate(actual_tool_mock.call_args_list)
         ]
-        self.assertEqual(actual_tool.await_count, len(fixtures.CONVERSATION_TOOL_CALLS))
-        other_tool.assert_not_awaited()
+        self.assertEqual(actual_tool_mock.await_count, len(fixtures.CONVERSATION_TOOL_CALLS))
+        other_tool_mock.assert_not_awaited()
 
     async def test_fails_and_retries(self):
         on_event_mock = Mock()
@@ -321,15 +321,15 @@ class TestChatPromptStream(TestCase):
         on_event_mock = Mock()
         on_finished_mock = Mock()
         on_error_mock = Mock()
-        actual_tool = AsyncMock(side_effect=fixtures.CONVERSATION_TOOL_RESULTS)
-        other_tool = AsyncMock()
+        actual_tool_mock = AsyncMock(side_effect=fixtures.CONVERSATION_TOOL_RESULTS)
+        other_tool_mock = AsyncMock()
         conversation_uuid = "conversation-uuid"
         messages = self.create_conversation(4)
         options = ChatPromptOptions(
             on_event=on_event_mock,
             on_finished=on_finished_mock,
             on_error=on_error_mock,
-            tools={"calculator": actual_tool, "other_tool": other_tool},
+            tools={"calculator": actual_tool_mock, "other_tool": other_tool_mock},
             stream=True,
         )
         endpoint = re.compile(r"/conversations/(?P<uuid>[a-zA-Z0-9-]+)/chat")
@@ -377,7 +377,7 @@ class TestChatPromptStream(TestCase):
         on_error_mock.assert_not_called()
         [
             self.assertEqual(
-                actual_tool.call_args_list[index][0],
+                actual_tool_mock.call_args_list[index][0],
                 (
                     fixtures.CONVERSATION_TOOL_CALLS[index],
                     OnToolCallDetails.model_construct(
@@ -388,24 +388,24 @@ class TestChatPromptStream(TestCase):
                     ),
                 ),
             )
-            for index, _ in enumerate(actual_tool.call_args_list)
+            for index, _ in enumerate(actual_tool_mock.call_args_list)
         ]
-        self.assertEqual(actual_tool.await_count, len(fixtures.CONVERSATION_TOOL_CALLS))
-        other_tool.assert_not_awaited()
+        self.assertEqual(actual_tool_mock.await_count, len(fixtures.CONVERSATION_TOOL_CALLS))
+        other_tool_mock.assert_not_awaited()
 
     async def test_success_with_paused_tools(self):
         on_event_mock = Mock()
         on_finished_mock = Mock()
         on_error_mock = Mock()
-        actual_tool = AsyncMock(side_effect=OnToolCallPaused)
-        other_tool = AsyncMock()
+        actual_tool_mock = AsyncMock(side_effect=OnToolCallPaused)
+        other_tool_mock = AsyncMock()
         conversation_uuid = "conversation-uuid"
         messages = self.create_conversation(4)
         options = ChatPromptOptions(
             on_event=on_event_mock,
             on_finished=on_finished_mock,
             on_error=on_error_mock,
-            tools={"calculator": actual_tool, "other_tool": other_tool},
+            tools={"calculator": actual_tool_mock, "other_tool": other_tool_mock},
             stream=True,
         )
         endpoint = re.compile(r"/conversations/(?P<uuid>[a-zA-Z0-9-]+)/chat")
@@ -437,7 +437,7 @@ class TestChatPromptStream(TestCase):
         on_error_mock.assert_not_called()
         [
             self.assertEqual(
-                actual_tool.call_args_list[index][0],
+                actual_tool_mock.call_args_list[index][0],
                 (
                     fixtures.CONVERSATION_TOOL_CALLS[index],
                     OnToolCallDetails.model_construct(
@@ -448,10 +448,10 @@ class TestChatPromptStream(TestCase):
                     ),
                 ),
             )
-            for index, _ in enumerate(actual_tool.call_args_list)
+            for index, _ in enumerate(actual_tool_mock.call_args_list)
         ]
-        self.assertEqual(actual_tool.await_count, len(fixtures.CONVERSATION_TOOL_CALLS))
-        other_tool.assert_not_awaited()
+        self.assertEqual(actual_tool_mock.await_count, len(fixtures.CONVERSATION_TOOL_CALLS))
+        other_tool_mock.assert_not_awaited()
 
     async def test_fails_and_retries(self):
         on_event_mock = Mock()

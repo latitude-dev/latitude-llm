@@ -72,6 +72,10 @@ class StrEnum(str, Enum):
 Field = pydantic.Field
 Config = pydantic.ConfigDict
 Adapter = pydantic.TypeAdapter
+Aliases = pydantic.AliasChoices
+Validator = pydantic.WrapValidator
+ValidatorInfo = pydantic.ValidationInfo
+ValidatorHandler = pydantic.ValidatorFunctionWrapHandler
 
 
 class Model(pydantic.BaseModel):
@@ -84,12 +88,12 @@ class Model(pydantic.BaseModel):
     @is_like(pydantic.BaseModel.model_dump)
     def model_dump(self, *args: Any, **kwargs: Any) -> Any:
         exclude_none = kwargs.pop("exclude_none", True)
-        return super().model_dump(*args, exclude_none=exclude_none, **kwargs)
+        by_alias = kwargs.pop("by_alias", True)
+        return super().model_dump(*args, exclude_none=exclude_none, by_alias=by_alias, **kwargs)
 
     @is_like(pydantic.BaseModel.dict)  # pyright: ignore [reportDeprecated]
     def dict(self, *args: Any, **kwargs: Any) -> Any:
-        exclude_none = kwargs.pop("exclude_none", True)
-        return super().dict(*args, exclude_none=exclude_none, **kwargs)  # pyright: ignore [reportDeprecated]
+        raise NotImplementedError("deprecated")
 
     @is_like(pydantic.BaseModel.model_dump_json)
     def model_dump_json(self, *args: Any, **kwargs: Any) -> Any:
@@ -99,6 +103,4 @@ class Model(pydantic.BaseModel):
 
     @is_like(pydantic.BaseModel.json)  # pyright: ignore [reportDeprecated]
     def json(self, *args: Any, **kwargs: Any) -> Any:
-        exclude_none = kwargs.pop("exclude_none", True)
-        by_alias = kwargs.pop("by_alias", True)
-        return super().json(*args, exclude_none=exclude_none, by_alias=by_alias, **kwargs)  # pyright: ignore [reportDeprecated]
+        raise NotImplementedError("deprecated")

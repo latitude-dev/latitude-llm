@@ -70,14 +70,14 @@ class Exporter(SpanExporter):
                     ScopeSpan(
                         spans=[
                             Span(
-                                # Note: span.context should not be None
+                                # NOTE: span.context should not be None
                                 trace_id=format_trace_id(span.context.trace_id if span.context else 0),
-                                # Note: span.context should not be None
+                                # NOTE: span.context should not be None
                                 span_id=format_span_id(span.context.span_id if span.context else 0),
                                 parent_span_id=format_span_id(span.parent.span_id) if span.parent else None,
                                 name=span.name,
                                 kind=span.kind.value,
-                                # Note: span.start_time should not be None
+                                # NOTE: span.start_time should not be None
                                 start_time=str(span.start_time or 0),
                                 end_time=str(span.end_time) if span.end_time else None,
                                 status=Status(

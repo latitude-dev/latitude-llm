@@ -14,7 +14,7 @@ async def main():
     sdk = Latitude(LATITUDE_API_KEY, LatitudeOptions(project_id=int(LATITUDE_PROJECT_ID)))
 
     # Latest version
-    prompt = await sdk.prompts.get("prompt-path", GetPromptOptions())
+    prompt = await sdk.prompts.get("prompt-path")
     print(prompt)
 
     # Specific version

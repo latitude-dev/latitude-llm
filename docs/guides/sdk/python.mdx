@@ -160,12 +160,31 @@ await sdk.prompts.run('path/to/your/prompt', RunPromptOptions(
 ))
 ```
 
-<Note>
-  If you need to pause the execution of the tools, you can do so by returning
-  `details.pause_execution()` in the tool handler. You can resume the
-  conversation later by returning the tool results in the `sdk.prompts.chat`
-  method.
-</Note>
+#### Pausing tool execution
+
+If you need to pause the execution of the tools, you can do so by returning
+`details.pause_execution()` in the tool handler. You can resume the
+conversation later by returning the tool results in the `sdk.prompts.chat`
+method.
+
+```python
+async def get_weather(call: ToolCall, details: OnToolCallDetails) -> ToolResult:
+    # Let's imagine `get_weather` takes a long time to execute and you want to do it in the background.
+    # With `pause_execution`, you can pause the conversation, get the weather data, and resume the conversation
+    # later, by returning the tool results in the `sdk.prompts.chat` method.
+    # You may have to store `requested_tool_calls` and `conversation_uuid` on your side to resume the conversation.
+    # Note that, you must return all results from the requested tools, in the `sdk.prompts.chat` method, at once.
+    return details.pause_execution()
+
+await sdk.prompts.run('path/to/your/prompt', RunPromptOptions(
+    ...
+    tools={
+        "get_coordinates": get_coordinates,
+        "get_weather": get_weather,
+    },
+    ...
+))
+```
 
 ## Log Management
 

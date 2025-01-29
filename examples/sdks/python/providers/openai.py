@@ -5,7 +5,6 @@ from typing import Any, cast
 from latitude_sdk import (
     CreateEvaluationResultOptions,
     CreateLogOptions,
-    GetOrCreatePromptOptions,
     Latitude,
     LatitudeOptions,
     SystemMessage,
@@ -26,7 +25,7 @@ async def main():
     sdk = Latitude(LATITUDE_API_KEY, LatitudeOptions(project_id=int(LATITUDE_PROJECT_ID)))
     openai = AsyncOpenAI(api_key=OPENAI_API_KEY)
 
-    prompt = await sdk.prompts.get_or_create("prompt-path", GetOrCreatePromptOptions())
+    prompt = await sdk.prompts.get_or_create("prompt-path")
 
     # You can also pass a list of dictionaries, but type hinting won't be available
     messages = [

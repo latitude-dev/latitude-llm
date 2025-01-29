@@ -1,6 +1,7 @@
 from typing import Optional
 
 from latitude_telemetry import Telemetry, TelemetryOptions
+from promptl_ai import Promptl, PromptlOptions
 
 from latitude_sdk.client import Client, ClientOptions, RouterOptions
 from latitude_sdk.env import env
@@ -20,6 +21,7 @@ class InternalOptions(Model):
 
 
 class LatitudeOptions(SdkOptions, Model):
+    promptl: Optional[PromptlOptions] = None
     telemetry: Optional[TelemetryOptions] = None
     internal: Optional[InternalOptions] = None
 
@@ -48,15 +50,16 @@ class Latitude:
     _options: LatitudeOptions
     _client: Client
 
+    promptl: Promptl
     telemetry: Optional[Telemetry]
 
     prompts: Prompts
     logs: Logs
     evaluations: Evaluations
 
-    def __init__(self, api_key: str, options: LatitudeOptions):
+    def __init__(self, api_key: str, options: Optional[LatitudeOptions] = None):
+        options = LatitudeOptions(**{**dict(DEFAULT_LATITUDE_OPTIONS), **dict(options or {})})
         options.internal = InternalOptions(**{**dict(DEFAULT_INTERNAL_OPTIONS), **dict(options.internal or {})})
-        options = LatitudeOptions(**{**dict(DEFAULT_LATITUDE_OPTIONS), **dict(options)})
         self._options = options
 
         assert self._options.internal is not None
@@ -77,9 +80,10 @@ class Latitude:
             )
         )
 
+        self.promptl = Promptl(self._options.promptl)
         if self._options.telemetry:
             self.telemetry = Telemetry(api_key, self._options.telemetry)
 
-        self.prompts = Prompts(self._client, self._options)
+        self.prompts = Prompts(self._client, self.promptl, self._options)
         self.logs = Logs(self._client, self._options)
         self.evaluations = Evaluations(self._client, self._options)

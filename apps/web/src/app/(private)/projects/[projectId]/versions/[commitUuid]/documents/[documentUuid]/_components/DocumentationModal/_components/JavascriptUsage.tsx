@@ -1,6 +1,6 @@
-import { UsedToolsDoc } from '../index'
 import { HEAD_COMMIT } from '@latitude-data/core/browser'
 import { CodeBlock, Text } from '@latitude-data/web-ui'
+import { UsedToolsDoc } from '../index'
 
 function getToolsString(tools: UsedToolsDoc[]) {
   if (!tools.length) return ''
@@ -14,13 +14,15 @@ function getToolsString(tools: UsedToolsDoc[]) {
       }
 
       return `    ${name}: async ({ ${paramList} }, details) => {
-      // Details can be used to pause execution
-      // Know more about pause execution in the docs:
+      // Details are included to be able to pause execution
+      // Learn more about pausing tool execution:
       // http://docs.latitude.so/guides/sdk/typescript#pausing-tool-execution
 
       // This is where you call your code to get the result
-      const data = await yourServficeToGet${name}({ ${paramList} })
+      const data = await yourServiceToGet${name}({ ${paramList} })
       const result = await data.json()
+
+      // The result can be anything JSON serializable
       return result
     }`
     })

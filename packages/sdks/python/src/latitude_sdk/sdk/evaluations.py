@@ -8,10 +8,7 @@ from latitude_sdk.client import (
     TriggerEvaluationRequestBody,
     TriggerEvaluationRequestParams,
 )
-from latitude_sdk.sdk.types import (
-    EvaluationResult,
-    SdkOptions,
-)
+from latitude_sdk.sdk.types import EvaluationResult, SdkOptions
 from latitude_sdk.util import Model
 
 
@@ -40,8 +37,8 @@ class Evaluations:
         self._options = options
         self._client = client
 
-    async def trigger(self, uuid: str, options: TriggerEvaluationOptions) -> TriggerEvaluationResult:
-        options = TriggerEvaluationOptions(**{**dict(self._options), **dict(options)})
+    async def trigger(self, uuid: str, options: Optional[TriggerEvaluationOptions] = None) -> TriggerEvaluationResult:
+        options = TriggerEvaluationOptions(**{**dict(self._options), **dict(options or {})})
 
         async with self._client.request(
             handler=RequestHandler.TriggerEvaluation,

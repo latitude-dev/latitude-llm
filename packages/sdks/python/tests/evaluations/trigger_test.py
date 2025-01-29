@@ -31,14 +31,13 @@ class TestTriggerEvaluation(TestCase):
 
     async def test_fails(self):
         conversation_uuid = "conversation-uuid"
-        options = TriggerEvaluationOptions()
         endpoint = f"/conversations/{conversation_uuid}/evaluate"
         endpoint_mock = self.gateway_mock.post(endpoint).mock(
             return_value=httpx.Response(500, json=fixtures.ERROR_RESPONSE)
         )
 
         with self.assertRaisesRegex(type(fixtures.ERROR), fixtures.ERROR.message):
-            await self.sdk.evaluations.trigger(conversation_uuid, options)
+            await self.sdk.evaluations.trigger(conversation_uuid)
         requests = cast(List[httpx.Request], [request for request, _ in endpoint_mock.calls])  # type: ignore
 
         [
