@@ -70,17 +70,15 @@ export default function DocumentationModal({
     doit()
   }, [document])
 
-  const tools = useMemo(
-    () =>
-      Object.entries((metadata?.config?.tools as object) ?? {}).map(
-        ([name, values]) => ({
-          name,
-          parameters: Object.keys((values?.parameters ?? {}).properties),
-        }),
-      ) as UsedToolsDoc[],
+  const rawTools = metadata?.config?.tools
+  const tools = useMemo(() => {
+    if (!rawTools || typeof rawTools !== 'object') return []
 
-    [metadata],
-  )
+    return Object.entries(rawTools).map(([name, values]) => ({
+      name,
+      parameters: Object.keys((values?.parameters ?? {}).properties ?? {}),
+    })) as UsedToolsDoc[]
+  }, [rawTools])
   return (
     <Modal
       dismissible
