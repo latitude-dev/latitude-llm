@@ -32,11 +32,8 @@
     "WEBSOCKET_TOKEN_SECRET_KEY",
     "NEXT_PUBLIC_POSTHOG_KEY",
     "NEXT_PUBLIC_POSTHOG_HOST",
-    "DATASET_GENERATOR_PROJECT_ID",
-    "DATASET_GENERATOR_DOCUMENT_PATH",
-    "DATASET_GENERATOR_WORKSPACE_APIKEY",
-    "TEMPLATES_SUGGESTION_PROJECT_ID",
-    "TEMPLATES_SUGGESTION_PROMPT_PATH",
+    "COPILOT_DATASET_GENERATOR_PROMPT_PATH",
+    "COPILOT_TEMPLATES_SUGGESTION_PROMPT_PATH",
     "CI",
     "SUPPORT_APP_ID",
     "SUPPORT_APP_SECRET_KEY",
@@ -46,12 +43,22 @@
     "npm_package_name"
   ],
   "$schema": "https://turbo.build/schema.json",
-  "globalDependencies": ["**/.env.*local"],
+  "globalDependencies": [
+    "**/.env.*local"
+  ],
   "tasks": {
     "build": {
-      "dependsOn": ["^build"],
-      "inputs": ["$TURBO_DEFAULT$"],
-      "outputs": [".next/**", "!.next/cache/**", "dist/**"],
+      "dependsOn": [
+        "^build"
+      ],
+      "inputs": [
+        "$TURBO_DEFAULT$"
+      ],
+      "outputs": [
+        ".next/**",
+        "!.next/cache/**",
+        "dist/**"
+      ],
       "env": [
         "SENTRY_DSN",
         "SENTRY_ORG",
@@ -61,8 +68,16 @@
         "NEXT_PUBLIC_POSTHOG_HOST"
       ]
     },
-    "lint": { "dependsOn": ["^lint"] },
-    "tc": { "dependsOn": ["^tc"] },
+    "lint": {
+      "dependsOn": [
+        "^lint"
+      ]
+    },
+    "tc": {
+      "dependsOn": [
+        "^tc"
+      ]
+    },
     "test": {},
     "dev": {
       "cache": false,

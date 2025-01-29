@@ -27,8 +27,8 @@ export const refinePromptAction = authProcedure
     }),
   )
   .handler(async ({ ctx, input }) => {
-    if (!env.DATASET_GENERATOR_WORKSPACE_APIKEY) {
-      throw new BadRequestError('DATASET_GENERATOR_WORKSPACE_APIKEY is not set')
+    if (!env.COPILOT_WORKSPACE_API_KEY) {
+      throw new BadRequestError('COPILOT_WORKSPACE_API_KEY is not set')
     }
     if (!env.COPILOT_PROJECT_ID) {
       throw new BadRequestError('COPILOT_PROJECT_ID is not set')
@@ -77,7 +77,7 @@ export const refinePromptAction = authProcedure
 
     const sdk = await createSdk({
       workspace: ctx.workspace,
-      apiKey: env.DATASET_GENERATOR_WORKSPACE_APIKEY,
+      apiKey: env.COPILOT_WORKSPACE_API_KEY,
       projectId: env.COPILOT_PROJECT_ID,
     }).then((r) => r.unwrap())
 

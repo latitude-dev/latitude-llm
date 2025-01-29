@@ -23,44 +23,49 @@ export async function generateDatasetPreviewAction({
     { event: StreamEventTypes; data: ChainEventDto },
     Error
   >()
-  if (!env.DATASET_GENERATOR_PROJECT_ID) {
-    throw new BadRequestError('DATASET_GENERATOR_PROJECT_ID is not set')
+  if (!env.COPILOT_PROJECT_ID) {
+    throw new BadRequestError('COPILOT_PROJECT_ID is not set')
   }
-  if (!env.DATASET_GENERATOR_DOCUMENT_PATH) {
-    throw new BadRequestError('DATASET_GENERATOR_DOCUMENT_PATH is not set')
+  if (!env.COPILOT_DATASET_GENERATOR_PROMPT_PATH) {
+    throw new BadRequestError(
+      'COPILOT_DATASET_GENERATOR_PROMPT_PATH is not set',
+    )
   }
-  if (!env.DATASET_GENERATOR_WORKSPACE_APIKEY) {
-    throw new BadRequestError('DATASET_GENERATOR_WORKSPACE_APIKEY is not set')
+  if (!env.COPILOT_WORKSPACE_API_KEY) {
+    throw new BadRequestError('COPILOT_WORKSPACE_API_KEY is not set')
   }
 
   const { workspace } = await getCurrentUserOrError()
   const sdk = await createSdk({
     workspace,
-    apiKey: env.DATASET_GENERATOR_WORKSPACE_APIKEY,
-    projectId: env.DATASET_GENERATOR_PROJECT_ID,
+    apiKey: env.COPILOT_WORKSPACE_API_KEY,
+    projectId: env.COPILOT_PROJECT_ID,
     __internal: { source: LogSources.Playground },
   }).then((r) => r.unwrap())
-  const response = await sdk.prompts.run(env.DATASET_GENERATOR_DOCUMENT_PATH, {
-    stream: true,
-    parameters: {
-      row_count: 10,
-      parameters,
-      user_message: description,
+  const response = await sdk.prompts.run(
+    env.COPILOT_DATASET_GENERATOR_PROMPT_PATH,
+    {
+      stream: true,
+      parameters: {
+        row_count: 10,
+        parameters,
+        user_message: description,
+      },
+      onEvent: (event) => {
+        stream.update(event)
+      },
+      onError: (error) => {
+        stream.error({
+          name: error.name,
+          message: error.message,
+          stack: error.stack,
+        })
+      },
+      onFinished: () => {
+        stream.done()
+      },
     },
-    onEvent: (event) => {
-      stream.update(event)
-    },
-    onError: (error) => {
-      stream.error({
-        name: error.name,
-        message: error.message,
-        stack: error.stack,
-      })
-    },
-    onFinished: () => {
-      stream.done()
-    },
-  })
+  )
 
   return {
     output: stream.value,

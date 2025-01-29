@@ -13,15 +13,13 @@ import { Commit, Workspace, DocumentVersion } from '../../../../browser'
 export const DEFAULT_COPILOT_GENERATE_TOOL_RESPONSES_PATH =
   'tool-responses-generator'
 function getCopilotCredentials() {
-  const apiKey = env.DATASET_GENERATOR_WORKSPACE_APIKEY
+  const apiKey = env.COPILOT_WORKSPACE_API_KEY
   const projectId = env.COPILOT_PROJECT_ID
   const generateToolResponsesPath =
     env.COPILOT_GENERATE_TOOL_RESPONSES_PATH ??
     DEFAULT_COPILOT_GENERATE_TOOL_RESPONSES_PATH
   if (!apiKey) {
-    return Result.error(
-      new Error('DATASET_GENERATOR_WORKSPACE_APIKEY is not set'),
-    )
+    return Result.error(new Error('COPILOT_WORKSPACE_API_KEY is not set'))
   }
   if (!projectId) {
     return Result.error(new Error('COPILOT_PROJECT_ID is not set'))

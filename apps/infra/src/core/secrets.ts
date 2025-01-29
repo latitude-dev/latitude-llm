@@ -74,11 +74,6 @@ const postHogApiKey = createSecretWithVersion(
   'NEXT_PUBLIC_POSTHOG_KEY',
   'Posthog API Key for product analytics',
 )
-const datasetGeneratorWorkspaceApiKey = createSecretWithVersion(
-  'DATASET_GENERATOR_WORKSPACE_APIKEY',
-  'API key for the dataset generator',
-)
-
 export const copilotWorkspaceApiKey = config.requireSecret(
   'COPILOT_WORKSPACE_API_KEY',
 )
@@ -122,5 +117,3 @@ export const postHogApiKeyArn = postHogApiKey.arn
 export const supportAppIdArn = supportAppId.arn
 export const supportAppSecretKeyArn = supportAppSecretKey.arn
 export const loopsSecretApiKeyArn = loopsSecretApiKey.arn
-export const datasetGeneratorWorkspaceApiKeyArn =
-  datasetGeneratorWorkspaceApiKey.arn
