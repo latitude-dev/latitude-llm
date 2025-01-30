@@ -179,4 +179,41 @@ describe('useProcessLogFilters', () => {
     expect(onFiltersChanged).toHaveBeenCalledWith(expect.any(Function))
     expect(mocks.push).toHaveBeenCalledWith('/test-path')
   })
+
+  it('onCustomIdentifierChange sets param when a identifier is provided', () => {
+    const onFiltersChanged = vi.fn()
+    const { result } = renderHook(() =>
+      useProcessLogFilters({
+        onFiltersChanged,
+        filterOptions: FILTER_OPTIONS,
+        originalSelectedCommitsIds: ORIGINAL_COMMIT_IDS,
+      }),
+    )
+
+    act(() => {
+      result.current.onCustomIdentifierChange('31')
+    })
+
+    expect(onFiltersChanged).toHaveBeenCalledWith(expect.any(Function))
+
+    expect(mocks.push).toHaveBeenCalledWith('/test-path?customIdentifier=31')
+  })
+
+  it('onCustomIdentifierChange removes param if no identifier provided', () => {
+    const onFiltersChanged = vi.fn()
+    const { result } = renderHook(() =>
+      useProcessLogFilters({
+        onFiltersChanged,
+        filterOptions: FILTER_OPTIONS,
+        originalSelectedCommitsIds: ORIGINAL_COMMIT_IDS,
+      }),
+    )
+
+    act(() => {
+      result.current.onCustomIdentifierChange('')
+    })
+
+    expect(onFiltersChanged).toHaveBeenCalledWith(expect.any(Function))
+    expect(mocks.push).toHaveBeenCalledWith('/test-path')
+  })
 })

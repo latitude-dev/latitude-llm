@@ -13,6 +13,7 @@ export function useDefaultLogFilterOptions() {
         .map((c) => c.id),
       logSources: LOG_SOURCES,
       createdAt: undefined,
+      customIdentifier: undefined,
     }
   }, [commits, commit])
 }

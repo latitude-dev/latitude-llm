@@ -24,7 +24,7 @@ export function parseSafeCreatedAtRange(
   }
 }
 
-function parseSafeCustomIdentifier(
+export function parseSafeCustomIdentifier(
   customIdentifier: string | string[] | undefined,
 ) {
   if (!customIdentifier) return undefined

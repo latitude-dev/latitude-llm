@@ -1,5 +1,8 @@
 import { DEFAULT_PAGINATION_SIZE, LogSources } from '../../../constants'
-import { parseSafeCreatedAtRange } from './parseLogFilterParams'
+import {
+  parseSafeCreatedAtRange,
+  parseSafeCustomIdentifier,
+} from './parseLogFilterParams'
 
 function parsePage(page: string | null): string {
   if (!page) return '1'
@@ -26,12 +29,14 @@ export function parseApiDocumentLogParams({
   const params = Object.fromEntries(searchParams.entries())
   const commitIds = parseCommitIds(params.commitIds)
   const logSources = parseLogSources(params.logSources)
+  const customIdentifier = parseSafeCustomIdentifier(params.customIdentifier)
   const excludeErrors = searchParams.get('excludeErrors') === 'true'
 
   const filterOptions = {
     commitIds,
     logSources,
     createdAt: parseSafeCreatedAtRange(params.createdAt),
+    customIdentifier,
   }
 
   const isEmptyResponse =
