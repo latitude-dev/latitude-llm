@@ -24,6 +24,21 @@ export function parseSafeCreatedAtRange(
   }
 }
 
+function parseSafeCustomIdentifier(
+  customIdentifier: string | string[] | undefined,
+) {
+  if (!customIdentifier) return undefined
+
+  if (Array.isArray(customIdentifier) && customIdentifier.length) {
+    customIdentifier = customIdentifier[0]
+  }
+
+  customIdentifier = decodeURIComponent(customIdentifier as string).trim()
+  if (!customIdentifier) return undefined
+
+  return customIdentifier
+}
+
 export function parseLogFiltersParams({
   params,
   currentCommit,
@@ -37,18 +52,24 @@ export function parseLogFiltersParams({
     ...commits.filter((c) => !!c.mergedAt).map((c) => c.id),
     ...(!currentCommit.mergedAt ? [currentCommit.id] : []),
   ]
-  const { versions, origins, createdAt: createdAtParam } = params
+  const {
+    versions,
+    origins,
+    createdAt: createdAtParam,
+    customIdentifier: customIdentifierParam,
+  } = params
   const commitIds =
     versions?.toString()?.split(',')?.map(Number) ?? originalSelectedCommitsIds
   const logSources = parseLogSourcesSafe(origins)
   const createdAt = parseSafeCreatedAtRange(createdAtParam)
   const formattedCreatedAt = formatDocumentLogCreatedAtParam(createdAt)
-
+  const customIdentifier = parseSafeCustomIdentifier(customIdentifierParam)
   return {
     filterOptions: {
       commitIds,
       logSources,
       createdAt,
+      customIdentifier,
     },
     formattedCreatedAt,
     originalSelectedCommitsIds,
@@ -56,6 +77,9 @@ export function parseLogFiltersParams({
       versions ? `versions=${versions}` : undefined,
       origins ? `origins=${origins}` : undefined,
       formattedCreatedAt ? formattedCreatedAt.urlParam : undefined,
+      customIdentifier
+        ? `customIdentifier=${customIdentifierParam}`
+        : undefined,
     ],
   }
 }

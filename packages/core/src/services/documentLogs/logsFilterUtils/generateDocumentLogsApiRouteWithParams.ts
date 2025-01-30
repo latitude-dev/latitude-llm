@@ -3,14 +3,7 @@ import {
   DocumentLogFilterOptions,
   LOG_FILTERS_ENCODED_PARAMS,
 } from '../../../constants'
-
-function addToAcc(acc: string[], key: string, value: unknown) {
-  if (!value) return acc
-  if (Array.isArray(value) && !value.length) return acc
-
-  acc.push(`${key}=${value}`)
-  return acc
-}
+import { paramsToString } from '../../../lib/pagination/buildPaginatedUrl'
 
 type CreatedAt = DocumentLogFilterOptions['createdAt']
 export function formatDocumentLogCreatedAtParam(value: CreatedAt) {
@@ -42,26 +35,13 @@ export function formatDocumentLogCreatedAtParam(value: CreatedAt) {
 }
 
 function processFilterOptions(filterOptions: DocumentLogFilterOptions) {
-  return Object.keys(filterOptions).reduce((acc, key) => {
-    switch (key) {
-      case 'createdAt': {
-        const createdAt = formatDocumentLogCreatedAtParam(
-          filterOptions.createdAt,
-        )
-        if (!createdAt) return acc
-
-        acc.push(createdAt.urlParam)
-        return acc
-      }
-      default: {
-        return addToAcc(
-          acc,
-          key,
-          filterOptions[key as keyof DocumentLogFilterOptions],
-        )
-      }
-    }
-  }, [] as string[])
+  return paramsToString({
+    params: {
+      ...filterOptions,
+      createdAt: formatDocumentLogCreatedAtParam(filterOptions.createdAt),
+    },
+    paramsToEncode: LOG_FILTERS_ENCODED_PARAMS,
+  })
 }
 
 export function generateDocumentLogsApiRouteWithParams({
@@ -79,22 +59,18 @@ export function generateDocumentLogsApiRouteWithParams({
     days?: number | undefined
   }
 }) {
-  const parts = Object.keys(params).reduce((acc, key) => {
-    switch (key) {
-      case 'filterOptions': {
-        const filterParts = processFilterOptions(
-          params[key] as DocumentLogFilterOptions,
-        )
-        acc.push(...filterParts)
-        return acc
-      }
-      default: {
-        return addToAcc(acc, key, params[key as keyof typeof params])
-      }
-    }
-  }, [] as string[])
+  const { filterOptions, ...rest } = params
 
-  if (!parts.length) return path
+  let query = paramsToString({
+    params: rest,
+    paramsToEncode: _pe,
+  })
 
-  return `${path}?${parts.join('&')}`
+  if (filterOptions) {
+    query += `&${processFilterOptions(filterOptions)}`
+  }
+
+  if (!query) return path
+
+  return `${path}?${query}`
 }

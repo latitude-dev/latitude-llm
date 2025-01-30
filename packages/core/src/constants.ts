@@ -407,6 +407,7 @@ export type DocumentLogFilterOptions = {
   commitIds: number[]
   logSources: LogSources[]
   createdAt: { from: Date | undefined; to?: Date } | undefined
+  customIdentifier: string | undefined
 }
 
 export const RELATIVE_DATES = {

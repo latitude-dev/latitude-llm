@@ -1,7 +1,7 @@
-import { and, or, sql, inArray, between } from 'drizzle-orm'
-import { documentLogs } from '../../../schema'
-import { DocumentLogFilterOptions } from '../../../constants'
 import { endOfDay } from 'date-fns'
+import { and, between, eq, inArray, or, sql } from 'drizzle-orm'
+import { DocumentLogFilterOptions } from '../../../constants'
+import { documentLogs } from '../../../schema'
 
 function safeCreatedAt(createdAt: DocumentLogFilterOptions['createdAt']) {
   if (!createdAt) return undefined
@@ -17,6 +17,7 @@ export function buildLogsFilterSQLConditions({
   commitIds,
   logSources,
   createdAt: unsafeCreatedAt,
+  customIdentifier,
 }: DocumentLogFilterOptions) {
   const createdAt = safeCreatedAt(unsafeCreatedAt)
   return and(
@@ -29,5 +30,8 @@ export function buildLogsFilterSQLConditions({
     createdAt
       ? and(between(documentLogs.createdAt, createdAt.from, createdAt.to))
       : sql`1 = 1`, // Return all if createdAt is not set
+    customIdentifier
+      ? and(eq(documentLogs.customIdentifier, customIdentifier))
+      : sql`1 = 1`, // Return all if customIdentifier is not set
   )
 }
