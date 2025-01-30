@@ -129,7 +129,7 @@ result = await sdk.prompts.render(prompt, RenderPromptOptions(
 ))
 
 response = openai.chat.completions.create(
-    **dict(result.config),
+    **result.config,
     messages=[message.model_dump() for message in result.messages],
 )
 ```
