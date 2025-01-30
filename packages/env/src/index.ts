@@ -114,6 +114,7 @@ export const env = createEnv({
     DEFAULT_PROVIDER_ID: 'Latitude',
     DRIVE_DISK: process.env.DRIVE_DISK ?? 'local',
     FILE_PUBLIC_PATH: process.env.FILE_PUBLIC_PATH ?? FILE_PUBLIC_PATH,
+    GATEWAY_PORT: process.env.GATEWAY_PORT ?? '8787',
     QUEUE_PORT: process.env.QUEUE_PORT ?? '6379',
     SUPPORT_APP_ID: process.env.SUPPORT_APP_ID ?? '',
     SUPPORT_APP_SECRET_KEY: process.env.SUPPORT_APP_SECRET_KEY ?? '',
