@@ -338,6 +338,8 @@ describe('/run', () => {
           expect(mockChatBody).not.toHaveBeenCalled()
           expect(onFinished).toHaveBeenCalledTimes(1)
           expect(onPausedExecutionCallback).toHaveBeenNthCalledWith(1, {
+            toolId: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
+            toolName: 'get_coordinates',
             pauseExecution: expect.any(Function),
             conversationUuid: '02e6ac23-a43b-4c3a-aedc-41b7d5e26a1b',
             messages: [

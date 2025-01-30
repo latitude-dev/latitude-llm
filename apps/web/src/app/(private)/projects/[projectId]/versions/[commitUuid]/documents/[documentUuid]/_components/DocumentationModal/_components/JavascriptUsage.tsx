@@ -7,11 +7,13 @@ function getToolsString(tools: UsedToolsDoc[]) {
 
   const toolEntries = tools
     .map(({ name, parameters }, index: number) => {
-      if (index !== 0)
-        return `    ${name}: async ({ id, arguments: { ${parameters.join(', ')} } }) => { \n      //...\n    }`
-
       const paramList = parameters.map((param) => `${param}`).join(', ')
-      return `    ${name}: async ({ id, arguments: { ${paramList} } }, details) => {
+
+      if (index !== 0) {
+        return `    ${name}: async ({ ${paramList} } }) => { \n      //...\n    }`
+      }
+
+      return `    ${name}: async ({ ${paramList} }, details) => {
       // Details can be used to pause execution
       // Know more about pause execution in the docs:
       // http://docs.latitude.so/guides/sdk/typescript#pausing-tool-execution
@@ -19,14 +21,7 @@ function getToolsString(tools: UsedToolsDoc[]) {
       // This is where you call your code to get the result
       const data = await yourServficeToGet${name}({ ${paramList} })
       const result = await data.json()
-
-      // You have to return. The ID of the tool, the name of the tool, and the result
-      // Result can be valid JSON
-      return {
-        id,
-        name: '${name}',
-        result,
-      }
+      return result
     }`
     })
     .join(',\n')

@@ -208,23 +208,15 @@ const response = await sdk.prompts.run<Tools>(documentPath, {
   versionUuid: commitUuid,
   stream: true,
   tools: {
-    get_coordinates: async ({ id, arguments: { location } }) => {
+    get_coordinates: async ({ location }) => {
       const data = fetch('https://api.example.com/coordinates?location=' + location)
       const { latitude, longitude } = await data.json()
-      return {
-        id,
-        name: 'get_coordinates',
-        result: { latitude, longitude },
-      }
+      return { latitude, longitude }
     },
-    get_weather: async ({ id, arguments: { latitude, longitude } }) => {
+    get_weather: async ({ latitude, longitude }) => {
       const data = fetch('https://api.example.com/weather?latitude=' + latitude + '&longitude=' + longitude)
       const { temperature } = await data.json()
-      return {
-        id,
-        name: 'get_weather',
-        result: { temperature },
-      }
+      return { temperature },
     },
   },
 })
@@ -237,12 +229,14 @@ When the AI calls one or more tools in your prompt, you can pause the execution.
 // ...example of the tools argument in the `sdk.prompts.run` method
 tools: {
   get_weather: async (
-    { id, arguments: { latitude, longitude } },
+    { latitude, longitude },
     details: {
-      pauseExecution,
-      messages,
-      conversationUuid,
-      requestedToolCalls,
+      toolId, // Current tool Id called. `get_weather` in this case
+      toolName, // Current tool name called. `get_weather` in this case
+      pauseExecution, // Function to pause the execution
+      messages, // List of generated messages so far
+      conversationUuid, // Unique identifier for the conversation to be used in the `sdk.prompts.chat` method
+      requestedToolCalls, // List of tools requested by the AI together with `get_weather`
     },
   ) => {
     // Let's imagine get_weather takes a long time to execute

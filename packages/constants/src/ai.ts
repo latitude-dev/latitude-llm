@@ -202,7 +202,7 @@ export type ChatSyncAPIResponse = RunSyncAPIResponse
 export const toolCallResponseSchema = z.object({
   id: z.string(),
   name: z.string(),
-  result: z.string().or(z.record(z.any())),
+  result: z.unknown(),
   isError: z.boolean().optional(),
   text: z.string().optional(),
 })
