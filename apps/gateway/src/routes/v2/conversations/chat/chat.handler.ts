@@ -3,6 +3,7 @@ import { AppRouteHandler } from '$/openApi/types'
 import { runPresenter } from '$/presenters/runPresenter'
 import { ChatRoute } from '$/routes/v2/conversations/chat/chat.route'
 import { LogSources } from '@latitude-data/core/browser'
+import { convertToLegacyChainStream } from '@latitude-data/core/lib/chainStreamManager/index'
 import { getUnknownError } from '@latitude-data/core/lib/getUnknownError'
 import { streamToGenerator } from '@latitude-data/core/lib/streamToGenerator'
 import { addMessages } from '@latitude-data/core/services/documentLogs/index'
@@ -15,7 +16,7 @@ export const chatHandler: AppRouteHandler<ChatRoute> = async (c) => {
   const { messages, stream: useSSE, __internal } = c.req.valid('json')
   const workspace = c.get('workspace')
 
-  const result = (
+  const { stream: newStream } = (
     await addMessages({
       workspace,
       documentLogUuid: conversationUuid,
@@ -25,12 +26,15 @@ export const chatHandler: AppRouteHandler<ChatRoute> = async (c) => {
     })
   ).unwrap()
 
+  const { stream: legacyStream, response } =
+    convertToLegacyChainStream(newStream)
+
   if (useSSE) {
     return streamSSE(
       c,
       async (stream) => {
         let id = 0
-        for await (const event of streamToGenerator(result.stream)) {
+        for await (const event of streamToGenerator(legacyStream)) {
           const data = chainEventPresenter(event)
 
           stream.writeSSE({
@@ -52,8 +56,7 @@ export const chatHandler: AppRouteHandler<ChatRoute> = async (c) => {
     )
   }
 
-  const response = (await result.response).unwrap()
-  const body = runPresenter(response).unwrap()
+  const body = runPresenter(await response).unwrap()
 
   return c.json(body, 200)
 }

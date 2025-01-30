@@ -1,7 +1,7 @@
 import http from '$/common/http'
 import { GENERIC_ERROR_RESPONSES } from '$/openApi/responses/errorResponses'
 import {
-  chainEventDtoSchema,
+  legacyChainEventDtoSchema,
   internalInfoSchema,
   runSyncAPIResponseSchema,
 } from '$/openApi/schemas'
@@ -35,7 +35,7 @@ export const runRoute = createRoute({
         'If stream is true, returns a SSE stream. Otherwise, returns the final event as JSON.',
       content: {
         [http.MediaTypes.JSON]: { schema: runSyncAPIResponseSchema },
-        [http.MediaTypes.SSE]: { schema: chainEventDtoSchema },
+        [http.MediaTypes.SSE]: { schema: legacyChainEventDtoSchema },
       },
     },
   },

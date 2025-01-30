@@ -6,7 +6,7 @@ import { cache } from '../../../cache'
 import { Result } from '../../../lib'
 import * as factories from '../../../tests/factories'
 import { buildFreeRunCacheKey, getFreeRuns } from '../../freeRunsManager'
-import { ChainError } from '../../../lib/streamManager/ChainErrors'
+import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
 import { checkFreeProviderQuota } from './index'
 
 let workspace: Workspace

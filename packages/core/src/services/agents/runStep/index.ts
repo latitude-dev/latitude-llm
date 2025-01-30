@@ -7,138 +7,106 @@ import {
 import { CachedApiKeys, stepLimitExceededErrorMessage } from '../../chains/run'
 import {
   ABSOLUTE_MAX_STEPS,
-  ChainStepResponse,
+  AGENT_RETURN_TOOL_NAME,
   DEFAULT_MAX_STEPS,
   MAX_STEPS_CONFIG_NAME,
-  StreamType,
 } from '../../../constants'
 import { Message } from '@latitude-data/compiler'
-import { buildPrevContent, getToolCalls } from '../../chains/runStep'
-import { ChainStreamConsumer } from '../../../lib/streamManager/ChainStreamConsumer'
-import { validateAgentStep } from '../AgentStepValidator'
-import { ChainError } from '../../../lib/streamManager/ChainErrors'
+import { getToolCalls } from '../../chains/runStep'
+import { validateAgentStep, ValidatedAgentStep } from '../AgentStepValidator'
+import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
-import { streamAIResponse } from '../../../lib/streamManager'
+import { ChainStreamManager } from '../../../lib/chainStreamManager'
+import { Result } from '../../../lib'
+
+function assertValidStepCount({
+  stepCount,
+  step,
+}: {
+  stepCount: number
+  step: ValidatedAgentStep
+}) {
+  const maxSteps = Math.min(
+    (step.conversation.config[MAX_STEPS_CONFIG_NAME] as number | undefined) ??
+      DEFAULT_MAX_STEPS,
+    ABSOLUTE_MAX_STEPS,
+  )
+  const exceededMaxSteps = stepCount >= maxSteps
+  if (!exceededMaxSteps) return Result.nil()
+
+  return Result.error(
+    new ChainError({
+      message: stepLimitExceededErrorMessage(maxSteps),
+      code: RunErrorCodes.MaxStepCountExceededError,
+    }),
+  )
+}
 
 export async function runAgentStep({
+  chainStreamManager,
   workspace,
   source,
   conversation,
   providersMap,
-  controller,
-  previousCount: _previousCount = 0,
-  previousResponse,
   errorableUuid,
+  newMessages = undefined,
   stepCount,
-  extraMessages,
 }: {
+  chainStreamManager: ChainStreamManager
   workspace: Workspace
   source: LogSources
   conversation: Conversation
   providersMap: CachedApiKeys
-  controller: ReadableStreamDefaultController
   errorableUuid: string
-  previousCount?: number
-  previousResponse: ChainStepResponse<StreamType>
+  newMessages: Message[] | undefined
   stepCount: number
-  extraMessages?: Message[] // Contains tool responses when a stopped chain is resumed
 }) {
-  const { prevContent, previousCount } = buildPrevContent({
-    previousResponse,
-    extraMessages,
-    previousCount: _previousCount,
-  })
+  const step = await validateAgentStep({
+    workspace,
+    conversation,
+    newMessages,
+    providersMap,
+  }).then((r) => r.unwrap())
 
-  const streamConsumer = new ChainStreamConsumer({
-    controller,
-    previousCount,
-    errorableUuid,
-  })
-
-  try {
-    const step = await validateAgentStep({
-      workspace,
-      prevContent,
-      conversation,
-      providersMap,
-    }).then((r) => r.unwrap())
-
-    if (previousResponse && step.chainCompleted) {
-      streamConsumer.chainCompleted({
-        step,
-        response: previousResponse,
-        finishReason: 'stop',
-      })
-
-      return previousResponse
-    }
-
-    const maxSteps = Math.min(
-      (conversation.config[MAX_STEPS_CONFIG_NAME] as number | undefined) ??
-        DEFAULT_MAX_STEPS,
-      ABSOLUTE_MAX_STEPS,
-    )
-    if (maxSteps && stepCount >= maxSteps) {
-      throw new ChainError({
-        message: stepLimitExceededErrorMessage(maxSteps),
-        code: RunErrorCodes.MaxStepCountExceededError,
-      })
-    }
-
-    const response = await streamAIResponse({
-      workspace,
-      controller,
-      config: step.config,
-      messages: step.conversation.messages,
-      newMessagesCount: step.conversation.messages.length - previousCount,
-      provider: step.provider,
-      source,
-      errorableUuid,
-      chainCompleted: step.chainCompleted,
-      schema: step.schema,
-      output: step.output,
-    })
-
-    const toolCalls = getToolCalls({ response })
-
-    // Stop the chain if there are tool calls
-    if (toolCalls.length) {
-      streamConsumer.chainCompleted({
-        step,
-        response,
-        finishReason: 'tool-calls',
-        responseMessages: buildMessagesFromResponse({
-          response,
-        }),
-      })
-
-      return response
-    }
-
-    // Stop the chain if completed
-    if (step.chainCompleted) {
-      streamConsumer.chainCompleted({
-        step,
-        response,
-        finishReason: response.finishReason ?? 'stop',
-      })
-
-      return response
-    }
-
-    return runAgentStep({
-      workspace,
-      source,
-      conversation: step.conversation,
-      errorableUuid,
-      providersMap,
-      controller,
-      previousCount: step.conversation.messages.length,
-      previousResponse: response,
-      stepCount: stepCount + 1,
-    })
-  } catch (e: unknown) {
-    const error = streamConsumer.chainError(e)
-    throw error
+  if (step.chainCompleted) {
+    chainStreamManager.done()
+    return
   }
+
+  const validStepCount = assertValidStepCount({ stepCount, step })
+  if (validStepCount.error) {
+    chainStreamManager.error(validStepCount.error)
+    return
+  }
+
+  const response = await chainStreamManager.getProviderResponse({
+    workspace,
+    source,
+    documentLogUuid: errorableUuid,
+    conversation: step.conversation,
+    provider: step.provider,
+    schema: step.schema,
+    output: step.output,
+  })
+
+  const toolCalls = getToolCalls({ response }).filter(
+    (tc) => tc.name !== AGENT_RETURN_TOOL_NAME,
+  )
+
+  // Stop the chain if there are tool calls
+  if (toolCalls.length) {
+    chainStreamManager.requestTools(toolCalls)
+    return
+  }
+
+  await runAgentStep({
+    chainStreamManager,
+    workspace,
+    source,
+    conversation: step.conversation,
+    errorableUuid,
+    providersMap,
+    stepCount: stepCount + 1,
+    newMessages: buildMessagesFromResponse({ response }),
+  })
 }

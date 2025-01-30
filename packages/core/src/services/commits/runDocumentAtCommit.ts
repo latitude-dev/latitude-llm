@@ -139,32 +139,29 @@ export async function runDocumentAtCommit({
     source,
   }
 
-  const run =
-    document.documentType === DocumentType.Agent
-      ? await runAgent(runArgs)
-      : await runChain(runArgs)
+  const runFn =
+    document.documentType === DocumentType.Agent ? runAgent : runChain
+  const run = runFn(runArgs)
+
+  run.messages.then(async () => {
+    createDocumentRunResult({
+      workspace,
+      document,
+      commit,
+      errorableUuid,
+      parameters,
+      resolvedContent: result.value,
+      customIdentifier,
+      source,
+      duration: await run.duration,
+      publishEvent: true,
+    })
+  })
 
   return Result.ok({
     stream: run.stream,
     duration: run.duration,
     resolvedContent: result.value,
     errorableUuid,
-    response: run.response.then(async (response) => {
-      await createDocumentRunResult({
-        workspace,
-        document,
-        commit,
-        errorableUuid,
-        parameters,
-        resolvedContent: result.value,
-        customIdentifier,
-        source,
-        response: response.value,
-        duration: await run.duration,
-        publishEvent: !response.error,
-      })
-
-      return response
-    }),
   })
 }

@@ -19,10 +19,10 @@ import {
 import { Config } from '@latitude-data/core/services/ai/helpers'
 import {
   ChainCallResponseDto,
-  ChainEvent,
   ChainEventDto,
-  ChainEventTypes,
-  LatitudeEventData,
+  LegacyChainEvent,
+  LegacyChainEventTypes,
+  LegacyLatitudeEventData,
   StreamEventTypes,
 } from '@latitude-data/constants'
 
@@ -67,7 +67,7 @@ export const getData = async ({
   return Result.ok({ project, commit, document })
 }
 
-export function chainEventPresenter(event: ChainEvent) {
+export function chainEventPresenter(event: LegacyChainEvent) {
   switch (event.event) {
     case StreamEventTypes.Provider:
       return event.data
@@ -77,23 +77,23 @@ export function chainEventPresenter(event: ChainEvent) {
 }
 
 function latitudeEventPresenter(event: {
-  data: LatitudeEventData
+  data: LegacyLatitudeEventData
   event: StreamEventTypes.Latitude
 }): ChainEventDto | string {
   switch (event.data.type) {
-    case ChainEventTypes.Step:
-    case ChainEventTypes.StepComplete:
+    case LegacyChainEventTypes.Step:
+    case LegacyChainEventTypes.StepComplete:
       return {
         ...omit(event.data, 'documentLogUuid'),
         uuid: event.data.documentLogUuid!,
       } as {
-        type: ChainEventTypes.Step
+        type: LegacyChainEventTypes.Step
         config: Config
         isLastStep: boolean
         messages: Message[]
         uuid?: string
       }
-    case ChainEventTypes.Complete:
+    case LegacyChainEventTypes.Complete:
       return {
         ...omit(event.data, 'documentLogUuid'),
         uuid: event.data.response.documentLogUuid!,
@@ -103,9 +103,9 @@ function latitudeEventPresenter(event: {
           'documentLogUuid',
         ) as ChainCallResponseDto,
       }
-    case ChainEventTypes.Error:
+    case LegacyChainEventTypes.Error:
       return {
-        type: ChainEventTypes.Error,
+        type: LegacyChainEventTypes.Error,
         error: {
           name: event.data.error.name,
           message: event.data.error.message,

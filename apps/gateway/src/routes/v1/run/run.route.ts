@@ -1,6 +1,9 @@
 import http from '$/common/http'
 import { GENERIC_ERROR_RESPONSES } from '$/openApi/responses/errorResponses'
-import { chainEventDtoSchema, internalInfoSchema } from '$/openApi/schemas'
+import {
+  legacyChainEventDtoSchema,
+  internalInfoSchema,
+} from '$/openApi/schemas'
 import { ROUTES } from '$/routes'
 import { documentParamsSchema } from '$/routes/v2/documents/paramsSchema'
 import { createRoute, z } from '@hono/zod-openapi'
@@ -28,7 +31,7 @@ export const runRoute = createRoute({
     [http.Status.OK]: {
       description: 'Returns a SSE stream',
       content: {
-        [http.MediaTypes.SSE]: { schema: chainEventDtoSchema },
+        [http.MediaTypes.SSE]: { schema: legacyChainEventDtoSchema },
       },
     },
   },

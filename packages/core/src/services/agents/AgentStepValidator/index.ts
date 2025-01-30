@@ -1,9 +1,4 @@
-import {
-  Conversation,
-  Message,
-  ToolCall,
-  MessageRole,
-} from '@latitude-data/compiler'
+import { Conversation, Message, ToolCall } from '@latitude-data/compiler'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
 import { JSONSchema7 } from 'json-schema'
 import { z } from 'zod'
@@ -17,7 +12,7 @@ import {
 import { Result, TypedResult } from '../../../lib'
 import { Config } from '../../ai'
 import { azureConfig, googleConfig } from '../../ai/helpers'
-import { ChainError } from '../../../lib/streamManager/ChainErrors'
+import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
 import { checkFreeProviderQuota } from '../../chains/checkFreeProviderQuota'
 import { CachedApiKeys } from '../../chains/run'
 
@@ -35,9 +30,9 @@ export type ConfigOverrides = JSONOverride | { output: 'no-schema' }
 
 type ValidatorContext = {
   workspace: Workspace
-  prevContent: Message[] | string | undefined
-  conversation: Conversation
   providersMap: CachedApiKeys
+  conversation: Conversation
+  newMessages: Message[] | undefined
 }
 
 const findProvider = (name: string, providersMap: CachedApiKeys) => {
@@ -115,11 +110,14 @@ const applyAgentTools = (config: Config): Config => {
   }
 }
 
-export const validateAgentStep = async (
-  context: ValidatorContext,
-): Promise<TypedResult<ValidatedAgentStep, ChainError<RunErrorCodes>>> => {
-  const { workspace, conversation, providersMap, prevContent } = context
-
+export const validateAgentStep = async ({
+  workspace,
+  providersMap,
+  conversation,
+  newMessages,
+}: ValidatorContext): Promise<
+  TypedResult<ValidatedAgentStep, ChainError<RunErrorCodes>>
+> => {
   const configResult = validateConfig(conversation.config)
   if (configResult.error) return Result.error(configResult.error)
 
@@ -138,14 +136,8 @@ export const validateAgentStep = async (
   const messages = conversation.messages
   const assistantResponse = messages[messages.length - 1]
 
-  if (Array.isArray(prevContent)) {
-    messages.push(...prevContent)
-  } else {
-    messages.push({
-      role: MessageRole.assistant,
-      content: prevContent!,
-      toolCalls: [],
-    })
+  if (newMessages) {
+    messages.push(...newMessages)
   }
 
   const rule = applyProviderRules({

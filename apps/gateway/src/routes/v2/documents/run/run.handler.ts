@@ -12,6 +12,7 @@ import {
   publishDocumentRunRequestedEvent,
 } from '$/common/documents/getData'
 import { runPresenter } from '$/presenters/runPresenter'
+import { convertToLegacyChainStream } from '@latitude-data/core/lib/chainStreamManager/index'
 
 // @ts-expect-error: streamSSE has type issues with zod-openapi
 // https://github.com/honojs/middleware/issues/735
@@ -43,7 +44,7 @@ export const runHandler: AppRouteHandler<RunRoute> = async (c) => {
     })
   }
 
-  const result = await runDocumentAtCommit({
+  const { stream: newStream } = await runDocumentAtCommit({
     workspace,
     document,
     commit,
@@ -52,12 +53,15 @@ export const runHandler: AppRouteHandler<RunRoute> = async (c) => {
     source: __internal?.source ?? LogSources.API,
   }).then((r) => r.unwrap())
 
+  const { stream: legacyStream, response } =
+    convertToLegacyChainStream(newStream)
+
   if (useSSE) {
     return streamSSE(
       c,
       async (stream) => {
         let id = 0
-        for await (const event of streamToGenerator(result.stream)) {
+        for await (const event of streamToGenerator(legacyStream)) {
           const data = chainEventPresenter(event)
 
           stream.writeSSE({
@@ -79,7 +83,6 @@ export const runHandler: AppRouteHandler<RunRoute> = async (c) => {
     )
   }
 
-  const response = await result.response.then((r) => r.unwrap())
-  const body = runPresenter(response).unwrap()
+  const body = runPresenter(await response).unwrap()
   return c.json(body)
 }

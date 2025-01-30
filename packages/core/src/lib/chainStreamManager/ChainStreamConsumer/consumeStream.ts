@@ -9,7 +9,7 @@ import {
   StreamEventTypes,
   StreamType,
 } from '../../../constants'
-import { streamToGenerator } from '../../../lib/streamToGenerator'
+import { streamToGenerator } from '../../streamToGenerator'
 import { AIReturn } from '../../../services/ai'
 import { ChainError } from '../ChainErrors'
 

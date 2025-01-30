@@ -1,7 +1,7 @@
 import { Conversation } from '@latitude-data/compiler'
 import { FinishReason } from 'ai'
 
-import { ProviderApiKey, Workspace } from '../../../browser'
+import { ProviderApiKey, ProviderLog, Workspace } from '../../../browser'
 import { ChainStepResponse, LogSources, StreamType } from '../../../constants'
 import { AIProviderCallCompletedData } from '../../../events/events'
 import { publisher } from '../../../events/publisher'
@@ -10,27 +10,28 @@ import { generateUUIDIdentifier } from '../../../lib'
 import { PartialConfig } from '../../ai'
 import { createProviderLog } from '../../providerLogs'
 
-export async function saveOrPublishProviderLogs({
+export async function saveOrPublishProviderLogs<
+  S extends boolean,
+  P = S extends true ? ProviderLog : void,
+>({
   workspace,
   data,
   streamType,
   saveSyncProviderLogs,
   finishReason,
-  chainCompleted,
 }: {
   workspace: Workspace
   streamType: StreamType
   data: ReturnType<typeof buildProviderLogDto>
-  saveSyncProviderLogs: boolean
+  saveSyncProviderLogs: S
   finishReason: FinishReason
-  chainCompleted: boolean
-}) {
+}): Promise<P> {
   publisher.publishLater({
     type: 'aiProviderCallCompleted',
     data: {
       ...data,
       finishReason,
-      chainCompleted,
+      chainCompleted: false,
       streamType,
     } as AIProviderCallCompletedData<typeof streamType>,
   })
@@ -45,7 +46,7 @@ export async function saveOrPublishProviderLogs({
     const providerLog = await createProviderLog(providerLogsData).then((r) =>
       r.unwrap(),
     )
-    return providerLog
+    return providerLog as P
   }
 
   const queues = await setupJobs()
@@ -53,6 +54,7 @@ export async function saveOrPublishProviderLogs({
     ...providerLogsData,
     generatedAt: data.generatedAt.toISOString(),
   })
+  return undefined as P
 }
 
 export function buildProviderLogDto({

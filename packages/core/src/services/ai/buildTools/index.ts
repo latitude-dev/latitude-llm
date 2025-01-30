@@ -3,7 +3,7 @@ import { CoreTool, jsonSchema } from 'ai'
 
 import { Result } from '../../../lib'
 import { compactObject } from '../../../lib/compactObject'
-import { ChainError } from '../../../lib/streamManager/ChainErrors'
+import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
 
 export type AITools = Record<
   string,

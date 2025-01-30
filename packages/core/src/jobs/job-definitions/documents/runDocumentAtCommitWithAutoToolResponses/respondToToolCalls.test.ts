@@ -12,7 +12,7 @@ import {
   Result,
   UnprocessableEntityError,
 } from '../../../../lib'
-import { ChainError } from '../../../../lib/streamManager/ChainErrors'
+import { ChainError } from '../../../../lib/chainStreamManager/ChainErrors'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
 
 let workspace: Workspace

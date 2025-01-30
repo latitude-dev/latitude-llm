@@ -13,13 +13,12 @@ import {
 } from '../ChainValidator'
 import { CachedApiKeys, SomeChain, stepLimitExceededErrorMessage } from '../run'
 import { Result } from '../../../lib'
-import { ChainError } from '../../../lib/streamManager/ChainErrors'
+import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
 import { buildMessagesFromResponse, Workspace } from '../../../browser'
 import { ChainStepResponse, StreamType } from '../../../constants'
-import { ChainStreamConsumer } from '../../../lib/streamManager/ChainStreamConsumer'
-import { streamAIResponse } from '../../../lib/streamManager'
 import { cacheChain } from '../chainCache'
+import { ChainStreamManager } from '../../../lib/chainStreamManager'
 
 export function getToolCalls({
   response,
@@ -34,7 +33,7 @@ export function getToolCalls({
   return toolCalls
 }
 
-function getNextStepCount({
+function assertValidStepCount({
   stepCount,
   chain,
   step,
@@ -51,7 +50,7 @@ function getNextStepCount({
   const exceededMaxSteps =
     chain instanceof PromptlChain ? stepCount >= maxSteps : stepCount > maxSteps
 
-  if (!exceededMaxSteps) return Result.ok(++stepCount)
+  if (!exceededMaxSteps) return Result.nil()
 
   return Result.error(
     new ChainError({
@@ -62,171 +61,102 @@ function getNextStepCount({
 }
 
 export type StepProps = {
+  chainStreamManager: ChainStreamManager
+
   workspace: Workspace
   source: LogSources
   chain: SomeChain
   promptlVersion: number
   providersMap: CachedApiKeys
-  controller: ReadableStreamDefaultController
   errorableUuid: string
-  previousCount?: number
-  previousResponse?: ChainStepResponse<StreamType>
+
+  newMessages: Message[] | undefined
+
+  configOverrides?: ConfigOverrides
   removeSchema?: boolean
   stepCount?: number
-  extraMessages?: Message[]
-  configOverrides?: ConfigOverrides
 }
 
-export function buildPrevContent({
-  previousResponse,
-  extraMessages,
-  previousCount,
-}: {
-  previousResponse: StepProps['previousResponse']
-  extraMessages: StepProps['extraMessages']
-  previousCount: number
-}) {
-  if (!previousResponse) return { prevContent: undefined, previousCount }
-  if (!extraMessages) {
-    return {
-      prevContent: previousResponse.text,
-      previousCount: previousCount + 1,
-    }
+export async function runStep({
+  chainStreamManager,
+  workspace,
+  source,
+  chain,
+  promptlVersion,
+  providersMap,
+  errorableUuid,
+  newMessages = undefined, // Contains all messages added from the end of the last step to the beginning of this one, including the assistant response and tool results
+  configOverrides,
+  removeSchema,
+  stepCount = 0,
+}: StepProps) {
+  const step = await validateChain({
+    workspace,
+    newMessages,
+    chain,
+    promptlVersion,
+    providersMap,
+    configOverrides,
+    removeSchema,
+  }).then((r) => r.unwrap())
+
+  // With PromptL, the chain complete is checked AFTER the step is executed.
+  // If the chain is completed, no more steps must be ran.
+  if (chain instanceof PromptlChain && step.chainCompleted) {
+    chainStreamManager.done()
+    return step.conversation
   }
 
-  const prevContent = buildMessagesFromResponse({
-    response: previousResponse,
-  }).concat(...extraMessages)
-  return { prevContent, previousCount: previousCount + prevContent.length }
-}
+  const validStepCount = assertValidStepCount({ stepCount, chain, step })
+  if (validStepCount.error) {
+    chainStreamManager.error(validStepCount.error)
+    return step.conversation
+  }
 
-export async function runStep(stepProps: StepProps) {
-  const {
+  const response = await chainStreamManager.getProviderResponse({
+    workspace,
+    source,
+    documentLogUuid: errorableUuid,
+    conversation: step.conversation,
+    provider: step.provider,
+    schema: step.schema,
+    output: step.output,
+  })
+
+  const isPromptl = chain instanceof PromptlChain
+  const toolCalls = getToolCalls({ response })
+  const hasTools = isPromptl && toolCalls.length > 0
+
+  // If response has tools, we must cache and stop the chain
+  if (hasTools) {
+    await cacheChain({
+      workspace,
+      chain,
+      documentLogUuid: errorableUuid,
+      previousResponse: response,
+    })
+
+    chainStreamManager.requestTools(toolCalls)
+    return step.conversation
+  }
+
+  // With Legacy Compiler, we already knew whether the step was the last one BEFORE it was executed
+  if (step.chainCompleted) {
+    chainStreamManager.done()
+    return step.conversation
+  }
+
+  return runStep({
+    chainStreamManager,
     workspace,
     source,
     chain,
     promptlVersion,
     providersMap,
-    controller,
-    previousCount: _previousCount = 0,
-    previousResponse,
     errorableUuid,
+    stepCount: stepCount + 1,
+    newMessages: buildMessagesFromResponse({ response }),
     configOverrides,
     removeSchema,
-    extraMessages, // Contains tool responses when a stopped chain is resumed
-    stepCount = 0,
-  } = stepProps
-
-  const { prevContent, previousCount } = buildPrevContent({
-    previousResponse,
-    extraMessages,
-    previousCount: _previousCount,
   })
-
-  const streamConsumer = new ChainStreamConsumer({
-    controller,
-    previousCount,
-    errorableUuid,
-  })
-
-  try {
-    const step = await validateChain({
-      workspace,
-      prevContent,
-      chain,
-      promptlVersion,
-      providersMap,
-      configOverrides,
-      removeSchema,
-    }).then((r) => r.unwrap())
-
-    // With PromptL, the chain complete is checked AFTER the step is executed.
-    // If the chain is completed, no more steps must be ran.
-    if (chain instanceof PromptlChain && step.chainCompleted) {
-      streamConsumer.chainCompleted({
-        step,
-        response: previousResponse!,
-        finishReason: previousResponse?.finishReason ?? 'stop',
-      })
-
-      previousResponse!.chainCompleted = true
-      return previousResponse!
-    }
-
-    const nextStepCount = getNextStepCount({ stepCount, chain, step }).unwrap()
-
-    const response = await streamAIResponse({
-      workspace,
-      controller,
-      config: step.config,
-      messages: step.conversation.messages,
-      newMessagesCount: step.conversation.messages.length - previousCount,
-      provider: step.provider,
-      source,
-      errorableUuid,
-      chainCompleted: step.chainCompleted,
-      schema: step.schema,
-      output: step.output,
-    })
-
-    const isPromptl = chain instanceof PromptlChain
-    const toolCalls = getToolCalls({ response })
-    const hasTools = isPromptl && toolCalls.length > 0
-
-    // If response has tools, we must cache and stop the chain
-    if (hasTools) {
-      await cacheChain({
-        workspace,
-        chain,
-        documentLogUuid: errorableUuid,
-        previousResponse: response,
-      })
-
-      streamConsumer.chainCompleted({
-        step,
-        response,
-        finishReason: 'tool-calls',
-        responseMessages: buildMessagesFromResponse({
-          response,
-        }),
-      })
-
-      return {
-        ...response,
-        finishReason: 'tool-calls',
-        chainCompleted: step.chainCompleted,
-      } as ChainStepResponse<StreamType>
-    }
-
-    // With Legacy Compiler, we already knew whether the step was the last one BEFORE it was executed
-    if (step.chainCompleted) {
-      const finishReason = response.finishReason ?? 'stop'
-
-      streamConsumer.chainCompleted({
-        step,
-        response,
-        finishReason,
-        responseMessages: buildMessagesFromResponse({
-          response,
-        }),
-      })
-
-      return {
-        ...response,
-        finishReason,
-        chainCompleted: step.chainCompleted,
-      } as ChainStepResponse<StreamType>
-    }
-
-    return runStep({
-      ...stepProps,
-      previousResponse: response,
-      previousCount: step.conversation.messages.length,
-      stepCount: nextStepCount,
-      extraMessages: undefined,
-    })
-  } catch (e: unknown) {
-    const error = streamConsumer.chainError(e)
-    throw error
-  }
 }
