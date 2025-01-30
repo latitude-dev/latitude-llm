@@ -48,7 +48,7 @@ export function DocumentLogFilters({
       <div className='max-w-40'>
         <Input
           placeholder='Custom identifier'
-          value={filterOptions.customIdentifier}
+          value={filterOptions.customIdentifier ?? ''}
           onChange={(e) => filters.onCustomIdentifierChange(e.target.value)}
         />
       </div>
