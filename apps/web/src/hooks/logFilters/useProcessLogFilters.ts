@@ -1,15 +1,15 @@
-import { useCallback, useMemo } from 'react'
-import { usePathname, useRouter } from 'next/navigation'
 import {
   DocumentLogFilterOptions,
   LOG_FILTERS_ENCODED_PARAMS,
   LOG_SOURCES,
   LogSources,
 } from '@latitude-data/core/browser'
-import { ReactStateDispatch } from '@latitude-data/web-ui'
 import { paramsToString } from '@latitude-data/core/lib/pagination/buildPaginatedUrl'
 import { formatDocumentLogCreatedAtParam } from '@latitude-data/core/services/documentLogs/logsFilterUtils/generateDocumentLogsApiRouteWithParams'
+import { ReactStateDispatch } from '@latitude-data/web-ui'
 import { endOfDay } from 'date-fns'
+import { usePathname, useRouter } from 'next/navigation'
+import { useCallback, useMemo } from 'react'
 
 function useEditableSearchParams() {
   const router = useRouter()
@@ -124,11 +124,27 @@ export function useProcessLogFilters({
     }
   }, [])
 
+  const onCustomIdentifierChange = useCallback((value: string) => {
+    value = value?.trim()
+
+    onFiltersChanged((currentFilters) => ({
+      ...currentFilters,
+      customIdentifier: value,
+    }))
+
+    if (!value) {
+      setSearchParams('customIdentifier', undefined)
+    } else {
+      setSearchParams('customIdentifier', value)
+    }
+  }, [])
+
   return {
     isCommitsDefault,
     isLogSourcesDefault,
     onSelectLogSources,
     onSelectCommits,
     onCreatedAtChange,
+    onCustomIdentifierChange,
   }
 }

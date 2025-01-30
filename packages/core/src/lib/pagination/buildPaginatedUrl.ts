@@ -4,7 +4,7 @@ export function paramsToString({
   params,
   paramsToEncode = [],
 }: {
-  params: Record<string, string> | QueryParams | undefined
+  params: Record<string, unknown> | QueryParams | undefined
   paramsToEncode?: string[]
 }) {
   if (!params) return ''
@@ -17,7 +17,7 @@ export function paramsToString({
       if (paramsToEncode.includes(key)) {
         return `${key}=${encodeURIComponent(value?.toString() ?? '')}`
       }
-      return `${key}=${value}`
+      return `${key}=${value?.toString() ?? ''}`
     })
     .filter(Boolean)
     .join('&')

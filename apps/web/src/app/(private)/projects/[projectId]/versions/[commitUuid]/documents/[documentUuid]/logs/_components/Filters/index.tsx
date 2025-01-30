@@ -3,10 +3,14 @@ import {
   LOG_SOURCES,
 } from '@latitude-data/core/browser'
 
+import { useProcessLogFilters } from '$/hooks/logFilters/useProcessLogFilters'
+import {
+  DatePickerRange,
+  Input,
+  ReactStateDispatch,
+} from '@latitude-data/web-ui'
 import { CommitFilter } from './CommitFilter'
 import { LogSourceFilter } from './LogSourceFilter'
-import { ReactStateDispatch, DatePickerRange } from '@latitude-data/web-ui'
-import { useProcessLogFilters } from '$/hooks/logFilters/useProcessLogFilters'
 
 export function DocumentLogFilters({
   filterOptions,
@@ -41,6 +45,13 @@ export function DocumentLogFilters({
         isDefault={filters.isLogSourcesDefault}
         reset={() => filters.onSelectLogSources(LOG_SOURCES)}
       />
+      <div className='max-w-40'>
+        <Input
+          placeholder='Custom identifier'
+          value={filterOptions.customIdentifier ?? ''}
+          onChange={(e) => filters.onCustomIdentifierChange(e.target.value)}
+        />
+      </div>
     </>
   )
 }

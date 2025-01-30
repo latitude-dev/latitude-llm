@@ -1,11 +1,14 @@
 // @vitest-environment jsdom
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { renderHook, act } from '@testing-library/react'
-import { DocumentLogFilterOptions } from '@latitude-data/core/browser'
-import { LogSources, LOG_SOURCES } from '@latitude-data/core/browser'
-import { useProcessLogFilters } from './useProcessLogFilters'
+import {
+  DocumentLogFilterOptions,
+  LOG_SOURCES,
+  LogSources,
+} from '@latitude-data/core/browser'
+import { act, renderHook } from '@testing-library/react'
 import { parseISO } from 'date-fns'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { useProcessLogFilters } from './useProcessLogFilters'
 
 const mocks = vi.hoisted(() => ({
   push: vi.fn(async (path: string) => {
@@ -32,6 +35,7 @@ const FILTER_OPTIONS: DocumentLogFilterOptions = {
   commitIds: ORIGINAL_COMMIT_IDS,
   logSources: LOG_SOURCES,
   createdAt: undefined,
+  customIdentifier: undefined,
 }
 
 describe('useProcessLogFilters', () => {
@@ -170,6 +174,43 @@ describe('useProcessLogFilters', () => {
 
     act(() => {
       result.current.onCreatedAtChange(undefined)
+    })
+
+    expect(onFiltersChanged).toHaveBeenCalledWith(expect.any(Function))
+    expect(mocks.push).toHaveBeenCalledWith('/test-path')
+  })
+
+  it('onCustomIdentifierChange sets param when a identifier is provided', () => {
+    const onFiltersChanged = vi.fn()
+    const { result } = renderHook(() =>
+      useProcessLogFilters({
+        onFiltersChanged,
+        filterOptions: FILTER_OPTIONS,
+        originalSelectedCommitsIds: ORIGINAL_COMMIT_IDS,
+      }),
+    )
+
+    act(() => {
+      result.current.onCustomIdentifierChange('31')
+    })
+
+    expect(onFiltersChanged).toHaveBeenCalledWith(expect.any(Function))
+
+    expect(mocks.push).toHaveBeenCalledWith('/test-path?customIdentifier=31')
+  })
+
+  it('onCustomIdentifierChange removes param if no identifier provided', () => {
+    const onFiltersChanged = vi.fn()
+    const { result } = renderHook(() =>
+      useProcessLogFilters({
+        onFiltersChanged,
+        filterOptions: FILTER_OPTIONS,
+        originalSelectedCommitsIds: ORIGINAL_COMMIT_IDS,
+      }),
+    )
+
+    act(() => {
+      result.current.onCustomIdentifierChange('')
     })
 
     expect(onFiltersChanged).toHaveBeenCalledWith(expect.any(Function))

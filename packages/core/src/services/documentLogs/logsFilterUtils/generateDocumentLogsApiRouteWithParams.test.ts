@@ -1,7 +1,7 @@
-import { describe, it, expect } from 'vitest'
 import { formatISO } from 'date-fns'
-import { generateDocumentLogsApiRouteWithParams } from './generateDocumentLogsApiRouteWithParams'
+import { describe, expect, it } from 'vitest'
 import { LogSources } from '../../../constants'
+import { generateDocumentLogsApiRouteWithParams } from './generateDocumentLogsApiRouteWithParams'
 
 const mockPath = '/api/logs'
 
@@ -39,6 +39,7 @@ describe('generateDocumentLogsApiRouteWithParams', () => {
           createdAt: { from: fromDate, to: undefined },
           commitIds: [],
           logSources: [],
+          customIdentifier: undefined,
         },
       },
     })
@@ -55,6 +56,7 @@ describe('generateDocumentLogsApiRouteWithParams', () => {
           createdAt: { from: fromDate, to: toDate },
           commitIds: [],
           logSources: [],
+          customIdentifier: undefined,
         },
       },
     })
@@ -71,6 +73,7 @@ describe('generateDocumentLogsApiRouteWithParams', () => {
           createdAt: undefined,
           commitIds: [],
           logSources: [],
+          customIdentifier: undefined,
         },
       },
     })
@@ -85,10 +88,28 @@ describe('generateDocumentLogsApiRouteWithParams', () => {
           createdAt: undefined,
           commitIds: [123, 456],
           logSources: [LogSources.API, LogSources.User],
+          customIdentifier: undefined,
         },
       },
     })
     expect(result).toBe(`${mockPath}?commitIds=123,456&logSources=api,user`)
+  })
+
+  it('should handle filterOptions with non-empty customIdentifier', () => {
+    const result = generateDocumentLogsApiRouteWithParams({
+      path: mockPath,
+      params: {
+        filterOptions: {
+          createdAt: undefined,
+          commitIds: [],
+          logSources: [],
+          customIdentifier: 'thís shóùld be encoded',
+        },
+      },
+    })
+    expect(result).toBe(
+      `${mockPath}?customIdentifier=th%C3%ADs%20sh%C3%B3%C3%B9ld%20be%20encoded`,
+    )
   })
 
   it('should handle mixed parameters', () => {
@@ -102,13 +123,14 @@ describe('generateDocumentLogsApiRouteWithParams', () => {
           createdAt: { from: fromDate, to: undefined },
           commitIds: [789],
           logSources: [LogSources.API],
+          customIdentifier: '8861c3a3-4728-4818-9259-769f121a2fc6',
         },
         excludeErrors: true,
         days: 30,
       },
     })
     expect(result).toBe(
-      `${mockPath}?page=1&pageSize=50&createdAt=${formatISO(fromDate)}&commitIds=789&logSources=api&excludeErrors=true&days=30`,
+      `${mockPath}?page=1&pageSize=50&excludeErrors=true&days=30&createdAt=${formatISO(fromDate)}&commitIds=789&logSources=api&customIdentifier=8861c3a3-4728-4818-9259-769f121a2fc6`,
     )
   })
 
@@ -122,6 +144,7 @@ describe('generateDocumentLogsApiRouteWithParams', () => {
           createdAt: undefined,
           commitIds: [],
           logSources: [],
+          customIdentifier: undefined,
         },
       },
     })
@@ -140,6 +163,7 @@ describe('generateDocumentLogsApiRouteWithParams', () => {
           },
           commitIds: [],
           logSources: [],
+          customIdentifier: undefined,
         },
       },
     })

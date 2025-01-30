@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it } from 'vitest'
 import { eq } from 'drizzle-orm'
+import { beforeEach, describe, expect, it } from 'vitest'
 
 import {
   Commit,
@@ -12,6 +12,8 @@ import {
   User,
   Workspace,
 } from '../../browser'
+import { database } from '../../client'
+import { documentLogs } from '../../schema'
 import { mergeCommit } from '../../services/commits'
 import { updateDocument } from '../../services/documents'
 import * as factories from '../../tests/factories'
@@ -19,8 +21,6 @@ import {
   computeDocumentLogsWithMetadataCount,
   computeDocumentLogsWithMetadataQuery,
 } from './computeDocumentLogsWithMetadata'
-import { database } from '../../client'
-import { documentLogs } from '../../schema'
 import { parseSafeCreatedAtRange } from './logsFilterUtils'
 
 async function updateLogCreatedAt(date: Date, log: DocumentLog) {
@@ -104,6 +104,7 @@ describe('getDocumentLogsWithMetadata', () => {
           commitIds: [commit.id, commit2.id],
           logSources: LOG_SOURCES,
           createdAt: undefined,
+          customIdentifier: undefined,
         },
       })
 
@@ -132,6 +133,7 @@ describe('getDocumentLogsWithMetadata', () => {
           commitIds: [commit.id, commit2.id],
           logSources: LOG_SOURCES,
           createdAt: undefined,
+          customIdentifier: undefined,
         },
       })
 
@@ -222,6 +224,7 @@ describe('getDocumentLogsWithMetadata', () => {
             commitIds: [commit.id, commit2.id, anotherCommit.id],
             logSources: LOG_SOURCES,
             createdAt,
+            customIdentifier: undefined,
           },
         })
 
@@ -242,6 +245,7 @@ describe('getDocumentLogsWithMetadata', () => {
             commitIds: [commit.id, commit2.id, anotherCommit.id],
             logSources: LOG_SOURCES,
             createdAt,
+            customIdentifier: undefined,
           },
         })
 
@@ -263,6 +267,7 @@ describe('getDocumentLogsWithMetadata', () => {
           commitIds: [commit.id, commit2.id],
           logSources: LOG_SOURCES,
           createdAt: undefined,
+          customIdentifier: undefined,
         },
         page: '1',
         pageSize: '1',
@@ -278,6 +283,7 @@ describe('getDocumentLogsWithMetadata', () => {
           commitIds: [commit.id, commit2.id],
           logSources: LOG_SOURCES,
           createdAt: undefined,
+          customIdentifier: undefined,
         },
       })
 
@@ -343,6 +349,7 @@ describe('getDocumentLogsWithMetadata', () => {
         commitIds: [commit1.id, commit2.id, draft.id],
         logSources: LOG_SOURCES,
         createdAt: undefined,
+        customIdentifier: undefined,
       },
     })
 
@@ -407,12 +414,67 @@ describe('getDocumentLogsWithMetadata', () => {
         commitIds: [commit1.id, draft1.id],
         logSources: LOG_SOURCES,
         createdAt: undefined,
+        customIdentifier: undefined,
       },
     })
 
     expect(result.find((l) => l.uuid === log1.uuid)).toBeDefined()
     expect(result.find((l) => l.uuid === log2.uuid)).toBeDefined()
     expect(result.find((l) => l.uuid === log3.uuid)).not.toBeDefined()
+  })
+
+  it('includes logs from specified custom identifier', async () => {
+    const { project, user, workspace, providers } =
+      await factories.createProject()
+    const { commit } = await factories.createDraft({ project, user })
+    const { documentVersion: document } = await factories.createDocumentVersion(
+      {
+        workspace,
+        user,
+        commit,
+        path: 'folder1/doc1',
+        content: factories.helpers.createPrompt({
+          provider: providers[0]!,
+          content: 'VERSION_1',
+        }),
+      },
+    )
+
+    const { documentLog: log1 } = await factories.createDocumentLog({
+      document,
+      commit,
+      customIdentifier: '31',
+    })
+    const { documentLog: log2 } = await factories.createDocumentLog({
+      document,
+      commit,
+      customIdentifier: '31',
+    })
+    const { documentLog: log3 } = await factories.createDocumentLog({
+      document,
+      commit,
+      customIdentifier: '32',
+    })
+    const { documentLog: log4 } = await factories.createDocumentLog({
+      document,
+      commit,
+    })
+
+    const result = await computeDocumentLogsWithMetadataQuery({
+      workspaceId: project.workspaceId,
+      documentUuid: document.documentUuid,
+      filterOptions: {
+        commitIds: [commit.id],
+        logSources: LOG_SOURCES,
+        createdAt: undefined,
+        customIdentifier: '31',
+      },
+    })
+
+    expect(result.find((l) => l.uuid === log1.uuid)).toBeDefined()
+    expect(result.find((l) => l.uuid === log2.uuid)).toBeDefined()
+    expect(result.find((l) => l.uuid === log3.uuid)).not.toBeDefined()
+    expect(result.find((l) => l.uuid === log4.uuid)).not.toBeDefined()
   })
 
   it('returns a sum of tokens and cost', async () => {
@@ -443,6 +505,7 @@ describe('getDocumentLogsWithMetadata', () => {
         commitIds: [commit.id],
         logSources: LOG_SOURCES,
         createdAt: undefined,
+        customIdentifier: undefined,
       },
     })
 
@@ -480,6 +543,7 @@ describe('getDocumentLogsWithMetadata', () => {
         commitIds: [commit.id],
         logSources: [],
         createdAt: undefined,
+        customIdentifier: undefined,
       },
     })
 
@@ -520,6 +584,7 @@ describe('getDocumentLogsWithMetadata', () => {
         commitIds: [commit0.id, commit1.id],
         logSources: LOG_SOURCES,
         createdAt: undefined,
+        customIdentifier: undefined,
       },
     })
 

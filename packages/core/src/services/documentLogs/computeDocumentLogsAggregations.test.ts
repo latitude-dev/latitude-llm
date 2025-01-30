@@ -88,6 +88,43 @@ describe('computeDocumentLogsAggregations', () => {
         commitIds: [commit.id],
         logSources: LOG_SOURCES,
         createdAt: undefined,
+        customIdentifier: undefined,
+      },
+    })
+
+    expect(result.totalCount).toBe(1)
+  })
+
+  it('only includes logs from specified custom identifier', async () => {
+    const { commit: draft } = await factories.createDraft({
+      project,
+      user,
+    })
+
+    // Create log with custom identifier
+    await factories.createDocumentLog({
+      document,
+      commit: draft,
+      customIdentifier: '31',
+    })
+
+    // Create other logs
+    await factories.createDocumentLog({ document, commit })
+    await factories.createDocumentLog({
+      document,
+      commit: draft,
+      customIdentifier: '32',
+    })
+    await factories.createDocumentLog({ document, commit: draft })
+
+    const result = await computeDocumentLogsAggregations({
+      workspace,
+      documentUuid: document.documentUuid,
+      filterOptions: {
+        commitIds: [draft.id],
+        logSources: LOG_SOURCES,
+        createdAt: undefined,
+        customIdentifier: '31',
       },
     })
 

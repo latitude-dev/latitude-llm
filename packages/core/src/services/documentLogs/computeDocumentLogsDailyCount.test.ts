@@ -98,6 +98,7 @@ describe('computeDocumentLogsDailyCount', () => {
         commitIds: [commit.id],
         logSources: LOG_SOURCES,
         createdAt: undefined,
+        customIdentifier: undefined,
       },
       days: 3,
     })
@@ -141,6 +142,52 @@ describe('computeDocumentLogsDailyCount', () => {
         commitIds: [commit.id],
         logSources: LOG_SOURCES,
         createdAt: undefined,
+        customIdentifier: undefined,
+      },
+    })
+
+    expect(result[0]?.count).toBe(2)
+  })
+
+  it('only includes logs from specified draft', async () => {
+    const { commit: draft } = await factories.createDraft({
+      project,
+      user,
+    })
+
+    // Create logs with custom identifier
+    await Promise.all([
+      factories.createDocumentLog({
+        document,
+        commit: draft,
+        customIdentifier: '31',
+      }),
+      factories.createDocumentLog({
+        document,
+        commit: draft,
+        customIdentifier: '31',
+      }),
+    ])
+
+    // Create other logs
+    await Promise.all([
+      factories.createDocumentLog({ document, commit }),
+      factories.createDocumentLog({ document, commit: draft }),
+      factories.createDocumentLog({
+        document,
+        commit: draft,
+        customIdentifier: '32',
+      }),
+    ])
+
+    const result = await computeDocumentLogsDailyCount({
+      workspace,
+      documentUuid: document.documentUuid,
+      filterOptions: {
+        commitIds: [draft.id],
+        logSources: LOG_SOURCES,
+        createdAt: undefined,
+        customIdentifier: '31',
       },
     })
 
@@ -169,6 +216,7 @@ describe('computeDocumentLogsDailyCount', () => {
         commitIds: [commit.id],
         logSources: LOG_SOURCES,
         createdAt: undefined,
+        customIdentifier: undefined,
       },
     })
 
@@ -198,6 +246,7 @@ describe('computeDocumentLogsDailyCount', () => {
         commitIds: [commit.id],
         logSources: LOG_SOURCES,
         createdAt: undefined,
+        customIdentifier: undefined,
       },
       days: 30,
     })
