@@ -34,11 +34,14 @@ export function formatDocumentLogCreatedAtParam(value: CreatedAt) {
   }
 }
 
-function processFilterOptions(filterOptions: DocumentLogFilterOptions) {
+function processFilterOptions(filterOptions?: DocumentLogFilterOptions) {
+  if (!filterOptions) return undefined
+
   return paramsToString({
     params: {
       ...filterOptions,
-      createdAt: formatDocumentLogCreatedAtParam(filterOptions.createdAt),
+      createdAt: formatDocumentLogCreatedAtParam(filterOptions.createdAt)
+        ?.formattedValue,
     },
     paramsToEncode: LOG_FILTERS_ENCODED_PARAMS,
   })
@@ -66,8 +69,10 @@ export function generateDocumentLogsApiRouteWithParams({
     paramsToEncode: _pe,
   })
 
-  if (filterOptions) {
-    query += `&${processFilterOptions(filterOptions)}`
+  const filtersQuery = processFilterOptions(filterOptions)
+  if (filtersQuery) {
+    if (query) query += `&${filtersQuery}`
+    else query = filtersQuery
   }
 
   if (!query) return path

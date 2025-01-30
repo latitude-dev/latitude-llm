@@ -1,11 +1,14 @@
 // @vitest-environment jsdom
 
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { renderHook, act } from '@testing-library/react'
-import { DocumentLogFilterOptions } from '@latitude-data/core/browser'
-import { LogSources, LOG_SOURCES } from '@latitude-data/core/browser'
-import { useProcessLogFilters } from './useProcessLogFilters'
+import {
+  DocumentLogFilterOptions,
+  LOG_SOURCES,
+  LogSources,
+} from '@latitude-data/core/browser'
+import { act, renderHook } from '@testing-library/react'
 import { parseISO } from 'date-fns'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { useProcessLogFilters } from './useProcessLogFilters'
 
 const mocks = vi.hoisted(() => ({
   push: vi.fn(async (path: string) => {
@@ -32,6 +35,7 @@ const FILTER_OPTIONS: DocumentLogFilterOptions = {
   commitIds: ORIGINAL_COMMIT_IDS,
   logSources: LOG_SOURCES,
   createdAt: undefined,
+  customIdentifier: undefined,
 }
 
 describe('useProcessLogFilters', () => {
