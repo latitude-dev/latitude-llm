@@ -1,19 +1,10 @@
-import { LogSources, StreamType } from '@latitude-data/constants'
+import { LogSources } from '@latitude-data/constants'
 import { runDocumentAtCommit as runDocumentAtCommitFn } from '../../../../services/commits/runDocumentAtCommit'
 import { Commit, Workspace, DocumentVersion } from '../../../../browser'
-import { ChainResponse } from '../../../../services/chains/run'
 import { ToolCall } from '@latitude-data/compiler'
-import { getToolCalls } from '../../../../services/chains/runStep'
 import { Result } from '../../../../lib'
 import { respondToToolCalls } from './respondToToolCalls'
 import { AutogenerateToolResponseCopilotData } from './getCopilotData'
-
-async function getResponseValue(response: Promise<ChainResponse<StreamType>>) {
-  const responseResult = await response
-  if (responseResult.error) return responseResult
-
-  return Result.ok(responseResult.value)
-}
 
 type Props<T extends boolean> = T extends true
   ? {
@@ -52,33 +43,32 @@ export async function runDocumentUntilItStops<T extends boolean>(
   { hasToolCalls, data }: Props<T>,
   recursiveFn: typeof runDocumentUntilItStops,
 ) {
-  const result = !hasToolCalls
+  const runResult = !hasToolCalls
     ? await runDocumentAtCommitFn(data)
     : await respondToToolCalls(data)
 
-  if (result.error) return result
+  if (runResult.error) return Result.error(runResult.error)
+  const result = runResult.unwrap()
 
-  const value = result.value
-  const responseResult = await getResponseValue(value.response)
-  if (responseResult.error) return result
+  const error = await result.error
+  if (error) {
+    return Result.error(error)
+  }
 
-  const response = responseResult.value
-  const toolCalls = getToolCalls({ response })
-  if (!toolCalls.length) return result
-
-  return recursiveFn(
-    {
-      hasToolCalls: true,
-      data: {
-        workspace: data.workspace,
-        commit: data.commit,
-        document: data.document,
-        source: data.source,
-        copilot: data.copilot,
-        documentLogUuid: value.errorableUuid,
-        toolCalls,
+  const toolCalls = await result.toolCalls
+  if (toolCalls.length) {
+    return recursiveFn(
+      {
+        hasToolCalls: true,
+        data: {
+          ...data,
+          documentLogUuid: result.errorableUuid,
+          toolCalls,
+        },
       },
-    },
-    recursiveFn,
-  )
+      recursiveFn,
+    )
+  }
+
+  return Result.ok(result)
 }

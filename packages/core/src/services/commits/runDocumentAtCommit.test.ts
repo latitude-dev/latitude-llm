@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { LogSources, Providers } from '../../browser'
+import { LogSources, Providers, StreamEventTypes } from '../../browser'
 import { publisher } from '../../events/publisher'
 import { Ok, Result, UnprocessableEntityError } from '../../lib'
 import { ProviderLogsRepository } from '../../repositories'
@@ -12,6 +12,7 @@ import {
 } from '../../tests/factories'
 import { testConsumeStream } from '../../tests/helpers'
 import { runDocumentAtCommit } from './index'
+import { ChainEventTypes } from '../../lib/chainStreamManager/events'
 
 const mocks = {
   publish: vi.fn(),
@@ -127,17 +128,16 @@ describe('runDocumentAtCommit', () => {
       const { workspace, document, commit } = await buildData({
         doc1Content: dummyDoc1Content,
       })
-      const { response, duration, resolvedContent } = await runDocumentAtCommit(
-        {
+      const { lastResponse, duration, resolvedContent } =
+        await runDocumentAtCommit({
           workspace,
           document,
           commit,
           parameters: {},
           source: LogSources.API,
-        },
-      ).then((r) => r.unwrap())
+        }).then((r) => r.unwrap())
 
-      await response
+      await lastResponse
       await duration
 
       expect(resolvedContent.trim()).toEqual(`---
@@ -159,7 +159,7 @@ model: gpt-4o
         doc1Content: dummyDoc1Content,
       })
 
-      const { stream, duration, response } = await runDocumentAtCommit({
+      const { lastResponse } = await runDocumentAtCommit({
         workspace,
         document,
         commit,
@@ -167,10 +167,7 @@ model: gpt-4o
         source: LogSources.API,
       }).then((r) => r.unwrap())
 
-      await response
-      await duration
-
-      await testConsumeStream(stream)
+      await lastResponse // wait for the chain to finish
 
       expect(aiSpy).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -196,7 +193,7 @@ model: gpt-4o
       const { workspace, document, commit } = await buildData({
         doc1Content: dummyDoc1Content,
       })
-      const { response, duration, stream } = await runDocumentAtCommit({
+      const { lastResponse, duration, stream } = await runDocumentAtCommit({
         workspace,
         document,
         commit,
@@ -204,127 +201,52 @@ model: gpt-4o
         source: LogSources.API,
       }).then((r) => r.unwrap())
 
-      await response
+      await lastResponse
       await duration
 
       const { value } = await testConsumeStream(stream)
       const repo = new ProviderLogsRepository(workspace.id)
       const logs = await repo.findAll().then((r) => r.unwrap())
 
-      expect(value).toEqual([
-        {
-          data: {
-            type: 'chain-step',
-            isLastStep: false,
-            documentLogUuid: expect.any(String),
-            config: {
-              provider: 'openai',
-              model: 'gpt-4o',
-            },
-            messages: [
-              {
-                role: 'system',
-                content: [
-                  {
-                    type: 'text',
-                    text: 'This is a test document',
-                    _promptlSourceMap: [],
-                  },
-                ],
-              },
-            ],
+      expect(value).toEqual(
+        expect.arrayContaining([
+          {
+            event: StreamEventTypes.Latitude,
+            data: expect.objectContaining({
+              type: ChainEventTypes.ChainStarted,
+            }),
           },
-          event: 'latitude-event',
-        },
-        {
-          event: 'latitude-event',
-          data: {
-            type: 'chain-step-complete',
-            documentLogUuid: expect.any(String),
-            response: {
-              streamType: 'text',
-              documentLogUuid: expect.any(String),
-              providerLog: expect.any(Object),
-              text: 'Fake AI generated text',
-              toolCalls: [],
-              usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
-            },
+          {
+            event: StreamEventTypes.Latitude,
+            data: expect.objectContaining({
+              type: ChainEventTypes.ProviderCompleted,
+              providerLogUuid: logs[0]!.uuid,
+            }),
           },
-        },
-        {
-          data: {
-            type: 'chain-step',
-            isLastStep: false,
-            documentLogUuid: expect.any(String),
-            config: {
-              provider: 'openai',
-              model: 'gpt-4o',
-            },
-            messages: [
-              {
-                role: 'system',
-                content: [
-                  {
-                    type: 'text',
-                    text: 'With two steps',
-                    _promptlSourceMap: [],
-                  },
-                ],
-              },
-            ],
+          {
+            event: StreamEventTypes.Latitude,
+            data: expect.objectContaining({
+              type: ChainEventTypes.ProviderCompleted,
+              providerLogUuid: logs[0]!.uuid,
+            }),
           },
-          event: 'latitude-event',
-        },
-        {
-          data: {
-            type: 'chain-step-complete',
-            documentLogUuid: expect.any(String),
-            response: {
-              chainCompleted: true,
-              documentLogUuid: expect.any(String),
-              providerLog: expect.any(Object),
-              streamType: 'text',
-              text: 'Fake AI generated text',
-              toolCalls: [],
-              usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
-            },
+          {
+            event: StreamEventTypes.Latitude,
+            data: expect.objectContaining({
+              type: ChainEventTypes.ProviderCompleted,
+              providerLogUuid: logs[1]!.uuid,
+            }),
           },
-          event: 'latitude-event',
-        },
-        {
-          event: 'latitude-event',
-          data: {
-            type: 'chain-complete',
-            documentLogUuid: expect.any(String),
-            finishReason: 'stop',
-            config: {
-              provider: 'openai',
-              model: 'gpt-4o',
-            },
-            messages: [
-              {
-                role: 'assistant',
-                content: [
-                  {
-                    type: 'text',
-                    text: 'Fake AI generated text',
-                  },
-                ],
-                toolCalls: [],
-              },
-            ],
-            response: {
-              streamType: 'text',
-              text: 'Fake AI generated text',
-              chainCompleted: true,
-              toolCalls: [],
-              usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
-              providerLog: logs[logs.length - 1],
-              documentLogUuid: expect.any(String),
-            },
-          },
-        },
-      ])
+        ]),
+      )
+
+      expect(value.at(-1)).toEqual({
+        event: StreamEventTypes.Latitude,
+        data: expect.objectContaining({
+          type: ChainEventTypes.ChainCompleted,
+          documentLogUuid: logs[0]!.documentLogUuid,
+        }),
+      })
     })
 
     it('calls publisher with correct data', async () => {
@@ -332,7 +254,7 @@ model: gpt-4o
         doc1Content: dummyDoc1Content,
       })
       const parameters = { testParam: 'testValue' }
-      const { response, duration } = await runDocumentAtCommit({
+      const { lastResponse, duration } = await runDocumentAtCommit({
         workspace,
         document,
         commit,
@@ -340,8 +262,8 @@ model: gpt-4o
         source: LogSources.API,
       }).then((r) => r.unwrap())
 
-      // Wait for the response promise to resolve
-      await response
+      // Wait for the lastResponse promise to resolve
+      await lastResponse
       await duration
 
       expect(publisher.publishLater).toHaveBeenCalled()
@@ -351,7 +273,7 @@ model: gpt-4o
       const { workspace, document, commit } = await buildData({
         doc1Content: dummyDoc1Content,
       })
-      const { response } = await runDocumentAtCommit({
+      const { lastResponse } = await runDocumentAtCommit({
         workspace,
         document,
         commit,
@@ -359,7 +281,7 @@ model: gpt-4o
         source: LogSources.API,
       }).then((r) => r.unwrap())
 
-      await response
+      await lastResponse
 
       expect(createDocumentLogSpy).toHaveResolvedWith(expect.any(Ok))
     })
@@ -369,7 +291,7 @@ model: gpt-4o
         doc1Content: dummyDoc1Content,
       })
       const parameters = { testParam: 'testValue' }
-      const { response } = await runDocumentAtCommit({
+      const { lastResponse } = await runDocumentAtCommit({
         workspace,
         document,
         commit,
@@ -378,8 +300,8 @@ model: gpt-4o
         source: LogSources.API,
       }).then((r) => r.unwrap())
 
-      // Wait for the response promise to resolve
-      await response
+      // Wait for the lastResponse promise to resolve
+      await lastResponse
 
       expect(createDocumentLogSpy).toHaveResolvedWith(expect.any(Ok))
       expect(

@@ -13,7 +13,6 @@ import {
 } from '@latitude-data/constants/errors'
 import { Workspace } from '../../browser'
 import {
-  ChainEventTypes,
   ErrorableEntity,
   LogSources,
   Providers,
@@ -24,11 +23,12 @@ import * as factories from '../../tests/factories'
 import { testConsumeStream } from '../../tests/helpers'
 import * as aiModule from '../ai'
 import { setCachedResponse } from '../commits/promptCache'
-import { ChainError } from '../../lib/streamManager/ChainErrors'
+import { ChainError } from '../../lib/chainStreamManager/ChainErrors'
 import * as chainValidatorModule from './ChainValidator'
 import * as saveOrPublishProviderLogsModule from './ProviderProcessor/saveOrPublishProviderLogs'
 import { runChain } from './run'
 import { objectToString } from '@latitude-data/constants'
+import { ChainEventTypes } from '../../lib/chainStreamManager/events'
 
 // Mock other dependencies
 vi.mock('@latitude-data/compiler')
@@ -94,7 +94,7 @@ describe('runChain', () => {
       },
     })
 
-    const run = await runChain({
+    const run = runChain({
       workspace,
       chain: mockChain as LegacyChain,
       promptlVersion: 0,
@@ -103,8 +103,8 @@ describe('runChain', () => {
       errorableType: ErrorableEntity.DocumentLog,
     })
 
-    const response = await run.response
-    expect(response.value).toEqual(
+    const response = await run.lastResponse
+    expect(response).toEqual(
       expect.objectContaining({
         documentLogUuid: expect.any(String),
         text: 'AI response',
@@ -167,7 +167,7 @@ describe('runChain', () => {
       },
     })
 
-    const run = await runChain({
+    const run = runChain({
       workspace,
       chain: mockChain as LegacyChain,
       promptlVersion: 0,
@@ -180,8 +180,8 @@ describe('runChain', () => {
       },
     })
 
-    const response = await run.response
-    expect(response.value).toEqual(
+    const response = await run.lastResponse
+    expect(response).toEqual(
       expect.objectContaining({
         documentLogUuid: expect.any(String),
         object: { name: 'John', age: 30 },
@@ -242,7 +242,7 @@ describe('runChain', () => {
         },
       })
 
-    const run = await runChain({
+    const run = runChain({
       workspace,
       chain: mockChain as LegacyChain,
       promptlVersion: 0,
@@ -251,8 +251,8 @@ describe('runChain', () => {
       errorableType: ErrorableEntity.DocumentLog,
     })
 
-    const response = await run.response
-    expect(response.value).toEqual(
+    const response = await run.lastResponse
+    expect(response).toEqual(
       expect.objectContaining({
         documentLogUuid: expect.any(String),
         text: 'AI response 2',
@@ -285,7 +285,7 @@ describe('runChain', () => {
       },
     })
 
-    const run = await runChain({
+    const run = runChain({
       workspace,
       chain: mockChain as LegacyChain,
       promptlVersion: 0,
@@ -294,8 +294,8 @@ describe('runChain', () => {
       errorableType: ErrorableEntity.DocumentLog,
     })
 
-    const response = await run.response
-    expect(response.value).toEqual(
+    const response = await run.lastResponse
+    expect(response).toEqual(
       expect.objectContaining({
         documentLogUuid: expect.any(String),
         text: 'AI response',
@@ -365,7 +365,7 @@ describe('runChain', () => {
       },
     })
 
-    const run = await runChain({
+    const run = runChain({
       workspace,
       chain: mockChain as LegacyChain,
       promptlVersion: 0,
@@ -378,8 +378,8 @@ describe('runChain', () => {
       },
     })
 
-    const response = await run.response
-    expect(response.value).toEqual(
+    const response = await run.lastResponse
+    expect(response).toEqual(
       expect.objectContaining({
         documentLogUuid: expect.any(String),
         object: { name: 'John', age: 30 },
@@ -456,7 +456,7 @@ describe('runChain', () => {
       },
     })
 
-    const run = await runChain({
+    const run = runChain({
       workspace,
       chain: mockChain as LegacyChain,
       promptlVersion: 0,
@@ -469,8 +469,8 @@ describe('runChain', () => {
       },
     })
 
-    const response = await run.response
-    expect(response.value).toEqual(
+    const response = await run.lastResponse
+    expect(response).toEqual(
       expect.objectContaining({
         documentLogUuid: expect.any(String),
         object: [
@@ -513,7 +513,7 @@ describe('runChain', () => {
       },
     })
 
-    const run = await runChain({
+    const run = runChain({
       workspace,
       chain: mockChain as LegacyChain,
       promptlVersion: 0,
@@ -525,8 +525,8 @@ describe('runChain', () => {
       },
     })
 
-    const response = await run.response
-    expect(response.value).toEqual(
+    const response = await run.lastResponse
+    expect(response).toEqual(
       expect.objectContaining({
         documentLogUuid: expect.any(String),
         text: 'AI response without schema',
@@ -580,7 +580,7 @@ describe('runChain', () => {
       }) as any as TypedResult<aiModule.AIReturn<'text'>, any>,
     )
 
-    const result = await runChain({
+    const result = runChain({
       workspace,
       chain: mockChain as LegacyChain,
       promptlVersion: 0,
@@ -589,19 +589,19 @@ describe('runChain', () => {
       errorableType: ErrorableEntity.DocumentLog,
     })
     const { value: stream } = await testConsumeStream(result.stream)
-    const response = await result.response
+    const error = await result.error
 
     expect(stream.at(-1)).toEqual({
       event: StreamEventTypes.Latitude,
-      data: {
-        type: ChainEventTypes.Error,
-        error: {
+      data: expect.objectContaining({
+        type: ChainEventTypes.ChainError,
+        error: expect.objectContaining({
           name: LatitudeErrorCodes.UnprocessableEntityError,
           message: 'Openai returned this error: provider error',
-        },
-      },
+        }),
+      }),
     })
-    expect(response.error).toEqual(
+    expect(error).toEqual(
       new ChainError({
         code: RunErrorCodes.Unknown,
         message: 'Openai returned this error: provider error',
@@ -647,7 +647,7 @@ describe('runChain', () => {
       }) as any as TypedResult<aiModule.AIReturn<'text'>, any>,
     )
 
-    const result = await runChain({
+    const result = runChain({
       workspace,
       chain: mockChain as LegacyChain,
       promptlVersion: 0,
@@ -656,13 +656,22 @@ describe('runChain', () => {
       errorableType: ErrorableEntity.DocumentLog,
     })
     const { value: stream } = await testConsumeStream(result.stream)
-    const response = await result.response.then((r) => r.unwrap())
+    const response = await result.lastResponse
 
     expect(stream.at(-1)).toEqual({
       event: StreamEventTypes.Latitude,
       data: expect.objectContaining({
-        type: ChainEventTypes.Complete,
+        type: ChainEventTypes.ChainCompleted,
         messages: [
+          {
+            role: MessageRole.user,
+            content: [
+              {
+                type: ContentType.text,
+                text: 'user message',
+              },
+            ],
+          },
           {
             role: MessageRole.assistant,
             content: [
@@ -686,33 +695,6 @@ describe('runChain', () => {
             ],
           },
         ],
-        response: expect.objectContaining({
-          text: 'assistant message',
-          toolCalls: [
-            {
-              id: 'tool-call-id',
-              name: 'tool-call-name',
-              arguments: { arg1: 'value1', arg2: 'value2' },
-            },
-          ],
-          providerLog: expect.objectContaining({
-            messages: [
-              {
-                role: MessageRole.user,
-                content: [{ type: ContentType.text, text: 'user message' }],
-              },
-            ],
-            responseText: 'assistant message',
-            responseObject: null,
-            toolCalls: [
-              {
-                id: 'tool-call-id',
-                name: 'tool-call-name',
-                arguments: { arg1: 'value1', arg2: 'value2' },
-              },
-            ],
-          }),
-        }),
       }),
     })
     expect(response).toEqual(
@@ -793,7 +775,7 @@ describe('runChain', () => {
           toolCalls: [],
         },
       })
-      const run = await runChain({
+      const run = runChain({
         workspace,
         chain: mockChain as LegacyChain,
         promptlVersion: 0,
@@ -805,19 +787,18 @@ describe('runChain', () => {
       const spy = vi.spyOn(aiModule, 'ai')
       const saveOrPublishProviderLogSpy = vi
         .spyOn(saveOrPublishProviderLogsModule, 'saveOrPublishProviderLogs')
-        // @ts-expect-error - mock
         .mockResolvedValue({ id: 'fake-provider-log-id' })
-      const res = await run.response
+      const res = await run.lastResponse
 
       expect(spy).not.toHaveBeenCalled()
       expect(saveOrPublishProviderLogSpy).toHaveBeenCalledTimes(1)
-      expect(res.value).toEqual(
+      expect(res).toEqual(
         expect.objectContaining({
           text: 'cached response',
           providerLog: { id: 'fake-provider-log-id' },
         }),
       )
-      expect(res.value?.documentLogUuid).toEqual('new-document-log-uuid')
+      expect(res?.documentLogUuid).toEqual('new-document-log-uuid')
     })
 
     describe('with config having temperature != 0', () => {
@@ -848,7 +829,7 @@ describe('runChain', () => {
           .spyOn(aiModule, 'ai')
           .mockResolvedValue(mockAiResponse as any)
 
-        const run = await runChain({
+        const run = runChain({
           workspace,
           chain: mockChain as LegacyChain,
           promptlVersion: 0,
@@ -856,11 +837,11 @@ describe('runChain', () => {
           source: LogSources.API,
           errorableType: ErrorableEntity.DocumentLog,
         })
-        const result = await run.response
+        const result = await run.lastResponse
 
         expect(spy).toHaveBeenCalled()
-        expect(result.ok).toEqual(true)
-        expect(result.value).not.toEqual(
+        expect(result).toBeDefined()
+        expect(result).not.toEqual(
           expect.objectContaining({ text: 'cached response' }),
         )
       })
@@ -907,7 +888,7 @@ describe('runChain', () => {
           .spyOn(aiModule, 'ai')
           .mockResolvedValue(mockAiResponse as any)
 
-        const run = await runChain({
+        const run = runChain({
           workspace,
           chain: mockChain as LegacyChain,
           promptlVersion: 0,
@@ -916,10 +897,10 @@ describe('runChain', () => {
           errorableType: ErrorableEntity.DocumentLog,
         })
 
-        const result = await run.response
+        const result = await run.lastResponse
 
         expect(spy).toHaveBeenCalledOnce()
-        expect(result.ok).toEqual(true)
+        expect(result).toBeDefined()
       })
     })
   })

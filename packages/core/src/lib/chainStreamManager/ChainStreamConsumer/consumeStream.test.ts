@@ -2,7 +2,7 @@ import { RunErrorCodes } from '@latitude-data/constants/errors'
 import { CoreTool, LanguageModelUsage, TextStreamPart } from 'ai'
 import { describe, expect, it } from 'vitest'
 
-import { ChainEvent, Providers, StreamType } from '../../../constants'
+import { LegacyChainEvent, Providers, StreamType } from '../../../constants'
 import { AIReturn } from '../../../services/ai'
 import { ChainError } from '../ChainErrors'
 import { consumeStream } from './consumeStream'
@@ -30,7 +30,7 @@ export const PARTIAL_FINISH_CHUNK = {
 
 export type TOOLS = Record<string, CoreTool>
 type BuildChainCallback = (
-  controller: ReadableStreamDefaultController<ChainEvent>,
+  controller: ReadableStreamDefaultController<LegacyChainEvent>,
   result: AIReturn<StreamType>,
 ) => Promise<void>
 function buildFakeChain({
@@ -57,7 +57,7 @@ function buildFakeChain({
     },
   }
   return new Promise<void>((resolve) => {
-    new ReadableStream<ChainEvent>({
+    new ReadableStream<LegacyChainEvent>({
       start(controller) {
         callback(controller, result).then(() => {
           resolve()

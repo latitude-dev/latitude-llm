@@ -1,6 +1,9 @@
 import http from '$/common/http'
 import { GENERIC_ERROR_RESPONSES } from '$/openApi/responses/errorResponses'
-import { chainEventDtoSchema, internalInfoSchema } from '$/openApi/schemas'
+import {
+  legacyChainEventDtoSchema,
+  internalInfoSchema,
+} from '$/openApi/schemas'
 import { ROUTES } from '$/routes'
 import { conversationsParamsSchema } from '$/routes/v2/conversations/paramsSchema'
 import { createRoute, z } from '@hono/zod-openapi'
@@ -28,7 +31,7 @@ export const chatRoute = createRoute({
     [http.Status.OK]: {
       description: 'Chat was created successfully',
       content: {
-        [http.MediaTypes.SSE]: { schema: chainEventDtoSchema },
+        [http.MediaTypes.SSE]: { schema: legacyChainEventDtoSchema },
       },
     },
   },

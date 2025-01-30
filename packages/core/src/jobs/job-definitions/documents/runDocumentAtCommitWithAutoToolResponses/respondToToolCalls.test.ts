@@ -12,7 +12,7 @@ import {
   Result,
   UnprocessableEntityError,
 } from '../../../../lib'
-import { ChainError } from '../../../../lib/streamManager/ChainErrors'
+import { ChainError } from '../../../../lib/chainStreamManager/ChainErrors'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
 
 let workspace: Workspace
@@ -93,25 +93,24 @@ describe('respondToToolCalls', () => {
 
   it('generates response messages and resume conversation', async () => {
     const mockResult = {
-      response: Promise.resolve(
-        Result.ok({
-          providerLog: { uuid: 'log1' },
-          object: {
-            tool_responses: [
-              {
-                id: 'call_fake_id1',
-                name: 'get_the_weather',
-                result: 23,
-              },
-              {
-                id: 'call_fake_id2',
-                name: 'get_the_time',
-                result: { time: '12:00:00', timezone: 'UTC' },
-              },
-            ],
-          },
-        }),
-      ),
+      error: Promise.resolve(undefined),
+      lastResponse: Promise.resolve({
+        providerLog: { uuid: 'log1' },
+        object: {
+          tool_responses: [
+            {
+              id: 'call_fake_id1',
+              name: 'get_the_weather',
+              result: 23,
+            },
+            {
+              id: 'call_fake_id2',
+              name: 'get_the_time',
+              result: { time: '12:00:00', timezone: 'UTC' },
+            },
+          ],
+        },
+      }),
       errorableUuid: 'log1',
     }
     vi.spyOn(chainCache, 'getCachedChain').mockResolvedValue({
@@ -279,14 +278,13 @@ describe('respondToToolCalls', () => {
 
   it('returns error when copilot response fails', async () => {
     const mockResult = {
-      response: Promise.resolve(
-        Result.error(
-          new ChainError({
-            code: RunErrorCodes.ChainCompileError,
-            message: 'Some chain error',
-          }),
-        ),
+      error: Promise.resolve(
+        new ChainError({
+          code: 'SomeError' as RunErrorCodes,
+          message: 'Some chain error',
+        }),
       ),
+      lastResponse: Promise.resolve(undefined),
       errorableUuid: 'log1',
     }
     vi.spyOn(chainCache, 'getCachedChain').mockResolvedValue({

@@ -4,12 +4,12 @@ import { RunErrorCodes } from '@latitude-data/constants/errors'
 import { CoreTool, FinishReason, ObjectStreamPart, TextStreamPart } from 'ai'
 
 import {
-  ChainEvent,
+  LegacyChainEvent,
   Providers,
   StreamEventTypes,
   StreamType,
 } from '../../../constants'
-import { streamToGenerator } from '../../../lib/streamToGenerator'
+import { streamToGenerator } from '../../streamToGenerator'
 import { AIReturn } from '../../../services/ai'
 import { ChainError } from '../ChainErrors'
 
@@ -29,7 +29,7 @@ interface ConsumeStreamResult {
 
 function enqueueChainEvent(
   controller: ReadableStreamDefaultController,
-  event: ChainEvent,
+  event: LegacyChainEvent,
 ) {
   controller.enqueue(event)
 }

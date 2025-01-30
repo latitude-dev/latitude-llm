@@ -1,166 +1,105 @@
-import { LatitudeChainCompleteEventData } from '@latitude-data/constants'
-import { RunErrorCodes } from '@latitude-data/constants/errors'
-import {
-  ErrorableEntity,
-  ChainEvent,
-  ChainEventTypes,
-  ChainStepResponse,
-  StreamEventTypes,
-  StreamType,
-} from '../../constants'
-import { Result } from '../../lib'
+import { ErrorableEntity } from '../../constants'
 import { generateUUIDIdentifier } from '../../lib/generateUUID'
-import { Conversation } from '@latitude-data/compiler'
-import { runChain, SomeChain, RunChainArgs, ChainResponse } from '../chains/run'
-import {
-  ChainError,
-  createChainRunError,
-} from '../../lib/streamManager/ChainErrors'
+import { runChain, SomeChain, RunChainArgs } from '../chains/run'
 import { runAgentStep } from './runStep'
 import { deleteCachedChain } from '../chains/chainCache'
+import { ChainStreamManager } from '../../lib/chainStreamManager'
+import { ChainEventTypes } from '../../lib/chainStreamManager/events'
 
-type ChainCompleteEvent = {
-  data: LatitudeChainCompleteEventData
-  event: StreamEventTypes.Latitude
-}
-function isChainComplete(value: ChainEvent): value is ChainCompleteEvent {
-  return (
-    value.event === StreamEventTypes.Latitude &&
-    value.data.type === ChainEventTypes.Complete
-  )
-}
-
-export async function runAgent<T extends boolean, C extends SomeChain>({
+export function runAgent<T extends boolean, C extends SomeChain>({
   workspace,
-  chain,
-  promptlVersion,
   providersMap,
   source,
-  errorableType,
-  configOverrides,
+  promptlVersion,
+  chain,
+
   persistErrors = true,
   generateUUID = generateUUIDIdentifier,
-  previousResponse: _previousResponse,
-  extraMessages: _extraMessages,
-  ...other
+  errorableType,
+  messages: pausedMessages,
+  newMessages,
+  pausedTokenUsage,
+
+  configOverrides,
 }: RunChainArgs<T, C>) {
   const errorableUuid = generateUUID()
-
-  let responseResolve: (value: ChainResponse<StreamType>) => void
-
-  const response = new Promise<ChainResponse<StreamType>>((resolve) => {
-    responseResolve = resolve
-  })
-
-  let conversation: Conversation
-  let stepCount = 0
-  let previousResponse = _previousResponse
-  let extraMessages = _extraMessages
-
-  const chainResult = await runChain({
-    workspace,
-    chain,
-    promptlVersion,
-    providersMap,
-    source,
-    errorableType: errorableType as ErrorableEntity,
-    configOverrides,
-    persistErrors: persistErrors as true,
-    generateUUID: () => errorableUuid,
-    removeSchema: true, // Removes the schema configuration for the AI generation, as it is reserved for the agent's Return function
-    previousResponse,
-    extraMessages,
-    ...other,
-  })
-
   const chainStartTime = Date.now()
-  const stream = new ReadableStream<ChainEvent>({
-    start(controller) {
-      const chainEventsReader = chainResult.stream.getReader()
 
-      const readNextChainEvent = () => {
-        chainEventsReader.read().then(({ done, value }) => {
-          if (value) {
-            if (value.data.type === ChainEventTypes.Error) {
-              controller.enqueue(value)
-              return responseResolve(
-                Result.error(value.data.error as ChainError<RunErrorCodes>),
-              )
-            }
+  const chainStreamManager = new ChainStreamManager({
+    errorableUuid,
+    messages: pausedMessages,
+    tokenUsage: pausedTokenUsage,
+  })
 
-            if (isChainComplete(value)) {
-              conversation = {
-                config: value.data.config,
-                messages: value.data.response.providerLog?.messages ?? [],
-              }
+  let stepCount = 0
 
-              // Pause this process if the chain stopped due to tool calls
-              if (value.data.finishReason === 'tool-calls') {
-                controller.enqueue(value)
-                controller.close()
-                return responseResolve(
-                  Result.ok(
-                    value.data.response as ChainStepResponse<StreamType>,
-                  ),
-                )
-              }
-            } else {
-              // Forward all events that are not the ChainComplete event
-              controller.enqueue(value)
+  const streamResult = chainStreamManager.start(async () => {
+    const chainResult = runChain({
+      workspace,
+      providersMap,
+      source,
+      promptlVersion,
+      chain,
+      persistErrors: persistErrors as true,
+      generateUUID,
+      errorableType: errorableType as ErrorableEntity,
+      messages: pausedMessages,
+      newMessages,
+      pausedTokenUsage,
+      configOverrides,
+      removeSchema: true, // Removes the schema configuration for the AI generation, as it is reserved for the agent's Return function
+    })
 
-              if (value.data.type === ChainEventTypes.StepComplete) {
-                stepCount++
-                extraMessages = undefined // extraMessages has been used by the Chain, so we no longer need it for the agent workflow
-                previousResponse = value.data
-                  .response as ChainStepResponse<StreamType>
-              }
-            }
-          }
+    const chainEventsReader = chainResult.stream.getReader()
+    while (true) {
+      const { done, value } = await chainEventsReader.read()
+      if (done) break
 
-          if (!done) return readNextChainEvent()
-
-          // Chain has been completed. Remove the cached chain if there was any.
-          deleteCachedChain({ workspace, documentLogUuid: errorableUuid })
-
-          // Start agent's auntonomous workflow when initial chain is done
-          runAgentStep({
-            workspace,
-            source,
-            conversation,
-            providersMap,
-            controller,
-            errorableUuid,
-            stepCount,
-            previousCount: conversation.messages.length,
-            previousResponse: previousResponse!,
-            extraMessages,
-          })
-            .then((okResponse) => {
-              responseResolve(Result.ok(okResponse))
-            })
-            .catch(async (e: ChainError<RunErrorCodes>) => {
-              const error = await createChainRunError({
-                error: e,
-                errorableUuid,
-                errorableType,
-                persistErrors,
-              })
-
-              responseResolve(Result.error(error))
-            })
-        })
+      // Handle chain-finishing events
+      if (value.data.type === ChainEventTypes.ChainError) {
+        throw value.data.error
+      }
+      if (value.data.type === ChainEventTypes.ChainCompleted) {
+        // Ignore the ChainCompleted event
+        continue
+      }
+      if (value.data.type === ChainEventTypes.ToolsRequested) {
+        // Stop the stream and request tools from the user
+        chainStreamManager.requestTools(value.data.tools)
+        return
       }
 
-      // Start reading the chain events
-      readNextChainEvent()
-    },
+      // Forward all other events
+      chainStreamManager.forwardEvent(value)
+
+      if (value.data.type === ChainEventTypes.StepCompleted) {
+        stepCount++
+        newMessages = undefined // newMessages has been used by the Chain, so we no longer need it for the agent workflow
+      }
+    }
+
+    const conversation = {
+      config: (await chainResult.conversation).config,
+      messages: await chainResult.messages,
+    }
+
+    await deleteCachedChain({ workspace, documentLogUuid: errorableUuid })
+    await runAgentStep({
+      chainStreamManager,
+      workspace,
+      source,
+      conversation,
+      providersMap,
+      errorableUuid,
+      stepCount,
+      newMessages,
+    })
   })
 
   return {
-    stream,
-    response,
+    ...streamResult,
     resolvedContent: chain.rawText,
     errorableUuid,
-    duration: response.then(() => Date.now() - chainStartTime),
+    duration: streamResult.messages.then(() => Date.now() - chainStartTime),
   }
 }
