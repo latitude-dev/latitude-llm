@@ -93,9 +93,7 @@ await sdk.prompts.getOrCreate('path/to/your/prompt', {
 
 The `render` method will render your prompt and return the configuration and
 messages to use with your LLM provider. This render step is completely local and
-does not use Latitude's runtime services.
-
-Here's an example of running a Latitude prompt locally using the OpenAI package:
+does not use Latitude's runtime services:
 
 ```typescript
 import { Latitude } from '@latitude-data/sdk'
@@ -127,8 +125,8 @@ const response = await openai.chat.completions.create({
 ```
 
 You can also execute [chains](/promptl/advanced/chains) by providing an `onStep` callback to the
-`renderChain` method, which will be run for each step of the chain to generate
-the response. Here's an example:
+`renderChain` method, which will be called for each step of the chain to generate
+the corresponding response:
 
 ```typescript
 await sdk.prompts.renderChain({
