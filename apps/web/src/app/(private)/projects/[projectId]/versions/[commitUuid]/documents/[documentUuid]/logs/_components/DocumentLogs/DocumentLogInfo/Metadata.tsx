@@ -218,6 +218,15 @@ export function DocumentLogMetadata({
           </Text.H5>
         </ClickToCopy>
       </MetadataItem>
+      {documentLog.customIdentifier && (
+        <MetadataItem label='Custom identifier'>
+          <ClickToCopy copyValue={documentLog.customIdentifier}>
+            <Text.H5 align='right' color='foregroundMuted'>
+              {documentLog.customIdentifier}
+            </Text.H5>
+          </ClickToCopy>
+        </MetadataItem>
+      )}
       <MetadataItem label='Version'>
         <ClickToCopy copyValue={documentLog.commit.uuid}>
           <Text.H5 align='right' color='foregroundMuted'>
