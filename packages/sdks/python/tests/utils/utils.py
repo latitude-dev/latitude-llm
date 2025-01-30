@@ -6,16 +6,13 @@ import httpx
 import respx
 from latitude_telemetry import InternalOptions as TelemetryInternalOptions
 from latitude_telemetry import TelemetryOptions
-
-from latitude_sdk import (
+from promptl_ai import (
+    Adapter,
     AssistantMessage,
     FileContent,
     ImageContent,
-    InternalOptions,
-    Latitude,
-    LatitudeOptions,
-    LogSources,
     Message,
+    PromptlOptions,
     SystemMessage,
     TextContent,
     ToolCallContent,
@@ -23,6 +20,8 @@ from latitude_sdk import (
     ToolResultContent,
     UserMessage,
 )
+
+from latitude_sdk import InternalOptions, Latitude, LatitudeOptions, LogSources
 
 
 class TestCase(IsolatedAsyncioTestCase):
@@ -49,6 +48,9 @@ class TestCase(IsolatedAsyncioTestCase):
             disable_batch=True,
             internal=TelemetryInternalOptions.model_validate(internal_options),
         )
+        self.promptl_options = PromptlOptions(
+            adapter=Adapter.Default,
+        )
         self.api_key = "fake-api-key"
         self.project_id = 31
         self.version_uuid = "fake-version-uuid"
@@ -68,6 +70,7 @@ class TestCase(IsolatedAsyncioTestCase):
             LatitudeOptions(
                 project_id=self.project_id,
                 version_uuid=self.version_uuid,
+                promptl=self.promptl_options,
                 telemetry=self.telemetry_options,
                 internal=self.internal_options,
             ),

@@ -1,6 +1,6 @@
 [project]
 name = "latitude-telemetry"
-version = "0.1.0-beta.6"
+version = "1.0.0"
 description = "Latitude Telemetry for Python"
 authors = [{ name = "Latitude Data SL", email = "hello@latitude.so" }]
 maintainers = [{ name = "Latitude Data SL", email = "hello@latitude.so" }]

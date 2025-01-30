@@ -53,7 +53,9 @@ export function PythonUsage({
       options.push(toolsString)
     }
 
-    return options.length > 0 ? `\n${options.join(',\n')}\n` : ''
+    return options.length > 0
+      ? `, RunPromptOptions(\n${options.join(',\n')}\n)`
+      : ''
   }
 
   const sdkCode = `from latitude_sdk import Latitude, LatitudeOptions, RunPromptOptions
@@ -61,7 +63,7 @@ export function PythonUsage({
 # Do not expose the API key in client-side code
 sdk = Latitude('${apiKey ?? 'YOUR_API_KEY'}', LatitudeOptions(project_id=${projectId}))
 
-result = await sdk.prompts.run('${documentPath}', RunPromptOptions(${getRunOptions()}))
+result = await sdk.prompts.run('${documentPath}'${getRunOptions()})
 `
 
   return (

@@ -93,9 +93,7 @@ await sdk.prompts.getOrCreate('path/to/your/prompt', {
 
 The `render` method will render your prompt and return the configuration and
 messages to use with your LLM provider. This render step is completely local and
-does not use Latitude's runtime services.
-
-Here's an example of running a Latitude prompt locally using the OpenAI package:
+does not use Latitude's runtime services:
 
 ```typescript
 import { Latitude } from '@latitude-data/sdk'
@@ -127,8 +125,8 @@ const response = await openai.chat.completions.create({
 ```
 
 You can also execute [chains](/promptl/advanced/chains) by providing an `onStep` callback to the
-`renderChain` method, which will be run for each step of the chain to generate
-the response. Here's an example:
+`renderChain` method, which will be called for each step of the chain to generate
+the corresponding response:
 
 ```typescript
 await sdk.prompts.renderChain({
@@ -149,7 +147,7 @@ await sdk.prompts.renderChain({
 ```
 
 <Note>
-  `render` and `renderChain` only work with the latest iteration of Latitude's
+  `render` and `renderChain` only work with the latest version of Latitude's
   open source prompt syntax: [PromptL](https://promptl.ai/)
 </Note>
 
@@ -169,6 +167,9 @@ await sdk.prompts.run('path/to/your/prompt', {
   stream: false, // Optional, by default it's false
   parameters: {
     // Any parameters your prompt expects
+  },
+  tools: {
+    // Any tools your prompt expects
   },
   onEvent: ({ event, data }) => {
     // Handle events during execution
@@ -193,7 +194,7 @@ and the conversation will continue.
 import { Latitude } from '@latitude-data/sdk'
 
 // If you use TypeScript, you can define the tools you want to use
-// These types will be available in the tools parameter of the run method
+// These types will be available in the tools parameter of the run and chat methods
 type Tools = {
   get_coordinates: { location: string }
   get_weather: { latitude: string; longitude: string }
@@ -216,14 +217,18 @@ const response = await sdk.prompts.run<Tools>(documentPath, {
     get_weather: async ({ latitude, longitude }) => {
       const data = fetch('https://api.example.com/weather?latitude=' + latitude + '&longitude=' + longitude)
       const { temperature } = await data.json()
-      return { temperature },
+      return { temperature }
     },
   },
 })
 ```
 
 #### Pausing tool execution
-When the AI calls one or more tools in your prompt, you can pause the execution. Tools have a second parameter with details.
+
+If you need to pause the execution of the tools, you can do so by returning
+`details.pauseExecution()` in the tool handler. You can resume the
+conversation later by returning the tool results in the `sdk.prompts.chat`
+method.
 
 ```typescript
 // ...example of the tools argument in the `sdk.prompts.run` method
@@ -231,20 +236,19 @@ tools: {
   get_weather: async (
     { latitude, longitude },
     details: {
-      toolId, // Current tool Id called. `get_weather` in this case
-      toolName, // Current tool name called. `get_weather` in this case
-      pauseExecution, // Function to pause the execution
-      messages, // List of generated messages so far
-      conversationUuid, // Unique identifier for the conversation to be used in the `sdk.prompts.chat` method
-      requestedToolCalls, // List of tools requested by the AI together with `get_weather`
+      toolId, // Called tool id
+      toolName, // Called tool name, `get_weather` in this case
+      pauseExecution, // Signal to optionally pause the execution
+      messages, // List of conversation messages so far
+      conversationUuid, // Conversation identifier, to be used in the `sdk.prompts.chat` method
+      requestedToolCalls, // All tool calls requested by the LLM, including this one
     },
   ) => {
-    // Let's imagine get_weather takes a long time to execute
-    // You can pause the prompt execution, get the weather data, and resume the execution
-    // by using the sdk.prompts.chat method
-    // You will have to store `requestedToolCalls` and `conversationUuid` on your side to resume the execution
-    // If one of the tools is paused, none is sent to your LLM. Because if an LLM requests two tools
-    // and we respond with only one, the LLM will fail, saying a tool response is missing
+    // Let's imagine `get_weather` takes a long time to execute and you want to do it in the background.
+    // With `pauseExecution`, you can pause the conversation, get the weather data, and resume the conversation
+    // later, by returning the tool results in the `sdk.prompts.chat` method.
+    // You may have to store `requestedToolCalls` and `conversationUuid` on your side to resume the conversation.
+    // Note that, you must return all results from the requested tools, in the `sdk.prompts.chat` method, at once.
     return pauseExecution()
   },
 },
@@ -272,6 +276,6 @@ await sdk.logs.create('path/to/your/prompt', messages, {
 ```
 
 <Note>
-  Message follows [OpenAI's
-  format](https://platform.openai.com/docs/guides/text-generation/building-prompts).
+  Logs follow the [PromptL format](/promptl/getting-started/introduction).
+  If you're using a different method to run your prompts, you'll need to format your logs accordingly.
 </Note>

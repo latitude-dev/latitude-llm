@@ -7,6 +7,7 @@ Latitude's Python integration has the following main features:
 
 - Automatic tracing of LLM calls
 - Interact with Latitude's prompt manager from code: create, update and delete prompts
+- Render Latitude prompts locally and run them against your LLM providers
 - Run prompts with Latitude's high-performing gateway
 - Trigger LLM as judge and human in the loop evaluations
 - Programmatically push external logs to Latitude for evaluation and monitoring
@@ -104,6 +105,61 @@ await sdk.prompts.get_or_create('path/to/your/prompt', GetOrCreatePromptOptions(
 ))
 ```
 
+### Run a prompt with your LLM provider
+
+The `render` method will render your prompt and return the configuration and
+messages to use with your LLM provider. This render step is completely local and
+does not use Latitude's runtime services:
+
+```python
+from latitude_sdk import GetPromptOptions, RenderPromptOptions
+from promptl_ai import Adapter
+from openai import OpenAI
+
+prompt = await sdk.prompts.get('path/to/your/prompt', GetPromptOptions(
+    project_id=12345, # Optional, if you did not provide it in the constructor
+    version_uuid='optional-version-uuid', # Optional, by default it targets the latest live version
+))
+
+result = await sdk.prompts.render(prompt, RenderPromptOptions(
+    parameters={
+        # Any parameters your prompt expects
+    },
+    adapter=Adapter.OpenAI, # Optional, by default is OpenAI
+))
+
+response = openai.chat.completions.create(
+    **result.config,
+    messages=[message.model_dump() for message in result.messages],
+)
+```
+
+You can also execute [chains](/promptl/advanced/chains) by providing an `on_step` callback to the
+`render_chain` method, which will be called for each step of the chain to generate
+the corresponding response:
+
+```python
+from typing import Any, Dict, List, Sequence, Union
+from latitude_sdk import RenderChainOptions
+from promptl_ai import Adapter, MessageLike
+
+async def on_step(messages: List[MessageLike], config: Dict[str, Any]) -> Union[str, MessageLike, Sequence[MessageLike]]:
+    ...
+    return "Assistant message"
+
+result = await sdk.prompts.render_chain(prompt, on_step, RenderChainOptions(
+    parameters={
+        # Any parameters your prompt expects
+    },
+    adapter=Adapter.OpenAI, # Optional, by default is OpenAI
+))
+```
+
+<Note>
+  `render` and `render_chain` only work with the latest version of Latitude's
+  open source prompt syntax: [PromptL](https://promptl.ai/)
+</Note>
+
 ### Run a prompt through Latitude Gateway
 
 Latitude's Gateway is a high-performing gateway that proxies your LLM calls
@@ -136,7 +192,7 @@ await sdk.prompts.run('path/to/your/prompt', RunPromptOptions(
 
 When you run a prompt with tools, you can define and supply the corresponding
 tool handlers to the Latitude SDK. These handlers will be called automatically
-when the LLM invokes the tools. The tool results will be returned to the LLM
+when the LLM invokes the tools. The tool results will be returned to the LLM,
 and the conversation will continue.
 
 ```python
@@ -160,12 +216,37 @@ await sdk.prompts.run('path/to/your/prompt', RunPromptOptions(
 ))
 ```
 
-<Note>
-  If you need to pause the execution of the tools, you can do so by returning
-  `details.pause_execution()` in the tool handler. You can resume the
-  conversation later by returning the tool results in the `sdk.prompts.chat`
-  method.
-</Note>
+#### Pausing tool execution
+
+If you need to pause the execution of the tools, you can do so by returning
+`details.pause_execution()` in the tool handler. You can resume the
+conversation later by returning the tool results in the `sdk.prompts.chat`
+method.
+
+```python
+# OnToolCallDetails
+# .pause_execution: Signal to optionally pause the execution
+# .messages: List of conversation messages so far
+# .conversation_uuid: Conversation identifier, to be used in the `sdk.prompts.chat` method
+# .requested_tool_calls: All tool calls requested by the LLM, including this one
+
+async def get_weather(call: ToolCall, details: OnToolCallDetails) -> ToolResult:
+    # Let's imagine `get_weather` takes a long time to execute and you want to do it in the background.
+    # With `pause_execution`, you can pause the conversation, get the weather data, and resume the conversation
+    # later, by returning the tool results in the `sdk.prompts.chat` method.
+    # You may have to store `requested_tool_calls` and `conversation_uuid` on your side to resume the conversation.
+    # Note that, you must return all results from the requested tools, in the `sdk.prompts.chat` method, at once.
+    return details.pause_execution()
+
+await sdk.prompts.run('path/to/your/prompt', RunPromptOptions(
+    ...
+    tools={
+        "get_coordinates": get_coordinates,
+        "get_weather": get_weather,
+    },
+    ...
+))
+```
 
 ## Log Management
 
@@ -188,6 +269,7 @@ await sdk.logs.create('path/to/your/prompt', messages, CreateLogOptions(
 ```
 
 <Note>
-  Message follows [OpenAI's
-  format](https://platform.openai.com/docs/guides/text-generation/building-prompts).
+  Logs follow the [PromptL format](/promptl/getting-started/introduction). If
+  you're using a different method to run your prompts, you'll need to format
+  your logs accordingly.
 </Note>

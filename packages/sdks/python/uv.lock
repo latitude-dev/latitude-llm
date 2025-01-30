@@ -229,6 +229,18 @@ wheels = [
 ]
 
 [[package]]
+name = "importlib-resources"
+version = "6.5.2"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "zipp", marker = "python_full_version < '3.10'" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/cf/8c/f834fbf984f691b4f7ff60f50b514cc3de5cc08abfc3295564dd89c5e2e7/importlib_resources-6.5.2.tar.gz", hash = "sha256:185f87adef5bcc288449d98fb4fba07cea78bc036455dd44c5fc4a2fe78fed2c", size = 44693 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/a4/ed/1f1afb2e9e7f38a545d628f864d562a5ae64fe6f7a10e28ffb9b185b4e89/importlib_resources-6.5.2-py3-none-any.whl", hash = "sha256:789cfdc3ed28c78b67a06acb8126751ced69a3d5f79c095a98298cd8a760ccec", size = 37461 },
+]
+
+[[package]]
 name = "inflection"
 version = "0.5.1"
 source = { registry = "https://pypi.org/simple" }
@@ -304,12 +316,13 @@ wheels = [
 
 [[package]]
 name = "latitude-sdk"
-version = "0.1.0b8"
+version = "1.0.0"
 source = { editable = "." }
 dependencies = [
     { name = "httpx" },
     { name = "httpx-sse" },
     { name = "latitude-telemetry" },
+    { name = "promptl-ai" },
     { name = "pydantic" },
     { name = "typing-extensions" },
 ]
@@ -329,7 +342,8 @@ dev = [
 requires-dist = [
     { name = "httpx", specifier = ">=0.28.1" },
     { name = "httpx-sse", specifier = ">=0.4.0" },
-    { name = "latitude-telemetry", specifier = ">=0.1.0b6" },
+    { name = "latitude-telemetry", specifier = ">=1.0.0" },
+    { name = "promptl-ai", specifier = ">=1.0.1" },
     { name = "pydantic", specifier = ">=2.10.3" },
     { name = "typing-extensions", specifier = ">=4.12.2" },
 ]
@@ -347,7 +361,7 @@ dev = [
 
 [[package]]
 name = "latitude-telemetry"
-version = "0.1.0b6"
+version = "1.0.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "httpx" },
@@ -379,9 +393,9 @@ dependencies = [
     { name = "pydantic" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/87/00/8347857b4d2bb8c66a1a9252c79174ca761b34aa4bfc92dc887dcfea2572/latitude_telemetry-0.1.0b6.tar.gz", hash = "sha256:38f3c7a877d7bdab7ed0e6d71d5f1d2ea23fe6cd7d1231b058ed3b00110f5f99", size = 125748 }
+sdist = { url = "https://files.pythonhosted.org/packages/f1/ab/a0d7e3996c7ca13688c8e1b74733be0bc1b9cce4d1b14c5950396cbbfd8a/latitude_telemetry-1.0.0.tar.gz", hash = "sha256:dc1b1e9b45827092767ea0972749948df5914df546541b4dc5ffa36e07ee6a69", size = 125806 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/e2/f2/888f0ee097a4e10c5b8804954984c2ade96ff300a3707752fa601ee58c47/latitude_telemetry-0.1.0b6-py3-none-any.whl", hash = "sha256:abeecc9cd499dfbcd0cfa4f3f55a5556fcc0b01653b35c431a7c74043ecf2fc1", size = 10790 },
+    { url = "https://files.pythonhosted.org/packages/0a/13/41fc1443a6c7c09c59a1b2462af5cffe0c5c71f94ebda34d318e6d599932/latitude_telemetry-1.0.0-py3-none-any.whl", hash = "sha256:42d016e55d928ef0c072879af355af332cfe3d6a9ac4f36469a63b7d96fface3", size = 10850 },
 ]
 
 [[package]]
@@ -822,6 +836,20 @@ wheels = [
 ]
 
 [[package]]
+name = "promptl-ai"
+version = "1.0.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pydantic" },
+    { name = "typing-extensions" },
+    { name = "wasmtime" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/13/99/be5bf3f5aa24d48b5d7f573a1f2a6ff83f10c3e42a1a16287a731ff4b1af/promptl_ai-1.0.1.tar.gz", hash = "sha256:8d30f33f480488f2e817057ef54a195bf8947dc1c1ae0fcaf1339732370ac30b", size = 983536 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/17/08/8a910211bcc687b96ea6ce026048adecb036fde85e966605897a1666c161/promptl_ai-1.0.1-py3-none-any.whl", hash = "sha256:030619f43a400f9e39bd665f1cdb5db60972447d29583de8cf94720b725e5843", size = 968511 },
+]
+
+[[package]]
 name = "pydantic"
 version = "2.10.3"
 source = { registry = "https://pypi.org/simple" }
@@ -1200,6 +1228,23 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/aa/63/e53da845320b757bf29ef6a9062f5c669fe997973f966045cb019c3f4b66/urllib3-2.3.0.tar.gz", hash = "sha256:f8c5449b3cf0861679ce7e0503c7b44b5ec981bec0d1d3795a07f1ba96f0204d", size = 307268 }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c8/19/4ec628951a74043532ca2cf5d97b7b14863931476d117c471e8e2b1eb39f/urllib3-2.3.0-py3-none-any.whl", hash = "sha256:1cee9ad369867bfdbbb48b7dd50374c0967a0bb7710050facf0dd6911440e3df", size = 128369 },
+]
+
+[[package]]
+name = "wasmtime"
+version = "29.0.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "importlib-resources" },
+]
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/74/aa/a92f587239c8980ffd23bcdf1c2a8f4a9beabbf59d962e27049da6acbcfa/wasmtime-29.0.0-py3-none-any.whl", hash = "sha256:3d14a57e43378a848b4cb4e14e3edb9a01d5183cda232291b2dc202b1ade5a06", size = 5420085 },
+    { url = "https://files.pythonhosted.org/packages/17/48/0659172993a2edc7cc6b0a49557b4d348613520d4a9e2c2aecaffba731ee/wasmtime-29.0.0-py3-none-macosx_10_13_x86_64.whl", hash = "sha256:9581250dded9af61677813f67929104d750166eae4319fee8cf2dcffa715fb53", size = 6300627 },
+    { url = "https://files.pythonhosted.org/packages/19/45/d286cadd49b4b731a94a963c1a9a4a62c372f4421b7d23ee4f546a1437d5/wasmtime-29.0.0-py3-none-macosx_11_0_arm64.whl", hash = "sha256:ee00f406116db93951a27ddeb4a507f77a8d3e949a1a749b674f67927bd9f419", size = 5725470 },
+    { url = "https://files.pythonhosted.org/packages/3e/41/dcbcda10b1308046cfc8a3e9a1761df725f498864edd2311b83bda24ac1c/wasmtime-29.0.0-py3-none-manylinux1_x86_64.whl", hash = "sha256:d41f36544a1767c2095e087a12c53953a75d4b8cc1788b8a830b0afde225799a", size = 6842308 },
+    { url = "https://files.pythonhosted.org/packages/cd/02/3cf40814949af073e27a14460c7c579022637547846df6e5ec4c806a8394/wasmtime-29.0.0-py3-none-manylinux2014_aarch64.whl", hash = "sha256:11d3b3e3465c4dd174a22b0f23cd2e02b5e27b04961fac14fce5ac46021e4717", size = 6427286 },
+    { url = "https://files.pythonhosted.org/packages/02/b0/1dca5ea86f02af81eb4a551653567aa0ac7abb8d12f66141bad10c9e260a/wasmtime-29.0.0-py3-none-musllinux_1_2_x86_64.whl", hash = "sha256:3f69eb347bc399f43b524ef95169e1cc93567afb4ea11e6a855eb4f9b37b9cc9", size = 6853320 },
+    { url = "https://files.pythonhosted.org/packages/08/83/13fc6ac40d10518f9361653e9782bc74bbc6341dbfb98d6670216d431aa9/wasmtime-29.0.0-py3-none-win_amd64.whl", hash = "sha256:a1d12ae179a87289f1e9d9ade551b393de9fb3e05030953c7aa9454dabf8ffed", size = 5420092 },
 ]
 
 [[package]]

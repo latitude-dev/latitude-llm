@@ -1,13 +1,11 @@
-from typing import Any, Dict, Optional, Sequence, Union
+from typing import Optional, Sequence
+
+from promptl_ai import MessageLike
+from promptl_ai.bindings.types import _Message
 
 from latitude_sdk.client import Client, CreateLogRequestBody, CreateLogRequestParams, RequestHandler
 from latitude_sdk.sdk.errors import ApiError, ApiErrorCodes
-from latitude_sdk.sdk.types import (
-    Log,
-    Message,
-    SdkOptions,
-    _Message,
-)
+from latitude_sdk.sdk.types import Log, SdkOptions
 from latitude_sdk.util import Model
 
 
@@ -42,9 +40,9 @@ class Logs:
             )
 
     async def create(
-        self, path: str, messages: Sequence[Union[Message, Dict[str, Any]]], options: CreateLogOptions
+        self, path: str, messages: Sequence[MessageLike], options: Optional[CreateLogOptions] = None
     ) -> CreateLogResult:
-        options = CreateLogOptions(**{**dict(self._options), **dict(options)})
+        options = CreateLogOptions(**{**dict(self._options), **dict(options or {})})
         self._ensure_log_options(options)
         assert options.project_id is not None
 

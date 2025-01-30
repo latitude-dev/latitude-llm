@@ -1,6 +1,8 @@
 from typing import Any, Dict, List, Optional, Union
 
-from latitude_sdk.sdk.types import DbErrorRef, Message
+from promptl_ai import Message
+
+from latitude_sdk.sdk.types import DbErrorRef
 from latitude_sdk.util import Field, Model, StrEnum
 
 

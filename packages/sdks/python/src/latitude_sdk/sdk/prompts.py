@@ -1,6 +1,9 @@
 import asyncio
 from typing import Any, AsyncGenerator, Dict, List, Optional, Sequence, Union
 
+from promptl_ai import Adapter, Message, MessageLike, Promptl, ToolMessage, ToolResultContent
+from promptl_ai.bindings.types import _Message
+
 from latitude_sdk.client import (
     ChatPromptRequestBody,
     ChatPromptRequestParams,
@@ -21,20 +24,32 @@ from latitude_sdk.sdk.types import (
     ChainEventStep,
     ChainEventStepCompleted,
     FinishedEvent,
-    Message,
+    OnStep,
     OnToolCall,
     OnToolCallDetails,
     Prompt,
+    Providers,
     SdkOptions,
     StreamCallbacks,
     StreamEvents,
     StreamTypes,
-    ToolMessage,
     ToolResult,
-    ToolResultContent,
-    _Message,
 )
 from latitude_sdk.util import Model
+
+_PROVIDER_TO_ADAPTER = {
+    Providers.OpenAI: Adapter.OpenAI,
+    Providers.Anthropic: Adapter.Anthropic,
+}
+
+_PROMPT_ATTR_TO_ADAPTER_ATTR = {
+    "maxTokens": ("max_tokens", [Adapter.OpenAI, Adapter.Anthropic]),
+    "topP": ("top_p", [Adapter.OpenAI, Adapter.Anthropic]),
+    "topK": ("top_k", [Adapter.OpenAI, Adapter.Anthropic]),
+    "presencePenalty": ("presence_penalty", [Adapter.OpenAI, Adapter.Anthropic]),
+    "stopSequences": ("stop_sequences", [Adapter.OpenAI, Adapter.Anthropic]),
+    "toolChoice": ("tool_choice", [Adapter.OpenAI, Adapter.Anthropic]),
+}
 
 
 class OnToolCallPaused(Exception):
@@ -82,13 +97,34 @@ class ChatPromptResult(FinishedEvent, Model):
     pass
 
 
+class RenderPromptOptions(Model):
+    parameters: Optional[Dict[str, Any]] = None
+    adapter: Optional[Adapter] = None
+
+
+class RenderPromptResult(Model):
+    messages: List[MessageLike]
+    config: Dict[str, Any]
+
+
+class RenderChainOptions(Model):
+    parameters: Optional[Dict[str, Any]] = None
+    adapter: Optional[Adapter] = None
+
+
+class RenderChainResult(RenderPromptResult, Model):
+    pass
+
+
 class Prompts:
     _options: SdkOptions
     _client: Client
+    _promptl: Promptl
 
-    def __init__(self, client: Client, options: SdkOptions):
+    def __init__(self, client: Client, promptl: Promptl, options: SdkOptions):
         self._options = options
         self._client = client
+        self._promptl = promptl
 
     def _ensure_prompt_options(self, options: PromptOptions):
         if not options.project_id:
@@ -224,8 +260,8 @@ class Prompts:
 
         return FinishedEvent(**dict(next_result)) if next_result else None
 
-    async def get(self, path: str, options: GetPromptOptions) -> GetPromptResult:
-        options = GetPromptOptions(**{**dict(self._options), **dict(options)})
+    async def get(self, path: str, options: Optional[GetPromptOptions] = None) -> GetPromptResult:
+        options = GetPromptOptions(**{**dict(self._options), **dict(options or {})})
         self._ensure_prompt_options(options)
         assert options.project_id is not None
 
@@ -239,8 +275,10 @@ class Prompts:
         ) as response:
             return GetPromptResult.model_validate_json(response.content)
 
-    async def get_or_create(self, path: str, options: GetOrCreatePromptOptions) -> GetOrCreatePromptResult:
-        options = GetOrCreatePromptOptions(**{**dict(self._options), **dict(options)})
+    async def get_or_create(
+        self, path: str, options: Optional[GetOrCreatePromptOptions] = None
+    ) -> GetOrCreatePromptResult:
+        options = GetOrCreatePromptOptions(**{**dict(self._options), **dict(options or {})})
         self._ensure_prompt_options(options)
         assert options.project_id is not None
 
@@ -257,12 +295,12 @@ class Prompts:
         ) as response:
             return GetOrCreatePromptResult.model_validate_json(response.content)
 
-    async def run(self, path: str, options: RunPromptOptions) -> Optional[RunPromptResult]:
-        try:
-            options = RunPromptOptions(**{**dict(self._options), **dict(options)})
-            self._ensure_prompt_options(options)
-            assert options.project_id is not None
+    async def run(self, path: str, options: Optional[RunPromptOptions] = None) -> Optional[RunPromptResult]:
+        options = RunPromptOptions(**{**dict(self._options), **dict(options or {})})
+        self._ensure_prompt_options(options)
+        assert options.project_id is not None
 
+        try:
             async with self._client.request(
                 handler=RequestHandler.RunPrompt,
                 params=RunPromptRequestParams(
@@ -311,13 +349,13 @@ class Prompts:
             return None
 
     async def chat(
-        self, uuid: str, messages: Sequence[Union[Message, Dict[str, Any]]], options: ChatPromptOptions
+        self, uuid: str, messages: Sequence[MessageLike], options: Optional[ChatPromptOptions] = None
     ) -> Optional[ChatPromptResult]:
+        options = ChatPromptOptions(**{**dict(self._options), **dict(options or {})})
+
+        messages = [_Message.validate_python(message) for message in messages]
+
         try:
-            options = ChatPromptOptions(**{**dict(self._options), **dict(options)})
-
-            messages = [_Message.validate_python(message) for message in messages]
-
             async with self._client.request(
                 handler=RequestHandler.ChatPrompt,
                 params=ChatPromptRequestParams(
@@ -362,6 +400,54 @@ class Prompts:
 
             return None
 
-    # TODO: render - needs PromptL in Python
+    def _adapt_prompt_config(self, config: Dict[str, Any], adapter: Adapter) -> Dict[str, Any]:
+        adapted_config: Dict[str, Any] = {}
 
-    # TODO: render_chain - needs PromptL in Python
+        for attr, value in config.items():
+            if attr in _PROMPT_ATTR_TO_ADAPTER_ATTR and adapter in _PROMPT_ATTR_TO_ADAPTER_ATTR[attr][1]:
+                adapted_config[_PROMPT_ATTR_TO_ADAPTER_ATTR[attr][0]] = value
+            else:
+                adapted_config[attr] = value
+
+        return adapted_config
+
+    async def render(self, prompt: str, options: Optional[RenderPromptOptions] = None) -> RenderPromptResult:
+        options = RenderPromptOptions(**{**dict(self._options), **dict(options or {})})
+        adapter = options.adapter or Adapter.OpenAI
+
+        result = self._promptl.prompts.render(
+            prompt=prompt,
+            parameters=options.parameters,
+            adapter=adapter,
+        )
+
+        return RenderPromptResult(
+            messages=result.messages,
+            config=self._adapt_prompt_config(result.config, adapter),
+        )
+
+    async def render_chain(
+        self, prompt: Prompt, on_step: OnStep, options: Optional[RenderChainOptions] = None
+    ) -> RenderChainResult:
+        options = RenderChainOptions(**{**dict(self._options), **dict(options or {})})
+        adapter = options.adapter or _PROVIDER_TO_ADAPTER.get(prompt.provider or Providers.OpenAI, Adapter.OpenAI)
+
+        chain = self._promptl.chains.create(
+            prompt=prompt.content,
+            parameters=options.parameters,
+            adapter=adapter,
+        )
+
+        step = None
+        response = None
+        while not chain.completed:
+            step = chain.step(response)
+            if not step.completed:
+                response = await on_step(step.messages, self._adapt_prompt_config(step.config, adapter))
+
+        assert step is not None
+
+        return RenderChainResult(
+            messages=step.messages,
+            config=self._adapt_prompt_config(step.config, adapter),
+        )

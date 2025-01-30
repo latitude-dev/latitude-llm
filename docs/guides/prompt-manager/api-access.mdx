@@ -213,8 +213,7 @@ Run a specific document (prompt) with optional parameters.
 ```
 
 <Note>
-  Message follows [OpenAI's
-  format](https://platform.openai.com/docs/guides/text-generation/building-prompts).
+  Message follows the [PromptL format](/promptl/getting-started/introduction).
 </Note>
 
 <Note>
@@ -242,7 +241,7 @@ The previously described `POST /projects/{projectId}/versions/{versionUuid}/docu
 
 **Request Body:**
 
-- follows OpenAI's format or the [vercel's ai sdk](https://sdk.vercel.ai/docs/reference/ai-sdk-core/stream-text#api-signature)
+- Messages follow the [PromptL format](/promptl/getting-started/introduction). If you're using a different method to run your prompts, you'll need to format your messages accordingly.
 
 ```json
 {
@@ -262,8 +261,7 @@ The previously described `POST /projects/{projectId}/versions/{versionUuid}/docu
 - `stream`: Optional boolean parameter (defaults to `false`). When set to true, the response will be a stream of Server-Sent Events (SSE). If false, a single JSON response containing the last event is returned.
 
 <Note>
-  Message follows [OpenAI's
-  format](https://platform.openai.com/docs/guides/text-generation/building-prompts).
+  Message follows the [PromptL format](/promptl/getting-started/introduction).
 </Note>
 
 **Response:**
@@ -330,7 +328,7 @@ Create a log entry for a document.
 
 **Request Body:**
 
-- follows OpenAI's format or the [vercel's ai sdk](https://sdk.vercel.ai/docs/reference/ai-sdk-core/stream-text#api-signature)
+- Messages follow the [PromptL format](/promptl/getting-started/introduction). If you're using a different method to run your prompts, you'll need to format your messages accordingly.
 
 ```json
 {

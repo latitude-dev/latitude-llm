@@ -3,10 +3,20 @@ from datetime import datetime
 from typing import Any, Dict, List, cast
 from unittest import mock
 
+from promptl_ai import (
+    AssistantMessage,
+    Message,
+    SystemMessage,
+    TextContent,
+    ToolCallContent,
+    ToolMessage,
+    ToolResultContent,
+    UserMessage,
+)
+
 from latitude_sdk import (
     ApiError,
     ApiErrorCodes,
-    AssistantMessage,
     ChainError,
     ChainEventCompleted,
     ChainEventError,
@@ -19,19 +29,13 @@ from latitude_sdk import (
     FinishReason,
     Log,
     LogSources,
-    Message,
     ModelUsage,
     Prompt,
+    Providers,
     StreamEvent,
     StreamEvents,
-    SystemMessage,
-    TextContent,
     ToolCall,
-    ToolCallContent,
-    ToolMessage,
     ToolResult,
-    ToolResultContent,
-    UserMessage,
 )
 
 ERROR_RESPONSE: Dict[str, Any] = {
@@ -52,22 +56,61 @@ ERROR = ApiError(
 PROMPT_RESPONSE: Dict[str, Any] = {
     "uuid": "e01a1035-6ed3-4edc-88e6-c0748ea300c7",
     "path": "prompt",
-    "content": "---\nprovider: Latitude\nmodel: gpt-4o-mini\n---\n\nHello World!",
+    "content": """
+---
+provider: OpenAI
+model: gpt-4o-mini
+temperature: 0.5
+maxTokens: 1024
+topP: 0.9
+---
+
+<step>
+    You are a helpful assistant.
+    <user>{{ question }}</user>
+</step>
+<step>
+    Now say bye.
+</step>
+""".strip(),
     "config": {
-        "provider": "Latitude",
+        "provider": "OpenAI",
         "model": "gpt-4o-mini",
+        "temperature": 0.5,
+        "maxTokens": 1024,
+        "topP": 0.9,
     },
+    "provider": "openai",
 }
 
 PROMPT = Prompt(
     uuid="e01a1035-6ed3-4edc-88e6-c0748ea300c7",
     path="prompt",
-    content="---\nprovider: Latitude\nmodel: gpt-4o-mini\n---\n\nHello World!",
+    content="""
+---
+provider: OpenAI
+model: gpt-4o-mini
+temperature: 0.5
+maxTokens: 1024
+topP: 0.9
+---
+
+<step>
+    You are a helpful assistant.
+    <user>{{ question }}</user>
+</step>
+<step>
+    Now say bye.
+</step>
+""".strip(),
     config={
-        "provider": "Latitude",
+        "provider": "OpenAI",
         "model": "gpt-4o-mini",
+        "temperature": 0.5,
+        "maxTokens": 1024,
+        "topP": 0.9,
     },
-    provider=None,
+    provider=Providers.OpenAI,
 )
 
 
