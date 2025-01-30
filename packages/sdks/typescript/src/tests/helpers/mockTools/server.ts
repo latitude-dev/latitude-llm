@@ -205,11 +205,11 @@ export function buildMockTools(
   } = { pauseExecution: false },
 ): ToolCalledFn<MockedTools> {
   return {
-    tool_not_requested: async ({ id }) => {
+    tool_not_requested: async () => {
       // This is here only to prove that tools are filtered
-      return { id, name: 'tool_not_requested', result: {} }
+      return 'do-nothing'
     },
-    get_coordinates: async ({ id, arguments: { location } }, details) => {
+    get_coordinates: async ({ location }, details) => {
       if (pauseExecution) {
         onPausedExecutionCallback?.(details)
         return details.pauseExecution()
@@ -217,22 +217,14 @@ export function buildMockTools(
       const { latitude, longitude } = LOCATIONS.find(
         (loc) => loc.name === location,
       )!
-      return {
-        id,
-        name: 'get_coordinates',
-        result: { latitude, longitude },
-      }
+      return { latitude, longitude }
     },
-    get_weather: async ({ id, arguments: { latitude, longitude } }) => {
+    get_weather: async ({ latitude, longitude }) => {
       const latlong = `${latitude}:${longitude}`
       // @ts-expect-error - We know it's defined
       const name = LOCATIONS_BY_LAT_LONG[latlong]
       const { temperature } = LOCATIONS.find((loc) => loc.name === name)!
-      return {
-        id,
-        name: 'get_the_weather',
-        result: { temperature },
-      }
+      return { temperature }
     },
   }
 }

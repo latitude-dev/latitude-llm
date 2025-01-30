@@ -90,20 +90,13 @@ async function runDocumentRequestWithToolCalls() {
       /*   }) */
       /* }, */
       tools: {
-        get_coordinates: async ({ id, arguments: { location } }) => {
+        get_coordinates: async ({ location }) => {
           const { latitude, longitude } = LOCATIONS.find(
             (loc) => loc.name === location,
           )
-          return {
-            id,
-            name: 'get_coordinates',
-            result: { latitude, longitude },
-          }
+          return { latitude, longitude }
         },
-        get_weather: async (
-          { id, arguments: { latitude, longitude } },
-          { pauseExecution },
-        ) => {
+        get_weather: async ({ latitude, longitude }, { pauseExecution }) => {
           const callPauseExecution = process.env.PAUSE_EXECUTION
 
           if (callPauseExecution) {
@@ -114,11 +107,7 @@ async function runDocumentRequestWithToolCalls() {
           const latlong = `${latitude}:${longitude}`
           const name = LOCATIONS_BY_LAT_LONG[latlong]
           const { temperature } = LOCATIONS.find((loc) => loc.name === name)
-          return {
-            id,
-            name: 'get_the_weather',
-            result: { temperature },
-          }
+          return { temperature }
         },
       },
     })

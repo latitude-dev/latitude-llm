@@ -18,7 +18,6 @@ import {
   StreamEventTypes,
   ChainCallResponseDto,
   Providers,
-  ToolCallResponse,
 } from '@latitude-data/constants'
 
 export type GetDocumentUrlParams = {
@@ -139,6 +138,8 @@ export enum LogSources {
 }
 
 export type ToolCallDetails = {
+  toolId: string
+  toolName: string
   requestedToolCalls: ToolCall[]
   conversationUuid: string
   messages: Message[]
@@ -147,9 +148,9 @@ export type ToolCallDetails = {
 
 export type ToolSpec = Record<string, Record<string, unknown>>
 export type ToolHandler<T extends ToolSpec, K extends keyof T> = (
-  toolCall: { id: string; name: K; arguments: T[K] },
+  toolCall: T[K],
   details: ToolCallDetails,
-) => Promise<void | ToolCallResponse>
+) => Promise<unknown>
 export type ToolCalledFn<Tools extends ToolSpec> = {
   [K in keyof Tools]: ToolHandler<Tools, K>
 }

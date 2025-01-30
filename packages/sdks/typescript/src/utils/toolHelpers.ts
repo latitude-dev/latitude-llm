@@ -54,23 +54,21 @@ async function runHandler<T extends ToolSpec, K extends keyof T>({
   conversationUuid: string
   messages: Message[]
 }) {
-  const response = await handler(
+  const toolName = toolRequest.name.toString()
+  const result = await handler(
+    toolRequest.arguments as T[typeof toolRequest.name],
     {
-      id: toolRequest.id,
-      name: toolRequest.name,
-      arguments: toolRequest.arguments as T[typeof toolRequest.name],
-    },
-    {
+      toolId: toolRequest.id,
+      toolName,
       pauseExecution,
       conversationUuid,
       messages,
       requestedToolCalls,
     },
   )
-  const result = response!.result
   const toolResponse = {
     id: toolRequest.id,
-    name: toolRequest.name.toString(),
+    name: toolName,
     result,
   }
   const message = buildResponseMessage<'text'>({
