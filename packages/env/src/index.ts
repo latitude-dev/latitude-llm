@@ -31,6 +31,7 @@ if (environment === 'development' || environment === 'test') {
       FILES_STORAGE_PATH,
       FROM_MAILER_EMAIL: 'hello@latitude.so',
       GATEWAY_HOSTNAME: 'localhost',
+      GATEWAY_PORT: '8787',
       GATEWAY_SSL: 'false',
       LATITUDE_DOMAIN: 'latitude.so',
       LATITUDE_URL: 'http://localhost:3000',
