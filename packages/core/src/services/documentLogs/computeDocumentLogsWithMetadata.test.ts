@@ -440,6 +440,11 @@ describe('getDocumentLogsWithMetadata', () => {
       },
     )
 
+    const { documentLog: log0 } = await factories.createDocumentLog({
+      document,
+      commit,
+      customIdentifier: 'custom_123456',
+    })
     const { documentLog: log1 } = await factories.createDocumentLog({
       document,
       commit,
@@ -486,6 +491,7 @@ describe('getDocumentLogsWithMetadata', () => {
       log1.uuid,
       log3.uuid,
       log4.uuid,
+      log0.uuid,
     ])
   })
 
