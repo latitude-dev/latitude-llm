@@ -1,4 +1,4 @@
-import { and, desc, eq, isNotNull, or, sql } from 'drizzle-orm'
+import { and, desc, eq, isNotNull, or, SQL, sql } from 'drizzle-orm'
 
 import {
   Commit,
@@ -40,9 +40,18 @@ export function computeDocumentLogsWithMetadataQuery(
     documentUuid ? eq(documentLogs.documentUuid, documentUuid) : undefined,
     filterOptions ? buildLogsFilterSQLConditions(filterOptions) : undefined,
   ].filter(Boolean)
+  const ordering = [
+    filterOptions?.customIdentifier
+      ? desc(
+          sql`similarity(${documentLogs.customIdentifier}, ${filterOptions.customIdentifier})`,
+        )
+      : undefined,
+    desc(documentLogs.createdAt),
+  ].filter(Boolean) as SQL<unknown>[]
+
   return repo.scope
     .where(and(...conditions))
-    .orderBy(desc(documentLogs.createdAt))
+    .orderBy(...ordering)
     .limit(parseInt(pageSize))
     .offset(offset)
 }
