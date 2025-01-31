@@ -1,4 +1,4 @@
-import { and, desc, eq, isNull, sql } from 'drizzle-orm'
+import { and, desc, eq, isNull, SQL, sql } from 'drizzle-orm'
 
 import {
   DEFAULT_PAGINATION_SIZE,
@@ -41,9 +41,18 @@ export function computeDocumentLogsQuery(
     documentUuid ? eq(documentLogs.documentUuid, documentUuid) : undefined,
     filterOptions ? buildLogsFilterSQLConditions(filterOptions) : undefined,
   ].filter(Boolean)
+  const ordering = [
+    filterOptions?.customIdentifier
+      ? desc(
+          sql`similarity(${documentLogs.customIdentifier}, ${filterOptions.customIdentifier})`,
+        )
+      : undefined,
+    desc(documentLogs.createdAt),
+  ].filter(Boolean) as SQL<unknown>[]
+
   return repo.scope
     .where(and(...conditions))
-    .orderBy(desc(documentLogs.createdAt))
+    .orderBy(...ordering)
     .limit(parseInt(pageSize))
     .offset(offset)
 }

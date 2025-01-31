@@ -440,22 +440,37 @@ describe('getDocumentLogsWithMetadata', () => {
       },
     )
 
+    const { documentLog: log0 } = await factories.createDocumentLog({
+      document,
+      commit,
+      customIdentifier: 'custom_123456',
+    })
     const { documentLog: log1 } = await factories.createDocumentLog({
       document,
       commit,
-      customIdentifier: '31',
+      customIdentifier: 'custom_1234',
     })
     const { documentLog: log2 } = await factories.createDocumentLog({
       document,
       commit,
-      customIdentifier: '31',
+      customIdentifier: 'custom_1234',
     })
     const { documentLog: log3 } = await factories.createDocumentLog({
       document,
       commit,
-      customIdentifier: '32',
+      customIdentifier: '0_custom_1234',
     })
     const { documentLog: log4 } = await factories.createDocumentLog({
+      document,
+      commit,
+      customIdentifier: 'custom_123456',
+    })
+    await factories.createDocumentLog({
+      document,
+      commit,
+      customIdentifier: 'custom_1235',
+    })
+    await factories.createDocumentLog({
       document,
       commit,
     })
@@ -467,14 +482,17 @@ describe('getDocumentLogsWithMetadata', () => {
         commitIds: [commit.id],
         logSources: LOG_SOURCES,
         createdAt: undefined,
-        customIdentifier: '31',
+        customIdentifier: 'custom_1234',
       },
     })
 
-    expect(result.find((l) => l.uuid === log1.uuid)).toBeDefined()
-    expect(result.find((l) => l.uuid === log2.uuid)).toBeDefined()
-    expect(result.find((l) => l.uuid === log3.uuid)).not.toBeDefined()
-    expect(result.find((l) => l.uuid === log4.uuid)).not.toBeDefined()
+    expect(result.map((l) => l.uuid)).toEqual([
+      log2.uuid,
+      log1.uuid,
+      log3.uuid,
+      log4.uuid,
+      log0.uuid,
+    ])
   })
 
   it('returns a sum of tokens and cost', async () => {

@@ -7,6 +7,7 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core'
 
+import { sql } from 'drizzle-orm'
 import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
 import { commits } from './commits'
@@ -40,5 +41,8 @@ export const documentLogs = latitudeSchema.table(
       table.contentHash,
     ),
     createdAtIdx: index('document_logs_created_at_idx').on(table.createdAt),
+    customIdentifierTrgmIdx: index('document_logs_custom_identifier_trgm_idx')
+      .using('gin', sql`${table.customIdentifier} gin_trgm_ops`)
+      .concurrently(),
   }),
 )

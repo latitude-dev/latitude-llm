@@ -33,7 +33,12 @@ export function parseSafeCustomIdentifier(
     customIdentifier = customIdentifier[0]
   }
 
-  customIdentifier = decodeURIComponent(customIdentifier as string).trim()
+  try {
+    customIdentifier = decodeURIComponent(customIdentifier as string).trim()
+  } catch (error) {
+    return undefined
+  }
+
   if (!customIdentifier) return undefined
 
   return customIdentifier
