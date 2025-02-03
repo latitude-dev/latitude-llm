@@ -15,6 +15,7 @@ export default function AppLayout({
   currentUser,
   navigationLinks,
   scrollable = true,
+  cloudInfo,
 }: AppLayoutProps) {
   return (
     <div
@@ -22,7 +23,11 @@ export default function AppLayout({
         'overflow-y-auto custom-scrollbar': scrollable,
       })}
     >
-      <AppHeader navigationLinks={navigationLinks} currentUser={currentUser} />
+      <AppHeader
+        navigationLinks={navigationLinks}
+        currentUser={currentUser}
+        cloudInfo={cloudInfo}
+      />
       <main className='w-full flex-grow min-h-0 h-full relative'>
         {children}
       </main>

@@ -22,6 +22,7 @@ export default function useWorkspaceUsage(opts?: SWRConfiguration) {
         return {
           ...prevData,
           usage: prevData.usage + 1,
+          members: prevData.members + 1,
         }
       },
       {

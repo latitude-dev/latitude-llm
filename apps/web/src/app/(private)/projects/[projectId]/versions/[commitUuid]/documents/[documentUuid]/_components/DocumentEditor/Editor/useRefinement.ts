@@ -74,3 +74,5 @@ export function useRefinement({
     },
   }
 }
+
+export type RefinementHook = ReturnType<typeof useRefinement>

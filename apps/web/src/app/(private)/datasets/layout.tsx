@@ -8,6 +8,7 @@ import { DatasetsTable } from '$/app/(private)/datasets/_components/DatasetsTabl
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
 import Link from 'next/link'
+import env from '$/env'
 
 export const metadata = buildMetatags({
   title: 'Datasets',
@@ -29,9 +30,13 @@ export default async function DatasetsList({
         title='Datasets'
         actions={
           <div className='flex flex-row items-center gap-2'>
-            <Link href={ROUTES.datasets.generate.root}>
-              <TableWithHeader.Button>Generate dataset</TableWithHeader.Button>
-            </Link>
+            {env.LATITUDE_CLOUD ? (
+              <Link href={ROUTES.datasets.generate.root}>
+                <TableWithHeader.Button>
+                  Generate dataset
+                </TableWithHeader.Button>
+              </Link>
+            ) : null}
             <Link href={ROUTES.datasets.new.root}>
               <TableWithHeader.Button>Upload dataset</TableWithHeader.Button>
             </Link>

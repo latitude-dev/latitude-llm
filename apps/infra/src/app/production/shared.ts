@@ -176,5 +176,11 @@ export const environment = pulumi
       { name: 'SUPPORT_APP_ID', value: supportAppId },
       { name: 'SUPPORT_APP_SECRET_KEY', value: supportAppSecretKey },
       { name: 'LOOPS_API_KEY', value: loopsSecretApiKey },
+
+      { name: 'LATITUDE_CLOUD', value: true },
+      {
+        name: 'LATITUDE_CLOUD_PAYMENT_URL',
+        value: 'https://buy.stripe.com/6oE8ykbkHdygdBm5kp',
+      },
     ]
   })

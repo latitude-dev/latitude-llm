@@ -1,5 +1,3 @@
-'use client'
-
 import { ReactNode, useMemo, useState } from 'react'
 
 import { DocumentVersion, EvaluationDto } from '@latitude-data/core/browser'
@@ -96,6 +94,7 @@ export default function RefineDocumentModal({
   return (
     <Modal
       open
+      dismissible
       title={title}
       description={description}
       size='large'

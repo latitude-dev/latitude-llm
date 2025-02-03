@@ -143,11 +143,13 @@ export function ConfirmModal({
       {...rest}
       footer={
         <div className='flex justify-end space-x-2'>
-          <DialogClose asChild>
-            <Button fancy variant='outline' onClick={onCancel}>
-              {cancel?.label ?? 'Cancel'}
-            </Button>
-          </DialogClose>
+          {rest.dismissible && onCancel ? (
+            <DialogClose asChild>
+              <Button fancy variant='outline' onClick={onCancel}>
+                {cancel?.label ?? 'Cancel'}
+              </Button>
+            </DialogClose>
+          ) : null}
           <Button
             fancy
             disabled={confirm.disabled}

@@ -45,6 +45,7 @@ if (environment === 'development' || environment === 'test') {
       WEBSOCKET_REFRESH_SECRET_TOKEN_KEY: 'refresh-refresh-token-key',
       WEBSOCKET_SECRET_TOKEN_KEY: 'secret-token-key',
       WORKERS_WEBSOCKET_SECRET_TOKEN: 'workers-secret-token',
+      LATITUDE_CLOUD_PAYMENT_URL: 'https://fake-payment-url.com',
     },
     { path: pathToEnv },
   )
@@ -100,6 +101,7 @@ export const env = createEnv({
       .transform((value) => value === 'true')
       .optional()
       .default('true'),
+    LATITUDE_CLOUD: z.boolean().optional().default(false),
     COPILOT_CODE_SUGGESTION_PROMPT_PATH: z.string().optional(),
     COPILOT_DATASET_GENERATOR_PROMPT_PATH: z.string().optional(),
     COPILOT_EVALUATION_SUGGESTION_PROMPT_PATH: z.string().optional(),
@@ -119,5 +121,7 @@ export const env = createEnv({
     SUPPORT_APP_ID: process.env.SUPPORT_APP_ID ?? '',
     SUPPORT_APP_SECRET_KEY: process.env.SUPPORT_APP_SECRET_KEY ?? '',
     LOOPS_API_KEY: process.env.LOOPS_API_KEY ?? '',
+    LATITUDE_CLOUD: process.env.LATITUDE_CLOUD === 'true',
+    LATITUDE_CLOUD_PAYMENT_URL: process.env.LATITUDE_CLOUD_PAYMENT_URL,
   },
 })

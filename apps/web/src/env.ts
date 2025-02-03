@@ -12,6 +12,8 @@ export default createEnv({
     WEBSOCKETS_SERVER: z.string(),
     SUPPORT_APP_ID: z.string(),
     SUPPORT_APP_SECRET_KEY: z.string(),
+    LATITUDE_CLOUD: z.boolean(),
+    LATITUDE_CLOUD_PAYMENT_URL: z.string().optional(),
   },
   runtimeEnv: {
     NODE_ENV: process.env.NODE_ENV,
@@ -19,5 +21,7 @@ export default createEnv({
     WEBSOCKETS_SERVER: process.env.WEBSOCKETS_SERVER,
     SUPPORT_APP_ID: process.env.SUPPORT_APP_ID ?? '',
     SUPPORT_APP_SECRET_KEY: process.env.SUPPORT_APP_SECRET_KEY ?? '',
+    LATITUDE_CLOUD: process.env.LATITUDE_CLOUD === 'true',
+    LATITUDE_CLOUD_PAYMENT_URL: process.env.LATITUDE_CLOUD_PAYMENT_URL,
   },
 })

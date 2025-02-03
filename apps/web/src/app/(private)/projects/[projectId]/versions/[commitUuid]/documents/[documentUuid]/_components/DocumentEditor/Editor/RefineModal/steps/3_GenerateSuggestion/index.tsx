@@ -1,5 +1,3 @@
-'use client'
-
 import { useEffect, useMemo, useState } from 'react'
 
 import { DocumentVersion, EvaluationDto } from '@latitude-data/core/browser'
@@ -78,7 +76,7 @@ export function GenerateSuggestion({
             {description}
           </Text.H5>
         </div>
-        <div className='flex flex-col gap-2 w-[300px] max-w-[300px] items-center justify-center'>
+        <div className='flex flex-col gap-y-4 items-center justify-center'>
           <FakeProgress completed={!isLoading} />
           {isLoading && <LoadingText />}
           {!isLoading && suggestion && (

@@ -51,18 +51,24 @@ function NavLink({ label, href, onClick, _target }: INavigationLink) {
 export type AppHeaderProps = {
   navigationLinks: INavigationLink[]
   currentUser: SessionUser | undefined
+  cloudInfo?: { paymentUrl: string }
 }
 export default function AppHeader({
   navigationLinks,
   currentUser,
+  cloudInfo,
 }: AppHeaderProps) {
   return (
     <AppHeaderWrapper>
       <HeaderBreadcrumb />
       <div className='flex flex-row items-center gap-x-6 pl-6'>
         <nav className='flex flex-row gap-x-4 items-center'>
-          <RewardsButton />
-          <UsageIndicator />
+          {cloudInfo ? (
+            <>
+              <UsageIndicator paymentUrl={cloudInfo.paymentUrl} />
+              <RewardsButton />
+            </>
+          ) : null}
           {navigationLinks.map((link, idx) => (
             <NavLink key={idx} {...link} />
           ))}

@@ -46,7 +46,7 @@ import { useDebouncedCallback } from 'use-debounce'
 import Playground from './Playground'
 import RefineDocumentModal from './RefineModal'
 import { UpdateToPromptLButton } from './UpdateToPromptl'
-import { useRefinement } from './useRefinement'
+import { RefinementHook, useRefinement } from './useRefinement'
 import Link from 'next/link'
 
 export const DocumentEditorContext = createContext<
@@ -57,6 +57,44 @@ export const DocumentEditorContext = createContext<
   | undefined
 >(undefined)
 
+function RefineButton({
+  refinement,
+  document,
+  copilotEnabled,
+}: {
+  refinement: RefinementHook
+  document: DocumentVersion
+  copilotEnabled: boolean
+}) {
+  if (!copilotEnabled) return null
+
+  const RefinementButton = (
+    <Button
+      disabled={document.promptlVersion === 0}
+      className='bg-background'
+      variant='outline'
+      size='small'
+      iconProps={{
+        name: 'sparkles',
+        size: 'small',
+      }}
+      onClick={refinement.modal.onOpen}
+    >
+      <Text.H6>Refine</Text.H6>
+    </Button>
+  )
+
+  if (document.promptlVersion === 0) {
+    return (
+      <Tooltip trigger={RefinementButton} asChild>
+        Upgrade the syntax of the document to use the Refine feature.
+      </Tooltip>
+    )
+  }
+
+  return <>{RefinementButton}</>
+}
+
 export default function DocumentEditor({
   runDocumentAction,
   addMessagesAction,
@@ -66,6 +104,7 @@ export default function DocumentEditor({
   freeRunsCount,
   evaluation: serverEvaluation,
   evaluationResults: serverEvaluationResults,
+  copilotEnabled,
 }: {
   runDocumentAction: Function
   addMessagesAction: Function
@@ -75,6 +114,7 @@ export default function DocumentEditor({
   freeRunsCount?: number
   evaluation: EvaluationDto | undefined
   evaluationResults: EvaluationResult[]
+  copilotEnabled: boolean
 }) {
   const { execute: publishEvent } = useLatitudeAction(publishEventAction)
   const { commit } = useCurrentCommit()
@@ -264,22 +304,6 @@ export default function DocumentEditor({
 
   const isMerged = commit.mergedAt !== null
 
-  const RefineButton = (
-    <Button
-      disabled={document.promptlVersion === 0}
-      className='bg-background'
-      variant='outline'
-      size='small'
-      iconProps={{
-        name: 'sparkles',
-        size: 'small',
-      }}
-      onClick={refinement.modal.onOpen}
-    >
-      <Text.H6>Refine</Text.H6>
-    </Button>
-  )
-
   const name = document.path.split('/').pop() ?? document.path
 
   return (
@@ -353,7 +377,7 @@ export default function DocumentEditor({
                   prompt={value}
                   onChangePrompt={onChange}
                   freeRunsCount={freeRunsCount}
-                  showCopilotSetting
+                  showCopilotSetting={copilotEnabled}
                 />
                 <Suspense fallback={<TextEditorPlaceholder />}>
                   <DocumentTextEditor
@@ -366,23 +390,24 @@ export default function DocumentEditor({
                     }
                     isSaved={isSaved}
                     actionButtons={
-                      document.promptlVersion === 0 ? (
-                        <Tooltip trigger={RefineButton} asChild>
-                          Upgrade the syntax of the document to use the Refine
-                          feature.
-                        </Tooltip>
-                      ) : (
-                        RefineButton
-                      )
+                      <RefineButton
+                        refinement={refinement}
+                        document={document}
+                        copilotEnabled={copilotEnabled}
+                      />
                     }
-                    copilot={{
-                      isLoading: isCopilotLoading,
-                      requestSuggestion,
-                      disabledMessage:
-                        document.promptlVersion === 0
-                          ? 'Copilot is disabled for prompts using the old syntax. Upgrade to use Copilot.'
-                          : undefined,
-                    }}
+                    copilot={
+                      copilotEnabled
+                        ? {
+                            isLoading: isCopilotLoading,
+                            requestSuggestion,
+                            disabledMessage:
+                              document.promptlVersion === 0
+                                ? 'Copilot is disabled for prompts using the old syntax. Upgrade to use Copilot.'
+                                : undefined,
+                          }
+                        : undefined
+                    }
                   />
                 </Suspense>
               </div>
