@@ -17,6 +17,7 @@ export enum BackofficeRoutes {
   templates = 'templates',
   rewards = 'rewards',
   users = 'users',
+  usageOverview = 'usageOverview',
 }
 
 const PUBLIC_ROOT_PATHS = {
@@ -56,6 +57,9 @@ export const ROUTES = {
     },
     [BackofficeRoutes.users]: {
       root: `${BACKOFFICE_ROOT}/users`,
+    },
+    [BackofficeRoutes.usageOverview]: {
+      root: `${BACKOFFICE_ROOT}/usage-overview`,
     },
   },
   settings: {

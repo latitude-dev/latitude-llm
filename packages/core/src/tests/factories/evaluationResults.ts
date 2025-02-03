@@ -167,6 +167,7 @@ export type IEvaluationResultData = ProviderLogProps & {
   skipProviderLogCreation?: boolean
   skipEvaluationResultCreation?: boolean
   evaluationResultUuid?: string
+  evaluationResultCreatedAt?: Date
 }
 
 export async function createEvaluationResult({
@@ -179,6 +180,7 @@ export async function createEvaluationResult({
   stepCosts,
   skipProviderLogCreation = false,
   skipEvaluationResultCreation = false,
+  evaluationResultCreatedAt,
 }: IEvaluationResultData) {
   const noEvaluationProvider =
     evaluation.metadataType === EvaluationMetadataType.Manual ||
@@ -204,6 +206,7 @@ export async function createEvaluationResult({
     documentLog,
     evaluatedProviderLog,
     evaluationProviderLog,
+    createdAt: evaluationResultCreatedAt,
     result: skipEvaluationResultCreation
       ? undefined
       : {
@@ -218,13 +221,15 @@ export async function createEvaluationResult({
         },
   }).then((r) => r.unwrap())
 
-  // Tests run within a transaction and the NOW() PostgreSQL function returns
-  // the transaction start time. Therefore, all results would be created
-  // at the same time, messing with tests. This code patches this.
-  await database
-    .update(evaluationResults)
-    .set({ createdAt: new Date() })
-    .where(eq(evaluationResults.id, evaluationResult.id))
+  if (!evaluationResultCreatedAt) {
+    // Tests run within a transaction and the NOW() PostgreSQL function returns
+    // the transaction start time. Therefore, all results would be created
+    // at the same time, messing with tests. This code patches this.
+    await database
+      .update(evaluationResults)
+      .set({ createdAt: new Date() })
+      .where(eq(evaluationResults.id, evaluationResult.id))
+  }
 
   const evaluationResultsRepository = new EvaluationResultsRepository(
     evaluation.workspaceId,

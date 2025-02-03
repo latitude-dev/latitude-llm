@@ -7,20 +7,7 @@ import {
   EvaluationResultsRepository,
 } from '../../repositories'
 import { DocumentLogsRepository } from '../../repositories/documentLogsRepository'
-
-export function getLatestRenewalDate(firstRenewalDate: Date, targetDate: Date) {
-  if (targetDate.getTime() < firstRenewalDate.getTime()) {
-    return firstRenewalDate
-  }
-
-  const day = firstRenewalDate.getDate() // The day of the month is always mantained.
-
-  return new Date(
-    targetDate.getFullYear(),
-    (targetDate.getMonth() - (targetDate.getDate() < day ? 1 : 0)) % 12,
-    day,
-  )
-}
+import { getLatestRenewalDate } from './utils/calculateRenewalDate'
 
 export async function computeWorkspaceUsage(
   workspace: WorkspaceDto,
@@ -33,8 +20,8 @@ export async function computeWorkspaceUsage(
   )
 
   const createdAtDate = workspace.currentSubscription.createdAt
-  const currentDate = new Date(Date.now())
-  const latestRenewalDate = getLatestRenewalDate(createdAtDate, currentDate)
+  const targetDate = new Date(Date.now())
+  const latestRenewalDate = getLatestRenewalDate(createdAtDate, targetDate)
 
   const evaluationResultsCount =
     await evaluationResultsScope.totalCountSinceDate(latestRenewalDate)
@@ -43,14 +30,15 @@ export async function computeWorkspaceUsage(
     await documentLogsScope.totalCountSinceDate(latestRenewalDate)
 
   const claimedRewardsScope = new ClaimedRewardsRepository(workspace.id, db)
-  const extraRunsResult = await claimedRewardsScope.getExtraRunsOptimistic()
-  if (extraRunsResult.error) return Result.error(extraRunsResult.error)
+  const extraRuns = await claimedRewardsScope
+    .getExtraRunsOptimistic()
+    .then((r) => r.unwrap())
 
   const currentSubscriptionPlan =
     SubscriptionPlans[workspace.currentSubscription.plan]
 
   return Result.ok({
     usage: evaluationResultsCount + documentLogsCount,
-    max: currentSubscriptionPlan.credits + extraRunsResult.value,
+    max: currentSubscriptionPlan.credits + extraRuns,
   })
 }

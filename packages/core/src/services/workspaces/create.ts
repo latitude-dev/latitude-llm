@@ -13,10 +13,12 @@ export async function createWorkspace(
     name,
     user,
     createdAt,
+    subscriptionPlan = SubscriptionPlan.HobbyV2,
   }: {
     name: string
     user: User
     createdAt?: Date
+    subscriptionPlan?: SubscriptionPlan
   },
   db = database,
 ) {
@@ -30,7 +32,8 @@ export async function createWorkspace(
     const subscription = await createSubscription(
       {
         workspace,
-        plan: SubscriptionPlan.HobbyV2,
+        plan: subscriptionPlan,
+        createdAt,
       },
       tx,
     ).then((r) => r.unwrap())
