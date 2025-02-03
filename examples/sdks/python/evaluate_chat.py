@@ -8,8 +8,8 @@ from latitude_sdk import (
     LatitudeOptions,
     RunPromptOptions,
     TriggerEvaluationOptions,
-    UserMessage,
 )
+from promptl_ai import UserMessage
 
 LATITUDE_API_KEY = os.getenv("LATITUDE_API_KEY")
 LATITUDE_PROJECT_ID = os.getenv("LATITUDE_PROJECT_ID")

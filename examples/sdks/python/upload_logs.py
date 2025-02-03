@@ -1,13 +1,8 @@
 import asyncio
 import os
 
-from latitude_sdk import (
-    AssistantMessage,
-    CreateLogOptions,
-    Latitude,
-    LatitudeOptions,
-    UserMessage,
-)
+from latitude_sdk import CreateLogOptions, Latitude, LatitudeOptions
+from promptl_ai import AssistantMessage, UserMessage
 
 LATITUDE_API_KEY = os.getenv("LATITUDE_API_KEY")
 LATITUDE_PROJECT_ID = os.getenv("LATITUDE_PROJECT_ID")

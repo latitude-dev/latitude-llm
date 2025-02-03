@@ -1,32 +1,23 @@
 import asyncio
 import os
+from typing import Any, Dict
 
-from latitude_sdk import (
-    ChatPromptOptions,
-    ImageContent,
-    Latitude,
-    LatitudeOptions,
-    OnToolCallDetails,
-    RunPromptOptions,
-    TextContent,
-    ToolCall,
-    ToolResult,
-    UserMessage,
-)
+from latitude_sdk import ChatPromptOptions, Latitude, LatitudeOptions, OnToolCallDetails, RunPromptOptions
+from promptl_ai import ImageContent, TextContent, UserMessage
 
 LATITUDE_API_KEY = os.getenv("LATITUDE_API_KEY")
 LATITUDE_PROJECT_ID = os.getenv("LATITUDE_PROJECT_ID")
 
 
-async def get_weather(call: ToolCall, details: OnToolCallDetails) -> ToolResult:
-    # You could use a Pydantic model to validate the arguments and have type hinting
-    print(call.arguments["location"])
+async def get_weather(arguments: Dict[str, Any], details: OnToolCallDetails) -> str:
+    # You could use a Pydantic model to validate the arguments and to have type hinting
+    print(arguments["location"])
 
     # You can pause the execution of the tools if you need it, and resume the conversation
     # later, returning the tool results in the sdk.prompts.chat method
     # return details.pause_execution()
 
-    return ToolResult(id=call.id, name=call.name, result="20°C", is_error=False)
+    return "20°C"
 
 
 async def main():

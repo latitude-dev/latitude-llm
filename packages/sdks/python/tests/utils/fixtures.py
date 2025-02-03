@@ -769,13 +769,12 @@ CONVERSATION_TOOL_RESULTS = [
     ToolResult(
         id="toolu_01ARatRfRidTDshkg1UuQhW2",
         name="calculator",
-        result="true",
-        is_error=False,
+        result=True,
     ),
     ToolResult(
         id="toolu_B0398l23AOdTDshkg1UuQhZ3",
         name="calculator",
-        result={"error": "ERRROR_INVALID_EXPRESSION", "message": "Expression is invalid"},
+        result="Expression is invalid",
         is_error=True,
     ),
 ]
@@ -786,8 +785,7 @@ CONVERSATION_TOOL_RESULTS_MESSAGES: List[Message] = [
             ToolResultContent(
                 id="toolu_01ARatRfRidTDshkg1UuQhW2",
                 name="calculator",
-                result="true",
-                is_error=False,
+                result=True,
             ),
         ],
     ),
@@ -796,7 +794,7 @@ CONVERSATION_TOOL_RESULTS_MESSAGES: List[Message] = [
             ToolResultContent(
                 id="toolu_B0398l23AOdTDshkg1UuQhZ3",
                 name="calculator",
-                result={"error": "ERRROR_INVALID_EXPRESSION", "message": "Expression is invalid"},
+                result="Expression is invalid",
                 is_error=True,
             ),
         ],

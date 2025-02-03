@@ -50,7 +50,11 @@ class TestChatPromptSync(TestCase):
         on_event_mock = Mock()
         on_finished_mock = Mock()
         on_error_mock = Mock()
-        actual_tool_mock = AsyncMock(side_effect=fixtures.CONVERSATION_TOOL_RESULTS)
+        actual_tool_mock = AsyncMock(
+            side_effect=[
+                r.result if not r.is_error else Exception(r.result) for r in fixtures.CONVERSATION_TOOL_RESULTS
+            ]
+        )
         other_tool_mock = AsyncMock()
         conversation_uuid = "conversation-uuid"
         messages = self.create_conversation(4)
@@ -101,8 +105,10 @@ class TestChatPromptSync(TestCase):
             self.assertEqual(
                 actual_tool_mock.call_args_list[index][0],
                 (
-                    fixtures.CONVERSATION_TOOL_CALLS[index],
+                    fixtures.CONVERSATION_TOOL_CALLS[index].arguments,
                     OnToolCallDetails.model_construct(
+                        id=fixtures.CONVERSATION_TOOL_CALLS[index].id,
+                        name=fixtures.CONVERSATION_TOOL_CALLS[index].name,
                         conversation_uuid=fixtures.CONVERSATION_FINISHED_EVENT.uuid,
                         messages=fixtures.CONVERSATION_FINISHED_EVENT.conversation,
                         pause_execution=mock.ANY,
@@ -159,8 +165,10 @@ class TestChatPromptSync(TestCase):
             self.assertEqual(
                 actual_tool_mock.call_args_list[index][0],
                 (
-                    fixtures.CONVERSATION_TOOL_CALLS[index],
+                    fixtures.CONVERSATION_TOOL_CALLS[index].arguments,
                     OnToolCallDetails.model_construct(
+                        id=fixtures.CONVERSATION_TOOL_CALLS[index].id,
+                        name=fixtures.CONVERSATION_TOOL_CALLS[index].name,
                         conversation_uuid=fixtures.CONVERSATION_FINISHED_EVENT.uuid,
                         messages=fixtures.CONVERSATION_FINISHED_EVENT.conversation,
                         pause_execution=mock.ANY,
@@ -321,7 +329,11 @@ class TestChatPromptStream(TestCase):
         on_event_mock = Mock()
         on_finished_mock = Mock()
         on_error_mock = Mock()
-        actual_tool_mock = AsyncMock(side_effect=fixtures.CONVERSATION_TOOL_RESULTS)
+        actual_tool_mock = AsyncMock(
+            side_effect=[
+                r.result if not r.is_error else Exception(r.result) for r in fixtures.CONVERSATION_TOOL_RESULTS
+            ]
+        )
         other_tool_mock = AsyncMock()
         conversation_uuid = "conversation-uuid"
         messages = self.create_conversation(4)
@@ -379,8 +391,10 @@ class TestChatPromptStream(TestCase):
             self.assertEqual(
                 actual_tool_mock.call_args_list[index][0],
                 (
-                    fixtures.CONVERSATION_TOOL_CALLS[index],
+                    fixtures.CONVERSATION_TOOL_CALLS[index].arguments,
                     OnToolCallDetails.model_construct(
+                        id=fixtures.CONVERSATION_TOOL_CALLS[index].id,
+                        name=fixtures.CONVERSATION_TOOL_CALLS[index].name,
                         conversation_uuid=fixtures.CONVERSATION_FINISHED_EVENT.uuid,
                         messages=fixtures.CONVERSATION_FINISHED_EVENT.conversation,
                         pause_execution=mock.ANY,
@@ -439,8 +453,10 @@ class TestChatPromptStream(TestCase):
             self.assertEqual(
                 actual_tool_mock.call_args_list[index][0],
                 (
-                    fixtures.CONVERSATION_TOOL_CALLS[index],
+                    fixtures.CONVERSATION_TOOL_CALLS[index].arguments,
                     OnToolCallDetails.model_construct(
+                        id=fixtures.CONVERSATION_TOOL_CALLS[index].id,
+                        name=fixtures.CONVERSATION_TOOL_CALLS[index].name,
                         conversation_uuid=fixtures.CONVERSATION_FINISHED_EVENT.uuid,
                         messages=fixtures.CONVERSATION_FINISHED_EVENT.conversation,
                         pause_execution=mock.ANY,

@@ -30,7 +30,7 @@ export function PythonUsage({
 
     const entries = tools.map(
       (tool) =>
-        `\t\t'${tool.name}': # async def ${tool.name}(call: ToolCall, details: OnToolCallDetails) -> ToolResult`,
+        `\t\t'${tool.name}': # async def ${tool.name}(arguments: Dict[str, Any], details: OnToolCallDetails) -> Any`,
     )
 
     return `\ttools={\n${entries.join('\n')}\n\t}`

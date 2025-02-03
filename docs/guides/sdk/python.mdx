@@ -196,15 +196,19 @@ when the LLM invokes the tools. The tool results will be returned to the LLM,
 and the conversation will continue.
 
 ```python
-from latitude_sdk import OnToolCallDetails, ToolCall, ToolResult
+from latitude_sdk import OnToolCallDetails
 
-async def get_coordinates(call: ToolCall, details: OnToolCallDetails) -> ToolResult:
+async def get_coordinates(arguments: Dict[str, Any], details: OnToolCallDetails) -> int:
+    # Arguments from the LLM. You could use a Pydantic model to validate the arguments and to have type hinting
+    location = arguments["location"]
     ...
-    return ToolResult(id=call.id, name=call.name, result="...", is_error=False)
+    # The result can be anything JSON serializable
+    return 12345
 
-async def get_weather(call: ToolCall, details: OnToolCallDetails) -> ToolResult:
+async def get_weather(arguments: Dict[str, Any], details: OnToolCallDetails) -> Dict[str, Any]:
     ...
-    return ToolResult(id=call.id, name=call.name, result="...", is_error=False)
+    # The result can be anything JSON serializable
+    return {"weather": "sunny"}
 
 await sdk.prompts.run('path/to/your/prompt', RunPromptOptions(
     ...
@@ -216,6 +220,11 @@ await sdk.prompts.run('path/to/your/prompt', RunPromptOptions(
 ))
 ```
 
+<Note>
+  Any exception raised in the tool handler will be caught and sent to the LLM as
+  a tool result error.
+</Note>
+
 #### Pausing tool execution
 
 If you need to pause the execution of the tools, you can do so by returning
@@ -224,13 +233,17 @@ conversation later by returning the tool results in the `sdk.prompts.chat`
 method.
 
 ```python
-# OnToolCallDetails
+from latitude_sdk import OnToolCallDetails
+
+# OnToolCallDetails:
+# .id: Called tool id
+# .name: Called tool name, `get_weather` in this case
 # .pause_execution: Signal to optionally pause the execution
 # .messages: List of conversation messages so far
 # .conversation_uuid: Conversation identifier, to be used in the `sdk.prompts.chat` method
 # .requested_tool_calls: All tool calls requested by the LLM, including this one
 
-async def get_weather(call: ToolCall, details: OnToolCallDetails) -> ToolResult:
+async def get_weather(arguments: Dict[str, Any], details: OnToolCallDetails) -> Any:
     # Let's imagine `get_weather` takes a long time to execute and you want to do it in the background.
     # With `pause_execution`, you can pause the conversation, get the weather data, and resume the conversation
     # later, by returning the tool results in the `sdk.prompts.chat` method.

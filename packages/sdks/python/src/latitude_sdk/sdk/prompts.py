@@ -204,8 +204,25 @@ class Prompts:
         # NOTE: FinishedEvent not in on_event
         return FinishedEvent(uuid=uuid, conversation=conversation, response=response)
 
-    def _pause_tool_execution(self) -> ToolResult:
+    @staticmethod
+    def _pause_tool_execution() -> Any:
         raise OnToolCallPaused()
+
+    @staticmethod
+    async def _wrap_tool_handler(
+        handler: OnToolCall, arguments: Dict[str, Any], details: OnToolCallDetails
+    ) -> ToolResult:
+        tool_result: Dict[str, Any] = {"id": details.id, "name": details.name}
+
+        try:
+            result = await handler(arguments, details)
+
+            return ToolResult(**tool_result, result=result)
+        except Exception as exception:
+            if isinstance(exception, OnToolCallPaused):
+                raise exception
+
+            return ToolResult(**tool_result, result=str(exception), is_error=True)
 
     async def _handle_tool_calls(
         self, result: FinishedEvent, options: Union[RunPromptOptions, ChatPromptOptions]
@@ -230,15 +247,22 @@ class Prompts:
                     response=f"Tool {tool_call.name} not supplied",
                 )
 
-        details = OnToolCallDetails(
-            conversation_uuid=result.uuid,
-            messages=result.conversation,
-            pause_execution=self._pause_tool_execution,
-            requested_tool_calls=result.response.tool_calls,
-        )
-
         tool_results = await asyncio.gather(
-            *[options.tools[tool_call.name](tool_call, details) for tool_call in result.response.tool_calls],
+            *[
+                self._wrap_tool_handler(
+                    options.tools[tool_call.name],
+                    tool_call.arguments,
+                    OnToolCallDetails(
+                        id=tool_call.id,
+                        name=tool_call.name,
+                        conversation_uuid=result.uuid,
+                        messages=result.conversation,
+                        pause_execution=self._pause_tool_execution,
+                        requested_tool_calls=result.response.tool_calls,
+                    ),
+                )
+                for tool_call in result.response.tool_calls
+            ],
             return_exceptions=False,
         )
 
@@ -403,6 +427,7 @@ class Prompts:
     def _adapt_prompt_config(self, config: Dict[str, Any], adapter: Adapter) -> Dict[str, Any]:
         adapted_config: Dict[str, Any] = {}
 
+        # NOTE: Should we delete attributes not supported by the provider?
         for attr, value in config.items():
             if attr in _PROMPT_ATTR_TO_ADAPTER_ATTR and adapter in _PROMPT_ATTR_TO_ADAPTER_ATTR[attr][1]:
                 adapted_config[_PROMPT_ATTR_TO_ADAPTER_ATTR[attr][0]] = value
