@@ -5,6 +5,7 @@ import {
   DropdownMenu,
   DropdownMenuTrigger,
   getUserInfoFromSession,
+  MenuOption,
   SessionUser,
 } from '@latitude-data/web-ui'
 import { logoutAction } from '$/actions/user/logoutAction'
@@ -21,6 +22,23 @@ export default function AvatarDropdown({
     await logoutAction()
   }, [])
 
+  let options: MenuOption[] = [
+    {
+      label: 'Logout',
+      type: 'destructive',
+      onClick: onClickLogout,
+    },
+  ]
+  options = currentUser
+    ? [
+        {
+          label: currentUser?.email,
+          onClick: () => {},
+        },
+        ...options,
+      ]
+    : options
+
   return (
     <DropdownMenu
       trigger={() => (
@@ -32,13 +50,7 @@ export default function AvatarDropdown({
           />
         </DropdownMenuTrigger>
       )}
-      options={[
-        {
-          label: 'Logout',
-          type: 'destructive',
-          onClick: onClickLogout,
-        },
-      ]}
+      options={options}
       side='bottom'
       align='end'
     />
