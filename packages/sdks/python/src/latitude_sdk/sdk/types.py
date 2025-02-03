@@ -216,6 +216,8 @@ class StreamCallbacks(Model):
 
 
 class OnToolCallDetails(Model):
+    id: str
+    name: str
     conversation_uuid: str
     messages: List[Message]
     pause_execution: Callable[[], ToolResult]
@@ -224,7 +226,7 @@ class OnToolCallDetails(Model):
 
 @runtime_checkable
 class OnToolCall(Protocol):
-    async def __call__(self, call: ToolCall, details: OnToolCallDetails) -> ToolResult: ...
+    async def __call__(self, arguments: Dict[str, Any], details: OnToolCallDetails) -> Any: ...
 
 
 @runtime_checkable
