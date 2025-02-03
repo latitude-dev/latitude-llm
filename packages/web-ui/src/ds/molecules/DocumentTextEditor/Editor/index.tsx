@@ -31,10 +31,11 @@ export function DocumentTextEditor({
   const editorRef = useRef<editor.IStandaloneCodeEditor | null>(null)
   const diffEditorRef = useRef<editor.IStandaloneDiffEditor | null>(null)
 
-  const { value: showCopilot } = useLocalStorage({
+  const { value: showCopilotLocalStorage } = useLocalStorage({
     key: AppLocalStorage.editorCopilot,
     defaultValue: true,
   })
+  const showCopilot = showCopilotLocalStorage && copilot
 
   const [editorLines, setEditorLines] = useState(value.split('\n').length)
 

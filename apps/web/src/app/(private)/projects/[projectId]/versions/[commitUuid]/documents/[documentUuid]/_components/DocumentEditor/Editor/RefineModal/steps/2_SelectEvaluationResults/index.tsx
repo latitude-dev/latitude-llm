@@ -75,16 +75,16 @@ export function SelectEvaluationResults({
 
   if (isLoading && !rows.length) {
     return (
-      <>
+      <div className='flex flex-col gap-y-4'>
         <TableSkeleton rows={PAGE_SIZE} cols={5} />
         <ActionButtons />
-      </>
+      </div>
     )
   }
 
   if (!rows?.length) {
     return (
-      <>
+      <div className='flex flex-col gap-y-4'>
         <TableBlankSlate
           description='This evaluation has not evaluated any log from this version of the document. To make suggestions, our system needs logs. Run an evaluation to generate logs and come back.'
           link={
@@ -102,12 +102,12 @@ export function SelectEvaluationResults({
           }
         />
         <ActionButtons />
-      </>
+      </div>
     )
   }
 
   return (
-    <>
+    <div className='flex flex-col gap-y-4'>
       <div className='flex'>
         <SelectableEvaluationResultsTable
           evaluation={evaluation}
@@ -120,6 +120,6 @@ export function SelectEvaluationResults({
         />
       </div>
       <ActionButtons />
-    </>
+    </div>
   )
 }

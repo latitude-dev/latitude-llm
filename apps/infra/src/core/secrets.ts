@@ -101,6 +101,7 @@ const loopsSecretApiKey = createSecretWithVersion(
   'LOOPS_API_KEY',
   'Marketing tool loops app secret key',
 )
+
 export const mailerApiKeyArn = mailerApiKey.arn
 export const mailgunMailerApiKeyArn = mailgunMailerApiKey.arn
 export const sentryDsnArn = sentryDsn.arn

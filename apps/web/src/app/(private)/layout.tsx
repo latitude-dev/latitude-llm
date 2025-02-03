@@ -34,6 +34,10 @@ export default async function PrivateLayout({
   if (!user) return redirect(ROUTES.auth.login)
 
   const supportIdentity = createSupportUserIdentity(user)
+  const cloudInfo =
+    env.LATITUDE_CLOUD && env.LATITUDE_CLOUD_PAYMENT_URL
+      ? { paymentUrl: env.LATITUDE_CLOUD_PAYMENT_URL }
+      : undefined
   return (
     <CSPostHogProvider>
       <IdentifyUser user={user} workspace={workspace}>
@@ -48,7 +52,11 @@ export default async function PrivateLayout({
               workspace={workspace}
               socketServer={env.WEBSOCKETS_SERVER}
             >
-              <AppLayout currentUser={user} navigationLinks={NAV_LINKS}>
+              <AppLayout
+                currentUser={user}
+                navigationLinks={NAV_LINKS}
+                cloudInfo={cloudInfo}
+              >
                 {children}
               </AppLayout>
             </LatitudeWebsocketsProvider>

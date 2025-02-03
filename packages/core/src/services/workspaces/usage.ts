@@ -5,6 +5,7 @@ import { SubscriptionPlans } from '../../plans'
 import {
   ClaimedRewardsRepository,
   EvaluationResultsRepository,
+  MembershipsRepository,
 } from '../../repositories'
 import { DocumentLogsRepository } from '../../repositories/documentLogsRepository'
 import { getLatestRenewalDate } from './utils/calculateRenewalDate'
@@ -23,9 +24,6 @@ export async function computeWorkspaceUsage(
   const targetDate = new Date(Date.now())
   const latestRenewalDate = getLatestRenewalDate(createdAtDate, targetDate)
 
-  const evaluationResultsCount =
-    await evaluationResultsScope.totalCountSinceDate(latestRenewalDate)
-
   const documentLogsCount =
     await documentLogsScope.totalCountSinceDate(latestRenewalDate)
 
@@ -37,8 +35,16 @@ export async function computeWorkspaceUsage(
   const currentSubscriptionPlan =
     SubscriptionPlans[workspace.currentSubscription.plan]
 
+  const evaluationResultsCount =
+    await evaluationResultsScope.totalCountSinceDate(latestRenewalDate)
+
+  const membersRepo = new MembershipsRepository(workspace.id, db)
+  const members = await membersRepo.findAll().then((r) => r.unwrap())
+
   return Result.ok({
     usage: evaluationResultsCount + documentLogsCount,
     max: currentSubscriptionPlan.credits + extraRuns,
+    members: members.length,
+    maxMembers: currentSubscriptionPlan.users,
   })
 }

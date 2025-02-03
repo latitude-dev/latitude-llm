@@ -14,6 +14,7 @@ import { createSdk } from '$/app/(private)/_lib/createSdk'
 import { z } from 'zod'
 
 import { authProcedure } from '../procedures'
+import { CLOUD_MESSAGES } from '@latitude-data/core/browser'
 
 export const refinePromptAction = authProcedure
   .createServerAction()
@@ -27,12 +28,18 @@ export const refinePromptAction = authProcedure
     }),
   )
   .handler(async ({ ctx, input }) => {
+    if (!env.LATITUDE_CLOUD) {
+      throw new BadRequestError(CLOUD_MESSAGES.refinePrompt)
+    }
+
     if (!env.COPILOT_WORKSPACE_API_KEY) {
       throw new BadRequestError('COPILOT_WORKSPACE_API_KEY is not set')
     }
+
     if (!env.COPILOT_PROJECT_ID) {
       throw new BadRequestError('COPILOT_PROJECT_ID is not set')
     }
+
     if (!env.COPILOT_REFINE_PROMPT_PATH) {
       throw new BadRequestError('COPILOT_REFINE_PROMPT_PATH is not set')
     }
