@@ -17,6 +17,7 @@ import { redirect } from 'next/navigation'
 
 import DocumentEditor from './_components/DocumentEditor/Editor'
 import { PromptlNotificationModal } from './_components/PromptlNotificationModal'
+import env from '$/env'
 
 export default async function DocumentPage({
   params,
@@ -60,7 +61,6 @@ export default async function DocumentPage({
   const documents = await getDocumentsAtCommitCached({ commit })
   const providerApiKeys = await getProviderApiKeysCached()
   const freeRunsCount = await getFreeRuns(workspace.id)
-
   return (
     <>
       <DocumentEditor
@@ -72,6 +72,7 @@ export default async function DocumentPage({
         freeRunsCount={freeRunsCount ? Number(freeRunsCount) : undefined}
         evaluationResults={refinementResult.evaluationResults ?? []}
         evaluation={refinementResult.evaluation}
+        copilotEnabled={env.LATITUDE_CLOUD}
       />
       <PromptlNotificationModal documents={documents} />
     </>

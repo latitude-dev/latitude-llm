@@ -19,6 +19,7 @@ import { redirect } from 'next/navigation'
 import { EvaluationResults } from './_components/EvaluationResults'
 import { ManualEvaluationResultsClient } from './_components/ManualEvaluationResults'
 import { fetchEvaluationCached } from './_lib/fetchEvaluationCached'
+import env from '$/env'
 
 export default async function ConnectedEvaluationPage({
   params,
@@ -38,6 +39,7 @@ export default async function ConnectedEvaluationPage({
     projectId: Number(projectId),
     uuid: commitUuid,
   })
+  const refinementEnabled = env.LATITUDE_CLOUD
 
   if (evaluation.metadataType === EvaluationMetadataType.Manual) {
     return (
@@ -46,6 +48,7 @@ export default async function ConnectedEvaluationPage({
         evaluation={evaluation}
         params={await params}
         searchParams={await searchParams}
+        refinementEnabled={refinementEnabled}
       />
     )
   }
@@ -56,6 +59,7 @@ export default async function ConnectedEvaluationPage({
       evaluation={evaluation}
       params={await params}
       searchParams={await searchParams}
+      refinementEnabled={refinementEnabled}
     />
   )
 }
@@ -65,11 +69,13 @@ async function LlmAsJudgeEvaluationResults({
   searchParams: { pageSize, page, resultUuid },
   evaluation,
   commit,
+  refinementEnabled,
 }: {
   params: { projectId: string; commitUuid: string; documentUuid: string }
   searchParams: QueryParams
   evaluation: EvaluationDto
   commit: Commit
+  refinementEnabled: boolean
 }) {
   if (resultUuid) {
     const targetPage = await findEvaluationResultWithMetadataPage({
@@ -113,6 +119,7 @@ async function LlmAsJudgeEvaluationResults({
       evaluation={evaluation}
       evaluationResults={rows}
       selectedResult={selectedResult}
+      refinementEnabled={refinementEnabled}
     />
   )
 }
@@ -122,11 +129,13 @@ async function ManualEvaluationResults({
   searchParams: { pageSize, page, documentLogId },
   evaluation,
   commit,
+  refinementEnabled,
 }: {
   params: { projectId: string; commitUuid: string; documentUuid: string }
   searchParams: QueryParams
   evaluation: EvaluationDto
   commit: Commit
+  refinementEnabled: boolean
 }) {
   if (documentLogId) {
     const targetPage = await findDocumentLogWithEvaluationResultPage({
@@ -168,6 +177,7 @@ async function ManualEvaluationResults({
       evaluation={evaluation}
       documentLogs={rows}
       selectedLog={selectedLog}
+      refinementEnabled={refinementEnabled}
     />
   )
 }

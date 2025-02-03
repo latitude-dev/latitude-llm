@@ -5,9 +5,7 @@ import { useCallback, useMemo, useRef, useState } from 'react'
 import { EvaluationDto } from '@latitude-data/core/browser'
 import { type EvaluationResultWithMetadataAndErrors } from '@latitude-data/core/repositories'
 import {
-  Button,
   cn,
-  FloatingPanel,
   TableBlankSlate,
   Text,
   useCurrentCommit,
@@ -32,6 +30,7 @@ import {
   EvaluationResultsTable,
 } from './EvaluationResultsTable'
 import { EvaluationStatusBanner } from './EvaluationStatusBanner'
+import { RefineEvaluationResults } from '../RefineEvaluationResults'
 
 const useEvaluationResultsSocket = (
   evaluation: EvaluationDto,
@@ -84,9 +83,11 @@ export function EvaluationResults({
   evaluation,
   evaluationResults: serverData,
   selectedResult: serverSelectedResult,
+  refinementEnabled,
 }: {
   evaluation: EvaluationDto
   evaluationResults: EvaluationResultWithMetadataAndErrors[]
+  refinementEnabled: boolean
   selectedResult?: EvaluationResultWithMetadataAndErrors
 }) {
   const tabelRef = useRef<HTMLTableElement | null>(null)
@@ -155,27 +156,14 @@ export function EvaluationResults({
               selectedResult={selectedResult}
               setSelectedResult={setSelectedResult}
               selectableState={selectableState}
+              selectionEnabled={refinementEnabled}
             />
-            <div className='flex justify-center sticky bottom-4 pointer-events-none'>
-              <FloatingPanel visible={selectableState.selectedCount > 0}>
-                <div className='flex flex-row justify-between gap-x-4'>
-                  <Button
-                    disabled={selectableState.selectedCount === 0}
-                    fancy
-                    onClick={onClickRefine}
-                  >
-                    Refine prompt
-                  </Button>
-                  <Button
-                    fancy
-                    variant='outline'
-                    onClick={selectableState.clearSelections}
-                  >
-                    Clear selection
-                  </Button>
-                </div>
-              </FloatingPanel>
-            </div>
+            <RefineEvaluationResults
+              selectedCount={selectableState.selectedCount}
+              onClickRefine={onClickRefine}
+              clearSelections={selectableState.clearSelections}
+              refinementEnabled={refinementEnabled}
+            />
           </div>
         ) : (
           <TableBlankSlate

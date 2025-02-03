@@ -44,6 +44,7 @@ type Props = {
     log: DocumentLogWithMetadataAndErrorAndEvaluationResult | undefined,
   ) => void
   selectableState: SelectableRowsHook
+  selectionEnabled: boolean
 }
 export const DocumentLogsTable = forwardRef<HTMLTableElement, Props>(
   function DocumentLogsTable(
@@ -52,6 +53,7 @@ export const DocumentLogsTable = forwardRef<HTMLTableElement, Props>(
       documentLogs,
       selectedLog,
       setSelectedLog,
+      selectionEnabled,
       selectableState: {
         headerState,
         isSelected,
@@ -104,9 +106,11 @@ export const DocumentLogsTable = forwardRef<HTMLTableElement, Props>(
       >
         <TableHeader className='sticky top-0 z-10'>
           <TableRow>
-            <TableHead>
-              <Checkbox checked={headerState} onCheckedChange={toggleAll} />
-            </TableHead>
+            {selectionEnabled ? (
+              <TableHead>
+                <Checkbox checked={headerState} onCheckedChange={toggleAll} />
+              </TableHead>
+            ) : null}
             <TableHead>Time</TableHead>
             <TableHead>Origin</TableHead>
             <TableHead>Result</TableHead>
@@ -139,14 +143,18 @@ export const DocumentLogsTable = forwardRef<HTMLTableElement, Props>(
                   },
                 )}
               >
-                <TableCell preventDefault align='left'>
-                  <Checkbox
-                    fullWidth={false}
-                    disabled={resultId === undefined}
-                    checked={isSelected(resultId)}
-                    onCheckedChange={(checked) => toggleRow(resultId, checked)}
-                  />
-                </TableCell>
+                {selectionEnabled ? (
+                  <TableCell preventDefault align='left'>
+                    <Checkbox
+                      fullWidth={false}
+                      disabled={resultId === undefined}
+                      checked={isSelected(resultId)}
+                      onCheckedChange={(checked) =>
+                        toggleRow(resultId, checked)
+                      }
+                    />
+                  </TableCell>
+                ) : null}
                 <TableCell>
                   <Text.H5 noWrap color={cellColor}>
                     {relativeTime(documentLog.createdAt)}
