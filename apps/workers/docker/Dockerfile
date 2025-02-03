@@ -10,7 +10,7 @@ RUN apk add --no-cache libc6-compat curl
 FROM alpine as base
 
 # Will be used to cache pnpm store
-RUN corepack enable
+RUN npm install -g corepack@0.31.0 && corepack enable
 
 # Install pnpm
 ENV PNPM_HOME="/pnpm"
