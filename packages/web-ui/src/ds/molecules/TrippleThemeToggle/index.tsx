@@ -1,17 +1,24 @@
 'use client'
 
 import { useTheme } from 'next-themes'
-import { useCallback, useState } from 'react'
+import { useCallback } from 'react'
 import { Button, ClientOnly } from '../../atoms'
 import { cn } from '../../../lib/utils'
+import {
+  AppLocalStorage,
+  useLocalStorage,
+} from '../../../lib/hooks/useLocalStorage'
 
 export const THEMES = ['light', 'dark', 'system'] as const
 export type ThemeValue = (typeof THEMES)[number]
 
 export function TripleThemeToggle() {
   const { theme: initialTheme, setTheme } = useTheme()
-  const [theme, setLocalTheme] = useState<ThemeValue>(
-    initialTheme as unknown as ThemeValue,
+  const { value: theme, setValue: setLocalTheme } = useLocalStorage<ThemeValue>(
+    {
+      key: AppLocalStorage.colorTheme,
+      defaultValue: initialTheme as ThemeValue,
+    },
   )
   const onClick = useCallback(
     (t: ThemeValue) => () => {

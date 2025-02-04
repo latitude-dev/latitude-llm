@@ -49,16 +49,16 @@ export function SelectEvaluation({
 
   if (isLoading) {
     return (
-      <>
+      <div className='flex flex-col gap-y-4'>
         <TableSkeleton rows={7} cols={3} />
         <ActionButtons />
-      </>
+      </div>
     )
   }
 
   if (!evaluations?.length) {
     return (
-      <>
+      <div className='flex flex-col gap-y-4'>
         <TableBlankSlate
           description='There are no evaluations connected to this document. To make suggestions our system needs evaluations. Create and run an evaluation and come back.'
           link={
@@ -76,18 +76,18 @@ export function SelectEvaluation({
           }
         />
         <ActionButtons />
-      </>
+      </div>
     )
   }
 
   return (
-    <>
+    <div className='flex flex-col gap-y-4'>
       <EvaluationsTable
         documentUuid={documentVersion.documentUuid}
         evaluations={evaluations}
         onSelect={setSelectedEvaluation}
       />
       <ActionButtons />
-    </>
+    </div>
   )
 }

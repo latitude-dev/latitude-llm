@@ -1,6 +1,10 @@
 'use server'
 
-import { ChainStepResponse, PROVIDER_MODELS } from '@latitude-data/core/browser'
+import {
+  ChainStepResponse,
+  CLOUD_MESSAGES,
+  PROVIDER_MODELS,
+} from '@latitude-data/core/browser'
 import { publisher } from '@latitude-data/core/events/publisher'
 import { BadRequestError } from '@latitude-data/core/lib/errors'
 import {
@@ -24,12 +28,18 @@ export const requestSuggestionAction = authProcedure
     }),
   )
   .handler(async ({ ctx, input }) => {
+    if (!env.LATITUDE_CLOUD) {
+      throw new BadRequestError(CLOUD_MESSAGES.promptSuggestions)
+    }
+
     if (!env.COPILOT_WORKSPACE_API_KEY) {
       throw new BadRequestError('COPILOT_WORKSPACE_API_KEY is not set')
     }
+
     if (!env.COPILOT_PROJECT_ID) {
       throw new BadRequestError('COPILOT_PROJECT_ID is not set')
     }
+
     if (!env.COPILOT_CODE_SUGGESTION_PROMPT_PATH) {
       throw new BadRequestError(
         'COPILOT_CODE_SUGGESTION_PROMPT_PATH is not set',

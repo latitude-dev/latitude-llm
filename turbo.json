@@ -40,6 +40,8 @@
     "DEFAULT_PROVIDER_API_KEY",
     "KEEP_ALIVE_TIMEOUT",
     "LOOPS_API_KEY",
+    "LATITUDE_CLOUD",
+    "LATITUDE_CLOUD_PAYMENT_URL",
     "npm_package_name"
   ],
   "$schema": "https://turbo.build/schema.json",

@@ -10,9 +10,7 @@ import {
 import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
 import { fetchDocumentLogsWithEvaluationResults } from '@latitude-data/core/services/documentLogs/fetchDocumentLogsWithEvaluationResults'
 import {
-  Button,
   cn,
-  FloatingPanel,
   TableBlankSlate,
   Text,
   useCurrentCommit,
@@ -27,6 +25,7 @@ import { useSearchParams } from 'next/navigation'
 import { SubmitEvaluationDocumentation } from '../EvaluationResults/EvaluationBlankSlate'
 import { DocumentLogInfoForManualEvaluation } from './DocumentLogInfo'
 import { DocumentLogsTable } from './DocumentLogsTable'
+import { RefineEvaluationResults } from '../RefineEvaluationResults'
 
 type DocumentLogWithEvaluationResults = Awaited<
   ReturnType<typeof fetchDocumentLogsWithEvaluationResults>
@@ -42,10 +41,12 @@ export function ManualEvaluationResultsClient({
   evaluation,
   documentLogs: fallbackData,
   selectedLog: serverSelectedLog,
+  refinementEnabled,
 }: {
   evaluation: EvaluationDto
   documentLogs: DocumentLogWithEvaluationResults[]
   selectedLog?: DocumentLogWithEvaluationResults
+  refinementEnabled: boolean
 }) {
   const stickyRef = useRef<HTMLTableElement | null>(null)
   const sidebarWrapperRef = useRef<HTMLDivElement | null>(null)
@@ -113,27 +114,14 @@ export function ManualEvaluationResultsClient({
             selectedLog={selectedLog}
             setSelectedLog={setSelectedLog}
             selectableState={selectableState}
+            selectionEnabled={refinementEnabled}
           />
-          <div className='flex justify-center sticky bottom-4 pointer-events-none'>
-            <FloatingPanel visible={selectableState.selectedCount > 0}>
-              <div className='flex flex-row justify-between gap-x-4'>
-                <Button
-                  disabled={selectableState.selectedCount === 0}
-                  fancy
-                  onClick={onClickRefine}
-                >
-                  Refine prompt
-                </Button>
-                <Button
-                  fancy
-                  variant='outline'
-                  onClick={selectableState.clearSelections}
-                >
-                  Clear selection
-                </Button>
-              </div>
-            </FloatingPanel>
-          </div>
+          <RefineEvaluationResults
+            selectedCount={selectableState.selectedCount}
+            onClickRefine={onClickRefine}
+            clearSelections={selectableState.clearSelections}
+            refinementEnabled={refinementEnabled}
+          />
         </div>
         {selectedLog ? (
           <div ref={sidebarWrapperRef}>

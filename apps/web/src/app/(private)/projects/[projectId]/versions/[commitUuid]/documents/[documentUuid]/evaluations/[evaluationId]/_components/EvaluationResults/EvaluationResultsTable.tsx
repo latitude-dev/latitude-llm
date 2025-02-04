@@ -87,6 +87,7 @@ type Props = {
     log: EvaluationResultWithMetadataAndErrors | undefined,
   ) => void
   selectableState: SelectableRowsHook
+  selectionEnabled: boolean
 }
 export const EvaluationResultsTable = forwardRef<HTMLTableElement, Props>(
   function EvaluationResultsTable(
@@ -95,6 +96,7 @@ export const EvaluationResultsTable = forwardRef<HTMLTableElement, Props>(
       evaluationResults,
       selectedResult,
       setSelectedResult,
+      selectionEnabled,
       selectableState: {
         headerState,
         isSelected,
@@ -148,9 +150,11 @@ export const EvaluationResultsTable = forwardRef<HTMLTableElement, Props>(
       >
         <TableHeader className='isolate sticky top-0 z-10'>
           <TableRow>
-            <TableHead>
-              <Checkbox checked={headerState} onCheckedChange={toggleAll} />
-            </TableHead>
+            {selectionEnabled ? (
+              <TableHead>
+                <Checkbox checked={headerState} onCheckedChange={toggleAll} />
+              </TableHead>
+            ) : null}
             <TableHead>Time</TableHead>
             <TableHead>Version</TableHead>
             <TableHead>Origin</TableHead>
@@ -183,22 +187,24 @@ export const EvaluationResultsTable = forwardRef<HTMLTableElement, Props>(
                   },
                 )}
               >
-                <TableCell
-                  preventDefault
-                  align='left'
-                  onClick={() =>
-                    toggleRow(
-                      evaluationResult.id,
-                      !isSelected(evaluationResult.id),
-                    )
-                  }
-                >
-                  <Checkbox
-                    fullWidth={false}
-                    disabled={!!error}
-                    checked={error ? false : isSelected(evaluationResult.id)}
-                  />
-                </TableCell>
+                {selectionEnabled ? (
+                  <TableCell
+                    preventDefault
+                    align='left'
+                    onClick={() =>
+                      toggleRow(
+                        evaluationResult.id,
+                        !isSelected(evaluationResult.id),
+                      )
+                    }
+                  >
+                    <Checkbox
+                      fullWidth={false}
+                      disabled={!!error}
+                      checked={error ? false : isSelected(evaluationResult.id)}
+                    />
+                  </TableCell>
+                ) : null}
                 <TableCell>
                   <Text.H5 noWrap color={cellColor}>
                     <time

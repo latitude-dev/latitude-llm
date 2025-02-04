@@ -8,6 +8,7 @@ import { persist, PersistOptions } from 'zustand/middleware'
 import { ReactStateDispatch, SetStateAction } from '../commonTypes'
 
 export enum AppLocalStorage {
+  colorTheme = 'latitudeColorTheme',
   editorLineNumbers = 'editorLineNumbers',
   editorWrapText = 'editorWrapText',
   editorMinimap = 'editorMinimap',
@@ -18,7 +19,7 @@ export enum AppLocalStorage {
   expandParameters = 'expandParameters',
 }
 
-const isLocalStorageAvailable = (() => {
+export const isLocalStorageAvailable = (() => {
   try {
     const testKey = '__test__'
     localStorage.setItem(testKey, testKey)
