@@ -1,6 +1,7 @@
 import {
   forwardRef,
   HTMLAttributes,
+  MouseEvent,
   ReactNode,
   TdHTMLAttributes,
   ThHTMLAttributes,
@@ -159,22 +160,12 @@ const TableHead = forwardRef<HTMLTableCellElement, THeadProps>(
 )
 TableHead.displayName = 'TableHead'
 
-type CellProps = TdHTMLAttributes<HTMLTableCellElement> & {
+type CommonCellProps = TdHTMLAttributes<HTMLTableCellElement> & {
   align?: 'left' | 'center' | 'right'
-  preventDefault?: boolean
 }
-const TableCell = forwardRef<HTMLTableCellElement, CellProps>(
-  (
-    {
-      className,
-      children,
-      align = 'left',
-      preventDefault = false,
-      onClick,
-      ...props
-    },
-    ref,
-  ) => (
+
+const ServerSideTableCell = forwardRef<HTMLTableCellElement, CommonCellProps>(
+  ({ className, children, align = 'left', ...props }, ref) => (
     <td
       ref={ref}
       className={cn(
@@ -182,12 +173,6 @@ const TableCell = forwardRef<HTMLTableCellElement, CellProps>(
         className,
       )}
       {...props}
-      onClick={(e) => {
-        if (!preventDefault) return
-        e.preventDefault()
-        e.stopPropagation()
-        onClick?.(e)
-      }}
     >
       <div
         className={cn('flex', {
@@ -199,6 +184,29 @@ const TableCell = forwardRef<HTMLTableCellElement, CellProps>(
         {children}
       </div>
     </td>
+  ),
+)
+ServerSideTableCell.displayName = 'ServerSideTableCell'
+
+type CellProps = CommonCellProps & {
+  preventDefault?: boolean
+  onClick?: (e: MouseEvent<HTMLTableCellElement>) => void
+}
+
+const TableCell = forwardRef<HTMLTableCellElement, CellProps>(
+  ({ children, onClick, preventDefault = true, ...props }, ref) => (
+    <ServerSideTableCell
+      ref={ref}
+      {...props}
+      onClick={(e) => {
+        if (!preventDefault) return
+        e.preventDefault()
+        e.stopPropagation()
+        onClick?.(e)
+      }}
+    >
+      {children}
+    </ServerSideTableCell>
   ),
 )
 TableCell.displayName = 'TableCell'
@@ -223,5 +231,6 @@ export {
   TableHead,
   TableRow,
   TableCell,
+  ServerSideTableCell,
   TableCaption,
 }

@@ -8,22 +8,28 @@ import { computeWorkspaceUsage } from './usage'
 
 describe('computeWorkspaceUsage', () => {
   it('calculates usage correctly when there are evaluation results and document logs', async (ctx) => {
-    const { workspace, user, commit, documents, evaluations } =
-      await ctx.factories.createProject({
-        providers: [{ type: Providers.OpenAI, name: 'test' }],
-        documents: {
-          foo: ctx.factories.helpers.createPrompt({ provider: 'test' }),
-        },
-        evaluations: [
-          { prompt: ctx.factories.helpers.createPrompt({ provider: 'test' }) },
-        ],
-      })
+    const {
+      workspace: wsp,
+      user,
+      commit,
+      documents,
+      evaluations,
+    } = await ctx.factories.createProject({
+      providers: [{ type: Providers.OpenAI, name: 'test' }],
+      documents: {
+        foo: ctx.factories.helpers.createPrompt({ provider: 'test' }),
+      },
+      evaluations: [
+        { prompt: ctx.factories.helpers.createPrompt({ provider: 'test' }) },
+      ],
+    })
 
     const NUM_DOC_LOGS = 5
     const NUM_EVAL_LOGS = 5
 
     const document = documents[0]!
     const evaluation = evaluations[0]!
+    const workspace = wsp as WorkspaceDto
     await connectEvaluations({
       user,
       workspace,
@@ -58,16 +64,18 @@ describe('computeWorkspaceUsage', () => {
         ),
     )
 
-    const result = await computeWorkspaceUsage(workspace as WorkspaceDto).then(
-      (r) => r.unwrap(),
-    )
+    const result = await computeWorkspaceUsage({
+      id: workspace.id,
+      currentSubscriptionCreatedAt: workspace.currentSubscription.createdAt,
+      plan: workspace.currentSubscription.plan,
+    }).then((r) => r.unwrap())
 
     expect(result.usage).toBe(documentLogs.length + evaluationLogs.length)
   })
 
   it('calculates usage correctly even if there are multiple workspaces with evaluation results and document logs', async (ctx) => {
     const {
-      workspace: workspace1,
+      workspace: wsp1,
       documents: documents1,
       evaluations: evaluations1,
       commit: commit1,
@@ -81,6 +89,7 @@ describe('computeWorkspaceUsage', () => {
       ],
     })
 
+    const workspace1 = wsp1 as WorkspaceDto
     const {
       workspace: workspace2,
       documents: documents2,
@@ -176,25 +185,32 @@ describe('computeWorkspaceUsage', () => {
         ),
     )
 
-    const result = await computeWorkspaceUsage(workspace1 as WorkspaceDto).then(
-      (r) => r.unwrap(),
-    )
+    const result = await computeWorkspaceUsage({
+      id: workspace1.id,
+      currentSubscriptionCreatedAt: workspace1.currentSubscription.createdAt,
+      plan: workspace1.currentSubscription.plan,
+    }).then((r) => r.unwrap())
 
     expect(result.usage).toBe(documentLogs1.length + evaluationLogs1.length)
   })
 
   it('calculates usage correctly when there are no evaluation results or document logs', async (ctx) => {
-    const { workspace, user, documents, evaluations } =
-      await ctx.factories.createProject({
-        providers: [{ type: Providers.OpenAI, name: 'test' }],
-        documents: {
-          foo: ctx.factories.helpers.createPrompt({ provider: 'test' }),
-        },
-        evaluations: [
-          { prompt: ctx.factories.helpers.createPrompt({ provider: 'test' }) },
-        ],
-      })
+    const {
+      workspace: wsp,
+      user,
+      documents,
+      evaluations,
+    } = await ctx.factories.createProject({
+      providers: [{ type: Providers.OpenAI, name: 'test' }],
+      documents: {
+        foo: ctx.factories.helpers.createPrompt({ provider: 'test' }),
+      },
+      evaluations: [
+        { prompt: ctx.factories.helpers.createPrompt({ provider: 'test' }) },
+      ],
+    })
 
+    const workspace = wsp as WorkspaceDto
     const document = documents[0]!
     const evaluation = evaluations[0]!
     await connectEvaluations({
@@ -204,16 +220,18 @@ describe('computeWorkspaceUsage', () => {
       evaluationUuids: [evaluation.uuid],
     })
 
-    const result = await computeWorkspaceUsage(workspace as WorkspaceDto).then(
-      (r) => r.unwrap(),
-    )
+    const result = await computeWorkspaceUsage({
+      id: workspace.id,
+      currentSubscriptionCreatedAt: workspace.currentSubscription.createdAt,
+      plan: workspace.currentSubscription.plan,
+    }).then((r) => r.unwrap())
 
     expect(result.usage).toBe(0)
   })
 
   it('calculates usage correctly across multiple projects within the workspace', async (ctx) => {
     const {
-      workspace,
+      workspace: wsp,
       user: user1,
       commit: commit1,
       documents: documents1,
@@ -228,6 +246,7 @@ describe('computeWorkspaceUsage', () => {
       ],
     })
 
+    const workspace = wsp as WorkspaceDto
     const {
       commit: commit2,
       documents: documents2,
@@ -317,24 +336,32 @@ describe('computeWorkspaceUsage', () => {
     const documentLogs = [...document1Logs, ...document2Logs]
     const evaluationLogs = [...evaluation1Logs, ...evaluation2Logs]
 
-    const result = await computeWorkspaceUsage(workspace as WorkspaceDto).then(
-      (r) => r.unwrap(),
-    )
+    const result = await computeWorkspaceUsage({
+      id: workspace.id,
+      currentSubscriptionCreatedAt: workspace.currentSubscription.createdAt,
+      plan: workspace.currentSubscription.plan,
+    }).then((r) => r.unwrap())
 
     expect(result.usage).toBe(documentLogs.length + evaluationLogs.length)
   })
 
   it('takes logs from removed commits and evaluations into account', async (ctx) => {
-    const { user, workspace, project, documents, evaluations } =
-      await ctx.factories.createProject({
-        providers: [{ type: Providers.OpenAI, name: 'test' }],
-        documents: {
-          foo: ctx.factories.helpers.createPrompt({ provider: 'test' }),
-        },
-        evaluations: [
-          { prompt: ctx.factories.helpers.createPrompt({ provider: 'test' }) },
-        ],
-      })
+    const {
+      user,
+      workspace: wsp,
+      project,
+      documents,
+      evaluations,
+    } = await ctx.factories.createProject({
+      providers: [{ type: Providers.OpenAI, name: 'test' }],
+      documents: {
+        foo: ctx.factories.helpers.createPrompt({ provider: 'test' }),
+      },
+      evaluations: [
+        { prompt: ctx.factories.helpers.createPrompt({ provider: 'test' }) },
+      ],
+    })
+    const workspace = wsp as WorkspaceDto
 
     const { commit: draft } = await ctx.factories.createDraft({ project, user })
 
@@ -381,9 +408,11 @@ describe('computeWorkspaceUsage', () => {
     await deleteCommitDraft(draft)
     await destroyEvaluation({ evaluation })
 
-    const result = await computeWorkspaceUsage(workspace as WorkspaceDto).then(
-      (r) => r.unwrap(),
-    )
+    const result = await computeWorkspaceUsage({
+      id: workspace.id,
+      currentSubscriptionCreatedAt: workspace.currentSubscription.createdAt,
+      plan: workspace.currentSubscription.plan,
+    }).then((r) => r.unwrap())
 
     expect(result.usage).toBe(documentLogs.length + evaluationLogs.length)
   })
@@ -394,7 +423,11 @@ describe('computeWorkspaceUsage', () => {
     const createdAt = new Date(2023, 6, 3)
     vi.spyOn(Date, 'now').mockImplementation(() => today.getTime())
 
-    const { workspace, commit, documents } = await ctx.factories.createProject({
+    const {
+      workspace: wsp,
+      commit,
+      documents,
+    } = await ctx.factories.createProject({
       providers: [{ type: Providers.OpenAI, name: 'test' }],
       documents: {
         foo: ctx.factories.helpers.createPrompt({ provider: 'test' }),
@@ -403,6 +436,7 @@ describe('computeWorkspaceUsage', () => {
         createdAt,
       },
     })
+    const workspace = wsp as WorkspaceDto
 
     expect(workspace.createdAt).toEqual(createdAt)
     const document = documents[0]!
@@ -448,9 +482,11 @@ describe('computeWorkspaceUsage', () => {
         }),
     )
 
-    const result = await computeWorkspaceUsage(workspace as WorkspaceDto).then(
-      (r) => r.unwrap(),
-    )
+    const result = await computeWorkspaceUsage({
+      id: workspace.id,
+      currentSubscriptionCreatedAt: workspace.currentSubscription.createdAt,
+      plan: workspace.currentSubscription.plan,
+    }).then((r) => r.unwrap())
 
     expect(result.usage).toBe(NUM_INCLUDED_DOC_LOGS)
   })

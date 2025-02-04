@@ -1,6 +1,8 @@
 import {
+  ArrowDownIcon,
   ArrowLeft,
   ArrowRightIcon,
+  ArrowUpIcon,
   BarChart4,
   Bot,
   CalendarIcon,
@@ -20,6 +22,7 @@ import {
   Copy,
   Ellipsis,
   EllipsisVertical,
+  EqualApproximatelyIcon,
   EqualNotIcon,
   ExternalLink,
   Eye,
@@ -140,6 +143,9 @@ const Icons = {
   imageUp: ImageUp,
   logs: Logs,
   close: XIcon,
+  arrowUp: ArrowUpIcon,
+  arrowDown: ArrowDownIcon,
+  equalApproximately: EqualApproximatelyIcon,
 }
 
 export type IconName = keyof typeof Icons

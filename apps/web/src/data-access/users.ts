@@ -81,6 +81,14 @@ export async function getCurrentUserFromDB({
   }
 }
 
+export function getPlanFromSubscriptionSlug(
+  slug: SubscriptionPlan | undefined,
+) {
+  const plan = slug || SubscriptionPlan.HobbyV2
+  const planData = SubscriptionPlans[plan]
+  return { ...planData, plan }
+}
+
 export async function unsafelyGetCurrentUserFromDb({
   userId,
 }: {
@@ -90,9 +98,7 @@ export async function unsafelyGetCurrentUserFromDb({
   const workspaces = await unsafelyFindWorkspacesFromUser(userId)
   const workspace = workspaces[0]
   const plan = workspace?.currentSubscription.plan
-  const subscriptionPlan = plan
-    ? SubscriptionPlans[plan]
-    : SubscriptionPlans[SubscriptionPlan.HobbyV2]
+  const subscriptionPlan = getPlanFromSubscriptionSlug(plan)
 
   return { user, workspace, subscriptionPlan }
 }

@@ -1,7 +1,7 @@
-import { WorkspaceDto, WorkspaceUsage } from '../../browser'
+import { Subscription, Workspace, WorkspaceUsage } from '../../browser'
 import { database } from '../../client'
 import { PromisedResult, Result } from '../../lib'
-import { SubscriptionPlans } from '../../plans'
+import { SubscriptionPlan, SubscriptionPlans } from '../../plans'
 import {
   ClaimedRewardsRepository,
   EvaluationResultsRepository,
@@ -11,7 +11,11 @@ import { DocumentLogsRepository } from '../../repositories/documentLogsRepositor
 import { getLatestRenewalDate } from './utils/calculateRenewalDate'
 
 export async function computeWorkspaceUsage(
-  workspace: WorkspaceDto,
+  workspace: {
+    id: Workspace['id']
+    currentSubscriptionCreatedAt: Subscription['createdAt']
+    plan: SubscriptionPlan
+  },
   db = database,
 ): PromisedResult<WorkspaceUsage, Error> {
   const documentLogsScope = new DocumentLogsRepository(workspace.id, db)
@@ -20,7 +24,7 @@ export async function computeWorkspaceUsage(
     db,
   )
 
-  const createdAtDate = workspace.currentSubscription.createdAt
+  const createdAtDate = workspace.currentSubscriptionCreatedAt
   const targetDate = new Date(Date.now())
   const latestRenewalDate = getLatestRenewalDate(createdAtDate, targetDate)
 
@@ -32,8 +36,7 @@ export async function computeWorkspaceUsage(
     .getExtraRunsOptimistic()
     .then((r) => r.unwrap())
 
-  const currentSubscriptionPlan =
-    SubscriptionPlans[workspace.currentSubscription.plan]
+  const currentSubscriptionPlan = SubscriptionPlans[workspace.plan]
 
   const evaluationResultsCount =
     await evaluationResultsScope.totalCountSinceDate(latestRenewalDate)
