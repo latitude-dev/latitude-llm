@@ -14,8 +14,8 @@ import {
   ProjectsRepository,
 } from '../../repositories'
 import { connectedEvaluations } from '../../schema'
-import { importLlmAsJudgeEvaluation } from './create'
 import { pingProjectUpdate } from '../projects'
+import { importLlmAsJudgeEvaluation } from './create'
 
 export function connectEvaluations(
   {
@@ -24,12 +24,14 @@ export function connectEvaluations(
     evaluationUuids,
     templateIds,
     user,
+    live = false,
   }: {
     workspace: Workspace
     documentUuid: string
     evaluationUuids?: string[]
     templateIds?: number[]
     user: User
+    live?: boolean
   },
   db = database,
 ): PromisedResult<ConnectedEvaluation[], Error> {
@@ -94,6 +96,7 @@ export function connectEvaluations(
           allEvaluationIds.map((evaluationId) => ({
             documentUuid,
             evaluationId,
+            live,
           })),
         )
         .returning()

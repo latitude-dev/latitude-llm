@@ -3,6 +3,10 @@ import { eq } from 'drizzle-orm'
 
 import {
   DOCUMENT_PATH_REGEXP,
+  EvaluationConfigurationNumerical,
+  EvaluationMetadataLlmAsJudgeSimple,
+  EvaluationMetadataType,
+  EvaluationResultableType,
   findFirstModelForProvider,
   User,
   Workspace,
@@ -15,8 +19,9 @@ import { Result, Transaction, TypedResult } from '../../lib'
 import { BadRequestError } from '../../lib/errors'
 import { DocumentVersionsRepository } from '../../repositories'
 import { documentVersions } from '../../schema'
-import { findDefaultProvider } from '../providerApiKeys/findDefaultProvider'
+import { connectEvaluations, createEvaluation } from '../evaluations'
 import { pingProjectUpdate } from '../projects'
+import { findDefaultProvider } from '../providerApiKeys/findDefaultProvider'
 import { getDocumentType } from './update'
 
 export async function createNewDocument(
@@ -82,6 +87,8 @@ export async function createNewDocument(
       })
       .returning()
 
+    const document = newDoc[0]!
+
     // Invalidate all resolvedContent for this commit
     await tx
       .update(documentVersions)
@@ -93,13 +100,49 @@ export async function createNewDocument(
     publisher.publishLater({
       type: 'documentCreated',
       data: {
-        document: newDoc[0]!,
+        document: document,
         workspaceId: workspace.id,
         userEmail: user?.email,
       },
     })
 
-    return Result.ok(newDoc[0]!)
+    if (user) {
+      const evaluation = await createEvaluation(
+        {
+          workspace: workspace,
+          user: user,
+          name: `[${path.split('/').at(-1)}] Accuracy`,
+          description: `Evaluates how well the given instructions are followed.`,
+          metadataType: EvaluationMetadataType.LlmAsJudgeSimple,
+          metadata: {
+            objective:
+              'Assess how well the response follows the given instructions.',
+            additionalInstructions: 'The output should be formatted in JSON.',
+          } as EvaluationMetadataLlmAsJudgeSimple,
+          resultType: EvaluationResultableType.Number,
+          resultConfiguration: {
+            minValue: 1,
+            maxValue: 5,
+            minValueDescription: 'Not faithful, not follows the instructions.',
+            maxValueDescription: 'Very faithful, follows the instructions.',
+          } as EvaluationConfigurationNumerical,
+        },
+        tx,
+      ).then((r) => r.unwrap())
+
+      await connectEvaluations(
+        {
+          workspace: workspace,
+          documentUuid: document.documentUuid,
+          evaluationUuids: [evaluation.uuid],
+          user: user,
+          live: true,
+        },
+        tx,
+      ).then((r) => r.unwrap())
+    }
+
+    return Result.ok(document)
   }, db)
 }
 
