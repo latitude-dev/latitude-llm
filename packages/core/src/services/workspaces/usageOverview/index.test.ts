@@ -28,28 +28,43 @@ describe('getUsageOverview', () => {
       targetDate,
     })
 
-    expect(onlyOverviewWorkspaces(result)).toEqual([
+    // TODO: Implement the rest of this
+    // BUT first check performance of main query
+    /* expect(onlyOverviewWorkspaces(result)).toEqual([ */
+    /*   { */
+    /*     ...data.workspaces.workspaceA.expectedData, */
+    /*     subscriptionCreatedAt: '2024-07-19 00:00:00', */
+    /*     lastMonthRuns: '4', */
+    /*     currentPeriodAt: '2025-01-19 00:00:00', */
+    /*     currentPeriodRuns: '4', */
+    /*     oneMonthAgoPeriodAt: '2024-12-19 00:00:00', */
+    /*     oneMonthAgoPeriodRuns: '1', */
+    /*     twoMonthsAgoPeriodAt: '2024-11-19 00:00:00', */
+    /*     twoMonthsAgoPeriodRuns: '2', */
+    /*   }, */
+    /*   { */
+    /*     ...data.workspaces.workspaceB.expectedData, */
+    /*     subscriptionCreatedAt: '2024-07-19 00:00:00', */
+    /*     lastMonthRuns: '3', */
+    /*     currentPeriodAt: '2025-01-19 00:00:00', */
+    /*     currentPeriodRuns: '2', */
+    /*     oneMonthAgoPeriodAt: '2024-12-19 00:00:00', */
+    /*     oneMonthAgoPeriodRuns: '2', */
+    /*     twoMonthsAgoPeriodAt: '2024-11-19 00:00:00', */
+    /*     twoMonthsAgoPeriodRuns: '1', */
+    /*   }, */
+    /* ]) */
+    const overviewWorkspaces = onlyOverviewWorkspaces(result)
+    expect(overviewWorkspaces).toEqual([
       {
-        ...data.workspaces.workspaceA.expectedData,
-        subscriptionCreatedAt: '2024-07-19 00:00:00',
+        workspaceId: data.workspaces.workspaceA.expectedData.id,
+        name: data.workspaces.workspaceA.expectedData.name,
         lastMonthRuns: '4',
-        currentPeriodAt: '2025-01-19 00:00:00',
-        currentPeriodRuns: '4',
-        oneMonthAgoPeriodAt: '2024-12-19 00:00:00',
-        oneMonthAgoPeriodRuns: '1',
-        twoMonthsAgoPeriodAt: '2024-11-19 00:00:00',
-        twoMonthsAgoPeriodRuns: '2',
       },
       {
-        ...data.workspaces.workspaceB.expectedData,
-        subscriptionCreatedAt: '2024-07-19 00:00:00',
+        workspaceId: data.workspaces.workspaceB.expectedData.id,
+        name: data.workspaces.workspaceB.expectedData.name,
         lastMonthRuns: '3',
-        currentPeriodAt: '2025-01-19 00:00:00',
-        currentPeriodRuns: '2',
-        oneMonthAgoPeriodAt: '2024-12-19 00:00:00',
-        oneMonthAgoPeriodRuns: '2',
-        twoMonthsAgoPeriodAt: '2024-11-19 00:00:00',
-        twoMonthsAgoPeriodRuns: '1',
       },
     ])
   })
@@ -71,26 +86,27 @@ describe('getUsageOverview', () => {
     })
     expect(onlyOverviewWorkspaces(result)).toEqual([
       {
-        ...data.workspaces.workspaceA.expectedData,
-        subscriptionCreatedAt: '2024-07-19 00:00:00',
+        workspaceId: data.workspaces.workspaceA.expectedData.id,
+        name: data.workspaces.workspaceA.expectedData.name,
         lastMonthRuns: '4',
-        currentPeriodAt: '2025-01-19 00:00:00',
-        currentPeriodRuns: '4',
-        oneMonthAgoPeriodAt: '2024-12-19 00:00:00',
-        oneMonthAgoPeriodRuns: '1',
-        twoMonthsAgoPeriodAt: '2024-11-19 00:00:00',
-        twoMonthsAgoPeriodRuns: '2',
+        /* subscriptionCreatedAt: '2024-07-19 00:00:00', */
+        /* currentPeriodAt: '2025-01-19 00:00:00', */
+        /* currentPeriodRuns: '4', */
+        /* oneMonthAgoPeriodAt: '2024-12-19 00:00:00', */
+        /* oneMonthAgoPeriodRuns: '1', */
+        /* twoMonthsAgoPeriodAt: '2024-11-19 00:00:00', */
+        /* twoMonthsAgoPeriodRuns: '2', */
       },
       {
-        ...data.workspaces.workspaceB.expectedData,
-        subscriptionCreatedAt: '2024-07-19 00:00:00',
+        workspaceId: data.workspaces.workspaceB.expectedData.id,
+        name: data.workspaces.workspaceB.expectedData.name,
         lastMonthRuns: '2',
-        currentPeriodAt: '2025-01-19 00:00:00',
-        currentPeriodRuns: '1',
-        oneMonthAgoPeriodAt: '2024-12-19 00:00:00',
-        oneMonthAgoPeriodRuns: '2',
-        twoMonthsAgoPeriodAt: '2024-11-19 00:00:00',
-        twoMonthsAgoPeriodRuns: '1',
+        /* currentPeriodAt: '2025-01-19 00:00:00', */
+        /* currentPeriodRuns: '1', */
+        /* oneMonthAgoPeriodAt: '2024-12-19 00:00:00', */
+        /* oneMonthAgoPeriodRuns: '2', */
+        /* twoMonthsAgoPeriodAt: '2024-11-19 00:00:00', */
+        /* twoMonthsAgoPeriodRuns: '1', */
       },
     ])
   })
@@ -119,26 +135,28 @@ describe('getUsageOverview', () => {
     })
     expect(onlyOverviewWorkspaces(result)).toEqual([
       {
-        ...data.workspaces.workspaceA.expectedData,
-        subscriptionCreatedAt: '2024-07-19 00:00:00',
+        workspaceId: data.workspaces.workspaceA.expectedData.id,
+        name: data.workspaces.workspaceA.expectedData.name,
         lastMonthRuns: '4',
-        currentPeriodAt: '2025-01-19 00:00:00',
-        currentPeriodRuns: '4',
-        oneMonthAgoPeriodAt: '2024-12-19 00:00:00',
-        oneMonthAgoPeriodRuns: '1',
-        twoMonthsAgoPeriodAt: '2024-11-19 00:00:00',
-        twoMonthsAgoPeriodRuns: '2',
+        /* subscriptionCreatedAt: '2024-07-19 00:00:00', */
+        /* currentPeriodAt: '2025-01-19 00:00:00', */
+        /* currentPeriodRuns: '4', */
+        /* oneMonthAgoPeriodAt: '2024-12-19 00:00:00', */
+        /* oneMonthAgoPeriodRuns: '1', */
+        /* twoMonthsAgoPeriodAt: '2024-11-19 00:00:00', */
+        /* twoMonthsAgoPeriodRuns: '2', */
       },
       {
-        ...data.workspaces.workspaceB.expectedData,
-        subscriptionCreatedAt: '2024-07-19 00:00:00',
+        workspaceId: data.workspaces.workspaceB.expectedData.id,
+        name: data.workspaces.workspaceB.expectedData.name,
         lastMonthRuns: '2', // Removed one here
-        currentPeriodAt: '2025-01-19 00:00:00',
-        currentPeriodRuns: '1', // Removed one here
-        oneMonthAgoPeriodAt: '2024-12-19 00:00:00',
-        oneMonthAgoPeriodRuns: '2',
-        twoMonthsAgoPeriodAt: '2024-11-19 00:00:00',
-        twoMonthsAgoPeriodRuns: '0', // Removed one here
+        /* subscriptionCreatedAt: '2024-07-19 00:00:00', */
+        /* currentPeriodAt: '2025-01-19 00:00:00', */
+        /* currentPeriodRuns: '1', // Removed one here */
+        /* oneMonthAgoPeriodAt: '2024-12-19 00:00:00', */
+        /* oneMonthAgoPeriodRuns: '2', */
+        /* twoMonthsAgoPeriodAt: '2024-11-19 00:00:00', */
+        /* twoMonthsAgoPeriodRuns: '0', // Removed one here */
       },
     ])
   })

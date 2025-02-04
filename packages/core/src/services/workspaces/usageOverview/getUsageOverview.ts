@@ -1,23 +1,21 @@
-import { desc, sql, eq, max } from 'drizzle-orm'
+import { sql, count, desc, eq, and, gte, isNull, max } from 'drizzle-orm'
 import { database, Database } from '../../../client'
-import { buildDocumentLogsCountersQuery } from './documentLogsCountersQuery'
-import { buildEvaluationResultsCountersQuery } from './evaluationResultsCountersQuery'
-import { workspaceUsageInfoQuery } from './workspaceUsageInfoQuery'
-import { buildSubscriptionWithRenewalDatesQuery } from '../utils/calculateRenewalDate'
+import {
+  commits,
+  documentLogs,
+  evaluationResults,
+  evaluations,
+  projects,
+  runErrors,
+  workspaces,
+} from '../../../schema'
+import { ErrorableEntity } from '../../../constants'
 
-/**
- * NOTE:
- * This query is pre-agrragating the data for the overview page.
- * It has a subquery for documentLogs and evaluationResults.
- * I'm aware that this can do full table scans.
- * But without pre-aggregating the data the query results in duplicate rows.
- * so the counts are wrong.
- */
 export async function getUsageOverview(
   {
-    pageSize,
     page,
-    targetDate,
+    pageSize,
+    targetDate: target,
   }: {
     pageSize: number
     page: number
@@ -25,64 +23,95 @@ export async function getUsageOverview(
   },
   db: Database = database,
 ) {
-  const renewalDates = buildSubscriptionWithRenewalDatesQuery(targetDate)
-  const documentLogsCountersQuery = buildDocumentLogsCountersQuery(renewalDates)
-  const evaluationResultsCountersQuery =
-    buildEvaluationResultsCountersQuery(renewalDates)
-  const query = db
+  const targetDate =
+    target?.toISOString().replace('T', ' ').replace('Z', '') ?? undefined
+  const dateCondition = targetDate
+    ? sql<Date>`CAST(${targetDate} AS DATE)`
+    : sql<Date>`CURRENT_DATE`
+
+  const logsCTE = db.$with('document_logs_counts').as(
+    db
+      .select({
+        workspaceId: sql<number>`${workspaces.id}`.as(
+          'document_log_workspace_id',
+        ),
+        logsCount: count(documentLogs.id).as('document_logs_counts'),
+      })
+      .from(documentLogs)
+      .leftJoin(commits, eq(commits.id, documentLogs.commitId))
+      .leftJoin(projects, eq(projects.id, commits.projectId))
+      .leftJoin(workspaces, eq(workspaces.id, projects.workspaceId))
+      .leftJoin(
+        runErrors,
+        and(
+          eq(runErrors.errorableUuid, documentLogs.uuid),
+          eq(runErrors.errorableType, ErrorableEntity.DocumentLog),
+        ),
+      )
+      .where(
+        and(
+          isNull(runErrors.id),
+          gte(
+            documentLogs.createdAt,
+            sql<Date>`${dateCondition} - INTERVAL '1 month'`,
+          ),
+        ),
+      )
+      .groupBy(workspaces.id),
+  )
+
+  const evaluationResultsCTE = db.$with('evaluation_results_counts').as(
+    db
+      .select({
+        workspaceId: sql<number>`${workspaces.id}`.as(
+          'evaluation_result_workspace_id',
+        ),
+        evaluationResultsCount: count(evaluationResults.id).as(
+          'evaluation_results_counts',
+        ),
+      })
+      .from(evaluationResults)
+      .leftJoin(evaluations, eq(evaluations.id, evaluationResults.evaluationId))
+      .leftJoin(workspaces, eq(workspaces.id, evaluations.workspaceId))
+      .leftJoin(
+        runErrors,
+        and(
+          eq(runErrors.errorableUuid, evaluationResults.uuid),
+          eq(runErrors.errorableType, ErrorableEntity.EvaluationResult),
+        ),
+      )
+      .where(
+        and(
+          isNull(runErrors.id),
+          gte(
+            evaluationResults.createdAt,
+            sql<Date>`${dateCondition} - INTERVAL '1 month'`,
+          ),
+        ),
+      )
+      .groupBy(workspaces.id),
+  )
+
+  return db
+    .with(logsCTE, evaluationResultsCTE)
     .select({
-      id: workspaceUsageInfoQuery.id,
-      name: max(workspaceUsageInfoQuery.name),
-      subscriptionPlan: max(workspaceUsageInfoQuery.subscriptionPlan),
-      emails: max(workspaceUsageInfoQuery.emails),
-      numOfMembers: max(workspaceUsageInfoQuery.numOfMembers),
-      subscriptionCreatedAt: max(workspaceUsageInfoQuery.subscriptionCreatedAt),
-
-      // Last 30 (or 31) natural days generated runs (documentLogs + evaluationResults)
+      workspaceId: max(workspaces.id),
+      name: max(workspaces.name),
       lastMonthRuns: sql<number>`SUM(
-        ${documentLogsCountersQuery.lastMonthCount} +
-        ${evaluationResultsCountersQuery.oneMonthCount}
+        COALESCE(${logsCTE.logsCount}, 0) +
+        COALESCE(${evaluationResultsCTE.evaluationResultsCount}, 0)
       )`.as('last_month_runs'),
-
-      // Current period (period is when subscription was created)
-      currentPeriodAt: max(documentLogsCountersQuery.currentPeriodAt),
-      currentPeriodRuns: sql<number>`SUM(
-        ${documentLogsCountersQuery.currentPeriodCount} +
-        ${evaluationResultsCountersQuery.currentPeriodCount}
-      )`.as('current_period_runs'),
-
-      // One month ago period
-      oneMonthAgoPeriodAt: max(documentLogsCountersQuery.oneMonthAgoPeriodAt),
-      oneMonthAgoPeriodRuns: sql<number>`SUM(
-        ${documentLogsCountersQuery.oneMonthAgoPeriodCount} +
-        ${evaluationResultsCountersQuery.oneMonthAgoPeriodCount}
-      )`.as('one_month_ago_period_runs'),
-
-      // Two months ago period
-      twoMonthsAgoPeriodAt: max(documentLogsCountersQuery.twoMonthsAgoPeriodAt),
-      twoMonthsAgoPeriodRuns: sql<number>`SUM(
-        ${documentLogsCountersQuery.twoMonthsAgoPeriodCount} +
-        ${evaluationResultsCountersQuery.twoMonthsAgoPeriodCount}
-      )`.as('two_months_ago_period_runs'),
     })
-    .from(workspaceUsageInfoQuery)
-    .innerJoin(
-      documentLogsCountersQuery,
-      eq(documentLogsCountersQuery.workspaceId, workspaceUsageInfoQuery.id),
+    .from(workspaces)
+    .leftJoin(logsCTE, eq(logsCTE.workspaceId, workspaces.id))
+    .leftJoin(
+      evaluationResultsCTE,
+      eq(evaluationResultsCTE.workspaceId, workspaces.id),
     )
-    .innerJoin(
-      evaluationResultsCountersQuery,
-      eq(
-        evaluationResultsCountersQuery.workspaceId,
-        workspaceUsageInfoQuery.id,
-      ),
-    )
-    .groupBy(workspaceUsageInfoQuery.id)
+    .groupBy(workspaces.id)
     .orderBy(desc(sql<number>`last_month_runs`))
     .limit(pageSize)
     .offset((page - 1) * pageSize)
-
-  return await query
 }
 
 export type GetUsageOverviewRow = Awaited<

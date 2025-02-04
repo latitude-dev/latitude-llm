@@ -19,7 +19,7 @@ export default async function AdminPage({
 }) {
   const { page: pageParam, pageSize: pageSizeParam } = await searchParams
   const page = pageParam ? +pageParam : 1
-  const pageSize = pageSizeParam ? +pageSizeParam : 2
+  const pageSize = pageSizeParam ? +pageSizeParam : 25
   const pagination = buildPagination({
     count: Infinity, // We avoid calculating the full amount of workspaces
     baseUrl: ROUTES.backoffice.usageOverview.root,
@@ -43,15 +43,12 @@ export default async function AdminPage({
               <TableRow>
                 <TableHead>Subscription</TableHead>
                 <TableHead>Last 30 days</TableHead>
-                <TableHead>Two months ago</TableHead>
-                <TableHead>One month ago</TableHead>
-                <TableHead>Current period</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {workspaces.map((workspace) => (
                 <OverviewRow
-                  key={workspace.id}
+                  key={workspace.workspaceId}
                   workspace={workspace}
                   today={today}
                 />
