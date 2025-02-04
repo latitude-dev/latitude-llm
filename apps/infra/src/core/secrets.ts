@@ -101,6 +101,10 @@ const loopsSecretApiKey = createSecretWithVersion(
   'LOOPS_API_KEY',
   'Marketing tool loops app secret key',
 )
+const latitudeCloudPaymentUrl = createSecretWithVersion(
+  'LATITUDE_CLOUD_PAYMENT_URL',
+  'URL for payment page',
+)
 
 export const mailerApiKeyArn = mailerApiKey.arn
 export const mailgunMailerApiKeyArn = mailgunMailerApiKey.arn
@@ -118,3 +122,4 @@ export const postHogApiKeyArn = postHogApiKey.arn
 export const supportAppIdArn = supportAppId.arn
 export const supportAppSecretKeyArn = supportAppSecretKey.arn
 export const loopsSecretApiKeyArn = loopsSecretApiKey.arn
+export const latitudeCloudPaymentUrlArn = latitudeCloudPaymentUrl.arn

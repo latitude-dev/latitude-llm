@@ -2,7 +2,7 @@
 
 import { ReactNode, useMemo } from 'react'
 
-import { WorkspaceUsage } from '@latitude-data/core/browser'
+import { SubscriptionPlan, WorkspaceUsage } from '@latitude-data/core/browser'
 import {
   Badge,
   Button,
@@ -10,6 +10,7 @@ import {
   CircularProgressProps,
   Icon,
   Popover,
+  SessionUser,
   Skeleton,
   Text,
   useSession,
@@ -89,12 +90,32 @@ function descriptionText({ ratio, max }: { ratio: number; max: number }) {
   return `Your plan has included ${max} runs. You can upgrade your plan to get more runs.`
 }
 
+const FREE_PLANS = [SubscriptionPlan.HobbyV1, SubscriptionPlan.HobbyV2]
+
+function SubscriptionButton({
+  paymentUrl,
+  currentUser,
+  subscriptionPlan,
+}: {
+  paymentUrl: string
+  currentUser: SessionUser
+  subscriptionPlan: SubscriptionPlan
+}) {
+  const upgradeLink = `${paymentUrl}?prefilled_email=${currentUser.email}`
+  const isFreePlan = FREE_PLANS.includes(subscriptionPlan)
+  const href = isFreePlan ? upgradeLink : 'mailto:hello@latitude.so'
+  const label = isFreePlan ? 'Upgrade to Team plan' : 'Contact us to upgrade'
+  return (
+    <Link href={href} target='_blank'>
+      <Button fancy>{label}</Button>
+    </Link>
+  )
+}
+
 export function UsageIndicator({ paymentUrl }: { paymentUrl: string }) {
   const theme = useCurrentTheme()
   const { data, isLoading } = useWorkspaceUsage()
-  const { subscriptionPlan } = useSession()
-  const session = useSession()
-  const upgradeLink = `${paymentUrl}?prefilled_email=${session.currentUser.email}`
+  const { currentUser, subscriptionPlan, workspace } = useSession()
   const { ratio, max, isOverlimits, isOverlimitsRuns, isOverlimitsMembers } =
     useMemo(() => {
       if (!data) return { ratio: 1, max: 0, isOverlimits: false }
@@ -229,9 +250,11 @@ export function UsageIndicator({ paymentUrl }: { paymentUrl: string }) {
             </div>
           </div>
           <div className='flex flex-row'>
-            <Link href={upgradeLink} target='_blank'>
-              <Button fancy>Upgrade to Team plan</Button>
-            </Link>
+            <SubscriptionButton
+              subscriptionPlan={workspace.currentSubscription.plan}
+              currentUser={currentUser}
+              paymentUrl={paymentUrl}
+            />
           </div>
         </>
       </Popover.Content>
