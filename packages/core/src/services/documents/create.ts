@@ -32,6 +32,7 @@ export async function createNewDocument(
     path,
     content,
     promptlVersion = 1,
+    createDemoEvaluation = false,
   }: {
     workspace: Workspace
     user?: User
@@ -39,6 +40,7 @@ export async function createNewDocument(
     path: string
     content?: string
     promptlVersion?: number
+    createDemoEvaluation?: boolean
   },
   db = database,
 ): Promise<TypedResult<DocumentVersion, Error>> {
@@ -106,7 +108,7 @@ export async function createNewDocument(
       },
     })
 
-    if (user) {
+    if (user && createDemoEvaluation) {
       const evaluation = await createEvaluation(
         {
           workspace: workspace,
@@ -117,14 +119,14 @@ export async function createNewDocument(
           metadata: {
             objective:
               'Assess how well the response follows the given instructions.',
-            additionalInstructions: 'The output should be formatted in JSON.',
           } as EvaluationMetadataLlmAsJudgeSimple,
           resultType: EvaluationResultableType.Number,
           resultConfiguration: {
             minValue: 1,
             maxValue: 5,
-            minValueDescription: 'Not faithful, not follows the instructions.',
-            maxValueDescription: 'Very faithful, follows the instructions.',
+            minValueDescription:
+              "Not faithful, doesn't follow the instructions.",
+            maxValueDescription: 'Very faithful, does follow the instructions.',
           } as EvaluationConfigurationNumerical,
         },
         tx,

@@ -100,6 +100,7 @@ export const createDocumentVersionFromTraceAction = authProcedure
       commit,
       path: response.object.name,
       content: response.object.prompt,
+      createDemoEvaluation: true,
     })
 
     if (fresult.error) {
