@@ -143,7 +143,7 @@ async function createWorkspaces({
     const name = w.workspace.name.replace('overview__', '')
     acc[name] = {
       expectedData: {
-        id: w.workspace.id.toString(),
+        id: w.workspace.id,
         name,
         subscriptionPlan: w.subcription.plan,
         numOfMembers: w.membersCount.toString(),
