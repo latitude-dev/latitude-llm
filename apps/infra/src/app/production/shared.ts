@@ -34,6 +34,9 @@ const postHogApiKeyArn = coreStack.requireOutput('postHogApiKeyArn')
 const supportAppIdArn = coreStack.requireOutput('supportAppIdArn')
 const supportAppSecretKeyArn = coreStack.requireOutput('supportAppSecretKeyArn')
 const loopsSecretApiKeyArn = coreStack.requireOutput('loopsSecretApiKeyArn')
+const latitudeCloudPaymentUrlArn = coreStack.requireOutput(
+  'latitudeCloudPaymentUrlArn',
+)
 
 const getSecretString = (arn: pulumi.Output<any>) => {
   return arn.apply((secretId) =>
@@ -68,6 +71,9 @@ export const postHogApiKey = getSecretString(postHogApiKeyArn)
 export const supportAppId = getSecretString(supportAppIdArn)
 export const supportAppSecretKey = getSecretString(supportAppSecretKeyArn)
 export const loopsSecretApiKey = getSecretString(loopsSecretApiKeyArn)
+export const latitudeCloudPaymentUrl = getSecretString(
+  latitudeCloudPaymentUrlArn,
+)
 
 export const copilotWorkspaceApiKey = coreStack.requireOutput(
   'copilotWorkspaceApiKey',
@@ -107,6 +113,7 @@ export const environment = pulumi
     supportAppId,
     supportAppSecretKey,
     loopsSecretApiKey,
+    latitudeCloudPaymentUrl,
   ])
   .apply(() => {
     return [
@@ -177,10 +184,10 @@ export const environment = pulumi
       { name: 'SUPPORT_APP_SECRET_KEY', value: supportAppSecretKey },
       { name: 'LOOPS_API_KEY', value: loopsSecretApiKey },
 
-      { name: 'LATITUDE_CLOUD', value: true },
+      { name: 'LATITUDE_CLOUD', value: 'true' },
       {
         name: 'LATITUDE_CLOUD_PAYMENT_URL',
-        value: 'https://buy.stripe.com/6oE8ykbkHdygdBm5kp',
+        value: latitudeCloudPaymentUrl,
       },
     ]
   })
