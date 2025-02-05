@@ -26,6 +26,7 @@ export const createDocumentVersionAction = withProject
       user: ctx.user,
       commit,
       path: input.path,
+      createDemoEvaluation: true,
     })
 
     return result.unwrap()

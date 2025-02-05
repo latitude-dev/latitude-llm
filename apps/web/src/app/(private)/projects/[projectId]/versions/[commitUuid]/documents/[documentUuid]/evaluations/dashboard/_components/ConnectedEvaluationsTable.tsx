@@ -1,3 +1,10 @@
+import {
+  evaluationMetadataTypes,
+  evaluationResultTypes,
+} from '$/app/(private)/evaluations/_components/ActiveEvaluations/Table'
+import { useCurrentDocument } from '$/app/providers/DocumentProvider'
+import { useNavigate } from '$/hooks/useNavigate'
+import { ROUTES } from '$/services/routes'
 import { EvaluationDto } from '@latitude-data/core/browser'
 import {
   ClickToCopyUuid,
@@ -11,13 +18,6 @@ import {
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui'
-import {
-  evaluationMetadataTypes,
-  evaluationResultTypes,
-} from '$/app/(private)/evaluations/_components/ActiveEvaluations/Table'
-import { useCurrentDocument } from '$/app/providers/DocumentProvider'
-import { useNavigate } from '$/hooks/useNavigate'
-import { ROUTES } from '$/services/routes'
 
 export default function ConnectedEvaluationsTable({
   evaluations,
@@ -54,9 +54,11 @@ export default function ConnectedEvaluationsTable({
             }
           >
             <TableCell>
-              <Text.H5 noWrap>{evaluation.name}</Text.H5>
-              <div onClick={(e) => e.stopPropagation()}>
-                <ClickToCopyUuid uuid={evaluation.uuid} />
+              <div className='flex items-center justify-between gap-2'>
+                <Text.H5 noWrap>{evaluation.name}</Text.H5>
+                <div onClick={(e) => e.stopPropagation()}>
+                  <ClickToCopyUuid uuid={evaluation.uuid} />
+                </div>
               </div>
             </TableCell>
             <TableCell>

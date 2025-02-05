@@ -101,6 +101,7 @@ async function createDocuments({
         ...docData,
         user: destination.user,
         commit: destination.commit,
+        createDemoEvaluation: true,
       }),
     ),
   )
