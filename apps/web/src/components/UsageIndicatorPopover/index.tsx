@@ -11,7 +11,6 @@ import {
   Skeleton,
   Text,
 } from '@latitude-data/web-ui'
-import { useCurrentTheme } from '$/hooks/useCurrentTheme'
 import {
   SubscriptionPlan,
   FREE_PLANS,
@@ -97,12 +96,10 @@ function UsageIndicatorCircle({
   }
 
   const color = overlimits
-    ? 'destructive'
+    ? 'white'
     : ratio < 0.75
       ? 'primary'
-      : ratio >= 1
-        ? 'destructive'
-        : 'warningMutedForeground'
+      : 'warningMutedForeground'
 
   return <CircularProgress value={ratio} color={color} {...props} />
 }
@@ -150,7 +147,6 @@ export function UsageIndicatorPopover({
   }
   isLoading?: boolean
 }) {
-  const theme = useCurrentTheme()
   const membersText = useMemo(
     () =>
       workspaceUsage
@@ -168,10 +164,13 @@ export function UsageIndicatorPopover({
   return (
     <Popover.Root>
       <Popover.Trigger asChild>
-        <Button variant='ghost' className='hover:bg-muted'>
+        <Button
+          variant={isOverlimits ? 'destructive' : 'ghost'}
+          className='hover:bg-muted'
+        >
           <div className='flex flex-row items-center gap-x-2'>
             {isOverlimits ? (
-              <Icon name='alert' color='destructive' darkColor='foreground' />
+              <Icon name='alert' color='white' />
             ) : (
               <UsageIndicatorCircle
                 workspaceUsage={workspaceUsage}
@@ -180,12 +179,7 @@ export function UsageIndicatorPopover({
               />
             )}
             <LoadingText isLoading={isLoading}>
-              <Text.H6
-                noWrap
-                theme={theme}
-                darkColor='foreground'
-                color={isOverlimits ? 'destructive' : 'foreground'}
-              >
+              <Text.H6 noWrap color={isOverlimits ? 'white' : 'foreground'}>
                 {isOverlimits
                   ? 'Over limits'
                   : `${workspaceUsage?.usage} / ${workspaceUsage?.max}`}
