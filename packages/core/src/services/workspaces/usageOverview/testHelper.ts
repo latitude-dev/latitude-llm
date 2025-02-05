@@ -1,4 +1,5 @@
 import { EvaluationResultDto, Providers } from '@latitude-data/constants'
+import { orderBy } from 'lodash-es'
 import { format } from 'date-fns'
 import * as factories from '../../../tests/factories'
 import { createMembership } from '../../memberships/create'
@@ -124,8 +125,8 @@ async function createWorkspace(workspaceInfo: WorkspaceInfo) {
     documentLogs,
     evaluationResults,
     membersCount: workspaceInfo.numberOfMembers,
-    emails: [creator.email, ...remainderMembers.map((m) => m.email)]
-      .sort()
+    emails: orderBy([creator, ...remainderMembers], (u) => u.createdAt, 'desc')
+      .map((u) => u.email)
       .join(', '),
   }
 }
