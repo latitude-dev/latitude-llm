@@ -1,7 +1,6 @@
 import {
   forwardRef,
   HTMLAttributes,
-  MouseEvent,
   ReactNode,
   TdHTMLAttributes,
   ThHTMLAttributes,
