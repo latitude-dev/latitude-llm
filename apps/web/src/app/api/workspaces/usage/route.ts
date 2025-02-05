@@ -14,9 +14,11 @@ export const GET = errorHandler(
         workspace: WorkspaceDto
       },
     ) => {
-      const usage = await computeWorkspaceUsage(workspace).then((r) =>
-        r.unwrap(),
-      )
+      const usage = await computeWorkspaceUsage({
+        id: workspace.id,
+        currentSubscriptionCreatedAt: workspace.currentSubscription.createdAt,
+        plan: workspace.currentSubscription.plan,
+      }).then((r) => r.unwrap())
 
       return NextResponse.json(usage)
     },

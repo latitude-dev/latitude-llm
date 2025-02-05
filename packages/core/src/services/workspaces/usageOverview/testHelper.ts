@@ -1,4 +1,5 @@
 import { EvaluationResultDto, Providers } from '@latitude-data/constants'
+import { format } from 'date-fns'
 import * as factories from '../../../tests/factories'
 import { createMembership } from '../../memberships/create'
 import { generateWorkspaceFixtures, type WorkspaceInfo } from './fixtures'
@@ -143,9 +144,13 @@ async function createWorkspaces({
     const name = w.workspace.name.replace('overview__', '')
     acc[name] = {
       expectedData: {
-        id: w.workspace.id,
+        workspaceId: w.workspace.id,
         name,
         subscriptionPlan: w.subcription.plan,
+        subscriptionCreatedAt: format(
+          w.subcription.createdAt,
+          'yyyy-MM-dd HH:mm:ss',
+        ),
         numOfMembers: w.membersCount.toString(),
         emails: w.emails,
       },
