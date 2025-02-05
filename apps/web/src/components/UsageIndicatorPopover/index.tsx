@@ -20,14 +20,20 @@ import {
 
 export function SubscriptionBadge({
   subscription: { name, plan },
+  showPlanSlug = false,
 }: {
+  showPlanSlug?: boolean
   subscription: {
     name: string
     plan: SubscriptionPlan
   }
 }) {
   const isFree = FREE_PLANS.includes(plan)
-  return <Badge variant={isFree ? 'muted' : 'success'}>{name}</Badge>
+  return (
+    <Badge variant={isFree ? 'muted' : 'success'}>
+      {showPlanSlug ? plan : name}
+    </Badge>
+  )
 }
 
 function runsDescription({ ratio, max }: { ratio: number; max: number }) {

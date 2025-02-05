@@ -3,7 +3,10 @@ import { formatDistanceToNow, format } from 'date-fns'
 import { LinkableTablePaginationFooter } from '$/components/TablePaginationFooter'
 import { ROUTES } from '$/services/routes'
 import { buildPagination } from '@latitude-data/core/lib/pagination/buildPagination'
-import { getUsageOverview } from '@latitude-data/core/services/workspaces/index'
+import {
+  getUsageOverview,
+  GetUsageOverviewRow,
+} from '@latitude-data/core/services/workspaces/index'
 import {
   Table,
   Text,
@@ -20,6 +23,20 @@ import { buildUsageInformation } from '$/app/(admin)/backoffice/usage-overview/b
 import { TrendCell } from './_components/TrendCell'
 import { UsageCell } from './_components/UsageCell'
 import { EmailsCell } from '$/app/(admin)/backoffice/usage-overview/_components/EmailsCell/index.tsx'
+
+/**
+ * All workspaces should have subscription
+ * this send to Sentry if there is a workspace without subscription
+ */
+function formatSubscriptionDate(usage: GetUsageOverviewRow) {
+  try {
+    return format(usage.subscriptionCreatedAt!, 'yyyy-MM-dd HH:mm:ss')
+  } catch (e) {
+    const error = e as Error
+    const message = `Error formatting subscription date (${usage.subscriptionCreatedAt}) for workspace ${usage.workspaceId}. Error: ${error.message}`
+    throw new Error(message)
+  }
+}
 
 export default async function AdminPage({
   searchParams,
@@ -95,16 +112,13 @@ export default async function AdminPage({
                           <div className='flex flex-col gap-y-2 py-2'>
                             <div>
                               <SubscriptionBadge
+                                showPlanSlug
                                 subscription={usageInfo.plan}
                               />
                             </div>
                             <div className='flex gap-x-2 items-center'>
                               <Text.H7 color='foregroundMuted'>
-                                Created:{' '}
-                                {format(
-                                  usage.subscriptionCreatedAt!,
-                                  'yyyy-MM-dd HH:mm:ss',
-                                )}
+                                Created: {formatSubscriptionDate(usage)}
                               </Text.H7>
                             </div>
                           </div>
