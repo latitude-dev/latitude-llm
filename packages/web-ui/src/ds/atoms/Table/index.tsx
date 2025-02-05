@@ -188,15 +188,28 @@ const ServerSideTableCell = forwardRef<HTMLTableCellElement, CommonCellProps>(
 )
 ServerSideTableCell.displayName = 'ServerSideTableCell'
 
-type CellProps = CommonCellProps & {
+type CellProps = TdHTMLAttributes<HTMLTableCellElement> & {
+  align?: 'left' | 'center' | 'right'
   preventDefault?: boolean
-  onClick?: (e: MouseEvent<HTMLTableCellElement>) => void
 }
-
 const TableCell = forwardRef<HTMLTableCellElement, CellProps>(
-  ({ children, onClick, preventDefault = true, ...props }, ref) => (
-    <ServerSideTableCell
+  (
+    {
+      className,
+      children,
+      align = 'left',
+      preventDefault = false,
+      onClick,
+      ...props
+    },
+    ref,
+  ) => (
+    <td
       ref={ref}
+      className={cn(
+        'px-4 align-middle [&:has([role=checkbox])]:pr-0',
+        className,
+      )}
       {...props}
       onClick={(e) => {
         if (!preventDefault) return
@@ -205,8 +218,16 @@ const TableCell = forwardRef<HTMLTableCellElement, CellProps>(
         onClick?.(e)
       }}
     >
-      {children}
-    </ServerSideTableCell>
+      <div
+        className={cn('flex', {
+          'justify-start': align === 'left',
+          'justify-center': align === 'center',
+          'justify-end': align === 'right',
+        })}
+      >
+        {children}
+      </div>
+    </td>
   ),
 )
 TableCell.displayName = 'TableCell'
