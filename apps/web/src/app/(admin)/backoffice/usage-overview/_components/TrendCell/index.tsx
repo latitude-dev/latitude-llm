@@ -1,7 +1,7 @@
 'use client'
 
 import type { UsageTrend } from '$/app/(admin)/backoffice/usage-overview/buildUsageInformation'
-import { Icon, Tooltip } from '@latitude-data/web-ui'
+import { Text, Icon, Tooltip } from '@latitude-data/web-ui'
 
 export function TrendCell({ trend }: { trend: UsageTrend }) {
   const color =
@@ -11,16 +11,19 @@ export function TrendCell({ trend }: { trend: UsageTrend }) {
         ? 'success'
         : 'destructive'
   return (
-    <Tooltip
-      trigger={
-        <div className='w-full flex items-center justify-center'>
-          <Icon name={trend.icon} size='normal' color={color} />
-        </div>
-      }
-    >
-      {trend.twoMonthsAgoRuns <= 0 && trend.last30daysRuns <= 0
-        ? 'No runs'
-        : `${trend.twoMonthsAgoRuns} runs 2 months ago  / ${trend.last30daysRuns} runs last 30 days`}
-    </Tooltip>
+    <div className='w-full flex items-center justify-start gap-x-3'>
+      <Tooltip
+        trigger={
+          <div className='w-full flex items-center justify-center'>
+            <Icon name={trend.icon} size='normal' color={color} />
+          </div>
+        }
+      >
+        {trend.twoMonthsAgoRuns <= 0 && trend.last30daysRuns <= 0
+          ? 'No runs'
+          : `${trend.twoMonthsAgoRuns} runs 2 months ago  / ${trend.last30daysRuns} runs last 30 days`}
+      </Tooltip>
+      <Text.H6>{trend.last30daysRuns}</Text.H6>
+    </div>
   )
 }

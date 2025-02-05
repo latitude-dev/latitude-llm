@@ -1,6 +1,6 @@
 'use client'
 
-import { ButtonTrigger, Popover, Text } from '@latitude-data/web-ui'
+import { ButtonTrigger, CopyButton, Popover, Text } from '@latitude-data/web-ui'
 
 export function EmailsCell({
   firstEmail,
@@ -11,7 +11,18 @@ export function EmailsCell({
 }) {
   if (!firstEmail) return 'No emails, weird'
 
-  if (rest.length === 0) return <Text.H6>{firstEmail}</Text.H6>
+  if (rest.length === 0) {
+    return (
+      <div className='flex items-center gap-x-2 w-full'>
+        <div className='flex-none'>
+          <CopyButton content={firstEmail} />
+        </div>
+        <Text.H6 ellipsis noWrap>
+          {firstEmail}
+        </Text.H6>
+      </div>
+    )
+  }
 
   return (
     <Popover.Root>

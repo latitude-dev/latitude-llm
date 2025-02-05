@@ -70,7 +70,7 @@ export default async function AdminPage({
               >
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Trend</TableHead>
+                    <TableHead>Last 30 days</TableHead>
                     <TableHead>Last run</TableHead>
                     <TableHead>Workspace</TableHead>
                     <TableHead>subscription</TableHead>
@@ -86,7 +86,7 @@ export default async function AdminPage({
                         key={usage.workspaceId}
                         className='border-b-[0.5px] h-12 max-h-12 border-border'
                       >
-                        <ServerSideTableCell className='w-8' align='center'>
+                        <ServerSideTableCell>
                           <TrendCell trend={usageInfo.trend} />
                         </ServerSideTableCell>
                         <ServerSideTableCell className='w-40'>
@@ -131,7 +131,7 @@ export default async function AdminPage({
                             />
                           </Suspense>
                         </ServerSideTableCell>
-                        <ServerSideTableCell className='max-w-52'>
+                        <ServerSideTableCell className='max-w-40'>
                           <EmailsCell {...usageInfo.emails} />
                         </ServerSideTableCell>
                       </TableRow>
