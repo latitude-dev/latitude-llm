@@ -165,10 +165,11 @@ export function UsageIndicatorPopover({
     <Popover.Root>
       <Popover.Trigger asChild>
         <Button
+          size='small'
           variant={isOverlimits ? 'destructive' : 'ghost'}
           className='hover:bg-muted'
         >
-          <div className='flex flex-row items-center gap-x-2'>
+          <div className='flex flex-row items-center gap-x-2.5'>
             {isOverlimits ? (
               <Icon name='alert' color='white' />
             ) : (
@@ -181,7 +182,7 @@ export function UsageIndicatorPopover({
             <LoadingText isLoading={isLoading}>
               <Text.H6 noWrap color={isOverlimits ? 'white' : 'foreground'}>
                 {isOverlimits
-                  ? 'Over limits'
+                  ? 'Check over limits'
                   : `${workspaceUsage?.usage} / ${workspaceUsage?.max}`}
               </Text.H6>
             </LoadingText>
