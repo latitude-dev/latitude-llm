@@ -12,7 +12,7 @@ import { Providers } from '../../../constants'
 import { Result } from '../../../lib'
 import * as queues from '../../../queues'
 import { EvaluationsRepository } from '../../../repositories'
-import { ChainError } from '../../../lib/streamManager/ChainErrors'
+import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
 import { ChainResponse } from '../../../services/chains/run'
 import * as evaluations from '../../../services/evaluations/run'
 import * as factories from '../../../tests/factories'
@@ -131,10 +131,18 @@ describe('runEvaluationJob', () => {
       runEvaluationSpy.mockResolvedValueOnce(
         Result.ok({
           stream,
-          response: new Promise((resolve) => resolve(runChainResponse)),
           resolvedContent: 'chain resolved text',
           errorableUuid: FAKE_ERRORABLE_UUID,
           duration: new Promise((resolve) => resolve(1000)),
+          messages: new Promise((resolve) => resolve([])),
+          lastResponse: new Promise((resolve) =>
+            resolve(runChainResponse.value),
+          ),
+          error: new Promise((resolve) => resolve(undefined)),
+          toolCalls: new Promise((resolve) => resolve([])),
+          conversation: new Promise((resolve) =>
+            resolve({ config: {}, messages: [] }),
+          ),
         }),
       )
       await runEvaluationJob(jobData)
@@ -159,10 +167,18 @@ describe('runEvaluationJob', () => {
       runEvaluationSpy.mockResolvedValueOnce(
         Result.ok({
           stream,
-          response: new Promise((resolve) => resolve(runChainResponse)),
           resolvedContent: 'chain resolved text',
           errorableUuid: FAKE_ERRORABLE_UUID,
           duration: new Promise((resolve) => resolve(1000)),
+          messages: new Promise((resolve) => resolve([])),
+          lastResponse: new Promise((resolve) =>
+            resolve(runChainResponse.value),
+          ),
+          error: new Promise((resolve) => resolve(undefined)),
+          toolCalls: new Promise((resolve) => resolve([])),
+          conversation: new Promise((resolve) =>
+            resolve({ config: {}, messages: [] }),
+          ),
         }),
       )
       await runEvaluationJob(jobData)
@@ -217,10 +233,18 @@ describe('runEvaluationJob', () => {
       runEvaluationSpy.mockResolvedValueOnce(
         Result.ok({
           stream,
-          response: new Promise((resolve) => resolve(runChainResponse)),
           resolvedContent: 'chain resolved text',
           errorableUuid: FAKE_ERRORABLE_UUID,
           duration: new Promise((resolve) => resolve(1000)),
+          messages: new Promise((resolve) => resolve([])),
+          lastResponse: new Promise((resolve) =>
+            resolve(runChainResponse.value),
+          ),
+          error: new Promise((resolve) => resolve(runChainResponse.error)),
+          toolCalls: new Promise((resolve) => resolve([])),
+          conversation: new Promise((resolve) =>
+            resolve({ config: {}, messages: [] }),
+          ),
         }),
       )
 

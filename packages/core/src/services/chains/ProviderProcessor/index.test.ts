@@ -4,18 +4,15 @@ import { LanguageModelUsage, TextStreamPart } from 'ai'
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import { processResponse } from '.'
-import { ProviderApiKey, Workspace } from '../../../browser'
 import { LogSources, Providers } from '../../../constants'
 import { generateUUIDIdentifier } from '../../../lib'
 import {
   AsyncStreamIteable,
   TOOLS,
-} from '../../../lib/streamManager/ChainStreamConsumer/consumeStream.test'
+} from '../../../lib/chainStreamManager/ChainStreamConsumer/consumeStream.test'
 import { buildProviderLogDto } from './saveOrPublishProviderLogs'
 
 let data: ReturnType<typeof buildProviderLogDto>
-let apiProvider: ProviderApiKey
-let workspace: Workspace
 
 describe('ProviderProcessor', () => {
   beforeEach(async () => {
@@ -40,8 +37,6 @@ describe('ProviderProcessor', () => {
       document: setup.documents[0]!,
       commit,
     })
-    apiProvider = setup.providers[0]!
-    workspace = setup.workspace
     // @ts-expect-error - mock implementation
     data = {
       workspaceId: setup.workspace.id,
@@ -68,12 +63,7 @@ describe('ProviderProcessor', () => {
 
   it('process AI provider result', async () => {
     const result = await processResponse({
-      workspace,
-      apiProvider,
-      source: data.source,
-      config: data.config,
-      messages: data.messages,
-      errorableUuid: data.documentLogUuid!,
+      documentLogUuid: data.documentLogUuid!,
       aiResult: {
         type: 'text' as 'text',
         data: {
@@ -92,9 +82,6 @@ describe('ProviderProcessor', () => {
           providerName: Providers.OpenAI,
         },
       },
-      startTime: Date.now(),
-      chainCompleted: true,
-      finishReason: 'stop',
     })
 
     expect(result).toEqual({

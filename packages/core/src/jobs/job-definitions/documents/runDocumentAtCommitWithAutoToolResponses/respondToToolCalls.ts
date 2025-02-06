@@ -52,7 +52,9 @@ export async function respondToToolCalls({
     copilot,
   })
 
-  if (responseMessagesResult.error) return responseMessagesResult
+  if (responseMessagesResult.error) {
+    return Result.error(responseMessagesResult.error)
+  }
 
   return resumePausedPrompt({
     workspace,

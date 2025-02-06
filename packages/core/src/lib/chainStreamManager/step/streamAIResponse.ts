@@ -1,54 +1,50 @@
 import { JSONSchema7 } from 'json-schema'
-import { Message } from '@latitude-data/compiler'
-import { LogSources, ProviderApiKey, Workspace } from '../../browser'
+import { Conversation } from '@latitude-data/compiler'
+import { LogSources, ProviderApiKey, Workspace } from '../../../browser'
 import {
   buildProviderLogDto,
   saveOrPublishProviderLogs,
-} from '../../services/chains/ProviderProcessor/saveOrPublishProviderLogs'
-import { checkValidStream } from './checkValidStream'
-import { processResponse } from '../../services/chains/ProviderProcessor'
+} from '../../../services/chains/ProviderProcessor/saveOrPublishProviderLogs'
+import { checkValidStream } from '../checkValidStream'
+import { processResponse } from '../../../services/chains/ProviderProcessor'
 import {
   getCachedResponse,
   setCachedResponse,
-} from '../../services/commits/promptCache'
-import { ai, Config as ValidatedConfig } from '../../services/ai'
-import { ChainStepResponse, StreamType } from '../../constants'
-import { ChainStreamConsumer } from './ChainStreamConsumer'
-import { consumeStream } from './ChainStreamConsumer/consumeStream'
+} from '../../../services/commits/promptCache'
+import { ai, Config as ValidatedConfig } from '../../../services/ai'
+import { ChainStepResponse, StreamType } from '../../../constants'
+import { consumeStream } from '../ChainStreamConsumer/consumeStream'
+import { LanguageModelUsage } from 'ai'
 
-type ExecuteStepArgs = {
+export type ExecuteStepArgs = {
   controller: ReadableStreamDefaultController
   workspace: Workspace
-  config: ValidatedConfig
-  messages: Message[]
-  newMessagesCount: number
   provider: ProviderApiKey
+  conversation: Conversation
   source: LogSources
-  errorableUuid: string
-  chainCompleted?: boolean
+  documentLogUuid: string
   schema?: JSONSchema7
   output?: 'object' | 'array' | 'no-schema'
 }
 
-async function obtainAiResponse({
+export async function streamAIResponse({
   controller,
   workspace,
-  config,
-  messages,
   provider,
+  conversation,
+  source,
+  documentLogUuid,
   schema,
   output,
-  startTime,
-  chainCompleted = false,
-  source,
-  errorableUuid,
-}: ExecuteStepArgs & { startTime: number }) {
-  const conversation = { messages, config }
-
+}: ExecuteStepArgs): Promise<{
+  response: ChainStepResponse<StreamType>
+  tokenUsage: LanguageModelUsage
+}> {
+  const startTime = Date.now()
   const cachedResponse = await getCachedResponse({
     workspace,
-    config,
-    conversation: { messages, config },
+    config: conversation.config,
+    conversation,
   })
 
   if (cachedResponse) {
@@ -56,29 +52,37 @@ async function obtainAiResponse({
       workspace,
       streamType: cachedResponse.streamType,
       finishReason: cachedResponse.finishReason ?? 'stop',
-      chainCompleted,
       data: buildProviderLogDto({
         workspace,
         source,
         provider,
         conversation,
         stepStartTime: startTime,
-        errorableUuid,
+        errorableUuid: documentLogUuid,
         response: cachedResponse as ChainStepResponse<StreamType>,
       }),
       saveSyncProviderLogs: true, // TODO: temp bugfix, it should only save last one syncronously
     })
 
-    return {
+    const response = {
       ...cachedResponse,
       providerLog,
-      documentLogUuid: errorableUuid,
+      documentLogUuid,
     } as ChainStepResponse<'text'>
+
+    return {
+      response,
+      tokenUsage: {
+        promptTokens: 0,
+        completionTokens: 0,
+        totalTokens: 0,
+      },
+    }
   }
 
   const aiResult = await ai({
-    messages,
-    config,
+    messages: [...conversation.messages], // TODO: vitest will cry when checking the parameters passed to this function when the object mutes afterwards. To fix this, we make a deep copy of the array so that it is immutable.
+    config: conversation.config as ValidatedConfig,
     provider: provider,
     schema: schema,
     output: output,
@@ -95,29 +99,20 @@ async function obtainAiResponse({
 
   const processedResponse = await processResponse({
     aiResult,
-    apiProvider: provider,
-    config,
-    errorableUuid,
-    messages,
-    source,
-    workspace,
-    startTime,
-    chainCompleted,
-    finishReason: consumedStream.finishReason,
+    documentLogUuid,
   })
 
   const providerLog = await saveOrPublishProviderLogs({
     workspace,
     streamType: aiResult.type,
     finishReason: consumedStream.finishReason,
-    chainCompleted,
     data: buildProviderLogDto({
       workspace,
       source,
       provider,
       conversation,
       stepStartTime: startTime,
-      errorableUuid,
+      errorableUuid: documentLogUuid,
       response: processedResponse,
     }),
     saveSyncProviderLogs: true, // TODO: temp bugfix, should only save last one syncronously
@@ -127,42 +122,13 @@ async function obtainAiResponse({
 
   await setCachedResponse({
     workspace,
-    config,
+    config: conversation.config,
     conversation,
     response,
   })
 
-  return response
-}
-
-export async function streamAIResponse(args: ExecuteStepArgs) {
-  const startTime = Date.now()
-
-  const {
-    controller,
-    messages,
-    newMessagesCount,
-    config,
-    errorableUuid,
-    chainCompleted,
-  } = args
-
-  const newMessages = messages.slice(messages.length - newMessagesCount)
-
-  ChainStreamConsumer.startStep({
-    controller,
-    config,
-    messages: newMessages, // Only send the messages that have been added to this step
-    documentLogUuid: errorableUuid,
-    isLastStep: chainCompleted,
-  })
-
-  const response = await obtainAiResponse({ ...args, startTime })
-
-  ChainStreamConsumer.stepCompleted({
-    controller,
+  return {
     response,
-  })
-
-  return response
+    tokenUsage: await aiResult.data.usage,
+  }
 }

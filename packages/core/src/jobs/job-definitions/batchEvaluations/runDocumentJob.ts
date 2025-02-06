@@ -44,10 +44,9 @@ export const runDocumentForEvaluationJob = async (
       source: LogSources.Evaluation,
     }).then((r) => r.unwrap())
 
-    const response = await result.response
-    const responseValue = response.unwrap()
-    const providerLogUuid = responseValue?.providerLog?.uuid
-    if (!providerLogUuid) {
+    const providerLog = (await result.lastResponse)?.providerLog
+
+    if (!providerLog) {
       throw new NotFoundError('Provider log not found after running document')
     }
 
@@ -55,7 +54,7 @@ export const runDocumentForEvaluationJob = async (
       {
         workspaceId,
         documentUuid,
-        providerLogUuid,
+        providerLogUuid: providerLog.uuid,
         evaluationId,
         batchId,
       },

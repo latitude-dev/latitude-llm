@@ -13,12 +13,12 @@ import { ErrorableEntity, LogSources, Providers } from '../../constants'
 import { Result } from '../../lib'
 import * as factories from '../../tests/factories'
 import * as aiModule from '../ai'
-import { ChainError } from '../../lib/streamManager/ChainErrors'
+import { ChainError } from '../../lib/chainStreamManager/ChainErrors'
 import {
   AsyncStreamIteable,
   PARTIAL_FINISH_CHUNK,
   TOOLS,
-} from '../../lib/streamManager/ChainStreamConsumer/consumeStream.test'
+} from '../../lib/chainStreamManager/ChainStreamConsumer/consumeStream.test'
 import * as ChainValidator from './ChainValidator'
 import { runChain } from './run'
 
@@ -104,14 +104,14 @@ describe('run chain error handling', () => {
       source: LogSources.API,
     })
 
-    const response = await run.response
-    expect(response.error).toEqual(
+    const error = await run.error
+    expect(error).toEqual(
       new ChainError({
         code: RunErrorCodes.DefaultProviderExceededQuota,
         message: 'You have exceeded your maximum number of free runs for today',
       }),
     )
-    expect(response.error?.dbError).toEqual({
+    expect(error?.dbError).toEqual({
       id: expect.any(Number),
       errorableUuid: expect.any(String),
       errorableType: ErrorableEntity.DocumentLog,
@@ -135,7 +135,7 @@ describe('run chain error handling', () => {
           Result.error(new Error('Something undefined happened')),
         ),
       )
-    const run = await runChain({
+    const run = runChain({
       errorableType: ErrorableEntity.DocumentLog,
       workspace,
       chain: mockChain as Chain,
@@ -144,8 +144,8 @@ describe('run chain error handling', () => {
       source: LogSources.API,
     })
 
-    const response = await run.response
-    expect(response.error?.dbError).toEqual({
+    const error = await run.error
+    expect(error?.dbError).toEqual({
       id: expect.any(Number),
       errorableUuid: expect.any(String),
       errorableType: ErrorableEntity.DocumentLog,
@@ -174,8 +174,8 @@ describe('run chain error handling', () => {
       source: LogSources.API,
     })
 
-    const response = await run.response
-    expect(response.error?.dbError).toEqual({
+    const error = await run.error
+    expect(error?.dbError).toEqual({
       id: expect.any(Number),
       errorableUuid: expect.any(String),
       errorableType: ErrorableEntity.DocumentLog,
@@ -209,8 +209,8 @@ describe('run chain error handling', () => {
       source: LogSources.API,
     })
 
-    const response = await run.response
-    expect(response.error?.dbError).toEqual({
+    const error = await run.error
+    expect(error?.dbError).toEqual({
       id: expect.any(Number),
       errorableUuid: expect.any(String),
       errorableType: ErrorableEntity.DocumentLog,
@@ -245,8 +245,8 @@ describe('run chain error handling', () => {
       source: LogSources.API,
     })
 
-    const response = await run.response
-    expect(response.error?.dbError).toEqual({
+    const error = await run.error
+    expect(error?.dbError).toEqual({
       id: expect.any(Number),
       errorableUuid: expect.any(String),
       errorableType: ErrorableEntity.DocumentLog,
@@ -281,8 +281,8 @@ describe('run chain error handling', () => {
       source: LogSources.API,
     })
 
-    const response = await run.response
-    expect(response.error?.dbError).toEqual({
+    const error = await run.error
+    expect(error?.dbError).toEqual({
       id: expect.any(Number),
       errorableUuid: expect.any(String),
       errorableType: ErrorableEntity.DocumentLog,
@@ -322,8 +322,8 @@ describe('run chain error handling', () => {
       providersMap,
       source: LogSources.API,
     })
-    const response = await run.response
-    expect(response.error?.dbError).toEqual({
+    const error = await run.error
+    expect(error?.dbError).toEqual({
       id: expect.any(Number),
       errorableUuid: expect.any(String),
       errorableType: ErrorableEntity.DocumentLog,
@@ -337,7 +337,7 @@ describe('run chain error handling', () => {
     })
   })
 
-  it('returns a susscessful response', async () => {
+  it('returns a successful response', async () => {
     vi.spyOn(aiModule, 'ai').mockResolvedValue(
       buildMockAIresponse([
         {
@@ -364,14 +364,12 @@ describe('run chain error handling', () => {
       providersMap,
       source: LogSources.API,
     })
-    const response = await run.response
-    expect(response.value).toEqual({
+    const response = await run.lastResponse
+    expect(response).toEqual({
       documentLogUuid: expect.any(String),
       streamType: 'text',
       text: 'MY TEXT',
       toolCalls: [],
-      chainCompleted: true,
-      finishReason: 'stop',
       usage: {
         promptTokens: 3,
         completionTokens: 7,
