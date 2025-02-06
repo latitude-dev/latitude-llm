@@ -12,7 +12,12 @@ const usePromise = <T>(): readonly [Promise<T>, (value: T) => void] => {
   let resolveValue: (value: T) => void
 
   const promisedValue = new Promise<T>((res) => {
-    resolveValue = res
+    let isResolved = false
+    resolveValue = (value) => {
+      if (isResolved) return
+      isResolved = true
+      res(value)
+    }
   })
 
   return [promisedValue, resolveValue!] as const
@@ -223,6 +228,8 @@ export class ChainStreamManager {
     this.controller.close()
     this.resolveMessages?.(this.messages)
     this.resolveLastResponse?.(this.lastResponse)
+    this.resolveError?.(undefined)
+    this.resolveToolCalls?.([])
   }
 }
 
