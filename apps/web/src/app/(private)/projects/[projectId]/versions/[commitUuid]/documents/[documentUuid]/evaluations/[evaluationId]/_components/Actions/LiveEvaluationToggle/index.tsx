@@ -1,14 +1,13 @@
 import { useCallback } from 'react'
 
+import useConnectedEvaluations from '$/stores/connectedEvaluations'
 import { EvaluationDto } from '@latitude-data/core/browser'
 import {
-  Label,
   SwitchToogle,
   useCurrentCommit,
   useCurrentProject,
   useToast,
 } from '@latitude-data/web-ui'
-import useConnectedEvaluations from '$/stores/connectedEvaluations'
 
 export default function LiveEvaluationToggle({
   documentUuid,
@@ -40,19 +39,18 @@ export default function LiveEvaluationToggle({
 
     toast({
       title: 'Successfully updated evaluation',
-      description: live ? 'Evaluation is now live' : 'Evaluation is now paused',
+      description: live
+        ? `${evaluation.name} is now live`
+        : `${evaluation.name} is now paused`,
     })
   }, [connectedEvaluation, update])
   if (!connectedEvaluation) return null
 
   return (
-    <div className='flex flex-row gap-2 items-center'>
-      <Label>Evaluate live logs</Label>
-      <SwitchToogle
-        disabled={isUpdating}
-        checked={connectedEvaluation.live}
-        onCheckedChange={toggleLive}
-      />
-    </div>
+    <SwitchToogle
+      disabled={isUpdating}
+      checked={connectedEvaluation.live}
+      onCheckedChange={toggleLive}
+    />
   )
 }

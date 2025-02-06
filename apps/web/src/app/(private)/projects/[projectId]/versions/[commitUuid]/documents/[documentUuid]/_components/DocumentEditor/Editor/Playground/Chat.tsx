@@ -23,16 +23,17 @@ import {
 } from '@latitude-data/web-ui'
 import { LanguageModelUsage } from 'ai'
 
+import { usePlaygroundChat } from '$/hooks/playgroundChat/usePlaygroundChat'
+import { type PromptlVersion } from '@latitude-data/web-ui'
 import { DocumentEditorContext } from '..'
 import Actions, { ActionsState } from './Actions'
-import { type PromptlVersion } from '@latitude-data/web-ui'
-import { usePlaygroundChat } from '$/hooks/playgroundChat/usePlaygroundChat'
 
 export default function Chat<V extends PromptlVersion>({
   document,
   promptlVersion,
   parameters,
   clearChat,
+  onPromptRan,
   expandParameters,
   setExpandParameters,
 }: {
@@ -40,6 +41,7 @@ export default function Chat<V extends PromptlVersion>({
   promptlVersion: V
   parameters: Record<string, unknown>
   clearChat: () => void
+  onPromptRan?: (documentLogUuid: string) => void
 } & ActionsState) {
   const runOnce = useRef(false)
   const [isScrolledToBottom, setIsScrolledToBottom] = useState(false)
@@ -100,6 +102,7 @@ export default function Chat<V extends PromptlVersion>({
     start,
     submitUserMessage,
     addMessages,
+    documentLogUuid,
     unresponedToolCalls,
     error,
     usage,
@@ -120,6 +123,10 @@ export default function Chat<V extends PromptlVersion>({
       start()
     }
   }, [start])
+
+  useEffect(() => {
+    if (documentLogUuid && !isLoading) onPromptRan?.(documentLogUuid)
+  }, [documentLogUuid, isLoading])
 
   return (
     <div className='flex flex-col flex-1 gap-2 h-full overflow-hidden'>

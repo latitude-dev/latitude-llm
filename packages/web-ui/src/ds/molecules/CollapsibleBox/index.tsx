@@ -2,22 +2,26 @@
 
 import { ReactNode, useCallback, useState } from 'react'
 
-import { Icon, Text } from '@latitude-data/web-ui'
+import { Icon, IconName, Text } from '@latitude-data/web-ui'
 
 export type OnExpandFn = (expanded: boolean) => void
 export function CollapsibleBox({
   title,
+  icon,
   collapsedContent,
   collapsedContentHeader,
   expandedContent,
+  expandedContentHeader,
   expandedHeight,
   initialExpanded = false,
   onExpand,
 }: {
   title: string
-  collapsedContent: ReactNode
+  icon?: IconName
+  collapsedContent?: ReactNode
   collapsedContentHeader?: ReactNode
   expandedContent?: ReactNode
+  expandedContentHeader?: ReactNode
   expandedHeight?: string
   initialExpanded?: boolean
   onExpand?: OnExpandFn
@@ -32,6 +36,8 @@ export function CollapsibleBox({
     })
   }, [])
 
+  // TODO: Fix header should have minimum height
+
   return (
     <div className='w-full border rounded-lg custom-scrollbar relative'>
       <div
@@ -39,22 +45,23 @@ export function CollapsibleBox({
         onClick={toggleExpand}
       >
         <div className='flex justify-between items-center py-3.5 px-4'>
-          <Text.H5M>{title}</Text.H5M>
           <div className='flex flex-row items-center gap-x-2'>
-            {!isExpanded ? (
-              <div onClick={(e) => e.stopPropagation()}>
-                {collapsedContentHeader}
-              </div>
-            ) : null}
+            {icon && <Icon className='flex-shrink-0' name={icon} />}
+            <Text.H5M userSelect={false}>{title}</Text.H5M>
+          </div>
+          <div className='flex flex-row items-center gap-x-2'>
+            <div onClick={(e) => e.stopPropagation()}>
+              {isExpanded ? expandedContentHeader : collapsedContentHeader}
+            </div>
             <Icon
               className='flex-none'
               name={isExpanded ? 'chevronUp' : 'chevronDown'}
             />
           </div>
         </div>
-        {!isExpanded && collapsedContent ? (
+        {!isExpanded && collapsedContent && (
           <div className='px-4 pb-4'>{collapsedContent}</div>
-        ) : null}
+        )}
       </div>
       <div
         className='transition-all duration-300 ease-in-out overflow-y-auto custom-scrollbar'
@@ -63,7 +70,9 @@ export function CollapsibleBox({
           opacity: isExpanded ? 1 : 0,
         }}
       >
-        <div className='pb-3.5 px-4'>{expandedContent}</div>
+        {expandedContent && (
+          <div className='pb-3.5 px-4'>{expandedContent}</div>
+        )}
       </div>
     </div>
   )

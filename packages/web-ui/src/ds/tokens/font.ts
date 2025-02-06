@@ -28,6 +28,16 @@ export const font = {
     center: 'text-center',
     right: 'text-right',
   },
+  height: {
+    h8: 'leading-[10px]',
+    h7: 'leading-4',
+    h6: 'leading-4',
+    h5: 'leading-5',
+    h4: 'leading-6',
+    h3: 'leading-8',
+    h2: 'leading-10',
+    h1: 'leading-h1',
+  },
 }
 
 export type FontFamily = keyof typeof font.family
@@ -35,3 +45,4 @@ export type FontSize = keyof typeof font.size
 export type TextAlign = keyof typeof font.align
 export type FontWeight = keyof typeof font.weight
 export type FontSpacing = keyof typeof font.spacing
+export type LineHeight = keyof typeof font.height

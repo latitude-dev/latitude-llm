@@ -24,6 +24,7 @@ import {
   type TextColor,
   type WhiteSpace,
   type WordBreak,
+  type LineHeight,
 } from '../../tokens'
 
 type Display = 'inline' | 'inline-block' | 'block'
@@ -48,6 +49,8 @@ export type Common = {
   monospace?: boolean
   centered?: boolean
   animate?: boolean
+  lineClamp?: number
+  lineHeight?: LineHeight
 }
 
 export type TextProps = {
@@ -86,6 +89,8 @@ const TextAtom = forwardRef<HTMLElement, AllTextProps>(function Text(
     monospace = false,
     centered = false,
     animate = false,
+    lineClamp = undefined,
+    lineHeight = undefined,
   },
   ref,
 ) {
@@ -95,6 +100,7 @@ const TextAtom = forwardRef<HTMLElement, AllTextProps>(function Text(
   const weightClass = font.weight[weight]
   const spacingClass = font.spacing[spacing]
   const alignClass = font.align[align]
+  const lineHeightClass = lineHeight ? font.height[lineHeight] : undefined
   const wordBreakClass = wordBreakOptions[wordBreak]
   const whiteSpaceClass = whiteSpaceOptions[whiteSpace]
   const Comp = asChild ? Slot : 'span'
@@ -110,6 +116,7 @@ const TextAtom = forwardRef<HTMLElement, AllTextProps>(function Text(
         wordBreakClass,
         whiteSpaceClass,
         alignClass,
+        lineHeightClass,
         display,
         {
           'bg-[length:200%_auto] text-transparent bg-clip-text animate-text-gradient bg-gradient-to-r from-muted via-muted-foreground to-muted':
@@ -124,6 +131,11 @@ const TextAtom = forwardRef<HTMLElement, AllTextProps>(function Text(
           [font.family.mono]: monospace,
           [font.family.sans]: !monospace,
           'text-center': centered,
+          'line-clamp-2': lineClamp === 2,
+          'line-clamp-3': lineClamp === 3,
+          'line-clamp-4': lineClamp === 4,
+          'line-clamp-5': lineClamp === 5,
+          'line-clamp-6': lineClamp === 6,
         },
       )}
     >

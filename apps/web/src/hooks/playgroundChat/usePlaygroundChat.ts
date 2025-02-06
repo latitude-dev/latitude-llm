@@ -204,6 +204,7 @@ export function usePlaygroundChat<V extends PromptlVersion>({
     submitUserMessage,
     setError,
     addMessages,
+    documentLogUuid,
     error,
     streamingResponse,
     messages,
