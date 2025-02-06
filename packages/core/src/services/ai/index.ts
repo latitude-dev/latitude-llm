@@ -19,7 +19,7 @@ import { JSONSchema7 } from 'json-schema'
 
 import { ProviderApiKey, StreamType } from '../../browser'
 import { Result, TypedResult } from '../../lib'
-import { ChainError } from '../../lib/streamManager/ChainErrors'
+import { ChainError } from '../../lib/chainStreamManager/ChainErrors'
 import { buildTools } from './buildTools'
 import { handleAICallAPIError } from './handleError'
 import { createProvider, PartialConfig } from './helpers'

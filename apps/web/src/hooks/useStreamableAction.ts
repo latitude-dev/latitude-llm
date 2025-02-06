@@ -1,6 +1,9 @@
 import { useCallback, useState } from 'react'
 
-import { ChainEventTypes, StreamEventTypes } from '@latitude-data/core/browser'
+import {
+  LegacyChainEventTypes,
+  StreamEventTypes,
+} from '@latitude-data/core/browser'
 import { readStreamableValue } from 'ai/rsc'
 
 type OnEventHandler = (event: string, data: any) => void
@@ -40,11 +43,11 @@ export function useStreamableAction<T extends (...args: any[]) => any>(
 
           switch (event) {
             case StreamEventTypes.Latitude: {
-              if (data.type === ChainEventTypes.Complete) {
+              if (data.type === LegacyChainEventTypes.Complete) {
                 setResponseStream(undefined)
                 setDone(true)
                 setLoading(false)
-              } else if (data.type === ChainEventTypes.Error) {
+              } else if (data.type === LegacyChainEventTypes.Error) {
                 setError(new Error(data.error.message))
                 setLoading(false)
               }

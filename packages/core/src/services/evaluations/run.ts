@@ -1,6 +1,7 @@
 import { RunErrorCodes } from '@latitude-data/constants/errors'
 
 import {
+  ChainStepResponse,
   DocumentLog,
   ErrorableEntity,
   EvaluationDto,
@@ -12,8 +13,8 @@ import { database } from '../../client'
 import { unsafelyFindDocumentLogByUuid } from '../../data-access'
 import { publisher } from '../../events/publisher'
 import { generateUUIDIdentifier, NotFoundError, Result } from '../../lib'
-import { ChainError } from '../../lib/streamManager/ChainErrors'
-import { ChainResponse, runChain } from '../chains/run'
+import { ChainError } from '../../lib/chainStreamManager/ChainErrors'
+import { runChain } from '../chains/run'
 import {
   createEvaluationResult,
   CreateEvaluationResultProps,
@@ -77,7 +78,7 @@ export async function runEvaluation(
     evaluation.metadataType !== EvaluationMetadataType.LlmAsJudgeAdvanced ||
     evaluation.metadata.promptlVersion !== 0
 
-  const run = await runChain({
+  const run = runChain({
     generateUUID: () => errorableUuid,
     errorableType: ErrorableEntity.EvaluationResult,
     workspace,
@@ -89,13 +90,16 @@ export async function runEvaluation(
   })
 
   // Handle response
-  const responseResult = (await run.response) as ChainResponse<'object'>
-  const response = responseResult.value
+  const response = (await run.lastResponse) as
+    | ChainStepResponse<'object'>
+    | undefined
+  const providerLog = response?.providerLog
+  const responseError = await run.error
   let error: ChainError<RunErrorCodes> | undefined
-  if (responseResult.ok && !response?.object) {
+  if (!responseError && !response?.object) {
     error = new ChainError({
       code: RunErrorCodes.EvaluationRunResponseJsonFormatError,
-      message: `Provider with model [${response?.providerLog?.config?.model ?? 'unknown'}] did not return a valid JSON object`,
+      message: `Provider with model [${providerLog?.config?.model ?? 'unknown'}] did not return a valid JSON object`,
     })
     await handleEvaluationError(error, errorableUuid)
   }
@@ -105,10 +109,10 @@ export async function runEvaluation(
     errorableUuid,
     evaluation,
     documentLog,
-    evaluationProviderLog: response?.providerLog,
-    result: response?.object,
+    evaluationProviderLog: providerLog,
     documentUuid,
-    responseResult,
+    response,
+    result: response?.object,
     publishEvent: true,
     evaluatedProviderLog,
   })
@@ -135,7 +139,7 @@ async function handleEvaluationError(
 
 async function createEvaluationRunResult({
   errorableUuid,
-  responseResult,
+  response,
   documentUuid,
   evaluation,
   documentLog,
@@ -149,7 +153,7 @@ async function createEvaluationRunResult({
   evaluation: EvaluationDto
   documentLog: DocumentLog
   publishEvent: boolean
-  responseResult?: ChainResponse<'object'>
+  response?: ChainStepResponse<'object'>
   evaluationProviderLog?: ProviderLog
   evaluatedProviderLog: ProviderLog
   result?: CreateEvaluationResultProps['result']
@@ -158,7 +162,7 @@ async function createEvaluationRunResult({
     publisher.publishLater({
       type: 'evaluationRun',
       data: {
-        response: responseResult?.value,
+        response,
         documentUuid,
         evaluationId: evaluation.id,
         documentLogUuid: documentLog.uuid,

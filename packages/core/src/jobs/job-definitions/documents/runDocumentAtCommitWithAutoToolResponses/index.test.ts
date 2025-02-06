@@ -15,7 +15,7 @@ import { NotFoundError, Result } from '../../../../lib'
 import { AutogenerateToolResponseCopilotData } from './getCopilotData'
 import type { RunDocumentAtCommitWithAutoToolResponsesFn } from './index'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
-import { ChainError } from '../../../../lib/streamManager/ChainErrors'
+import { ChainError } from '../../../../lib/chainStreamManager/ChainErrors'
 
 let workspace: Workspace
 let project: Project
@@ -45,8 +45,10 @@ describe('runDocumentAtCommitWithAutoToolResponses', () => {
 
   it('it runs document without tools', async () => {
     const mockResult = {
-      response: Promise.resolve(Result.ok({ providerLog: { uuid: 'log1' } })),
       errorableUuid: 'log1',
+      error: Promise.resolve(undefined),
+      response: Promise.resolve({ providerLog: { uuid: 'log1' } }),
+      toolCalls: Promise.resolve([]),
     }
     vi.spyOn(runDoc, 'runDocumentAtCommit')
     const mockRunUntilItStops = vi.spyOn(
@@ -145,12 +147,11 @@ describe('runDocumentAtCommitWithAutoToolResponses', () => {
       },
     ]
     const mockResult = {
-      response: Promise.resolve(
-        Result.ok({
-          providerLog: { uuid: 'log1' },
-          toolCalls: fakeTools,
-        }),
-      ),
+      response: Promise.resolve({
+        providerLog: { uuid: 'log1' },
+        toolCalls: fakeTools,
+      }),
+      toolCalls: Promise.resolve(fakeTools),
       errorableUuid: 'log1',
     }
 
@@ -210,6 +211,7 @@ describe('runDocumentAtCommitWithAutoToolResponses', () => {
           source: LogSources.Playground,
           copilot,
           documentLogUuid: 'log1',
+          parameters: { param1: 'value1' },
           toolCalls: fakeTools,
         },
       },

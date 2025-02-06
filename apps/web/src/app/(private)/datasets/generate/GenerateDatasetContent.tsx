@@ -2,7 +2,10 @@
 
 import { ChangeEvent, FormEvent, useEffect, useState } from 'react'
 
-import { ChainEventTypes, StreamEventTypes } from '@latitude-data/core/browser'
+import {
+  LegacyChainEventTypes,
+  StreamEventTypes,
+} from '@latitude-data/core/browser'
 import { syncReadCsv } from '@latitude-data/core/lib/readCsv'
 import {
   Alert,
@@ -75,7 +78,7 @@ export function GenerateDatasetContent({
     async (event, data) => {
       if (
         event === StreamEventTypes.Latitude &&
-        data.type === ChainEventTypes.Complete
+        data.type === LegacyChainEventTypes.Complete
       ) {
         const parsedCsv = await syncReadCsv(data.response.object.csv, {
           delimiter: ',',
