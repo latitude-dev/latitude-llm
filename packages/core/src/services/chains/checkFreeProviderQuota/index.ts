@@ -3,7 +3,7 @@ import { env } from '@latitude-data/env'
 
 import {
   DEFAULT_PROVIDER_MAX_FREE_RUNS,
-  DEFAULT_PROVIDER_UNSUPPORTED_MODELS,
+  DEFAULT_PROVIDER_SUPPORTED_MODELS,
   ProviderApiKey,
   Workspace,
 } from '../../../browser'
@@ -23,12 +23,11 @@ export async function checkFreeProviderQuota({
   defaultProviderApiKey?: string
 }) {
   if (provider.token !== defaultProviderApiKey) return Result.ok(true)
-  if (DEFAULT_PROVIDER_UNSUPPORTED_MODELS.includes(model ?? '')) {
+  if (!DEFAULT_PROVIDER_SUPPORTED_MODELS.includes(model ?? '')) {
     return Result.error(
       new ChainError({
         code: RunErrorCodes.DefaultProviderInvalidModel,
-        message:
-          'The default provider does not support the gpt-4o model, except 4o-mini.',
+        message: `You're using ${model} model. The default provider only supports these models: ${DEFAULT_PROVIDER_SUPPORTED_MODELS.join(', ')}. Please use a different provider or model`,
       }),
     )
   }

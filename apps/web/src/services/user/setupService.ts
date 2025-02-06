@@ -15,7 +15,7 @@ export default function setupService({
     email,
     name,
     companyName,
-    defaultProviderId: env.DEFAULT_PROVIDER_ID,
+    defaultProviderName: env.NEXT_PUBLIC_DEFAULT_PROVIDER_NAME,
     defaultProviderApiKey: env.DEFAULT_PROVIDER_API_KEY,
     captureException,
   })

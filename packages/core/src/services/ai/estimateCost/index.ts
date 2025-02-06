@@ -1,43 +1,102 @@
 import { LanguageModelUsage } from 'ai'
 
 import { Providers } from '../../../browser'
-import { getCostPer1MAnthropic } from './anthropic'
-import { getCostPer1MGroq } from './groq'
-import { getCostPer1MMistral } from './mistral'
-import { getCostPer1MOpenAI } from './openai'
-import { getCostPer1MGoogle } from './google'
+import { GROQ_MODELS } from './groq'
+import { OPENAI_MODELS } from './openai'
+import { ANTHROPIC_MODELS } from './anthropic'
+import { MISTRAL_MODELS } from './mistral'
+import { GOOGLE_MODELS } from './google'
 
-// FIXME: Unifify models with src/constants.ts
-// The list of supported models for each provider is duplicated.
-export type ModelCost = { input: number; output: number }
+export type ModelCost = {
+  input: number
+  output: number
+  tokensRangeStart?: number
+}
+const NON_IMPLEMENTED_COST = {
+  cost: { input: 0, output: 0 },
+  costImplemented: false,
+}
 
-function getCostPer1M({
+type ModelCostPer1M = {
+  cost: ModelCost | ModelCost[]
+  costImplemented: boolean
+}
+
+export function getCostPer1M({
   provider,
   model,
 }: {
   provider: Providers
   model: string
-}): ModelCost {
+}): ModelCostPer1M {
   switch (provider) {
     case Providers.OpenAI:
-      return getCostPer1MOpenAI(model)
+      return OPENAI_MODELS.getCost(model)
     case Providers.Groq:
-      return getCostPer1MGroq(model)
+      return GROQ_MODELS.getCost(model)
     case Providers.Anthropic:
-      return getCostPer1MAnthropic(model)
+      return ANTHROPIC_MODELS.getCost(model)
     case Providers.Mistral:
-      return getCostPer1MMistral(model)
-    case Providers.Azure:
-      return getCostPer1MOpenAI(model)
+      return MISTRAL_MODELS.getCost(model)
     case Providers.Google:
-      return getCostPer1MGoogle(model)
+      return GOOGLE_MODELS.getCost(model)
+    case Providers.Azure:
+      return NON_IMPLEMENTED_COST
     case Providers.Custom:
-      return { input: 0, output: 0 }
+      return NON_IMPLEMENTED_COST
     default:
-      return { input: 0, output: 0 }
+      return NON_IMPLEMENTED_COST
   }
 }
 
+function computeCost({
+  costSpec,
+  tokens,
+  tokenType,
+}: {
+  costSpec: ModelCost | ModelCost[]
+  tokens: number
+  tokenType: 'input' | 'output'
+}): number {
+  const tiers: ModelCost[] = Array.isArray(costSpec) ? costSpec : [costSpec]
+  const sortedTiers = tiers
+    .slice()
+    .sort((a, b) => (a.tokensRangeStart ?? 0) - (b.tokensRangeStart ?? 0))
+
+  let totalCost = 0
+  for (let i = 0; i < sortedTiers.length; i++) {
+    const cost = sortedTiers[i]
+    if (!cost) continue
+
+    const tierStart = cost.tokensRangeStart ?? 0
+    const tierEnd =
+      i + 1 < sortedTiers.length
+        ? (sortedTiers[i + 1]?.tokensRangeStart ?? Infinity)
+        : Infinity
+
+    // If the total tokens are less than or equal to the start of this tier,
+    // then no tokens fall into this tier.
+    if (tokens <= tierStart) break
+
+    // Calculate the number of tokens in the current tier.
+    // (For example, if tokens = 200_000, tierStart = 0 and tierEnd = 128_000,
+    // then tokensInTier = 128_000. In the next tier, tokensInTier = 200_000 - 128_000.)
+    const tokensInTier = Math.min(tokens, tierEnd) - tierStart
+
+    totalCost += (cost[tokenType] * tokensInTier) / 1_000_000
+  }
+
+  return totalCost
+}
+
+/**
+ * Given the usage (number of input and output tokens), a provider and a model name,
+ * this function returns the estimated cost by applying the proper cost rates.
+ *
+ * If the model’s cost is defined as an array then we assume it contains multiple tiers.
+ * In that case, the first tier applies from token 0 (or from tokensRangeStart=undefined, assumed to be 0)
+ * up to the next tier’s starting threshold, and so on.
+ */
 export function estimateCost({
   usage,
   provider,
@@ -47,15 +106,23 @@ export function estimateCost({
   provider: Providers
   model: string
 }): number {
-  const { promptTokens: inputTokens, completionTokens: outputTokens } = usage
-  const { input: inputCostPer1MToken, output: outputCostPer1MToken } =
-    getCostPer1M({ provider, model })
+  const { promptTokens, completionTokens } = usage
+  const costSpec = getCostPer1M({ provider, model }).cost
 
-  const inputCost =
-    (inputCostPer1MToken * (isNaN(inputTokens) ? 0 : inputTokens)) / 1_000_000
-  const outputCost =
-    (outputCostPer1MToken * (isNaN(outputTokens) ? 0 : outputTokens)) /
-    1_000_000
+  // Guard against NaN token counts.
+  const validInputTokens = isNaN(promptTokens) ? 0 : promptTokens
+  const validOutputTokens = isNaN(completionTokens) ? 0 : completionTokens
+
+  const inputCost = computeCost({
+    costSpec,
+    tokens: validInputTokens,
+    tokenType: 'input',
+  })
+  const outputCost = computeCost({
+    costSpec,
+    tokens: validOutputTokens,
+    tokenType: 'output',
+  })
 
   return inputCost + outputCost
 }

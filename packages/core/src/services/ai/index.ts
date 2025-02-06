@@ -202,5 +202,5 @@ export async function ai({
   }
 }
 
-export { estimateCost } from './estimateCost'
+export { estimateCost, getCostPer1M } from './estimateCost'
 export type { Config, PartialConfig } from './helpers'

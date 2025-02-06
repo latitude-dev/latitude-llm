@@ -119,7 +119,7 @@ export default function EditorHeader({
 
       const firstModel = findFirstModelForProvider({
         provider: providersByName[selectedProvider],
-        latitudeProvider: envClient.NEXT_PUBLIC_DEFAULT_PROJECT_ID,
+        defaultProviderName: envClient.NEXT_PUBLIC_DEFAULT_PROVIDER_NAME,
       })
 
       setProvider(selectedProvider)
@@ -165,7 +165,7 @@ export default function EditorHeader({
   )
 
   const isLatitudeProvider =
-    provider === envClient.NEXT_PUBLIC_DEFAULT_PROJECT_ID
+    provider === envClient.NEXT_PUBLIC_DEFAULT_PROVIDER_NAME
 
   return (
     <div className='flex flex-col gap-y-2'>

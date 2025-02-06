@@ -215,42 +215,42 @@ describe('forkDocument', () => {
           {
             path: 'some-folder/parent',
             provider: 'google',
-            model: 'gemini-1.5-flash',
+            model: 'gemini-2.0-flash',
           },
           {
             path: 'siblingParent/sibling',
             provider: 'google',
-            model: 'gemini-1.5-flash',
+            model: 'gemini-2.0-flash',
           },
           {
             path: 'some-folder/children/child1',
             provider: 'google',
-            model: 'gemini-1.5-flash',
+            model: 'gemini-2.0-flash',
           },
           {
             path: 'some-folder/children/child2',
             provider: 'google',
-            model: 'gemini-1.5-flash',
+            model: 'gemini-2.0-flash',
           },
           {
             path: 'some-folder/children/childSibling',
             provider: 'google',
-            model: 'gemini-1.5-flash',
+            model: 'gemini-2.0-flash',
           },
           {
             path: 'some-folder/children/grandchildren/grandchild1',
             provider: 'google',
-            model: 'gemini-1.5-flash',
+            model: 'gemini-2.0-flash',
           },
           {
             path: 'some-folder/children/grandchildren/grandchild2',
             provider: 'google',
-            model: 'gemini-1.5-flash',
+            model: 'gemini-2.0-flash',
           },
           {
             path: 'some-folder/children/grandchildren/grand-grand-grandChildren/deepestGrandChild',
             provider: 'google',
-            model: 'gemini-1.5-flash',
+            model: 'gemini-2.0-flash',
           },
         ])
       })
@@ -296,27 +296,27 @@ describe('forkDocument', () => {
           {
             path: 'some-folder/children/child1',
             provider: 'google',
-            model: 'gemini-1.5-flash',
+            model: 'gemini-2.0-flash',
           },
           {
             path: 'some-folder/children/childSibling',
             provider: 'google',
-            model: 'gemini-1.5-flash',
+            model: 'gemini-2.0-flash',
           },
           {
             path: 'some-folder/children/grandchildren/grandchild1',
             provider: 'google',
-            model: 'gemini-1.5-flash',
+            model: 'gemini-2.0-flash',
           },
           {
             path: 'some-folder/children/grandchildren/grandchild2',
             provider: 'google',
-            model: 'gemini-1.5-flash',
+            model: 'gemini-2.0-flash',
           },
           {
             path: 'some-folder/children/grandchildren/grand-grand-grandChildren/deepestGrandChild',
             provider: 'google',
-            model: 'gemini-1.5-flash',
+            model: 'gemini-2.0-flash',
           },
         ])
       })
@@ -330,7 +330,7 @@ describe('New workspace', () => {
       name: 'Alice',
       email: 'alice@example.com',
       companyName: 'Alice Company',
-      defaultProviderId: 'Latitude',
+      defaultProviderName: 'Latitude',
       defaultProviderApiKey: 'some-key',
     }).then((r) => r.unwrap())
     user = usr

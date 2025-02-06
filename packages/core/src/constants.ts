@@ -39,7 +39,7 @@ export enum CommitStatus {
 }
 
 export {
-  DEFAULT_PROVIDER_UNSUPPORTED_MODELS,
+  DEFAULT_PROVIDER_SUPPORTED_MODELS,
   PROVIDER_MODELS,
   Providers,
 } from './services/ai/providers/models'

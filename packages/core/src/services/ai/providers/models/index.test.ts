@@ -31,11 +31,11 @@ describe('findFirstModelForProvider', () => {
 
   it('returns default model for provider with default model set', async () => {
     provider.provider = Providers.OpenAI
-    provider.defaultModel = 'gpt-4'
+    provider.defaultModel = 'gpt-4o'
 
     const result = findFirstModelForProvider({ provider })
 
-    expect(result).toBe('gpt-4')
+    expect(result).toBe('gpt-4o')
   })
 
   it('returns first model for provider without default model set', async () => {
@@ -77,10 +77,12 @@ describe('findFirstModelForProvider', () => {
   it('returns first supported model for latitude provider', async () => {
     provider.provider = Providers.OpenAI
     provider.name = 'latitude'
-    const latitudeProvider = 'latitude'
 
-    const result = findFirstModelForProvider({ provider, latitudeProvider })
+    const result = findFirstModelForProvider({
+      provider,
+      defaultProviderName: 'latitude',
+    })
 
-    expect(result).toBe(Object.values(PROVIDER_MODELS[Providers.OpenAI]!)[0])
+    expect(result).toBe('gpt-4o-mini')
   })
 })

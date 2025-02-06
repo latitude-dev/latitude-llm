@@ -1,29 +1,26 @@
-import { Providers, RewardType } from '../../constants'
+import { Providers } from '../../constants'
 import { SessionData } from '../../data-access'
 import { publisher } from '../../events/publisher'
 import { PromisedResult, Result, Transaction } from '../../lib'
 import { createApiKey } from '../apiKeys'
-import { claimReward } from '../claimedRewards'
 import { createMembership } from '../memberships/create'
 import { importDefaultProject } from '../projects/import'
 import { createProviderApiKey } from '../providerApiKeys'
 import { createWorkspace } from '../workspaces'
 import { createUser } from './createUser'
 
-const LAUNCH_DAY = '2024-10-10'
-
 export default function setupService({
   email,
   name,
   companyName,
-  defaultProviderId,
+  defaultProviderName,
   defaultProviderApiKey,
   captureException,
 }: {
   email: string
   name: string
   companyName: string
-  defaultProviderId?: string
+  defaultProviderName?: string
   defaultProviderApiKey?: string
   captureException?: (error: Error) => void
 }): PromisedResult<SessionData> {
@@ -46,26 +43,14 @@ export default function setupService({
     if (resultWorkspace.error) return resultWorkspace
     const workspace = resultWorkspace.value
 
-    if (new Date().toISOString().split('T')[0] === LAUNCH_DAY) {
-      await claimReward(
-        {
-          workspace,
-          user,
-          type: RewardType.SignupLaunchDay,
-          reference: LAUNCH_DAY, // not really used for this reward type
-          autoValidated: true,
-        },
-        tx,
-      )
-    }
-
-    if (defaultProviderId && defaultProviderApiKey) {
+    if (defaultProviderName && defaultProviderApiKey) {
       const firstProvider = await createProviderApiKey(
         {
           workspace,
           provider: Providers.OpenAI,
-          name: defaultProviderId,
+          name: defaultProviderName,
           token: defaultProviderApiKey,
+          defaultModel: 'gpt-4o-mini', // TODO: Move this to env variable
           author: user,
         },
         tx,

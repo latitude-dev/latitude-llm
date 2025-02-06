@@ -49,6 +49,7 @@ describe('checkFreeProviderQuota', () => {
       const result = await checkFreeProviderQuota({
         workspace,
         provider,
+        model: 'gpt-4o-mini',
         defaultProviderApiKey: provider.token,
       })
       expect(result).toEqual(Result.ok(true))
@@ -60,6 +61,7 @@ describe('checkFreeProviderQuota', () => {
       const result = await checkFreeProviderQuota({
         workspace,
         provider,
+        model: 'gpt-4o-mini',
         defaultProviderApiKey: provider.token,
       })
 
@@ -75,8 +77,8 @@ describe('checkFreeProviderQuota', () => {
       resetFreeRuns(workspace.id, prevCount)
     })
 
-    it('returns an error when the model is 4o', async () => {
-      const model = 'gpt-4o'
+    it('returns an error when the model is not permited for default provider', async () => {
+      const model = 'o1-mini'
       const result = await checkFreeProviderQuota({
         workspace,
         provider,
@@ -90,7 +92,7 @@ describe('checkFreeProviderQuota', () => {
           new ChainError({
             code: RunErrorCodes.DefaultProviderInvalidModel,
             message:
-              'The default provider does not support the gpt-4o model, except 4o-mini.',
+              "You're using o1-mini model. The default provider only supports these models: gpt-4o-mini, gpt-4o. Please use a different provider or model",
           }),
         ),
       )

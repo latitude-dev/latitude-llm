@@ -55,7 +55,7 @@ export function useProviderModel(metadata: EvaluationMetadataLlmAsJudgeSimple) {
 
     const firstModel = findFirstModelForProvider({
       provider: providersByName[value],
-      latitudeProvider: envClient.NEXT_PUBLIC_DEFAULT_PROJECT_ID,
+      defaultProviderName: envClient.NEXT_PUBLIC_DEFAULT_PROVIDER_NAME,
     })
 
     setSelectedProvider(value)

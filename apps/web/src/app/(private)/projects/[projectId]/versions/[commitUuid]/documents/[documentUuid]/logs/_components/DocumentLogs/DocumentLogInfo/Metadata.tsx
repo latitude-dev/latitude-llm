@@ -4,7 +4,7 @@ import { RunErrorMessage } from '$/app/(private)/projects/[projectId]/versions/[
 import { formatCostInMillicents, formatDuration } from '$/app/_lib/formatUtils'
 import useProviderApiKeys from '$/stores/providerApiKeys'
 import { Message } from '@latitude-data/compiler'
-import { ProviderLogDto } from '@latitude-data/core/browser'
+import { ProviderApiKey, ProviderLogDto } from '@latitude-data/core/browser'
 import { DocumentLogWithMetadataAndError } from '@latitude-data/core/repositories'
 import {
   Badge,
@@ -20,6 +20,63 @@ import {
   MetadataItem,
   MetadataItemTooltip,
 } from '../../../../../[documentUuid]/_components/MetadataItem'
+import { getCostPer1M } from '@latitude-data/core/services/ai/estimateCost/index'
+
+function costNotCalculatedReason({
+  provider,
+  log,
+}: {
+  provider: ProviderApiKey
+  log: ProviderLogDto
+}) {
+  const model = log.config?.model
+  if (!model) return 'Model not specified, we could not calculate the cost.'
+
+  const providerKey = provider.provider
+  const costImplemented = getCostPer1M({
+    provider: providerKey,
+    model,
+  }).costImplemented
+
+  if (costImplemented) return undefined
+
+  return `Cost not calculated for ${providerKey} model ${model}. We have not implemented the cost calculation for this provider yet.`
+}
+
+function useCostByModel({
+  providerLogs,
+  providers,
+  providersLoading,
+}: {
+  providerLogs: ProviderLogDto[]
+  providers: ProviderApiKey[] | undefined
+  providersLoading: boolean
+}) {
+  return useMemo(() => {
+    if (providersLoading) return {}
+    if (providers === undefined) return {}
+
+    return (
+      providerLogs?.reduce(
+        (acc, log) => {
+          const provider = providers.find((p) => p.id === log.providerId)
+          if (!provider) return acc
+          const key = String(log.providerId)
+          const prevCost = acc[key]?.cost ?? 0
+          acc[key] = {
+            cost: prevCost + log.costInMillicents,
+            notImplementedReason: costNotCalculatedReason({ provider, log }),
+          }
+          return acc
+        },
+        {} as Record<
+          string,
+          { cost: number; notImplementedReason: string | undefined }
+        >,
+      ) ?? {}
+    )
+  }, [providerLogs, providers, providersLoading])
+}
 
 function ProviderLogsMetadata({
   providerLog,
@@ -45,18 +102,11 @@ function ProviderLogsMetadata({
     )
   }, [providerLogs])
 
-  const costByModel = useMemo(
-    () =>
-      providerLogs?.reduce(
-        (acc, log) => {
-          const key = String(log.providerId)
-          acc[key] = (acc[key] ?? 0) + log.costInMillicents
-          return acc
-        },
-        {} as Record<string, number>,
-      ) ?? {},
-    [providerLogs],
-  )
+  const costByModel = useCostByModel({
+    providerLogs,
+    providers,
+    providersLoading,
+  })
   const duration = useMemo(() => {
     const timeInMs = (documentLog.duration ?? 0) - (providerLog.duration ?? 0)
     if (timeInMs <= 0) return
@@ -87,17 +137,13 @@ function ProviderLogsMetadata({
                   key={model}
                   className='flex flex-row w-full justify-between items-center gap-4'
                 >
-                  {model && (
-                    <Text.H6B color='foregroundMuted'>{model}</Text.H6B>
-                  )}
-                  {tokens && (
-                    <Text.H6 color='foregroundMuted'>{tokens}</Text.H6>
-                  )}
+                  {model && <Text.H6B color='background'>{model}</Text.H6B>}
+                  {tokens && <Text.H6 color='background'>{tokens}</Text.H6>}
                 </div>
               ))}
               {Object.values(tokensByModel).some((t) => t === 0) && (
                 <div className='pt-4'>
-                  <Text.H6 color='foregroundMuted'>
+                  <Text.H6 color='background'>
                     Note: Number of tokens is provided by your LLM Provider.
                     Some providers may return 0 tokens.
                   </Text.H6>
@@ -112,6 +158,7 @@ function ProviderLogsMetadata({
           value={documentLog.tokens ? String(documentLog.tokens) : '-'}
         />
       )}
+
       {documentLog.costInMillicents ? (
         <MetadataItemTooltip
           loading={providersLoading}
@@ -123,27 +170,35 @@ function ProviderLogsMetadata({
           }
           tooltipContent={
             <div className='flex flex-col justify-between'>
-              {Object.entries(costByModel).map(
-                ([providerId, cost_in_millicents]) => (
-                  <div
-                    key={providerId}
-                    className='flex flex-row w-full justify-between items-center gap-4'
-                  >
-                    <Text.H6B color='foregroundMuted'>
-                      {providers?.find((p) => p.id === Number(providerId))
-                        ?.name ?? 'Unknown'}
-                    </Text.H6B>
-                    <Text.H6 color='foregroundMuted'>
-                      {formatCostInMillicents(cost_in_millicents)}
-                    </Text.H6>
-                  </div>
-                ),
-              )}
-              <div className='pt-4'>
-                <Text.H6 color='foregroundMuted'>
-                  Note: This is just an estimate based on the token usage and
-                  your provider's pricing. Actual cost may vary.
-                </Text.H6>
+              <div className='flex flex-col justify-between gap-y-2 divide-y divider-background'>
+                {Object.entries(costByModel).map(
+                  ([providerId, providerCost]) => (
+                    <div key={providerId} className='flex flex-col w-full'>
+                      <div className='flex flex-row w-full justify-between items-center gap-4'>
+                        <Text.H6B color='background'>
+                          {providers?.find((p) => p.id === Number(providerId))
+                            ?.name ?? 'Unknown'}
+                        </Text.H6B>
+                        <Text.H6 color='background'>
+                          {providerCost.notImplementedReason
+                            ? 'N/A'
+                            : formatCostInMillicents(providerCost.cost)}
+                        </Text.H6>
+                      </div>
+                      {providerCost.notImplementedReason ? (
+                        <Text.H7 color='background'>
+                          {providerCost.notImplementedReason}
+                        </Text.H7>
+                      ) : null}
+                    </div>
+                  ),
+                )}
+                <div className='pt-4'>
+                  <Text.H6 color='background'>
+                    Note: This is just an estimate based on the token usage and
+                    your provider's pricing. Actual cost may vary.
+                  </Text.H6>
+                </div>
               </div>
             </div>
           }
