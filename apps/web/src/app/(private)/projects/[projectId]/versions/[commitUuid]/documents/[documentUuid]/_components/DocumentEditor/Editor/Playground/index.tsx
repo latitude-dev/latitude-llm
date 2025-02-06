@@ -5,6 +5,7 @@ import useDocumentLogWithMetadata from '$/stores/documentLogWithMetadata'
 import { DocumentVersion } from '@latitude-data/core/browser'
 import {
   AppLocalStorage,
+  COLLAPSED_BOX_HEIGHT,
   SplitPane,
   useCurrentCommit,
   useLocalStorage,
@@ -16,7 +17,8 @@ import { DocumentParams } from './DocumentParams'
 import Evaluations from './Evaluations'
 import Preview from './Preview'
 
-const COLLAPSED_SIZE = 56 * 2 // Collapsed boxes height
+const COLLAPSED_SIZE = COLLAPSED_BOX_HEIGHT * 2 + 12
+const GAP_PADDING = 26
 
 export default function Playground({
   document,
@@ -38,7 +40,7 @@ export default function Playground({
   const [expandedEvaluations, setExpandedEvaluations] = useState(false)
   const collapsed = !expandedParameters && !expandedEvaluations
   useEffect(() => {
-    if (collapsed) setForcedSize(COLLAPSED_SIZE)
+    setForcedSize(collapsed ? COLLAPSED_SIZE : undefined)
   }, [collapsed])
 
   const { parameters } = useDocumentParameters({
@@ -67,10 +69,10 @@ export default function Playground({
       gap={4}
       initialPercentage={1} // minSize ensures all boxes are visible when collapsed
       forcedSize={forcedSize}
-      minSize={COLLAPSED_SIZE}
+      minSize={COLLAPSED_SIZE + GAP_PADDING}
       dragDisabled={collapsed}
       firstPane={
-        <div className='flex flex-col gap-2 w-full'>
+        <div className='flex flex-col gap-2 w-full pr-0.5'>
           <DocumentParams
             commit={commit}
             document={document}
@@ -87,7 +89,7 @@ export default function Playground({
         </div>
       }
       secondPane={
-        <div className='h-full flex-grow flex-shrink min-h-0 flex flex-col gap-2 overflow-hidden'>
+        <div className='h-full flex-grow flex-shrink min-h-0 flex flex-col gap-2 overflow-hidden pr-0.5'>
           {mode === 'preview' ? (
             <Preview
               metadata={metadata}

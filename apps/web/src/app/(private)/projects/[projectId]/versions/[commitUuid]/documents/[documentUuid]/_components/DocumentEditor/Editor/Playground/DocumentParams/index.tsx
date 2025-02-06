@@ -108,7 +108,7 @@ function CollapsedContentHeader({
   const onNextDatasetPage = (page: number) => datasetInfo.onRowChange(page + 1)
 
   return (
-    <div className='w-full flex flex-col gap-4'>
+    <div className='w-full flex items-center justify-end gap-4'>
       {isDataset && (
         <ParametersPaginationNav
           zeroIndex

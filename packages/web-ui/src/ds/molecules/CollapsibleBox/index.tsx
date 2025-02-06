@@ -4,6 +4,8 @@ import { ReactNode, useCallback, useState } from 'react'
 
 import { Icon, IconName, Text } from '@latitude-data/web-ui'
 
+export const COLLAPSED_BOX_HEIGHT = 56
+
 export type OnExpandFn = (expanded: boolean) => void
 export function CollapsibleBox({
   title,
@@ -36,21 +38,22 @@ export function CollapsibleBox({
     })
   }, [])
 
-  // TODO: Fix header should have minimum height
-
   return (
-    <div className='w-full border rounded-lg custom-scrollbar relative'>
+    <div className='min-h-14 w-full box-content border rounded-lg custom-scrollbar relative'>
       <div
         className='flex flex-col cursor-pointer sticky top-0 z-10 bg-background'
         onClick={toggleExpand}
       >
-        <div className='flex justify-between items-center py-3.5 px-4'>
+        <div className='min-h-14 flex flex-shrink-0 justify-between items-center py-3.5 px-4 gap-x-4'>
           <div className='flex flex-row items-center gap-x-2'>
             {icon && <Icon className='flex-shrink-0' name={icon} />}
             <Text.H5M userSelect={false}>{title}</Text.H5M>
           </div>
-          <div className='flex flex-row items-center gap-x-2'>
-            <div onClick={(e) => e.stopPropagation()}>
+          <div className='flex flex-row flex-grow min-w-0 items-center gap-x-2'>
+            <div
+              className='flex-grow min-w-0'
+              onClick={(e) => e.stopPropagation()}
+            >
               {isExpanded ? expandedContentHeader : collapsedContentHeader}
             </div>
             <Icon

@@ -211,7 +211,6 @@ function ExpandedContent({
   )
 }
 
-// TODO: Fix header overflows
 function ExpandedContentHeader({ document, commit, project }: ContentProps) {
   const route = ROUTES.projects
     .detail({ id: project.id })
@@ -220,7 +219,7 @@ function ExpandedContentHeader({ document, commit, project }: ContentProps) {
     .connect.root
 
   return (
-    <div className='w-full flex items-center justify-center'>
+    <div className='w-full flex items-center justify-end gap-4'>
       <Link href={route}>
         <Button variant='link'>+ Connect an evaluation</Button>
       </Link>
@@ -228,13 +227,12 @@ function ExpandedContentHeader({ document, commit, project }: ContentProps) {
   )
 }
 
-// TODO: Fix header overflows
 function CollapsedContentHeader({
   evaluations,
   isEvaluationsLoading,
 }: ContentProps) {
   return (
-    <div className='w-full flex items-center justify-center gap-4 pr-3 truncate'>
+    <div className='w-full flex items-center justify-end gap-4'>
       {isEvaluationsLoading ? (
         <Skeleton className='w-36 h-4' />
       ) : (
