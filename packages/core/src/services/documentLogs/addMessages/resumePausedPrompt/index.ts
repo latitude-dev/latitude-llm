@@ -4,7 +4,6 @@ import {
   DocumentVersion,
   LogSources,
   Workspace,
-  buildMessagesFromResponse,
 } from '../../../../browser'
 import { Result } from '../../../../lib'
 import { runChain } from '../../../chains/run'
@@ -13,11 +12,7 @@ import { Message } from '@latitude-data/compiler'
 import { Chain as PromptlChain } from 'promptl-ai'
 import { getResolvedContent } from '../../../documents'
 import { deleteCachedChain } from '../../../chains/chainCache'
-import {
-  ChainStepResponse,
-  DocumentType,
-  StreamType,
-} from '../../../../constants'
+import { ChainStepResponse, StreamType } from '../../../../constants'
 import { runAgent } from '../../../agents/run'
 
 /**
@@ -66,10 +61,9 @@ export async function resumePausedPrompt({
   })
   const errorableUuid = documentLogUuid
 
-  const runFn =
-    document.documentType === DocumentType.Agent ? runAgent : runChain
+  const runFn = document.documentType === 'agent' ? runAgent : runChain
 
-  const runResult = runFn({
+  const run = await runFn({
     generateUUID: () => errorableUuid,
     errorableType,
     workspace,
@@ -77,21 +71,26 @@ export async function resumePausedPrompt({
     promptlVersion: document.promptlVersion,
     providersMap,
     source,
-
-    messages: previousResponse.providerLog!.messages, // TODO: Store this in the cache instead
-    newMessages: [
-      ...buildMessagesFromResponse({ response: previousResponse }),
-      ...responseMessages,
-    ],
+    previousCount: pausedChain.globalMessagesCount,
+    previousResponse,
+    extraMessages: responseMessages,
   })
 
   return Result.ok({
-    ...runResult,
+    stream: run.stream,
+    duration: run.duration,
     resolvedContent,
     errorableUuid,
-    lastResponse: runResult.lastResponse.then(async (r) => {
-      await deleteCachedChain({ workspace, documentLogUuid })
-      return r
+    response: run.response.then(async (response) => {
+      const isCompleted = response.value?.chainCompleted
+
+      if (isCompleted) {
+        // We delete cached chain so next time someone add a message to
+        // this documentLogUuid it will simple add the message to the conversation.
+        await deleteCachedChain({ workspace, documentLogUuid })
+      }
+
+      return response
     }),
   })
 }

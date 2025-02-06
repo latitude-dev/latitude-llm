@@ -45,9 +45,8 @@ export type RunEvaluationJobData = {
 async function isSuccessful(run: Awaited<ReturnType<typeof runEvaluation>>) {
   if (run.error) return { ok: false, error: run.error }
 
-  const response = run.unwrap()
-  const responseError = await response.error
-  if (responseError) return { ok: false, error: responseError }
+  const response = await run.value.response
+  if (response.error) return { ok: false, error: response.error }
 
   return { ok: true, error: undefined }
 }

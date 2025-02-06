@@ -116,14 +116,14 @@ export async function generateToolResponseMessages({
   })
 
   if (result.error) return result
-  const responseResult = result.unwrap()
 
-  const responseError = await responseResult.error
-  if (responseError) {
-    return Result.error(responseError)
+  const responseResult = await result.value.response
+
+  if (responseResult.error) {
+    return Result.error(responseResult.error)
   }
 
-  const response = (await responseResult.lastResponse)!
+  const response = responseResult.value
   if (response.streamType === 'text') {
     return Result.error(
       new Error(

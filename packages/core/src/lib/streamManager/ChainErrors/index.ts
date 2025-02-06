@@ -48,32 +48,23 @@ export async function createChainRunError({
   persistErrors,
 }: {
   errorableUuid: string
-  error: ChainError<RunErrorCodes> | Error
+  error: ChainError<RunErrorCodes>
   persistErrors: boolean
   errorableType?: ErrorableEntity
 }) {
   if (!persistErrors || !errorableType) return error
 
-  let chainError: ChainError<RunErrorCodes> = error as ChainError<RunErrorCodes>
-  if (!(error instanceof ChainError)) {
-    chainError = new ChainError<RunErrorCodes.Unknown>({
-      ...error,
-      message: error.message,
-      stack: error.stack,
-      code: RunErrorCodes.Unknown,
-    })
-  }
-
   const dbError = await createRunError({
     data: {
       errorableUuid,
       errorableType,
-      code: chainError.errorCode,
-      message: chainError.message,
-      details: chainError.details,
+      code: error.errorCode,
+      message: error.message,
+      details: error.details,
     },
   }).then((r) => r.unwrap())
 
-  chainError.dbError = dbError
-  return chainError
+  error.dbError = dbError
+
+  return error
 }

@@ -1,29 +1,24 @@
-import {
-  Conversation,
-  Chain as LegacyChain,
-  Message,
-} from '@latitude-data/compiler'
+import { Chain as LegacyChain, Message } from '@latitude-data/compiler'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
 import { Chain as PromptlChain } from 'promptl-ai'
 
 import { ProviderApiKey, Workspace } from '../../browser'
 import {
+  ChainEvent,
   ChainStepResponse,
   ErrorableEntity,
   LogSources,
   MAX_STEPS_CONFIG_NAME,
   StreamType,
 } from '../../constants'
-import { TypedResult } from '../../lib'
+import { Result, TypedResult } from '../../lib'
 import { generateUUIDIdentifier } from '../../lib/generateUUID'
 import {
   ChainError,
   createChainRunError,
-} from '../../lib/chainStreamManager/ChainErrors'
+} from '../../lib/streamManager/ChainErrors'
 import { ConfigOverrides } from './ChainValidator'
 import { runStep } from './runStep'
-import { ChainStreamManager } from '../../lib/chainStreamManager'
-import { LanguageModelUsage } from 'ai'
 
 export type CachedApiKeys = Map<string, ProviderApiKey>
 export type SomeChain = LegacyChain | PromptlChain
@@ -37,19 +32,17 @@ export type ChainResponse<T extends StreamType> = TypedResult<
 >
 type CommonArgs<T extends boolean = true, C extends SomeChain = LegacyChain> = {
   workspace: Workspace
-  providersMap: CachedApiKeys
-  source: LogSources
-  promptlVersion: number
   chain: C
-
-  persistErrors?: T
-  generateUUID?: () => string
-  messages?: Message[]
-  newMessages?: Message[]
-  pausedTokenUsage?: LanguageModelUsage
-
+  promptlVersion: number
+  source: LogSources
+  providersMap: CachedApiKeys
   configOverrides?: ConfigOverrides
+  generateUUID?: () => string
+  persistErrors?: T
   removeSchema?: boolean
+  extraMessages?: Message[]
+  previousResponse?: ChainStepResponse<StreamType>
+  previousCount?: number
 }
 export type RunChainArgs<
   T extends boolean,
@@ -60,69 +53,68 @@ export type RunChainArgs<
     }
   : CommonArgs<T, C> & { errorableType?: undefined }
 
-export function runChain<T extends boolean, C extends SomeChain>({
+export async function runChain<T extends boolean, C extends SomeChain>({
   workspace,
+  chain,
+  promptlVersion,
   providersMap,
   source,
-  promptlVersion,
-  chain,
-
+  errorableType,
+  configOverrides,
   persistErrors = true,
   generateUUID = generateUUIDIdentifier,
-  errorableType,
-  messages: pausedMessages,
-  newMessages,
-  pausedTokenUsage,
-
-  configOverrides,
   removeSchema = false,
+  previousResponse,
+  extraMessages,
+  previousCount = 0,
 }: RunChainArgs<T, C>) {
   const errorableUuid = generateUUID()
+
+  let responseResolve: (value: ChainResponse<StreamType>) => void
+
+  const response = new Promise<ChainResponse<StreamType>>((resolve) => {
+    responseResolve = resolve
+  })
+
   const chainStartTime = Date.now()
-
-  // Conversation is returned for the Agent to use
-  let resolveConversation: (conversation: Conversation) => void
-  const conversation = new Promise<Conversation>((resolve) => {
-    resolveConversation = resolve
-  })
-
-  const chainStreamManager = new ChainStreamManager({
-    errorableUuid,
-    messages: pausedMessages,
-    tokenUsage: pausedTokenUsage,
-  })
-  const streamResult = chainStreamManager.start(async () => {
-    try {
-      const conversation = await runStep({
-        chainStreamManager,
+  const stream = new ReadableStream<ChainEvent>({
+    start(controller) {
+      // Recursive method:
+      runStep({
         workspace,
         source,
         chain,
         promptlVersion,
         providersMap,
+        controller,
         errorableUuid,
         configOverrides,
         removeSchema,
-        newMessages,
+        previousResponse,
+        extraMessages,
+        previousCount,
       })
+        .then((okResponse) => {
+          responseResolve(Result.ok(okResponse))
+        })
+        .catch(async (e: ChainError<RunErrorCodes>) => {
+          const error = await createChainRunError({
+            error: e,
+            errorableUuid,
+            errorableType,
+            persistErrors,
+          })
 
-      resolveConversation(conversation)
-    } catch (err) {
-      const error = err as ChainError<RunErrorCodes>
-      throw await createChainRunError({
-        error,
-        errorableUuid,
-        errorableType,
-        persistErrors,
-      })
-    }
+          responseResolve(Result.error(error))
+        })
+    },
   })
 
   return {
-    ...streamResult,
+    stream,
+    response,
     resolvedContent: chain.rawText,
     errorableUuid,
-    duration: streamResult.messages.then(() => Date.now() - chainStartTime),
-    conversation,
+    duration: response.then(() => Date.now() - chainStartTime),
   }
 }

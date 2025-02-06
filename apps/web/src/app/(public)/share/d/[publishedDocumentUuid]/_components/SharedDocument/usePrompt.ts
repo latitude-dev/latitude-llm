@@ -7,7 +7,7 @@ import {
 } from '@latitude-data/compiler'
 import {
   buildMessagesFromResponse,
-  LegacyChainEventTypes,
+  ChainEventTypes,
   PublishedDocument,
   StreamEventTypes,
 } from '@latitude-data/core/browser'
@@ -129,7 +129,7 @@ export function usePrompt({ shared }: { shared: PublishedDocument }) {
           }
 
           // Step started
-          if (data.type === LegacyChainEventTypes.Step) {
+          if (data.type === ChainEventTypes.Step) {
             setResponseStream(undefined)
             data.messages.forEach(addMessageToConversation)
             messagesCount += data.messages!.length
@@ -138,7 +138,7 @@ export function usePrompt({ shared }: { shared: PublishedDocument }) {
           }
 
           // Step finished
-          if (data.type === LegacyChainEventTypes.StepComplete) {
+          if (data.type === ChainEventTypes.StepComplete) {
             const responseMsgs = buildMessagesFromResponse(data)
             setResponseStream(undefined)
             responseMsgs.forEach(addMessageToConversation)
@@ -151,7 +151,7 @@ export function usePrompt({ shared }: { shared: PublishedDocument }) {
           }
 
           // Chain finished
-          if (data.type === LegacyChainEventTypes.Complete) {
+          if (data.type === ChainEventTypes.Complete) {
             const deltas = getDeltas({
               accomulatedDeltas,
               accomulateIndex,
@@ -162,7 +162,7 @@ export function usePrompt({ shared }: { shared: PublishedDocument }) {
           }
 
           // Error
-          if (data.type === LegacyChainEventTypes.Error) {
+          if (data.type === ChainEventTypes.Error) {
             setError(new Error(data.error.message))
           }
         }

@@ -1,8 +1,8 @@
 import { RunErrorCodes } from '@latitude-data/constants/errors'
 
 import {
-  LegacyChainEvent,
-  LegacyChainEventTypes,
+  ChainEvent,
+  ChainEventTypes,
   ChainStepResponse,
   Message,
   StreamEventTypes,
@@ -19,7 +19,7 @@ import { buildMessagesFromResponse } from '../../../helpers'
 
 export function enqueueChainEvent(
   controller: ReadableStreamDefaultController,
-  event: LegacyChainEvent,
+  event: ChainEvent,
 ) {
   controller.enqueue(event)
 }
@@ -60,7 +60,7 @@ export class ChainStreamConsumer {
   }) {
     enqueueChainEvent(controller, {
       data: {
-        type: LegacyChainEventTypes.Step,
+        type: ChainEventTypes.Step,
         isLastStep,
         config,
         messages,
@@ -80,7 +80,7 @@ export class ChainStreamConsumer {
     enqueueChainEvent(controller, {
       event: StreamEventTypes.Latitude,
       data: {
-        type: LegacyChainEventTypes.StepComplete,
+        type: ChainEventTypes.StepComplete,
         documentLogUuid: response.documentLogUuid,
         response: response,
       },
@@ -103,7 +103,7 @@ export class ChainStreamConsumer {
     enqueueChainEvent(controller, {
       event: StreamEventTypes.Latitude,
       data: {
-        type: LegacyChainEventTypes.Complete,
+        type: ChainEventTypes.Complete,
         config,
         documentLogUuid: response.documentLogUuid,
         response,
@@ -127,7 +127,7 @@ export class ChainStreamConsumer {
     enqueueChainEvent(controller, {
       event: StreamEventTypes.Latitude,
       data: {
-        type: LegacyChainEventTypes.Error,
+        type: ChainEventTypes.Error,
         error: {
           name: error.name,
           message: error.message,

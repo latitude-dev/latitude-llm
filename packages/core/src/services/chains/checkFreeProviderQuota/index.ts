@@ -9,7 +9,7 @@ import {
 } from '../../../browser'
 import { Result } from '../../../lib'
 import { incrFreeRuns } from '../../freeRunsManager'
-import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
+import { ChainError } from '../../../lib/streamManager/ChainErrors'
 
 export async function checkFreeProviderQuota({
   workspace,

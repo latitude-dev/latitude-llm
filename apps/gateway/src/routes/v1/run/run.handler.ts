@@ -11,7 +11,6 @@ import {
 } from '$/common/documents/getData'
 import { AppRouteHandler } from '$/openApi/types'
 import { RunRoute } from '$/routes/v1/run/run.route'
-import { convertToLegacyChainStream } from '@latitude-data/core/lib/chainStreamManager/index'
 
 // @ts-expect-error: streamSSE has type issues with zod-openapi
 export const runHandler: AppRouteHandler<RunRoute> = async (c) => {
@@ -40,7 +39,7 @@ export const runHandler: AppRouteHandler<RunRoute> = async (c) => {
         })
       }
 
-      const { stream: newStream } = await runDocumentAtCommit({
+      const result = await runDocumentAtCommit({
         workspace,
         document,
         commit,
@@ -49,10 +48,8 @@ export const runHandler: AppRouteHandler<RunRoute> = async (c) => {
         source: __internal?.source ?? LogSources.API,
       }).then((r) => r.unwrap())
 
-      const { stream: legacyStream } = convertToLegacyChainStream(newStream)
-
       let id = 0
-      for await (const event of streamToGenerator(legacyStream)) {
+      for await (const event of streamToGenerator(result.stream)) {
         const data = chainEventPresenter(event)
 
         stream.writeSSE({

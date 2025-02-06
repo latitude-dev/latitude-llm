@@ -3,7 +3,7 @@ import app from '$/routes/app'
 import { ContentType, MessageRole } from '@latitude-data/compiler'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
 import {
-  LegacyChainEventTypes,
+  ChainEventTypes,
   Commit,
   LogSources,
   Project,
@@ -20,11 +20,11 @@ import {
 } from '@latitude-data/core/factories'
 import { LatitudeError } from '@latitude-data/core/lib/errors'
 import { Result } from '@latitude-data/core/lib/Result'
-import { ChainError } from '@latitude-data/core/lib/chainStreamManager/ChainErrors/index'
+import { ChainError } from '@latitude-data/core/lib/streamManager/ChainErrors/index'
+import { ChainResponse } from '@latitude-data/core/services/chains/run'
 import { mergeCommit } from '@latitude-data/core/services/commits/merge'
 import { testConsumeStream } from 'test/helpers'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { ChainEventTypes } from '@latitude-data/core/lib/chainStreamManager/events'
 
 const mocks = vi.hoisted(() => ({
   runDocumentAtCommit: vi.fn(),
@@ -138,7 +138,7 @@ describe('POST /run', () => {
           controller.enqueue({
             event: StreamEventTypes.Latitude,
             data: {
-              type: LegacyChainEventTypes.Complete,
+              type: ChainEventTypes.Complete,
               response: {
                 text: 'Hello',
                 usage: {},
@@ -193,17 +193,11 @@ describe('POST /run', () => {
           controller.enqueue({
             event: StreamEventTypes.Latitude,
             data: {
-              type: ChainEventTypes.ProviderCompleted,
+              type: ChainEventTypes.Complete,
               response: {
                 text: 'Hello',
                 usage: {},
               },
-            },
-          })
-          controller.enqueue({
-            event: StreamEventTypes.Latitude,
-            data: {
-              type: ChainEventTypes.ChainCompleted,
             },
           })
 
@@ -211,12 +205,16 @@ describe('POST /run', () => {
         },
       })
 
+      const response = new Promise((resolve) => {
+        resolve({ text: 'Hello', usage: {} })
+      })
+
       mocks.runDocumentAtCommit.mockReturnValue(
         new Promise((resolve) => {
           resolve(
             Result.ok({
               stream,
-              lastResponse: Promise.resolve({ text: 'Hello', usage: {} }),
+              response,
             }),
           )
         }),
@@ -238,7 +236,7 @@ describe('POST /run', () => {
         id: 0,
         event: StreamEventTypes.Latitude,
         data: {
-          type: LegacyChainEventTypes.Complete,
+          type: ChainEventTypes.Complete,
           response: {
             text: 'Hello',
             usage: {},
@@ -253,7 +251,7 @@ describe('POST /run', () => {
           controller.enqueue({
             event: StreamEventTypes.Latitude,
             data: {
-              type: ChainEventTypes.ProviderStarted,
+              type: ChainEventTypes.Complete,
               config: {
                 tools: {
                   get_the_weather: {
@@ -274,13 +272,6 @@ describe('POST /run', () => {
                   },
                 },
               },
-              messages: [],
-            },
-          })
-          controller.enqueue({
-            event: StreamEventTypes.Latitude,
-            data: {
-              type: ChainEventTypes.ProviderCompleted,
               response: {
                 streamType: 'text',
                 text: '',
@@ -294,12 +285,6 @@ describe('POST /run', () => {
                 ],
                 documentLogUuid: 'fake-uuid',
               },
-            },
-          })
-          controller.enqueue({
-            event: StreamEventTypes.Latitude,
-            data: {
-              type: ChainEventTypes.ChainCompleted,
               messages: [
                 {
                   role: MessageRole.assistant,
@@ -327,14 +312,14 @@ describe('POST /run', () => {
         },
       })
 
-      const lastResponse = Promise.resolve({})
+      const response = new Promise((resolve) => resolve({}))
 
       mocks.runDocumentAtCommit.mockReturnValue(
         new Promise((resolve) => {
           resolve(
             Result.ok({
               stream,
-              lastResponse,
+              response,
             }),
           )
         }),
@@ -353,10 +338,10 @@ describe('POST /run', () => {
       expect(res.body).toBeInstanceOf(ReadableStream)
       expect(done).toBe(true)
       expect(event).toEqual({
-        id: expect.any(Number),
+        id: 0,
         event: StreamEventTypes.Latitude,
         data: {
-          type: LegacyChainEventTypes.Complete,
+          type: ChainEventTypes.Complete,
           uuid: 'fake-uuid',
           config: {
             tools: {
@@ -461,7 +446,7 @@ describe('POST /run', () => {
           controller.enqueue({
             event: StreamEventTypes.Latitude,
             data: {
-              type: LegacyChainEventTypes.Complete,
+              type: ChainEventTypes.Complete,
               response: {
                 text: 'Hello',
                 usage: {},
@@ -513,17 +498,11 @@ describe('POST /run', () => {
           controller.enqueue({
             event: StreamEventTypes.Latitude,
             data: {
-              type: ChainEventTypes.ProviderCompleted,
+              type: ChainEventTypes.Complete,
               response: {
                 text: 'Hello',
                 usage: {},
               },
-            },
-          })
-          controller.enqueue({
-            event: StreamEventTypes.Latitude,
-            data: {
-              type: ChainEventTypes.ChainCompleted,
             },
           })
 
@@ -531,21 +510,25 @@ describe('POST /run', () => {
         },
       })
 
-      const lastResponse = Promise.resolve({
-        streamType: 'object',
-        object: { something: { else: 'here' } },
-        text: 'Hello',
-        usage: { promptTokens: 4, completionTokens: 6, totalTokens: 10 },
-        documentLogUuid: 'fake-document-log-uuid',
-        providerLog: {
-          messages: [
-            {
-              role: MessageRole.assistant,
-              toolCalls: [],
-              content: 'Hello',
-            },
-          ],
-        } as unknown as ProviderLog,
+      const response = new Promise<ChainResponse<'object'>>((resolve) => {
+        resolve(
+          Result.ok({
+            streamType: 'object',
+            object: { something: { else: 'here' } },
+            text: 'Hello',
+            usage: { promptTokens: 4, completionTokens: 6, totalTokens: 10 },
+            documentLogUuid: 'fake-document-log-uuid',
+            providerLog: {
+              messages: [
+                {
+                  role: MessageRole.assistant,
+                  toolCalls: [],
+                  content: 'Hello',
+                },
+              ],
+            } as unknown as ProviderLog,
+          }),
+        )
       })
 
       mocks.runDocumentAtCommit.mockReturnValue(
@@ -553,7 +536,7 @@ describe('POST /run', () => {
           resolve(
             Result.ok({
               stream,
-              lastResponse,
+              response,
             }),
           )
         }),
@@ -586,22 +569,26 @@ describe('POST /run', () => {
     })
 
     it('returns error when runDocumentAtCommit has an error', async () => {
-      const lastResponse = Promise.resolve(undefined)
-      const error = Promise.resolve(
-        new ChainError({
-          code: RunErrorCodes.ChainCompileError,
-          message: 'Error compiling prompt for document uuid',
-        }),
-      )
+      const response = new Promise<ChainResponse<'object'>>((resolve) => {
+        resolve(
+          Result.error(
+            new ChainError({
+              code: RunErrorCodes.ChainCompileError,
+              message: 'Error compiling prompt for document uuid',
+            }),
+          ),
+        )
+      })
 
       mocks.runDocumentAtCommit.mockReturnValue(
-        Promise.resolve(
-          Result.ok({
-            stream: new ReadableStream(),
-            lastResponse,
-            error,
-          }),
-        ),
+        new Promise((resolve) => {
+          resolve(
+            Result.ok({
+              stream: new ReadableStream(),
+              response,
+            }),
+          )
+        }),
       )
 
       const res = await app.request(route, {
@@ -622,29 +609,35 @@ describe('POST /run', () => {
     })
 
     it('returns error if runDocumentAtCommit has not documentLogUuid', async () => {
-      const lastResponse = Promise.resolve({
-        streamType: 'object',
-        object: { something: { else: 'here' } },
-        text: 'Hello',
-        usage: { promptTokens: 4, completionTokens: 6, totalTokens: 10 },
-        providerLog: {
-          messages: [
-            {
-              role: MessageRole.assistant,
-              toolCalls: [],
-              content: 'Hello',
-            },
-          ],
-        } as unknown as ProviderLog,
+      const response = new Promise<ChainResponse<'object'>>((resolve) => {
+        resolve(
+          Result.ok({
+            streamType: 'object',
+            object: { something: { else: 'here' } },
+            text: 'Hello',
+            usage: { promptTokens: 4, completionTokens: 6, totalTokens: 10 },
+            providerLog: {
+              messages: [
+                {
+                  role: MessageRole.assistant,
+                  toolCalls: [],
+                  content: 'Hello',
+                },
+              ],
+            } as unknown as ProviderLog,
+          }),
+        )
       })
 
       mocks.runDocumentAtCommit.mockReturnValue(
-        Promise.resolve(
-          Result.ok({
-            stream: new ReadableStream(),
-            lastResponse,
-          }),
-        ),
+        new Promise((resolve) => {
+          resolve(
+            Result.ok({
+              stream: new ReadableStream(),
+              response,
+            }),
+          )
+        }),
       )
 
       const res = await app.request(route, {
@@ -666,21 +659,27 @@ describe('POST /run', () => {
     })
 
     it('returns error if runDocumentAtCommit has not providerLog', async () => {
-      const lastResponse = Promise.resolve({
-        streamType: 'object',
-        object: { something: { else: 'here' } },
-        text: 'Hello',
-        usage: { promptTokens: 4, completionTokens: 6, totalTokens: 10 },
-        documentLogUuid: 'fake-document-log-uuid',
+      const response = new Promise<ChainResponse<'object'>>((resolve) => {
+        resolve(
+          Result.ok({
+            streamType: 'object',
+            object: { something: { else: 'here' } },
+            text: 'Hello',
+            usage: { promptTokens: 4, completionTokens: 6, totalTokens: 10 },
+            documentLogUuid: 'fake-document-log-uuid',
+          }),
+        )
       })
 
       mocks.runDocumentAtCommit.mockReturnValue(
-        Promise.resolve(
-          Result.ok({
-            stream: new ReadableStream(),
-            lastResponse,
-          }),
-        ),
+        new Promise((resolve) => {
+          resolve(
+            Result.ok({
+              stream: new ReadableStream(),
+              response,
+            }),
+          )
+        }),
       )
 
       const res = await app.request(route, {

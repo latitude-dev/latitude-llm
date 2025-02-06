@@ -5,7 +5,7 @@ import {
   Message as ConversationMessage,
 } from '@latitude-data/compiler'
 import {
-  LegacyChainEventTypes,
+  ChainEventTypes,
   EvaluationDto,
   EvaluationMetadataType,
   StreamEventTypes,
@@ -110,13 +110,13 @@ export default function Chat({
 
       switch (event) {
         case StreamEventTypes.Latitude: {
-          if (data.type === LegacyChainEventTypes.Complete) {
+          if (data.type === ChainEventTypes.Complete) {
             setChainLength(messagesCount)
             setResponseStream(undefined)
             setUsage(data.response.usage)
             setIsStreaming(false)
             setEndTime(performance.now())
-          } else if (data.type === LegacyChainEventTypes.Error) {
+          } else if (data.type === ChainEventTypes.Error) {
             setError(new Error(data.error.message))
             setIsStreaming(false)
           }

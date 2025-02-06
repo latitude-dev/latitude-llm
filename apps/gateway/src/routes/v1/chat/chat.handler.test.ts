@@ -1,6 +1,6 @@
 import {
   ApiKey,
-  LegacyChainEventTypes,
+  ChainEventTypes,
   LogSources,
   StreamEventTypes,
   Workspace,
@@ -12,7 +12,6 @@ import { parseSSEvent } from '$/common/parseSSEEvent'
 import app from '$/routes/app'
 import { testConsumeStream } from 'test/helpers'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { ChainEventTypes } from '@latitude-data/core/lib/chainStreamManager/events'
 
 const mocks = vi.hoisted(() => ({
   addMessages: vi.fn(async () => {
@@ -21,17 +20,11 @@ const mocks = vi.hoisted(() => ({
         controller.enqueue({
           event: StreamEventTypes.Latitude,
           data: {
-            type: ChainEventTypes.ProviderCompleted,
+            type: ChainEventTypes.Complete,
             response: {
               text: 'Hello',
               usage: {},
             },
-          },
-        })
-        controller.enqueue({
-          event: StreamEventTypes.Latitude,
-          data: {
-            type: ChainEventTypes.ChainCompleted,
           },
         })
 
@@ -133,7 +126,7 @@ describe('POST /add-message', () => {
         id: 0,
         event: StreamEventTypes.Latitude,
         data: {
-          type: LegacyChainEventTypes.Complete,
+          type: ChainEventTypes.Complete,
           response: {
             text: 'Hello',
             usage: {},

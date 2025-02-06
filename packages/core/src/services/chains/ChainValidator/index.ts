@@ -11,14 +11,16 @@ import { z } from 'zod'
 
 import { applyProviderRules, ProviderApiKey, Workspace } from '../../../browser'
 import { Result, TypedResult } from '../../../lib'
-import { azureConfig, Config, googleConfig } from '../../ai/helpers'
-import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
+import { Config } from '../../ai'
+import { azureConfig, googleConfig } from '../../ai/helpers'
+import { ChainError } from '../../../lib/streamManager/ChainErrors'
 import { checkFreeProviderQuota } from '../checkFreeProviderQuota'
 import { CachedApiKeys } from '../run'
 
 type SomeChain = LegacyChain | PromptlChain
 
 export type ValidatedChainStep = {
+  config: Config
   provider: ProviderApiKey
   conversation: Conversation
   chainCompleted: boolean
@@ -31,10 +33,10 @@ export type ConfigOverrides = JSONOverride | { output: 'no-schema' }
 
 type ValidatorContext = {
   workspace: Workspace
-  providersMap: CachedApiKeys
-  promptlVersion: number
+  prevContent: Message[] | string | undefined
   chain: SomeChain
-  newMessages: Message[] | undefined
+  promptlVersion: number
+  providersMap: CachedApiKeys
   configOverrides?: ConfigOverrides
   removeSchema?: boolean
 }
@@ -100,15 +102,15 @@ function getTextFromMessages(
 const safeChain = async ({
   promptlVersion,
   chain,
-  newMessages,
+  prevContent,
 }: {
   promptlVersion: number
   chain: SomeChain
-  newMessages: Message[] | undefined
+  prevContent: Message[] | string | undefined
 }) => {
   try {
     if (promptlVersion === 0) {
-      let prevText = getTextFromMessages(newMessages)
+      let prevText = getTextFromMessages(prevContent)
       const { completed, conversation } = await (chain as LegacyChain).step(
         prevText,
       )
@@ -116,9 +118,8 @@ const safeChain = async ({
     }
 
     const { completed, messages, config } = await (chain as PromptlChain).step(
-      newMessages as PromptlMessage[] | undefined,
+      prevContent as PromptlMessage[] | undefined | string,
     )
-
     return Result.ok({
       chainCompleted: completed,
       conversation: { messages, config },
@@ -187,18 +188,19 @@ const validateConfig = (
   return Result.ok(result.data)
 }
 
-export const validateChain = async ({
-  workspace,
-  providersMap,
-  promptlVersion,
-  chain,
-  newMessages,
-  configOverrides,
-  removeSchema,
-}: ValidatorContext): Promise<
-  TypedResult<ValidatedChainStep, ChainError<RunErrorCodes>>
-> => {
-  const chainResult = await safeChain({ promptlVersion, chain, newMessages })
+export const validateChain = async (
+  context: ValidatorContext,
+): Promise<TypedResult<ValidatedChainStep, ChainError<RunErrorCodes>>> => {
+  const {
+    workspace,
+    promptlVersion,
+    prevContent,
+    chain,
+    providersMap,
+    configOverrides,
+    removeSchema,
+  } = context
+  const chainResult = await safeChain({ promptlVersion, chain, prevContent })
   if (chainResult.error) return chainResult
 
   const { chainCompleted, conversation } = chainResult.value
@@ -223,29 +225,35 @@ export const validateChain = async ({
     config,
   })
 
-  const output = removeSchema
-    ? 'no-schema'
-    : getOutputType({
-        config,
-        configOverrides,
-        ignoreSchema: promptlVersion === 0 && !chainCompleted,
-      })
-  const schema = removeSchema
-    ? undefined
-    : getInputSchema({
-        config,
-        configOverrides,
-        ignoreSchema: promptlVersion === 0 && !chainCompleted,
-      })
+  const schema = getInputSchema({
+    config,
+    configOverrides,
+    ignoreSchema: promptlVersion === 0 && !chainCompleted,
+  })
+  const output = getOutputType({
+    config,
+    configOverrides,
+    ignoreSchema: promptlVersion === 0 && !chainCompleted,
+  })
 
   return Result.ok({
     provider,
+    config: rule.config as Config,
+    chainCompleted,
     conversation: {
-      config: rule.config,
+      ...conversation,
       messages: rule?.messages ?? conversation.messages,
     },
-    chainCompleted,
-    output,
-    schema,
+
+    ...(removeSchema
+      ? {
+          // Schema is removed when called from an Agent, as this configuration is reserved for the return function.
+          schema: undefined,
+          output: 'no-schema',
+        }
+      : {
+          schema,
+          output,
+        }),
   })
 }

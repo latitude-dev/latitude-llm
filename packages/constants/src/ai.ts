@@ -65,7 +65,7 @@ export type Config = {
   >
 }
 
-export enum LegacyChainEventTypes {
+export enum ChainEventTypes {
   Error = 'chain-error',
   Step = 'chain-step',
   Complete = 'chain-complete',
@@ -80,19 +80,19 @@ export type ProviderData =
 export type ChainEventDto =
   | ProviderData
   | {
-      type: LegacyChainEventTypes.Step
+      type: ChainEventTypes.Step
       config: Config
       isLastStep: boolean
       messages: Message[]
       uuid?: string
     }
   | {
-      type: LegacyChainEventTypes.StepComplete
+      type: ChainEventTypes.StepComplete
       response: ChainEventDtoResponse
       uuid?: string
     }
   | {
-      type: LegacyChainEventTypes.Complete
+      type: ChainEventTypes.Complete
       config: Config
       finishReason?: FinishReason
       messages?: Message[]
@@ -101,7 +101,7 @@ export type ChainEventDto =
       uuid?: string
     }
   | {
-      type: LegacyChainEventTypes.Error
+      type: ChainEventTypes.Error
       error: {
         name: string
         message: string
@@ -146,9 +146,9 @@ export enum StreamEventTypes {
   Provider = 'provider-event',
 }
 
-export type LegacyChainEvent =
+export type ChainEvent =
   | {
-      data: LegacyLatitudeEventData
+      data: LatitudeEventData
       event: StreamEventTypes.Latitude
     }
   | {
@@ -156,22 +156,22 @@ export type LegacyChainEvent =
       event: StreamEventTypes.Provider
     }
 
-export type LegacyLatitudeStepEventData = {
-  type: LegacyChainEventTypes.Step
+export type LatitudeStepEventData = {
+  type: ChainEventTypes.Step
   config: Config
   isLastStep: boolean
   messages: Message[]
   documentLogUuid?: string
 }
 
-export type LegacyLatitudeStepCompleteEventData = {
-  type: LegacyChainEventTypes.StepComplete
+export type LatitudeStepCompleteEventData = {
+  type: ChainEventTypes.StepComplete
   response: ChainStepResponse<StreamType>
   documentLogUuid?: string
 }
 
-export type LegacyLatitudeChainCompleteEventData = {
-  type: LegacyChainEventTypes.Complete
+export type LatitudeChainCompleteEventData = {
+  type: ChainEventTypes.Complete
   config: Config
   messages?: Message[]
   object?: any
@@ -180,16 +180,16 @@ export type LegacyLatitudeChainCompleteEventData = {
   documentLogUuid?: string
 }
 
-export type LegacyLatitudeChainErrorEventData = {
-  type: LegacyChainEventTypes.Error
+export type LatitudeChainErrorEventData = {
+  type: ChainEventTypes.Error
   error: Error
 }
 
-export type LegacyLatitudeEventData =
-  | LegacyLatitudeStepEventData
-  | LegacyLatitudeStepCompleteEventData
-  | LegacyLatitudeChainCompleteEventData
-  | LegacyLatitudeChainErrorEventData
+export type LatitudeEventData =
+  | LatitudeStepEventData
+  | LatitudeStepCompleteEventData
+  | LatitudeChainCompleteEventData
+  | LatitudeChainErrorEventData
 
 export type RunSyncAPIResponse = {
   uuid: string

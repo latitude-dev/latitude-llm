@@ -6,7 +6,7 @@ import {
 } from '@latitude-data/compiler'
 import {
   buildMessagesFromResponse,
-  LegacyChainEventTypes,
+  ChainEventTypes,
   PublishedDocument,
   StreamEventTypes,
 } from '@latitude-data/core/browser'
@@ -64,25 +64,25 @@ export function useChat({
           }
 
           // Step started
-          if (data.type === LegacyChainEventTypes.Step) {
+          if (data.type === ChainEventTypes.Step) {
             setResponseStream('')
             response = ''
           }
 
           // Step finished
-          if (data.type === LegacyChainEventTypes.StepComplete) {
+          if (data.type === ChainEventTypes.StepComplete) {
             const responseMsgs = buildMessagesFromResponse(data)
             responseMsgs.forEach(addMessageToConversation)
             setResponseStream(undefined)
           }
 
           // Chain finished
-          if (data.type === LegacyChainEventTypes.Complete) {
+          if (data.type === ChainEventTypes.Complete) {
             setResponseStream(undefined)
           }
 
           // Error
-          if (data.type === LegacyChainEventTypes.Error) {
+          if (data.type === ChainEventTypes.Error) {
             setError(new Error(data.error.message))
           }
         }

@@ -1,5 +1,5 @@
 import {
-  LegacyChainEventTypes,
+  ChainEventTypes,
   Commit,
   LogSources,
   Project,
@@ -19,7 +19,6 @@ import { parseSSEvent } from '$/common/parseSSEEvent'
 import app from '$/routes/app'
 import { testConsumeStream } from 'test/helpers'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { ChainEventTypes } from '@latitude-data/core/lib/chainStreamManager/events'
 
 const mocks = vi.hoisted(() => ({
   runDocumentAtCommit: vi.fn(),
@@ -121,7 +120,7 @@ describe('POST /run', () => {
           controller.enqueue({
             event: StreamEventTypes.Latitude,
             data: {
-              type: ChainEventTypes.ChainCompleted,
+              type: ChainEventTypes.Complete,
               response: {
                 text: 'Hello',
                 usage: {},
@@ -170,25 +169,16 @@ describe('POST /run', () => {
     })
 
     it('stream succeeds', async () => {
-      const responseContent = { text: 'Hello', usage: {} }
-
       const stream = new ReadableStream({
         start(controller) {
           controller.enqueue({
             event: StreamEventTypes.Latitude,
             data: {
-              type: ChainEventTypes.ProviderCompleted,
-              response: responseContent,
-              providerLog: {
-                response: responseContent,
+              type: ChainEventTypes.Complete,
+              response: {
+                text: 'Hello',
+                usage: {},
               },
-            },
-          })
-          controller.enqueue({
-            event: StreamEventTypes.Latitude,
-            data: {
-              type: ChainEventTypes.ChainCompleted,
-              documentLogUuid: 'log1',
             },
           })
 
@@ -196,13 +186,16 @@ describe('POST /run', () => {
         },
       })
 
-      const response = Promise.resolve(responseContent)
+      const response = new Promise((resolve) => {
+        resolve({ text: 'Hello', usage: {} })
+      })
+
       mocks.runDocumentAtCommit.mockReturnValue(
         new Promise((resolve) => {
           resolve(
             Result.ok({
               stream,
-              lastResponse: response,
+              response,
             }),
           )
         }),
@@ -224,7 +217,7 @@ describe('POST /run', () => {
         id: 0,
         event: StreamEventTypes.Latitude,
         data: {
-          type: LegacyChainEventTypes.Complete,
+          type: ChainEventTypes.Complete,
           response: {
             text: 'Hello',
             usage: {},

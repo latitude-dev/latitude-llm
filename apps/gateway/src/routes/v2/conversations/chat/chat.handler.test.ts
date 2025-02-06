@@ -1,7 +1,7 @@
 import { MessageRole } from '@latitude-data/compiler'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
 import {
-  LegacyChainEventTypes,
+  ChainEventTypes,
   ChainStepResponse,
   LogSources,
   ProviderLog,
@@ -12,12 +12,11 @@ import { unsafelyGetFirstApiKeyByWorkspaceId } from '@latitude-data/core/data-ac
 import { createProject } from '@latitude-data/core/factories'
 import { LatitudeError } from '@latitude-data/core/lib/errors'
 import { Result } from '@latitude-data/core/lib/Result'
-import { ChainError } from '@latitude-data/core/lib/chainStreamManager/ChainErrors/index'
+import { ChainError } from '@latitude-data/core/lib/streamManager/ChainErrors/index'
 import { parseSSEvent } from '$/common/parseSSEEvent'
 import app from '$/routes/app'
 import { testConsumeStream } from 'test/helpers'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { ChainEventTypes } from '@latitude-data/core/lib/chainStreamManager/events'
 
 const mocks = vi.hoisted(() => ({
   addMessages: vi.fn(),
@@ -144,14 +143,8 @@ describe('POST /chat', () => {
                   controller.enqueue({
                     event: StreamEventTypes.Latitude,
                     data: {
-                      type: ChainEventTypes.ProviderCompleted,
+                      type: ChainEventTypes.Complete,
                       response: step,
-                    },
-                  })
-                  controller.enqueue({
-                    event: StreamEventTypes.Latitude,
-                    data: {
-                      type: ChainEventTypes.ChainCompleted,
                       messages: step.providerLog?.messages,
                     },
                   })
@@ -181,7 +174,7 @@ describe('POST /chat', () => {
         id: 0,
         event: StreamEventTypes.Latitude,
         data: {
-          type: LegacyChainEventTypes.Complete,
+          type: ChainEventTypes.Complete,
           uuid: step.documentLogUuid,
           response: {
             streamType: step.streamType,
@@ -204,14 +197,8 @@ describe('POST /chat', () => {
                   controller.enqueue({
                     event: StreamEventTypes.Latitude,
                     data: {
-                      type: ChainEventTypes.ProviderCompleted,
+                      type: ChainEventTypes.Complete,
                       response: step,
-                    },
-                  })
-                  controller.enqueue({
-                    event: StreamEventTypes.Latitude,
-                    data: {
-                      type: ChainEventTypes.ChainCompleted,
                       messages: step.providerLog?.messages,
                     },
                   })
@@ -248,14 +235,8 @@ describe('POST /chat', () => {
                   controller.enqueue({
                     event: StreamEventTypes.Latitude,
                     data: {
-                      type: ChainEventTypes.ProviderCompleted,
+                      type: ChainEventTypes.Complete,
                       response: step,
-                    },
-                  })
-                  controller.enqueue({
-                    event: StreamEventTypes.Latitude,
-                    data: {
-                      type: ChainEventTypes.ChainCompleted,
                       messages: step.providerLog?.messages,
                     },
                   })
@@ -295,7 +276,7 @@ describe('POST /chat', () => {
                   controller.enqueue({
                     event: StreamEventTypes.Latitude,
                     data: {
-                      type: ChainEventTypes.ChainError,
+                      type: ChainEventTypes.Error,
                       error: new ChainError({
                         code: RunErrorCodes.AIRunError,
                         message: 'API call error',
@@ -328,7 +309,7 @@ describe('POST /chat', () => {
         id: 0,
         event: StreamEventTypes.Latitude,
         data: {
-          type: LegacyChainEventTypes.Error,
+          type: ChainEventTypes.Error,
           error: {
             name: 'UnprocessableEntityError',
             message: 'API call error',
@@ -379,7 +360,9 @@ describe('POST /chat', () => {
           resolve(
             Result.ok({
               stream: new ReadableStream({}),
-              lastResponse: Promise.resolve(step),
+              response: new Promise((resolve) => {
+                resolve(Result.ok(step))
+              }),
             }),
           )
         }),
@@ -470,13 +453,16 @@ describe('POST /chat', () => {
           resolve(
             Result.ok({
               stream: new ReadableStream({}),
-              error: Promise.resolve(
-                new ChainError({
-                  code: RunErrorCodes.AIRunError,
-                  message: 'API call error',
-                }),
-              ),
-              lastResponse: Promise.resolve(undefined),
+              response: new Promise((resolve) => {
+                resolve(
+                  Result.error(
+                    new ChainError({
+                      code: RunErrorCodes.AIRunError,
+                      message: 'API call error',
+                    }),
+                  ),
+                )
+              }),
             }),
           )
         }),
@@ -507,9 +493,8 @@ describe('POST /chat', () => {
           resolve(
             Result.ok({
               stream: new ReadableStream({}),
-              lastResponse: Promise.resolve({
-                ...step,
-                documentLogUuid: undefined,
+              response: new Promise((resolve) => {
+                resolve(Result.ok({ ...step, documentLogUuid: undefined }))
               }),
             }),
           )
@@ -541,9 +526,8 @@ describe('POST /chat', () => {
           resolve(
             Result.ok({
               stream: new ReadableStream({}),
-              lastResponse: Promise.resolve({
-                ...step,
-                providerLog: undefined,
+              response: new Promise((resolve) => {
+                resolve(Result.ok({ ...step, providerLog: undefined }))
               }),
             }),
           )

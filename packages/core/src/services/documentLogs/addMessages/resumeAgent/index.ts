@@ -2,38 +2,28 @@ import { LogSources, Workspace, ProviderLog } from '../../../../browser'
 import { Result } from '../../../../lib'
 import { buildProvidersMap } from '../../../providerApiKeys/buildMap'
 import {
-  AssistantMessage,
   ContentType,
+  Conversation,
   Message,
-  MessageContent,
   MessageRole,
   ToolMessage,
-  ToolRequestContent,
 } from '@latitude-data/compiler'
-import { AGENT_RETURN_TOOL_NAME } from '../../../../constants'
+import {
+  AGENT_RETURN_TOOL_NAME,
+  ChainStepResponse,
+  ErrorableEntity,
+  StreamType,
+} from '../../../../constants'
+import { ChainEvent } from '@latitude-data/constants'
 import { runAgentStep } from '../../../agents/runStep'
-import { ChainStreamManager } from '../../../../lib/chainStreamManager'
-
-function buildAssistantMessage(providerLog: ProviderLog): AssistantMessage {
-  const toolContents: ToolRequestContent[] = providerLog.toolCalls.map(
-    (toolCall) => ({
-      type: ContentType.toolCall,
-      toolCallId: toolCall.id,
-      toolName: toolCall.name,
-      args: toolCall.arguments,
-    }),
-  )
-
-  const textContents = providerLog.responseText
-    ? [{ type: ContentType.text, text: providerLog.responseText }]
-    : []
-
-  return {
-    role: MessageRole.assistant,
-    content: [...textContents, ...toolContents] as MessageContent[],
-    toolCalls: providerLog.toolCalls,
-  }
-}
+import { ChainResponse } from '../addChatMessage'
+import { buildProviderLogResponse } from '../../../providerLogs'
+import {
+  ChainError,
+  createChainRunError,
+} from '../../../../lib/streamManager/ChainErrors'
+import { RunErrorCodes } from '@latitude-data/constants/errors'
+import { FinishReason } from 'ai'
 
 function buildExtraMessages({
   providerLog,
@@ -42,11 +32,14 @@ function buildExtraMessages({
   providerLog: ProviderLog
   newMessages: Message[]
 }) {
-  const assistantMessage = buildAssistantMessage(providerLog)
   const agentFinishToolCalls =
     providerLog.toolCalls?.filter(
       (toolCall) => toolCall.name === AGENT_RETURN_TOOL_NAME,
     ) ?? []
+
+  if (!agentFinishToolCalls.length) {
+    return newMessages
+  }
 
   const agentToolCallResponseMessages: ToolMessage[] = agentFinishToolCalls.map(
     (toolCall) => ({
@@ -63,7 +56,7 @@ function buildExtraMessages({
     }),
   )
 
-  return [assistantMessage, ...agentToolCallResponseMessages, ...newMessages]
+  return [...agentToolCallResponseMessages, ...newMessages]
 }
 
 /**
@@ -75,7 +68,7 @@ function buildExtraMessages({
 export async function resumeAgent({
   workspace,
   providerLog,
-  messages: newMessages,
+  messages,
   source,
 }: {
   workspace: Workspace
@@ -87,30 +80,67 @@ export async function resumeAgent({
     workspaceId: workspace.id,
   })
 
-  const chainStreamManager = new ChainStreamManager({
-    errorableUuid: providerLog.documentLogUuid!,
-    messages: providerLog.messages,
-    // TODO: Missing previous TokenUsage
+  const previousResponse: ChainStepResponse<StreamType> = {
+    text: buildProviderLogResponse(providerLog),
+    usage: {
+      completionTokens: 0,
+      promptTokens: 0,
+      totalTokens: 0,
+    },
+    finishReason: (providerLog.finishReason as FinishReason) ?? 'tool-calls',
+    chainCompleted: false,
+    documentLogUuid: providerLog.documentLogUuid!,
+    providerLog,
+    streamType: providerLog.responseObject ? 'object' : 'text',
+    toolCalls: providerLog.toolCalls,
+    object: providerLog.responseObject,
+  }
+
+  const previousMessages = providerLog.messages
+  const extraMessages = buildExtraMessages({
+    providerLog,
+    newMessages: messages,
+  })
+  const conversation: Conversation = {
+    config: providerLog.config!,
+    messages: previousMessages,
+  }
+
+  let responseResolve: (value: ChainResponse<StreamType>) => void
+
+  const response = new Promise<ChainResponse<StreamType>>((resolve) => {
+    responseResolve = resolve
   })
 
-  const streamResult = chainStreamManager.start(async () => {
-    await runAgentStep({
-      chainStreamManager,
-      workspace,
-      source,
-      conversation: {
-        config: providerLog.config!,
-        messages: providerLog.messages,
-      },
-      providersMap,
-      errorableUuid: providerLog.documentLogUuid!,
-      stepCount: 0,
-      newMessages: buildExtraMessages({
-        providerLog,
-        newMessages,
-      }),
-    })
+  const stream = new ReadableStream<ChainEvent>({
+    start(controller) {
+      runAgentStep({
+        controller,
+        workspace,
+        source,
+        conversation,
+        providersMap,
+        previousCount: previousMessages.length,
+        previousResponse,
+        errorableUuid: providerLog.documentLogUuid!,
+        stepCount: 0,
+        extraMessages,
+      })
+        .then((res) => {
+          responseResolve(Result.ok(res))
+        })
+        .catch(async (e: ChainError<RunErrorCodes>) => {
+          const error = await createChainRunError({
+            error: e,
+            errorableUuid: providerLog.documentLogUuid!,
+            errorableType: ErrorableEntity.DocumentLog,
+            persistErrors: true,
+          })
+
+          responseResolve(Result.error(error))
+        })
+    },
   })
 
-  return Result.ok(streamResult)
+  return Result.ok({ stream, response })
 }

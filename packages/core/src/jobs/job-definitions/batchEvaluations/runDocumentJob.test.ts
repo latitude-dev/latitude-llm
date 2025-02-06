@@ -93,10 +93,8 @@ describe('runDocumentJob', () => {
     const mod = await import('./runDocumentJob')
     const runDocumentForEvaluationJob = mod.runDocumentForEvaluationJob
     const mockResult = {
+      response: Promise.resolve(Result.ok({ providerLog: { uuid: 'log1' } })),
       errorableUuid: 'log1',
-      lastResponse: Promise.resolve({ providerLog: { uuid: 'log1' } }),
-      toolCalls: Promise.resolve([]),
-      messages: Promise.resolve([]),
     }
     vi.mocked(commits.runDocumentAtCommit).mockResolvedValue(
       // @ts-ignore

@@ -1,6 +1,6 @@
 import {
   ChainEventDto,
-  LegacyChainEventTypes,
+  ChainEventTypes,
   StreamEventTypes,
 } from '@latitude-data/constants'
 import { buildMessagesFromResponse } from '@latitude-data/core/browser'
@@ -101,7 +101,7 @@ export function usePlaygroundChat<V extends PromptlVersion>({
           }
 
           // Step started
-          if (data.type === LegacyChainEventTypes.Step) {
+          if (data.type === ChainEventTypes.Step) {
             setStreamingResponse('')
             addMessages(data.messages ?? [])
             messagesCount += data.messages?.length ?? 0
@@ -109,7 +109,7 @@ export function usePlaygroundChat<V extends PromptlVersion>({
           }
 
           // Step finished
-          if (data.type === LegacyChainEventTypes.StepComplete) {
+          if (data.type === ChainEventTypes.StepComplete) {
             const responseMsgs = buildMessagesFromResponse(data)
             setStreamingResponse(undefined)
             addMessages(responseMsgs)
@@ -118,7 +118,7 @@ export function usePlaygroundChat<V extends PromptlVersion>({
           }
 
           // Chain finished
-          if (data.type === LegacyChainEventTypes.Complete) {
+          if (data.type === ChainEventTypes.Complete) {
             if (!isChat.current) {
               setChainLength((prev) => prev + messagesCount)
               setTime((prev) => (prev ?? 0) + (performance.now() - start))
@@ -135,7 +135,7 @@ export function usePlaygroundChat<V extends PromptlVersion>({
           }
 
           // Error
-          if (data.type === LegacyChainEventTypes.Error) {
+          if (data.type === ChainEventTypes.Error) {
             setError(new Error(data.error.message))
           }
         }

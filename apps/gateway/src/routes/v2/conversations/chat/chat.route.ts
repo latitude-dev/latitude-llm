@@ -1,7 +1,7 @@
 import http from '$/common/http'
 import { GENERIC_ERROR_RESPONSES } from '$/openApi/responses/errorResponses'
 import {
-  legacyChainEventDtoSchema,
+  chainEventDtoSchema,
   internalInfoSchema,
   runSyncAPIResponseSchema,
 } from '$/openApi/schemas'
@@ -34,7 +34,7 @@ export const chatRoute = createRoute({
       description: 'Chat was created successfully',
       content: {
         [http.MediaTypes.JSON]: { schema: runSyncAPIResponseSchema },
-        [http.MediaTypes.SSE]: { schema: legacyChainEventDtoSchema },
+        [http.MediaTypes.SSE]: { schema: chainEventDtoSchema },
       },
     },
   },

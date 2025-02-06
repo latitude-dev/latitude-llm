@@ -1,8 +1,5 @@
 import { z } from '@hono/zod-openapi'
-import {
-  LegacyChainEventTypes,
-  StreamEventTypes,
-} from '@latitude-data/constants'
+import { ChainEventTypes, StreamEventTypes } from '@latitude-data/constants'
 import { messageSchema } from '@latitude-data/core/browser'
 
 export const languageModelUsageSchema = z.object({
@@ -54,7 +51,7 @@ export const chainEventDtoResponseSchema = z.discriminatedUnion('streamType', [
   chainStepResponseSchema.options[1].omit({ providerLog: true }),
 ])
 
-export const legacyChainEventDtoSchema = z.discriminatedUnion('event', [
+export const chainEventDtoSchema = z.discriminatedUnion('event', [
   z.object({
     event: z.literal(StreamEventTypes.Provider),
     data: z.object({}).passthrough(),
@@ -63,19 +60,19 @@ export const legacyChainEventDtoSchema = z.discriminatedUnion('event', [
     event: z.literal(StreamEventTypes.Latitude),
     data: z.discriminatedUnion('type', [
       z.object({
-        type: z.literal(LegacyChainEventTypes.Step),
+        type: z.literal(ChainEventTypes.Step),
         config: configSchema,
         isLastStep: z.boolean(),
         messages: z.array(messageSchema),
         uuid: z.string().optional(),
       }),
       z.object({
-        type: z.literal(LegacyChainEventTypes.StepComplete),
+        type: z.literal(ChainEventTypes.StepComplete),
         response: chainEventDtoResponseSchema,
         uuid: z.string().optional(),
       }),
       z.object({
-        type: z.literal(LegacyChainEventTypes.Complete),
+        type: z.literal(ChainEventTypes.Complete),
         config: configSchema,
         messages: z.array(messageSchema).optional(),
         object: z.object({}).passthrough().optional(),
@@ -83,7 +80,7 @@ export const legacyChainEventDtoSchema = z.discriminatedUnion('event', [
         uuid: z.string().optional(),
       }),
       z.object({
-        type: z.literal(LegacyChainEventTypes.Error),
+        type: z.literal(ChainEventTypes.Error),
         error: z.object({
           name: z.string(),
           message: z.string(),

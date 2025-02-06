@@ -7,7 +7,6 @@ import { streamSSE } from 'hono/streaming'
 import { AppRouteHandler } from '$/openApi/types'
 import { ChatRoute } from '$/routes/v1/chat/chat.route'
 import { chainEventPresenter } from '$/common/documents/getData'
-import { convertToLegacyChainStream } from '@latitude-data/core/lib/chainStreamManager/index'
 
 // @ts-expect-error: streamSSE has type issues
 export const chatHandler: AppRouteHandler<ChatRoute> = async (c) => {
@@ -18,7 +17,7 @@ export const chatHandler: AppRouteHandler<ChatRoute> = async (c) => {
       const { messages, __internal } = c.req.valid('json')
       const workspace = c.get('workspace')
 
-      const { stream: newStream } = await addMessages({
+      const result = await addMessages({
         workspace,
         documentLogUuid: conversationUuid,
         // @ts-expect-error: messages types are different
@@ -26,10 +25,8 @@ export const chatHandler: AppRouteHandler<ChatRoute> = async (c) => {
         source: __internal?.source ?? LogSources.API,
       }).then((r) => r.unwrap())
 
-      const { stream: legacyStream } = convertToLegacyChainStream(newStream)
-
       let id = 0
-      for await (const event of streamToGenerator(legacyStream)) {
+      for await (const event of streamToGenerator(result.stream)) {
         const data = chainEventPresenter(event)
 
         stream.writeSSE({

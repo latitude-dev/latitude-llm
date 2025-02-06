@@ -16,11 +16,11 @@ import { z } from 'zod'
 import { DocumentVersion, ProviderLog, Span, Trace } from './browser'
 
 export {
-  LegacyChainEventTypes,
+  ChainEventTypes,
   EvaluationResultableType,
   LogSources,
   StreamEventTypes,
-  type LegacyChainEvent,
+  type ChainEvent,
 } from '@latitude-data/constants'
 
 export const LATITUDE_EVENT = 'latitudeEventsChannel'

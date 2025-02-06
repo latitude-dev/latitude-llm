@@ -20,12 +20,7 @@ import {
   Workspace,
 } from '../../browser'
 import { database } from '../../client'
-import {
-  ChainStepResponse,
-  ErrorableEntity,
-  LogSources,
-  Providers,
-} from '../../constants'
+import { ErrorableEntity, LogSources, Providers } from '../../constants'
 import { publisher } from '../../events/publisher'
 import { Result } from '../../lib'
 import * as generateUUIDModule from '../../lib/generateUUID'
@@ -36,7 +31,7 @@ import {
   runErrors,
 } from '../../schema'
 import * as factories from '../../tests/factories'
-import { ChainError } from '../../lib/chainStreamManager/ChainErrors'
+import { ChainError } from '../../lib/streamManager/ChainErrors'
 import * as runChainModule from '../chains/run'
 import { serialize } from '../documentLogs/serialize'
 import * as createRunErrorModule from '../runErrors/create'
@@ -70,7 +65,7 @@ let workspace: Workspace
 let user: User
 let evaluation: EvaluationDto
 let provider: ProviderApiKey
-let lastResponse: ChainStepResponse<'object'>
+let runChainResponse: runChainModule.ChainResponse<'object'>
 let runChainSpy: MockInstance
 
 describe('run', () => {
@@ -129,24 +124,20 @@ describe('run', () => {
         providerId: provider.id,
         providerType: Providers.OpenAI,
       })
-      const response = {
+      runChainResponse = Result.ok({
         streamType: 'object' as 'object',
         object: { result: '42', reason: 'Is always 42' },
         text: 'chain resolved text',
         usage: { promptTokens: 8, completionTokens: 2, totalTokens: 10 },
         documentLogUuid: FAKE_GENERATED_UUID,
         providerLog: resultProviderLog,
-      }
-      runChainSpy = vi.spyOn(runChainModule, 'runChain').mockReturnValue({
+      })
+      runChainSpy = vi.spyOn(runChainModule, 'runChain').mockResolvedValue({
         stream,
+        response: new Promise((resolve) => resolve(runChainResponse)),
         resolvedContent: 'chain resolved text',
         errorableUuid: FAKE_GENERATED_UUID,
-        duration: Promise.resolve(1000),
-        lastResponse: Promise.resolve(response),
-        messages: Promise.resolve([]),
-        error: Promise.resolve(undefined),
-        toolCalls: Promise.resolve([]),
-        conversation: Promise.resolve({ config: {}, messages: [] }),
+        duration: new Promise((resolve) => resolve(1000)),
       })
     })
 
@@ -234,14 +225,10 @@ describe('run', () => {
       expect(result).toEqual(
         Result.ok({
           stream,
+          response: new Promise((resolve) => resolve(runChainResponse)),
           resolvedContent: 'chain resolved text',
           errorableUuid: FAKE_GENERATED_UUID,
           duration: new Promise((resolve) => resolve(1000)),
-          lastResponse: Promise.resolve(lastResponse),
-          toolCalls: expect.any(Promise),
-          error: expect.any(Promise),
-          messages: expect.any(Promise),
-          conversation: expect.any(Promise),
         }),
       )
     })
@@ -253,15 +240,16 @@ describe('run', () => {
         evaluation,
       })
 
-      const response = await run.value?.lastResponse
+      const response = await run.value?.response
+      const responseValue = response!.value!
       expect(publisherSpy).toHaveBeenCalledWith({
         type: 'evaluationRun',
         data: {
-          response,
+          response: responseValue,
           documentUuid: documentUuid,
           documentLogUuid: documentLog.uuid,
           evaluationId: evaluation.id,
-          providerLogUuid: response?.providerLog!.uuid,
+          providerLogUuid: responseValue.providerLog!.uuid,
           workspaceId: workspace.id,
         },
       })
@@ -325,27 +313,22 @@ describe('run', () => {
         documentLogUuid: documentLog.uuid,
         providerId: provider.id,
         providerType: Providers.OpenAI,
-        model: 'gpt-4o',
       })
-      lastResponse = {
+      runChainResponse = Result.ok({
         streamType: 'object' as 'object',
         object: undefined,
         text: 'chain resolved text',
         usage: { promptTokens: 8, completionTokens: 2, totalTokens: 10 },
         documentLogUuid: FAKE_GENERATED_UUID,
         providerLog: resultProviderLog,
-      }
+      })
 
-      runChainSpy = vi.spyOn(runChainModule, 'runChain').mockReturnValue({
+      runChainSpy = vi.spyOn(runChainModule, 'runChain').mockResolvedValue({
         stream,
+        response: new Promise((resolve) => resolve(runChainResponse)),
         resolvedContent: 'chain resolved text',
         errorableUuid: FAKE_GENERATED_UUID,
-        duration: Promise.resolve(1000),
-        lastResponse: Promise.resolve(lastResponse),
-        messages: Promise.resolve([]),
-        error: Promise.resolve(undefined),
-        toolCalls: Promise.resolve([]),
-        conversation: Promise.resolve({ config: {}, messages: [] }),
+        duration: new Promise((resolve) => resolve(1000)),
       })
 
       const result = await runEvaluation({

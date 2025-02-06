@@ -1,8 +1,7 @@
 import {
-  AssistantMessage,
-  ContentType,
   Conversation,
   Message,
+  ToolCall,
   MessageRole,
 } from '@latitude-data/compiler'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
@@ -18,7 +17,7 @@ import {
 import { Result, TypedResult } from '../../../lib'
 import { Config } from '../../ai'
 import { azureConfig, googleConfig } from '../../ai/helpers'
-import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
+import { ChainError } from '../../../lib/streamManager/ChainErrors'
 import { checkFreeProviderQuota } from '../../chains/checkFreeProviderQuota'
 import { CachedApiKeys } from '../../chains/run'
 
@@ -36,9 +35,9 @@ export type ConfigOverrides = JSONOverride | { output: 'no-schema' }
 
 type ValidatorContext = {
   workspace: Workspace
-  providersMap: CachedApiKeys
+  prevContent: Message[] | string | undefined
   conversation: Conversation
-  newMessages: Message[] | undefined
+  providersMap: CachedApiKeys
 }
 
 const findProvider = (name: string, providersMap: CachedApiKeys) => {
@@ -116,36 +115,11 @@ const applyAgentTools = (config: Config): Config => {
   }
 }
 
-function isChainCompleted(newMessages?: Message[]) {
-  if (!newMessages?.length) return false
+export const validateAgentStep = async (
+  context: ValidatorContext,
+): Promise<TypedResult<ValidatedAgentStep, ChainError<RunErrorCodes>>> => {
+  const { workspace, conversation, providersMap, prevContent } = context
 
-  const assistantMessage = newMessages[0] as AssistantMessage
-  const returnToolCallIds = assistantMessage.toolCalls
-    .filter((toolCall) => toolCall.name === AGENT_RETURN_TOOL_NAME)
-    .map((toolCall) => toolCall.id)
-
-  const answeredReturnTools = newMessages.slice(1).reduce((acc, message) => {
-    if (message.role !== MessageRole.tool) return acc
-    if (!Array.isArray(message.content)) return acc
-
-    return message.content.filter(
-      (content) =>
-        content.type === ContentType.toolResult &&
-        returnToolCallIds.includes(content.toolCallId),
-    ).length
-  }, 0)
-
-  return returnToolCallIds.length > answeredReturnTools
-}
-
-export const validateAgentStep = async ({
-  workspace,
-  providersMap,
-  conversation,
-  newMessages,
-}: ValidatorContext): Promise<
-  TypedResult<ValidatedAgentStep, ChainError<RunErrorCodes>>
-> => {
   const configResult = validateConfig(conversation.config)
   if (configResult.error) return Result.error(configResult.error)
 
@@ -161,13 +135,32 @@ export const validateAgentStep = async ({
   })
   if (freeQuota.error) return freeQuota
 
-  const messages = [...conversation.messages, ...(newMessages ?? [])]
+  const messages = conversation.messages
+  const assistantResponse = messages[messages.length - 1]
+
+  if (Array.isArray(prevContent)) {
+    messages.push(...prevContent)
+  } else {
+    messages.push({
+      role: MessageRole.assistant,
+      content: prevContent!,
+      toolCalls: [],
+    })
+  }
 
   const rule = applyProviderRules({
     providerType: provider.provider,
     messages,
     config,
   })
+
+  const lastMessageToolCalls: ToolCall[] | undefined =
+    assistantResponse?.toolCalls as ToolCall[]
+
+  const chainCompleted =
+    lastMessageToolCalls?.some(
+      (toolCall) => toolCall.name === AGENT_RETURN_TOOL_NAME,
+    ) ?? false
 
   return Result.ok({
     provider,
@@ -177,7 +170,7 @@ export const validateAgentStep = async ({
       config: applyAgentTools(config),
       messages: rule?.messages ?? messages,
     },
-    chainCompleted: isChainCompleted(newMessages),
+    chainCompleted,
 
     // Agents' "schema" config will be used for the return function, not for the actual LLM output.
     schema: undefined,

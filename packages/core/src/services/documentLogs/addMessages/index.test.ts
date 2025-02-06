@@ -8,6 +8,7 @@ import {
 } from '@latitude-data/constants/errors'
 import { eq } from 'drizzle-orm'
 import {
+  ChainEventTypes,
   Commit,
   DocumentVersion,
   LogSources,
@@ -25,9 +26,8 @@ import { providerLogs } from '../../../schema'
 import { createDocumentLog, createProject } from '../../../tests/factories'
 import { testConsumeStream } from '../../../tests/helpers'
 import * as aiModule from '../../ai'
-import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
+import { ChainError } from '../../../lib/streamManager/ChainErrors'
 import { addMessages } from './index'
-import { ChainEventTypes } from '../../../lib/chainStreamManager/events'
 
 const dummyDoc1Content = `
 ---
@@ -447,51 +447,56 @@ describe('addMessages', () => {
 
     expect(value).toEqual([
       {
-        event: StreamEventTypes.Latitude,
+        event: 'latitude-event',
         data: expect.objectContaining({
-          type: ChainEventTypes.ChainStarted,
+          type: 'chain-step',
         }),
       },
       {
-        event: StreamEventTypes.Latitude,
-        data: expect.objectContaining({
-          type: ChainEventTypes.StepStarted,
-        }),
-      },
-      {
-        event: StreamEventTypes.Latitude,
-        data: expect.objectContaining({
-          type: ChainEventTypes.ProviderStarted,
-        }),
-      },
-      {
-        event: StreamEventTypes.Provider,
+        event: 'provider-event',
         data: { type: 'text-delta', textDelta: 'AI gener' },
       },
       {
-        event: StreamEventTypes.Provider,
+        event: 'provider-event',
         data: { type: 'text-delta', textDelta: 'ated text' },
       },
       {
-        event: StreamEventTypes.Latitude,
+        event: 'latitude-event',
         data: expect.objectContaining({
-          type: ChainEventTypes.ProviderCompleted,
-          providerLogUuid: log.uuid,
+          type: 'chain-step-complete',
         }),
       },
       {
-        event: StreamEventTypes.Latitude,
-        data: expect.objectContaining({
-          type: ChainEventTypes.StepCompleted,
-        }),
-      },
-      {
-        event: StreamEventTypes.Latitude,
-        data: expect.objectContaining({
-          type: ChainEventTypes.ChainCompleted,
+        event: 'latitude-event',
+        data: {
+          type: 'chain-complete',
           documentLogUuid: providerLog.documentLogUuid!,
           finishReason: 'stop',
-        }),
+          config: {
+            provider: 'openai',
+            model: 'gpt-4o',
+          },
+          messages: [
+            {
+              role: 'assistant',
+              content: [
+                {
+                  type: ContentType.text,
+                  text: 'Fake AI generated text',
+                },
+              ],
+              toolCalls: [],
+            },
+          ],
+          response: {
+            streamType: 'text',
+            documentLogUuid: providerLog.documentLogUuid,
+            providerLog: log,
+            text: 'Fake AI generated text',
+            toolCalls: [],
+            usage: { promptTokens: 0, completionTokens: 0, totalTokens: 0 },
+          },
+        },
       },
     ])
   })
@@ -516,7 +521,7 @@ describe('addMessages', () => {
       })
     ).unwrap()
 
-    const response = await result.lastResponse
+    const response = (await result.response).unwrap()
     const log = await new ProviderLogsRepository(workspace.id)
       .findLastByDocumentLogUuid(providerLog.documentLogUuid!)
       .then((r) => r.unwrap())
@@ -574,39 +579,27 @@ describe('addMessages', () => {
       source: LogSources.API,
     }).then((r) => r.unwrap())
     const { value: stream } = await testConsumeStream(result.stream)
-    const error = await result.error
+    const response = await result.response
 
     expect(stream).toEqual([
       {
         event: StreamEventTypes.Latitude,
         data: expect.objectContaining({
-          type: ChainEventTypes.ChainStarted,
+          type: ChainEventTypes.Step,
         }),
       },
       {
         event: StreamEventTypes.Latitude,
-        data: expect.objectContaining({
-          type: ChainEventTypes.StepStarted,
-        }),
-      },
-      {
-        event: StreamEventTypes.Latitude,
-        data: expect.objectContaining({
-          type: ChainEventTypes.ProviderStarted,
-        }),
-      },
-      {
-        event: StreamEventTypes.Latitude,
-        data: expect.objectContaining({
-          type: ChainEventTypes.ChainError,
-          error: expect.objectContaining({
+        data: {
+          type: ChainEventTypes.Error,
+          error: {
             name: LatitudeErrorCodes.UnprocessableEntityError,
             message: 'Openai returned this error: provider error',
-          }),
-        }),
+          },
+        },
       },
     ])
-    expect(error).toEqual(
+    expect(response.error).toEqual(
       new ChainError({
         code: RunErrorCodes.Unknown,
         message: 'Openai returned this error: provider error',
@@ -657,7 +650,7 @@ describe('addMessages', () => {
       source: LogSources.API,
     }).then((r) => r.unwrap())
     const { value: stream } = await testConsumeStream(result.stream)
-    const response = await result.lastResponse
+    const response = await result.response.then((r) => r.unwrap())
     const log = await new ProviderLogsRepository(workspace.id)
       .findLastByDocumentLogUuid(providerLog.documentLogUuid!)
       .then((r) => r.unwrap())
@@ -666,43 +659,71 @@ describe('addMessages', () => {
       {
         event: StreamEventTypes.Latitude,
         data: expect.objectContaining({
-          type: ChainEventTypes.ChainStarted,
+          type: ChainEventTypes.Step,
         }),
       },
       {
         event: StreamEventTypes.Latitude,
         data: expect.objectContaining({
-          type: ChainEventTypes.StepStarted,
+          type: ChainEventTypes.StepComplete,
         }),
       },
       {
         event: StreamEventTypes.Latitude,
         data: expect.objectContaining({
-          type: ChainEventTypes.ProviderStarted,
-        }),
-      },
-      {
-        event: StreamEventTypes.Latitude,
-        data: expect.objectContaining({
-          type: ChainEventTypes.ProviderCompleted,
-        }),
-      },
-      {
-        event: StreamEventTypes.Latitude,
-        data: expect.objectContaining({
-          type: ChainEventTypes.StepCompleted,
-        }),
-      },
-      {
-        event: StreamEventTypes.Latitude,
-        data: expect.objectContaining({
-          type: ChainEventTypes.ChainCompleted,
-          tokenUsage: {
-            promptTokens: expect.any(Number),
-            completionTokens: expect.any(Number),
-            totalTokens: expect.any(Number),
-          },
-          finishReason: 'stop',
+          type: ChainEventTypes.Complete,
+          messages: [
+            {
+              role: MessageRole.assistant,
+              content: [
+                {
+                  type: ContentType.text,
+                  text: 'assistant message',
+                },
+                {
+                  type: ContentType.toolCall,
+                  toolCallId: 'tool-call-id',
+                  toolName: 'tool-call-name',
+                  args: { arg1: 'value1', arg2: 'value2' },
+                },
+              ],
+              toolCalls: [
+                {
+                  id: 'tool-call-id',
+                  name: 'tool-call-name',
+                  arguments: { arg1: 'value1', arg2: 'value2' },
+                },
+              ],
+            },
+          ],
+          response: expect.objectContaining({
+            text: 'assistant message',
+            toolCalls: [
+              {
+                id: 'tool-call-id',
+                name: 'tool-call-name',
+                arguments: { arg1: 'value1', arg2: 'value2' },
+              },
+            ],
+            providerLog: expect.objectContaining({
+              messages: [
+                ...log.messages.slice(0, -1),
+                {
+                  role: MessageRole.user,
+                  content: [{ type: ContentType.text, text: 'user message' }],
+                },
+              ],
+              responseText: 'assistant message',
+              responseObject: null,
+              toolCalls: [
+                {
+                  id: 'tool-call-id',
+                  name: 'tool-call-name',
+                  arguments: { arg1: 'value1', arg2: 'value2' },
+                },
+              ],
+            }),
+          }),
         }),
       },
     ])

@@ -7,7 +7,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { ChainStreamConsumer } from '.'
 import {
-  LegacyChainEventTypes,
+  ChainEventTypes,
   ChainStepResponse,
   Providers,
   StreamEventTypes,
@@ -65,6 +65,7 @@ describe('ChainStreamConsumer', () => {
         ],
         config: { provider: provider.name, model: provider.defaultModel! },
       },
+      config: { provider: provider.name, model: provider.defaultModel! },
       provider: provider,
     }
   })
@@ -80,7 +81,7 @@ describe('ChainStreamConsumer', () => {
     })
     expect(controller.enqueue).toHaveBeenCalledWith({
       data: {
-        type: LegacyChainEventTypes.Step,
+        type: ChainEventTypes.Step,
         isLastStep: false,
         config: step.conversation.config,
         messages: step.conversation.messages,
@@ -107,7 +108,7 @@ describe('ChainStreamConsumer', () => {
     expect(controller.enqueue).toHaveBeenCalledWith({
       event: StreamEventTypes.Latitude,
       data: {
-        type: LegacyChainEventTypes.StepComplete,
+        type: ChainEventTypes.StepComplete,
         documentLogUuid: 'errorable-uuid',
         response: response,
       },
@@ -147,7 +148,7 @@ describe('ChainStreamConsumer', () => {
     expect(controller.enqueue).toHaveBeenCalledWith({
       event: StreamEventTypes.Latitude,
       data: {
-        type: LegacyChainEventTypes.Complete,
+        type: ChainEventTypes.Complete,
         config: step.conversation.config,
         response: response,
         finishReason: 'stop',
@@ -202,7 +203,7 @@ describe('ChainStreamConsumer', () => {
     expect(controller.enqueue).toHaveBeenCalledWith({
       event: StreamEventTypes.Latitude,
       data: {
-        type: LegacyChainEventTypes.Complete,
+        type: ChainEventTypes.Complete,
         config: step.conversation.config,
         response: response,
         finishReason: 'stop',
@@ -271,7 +272,7 @@ describe('ChainStreamConsumer', () => {
     expect(controller.enqueue).toHaveBeenCalledWith({
       event: StreamEventTypes.Latitude,
       data: {
-        type: LegacyChainEventTypes.Complete,
+        type: ChainEventTypes.Complete,
         config: step.conversation.config,
         response: response,
         finishReason: 'stop',
@@ -352,7 +353,7 @@ describe('ChainStreamConsumer', () => {
     expect(controller.enqueue).toHaveBeenCalledWith({
       event: StreamEventTypes.Latitude,
       data: {
-        type: LegacyChainEventTypes.Complete,
+        type: ChainEventTypes.Complete,
         config: step.conversation.config,
         finishReason: 'stop',
         response: response,
@@ -398,7 +399,7 @@ describe('ChainStreamConsumer', () => {
     expect(controller.enqueue).toHaveBeenCalledWith({
       event: StreamEventTypes.Latitude,
       data: {
-        type: LegacyChainEventTypes.Error,
+        type: ChainEventTypes.Error,
         error: {
           name: error.name,
           message: error.message,
@@ -418,7 +419,7 @@ describe('ChainStreamConsumer', () => {
     expect(controller.enqueue).toHaveBeenCalledWith({
       event: StreamEventTypes.Latitude,
       data: {
-        type: LegacyChainEventTypes.Error,
+        type: ChainEventTypes.Error,
         error: {
           name: LatitudeErrorCodes.UnprocessableEntityError,
           message: error.message,

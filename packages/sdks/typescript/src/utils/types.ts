@@ -12,8 +12,8 @@ import { LatitudeApiError } from '$sdk/utils/errors'
 import {
   ChatSyncAPIResponse,
   RunSyncAPIResponse,
-  LegacyChainEvent as ChainEvent,
-  LegacyChainEventTypes as ChainEventTypes,
+  ChainEvent,
+  ChainEventTypes,
   ChainEventDto,
   StreamEventTypes,
   ChainCallResponseDto,

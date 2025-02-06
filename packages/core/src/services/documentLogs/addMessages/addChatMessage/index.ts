@@ -3,18 +3,23 @@ import { RunErrorCodes } from '@latitude-data/constants/errors'
 
 import {
   buildConversation,
+  buildMessagesFromResponse,
+  ChainEvent,
   ChainStepResponse,
   LogSources,
+  ProviderApiKey,
   StreamType,
   Workspace,
   ProviderLog,
 } from '../../../../browser'
 import { unsafelyFindProviderApiKey } from '../../../../data-access'
 import { NotFoundError, Result, TypedResult } from '../../../../lib'
-import { ChainError } from '../../../../lib/chainStreamManager/ChainErrors'
+import { Config as ValidatedConfig, PartialConfig } from '../../../ai'
+import { ChainError } from '../../../../lib/streamManager/ChainErrors'
+import { ChainStreamConsumer } from '../../../../lib/streamManager/ChainStreamConsumer'
 import { checkFreeProviderQuota } from '../../../chains/checkFreeProviderQuota'
+import { streamAIResponse } from '../../../../lib/streamManager'
 import serializeProviderLog from '../../../providerLogs/serialize'
-import { ChainStreamManager } from '../../../../lib/chainStreamManager'
 
 export type ChainResponse<T extends StreamType> = TypedResult<
   ChainStepResponse<T>,
@@ -30,7 +35,7 @@ export async function addChatMessage({
   workspace,
   providerLog,
   source,
-  messages: newMessages,
+  messages,
 }: {
   workspace: Workspace
   providerLog: ProviderLog
@@ -61,34 +66,92 @@ export async function addChatMessage({
     )
   }
 
-  const previousMessages = buildConversation(serializeProviderLog(providerLog))
-  const conversation = {
-    config: {
-      ...providerLog.config!,
-      provider: provider.name,
-    },
-    messages: [...previousMessages, ...newMessages],
-  }
+  let responseResolve: (value: ChainResponse<StreamType>) => void
 
-  const chainStreamManager = new ChainStreamManager({
-    errorableUuid: providerLog.documentLogUuid!,
-    messages: conversation.messages,
+  const response = new Promise<ChainResponse<StreamType>>((resolve) => {
+    responseResolve = resolve
   })
 
-  const streamResult = chainStreamManager.start(async () => {
+  const previousMessages = buildConversation(serializeProviderLog(providerLog))
+
+  const stream = new ReadableStream<ChainEvent>({
+    start(controller) {
+      iterate({
+        workspace,
+        source,
+        config: providerLog.config!,
+        provider,
+        controller,
+        documentLogUuid: providerLog.documentLogUuid!,
+        messages: [...previousMessages, ...messages],
+      })
+        .then((res) => {
+          responseResolve(Result.ok(res))
+        })
+        .catch((err) => {
+          responseResolve(Result.error(err))
+        })
+    },
+  })
+
+  return Result.ok({ stream, response })
+}
+
+async function iterate({
+  workspace,
+  config,
+  provider,
+  controller,
+  messages,
+  source,
+  documentLogUuid,
+}: {
+  workspace: Workspace
+  config: PartialConfig
+  provider: ProviderApiKey
+  controller: ReadableStreamDefaultController
+  source: LogSources
+  messages: Message[]
+  documentLogUuid?: string
+}) {
+  try {
     await checkFreeProviderQuota({
       workspace,
       provider,
     }).then((r) => r.unwrap())
 
-    await chainStreamManager.getProviderResponse({
+    const response = await streamAIResponse({
+      controller,
       workspace,
+      config: config as ValidatedConfig,
+      messages,
+      newMessagesCount: 0,
       provider,
       source,
-      documentLogUuid: providerLog.documentLogUuid!,
-      conversation,
+      errorableUuid: documentLogUuid!,
     })
-  })
 
-  return Result.ok(streamResult)
+    const responseMessages = buildMessagesFromResponse({ response })
+
+    ChainStreamConsumer.chainCompleted({
+      controller,
+      response,
+      config: {
+        ...config,
+        provider: provider.name,
+        model: config.model,
+      },
+      finishReason: response.finishReason ?? 'stop',
+      responseMessages,
+    })
+
+    return response
+  } catch (e) {
+    const error = ChainStreamConsumer.chainError({
+      controller,
+      e,
+    })
+
+    throw error
+  }
 }

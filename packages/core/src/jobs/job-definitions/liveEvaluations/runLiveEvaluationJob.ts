@@ -20,9 +20,11 @@ export const runLiveEvaluationJob = async (
   // Document logs can be generated without a provider log (in case of error), so we don't want to fail the job
   if (!providerLog) return
 
-  return await runEvaluation({
+  const { response } = await runEvaluation({
     providerLog,
     evaluation,
     documentUuid,
   }).then((r) => r.unwrap())
+
+  await response
 }
