@@ -23,6 +23,7 @@ export default function useConnectedEvaluations(
       .commits.detail(commitUuid)
       .documents.detail(documentUuid).evaluations.root,
   )
+  // TODO: ConnectedEvaluation with evaluation details (EvaluationDto) too
   const {
     data = [],
     mutate,

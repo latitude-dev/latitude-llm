@@ -34,8 +34,7 @@ type ContentProps = {
   document: DocumentVersion
   commit: ICommitContextType['commit']
   project: IProjectContextType['project']
-  isEvaluationsLoading: boolean
-  isEvaluationResultsLoading: boolean
+  isLoading: boolean
 }
 
 function ResultCellContent({
@@ -58,63 +57,18 @@ function ResultCellContent({
   )
 }
 
-function EvaluationItemResult({
-  result,
-  evaluation,
-}: {
-  result?: EvaluationResultDto
-  evaluation: EvaluationDto
-}) {
-  if (!result) {
-    return (
-      <Text.H6
-        userSelect={false}
-        color='foregroundMuted'
-        lineHeight='h5'
-        wordBreak='breakAll'
-        ellipsis
-        lineClamp={3}
-      >
-        {evaluation.description}
-      </Text.H6>
-    )
-  }
-
-  return (
-    <div className='w-full h-full'>
-      <Text.H6
-        userSelect={false}
-        color='foregroundMuted'
-        lineHeight='h5'
-        wordBreak='breakAll'
-        ellipsis
-        lineClamp={3}
-      >
-        <span className='space-x-1.5'>
-          <ResultCellContent result={result} evaluation={evaluation} />
-          <Tooltip asChild trigger={<span>{result.reason}</span>}>
-            {result.reason}
-          </Tooltip>
-        </span>
-      </Text.H6>
-    </div>
-  )
-}
-
 function EvaluationItem({
   result,
   evaluation,
   document,
   commit,
   project,
-  isResultLoading,
 }: {
   result?: EvaluationResultDto
   evaluation: EvaluationDto
   document: DocumentVersion
   commit: ICommitContextType['commit']
   project: IProjectContextType['project']
-  isResultLoading: boolean
 }) {
   const query = new URLSearchParams()
   query.set(
@@ -156,11 +110,25 @@ function EvaluationItem({
         </div>
       </div>
       <div className='w-full h-full'>
-        {isResultLoading ? (
-          <Skeleton className='h-full w-full' />
-        ) : (
-          <EvaluationItemResult result={result} evaluation={evaluation} />
-        )}
+        <Text.H6
+          userSelect={false}
+          color='foregroundMuted'
+          lineHeight='h5'
+          wordBreak='breakAll'
+          ellipsis
+          lineClamp={3}
+        >
+          {result ? (
+            <span className='space-x-1.5'>
+              <ResultCellContent result={result} evaluation={evaluation} />
+              <Tooltip asChild trigger={<span>{result.reason}</span>}>
+                {result.reason}
+              </Tooltip>
+            </span>
+          ) : (
+            evaluation.description
+          )}
+        </Text.H6>
       </div>
     </div>
   )
@@ -172,10 +140,9 @@ function ExpandedContent({
   document,
   commit,
   project,
-  isEvaluationsLoading,
-  isEvaluationResultsLoading,
+  isLoading,
 }: ContentProps) {
-  if (isEvaluationsLoading) {
+  if (isLoading) {
     return (
       <div className='w-full flex gap-4 items-center justify-center flex-wrap'>
         <Skeleton className='h-32 flex flex-col flex-grow basis-60 flex-shrink' />
@@ -204,7 +171,6 @@ function ExpandedContent({
           document={document}
           commit={commit}
           project={project}
-          isResultLoading={isEvaluationResultsLoading}
         />
       ))}
     </div>
@@ -228,17 +194,73 @@ function ExpandedContentHeader({ document, commit, project }: ContentProps) {
 }
 
 function CollapsedContentHeader({
+  results,
   evaluations,
-  isEvaluationsLoading,
+  isLoading,
 }: ContentProps) {
-  return (
-    <div className='w-full flex items-center justify-end gap-4'>
-      {isEvaluationsLoading ? (
+  const count = useMemo(() => {
+    return evaluations.reduce(
+      (acc, evaluation) => {
+        // TODO: Change for real skipped condition
+        if (evaluation.description) acc.skipped++
+
+        const result = results[evaluation.id]
+        if (!result || result.result === undefined) return acc
+
+        if (evaluation.resultType === EvaluationResultableType.Boolean) {
+          const value =
+            typeof result.result === 'string'
+              ? result.result === 'true'
+              : Boolean(result.result)
+          return value ? { ...acc, passed: acc.passed + 1 } : acc
+        }
+
+        if (evaluation.resultType === EvaluationResultableType.Number) {
+          const value = Number(result.result)
+          return value >= evaluation.resultConfiguration.maxValue
+            ? { ...acc, passed: acc.passed + 1 }
+            : acc
+        }
+
+        return { ...acc, passed: acc.passed + 1 }
+      },
+      { passed: 0, skipped: 0 },
+    )
+  }, [results, evaluations])
+
+  if (isLoading) {
+    return (
+      <div className='w-full flex items-center justify-end'>
         <Skeleton className='w-36 h-4' />
-      ) : (
+      </div>
+    )
+  }
+
+  if (!Object.keys(results).length) {
+    return (
+      <div className='w-full flex items-center justify-end'>
         <Text.H5M userSelect={false} color='foregroundMuted' ellipsis noWrap>
           {evaluations.map((evaluation) => evaluation.name).join(' · ')}
         </Text.H5M>
+      </div>
+    )
+  }
+
+  return (
+    <div className='w-full flex items-center justify-end gap-2'>
+      <Badge
+        variant={
+          count.passed
+            ? count.passed >= evaluations.length / 2
+              ? 'successMuted'
+              : 'warningMuted'
+            : 'destructiveMuted'
+        }
+      >
+        {count.passed}/{evaluations.length} passed
+      </Badge>
+      {count.skipped > 0 && (
+        <Badge variant='muted'>{count.skipped} skipped</Badge>
       )}
     </div>
   )
@@ -256,6 +278,7 @@ export default function Evaluations({
   onExpand?: OnExpandFn
 }) {
   const { project } = useCurrentProject()
+  // TODO: Use ConnectedEvaluations with evaluation details (EvaluationDto)
   const { data: evaluations, isLoading: isEvaluationsLoading } = useEvaluations(
     {
       params: { documentUuid: document.documentUuid },
@@ -284,8 +307,8 @@ export default function Evaluations({
     document,
     commit,
     project,
-    isEvaluationsLoading,
-    isEvaluationResultsLoading,
+    // TODO: When we have the connected info we can just wait for the live evals to load their results
+    isLoading: isEvaluationsLoading || isEvaluationResultsLoading,
   }
 
   return (

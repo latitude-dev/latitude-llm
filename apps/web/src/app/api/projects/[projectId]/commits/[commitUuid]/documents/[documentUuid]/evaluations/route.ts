@@ -18,6 +18,7 @@ export const GET = errorHandler(
         workspace: Workspace
       },
     ) => {
+      // TODO: ConnectedEvaluation with evaluation details (EvaluationDto) too
       const { documentUuid } = params
       const scope = new ConnectedEvaluationsRepository(workspace.id)
       const connectedEvaluations = await scope
