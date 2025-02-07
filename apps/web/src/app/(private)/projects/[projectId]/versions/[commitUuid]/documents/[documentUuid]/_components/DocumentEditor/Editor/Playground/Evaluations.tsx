@@ -20,6 +20,7 @@ import {
   Skeleton,
   Text,
   Tooltip,
+  cn,
   useCurrentProject,
   type ICommitContextType,
   type IProjectContextType,
@@ -72,7 +73,18 @@ function EvaluationItemContent({
   isWaiting: boolean
 }) {
   if (!runCount || !evaluation.live) {
-    return <span>{evaluation.description}</span>
+    return (
+      <Text.H6
+        userSelect={false}
+        color='foregroundMuted'
+        lineHeight='h5'
+        wordBreak='breakAll'
+        ellipsis
+        lineClamp={3}
+      >
+        {evaluation.description}
+      </Text.H6>
+    )
   }
 
   if (isWaiting || !result) {
@@ -86,12 +98,9 @@ function EvaluationItemContent({
   }
 
   return (
-    <span className='space-x-1.5'>
-      <ResultCellContent result={result} evaluation={evaluation} />
-      <Tooltip asChild trigger={<span>{result.reason}</span>}>
-        {result.reason}
-      </Tooltip>
-    </span>
+    <Text.H6 color='foregroundMuted' wordBreak='breakAll'>
+      {result.reason || 'No reason'}
+    </Text.H6>
   )
 }
 
@@ -128,11 +137,23 @@ function EvaluationItem({
   }, [project, commit, document, result, evaluation])
 
   return (
-    <div className='h-32 flex flex-col flex-grow basis-60 flex-shrink items-center justify-start gap-2 border p-4 rounded-lg overflow-hidden'>
+    <div
+      className={cn(
+        'flex flex-col flex-grow flex-shrink items-center justify-start gap-2',
+        'border p-4 rounded-lg overflow-hidden',
+        'h-full basis-full',
+        (!runCount || (runCount === 1 && isWaiting)) && 'h-32 basis-60',
+      )}
+    >
       <div className='flex flex-row items-center justify-between gap-2 w-full'>
-        <Text.H5 userSelect={false} ellipsis noWrap>
-          {evaluation.name}
-        </Text.H5>
+        <span className='flex flex-row items-center gap-x-2 truncate'>
+          <Text.H5 ellipsis noWrap>
+            {evaluation.name}
+          </Text.H5>
+          {!isWaiting && result && (
+            <ResultCellContent result={result} evaluation={evaluation} />
+          )}
+        </span>
         <div className='flex flex-row items-center gap-2 flex-shrink-0'>
           <LiveEvaluationToggle
             documentUuid={document.documentUuid}
@@ -150,21 +171,12 @@ function EvaluationItem({
         </div>
       </div>
       <div className='w-full h-full'>
-        <Text.H6
-          userSelect={false}
-          color='foregroundMuted'
-          lineHeight='h5'
-          wordBreak='breakAll'
-          ellipsis
-          lineClamp={3}
-        >
-          <EvaluationItemContent
-            result={result}
-            evaluation={evaluation}
-            runCount={runCount}
-            isWaiting={isWaiting}
-          />
-        </Text.H6>
+        <EvaluationItemContent
+          result={result}
+          evaluation={evaluation}
+          runCount={runCount}
+          isWaiting={isWaiting}
+        />
       </div>
     </div>
   )
