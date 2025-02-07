@@ -279,6 +279,10 @@ function CollapsedContentHeader({
     )
   }
 
+  if (!evaluations.length) {
+    return null
+  }
+
   if (!runCount) {
     return (
       <div className='w-full flex items-center justify-end'>
@@ -291,19 +295,17 @@ function CollapsedContentHeader({
 
   return (
     <div className='w-full flex items-center justify-end gap-2'>
-      {evaluations.length && (
-        <Badge
-          variant={
-            count.passed
-              ? count.passed >= (evaluations.length - count.skipped) / 2
-                ? 'successMuted'
-                : 'warningMuted'
-              : 'destructiveMuted'
-          }
-        >
-          {count.passed}/{evaluations.length - count.skipped} passed
-        </Badge>
-      )}
+      <Badge
+        variant={
+          count.passed
+            ? count.passed >= (evaluations.length - count.skipped) / 2
+              ? 'successMuted'
+              : 'warningMuted'
+            : 'destructiveMuted'
+        }
+      >
+        {count.passed}/{evaluations.length - count.skipped} passed
+      </Badge>
       {count.skipped > 0 && (
         <Badge variant='muted'>{count.skipped} skipped</Badge>
       )}

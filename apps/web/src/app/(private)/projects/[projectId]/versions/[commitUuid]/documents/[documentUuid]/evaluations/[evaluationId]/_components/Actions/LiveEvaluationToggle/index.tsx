@@ -36,9 +36,10 @@ export default function LiveEvaluationToggle({
   const evaluation = useMemo(
     () =>
       evaluations
-        .map(({ evaluation, live }) => ({
-          ...evaluation,
+        .map(({ id, live, evaluation }) => ({
+          connectedId: id,
           live,
+          ...evaluation,
         }))
         .find((evaluation) => evaluation.id === evaluationId),
     [evaluations],
@@ -46,14 +47,15 @@ export default function LiveEvaluationToggle({
   const isDisabled =
     isLoading ||
     isUpdating ||
-    evaluation?.metadataType === EvaluationMetadataType.Manual
+    !evaluation ||
+    evaluation.metadataType === EvaluationMetadataType.Manual
 
   const toggleLive = useCallback(async () => {
-    if (isDisabled || !evaluation) return
+    if (isDisabled) return
 
     const live = !evaluation.live
     const [_, error] = await update({
-      id: evaluation.id,
+      id: evaluation.connectedId,
       data: { live },
     })
     if (error) return
