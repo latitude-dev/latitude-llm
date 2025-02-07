@@ -10,7 +10,11 @@ import {
   sum,
 } from 'drizzle-orm'
 
-import { ConnectedEvaluation, DocumentVersion } from '../../browser'
+import {
+  ConnectedEvaluation,
+  DocumentVersion,
+  EvaluationDto,
+} from '../../browser'
 import { LatitudeError, Result, TypedResult } from '../../lib'
 import {
   connectedEvaluations,
@@ -34,6 +38,10 @@ export type ConnectedDocumentWithMetadata = DocumentVersion & {
   costInMillicents: number
   modalValue: string | null
   modalValueCount: number
+}
+
+export type ConnectedEvaluationWithDetails = ConnectedEvaluation & {
+  evaluation: EvaluationDto
 }
 
 export class ConnectedEvaluationsRepository extends RepositoryLegacy<
@@ -71,6 +79,32 @@ export class ConnectedEvaluationsRepository extends RepositoryLegacy<
       .where(eq(this.scope.documentUuid, uuid))
 
     return Result.ok(result)
+  }
+
+  async filterConnectedEvaluationsWithDetailsByDocumentUuid(
+    uuid: string,
+  ): Promise<TypedResult<ConnectedEvaluationWithDetails[], LatitudeError>> {
+    const evaluationsScope = new EvaluationsRepository(
+      this.workspaceId,
+      this.db,
+    )
+
+    const result = await this.db
+      .select({
+        ...this.scope._.selectedFields,
+        // @ts-expect-error the query works but the types don't
+        evaluation: {
+          ...evaluationsScope.scope._.selectedFields,
+        },
+      })
+      .from(this.scope)
+      .innerJoin(
+        evaluationsScope.scope,
+        eq(evaluationsScope.scope.id, this.scope.evaluationId),
+      )
+      .where(eq(this.scope.documentUuid, uuid))
+
+    return Result.ok(result as ConnectedEvaluationWithDetails[])
   }
 
   async getConnectedDocumentsWithMetadata(
