@@ -21,7 +21,7 @@ export const GET = errorHandler(
       const { documentUuid } = params
       const scope = new ConnectedEvaluationsRepository(workspace.id)
       const connectedEvaluations = await scope
-        .filterConnectedEvaluationsWithDetailsByDocumentUuid(documentUuid)
+        .filterWithDetailsByDocumentUuid(documentUuid)
         .then((r) => r.unwrap())
 
       return NextResponse.json(connectedEvaluations, { status: 200 })

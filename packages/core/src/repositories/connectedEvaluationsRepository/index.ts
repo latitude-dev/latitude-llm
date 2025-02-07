@@ -81,7 +81,7 @@ export class ConnectedEvaluationsRepository extends RepositoryLegacy<
     return Result.ok(result)
   }
 
-  async filterConnectedEvaluationsWithDetailsByDocumentUuid(
+  async filterWithDetailsByDocumentUuid(
     uuid: string,
   ): Promise<TypedResult<ConnectedEvaluationWithDetails[], LatitudeError>> {
     const evaluationsScope = new EvaluationsRepository(
