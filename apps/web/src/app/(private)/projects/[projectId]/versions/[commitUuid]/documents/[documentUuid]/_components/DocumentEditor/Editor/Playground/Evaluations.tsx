@@ -1,10 +1,11 @@
 import { EvaluationRoutes, ROUTES } from '$/services/routes'
+import useConnectedEvaluations from '$/stores/connectedEvaluations'
 import useEvaluationResultsByDocumentLogs from '$/stores/evaluationResultsByDocumentLogs'
-import useEvaluations from '$/stores/evaluations'
 import { DocumentLogWithMetadata } from '@latitude-data/core/repositories'
 import { useMemo } from 'react'
 
 import {
+  ConnectedEvaluation,
   DocumentVersion,
   EvaluationDto,
   EvaluationResultDto,
@@ -30,11 +31,13 @@ import { ResultCellContent as OriginalResultCellContent } from '../../../../eval
 
 type ContentProps = {
   results: Record<number, EvaluationResultDto>
-  evaluations: EvaluationDto[]
+  evaluations: (EvaluationDto & { live: ConnectedEvaluation['live'] })[]
   document: DocumentVersion
   commit: ICommitContextType['commit']
   project: IProjectContextType['project']
+  runCount: number
   isLoading: boolean
+  isWaiting: boolean
 }
 
 function ResultCellContent({
@@ -57,35 +60,72 @@ function ResultCellContent({
   )
 }
 
+function EvaluationItemContent({
+  result,
+  evaluation,
+  runCount,
+  isWaiting,
+}: {
+  result?: EvaluationResultDto
+  evaluation: ContentProps['evaluations'][number]
+  runCount: number
+  isWaiting: boolean
+}) {
+  if (!runCount || !evaluation.live) {
+    return <span>{evaluation.description}</span>
+  }
+
+  if (isWaiting || !result) {
+    return (
+      <span className='flex flex-col gap-y-2.5 pt-1'>
+        <Skeleton className='h-3 w-full' />
+        <Skeleton className='h-3 w-full' />
+        <Skeleton className='h-3 w-full' />
+      </span>
+    )
+  }
+
+  return (
+    <span className='space-x-1.5'>
+      <ResultCellContent result={result} evaluation={evaluation} />
+      <Tooltip asChild trigger={<span>{result.reason}</span>}>
+        {result.reason}
+      </Tooltip>
+    </span>
+  )
+}
+
 function EvaluationItem({
   result,
   evaluation,
   document,
   commit,
   project,
-}: {
+  runCount,
+  isWaiting,
+}: Omit<ContentProps, 'results' | 'evaluations'> & {
   result?: EvaluationResultDto
-  evaluation: EvaluationDto
-  document: DocumentVersion
-  commit: ICommitContextType['commit']
-  project: IProjectContextType['project']
+  evaluation: ContentProps['evaluations'][number]
 }) {
-  const query = new URLSearchParams()
-  query.set(
-    'back',
-    ROUTES.projects
-      .detail({ id: project.id })
-      .commits.detail({ uuid: commit.uuid })
-      .documents.detail({ uuid: document.documentUuid }).root,
-  )
-  if (result?.evaluatedProviderLogId) {
-    query.set('providerLogId', result.evaluatedProviderLogId.toString())
-  }
+  const route = useMemo(() => {
+    const query = new URLSearchParams()
+    query.set(
+      'back',
+      ROUTES.projects
+        .detail({ id: project.id })
+        .commits.detail({ uuid: commit.uuid })
+        .documents.detail({ uuid: document.documentUuid }).root,
+    )
+    if (result?.evaluatedProviderLogId) {
+      query.set('providerLogId', result.evaluatedProviderLogId.toString())
+    }
 
-  const route =
-    ROUTES.evaluations.detail({ uuid: evaluation.uuid })[
-      EvaluationRoutes.editor
-    ].root + `?${query.toString()}`
+    return (
+      ROUTES.evaluations.detail({ uuid: evaluation.uuid })[
+        EvaluationRoutes.editor
+      ].root + `?${query.toString()}`
+    )
+  }, [project, commit, document, result, evaluation])
 
   return (
     <div className='h-32 flex flex-col flex-grow basis-60 flex-shrink items-center justify-start gap-2 border p-4 rounded-lg overflow-hidden'>
@@ -118,16 +158,12 @@ function EvaluationItem({
           ellipsis
           lineClamp={3}
         >
-          {result ? (
-            <span className='space-x-1.5'>
-              <ResultCellContent result={result} evaluation={evaluation} />
-              <Tooltip asChild trigger={<span>{result.reason}</span>}>
-                {result.reason}
-              </Tooltip>
-            </span>
-          ) : (
-            evaluation.description
-          )}
+          <EvaluationItemContent
+            result={result}
+            evaluation={evaluation}
+            runCount={runCount}
+            isWaiting={isWaiting}
+          />
         </Text.H6>
       </div>
     </div>
@@ -137,10 +173,8 @@ function EvaluationItem({
 function ExpandedContent({
   results,
   evaluations,
-  document,
-  commit,
-  project,
   isLoading,
+  ...rest
 }: ContentProps) {
   if (isLoading) {
     return (
@@ -168,9 +202,8 @@ function ExpandedContent({
           key={evaluation.uuid}
           result={results[evaluation.id]}
           evaluation={evaluation}
-          document={document}
-          commit={commit}
-          project={project}
+          isLoading={isLoading}
+          {...rest}
         />
       ))}
     </div>
@@ -196,27 +229,25 @@ function ExpandedContentHeader({ document, commit, project }: ContentProps) {
 function CollapsedContentHeader({
   results,
   evaluations,
+  runCount,
   isLoading,
+  isWaiting,
 }: ContentProps) {
   const count = useMemo(() => {
     return evaluations.reduce(
       (acc, evaluation) => {
-        // TODO: Change for real skipped condition
-        if (evaluation.description) acc.skipped++
+        if (!evaluation.live) return { ...acc, skipped: acc.skipped + 1 }
 
-        const result = results[evaluation.id]
-        if (!result || result.result === undefined) return acc
+        let value = results[evaluation.id]?.result
+        if (value === undefined) return acc
 
         if (evaluation.resultType === EvaluationResultableType.Boolean) {
-          const value =
-            typeof result.result === 'string'
-              ? result.result === 'true'
-              : Boolean(result.result)
+          value = typeof value === 'string' ? value === 'true' : Boolean(value)
           return value ? { ...acc, passed: acc.passed + 1 } : acc
         }
 
         if (evaluation.resultType === EvaluationResultableType.Number) {
-          const value = Number(result.result)
+          value = Number(value)
           return value >= evaluation.resultConfiguration.maxValue
             ? { ...acc, passed: acc.passed + 1 }
             : acc
@@ -228,7 +259,7 @@ function CollapsedContentHeader({
     )
   }, [results, evaluations])
 
-  if (isLoading) {
+  if (isLoading || isWaiting) {
     return (
       <div className='w-full flex items-center justify-end'>
         <Skeleton className='w-36 h-4' />
@@ -236,7 +267,7 @@ function CollapsedContentHeader({
     )
   }
 
-  if (!Object.keys(results).length) {
+  if (!runCount) {
     return (
       <div className='w-full flex items-center justify-end'>
         <Text.H5M userSelect={false} color='foregroundMuted' ellipsis noWrap>
@@ -248,17 +279,19 @@ function CollapsedContentHeader({
 
   return (
     <div className='w-full flex items-center justify-end gap-2'>
-      <Badge
-        variant={
-          count.passed
-            ? count.passed >= evaluations.length / 2
-              ? 'successMuted'
-              : 'warningMuted'
-            : 'destructiveMuted'
-        }
-      >
-        {count.passed}/{evaluations.length} passed
-      </Badge>
+      {evaluations.length && (
+        <Badge
+          variant={
+            count.passed
+              ? count.passed >= (evaluations.length - count.skipped) / 2
+                ? 'successMuted'
+                : 'warningMuted'
+              : 'destructiveMuted'
+          }
+        >
+          {count.passed}/{evaluations.length - count.skipped} passed
+        </Badge>
+      )}
       {count.skipped > 0 && (
         <Badge variant='muted'>{count.skipped} skipped</Badge>
       )}
@@ -267,39 +300,66 @@ function CollapsedContentHeader({
 }
 
 export default function Evaluations({
-  log,
+  documentLog,
   document,
   commit,
+  runCount,
   onExpand,
+  isLoading: isDocumentLogLoading,
 }: {
-  log?: DocumentLogWithMetadata
+  documentLog?: DocumentLogWithMetadata
   document: DocumentVersion
   commit: ICommitContextType['commit']
+  runCount: number
   onExpand?: OnExpandFn
+  isLoading: boolean
 }) {
   const { project } = useCurrentProject()
-  // TODO: Use ConnectedEvaluations with evaluation details (EvaluationDto)
-  const { data: evaluations, isLoading: isEvaluationsLoading } = useEvaluations(
-    {
-      params: { documentUuid: document.documentUuid },
-    },
-  )
-  // TODO: Fix, this does not automatically update when evaluation is updated
-  const { data: evaluationResults, isLoading: isEvaluationResultsLoading } =
-    useEvaluationResultsByDocumentLogs({
-      documentLogIds: log ? [log.id] : [],
+
+  const { data: connectedEvaluations, isLoading: isEvaluationsLoading } =
+    useConnectedEvaluations({
+      documentUuid: document.documentUuid,
+      projectId: project.id,
+      commitUuid: commit.uuid,
     })
+  const evaluations = useMemo(
+    () =>
+      connectedEvaluations.map(({ evaluation, live }) => ({
+        ...evaluation,
+        live,
+      })),
+    [connectedEvaluations],
+  )
+
+  const { data: evaluationResults } = useEvaluationResultsByDocumentLogs(
+    {
+      documentLogIds: documentLog ? [documentLog.id] : [],
+    },
+    { refreshInterval: 5000 },
+  )
   const results = useMemo(() => {
-    console.log(evaluationResults)
-    if (!log || !evaluationResults[log.id]) return {}
-    return evaluationResults[log.id]!.reduce(
+    if (!documentLog || !evaluationResults[documentLog.id]) return {}
+    return evaluationResults[documentLog.id]!.reduce(
       (acc, { result }) => {
         acc[result.evaluationId] = result
         return acc
       },
-      {} as Record<number, EvaluationResultDto>,
+      {} as ContentProps['results'],
     )
-  }, [evaluationResults, log])
+  }, [evaluationResults])
+
+  const isWaiting = useMemo(
+    () =>
+      !!documentLog &&
+      evaluations
+        .filter((evaluation) => evaluation.live)
+        .some(
+          (evaluation) =>
+            !results[evaluation.id] ||
+            results[evaluation.id]!.documentLogId !== documentLog.id,
+        ),
+    [documentLog, evaluations, results],
+  )
 
   const contentProps = {
     results,
@@ -307,8 +367,9 @@ export default function Evaluations({
     document,
     commit,
     project,
-    // TODO: When we have the connected info we can just wait for the live evals to load their results
-    isLoading: isEvaluationsLoading || isEvaluationResultsLoading,
+    runCount,
+    isLoading: isEvaluationsLoading,
+    isWaiting: isWaiting || isDocumentLogLoading,
   }
 
   return (

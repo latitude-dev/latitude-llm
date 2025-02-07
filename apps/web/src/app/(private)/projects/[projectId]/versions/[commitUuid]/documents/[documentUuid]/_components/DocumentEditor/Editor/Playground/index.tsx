@@ -54,12 +54,17 @@ export default function Playground({
       defaultValue: false,
     })
 
+  const [runCount, setRunCount] = useState(0)
   const [documentLogUuid, setDocumentLogUuid] = useState<string | undefined>()
-  const { data: documentLog } = useDocumentLogWithMetadata({
-    documentLogUuid: documentLogUuid,
-  })
+  const { data: documentLog, isLoading: isDocumentLogLoading } =
+    useDocumentLogWithMetadata({
+      documentLogUuid: documentLogUuid,
+    })
   const onPromptRan = useCallback(
-    (documentLogUuid: string) => setDocumentLogUuid(documentLogUuid),
+    (documentLogUuid: string) => {
+      setRunCount((prev) => prev + 1)
+      setDocumentLogUuid(documentLogUuid)
+    },
     [setDocumentLogUuid],
   )
 
@@ -81,10 +86,12 @@ export default function Playground({
             onExpand={setExpandedParameters}
           />
           <Evaluations
-            log={documentLog}
+            documentLog={documentLog}
             commit={commit}
             document={document}
+            runCount={runCount}
             onExpand={setExpandedEvaluations}
+            isLoading={isDocumentLogLoading}
           />
         </div>
       }
