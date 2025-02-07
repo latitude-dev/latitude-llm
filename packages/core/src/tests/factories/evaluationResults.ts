@@ -19,10 +19,7 @@ import { database } from '../../client'
 import { findWorkspaceFromCommit } from '../../data-access'
 import { findCommitById } from '../../data-access/commits'
 import { generateUUIDIdentifier } from '../../lib'
-import {
-  EvaluationResultsRepository,
-  ProviderApiKeysRepository,
-} from '../../repositories'
+import { ProviderApiKeysRepository } from '../../repositories'
 import { evaluationResults } from '../../schema'
 import { Config } from '../../services/ai'
 import { createEvaluationResult as createEvaluationResultService } from '../../services/evaluationResults'
@@ -230,13 +227,6 @@ export async function createEvaluationResult({
       .set({ createdAt: new Date() })
       .where(eq(evaluationResults.id, evaluationResult.id))
   }
-
-  const evaluationResultsRepository = new EvaluationResultsRepository(
-    evaluation.workspaceId,
-  )
-  evaluationResult = await evaluationResultsRepository
-    .find(evaluationResult.id)
-    .then((r) => r.unwrap())
 
   return {
     evaluationResult: evaluationResult,

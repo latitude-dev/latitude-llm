@@ -1,6 +1,6 @@
 import { EvaluationResultDto, Providers } from '@latitude-data/constants'
 import { orderBy } from 'lodash-es'
-import { format } from 'date-fns'
+import { format, addDays } from 'date-fns'
 import * as factories from '../../../tests/factories'
 import { createMembership } from '../../memberships/create'
 import { generateWorkspaceFixtures, type WorkspaceInfo } from './fixtures'
@@ -16,9 +16,21 @@ import {
 import { connectEvaluations } from '../../evaluations'
 import { GetUsageOverview, GetUsageOverviewRow } from './getUsageOverview'
 
-async function createMember(workspace: Workspace) {
-  const user = await factories.createUser()
-  await createMembership({ workspace, user }).then((r) => r.unwrap())
+async function createMember({
+  workspace,
+  email,
+  membershipCreatedAt,
+}: {
+  workspace: Workspace
+  email: string
+  membershipCreatedAt: Date
+}) {
+  const user = await factories.createUser({ email })
+  await createMembership({
+    workspace,
+    user,
+    createdAt: membershipCreatedAt,
+  }).then((r) => r.unwrap())
   return user
 }
 
@@ -62,8 +74,9 @@ async function createResult({
     .then((r) => r.evaluationResult)
 }
 async function createWorkspace(workspaceInfo: WorkspaceInfo) {
-  const creator = await factories.createUser()
-  const remainingMembers = workspaceInfo.numberOfMembers - 1
+  const creator = await factories.createUser({
+    email: `admin@${workspaceInfo.name}.com`,
+  })
   const { workspace } = await factories.createWorkspace({
     name: workspaceInfo.name,
     creator,
@@ -73,7 +86,13 @@ async function createWorkspace(workspaceInfo: WorkspaceInfo) {
 
   // Members
   const remainderMembers = await Promise.all(
-    Array.from({ length: remainingMembers }, () => createMember(workspace)),
+    workspaceInfo.memberEmails.map((email, i) =>
+      createMember({
+        workspace,
+        email,
+        membershipCreatedAt: addDays(creator.createdAt, i + 1),
+      }),
+    ),
   )
 
   // Project and evaluation
@@ -124,7 +143,7 @@ async function createWorkspace(workspaceInfo: WorkspaceInfo) {
     projectId: project.id,
     documentLogs,
     evaluationResults,
-    membersCount: workspaceInfo.numberOfMembers,
+    membersCount: workspaceInfo.memberEmails.length + 1,
     emails: orderBy([creator, ...remainderMembers], (u) => u.createdAt, 'desc')
       .map((u) => u.email)
       .join(', '),

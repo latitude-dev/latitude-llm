@@ -27,7 +27,7 @@ export type WorkspaceInfo = {
   logs: RunnableEntity<'documentLog'>[]
   results: RunnableEntity<'evaluationResult'>[]
   subscription: SubscriptionInfo
-  numberOfMembers: number
+  memberEmails: string[]
 }
 
 export const generateWorkspaceFixtures = (
@@ -83,7 +83,7 @@ export const generateWorkspaceFixtures = (
         createdAt: subscriptionCreatedAt,
         plan: SubscriptionPlan.TeamV1,
       },
-      numberOfMembers: 1,
+      memberEmails: ['member1@overview__workspaceA.com'],
     },
     overview__workspaceB: {
       name: 'overview__workspaceB',
@@ -101,7 +101,11 @@ export const generateWorkspaceFixtures = (
         createdAt: subscriptionCreatedAt,
         plan: SubscriptionPlan.TeamV1,
       },
-      numberOfMembers: 3,
+      memberEmails: [
+        'member1@overview__workspaceB.com',
+        'member2@overview__workspaceB.com',
+        'member3@overview__workspaceB.com',
+      ],
     },
   }
 }

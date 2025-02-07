@@ -11,9 +11,9 @@ export const createMembership = async (
     workspace,
     ...rest
   }: {
-    author?: User
     user: User
     workspace: Workspace
+    author?: User
   } & Partial<Omit<Membership, 'userId' | 'workspaceId'>>,
   db = database,
 ) => {

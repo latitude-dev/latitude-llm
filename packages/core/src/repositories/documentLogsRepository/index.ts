@@ -2,13 +2,7 @@ import { and, count, eq, getTableColumns, gte, isNull } from 'drizzle-orm'
 
 import { Commit, DocumentLog, ErrorableEntity } from '../../browser'
 import { NotFoundError, Result } from '../../lib'
-import {
-  commits,
-  documentLogs,
-  projects,
-  runErrors,
-  workspaces,
-} from '../../schema'
+import { commits, documentLogs, projects, runErrors } from '../../schema'
 import Repository from '../repositoryV2'
 
 export type DocumentLogWithMetadata = DocumentLog & {
@@ -21,6 +15,9 @@ export type DocumentLogWithMetadata = DocumentLog & {
 const tt = getTableColumns(documentLogs)
 
 export class DocumentLogsRepository extends Repository<DocumentLog> {
+  get scopeFilter() {
+    return and(isNull(runErrors.id), eq(projects.workspaceId, this.workspaceId))
+  }
   get scope() {
     return this.db
       .select(tt)
@@ -30,7 +27,6 @@ export class DocumentLogsRepository extends Repository<DocumentLog> {
         and(isNull(commits.deletedAt), eq(commits.id, documentLogs.commitId)),
       )
       .innerJoin(projects, eq(projects.id, commits.projectId))
-      .innerJoin(workspaces, eq(workspaces.id, projects.workspaceId))
       .leftJoin(
         runErrors,
         and(
@@ -38,7 +34,7 @@ export class DocumentLogsRepository extends Repository<DocumentLog> {
           eq(runErrors.errorableType, ErrorableEntity.DocumentLog),
         ),
       )
-      .where(and(isNull(runErrors.id), eq(workspaces.id, this.workspaceId)))
+      .where(this.scopeFilter)
       .$dynamic()
   }
 
@@ -47,7 +43,9 @@ export class DocumentLogsRepository extends Repository<DocumentLog> {
       return Result.error(new NotFoundError('DocumentLog not found'))
     }
 
-    const result = await this.scope.where(eq(documentLogs.uuid, uuid))
+    const result = await this.scope.where(
+      and(this.scopeFilter, eq(documentLogs.uuid, uuid)),
+    )
 
     if (!result.length) {
       return Result.error(
@@ -64,9 +62,31 @@ export class DocumentLogsRepository extends Repository<DocumentLog> {
         count: count(documentLogs.id),
       })
       .from(documentLogs)
-      .where(eq(documentLogs.uuid, documentUuid))
+      .innerJoin(
+        commits,
+        and(isNull(commits.deletedAt), eq(commits.id, documentLogs.commitId)),
+      )
+      .innerJoin(projects, eq(projects.id, commits.projectId))
+      .leftJoin(
+        runErrors,
+        and(
+          eq(runErrors.errorableUuid, documentLogs.uuid),
+          eq(runErrors.errorableType, ErrorableEntity.DocumentLog),
+        ),
+      )
+      .where(
+        and(
+          eq(projects.workspaceId, this.workspaceId),
+          eq(documentLogs.documentUuid, documentUuid),
+        ),
+      )
+      .$dynamic()
 
-    return result[0]?.count ?? 0 > 0
+    const firstValue = result[0]
+
+    if (!firstValue) return false
+
+    return firstValue.count > 0
   }
 
   async totalCountSinceDate(minDate: Date) {
@@ -90,7 +110,7 @@ export class DocumentLogsRepository extends Repository<DocumentLog> {
           eq(runErrors.errorableType, ErrorableEntity.DocumentLog),
         ),
       )
-      .where(and(isNull(runErrors.id), gte(documentLogs.createdAt, minDate)))
+      .where(and(this.scopeFilter, gte(documentLogs.createdAt, minDate)))
 
     return result[0]?.count ?? 0
   }

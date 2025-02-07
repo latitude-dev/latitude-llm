@@ -1,4 +1,4 @@
-import { eq, inArray } from 'drizzle-orm'
+import { and, eq, inArray, SQL } from 'drizzle-orm'
 import { PgSelect } from 'drizzle-orm/pg-core'
 
 import { database } from '../client'
@@ -12,6 +12,7 @@ export type QueryOptions = {
 export default abstract class Repository<T extends Record<string, unknown>> {
   protected workspaceId: number
   protected db = database
+  abstract get scopeFilter(): SQL<unknown> | undefined
 
   constructor(workspaceId: number, db = database) {
     this.workspaceId = workspaceId
@@ -35,7 +36,7 @@ export default abstract class Repository<T extends Record<string, unknown>> {
 
   async find(id: string | number | undefined | null) {
     const result = await this.scope
-      .where(eq(this.scope._.selectedFields.id, id))
+      .where(and(this.scopeFilter, eq(this.scope._.selectedFields.id, id)))
       .limit(1)
     if (!result[0]) {
       return Result.error(new NotFoundError(`Record with id ${id} not found`))
@@ -46,7 +47,9 @@ export default abstract class Repository<T extends Record<string, unknown>> {
 
   async findMany(ids: (string | number)[]) {
     const result = await this.scope
-      .where(inArray(this.scope._.selectedFields.id, ids))
+      .where(
+        and(this.scopeFilter, inArray(this.scope._.selectedFields.id, ids)),
+      )
       .limit(ids.length)
 
     return Result.ok(result as T[])

@@ -1,6 +1,6 @@
 import { beforeAll, describe, expect, it } from 'vitest'
 
-import { computeEvaluationResultsByDocumentContent } from '.'
+import { computeEvaluationResultsByDocumentContent } from './index'
 import {
   Commit,
   DocumentVersion,
@@ -140,7 +140,10 @@ describe('computeEvaluationResultsByDocumentContent', () => {
         documentUuid: document.documentUuid,
       }).then((r) => r.unwrap())
 
-      expect(results).toEqual([llmEvaluatedResult, oldDocumentResult])
+      expect(results).toEqual([
+        { ...llmEvaluatedResult, createdAt: expect.any(Date) },
+        { ...oldDocumentResult, createdAt: expect.any(Date) },
+      ])
     })
 
     it('returns manual evaluation results', async () => {
@@ -159,7 +162,9 @@ describe('computeEvaluationResultsByDocumentContent', () => {
         documentUuid: document.documentUuid,
       }).then((r) => r.unwrap())
 
-      expect(results).toEqual([manualEvaluatedResult])
+      expect(results).toEqual([
+        { ...manualEvaluatedResult, createdAt: expect.any(Date) },
+      ])
     })
   })
 

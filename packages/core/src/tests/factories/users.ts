@@ -13,6 +13,7 @@ export type ICreateUser = {
   name?: string
   email?: string
   password?: string
+  createdAt?: Date
 }
 export async function createUser(userData: Partial<ICreateUser> = {}) {
   const randomUserData = makeRandomUserData()

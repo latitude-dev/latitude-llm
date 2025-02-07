@@ -20,7 +20,6 @@ import {
 } from '../../browser'
 import { Result } from '../../lib'
 import {
-  documentLogs,
   evaluationResultableBooleans,
   evaluationResultableNumbers,
   evaluationResultableTexts,
@@ -64,6 +63,15 @@ export type ResultWithEvaluation = {
 }
 
 export class EvaluationResultsRepository extends Repository<EvaluationResultDto> {
+  get scopeFilter() {
+    return and(
+      isNull(runErrors.id),
+      isNotNull(evaluationResults.resultableId),
+      isNotNull(evaluationResults.evaluatedProviderLogId),
+      eq(evaluations.workspaceId, this.workspaceId),
+    )
+  }
+
   get scope() {
     return this.db
       .select(evaluationResultDto)
@@ -106,49 +114,16 @@ export class EvaluationResultsRepository extends Repository<EvaluationResultDto>
           eq(runErrors.errorableType, ErrorableEntity.EvaluationResult),
         ),
       )
-      .where(
-        and(
-          isNull(runErrors.id),
-          isNotNull(evaluationResults.resultableId),
-          isNotNull(evaluationResults.evaluatedProviderLogId),
-          eq(evaluations.workspaceId, this.workspaceId),
-        ),
-      )
+      .where(this.scopeFilter)
       .$dynamic()
-  }
-
-  async findByContentHash({
-    evaluationId,
-    contentHash,
-  }: {
-    evaluationId: number
-    contentHash: string
-  }) {
-    const results = await this.scope
-      .innerJoin(
-        documentLogs,
-        eq(documentLogs.id, evaluationResults.documentLogId),
-      )
-      .where(
-        and(
-          eq(evaluationResults.evaluationId, evaluationId),
-          eq(documentLogs.contentHash, contentHash),
-        ),
-      )
-      .orderBy(desc(evaluationResults.createdAt))
-
-    return Result.ok(results.map(EvaluationResultsRepository.parseResult))
   }
 
   async findByDocumentLogIds(documentLogIds: number[]) {
     const results = await this.scope
       .where(
         and(
-          isNull(runErrors.id),
-          isNotNull(evaluationResults.resultableId),
-          isNotNull(evaluationResults.evaluatedProviderLogId),
+          this.scopeFilter,
           inArray(evaluationResults.documentLogId, documentLogIds),
-          eq(evaluations.workspaceId, this.workspaceId),
         ),
       )
       .orderBy(desc(evaluationResults.updatedAt))
@@ -176,9 +151,7 @@ export class EvaluationResultsRepository extends Repository<EvaluationResultDto>
           eq(runErrors.errorableType, ErrorableEntity.EvaluationResult),
         ),
       )
-      .where(
-        and(isNull(runErrors.id), gte(evaluationResults.createdAt, minDate)),
-      )
+      .where(and(this.scopeFilter, gte(evaluationResults.createdAt, minDate)))
 
     return result[0]?.count ?? 0
   }
