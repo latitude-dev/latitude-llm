@@ -170,7 +170,7 @@ function EvaluationItem({
           </Link>
         </div>
       </div>
-      <div className='w-full h-full'>
+      <div className='w-full h-full !leading-5'>
         <EvaluationItemContent
           result={result}
           evaluation={evaluation}
