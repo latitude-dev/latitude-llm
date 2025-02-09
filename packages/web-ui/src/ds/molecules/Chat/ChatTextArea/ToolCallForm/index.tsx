@@ -18,9 +18,10 @@ const TextEditor = lazy(() => import('./Editor/index'))
 function generateExampleFunctionCall(toolCall: ToolCall) {
   const args = toolCall.arguments
   const functionName = toolCall.name
-  const formattedArgs = Object.keys(args).length
-    ? JSON.stringify(args, null, 2)
-    : ''
+  const formattedArgs =
+    typeof args === 'object' && Object.keys(args).length
+      ? JSON.stringify(args, null, 2)
+      : ''
 
   return `${functionName}(${formattedArgs ? formattedArgs : ''})`
 }
