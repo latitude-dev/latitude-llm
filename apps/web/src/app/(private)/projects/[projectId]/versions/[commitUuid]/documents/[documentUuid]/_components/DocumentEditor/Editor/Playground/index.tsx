@@ -61,11 +61,12 @@ export default function Playground({
       documentLogUuid: documentLogUuid,
     })
   const onPromptRan = useCallback(
-    (documentLogUuid: string) => {
+    (documentLogUuid?: string, error?: Error) => {
+      if (!documentLogUuid || error) return
       setRunCount((prev) => prev + 1)
       setDocumentLogUuid(documentLogUuid)
     },
-    [setDocumentLogUuid],
+    [setRunCount, setDocumentLogUuid],
   )
 
   return (

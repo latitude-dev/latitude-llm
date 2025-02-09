@@ -41,7 +41,7 @@ export default function Chat<V extends PromptlVersion>({
   promptlVersion: V
   parameters: Record<string, unknown>
   clearChat: () => void
-  onPromptRan?: (documentLogUuid: string) => void
+  onPromptRan?: (documentLogUuid?: string, error?: Error) => void
 } & ActionsState) {
   const runOnce = useRef(false)
   const [isScrolledToBottom, setIsScrolledToBottom] = useState(false)
@@ -102,7 +102,6 @@ export default function Chat<V extends PromptlVersion>({
     start,
     submitUserMessage,
     addMessages,
-    documentLogUuid,
     unresponedToolCalls,
     error,
     usage,
@@ -115,6 +114,7 @@ export default function Chat<V extends PromptlVersion>({
     promptlVersion,
     runPromptFn,
     addMessagesFn,
+    onPromptRan,
   })
 
   useEffect(() => {
@@ -123,10 +123,6 @@ export default function Chat<V extends PromptlVersion>({
       start()
     }
   }, [start])
-
-  useEffect(() => {
-    if (documentLogUuid && !isLoading) onPromptRan?.(documentLogUuid)
-  }, [documentLogUuid, isLoading])
 
   return (
     <div className='flex flex-col flex-1 gap-2 h-full overflow-hidden'>
