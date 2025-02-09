@@ -103,10 +103,32 @@ function groupContentMetadata({
   })
 }
 
-function adaptContentFields({ content }: { content: Message['content'] }) {
+function adaptContentFields({
+  toolResultInMessage,
+  content,
+}: {
+  content: Message['content']
+  toolResultInMessage:
+    | {
+        toolCallId: string
+        toolName: string
+      }
+    | undefined
+}) {
   if (typeof content === 'string') return content
 
   return content.map((c) => {
+    if (toolResultInMessage && c.type === 'text') {
+      const toolCallId = toolResultInMessage.toolCallId
+      const toolName = toolResultInMessage.toolName
+      return {
+        type: 'tool-result',
+        toolCallId,
+        toolName,
+        result: c.text,
+      }
+    }
+
     switch (c.type) {
       case 'file': {
         const adaptedContent = {
@@ -136,6 +158,22 @@ function adaptContentFields({ content }: { content: Message['content'] }) {
   })
 }
 
+/**
+ * Extracts the toolCallId and toolName from
+ * promptl-ai messages. Old compiler messages don't have this.
+ */
+function extractPromptlToolInfo({ message }: { message: Message }) {
+  const hasToolCallId = 'toolId' in message
+  const hasToolName = 'toolName' in message
+  if (!hasToolCallId || !hasToolName) return undefined
+
+  // Only 'tool' promptl messages have this
+  const toolCallId = message.toolId as string
+  const toolName = message.toolName as string
+
+  return { toolCallId, toolName }
+}
+
 export function vercelSdkRules(
   rules: AppliedRules,
   provider: Providers,
@@ -145,12 +183,14 @@ export function vercelSdkRules(
       return flattenSystemMessage({ message, provider })
     }
 
+    const toolResultInMessage = extractPromptlToolInfo({ message })
     const extracted = extractMessageMetadata({
       message: message,
       provider: provider,
     })
 
     let content = adaptContentFields({
+      toolResultInMessage,
       content: extracted.content,
     }) as unknown as Message['content']
 

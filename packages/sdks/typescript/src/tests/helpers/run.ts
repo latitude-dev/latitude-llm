@@ -43,24 +43,29 @@ export function mockRequest({
 export function mockStreamResponse({
   server,
   apiVersion,
+  customChunks,
 }: {
   server: Server
   apiVersion: SdkApiVersion
+  customChunks?: string[]
 }) {
   let stream: ReadableStream
+  const chunks = customChunks ?? CHUNKS
   server.use(
     http.post(
       `http://localhost:8787/api/${apiVersion}/projects/123/versions/live/documents/run`,
       async () => {
         stream = new ReadableStream({
           start(controller) {
-            CHUNKS.forEach((chunk, index) => {
+            chunks.forEach((chunk, index) => {
               // @ts-expect-error
               const { event, data } = parseSSE(chunk)
               controller.enqueue(
                 encoder.encode(`event: ${event}\ndata: ${data}\n\n`),
               )
-              if (index === CHUNKS.length - 1) {
+
+              // customChunks is used to test the case where the server returns errors
+              if (index === chunks.length - 1 && !customChunks) {
                 controller.close()
               }
             })
@@ -75,7 +80,7 @@ export function mockStreamResponse({
       },
     ),
   )
-  return { chunks: CHUNKS }
+  return { chunks }
 }
 
 export function mockNonStreamResponse({

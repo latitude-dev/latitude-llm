@@ -26,6 +26,7 @@ const CONTENT_DEFINED_ATTRIBUTES = [
 ] as const
 
 type AttrArgs = { attributes: string[]; content: Record<string, unknown> }
+
 function genericAttributesProcessor({ attributes, content }: AttrArgs) {
   return attributes.reduce((acc, key) => ({ ...acc, [key]: content[key] }), {})
 }
@@ -74,6 +75,7 @@ export function extractContentMetadata({
   const providerAttributes = Object.keys(content).filter(
     (key) => !CONTENT_DEFINED_ATTRIBUTES.includes(key as any),
   )
+
   const definedData = definedAttributes.reduce(
     // @ts-ignore
     (acc, key) => ({ ...acc, [key]: content[key] }),
@@ -106,6 +108,7 @@ function removeUndefinedValues(data: Record<string, unknown>) {
 type MessageWithMetadata = Message & {
   experimental_providerMetadata?: Record<string, Record<string, unknown>>
 }
+
 export function extractMessageMetadata({
   message,
   provider,
@@ -133,20 +136,26 @@ export function extractMessageMetadata({
     }
   }
 
-  const { name: _, ...restWithoutName } = rest as {
+  const {
+    name: _name,
+    toolName: _toolName,
+    toolId: _toolId,
+    _promptlSourceMap,
+    ...attributes
+  } = rest as {
     name?: string
     [key: string]: unknown
   }
 
-  if (!Object.keys(restWithoutName).length) return common
+  if (!Object.keys(attributes).length) return common
 
   return {
     ...common,
     experimental_providerMetadata: {
       [getProviderMetadataKey(provider)]: processAttributes({
-        attributes: Object.keys(restWithoutName),
+        attributes: Object.keys(attributes),
         provider,
-        content: restWithoutName,
+        content: attributes,
       }),
     },
   }

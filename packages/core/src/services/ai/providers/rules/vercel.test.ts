@@ -450,4 +450,46 @@ describe('applyVercelSdkRules', () => {
       },
     ])
   })
+
+  it('transform promptl tool messages into vercel tool messages', () => {
+    messages = [
+      {
+        role: 'tool',
+        content: [
+          {
+            type: 'text',
+            text: 'The location Manolo is in the country of Spain.',
+            _promptlSourceMap: [
+              {
+                start: 13,
+                end: 19,
+                identifier: 'location',
+              },
+            ],
+          },
+        ],
+        toolId: '1',
+        toolName: 'location-info',
+      },
+    ] as unknown as Message[]
+
+    const rules = vercelSdkRules(
+      { rules: [], messages, config },
+      Providers.OpenAI,
+    )
+
+    expect(rules.messages).toEqual([
+      {
+        role: 'tool',
+        content: [
+          {
+            type: 'tool-result',
+            toolCallId: '1',
+            toolName: 'location-info',
+            result: 'The location Manolo is in the country of Spain.',
+          },
+        ],
+      },
+    ])
+  })
 })

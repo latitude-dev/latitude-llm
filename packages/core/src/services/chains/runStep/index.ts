@@ -82,7 +82,9 @@ export async function runStep({
   promptlVersion,
   providersMap,
   errorableUuid,
-  newMessages = undefined, // Contains all messages added from the end of the last step to the beginning of this one, including the assistant response and tool results
+  // Contains all messages added from the end of the last step to the beginning of this one,
+  // including the assistant response and tool results
+  newMessages = undefined,
   configOverrides,
   removeSchema,
   stepCount = 0,
@@ -105,6 +107,7 @@ export async function runStep({
   }
 
   const validStepCount = assertValidStepCount({ stepCount, chain, step })
+
   if (validStepCount.error) {
     chainStreamManager.error(validStepCount.error)
     return step.conversation

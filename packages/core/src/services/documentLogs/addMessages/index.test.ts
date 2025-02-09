@@ -2,10 +2,6 @@ import { ContentType, MessageRole } from '@latitude-data/compiler'
 import { v4 as uuid } from 'uuid'
 import { beforeEach, describe, expect, it, MockInstance, vi } from 'vitest'
 
-import {
-  LatitudeErrorCodes,
-  RunErrorCodes,
-} from '@latitude-data/constants/errors'
 import { eq } from 'drizzle-orm'
 import {
   Commit,
@@ -25,7 +21,6 @@ import { providerLogs } from '../../../schema'
 import { createDocumentLog, createProject } from '../../../tests/factories'
 import { testConsumeStream } from '../../../tests/helpers'
 import * as aiModule from '../../ai'
-import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
 import { addMessages } from './index'
 import { ChainEventTypes } from '@latitude-data/constants'
 
@@ -600,17 +595,13 @@ describe('addMessages', () => {
         data: expect.objectContaining({
           type: ChainEventTypes.ChainError,
           error: expect.objectContaining({
-            name: LatitudeErrorCodes.UnprocessableEntityError,
             message: 'Openai returned this error: provider error',
           }),
         }),
       },
     ])
     expect(error).toEqual(
-      new ChainError({
-        code: RunErrorCodes.Unknown,
-        message: 'Openai returned this error: provider error',
-      }),
+      new Error('Openai returned this error: provider error'),
     )
   })
 
