@@ -2,7 +2,7 @@ import { EvaluationRoutes, ROUTES } from '$/services/routes'
 import useConnectedEvaluations from '$/stores/connectedEvaluations'
 import useEvaluationResultsByDocumentLogs from '$/stores/evaluationResultsByDocumentLogs'
 import { DocumentLogWithMetadata } from '@latitude-data/core/repositories'
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 import {
   ConnectedEvaluation,
@@ -72,7 +72,7 @@ function EvaluationItemContent({
   runCount: number
   isWaiting: boolean
 }) {
-  if (!runCount || !evaluation.live) {
+  if (!runCount || !evaluation.live || (!isWaiting && !result)) {
     return (
       <Text.H6
         userSelect={false}
@@ -87,7 +87,7 @@ function EvaluationItemContent({
     )
   }
 
-  if (isWaiting || !result) {
+  if (isWaiting) {
     return (
       <span className='flex flex-col gap-y-2.5 pt-1'>
         <Skeleton className='h-3 w-full' />
@@ -99,7 +99,7 @@ function EvaluationItemContent({
 
   return (
     <Text.H6 color='foregroundMuted' wordBreak='breakAll'>
-      {result.reason || 'No reason'}
+      {result!.reason || 'No reason'}
     </Text.H6>
   )
 }
@@ -125,7 +125,7 @@ function EvaluationItem({
         .commits.detail({ uuid: commit.uuid })
         .documents.detail({ uuid: document.documentUuid }).root,
     )
-    if (result?.evaluatedProviderLogId) {
+    if (evaluation.live && !isWaiting && result?.evaluatedProviderLogId) {
       query.set('providerLogId', result.evaluatedProviderLogId.toString())
     }
 
@@ -150,7 +150,7 @@ function EvaluationItem({
           <Text.H5 ellipsis noWrap>
             {evaluation.name}
           </Text.H5>
-          {!isWaiting && result && (
+          {evaluation.live && !isWaiting && result && (
             <ResultCellContent result={result} evaluation={evaluation} />
           )}
         </span>
@@ -249,8 +249,9 @@ function CollapsedContentHeader({
     return evaluations.reduce(
       (acc, evaluation) => {
         if (!evaluation.live) return { ...acc, skipped: acc.skipped + 1 }
+        if (!results[evaluation.id]) return { ...acc, skipped: acc.skipped + 1 }
 
-        let value = results[evaluation.id]?.result
+        let value = results[evaluation.id]!.result
         if (value === undefined) return acc
 
         if (evaluation.resultType === EvaluationResultableType.Boolean) {
@@ -295,17 +296,19 @@ function CollapsedContentHeader({
 
   return (
     <div className='w-full flex items-center justify-end gap-2'>
-      <Badge
-        variant={
-          count.passed
-            ? count.passed >= (evaluations.length - count.skipped) / 2
-              ? 'successMuted'
-              : 'warningMuted'
-            : 'destructiveMuted'
-        }
-      >
-        {count.passed}/{evaluations.length - count.skipped} passed
-      </Badge>
+      {evaluations.length - count.skipped > 0 && (
+        <Badge
+          variant={
+            count.passed
+              ? count.passed >= (evaluations.length - count.skipped) / 2
+                ? 'successMuted'
+                : 'warningMuted'
+              : 'destructiveMuted'
+          }
+        >
+          {count.passed}/{evaluations.length - count.skipped} passed
+        </Badge>
+      )}
       {count.skipped > 0 && (
         <Badge variant='muted'>{count.skipped} skipped</Badge>
       )}
@@ -362,17 +365,28 @@ export default function Evaluations({
     )
   }, [evaluationResults])
 
+  const [awaitable, setAwaitable] = useState<{
+    documentLog?: DocumentLogWithMetadata
+    results: number
+  }>({ results: 0 })
+  useEffect(() => {
+    if (!documentLog) return
+    if (isDocumentLogLoading || isEvaluationsLoading) return
+    if (awaitable.documentLog?.id === documentLog.id) return
+    setAwaitable({
+      documentLog: documentLog,
+      results: evaluations.filter((evaluation) => evaluation.live).length,
+    })
+  }, [isDocumentLogLoading, documentLog, isEvaluationsLoading, evaluations])
+
   const isWaiting = useMemo(
     () =>
-      !!documentLog &&
-      evaluations
-        .filter((evaluation) => evaluation.live)
-        .some(
-          (evaluation) =>
-            !results[evaluation.id] ||
-            results[evaluation.id]!.documentLogId !== documentLog.id,
-        ),
-    [documentLog, evaluations, results],
+      (runCount > 0 && !documentLog) ||
+      isDocumentLogLoading ||
+      Object.values(results).filter(
+        (result) => result.documentLogId === documentLog?.id,
+      ).length < awaitable.results,
+    [runCount, isDocumentLogLoading, documentLog, results, awaitable],
   )
 
   const contentProps = {
@@ -383,7 +397,7 @@ export default function Evaluations({
     project,
     runCount,
     isLoading: isEvaluationsLoading,
-    isWaiting: isWaiting || isDocumentLogLoading,
+    isWaiting,
   }
 
   return (
