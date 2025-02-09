@@ -62,16 +62,13 @@ function assertValidStepCount({
 
 export type StepProps = {
   chainStreamManager: ChainStreamManager
-
   workspace: Workspace
   source: LogSources
   chain: SomeChain
   promptlVersion: number
   providersMap: CachedApiKeys
   errorableUuid: string
-
   newMessages: Message[] | undefined
-
   configOverrides?: ConfigOverrides
   removeSchema?: boolean
   stepCount?: number

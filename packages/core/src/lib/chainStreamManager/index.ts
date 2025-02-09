@@ -117,7 +117,8 @@ export class ChainStreamManager {
   async getProviderResponse(args: Omit<ExecuteStepArgs, 'controller'>) {
     if (!this.controller) throw new Error('Stream not started')
 
-    this.messages = [...args.conversation.messages] // TODO: This may conflict with isolated steps
+    // TODO: This may conflict with isolated steps
+    this.messages = [...args.conversation.messages]
 
     this.sendEvent({ type: ChainEventTypes.StepStarted })
 

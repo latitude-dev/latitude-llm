@@ -267,10 +267,14 @@ const Content = ({
     const headerIcon = isAgentResponse ? 'bot' : 'puzzle'
     const headerLabel = isAgentResponse ? 'Agent Response' : 'Tool requested'
 
+    // FIXME: Please kill old compiler
+    // @ts-ignore
+    let oldOrNewArgs = value.args || value.toolArguments
+    oldOrNewArgs = typeof oldOrNewArgs === 'object' ? oldOrNewArgs : {}
     const codeLanguage = isAgentResponse ? 'json' : 'javascript'
     const codeContent = isAgentResponse
-      ? JSON.stringify(value.args, null, 2)
-      : `${value.toolName}(${JSON.stringify(value.args, null, 2)})`
+      ? JSON.stringify(oldOrNewArgs, null, 2)
+      : `${value.toolName}(${JSON.stringify(oldOrNewArgs, null, 2)})`
 
     return (
       <div key={`${index}`} className='py-2 w-full'>
