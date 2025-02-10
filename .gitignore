@@ -16,6 +16,11 @@ coverage
 # Turbo
 .turbo
 
+# Vim shit
+*.py-E
+# Python packages
+.venv
+
 # Vercel
 .vercel
 

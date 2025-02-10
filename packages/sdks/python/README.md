@@ -41,6 +41,28 @@ Requires uv `0.5.10` or higher.
 - Build package: `uv build`
 - Publish package: `uv publish`
 
+## Run only one test
+
+```python
+import pytest
+
+@pytest.mark.only
+async def my_test(self):
+    # ... your code
+```
+
+And then run the tests with the marker `only`:
+
+```sh
+uv run scripts/test.py -m only
+```
+
+Other way is all in line:
+
+```python
+uv run scripts/test.py <test_path>::<test_case>::<test_name>
+```
+
 ## License
 
 The SDK is licensed under the [LGPL-3.0 License](https://opensource.org/licenses/LGPL-3.0) - read the [LICENSE](/LICENSE) file for details.

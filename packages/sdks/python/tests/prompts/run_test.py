@@ -1,5 +1,5 @@
 import json
-from typing import List, cast
+from typing import cast
 from unittest import mock
 from unittest.mock import AsyncMock, Mock
 
@@ -25,7 +25,7 @@ class TestRunPromptSync(TestCase):
         )
         endpoint = f"/projects/{self.project_id}/versions/{self.version_uuid}/documents/run"
         endpoint_mock = self.gateway_mock.post(endpoint).mock(
-            return_value=httpx.Response(200, json=fixtures.CONVERSATION_FINISHED_EVENT_RESPONSE)
+            return_value=httpx.Response(200, json=fixtures.CONVERSATION_FINISHED_RESULT_RESPONSE)
         )
 
         result = await self.sdk.prompts.run(path, options)
@@ -43,9 +43,9 @@ class TestRunPromptSync(TestCase):
             },
         )
         self.assertEqual(endpoint_mock.call_count, 1)
-        self.assertEqual(result, RunPromptResult(**dict(fixtures.CONVERSATION_FINISHED_EVENT)))
+        self.assertEqual(result, RunPromptResult(**dict(fixtures.CONVERSATION_FINISHED_RESULT)))
         on_event_mock.assert_not_called()
-        on_finished_mock.assert_called_once_with(fixtures.CONVERSATION_FINISHED_EVENT)
+        on_finished_mock.assert_called_once_with(fixtures.CONVERSATION_FINISHED_RESULT)
         on_error_mock.assert_not_called()
 
     async def test_success_overrides_options(self):
@@ -65,7 +65,7 @@ class TestRunPromptSync(TestCase):
         )
         endpoint = f"/projects/{options.project_id}/versions/{options.version_uuid}/documents/run"
         endpoint_mock = self.gateway_mock.post(endpoint).mock(
-            return_value=httpx.Response(200, json=fixtures.CONVERSATION_FINISHED_EVENT_RESPONSE)
+            return_value=httpx.Response(200, json=fixtures.CONVERSATION_FINISHED_RESULT_RESPONSE)
         )
 
         result = await self.sdk.prompts.run(path, options)
@@ -83,13 +83,13 @@ class TestRunPromptSync(TestCase):
             },
         )
         self.assertEqual(endpoint_mock.call_count, 1)
-        self.assertEqual(result, RunPromptResult(**dict(fixtures.CONVERSATION_FINISHED_EVENT)))
+        self.assertEqual(result, RunPromptResult(**dict(fixtures.CONVERSATION_FINISHED_RESULT)))
         on_event_mock.assert_not_called()
-        on_finished_mock.assert_called_once_with(fixtures.CONVERSATION_FINISHED_EVENT)
+        on_finished_mock.assert_called_once_with(fixtures.CONVERSATION_FINISHED_RESULT)
         on_error_mock.assert_not_called()
 
     async def test_success_default_version_uuid(self):
-        self.sdk._options.version_uuid = None  # pyright: ignore [reportPrivateUsage]
+        self.sdk._options.version_uuid = None
         on_event_mock = Mock()
         on_finished_mock = Mock()
         on_error_mock = Mock()
@@ -104,7 +104,7 @@ class TestRunPromptSync(TestCase):
         )
         endpoint = f"/projects/{self.project_id}/versions/live/documents/run"
         endpoint_mock = self.gateway_mock.post(endpoint).mock(
-            return_value=httpx.Response(200, json=fixtures.CONVERSATION_FINISHED_EVENT_RESPONSE)
+            return_value=httpx.Response(200, json=fixtures.CONVERSATION_FINISHED_RESULT_RESPONSE)
         )
 
         result = await self.sdk.prompts.run(path, options)
@@ -122,9 +122,9 @@ class TestRunPromptSync(TestCase):
             },
         )
         self.assertEqual(endpoint_mock.call_count, 1)
-        self.assertEqual(result, RunPromptResult(**dict(fixtures.CONVERSATION_FINISHED_EVENT)))
+        self.assertEqual(result, RunPromptResult(**dict(fixtures.CONVERSATION_FINISHED_RESULT)))
         on_event_mock.assert_not_called()
-        on_finished_mock.assert_called_once_with(fixtures.CONVERSATION_FINISHED_EVENT)
+        on_finished_mock.assert_called_once_with(fixtures.CONVERSATION_FINISHED_RESULT)
         on_error_mock.assert_not_called()
 
     async def test_success_with_tools(self):
@@ -149,11 +149,11 @@ class TestRunPromptSync(TestCase):
         )
         run_endpoint = f"/projects/{self.project_id}/versions/{self.version_uuid}/documents/run"
         run_endpoint_mock = self.gateway_mock.post(run_endpoint).mock(
-            return_value=httpx.Response(200, json=fixtures.CONVERSATION_FINISHED_EVENT_RESPONSE)
+            return_value=httpx.Response(200, json=fixtures.CONVERSATION_FINISHED_RESULT_RESPONSE)
         )
-        chat_endpoint = f"/conversations/{fixtures.CONVERSATION_FINISHED_EVENT.uuid}/chat"
+        chat_endpoint = f"/conversations/{fixtures.CONVERSATION_FINISHED_RESULT.uuid}/chat"
         chat_endpoint_mock = self.gateway_mock.post(chat_endpoint).mock(
-            return_value=httpx.Response(200, json=fixtures.FOLLOW_UP_CONVERSATION_FINISHED_EVENT_RESPONSE)
+            return_value=httpx.Response(200, json=fixtures.FOLLOW_UP_CONVERSATION_FINISHED_RESULT_RESPONSE)
         )
 
         result = await self.sdk.prompts.run(path, options)
@@ -184,9 +184,9 @@ class TestRunPromptSync(TestCase):
             },
         )
         self.assertEqual(chat_endpoint_mock.call_count, 1)
-        self.assertEqual(result, RunPromptResult(**dict(fixtures.FOLLOW_UP_CONVERSATION_FINISHED_EVENT)))
+        self.assertEqual(result, RunPromptResult(**dict(fixtures.FOLLOW_UP_CONVERSATION_FINISHED_RESULT)))
         on_event_mock.assert_not_called()
-        on_finished_mock.assert_called_once_with(fixtures.FOLLOW_UP_CONVERSATION_FINISHED_EVENT)
+        on_finished_mock.assert_called_once_with(fixtures.FOLLOW_UP_CONVERSATION_FINISHED_RESULT)
         on_error_mock.assert_not_called()
         [
             self.assertEqual(
@@ -196,8 +196,8 @@ class TestRunPromptSync(TestCase):
                     OnToolCallDetails.model_construct(
                         id=fixtures.CONVERSATION_TOOL_CALLS[index].id,
                         name=fixtures.CONVERSATION_TOOL_CALLS[index].name,
-                        conversation_uuid=fixtures.CONVERSATION_FINISHED_EVENT.uuid,
-                        messages=fixtures.CONVERSATION_FINISHED_EVENT.conversation,
+                        conversation_uuid=fixtures.CONVERSATION_FINISHED_RESULT.uuid,
+                        messages=fixtures.CONVERSATION_FINISHED_RESULT.conversation,
                         pause_execution=mock.ANY,
                         requested_tool_calls=fixtures.CONVERSATION_TOOL_CALLS,
                     ),
@@ -226,11 +226,11 @@ class TestRunPromptSync(TestCase):
         )
         run_endpoint = f"/projects/{self.project_id}/versions/{self.version_uuid}/documents/run"
         run_endpoint_mock = self.gateway_mock.post(run_endpoint).mock(
-            return_value=httpx.Response(200, json=fixtures.CONVERSATION_FINISHED_EVENT_RESPONSE)
+            return_value=httpx.Response(200, json=fixtures.CONVERSATION_FINISHED_RESULT_RESPONSE)
         )
-        chat_endpoint = f"/conversations/{fixtures.CONVERSATION_FINISHED_EVENT.uuid}/chat"
+        chat_endpoint = f"/conversations/{fixtures.CONVERSATION_FINISHED_RESULT.uuid}/chat"
         chat_endpoint_mock = self.gateway_mock.post(chat_endpoint).mock(
-            return_value=httpx.Response(200, json=fixtures.FOLLOW_UP_CONVERSATION_FINISHED_EVENT_RESPONSE)
+            return_value=httpx.Response(200, json=fixtures.FOLLOW_UP_CONVERSATION_FINISHED_RESULT_RESPONSE)
         )
 
         result = await self.sdk.prompts.run(path, options)
@@ -249,9 +249,9 @@ class TestRunPromptSync(TestCase):
         )
         self.assertEqual(run_endpoint_mock.call_count, 1)
         self.assertEqual(chat_endpoint_mock.call_count, 0)
-        self.assertEqual(result, RunPromptResult(**dict(fixtures.CONVERSATION_FINISHED_EVENT)))
+        self.assertEqual(result, RunPromptResult(**dict(fixtures.CONVERSATION_FINISHED_RESULT)))
         on_event_mock.assert_not_called()
-        on_finished_mock.assert_called_once_with(fixtures.CONVERSATION_FINISHED_EVENT)
+        on_finished_mock.assert_called_once_with(fixtures.CONVERSATION_FINISHED_RESULT)
         on_error_mock.assert_not_called()
         [
             self.assertEqual(
@@ -261,8 +261,8 @@ class TestRunPromptSync(TestCase):
                     OnToolCallDetails.model_construct(
                         id=fixtures.CONVERSATION_TOOL_CALLS[index].id,
                         name=fixtures.CONVERSATION_TOOL_CALLS[index].name,
-                        conversation_uuid=fixtures.CONVERSATION_FINISHED_EVENT.uuid,
-                        messages=fixtures.CONVERSATION_FINISHED_EVENT.conversation,
+                        conversation_uuid=fixtures.CONVERSATION_FINISHED_RESULT.uuid,
+                        messages=fixtures.CONVERSATION_FINISHED_RESULT.conversation,
                         pause_execution=mock.ANY,
                         requested_tool_calls=fixtures.CONVERSATION_TOOL_CALLS,
                     ),
@@ -292,7 +292,7 @@ class TestRunPromptSync(TestCase):
         )
 
         result = await self.sdk.prompts.run(path, options)
-        requests = cast(List[httpx.Request], [request for request, _ in endpoint_mock.calls])  # type: ignore
+        requests = cast(list[httpx.Request], [request for request, _ in endpoint_mock.calls])  # type: ignore
 
         [
             self.assert_requested(
@@ -409,7 +409,7 @@ class TestRunPromptStream(TestCase):
 
         result = await self.sdk.prompts.run(path, options)
         request, _ = endpoint_mock.calls.last
-        events = cast(List[StreamEvent], [event[0] for event, _ in on_event_mock.call_args_list])  # type: ignore
+        events = cast(list[StreamEvent], [event[0] for event, _ in on_event_mock.call_args_list])  # type: ignore
 
         self.assert_requested(
             request,
@@ -423,10 +423,10 @@ class TestRunPromptStream(TestCase):
             },
         )
         self.assertEqual(endpoint_mock.call_count, 1)
-        self.assertEqual(result, RunPromptResult(**dict(fixtures.CONVERSATION_FINISHED_EVENT)))
+        self.assertEqual(result, RunPromptResult(**dict(fixtures.CONVERSATION_FINISHED_RESULT)))
         [self.assertEqual(got, exp) for got, exp in zip(events, fixtures.CONVERSATION_EVENTS)]
         self.assertEqual(on_event_mock.call_count, len(fixtures.CONVERSATION_EVENTS))
-        on_finished_mock.assert_called_once_with(fixtures.CONVERSATION_FINISHED_EVENT)
+        on_finished_mock.assert_called_once_with(fixtures.CONVERSATION_FINISHED_RESULT)
         on_error_mock.assert_not_called()
 
     async def test_success_overrides_options(self):
@@ -451,7 +451,7 @@ class TestRunPromptStream(TestCase):
 
         result = await self.sdk.prompts.run(path, options)
         request, _ = endpoint_mock.calls.last
-        events = cast(List[StreamEvent], [event[0] for event, _ in on_event_mock.call_args_list])  # type: ignore
+        events = cast(list[StreamEvent], [event[0] for event, _ in on_event_mock.call_args_list])  # type: ignore
 
         self.assert_requested(
             request,
@@ -465,14 +465,14 @@ class TestRunPromptStream(TestCase):
             },
         )
         self.assertEqual(endpoint_mock.call_count, 1)
-        self.assertEqual(result, RunPromptResult(**dict(fixtures.CONVERSATION_FINISHED_EVENT)))
+        self.assertEqual(result, RunPromptResult(**dict(fixtures.CONVERSATION_FINISHED_RESULT)))
         [self.assertEqual(got, exp) for got, exp in zip(events, fixtures.CONVERSATION_EVENTS)]
         self.assertEqual(on_event_mock.call_count, len(fixtures.CONVERSATION_EVENTS))
-        on_finished_mock.assert_called_once_with(fixtures.CONVERSATION_FINISHED_EVENT)
+        on_finished_mock.assert_called_once_with(fixtures.CONVERSATION_FINISHED_RESULT)
         on_error_mock.assert_not_called()
 
     async def test_success_default_version_uuid(self):
-        self.sdk._options.version_uuid = None  # pyright: ignore [reportPrivateUsage]
+        self.sdk._options.version_uuid = None
         on_event_mock = Mock()
         on_finished_mock = Mock()
         on_error_mock = Mock()
@@ -492,7 +492,7 @@ class TestRunPromptStream(TestCase):
 
         result = await self.sdk.prompts.run(path, options)
         request, _ = endpoint_mock.calls.last
-        events = cast(List[StreamEvent], [event[0] for event, _ in on_event_mock.call_args_list])  # type: ignore
+        events = cast(list[StreamEvent], [event[0] for event, _ in on_event_mock.call_args_list])  # type: ignore
 
         self.assert_requested(
             request,
@@ -506,10 +506,10 @@ class TestRunPromptStream(TestCase):
             },
         )
         self.assertEqual(endpoint_mock.call_count, 1)
-        self.assertEqual(result, RunPromptResult(**dict(fixtures.CONVERSATION_FINISHED_EVENT)))
+        self.assertEqual(result, RunPromptResult(**dict(fixtures.CONVERSATION_FINISHED_RESULT)))
         [self.assertEqual(got, exp) for got, exp in zip(events, fixtures.CONVERSATION_EVENTS)]
         self.assertEqual(on_event_mock.call_count, len(fixtures.CONVERSATION_EVENTS))
-        on_finished_mock.assert_called_once_with(fixtures.CONVERSATION_FINISHED_EVENT)
+        on_finished_mock.assert_called_once_with(fixtures.CONVERSATION_FINISHED_RESULT)
         on_error_mock.assert_not_called()
 
     async def test_success_with_tools(self):
@@ -536,7 +536,7 @@ class TestRunPromptStream(TestCase):
         run_endpoint_mock = self.gateway_mock.post(run_endpoint).mock(
             return_value=self.create_stream(200, fixtures.CONVERSATION_EVENTS_STREAM)
         )
-        chat_endpoint = f"/conversations/{fixtures.CONVERSATION_FINISHED_EVENT.uuid}/chat"
+        chat_endpoint = f"/conversations/{fixtures.CONVERSATION_FINISHED_RESULT.uuid}/chat"
         chat_endpoint_mock = self.gateway_mock.post(chat_endpoint).mock(
             return_value=self.create_stream(200, fixtures.FOLLOW_UP_CONVERSATION_EVENTS_STREAM)
         )
@@ -544,7 +544,7 @@ class TestRunPromptStream(TestCase):
         result = await self.sdk.prompts.run(path, options)
         run_request, _ = run_endpoint_mock.calls.last
         chat_request, _ = chat_endpoint_mock.calls.last
-        events = cast(List[StreamEvent], [event[0] for event, _ in on_event_mock.call_args_list])  # type: ignore
+        events = cast(list[StreamEvent], [event[0] for event, _ in on_event_mock.call_args_list])  # type: ignore
 
         self.assert_requested(
             run_request,
@@ -570,7 +570,7 @@ class TestRunPromptStream(TestCase):
             },
         )
         self.assertEqual(chat_endpoint_mock.call_count, 1)
-        self.assertEqual(result, RunPromptResult(**dict(fixtures.FOLLOW_UP_CONVERSATION_FINISHED_EVENT)))
+        self.assertEqual(result, RunPromptResult(**dict(fixtures.FOLLOW_UP_CONVERSATION_FINISHED_RESULT)))
         [
             self.assertEqual(got, exp)
             for got, exp in zip(events, fixtures.CONVERSATION_EVENTS + fixtures.FOLLOW_UP_CONVERSATION_EVENTS)
@@ -578,7 +578,7 @@ class TestRunPromptStream(TestCase):
         self.assertEqual(
             on_event_mock.call_count, len(fixtures.CONVERSATION_EVENTS + fixtures.FOLLOW_UP_CONVERSATION_EVENTS)
         )
-        on_finished_mock.assert_called_once_with(fixtures.FOLLOW_UP_CONVERSATION_FINISHED_EVENT)
+        on_finished_mock.assert_called_once_with(fixtures.FOLLOW_UP_CONVERSATION_FINISHED_RESULT)
         on_error_mock.assert_not_called()
         [
             self.assertEqual(
@@ -588,8 +588,8 @@ class TestRunPromptStream(TestCase):
                     OnToolCallDetails.model_construct(
                         id=fixtures.CONVERSATION_TOOL_CALLS[index].id,
                         name=fixtures.CONVERSATION_TOOL_CALLS[index].name,
-                        conversation_uuid=fixtures.CONVERSATION_FINISHED_EVENT.uuid,
-                        messages=fixtures.CONVERSATION_FINISHED_EVENT.conversation,
+                        conversation_uuid=fixtures.CONVERSATION_FINISHED_RESULT.uuid,
+                        messages=fixtures.CONVERSATION_FINISHED_RESULT.conversation,
                         pause_execution=mock.ANY,
                         requested_tool_calls=fixtures.CONVERSATION_TOOL_CALLS,
                     ),
@@ -620,14 +620,14 @@ class TestRunPromptStream(TestCase):
         run_endpoint_mock = self.gateway_mock.post(run_endpoint).mock(
             return_value=self.create_stream(200, fixtures.CONVERSATION_EVENTS_STREAM)
         )
-        chat_endpoint = f"/conversations/{fixtures.CONVERSATION_FINISHED_EVENT.uuid}/chat"
+        chat_endpoint = f"/conversations/{fixtures.CONVERSATION_FINISHED_RESULT.uuid}/chat"
         chat_endpoint_mock = self.gateway_mock.post(chat_endpoint).mock(
             return_value=self.create_stream(200, fixtures.FOLLOW_UP_CONVERSATION_EVENTS_STREAM)
         )
 
         result = await self.sdk.prompts.run(path, options)
         run_request, _ = run_endpoint_mock.calls.last
-        events = cast(List[StreamEvent], [event[0] for event, _ in on_event_mock.call_args_list])  # type: ignore
+        events = cast(list[StreamEvent], [event[0] for event, _ in on_event_mock.call_args_list])  # type: ignore
 
         self.assert_requested(
             run_request,
@@ -642,10 +642,10 @@ class TestRunPromptStream(TestCase):
         )
         self.assertEqual(run_endpoint_mock.call_count, 1)
         self.assertEqual(chat_endpoint_mock.call_count, 0)
-        self.assertEqual(result, RunPromptResult(**dict(fixtures.CONVERSATION_FINISHED_EVENT)))
+        self.assertEqual(result, RunPromptResult(**dict(fixtures.CONVERSATION_FINISHED_RESULT)))
         [self.assertEqual(got, exp) for got, exp in zip(events, fixtures.CONVERSATION_EVENTS)]
         self.assertEqual(on_event_mock.call_count, len(fixtures.CONVERSATION_EVENTS))
-        on_finished_mock.assert_called_once_with(fixtures.CONVERSATION_FINISHED_EVENT)
+        on_finished_mock.assert_called_once_with(fixtures.CONVERSATION_FINISHED_RESULT)
         on_error_mock.assert_not_called()
         [
             self.assertEqual(
@@ -655,8 +655,8 @@ class TestRunPromptStream(TestCase):
                     OnToolCallDetails.model_construct(
                         id=fixtures.CONVERSATION_TOOL_CALLS[index].id,
                         name=fixtures.CONVERSATION_TOOL_CALLS[index].name,
-                        conversation_uuid=fixtures.CONVERSATION_FINISHED_EVENT.uuid,
-                        messages=fixtures.CONVERSATION_FINISHED_EVENT.conversation,
+                        conversation_uuid=fixtures.CONVERSATION_FINISHED_RESULT.uuid,
+                        messages=fixtures.CONVERSATION_FINISHED_RESULT.conversation,
                         pause_execution=mock.ANY,
                         requested_tool_calls=fixtures.CONVERSATION_TOOL_CALLS,
                     ),
@@ -686,7 +686,7 @@ class TestRunPromptStream(TestCase):
         )
 
         result = await self.sdk.prompts.run(path, options)
-        requests = cast(List[httpx.Request], [request for request, _ in endpoint_mock.calls])  # type: ignore
+        requests = cast(list[httpx.Request], [request for request, _ in endpoint_mock.calls])  # type: ignore
 
         [
             self.assert_requested(
@@ -721,7 +721,7 @@ class TestRunPromptStream(TestCase):
         )
         endpoint = f"/projects/{self.project_id}/versions/{self.version_uuid}/documents/run"
         endpoint_mock = self.gateway_mock.post(endpoint).mock(
-            return_value=self.create_stream(200, fixtures.CONVERSATION_ERROR_EVENT_STREAM)
+            return_value=self.create_stream(200, fixtures.CONVERSATION_ERROR_EVENT_STREAM),
         )
 
         with self.assertRaisesRegex(type(fixtures.CONVERSATION_ERROR), fixtures.CONVERSATION_ERROR.message):

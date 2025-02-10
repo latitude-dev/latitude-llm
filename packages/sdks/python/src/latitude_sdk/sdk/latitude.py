@@ -31,7 +31,7 @@ DEFAULT_INTERNAL_OPTIONS = InternalOptions(
         host=env.GATEWAY_HOSTNAME,
         port=env.GATEWAY_PORT,
         ssl=env.GATEWAY_SSL,
-        api_version="v2",
+        api_version="v3",
     ),
     source=LogSources.Api,
     retries=3,
