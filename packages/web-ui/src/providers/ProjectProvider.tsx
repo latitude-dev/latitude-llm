@@ -31,4 +31,4 @@ const useCurrentProject = () => {
   return context
 }
 
-export { ProjectProvider, useCurrentProject, type IProjectContextType }
+export { ProjectProvider, useCurrentProject }

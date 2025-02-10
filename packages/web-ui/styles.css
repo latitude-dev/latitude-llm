@@ -90,6 +90,8 @@
     --muted: 220 14% 96%;
     --muted-foreground: 211 11% 45%;
 
+    --warning-muted-foreground: 26 90% 37%;
+
     --accent: 210 100% 97%;
     --accent-button: 211 97% 35%;
     --accent-foreground: 211 97% 35%;
@@ -101,11 +103,6 @@
 
     --success: 142 72% 29%;
     --success-foreground: 120 87% 97%;
-    --success-muted: 141 84% 93%;
-    --success-muted-foreground: 142 72% 29%;
-
-    --warning-muted: 48 96% 89%;
-    --warning-muted-foreground: 26 90% 37%;
 
     --border: 0 0% 89.8%;
     --input: 0 0% 84.8%;
@@ -145,6 +142,8 @@
     --muted: 0 0% 14.9%;
     --muted-foreground: 0 0% 63.9%;
 
+    --warning-muted-foreground: 48 100% 96%;
+
     --accent: 211 88% 10%;
     --accent-button: 211 97% 35%;
     --accent-foreground: 211 94% 65%;
@@ -156,11 +155,6 @@
 
     --success: 142 76% 36%;
     --success-foreground: 120 87% 97%;
-    --success-muted: 141 84% 10%;
-    --success-muted-foreground: 142 76% 36%;
-
-    --warning-muted: 48 100% 10%;
-    --warning-muted-foreground: 49 100% 36%;
 
     --border: 231 9% 12.9%;
     --input: 0 0% 14.9%;

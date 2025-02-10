@@ -4,11 +4,6 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
-patchedDependencies:
-  socket.io-react-hook:
-    hash: flacogqzanzqzl7ztwpch75azy
-    path: patches/socket.io-react-hook.patch
-
 importers:
 
   .:
@@ -445,7 +440,7 @@ importers:
         version: 19.0.0-rc-5d19e1c8-20240923(react@19.0.0-rc-5d19e1c8-20240923)
       socket.io-react-hook:
         specifier: ^2.4.5
-        version: 2.4.5(patch_hash=flacogqzanzqzl7ztwpch75azy)(react@19.0.0-rc-5d19e1c8-20240923)
+        version: 2.4.5(react@19.0.0-rc-5d19e1c8-20240923)
       swr:
         specifier: ^2.2.5
         version: 2.2.5(react@19.0.0-rc-5d19e1c8-20240923)
@@ -27624,7 +27619,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  socket.io-react-hook@2.4.5(patch_hash=flacogqzanzqzl7ztwpch75azy)(react@19.0.0-rc-5d19e1c8-20240923):
+  socket.io-react-hook@2.4.5(react@19.0.0-rc-5d19e1c8-20240923):
     dependencies:
       parseuri: 0.0.6
       react: 19.0.0-rc-5d19e1c8-20240923

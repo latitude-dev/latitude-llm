@@ -23,17 +23,16 @@ import {
 } from '@latitude-data/web-ui'
 import { LanguageModelUsage } from 'ai'
 
-import { usePlaygroundChat } from '$/hooks/playgroundChat/usePlaygroundChat'
-import { type PromptlVersion } from '@latitude-data/web-ui'
 import { DocumentEditorContext } from '..'
 import Actions, { ActionsState } from './Actions'
+import { type PromptlVersion } from '@latitude-data/web-ui'
+import { usePlaygroundChat } from '$/hooks/playgroundChat/usePlaygroundChat'
 
 export default function Chat<V extends PromptlVersion>({
   document,
   promptlVersion,
   parameters,
   clearChat,
-  onPromptRan,
   expandParameters,
   setExpandParameters,
 }: {
@@ -41,7 +40,6 @@ export default function Chat<V extends PromptlVersion>({
   promptlVersion: V
   parameters: Record<string, unknown>
   clearChat: () => void
-  onPromptRan?: (documentLogUuid?: string, error?: Error) => void
 } & ActionsState) {
   const runOnce = useRef(false)
   const [isScrolledToBottom, setIsScrolledToBottom] = useState(false)
@@ -114,7 +112,6 @@ export default function Chat<V extends PromptlVersion>({
     promptlVersion,
     runPromptFn,
     addMessagesFn,
-    onPromptRan,
   })
 
   useEffect(() => {

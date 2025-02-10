@@ -1,9 +1,8 @@
+import { ConnectedEvaluation } from '@latitude-data/core/browser'
 import { updateConnectedEvaluationAction } from '$/actions/connectedEvaluations/update'
 import useFetcher from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
-import { ConnectedEvaluation } from '@latitude-data/core/browser'
-import { ConnectedEvaluationWithDetails } from '@latitude-data/core/repositories'
 import useSWR, { SWRConfiguration } from 'swr'
 
 export default function useConnectedEvaluations(
@@ -28,7 +27,7 @@ export default function useConnectedEvaluations(
     data = [],
     mutate,
     ...rest
-  } = useSWR<ConnectedEvaluationWithDetails[]>(
+  } = useSWR<ConnectedEvaluation[]>(
     ['connectedEvaluations', documentUuid],
     fetcher,
     opts,
@@ -46,9 +45,9 @@ export default function useConnectedEvaluations(
           (evaluations) =>
             evaluations?.map((evaluation) =>
               evaluation.id === updatedEvaluation.id
-                ? { ...evaluation, ...updatedEvaluation }
+                ? updatedEvaluation
                 : evaluation,
-            ) ?? [],
+            ) ?? [updatedEvaluation],
         )
       },
     },

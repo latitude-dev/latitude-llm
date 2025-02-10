@@ -38,7 +38,6 @@ export type Common = {
   wordBreak?: WordBreak
   whiteSpace?: WhiteSpace
   ellipsis?: boolean
-  lineClamp?: number
   display?: Display
   userSelect?: boolean
   noWrap?: boolean
@@ -79,7 +78,6 @@ const TextAtom = forwardRef<HTMLElement, AllTextProps>(function Text(
     whiteSpace = 'normal',
     wordBreak = 'normal',
     ellipsis = false,
-    lineClamp = undefined,
     userSelect = true,
     noWrap = false,
     underline = false,
@@ -126,8 +124,6 @@ const TextAtom = forwardRef<HTMLElement, AllTextProps>(function Text(
           [font.family.mono]: monospace,
           [font.family.sans]: !monospace,
           'text-center': centered,
-          'line-clamp-3': lineClamp === 3,
-          'leading-5': lineClamp && size === 'h6',
         },
       )}
     >

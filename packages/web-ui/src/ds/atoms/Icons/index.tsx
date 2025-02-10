@@ -68,8 +68,6 @@ import {
   Twitter,
   Undo,
   XIcon,
-  Braces,
-  ListCheck,
 } from 'lucide-react'
 
 import { cn } from '../../../lib/utils'
@@ -148,8 +146,6 @@ const Icons = {
   arrowUp: ArrowUpIcon,
   arrowDown: ArrowDownIcon,
   equalApproximately: EqualApproximatelyIcon,
-  braces: Braces,
-  listCheck: ListCheck,
 }
 
 export type IconName = keyof typeof Icons

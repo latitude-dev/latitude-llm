@@ -1,20 +1,18 @@
-import { useCallback, useMemo } from 'react'
+import { useCallback } from 'react'
 
-import useConnectedEvaluations from '$/stores/connectedEvaluations'
+import { EvaluationDto } from '@latitude-data/core/browser'
 import {
-  EvaluationDto,
-  EvaluationMetadataType,
-} from '@latitude-data/core/browser'
-import {
+  Label,
   SwitchToogle,
   useCurrentCommit,
   useCurrentProject,
   useToast,
 } from '@latitude-data/web-ui'
+import useConnectedEvaluations from '$/stores/connectedEvaluations'
 
 export default function LiveEvaluationToggle({
   documentUuid,
-  evaluation: { id: evaluationId },
+  evaluation,
 }: {
   documentUuid: string
   evaluation: EvaluationDto
@@ -22,57 +20,39 @@ export default function LiveEvaluationToggle({
   const { toast } = useToast()
   const { commit } = useCurrentCommit()
   const { project } = useCurrentProject()
-
-  const {
-    data: evaluations,
-    isLoading,
-    update,
-    isUpdating,
-  } = useConnectedEvaluations({
-    documentUuid: documentUuid,
+  const { data, update, isUpdating } = useConnectedEvaluations({
+    documentUuid,
     projectId: project.id,
     commitUuid: commit.uuid,
   })
-  const evaluation = useMemo(
-    () =>
-      evaluations
-        .map(({ id, live, evaluation }) => ({
-          connectedId: id,
-          live,
-          ...evaluation,
-        }))
-        .find((evaluation) => evaluation.id === evaluationId),
-    [evaluations],
+  const connectedEvaluation = data.find(
+    (ev) => ev.evaluationId === evaluation.id,
   )
-  const isDisabled =
-    isLoading ||
-    isUpdating ||
-    !evaluation ||
-    evaluation.metadataType === EvaluationMetadataType.Manual
-
   const toggleLive = useCallback(async () => {
-    if (isDisabled) return
+    if (!connectedEvaluation) return
 
-    const live = !evaluation.live
+    const live = !connectedEvaluation.live
     const [_, error] = await update({
-      id: evaluation.connectedId,
+      id: connectedEvaluation.id,
       data: { live },
     })
     if (error) return
 
     toast({
       title: 'Successfully updated evaluation',
-      description: live
-        ? `${evaluation.name} is now live`
-        : `${evaluation.name} is now paused`,
+      description: live ? 'Evaluation is now live' : 'Evaluation is now paused',
     })
-  }, [isDisabled, evaluation, update])
+  }, [connectedEvaluation, update])
+  if (!connectedEvaluation) return null
 
   return (
-    <SwitchToogle
-      disabled={isDisabled}
-      checked={evaluation?.live}
-      onCheckedChange={toggleLive}
-    />
+    <div className='flex flex-row gap-2 items-center'>
+      <Label>Evaluate live logs</Label>
+      <SwitchToogle
+        disabled={isUpdating}
+        checked={connectedEvaluation.live}
+        onCheckedChange={toggleLive}
+      />
+    </div>
   )
 }

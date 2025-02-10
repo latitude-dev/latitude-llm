@@ -32,9 +32,9 @@ import {
   Button,
   ClickToCopyUuid,
   DocumentTextEditor,
+  TextEditorPlaceholder,
   SplitPane,
   Text,
-  TextEditorPlaceholder,
   Tooltip,
   useCurrentCommit,
   useCurrentProject,
@@ -43,11 +43,11 @@ import { useRouter } from 'next/navigation'
 import { DiffOptions } from 'node_modules/@latitude-data/web-ui/src/ds/molecules/DocumentTextEditor/types'
 import { useDebouncedCallback } from 'use-debounce'
 
-import Link from 'next/link'
 import Playground from './Playground'
 import RefineDocumentModal from './RefineModal'
 import { UpdateToPromptLButton } from './UpdateToPromptl'
 import { RefinementHook, useRefinement } from './useRefinement'
+import Link from 'next/link'
 
 export const DocumentEditorContext = createContext<
   | {
@@ -327,7 +327,7 @@ export default function DocumentEditor({
           className='p-6'
           direction='horizontal'
           gap={4}
-          initialPercentage={52}
+          initialPercentage={55}
           minSize={300}
           firstPane={
             <SplitPane.Pane>
