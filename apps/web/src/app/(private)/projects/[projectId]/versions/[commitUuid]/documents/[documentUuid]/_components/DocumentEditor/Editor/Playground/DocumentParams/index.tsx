@@ -132,7 +132,7 @@ function CollapsedContentHeader({
   )
 }
 
-export function DocumentParams({ onExpand, ...props }: Props) {
+export default function DocumentParams({ onExpand, ...props }: Props) {
   const datasetInfo = useSelectDataset({
     document: props.document,
     commitVersionUuid: props.commit.uuid,

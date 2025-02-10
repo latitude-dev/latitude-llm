@@ -13,8 +13,8 @@ import {
 import type { ConversationMetadata } from 'promptl-ai'
 
 import Chat from './Chat'
-import { DocumentParams } from './DocumentParams'
-import Evaluations from './Evaluations'
+import DocumentEvaluations from './DocumentEvaluations'
+import DocumentParams from './DocumentParams'
 import Preview from './Preview'
 
 const COLLAPSED_SIZE = COLLAPSED_BOX_HEIGHT * 2 + 12
@@ -86,7 +86,7 @@ export default function Playground({
             setPrompt={setPrompt}
             onExpand={setExpandedParameters}
           />
-          <Evaluations
+          <DocumentEvaluations
             documentLog={documentLog}
             commit={commit}
             document={document}
