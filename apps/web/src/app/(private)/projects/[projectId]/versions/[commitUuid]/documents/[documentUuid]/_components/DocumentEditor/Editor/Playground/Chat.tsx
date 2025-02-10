@@ -31,12 +31,14 @@ export default function Chat({
   document,
   parameters,
   clearChat,
+  onPromptRan,
   expandParameters,
   setExpandParameters,
 }: {
   document: DocumentVersion
   parameters: Record<string, unknown>
   clearChat: () => void
+  onPromptRan?: (documentLogUuid?: string, error?: Error) => void
 } & ActionsState) {
   const runOnce = useRef(false)
   const [isScrolledToBottom, setIsScrolledToBottom] = useState(false)
@@ -108,6 +110,7 @@ export default function Chat({
   } = usePlaygroundChat({
     runPromptFn,
     addMessagesFn,
+    onPromptRan,
   })
 
   useEffect(() => {

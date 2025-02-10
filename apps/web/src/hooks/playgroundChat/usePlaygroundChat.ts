@@ -26,6 +26,7 @@ function buildMessage({ input }: { input: string | ToolMessage[] }) {
 export function usePlaygroundChat({
   runPromptFn,
   addMessagesFn,
+  onPromptRan,
 }: {
   runPromptFn: () => Promise<{
     stream: StreamableValue<ChainEvent>
@@ -40,6 +41,7 @@ export function usePlaygroundChat({
   }) => Promise<{
     stream: StreamableValue<ChainEvent>
   }>
+  onPromptRan?: (documentLogUuid?: string, error?: Error) => void
 }) {
   const isChat = useRef(false)
   const [documentLogUuid, setDocumentLogUuid] = useState<string | undefined>()
@@ -177,12 +179,15 @@ export function usePlaygroundChat({
       setIsLoading(true)
       const { stream, documentLogUuid } = await runPromptFn()
       handleStream(stream)
-      documentLogUuid.then((uuid) => setDocumentLogUuid(uuid))
+      const uuid = await documentLogUuid
+      setDocumentLogUuid(uuid)
+      onPromptRan?.(uuid, error)
     } catch (error) {
       setIsLoading(false)
       setError(error as Error)
+      onPromptRan?.(undefined, error as Error)
     }
-  }, [handleStream, runPromptFn])
+  }, [handleStream, runPromptFn, onPromptRan])
 
   return {
     start,
