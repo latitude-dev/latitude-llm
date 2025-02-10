@@ -6,7 +6,7 @@ import { streamSSE } from 'hono/streaming'
 
 import { AppRouteHandler } from '$/openApi/types'
 import { ChatRoute } from '$/routes/v1/chat/chat.route'
-import { chainEventPresenter } from '$/common/documents/getData'
+import { legacyChainEventPresenter } from '$/common/documents/getData'
 import { convertToLegacyChainStream } from '@latitude-data/core/lib/chainStreamManager/index'
 
 // @ts-expect-error: streamSSE has type issues
@@ -30,7 +30,7 @@ export const chatHandler: AppRouteHandler<ChatRoute> = async (c) => {
 
       let id = 0
       for await (const event of streamToGenerator(legacyStream)) {
-        const data = chainEventPresenter(event)
+        const data = legacyChainEventPresenter(event)
 
         stream.writeSSE({
           id: String(id++),

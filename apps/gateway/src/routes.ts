@@ -1,6 +1,7 @@
 const BASE_PATH = '/api'
 const V1_PATH = `${BASE_PATH}/v1`
 const V2_PATH = `${BASE_PATH}/v2`
+const V3_PATH = `${BASE_PATH}/v3`
 
 const PROJECTS = 'projects'
 const CONVERSATIONS = 'conversations'
@@ -11,14 +12,23 @@ const DOCUMENTS = `${VERSION_DETAIL}/documents`
 
 const V1_DOCUMENTS = `${V1_PATH}/${DOCUMENTS}`
 const V2_DOCUMENTS = `${V2_PATH}/${DOCUMENTS}`
+const V3_DOCUMENTS = `${V3_PATH}/${DOCUMENTS}`
 
 const V1_CONVERSATIONS = `${V1_PATH}/${CONVERSATIONS}`
 const V2_CONVERSATIONS = `${V2_PATH}/${CONVERSATIONS}`
+const V3_CONVERSATIONS = `${V3_PATH}/${CONVERSATIONS}`
+
 const V2_CONVERSATION_DETAIL = `${V2_CONVERSATIONS}/{conversationUuid}`
+const V3_CONVERSATION_DETAIL = `${V3_CONVERSATIONS}/{conversationUuid}`
+
 const V2_EVALUATIONS = `${V2_CONVERSATIONS}/{conversationUuid}/evaluations`
+const V3_EVALUATIONS = `${V3_CONVERSATIONS}/{conversationUuid}/evaluations`
+
 const V2_EVALUATION_DETAIL = `${V2_EVALUATIONS}/{evaluationUuid}`
+const V3_EVALUATION_DETAIL = `${V3_EVALUATIONS}/{evaluationUuid}`
 
 const V2_TELEMETRY = `${V2_PATH}/otlp`
+const V3_TELEMETRY = `${V3_PATH}/otlp`
 
 export const ROUTES = {
   v1: {
@@ -45,6 +55,22 @@ export const ROUTES = {
     },
     telemetry: {
       traces: `${V2_TELEMETRY}/v1/traces`,
+    },
+  },
+  v3: {
+    documents: {
+      get: `${V3_DOCUMENTS}/:documentPath{.+}`,
+      getOrCreate: `${V3_DOCUMENTS}/get-or-create`,
+      run: `${V3_DOCUMENTS}/run`,
+      logs: `${V3_DOCUMENTS}/logs`,
+    },
+    conversations: {
+      chat: `${V3_CONVERSATION_DETAIL}/chat`,
+      evaluate: `${V3_CONVERSATION_DETAIL}/evaluate`,
+      createEvaluationResult: `${V3_EVALUATION_DETAIL}/evaluation-results`,
+    },
+    telemetry: {
+      traces: `${V3_TELEMETRY}/v1/traces`,
     },
   },
 }

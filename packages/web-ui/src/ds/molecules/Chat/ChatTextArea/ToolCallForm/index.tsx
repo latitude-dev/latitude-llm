@@ -1,7 +1,7 @@
 'use client'
 
 import { MouseEvent, lazy, useState, useCallback, useMemo } from 'react'
-import { ToolMessage, Message } from '@latitude-data/compiler'
+import { ToolMessage, Message, ToolCall } from '@latitude-data/compiler'
 import {
   Badge,
   Icon,
@@ -11,13 +11,13 @@ import {
   ClientOnly,
 } from '../../../../atoms'
 import { ToolBar } from '../ToolBar'
-import { buildResponseMessage, ToolRequest } from '@latitude-data/constants'
+import { buildResponseMessage } from '@latitude-data/constants'
 
 const TextEditor = lazy(() => import('./Editor/index'))
 
-function generateExampleFunctionCall(toolCall: ToolRequest) {
-  const args = toolCall.toolArguments
-  const functionName = toolCall.toolName
+function generateExampleFunctionCall(toolCall: ToolCall) {
+  const args = toolCall.arguments
+  const functionName = toolCall.name
   const formattedArgs = Object.keys(args).length
     ? JSON.stringify(args, null, 2)
     : ''
@@ -30,11 +30,11 @@ function buildToolResponseMessage({
   toolRequest,
 }: {
   value: string
-  toolRequest: ToolRequest
+  toolRequest: ToolCall
 }) {
   const toolResponse = {
-    id: toolRequest.toolCallId,
-    name: toolRequest.toolName,
+    id: toolRequest.id,
+    name: toolRequest.name,
     result: value,
   }
   const message = buildResponseMessage<'text'>({
@@ -56,7 +56,7 @@ function ToolEditor({
   currentToolRequest,
   totalToolRequests,
 }: {
-  toolRequest: ToolRequest
+  toolRequest: ToolCall
   placeholder: string
   value: string | undefined
   currentToolRequest: number
@@ -130,7 +130,7 @@ export function ToolCallForm({
   disabled,
   placeholder,
 }: {
-  toolRequests: ToolRequest[]
+  toolRequests: ToolCall[]
   placeholder: string
   addLocalMessages: (messages: Message[]) => void
   sendToServer?: (messages: ToolMessage[]) => void
@@ -139,7 +139,7 @@ export function ToolCallForm({
 }) {
   const [currentToolRequestIndex, setCurrentToolRequestIndex] = useState(1)
   const [currentToolRequest, setCurrentToolRequest] = useState<
-    ToolRequest | undefined
+    ToolCall | undefined
   >(toolRequests[0])
   const [respondedToolRequests, setRespondedToolRequests] = useState<
     ToolMessage[]
@@ -162,7 +162,7 @@ export function ToolCallForm({
       setRespondedToolRequests((prev) => [...prev, message])
       addLocalMessages([message])
       const findNextToolRequest = toolRequests.findIndex(
-        (tr) => tr.toolCallId === currentToolRequest.toolCallId,
+        (tr) => tr.id === currentToolRequest.id,
       )
       const nextIndex = findNextToolRequest + 1
       const nextToolRequest = toolRequests[nextIndex]
@@ -211,8 +211,7 @@ export function ToolCallForm({
   if (!currentToolRequest) return null
 
   const isLastRequest =
-    currentToolRequest.toolCallId ===
-    toolRequests[toolRequests.length - 1]?.toolCallId
+    currentToolRequest.id === toolRequests[toolRequests.length - 1]?.id
 
   const onSubmitHandler = isLastRequest ? onServerSend : onLocalSend
 

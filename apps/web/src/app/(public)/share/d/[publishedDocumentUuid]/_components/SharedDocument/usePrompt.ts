@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from 'react'
+import { Dispatch, useCallback, useRef, useState } from 'react'
 
 import {
   ContentType,
@@ -6,13 +6,13 @@ import {
   Message as ConversationMessage,
 } from '@latitude-data/compiler'
 import {
-  buildMessagesFromResponse,
-  LegacyChainEventTypes,
   PublishedDocument,
   StreamEventTypes,
 } from '@latitude-data/core/browser'
 import { runSharedPromptAction } from '$/actions/sdk/runSharedPromptAction'
 import { readStreamableValue } from 'ai/rsc'
+import { SetStateAction } from '@latitude-data/web-ui'
+import { ChainEvent, ChainEventTypes } from '@latitude-data/constants'
 
 type AccoumulatedDeltaMessage = { deltas: string[] }
 export type LastMessage = {
@@ -72,21 +72,25 @@ export function usePrompt({ shared }: { shared: PublishedDocument }) {
     undefined,
   )
   const [chainLength, setChainLength] = useState<number>(Infinity)
-
-  const addMessageToConversation = useCallback(
-    (message: ConversationMessage) => {
-      let newConversation: Conversation
-      setConversation((prevConversation) => {
-        newConversation = {
-          ...prevConversation,
-          messages: [...(prevConversation?.messages ?? []), message],
-        } as Conversation
-        return newConversation
-      })
-      return newConversation!
-    },
-    [],
-  )
+  const setMessages: Dispatch<SetStateAction<ConversationMessage[]>> =
+    useCallback(
+      (
+        value:
+          | ConversationMessage[]
+          | ((prevMessages: ConversationMessage[]) => ConversationMessage[]),
+      ) => {
+        setConversation((prevConversation) => {
+          return {
+            ...prevConversation,
+            messages:
+              typeof value === 'function'
+                ? value(prevConversation?.messages ?? [])
+                : value,
+          } as Conversation
+        })
+      },
+      [setConversation],
+    )
 
   const runPrompt = useCallback(
     async (parameters: Record<string, string>) => {
@@ -115,7 +119,7 @@ export function usePrompt({ shared }: { shared: PublishedDocument }) {
         for await (const serverEvent of readStreamableValue(output)) {
           if (!serverEvent) continue
 
-          const { event, data } = serverEvent
+          const { event, data } = serverEvent as ChainEvent
 
           // Delta text from the provider
           if (event === StreamEventTypes.Provider) {
@@ -128,30 +132,31 @@ export function usePrompt({ shared }: { shared: PublishedDocument }) {
             continue
           }
 
-          // Step started
-          if (data.type === LegacyChainEventTypes.Step) {
-            setResponseStream(undefined)
-            data.messages.forEach(addMessageToConversation)
-            messagesCount += data.messages!.length
+          setMessages(data.messages)
+          messagesCount = data.messages.length
 
+          // Step started
+          if (data.type === ChainEventTypes.StepStarted) {
             response = ''
           }
 
-          // Step finished
-          if (data.type === LegacyChainEventTypes.StepComplete) {
-            const responseMsgs = buildMessagesFromResponse(data)
-            setResponseStream(undefined)
-            responseMsgs.forEach(addMessageToConversation)
-            messagesCount += responseMsgs.length
-            lastMessage = responseMsgs[responseMsgs.length - 1]
-
+          if (data.type === ChainEventTypes.ProviderCompleted) {
+            response = ''
             response = ''
             accomulatedDeltas.push({ deltas: [] })
             accomulateIndex++
+
+            setResponseStream(undefined)
+            messagesCount += data.messages!.length
+
+            lastMessage = data.messages[data.messages.length - 1]
           }
 
           // Chain finished
-          if (data.type === LegacyChainEventTypes.Complete) {
+          if (
+            data.type === ChainEventTypes.ChainCompleted ||
+            data.type === ChainEventTypes.ToolsRequested
+          ) {
             const deltas = getDeltas({
               accomulatedDeltas,
               accomulateIndex,
@@ -162,7 +167,7 @@ export function usePrompt({ shared }: { shared: PublishedDocument }) {
           }
 
           // Error
-          if (data.type === LegacyChainEventTypes.Error) {
+          if (data.type === ChainEventTypes.ChainError) {
             setError(new Error(data.error.message))
           }
         }
@@ -174,7 +179,7 @@ export function usePrompt({ shared }: { shared: PublishedDocument }) {
         setResponseStream(undefined)
       }
     },
-    [runSharedPromptAction, addMessageToConversation, shared.uuid],
+    [runSharedPromptAction, setMessages, shared.uuid],
   )
 
   const resetPrompt = useCallback(() => {
@@ -200,7 +205,7 @@ export function usePrompt({ shared }: { shared: PublishedDocument }) {
     chainLength,
     resetPrompt,
     documentLogUuid,
-    addMessageToConversation,
+    setMessages,
     setResponseStream,
     setError,
   }

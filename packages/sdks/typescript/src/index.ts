@@ -153,7 +153,7 @@ class Latitude {
       projectId,
       routeResolver: new RouteResolver({
         gateway,
-        apiVersion: 'v2',
+        apiVersion: 'v3',
       }),
     }
 

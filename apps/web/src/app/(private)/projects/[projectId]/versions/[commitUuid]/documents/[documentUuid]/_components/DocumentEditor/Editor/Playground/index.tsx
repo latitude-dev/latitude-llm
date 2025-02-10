@@ -28,7 +28,6 @@ export default function Playground({
   setPrompt: (prompt: string) => void
   metadata: ConversationMetadata
 }) {
-  const promptlVersion = document.promptlVersion === 1 ? 1 : 0
   const [mode, setMode] = useState<'preview' | 'chat'>('preview')
   const { commit } = useCurrentCommit()
   const [expanded, setExpanded] = useState(true)
@@ -76,7 +75,6 @@ export default function Playground({
           ) : (
             <Chat
               document={document}
-              promptlVersion={promptlVersion}
               parameters={parameters}
               clearChat={() => setMode('preview')}
               expandParameters={expandParameters}

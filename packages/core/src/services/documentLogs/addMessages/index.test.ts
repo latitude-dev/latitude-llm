@@ -27,7 +27,7 @@ import { testConsumeStream } from '../../../tests/helpers'
 import * as aiModule from '../../ai'
 import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
 import { addMessages } from './index'
-import { ChainEventTypes } from '../../../lib/chainStreamManager/events'
+import { ChainEventTypes } from '@latitude-data/constants'
 
 const dummyDoc1Content = `
 ---
@@ -489,7 +489,7 @@ describe('addMessages', () => {
         event: StreamEventTypes.Latitude,
         data: expect.objectContaining({
           type: ChainEventTypes.ChainCompleted,
-          documentLogUuid: providerLog.documentLogUuid!,
+          uuid: providerLog.documentLogUuid!,
           finishReason: 'stop',
         }),
       },

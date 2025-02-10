@@ -12,7 +12,7 @@ import { parseSSEvent } from '$/common/parseSSEEvent'
 import app from '$/routes/app'
 import { testConsumeStream } from 'test/helpers'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { ChainEventTypes } from '@latitude-data/core/lib/chainStreamManager/events'
+import { ChainEventTypes } from '@latitude-data/constants'
 
 const mocks = vi.hoisted(() => ({
   addMessages: vi.fn(async () => {

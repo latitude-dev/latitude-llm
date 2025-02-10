@@ -7,11 +7,11 @@ import { streamToGenerator } from '@latitude-data/core/lib/streamToGenerator'
 import { getUnknownError } from '@latitude-data/core/lib/getUnknownError'
 import { captureException } from '$/common/sentry'
 import {
-  chainEventPresenter,
+  legacyChainEventPresenter,
   getData,
   publishDocumentRunRequestedEvent,
 } from '$/common/documents/getData'
-import { runPresenter } from '$/presenters/runPresenter'
+import { v2RunPresenter } from '$/presenters/runPresenter'
 import { convertToLegacyChainStream } from '@latitude-data/core/lib/chainStreamManager/index'
 
 // @ts-expect-error: streamSSE has type issues with zod-openapi
@@ -65,7 +65,7 @@ export const runHandler: AppRouteHandler<RunRoute> = async (c) => {
       async (stream) => {
         let id = 0
         for await (const event of streamToGenerator(legacyStream)) {
-          const data = chainEventPresenter(event)
+          const data = legacyChainEventPresenter(event)
 
           stream.writeSSE({
             id: String(id++),
@@ -90,6 +90,6 @@ export const runHandler: AppRouteHandler<RunRoute> = async (c) => {
   if (awaitedError) throw awaitedError
 
   const response = await lastResponse
-  const body = runPresenter(response!).unwrap()
+  const body = v2RunPresenter(response!).unwrap()
   return c.json(body)
 }

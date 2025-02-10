@@ -12,7 +12,7 @@ import {
 } from '../../tests/factories'
 import { testConsumeStream } from '../../tests/helpers'
 import { runDocumentAtCommit } from './index'
-import { ChainEventTypes } from '../../lib/chainStreamManager/events'
+import { ChainEventTypes } from '@latitude-data/constants'
 
 const mocks = {
   publish: vi.fn(),
@@ -244,7 +244,8 @@ model: gpt-4o
         event: StreamEventTypes.Latitude,
         data: expect.objectContaining({
           type: ChainEventTypes.ChainCompleted,
-          documentLogUuid: logs[0]!.documentLogUuid,
+          uuid: logs[0]!.documentLogUuid,
+          messages: expect.any(Array),
         }),
       })
     })

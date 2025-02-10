@@ -141,6 +141,7 @@ async function buildToolResponseMessages<Tools extends ToolSpec>({
 type OriginalResponse = {
   uuid: string
   conversation: Message[]
+  toolRequests: ToolCall[]
   response: ChainCallResponseDto
 }
 
@@ -163,15 +164,13 @@ export async function handleToolRequests<
 >({
   chatFn,
   originalResponse,
+  toolRequests,
   ...options
 }: ChatOptionsWithSDKOptions<Tools> & {
   originalResponse: OriginalResponse
+  toolRequests: ToolCall[]
   chatFn: T extends false ? typeof syncChat : typeof streamChat
 }): Promise<ChatSyncAPIResponse | undefined> {
-  const toolRequests =
-    originalResponse.response.streamType === 'text'
-      ? originalResponse.response.toolCalls
-      : []
   const toolHandlers = options.tools!
   const toolResponseMessages = await buildToolResponseMessages({
     tools: toolHandlers,

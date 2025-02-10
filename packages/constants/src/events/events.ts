@@ -4,7 +4,7 @@ import {
   ProviderData,
   StreamEventTypes,
   StreamType,
-} from '@latitude-data/constants'
+} from '..'
 import { FinishReason, LanguageModelUsage } from 'ai'
 
 export enum ChainEventTypes {
@@ -23,7 +23,7 @@ export enum ChainEventTypes {
 interface GenericLatitudeEventData {
   type: ChainEventTypes
   messages: Message[]
-  documentLogUuid: string
+  uuid: string
 }
 
 export interface LatitudeChainStartedEventData
@@ -96,18 +96,18 @@ export type LatitudeEventData =
   | LatitudeChainErrorEventData
   | LatitudeToolsRequestedEventData
 
-// Just a type helper for ChainStreamManager. Omit<LatitudeEventData, 'messages' | 'documentLogUuid'> does not work.
+// Just a type helper for ChainStreamManager. Omit<LatitudeEventData, 'messages' | 'uuid'> does not work.
 export type OmittedLatitudeEventData =
-  | Omit<LatitudeChainStartedEventData, 'messages' | 'documentLogUuid'>
-  | Omit<LatitudeStepStartedEventData, 'messages' | 'documentLogUuid'>
-  | Omit<LatitudeProviderStartedEventData, 'messages' | 'documentLogUuid'>
-  | Omit<LatitudeProviderCompletedEventData, 'messages' | 'documentLogUuid'>
-  | Omit<LatitudeToolsStartedEventData, 'messages' | 'documentLogUuid'>
-  | Omit<LatitudeToolCompletedEventData, 'messages' | 'documentLogUuid'>
-  | Omit<LatitudeStepCompletedEventData, 'messages' | 'documentLogUuid'>
-  | Omit<LatitudeChainCompletedEventData, 'messages' | 'documentLogUuid'>
-  | Omit<LatitudeChainErrorEventData, 'messages' | 'documentLogUuid'>
-  | Omit<LatitudeToolsRequestedEventData, 'messages' | 'documentLogUuid'>
+  | Omit<LatitudeChainStartedEventData, 'messages' | 'uuid'>
+  | Omit<LatitudeStepStartedEventData, 'messages' | 'uuid'>
+  | Omit<LatitudeProviderStartedEventData, 'messages' | 'uuid'>
+  | Omit<LatitudeProviderCompletedEventData, 'messages' | 'uuid'>
+  | Omit<LatitudeToolsStartedEventData, 'messages' | 'uuid'>
+  | Omit<LatitudeToolCompletedEventData, 'messages' | 'uuid'>
+  | Omit<LatitudeStepCompletedEventData, 'messages' | 'uuid'>
+  | Omit<LatitudeChainCompletedEventData, 'messages' | 'uuid'>
+  | Omit<LatitudeChainErrorEventData, 'messages' | 'uuid'>
+  | Omit<LatitudeToolsRequestedEventData, 'messages' | 'uuid'>
 
 export type ChainEvent =
   | {

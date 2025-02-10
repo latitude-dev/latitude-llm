@@ -1,20 +1,15 @@
-import {
-  ChainEventDto,
-  LegacyChainEventTypes,
-  StreamEventTypes,
-} from '@latitude-data/constants'
-import { buildMessagesFromResponse } from '@latitude-data/core/browser'
-import { PromptlVersion } from '@latitude-data/web-ui'
+import { StreamEventTypes } from '@latitude-data/core/browser'
 import { LanguageModelUsage } from 'ai'
 import { readStreamableValue, StreamableValue } from 'ai/rsc'
 import { useCallback, useRef, useState } from 'react'
-import { useMessages } from './useMessages'
 import {
   ContentType,
   MessageRole,
   ToolMessage,
   Message,
+  ToolCall,
 } from '@latitude-data/compiler'
+import { ChainEvent, ChainEventTypes } from '@latitude-data/constants'
 
 function buildMessage({ input }: { input: string | ToolMessage[] }) {
   if (typeof input === 'string') {
@@ -28,16 +23,12 @@ function buildMessage({ input }: { input: string | ToolMessage[] }) {
   return input
 }
 
-export function usePlaygroundChat<V extends PromptlVersion>({
+export function usePlaygroundChat({
   runPromptFn,
   addMessagesFn,
-  promptlVersion,
 }: {
   runPromptFn: () => Promise<{
-    stream: StreamableValue<{
-      event: StreamEventTypes
-      data: ChainEventDto
-    }>
+    stream: StreamableValue<ChainEvent>
     documentLogUuid: Promise<string>
   }>
   addMessagesFn: ({
@@ -47,12 +38,8 @@ export function usePlaygroundChat<V extends PromptlVersion>({
     documentLogUuid: string
     messages: Message[]
   }) => Promise<{
-    stream: StreamableValue<{
-      event: StreamEventTypes
-      data: ChainEventDto
-    }>
+    stream: StreamableValue<ChainEvent>
   }>
-  promptlVersion: V
 }) {
   const isChat = useRef(false)
   const [documentLogUuid, setDocumentLogUuid] = useState<string | undefined>()
@@ -61,9 +48,8 @@ export function usePlaygroundChat<V extends PromptlVersion>({
     string | undefined
   >()
   const [isLoading, setIsLoading] = useState(false)
-  const { messages, addMessages, unresponedToolCalls } = useMessages<V>({
-    version: promptlVersion,
-  })
+  const [messages, setMessages] = useState<Message[]>([])
+  const [unresponedToolCalls, setUnresponedToolCalls] = useState<ToolCall[]>([])
   const [chainLength, setChainLength] = useState(Infinity)
   const [usage, setUsage] = useState<LanguageModelUsage>({
     promptTokens: 0,
@@ -72,18 +58,19 @@ export function usePlaygroundChat<V extends PromptlVersion>({
   })
   const [time, setTime] = useState<number | undefined>()
 
+  const addMessages = useCallback(
+    (m: Message[]) => {
+      setMessages((prev) => [...prev, ...m])
+    },
+    [setMessages],
+  )
+
   const handleStream = useCallback(
-    async (
-      stream: StreamableValue<{
-        event: StreamEventTypes
-        data: ChainEventDto
-      }>,
-    ) => {
+    async (stream: StreamableValue<ChainEvent>) => {
       setIsLoading(true)
       setError(undefined)
       const start = performance.now()
       let accumulatedTextDelta = ''
-      let messagesCount = 0
 
       try {
         for await (const serverEvent of readStreamableValue(stream)) {
@@ -100,43 +87,27 @@ export function usePlaygroundChat<V extends PromptlVersion>({
             continue
           }
 
-          // Step started
-          if (data.type === LegacyChainEventTypes.Step) {
-            setStreamingResponse('')
-            addMessages(data.messages ?? [])
-            messagesCount += data.messages?.length ?? 0
+          setMessages(data.messages)
+
+          if (data.type === ChainEventTypes.StepStarted) {
             accumulatedTextDelta = ''
           }
-
-          // Step finished
-          if (data.type === LegacyChainEventTypes.StepComplete) {
-            const responseMsgs = buildMessagesFromResponse(data)
+          if (data.type === ChainEventTypes.ProviderCompleted) {
+            accumulatedTextDelta = ''
             setStreamingResponse(undefined)
-            addMessages(responseMsgs)
-            messagesCount += responseMsgs.length
-            accumulatedTextDelta = ''
+            setUsage(data.tokenUsage)
           }
-
-          // Chain finished
-          if (data.type === LegacyChainEventTypes.Complete) {
+          if (data.type === ChainEventTypes.ChainCompleted) {
             if (!isChat.current) {
-              setChainLength((prev) => prev + messagesCount)
+              setChainLength(data.messages.length)
               setTime((prev) => (prev ?? 0) + (performance.now() - start))
             }
-            setUsage((prev) => ({
-              promptTokens:
-                (prev?.promptTokens ?? 0) + data.response.usage.promptTokens,
-              completionTokens:
-                (prev?.completionTokens ?? 0) +
-                data.response.usage.completionTokens,
-              totalTokens:
-                (prev?.totalTokens ?? 0) + data.response.usage.totalTokens,
-            }))
           }
-
-          // Error
-          if (data.type === LegacyChainEventTypes.Error) {
-            setError(new Error(data.error.message))
+          if (data.type === ChainEventTypes.ChainError) {
+            setError(data.error)
+          }
+          if (data.type === ChainEventTypes.ToolsRequested) {
+            setUnresponedToolCalls(data.tools)
           }
         }
       } catch (error) {
@@ -161,10 +132,24 @@ export function usePlaygroundChat<V extends PromptlVersion>({
 
       const newMessages = buildMessage({ input })
 
-      // Only in Chat mode we add optimistically the message
       if (typeof input === 'string') {
+        // Only in Chat mode we add optimistically the message
         addMessages(newMessages)
         isChat.current = true
+      } else {
+        // Remove unresponded tool calls
+        const respondedToolCallIds = newMessages.reduce((acc, message) => {
+          if (message.role !== MessageRole.tool) return acc
+          const toolResponseContents = message.content.filter(
+            (c) => c.type === ContentType.toolResult,
+          )
+          return [...acc, ...toolResponseContents.map((c) => c.toolCallId)]
+        }, [] as string[])
+        setUnresponedToolCalls((prev) =>
+          prev.filter((unrespondedToolCall) => {
+            return !respondedToolCallIds.includes(unrespondedToolCall.id)
+          }),
+        )
       }
 
       if (!isChat.current) {
@@ -184,7 +169,7 @@ export function usePlaygroundChat<V extends PromptlVersion>({
         setError(error as Error)
       }
     },
-    [addMessages, addMessagesFn, documentLogUuid, handleStream],
+    [addMessagesFn, documentLogUuid, handleStream],
   )
 
   const start = useCallback(async () => {
@@ -202,8 +187,8 @@ export function usePlaygroundChat<V extends PromptlVersion>({
   return {
     start,
     submitUserMessage,
-    setError,
     addMessages,
+    setError,
     error,
     streamingResponse,
     messages,

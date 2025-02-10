@@ -5,18 +5,30 @@ import { ROUTES } from '$/routes'
 import { documentParamsSchema } from '$/routes/v2/documents/paramsSchema'
 import { createRoute, z } from '@hono/zod-openapi'
 
-function getRouteFactory({ path, tags }: { path: string; tags: string[] }) {
+function getOrCreateRouteFactory({
+  path,
+  tags,
+}: {
+  path: string
+  tags: string[]
+}) {
   return createRoute({
-    operationId: 'getDocument',
-    method: http.Methods.GET,
+    operationId: 'getOrCreateDocument',
+    method: http.Methods.POST,
     path,
     tags,
     request: {
-      params: documentParamsSchema.extend({
-        documentPath: z.string().openapi({
-          description: 'Prompt path',
-        }),
-      }),
+      params: documentParamsSchema,
+      body: {
+        content: {
+          [http.MediaTypes.JSON]: {
+            schema: z.object({
+              path: z.string(),
+              prompt: z.string().optional(),
+            }),
+          },
+        },
+      },
     },
     responses: {
       ...GENERIC_ERROR_RESPONSES,
@@ -30,13 +42,14 @@ function getRouteFactory({ path, tags }: { path: string; tags: string[] }) {
   })
 }
 
-export const getRouteV1 = getRouteFactory({
-  path: ROUTES.v1.documents.get,
-  tags: ['V1_DEPRECATED'],
+export const getOrCreateRouteV2 = getOrCreateRouteFactory({
+  path: ROUTES.v2.documents.getOrCreate,
+  tags: ['V2_DEPRECATED'],
 })
-export const getRouteV2 = getRouteFactory({
-  path: ROUTES.v2.documents.get,
+
+export const getOrCreateRouteV3 = getOrCreateRouteFactory({
+  path: ROUTES.v3.documents.getOrCreate,
   tags: ['Documents'],
 })
 
-export type GetRoute = typeof getRouteV2
+export type GetOrCreateRoute = typeof getOrCreateRouteV3

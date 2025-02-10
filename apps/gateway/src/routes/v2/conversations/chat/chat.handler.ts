@@ -1,6 +1,6 @@
-import { chainEventPresenter } from '$/common/documents/getData'
+import { legacyChainEventPresenter } from '$/common/documents/getData'
 import { AppRouteHandler } from '$/openApi/types'
-import { runPresenter } from '$/presenters/runPresenter'
+import { v2RunPresenter } from '$/presenters/runPresenter'
 import { ChatRoute } from '$/routes/v2/conversations/chat/chat.route'
 import { LogSources } from '@latitude-data/core/browser'
 import { convertToLegacyChainStream } from '@latitude-data/core/lib/chainStreamManager/index'
@@ -38,7 +38,7 @@ export const chatHandler: AppRouteHandler<ChatRoute> = async (c) => {
       async (stream) => {
         let id = 0
         for await (const event of streamToGenerator(legacyStream)) {
-          const data = chainEventPresenter(event)
+          const data = legacyChainEventPresenter(event)
 
           stream.writeSSE({
             id: String(id++),
@@ -64,6 +64,6 @@ export const chatHandler: AppRouteHandler<ChatRoute> = async (c) => {
 
   const awaitedResponse = await lastResponse
 
-  const body = runPresenter(awaitedResponse!).unwrap()
+  const body = v2RunPresenter(awaitedResponse!).unwrap()
   return c.json(body, 200)
 }

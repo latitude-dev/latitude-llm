@@ -12,7 +12,7 @@ import { createRoute, z } from '@hono/zod-openapi'
 export const runRoute = createRoute({
   method: http.Methods.POST,
   path: ROUTES.v2.documents.run,
-  tags: ['Documents'],
+  tags: ['V2_DEPRECATED'],
   request: {
     params: documentParamsSchema,
     body: {

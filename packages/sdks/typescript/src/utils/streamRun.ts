@@ -14,7 +14,7 @@ import {
   SDKOptions,
   ToolSpec,
 } from '$sdk/utils/types'
-import { handleToolRequests, hasToolRequests } from '$sdk/utils/toolHelpers'
+import { handleToolRequests, hasTools } from '$sdk/utils/toolHelpers'
 import { streamChat } from '$sdk/utils/streamChat'
 
 export async function streamRun<Tools extends ToolSpec>(
@@ -82,10 +82,11 @@ export async function streamRun<Tools extends ToolSpec>(
       onError,
     })
 
-    if (hasToolRequests({ response: finalResponse, tools })) {
+    if (hasTools(tools) && finalResponse.toolRequests.length) {
       return handleToolRequests<Tools, false>({
         originalResponse: finalResponse,
         messages: finalResponse.conversation,
+        toolRequests: finalResponse.toolRequests,
         onEvent,
         onFinished,
         onError,

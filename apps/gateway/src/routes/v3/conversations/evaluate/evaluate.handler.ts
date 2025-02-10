@@ -7,7 +7,7 @@ import {
 import { evaluateDocumentLog } from '@latitude-data/core/services/documentLogs/evaluate'
 import { captureException } from '$/common/sentry'
 import { AppRouteHandler } from '$/openApi/types'
-import { EvaluateRoute } from '$/routes/v2/conversations/evaluate/evaluate.route'
+import { EvaluateRoute } from './evaluate.route'
 
 // @ts-expect-error: streamSSE has type issues
 export const evaluateHandler: AppRouteHandler<EvaluateRoute> = async (c) => {

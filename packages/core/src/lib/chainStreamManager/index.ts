@@ -1,6 +1,10 @@
 import { Message, ToolCall } from '@latitude-data/compiler'
 import { StreamEventTypes } from '@latitude-data/constants'
-import { ChainEvent, ChainEventTypes, OmittedLatitudeEventData } from './events'
+import {
+  ChainEvent,
+  ChainEventTypes,
+  OmittedLatitudeEventData,
+} from '@latitude-data/constants'
 import { ExecuteStepArgs, streamAIResponse } from './step/streamAIResponse'
 import { ChainStepResponse, StreamType } from '../../constants'
 import { buildMessagesFromResponse } from '../../helpers'
@@ -196,7 +200,7 @@ export class ChainStreamManager {
       return
     }
 
-    if (event.data.documentLogUuid !== this.errorableUuid) {
+    if (event.data.uuid !== this.errorableUuid) {
       throw new Error('Forwarded event has different errorableUuid')
     }
 
@@ -215,7 +219,7 @@ export class ChainStreamManager {
       data: {
         ...event,
         messages: this.messages,
-        documentLogUuid: this.errorableUuid,
+        uuid: this.errorableUuid,
       },
     })
   }

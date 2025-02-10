@@ -4,7 +4,7 @@ import { runChain, SomeChain, RunChainArgs } from '../chains/run'
 import { runAgentStep } from './runStep'
 import { deleteCachedChain } from '../chains/chainCache'
 import { ChainStreamManager } from '../../lib/chainStreamManager'
-import { ChainEventTypes } from '../../lib/chainStreamManager/events'
+import { ChainEventTypes } from '@latitude-data/constants'
 
 export function runAgent<T extends boolean, C extends SomeChain>({
   workspace,

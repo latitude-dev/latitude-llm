@@ -38,7 +38,7 @@ describe('/get-or-create', () => {
       const { mockAuthHeader, mockUrl, mockBody, projectId, versionUuid } =
         mockRequest({
           server,
-          apiVersion: 'v2',
+          apiVersion: 'v3',
           projectId: 31,
           versionUuid: 'fake-version-uuid',
         })
@@ -51,7 +51,7 @@ describe('/get-or-create', () => {
 
       expect(mockAuthHeader).toHaveBeenCalledWith(`Bearer ${FAKE_API_KEY}`)
       expect(mockUrl).toHaveBeenCalledWith(
-        `http://localhost:8787/api/v2/projects/${projectId}/versions/${versionUuid}/documents/get-or-create`,
+        `http://localhost:8787/api/v3/projects/${projectId}/versions/${versionUuid}/documents/get-or-create`,
       )
       expect(mockBody).toHaveBeenCalledWith({
         path: 'fake-document-path',
@@ -66,7 +66,7 @@ describe('/get-or-create', () => {
     server.boundary(async () => {
       const { mockAuthHeader, mockUrl, mockBody, projectId } = mockRequest({
         server,
-        apiVersion: 'v2',
+        apiVersion: 'v3',
         projectId: 31,
       })
 
@@ -76,7 +76,7 @@ describe('/get-or-create', () => {
 
       expect(mockAuthHeader).toHaveBeenCalledWith(`Bearer ${FAKE_API_KEY}`)
       expect(mockUrl).toHaveBeenCalledWith(
-        `http://localhost:8787/api/v2/projects/${projectId}/versions/live/documents/get-or-create`,
+        `http://localhost:8787/api/v3/projects/${projectId}/versions/live/documents/get-or-create`,
       )
       expect(mockBody).toHaveBeenCalledWith({
         path: 'fake-document-path',
@@ -95,7 +95,7 @@ describe('/get-or-create', () => {
         versionUuid,
       } = mock200Response({
         server,
-        apiVersion: 'v2',
+        apiVersion: 'v3',
         projectId: 31,
         versionUuid: 'fake-version-uuid',
       })
@@ -116,7 +116,7 @@ describe('/get-or-create', () => {
     server.boundary(async () => {
       const { mockFn, projectId, versionUuid } = mock502Response({
         server,
-        apiVersion: 'v2',
+        apiVersion: 'v3',
         projectId: 31,
         versionUuid: 'fake-version-uuid',
       })
