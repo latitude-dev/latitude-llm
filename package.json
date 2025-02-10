@@ -34,6 +34,9 @@
         "react-dom": ">=18.x",
         "eslint": ">=8.x"
       }
+    },
+    "patchedDependencies": {
+      "socket.io-react-hook": "patches/socket.io-react-hook.patch"
     }
   },
   "dependencies": {
