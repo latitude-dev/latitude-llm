@@ -2,8 +2,12 @@ import { EvaluationRoutes, ROUTES } from '$/services/routes'
 import useConnectedEvaluations from '$/stores/connectedEvaluations'
 import useEvaluationResultsByDocumentLogs from '$/stores/evaluationResultsByDocumentLogs'
 import { DocumentLogWithMetadata } from '@latitude-data/core/repositories'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
+import {
+  EventArgs,
+  useSockets,
+} from '$/components/Providers/WebsocketsProvider/useSockets'
 import {
   ConnectedEvaluation,
   DocumentVersion,
@@ -316,6 +320,41 @@ function CollapsedContentHeader({
   )
 }
 
+const useEvaluationResultsSocket = ({
+  documentLog,
+  evaluations,
+  mutate,
+}: {
+  documentLog?: DocumentLogWithMetadata
+  evaluations: ContentProps['evaluations']
+  mutate: ReturnType<typeof useEvaluationResultsByDocumentLogs>['mutate']
+}) => {
+  const onMessage = useCallback(
+    (args: EventArgs<'evaluationResultCreated'>) => {
+      if (!args.row || !documentLog) return
+      if (args.row.documentLogId !== documentLog.id) return
+      const evaluation = evaluations.find(
+        (evaluation) =>
+          evaluation.live && evaluation.id === args.row.evaluationId,
+      )
+      if (!evaluation) return
+
+      mutate(
+        (prev) => ({
+          ...(prev ?? {}),
+          [documentLog.id]: (prev?.[documentLog.id] ?? []).concat([
+            { result: args.row, evaluation },
+          ]),
+        }),
+        { revalidate: false },
+      )
+    },
+    [documentLog, evaluations, mutate],
+  )
+
+  useSockets({ event: 'evaluationResultCreated', onMessage })
+}
+
 export default function Evaluations({
   documentLog,
   document,
@@ -348,12 +387,11 @@ export default function Evaluations({
     [connectedEvaluations],
   )
 
-  const { data: evaluationResults } = useEvaluationResultsByDocumentLogs(
-    {
+  const { data: evaluationResults, mutate } =
+    useEvaluationResultsByDocumentLogs({
       documentLogIds: documentLog ? [documentLog.id] : [],
-    },
-    { refreshInterval: 5000 },
-  )
+    })
+  useEvaluationResultsSocket({ documentLog, evaluations, mutate })
   const results = useMemo(() => {
     if (!documentLog || !evaluationResults[documentLog.id]) return {}
     return evaluationResults[documentLog.id]!.reduce(

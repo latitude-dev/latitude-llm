@@ -131,11 +131,9 @@ const TextAtom = forwardRef<HTMLElement, AllTextProps>(function Text(
           [font.family.mono]: monospace,
           [font.family.sans]: !monospace,
           'text-center': centered,
+          'line-clamp-1': lineClamp === 1,
           'line-clamp-2': lineClamp === 2,
           'line-clamp-3': lineClamp === 3,
-          'line-clamp-4': lineClamp === 4,
-          'line-clamp-5': lineClamp === 5,
-          'line-clamp-6': lineClamp === 6,
         },
       )}
     >
