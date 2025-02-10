@@ -59,13 +59,13 @@ describe('GET /api/documents/[projectId]/[commitUuid]/[documentUuid]/evaluations
   })
 
   it('should return evaluations for the given document UUID', async () => {
-    const mockFilterByDocumentUuid = vi
+    const mockFilterWithDetailsByDocumentUuid = vi
       .fn()
       .mockResolvedValue(Result.ok(mockEvaluations))
     vi.mocked(ConnectedEvaluationsRepository).mockImplementation(
       () =>
         ({
-          filterByDocumentUuid: mockFilterByDocumentUuid,
+          filterWithDetailsByDocumentUuid: mockFilterWithDetailsByDocumentUuid,
         }) as any,
     )
 
@@ -78,7 +78,7 @@ describe('GET /api/documents/[projectId]/[commitUuid]/[documentUuid]/evaluations
     })
 
     expect(ConnectedEvaluationsRepository).toHaveBeenCalledWith(workspace.id)
-    expect(mockFilterByDocumentUuid).toHaveBeenCalledWith(
+    expect(mockFilterWithDetailsByDocumentUuid).toHaveBeenCalledWith(
       documents[0]!.documentUuid,
     )
     expect(response).toBeInstanceOf(NextResponse)
@@ -92,13 +92,13 @@ describe('GET /api/documents/[projectId]/[commitUuid]/[documentUuid]/evaluations
 
   it('should handle errors when fetching evaluations fails', async () => {
     const mockError = new Error('Failed to fetch evaluations')
-    const mockFilterByDocumentUuid = vi
+    const mockFilterWithDetailsByDocumentUuid = vi
       .fn()
       .mockResolvedValue(Result.error(mockError))
     vi.mocked(ConnectedEvaluationsRepository).mockImplementation(
       () =>
         ({
-          filterByDocumentUuid: mockFilterByDocumentUuid,
+          filterWithDetailsByDocumentUuid: mockFilterWithDetailsByDocumentUuid,
         }) as any,
     )
 
@@ -111,7 +111,7 @@ describe('GET /api/documents/[projectId]/[commitUuid]/[documentUuid]/evaluations
     })
 
     expect(ConnectedEvaluationsRepository).toHaveBeenCalledWith(workspace.id)
-    expect(mockFilterByDocumentUuid).toHaveBeenCalledWith(
+    expect(mockFilterWithDetailsByDocumentUuid).toHaveBeenCalledWith(
       documents[0]!.documentUuid,
     )
     expect(response).toBeInstanceOf(NextResponse)

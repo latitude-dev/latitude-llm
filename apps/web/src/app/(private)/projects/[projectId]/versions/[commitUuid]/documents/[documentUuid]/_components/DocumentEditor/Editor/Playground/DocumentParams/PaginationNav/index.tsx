@@ -23,7 +23,7 @@ export function ParametersPaginationNav({
   return (
     <div className='flex items-center min-w-0'>
       <Button
-        size='default'
+        size='icon'
         variant='ghost'
         disabled={zeroIndex ? currentIndex <= 0 : currentIndex <= 1 || disabled}
         iconProps={{
@@ -38,7 +38,7 @@ export function ParametersPaginationNav({
         </Text.H5M>
       </div>
       <Button
-        size='default'
+        size='icon'
         variant='ghost'
         disabled={
           disabled ||

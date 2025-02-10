@@ -1,6 +1,6 @@
-import { DocumentLogWithMetadata } from '@latitude-data/core/repositories'
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
+import { DocumentLogWithMetadata } from '@latitude-data/core/repositories'
 import useSWR, { SWRConfiguration } from 'swr'
 
 export default function useDocumentLogWithMetadata(
@@ -15,6 +15,7 @@ export default function useDocumentLogWithMetadata(
     documentLogUuid
       ? ROUTES.api.documentLogs.uuids.detail({ uuid: documentLogUuid }).root
       : undefined,
+    { fallback: null },
   )
   return useSWR<DocumentLogWithMetadata>(
     ['documentLogWithMetadata', documentLogUuid],

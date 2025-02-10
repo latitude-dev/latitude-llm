@@ -1,4 +1,10 @@
 import {
+  ContentType,
+  Message,
+  MessageRole,
+  ToolMessage,
+} from '@latitude-data/compiler'
+import {
   ChainEventDto,
   LegacyChainEventTypes,
   StreamEventTypes,
@@ -9,12 +15,6 @@ import { LanguageModelUsage } from 'ai'
 import { readStreamableValue, StreamableValue } from 'ai/rsc'
 import { useCallback, useRef, useState } from 'react'
 import { useMessages } from './useMessages'
-import {
-  ContentType,
-  MessageRole,
-  ToolMessage,
-  Message,
-} from '@latitude-data/compiler'
 
 function buildMessage({ input }: { input: string | ToolMessage[] }) {
   if (typeof input === 'string') {
@@ -31,6 +31,7 @@ function buildMessage({ input }: { input: string | ToolMessage[] }) {
 export function usePlaygroundChat<V extends PromptlVersion>({
   runPromptFn,
   addMessagesFn,
+  onPromptRan,
   promptlVersion,
 }: {
   runPromptFn: () => Promise<{
@@ -52,6 +53,7 @@ export function usePlaygroundChat<V extends PromptlVersion>({
       data: ChainEventDto
     }>
   }>
+  onPromptRan?: (documentLogUuid?: string, error?: Error) => void
   promptlVersion: V
 }) {
   const isChat = useRef(false)
@@ -192,12 +194,15 @@ export function usePlaygroundChat<V extends PromptlVersion>({
       setIsLoading(true)
       const { stream, documentLogUuid } = await runPromptFn()
       handleStream(stream)
-      documentLogUuid.then((uuid) => setDocumentLogUuid(uuid))
+      const uuid = await documentLogUuid
+      setDocumentLogUuid(uuid)
+      onPromptRan?.(uuid, error)
     } catch (error) {
       setIsLoading(false)
       setError(error as Error)
+      onPromptRan?.(undefined, error as Error)
     }
-  }, [handleStream, runPromptFn])
+  }, [handleStream, runPromptFn, onPromptRan])
 
   return {
     start,

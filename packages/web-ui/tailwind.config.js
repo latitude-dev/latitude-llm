@@ -45,19 +45,25 @@ export default {
         success: {
           DEFAULT: 'hsl(var(--success) / <alpha-value>)',
           foreground: 'hsl(var(--success-foreground) / <alpha-value>)',
-        },
-        'destructive-muted-foreground':
-          'hsl(var(--destructive-muted-foreground) / <alpha-value>)',
-        'warning-muted-foreground':
-          'hsl(var(--warning-muted-foreground) / <alpha-value>)',
+        },      
         muted: {
           DEFAULT: 'hsl(var(--muted) / <alpha-value>)',
           foreground: 'hsl(var(--muted-foreground) / <alpha-value>)',
+        },
+        'success-muted': {
+          DEFAULT: 'hsl(var(--success-muted) / <alpha-value>)',
+          foreground:
+            'hsl(var(--success-muted-foreground) / <alpha-value>)',
         },
         'destructive-muted': {
           DEFAULT: 'hsl(var(--destructive-muted) / <alpha-value>)',
           foreground:
             'hsl(var(--destructive-muted-foreground) / <alpha-value>)',
+        },
+        'warning-muted': {
+          DEFAULT: 'hsl(var(--warning-muted) / <alpha-value>)',
+          foreground:
+            'hsl(var(--warning-muted-foreground) / <alpha-value>)',
         },
         accent: {
           DEFAULT: 'hsl(var(--accent) / <alpha-value>)',
