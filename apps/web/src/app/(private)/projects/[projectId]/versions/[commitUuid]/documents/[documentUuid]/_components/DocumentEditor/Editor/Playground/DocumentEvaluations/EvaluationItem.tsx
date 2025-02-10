@@ -56,7 +56,6 @@ function EvaluationItemContent({
       <Text.H6
         userSelect={false}
         color='foregroundMuted'
-        lineHeight='h5'
         wordBreak='breakAll'
         ellipsis
         lineClamp={3}

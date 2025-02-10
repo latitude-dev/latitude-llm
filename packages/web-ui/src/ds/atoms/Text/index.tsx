@@ -24,7 +24,6 @@ import {
   type TextColor,
   type WhiteSpace,
   type WordBreak,
-  type LineHeight,
 } from '../../tokens'
 
 type Display = 'inline' | 'inline-block' | 'block'
@@ -39,6 +38,7 @@ export type Common = {
   wordBreak?: WordBreak
   whiteSpace?: WhiteSpace
   ellipsis?: boolean
+  lineClamp?: number
   display?: Display
   userSelect?: boolean
   noWrap?: boolean
@@ -49,8 +49,6 @@ export type Common = {
   monospace?: boolean
   centered?: boolean
   animate?: boolean
-  lineClamp?: number
-  lineHeight?: LineHeight
 }
 
 export type TextProps = {
@@ -81,6 +79,7 @@ const TextAtom = forwardRef<HTMLElement, AllTextProps>(function Text(
     whiteSpace = 'normal',
     wordBreak = 'normal',
     ellipsis = false,
+    lineClamp = undefined,
     userSelect = true,
     noWrap = false,
     underline = false,
@@ -89,8 +88,6 @@ const TextAtom = forwardRef<HTMLElement, AllTextProps>(function Text(
     monospace = false,
     centered = false,
     animate = false,
-    lineClamp = undefined,
-    lineHeight = undefined,
   },
   ref,
 ) {
@@ -100,7 +97,6 @@ const TextAtom = forwardRef<HTMLElement, AllTextProps>(function Text(
   const weightClass = font.weight[weight]
   const spacingClass = font.spacing[spacing]
   const alignClass = font.align[align]
-  const lineHeightClass = lineHeight ? font.height[lineHeight] : undefined
   const wordBreakClass = wordBreakOptions[wordBreak]
   const whiteSpaceClass = whiteSpaceOptions[whiteSpace]
   const Comp = asChild ? Slot : 'span'
@@ -116,7 +112,6 @@ const TextAtom = forwardRef<HTMLElement, AllTextProps>(function Text(
         wordBreakClass,
         whiteSpaceClass,
         alignClass,
-        lineHeightClass,
         display,
         {
           'bg-[length:200%_auto] text-transparent bg-clip-text animate-text-gradient bg-gradient-to-r from-muted via-muted-foreground to-muted':
@@ -131,9 +126,8 @@ const TextAtom = forwardRef<HTMLElement, AllTextProps>(function Text(
           [font.family.mono]: monospace,
           [font.family.sans]: !monospace,
           'text-center': centered,
-          'line-clamp-1': lineClamp === 1,
-          'line-clamp-2': lineClamp === 2,
           'line-clamp-3': lineClamp === 3,
+          'leading-5': lineClamp && size === 'h6',
         },
       )}
     >
