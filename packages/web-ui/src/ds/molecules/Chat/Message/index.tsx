@@ -7,6 +7,7 @@ import {
   FileContent,
   ImageContent,
   MessageContent,
+  type MessageRole,
   PromptlSourceRef,
   TextContent,
 } from '@latitude-data/compiler'
@@ -24,7 +25,7 @@ import {
   Tooltip,
 } from '../../../atoms'
 import { colors, font, TextColor } from '../../../tokens'
-import { roleToString, roleVariant } from './helpers'
+import { isAgentToolResponse, roleToString, roleVariant } from './helpers'
 import { AGENT_RETURN_TOOL_NAME } from '@latitude-data/core/browser'
 import { TruncatedTooltip } from '../../TruncatedTooltip'
 
@@ -87,6 +88,9 @@ export function Message({
   parameters = [],
   collapseParameters = false,
 }: MessageProps) {
+  if (isAgentToolResponse({ role: role as MessageRole, content })) {
+    return null
+  }
   return (
     <MessageItem
       animatePulse={animatePulse}

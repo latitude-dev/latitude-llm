@@ -155,7 +155,7 @@ export type ToolCalledFn<Tools extends ToolSpec> = {
   [K in keyof Tools]: ToolHandler<Tools, K>
 }
 
-export type SdkApiVersion = 'v1' | 'v2'
+export type SdkApiVersion = 'v1' | 'v2' | 'v3'
 
 export type {
   ChainEvent,

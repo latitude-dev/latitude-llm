@@ -24,7 +24,7 @@ describe('/get', () => {
     server.boundary(async () => {
       const { docPath, mockFn } = mockAuthHeader({
         server,
-        apiVersion: 'v2',
+        apiVersion: 'v3',
         docPath: 'fake-document-id',
       })
       await sdk.prompts.get(docPath, { projectId })
@@ -37,7 +37,7 @@ describe('/get', () => {
     server.boundary(async () => {
       const { docPath, mockResponse } = mockGetBody({
         server,
-        apiVersion: 'v2',
+        apiVersion: 'v3',
         version: 'live',
         docPath: 'fake-document-id',
       })
@@ -51,7 +51,7 @@ describe('/get', () => {
     server.boundary(async () => {
       const { docPath } = mock500Error({
         server,
-        apiVersion: 'v2',
+        apiVersion: 'v3',
         docPath: 'fake-document-id',
       })
       try {
@@ -68,7 +68,7 @@ describe('/get', () => {
   it('target correct version uuid if one is provided', async () => {
     const { docPath, version, mockResponse } = mockGetBody({
       server,
-      apiVersion: 'v2',
+      apiVersion: 'v3',
       version: 'fake-version-uuid',
       docPath: 'fake-document-id',
     })

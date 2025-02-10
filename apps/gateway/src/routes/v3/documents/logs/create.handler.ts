@@ -2,7 +2,7 @@ import { LogSources } from '@latitude-data/core/browser'
 import { generateUUIDIdentifier } from '@latitude-data/core/lib/generateUUID'
 import { createDocumentLog } from '@latitude-data/core/services/documentLogs/create'
 import { AppRouteHandler } from '$/openApi/types'
-import { CreateLogRoute } from '$/routes/v2/documents/logs/create.route'
+import { CreateLogRoute } from './create.route'
 import { getData } from '$/common/documents/getData'
 
 // @ts-expect-error: broken types

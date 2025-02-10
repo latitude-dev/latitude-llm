@@ -44,7 +44,7 @@ describe('/chat', () => {
         const { mockAuthHeader, mockUrl, mockBody, conversationUuid } =
           mockStreamResponse({
             server,
-            apiVersion: 'v2',
+            apiVersion: 'v3',
             conversationUuid: 'fake-document-log-uuid',
           })
 
@@ -66,7 +66,7 @@ describe('/chat', () => {
 
         expect(mockAuthHeader).toHaveBeenCalledWith('Bearer fake-api-key')
         expect(mockUrl).toHaveBeenCalledWith(
-          `http://localhost:8787/api/v2/conversations/${conversationUuid}/chat`,
+          `http://localhost:8787/api/v3/conversations/${conversationUuid}/chat`,
         )
         expect(mockBody).toHaveBeenCalledWith({
           body: {
@@ -97,7 +97,7 @@ describe('/chat', () => {
         const { chunks, finalResponse, conversationUuid } = mockStreamResponse({
           server,
           conversationUuid: 'fake-document-log-uuid',
-          apiVersion: 'v2',
+          apiVersion: 'v3',
         })
 
         const response = await sdk.prompts.chat(
@@ -139,7 +139,7 @@ describe('/chat', () => {
       const onErrorMock = vi.fn()
       const { mockFn, conversationUuid } = mock502Response({
         server,
-        apiVersion: 'v2',
+        apiVersion: 'v3',
         conversationUuid: 'fake-document-log-uuid',
       })
 
@@ -179,7 +179,7 @@ describe('/chat', () => {
       const onErrorMock = vi.fn()
       const { mockFn, conversationUuid } = mock502Response({
         server,
-        apiVersion: 'v2',
+        apiVersion: 'v3',
         conversationUuid: 'fake-document-log-uuid',
       })
 
@@ -218,7 +218,7 @@ describe('/chat', () => {
     it('throws error if onError option is not present', async () => {
       const { mockFn, conversationUuid } = mock502Response({
         server,
-        apiVersion: 'v2',
+        apiVersion: 'v3',
         conversationUuid: 'fake-document-log-uuid',
       })
 
@@ -262,7 +262,7 @@ describe('/chat', () => {
         const { mockAuthHeader, mockUrl, mockBody, conversationUuid } =
           mockRequest({
             server,
-            apiVersion: 'v2',
+            apiVersion: 'v3',
             conversationUuid: 'fake-document-log-uuid',
             fakeResponse: RUN_TEXT_RESPONSE,
           })
@@ -285,7 +285,7 @@ describe('/chat', () => {
 
         expect(mockAuthHeader).toHaveBeenCalledWith('Bearer fake-api-key')
         expect(mockUrl).toHaveBeenCalledWith(
-          `http://localhost:8787/api/v2/conversations/${conversationUuid}/chat`,
+          `http://localhost:8787/api/v3/conversations/${conversationUuid}/chat`,
         )
         expect(mockBody).toHaveBeenCalledWith({
           body: {
@@ -315,7 +315,7 @@ describe('/chat', () => {
         const { finalResponse, conversationUuid } = mockNonStreamResponse({
           server,
           conversationUuid: 'fake-document-log-uuid',
-          apiVersion: 'v2',
+          apiVersion: 'v3',
         })
 
         const response = await sdk.prompts.chat(
@@ -348,7 +348,7 @@ describe('/chat', () => {
       const onErrorMock = vi.fn()
       const { mockFn, conversationUuid } = mock502Response({
         server,
-        apiVersion: 'v2',
+        apiVersion: 'v3',
         conversationUuid: 'fake-document-log-uuid',
       })
 
@@ -388,7 +388,7 @@ describe('/chat', () => {
       const onErrorMock = vi.fn()
       const { mockFn, conversationUuid } = mock502Response({
         server,
-        apiVersion: 'v2',
+        apiVersion: 'v3',
         conversationUuid: 'fake-document-log-uuid',
       })
 
@@ -427,7 +427,7 @@ describe('/chat', () => {
     it('throws error if onError option is not present', async () => {
       const { mockFn, conversationUuid } = mock502Response({
         server,
-        apiVersion: 'v2',
+        apiVersion: 'v3',
         conversationUuid: 'fake-document-log-uuid',
       })
 

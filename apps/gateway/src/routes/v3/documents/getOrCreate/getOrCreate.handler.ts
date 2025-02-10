@@ -7,7 +7,7 @@ import {
 import { createNewDocument } from '@latitude-data/core/services/documents/create'
 import { documentPresenter } from '$/presenters/documentPresenter'
 import { AppRouteHandler } from '$/openApi/types'
-import { GetOrCreateRoute } from '$/routes/v2/documents/getOrCreate/getOrCreate.route'
+import { GetOrCreateRoute } from './getOrCreate.route'
 
 async function getOrCreateDocument({
   workspace,

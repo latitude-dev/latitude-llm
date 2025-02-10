@@ -178,7 +178,7 @@ export function SharedDocument({
   const { onChat } = useChat({
     shared,
     documentLogUuid: prompt.documentLogUuid,
-    addMessageToConversation: prompt.addMessageToConversation,
+    setMessages: prompt.setMessages,
     setResponseStream: prompt.setResponseStream,
     setError: prompt.setError,
   })

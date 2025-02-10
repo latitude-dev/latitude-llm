@@ -19,9 +19,9 @@ import {
 import { Config } from '@latitude-data/core/services/ai/helpers'
 import {
   ChainCallResponseDto,
-  ChainEventDto,
   LegacyChainEvent,
   LegacyChainEventTypes,
+  LegacyEventData,
   LegacyLatitudeEventData,
   StreamEventTypes,
 } from '@latitude-data/constants'
@@ -67,19 +67,28 @@ export const getData = async ({
   return Result.ok({ project, commit, document })
 }
 
-export function chainEventPresenter(event: LegacyChainEvent) {
+export function legacyChainEventPresenter(event: LegacyChainEvent) {
   switch (event.event) {
     case StreamEventTypes.Provider:
       return event.data
     case StreamEventTypes.Latitude:
-      return latitudeEventPresenter(event)
+      return latitudeLegacyEventPresenter(
+        event as {
+          data: LegacyLatitudeEventData
+          event: StreamEventTypes.Latitude
+        },
+      )
+    default:
+      throw new BadRequestError(
+        `Unknown event type in chainEventPresenter ${JSON.stringify(event)}`,
+      )
   }
 }
 
-function latitudeEventPresenter(event: {
+function latitudeLegacyEventPresenter(event: {
   data: LegacyLatitudeEventData
   event: StreamEventTypes.Latitude
-}): ChainEventDto | string {
+}): LegacyEventData {
   switch (event.data.type) {
     case LegacyChainEventTypes.Step:
     case LegacyChainEventTypes.StepComplete:

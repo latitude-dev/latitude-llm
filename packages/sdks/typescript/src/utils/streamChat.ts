@@ -13,7 +13,7 @@ import {
   HandlerType,
   ToolSpec,
 } from '$sdk/utils/types'
-import { handleToolRequests, hasToolRequests } from '$sdk/utils/toolHelpers'
+import { handleToolRequests, hasTools } from '$sdk/utils/toolHelpers'
 
 export async function streamChat<Tools extends ToolSpec>(
   uuid: string,
@@ -55,10 +55,11 @@ export async function streamChat<Tools extends ToolSpec>(
       onError,
     })
 
-    if (hasToolRequests({ response: finalResponse, tools })) {
+    if (hasTools(tools) && finalResponse.toolRequests.length) {
       return handleToolRequests<Tools, false>({
         originalResponse: finalResponse,
         messages: finalResponse.conversation,
+        toolRequests: finalResponse.toolRequests,
         onEvent,
         onFinished,
         onError,

@@ -12,7 +12,7 @@ import {
   SDKOptions,
   ToolSpec,
 } from '$sdk/utils/types'
-import { handleToolRequests, hasToolRequests } from '$sdk/utils/toolHelpers'
+import { handleToolRequests, hasTools } from '$sdk/utils/toolHelpers'
 import { syncChat } from '$sdk/utils/syncChat'
 
 export async function syncRun<Tools extends ToolSpec>(
@@ -80,10 +80,11 @@ export async function syncRun<Tools extends ToolSpec>(
 
   const finalResponse = (await response.json()) as RunSyncAPIResponse
 
-  if (hasToolRequests({ response: finalResponse, tools })) {
+  if (hasTools(tools) && finalResponse.toolRequests.length) {
     return handleToolRequests<Tools, false>({
       originalResponse: finalResponse,
       messages: finalResponse.conversation,
+      toolRequests: finalResponse.toolRequests,
       onFinished,
       onError,
       chatFn: syncChat,

@@ -5,7 +5,7 @@ import { runDocumentAtCommit } from '@latitude-data/core/services/commits/runDoc
 import { captureException } from '$/common/sentry'
 import { streamSSE } from 'hono/streaming'
 import {
-  chainEventPresenter,
+  legacyChainEventPresenter,
   getData,
   publishDocumentRunRequestedEvent,
 } from '$/common/documents/getData'
@@ -53,7 +53,7 @@ export const runHandler: AppRouteHandler<RunRoute> = async (c) => {
 
       let id = 0
       for await (const event of streamToGenerator(legacyStream)) {
-        const data = chainEventPresenter(event)
+        const data = legacyChainEventPresenter(event)
 
         stream.writeSSE({
           id: String(id++),

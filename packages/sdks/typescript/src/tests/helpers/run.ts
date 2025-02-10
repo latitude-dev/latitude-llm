@@ -89,7 +89,7 @@ export function mockNonStreamResponse({
 }) {
   server.use(
     http.post(
-      'http://localhost:8787/api/v2/projects/123/versions/live/documents/run',
+      'http://localhost:8787/api/v3/projects/123/versions/live/documents/run',
       () =>
         typeof expectedBody === 'object'
           ? HttpResponse.json(expectedBody, { status: expectedStatus })
@@ -102,7 +102,7 @@ export function mock502Response({ server }: { server: Server }) {
   const mockFn = vi.fn()
   server.use(
     http.post(
-      'http://localhost:8787/api/v2/projects/123/versions/live/documents/run',
+      'http://localhost:8787/api/v3/projects/123/versions/live/documents/run',
       () => {
         mockFn('called!')
         return HttpResponse.json(

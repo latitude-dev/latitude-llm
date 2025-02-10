@@ -8,9 +8,11 @@ import createApp from '$/openApi/createApp'
 import configureOpenAPI from '$/openApi/configureOpenAPI'
 
 import v1Routes from '$/routes/v1'
-import documents from '$/routes/v2/documents'
-import conversations from '$/routes/v2/conversations'
-import telemetry from '$/routes/v2/otlp'
+import v2Routes from '$/routes/v2'
+
+import documents from '$/routes/v3/documents'
+import conversations from '$/routes/v3/conversations'
+import telemetry from '$/routes/v3/otlp'
 
 const app = createApp()
 
@@ -29,6 +31,8 @@ app.use(rateLimitMiddleware())
 app.use(authMiddleware())
 
 app.route('/', v1Routes)
+app.route('/', v2Routes)
+
 app.route('/', documents)
 app.route('/', conversations)
 app.route('/', telemetry)

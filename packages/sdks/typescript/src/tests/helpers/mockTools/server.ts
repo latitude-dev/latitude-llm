@@ -7,9 +7,11 @@ import { TOOL_EVENTS, TOOL_EVENTS_OBJECT, TOOLS_DOCUMENT_UUID } from './events'
 import { ToolCallDetails, ToolCalledFn } from '$sdk/utils/types'
 import {
   ChainEventDto,
-  ChainEventDtoResponse,
   StreamEventTypes,
-} from '@latitude-data/constants/ai'
+  ChainEventTypes,
+  LatitudeProviderCompletedEventData,
+  LatitudeEventData,
+} from '@latitude-data/constants'
 
 const encoder = new TextEncoder()
 
@@ -43,21 +45,21 @@ async function buildStream(events: string[]) {
 
 type StreamEvent = { event: StreamEventTypes; data: ChainEventDto }
 function findCompleteChainEvent(events: StreamEvent[]) {
-  const completeEvent = events.find((event) => {
-    const data = event.data
-    return data.type === 'chain-complete'
-  })!
+  const reversedEvents = [...events].reverse()
+  const lastResponse = (
+    reversedEvents.find(
+      (event) => event.data.type === ChainEventTypes.ProviderCompleted,
+    )?.data as LatitudeProviderCompletedEventData | undefined
+  )?.response
+
+  const lastEvent = reversedEvents[0]!.data as LatitudeEventData
+
   return {
-    ...completeEvent,
-    data: {
-      uuid: TOOLS_DOCUMENT_UUID,
-      response:
-        'response' in completeEvent.data
-          ? (completeEvent.data.response as ChainEventDtoResponse)
-          : undefined,
-      messages:
-        'messages' in completeEvent.data ? completeEvent.data.messages : [],
-    },
+    uuid: TOOLS_DOCUMENT_UUID,
+    conversation: lastEvent.messages,
+    toolRequests:
+      lastEvent.type === ChainEventTypes.ToolsRequested ? lastEvent.tools : [],
+    response: lastResponse,
   }
 }
 
@@ -83,7 +85,7 @@ export function mockToolsServers() {
     let mockChatBody = vi.fn()
     server.use(
       http.post(
-        'http://localhost:8787/api/v2/projects/123/versions/live/documents/run',
+        'http://localhost:8787/api/v3/projects/123/versions/live/documents/run',
         async (info) => {
           const body = await parseBody(info.request.body!)
           mockRunBody({ body })
@@ -96,7 +98,7 @@ export function mockToolsServers() {
         },
       ),
       http.post(
-        `http://localhost:8787/api/v2/conversations/${TOOLS_DOCUMENT_UUID}/chat`,
+        `http://localhost:8787/api/v3/conversations/${TOOLS_DOCUMENT_UUID}/chat`,
         async (info) => {
           const body = await parseBody(info.request.body!)
           mockChatBody({ body })
@@ -122,38 +124,30 @@ export function mockToolsServers() {
     let mockChatBody = vi.fn()
     server.use(
       http.post(
-        'http://localhost:8787/api/v2/projects/123/versions/live/documents/run',
+        'http://localhost:8787/api/v3/projects/123/versions/live/documents/run',
         async (info) => {
           const body = await parseBody(info.request.body!)
           mockRunBody({ body })
-          const completeEvent = findCompleteChainEvent(
+          const result = findCompleteChainEvent(
             TOOL_EVENTS_OBJECT.runEvents as StreamEvent[],
           )!
 
-          return HttpResponse.json({
-            uuid: TOOLS_DOCUMENT_UUID,
-            conversation: completeEvent.data.messages!,
-            response: completeEvent.data.response!,
-          })
+          return HttpResponse.json(result)
         },
       ),
       http.post(
-        `http://localhost:8787/api/v2/conversations/${TOOLS_DOCUMENT_UUID}/chat`,
+        `http://localhost:8787/api/v3/conversations/${TOOLS_DOCUMENT_UUID}/chat`,
         async (info) => {
           const body = await parseBody(info.request.body!)
           mockChatBody({ body })
           const { isFirstStep } = getStep(body as ExpectedBody)
-          const completeEvent = findCompleteChainEvent(
+          const result = findCompleteChainEvent(
             isFirstStep
               ? (TOOL_EVENTS_OBJECT.chatEventsFirst as StreamEvent[])
               : (TOOL_EVENTS_OBJECT.chatEventsLast as StreamEvent[]),
           )!
 
-          return HttpResponse.json({
-            uuid: TOOLS_DOCUMENT_UUID,
-            conversation: completeEvent.data.messages!,
-            response: completeEvent.data.response!,
-          })
+          return HttpResponse.json(result)
         },
       ),
     )

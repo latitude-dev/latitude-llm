@@ -10,13 +10,14 @@ import {
 import { createSdk } from '$/app/(private)/_lib/createSdk'
 import { getCurrentUserOrError } from '$/services/auth/getCurrentUser'
 import { createStreamableValue, StreamableValue } from 'ai/rsc'
+import { ChainEvent } from '@latitude-data/constants'
 
 type AddMessagesActionProps = {
   documentLogUuid: string
   messages: Message[]
 }
 export type AddMessagesResponse = Promise<{
-  output: StreamableValue<{ event: StreamEventTypes; data: ChainEventDto }>
+  output: StreamableValue<ChainEvent>
   response: Promise<StreamChainResponse | undefined>
 }>
 export type AddMessagesActionFn = (

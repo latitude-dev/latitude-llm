@@ -1,119 +1,122 @@
+import { ContentType, MessageRole } from '@latitude-data/compiler'
+import {
+  StreamEventTypes,
+  ChainEvent,
+  ChainEventTypes,
+} from '@latitude-data/constants'
+
 export const TOOLS_DOCUMENT_UUID = '02e6ac23-a43b-4c3a-aedc-41b7d5e26a1b'
-export const TOOL_EVENTS_OBJECT = {
+type ToolsEventsObject<T> = {
+  runEvents: T
+  chatEventsFirst: T
+  chatEventsLast: T
+}
+export const TOOL_EVENTS_OBJECT: ToolsEventsObject<ChainEvent[]> = {
   runEvents: [
     {
-      event: 'latitude-event',
+      event: StreamEventTypes.Latitude,
       data: {
-        type: 'chain-step',
+        type: ChainEventTypes.ChainStarted,
+        uuid: TOOLS_DOCUMENT_UUID,
+        messages: [],
+      },
+    },
+    {
+      event: StreamEventTypes.Latitude,
+      data: {
+        type: ChainEventTypes.StepStarted,
+        uuid: TOOLS_DOCUMENT_UUID,
         messages: [
           {
-            role: 'system',
+            role: MessageRole.system,
             content: [
               {
-                type: 'text',
+                type: ContentType.text,
                 text: "You are a concerned mom. If the temperature is low, make recommendations to put on clothes, and if it's hot and sunny, be careful with so much exposure!\n\nBefore saying anything to the user, you must now their location and the current weather!\n\nIMPORTANT: Use exactly the names pased in the parameters for the locations. Do not add extra information.",
               },
               {
-                type: 'text',
+                type: ContentType.text,
                 text: 'First, locate the one or many recommendation requests.',
               },
             ],
           },
           {
-            role: 'user',
+            role: MessageRole.user,
             content: [
               {
-                type: 'text',
+                type: ContentType.text,
                 text: "Hi mom! I'm currently in Barcelona and Miami and Andrés is in Boston! Can you give us tips on what clothes we should put on?",
               },
             ],
           },
         ],
-        uuid: '02e6ac23-a43b-4c3a-aedc-41b7d5e26a1b',
       },
     },
     {
-      event: 'latitude-event',
+      event: StreamEventTypes.Latitude,
       data: {
-        type: 'chain-step-complete',
-        response: {
-          streamType: 'text',
-          documentLogUuid: '02e6ac23-a43b-4c3a-aedc-41b7d5e26a1b',
-          text: '',
-          usage: {
-            promptTokens: 251,
-            completionTokens: 59,
-            totalTokens: 310,
-          },
-          toolCalls: [
-            {
-              id: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
-              name: 'get_coordinates',
-              arguments: {
-                location: 'Barcelona',
-              },
-            },
-            {
-              id: 'call_KTPRHMRYPCF6NisrKhLxevEf',
-              name: 'get_coordinates',
-              arguments: {
-                location: 'Miami',
-              },
-            },
-            {
-              id: 'call_LRmAwTyy8NXChQo6reGll0tG',
-              name: 'get_coordinates',
-              arguments: {
-                location: 'Boston',
-              },
-            },
-          ],
-        },
-        uuid: '02e6ac23-a43b-4c3a-aedc-41b7d5e26a1b',
-      },
-    },
-    {
-      event: 'latitude-event',
-      data: {
-        type: 'chain-complete',
-        response: {
-          streamType: 'text',
-          text: '',
-          usage: {
-            promptTokens: 251,
-            completionTokens: 59,
-            totalTokens: 310,
-          },
-          toolCalls: [
-            {
-              id: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
-              name: 'get_coordinates',
-              arguments: {
-                location: 'Barcelona',
-              },
-            },
-            {
-              id: 'call_KTPRHMRYPCF6NisrKhLxevEf',
-              name: 'get_coordinates',
-              arguments: {
-                location: 'Miami',
-              },
-            },
-            {
-              id: 'call_LRmAwTyy8NXChQo6reGll0tG',
-              name: 'get_coordinates',
-              arguments: {
-                location: 'Boston',
-              },
-            },
-          ],
-        },
+        type: ChainEventTypes.ProviderStarted,
+        uuid: TOOLS_DOCUMENT_UUID,
         messages: [
           {
-            role: 'assistant',
+            role: MessageRole.system,
             content: [
               {
-                type: 'tool-call',
+                type: ContentType.text,
+                text: "You are a concerned mom. If the temperature is low, make recommendations to put on clothes, and if it's hot and sunny, be careful with so much exposure!\n\nBefore saying anything to the user, you must now their location and the current weather!\n\nIMPORTANT: Use exactly the names pased in the parameters for the locations. Do not add extra information.",
+              },
+              {
+                type: ContentType.text,
+                text: 'First, locate the one or many recommendation requests.',
+              },
+            ],
+          },
+          {
+            role: MessageRole.user,
+            content: [
+              {
+                type: ContentType.text,
+                text: "Hi mom! I'm currently in Barcelona and Miami and Andrés is in Boston! Can you give us tips on what clothes we should put on?",
+              },
+            ],
+          },
+        ],
+        config: {},
+      },
+    },
+    {
+      event: StreamEventTypes.Latitude,
+      data: {
+        type: ChainEventTypes.ProviderCompleted,
+        uuid: TOOLS_DOCUMENT_UUID,
+        messages: [
+          {
+            role: MessageRole.system,
+            content: [
+              {
+                type: ContentType.text,
+                text: "You are a concerned mom. If the temperature is low, make recommendations to put on clothes, and if it's hot and sunny, be careful with so much exposure!\n\nBefore saying anything to the user, you must now their location and the current weather!\n\nIMPORTANT: Use exactly the names pased in the parameters for the locations. Do not add extra information.",
+              },
+              {
+                type: ContentType.text,
+                text: 'First, locate the one or many recommendation requests.',
+              },
+            ],
+          },
+          {
+            role: MessageRole.user,
+            content: [
+              {
+                type: ContentType.text,
+                text: "Hi mom! I'm currently in Barcelona and Miami and Andrés is in Boston! Can you give us tips on what clothes we should put on?",
+              },
+            ],
+          },
+          {
+            role: MessageRole.assistant,
+            content: [
+              {
+                type: ContentType.toolCall,
                 toolCallId: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
                 toolName: 'get_coordinates',
                 args: {
@@ -121,7 +124,7 @@ export const TOOL_EVENTS_OBJECT = {
                 },
               },
               {
-                type: 'tool-call',
+                type: ContentType.toolCall,
                 toolCallId: 'call_KTPRHMRYPCF6NisrKhLxevEf',
                 toolName: 'get_coordinates',
                 args: {
@@ -129,7 +132,7 @@ export const TOOL_EVENTS_OBJECT = {
                 },
               },
               {
-                type: 'tool-call',
+                type: ContentType.toolCall,
                 toolCallId: 'call_LRmAwTyy8NXChQo6reGll0tG',
                 toolName: 'get_coordinates',
                 args: {
@@ -162,119 +165,819 @@ export const TOOL_EVENTS_OBJECT = {
             ],
           },
         ],
-        finishReason: 'tool-calls',
-        uuid: TOOLS_DOCUMENT_UUID,
-      },
-    },
-  ],
-  chatEventsFirst: [
-    {
-      event: 'latitude-event',
-      data: {
-        type: 'chain-step',
-        messages: [
-          {
-            role: 'system',
-            content: [
-              {
-                type: 'text',
-                text: 'Now get the weather from the one or many recommendation requests.',
-                _promptlSourceMap: [],
-              },
-            ],
-          },
-        ],
-        uuid: TOOLS_DOCUMENT_UUID,
-      },
-    },
-    {
-      event: 'latitude-event',
-      data: {
-        type: 'chain-step-complete',
         response: {
           streamType: 'text',
           documentLogUuid: TOOLS_DOCUMENT_UUID,
           text: '',
           usage: {
-            promptTokens: 391,
-            completionTokens: 91,
-            totalTokens: 482,
+            promptTokens: 251,
+            completionTokens: 59,
+            totalTokens: 310,
           },
           toolCalls: [
             {
-              id: 'call_CtgG80sOeYxUGR5J0Y0ZOiKF',
-              name: 'get_weather',
+              id: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
+              name: 'get_coordinates',
               arguments: {
-                latitude: '41.3851',
-                longitude: '2.1734',
+                location: 'Barcelona',
               },
             },
             {
-              id: 'call_AkTTcOQFhomjshMlgR4IDZ4m',
-              name: 'get_weather',
+              id: 'call_KTPRHMRYPCF6NisrKhLxevEf',
+              name: 'get_coordinates',
               arguments: {
-                latitude: '25.7617',
-                longitude: '-80.1918',
+                location: 'Miami',
               },
             },
             {
-              id: 'call_GzO72dVu3qf1cOBWVgsNQvUw',
-              name: 'get_weather',
+              id: 'call_LRmAwTyy8NXChQo6reGll0tG',
+              name: 'get_coordinates',
               arguments: {
-                latitude: '42.3601',
-                longitude: '-71.0589',
+                location: 'Boston',
               },
             },
           ],
         },
-        uuid: TOOLS_DOCUMENT_UUID,
+        providerLogUuid: '123',
+        tokenUsage: {
+          promptTokens: 251,
+          completionTokens: 59,
+          totalTokens: 310,
+        },
+        finishReason: 'tool-calls',
       },
     },
     {
-      event: 'latitude-event',
+      event: StreamEventTypes.Latitude,
       data: {
-        type: 'chain-complete',
-        response: {
-          streamType: 'text',
-          text: '',
-          usage: {
-            promptTokens: 391,
-            completionTokens: 91,
-            totalTokens: 482,
-          },
-          toolCalls: [
-            {
-              id: 'call_CtgG80sOeYxUGR5J0Y0ZOiKF',
-              name: 'get_weather',
-              arguments: {
-                latitude: '41.3851',
-                longitude: '2.1734',
-              },
-            },
-            {
-              id: 'call_AkTTcOQFhomjshMlgR4IDZ4m',
-              name: 'get_weather',
-              arguments: {
-                latitude: '25.7617',
-                longitude: '-80.1918',
-              },
-            },
-            {
-              id: 'call_GzO72dVu3qf1cOBWVgsNQvUw',
-              name: 'get_weather',
-              arguments: {
-                latitude: '42.3601',
-                longitude: '-71.0589',
-              },
-            },
-          ],
-        },
+        type: ChainEventTypes.StepCompleted,
+        uuid: TOOLS_DOCUMENT_UUID,
         messages: [
           {
-            role: 'assistant',
+            role: MessageRole.system,
             content: [
               {
-                type: 'tool-call',
+                type: ContentType.text,
+                text: "You are a concerned mom. If the temperature is low, make recommendations to put on clothes, and if it's hot and sunny, be careful with so much exposure!\n\nBefore saying anything to the user, you must now their location and the current weather!\n\nIMPORTANT: Use exactly the names pased in the parameters for the locations. Do not add extra information.",
+              },
+              {
+                type: ContentType.text,
+                text: 'First, locate the one or many recommendation requests.',
+              },
+            ],
+          },
+          {
+            role: MessageRole.user,
+            content: [
+              {
+                type: ContentType.text,
+                text: "Hi mom! I'm currently in Barcelona and Miami and Andrés is in Boston! Can you give us tips on what clothes we should put on?",
+              },
+            ],
+          },
+          {
+            role: MessageRole.assistant,
+            content: [
+              {
+                type: ContentType.toolCall,
+                toolCallId: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
+                toolName: 'get_coordinates',
+                args: {
+                  location: 'Barcelona',
+                },
+              },
+              {
+                type: ContentType.toolCall,
+                toolCallId: 'call_KTPRHMRYPCF6NisrKhLxevEf',
+                toolName: 'get_coordinates',
+                args: {
+                  location: 'Miami',
+                },
+              },
+              {
+                type: ContentType.toolCall,
+                toolCallId: 'call_LRmAwTyy8NXChQo6reGll0tG',
+                toolName: 'get_coordinates',
+                args: {
+                  location: 'Boston',
+                },
+              },
+            ],
+            toolCalls: [
+              {
+                id: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
+                name: 'get_coordinates',
+                arguments: {
+                  location: 'Barcelona',
+                },
+              },
+              {
+                id: 'call_KTPRHMRYPCF6NisrKhLxevEf',
+                name: 'get_coordinates',
+                arguments: {
+                  location: 'Miami',
+                },
+              },
+              {
+                id: 'call_LRmAwTyy8NXChQo6reGll0tG',
+                name: 'get_coordinates',
+                arguments: {
+                  location: 'Boston',
+                },
+              },
+            ],
+          },
+        ],
+      },
+    },
+    {
+      event: StreamEventTypes.Latitude,
+      data: {
+        type: ChainEventTypes.StepCompleted,
+        uuid: TOOLS_DOCUMENT_UUID,
+        messages: [
+          {
+            role: MessageRole.system,
+            content: [
+              {
+                type: ContentType.text,
+                text: "You are a concerned mom. If the temperature is low, make recommendations to put on clothes, and if it's hot and sunny, be careful with so much exposure!\n\nBefore saying anything to the user, you must now their location and the current weather!\n\nIMPORTANT: Use exactly the names pased in the parameters for the locations. Do not add extra information.",
+              },
+              {
+                type: ContentType.text,
+                text: 'First, locate the one or many recommendation requests.',
+              },
+            ],
+          },
+          {
+            role: MessageRole.user,
+            content: [
+              {
+                type: ContentType.text,
+                text: "Hi mom! I'm currently in Barcelona and Miami and Andrés is in Boston! Can you give us tips on what clothes we should put on?",
+              },
+            ],
+          },
+          {
+            role: MessageRole.assistant,
+            content: [
+              {
+                type: ContentType.toolCall,
+                toolCallId: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
+                toolName: 'get_coordinates',
+                args: {
+                  location: 'Barcelona',
+                },
+              },
+              {
+                type: ContentType.toolCall,
+                toolCallId: 'call_KTPRHMRYPCF6NisrKhLxevEf',
+                toolName: 'get_coordinates',
+                args: {
+                  location: 'Miami',
+                },
+              },
+              {
+                type: ContentType.toolCall,
+                toolCallId: 'call_LRmAwTyy8NXChQo6reGll0tG',
+                toolName: 'get_coordinates',
+                args: {
+                  location: 'Boston',
+                },
+              },
+            ],
+            toolCalls: [
+              {
+                id: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
+                name: 'get_coordinates',
+                arguments: {
+                  location: 'Barcelona',
+                },
+              },
+              {
+                id: 'call_KTPRHMRYPCF6NisrKhLxevEf',
+                name: 'get_coordinates',
+                arguments: {
+                  location: 'Miami',
+                },
+              },
+              {
+                id: 'call_LRmAwTyy8NXChQo6reGll0tG',
+                name: 'get_coordinates',
+                arguments: {
+                  location: 'Boston',
+                },
+              },
+            ],
+          },
+        ],
+      },
+    },
+    {
+      event: StreamEventTypes.Latitude,
+      data: {
+        type: ChainEventTypes.ToolsRequested,
+        uuid: TOOLS_DOCUMENT_UUID,
+        messages: [
+          {
+            role: MessageRole.system,
+            content: [
+              {
+                type: ContentType.text,
+                text: "You are a concerned mom. If the temperature is low, make recommendations to put on clothes, and if it's hot and sunny, be careful with so much exposure!\n\nBefore saying anything to the user, you must now their location and the current weather!\n\nIMPORTANT: Use exactly the names pased in the parameters for the locations. Do not add extra information.",
+              },
+              {
+                type: ContentType.text,
+                text: 'First, locate the one or many recommendation requests.',
+              },
+            ],
+          },
+          {
+            role: MessageRole.user,
+            content: [
+              {
+                type: ContentType.text,
+                text: "Hi mom! I'm currently in Barcelona and Miami and Andrés is in Boston! Can you give us tips on what clothes we should put on?",
+              },
+            ],
+          },
+          {
+            role: MessageRole.assistant,
+            content: [
+              {
+                type: ContentType.toolCall,
+                toolCallId: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
+                toolName: 'get_coordinates',
+                args: {
+                  location: 'Barcelona',
+                },
+              },
+              {
+                type: ContentType.toolCall,
+                toolCallId: 'call_KTPRHMRYPCF6NisrKhLxevEf',
+                toolName: 'get_coordinates',
+                args: {
+                  location: 'Miami',
+                },
+              },
+              {
+                type: ContentType.toolCall,
+                toolCallId: 'call_LRmAwTyy8NXChQo6reGll0tG',
+                toolName: 'get_coordinates',
+                args: {
+                  location: 'Boston',
+                },
+              },
+            ],
+            toolCalls: [
+              {
+                id: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
+                name: 'get_coordinates',
+                arguments: {
+                  location: 'Barcelona',
+                },
+              },
+              {
+                id: 'call_KTPRHMRYPCF6NisrKhLxevEf',
+                name: 'get_coordinates',
+                arguments: {
+                  location: 'Miami',
+                },
+              },
+              {
+                id: 'call_LRmAwTyy8NXChQo6reGll0tG',
+                name: 'get_coordinates',
+                arguments: {
+                  location: 'Boston',
+                },
+              },
+            ],
+          },
+        ],
+        tools: [
+          {
+            id: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
+            name: 'get_coordinates',
+            arguments: {
+              location: 'Barcelona',
+            },
+          },
+          {
+            id: 'call_KTPRHMRYPCF6NisrKhLxevEf',
+            name: 'get_coordinates',
+            arguments: {
+              location: 'Miami',
+            },
+          },
+          {
+            id: 'call_LRmAwTyy8NXChQo6reGll0tG',
+            name: 'get_coordinates',
+            arguments: {
+              location: 'Boston',
+            },
+          },
+        ],
+      },
+    },
+  ],
+  chatEventsFirst: [
+    {
+      event: StreamEventTypes.Latitude,
+      data: {
+        type: ChainEventTypes.ChainStarted,
+        uuid: TOOLS_DOCUMENT_UUID,
+        messages: [
+          {
+            role: MessageRole.system,
+            content: [
+              {
+                type: ContentType.text,
+                text: "You are a concerned mom. If the temperature is low, make recommendations to put on clothes, and if it's hot and sunny, be careful with so much exposure!\n\nBefore saying anything to the user, you must now their location and the current weather!\n\nIMPORTANT: Use exactly the names pased in the parameters for the locations. Do not add extra information.",
+              },
+              {
+                type: ContentType.text,
+                text: 'First, locate the one or many recommendation requests.',
+              },
+            ],
+          },
+          {
+            role: MessageRole.user,
+            content: [
+              {
+                type: ContentType.text,
+                text: "Hi mom! I'm currently in Barcelona and Miami and Andrés is in Boston! Can you give us tips on what clothes we should put on?",
+              },
+            ],
+          },
+          {
+            role: MessageRole.assistant,
+            content: [
+              {
+                type: ContentType.toolCall,
+                toolCallId: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
+                toolName: 'get_coordinates',
+                args: {
+                  location: 'Barcelona',
+                },
+              },
+              {
+                type: ContentType.toolCall,
+                toolCallId: 'call_KTPRHMRYPCF6NisrKhLxevEf',
+                toolName: 'get_coordinates',
+                args: {
+                  location: 'Miami',
+                },
+              },
+              {
+                type: ContentType.toolCall,
+                toolCallId: 'call_LRmAwTyy8NXChQo6reGll0tG',
+                toolName: 'get_coordinates',
+                args: {
+                  location: 'Boston',
+                },
+              },
+            ],
+            toolCalls: [
+              {
+                id: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
+                name: 'get_coordinates',
+                arguments: {
+                  location: 'Barcelona',
+                },
+              },
+              {
+                id: 'call_KTPRHMRYPCF6NisrKhLxevEf',
+                name: 'get_coordinates',
+                arguments: {
+                  location: 'Miami',
+                },
+              },
+              {
+                id: 'call_LRmAwTyy8NXChQo6reGll0tG',
+                name: 'get_coordinates',
+                arguments: {
+                  location: 'Boston',
+                },
+              },
+            ],
+          },
+        ],
+      },
+    },
+    {
+      event: StreamEventTypes.Latitude,
+      data: {
+        type: ChainEventTypes.StepStarted,
+        uuid: TOOLS_DOCUMENT_UUID,
+        messages: [
+          {
+            role: MessageRole.system,
+            content: [
+              {
+                type: ContentType.text,
+                text: "You are a concerned mom. If the temperature is low, make recommendations to put on clothes, and if it's hot and sunny, be careful with so much exposure!\n\nBefore saying anything to the user, you must now their location and the current weather!\n\nIMPORTANT: Use exactly the names pased in the parameters for the locations. Do not add extra information.",
+              },
+              {
+                type: ContentType.text,
+                text: 'First, locate the one or many recommendation requests.',
+              },
+            ],
+          },
+          {
+            role: MessageRole.user,
+            content: [
+              {
+                type: ContentType.text,
+                text: "Hi mom! I'm currently in Barcelona and Miami and Andrés is in Boston! Can you give us tips on what clothes we should put on?",
+              },
+            ],
+          },
+          {
+            role: MessageRole.assistant,
+            content: [
+              {
+                type: ContentType.toolCall,
+                toolCallId: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
+                toolName: 'get_coordinates',
+                args: {
+                  location: 'Barcelona',
+                },
+              },
+              {
+                type: ContentType.toolCall,
+                toolCallId: 'call_KTPRHMRYPCF6NisrKhLxevEf',
+                toolName: 'get_coordinates',
+                args: {
+                  location: 'Miami',
+                },
+              },
+              {
+                type: ContentType.toolCall,
+                toolCallId: 'call_LRmAwTyy8NXChQo6reGll0tG',
+                toolName: 'get_coordinates',
+                args: {
+                  location: 'Boston',
+                },
+              },
+            ],
+            toolCalls: [
+              {
+                id: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
+                name: 'get_coordinates',
+                arguments: {
+                  location: 'Barcelona',
+                },
+              },
+              {
+                id: 'call_KTPRHMRYPCF6NisrKhLxevEf',
+                name: 'get_coordinates',
+                arguments: {
+                  location: 'Miami',
+                },
+              },
+              {
+                id: 'call_LRmAwTyy8NXChQo6reGll0tG',
+                name: 'get_coordinates',
+                arguments: {
+                  location: 'Boston',
+                },
+              },
+            ],
+          },
+          {
+            role: MessageRole.tool,
+            content: [
+              {
+                type: ContentType.toolResult,
+                toolCallId: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
+                toolName: 'get_coordinates',
+                result: {
+                  latitude: '41.3851',
+                  longitude: '2.1734',
+                },
+                isError: false,
+              },
+            ],
+          },
+          {
+            role: MessageRole.tool,
+            content: [
+              {
+                type: ContentType.toolResult,
+                toolCallId: 'call_KTPRHMRYPCF6NisrKhLxevEf',
+                toolName: 'get_coordinates',
+                result: {
+                  latitude: '25.7617',
+                  longitude: '-80.1918',
+                },
+                isError: false,
+              },
+            ],
+          },
+          {
+            role: MessageRole.tool,
+            content: [
+              {
+                type: ContentType.toolResult,
+                toolCallId: 'call_LRmAwTyy8NXChQo6reGll0tG',
+                toolName: 'get_coordinates',
+                result: {
+                  latitude: '42.3601',
+                  longitude: '-71.0589',
+                },
+                isError: false,
+              },
+            ],
+          },
+          {
+            role: MessageRole.system,
+            content: [
+              {
+                type: ContentType.text,
+                text: 'Now get the weather from the one or many recommendation requests.',
+              },
+            ],
+          },
+        ],
+      },
+    },
+    {
+      event: StreamEventTypes.Latitude,
+      data: {
+        type: ChainEventTypes.ProviderStarted,
+        uuid: TOOLS_DOCUMENT_UUID,
+        messages: [
+          {
+            role: MessageRole.system,
+            content: [
+              {
+                type: ContentType.text,
+                text: "You are a concerned mom. If the temperature is low, make recommendations to put on clothes, and if it's hot and sunny, be careful with so much exposure!\n\nBefore saying anything to the user, you must now their location and the current weather!\n\nIMPORTANT: Use exactly the names pased in the parameters for the locations. Do not add extra information.",
+              },
+              {
+                type: ContentType.text,
+                text: 'First, locate the one or many recommendation requests.',
+              },
+            ],
+          },
+          {
+            role: MessageRole.user,
+            content: [
+              {
+                type: ContentType.text,
+                text: "Hi mom! I'm currently in Barcelona and Miami and Andrés is in Boston! Can you give us tips on what clothes we should put on?",
+              },
+            ],
+          },
+          {
+            role: MessageRole.assistant,
+            content: [
+              {
+                type: ContentType.toolCall,
+                toolCallId: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
+                toolName: 'get_coordinates',
+                args: {
+                  location: 'Barcelona',
+                },
+              },
+              {
+                type: ContentType.toolCall,
+                toolCallId: 'call_KTPRHMRYPCF6NisrKhLxevEf',
+                toolName: 'get_coordinates',
+                args: {
+                  location: 'Miami',
+                },
+              },
+              {
+                type: ContentType.toolCall,
+                toolCallId: 'call_LRmAwTyy8NXChQo6reGll0tG',
+                toolName: 'get_coordinates',
+                args: {
+                  location: 'Boston',
+                },
+              },
+            ],
+            toolCalls: [
+              {
+                id: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
+                name: 'get_coordinates',
+                arguments: {
+                  location: 'Barcelona',
+                },
+              },
+              {
+                id: 'call_KTPRHMRYPCF6NisrKhLxevEf',
+                name: 'get_coordinates',
+                arguments: {
+                  location: 'Miami',
+                },
+              },
+              {
+                id: 'call_LRmAwTyy8NXChQo6reGll0tG',
+                name: 'get_coordinates',
+                arguments: {
+                  location: 'Boston',
+                },
+              },
+            ],
+          },
+          {
+            role: MessageRole.tool,
+            content: [
+              {
+                type: ContentType.toolResult,
+                toolCallId: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
+                toolName: 'get_coordinates',
+                result: {
+                  latitude: '41.3851',
+                  longitude: '2.1734',
+                },
+                isError: false,
+              },
+            ],
+          },
+          {
+            role: MessageRole.tool,
+            content: [
+              {
+                type: ContentType.toolResult,
+                toolCallId: 'call_KTPRHMRYPCF6NisrKhLxevEf',
+                toolName: 'get_coordinates',
+                result: {
+                  latitude: '25.7617',
+                  longitude: '-80.1918',
+                },
+                isError: false,
+              },
+            ],
+          },
+          {
+            role: MessageRole.tool,
+            content: [
+              {
+                type: ContentType.toolResult,
+                toolCallId: 'call_LRmAwTyy8NXChQo6reGll0tG',
+                toolName: 'get_coordinates',
+                result: {
+                  latitude: '42.3601',
+                  longitude: '-71.0589',
+                },
+                isError: false,
+              },
+            ],
+          },
+          {
+            role: MessageRole.system,
+            content: [
+              {
+                type: ContentType.text,
+                text: 'Now get the weather from the one or many recommendation requests.',
+              },
+            ],
+          },
+        ],
+        config: {},
+      },
+    },
+    {
+      event: StreamEventTypes.Latitude,
+      data: {
+        type: ChainEventTypes.ProviderCompleted,
+        uuid: TOOLS_DOCUMENT_UUID,
+        messages: [
+          {
+            role: MessageRole.system,
+            content: [
+              {
+                type: ContentType.text,
+                text: "You are a concerned mom. If the temperature is low, make recommendations to put on clothes, and if it's hot and sunny, be careful with so much exposure!\n\nBefore saying anything to the user, you must now their location and the current weather!\n\nIMPORTANT: Use exactly the names pased in the parameters for the locations. Do not add extra information.",
+              },
+              {
+                type: ContentType.text,
+                text: 'First, locate the one or many recommendation requests.',
+              },
+            ],
+          },
+          {
+            role: MessageRole.user,
+            content: [
+              {
+                type: ContentType.text,
+                text: "Hi mom! I'm currently in Barcelona and Miami and Andrés is in Boston! Can you give us tips on what clothes we should put on?",
+              },
+            ],
+          },
+          {
+            role: MessageRole.assistant,
+            content: [
+              {
+                type: ContentType.toolCall,
+                toolCallId: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
+                toolName: 'get_coordinates',
+                args: {
+                  location: 'Barcelona',
+                },
+              },
+              {
+                type: ContentType.toolCall,
+                toolCallId: 'call_KTPRHMRYPCF6NisrKhLxevEf',
+                toolName: 'get_coordinates',
+                args: {
+                  location: 'Miami',
+                },
+              },
+              {
+                type: ContentType.toolCall,
+                toolCallId: 'call_LRmAwTyy8NXChQo6reGll0tG',
+                toolName: 'get_coordinates',
+                args: {
+                  location: 'Boston',
+                },
+              },
+            ],
+            toolCalls: [
+              {
+                id: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
+                name: 'get_coordinates',
+                arguments: {
+                  location: 'Barcelona',
+                },
+              },
+              {
+                id: 'call_KTPRHMRYPCF6NisrKhLxevEf',
+                name: 'get_coordinates',
+                arguments: {
+                  location: 'Miami',
+                },
+              },
+              {
+                id: 'call_LRmAwTyy8NXChQo6reGll0tG',
+                name: 'get_coordinates',
+                arguments: {
+                  location: 'Boston',
+                },
+              },
+            ],
+          },
+          {
+            role: MessageRole.tool,
+            content: [
+              {
+                type: ContentType.toolResult,
+                toolCallId: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
+                toolName: 'get_coordinates',
+                result: {
+                  latitude: '41.3851',
+                  longitude: '2.1734',
+                },
+                isError: false,
+              },
+            ],
+          },
+          {
+            role: MessageRole.tool,
+            content: [
+              {
+                type: ContentType.toolResult,
+                toolCallId: 'call_KTPRHMRYPCF6NisrKhLxevEf',
+                toolName: 'get_coordinates',
+                result: {
+                  latitude: '25.7617',
+                  longitude: '-80.1918',
+                },
+                isError: false,
+              },
+            ],
+          },
+          {
+            role: MessageRole.tool,
+            content: [
+              {
+                type: ContentType.toolResult,
+                toolCallId: 'call_LRmAwTyy8NXChQo6reGll0tG',
+                toolName: 'get_coordinates',
+                result: {
+                  latitude: '42.3601',
+                  longitude: '-71.0589',
+                },
+                isError: false,
+              },
+            ],
+          },
+          {
+            role: MessageRole.system,
+            content: [
+              {
+                type: ContentType.text,
+                text: 'Now get the weather from the one or many recommendation requests.',
+              },
+            ],
+          },
+          {
+            role: MessageRole.assistant,
+            content: [
+              {
+                type: ContentType.toolCall,
                 toolCallId: 'call_CtgG80sOeYxUGR5J0Y0ZOiKF',
                 toolName: 'get_weather',
                 args: {
@@ -283,7 +986,7 @@ export const TOOL_EVENTS_OBJECT = {
                 },
               },
               {
-                type: 'tool-call',
+                type: ContentType.toolCall,
                 toolCallId: 'call_AkTTcOQFhomjshMlgR4IDZ4m',
                 toolName: 'get_weather',
                 args: {
@@ -292,7 +995,7 @@ export const TOOL_EVENTS_OBJECT = {
                 },
               },
               {
-                type: 'tool-call',
+                type: ContentType.toolCall,
                 toolCallId: 'call_GzO72dVu3qf1cOBWVgsNQvUw',
                 toolName: 'get_weather',
                 args: {
@@ -329,35 +1032,1420 @@ export const TOOL_EVENTS_OBJECT = {
             ],
           },
         ],
+        response: {
+          streamType: 'text',
+          documentLogUuid: TOOLS_DOCUMENT_UUID,
+          text: '',
+          usage: {
+            promptTokens: 391,
+            completionTokens: 91,
+            totalTokens: 482,
+          },
+          toolCalls: [
+            {
+              id: 'call_CtgG80sOeYxUGR5J0Y0ZOiKF',
+              name: 'get_weather',
+              arguments: {
+                latitude: '41.3851',
+                longitude: '2.1734',
+              },
+            },
+            {
+              id: 'call_AkTTcOQFhomjshMlgR4IDZ4m',
+              name: 'get_weather',
+              arguments: {
+                latitude: '25.7617',
+                longitude: '-80.1918',
+              },
+            },
+            {
+              id: 'call_GzO72dVu3qf1cOBWVgsNQvUw',
+              name: 'get_weather',
+              arguments: {
+                latitude: '42.3601',
+                longitude: '-71.0589',
+              },
+            },
+          ],
+        },
+        providerLogUuid: '456',
+        tokenUsage: {
+          promptTokens: 391,
+          completionTokens: 91,
+          totalTokens: 482,
+        },
         finishReason: 'tool-calls',
+      },
+    },
+    {
+      event: StreamEventTypes.Latitude,
+      data: {
+        type: ChainEventTypes.StepCompleted,
         uuid: TOOLS_DOCUMENT_UUID,
+        messages: [
+          {
+            role: MessageRole.system,
+            content: [
+              {
+                type: ContentType.text,
+                text: "You are a concerned mom. If the temperature is low, make recommendations to put on clothes, and if it's hot and sunny, be careful with so much exposure!\n\nBefore saying anything to the user, you must now their location and the current weather!\n\nIMPORTANT: Use exactly the names pased in the parameters for the locations. Do not add extra information.",
+              },
+              {
+                type: ContentType.text,
+                text: 'First, locate the one or many recommendation requests.',
+              },
+            ],
+          },
+          {
+            role: MessageRole.user,
+            content: [
+              {
+                type: ContentType.text,
+                text: "Hi mom! I'm currently in Barcelona and Miami and Andrés is in Boston! Can you give us tips on what clothes we should put on?",
+              },
+            ],
+          },
+          {
+            role: MessageRole.assistant,
+            content: [
+              {
+                type: ContentType.toolCall,
+                toolCallId: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
+                toolName: 'get_coordinates',
+                args: {
+                  location: 'Barcelona',
+                },
+              },
+              {
+                type: ContentType.toolCall,
+                toolCallId: 'call_KTPRHMRYPCF6NisrKhLxevEf',
+                toolName: 'get_coordinates',
+                args: {
+                  location: 'Miami',
+                },
+              },
+              {
+                type: ContentType.toolCall,
+                toolCallId: 'call_LRmAwTyy8NXChQo6reGll0tG',
+                toolName: 'get_coordinates',
+                args: {
+                  location: 'Boston',
+                },
+              },
+            ],
+            toolCalls: [
+              {
+                id: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
+                name: 'get_coordinates',
+                arguments: {
+                  location: 'Barcelona',
+                },
+              },
+              {
+                id: 'call_KTPRHMRYPCF6NisrKhLxevEf',
+                name: 'get_coordinates',
+                arguments: {
+                  location: 'Miami',
+                },
+              },
+              {
+                id: 'call_LRmAwTyy8NXChQo6reGll0tG',
+                name: 'get_coordinates',
+                arguments: {
+                  location: 'Boston',
+                },
+              },
+            ],
+          },
+          {
+            role: MessageRole.tool,
+            content: [
+              {
+                type: ContentType.toolResult,
+                toolCallId: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
+                toolName: 'get_coordinates',
+                result: {
+                  latitude: '41.3851',
+                  longitude: '2.1734',
+                },
+                isError: false,
+              },
+            ],
+          },
+          {
+            role: MessageRole.tool,
+            content: [
+              {
+                type: ContentType.toolResult,
+                toolCallId: 'call_KTPRHMRYPCF6NisrKhLxevEf',
+                toolName: 'get_coordinates',
+                result: {
+                  latitude: '25.7617',
+                  longitude: '-80.1918',
+                },
+                isError: false,
+              },
+            ],
+          },
+          {
+            role: MessageRole.tool,
+            content: [
+              {
+                type: ContentType.toolResult,
+                toolCallId: 'call_LRmAwTyy8NXChQo6reGll0tG',
+                toolName: 'get_coordinates',
+                result: {
+                  latitude: '42.3601',
+                  longitude: '-71.0589',
+                },
+                isError: false,
+              },
+            ],
+          },
+          {
+            role: MessageRole.system,
+            content: [
+              {
+                type: ContentType.text,
+                text: 'Now get the weather from the one or many recommendation requests.',
+              },
+            ],
+          },
+          {
+            role: MessageRole.assistant,
+            content: [
+              {
+                type: ContentType.toolCall,
+                toolCallId: 'call_CtgG80sOeYxUGR5J0Y0ZOiKF',
+                toolName: 'get_weather',
+                args: {
+                  latitude: '41.3851',
+                  longitude: '2.1734',
+                },
+              },
+              {
+                type: ContentType.toolCall,
+                toolCallId: 'call_AkTTcOQFhomjshMlgR4IDZ4m',
+                toolName: 'get_weather',
+                args: {
+                  latitude: '25.7617',
+                  longitude: '-80.1918',
+                },
+              },
+              {
+                type: ContentType.toolCall,
+                toolCallId: 'call_GzO72dVu3qf1cOBWVgsNQvUw',
+                toolName: 'get_weather',
+                args: {
+                  latitude: '42.3601',
+                  longitude: '-71.0589',
+                },
+              },
+            ],
+            toolCalls: [
+              {
+                id: 'call_CtgG80sOeYxUGR5J0Y0ZOiKF',
+                name: 'get_weather',
+                arguments: {
+                  latitude: '41.3851',
+                  longitude: '2.1734',
+                },
+              },
+              {
+                id: 'call_AkTTcOQFhomjshMlgR4IDZ4m',
+                name: 'get_weather',
+                arguments: {
+                  latitude: '25.7617',
+                  longitude: '-80.1918',
+                },
+              },
+              {
+                id: 'call_GzO72dVu3qf1cOBWVgsNQvUw',
+                name: 'get_weather',
+                arguments: {
+                  latitude: '42.3601',
+                  longitude: '-71.0589',
+                },
+              },
+            ],
+          },
+        ],
+      },
+    },
+    {
+      event: StreamEventTypes.Latitude,
+      data: {
+        type: ChainEventTypes.ToolsRequested,
+        uuid: TOOLS_DOCUMENT_UUID,
+        messages: [
+          {
+            role: MessageRole.system,
+            content: [
+              {
+                type: ContentType.text,
+                text: "You are a concerned mom. If the temperature is low, make recommendations to put on clothes, and if it's hot and sunny, be careful with so much exposure!\n\nBefore saying anything to the user, you must now their location and the current weather!\n\nIMPORTANT: Use exactly the names pased in the parameters for the locations. Do not add extra information.",
+              },
+              {
+                type: ContentType.text,
+                text: 'First, locate the one or many recommendation requests.',
+              },
+            ],
+          },
+          {
+            role: MessageRole.user,
+            content: [
+              {
+                type: ContentType.text,
+                text: "Hi mom! I'm currently in Barcelona and Miami and Andrés is in Boston! Can you give us tips on what clothes we should put on?",
+              },
+            ],
+          },
+          {
+            role: MessageRole.assistant,
+            content: [
+              {
+                type: ContentType.toolCall,
+                toolCallId: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
+                toolName: 'get_coordinates',
+                args: {
+                  location: 'Barcelona',
+                },
+              },
+              {
+                type: ContentType.toolCall,
+                toolCallId: 'call_KTPRHMRYPCF6NisrKhLxevEf',
+                toolName: 'get_coordinates',
+                args: {
+                  location: 'Miami',
+                },
+              },
+              {
+                type: ContentType.toolCall,
+                toolCallId: 'call_LRmAwTyy8NXChQo6reGll0tG',
+                toolName: 'get_coordinates',
+                args: {
+                  location: 'Boston',
+                },
+              },
+            ],
+            toolCalls: [
+              {
+                id: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
+                name: 'get_coordinates',
+                arguments: {
+                  location: 'Barcelona',
+                },
+              },
+              {
+                id: 'call_KTPRHMRYPCF6NisrKhLxevEf',
+                name: 'get_coordinates',
+                arguments: {
+                  location: 'Miami',
+                },
+              },
+              {
+                id: 'call_LRmAwTyy8NXChQo6reGll0tG',
+                name: 'get_coordinates',
+                arguments: {
+                  location: 'Boston',
+                },
+              },
+            ],
+          },
+          {
+            role: MessageRole.tool,
+            content: [
+              {
+                type: ContentType.toolResult,
+                toolCallId: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
+                toolName: 'get_coordinates',
+                result: {
+                  latitude: '41.3851',
+                  longitude: '2.1734',
+                },
+                isError: false,
+              },
+            ],
+          },
+          {
+            role: MessageRole.tool,
+            content: [
+              {
+                type: ContentType.toolResult,
+                toolCallId: 'call_KTPRHMRYPCF6NisrKhLxevEf',
+                toolName: 'get_coordinates',
+                result: {
+                  latitude: '25.7617',
+                  longitude: '-80.1918',
+                },
+                isError: false,
+              },
+            ],
+          },
+          {
+            role: MessageRole.tool,
+            content: [
+              {
+                type: ContentType.toolResult,
+                toolCallId: 'call_LRmAwTyy8NXChQo6reGll0tG',
+                toolName: 'get_coordinates',
+                result: {
+                  latitude: '42.3601',
+                  longitude: '-71.0589',
+                },
+                isError: false,
+              },
+            ],
+          },
+          {
+            role: MessageRole.system,
+            content: [
+              {
+                type: ContentType.text,
+                text: 'Now get the weather from the one or many recommendation requests.',
+              },
+            ],
+          },
+          {
+            role: MessageRole.assistant,
+            content: [
+              {
+                type: ContentType.toolCall,
+                toolCallId: 'call_CtgG80sOeYxUGR5J0Y0ZOiKF',
+                toolName: 'get_weather',
+                args: {
+                  latitude: '41.3851',
+                  longitude: '2.1734',
+                },
+              },
+              {
+                type: ContentType.toolCall,
+                toolCallId: 'call_AkTTcOQFhomjshMlgR4IDZ4m',
+                toolName: 'get_weather',
+                args: {
+                  latitude: '25.7617',
+                  longitude: '-80.1918',
+                },
+              },
+              {
+                type: ContentType.toolCall,
+                toolCallId: 'call_GzO72dVu3qf1cOBWVgsNQvUw',
+                toolName: 'get_weather',
+                args: {
+                  latitude: '42.3601',
+                  longitude: '-71.0589',
+                },
+              },
+            ],
+            toolCalls: [
+              {
+                id: 'call_CtgG80sOeYxUGR5J0Y0ZOiKF',
+                name: 'get_weather',
+                arguments: {
+                  latitude: '41.3851',
+                  longitude: '2.1734',
+                },
+              },
+              {
+                id: 'call_AkTTcOQFhomjshMlgR4IDZ4m',
+                name: 'get_weather',
+                arguments: {
+                  latitude: '25.7617',
+                  longitude: '-80.1918',
+                },
+              },
+              {
+                id: 'call_GzO72dVu3qf1cOBWVgsNQvUw',
+                name: 'get_weather',
+                arguments: {
+                  latitude: '42.3601',
+                  longitude: '-71.0589',
+                },
+              },
+            ],
+          },
+        ],
+        tools: [
+          {
+            id: 'call_CtgG80sOeYxUGR5J0Y0ZOiKF',
+            name: 'get_weather',
+            arguments: {
+              latitude: '41.3851',
+              longitude: '2.1734',
+            },
+          },
+          {
+            id: 'call_AkTTcOQFhomjshMlgR4IDZ4m',
+            name: 'get_weather',
+            arguments: {
+              latitude: '25.7617',
+              longitude: '-80.1918',
+            },
+          },
+          {
+            id: 'call_GzO72dVu3qf1cOBWVgsNQvUw',
+            name: 'get_weather',
+            arguments: {
+              latitude: '42.3601',
+              longitude: '-71.0589',
+            },
+          },
+        ],
       },
     },
   ],
   chatEventsLast: [
     {
-      event: 'latitude-event',
+      event: StreamEventTypes.Latitude,
       data: {
-        type: 'chain-step',
+        type: ChainEventTypes.ChainStarted,
+        uuid: TOOLS_DOCUMENT_UUID,
         messages: [
           {
-            role: 'system',
+            role: MessageRole.system,
             content: [
               {
-                type: 'text',
-                text: 'Now make the recommendations based on the weather.',
-                _promptlSourceMap: [],
+                type: ContentType.text,
+                text: "You are a concerned mom. If the temperature is low, make recommendations to put on clothes, and if it's hot and sunny, be careful with so much exposure!\n\nBefore saying anything to the user, you must now their location and the current weather!\n\nIMPORTANT: Use exactly the names pased in the parameters for the locations. Do not add extra information.",
+              },
+              {
+                type: ContentType.text,
+                text: 'First, locate the one or many recommendation requests.',
+              },
+            ],
+          },
+          {
+            role: MessageRole.user,
+            content: [
+              {
+                type: ContentType.text,
+                text: "Hi mom! I'm currently in Barcelona and Miami and Andrés is in Boston! Can you give us tips on what clothes we should put on?",
+              },
+            ],
+          },
+          {
+            role: MessageRole.assistant,
+            content: [
+              {
+                type: ContentType.toolCall,
+                toolCallId: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
+                toolName: 'get_coordinates',
+                args: {
+                  location: 'Barcelona',
+                },
+              },
+              {
+                type: ContentType.toolCall,
+                toolCallId: 'call_KTPRHMRYPCF6NisrKhLxevEf',
+                toolName: 'get_coordinates',
+                args: {
+                  location: 'Miami',
+                },
+              },
+              {
+                type: ContentType.toolCall,
+                toolCallId: 'call_LRmAwTyy8NXChQo6reGll0tG',
+                toolName: 'get_coordinates',
+                args: {
+                  location: 'Boston',
+                },
+              },
+            ],
+            toolCalls: [
+              {
+                id: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
+                name: 'get_coordinates',
+                arguments: {
+                  location: 'Barcelona',
+                },
+              },
+              {
+                id: 'call_KTPRHMRYPCF6NisrKhLxevEf',
+                name: 'get_coordinates',
+                arguments: {
+                  location: 'Miami',
+                },
+              },
+              {
+                id: 'call_LRmAwTyy8NXChQo6reGll0tG',
+                name: 'get_coordinates',
+                arguments: {
+                  location: 'Boston',
+                },
+              },
+            ],
+          },
+          {
+            role: MessageRole.tool,
+            content: [
+              {
+                type: ContentType.toolResult,
+                toolCallId: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
+                toolName: 'get_coordinates',
+                result: {
+                  latitude: '41.3851',
+                  longitude: '2.1734',
+                },
+                isError: false,
+              },
+            ],
+          },
+          {
+            role: MessageRole.tool,
+            content: [
+              {
+                type: ContentType.toolResult,
+                toolCallId: 'call_KTPRHMRYPCF6NisrKhLxevEf',
+                toolName: 'get_coordinates',
+                result: {
+                  latitude: '25.7617',
+                  longitude: '-80.1918',
+                },
+                isError: false,
+              },
+            ],
+          },
+          {
+            role: MessageRole.tool,
+            content: [
+              {
+                type: ContentType.toolResult,
+                toolCallId: 'call_LRmAwTyy8NXChQo6reGll0tG',
+                toolName: 'get_coordinates',
+                result: {
+                  latitude: '42.3601',
+                  longitude: '-71.0589',
+                },
+                isError: false,
+              },
+            ],
+          },
+          {
+            role: MessageRole.system,
+            content: [
+              {
+                type: ContentType.text,
+                text: 'Now get the weather from the one or many recommendation requests.',
+              },
+            ],
+          },
+          {
+            role: MessageRole.assistant,
+            content: [
+              {
+                type: ContentType.toolCall,
+                toolCallId: 'call_CtgG80sOeYxUGR5J0Y0ZOiKF',
+                toolName: 'get_weather',
+                args: {
+                  latitude: '41.3851',
+                  longitude: '2.1734',
+                },
+              },
+              {
+                type: ContentType.toolCall,
+                toolCallId: 'call_AkTTcOQFhomjshMlgR4IDZ4m',
+                toolName: 'get_weather',
+                args: {
+                  latitude: '25.7617',
+                  longitude: '-80.1918',
+                },
+              },
+              {
+                type: ContentType.toolCall,
+                toolCallId: 'call_GzO72dVu3qf1cOBWVgsNQvUw',
+                toolName: 'get_weather',
+                args: {
+                  latitude: '42.3601',
+                  longitude: '-71.0589',
+                },
+              },
+            ],
+            toolCalls: [
+              {
+                id: 'call_CtgG80sOeYxUGR5J0Y0ZOiKF',
+                name: 'get_weather',
+                arguments: {
+                  latitude: '41.3851',
+                  longitude: '2.1734',
+                },
+              },
+              {
+                id: 'call_AkTTcOQFhomjshMlgR4IDZ4m',
+                name: 'get_weather',
+                arguments: {
+                  latitude: '25.7617',
+                  longitude: '-80.1918',
+                },
+              },
+              {
+                id: 'call_GzO72dVu3qf1cOBWVgsNQvUw',
+                name: 'get_weather',
+                arguments: {
+                  latitude: '42.3601',
+                  longitude: '-71.0589',
+                },
               },
             ],
           },
         ],
-        uuid: TOOLS_DOCUMENT_UUID,
       },
     },
     {
-      event: 'latitude-event',
+      event: StreamEventTypes.Latitude,
       data: {
-        type: 'chain-step-complete',
+        type: ChainEventTypes.StepStarted,
+        uuid: TOOLS_DOCUMENT_UUID,
+        messages: [
+          {
+            role: MessageRole.system,
+            content: [
+              {
+                type: ContentType.text,
+                text: "You are a concerned mom. If the temperature is low, make recommendations to put on clothes, and if it's hot and sunny, be careful with so much exposure!\n\nBefore saying anything to the user, you must now their location and the current weather!\n\nIMPORTANT: Use exactly the names pased in the parameters for the locations. Do not add extra information.",
+              },
+              {
+                type: ContentType.text,
+                text: 'First, locate the one or many recommendation requests.',
+              },
+            ],
+          },
+          {
+            role: MessageRole.user,
+            content: [
+              {
+                type: ContentType.text,
+                text: "Hi mom! I'm currently in Barcelona and Miami and Andrés is in Boston! Can you give us tips on what clothes we should put on?",
+              },
+            ],
+          },
+          {
+            role: MessageRole.assistant,
+            content: [
+              {
+                type: ContentType.toolCall,
+                toolCallId: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
+                toolName: 'get_coordinates',
+                args: {
+                  location: 'Barcelona',
+                },
+              },
+              {
+                type: ContentType.toolCall,
+                toolCallId: 'call_KTPRHMRYPCF6NisrKhLxevEf',
+                toolName: 'get_coordinates',
+                args: {
+                  location: 'Miami',
+                },
+              },
+              {
+                type: ContentType.toolCall,
+                toolCallId: 'call_LRmAwTyy8NXChQo6reGll0tG',
+                toolName: 'get_coordinates',
+                args: {
+                  location: 'Boston',
+                },
+              },
+            ],
+            toolCalls: [
+              {
+                id: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
+                name: 'get_coordinates',
+                arguments: {
+                  location: 'Barcelona',
+                },
+              },
+              {
+                id: 'call_KTPRHMRYPCF6NisrKhLxevEf',
+                name: 'get_coordinates',
+                arguments: {
+                  location: 'Miami',
+                },
+              },
+              {
+                id: 'call_LRmAwTyy8NXChQo6reGll0tG',
+                name: 'get_coordinates',
+                arguments: {
+                  location: 'Boston',
+                },
+              },
+            ],
+          },
+          {
+            role: MessageRole.tool,
+            content: [
+              {
+                type: ContentType.toolResult,
+                toolCallId: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
+                toolName: 'get_coordinates',
+                result: {
+                  latitude: '41.3851',
+                  longitude: '2.1734',
+                },
+                isError: false,
+              },
+            ],
+          },
+          {
+            role: MessageRole.tool,
+            content: [
+              {
+                type: ContentType.toolResult,
+                toolCallId: 'call_KTPRHMRYPCF6NisrKhLxevEf',
+                toolName: 'get_coordinates',
+                result: {
+                  latitude: '25.7617',
+                  longitude: '-80.1918',
+                },
+                isError: false,
+              },
+            ],
+          },
+          {
+            role: MessageRole.tool,
+            content: [
+              {
+                type: ContentType.toolResult,
+                toolCallId: 'call_LRmAwTyy8NXChQo6reGll0tG',
+                toolName: 'get_coordinates',
+                result: {
+                  latitude: '42.3601',
+                  longitude: '-71.0589',
+                },
+                isError: false,
+              },
+            ],
+          },
+          {
+            role: MessageRole.system,
+            content: [
+              {
+                type: ContentType.text,
+                text: 'Now get the weather from the one or many recommendation requests.',
+              },
+            ],
+          },
+          {
+            role: MessageRole.assistant,
+            content: [
+              {
+                type: ContentType.toolCall,
+                toolCallId: 'call_CtgG80sOeYxUGR5J0Y0ZOiKF',
+                toolName: 'get_weather',
+                args: {
+                  latitude: '41.3851',
+                  longitude: '2.1734',
+                },
+              },
+              {
+                type: ContentType.toolCall,
+                toolCallId: 'call_AkTTcOQFhomjshMlgR4IDZ4m',
+                toolName: 'get_weather',
+                args: {
+                  latitude: '25.7617',
+                  longitude: '-80.1918',
+                },
+              },
+              {
+                type: ContentType.toolCall,
+                toolCallId: 'call_GzO72dVu3qf1cOBWVgsNQvUw',
+                toolName: 'get_weather',
+                args: {
+                  latitude: '42.3601',
+                  longitude: '-71.0589',
+                },
+              },
+            ],
+            toolCalls: [
+              {
+                id: 'call_CtgG80sOeYxUGR5J0Y0ZOiKF',
+                name: 'get_weather',
+                arguments: {
+                  latitude: '41.3851',
+                  longitude: '2.1734',
+                },
+              },
+              {
+                id: 'call_AkTTcOQFhomjshMlgR4IDZ4m',
+                name: 'get_weather',
+                arguments: {
+                  latitude: '25.7617',
+                  longitude: '-80.1918',
+                },
+              },
+              {
+                id: 'call_GzO72dVu3qf1cOBWVgsNQvUw',
+                name: 'get_weather',
+                arguments: {
+                  latitude: '42.3601',
+                  longitude: '-71.0589',
+                },
+              },
+            ],
+          },
+          {
+            role: MessageRole.tool,
+            content: [
+              {
+                type: ContentType.toolResult,
+                toolCallId: 'call_CtgG80sOeYxUGR5J0Y0ZOiKF',
+                toolName: 'get_weather',
+                result: {
+                  temperature: 24,
+                  weather: 'Clear',
+                },
+                isError: false,
+              },
+            ],
+          },
+          {
+            role: MessageRole.tool,
+            content: [
+              {
+                type: ContentType.toolResult,
+                toolCallId: 'call_AkTTcOQFhomjshMlgR4IDZ4m',
+                toolName: 'get_weather',
+                result: {
+                  temperature: 30,
+                  weather: 'Clear',
+                },
+                isError: false,
+              },
+            ],
+          },
+          {
+            role: MessageRole.tool,
+            content: [
+              {
+                type: ContentType.toolResult,
+                toolCallId: 'call_GzO72dVu3qf1cOBWVgsNQvUw',
+                toolName: 'get_weather',
+                result: {
+                  temperature: 10,
+                  weather: 'Clear',
+                },
+                isError: false,
+              },
+            ],
+          },
+          {
+            role: MessageRole.system,
+            content: [
+              {
+                type: ContentType.text,
+                text: 'Now make the recommendations based on the weather.',
+              },
+            ],
+          },
+        ],
+      },
+    },
+    {
+      event: StreamEventTypes.Latitude,
+      data: {
+        type: ChainEventTypes.ProviderStarted,
+        uuid: TOOLS_DOCUMENT_UUID,
+        messages: [
+          {
+            role: MessageRole.system,
+            content: [
+              {
+                type: ContentType.text,
+                text: "You are a concerned mom. If the temperature is low, make recommendations to put on clothes, and if it's hot and sunny, be careful with so much exposure!\n\nBefore saying anything to the user, you must now their location and the current weather!\n\nIMPORTANT: Use exactly the names pased in the parameters for the locations. Do not add extra information.",
+              },
+              {
+                type: ContentType.text,
+                text: 'First, locate the one or many recommendation requests.',
+              },
+            ],
+          },
+          {
+            role: MessageRole.user,
+            content: [
+              {
+                type: ContentType.text,
+                text: "Hi mom! I'm currently in Barcelona and Miami and Andrés is in Boston! Can you give us tips on what clothes we should put on?",
+              },
+            ],
+          },
+          {
+            role: MessageRole.assistant,
+            content: [
+              {
+                type: ContentType.toolCall,
+                toolCallId: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
+                toolName: 'get_coordinates',
+                args: {
+                  location: 'Barcelona',
+                },
+              },
+              {
+                type: ContentType.toolCall,
+                toolCallId: 'call_KTPRHMRYPCF6NisrKhLxevEf',
+                toolName: 'get_coordinates',
+                args: {
+                  location: 'Miami',
+                },
+              },
+              {
+                type: ContentType.toolCall,
+                toolCallId: 'call_LRmAwTyy8NXChQo6reGll0tG',
+                toolName: 'get_coordinates',
+                args: {
+                  location: 'Boston',
+                },
+              },
+            ],
+            toolCalls: [
+              {
+                id: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
+                name: 'get_coordinates',
+                arguments: {
+                  location: 'Barcelona',
+                },
+              },
+              {
+                id: 'call_KTPRHMRYPCF6NisrKhLxevEf',
+                name: 'get_coordinates',
+                arguments: {
+                  location: 'Miami',
+                },
+              },
+              {
+                id: 'call_LRmAwTyy8NXChQo6reGll0tG',
+                name: 'get_coordinates',
+                arguments: {
+                  location: 'Boston',
+                },
+              },
+            ],
+          },
+          {
+            role: MessageRole.tool,
+            content: [
+              {
+                type: ContentType.toolResult,
+                toolCallId: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
+                toolName: 'get_coordinates',
+                result: {
+                  latitude: '41.3851',
+                  longitude: '2.1734',
+                },
+                isError: false,
+              },
+            ],
+          },
+          {
+            role: MessageRole.tool,
+            content: [
+              {
+                type: ContentType.toolResult,
+                toolCallId: 'call_KTPRHMRYPCF6NisrKhLxevEf',
+                toolName: 'get_coordinates',
+                result: {
+                  latitude: '25.7617',
+                  longitude: '-80.1918',
+                },
+                isError: false,
+              },
+            ],
+          },
+          {
+            role: MessageRole.tool,
+            content: [
+              {
+                type: ContentType.toolResult,
+                toolCallId: 'call_LRmAwTyy8NXChQo6reGll0tG',
+                toolName: 'get_coordinates',
+                result: {
+                  latitude: '42.3601',
+                  longitude: '-71.0589',
+                },
+                isError: false,
+              },
+            ],
+          },
+          {
+            role: MessageRole.system,
+            content: [
+              {
+                type: ContentType.text,
+                text: 'Now get the weather from the one or many recommendation requests.',
+              },
+            ],
+          },
+          {
+            role: MessageRole.assistant,
+            content: [
+              {
+                type: ContentType.toolCall,
+                toolCallId: 'call_CtgG80sOeYxUGR5J0Y0ZOiKF',
+                toolName: 'get_weather',
+                args: {
+                  latitude: '41.3851',
+                  longitude: '2.1734',
+                },
+              },
+              {
+                type: ContentType.toolCall,
+                toolCallId: 'call_AkTTcOQFhomjshMlgR4IDZ4m',
+                toolName: 'get_weather',
+                args: {
+                  latitude: '25.7617',
+                  longitude: '-80.1918',
+                },
+              },
+              {
+                type: ContentType.toolCall,
+                toolCallId: 'call_GzO72dVu3qf1cOBWVgsNQvUw',
+                toolName: 'get_weather',
+                args: {
+                  latitude: '42.3601',
+                  longitude: '-71.0589',
+                },
+              },
+            ],
+            toolCalls: [
+              {
+                id: 'call_CtgG80sOeYxUGR5J0Y0ZOiKF',
+                name: 'get_weather',
+                arguments: {
+                  latitude: '41.3851',
+                  longitude: '2.1734',
+                },
+              },
+              {
+                id: 'call_AkTTcOQFhomjshMlgR4IDZ4m',
+                name: 'get_weather',
+                arguments: {
+                  latitude: '25.7617',
+                  longitude: '-80.1918',
+                },
+              },
+              {
+                id: 'call_GzO72dVu3qf1cOBWVgsNQvUw',
+                name: 'get_weather',
+                arguments: {
+                  latitude: '42.3601',
+                  longitude: '-71.0589',
+                },
+              },
+            ],
+          },
+          {
+            role: MessageRole.tool,
+            content: [
+              {
+                type: ContentType.toolResult,
+                toolCallId: 'call_CtgG80sOeYxUGR5J0Y0ZOiKF',
+                toolName: 'get_weather',
+                result: {
+                  temperature: 24,
+                  weather: 'Clear',
+                },
+                isError: false,
+              },
+            ],
+          },
+          {
+            role: MessageRole.tool,
+            content: [
+              {
+                type: ContentType.toolResult,
+                toolCallId: 'call_AkTTcOQFhomjshMlgR4IDZ4m',
+                toolName: 'get_weather',
+                result: {
+                  temperature: 30,
+                  weather: 'Clear',
+                },
+                isError: false,
+              },
+            ],
+          },
+          {
+            role: MessageRole.tool,
+            content: [
+              {
+                type: ContentType.toolResult,
+                toolCallId: 'call_GzO72dVu3qf1cOBWVgsNQvUw',
+                toolName: 'get_weather',
+                result: {
+                  temperature: 10,
+                  weather: 'Clear',
+                },
+                isError: false,
+              },
+            ],
+          },
+          {
+            role: MessageRole.system,
+            content: [
+              {
+                type: ContentType.text,
+                text: 'Now make the recommendations based on the weather.',
+              },
+            ],
+          },
+        ],
+        config: {},
+      },
+    },
+    {
+      event: StreamEventTypes.Latitude,
+      data: {
+        type: ChainEventTypes.ProviderCompleted,
+        uuid: TOOLS_DOCUMENT_UUID,
+        messages: [
+          {
+            role: MessageRole.system,
+            content: [
+              {
+                type: ContentType.text,
+                text: "You are a concerned mom. If the temperature is low, make recommendations to put on clothes, and if it's hot and sunny, be careful with so much exposure!\n\nBefore saying anything to the user, you must now their location and the current weather!\n\nIMPORTANT: Use exactly the names pased in the parameters for the locations. Do not add extra information.",
+              },
+              {
+                type: ContentType.text,
+                text: 'First, locate the one or many recommendation requests.',
+              },
+            ],
+          },
+          {
+            role: MessageRole.user,
+            content: [
+              {
+                type: ContentType.text,
+                text: "Hi mom! I'm currently in Barcelona and Miami and Andrés is in Boston! Can you give us tips on what clothes we should put on?",
+              },
+            ],
+          },
+          {
+            role: MessageRole.assistant,
+            content: [
+              {
+                type: ContentType.toolCall,
+                toolCallId: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
+                toolName: 'get_coordinates',
+                args: {
+                  location: 'Barcelona',
+                },
+              },
+              {
+                type: ContentType.toolCall,
+                toolCallId: 'call_KTPRHMRYPCF6NisrKhLxevEf',
+                toolName: 'get_coordinates',
+                args: {
+                  location: 'Miami',
+                },
+              },
+              {
+                type: ContentType.toolCall,
+                toolCallId: 'call_LRmAwTyy8NXChQo6reGll0tG',
+                toolName: 'get_coordinates',
+                args: {
+                  location: 'Boston',
+                },
+              },
+            ],
+            toolCalls: [
+              {
+                id: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
+                name: 'get_coordinates',
+                arguments: {
+                  location: 'Barcelona',
+                },
+              },
+              {
+                id: 'call_KTPRHMRYPCF6NisrKhLxevEf',
+                name: 'get_coordinates',
+                arguments: {
+                  location: 'Miami',
+                },
+              },
+              {
+                id: 'call_LRmAwTyy8NXChQo6reGll0tG',
+                name: 'get_coordinates',
+                arguments: {
+                  location: 'Boston',
+                },
+              },
+            ],
+          },
+          {
+            role: MessageRole.tool,
+            content: [
+              {
+                type: ContentType.toolResult,
+                toolCallId: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
+                toolName: 'get_coordinates',
+                result: {
+                  latitude: '41.3851',
+                  longitude: '2.1734',
+                },
+                isError: false,
+              },
+            ],
+          },
+          {
+            role: MessageRole.tool,
+            content: [
+              {
+                type: ContentType.toolResult,
+                toolCallId: 'call_KTPRHMRYPCF6NisrKhLxevEf',
+                toolName: 'get_coordinates',
+                result: {
+                  latitude: '25.7617',
+                  longitude: '-80.1918',
+                },
+                isError: false,
+              },
+            ],
+          },
+          {
+            role: MessageRole.tool,
+            content: [
+              {
+                type: ContentType.toolResult,
+                toolCallId: 'call_LRmAwTyy8NXChQo6reGll0tG',
+                toolName: 'get_coordinates',
+                result: {
+                  latitude: '42.3601',
+                  longitude: '-71.0589',
+                },
+                isError: false,
+              },
+            ],
+          },
+          {
+            role: MessageRole.system,
+            content: [
+              {
+                type: ContentType.text,
+                text: 'Now get the weather from the one or many recommendation requests.',
+              },
+            ],
+          },
+          {
+            role: MessageRole.assistant,
+            content: [
+              {
+                type: ContentType.toolCall,
+                toolCallId: 'call_CtgG80sOeYxUGR5J0Y0ZOiKF',
+                toolName: 'get_weather',
+                args: {
+                  latitude: '41.3851',
+                  longitude: '2.1734',
+                },
+              },
+              {
+                type: ContentType.toolCall,
+                toolCallId: 'call_AkTTcOQFhomjshMlgR4IDZ4m',
+                toolName: 'get_weather',
+                args: {
+                  latitude: '25.7617',
+                  longitude: '-80.1918',
+                },
+              },
+              {
+                type: ContentType.toolCall,
+                toolCallId: 'call_GzO72dVu3qf1cOBWVgsNQvUw',
+                toolName: 'get_weather',
+                args: {
+                  latitude: '42.3601',
+                  longitude: '-71.0589',
+                },
+              },
+            ],
+            toolCalls: [
+              {
+                id: 'call_CtgG80sOeYxUGR5J0Y0ZOiKF',
+                name: 'get_weather',
+                arguments: {
+                  latitude: '41.3851',
+                  longitude: '2.1734',
+                },
+              },
+              {
+                id: 'call_AkTTcOQFhomjshMlgR4IDZ4m',
+                name: 'get_weather',
+                arguments: {
+                  latitude: '25.7617',
+                  longitude: '-80.1918',
+                },
+              },
+              {
+                id: 'call_GzO72dVu3qf1cOBWVgsNQvUw',
+                name: 'get_weather',
+                arguments: {
+                  latitude: '42.3601',
+                  longitude: '-71.0589',
+                },
+              },
+            ],
+          },
+          {
+            role: MessageRole.tool,
+            content: [
+              {
+                type: ContentType.toolResult,
+                toolCallId: 'call_CtgG80sOeYxUGR5J0Y0ZOiKF',
+                toolName: 'get_weather',
+                result: {
+                  temperature: 24,
+                  weather: 'Clear',
+                },
+                isError: false,
+              },
+            ],
+          },
+          {
+            role: MessageRole.tool,
+            content: [
+              {
+                type: ContentType.toolResult,
+                toolCallId: 'call_AkTTcOQFhomjshMlgR4IDZ4m',
+                toolName: 'get_weather',
+                result: {
+                  temperature: 30,
+                  weather: 'Clear',
+                },
+                isError: false,
+              },
+            ],
+          },
+          {
+            role: MessageRole.tool,
+            content: [
+              {
+                type: ContentType.toolResult,
+                toolCallId: 'call_GzO72dVu3qf1cOBWVgsNQvUw',
+                toolName: 'get_weather',
+                result: {
+                  temperature: 10,
+                  weather: 'Clear',
+                },
+                isError: false,
+              },
+            ],
+          },
+          {
+            role: MessageRole.system,
+            content: [
+              {
+                type: ContentType.text,
+                text: 'Now make the recommendations based on the weather.',
+              },
+            ],
+          },
+          {
+            role: MessageRole.assistant,
+            content: [
+              {
+                type: ContentType.text,
+                text: "- **Barcelona**: It's 24°C, so I recommend wearing light layers, like a t-shirt with a light jacket or cardigan, especially if you're going to be out in the evening.\n\n- **Miami**: It's hot at 30°C! Make sure to wear light, breathable clothing, and don't forget sunscreen and a hat to protect yourself from the sun.\n\n- **Boston**: It's quite chilly at 10°C. Please wear warm clothes, like a sweater or a jacket, and consider a scarf and gloves if you'll be outside for a while.",
+              },
+            ],
+            toolCalls: [],
+          },
+        ],
         response: {
           streamType: 'text',
           documentLogUuid: TOOLS_DOCUMENT_UUID,
@@ -369,38 +2457,537 @@ export const TOOL_EVENTS_OBJECT = {
           },
           toolCalls: [],
         },
-        uuid: TOOLS_DOCUMENT_UUID,
+        providerLogUuid: '789',
+        finishReason: 'stop',
+        tokenUsage: {
+          promptTokens: 523,
+          completionTokens: 115,
+          totalTokens: 638,
+        },
       },
     },
     {
-      event: 'latitude-event',
+      event: StreamEventTypes.Latitude,
       data: {
-        type: 'chain-complete',
-        response: {
-          streamType: 'text',
-          text: "- **Barcelona**: It's 24°C, so I recommend wearing light layers, like a t-shirt with a light jacket or cardigan, especially if you're going to be out in the evening.\n\n- **Miami**: It's hot at 30°C! Make sure to wear light, breathable clothing, and don't forget sunscreen and a hat to protect yourself from the sun.\n\n- **Boston**: It's quite chilly at 10°C. Please wear warm clothes, like a sweater or a jacket, and consider a scarf and gloves if you'll be outside for a while.",
-          usage: {
-            promptTokens: 523,
-            completionTokens: 115,
-            totalTokens: 638,
-          },
-          toolCalls: [],
-          chainCompleted: true,
-        },
+        type: ChainEventTypes.StepCompleted,
+        uuid: TOOLS_DOCUMENT_UUID,
         messages: [
           {
-            role: 'assistant',
+            role: MessageRole.system,
             content: [
               {
-                type: 'text',
+                type: ContentType.text,
+                text: "You are a concerned mom. If the temperature is low, make recommendations to put on clothes, and if it's hot and sunny, be careful with so much exposure!\n\nBefore saying anything to the user, you must now their location and the current weather!\n\nIMPORTANT: Use exactly the names pased in the parameters for the locations. Do not add extra information.",
+              },
+              {
+                type: ContentType.text,
+                text: 'First, locate the one or many recommendation requests.',
+              },
+            ],
+          },
+          {
+            role: MessageRole.user,
+            content: [
+              {
+                type: ContentType.text,
+                text: "Hi mom! I'm currently in Barcelona and Miami and Andrés is in Boston! Can you give us tips on what clothes we should put on?",
+              },
+            ],
+          },
+          {
+            role: MessageRole.assistant,
+            content: [
+              {
+                type: ContentType.toolCall,
+                toolCallId: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
+                toolName: 'get_coordinates',
+                args: {
+                  location: 'Barcelona',
+                },
+              },
+              {
+                type: ContentType.toolCall,
+                toolCallId: 'call_KTPRHMRYPCF6NisrKhLxevEf',
+                toolName: 'get_coordinates',
+                args: {
+                  location: 'Miami',
+                },
+              },
+              {
+                type: ContentType.toolCall,
+                toolCallId: 'call_LRmAwTyy8NXChQo6reGll0tG',
+                toolName: 'get_coordinates',
+                args: {
+                  location: 'Boston',
+                },
+              },
+            ],
+            toolCalls: [
+              {
+                id: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
+                name: 'get_coordinates',
+                arguments: {
+                  location: 'Barcelona',
+                },
+              },
+              {
+                id: 'call_KTPRHMRYPCF6NisrKhLxevEf',
+                name: 'get_coordinates',
+                arguments: {
+                  location: 'Miami',
+                },
+              },
+              {
+                id: 'call_LRmAwTyy8NXChQo6reGll0tG',
+                name: 'get_coordinates',
+                arguments: {
+                  location: 'Boston',
+                },
+              },
+            ],
+          },
+          {
+            role: MessageRole.tool,
+            content: [
+              {
+                type: ContentType.toolResult,
+                toolCallId: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
+                toolName: 'get_coordinates',
+                result: {
+                  latitude: '41.3851',
+                  longitude: '2.1734',
+                },
+                isError: false,
+              },
+            ],
+          },
+          {
+            role: MessageRole.tool,
+            content: [
+              {
+                type: ContentType.toolResult,
+                toolCallId: 'call_KTPRHMRYPCF6NisrKhLxevEf',
+                toolName: 'get_coordinates',
+                result: {
+                  latitude: '25.7617',
+                  longitude: '-80.1918',
+                },
+                isError: false,
+              },
+            ],
+          },
+          {
+            role: MessageRole.tool,
+            content: [
+              {
+                type: ContentType.toolResult,
+                toolCallId: 'call_LRmAwTyy8NXChQo6reGll0tG',
+                toolName: 'get_coordinates',
+                result: {
+                  latitude: '42.3601',
+                  longitude: '-71.0589',
+                },
+                isError: false,
+              },
+            ],
+          },
+          {
+            role: MessageRole.system,
+            content: [
+              {
+                type: ContentType.text,
+                text: 'Now get the weather from the one or many recommendation requests.',
+              },
+            ],
+          },
+          {
+            role: MessageRole.assistant,
+            content: [
+              {
+                type: ContentType.toolCall,
+                toolCallId: 'call_CtgG80sOeYxUGR5J0Y0ZOiKF',
+                toolName: 'get_weather',
+                args: {
+                  latitude: '41.3851',
+                  longitude: '2.1734',
+                },
+              },
+              {
+                type: ContentType.toolCall,
+                toolCallId: 'call_AkTTcOQFhomjshMlgR4IDZ4m',
+                toolName: 'get_weather',
+                args: {
+                  latitude: '25.7617',
+                  longitude: '-80.1918',
+                },
+              },
+              {
+                type: ContentType.toolCall,
+                toolCallId: 'call_GzO72dVu3qf1cOBWVgsNQvUw',
+                toolName: 'get_weather',
+                args: {
+                  latitude: '42.3601',
+                  longitude: '-71.0589',
+                },
+              },
+            ],
+            toolCalls: [
+              {
+                id: 'call_CtgG80sOeYxUGR5J0Y0ZOiKF',
+                name: 'get_weather',
+                arguments: {
+                  latitude: '41.3851',
+                  longitude: '2.1734',
+                },
+              },
+              {
+                id: 'call_AkTTcOQFhomjshMlgR4IDZ4m',
+                name: 'get_weather',
+                arguments: {
+                  latitude: '25.7617',
+                  longitude: '-80.1918',
+                },
+              },
+              {
+                id: 'call_GzO72dVu3qf1cOBWVgsNQvUw',
+                name: 'get_weather',
+                arguments: {
+                  latitude: '42.3601',
+                  longitude: '-71.0589',
+                },
+              },
+            ],
+          },
+          {
+            role: MessageRole.tool,
+            content: [
+              {
+                type: ContentType.toolResult,
+                toolCallId: 'call_CtgG80sOeYxUGR5J0Y0ZOiKF',
+                toolName: 'get_weather',
+                result: {
+                  temperature: 24,
+                  weather: 'Clear',
+                },
+                isError: false,
+              },
+            ],
+          },
+          {
+            role: MessageRole.tool,
+            content: [
+              {
+                type: ContentType.toolResult,
+                toolCallId: 'call_AkTTcOQFhomjshMlgR4IDZ4m',
+                toolName: 'get_weather',
+                result: {
+                  temperature: 30,
+                  weather: 'Clear',
+                },
+                isError: false,
+              },
+            ],
+          },
+          {
+            role: MessageRole.tool,
+            content: [
+              {
+                type: ContentType.toolResult,
+                toolCallId: 'call_GzO72dVu3qf1cOBWVgsNQvUw',
+                toolName: 'get_weather',
+                result: {
+                  temperature: 10,
+                  weather: 'Clear',
+                },
+                isError: false,
+              },
+            ],
+          },
+          {
+            role: MessageRole.system,
+            content: [
+              {
+                type: ContentType.text,
+                text: 'Now make the recommendations based on the weather.',
+              },
+            ],
+          },
+          {
+            role: MessageRole.assistant,
+            content: [
+              {
+                type: ContentType.text,
                 text: "- **Barcelona**: It's 24°C, so I recommend wearing light layers, like a t-shirt with a light jacket or cardigan, especially if you're going to be out in the evening.\n\n- **Miami**: It's hot at 30°C! Make sure to wear light, breathable clothing, and don't forget sunscreen and a hat to protect yourself from the sun.\n\n- **Boston**: It's quite chilly at 10°C. Please wear warm clothes, like a sweater or a jacket, and consider a scarf and gloves if you'll be outside for a while.",
               },
             ],
             toolCalls: [],
           },
         ],
-        finishReason: 'stop',
+      },
+    },
+    {
+      event: StreamEventTypes.Latitude,
+      data: {
+        type: ChainEventTypes.ChainCompleted,
         uuid: TOOLS_DOCUMENT_UUID,
+        tokenUsage: {
+          promptTokens: 523,
+          completionTokens: 115,
+          totalTokens: 638,
+        },
+        finishReason: 'stop',
+        messages: [
+          {
+            role: MessageRole.system,
+            content: [
+              {
+                type: ContentType.text,
+                text: "You are a concerned mom. If the temperature is low, make recommendations to put on clothes, and if it's hot and sunny, be careful with so much exposure!\n\nBefore saying anything to the user, you must now their location and the current weather!\n\nIMPORTANT: Use exactly the names pased in the parameters for the locations. Do not add extra information.",
+              },
+              {
+                type: ContentType.text,
+                text: 'First, locate the one or many recommendation requests.',
+              },
+            ],
+          },
+          {
+            role: MessageRole.user,
+            content: [
+              {
+                type: ContentType.text,
+                text: "Hi mom! I'm currently in Barcelona and Miami and Andrés is in Boston! Can you give us tips on what clothes we should put on?",
+              },
+            ],
+          },
+          {
+            role: MessageRole.assistant,
+            content: [
+              {
+                type: ContentType.toolCall,
+                toolCallId: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
+                toolName: 'get_coordinates',
+                args: {
+                  location: 'Barcelona',
+                },
+              },
+              {
+                type: ContentType.toolCall,
+                toolCallId: 'call_KTPRHMRYPCF6NisrKhLxevEf',
+                toolName: 'get_coordinates',
+                args: {
+                  location: 'Miami',
+                },
+              },
+              {
+                type: ContentType.toolCall,
+                toolCallId: 'call_LRmAwTyy8NXChQo6reGll0tG',
+                toolName: 'get_coordinates',
+                args: {
+                  location: 'Boston',
+                },
+              },
+            ],
+            toolCalls: [
+              {
+                id: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
+                name: 'get_coordinates',
+                arguments: {
+                  location: 'Barcelona',
+                },
+              },
+              {
+                id: 'call_KTPRHMRYPCF6NisrKhLxevEf',
+                name: 'get_coordinates',
+                arguments: {
+                  location: 'Miami',
+                },
+              },
+              {
+                id: 'call_LRmAwTyy8NXChQo6reGll0tG',
+                name: 'get_coordinates',
+                arguments: {
+                  location: 'Boston',
+                },
+              },
+            ],
+          },
+          {
+            role: MessageRole.tool,
+            content: [
+              {
+                type: ContentType.toolResult,
+                toolCallId: 'call_NCVUjMa6MeqDuj2bicbYOV1L',
+                toolName: 'get_coordinates',
+                result: {
+                  latitude: '41.3851',
+                  longitude: '2.1734',
+                },
+                isError: false,
+              },
+            ],
+          },
+          {
+            role: MessageRole.tool,
+            content: [
+              {
+                type: ContentType.toolResult,
+                toolCallId: 'call_KTPRHMRYPCF6NisrKhLxevEf',
+                toolName: 'get_coordinates',
+                result: {
+                  latitude: '25.7617',
+                  longitude: '-80.1918',
+                },
+                isError: false,
+              },
+            ],
+          },
+          {
+            role: MessageRole.tool,
+            content: [
+              {
+                type: ContentType.toolResult,
+                toolCallId: 'call_LRmAwTyy8NXChQo6reGll0tG',
+                toolName: 'get_coordinates',
+                result: {
+                  latitude: '42.3601',
+                  longitude: '-71.0589',
+                },
+                isError: false,
+              },
+            ],
+          },
+          {
+            role: MessageRole.system,
+            content: [
+              {
+                type: ContentType.text,
+                text: 'Now get the weather from the one or many recommendation requests.',
+              },
+            ],
+          },
+          {
+            role: MessageRole.assistant,
+            content: [
+              {
+                type: ContentType.toolCall,
+                toolCallId: 'call_CtgG80sOeYxUGR5J0Y0ZOiKF',
+                toolName: 'get_weather',
+                args: {
+                  latitude: '41.3851',
+                  longitude: '2.1734',
+                },
+              },
+              {
+                type: ContentType.toolCall,
+                toolCallId: 'call_AkTTcOQFhomjshMlgR4IDZ4m',
+                toolName: 'get_weather',
+                args: {
+                  latitude: '25.7617',
+                  longitude: '-80.1918',
+                },
+              },
+              {
+                type: ContentType.toolCall,
+                toolCallId: 'call_GzO72dVu3qf1cOBWVgsNQvUw',
+                toolName: 'get_weather',
+                args: {
+                  latitude: '42.3601',
+                  longitude: '-71.0589',
+                },
+              },
+            ],
+            toolCalls: [
+              {
+                id: 'call_CtgG80sOeYxUGR5J0Y0ZOiKF',
+                name: 'get_weather',
+                arguments: {
+                  latitude: '41.3851',
+                  longitude: '2.1734',
+                },
+              },
+              {
+                id: 'call_AkTTcOQFhomjshMlgR4IDZ4m',
+                name: 'get_weather',
+                arguments: {
+                  latitude: '25.7617',
+                  longitude: '-80.1918',
+                },
+              },
+              {
+                id: 'call_GzO72dVu3qf1cOBWVgsNQvUw',
+                name: 'get_weather',
+                arguments: {
+                  latitude: '42.3601',
+                  longitude: '-71.0589',
+                },
+              },
+            ],
+          },
+          {
+            role: MessageRole.tool,
+            content: [
+              {
+                type: ContentType.toolResult,
+                toolCallId: 'call_CtgG80sOeYxUGR5J0Y0ZOiKF',
+                toolName: 'get_weather',
+                result: {
+                  temperature: 24,
+                  weather: 'Clear',
+                },
+                isError: false,
+              },
+            ],
+          },
+          {
+            role: MessageRole.tool,
+            content: [
+              {
+                type: ContentType.toolResult,
+                toolCallId: 'call_AkTTcOQFhomjshMlgR4IDZ4m',
+                toolName: 'get_weather',
+                result: {
+                  temperature: 30,
+                  weather: 'Clear',
+                },
+                isError: false,
+              },
+            ],
+          },
+          {
+            role: MessageRole.tool,
+            content: [
+              {
+                type: ContentType.toolResult,
+                toolCallId: 'call_GzO72dVu3qf1cOBWVgsNQvUw',
+                toolName: 'get_weather',
+                result: {
+                  temperature: 10,
+                  weather: 'Clear',
+                },
+                isError: false,
+              },
+            ],
+          },
+          {
+            role: MessageRole.system,
+            content: [
+              {
+                type: ContentType.text,
+                text: 'Now make the recommendations based on the weather.',
+              },
+            ],
+          },
+          {
+            role: MessageRole.assistant,
+            content: [
+              {
+                type: ContentType.text,
+                text: "- **Barcelona**: It's 24°C, so I recommend wearing light layers, like a t-shirt with a light jacket or cardigan, especially if you're going to be out in the evening.\n\n- **Miami**: It's hot at 30°C! Make sure to wear light, breathable clothing, and don't forget sunscreen and a hat to protect yourself from the sun.\n\n- **Boston**: It's quite chilly at 10°C. Please wear warm clothes, like a sweater or a jacket, and consider a scarf and gloves if you'll be outside for a while.",
+              },
+            ],
+            toolCalls: [],
+          },
+        ],
       },
     },
   ],

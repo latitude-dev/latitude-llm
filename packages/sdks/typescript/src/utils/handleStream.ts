@@ -1,6 +1,6 @@
 import { Readable } from 'stream'
 
-import type { Message } from '@latitude-data/compiler'
+import type { Message, ToolCall } from '@latitude-data/compiler'
 import {
   ApiErrorCodes,
   LatitudeApiError,
@@ -12,13 +12,15 @@ import { ParsedEvent, ReconnectInterval } from 'eventsource-parser'
 import { EventSourceParserStream } from 'eventsource-parser/stream'
 import {
   ChainCallResponseDto,
-  ChainEventDto,
+  ProviderData,
   StreamEventTypes,
-} from '@latitude-data/constants/ai'
+  ChainEventTypes,
+  LatitudeEventData,
+} from '@latitude-data/constants'
 
 function parseJSON(line: string) {
   try {
-    return JSON.parse(line) as ChainEventDto
+    return JSON.parse(line) as ProviderData | LatitudeEventData
   } catch (e) {
     // do nothing
   }
@@ -34,6 +36,7 @@ export async function handleStream({
   let conversation: Message[] = []
   let uuid: string | undefined
   let chainResponse: ChainCallResponseDto | undefined
+  let toolsRequested: ToolCall[] = []
 
   const parser = new EventSourceParserStream()
   const stream = nodeFetchResponseToReadableStream(body, onError)
@@ -48,7 +51,7 @@ export async function handleStream({
       const parsedEvent = event as ParsedEvent | ReconnectInterval
 
       if (parsedEvent.type === 'event') {
-        const data = parseJSON(parsedEvent.data)
+        const data = parseJSON(parsedEvent.data) as LatitudeEventData
 
         if (!data) {
           throw new LatitudeApiError({
@@ -59,8 +62,11 @@ export async function handleStream({
           })
         }
 
-        if (parsedEvent.event === 'latitude-event') {
-          if (data.type === 'chain-error') {
+        if (parsedEvent.event === StreamEventTypes.Latitude) {
+          uuid = data.uuid
+          conversation = data.messages
+
+          if (data.type === ChainEventTypes.ChainError) {
             throw new LatitudeApiError({
               status: 402,
               message: data.error.message,
@@ -69,16 +75,12 @@ export async function handleStream({
             })
           }
 
-          const messages =
-            'messages' in data ? (data.messages! as Message[]) : []
-
-          if (messages.length > 0) {
-            conversation.push(...messages)
+          if (data.type === ChainEventTypes.ProviderCompleted) {
+            chainResponse = data.response
           }
 
-          if (data.type === 'chain-complete') {
-            uuid = data.uuid!
-            chainResponse = data.response!
+          if (data.type === ChainEventTypes.ToolsRequested) {
+            toolsRequested = data.tools
           }
         }
 
@@ -87,15 +89,14 @@ export async function handleStream({
     }
 
     if (!uuid || !chainResponse) {
-      throw new Error(
-        'Stream ended without a chain-complete event. Missing uuid or response.',
-      )
+      throw new Error('Stream ended without returning a provider response.')
     }
 
     const finalResponse = {
       conversation,
       uuid,
       response: chainResponse,
+      toolRequests: toolsRequested,
     }
 
     return finalResponse

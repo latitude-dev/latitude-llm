@@ -28,7 +28,7 @@ import * as chainValidatorModule from './ChainValidator'
 import * as saveOrPublishProviderLogsModule from './ProviderProcessor/saveOrPublishProviderLogs'
 import { runChain } from './run'
 import { objectToString } from '@latitude-data/constants'
-import { ChainEventTypes } from '../../lib/chainStreamManager/events'
+import { ChainEventTypes } from '@latitude-data/constants'
 
 // Mock other dependencies
 vi.mock('@latitude-data/compiler')

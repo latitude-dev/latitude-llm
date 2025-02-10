@@ -25,19 +25,16 @@ import { LanguageModelUsage } from 'ai'
 
 import { DocumentEditorContext } from '..'
 import Actions, { ActionsState } from './Actions'
-import { type PromptlVersion } from '@latitude-data/web-ui'
 import { usePlaygroundChat } from '$/hooks/playgroundChat/usePlaygroundChat'
 
-export default function Chat<V extends PromptlVersion>({
+export default function Chat({
   document,
-  promptlVersion,
   parameters,
   clearChat,
   expandParameters,
   setExpandParameters,
 }: {
   document: DocumentVersion
-  promptlVersion: V
   parameters: Record<string, unknown>
   clearChat: () => void
 } & ActionsState) {
@@ -109,7 +106,6 @@ export default function Chat<V extends PromptlVersion>({
     chainLength,
     isLoading,
   } = usePlaygroundChat({
-    promptlVersion,
     runPromptFn,
     addMessagesFn,
   })

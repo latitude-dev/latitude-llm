@@ -54,7 +54,7 @@ describe('/run', () => {
       server.boundary(async () => {
         const { mockAuthHeader } = mockRequest({
           server,
-          apiVersion: 'v2',
+          apiVersion: 'v3',
           version: 'live',
           projectId: '123',
         })
@@ -72,7 +72,7 @@ describe('/run', () => {
       server.boundary(async () => {
         const { mockUrl } = mockRequest({
           server,
-          apiVersion: 'v2',
+          apiVersion: 'v3',
           version: 'live',
           projectId: '123',
         })
@@ -81,7 +81,7 @@ describe('/run', () => {
           stream: true,
         })
         expect(mockUrl).toHaveBeenCalledWith(
-          'http://localhost:8787/api/v2/projects/123/versions/live/documents/run',
+          'http://localhost:8787/api/v3/projects/123/versions/live/documents/run',
         )
       }),
     )
@@ -93,7 +93,7 @@ describe('/run', () => {
       })
       const { mockUrl } = mockRequest({
         server,
-        apiVersion: 'v2',
+        apiVersion: 'v3',
         version: 'live',
         projectId: '345',
       })
@@ -101,7 +101,7 @@ describe('/run', () => {
         stream: true,
       })
       expect(mockUrl).toHaveBeenCalledWith(
-        'http://localhost:8787/api/v2/projects/345/versions/live/documents/run',
+        'http://localhost:8787/api/v3/projects/345/versions/live/documents/run',
       )
     })
 
@@ -110,7 +110,7 @@ describe('/run', () => {
       server.boundary(async () => {
         const { mockUrl, version } = mockRequest({
           server,
-          apiVersion: 'v2',
+          apiVersion: 'v3',
           version: 'SOME_UUID',
           projectId: '123',
         })
@@ -120,7 +120,7 @@ describe('/run', () => {
           stream: true,
         })
         expect(mockUrl).toHaveBeenCalledWith(
-          'http://localhost:8787/api/v2/projects/123/versions/SOME_UUID/documents/run',
+          'http://localhost:8787/api/v3/projects/123/versions/SOME_UUID/documents/run',
         )
       }),
     )
@@ -130,7 +130,7 @@ describe('/run', () => {
       server.boundary(async () => {
         const { mockBody } = mockRequest({
           server,
-          apiVersion: 'v2',
+          apiVersion: 'v3',
           version: 'SOME_UUID',
           projectId: '123',
         })
@@ -157,7 +157,7 @@ describe('/run', () => {
         const onMessageMock = vi.fn()
         const { chunks } = mockStreamResponse({
           server,
-          apiVersion: 'v2',
+          apiVersion: 'v3',
         })
         await sdk.prompts.run('path/to/document', {
           projectId,
@@ -183,7 +183,7 @@ describe('/run', () => {
         const onErrorMock = vi.fn()
         mockStreamResponse({
           server,
-          apiVersion: 'v2',
+          apiVersion: 'v3',
         })
         const final = await sdk.prompts.run('path/to/document', {
           projectId,
@@ -456,7 +456,7 @@ describe('/run', () => {
             onEvent,
             tools: buildMockTools(),
           })
-          expect(onEvent).toHaveBeenCalledTimes(9)
+          expect(onEvent).toHaveBeenCalledTimes(19)
         }),
       )
 
@@ -480,30 +480,9 @@ describe('/run', () => {
 
           expect(onFinished).toHaveBeenCalledTimes(1)
           expect(onFinished).toHaveBeenNthCalledWith(1, {
-            conversation: [
-              {
-                content: [
-                  {
-                    _promptlSourceMap: [],
-                    text: 'Now make the recommendations based on the weather.',
-                    type: 'text',
-                  },
-                ],
-                role: 'system',
-              },
-              {
-                role: 'assistant',
-                toolCalls: [],
-                content: [
-                  {
-                    text: finalText,
-                    type: 'text',
-                  },
-                ],
-              },
-            ],
+            conversation: expect.any(Array), // all messages
             response: {
-              chainCompleted: true,
+              documentLogUuid: '02e6ac23-a43b-4c3a-aedc-41b7d5e26a1b',
               streamType: 'text',
               text: finalText,
               toolCalls: [],
@@ -513,6 +492,7 @@ describe('/run', () => {
                 totalTokens: 638,
               },
             },
+            toolRequests: [],
             uuid: '02e6ac23-a43b-4c3a-aedc-41b7d5e26a1b',
           })
         }),
@@ -593,7 +573,7 @@ describe('/run', () => {
       server.boundary(async () => {
         const { mockAuthHeader } = mockRequest({
           server,
-          apiVersion: 'v2',
+          apiVersion: 'v3',
           version: 'live',
           projectId: '123',
           fakeResponse: RUN_TEXT_RESPONSE,
@@ -612,7 +592,7 @@ describe('/run', () => {
       server.boundary(async () => {
         const { mockUrl } = mockRequest({
           server,
-          apiVersion: 'v2',
+          apiVersion: 'v3',
           version: 'live',
           projectId: '123',
           fakeResponse: RUN_TEXT_RESPONSE,
@@ -622,7 +602,7 @@ describe('/run', () => {
           stream: false,
         })
         expect(mockUrl).toHaveBeenCalledWith(
-          'http://localhost:8787/api/v2/projects/123/versions/live/documents/run',
+          'http://localhost:8787/api/v3/projects/123/versions/live/documents/run',
         )
       }),
     )
@@ -634,7 +614,7 @@ describe('/run', () => {
       })
       const { mockUrl } = mockRequest({
         server,
-        apiVersion: 'v2',
+        apiVersion: 'v3',
         version: 'live',
         projectId: '345',
         fakeResponse: RUN_TEXT_RESPONSE,
@@ -643,7 +623,7 @@ describe('/run', () => {
         stream: false,
       })
       expect(mockUrl).toHaveBeenCalledWith(
-        'http://localhost:8787/api/v2/projects/345/versions/live/documents/run',
+        'http://localhost:8787/api/v3/projects/345/versions/live/documents/run',
       )
       sdk = oldSdk
     })
@@ -653,7 +633,7 @@ describe('/run', () => {
       server.boundary(async () => {
         const { mockUrl, version } = mockRequest({
           server,
-          apiVersion: 'v2',
+          apiVersion: 'v3',
           version: 'SOME_UUID',
           projectId: '123',
           fakeResponse: RUN_TEXT_RESPONSE,
@@ -664,7 +644,7 @@ describe('/run', () => {
           stream: false,
         })
         expect(mockUrl).toHaveBeenCalledWith(
-          'http://localhost:8787/api/v2/projects/123/versions/SOME_UUID/documents/run',
+          'http://localhost:8787/api/v3/projects/123/versions/SOME_UUID/documents/run',
         )
       }),
     )
@@ -674,7 +654,7 @@ describe('/run', () => {
       server.boundary(async () => {
         const { mockBody } = mockRequest({
           server,
-          apiVersion: 'v2',
+          apiVersion: 'v3',
           version: 'SOME_UUID',
           projectId: '123',
           fakeResponse: RUN_TEXT_RESPONSE,

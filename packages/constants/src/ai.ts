@@ -10,6 +10,7 @@ import { JSONSchema7 } from 'json-schema'
 import { z } from 'zod'
 
 import { ProviderLog } from './models'
+import { LatitudeEventData, LegacyChainEventTypes } from './events'
 
 export const azureConfig = z.object({
   resourceName: z.string({
@@ -65,49 +66,12 @@ export type Config = {
   >
 }
 
-export enum LegacyChainEventTypes {
-  Error = 'chain-error',
-  Step = 'chain-step',
-  Complete = 'chain-complete',
-  StepComplete = 'chain-step-complete',
-}
-
 export type ProviderData =
   | TextStreamPart<Record<string, CoreTool>>
   | ObjectStreamPart<Record<string, CoreTool>>
   | ObjectStreamPart<unknown>
 
-export type ChainEventDto =
-  | ProviderData
-  | {
-      type: LegacyChainEventTypes.Step
-      config: Config
-      isLastStep: boolean
-      messages: Message[]
-      uuid?: string
-    }
-  | {
-      type: LegacyChainEventTypes.StepComplete
-      response: ChainEventDtoResponse
-      uuid?: string
-    }
-  | {
-      type: LegacyChainEventTypes.Complete
-      config: Config
-      finishReason?: FinishReason
-      messages?: Message[]
-      object?: any
-      response: ChainEventDtoResponse
-      uuid?: string
-    }
-  | {
-      type: LegacyChainEventTypes.Error
-      error: {
-        name: string
-        message: string
-        stack?: string
-      }
-    }
+export type ChainEventDto = ProviderData | LatitudeEventData
 
 export type ChainCallResponseDto =
   | Omit<ChainStepResponse<'object'>, 'documentLogUuid' | 'providerLog'>
@@ -194,6 +158,7 @@ export type LegacyLatitudeEventData =
 export type RunSyncAPIResponse = {
   uuid: string
   conversation: Message[]
+  toolRequests: ToolCall[]
   response: ChainCallResponseDto
 }
 

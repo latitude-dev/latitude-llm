@@ -5,10 +5,9 @@ import { KeyboardEvent, useCallback, useState } from 'react'
 import TextareaAutosize from 'react-textarea-autosize'
 
 import { ToolCallForm } from './ToolCallForm'
-import { Message, ToolMessage } from '@latitude-data/compiler'
+import { Message, ToolMessage, ToolCall } from '@latitude-data/compiler'
 import { cn } from '../../../../lib/utils'
 import { ToolBar } from './ToolBar'
-import { ToolRequest } from '@latitude-data/constants'
 
 function SimpleTextArea({
   placeholder,
@@ -75,7 +74,7 @@ export function ChatTextArea({
   disabled?: boolean
   onSubmit?: OnSubmit | OnSubmitWithTools
   addMessages?: (messages: Message[]) => void
-  toolRequests?: ToolRequest[]
+  toolRequests?: ToolCall[]
 }) {
   return (
     <div

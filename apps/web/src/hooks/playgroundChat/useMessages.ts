@@ -71,6 +71,8 @@ export function useMessages<V extends PromptlVersion>({ version }: Props<V>) {
   )
 
   return {
+    setMessages,
+    setUnresponedToolCalls,
     addMessages,
     messages: messages as CompilerMessage[],
     unresponedToolCalls,

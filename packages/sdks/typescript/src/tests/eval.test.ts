@@ -95,7 +95,7 @@ describe('evaluations.trigger', () => {
   it('sends auth header', async () => {
     const { mockAuthHeader } = mockEvalRequest({
       server,
-      apiVersion: 'v2',
+      apiVersion: 'v3',
     })
 
     await sdk.evaluations.trigger(conversationUuid)
@@ -105,7 +105,7 @@ describe('evaluations.trigger', () => {
   it('sends evaluation uuids in body when provided', async () => {
     const { mockBody } = mockEvalRequest({
       server,
-      apiVersion: 'v2',
+      apiVersion: 'v3',
     })
 
     const evaluationUuids = [randomUUID(), randomUUID()]
@@ -120,7 +120,7 @@ describe('evaluations.trigger', () => {
   it('sends empty evaluationUuids when not provided', async () => {
     const { mockBody } = mockEvalRequest({
       server,
-      apiVersion: 'v2',
+      apiVersion: 'v3',
     })
 
     await sdk.evaluations.trigger(conversationUuid)
@@ -135,7 +135,7 @@ describe('evaluations.trigger', () => {
     const expectedResponse = { uuid: randomUUID() }
     mockEvalRequest({
       server,
-      apiVersion: 'v2',
+      apiVersion: 'v3',
       response: expectedResponse,
     })
 
@@ -152,7 +152,7 @@ describe('evaluations.trigger', () => {
 
     mockEvalRequest({
       server,
-      apiVersion: 'v2',
+      apiVersion: 'v3',
       response: errorResponse,
       status: 400,
     })
@@ -172,7 +172,7 @@ describe('evaluations.trigger', () => {
       const mockResponse = { uuid: 'eval-result-uuid' }
       const { mockBody, mockAuthHeader } = mockEvalResultRequest({
         server,
-        apiVersion: 'v2',
+        apiVersion: 'v3',
         response: mockResponse,
         conversationUuid: 'conversation-uuid',
         evaluationUuid: 'eval-uuid',
@@ -204,7 +204,7 @@ describe('evaluations.trigger', () => {
 
       mockEvalResultRequest({
         server,
-        apiVersion: 'v2',
+        apiVersion: 'v3',
         response: errorResponse,
         status: 400,
         conversationUuid: 'conversation-uuid',

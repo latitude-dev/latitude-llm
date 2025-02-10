@@ -5,25 +5,24 @@ import {
   ContentType,
 } from '@latitude-data/compiler'
 import {
-  buildMessagesFromResponse,
-  LegacyChainEventTypes,
   PublishedDocument,
   StreamEventTypes,
 } from '@latitude-data/core/browser'
 import { ReactStateDispatch } from '@latitude-data/web-ui'
 import { useCallback } from 'react'
 import { readStreamableValue } from 'ai/rsc'
+import { ChainEvent, ChainEventTypes } from '@latitude-data/constants'
 
 export function useChat({
   shared,
   documentLogUuid,
-  addMessageToConversation,
+  setMessages,
   setResponseStream,
   setError,
 }: {
   shared: PublishedDocument
   documentLogUuid: string | undefined
-  addMessageToConversation: (message: ConversationMessage) => void
+  setMessages: ReactStateDispatch<ConversationMessage[]>
   setResponseStream: ReactStateDispatch<string | undefined>
   setError: ReactStateDispatch<Error | undefined>
 }) {
@@ -37,8 +36,7 @@ export function useChat({
       }
 
       setResponseStream('')
-
-      addMessageToConversation(message)
+      setMessages((prev) => [...prev, message])
 
       let response = ''
 
@@ -52,7 +50,7 @@ export function useChat({
         for await (const serverEvent of readStreamableValue(output)) {
           if (!serverEvent) continue
 
-          const { event, data } = serverEvent
+          const { event, data } = serverEvent as ChainEvent
 
           // Delta text from the provider
           if (event === StreamEventTypes.Provider) {
@@ -63,26 +61,21 @@ export function useChat({
             continue
           }
 
+          setMessages(data.messages)
+
           // Step started
-          if (data.type === LegacyChainEventTypes.Step) {
+          if (data.type === ChainEventTypes.StepStarted) {
             setResponseStream('')
             response = ''
           }
 
           // Step finished
-          if (data.type === LegacyChainEventTypes.StepComplete) {
-            const responseMsgs = buildMessagesFromResponse(data)
-            responseMsgs.forEach(addMessageToConversation)
-            setResponseStream(undefined)
-          }
-
-          // Chain finished
-          if (data.type === LegacyChainEventTypes.Complete) {
+          if (data.type === ChainEventTypes.ProviderCompleted) {
             setResponseStream(undefined)
           }
 
           // Error
-          if (data.type === LegacyChainEventTypes.Error) {
+          if (data.type === ChainEventTypes.ChainError) {
             setError(new Error(data.error.message))
           }
         }
@@ -92,7 +85,7 @@ export function useChat({
         setResponseStream(undefined)
       }
     },
-    [addMessageToConversation, setError, documentLogUuid],
+    [setMessages, setError, documentLogUuid],
   )
 
   return { onChat }

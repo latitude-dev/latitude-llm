@@ -64,6 +64,11 @@ export const createLogRouteV1 = createLogRouteFactory({
 
 export const createLogRouteV2 = createLogRouteFactory({
   path: ROUTES.v2.documents.logs,
+  tags: ['V2_DEPRECATED'],
+})
+
+export const createLogRouteV3 = createLogRouteFactory({
+  path: ROUTES.v3.documents.logs,
   tags: ['Documents'],
 })
 

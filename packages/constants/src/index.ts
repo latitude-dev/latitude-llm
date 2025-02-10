@@ -19,3 +19,4 @@ export enum Providers {
 export * from './models'
 export * from './ai'
 export * from './tools'
+export * from './events'

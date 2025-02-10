@@ -5,7 +5,7 @@ import {
   LegacyChainEventTypes,
   StreamEventTypes,
 } from '@latitude-data/constants'
-import { ChainEvent, ChainEventTypes } from '../events'
+import { ChainEvent, ChainEventTypes } from '@latitude-data/constants'
 import { StreamType } from '../../../constants'
 import {
   ContentType,
@@ -83,7 +83,7 @@ export function convertToLegacyChainStream(
             event: StreamEventTypes.Latitude,
             data: {
               type: LegacyChainEventTypes.Step,
-              documentLogUuid: data.documentLogUuid,
+              documentLogUuid: data.uuid,
               messages: data.messages.slice(messageCount),
               isLastStep: false,
               config: data.config as Config,
@@ -105,7 +105,7 @@ export function convertToLegacyChainStream(
             event: StreamEventTypes.Latitude,
             data: {
               type: LegacyChainEventTypes.StepComplete,
-              documentLogUuid: data.documentLogUuid,
+              documentLogUuid: data.uuid,
               response: lastResponse,
             },
           })
@@ -118,7 +118,7 @@ export function convertToLegacyChainStream(
             event: StreamEventTypes.Latitude,
             data: {
               type: LegacyChainEventTypes.Complete,
-              documentLogUuid: data.documentLogUuid,
+              documentLogUuid: data.uuid,
               config: lastConfig,
               messages: data.messages,
               response: lastResponse,
@@ -134,7 +134,7 @@ export function convertToLegacyChainStream(
             event: StreamEventTypes.Latitude,
             data: {
               type: LegacyChainEventTypes.Complete,
-              documentLogUuid: data.documentLogUuid,
+              documentLogUuid: data.uuid,
               config: lastConfig,
               messages: data.messages,
               response: {

@@ -6,6 +6,7 @@ import { Latitude, type ChainEventDto } from '@latitude-data/sdk'
 import { createSdk } from '$/app/(private)/_lib/createSdk'
 import { getCurrentUserOrError } from '$/services/auth/getCurrentUser'
 import { createStreamableValue, StreamableValue } from 'ai/rsc'
+import { ChainEvent } from '@latitude-data/constants'
 
 type RunDocumentActionProps = {
   documentPath: string
@@ -14,7 +15,7 @@ type RunDocumentActionProps = {
   parameters: Record<string, unknown>
 }
 export type RunDocumentResponse = Promise<{
-  output: StreamableValue<{ event: StreamEventTypes; data: ChainEventDto }>
+  output: StreamableValue<ChainEvent>
   response: ReturnType<typeof Latitude.prototype.prompts.run>
 }>
 export type RunDocumentActionFn = (
