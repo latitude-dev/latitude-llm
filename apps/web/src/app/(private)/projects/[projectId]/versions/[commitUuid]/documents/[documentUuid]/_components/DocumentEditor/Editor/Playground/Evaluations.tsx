@@ -333,6 +333,7 @@ const useEvaluationResultsSocket = ({
     (args: EventArgs<'evaluationResultCreated'>) => {
       if (!args.row || !documentLog) return
       if (args.row.documentLogId !== documentLog.id) return
+      if (!args.row.resultableId || !args.row.evaluatedProviderLogId) return
       const evaluation = evaluations.find(
         (evaluation) =>
           evaluation.live && evaluation.id === args.row.evaluationId,
