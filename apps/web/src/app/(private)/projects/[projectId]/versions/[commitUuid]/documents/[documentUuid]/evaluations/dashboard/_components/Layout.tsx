@@ -18,9 +18,9 @@ import Link from 'next/link'
 import ConnectedEvaluationsTable from './ConnectedEvaluationsTable'
 
 function SuggestedEvaluations({
-  isEvaluationGeneratorEnabled,
+  isGeneratorEnabled,
 }: {
-  isEvaluationGeneratorEnabled?: boolean
+  isGeneratorEnabled?: boolean
 }) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
@@ -36,7 +36,7 @@ function SuggestedEvaluations({
       <div className='relative bg-secondary px-4 py-2 rounded-lg border max-h-[272px] overflow-hidden'>
         <div className='max-h-[272px] overflow-hidden'>
           <span className='whitespace-pre-wrap text-sm leading-1 text-muted-foreground'>
-            {isEvaluationGeneratorEnabled
+            {isGeneratorEnabled
               ? `
 ---
   provider: OpenAI
@@ -67,11 +67,9 @@ Don't rawdog your prompts!
                 .documents.detail({ uuid: document.documentUuid }).evaluations
                 .dashboard.generate.root
             }
-            className={cn(
-              !isEvaluationGeneratorEnabled && 'pointer-events-none',
-            )}
+            className={cn(!isGeneratorEnabled && 'pointer-events-none')}
           >
-            <Button fancy disabled={!isEvaluationGeneratorEnabled}>
+            <Button fancy disabled={!isGeneratorEnabled}>
               Generate the evaluation
             </Button>
           </Link>
@@ -83,10 +81,10 @@ Don't rawdog your prompts!
 
 export default function EvaluationsLayoutClient({
   evaluations: fallbackData,
-  isEvaluationGeneratorEnabled,
+  isGeneratorEnabled,
 }: {
   evaluations: EvaluationDto[]
-  isEvaluationGeneratorEnabled?: boolean
+  isGeneratorEnabled?: boolean
 }) {
   const { document } = useCurrentDocument()
   const { data: evaluations, isLoading } = useEvaluations({
@@ -120,9 +118,7 @@ export default function EvaluationsLayoutClient({
           title='How to evaluate your prompts using LLMs and Latitude.so'
         />
       </BlankSlateStep>
-      <SuggestedEvaluations
-        isEvaluationGeneratorEnabled={isEvaluationGeneratorEnabled}
-      />
+      <SuggestedEvaluations isGeneratorEnabled={isGeneratorEnabled} />
     </BlankSlateWithSteps>
   )
 }

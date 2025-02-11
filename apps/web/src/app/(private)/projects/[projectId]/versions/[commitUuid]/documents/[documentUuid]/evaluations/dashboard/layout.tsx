@@ -35,7 +35,7 @@ export default async function EvaluationsLayout({
         table={
           <EvaluationsLayoutClient
             evaluations={evaluations}
-            isEvaluationGeneratorEnabled={!!env.LATITUDE_CLOUD}
+            isGeneratorEnabled={!!env.LATITUDE_CLOUD}
           />
         }
       />
