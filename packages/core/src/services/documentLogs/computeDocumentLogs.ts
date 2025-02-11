@@ -37,7 +37,7 @@ export function computeDocumentLogsQuery(
   const offset = calculateOffset(page, pageSize)
   const conditions = [
     isNull(runErrors.id),
-    eq(workspaces.id, workspaceId),
+    eq(projects.workspaceId, workspaceId),
     documentUuid ? eq(documentLogs.documentUuid, documentUuid) : undefined,
     filterOptions ? buildLogsFilterSQLConditions(filterOptions) : undefined,
   ].filter(Boolean)
