@@ -21,7 +21,7 @@
   },
   "dependencies": {
     "@latitude-data/compiler": "workspace:^",
-    "promptl-ai": "^0.4.8",
+    "promptl-ai": "^0.4.9",
     "json-schema": "^0.4.0",
     "zod": "^3.23.8"
   }

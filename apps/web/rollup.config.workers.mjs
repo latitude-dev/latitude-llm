@@ -10,6 +10,7 @@ export default defineConfig({
     sourcemap: true,
   },
   treeshake: 'smallest',
+  external: ['promptl-ai'],
   plugins: [
     typescript({
       tsconfig: './tsconfig.workers.json',
