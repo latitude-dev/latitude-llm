@@ -50,8 +50,8 @@ services:
     image: latitude/gateway:latest
     build:
       platforms:
-        - 'linux/amd64'
         - 'linux/arm64'
+        - 'linux/amd64'
       context: .
       dockerfile: apps/gateway/docker/Dockerfile
     env_file:
@@ -68,8 +68,8 @@ services:
     image: latitude/workers:latest
     build:
       platforms:
-        - 'linux/amd64'
         - 'linux/arm64'
+        - 'linux/amd64'
       context: .
       dockerfile: apps/workers/docker/Dockerfile
     env_file:
@@ -82,8 +82,8 @@ services:
     image: latitude/websockets:latest
     build:
       platforms:
-        - 'linux/amd64'
         - 'linux/arm64'
+        - 'linux/amd64'
       context: .
       dockerfile: apps/websockets/docker/Dockerfile
     env_file:
