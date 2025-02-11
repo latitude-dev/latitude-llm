@@ -167,32 +167,51 @@ function DocumentLogParameters({
 }: {
   documentLog: DocumentLogWithMetadataAndError
 }) {
+  const parameters = useMemo(() => {
+    return Object.entries(documentLog.parameters).map(([parameter, value]) => {
+      if (value === undefined || value === null) {
+        value = ''
+      } else if (typeof value === 'object' || Array.isArray(value)) {
+        try {
+          value = JSON.stringify(value)
+        } catch (error) {
+          value = String(value)
+        }
+      } else {
+        value = String(value)
+      }
+
+      return {
+        parameter,
+        value,
+      }
+    })
+  }, [documentLog.parameters])
+
   return (
     <>
       <Text.H5M color='foreground'>Parameters</Text.H5M>
       <div className='grid grid-cols-[auto_1fr] gap-y-3'>
-        {Object.entries(documentLog.parameters).map(
-          ([parameter, value], index) => (
-            <div
-              key={index}
-              className='grid col-span-2 grid-cols-subgrid gap-3 w-full items-start'
-            >
-              <div className='flex flex-row items-center gap-x-2 min-h-8'>
-                <Badge variant='accent'>
-                  &#123;&#123;{parameter}&#125;&#125;
-                </Badge>
-              </div>
-              <div className='flex flex-grow w-full min-w-0'>
-                <TextArea
-                  value={String(value || '')}
-                  minRows={1}
-                  maxRows={6}
-                  disabled={true}
-                />
-              </div>
+        {parameters.map(({ parameter, value }, index) => (
+          <div
+            key={index}
+            className='grid col-span-2 grid-cols-subgrid gap-3 w-full items-start'
+          >
+            <div className='flex flex-row items-center gap-x-2 min-h-8'>
+              <Badge variant='accent'>
+                &#123;&#123;{parameter}&#125;&#125;
+              </Badge>
             </div>
-          ),
-        )}
+            <div className='flex flex-grow w-full min-w-0'>
+              <TextArea
+                value={String(value || '')}
+                minRows={1}
+                maxRows={6}
+                disabled={true}
+              />
+            </div>
+          </div>
+        ))}
       </div>
     </>
   )

@@ -1,5 +1,10 @@
 import { RefObject, useCallback, useEffect, useRef, useState } from 'react'
 
+import useFetcher from '$/hooks/useFetcher'
+import { useStickyNested } from '$/hooks/useStickyNested'
+import { ROUTES } from '$/services/routes'
+import useEvaluationResultsByDocumentLogs from '$/stores/evaluationResultsByDocumentLogs'
+import useProviderLogs from '$/stores/providerLogs'
 import {
   EvaluationDto,
   EvaluationMetadataType,
@@ -9,18 +14,7 @@ import {
   DocumentLogWithMetadataAndError,
   type EvaluationResultWithMetadataAndErrors,
 } from '@latitude-data/core/repositories'
-import {
-  Button,
-  cn,
-  Icon,
-  Modal,
-  ReactStateDispatch,
-} from '@latitude-data/web-ui'
-import useFetcher from '$/hooks/useFetcher'
-import { useStickyNested } from '$/hooks/useStickyNested'
-import { ROUTES } from '$/services/routes'
-import useEvaluationResultsByDocumentLogs from '$/stores/evaluationResultsByDocumentLogs'
-import useProviderLogs from '$/stores/providerLogs'
+import { Button, cn, Modal, ReactStateDispatch } from '@latitude-data/web-ui'
 import { usePanelDomRef } from 'node_modules/@latitude-data/web-ui/src/ds/atoms/SplitPane'
 import useSWR from 'swr'
 
@@ -180,9 +174,17 @@ function MetadataInfo({
             />
             {evaluationResult.evaluatedProviderLogId && (
               <div className='w-full flex justify-center'>
-                <Button variant='link' onClick={onClickOpen}>
+                <Button
+                  variant='link'
+                  iconProps={{
+                    name: 'arrowRight',
+                    widthClass: 'w-4',
+                    heightClass: 'h-4',
+                    placement: 'right',
+                  }}
+                  onClick={onClickOpen}
+                >
                   Check original log
-                  <Icon name='arrowRight' widthClass='w-4' heightClass='h-4' />
                 </Button>
               </div>
             )}
@@ -206,13 +208,17 @@ function MetadataInfo({
               )}
               {evaluationResult.evaluatedProviderLogId && (
                 <div className='w-full flex justify-center'>
-                  <Button variant='link' onClick={onClickOpen}>
+                  <Button
+                    variant='link'
+                    iconProps={{
+                      name: 'arrowRight',
+                      widthClass: 'w-4',
+                      heightClass: 'h-4',
+                      placement: 'right',
+                    }}
+                    onClick={onClickOpen}
+                  >
                     Check original log
-                    <Icon
-                      name='arrowRight'
-                      widthClass='w-4'
-                      heightClass='h-4'
-                    />
                   </Button>
                 </div>
               )}
