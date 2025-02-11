@@ -117,7 +117,8 @@ export class ChainStreamManager {
   async getProviderResponse(args: Omit<ExecuteStepArgs, 'controller'>) {
     if (!this.controller) throw new Error('Stream not started')
 
-    this.messages = [...args.conversation.messages] // TODO: This may conflict with isolated steps
+    // TODO: This may conflict with isolated steps
+    this.messages = [...args.conversation.messages]
 
     this.sendEvent({ type: ChainEventTypes.StepStarted })
 
@@ -185,10 +186,12 @@ export class ChainStreamManager {
    */
   error(error: ChainError<RunErrorCodes>) {
     if (this.finished) throw new Error('Chain already finished')
+
     this.sendEvent({
       type: ChainEventTypes.ChainError,
-      error,
+      error: new Error(error.runError ? error.runError.message : error.message),
     })
+
     this.resolveError?.(error)
     this.endStream()
   }
@@ -214,6 +217,7 @@ export class ChainStreamManager {
 
   private sendEvent(event: OmittedLatitudeEventData) {
     if (!this.controller) throw new Error('Stream not started')
+
     this.controller.enqueue({
       event: StreamEventTypes.Latitude,
       data: {

@@ -81,7 +81,9 @@ export async function streamAIResponse({
   }
 
   const aiResult = await ai({
-    messages: [...conversation.messages], // TODO: vitest will cry when checking the parameters passed to this function when the object mutes afterwards. To fix this, we make a deep copy of the array so that it is immutable.
+    // TODO: vitest will cry when checking the parameters passed to this function when the object mutes afterwards.
+    // To fix this, we make a deep copy of the array so that it is immutable.
+    messages: [...conversation.messages],
     config: conversation.config as ValidatedConfig,
     provider: provider,
     schema: schema,

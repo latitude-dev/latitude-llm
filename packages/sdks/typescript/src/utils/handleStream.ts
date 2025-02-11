@@ -70,7 +70,7 @@ export async function handleStream({
             throw new LatitudeApiError({
               status: 402,
               message: data.error.message,
-              serverResponse: JSON.stringify(data.error),
+              serverResponse: data.error.message,
               errorCode: RunErrorCodes.AIRunError,
             })
           }
@@ -114,7 +114,6 @@ export async function handleStream({
         errorCode: ApiErrorCodes.InternalServerError,
       })
     }
-    onError?.(error)
     return Promise.reject(error)
   }
 }

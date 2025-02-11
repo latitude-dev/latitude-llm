@@ -47,7 +47,11 @@ function extractCompilerToolContents(messages: CompilerMessage[]): ToolPart[] {
       type: PromptlContentType.toolCall,
       toolCallId: content.toolCallId,
       toolName: content.toolName,
-      toolArguments: content.args,
+      // FIXME: Kill old compiler please
+      // We have a mess and sometimes messages produced by promptl are
+      // formatted with this code. So we have to check if `toolArguments` is there
+      // @ts-expect-error - toolArguments is not part of old messages but can be here
+      toolArguments: content.args ?? content.toolArguments,
     }))
   })
 }

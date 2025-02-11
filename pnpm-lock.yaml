@@ -260,8 +260,8 @@ importers:
         specifier: ^4.17.21
         version: 4.17.21
       promptl-ai:
-        specifier: ^0.4.5
-        version: 0.4.5
+        specifier: ^0.4.8
+        version: 0.4.8
       rate-limiter-flexible:
         specifier: ^5.0.3
         version: 5.0.4
@@ -427,8 +427,8 @@ importers:
         specifier: ^1.161.6
         version: 1.176.0
       promptl-ai:
-        specifier: ^0.4.5
-        version: 0.4.5
+        specifier: ^0.4.8
+        version: 0.4.8
       rate-limiter-flexible:
         specifier: ^5.0.3
         version: 5.0.4
@@ -755,8 +755,8 @@ importers:
         specifier: ^0.4.0
         version: 0.4.0
       promptl-ai:
-        specifier: ^0.4.5
-        version: 0.4.5
+        specifier: ^0.4.8
+        version: 0.4.8
       zod:
         specifier: ^3.23.8
         version: 3.23.8
@@ -780,8 +780,8 @@ importers:
         specifier: ^1.0.5
         version: 1.0.5
       promptl-ai:
-        specifier: ^0.4.5
-        version: 0.4.5
+        specifier: ^0.4.8
+        version: 0.4.8
     devDependencies:
       '@ai-sdk/anthropic':
         specifier: ^1.1.0
@@ -1003,8 +1003,8 @@ importers:
         specifier: 3.3.2
         version: 3.3.2
       promptl-ai:
-        specifier: ^0.4.5
-        version: 0.4.5
+        specifier: ^0.4.8
+        version: 0.4.8
       typescript:
         specifier: ^5.5.4
         version: 5.7.2
@@ -1321,8 +1321,8 @@ importers:
         specifier: ^8.4.39
         version: 8.4.47
       promptl-ai:
-        specifier: ^0.3.5
-        version: 0.3.5
+        specifier: ^0.4.8
+        version: 0.4.8
       react:
         specifier: 18.3.0
         version: 18.3.0
@@ -8381,6 +8381,9 @@ packages:
   fast-safe-stringify@2.1.1:
     resolution: {integrity: sha512-W+KJc2dmILlPplD/H4K9l9LcAHAfPtP6BY84uVLXQ6Evcz9Lcg33Y2z1IVblT6xdY54PXYVHEv+0Wpq8Io6zkA==}
 
+  fast-sha256@1.3.0:
+    resolution: {integrity: sha512-n11RGP/lrWEFI/bWdygLxhI+pVeo1ZYIVwvvPkW7azl/rOy+F3HYRZ2K5zeE9mmkhQppyv9sQFx0JM9UabnpPQ==}
+
   fast-uri@3.0.3:
     resolution: {integrity: sha512-aLrHthzCjH5He4Z2H9YZ+v6Ujb9ocRuW6ZzkJQOrTxleEijANq4v1TsaPaVG1PZcuurEzrLcWRyYBYXD5cEiaw==}
 
@@ -11338,11 +11341,8 @@ packages:
     resolution: {integrity: sha512-y+WKFlBR8BGXnsNlIHFGPZmyDf3DFMoLhaflAnyZgV6rG6xu+JwesTo2Q9R6XwYmtmwAFCkAk3e35jEdoeh/3g==}
     engines: {node: '>=10'}
 
-  promptl-ai@0.3.5:
-    resolution: {integrity: sha512-g3RtXgCOtMky68rkdalGGApO85DBZvL65gJy7SzZ+D+eEpCB2hR+7q2G67y+s66AHDzG2DM+sU+1WTRbDCrfyg==}
-
-  promptl-ai@0.4.5:
-    resolution: {integrity: sha512-bJkWlLtyxJkxt28+InTtKF8e4OZ67J9QtkOnI9xKBeEv6ILRFHcU09quTbCFi0wCL+6lw6okL2tV1yix21Jf6g==}
+  promptl-ai@0.4.8:
+    resolution: {integrity: sha512-RHw+LlTTzeOJTe5ZxyI79weq+U/GLJZlpJ7nmmgQhK7vgboXjrL8ilZrHHOF5zgRN7LiLf4F15i6viomad39wg==}
 
   prop-types@15.8.1:
     resolution: {integrity: sha512-oj87CgZICdulUohogVAR7AjlC0327U4el4L6eAvOqCeudMDVU0NThNaV+b9Df4dXgSP1gXMTnPdhfe/2qDH5cg==}
@@ -22568,6 +22568,8 @@ snapshots:
 
   fast-safe-stringify@2.1.1: {}
 
+  fast-sha256@1.3.0: {}
+
   fast-uri@3.0.3: {}
 
   fast-xml-parser@4.4.1:
@@ -26549,18 +26551,11 @@ snapshots:
       err-code: 2.0.3
       retry: 0.12.0
 
-  promptl-ai@0.3.5:
+  promptl-ai@0.4.8:
     dependencies:
       acorn: 8.14.0
       code-red: 1.0.4
-      locate-character: 3.0.0
-      yaml: 2.6.0
-      zod: 3.23.8
-
-  promptl-ai@0.4.5:
-    dependencies:
-      acorn: 8.14.0
-      code-red: 1.0.4
+      fast-sha256: 1.3.0
       locate-character: 3.0.0
       yaml: 2.6.0
       zod: 3.23.8

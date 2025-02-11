@@ -198,6 +198,41 @@ describe('/run', () => {
       }),
     )
 
+    it(
+      'sends onError callback when error is received',
+      server.boundary(async () => {
+        const onFinishMock = vi.fn()
+        const onErrorMock = vi.fn()
+        const customChunks = [
+          `event: latitude-event
+data: ${JSON.stringify({
+            type: 'chain-error',
+            error: {
+              message: 'Something bad happened',
+            },
+          })}
+        `,
+        ]
+        mockStreamResponse({
+          server,
+          apiVersion: 'v3',
+          customChunks,
+        })
+        await sdk.prompts.run('path/to/document', {
+          projectId,
+          parameters: { foo: 'bar', lol: 'foo' },
+          stream: true,
+          onFinished: onFinishMock,
+          onError: onErrorMock,
+        })
+        expect(onErrorMock).toHaveBeenCalledTimes(1)
+        expect(onErrorMock).toHaveBeenCalledWith(
+          new Error('Unexpected API Error: 500 Something bad happened'),
+        )
+        expect(onFinishMock).not.toHaveBeenCalled()
+      }),
+    )
+
     describe('tool calling', () => {
       let mockRunBody: Mock
       let mockChatBody: Mock

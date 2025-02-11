@@ -7,10 +7,6 @@ import {
 import { v4 as uuid } from 'uuid'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import {
-  LatitudeErrorCodes,
-  RunErrorCodes,
-} from '@latitude-data/constants/errors'
 import { Workspace } from '../../browser'
 import {
   ErrorableEntity,
@@ -23,7 +19,6 @@ import * as factories from '../../tests/factories'
 import { testConsumeStream } from '../../tests/helpers'
 import * as aiModule from '../ai'
 import { setCachedResponse } from '../commits/promptCache'
-import { ChainError } from '../../lib/chainStreamManager/ChainErrors'
 import * as chainValidatorModule from './ChainValidator'
 import * as saveOrPublishProviderLogsModule from './ProviderProcessor/saveOrPublishProviderLogs'
 import { runChain } from './run'
@@ -596,16 +591,13 @@ describe('runChain', () => {
       data: expect.objectContaining({
         type: ChainEventTypes.ChainError,
         error: expect.objectContaining({
-          name: LatitudeErrorCodes.UnprocessableEntityError,
           message: 'Openai returned this error: provider error',
         }),
       }),
     })
+
     expect(error).toEqual(
-      new ChainError({
-        code: RunErrorCodes.Unknown,
-        message: 'Openai returned this error: provider error',
-      }),
+      new Error('Openai returned this error: provider error'),
     )
   })
 
