@@ -1,5 +1,3 @@
-'use client'
-
 import { useCallback, useState } from 'react'
 
 import {
@@ -31,6 +29,11 @@ function UpgradeToPromptlModal({
       onOpenChange={onOpenChange}
       title='Upgrade syntax'
       description='We have updated the syntax for Latitude prompts!'
+      footer={
+        <Button variant='default' fancy onClick={() => upgradeEvaluation()}>
+          Upgrade evaluation
+        </Button>
+      }
     >
       <Text.H5>
         Since Latitude launched, we have been working on improving the syntax,
@@ -64,12 +67,6 @@ function UpgradeToPromptlModal({
         variant='default'
         description={`When you upgrade, the editor will start evaluating your content with the new syntax. Once you save your changes, the new syntax will be applied to your evaluation. You might need to adjust the prompt to make it compatible with the new syntax.`}
       />
-
-      <div className='flex flex-row w-full justify-end gap-2'>
-        <Button variant='default' fancy onClick={() => upgradeEvaluation()}>
-          Upgrade evaluation
-        </Button>
-      </div>
     </Modal>
   )
 }

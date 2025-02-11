@@ -36,7 +36,7 @@ export function computeDocumentLogsWithMetadataQuery(
   const repo = new DocumentLogsWithMetadataAndErrorsRepository(workspaceId, db)
   const offset = calculateOffset(page, pageSize)
   const conditions = [
-    eq(workspaces.id, workspaceId),
+    repo.scopeFilter,
     documentUuid ? eq(documentLogs.documentUuid, documentUuid) : undefined,
     filterOptions ? buildLogsFilterSQLConditions(filterOptions) : undefined,
   ].filter(Boolean)

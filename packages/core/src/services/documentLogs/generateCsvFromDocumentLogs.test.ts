@@ -5,52 +5,60 @@ import { NotFoundError } from '../../lib'
 import * as factories from '../../tests/factories'
 import { generateCsvFromDocumentLogs } from './generateCsvFromDocumentLogs'
 
+type LogData = {
+  parameters: Record<string, string>
+  createdAt?: Date
+}
+
+async function setupWorkspaceWithLogs(logsData: LogData[]) {
+  const setup = await factories.createProject({
+    providers: [{ type: Providers.OpenAI, name: 'openai' }],
+    documents: {
+      'test.md': factories.helpers.createPrompt({
+        provider: 'openai',
+        model: 'gpt-4',
+      }),
+    },
+  })
+  const workspace = setup.workspace
+  const document = setup.documents[0]!
+  const commit = setup.commit
+
+  const logs = await Promise.all(
+    logsData.map((logData) =>
+      factories.createDocumentLog({
+        document,
+        commit,
+        parameters: logData.parameters,
+        createdAt: logData.createdAt,
+      }),
+    ),
+  )
+
+  const documentLogIds = logs.map((log) => log.documentLog.id)
+
+  return { workspace, documentLogIds }
+}
+
 describe('generateCsvFromDocumentLogs', () => {
   let workspace: Workspace
   let documentLogIds: number[]
 
   beforeEach(async () => {
-    // Create a workspace
-    const setup = await factories.createProject({
-      providers: [{ type: Providers.OpenAI, name: 'openai' }],
-      documents: {
-        'test.md': factories.helpers.createPrompt({
-          provider: 'openai',
-          model: 'gpt-4',
-        }),
-      },
-    })
-    workspace = setup.workspace
-    const document = setup.documents[0]!
-    const commit = setup.commit
-
-    // Create document logs with varying parameters
-    const logs = await Promise.all([
-      factories.createDocumentLog({
-        document,
-        commit,
-        parameters: { key1: 'value1', key2: 'value2', key3: 'value3' },
-        createdAt: new Date('2022-01-01'),
-      }),
-      factories.createDocumentLog({
-        document,
-        commit,
-        parameters: { key1: 'value4', key2: 'value5' },
-        createdAt: new Date('2022-01-02'),
-      }),
-      factories.createDocumentLog({
-        document,
-        commit,
+    const { workspace: w, documentLogIds: ids } = await setupWorkspaceWithLogs([
+      { parameters: { key1: 'value1', key2: 'value2', key3: 'value3' } },
+      { parameters: { key1: 'value4', key2: 'value5' } },
+      {
         parameters: {
           key1: 'value6',
           key2: 'value7',
           key3: 'value8',
           key4: 'value9',
         },
-        createdAt: new Date('2022-01-03'),
-      }),
+      },
     ])
-    documentLogIds = logs.map((log) => log.documentLog.id)
+    workspace = w
+    documentLogIds = ids
   })
 
   it('returns CSV data with merged headers and consistent data output', async () => {
@@ -90,15 +98,18 @@ describe('generateCsvFromDocumentLogs', () => {
   })
 
   it('returns NotFoundError if some document logs are missing', async () => {
-    const nonExistentId = 9999
+    const { documentLogIds: otherWorkspaceDocumentLogIds } =
+      await setupWorkspaceWithLogs([
+        { parameters: { key1: 'value1', key2: 'value2', key3: 'value3' } },
+      ])
     const result = await generateCsvFromDocumentLogs({
       workspace,
-      documentLogIds: [...documentLogIds, nonExistentId],
+      documentLogIds: [...documentLogIds, ...otherWorkspaceDocumentLogIds],
     })
 
     expect(result.error).toBeInstanceOf(NotFoundError)
     expect(result.error?.message).toContain(
-      `Document logs not found with ids: ${nonExistentId}`,
+      `Document logs not found with ids: ${otherWorkspaceDocumentLogIds.join(', ')}`,
     )
   })
 

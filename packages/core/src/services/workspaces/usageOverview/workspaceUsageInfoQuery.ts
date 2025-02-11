@@ -12,7 +12,7 @@ export const workspaceUsageInfoCTE = database.$with('workspaces_subquery').as(
       numOfMembers: count(memberships.id).as('members_count'),
       subscriptionPlan: max(subscriptions.plan).as('subscription_plan'),
       emails:
-        sql<string>`string_agg(${users.email}, ', ' ORDER BY ${users.createdAt} ASC)`.as(
+        sql<string>`string_agg(${users.email}, ', ' ORDER BY ${memberships.createdAt} ASC)`.as(
           'emails',
         ),
     })

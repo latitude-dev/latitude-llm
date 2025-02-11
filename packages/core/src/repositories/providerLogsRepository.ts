@@ -1,4 +1,4 @@
-import { asc, desc, eq, getTableColumns } from 'drizzle-orm'
+import { and, asc, desc, eq, getTableColumns } from 'drizzle-orm'
 
 import { ProviderLog } from '../browser'
 import { NotFoundError, Result } from '../lib'
@@ -9,16 +9,22 @@ import Repository from './repositoryV2'
 const tt = getTableColumns(providerLogs)
 
 export class ProviderLogsRepository extends Repository<ProviderLog> {
+  get scopeFilter() {
+    return eq(providerLogs.workspaceId, this.workspaceId)
+  }
+
   get scope() {
     return this.db
       .select(tt)
       .from(providerLogs)
-      .where(eq(providerLogs.workspaceId, this.workspaceId))
+      .where(this.scopeFilter)
       .$dynamic()
   }
 
   async findByUuid(uuid: string) {
-    const result = await this.scope.where(eq(providerLogs.uuid, uuid)).limit(1)
+    const result = await this.scope
+      .where(and(this.scopeFilter, eq(providerLogs.uuid, uuid)))
+      .limit(1)
 
     if (!result.length) {
       return Result.error(
@@ -35,7 +41,7 @@ export class ProviderLogsRepository extends Repository<ProviderLog> {
         documentLogs,
         eq(providerLogs.documentLogUuid, documentLogs.uuid),
       )
-      .where(eq(documentLogs.documentUuid, documentUuid))
+      .where(and(this.scopeFilter, eq(documentLogs.documentUuid, documentUuid)))
       .orderBy(asc(providerLogs.generatedAt))
 
     if (opts.limit !== undefined) {
@@ -56,7 +62,12 @@ export class ProviderLogsRepository extends Repository<ProviderLog> {
     }
 
     const result = await this.scope
-      .where(eq(providerLogs.documentLogUuid, documentLogUuid))
+      .where(
+        and(
+          this.scopeFilter,
+          eq(providerLogs.documentLogUuid, documentLogUuid),
+        ),
+      )
       .orderBy(desc(providerLogs.generatedAt))
       .limit(1)
 
@@ -72,7 +83,12 @@ export class ProviderLogsRepository extends Repository<ProviderLog> {
     opts: QueryOptions = {},
   ) {
     const query = this.scope
-      .where(eq(providerLogs.documentLogUuid, documentLogUuid))
+      .where(
+        and(
+          this.scopeFilter,
+          eq(providerLogs.documentLogUuid, documentLogUuid),
+        ),
+      )
       .orderBy(asc(providerLogs.generatedAt))
 
     if (opts.limit !== undefined) {

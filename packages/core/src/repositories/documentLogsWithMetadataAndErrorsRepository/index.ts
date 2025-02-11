@@ -14,6 +14,10 @@ import Repository from '../repositoryV2'
 import { DocumentLogWithMetadataAndError } from '../runErrors/documentLogsRepository'
 
 export class DocumentLogsWithMetadataAndErrorsRepository extends Repository<DocumentLogWithMetadataAndError> {
+  get scopeFilter() {
+    return eq(workspaces.id, this.workspaceId)
+  }
+
   get scope() {
     return this.db
       .select({
@@ -54,7 +58,7 @@ export class DocumentLogsWithMetadataAndErrorsRepository extends Repository<Docu
           eq(runErrors.errorableType, ErrorableEntity.DocumentLog),
         ),
       )
-      .where(eq(workspaces.id, this.workspaceId))
+      .where(this.scopeFilter)
       .groupBy(
         commits.id,
         documentLogs.id,
@@ -66,7 +70,9 @@ export class DocumentLogsWithMetadataAndErrorsRepository extends Repository<Docu
   }
 
   async findByUuid(uuid: string) {
-    const result = await this.scope.where(eq(documentLogs.uuid, uuid))
+    const result = await this.scope.where(
+      and(this.scopeFilter, eq(documentLogs.uuid, uuid)),
+    )
 
     if (!result.length) {
       return Result.error(

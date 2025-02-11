@@ -28,6 +28,10 @@ export type DocumentLogWithErrorScope =
   typeof DocumentLogsWithErrorsRepository.prototype.scope
 
 export class DocumentLogsWithErrorsRepository extends Repository<DocumentLogWithMetadataAndError> {
+  get scopeFilter() {
+    return eq(workspaces.id, this.workspaceId)
+  }
+
   get scope() {
     return this.db
       .select(tt)
@@ -45,12 +49,14 @@ export class DocumentLogsWithErrorsRepository extends Repository<DocumentLogWith
           eq(runErrors.errorableType, ErrorableEntity.DocumentLog),
         ),
       )
-      .where(eq(workspaces.id, this.workspaceId))
+      .where(this.scopeFilter)
       .$dynamic()
   }
 
   async findByUuid(uuid: string) {
-    const result = await this.scope.where(eq(documentLogs.uuid, uuid))
+    const result = await this.scope.where(
+      and(this.scopeFilter, eq(documentLogs.uuid, uuid)),
+    )
 
     if (!result.length) {
       return Result.error(

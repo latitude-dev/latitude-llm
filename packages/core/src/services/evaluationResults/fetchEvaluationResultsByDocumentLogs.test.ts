@@ -43,7 +43,13 @@ describe('fetchEvaluationResultsByDocumentLogs', () => {
     const parsed = EvaluationResultsRepository.parseResult(
       result as Parameters<typeof EvaluationResultsRepository.parseResult>[0],
     )
-    return parsed
+    // @ts-expect-error - providerLogId is not in the type
+    const { providerLogId: _pl, ...rest } = parsed
+    return {
+      ...rest,
+      createdAt: expect.any(Date),
+      updatedAt: expect.any(Date),
+    }
   }
 
   beforeEach(async () => {
