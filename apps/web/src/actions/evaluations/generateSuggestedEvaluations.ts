@@ -2,12 +2,12 @@
 
 import { createHash } from 'crypto'
 
-import { ChainStepResponse } from '@latitude-data/core/browser'
+import { createSdk } from '$/app/(private)/_lib/createSdk'
+import { SuggestedEvaluation } from '$/stores/suggestedEvaluations'
+import { ChainStepResponse, CLOUD_MESSAGES } from '@latitude-data/core/browser'
 import { cache } from '@latitude-data/core/cache'
 import { BadRequestError } from '@latitude-data/core/lib/errors'
 import { env } from '@latitude-data/env'
-import { createSdk } from '$/app/(private)/_lib/createSdk'
-import { SuggestedEvaluation } from '$/stores/suggestedEvaluations'
 import { z } from 'zod'
 
 import { authProcedure } from '../procedures'
@@ -20,12 +20,18 @@ export const generateSuggestedEvaluationsAction = authProcedure
     }),
   )
   .handler(async ({ input, ctx }) => {
+    if (!env.LATITUDE_CLOUD) {
+      throw new BadRequestError(CLOUD_MESSAGES.autogenerateEvaluations)
+    }
+
     if (!env.COPILOT_WORKSPACE_API_KEY) {
       throw new BadRequestError('COPILOT_WORKSPACE_API_KEY is not set')
     }
+
     if (!env.COPILOT_PROJECT_ID) {
       throw new BadRequestError('COPILOT_PROJECT_ID is not set')
     }
+
     if (!env.COPILOT_EVALUATION_SUGGESTION_PROMPT_PATH) {
       throw new BadRequestError(
         'COPILOT_EVALUATION_SUGGESTION_PROMPT_PATH is not set',

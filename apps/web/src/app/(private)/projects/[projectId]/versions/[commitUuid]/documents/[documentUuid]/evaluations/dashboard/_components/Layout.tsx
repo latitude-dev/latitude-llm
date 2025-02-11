@@ -1,25 +1,31 @@
 'use client'
 
+import { useCurrentDocument } from '$/app/providers/DocumentProvider'
+import { ROUTES } from '$/services/routes'
+import useEvaluations from '$/stores/evaluations'
 import { EvaluationDto } from '@latitude-data/core/browser'
 import {
   BlankSlateStep,
   BlankSlateWithSteps,
   Button,
+  cn,
   TableSkeleton,
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui'
-import { useCurrentDocument } from '$/app/providers/DocumentProvider'
-import { ROUTES } from '$/services/routes'
-import useEvaluations from '$/stores/evaluations'
 import Link from 'next/link'
 
 import ConnectedEvaluationsTable from './ConnectedEvaluationsTable'
 
-function SuggestedEvaluations() {
+function SuggestedEvaluations({
+  isEvaluationGeneratorEnabled,
+}: {
+  isEvaluationGeneratorEnabled?: boolean
+}) {
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
   const { document } = useCurrentDocument()
+
   return (
     <BlankSlateStep
       number={2}
@@ -30,14 +36,25 @@ function SuggestedEvaluations() {
       <div className='relative bg-secondary px-4 py-2 rounded-lg border max-h-[272px] overflow-hidden'>
         <div className='max-h-[272px] overflow-hidden'>
           <span className='whitespace-pre-wrap text-sm leading-1 text-muted-foreground'>
-            {`---
+            {isEvaluationGeneratorEnabled
+              ? `
+---
   provider: OpenAI
   model: gpt-4o
 ---
 This is just a placeholder for the evaluation prompt because generating it takes a bit longer than we'd like. Click the button to actually generate the evaluation, it's free as this one is on us.
 
 Don't rawdog your prompts!
-            `}
+            `.trim()
+              : `
+---
+  provider: OpenAI
+  model: gpt-4o
+---
+This is just a placeholder for the evaluation prompt because the evaluation generator is disabled. If it were enabled, you could click the button to actually generate the evaluation.
+
+Don't rawdog your prompts!
+            `.trim()}
           </span>
         </div>
         <div className='absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-secondary to-transparent pointer-events-none'></div>
@@ -50,8 +67,13 @@ Don't rawdog your prompts!
                 .documents.detail({ uuid: document.documentUuid }).evaluations
                 .dashboard.generate.root
             }
+            className={cn(
+              !isEvaluationGeneratorEnabled && 'pointer-events-none',
+            )}
           >
-            <Button fancy>Generate the evaluation</Button>
+            <Button fancy disabled={!isEvaluationGeneratorEnabled}>
+              Generate the evaluation
+            </Button>
           </Link>
         </div>
       </div>
@@ -61,8 +83,10 @@ Don't rawdog your prompts!
 
 export default function EvaluationsLayoutClient({
   evaluations: fallbackData,
+  isEvaluationGeneratorEnabled,
 }: {
   evaluations: EvaluationDto[]
+  isEvaluationGeneratorEnabled?: boolean
 }) {
   const { document } = useCurrentDocument()
   const { data: evaluations, isLoading } = useEvaluations({
@@ -73,6 +97,7 @@ export default function EvaluationsLayoutClient({
   if (!evaluations.length && isLoading) {
     return <TableSkeleton cols={2} rows={3} />
   }
+
   if (evaluations.length) {
     return <ConnectedEvaluationsTable evaluations={evaluations} />
   }
@@ -95,7 +120,9 @@ export default function EvaluationsLayoutClient({
           title='How to evaluate your prompts using LLMs and Latitude.so'
         />
       </BlankSlateStep>
-      <SuggestedEvaluations />
+      <SuggestedEvaluations
+        isEvaluationGeneratorEnabled={isEvaluationGeneratorEnabled}
+      />
     </BlankSlateWithSteps>
   )
 }
