@@ -1,6 +1,10 @@
 name: Deploy Workers and Websockets
 
 on:
+  # TODO: remove this once we have a proper release process
+  push:
+    branches:
+      - main
   workflow_run:
     workflows: ['Build and Push Docker Images']
     types:
@@ -50,6 +54,7 @@ jobs:
           role-to-assume: ${{ secrets.ARN_OF_IAM_ROLE_TO_ASSUME }}
           role-session-name: ${{ matrix.app }}Deployment
           aws-region: ${{ env.AWS_REGION }}
+          role-skip-session-tagging: true
 
       - name: Update ECS Task Definition
         id: task-def
