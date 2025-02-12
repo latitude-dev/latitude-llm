@@ -40,10 +40,18 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          # Get the SHA from the triggering workflow
-          SHA_TAG=$(echo ${{ github.event.workflow_run.head_sha }} | cut -c1-7)
-          echo "image_tag=sha-${SHA_TAG}" >> $GITHUB_OUTPUT
-          echo "Using image tag: sha-${SHA_TAG}"
+          if [ "${{ github.event_name }}" = "workflow_run" ]; then
+            # Get SHA from the triggering workflow
+            SHA=${{ github.event.workflow_run.head_sha }}
+          else
+            # Get SHA directly from the push event
+            SHA=${{ github.sha }}
+          fi
+
+          # Cut to short SHA and set output
+          SHORT_SHA=$(echo $SHA | cut -c1-7)
+          echo "image_tag=sha-${SHORT_SHA}" >> $GITHUB_OUTPUT
+          echo "Using image tag: sha-${SHORT_SHA}"
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4.0.2
