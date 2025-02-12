@@ -18,6 +18,7 @@ import DocumentParams from './DocumentParams'
 import Preview from './Preview'
 
 const COLLAPSED_SIZE = COLLAPSED_BOX_HEIGHT * 2 + 12
+const INITIAL_EXPANDED_SIZE = COLLAPSED_SIZE + 120
 const GAP_PADDING = 26
 
 export default function Playground({
@@ -39,7 +40,7 @@ export default function Playground({
   const [expandedEvaluations, setExpandedEvaluations] = useState(false)
   const collapsed = !expandedParameters && !expandedEvaluations
   useEffect(() => {
-    setForcedSize(collapsed ? COLLAPSED_SIZE : undefined)
+    setForcedSize(collapsed ? COLLAPSED_SIZE : INITIAL_EXPANDED_SIZE)
   }, [collapsed])
 
   const { parameters } = useDocumentParameters({
