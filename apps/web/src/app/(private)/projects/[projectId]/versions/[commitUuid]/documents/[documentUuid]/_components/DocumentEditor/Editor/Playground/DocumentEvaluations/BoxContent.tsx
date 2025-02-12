@@ -58,7 +58,7 @@ export function ExpandedContentHeader({ document, commit, project }: Props) {
   return (
     <div className='w-full flex items-center justify-end gap-4'>
       <Link href={route}>
-        <Button variant='link' stopPropagation>
+        <Button variant='link' onClick={(e) => e.stopPropagation()}>
           + Connect an evaluation
         </Button>
       </Link>

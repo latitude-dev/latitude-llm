@@ -29,8 +29,10 @@ export function ParametersPaginationNav({
         iconProps={{
           name: 'chevronLeft',
         }}
-        stopPropagation
-        onClick={() => onPrevPage(currentIndex)}
+        onClick={(e) => {
+          e.stopPropagation()
+          onPrevPage(currentIndex)
+        }}
       />
       <div className='flex flex-row justify-center items-center flex-grow min-w-0'>
         <Text.H5M userSelect={false} color='foregroundMuted' ellipsis noWrap>
@@ -49,8 +51,10 @@ export function ParametersPaginationNav({
         iconProps={{
           name: 'chevronRight',
         }}
-        stopPropagation
-        onClick={() => onNextPage(currentIndex)}
+        onClick={(e) => {
+          e.stopPropagation()
+          onNextPage(currentIndex)
+        }}
       />
     </div>
   )
