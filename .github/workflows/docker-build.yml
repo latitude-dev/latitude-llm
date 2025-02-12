@@ -19,7 +19,18 @@ env:
   OWNER: latitude-dev
 
 jobs:
+  lint:
+    uses: ./.github/workflows/lint.yml
+    with:
+      workflow_call: true
+
+  test:
+    uses: ./.github/workflows/test.yml
+    with:
+      workflow_call: true
+
   build-and-push:
+    needs: [lint, test]
     runs-on: ubuntu-latest
     permissions:
       contents: read

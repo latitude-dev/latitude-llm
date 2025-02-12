@@ -117,6 +117,10 @@ export const environment = pulumi
   ])
   .apply(() => {
     return [
+      // NOTE: HOSTNAME and PORT vars are used by NextJS production server, do not remove them
+      { name: 'HOSTNAME', value: '0.0.0.0' },
+      { name: 'PORT', value: '8080' },
+
       { name: 'DATABASE_URL', value: dbUrl },
       { name: 'QUEUE_HOST', value: queueEndpoint },
       { name: 'CACHE_HOST', value: cacheEndpoint },
