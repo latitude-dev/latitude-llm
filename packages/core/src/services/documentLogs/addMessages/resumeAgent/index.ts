@@ -75,7 +75,7 @@ function buildExtraMessages({
 export async function resumeAgent({
   workspace,
   providerLog,
-  messages: newMessages,
+  messages: userProvidedMessags,
   source,
 }: {
   workspace: Workspace
@@ -87,9 +87,14 @@ export async function resumeAgent({
     workspaceId: workspace.id,
   })
 
+  const newMessages = buildExtraMessages({
+    providerLog,
+    newMessages: userProvidedMessags,
+  })
+
   const chainStreamManager = new ChainStreamManager({
     errorableUuid: providerLog.documentLogUuid!,
-    messages: providerLog.messages,
+    messages: [...providerLog.messages, ...newMessages],
     // TODO: Missing previous TokenUsage
   })
 
@@ -105,10 +110,7 @@ export async function resumeAgent({
       providersMap,
       errorableUuid: providerLog.documentLogUuid!,
       stepCount: 0,
-      newMessages: buildExtraMessages({
-        providerLog,
-        newMessages,
-      }),
+      newMessages,
     })
   })
 

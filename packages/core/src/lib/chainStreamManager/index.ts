@@ -34,6 +34,7 @@ const usePromise = <T>(): readonly [Promise<T>, (value: T) => void] => {
 
 export class ChainStreamManager {
   private finished = false
+  private inStep = false
 
   private tokenUsage: LanguageModelUsage
   private messages: Message[]
@@ -125,7 +126,8 @@ export class ChainStreamManager {
     // TODO: This may conflict with isolated steps
     this.messages = [...args.conversation.messages]
 
-    this.sendEvent({ type: ChainEventTypes.StepStarted })
+    if (this.inStep) this.completeStep()
+    this.startStep()
 
     this.sendEvent({
       type: ChainEventTypes.ProviderStarted,
@@ -155,8 +157,6 @@ export class ChainStreamManager {
       response,
     })
 
-    this.sendEvent({ type: ChainEventTypes.StepCompleted })
-
     return response
   }
 
@@ -169,6 +169,7 @@ export class ChainStreamManager {
     toolCalls: BuiltInToolCall[],
   ): Promise<ToolMessage[]> {
     if (!toolCalls.length) return []
+    if (!this.inStep) this.startStep()
 
     this.sendEvent({
       type: ChainEventTypes.ToolsStarted,
@@ -202,11 +203,36 @@ export class ChainStreamManager {
     return toolResponses
   }
 
+  startStep() {
+    if (!this.controller) throw new Error('Stream not started')
+    if (this.inStep)
+      throw new Error(
+        'Tried to start a new step without completing the previous one',
+      )
+
+    this.inStep = true
+    this.sendEvent({
+      type: ChainEventTypes.StepStarted,
+    })
+  }
+
+  completeStep() {
+    if (!this.controller) throw new Error('Stream not started')
+    if (!this.inStep)
+      throw new Error('Tried to complete step without starting it')
+
+    this.inStep = false
+    this.sendEvent({
+      type: ChainEventTypes.StepCompleted,
+    })
+  }
+
   /**
    * Ends the chain stream successfully
    */
   done() {
     if (this.finished) throw new Error('Chain already finished')
+    if (this.inStep) this.completeStep()
     this.sendEvent({
       type: ChainEventTypes.ChainCompleted,
       finishReason: this.finishReason ?? 'stop',

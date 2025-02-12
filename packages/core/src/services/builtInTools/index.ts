@@ -1,4 +1,3 @@
-import { ChainStepResponse, StreamType } from '@latitude-data/constants'
 import { BuiltInToolCall, LatitudeTool } from '../../constants'
 import { runCode } from './runCode'
 import {
@@ -9,12 +8,17 @@ import {
   TypedResult,
 } from '../../lib'
 import { getLatitudeToolName, LatitudeToolInternalName } from './definitions'
-import { ContentType, MessageRole, ToolMessage } from '@latitude-data/compiler'
+import {
+  AssistantMessage,
+  ContentType,
+  MessageRole,
+  ToolMessage,
+} from '@latitude-data/compiler'
 
-export function getBuiltInToolCallsFromResponse(
-  response: ChainStepResponse<StreamType>,
+export function getBuiltInToolCallsFromAssistantMessage(
+  message: AssistantMessage,
 ): BuiltInToolCall[] {
-  const toolCalls = (response as ChainStepResponse<'text'>).toolCalls ?? []
+  const toolCalls = message.toolCalls ?? []
   const builtinToolCallNames = Object.values(LatitudeToolInternalName)
   return toolCalls.filter((toolCall) =>
     builtinToolCallNames.includes(toolCall.name as LatitudeToolInternalName),

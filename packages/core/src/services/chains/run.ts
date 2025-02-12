@@ -88,7 +88,7 @@ export function runChain<T extends boolean, C extends SomeChain>({
 
   const chainStreamManager = new ChainStreamManager({
     errorableUuid,
-    messages: pausedMessages,
+    messages: [...(pausedMessages ?? []), ...(newMessages ?? [])],
     tokenUsage: pausedTokenUsage,
   })
   const streamResult = chainStreamManager.start(async () => {
