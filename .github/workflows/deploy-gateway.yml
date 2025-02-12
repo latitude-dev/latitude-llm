@@ -2,6 +2,15 @@ name: Deploy Gateway
 
 on:
   workflow_call:
+    secrets:
+      AWS_ACCESS_KEY_ID:
+        required: true
+      AWS_SECRET_ACCESS_KEY:
+        required: true
+      ARN_OF_IAM_ROLE_TO_ASSUME:
+        required: true
+      GITHUB_TOKEN:
+        required: true
 
 env:
   REGISTRY: ghcr.io

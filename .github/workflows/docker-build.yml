@@ -91,16 +91,39 @@ jobs:
     needs: build-and-push
     if: github.ref == 'refs/heads/main'
     uses: ./.github/workflows/deploy-rest.yml
+    permissions:
+      id-token: write
+      contents: read
+    secrets:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      ARN_OF_IAM_ROLE_TO_ASSUME: ${{ secrets.ARN_OF_IAM_ROLE_TO_ASSUME }}
 
   deploy-web:
     needs: build-and-push
     if: github.ref == 'refs/heads/main'
     uses: ./.github/workflows/deploy-web.yml
+    permissions:
+      id-token: write
+      contents: read
+    secrets:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      ARN_OF_IAM_ROLE_TO_ASSUME: ${{ secrets.ARN_OF_IAM_ROLE_TO_ASSUME }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   deploy-gateway:
     needs: build-and-push
     if: github.ref == 'refs/heads/main'
     uses: ./.github/workflows/deploy-gateway.yml
+    permissions:
+      id-token: write
+      contents: read
+    secrets:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      ARN_OF_IAM_ROLE_TO_ASSUME: ${{ secrets.ARN_OF_IAM_ROLE_TO_ASSUME }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 # Concurrency settings to manage multiple workflow runs
 # - Groups runs by workflow name and git ref
