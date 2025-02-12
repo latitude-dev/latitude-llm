@@ -8,15 +8,15 @@ import {
   useEffect,
 } from 'react'
 
+import { refreshWebesocketTokenAction } from '$/actions/user/refreshWebsocketTokenAction'
 import {
   WebClientToServerEvents,
   WebServerToClientEvents,
   Workspace,
 } from '@latitude-data/core/browser'
+import { IoProvider, useSocket } from '@latitude-data/socket.io-react-hook'
 import { useSession, useToast } from '@latitude-data/web-ui'
 import * as Sentry from '@sentry/nextjs'
-import { refreshWebesocketTokenAction } from '$/actions/user/refreshWebsocketTokenAction'
-import { IoProvider, useSocket } from 'socket.io-react-hook'
 
 export const SocketIOProvider = ({ children }: { children: ReactNode }) => {
   return <IoProvider>{children}</IoProvider>
