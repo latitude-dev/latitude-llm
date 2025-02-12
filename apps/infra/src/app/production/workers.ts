@@ -81,18 +81,22 @@ const taskDefinition = pulumi
   )
 
 const cluster = coreStack.requireOutput('cluster') as pulumi.Output<Cluster>
-export const service = new aws.ecs.Service('LatitudeLLMWorkers', {
-  cluster: cluster.arn,
-  taskDefinition: taskDefinition.arn,
-  desiredCount: 2,
-  launchType: 'FARGATE',
-  forceNewDeployment: true,
-  enableExecuteCommand: true,
-  networkConfiguration: {
-    subnets: privateSubnets.ids,
-    assignPublicIp: false,
-    securityGroups: [ecsSecurityGroup],
+export const service = new aws.ecs.Service(
+  'LatitudeLLMWorkers',
+  {
+    cluster: cluster.arn,
+    taskDefinition: taskDefinition.arn,
+    desiredCount: 2,
+    launchType: 'FARGATE',
+    forceNewDeployment: true,
+    enableExecuteCommand: true,
+    networkConfiguration: {
+      subnets: privateSubnets.ids,
+      assignPublicIp: false,
+      securityGroups: [ecsSecurityGroup],
+    },
   },
-}, {
-  ignoreChanges: ['taskDefinition', 'desiredCount'],
-})
+  {
+    ignoreChanges: ['taskDefinition', 'desiredCount'],
+  },
+)

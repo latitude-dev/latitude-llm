@@ -125,27 +125,31 @@ new aws.lb.ListenerRule('LatitudeLLMWebsocketsListenerRule', {
 })
 
 const cluster = coreStack.requireOutput('cluster') as pulumi.Output<Cluster>
-new aws.ecs.Service('LatitudeLLMWebsockets', {
-  cluster: cluster.arn,
-  taskDefinition: taskDefinition.arn,
-  desiredCount: 1,
-  launchType: 'FARGATE',
-  forceNewDeployment: true,
-  enableExecuteCommand: true,
-  networkConfiguration: {
-    subnets: privateSubnets.ids,
-    assignPublicIp: false,
-    securityGroups: [ecsSecurityGroup],
-  },
-  loadBalancers: [
-    {
-      targetGroupArn: targetGroup.arn,
-      containerName,
-      containerPort: 8080,
+new aws.ecs.Service(
+  'LatitudeLLMWebsockets',
+  {
+    cluster: cluster.arn,
+    taskDefinition: taskDefinition.arn,
+    desiredCount: 1,
+    launchType: 'FARGATE',
+    forceNewDeployment: true,
+    enableExecuteCommand: true,
+    networkConfiguration: {
+      subnets: privateSubnets.ids,
+      assignPublicIp: false,
+      securityGroups: [ecsSecurityGroup],
     },
-  ],
-}, {
-  ignoreChanges: ['taskDefinition', 'desiredCount'],
-})
+    loadBalancers: [
+      {
+        targetGroupArn: targetGroup.arn,
+        containerName,
+        containerPort: 8080,
+      },
+    ],
+  },
+  {
+    ignoreChanges: ['taskDefinition', 'desiredCount'],
+  },
+)
 
 export const serviceUrl = pulumi.interpolate`https://${DNS_ADDRESS}`
