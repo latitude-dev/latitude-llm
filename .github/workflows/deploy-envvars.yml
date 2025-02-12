@@ -1,0 +1,121 @@
+# This workflow deploys environment variables to all production services.
+# It handles two main scenarios:
+# 1. When core infrastructure changes AND shared.ts changes: runs after core deployment completes
+# 2. When only shared.ts changes (no core changes): runs immediately
+
+name: Deploy Environment Variables
+
+on:
+  # Trigger after core infrastructure deployment completes (for scenario 1)
+  workflow_run:
+    workflows: ['Deploy Core Infrastructure']
+    types:
+      - completed
+    branches:
+      - main
+  # Trigger on shared.ts changes (for scenario 2)
+  push:
+    branches:
+      - main
+    paths:
+      - 'apps/infra/src/app/production/shared.ts'
+  # Allow manual triggers for emergency/maintenance
+  workflow_dispatch:
+
+# AWS credentials needed for Pulumi to deploy infrastructure
+env:
+  AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+  AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+  AWS_REGION: ${{ vars.AWS_REGION }}
+
+jobs:
+  # This job checks if there are any changes to core infrastructure
+  # We need this to prevent deploying env vars in parallel with core changes
+  check-core-changes:
+    name: Check Core Changes
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push'
+    outputs:
+      has_core_changes: ${{ steps.check.outputs.has_core_changes }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2 # Need at least 2 commits to check for changes
+
+      - name: Check for core changes
+        id: check
+        run: |
+          if git diff --name-only HEAD^1 HEAD | grep -q "apps/infra/src/core/"; then
+            echo "has_core_changes=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_core_changes=false" >> $GITHUB_OUTPUT
+          fi
+
+  # Main deployment job that updates environment variables for all services
+  deploy-envvars:
+    name: Deploy Environment Variables
+    needs: [check-core-changes]
+    # Run this job if:
+    # 1. Manually triggered (workflow_dispatch)
+    # 2. After successful core deployment (workflow_run)
+    # 3. On push but only if there are no core changes
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success') ||
+      (github.event_name == 'push' && needs.check-core-changes.outputs.has_core_changes == 'false')
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # Use the correct ref depending on trigger type
+          ref: ${{ github.event.workflow_run.head_branch || github.ref }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Pulumi CLI
+        uses: pulumi/setup-pulumi@v2
+
+      # Deploy environment variables to each service stack
+      # The order doesn't matter as they are independent of each other
+      - name: Deploy Web Environment Variables
+        run: |
+          cd apps/infra
+          pulumi stack select app-production-web
+          pulumi up --yes --non-interactive
+        env:
+          PULUMI_CONFIG_PASSPHRASE: ${{ secrets.PULUMI_CONFIG_PASSPHRASE }}
+
+      - name: Deploy Gateway Environment Variables
+        run: |
+          cd apps/infra
+          pulumi stack select app-production-gateway
+          pulumi up --yes --non-interactive
+        env:
+          PULUMI_CONFIG_PASSPHRASE: ${{ secrets.PULUMI_CONFIG_PASSPHRASE }}
+
+      - name: Deploy Workers Environment Variables
+        run: |
+          cd apps/infra
+          pulumi stack select app-production-workers
+          pulumi up --yes --non-interactive
+        env:
+          PULUMI_CONFIG_PASSPHRASE: ${{ secrets.PULUMI_CONFIG_PASSPHRASE }}
+
+      - name: Deploy Websockets Environment Variables
+        run: |
+          cd apps/infra
+          pulumi stack select app-production-websockets
+          pulumi up --yes --non-interactive
+        env:
+          PULUMI_CONFIG_PASSPHRASE: ${{ secrets.PULUMI_CONFIG_PASSPHRASE }}
