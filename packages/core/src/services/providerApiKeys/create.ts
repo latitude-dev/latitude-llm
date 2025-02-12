@@ -9,7 +9,7 @@ import {
   Result,
   Transaction,
 } from '../../lib'
-import { providerApiKeys } from '../../schema'
+import { providerApiKeys, ProviderConfiguration } from '../../schema'
 
 export type Props = {
   workspace: Workspace
@@ -19,9 +19,19 @@ export type Props = {
   name: string
   defaultModel?: string
   author: User
+  configuration?: ProviderConfiguration<Providers> | undefined
 }
 export function createProviderApiKey(
-  { workspace, provider, token, url, name, defaultModel, author }: Props,
+  {
+    workspace,
+    provider,
+    token,
+    url,
+    name,
+    defaultModel,
+    author,
+    configuration,
+  }: Props,
   db = database,
 ) {
   return Transaction.call(async (tx) => {
@@ -44,6 +54,7 @@ export function createProviderApiKey(
           name,
           defaultModel,
           authorId: author.id,
+          configuration,
         })
         .returning()
 

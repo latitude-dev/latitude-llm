@@ -1,7 +1,13 @@
 import { capitalize } from 'lodash-es'
 
 import { RunErrorCodes } from '@latitude-data/constants/errors'
-import { CoreTool, FinishReason, ObjectStreamPart, TextStreamPart } from 'ai'
+import {
+  APICallError,
+  CoreTool,
+  FinishReason,
+  ObjectStreamPart,
+  TextStreamPart,
+} from 'ai'
 
 import {
   LegacyChainEvent,
@@ -49,7 +55,31 @@ function getErrorMessage({
   providerName: Providers
 }): string {
   const intro = `${capitalize(providerName)} returned this error`
-  if (error instanceof Error) return `${intro}: ${error.message}`
+  if (error instanceof APICallError) {
+    try {
+      const body = error.responseBody ? JSON.parse(error.responseBody) : null
+
+      if (!Array.isArray(body) || body.length === 0) {
+        return `${intro}: ${error.message}`
+      }
+
+      return `${intro}: ${body
+        .map((item) => {
+          const error = item.error
+          if (!error) return JSON.stringify(item)
+
+          return item.error.message
+        })
+        .join(', ')}`
+    } catch (e) {
+      console.error(e)
+      return `${intro}: ${error.message}`
+    }
+  }
+
+  if (error instanceof Error) {
+    return `${intro}: ${error.message}`
+  }
 
   try {
     return `${intro}: ${JSON.stringify(error)}`

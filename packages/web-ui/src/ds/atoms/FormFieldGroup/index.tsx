@@ -27,6 +27,7 @@ export function FormFieldGroup({
         role='group'
         className={cn('flex', {
           'gap-x-2 items-start': layout === 'horizontal',
+          'flex-col gap-y-2': layout === 'vertical',
         })}
         id={`form-field-group-${id}`}
         aria-labelledby={id}

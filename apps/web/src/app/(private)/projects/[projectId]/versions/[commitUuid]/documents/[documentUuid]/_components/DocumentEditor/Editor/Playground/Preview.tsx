@@ -35,10 +35,11 @@ import Link from 'next/link'
 import Actions, { ActionsState } from './Actions'
 
 function WarningLink({ providerRule }: { providerRule: ProviderRules }) {
+  const docPath = providerRule.startsWith('vertex') ? 'vertex' : providerRule
   return (
     <Link
       target='_blank'
-      href={`${LATITUDE_DOCS_URL}/guides/prompt-manager/provider-rules/${providerRule}`}
+      href={`${LATITUDE_DOCS_URL}/guides/prompt-manager/provider-rules/${docPath}`}
       className='flex-nowrap'
     >
       <Text.H5B underline noWrap color='warningMutedForeground'>

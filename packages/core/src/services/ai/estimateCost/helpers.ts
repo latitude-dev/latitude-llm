@@ -1,7 +1,7 @@
 import type { ModelCost } from './index'
 
 type ModelSpec = {
-  cost: ModelCost | ModelCost[]
+  cost?: ModelCost | ModelCost[]
   hidden?: boolean
 }
 type ModelSpecValue<N extends string> = ModelSpec & { name: N }
@@ -14,6 +14,11 @@ function orderCost(cost: ModelCost | ModelCost[]): ModelCost | ModelCost[] {
   )
 }
 
+export const NON_IMPLEMENTED_COST = {
+  cost: { input: 0, output: 0 },
+  costImplemented: false,
+}
+
 export const createModelSpec = <T extends Record<string, ModelSpec>>({
   defaultModel,
   models,
@@ -21,7 +26,7 @@ export const createModelSpec = <T extends Record<string, ModelSpec>>({
 }: {
   defaultModel: keyof T
   models: T
-  modelName: (model: string) => keyof T | undefined
+  modelName?: (model: string) => keyof T | undefined
 }) => {
   const modelSpec = Object.fromEntries(
     Object.entries(models).map(([key, value]) => {
@@ -29,8 +34,8 @@ export const createModelSpec = <T extends Record<string, ModelSpec>>({
         key,
         {
           ...value,
-          cost: orderCost(value.cost),
           name: key as T & string,
+          ...(value.cost ? { cost: orderCost(value.cost) } : {}),
         },
       ]
     }),
@@ -62,7 +67,7 @@ export const createModelSpec = <T extends Record<string, ModelSpec>>({
       return model as keyof T
     }
 
-    const modelFallback = modelName(model)
+    const modelFallback = modelName?.(model)
 
     if (modelFallback) return modelFallback
 
@@ -74,7 +79,11 @@ export const createModelSpec = <T extends Record<string, ModelSpec>>({
   }
 
   const getCost = (model: string) => {
-    return { cost: modelSpec[getModelName(model)].cost, costImplemented: true }
+    const cost = modelSpec[getModelName(model)].cost
+
+    if (!cost) return NON_IMPLEMENTED_COST
+
+    return { cost, costImplemented: true }
   }
 
   return { modelSpec, modelList, uiList, getCost }

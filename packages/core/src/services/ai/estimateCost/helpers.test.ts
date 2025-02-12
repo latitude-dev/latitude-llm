@@ -129,4 +129,20 @@ describe('createModelSpec', () => {
       costImplemented: true,
     })
   })
+
+  it('should return NON_IMPLEMENTED_COST when cost is not present', () => {
+    // Add a model without a cost
+    modelSpec = createModelSpec({
+      defaultModel: 'model-a',
+      models: {
+        'model-a': { cost: { input: 0.1, output: 0.2 } },
+        'model-without-cost': {},
+      },
+    })
+
+    expect(modelSpec.getCost('model-without-cost')).toEqual({
+      cost: { input: 0, output: 0 },
+      costImplemented: false,
+    })
+  })
 })

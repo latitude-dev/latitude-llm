@@ -5,6 +5,8 @@ export enum ProviderRules {
   Google = 'google',
   VercelSDK = 'latitude',
   OpenAI = 'openai',
+  VertexAntropic = 'vertex_anthropic',
+  VertexGoogle = 'vertex_google',
   Custom = 'custom',
 }
 

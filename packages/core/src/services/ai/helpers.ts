@@ -1,6 +1,8 @@
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { createAzure } from '@ai-sdk/azure'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
+import { createVertex } from '@ai-sdk/google-vertex/edge'
+import { createVertexAnthropic } from '@ai-sdk/google-vertex/anthropic/edge'
 import { createMistral } from '@ai-sdk/mistral'
 import { createOpenAI } from '@ai-sdk/openai'
 import { type Message, MessageRole } from '@latitude-data/compiler'
@@ -12,6 +14,8 @@ import { ChainError } from '../../lib/chainStreamManager/ChainErrors'
 
 import { PartialConfig } from '@latitude-data/constants'
 import type { ModelCost } from './estimateCost'
+import { ProviderApiKey } from '../../browser'
+import { vertexConfigurationSchema } from './providers/helpers/vertex'
 export {
   type Config,
   type PartialConfig,
@@ -34,6 +38,33 @@ function isFirstMessageOfUserType(messages: Message[]) {
   )
 }
 
+function validateVertexConfig({
+  name,
+  maybeConfig,
+}: {
+  name: string
+  maybeConfig: unknown
+}) {
+  const result = vertexConfigurationSchema.safeParse(maybeConfig)
+  if (result.success) {
+    const config = result.data
+    const privateKey = config.googleCredentials.privateKey.replace(/\\n/g, '\n')
+    return Result.ok({
+      ...config,
+      googleCredentials: {
+        ...config.googleCredentials,
+        privateKey,
+      },
+    })
+  }
+  return Result.error(
+    new ChainError({
+      code: RunErrorCodes.AIProviderConfigError,
+      message: `Provider '${name}' is not properly configured with all the Vertex required fields`,
+    }),
+  )
+}
+
 export function createProvider({
   provider,
   messages,
@@ -41,13 +72,14 @@ export function createProvider({
   url,
   config,
 }: {
-  provider: Providers
+  provider: ProviderApiKey
   messages: Message[]
   apiKey: string
   url?: string
   config?: PartialConfig
 }) {
-  switch (provider) {
+  const type = provider.provider
+  switch (type) {
     case Providers.OpenAI:
       return Result.ok(
         createOpenAI({
@@ -93,6 +125,25 @@ export function createProvider({
           ...(config?.google ?? {}),
         }),
       )
+    }
+    case Providers.GoogleVertex: {
+      const result = validateVertexConfig({
+        name: provider.name,
+        maybeConfig: provider.configuration,
+      })
+
+      return result.error ? result : Result.ok(createVertex(result.value))
+    }
+
+    case Providers.AnthropicVertex: {
+      const result = validateVertexConfig({
+        name: provider.name,
+        maybeConfig: provider.configuration,
+      })
+
+      return result.error
+        ? result
+        : Result.ok(createVertexAnthropic(result.value))
     }
     case Providers.Custom:
       return Result.ok(

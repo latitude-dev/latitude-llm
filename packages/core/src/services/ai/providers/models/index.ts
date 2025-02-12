@@ -5,6 +5,8 @@ import { ANTHROPIC_MODELS } from '../../estimateCost/anthropic'
 import { GOOGLE_MODELS } from '../../estimateCost/google'
 import { MISTRAL_MODELS } from '../../estimateCost/mistral'
 import { OPENAI_MODELS } from '../../estimateCost/openai'
+import { VERTEX_GOOGLE_MODELS } from '../../estimateCost/vertexGoogle'
+import { VERTEX_ANTHROPIC_MODELS } from '../../estimateCost/vertexAnthropic'
 
 export { Providers } from '@latitude-data/constants'
 
@@ -18,8 +20,8 @@ export const PROVIDER_MODELS: Partial<
   [Providers.Groq]: GROQ_MODELS.uiList,
   [Providers.Mistral]: MISTRAL_MODELS.uiList,
   [Providers.Google]: GOOGLE_MODELS.uiList,
-  // TODO: Get Azure pricing. It's dynamic and based in server regions.
-  // not as easy as the others.
+  [Providers.GoogleVertex]: VERTEX_GOOGLE_MODELS.uiList,
+  [Providers.AnthropicVertex]: VERTEX_ANTHROPIC_MODELS.uiList,
   [Providers.Azure]: {},
   [Providers.Custom]: {},
 }

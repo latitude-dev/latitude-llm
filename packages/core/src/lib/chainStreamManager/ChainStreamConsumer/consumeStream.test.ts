@@ -76,6 +76,7 @@ describe('consumeStream', () => {
           ...PARTIAL_FINISH_CHUNK,
           type: 'finish',
           finishReason: 'stop',
+          providerMetadata: undefined,
         },
       ],
       callback: async (controller, result) => {
@@ -97,6 +98,7 @@ describe('consumeStream', () => {
           ...PARTIAL_FINISH_CHUNK,
           type: 'finish',
           finishReason: 'error',
+          providerMetadata: undefined,
         },
       ],
       callback: async (controller, result) => {

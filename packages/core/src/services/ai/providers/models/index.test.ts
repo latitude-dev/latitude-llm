@@ -20,6 +20,7 @@ describe('findFirstModelForProvider', () => {
       workspaceId: 1,
       lastUsedAt: null,
       deletedAt: null,
+      configuration: null,
     }
   })
 
