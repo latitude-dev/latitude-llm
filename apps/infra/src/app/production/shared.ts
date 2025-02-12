@@ -20,9 +20,6 @@ const websocketsSecretTokenArn = coreStack.requireOutput(
 const websocketsSecretRefreshTokenArn = coreStack.requireOutput(
   'websocketsSecretRefreshTokenArn',
 )
-const workersWebsocketsSecretTokenArn = coreStack.requireOutput(
-  'workersWebsocketsSecretTokenArn',
-)
 const sentryDsnArn = coreStack.requireOutput('sentryDsnArn')
 const sentryOrgArn = coreStack.requireOutput('sentryOrgArn')
 const sentryProjectArn = coreStack.requireOutput('sentryProjectArn')
@@ -57,9 +54,6 @@ const awsAccessSecret = getSecretString(awsAccessSecretArn)
 const websocketSecretToken = getSecretString(websocketsSecretTokenArn)
 const websocketSecretRefreshToken = getSecretString(
   websocketsSecretRefreshTokenArn,
-)
-const workersWebsocketsSecretToken = getSecretString(
-  workersWebsocketsSecretTokenArn,
 )
 const defaultProjectId = getSecretString(defaultProjectIdArn)
 
