@@ -152,6 +152,6 @@
   "dependencies": {
     "date-fns": "^3.6.0",
     "diff-match-patch": "^1.0.5",
-    "promptl-ai": "^0.4.9"
+    "promptl-ai": "^0.4.10"
   }
 }
