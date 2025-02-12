@@ -50,10 +50,7 @@ export function CollapsibleBox({
             <Text.H5M userSelect={false}>{title}</Text.H5M>
           </div>
           <div className='flex flex-row flex-grow min-w-0 items-center gap-x-2'>
-            <div
-              className='flex-grow min-w-0'
-              onClick={(e) => e.stopPropagation()}
-            >
+            <div className='flex-grow min-w-0'>
               {isExpanded ? expandedContentHeader : collapsedContentHeader}
             </div>
             <Icon

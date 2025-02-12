@@ -1,11 +1,17 @@
-import { ButtonHTMLAttributes, forwardRef, ReactNode } from 'react'
-import { cva, type VariantProps } from 'class-variance-authority'
 import { Slot, Slottable } from '@radix-ui/react-slot'
+import { cva, type VariantProps } from 'class-variance-authority'
+import {
+  ButtonHTMLAttributes,
+  forwardRef,
+  MouseEvent,
+  ReactNode,
+  useCallback,
+} from 'react'
 
 import { cn } from '../../../lib/utils'
+import { font } from '../../tokens'
 import { DotIndicator, DotIndicatorProps } from '../DotIndicator'
 import { Icon, IconProps } from '../Icons'
-import { font } from '../../tokens'
 
 const buttonContainerVariants = cva(
   cn(
@@ -137,6 +143,7 @@ export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> &
     ellipsis?: boolean
     containerClassName?: string
     indicator?: DotIndicatorProps
+    stopPropagation?: boolean
   }
 
 const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
@@ -155,6 +162,8 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
     lookDisabled,
     ellipsis,
     indicator,
+    stopPropagation,
+    onClick,
     ...props
   },
   ref,
@@ -168,9 +177,18 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
   const fanciness = fancy ? 'fancy' : 'default'
   const iconPlacement = iconProps?.placement || 'left'
 
+  const handleClick = useCallback(
+    (e: MouseEvent<HTMLButtonElement>) => {
+      if (stopPropagation) e.stopPropagation()
+      onClick?.(e)
+    },
+    [stopPropagation, onClick],
+  )
+
   return (
     <Comp
       disabled={disabled || isLoading}
+      onClick={handleClick}
       className={cn(
         'group relative',
         buttonContainerVariants({ fanciness, variant }),

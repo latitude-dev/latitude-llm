@@ -29,6 +29,7 @@ export function ParametersPaginationNav({
         iconProps={{
           name: 'chevronLeft',
         }}
+        stopPropagation
         onClick={() => onPrevPage(currentIndex)}
       />
       <div className='flex flex-row justify-center items-center flex-grow min-w-0'>
@@ -48,6 +49,7 @@ export function ParametersPaginationNav({
         iconProps={{
           name: 'chevronRight',
         }}
+        stopPropagation
         onClick={() => onNextPage(currentIndex)}
       />
     </div>
