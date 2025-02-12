@@ -5,6 +5,7 @@ import useDocumentLogWithMetadata from '$/stores/documentLogWithMetadata'
 import { DocumentVersion } from '@latitude-data/core/browser'
 import {
   AppLocalStorage,
+  cn,
   COLLAPSED_BOX_HEIGHT,
   SplitPane,
   useCurrentCommit,
@@ -18,7 +19,6 @@ import DocumentParams from './DocumentParams'
 import Preview from './Preview'
 
 const COLLAPSED_SIZE = COLLAPSED_BOX_HEIGHT * 2 + 12
-const INITIAL_EXPANDED_SIZE = COLLAPSED_SIZE + 120
 const GAP_PADDING = 26
 
 export default function Playground({
@@ -40,7 +40,7 @@ export default function Playground({
   const [expandedEvaluations, setExpandedEvaluations] = useState(false)
   const collapsed = !expandedParameters && !expandedEvaluations
   useEffect(() => {
-    setForcedSize(collapsed ? COLLAPSED_SIZE : INITIAL_EXPANDED_SIZE)
+    setForcedSize(collapsed ? COLLAPSED_SIZE : undefined)
   }, [collapsed])
 
   const { parameters } = useDocumentParameters({
@@ -73,12 +73,18 @@ export default function Playground({
     <SplitPane
       direction='vertical'
       gap={4}
-      initialPercentage={1} // minSize ensures all boxes are visible when collapsed
+      initialPercentage={50}
       forcedSize={forcedSize}
       minSize={COLLAPSED_SIZE + GAP_PADDING}
       dragDisabled={collapsed}
       firstPane={
-        <div className='flex flex-col gap-2 w-full pr-0.5'>
+        <div
+          className={cn('grid gap-2 w-full pr-0.5', {
+            'grid-rows-[1fr,auto]': expandedParameters && !expandedEvaluations,
+            'grid-rows-[auto,1fr]': !expandedParameters && expandedEvaluations,
+            'grid-rows-2': expandedParameters && expandedEvaluations,
+          })}
+        >
           <DocumentParams
             commit={commit}
             document={document}

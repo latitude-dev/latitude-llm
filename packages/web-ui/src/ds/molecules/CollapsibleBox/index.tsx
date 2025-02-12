@@ -2,7 +2,7 @@
 
 import { ReactNode, useEffect, useState } from 'react'
 
-import { Icon, IconName, Text } from '@latitude-data/web-ui'
+import { Icon, IconName, Text, cn } from '@latitude-data/web-ui'
 
 export const COLLAPSED_BOX_HEIGHT = 56
 
@@ -34,7 +34,12 @@ export function CollapsibleBox({
   }, [isExpanded])
 
   return (
-    <div className='min-h-14 w-full box-content border rounded-lg custom-scrollbar relative'>
+    <div
+      className={cn('w-full border rounded-lg custom-scrollbar relative', {
+        'h-full': isExpanded,
+        'h-auto': !isExpanded,
+      })}
+    >
       <div
         className='flex flex-col cursor-pointer sticky top-0 z-10 bg-background'
         onClick={() => setIsExpanded((prev) => !prev)}
