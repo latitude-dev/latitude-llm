@@ -1,13 +1,11 @@
 import * as aws from '@pulumi/aws'
 import { Cluster } from '@pulumi/aws/ecs'
-import * as docker from '@pulumi/docker'
 import * as pulumi from '@pulumi/pulumi'
 
 import {
   ecsSecurityGroup,
   ecsTaskExecutionRole,
   privateSubnets,
-  resolve,
 } from '../../shared'
 import { coreStack, environment } from './shared'
 
@@ -34,27 +32,7 @@ new aws.ecr.LifecyclePolicy('latitude-llm-workers-repo-lifecycle', {
   }),
 })
 
-const token = await aws.ecr.getAuthorizationToken()
-const image = new docker.Image('LatitudeLLMWorkersImage', {
-  build: {
-    platform: 'linux/amd64',
-    context: resolve('../../../'),
-    dockerfile: resolve('../../../apps/workers/docker/Dockerfile'),
-    cacheFrom: {
-      images: [pulumi.interpolate`${repo.repositoryUrl}:latest`],
-    },
-    args: {
-      SENTRY_AUTH_TOKEN: process.env.SENTRY_AUTH_TOKEN!,
-    },
-  },
-  imageName: pulumi.interpolate`${repo.repositoryUrl}:latest`,
-  registry: {
-    server: repo.repositoryUrl,
-    username: token.userName,
-    password: pulumi.secret(token.password),
-  },
-})
-
+const imageName = pulumi.interpolate`${repo.repositoryUrl}:latest`
 const containerName = 'LatitudeLLMWorkersContainer'
 const logGroup = new aws.cloudwatch.LogGroup('LatitudeLLMWorkersLogGroup', {
   name: '/ecs/LatitudeLLMWorkers',
@@ -62,7 +40,7 @@ const logGroup = new aws.cloudwatch.LogGroup('LatitudeLLMWorkersLogGroup', {
 })
 
 const taskDefinition = pulumi
-  .all([logGroup.name, image.imageName, environment])
+  .all([logGroup.name, imageName, environment])
   .apply(
     ([logGroupName, imageName, environment]) =>
       new aws.ecs.TaskDefinition('LatitudeLLMWorkersTaskDefinition', {
@@ -115,10 +93,6 @@ export const service = new aws.ecs.Service('LatitudeLLMWorkers', {
     assignPublicIp: false,
     securityGroups: [ecsSecurityGroup],
   },
-  tags: {
-    diggest: image.repoDigest,
-  },
-  triggers: {
-    diggest: image.repoDigest,
-  },
+}, {
+  ignoreChanges: ['taskDefinition', 'desiredCount'],
 })

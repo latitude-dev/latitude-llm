@@ -4,6 +4,11 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  socket.io-react-hook:
+    hash: flacogqzanzqzl7ztwpch75azy
+    path: patches/socket.io-react-hook.patch
+
 importers:
 
   .:
@@ -440,7 +445,7 @@ importers:
         version: 19.0.0-rc-5d19e1c8-20240923(react@19.0.0-rc-5d19e1c8-20240923)
       socket.io-react-hook:
         specifier: ^2.4.5
-        version: 2.4.5(react@19.0.0-rc-5d19e1c8-20240923)
+        version: 2.4.5(patch_hash=flacogqzanzqzl7ztwpch75azy)(react@19.0.0-rc-5d19e1c8-20240923)
       swr:
         specifier: ^2.2.5
         version: 2.2.5(react@19.0.0-rc-5d19e1c8-20240923)
@@ -3262,6 +3267,9 @@ packages:
     peerDependencies:
       drizzle-orm: '>= 0.29 <1'
       lucia: 3.x
+    peerDependenciesMeta:
+      drizzle-orm:
+        optional: true
 
   '@lukeed/ms@2.0.2':
     resolution: {integrity: sha512-9I2Zn6+NJLfaGoz9jN3lpwDgAYvfGeNYdbAIjJOqzs4Tpc+VU3Jqq4IofSUBKajiDS8k9fZIg18/z13mpk1bsA==}
@@ -15939,8 +15947,9 @@ snapshots:
 
   '@lucia-auth/adapter-drizzle@1.1.0(drizzle-orm@0.33.0(@opentelemetry/api@1.9.0)(@types/pg@8.11.10)(@types/react@18.3.0)(pg@8.13.1)(react@19.0.0-rc-5d19e1c8-20240923))(lucia@3.2.2)':
     dependencies:
-      drizzle-orm: 0.33.0(@opentelemetry/api@1.9.0)(@types/pg@8.11.10)(@types/react@18.3.0)(pg@8.13.1)(react@19.0.0-rc-5d19e1c8-20240923)
       lucia: 3.2.2
+    optionalDependencies:
+      drizzle-orm: 0.33.0(@opentelemetry/api@1.9.0)(@types/pg@8.11.10)(@types/react@18.3.0)(pg@8.13.1)(react@19.0.0-rc-5d19e1c8-20240923)
 
   '@lukeed/ms@2.0.2': {}
 
@@ -27614,7 +27623,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  socket.io-react-hook@2.4.5(react@19.0.0-rc-5d19e1c8-20240923):
+  socket.io-react-hook@2.4.5(patch_hash=flacogqzanzqzl7ztwpch75azy)(react@19.0.0-rc-5d19e1c8-20240923):
     dependencies:
       parseuri: 0.0.6
       react: 19.0.0-rc-5d19e1c8-20240923

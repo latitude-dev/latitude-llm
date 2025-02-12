@@ -23,8 +23,8 @@ export default function setupService({
   email: string
   name: string
   companyName: string
-  defaultProviderId: string
-  defaultProviderApiKey: string
+  defaultProviderId?: string
+  defaultProviderApiKey?: string
   captureException?: (error: Error) => void
 }): PromisedResult<SessionData> {
   return Transaction.call(async (tx) => {
@@ -59,19 +59,21 @@ export default function setupService({
       )
     }
 
-    const firstProvider = await createProviderApiKey(
-      {
-        workspace,
-        provider: Providers.OpenAI,
-        name: defaultProviderId,
-        token: defaultProviderApiKey,
-        author: user,
-      },
-      tx,
-    )
+    if (defaultProviderId && defaultProviderApiKey) {
+      const firstProvider = await createProviderApiKey(
+        {
+          workspace,
+          provider: Providers.OpenAI,
+          name: defaultProviderId,
+          token: defaultProviderApiKey,
+          author: user,
+        },
+        tx,
+      )
 
-    if (firstProvider.error) {
-      captureException?.(firstProvider.error)
+      if (firstProvider.error) {
+        captureException?.(firstProvider.error)
+      }
     }
 
     const resultImportingDefaultProject = await importDefaultProject(

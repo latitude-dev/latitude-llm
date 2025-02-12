@@ -1,9 +1,9 @@
 'use client'
 
-import { EvaluationDto } from '@latitude-data/core/browser'
-import { TableWithHeader } from '@latitude-data/web-ui'
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useToggleModal } from '$/hooks/useToogleModal'
+import { EvaluationDto } from '@latitude-data/core/browser'
+import { Label, TableWithHeader } from '@latitude-data/web-ui'
 
 import DefaultProviderBanner from '../DefaulProviderBanner'
 import CreateBatchEvaluationModal from './CreateBatchEvaluationModal'
@@ -28,10 +28,13 @@ export function Actions({
     <div className='flex flex-row items-center gap-4'>
       <div className='flex flex-row items-center gap-4'>
         {isUsingDefaultProvider && <DefaultProviderBanner />}
-        <LiveEvaluationToggle
-          documentUuid={documentUuid}
-          evaluation={evaluation}
-        />
+        <div className='flex flex-row gap-2 items-center'>
+          <Label>Evaluate live logs</Label>
+          <LiveEvaluationToggle
+            documentUuid={documentUuid}
+            evaluation={evaluation}
+          />
+        </div>
       </div>
       <TableWithHeader.Button onClick={onOpen}>
         Run batch evaluation

@@ -35,7 +35,7 @@ export default function InvitationMail({
 }
 
 const createInvitationLink = (token: string) => {
-  return `${env.LATITUDE_URL}/invitations/${token}`
+  return `${env.APP_URL}/invitations/${token}`
 }
 
 InvitationMail.PreviewProps = {

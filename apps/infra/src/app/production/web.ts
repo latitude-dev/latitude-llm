@@ -60,7 +60,6 @@ new aws.ecr.LifecyclePolicy('latitude-llm-core-repo-lifecycle', {
 
 // Use existing images (replace 'latest' with the specific tag you want to deploy)
 const imageName = pulumi.interpolate`${repo.repositoryUrl}:latest`
-const coreImageName = pulumi.interpolate`${coreRepo.repositoryUrl}:latest`
 
 // Create a Fargate task definition
 const containerName = 'LatitudeLLMAppContainer'
@@ -71,9 +70,9 @@ const logGroup = new aws.cloudwatch.LogGroup('LatitudeLLMAppLogGroup', {
 })
 
 const taskDefinition = pulumi
-  .all([logGroup.name, imageName, coreImageName, environment])
+  .all([logGroup.name, imageName, environment])
   .apply(
-    ([logGroupName, imageName, coreImageName, environment]) =>
+    ([logGroupName, imageName, environment]) =>
       new aws.ecs.TaskDefinition('LatitudeLLMAppTaskDefinition', {
         family: 'LatitudeLLMAppTaskFamily',
         cpu: '1024',
@@ -101,23 +100,6 @@ const taskDefinition = pulumi
               retries: 3,
               startPeriod: 60,
             },
-            logConfiguration: {
-              logDriver: 'awslogs',
-              options: {
-                'awslogs-group': logGroupName,
-                'awslogs-region': 'eu-central-1',
-                'awslogs-stream-prefix': 'ecs',
-              },
-            },
-          },
-          {
-            name: 'db-migrate',
-            image: coreImageName,
-            cpu: 128,
-            memory: 256,
-            command: ['pnpm', '--prefix', 'packages/core', 'db:migrate'],
-            essential: false,
-            environment,
             logConfiguration: {
               logDriver: 'awslogs',
               options: {

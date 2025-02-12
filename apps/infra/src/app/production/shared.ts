@@ -117,16 +117,14 @@ export const environment = pulumi
   ])
   .apply(() => {
     return [
-      { name: 'HOSTNAME', value: '0.0.0.0' }, // This is the host gateway listens to within its container
-      { name: 'PORT', value: '8080' },
       { name: 'DATABASE_URL', value: dbUrl },
       { name: 'QUEUE_HOST', value: queueEndpoint },
       { name: 'CACHE_HOST', value: cacheEndpoint },
-      { name: 'GATEWAY_HOSTNAME', value: 'gateway.latitude.so' }, // This is the host gateway is available at
+      { name: 'GATEWAY_HOSTNAME', value: 'gateway.latitude.so' },
       { name: 'GATEWAY_SSL', value: 'true' },
-      { name: 'LATITUDE_DOMAIN', value: 'latitude.so' },
-      { name: 'LATITUDE_EMAIL_DOMAIN', value: 'mail.latitude.so' },
-      { name: 'LATITUDE_URL', value: latitudeUrl },
+      { name: 'APP_DOMAIN', value: 'latitude.so' },
+      { name: 'MAILGUN_EMAIL_DOMAIN', value: 'mail.latitude.so' },
+      { name: 'APP_URL', value: latitudeUrl },
       { name: 'WEBSOCKETS_SERVER', value: 'https://ws.latitude.so' },
       { name: 'WEBSOCKETS_SERVER_PORT', value: '8080' },
       { name: 'WEBSOCKET_SECRET_TOKEN_KEY', value: websocketSecretToken },
@@ -134,12 +132,7 @@ export const environment = pulumi
         name: 'WEBSOCKET_REFRESH_SECRET_TOKEN_KEY',
         value: websocketSecretRefreshToken,
       },
-      {
-        name: 'WORKERS_WEBSOCKET_SECRET_TOKEN',
-        value: workersWebsocketsSecretToken,
-      },
       { name: 'FROM_MAILER_EMAIL', value: 'hello@latitude.so' },
-      { name: 'MAILER_API_KEY', value: mailerApiKey },
       { name: 'MAILGUN_MAILER_API_KEY', value: mailgunMailerApiKey },
       { name: 'SENTRY_DSN', value: sentryDsn },
       { name: 'SENTRY_ORG', value: sentryOrg },

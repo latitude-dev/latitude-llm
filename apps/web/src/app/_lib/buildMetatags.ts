@@ -25,7 +25,7 @@ export default function buildMetatags({
   const metaDescription = description || DEFAULT_DESCRIPTION
 
   return {
-    // FIXME: use env.LATITUDE_URL (is broken when building production) instead
+    // FIXME: use env.APP_URL (is broken when building production) instead
     metadataBase: new URL('https://app.latitude.so'),
     title: metaTitle,
     description: metaDescription,

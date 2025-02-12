@@ -7,10 +7,34 @@ ARG SENTRY_AUTH_TOKEN
 
 FROM node:20-alpine AS alpine
 
-# Check https://github.com/nodejs/docker-node/tree/b4117f9333da4138b03a546ec926ef50a31506c3#nodealpine to understand why libc6-compat might be needed.
-RUN apk add --no-cache libc6-compat curl
+# Install build dependencies
+RUN apk add --update --no-cache \
+  libc6-compat \
+  curl \
+  sudo \
+  build-base \
+  g++ \
+  bash \
+  wget \
+  cmake \
+  musl-dev \
+  clang \
+  llvm \
+  python3 \
+  pkgconfig \
+  pixman-dev \
+  cairo-dev \
+  pango-dev \
+  jpeg-dev \
+  giflib-dev \
+  librsvg-dev \
+  rustup \
+  git \
+  gn \
+  tar \
+  ninja
 
-FROM alpine as base
+FROM alpine AS base
 
 # Will be used to cache pnpm store
 RUN npm install -g corepack@0.31.0 && corepack enable
@@ -19,9 +43,10 @@ RUN npm install -g corepack@0.31.0 && corepack enable
 ENV PNPM_HOME="/pnpm"
 ENV PATH="$PNPM_HOME:$PATH"
 
-RUN pnpm i -g turbo
+# Install turbo with npm instead of pnpm to avoid key verification issues
+RUN pnpm install -g turbo
 
-FROM base as pruner
+FROM base AS pruner
 
 ARG PROJECT
 
@@ -42,7 +67,6 @@ ARG SENTRY_PROJECT
 ARG SENTRY_AUTH_TOKEN
 ARG NEXT_PUBLIC_POSTHOG_KEY
 ARG NEXT_PUBLIC_POSTHOG_HOST
-ARG LATITUDE_URL
 
 ENV SENTRY_DSN=$SENTRY_DSN
 ENV SENTRY_ORG=$SENTRY_ORG
@@ -50,7 +74,6 @@ ENV SENTRY_PROJECT=$SENTRY_PROJECT
 ENV SENTRY_AUTH_TOKEN=$SENTRY_AUTH_TOKEN
 ENV NEXT_PUBLIC_POSTHOG_KEY=$NEXT_PUBLIC_POSTHOG_KEY
 ENV NEXT_PUBLIC_POSTHOG_HOST=$NEXT_PUBLIC_POSTHOG_HOST
-ENV LATITUDE_URL=$LATITUDE_URL
 
 WORKDIR /app
 
@@ -72,7 +95,6 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
   SENTRY_AUTH_TOKEN=$SENTRY_AUTH_TOKEN \
   NEXT_PUBLIC_POSTHOG_KEY=$NEXT_PUBLIC_POSTHOG_KEY \
   NEXT_PUBLIC_POSTHOG_HOST=$NEXT_PUBLIC_POSTHOG_HOST \
-  LATITUDE_URL=$LATITUDE_URL \
   pnpm turbo build --filter="${PROJECT}..."
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm prune --prod --no-optional
@@ -86,6 +108,16 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
+# Install runtime dependencies for canvas
+RUN apk add --no-cache \
+  pixman \
+  cairo \
+  pango \
+  libjpeg \
+  giflib \
+  librsvg \
+  libstdc++
+
 RUN addgroup --system --gid 1001 nodejs
 RUN adduser --system --uid 1001 nextjs
 
@@ -98,22 +130,23 @@ RUN mkdir -p apps/web/.next/cache
 RUN chown nextjs:nodejs apps/web/.next
 RUN chown nextjs:nodejs apps/web/.next/cache
 
+# Copy the standalone server and all node_modules
 COPY --from=builder --chown=nodejs:nextjs /app/apps/web/.next/standalone ./
 COPY --from=builder --chown=nodejs:nextjs /app/apps/web/.next/static ./apps/web/.next/static
+# Copy all node_modules to ensure dependencies are available
+COPY --from=builder --chown=nodejs:nextjs /app/node_modules ./node_modules
+COPY --from=builder --chown=nodejs:nextjs /app/apps/web/node_modules ./apps/web/node_modules
 
 USER nextjs
 
 WORKDIR /app/apps/web
 
-ARG PORT=8080
-ARG HOSTNAME="0.0.0.0"
-
-ENV HOSTNAME $HOSTNAME
-ENV PORT $PORT
-ENV NODE_ENV=production
+ENV HOSTNAME=0.0.0.0
+ENV KEEP_ALIVE_TIMEOUT=601000
 ENV NEXT_TELEMETRY_DISABLED=1
-ENV KEEP_ALIVE_TIMEOUT 601000
+ENV NODE_ENV=production
+ENV PORT=8080
 
-EXPOSE $PORT
+EXPOSE 8080
 
-CMD node server.js -p $PORT -h $HOSTNAME
+CMD ["node", "server.js"]

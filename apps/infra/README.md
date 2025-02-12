@@ -21,8 +21,11 @@ pulumi config --stack core set [EXAMPLE_KEY] [example-secret] --secret
 // 2. Upload the secret to core stack
 pulumi up --stack core
 
-// 3. Deploy new infra for web
+// 3. Update web task definition with new env var
 pulumi up --stack app-production-web
+
+// 4. Update gateway task definition with new env var
+pulumi up --stack app-production-gateway
 ```
 
 By default all secrets are added in the stack 'core'.

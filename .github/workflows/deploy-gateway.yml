@@ -1,43 +1,20 @@
 name: Deploy Gateway
 
 on:
-  workflow_call:
-    secrets:
-      AWS_ACCESS_KEY_ID:
-        required: true
-      AWS_SECRET_ACCESS_KEY:
-        required: true
-      ARN_OF_IAM_ROLE_TO_ASSUME:
-        required: true
-      PULUMI_CONFIG_PASSPHRASE:
-        required: true
-      SENTRY_AUTH_TOKEN:
-        required: true
+  workflow_run:
+    workflows: ['Build and Push Docker Images']
+    types:
+      - completed
+    branches:
+      - main
+
+env:
+  REGISTRY: ghcr.io
+  OWNER: latitude-dev
 
 jobs:
-  check_changes:
-    runs-on: ubuntu-latest
-    outputs:
-      changes_detected: ${{ steps.check_changes.outputs.changes_detected }}
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 2
-      - name: Check for relevant changes
-        id: check_changes
-        run: |
-          changes=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }})
-          echo "Changes detected:"
-          echo "$changes"
-          if echo "$changes" | grep -qE "^(apps/infra/|apps/gateway/|packages/)"
-          then
-            echo "changes_detected=true" >> $GITHUB_OUTPUT
-          else
-            echo "changes_detected=false" >> $GITHUB_OUTPUT
-          fi
   deployment:
-    needs: check_changes
-    if: needs.check_changes.outputs.changes_detected == 'true'
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -79,33 +56,30 @@ jobs:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           role-to-assume: ${{ secrets.ARN_OF_IAM_ROLE_TO_ASSUME }}
-          role-session-name: WebDeployment
+          role-session-name: GatewayDeployment
           aws-region: eu-central-1
           role-skip-session-tagging: true
 
-      - name: Generate unique image tag
-        run: echo "IMAGE_TAG=$(date +%Y%m%d-%H%M%S)-${GITHUB_SHA}" >> $GITHUB_ENV
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build & push docker images
-        working-directory: apps/infra
+      - name: Get image tag
+        id: get_tag
         run: |
-          echo "Deploying Pulumi stack: docker-production-gateway"
-          pulumi up --stack docker-production-gateway --yes
-        env:
-          PULUMI_CONFIG_PASSPHRASE: ${{ secrets.PULUMI_CONFIG_PASSPHRASE }}
-          IMAGE_TAG: ${{ env.IMAGE_TAG }}
-          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SHA_TAG=$(echo ${{ github.event.workflow_run.head_sha }} | cut -c1-7)
+          echo "GATEWAY_IMAGE=${{ env.REGISTRY }}/${{ env.OWNER }}/gateway:sha-${SHA_TAG}" >> $GITHUB_ENV
 
       - name: Create new task definition
         run: |
-          AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query "Account" --output text)
           TASK_DEFINITION=$(aws ecs describe-task-definition --task-definition LatitudeLLMGatewayTaskFamily --query 'taskDefinition')
-          NEW_TASK_DEFINITION=$(echo $TASK_DEFINITION | jq 'del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy) | .containerDefinitions[0].image = "'"$AWS_ACCOUNT_ID"'.dkr.ecr.eu-central-1.amazonaws.com/latitude-llm-gateway-repo-b859826:${{ env.IMAGE_TAG }}"')
+          NEW_TASK_DEFINITION=$(echo $TASK_DEFINITION | jq 'del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy) | .containerDefinitions[0].image = env.GATEWAY_IMAGE')
           echo $NEW_TASK_DEFINITION > new-task-definition.json
           NEW_TASK_DEFINITION_ARN=$(aws ecs register-task-definition --cli-input-json file://new-task-definition.json --query taskDefinition.taskDefinitionArn --output text)
           echo "NEW_TASK_DEFINITION_ARN=$NEW_TASK_DEFINITION_ARN" >> $GITHUB_ENV
-        env:
-          IMAGE_TAG: ${{ env.IMAGE_TAG }}
 
       - name: Update AppSpec with new task definition
         run: |
@@ -114,8 +88,7 @@ jobs:
       - name: Deploy with CodeDeploy
         working-directory: apps/gateway
         run: |
-          echo "Deploying branch ${{ github.ref }} to production"
-          commit_hash=`git rev-parse HEAD`
+          echo "Deploying commit ${{ github.event.workflow_run.head_sha }} to production"
           appspec_content=$(cat appspec.yml | jq -Rs .)
           aws deploy create-deployment \
             --application-name LatitudeLLMCodeDeployGateway \

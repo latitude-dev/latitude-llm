@@ -6,7 +6,7 @@
   "private": true,
   "scripts": {
     "dev": "tsx watch src/server",
-    "build": "tsup --config tsup.config.ts && pnpm run sentry:sourcemaps",
+    "build": "tsup --config tsup.config.ts",
     "dev:debug": "tsx watch --inspect src/server",
     "lint": "eslint src/",
     "tc": "tsc --noEmit",

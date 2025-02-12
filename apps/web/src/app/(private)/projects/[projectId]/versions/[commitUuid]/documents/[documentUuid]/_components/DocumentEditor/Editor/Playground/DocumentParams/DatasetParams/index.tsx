@@ -3,7 +3,6 @@ import { DocumentVersion } from '@latitude-data/core/browser'
 import {
   Button,
   cn,
-  Icon,
   Select,
   type ICommitContextType,
 } from '@latitude-data/web-ui'
@@ -19,8 +18,8 @@ function BlankSlate() {
       href={ROUTES.datasets.root}
       className='flex flex-row items-center gap-1'
     >
-      <Button variant='link'>
-        Manage datasets <Icon name='externalLink' />
+      <Button iconProps={{ name: 'externalLink' }} variant='link'>
+        Manage datasets
       </Button>
     </Link>
   )

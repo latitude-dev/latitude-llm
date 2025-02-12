@@ -5,7 +5,7 @@
   "description": "Latitude AI Workers for processing logs",
   "private": true,
   "scripts": {
-    "build": "tsup --config tsup.config.ts && pnpm run sentry:sourcemaps",
+    "build": "tsup --config tsup.config.ts",
     "dev": "NODE_DEBUG=latitude:debug tsx watch src/server",
     "dev:debug": "tsx watch --inspect-brk src/server",
     "lint": "eslint src/",

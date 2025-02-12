@@ -23,6 +23,7 @@ export const publishToAnalyticsJob = async (job: Job<LatitudeEvent>) => {
   }
 
   const client = PostHogClient()
+  if (!client) return
 
   client.capture({
     distinctId: userEmail,

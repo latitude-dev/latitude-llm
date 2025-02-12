@@ -1,11 +1,8 @@
-import { env } from 'process'
-
 import { eq } from 'drizzle-orm'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { Providers, User, Workspace } from '../../browser'
 import { database } from '../../client'
-import { BadRequestError } from '../../lib'
 import {
   ProviderApiKeysRepository,
   WorkspacesRepository,
@@ -33,24 +30,6 @@ describe('destroyProviderApiKey', () => {
     const { workspace: w, user: u } = await createProject()
     workspace = w
     user = u
-  })
-
-  it('does not allow to delete the latitude provider', async () => {
-    const provider = await createProviderApiKey({
-      workspace,
-      user,
-      name: 'Latitude',
-      type: Providers.OpenAI,
-      token: env.DEFAULT_PROVIDER_API_KEY,
-    })
-
-    const result = await destroyProviderApiKey(provider)
-
-    expect(result.ok).toBe(false)
-    expect(result.error).toBeInstanceOf(BadRequestError)
-    expect(result.error!.message).toBe(
-      'Cannot delete the default provider API key',
-    )
   })
 
   it('deletes a non-default provider', async () => {

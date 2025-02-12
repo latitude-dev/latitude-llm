@@ -20,7 +20,7 @@ export async function importDefaultProject(
   db = database,
 ) {
   const defaultProject = await db.query.projects.findFirst({
-    where: eq(projects.id, env.DEFAULT_PROJECT_ID),
+    where: eq(projects.id, env.DEFAULT_PROJECT_ID ?? -1),
   })
   if (!defaultProject) {
     return Result.error(new NotFoundError('Default project not found'))

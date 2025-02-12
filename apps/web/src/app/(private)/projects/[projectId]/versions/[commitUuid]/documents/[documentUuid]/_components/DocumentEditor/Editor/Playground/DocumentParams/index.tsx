@@ -108,7 +108,7 @@ function CollapsedContentHeader({
   const onNextDatasetPage = (page: number) => datasetInfo.onRowChange(page + 1)
 
   return (
-    <div className='w-full flex flex-col gap-4'>
+    <div className='w-full flex items-center justify-end gap-4'>
       {isDataset && (
         <ParametersPaginationNav
           zeroIndex
@@ -132,7 +132,7 @@ function CollapsedContentHeader({
   )
 }
 
-export function DocumentParams({ onExpand, ...props }: Props) {
+export default function DocumentParams({ onExpand, ...props }: Props) {
   const datasetInfo = useSelectDataset({
     document: props.document,
     commitVersionUuid: props.commit.uuid,
@@ -153,8 +153,8 @@ export function DocumentParams({ onExpand, ...props }: Props) {
     <ClientOnly>
       <CollapsibleBox
         title='Parameters'
-        initialExpanded
-        collapsedContent={null}
+        icon='braces'
+        initialExpanded={false}
         collapsedContentHeader={<CollapsedContentHeader {...contentProps} />}
         expandedContent={<ParamsTabs {...contentProps} />}
         onExpand={onExpand}

@@ -18,7 +18,7 @@ export default function InvitationMail({ invitee }: Props) {
         set up an account for free.
       </Text>
       <Link
-        href={`${env.LATITUDE_URL}/setup`}
+        href={`${env.APP_URL}/setup`}
         target='_blank'
         className='text-blue-500 font-medium text-base mb-4 underline'
       >

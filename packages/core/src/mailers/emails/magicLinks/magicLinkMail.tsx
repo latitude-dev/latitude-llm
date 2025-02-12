@@ -34,7 +34,7 @@ export default function MagicLinkMail({
 
 const createMagicLink = (token: string, returnTo?: string) => {
   const goTo = returnTo ? `?returnTo=${returnTo}` : ''
-  return `${env.LATITUDE_URL}/magic-links/confirm/${token}${goTo}`
+  return `${env.APP_URL}/magic-links/confirm/${token}${goTo}`
 }
 
 MagicLinkMail.PreviewProps = {

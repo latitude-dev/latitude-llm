@@ -40,7 +40,7 @@ const server = http.createServer(app)
 const io = new Server(server, {
   path: '/websocket',
   cors: {
-    origin: env.LATITUDE_URL,
+    origin: env.APP_URL,
     credentials: true,
     methods: ['GET', 'POST'],
   },

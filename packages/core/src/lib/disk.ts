@@ -116,7 +116,7 @@ export class DiskWrapper {
 
   private buildDisk(visibility: 'private' | 'public') {
     const key = env.DRIVE_DISK
-    const baseUrl = env.LATITUDE_URL
+    const baseUrl = env.APP_URL
     const publicPath = env.FILE_PUBLIC_PATH
     const location = env.FILES_STORAGE_PATH
     const publicLocation = env.PUBLIC_FILES_STORAGE_PATH
