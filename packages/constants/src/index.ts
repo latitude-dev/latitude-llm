@@ -13,6 +13,7 @@ export enum Providers {
   Mistral = 'mistral',
   Azure = 'azure',
   Google = 'google',
+  GoogleVertex = 'google_vertex',
   Custom = 'custom',
 }
 

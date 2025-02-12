@@ -21,6 +21,7 @@ export const providersEnum = latitudeSchema.enum('provider', [
   Providers.Mistral,
   Providers.Azure,
   Providers.Google,
+  Providers.GoogleVertex,
   Providers.Custom,
 ])
 

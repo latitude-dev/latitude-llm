@@ -60,8 +60,8 @@ type AIReturnText = {
 export type AIReturn<T extends StreamType> = T extends 'object'
   ? AIReturnObject
   : T extends 'text'
-    ? AIReturnText
-    : never
+  ? AIReturnText
+  : never
 
 export type StreamChunk =
   | TextStreamPart<Record<string, CoreTool>>
@@ -146,7 +146,11 @@ export async function ai({
 
     const languageModel = customLanguageModel
       ? customLanguageModel
-      : llmProvider.value(model, { cacheControl: config.cacheControl })
+      : llmProvider.value(model, {
+        cacheControl: config.cacheControl ?? false,
+        // Propagate provider config options for this language model
+        ...config,
+      })
     const toolsResult = buildTools(tools)
     if (toolsResult.error) return toolsResult
 
@@ -162,6 +166,7 @@ export async function ai({
     }
 
     if (schema && output) {
+      // @ts-expect-error - https://github.com/vercel/ai/issues/4760
       const result = streamObject({
         ...commonOptions,
         schema: jsonSchema(schema),
@@ -182,6 +187,7 @@ export async function ai({
       })
     }
 
+    // @ts-expect-error - https://github.com/vercel/ai/issues/4760
     const result = streamText({
       ...commonOptions,
       experimental_transform: smoothStream(),

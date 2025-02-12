@@ -1,6 +1,7 @@
 import { createAnthropic } from '@ai-sdk/anthropic'
 import { createAzure } from '@ai-sdk/azure'
 import { createGoogleGenerativeAI } from '@ai-sdk/google'
+import { createVertex } from '@ai-sdk/google-vertex/edge'
 import { createMistral } from '@ai-sdk/mistral'
 import { createOpenAI } from '@ai-sdk/openai'
 import { type Message, MessageRole } from '@latitude-data/compiler'
@@ -93,6 +94,17 @@ export function createProvider({
           ...(config?.google ?? {}),
         }),
       )
+    }
+    case Providers.GoogleVertex: {
+      return Result.ok(createVertex({
+        project: 'something',
+        location: 'us-central1',
+        googleCredentials: {
+          clientEmail: '',
+          privateKey: '',
+          privateKeyId: '',
+        }
+      }))
     }
     case Providers.Custom:
       return Result.ok(
