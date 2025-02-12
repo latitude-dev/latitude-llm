@@ -1,6 +1,6 @@
 'use client'
 
-import { ReactNode, useCallback, useState } from 'react'
+import { ReactNode, useEffect, useState } from 'react'
 
 import { Icon, IconName, Text } from '@latitude-data/web-ui'
 
@@ -29,20 +29,15 @@ export function CollapsibleBox({
   onExpand?: OnExpandFn
 }) {
   const [isExpanded, setIsExpanded] = useState(initialExpanded)
-
-  const toggleExpand = useCallback(() => {
-    setIsExpanded((prevExpanded) => {
-      const nextExpanded = !prevExpanded
-      onExpand?.(nextExpanded)
-      return nextExpanded
-    })
-  }, [])
+  useEffect(() => {
+    onExpand?.(isExpanded)
+  }, [isExpanded])
 
   return (
     <div className='min-h-14 w-full box-content border rounded-lg custom-scrollbar relative'>
       <div
         className='flex flex-col cursor-pointer sticky top-0 z-10 bg-background'
-        onClick={toggleExpand}
+        onClick={() => setIsExpanded((prev) => !prev)}
       >
         <div className='min-h-14 flex flex-shrink-0 justify-between items-center py-3.5 px-4 gap-x-4'>
           <div className='flex flex-row items-center gap-x-2'>

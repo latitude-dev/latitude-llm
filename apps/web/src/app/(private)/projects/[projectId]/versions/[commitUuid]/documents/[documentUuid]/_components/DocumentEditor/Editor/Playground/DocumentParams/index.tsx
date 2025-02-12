@@ -154,7 +154,7 @@ export default function DocumentParams({ onExpand, ...props }: Props) {
       <CollapsibleBox
         title='Parameters'
         icon='braces'
-        initialExpanded={false}
+        initialExpanded={true}
         collapsedContentHeader={<CollapsedContentHeader {...contentProps} />}
         expandedContent={<ParamsTabs {...contentProps} />}
         onExpand={onExpand}
