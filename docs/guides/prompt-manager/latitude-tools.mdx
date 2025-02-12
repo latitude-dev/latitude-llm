@@ -1,0 +1,39 @@
+---
+title: Latitude Tools
+description: Learn how to use Latitude's built-in tools in your prompts.
+---
+
+# Overview
+
+Latitude comes with a selection of built-in tools that can be used in your prompts. These tools allow you to extend the capabilities of the AI model by providing additional functionality beyond its default behavior.
+
+<Note>
+  Latitude Tools are specially useful with [Agents](/guides/prompt-manager/agents), as they will be able to interpret the tool results and improvise accordingly.
+</Note>
+
+<Warning>
+  Tools may not be available for all providers or models. Check the documentation of your provider to see if tools are supported.
+</Warning>
+
+---
+
+## Defining available Latitude Tools
+
+Currently, Latitude supports the following built-in tools:
+- `code`
+
+To add them to your prompt, simply include them in a `latitudeTools` section in your prompt configuration as a list:
+```yaml
+---
+provider: <your-provider-name>
+model: <your-model>
+latitudeTools:
+  - code
+---
+```
+
+## Code Tool
+
+The `code` tool allows you to execute custom code during the conversation. This tool is particularly useful for performing complex calculations, making API requests, or integrating with external services.
+
+When this tool is available in your prompt, the AI model will be able to request the execution of custom code by returning a tool call. This tool can run any custom code in either Python or JavaScript, and even include additional dependencies that will be installed before execution. After the code execution, the AI model will receive the output of the code as a response.
