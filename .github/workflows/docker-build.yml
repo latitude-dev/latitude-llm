@@ -1,16 +1,7 @@
 name: Build and Push Docker Images
 
-# Trigger on:
-# - Pushes to main branch (production deployments)
-# - New version tags (releases)
-# - Pull requests to main (testing builds)
 on:
   push:
-    branches:
-      - main
-    tags:
-      - 'v*'
-  pull_request:
     branches:
       - main
 
@@ -66,8 +57,6 @@ jobs:
 
       # Generate Docker metadata/tags based on Git context
       # - For main branch: latest tag
-      # - For PRs: PR-specific tag
-      # - For version tags: semver tags
       # - For all: SHA tag for precise version tracking
       - name: Extract metadata
         id: meta
@@ -84,7 +73,7 @@ jobs:
 
       # Build and push the Docker image
       # - Uses layer caching for faster builds
-      # - Only pushes on main branch or tags (not on PRs)
+      # - Only pushes on main branch
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
@@ -99,7 +88,6 @@ jobs:
 
   run-migrations:
     needs: build-and-push
-    if: github.ref == 'refs/heads/main'
     uses: ./.github/workflows/run-migrations.yml
     with:
       workflow_call: true
@@ -114,7 +102,6 @@ jobs:
 
   deploy-rest:
     needs: run-migrations
-    if: github.ref == 'refs/heads/main'
     uses: ./.github/workflows/deploy-rest.yml
     permissions:
       id-token: write
@@ -126,7 +113,6 @@ jobs:
 
   deploy-web:
     needs: run-migrations
-    if: github.ref == 'refs/heads/main'
     uses: ./.github/workflows/deploy-web.yml
     permissions:
       id-token: write
@@ -138,7 +124,6 @@ jobs:
 
   deploy-gateway:
     needs: run-migrations
-    if: github.ref == 'refs/heads/main'
     uses: ./.github/workflows/deploy-gateway.yml
     permissions:
       id-token: write
@@ -151,7 +136,6 @@ jobs:
 # Concurrency settings to manage multiple workflow runs
 # - Groups runs by workflow name and git ref
 # - For main branch: Never cancel running builds (queue them instead)
-# - For other branches/PRs: Cancel old builds when new ones come in
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+  cancel-in-progress: false
