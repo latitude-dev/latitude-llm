@@ -3,4 +3,109 @@ title: Quick start
 description: Learn how to self-host Latitude
 ---
 
-TODO.
+# Starting Latitude with Docker Compose
+
+Latitude can be easily deployed in a single machine using Docker Compose, which will set up all required services including the web interface, API gateway, workers, websockets, database, and Redis.
+
+## Prerequisites
+
+- Docker and Docker Compose installed on your system
+- A copy of the `.env` configuration file
+
+## Configuration
+
+1. First, create your environment configuration by copying the example file:
+
+```bash
+cp .env.example .env
+```
+
+2. Configure your `.env` file with your production settings. The following key configurations are available:
+
+- **Database Settings**:
+
+  - `POSTGRES_USER` and `POSTGRES_PASSWORD`: Database credentials
+  - `DATABASE_URL`: PostgreSQL connection string
+
+- **Redis Settings**:
+
+  - `QUEUE_PORT` and `QUEUE_HOST`: Redis queue configuration
+  - `CACHE_PORT` and `CACHE_HOST`: Redis cache configuration
+
+- **Network Settings**:
+
+  - `APP_DOMAIN`: Your domain (e.g., `latitude.so`)
+  - `APP_URL`: Full URL to your application
+  - `GATEWAY_HOSTNAME`: API gateway hostname
+  - `GATEWAY_SSL`: Enable/disable SSL
+
+- **Email Configuration**:
+
+  - `MAILGUN_EMAIL_DOMAIN`: Email domain for sending emails
+  - `FROM_MAILER_EMAIL`: Sender email address
+  - `MAILGUN_MAILER_API_KEY`: Mailgun API key (optional)
+
+- **Storage Configuration**:
+
+  - `DRIVE_DISK`: Choose between `local` or `s3` for file storage
+  - AWS S3 credentials (if using S3 storage)
+
+- **Optional Features**:
+  - Sentry integration for error tracking
+  - PostHog for analytics
+
+## Starting the Services
+
+1. Start all services using Docker Compose:
+
+```bash
+docker compose up -d
+```
+
+This will start the following services:
+
+- Traefik (reverse proxy) on port 80
+- PostgreSQL database on port 5432
+- Redis on port 6379
+- Web application (accessible via `app.latitude.localhost`)
+- API Gateway (accessible via `gateway.latitude.localhost`)
+- Background workers
+- WebSocket server (accessible via `ws.latitude.localhost`)
+
+## Service URLs
+
+Once running, you can access:
+
+- Main application: `http://app.latitude.localhost`
+- API Gateway: `http://gateway.latitude.localhost`
+- WebSocket server: `http://ws.latitude.localhost`
+- Traefik dashboard: `http://localhost:8090`
+
+## Monitoring
+
+You can monitor the services using standard Docker commands:
+
+```bash
+# View service logs
+docker compose logs -f [service_name]
+
+# Check service status
+docker compose ps
+
+# View resource usage
+docker compose top
+```
+
+## Important Notes
+
+1. The services use Traefik as a reverse proxy, which automatically handles routing and service discovery.
+2. The database data is persisted using a Docker volume mounted at `./docker/pgdata`.
+3. For production use, make sure to:
+
+   - Set strong passwords in your `.env` file
+   - Configure proper SSL certificates
+   - Use appropriate storage configuration (S3 recommended for production)
+   - Set up proper monitoring and logging
+
+4. If you're using local file storage, note that it requires additional configuration for multi-container setups, and S3 is recommended for production environments.
+5. For production environments, we recommend using a container orchestration tool like Kubernetes and handle env variables in a more robust way.
