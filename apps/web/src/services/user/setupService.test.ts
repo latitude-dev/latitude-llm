@@ -1,22 +1,21 @@
-import { Providers, RewardType } from '@latitude-data/core/browser'
+import { beforeAll, afterAll, describe, expect, it, vi } from 'vitest'
+import { Providers } from '@latitude-data/core/browser'
 import { database } from '@latitude-data/core/client'
 import { publisher } from '@latitude-data/core/events/publisher'
-import { createProject, helpers } from '@latitude-data/core/factories'
-import { Result } from '@latitude-data/core/lib/Result'
+import * as factories from '@latitude-data/core/factories'
 import {
   apiKeys,
   commits,
   documentVersions,
   memberships,
   projects,
+  providerApiKeys,
   users,
   workspaces,
 } from '@latitude-data/core/schema'
 import { env } from '@latitude-data/env'
 import { eq } from 'drizzle-orm'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-
-import setupService from './setupService'
+import setupServiceGlobal from './setupService'
 
 const mocks = vi.hoisted(() => ({
   claimReward: vi.fn(),
@@ -28,7 +27,22 @@ vi.mock('@latitude-data/core/services/claimedRewards/claim', () => ({
 }))
 
 describe('setupService', () => {
+  beforeAll(async () => {
+    const { project: defaultProject } = await factories.createProject()
+
+    vi.stubEnv('DEFAULT_PROJECT_ID', defaultProject.id.toString())
+    vi.stubEnv('NEXT_PUBLIC_DEFAULT_PROVIDER_NAME', 'Latitude')
+    vi.stubEnv('DEFAULT_PROVIDER_API_KEY', 'default-provider-api-key')
+    vi.resetModules()
+  })
+
+  afterAll(() => {
+    vi.unstubAllEnvs()
+  })
+
   it('should create all necessary entities when calling setup service', async () => {
+    const mod = await import('./setupService')
+    const setupService = mod.default
     const result = await setupService({
       email: 'test@example.com',
       name: 'Test User',
@@ -73,16 +87,26 @@ describe('setupService', () => {
       where: eq(apiKeys.workspaceId, workspace.id),
     })
     expect(createdApiKey).toBeDefined()
+
+    // Check provider API key creation when ENV variables are present
+    const createdProviderApiKey =
+      await database.query.providerApiKeys.findFirst({
+        // @ts-expect-error - drizzle-orm types are not up to date
+        where: eq(providerApiKeys.workspaceId, workspace.id),
+      })
+    expect(createdProviderApiKey).toBeDefined()
+    expect(createdProviderApiKey?.authorId).toBe(user.id)
   })
 
   it('publishes userCreated event', async () => {
-    const result = await setupService({
+    const result = await setupServiceGlobal({
       email: 'test@example.com',
       name: 'Test User',
       companyName: 'Test Company',
     })
 
     const user = result.value?.user!
+
     expect(publisherSpy).toHaveBeenCalledWith({
       type: 'userCreated',
       data: {
@@ -94,11 +118,11 @@ describe('setupService', () => {
   })
 
   it('should import the default project when calling setup service', async () => {
-    const prompt = helpers.createPrompt({
+    const prompt = factories.helpers.createPrompt({
       provider: 'Latitude',
       model: 'gpt-4o',
     })
-    const { project } = await createProject({
+    const { project } = await factories.createProject({
       providers: [{ type: Providers.OpenAI, name: 'Latitude' }],
       name: 'Default Project',
       documents: {
@@ -110,7 +134,7 @@ describe('setupService', () => {
 
     vi.mocked(env).DEFAULT_PROJECT_ID = project.id
 
-    const result = await setupService({
+    const result = await setupServiceGlobal({
       email: 'test2@example.com',
       name: 'Test User 2',
       companyName: 'Test Company 2',
@@ -141,32 +165,5 @@ describe('setupService', () => {
       .where(eq(commits.projectId, importedProject!.id))
     expect(importedDocuments.length).toBe(1)
     expect(importedDocuments[0]!.document_versions.content).toEqual(prompt)
-  })
-
-  describe('with custom timers', () => {
-    beforeEach(() => {
-      vi.setSystemTime(new Date('2024-10-10'))
-      mocks.claimReward.mockResolvedValue(Result.nil())
-    })
-
-    afterEach(() => {
-      vi.useRealTimers()
-    })
-
-    // TODO: review, not sure why the timers :point_up: are messing with the test
-    it.skip('should claim the reward for sigingup on the launch day', async () => {
-      await setupService({
-        email: 'test@example.com',
-        name: 'Test User',
-        companyName: 'Test Company',
-      })
-
-      expect(mocks.claimReward).toHaveBeenCalledWith({
-        workspace: { id: 'workspace-id' },
-        user: { id: 'user-id' },
-        type: RewardType.SignupLaunchDay,
-        reference: '',
-      })
-    })
   })
 })

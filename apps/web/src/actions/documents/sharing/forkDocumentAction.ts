@@ -26,6 +26,6 @@ export const forkDocumentAction = authProcedure
         workspace: ctx.workspace,
         user: ctx.user,
       },
-      defaultProviderId: env.DEFAULT_PROVIDER_ID,
+      defaultProviderName: env.NEXT_PUBLIC_DEFAULT_PROVIDER_NAME,
     }).then((r) => r.unwrap())
   })

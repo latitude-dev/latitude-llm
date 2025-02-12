@@ -165,7 +165,7 @@ export async function defaultDocumentContent(
 
   const model = findFirstModelForProvider({
     provider: provider,
-    latitudeProvider: env.DEFAULT_PROVIDER_ID,
+    defaultProviderName: env.NEXT_PUBLIC_DEFAULT_PROVIDER_NAME,
   })
   if (model) metadata += `\nmodel: ${model}`
 

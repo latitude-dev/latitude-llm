@@ -58,7 +58,7 @@ export const env = createEnv({
     DATABASE_URL: z.string().url(),
     DEFAULT_PROJECT_ID: z.coerce.number().optional(),
     DEFAULT_PROVIDER_API_KEY: z.string().optional(),
-    DEFAULT_PROVIDER_ID: z.string(),
+    NEXT_PUBLIC_DEFAULT_PROVIDER_NAME: z.string(),
     FROM_MAILER_EMAIL: z.string(),
     GATEWAY_HOSTNAME: z.string(),
     APP_DOMAIN: z.string(),
@@ -110,7 +110,8 @@ export const env = createEnv({
   runtimeEnv: {
     ...process.env,
     CACHE_PORT: process.env.CACHE_PORT ?? '6379',
-    DEFAULT_PROVIDER_ID: 'Latitude',
+    NEXT_PUBLIC_DEFAULT_PROVIDER_NAME: 'Latitude', // TODO: Move to env in infra
+    DEFAULT_PROVIDER_API_KEY: process.env.DEFAULT_PROVIDER_API_KEY,
     DRIVE_DISK: process.env.DRIVE_DISK ?? 'local',
     FILE_PUBLIC_PATH: process.env.FILE_PUBLIC_PATH ?? FILE_PUBLIC_PATH,
     QUEUE_PORT: process.env.QUEUE_PORT ?? '6379',

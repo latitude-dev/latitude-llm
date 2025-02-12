@@ -351,7 +351,7 @@ async function enrichWithProvider<M extends EvaluationMetadataType>(
       metadata.model ||
       findFirstModelForProvider({
         provider: provider,
-        latitudeProvider: env.DEFAULT_PROVIDER_ID,
+        defaultProviderName: env.NEXT_PUBLIC_DEFAULT_PROVIDER_NAME,
       })
     if (!model) {
       throw new NotFoundError(
@@ -378,7 +378,7 @@ async function enrichWithProvider<M extends EvaluationMetadataType>(
 
     const model = findFirstModelForProvider({
       provider: provider,
-      latitudeProvider: env.DEFAULT_PROVIDER_ID,
+      defaultProviderName: env.NEXT_PUBLIC_DEFAULT_PROVIDER_NAME,
     })
     if (!model) {
       throw new NotFoundError(

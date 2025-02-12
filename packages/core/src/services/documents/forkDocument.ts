@@ -27,7 +27,7 @@ type ForkProps = {
     workspace: Workspace
     user: User
   }
-  defaultProviderId?: string
+  defaultProviderName?: string
 }
 const ATTEMPTS_BEFORE_RANDOM_SUFFIX = 4
 async function createProjectFromDocument({
@@ -124,7 +124,7 @@ export async function forkDocument({
   title,
   origin,
   destination,
-  defaultProviderId,
+  defaultProviderName,
 }: ForkProps) {
   const { commit, project } = await createProjectFromDocument({
     title,
@@ -137,7 +137,7 @@ export async function forkDocument({
   )
   const model = findFirstModelForProvider({
     provider,
-    latitudeProvider: defaultProviderId,
+    defaultProviderName,
   })
 
   publisher.publishLater({

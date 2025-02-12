@@ -18,7 +18,7 @@ export default function useModelOptions({
       listModelsForProvider({
         provider: provider as Providers,
         name: name,
-        latitudeProvider: envClient.NEXT_PUBLIC_DEFAULT_PROJECT_ID,
+        defaultProviderName: envClient.NEXT_PUBLIC_DEFAULT_PROVIDER_NAME,
       }),
     ).map(([key, value]) => ({
       label: key,

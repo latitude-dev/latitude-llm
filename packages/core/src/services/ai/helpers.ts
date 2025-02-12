@@ -11,6 +11,7 @@ import { Result } from '../../lib'
 import { ChainError } from '../../lib/chainStreamManager/ChainErrors'
 
 import { PartialConfig } from '@latitude-data/constants'
+import type { ModelCost } from './estimateCost'
 export {
   type Config,
   type PartialConfig,
@@ -109,4 +110,45 @@ export function createProvider({
         }),
       )
   }
+}
+
+type ModelSpec = ModelCost & { hidden?: boolean }
+type ModelSpecValue<N extends string> = ModelSpec & { name: N }
+export const createModelSpec = <T extends Record<string, ModelSpec>>(
+  models: T,
+) => {
+  const modelSpec = Object.fromEntries(
+    Object.entries(models).map(([key, value]) => {
+      return [
+        key,
+        {
+          ...value,
+          name: key as T & string,
+        },
+      ]
+    }),
+  ) as unknown as { [K in keyof T]: ModelSpecValue<K & string> }
+
+  const modelKeys = Object.keys(modelSpec) as (keyof T)[]
+  const uiModelListKeys = modelKeys.filter((m) => !modelSpec[m]!.hidden)
+  const modelList = modelKeys.reduce(
+    (acc, model) => {
+      acc[model] = model
+      return acc
+    },
+    {} as Record<keyof T, keyof T>,
+  )
+
+  // This is final list used in the UI
+  // Hidden models are for example snapshots
+  // that we have the price but we don't want to show them in the UI.
+  const uiList = uiModelListKeys.reduce(
+    (acc, model) => {
+      acc[model] = model
+      return acc
+    },
+    {} as Record<keyof T, keyof T>,
+  )
+
+  return { modelSpec, modelList, uiList }
 }
