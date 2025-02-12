@@ -13,7 +13,7 @@ export type MailgunResponse = {
 export default function createMailgunTransport({
   transportOptions,
 }: MailerOptions) {
-  const domain = env.LATITUDE_EMAIL_DOMAIN
+  const domain = env.MAILGUN_EMAIL_DOMAIN
   const apiKey = env.MAILGUN_MAILER_API_KEY
 
   if (!domain || !apiKey) return null

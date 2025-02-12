@@ -1,5 +1,9 @@
 name: Build and Push Docker Images
 
+# Trigger on:
+# - Pushes to main branch (production deployments)
+# - New version tags (releases)
+# - Pull requests to main (testing builds)
 on:
   push:
     branches:
@@ -15,13 +19,32 @@ env:
   OWNER: latitude-dev
 
 jobs:
+  # Lint and test jobs only run on main branch to ensure quality before building production images
+  lint:
+    if: github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/lint.yml
+    with:
+      workflow_call: true
+
+  test:
+    if: github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/test.yml
+    with:
+      workflow_call: true
+
   build-and-push:
+    needs: [lint, test]
+    # Run this job if:
+    # - We're not on main branch (PR or tag builds run immediately)
+    # - OR we're on main and both lint and test passed
+    if: always() && (github.ref != 'refs/heads/main' || (needs.lint.result == 'success' && needs.test.result == 'success'))
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
     strategy:
       matrix:
+        # Build all our service images in parallel
         app: [web, gateway, workers, websockets]
         include:
           - app: web
@@ -40,6 +63,7 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
+      # Login to GitHub Container Registry to enable both pulling cache and pushing images
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -47,6 +71,11 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # Generate Docker metadata/tags based on Git context
+      # - For main branch: latest tag
+      # - For PRs: PR-specific tag
+      # - For version tags: semver tags
+      # - For all: SHA tag for precise version tracking
       - name: Extract metadata
         id: meta
         uses: docker/metadata-action@v5
@@ -60,6 +89,9 @@ jobs:
             type=sha,format=long
             type=raw,value=latest,enable={{is_default_branch}}
 
+      # Build and push the Docker image
+      # - Uses layer caching for faster builds
+      # - Only pushes on main branch or tags (not on PRs)
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
@@ -71,3 +103,11 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.OWNER }}/${{ matrix.app }}:latest
           cache-to: type=inline
+
+# Concurrency settings to manage multiple workflow runs
+# - Groups runs by workflow name and git ref
+# - For main branch: Never cancel running builds (queue them instead)
+# - For other branches/PRs: Cancel old builds when new ones come in
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}

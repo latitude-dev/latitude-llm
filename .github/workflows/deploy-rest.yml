@@ -1,0 +1,82 @@
+name: Deploy Workers and Websockets
+
+on:
+  workflow_run:
+    workflows: ['Build and Push Docker Images']
+    types:
+      - completed
+    branches:
+      - main
+
+env:
+  REGISTRY: ghcr.io
+  OWNER: latitude-dev
+  AWS_REGION: eu-central-1
+
+jobs:
+  deploy:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - app: workers
+            task-family: LatitudeLLMWorkersTaskFamily
+            service: LatitudeLLMWorkers
+            cluster: LatitudeLLMCluster
+          - app: websockets
+            task-family: LatitudeLLMWebsocketsTaskFamily
+            service: LatitudeLLMWebsockets
+            cluster: LatitudeLLMCluster
+    concurrency:
+      group: deploy-${{ matrix.app }}
+      cancel-in-progress: false
+    steps:
+      - name: Get image tag
+        id: get_tag
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Get the SHA from the triggering workflow
+          SHA_TAG=$(echo ${{ github.event.workflow_run.head_sha }} | cut -c1-7)
+          echo "image_tag=sha-${SHA_TAG}" >> $GITHUB_OUTPUT
+          echo "Using image tag: sha-${SHA_TAG}"
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4.0.2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          role-to-assume: ${{ secrets.ARN_OF_IAM_ROLE_TO_ASSUME }}
+          role-session-name: ${{ matrix.app }}Deployment
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Update ECS Task Definition
+        id: task-def
+        run: |
+          # Get current task definition
+          TASK_DEFINITION=$(aws ecs describe-task-definition --task-definition ${{ matrix.task-family }} --query 'taskDefinition' --output json)
+
+          # Update container image
+          NEW_TASK_DEFINITION=$(echo $TASK_DEFINITION | jq --arg IMAGE "${{ env.REGISTRY }}/${{ env.OWNER }}/${{ matrix.app }}:${{ steps.get_tag.outputs.image_tag }}" \
+            'del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy) | .containerDefinitions[0].image = $IMAGE')
+
+          # Register new task definition
+          echo "$NEW_TASK_DEFINITION" > task-definition.json
+          NEW_TASK_DEF_ARN=$(aws ecs register-task-definition --cli-input-json file://task-definition.json --query 'taskDefinition.taskDefinitionArn' --output text)
+          echo "task_def_arn=${NEW_TASK_DEF_ARN}" >> $GITHUB_OUTPUT
+          echo "New task definition: ${NEW_TASK_DEF_ARN}"
+
+      - name: Deploy to ECS
+        run: |
+          aws ecs update-service \
+            --cluster ${{ matrix.cluster }} \
+            --service ${{ matrix.service }} \
+            --task-definition ${{ steps.task-def.outputs.task_def_arn }} \
+            --force-new-deployment
+
+      - name: Wait for deployment
+        run: |
+          aws ecs wait services-stable \
+            --cluster ${{ matrix.cluster }} \
+            --services ${{ matrix.service }}

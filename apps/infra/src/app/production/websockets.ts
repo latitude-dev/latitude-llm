@@ -1,13 +1,11 @@
 import * as aws from '@pulumi/aws'
 import { Cluster } from '@pulumi/aws/ecs'
-import * as docker from '@pulumi/docker'
 import * as pulumi from '@pulumi/pulumi'
 
 import {
   ecsSecurityGroup,
   ecsTaskExecutionRole,
   privateSubnets,
-  resolve,
   vpcId,
 } from '../../shared'
 import { coreStack, environment } from './shared'
@@ -38,24 +36,7 @@ new aws.ecr.LifecyclePolicy('latitude-llm-websockets-repo-lifecycle', {
   }),
 })
 
-// Build and push the Docker image
-const token = await aws.ecr.getAuthorizationToken()
-const image = new docker.Image('LatitudeLLMWebsocketsImage', {
-  build: {
-    platform: 'linux/amd64',
-    context: resolve('../../../'),
-    dockerfile: resolve('../../../apps/websockets/docker/Dockerfile'),
-    cacheFrom: {
-      images: [pulumi.interpolate`${repo.repositoryUrl}:latest`],
-    },
-  },
-  imageName: pulumi.interpolate`${repo.repositoryUrl}:latest`,
-  registry: {
-    server: repo.repositoryUrl,
-    username: token.userName,
-    password: pulumi.secret(token.password),
-  },
-})
+const imageName = pulumi.interpolate`${repo.repositoryUrl}:latest`
 
 // Create a Fargate task definition
 const containerName = 'LatitudeLLMWebsocketsContainer'
@@ -66,7 +47,7 @@ const logGroup = new aws.cloudwatch.LogGroup('LatitudeLLMWebsocketsLogGroup', {
 })
 
 const taskDefinition = pulumi
-  .all([logGroup.name, image.imageName, environment])
+  .all([logGroup.name, imageName, environment])
   .apply(
     ([logGroupName, imageName, environment]) =>
       new aws.ecs.TaskDefinition('LatitudeLLMWebsocketsTaskDefinition', {
@@ -163,9 +144,8 @@ new aws.ecs.Service('LatitudeLLMWebsockets', {
       containerPort: 8080,
     },
   ],
-  triggers: {
-    digest: image.repoDigest,
-  },
+}, {
+  ignoreChanges: ['taskDefinition', 'desiredCount'],
 })
 
 export const serviceUrl = pulumi.interpolate`https://${DNS_ADDRESS}`
