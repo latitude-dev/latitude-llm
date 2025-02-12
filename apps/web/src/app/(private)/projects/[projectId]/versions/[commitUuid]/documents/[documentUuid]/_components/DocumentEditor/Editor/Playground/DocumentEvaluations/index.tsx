@@ -21,39 +21,34 @@ import {
   ExpandedContent,
   ExpandedContentHeader,
 } from './BoxContent'
-import { Props } from './shared'
+import { Props, Snapshot } from './shared'
 
 const useEvaluationResultsSocket = ({
-  documentLog,
   evaluations,
   mutate,
 }: {
-  documentLog?: DocumentLogWithMetadata
   evaluations: Props['evaluations']
   mutate: ReturnType<typeof useEvaluationResultsByDocumentLogs>['mutate']
 }) => {
   const onMessage = useCallback(
     (args: EventArgs<'evaluationResultCreated'>) => {
-      if (!args.row || !documentLog) return
-      if (args.row.documentLogId !== documentLog.id) return
-      if (!args.row.resultableId || !args.row.evaluatedProviderLogId) return
+      if (!args.row?.resultableId || !args.row?.evaluatedProviderLogId) return
       const evaluation = evaluations.find(
-        (evaluation) =>
-          evaluation.live && evaluation.id === args.row.evaluationId,
+        (e) => e.live && e.id === args.row.evaluationId,
       )
       if (!evaluation) return
 
       mutate(
         (prev) => ({
           ...(prev ?? {}),
-          [documentLog.id]: (prev?.[documentLog.id] ?? []).concat([
-            { result: args.row, evaluation },
-          ]),
+          [args.row.documentLogId]: (
+            prev?.[args.row.documentLogId] ?? []
+          ).concat([{ result: args.row, evaluation }]),
         }),
         { revalidate: false },
       )
     },
-    [documentLog, evaluations, mutate],
+    [evaluations, mutate],
   )
 
   useSockets({ event: 'evaluationResultCreated', onMessage })
@@ -95,7 +90,7 @@ export default function DocumentEvaluations({
     useEvaluationResultsByDocumentLogs({
       documentLogIds: documentLog ? [documentLog.id] : [],
     })
-  useEvaluationResultsSocket({ documentLog, evaluations, mutate })
+  useEvaluationResultsSocket({ evaluations, mutate })
   const results = useMemo(() => {
     if (!documentLog || !evaluationResults[documentLog.id]) return {}
     return evaluationResults[documentLog.id]!.reduce(
@@ -107,28 +102,22 @@ export default function DocumentEvaluations({
     )
   }, [evaluationResults])
 
-  const [awaitable, setAwaitable] = useState<{
-    documentLog?: DocumentLogWithMetadata
-    results: number
-  }>({ results: 0 })
+  const [snapshot, setSnapshot] = useState<Snapshot>({ results: 0 })
   useEffect(() => {
-    if (!documentLog) return
-    if (isDocumentLogLoading || isEvaluationsLoading) return
-    if (awaitable.documentLog?.id === documentLog.id) return
-    setAwaitable({
-      documentLog: documentLog,
+    if (!documentLog || snapshot.id === documentLog.id) return
+    setSnapshot({
+      id: documentLog.id,
       results: evaluations.filter((evaluation) => evaluation.live).length,
     })
-  }, [isDocumentLogLoading, documentLog, isEvaluationsLoading, evaluations])
+  }, [documentLog, evaluations])
 
   const isWaiting = useMemo(
     () =>
       (runCount > 0 && !documentLog) ||
       isDocumentLogLoading ||
-      Object.values(results).filter(
-        (result) => result.documentLogId === documentLog?.id,
-      ).length < awaitable.results,
-    [runCount, isDocumentLogLoading, documentLog, results, awaitable],
+      Object.values(results).filter((r) => r.documentLogId === snapshot.id)
+        .length < snapshot.results,
+    [runCount, isDocumentLogLoading, documentLog, results, snapshot],
   )
 
   const props = {

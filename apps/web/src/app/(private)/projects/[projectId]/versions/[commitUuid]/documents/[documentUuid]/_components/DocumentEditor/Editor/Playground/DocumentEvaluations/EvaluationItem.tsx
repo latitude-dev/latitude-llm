@@ -112,7 +112,7 @@ export default function EvaluationItem({
         EvaluationRoutes.editor
       ].root + `?${query.toString()}`
     )
-  }, [project, commit, document, result, evaluation])
+  }, [project, commit, document, result, evaluation, isWaiting])
 
   return (
     <div

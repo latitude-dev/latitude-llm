@@ -19,3 +19,8 @@ export type Props = {
   isLoading: boolean
   isWaiting: boolean
 }
+
+export type Snapshot = {
+  id?: number
+  results: number
+}
