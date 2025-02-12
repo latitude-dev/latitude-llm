@@ -70,8 +70,8 @@ jobs:
       - name: Get image tag
         id: get_tag
         run: |
-          SHA_TAG=$(echo ${{ github.event.workflow_run.head_sha }} | cut -c1-7)
-          echo "GATEWAY_IMAGE=${{ env.REGISTRY }}/${{ env.OWNER }}/gateway:sha-${SHA_TAG}" >> $GITHUB_ENV
+          SHA=${{ github.event.workflow_run.head_sha }}
+          echo "GATEWAY_IMAGE=${{ env.REGISTRY }}/${{ env.OWNER }}/gateway:sha-${SHA}" >> $GITHUB_ENV
 
       - name: Create new task definition
         run: |

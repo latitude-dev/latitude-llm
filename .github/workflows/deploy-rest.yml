@@ -1,10 +1,6 @@
 name: Deploy Workers and Websockets
 
 on:
-  # TODO: remove this once we have a proper release process
-  push:
-    branches:
-      - main
   workflow_run:
     workflows: ['Build and Push Docker Images']
     types:
@@ -20,6 +16,7 @@ env:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     strategy:
       matrix:
         include:
@@ -48,10 +45,8 @@ jobs:
             SHA=${{ github.sha }}
           fi
 
-          # Cut to short SHA and set output
-          SHORT_SHA=$(echo $SHA | cut -c1-7)
-          echo "image_tag=sha-${SHORT_SHA}" >> $GITHUB_OUTPUT
-          echo "Using image tag: sha-${SHORT_SHA}"
+          echo "image_tag=sha-${SHA}" >> $GITHUB_OUTPUT
+          echo "Using image tag: sha-${SHA}"
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4.0.2

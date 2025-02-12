@@ -6,9 +6,8 @@ name: Build and Push Docker Images
 # - Pull requests to main (testing builds)
 on:
   push:
-    # TODO: Uncomment this
-    # branches:
-    #   - main
+    branches:
+      - main
     tags:
       - 'v*'
   pull_request:
