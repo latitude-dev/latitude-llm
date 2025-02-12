@@ -169,29 +169,7 @@ Run a specific document (prompt) with optional parameters.
 
 **Response:**
 
-- If `stream` is `true`: The response is a stream of Server-Sent Events (SSE). Each event contains JSON data with the following structure:
-
-```json
-{
-  "type": "chain-step" | "chain-step-complete" | "chain-complete",
-  "isLastStep": boolean,
-  "uuid": string,
-  "config": {
-    "provider": string,
-    "model": string
-  },
-  "messages": Message[],
-  "response": {
-    "text": string,
-    "toolCalls": ToolCall[],
-    "usage": {
-      "promptTokens": number,
-      "completionTokens": number,
-      "totalTokens": number
-    }
-  }
-}
-```
+- If `stream` is `true`: The response is a stream of Server-Sent Events (SSE). Check out the [Streaming Events](/guides/api/streaming-events) guide for more information about the specific events you can expect.
 
 - If `stream` is `false`: A single JSON response is returned with the final event (typically the chain-complete event) in the following structure:
 
@@ -258,7 +236,7 @@ The previously described `POST /projects/{projectId}/versions/{versionUuid}/docu
 }
 ```
 
-- `stream`: Optional boolean parameter (defaults to `false`). When set to true, the response will be a stream of Server-Sent Events (SSE). If false, a single JSON response containing the last event is returned.
+- `stream`: Optional boolean parameter (defaults to `false`). When set to true, the response will be a stream of Server-Sent Events (SSE). If false, a single JSON response containing the last event is returned. Check out the [Streaming Events](/guides/api/streaming-events) guide for more information about the specific events you can expect.
 
 <Note>
   Message follows the [PromptL format](/promptl/getting-started/introduction).
@@ -267,17 +245,9 @@ The previously described `POST /projects/{projectId}/versions/{versionUuid}/docu
 **Response:**
 The response is a stream of Server-Sent Events (SSE) or a single JSON response containing the final event, similar to the "Run a Document" endpoint.
 
-##### Handling Server-Sent Events (SSE)
+Check out the [Streaming Events](/guides/api/streaming-events) guide for more information about the specific events you can expect.
 
-The API uses SSE for real-time updates. Here's how to handle SSE responses:
-
-1. Set up an EventSource or use a library that supports SSE.
-2. Listen for events and parse the JSON data in each event.
-3. Handle different event types:
-   - `latitude-event`: Contains information about the chain progress and results.
-   - `provider-event`: Contains real-time updates from the AI provider.
-
-##### Error Handling
+**Error Handling**
 
 The API uses standard HTTP status codes. In case of an error, the response body will contain an error message:
 
