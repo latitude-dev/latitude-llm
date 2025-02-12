@@ -25,12 +25,12 @@ jobs:
         include:
           - app: workers
             task-family: LatitudeLLMWorkersTaskFamily
-            service: LatitudeLLMWorkers
-            cluster: LatitudeLLMCluster
+            service: LatitudeLLMWorkers-8b32da0
+            cluster: LatitudeLLMCluster-883fb8c
           - app: websockets
             task-family: LatitudeLLMWebsocketsTaskFamily
-            service: LatitudeLLMWebsockets
-            cluster: LatitudeLLMCluster
+            service: LatitudeLLMWebsockets-3ba81ef
+            cluster: LatitudeLLMCluster-883fb8c
     concurrency:
       group: deploy-${{ matrix.app }}
       cancel-in-progress: false
