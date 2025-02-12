@@ -97,9 +97,23 @@ jobs:
           cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.OWNER }}/${{ matrix.app }}:latest
           cache-to: type=inline
 
-  # Deploy jobs - only run on main branch after successful build
-  deploy-rest:
+  run-migrations:
     needs: build-and-push
+    if: github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/run-migrations.yml
+    with:
+      workflow_call: true
+    secrets:
+      DB_USERNAME: ${{ secrets.DB_USERNAME }}
+      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+      DB_NAME: ${{ secrets.DB_NAME }}
+      SSH_HOST: ${{ secrets.SSH_HOST }}
+      SSH_USER: ${{ secrets.SSH_USER }}
+      SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+      DB_PORT: ${{ secrets.DB_PORT }}
+
+  deploy-rest:
+    needs: run-migrations
     if: github.ref == 'refs/heads/main'
     uses: ./.github/workflows/deploy-rest.yml
     permissions:
@@ -111,7 +125,7 @@ jobs:
       ARN_OF_IAM_ROLE_TO_ASSUME: ${{ secrets.ARN_OF_IAM_ROLE_TO_ASSUME }}
 
   deploy-web:
-    needs: build-and-push
+    needs: run-migrations
     if: github.ref == 'refs/heads/main'
     uses: ./.github/workflows/deploy-web.yml
     permissions:
@@ -123,7 +137,7 @@ jobs:
       ARN_OF_IAM_ROLE_TO_ASSUME: ${{ secrets.ARN_OF_IAM_ROLE_TO_ASSUME }}
 
   deploy-gateway:
-    needs: build-and-push
+    needs: run-migrations
     if: github.ref == 'refs/heads/main'
     uses: ./.github/workflows/deploy-gateway.yml
     permissions:

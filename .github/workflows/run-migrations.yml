@@ -1,0 +1,73 @@
+name: Run Database Migrations
+
+on:
+  workflow_call:
+    inputs:
+      workflow_call:
+        type: boolean
+        required: false
+        default: false
+    secrets:
+      DB_USERNAME:
+        required: true
+      DB_PASSWORD:
+        required: true
+      DB_NAME:
+        required: true
+      SSH_HOST:
+        required: true
+      SSH_USER:
+        required: true
+      SSH_PRIVATE_KEY:
+        required: true
+      DB_PORT:
+        required: true
+
+jobs:
+  run-migrations:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup SSH tunnel
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+          ssh -f -N -L ${{ secrets.DB_PORT }}:localhost:${{ secrets.DB_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Check for migration changes
+        id: check_changes
+        run: |
+          CHANGES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -c "packages/core/drizzle/" || true)
+          echo "has_changes=$CHANGES" >> $GITHUB_OUTPUT
+
+      - name: Install dependencies
+        if: steps.check_changes.outputs.has_changes != '0'
+        working-directory: packages/core
+        run: pnpm install
+
+      - name: Run database migrations
+        if: steps.check_changes.outputs.has_changes != '0'
+        working-directory: packages/core
+        run: pnpm db:migrate
+        env:
+          DATABASE_URL: postgresql://${{ secrets.DB_USERNAME }}:${{ secrets.DB_PASSWORD }}@localhost:${{ secrets.DB_PORT }}/${{ secrets.DB_NAME }}?sslmode=verify-full&sslrootcert=${{ github.workspace }}/packages/core/src/assets/eu-central-1-bundle.pem
+
+      - name: Cleanup SSH tunnel
+        if: always()
+        run: |
+          pkill -f "ssh -f -N -L ${{ secrets.DB_PORT }}"
+          rm -f ~/.ssh/id_rsa
