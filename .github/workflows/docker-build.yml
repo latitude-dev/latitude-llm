@@ -86,6 +86,22 @@ jobs:
           cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.OWNER }}/${{ matrix.app }}:latest
           cache-to: type=inline
 
+  # Deploy jobs - only run on main branch after successful build
+  deploy-rest:
+    needs: build-and-push
+    if: github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/deploy-rest.yml
+
+  deploy-web:
+    needs: build-and-push
+    if: github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/deploy-web.yml
+
+  deploy-gateway:
+    needs: build-and-push
+    if: github.ref == 'refs/heads/main'
+    uses: ./.github/workflows/deploy-gateway.yml
+
 # Concurrency settings to manage multiple workflow runs
 # - Groups runs by workflow name and git ref
 # - For main branch: Never cancel running builds (queue them instead)

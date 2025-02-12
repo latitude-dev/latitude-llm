@@ -1,12 +1,7 @@
 name: Deploy Workers and Websockets
 
 on:
-  workflow_run:
-    workflows: ['Build and Push Docker Images']
-    types:
-      - completed
-    branches:
-      - main
+  workflow_call:
 
 env:
   REGISTRY: ghcr.io
@@ -16,7 +11,6 @@ env:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     strategy:
       matrix:
         include:
@@ -37,14 +31,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          if [ "${{ github.event_name }}" = "workflow_run" ]; then
-            # Get SHA from the triggering workflow
-            SHA=${{ github.event.workflow_run.head_sha }}
-          else
-            # Get SHA directly from the push event
-            SHA=${{ github.sha }}
-          fi
-
+          SHA=${{ github.sha }}
           echo "image_tag=sha-${SHA}" >> $GITHUB_OUTPUT
           echo "Using image tag: sha-${SHA}"
 

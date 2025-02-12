@@ -1,12 +1,7 @@
 name: Deploy Gateway
 
 on:
-  workflow_run:
-    workflows: ['Build and Push Docker Images']
-    types:
-      - completed
-    branches:
-      - main
+  workflow_call:
 
 env:
   REGISTRY: ghcr.io
@@ -14,7 +9,6 @@ env:
 
 jobs:
   deployment:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
@@ -70,7 +64,7 @@ jobs:
       - name: Get image tag
         id: get_tag
         run: |
-          SHA=${{ github.event.workflow_run.head_sha }}
+          SHA=${{ github.sha }}
           echo "GATEWAY_IMAGE=${{ env.REGISTRY }}/${{ env.OWNER }}/gateway:sha-${SHA}" >> $GITHUB_ENV
 
       - name: Create new task definition
@@ -88,7 +82,7 @@ jobs:
       - name: Deploy with CodeDeploy
         working-directory: apps/gateway
         run: |
-          echo "Deploying commit ${{ github.event.workflow_run.head_sha }} to production"
+          echo "Deploying commit ${{ github.sha }} to production"
           appspec_content=$(cat appspec.yml | jq -Rs .)
           aws deploy create-deployment \
             --application-name LatitudeLLMCodeDeployGateway \

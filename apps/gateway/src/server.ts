@@ -8,7 +8,7 @@ import { captureException, captureMessage } from './common/sentry'
 const isProd = process.env.NODE_ENV === 'production'
 const isTest = process.env.NODE_ENV === 'test'
 const HOSTNAME = isProd ? '0.0.0.0' : 'localhost'
-const PORT = isTest ? 8788 : process.env.GATEWAY_PORT || 8787
+const PORT = isTest ? 8788 : isProd ? 8080 : 8787
 
 serve(
   {
