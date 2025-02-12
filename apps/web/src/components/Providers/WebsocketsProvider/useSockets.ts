@@ -1,5 +1,5 @@
 import { WebServerToClientEvents } from '@latitude-data/core/browser'
-import { useSocketEvent } from 'socket.io-react-hook'
+import { useSocketEvent } from '@latitude-data/socket.io-react-hook'
 
 import { useWebsocketConfig } from './index'
 
