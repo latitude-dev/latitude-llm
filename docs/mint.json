@@ -71,6 +71,7 @@
         "guides/prompt-manager/version-control",
         "guides/prompt-manager/json-output",
         "guides/prompt-manager/tools",
+        "guides/prompt-manager/latitude-tools",
         "guides/prompt-manager/agents",
         {
           "group": "Custom Rules",

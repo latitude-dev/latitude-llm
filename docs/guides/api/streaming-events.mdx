@@ -40,6 +40,9 @@ Every chain execution follows the same flow:
 2. **Processing Steps**: Multiple steps can be executed within a chain. All steps start with a `step-started` event and end with a `step-completed` event. Within a step, you may receive additional events:
    - **Provider Interaction**: The LLM processing includes `provider-started` and `provider-completed` events.
    - **Tool Execution**: If Latitude built-in tools are involved, `tools-started` and `tool-completed` events occur, indicating the execution status of the requested tool.
+      <Note>
+        Check out [Latitude Tools](/guides/prompt-manager/latitude-tools) for more information about built-in tools.
+      </Note>
 3. **Chain Completion**: The chain concludes with a `chain-completed`.
 
 However, the chain execution can be interrupted by any of the following events:
@@ -134,6 +137,10 @@ Your LLM Provider has completed the response generation.
 <Accordion title="ToolsStarted">
 Latitude has started running built-in tools requested by the LLM response.
 
+<Note>
+  Check out [Latitude Tools](/guides/prompt-manager/latitude-tools) for more information about built-in tools.
+</Note>
+
 ```json
 {
   "type": "latitude-event",
@@ -158,6 +165,10 @@ Latitude has started running built-in tools requested by the LLM response.
 
 <Accordion title="ToolCompleted">
 A built-in tool has completed its execution.
+
+<Note>
+  Check out [Latitude Tools](/guides/prompt-manager/latitude-tools) for more information about built-in tools.
+</Note>
 
 ```json
 {
