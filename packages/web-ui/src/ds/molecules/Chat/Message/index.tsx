@@ -26,8 +26,8 @@ import {
 } from '../../../atoms'
 import { colors, font, TextColor } from '../../../tokens'
 import { isAgentToolResponse, roleToString, roleVariant } from './helpers'
-import { AGENT_RETURN_TOOL_NAME } from '@latitude-data/core/browser'
-import { TruncatedTooltip } from '../../TruncatedTooltip'
+import { ToolCallContent } from './ToolCall'
+import { ToolResultContent } from './ToolResult'
 
 export { roleToString, roleVariant } from './helpers'
 
@@ -260,98 +260,11 @@ const Content = ({
   }
 
   if (value.type === ContentType.toolCall) {
-    const isAgentResponse = value.toolName === AGENT_RETURN_TOOL_NAME
-
-    const headerBgColor = isAgentResponse ? 'bg-primary' : 'bg-yellow'
-    const headerFgColor = isAgentResponse ? 'accent' : 'warningForeground'
-    const headerIcon = isAgentResponse ? 'bot' : 'puzzle'
-    const headerLabel = isAgentResponse ? 'Agent Response' : 'Tool requested'
-
-    // FIXME: Please kill old compiler
-    // @ts-ignore
-    let oldOrNewArgs = value.args || value.toolArguments
-    oldOrNewArgs = typeof oldOrNewArgs === 'object' ? oldOrNewArgs : {}
-    const codeLanguage = isAgentResponse ? 'json' : 'javascript'
-    const codeContent = isAgentResponse
-      ? JSON.stringify(oldOrNewArgs, null, 2)
-      : `${value.toolName}(${JSON.stringify(oldOrNewArgs, null, 2)})`
-
-    return (
-      <div key={`${index}`} className='py-2 w-full'>
-        <div className='overflow-hidden rounded-xl w-full flex-col'>
-          <div
-            className={cn(
-              'flex w-full px-2 py-0.5 items-center gap-2 justify-between',
-              headerBgColor,
-              { 'py-1': isAgentResponse },
-            )}
-          >
-            <div className='flex items-center gap-1.5'>
-              <Icon name={headerIcon} color={headerFgColor} />
-              <Text.H6 noWrap color={headerFgColor}>
-                {headerLabel}
-              </Text.H6>
-            </div>
-            {!isAgentResponse && (
-              <TruncatedTooltip content={value.toolCallId}>
-                <Text.H6 color='warningMutedForeground' ellipsis>
-                  {value.toolCallId}
-                </Text.H6>
-              </TruncatedTooltip>
-            )}
-          </div>
-          <CodeBlock language={codeLanguage}>{codeContent}</CodeBlock>
-        </div>
-      </div>
-    )
+    return <ToolCallContent value={value} />
   }
 
   if (value.type === ContentType.toolResult) {
-    return (
-      <div key={`${index}`} className='py-2 w-full'>
-        <div className='overflow-hidden rounded-xl w-full'>
-          <div
-            className={cn(
-              'flex w-full px-2 py-0.5 items-center gap-2 justify-between',
-              {
-                'bg-muted': !value.isError,
-                'bg-destructive': value.isError,
-              },
-            )}
-          >
-            <div className='flex items-center gap-1.5'>
-              <Icon
-                name={'terminal'}
-                color={
-                  value.isError ? 'destructiveForeground' : 'foregroundMuted'
-                }
-              />
-              <Text.H6
-                noWrap
-                color={
-                  value.isError ? 'destructiveForeground' : 'foregroundMuted'
-                }
-              >
-                {value.toolName}
-              </Text.H6>
-            </div>
-            <TruncatedTooltip content={value.toolCallId}>
-              <Text.H6
-                color={
-                  value.isError ? 'destructiveForeground' : 'foregroundMuted'
-                }
-                ellipsis
-              >
-                {value.toolCallId}
-              </Text.H6>
-            </TruncatedTooltip>
-          </div>
-          <CodeBlock language='json'>
-            {JSON.stringify(value.result, null, 2)}
-          </CodeBlock>
-        </div>
-      </div>
-    )
+    return <ToolResultContent value={value} />
   }
 
   return (

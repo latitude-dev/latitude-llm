@@ -21,7 +21,7 @@ import { runPromptAction } from '$/actions/prompts/run'
 import {
   StreamMessage,
   Timer,
-  TokenUsage,
+  StatusIndicator,
 } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/DocumentEditor/Editor/Playground/Chat'
 import useEvaluationPrompt from '$/stores/evaluationPrompt'
 import { LanguageModelUsage } from 'ai'
@@ -182,7 +182,7 @@ export default function Chat({
         )}
       </div>
       <div className='flex relative flex-row w-full items-center justify-center'>
-        <TokenUsage
+        <StatusIndicator
           isScrolledToBottom={isScrolledToBottom}
           usage={usage}
           isStreaming={isStreaming}

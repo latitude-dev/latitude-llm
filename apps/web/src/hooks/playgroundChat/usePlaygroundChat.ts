@@ -59,6 +59,7 @@ export function usePlaygroundChat({
     totalTokens: 0,
   })
   const [time, setTime] = useState<number | undefined>()
+  const [runningLatitudeTools, setRunningLatitudeTools] = useState<number>(0)
 
   const addMessages = useCallback(
     (m: Message[]) => {
@@ -98,6 +99,15 @@ export function usePlaygroundChat({
             accumulatedTextDelta = ''
             setStreamingResponse(undefined)
             setUsage(data.tokenUsage)
+          }
+          if (data.type === ChainEventTypes.ToolsStarted) {
+            setRunningLatitudeTools(data.tools.length)
+          }
+          if (data.type === ChainEventTypes.ToolCompleted) {
+            setRunningLatitudeTools((prev) => prev - 1)
+          }
+          if (data.type === ChainEventTypes.StepCompleted) {
+            setRunningLatitudeTools(0) // fallback
           }
           if (data.type === ChainEventTypes.ChainCompleted) {
             if (!isChat.current) {
@@ -197,6 +207,7 @@ export function usePlaygroundChat({
     error,
     streamingResponse,
     messages,
+    runningLatitudeTools,
     chainLength,
     usage,
     time,

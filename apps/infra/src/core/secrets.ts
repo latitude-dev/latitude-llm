@@ -70,6 +70,11 @@ const postHogApiKey = createSecretWithVersion(
   'NEXT_PUBLIC_POSTHOG_KEY',
   'Posthog API Key for product analytics',
 )
+const codesandboxApiKey = createSecretWithVersion(
+  'CODESANDBOX_API_KEY',
+  'API key for CodeSandbox code execution service',
+)
+
 export const copilotWorkspaceApiKey = config.requireSecret(
   'COPILOT_WORKSPACE_API_KEY',
 )
@@ -118,3 +123,4 @@ export const supportAppIdArn = supportAppId.arn
 export const supportAppSecretKeyArn = supportAppSecretKey.arn
 export const loopsSecretApiKeyArn = loopsSecretApiKey.arn
 export const latitudeCloudPaymentUrlArn = latitudeCloudPaymentUrl.arn
+export const codesandboxApiKeyArn = codesandboxApiKey.arn

@@ -64,3 +64,5 @@ config:
     secure: v1:HKYJSVecegwLIR3N:UwrixduYJlNIrmCnuDGqvr2oOoeKDwOh+b0aCF9F/kryL/TggQ==
   infra:LATITUDE_CLOUD_PAYMENT_URL:
     secure: v1:y6oy1HqttLBjv8es:YmaNen9C5UbJAMPyU99x9Sld23eREuuZVHAMiiLc8BVD0FkDK2axf2wSuhAMoZWCc++gvsnkJjf/
+  infra:CODESANDBOX_API_KEY:
+    secure: v1:0NOS2xdQxcKmCsSG:Mv0PuaXim4CrqOEizv2W6pPYWSHei2y6Bvs//Nw9Ae+dgEM8rpqRfYae817EQG+VxSd6brajvs/P8Ql+Y8/o7m/8
