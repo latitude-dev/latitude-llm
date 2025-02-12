@@ -1,5 +1,5 @@
 import { Chain as PromptlChain } from 'promptl-ai'
-import { type Message } from '@latitude-data/compiler'
+import { AssistantMessage, type Message } from '@latitude-data/compiler'
 import {
   ABSOLUTE_MAX_STEPS,
   DEFAULT_MAX_STEPS,
@@ -19,7 +19,7 @@ import { buildMessagesFromResponse, Workspace } from '../../../browser'
 import { ChainStepResponse, StreamType } from '../../../constants'
 import { cacheChain } from '../chainCache'
 import { ChainStreamManager } from '../../../lib/chainStreamManager'
-import { getBuiltInToolCallsFromResponse } from '../../builtInTools'
+import { getBuiltInToolCallsFromAssistantMessage } from '../../builtInTools'
 
 export function getToolCalls({
   response,
@@ -32,6 +32,22 @@ export function getToolCalls({
   const toolCalls = response.toolCalls ?? []
 
   return toolCalls
+}
+
+export async function handleLatitudeTools({
+  chainStreamManager,
+  newMessages,
+}: {
+  chainStreamManager: ChainStreamManager
+  newMessages: Message[] | undefined
+}) {
+  if (!newMessages?.length) return
+
+  const lastResponse = newMessages[0]! as AssistantMessage
+  const builtInToolCalls = getBuiltInToolCallsFromAssistantMessage(lastResponse)
+  const latitudeToolResponses =
+    await chainStreamManager.executeLatitudeTools(builtInToolCalls)
+  newMessages.push(...latitudeToolResponses)
 }
 
 function assertValidStepCount({
@@ -90,6 +106,8 @@ export async function runStep({
   removeSchema,
   stepCount = 0,
 }: StepProps) {
+  await handleLatitudeTools({ chainStreamManager, newMessages })
+
   const step = await validateChain({
     workspace,
     newMessages,
@@ -127,7 +145,12 @@ export async function runStep({
   const isPromptl = chain instanceof PromptlChain
   const toolCalls = getToolCalls({ response })
 
-  const builtInToolCalls = getBuiltInToolCallsFromResponse(response)
+  const [responseMessage] = buildMessagesFromResponse({ response }) as [
+    AssistantMessage,
+  ]
+  const builtInToolCalls = getBuiltInToolCallsFromAssistantMessage(
+    responseMessage as AssistantMessage,
+  )
   const clientToolCalls = toolCalls.filter(
     (toolCall) => !builtInToolCalls.some((b) => b.id === toolCall.id),
   )
@@ -153,9 +176,6 @@ export async function runStep({
     return step.conversation
   }
 
-  const latitudeToolResponses =
-    await chainStreamManager.executeLatitudeTools(builtInToolCalls)
-
   return runStep({
     chainStreamManager,
     workspace,
@@ -165,9 +185,7 @@ export async function runStep({
     providersMap,
     errorableUuid,
     stepCount: stepCount + 1,
-    newMessages: buildMessagesFromResponse({ response }).concat(
-      latitudeToolResponses,
-    ),
+    newMessages: [responseMessage],
     configOverrides,
     removeSchema,
   })

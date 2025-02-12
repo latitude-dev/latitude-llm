@@ -1,4 +1,4 @@
-import { Conversation } from '@latitude-data/compiler'
+import { AssistantMessage, Conversation } from '@latitude-data/compiler'
 import {
   buildMessagesFromResponse,
   LogSources,
@@ -12,8 +12,8 @@ import {
   MAX_STEPS_CONFIG_NAME,
 } from '../../../constants'
 import { Message } from '@latitude-data/compiler'
-import { getBuiltInToolCallsFromResponse } from '../../builtInTools'
-import { getToolCalls } from '../../chains/runStep'
+import { getBuiltInToolCallsFromAssistantMessage } from '../../builtInTools'
+import { getToolCalls, handleLatitudeTools } from '../../chains/runStep'
 import { validateAgentStep, ValidatedAgentStep } from '../AgentStepValidator'
 import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
@@ -62,6 +62,8 @@ export async function runAgentStep({
   newMessages: Message[] | undefined
   stepCount: number
 }) {
+  await handleLatitudeTools({ chainStreamManager, newMessages })
+
   const step = await validateAgentStep({
     workspace,
     conversation,
@@ -93,9 +95,12 @@ export async function runAgentStep({
   const toolCalls = getToolCalls({ response }).filter(
     (tc) => tc.name !== AGENT_RETURN_TOOL_NAME,
   )
-
-  const builtInToolCalls = getBuiltInToolCallsFromResponse(response)
-
+  const [responseMessage] = buildMessagesFromResponse({ response }) as [
+    AssistantMessage,
+  ]
+  const builtInToolCalls = getBuiltInToolCallsFromAssistantMessage(
+    responseMessage as AssistantMessage,
+  )
   const clientToolCalls = toolCalls.filter(
     (toolCall) => !builtInToolCalls.some((b) => b.id === toolCall.id),
   )
@@ -106,9 +111,6 @@ export async function runAgentStep({
     return
   }
 
-  const latitudeToolResponses =
-    await chainStreamManager.executeLatitudeTools(builtInToolCalls)
-
   return runAgentStep({
     chainStreamManager,
     workspace,
@@ -117,8 +119,6 @@ export async function runAgentStep({
     errorableUuid,
     providersMap,
     stepCount: stepCount + 1,
-    newMessages: buildMessagesFromResponse({ response }).concat(
-      latitudeToolResponses,
-    ),
+    newMessages: [responseMessage],
   })
 }
