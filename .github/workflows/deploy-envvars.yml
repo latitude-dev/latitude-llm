@@ -106,6 +106,7 @@ jobs:
           aws-region: ${{ vars.AWS_REGION }}
           role-to-assume: ${{ secrets.ARN_OF_IAM_ROLE_TO_ASSUME }}
           role-duration-seconds: 3600
+          role-skip-session-tagging: true
 
       - name: Install Pulumi CLI
         uses: pulumi/setup-pulumi@v2
