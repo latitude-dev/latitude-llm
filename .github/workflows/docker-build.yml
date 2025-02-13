@@ -169,7 +169,7 @@ jobs:
       SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
       DB_PORT: ${{ secrets.DB_PORT }}
 
-  deploy-apps:
+  deploy-bluegreen:
     needs: run-migrations
     uses: ./.github/workflows/deploy-bluegreen.yml
     permissions:
@@ -181,7 +181,7 @@ jobs:
       ARN_OF_IAM_ROLE_TO_ASSUME: ${{ secrets.ARN_OF_IAM_ROLE_TO_ASSUME }}
       AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
 
-  deploy-rest:
+  deploy-rolling:
     needs: run-migrations
     uses: ./.github/workflows/deploy-rolling.yml
     permissions:
