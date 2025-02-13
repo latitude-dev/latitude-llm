@@ -96,15 +96,17 @@ export function createProvider({
       )
     }
     case Providers.GoogleVertex: {
-      return Result.ok(createVertex({
-        project: 'something',
-        location: 'us-central1',
-        googleCredentials: {
-          clientEmail: '',
-          privateKey: '',
-          privateKeyId: '',
-        }
-      }))
+      return Result.ok(
+        createVertex({
+          project: 'something',
+          location: 'us-central1',
+          googleCredentials: {
+            clientEmail: '',
+            privateKey: '',
+            privateKeyId: '',
+          },
+        }),
+      )
     }
     case Providers.Custom:
       return Result.ok(
