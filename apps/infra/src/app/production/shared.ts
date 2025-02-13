@@ -35,6 +35,7 @@ const latitudeCloudPaymentUrlArn = coreStack.requireOutput(
   'latitudeCloudPaymentUrlArn',
 )
 const codesandboxApiKeyArn = coreStack.requireOutput('codesandboxApiKeyArn')
+const tavilyApiKeyArn = coreStack.requireOutput('tavilyApiKeyArn')
 
 const getSecretString = (arn: pulumi.Output<any>) => {
   return arn.apply((secretId) =>
@@ -70,6 +71,7 @@ export const latitudeCloudPaymentUrl = getSecretString(
   latitudeCloudPaymentUrlArn,
 )
 export const codesandboxApiKey = getSecretString(codesandboxApiKeyArn)
+export const tavilyApiKey = getSecretString(tavilyApiKeyArn)
 
 export const copilotWorkspaceApiKey = coreStack.requireOutput(
   'copilotWorkspaceApiKey',
@@ -107,6 +109,7 @@ export const environment = pulumi
     copilotCodeSuggestionPromptPath,
     copilotEvaluationSuggestionPromptPath,
     codesandboxApiKey,
+    tavilyApiKey,
     supportAppId,
     supportAppSecretKey,
     loopsSecretApiKey,
@@ -175,6 +178,7 @@ export const environment = pulumi
         value: 'dataset-generator',
       },
       { name: 'CODESANDBOX_API_KEY', value: codesandboxApiKey },
+      { name: 'TAVILY_API_KEY', value: tavilyApiKey },
       { name: 'SUPPORT_APP_ID', value: supportAppId },
       { name: 'SUPPORT_APP_SECRET_KEY', value: supportAppSecretKey },
       { name: 'LOOPS_API_KEY', value: loopsSecretApiKey },

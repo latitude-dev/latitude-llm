@@ -15,7 +15,7 @@ import { azureConfig, Config, googleConfig } from '../../ai/helpers'
 import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
 import { checkFreeProviderQuota } from '../checkFreeProviderQuota'
 import { CachedApiKeys } from '../run'
-import { injectBuiltInToolsConfig } from '../../builtInTools/injectConfig'
+import { injectLatitudeToolsConfig } from '../../latitudeTools'
 
 type SomeChain = LegacyChain | PromptlChain
 
@@ -185,7 +185,7 @@ const validateConfig = (
     )
   }
 
-  const injectResult = injectBuiltInToolsConfig(parseResult.data)
+  const injectResult = injectLatitudeToolsConfig(parseResult.data)
   if (!injectResult.ok) {
     return Result.error(
       new ChainError({
