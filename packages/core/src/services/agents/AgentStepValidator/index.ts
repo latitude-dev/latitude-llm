@@ -22,7 +22,7 @@ import { azureConfig, googleConfig } from '../../ai/helpers'
 import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
 import { checkFreeProviderQuota } from '../../chains/checkFreeProviderQuota'
 import { CachedApiKeys } from '../../chains/run'
-import { injectLatitudeToolsConfig } from '../../latitudeTools'
+import { injectBuiltInToolsConfig } from '../../builtInTools/injectConfig'
 
 export type ValidatedAgentStep = {
   config: Config
@@ -90,7 +90,7 @@ const validateConfig = (
     )
   }
 
-  const injectResult = injectLatitudeToolsConfig(parseResult.data)
+  const injectResult = injectBuiltInToolsConfig(parseResult.data)
   if (!injectResult.ok) {
     return Result.error(
       new ChainError({

@@ -19,7 +19,7 @@ import { buildMessagesFromResponse, Workspace } from '../../../browser'
 import { ChainStepResponse, StreamType } from '../../../constants'
 import { cacheChain } from '../chainCache'
 import { ChainStreamManager } from '../../../lib/chainStreamManager'
-import { getLatitudeToolCallsFromAssistantMessage } from '../../latitudeTools/helpers'
+import { getBuiltInToolCallsFromAssistantMessage } from '../../builtInTools'
 
 export function getToolCalls({
   response,
@@ -44,10 +44,9 @@ export async function handleLatitudeTools({
   if (!newMessages?.length) return
 
   const lastResponse = newMessages[0]! as AssistantMessage
-  const latitudeToolCalls =
-    getLatitudeToolCallsFromAssistantMessage(lastResponse)
+  const builtInToolCalls = getBuiltInToolCallsFromAssistantMessage(lastResponse)
   const latitudeToolResponses =
-    await chainStreamManager.executeLatitudeTools(latitudeToolCalls)
+    await chainStreamManager.executeLatitudeTools(builtInToolCalls)
   newMessages.push(...latitudeToolResponses)
 }
 
@@ -149,11 +148,11 @@ export async function runStep({
   const [responseMessage] = buildMessagesFromResponse({ response }) as [
     AssistantMessage,
   ]
-  const latitudeToolCalls = getLatitudeToolCallsFromAssistantMessage(
+  const builtInToolCalls = getBuiltInToolCallsFromAssistantMessage(
     responseMessage as AssistantMessage,
   )
   const clientToolCalls = toolCalls.filter(
-    (toolCall) => !latitudeToolCalls.some((b) => b.id === toolCall.id),
+    (toolCall) => !builtInToolCalls.some((b) => b.id === toolCall.id),
   )
 
   const hasTools = isPromptl && clientToolCalls.length > 0

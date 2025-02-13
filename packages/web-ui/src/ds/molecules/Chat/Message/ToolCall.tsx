@@ -5,11 +5,8 @@ import {
 } from '@latitude-data/core/browser'
 import { CodeBlock } from '../../../atoms'
 import { CardTextContent, ContentCard } from './ContentCard'
-import { CodeToolArgs } from '@latitude-data/core/services/latitudeTools/runCode/types'
+import { CodeToolArgs } from '@latitude-data/core/services/builtInTools/runCode/types'
 import { ToolCallContent as PromptlToolCall } from 'promptl-ai'
-import { CodeLatitudeToolCallContent } from './LatitudeTools/Code'
-import { WebSearchLatitudeToolCallContent } from './LatitudeTools/Search'
-import { SearchToolArgs } from '@latitude-data/core/services/latitudeTools/webSearch/index'
 
 function toolArgs(
   value: ToolRequestContent | PromptlToolCall,
@@ -17,6 +14,16 @@ function toolArgs(
   if ('args' in value) return value.args
   if ('toolArguments' in value) return value.toolArguments
   return {}
+}
+
+function runCodeContent(args: CodeToolArgs): string {
+  if (!args.dependencies) return args.code
+  const comment = args.language === 'python' ? '#' : '//'
+  const deps = ['Dependencies:']
+    .concat(args.dependencies.map((dep) => `- ${dep}`))
+    .map((line) => `${comment} ${line}`)
+    .join('\n')
+  return `${deps}\n\n${args.code}`
 }
 
 export function ToolCallContent({ value }: { value: ToolRequestContent }) {
@@ -27,20 +34,19 @@ export function ToolCallContent({ value }: { value: ToolRequestContent }) {
   const args = toolArgs(value)
 
   if (value.toolName === LatitudeToolInternalName.RunCode) {
+    const { language } = args as CodeToolArgs
     return (
-      <CodeLatitudeToolCallContent
-        toolCallId={value.toolCallId}
-        args={args as CodeToolArgs}
-      />
-    )
-  }
-
-  if (value.toolName === LatitudeToolInternalName.WebSearch) {
-    return (
-      <WebSearchLatitudeToolCallContent
-        toolCallId={value.toolCallId}
-        args={args as SearchToolArgs}
-      />
+      <ContentCard
+        label={language.at(0)!.toUpperCase() + language.slice(1)}
+        icon='code'
+        bgColor='bg-success'
+        fgColor='successForeground'
+        info={value.toolCallId}
+      >
+        <CodeBlock language={language}>
+          {runCodeContent(args as CodeToolArgs)}
+        </CodeBlock>
+      </ContentCard>
     )
   }
 

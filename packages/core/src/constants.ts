@@ -468,9 +468,11 @@ export const CLOUD_MESSAGES = {
 }
 
 export {
-  type LatitudeToolCall,
+  type ToolDefinition,
+  type BuiltInToolCall,
   LatitudeTool,
   LatitudeToolInternalName,
-} from './services/latitudeTools/types'
+  LATITUDE_TOOLS_DEFINITION,
+} from './services/builtInTools/definitions'
 
 export const LATITUDE_TOOLS_CONFIG_NAME = 'latitudeTools'

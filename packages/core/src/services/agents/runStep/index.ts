@@ -12,13 +12,13 @@ import {
   MAX_STEPS_CONFIG_NAME,
 } from '../../../constants'
 import { Message } from '@latitude-data/compiler'
+import { getBuiltInToolCallsFromAssistantMessage } from '../../builtInTools'
 import { getToolCalls, handleLatitudeTools } from '../../chains/runStep'
 import { validateAgentStep, ValidatedAgentStep } from '../AgentStepValidator'
 import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
 import { ChainStreamManager } from '../../../lib/chainStreamManager'
 import { Result } from '../../../lib'
-import { getLatitudeToolCallsFromAssistantMessage } from '../../latitudeTools/helpers'
 
 function assertValidStepCount({
   stepCount,
@@ -98,11 +98,11 @@ export async function runAgentStep({
   const [responseMessage] = buildMessagesFromResponse({ response }) as [
     AssistantMessage,
   ]
-  const latitudeToolCalls = getLatitudeToolCallsFromAssistantMessage(
+  const builtInToolCalls = getBuiltInToolCallsFromAssistantMessage(
     responseMessage as AssistantMessage,
   )
   const clientToolCalls = toolCalls.filter(
-    (toolCall) => !latitudeToolCalls.some((b) => b.id === toolCall.id),
+    (toolCall) => !builtInToolCalls.some((b) => b.id === toolCall.id),
   )
 
   // Stop the chain if there are tool calls

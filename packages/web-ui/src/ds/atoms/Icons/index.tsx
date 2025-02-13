@@ -53,7 +53,6 @@ import {
   Puzzle,
   RefreshCcw,
   ScrollTextIcon,
-  SearchIcon,
   SettingsIcon,
   Sparkles,
   SquareArrowRight,
@@ -71,8 +70,6 @@ import {
   XIcon,
   Braces,
   ListCheck,
-  Newspaper,
-  CircleDollarSign,
 } from 'lucide-react'
 
 import { cn } from '../../../lib/utils'
@@ -96,7 +93,6 @@ const Icons = {
   chevronLeft: ChevronLeft,
   chevronsUpDown: ChevronsUpDown,
   chevronsDownUp: ChevronsDownUpIcon,
-  circleDollarSign: CircleDollarSign,
   circleHelp: CircleHelp,
   clipboard: Copy,
   code: Code,
@@ -125,13 +121,11 @@ const Icons = {
   modification: SquareDot,
   moon: Moon,
   monitor: MonitorIcon,
-  newspaper: Newspaper,
   pencil: Pencil,
   pin: Pin,
   pinOff: PinOff,
   puzzle: Puzzle,
   refresh: RefreshCcw,
-  search: SearchIcon,
   squareArrowRight: SquareArrowRight,
   star: Star,
   sun: Sun,
