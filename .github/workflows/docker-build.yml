@@ -146,11 +146,12 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=registry,ref=${{ matrix.private && format('{0}/{1}', env.ECR_REGISTRY, matrix.repo_name) || format('{0}/{1}/{2}', matrix.registry, matrix.owner, matrix.repo_name) }}:latest
           cache-to: type=inline
+          secrets: |
+            SENTRY_AUTH_TOKEN=${{ matrix.private && secrets.SENTRY_AUTH_TOKEN || '' }}
           build-args: |
             SENTRY_DSN=${{ matrix.private && secrets.SENTRY_DSN || '' }}
             SENTRY_ORG=${{ matrix.private && secrets.SENTRY_ORG || '' }}
             SENTRY_PROJECT=${{ matrix.private && secrets.SENTRY_PROJECT || '' }}
-            SENTRY_AUTH_TOKEN=${{ matrix.private && secrets.SENTRY_AUTH_TOKEN || '' }}
             NEXT_PUBLIC_POSTHOG_KEY=${{ matrix.private && secrets.NEXT_PUBLIC_POSTHOG_KEY || '' }}
             NEXT_PUBLIC_POSTHOG_HOST=${{ matrix.private && secrets.NEXT_PUBLIC_POSTHOG_HOST || '' }}
 

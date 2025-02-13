@@ -22,12 +22,12 @@ jobs:
             task_family: LatitudeLLMAppTaskFamily
             codedeploy_app: LatitudeLLMCodeDeployApp
             codedeploy_group: LatitudeLLMDeploymentGroup
-            repo_name: latitude-llm-app-repo
+            repo_name: latitude-llm-app-repo-43d71dc
           - app: gateway
             task_family: LatitudeLLMGatewayTaskFamily
             codedeploy_app: LatitudeLLMCodeDeployGateway
             codedeploy_group: LatitudeLLMGatewayDeploymentGroup
-            repo_name: latitude-llm-gateway-repo
+            repo_name: latitude-llm-gateway-repo-b859826
     concurrency:
       group: deploy-${{ matrix.app }}
       cancel-in-progress: false

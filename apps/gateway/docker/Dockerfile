@@ -1,6 +1,5 @@
 ARG PROJECT="@latitude-data/gateway"
 ARG PROJECT_PATH="apps/gateway"
-ARG SENTRY_AUTH_TOKEN
 
 FROM node:20-alpine AS alpine
 
@@ -45,9 +44,6 @@ RUN turbo prune "${PROJECT}" --docker
 FROM base AS builder
 
 ARG PROJECT
-ARG SENTRY_AUTH_TOKEN
-
-ENV SENTRY_AUTH_TOKEN=$SENTRY_AUTH_TOKEN
 
 WORKDIR /app
 
@@ -62,14 +58,16 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm install \
 COPY --from=pruner /app/out/full/ .
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
+  --mount=type=secret,id=SENTRY_AUTH_TOKEN \
   BUILDING_CONTAINER=true \
-  SENTRY_AUTH_TOKEN=$SENTRY_AUTH_TOKEN \
+  SENTRY_AUTH_TOKEN="$(cat /run/secrets/SENTRY_AUTH_TOKEN 2>/dev/null || echo '')" \
   pnpm turbo build --filter="${PROJECT}..."
 
-# Run sentry:sourcemaps if SENTRY_AUTH_TOKEN is present and not empty
-RUN if [ -n "$SENTRY_AUTH_TOKEN" ] && [ "$SENTRY_AUTH_TOKEN" != "" ]; then \
+# Run sentry:sourcemaps if SENTRY_AUTH_TOKEN secret is present and not empty
+RUN --mount=type=secret,id=SENTRY_AUTH_TOKEN \
+  if [ -s /run/secrets/SENTRY_AUTH_TOKEN ]; then \
   cd apps/gateway && \
-  pnpm sentry:sourcemaps; \
+  SENTRY_AUTH_TOKEN="$(cat /run/secrets/SENTRY_AUTH_TOKEN)" pnpm sentry:sourcemaps; \
   fi
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm prune --prod --no-optional
