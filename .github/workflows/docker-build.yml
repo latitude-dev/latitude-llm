@@ -120,7 +120,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ matrix.private && env.ECR_REGISTRY || matrix.registry }}/${{ matrix.repo_name }}
+          images: ${{ matrix.private && env.ECR_REGISTRY || matrix.registry }}/${{ matrix.owner }}/${{ matrix.repo_name }}
           tags: |
             type=ref,event=branch
             type=ref,event=pr
@@ -139,7 +139,7 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=registry,ref=${{ matrix.private && env.ECR_REGISTRY || matrix.registry }}/${{ matrix.repo_name }}:latest
+          cache-from: type=registry,ref=${{ matrix.private && env.ECR_REGISTRY || matrix.registry }}/${{ matrix.owner }}/${{ matrix.repo_name }}:latest
           cache-to: type=inline
           build-args: |
             SENTRY_DSN=${{ matrix.private && secrets.SENTRY_DSN || '' }}
