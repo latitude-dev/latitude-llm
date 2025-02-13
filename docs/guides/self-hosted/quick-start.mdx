@@ -109,3 +109,13 @@ docker compose top
 
 4. If you're using local file storage, note that it requires additional configuration for multi-container setups, and S3 is recommended for production environments.
 5. For production environments, we recommend using a container orchestration tool like Kubernetes and handle env variables in a more robust way.
+
+## Public Docker Images
+
+We provide public Docker images for each service in [GitHub Container Registry](https://github.com/orgs/latitude-dev/packages).
+
+To use the public images, you can pull them using the following commands:
+
+```bash
+docker pull ghcr.io/latitude-dev/web:latest
+```
