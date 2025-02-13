@@ -66,6 +66,12 @@ RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
   SENTRY_AUTH_TOKEN=$SENTRY_AUTH_TOKEN \
   pnpm turbo build --filter="${PROJECT}..."
 
+# Run sentry:sourcemaps if SENTRY_AUTH_TOKEN is present and not empty
+RUN if [ -n "$SENTRY_AUTH_TOKEN" ] && [ "$SENTRY_AUTH_TOKEN" != "" ]; then \
+  cd apps/gateway && \
+  pnpm sentry:sourcemaps; \
+  fi
+
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store pnpm prune --prod --no-optional
 
 FROM alpine AS runner

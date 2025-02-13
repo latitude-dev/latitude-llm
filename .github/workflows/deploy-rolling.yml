@@ -1,4 +1,4 @@
-name: Deploy Workers and Websockets
+name: Deploy Workers and Websockets (Rolling)
 
 on:
   workflow_call:
@@ -9,11 +9,8 @@ on:
         required: true
       ARN_OF_IAM_ROLE_TO_ASSUME:
         required: true
-
-env:
-  REGISTRY: ghcr.io
-  OWNER: latitude-dev
-  AWS_REGION: eu-central-1
+      AWS_ACCOUNT_ID:
+        required: true
 
 jobs:
   deploy:
@@ -25,10 +22,12 @@ jobs:
             task-family: LatitudeLLMWorkersTaskFamily
             service: LatitudeLLMWorkers-8b32da0
             cluster: LatitudeLLMCluster-883fb8c
+            repo_name: latitude-llm-workers-repo
           - app: websockets
             task-family: LatitudeLLMWebsocketsTaskFamily
             service: LatitudeLLMWebsockets-3ba81ef
             cluster: LatitudeLLMCluster-883fb8c
+            repo_name: latitude-llm-websockets-repo
     concurrency:
       group: deploy-${{ matrix.app }}
       cancel-in-progress: false
@@ -49,7 +48,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           role-to-assume: ${{ secrets.ARN_OF_IAM_ROLE_TO_ASSUME }}
           role-session-name: ${{ matrix.app }}Deployment
-          aws-region: ${{ env.AWS_REGION }}
+          aws-region: ${{ vars.AWS_REGION }}
           role-skip-session-tagging: true
 
       - name: Update ECS Task Definition
@@ -59,7 +58,7 @@ jobs:
           TASK_DEFINITION=$(aws ecs describe-task-definition --task-definition ${{ matrix.task-family }} --query 'taskDefinition' --output json)
 
           # Update container image
-          NEW_TASK_DEFINITION=$(echo $TASK_DEFINITION | jq --arg IMAGE "${{ env.REGISTRY }}/${{ env.OWNER }}/${{ matrix.app }}:${{ steps.get_tag.outputs.image_tag }}" \
+          NEW_TASK_DEFINITION=$(echo $TASK_DEFINITION | jq --arg IMAGE "${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ vars.AWS_REGION }}.amazonaws.com/${{ matrix.repo_name }}:${{ steps.get_tag.outputs.image_tag }}" \
             'del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy) | .containerDefinitions[0].image = $IMAGE')
 
           # Register new task definition
