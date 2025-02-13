@@ -116,11 +116,16 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       # Generate Docker metadata/tags based on Git context
+      # Image path interpolation examples:
+      # Private (ECR): {ECR_REGISTRY}/{repo_name}
+      #   e.g.: 123456789012.dkr.ecr.eu-central-1.amazonaws.com/latitude-llm-websockets-repo-eea3d9a
+      # Public (GHCR): {registry}/{owner}/{repo_name}
+      #   e.g.: ghcr.io/latitude-dev/websockets
       - name: Extract metadata
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ matrix.private && env.ECR_REGISTRY || matrix.registry }}/${{ matrix.owner }}/${{ matrix.repo_name }}
+          images: ${{ matrix.private && format('{0}/{1}', env.ECR_REGISTRY, matrix.repo_name) || format('{0}/{1}/{2}', matrix.registry, matrix.owner, matrix.repo_name) }}
           tags: |
             type=ref,event=branch
             type=ref,event=pr
@@ -139,7 +144,7 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=registry,ref=${{ matrix.private && env.ECR_REGISTRY || matrix.registry }}/${{ matrix.owner }}/${{ matrix.repo_name }}:latest
+          cache-from: type=registry,ref=${{ matrix.private && format('{0}/{1}', env.ECR_REGISTRY, matrix.repo_name) || format('{0}/{1}/{2}', matrix.registry, matrix.owner, matrix.repo_name) }}:latest
           cache-to: type=inline
           build-args: |
             SENTRY_DSN=${{ matrix.private && secrets.SENTRY_DSN || '' }}
