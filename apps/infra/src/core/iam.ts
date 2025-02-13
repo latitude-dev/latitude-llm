@@ -12,6 +12,36 @@ export const pulumiDeployer = new aws.iam.User('PulumiDeployer', {
   },
 })
 
+// Create policy for Pulumi state bucket access
+const pulumiStateBucketPolicy = new aws.iam.Policy('PulumiStateBucketPolicy', {
+  name: 'PulumiStateBucketAccess',
+  description: 'Policy granting access to Pulumi state bucket',
+  policy: JSON.stringify({
+    Version: '2012-10-17',
+    Statement: [
+      {
+        Effect: 'Allow',
+        Action: [
+          's3:GetObject',
+          's3:PutObject',
+          's3:DeleteObject',
+          's3:ListBucket',
+        ],
+        Resource: [
+          'arn:aws:s3:::latitude-llm-pulumi-backend',
+          'arn:aws:s3:::latitude-llm-pulumi-backend/*',
+        ],
+      },
+    ],
+  }),
+})
+
+// Attach the Pulumi state bucket policy to the PulumiDeployer user
+new aws.iam.UserPolicyAttachment('PulumiStateBucketPolicyAttachment', {
+  user: pulumiDeployer.name,
+  policyArn: pulumiStateBucketPolicy.arn,
+})
+
 // IAM Role used by Pulumi iam user to update our infrastructure from CI
 export const deployerRole = pulumiDeployer.arn.apply((pulumiDeployerArn) =>
   bastionAccountId.apply(
