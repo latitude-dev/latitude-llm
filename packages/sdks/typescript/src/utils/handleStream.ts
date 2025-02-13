@@ -52,6 +52,7 @@ export async function handleStream({
 
       if (parsedEvent.type === 'event') {
         const data = parseJSON(parsedEvent.data) as LatitudeEventData
+        onEvent?.({ event: parsedEvent.event as StreamEventTypes, data })
 
         if (!data) {
           throw new LatitudeApiError({
@@ -83,8 +84,6 @@ export async function handleStream({
             toolsRequested = data.tools
           }
         }
-
-        onEvent?.({ event: parsedEvent.event as StreamEventTypes, data })
       }
     }
 
@@ -101,11 +100,9 @@ export async function handleStream({
 
     return finalResponse
   } catch (e) {
-    let error: LatitudeApiError
+    let error = e as LatitudeApiError
 
-    if (e instanceof LatitudeApiError) {
-      error = e as LatitudeApiError
-    } else {
+    if (!(e instanceof LatitudeApiError)) {
       const err = e as Error
       error = new LatitudeApiError({
         status: 402,

@@ -227,7 +227,7 @@ data: ${JSON.stringify({
         })
         expect(onErrorMock).toHaveBeenCalledTimes(1)
         expect(onErrorMock).toHaveBeenCalledWith(
-          new Error('Unexpected API Error: 500 Something bad happened'),
+          new Error('Something bad happened'),
         )
         expect(onFinishMock).not.toHaveBeenCalled()
       }),
