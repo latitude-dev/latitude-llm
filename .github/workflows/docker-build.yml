@@ -21,8 +21,7 @@ jobs:
       workflow_call: true
 
   build-and-push:
-    # TODO: uncomment this
-    # needs: [lint, test]
+    needs: [lint, test]
     runs-on: ubuntu-latest
     permissions:
       contents: read
