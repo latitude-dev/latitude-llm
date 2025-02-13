@@ -1,17 +1,45 @@
-import { Config } from '@latitude-data/compiler'
+import { LATITUDE_TOOLS_CONFIG_NAME } from '../../constants'
 import {
-  LATITUDE_TOOLS_CONFIG_NAME,
-  LATITUDE_TOOLS_DEFINITION,
-  LatitudeTool,
-  ToolDefinition,
-} from '../../constants'
-import { BadRequestError, LatitudeError, Result, TypedResult } from '../../lib'
+  BadRequestError,
+  LatitudeError,
+  PromisedResult,
+  Result,
+  TypedResult,
+} from '../../lib'
 import {
+  getLatitudeToolDefinition,
   getLatitudeToolInternalName,
+  getLatitudeToolName,
+} from './helpers'
+import { LATITUDE_TOOLS } from './tools'
+import {
+  LatitudeTool,
   LatitudeToolInternalName,
-} from './definitions'
+  LatitudeToolCall,
+  ToolDefinition,
+} from './types'
+import { Config } from '@latitude-data/compiler'
 
-export function injectBuiltInToolsConfig(
+export async function executeLatitudeToolCall(
+  toolCall: LatitudeToolCall,
+): PromisedResult<unknown, LatitudeError> {
+  const toolName = getLatitudeToolName(toolCall.name)
+  const method = LATITUDE_TOOLS.find((tool) => tool.name === toolName)?.method
+  if (!method) {
+    return Result.error(
+      new BadRequestError(`Unsupported built-in tool: ${toolCall.name}`),
+    )
+  }
+
+  try {
+    const response = await method(toolCall.arguments)
+    return response
+  } catch (error) {
+    return Result.error(error as LatitudeError)
+  }
+}
+
+export function injectLatitudeToolsConfig(
   config: Config,
 ): TypedResult<Config, LatitudeError> {
   const builtInTools: LatitudeTool[] =
@@ -44,7 +72,7 @@ export function injectBuiltInToolsConfig(
       ...builtInTools.reduce(
         (acc, tool) => {
           const internalToolName = getLatitudeToolInternalName(tool)
-          const toolDefinition = LATITUDE_TOOLS_DEFINITION[tool]
+          const toolDefinition = getLatitudeToolDefinition(tool)!
 
           acc[internalToolName] = toolDefinition
           return acc

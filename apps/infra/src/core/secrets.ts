@@ -74,6 +74,10 @@ const codesandboxApiKey = createSecretWithVersion(
   'CODESANDBOX_API_KEY',
   'API key for CodeSandbox code execution service',
 )
+const tavilyApiKey = createSecretWithVersion(
+  'TAVILY_API_KEY',
+  'API key for Tavily web search service',
+)
 
 export const copilotWorkspaceApiKey = config.requireSecret(
   'COPILOT_WORKSPACE_API_KEY',
@@ -124,3 +128,4 @@ export const supportAppSecretKeyArn = supportAppSecretKey.arn
 export const loopsSecretApiKeyArn = loopsSecretApiKey.arn
 export const latitudeCloudPaymentUrlArn = latitudeCloudPaymentUrl.arn
 export const codesandboxApiKeyArn = codesandboxApiKey.arn
+export const tavilyApiKeyArn = tavilyApiKey.arn
