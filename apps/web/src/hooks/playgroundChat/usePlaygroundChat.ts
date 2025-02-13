@@ -115,9 +115,6 @@ export function usePlaygroundChat({
               setTime((prev) => (prev ?? 0) + (performance.now() - start))
             }
           }
-          if (data.type === ChainEventTypes.ChainError) {
-            setError(data.error)
-          }
           if (data.type === ChainEventTypes.ToolsRequested) {
             setUnresponedToolCalls(data.tools)
           }

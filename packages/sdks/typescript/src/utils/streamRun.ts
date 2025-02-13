@@ -99,13 +99,18 @@ export async function streamRun<Tools extends ToolSpec>(
     onFinished?.(finalResponse)
     return finalResponse
   } catch (e) {
-    const err = e as Error
-    const error = new LatitudeApiError({
-      status: 500,
-      message: err.message,
-      serverResponse: err.message,
-      errorCode: ApiErrorCodes.InternalServerError,
-    })
+    let error = e as LatitudeApiError
+
+    if (!(e instanceof LatitudeApiError)) {
+      const err = e as Error
+      error = new LatitudeApiError({
+        status: 500,
+        message: err.message,
+        serverResponse: err.stack ?? '',
+        errorCode: ApiErrorCodes.InternalServerError,
+      })
+    }
+
     onError?.(error)
     return
   }

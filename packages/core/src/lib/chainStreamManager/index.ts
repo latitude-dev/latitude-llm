@@ -262,7 +262,11 @@ export class ChainStreamManager {
 
     this.sendEvent({
       type: ChainEventTypes.ChainError,
-      error: new Error(error.runError ? error.runError.message : error.message),
+      error: {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+      },
     })
 
     this.resolveError?.(error)
