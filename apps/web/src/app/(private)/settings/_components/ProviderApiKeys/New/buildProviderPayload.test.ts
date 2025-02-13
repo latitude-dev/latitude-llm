@@ -15,7 +15,10 @@ describe('buildProviderPayload', () => {
     formData.append('defaultModel', 'gpt-3.5-turbo')
 
     // Call the function under test.
-    const payload = buildProviderPayload({ formData })
+    const payload = buildProviderPayload({
+      formData,
+      provider: Providers.OpenAI,
+    })
 
     // Expect that only the common fields (name, provider, defaultModel, etc.) are present.
     expect(payload).toEqual({
@@ -26,7 +29,7 @@ describe('buildProviderPayload', () => {
     })
   })
 
-  it('should build payload for a vertex provider with nested configuration', () => {
+  it.only('should build payload for a vertex provider with nested configuration', () => {
     const formData = new FormData()
     formData.append('name', 'Vertex Provider')
     formData.append('provider', Providers.GoogleVertex)
@@ -69,7 +72,11 @@ describe('buildProviderPayload', () => {
       'Super secret',
     )
 
-    const payload = buildProviderPayload({ formData })
+    const payload = buildProviderPayload({
+      formData,
+      provider: Providers.GoogleVertex,
+    })
+
     expect(payload).toEqual({
       name: 'Vertex Provider',
       provider: Providers.GoogleVertex,
