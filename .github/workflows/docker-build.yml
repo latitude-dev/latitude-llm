@@ -146,8 +146,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=registry,ref=${{ matrix.private && format('{0}/{1}', env.ECR_REGISTRY, matrix.repo_name) || format('{0}/{1}/{2}', matrix.registry, matrix.owner, matrix.repo_name) }}:latest
           cache-to: type=inline
-          secrets: |
-            SENTRY_AUTH_TOKEN=${{ matrix.private && secrets.SENTRY_AUTH_TOKEN || '' }}
+          secrets: ${{ matrix.private && format('SENTRY_AUTH_TOKEN={0}', secrets.SENTRY_AUTH_TOKEN) || '' }}
           build-args: |
             SENTRY_DSN=${{ matrix.private && secrets.SENTRY_DSN || '' }}
             SENTRY_ORG=${{ matrix.private && secrets.SENTRY_ORG || '' }}
