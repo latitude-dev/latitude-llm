@@ -60,19 +60,19 @@ jobs:
           - app: web
             dockerfile: apps/web/docker/Dockerfile
             private: true
-            repo_name: latitude-llm-app-repo
+            repo_name: latitude-llm-app-repo-43d71dc
           - app: gateway
             dockerfile: apps/gateway/docker/Dockerfile
             private: true
-            repo_name: latitude-llm-gateway-repo
+            repo_name: latitude-llm-gateway-repo-b859826
           - app: workers
             dockerfile: apps/workers/docker/Dockerfile
             private: true
-            repo_name: latitude-llm-workers-repo
+            repo_name: latitude-llm-workers-repo-184cb29
           - app: websockets
             dockerfile: apps/websockets/docker/Dockerfile
             private: true
-            repo_name: latitude-llm-websockets-repo
+            repo_name: latitude-llm-websockets-repo-eea3d9a
 
     steps:
       - name: Checkout repository
