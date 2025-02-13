@@ -60,8 +60,8 @@ type AIReturnText = {
 export type AIReturn<T extends StreamType> = T extends 'object'
   ? AIReturnObject
   : T extends 'text'
-    ? AIReturnText
-    : never
+  ? AIReturnText
+  : never
 
 export type StreamChunk =
   | TextStreamPart<Record<string, CoreTool>>
@@ -147,10 +147,10 @@ export async function ai({
     const languageModel = customLanguageModel
       ? customLanguageModel
       : llmProvider.value(model, {
-          cacheControl: config.cacheControl ?? false,
-          // Propagate provider config options for this language model
-          ...config,
-        })
+        cacheControl: config.cacheControl ?? false,
+        // Propagate provider config options for this language model
+        ...config,
+      })
     const toolsResult = buildTools(tools)
     if (toolsResult.error) return toolsResult
 
@@ -210,3 +210,7 @@ export async function ai({
 
 export { estimateCost, getCostPer1M } from './estimateCost'
 export type { Config, PartialConfig } from './helpers'
+export {
+  vertexConfigurationSchema,
+  type VertexConfiguration,
+} from './providers/helpers/vertex'
