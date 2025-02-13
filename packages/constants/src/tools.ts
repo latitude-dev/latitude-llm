@@ -75,7 +75,9 @@ export function buildResponseMessage<T extends StreamType>({
       type: 'text',
       text: objectToString(object),
     } as MessageContent)
-  } else if (text && text.length > 0) {
+  } else if (text !== undefined) {
+    // Text can be empty string. We want to always at least generate
+    // an empty text response
     content.push({
       type: 'text',
       text: text,
