@@ -95,10 +95,19 @@ jobs:
             sleep 5
           fi
 
-          # Run migrations with increased logging
-          DEBUG=* pnpm db:migrate
+          # Create SSL cert directory and copy cert
+          mkdir -p ~/.postgresql
+          cp ${{ github.workspace }}/packages/core/src/assets/eu-central-1-bundle.pem ~/.postgresql/root.crt
+
+          # Test direct connection with psql
+          PGPASSWORD=${{ secrets.DB_PASSWORD }} psql -h localhost -p ${{ secrets.DB_PORT }} -U ${{ secrets.DB_USERNAME }} -d ${{ secrets.DB_NAME }} -c "SELECT 1" || echo "Direct psql connection failed"
+
+          # Run migrations with increased logging and explicit SSL settings
+          NODE_TLS_REJECT_UNAUTHORIZED=0 DEBUG=* PGSSLMODE=verify-full PGSSLCERT=~/.postgresql/root.crt pnpm db:migrate
         env:
-          DATABASE_URL: postgresql://${{ secrets.DB_USERNAME }}:${{ secrets.DB_PASSWORD }}@localhost:${{ secrets.DB_PORT }}/${{ secrets.DB_NAME }}?sslmode=verify-full&sslrootcert=${{ github.workspace }}/packages/core/src/assets/eu-central-1-bundle.pem
+          DATABASE_URL: postgresql://${{ secrets.DB_USERNAME }}:${{ secrets.DB_PASSWORD }}@localhost:${{ secrets.DB_PORT }}/${{ secrets.DB_NAME }}?sslmode=verify-full
+          NODE_ENV: production
+          DEBUG: 'drizzle-kit:*,drizzle-orm:*'
 
       - name: Cleanup SSH tunnel
         if: always()
