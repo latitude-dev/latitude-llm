@@ -40,7 +40,7 @@ jobs:
           ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
 
           # Start SSH tunnel with keep-alive settings
-          ssh -o ServerAliveInterval=30 -o ServerAliveCountMax=2 -f -N -L ${{ secrets.DB_PORT }}:localhost:${{ secrets.DB_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}
+          ssh -f -N -L ${{ secrets.DB_PORT }}:${{ secrets.DB_HOST }}:${{ secrets.DB_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}
 
           # Wait for tunnel to be established
           sleep 5
@@ -88,26 +88,14 @@ jobs:
       - name: Run database migrations
         working-directory: packages/core
         run: |
-          # Verify tunnel is still active
-          if ! nc -z localhost ${{ secrets.DB_PORT }}; then
-            echo "Database connection lost. Attempting to reconnect..."
-            ssh -o ServerAliveInterval=30 -o ServerAliveCountMax=2 -f -N -L ${{ secrets.DB_PORT }}:localhost:${{ secrets.DB_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}
-            sleep 5
-          fi
-
-          # Create SSL cert directory and copy cert
-          mkdir -p ~/.postgresql
-          cp ${{ github.workspace }}/packages/core/src/assets/eu-central-1-bundle.pem ~/.postgresql/root.crt
-
           # Test direct connection with psql
           PGPASSWORD=${{ secrets.DB_PASSWORD }} psql -h localhost -p ${{ secrets.DB_PORT }} -U ${{ secrets.DB_USERNAME }} -d ${{ secrets.DB_NAME }} -c "SELECT 1" || echo "Direct psql connection failed"
 
           # Run migrations with increased logging and explicit SSL settings
-          NODE_TLS_REJECT_UNAUTHORIZED=0 DEBUG=* PGSSLMODE=verify-full PGSSLCERT=~/.postgresql/root.crt pnpm db:migrate
+          pnpm db:migrate
         env:
-          DATABASE_URL: postgresql://${{ secrets.DB_USERNAME }}:${{ secrets.DB_PASSWORD }}@localhost:${{ secrets.DB_PORT }}/${{ secrets.DB_NAME }}?sslmode=verify-full
+          DATABASE_URL: postgresql://${{ secrets.DB_USERNAME }}:${{ secrets.DB_PASSWORD }}@localhost:${{ secrets.DB_PORT }}/${{ secrets.DB_NAME }}
           NODE_ENV: production
-          DEBUG: 'drizzle-kit:*,drizzle-orm:*'
 
       - name: Cleanup SSH tunnel
         if: always()
