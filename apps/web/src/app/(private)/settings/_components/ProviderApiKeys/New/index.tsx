@@ -20,6 +20,7 @@ import { buildProviderPayload } from './buildProviderPayload'
 
 const CUSTOM_LABELS: Partial<Record<Providers, string>> = {
   [Providers.GoogleVertex]: 'Google Vertex (Gemini models)',
+  [Providers.AnthropicVertex]: 'Google Vertex (Anthropic models)',
 }
 
 const PROVIDER_OPTIONS = Object.entries(Providers).map(([key, value]) => ({
@@ -41,14 +42,12 @@ export default function NewProviderApiKey() {
       const payload = buildProviderPayload({
         formData: new FormData(event.currentTarget),
       })
-      console.log('PAYLOAD: ', payload)
-      // const [_, error] = await create({
-      //   ...payload,
-      //   // Ensure defaultModel is either non-empty or undefined
-      //   defaultModel: payload.defaultModel || undefined,
-      // })
-      //
-      // if (!error) onOpenChange(false)
+      const [_, error] = await create({
+        ...payload,
+        defaultModel: payload.defaultModel || undefined,
+      })
+
+      if (!error) onOpenChange(false)
     },
     [create],
   )

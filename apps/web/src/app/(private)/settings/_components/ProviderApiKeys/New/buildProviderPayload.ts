@@ -55,20 +55,26 @@ export function buildProviderPayload({
   namespace = DEFAULT_NAMESPACE,
 }: {
   formData: FormData
-  provider: Providers
   namespace?: string
 }): ProviderInputSchema {
-  return Array.from(formData.entries()).reduce<ProviderInputSchema>((acc, [key, value]) => {
+  return Array.from(formData.entries()).reduce((acc, [key, value]) => {
     if (key === 'provider') {
       acc.provider = value.toString() as Providers
+      return acc as ProviderInputSchema
     }
 
     if (COMMON_PROVIDER_INPUT_FIELDS_KEYS.includes(key)) {
       acc[key as CommonProviderInputKey] = value.toString()
+      return acc as ProviderInputSchema
     }
 
-    return buildConfigAttribute({ namespace, key, value, acc })
-  }, {} as ProviderInputSchema)
+    return buildConfigAttribute({
+      namespace,
+      key,
+      value,
+      acc,
+    }) as ProviderInputSchema
+  }, {} as ProviderInputSchema) as ProviderInputSchema
 }
 
 export function buildConfigFieldName({

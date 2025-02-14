@@ -108,6 +108,19 @@ export function createProvider({
         }),
       )
     }
+    case Providers.AnthropicVertex: {
+      return Result.ok(
+        createVertex({
+          project: 'something',
+          location: 'us-central1',
+          googleCredentials: {
+            clientEmail: '',
+            privateKey: '',
+            privateKeyId: '',
+          },
+        }),
+      )
+    }
     case Providers.Custom:
       return Result.ok(
         createOpenAI({
