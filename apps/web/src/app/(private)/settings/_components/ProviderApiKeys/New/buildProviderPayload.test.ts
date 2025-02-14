@@ -29,7 +29,7 @@ describe('buildProviderPayload', () => {
     })
   })
 
-  it.only('should build payload for a vertex provider with nested configuration', () => {
+  it('should build payload for a vertex provider with nested configuration', () => {
     const formData = new FormData()
     formData.append('name', 'Vertex Provider')
     formData.append('provider', Providers.GoogleVertex)
@@ -71,8 +71,6 @@ describe('buildProviderPayload', () => {
       formData,
       provider: Providers.GoogleVertex,
     })
-
-    console.log("PAYLOAD", JSON.stringify(payload, null, 2))
 
     expect(payload).toEqual({
       name: 'Vertex Provider',

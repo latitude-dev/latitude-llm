@@ -1,3 +1,4 @@
+import { merge } from 'lodash-es'
 import {
   COMMON_PROVIDER_INPUT_FIELDS_KEYS,
   CommonProviderInputKey,
@@ -29,38 +30,22 @@ function buildConfigAttribute({
   acc: ProviderInputSchema
   namespace: string
 }) {
-  const configuration = acc.configuration ?? {}
   const tokens = extractTokens({ key, namespace })
-
   if (!tokens.length) return acc
 
-  const firstToken = tokens[0]
-  if (!firstToken) return acc
-
-  const config = tokens.reduce((config, path, index) => {
-    console.log('PATH', path)
-    if (path === undefined) return config
-
-    if (tokens.length === 1) {
-      const foo = { ...config, configuration: { [path]: value } }
-      console.log('FOO', foo)
-
-      return foo
-    }
-
-    const prevPath = tokens[tokens.indexOf(path) - 1]
-    if (prevPath === undefined) return config
-
+  const configuration = tokens.reduceRight((inner, token, index) => {
     if (index === tokens.length - 1) {
-      // @ts-ignore
-      config['configuration'] = { [prevPath]: { [path]: value } }
-      return config
+      return { [token]: value }
     }
+    return { [token]: inner }
+  }, {}) as ProviderInputSchema['configuration']
 
-    return { ...config, [prevPath]: { [path]: {} } }
-  }, configuration)
+  if (!acc.configuration) return { ...acc, configuration }
 
-  return { ...acc, configuration: config }
+  return {
+    ...acc,
+    configuration: merge(acc.configuration, configuration),
+  }
 }
 
 const DEFAULT_NAMESPACE = '[configuration]'
@@ -73,7 +58,7 @@ export function buildProviderPayload({
   provider: Providers
   namespace?: string
 }): ProviderInputSchema {
-  return Array.from(formData.entries()).reduce((acc, [key, value]) => {
+  return Array.from(formData.entries()).reduce<ProviderInputSchema>((acc, [key, value]) => {
     if (key === 'provider') {
       acc.provider = value.toString() as Providers
     }
