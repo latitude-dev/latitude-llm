@@ -199,12 +199,12 @@ codeDeployServiceRole.arn.apply(
       },
       blueGreenDeploymentConfig: {
         deploymentReadyOption: {
-          actionOnTimeout: 'CONTINUE_DEPLOYMENT',
-          waitTimeInMinutes: 0,
+          actionOnTimeout: 'STOP_DEPLOYMENT',
+          waitTimeInMinutes: 10,
         },
         terminateBlueInstancesOnDeploymentSuccess: {
           action: 'TERMINATE',
-          terminationWaitTimeInMinutes: 3,
+          terminationWaitTimeInMinutes: 1,
         },
       },
       deploymentStyle: {
