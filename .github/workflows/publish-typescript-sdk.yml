@@ -1,0 +1,86 @@
+name: Publish TypeScript SDK
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'packages/sdks/typescript/package.json'
+
+jobs:
+  publish:
+    name: Build and Publish
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/sdks/typescript
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
+
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+      - name: Setup pnpm cache
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Get package version
+        id: get_version
+        run: |
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Check version on npm
+        id: check_version
+        run: |
+          NPM_VERSION=$(npm view @latitude-data/sdk version 2>/dev/null || echo "0.0.0")
+          if [ "${{ steps.get_version.outputs.version }}" != "$NPM_VERSION" ]; then
+            echo "should_publish=true" >> $GITHUB_OUTPUT
+          else
+            echo "should_publish=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Install dependencies
+        if: steps.check_version.outputs.should_publish == 'true'
+        run: pnpm install
+
+      - name: Run linter
+        if: steps.check_version.outputs.should_publish == 'true'
+        run: pnpm lint
+
+      - name: Run typescript checker
+        if: steps.check_version.outputs.should_publish == 'true'
+        run: pnpm tc
+
+      - name: Run tests
+        if: steps.check_version.outputs.should_publish == 'true'
+        run: pnpm test
+
+      - name: Build package
+        if: steps.check_version.outputs.should_publish == 'true'
+        run: pnpm build
+
+      - name: Publish to npm
+        if: steps.check_version.outputs.should_publish == 'true'
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
