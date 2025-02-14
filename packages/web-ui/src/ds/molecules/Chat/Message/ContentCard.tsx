@@ -51,6 +51,35 @@ export function ContentCard({
   )
 }
 
+export function ContentCardContainer({
+  children,
+  copy,
+}: {
+  children: ReactNode
+  copy?: string
+}) {
+  const copyToClipboard = () => {
+    if (!copy) return
+    navigator.clipboard.writeText(copy)
+  }
+
+  return (
+    <div className='relative w-full p-4 bg-backgroundCode flex flex-col gap-2'>
+      {copy && (
+        <div className='absolute top-2 right-0'>
+          <Button
+            variant='ghost'
+            iconProps={{ name: 'clipboard' }}
+            onClick={copyToClipboard}
+          />
+        </div>
+      )}
+
+      {children}
+    </div>
+  )
+}
+
 export function CardTextContent({
   value,
   color,
@@ -58,25 +87,13 @@ export function CardTextContent({
   value: string
   color: TextColor
 }) {
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(value)
-  }
-
   return (
-    <div className='relative w-full p-4 bg-backgroundCode flex flex-col gap-2'>
-      <div className='absolute top-2 right-0'>
-        <Button
-          variant='ghost'
-          iconProps={{ name: 'clipboard' }}
-          onClick={copyToClipboard}
-        />
-      </div>
-
+    <ContentCardContainer copy={value}>
       {value.split('\n').map((line, i) => (
         <Text.H5 key={i} color={color}>
           {line}
         </Text.H5>
       ))}
-    </div>
+    </ContentCardContainer>
   )
 }
