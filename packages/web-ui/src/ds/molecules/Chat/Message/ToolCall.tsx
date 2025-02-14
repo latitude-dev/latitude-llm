@@ -5,11 +5,13 @@ import {
 } from '@latitude-data/core/browser'
 import { CodeBlock } from '../../../atoms'
 import { CardTextContent, ContentCard } from './ContentCard'
-import { CodeToolArgs } from '@latitude-data/core/services/latitudeTools/runCode/types'
 import { ToolCallContent as PromptlToolCall } from 'promptl-ai'
 import { CodeLatitudeToolCallContent } from './LatitudeTools/Code'
 import { WebSearchLatitudeToolCallContent } from './LatitudeTools/Search'
+import { WebExtractLatitudeToolCallContent } from './LatitudeTools/Extract'
+import type { CodeToolArgs } from '@latitude-data/core/services/latitudeTools/runCode/types'
 import type { SearchToolArgs } from '@latitude-data/core/services/latitudeTools/webSearch/types'
+import type { ExtractToolArgs } from '@latitude-data/core/services/latitudeTools/webExtract/types'
 
 function toolArgs(
   value: ToolRequestContent | PromptlToolCall,
@@ -40,6 +42,15 @@ export function ToolCallContent({ value }: { value: ToolRequestContent }) {
       <WebSearchLatitudeToolCallContent
         toolCallId={value.toolCallId}
         args={args as SearchToolArgs}
+      />
+    )
+  }
+
+  if (value.toolName === LatitudeToolInternalName.WebExtract) {
+    return (
+      <WebExtractLatitudeToolCallContent
+        toolCallId={value.toolCallId}
+        args={args as ExtractToolArgs}
       />
     )
   }

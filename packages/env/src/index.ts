@@ -107,6 +107,7 @@ export const env = createEnv({
     COPILOT_TEMPLATES_SUGGESTION_PROMPT_PATH: z.string().optional(),
     CODESANDBOX_API_KEY: z.string().optional(),
     TAVILY_API_KEY: z.string().optional(),
+    HANDINGER_API_KEY: z.string().optional(),
   },
   runtimeEnv: {
     ...process.env,

@@ -45,15 +45,14 @@ export default {
         success: {
           DEFAULT: 'hsl(var(--success) / <alpha-value>)',
           foreground: 'hsl(var(--success-foreground) / <alpha-value>)',
-        },      
+        },
         muted: {
           DEFAULT: 'hsl(var(--muted) / <alpha-value>)',
           foreground: 'hsl(var(--muted-foreground) / <alpha-value>)',
         },
         'success-muted': {
           DEFAULT: 'hsl(var(--success-muted) / <alpha-value>)',
-          foreground:
-            'hsl(var(--success-muted-foreground) / <alpha-value>)',
+          foreground: 'hsl(var(--success-muted-foreground) / <alpha-value>)',
         },
         'destructive-muted': {
           DEFAULT: 'hsl(var(--destructive-muted) / <alpha-value>)',
@@ -62,8 +61,7 @@ export default {
         },
         'warning-muted': {
           DEFAULT: 'hsl(var(--warning-muted) / <alpha-value>)',
-          foreground:
-            'hsl(var(--warning-muted-foreground) / <alpha-value>)',
+          foreground: 'hsl(var(--warning-muted-foreground) / <alpha-value>)',
         },
         accent: {
           DEFAULT: 'hsl(var(--accent) / <alpha-value>)',
@@ -142,5 +140,21 @@ export default {
       },
     },
   },
-  plugins: [require('tailwindcss-animate')],
+  corePlugins: {
+    typography: true,
+  },
+  plugins: [
+    require('tailwindcss-animate'),
+    require('@tailwindcss/typography'),
+    function ({ addComponents, theme }) {
+      addComponents({
+        '.prose': {
+          '--tw-prose-text': 'hsl(var(--foreground))',
+          '--tw-prose-headings': 'hsl(var(--foreground))',
+          '--tw-prose-links': 'hsl(var(--accent-foreground))',
+          '--tw-prose-border': 'hsl(var(--border))',
+        },
+      })
+    },
+  ],
 }

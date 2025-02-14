@@ -3,8 +3,10 @@ import { CodeBlock } from '../../../atoms'
 import { CardTextContent, ContentCard } from './ContentCard'
 import { useMemo } from 'react'
 import { LatitudeToolInternalName } from '@latitude-data/core/browser'
-import type { SearchToolResult } from '@latitude-data/core/services/latitudeTools/webSearch/types'
 import { WebSearchLatitudeToolResponseContent } from './LatitudeTools/Search'
+import { WebExtractLatitudeToolResponseContent } from './LatitudeTools/Extract'
+import type { SearchToolResult } from '@latitude-data/core/services/latitudeTools/webSearch/types'
+import type { ExtractToolResult } from '@latitude-data/core/services/latitudeTools/webExtract/types'
 
 function getResult<S extends boolean>(
   value: unknown,
@@ -38,6 +40,18 @@ export function ToolResultContent({ value }: { value: ToolContent }) {
       <WebSearchLatitudeToolResponseContent
         toolCallId={value.toolCallId}
         response={result as SearchToolResult | string}
+      />
+    )
+  }
+
+  if (
+    !value.isError &&
+    value.toolName === LatitudeToolInternalName.WebExtract
+  ) {
+    return (
+      <WebExtractLatitudeToolResponseContent
+        toolCallId={value.toolCallId}
+        response={result as ExtractToolResult}
       />
     )
   }

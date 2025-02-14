@@ -73,6 +73,9 @@ import {
   ListCheck,
   Newspaper,
   CircleDollarSign,
+  Globe,
+  Maximize2,
+  Minimize2,
 } from 'lucide-react'
 
 import { cn } from '../../../lib/utils'
@@ -115,6 +118,7 @@ const Icons = {
   folderOpen: FolderOpen,
   folderPlus: FolderPlus,
   github: Github,
+  globe: Globe,
   history: History,
   info: InfoIcon,
   listOrdered: ListOrdered,
@@ -122,6 +126,8 @@ const Icons = {
   lock: Lock,
   logo: LatitudeLogo,
   logoMonochrome: LatitudeLogoMonochrome,
+  maximize: Maximize2,
+  minimize: Minimize2,
   modification: SquareDot,
   moon: Moon,
   monitor: MonitorIcon,
