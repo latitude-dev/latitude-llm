@@ -74,9 +74,10 @@ jobs:
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+          ssh-keyscan -H ${{ secrets.DB_HOST }} >> ~/.ssh/known_hosts
 
           # Start SSH tunnel with keep-alive settings
-          ssh -o ServerAliveInterval=30 -o ServerAliveCountMax=2 -f -N -L ${{ secrets.DB_PORT }}:${{ secrets.DB_HOST }}:${{ secrets.DB_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}
+          ssh -o IdentityFile=~/.ssh/id_ed25519 -o ServerAliveInterval=30 -o ServerAliveCountMax=2 -f -N -L ${{ secrets.DB_PORT }}:${{ secrets.DB_HOST }}:${{ secrets.DB_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}
 
           # Test direct connection with psql
           psql "postgresql://${{ secrets.DB_USERNAME }}:${{ secrets.DB_PASSWORD }}@127.0.0.1:${{ secrets.DB_PORT }}/${{ secrets.DB_NAME }}" || echo "Direct psql connection failed"
