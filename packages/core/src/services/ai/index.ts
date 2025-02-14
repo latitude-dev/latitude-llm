@@ -136,7 +136,7 @@ export async function ai({
     const tools = config.tools
     const llmProvider = createProvider({
       messages,
-      provider,
+      provider: apiProvider,
       apiKey,
       url: url ?? undefined,
       config,
@@ -166,7 +166,6 @@ export async function ai({
     }
 
     if (schema && output) {
-      // @ts-expect-error - https://github.com/vercel/ai/issues/4760
       const result = streamObject({
         ...commonOptions,
         schema: jsonSchema(schema),
@@ -187,7 +186,6 @@ export async function ai({
       })
     }
 
-    // @ts-expect-error - https://github.com/vercel/ai/issues/4760
     const result = streamText({
       ...commonOptions,
       experimental_transform: smoothStream(),

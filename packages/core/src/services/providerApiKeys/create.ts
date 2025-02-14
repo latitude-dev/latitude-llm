@@ -22,7 +22,16 @@ export type Props = {
   configuration: ProviderConfiguration<Providers> | undefined
 }
 export function createProviderApiKey(
-  { workspace, provider, token, url, name, defaultModel, author, configuration }: Props,
+  {
+    workspace,
+    provider,
+    token,
+    url,
+    name,
+    defaultModel,
+    author,
+    configuration,
+  }: Props,
   db = database,
 ) {
   return Transaction.call(async (tx) => {
