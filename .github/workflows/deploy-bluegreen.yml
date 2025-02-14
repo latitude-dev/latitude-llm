@@ -62,9 +62,6 @@ jobs:
         run: pnpm install
         working-directory: apps/infra
 
-      - name: Setup Pulumi
-        uses: pulumi/setup-pulumi@v2
-
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4.0.2
         with:
