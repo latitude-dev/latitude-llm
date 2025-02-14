@@ -40,7 +40,7 @@ jobs:
           ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
 
           # Start SSH tunnel with keep-alive settings
-          ssh -f -N -L ${{ secrets.DB_PORT }}:${{ secrets.DB_HOST }}:${{ secrets.DB_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}
+          ssh -o ServerAliveInterval=30 -o ServerAliveCountMax=2 -f -N -L ${{ secrets.DB_PORT }}:${{ secrets.DB_HOST }}:${{ secrets.DB_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}
 
           # Wait for tunnel to be established
           sleep 5
@@ -89,12 +89,12 @@ jobs:
         working-directory: packages/core
         run: |
           # Test direct connection with psql
-          PGPASSWORD=${{ secrets.DB_PASSWORD }} psql -h localhost -p ${{ secrets.DB_PORT }} -U ${{ secrets.DB_USERNAME }} -d ${{ secrets.DB_NAME }} -c "SELECT 1" || echo "Direct psql connection failed"
+          psql "postgresql://${{ secrets.DB_USERNAME }}:${{ secrets.DB_PASSWORD }}@127.0.0.1:${{ secrets.DB_PORT }}/${{ secrets.DB_NAME }}" || echo "Direct psql connection failed"
 
           # Run migrations with increased logging and explicit SSL settings
           pnpm db:migrate
         env:
-          DATABASE_URL: postgresql://${{ secrets.DB_USERNAME }}:${{ secrets.DB_PASSWORD }}@localhost:${{ secrets.DB_PORT }}/${{ secrets.DB_NAME }}
+          DATABASE_URL: postgresql://${{ secrets.DB_USERNAME }}:${{ secrets.DB_PASSWORD }}@127.0.0.1:${{ secrets.DB_PORT }}/${{ secrets.DB_NAME }}
           NODE_ENV: production
 
       - name: Cleanup SSH tunnel
