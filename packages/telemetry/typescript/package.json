@@ -73,7 +73,7 @@
     "@rollup/plugin-replace": "^6.0.1",
     "@rollup/plugin-typescript": "^11.1.6",
     "@types/node": "^22.7.5",
-    "ai": "^4.0.18",
+    "ai": "^4.0.36",
     "chromadb": "^1.9.4",
     "cohere-ai": "^7.14.0",
     "langchain": "^0.3.6",
