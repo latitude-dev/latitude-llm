@@ -154,7 +154,6 @@ jobs:
             NEXT_PUBLIC_POSTHOG_HOST=${{ matrix.private && secrets.NEXT_PUBLIC_POSTHOG_HOST || '' }}
 
   run-migrations:
-    needs: build-and-push
     uses: ./.github/workflows/run-migrations.yml
     with:
       workflow_call: true
