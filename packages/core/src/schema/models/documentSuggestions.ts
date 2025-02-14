@@ -1,0 +1,45 @@
+import {
+  bigint,
+  bigserial,
+  foreignKey,
+  index,
+  text,
+  uuid,
+} from 'drizzle-orm/pg-core'
+
+import { latitudeSchema } from '../db-schema'
+import { timestamps } from '../schemaHelpers'
+import { documentVersions } from './documentVersions'
+import { evaluations } from './evaluations'
+
+export const documentSuggestions = latitudeSchema.table(
+  'document_suggestions',
+  {
+    id: bigserial('id', { mode: 'number' }).notNull().primaryKey(),
+    commitId: bigint('commit_id', { mode: 'number' }).notNull(),
+    documentUuid: uuid('document_uuid').notNull(),
+    evaluationId: bigint('evaluation_id', { mode: 'number' })
+      .notNull()
+      .references(() => evaluations.id, { onDelete: 'cascade' }),
+    prompt: text('prompt').notNull(),
+    summary: text('summary').notNull(),
+    ...timestamps(),
+  },
+  (table) => ({
+    documentVersionsFk: foreignKey({
+      columns: [table.commitId, table.documentUuid],
+      foreignColumns: [
+        documentVersions.commitId,
+        documentVersions.documentUuid,
+      ],
+      name: 'document_suggestions_document_versions_fk',
+    }).onDelete('cascade'),
+    commitIdIdx: index('document_suggestions_commit_id_idx').on(table.commitId),
+    documentUuidIdx: index('document_suggestions_document_uuid_idx').on(
+      table.documentUuid,
+    ),
+    evaluationIdIdx: index('document_suggestions_evaluation_id_idx').on(
+      table.evaluationId,
+    ),
+  }),
+)

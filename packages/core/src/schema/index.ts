@@ -13,6 +13,7 @@ export * from './models/claimedRewards'
 export * from './models/projects'
 export * from './models/commits'
 export * from './models/documentVersions'
+export * from './models/documentSuggestions'
 
 export * from './models/providerApiKeys'
 
