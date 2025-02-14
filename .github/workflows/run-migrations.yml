@@ -14,6 +14,8 @@ on:
         required: true
       DB_NAME:
         required: true
+      DB_HOST:
+        required: true
       SSH_HOST:
         required: true
       SSH_USER:
