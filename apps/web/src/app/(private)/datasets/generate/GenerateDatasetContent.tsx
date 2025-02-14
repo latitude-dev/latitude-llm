@@ -3,11 +3,6 @@
 import { ChangeEvent, FormEvent, useEffect, useState } from 'react'
 
 import {
-  LegacyChainEventTypes,
-  StreamEventTypes,
-} from '@latitude-data/core/browser'
-import { syncReadCsv } from '@latitude-data/core/lib/readCsv'
-import {
   Alert,
   Badge,
   Button,
@@ -34,6 +29,7 @@ import useDatasets from '$/stores/datasets'
 import Link from 'next/link'
 
 import { CsvPreviewTable } from './CsvPreviewTable'
+import { useServerAction } from 'zsa-react'
 
 export function GenerateDatasetContent({
   defaultParameters,
@@ -69,25 +65,18 @@ export function GenerateDatasetContent({
   }
 
   const {
-    runAction: runPreviewAction,
-    done: previewDone,
-    isLoading: previewIsLoading,
+    execute: runPreviewAction,
+    isPending: previewIsLoading,
     error: previewError,
-  } = useStreamableAction<typeof generateDatasetPreviewAction>(
-    generateDatasetPreviewAction,
-    async (event, data) => {
-      if (
-        event === StreamEventTypes.Latitude &&
-        data.type === LegacyChainEventTypes.Complete
-      ) {
-        const parsedCsv = await syncReadCsv(data.response.object.csv, {
-          delimiter: ',',
-        }).then((r) => r.unwrap())
-        setPreviewCsv(parsedCsv)
-        setExplanation(data.response.object.explanation)
-      }
+  } = useServerAction(generateDatasetPreviewAction, {
+    onError: (error) => {
+      toast({
+        title: 'Failed to generate dataset',
+        description: error.err.message,
+        variant: 'destructive',
+      })
     },
-  )
+  })
 
   const {
     runAction: runGenerateAction,
@@ -101,10 +90,14 @@ export function GenerateDatasetContent({
     const formData = new FormData(e.target as HTMLFormElement)
 
     if (!previewCsv) {
-      await runPreviewAction({
+      const [data] = await runPreviewAction({
         parameters: formData.get('parameters') as string,
         description: formData.get('description') as string,
       })
+      if (!data) return
+
+      setPreviewCsv(data.parsedCsv)
+      setExplanation(data.explanation)
     } else {
       const response = await runGenerateAction({
         parameters: formData.get('parameters') as string,
@@ -133,6 +126,7 @@ export function GenerateDatasetContent({
       }
     }
   }
+  const previewDone = previewCsv && explanation
 
   const handleRegeneratePreview = async () => {
     const form = window.document.getElementById(
@@ -163,7 +157,7 @@ export function GenerateDatasetContent({
       title='Generate new dataset'
       description='Generate a dataset of parameters using AI. Datasets can be used to run batch evaluations over prompts.'
       footer={
-        <div className='flex flex-col w-full'>
+        <div className='flex flex-col gap-y-4 w-full'>
           <div
             className={cn('w-full flex flex-row flex-grow gap-4', {
               'justify-between': !!backUrl,
@@ -266,21 +260,23 @@ export function GenerateDatasetContent({
                 maxRows={5}
               />
             </FormField>
-            <FormField
-              label='Row count'
-              info='AI agent might decide to generate more or less rows than requested'
-            >
-              <div className='max-w-[200px]'>
-                <Input
-                  defaultValue={100}
-                  max={200}
-                  min={0}
-                  name='rows'
-                  placeholder='Number of rows to generate'
-                  type='number'
-                />
-              </div>
-            </FormField>
+            {previewCsv ? (
+              <FormField
+                label='Row count'
+                info='AI agent might decide to generate more or less rows than requested'
+              >
+                <div className='max-w-[200px]'>
+                  <Input
+                    defaultValue={100}
+                    max={200}
+                    min={0}
+                    name='rows'
+                    placeholder='Number of rows to generate'
+                    type='number'
+                  />
+                </div>
+              </FormField>
+            ) : null}
           </FormWrapper>
         </form>
         {(previewError || generateError || unexpectedError) && (
