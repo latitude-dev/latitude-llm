@@ -57,12 +57,10 @@ jobs:
           echo "has_changes=$CHANGES" >> $GITHUB_OUTPUT
 
       - name: Install dependencies
-        if: steps.check_changes.outputs.has_changes != '0'
         working-directory: packages/core
         run: pnpm install
 
       - name: Run database migrations
-        if: steps.check_changes.outputs.has_changes != '0'
         working-directory: packages/core
         run: pnpm db:migrate
         env:
