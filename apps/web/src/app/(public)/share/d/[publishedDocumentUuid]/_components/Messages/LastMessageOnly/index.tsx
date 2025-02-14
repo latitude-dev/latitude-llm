@@ -1,14 +1,16 @@
 import { LastMessage } from '../../SharedDocument/usePrompt'
-import { ContentType } from '@latitude-data/compiler'
+import {
+  ContentType,
+  Message as ConversationMessage,
+} from '@latitude-data/compiler'
 import { ExpandMessages } from '../ExpandMessages'
 import {
   ErrorMessage,
   MessageItem,
   ReactStateDispatch,
   LoadingText,
-  roleToString,
-  roleVariant,
   MessageItemContent,
+  Message,
 } from '@latitude-data/web-ui'
 import { useEffect, useState } from 'react'
 
@@ -52,6 +54,46 @@ export function useFakeStream({
   return { fakeIsStreaming, fakeResponseStream }
 }
 
+function ChainResponseMessage<L extends boolean>({
+  isLoading,
+  message,
+  responseStream,
+  error,
+}: {
+  isLoading: L
+  message: L extends true ? ConversationMessage : undefined
+  responseStream: string | undefined
+  error: Error | undefined
+}) {
+  if (error) {
+    return <ErrorMessage error={error} />
+  }
+
+  if (isLoading) {
+    return (
+      <MessageItem badgeLabel='Assistant' badgeVariant='yellow'>
+        {({ collapsedMessage }) =>
+          !responseStream ? (
+            <LoadingText alignX='left' />
+          ) : (
+            <MessageItemContent
+              content={[
+                {
+                  type: ContentType.text,
+                  text: responseStream ?? '',
+                },
+              ]}
+              collapsedMessage={collapsedMessage}
+            />
+          )
+        }
+      </MessageItem>
+    )
+  }
+
+  return <Message role={message!.role} content={message!.content} />
+}
+
 export function LastMessageOnly({
   lastMessage,
   error,
@@ -75,36 +117,12 @@ export function LastMessageOnly({
         isExpanded={false}
         onToggleShowPromptMessages={setPromptVisibility}
       />
-      {error ? (
-        <ErrorMessage error={error} />
-      ) : (
-        <MessageItem
-          badgeLabel={
-            isStreaming || !message ? 'Assistant' : roleToString(message.role)
-          }
-          badgeVariant={
-            isStreaming || !message ? 'yellow' : roleVariant(message.role)
-          }
-        >
-          {({ collapsedMessage }) => (
-            <>
-              {!responseStream ? (
-                <LoadingText alignX='left' />
-              ) : (
-                <MessageItemContent
-                  content={[
-                    {
-                      type: ContentType.text,
-                      text: responseStream ?? '',
-                    },
-                  ]}
-                  collapsedMessage={collapsedMessage}
-                />
-              )}
-            </>
-          )}
-        </MessageItem>
-      )}
+      <ChainResponseMessage
+        isLoading={isStreaming || !message}
+        message={message}
+        responseStream={responseStream}
+        error={error}
+      />
     </>
   )
 }
