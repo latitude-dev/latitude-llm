@@ -33,9 +33,11 @@ export function ContentCard({
         >
           <div className='flex items-center gap-1.5'>
             {icon && <Icon name={icon} color={fgColor} />}
-            <Text.H6 noWrap color={fgColor}>
-              {label}
-            </Text.H6>
+            <TruncatedTooltip content={label}>
+              <Text.H6 noWrap color={fgColor}>
+                {label}
+              </Text.H6>
+            </TruncatedTooltip>
           </div>
           {info && (
             <TruncatedTooltip content={info}>

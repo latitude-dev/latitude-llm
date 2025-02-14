@@ -5,11 +5,13 @@ import { LatitudeError, PromisedResult } from '../../lib'
 export enum LatitudeTool {
   RunCode = 'code',
   WebSearch = 'search',
+  WebExtract = 'extract',
 }
 
 export enum LatitudeToolInternalName {
   RunCode = 'lat_run_code',
   WebSearch = 'lat_web_search',
+  WebExtract = 'lat_web_extract',
 }
 
 export type ToolDefinition = {
