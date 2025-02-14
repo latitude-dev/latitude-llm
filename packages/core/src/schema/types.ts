@@ -6,6 +6,7 @@ import { claimedRewards } from './models/claimedRewards'
 import { commits } from './models/commits'
 import { connectedEvaluations } from './models/connectedEvaluations'
 import { datasets } from './models/datasets'
+import { documentSuggestions } from './models/documentSuggestions'
 import { documentVersions } from './models/documentVersions'
 import { evaluationAdvancedTemplates } from './models/evaluationAdvancedTemplates'
 import { evaluationConfigurationBoolean } from './models/evaluationConfigurationBoolean'
@@ -48,6 +49,7 @@ export type ProviderApiKey = InferSelectModel<typeof providerApiKeys>
 export type ApiKey = InferSelectModel<typeof apiKeys>
 export type Commit = InferSelectModel<typeof commits>
 export type DocumentVersion = InferSelectModel<typeof documentVersions>
+export type DocumentSuggestion = InferSelectModel<typeof documentSuggestions>
 export type Project = InferSelectModel<typeof projects>
 export type ProviderLog = InferSelectModel<typeof providerLogs>
 export type RunError = InferSelectModel<typeof runErrors>
