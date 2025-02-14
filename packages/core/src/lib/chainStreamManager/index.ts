@@ -6,16 +6,18 @@ import {
   OmittedLatitudeEventData,
 } from '@latitude-data/constants'
 import { ExecuteStepArgs, streamAIResponse } from './step/streamAIResponse'
-import { BuiltInToolCall, ChainStepResponse, StreamType } from '../../constants'
+import {
+  ChainStepResponse,
+  LatitudeToolCall,
+  StreamType,
+} from '../../constants'
 import { buildMessagesFromResponse } from '../../helpers'
 import { FinishReason, LanguageModelUsage } from 'ai'
 import { ChainError } from './ChainErrors'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
 import { Result } from '../Result'
-import {
-  buildToolMessage,
-  executeBuiltInToolCall,
-} from '../../services/builtInTools'
+import { executeLatitudeToolCall } from '../../services/latitudeTools'
+import { buildToolMessage } from '../../services/latitudeTools/helpers'
 
 const usePromise = <T>(): readonly [Promise<T>, (value: T) => void] => {
   let resolveValue: (value: T) => void
@@ -166,7 +168,7 @@ export class ChainStreamManager {
    * Sends both ToolsStarted and ToolCompleted events.
    */
   async executeLatitudeTools(
-    toolCalls: BuiltInToolCall[],
+    toolCalls: LatitudeToolCall[],
   ): Promise<ToolMessage[]> {
     if (!toolCalls.length) return []
     if (!this.inStep) this.startStep()
@@ -180,7 +182,7 @@ export class ChainStreamManager {
       toolCalls.map(async (toolCall) => {
         let toolMessage: ToolMessage
         try {
-          const result = await executeBuiltInToolCall(toolCall)
+          const result = await executeLatitudeToolCall(toolCall)
           toolMessage = buildToolMessage({
             toolName: toolCall.name,
             toolId: toolCall.id,
