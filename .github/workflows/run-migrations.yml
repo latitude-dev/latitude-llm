@@ -39,24 +39,23 @@ jobs:
         with:
           node-version: '20'
 
-      # TODO: Uncomment
-      # - name: Install pnpm
-      #   uses: pnpm/action-setup@v2
-      #   with:
-      #     version: 8
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 8
 
-      # - name: Get pnpm store directory
-      #   shell: bash
-      #   run: |
-      #     echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+      - name: Get pnpm store directory
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
 
-      # - name: Setup pnpm cache
-      #   uses: actions/cache@v3
-      #   with:
-      #     path: ${{ env.STORE_PATH }}
-      #     key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
-      #     restore-keys: |
-      #       ${{ runner.os }}-pnpm-store-
+      - name: Setup pnpm cache
+        uses: actions/cache@v3
+        with:
+          path: ${{ env.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
 
       - name: Check for migration changes
         id: check_changes
@@ -64,10 +63,9 @@ jobs:
           CHANGES=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep -c "packages/core/drizzle/" || true)
           echo "has_changes=$CHANGES" >> $GITHUB_OUTPUT
 
-      # TODO: Uncomment
-      # - name: Install dependencies
-      #   working-directory: packages/core
-      #   run: pnpm install
+      - name: Install dependencies
+        working-directory: packages/core
+        run: pnpm install
 
       - name: Run database migrations
         working-directory: packages/core
