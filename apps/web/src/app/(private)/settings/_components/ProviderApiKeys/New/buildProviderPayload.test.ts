@@ -38,36 +38,31 @@ describe('buildProviderPayload', () => {
     // Append configuration keys using bracket notation.
     formData.append(
       buildConfigFieldName({
-        provider: Providers.GoogleVertex,
         fieldNamespace: 'project',
       }),
       'project',
     )
     formData.append(
       buildConfigFieldName({
-        provider: Providers.GoogleVertex,
         fieldNamespace: 'location',
       }),
       'us-central-1',
     )
     formData.append(
       buildConfigFieldName({
-        provider: Providers.GoogleVertex,
-        fieldNamespace: 'googleCredentials[clientEmail]',
+        fieldNamespace: '[googleCredentials][clientEmail]',
       }),
       'someEmail',
     )
     formData.append(
       buildConfigFieldName({
-        provider: Providers.GoogleVertex,
-        fieldNamespace: 'googleCredentials[privateKeyId]',
+        fieldNamespace: '[googleCredentials][privateKeyId]',
       }),
       'priv key ID',
     )
     formData.append(
       buildConfigFieldName({
-        provider: Providers.GoogleVertex,
-        fieldNamespace: 'googleCredentials[privateKey]',
+        fieldNamespace: '[googleCredentials][privateKey]',
       }),
       'Super secret',
     )

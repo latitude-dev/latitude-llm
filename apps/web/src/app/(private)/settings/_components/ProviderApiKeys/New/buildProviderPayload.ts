@@ -6,35 +6,14 @@ import {
 import { Providers } from '@latitude-data/constants'
 
 const CONFIG_PARAM_REGX = /\[([^\]]+)\]/g
-const PROVIDER_VALUES = Object.values(Providers)
 
-const EMPTY_TOKENS = { provider: undefined, tokens: [] as string[] }
-function extractTokens(key: string) {
-  if (!key.startsWith('[configuration]')) return EMPTY_TOKENS
+function extractTokens({ key, namespace }: { key: string; namespace: string }) {
+  if (!key.startsWith(namespace)) return []
 
-  let match: RegExpExecArray | null
-  const tokens: string[] = []
-  while ((match = CONFIG_PARAM_REGX.exec(key)) !== null) {
-    if (match[1]) {
-      tokens.push(match[1])
-    }
-  }
+  const tokens = [...key.matchAll(CONFIG_PARAM_REGX)].map((match) => match[1])
 
-  console.log({ tokens })
-
-  // Check for any trailing part (non-bracketed) after the last match.
-  if (CONFIG_PARAM_REGX.lastIndex < key.length) {
-    const remaining = key.substring(CONFIG_PARAM_REGX.lastIndex)
-    if (remaining) tokens.push(remaining)
-  }
-
-  // Remove the first token ('configuration')
-  const [_configuration, provider, ...rest] = tokens
-
-  if (!provider) return EMPTY_TOKENS
-  if (!PROVIDER_VALUES.includes(provider as Providers)) return EMPTY_TOKENS
-
-  return { provider: provider as Providers, tokens: rest }
+  const [_configuration, ...rest] = tokens
+  return rest.filter(t => t !== undefined)
 }
 
 type ValueOf<T> = T extends IterableIterator<[any, infer V]> ? V : never
@@ -42,31 +21,71 @@ type ValueOf<T> = T extends IterableIterator<[any, infer V]> ? V : never
 function buildConfigAttribute({
   key,
   value,
-  usedProvider,
   acc,
+  namespace,
 }: {
   key: string
   value: ValueOf<ReturnType<FormData['entries']>>
-  usedProvider: Providers
   acc: ProviderInputSchema
+  namespace: string
 }) {
-  if (usedProvider !== Providers.GoogleVertex) return acc
-
-  console.log({ key, value, acc })
   const configuration = acc.configuration ?? {}
-  const { provider, tokens } = extractTokens(key)
+  const tokens = extractTokens({ key, namespace })
 
-  if (!provider || !tokens.length) return acc
+  if (!tokens.length) return acc
 
-  console.log({ provider, tokens, key, value })
+  const firstToken = tokens[0]
+  if (!firstToken) return acc
+
+  console.log('TOKENS', tokens)
+  if (tokens.length === 1) {
+    // @ts-ignore
+    configuration[firstToken] = value
+    return acc
+  }
+
+  const config = tokens.reduce((config, path) => {
+    const [key, subKey] = path
+    if (!key) return config
+
+    if (subKey) {
+      return {
+        ...config,
+        [key]: {
+          ...(config[key] || {}),
+          [subKey]: subKey,
+        },
+      }
+    }
+    return { ...config, [key]: key }
+  }, {})
+  // @ts-ignore
+  /* const existingValue = configuration[firstToken] ?? {} */
+  /**/
+  /* const newConfiguration = tokens.slice(1).reduce((acc, token, index) => { */
+  /*   if (index === tokens.length - 2) { */
+  /*     acc[token] = value */
+  /*   } else { */
+  /*     acc[token] = {} */
+  /*   } */
+  /**/
+  /*   return acc */
+  /* }, existingValue) */
+  /**/
+  /* // @ts-ignore */
+  /* acc.configuration[firstToken] = newConfiguration */
+  return acc
 }
+
+const DEFAULT_NAMESPACE = '[configuration]'
 
 export function buildProviderPayload({
   formData,
-  provider,
+  namespace = DEFAULT_NAMESPACE,
 }: {
   formData: FormData
   provider: Providers
+  namespace?: string
 }): ProviderInputSchema {
   return Array.from(formData.entries()).reduce((acc, [key, value]) => {
     if (key === 'provider') {
@@ -77,16 +96,19 @@ export function buildProviderPayload({
       acc[key as CommonProviderInputKey] = value.toString()
     }
 
-    return buildConfigAttribute({ key, value, usedProvider: provider, acc })
+    return buildConfigAttribute({ namespace, key, value, acc })
   }, {} as ProviderInputSchema)
 }
 
 export function buildConfigFieldName({
-  provider,
   fieldNamespace,
+  namespace = DEFAULT_NAMESPACE,
 }: {
-  provider: Providers
   fieldNamespace: string
+  namespace?: string
 }) {
-  return `[configuration][${provider}][${fieldNamespace}]`
+  const field = fieldNamespace.startsWith('[')
+    ? fieldNamespace
+    : `[${fieldNamespace}]`
+  return `${namespace}${field}`
 }
