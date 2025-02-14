@@ -38,7 +38,19 @@ jobs:
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
-          ssh -f -N -L ${{ secrets.DB_PORT }}:localhost:${{ secrets.DB_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}
+
+          # Start SSH tunnel with keep-alive settings
+          ssh -o ServerAliveInterval=30 -o ServerAliveCountMax=2 -f -N -L ${{ secrets.DB_PORT }}:localhost:${{ secrets.DB_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}
+
+          # Wait for tunnel to be established
+          sleep 5
+
+          # Test connection
+          nc -zv localhost ${{ secrets.DB_PORT }}
+          if [ $? -ne 0 ]; then
+            echo "Failed to establish tunnel connection"
+            exit 1
+          fi
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -75,7 +87,16 @@ jobs:
 
       - name: Run database migrations
         working-directory: packages/core
-        run: pnpm db:migrate
+        run: |
+          # Verify tunnel is still active
+          if ! nc -z localhost ${{ secrets.DB_PORT }}; then
+            echo "Database connection lost. Attempting to reconnect..."
+            ssh -o ServerAliveInterval=30 -o ServerAliveCountMax=2 -f -N -L ${{ secrets.DB_PORT }}:localhost:${{ secrets.DB_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}
+            sleep 5
+          fi
+
+          # Run migrations with increased logging
+          DEBUG=* pnpm db:migrate
         env:
           DATABASE_URL: postgresql://${{ secrets.DB_USERNAME }}:${{ secrets.DB_PASSWORD }}@localhost:${{ secrets.DB_PORT }}/${{ secrets.DB_NAME }}?sslmode=verify-full&sslrootcert=${{ github.workspace }}/packages/core/src/assets/eu-central-1-bundle.pem
 
@@ -84,3 +105,4 @@ jobs:
         run: |
           pkill -f "ssh -f -N -L ${{ secrets.DB_PORT }}"
           rm -f ~/.ssh/id_ed25519
+          rm -f ~/.ssh/known_hosts
