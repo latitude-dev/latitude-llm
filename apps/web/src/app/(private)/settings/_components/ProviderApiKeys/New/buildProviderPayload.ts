@@ -13,7 +13,7 @@ function extractTokens({ key, namespace }: { key: string; namespace: string }) {
   const tokens = [...key.matchAll(CONFIG_PARAM_REGX)].map((match) => match[1])
 
   const [_configuration, ...rest] = tokens
-  return rest.filter(t => t !== undefined)
+  return rest.filter((t) => t !== undefined)
 }
 
 type ValueOf<T> = T extends IterableIterator<[any, infer V]> ? V : never
@@ -37,44 +37,30 @@ function buildConfigAttribute({
   const firstToken = tokens[0]
   if (!firstToken) return acc
 
-  console.log('TOKENS', tokens)
-  if (tokens.length === 1) {
-    // @ts-ignore
-    configuration[firstToken] = value
-    return acc
-  }
+  const config = tokens.reduce((config, path, index) => {
+    console.log('PATH', path)
+    if (path === undefined) return config
 
-  const config = tokens.reduce((config, path) => {
-    const [key, subKey] = path
-    if (!key) return config
+    if (tokens.length === 1) {
+      const foo = { ...config, configuration: { [path]: value } }
+      console.log('FOO', foo)
 
-    if (subKey) {
-      return {
-        ...config,
-        [key]: {
-          ...(config[key] || {}),
-          [subKey]: subKey,
-        },
-      }
+      return foo
     }
-    return { ...config, [key]: key }
-  }, {})
-  // @ts-ignore
-  /* const existingValue = configuration[firstToken] ?? {} */
-  /**/
-  /* const newConfiguration = tokens.slice(1).reduce((acc, token, index) => { */
-  /*   if (index === tokens.length - 2) { */
-  /*     acc[token] = value */
-  /*   } else { */
-  /*     acc[token] = {} */
-  /*   } */
-  /**/
-  /*   return acc */
-  /* }, existingValue) */
-  /**/
-  /* // @ts-ignore */
-  /* acc.configuration[firstToken] = newConfiguration */
-  return acc
+
+    const prevPath = tokens[tokens.indexOf(path) - 1]
+    if (prevPath === undefined) return config
+
+    if (index === tokens.length - 1) {
+      // @ts-ignore
+      config['configuration'] = { [prevPath]: { [path]: value } }
+      return config
+    }
+
+    return { ...config, [prevPath]: { [path]: {} } }
+  }, configuration)
+
+  return { ...acc, configuration: config }
 }
 
 const DEFAULT_NAMESPACE = '[configuration]'

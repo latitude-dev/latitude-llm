@@ -72,6 +72,8 @@ describe('buildProviderPayload', () => {
       provider: Providers.GoogleVertex,
     })
 
+    console.log("PAYLOAD", JSON.stringify(payload, null, 2))
+
     expect(payload).toEqual({
       name: 'Vertex Provider',
       provider: Providers.GoogleVertex,
@@ -80,7 +82,7 @@ describe('buildProviderPayload', () => {
         project: 'project',
         location: 'us-central-1',
         googleCredentials: {
-          clientEmail: 'client@gmail.com',
+          clientEmail: 'someEmail',
           privateKeyId: 'priv key ID',
           privateKey: 'Super secret',
         },
