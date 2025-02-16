@@ -65,9 +65,11 @@ jobs:
 
       - name: Install dependencies
         working-directory: packages/core
+        if: steps.check_changes.outputs.has_changes > 0
         run: pnpm install
 
       - name: Setup SSH configuration
+        if: steps.check_changes.outputs.has_changes > 0
         working-directory: packages/core
         run: |
           mkdir -p ~/.ssh
@@ -76,6 +78,7 @@ jobs:
           ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
 
       - name: Establish SSH tunnel
+        if: steps.check_changes.outputs.has_changes > 0
         working-directory: packages/core
         run: |
           ssh -i ~/.ssh/key.pem -o ServerAliveInterval=30 -o ServerAliveCountMax=2 -f -N -L ${{ secrets.DB_PORT }}:${{ secrets.DB_HOST }}:${{ secrets.DB_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}
@@ -84,6 +87,7 @@ jobs:
           sleep 5
 
       - name: Test tunnel connection
+        if: steps.check_changes.outputs.has_changes > 0
         working-directory: packages/core
         run: |
           nc -zv 127.0.0.1 ${{ secrets.DB_PORT }}
@@ -93,12 +97,14 @@ jobs:
           fi
 
       - name: Test database connection
+        if: steps.check_changes.outputs.has_changes > 0
         working-directory: packages/core
         run: |
           psql "postgresql://${{ secrets.DB_USERNAME }}:${{ secrets.DB_PASSWORD }}@127.0.0.1:${{ secrets.DB_PORT }}/${{ secrets.DB_NAME }}" -c "\conninfo"
         continue-on-error: true
 
       - name: Run database migrations
+        if: steps.check_changes.outputs.has_changes > 0
         working-directory: packages/core
         run: PGSSLMODE=no-verify pnpm db:migrate
         env:

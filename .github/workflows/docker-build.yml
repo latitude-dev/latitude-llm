@@ -169,6 +169,7 @@ jobs:
 
   deploy-bluegreen:
     needs: run-migrations
+    if: ${{ needs.run-migrations.result == 'success' }}
     uses: ./.github/workflows/deploy-bluegreen.yml
     permissions:
       id-token: write
@@ -181,6 +182,7 @@ jobs:
 
   deploy-rolling:
     needs: run-migrations
+    if: ${{ needs.run-migrations.result == 'success' }}
     uses: ./.github/workflows/deploy-rolling.yml
     permissions:
       id-token: write
