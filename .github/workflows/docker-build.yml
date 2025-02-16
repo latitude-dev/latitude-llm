@@ -154,6 +154,7 @@ jobs:
             NEXT_PUBLIC_POSTHOG_HOST=${{ matrix.private && secrets.NEXT_PUBLIC_POSTHOG_HOST || '' }}
 
   run-migrations:
+    needs: [lint, test]
     uses: ./.github/workflows/run-migrations.yml
     with:
       workflow_call: true
@@ -168,8 +169,7 @@ jobs:
       SSH_USER: ${{ secrets.SSH_USER }}
 
   deploy-bluegreen:
-    needs: run-migrations
-    if: ${{ needs.run-migrations.result == 'success' }}
+    needs: [run-migrations, lint, test, build-and-push]
     uses: ./.github/workflows/deploy-bluegreen.yml
     permissions:
       id-token: write
@@ -181,8 +181,7 @@ jobs:
       AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
 
   deploy-rolling:
-    needs: run-migrations
-    if: ${{ needs.run-migrations.result == 'success' }}
+    needs: [run-migrations, lint, test, build-and-push]
     uses: ./.github/workflows/deploy-rolling.yml
     permissions:
       id-token: write
