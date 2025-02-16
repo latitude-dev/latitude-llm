@@ -74,7 +74,6 @@ jobs:
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/key.pem
           chmod 600 ~/.ssh/key.pem
           ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
-          ssh-keyscan -H ${{ secrets.DB_HOST }} >> ~/.ssh/known_hosts
 
       - name: Establish SSH tunnel
         working-directory: packages/core
