@@ -71,13 +71,13 @@ jobs:
         working-directory: packages/core
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
-          chmod 600 ~/.ssh/id_ed25519
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/key.pem
+          chmod 600 ~/.ssh/key.pem
           ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
           ssh-keyscan -H ${{ secrets.DB_HOST }} >> ~/.ssh/known_hosts
 
-          # Start SSH tunnel with keep-alive settings
-          ssh -o ServerAliveInterval=30 -o ServerAliveCountMax=2 -f -N -L ${{ secrets.DB_PORT }}:${{ secrets.DB_HOST }}:${{ secrets.DB_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}
+          # Start SSH tunnel with keep-alive settings and .pem key
+          ssh -i ~/.ssh/key.pem -o ServerAliveInterval=30 -o ServerAliveCountMax=2 -f -N -L ${{ secrets.DB_PORT }}:${{ secrets.DB_HOST }}:${{ secrets.DB_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}
 
           # Wait for tunnel to be established
           sleep 5
@@ -102,5 +102,5 @@ jobs:
         if: always()
         run: |
           pkill -f "ssh -f -N -L ${{ secrets.DB_PORT }}"
-          rm -f ~/.ssh/id_ed25519
+          rm -f ~/.ssh/key.pem
           rm -f ~/.ssh/known_hosts

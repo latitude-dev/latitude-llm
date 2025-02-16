@@ -153,23 +153,22 @@ jobs:
             NEXT_PUBLIC_POSTHOG_KEY=${{ matrix.private && secrets.NEXT_PUBLIC_POSTHOG_KEY || '' }}
             NEXT_PUBLIC_POSTHOG_HOST=${{ matrix.private && secrets.NEXT_PUBLIC_POSTHOG_HOST || '' }}
 
-  # TODO: Uncomment
-  # run-migrations:
-  #   uses: ./.github/workflows/run-migrations.yml
-  #   with:
-  #     workflow_call: true
-  #   secrets:
-  #     DB_HOST: ${{ secrets.DB_HOST }}
-  #     DB_NAME: ${{ secrets.DB_NAME }}
-  #     DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-  #     DB_PORT: ${{ secrets.DB_PORT }}
-  #     DB_USERNAME: ${{ secrets.DB_USERNAME }}
-  #     SSH_HOST: ${{ secrets.SSH_HOST }}
-  #     SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-  #     SSH_USER: ${{ secrets.SSH_USER }}
+  run-migrations:
+    uses: ./.github/workflows/run-migrations.yml
+    with:
+      workflow_call: true
+    secrets:
+      DB_HOST: ${{ secrets.DB_HOST }}
+      DB_NAME: ${{ secrets.DB_NAME }}
+      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+      DB_PORT: ${{ secrets.DB_PORT }}
+      DB_USERNAME: ${{ secrets.DB_USERNAME }}
+      SSH_HOST: ${{ secrets.SSH_HOST }}
+      SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+      SSH_USER: ${{ secrets.SSH_USER }}
 
   deploy-bluegreen:
-    needs: [build-and-push]
+    needs: run-migrations
     uses: ./.github/workflows/deploy-bluegreen.yml
     permissions:
       id-token: write
@@ -181,7 +180,7 @@ jobs:
       AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
 
   deploy-rolling:
-    needs: [build-and-push]
+    needs: run-migrations
     uses: ./.github/workflows/deploy-rolling.yml
     permissions:
       id-token: write
