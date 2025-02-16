@@ -67,7 +67,7 @@ jobs:
         working-directory: packages/core
         run: pnpm install
 
-      - name: Run database migrations
+      - name: Setup SSH configuration
         working-directory: packages/core
         run: |
           mkdir -p ~/.ssh
@@ -76,24 +76,32 @@ jobs:
           ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
           ssh-keyscan -H ${{ secrets.DB_HOST }} >> ~/.ssh/known_hosts
 
-          # Start SSH tunnel with keep-alive settings and .pem key
+      - name: Establish SSH tunnel
+        working-directory: packages/core
+        run: |
           ssh -i ~/.ssh/key.pem -o ServerAliveInterval=30 -o ServerAliveCountMax=2 -f -N -L ${{ secrets.DB_PORT }}:${{ secrets.DB_HOST }}:${{ secrets.DB_PORT }} ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}
 
           # Wait for tunnel to be established
           sleep 5
 
-          # Test tunnel connection
+      - name: Test tunnel connection
+        working-directory: packages/core
+        run: |
           nc -zv 127.0.0.1 ${{ secrets.DB_PORT }}
           if [ $? -ne 0 ]; then
             echo "Failed to establish tunnel connection"
             exit 1
           fi
 
-          # Test direct connection with psql
-          psql "postgresql://${{ secrets.DB_USERNAME }}:${{ secrets.DB_PASSWORD }}@127.0.0.1:${{ secrets.DB_PORT }}/${{ secrets.DB_NAME }}" || echo "Direct psql connection failed"
+      - name: Test database connection
+        working-directory: packages/core
+        run: |
+          psql "postgresql://${{ secrets.DB_USERNAME }}:${{ secrets.DB_PASSWORD }}@127.0.0.1:${{ secrets.DB_PORT }}/${{ secrets.DB_NAME }}" -c "\conninfo"
+        continue-on-error: true
 
-          # Run migrations with increased logging and explicit SSL settings
-          pnpm db:migrate
+      - name: Run database migrations
+        working-directory: packages/core
+        run: pnpm db:migrate
         env:
           DATABASE_URL: postgresql://${{ secrets.DB_USERNAME }}:${{ secrets.DB_PASSWORD }}@127.0.0.1:${{ secrets.DB_PORT }}/${{ secrets.DB_NAME }}
           NODE_ENV: production
