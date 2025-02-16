@@ -108,6 +108,9 @@ jobs:
       - name: Cleanup SSH tunnel
         if: always()
         run: |
-          pkill -f "ssh -f -N -L ${{ secrets.DB_PORT }}"
+          # Kill SSH tunnel if it exists, don't fail if not found
+          pkill -f "ssh -f -N -L ${{ secrets.DB_PORT }}" || true
+
+          # Clean up SSH files
           rm -f ~/.ssh/key.pem
           rm -f ~/.ssh/known_hosts
