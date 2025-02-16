@@ -95,14 +95,14 @@ jobs:
       - name: Test database connection
         working-directory: packages/core
         run: |
-          psql "postgresql://${{ secrets.DB_USERNAME }}:${{ secrets.DB_PASSWORD }}@127.0.0.1:${{ secrets.DB_PORT }}/${{ secrets.DB_NAME }}" -c "\conninfo"
+          psql "postgresql://${{ secrets.DB_USERNAME }}:${{ secrets.DB_PASSWORD }}@127.0.0.1:${{ secrets.DB_PORT }}/${{ secrets.DB_NAME }}?sslmode=disable" -c "\conninfo"
         continue-on-error: true
 
       - name: Run database migrations
         working-directory: packages/core
         run: pnpm db:migrate
         env:
-          DATABASE_URL: postgresql://${{ secrets.DB_USERNAME }}:${{ secrets.DB_PASSWORD }}@127.0.0.1:${{ secrets.DB_PORT }}/${{ secrets.DB_NAME }}?sslmode=verify-full&sslrootcert=${{ github.workspace }}/packages/core/src/assets/eu-central-1-bundle.pem
+          DATABASE_URL: postgresql://${{ secrets.DB_USERNAME }}:${{ secrets.DB_PASSWORD }}@127.0.0.1:${{ secrets.DB_PORT }}/${{ secrets.DB_NAME }}?sslmode=disable
           NODE_ENV: production
 
       - name: Cleanup SSH tunnel
