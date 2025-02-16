@@ -100,9 +100,9 @@ jobs:
 
       - name: Run database migrations
         working-directory: packages/core
-        run: pnpm db:migrate
+        run: PGSSLMODE=no-verify pnpm db:migrate
         env:
-          DATABASE_URL: postgresql://${{ secrets.DB_USERNAME }}:${{ secrets.DB_PASSWORD }}@127.0.0.1:${{ secrets.DB_PORT }}/${{ secrets.DB_NAME }}?sslmode=allow
+          DATABASE_URL: postgresql://${{ secrets.DB_USERNAME }}:${{ secrets.DB_PASSWORD }}@127.0.0.1:${{ secrets.DB_PORT }}/${{ secrets.DB_NAME }}
           NODE_ENV: production
 
       - name: Cleanup SSH tunnel
