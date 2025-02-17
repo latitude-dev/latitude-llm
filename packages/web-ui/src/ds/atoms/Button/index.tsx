@@ -214,7 +214,10 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
           >
             {indicator ? <DotIndicator {...indicator} /> : null}
             {iconProps && iconPlacement === 'left' ? (
-              <Icon {...iconProps} className={cn("flex-shrink-0", iconProps.className)} />
+              <Icon
+                {...iconProps}
+                className={cn('flex-shrink-0', iconProps.className)}
+              />
             ) : null}
             {children ? (
               <div
@@ -227,7 +230,10 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
               </div>
             ) : null}
             {iconProps && iconPlacement === 'right' ? (
-              <Icon {...iconProps} className={cn("flex-shrink-0", iconProps.className)} />
+              <Icon
+                {...iconProps}
+                className={cn('flex-shrink-0', iconProps.className)}
+              />
             ) : null}
           </div>
         </div>
