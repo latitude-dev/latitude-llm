@@ -35,7 +35,7 @@ type AIReturnObject = {
   type: 'object'
   data: Pick<
     StreamObjectResult<unknown, unknown, never>,
-    'fullStream' | 'object' | 'usage'
+    'fullStream' | 'object' | 'usage' | 'providerMetadata'
   > & {
     providerName: Providers
   }
@@ -51,7 +51,7 @@ type AIReturnText = {
   type: 'text'
   data: Pick<
     StreamTextResult<Record<string, CoreTool<any, any>>, PARTIAL_OUTPUT>,
-    'fullStream' | 'text' | 'usage' | 'toolCalls'
+    'fullStream' | 'text' | 'usage' | 'toolCalls' | 'providerMetadata'
   > & {
     providerName: Providers
   }
@@ -182,6 +182,7 @@ export async function ai({
           object: result.object,
           usage: result.usage,
           providerName: provider,
+          providerMetadata: result.providerMetadata,
         },
       })
     }
@@ -199,6 +200,7 @@ export async function ai({
         usage: result.usage,
         toolCalls: result.toolCalls,
         providerName: provider,
+        providerMetadata: result.providerMetadata,
       },
     })
   } catch (e) {

@@ -54,6 +54,7 @@ function buildFakeChain({
       usage: new Promise<LanguageModelUsage>(() => DEFAULT_USAGE),
       fullStream,
       providerName: Providers.OpenAI,
+      providerMetadata: new Promise<undefined>(() => undefined),
     },
   }
   return new Promise<void>((resolve) => {
