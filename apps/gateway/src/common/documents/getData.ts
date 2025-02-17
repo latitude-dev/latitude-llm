@@ -15,6 +15,7 @@ import {
   CommitsRepository,
   DocumentVersionsRepository,
   ProjectsRepository,
+  ProviderApiKeysRepository,
 } from '@latitude-data/core/repositories'
 import { Config } from '@latitude-data/core/services/ai/helpers'
 import {
@@ -23,23 +24,23 @@ import {
   LegacyChainEventTypes,
   LegacyEventData,
   LegacyLatitudeEventData,
+  Providers,
   StreamEventTypes,
 } from '@latitude-data/constants'
+import { getDocumentMetadata } from '@latitude-data/core/services/documents/scan'
+import { documentPresenterWithProviderAndMetadata } from '$/presenters/documentPresenter'
 
-export const getData = async ({
+async function getProjectByVersionData({
   workspace,
   projectId,
   commitUuid,
-  documentPath,
 }: {
   workspace: Workspace
   projectId: number
   commitUuid: string
-  documentPath: string
-}) => {
+}) {
   const projectsScope = new ProjectsRepository(workspace.id)
   const commitsScope = new CommitsRepository(workspace.id)
-  const docsScope = new DocumentVersionsRepository(workspace.id)
 
   const pid = Number(projectId)
   if (isNaN(pid)) {
@@ -56,7 +57,95 @@ export const getData = async ({
   })
   if (commitResult.error) return commitResult
   const commit = commitResult.value
+  return Result.ok({ project, commit })
+}
 
+export async function getAllDocumentsAtCommitWithMetadata({
+  workspace,
+  projectId,
+  commitUuid,
+}: {
+  workspace: Workspace
+  projectId: number
+  commitUuid: string
+}) {
+  const projectResult = await getProjectByVersionData({
+    workspace,
+    projectId,
+    commitUuid,
+  })
+
+  if (projectResult.error) return projectResult
+
+  const { commit } = projectResult.value
+  const docsScope = new DocumentVersionsRepository(workspace.id)
+
+  const docsResult = await docsScope.getDocumentsAtCommit(commit)
+  if (docsResult.error) return docsResult
+
+  const docs = docsResult.value
+  const docsWithMetadata = await Promise.all(
+    docs.map(async (document) => {
+      const metadata = await getDocumentMetadata({
+        document,
+        getDocumentByPath: (path) => docs.find((d) => d.path === path),
+      })
+      return {
+        document,
+        metadata,
+      }
+    }),
+  )
+
+  const providerNames = docsWithMetadata
+    .map((d) => d.metadata?.config?.provider as string)
+    .filter((providerName) => !!providerName)
+  const providersScope = new ProviderApiKeysRepository(workspace.id)
+  const allUsedProviders = await providersScope.findAllByNames(providerNames)
+  const llmProviders = allUsedProviders.reduce(
+    (acc, provider) => {
+      acc[provider.name] = provider.provider
+      return acc
+    },
+    {} as Record<string, Providers>,
+  )
+
+  return Result.ok(
+    docs.map((document) => {
+      const doc = docsWithMetadata.find(
+        (d) => d.document.documentUuid === document.documentUuid,
+      )
+      const provider = doc?.metadata?.config?.provider
+      return documentPresenterWithProviderAndMetadata({
+        document,
+        metadata: doc?.metadata,
+        provider: llmProviders[provider as string],
+      })
+    }),
+  )
+}
+
+export const getData = async ({
+  workspace,
+  projectId,
+  commitUuid,
+  documentPath,
+}: {
+  workspace: Workspace
+  projectId: number
+  commitUuid: string
+  documentPath: string
+}) => {
+  const projectResult = await getProjectByVersionData({
+    workspace,
+    projectId,
+    commitUuid,
+  })
+
+  if (projectResult.error) return projectResult
+
+  const { project, commit } = projectResult.value
+  const docsScope = new DocumentVersionsRepository(workspace.id)
   const documentResult = await docsScope.getDocumentByPath({
     commit,
     path: documentPath,

@@ -59,6 +59,7 @@ export const ROUTES = {
   },
   v3: {
     documents: {
+      getAll: V3_DOCUMENTS,
       get: `${V3_DOCUMENTS}/:documentPath{.+}`,
       getOrCreate: `${V3_DOCUMENTS}/get-or-create`,
       run: `${V3_DOCUMENTS}/run`,

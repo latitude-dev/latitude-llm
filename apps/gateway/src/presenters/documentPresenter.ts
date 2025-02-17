@@ -7,14 +7,58 @@ import {
 import { ProviderApiKeysRepository } from '@latitude-data/core/repositories'
 import { scanDocumentContent } from '@latitude-data/core/services/documents/scan'
 import { z } from '@hono/zod-openapi'
+import { ConversationMetadata as CompilerConversationMetadata } from '@latitude-data/compiler'
+import { ConversationMetadata as PromptlConversationMetadata } from 'promptl-ai'
+import { PROMPT_PARAMETER_ENUM } from '@latitude-data/constants'
 
+type ConversationMetadata =
+  | CompilerConversationMetadata
+  | PromptlConversationMetadata
 export const documentPresenterSchema = z.object({
   uuid: z.string(),
   path: z.string(),
   content: z.string(),
   config: z.object({}).passthrough(),
+  parameters: z.record(z.object({ type: PROMPT_PARAMETER_ENUM })),
   provider: z.nativeEnum(Providers).optional(),
 })
+type Parameters = z.infer<typeof documentPresenterSchema>['parameters']
+
+export function documentPresenterWithProviderAndMetadata({
+  document,
+  metadata,
+  provider,
+}: {
+  document: DocumentVersion
+  metadata: ConversationMetadata | undefined
+  provider: Providers | undefined
+}) {
+  const configParams = (metadata?.config['parameters'] ?? {}) as Parameters
+  const rawParams = metadata?.parameters
+    ? Array.from(metadata.parameters.values())
+    : []
+  const parameters =
+    rawParams.length > 0
+      ? rawParams.reduce(
+          (acc, rawParam) => {
+            if (acc[rawParam]) return acc
+            acc[rawParam] = { type: 'text' }
+
+            return acc
+          },
+          { ...configParams },
+        )
+      : configParams
+
+  return {
+    uuid: document.documentUuid,
+    path: document.path,
+    content: document.content,
+    config: metadata?.config,
+    parameters,
+    provider,
+  }
+}
 
 export async function documentPresenter({
   document,
@@ -48,11 +92,9 @@ export async function documentPresenter({
     document.resolvedContent = metadata.resolvedPrompt
   }
 
-  return {
-    uuid: document.documentUuid,
-    path: document.path,
-    content: document.content,
-    config: metadata?.config,
+  return documentPresenterWithProviderAndMetadata({
+    document,
+    metadata,
     provider,
-  }
+  })
 }

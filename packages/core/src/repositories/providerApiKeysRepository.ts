@@ -1,4 +1,4 @@
-import { and, eq, getTableColumns, isNull } from 'drizzle-orm'
+import { and, eq, getTableColumns, inArray, isNull } from 'drizzle-orm'
 
 import { ProviderApiKey } from '../browser'
 import { NotFoundError, Result } from '../lib'
@@ -35,5 +35,12 @@ export class ProviderApiKeysRepository extends RepositoryLegacy<
     }
 
     return Result.ok(result[0]!)
+  }
+
+  async findAllByNames(names: string[]) {
+    return await this.db
+      .select()
+      .from(this.scope)
+      .where(inArray(this.scope.name, names))
   }
 }

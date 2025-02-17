@@ -39,7 +39,7 @@ export default function configureOpenAPI(app: OpenAPIHono) {
 
   app.doc31('/doc', openAPIObjectConfig)
   app.get(
-    '/ui',
+    '/api-docs',
     swaggerUI({
       url: '/doc',
       docExpansion: 'list',

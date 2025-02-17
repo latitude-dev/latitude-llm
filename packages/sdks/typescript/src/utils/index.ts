@@ -1,6 +1,7 @@
 import {
   ChatUrlParams,
   EvaluationResultUrlParams,
+  GetAllDocumentsParams,
   GetDocumentUrlParams,
   GetOrCreateDocumentUrlParams,
   HandlerType,
@@ -43,6 +44,10 @@ export class RouteResolver {
         const getParams = params as GetDocumentUrlParams
         return this.documents(getParams).document(getParams.path)
       }
+      case HandlerType.GetAllDocuments: {
+        const getParams = params as GetAllDocumentsParams
+        return this.documents(getParams).root
+      }
       case HandlerType.GetOrCreateDocument: {
         return this.documents(params as GetOrCreateDocumentUrlParams)
           .getOrCreate
@@ -82,6 +87,7 @@ export class RouteResolver {
   private documents(params: { projectId: number; versionUuid?: string }) {
     const base = `${this.commitsUrl(params)}/documents`
     return {
+      root: base,
       document: (path: string) => `${base}/${path}`,
       getOrCreate: `${base}/get-or-create`,
       run: `${base}/run`,

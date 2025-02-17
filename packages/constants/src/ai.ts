@@ -52,12 +52,16 @@ type GoogleConfig = z.infer<typeof googleConfig>
 
 export type PartialConfig = Omit<Config, 'provider'>
 
+export const PROMPT_PARAMETER_ENUM = z.enum(['text', 'file', 'image'])
+export type ParameterType = z.infer<typeof PROMPT_PARAMETER_ENUM>
+
 export type Config = {
   provider: string
   model: string
   url?: string
   cacheControl?: boolean
   schema?: JSONSchema7
+  parameters?: Record<string, { type: ParameterType }>
   azure?: AzureConfig
   google?: GoogleConfig
   tools?: Record<
