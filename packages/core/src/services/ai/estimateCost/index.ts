@@ -6,17 +6,15 @@ import { OPENAI_MODELS } from './openai'
 import { ANTHROPIC_MODELS } from './anthropic'
 import { MISTRAL_MODELS } from './mistral'
 import { GOOGLE_MODELS } from './google'
+import { VERTEX_GOOGLE_MODELS } from './vertexGoogle'
+import { VERTEX_ANTHROPIC_MODELS } from './vertexAnthropic'
+import { NON_IMPLEMENTED_COST } from './helpers'
 
 export type ModelCost = {
   input: number
   output: number
   tokensRangeStart?: number
 }
-const NON_IMPLEMENTED_COST = {
-  cost: { input: 0, output: 0 },
-  costImplemented: false,
-}
-
 type ModelCostPer1M = {
   cost: ModelCost | ModelCost[]
   costImplemented: boolean
@@ -40,6 +38,10 @@ export function getCostPer1M({
       return MISTRAL_MODELS.getCost(model)
     case Providers.Google:
       return GOOGLE_MODELS.getCost(model)
+    case Providers.GoogleVertex:
+      return VERTEX_GOOGLE_MODELS.getCost(model)
+    case Providers.AnthropicVertex:
+      return VERTEX_ANTHROPIC_MODELS.getCost(model)
     case Providers.Azure:
       return NON_IMPLEMENTED_COST
     case Providers.Custom:

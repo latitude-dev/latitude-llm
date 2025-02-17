@@ -6,6 +6,7 @@ import {
   destroyProviderApiKey,
 } from '../../services/providerApiKeys'
 import { updateWorkspace } from '../../services/workspaces'
+import { ProviderConfiguration } from '../../schema'
 
 export function defaultProviderFakeData() {
   return { type: Providers.OpenAI, name: faker.internet.domainName() }
@@ -20,6 +21,7 @@ export type ICreateProvider = {
   token?: string
   url?: string
   defaultModel?: string
+  configuration?: ProviderConfiguration<Providers>
 }
 export async function createProviderApiKey({
   workspace,
@@ -30,6 +32,7 @@ export async function createProviderApiKey({
   token = `sk-${faker.string.alphanumeric(48)}`,
   defaultModel,
   url,
+  configuration,
 }: ICreateProvider) {
   let providerApiKey = await createFn({
     workspace,
@@ -39,6 +42,7 @@ export async function createProviderApiKey({
     author: user,
     defaultModel,
     url,
+    configuration,
   }).then((r) => r.unwrap())
 
   if (deletedAt) {

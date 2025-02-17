@@ -136,7 +136,7 @@ export async function ai({
     const tools = config.tools
     const llmProvider = createProvider({
       messages,
-      provider,
+      provider: apiProvider,
       apiKey,
       url: url ?? undefined,
       config,
@@ -146,7 +146,11 @@ export async function ai({
 
     const languageModel = customLanguageModel
       ? customLanguageModel
-      : llmProvider.value(model, { cacheControl: config.cacheControl })
+      : llmProvider.value(model, {
+          cacheControl: config.cacheControl ?? false,
+          // Propagate provider config options for this language model
+          ...config,
+        })
     const toolsResult = buildTools(tools)
     if (toolsResult.error) return toolsResult
 
@@ -204,3 +208,7 @@ export async function ai({
 
 export { estimateCost, getCostPer1M } from './estimateCost'
 export type { Config, PartialConfig } from './helpers'
+export {
+  vertexConfigurationSchema,
+  type VertexConfiguration,
+} from './providers/helpers/vertex'

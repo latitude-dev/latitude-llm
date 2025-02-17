@@ -11,15 +11,21 @@ import {
   Modal,
   Select,
 } from '@latitude-data/web-ui'
-import { formDataToAction } from '$/helpers/forms'
 import useModelOptions from '$/hooks/useModelOptions'
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
 import useProviderApiKeys from '$/stores/providerApiKeys'
+import { ProviderConfigurationForm } from '$/app/(private)/settings/_components/ProviderApiKeys/New/_components/Configuration'
+import { buildProviderPayload } from './buildProviderPayload'
+
+const CUSTOM_LABELS: Partial<Record<Providers, string>> = {
+  [Providers.GoogleVertex]: 'Google Vertex (Gemini models)',
+  [Providers.AnthropicVertex]: 'Google Vertex (Anthropic models)',
+}
 
 const PROVIDER_OPTIONS = Object.entries(Providers).map(([key, value]) => ({
   value,
-  label: key,
+  label: CUSTOM_LABELS[value] ?? key,
 }))
 
 export default function NewProviderApiKey() {
@@ -33,20 +39,20 @@ export default function NewProviderApiKey() {
     async (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault()
 
-      const payload = formDataToAction<typeof create>(
-        new FormData(event.currentTarget),
-      )
-
+      const payload = buildProviderPayload({
+        formData: new FormData(event.currentTarget),
+      })
       const [_, error] = await create({
         ...payload,
-        defaultModel: payload.defaultModel || undefined, // Ensure defaultModel is either non-empty or undefined
+        defaultModel: payload.defaultModel || undefined,
       })
+
       if (!error) onOpenChange(false)
     },
     [create],
   )
 
-  const [provider, setProvider] = useState<string | undefined>()
+  const [provider, setProvider] = useState<Providers | undefined>()
 
   const isCustom = provider == Providers.Custom
   const MODEL_OPTIONS = useModelOptions({ provider })
@@ -90,23 +96,7 @@ export default function NewProviderApiKey() {
             onChange={(value) => setProvider(value as Providers)}
             label='Provider'
           />
-          <Input
-            required
-            type='text'
-            name='token'
-            label='API Key'
-            placeholder='sk-0dfdsn23bm4m23n4MfB'
-          />
-          {isCustom && (
-            <Input
-              required
-              type='text'
-              name='url'
-              label='URL'
-              description='URL to your OpenAI compatible API.'
-              placeholder='http://localhost:11434/v1'
-            />
-          )}
+
           {!isCustom && MODEL_OPTIONS.length ? (
             <Select
               name='defaultModel'
@@ -121,6 +111,8 @@ export default function NewProviderApiKey() {
               placeholder='llama3.2-8b'
             />
           )}
+
+          {provider ? <ProviderConfigurationForm provider={provider} /> : null}
         </FormWrapper>
       </form>
     </Modal>

@@ -95,7 +95,7 @@ describe('run chain error handling', () => {
           ),
         ),
       )
-    const run = await runChain({
+    const run = runChain({
       errorableType: ErrorableEntity.DocumentLog,
       workspace,
       chain: mockChain as Chain,
@@ -165,7 +165,7 @@ describe('run chain error handling', () => {
       prompt: 'Test prompt',
       parameters: {},
     })
-    const run = await runChain({
+    const run = runChain({
       errorableType: ErrorableEntity.DocumentLog,
       workspace,
       chain,
@@ -200,7 +200,7 @@ describe('run chain error handling', () => {
       `,
       parameters: {},
     })
-    const run = await runChain({
+    const run = runChain({
       errorableType: ErrorableEntity.DocumentLog,
       workspace,
       chain,
@@ -236,7 +236,7 @@ describe('run chain error handling', () => {
       `,
       parameters: {},
     })
-    const run = await runChain({
+    const run = runChain({
       errorableType: ErrorableEntity.DocumentLog,
       workspace,
       chain,
@@ -272,7 +272,7 @@ describe('run chain error handling', () => {
       `,
       parameters: {},
     })
-    const run = await runChain({
+    const run = runChain({
       errorableType: ErrorableEntity.DocumentLog,
       workspace,
       chain,
@@ -314,7 +314,7 @@ describe('run chain error handling', () => {
       `,
       parameters: {},
     })
-    const run = await runChain({
+    const run = runChain({
       errorableType: ErrorableEntity.DocumentLog,
       workspace,
       chain,
@@ -344,6 +344,7 @@ describe('run chain error handling', () => {
           ...PARTIAL_FINISH_CHUNK,
           type: 'finish',
           finishReason: 'stop',
+          providerMetadata: undefined,
         },
       ]),
     )
@@ -356,7 +357,7 @@ describe('run chain error handling', () => {
       `,
       parameters: {},
     })
-    const run = await runChain({
+    const run = runChain({
       errorableType: ErrorableEntity.DocumentLog,
       workspace,
       chain,

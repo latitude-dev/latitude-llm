@@ -6,6 +6,7 @@ import {
   timestamp,
   unique,
   varchar,
+  jsonb,
 } from 'drizzle-orm/pg-core'
 
 import { Providers } from '../../browser'
@@ -13,6 +14,7 @@ import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
 import { users } from './users'
 import { workspaces } from './workspaces'
+import { VertexConfiguration } from '../../services/ai'
 
 export const providersEnum = latitudeSchema.enum('provider', [
   Providers.OpenAI,
@@ -21,8 +23,13 @@ export const providersEnum = latitudeSchema.enum('provider', [
   Providers.Mistral,
   Providers.Azure,
   Providers.Google,
+  Providers.GoogleVertex,
+  Providers.AnthropicVertex,
   Providers.Custom,
 ])
+
+export type ProviderConfiguration<P extends Providers> =
+  P extends Providers.GoogleVertex ? VertexConfiguration : never
 
 export const providerApiKeys = latitudeSchema.table(
   'provider_api_keys',
@@ -41,6 +48,8 @@ export const providerApiKeys = latitudeSchema.table(
       .references(() => workspaces.id),
     lastUsedAt: timestamp('last_used_at'),
     deletedAt: timestamp('deleted_at'),
+    configuration:
+      jsonb('configuration').$type<ProviderConfiguration<Providers>>(),
     ...timestamps(),
   },
   (table) => ({

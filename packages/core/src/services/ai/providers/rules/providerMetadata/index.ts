@@ -10,6 +10,8 @@ export const PROVIDER_TO_METADATA_KEY: Record<Providers, string> = {
   [Providers.Azure]: 'azure',
   [Providers.Google]: 'google',
   [Providers.Custom]: 'custom',
+  [Providers.GoogleVertex]: 'google',
+  [Providers.AnthropicVertex]: 'anthropic',
 }
 
 const CONTENT_DEFINED_ATTRIBUTES = [

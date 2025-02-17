@@ -20,6 +20,7 @@ const PROVIDER_PAYLOAD: ProviderApiKey = {
   createdAt: new Date(),
   updatedAt: new Date(),
   deletedAt: null,
+  configuration: null,
 }
 
 describe('ai function', () => {

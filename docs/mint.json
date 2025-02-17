@@ -78,7 +78,8 @@
             "guides/prompt-manager/custom-rules",
             "guides/prompt-manager/provider-rules/openai",
             "guides/prompt-manager/provider-rules/anthropic",
-            "guides/prompt-manager/provider-rules/google"
+            "guides/prompt-manager/provider-rules/google",
+            "guides/prompt-manager/provider-rules/vertex"
           ]
         },
         "guides/prompt-manager/cache",
