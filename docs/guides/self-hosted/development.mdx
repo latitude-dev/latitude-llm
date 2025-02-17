@@ -3,6 +3,13 @@ title: Development
 description: Learn how to set up a local Latitude instance for development
 ---
 
+<Note>
+  Due to NextJS's performance limitations in dockerized environments with
+  mounted volumens, we cannot offer a fully dockerized development environment.
+  Instead, we offer the following guide to set up your host machine to develop
+  Latitude.
+</Note>
+
 ## Prerequisites:
 
 - Install [PNPM](https://pnpm.io/installation).
@@ -18,6 +25,7 @@ pnpm i
 ```
 
 Build dependencies
+
 ```bash
 pnpm build --filter='./packages/**'
 ```
