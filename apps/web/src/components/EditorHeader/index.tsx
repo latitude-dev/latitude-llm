@@ -21,6 +21,7 @@ import {
   useLocalStorage,
 } from '@latitude-data/web-ui'
 import Link from 'next/link'
+import { PromptConfiguration } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/DocumentEditor/Editor/PromptConfiguration'
 
 type PromptMetadata = { provider?: string; model?: string }
 export type IProviderByName = Record<string, ProviderApiKey>
@@ -208,27 +209,36 @@ export default function EditorHeader({
           />
         </div>
       </div>
-      <ProviderModelSelector
-        providerOptions={providerOptions}
-        selectedProvider={provider}
-        onProviderChange={onSelectProvider}
-        modelOptions={modelOptions}
-        selectedModel={model}
-        onModelChange={onSelectModel}
-        providerDisabled={
-          disabledMetadataSelectors ||
-          isLoading ||
-          !providerOptions.length ||
-          !metadata
-        }
-        modelDisabled={
-          disabledMetadataSelectors ||
-          isLoading ||
-          !modelOptions.length ||
-          !provider ||
-          !metadata
-        }
-      />
+      <div className='flex flex-row items-end gap-2'>
+        <ProviderModelSelector
+          providerOptions={providerOptions}
+          selectedProvider={provider}
+          onProviderChange={onSelectProvider}
+          modelOptions={modelOptions}
+          selectedModel={model}
+          onModelChange={onSelectModel}
+          providerDisabled={
+            disabledMetadataSelectors ||
+            isLoading ||
+            !providerOptions.length ||
+            !metadata
+          }
+          modelDisabled={
+            disabledMetadataSelectors ||
+            isLoading ||
+            !modelOptions.length ||
+            !provider ||
+            !metadata
+          }
+        />
+        <PromptConfiguration
+          disabled={disabledMetadataSelectors}
+          config={metadata?.config ?? {}}
+          setConfig={(config: Record<string, unknown>) => {
+            onChangePrompt(updatePromptMetadata(prompt, config))
+          }}
+        />
+      </div>
       {isLatitudeProvider && (
         <div>
           {freeRunsCount !== undefined ? (

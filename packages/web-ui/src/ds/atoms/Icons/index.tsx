@@ -76,6 +76,9 @@ import {
   Globe,
   Maximize2,
   Minimize2,
+  Thermometer,
+  ListVideo,
+  WholeWord,
 } from 'lucide-react'
 
 import { cn } from '../../../lib/utils'
@@ -122,6 +125,7 @@ const Icons = {
   history: History,
   info: InfoIcon,
   listOrdered: ListOrdered,
+  listVideo: ListVideo,
   loader: LoaderCircle,
   lock: Lock,
   logo: LatitudeLogo,
@@ -143,11 +147,13 @@ const Icons = {
   sun: Sun,
   sparkles: Sparkles,
   terminal: Terminal,
+  thermometer: Thermometer,
   thumbsDown: ThumbsDown,
   thumbsUp: ThumbsUp,
   trash: Trash,
   twitter: Twitter,
   undo: Undo,
+  wholeWord: WholeWord,
   rollText: ScrollTextIcon,
   notEqual: EqualNotIcon,
   settings: SettingsIcon,
