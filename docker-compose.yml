@@ -51,6 +51,7 @@ services:
     build:
       platforms:
         - 'linux/arm64'
+        - 'linux/amd64'
       context: .
       dockerfile: packages/core/docker/Dockerfile
     env_file:
