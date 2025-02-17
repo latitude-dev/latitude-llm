@@ -104,7 +104,8 @@ docker compose top
 1. The services use Traefik as a reverse proxy, which automatically handles routing and service discovery.
 2. The database data is persisted using a Docker volume mounted at `./docker/pgdata`.
 3. If you're using local file storage, note that it requires additional configuration for multi-container setups, and S3 is recommended for production environments.
-4. For a more robust production environment, make sure to:
+4. Make sure docker/sh has execution permissions or otherwise the database container will not start appropiately.
+5. For a more robust production environment, make sure to:
 
    - Set strong passwords in your `.env` file
    - Configure proper SSL certificates
