@@ -33,13 +33,12 @@ function flattenSystemMessage({
     extractMessageMetadata({
       message,
       provider,
-    }).experimental_providerMetadata ?? {}
+    }).providerOptions ?? {}
 
   return content.flatMap((content) => {
     const extracted = extractContentMetadata({ content, provider })
     // @ts-expect-error - metadata key can be not present
-    const metadata = (extracted.experimental_providerMetadata ??
-      {}) as ProviderMetadata
+    const metadata = (extracted.providerOptions ?? {}) as ProviderMetadata
     const baseMsg = { role: message.role, content: content.text }
 
     if (!Object.keys(metadata).length && !Object.keys(msgMetadata).length) {
@@ -50,7 +49,7 @@ function flattenSystemMessage({
 
     return {
       ...baseMsg,
-      experimental_providerMetadata: {
+      providerOptions: {
         [key]: {
           ...(msgMetadata?.[key] || {}),
           ...(metadata?.[key] || {}),
@@ -78,7 +77,7 @@ function groupContentMetadata({
     return [
       {
         ...baseMsg,
-        experimental_providerMetadata: messageMetadata,
+        providerOptions: messageMetadata,
       },
     ]
   }
@@ -88,12 +87,12 @@ function groupContentMetadata({
     if (!messageMetadata) return extracted
 
     // @ts-expect-error - metadata key can be not present
-    const contentMetadata = (extracted.experimental_providerMetadata ??
+    const contentMetadata = (extracted.providerOptions ??
       {}) as ProviderMetadata
 
     return {
       ...extracted,
-      experimental_providerMetadata: {
+      providerOptions: {
         [key]: {
           ...(messageMetadata?.[key] || {}),
           ...(contentMetadata?.[key] || {}),
@@ -197,7 +196,7 @@ export function vercelSdkRules(
     content = groupContentMetadata({
       content: content,
       provider: provider,
-      messageMetadata: extracted.experimental_providerMetadata,
+      messageMetadata: extracted.providerOptions,
     }) as unknown as Message['content']
 
     return [{ ...extracted, content } as Message]

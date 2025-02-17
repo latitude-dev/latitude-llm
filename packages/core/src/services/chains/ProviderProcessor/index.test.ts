@@ -80,6 +80,9 @@ describe('ProviderProcessor', () => {
             },
           }),
           providerName: Providers.OpenAI,
+          providerMetadata: new Promise<undefined>((resolve) =>
+            resolve(undefined),
+          ),
         },
       },
     })

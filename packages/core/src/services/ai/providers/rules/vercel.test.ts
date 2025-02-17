@@ -100,7 +100,7 @@ describe('applyVercelSdkRules', () => {
       {
         role: 'system',
         content: 'I am a',
-        experimental_providerMetadata: {
+        providerOptions: {
           anthropic: {
             cacheControl: { type: 'ephemeral' },
           },
@@ -109,7 +109,7 @@ describe('applyVercelSdkRules', () => {
       {
         role: 'system',
         content: 'system message',
-        experimental_providerMetadata: {
+        providerOptions: {
           anthropic: {
             cacheControl: { type: 'ephemeral' },
           },
@@ -137,7 +137,7 @@ describe('applyVercelSdkRules', () => {
     expect(rules.messages).toEqual([
       {
         role: 'user',
-        experimental_providerMetadata: {
+        providerOptions: {
           anthropic: {
             cacheControl: { type: 'ephemeral' },
           },
@@ -146,7 +146,7 @@ describe('applyVercelSdkRules', () => {
           {
             type: 'text',
             text: 'I am a',
-            experimental_providerMetadata: {
+            providerOptions: {
               anthropic: {
                 cacheControl: { type: 'ephemeral' },
               },
@@ -155,7 +155,7 @@ describe('applyVercelSdkRules', () => {
           {
             type: 'text',
             text: 'system message',
-            experimental_providerMetadata: {
+            providerOptions: {
               anthropic: {
                 cacheControl: { type: 'ephemeral' },
               },
@@ -207,7 +207,7 @@ describe('applyVercelSdkRules', () => {
           {
             type: 'text',
             text: 'Hello',
-            experimental_providerMetadata: {
+            providerOptions: {
               anthropic: {
                 some_attribute: 'some_user_value',
                 another_attribute: { another_user: 'value' },
@@ -215,7 +215,7 @@ describe('applyVercelSdkRules', () => {
             },
           },
         ],
-        experimental_providerMetadata: {
+        providerOptions: {
           anthropic: {
             some_attribute: 'some_user_value',
             another_attribute: { another_user: 'value' },
@@ -232,7 +232,7 @@ describe('applyVercelSdkRules', () => {
           {
             type: 'text',
             text: 'I am good',
-            experimental_providerMetadata: {
+            providerOptions: {
               anthropic: {
                 some_attribute: 'some_assistant_value',
                 another_attribute: { another_assistant: 'value' },
@@ -240,7 +240,7 @@ describe('applyVercelSdkRules', () => {
             },
           },
         ],
-        experimental_providerMetadata: {
+        providerOptions: {
           anthropic: {
             some_attribute: 'some_assistant_value',
             another_attribute: { another_assistant: 'value' },
@@ -250,7 +250,7 @@ describe('applyVercelSdkRules', () => {
       {
         role: 'system',
         content: 'I am good',
-        experimental_providerMetadata: {
+        providerOptions: {
           anthropic: {
             some_attribute: 'some_system_value',
             cacheControl: { type: 'ephemeral' },
@@ -305,7 +305,7 @@ describe('applyVercelSdkRules', () => {
           {
             type: 'text',
             text: 'Hello',
-            experimental_providerMetadata: {
+            providerOptions: {
               anthropic: {
                 some_attribute: 'some_user_value',
                 another_attribute: { another_user: 'value' },
@@ -324,7 +324,7 @@ describe('applyVercelSdkRules', () => {
           {
             type: 'text',
             text: 'I am good',
-            experimental_providerMetadata: {
+            providerOptions: {
               anthropic: {
                 some_attribute: 'some_assistant_value',
                 another_attribute: { another_assistant: 'value' },

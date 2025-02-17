@@ -90,7 +90,7 @@ export function extractContentMetadata({
 
   return {
     ...definedData,
-    experimental_providerMetadata: {
+    providerOptions: {
       [getProviderMetadataKey(provider)]: processAttributes({
         attributes: providerAttributes,
         provider,
@@ -108,7 +108,7 @@ function removeUndefinedValues(data: Record<string, unknown>) {
 }
 
 type MessageWithMetadata = Message & {
-  experimental_providerMetadata?: Record<string, Record<string, unknown>>
+  providerOptions?: Record<string, Record<string, unknown>>
 }
 
 export function extractMessageMetadata({
@@ -153,7 +153,7 @@ export function extractMessageMetadata({
 
   return {
     ...common,
-    experimental_providerMetadata: {
+    providerOptions: {
       [getProviderMetadataKey(provider)]: processAttributes({
         attributes: Object.keys(attributes),
         provider,
