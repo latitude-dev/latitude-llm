@@ -14,16 +14,16 @@ Go to the [documentation](https://docs.latitude.so/guides/sdk/typescript) to lea
 import { Latitude, LatitudeOptions, RunPromptOptions } from '@latitude-data/sdk'
 
 const sdk = new Latitude('my-api-key', {
-    projectId: 'my-project-id',
-    versionUuid: 'my-version-uuid',
+  projectId: 'my-project-id',
+  versionUuid: 'my-version-uuid',
 })
 
 await sdk.prompts.run('joke-teller', {
-    parameters: { topic: 'Typescript' },
-    onEvent: (event) => console.log(event),
-    onFinished: (event) => console.log(event),
-    onError: (error) => console.log(error),
-    stream: true,
+  parameters: { topic: 'Typescript' },
+  onEvent: (event) => console.log(event),
+  onFinished: (event) => console.log(event),
+  onError: (error) => console.log(error),
+  stream: true,
 })
 ```
 
@@ -33,12 +33,12 @@ Find more [examples](https://github.com/latitude-dev/latitude-llm/tree/main/exam
 
 Requires npm `0.5.10` or higher.
 
--   Install dependencies: `npm install`
--   Add [dev] dependencies: `npm install <package> [--save-dev]`
--   Run linter: `npm run lint`
--   Run formatter: `npm run format`
--   Run tests: `npm run test`
--   Build package: `npm run build`
+- Install dependencies: `npm install`
+- Add [dev] dependencies: `npm install <package> [--save-dev]`
+- Run linter: `npm run lint`
+- Run formatter: `npm run format`
+- Run tests: `npm run test`
+- Build package: `npm run build`
 
 ## License
 
