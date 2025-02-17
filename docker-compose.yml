@@ -46,6 +46,18 @@ services:
       - redis
       - traefik
 
+  migrations:
+    image: latitude/migrations:latest
+    build:
+      platforms:
+        - 'linux/arm64'
+      context: .
+      dockerfile: packages/core/docker/Dockerfile
+    env_file:
+      - .env
+    depends_on:
+      - db
+
   gateway:
     image: latitude/gateway:latest
     build:

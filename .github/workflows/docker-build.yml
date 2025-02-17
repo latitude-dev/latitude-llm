@@ -55,6 +55,12 @@ jobs:
             registry: ghcr.io
             owner: latitude-dev
             repo_name: websockets
+          - app: migrations
+            dockerfile: packages/core/docker/Dockerfile
+            private: false
+            registry: ghcr.io
+            owner: latitude-dev
+            repo_name: migrations
           # Private images on AWS ECR (with Sentry)
           - app: web
             dockerfile: apps/web/docker/Dockerfile

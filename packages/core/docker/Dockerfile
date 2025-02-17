@@ -5,7 +5,7 @@ FROM node:20-alpine AS alpine
 # Check https://github.com/nodejs/docker-node/tree/b4117f9333da4138b03a546ec926ef50a31506c3#nodealpine to understand why libc6-compat might be needed.
 RUN apk add --no-cache libc6-compat
 
-FROM alpine as base
+FROM alpine AS base
 
 # Will be used to cache pnpm store
 RUN npm install -g corepack@0.31.0 && corepack enable
@@ -16,7 +16,7 @@ ENV PATH="$PNPM_HOME:$PATH"
 
 RUN pnpm i -g turbo
 
-FROM base as runner
+FROM base AS runner
 
 ARG PROJECT
 
