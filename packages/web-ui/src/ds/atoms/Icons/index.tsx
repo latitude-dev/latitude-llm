@@ -79,6 +79,8 @@ import {
   Thermometer,
   ListVideo,
   WholeWord,
+  AlertCircle,
+  CircleArrowUp,
 } from 'lucide-react'
 
 import { cn } from '../../../lib/utils'
@@ -168,6 +170,8 @@ const Icons = {
   equalApproximately: EqualApproximatelyIcon,
   braces: Braces,
   listCheck: ListCheck,
+  alertCircle: AlertCircle,
+  circleArrowUp: CircleArrowUp,
 }
 
 export type IconName = keyof typeof Icons

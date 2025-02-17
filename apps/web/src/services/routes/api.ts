@@ -84,6 +84,9 @@ export const _API_ROUTES = {
                       pagination: `${documentRoot}/evaluation-results-by-document-content/${evaluationId}/pagination`,
                     }),
                   },
+                  suggestions: {
+                    root: `${documentRoot}/suggestions`,
+                  },
                 }
               },
             },

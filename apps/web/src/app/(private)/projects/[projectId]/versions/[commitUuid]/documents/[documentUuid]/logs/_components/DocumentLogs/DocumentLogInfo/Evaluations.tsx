@@ -18,6 +18,7 @@ import {
 import Link from 'next/link'
 import { MetadataItem } from '../../../../_components/MetadataItem'
 import { ResultCellContent } from '../../../../evaluations/[evaluationId]/_components/EvaluationResults/EvaluationResultsTable'
+
 function EvaluationResultItem({ result, evaluation }: ResultWithEvaluation) {
   if (result.resultableType === EvaluationResultableType.Text) {
     return (

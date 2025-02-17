@@ -474,3 +474,5 @@ export {
 } from './services/latitudeTools/types'
 
 export const LATITUDE_TOOLS_CONFIG_NAME = 'latitudeTools'
+
+export const DOCUMENT_SUGGESTION_EXPIRATION_DAYS = 7
