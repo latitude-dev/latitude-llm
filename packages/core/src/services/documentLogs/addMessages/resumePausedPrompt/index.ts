@@ -16,6 +16,7 @@ import { deleteCachedChain } from '../../../chains/chainCache'
 import {
   ChainStepResponse,
   DocumentType,
+  PromptSource,
   StreamType,
 } from '../../../../constants'
 import { runAgent } from '../../../agents/run'
@@ -41,6 +42,7 @@ export async function resumePausedPrompt({
   responseMessages,
   previousResponse,
   source,
+  promptSource,
 }: {
   workspace: Workspace
   commit: Commit
@@ -50,6 +52,7 @@ export async function resumePausedPrompt({
   responseMessages: Message[]
   previousResponse: ChainStepResponse<StreamType>
   source: LogSources
+  promptSource: PromptSource
 }) {
   const resultResolvedContent = await getResolvedContent({
     workspaceId: workspace.id,
