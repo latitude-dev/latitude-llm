@@ -106,6 +106,7 @@ class Latitude {
 
   public prompts: {
     get: (path: string, args?: GetPromptOptions) => Promise<Prompt>
+    getAll: (args?: GetPromptOptions) => Promise<Prompt[]>
     getOrCreate: (
       path: string,
       args?: GetOrCreatePromptOptions,
@@ -171,6 +172,7 @@ class Latitude {
     // Initialize prompts namespace
     this.prompts = {
       get: this.getPrompt.bind(this),
+      getAll: this.getAllPrompts.bind(this),
       getOrCreate: this.getOrCreatePrompt.bind(this),
       run: this.runPrompt.bind(this),
       chat: this.chat.bind(this),
@@ -222,6 +224,34 @@ class Latitude {
     }
 
     return (await response.json()) as Prompt
+  }
+
+  async getAllPrompts({ projectId, versionUuid }: GetPromptOptions = {}) {
+    projectId = projectId ?? this.options.projectId
+    if (!projectId) throw new Error('Project ID is required')
+
+    versionUuid = versionUuid ?? this.options.versionUuid
+
+    const response = await makeRequest({
+      method: 'GET',
+      handler: HandlerType.GetAllDocuments,
+      params: { projectId, versionUuid },
+      options: this.options,
+    })
+
+    if (!response.ok) {
+      const error = (await response.json()) as ApiErrorJsonResponse
+
+      throw new LatitudeApiError({
+        status: response.status,
+        serverResponse: JSON.stringify(error),
+        message: error.message,
+        errorCode: error.errorCode,
+        dbErrorRef: error.dbErrorRef,
+      })
+    }
+
+    return (await response.json()) as Prompt[]
   }
 
   async getOrCreatePrompt(

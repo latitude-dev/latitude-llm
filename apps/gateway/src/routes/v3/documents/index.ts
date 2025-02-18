@@ -12,6 +12,7 @@ import {
   getRouteV2,
   getRouteV3,
 } from '$/routes/v3/documents/get'
+import { getAllHandler, getAllRoute } from '$/routes/v3/documents/getAll'
 import {
   createLogHandler,
   createLogRouteV1,
@@ -20,6 +21,7 @@ import {
 } from '$/routes/v3/documents/logs'
 
 const router = createRouter()
+  .openapi(getAllRoute, getAllHandler)
   .openapi(runRoute, runHandler)
   .openapi(getOrCreateRouteV2, getOrCreateHandler)
   .openapi(getOrCreateRouteV3, getOrCreateHandler)

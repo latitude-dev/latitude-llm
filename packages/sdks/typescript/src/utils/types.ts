@@ -18,11 +18,14 @@ import {
   StreamEventTypes,
   ChainCallResponseDto,
   Providers,
+  ParameterType,
 } from '@latitude-data/constants'
 
-export type GetDocumentUrlParams = {
+export type GetAllDocumentsParams = {
   projectId: number
   versionUuid?: string
+}
+export type GetDocumentUrlParams = GetAllDocumentsParams & {
   path: string
 }
 
@@ -71,6 +74,7 @@ type LogBodyParams = {
 
 export enum HandlerType {
   GetDocument = 'get-document',
+  GetAllDocuments = 'get-all-documents',
   GetOrCreateDocument = 'get-or-create-document',
   RunDocument = 'run-document',
   Chat = 'chat',
@@ -93,7 +97,9 @@ export type UrlParams<T extends HandlerType> = T extends HandlerType.GetDocument
             ? { conversationUuid: string }
             : T extends HandlerType.EvaluationResult
               ? { conversationUuid: string; evaluationUuid: string }
-              : never
+              : T extends HandlerType.GetAllDocuments
+                ? GetAllDocumentsParams
+                : never
 
 export type BodyParams<T extends HandlerType> =
   T extends HandlerType.GetOrCreateDocument
@@ -241,5 +247,6 @@ export type Prompt = {
   path: string
   content: string
   config: Config
+  parameters: Record<string, { type: ParameterType }>
   provider?: Providers
 }
