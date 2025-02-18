@@ -4,6 +4,7 @@ import {
   EvaluationDto,
   EvaluationResultDto,
 } from '@latitude-data/core/browser'
+import { DocumentLogWithMetadata } from '@latitude-data/core/repositories'
 import {
   type ICommitContextType,
   type IProjectContextType,
@@ -21,6 +22,6 @@ export type Props = {
 }
 
 export type Snapshot = {
-  id?: number
-  results: number
+  documentLog: DocumentLogWithMetadata
+  evaluations: Props['evaluations']
 }

@@ -29,7 +29,7 @@ export class UnprocessableEntityError extends LatitudeError {
   public statusCode = 422
   public name = LatitudeErrorCodes.UnprocessableEntityError
 
-  constructor(message: string, details: LatitudeErrorDetails) {
+  constructor(message: string, details: LatitudeErrorDetails = {}) {
     super(message, details)
   }
 }
@@ -85,4 +85,5 @@ export class RateLimitError extends LatitudeError {
 export const databaseErrorCodes = {
   foreignKeyViolation: '23503',
   uniqueViolation: '23505',
+  lockNotAvailable: '55P03',
 }

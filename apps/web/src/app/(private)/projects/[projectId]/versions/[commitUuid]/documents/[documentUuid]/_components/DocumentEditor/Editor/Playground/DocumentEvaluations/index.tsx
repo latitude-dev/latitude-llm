@@ -1,13 +1,11 @@
-import useConnectedEvaluations from '$/stores/connectedEvaluations'
-import useEvaluationResultsByDocumentLogs from '$/stores/evaluationResultsByDocumentLogs'
-import { DocumentLogWithMetadata } from '@latitude-data/core/repositories'
-import { useCallback, useEffect, useMemo, useState } from 'react'
-
 import {
   EventArgs,
   useSockets,
 } from '$/components/Providers/WebsocketsProvider/useSockets'
+import useConnectedEvaluations from '$/stores/connectedEvaluations'
+import useEvaluationResultsByDocumentLogs from '$/stores/evaluationResultsByDocumentLogs'
 import { DocumentVersion } from '@latitude-data/core/browser'
+import { DocumentLogWithMetadata } from '@latitude-data/core/repositories'
 import {
   ClientOnly,
   CollapsibleBox,
@@ -15,7 +13,7 @@ import {
   useCurrentProject,
   type ICommitContextType,
 } from '@latitude-data/web-ui'
-
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   CollapsedContentHeader,
   ExpandedContent,
@@ -102,22 +100,22 @@ export default function DocumentEvaluations({
     )
   }, [evaluationResults])
 
-  const [snapshot, setSnapshot] = useState<Snapshot>({ results: 0 })
+  const [snapshot, setSnapshot] = useState<Snapshot>()
   useEffect(() => {
-    if (!documentLog || snapshot.id === documentLog.id) return
+    if (!documentLog || snapshot?.documentLog.id === documentLog.id) return
     setSnapshot({
-      id: documentLog.id,
-      results: evaluations.filter((evaluation) => evaluation.live).length,
+      documentLog: documentLog,
+      evaluations: evaluations.filter((evaluation) => evaluation.live),
     })
-  }, [documentLog, evaluations])
+  }, [documentLog])
 
   const isWaiting = useMemo(
     () =>
-      (runCount > 0 && !documentLog) ||
-      isDocumentLogLoading ||
-      Object.values(results).filter((r) => r.documentLogId === snapshot.id)
-        .length < snapshot.results,
-    [runCount, isDocumentLogLoading, documentLog, results, snapshot],
+      snapshot &&
+      !snapshot.evaluations.every(
+        (e) => results[e.id]?.documentLogId === snapshot.documentLog.id,
+      ),
+    [snapshot, results],
   )
 
   const props = {
@@ -128,7 +126,7 @@ export default function DocumentEvaluations({
     project,
     runCount,
     isLoading: isEvaluationsLoading,
-    isWaiting,
+    isWaiting: isWaiting || isDocumentLogLoading,
   }
 
   return (

@@ -6,6 +6,7 @@ import { notifyClientOfBulkCreateTracesAndSpans } from './notifyClientOfBulkCrea
 import { notifyClientOfDocumentSuggestionCreated } from './notifyClientOfDocumentSuggestionCreated'
 import { notifyToClientDocumentLogCreatedJob } from './notifyToClientDocumentLogCreatedJob'
 import { notifyToClientEvaluationResultCreatedJob } from './notifyToClientEvaluationResultCreatedJob'
+import { requestDocumentSuggestionJob } from './requestDocumentSuggestionJob'
 import { runLiveEvaluationsJob } from './runLiveEvaluationsJob'
 import { sendInvitationToUserJob } from './sendInvitationToUser'
 import { sendMagicLinkJob } from './sendMagicLinkHandler'
@@ -28,7 +29,10 @@ export const EventHandlers: IEventsHandlers = {
   documentSuggestionDiscarded: [],
   documentRun: [],
   evaluationCreated: [],
-  evaluationResultCreated: [notifyToClientEvaluationResultCreatedJob],
+  evaluationResultCreated: [
+    requestDocumentSuggestionJob,
+    notifyToClientEvaluationResultCreatedJob,
+  ],
   evaluationResultUpdated: [],
   evaluationRun: [],
   evaluationsConnected: [],

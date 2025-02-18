@@ -15,9 +15,11 @@ import {
 export default function LiveEvaluationToggle({
   documentUuid,
   evaluation: { id: evaluationId },
+  disabled,
 }: {
   documentUuid: string
   evaluation: EvaluationDto
+  disabled?: boolean
 }) {
   const { toast } = useToast()
   const { commit } = useCurrentCommit()
@@ -45,6 +47,7 @@ export default function LiveEvaluationToggle({
     [evaluations],
   )
   const isDisabled =
+    disabled ||
     isLoading ||
     isUpdating ||
     !evaluation ||

@@ -1,5 +1,7 @@
+import { subDays } from 'date-fns'
 import {
   and,
+  asc,
   count,
   desc,
   eq,
@@ -10,13 +12,14 @@ import {
   isNull,
   sql,
 } from 'drizzle-orm'
-
 import {
   Commit,
   ErrorableEntity,
+  EVALUATION_RESULT_RECENCY_DAYS,
   EvaluationDto,
   EvaluationResultableType,
   EvaluationResultDto,
+  MAX_EVALUATION_RESULTS_PER_DOCUMENT_SUGGESTION,
 } from '../../browser'
 import { Result } from '../../lib'
 import {
@@ -154,6 +157,28 @@ export class EvaluationResultsRepository extends Repository<EvaluationResultDto>
       .where(and(this.scopeFilter, gte(evaluationResults.createdAt, minDate)))
 
     return result[0]?.count ?? 0
+  }
+
+  async selectForDocumentSuggestion(evaluationId: number) {
+    // Note: enhance selection in evaluations 2.0
+    const results = await this.scope
+      .where(
+        and(
+          this.scopeFilter,
+          eq(evaluationResults.evaluationId, evaluationId),
+          gte(
+            evaluationResults.updatedAt,
+            subDays(new Date(), EVALUATION_RESULT_RECENCY_DAYS),
+          ),
+        ),
+      )
+      .orderBy(
+        asc(evaluationResultDto.result),
+        desc(evaluationResults.updatedAt),
+      )
+      .limit(MAX_EVALUATION_RESULTS_PER_DOCUMENT_SUGGESTION)
+
+    return Result.ok(results.map(EvaluationResultsRepository.parseResult))
   }
 
   static parseResult(row: EvaluationResultDto) {
