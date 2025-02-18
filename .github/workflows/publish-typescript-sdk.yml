@@ -11,9 +11,6 @@ jobs:
   publish:
     name: Build and Publish
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: packages/sdks/typescript
 
     steps:
       - name: Checkout repository
@@ -46,7 +43,7 @@ jobs:
       - name: Get package version
         id: get_version
         run: |
-          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          CURRENT_VERSION=$(node -p "require('./packages/sdks/typescript/package.json').version")
           echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
 
       - name: Check version on npm
@@ -69,18 +66,19 @@ jobs:
 
       - name: Run typescript checker
         if: steps.check_version.outputs.should_publish == 'true'
-        run: pnpm tc
+        run: pnpm tc --filter=@latitude-data/sdk
 
       - name: Run tests
         if: steps.check_version.outputs.should_publish == 'true'
-        run: pnpm test
+        run: pnpm test --filter=@latitude-data/sdk
 
       - name: Build package
         if: steps.check_version.outputs.should_publish == 'true'
-        run: pnpm build
+        run: pnpm build --filter=@latitude-data/sdk
 
       - name: Publish to npm
         if: steps.check_version.outputs.should_publish == 'true'
-        run: npm publish --access public
+        run: cd packages/sdks/typescript && npm publish --access public
+
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
