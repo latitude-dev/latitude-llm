@@ -45,7 +45,7 @@ Unlike regular prompts or predefined Chains, Agents can adapt dynamically, respo
         icon='terminal'
         summary='Enables the AI to run code to help generate the response.'
         description={`Allows the model to execute their own generated scripts to solve problems or answer questions.
-          A new tool will be injected into the prompt, and handled in Latitide's backend when the AI requests it.`}
+          A new tool will be injected into the prompt, and handled in Latitude's backend when the AI requests it.`}
       >
         <SwitchToogle
           disabled={disabled}
@@ -58,7 +58,7 @@ Unlike regular prompts or predefined Chains, Agents can adapt dynamically, respo
         icon='search'
         summary='Enables the AI to search the web to help generate the response.'
         description={`Allows the model to search the web for information to get real-time data.
-          A new tool will be injected into the prompt, and handled in Latitide's backend when the AI requests it.`}
+          A new tool will be injected into the prompt, and handled in Latitude's backend when the AI requests it.`}
       >
         <SwitchToogle
           disabled={disabled}
@@ -71,7 +71,7 @@ Unlike regular prompts or predefined Chains, Agents can adapt dynamically, respo
         icon='globe'
         summary='Enables the AI to read the contents from web pages.'
         description={`Allows the model to extract content from web pages as Markdown.
-          A new tool will be injected into the prompt, and handled in Latitide's backend when the AI requests it.`}
+          A new tool will be injected into the prompt, and handled in Latitude's backend when the AI requests it.`}
       >
         <SwitchToogle
           disabled={disabled}
