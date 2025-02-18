@@ -60,21 +60,21 @@ jobs:
         if: steps.check_version.outputs.should_publish == 'true'
         run: pnpm install
 
-      - name: Run linter
-        if: steps.check_version.outputs.should_publish == 'true'
-        run: pnpm lint
-
-      - name: Run typescript checker
-        if: steps.check_version.outputs.should_publish == 'true'
-        run: pnpm tc --filter=@latitude-data/sdk
-
-      - name: Run tests
-        if: steps.check_version.outputs.should_publish == 'true'
-        run: pnpm test --filter=@latitude-data/sdk
-
       - name: Build package
         if: steps.check_version.outputs.should_publish == 'true'
         run: pnpm build --filter=@latitude-data/sdk
+
+      - name: Run linter
+        if: steps.check_version.outputs.should_publish == 'true'
+        run: pnpm lint --filter=@latitude-data/sdk --filter=@latitude-data/compiler --filter=@latitude-data/constants
+
+      - name: Run typescript checker
+        if: steps.check_version.outputs.should_publish == 'true'
+        run: pnpm tc --filter=@latitude-data/sdk --filter=@latitude-data/compiler --filter=@latitude-data/constants
+
+      - name: Run tests
+        if: steps.check_version.outputs.should_publish == 'true'
+        run: pnpm test --filter=@latitude-data/sdk --filter=@latitude-data/compiler --filter=@latitude-data/constants
 
       - name: Publish to npm
         if: steps.check_version.outputs.should_publish == 'true'
