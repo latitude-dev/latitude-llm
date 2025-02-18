@@ -65,5 +65,9 @@ export async function respondToToolCalls({
     pausedChain: cachedData.chain,
     previousResponse: cachedData.previousResponse,
     responseMessages: responseMessagesResult.value as unknown as Message[],
+    promptSource: {
+      document,
+      commit,
+    },
   })
 }

@@ -81,6 +81,10 @@ export async function addMessages({
       responseMessages: messages,
       documentLogUuid,
       source,
+      promptSource: {
+        document,
+        commit,
+      },
     })
   }
 
