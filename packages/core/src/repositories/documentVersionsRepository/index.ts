@@ -186,7 +186,7 @@ export class DocumentVersionsRepository extends RepositoryLegacy<
     commitUuid,
     documentUuid,
   }: GetDocumentAtCommitProps) {
-    const commitsScope = new CommitsRepository(this.workspaceId)
+    const commitsScope = new CommitsRepository(this.workspaceId, this.db)
     const commitResult = await commitsScope.getCommitByUuid({
       projectId,
       uuid: commitUuid,
