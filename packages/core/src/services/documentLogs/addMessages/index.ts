@@ -67,7 +67,7 @@ export async function addMessages({
     documentLogUuid,
   })
   if (dataResult.error) return dataResult
-  const { commit, document, providerLog } = dataResult.value
+  const { commit, document, providerLog } = dataResult.unwrap()
 
   const chainCacheData = await findPausedChain({ workspace, documentLogUuid })
 
@@ -90,6 +90,10 @@ export async function addMessages({
       providerLog,
       messages,
       source,
+      promptSource: {
+        document,
+        commit,
+      },
     })
   }
 
@@ -98,5 +102,9 @@ export async function addMessages({
     providerLog,
     messages,
     source,
+    promptSource: {
+      document,
+      commit,
+    },
   })
 }

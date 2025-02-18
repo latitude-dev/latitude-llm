@@ -21,14 +21,17 @@ export function runAgent<T extends boolean, C extends SomeChain>({
   pausedTokenUsage,
 
   configOverrides,
+  promptSource,
 }: RunChainArgs<T, C>) {
   const errorableUuid = generateUUID()
   const chainStartTime = Date.now()
 
   const chainStreamManager = new ChainStreamManager({
+    workspace,
     errorableUuid,
     messages: [...(pausedMessages ?? []), ...(newMessages ?? [])],
     tokenUsage: pausedTokenUsage,
+    promptSource,
   })
 
   let stepCount = 0
@@ -48,6 +51,7 @@ export function runAgent<T extends boolean, C extends SomeChain>({
       pausedTokenUsage,
       configOverrides,
       removeSchema: true, // Removes the schema configuration for the AI generation, as it is reserved for the agent's Return function
+      promptSource,
     })
 
     const chainEventsReader = chainResult.stream.getReader()

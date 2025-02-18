@@ -12,6 +12,11 @@ import { WebExtractLatitudeToolCallContent } from './LatitudeTools/Extract'
 import type { CodeToolArgs } from '@latitude-data/core/services/latitudeTools/runCode/types'
 import type { SearchToolArgs } from '@latitude-data/core/services/latitudeTools/webSearch/types'
 import type { ExtractToolArgs } from '@latitude-data/core/services/latitudeTools/webExtract/types'
+import {
+  type AgentToolsMap,
+  AGENT_TOOL_PREFIX,
+} from '@latitude-data/core/browser'
+import { SubAgentToolCallContent } from './LatitudeTools/SubAgent'
 
 function toolArgs(
   value: ToolRequestContent | PromptlToolCall,
@@ -21,7 +26,13 @@ function toolArgs(
   return {}
 }
 
-export function ToolCallContent({ value }: { value: ToolRequestContent }) {
+export function ToolCallContent({
+  value,
+  agentToolsMap,
+}: {
+  value: ToolRequestContent
+  agentToolsMap?: AgentToolsMap
+}) {
   if (value.toolName === AGENT_RETURN_TOOL_NAME) {
     return <AgentToolCallContent value={value} />
   }
@@ -51,6 +62,17 @@ export function ToolCallContent({ value }: { value: ToolRequestContent }) {
       <WebExtractLatitudeToolCallContent
         toolCallId={value.toolCallId}
         args={args as ExtractToolArgs}
+      />
+    )
+  }
+
+  if (value.toolName.startsWith(AGENT_TOOL_PREFIX)) {
+    return (
+      <SubAgentToolCallContent
+        toolCallId={value.toolCallId}
+        toolName={value.toolName}
+        args={args}
+        agentToolsMap={agentToolsMap}
       />
     )
   }

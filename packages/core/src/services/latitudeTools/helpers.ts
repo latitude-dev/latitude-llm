@@ -8,10 +8,10 @@ import {
   LatitudeTool,
   LatitudeToolCall,
   LatitudeToolInternalName,
-  ToolDefinition,
-} from './types'
+} from '../../constants'
 import { TypedResult } from '../../lib'
 import { LATITUDE_TOOLS } from './tools'
+import { ToolDefinition } from '@latitude-data/constants'
 
 export const getLatitudeToolName = (
   internalName: LatitudeToolInternalName,
@@ -54,7 +54,7 @@ export function buildToolMessage({
   toolId,
   result,
 }: {
-  toolName: LatitudeToolInternalName
+  toolName: string
   toolId: string
   result: TypedResult<unknown, Error>
 }): ToolMessage {

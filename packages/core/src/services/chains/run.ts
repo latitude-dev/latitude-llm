@@ -12,6 +12,7 @@ import {
   ErrorableEntity,
   LogSources,
   MAX_STEPS_CONFIG_NAME,
+  PromptSource,
   StreamType,
 } from '../../constants'
 import { TypedResult } from '../../lib'
@@ -41,6 +42,7 @@ type CommonArgs<T extends boolean = true, C extends SomeChain = LegacyChain> = {
   source: LogSources
   promptlVersion: number
   chain: C
+  promptSource: PromptSource
 
   persistErrors?: T
   generateUUID?: () => string
@@ -76,6 +78,7 @@ export function runChain<T extends boolean, C extends SomeChain>({
 
   configOverrides,
   removeSchema = false,
+  promptSource,
 }: RunChainArgs<T, C>) {
   const errorableUuid = generateUUID()
   const chainStartTime = Date.now()
@@ -87,9 +90,11 @@ export function runChain<T extends boolean, C extends SomeChain>({
   })
 
   const chainStreamManager = new ChainStreamManager({
+    workspace,
     errorableUuid,
     messages: [...(pausedMessages ?? []), ...(newMessages ?? [])],
     tokenUsage: pausedTokenUsage,
+    promptSource,
   })
   const streamResult = chainStreamManager.start(async () => {
     try {

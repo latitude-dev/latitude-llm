@@ -8,22 +8,33 @@ import { createStreamableValue } from 'ai/rsc'
 import { z } from 'zod'
 
 import { authProcedure } from '../procedures'
+import { EvaluationsRepository } from '@latitude-data/core/repositories'
+import { NotFoundError } from '@latitude-data/core/lib/errors'
 
-export const runPromptAction = authProcedure
+export const runEvaluationPromptAction = authProcedure
   .createServerAction()
   .input(
     z.object({
+      evaluationId: z.number(),
       prompt: z.string(),
       parameters: z.record(z.any()),
       promptlVersion: z.number(),
     }),
   )
   .handler(async ({ ctx, input }) => {
-    const { prompt, parameters, promptlVersion } = input
+    const { prompt, parameters, promptlVersion, evaluationId } = input
+    const { workspace } = ctx
+
+    const evaluationScope = new EvaluationsRepository(workspace.id)
+    const evaluationResult = await evaluationScope.find(evaluationId)
+    if (evaluationResult.error) {
+      throw new NotFoundError('Evaluation not found')
+    }
+
     const stream = createStreamableValue()
     try {
       const run = await runPrompt({
-        workspace: ctx.workspace,
+        workspace,
         source: LogSources.Evaluation,
         prompt,
         promptlVersion,
@@ -31,6 +42,7 @@ export const runPromptAction = authProcedure
         providersMap: await buildProvidersMap({
           workspaceId: ctx.workspace.id,
         }),
+        promptSource: evaluationResult.unwrap(),
       }).then((r) => r.unwrap())
 
       pipeToStream(run.stream, stream)

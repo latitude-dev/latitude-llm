@@ -1,3 +1,4 @@
+import { ToolDefinition } from '@latitude-data/constants'
 import { LATITUDE_TOOLS_CONFIG_NAME } from '../../constants'
 import {
   BadRequestError,
@@ -16,8 +17,7 @@ import {
   LatitudeTool,
   LatitudeToolInternalName,
   LatitudeToolCall,
-  ToolDefinition,
-} from './types'
+} from '../../constants'
 import { Config } from '@latitude-data/compiler'
 
 export async function executeLatitudeToolCall(

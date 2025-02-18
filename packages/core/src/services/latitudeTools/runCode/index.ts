@@ -11,7 +11,7 @@ import {
   LatitudeToolDefinition,
   LatitudeTool,
   LatitudeToolInternalName,
-} from '../types'
+} from '../../../constants'
 
 function assertContainsPrintStatement({ code, language }: CodeToolArgs) {
   const printStatementResult = (() => {

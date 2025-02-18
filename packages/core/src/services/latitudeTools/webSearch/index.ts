@@ -4,7 +4,7 @@ import {
   LatitudeTool,
   LatitudeToolDefinition,
   LatitudeToolInternalName,
-} from '../types'
+} from '../../../constants'
 import {
   BadRequestError,
   LatitudeError,

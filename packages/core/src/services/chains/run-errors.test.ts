@@ -9,7 +9,12 @@ import { TextStreamPart } from 'ai'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import { Workspace } from '../../browser'
-import { ErrorableEntity, LogSources, Providers } from '../../constants'
+import {
+  ErrorableEntity,
+  LogSources,
+  PromptSource,
+  Providers,
+} from '../../constants'
 import { Result } from '../../lib'
 import * as factories from '../../tests/factories'
 import * as aiModule from '../ai'
@@ -25,6 +30,7 @@ import { runChain } from './run'
 let providersMap: Map<string, any>
 
 let workspace: Workspace
+let promptSource: PromptSource
 function buildMockAIresponse(chunks: TextStreamPart<TOOLS>[]) {
   return Result.ok({
     type: 'text' as 'text',
@@ -58,14 +64,23 @@ describe('run chain error handling', () => {
   beforeEach(async () => {
     vi.resetAllMocks()
 
-    const { workspace: w, providers } = await factories.createProject({
+    const {
+      workspace: w,
+      providers,
+      documents,
+      commit,
+    } = await factories.createProject({
       providers: [
         { name: 'openai', type: Providers.OpenAI },
         { name: 'google', type: Providers.Google },
       ],
+      documents: {
+        'source-doc': factories.helpers.createPrompt({ provider: 'openai' }),
+      },
     })
     providersMap = new Map(providers.map((p) => [p.name, p]))
     workspace = w
+    promptSource = { document: documents[0]!, commit }
 
     vi.mocked(mockChain.step!).mockResolvedValue({
       completed: true,
@@ -102,6 +117,7 @@ describe('run chain error handling', () => {
       promptlVersion: 0,
       providersMap,
       source: LogSources.API,
+      promptSource,
     })
 
     const error = await run.error
@@ -142,6 +158,7 @@ describe('run chain error handling', () => {
       promptlVersion: 0,
       providersMap,
       source: LogSources.API,
+      promptSource,
     })
 
     const error = await run.error
@@ -172,6 +189,7 @@ describe('run chain error handling', () => {
       promptlVersion: 0,
       providersMap,
       source: LogSources.API,
+      promptSource,
     })
 
     const error = await run.error
@@ -207,6 +225,7 @@ describe('run chain error handling', () => {
       promptlVersion: 0,
       providersMap,
       source: LogSources.API,
+      promptSource,
     })
 
     const error = await run.error
@@ -243,6 +262,7 @@ describe('run chain error handling', () => {
       promptlVersion: 0,
       providersMap,
       source: LogSources.API,
+      promptSource,
     })
 
     const error = await run.error
@@ -279,6 +299,7 @@ describe('run chain error handling', () => {
       promptlVersion: 0,
       providersMap,
       source: LogSources.API,
+      promptSource,
     })
 
     const error = await run.error
@@ -321,6 +342,7 @@ describe('run chain error handling', () => {
       promptlVersion: 0,
       providersMap,
       source: LogSources.API,
+      promptSource,
     })
     const error = await run.error
     expect(error?.dbError).toEqual({
@@ -364,6 +386,7 @@ describe('run chain error handling', () => {
       promptlVersion: 0,
       providersMap,
       source: LogSources.API,
+      promptSource,
     })
     const response = await run.lastResponse
     expect(response).toEqual({

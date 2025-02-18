@@ -4,6 +4,7 @@ export enum LogSources {
   Evaluation = 'evaluation',
   User = 'user',
   SharedPrompt = 'shared_prompt',
+  AgentAsTool = 'agent_as_tool',
 }
 
 export enum Providers {

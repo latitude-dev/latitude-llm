@@ -50,7 +50,10 @@ export const googleConfig = z.object({
 
 type GoogleConfig = z.infer<typeof googleConfig>
 
-export type PartialConfig = Omit<Config, 'provider'>
+export type ToolDefinition = {
+  description: string
+  parameters: JSONSchema7
+}
 
 export const PROMPT_PARAMETER_ENUM = z.enum(['text', 'file', 'image'])
 export type ParameterType = z.infer<typeof PROMPT_PARAMETER_ENUM>
@@ -64,11 +67,12 @@ export type Config = {
   parameters?: Record<string, { type: ParameterType }>
   azure?: AzureConfig
   google?: GoogleConfig
-  tools?: Record<
-    string,
-    { description?: string; parameters: Record<string, any> }
-  >
+  type?: 'agent' | undefined
+  tools?: Record<string, ToolDefinition>
+  agents?: string[]
 }
+
+export type PartialConfig = Omit<Config, 'provider'>
 
 export type ProviderData =
   | TextStreamPart<Record<string, CoreTool>>

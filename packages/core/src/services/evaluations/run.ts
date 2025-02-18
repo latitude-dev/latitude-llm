@@ -87,6 +87,7 @@ export async function runEvaluation(
     source: LogSources.Evaluation,
     providersMap,
     configOverrides: { schema, output: 'object' },
+    promptSource: evaluation,
   })
 
   // Handle response

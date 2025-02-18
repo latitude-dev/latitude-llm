@@ -7,18 +7,15 @@ import {
 import { CachedApiKeys, stepLimitExceededErrorMessage } from '../../chains/run'
 import {
   ABSOLUTE_MAX_STEPS,
-  AGENT_RETURN_TOOL_NAME,
   DEFAULT_MAX_STEPS,
   MAX_STEPS_CONFIG_NAME,
 } from '../../../constants'
 import { Message } from '@latitude-data/compiler'
-import { getToolCalls, handleLatitudeTools } from '../../chains/runStep'
 import { validateAgentStep, ValidatedAgentStep } from '../AgentStepValidator'
 import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
 import { ChainStreamManager } from '../../../lib/chainStreamManager'
 import { Result } from '../../../lib'
-import { getLatitudeToolCallsFromAssistantMessage } from '../../latitudeTools/helpers'
 
 function assertValidStepCount({
   stepCount,
@@ -62,7 +59,12 @@ export async function runAgentStep({
   newMessages: Message[] | undefined
   stepCount: number
 }) {
-  await handleLatitudeTools({ chainStreamManager, newMessages })
+  if (newMessages?.length) {
+    const lastResponseMessage = newMessages[0]! as AssistantMessage
+    const latitudeToolResponses =
+      await chainStreamManager.handleLatitudeToolCalls(lastResponseMessage)
+    newMessages.push(...latitudeToolResponses)
+  }
 
   const step = await validateAgentStep({
     workspace,
@@ -82,28 +84,16 @@ export async function runAgentStep({
     return
   }
 
-  const response = await chainStreamManager.getProviderResponse({
-    workspace,
-    source,
-    documentLogUuid: errorableUuid,
-    conversation: step.conversation,
-    provider: step.provider,
-    schema: step.schema,
-    output: step.output,
-  })
-
-  const toolCalls = getToolCalls({ response }).filter(
-    (tc) => tc.name !== AGENT_RETURN_TOOL_NAME,
-  )
-  const [responseMessage] = buildMessagesFromResponse({ response }) as [
-    AssistantMessage,
-  ]
-  const latitudeToolCalls = getLatitudeToolCallsFromAssistantMessage(
-    responseMessage as AssistantMessage,
-  )
-  const clientToolCalls = toolCalls.filter(
-    (toolCall) => !latitudeToolCalls.some((b) => b.id === toolCall.id),
-  )
+  const { response, clientToolCalls } =
+    await chainStreamManager.getProviderResponse({
+      workspace,
+      source,
+      documentLogUuid: errorableUuid,
+      conversation: step.conversation,
+      provider: step.provider,
+      schema: step.schema,
+      output: step.output,
+    })
 
   // Stop the chain if there are tool calls
   if (clientToolCalls.length) {
@@ -119,6 +109,6 @@ export async function runAgentStep({
     errorableUuid,
     providersMap,
     stepCount: stepCount + 1,
-    newMessages: [responseMessage],
+    newMessages: buildMessagesFromResponse({ response }),
   })
 }

@@ -1,4 +1,7 @@
-import { StreamEventTypes } from '@latitude-data/core/browser'
+import {
+  AGENT_RETURN_TOOL_NAME,
+  StreamEventTypes,
+} from '@latitude-data/core/browser'
 import { LanguageModelUsage } from 'ai'
 import { readStreamableValue, StreamableValue } from 'ai/rsc'
 import { useCallback, useRef, useState } from 'react'
@@ -116,7 +119,9 @@ export function usePlaygroundChat({
             }
           }
           if (data.type === ChainEventTypes.ToolsRequested) {
-            setUnresponedToolCalls(data.tools)
+            setUnresponedToolCalls(
+              data.tools.filter((t) => t.name !== AGENT_RETURN_TOOL_NAME),
+            )
           }
         }
       } catch (error) {
