@@ -5,6 +5,7 @@ import type {
   Commit,
   Dataset,
   DocumentLog,
+  DocumentSuggestion,
   DocumentVersion,
   Evaluation,
   EvaluationResult,
@@ -36,6 +37,9 @@ export type Events =
   | 'workspaceCreated'
   | 'projectCreated'
   | 'documentLogCreated'
+  | 'documentSuggestionCreated'
+  | 'documentSuggestionApplied'
+  | 'documentSuggestionDiscarded'
   | 'sendReferralInvitation'
   | 'claimReferralInvitations'
   | 'evaluationCreated'
@@ -192,6 +196,33 @@ export type CommitCreatedEvent = LatitudeEventGeneric<
 export type DocumentLogCreatedEvent = LatitudeEventGeneric<
   'documentLogCreated',
   DocumentLog
+>
+
+export type DocumentSuggestionCreatedEvent = LatitudeEventGeneric<
+  'documentSuggestionCreated',
+  {
+    workspaceId: number
+    suggestion: DocumentSuggestion
+    evaluation: Evaluation
+  }
+>
+
+export type DocumentSuggestionAppliedEvent = LatitudeEventGeneric<
+  'documentSuggestionApplied',
+  {
+    workspaceId: number
+    userId: string
+    suggestion: DocumentSuggestion
+  }
+>
+
+export type DocumentSuggestionDiscardedEvent = LatitudeEventGeneric<
+  'documentSuggestionDiscarded',
+  {
+    workspaceId: number
+    userId: string
+    suggestion: DocumentSuggestion
+  }
 >
 
 export type SendReferralInvitationEvent = LatitudeEventGeneric<
@@ -441,6 +472,9 @@ export type LatitudeEvent =
   | WorkspaceCreatedEvent
   | ProjectCreatedEvent
   | DocumentLogCreatedEvent
+  | DocumentSuggestionCreatedEvent
+  | DocumentSuggestionAppliedEvent
+  | DocumentSuggestionDiscardedEvent
   | SendReferralInvitationEvent
   | ClaimReferralInvitationEvent
   | EvaluationCreatedEvent
@@ -478,6 +512,9 @@ export interface IEventsHandlers {
   workspaceCreated: EventHandler<WorkspaceCreatedEvent>[]
   projectCreated: EventHandler<ProjectCreatedEvent>[]
   documentLogCreated: EventHandler<DocumentLogCreatedEvent>[]
+  documentSuggestionCreated: EventHandler<DocumentSuggestionCreatedEvent>[]
+  documentSuggestionApplied: EventHandler<DocumentSuggestionAppliedEvent>[]
+  documentSuggestionDiscarded: EventHandler<DocumentSuggestionDiscardedEvent>[]
   sendReferralInvitation: EventHandler<SendReferralInvitationEvent>[]
   claimReferralInvitations: EventHandler<ClaimReferralInvitationEvent>[]
   evaluationCreated: EventHandler<EvaluationCreatedEvent>[]

@@ -224,3 +224,8 @@ export type SpanLink = {
 }
 
 export type TraceAttributes = Record<string, string | number | boolean>
+
+export type DocumentSuggestionWithDetails = DocumentSuggestion & {
+  evaluationUuid: string
+  evaluationName: string
+}

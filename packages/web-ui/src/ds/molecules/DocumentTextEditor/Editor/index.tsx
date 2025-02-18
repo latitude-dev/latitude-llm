@@ -1,10 +1,10 @@
 'use client'
 
+import { CheckCircle2, LoaderCircle } from 'lucide-react'
 import { useCallback, useMemo, useRef, useState } from 'react'
-import { AlertCircle, CheckCircle2, LoaderCircle } from 'lucide-react'
 
-import { CompileError } from 'promptl-ai'
 import { MarkerSeverity, type editor } from 'monaco-editor'
+import { CompileError } from 'promptl-ai'
 
 import {
   AppLocalStorage,
@@ -68,19 +68,27 @@ export function DocumentTextEditor({
     [onChange],
   )
 
-  const handleAcceptDiff = useCallback(() => {
+  const [isApplyingDiff, setIsApplyingDiff] = useState(false)
+  const [isDiscardingDiff, setIsDiscardingDiff] = useState(false)
+
+  const handleAcceptDiff = useCallback(async () => {
     if (!diff) return
     if (!diffEditorRef.current) return
 
     const newValue = diffEditorRef.current.getModifiedEditor().getValue()
-    diff.onAccept(newValue)
+
+    setIsApplyingDiff(true)
+    await diff.onAccept(newValue)
+    setIsApplyingDiff(false)
   }, [diff])
 
-  const handleRejectDiff = useCallback(() => {
+  const handleRejectDiff = useCallback(async () => {
     if (!diff) return
     if (!diffEditorRef.current) return
 
-    diff.onReject()
+    setIsDiscardingDiff(true)
+    await diff.onReject()
+    setIsDiscardingDiff(false)
   }, [diff])
 
   const errorFixFn = useMemo(() => {
@@ -137,11 +145,20 @@ export function DocumentTextEditor({
               </div>
             )}
             <div className='flex flex-row gap-2 w-full justify-end'>
-              <Button variant='outline' fancy onClick={handleRejectDiff}>
-                Discard
+              <Button
+                variant='outline'
+                fancy
+                onClick={handleRejectDiff}
+                disabled={isDiscardingDiff || isApplyingDiff}
+              >
+                {isDiscardingDiff ? 'Discarding...' : 'Discard'}
               </Button>
-              <Button onClick={handleAcceptDiff} fancy>
-                Apply
+              <Button
+                fancy
+                onClick={handleAcceptDiff}
+                disabled={isApplyingDiff || isDiscardingDiff}
+              >
+                {isApplyingDiff ? 'Applying...' : 'Apply'}
               </Button>
             </div>
           </div>
@@ -179,12 +196,17 @@ export function DocumentTextEditor({
               variant='outline'
               onClick={focusNextError}
               size='small'
-              className='flex flex-row items-center gap-2 bg-background hover:border-destructive'
+              iconProps={{
+                name: 'alertCircle',
+                placement: 'right',
+                size: 'normal',
+                color: 'destructive',
+              }}
+              className='group-hover:border-destructive'
             >
               <Text.H6 color='destructive'>
                 {metadata!.errors.length} errors
               </Text.H6>
-              <AlertCircle className='h-4 w-4 text-destructive' />
             </Button>
           )}
         </div>

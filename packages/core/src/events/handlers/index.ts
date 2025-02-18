@@ -3,6 +3,7 @@ import { createClaimInvitationReferralJob } from './createClaimInvitationReferra
 import { createDocumentLogsFromSpansJob } from './createDocumentLogsFromSpansJob'
 import { createLoopsContact } from './createLoopsContact'
 import { notifyClientOfBulkCreateTracesAndSpans } from './notifyClientOfBulkCreateTracesAndSpans'
+import { notifyClientOfDocumentSuggestionCreated } from './notifyClientOfDocumentSuggestionCreated'
 import { notifyToClientDocumentLogCreatedJob } from './notifyToClientDocumentLogCreatedJob'
 import { notifyToClientEvaluationResultCreatedJob } from './notifyToClientEvaluationResultCreatedJob'
 import { runLiveEvaluationsJob } from './runLiveEvaluationsJob'
@@ -22,6 +23,9 @@ export const EventHandlers: IEventsHandlers = {
     runLiveEvaluationsJob,
     notifyToClientDocumentLogCreatedJob,
   ],
+  documentSuggestionCreated: [notifyClientOfDocumentSuggestionCreated],
+  documentSuggestionApplied: [],
+  documentSuggestionDiscarded: [],
   documentRun: [],
   evaluationCreated: [],
   evaluationResultCreated: [notifyToClientEvaluationResultCreatedJob],

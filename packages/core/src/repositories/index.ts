@@ -1,6 +1,7 @@
 export * from './commitsRepository'
 export * from './projectsRepository'
 export * from './documentVersionsRepository'
+export * from './documentSuggestionsRepository'
 export * from './workspacesRepository'
 export * from './providerApiKeysRepository'
 export * from './usersRepository'

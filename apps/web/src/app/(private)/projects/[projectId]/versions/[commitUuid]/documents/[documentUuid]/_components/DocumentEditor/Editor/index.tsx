@@ -44,6 +44,7 @@ import { DiffOptions } from 'node_modules/@latitude-data/web-ui/src/ds/molecules
 import { useDebouncedCallback } from 'use-debounce'
 
 import Link from 'next/link'
+import { DocumentSuggestions } from './DocumentSuggestions'
 import Playground from './Playground'
 import RefineDocumentModal from './RefineModal'
 import { UpdateToPromptLButton } from './UpdateToPromptl'
@@ -390,11 +391,20 @@ export default function DocumentEditor({
                     }
                     isSaved={isSaved}
                     actionButtons={
-                      <RefineButton
-                        refinement={refinement}
-                        document={document}
-                        copilotEnabled={copilotEnabled}
-                      />
+                      <>
+                        <DocumentSuggestions
+                          project={project}
+                          commit={commit}
+                          document={document}
+                          setDiff={setDiff}
+                          setPrompt={onChange}
+                        />
+                        <RefineButton
+                          refinement={refinement}
+                          document={document}
+                          copilotEnabled={copilotEnabled}
+                        />
+                      </>
                     }
                     copilot={
                       copilotEnabled

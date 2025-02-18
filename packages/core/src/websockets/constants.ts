@@ -3,7 +3,7 @@
 // All this can be seen in the browser. If you want something private
 // put in other place.
 
-import { Span, Trace } from '../browser'
+import { Span, Trace, DocumentSuggestionWithDetails } from '../browser'
 import {
   type DocumentLogWithMetadataAndError,
   type EvaluationResultWithMetadataAndErrors,
@@ -66,12 +66,18 @@ type DocumentLogCreatedArgs = {
   documentLogWithMetadata: DocumentLogWithMetadataAndError
 }
 
+type DocumentSuggestionCreatedArgs = {
+  workspaceId: number
+  suggestion: DocumentSuggestionWithDetails
+}
+
 export type WebServerToClientEvents = {
   documentBatchRunStatus: (args: DocumentBatchRunStatusArgs) => void
   evaluationStatus: (args: EvaluationStatusArgs) => void
   evaluationResultCreated: (args: EvaluationResultCreatedArgs) => void
   joinWorkspace: (args: { workspaceId: number; userId: string }) => void
   documentLogCreated: (args: DocumentLogCreatedArgs) => void
+  documentSuggestionCreated: (args: DocumentSuggestionCreatedArgs) => void
   tracesAndSpansCreated: (args: {
     workspaceId: number
     traces: Trace[]
@@ -99,6 +105,10 @@ export type WorkersClientToServerEvents = {
   documentLogCreated: (args: {
     workspaceId: number
     data: DocumentLogCreatedArgs
+  }) => void
+  documentSuggestionCreated: (args: {
+    workspaceId: number
+    data: DocumentSuggestionCreatedArgs
   }) => void
   tracesAndSpansCreated: (args: {
     workspaceId: number

@@ -146,6 +146,12 @@ workers.on('connection', (socket) => {
     web.to(workspace).emit('documentLogCreated', data)
   })
 
+  socket.on('documentSuggestionCreated', (args) => {
+    const { workspaceId, data } = args
+    const workspace = buildWorkspaceRoom({ workspaceId })
+    web.to(workspace).emit('documentSuggestionCreated', data)
+  })
+
   socket.on('tracesAndSpansCreated', (args) => {
     const { workspaceId, data } = args
     const workspace = buildWorkspaceRoom({ workspaceId })

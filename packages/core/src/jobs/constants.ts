@@ -53,6 +53,7 @@ export const QUEUES = {
       'createLoopsContact',
       'notifyClientOfBulkCreateTracesAndSpans',
       'notifyToClientDocumentLogCreatedJob',
+      'notifyClientOfDocumentSuggestionCreated',
       'notifyToClientEvaluationResultCreatedJob',
       'runLiveEvaluationsJob',
       'sendInvitationToUserJob',
