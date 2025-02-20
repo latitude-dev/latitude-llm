@@ -35,7 +35,9 @@ from latitude_sdk import (
     Log,
     LogSources,
     ModelUsage,
+    ParameterType,
     Prompt,
+    PromptParameter,
     Providers,
     StreamEvent,
     StreamEvents,
@@ -86,6 +88,7 @@ topP: 0.9
         "topP": 0.9,
     },
     "provider": "openai",
+    "parameters": {"question": {"type": "text"}},
 }
 
 PROMPT = Prompt(
@@ -116,6 +119,7 @@ topP: 0.9
         "topP": 0.9,
     },
     provider=Providers.OpenAI,
+    parameters={"question": PromptParameter(type=ParameterType.Text)},
 )
 
 

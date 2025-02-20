@@ -20,6 +20,8 @@ coverage
 *.py-E
 # Python packages
 .venv
+**/*.egg-info/
+__pycache__
 
 # Vercel
 .vercel

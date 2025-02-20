@@ -9,6 +9,10 @@ dependencies = [
     "latitude-sdk",
 ]
 
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
 [tool.hatch.metadata]
 allow-direct-references = true
 

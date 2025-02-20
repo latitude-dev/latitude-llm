@@ -1,5 +1,5 @@
 import asyncio
-from typing import Any, AsyncGenerator, Optional, Sequence, Union
+from typing import Any, AsyncGenerator, List, Optional, Sequence, Union
 
 from promptl_ai import Adapter, Message, MessageLike, Promptl, ToolMessage, ToolResultContent
 from promptl_ai.bindings.types import _Message
@@ -9,6 +9,7 @@ from latitude_sdk.client import (
     ChatPromptRequestParams,
     Client,
     ClientEvent,
+    GetAllPromptRequestParams,
     GetOrCreatePromptRequestBody,
     GetOrCreatePromptRequestParams,
     GetPromptRequestParams,
@@ -33,6 +34,7 @@ from latitude_sdk.sdk.types import (
     ToolResult,
     _LatitudeEvent,
 )
+from latitude_sdk.util import Adapter as AdapterUtil
 from latitude_sdk.util import Model
 
 _PROVIDER_TO_ADAPTER = {
@@ -64,6 +66,13 @@ class GetPromptOptions(PromptOptions, Model):
 
 
 class GetPromptResult(Prompt, Model):
+    pass
+
+
+_GetAllPromptResults = AdapterUtil[List[GetPromptResult]](List[GetPromptResult])
+
+
+class GetAllPromptOptions(PromptOptions, Model):
     pass
 
 
@@ -282,6 +291,20 @@ class Prompts:
             ),
         ) as response:
             return GetPromptResult.model_validate_json(response.content)
+
+    async def get_all(self, options: Optional[GetAllPromptOptions] = None) -> List[GetPromptResult]:
+        options = GetAllPromptOptions(**{**dict(self._options), **dict(options or {})})
+        self._ensure_prompt_options(options)
+        assert options.project_id is not None
+
+        async with self._client.request(
+            handler=RequestHandler.GetAllPrompts,
+            params=GetAllPromptRequestParams(
+                project_id=options.project_id,
+                version_uuid=options.version_uuid,
+            ),
+        ) as response:
+            return _GetAllPromptResults.validate_json(response.content)
 
     async def get_or_create(
         self, path: str, options: Optional[GetOrCreatePromptOptions] = None

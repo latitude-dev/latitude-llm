@@ -26,7 +26,7 @@ async def main():
         RunPromptOptions(
             parameters={"topic": "Python"},
             on_event=lambda event: print(event, "\n" * 2),
-            on_finished=lambda event: print(event, "\n" * 2),
+            on_finished=lambda result: print(result, "\n" * 2),
             on_error=lambda error: print(error, "\n" * 2),
             stream=True,
         ),
@@ -40,7 +40,7 @@ async def main():
         [UserMessage(content="Tell me another joke!")],
         ChatPromptOptions(
             on_event=lambda event: print(event, "\n" * 2),
-            on_finished=lambda event: print(event, "\n" * 2),
+            on_finished=lambda result: print(result, "\n" * 2),
             on_error=lambda error: print(error, "\n" * 2),
             stream=True,
         ),

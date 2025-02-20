@@ -23,6 +23,10 @@ class GetPromptRequestParams(PromptRequestParams, Model):
     path: str
 
 
+class GetAllPromptRequestParams(PromptRequestParams, Model):
+    pass
+
+
 class GetOrCreatePromptRequestParams(PromptRequestParams, Model):
     pass
 
@@ -90,6 +94,7 @@ class CreateEvaluationResultRequestBody(Model):
 
 RequestParams = Union[
     GetPromptRequestParams,
+    GetAllPromptRequestParams,
     GetOrCreatePromptRequestParams,
     RunPromptRequestParams,
     ChatPromptRequestParams,
@@ -111,6 +116,7 @@ RequestBody = Union[
 
 class RequestHandler(StrEnum):
     GetPrompt = "GET_PROMPT"
+    GetAllPrompts = "GET_ALL_PROMPTS"
     GetOrCreatePrompt = "GET_OR_CREATE_PROMPT"
     RunPrompt = "RUN_PROMPT"
     ChatPrompt = "CHAT_PROMPT"

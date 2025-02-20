@@ -4,6 +4,7 @@ from latitude_sdk.client.payloads import (
     ChatPromptRequestParams,
     CreateEvaluationResultRequestParams,
     CreateLogRequestParams,
+    GetAllPromptRequestParams,
     GetOrCreatePromptRequestParams,
     GetPromptRequestParams,
     RequestHandler,
@@ -35,6 +36,14 @@ class Router:
                 project_id=params.project_id,
                 version_uuid=params.version_uuid,
             ).prompt(params.path)
+
+        if handler == RequestHandler.GetAllPrompts:
+            assert isinstance(params, GetAllPromptRequestParams)
+
+            return "GET", self.prompts(
+                project_id=params.project_id,
+                version_uuid=params.version_uuid,
+            ).all_prompts
 
         elif handler == RequestHandler.GetOrCreatePrompt:
             assert isinstance(params, GetOrCreatePromptRequestParams)
@@ -94,6 +103,7 @@ class Router:
 
     class Prompts(Model):
         prompt: Callable[[str], str]
+        all_prompts: str
         get_or_create: str
         run: str
         logs: str
@@ -102,6 +112,7 @@ class Router:
         base_url = f"{self.commits_url(project_id, version_uuid)}/documents"
 
         return self.Prompts(
+            all_prompts=f"{base_url}",
             prompt=lambda path: f"{base_url}/{path}",
             get_or_create=f"{base_url}/get-or-create",
             run=f"{base_url}/run",
