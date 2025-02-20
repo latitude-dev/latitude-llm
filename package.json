@@ -62,7 +62,7 @@
     "@t3-oss/env-core": "^0.11.1",
     "ai": "^4.1.36",
     "argon2": "^0.41.0",
-    "bullmq": "^5.12.11",
+    "bullmq": "^5.41.3",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.1",
     "csv-parse": "^5.5.6",

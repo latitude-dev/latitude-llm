@@ -465,6 +465,7 @@ export const CLOUD_MESSAGES = {
   autogenerateEvaluations: `Auto-generate evaluations is only available on Latitude Cloud. ${CLOUD_INFO}`,
   refinePrompt: `Refine prompt is only available on Latitude Cloud. ${CLOUD_INFO}`,
   promptSuggestions: `Prompt suggestions are only available on Latitude Cloud. ${CLOUD_INFO}`,
+  documentSuggestions: `Document suggestions are only available on Latitude Cloud. ${CLOUD_INFO}`,
 }
 
 export {
@@ -476,3 +477,6 @@ export {
 export const LATITUDE_TOOLS_CONFIG_NAME = 'latitudeTools'
 
 export const DOCUMENT_SUGGESTION_EXPIRATION_DAYS = 7
+export const MAX_DOCUMENT_SUGGESTIONS_PER_EVALUATION = 1
+export const MAX_EVALUATION_RESULTS_PER_DOCUMENT_SUGGESTION = 5
+export const EVALUATION_RESULT_RECENCY_DAYS = 7

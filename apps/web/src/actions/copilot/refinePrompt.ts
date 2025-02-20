@@ -1,5 +1,7 @@
 'use server'
 
+import { createSdk } from '$/app/(private)/_lib/createSdk'
+import { CLOUD_MESSAGES } from '@latitude-data/core/browser'
 import { publisher } from '@latitude-data/core/events/publisher'
 import { BadRequestError } from '@latitude-data/core/lib/errors'
 import {
@@ -10,11 +12,8 @@ import {
 import { serialize } from '@latitude-data/core/services/evaluationResults/serialize'
 import { getEvaluationPrompt } from '@latitude-data/core/services/evaluations/index'
 import { env } from '@latitude-data/env'
-import { createSdk } from '$/app/(private)/_lib/createSdk'
 import { z } from 'zod'
-
 import { authProcedure } from '../procedures'
-import { CLOUD_MESSAGES } from '@latitude-data/core/browser'
 
 export const refinePromptAction = authProcedure
   .createServerAction()
@@ -116,5 +115,9 @@ export const refinePromptAction = authProcedure
       },
     })
 
-    return result.response.text
+    if (result.response.streamType !== 'object') {
+      throw new Error('Invalid refiner response type')
+    }
+
+    return result.response.object.prompt
   })

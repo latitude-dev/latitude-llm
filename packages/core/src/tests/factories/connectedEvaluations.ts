@@ -6,6 +6,7 @@ import {
   User,
   Workspace,
 } from '../../browser'
+import { updateConnectedEvaluation } from '../../services/connectedEvaluations'
 import {
   connectEvaluations,
   createAdvancedEvaluation,
@@ -16,11 +17,13 @@ export async function createConnectedEvaluation({
   evaluationUuid,
   user,
   documentUuid,
+  live = false,
 }: {
   workspace: Workspace
   user: User
   evaluationUuid?: string
   documentUuid: string
+  live?: boolean
 }): Promise<ConnectedEvaluation> {
   if (!evaluationUuid) {
     const evaluation = await createAdvancedEvaluation({
@@ -43,6 +46,7 @@ export async function createConnectedEvaluation({
     user,
     documentUuid,
     evaluationUuids: [evaluationUuid],
+    live,
   }).then((r) => r.unwrap())
   const connectedEvaluation = connectedEvaluations[0]
 
@@ -51,4 +55,17 @@ export async function createConnectedEvaluation({
   }
 
   return connectedEvaluation
+}
+
+export async function modifyConnectedEvaluation({
+  evaluation,
+  ...rest
+}: {
+  evaluation: ConnectedEvaluation
+  live: boolean
+}) {
+  return await updateConnectedEvaluation({
+    connectedEvaluation: evaluation,
+    data: rest,
+  }).then((r) => r.unwrap())
 }

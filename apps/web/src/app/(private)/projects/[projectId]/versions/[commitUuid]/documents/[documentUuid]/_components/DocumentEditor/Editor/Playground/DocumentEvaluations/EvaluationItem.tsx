@@ -136,6 +136,7 @@ export default function EvaluationItem({
           <LiveEvaluationToggle
             documentUuid={document.documentUuid}
             evaluation={evaluation}
+            disabled={isWaiting}
           />
           <Link href={route}>
             <Button

@@ -81,6 +81,23 @@ export class ConnectedEvaluationsRepository extends RepositoryLegacy<
     return Result.ok(result)
   }
 
+  async findByDocumentAndEvaluation(
+    documentUuid: string,
+    evaluationId: number,
+  ) {
+    const result = await this.db
+      .select()
+      .from(this.scope)
+      .where(
+        and(
+          eq(this.scope.documentUuid, documentUuid),
+          eq(this.scope.evaluationId, evaluationId),
+        ),
+      )
+
+    return Result.ok(result[0])
+  }
+
   async filterWithDetailsByDocumentUuid(
     uuid: string,
   ): Promise<TypedResult<ConnectedEvaluationWithDetails[], LatitudeError>> {

@@ -1,3 +1,5 @@
+'use client'
+
 import { applyDocumentSuggestionAction } from '$/actions/documentSuggestions/apply'
 import { discardDocumentSuggestionAction } from '$/actions/documentSuggestions/discard'
 import useFetcher from '$/hooks/useFetcher'
@@ -6,6 +8,7 @@ import { ROUTES } from '$/services/routes'
 import { DocumentSuggestionWithDetails } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui'
 import { compact } from 'lodash-es'
+import { useCallback } from 'react'
 import useSWR, { SWRConfiguration } from 'swr'
 
 export default function useDocumentSuggestions(
@@ -40,7 +43,7 @@ export default function useDocumentSuggestions(
   )
 
   const {
-    execute: applyDocumentSuggestion,
+    execute: executeApplyDocumentSuggestion,
     isPending: isApplyingDocumentSuggestion,
   } = useLatitudeAction(applyDocumentSuggestionAction, {
     onSuccess: async ({ data: { suggestion } }) => {
@@ -54,9 +57,20 @@ export default function useDocumentSuggestions(
       })
     },
   })
+  const applyDocumentSuggestion = useCallback(
+    async ({ suggestionId }: { suggestionId: number }) => {
+      const [result, error] = await executeApplyDocumentSuggestion({
+        projectId: projectId,
+        suggestionId: suggestionId,
+      })
+      if (error) return
+      return result
+    },
+    [projectId, commitUuid, documentUuid, executeApplyDocumentSuggestion],
+  )
 
   const {
-    execute: discardDocumentSuggestion,
+    execute: executeDiscardDocumentSuggestion,
     isPending: isDiscardingDocumentSuggestion,
   } = useLatitudeAction(discardDocumentSuggestionAction, {
     onSuccess: async ({ data: { suggestion } }) => {
@@ -70,6 +84,17 @@ export default function useDocumentSuggestions(
       })
     },
   })
+  const discardDocumentSuggestion = useCallback(
+    async ({ suggestionId }: { suggestionId: number }) => {
+      const [result, error] = await executeDiscardDocumentSuggestion({
+        projectId: projectId,
+        suggestionId: suggestionId,
+      })
+      if (error) return
+      return result
+    },
+    [projectId, commitUuid, documentUuid, executeDiscardDocumentSuggestion],
+  )
 
   return {
     data,

@@ -23,6 +23,7 @@ export enum Jobs {
   processOtlpTracesJob = 'processOtlpTracesJob',
   createDocumentLogFromSpanJob = 'createDocumentLogFromSpanJob',
   createDocumentLogsFromSpansJob = 'createDocumentLogsFromSpansJob',
+  generateDocumentSuggestionJob = 'generateDocumentSuggestionJob',
 }
 
 export const QUEUES = {
@@ -39,6 +40,7 @@ export const QUEUES = {
       'runDocumentJob',
       'runEvaluationJob',
       'uploadDocumentLogsJob',
+      'generateDocumentSuggestionJob',
     ],
   },
   [Queues.eventsQueue]: {
@@ -59,6 +61,7 @@ export const QUEUES = {
       'sendInvitationToUserJob',
       'sendMagicLinkJob',
       'sendReferralInvitationJob',
+      'requestDocumentSuggestionJob',
     ],
   },
   [Queues.liveEvaluationsQueue]: {

@@ -12,11 +12,16 @@ import {
 } from 'drizzle-orm'
 
 import { Commit, DocumentVersion } from '../../browser'
-import { NotFoundError, Result } from '../../lib'
+import { database } from '../../client'
+import {
+  databaseErrorCodes,
+  NotFoundError,
+  Result,
+  UnprocessableEntityError,
+} from '../../lib'
 import { commits, documentVersions, projects } from '../../schema'
 import { CommitsRepository } from '../commitsRepository'
 import RepositoryLegacy from '../repository'
-import { database } from '../../client'
 
 function mergeDocuments(
   ...documentsArr: DocumentVersion[][]
@@ -81,6 +86,42 @@ export class DocumentVersionsRepository extends RepositoryLegacy<
       .innerJoin(projects, eq(projects.id, commits.projectId))
       .where(eq(projects.workspaceId, this.workspaceId))
       .as('documentVersionsScope')
+  }
+
+  async lockDocument({
+    commitId,
+    documentUuid,
+    wait,
+  }: {
+    commitId: number
+    documentUuid: string
+    wait?: boolean
+  }) {
+    // .for('no key update', { noWait: true }) is bugged in drizzle!
+    // https://github.com/drizzle-team/drizzle-orm/issues/3554
+
+    try {
+      await this.db.execute(sql<boolean>`
+        SELECT TRUE
+        FROM ${documentVersions}
+        INNER JOIN ${commits} ON ${commits.id} = ${documentVersions.commitId}
+        INNER JOIN ${projects} ON ${projects.id} = ${commits.projectId}
+        WHERE (
+          ${projects.workspaceId} = ${this.workspaceId} AND
+          ${documentVersions.commitId} = ${commitId} AND
+          ${documentVersions.documentUuid} = ${documentUuid}
+        ) LIMIT 1 FOR NO KEY UPDATE ${sql.raw(wait ? '' : 'NOWAIT')};
+          `)
+    } catch (error: any) {
+      if (error?.code === databaseErrorCodes.lockNotAvailable) {
+        return Result.error(
+          new UnprocessableEntityError('Cannot obtain lock on document'),
+        )
+      }
+      return Result.error(error as Error)
+    }
+
+    return Result.nil()
   }
 
   async existsDocumentWithUuid(documentUuid: string) {

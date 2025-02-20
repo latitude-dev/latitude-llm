@@ -1,5 +1,5 @@
 import { subDays } from 'date-fns'
-import { and, desc, eq, getTableColumns, gte, isNull } from 'drizzle-orm'
+import { and, count, desc, eq, getTableColumns, gte, isNull } from 'drizzle-orm'
 import {
   DOCUMENT_SUGGESTION_EXPIRATION_DAYS,
   DocumentSuggestion,
@@ -25,6 +25,36 @@ export class DocumentSuggestionsRepository extends Repository<DocumentSuggestion
       .where(this.scopeFilter)
       .orderBy(desc(documentSuggestions.createdAt))
       .$dynamic()
+  }
+
+  async countByDocumentVersionAndEvaluation({
+    commitId,
+    documentUuid,
+    evaluationId,
+  }: {
+    commitId: number
+    documentUuid: string
+    evaluationId: number
+  }) {
+    const result = await this.db
+      .select({ count: count() })
+      .from(documentSuggestions)
+      .innerJoin(commits, eq(commits.id, documentSuggestions.commitId)) // Needed for tenancy
+      .innerJoin(projects, eq(projects.id, commits.projectId)) // Needed for tenancy
+      .where(
+        and(
+          this.scopeFilter,
+          eq(documentSuggestions.commitId, commitId),
+          eq(documentSuggestions.documentUuid, documentUuid),
+          eq(documentSuggestions.evaluationId, evaluationId),
+          gte(
+            documentSuggestions.createdAt,
+            subDays(new Date(), DOCUMENT_SUGGESTION_EXPIRATION_DAYS),
+          ),
+        ),
+      )
+
+    return Result.ok<number>(result[0]!.count)
   }
 
   async listByDocumentVersionWithDetails({
