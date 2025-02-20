@@ -7,5 +7,5 @@ windows:
       panes:
         - pnpm dev --filter='./packages/*'
         - cd apps/web && pnpm workers:watch
-  - docker: docker compose up db redis --menu=false
+  - docker: docker compose up db redis mailpit --menu=false
   - studio: cd packages/core && pnpm db:studio

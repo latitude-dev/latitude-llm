@@ -1,4 +1,12 @@
 services:
+  mailpit:
+    image: axllent/mailpit
+    ports:
+      - 8025:8025
+      - 1025:1025
+    profiles:
+      - development
+
   traefik:
     image: traefik:v2.10
     command:
