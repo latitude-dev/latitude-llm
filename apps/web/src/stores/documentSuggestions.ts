@@ -2,7 +2,6 @@
 
 import { applyDocumentSuggestionAction } from '$/actions/documentSuggestions/apply'
 import { discardDocumentSuggestionAction } from '$/actions/documentSuggestions/discard'
-import { generateDocumentSuggestionAction } from '$/actions/documentSuggestions/generate'
 import useFetcher from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
@@ -97,38 +96,6 @@ export default function useDocumentSuggestions(
     [projectId, commitUuid, documentUuid, executeDiscardDocumentSuggestion],
   )
 
-  const {
-    execute: executeGenerateDocumentSuggestion,
-    isPending: isGeneratingDocumentSuggestion,
-  } = useLatitudeAction(generateDocumentSuggestionAction, {
-    onSuccess: async ({ data: { suggestion } }) => {
-      mutate((prev) => {
-        if (prev?.find((s) => s.id === suggestion.id)) return prev
-        return [suggestion, ...(prev ?? [])]
-      })
-    },
-    onError: async (error) => {
-      toast({
-        title: 'Error generating suggestion',
-        description: error?.err?.message,
-        variant: 'destructive',
-      })
-    },
-  })
-  const generateDocumentSuggestion = useCallback(
-    async ({ evaluationId }: { evaluationId: number }) => {
-      const [result, error] = await executeGenerateDocumentSuggestion({
-        projectId: projectId,
-        commitUuid: commitUuid,
-        documentUuid: documentUuid,
-        evaluationId: evaluationId,
-      })
-      if (error) return
-      return result
-    },
-    [projectId, commitUuid, documentUuid, executeGenerateDocumentSuggestion],
-  )
-
   return {
     data,
     mutate,
@@ -136,12 +103,7 @@ export default function useDocumentSuggestions(
     isApplyingDocumentSuggestion,
     discardDocumentSuggestion,
     isDiscardingDocumentSuggestion,
-    generateDocumentSuggestion,
-    isGeneratingDocumentSuggestion,
-    isExecuting:
-      isApplyingDocumentSuggestion ||
-      isDiscardingDocumentSuggestion ||
-      isGeneratingDocumentSuggestion,
+    isExecuting: isApplyingDocumentSuggestion || isDiscardingDocumentSuggestion,
     ...rest,
   }
 }

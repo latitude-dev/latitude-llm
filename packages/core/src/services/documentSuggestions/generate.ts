@@ -75,7 +75,7 @@ export async function generateDocumentSuggestion(
   )
 
   if (!env.LATITUDE_CLOUD) {
-    return Result.error(new Error(CLOUD_MESSAGES.refinePrompt))
+    return Result.error(new Error(CLOUD_MESSAGES.documentSuggestions))
   }
 
   if (!env.COPILOT_REFINE_PROMPT_PATH) {

@@ -173,7 +173,16 @@ export class EvaluationResultsRepository extends Repository<EvaluationResultDto>
         ),
       )
       .orderBy(
-        asc(evaluationResultDto.result),
+        asc(
+          sql`CASE 
+            WHEN ${evaluationResults.resultableType} = ${EvaluationResultableType.Boolean} 
+              THEN CASE WHEN ${evaluationResultableBooleans.result} = TRUE THEN 1 ELSE 0 END
+            WHEN ${evaluationResults.resultableType} = ${EvaluationResultableType.Number} 
+              THEN ${evaluationResultableNumbers.result}::numeric
+            WHEN ${evaluationResults.resultableType} = ${EvaluationResultableType.Text}
+              THEN 1
+          END`,
+        ),
         desc(evaluationResults.updatedAt),
       )
       .limit(MAX_EVALUATION_RESULTS_PER_DOCUMENT_SUGGESTION)

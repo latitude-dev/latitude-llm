@@ -17,8 +17,8 @@ import * as factories from '../../tests/factories'
 import { discardDocumentSuggestion } from './discard'
 
 describe('discardDocumentSuggestion', () => {
-  const mocks = {
-    publisher: undefined as unknown as MockInstance,
+  let mocks: {
+    publisher: MockInstance
   }
 
   let workspace: Workspace
@@ -81,9 +81,11 @@ describe('discardDocumentSuggestion', () => {
       evaluation: evaluation,
     })
 
-    mocks.publisher = vi
-      .spyOn(publisher, 'publishLater')
-      .mockImplementation(async () => {})
+    mocks = {
+      publisher: vi
+        .spyOn(publisher, 'publishLater')
+        .mockImplementation(async () => {}),
+    }
   })
 
   it('discards document suggestion', async () => {

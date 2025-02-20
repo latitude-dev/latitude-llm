@@ -465,6 +465,7 @@ export const CLOUD_MESSAGES = {
   autogenerateEvaluations: `Auto-generate evaluations is only available on Latitude Cloud. ${CLOUD_INFO}`,
   refinePrompt: `Refine prompt is only available on Latitude Cloud. ${CLOUD_INFO}`,
   promptSuggestions: `Prompt suggestions are only available on Latitude Cloud. ${CLOUD_INFO}`,
+  documentSuggestions: `Document suggestions are only available on Latitude Cloud. ${CLOUD_INFO}`,
 }
 
 export {

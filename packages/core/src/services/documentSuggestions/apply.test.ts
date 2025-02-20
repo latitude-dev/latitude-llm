@@ -17,8 +17,8 @@ import { mergeCommit } from '../commits/merge'
 import { applyDocumentSuggestion } from './apply'
 
 describe('applyDocumentSuggestion', () => {
-  const mocks = {
-    publisher: undefined as unknown as MockInstance,
+  let mocks: {
+    publisher: MockInstance
   }
 
   let workspace: Workspace
@@ -72,9 +72,11 @@ describe('applyDocumentSuggestion', () => {
       documentUuid: document.documentUuid,
     })
 
-    mocks.publisher = vi
-      .spyOn(publisher, 'publishLater')
-      .mockImplementation(async () => {})
+    mocks = {
+      publisher: vi
+        .spyOn(publisher, 'publishLater')
+        .mockImplementation(async () => {}),
+    }
   })
 
   it('not applies document suggestion when fails', async () => {
