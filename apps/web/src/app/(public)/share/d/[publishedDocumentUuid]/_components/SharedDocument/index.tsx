@@ -4,7 +4,14 @@ import { capitalize } from 'lodash-es'
 import { FormEvent, useCallback, useEffect, useRef, useState } from 'react'
 
 import { ParameterType, PublishedDocument } from '@latitude-data/core/browser'
-import { Button, Card, CardContent, cn, FormField } from '@latitude-data/web-ui'
+import {
+  Button,
+  Card,
+  CardContent,
+  cn,
+  FormField,
+  useToast,
+} from '@latitude-data/web-ui'
 import { ConversationMetadata } from 'promptl-ai'
 
 import { ParameterInput } from '$/components/ParameterInput'
@@ -123,15 +130,27 @@ function PromptForm({
   )
 }
 
-function useSearchParams({ shared }: { shared: PublishedDocument }) {
-  const router = useNavigate()
+const MAX_SAFE_LIMIT_CHARACTERS = 8000
+
+function useGetUrlWithParams({ shared }: { shared: PublishedDocument }) {
+  const { toast } = useToast()
   const promptPath = ROUTES.share.document(shared.uuid!).root
   return useCallback(
     (parameters: Record<string, string>) => {
       const search = convertParametersToUrlSearchParams(parameters)
-      router.replace(`${promptPath}?${search}`)
+      const url = `${promptPath}?${search}`
+
+      if (url.length > MAX_SAFE_LIMIT_CHARACTERS) {
+        toast({
+          title: 'Error',
+          description: 'Too much text in the form. Try reducing input length.',
+          variant: 'destructive',
+        })
+        return null
+      }
+      return url
     },
-    [router, promptPath],
+    [promptPath],
   )
 }
 
@@ -144,7 +163,8 @@ export function SharedDocument({
   shared: PublishedDocument
   queryParams: Record<string, string>
 }) {
-  const updateSearchParams = useSearchParams({ shared })
+  const router = useNavigate()
+  const getUrl = useGetUrlWithParams({ shared })
   const formRef = useRef<HTMLDivElement>(null)
   const originalFormHeight = useRef<number | undefined>(undefined)
   const originalFormWidth = useRef<number | undefined>(undefined)
@@ -154,9 +174,12 @@ export function SharedDocument({
   const prompt = usePrompt({ shared })
   const onSubmit = useCallback(
     async (parameters: Record<string, string>) => {
+      const url = getUrl(parameters)
+      if (!url) return // Url too long
+
+      router.replace(url)
       setFormVisible(false)
       setFormHeight(undefined)
-      updateSearchParams(parameters)
 
       // Give time to animation to finish
       setTimeout(async () => {
