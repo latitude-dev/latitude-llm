@@ -63,7 +63,7 @@ ${getRequestBodyContent()}
         Check out{' '}
         <a
           target='_blank'
-          href='https://docs.latitude.so/guides/prompt-manager/api-access'
+          href='https://docs.latitude.so/guides/api/api-access'
         >
           <Text.H5 underline color='primary'>
             our docs
