@@ -78,8 +78,7 @@ jobs:
 
       - name: Publish to npm
         if: steps.check_version.outputs.should_publish == 'true'
-        run: pnpm publish --access public --filter=@latitude-data/sdk
-
+        run: pnpm publish --access public --filter=@latitude-data/sdk --no-git-checks
 
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
