@@ -103,13 +103,13 @@ export class DocumentVersionsRepository extends RepositoryLegacy<
     try {
       await this.db.execute(sql<boolean>`
         SELECT TRUE
-        FROM "latitude"."document_versions"
-        INNER JOIN "latitude"."commits" ON "commits"."id" = "document_versions"."commit_id"
-        INNER JOIN "latitude"."projects" ON "projects"."id" = "commits"."project_id"
+        FROM ${documentVersions}
+        INNER JOIN ${commits} ON ${commits.id} = ${documentVersions.commitId}
+        INNER JOIN ${projects} ON ${projects.id} = ${commits.projectId}
         WHERE (
-          "projects"."workspace_id" = ${this.workspaceId} AND
-          "document_versions"."commit_id" = ${commitId} AND
-          "document_versions"."document_uuid" = ${documentUuid}
+          ${projects.workspaceId} = ${this.workspaceId} AND
+          ${documentVersions.commitId} = ${commitId} AND
+          ${documentVersions.documentUuid} = ${documentUuid}
         ) LIMIT 1 FOR NO KEY UPDATE ${sql.raw(wait ? '' : 'NOWAIT')};
           `)
     } catch (error: any) {
