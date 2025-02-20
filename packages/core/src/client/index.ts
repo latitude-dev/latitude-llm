@@ -10,6 +10,8 @@ export type Database = NodePgDatabase<typeof schema>
 
 const pool = new Pool({
   connectionString: env.DATABASE_URL,
+  idle_in_transaction_session_timeout: 1800000, // 30 minutes
+  statement_timeout: 30000, // 30 seconds
 })
 
 export const database = drizzle(pool, { schema })
