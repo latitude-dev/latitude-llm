@@ -1,10 +1,10 @@
 from datetime import datetime
-from typing import Any, Callable, Dict, List, Literal, Optional, Protocol, Sequence, Union, runtime_checkable
+from typing import Any, Callable, Literal, Optional, Protocol, Sequence, Union, runtime_checkable
 
 from promptl_ai import Message, MessageLike
 
 from latitude_sdk.sdk.errors import ApiError
-from latitude_sdk.util import Field, Model, StrEnum
+from latitude_sdk.util import Adapter, Field, Model, StrEnum
 
 
 class DbErrorRef(Model):
@@ -19,6 +19,8 @@ class Providers(StrEnum):
     Mistral = "mistral"
     Azure = "azure"
     Google = "google"
+    GoogleVertex = "google_vertex"
+    AnthropicVertex = "anthropic_vertex"
     Custom = "custom"
 
 
@@ -26,7 +28,7 @@ class Prompt(Model):
     uuid: str
     path: str
     content: str
-    config: Dict[str, Any]
+    config: dict[str, Any]
     provider: Optional[Providers] = None
 
 
@@ -49,7 +51,7 @@ class FinishReason(StrEnum):
 class ToolCall(Model):
     id: str
     name: str
-    arguments: Dict[str, Any]
+    arguments: dict[str, Any]
 
 
 class ToolResult(Model):
@@ -67,7 +69,7 @@ class StreamTypes(StrEnum):
 class ChainTextResponse(Model):
     type: Literal[StreamTypes.Text] = Field(default=StreamTypes.Text, alias=str("streamType"))
     text: str
-    tool_calls: Optional[List[ToolCall]] = Field(default=None, alias=str("toolCalls"))
+    tool_calls: list[ToolCall] = Field(alias=str("toolCalls"))
     usage: ModelUsage
 
 
@@ -89,66 +91,105 @@ class ChainError(Model):
 class StreamEvents(StrEnum):
     Latitude = "latitude-event"
     Provider = "provider-event"
-    Finished = "finished-event"
 
 
-ProviderEvent = Dict[str, Any]
+ProviderEvent = dict[str, Any]
 
 
 class ChainEvents(StrEnum):
-    Step = "chain-step"
-    StepCompleted = "chain-step-complete"
-    Completed = "chain-complete"
-    Error = "chain-error"
+    ChainStarted = "chain-started"
+    StepStarted = "step-started"
+    ProviderStarted = "provider-started"
+    ProviderCompleted = "provider-completed"
+    ToolsStarted = "tools-started"
+    ToolCompleted = "tool-completed"
+    StepCompleted = "step-completed"
+    ChainCompleted = "chain-completed"
+    ChainError = "chain-error"
+    ToolsRequested = "tools-requested"
 
 
-class ChainEventStep(Model):
+class GenericChainEvent(Model):
     event: Literal[StreamEvents.Latitude] = StreamEvents.Latitude
-    type: Literal[ChainEvents.Step] = ChainEvents.Step
-    uuid: Optional[str] = None
-    is_last_step: bool = Field(alias=str("isLastStep"))
-    config: Dict[str, Any]
-    messages: List[Message]
+    messages: list[Message]
+    uuid: str
 
 
-class ChainEventStepCompleted(Model):
-    event: Literal[StreamEvents.Latitude] = StreamEvents.Latitude
-    type: Literal[ChainEvents.StepCompleted] = ChainEvents.StepCompleted
-    uuid: Optional[str] = None
-    response: ChainResponse
+class ChainEventChainStarted(GenericChainEvent):
+    type: Literal[ChainEvents.ChainStarted] = ChainEvents.ChainStarted
 
 
-class ChainEventCompleted(Model):
-    event: Literal[StreamEvents.Latitude] = StreamEvents.Latitude
-    type: Literal[ChainEvents.Completed] = ChainEvents.Completed
-    uuid: Optional[str] = None
+class ChainEventStepStarted(GenericChainEvent):
+    type: Literal[ChainEvents.StepStarted] = ChainEvents.StepStarted
+
+
+class ChainEventProviderStarted(GenericChainEvent):
+    type: Literal[ChainEvents.ProviderStarted] = ChainEvents.ProviderStarted
+    config: dict[str, Any]
+
+
+class ChainEventProviderCompleted(GenericChainEvent):
+    type: Literal[ChainEvents.ProviderCompleted] = ChainEvents.ProviderCompleted
+    provider_log_uuid: str = Field(alias=str("providerLogUuid"))
+    token_usage: ModelUsage = Field(alias=str("tokenUsage"))
     finish_reason: FinishReason = Field(alias=str("finishReason"))
-    config: Dict[str, Any]
-    messages: Optional[List[Message]] = None
-    object: Optional[Any] = None
     response: ChainResponse
 
 
-class ChainEventError(Model):
-    event: Literal[StreamEvents.Latitude] = StreamEvents.Latitude
-    type: Literal[ChainEvents.Error] = ChainEvents.Error
+class ChainEventToolsStarted(GenericChainEvent):
+    type: Literal[ChainEvents.ToolsStarted] = ChainEvents.ToolsStarted
+    tools: list[ToolCall]
+
+
+class ChainEventToolCompleted(GenericChainEvent):
+    type: Literal[ChainEvents.ToolCompleted] = ChainEvents.ToolCompleted
+
+
+class ChainEventStepCompleted(GenericChainEvent):
+    type: Literal[ChainEvents.StepCompleted] = ChainEvents.StepCompleted
+
+
+class ChainEventChainCompleted(GenericChainEvent):
+    type: Literal[ChainEvents.ChainCompleted] = ChainEvents.ChainCompleted
+    token_usage: ModelUsage = Field(alias=str("tokenUsage"))
+    finish_reason: FinishReason = Field(alias=str("finishReason"))
+
+
+class ChainEventChainError(GenericChainEvent):
+    type: Literal[ChainEvents.ChainError] = ChainEvents.ChainError
     error: ChainError
 
 
-ChainEvent = Union[ChainEventStep, ChainEventStepCompleted, ChainEventCompleted, ChainEventError]
+class ChainEventToolsRequested(GenericChainEvent):
+    type: Literal[ChainEvents.ToolsRequested] = ChainEvents.ToolsRequested
+    tools: list[ToolCall]
 
+
+ChainEvent = Union[
+    ChainEventChainStarted,
+    ChainEventStepStarted,
+    ChainEventProviderStarted,
+    ChainEventProviderCompleted,
+    ChainEventToolsStarted,
+    ChainEventToolCompleted,
+    ChainEventStepCompleted,
+    ChainEventChainCompleted,
+    ChainEventChainError,
+    ChainEventToolsRequested,
+]
 
 LatitudeEvent = ChainEvent
+_LatitudeEvent = Adapter[LatitudeEvent](LatitudeEvent)
 
 
-class FinishedEvent(Model):
-    event: Literal[StreamEvents.Finished] = StreamEvents.Finished
+class FinishedResult(Model):
     uuid: str
-    conversation: List[Message]
+    conversation: list[Message]
     response: ChainResponse
+    tool_requests: list[ToolCall] = Field(alias=str("toolRequests"))
 
 
-StreamEvent = Union[ProviderEvent, LatitudeEvent, FinishedEvent]
+StreamEvent = Union[ProviderEvent, LatitudeEvent]
 
 
 class LogSources(StrEnum):
@@ -166,7 +207,7 @@ class Log(Model):
     commit_id: int = Field(alias=str("commitId"))
     resolved_content: str = Field(alias=str("resolvedContent"))
     content_hash: str = Field(alias=str("contentHash"))
-    parameters: Dict[str, Any]
+    parameters: dict[str, Any]
     custom_identifier: Optional[str] = Field(default=None, alias=str("customIdentifier"))
     duration: Optional[int] = None
     created_at: datetime = Field(alias=str("createdAt"))
@@ -204,7 +245,7 @@ class StreamCallbacks(Model):
 
     @runtime_checkable
     class OnFinished(Protocol):
-        def __call__(self, event: FinishedEvent): ...
+        def __call__(self, result: FinishedResult): ...
 
     on_finished: Optional[OnFinished] = None
 
@@ -219,27 +260,27 @@ class OnToolCallDetails(Model):
     id: str
     name: str
     conversation_uuid: str
-    messages: List[Message]
+    messages: list[Message]
     pause_execution: Callable[[], ToolResult]
-    requested_tool_calls: List[ToolCall]
+    requested_tool_calls: list[ToolCall]
 
 
 @runtime_checkable
 class OnToolCall(Protocol):
-    async def __call__(self, arguments: Dict[str, Any], details: OnToolCallDetails) -> Any: ...
+    async def __call__(self, arguments: dict[str, Any], details: OnToolCallDetails) -> Any: ...
 
 
 @runtime_checkable
 class OnStep(Protocol):
     async def __call__(
-        self, messages: List[MessageLike], config: Dict[str, Any]
+        self, messages: list[MessageLike], config: dict[str, Any]
     ) -> Union[str, MessageLike, Sequence[MessageLike]]: ...
 
 
 class SdkOptions(Model):
     project_id: Optional[int] = None
     version_uuid: Optional[str] = None
-    tools: Optional[Dict[str, OnToolCall]] = None
+    tools: Optional[dict[str, OnToolCall]] = None
 
 
 class GatewayOptions(Model):

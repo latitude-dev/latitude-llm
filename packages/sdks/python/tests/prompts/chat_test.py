@@ -25,7 +25,7 @@ class TestChatPromptSync(TestCase):
         )
         endpoint = f"/conversations/{conversation_uuid}/chat"
         endpoint_mock = self.gateway_mock.post(endpoint).mock(
-            return_value=httpx.Response(200, json=fixtures.CONVERSATION_FINISHED_EVENT_RESPONSE)
+            return_value=httpx.Response(200, json=fixtures.CONVERSATION_FINISHED_RESULT_RESPONSE)
         )
 
         result = await self.sdk.prompts.chat(conversation_uuid, messages, options)
@@ -41,9 +41,9 @@ class TestChatPromptSync(TestCase):
             },
         )
         self.assertEqual(endpoint_mock.call_count, 1)
-        self.assertEqual(result, ChatPromptResult(**dict(fixtures.CONVERSATION_FINISHED_EVENT)))
+        self.assertEqual(result, ChatPromptResult(**dict(fixtures.CONVERSATION_FINISHED_RESULT)))
         on_event_mock.assert_not_called()
-        on_finished_mock.assert_called_once_with(fixtures.CONVERSATION_FINISHED_EVENT)
+        on_finished_mock.assert_called_once_with(fixtures.CONVERSATION_FINISHED_RESULT)
         on_error_mock.assert_not_called()
 
     async def test_success_with_tools(self):
@@ -68,8 +68,8 @@ class TestChatPromptSync(TestCase):
         endpoint = re.compile(r"/conversations/(?P<uuid>[a-zA-Z0-9-]+)/chat")
         endpoint_mock = self.gateway_mock.post(endpoint).mock(
             side_effect=[
-                httpx.Response(200, json=fixtures.CONVERSATION_FINISHED_EVENT_RESPONSE),
-                httpx.Response(200, json=fixtures.FOLLOW_UP_CONVERSATION_FINISHED_EVENT_RESPONSE),
+                httpx.Response(200, json=fixtures.CONVERSATION_FINISHED_RESULT_RESPONSE),
+                httpx.Response(200, json=fixtures.FOLLOW_UP_CONVERSATION_FINISHED_RESULT_RESPONSE),
             ]
         )
 
@@ -88,7 +88,7 @@ class TestChatPromptSync(TestCase):
         self.assert_requested(
             requests[1],
             method="POST",
-            endpoint=f"/conversations/{fixtures.CONVERSATION_FINISHED_EVENT.uuid}/chat",
+            endpoint=f"/conversations/{fixtures.CONVERSATION_FINISHED_RESULT.uuid}/chat",
             body={
                 "messages": [
                     json.loads(message.model_dump_json()) for message in fixtures.CONVERSATION_TOOL_RESULTS_MESSAGES
@@ -97,9 +97,9 @@ class TestChatPromptSync(TestCase):
             },
         )
         self.assertEqual(endpoint_mock.call_count, 2)
-        self.assertEqual(result, ChatPromptResult(**dict(fixtures.FOLLOW_UP_CONVERSATION_FINISHED_EVENT)))
+        self.assertEqual(result, ChatPromptResult(**dict(fixtures.FOLLOW_UP_CONVERSATION_FINISHED_RESULT)))
         on_event_mock.assert_not_called()
-        on_finished_mock.assert_called_once_with(fixtures.FOLLOW_UP_CONVERSATION_FINISHED_EVENT)
+        on_finished_mock.assert_called_once_with(fixtures.FOLLOW_UP_CONVERSATION_FINISHED_RESULT)
         on_error_mock.assert_not_called()
         [
             self.assertEqual(
@@ -109,8 +109,8 @@ class TestChatPromptSync(TestCase):
                     OnToolCallDetails.model_construct(
                         id=fixtures.CONVERSATION_TOOL_CALLS[index].id,
                         name=fixtures.CONVERSATION_TOOL_CALLS[index].name,
-                        conversation_uuid=fixtures.CONVERSATION_FINISHED_EVENT.uuid,
-                        messages=fixtures.CONVERSATION_FINISHED_EVENT.conversation,
+                        conversation_uuid=fixtures.CONVERSATION_FINISHED_RESULT.uuid,
+                        messages=fixtures.CONVERSATION_FINISHED_RESULT.conversation,
                         pause_execution=mock.ANY,
                         requested_tool_calls=fixtures.CONVERSATION_TOOL_CALLS,
                     ),
@@ -139,8 +139,8 @@ class TestChatPromptSync(TestCase):
         endpoint = re.compile(r"/conversations/(?P<uuid>[a-zA-Z0-9-]+)/chat")
         endpoint_mock = self.gateway_mock.post(endpoint).mock(
             side_effect=[
-                httpx.Response(200, json=fixtures.CONVERSATION_FINISHED_EVENT_RESPONSE),
-                httpx.Response(200, json=fixtures.FOLLOW_UP_CONVERSATION_FINISHED_EVENT_RESPONSE),
+                httpx.Response(200, json=fixtures.CONVERSATION_FINISHED_RESULT_RESPONSE),
+                httpx.Response(200, json=fixtures.FOLLOW_UP_CONVERSATION_FINISHED_RESULT_RESPONSE),
             ]
         )
 
@@ -157,9 +157,9 @@ class TestChatPromptSync(TestCase):
             },
         )
         self.assertEqual(endpoint_mock.call_count, 1)
-        self.assertEqual(result, ChatPromptResult(**dict(fixtures.CONVERSATION_FINISHED_EVENT)))
+        self.assertEqual(result, ChatPromptResult(**dict(fixtures.CONVERSATION_FINISHED_RESULT)))
         on_event_mock.assert_not_called()
-        on_finished_mock.assert_called_once_with(fixtures.CONVERSATION_FINISHED_EVENT)
+        on_finished_mock.assert_called_once_with(fixtures.CONVERSATION_FINISHED_RESULT)
         on_error_mock.assert_not_called()
         [
             self.assertEqual(
@@ -169,8 +169,8 @@ class TestChatPromptSync(TestCase):
                     OnToolCallDetails.model_construct(
                         id=fixtures.CONVERSATION_TOOL_CALLS[index].id,
                         name=fixtures.CONVERSATION_TOOL_CALLS[index].name,
-                        conversation_uuid=fixtures.CONVERSATION_FINISHED_EVENT.uuid,
-                        messages=fixtures.CONVERSATION_FINISHED_EVENT.conversation,
+                        conversation_uuid=fixtures.CONVERSATION_FINISHED_RESULT.uuid,
+                        messages=fixtures.CONVERSATION_FINISHED_RESULT.conversation,
                         pause_execution=mock.ANY,
                         requested_tool_calls=fixtures.CONVERSATION_TOOL_CALLS,
                     ),
@@ -199,7 +199,7 @@ class TestChatPromptSync(TestCase):
         )
 
         result = await self.sdk.prompts.chat(conversation_uuid, messages, options)
-        requests = cast(List[httpx.Request], [request for request, _ in endpoint_mock.calls])  # type: ignore
+        requests = cast(list[httpx.Request], [request for request, _ in endpoint_mock.calls])  # type: ignore
 
         [
             self.assert_requested(
@@ -319,10 +319,10 @@ class TestChatPromptStream(TestCase):
             },
         )
         self.assertEqual(endpoint_mock.call_count, 1)
-        self.assertEqual(result, ChatPromptResult(**dict(fixtures.CONVERSATION_FINISHED_EVENT)))
+        self.assertEqual(result, ChatPromptResult(**dict(fixtures.CONVERSATION_FINISHED_RESULT)))
         [self.assertEqual(got, exp) for got, exp in zip(events, fixtures.CONVERSATION_EVENTS)]
         self.assertEqual(on_event_mock.call_count, len(fixtures.CONVERSATION_EVENTS))
-        on_finished_mock.assert_called_once_with(fixtures.CONVERSATION_FINISHED_EVENT)
+        on_finished_mock.assert_called_once_with(fixtures.CONVERSATION_FINISHED_RESULT)
         on_error_mock.assert_not_called()
 
     async def test_success_with_tools(self):
@@ -368,7 +368,7 @@ class TestChatPromptStream(TestCase):
         self.assert_requested(
             requests[1],
             method="POST",
-            endpoint=f"/conversations/{fixtures.CONVERSATION_FINISHED_EVENT.uuid}/chat",
+            endpoint=f"/conversations/{fixtures.CONVERSATION_FINISHED_RESULT.uuid}/chat",
             body={
                 "messages": [
                     json.loads(message.model_dump_json()) for message in fixtures.CONVERSATION_TOOL_RESULTS_MESSAGES
@@ -377,7 +377,7 @@ class TestChatPromptStream(TestCase):
             },
         )
         self.assertEqual(endpoint_mock.call_count, 2)
-        self.assertEqual(result, ChatPromptResult(**dict(fixtures.FOLLOW_UP_CONVERSATION_FINISHED_EVENT)))
+        self.assertEqual(result, ChatPromptResult(**dict(fixtures.FOLLOW_UP_CONVERSATION_FINISHED_RESULT)))
         [
             self.assertEqual(got, exp)
             for got, exp in zip(events, fixtures.CONVERSATION_EVENTS + fixtures.FOLLOW_UP_CONVERSATION_EVENTS)
@@ -385,7 +385,7 @@ class TestChatPromptStream(TestCase):
         self.assertEqual(
             on_event_mock.call_count, len(fixtures.CONVERSATION_EVENTS + fixtures.FOLLOW_UP_CONVERSATION_EVENTS)
         )
-        on_finished_mock.assert_called_once_with(fixtures.FOLLOW_UP_CONVERSATION_FINISHED_EVENT)
+        on_finished_mock.assert_called_once_with(fixtures.FOLLOW_UP_CONVERSATION_FINISHED_RESULT)
         on_error_mock.assert_not_called()
         [
             self.assertEqual(
@@ -395,8 +395,8 @@ class TestChatPromptStream(TestCase):
                     OnToolCallDetails.model_construct(
                         id=fixtures.CONVERSATION_TOOL_CALLS[index].id,
                         name=fixtures.CONVERSATION_TOOL_CALLS[index].name,
-                        conversation_uuid=fixtures.CONVERSATION_FINISHED_EVENT.uuid,
-                        messages=fixtures.CONVERSATION_FINISHED_EVENT.conversation,
+                        conversation_uuid=fixtures.CONVERSATION_FINISHED_RESULT.uuid,
+                        messages=fixtures.CONVERSATION_FINISHED_RESULT.conversation,
                         pause_execution=mock.ANY,
                         requested_tool_calls=fixtures.CONVERSATION_TOOL_CALLS,
                     ),
@@ -444,10 +444,10 @@ class TestChatPromptStream(TestCase):
             },
         )
         self.assertEqual(endpoint_mock.call_count, 1)
-        self.assertEqual(result, ChatPromptResult(**dict(fixtures.CONVERSATION_FINISHED_EVENT)))
+        self.assertEqual(result, ChatPromptResult(**dict(fixtures.CONVERSATION_FINISHED_RESULT)))
         [self.assertEqual(got, exp) for got, exp in zip(events, fixtures.CONVERSATION_EVENTS)]
         self.assertEqual(on_event_mock.call_count, len(fixtures.CONVERSATION_EVENTS))
-        on_finished_mock.assert_called_once_with(fixtures.CONVERSATION_FINISHED_EVENT)
+        on_finished_mock.assert_called_once_with(fixtures.CONVERSATION_FINISHED_RESULT)
         on_error_mock.assert_not_called()
         [
             self.assertEqual(
@@ -457,8 +457,8 @@ class TestChatPromptStream(TestCase):
                     OnToolCallDetails.model_construct(
                         id=fixtures.CONVERSATION_TOOL_CALLS[index].id,
                         name=fixtures.CONVERSATION_TOOL_CALLS[index].name,
-                        conversation_uuid=fixtures.CONVERSATION_FINISHED_EVENT.uuid,
-                        messages=fixtures.CONVERSATION_FINISHED_EVENT.conversation,
+                        conversation_uuid=fixtures.CONVERSATION_FINISHED_RESULT.uuid,
+                        messages=fixtures.CONVERSATION_FINISHED_RESULT.conversation,
                         pause_execution=mock.ANY,
                         requested_tool_calls=fixtures.CONVERSATION_TOOL_CALLS,
                     ),

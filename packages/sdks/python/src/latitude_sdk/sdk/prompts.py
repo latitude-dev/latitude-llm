@@ -1,5 +1,5 @@
 import asyncio
-from typing import Any, AsyncGenerator, Dict, List, Optional, Sequence, Union
+from typing import Any, AsyncGenerator, Optional, Sequence, Union
 
 from promptl_ai import Adapter, Message, MessageLike, Promptl, ToolMessage, ToolResultContent
 from promptl_ai.bindings.types import _Message
@@ -18,12 +18,8 @@ from latitude_sdk.client import (
 )
 from latitude_sdk.sdk.errors import ApiError, ApiErrorCodes
 from latitude_sdk.sdk.types import (
-    ChainEventCompleted,
-    ChainEventError,
     ChainEvents,
-    ChainEventStep,
-    ChainEventStepCompleted,
-    FinishedEvent,
+    FinishedResult,
     OnStep,
     OnToolCall,
     OnToolCallDetails,
@@ -33,7 +29,9 @@ from latitude_sdk.sdk.types import (
     StreamCallbacks,
     StreamEvents,
     StreamTypes,
+    ToolCall,
     ToolResult,
+    _LatitudeEvent,
 )
 from latitude_sdk.util import Model
 
@@ -79,36 +77,36 @@ class GetOrCreatePromptResult(Prompt, Model):
 
 class RunPromptOptions(StreamCallbacks, PromptOptions, Model):
     custom_identifier: Optional[str] = None
-    parameters: Optional[Dict[str, Any]] = None
-    tools: Optional[Dict[str, OnToolCall]] = None
+    parameters: Optional[dict[str, Any]] = None
+    tools: Optional[dict[str, OnToolCall]] = None
     stream: Optional[bool] = None
 
 
-class RunPromptResult(FinishedEvent, Model):
+class RunPromptResult(FinishedResult, Model):
     pass
 
 
 class ChatPromptOptions(StreamCallbacks, Model):
-    tools: Optional[Dict[str, OnToolCall]] = None
+    tools: Optional[dict[str, OnToolCall]] = None
     stream: Optional[bool] = None
 
 
-class ChatPromptResult(FinishedEvent, Model):
+class ChatPromptResult(FinishedResult, Model):
     pass
 
 
 class RenderPromptOptions(Model):
-    parameters: Optional[Dict[str, Any]] = None
+    parameters: Optional[dict[str, Any]] = None
     adapter: Optional[Adapter] = None
 
 
 class RenderPromptResult(Model):
-    messages: List[MessageLike]
-    config: Dict[str, Any]
+    messages: list[MessageLike]
+    config: dict[str, Any]
 
 
 class RenderChainOptions(Model):
-    parameters: Optional[Dict[str, Any]] = None
+    parameters: Optional[dict[str, Any]] = None
     adapter: Optional[Adapter] = None
 
 
@@ -137,44 +135,31 @@ class Prompts:
 
     async def _handle_stream(
         self, stream: AsyncGenerator[ClientEvent, Any], on_event: Optional[StreamCallbacks.OnEvent]
-    ) -> FinishedEvent:
+    ) -> FinishedResult:
         uuid = None
-        conversation: List[Message] = []
+        conversation: list[Message] = []
         response = None
+        tool_requests: list[ToolCall] = []
 
         async for stream_event in stream:
             event = None
 
             if stream_event.event == str(StreamEvents.Latitude):
-                type = stream_event.json().get("type")
+                event = _LatitudeEvent.validate_json(stream_event.data)
+                conversation = event.messages
+                uuid = event.uuid
 
-                if type == str(ChainEvents.Step):
-                    event = ChainEventStep.model_validate_json(stream_event.data)
-                    conversation.extend(event.messages)
-
-                elif type == str(ChainEvents.StepCompleted):
-                    event = ChainEventStepCompleted.model_validate_json(stream_event.data)
-
-                elif type == str(ChainEvents.Completed):
-                    event = ChainEventCompleted.model_validate_json(stream_event.data)
-                    uuid = event.uuid
-                    conversation.extend(event.messages or [])
+                if event.type == ChainEvents.ProviderCompleted:
                     response = event.response
 
-                elif type == str(ChainEvents.Error):
-                    event = ChainEventError.model_validate_json(stream_event.data)
+                elif event.type == ChainEvents.ToolsRequested:
+                    tool_requests = event.tools
+
+                elif event.type == ChainEvents.ChainError:
                     raise ApiError(
                         status=400,
                         code=ApiErrorCodes.AIRunError,
                         message=event.error.message,
-                        response=stream_event.data,
-                    )
-
-                else:
-                    raise ApiError(
-                        status=500,
-                        code=ApiErrorCodes.InternalServerError,
-                        message=f"Unknown latitude event: {type}",
                         response=stream_event.data,
                     )
 
@@ -201,8 +186,7 @@ class Prompts:
                 response="Stream ended without a chain-complete event. Missing uuid or response.",
             )
 
-        # NOTE: FinishedEvent not in on_event
-        return FinishedEvent(uuid=uuid, conversation=conversation, response=response)
+        return FinishedResult(uuid=uuid, conversation=conversation, response=response, tool_requests=tool_requests)
 
     @staticmethod
     def _pause_tool_execution() -> Any:
@@ -210,9 +194,9 @@ class Prompts:
 
     @staticmethod
     async def _wrap_tool_handler(
-        handler: OnToolCall, arguments: Dict[str, Any], details: OnToolCallDetails
+        handler: OnToolCall, arguments: dict[str, Any], details: OnToolCallDetails
     ) -> ToolResult:
-        tool_result: Dict[str, Any] = {"id": details.id, "name": details.name}
+        tool_result: dict[str, Any] = {"id": details.id, "name": details.name}
 
         try:
             result = await handler(arguments, details)
@@ -225,10 +209,10 @@ class Prompts:
             return ToolResult(**tool_result, result=str(exception), is_error=True)
 
     async def _handle_tool_calls(
-        self, result: FinishedEvent, options: Union[RunPromptOptions, ChatPromptOptions]
-    ) -> Optional[FinishedEvent]:
+        self, result: FinishedResult, options: Union[RunPromptOptions, ChatPromptOptions]
+    ) -> Optional[FinishedResult]:
         # Seems Python cannot infer the type
-        assert result.response.type == StreamTypes.Text and result.response.tool_calls is not None
+        assert result.response.type == StreamTypes.Text and result.tool_requests is not None
 
         if not options.tools:
             raise ApiError(
@@ -238,7 +222,7 @@ class Prompts:
                 response="Tools not supplied",
             )
 
-        for tool_call in result.response.tool_calls:
+        for tool_call in result.tool_requests:
             if tool_call.name not in options.tools:
                 raise ApiError(
                     status=400,
@@ -258,10 +242,10 @@ class Prompts:
                         conversation_uuid=result.uuid,
                         messages=result.conversation,
                         pause_execution=self._pause_tool_execution,
-                        requested_tool_calls=result.response.tool_calls,
+                        requested_tool_calls=result.tool_requests,
                     ),
                 )
-                for tool_call in result.response.tool_calls
+                for tool_call in result.tool_requests
             ],
             return_exceptions=False,
         )
@@ -282,7 +266,7 @@ class Prompts:
 
         next_result = await self.chat(result.uuid, tool_messages, ChatPromptOptions(**dict(options)))
 
-        return FinishedEvent(**dict(next_result)) if next_result else None
+        return FinishedResult(**dict(next_result)) if next_result else None
 
     async def get(self, path: str, options: Optional[GetPromptOptions] = None) -> GetPromptResult:
         options = GetPromptOptions(**{**dict(self._options), **dict(options or {})})
@@ -343,7 +327,7 @@ class Prompts:
                 else:
                     result = RunPromptResult.model_validate_json(response.content)
 
-            if options.tools and result.response.type == StreamTypes.Text and result.response.tool_calls:
+            if options.tools and result.response.type == StreamTypes.Text and result.tool_requests:
                 try:
                     # NOTE: The last sdk.chat called will already call on_finished
                     final_result = await self._handle_tool_calls(result, options)
@@ -352,7 +336,7 @@ class Prompts:
                     pass
 
             if options.on_finished:
-                options.on_finished(FinishedEvent(**dict(result)))
+                options.on_finished(FinishedResult(**dict(result)))
 
             return RunPromptResult(**dict(result))
 
@@ -395,7 +379,7 @@ class Prompts:
                 else:
                     result = ChatPromptResult.model_validate_json(response.content)
 
-            if options.tools and result.response.type == StreamTypes.Text and result.response.tool_calls:
+            if options.tools and result.response.type == StreamTypes.Text and result.tool_requests:
                 try:
                     # NOTE: The last sdk.chat called will already call on_finished
                     final_result = await self._handle_tool_calls(result, options)
@@ -404,7 +388,7 @@ class Prompts:
                     pass
 
             if options.on_finished:
-                options.on_finished(FinishedEvent(**dict(result)))
+                options.on_finished(FinishedResult(**dict(result)))
 
             return ChatPromptResult(**dict(result))
 
@@ -424,8 +408,8 @@ class Prompts:
 
             return None
 
-    def _adapt_prompt_config(self, config: Dict[str, Any], adapter: Adapter) -> Dict[str, Any]:
-        adapted_config: Dict[str, Any] = {}
+    def _adapt_prompt_config(self, config: dict[str, Any], adapter: Adapter) -> dict[str, Any]:
+        adapted_config: dict[str, Any] = {}
 
         # NOTE: Should we delete attributes not supported by the provider?
         for attr, value in config.items():

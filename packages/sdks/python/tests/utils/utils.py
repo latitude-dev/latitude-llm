@@ -35,7 +35,7 @@ class TestCase(IsolatedAsyncioTestCase):
                 "host": "fake-host.com",
                 "port": 443,
                 "ssl": True,
-                "api_version": "v2",
+                "api_version": "v3",
             },
             "retries": 3,
             "delay": 0,
@@ -54,7 +54,7 @@ class TestCase(IsolatedAsyncioTestCase):
         self.api_key = "fake-api-key"
         self.project_id = 31
         self.version_uuid = "fake-version-uuid"
-        self.base_url = "https://fake-host.com/api/v2"
+        self.base_url = "https://fake-host.com/api/v3"
 
         self.gateway_mock = respx.MockRouter(
             assert_all_called=False,
