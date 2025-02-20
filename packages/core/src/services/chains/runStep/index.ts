@@ -16,40 +16,8 @@ import { Result } from '../../../lib'
 import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
 import { buildMessagesFromResponse, Workspace } from '../../../browser'
-import { ChainStepResponse, StreamType } from '../../../constants'
 import { cacheChain } from '../chainCache'
 import { ChainStreamManager } from '../../../lib/chainStreamManager'
-import { getLatitudeToolCallsFromAssistantMessage } from '../../latitudeTools/helpers'
-
-export function getToolCalls({
-  response,
-}: {
-  response: ChainStepResponse<StreamType>
-}) {
-  const type = response.streamType
-  if (type === 'object') return []
-
-  const toolCalls = response.toolCalls ?? []
-
-  return toolCalls
-}
-
-export async function handleLatitudeTools({
-  chainStreamManager,
-  newMessages,
-}: {
-  chainStreamManager: ChainStreamManager
-  newMessages: Message[] | undefined
-}) {
-  if (!newMessages?.length) return
-
-  const lastResponse = newMessages[0]! as AssistantMessage
-  const latitudeToolCalls =
-    getLatitudeToolCallsFromAssistantMessage(lastResponse)
-  const latitudeToolResponses =
-    await chainStreamManager.executeLatitudeTools(latitudeToolCalls)
-  newMessages.push(...latitudeToolResponses)
-}
 
 function assertValidStepCount({
   stepCount,
@@ -107,7 +75,12 @@ export async function runStep({
   removeSchema,
   stepCount = 0,
 }: StepProps) {
-  await handleLatitudeTools({ chainStreamManager, newMessages })
+  if (newMessages?.length) {
+    const lastResponseMessage = newMessages[0]! as AssistantMessage
+    const latitudeToolResponses =
+      await chainStreamManager.handleLatitudeToolCalls(lastResponseMessage)
+    newMessages.push(...latitudeToolResponses)
+  }
 
   const step = await validateChain({
     workspace,
@@ -133,29 +106,18 @@ export async function runStep({
     return step.conversation
   }
 
-  const response = await chainStreamManager.getProviderResponse({
-    workspace,
-    source,
-    documentLogUuid: errorableUuid,
-    conversation: step.conversation,
-    provider: step.provider,
-    schema: step.schema,
-    output: step.output,
-  })
+  const { response, clientToolCalls } =
+    await chainStreamManager.getProviderResponse({
+      workspace,
+      source,
+      documentLogUuid: errorableUuid,
+      conversation: step.conversation,
+      provider: step.provider,
+      schema: step.schema,
+      output: step.output,
+    })
 
   const isPromptl = chain instanceof PromptlChain
-  const toolCalls = getToolCalls({ response })
-
-  const [responseMessage] = buildMessagesFromResponse({ response }) as [
-    AssistantMessage,
-  ]
-  const latitudeToolCalls = getLatitudeToolCallsFromAssistantMessage(
-    responseMessage as AssistantMessage,
-  )
-  const clientToolCalls = toolCalls.filter(
-    (toolCall) => !latitudeToolCalls.some((b) => b.id === toolCall.id),
-  )
-
   const hasTools = isPromptl && clientToolCalls.length > 0
 
   // If response has tools, we must cache and stop the chain
@@ -186,7 +148,7 @@ export async function runStep({
     providersMap,
     errorableUuid,
     stepCount: stepCount + 1,
-    newMessages: [responseMessage],
+    newMessages: buildMessagesFromResponse({ response }),
     configOverrides,
     removeSchema,
   })

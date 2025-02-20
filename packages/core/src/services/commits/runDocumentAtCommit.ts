@@ -137,6 +137,10 @@ export async function runDocumentAtCommit({
     promptlVersion: document.promptlVersion,
     providersMap,
     source,
+    promptSource: {
+      document,
+      commit,
+    },
   }
 
   const runFn =

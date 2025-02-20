@@ -8,6 +8,7 @@ import {
   StreamType,
   Workspace,
   ProviderLog,
+  PromptSource,
 } from '../../../../browser'
 import { unsafelyFindProviderApiKey } from '../../../../data-access'
 import { NotFoundError, Result, TypedResult } from '../../../../lib'
@@ -31,11 +32,13 @@ export async function addChatMessage({
   providerLog,
   source,
   messages: newMessages,
+  promptSource,
 }: {
   workspace: Workspace
   providerLog: ProviderLog
   messages: Message[]
   source: LogSources
+  promptSource: PromptSource
 }) {
   if (!providerLog.providerId) {
     return Result.error(
@@ -71,8 +74,10 @@ export async function addChatMessage({
   }
 
   const chainStreamManager = new ChainStreamManager({
+    workspace,
     errorableUuid: providerLog.documentLogUuid!,
     messages: conversation.messages,
+    promptSource,
   })
 
   const streamResult = chainStreamManager.start(async () => {

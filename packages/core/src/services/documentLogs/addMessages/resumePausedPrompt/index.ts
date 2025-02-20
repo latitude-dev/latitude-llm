@@ -77,7 +77,10 @@ export async function resumePausedPrompt({
     promptlVersion: document.promptlVersion,
     providersMap,
     source,
-
+    promptSource: {
+      document,
+      commit,
+    },
     messages: previousResponse.providerLog!.messages, // TODO: Store this in the cache instead
     newMessages: [
       ...buildMessagesFromResponse({ response: previousResponse }),

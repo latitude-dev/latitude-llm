@@ -28,6 +28,7 @@ import { colors, font, TextColor } from '../../../tokens'
 import { isAgentToolResponse, roleToString, roleVariant } from './helpers'
 import { ToolCallContent } from './ToolCall'
 import { ToolResultContent } from './ToolResult'
+import type { AgentToolsMap } from '@latitude-data/core/browser'
 
 export { roleToString, roleVariant } from './helpers'
 
@@ -39,6 +40,7 @@ export type MessageProps = {
   animatePulse?: boolean
   parameters?: string[]
   collapseParameters?: boolean
+  agentToolsMap?: AgentToolsMap
 }
 
 export function MessageItem({
@@ -87,6 +89,7 @@ export function Message({
   size = 'default',
   parameters = [],
   collapseParameters = false,
+  agentToolsMap,
 }: MessageProps) {
   if (isAgentToolResponse({ role: role as MessageRole, content })) {
     return null
@@ -104,6 +107,7 @@ export function Message({
           parameters={parameters}
           collapseParameters={collapseParameters}
           collapsedMessage={collapsedMessage}
+          agentToolsMap={agentToolsMap}
         />
       )}
     </MessageItem>
@@ -116,18 +120,34 @@ export function MessageItemContent({
   parameters = [],
   collapseParameters = false,
   collapsedMessage,
+  agentToolsMap,
 }: {
   content: MessageProps['content']
   size?: MessageProps['size']
   parameters?: MessageProps['parameters']
   collapseParameters?: MessageProps['collapseParameters']
   collapsedMessage: boolean
+  agentToolsMap?: AgentToolsMap
 }) {
   if (collapsedMessage)
-    return <Content value='...' color='foregroundMuted' size={size} />
+    return (
+      <Content
+        value='...'
+        color='foregroundMuted'
+        size={size}
+        agentToolsMap={agentToolsMap}
+      />
+    )
 
   if (typeof content === 'string')
-    return <Content value={content} color='foregroundMuted' size={size} />
+    return (
+      <Content
+        value={content}
+        color='foregroundMuted'
+        size={size}
+        agentToolsMap={agentToolsMap}
+      />
+    )
 
   return content.map((c, idx) => (
     <Content
@@ -139,6 +159,7 @@ export function MessageItemContent({
       parameters={parameters}
       collapseParameters={collapseParameters}
       sourceMap={(c as any)?._promptlSourceMap}
+      agentToolsMap={agentToolsMap}
     />
   ))
 }
@@ -168,6 +189,7 @@ const Content = ({
   parameters = [],
   collapseParameters = false,
   sourceMap = [],
+  agentToolsMap,
 }: {
   index?: number
   color: TextColor
@@ -176,6 +198,7 @@ const Content = ({
   parameters?: string[]
   collapseParameters?: boolean
   sourceMap?: PromptlSourceRef[]
+  agentToolsMap?: AgentToolsMap
 }) => {
   if (typeof value === 'string') {
     try {
@@ -260,11 +283,11 @@ const Content = ({
   }
 
   if (value.type === ContentType.toolCall) {
-    return <ToolCallContent value={value} />
+    return <ToolCallContent value={value} agentToolsMap={agentToolsMap} />
   }
 
   if (value.type === ContentType.toolResult) {
-    return <ToolResultContent value={value} />
+    return <ToolResultContent value={value} agentToolsMap={agentToolsMap} />
   }
 
   return (

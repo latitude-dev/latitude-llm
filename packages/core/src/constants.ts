@@ -9,11 +9,21 @@ import {
   EvaluationResultableType,
   LogSources,
   ProviderData,
+  type ToolDefinition,
 } from '@latitude-data/constants'
 import { FinishReason, LanguageModelUsage } from 'ai'
 import { z } from 'zod'
 
-import { DocumentVersion, ProviderLog, Span, Trace } from './browser'
+import {
+  Commit,
+  DocumentVersion,
+  EvaluationDto,
+  ProviderLog,
+  Span,
+  Trace,
+} from './browser'
+
+import type { LatitudeError, PromisedResult } from './lib'
 
 export {
   EvaluationResultableType,
@@ -468,15 +478,42 @@ export const CLOUD_MESSAGES = {
   documentSuggestions: `Document suggestions are only available on Latitude Cloud. ${CLOUD_INFO}`,
 }
 
-export {
-  type LatitudeToolCall,
-  LatitudeTool,
-  LatitudeToolInternalName,
-} from './services/latitudeTools/types'
-
 export const LATITUDE_TOOLS_CONFIG_NAME = 'latitudeTools'
 
 export const DOCUMENT_SUGGESTION_EXPIRATION_DAYS = 7
 export const MAX_DOCUMENT_SUGGESTIONS_PER_EVALUATION = 1
 export const MAX_EVALUATION_RESULTS_PER_DOCUMENT_SUGGESTION = 5
 export const EVALUATION_RESULT_RECENCY_DAYS = 7
+
+export type DocumentRunPromptSource = {
+  document: DocumentVersion
+  commit: Commit
+}
+export type PromptSource = EvaluationDto | DocumentRunPromptSource
+
+export enum LatitudeTool {
+  RunCode = 'code',
+  WebSearch = 'search',
+  WebExtract = 'extract',
+}
+
+export type AgentToolsMap = Record<string, string> // { [toolName]: agentPath }
+export const LATITUDE_TOOL_PREFIX = 'lat_tool'
+export const AGENT_TOOL_PREFIX = 'lat_agent'
+
+export enum LatitudeToolInternalName {
+  RunCode = 'lat_tool_run_code',
+  WebSearch = 'lat_tool_web_search',
+  WebExtract = 'lat_tool_web_extract',
+}
+
+export type LatitudeToolDefinition = {
+  name: LatitudeTool
+  internalName: LatitudeToolInternalName
+  definition: ToolDefinition
+  method: (args: unknown) => PromisedResult<unknown, LatitudeError>
+}
+
+export type LatitudeToolCall = ToolCall & {
+  name: LatitudeToolInternalName
+}

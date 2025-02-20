@@ -33,6 +33,7 @@ import { LanguageModelUsage } from 'ai'
 import { DocumentEditorContext } from '..'
 import Actions, { ActionsState } from './Actions'
 import { usePlaygroundChat } from '$/hooks/playgroundChat/usePlaygroundChat'
+import { useAgentToolsMap } from '$/stores/agentToolsMap'
 
 export default function Chat({
   document,
@@ -60,6 +61,10 @@ export default function Chat({
   const { runDocumentAction, addMessagesAction } = useContext(
     DocumentEditorContext,
   )!
+  const { data: agentToolsMap } = useAgentToolsMap({
+    commitUuid: commit.uuid,
+    projectId: project.id,
+  })
 
   const runPromptFn = useCallback(async () => {
     const { response, output } = await runDocumentAction({
@@ -145,6 +150,7 @@ export default function Chat({
           messages={messages.slice(0, chainLength - 1) ?? []}
           parameters={Object.keys(parameters)}
           collapseParameters={!expandParameters}
+          agentToolsMap={agentToolsMap}
         />
         {(messages.length ?? 0) >= chainLength && (
           <>

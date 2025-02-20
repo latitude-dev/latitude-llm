@@ -187,6 +187,7 @@ describe('run', () => {
         chain,
         promptlVersion: 1,
         source: LogSources.Evaluation,
+        promptSource: evaluation,
         providersMap: new Map().set(provider.name, providerUsed),
         configOverrides: {
           schema: {

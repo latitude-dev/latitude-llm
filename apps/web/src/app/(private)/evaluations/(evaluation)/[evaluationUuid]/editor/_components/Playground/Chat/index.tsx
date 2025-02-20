@@ -17,7 +17,7 @@ import {
   Text,
   useAutoScroll,
 } from '@latitude-data/web-ui'
-import { runPromptAction } from '$/actions/prompts/run'
+import { runEvaluationPromptAction } from '$/actions/prompts/run'
 import {
   StreamMessage,
   Timer,
@@ -86,10 +86,11 @@ export default function Chat({
     let response = ''
     let messagesCount = 0
 
-    const [data, error] = await runPromptAction({
+    const [data, error] = await runEvaluationPromptAction({
       prompt,
       parameters,
       promptlVersion: usePromptl ? 1 : 0,
+      evaluationId: evaluation.id,
     })
     if (error) {
       setError(error)
@@ -135,7 +136,7 @@ export default function Chat({
       }
     }
     setIsStreaming(false)
-  }, [prompt, parameters, runPromptAction])
+  }, [prompt, parameters, runEvaluationPromptAction])
 
   useEffect(() => {
     if (isLoading) return

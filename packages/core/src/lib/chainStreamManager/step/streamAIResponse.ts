@@ -11,10 +11,11 @@ import {
   getCachedResponse,
   setCachedResponse,
 } from '../../../services/commits/promptCache'
-import { ai, Config as ValidatedConfig } from '../../../services/ai'
-import { ChainStepResponse, StreamType } from '../../../constants'
+import { ai, Config } from '../../../services/ai'
+import { ChainStepResponse, PromptSource, StreamType } from '../../../constants'
 import { consumeStream } from '../ChainStreamConsumer/consumeStream'
 import { LanguageModelUsage } from 'ai'
+import { performPromptInjection } from './promptInjection'
 
 export type ExecuteStepArgs = {
   controller: ReadableStreamDefaultController
@@ -22,6 +23,7 @@ export type ExecuteStepArgs = {
   provider: ProviderApiKey
   conversation: Conversation
   source: LogSources
+  promptSource: PromptSource
   documentLogUuid: string
   schema?: JSONSchema7
   output?: 'object' | 'array' | 'no-schema'
@@ -33,6 +35,7 @@ export async function streamAIResponse({
   provider,
   conversation,
   source,
+  promptSource,
   documentLogUuid,
   schema,
   output,
@@ -46,6 +49,15 @@ export async function streamAIResponse({
     config: conversation.config,
     conversation,
   })
+
+  const injectionResult = await performPromptInjection({
+    workspace,
+    promptSource,
+    messages: conversation.messages,
+    config: conversation.config as Config,
+  })
+  if (injectionResult.error) throw injectionResult.error
+  const { messages, config } = injectionResult.unwrap()
 
   if (cachedResponse) {
     const providerLog = await saveOrPublishProviderLogs({
@@ -83,11 +95,11 @@ export async function streamAIResponse({
   const aiResult = await ai({
     // TODO: vitest will cry when checking the parameters passed to this function when the object mutes afterwards.
     // To fix this, we make a deep copy of the array so that it is immutable.
-    messages: [...conversation.messages],
-    config: conversation.config as ValidatedConfig,
-    provider: provider,
-    schema: schema,
-    output: output,
+    messages,
+    config,
+    provider,
+    schema,
+    output,
   }).then((r) => r.unwrap())
 
   const checkResult = checkValidStream(aiResult)

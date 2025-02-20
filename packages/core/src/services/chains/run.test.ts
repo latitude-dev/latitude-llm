@@ -11,6 +11,7 @@ import { Workspace } from '../../browser'
 import {
   ErrorableEntity,
   LogSources,
+  PromptSource,
   Providers,
   StreamEventTypes,
 } from '../../constants'
@@ -60,16 +61,26 @@ describe('runChain', () => {
   }
 
   let workspace: Workspace
+  let promptSource: PromptSource
 
   beforeEach(async () => {
     vi.resetAllMocks()
     vi.mocked(uuid).mockReturnValue(mockUUID)
 
-    const { workspace: w, providers } = await factories.createProject({
+    const {
+      workspace: w,
+      commit,
+      providers,
+      documents,
+    } = await factories.createProject({
       providers: [{ name: 'openai', type: Providers.OpenAI }],
+      documents: {
+        'prompt-source': factories.helpers.createPrompt({ provider: 'openai' }),
+      },
     })
     providersMap = new Map(providers.map((p) => [p.name, p]))
     workspace = w
+    promptSource = { document: documents[0]!, commit }
   })
 
   it('runs a chain without schema override', async () => {
@@ -96,6 +107,7 @@ describe('runChain', () => {
       providersMap,
       source: LogSources.API,
       errorableType: ErrorableEntity.DocumentLog,
+      promptSource,
     })
 
     const response = await run.lastResponse
@@ -173,6 +185,7 @@ describe('runChain', () => {
         schema: mockSchema,
         output: 'object',
       },
+      promptSource,
     })
 
     const response = await run.lastResponse
@@ -244,6 +257,7 @@ describe('runChain', () => {
       providersMap,
       source: LogSources.API,
       errorableType: ErrorableEntity.DocumentLog,
+      promptSource,
     })
 
     const response = await run.lastResponse
@@ -287,6 +301,7 @@ describe('runChain', () => {
       providersMap,
       source: LogSources.API,
       errorableType: ErrorableEntity.DocumentLog,
+      promptSource,
     })
 
     const response = await run.lastResponse
@@ -371,6 +386,7 @@ describe('runChain', () => {
         schema: mockSchema,
         output: 'object',
       },
+      promptSource,
     })
 
     const response = await run.lastResponse
@@ -462,6 +478,7 @@ describe('runChain', () => {
         schema: mockSchema,
         output: 'array',
       },
+      promptSource,
     })
 
     const response = await run.lastResponse
@@ -518,6 +535,7 @@ describe('runChain', () => {
       configOverrides: {
         output: 'no-schema',
       },
+      promptSource,
     })
 
     const response = await run.lastResponse
@@ -582,6 +600,7 @@ describe('runChain', () => {
       providersMap,
       source: LogSources.API,
       errorableType: ErrorableEntity.DocumentLog,
+      promptSource,
     })
     const { value: stream } = await testConsumeStream(result.stream)
     const error = await result.error
@@ -646,6 +665,7 @@ describe('runChain', () => {
       providersMap,
       source: LogSources.API,
       errorableType: ErrorableEntity.DocumentLog,
+      promptSource,
     })
     const { value: stream } = await testConsumeStream(result.stream)
     const response = await result.lastResponse
@@ -775,6 +795,7 @@ describe('runChain', () => {
         source: LogSources.API,
         errorableType: ErrorableEntity.DocumentLog,
         generateUUID: () => 'new-document-log-uuid',
+        promptSource,
       })
       const spy = vi.spyOn(aiModule, 'ai')
       const saveOrPublishProviderLogSpy = vi
@@ -828,6 +849,7 @@ describe('runChain', () => {
           providersMap,
           source: LogSources.API,
           errorableType: ErrorableEntity.DocumentLog,
+          promptSource,
         })
         const result = await run.lastResponse
 
@@ -887,6 +909,7 @@ describe('runChain', () => {
           providersMap,
           source: LogSources.API,
           errorableType: ErrorableEntity.DocumentLog,
+          promptSource,
         })
 
         const result = await run.lastResponse

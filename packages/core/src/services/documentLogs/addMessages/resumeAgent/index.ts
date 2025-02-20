@@ -10,7 +10,7 @@ import {
   ToolMessage,
   ToolRequestContent,
 } from '@latitude-data/compiler'
-import { AGENT_RETURN_TOOL_NAME } from '../../../../constants'
+import { AGENT_RETURN_TOOL_NAME, PromptSource } from '../../../../constants'
 import { runAgentStep } from '../../../agents/runStep'
 import { ChainStreamManager } from '../../../../lib/chainStreamManager'
 
@@ -77,11 +77,13 @@ export async function resumeAgent({
   providerLog,
   messages: userProvidedMessags,
   source,
+  promptSource,
 }: {
   workspace: Workspace
   providerLog: ProviderLog
   messages: Message[]
   source: LogSources
+  promptSource: PromptSource
 }) {
   const providersMap = await buildProvidersMap({
     workspaceId: workspace.id,
@@ -93,8 +95,10 @@ export async function resumeAgent({
   })
 
   const chainStreamManager = new ChainStreamManager({
+    workspace,
     errorableUuid: providerLog.documentLogUuid!,
     messages: [...providerLog.messages, ...newMessages],
+    promptSource,
     // TODO: Missing previous TokenUsage
   })
 

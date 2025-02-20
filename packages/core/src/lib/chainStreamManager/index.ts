@@ -1,4 +1,9 @@
-import { Message, ToolCall, ToolMessage } from '@latitude-data/compiler'
+import {
+  AssistantMessage,
+  Message,
+  ToolCall,
+  ToolMessage,
+} from '@latitude-data/compiler'
 import { StreamEventTypes } from '@latitude-data/constants'
 import {
   ChainEvent,
@@ -6,18 +11,22 @@ import {
   OmittedLatitudeEventData,
 } from '@latitude-data/constants'
 import { ExecuteStepArgs, streamAIResponse } from './step/streamAIResponse'
-import {
+import type {
   ChainStepResponse,
   LatitudeToolCall,
+  PromptSource,
   StreamType,
 } from '../../constants'
 import { buildMessagesFromResponse } from '../../helpers'
 import { FinishReason, LanguageModelUsage } from 'ai'
 import { ChainError } from './ChainErrors'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
-import { Result } from '../Result'
-import { executeLatitudeToolCall } from '../../services/latitudeTools'
-import { buildToolMessage } from '../../services/latitudeTools/helpers'
+import { LatitudeToolInternalName, Workspace } from '../../browser'
+import { AGENT_TOOL_PREFIX } from '../../constants'
+import {
+  getAgentAsToolCallResponses,
+  getLatitudeToolCallResponses,
+} from './step/toolExecution'
 
 const usePromise = <T>(): readonly [Promise<T>, (value: T) => void] => {
   let resolveValue: (value: T) => void
@@ -42,6 +51,8 @@ export class ChainStreamManager {
   private messages: Message[]
   private lastResponse?: ChainStepResponse<StreamType>
   private errorableUuid: string
+  private promptSource: PromptSource
+  private workspace: Workspace
 
   private resolveMessages?: (messages: Message[]) => void
   private resolveToolCalls?: (toolCalls: ToolCall[]) => void
@@ -53,6 +64,7 @@ export class ChainStreamManager {
   private finishReason?: FinishReason
 
   constructor({
+    workspace,
     errorableUuid,
     messages = [],
     tokenUsage = {
@@ -60,14 +72,19 @@ export class ChainStreamManager {
       completionTokens: 0,
       totalTokens: 0,
     },
+    promptSource,
   }: {
+    workspace: Workspace
     errorableUuid: string
     messages?: Message[]
     tokenUsage?: LanguageModelUsage
+    promptSource: PromptSource
   }) {
+    this.workspace = workspace
     this.messages = messages
     this.tokenUsage = tokenUsage
     this.errorableUuid = errorableUuid
+    this.promptSource = promptSource
   }
 
   /**
@@ -122,7 +139,9 @@ export class ChainStreamManager {
    *
    * Sends both StepStarted and StepCompleted events.
    */
-  async getProviderResponse(args: Omit<ExecuteStepArgs, 'controller'>) {
+  async getProviderResponse(
+    args: Omit<ExecuteStepArgs, 'controller' | 'promptSource'>,
+  ) {
     if (!this.controller) throw new Error('Stream not started')
 
     // TODO: This may conflict with isolated steps
@@ -138,6 +157,7 @@ export class ChainStreamManager {
 
     const { response, tokenUsage } = await streamAIResponse({
       controller: this.controller,
+      promptSource: this.promptSource,
       ...args,
     })
     this.addMessageFromResponse(response)
@@ -159,49 +179,59 @@ export class ChainStreamManager {
       response,
     })
 
-    return response
+    const toolCalls = (response as ChainStepResponse<'text'>).toolCalls ?? []
+    const { clientToolCalls } = this.segregateToolCalls(toolCalls)
+
+    return {
+      response,
+      clientToolCalls,
+    }
   }
 
   /**
-   * Generates the built-in tool responses.
+   * Executes any built-in tool calls and agent-as-tool calls in a message
+   * Generates the tool responses.
    *
    * Sends both ToolsStarted and ToolCompleted events.
    */
-  async executeLatitudeTools(
-    toolCalls: LatitudeToolCall[],
+  async handleLatitudeToolCalls(
+    message: AssistantMessage,
   ): Promise<ToolMessage[]> {
-    if (!toolCalls.length) return []
+    const { latitudeToolCalls, agentsAsToolCalls } = this.segregateToolCalls(
+      message.toolCalls ?? [],
+    )
+    const allToolCalls = [...latitudeToolCalls, ...agentsAsToolCalls]
+
+    if (!allToolCalls.length) return []
     if (!this.inStep) this.startStep()
 
     this.sendEvent({
       type: ChainEventTypes.ToolsStarted,
-      tools: toolCalls,
+      tools: allToolCalls,
     })
 
-    const toolResponses = await Promise.all(
-      toolCalls.map(async (toolCall) => {
-        let toolMessage: ToolMessage
-        try {
-          const result = await executeLatitudeToolCall(toolCall)
-          toolMessage = buildToolMessage({
-            toolName: toolCall.name,
-            toolId: toolCall.id,
-            result: result,
-          })
-        } catch (error) {
-          toolMessage = buildToolMessage({
-            toolName: toolCall.name,
-            toolId: toolCall.id,
-            result: Result.error(error as Error),
-          })
-        }
-
+    const latitudeToolResponses = getLatitudeToolCallResponses({
+      toolCalls: latitudeToolCalls,
+      onFinish: (toolMessage: ToolMessage) => {
         this.messages.push(toolMessage)
         this.sendEvent({ type: ChainEventTypes.ToolCompleted })
-        return toolMessage
-      }),
-    )
+      },
+    })
 
+    const agentAsToolResponses = await getAgentAsToolCallResponses({
+      workspace: this.workspace,
+      promptSource: this.promptSource,
+      toolCalls: agentsAsToolCalls,
+      onFinish: (toolMessage: ToolMessage) => {
+        this.messages.push(toolMessage)
+        this.sendEvent({ type: ChainEventTypes.ToolCompleted })
+      },
+    })
+
+    const toolResponses = await Promise.all([
+      ...latitudeToolResponses,
+      ...agentAsToolResponses,
+    ])
     return toolResponses
   }
 
@@ -317,6 +347,41 @@ export class ChainStreamManager {
     this.resolveLastResponse?.(this.lastResponse)
     this.resolveError?.(undefined)
     this.resolveToolCalls?.([])
+  }
+
+  private segregateToolCalls(toolCalls: ToolCall[]): {
+    clientToolCalls: ToolCall[]
+    latitudeToolCalls: LatitudeToolCall[]
+    agentsAsToolCalls: ToolCall[]
+  } {
+    return toolCalls.reduce(
+      (
+        acc: {
+          clientToolCalls: ToolCall[]
+          latitudeToolCalls: LatitudeToolCall[]
+          agentsAsToolCalls: ToolCall[]
+        },
+        toolCall,
+      ) => {
+        if (
+          Object.values(LatitudeToolInternalName).includes(
+            toolCall.name as LatitudeToolInternalName,
+          )
+        ) {
+          acc.latitudeToolCalls.push(toolCall as LatitudeToolCall)
+        } else if (toolCall.name.startsWith(AGENT_TOOL_PREFIX)) {
+          acc.agentsAsToolCalls.push(toolCall as LatitudeToolCall)
+        } else {
+          acc.clientToolCalls.push(toolCall)
+        }
+        return acc
+      },
+      {
+        clientToolCalls: [],
+        latitudeToolCalls: [],
+        agentsAsToolCalls: [],
+      },
+    )
   }
 }
 

@@ -6,7 +6,7 @@ import {
 import { Chain as PromptlChain } from 'promptl-ai'
 
 import { Workspace } from '../../browser'
-import { LogSources } from '../../constants'
+import { LogSources, PromptSource } from '../../constants'
 import { Result } from '../../lib'
 import { CachedApiKeys, runChain } from '../chains/run'
 
@@ -17,6 +17,7 @@ export async function runPrompt({
   prompt,
   promptlVersion,
   source,
+  promptSource,
 }: {
   workspace: Workspace
   parameters: Record<string, unknown>
@@ -24,6 +25,7 @@ export async function runPrompt({
   promptlVersion: number
   providersMap: CachedApiKeys
   source: LogSources
+  promptSource: PromptSource
 }) {
   let chain: PromptlChain | LegacyChain
   if (promptlVersion === 0) {
@@ -57,6 +59,7 @@ export async function runPrompt({
     providersMap,
     source,
     persistErrors: false,
+    promptSource,
   })
   return Result.ok(run)
 }

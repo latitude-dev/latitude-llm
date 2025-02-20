@@ -848,6 +848,13 @@
       "when": 1739545969811,
       "tag": "0121_green_sheva_callister",
       "breakpoints": true
+    },
+    {
+      "idx": 122,
+      "version": "7",
+      "when": 1739973263017,
+      "tag": "0122_curved_stranger",
+      "breakpoints": true
     }
   ]
 }

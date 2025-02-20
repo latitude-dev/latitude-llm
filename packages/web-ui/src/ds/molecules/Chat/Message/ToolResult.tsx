@@ -2,11 +2,16 @@ import { ToolContent } from '@latitude-data/compiler'
 import { CodeBlock } from '../../../atoms'
 import { CardTextContent, ContentCard } from './ContentCard'
 import { useMemo } from 'react'
-import { LatitudeToolInternalName } from '@latitude-data/core/browser'
+import {
+  AGENT_TOOL_PREFIX,
+  LatitudeToolInternalName,
+} from '@latitude-data/core/browser'
 import { WebSearchLatitudeToolResponseContent } from './LatitudeTools/Search'
 import { WebExtractLatitudeToolResponseContent } from './LatitudeTools/Extract'
 import type { SearchToolResult } from '@latitude-data/core/services/latitudeTools/webSearch/types'
 import type { ExtractToolResult } from '@latitude-data/core/services/latitudeTools/webExtract/types'
+import type { AgentToolsMap } from '@latitude-data/core/browser'
+import { SubAgentToolResponseContent } from './LatitudeTools/SubAgent'
 
 function getResult<S extends boolean>(
   value: unknown,
@@ -26,7 +31,13 @@ function getResult<S extends boolean>(
   return [stringValue, true]
 }
 
-export function ToolResultContent({ value }: { value: ToolContent }) {
+export function ToolResultContent({
+  value,
+  agentToolsMap,
+}: {
+  value: ToolContent
+  agentToolsMap?: AgentToolsMap
+}) {
   const [result, isString] = useMemo(
     () => getResult(value.result),
     [value.result],
@@ -52,6 +63,18 @@ export function ToolResultContent({ value }: { value: ToolContent }) {
       <WebExtractLatitudeToolResponseContent
         toolCallId={value.toolCallId}
         response={result as ExtractToolResult}
+      />
+    )
+  }
+
+  if (value.toolName.startsWith(AGENT_TOOL_PREFIX)) {
+    return (
+      <SubAgentToolResponseContent
+        toolCallId={value.toolCallId}
+        toolName={value.toolName}
+        isError={value.isError}
+        response={result as Record<string, unknown>}
+        agentToolsMap={agentToolsMap}
       />
     )
   }
