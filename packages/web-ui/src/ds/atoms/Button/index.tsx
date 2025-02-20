@@ -206,11 +206,14 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
             ></span>
           )}
           <div
-            className={cn('flex flex-row items-center gap-x-2 cursor-pointer', {
-              'w-full justify-center': fullWidth,
-              'overflow-hidden flex-grow min-w-0': ellipsis,
-              'animate-pulse': isLoading,
-            })}
+            className={cn(
+              'flex flex-row items-center gap-x-2 cursor-pointer max-w-full',
+              {
+                'w-full justify-center': fullWidth,
+                'overflow-hidden flex-grow min-w-0': ellipsis,
+                'animate-pulse': isLoading,
+              },
+            )}
           >
             {indicator ? <DotIndicator {...indicator} /> : null}
             {iconProps && iconPlacement === 'left' ? (

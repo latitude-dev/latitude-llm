@@ -1,5 +1,5 @@
 import { Button, Icon, Popover } from '@latitude-data/web-ui'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { GenerationSettings } from './GenerationSettings'
 import { BehaviourSettings } from './BehaviourSettings'
 import { PromptConfigurationProps, useReactiveConfig } from './utils'
@@ -12,6 +12,10 @@ export function PromptConfiguration({
 }: PromptConfigurationProps) {
   const [isOpen, setIsOpen] = useState(false)
   const { config, setConfig } = useReactiveConfig(restProps)
+
+  useEffect(() => {
+    console.log('new GLOBAL config', config)
+  }, [config])
 
   return (
     <Popover.Root open={isOpen} onOpenChange={setIsOpen}>
