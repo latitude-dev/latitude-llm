@@ -66,7 +66,7 @@ export function SuggestionItem({
         if (result.draft) {
           router.push(
             ROUTES.projects
-              .detail({ id: project.id })
+              .detail({ id: result.draft.projectId })
               .commits.detail({ uuid: result.draft.uuid })
               .documents.detail({ uuid: result.suggestion.documentUuid }).root,
           )

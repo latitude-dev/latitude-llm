@@ -5,7 +5,7 @@ import {
   DocumentSuggestion,
   DocumentSuggestionWithDetails,
 } from '../browser'
-import { NotFoundError, Result } from '../lib'
+import { Result } from '../lib'
 import { commits, documentSuggestions, evaluations, projects } from '../schema'
 import Repository from './repositoryV2'
 
@@ -25,6 +25,13 @@ export class DocumentSuggestionsRepository extends Repository<DocumentSuggestion
       .where(this.scopeFilter)
       .orderBy(desc(documentSuggestions.createdAt))
       .$dynamic()
+  }
+
+  get expirationFilter() {
+    return gte(
+      documentSuggestions.createdAt,
+      subDays(new Date(), DOCUMENT_SUGGESTION_EXPIRATION_DAYS),
+    )
   }
 
   async countByDocumentVersionAndEvaluation({
@@ -47,10 +54,7 @@ export class DocumentSuggestionsRepository extends Repository<DocumentSuggestion
           eq(documentSuggestions.commitId, commitId),
           eq(documentSuggestions.documentUuid, documentUuid),
           eq(documentSuggestions.evaluationId, evaluationId),
-          gte(
-            documentSuggestions.createdAt,
-            subDays(new Date(), DOCUMENT_SUGGESTION_EXPIRATION_DAYS),
-          ),
+          this.expirationFilter,
         ),
       )
 
@@ -59,29 +63,11 @@ export class DocumentSuggestionsRepository extends Repository<DocumentSuggestion
 
   async listByDocumentVersionWithDetails({
     commitId,
-    commitUuid,
     documentUuid,
   }: {
-    commitId?: number
-    commitUuid?: string
+    commitId: number
     documentUuid: string
   }) {
-    let commitFilter
-
-    if (commitId) {
-      commitFilter = eq(documentSuggestions.commitId, commitId)
-    }
-
-    if (commitUuid) {
-      commitFilter = eq(commits.uuid, commitUuid)
-    }
-
-    if (!commitFilter) {
-      return Result.error(
-        new NotFoundError('Either commitId or commitUuid must be provided'),
-      )
-    }
-
     const result = await this.db
       .select({
         ...tt,
@@ -98,13 +84,10 @@ export class DocumentSuggestionsRepository extends Repository<DocumentSuggestion
       .where(
         and(
           this.scopeFilter,
-          commitFilter,
+          eq(documentSuggestions.commitId, commitId),
           eq(documentSuggestions.documentUuid, documentUuid),
           isNull(evaluations.deletedAt),
-          gte(
-            documentSuggestions.createdAt,
-            subDays(new Date(), DOCUMENT_SUGGESTION_EXPIRATION_DAYS),
-          ),
+          this.expirationFilter,
         ),
       )
       .orderBy(desc(documentSuggestions.createdAt))

@@ -1,5 +1,6 @@
-import { queues } from '@latitude-data/core/queues'
 import { captureException } from '$/utils/sentry'
+import { setupSchedules } from '@latitude-data/core/jobs'
+import { queues } from '@latitude-data/core/queues'
 import { Worker } from 'bullmq'
 
 import { defaultWorker } from './worker-definitions/defaultWorker'
@@ -16,6 +17,8 @@ const WORKERS = [defaultWorker]
 
 export default async function startWorkers() {
   const connection = await queues({ enableOfflineQueue: true })
+
+  await setupSchedules(connection)
 
   return WORKERS.flatMap((w) =>
     w.queues.map((q) => {

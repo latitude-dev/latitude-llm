@@ -88,7 +88,7 @@ export class DocumentVersionsRepository extends RepositoryLegacy<
       .as('documentVersionsScope')
   }
 
-  async lockDocument({
+  async lock({
     commitId,
     documentUuid,
     wait,
@@ -115,7 +115,9 @@ export class DocumentVersionsRepository extends RepositoryLegacy<
     } catch (error: any) {
       if (error?.code === databaseErrorCodes.lockNotAvailable) {
         return Result.error(
-          new UnprocessableEntityError('Cannot obtain lock on document'),
+          new UnprocessableEntityError(
+            'Cannot obtain lock on document version',
+          ),
         )
       }
       return Result.error(error as Error)
@@ -151,6 +153,29 @@ export class DocumentVersionsRepository extends RepositoryLegacy<
 
     // NOTE: I hate this
     const document = res[0]
+    if (!document) return Result.error(new NotFoundError('Document not found'))
+
+    return Result.ok(document)
+  }
+
+  async getDocumentByCompositedId({
+    commitId,
+    documentUuid,
+  }: {
+    commitId: number
+    documentUuid: string
+  }) {
+    const result = await this.db
+      .select()
+      .from(this.scope)
+      .where(
+        and(
+          eq(this.scope.commitId, commitId),
+          eq(this.scope.documentUuid, documentUuid),
+        ),
+      )
+
+    const document = result[0]
     if (!document) return Result.error(new NotFoundError('Document not found'))
 
     return Result.ok(document)

@@ -21,7 +21,7 @@ import { database } from '../../client'
 import { publisher } from '../../events/publisher'
 import { Result, UnprocessableEntityError } from '../../lib'
 import { DocumentSuggestionsRepository } from '../../repositories'
-import { documentSuggestions, evaluationResults } from '../../schema'
+import { evaluationResults } from '../../schema'
 import * as factories from '../../tests/factories'
 import * as copilot from '../copilot'
 import { generateDocumentSuggestion } from './generate'
@@ -208,9 +208,6 @@ describe('generateDocumentSuggestion', () => {
 
   it('not generates document suggestion when limits are exceeded', async () => {
     const anotherSuggestion = await factories.createDocumentSuggestion({
-      prompt: 'another prompt',
-      summary: 'another summary',
-      commit: commit,
       document: document,
       evaluation: evaluation,
     })
@@ -323,13 +320,10 @@ describe('generateDocumentSuggestion', () => {
 
   it('generates document suggestion when another are expired', async () => {
     await factories.createDocumentSuggestion({
-      prompt: 'another prompt',
-      summary: 'another summary',
-      commit: commit,
       document: document,
       evaluation: evaluation,
-    })
-    await database.update(documentSuggestions).set({
+      prompt: 'another prompt',
+      summary: 'another summary',
       createdAt: subDays(new Date(), DOCUMENT_SUGGESTION_EXPIRATION_DAYS + 1),
     })
     mocks.publisher.mockClear()
