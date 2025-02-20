@@ -10,6 +10,8 @@ import {
   inArray,
   isNotNull,
   isNull,
+  lt,
+  ne,
   sql,
 } from 'drizzle-orm'
 import {
@@ -30,6 +32,7 @@ import {
   evaluations,
   runErrors,
 } from '../../schema'
+import { EvaluationsRepository } from '../evaluationsRepository'
 import Repository from '../repositoryV2'
 
 const { providerLogId: _providerLogId, ...tt } =
@@ -160,31 +163,45 @@ export class EvaluationResultsRepository extends Repository<EvaluationResultDto>
   }
 
   async selectForDocumentSuggestion(evaluationId: number) {
+    const evaluationsRepository = new EvaluationsRepository(
+      this.workspaceId,
+      this.db,
+    )
+    const evaluation = await evaluationsRepository
+      .find(evaluationId)
+      .then((r) => r.unwrap())
+
+    let resultFilter
+    let resultOrder
+
+    if (evaluation.resultType == EvaluationResultableType.Boolean) {
+      resultFilter = eq(evaluationResultableBooleans.result, false)
+      resultOrder = asc(evaluationResultableBooleans.result)
+    } else if (evaluation.resultType == EvaluationResultableType.Number) {
+      resultFilter = lt(
+        evaluationResultableNumbers.result,
+        evaluation.resultConfiguration.maxValue,
+      )
+      resultOrder = asc(evaluationResultableNumbers.result)
+    } else {
+      resultFilter = ne(evaluationResultableTexts.result, '')
+      resultOrder = asc(evaluationResultableTexts.result)
+    }
+
     // Note: enhance selection in evaluations 2.0
     const results = await this.scope
       .where(
         and(
           this.scopeFilter,
           eq(evaluationResults.evaluationId, evaluationId),
+          resultFilter,
           gte(
             evaluationResults.updatedAt,
             subDays(new Date(), EVALUATION_RESULT_RECENCY_DAYS),
           ),
         ),
       )
-      .orderBy(
-        asc(
-          sql`CASE 
-            WHEN ${evaluationResults.resultableType} = ${EvaluationResultableType.Boolean} 
-              THEN CASE WHEN ${evaluationResultableBooleans.result} = TRUE THEN 1 ELSE 0 END
-            WHEN ${evaluationResults.resultableType} = ${EvaluationResultableType.Number} 
-              THEN ${evaluationResultableNumbers.result}::numeric
-            WHEN ${evaluationResults.resultableType} = ${EvaluationResultableType.Text}
-              THEN 1
-          END`,
-        ),
-        desc(evaluationResults.updatedAt),
-      )
+      .orderBy(resultOrder, desc(evaluationResults.updatedAt))
       .limit(MAX_EVALUATION_RESULTS_PER_DOCUMENT_SUGGESTION)
 
     return Result.ok(results.map(EvaluationResultsRepository.parseResult))
