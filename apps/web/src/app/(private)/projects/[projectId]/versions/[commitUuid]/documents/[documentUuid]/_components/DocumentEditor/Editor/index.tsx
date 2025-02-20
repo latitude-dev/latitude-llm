@@ -49,6 +49,7 @@ import Playground from './Playground'
 import RefineDocumentModal from './RefineModal'
 import { UpdateToPromptLButton } from './UpdateToPromptl'
 import { RefinementHook, useRefinement } from './useRefinement'
+import { useAgentToolsMap } from '$/stores/agentToolsMap'
 
 export const DocumentEditorContext = createContext<
   | {
@@ -232,6 +233,10 @@ export default function DocumentEditor({
   const { metadata, runReadMetadata } = useMetadata({
     onMetadataProcessed: onMetadataProcessed,
   })
+  const { data: agentToolsMap } = useAgentToolsMap({
+    projectId: project.id,
+    commitUuid: commit.uuid,
+  })
 
   useEffect(() => {
     runReadMetadata({
@@ -240,8 +245,10 @@ export default function DocumentEditor({
       document,
       fullPath: document.path,
       promptlVersion: document.promptlVersion,
+      agentToolsMap,
+      providerNames: providers.map((p) => p.name) ?? [],
     })
-  }, [document.promptlVersion])
+  }, [document.promptlVersion, agentToolsMap, providers])
 
   const onChange = useCallback(
     (newValue: string) => {
@@ -254,9 +261,17 @@ export default function DocumentEditor({
         document,
         fullPath: document.path,
         promptlVersion: document.promptlVersion,
+        agentToolsMap,
+        providerNames: providers.map((p) => p.name) ?? [],
       })
     },
-    [runReadMetadata, document.path, document.promptlVersion],
+    [
+      runReadMetadata,
+      document.path,
+      document.promptlVersion,
+      agentToolsMap,
+      providers,
+    ],
   )
 
   const {

@@ -2,16 +2,16 @@ import { ToolContent } from '@latitude-data/compiler'
 import { CodeBlock } from '../../../atoms'
 import { CardTextContent, ContentCard } from './ContentCard'
 import { useMemo } from 'react'
-import {
-  AGENT_TOOL_PREFIX,
-  LatitudeToolInternalName,
-} from '@latitude-data/core/browser'
 import { WebSearchLatitudeToolResponseContent } from './LatitudeTools/Search'
 import { WebExtractLatitudeToolResponseContent } from './LatitudeTools/Extract'
 import type { SearchToolResult } from '@latitude-data/core/services/latitudeTools/webSearch/types'
 import type { ExtractToolResult } from '@latitude-data/core/services/latitudeTools/webExtract/types'
-import type { AgentToolsMap } from '@latitude-data/core/browser'
 import { SubAgentToolResponseContent } from './LatitudeTools/SubAgent'
+import {
+  AGENT_TOOL_PREFIX,
+  AgentToolsMap,
+  LatitudeToolInternalName,
+} from '@latitude-data/constants'
 
 function getResult<S extends boolean>(
   value: unknown,

@@ -1,4 +1,4 @@
-import { Config, ToolDefinition } from '@latitude-data/constants'
+import { AgentToolsMap, Config, ToolDefinition } from '@latitude-data/constants'
 import {
   BadRequestError,
   LatitudeError,
@@ -7,7 +7,6 @@ import {
   Result,
   TypedResult,
 } from '../../lib'
-import { AgentToolsMap } from '../../constants'
 import { DocumentVersionsRepository } from '../../repositories'
 import path from 'path'
 import { Commit, DocumentVersion, Workspace } from '../../browser'

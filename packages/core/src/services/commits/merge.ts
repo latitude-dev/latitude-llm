@@ -41,7 +41,7 @@ export async function mergeCommit(commit: Commit, db = database) {
     }
 
     const recomputedResults = await recomputeChanges(
-      { draft: commit, workspaceId: workspace.id },
+      { draft: commit, workspace },
       tx,
     )
 

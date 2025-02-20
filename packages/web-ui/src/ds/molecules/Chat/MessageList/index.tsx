@@ -3,7 +3,7 @@
 import { Message as ConversationMessage } from '@latitude-data/compiler'
 
 import { Message } from '../Message'
-import type { AgentToolsMap } from '@latitude-data/core/browser'
+import type { AgentToolsMap } from '@latitude-data/constants'
 
 export function MessageList({
   messages,

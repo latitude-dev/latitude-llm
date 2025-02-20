@@ -3,7 +3,7 @@ import { useDocumentParameters } from '$/hooks/useDocumentParameters'
 import { Props } from '../index'
 
 import { ParameterInput } from '$/components/ParameterInput'
-import { ParameterType } from '@latitude-data/core/browser'
+import { ParameterType } from '@latitude-data/constants'
 import { Badge, ClientOnly, Icon, Text, Tooltip } from '@latitude-data/web-ui'
 import { ParameterTypeSelector } from './ParameterTypeSelector'
 

@@ -4,7 +4,7 @@ import { DatasetsRepository } from '@latitude-data/core/repositories'
 import { z } from 'zod'
 
 import { withDocument } from '../procedures'
-import { ParameterType } from '@latitude-data/core/browser'
+import { ParameterType } from '@latitude-data/constants'
 import { saveLinkedDataset } from '@latitude-data/core/services/documents/saveLinkedDataset'
 
 const parameterTypeSchema = z.nativeEnum(ParameterType)

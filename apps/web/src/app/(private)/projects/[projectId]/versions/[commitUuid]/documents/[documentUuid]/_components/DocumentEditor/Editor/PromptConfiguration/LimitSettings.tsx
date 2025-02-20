@@ -5,7 +5,7 @@ import {
   ABSOLUTE_MAX_STEPS,
   DEFAULT_MAX_STEPS,
   MAX_STEPS_CONFIG_NAME,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/constants'
 
 export function LimitSettings({
   config,

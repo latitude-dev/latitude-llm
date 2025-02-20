@@ -1,7 +1,4 @@
-import {
-  AGENT_RETURN_TOOL_NAME,
-  StreamEventTypes,
-} from '@latitude-data/core/browser'
+import { StreamEventTypes } from '@latitude-data/core/browser'
 import { LanguageModelUsage } from 'ai'
 import { readStreamableValue, StreamableValue } from 'ai/rsc'
 import { useCallback, useRef, useState } from 'react'
@@ -12,7 +9,11 @@ import {
   Message,
   ToolCall,
 } from '@latitude-data/compiler'
-import { ChainEvent, ChainEventTypes } from '@latitude-data/constants'
+import {
+  AGENT_RETURN_TOOL_NAME,
+  ChainEvent,
+  ChainEventTypes,
+} from '@latitude-data/constants'
 
 function buildMessage({ input }: { input: string | ToolMessage[] }) {
   if (typeof input === 'string') {

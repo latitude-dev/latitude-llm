@@ -1,9 +1,5 @@
 import { env } from '@latitude-data/env'
-import {
-  LatitudeTool,
-  LatitudeToolDefinition,
-  LatitudeToolInternalName,
-} from '../../../constants'
+import { LatitudeToolDefinition } from '../../../constants'
 import {
   BadRequestError,
   LatitudeError,
@@ -11,6 +7,10 @@ import {
   Result,
 } from '../../../lib'
 import { ExtractToolArgs, ExtractToolResult } from './types'
+import {
+  LatitudeTool,
+  LatitudeToolInternalName,
+} from '@latitude-data/constants'
 
 const HANDINGER_API_URL = 'https://api.handinger.com/markdown'
 

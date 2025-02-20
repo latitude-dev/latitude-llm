@@ -1,4 +1,4 @@
-import { ParameterType } from '../constants'
+import { ParameterType } from '@latitude-data/constants'
 
 export const INPUT_SOURCE = {
   manual: 'manual',

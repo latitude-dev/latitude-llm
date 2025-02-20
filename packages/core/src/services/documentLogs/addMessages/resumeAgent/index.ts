@@ -10,9 +10,10 @@ import {
   ToolMessage,
   ToolRequestContent,
 } from '@latitude-data/compiler'
-import { AGENT_RETURN_TOOL_NAME, PromptSource } from '../../../../constants'
+import { PromptSource } from '../../../../constants'
 import { runAgentStep } from '../../../agents/runStep'
 import { ChainStreamManager } from '../../../../lib/chainStreamManager'
+import { AGENT_RETURN_TOOL_NAME } from '@latitude-data/constants'
 
 function buildAssistantMessage(providerLog: ProviderLog): AssistantMessage {
   const toolContents: ToolRequestContent[] = providerLog.toolCalls.map(
