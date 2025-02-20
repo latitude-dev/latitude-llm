@@ -62,10 +62,7 @@ async function getDraftChanges(
   { workspace, draft }: { workspace: Workspace; draft: Commit },
   db = database,
 ): PromisedResult<ChangedDocument[]> {
-  const result = await recomputeChanges(
-    { draft, workspaceId: workspace.id },
-    db,
-  )
+  const result = await recomputeChanges({ draft, workspace }, db)
   if (result.error) return result
 
   const changes = result.value

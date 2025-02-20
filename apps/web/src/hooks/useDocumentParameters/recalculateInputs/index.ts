@@ -1,4 +1,5 @@
-import { Inputs, InputSource, ParameterType } from '@latitude-data/core/browser'
+import { ParameterType } from '@latitude-data/constants'
+import { Inputs, InputSource } from '@latitude-data/core/browser'
 import type { ConversationMetadata } from 'promptl-ai'
 
 const ParameterTypes = Object.values(ParameterType) as string[]

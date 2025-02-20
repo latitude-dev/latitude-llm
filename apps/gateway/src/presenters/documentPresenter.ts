@@ -9,7 +9,7 @@ import { scanDocumentContent } from '@latitude-data/core/services/documents/scan
 import { z } from '@hono/zod-openapi'
 import { ConversationMetadata as CompilerConversationMetadata } from '@latitude-data/compiler'
 import { ConversationMetadata as PromptlConversationMetadata } from 'promptl-ai'
-import { PROMPT_PARAMETER_ENUM } from '@latitude-data/constants'
+import { ParameterType } from '@latitude-data/constants'
 
 type ConversationMetadata =
   | CompilerConversationMetadata
@@ -19,7 +19,7 @@ export const documentPresenterSchema = z.object({
   path: z.string(),
   content: z.string(),
   config: z.object({}).passthrough(),
-  parameters: z.record(z.object({ type: PROMPT_PARAMETER_ENUM })),
+  parameters: z.record(z.object({ type: z.nativeEnum(ParameterType) })),
   provider: z.nativeEnum(Providers).optional(),
 })
 type Parameters = z.infer<typeof documentPresenterSchema>['parameters']
@@ -42,7 +42,7 @@ export function documentPresenterWithProviderAndMetadata({
       ? rawParams.reduce(
           (acc, rawParam) => {
             if (acc[rawParam]) return acc
-            acc[rawParam] = { type: 'text' }
+            acc[rawParam] = { type: ParameterType.Text }
 
             return acc
           },

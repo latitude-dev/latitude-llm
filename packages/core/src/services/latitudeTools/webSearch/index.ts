@@ -1,10 +1,6 @@
 import { tavily } from '@tavily/core'
 import { env } from '@latitude-data/env'
-import {
-  LatitudeTool,
-  LatitudeToolDefinition,
-  LatitudeToolInternalName,
-} from '../../../constants'
+import { LatitudeToolDefinition } from '../../../constants'
 import {
   BadRequestError,
   LatitudeError,
@@ -12,6 +8,10 @@ import {
   Result,
 } from '../../../lib'
 import { SearchToolArgs, SearchToolResult } from './types'
+import {
+  LatitudeTool,
+  LatitudeToolInternalName,
+} from '@latitude-data/constants'
 
 async function webSearch({
   query,

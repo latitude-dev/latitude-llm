@@ -4,7 +4,6 @@ import { updatePromptMetadata } from '$/lib/promptMetadata'
 import {
   Inputs,
   InputSource,
-  ParameterType,
   PlaygroundInput,
 } from '@latitude-data/core/browser'
 import {
@@ -13,6 +12,7 @@ import {
   SelectTriggerPrimitive,
   Tooltip,
 } from '@latitude-data/web-ui'
+import { ParameterType } from '@latitude-data/constants'
 
 const ParameterTypes = Object.values(ParameterType) as string[]
 

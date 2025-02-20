@@ -1,7 +1,7 @@
 import {
   LATITUDE_TOOLS_CONFIG_NAME,
   LatitudeTool,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/constants'
 import { useEffect, useState } from 'react'
 
 export type PromptConfigurationProps = {

@@ -10,7 +10,7 @@ import { useCallback, useState } from 'react'
 import {
   AGENT_RETURN_TOOL_NAME,
   LatitudeToolInternalName,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/constants'
 
 function isToolRequest(part: ToolPart): part is ToolRequest {
   return 'toolCallId' in part

@@ -5,7 +5,7 @@ import {
   useConfigValue,
   useLatitudeToolsConfig,
 } from './utils'
-import { LatitudeTool } from '@latitude-data/core/browser'
+import { LatitudeTool } from '@latitude-data/constants'
 
 export function BehaviourSettings({
   config,

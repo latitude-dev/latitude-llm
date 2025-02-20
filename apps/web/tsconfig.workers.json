@@ -11,21 +11,12 @@
     ],
     "moduleResolution": "Bundler",
     "jsx": "preserve",
-    "typeRoots": [
-      "./node_modules/@types"
-    ],
+    "typeRoots": ["./node_modules/@types"],
     "baseUrl": ".",
     "paths": {
-      "$/*": [
-        "./src/*"
-      ]
+      "$/*": ["./src/*"]
     }
   },
-  "include": [
-    "./src/workers/**/*.ts"
-  ],
-  "exclude": [
-    "node_modules",
-    ""
-  ]
+  "include": ["./src/workers/**/*.ts", "../../packages/constants/src/**/*.ts"],
+  "exclude": ["node_modules", ""]
 }

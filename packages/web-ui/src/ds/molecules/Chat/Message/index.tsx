@@ -28,7 +28,7 @@ import { colors, font, TextColor } from '../../../tokens'
 import { isAgentToolResponse, roleToString, roleVariant } from './helpers'
 import { ToolCallContent } from './ToolCall'
 import { ToolResultContent } from './ToolResult'
-import type { AgentToolsMap } from '@latitude-data/core/browser'
+import { AgentToolsMap } from '@latitude-data/constants'
 
 export { roleToString, roleVariant } from './helpers'
 

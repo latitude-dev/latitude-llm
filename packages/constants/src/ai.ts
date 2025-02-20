@@ -11,6 +11,9 @@ import { z } from 'zod'
 
 import { ProviderLog } from './models'
 import { LatitudeEventData, LegacyChainEventTypes } from './events'
+import { ParameterType } from './config'
+
+export type AgentToolsMap = Record<string, string> // { [toolName]: agentPath }
 
 export const azureConfig = z.object({
   resourceName: z.string({
@@ -54,9 +57,6 @@ export type ToolDefinition = {
   description: string
   parameters: JSONSchema7
 }
-
-export const PROMPT_PARAMETER_ENUM = z.enum(['text', 'file', 'image'])
-export type ParameterType = z.infer<typeof PROMPT_PARAMETER_ENUM>
 
 export type Config = {
   provider: string

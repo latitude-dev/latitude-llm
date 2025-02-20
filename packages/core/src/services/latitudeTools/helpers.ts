@@ -4,14 +4,14 @@ import {
   MessageRole,
   ToolMessage,
 } from '@latitude-data/compiler'
-import {
-  LatitudeTool,
-  LatitudeToolCall,
-  LatitudeToolInternalName,
-} from '../../constants'
+import { LatitudeToolCall } from '../../constants'
 import { TypedResult } from '../../lib'
 import { LATITUDE_TOOLS } from './tools'
-import { ToolDefinition } from '@latitude-data/constants'
+import {
+  LatitudeTool,
+  LatitudeToolInternalName,
+  ToolDefinition,
+} from '@latitude-data/constants'
 
 export const getLatitudeToolName = (
   internalName: LatitudeToolInternalName,

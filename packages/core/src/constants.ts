@@ -7,6 +7,8 @@ import type {
 } from '@latitude-data/compiler'
 import {
   EvaluationResultableType,
+  LatitudeTool,
+  LatitudeToolInternalName,
   LogSources,
   ProviderData,
   type ToolDefinition,
@@ -14,7 +16,7 @@ import {
 import { FinishReason, LanguageModelUsage } from 'ai'
 import { z } from 'zod'
 
-import {
+import type {
   Commit,
   DocumentVersion,
   EvaluationDto,
@@ -441,12 +443,6 @@ export const RELATIVE_DATES = {
 
 export type RelativeDate = keyof typeof RELATIVE_DATES
 
-export enum ParameterType {
-  Text = 'text',
-  Image = 'image',
-  File = 'file',
-}
-
 export const SUPPORTED_IMAGE_TYPES = ['.jpg', '.jpeg', '.png', '.gif', '.webp']
 
 export const LOG_FILTERS_ENCODED_PARAMS = ['customIdentifier']
@@ -461,11 +457,6 @@ export type DraftChange = {
   oldDocumentPath: string
   content: DiffValue
 }
-
-export const AGENT_RETURN_TOOL_NAME = 'agent_finish_task'
-export const MAX_STEPS_CONFIG_NAME = 'maxSteps'
-export const DEFAULT_MAX_STEPS = 20
-export const ABSOLUTE_MAX_STEPS = 150
 
 const CLOUD_INFO_URL =
   'https://docs.latitude.so/guides/getting-started/quick-start#latitude-cloud'
@@ -490,22 +481,6 @@ export type DocumentRunPromptSource = {
   commit: Commit
 }
 export type PromptSource = EvaluationDto | DocumentRunPromptSource
-
-export enum LatitudeTool {
-  RunCode = 'code',
-  WebSearch = 'search',
-  WebExtract = 'extract',
-}
-
-export type AgentToolsMap = Record<string, string> // { [toolName]: agentPath }
-export const LATITUDE_TOOL_PREFIX = 'lat_tool'
-export const AGENT_TOOL_PREFIX = 'lat_agent'
-
-export enum LatitudeToolInternalName {
-  RunCode = 'lat_tool_run_code',
-  WebSearch = 'lat_tool_web_search',
-  WebExtract = 'lat_tool_web_extract',
-}
 
 export type LatitudeToolDefinition = {
   name: LatitudeTool
