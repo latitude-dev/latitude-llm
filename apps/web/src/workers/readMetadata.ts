@@ -1,22 +1,47 @@
 import { readMetadata } from '@latitude-data/compiler'
-import { type DocumentVersion } from '@latitude-data/core/browser'
+import {
+  AgentToolsMap,
+  promptConfigSchema,
+  resolveRelativePath,
+} from '@latitude-data/constants'
+import type { DocumentVersion } from '@latitude-data/core/browser'
+
 import { scan } from 'promptl-ai'
 
 export type ReadMetadataWorkerProps = Parameters<typeof readMetadata>[0] & {
   promptlVersion: number
   document?: DocumentVersion
   documents?: DocumentVersion[]
+  providerNames?: string[]
+  agentToolsMap?: AgentToolsMap
 }
 
 self.onmessage = async function (event: { data: ReadMetadataWorkerProps }) {
-  const { document, documents, prompt, promptlVersion, ...rest } = event.data
+  const {
+    document,
+    documents,
+    prompt,
+    promptlVersion,
+    providerNames,
+    agentToolsMap,
+    ...rest
+  } = event.data
 
   const referenceFn = readDocument(document, documents, prompt)
+  const configSchema =
+    document && providerNames
+      ? promptConfigSchema({
+          providerNames,
+          fullPath: document.path,
+          agentToolsMap,
+        })
+      : undefined
 
   const props = {
     ...rest,
     prompt,
     referenceFn,
+    configSchema,
   }
 
   const metadata =
@@ -70,29 +95,4 @@ function readDocument(
       content,
     }
   }
-}
-
-function resolveRelativePath(refPath: string, from?: string): string {
-  if (refPath.startsWith('/')) {
-    return refPath.slice(1)
-  }
-
-  if (!from) {
-    return refPath
-  }
-
-  const fromDir = from.split('/').slice(0, -1).join('/')
-
-  const segments = refPath.split('/')
-  const resultSegments = fromDir ? fromDir.split('/') : []
-
-  for (const segment of segments) {
-    if (segment === '..') {
-      resultSegments.pop()
-    } else if (segment !== '.') {
-      resultSegments.push(segment)
-    }
-  }
-
-  return resultSegments.join('/')
 }

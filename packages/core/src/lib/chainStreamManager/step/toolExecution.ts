@@ -1,6 +1,5 @@
 import { ToolCall, ToolMessage } from '@latitude-data/compiler'
 import {
-  AGENT_RETURN_TOOL_NAME,
   DocumentRunPromptSource,
   LatitudeToolCall,
   LogSources,
@@ -14,6 +13,7 @@ import { BadRequestError, NotFoundError } from '../../errors'
 import { buildAgentsToolsMap } from '../../../services/agents/agentsAsTools'
 import { runDocumentAtCommit } from '../../../services/commits/runDocumentAtCommit'
 import { DocumentVersionsRepository } from '../../../repositories'
+import { AGENT_RETURN_TOOL_NAME } from '@latitude-data/constants'
 
 function isDocumentRun(
   promptSource: PromptSource,

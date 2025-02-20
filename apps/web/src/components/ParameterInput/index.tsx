@@ -1,11 +1,9 @@
 import { ChangeEvent, useCallback } from 'react'
 
 import useFiles from '$/stores/files'
-import {
-  ParameterType,
-  SUPPORTED_IMAGE_TYPES,
-} from '@latitude-data/core/browser'
+import { SUPPORTED_IMAGE_TYPES } from '@latitude-data/core/browser'
 import { DropzoneInput, Skeleton, TextArea } from '@latitude-data/web-ui'
+import { ParameterType } from '@latitude-data/constants'
 
 export function ParameterInputSkeleton() {
   return (

@@ -1,8 +1,8 @@
-import { ParameterType } from '@latitude-data/core/browser'
 import type { ConversationMetadata } from 'promptl-ai'
 import { describe, expect, it } from 'vitest'
 
 import { recalculateInputs } from './index'
+import { ParameterType } from '@latitude-data/constants'
 
 describe('recalculateInputs', () => {
   it('delete inputs not present in parameters', () => {

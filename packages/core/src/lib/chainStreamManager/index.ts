@@ -4,7 +4,11 @@ import {
   ToolCall,
   ToolMessage,
 } from '@latitude-data/compiler'
-import { StreamEventTypes } from '@latitude-data/constants'
+import {
+  AGENT_TOOL_PREFIX,
+  LatitudeToolInternalName,
+  StreamEventTypes,
+} from '@latitude-data/constants'
 import {
   ChainEvent,
   ChainEventTypes,
@@ -21,8 +25,7 @@ import { buildMessagesFromResponse } from '../../helpers'
 import { FinishReason, LanguageModelUsage } from 'ai'
 import { ChainError } from './ChainErrors'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
-import { LatitudeToolInternalName, Workspace } from '../../browser'
-import { AGENT_TOOL_PREFIX } from '../../constants'
+import { Workspace } from '../../browser'
 import {
   getAgentAsToolCallResponses,
   getLatitudeToolCallResponses,

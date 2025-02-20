@@ -7,11 +7,11 @@ import {
 import { CodeToolArgs } from './types'
 import { runCodeWithoutDependencies } from './withoutDependencies'
 import { runCodeWithDependencies } from './withDependencies'
+import { LatitudeToolDefinition } from '../../../constants'
 import {
-  LatitudeToolDefinition,
   LatitudeTool,
   LatitudeToolInternalName,
-} from '../../../constants'
+} from '@latitude-data/constants'
 
 function assertContainsPrintStatement({ code, language }: CodeToolArgs) {
   const printStatementResult = (() => {

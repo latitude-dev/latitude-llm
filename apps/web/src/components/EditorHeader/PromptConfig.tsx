@@ -1,7 +1,7 @@
 import {
   LATITUDE_TOOLS_CONFIG_NAME,
   LatitudeTool,
-} from '@latitude-data/core/browser'
+} from '@latitude-data/constants'
 import { Checkbox, cn, Icon, Text, Tooltip } from '@latitude-data/web-ui'
 import { ChangeEvent, ReactNode, useEffect, useMemo, useState } from 'react'
 

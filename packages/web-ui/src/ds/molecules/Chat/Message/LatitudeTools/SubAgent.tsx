@@ -5,7 +5,7 @@ import {
   ContentCardContainer,
 } from '../ContentCard'
 import { CodeBlock } from '../../../../atoms'
-import type { AgentToolsMap } from '@latitude-data/core/browser'
+import { AgentToolsMap } from '@latitude-data/constants'
 
 export function SubAgentToolCallContent({
   toolCallId,

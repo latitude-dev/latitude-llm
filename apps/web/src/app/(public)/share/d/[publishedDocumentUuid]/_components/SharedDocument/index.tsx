@@ -3,7 +3,7 @@
 import { capitalize } from 'lodash-es'
 import { FormEvent, useCallback, useEffect, useRef, useState } from 'react'
 
-import { ParameterType, PublishedDocument } from '@latitude-data/core/browser'
+import { PublishedDocument } from '@latitude-data/core/browser'
 import {
   Button,
   Card,
@@ -22,6 +22,7 @@ import { PromptHeader } from '../Header'
 import { Messages } from '../Messages'
 import { useChat } from './useChat'
 import { usePrompt } from './usePrompt'
+import { ParameterType } from '@latitude-data/constants'
 
 const ParameterTypes = Object.values(ParameterType) as string[]
 
