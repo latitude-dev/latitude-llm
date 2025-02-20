@@ -24,11 +24,22 @@ class Providers(StrEnum):
     Custom = "custom"
 
 
+class ParameterType(StrEnum):
+    Text = "text"
+    File = "file"
+    Image = "image"
+
+
+class PromptParameter(Model):
+    type: ParameterType
+
+
 class Prompt(Model):
     uuid: str
     path: str
     content: str
     config: dict[str, Any]
+    parameters: dict[str, PromptParameter]
     provider: Optional[Providers] = None
 
 

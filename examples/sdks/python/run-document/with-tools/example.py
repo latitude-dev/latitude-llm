@@ -6,14 +6,13 @@ from typing import Any
 from latitude_sdk import ChatPromptOptions, Latitude, LatitudeOptions, OnToolCallDetails, RunPromptOptions, InternalOptions, GatewayOptions
 from promptl_ai import ImageContent, TextContent, UserMessage
 
+from util.create_sdk import create_sdk
+
 load_dotenv()
 
-LATITUDE_API_KEY = os.getenv("LATITUDE_API_KEY")
 PROJECT_ID = os.getenv("PROJECT_ID")
 COMMIT_UUID = os.getenv("COMMIT_UUID")
 DOCUMENT_PATH = os.getenv("DOCUMENT_PATH")
-GATEWAY_HOST = os.getenv("GATEWAY_HOST")
-GATEWAY_PORT = os.getenv("GATEWAY_PORT")
 
 
 async def get_weather(arguments: dict[str, Any], details: OnToolCallDetails) -> str:
@@ -28,28 +27,16 @@ async def get_weather(arguments: dict[str, Any], details: OnToolCallDetails) -> 
     return "20°C"
 
 async def main():
-    assert LATITUDE_API_KEY, "LATITUDE_API_KEY is not set"
     assert PROJECT_ID, "PROJECT_ID is not set"
     assert DOCUMENT_PATH, "DOCUMENT_PATH is not set"
 
-    gateway = None
 
-    if (GATEWAY_HOST and GATEWAY_PORT):
-        gateway = GatewayOptions(
-            host=GATEWAY_HOST,
-            port=int(GATEWAY_PORT),
-            ssl=False,
-            api_version="v3"
-        )
-    sdk = Latitude(
-        LATITUDE_API_KEY,
+    sdk = create_sdk(
         LatitudeOptions(
             project_id=int(PROJECT_ID),
-            version_uuid=COMMIT_UUID,
-            internal=InternalOptions(gateway=gateway)
+            version_uuid=COMMIT_UUID
         )
     )
-
     result = await sdk.prompts.run(
         DOCUMENT_PATH,
         RunPromptOptions(
