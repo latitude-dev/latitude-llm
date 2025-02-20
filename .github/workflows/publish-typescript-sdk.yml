@@ -60,9 +60,9 @@ jobs:
         if: steps.check_version.outputs.should_publish == 'true'
         run: pnpm install
 
-      - name: Build package
+      - name: Build package (with workspace dependencies)
         if: steps.check_version.outputs.should_publish == 'true'
-        run: pnpm build --filter=@latitude-data/sdk
+        run: pnpm exec turbo run build --filter=@latitude-data/sdk...
 
       - name: Run linter
         if: steps.check_version.outputs.should_publish == 'true'
