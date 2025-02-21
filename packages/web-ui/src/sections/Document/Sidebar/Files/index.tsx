@@ -139,6 +139,9 @@ function FileNode({
         <ul
           className={cn('flex flex-col', {
             hidden: !open && !node.isRoot,
+            'pt-1 pb-8': node.isRoot,
+            'outline outline-1 outline-primary':
+              droppable.isOver && node.isRoot,
           })}
         >
           {allNodes.map((node, idx) => {

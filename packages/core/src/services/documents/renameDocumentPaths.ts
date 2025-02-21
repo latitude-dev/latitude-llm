@@ -38,16 +38,9 @@ export async function renameDocumentPaths(
       .getDocumentsAtCommit(commit)
       .then((r) => r.unwrap())
 
-    console.log('CURRENT_DOCS', currentDocs)
-    console.log('OLD_PATH', oldPath)
-    console.log('NEW_PATH', newPath)
-
     const docsToUpdate = currentDocs.filter((d) =>
       oldPath.endsWith('/') ? d.path.startsWith(oldPath) : d.path === oldPath,
     )
-
-    console.log('DOCS_TO_UPDATE', docsToUpdate)
-
     const updatedDocs = await Promise.all(
       docsToUpdate.map(async (document) => {
         const updatedPath = newPath + document.path.slice(oldPath.length)
