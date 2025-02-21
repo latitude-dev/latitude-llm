@@ -1,6 +1,5 @@
 'use client'
 
-import { CSS } from '@dnd-kit/utilities'
 import { useDraggable } from '@dnd-kit/core'
 import { RefObject, useEffect, useRef, useState } from 'react'
 
@@ -104,7 +103,7 @@ function NodeHeaderWrapper({
     {
       name,
       nodeRef: nodeRef as RefObject<HTMLDivElement>,
-      inputRef,
+      inputRef: inputRef as RefObject<HTMLInputElement>,
       isEditing,
       setIsEditing,
       saveValue: ({ path }) => {

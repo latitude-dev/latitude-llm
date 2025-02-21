@@ -130,6 +130,8 @@ export function TreeToolbar() {
       {nodeInput ? (
         <NodeHeaderWrapper
           open={false}
+          canDrag={false}
+          draggble={undefined}
           hasChildren={false}
           isFile={isFile}
           name=''

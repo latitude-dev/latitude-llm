@@ -1,11 +1,4 @@
-import {
-  ComponentPropsWithRef,
-  ElementRef,
-  forwardRef,
-  HTMLAttributes,
-  ReactNode,
-  useId,
-} from 'react'
+import { ComponentPropsWithRef, HTMLAttributes, ReactNode, useId } from 'react'
 import { Slot } from '@radix-ui/react-slot'
 
 import { cn } from '../../../lib/utils'
@@ -45,15 +38,18 @@ export function InlineFormErrorMessage({
   )
 }
 
-export const FormControl = forwardRef<
-  ElementRef<typeof Slot>,
-  ComponentPropsWithRef<typeof Slot> & {
-    error?: string | undefined
-    formItemId: string
-    formDescriptionId: string
-    formMessageId: string
-  }
->(({ error, formItemId, formMessageId, formDescriptionId, ...props }, _ref) => {
+export function FormControl({
+  error,
+  formItemId,
+  formMessageId,
+  formDescriptionId,
+  ...props
+}: ComponentPropsWithRef<typeof Slot> & {
+  error?: string | undefined
+  formItemId: string
+  formDescriptionId: string
+  formMessageId: string
+}) {
   return (
     <Slot
       ref={props.ref}
@@ -67,7 +63,7 @@ export const FormControl = forwardRef<
       {...props}
     />
   )
-})
+}
 
 function DescriptionAndError({
   description,

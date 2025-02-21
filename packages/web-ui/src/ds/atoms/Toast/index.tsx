@@ -1,11 +1,6 @@
 'use client'
 
-import {
-  ComponentPropsWithRef,
-  ElementRef,
-  forwardRef,
-  ReactElement,
-} from 'react'
+import { ComponentPropsWithRef, ReactElement } from 'react'
 import { cva, type VariantProps } from 'class-variance-authority'
 import * as ToastPrimitives from '@radix-ui/react-toast'
 
@@ -14,10 +9,10 @@ import { Icon } from '../Icons'
 
 const ToastProviderPrimitive = ToastPrimitives.Provider
 
-const ToastViewport = forwardRef<
-  ElementRef<typeof ToastPrimitives.Viewport>,
-  ComponentPropsWithRef<typeof ToastPrimitives.Viewport>
->(function ToastViewport({ className, ...props }, _ref) {
+function ToastViewport({
+  className,
+  ...props
+}: ComponentPropsWithRef<typeof ToastPrimitives.Viewport>) {
   return (
     <ToastPrimitives.Viewport
       ref={props.ref}
@@ -28,7 +23,7 @@ const ToastViewport = forwardRef<
       {...props}
     />
   )
-})
+}
 
 const toastVariants = cva(
   cn(
@@ -53,11 +48,11 @@ const toastVariants = cva(
   },
 )
 
-const Toast = forwardRef<
-  ElementRef<typeof ToastPrimitives.Root>,
-  ComponentPropsWithRef<typeof ToastPrimitives.Root> &
-    VariantProps<typeof toastVariants>
->(function Toast({ className, variant, ref, ...props }, _ref) {
+type ToastPropsWithVariant = ComponentPropsWithRef<
+  typeof ToastPrimitives.Root
+> &
+  VariantProps<typeof toastVariants>
+function Toast({ className, variant, ref, ...props }: ToastPropsWithVariant) {
   return (
     <ToastPrimitives.Root
       ref={ref}
@@ -65,12 +60,13 @@ const Toast = forwardRef<
       {...props}
     />
   )
-})
+}
 
-const ToastAction = forwardRef<
-  ElementRef<typeof ToastPrimitives.Action>,
-  ComponentPropsWithRef<typeof ToastPrimitives.Action>
->(function ToastAction({ className, ref, ...props }, _ref) {
+function ToastAction({
+  className,
+  ref,
+  ...props
+}: ComponentPropsWithRef<typeof ToastPrimitives.Action>) {
   return (
     <ToastPrimitives.Action
       ref={ref}
@@ -81,12 +77,13 @@ const ToastAction = forwardRef<
       {...props}
     />
   )
-})
+}
 
-const ToastClose = forwardRef<
-  ElementRef<typeof ToastPrimitives.Close>,
-  ComponentPropsWithRef<typeof ToastPrimitives.Close>
->(function ToastClose({ className, ref, ...props }, _ref) {
+function ToastClose({
+  className,
+  ref,
+  ...props
+}: ComponentPropsWithRef<typeof ToastPrimitives.Close>) {
   return (
     <ToastPrimitives.Close
       ref={ref}
@@ -100,12 +97,13 @@ const ToastClose = forwardRef<
       <Icon name='close' />
     </ToastPrimitives.Close>
   )
-})
+}
 
-const ToastTitle = forwardRef<
-  ElementRef<typeof ToastPrimitives.Title>,
-  ComponentPropsWithRef<typeof ToastPrimitives.Title>
->(function ToastTitle({ className, ref, ...props }, _ref) {
+function ToastTitle({
+  className,
+  ref,
+  ...props
+}: ComponentPropsWithRef<typeof ToastPrimitives.Title>) {
   return (
     <ToastPrimitives.Title
       ref={ref}
@@ -113,12 +111,13 @@ const ToastTitle = forwardRef<
       {...props}
     />
   )
-})
+}
 
-const ToastDescription = forwardRef<
-  ElementRef<typeof ToastPrimitives.Description>,
-  ComponentPropsWithRef<typeof ToastPrimitives.Description>
->(function ToastDescription({ className, ref, ...props }, _ref) {
+function ToastDescription({
+  className,
+  ref,
+  ...props
+}: ComponentPropsWithRef<typeof ToastPrimitives.Description>) {
   return (
     <ToastPrimitives.Description
       ref={ref}
@@ -126,7 +125,7 @@ const ToastDescription = forwardRef<
       {...props}
     />
   )
-})
+}
 
 type ToastProps = ComponentPropsWithRef<typeof Toast>
 

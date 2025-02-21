@@ -2,7 +2,6 @@
 import {
   DataRef,
   DndContext,
-  DragEndEvent,
   DragOverEvent,
   MouseSensor,
   useSensor,
@@ -19,6 +18,7 @@ import {
 } from './DragOverlayNode'
 import { useOpenPaths } from '../useOpenPaths'
 import { ClientOnly } from '../../../../../ds/atoms'
+import { useDragEndFile } from './useDragEndFile'
 
 type IFilesContext = {
   isLoading: boolean
@@ -32,6 +32,7 @@ type IFilesContext = {
   onDeleteFolder: (args: { node: Node; path: string }) => void
   onNavigateToDocument: (documentUuid: string) => void
 }
+
 const FileTreeContext = createContext({} as IFilesContext)
 
 const FileTreeProvider = ({
@@ -63,6 +64,7 @@ const FileTreeProvider = ({
     openPaths: state.openPaths,
     togglePath: state.togglePath,
   }))
+  const { onDragEnd } = useDragEndFile({ renamePaths })
   const onDragOver = useCallback(
     (event: DragOverEvent) => {
       const overData = event.over?.data?.current
@@ -79,28 +81,6 @@ const FileTreeProvider = ({
       togglePath(nodePath)
     },
     [openPaths, togglePath],
-  )
-  const onDragEnd = useCallback(
-    (event: DragEndEvent) => {
-      const dragNodeData = event.active.data.current
-      const draggedFolderData = event.over?.data?.current
-      if (!dragNodeData || !draggedFolderData) return
-
-      const dragNode = dragNodeData as DraggableAndDroppableData
-      const destinationFolder = draggedFolderData as DraggableAndDroppableData
-
-      const dragSufix = dragNode.isFile ? '' : '/'
-      const oldPath = `${dragNode.path}${dragSufix}`
-      const separator = destinationFolder.isRoot ? '' : '/'
-      const newPath = `${destinationFolder.path}${separator}${dragNode.name}${dragSufix}`
-
-      if (oldPath === newPath) return
-
-      console.log('OLD_PATH', oldPath)
-      console.log('NEW_PATH', newPath)
-      renamePaths({ oldPath, newPath })
-    },
-    [renamePaths],
   )
   return (
     <DndContext
