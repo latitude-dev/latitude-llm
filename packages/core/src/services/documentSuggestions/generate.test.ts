@@ -208,8 +208,6 @@ describe('generateDocumentSuggestion', () => {
 
   it('not generates document suggestion when limits are exceeded', async () => {
     const anotherSuggestion = await factories.createDocumentSuggestion({
-      prompt: 'another prompt',
-      summary: 'another summary',
       commit: commit,
       document: document,
       evaluation: evaluation,

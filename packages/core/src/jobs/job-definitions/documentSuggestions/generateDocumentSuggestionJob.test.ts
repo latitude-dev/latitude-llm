@@ -13,6 +13,7 @@ import { Result, UnprocessableEntityError } from '../../../lib'
 import * as services from '../../../services/documentSuggestions'
 import * as factories from '../../../tests/factories'
 import { generateDocumentSuggestionJob } from './generateDocumentSuggestionJob'
+
 describe('generateDocumentSuggestionJob', () => {
   let mocks: {
     generateDocumentSuggestion: MockInstance
