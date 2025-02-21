@@ -157,7 +157,7 @@ export async function createProject(projectData: Partial<ICreateProject> = {}) {
     }
 
     commit = skipMerge
-      ? commit
+      ? draft
       : await mergeCommit(draft).then((r) => r.unwrap())
   }
 

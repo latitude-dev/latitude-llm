@@ -1,11 +1,6 @@
 import { Chain as PromptlChain } from 'promptl-ai'
 import { AssistantMessage, type Message } from '@latitude-data/compiler'
-import {
-  ABSOLUTE_MAX_STEPS,
-  DEFAULT_MAX_STEPS,
-  LogSources,
-  MAX_STEPS_CONFIG_NAME,
-} from '../../../constants'
+import { LogSources } from '../../../constants'
 import {
   ConfigOverrides,
   validateChain,
@@ -18,6 +13,11 @@ import { RunErrorCodes } from '@latitude-data/constants/errors'
 import { buildMessagesFromResponse, Workspace } from '../../../browser'
 import { cacheChain } from '../chainCache'
 import { ChainStreamManager } from '../../../lib/chainStreamManager'
+import {
+  ABSOLUTE_MAX_STEPS,
+  DEFAULT_MAX_STEPS,
+  MAX_STEPS_CONFIG_NAME,
+} from '@latitude-data/constants'
 
 function assertValidStepCount({
   stepCount,

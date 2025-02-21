@@ -1,8 +1,4 @@
 import { ToolRequestContent } from '@latitude-data/compiler'
-import {
-  AGENT_RETURN_TOOL_NAME,
-  LatitudeToolInternalName,
-} from '@latitude-data/core/browser'
 import { CodeBlock } from '../../../atoms'
 import { CardTextContent, ContentCard } from './ContentCard'
 import { ToolCallContent as PromptlToolCall } from 'promptl-ai'
@@ -12,11 +8,13 @@ import { WebExtractLatitudeToolCallContent } from './LatitudeTools/Extract'
 import type { CodeToolArgs } from '@latitude-data/core/services/latitudeTools/runCode/types'
 import type { SearchToolArgs } from '@latitude-data/core/services/latitudeTools/webSearch/types'
 import type { ExtractToolArgs } from '@latitude-data/core/services/latitudeTools/webExtract/types'
-import {
-  type AgentToolsMap,
-  AGENT_TOOL_PREFIX,
-} from '@latitude-data/core/browser'
 import { SubAgentToolCallContent } from './LatitudeTools/SubAgent'
+import {
+  AGENT_RETURN_TOOL_NAME,
+  AGENT_TOOL_PREFIX,
+  AgentToolsMap,
+  LatitudeToolInternalName,
+} from '@latitude-data/constants'
 
 function toolArgs(
   value: ToolRequestContent | PromptlToolCall,

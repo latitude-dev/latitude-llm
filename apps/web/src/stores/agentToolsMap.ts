@@ -3,7 +3,7 @@ import { SWRConfiguration } from 'swr'
 import useDocumentVersions from './documentVersions'
 import { useMemo } from 'react'
 import { getAgentToolName } from '@latitude-data/core/services/agents/helpers'
-import type { AgentToolsMap } from '@latitude-data/core/browser'
+import { AgentToolsMap } from '@latitude-data/constants'
 
 export function useAgentToolsMap(
   {

@@ -141,6 +141,7 @@ describe('promptInjection', () => {
 
     it('fails when included agent does not exist', async () => {
       const { workspace, documents, commit } = await factories.createProject({
+        skipMerge: true,
         providers: [{ name: 'openai', type: Providers.OpenAI }],
         documents: {
           main: factories.helpers.createPrompt({
@@ -173,6 +174,7 @@ describe('promptInjection', () => {
 
     it('fails when included agent is not an agent', async () => {
       const { workspace, documents, commit } = await factories.createProject({
+        skipMerge: true,
         providers: [{ name: 'openai', type: Providers.OpenAI }],
         documents: {
           main: factories.helpers.createPrompt({

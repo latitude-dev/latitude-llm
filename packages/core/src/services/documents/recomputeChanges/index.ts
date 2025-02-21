@@ -12,8 +12,8 @@ import { eq } from 'drizzle-orm'
 import {
   Commit,
   DocumentVersion,
-  promptConfigSchema,
   ProviderApiKey,
+  Workspace,
 } from '../../../browser'
 import { database } from '../../../client'
 import { hashContent, Result, Transaction, TypedResult } from '../../../lib'
@@ -22,15 +22,19 @@ import { ProviderApiKeysRepository } from '../../../repositories'
 import { documentVersions } from '../../../schema'
 import { getHeadDocumentsAndDraftDocumentsForCommit } from './getHeadDocumentsAndDraftDocuments'
 import { getMergedAndDraftDocuments } from './getMergedAndDraftDocuments'
+import { buildAgentsToolsMap } from '../../agents/agentsAsTools'
+import { AgentToolsMap, promptConfigSchema } from '@latitude-data/constants'
 
 async function resolveDocumentChanges({
   originalDocuments,
   newDocuments,
   providers,
+  agentToolsMap,
 }: {
   originalDocuments: DocumentVersion[]
   newDocuments: DocumentVersion[]
   providers: ProviderApiKey[]
+  agentToolsMap: AgentToolsMap
 }): Promise<{
   documents: DocumentVersion[]
   errors: Record<string, CompileError[]>
@@ -52,10 +56,14 @@ async function resolveDocumentChanges({
     }
   }
 
-  const configSchema = promptConfigSchema({ providers })
-
   const newDocumentsWithUpdatedHash = await Promise.all(
     newDocuments.map(async (d) => {
+      const configSchema = promptConfigSchema({
+        fullPath: d.path,
+        providerNames: providers.map((p) => p.name),
+        agentToolsMap,
+      })
+
       if (d.promptlVersion === 0) {
         const metadata = await readMetadata({
           prompt: d.content ?? '',
@@ -146,11 +154,11 @@ export type RecomputedChanges = {
 
 export async function recomputeChanges(
   {
+    workspace,
     draft,
-    workspaceId,
   }: {
+    workspace: Workspace
     draft: Commit
-    workspaceId: number
   },
   tx = database,
 ): Promise<TypedResult<RecomputedChanges, Error>> {
@@ -158,7 +166,7 @@ export async function recomputeChanges(
     assertCommitIsDraft(draft).unwrap()
 
     const result = await getHeadDocumentsAndDraftDocumentsForCommit(
-      { commit: draft, workspaceId },
+      { commit: draft, workspaceId: workspace.id },
       tx,
     )
     if (result.error) return result
@@ -169,15 +177,26 @@ export async function recomputeChanges(
       documentsInDrafCommit,
     })
 
-    const providersScope = new ProviderApiKeysRepository(workspaceId, tx)
+    const providersScope = new ProviderApiKeysRepository(workspace.id, tx)
     const providersResult = await providersScope.findAll()
     if (providersResult.error) return Result.error(providersResult.error)
+
+    const agentToolsMapResult = await buildAgentsToolsMap(
+      {
+        workspace,
+        commit: draft,
+      },
+      tx,
+    )
+    if (agentToolsMapResult.error)
+      return Result.error(agentToolsMapResult.error)
 
     const { documents: documentsToUpdate, errors } =
       await resolveDocumentChanges({
         originalDocuments: mergedDocuments,
         newDocuments: draftDocuments,
         providers: providersResult.value,
+        agentToolsMap: agentToolsMapResult.value,
       })
 
     const newDraftDocuments = (

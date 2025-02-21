@@ -11,7 +11,6 @@ import {
   ChainStepResponse,
   ErrorableEntity,
   LogSources,
-  MAX_STEPS_CONFIG_NAME,
   PromptSource,
   StreamType,
 } from '../../constants'
@@ -25,6 +24,7 @@ import { ConfigOverrides } from './ChainValidator'
 import { runStep } from './runStep'
 import { ChainStreamManager } from '../../lib/chainStreamManager'
 import { LanguageModelUsage } from 'ai'
+import { MAX_STEPS_CONFIG_NAME } from '@latitude-data/constants'
 
 export type CachedApiKeys = Map<string, ProviderApiKey>
 export type SomeChain = LegacyChain | PromptlChain

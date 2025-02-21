@@ -1,13 +1,7 @@
 import { describe, it, expect, vi, beforeAll } from 'vitest'
 import * as factories from '../../../tests/factories'
 import { Result } from '../../Result'
-import {
-  AGENT_RETURN_TOOL_NAME,
-  LatitudeToolCall,
-  LatitudeToolInternalName,
-  LogSources,
-  Providers,
-} from '../../../constants'
+import { LatitudeToolCall, LogSources, Providers } from '../../../constants'
 import {
   getAgentAsToolCallResponses,
   getLatitudeToolCallResponses,
@@ -18,6 +12,10 @@ import { getAgentToolName } from '../../../services/agents/helpers'
 import * as latitudeToolsService from '../../../services/latitudeTools'
 import * as runDocumentService from '../../../services/commits/runDocumentAtCommit'
 import * as agentsAsToolsService from '../../../services/agents/agentsAsTools'
+import {
+  AGENT_RETURN_TOOL_NAME,
+  LatitudeToolInternalName,
+} from '@latitude-data/constants'
 
 const MOCKED_TOOL_CALL: LatitudeToolCall = {
   id: '1',
@@ -39,8 +37,6 @@ const SUCCESSFUL_RESPONSE_MESSAGE: ToolMessage = {
     },
   ],
 }
-
-// const { getLatitudeToolCallResponses } = await import('./toolExecution')
 
 describe('getLatitudeToolCallResponses', () => {
   beforeAll(() => {
@@ -144,6 +140,7 @@ describe('getAgentAsToolCallResponses', () => {
 
   it('executes the sub agent prompt', async () => {
     const { workspace, documents, commit } = await factories.createProject({
+      skipMerge: true,
       providers: [{ name: 'openai', type: Providers.OpenAI }],
       documents: {
         main: factories.helpers.createPrompt({
@@ -192,6 +189,7 @@ describe('getAgentAsToolCallResponses', () => {
 
   it('returns a successful response message', async () => {
     const { workspace, documents, commit } = await factories.createProject({
+      skipMerge: true,
       providers: [{ name: 'openai', type: Providers.OpenAI }],
       documents: {
         main: factories.helpers.createPrompt({
@@ -251,6 +249,7 @@ describe('getAgentAsToolCallResponses', () => {
     )
 
     const { workspace, documents, commit } = await factories.createProject({
+      skipMerge: true,
       providers: [{ name: 'openai', type: Providers.OpenAI }],
       documents: {
         main: factories.helpers.createPrompt({
@@ -310,6 +309,7 @@ describe('getAgentAsToolCallResponses', () => {
     )
 
     const { workspace, documents, commit } = await factories.createProject({
+      skipMerge: true,
       providers: [{ name: 'openai', type: Providers.OpenAI }],
       documents: {
         main: factories.helpers.createPrompt({
@@ -356,6 +356,7 @@ describe('getAgentAsToolCallResponses', () => {
     )
 
     const { workspace, documents, commit } = await factories.createProject({
+      skipMerge: true,
       providers: [{ name: 'openai', type: Providers.OpenAI }],
       documents: {
         main: factories.helpers.createPrompt({
@@ -408,6 +409,7 @@ describe('getAgentAsToolCallResponses', () => {
     )
 
     const { workspace, documents, commit } = await factories.createProject({
+      skipMerge: true,
       providers: [{ name: 'openai', type: Providers.OpenAI }],
       documents: {
         main: factories.helpers.createPrompt({

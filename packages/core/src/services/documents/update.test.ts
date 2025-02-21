@@ -38,7 +38,7 @@ describe('updateDocument', () => {
       }),
     }).then((r) => r.unwrap())
 
-    await recomputeChanges({ draft: commit, workspaceId: workspace.id })
+    await recomputeChanges({ draft: commit, workspace })
 
     const changedDocuments = await docsScope
       .listCommitChanges(commit)
@@ -74,7 +74,7 @@ describe('updateDocument', () => {
       }),
     }).then((r) => r.unwrap())
 
-    await recomputeChanges({ draft: commit, workspaceId: workspace.id })
+    await recomputeChanges({ draft: commit, workspace })
 
     const changedDocuments = await docsScope
       .listCommitChanges(commit)
@@ -121,7 +121,7 @@ describe('updateDocument', () => {
       }),
     }).then((r) => r.unwrap())
 
-    await recomputeChanges({ draft, workspaceId: workspace.id })
+    await recomputeChanges({ draft, workspace })
 
     const changedDocuments = await docsScope
       .listCommitChanges(draft)
@@ -167,7 +167,7 @@ describe('updateDocument', () => {
       path: 'referenced/doc2',
     }).then((r) => r.unwrap())
 
-    await recomputeChanges({ draft: commit, workspaceId: workspace.id })
+    await recomputeChanges({ draft: commit, workspace })
 
     const changedDocuments = await docsScope
       .listCommitChanges(commit)
@@ -216,7 +216,7 @@ describe('updateDocument', () => {
       }),
     }).then((r) => r.unwrap())
 
-    await recomputeChanges({ draft: commit, workspaceId: workspace.id })
+    await recomputeChanges({ draft: commit, workspace })
 
     const changedDocuments = await docsScope
       .listCommitChanges(commit)
@@ -234,7 +234,7 @@ describe('updateDocument', () => {
       content: referencedDoc.content, // Undo the change
     }).then((r) => r.unwrap())
 
-    await recomputeChanges({ draft: commit, workspaceId: workspace.id })
+    await recomputeChanges({ draft: commit, workspace })
 
     const changedDocuments2 = await docsScope
       .listCommitChanges(commit)
@@ -348,7 +348,7 @@ describe('updateDocument', () => {
       }),
     }).then((r) => r.unwrap())
 
-    await recomputeChanges({ draft: commit, workspaceId: workspace.id })
+    await recomputeChanges({ draft: commit, workspace })
 
     await updateDocument({
       commit,

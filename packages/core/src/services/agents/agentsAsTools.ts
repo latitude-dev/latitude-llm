@@ -1,4 +1,4 @@
-import { Config, ToolDefinition } from '@latitude-data/constants'
+import { AgentToolsMap, Config, ToolDefinition } from '@latitude-data/constants'
 import {
   BadRequestError,
   LatitudeError,
@@ -7,7 +7,6 @@ import {
   Result,
   TypedResult,
 } from '../../lib'
-import { AgentToolsMap } from '../../constants'
 import { DocumentVersionsRepository } from '../../repositories'
 import path from 'path'
 import { Commit, DocumentVersion, Workspace } from '../../browser'
@@ -15,6 +14,7 @@ import { scan } from 'promptl-ai'
 import { readMetadata } from '@latitude-data/compiler'
 import { JSONSchema7 } from 'json-schema'
 import { getAgentToolName } from './helpers'
+import { database } from '../../client'
 
 const DEFAULT_PARAM_DEFINITION: JSONSchema7 = {
   type: 'string',
@@ -159,14 +159,17 @@ export async function buildAgentsAsToolsDefinition({
   return Result.ok(toolDefinitions)
 }
 
-export async function buildAgentsToolsMap({
-  workspace,
-  commit,
-}: {
-  workspace: Workspace
-  commit: Commit
-}): PromisedResult<AgentToolsMap> {
-  const docsScope = new DocumentVersionsRepository(workspace.id)
+export async function buildAgentsToolsMap(
+  {
+    workspace,
+    commit,
+  }: {
+    workspace: Workspace
+    commit: Commit
+  },
+  db = database,
+): PromisedResult<AgentToolsMap> {
+  const docsScope = new DocumentVersionsRepository(workspace.id, db)
   const docsResult = await docsScope.getDocumentsAtCommit(commit)
   if (docsResult.error) return Result.error(docsResult.error)
   const docs = docsResult.unwrap()

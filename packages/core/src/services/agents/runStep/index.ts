@@ -5,17 +5,17 @@ import {
   Workspace,
 } from '../../../browser'
 import { CachedApiKeys, stepLimitExceededErrorMessage } from '../../chains/run'
-import {
-  ABSOLUTE_MAX_STEPS,
-  DEFAULT_MAX_STEPS,
-  MAX_STEPS_CONFIG_NAME,
-} from '../../../constants'
 import { Message } from '@latitude-data/compiler'
 import { validateAgentStep, ValidatedAgentStep } from '../AgentStepValidator'
 import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
 import { ChainStreamManager } from '../../../lib/chainStreamManager'
 import { Result } from '../../../lib'
+import {
+  ABSOLUTE_MAX_STEPS,
+  DEFAULT_MAX_STEPS,
+  MAX_STEPS_CONFIG_NAME,
+} from '@latitude-data/constants'
 
 function assertValidStepCount({
   stepCount,

@@ -1,12 +1,5 @@
-import { z } from 'zod'
-import {
-  CsvData,
-  LATITUDE_TOOLS_CONFIG_NAME,
-  LatitudeTool,
-  MAX_STEPS_CONFIG_NAME,
-  ParameterType,
-} from './constants'
-import { ProviderApiKey, ProviderLogDto } from './schema/types'
+import { type CsvData } from './constants'
+import type { ProviderLogDto } from './schema/types'
 
 import type { Message } from '@latitude-data/compiler'
 import {
@@ -14,39 +7,6 @@ import {
   ChainStepResponse,
   StreamType,
 } from '@latitude-data/constants'
-
-export function promptConfigSchema({
-  providers,
-}: {
-  providers: ProviderApiKey[]
-}) {
-  const providerNames = providers.map((provider) => provider.name)
-
-  return z.object({
-    provider: z
-      .string({
-        required_error: `You must select a provider.\nFor example: 'provider: ${providerNames[0] ?? '<your-provider-name>'}'`,
-      })
-      .refine((p) => providers.find((provider) => provider.name === p), {
-        message: `Provider not available. You must use one of the following:\n${providerNames.map((p) => `'${p}'`).join(', ')}`,
-      }),
-    model: z.string({
-      required_error: `You must select the model.\nFor example: 'model: 'gpt-4o'`,
-    }),
-    temperature: z.number().min(0).max(2).optional(),
-    parameters: z
-      .record(
-        z.object({
-          type: z.nativeEnum(ParameterType),
-        }),
-      )
-      .optional(),
-    [MAX_STEPS_CONFIG_NAME]: z.number().min(1).max(150).optional(),
-    [LATITUDE_TOOLS_CONFIG_NAME]: z
-      .array(z.nativeEnum(LatitudeTool))
-      .optional(),
-  })
-}
 
 export function buildCsvFile(csvData: CsvData, name: string): File {
   const headers = csvData.headers.map((h) => JSON.stringify(h)).join(',')

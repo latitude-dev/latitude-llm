@@ -9,13 +9,7 @@ import { RunErrorCodes } from '@latitude-data/constants/errors'
 import { JSONSchema7 } from 'json-schema'
 import { z } from 'zod'
 
-import {
-  AGENT_RETURN_TOOL_NAME,
-  applyProviderRules,
-  LATITUDE_TOOLS_CONFIG_NAME,
-  ProviderApiKey,
-  Workspace,
-} from '../../../browser'
+import { applyProviderRules, ProviderApiKey, Workspace } from '../../../browser'
 import { Result, TypedResult } from '../../../lib'
 import { Config } from '../../ai'
 import { azureConfig, googleConfig } from '../../ai/helpers'
@@ -23,6 +17,10 @@ import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
 import { checkFreeProviderQuota } from '../../chains/checkFreeProviderQuota'
 import { CachedApiKeys } from '../../chains/run'
 import { injectLatitudeToolsConfig } from '../../latitudeTools'
+import {
+  AGENT_RETURN_TOOL_NAME,
+  LATITUDE_TOOLS_CONFIG_NAME,
+} from '@latitude-data/constants'
 
 export type ValidatedAgentStep = {
   config: Config
