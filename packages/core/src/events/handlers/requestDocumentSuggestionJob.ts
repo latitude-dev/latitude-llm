@@ -1,8 +1,8 @@
 import { LogSources } from '../../browser'
 import { unsafelyFindWorkspace } from '../../data-access'
 import { setupJobs } from '../../jobs'
+import { generateDocumentSuggestionJobKey } from '../../jobs/job-definitions'
 import { NotFoundError } from '../../lib'
-import { EvaluationResultsRepository } from '../../repositories'
 import { EvaluationResultCreatedEvent } from '../events'
 
 export const requestDocumentSuggestionJob = async ({
@@ -12,16 +12,14 @@ export const requestDocumentSuggestionJob = async ({
 }) => {
   const {
     workspaceId,
-    evaluationResult: { id: resultId },
-    documentLog: { commitId, documentUuid },
+    evaluationResult: { evaluationId },
+    documentLog: { commitId, documentUuid, source },
   } = event.data
 
   const workspace = await unsafelyFindWorkspace(workspaceId)
   if (!workspace) throw new NotFoundError(`Workspace not found ${workspaceId}`)
 
-  const resultsRepository = new EvaluationResultsRepository(workspace.id)
-  const result = await resultsRepository.find(resultId).then((r) => r.unwrap())
-  if (result.source !== LogSources.Playground) return
+  if (source !== LogSources.Playground) return
 
   const queues = await setupJobs()
   queues.defaultQueue.jobs.enqueueGenerateDocumentSuggestionJob(
@@ -29,8 +27,18 @@ export const requestDocumentSuggestionJob = async ({
       workspaceId: workspace.id,
       commitId: commitId,
       documentUuid: documentUuid,
-      evaluationId: result.evaluationId,
+      evaluationId: evaluationId,
     },
-    { attempts: 1 },
+    {
+      attempts: 1,
+      deduplication: {
+        id: generateDocumentSuggestionJobKey({
+          workspaceId: workspace.id,
+          commitId: commitId,
+          documentUuid: documentUuid,
+          evaluationId: evaluationId,
+        }),
+      },
+    },
   )
 }

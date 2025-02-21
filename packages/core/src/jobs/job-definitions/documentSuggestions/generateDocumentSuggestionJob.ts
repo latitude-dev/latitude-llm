@@ -15,6 +15,15 @@ export type GenerateDocumentSuggestionJobData = {
   evaluationId: number
 }
 
+export function generateDocumentSuggestionJobKey({
+  workspaceId,
+  commitId,
+  documentUuid,
+  evaluationId,
+}: GenerateDocumentSuggestionJobData) {
+  return `generateDocumentSuggestionJob-${workspaceId}-${commitId}-${documentUuid}-${evaluationId}`
+}
+
 export const generateDocumentSuggestionJob = async (
   job: Job<GenerateDocumentSuggestionJobData>,
 ) => {
