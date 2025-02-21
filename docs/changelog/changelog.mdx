@@ -3,6 +3,45 @@ title: Changelog
 description: All notable changes to Latitude.
 ---
 
+<Update label='2025-02-20'>
+## Built-in tools
+
+We've added a set of built-in tools that are available in the playground.
+
+- Web search: if enabled, the model will be able to search the web for information.
+- Extract web content: great when paired with the web search tool, this will allow you to extract the content of a website.
+- Run code: if your prompt requires some code execution, you can now activate this tool and the model will be able to generate and run code in a sandboxed environment.
+
+We're working on adding more tools in the future, so if you have any suggestions, please let us know!
+
+![](/assets/changelog/250220/tools.png)
+
+## Playground improvements
+
+Now you can see the results of your evaluations right there after running a prompt, and access the evaluation editor directly with that log already imported. This simplifies the workflow of iterating on both your prompts and your evaluations.
+
+![](/assets/changelog/250220/evals.png)
+
+Additionally, we added a new prompt configuration section that allows you to tweak values like temperature, set up limits, and activate our built-in tools very easily.
+
+![](/assets/changelog/250220/config.png)
+
+## Automatic refiner suggestions
+
+We've added a new feature that suggests changes to your prompts based on the results of your evaluations, automatically. Now, whenever you run a prompt—from the playground or the API—that has an evaluation connected, you'll see suggestions appear next to the Refine button in the prompt editor. These suggestions are directly based on the evaluation results, so you can be sure they'll improve your prompt's quality.
+
+![](/assets/changelog/250220/suggestions.png)
+
+## Other stuff
+
+- General improvements to stability and performance
+- Updated list of available models
+- Anthropic's cache configuration now works as expected
+- New endpoint to fetch all available prompts for a project
+- We added Vertex AI as a new provider
+
+</Update>
+
 <Update label='2025-01-22'>
 ## Agents
 
