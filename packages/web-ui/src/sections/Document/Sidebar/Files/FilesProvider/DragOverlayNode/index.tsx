@@ -63,15 +63,18 @@ type DraggableNodeData = {
 function DraggableNodeVisual({ active }: { active: Active | null }) {
   if (!active) return null
 
-  const current = active.data.current
-  const data = current ? (current as DraggableNodeData) : undefined
+  const currentData = active.data.current
+  const currentRect = active.rect.current ? active.rect.current : null
+  const data = currentData ? (currentData as DraggableNodeData) : undefined
   const iconName: IconName = data?.isFile ? 'file' : 'folderClose'
-  if (!data) return null
+  if (!data || !currentRect) return null
+
+  console.log('CURRENT_RECT', currentRect)
 
   return (
     <div
       className={cn(
-        'relative flex flex-row items-center justify-center',
+        'relative flex flex-row items-center',
         'transition-transform duration-250 ease-in-out z-10 scale-105',
         'shadow-lg gap-x-1 my-0.5 px-2',
         'bg-primary min-w-7 rounded-md',
@@ -79,11 +82,11 @@ function DraggableNodeVisual({ active }: { active: Active | null }) {
     >
       <Icon name='gridVertical' color='white' className='opacity-60' />
       <Icon name={iconName} color='white' />
-        <div className='block cursor-pointer transition-opacity duration-250 ease-in-out'>
-          <Text.H5 userSelect={false} align='center' color='white'>
-            {data.name}
-          </Text.H5>
-        </div>
+      <div className='block cursor-pointer transition-opacity duration-250 ease-in-out'>
+        <Text.H5 userSelect={false} align='center' color='white'>
+          {data.name}
+        </Text.H5>
+      </div>
     </div>
   )
 }
@@ -98,7 +101,7 @@ export function DraggableOverlayNode({
   return createPortal(
     <DragOverlay
       dropAnimation={dropAnimation}
-      style={{ width: '100hv', height: '100hv' }}
+      style={{ width: '250px', height: '100hv' }}
     >
       <DraggableNodeVisual active={active} />
     </DragOverlay>,

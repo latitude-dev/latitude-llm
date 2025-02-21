@@ -4,7 +4,10 @@ import { ChangeEvent, useCallback, useMemo, useRef, useState } from 'react'
 
 import { MenuOption } from '../../../../../ds/atoms/DropdownMenu'
 import { useFileTreeContext } from '../FilesProvider'
-import NodeHeaderWrapper, { IndentType, NodeHeaderWrapperProps } from '../NodeHeaderWrapper'
+import NodeHeaderWrapper, {
+  IndentType,
+  NodeHeaderWrapperProps,
+} from '../NodeHeaderWrapper'
 import { useOpenPaths } from '../useOpenPaths'
 import { useTempNodes } from '../useTempNodes'
 import { Node } from '../useTree'

@@ -94,11 +94,9 @@ function NodeHeaderWrapper({
   indentation,
   actions,
   changeType,
+  canDrag,
   draggble,
 }: NodeHeaderWrapperProps) {
-  const style = {
-    transform: CSS.Translate.toString(draggble.transform),
-  }
   const [tmpName, setTmpName] = useState(name)
   const inputRef = useRef<HTMLInputElement>(null)
   const [nodeRef, isHovered] = useHover()
@@ -151,17 +149,22 @@ function NodeHeaderWrapper({
     >
       <div
         onClick={onClick}
-        className='relative min-w-0 flex-grow flex flex-row items-center py-0.5'
+        className={cn(
+          'relative min-w-0 flex-grow flex flex-row items-center py-0.5',
+          {
+            'cursor-pointer': !draggble.isDragging,
+            'cursor-grab': canDrag && draggble.isDragging,
+          },
+        )}
+        ref={draggble.setNodeRef}
+        {...draggble.listeners}
+        {...draggble.attributes}
       >
-        <div
-          className='absolute left-1 top-0 bottom-0 w-4 flex items-center transition opacity-0 group-hover/row:opacity-100'
-          ref={draggble.setNodeRef}
-          style={style}
-          {...draggble.listeners}
-          {...draggble.attributes}
-        >
-          <Icon name='gridVertical' color='foregroundMuted' />
-        </div>
+        {canDrag ? (
+          <div className='absolute left-1 top-0 bottom-0 w-4 flex items-center transition opacity-0 group-hover/row:opacity-100'>
+            <Icon name='gridVertical' color='foregroundMuted' />
+          </div>
+        ) : null}
         <IndentationBar
           indentation={indentation}
           hasChildren={open && hasChildren}

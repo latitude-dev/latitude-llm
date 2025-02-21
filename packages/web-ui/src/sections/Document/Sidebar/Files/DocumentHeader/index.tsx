@@ -4,7 +4,10 @@ import { useCallback, useMemo, useState } from 'react'
 
 import { MenuOption } from '../../../../../ds/atoms/DropdownMenu'
 import { useFileTreeContext } from '../FilesProvider'
-import NodeHeaderWrapper, { IndentType, NodeHeaderWrapperProps } from '../NodeHeaderWrapper'
+import NodeHeaderWrapper, {
+  IndentType,
+  NodeHeaderWrapperProps,
+} from '../NodeHeaderWrapper'
 import { useTempNodes } from '../useTempNodes'
 import { Node } from '../useTree'
 import { DocumentType } from '@latitude-data/core/browser'

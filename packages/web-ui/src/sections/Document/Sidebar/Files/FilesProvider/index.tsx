@@ -1,18 +1,7 @@
 'use client'
-import {
-  DndContext,
-  DragOverlay,
-  DragStartEvent,
-  UniqueIdentifier,
-} from '@dnd-kit/core'
+import { DndContext, MouseSensor, useSensor, useSensors } from '@dnd-kit/core'
 
-import {
-  createContext,
-  ReactNode,
-  useCallback,
-  useContext,
-  useState,
-} from 'react'
+import { createContext, ReactNode, useContext } from 'react'
 import { restrictToFirstScrollableAncestor } from '@dnd-kit/modifiers'
 
 import { Node } from '../useTree'
@@ -45,22 +34,18 @@ const FileTreeProvider = ({
   onDeleteFolder,
   onNavigateToDocument,
 }: { children: ReactNode } & IFilesContext) => {
-  const [draggingNodeId, setDraggingNodeId] = useState<UniqueIdentifier | null>(
-    null,
-  )
-  const handleDragStart = useCallback((event: DragStartEvent) => {
-    console.log("DRAG_START", event.active.data)
-    setDraggingNodeId(event.active.id)
-  }, [])
-  const handleDragEnd = useCallback(() => {
-    console.log("DRAG_END")
-    setDraggingNodeId(null)
-  }, [])
+  const mouseSensor = useSensor(MouseSensor, {
+    activationConstraint: {
+      delay: 200, // ms
+      distance: 15,
+      tolerance: 15,
+    },
+  })
+  const sensors = useSensors(mouseSensor)
   return (
     <DndContext
       modifiers={[restrictToFirstScrollableAncestor]}
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
+      sensors={sensors}
     >
       <FileTreeContext.Provider
         value={{
