@@ -6,6 +6,7 @@ import {
   useLatitudeToolsConfig,
 } from './utils'
 import { LatitudeTool } from '@latitude-data/constants'
+import { SubAgentSelector } from './_components/AgentSelector'
 
 export function BehaviourSettings({
   config,
@@ -77,6 +78,19 @@ Unlike regular prompts or predefined Chains, Agents can adapt dynamically, respo
           disabled={disabled}
           checked={tools.includes(LatitudeTool.WebExtract)}
           onCheckedChange={() => toggleTool(LatitudeTool.WebExtract)}
+        />
+      </ConfigElement>
+      <ConfigElement
+        label='Subagents'
+        icon='bot'
+        summary='Allow the AI to delegate some tasks to other agents to help generate the response.'
+        description={`Allows the model to call other agents to help generate the response.
+          New tools will be injected into the prompt, one per selected agent, that will execute the selected agent's prompt and return the result to the main prompt.`}
+      >
+        <SubAgentSelector
+          config={config}
+          setConfig={setConfig}
+          disabled={disabled}
         />
       </ConfigElement>
     </ConfigSection>

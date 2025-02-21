@@ -1,8 +1,11 @@
+import { useCurrentDocument } from '$/app/providers/DocumentProvider'
+import { useAgentToolsMap } from '$/stores/agentToolsMap'
 import {
   LATITUDE_TOOLS_CONFIG_NAME,
   LatitudeTool,
 } from '@latitude-data/constants'
-import { useEffect, useState } from 'react'
+import { useCurrentCommit, useCurrentProject } from '@latitude-data/web-ui'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 export type PromptConfigurationProps = {
   config: Record<string, unknown>
@@ -65,4 +68,46 @@ export const useLatitudeToolsConfig = ({
   }
 
   return { tools, toggleTool }
+}
+
+export const useLatitudeAgentsConfig = ({
+  config,
+  setConfig,
+}: PromptConfigurationProps) => {
+  const { commit } = useCurrentCommit()
+  const { project } = useCurrentProject()
+  const { document } = useCurrentDocument()
+
+  const { data: agentToolsMap } = useAgentToolsMap({
+    commitUuid: commit.uuid,
+    projectId: project.id,
+  })
+
+  const availableAgents = useMemo(() => {
+    if (!agentToolsMap) return []
+    return Object.values(agentToolsMap).filter(
+      (agentPath) => agentPath !== document.path,
+    )
+  }, [agentToolsMap, document.path])
+
+  const { value: selectedAgents, setValue: setSelectedAgents } = useConfigValue<
+    string[]
+  >({
+    config,
+    setConfig,
+    key: 'agents',
+    defaultValue: [],
+  })
+
+  const toggleAgent = useCallback(
+    (selected: string) => {
+      const newAgents = selectedAgents.includes(selected)
+        ? selectedAgents.filter((v) => v !== selected)
+        : [...selectedAgents, selected]
+      setSelectedAgents(newAgents.length ? newAgents : undefined)
+    },
+    [selectedAgents, setSelectedAgents],
+  )
+
+  return { availableAgents, selectedAgents, toggleAgent }
 }

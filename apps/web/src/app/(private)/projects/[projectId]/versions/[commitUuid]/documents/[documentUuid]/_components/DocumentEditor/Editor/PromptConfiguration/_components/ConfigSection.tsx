@@ -63,7 +63,9 @@ export function ConfigElement({
         </div>
         {summary && <Text.H6 color='foregroundMuted'>{summary}</Text.H6>}
       </div>
-      {!descriptionCanOverflowInput && <div className='w-fit'>{children}</div>}
+      {!descriptionCanOverflowInput && (
+        <div className='w-fit flex items-center ml-2'>{children}</div>
+      )}
     </div>
   )
 }
