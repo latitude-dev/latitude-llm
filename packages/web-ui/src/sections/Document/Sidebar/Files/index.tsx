@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
-import { useDraggable } from '@dnd-kit/core'
+import { useDraggable, useDroppable } from '@dnd-kit/core'
 import { ConfirmModal } from '../../../../ds/atoms'
 import { cn } from '../../../../lib/utils'
 import DocumentHeader from './DocumentHeader'
@@ -81,6 +81,17 @@ function FileNode({
   indentation = [],
   onRenameFile,
 }: FileNodeProps) {
+  const droppable = useDroppable({
+    id: node.id,
+    disabled: node.isFile,
+    data: {
+      nodeId: node.id,
+      name: node.name,
+      path: node.path,
+      isFile: node.isFile,
+      isRoot: node.isRoot,
+    },
+  })
   const allTmpFolders = useTempNodes((state) => state.tmpFolders)
   const tmpNodes = allTmpFolders[node.path] ?? []
   const { currentUuid } = useFileTreeContext()
@@ -108,9 +119,13 @@ function FileNode({
   useEffect(() => {
     setSelected(!!currentUuid && currentUuid === node.doc?.documentUuid)
   }, [currentUuid])
-
   return (
-    <div className={cn('flex-1 w-full')}>
+    <div
+      ref={droppable.setNodeRef}
+      className={cn('flex-1 w-full', {
+        'bg-accent/50': droppable.isOver,
+      })}
+    >
       <NodeHeader
         indentation={indentation}
         node={node}
@@ -150,15 +165,15 @@ enum DeletableType {
 }
 type DeletableElement<T extends DeletableType> = T extends DeletableType.File
   ? {
-      type: T
-      documentUuid: string
-      name: string
-    }
+    type: T
+    documentUuid: string
+    name: string
+  }
   : {
-      type: T
-      path: string
-      name: string
-    }
+    type: T
+    path: string
+    name: string
+  }
 
 export function FilesTree({
   isLoading,

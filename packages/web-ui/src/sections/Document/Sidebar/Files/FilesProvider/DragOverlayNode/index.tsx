@@ -53,7 +53,7 @@ const dropAnimationConfig: DropAnimation = {
   },
 }
 
-type DraggableNodeData = {
+export type DraggableAndDroppableData = {
   nodeId: string
   name: string
   path: string
@@ -65,11 +65,9 @@ function DraggableNodeVisual({ active }: { active: Active | null }) {
 
   const currentData = active.data.current
   const currentRect = active.rect.current ? active.rect.current : null
-  const data = currentData ? (currentData as DraggableNodeData) : undefined
+  const data = currentData ? (currentData as DraggableAndDroppableData) : undefined
   const iconName: IconName = data?.isFile ? 'file' : 'folderClose'
   if (!data || !currentRect) return null
-
-  console.log('CURRENT_RECT', currentRect)
 
   return (
     <div
