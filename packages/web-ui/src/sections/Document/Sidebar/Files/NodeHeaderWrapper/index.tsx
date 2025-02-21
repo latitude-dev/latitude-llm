@@ -62,7 +62,7 @@ export type NodeHeaderWrapperProps = {
   open: boolean
   name: string | undefined
   canDrag: boolean
-  draggble: DraggableProps
+  draggble: DraggableProps | undefined
   hasChildren?: boolean
   isFile?: boolean
   selected?: boolean
@@ -152,13 +152,13 @@ function NodeHeaderWrapper({
         className={cn(
           'relative min-w-0 flex-grow flex flex-row items-center py-0.5',
           {
-            'cursor-pointer': !draggble.isDragging,
-            'cursor-grab': canDrag && draggble.isDragging,
+            'cursor-pointer': !draggble?.isDragging,
+            'cursor-grab': canDrag && draggble?.isDragging,
           },
         )}
-        ref={draggble.setNodeRef}
-        {...draggble.listeners}
-        {...draggble.attributes}
+        ref={draggble?.setNodeRef}
+        {...(draggble ? draggble.listeners : {})}
+        {...(draggble ? draggble.attributes : {})}
       >
         {canDrag ? (
           <div className='absolute left-1 top-0 bottom-0 w-4 flex items-center transition opacity-0 group-hover/row:opacity-100'>

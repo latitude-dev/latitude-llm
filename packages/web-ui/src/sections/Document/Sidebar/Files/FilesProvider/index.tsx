@@ -2,6 +2,7 @@
 import {
   DataRef,
   DndContext,
+  DragEndEvent,
   DragOverEvent,
   MouseSensor,
   useSensor,
@@ -17,6 +18,7 @@ import {
   DraggableOverlayNode,
 } from './DragOverlayNode'
 import { useOpenPaths } from '../useOpenPaths'
+import { ClientOnly } from '../../../../../ds/atoms'
 
 type IFilesContext = {
   isLoading: boolean
@@ -41,10 +43,14 @@ const FileTreeProvider = ({
   onCreateFile,
   onUploadFile,
   onRenameFile,
+  renamePaths,
   onDeleteFile,
   onDeleteFolder,
   onNavigateToDocument,
-}: { children: ReactNode } & IFilesContext) => {
+}: IFilesContext & {
+  children: ReactNode
+  renamePaths: (args: { oldPath: string; newPath: string }) => Promise<void>
+}) => {
   const mouseSensor = useSensor(MouseSensor, {
     activationConstraint: {
       delay: 200, // ms
@@ -74,11 +80,32 @@ const FileTreeProvider = ({
     },
     [openPaths, togglePath],
   )
+  const onDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const dragNodeData = event.active.data.current
+      const draggedFolderData = event.over?.data?.current
+      if (!dragNodeData || !draggedFolderData) return
+
+      const dragNode = dragNodeData as DraggableAndDroppableData
+      const destinationFolder = draggedFolderData as DraggableAndDroppableData
+
+      const dragSufix = dragNode.isFile ? '' : '/'
+      const oldPath = `${dragNode.path}${dragSufix}`
+      const separator = destinationFolder.isRoot ? '' : '/'
+      const newPath = `${destinationFolder.path}${separator}${dragNode.name}${dragSufix}`
+
+      console.log("OLD_PATH", oldPath)
+      console.log("NEW_PATH", newPath)
+      renamePaths({ oldPath, newPath })
+    },
+    [renamePaths],
+  )
   return (
     <DndContext
-      modifiers={[restrictToFirstScrollableAncestor]}
       sensors={sensors}
+      modifiers={[restrictToFirstScrollableAncestor]}
       onDragOver={onDragOver}
+      onDragEnd={onDragEnd}
     >
       <FileTreeContext.Provider
         value={{
@@ -96,7 +123,9 @@ const FileTreeProvider = ({
       >
         {children}
       </FileTreeContext.Provider>
-      <DraggableOverlayNode />
+      <ClientOnly>
+        <DraggableOverlayNode />
+      </ClientOnly>
     </DndContext>
   )
 }

@@ -251,6 +251,7 @@ export function FilesTree({
         onMergeCommitClick={onMergeCommitClick}
         currentUuid={currentUuid}
         onNavigateToDocument={navigateToDocument}
+        renamePaths={renamePaths}
         onCreateFile={(path) => {
           createFile({ path })
         }}
