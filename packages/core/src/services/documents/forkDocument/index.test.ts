@@ -294,6 +294,16 @@ describe('forkDocument', () => {
         })
         expect(documents).toEqual([
           {
+            path: 'agents/agent1',
+            provider: 'google',
+            model: 'gemini-2.0-flash',
+          },
+          {
+            path: 'agents/agent2',
+            provider: 'google',
+            model: 'gemini-2.0-flash',
+          },
+          {
             path: 'some-folder/children/child1',
             provider: 'google',
             model: 'gemini-2.0-flash',

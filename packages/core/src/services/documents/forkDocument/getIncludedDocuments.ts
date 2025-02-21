@@ -1,3 +1,4 @@
+import { resolveRelativePath } from '@latitude-data/constants'
 import { Commit, DocumentVersion, Workspace } from '../../../browser'
 import { Result } from '../../../lib'
 import { DocumentVersionsRepository } from '../../../repositories'
@@ -17,7 +18,13 @@ export async function getIncludedDocuments({
     document,
     commit,
   }).then((r) => r.unwrap())
-  const includedPaths = Array.from(metadata.includedPromptPaths)
+
+  const includedAgents: string[] = (metadata.config.agents as string[]) ?? []
+  const includedAgentsFullPaths = includedAgents.map((agentPath) =>
+    resolveRelativePath(agentPath, document.path),
+  )
+  const referencedPaths = Array.from(metadata.includedPromptPaths)
+  const includedPaths = [...includedAgentsFullPaths, ...referencedPaths]
   const documentScope = new DocumentVersionsRepository(workspace.id)
   const allDocs = await documentScope
     .getDocumentsAtCommit(commit)
