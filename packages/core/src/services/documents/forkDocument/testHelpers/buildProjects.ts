@@ -19,6 +19,18 @@ export async function buildProjects() {
             content: 'Sibling Parent',
           }),
         },
+        agents: {
+          agent1: factories.helpers.createPrompt({
+            provider: 'myAnthropic',
+            content: 'Agent 1',
+            extraConfig: { type: 'agent' },
+          }),
+          agent2: factories.helpers.createPrompt({
+            provider: 'myAnthropic',
+            content: 'Agent 2',
+            extraConfig: { type: 'agent' },
+          }),
+        },
         'some-folder': {
           parent: factories.helpers.createPrompt({
             provider: 'openai',
@@ -33,6 +45,9 @@ export async function buildProjects() {
           children: {
             child1: factories.helpers.createPrompt({
               provider: 'myAnthropic',
+              extraConfig: {
+                agents: ['/agents/agent1', '../../agents/agent2'],
+              },
               content: `
             Child 1:
             <prompt path="./grandchildren/grandchild1" />

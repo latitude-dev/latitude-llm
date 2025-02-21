@@ -1,8 +1,10 @@
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useAgentToolsMap } from '$/stores/agentToolsMap'
 import {
+  createRelativePath,
   LATITUDE_TOOLS_CONFIG_NAME,
   LatitudeTool,
+  resolveRelativePath,
 } from '@latitude-data/constants'
 import { useCurrentCommit, useCurrentProject } from '@latitude-data/web-ui'
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -70,6 +72,21 @@ export const useLatitudeToolsConfig = ({
   return { tools, toggleTool }
 }
 
+function getSelectedRelativePath({
+  relativePathsList,
+  targetAbsolutePath,
+  currentAbsolutePath,
+}: {
+  relativePathsList: string[]
+  targetAbsolutePath: string
+  currentAbsolutePath: string
+}): string | undefined {
+  return relativePathsList.filter((relativePath) => {
+    const absolutePath = resolveRelativePath(relativePath, currentAbsolutePath)
+    return absolutePath === targetAbsolutePath
+  })[0]
+}
+
 export const useLatitudeAgentsConfig = ({
   config,
   setConfig,
@@ -99,15 +116,41 @@ export const useLatitudeAgentsConfig = ({
     defaultValue: [],
   })
 
+  const selectedAgentsFullPaths = useMemo(() => {
+    return selectedAgents.map((relativePath) =>
+      resolveRelativePath(relativePath, document.path),
+    )
+  }, [selectedAgents, document.path])
+
   const toggleAgent = useCallback(
-    (selected: string) => {
-      const newAgents = selectedAgents.includes(selected)
-        ? selectedAgents.filter((v) => v !== selected)
-        : [...selectedAgents, selected]
-      setSelectedAgents(newAgents.length ? newAgents : undefined)
+    (agentFullPath: string) => {
+      const selectedPath = getSelectedRelativePath({
+        relativePathsList: selectedAgents,
+        targetAbsolutePath: agentFullPath,
+        currentAbsolutePath: document.path,
+      })
+
+      if (selectedPath) {
+        setSelectedAgents(
+          selectedAgents.filter(
+            (relativePath) => relativePath !== selectedPath,
+          ),
+        )
+        return
+      }
+
+      const selectedRelativePath = createRelativePath(
+        agentFullPath,
+        document.path,
+      )
+      setSelectedAgents([...selectedAgents, selectedRelativePath])
     },
     [selectedAgents, setSelectedAgents],
   )
 
-  return { availableAgents, selectedAgents, toggleAgent }
+  return {
+    availableAgents,
+    selectedAgents: selectedAgentsFullPaths,
+    toggleAgent,
+  }
 }
