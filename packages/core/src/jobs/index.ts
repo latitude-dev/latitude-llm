@@ -16,9 +16,11 @@ export async function setupSchedules(connection?: Redis) {
   // Every day at 8 AM
   await queues.defaultQueue.jobs.scheduleRequestDocumentSuggestionsJob(
     '0 0 8 * * *',
+    { attempts: 1 },
   )
   // Every day at 2 AM
   await queues.maintenanceQueue.jobs.scheduleCleanDocumentSuggestionsJob(
     '0 0 2 * * *',
+    { attempts: 1 },
   )
 }
