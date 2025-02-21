@@ -4,7 +4,10 @@ import { useCallback, useMemo, useState } from 'react'
 
 import { MenuOption } from '../../../../../ds/atoms/DropdownMenu'
 import { useFileTreeContext } from '../FilesProvider'
-import NodeHeaderWrapper, { IndentType } from '../NodeHeaderWrapper'
+import NodeHeaderWrapper, {
+  IndentType,
+  NodeHeaderWrapperProps,
+} from '../NodeHeaderWrapper'
 import { useTempNodes } from '../useTempNodes'
 import { Node } from '../useTree'
 import { DocumentType } from '@latitude-data/core/browser'
@@ -15,11 +18,15 @@ export default function DocumentHeader({
   selected,
   node,
   indentation,
+  draggble,
+  canDrag,
 }: {
   open: boolean
   selected: boolean
   node: Node
   indentation: IndentType[]
+  draggble: NodeHeaderWrapperProps['draggble']
+  canDrag: boolean
 }) {
   const {
     isLoading,
@@ -106,6 +113,8 @@ export default function DocumentHeader({
       isFile
       open={open}
       name={node.name}
+      canDrag={canDrag}
+      draggble={draggble}
       isEditing={isEditing}
       setIsEditing={setIsEditing}
       hasChildren={false}

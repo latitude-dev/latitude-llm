@@ -41,7 +41,6 @@ export async function renameDocumentPaths(
     const docsToUpdate = currentDocs.filter((d) =>
       oldPath.endsWith('/') ? d.path.startsWith(oldPath) : d.path === oldPath,
     )
-
     const updatedDocs = await Promise.all(
       docsToUpdate.map(async (document) => {
         const updatedPath = newPath + document.path.slice(oldPath.length)

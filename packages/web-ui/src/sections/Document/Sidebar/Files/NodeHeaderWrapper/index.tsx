@@ -1,5 +1,7 @@
 'use client'
 
+import { CSS } from '@dnd-kit/utilities'
+import { useDraggable } from '@dnd-kit/core'
 import { RefObject, useEffect, useRef, useState } from 'react'
 
 import { Button, Icon, IconName, Tooltip } from '../../../../../ds/atoms'
@@ -55,10 +57,12 @@ const MODIFICATION_LABELS: Record<ModifiedDocumentType, string> = {
   [ModifiedDocumentType.UpdatedPath]: 'Renamed',
   [ModifiedDocumentType.Deleted]: 'Deleted',
 }
-
-type Props = {
+type DraggableProps = ReturnType<typeof useDraggable>
+export type NodeHeaderWrapperProps = {
   open: boolean
   name: string | undefined
+  canDrag: boolean
+  draggble: DraggableProps | undefined
   hasChildren?: boolean
   isFile?: boolean
   selected?: boolean
@@ -90,7 +94,9 @@ function NodeHeaderWrapper({
   indentation,
   actions,
   changeType,
-}: Props) {
+  canDrag,
+  draggble,
+}: NodeHeaderWrapperProps) {
   const [tmpName, setTmpName] = useState(name)
   const inputRef = useRef<HTMLInputElement>(null)
   const [nodeRef, isHovered] = useHover()
@@ -143,8 +149,22 @@ function NodeHeaderWrapper({
     >
       <div
         onClick={onClick}
-        className='min-w-0 flex-grow flex flex-row items-center py-0.5'
+        className={cn(
+          'relative min-w-0 flex-grow flex flex-row items-center py-0.5',
+          {
+            'cursor-pointer': !draggble?.isDragging,
+            'cursor-grab': canDrag && draggble?.isDragging,
+          },
+        )}
+        ref={draggble?.setNodeRef}
+        {...(draggble ? draggble.listeners : {})}
+        {...(draggble ? draggble.attributes : {})}
       >
+        {canDrag ? (
+          <div className='absolute left-1 top-0 bottom-0 w-4 flex items-center transition opacity-0 group-hover/row:opacity-100'>
+            <Icon name='gridVertical' color='foregroundMuted' />
+          </div>
+        ) : null}
         <IndentationBar
           indentation={indentation}
           hasChildren={open && hasChildren}

@@ -1,8 +1,24 @@
 'use client'
+import {
+  DataRef,
+  DndContext,
+  DragEndEvent,
+  DragOverEvent,
+  MouseSensor,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core'
 
-import { createContext, ReactNode, useContext } from 'react'
+import { createContext, ReactNode, useCallback, useContext } from 'react'
+import { restrictToFirstScrollableAncestor } from '@dnd-kit/modifiers'
 
 import { Node } from '../useTree'
+import {
+  DraggableAndDroppableData,
+  DraggableOverlayNode,
+} from './DragOverlayNode'
+import { useOpenPaths } from '../useOpenPaths'
+import { ClientOnly } from '../../../../../ds/atoms'
 
 type IFilesContext = {
   isLoading: boolean
@@ -27,27 +43,92 @@ const FileTreeProvider = ({
   onCreateFile,
   onUploadFile,
   onRenameFile,
+  renamePaths,
   onDeleteFile,
   onDeleteFolder,
   onNavigateToDocument,
-}: { children: ReactNode } & IFilesContext) => {
+}: IFilesContext & {
+  children: ReactNode
+  renamePaths: (args: { oldPath: string; newPath: string }) => Promise<void>
+}) => {
+  const mouseSensor = useSensor(MouseSensor, {
+    activationConstraint: {
+      delay: 200, // ms
+      distance: 15,
+      tolerance: 15,
+    },
+  })
+  const sensors = useSensors(mouseSensor)
+  const { openPaths, togglePath } = useOpenPaths((state) => ({
+    openPaths: state.openPaths,
+    togglePath: state.togglePath,
+  }))
+  const onDragOver = useCallback(
+    (event: DragOverEvent) => {
+      const overData = event.over?.data?.current
+        ? (event.over.data as DataRef<DraggableAndDroppableData>).current
+        : undefined
+
+      const nodePath = overData ? overData.path : undefined
+      if (!nodePath) return
+
+      const open = !!openPaths[nodePath]
+
+      if (open) return
+
+      togglePath(nodePath)
+    },
+    [openPaths, togglePath],
+  )
+  const onDragEnd = useCallback(
+    (event: DragEndEvent) => {
+      const dragNodeData = event.active.data.current
+      const draggedFolderData = event.over?.data?.current
+      if (!dragNodeData || !draggedFolderData) return
+
+      const dragNode = dragNodeData as DraggableAndDroppableData
+      const destinationFolder = draggedFolderData as DraggableAndDroppableData
+
+      const dragSufix = dragNode.isFile ? '' : '/'
+      const oldPath = `${dragNode.path}${dragSufix}`
+      const separator = destinationFolder.isRoot ? '' : '/'
+      const newPath = `${destinationFolder.path}${separator}${dragNode.name}${dragSufix}`
+
+      if (oldPath === newPath) return
+
+      console.log('OLD_PATH', oldPath)
+      console.log('NEW_PATH', newPath)
+      renamePaths({ oldPath, newPath })
+    },
+    [renamePaths],
+  )
   return (
-    <FileTreeContext.Provider
-      value={{
-        isLoading,
-        isMerged,
-        onMergeCommitClick,
-        currentUuid,
-        onCreateFile,
-        onUploadFile,
-        onRenameFile,
-        onDeleteFile,
-        onDeleteFolder,
-        onNavigateToDocument,
-      }}
+    <DndContext
+      sensors={sensors}
+      modifiers={[restrictToFirstScrollableAncestor]}
+      onDragOver={onDragOver}
+      onDragEnd={onDragEnd}
     >
-      {children}
-    </FileTreeContext.Provider>
+      <FileTreeContext.Provider
+        value={{
+          isLoading,
+          isMerged,
+          onMergeCommitClick,
+          currentUuid,
+          onCreateFile,
+          onUploadFile,
+          onRenameFile,
+          onDeleteFile,
+          onDeleteFolder,
+          onNavigateToDocument,
+        }}
+      >
+        {children}
+      </FileTreeContext.Provider>
+      <ClientOnly>
+        <DraggableOverlayNode />
+      </ClientOnly>
+    </DndContext>
   )
 }
 
