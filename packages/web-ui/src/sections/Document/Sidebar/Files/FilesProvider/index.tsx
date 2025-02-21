@@ -94,8 +94,8 @@ const FileTreeProvider = ({
       const separator = destinationFolder.isRoot ? '' : '/'
       const newPath = `${destinationFolder.path}${separator}${dragNode.name}${dragSufix}`
 
-      console.log("OLD_PATH", oldPath)
-      console.log("NEW_PATH", newPath)
+      console.log('OLD_PATH', oldPath)
+      console.log('NEW_PATH', newPath)
       renamePaths({ oldPath, newPath })
     },
     [renamePaths],

@@ -65,7 +65,9 @@ function DraggableNodeVisual({ active }: { active: Active | null }) {
 
   const currentData = active.data.current
   const currentRect = active.rect.current ? active.rect.current : null
-  const data = currentData ? (currentData as DraggableAndDroppableData) : undefined
+  const data = currentData
+    ? (currentData as DraggableAndDroppableData)
+    : undefined
   const iconName: IconName = data?.isFile ? 'file' : 'folderClose'
   if (!data || !currentRect) return null
 

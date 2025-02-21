@@ -165,15 +165,15 @@ enum DeletableType {
 }
 type DeletableElement<T extends DeletableType> = T extends DeletableType.File
   ? {
-    type: T
-    documentUuid: string
-    name: string
-  }
+      type: T
+      documentUuid: string
+      name: string
+    }
   : {
-    type: T
-    path: string
-    name: string
-  }
+      type: T
+      path: string
+      name: string
+    }
 
 export function FilesTree({
   isLoading,
