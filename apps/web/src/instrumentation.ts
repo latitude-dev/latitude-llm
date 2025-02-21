@@ -5,10 +5,9 @@ export async function register() {
     // Sentry
     await import('../sentry.server.config')
 
-    if (process.env.NODE_ENV === 'production') {
-      // Stdout logging
-      await import('pino')
-      await import('next-logger')
+    if (process.env.DD_TRACING_ENABLED === 'true') {
+      // Datadog
+      await import('./tracer')
     }
   }
 
