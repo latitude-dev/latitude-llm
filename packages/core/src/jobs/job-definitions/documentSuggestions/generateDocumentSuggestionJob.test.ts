@@ -1,3 +1,4 @@
+import * as env from '@latitude-data/env'
 import { beforeEach, describe, expect, it, MockInstance, vi } from 'vitest'
 import {
   DocumentLog,
@@ -90,6 +91,11 @@ describe('generateDocumentSuggestionJob', () => {
       result: '31',
     })
     result = r
+
+    vi.spyOn(env, 'env', 'get').mockReturnValue({
+      ...env.env,
+      LATITUDE_CLOUD: true,
+    })
 
     mocks = {
       generateDocumentSuggestion: vi

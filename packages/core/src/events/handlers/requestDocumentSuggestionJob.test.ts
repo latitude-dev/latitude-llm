@@ -118,6 +118,24 @@ describe('requestDocumentSuggestionJob', () => {
     expect(mocks.enqueueGenerateDocumentSuggestionJob).not.toHaveBeenCalled()
   })
 
+  it('not enqueues generate suggestion job when result has passed', async () => {
+    result.result = (evaluation.resultConfiguration as any).maxValue
+
+    await requestDocumentSuggestionJob({
+      data: {
+        type: 'evaluationResultCreated',
+        data: {
+          workspaceId: workspace.id,
+          evaluationResult: result,
+          evaluation: evaluation,
+          documentLog: documentLog,
+        },
+      },
+    })
+
+    expect(mocks.enqueueGenerateDocumentSuggestionJob).not.toHaveBeenCalled()
+  })
+
   it('enqueues generate suggestion job', async () => {
     await requestDocumentSuggestionJob({
       data: {
