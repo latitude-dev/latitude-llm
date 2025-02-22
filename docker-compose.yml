@@ -38,9 +38,6 @@ services:
   web:
     image: latitude/web:latest
     build:
-      platforms:
-        - 'linux/arm64'
-        - 'linux/amd64'
       context: .
       dockerfile: apps/web/docker/Dockerfile
     env_file:
@@ -57,9 +54,6 @@ services:
   migrations:
     image: latitude/migrations:latest
     build:
-      platforms:
-        - 'linux/arm64'
-        - 'linux/amd64'
       context: .
       dockerfile: packages/core/docker/Dockerfile
     env_file:
@@ -70,9 +64,6 @@ services:
   gateway:
     image: latitude/gateway:latest
     build:
-      platforms:
-        - 'linux/arm64'
-        - 'linux/amd64'
       context: .
       dockerfile: apps/gateway/docker/Dockerfile
     env_file:
@@ -88,9 +79,6 @@ services:
   workers:
     image: latitude/workers:latest
     build:
-      platforms:
-        - 'linux/arm64'
-        - 'linux/amd64'
       context: .
       dockerfile: apps/workers/docker/Dockerfile
     env_file:
@@ -102,9 +90,6 @@ services:
   websockets:
     image: latitude/websockets:latest
     build:
-      platforms:
-        - 'linux/arm64'
-        - 'linux/amd64'
       context: .
       dockerfile: apps/websockets/docker/Dockerfile
     env_file:
