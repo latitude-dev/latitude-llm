@@ -108,6 +108,8 @@ export const env = createEnv({
     CODESANDBOX_API_KEY: z.string().optional(),
     TAVILY_API_KEY: z.string().optional(),
     HANDINGER_API_KEY: z.string().optional(),
+    MAILGUN_HOST: z.string().optional(),
+    MAILGUN_PROTOCOL: z.string().optional(),
   },
   runtimeEnv: {
     ...process.env,
