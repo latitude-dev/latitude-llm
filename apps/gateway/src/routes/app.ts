@@ -17,13 +17,7 @@ import telemetry from '$/routes/v3/otlp'
 const app = createApp()
 
 if (process.env.NODE_ENV !== 'test') {
-  app.use('*', async (c, next) => {
-    if (!c.req.path.match(/^\/(health|api-docs|doc)$/)) {
-      logger()(c, next)
-    } else {
-      await next()
-    }
-  })
+  app.use(logger())
 }
 
 app.get('/health', (c) => {
