@@ -172,8 +172,8 @@
     {
       "group": "Self-hosting",
       "pages": [
-        "guides/self-hosted/quick-start",
-        "guides/self-hosted/development"
+        "guides/self-hosted/development",
+        "guides/self-hosted/production"
       ]
     },
     {
