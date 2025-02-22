@@ -28,7 +28,6 @@ export const confirmMagicLinkTokenAction = createServerAction()
     const workspace = await getFirstWorkspace({ userId: user.id }).then((r) =>
       r.unwrap(),
     )
-
     await setSession({
       sessionData: {
         user,

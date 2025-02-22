@@ -110,6 +110,7 @@ export const env = createEnv({
     HANDINGER_API_KEY: z.string().optional(),
     MAILGUN_HOST: z.string().optional(),
     MAILGUN_PROTOCOL: z.string().optional(),
+    DISABLE_EMAIL_AUTHENTICATION: z.boolean().optional().default(false),
   },
   runtimeEnv: {
     ...process.env,
@@ -124,5 +125,7 @@ export const env = createEnv({
     LOOPS_API_KEY: process.env.LOOPS_API_KEY ?? '',
     LATITUDE_CLOUD: process.env.LATITUDE_CLOUD === 'true',
     LATITUDE_CLOUD_PAYMENT_URL: process.env.LATITUDE_CLOUD_PAYMENT_URL,
+    DISABLE_EMAIL_AUTHENTICATION:
+      process.env.DISABLE_EMAIL_AUTHENTICATION === 'true',
   },
 })

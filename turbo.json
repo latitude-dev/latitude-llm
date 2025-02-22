@@ -42,7 +42,8 @@
     "LOOPS_API_KEY",
     "LATITUDE_CLOUD",
     "LATITUDE_CLOUD_PAYMENT_URL",
-    "npm_package_name"
+    "npm_package_name",
+    "DISABLE_EMAIL_AUTHENTICATION"
   ],
   "$schema": "https://turbo.build/schema.json",
   "globalDependencies": ["**/.env.*local"],
