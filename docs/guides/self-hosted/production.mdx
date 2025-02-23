@@ -64,7 +64,8 @@ cp .env.example .env
 docker compose up -d
 ```
 
-This will start the following services:
+This will start the following services from public Docker images stored in our
+[GitHub Container Registry](https://github.com/orgs/latitude-dev/packages):
 
 - API Gateway (accessible via `gateway.latitude.localhost`)
 - Background workers
@@ -113,14 +114,22 @@ docker compose top
    - Set up proper monitoring and logging
    - We recommend using a container orchestration tool like k8s and handle env variables at runtime
 
-## Public Docker Images
+## Building Your Own Images
 
-If you wanna set up your own docker environment, we provide public Docker
-images for each service in [GitHub Container
-Registry](https://github.com/orgs/latitude-dev/packages).
-
-To use the public images, you can pull them using the following commands. E.g:
+We provide a custom docker profile for building your own images locally. To build your own local images, run the following command:
 
 ```bash
-docker pull ghcr.io/latitude-dev/web:latest
+docker compose --profile local build
+```
+
+To run your local images, run the following command:
+
+```bash
+docker compose --profile local up -d
+```
+
+To build and run your local images, run the following command:
+
+```bash
+docker compose --profile local up
 ```
