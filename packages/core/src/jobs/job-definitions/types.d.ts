@@ -11,6 +11,9 @@ import type { CreateDocumentLogFromSpanJobData } from './documentLogs/createDocu
 import type { RunDocumentInBatchJobProps } from './documents/runDocumentInBatchJob'
 import type { RunDocumentJobData } from './documents/runDocumentJob'
 import type { UploadDocumentLogsJobData } from './documents/uploadDocumentLogsJob'
+import type { CleanDocumentSuggestionsJobData } from './documentSuggestions/cleanDocumentSuggestionsJob'
+import type { GenerateDocumentSuggestionJobData } from './documentSuggestions/generateDocumentSuggestionJob'
+import type { RequestDocumentSuggestionsJobData } from './documentSuggestions/requestDocumentSuggestionsJob'
 import type { RunLiveEvaluationJobData } from './liveEvaluations/runLiveEvaluationJob'
 
 export type JobDataMap = {
@@ -27,6 +30,9 @@ export type JobDataMap = {
   [Jobs.runLiveEvaluationJob]: RunLiveEvaluationJobData
   [Jobs.uploadDocumentLogsJob]: UploadDocumentLogsJobData
   [Jobs.createDocumentLogFromSpanJob]: CreateDocumentLogFromSpanJobData
+  [Jobs.generateDocumentSuggestionJob]: GenerateDocumentSuggestionJobData
+  [Jobs.requestDocumentSuggestionsJob]: RequestDocumentSuggestionsJobData
+  [Jobs.cleanDocumentSuggestionsJob]: CleanDocumentSuggestionsJobData
 }
 
 type JobData<J extends Jobs> = J extends keyof JobDataMap

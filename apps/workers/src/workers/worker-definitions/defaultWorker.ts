@@ -4,6 +4,7 @@ import { buildProcessor } from '../_shared'
 
 const defaultWorkerQueues = [
   Queues.defaultQueue,
+  Queues.maintenanceQueue,
   Queues.eventHandlersQueue,
   Queues.eventsQueue,
   Queues.liveEvaluationsQueue,

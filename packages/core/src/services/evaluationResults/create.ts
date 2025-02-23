@@ -92,7 +92,10 @@ export async function createEvaluationResult(
       })
       .returning()
 
-    const evaluationResult = inserts[0]!
+    const evaluationResult = {
+      ...inserts[0]!,
+      result: result?.result,
+    }
 
     publisher.publishLater({
       type: 'evaluationResultCreated',
@@ -104,9 +107,6 @@ export async function createEvaluationResult(
       },
     })
 
-    return Result.ok({
-      ...evaluationResult,
-      result: result?.result,
-    })
+    return Result.ok(evaluationResult)
   }, db)
 }

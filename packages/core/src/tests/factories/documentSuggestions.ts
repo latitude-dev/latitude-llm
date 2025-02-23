@@ -3,17 +3,19 @@ import { database } from '../../client'
 import { documentSuggestions } from '../../schema'
 
 export async function createDocumentSuggestion({
-  prompt,
-  summary,
+  prompt = 'prompt',
+  summary = 'summary',
   commit,
   document,
   evaluation,
+  createdAt,
 }: {
-  prompt: string
-  summary: string
+  prompt?: string
+  summary?: string
   commit: Commit
   document: DocumentVersion
   evaluation: Evaluation
+  createdAt?: Date
 }) {
   const result = await database
     .insert(documentSuggestions)
@@ -23,9 +25,9 @@ export async function createDocumentSuggestion({
       evaluationId: evaluation.id,
       prompt: prompt,
       summary: summary,
+      ...(createdAt && { createdAt }),
     })
     .returning()
-  const suggestion = result[0]!
 
-  return suggestion
+  return result[0]!
 }

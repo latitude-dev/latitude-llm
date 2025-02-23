@@ -74,8 +74,6 @@ describe('discardDocumentSuggestion', () => {
     })
 
     suggestion = await factories.createDocumentSuggestion({
-      prompt: 'suggested prompt',
-      summary: 'summary',
       commit: commit,
       document: document,
       evaluation: evaluation,

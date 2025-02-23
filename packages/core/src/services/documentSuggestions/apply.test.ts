@@ -83,8 +83,6 @@ describe('applyDocumentSuggestion', () => {
     commit = await mergeCommit(commit).then((r) => r.unwrap())
 
     const suggestion = await factories.createDocumentSuggestion({
-      prompt: 'suggested prompt',
-      summary: 'summary',
       commit: commit,
       document: document,
       evaluation: evaluation,
@@ -113,8 +111,6 @@ describe('applyDocumentSuggestion', () => {
 
   it('applies document suggestion on draft commit', async () => {
     const suggestion = await factories.createDocumentSuggestion({
-      prompt: 'suggested prompt',
-      summary: 'summary',
       commit: commit,
       document: document,
       evaluation: evaluation,
@@ -147,8 +143,6 @@ describe('applyDocumentSuggestion', () => {
     commit = await mergeCommit(commit).then((r) => r.unwrap())
 
     const suggestion = await factories.createDocumentSuggestion({
-      prompt: 'suggested prompt',
-      summary: 'summary',
       commit: commit,
       document: document,
       evaluation: evaluation,

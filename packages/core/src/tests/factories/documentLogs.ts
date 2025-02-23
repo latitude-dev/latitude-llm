@@ -24,6 +24,7 @@ export type IDocumentLogData = {
   commit: Commit
   parameters?: Record<string, unknown>
   customIdentifier?: string
+  source?: LogSources
   createdAt?: Date
   skipProviderLogs?: boolean
 }
@@ -100,6 +101,7 @@ export async function createDocumentLog({
   commit,
   parameters,
   customIdentifier,
+  source,
   createdAt,
   skipProviderLogs,
 }: IDocumentLogData) {
@@ -133,7 +135,7 @@ export async function createDocumentLog({
       resolvedContent: documentContent,
       parameters: parameters ?? {},
       customIdentifier,
-      source: LogSources.API,
+      source: source ?? LogSources.API,
       duration,
       createdAt,
     },
