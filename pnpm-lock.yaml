@@ -142,7 +142,7 @@ importers:
         version: 3.2.0
       nodemailer-mailgun-transport:
         specifier: ^2.1.5
-        version: 2.1.5(lodash@4.17.21)(nunjucks@3.2.4(chokidar@3.6.0))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(underscore@1.13.7)
+        version: 2.1.5(ejs@3.1.10)(lodash@4.17.21)(nunjucks@3.2.4(chokidar@3.6.0))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(underscore@1.13.7)
       pg:
         specifier: ^8.12.0
         version: 8.13.1
@@ -575,6 +575,12 @@ importers:
 
   apps/workers:
     dependencies:
+      '@bull-board/api':
+        specifier: ^6.7.9
+        version: 6.7.9(@bull-board/ui@6.7.9)
+      '@bull-board/express':
+        specifier: ^6.7.9
+        version: 6.7.9
       '@latitude-data/core':
         specifier: workspace:^
         version: link:../../packages/core
@@ -593,6 +599,9 @@ importers:
       '@tavily/core':
         specifier: ^0.3.1
         version: 0.3.1
+      express:
+        specifier: ^4.21.2
+        version: 4.21.2
       zod:
         specifier: ^3.23.8
         version: 3.23.8
@@ -603,6 +612,9 @@ importers:
       '@latitude-data/typescript-config':
         specifier: workspace:^
         version: link:../../tools/typescript
+      '@types/express':
+        specifier: ^4.17.21
+        version: 4.17.21
       '@types/node':
         specifier: ^22.5.1
         version: 22.8.1
@@ -931,7 +943,7 @@ importers:
         version: 3.2.0
       nodemailer-mailgun-transport:
         specifier: ^2.1.5
-        version: 2.1.5(lodash@4.17.21)(nunjucks@3.2.4(chokidar@3.6.0))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(underscore@1.13.7)
+        version: 2.1.5(ejs@3.1.10)(lodash@4.17.21)(nunjucks@3.2.4(chokidar@3.6.0))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(underscore@1.13.7)
       officeparser:
         specifier: ^5.1.1
         version: 5.1.1
@@ -2021,6 +2033,17 @@ packages:
   '@babel/types@7.26.0':
     resolution: {integrity: sha512-Z/yiTPj+lDVnF7lWeKCIJzaIkI0vYO87dMpZ4bg4TDrFe4XXLFWL1TbXU27gBP3QccxV9mZICCrnjnYlJjXHOA==}
     engines: {node: '>=6.9.0'}
+
+  '@bull-board/api@6.7.9':
+    resolution: {integrity: sha512-wgUoaOq7JmY0udhQ+AyMrRdFRpGCtaQJpSgM/QLkAqKRpRpVz5yHFJK9uI6iV+uNvGJkUWE6hNsn3xamzcMy5A==}
+    peerDependencies:
+      '@bull-board/ui': 6.7.9
+
+  '@bull-board/express@6.7.9':
+    resolution: {integrity: sha512-l6PmKDZB7GyaEGiPwzRGSTMHcwHr2dLOntBPTELpYJqhO9HuIGFez+T2hkxRo02CQ0hFJHhIXxOXmGN9pO8V5A==}
+
+  '@bull-board/ui@6.7.9':
+    resolution: {integrity: sha512-41a6rr04wu5uVCtnozqYaAhxUMlJZ3Mu4UwbEmGEvwrkTplKb3TKc8uvP3x0KgKUcIl7WU34Wr9N3lHciAUosQ==}
 
   '@bundled-es-modules/cookie@2.0.0':
     resolution: {integrity: sha512-Or6YHg/kamKHpxULAdSqhGqnWFneIXu1NKvvfBBzKGwpVsYuFIQ5aBPHDnnoR3ghW1nvSkALd+EF9iMtY7Vjxw==}
@@ -7912,6 +7935,11 @@ packages:
   ee-first@1.1.1:
     resolution: {integrity: sha512-WMwm9LhRUo+WUaRN+vRuETqG89IgZphVSNkdFgeb6sS/E4OrDIN7t48CAewSHXc6C8lefD8KKfr5vY61brQlow==}
 
+  ejs@3.1.10:
+    resolution: {integrity: sha512-UeJmFfOrAQS8OJWPZ4qtgHyWExa088/MtK5UEyoJGFH67cDEXkZSviOiKRCZ4Xij0zxI3JECgYs3oKx+AizQBA==}
+    engines: {node: '>=0.10.0'}
+    hasBin: true
+
   electron-to-chromium@1.5.47:
     resolution: {integrity: sha512-zS5Yer0MOYw4rtK2iq43cJagHZ8sXN0jDHDKzB+86gSBSAI4v07S97mcq+Gs2vclAxSh1j7vOAHxSVgduiiuVQ==}
 
@@ -8325,6 +8353,10 @@ packages:
     resolution: {integrity: sha512-YSFlK1Ee0/GC8QaO91tHcDxJiE/X4FbpAyQWkxAvG6AXCuR65YzK8ua6D9hvi/TzUfZMpc+BwuM1IPw8fmQBiQ==}
     engines: {node: '>= 0.10.0'}
 
+  express@4.21.2:
+    resolution: {integrity: sha512-28HqgMZAmih1Czt9ny7qr6ek2qddF4FclbMzwhCREB6OFfH+rXAnuNCwo1/wFvrtbgsQDb4kSbX9de9lFbrXnA==}
+    engines: {node: '>= 0.10.0'}
+
   extend-shallow@2.0.1:
     resolution: {integrity: sha512-zCnTtlxNoAiDc3gqY2aYAWFx7XWWiasuF2K8Me5WbN8otHKTUKBwjPtNpRs/rbUZm7KxWAaNj7P1a/p52GbVug==}
     engines: {node: '>=0.10.0'}
@@ -8418,6 +8450,9 @@ packages:
   file-type@16.5.4:
     resolution: {integrity: sha512-/yFHK0aGjFEgDJjEKP0pWCplsPFPhwyfwevf/pVxiN0tmE4L9LmwWxWukdJSHdoCli4VgQLehjJtwQBnqmsKcw==}
     engines: {node: '>=10'}
+
+  filelist@1.0.4:
+    resolution: {integrity: sha512-w1cEuf3S+DrLCQL7ET6kz+gmlJdbq9J7yXCSjK/OZCPA+qEN1WyF4ZAf0YYJa4/shHJra2t/d/r8SV4Ji+x+8Q==}
 
   fill-range@7.1.1:
     resolution: {integrity: sha512-YsGpe3WHLK8ZYi4tWDg2Jy3ebRz2rXowDxnld4bkQB00cc/1Zw9AWnC0i9ztDJitivtQvaI9KaLyKrc+hBW0yg==}
@@ -9334,6 +9369,11 @@ packages:
     resolution: {integrity: sha512-bZsjR/iRjl1Nk1UkjGpAzLNfQtzuijhn2g+pbZb98HQ1Gk8vM9hfbxeMBP+M2/UUdwj0RqGG3mlvk2MsAqwvEw==}
     engines: {node: 20 || >=22}
 
+  jake@10.9.2:
+    resolution: {integrity: sha512-2P4SQ0HrLQ+fw6llpLnOaGAvN2Zu6778SJMrCUwns4fOoG9ayrTiZk3VV8sCPkVZF8ab0zksVpS8FDY5pRCNBA==}
+    engines: {node: '>=10'}
+    hasBin: true
+
   jest-docblock@29.7.0:
     resolution: {integrity: sha512-q617Auw3A612guyaFgsbFeYpNP5t2aoUNLwBUbc/0kD1R4t9ixDbyFTHd1nok4epoVFpr7PmeWHrhvuV3XaJ4g==}
     engines: {node: ^14.15.0 || ^16.10.0 || >=18.0.0}
@@ -10207,6 +10247,10 @@ packages:
 
   minimatch@3.1.2:
     resolution: {integrity: sha512-J7p63hRiAjw1NDEww1W7i37+ByIrOWO5XQQAzZ3VOcL0PNybwpfmV/N05zFAzwQ9USyEcX6t3UO+K5aqBQOIHw==}
+
+  minimatch@5.1.6:
+    resolution: {integrity: sha512-lKwV/1brpG6mBUFHtb7NUmtABCb2WZZmm2wNiOA5hAb8VdCS4B3dtMWyvcoViccwAW/COERjXLt0zP1zXUN26g==}
+    engines: {node: '>=10'}
 
   minimatch@8.0.4:
     resolution: {integrity: sha512-W0Wvr9HyFXZRGIDgCicunpQ299OKXs9RgZfaukz4qAW/pJhcpUfupc9c+OObPOFueNy8VSrZgEmDtk6Kh4WzDA==}
@@ -11447,6 +11491,9 @@ packages:
   redis-errors@1.2.0:
     resolution: {integrity: sha512-1qny3OExCf0UvUV/5wpYKf2YwPcOqXzkwKKSmKHiE6ZMQs5heeE/c8eXK+PNllPvmjgAbfnsbpkGZWy8cBpn9w==}
     engines: {node: '>=4'}
+
+  redis-info@3.1.0:
+    resolution: {integrity: sha512-ER4L9Sh/vm63DkIE0bkSjxluQlioBiBgf5w1UuldaW/3vPcecdljVDisZhmnCMvsxHNiARTTDDHGg9cGwTfrKg==}
 
   redis-parser@3.0.0:
     resolution: {integrity: sha512-DJnGAeenTdpMEH6uAJRK/uiyEIH9WVsUmoLwzudwGJUwZPp80PDBWPHXSAGNPwNvIXAbe7MSUB1zQFugFml66A==}
@@ -14618,6 +14665,24 @@ snapshots:
       '@babel/helper-string-parser': 7.25.9
       '@babel/helper-validator-identifier': 7.25.9
 
+  '@bull-board/api@6.7.9(@bull-board/ui@6.7.9)':
+    dependencies:
+      '@bull-board/ui': 6.7.9
+      redis-info: 3.1.0
+
+  '@bull-board/express@6.7.9':
+    dependencies:
+      '@bull-board/api': 6.7.9(@bull-board/ui@6.7.9)
+      '@bull-board/ui': 6.7.9
+      ejs: 3.1.10
+      express: 4.21.2
+    transitivePeerDependencies:
+      - supports-color
+
+  '@bull-board/ui@6.7.9':
+    dependencies:
+      '@bull-board/api': 6.7.9(@bull-board/ui@6.7.9)
+
   '@bundled-es-modules/cookie@2.0.0':
     dependencies:
       cookie: 0.5.0
@@ -16023,7 +16088,7 @@ snapshots:
       better-opn: 3.0.2
       chalk: 5.3.0
       chokidar: 3.6.0
-      express: 4.21.1
+      express: 4.21.2
       fs-extra: 11.2.0
       got: 13.0.0
       gray-matter: 4.0.3
@@ -19431,7 +19496,7 @@ snapshots:
   '@types/body-parser@1.19.5':
     dependencies:
       '@types/connect': 3.4.38
-      '@types/node': 20.17.10
+      '@types/node': 22.10.1
 
   '@types/bytes@3.1.4': {}
 
@@ -19497,7 +19562,7 @@ snapshots:
 
   '@types/express-serve-static-core@4.19.6':
     dependencies:
-      '@types/node': 20.17.10
+      '@types/node': 22.10.1
       '@types/qs': 6.9.17
       '@types/range-parser': 1.2.7
       '@types/send': 0.17.4
@@ -19698,7 +19763,7 @@ snapshots:
   '@types/serve-static@1.15.7':
     dependencies:
       '@types/http-errors': 2.0.4
-      '@types/node': 20.17.10
+      '@types/node': 22.10.1
       '@types/send': 0.17.4
 
   '@types/shimmer@1.2.0': {}
@@ -20996,10 +21061,11 @@ snapshots:
   console-control-strings@1.1.0:
     optional: true
 
-  consolidate@0.15.1(lodash@4.17.21)(nunjucks@3.2.4(chokidar@3.6.0))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(underscore@1.13.7):
+  consolidate@0.15.1(ejs@3.1.10)(lodash@4.17.21)(nunjucks@3.2.4(chokidar@3.6.0))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(underscore@1.13.7):
     dependencies:
       bluebird: 3.7.2
     optionalDependencies:
+      ejs: 3.1.10
       lodash: 4.17.21
       nunjucks: 3.2.4(chokidar@3.6.0)
       react: 18.3.1
@@ -21454,6 +21520,10 @@ snapshots:
       semver: 7.6.3
 
   ee-first@1.1.1: {}
+
+  ejs@3.1.10:
+    dependencies:
+      jake: 10.9.2
 
   electron-to-chromium@1.5.47: {}
 
@@ -22195,6 +22265,42 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  express@4.21.2:
+    dependencies:
+      accepts: 1.3.8
+      array-flatten: 1.1.1
+      body-parser: 1.20.3
+      content-disposition: 0.5.4
+      content-type: 1.0.5
+      cookie: 0.7.1
+      cookie-signature: 1.0.6
+      debug: 2.6.9
+      depd: 2.0.0
+      encodeurl: 2.0.0
+      escape-html: 1.0.3
+      etag: 1.8.1
+      finalhandler: 1.3.1
+      fresh: 0.5.2
+      http-errors: 2.0.0
+      merge-descriptors: 1.0.3
+      methods: 1.1.2
+      on-finished: 2.4.1
+      parseurl: 1.3.3
+      path-to-regexp: 0.1.12
+      proxy-addr: 2.0.7
+      qs: 6.13.0
+      range-parser: 1.2.1
+      safe-buffer: 5.2.1
+      send: 0.19.0
+      serve-static: 1.16.2
+      setprototypeof: 1.2.0
+      statuses: 2.0.1
+      type-is: 1.6.18
+      utils-merge: 1.0.1
+      vary: 1.1.2
+    transitivePeerDependencies:
+      - supports-color
+
   extend-shallow@2.0.1:
     dependencies:
       is-extendable: 0.1.1
@@ -22295,6 +22401,10 @@ snapshots:
       readable-web-to-node-stream: 3.0.2
       strtok3: 6.3.0
       token-types: 4.2.1
+
+  filelist@1.0.4:
+    dependencies:
+      minimatch: 5.1.6
 
   fill-range@7.1.1:
     dependencies:
@@ -23462,6 +23572,13 @@ snapshots:
   jackspeak@4.0.2:
     dependencies:
       '@isaacs/cliui': 8.0.2
+
+  jake@10.9.2:
+    dependencies:
+      async: 3.2.6
+      chalk: 4.1.2
+      filelist: 1.0.4
+      minimatch: 3.1.2
 
   jest-docblock@29.7.0:
     dependencies:
@@ -24909,6 +25026,10 @@ snapshots:
     dependencies:
       brace-expansion: 1.1.11
 
+  minimatch@5.1.6:
+    dependencies:
+      brace-expansion: 2.0.1
+
   minimatch@8.0.4:
     dependencies:
       brace-expansion: 2.0.1
@@ -25285,9 +25406,9 @@ snapshots:
     dependencies:
       html-to-text: 7.1.1
 
-  nodemailer-mailgun-transport@2.1.5(lodash@4.17.21)(nunjucks@3.2.4(chokidar@3.6.0))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(underscore@1.13.7):
+  nodemailer-mailgun-transport@2.1.5(ejs@3.1.10)(lodash@4.17.21)(nunjucks@3.2.4(chokidar@3.6.0))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(underscore@1.13.7):
     dependencies:
-      consolidate: 0.15.1(lodash@4.17.21)(nunjucks@3.2.4(chokidar@3.6.0))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(underscore@1.13.7)
+      consolidate: 0.15.1(ejs@3.1.10)(lodash@4.17.21)(nunjucks@3.2.4(chokidar@3.6.0))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(underscore@1.13.7)
       form-data: 4.0.1
       mailgun.js: 8.2.2
     transitivePeerDependencies:
@@ -26525,6 +26646,10 @@ snapshots:
       victory-vendor: 36.9.2
 
   redis-errors@1.2.0: {}
+
+  redis-info@3.1.0:
+    dependencies:
+      lodash: 4.17.21
 
   redis-parser@3.0.0:
     dependencies:

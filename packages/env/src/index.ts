@@ -43,6 +43,8 @@ if (environment === 'development' || environment === 'test') {
       WEBSOCKET_REFRESH_SECRET_TOKEN_KEY: 'refresh-refresh-token-key',
       WEBSOCKET_SECRET_TOKEN_KEY: 'secret-token-key',
       LATITUDE_CLOUD_PAYMENT_URL: 'https://fake-payment-url.com',
+      BULL_ADMIN_USER: 'admin',
+      BULL_ADMIN_PASS: 'admin',
     },
     { path: pathToEnv },
   )
@@ -111,6 +113,10 @@ export const env = createEnv({
     MAILGUN_HOST: z.string().optional(),
     MAILGUN_PROTOCOL: z.string().optional(),
     DISABLE_EMAIL_AUTHENTICATION: z.boolean().optional().default(false),
+    BULL_ADMIN_USER: z.string(),
+    BULL_ADMIN_PASS: z.string(),
+    WORKERS_HOST: z.string().optional(),
+    WORKERS_PORT: z.coerce.number().optional(),
   },
   runtimeEnv: {
     ...process.env,
