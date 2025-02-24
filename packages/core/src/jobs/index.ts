@@ -14,7 +14,7 @@ export async function setupSchedules(connection?: Redis) {
   if (!queues) queues = await setupQueues(connection)
 
   // Every day at 8 AM
-  // TODO: UNCOMMENT WHEN READY
+  // TODO: UNCOMMENT WHEN USER NOTIFICATIONS ARE READY
   // await queues.defaultQueue.jobs.scheduleRequestDocumentSuggestionsJob(
   //   '0 0 8 * * *',
   //   { attempts: 1 },
