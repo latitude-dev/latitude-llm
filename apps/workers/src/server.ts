@@ -1,6 +1,6 @@
 import express from 'express'
 import { createBullBoard } from '@bull-board/api'
-import { BullMQAdapter } from '@bull-board/api/bullMQAdapter'
+import { BullMQAdapter } from '@bull-board/api/bullMQAdapter.js'
 import { ExpressAdapter } from '@bull-board/express'
 import { setupJobs } from '@latitude-data/core/jobs'
 
