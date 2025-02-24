@@ -1,3 +1,5 @@
+import './tracer'
+
 import express from 'express'
 import { createBullBoard } from '@bull-board/api'
 import { BullMQAdapter } from '@bull-board/api/bullMQAdapter.js'

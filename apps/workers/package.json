@@ -22,6 +22,7 @@
     "@sentry/node": "^8.30.0",
     "@t3-oss/env-core": "*",
     "@tavily/core": "^0.3.1",
+    "dd-trace": "^5.37.1",
     "express": "^4.21.2",
     "zod": "^3.23.8"
   },
