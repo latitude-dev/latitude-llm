@@ -101,32 +101,6 @@ const validateConfig = (
   return Result.ok(injectResult.unwrap() as Config)
 }
 
-const applyAgentTools = (config: Config): Config => {
-  const { schema, ...rest } = config
-
-  const DEFAULT_SCHEMA: JSONSchema7 = {
-    type: 'object',
-    properties: {
-      response: {
-        type: 'string',
-      },
-    },
-    required: ['response'],
-  }
-
-  return {
-    ...rest,
-    tools: {
-      ...(rest.tools ?? {}),
-      [AGENT_RETURN_TOOL_NAME]: {
-        description:
-          'You are an autonomous agent. You have been assigned a task, and your objective is to send messages autonomously following your instructions, obtaining information, and performing actions, indefinitely.\nWith this tool, you will be able to FINISH this workflow. Only use this tool when you have achieved your task and are ready to return the final results.\nUse this tool all by itself, do not include a response with it. If you need to both give a response and run this tool, do it in two separate messages.\nThis tool can ONLY be called once, and it will define the end of your task. Do not try to call it before finishing your task. Do not try to call it multiple times within the same message.\n',
-        parameters: schema ?? DEFAULT_SCHEMA,
-      },
-    },
-  }
-}
-
 function isChainCompleted(newMessages?: Message[]) {
   if (!newMessages?.length) return false
 
@@ -182,10 +156,10 @@ export const validateAgentStep = async ({
 
   return Result.ok({
     provider,
-    config: applyAgentTools(rule.config as Config),
+    config: rule.config as Config,
     conversation: {
       ...conversation,
-      config: applyAgentTools(config),
+      config,
       messages: rule?.messages ?? messages,
     },
     chainCompleted: isChainCompleted(newMessages),

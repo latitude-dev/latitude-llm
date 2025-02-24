@@ -68,6 +68,7 @@ export type Config = {
   azure?: AzureConfig
   google?: GoogleConfig
   type?: 'agent' | undefined
+  disableAgentOptimization?: boolean
   tools?: Record<string, ToolDefinition>
   agents?: string[]
 }

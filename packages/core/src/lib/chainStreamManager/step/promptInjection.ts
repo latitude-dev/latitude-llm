@@ -8,6 +8,7 @@ import {
   Workspace,
 } from '../../../browser'
 import { buildAgentsAsToolsDefinition } from '../../../services/agents/agentsAsTools'
+import { performAgentInjection } from '../../../services/agents/promptInjection'
 
 async function getAgentAsTools({
   workspace,
@@ -48,18 +49,24 @@ async function getAgentAsTools({
 export async function performPromptInjection({
   workspace,
   promptSource,
-  messages,
+  messages: originalMessages,
   config: originalConfig,
+  injectFakeAgentStartTool,
+  injectAgentFinishTool,
 }: {
   workspace: Workspace
   promptSource: PromptSource
   messages: Message[]
   config: Config
+  injectFakeAgentStartTool?: boolean
+  injectAgentFinishTool?: boolean
 }): PromisedResult<{
   messages: Message[]
   config: Config
 }> {
   let config = originalConfig
+  let messages = originalMessages
+
   const agentsAsToolsResult = await getAgentAsTools({
     workspace,
     config,
@@ -67,6 +74,16 @@ export async function performPromptInjection({
   })
   if (agentsAsToolsResult.error) return agentsAsToolsResult
   config = agentsAsToolsResult.unwrap()
+
+  const agentInjectionResult = performAgentInjection({
+    messages,
+    config,
+    injectAgentFinishTool,
+    injectFakeAgentStartTool,
+  })
+  if (agentInjectionResult.error) return agentInjectionResult
+  config = agentInjectionResult.unwrap().config
+  messages = agentInjectionResult.unwrap().messages
 
   return Result.ok({
     messages,

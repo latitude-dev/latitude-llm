@@ -7,7 +7,8 @@ export enum ParameterType {
 export const LATITUDE_TOOLS_CONFIG_NAME = 'latitudeTools'
 export const LATITUDE_TOOL_PREFIX = 'lat_tool'
 export const AGENT_TOOL_PREFIX = 'lat_agent'
-export const AGENT_RETURN_TOOL_NAME = 'agent_finish_task'
+export const AGENT_RETURN_TOOL_NAME = 'end_autonomous_chain'
+export const FAKE_AGENT_START_TOOL_NAME = 'start_autonomous_chain'
 
 export enum LatitudeTool {
   RunCode = 'code',

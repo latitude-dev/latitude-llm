@@ -27,6 +27,8 @@ export type ExecuteStepArgs = {
   documentLogUuid: string
   schema?: JSONSchema7
   output?: 'object' | 'array' | 'no-schema'
+  injectFakeAgentStartTool?: boolean
+  injectAgentFinishTool?: boolean
 }
 
 export async function streamAIResponse({
@@ -39,6 +41,8 @@ export async function streamAIResponse({
   documentLogUuid,
   schema,
   output,
+  injectFakeAgentStartTool,
+  injectAgentFinishTool,
 }: ExecuteStepArgs): Promise<{
   response: ChainStepResponse<StreamType>
   tokenUsage: LanguageModelUsage
@@ -55,6 +59,8 @@ export async function streamAIResponse({
     promptSource,
     messages: conversation.messages,
     config: conversation.config as Config,
+    injectFakeAgentStartTool,
+    injectAgentFinishTool,
   })
   if (injectionResult.error) throw injectionResult.error
   const { messages, config } = injectionResult.unwrap()
