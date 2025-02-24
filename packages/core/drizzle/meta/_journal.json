@@ -855,6 +855,13 @@
       "when": 1739973263017,
       "tag": "0122_curved_stranger",
       "breakpoints": true
+    },
+    {
+      "idx": 123,
+      "version": "7",
+      "when": 1740414994584,
+      "tag": "0123_regular_slyde",
+      "breakpoints": true
     }
   ]
 }

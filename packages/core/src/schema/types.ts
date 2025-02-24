@@ -5,7 +5,10 @@ import { apiKeys } from './models/apiKeys'
 import { claimedRewards } from './models/claimedRewards'
 import { commits } from './models/commits'
 import { connectedEvaluations } from './models/connectedEvaluations'
+// DEPRECATED: we need to run migration and create new records in datasetsV2 for all existing datasets
 import { datasets } from './models/datasets'
+import { datasetsV2 } from './models/datasetsV2'
+import { datasetRows } from './models/datasetRows'
 import { documentSuggestions } from './models/documentSuggestions'
 import { documentVersions } from './models/documentVersions'
 import { evaluationAdvancedTemplates } from './models/evaluationAdvancedTemplates'
@@ -168,6 +171,12 @@ export type EvaluationDto = Evaluation &
 export type Dataset = InferSelectModel<typeof datasets> & {
   author: Pick<User, 'id' | 'name'> | undefined
 }
+
+export type DatasetV2 = InferSelectModel<typeof datasetsV2> & {
+  author: Pick<User, 'id' | 'name'> | undefined
+}
+
+export type DatasetRow = InferSelectModel<typeof datasetRows>
 
 export type PublishedDocument = InferInsertModel<typeof publishedDocuments>
 
