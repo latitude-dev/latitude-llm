@@ -28,6 +28,16 @@ export async function buildProjects() {
           agent2: factories.helpers.createPrompt({
             provider: 'myAnthropic',
             content: 'Agent 2',
+            extraConfig: { type: 'agent', agents: ['./subagent1'] },
+          }),
+          subagent1: factories.helpers.createPrompt({
+            provider: 'myAnthropic',
+            content: 'Subagent 1',
+            extraConfig: { type: 'agent', agents: ['subagent2'] },
+          }),
+          subagent2: factories.helpers.createPrompt({
+            provider: 'myAnthropic',
+            content: 'Subagent 2',
             extraConfig: { type: 'agent' },
           }),
         },

@@ -1,8 +1,40 @@
 import { resolveRelativePath } from '@latitude-data/constants'
 import { Commit, DocumentVersion, Workspace } from '../../../browser'
-import { Result } from '../../../lib'
+import { NotFoundError, Result } from '../../../lib'
 import { DocumentVersionsRepository } from '../../../repositories'
-import { scanDocumentContent } from '../scan'
+import { scanCommitDocumentContents } from '../scan'
+import { ConversationMetadata as PromptlMetadata } from 'promptl-ai'
+import { ConversationMetadata as LegacyMetadata } from '@latitude-data/compiler'
+
+type ConversationMetadata = PromptlMetadata | LegacyMetadata
+
+function getIncludedAgentsPaths({
+  documentPath,
+  documentsMetadata,
+  acc = [],
+}: {
+  documentPath: string
+  documentsMetadata: Record<string, ConversationMetadata>
+  acc?: string[]
+}): string[] {
+  const docMetadata = documentsMetadata[documentPath]
+  const agentsRelativePaths = (docMetadata?.config.agents as string[]) ?? []
+
+  const agentsFullPaths = agentsRelativePaths.map((relativePath) =>
+    resolveRelativePath(relativePath, documentPath),
+  )
+
+  const notEvaluatedAgentPaths = agentsFullPaths.filter(
+    (path) => !acc.includes(path),
+  )
+  acc.push(...notEvaluatedAgentPaths)
+
+  notEvaluatedAgentPaths.forEach((path) => {
+    getIncludedAgentsPaths({ documentPath: path, documentsMetadata, acc })
+  })
+
+  return acc
+}
 
 export async function getIncludedDocuments({
   workspace,
@@ -13,18 +45,23 @@ export async function getIncludedDocuments({
   commit: Commit
   document: DocumentVersion
 }) {
-  const metadata = await scanDocumentContent({
+  const scannedDocuments = await scanCommitDocumentContents({
     workspaceId: workspace.id,
-    document,
     commit,
   }).then((r) => r.unwrap())
 
-  const includedAgents: string[] = (metadata.config.agents as string[]) ?? []
-  const includedAgentsFullPaths = includedAgents.map((agentPath) =>
-    resolveRelativePath(agentPath, document.path),
-  )
+  const metadata = scannedDocuments[document.path]
+
+  if (!metadata) {
+    return Result.error(new NotFoundError('Document not found in commit'))
+  }
+
+  const includedAgentsPaths = getIncludedAgentsPaths({
+    documentPath: document.path,
+    documentsMetadata: scannedDocuments,
+  })
   const referencedPaths = Array.from(metadata.includedPromptPaths)
-  const includedPaths = [...includedAgentsFullPaths, ...referencedPaths]
+  const includedPaths = [...includedAgentsPaths, ...referencedPaths]
   const documentScope = new DocumentVersionsRepository(workspace.id)
   const allDocs = await documentScope
     .getDocumentsAtCommit(commit)
