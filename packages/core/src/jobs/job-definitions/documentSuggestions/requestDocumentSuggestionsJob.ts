@@ -29,7 +29,6 @@ import { generateDocumentSuggestionJobKey } from './generateDocumentSuggestionJo
 
 export type RequestDocumentSuggestionsJobData = {}
 
-// TODO: See getDocumentsFromMergedCommits to get the live versions of all documents
 export const requestDocumentSuggestionsJob = async (
   _: Job<RequestDocumentSuggestionsJobData>,
 ) => {
@@ -44,13 +43,28 @@ export const requestDocumentSuggestionsJob = async (
   )
   const commitsCte = database.$with('commits_cte').as(
     database
-      .selectDistinctOn([commits.projectId], {
+      .select({
         id: commits.id,
         projectId: commits.projectId,
+        mergedAt: commits.mergedAt,
       })
       .from(commits)
-      .where(and(isNull(commits.deletedAt), isNotNull(commits.mergedAt)))
-      .orderBy(desc(commits.projectId), desc(commits.mergedAt)),
+      .where(and(isNull(commits.deletedAt), isNotNull(commits.mergedAt))),
+  )
+  // Note: just coarse-grained filter here
+  const hasRecentResults = exists(
+    database
+      .select({ exists: sql`TRUE` })
+      .from(evaluationResults)
+      .where(
+        and(
+          eq(evaluationResults.evaluationId, connectedEvaluations.evaluationId),
+          gte(
+            evaluationResults.updatedAt,
+            subDays(new Date(), EVALUATION_RESULT_RECENCY_DAYS),
+          ),
+        ),
+      ),
   )
   const evaluationsCte = database.$with('evaluations_cte').as(
     database
@@ -63,29 +77,30 @@ export const requestDocumentSuggestionsJob = async (
         and(
           isNull(connectedEvaluations.deletedAt),
           eq(connectedEvaluations.live, true),
-          exists(
-            database // Note: just coarse-grained filter here
-              .select({ exists: sql`TRUE` })
-              .from(evaluationResults)
-              .where(
-                and(
-                  eq(
-                    evaluationResults.evaluationId,
-                    connectedEvaluations.evaluationId,
-                  ),
-                  gte(
-                    evaluationResults.updatedAt,
-                    subDays(new Date(), EVALUATION_RESULT_RECENCY_DAYS),
-                  ),
-                ),
-              ),
+          hasRecentResults,
+        ),
+      ),
+  )
+  // Note: just coarse-grained filter here
+  const notHasRecentSuggestions = notExists(
+    database
+      .select({ exists: sql`TRUE` })
+      .from(documentSuggestions)
+      .where(
+        and(
+          eq(documentSuggestions.commitId, documentVersions.commitId),
+          eq(documentSuggestions.documentUuid, documentVersions.documentUuid),
+          eq(documentSuggestions.evaluationId, evaluationsCte.id),
+          gte(
+            documentSuggestions.createdAt,
+            subDays(new Date(), DOCUMENT_SUGGESTION_EXPIRATION_DAYS),
           ),
         ),
       ),
   )
   const candidates = await database
     .with(commitsCte, projectsCte, evaluationsCte)
-    .select({
+    .selectDistinctOn([documentVersions.documentUuid, evaluationsCte.id], {
       workspaceId: projectsCte.workspaceId,
       commitId: documentVersions.commitId,
       documentUuid: documentVersions.documentUuid,
@@ -98,29 +113,11 @@ export const requestDocumentSuggestionsJob = async (
       evaluationsCte,
       eq(evaluationsCte.documentUuid, documentVersions.documentUuid),
     )
-    .where(
-      and(
-        isNull(documentVersions.deletedAt),
-        notExists(
-          database
-            .select({ exists: sql`TRUE` })
-            .from(documentSuggestions)
-            .where(
-              and(
-                eq(documentSuggestions.commitId, documentVersions.commitId),
-                eq(
-                  documentSuggestions.documentUuid,
-                  documentVersions.documentUuid,
-                ),
-                eq(documentSuggestions.evaluationId, evaluationsCte.id),
-                gte(
-                  documentSuggestions.createdAt,
-                  subDays(new Date(), DOCUMENT_SUGGESTION_EXPIRATION_DAYS),
-                ),
-              ),
-            ),
-        ),
-      ),
+    .where(and(isNull(documentVersions.deletedAt), notHasRecentSuggestions))
+    .orderBy(
+      desc(documentVersions.documentUuid),
+      desc(evaluationsCte.id),
+      desc(commitsCte.mergedAt),
     )
 
   const queues = await setupJobs()
