@@ -4,7 +4,10 @@ import { ChangeEvent, useCallback, useMemo, useRef, useState } from 'react'
 
 import { MenuOption } from '../../../../../ds/atoms/DropdownMenu'
 import { useFileTreeContext } from '../FilesProvider'
-import NodeHeaderWrapper, { IndentType } from '../NodeHeaderWrapper'
+import NodeHeaderWrapper, {
+  IndentType,
+  NodeHeaderWrapperProps,
+} from '../NodeHeaderWrapper'
 import { useOpenPaths } from '../useOpenPaths'
 import { useTempNodes } from '../useTempNodes'
 import { Node } from '../useTree'
@@ -14,11 +17,15 @@ export default function FolderHeader({
   open,
   indentation,
   onToggleOpen,
+  canDrag,
+  draggble,
 }: {
   node: Node
   open: boolean
   indentation: IndentType[]
   onToggleOpen: () => void
+  canDrag: boolean
+  draggble: NodeHeaderWrapperProps['draggble']
 }) {
   const {
     isLoading,
@@ -190,6 +197,8 @@ export default function FolderHeader({
       />
       <NodeHeaderWrapper
         name={node.name}
+        canDrag={canDrag}
+        draggble={draggble}
         isEditing={isEditing}
         setIsEditing={setIsEditing}
         hasChildren={node.children.length > 0}
