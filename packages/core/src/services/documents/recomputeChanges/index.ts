@@ -7,7 +7,7 @@ import {
   type CompileError,
 } from '@latitude-data/compiler'
 import { scan } from 'promptl-ai'
-import { eq } from 'drizzle-orm'
+import { and, eq, inArray, not } from 'drizzle-orm'
 
 import {
   Commit,
@@ -126,23 +126,75 @@ async function replaceCommitChanges(
 ): Promise<TypedResult<DocumentVersion[], Error>> {
   const commitId = commit.id
   return Transaction.call<DocumentVersion[]>(async (trx) => {
-    await trx
-      .delete(documentVersions)
+    const previousDraftDocuments = await trx
+      .select()
+      .from(documentVersions)
       .where(eq(documentVersions.commitId, commitId))
+
+    await trx.delete(documentVersions).where(
+      and(
+        eq(documentVersions.commitId, commitId),
+        not(
+          inArray(
+            documentVersions.documentUuid,
+            documentChanges.map((d) => d.documentUuid),
+          ),
+        ),
+      ),
+    )
 
     if (documentChanges.length === 0) return Result.ok([])
 
-    const insertedDocuments = await trx
-      .insert(documentVersions)
-      .values(
-        documentChanges.map((d) => ({
-          ...omit(d, ['id', 'commitId', 'updatedAt']),
-          commitId,
-        })),
-      )
-      .returning()
+    const [docsToInsert, docsToUpdate] = documentChanges.reduce(
+      (acc, doc) => {
+        const existingDoc = previousDraftDocuments.find(
+          (d) => d.documentUuid === doc.documentUuid,
+        )
+        if (existingDoc) {
+          acc[1].push(doc)
+        } else {
+          acc[0].push(doc)
+        }
+        return acc
+      },
+      [[], []] as [DocumentVersion[], DocumentVersion[]],
+    )
 
-    return Result.ok(insertedDocuments)
+    const insertedDocs = docsToInsert.length
+      ? await trx
+          .insert(documentVersions)
+          .values(
+            docsToInsert.map((d) => ({
+              ...omit(d, ['id', 'commitId', 'updatedAt']),
+              commitId,
+            })),
+          )
+          .returning()
+      : []
+
+    const updatedDocs = docsToUpdate.length
+      ? await Promise.all(
+          docsToUpdate.map(async (doc) => {
+            const updatedDoc = await trx
+              .update(documentVersions)
+              .set({
+                ...omit(doc, ['id', 'commitId', 'updatedAt']),
+                updatedAt: new Date(),
+              })
+              .where(
+                and(
+                  eq(documentVersions.documentUuid, doc.documentUuid),
+                  eq(documentVersions.commitId, commitId),
+                ),
+              )
+              .returning()
+
+            return updatedDoc[0]!
+          }),
+        )
+      : []
+
+    return Result.ok([...insertedDocs, ...updatedDocs])
   }, tx)
 }
 
