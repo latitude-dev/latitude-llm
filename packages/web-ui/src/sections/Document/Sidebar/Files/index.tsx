@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
+import { useDraggable, useDroppable } from '@dnd-kit/core'
 import { ConfirmModal } from '../../../../ds/atoms'
 import { cn } from '../../../../lib/utils'
 import DocumentHeader from './DocumentHeader'
@@ -19,13 +20,27 @@ function NodeHeader({
   onToggleOpen,
   node,
   indentation,
+  canDrag,
 }: {
   selected: boolean
   open: boolean
   node: Node
   indentation: IndentType[]
   onToggleOpen: () => void
+  canDrag: boolean
 }) {
+  const draggable = useDraggable({
+    id: node.id,
+    disabled: !canDrag,
+    data: {
+      canDrag,
+      nodeId: node.id,
+      name: node.name,
+      path: node.path,
+      isFile: node.isFile,
+      isRoot: node.isRoot,
+    },
+  })
   if (node.isRoot) return null
 
   if (node.isFile) {
@@ -35,6 +50,8 @@ function NodeHeader({
         selected={selected}
         node={node}
         indentation={indentation}
+        canDrag={canDrag}
+        draggble={draggable}
       />
     )
   }
@@ -45,17 +62,36 @@ function NodeHeader({
       open={open}
       indentation={indentation}
       onToggleOpen={onToggleOpen}
+      canDrag={canDrag}
+      draggble={draggable}
     />
   )
 }
 
-function FileNode({
-  node,
-  indentation = [],
-}: {
+export type FileNodeProps = {
+  isMerged: boolean
   node: Node
   indentation?: IndentType[]
-}) {
+  onRenameFile: (args: { node: Node; path: string }) => Promise<void>
+}
+
+function FileNode({
+  isMerged,
+  node,
+  indentation = [],
+  onRenameFile,
+}: FileNodeProps) {
+  const droppable = useDroppable({
+    id: node.id,
+    disabled: node.isFile,
+    data: {
+      nodeId: node.id,
+      name: node.name,
+      path: node.path,
+      isFile: node.isFile,
+      isRoot: node.isRoot,
+    },
+  })
   const allTmpFolders = useTempNodes((state) => state.tmpFolders)
   const tmpNodes = allTmpFolders[node.path] ?? []
   const { currentUuid } = useFileTreeContext()
@@ -83,21 +119,29 @@ function FileNode({
   useEffect(() => {
     setSelected(!!currentUuid && currentUuid === node.doc?.documentUuid)
   }, [currentUuid])
-
   return (
-    <div className='flex-1 w-full'>
+    <div
+      ref={droppable.setNodeRef}
+      className={cn('flex-1 w-full', {
+        'bg-accent/50': droppable.isOver,
+      })}
+    >
       <NodeHeader
         indentation={indentation}
         node={node}
         selected={selected}
         open={open}
         onToggleOpen={onToggleOpen}
+        canDrag={!isMerged && !node.isRoot}
       />
 
       {node.isFile ? null : (
         <ul
           className={cn('flex flex-col', {
             hidden: !open && !node.isRoot,
+            'pt-1 pb-8': node.isRoot,
+            'outline outline-1 outline-primary':
+              droppable.isOver && node.isRoot,
           })}
         >
           {allNodes.map((node, idx) => {
@@ -106,6 +150,8 @@ function FileNode({
                 <FileNode
                   indentation={[...indentation, { isLast: idx === lastIdx }]}
                   node={node}
+                  onRenameFile={onRenameFile}
+                  isMerged={isMerged}
                 />
               </li>
             )
@@ -194,6 +240,12 @@ export function FilesTree({
   )
 
   const deletingFolder = deletableNode?.type === 'folder'
+  const onRenameFile = useCallback(
+    async ({ node, path }: { node: Node; path: string }) => {
+      await renamePaths({ oldPath: node.path, newPath: path })
+    },
+    [renamePaths],
+  )
   return (
     <>
       <FileTreeProvider
@@ -202,6 +254,7 @@ export function FilesTree({
         onMergeCommitClick={onMergeCommitClick}
         currentUuid={currentUuid}
         onNavigateToDocument={navigateToDocument}
+        renamePaths={renamePaths}
         onCreateFile={(path) => {
           createFile({ path })
         }}
@@ -226,7 +279,11 @@ export function FilesTree({
       >
         <div className='flex flex-col gap-2'>
           <TreeToolbar />
-          <FileNode node={rootNode} />
+          <FileNode
+            node={rootNode}
+            onRenameFile={onRenameFile}
+            isMerged={isMerged}
+          />
         </div>
       </FileTreeProvider>
 

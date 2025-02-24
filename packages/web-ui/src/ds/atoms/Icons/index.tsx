@@ -85,7 +85,11 @@ import {
 
 import { cn } from '../../../lib/utils'
 import { colors, DarkTextColor, type TextColor } from '../../tokens'
-import { LatitudeLogo, LatitudeLogoMonochrome } from './custom-icons'
+import {
+  LatitudeLogo,
+  LatitudeLogoMonochrome,
+  GridVertical,
+} from './custom-icons'
 
 const Icons = {
   addCircle: CirclePlus,
@@ -172,6 +176,7 @@ const Icons = {
   listCheck: ListCheck,
   alertCircle: AlertCircle,
   circleArrowUp: CircleArrowUp,
+  gridVertical: GridVertical,
 }
 
 export type IconName = keyof typeof Icons
