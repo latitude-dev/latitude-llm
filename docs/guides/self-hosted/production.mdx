@@ -116,20 +116,10 @@ docker compose top
 
 ## Building Your Own Images
 
-We provide a custom docker profile for building your own images locally. To build your own local images, run the following command:
-
-```bash
-docker compose --profile local build
-```
-
-To run your local images, run the following command:
-
-```bash
-docker compose --profile local up -d
-```
+We provide a custom docker profile for building your own images locally.
 
 To build and run your local images, run the following command:
 
 ```bash
-docker compose --profile local up
+docker compose --profile local up --build
 ```
