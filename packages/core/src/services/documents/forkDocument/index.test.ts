@@ -304,6 +304,16 @@ describe('forkDocument', () => {
             model: 'gemini-2.0-flash',
           },
           {
+            path: 'agents/subagent1',
+            provider: 'google',
+            model: 'gemini-2.0-flash',
+          },
+          {
+            path: 'agents/subagent2',
+            provider: 'google',
+            model: 'gemini-2.0-flash',
+          },
+          {
             path: 'some-folder/children/child1',
             provider: 'google',
             model: 'gemini-2.0-flash',

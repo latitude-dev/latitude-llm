@@ -85,3 +85,38 @@ export async function scanDocumentContent({
 
   return Result.ok(metadata)
 }
+
+export async function scanCommitDocumentContents({
+  workspaceId,
+  commit,
+}: {
+  workspaceId: Workspace['id']
+  commit: Commit
+}): Promise<
+  TypedResult<{ [path: string]: ConversationMetadata }, LatitudeError>
+> {
+  const documentScope = new DocumentVersionsRepository(workspaceId)
+  const docs = await documentScope
+    .getDocumentsAtCommit(commit)
+    .then((r) => r.unwrap())
+
+  try {
+    const metadata = await Promise.all(
+      docs.map(
+        async (doc) =>
+          [
+            doc.path,
+            await scanDocumentContent({
+              workspaceId,
+              document: doc,
+              commit,
+            }).then((r) => r.unwrap()),
+          ] as [string, ConversationMetadata],
+      ),
+    )
+
+    return Result.ok(Object.fromEntries(metadata))
+  } catch (error) {
+    return Result.error(error as LatitudeError)
+  }
+}
