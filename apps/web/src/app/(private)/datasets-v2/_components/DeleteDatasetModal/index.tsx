@@ -1,4 +1,4 @@
-import { Dataset } from '@latitude-data/core/browser'
+import { DatasetV2 } from '@latitude-data/core/browser'
 import { ReactStateDispatch } from '@latitude-data/web-ui'
 import { destroyDatasetAction } from '$/actions/datasets/destroy'
 import DestroyModal from '$/components/modals/DestroyModal'
@@ -9,8 +9,8 @@ export default function DeleteDatasetModal({
   dataset,
   setDataset,
 }: {
-  dataset: Dataset | null
-  setDataset: ReactStateDispatch<Dataset | null>
+  dataset: DatasetV2 | null
+  setDataset: ReactStateDispatch<DatasetV2 | null>
 }) {
   const router = useRouter()
   const { data, destroy } = useDatasets()

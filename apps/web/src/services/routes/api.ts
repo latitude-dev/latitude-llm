@@ -190,6 +190,9 @@ export const _API_ROUTES = {
       },
     }),
   },
+  datasetsV2: {
+    root: '/api/datasets-v2',
+  },
   evaluationTemplates: {
     root: '/api/evaluationTemplates',
   },

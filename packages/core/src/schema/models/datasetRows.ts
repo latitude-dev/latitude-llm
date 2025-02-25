@@ -3,7 +3,7 @@ import { timestamps } from '../schemaHelpers'
 import { datasetsV2 } from './datasetsV2'
 import { workspaces } from './workspaces'
 
-type DatasetRowData = {
+export type DatasetRowData = {
   [key: string]: string | number | boolean | null | undefined
 }
 

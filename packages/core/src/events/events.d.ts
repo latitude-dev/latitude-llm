@@ -4,6 +4,7 @@ import type {
   ChainStepResponse,
   Commit,
   Dataset,
+  DatasetV2,
   DocumentLog,
   DocumentSuggestion,
   DocumentVersion,
@@ -44,6 +45,7 @@ export type Events =
   | 'claimReferralInvitations'
   | 'evaluationCreated'
   | 'datasetCreated'
+  | 'datasetV2Created'
   | 'providerApiKeyCreated'
   | 'userInvited'
   | 'commitCreated'
@@ -258,6 +260,17 @@ export type DatasetCreatedEvent = LatitudeEventGeneric<
     dataset: Dataset
     userEmail: string
     workspaceId: number
+  }
+>
+
+export type DatasetV2CreatedEvent = LatitudeEventGeneric<
+  'datasetV2Created',
+  {
+    workspaceId: number
+    datasetId: number
+    userEmail: string
+    fileKey: string
+    csvDelimiter: string
   }
 >
 
@@ -479,6 +492,7 @@ export type LatitudeEvent =
   | ClaimReferralInvitationEvent
   | EvaluationCreatedEvent
   | DatasetCreatedEvent
+  | DatasetV2CreatedEvent
   | ProviderApiKeyCreatedEvent
   | UserInvitedEvent
   | CommitCreatedEvent
@@ -519,6 +533,7 @@ export interface IEventsHandlers {
   claimReferralInvitations: EventHandler<ClaimReferralInvitationEvent>[]
   evaluationCreated: EventHandler<EvaluationCreatedEvent>[]
   datasetCreated: EventHandler<DatasetCreatedEvent>[]
+  datasetV2Created: EventHandler<DatasetV2CreatedEvent>[]
   providerApiKeyCreated: EventHandler<ProviderApiKeyCreatedEvent>[]
   userInvited: EventHandler<UserInvitedEvent>[]
   commitCreated: EventHandler<CommitCreatedEvent>[]

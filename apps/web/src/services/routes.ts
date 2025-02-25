@@ -99,6 +99,16 @@ export const ROUTES = {
     },
     preview: (id: string | number) => `/datasets/preview/${id}`,
   },
+  datasetsV2: {
+    root: '/datasets-v2',
+    new: {
+      root: `/datasets-v2/new`,
+    },
+    generate: {
+      root: `/datasets-v2/generate`,
+    },
+    detail: (id: string | number) => `/datasets-v2/${id}`,
+  },
   evaluations: {
     root: '/evaluations',
     destroy: (uuid: string) => `${ROUTES.evaluations.root}/${uuid}/destroy`,

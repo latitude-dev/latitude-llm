@@ -4,7 +4,7 @@ import { DatasetsRepository } from '@latitude-data/core/repositories'
 import { Container, TableWithHeader } from '@latitude-data/web-ui'
 import buildMetatags from '$/app/_lib/buildMetatags'
 import { AppTabs } from '$/app/(private)/AppTabs'
-import { DatasetsTable } from '$/app/(private)/datasets-v2/_components/DatasetsTable'
+import { DatasetsTable } from '$/app/(private)/datasets/_components/DatasetsTable'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
 import Link from 'next/link'
@@ -31,13 +31,13 @@ export default async function DatasetsList({
         actions={
           <div className='flex flex-row items-center gap-2'>
             {env.LATITUDE_CLOUD ? (
-              <Link href={ROUTES.datasetsV2.generate.root}>
+              <Link href={ROUTES.datasets.generate.root}>
                 <TableWithHeader.Button>
                   Generate dataset
                 </TableWithHeader.Button>
               </Link>
             ) : null}
-            <Link href={ROUTES.datasetsV2.new.root}>
+            <Link href={ROUTES.datasets.new.root}>
               <TableWithHeader.Button>Upload dataset</TableWithHeader.Button>
             </Link>
           </div>

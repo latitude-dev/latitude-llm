@@ -1,5 +1,6 @@
 import { IEventsHandlers } from '../events'
 import { createClaimInvitationReferralJob } from './createClaimInvitationReferralJob'
+import { createDatasetRowsJob } from './createDatasetRowsJobs'
 import { createDocumentLogsFromSpansJob } from './createDocumentLogsFromSpansJob'
 import { createLoopsContact } from './createLoopsContact'
 import { notifyClientOfBulkCreateTracesAndSpans } from './notifyClientOfBulkCreateTracesAndSpans'
@@ -20,6 +21,7 @@ export const EventHandlers: IEventsHandlers = {
   commitCreated: [],
   commitPublished: [],
   datasetCreated: [],
+  datasetV2Created: [createDatasetRowsJob],
   documentCreated: [],
   documentLogCreated: [
     runLiveEvaluationsJob,
