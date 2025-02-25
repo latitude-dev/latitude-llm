@@ -41,5 +41,8 @@ export const documentSuggestions = latitudeSchema.table(
     evaluationIdIdx: index('document_suggestions_evaluation_id_idx').on(
       table.evaluationId,
     ),
+    createdAtIdx: index('document_suggestions_created_at_idx').on(
+      table.createdAt,
+    ),
   }),
 )
