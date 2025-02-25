@@ -65,9 +65,7 @@ export const sendSuggestionNotification = async ({
       .where(eq(users.id, user.id))
 
     const mailer = new SuggestionMailer(
-      {
-        to: user.email,
-      },
+      { to: user.email },
       {
         user: user.name!,
         document: document.path.split('/').pop()!,
