@@ -53,3 +53,6 @@ export * from './models/spans'
 
 // Public sharing
 export * from './models/publishedDocuments'
+
+// Integrations
+export * from './models/integrations'
