@@ -869,6 +869,13 @@
       "when": 1740477268251,
       "tag": "0124_good_revanche",
       "breakpoints": true
+    },
+    {
+      "idx": 125,
+      "version": "7",
+      "when": 1740504179170,
+      "tag": "0125_integrations_schema",
+      "breakpoints": true
     }
   ]
 }
