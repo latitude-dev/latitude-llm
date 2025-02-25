@@ -13,6 +13,9 @@ import {
 import { users } from '../../schema'
 import { DocumentSuggestionCreatedEvent } from '../events'
 
+const UTM_SOURCE = 'email'
+const UTM_CAMPAIGN = 'document_suggestions'
+
 function hasExceededNotificationLimits(user: User) {
   return (
     user.lastSuggestionNotifiedAt &&
@@ -27,8 +30,6 @@ export const sendSuggestionNotification = async ({
   data: DocumentSuggestionCreatedEvent
 }) => {
   const { workspaceId, suggestion, evaluation } = event.data
-
-  console.log('---------- Sending suggestion email ------------')
 
   const workspace = await unsafelyFindWorkspace(workspaceId)
   if (!workspace) throw new NotFoundError(`Workspace not found ${workspaceId}`)
@@ -72,7 +73,7 @@ export const sendSuggestionNotification = async ({
         document: document.path.split('/').pop()!,
         evaluation: evaluation.name,
         suggestion: suggestion.summary,
-        link: `${env.APP_URL}/projects/${commit.projectId}/versions/${commit.uuid}/documents/${document.documentUuid}`,
+        link: `${env.APP_URL}/projects/${commit.projectId}/versions/${commit.uuid}/documents/${document.documentUuid}?utm_source=${UTM_SOURCE}&utm_campaign=${UTM_CAMPAIGN}`,
       },
     )
 
