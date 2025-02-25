@@ -7,8 +7,8 @@ import {
 } from '@latitude-data/compiler'
 import {
   AGENT_RETURN_TOOL_NAME,
-  Config,
   FAKE_AGENT_START_TOOL_NAME,
+  VercelConfig,
 } from '@latitude-data/constants'
 import { LatitudeError, Result, TypedResult } from '../../lib'
 import { JSONSchema7 } from 'json-schema'
@@ -124,10 +124,10 @@ export function performAgentInjection({
   injectAgentFinishTool,
 }: {
   messages: Message[]
-  config: Config
+  config: VercelConfig
   injectFakeAgentStartTool?: boolean
   injectAgentFinishTool?: boolean
-}): TypedResult<{ messages: Message[]; config: Config }, LatitudeError> {
+}): TypedResult<{ messages: Message[]; config: VercelConfig }, LatitudeError> {
   let config = originalConfig
   let messages = originalMessages
 

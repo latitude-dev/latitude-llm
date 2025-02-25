@@ -15,7 +15,6 @@ import { azureConfig, Config, googleConfig } from '../../ai/helpers'
 import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
 import { checkFreeProviderQuota } from '../checkFreeProviderQuota'
 import { CachedApiKeys } from '../run'
-import { injectLatitudeToolsConfig } from '../../latitudeTools'
 
 type SomeChain = LegacyChain | PromptlChain
 
@@ -185,17 +184,7 @@ const validateConfig = (
     )
   }
 
-  const injectResult = injectLatitudeToolsConfig(parseResult.data)
-  if (!injectResult.ok) {
-    return Result.error(
-      new ChainError({
-        message: injectResult.error!.message,
-        code: RunErrorCodes.DocumentConfigError,
-      }),
-    )
-  }
-
-  return Result.ok(injectResult.unwrap() as Config)
+  return Result.ok(parseResult.data)
 }
 
 export const validateChain = async ({

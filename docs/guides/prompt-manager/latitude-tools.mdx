@@ -24,48 +24,62 @@ Latitude comes with a selection of built-in tools that can be used in your promp
 
 Currently, Latitude supports the following built-in tools:
 
-- `code`
-- `search`
-- `extract`
+- `latitude/code`
+- `latitude/search`
+- `latitude/extract`
 
-To add them to your prompt, simply include them in a `latitudeTools` section in your prompt configuration as a list:
+To add them to your prompt, simply include them in the `tools` section in your prompt configuration:
 
 ```yaml
 ---
 provider: <your-provider-name>
 model: <your-model>
-latitudeTools:
-  - code
-  - search
-  - extract
+tools:
+  - latitude/code
+  - latitude/search
+  - latitude/extract
 ---
 ```
+
+You can also use `latitude/*` to include all available tools in your prompt.
+
+```yaml
+---
+provider: <your-provider-name>
+model: <your-model>
+tools:
+  - latitude/*
+```
+
+<Note>
+  Check the (Tools)[/guides/prompt-manager/tools] guide for more information on how to define custom tools in your prompts.
+</Note>
 
 ---
 
 ## Code Tool
 
-The `code` tool enables the execution of custom scripts in Python or JavaScript within the conversation. This tool is ideal for:
+The `latitude/code` tool enables the execution of custom scripts in Python or JavaScript within the conversation. This tool is ideal for:
 
 - Running complex calculations.
 - Making API calls to external services.
 - Processing and transforming data dynamically.
 
-When the `code` tool is available, the AI model can generate and request the execution of code snippets. These snippets can include dependencies that will be installed before execution. Once the code runs, the AI model receives the output as a response.
+When the `latitude/code` tool is available, the AI model can generate and request the execution of code snippets. These snippets can include dependencies that will be installed before execution. Once the code runs, the AI model receives the output as a response.
 
 ## Search Tool
 
-The `search` tool allows the AI model to query the web and retrieve real-time information. It is particularly useful for:
+The `latitude/search` tool allows the AI model to query the web and retrieve real-time information. It is particularly useful for:
 
 - Looking up recent news or events.
 - Finding definitions, facts, or background information.
 - Retrieving relevant sources and references.
 
-When this tool is enabled, the AI model can issue search queries, and the `search` tool will return a list of results, including titles, URLs, and short descriptions of the retrieved content.
+When this tool is enabled, the AI model can issue search queries, and the `latitude/search` tool will return a list of results, including titles, URLs, and short descriptions of the retrieved content.
 
 ## Extract Tool
 
-The `extract` tool fetches and processes structured content from a given URL. This is useful for:
+The `latitude/extract` tool fetches and processes structured content from a given URL. This is useful for:
 
 - Extracting text, metadata, or images from web pages.
 - Summarizing long articles.
