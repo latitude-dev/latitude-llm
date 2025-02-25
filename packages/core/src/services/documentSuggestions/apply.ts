@@ -26,25 +26,21 @@ export async function applyDocumentSuggestion(
   db: Database = database,
 ) {
   return Transaction.call(async (tx) => {
+    const documentsRepository = new DocumentVersionsRepository(workspace.id, tx)
+    const document = await documentsRepository
+      .getDocumentByCompositedId({
+        commitId: suggestion.commitId,
+        documentUuid: suggestion.documentUuid,
+      })
+      .then((r) => r.unwrap())
+
     const commitsRepository = new CommitsRepository(workspace.id, tx)
-    const documentVersionsRepository = new DocumentVersionsRepository(
-      workspace.id,
-      tx,
-    )
+    const commit = await commitsRepository
+      .getCommitById(document.commitId)
+      .then((r) => r.unwrap())
 
     let draft
-    const commit = await commitsRepository
-      .getCommitById(suggestion.commitId)
-      .then((r) => r.unwrap())
     if (commit.mergedAt) {
-      const document = await documentVersionsRepository
-        .getDocumentAtCommit({
-          projectId: project.id,
-          commitUuid: commit.uuid,
-          documentUuid: suggestion.documentUuid,
-        })
-        .then((r) => r.unwrap())
-
       draft = await createCommit({
         project: project,
         user: user,

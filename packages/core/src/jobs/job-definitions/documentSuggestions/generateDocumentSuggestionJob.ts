@@ -1,3 +1,4 @@
+import { env } from '@latitude-data/env'
 import { Job } from 'bullmq'
 import { unsafelyFindWorkspace } from '../../../data-access'
 import { NotFoundError, UnprocessableEntityError } from '../../../lib'
@@ -15,9 +16,20 @@ export type GenerateDocumentSuggestionJobData = {
   evaluationId: number
 }
 
+export function generateDocumentSuggestionJobKey({
+  workspaceId,
+  commitId,
+  documentUuid,
+  evaluationId,
+}: GenerateDocumentSuggestionJobData) {
+  return `generateDocumentSuggestionJob-${workspaceId}-${commitId}-${documentUuid}-${evaluationId}`
+}
+
 export const generateDocumentSuggestionJob = async (
   job: Job<GenerateDocumentSuggestionJobData>,
 ) => {
+  if (!env.LATITUDE_CLOUD) return // Avoid spamming errors locally
+
   const { workspaceId, commitId, documentUuid, evaluationId } = job.data
 
   const workspace = await unsafelyFindWorkspace(workspaceId)
@@ -42,9 +54,9 @@ export const generateDocumentSuggestionJob = async (
     .then((r) => r.unwrap())
 
   const result = await generateDocumentSuggestion({
-    workspace: workspace,
     document: document,
     evaluation: evaluation,
+    workspace: workspace,
   })
 
   if (result.error && !(result.error instanceof UnprocessableEntityError)) {

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, MockInstance, vi } from 'vitest'
 import {
   Commit,
+  DocumentSuggestion,
   DocumentVersion,
   Evaluation,
   EvaluationMetadataType,
@@ -28,6 +29,7 @@ describe('applyDocumentSuggestion', () => {
   let commit: Commit
   let document: DocumentVersion
   let evaluation: Evaluation
+  let suggestion: DocumentSuggestion
 
   beforeEach(async () => {
     vi.clearAllMocks()
@@ -72,6 +74,11 @@ describe('applyDocumentSuggestion', () => {
       documentUuid: document.documentUuid,
     })
 
+    suggestion = await factories.createDocumentSuggestion({
+      document: document,
+      evaluation: evaluation,
+    })
+
     mocks = {
       publisher: vi
         .spyOn(publisher, 'publishLater')
@@ -81,14 +88,6 @@ describe('applyDocumentSuggestion', () => {
 
   it('not applies document suggestion when fails', async () => {
     commit = await mergeCommit(commit).then((r) => r.unwrap())
-
-    const suggestion = await factories.createDocumentSuggestion({
-      prompt: 'suggested prompt',
-      summary: 'summary',
-      commit: commit,
-      document: document,
-      evaluation: evaluation,
-    })
 
     vi.spyOn(
       await import('../commits/create'),
@@ -112,23 +111,14 @@ describe('applyDocumentSuggestion', () => {
   })
 
   it('applies document suggestion on draft commit', async () => {
-    const suggestion = await factories.createDocumentSuggestion({
-      prompt: 'suggested prompt',
-      summary: 'summary',
-      commit: commit,
-      document: document,
-      evaluation: evaluation,
-    })
+    const result = await applyDocumentSuggestion({
+      suggestion: suggestion,
+      workspace: workspace,
+      project: project,
+      user: user,
+    }).then((r) => r.unwrap())
 
-    await expect(
-      applyDocumentSuggestion({
-        suggestion: suggestion,
-        workspace: workspace,
-        project: project,
-        user: user,
-      }).then((r) => r.unwrap()),
-    ).resolves.toEqual({ suggestion })
-
+    expect(result).toEqual({ suggestion })
     const repository = new DocumentSuggestionsRepository(workspace.id)
     await expect(
       repository.find(suggestion.id).then((r) => r.unwrap()),
@@ -146,22 +136,14 @@ describe('applyDocumentSuggestion', () => {
   it('applies document suggestion on merged commit', async () => {
     commit = await mergeCommit(commit).then((r) => r.unwrap())
 
-    const suggestion = await factories.createDocumentSuggestion({
-      prompt: 'suggested prompt',
-      summary: 'summary',
-      commit: commit,
-      document: document,
-      evaluation: evaluation,
-    })
+    const result = await applyDocumentSuggestion({
+      suggestion: suggestion,
+      workspace: workspace,
+      project: project,
+      user: user,
+    }).then((r) => r.unwrap())
 
-    await expect(
-      applyDocumentSuggestion({
-        suggestion: suggestion,
-        workspace: workspace,
-        project: project,
-        user: user,
-      }).then((r) => r.unwrap()),
-    ).resolves.toEqual({
+    expect(result).toEqual({
       suggestion,
       draft: expect.objectContaining({
         title: `Refined 'prompt'`,
@@ -169,7 +151,6 @@ describe('applyDocumentSuggestion', () => {
         mergedAt: null,
       }),
     })
-
     const repository = new DocumentSuggestionsRepository(workspace.id)
     await expect(
       repository.find(suggestion.id).then((r) => r.unwrap()),

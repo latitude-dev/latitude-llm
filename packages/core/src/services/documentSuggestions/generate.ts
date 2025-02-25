@@ -24,13 +24,13 @@ import { getEvaluationPrompt } from '../evaluations'
 
 async function checkSuggestionLimits(
   {
-    workspace,
     document,
     evaluation,
+    workspace,
   }: {
-    workspace: Workspace
     document: DocumentVersion
     evaluation: EvaluationDto
+    workspace: Workspace
   },
   db: Database = database,
 ) {
@@ -56,15 +56,15 @@ async function checkSuggestionLimits(
 
 export async function generateDocumentSuggestion(
   {
-    workspace,
     document,
     evaluation,
     results,
+    workspace,
   }: {
-    workspace: Workspace
     document: DocumentVersion
     evaluation: EvaluationDto
     results?: EvaluationResultDto[]
+    workspace: Workspace
   },
   db: Database = database,
 ) {
@@ -150,7 +150,7 @@ export async function generateDocumentSuggestion(
 
   return Transaction.call(async (tx) => {
     const documentsRepository = new DocumentVersionsRepository(workspace.id, tx)
-    const lock = await documentsRepository.lockDocument({
+    const lock = await documentsRepository.lock({
       commitId: document.commitId,
       documentUuid: document.documentUuid,
     })

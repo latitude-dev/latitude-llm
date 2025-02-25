@@ -74,9 +74,6 @@ describe('discardDocumentSuggestion', () => {
     })
 
     suggestion = await factories.createDocumentSuggestion({
-      prompt: 'suggested prompt',
-      summary: 'summary',
-      commit: commit,
       document: document,
       evaluation: evaluation,
     })
@@ -89,14 +86,13 @@ describe('discardDocumentSuggestion', () => {
   })
 
   it('discards document suggestion', async () => {
-    await expect(
-      discardDocumentSuggestion({
-        suggestion: suggestion,
-        workspace: workspace,
-        user: user,
-      }).then((r) => r.unwrap()),
-    ).resolves.toEqual({ suggestion })
+    const result = await discardDocumentSuggestion({
+      suggestion: suggestion,
+      workspace: workspace,
+      user: user,
+    }).then((r) => r.unwrap())
 
+    expect(result).toEqual({ suggestion })
     const repository = new DocumentSuggestionsRepository(workspace.id)
     await expect(
       repository.find(suggestion.id).then((r) => r.unwrap()),

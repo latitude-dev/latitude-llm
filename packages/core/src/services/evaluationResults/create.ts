@@ -38,6 +38,7 @@ export type CreateEvaluationResultProps = {
   evaluationProviderLog?: ProviderLog
   result: EvaluationResultObject | undefined
   createdAt?: Date
+  updatedAt?: Date
 }
 
 type MaybeFailedEvaluationResultDto = Omit<EvaluationResultDto, 'result'> & {
@@ -52,6 +53,7 @@ export async function createEvaluationResult(
     evaluatedProviderLog,
     result,
     createdAt,
+    updatedAt,
   }: CreateEvaluationResultProps,
   db = database,
 ) {
@@ -89,10 +91,14 @@ export async function createEvaluationResult(
         source: documentLog.source,
         reason: result?.reason,
         createdAt,
+        updatedAt,
       })
       .returning()
 
-    const evaluationResult = inserts[0]!
+    const evaluationResult = {
+      ...inserts[0]!,
+      result: result?.result,
+    }
 
     publisher.publishLater({
       type: 'evaluationResultCreated',
@@ -104,9 +110,6 @@ export async function createEvaluationResult(
       },
     })
 
-    return Result.ok({
-      ...evaluationResult,
-      result: result?.result,
-    })
+    return Result.ok(evaluationResult)
   }, db)
 }

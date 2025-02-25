@@ -17,13 +17,11 @@ import { useCallback, useEffect, useState } from 'react'
 import { SuggestionItem } from './SuggestionItem'
 
 const useDocumentSuggestionsSocket = ({
-  commitId,
-  documentUuid,
+  document,
   mutate,
   notify,
 }: {
-  commitId: number
-  documentUuid: string
+  document: DocumentVersion
   mutate: ReturnType<typeof useDocumentSuggestions>['mutate']
   notify: () => void
 }) => {
@@ -31,8 +29,8 @@ const useDocumentSuggestionsSocket = ({
     (event: EventArgs<'documentSuggestionCreated'>) => {
       if (
         !event?.suggestion ||
-        event.suggestion.commitId !== commitId ||
-        event.suggestion.documentUuid !== documentUuid
+        event.suggestion.commitId !== document.commitId ||
+        event.suggestion.documentUuid !== document.documentUuid
       ) {
         return
       }
@@ -48,7 +46,7 @@ const useDocumentSuggestionsSocket = ({
       )
       notify()
     },
-    [commitId, documentUuid, mutate, notify],
+    [document, mutate, notify],
   )
 
   useSockets({ event: 'documentSuggestionCreated', onMessage })
@@ -97,12 +95,7 @@ export function DocumentSuggestions({
     commitUuid: commit.uuid,
     documentUuid: document.documentUuid,
   })
-  useDocumentSuggestionsSocket({
-    commitId: commit.id,
-    documentUuid: document.documentUuid,
-    mutate,
-    notify,
-  })
+  useDocumentSuggestionsSocket({ document, mutate, notify })
 
   if (!suggestions.length) return null
 

@@ -1,4 +1,10 @@
-import { Job, JobsOptions, Queue, QueueEvents } from 'bullmq'
+import {
+  Job,
+  JobSchedulerTemplateOptions,
+  JobsOptions,
+  Queue,
+  QueueEvents,
+} from 'bullmq'
 import Redis from 'ioredis'
 
 import { queues } from '../../queues'
@@ -10,11 +16,18 @@ export function capitalize(string: string) {
 }
 
 type EnqueueFunctionName<T extends string> = `enqueue${Capitalize<T>}`
-
 type JobEnqueueFn = {
   [P in EnqueueFunctionName<keyof typeof Jobs>]: (
     params: JobDefinition[Queues][Jobs]['data'],
     options?: JobsOptions,
+  ) => Promise<Job<JobDefinition[Queues][Jobs]['data']>>
+}
+
+type ScheduleFunctionName<T extends string> = `schedule${Capitalize<T>}`
+type JobScheduleFn = {
+  [P in ScheduleFunctionName<keyof typeof Jobs>]: (
+    cron: string,
+    options?: JobSchedulerTemplateOptions,
   ) => Promise<Job<JobDefinition[Queues][Jobs]['data']>>
 }
 
@@ -43,15 +56,21 @@ function setupQueue({
     connection,
     defaultJobOptions: DEFAULT_JOB_OPTIONS,
   })
-  const jobz = jobs.reduce((acc, job) => {
-    const key = `enqueue${capitalize(job)}` as EnqueueFunctionName<typeof job>
-    const enqueueFn = (
-      params: JobDefinition[typeof name][Jobs]['data'],
-      options: JobsOptions,
-    ) => queue.add(job, params, options)
 
-    return { ...acc, [key]: enqueueFn }
-  }, {} as JobEnqueueFn)
+  const jobz = jobs.reduce(
+    (acc, job) => ({
+      ...acc,
+      [`enqueue${capitalize(job)}` as EnqueueFunctionName<typeof job>]: (
+        params: JobDefinition[typeof name][Jobs]['data'],
+        options: JobsOptions,
+      ) => queue.add(job, params, options),
+      [`schedule${capitalize(job)}` as ScheduleFunctionName<typeof job>]: (
+        cron: string,
+        options: JobSchedulerTemplateOptions,
+      ) => queue.upsertJobScheduler(job, { pattern: cron }, { opts: options }),
+    }),
+    {} as JobEnqueueFn & JobScheduleFn,
+  )
 
   return {
     queue,
@@ -60,8 +79,8 @@ function setupQueue({
   }
 }
 
-export async function setupQueues() {
-  const connection = await queues()
+export async function setupQueues(connection?: Redis) {
+  if (!connection) connection = await queues()
   return Object.entries(QUEUES).reduce<{
     [K in keyof typeof QUEUES]: ReturnType<typeof setupQueue>
   }>(
