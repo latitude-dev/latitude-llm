@@ -681,19 +681,17 @@ describe('addMessages', () => {
       {
         event: StreamEventTypes.Latitude,
         data: expect.objectContaining({
-          type: ChainEventTypes.StepCompleted,
-        }),
-      },
-      {
-        event: StreamEventTypes.Latitude,
-        data: expect.objectContaining({
-          type: ChainEventTypes.ChainCompleted,
-          tokenUsage: {
-            promptTokens: expect.any(Number),
-            completionTokens: expect.any(Number),
-            totalTokens: expect.any(Number),
-          },
-          finishReason: 'stop',
+          type: ChainEventTypes.ToolsRequested,
+          tools: [
+            {
+              id: 'tool-call-id',
+              name: 'tool-call-name',
+              arguments: {
+                arg1: 'value1',
+                arg2: 'value2',
+              },
+            },
+          ],
         }),
       },
     ])

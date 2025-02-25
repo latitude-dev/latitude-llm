@@ -86,13 +86,17 @@ export async function addChatMessage({
       provider,
     }).then((r) => r.unwrap())
 
-    await chainStreamManager.getProviderResponse({
+    const { clientToolCalls } = await chainStreamManager.getProviderResponse({
       workspace,
       provider,
       source,
       documentLogUuid: providerLog.documentLogUuid!,
       conversation,
     })
+
+    if (clientToolCalls.length) {
+      return chainStreamManager.requestTools(clientToolCalls)
+    }
   })
 
   return Result.ok(streamResult)
