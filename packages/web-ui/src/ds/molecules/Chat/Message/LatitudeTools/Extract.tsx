@@ -6,13 +6,17 @@ import type {
   ExtractToolResult,
 } from '@latitude-data/core/services/latitudeTools/webExtract/types'
 import { useEffect, useRef, useState } from 'react'
+import { ToolContent } from '@latitude-data/compiler'
+import { ToolResultContent, ToolResultFooter } from '../ToolResult'
 
 export function WebExtractLatitudeToolCallContent({
   toolCallId,
   args,
+  toolResponse,
 }: {
   toolCallId: string
   args: ExtractToolArgs
+  toolResponse?: ToolContent
 }) {
   return (
     <ContentCard
@@ -21,6 +25,21 @@ export function WebExtractLatitudeToolCallContent({
       bgColor='bg-success'
       fgColor='successForeground'
       info={toolCallId}
+      separatorColor={
+        toolResponse?.isError ? 'destructiveMutedForeground' : undefined
+      }
+      resultFooter={
+        <ToolResultFooter loadingMessage='Rendering webpage...'>
+          {toolResponse &&
+            (toolResponse.isError || typeof toolResponse.result === 'string' ? (
+              <ToolResultContent toolResponse={toolResponse} />
+            ) : (
+              <WebExtractLatitudeToolResponseContent
+                result={toolResponse.result as ExtractToolResult}
+              />
+            ))}
+        </ToolResultFooter>
+      }
     >
       <ContentCardContainer copy={args.url}>
         <div className='w-full'>
@@ -34,11 +53,9 @@ export function WebExtractLatitudeToolCallContent({
 const MAX_CLOSED_HEIGHT = 300
 
 export function WebExtractLatitudeToolResponseContent({
-  toolCallId,
-  response,
+  result,
 }: {
-  toolCallId: string
-  response: ExtractToolResult
+  result: ExtractToolResult
 }) {
   const [isOpen, setIsOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
@@ -60,39 +77,29 @@ export function WebExtractLatitudeToolResponseContent({
   }, [])
 
   return (
-    <ContentCard
-      label={response.url}
-      icon='globe'
-      bgColor='bg-muted'
-      fgColor='foregroundMuted'
-      info={toolCallId}
+    <div
+      className='w-full overflow-hidden relative p-4'
+      style={{ maxHeight: isOpen ? 'none' : MAX_CLOSED_HEIGHT }}
     >
-      <ContentCardContainer>
-        <div
-          className='w-full overflow-hidden relative'
-          style={{ maxHeight: isOpen ? 'none' : MAX_CLOSED_HEIGHT }}
-        >
-          <Markdown ref={ref}>{response.content}</Markdown>
-          {displayOpenButton && (
-            <>
-              {!isOpen && (
-                <div className='absolute top-0 left-0 w-full h-full bg-gradient-to-b from-transparent to-backgroundCode pointer-events-none' />
-              )}
-              <div className='absolute bottom-0 right-0 z-10'>
-                <Button
-                  variant='outline'
-                  onClick={() => setIsOpen((prev) => !prev)}
-                  className='rounded-full'
-                  iconProps={{
-                    name: isOpen ? 'minimize' : 'maximize',
-                    className: 'my-1.5',
-                  }}
-                />
-              </div>
-            </>
+      <Markdown ref={ref}>{result.content}</Markdown>
+      {displayOpenButton && (
+        <>
+          {!isOpen && (
+            <div className='absolute top-0 left-0 w-full h-full bg-gradient-to-b from-transparent to-backgroundCode pointer-events-none' />
           )}
-        </div>
-      </ContentCardContainer>
-    </ContentCard>
+          <div className='absolute bottom-0 right-0 z-10'>
+            <Button
+              variant='outline'
+              onClick={() => setIsOpen((prev) => !prev)}
+              className='rounded-full'
+              iconProps={{
+                name: isOpen ? 'minimize' : 'maximize',
+                className: 'my-1.5',
+              }}
+            />
+          </div>
+        </>
+      )}
+    </div>
   )
 }

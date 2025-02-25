@@ -34,6 +34,7 @@ import { DocumentEditorContext } from '..'
 import Actions, { ActionsState } from './Actions'
 import { usePlaygroundChat } from '$/hooks/playgroundChat/usePlaygroundChat'
 import { useAgentToolsMap } from '$/stores/agentToolsMap'
+import { useToolContentMap } from 'node_modules/@latitude-data/web-ui/src/lib/hooks/useToolContentMap'
 
 export default function Chat({
   document,
@@ -126,6 +127,8 @@ export default function Chat({
     onPromptRan,
   })
 
+  const toolContentMap = useToolContentMap(messages)
+
   useEffect(() => {
     if (!runOnce.current) {
       runOnce.current = true
@@ -151,11 +154,13 @@ export default function Chat({
           parameters={Object.keys(parameters)}
           collapseParameters={!expandParameters}
           agentToolsMap={agentToolsMap}
+          toolContentMap={toolContentMap}
         />
         {(messages.length ?? 0) >= chainLength && (
           <>
             <MessageList
               messages={messages.slice(chainLength - 1, chainLength) ?? []}
+              toolContentMap={toolContentMap}
             />
             {time && <Timer timeMs={time} />}
           </>
@@ -163,7 +168,10 @@ export default function Chat({
         {(messages.length ?? 0) > chainLength && (
           <>
             <Text.H6M>Chat</Text.H6M>
-            <MessageList messages={messages.slice(chainLength)} />
+            <MessageList
+              messages={messages.slice(chainLength)}
+              toolContentMap={toolContentMap}
+            />
           </>
         )}
         {error ? (

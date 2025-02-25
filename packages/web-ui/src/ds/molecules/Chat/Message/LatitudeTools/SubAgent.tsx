@@ -1,22 +1,22 @@
 'use client'
-import {
-  CardTextContent,
-  ContentCard,
-  ContentCardContainer,
-} from '../ContentCard'
+import { ContentCard, ContentCardContainer } from '../ContentCard'
 import { CodeBlock } from '../../../../atoms'
 import { AgentToolsMap } from '@latitude-data/constants'
+import { ToolContent } from '@latitude-data/compiler'
+import { ToolResultContent, ToolResultFooter } from '../ToolResult'
 
 export function SubAgentToolCallContent({
   toolCallId,
   toolName,
   args,
   agentToolsMap,
+  toolResponse,
 }: {
   toolCallId: string
   toolName: string
   args: Record<string, unknown>
   agentToolsMap?: AgentToolsMap
+  toolResponse?: ToolContent
 }) {
   const agentName = agentToolsMap?.[toolName] ?? toolName
 
@@ -27,6 +27,16 @@ export function SubAgentToolCallContent({
       bgColor='bg-success'
       fgColor='successForeground'
       info={toolCallId}
+      separatorColor={
+        toolResponse?.isError ? 'destructiveMutedForeground' : undefined
+      }
+      resultFooter={
+        <ToolResultFooter loadingMessage='Waiting for agent response...'>
+          {toolResponse && (
+            <SubAgentToolResponseContent toolResponse={toolResponse} />
+          )}
+        </ToolResultFooter>
+      }
     >
       <ContentCardContainer>
         <CodeBlock language='json'>{JSON.stringify(args, null, 2)}</CodeBlock>
@@ -35,46 +45,23 @@ export function SubAgentToolCallContent({
   )
 }
 
-export function SubAgentToolResponseContent({
-  toolCallId,
-  toolName,
-  isError,
-  response,
-  agentToolsMap,
+function SubAgentToolResponseContent({
+  toolResponse,
 }: {
-  toolCallId: string
-  toolName: string
-  isError?: boolean
-  response: Record<string, unknown>
-  agentToolsMap?: AgentToolsMap
+  toolResponse: ToolContent
 }) {
-  const agentName = agentToolsMap?.[toolName] ?? toolName
+  const value = toolResponse.result as Record<string, unknown> | string
   const isDefaultSchema =
-    !isError &&
-    Object.keys(response).length === 1 &&
-    Object.keys(response)[0] === 'response'
-
-  const bgColor = isError ? 'bg-destructive' : 'bg-muted'
-  const fgColor = isError ? 'destructiveForeground' : 'foregroundMuted'
+    typeof value !== 'string' &&
+    Object.keys(value).length === 1 &&
+    Object.keys(value)[0] === 'response'
 
   return (
-    <ContentCard
-      label={agentName}
-      icon='bot'
-      bgColor={bgColor}
-      fgColor={fgColor}
-      info={toolCallId}
-    >
-      {isDefaultSchema ? (
-        <CardTextContent
-          value={response['response'] as string}
-          color={fgColor}
-        />
-      ) : (
-        <CodeBlock language='json'>
-          {JSON.stringify(response, null, 2)}
-        </CodeBlock>
-      )}
-    </ContentCard>
+    <ToolResultContent
+      toolResponse={{
+        ...toolResponse,
+        result: isDefaultSchema ? value['response'] : value,
+      }}
+    />
   )
 }

@@ -2,13 +2,11 @@ import type {
   SearchToolArgs,
   SearchToolResult,
 } from '@latitude-data/core/services/latitudeTools/webSearch/types'
-import {
-  CardTextContent,
-  ContentCard,
-  ContentCardContainer,
-} from '../ContentCard'
+import { ContentCard, ContentCardContainer } from '../ContentCard'
 import { Icon, Text } from '../../../../atoms'
 import { TruncatedTooltip } from '../../../TruncatedTooltip'
+import { ToolContent } from '@latitude-data/compiler'
+import { ToolResultContent, ToolResultFooter } from '../ToolResult'
 
 function TopicPill({
   topic,
@@ -35,31 +33,6 @@ function TopicPill({
         </Text.H6>
       </div>
     </div>
-  )
-}
-
-export function WebSearchLatitudeToolCallContent({
-  toolCallId,
-  args,
-}: {
-  toolCallId: string
-  args: SearchToolArgs
-}) {
-  return (
-    <ContentCard
-      label='Search the web'
-      icon='search'
-      bgColor='bg-success'
-      fgColor='successForeground'
-      info={toolCallId}
-    >
-      <ContentCardContainer copy={args.query}>
-        <div className='w-full'>
-          <TopicPill topic={args.topic} days={args.days} />
-          <Text.H5>{args.query}</Text.H5>
-        </div>
-      </ContentCardContainer>
-    </ContentCard>
   )
 }
 
@@ -97,35 +70,61 @@ function WebSearchResult({
   )
 }
 
-export function WebSearchLatitudeToolResponseContent({
+function WebSearchLatitudeToolResponseContent({
+  toolResponse,
+}: {
+  toolResponse: ToolContent
+}) {
+  if (toolResponse.isError || typeof toolResponse.result === 'string') {
+    return <ToolResultContent toolResponse={toolResponse} />
+  }
+
+  const response = toolResponse.result as SearchToolResult
+  return (
+    <div className='w-full flex flex-col gap-4 p-4'>
+      {response.answer && (
+        <Text.H6M color='primary'>{response.answer}</Text.H6M>
+      )}
+      {response.results.map((result, index) => (
+        <WebSearchResult key={index} result={result} />
+      ))}
+    </div>
+  )
+}
+
+export function WebSearchLatitudeToolCallContent({
   toolCallId,
-  response,
+  args,
+  toolResponse,
 }: {
   toolCallId: string
-  response: SearchToolResult | string
+  args: SearchToolArgs
+  toolResponse?: ToolContent
 }) {
   return (
     <ContentCard
-      label='Search results'
+      label='Search the web'
       icon='search'
-      bgColor='bg-muted'
-      fgColor='foregroundMuted'
+      bgColor='bg-success'
+      fgColor='successForeground'
       info={toolCallId}
+      separatorColor={
+        toolResponse?.isError ? 'destructiveMutedForeground' : undefined
+      }
+      resultFooter={
+        <ToolResultFooter loadingMessage='Searching the web...'>
+          {toolResponse && (
+            <WebSearchLatitudeToolResponseContent toolResponse={toolResponse} />
+          )}
+        </ToolResultFooter>
+      }
     >
-      {typeof response === 'string' ? (
-        <CardTextContent value={response} color='foregroundMuted' />
-      ) : (
-        <ContentCardContainer>
-          <div className='w-full flex flex-col gap-4'>
-            {response.answer && (
-              <Text.H6M color='primary'>{response.answer}</Text.H6M>
-            )}
-            {response.results.map((result, index) => (
-              <WebSearchResult key={index} result={result} />
-            ))}
-          </div>
-        </ContentCardContainer>
-      )}
+      <ContentCardContainer copy={args.query}>
+        <div className='w-full'>
+          <TopicPill topic={args.topic} days={args.days} />
+          <Text.H5>{args.query}</Text.H5>
+        </div>
+      </ContentCardContainer>
     </ContentCard>
   )
 }

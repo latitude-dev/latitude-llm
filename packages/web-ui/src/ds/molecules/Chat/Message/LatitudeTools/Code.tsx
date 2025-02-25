@@ -1,6 +1,8 @@
 import { CodeToolArgs } from '@latitude-data/core/services/latitudeTools/runCode/types'
 import { ContentCard } from '../ContentCard'
 import { CodeBlock } from '../../../../atoms'
+import { ToolContent } from '@latitude-data/compiler'
+import { ToolResultContent, ToolResultFooter } from '../ToolResult'
 
 function runCodeContent(args: CodeToolArgs): string {
   if (!args.dependencies) return args.code
@@ -15,9 +17,11 @@ function runCodeContent(args: CodeToolArgs): string {
 export function CodeLatitudeToolCallContent({
   toolCallId,
   args,
+  toolResponse,
 }: {
   toolCallId: string
   args: CodeToolArgs
+  toolResponse?: ToolContent
 }) {
   return (
     <ContentCard
@@ -26,6 +30,14 @@ export function CodeLatitudeToolCallContent({
       bgColor='bg-success'
       fgColor='successForeground'
       info={toolCallId}
+      separatorColor={
+        toolResponse?.isError ? 'destructiveMutedForeground' : undefined
+      }
+      resultFooter={
+        <ToolResultFooter loadingMessage='Running code...'>
+          {toolResponse && <ToolResultContent toolResponse={toolResponse} />}
+        </ToolResultFooter>
+      }
     >
       <CodeBlock language={args.language}>
         {runCodeContent(args as CodeToolArgs)}

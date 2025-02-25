@@ -1,23 +1,15 @@
 import { ToolContent } from '@latitude-data/compiler'
-import { CodeBlock } from '../../../atoms'
+import { CodeBlock, Icon, Text } from '../../../atoms'
 import { CardTextContent, ContentCard } from './ContentCard'
-import { useMemo } from 'react'
-import { WebSearchLatitudeToolResponseContent } from './LatitudeTools/Search'
-import { WebExtractLatitudeToolResponseContent } from './LatitudeTools/Extract'
-import type { SearchToolResult } from '@latitude-data/core/services/latitudeTools/webSearch/types'
-import type { ExtractToolResult } from '@latitude-data/core/services/latitudeTools/webExtract/types'
-import { SubAgentToolResponseContent } from './LatitudeTools/SubAgent'
-import {
-  AGENT_TOOL_PREFIX,
-  AgentToolsMap,
-  LatitudeToolInternalName,
-} from '@latitude-data/constants'
+import { ReactNode, useMemo } from 'react'
+import { cn } from '../../../../lib/utils'
+import { TextColor } from '../../../tokens'
 
 function getResult<S extends boolean>(
   value: unknown,
-): [S extends true ? string : unknown, boolean] {
+): [S extends true ? string : unknown, S] {
   if (typeof value !== 'string') {
-    return [value, false] as [S extends true ? string : unknown, boolean]
+    return [value, false] as [S extends true ? string : unknown, S]
   }
 
   const stringValue = value as string
@@ -28,16 +20,70 @@ function getResult<S extends boolean>(
     // do nothing
   }
 
-  return [stringValue, true]
+  return [stringValue, true] as [S extends true ? string : unknown, S]
+}
+
+export function LoadingToolResultContent({
+  loadingMessage = 'Waiting for tool response...',
+}: {
+  loadingMessage?: string
+}) {
+  return (
+    <div className='w-full flex items-center gap-2 p-4'>
+      <Icon name='loader' color='foregroundMuted' className='animate-spin' />
+      <Text.H6 color='foregroundMuted'>{loadingMessage}</Text.H6>
+    </div>
+  )
 }
 
 export function ToolResultContent({
-  value,
-  agentToolsMap,
+  toolResponse,
+  color = 'foregroundMuted',
 }: {
-  value: ToolContent
-  agentToolsMap?: AgentToolsMap
+  toolResponse: ToolContent
+  color?: TextColor
 }) {
+  const [result, isString] = getResult(toolResponse.result)
+  const fgColor = toolResponse.isError ? 'destructiveMutedForeground' : color
+
+  if (isString) {
+    return (
+      <div
+        className={cn('flex flex-col gap-2 p-4', {
+          'bg-destructive-muted': toolResponse.isError,
+        })}
+      >
+        {(result as string).split('\n').map((line, i) => (
+          <Text.H5 key={i} color={fgColor}>
+            {line}
+          </Text.H5>
+        ))}
+      </div>
+    )
+  }
+
+  return (
+    <CodeBlock language='json'>
+      {JSON.stringify(toolResponse.result, null, 2)}
+    </CodeBlock>
+  )
+}
+
+export function ToolResultFooter({
+  loadingMessage,
+  children,
+}: {
+  loadingMessage?: string
+  children?: ReactNode
+}) {
+  if (children) return children
+  return <LoadingToolResultContent loadingMessage={loadingMessage} />
+}
+
+/**
+ * Used to display the contents from Tool Messages which toolCallIds are not found in the conversation
+ */
+export function UnresolvedToolResultContent({ value }: { value: ToolContent }) {
   const [result, isString] = useMemo(
     () => getResult(value.result),
     [value.result],
@@ -45,39 +91,6 @@ export function ToolResultContent({
 
   const bgColor = value.isError ? 'bg-destructive' : 'bg-muted'
   const fgColor = value.isError ? 'destructiveForeground' : 'foregroundMuted'
-
-  if (!value.isError && value.toolName === LatitudeToolInternalName.WebSearch) {
-    return (
-      <WebSearchLatitudeToolResponseContent
-        toolCallId={value.toolCallId}
-        response={result as SearchToolResult | string}
-      />
-    )
-  }
-
-  if (
-    !value.isError &&
-    value.toolName === LatitudeToolInternalName.WebExtract
-  ) {
-    return (
-      <WebExtractLatitudeToolResponseContent
-        toolCallId={value.toolCallId}
-        response={result as ExtractToolResult}
-      />
-    )
-  }
-
-  if (value.toolName.startsWith(AGENT_TOOL_PREFIX)) {
-    return (
-      <SubAgentToolResponseContent
-        toolCallId={value.toolCallId}
-        toolName={value.toolName}
-        isError={value.isError}
-        response={result as Record<string, unknown>}
-        agentToolsMap={agentToolsMap}
-      />
-    )
-  }
 
   return (
     <ContentCard
