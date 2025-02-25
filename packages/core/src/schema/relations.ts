@@ -26,6 +26,7 @@ import { subscriptions } from './models/subscriptions'
 import { traces } from './models/traces'
 import { users } from './models/users'
 import { workspaces } from './models/workspaces'
+import { integrations } from './models/integrations'
 
 /**
  * NOTE: All relations are declared in this file to
@@ -55,6 +56,7 @@ export const workspaceRelations = relations(workspaces, ({ one, many }) => ({
     fields: [workspaces.defaultProviderId],
     references: [providerApiKeys.id],
   }),
+  integrations: many(integrations),
 }))
 
 export const sessionRelations = relations(sessions, ({ one }) => ({
@@ -282,5 +284,16 @@ export const spansRelations = relations(spans, ({ one }) => ({
   trace: one(traces, {
     fields: [spans.traceId],
     references: [traces.id],
+  }),
+}))
+
+export const integrationsRelations = relations(integrations, ({ one }) => ({
+  workspace: one(workspaces, {
+    fields: [integrations.workspaceId],
+    references: [workspaces.id],
+  }),
+  author: one(users, {
+    fields: [integrations.authorId],
+    references: [users.id],
   }),
 }))
