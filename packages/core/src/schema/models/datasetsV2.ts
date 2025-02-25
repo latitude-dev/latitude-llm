@@ -14,8 +14,7 @@ import { users } from './users'
 import { workspaces } from './workspaces'
 import { sql } from 'drizzle-orm'
 
-// Unique column identifier and name
-type Column = { identifier: string; name: string }
+export type Column = { identifier: string; name: string }
 
 // NOTE: Temporary table name to avoid conflicts with existing datasets table
 // in the future old datasets will be migrated to this table and then this table

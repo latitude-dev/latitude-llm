@@ -1,22 +1,57 @@
-import { join, resolve } from 'path'
+import { resolve } from 'path'
 import { cwd } from 'process'
-import { fileURLToPath } from 'url'
 
 import { createEnv } from '@t3-oss/env-core'
 import dotenv, { type DotenvPopulateInput } from 'dotenv'
 import z from 'zod'
 
 const environment = process.env.NODE_ENV || 'development'
-const FILE_PUBLIC_PATH = 'uploads'
+const UPLOADS_PATH = 'uploads'
+
+const buildPublicWebPath = (rootPath: string) =>
+  `${rootPath}/apps/web/public/${UPLOADS_PATH}`
+
+/**
+ * Dear developer. You only need to do this once.
+ * Create a .env.development file in the root of the project if
+ * you haven't already. Add the following line to the file:
+ *
+ * DEV_ROOT_PATH=/path/to/latitude
+ *
+ * Example: DEV_ROOT_PATH=/Users/YOUR_MACHINE_NAME/your-path-to/latitude
+ * It has to be an absolute path.
+ */
+function buildDevStoragePaths() {
+  const devRootPath = process.env.DEV_ROOT_PATH
+
+  if (!devRootPath) {
+    console.error(`
+  \x1b[31m[ERROR]\x1b[0m DEV_ROOT_PATH is missing!
+  Please define the \x1b[33mDEV_ROOT_PATH\x1b[0m environment variable in:
+  \x1b[36m.env.development\x1b[0m (located in the root of the project).
+  `)
+    process.exit(1)
+  }
+
+  const storagePath = `${devRootPath}/${UPLOADS_PATH}`
+
+  return { storagePath, publicStoragePath: buildPublicWebPath(devRootPath) }
+}
+
+const TEST_STORAGE_PATHS = {
+  storagePath: `/tmp/${UPLOADS_PATH}`,
+  publicStoragePath: buildPublicWebPath('/tmp'),
+}
 
 if (environment === 'development' || environment === 'test') {
-  const __dirname = fileURLToPath(import.meta.url)
   const pathToEnv = resolve(cwd(), `../../.env.${environment}`)
-  const FILES_STORAGE_PATH = join(__dirname, `../../../../${FILE_PUBLIC_PATH}`)
-  const PUBLIC_FILES_STORAGE_PATH = join(
-    __dirname,
-    `../../../../public/${FILE_PUBLIC_PATH}`,
-  )
+
+  dotenv.config({ path: pathToEnv })
+  const {
+    storagePath: FILES_STORAGE_PATH,
+    publicStoragePath: PUBLIC_FILES_STORAGE_PATH,
+  } =
+    environment === 'development' ? buildDevStoragePaths() : TEST_STORAGE_PATHS
 
   dotenv.populate(
     process.env as DotenvPopulateInput,
@@ -27,6 +62,7 @@ if (environment === 'development' || environment === 'test') {
       DATABASE_URL: `postgres://latitude:secret@localhost:5432/latitude_${environment}`,
       DRIVE_DISK: 'local',
       FILES_STORAGE_PATH,
+      PUBLIC_FILES_STORAGE_PATH,
       FROM_MAILER_EMAIL: 'hello@latitude.so',
       GATEWAY_HOSTNAME: 'localhost',
       GATEWAY_PORT: '8787',
@@ -36,7 +72,6 @@ if (environment === 'development' || environment === 'test') {
       NEXT_PUBLIC_POSTHOG_HOST: '',
       NEXT_PUBLIC_POSTHOG_KEY: '',
       NODE_ENV: environment,
-      PUBLIC_FILES_STORAGE_PATH,
       QUEUE_HOST: '0.0.0.0',
       COPILOT_TEMPLATES_SUGGESTION_PROMPT_PATH: 'generator',
       WEBSOCKETS_SERVER: 'http://localhost:4002',
@@ -124,7 +159,7 @@ export const env = createEnv({
     NEXT_PUBLIC_DEFAULT_PROVIDER_NAME: 'Latitude', // TODO: Move to env in infra
     DEFAULT_PROVIDER_API_KEY: process.env.DEFAULT_PROVIDER_API_KEY,
     DRIVE_DISK: process.env.DRIVE_DISK ?? 'local',
-    FILE_PUBLIC_PATH: process.env.FILE_PUBLIC_PATH ?? FILE_PUBLIC_PATH,
+    FILE_PUBLIC_PATH: process.env.FILE_PUBLIC_PATH ?? UPLOADS_PATH,
     QUEUE_PORT: process.env.QUEUE_PORT ?? '6379',
     SUPPORT_APP_ID: process.env.SUPPORT_APP_ID ?? '',
     SUPPORT_APP_SECRET_KEY: process.env.SUPPORT_APP_SECRET_KEY ?? '',

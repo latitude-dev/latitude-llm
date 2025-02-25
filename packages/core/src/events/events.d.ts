@@ -44,6 +44,7 @@ export type Events =
   | 'claimReferralInvitations'
   | 'evaluationCreated'
   | 'datasetCreated'
+  | 'datasetUploaded'
   | 'providerApiKeyCreated'
   | 'userInvited'
   | 'commitCreated'
@@ -258,6 +259,17 @@ export type DatasetCreatedEvent = LatitudeEventGeneric<
     dataset: Dataset
     userEmail: string
     workspaceId: number
+  }
+>
+
+export type DatasetV2CreatedEvent = LatitudeEventGeneric<
+  'datasetUploaded',
+  {
+    workspaceId: number
+    datasetId: number
+    userEmail: string
+    fileKey: string
+    csvDelimiter: string
   }
 >
 
@@ -479,6 +491,7 @@ export type LatitudeEvent =
   | ClaimReferralInvitationEvent
   | EvaluationCreatedEvent
   | DatasetCreatedEvent
+  | DatasetV2CreatedEvent
   | ProviderApiKeyCreatedEvent
   | UserInvitedEvent
   | CommitCreatedEvent
@@ -519,6 +532,7 @@ export interface IEventsHandlers {
   claimReferralInvitations: EventHandler<ClaimReferralInvitationEvent>[]
   evaluationCreated: EventHandler<EvaluationCreatedEvent>[]
   datasetCreated: EventHandler<DatasetCreatedEvent>[]
+  datasetUploaded: EventHandler<DatasetV2CreatedEvent>[]
   providerApiKeyCreated: EventHandler<ProviderApiKeyCreatedEvent>[]
   userInvited: EventHandler<UserInvitedEvent>[]
   commitCreated: EventHandler<CommitCreatedEvent>[]

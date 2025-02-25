@@ -12,6 +12,7 @@ import { sendInvitationToUserJob } from './sendInvitationToUser'
 import { sendMagicLinkJob } from './sendMagicLinkHandler'
 import { sendReferralInvitationJob } from './sendReferralInvitation'
 import { sendSuggestionNotification } from './sendSuggestionNotification'
+import { createDatasetRowsJob } from './createDatasetRowsJobs'
 
 export const EventHandlers: IEventsHandlers = {
   aiProviderCallCompleted: [],
@@ -20,6 +21,7 @@ export const EventHandlers: IEventsHandlers = {
   commitCreated: [],
   commitPublished: [],
   datasetCreated: [],
+  datasetUploaded: [createDatasetRowsJob],
   documentCreated: [],
   documentLogCreated: [
     runLiveEvaluationsJob,

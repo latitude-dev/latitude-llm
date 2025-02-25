@@ -186,6 +186,7 @@ export type IconProps = {
   color?: TextColor
   darkColor?: DarkTextColor
   spin?: boolean
+  spinSpeed?: 'normal' | 'fast'
   size?: Size
   widthClass?: string
   heightClass?: string
@@ -199,6 +200,7 @@ export function Icon({
   color,
   darkColor,
   spin,
+  spinSpeed = 'normal',
   size = 'normal',
   className,
 }: IconProps) {
@@ -215,6 +217,7 @@ export function Icon({
           'w-8 h-8': size === 'xlarge',
           'w-14 h-14': size === 'xxxlarge',
           'animate-spin': spin,
+          'duration-200': spinSpeed === 'fast',
         },
         className,
       )}

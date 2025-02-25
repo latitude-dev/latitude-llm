@@ -4,7 +4,7 @@ import {
   parseSafeCustomIdentifier,
 } from './parseLogFilterParams'
 
-function parsePage(page: string | null): string {
+export function parsePage(page: string | null): string {
   if (!page) return '1'
 
   const parsed = parseInt(page, 10)
