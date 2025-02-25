@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS "document_suggestions_created_at_idx" ON "latitude"."document_suggestions" USING btree ("created_at");

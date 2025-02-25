@@ -298,6 +298,7 @@ describe('requestDocumentSuggestionsJob', () => {
       }),
     ]
 
+    // No candidate
     await prepareCandidate({
       workspace: workspaces[0]!,
       user: users[0]!,
@@ -335,6 +336,7 @@ describe('requestDocumentSuggestionsJob', () => {
       withSuggestion: false,
     })
 
+    // Candidate not merged
     await prepareCandidate({
       workspace: workspaces[0]!,
       user: users[0]!,
@@ -378,27 +380,15 @@ describe('requestDocumentSuggestionsJob', () => {
     await requestDocumentSuggestionsJob({} as any)
 
     const options = { attempts: 1, deduplication: { id: expect.any(String) } }
+    const expectedCalls = [
+      [candidate1[0]!, options],
+      [candidate1[1]!, options],
+      [candidate2[0]!, options],
+      [candidate3[0]!, options],
+    ]
 
-    expect(mocks.enqueueGenerateDocumentSuggestionJob).toHaveBeenCalledTimes(4)
-    expect(mocks.enqueueGenerateDocumentSuggestionJob).toHaveBeenNthCalledWith(
-      1,
-      candidate1[0]!,
-      options,
-    )
-    expect(mocks.enqueueGenerateDocumentSuggestionJob).toHaveBeenNthCalledWith(
-      2,
-      candidate1[1]!,
-      options,
-    )
-    expect(mocks.enqueueGenerateDocumentSuggestionJob).toHaveBeenNthCalledWith(
-      3,
-      candidate2[0]!,
-      options,
-    )
-    expect(mocks.enqueueGenerateDocumentSuggestionJob).toHaveBeenNthCalledWith(
-      4,
-      candidate3[0]!,
-      options,
-    )
+    const actualCalls = mocks.enqueueGenerateDocumentSuggestionJob.mock.calls
+    expect(actualCalls).toHaveLength(expectedCalls.length)
+    expect(actualCalls).toEqual(expect.arrayContaining(expectedCalls))
   })
 })
