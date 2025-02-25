@@ -24,6 +24,8 @@ export * from './models/providerLogs'
 
 // Evaluations tables
 export * from './models/datasets'
+export * from './models/datasetsV2'
+export * from './models/datasetRows'
 export * from './models/evaluations'
 
 export * from './models/evaluationMetadataLlmAsJudgeAdvanced'
