@@ -1,6 +1,6 @@
 import { LogSources } from '.'
 import { Message, ToolCall } from '@latitude-data/compiler'
-import { PartialConfig } from './ai'
+import { PartialPromptConfig } from './ai'
 
 export type DocumentLog = {
   id: number
@@ -49,7 +49,7 @@ export type ProviderLog = {
   providerId: number | null
   model: string | null
   finishReason: string | null
-  config: PartialConfig | null
+  config: PartialPromptConfig | null
   messages: Message[]
   responseObject: unknown | null
   responseText: string | null

@@ -12,13 +12,13 @@ import { Providers } from '../../constants'
 import { Result } from '../../lib'
 import { ChainError } from '../../lib/chainStreamManager/ChainErrors'
 
-import { PartialConfig } from '@latitude-data/constants'
+import { PartialPromptConfig } from '@latitude-data/constants'
 import type { ModelCost } from './estimateCost'
 import { ProviderApiKey } from '../../browser'
 import { vertexConfigurationSchema } from './providers/helpers/vertex'
 export {
-  type Config,
-  type PartialConfig,
+  type PromptConfig as Config,
+  type PartialPromptConfig as PartialConfig,
   googleConfig,
   azureConfig,
 } from '@latitude-data/constants'
@@ -76,7 +76,7 @@ export function createProvider({
   messages: Message[]
   apiKey: string
   url?: string
-  config?: PartialConfig
+  config?: PartialPromptConfig
 }) {
   const type = provider.provider
   switch (type) {

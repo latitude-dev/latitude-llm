@@ -1,6 +1,6 @@
 import {
   ChainStepResponse,
-  Config,
+  PromptConfig,
   LegacyChainEvent,
   LegacyChainEventTypes,
   StreamEventTypes,
@@ -39,7 +39,7 @@ export function convertToLegacyChainStream(
   })
 
   let lastResponse: ChainStepResponse<StreamType>
-  let lastConfig: Config
+  let lastConfig: PromptConfig
   let messageCount = 0
   let isResumingPausedChain = false
 
@@ -86,12 +86,12 @@ export function convertToLegacyChainStream(
               documentLogUuid: data.uuid,
               messages: data.messages.slice(messageCount),
               isLastStep: false,
-              config: data.config as Config,
+              config: data.config as PromptConfig,
             },
           })
 
           messageCount = data.messages.length
-          lastConfig = data.config as Config
+          lastConfig = data.config as PromptConfig
           continue
         }
 

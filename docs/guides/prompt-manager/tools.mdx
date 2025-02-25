@@ -13,9 +13,24 @@ Latitude's prompt editor allows you to define **tools** in your prompts. Tools a
 
 ---
 
-## Defining Tools
+## Available Tools
 
-You can define tools as a list of functions. Each tool must include:
+In Latitude, you can specify a list of available tools to the AI model, which will be able to request its executions in order to accomplish a task. Although you can define your own custom tools, Latitude provides a set of built-in tools that can be used in your prompts.
+
+Currently, only Latitude Tools are supported. The following tools are available:
+- `latitude/code`
+- `latitude/search`
+- `latitude/extract`
+
+Take a look at the [Latitude Tools Section](/guides/prompt-manager/latitude-tools) for more information on how to use them.
+
+---
+
+## Defining Custom Tools
+
+You can define custom tools as a list of functions. These functions will not run in Latitude, but instead will be requested to your client through the SDK when the AI model calls them.
+
+Each tool must include:
 - A `name`
 - A `description`
 - An optional list of `parameters`
@@ -25,16 +40,16 @@ You can define tools as a list of functions. Each tool must include:
 provider: <your-provider-name>
 model: <your-model>
 tools:
-  <tool-name>:
-    description: <tool-description>
-    parameters:
-      type: object
-      properties:
-        <parameter-name>:
-          type: <parameter-type>
-          description: <parameter-description>
-      required: [<required-parameter-name>]
-      additionalProperties: false
+  - <tool-name>:
+      description: <tool-description>
+      parameters:
+        type: object
+        properties:
+          <parameter-name>:
+            type: <parameter-type>
+            description: <parameter-description>
+        required: [<required-parameter-name>]
+        additionalProperties: false
 ---
 ```
 
@@ -142,16 +157,16 @@ Here's an example of how you might define a tool to get the current weather for 
 provider: OpenAI
 model: gpt-4o
 tools:
-  get_weather:
-    description: Get the current weather for a specified location.
-    parameters:
-      type: object
-      properties:
-        location:
-          type: string
-          description: The name of the location to get the weather for.
-      required: [location]
-      additionalProperties: false
+  - get_weather:
+      description: Get the current weather for a specified location.
+      parameters:
+        type: object
+        properties:
+          location:
+            type: string
+            description: The name of the location to get the weather for.
+        required: [location]
+        additionalProperties: false
 ---
 
 You're a weather bot! Respond to any user's request

@@ -1,5 +1,5 @@
 import { Message } from '@latitude-data/compiler'
-import { ChainEventDtoResponse, Config } from '..'
+import { ChainEventDtoResponse, PromptConfig } from '..'
 import { FinishReason } from 'ai'
 
 export enum LegacyChainEventTypes {
@@ -12,7 +12,7 @@ export enum LegacyChainEventTypes {
 export type LegacyEventData =
   | {
       type: LegacyChainEventTypes.Step
-      config: Config
+      config: PromptConfig
       isLastStep: boolean
       messages: Message[]
       uuid?: string
@@ -24,7 +24,7 @@ export type LegacyEventData =
     }
   | {
       type: LegacyChainEventTypes.Complete
-      config: Config
+      config: PromptConfig
       finishReason?: FinishReason
       messages?: Message[]
       object?: any

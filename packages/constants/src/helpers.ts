@@ -87,22 +87,55 @@ export function promptConfigSchema({
         )
       : z.never({ message: 'Subagents are not allowed in this context ' })
 
-  const toolDefinitionSchema = z.object({
-    description: z.string({
-      required_error: 'You must provide a description for the tool',
+  const toolDefinitionObject = z.record(
+    z.object({
+      description: z.string({
+        required_error: 'You must provide a description for the tool',
+      }),
+      parameters: z
+        .object({
+          type: z.literal('object', {
+            required_error: 'Parameters must be an object',
+            invalid_type_error: 'Parameters must be an object',
+          }),
+          properties: z.record(jsonSchema),
+          required: z.array(z.string()).optional(),
+          additionalProperties: z.boolean().optional(),
+        })
+        .optional(),
     }),
-    parameters: z
-      .object({
-        type: z.literal('object', {
-          required_error: 'Parameters must be an object',
-          invalid_type_error: 'Parameters must be an object',
-        }),
-        properties: z.record(jsonSchema),
-        required: z.array(z.string()).optional(),
-        additionalProperties: z.boolean().optional(),
-      })
-      .optional(),
-  })
+  )
+  const getCustomToolErrorMessage = (toolId: string) => {
+    const [toolSource, toolName, ...other] = toolId
+      .split('/')
+      .map((s) => s.trim())
+    if (!toolSource || !toolName || other.length) {
+      return `Invalid tool ID: '${toolId}'`
+    }
+
+    if (toolSource === 'latitude') {
+      const toolName = toolId.slice('latitude:'.length)
+      if (
+        toolName === '*' ||
+        Object.values(LatitudeTool).includes(toolName as LatitudeTool)
+      ) {
+        return undefined
+      }
+
+      return `There is no Latitude tool with the name '${toolName}'`
+    }
+
+    return `Unknown tool source: '${toolSource}'` // TODO: This will include integrations
+  }
+
+  const customToolSchema = z.string().refine(
+    (toolId) => getCustomToolErrorMessage(toolId) === undefined,
+    (toolId) => ({ message: getCustomToolErrorMessage(toolId) }),
+  )
+  const toolDefinitionSchema = z.union([
+    toolDefinitionObject, // Old schema
+    z.array(z.union([toolDefinitionObject, customToolSchema])), // New schema
+  ])
 
   return z.object({
     provider: z
@@ -125,7 +158,7 @@ export function promptConfigSchema({
       )
       .optional(),
     [MAX_STEPS_CONFIG_NAME]: z.number().min(1).max(150).optional(),
-    tools: z.record(toolDefinitionSchema).optional(),
+    tools: toolDefinitionSchema.optional(),
     [LATITUDE_TOOLS_CONFIG_NAME]: z
       .array(z.nativeEnum(LatitudeTool))
       .optional(),

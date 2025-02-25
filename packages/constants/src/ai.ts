@@ -11,7 +11,7 @@ import { z } from 'zod'
 
 import { ProviderLog } from './models'
 import { LatitudeEventData, LegacyChainEventTypes } from './events'
-import { ParameterType } from './config'
+import { LatitudeTool, ParameterType } from './config'
 
 export type AgentToolsMap = Record<string, string> // { [toolName]: agentPath }
 
@@ -58,7 +58,12 @@ export type ToolDefinition = {
   parameters: JSONSchema7
 }
 
-export type Config = {
+export type ToolsItem =
+  | Record<string, ToolDefinition> // - tool_name: <tool_definition>
+  | string // - latitude/* (no spaces)
+
+// Config supported by Vercel
+export type VercelConfig = {
   provider: string
   model: string
   url?: string
@@ -67,13 +72,21 @@ export type Config = {
   parameters?: Record<string, { type: ParameterType }>
   azure?: AzureConfig
   google?: GoogleConfig
-  type?: 'agent' | undefined
   disableAgentOptimization?: boolean
   tools?: Record<string, ToolDefinition>
+}
+
+// Prompt config supported by Latitude
+export type PromptConfig = VercelConfig & {
+  type?: 'agent' | undefined
+  tools?:
+    | Record<string, ToolDefinition> // Old tools schema
+    | ToolsItem[] // New tools schema
+  latitudeTools?: LatitudeTool[] // deprecated
   agents?: string[]
 }
 
-export type PartialConfig = Omit<Config, 'provider'>
+export type PartialPromptConfig = Omit<PromptConfig, 'provider'>
 
 export type ProviderData =
   | TextStreamPart<Record<string, CoreTool>>
@@ -131,7 +144,7 @@ export type LegacyChainEvent =
 
 export type LegacyLatitudeStepEventData = {
   type: LegacyChainEventTypes.Step
-  config: Config
+  config: PromptConfig
   isLastStep: boolean
   messages: Message[]
   documentLogUuid?: string
@@ -145,7 +158,7 @@ export type LegacyLatitudeStepCompleteEventData = {
 
 export type LegacyLatitudeChainCompleteEventData = {
   type: LegacyChainEventTypes.Complete
-  config: Config
+  config: PromptConfig
   messages?: Message[]
   object?: any
   response: ChainStepResponse<StreamType>

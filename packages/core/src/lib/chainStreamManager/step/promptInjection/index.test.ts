@@ -1,11 +1,16 @@
 import { describe, expect, it, vi } from 'vitest'
 import * as factories from '@latitude-data/core/factories'
-import { performPromptInjection } from './promptInjection'
-import { Providers } from '@latitude-data/constants'
-import { getAgentToolName } from '../../../services/agents/helpers'
-import { BadRequestError, NotFoundError } from '../../errors'
+import { performPromptInjection } from '.'
+import { LatitudeTool, PromptConfig, Providers } from '@latitude-data/constants'
+import { getAgentToolName } from '../../../../services/agents/helpers'
+import { BadRequestError, NotFoundError } from '../../../errors'
 import { beforeEach } from 'node:test'
-import * as agentsAsTools from '../../../services/agents/agentsAsTools'
+import * as agentsAsTools from '../../../../services/agents/agentsAsTools'
+import yaml from 'yaml'
+import {
+  getLatitudeToolDefinition,
+  getLatitudeToolInternalName,
+} from '../../../../services/latitudeTools/helpers'
 
 describe('promptInjection', () => {
   describe('agentsAsTools', () => {
@@ -244,6 +249,115 @@ describe('promptInjection', () => {
 
       expect(result.ok).toBeTruthy()
       expect(agentsAsTools.buildAgentsAsToolsDefinition).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('tools', () => {
+    it('correctly parses tools in legacy format', async () => {
+      const { workspace, commit, documents } = await factories.createProject({
+        providers: [{ name: 'openai', type: Providers.OpenAI }],
+        documents: {
+          test: factories.helpers.createPrompt({ provider: 'openai' }),
+        },
+      })
+      const originalConfig = yaml.parse(
+        `
+provider: openai
+model: gpt-4o
+tools:
+  get_weather:
+    description: Gets the weather given a location
+    parameters:
+      type: object
+      properties:
+        location:
+          type: string
+          description: The location to get the weather for
+latitudeTools:
+  - code
+        `.trim(),
+      )
+
+      const { config } = await performPromptInjection({
+        workspace,
+        config: originalConfig,
+        messages: [],
+        promptSource: {
+          commit,
+          document: documents[0]!,
+        },
+      }).then((r) => r.unwrap())
+
+      expect((config as PromptConfig).latitudeTools).toBeUndefined()
+      expect(config.tools).toEqual({
+        get_weather: {
+          description: 'Gets the weather given a location',
+          parameters: {
+            type: 'object',
+            properties: {
+              location: {
+                type: 'string',
+                description: 'The location to get the weather for',
+              },
+            },
+          },
+        },
+        [getLatitudeToolInternalName(LatitudeTool.RunCode)]:
+          getLatitudeToolDefinition(LatitudeTool.RunCode),
+      })
+    })
+
+    it('correctly parses tools in new format', async () => {
+      const { workspace, commit, documents } = await factories.createProject({
+        providers: [{ name: 'openai', type: Providers.OpenAI }],
+        documents: {
+          test: factories.helpers.createPrompt({ provider: 'openai' }),
+        },
+      })
+      const originalConfig = yaml.parse(
+        `
+provider: openai
+model: gpt-4o
+tools:
+  - get_weather:
+      description: Gets the weather given a location
+      parameters:
+        type: object
+        properties:
+          location:
+            type: string
+            description: The location to get the weather for
+  - latitude/code
+        `.trim(),
+      )
+
+      const { config } = await performPromptInjection({
+        workspace,
+        config: originalConfig,
+        messages: [],
+        promptSource: {
+          commit,
+          document: documents[0]!,
+        },
+      }).then((r) => r.unwrap())
+
+      expect((config as PromptConfig).latitudeTools).toBeUndefined()
+      expect(config.tools).toEqual({
+        get_weather: {
+          description: 'Gets the weather given a location',
+          parameters: {
+            type: 'object',
+            properties: {
+              location: {
+                type: 'string',
+                description: 'The location to get the weather for',
+              },
+            },
+          },
+        },
+        [getLatitudeToolInternalName(LatitudeTool.RunCode)]:
+          getLatitudeToolDefinition(LatitudeTool.RunCode),
+      })
     })
   })
 })

@@ -1,4 +1,4 @@
-import { AgentToolsMap, Config, ToolDefinition } from '@latitude-data/constants'
+import { AgentToolsMap, ToolDefinition } from '@latitude-data/constants'
 import {
   BadRequestError,
   LatitudeError,
@@ -121,20 +121,20 @@ export async function buildAgentsAsToolsDefinition({
   workspace,
   document,
   commit,
-  config,
+  agents,
 }: {
   workspace: Workspace
   document: DocumentVersion
   commit: Commit
-  config: Config
+  agents: string[]
 }): PromisedResult<Record<string, ToolDefinition>> {
-  if (!config.agents) return Result.ok({})
+  if (!agents.length) return Result.ok({})
 
   const docsScope = new DocumentVersionsRepository(workspace.id)
   const docsResult = await docsScope.getDocumentsAtCommit(commit)
   if (docsResult.error) return Result.error(docsResult.error)
   const docs = docsResult.unwrap()
-  const configAgentPaths = config.agents!.map((agentPath) =>
+  const configAgentPaths = agents.map((agentPath) =>
     resolvePath(document.path, agentPath),
   )
 

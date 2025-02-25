@@ -1,36 +1,43 @@
 import { Message } from '@latitude-data/compiler'
-import { Config, ToolDefinition } from '@latitude-data/constants'
-import { PromisedResult } from '../../Transaction'
-import { Result } from '../../Result'
+import {
+  PromptConfig,
+  ToolDefinition,
+  VercelConfig,
+} from '@latitude-data/constants'
+import { PromisedResult } from '../../../Transaction'
+import { Result } from '../../../Result'
 import {
   DocumentRunPromptSource,
   PromptSource,
   Workspace,
-} from '../../../browser'
-import { buildAgentsAsToolsDefinition } from '../../../services/agents/agentsAsTools'
-import { performAgentInjection } from '../../../services/agents/promptInjection'
+} from '../../../../browser'
+import { buildAgentsAsToolsDefinition } from '../../../../services/agents/agentsAsTools'
+import { performAgentInjection } from '../../../../services/agents/promptInjection'
+import { injectCorrectToolsConfig } from './tools'
 
 async function getAgentAsTools({
   workspace,
   config,
   promptSource,
+  agents,
 }: {
   workspace: Workspace
-  config: Config
+  config: VercelConfig
   promptSource: PromptSource
-}): PromisedResult<Config> {
+  agents: string[]
+}): PromisedResult<VercelConfig> {
   // Only if the prompt source is a document
   if (!('commit' in promptSource)) {
     return Result.ok(config)
   }
 
-  if (!config.agents?.length) {
+  if (!agents.length) {
     return Result.ok(config)
   }
 
   const result = await buildAgentsAsToolsDefinition({
     workspace,
-    config,
+    agents,
     ...(promptSource as DocumentRunPromptSource),
   })
   if (result.error) return result
@@ -57,20 +64,25 @@ export async function performPromptInjection({
   workspace: Workspace
   promptSource: PromptSource
   messages: Message[]
-  config: Config
+  config: PromptConfig
   injectFakeAgentStartTool?: boolean
   injectAgentFinishTool?: boolean
 }): PromisedResult<{
   messages: Message[]
-  config: Config
+  config: VercelConfig
 }> {
   let config = originalConfig
   let messages = originalMessages
+
+  const latitudeToolsInjectionResult = injectCorrectToolsConfig(config)
+  if (latitudeToolsInjectionResult.error) return latitudeToolsInjectionResult
+  config = latitudeToolsInjectionResult.unwrap()
 
   const agentsAsToolsResult = await getAgentAsTools({
     workspace,
     config,
     promptSource,
+    agents: originalConfig.agents ?? [],
   })
   if (agentsAsToolsResult.error) return agentsAsToolsResult
   config = agentsAsToolsResult.unwrap()
