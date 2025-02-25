@@ -165,6 +165,7 @@ export type IEvaluationResultData = ProviderLogProps & {
   skipEvaluationResultCreation?: boolean
   evaluationResultUuid?: string
   evaluationResultCreatedAt?: Date
+  evaluationResultUpdatedAt?: Date
 }
 
 export async function createEvaluationResult({
@@ -178,6 +179,7 @@ export async function createEvaluationResult({
   skipProviderLogCreation = false,
   skipEvaluationResultCreation = false,
   evaluationResultCreatedAt,
+  evaluationResultUpdatedAt,
 }: IEvaluationResultData) {
   const noEvaluationProvider =
     evaluation.metadataType === EvaluationMetadataType.Manual ||
@@ -204,6 +206,7 @@ export async function createEvaluationResult({
     evaluatedProviderLog,
     evaluationProviderLog,
     createdAt: evaluationResultCreatedAt,
+    updatedAt: evaluationResultUpdatedAt,
     result: skipEvaluationResultCreation
       ? undefined
       : {
