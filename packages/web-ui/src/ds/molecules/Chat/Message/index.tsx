@@ -10,6 +10,7 @@ import {
   type MessageRole,
   PromptlSourceRef,
   TextContent,
+  ToolContent,
 } from '@latitude-data/compiler'
 
 import { cn } from '../../../../lib/utils'
@@ -27,7 +28,7 @@ import {
 import { colors, font, TextColor } from '../../../tokens'
 import { isAgentToolResponse, roleToString, roleVariant } from './helpers'
 import { ToolCallContent } from './ToolCall'
-import { ToolResultContent } from './ToolResult'
+import { UnresolvedToolResultContent } from './ToolResult'
 import { AgentToolsMap } from '@latitude-data/constants'
 
 export { roleToString, roleVariant } from './helpers'
@@ -41,6 +42,7 @@ export type MessageProps = {
   parameters?: string[]
   collapseParameters?: boolean
   agentToolsMap?: AgentToolsMap
+  toolContentMap?: Record<string, ToolContent>
 }
 
 export function MessageItem({
@@ -90,6 +92,7 @@ export function Message({
   parameters = [],
   collapseParameters = false,
   agentToolsMap,
+  toolContentMap,
 }: MessageProps) {
   if (isAgentToolResponse({ role: role as MessageRole, content })) {
     return null
@@ -108,6 +111,7 @@ export function Message({
           collapseParameters={collapseParameters}
           collapsedMessage={collapsedMessage}
           agentToolsMap={agentToolsMap}
+          toolContentMap={toolContentMap}
         />
       )}
     </MessageItem>
@@ -121,6 +125,7 @@ export function MessageItemContent({
   collapseParameters = false,
   collapsedMessage,
   agentToolsMap,
+  toolContentMap,
 }: {
   content: MessageProps['content']
   size?: MessageProps['size']
@@ -128,6 +133,7 @@ export function MessageItemContent({
   collapseParameters?: MessageProps['collapseParameters']
   collapsedMessage: boolean
   agentToolsMap?: AgentToolsMap
+  toolContentMap?: Record<string, ToolContent>
 }) {
   if (collapsedMessage)
     return (
@@ -160,6 +166,7 @@ export function MessageItemContent({
       collapseParameters={collapseParameters}
       sourceMap={(c as any)?._promptlSourceMap}
       agentToolsMap={agentToolsMap}
+      toolContentMap={toolContentMap}
     />
   ))
 }
@@ -190,6 +197,7 @@ const Content = ({
   collapseParameters = false,
   sourceMap = [],
   agentToolsMap,
+  toolContentMap,
 }: {
   index?: number
   color: TextColor
@@ -199,6 +207,7 @@ const Content = ({
   collapseParameters?: boolean
   sourceMap?: PromptlSourceRef[]
   agentToolsMap?: AgentToolsMap
+  toolContentMap?: Record<string, ToolContent>
 }) => {
   if (typeof value === 'string') {
     try {
@@ -283,11 +292,17 @@ const Content = ({
   }
 
   if (value.type === ContentType.toolCall) {
-    return <ToolCallContent value={value} agentToolsMap={agentToolsMap} />
+    return (
+      <ToolCallContent
+        value={value}
+        agentToolsMap={agentToolsMap}
+        toolContentMap={toolContentMap}
+      />
+    )
   }
 
   if (value.type === ContentType.toolResult) {
-    return <ToolResultContent value={value} agentToolsMap={agentToolsMap} />
+    return <UnresolvedToolResultContent value={value} />
   }
 
   return (

@@ -26,6 +26,7 @@ import {
 import useEvaluationPrompt from '$/stores/evaluationPrompt'
 import { LanguageModelUsage } from 'ai'
 import { readStreamableValue } from 'ai/rsc'
+import { useToolContentMap } from 'node_modules/@latitude-data/web-ui/src/lib/hooks/useToolContentMap'
 
 export default function Chat({
   clearChat,
@@ -138,6 +139,8 @@ export default function Chat({
     setIsStreaming(false)
   }, [prompt, parameters, runEvaluationPromptAction])
 
+  const toolContentMap = useToolContentMap(conversation?.messages ?? [])
+
   useEffect(() => {
     if (isLoading) return
     if (runChainOnce.current) return
@@ -155,6 +158,7 @@ export default function Chat({
         <Text.H6M>Prompt</Text.H6M>
         <MessageList
           messages={conversation?.messages.slice(0, chainLength - 1) ?? []}
+          toolContentMap={toolContentMap}
         />
         {(conversation?.messages.length ?? 0) >= chainLength && (
           <>
@@ -162,6 +166,7 @@ export default function Chat({
               messages={
                 conversation?.messages.slice(chainLength - 1, chainLength) ?? []
               }
+              toolContentMap={toolContentMap}
             />
             {endTime && <Timer timeMs={endTime - startTime} />}
           </>
@@ -169,7 +174,10 @@ export default function Chat({
         {(conversation?.messages.length ?? 0) > chainLength && (
           <>
             <Text.H6M>Chat</Text.H6M>
-            <MessageList messages={conversation!.messages.slice(chainLength)} />
+            <MessageList
+              messages={conversation!.messages.slice(chainLength)}
+              toolContentMap={toolContentMap}
+            />
           </>
         )}
         {error ? (

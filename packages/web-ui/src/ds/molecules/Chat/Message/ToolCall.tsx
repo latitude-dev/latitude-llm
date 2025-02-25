@@ -1,6 +1,6 @@
-import { ToolRequestContent } from '@latitude-data/compiler'
+import { ToolRequestContent, ToolContent } from '@latitude-data/compiler'
 import { CodeBlock } from '../../../atoms'
-import { CardTextContent, ContentCard } from './ContentCard'
+import { ContentCard } from './ContentCard'
 import { ToolCallContent as PromptlToolCall } from 'promptl-ai'
 import { CodeLatitudeToolCallContent } from './LatitudeTools/Code'
 import { WebSearchLatitudeToolCallContent } from './LatitudeTools/Search'
@@ -15,6 +15,8 @@ import {
   AgentToolsMap,
   LatitudeToolInternalName,
 } from '@latitude-data/constants'
+import { ToolResultContent, ToolResultFooter } from './ToolResult'
+import { AgentToolCallContent } from './LatitudeTools/Agent'
 
 function toolArgs(
   value: ToolRequestContent | PromptlToolCall,
@@ -27,10 +29,14 @@ function toolArgs(
 export function ToolCallContent({
   value,
   agentToolsMap,
+  toolContentMap,
 }: {
   value: ToolRequestContent
   agentToolsMap?: AgentToolsMap
+  toolContentMap?: Record<string, ToolContent>
 }) {
+  const toolResponse = toolContentMap?.[value.toolCallId]
+
   if (value.toolName === AGENT_RETURN_TOOL_NAME) {
     return <AgentToolCallContent value={value} />
   }
@@ -42,6 +48,7 @@ export function ToolCallContent({
       <CodeLatitudeToolCallContent
         toolCallId={value.toolCallId}
         args={args as CodeToolArgs}
+        toolResponse={toolResponse}
       />
     )
   }
@@ -51,6 +58,7 @@ export function ToolCallContent({
       <WebSearchLatitudeToolCallContent
         toolCallId={value.toolCallId}
         args={args as SearchToolArgs}
+        toolResponse={toolResponse}
       />
     )
   }
@@ -60,6 +68,7 @@ export function ToolCallContent({
       <WebExtractLatitudeToolCallContent
         toolCallId={value.toolCallId}
         args={args as ExtractToolArgs}
+        toolResponse={toolResponse}
       />
     )
   }
@@ -71,6 +80,7 @@ export function ToolCallContent({
         toolName={value.toolName}
         args={args}
         agentToolsMap={agentToolsMap}
+        toolResponse={toolResponse}
       />
     )
   }
@@ -83,35 +93,18 @@ export function ToolCallContent({
       fgColor='warningForeground'
       info={value.toolCallId}
       infoColor='warningMutedForeground'
+      resultFooter={
+        <ToolResultFooter>
+          {toolResponse && <ToolResultContent toolResponse={toolResponse} />}
+        </ToolResultFooter>
+      }
+      separatorColor={
+        toolResponse?.isError ? 'destructiveMutedForeground' : undefined
+      }
     >
       <CodeBlock language='javascript'>
         {`${value.toolName}(${JSON.stringify(args, null, 2)})`}
       </CodeBlock>
-    </ContentCard>
-  )
-}
-
-export function AgentToolCallContent({ value }: { value: ToolRequestContent }) {
-  const isDefaultSchema =
-    Object.keys(value.args).length === 1 &&
-    Object.keys(value.args)[0] === 'response'
-  return (
-    <ContentCard
-      label='Agent response'
-      icon='bot'
-      bgColor='bg-primary'
-      fgColor='accent'
-    >
-      {isDefaultSchema ? (
-        <CardTextContent
-          value={value.args['response'] as string}
-          color='primary'
-        />
-      ) : (
-        <CodeBlock language='json'>
-          {JSON.stringify(value.args, null, 2)}
-        </CodeBlock>
-      )}
     </ContentCard>
   )
 }

@@ -2,28 +2,32 @@ import { cn } from '../../../../lib/utils'
 import { Button, Icon, IconName, Text } from '../../../atoms'
 import { TruncatedTooltip } from '../../TruncatedTooltip'
 import { ReactNode } from 'react'
-import { TextColor } from '../../../tokens'
+import { BackgroundColor, colors, TextColor } from '../../../tokens'
 
 export function ContentCard({
   label,
   icon,
   bgColor = 'bg-yellow',
   fgColor = 'warningForeground',
-  children,
   info,
   infoColor,
+  children,
+  resultFooter,
+  separatorColor = 'mutedForeground',
 }: {
   label: string
   icon?: IconName
   bgColor: string
   fgColor: TextColor
-  children: ReactNode
   info?: string
   infoColor?: TextColor
+  children: ReactNode
+  resultFooter?: ReactNode
+  separatorColor?: BackgroundColor
 }) {
   return (
     <div className='py-2 w-full'>
-      <div className='overflow-hidden rounded-xl w-full flex-col'>
+      <div className='overflow-hidden rounded-xl w-full flex-col bg-backgroundCode'>
         <div
           className={cn(
             'flex w-full px-2 py-0.5 items-center gap-2 justify-between',
@@ -48,6 +52,17 @@ export function ContentCard({
           )}
         </div>
         {children}
+        {resultFooter && (
+          <>
+            <div
+              className={cn(
+                'w-full h-px opacity-25',
+                colors.backgrounds[separatorColor],
+              )}
+            />
+            {resultFooter}
+          </>
+        )}
       </div>
     </div>
   )
