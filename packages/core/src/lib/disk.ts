@@ -59,8 +59,8 @@ export class DiskWrapper {
 
   // TODO: Receive an instance of Disk as a parameter,
   // otherwise default to the local disk instance
-  constructor(visibility: 'private' | 'public' = 'private') {
-    this.disk = new Disk(this.buildDisk(visibility))
+  constructor(visibility: 'private' | 'public' = 'private', disk?: Disk) {
+    this.disk = disk ?? new Disk(this.buildDisk(visibility))
   }
 
   file(key: string) {
@@ -79,6 +79,20 @@ export class DiskWrapper {
   async putFile(key: string, file: File) {
     const contents = await getReadableStreamFromFile(file)
     return this.putStream(key, contents)
+  }
+
+  async deleteAll(prefix: string) {
+    try {
+      await this.disk.deleteAll(prefix)
+      return Result.nil()
+    } catch (e) {
+      if (e instanceof errors.E_CANNOT_DELETE_FILE) {
+        return Result.error(new Error('Cannot delete file'))
+      }
+
+      const error = e as Error
+      return Result.error(error)
+    }
   }
 
   async putStream(key: string, contents: Readable, options?: WriteOptions) {

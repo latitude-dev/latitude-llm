@@ -1,4 +1,5 @@
 import { DocumentLogFilterOptions } from '@latitude-data/core/browser'
+import { paramsToString } from '@latitude-data/core/lib/pagination/buildPaginatedUrl';
 import { generateDocumentLogsApiRouteWithParams } from '@latitude-data/core/services/documentLogs/logsFilterUtils/generateDocumentLogsApiRouteWithParams'
 
 type PaginationParameters = { page: number; pageSize: number }
@@ -189,6 +190,13 @@ export const _API_ROUTES = {
         root: `/api/datasets/${id}/preview`,
       },
     }),
+  },
+  datasetsV2: {
+    root: (params: Partial<PaginationParameters>) => {
+      const path = '/api/datasets-v2'
+      const query = paramsToString({ params })
+      return `${path}?${query}`
+    },
   },
   evaluationTemplates: {
     root: '/api/evaluationTemplates',

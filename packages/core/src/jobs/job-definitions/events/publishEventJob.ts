@@ -10,6 +10,7 @@ export const publishEventJob = async (job: Job<LatitudeEvent>) => {
   if (!handlers?.length) return
 
   const queues = await setupJobs()
+
   handlers.forEach((handler) => {
     queues.eventsQueue.queue.add(handler.name, event)
   })
