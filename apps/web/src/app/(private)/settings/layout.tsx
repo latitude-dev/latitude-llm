@@ -26,6 +26,7 @@ export default async function SettingsLayout({
       <WorkspaceName />
       <WorkspaceApiKeys />
       <ProviderApiKeys />
+      {/* <Integrations /> TODO: Re-enable it when they are fully working */}
       <Memberships />
     </Container>
   )

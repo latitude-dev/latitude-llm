@@ -14,6 +14,9 @@ export const _API_ROUTES = {
   providerApiKeys: {
     root: '/api/providerApiKeys',
   },
+  integrations: {
+    root: '/api/integrations',
+  },
   claimedRewards: {
     root: '/api/claimedRewards',
   },
