@@ -5,20 +5,30 @@ import { z } from 'zod'
 
 import { authProcedure } from '../procedures'
 import { IntegrationType } from '@latitude-data/constants'
-import { customMcpConfigurationSchema } from '@latitude-data/core/services/integrations/helpers/schema'
+import {
+  customMcpConfigurationSchema,
+  insertMCPServerConfigurationSchema,
+} from '@latitude-data/core/services/integrations/helpers/schema'
 
 export const createIntegrationAction = authProcedure
   .createServerAction()
   .input(
-    z.object({
-      name: z.string(),
-      type: z.nativeEnum(IntegrationType),
-      configuration: customMcpConfigurationSchema,
-    }),
+    z.discriminatedUnion('type', [
+      z.object({
+        name: z.string(),
+        type: z.literal(IntegrationType.CustomMCP),
+        configuration: customMcpConfigurationSchema,
+      }),
+      z.object({
+        name: z.string(),
+        type: z.literal(IntegrationType.MCPServer),
+        configuration: insertMCPServerConfigurationSchema,
+      }),
+    ]),
   )
   .handler(
     async ({ input, ctx }) =>
-      await createIntegration({
+      await createIntegration<typeof input.type>({
         workspace: ctx.workspace,
         name: input.name,
         type: input.type,
