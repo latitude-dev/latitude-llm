@@ -23,7 +23,7 @@ import { setCachedResponse } from '../commits/promptCache'
 import * as chainValidatorModule from './ChainValidator'
 import * as saveOrPublishProviderLogsModule from './ProviderProcessor/saveOrPublishProviderLogs'
 import { runChain } from './run'
-import { objectToString } from '@latitude-data/constants'
+import { objectToString, PromptConfig } from '@latitude-data/constants'
 import { ChainEventTypes } from '@latitude-data/constants'
 
 // Mock other dependencies
@@ -103,6 +103,7 @@ describe('runChain', () => {
     const run = runChain({
       workspace,
       chain: mockChain as LegacyChain,
+      globalConfig: {} as PromptConfig,
       promptlVersion: 0,
       providersMap,
       source: LogSources.API,
@@ -177,6 +178,7 @@ describe('runChain', () => {
     const run = runChain({
       workspace,
       chain: mockChain as LegacyChain,
+      globalConfig: {} as PromptConfig,
       promptlVersion: 0,
       providersMap,
       source: LogSources.API,
@@ -253,6 +255,7 @@ describe('runChain', () => {
     const run = runChain({
       workspace,
       chain: mockChain as LegacyChain,
+      globalConfig: {} as PromptConfig,
       promptlVersion: 0,
       providersMap,
       source: LogSources.API,
@@ -297,6 +300,7 @@ describe('runChain', () => {
     const run = runChain({
       workspace,
       chain: mockChain as LegacyChain,
+      globalConfig: {} as PromptConfig,
       promptlVersion: 0,
       providersMap,
       source: LogSources.API,
@@ -378,6 +382,7 @@ describe('runChain', () => {
     const run = runChain({
       workspace,
       chain: mockChain as LegacyChain,
+      globalConfig: {} as PromptConfig,
       promptlVersion: 0,
       providersMap,
       source: LogSources.API,
@@ -470,6 +475,7 @@ describe('runChain', () => {
     const run = runChain({
       workspace,
       chain: mockChain as LegacyChain,
+      globalConfig: {} as PromptConfig,
       promptlVersion: 0,
       providersMap,
       source: LogSources.API,
@@ -528,6 +534,7 @@ describe('runChain', () => {
     const run = runChain({
       workspace,
       chain: mockChain as LegacyChain,
+      globalConfig: {} as PromptConfig,
       promptlVersion: 0,
       providersMap,
       source: LogSources.API,
@@ -596,6 +603,7 @@ describe('runChain', () => {
     const result = runChain({
       workspace,
       chain: mockChain as LegacyChain,
+      globalConfig: {} as PromptConfig,
       promptlVersion: 0,
       providersMap,
       source: LogSources.API,
@@ -661,6 +669,7 @@ describe('runChain', () => {
     const result = runChain({
       workspace,
       chain: mockChain as LegacyChain,
+      globalConfig: {} as PromptConfig,
       promptlVersion: 0,
       providersMap,
       source: LogSources.API,
@@ -790,6 +799,7 @@ describe('runChain', () => {
       const run = runChain({
         workspace,
         chain: mockChain as LegacyChain,
+        globalConfig: {} as PromptConfig,
         promptlVersion: 0,
         providersMap,
         source: LogSources.API,
@@ -845,6 +855,7 @@ describe('runChain', () => {
         const run = runChain({
           workspace,
           chain: mockChain as LegacyChain,
+          globalConfig: {} as PromptConfig,
           promptlVersion: 0,
           providersMap,
           source: LogSources.API,
@@ -905,6 +916,7 @@ describe('runChain', () => {
         const run = runChain({
           workspace,
           chain: mockChain as LegacyChain,
+          globalConfig: {} as PromptConfig,
           promptlVersion: 0,
           providersMap,
           source: LogSources.API,

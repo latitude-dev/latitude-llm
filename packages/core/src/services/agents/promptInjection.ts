@@ -8,17 +8,7 @@ import {
 import {
   AGENT_RETURN_TOOL_NAME,
   FAKE_AGENT_START_TOOL_NAME,
-  VercelConfig,
 } from '@latitude-data/constants'
-import { LatitudeError, Result, TypedResult } from '../../lib'
-import { JSONSchema7 } from 'json-schema'
-
-export const AGENT_RETURN_TOOL_DESCRIPTION = `
-The '${FAKE_AGENT_START_TOOL_NAME}' tool is used to start an autonomous chain-of-thought workflow.
-Within this workflow, you will generate messages autonomously.
-All of the Assistant messages within this workflow will be internal, used as a chain-of-thought and to execute tools in order to achieve your task. The user will not read these messages.
-Use this tool to stop the autonomous workflow and return a message to the user. It must contain the final result of the workflow.
-`.trim()
 
 const FAKE_AGENT_START_TOOL_CONTENT = `
   Autonomous workflow started.
@@ -29,21 +19,11 @@ const FAKE_AGENT_START_TOOL_CONTENT = `
   Once you have finished your current task, use the '${AGENT_RETURN_TOOL_NAME}' tool to finish it. The tool call must include the requested result.
 `.trim()
 
-const DEFAULT_AGENT_RETURN_TOOL_SCHEMA: JSONSchema7 = {
-  type: 'object',
-  properties: {
-    response: {
-      type: 'string',
-    },
-  },
-  required: ['response'],
-}
-
 /**
  * Injects fake assistant messages used to request the start of an autonomous workflow.
  * These messages greatly help the AI understand they are in an autonomous workflow and how it works.
  */
-function injectFakeStartAutonomousWorkflowMessages(
+export function injectFakeStartAutonomousWorkflowMessages(
   messages: Message[],
 ): Message[] {
   let wokflowCount = 1
@@ -117,40 +97,53 @@ function injectFakeStartAutonomousWorkflowMessages(
   return newMessages
 }
 
-export function performAgentInjection({
-  messages: originalMessages,
-  config: originalConfig,
-  injectFakeAgentStartTool,
-  injectAgentFinishTool,
-}: {
-  messages: Message[]
-  config: VercelConfig
-  injectFakeAgentStartTool?: boolean
-  injectAgentFinishTool?: boolean
-}): TypedResult<{ messages: Message[]; config: VercelConfig }, LatitudeError> {
-  let config = originalConfig
-  let messages = originalMessages
+export function injectAgentFinishToolResponsesAfterEachRequest(
+  messages: Message[],
+): Message[] {
+  return messages
+    .map((message, idx) => {
+      if (message.role !== MessageRole.assistant) return [message]
+      const agentToolCallIds = message.toolCalls
+        .filter((toolCall) => toolCall.name === AGENT_RETURN_TOOL_NAME)
+        .map((toolCall) => toolCall.id)
 
-  if (injectFakeAgentStartTool) {
-    messages = injectFakeStartAutonomousWorkflowMessages(messages)
-  }
+      const nextNonToolResponseIdx = messages.findIndex(
+        (msg, j) => j > idx && msg.role !== MessageRole.tool,
+      )
+      const nextToolResponses = messages.slice(
+        idx + 1,
+        Math.max(nextNonToolResponseIdx, idx + 1),
+      )
+      const nextToolResponsesIds = nextToolResponses
+        .filter((msg) => msg.role === MessageRole.tool)
+        .flatMap((msg) => msg.content)
+        .filter(
+          (content) =>
+            content.type === ContentType.toolResult &&
+            content.toolCallId === AGENT_RETURN_TOOL_NAME,
+        )
+        .map((content) => content.toolCallId)
 
-  if (injectAgentFinishTool) {
-    const { schema, ...rest } = config
-    config = {
-      ...rest,
-      tools: {
-        ...(rest.tools ?? {}),
-        [AGENT_RETURN_TOOL_NAME]: {
-          description: AGENT_RETURN_TOOL_DESCRIPTION,
-          parameters: schema ?? DEFAULT_AGENT_RETURN_TOOL_SCHEMA,
-        },
-      },
-    }
-  }
+      const nonRespondedAgentToolCallIds = agentToolCallIds.filter(
+        (toolCallId) => !nextToolResponsesIds.includes(toolCallId),
+      )
 
-  return Result.ok({
-    messages,
-    config,
-  })
+      const toolResponses = nonRespondedAgentToolCallIds.map(
+        (toolCallId) =>
+          ({
+            role: MessageRole.tool,
+            content: [
+              {
+                type: ContentType.toolResult,
+                toolCallId,
+                toolName: AGENT_RETURN_TOOL_NAME,
+                result: {},
+                isError: false,
+              },
+            ],
+          }) as ToolMessage,
+      )
+      return [message, ...toolResponses]
+    })
+    .flat()
 }

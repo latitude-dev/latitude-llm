@@ -185,6 +185,7 @@ describe('run', () => {
         errorableType: ErrorableEntity.EvaluationResult,
         workspace,
         chain,
+        globalConfig: expect.any(Object),
         promptlVersion: 1,
         source: LogSources.Evaluation,
         promptSource: evaluation,

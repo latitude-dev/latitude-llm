@@ -50,6 +50,7 @@ import RefineDocumentModal from './RefineModal'
 import { UpdateToPromptLButton } from './UpdateToPromptl'
 import { RefinementHook, useRefinement } from './useRefinement'
 import { useAgentToolsMap } from '$/stores/agentToolsMap'
+import useIntegrations from '$/stores/integrations'
 
 export const DocumentEditorContext = createContext<
   | {
@@ -145,6 +146,7 @@ export default function DocumentEditor({
   const { data: providers } = useProviderApiKeys({
     fallbackData: providerApiKeys,
   })
+  const { data: integrations } = useIntegrations()
   const { data: documents, updateContent } = useDocumentVersions(
     {
       commitUuid: commit.uuid,
@@ -247,8 +249,9 @@ export default function DocumentEditor({
       promptlVersion: document.promptlVersion,
       agentToolsMap,
       providerNames: providers.map((p) => p.name) ?? [],
+      integrationNames: integrations?.map((i) => i.name) ?? [],
     })
-  }, [document.promptlVersion, agentToolsMap, providers])
+  }, [document.promptlVersion, agentToolsMap, providers, integrations])
 
   const onChange = useCallback(
     (newValue: string) => {
@@ -263,6 +266,7 @@ export default function DocumentEditor({
         promptlVersion: document.promptlVersion,
         agentToolsMap,
         providerNames: providers.map((p) => p.name) ?? [],
+        integrationNames: integrations?.map((i) => i.name) ?? [],
       })
     },
     [
@@ -271,6 +275,7 @@ export default function DocumentEditor({
       document.promptlVersion,
       agentToolsMap,
       providers,
+      integrations,
     ],
   )
 

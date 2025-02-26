@@ -1,6 +1,9 @@
-import { createChain as createChainFn } from '@latitude-data/compiler'
+import {
+  createChain as createChainFn,
+  readMetadata,
+} from '@latitude-data/compiler'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
-import { Adapters, Chain as PromptlChain } from 'promptl-ai'
+import { Adapters, Chain as PromptlChain, scan } from 'promptl-ai'
 import { JSONSchema7 } from 'json-schema'
 
 import {
@@ -18,6 +21,7 @@ import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
 import { serialize } from '../../documentLogs/serialize'
 import { createRunError } from '../../runErrors/create'
 import { getEvaluationPrompt } from '../prompt'
+import { PromptConfig } from '@latitude-data/constants'
 
 type EvaluationRunErrorCheckerCodes =
   | RunErrorCodes.EvaluationRunMissingProviderLogError
@@ -82,7 +86,8 @@ export class EvaluationRunChecker {
 
     return Result.ok({
       workspace,
-      chain: chainResult.value,
+      chain: chainResult.value.chain,
+      config: chainResult.value.config as PromptConfig,
       schema: schemaResult.value,
     })
   }
@@ -121,8 +126,11 @@ export class EvaluationRunChecker {
         this.evaluation.metadata.promptlVersion !== 0
 
       if (usePromptL) {
-        return Result.ok(
-          new PromptlChain({
+        const metadata = await scan({
+          prompt: evaluationPrompt,
+        })
+        return Result.ok({
+          chain: new PromptlChain({
             prompt: evaluationPrompt,
             parameters: {
               ...serializedLogResult.value,
@@ -130,17 +138,22 @@ export class EvaluationRunChecker {
             adapter: Adapters.default,
             includeSourceMap: true,
           }),
-        )
+          config: metadata.config,
+        })
       } else {
-        return Result.ok(
-          createChainFn({
+        const metadata = await readMetadata({
+          prompt: evaluationPrompt,
+        })
+        return Result.ok({
+          chain: createChainFn({
             prompt: evaluationPrompt,
             parameters: {
               ...serializedLogResult.value,
             },
             includeSourceMap: true,
           }),
-        )
+          config: metadata.config,
+        })
       }
     } catch (e) {
       const err = e as Error

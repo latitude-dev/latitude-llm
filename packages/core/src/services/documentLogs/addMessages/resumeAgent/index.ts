@@ -3,17 +3,17 @@ import { Result } from '../../../../lib'
 import { buildProvidersMap } from '../../../providerApiKeys/buildMap'
 import {
   AssistantMessage,
+  Config,
   ContentType,
   Message,
   MessageContent,
   MessageRole,
-  ToolMessage,
   ToolRequestContent,
 } from '@latitude-data/compiler'
 import { PromptSource } from '../../../../constants'
 import { runAgentStep } from '../../../agents/runStep'
 import { ChainStreamManager } from '../../../../lib/chainStreamManager'
-import { AGENT_RETURN_TOOL_NAME } from '@latitude-data/constants'
+import { PromptConfig } from '@latitude-data/constants'
 
 function buildAssistantMessage(providerLog: ProviderLog): AssistantMessage {
   const toolContents: ToolRequestContent[] = providerLog.toolCalls.map(
@@ -36,37 +36,6 @@ function buildAssistantMessage(providerLog: ProviderLog): AssistantMessage {
   }
 }
 
-function buildExtraMessages({
-  providerLog,
-  newMessages,
-}: {
-  providerLog: ProviderLog
-  newMessages: Message[]
-}) {
-  const assistantMessage = buildAssistantMessage(providerLog)
-  const agentFinishToolCalls =
-    providerLog.toolCalls?.filter(
-      (toolCall) => toolCall.name === AGENT_RETURN_TOOL_NAME,
-    ) ?? []
-
-  const agentToolCallResponseMessages: ToolMessage[] = agentFinishToolCalls.map(
-    (toolCall) => ({
-      role: MessageRole.tool,
-      content: [
-        {
-          type: ContentType.toolResult,
-          toolCallId: toolCall.id,
-          toolName: toolCall.name,
-          result: {},
-          isError: false,
-        },
-      ],
-    }),
-  )
-
-  return [assistantMessage, ...agentToolCallResponseMessages, ...newMessages]
-}
-
 /**
  * Resume agent
  * ::::::::::::::::::::
@@ -76,12 +45,14 @@ function buildExtraMessages({
 export async function resumeAgent({
   workspace,
   providerLog,
+  globalConfig,
   messages: userProvidedMessags,
   source,
   promptSource,
 }: {
   workspace: Workspace
   providerLog: ProviderLog
+  globalConfig: PromptConfig
   messages: Message[]
   source: LogSources
   promptSource: PromptSource
@@ -90,10 +61,10 @@ export async function resumeAgent({
     workspaceId: workspace.id,
   })
 
-  const newMessages = buildExtraMessages({
-    providerLog,
-    newMessages: userProvidedMessags,
-  })
+  const newMessages = [
+    buildAssistantMessage(providerLog),
+    ...userProvidedMessags,
+  ]
 
   const chainStreamManager = new ChainStreamManager({
     workspace,
@@ -108,14 +79,16 @@ export async function resumeAgent({
       chainStreamManager,
       workspace,
       source,
+      globalConfig,
       conversation: {
-        config: providerLog.config!,
+        config: globalConfig,
         messages: providerLog.messages,
       },
       providersMap,
       errorableUuid: providerLog.documentLogUuid!,
       stepCount: 0,
       newMessages,
+      previousConfig: providerLog.config as Config,
     })
   })
 
