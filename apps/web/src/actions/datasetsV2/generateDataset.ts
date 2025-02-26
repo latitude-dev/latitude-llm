@@ -3,11 +3,10 @@
 import {
   ChainStepResponse,
   CLOUD_MESSAGES,
-  Dataset,
   LogSources,
 } from '@latitude-data/core/browser'
 import { BadRequestError } from '@latitude-data/core/lib/errors'
-import { createDataset } from '@latitude-data/core/services/datasets/create'
+import { createDataset } from '@latitude-data/core/services/datasetsV2/create'
 import { env } from '@latitude-data/env'
 import slugify from '@sindresorhus/slugify'
 import { createSdk } from '$/app/(private)/_lib/createSdk'
@@ -84,5 +83,5 @@ export const generateDatasetAction = authProcedure
       throw result.error
     }
 
-    return result.value
+    return result.value.dataset
   })

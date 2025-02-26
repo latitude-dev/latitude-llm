@@ -1,5 +1,3 @@
-'use client'
-
 import {
   Button,
   CloseTrigger,
@@ -8,12 +6,18 @@ import {
   Input,
   Modal,
 } from '@latitude-data/web-ui'
-import DelimiterSelector from '$/app/(private)/datasets/new/_components/DelimiterSelector'
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
-import useDatasets from '$/stores/datasets'
+import useDatasets from '$/stores/datasetsV2'
+import DelimiterSelector from './DelimiterSelector'
 
-export default function NewDataset() {
+export function NewDatasetModal({
+  open,
+  onOpenChange,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+}) {
   const data = { name: '' }
   const navigate = useNavigate()
   const { createError, createFormAction, isCreating } = useDatasets({
@@ -23,8 +27,9 @@ export default function NewDataset() {
   const errors = createError?.fieldErrors
   return (
     <Modal
-      open
-      onOpenChange={(open) => !open && navigate.push(ROUTES.datasets.root)}
+      dismissible
+      open={open}
+      onOpenChange={onOpenChange}
       title='Create new dataset'
       description='Datasets allow you to test prompts and evaluations with your own data.'
       footer={

@@ -1,8 +1,9 @@
 import { eq, and, sql } from 'drizzle-orm'
 
-import { DatasetV2 } from '../browser'
+import { DatasetV2, DEFAULT_PAGINATION_SIZE } from '../browser'
 import { datasetsV2, users } from '../schema'
 import Repository from './repositoryV2'
+import { calculateOffset } from '../lib/pagination/calculateOffset'
 
 const datasetColumns = {
   id: datasetsV2.id,
@@ -36,5 +37,19 @@ export class DatasetsV2Repository extends Repository<DatasetV2> {
       .select(datasetColumns)
       .from(datasetsV2)
       .where(and(this.scopeFilter, eq(datasetsV2.name, name)))
+  }
+
+  findAllPaginated({
+    page = '1',
+    pageSize = String(DEFAULT_PAGINATION_SIZE),
+  }: {
+    page?: string
+    pageSize?: string
+  }) {
+    const offset = calculateOffset(page, pageSize)
+    return this.scope
+      .where(and(this.scopeFilter))
+      .limit(parseInt(pageSize))
+      .offset(offset)
   }
 }

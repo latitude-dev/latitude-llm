@@ -23,7 +23,6 @@ import {
 import { generateDatasetAction } from '$/actions/datasetsV2/generateDataset'
 import { generateDatasetPreviewAction } from '$/actions/sdk/generateDatasetPreviewAction'
 import { useNavigate } from '$/hooks/useNavigate'
-import { useStreamableAction } from '$/hooks/useStreamableAction'
 import { ROUTES } from '$/services/routes'
 import useDatasets from '$/stores/datasetsV2'
 import Link from 'next/link'
@@ -31,12 +30,12 @@ import Link from 'next/link'
 import { CsvPreviewTable } from './CsvPreviewTable'
 import { useServerAction } from 'zsa-react'
 
-export function GenerateDatasetContent({
+export function GenerateDatasetModal({
   defaultParameters,
   defaultName,
   backUrl,
 }: {
-  defaultParameters?: string[]
+  defaultParameters: string[]
   defaultName?: string
   backUrl?: string
 }) {
@@ -51,9 +50,7 @@ export function GenerateDatasetContent({
   }>()
   const { data: datasets, mutate } = useDatasets()
   const [explanation, setExplanation] = useState<string | undefined>()
-  const [parameters, setParameters] = useState<string[]>(
-    defaultParameters ?? [],
-  )
+  const [parameters, setParameters] = useState<string[]>(defaultParameters)
 
   const handleParametersChange = (e: ChangeEvent<HTMLInputElement>) => {
     const parameterList = e.target.value
@@ -155,7 +152,7 @@ export function GenerateDatasetContent({
     <Modal
       open
       size='large'
-      onOpenChange={(open) => !open && navigate.push(ROUTES.datasets.root)}
+      onOpenChange={(open) => !open && navigate.push(ROUTES.datasetsV2.root)}
       title='Generate new dataset'
       description='Generate a dataset of parameters using AI. Datasets can be used to run batch evaluations over prompts.'
       footer={

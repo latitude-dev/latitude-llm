@@ -101,9 +101,6 @@ export const ROUTES = {
   },
   datasetsV2: {
     root: '/datasets-v2',
-    new: {
-      root: `/datasets-v2/new`,
-    },
     generate: {
       root: `/datasets-v2/generate`,
     },
