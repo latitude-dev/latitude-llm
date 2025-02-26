@@ -19,7 +19,7 @@ export function AppTabs() {
     return [
       ...MAIN_NAV_LINKS,
       {
-        label: 'New datasets',
+        label: 'datasets (NEW)',
         value: ROUTES.datasetsV2.root as string,
       },
     ]

@@ -71,6 +71,7 @@ export const QUEUES = {
       'sendReferralInvitationJob',
       'sendSuggestionNotification',
       'requestDocumentSuggestionJob',
+      'createDatasetRowsJob',
     ],
   },
   [Queues.liveEvaluationsQueue]: {

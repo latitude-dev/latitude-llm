@@ -1,6 +1,5 @@
 import { IEventsHandlers } from '../events'
 import { createClaimInvitationReferralJob } from './createClaimInvitationReferralJob'
-import { createDatasetRowsJob } from './createDatasetRowsJobs'
 import { createDocumentLogsFromSpansJob } from './createDocumentLogsFromSpansJob'
 import { createLoopsContact } from './createLoopsContact'
 import { notifyClientOfBulkCreateTracesAndSpans } from './notifyClientOfBulkCreateTracesAndSpans'
@@ -13,6 +12,7 @@ import { sendInvitationToUserJob } from './sendInvitationToUser'
 import { sendMagicLinkJob } from './sendMagicLinkHandler'
 import { sendReferralInvitationJob } from './sendReferralInvitation'
 import { sendSuggestionNotification } from './sendSuggestionNotification'
+import { createDatasetRowsJob } from './createDatasetRowsJobs'
 
 export const EventHandlers: IEventsHandlers = {
   aiProviderCallCompleted: [],

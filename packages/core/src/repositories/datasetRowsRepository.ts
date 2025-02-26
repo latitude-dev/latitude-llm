@@ -1,7 +1,7 @@
 import { eq, and, getTableColumns } from 'drizzle-orm'
 
 import { DatasetRow } from '../browser'
-import { datasetRows, datasetsV2 } from '../schema'
+import { datasetRows } from '../schema'
 import Repository from './repositoryV2'
 
 const tt = getTableColumns(datasetRows)
