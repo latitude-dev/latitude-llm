@@ -61,6 +61,27 @@ export class DocumentSuggestionsRepository extends Repository<DocumentSuggestion
     return Result.ok<number>(result[0]!.count)
   }
 
+  async listByDocumentVersion({
+    commitId,
+    documentUuid,
+  }: {
+    commitId: number
+    documentUuid: string
+  }) {
+    const result = await this.scope
+      .where(
+        and(
+          this.scopeFilter,
+          eq(documentSuggestions.commitId, commitId),
+          eq(documentSuggestions.documentUuid, documentUuid),
+          this.expirationFilter,
+        ),
+      )
+      .orderBy(desc(documentSuggestions.createdAt))
+
+    return Result.ok<DocumentSuggestion[]>(result)
+  }
+
   async listByDocumentVersionWithDetails({
     commitId,
     documentUuid,
