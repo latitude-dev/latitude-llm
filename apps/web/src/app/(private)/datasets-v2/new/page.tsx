@@ -17,7 +17,8 @@ export default function NewDataset() {
   const data = { name: '' }
   const navigate = useNavigate()
   const { createError, createFormAction, isCreating } = useDatasets({
-    onCreateSuccess: () => navigate.push(ROUTES.datasets.root),
+    onCreateSuccess: (dataset) =>
+      navigate.push(ROUTES.datasetsV2.detail(dataset.id)),
   })
   const errors = createError?.fieldErrors
   return (

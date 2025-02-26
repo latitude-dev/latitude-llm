@@ -11,14 +11,13 @@ import {
 import DelimiterSelector from '$/app/(private)/datasets/new/_components/DelimiterSelector'
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
-import useDatasets from '$/stores/datasetsV2'
+import useDatasets from '$/stores/datasets'
 
 export default function NewDataset() {
   const data = { name: '' }
   const navigate = useNavigate()
   const { createError, createFormAction, isCreating } = useDatasets({
-    onCreateSuccess: (dataset) =>
-      navigate.push(ROUTES.datasetsV2.detail(dataset.id)),
+    onCreateSuccess: () => navigate.push(ROUTES.datasets.root),
   })
   const errors = createError?.fieldErrors
   return (
