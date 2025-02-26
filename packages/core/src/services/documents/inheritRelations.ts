@@ -1,6 +1,6 @@
 import { DocumentVersion, Workspace } from '../../browser'
 import { database, Database } from '../../client'
-import { ConflictError, Result } from '../../lib'
+import { ConflictError, Result, Transaction } from '../../lib'
 import { DocumentSuggestionsRepository } from '../../repositories'
 import { documentSuggestions } from '../../schema'
 
@@ -25,6 +25,8 @@ async function inheritSuggestions(
     })
     .then((r) => r.unwrap())
 
+  if (!suggestions.length) return Result.nil()
+
   await db.insert(documentSuggestions).values(
     suggestions.map((suggestion) => ({
       ...suggestion,
@@ -33,6 +35,8 @@ async function inheritSuggestions(
       documentUuid: toVersion.documentUuid,
     })),
   )
+
+  return Result.nil()
 }
 
 export async function inheritDocumentRelations(
@@ -60,9 +64,13 @@ export async function inheritDocumentRelations(
     )
   }
 
-  await Promise.all([
-    inheritSuggestions({ fromVersion, toVersion, workspace }, db),
-  ])
+  return Transaction.call(async (tx) => {
+    await Promise.all([
+      inheritSuggestions({ fromVersion, toVersion, workspace }, tx).then((r) =>
+        r.unwrap(),
+      ),
+    ])
 
-  return Result.nil()
+    return Result.nil()
+  }, db)
 }
