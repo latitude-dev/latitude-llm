@@ -89,6 +89,7 @@ import {
   LatitudeLogo,
   LatitudeLogoMonochrome,
   GridVertical,
+  MCP,
 } from './custom-icons'
 
 const Icons = {
@@ -137,6 +138,7 @@ const Icons = {
   logo: LatitudeLogo,
   logoMonochrome: LatitudeLogoMonochrome,
   maximize: Maximize2,
+  mcp: MCP,
   minimize: Minimize2,
   modification: SquareDot,
   moon: Moon,
