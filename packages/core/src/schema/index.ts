@@ -59,3 +59,6 @@ export * from './models/publishedDocuments'
 
 // Integrations
 export * from './models/integrations'
+
+// Hosted MCP Servers
+export * from './models/mcpServers'

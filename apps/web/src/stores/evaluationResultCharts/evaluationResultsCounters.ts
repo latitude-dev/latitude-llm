@@ -1,7 +1,6 @@
 import { useCurrentProject } from '@latitude-data/web-ui'
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
-import { _API_ROUTES } from '$/services/routes/api'
 import useSWR, { SWRConfiguration } from 'swr'
 
 export default function useEvaluationResultsCounters(

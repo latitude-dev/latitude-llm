@@ -3,7 +3,7 @@ import { generateDocumentLogsApiRouteWithParams } from '@latitude-data/core/serv
 
 type PaginationParameters = { page: number; pageSize: number }
 
-export const _API_ROUTES = {
+export const API_ROUTES = {
   workspaces: {
     current: '/api/workspaces/current',
     usage: '/api/workspaces/usage',

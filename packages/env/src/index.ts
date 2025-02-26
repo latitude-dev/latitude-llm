@@ -80,6 +80,8 @@ if (environment === 'development' || environment === 'test') {
       LATITUDE_CLOUD_PAYMENT_URL: 'https://fake-payment-url.com',
       BULL_ADMIN_USER: 'admin',
       BULL_ADMIN_PASS: 'admin',
+      MCP_SCHEME: 'internet-facing',
+      MCP_DOCKER_IMAGE: 'ghcr.io/latitude-dev/latitude-mcp:sha-dcf0fec',
     },
     { path: pathToEnv },
   )
@@ -91,49 +93,71 @@ export const env = createEnv({
   skipValidation:
     process.env.BUILDING_CONTAINER == 'true' || process.env.NODE_ENV === 'test',
   server: {
+    NODE_ENV: z.string(),
+
+    // Cache
     CACHE_HOST: z.string(),
+    CACHE_PORT: z.coerce.number().optional().default(6379),
+
+    // Postgres
     DATABASE_URL: z.string().url(),
+
+    // Default settings when creating a new workspace
     DEFAULT_PROJECT_ID: z.coerce.number().optional(),
     DEFAULT_PROVIDER_API_KEY: z.string().optional(),
     NEXT_PUBLIC_DEFAULT_PROVIDER_NAME: z.string(),
-    FROM_MAILER_EMAIL: z.string(),
-    GATEWAY_HOSTNAME: z.string(),
+
     APP_DOMAIN: z.string(),
     APP_URL: z.string().url(),
+
+    // Posthog
     NEXT_PUBLIC_POSTHOG_HOST: z.string(),
     NEXT_PUBLIC_POSTHOG_KEY: z.string(),
-    NODE_ENV: z.string(),
+
+    // Queue
     QUEUE_HOST: z.string(),
+    QUEUE_PASSWORD: z.string().optional(),
+    QUEUE_PORT: z.coerce.number().optional().default(6379),
+
+    // Websockets
     WEBSOCKETS_SERVER: z.string(),
     WEBSOCKET_REFRESH_SECRET_TOKEN_KEY: z.string(),
     WEBSOCKET_SECRET_TOKEN_KEY: z.string(),
-    MAILGUN_EMAIL_DOMAIN: z.string().optional(),
+
+    // Support app (intercom)
     SUPPORT_APP_SECRET_KEY: z.string().optional(),
-    LOOPS_API_KEY: z.string().optional(),
     NEXT_PUBLIC_SUPPORT_APP_ID: z.string().optional(),
+
+    // AWS
     AWS_ACCESS_KEY: z.string().optional(),
     AWS_ACCESS_SECRET: z.string().optional(),
     AWS_REGION: z.string().optional(),
-    CACHE_PORT: z.coerce.number().optional().default(6379),
+
+    // File storage
     DRIVE_DISK: z.union([z.literal('local'), z.literal('s3')]).optional(),
     FILES_STORAGE_PATH: z.string().optional(),
-    PUBLIC_FILES_STORAGE_PATH: z.string().optional(),
     FILE_PUBLIC_PATH: z.string().optional(),
-    MAILGUN_MAILER_API_KEY: z.string().optional(),
-    QUEUE_PASSWORD: z.string().optional(),
-    QUEUE_PORT: z.coerce.number().optional().default(6379),
-    S3_BUCKET: z.string().optional(),
+    PUBLIC_FILES_STORAGE_PATH: z.string().optional(),
     PUBLIC_S3_BUCKET: z.string().optional(),
+    S3_BUCKET: z.string().optional(),
+
+    // Sentry
     SENTRY_DSN: z.string().optional(),
     SENTRY_ORG: z.string().optional(),
     SENTRY_PROJECT: z.string().optional(),
+
+    // Gateway
+    GATEWAY_HOSTNAME: z.string(),
     GATEWAY_PORT: z.coerce.number().optional(),
     GATEWAY_SSL: z
       .enum(['true', 'false'])
       .transform((value) => value === 'true')
       .optional()
       .default('true'),
+
     LATITUDE_CLOUD: z.boolean().optional().default(false),
+
+    // Copilot
     COPILOT_CODE_SUGGESTION_PROMPT_PATH: z.string().optional(),
     COPILOT_DATASET_GENERATOR_PROMPT_PATH: z.string().optional(),
     COPILOT_EVALUATION_SUGGESTION_PROMPT_PATH: z.string().optional(),
@@ -142,16 +166,38 @@ export const env = createEnv({
     COPILOT_REFINE_PROMPT_PATH: z.string().optional(),
     COPILOT_WORKSPACE_API_KEY: z.string().optional(),
     COPILOT_TEMPLATES_SUGGESTION_PROMPT_PATH: z.string().optional(),
+
+    LOOPS_API_KEY: z.string().optional(),
     CODESANDBOX_API_KEY: z.string().optional(),
     TAVILY_API_KEY: z.string().optional(),
     HANDINGER_API_KEY: z.string().optional(),
+
+    // Mail settings
+    FROM_MAILER_EMAIL: z.string(),
     MAILGUN_HOST: z.string().optional(),
     MAILGUN_PROTOCOL: z.string().optional(),
+    MAILGUN_EMAIL_DOMAIN: z.string().optional(),
+    MAILGUN_MAILER_API_KEY: z.string().optional(),
     DISABLE_EMAIL_AUTHENTICATION: z.boolean().optional().default(false),
-    BULL_ADMIN_USER: z.string(),
-    BULL_ADMIN_PASS: z.string(),
+
+    // Workers
     WORKERS_HOST: z.string().optional(),
     WORKERS_PORT: z.coerce.number().optional(),
+
+    // BullMQ dashboard
+    BULL_ADMIN_USER: z.string(),
+    BULL_ADMIN_PASS: z.string(),
+
+    // MCP Server feature configurations
+    MCP_DOCKER_IMAGE: z.string(),
+    MCP_SCHEME: z.string(),
+    EKS_CA_DATA: z.string().optional(),
+    EKS_CLUSTER_NAME: z.string().optional(),
+    K8S_API_URL: z.string().optional(),
+    LATITUDE_MCP_HOST: z.string().optional(),
+    USE_EKS_CLUSTER: z.coerce.boolean().optional().default(false),
+
+    ENCRYPTION_KEY: z.string().optional(),
   },
   runtimeEnv: {
     ...process.env,

@@ -5,6 +5,9 @@ import { ReactNode, useMemo } from 'react'
 import { cn } from '../../../../lib/utils'
 import { TextColor } from '../../../tokens'
 
+// If the JSON is too long we don't parse it with CodeBlock component in order to avoid performance issues
+const MAX_LENGTH_JSON_PREVIEW = 10000
+
 function getResult<S extends boolean>(
   value: unknown,
 ): [S extends true ? string : unknown, S] {
@@ -43,7 +46,10 @@ export function ToolResultContent({
   toolResponse: ToolContent
   color?: TextColor
 }) {
-  const [result, isString] = getResult(toolResponse.result)
+  const [result, isString] = useMemo(
+    () => getResult(toolResponse.result),
+    [toolResponse.result],
+  )
   const fgColor = toolResponse.isError ? 'destructiveMutedForeground' : color
 
   if (isString) {
@@ -62,8 +68,12 @@ export function ToolResultContent({
     )
   }
 
+  const strResult = JSON.stringify(toolResponse.result, null, 2)
+
   return (
-    <CodeBlock language='json'>
+    <CodeBlock
+      language={strResult.length > MAX_LENGTH_JSON_PREVIEW ? '' : 'json'}
+    >
       {JSON.stringify(toolResponse.result, null, 2)}
     </CodeBlock>
   )

@@ -11,13 +11,22 @@ import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js'
 export async function getMcpClient(
   integration: Integration,
 ): PromisedResult<McpClient, LatitudeError> {
-  const clientUrl = integration.configuration?.url
+  let clientUrl = integration.configuration?.url
   if (!clientUrl) {
     return Result.error(
       new NotFoundError(
         'MCP server URL not found in integration configuration',
       ),
     )
+  }
+
+  // Add http:// protocol if the URL doesn't include a protocol
+  if (!clientUrl.match(/^https?:\/\//)) {
+    clientUrl = `http://${clientUrl}`
+  }
+  // Add /sse path if the URL doesn't include a path
+  if (!clientUrl.match(/\/sse$/)) {
+    clientUrl = `${clientUrl}/sse`
   }
 
   const transport = new SSEClientTransport(new URL(clientUrl))

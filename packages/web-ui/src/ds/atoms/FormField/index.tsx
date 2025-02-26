@@ -131,7 +131,7 @@ function InlineInput({
           {children}
         </FormControl>
         <DescriptionAndError
-          description=''
+          description={description}
           error={error}
           errorStyle='inline'
           formMessageId={formMessageId}
@@ -186,6 +186,7 @@ function StackInput({
   error,
   formDescriptionId,
   formMessageId,
+  description,
 }: InputWrapperProps) {
   return (
     <>
@@ -208,7 +209,7 @@ function StackInput({
         {children}
       </FormControl>
       <DescriptionAndError
-        description=''
+        description={description}
         error={error}
         errorStyle='inline'
         formMessageId={formMessageId}

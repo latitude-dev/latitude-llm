@@ -21,6 +21,7 @@ import { evaluationMetadataLlmAsJudgeSimple } from './models/evaluationMetadataL
 import { evaluations } from './models/evaluations'
 import { evaluationTemplateCategories } from './models/evaluationTemplateCategories'
 import { integrations } from './models/integrations'
+import { mcpServers } from './models/mcpServers'
 import { magicLinkTokens } from './models/magicLinkTokens'
 import { memberships } from './models/memberships'
 import { projects } from './models/projects'
@@ -73,6 +74,8 @@ export type EvaluationTemplateCategory = InferSelectModel<
 export type Subscription = InferSelectModel<typeof subscriptions>
 export type Trace = InferSelectModel<typeof traces>
 export type Span = InferSelectModel<typeof spans>
+
+export type McpServer = InferSelectModel<typeof mcpServers>
 
 export type EvaluationMetadataLlmAsJudgeAdvanced = Omit<
   InferSelectModel<typeof evaluationMetadataLlmAsJudgeAdvanced>,

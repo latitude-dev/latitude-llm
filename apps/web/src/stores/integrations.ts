@@ -30,20 +30,24 @@ export default function useIntegrations(opts?: SWRConfiguration) {
     },
   })
 
-  const { execute: destroy } = useLatitudeAction(destroyIntegrationAction, {
-    onSuccess: async ({ data: integration }) => {
-      toast({
-        title: 'Success',
-        description: `${integration.name} destroyed successfully`,
-      })
-      mutate(data.filter((item) => item.id !== integration.id))
+  const { execute: destroy, isPending: isDestroying } = useLatitudeAction(
+    destroyIntegrationAction,
+    {
+      onSuccess: async ({ data: integration }) => {
+        toast({
+          title: 'Success',
+          description: `${integration.name} destroyed successfully`,
+        })
+        mutate(data.filter((item) => item.id !== integration.id))
+      },
     },
-  })
+  )
 
   return {
     data,
     create,
     destroy,
+    isDestroying,
     mutate,
     ...rest,
   }
