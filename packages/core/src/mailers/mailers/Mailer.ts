@@ -12,11 +12,7 @@ export default abstract class Mailer {
   private adapter: Transporter<SMTPTransport.SentMessageInfo>
 
   static get from(): string {
-    return env.FROM_MAILER_EMAIL
-  }
-
-  static get fromString(): string {
-    return `Latitude <${Mailer.from}>`
+    return `Latitude <${env.FROM_MAILER_EMAIL}>`
   }
 
   constructor(options: Mail.Options, adapter = createAdapter()) {
