@@ -1,14 +1,15 @@
-import path from 'path'
 import { omit } from 'lodash-es'
+import path from 'path'
 
 import {
   readMetadata,
   Document as RefDocument,
   type CompileError,
 } from '@latitude-data/compiler'
-import { scan } from 'promptl-ai'
 import { and, eq, inArray, not } from 'drizzle-orm'
+import { scan } from 'promptl-ai'
 
+import { AgentToolsMap, promptConfigSchema } from '@latitude-data/constants'
 import {
   Commit,
   DocumentVersion,
@@ -20,10 +21,10 @@ import { hashContent, Result, Transaction, TypedResult } from '../../../lib'
 import { assertCommitIsDraft } from '../../../lib/assertCommitIsDraft'
 import { ProviderApiKeysRepository } from '../../../repositories'
 import { documentVersions } from '../../../schema'
+import { buildAgentsToolsMap } from '../../agents/agentsAsTools'
+import { inheritDocumentRelations } from '../inheritRelations'
 import { getHeadDocumentsAndDraftDocumentsForCommit } from './getHeadDocumentsAndDraftDocuments'
 import { getMergedAndDraftDocuments } from './getMergedAndDraftDocuments'
-import { buildAgentsToolsMap } from '../../agents/agentsAsTools'
-import { AgentToolsMap, promptConfigSchema } from '@latitude-data/constants'
 
 async function resolveDocumentChanges({
   originalDocuments,
@@ -118,9 +119,11 @@ async function replaceCommitChanges(
   {
     commit,
     documentChanges,
+    workspace,
   }: {
     commit: Commit
     documentChanges: DocumentVersion[]
+    workspace: Workspace
   },
   tx = database,
 ): Promise<TypedResult<DocumentVersion[], Error>> {
@@ -194,6 +197,18 @@ async function replaceCommitChanges(
         )
       : []
 
+    await Promise.all(
+      insertedDocs.map(async (toVersion) => {
+        const fromVersion = docsToInsert.find(
+          (d) => d.documentUuid === toVersion.documentUuid,
+        )!
+        return await inheritDocumentRelations(
+          { fromVersion, toVersion, workspace },
+          trx,
+        ).then((r) => r.unwrap())
+      }),
+    )
+
     return Result.ok([...insertedDocs, ...updatedDocs])
   }, tx)
 }
@@ -256,6 +271,7 @@ export async function recomputeChanges(
         {
           commit: draft,
           documentChanges: documentsToUpdate,
+          workspace: workspace,
         },
         tx,
       )

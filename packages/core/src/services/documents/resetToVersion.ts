@@ -1,4 +1,5 @@
 import { and, eq } from 'drizzle-orm'
+import { omit } from 'lodash-es'
 import { Commit, DocumentVersion, Workspace } from '../../browser'
 import { database } from '../../client'
 import {
@@ -8,9 +9,9 @@ import {
   Transaction,
   TypedResult,
 } from '../../lib'
-import { documentVersions } from '../../schema'
-import { omit } from 'lodash-es'
 import { DocumentVersionsRepository } from '../../repositories'
+import { documentVersions } from '../../schema'
+import { inheritDocumentRelations } from './inheritRelations'
 
 export async function resetToDocumentVersion(
   {
@@ -63,6 +64,15 @@ export async function resetToDocumentVersion(
     if (insertedDocument.length === 0) {
       return Result.error(new LatitudeError('Could not reset to version'))
     }
+
+    await inheritDocumentRelations(
+      {
+        fromVersion: documentVersion,
+        toVersion: insertedDocument[0]!,
+        workspace: workspace,
+      },
+      tx,
+    ).then((r) => r.unwrap())
 
     // Invalidate all resolvedContent for this commit
     await tx

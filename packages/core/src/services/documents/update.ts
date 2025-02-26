@@ -2,6 +2,7 @@ import { omit } from 'lodash-es'
 
 import { eq } from 'drizzle-orm'
 
+import { scan } from 'promptl-ai'
 import { Commit, DocumentType, DocumentVersion } from '../../browser'
 import { database } from '../../client'
 import { findWorkspaceFromCommit } from '../../data-access'
@@ -11,7 +12,7 @@ import { BadRequestError, NotFoundError } from '../../lib/errors'
 import { DocumentVersionsRepository } from '../../repositories/documentVersionsRepository'
 import { documentVersions } from '../../schema'
 import { pingProjectUpdate } from '../projects'
-import { scan } from 'promptl-ai'
+import { inheritDocumentRelations } from './inheritRelations'
 
 export async function getDocumentType({
   content,
@@ -120,6 +121,15 @@ export async function updateDocument(
     if (updatedDocs.length === 0) {
       return Result.error(new NotFoundError('Document does not exist'))
     }
+
+    await inheritDocumentRelations(
+      {
+        fromVersion: document,
+        toVersion: updatedDocs[0]!,
+        workspace: workspace!,
+      },
+      tx,
+    ).then((r) => r.unwrap())
 
     // Invalidate all resolvedContent for this commit
     await tx
