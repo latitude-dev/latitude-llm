@@ -3,7 +3,7 @@ import { eq } from 'drizzle-orm'
 import { DatasetV2 } from '../../browser'
 import { database } from '../../client'
 import { Result, Transaction } from '../../lib'
-import { datasets } from '../../schema'
+import { datasetsV2 } from '../../schema'
 
 export async function destroyDataset(
   {
@@ -15,8 +15,8 @@ export async function destroyDataset(
 ) {
   return Transaction.call(async (tx) => {
     const result = await tx
-      .delete(datasets)
-      .where(eq(datasets.id, dataset.id))
+      .delete(datasetsV2)
+      .where(eq(datasetsV2.id, dataset.id))
       .returning()
     const deleted = result[0]!
 

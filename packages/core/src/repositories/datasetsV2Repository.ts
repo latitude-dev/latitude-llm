@@ -1,4 +1,4 @@
-import { eq, and, sql } from 'drizzle-orm'
+import { eq, and, sql, getTableColumns } from 'drizzle-orm'
 
 import { DatasetV2, DEFAULT_PAGINATION_SIZE } from '../browser'
 import { datasetsV2, users } from '../schema'
@@ -6,16 +6,10 @@ import Repository from './repositoryV2'
 import { calculateOffset } from '../lib/pagination/calculateOffset'
 
 const datasetColumns = {
-  id: datasetsV2.id,
-  name: datasetsV2.name,
-  workspaceId: datasetsV2.workspaceId,
-  authorId: datasetsV2.authorId,
-  columns: datasetsV2.columns,
-  createdAt: datasetsV2.createdAt,
-  updatedAt: datasetsV2.updatedAt,
+  ...getTableColumns(datasetsV2),
   author: {
-    id: sql`${users.id}`.as('users_id'),
-    name: sql`${users.name}`.as('users_name'),
+    id: sql<string>`${users.id}`.as('users_id'),
+    name: sql<string>`${users.name}`.as('users_name'),
   },
 }
 export class DatasetsV2Repository extends Repository<DatasetV2> {

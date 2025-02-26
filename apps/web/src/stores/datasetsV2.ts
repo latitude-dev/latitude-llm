@@ -1,4 +1,5 @@
 import type { DatasetV2 } from '@latitude-data/core/browser'
+import { compact } from 'lodash-es'
 import { useToast } from '@latitude-data/web-ui'
 import { createDatasetAction } from '$/actions/datasetsV2/create'
 import { destroyDatasetAction } from '$/actions/datasetsV2/destroy'
@@ -11,21 +12,31 @@ export default function useDatasets(
   {
     onCreateSuccess,
     onFetched,
+    page,
+    pageSize,
   }: {
     onCreateSuccess?: (dataset: DatasetV2) => void
     onFetched?: (datasets: DatasetV2[]) => void
+    page?: string | null | undefined
+    pageSize?: string | null
   } = {},
   opts?: SWRConfiguration,
 ) {
   const { toast } = useToast()
-  const fetcher = useFetcher(ROUTES.api.datasetsV2.root, {
-    serializer: (rows) => rows.map(deserialize),
-  })
+  const fetcher = useFetcher(
+    ROUTES.api.datasetsV2.root({
+      page: page ? Number(page) : undefined,
+      pageSize: pageSize ? Number(pageSize) : undefined,
+    }),
+    {
+      serializer: (rows) => rows.map(deserialize),
+    },
+  )
   const {
     data = [],
     mutate,
     ...rest
-  } = useSWR<DatasetV2[]>(['datasetsV2'], fetcher, {
+  } = useSWR<DatasetV2[]>(compact(['datasetsV2', page, pageSize]), fetcher, {
     ...opts,
     onSuccess: (data) => {
       onFetched?.(data)
@@ -56,7 +67,8 @@ export default function useDatasets(
         description: 'Dataset removed successfully',
       })
 
-      mutate(data.filter((ds) => ds.id === dataset.id))
+      // FIXME: This does not work. WHY?
+      mutate(data.filter((ds) => ds.id !== dataset.id))
     },
   })
 

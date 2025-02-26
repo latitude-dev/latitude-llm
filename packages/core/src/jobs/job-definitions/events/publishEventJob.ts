@@ -10,12 +10,8 @@ export const publishEventJob = async (job: Job<LatitudeEvent>) => {
   if (!handlers?.length) return
 
   const queues = await setupJobs()
-  const jobs = await queues.eventsQueue.queue.getJobs()
-
-  console.log("RUNNING_JOB", jobs)
 
   handlers.forEach((handler) => {
-    console.log('Enqueueing handler:', handler.name)
     queues.eventsQueue.queue.add(handler.name, event)
   })
 }

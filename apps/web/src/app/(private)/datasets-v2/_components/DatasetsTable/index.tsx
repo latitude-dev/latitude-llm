@@ -17,42 +17,75 @@ import {
   Text,
 } from '@latitude-data/web-ui'
 import DeleteDatasetModal from '../DeleteDatasetModal'
-import { ROUTES } from '$/services/routes'
 import useDatasets from '$/stores/datasetsV2'
-import Link from 'next/link'
+import { useToggleModal } from '$/hooks/useToogleModal'
+import { NewDatasetModal } from '$/app/(private)/datasets-v2/_components/RootHeader/NewDatasetModal'
+import { useSearchParams } from 'next/navigation'
+import { buildPagination } from '@latitude-data/core/lib/pagination/buildPagination'
+import { ROUTES } from '$/services/routes'
+import { LinkableTablePaginationFooter } from '$/components/TablePaginationFooter'
 
 export function DatasetsTable({
   datasets: serverDatasets,
 }: {
   datasets: DatasetV2[]
 }) {
+  const searchParams = useSearchParams()
+  const page = searchParams.get('page') ?? '1'
+  const pageSize = searchParams.get('pageSize') ?? '25'
+  const newDataset = useToggleModal()
   const [deletable, setDeletable] = useState<DatasetV2 | null>(null)
-  const { data: datasets } = useDatasets(undefined, {
-    fallbackData: serverDatasets,
-  })
+  const { data: datasets } = useDatasets(
+    { page, pageSize },
+    {
+      fallbackData: serverDatasets,
+    },
+  )
   if (!datasets.length) {
+    const isFirstPage = page === '1'
+    const msg = isFirstPage
+      ? 'There are no datasets yet. Create one to start testing your prompts.'
+      : 'No more datasets to show.'
     return (
-      <TableBlankSlate
-        description='There are no datasets yet. Create one to start testing your prompts.'
-        link={
-          <Link href={ROUTES.datasetsV2.new.root}>
-            <TableBlankSlate.Button>
-              Create your first dataset
-            </TableBlankSlate.Button>
-          </Link>
-        }
-      />
+      <>
+        <TableBlankSlate
+          description={msg}
+          link={
+            <>
+              {isFirstPage ? (
+                <TableBlankSlate.Button onClick={newDataset.onOpen}>
+                  Create your first dataset
+                </TableBlankSlate.Button>
+              ) : null}
+            </>
+          }
+        />
+        <NewDatasetModal
+          open={newDataset.open}
+          onOpenChange={newDataset.onOpenChange}
+        />
+      </>
     )
   }
 
   return (
     <>
       <DeleteDatasetModal dataset={deletable} setDataset={setDeletable} />
-      <Table>
+      <Table
+        externalFooter={
+          <LinkableTablePaginationFooter
+            pagination={buildPagination({
+              count: Infinity,
+              baseUrl: ROUTES.datasetsV2.root,
+              page: Number(page),
+              pageSize: Number(pageSize),
+            })}
+          />
+        }
+      >
         <TableHeader>
           <TableRow verticalPadding>
             <TableHead>Name</TableHead>
-            <TableHead>Rows</TableHead>
             <TableHead>Columns</TableHead>
             <TableHead>Author</TableHead>
             <TableHead>Created at</TableHead>
@@ -64,9 +97,6 @@ export function DatasetsTable({
             <TableRow key={dataset.id} verticalPadding hoverable={false}>
               <TableCell>
                 <Text.H5>{dataset.name}</Text.H5>
-              </TableCell>
-              <TableCell>
-                <Text.H5>TODO Count</Text.H5>
               </TableCell>
               <TableCell>
                 <Text.H5>{dataset.columns.length}</Text.H5>

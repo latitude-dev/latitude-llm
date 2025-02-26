@@ -1,6 +1,5 @@
-import { join, resolve } from 'path'
+import { resolve } from 'path'
 import { cwd } from 'process'
-import { fileURLToPath } from 'url'
 
 import { createEnv } from '@t3-oss/env-core'
 import dotenv, { type DotenvPopulateInput } from 'dotenv'
@@ -10,13 +9,22 @@ const environment = process.env.NODE_ENV || 'development'
 const FILE_PUBLIC_PATH = 'uploads'
 
 if (environment === 'development' || environment === 'test') {
-  const __dirname = fileURLToPath(import.meta.url)
   const pathToEnv = resolve(cwd(), `../../.env.${environment}`)
-  const FILES_STORAGE_PATH = join(__dirname, `../../../../${FILE_PUBLIC_PATH}`)
-  const PUBLIC_FILES_STORAGE_PATH = join(
-    __dirname,
-    `../../../../public/${FILE_PUBLIC_PATH}`,
-  )
+
+  dotenv.config({ path: pathToEnv })
+  const devRootPath = process.env.DEV_ROOT_PATH
+
+  if (!devRootPath) {
+    console.error(`
+  \x1b[31m[ERROR]\x1b[0m DEV_ROOT_PATH is missing!
+  Please define the \x1b[33mDEV_ROOT_PATH\x1b[0m environment variable in:
+  \x1b[36m.env.development\x1b[0m (located in the root of the project).
+  `)
+    process.exit(1)
+  }
+
+  const FILES_STORAGE_PATH = `${devRootPath}/${FILE_PUBLIC_PATH}`
+  const PUBLIC_FILES_STORAGE_PATH = `${devRootPath}/${FILE_PUBLIC_PATH}`
 
   dotenv.populate(
     process.env as DotenvPopulateInput,
