@@ -1,4 +1,4 @@
-import { AssistantMessage, Conversation } from '@latitude-data/compiler'
+import { AssistantMessage, Config, Conversation } from '@latitude-data/compiler'
 import {
   buildMessagesFromResponse,
   LogSources,
@@ -15,6 +15,7 @@ import {
   ABSOLUTE_MAX_STEPS,
   DEFAULT_MAX_STEPS,
   MAX_STEPS_CONFIG_NAME,
+  PromptConfig,
 } from '@latitude-data/constants'
 
 function assertValidStepCount({
@@ -57,12 +58,16 @@ export async function runAgentStep({
   providersMap: CachedApiKeys
   errorableUuid: string
   newMessages: Message[] | undefined
+  previousConfig: Config
   stepCount: number
 }) {
   if (newMessages?.length) {
     const lastResponseMessage = newMessages[0]! as AssistantMessage
     const latitudeToolResponses =
-      await chainStreamManager.handleLatitudeToolCalls(lastResponseMessage)
+      await chainStreamManager.handleLatitudeToolCalls({
+        message: lastResponseMessage,
+        config: conversation.config as PromptConfig,
+      })
     newMessages.push(...latitudeToolResponses)
   }
 
@@ -112,5 +117,6 @@ export async function runAgentStep({
     providersMap,
     stepCount: stepCount + 1,
     newMessages: buildMessagesFromResponse({ response }),
+    previousConfig: step.config,
   })
 }

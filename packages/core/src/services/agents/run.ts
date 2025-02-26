@@ -97,6 +97,7 @@ export function runAgent<T extends boolean, C extends SomeChain>({
       errorableUuid,
       stepCount,
       newMessages,
+      previousConfig: conversation.config,
     })
   })
 

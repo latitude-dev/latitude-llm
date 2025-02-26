@@ -4,11 +4,7 @@ import {
   ToolCall,
   ToolMessage,
 } from '@latitude-data/compiler'
-import {
-  AGENT_TOOL_PREFIX,
-  LatitudeToolInternalName,
-  StreamEventTypes,
-} from '@latitude-data/constants'
+import { PromptConfig, StreamEventTypes } from '@latitude-data/constants'
 import {
   ChainEvent,
   ChainEventTypes,
@@ -17,7 +13,6 @@ import {
 import { ExecuteStepArgs, streamAIResponse } from './step/streamAIResponse'
 import type {
   ChainStepResponse,
-  LatitudeToolCall,
   PromptSource,
   StreamType,
 } from '../../constants'
@@ -26,10 +21,10 @@ import { FinishReason, LanguageModelUsage } from 'ai'
 import { ChainError } from './ChainErrors'
 import { RunErrorCodes } from '@latitude-data/constants/errors'
 import { Workspace } from '../../browser'
-import {
-  getAgentAsToolCallResponses,
-  getLatitudeToolCallResponses,
-} from './step/toolExecution'
+import { resolveToolsFromConfig } from './resolveTools'
+import { omit } from 'lodash-es'
+import { ToolSource } from './resolveTools/types'
+import { getBuiltInToolCallResponses } from './step/toolExecution'
 
 const usePromise = <T>(): readonly [Promise<T>, (value: T) => void] => {
   let resolveValue: (value: T) => void
@@ -153,6 +148,24 @@ export class ChainStreamManager {
     if (this.inStep) this.completeStep()
     this.startStep()
 
+    const resolvedTools = await resolveToolsFromConfig({
+      workspace: this.workspace,
+      promptSource: this.promptSource,
+      config: args.conversation.config as PromptConfig,
+    }).then((r) => r.unwrap())
+
+    const tools = Object.fromEntries(
+      Object.entries(resolvedTools).map(([name, { definition }]) => [
+        name,
+        definition,
+      ]),
+    )
+
+    const resolvedConfig = {
+      ...omit(args.conversation.config, 'tools', 'latitudeTools', 'agents'),
+      tools,
+    }
+
     this.sendEvent({
       type: ChainEventTypes.ProviderStarted,
       config: args.conversation.config,
@@ -160,8 +173,11 @@ export class ChainStreamManager {
 
     const { response, tokenUsage } = await streamAIResponse({
       controller: this.controller,
-      promptSource: this.promptSource,
       ...args,
+      conversation: {
+        messages: args.conversation.messages,
+        config: resolvedConfig,
+      },
     })
     this.addMessageFromResponse(response)
 
@@ -183,7 +199,12 @@ export class ChainStreamManager {
     })
 
     const toolCalls = (response as ChainStepResponse<'text'>).toolCalls ?? []
-    const { clientToolCalls } = this.segregateToolCalls(toolCalls)
+    const clientToolCalls = toolCalls.filter((toolCall) => {
+      const toolSource = resolvedTools[toolCall.name]?.sourceData
+      return (
+        toolSource?.source === ToolSource.Client || toolSource === undefined
+      )
+    })
 
     return {
       response,
@@ -197,45 +218,44 @@ export class ChainStreamManager {
    *
    * Sends both ToolsStarted and ToolCompleted events.
    */
-  async handleLatitudeToolCalls(
-    message: AssistantMessage,
-  ): Promise<ToolMessage[]> {
-    const { latitudeToolCalls, agentsAsToolCalls } = this.segregateToolCalls(
-      message.toolCalls ?? [],
-    )
-    const allToolCalls = [...latitudeToolCalls, ...agentsAsToolCalls]
+  async handleLatitudeToolCalls({
+    config,
+    message,
+  }: {
+    config: PromptConfig
+    message: AssistantMessage
+  }): Promise<ToolMessage[]> {
+    const resolvedTools = await resolveToolsFromConfig({
+      workspace: this.workspace,
+      promptSource: this.promptSource,
+      config,
+    }).then((r) => r.unwrap())
 
-    if (!allToolCalls.length) return []
+    const toolCalls = message.toolCalls ?? []
+    const nonClientToolCalls = toolCalls.filter(
+      (tc) => resolvedTools[tc.name]?.sourceData.source !== ToolSource.Client,
+    )
+
+    if (!nonClientToolCalls.length) return []
     if (!this.inStep) this.startStep()
 
     this.sendEvent({
       type: ChainEventTypes.ToolsStarted,
-      tools: allToolCalls,
+      tools: nonClientToolCalls,
     })
 
-    const latitudeToolResponses = getLatitudeToolCallResponses({
-      toolCalls: latitudeToolCalls,
-      onFinish: (toolMessage: ToolMessage) => {
-        this.messages.push(toolMessage)
-        this.sendEvent({ type: ChainEventTypes.ToolCompleted })
-      },
-    })
-
-    const agentAsToolResponses = await getAgentAsToolCallResponses({
+    const toolResponses = getBuiltInToolCallResponses({
       workspace: this.workspace,
       promptSource: this.promptSource,
-      toolCalls: agentsAsToolCalls,
+      resolvedTools,
+      toolCalls: nonClientToolCalls,
       onFinish: (toolMessage: ToolMessage) => {
         this.messages.push(toolMessage)
         this.sendEvent({ type: ChainEventTypes.ToolCompleted })
       },
     })
 
-    const toolResponses = await Promise.all([
-      ...latitudeToolResponses,
-      ...agentAsToolResponses,
-    ])
-    return toolResponses
+    return await Promise.all(toolResponses)
   }
 
   startStep() {
@@ -350,41 +370,6 @@ export class ChainStreamManager {
     this.resolveLastResponse?.(this.lastResponse)
     this.resolveError?.(undefined)
     this.resolveToolCalls?.([])
-  }
-
-  private segregateToolCalls(toolCalls: ToolCall[]): {
-    clientToolCalls: ToolCall[]
-    latitudeToolCalls: LatitudeToolCall[]
-    agentsAsToolCalls: ToolCall[]
-  } {
-    return toolCalls.reduce(
-      (
-        acc: {
-          clientToolCalls: ToolCall[]
-          latitudeToolCalls: LatitudeToolCall[]
-          agentsAsToolCalls: ToolCall[]
-        },
-        toolCall,
-      ) => {
-        if (
-          Object.values(LatitudeToolInternalName).includes(
-            toolCall.name as LatitudeToolInternalName,
-          )
-        ) {
-          acc.latitudeToolCalls.push(toolCall as LatitudeToolCall)
-        } else if (toolCall.name.startsWith(AGENT_TOOL_PREFIX)) {
-          acc.agentsAsToolCalls.push(toolCall as LatitudeToolCall)
-        } else {
-          acc.clientToolCalls.push(toolCall)
-        }
-        return acc
-      },
-      {
-        clientToolCalls: [],
-        latitudeToolCalls: [],
-        agentsAsToolCalls: [],
-      },
-    )
   }
 }
 

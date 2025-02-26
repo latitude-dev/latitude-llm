@@ -3,6 +3,7 @@ import { Result } from '../../../../lib'
 import { buildProvidersMap } from '../../../providerApiKeys/buildMap'
 import {
   AssistantMessage,
+  Config,
   ContentType,
   Message,
   MessageContent,
@@ -116,6 +117,7 @@ export async function resumeAgent({
       errorableUuid: providerLog.documentLogUuid!,
       stepCount: 0,
       newMessages,
+      previousConfig: providerLog.config as Config,
     })
   })
 

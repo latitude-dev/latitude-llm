@@ -35,11 +35,6 @@ describe('promptInjection', () => {
 
       const document = documents.find((doc) => doc.path === 'main')!
       const result = await performPromptInjection({
-        workspace,
-        promptSource: {
-          document,
-          commit,
-        },
         messages: [],
         config: {
           provider: 'openai',

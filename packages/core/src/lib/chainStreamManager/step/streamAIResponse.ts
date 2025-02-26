@@ -12,7 +12,7 @@ import {
   setCachedResponse,
 } from '../../../services/commits/promptCache'
 import { ai, Config } from '../../../services/ai'
-import { ChainStepResponse, PromptSource, StreamType } from '../../../constants'
+import { ChainStepResponse, StreamType } from '../../../constants'
 import { consumeStream } from '../ChainStreamConsumer/consumeStream'
 import { LanguageModelUsage } from 'ai'
 import { performPromptInjection } from './promptInjection'
@@ -23,7 +23,6 @@ export type ExecuteStepArgs = {
   provider: ProviderApiKey
   conversation: Conversation
   source: LogSources
-  promptSource: PromptSource
   documentLogUuid: string
   schema?: JSONSchema7
   output?: 'object' | 'array' | 'no-schema'
@@ -37,7 +36,6 @@ export async function streamAIResponse({
   provider,
   conversation,
   source,
-  promptSource,
   documentLogUuid,
   schema,
   output,
@@ -55,8 +53,6 @@ export async function streamAIResponse({
   })
 
   const injectionResult = await performPromptInjection({
-    workspace,
-    promptSource,
     messages: conversation.messages,
     config: conversation.config as Config,
     injectFakeAgentStartTool,

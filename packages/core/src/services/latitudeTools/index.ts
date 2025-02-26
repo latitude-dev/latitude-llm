@@ -14,25 +14,28 @@ import {
 import {
   getLatitudeToolDefinition,
   getLatitudeToolInternalName,
-  getLatitudeToolName,
 } from './helpers'
 import { LATITUDE_TOOLS } from './tools'
-import { LatitudeToolCall } from '../../constants'
 import { Config } from '@latitude-data/compiler'
 
-export async function executeLatitudeToolCall(
-  toolCall: LatitudeToolCall,
-): PromisedResult<unknown, LatitudeError> {
-  const toolName = getLatitudeToolName(toolCall.name)
-  const method = LATITUDE_TOOLS.find((tool) => tool.name === toolName)?.method
+export async function executeLatitudeToolCall({
+  latitudeTool,
+  args,
+}: {
+  latitudeTool: LatitudeTool
+  args: Record<string, unknown>
+}): PromisedResult<unknown, LatitudeError> {
+  const method = LATITUDE_TOOLS.find(
+    (tool) => tool.name === latitudeTool,
+  )?.method
   if (!method) {
     return Result.error(
-      new BadRequestError(`Unsupported built-in tool: ${toolCall.name}`),
+      new BadRequestError(`Unsupported built-in tool: ${latitudeTool}`),
     )
   }
 
   try {
-    const response = await method(toolCall.arguments)
+    const response = await method(args)
     return response
   } catch (error) {
     return Result.error(error as LatitudeError)

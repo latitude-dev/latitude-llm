@@ -1,5 +1,5 @@
 import { Chain as PromptlChain } from 'promptl-ai'
-import { AssistantMessage, type Message } from '@latitude-data/compiler'
+import { AssistantMessage, Config, type Message } from '@latitude-data/compiler'
 import { LogSources } from '../../../constants'
 import {
   ConfigOverrides,
@@ -17,6 +17,7 @@ import {
   ABSOLUTE_MAX_STEPS,
   DEFAULT_MAX_STEPS,
   MAX_STEPS_CONFIG_NAME,
+  PromptConfig,
 } from '@latitude-data/constants'
 
 function assertValidStepCount({
@@ -55,6 +56,7 @@ export type StepProps = {
   providersMap: CachedApiKeys
   errorableUuid: string
   newMessages: Message[] | undefined
+  previousConfig?: Config
   configOverrides?: ConfigOverrides
   removeSchema?: boolean
   stepCount?: number
@@ -71,6 +73,7 @@ export async function runStep({
   // Contains all messages added from the end of the last step to the beginning of this one,
   // including the assistant response and tool results
   newMessages = undefined,
+  previousConfig,
   configOverrides,
   removeSchema,
   stepCount = 0,
@@ -78,7 +81,10 @@ export async function runStep({
   if (newMessages?.length) {
     const lastResponseMessage = newMessages[0]! as AssistantMessage
     const latitudeToolResponses =
-      await chainStreamManager.handleLatitudeToolCalls(lastResponseMessage)
+      await chainStreamManager.handleLatitudeToolCalls({
+        message: lastResponseMessage,
+        config: previousConfig as PromptConfig,
+      })
     newMessages.push(...latitudeToolResponses)
   }
 
@@ -152,6 +158,7 @@ export async function runStep({
     errorableUuid,
     stepCount: stepCount + 1,
     newMessages: buildMessagesFromResponse({ response }),
+    previousConfig: step.conversation.config,
     configOverrides,
     removeSchema,
   })
