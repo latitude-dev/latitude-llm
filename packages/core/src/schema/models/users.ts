@@ -11,5 +11,6 @@ export const users = latitudeSchema.table('users', {
   email: text('email').notNull().unique(),
   confirmedAt: timestamp('confirmed_at'),
   admin: boolean('admin').notNull().default(false),
+  lastSuggestionNotifiedAt: timestamp('last_suggestion_notified_at'),
   ...timestamps(),
 })

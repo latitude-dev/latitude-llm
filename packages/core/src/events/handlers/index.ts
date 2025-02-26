@@ -11,6 +11,7 @@ import { runLiveEvaluationsJob } from './runLiveEvaluationsJob'
 import { sendInvitationToUserJob } from './sendInvitationToUser'
 import { sendMagicLinkJob } from './sendMagicLinkHandler'
 import { sendReferralInvitationJob } from './sendReferralInvitation'
+import { sendSuggestionNotification } from './sendSuggestionNotification'
 
 export const EventHandlers: IEventsHandlers = {
   aiProviderCallCompleted: [],
@@ -24,7 +25,10 @@ export const EventHandlers: IEventsHandlers = {
     runLiveEvaluationsJob,
     notifyToClientDocumentLogCreatedJob,
   ],
-  documentSuggestionCreated: [notifyClientOfDocumentSuggestionCreated],
+  documentSuggestionCreated: [
+    notifyClientOfDocumentSuggestionCreated,
+    sendSuggestionNotification,
+  ],
   documentSuggestionApplied: [],
   documentSuggestionDiscarded: [],
   documentRun: [],

@@ -1,6 +1,7 @@
-import { and, eq, getTableColumns } from 'drizzle-orm'
+import { and, eq, getTableColumns, sql } from 'drizzle-orm'
 
 import { User } from '../browser'
+import { databaseErrorCodes, Result, UnprocessableEntityError } from '../lib'
 import { memberships, users } from '../schema'
 import RepositoryLegacy from './repository'
 
@@ -22,5 +23,31 @@ export class UsersRepository extends RepositoryLegacy<typeof tt, User> {
         ),
       )
       .as('usersScope')
+  }
+
+  async lock({ id, wait }: { id: string; wait?: boolean }) {
+    // .for('no key update', { noWait: true }) is bugged in drizzle!
+    // https://github.com/drizzle-team/drizzle-orm/issues/3554
+
+    try {
+      await this.db.execute(sql<boolean>`
+        SELECT TRUE
+        FROM ${users}
+        INNER JOIN ${memberships} ON ${memberships.userId} = ${users.id}
+        WHERE (
+          ${memberships.workspaceId} = ${this.workspaceId} AND
+          ${users.id} = ${id}
+        ) LIMIT 1 FOR NO KEY UPDATE ${sql.raw(wait ? '' : 'NOWAIT')};
+          `)
+    } catch (error: any) {
+      if (error?.code === databaseErrorCodes.lockNotAvailable) {
+        return Result.error(
+          new UnprocessableEntityError('Cannot obtain lock on user'),
+        )
+      }
+      return Result.error(error as Error)
+    }
+
+    return Result.nil()
   }
 }

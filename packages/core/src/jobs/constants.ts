@@ -69,6 +69,7 @@ export const QUEUES = {
       'sendInvitationToUserJob',
       'sendMagicLinkJob',
       'sendReferralInvitationJob',
+      'sendSuggestionNotification',
       'requestDocumentSuggestionJob',
     ],
   },
