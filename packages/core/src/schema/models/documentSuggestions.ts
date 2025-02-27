@@ -17,16 +17,16 @@ export const documentSuggestions = latitudeSchema.table(
   'document_suggestions',
   {
     id: bigserial('id', { mode: 'number' }).notNull().primaryKey(),
-    workspaceId: bigint('workspace_id', { mode: 'number' }) // TODO: Add .notNull() when migration is done
+    workspaceId: bigint('workspace_id', { mode: 'number' })
+      .notNull()
       .references(() => workspaces.id, { onDelete: 'cascade' }),
     commitId: bigint('commit_id', { mode: 'number' }).notNull(),
     documentUuid: uuid('document_uuid').notNull(),
     evaluationId: bigint('evaluation_id', { mode: 'number' })
       .notNull()
       .references(() => evaluations.id, { onDelete: 'cascade' }),
-    oldPrompt: text('old_prompt'), // TODO: Add .notNull() when migration is done
-    newPrompt: text('new_prompt'), // TODO: Add .notNull() when migration is done
-    prompt: text('prompt').notNull(),
+    oldPrompt: text('old_prompt').notNull(),
+    newPrompt: text('new_prompt').notNull(),
     summary: text('summary').notNull(),
     ...timestamps(),
   },

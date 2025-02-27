@@ -59,8 +59,7 @@ export function SuggestionItem({
   }, [project, commit, document, suggestion])
 
   const onApply = useCallback(() => {
-    // TODO: Delete '!' when migration is done
-    const patches = dmp.patch_make(suggestion.oldPrompt!, suggestion.newPrompt!)
+    const patches = dmp.patch_make(suggestion.oldPrompt, suggestion.newPrompt)
     const patchedPrompt = dmp.patch_apply(patches, prompt)[0]
 
     setDiff({

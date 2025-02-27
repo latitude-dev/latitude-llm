@@ -178,7 +178,8 @@ describe('inheritDocumentRelations', () => {
         .then((r) => r.unwrap()),
     ).toEqual([
       expect.objectContaining({
-        prompt: suggestion.prompt,
+        newPrompt: suggestion.newPrompt,
+        oldPrompt: suggestion.oldPrompt,
         summary: suggestion.summary,
       }),
     ])

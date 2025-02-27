@@ -171,7 +171,6 @@ export async function generateDocumentSuggestion(
         evaluationId: evaluation.id,
         oldPrompt: document.content,
         newPrompt: result.prompt,
-        prompt: result.prompt, // TODO: Delete when migration is done
         summary: result.summary,
       })
       .returning()
