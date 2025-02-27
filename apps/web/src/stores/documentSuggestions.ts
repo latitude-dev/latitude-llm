@@ -5,7 +5,12 @@ import { discardDocumentSuggestionAction } from '$/actions/documentSuggestions/d
 import useFetcher from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
-import { DocumentSuggestionWithDetails } from '@latitude-data/core/browser'
+import {
+  Commit,
+  DocumentSuggestionWithDetails,
+  DocumentVersion,
+  Project,
+} from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui'
 import { compact } from 'lodash-es'
 import { useCallback } from 'react'
@@ -13,13 +18,13 @@ import useSWR, { SWRConfiguration } from 'swr'
 
 export default function useDocumentSuggestions(
   {
-    projectId,
-    commitUuid,
-    documentUuid,
+    project,
+    commit,
+    document,
   }: {
-    projectId: number
-    commitUuid: string
-    documentUuid: string
+    project: Pick<Project, 'id'>
+    commit: Pick<Commit, 'uuid'>
+    document: Pick<DocumentVersion, 'commitId' | 'documentUuid'>
   },
   opts?: SWRConfiguration,
 ) {
@@ -27,9 +32,9 @@ export default function useDocumentSuggestions(
 
   const fetcher = useFetcher(
     ROUTES.api.projects
-      .detail(projectId)
-      .commits.detail(commitUuid)
-      .documents.detail(documentUuid).suggestions.root,
+      .detail(project.id)
+      .commits.detail(commit.uuid)
+      .documents.detail(document.documentUuid).suggestions.root,
   )
 
   const {
@@ -37,7 +42,13 @@ export default function useDocumentSuggestions(
     mutate,
     ...rest
   } = useSWR<DocumentSuggestionWithDetails[]>(
-    compact(['documentSuggestions', projectId, commitUuid, documentUuid]),
+    compact([
+      'documentSuggestions',
+      project.id,
+      commit.uuid,
+      document.commitId,
+      document.documentUuid,
+    ]),
     fetcher,
     opts,
   )
@@ -66,16 +77,16 @@ export default function useDocumentSuggestions(
       prompt?: string
     }) => {
       const [result, error] = await executeApplyDocumentSuggestion({
-        projectId: projectId,
-        commitUuid: commitUuid,
-        documentUuid: documentUuid,
+        projectId: project.id,
+        commitUuid: commit.uuid,
+        documentUuid: document.documentUuid,
         suggestionId: suggestionId,
         prompt: prompt,
       })
       if (error) return
       return result
     },
-    [projectId, commitUuid, documentUuid, executeApplyDocumentSuggestion],
+    [project, commit, document, executeApplyDocumentSuggestion],
   )
 
   const {
@@ -96,15 +107,15 @@ export default function useDocumentSuggestions(
   const discardDocumentSuggestion = useCallback(
     async ({ suggestionId }: { suggestionId: number }) => {
       const [result, error] = await executeDiscardDocumentSuggestion({
-        projectId: projectId,
-        commitUuid: commitUuid,
-        documentUuid: documentUuid,
+        projectId: project.id,
+        commitUuid: commit.uuid,
+        documentUuid: document.documentUuid,
         suggestionId: suggestionId,
       })
       if (error) return
       return result
     },
-    [projectId, commitUuid, documentUuid, executeDiscardDocumentSuggestion],
+    [project, commit, document, executeDiscardDocumentSuggestion],
   )
 
   return {
