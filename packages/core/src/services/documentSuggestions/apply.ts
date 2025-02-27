@@ -1,12 +1,15 @@
-import { eq } from 'drizzle-orm'
-import { DocumentSuggestion, Project, User, Workspace } from '../../browser'
+import { and, eq } from 'drizzle-orm'
+import {
+  Commit,
+  DocumentSuggestion,
+  Project,
+  User,
+  Workspace,
+} from '../../browser'
 import { database, Database } from '../../client'
 import { publisher } from '../../events/publisher'
 import { Result, Transaction } from '../../lib'
-import {
-  CommitsRepository,
-  DocumentVersionsRepository,
-} from '../../repositories'
+import { DocumentVersionsRepository } from '../../repositories'
 import { documentSuggestions } from '../../schema'
 import { createCommit } from '../commits/create'
 import { updateDocument } from '../documents/update'
@@ -14,17 +17,23 @@ import { updateDocument } from '../documents/update'
 export async function applyDocumentSuggestion(
   {
     suggestion,
+    commit,
+    prompt,
     workspace,
     project,
     user,
   }: {
     suggestion: DocumentSuggestion
+    commit: Commit
+    prompt?: string
     workspace: Workspace
     project: Project
     user: User
   },
   db: Database = database,
 ) {
+  prompt = prompt ?? suggestion.newPrompt! // TODO: Delete '!' when migration is done
+
   return Transaction.call(async (tx) => {
     const documentsRepository = new DocumentVersionsRepository(workspace.id, tx)
     const document = await documentsRepository
@@ -34,10 +43,16 @@ export async function applyDocumentSuggestion(
       })
       .then((r) => r.unwrap())
 
-    const commitsRepository = new CommitsRepository(workspace.id, tx)
-    const commit = await commitsRepository
-      .getCommitById(document.commitId)
-      .then((r) => r.unwrap())
+    // Note: delete suggestion first so that the possible
+    // draft does not inherit this suggestion again
+    await tx
+      .delete(documentSuggestions)
+      .where(
+        and(
+          eq(documentSuggestions.workspaceId, workspace.id),
+          eq(documentSuggestions.id, suggestion.id),
+        ),
+      )
 
     let draft
     if (commit.mergedAt) {
@@ -55,15 +70,11 @@ export async function applyDocumentSuggestion(
         {
           commit: draft,
           document: document,
-          content: suggestion.prompt,
+          content: prompt,
         },
         tx,
       ).then((r) => r.unwrap())
     }
-
-    await tx
-      .delete(documentSuggestions)
-      .where(eq(documentSuggestions.id, suggestion.id))
 
     publisher.publishLater({
       type: 'documentSuggestionApplied',

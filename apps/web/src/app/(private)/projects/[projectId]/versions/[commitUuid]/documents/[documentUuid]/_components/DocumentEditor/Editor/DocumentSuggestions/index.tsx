@@ -61,12 +61,14 @@ export function DocumentSuggestions({
   project,
   commit,
   document,
+  prompt,
   setDiff,
   setPrompt,
 }: {
   project: IProjectContextType['project']
   commit: ICommitContextType['commit']
   document: DocumentVersion
+  prompt: string
   setDiff: (value?: DiffOptions) => void
   setPrompt: (prompt: string) => void
 }) {
@@ -152,6 +154,7 @@ export function DocumentSuggestions({
               project={project}
               commit={commit}
               document={document}
+              prompt={prompt}
               setDiff={setDiff}
               setPrompt={setPrompt}
               apply={applyDocumentSuggestion}

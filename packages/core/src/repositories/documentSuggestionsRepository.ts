@@ -6,22 +6,20 @@ import {
   DocumentSuggestionWithDetails,
 } from '../browser'
 import { Result } from '../lib'
-import { commits, documentSuggestions, evaluations, projects } from '../schema'
+import { documentSuggestions, evaluations } from '../schema'
 import Repository from './repositoryV2'
 
 const tt = getTableColumns(documentSuggestions)
 
 export class DocumentSuggestionsRepository extends Repository<DocumentSuggestion> {
   get scopeFilter() {
-    return eq(projects.workspaceId, this.workspaceId)
+    return eq(documentSuggestions.workspaceId, this.workspaceId)
   }
 
   get scope() {
     return this.db
       .select(tt)
       .from(documentSuggestions)
-      .innerJoin(commits, eq(commits.id, documentSuggestions.commitId)) // Needed for tenancy
-      .innerJoin(projects, eq(projects.id, commits.projectId)) // Needed for tenancy
       .where(this.scopeFilter)
       .orderBy(desc(documentSuggestions.createdAt))
       .$dynamic()
@@ -46,8 +44,6 @@ export class DocumentSuggestionsRepository extends Repository<DocumentSuggestion
     const result = await this.db
       .select({ count: count() })
       .from(documentSuggestions)
-      .innerJoin(commits, eq(commits.id, documentSuggestions.commitId)) // Needed for tenancy
-      .innerJoin(projects, eq(projects.id, commits.projectId)) // Needed for tenancy
       .where(
         and(
           this.scopeFilter,
@@ -96,12 +92,10 @@ export class DocumentSuggestionsRepository extends Repository<DocumentSuggestion
         evaluationName: evaluations.name,
       })
       .from(documentSuggestions)
-      .innerJoin(commits, eq(commits.id, documentSuggestions.commitId))
       .innerJoin(
         evaluations,
         eq(evaluations.id, documentSuggestions.evaluationId),
       )
-      .innerJoin(projects, eq(projects.id, commits.projectId)) // Needed for tenancy
       .where(
         and(
           this.scopeFilter,

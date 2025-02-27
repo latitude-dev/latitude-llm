@@ -58,10 +58,19 @@ export default function useDocumentSuggestions(
     },
   })
   const applyDocumentSuggestion = useCallback(
-    async ({ suggestionId }: { suggestionId: number }) => {
+    async ({
+      suggestionId,
+      prompt,
+    }: {
+      suggestionId: number
+      prompt?: string
+    }) => {
       const [result, error] = await executeApplyDocumentSuggestion({
         projectId: projectId,
+        commitUuid: commitUuid,
+        documentUuid: documentUuid,
         suggestionId: suggestionId,
+        prompt: prompt,
       })
       if (error) return
       return result
@@ -88,6 +97,8 @@ export default function useDocumentSuggestions(
     async ({ suggestionId }: { suggestionId: number }) => {
       const [result, error] = await executeDiscardDocumentSuggestion({
         projectId: projectId,
+        commitUuid: commitUuid,
+        documentUuid: documentUuid,
         suggestionId: suggestionId,
       })
       if (error) return

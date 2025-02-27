@@ -11,6 +11,7 @@ import {
   IProjectContextType,
   Text,
 } from '@latitude-data/web-ui'
+import DiffMatchPatch from 'diff-match-patch'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { DiffOptions } from 'node_modules/@latitude-data/web-ui/src/ds/molecules/DocumentTextEditor/types'
@@ -21,6 +22,7 @@ export function SuggestionItem({
   project,
   commit,
   document,
+  prompt,
   setDiff,
   setPrompt,
   apply,
@@ -32,6 +34,7 @@ export function SuggestionItem({
   project: IProjectContextType['project']
   commit: ICommitContextType['commit']
   document: DocumentVersion
+  prompt: string
   setDiff: (value?: DiffOptions) => void
   setPrompt: (prompt: string) => void
   apply: ReturnType<typeof useDocumentSuggestions>['applyDocumentSuggestion']
@@ -53,12 +56,18 @@ export function SuggestionItem({
       .evaluations.detail(suggestion.evaluationId).root
   }, [project, commit, document, suggestion])
 
+  const patchedPrompt = useMemo(() => {
+    const dmp = new DiffMatchPatch()
+    const patches = dmp.patch_make(suggestion.oldPrompt!, suggestion.newPrompt!) // TODO: Delete '!' when migration is done
+    return dmp.patch_apply(patches, prompt)[0]
+  }, [prompt, suggestion])
+
   const onApply = useCallback(() => {
     setDiff({
-      newValue: suggestion.prompt,
+      newValue: patchedPrompt,
       description: suggestion.summary,
-      onAccept: async () => {
-        const result = await apply({ suggestionId: suggestion.id })
+      onAccept: async (prompt) => {
+        const result = await apply({ suggestionId: suggestion.id, prompt })
         if (!result) return
 
         setDiff(undefined)
@@ -71,7 +80,7 @@ export function SuggestionItem({
               .documents.detail({ uuid: result.suggestion.documentUuid }).root,
           )
         } else {
-          setPrompt(result.suggestion.prompt)
+          setPrompt(prompt)
         }
       },
       onReject: () => setDiff(undefined),
