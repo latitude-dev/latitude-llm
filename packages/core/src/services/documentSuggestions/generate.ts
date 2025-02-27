@@ -165,10 +165,13 @@ export async function generateDocumentSuggestion(
     const suggestion = await tx
       .insert(documentSuggestions)
       .values({
+        workspaceId: workspace.id,
         commitId: document.commitId,
         documentUuid: document.documentUuid,
         evaluationId: evaluation.id,
-        prompt: result.prompt,
+        oldPrompt: document.content,
+        newPrompt: result.prompt,
+        prompt: result.prompt, // TODO: Delete when migration is done
         summary: result.summary,
       })
       .returning()

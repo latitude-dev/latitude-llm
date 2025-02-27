@@ -76,6 +76,7 @@ describe('discardDocumentSuggestion', () => {
     suggestion = await factories.createDocumentSuggestion({
       document: document,
       evaluation: evaluation,
+      workspace: workspace,
     })
 
     mocks = {

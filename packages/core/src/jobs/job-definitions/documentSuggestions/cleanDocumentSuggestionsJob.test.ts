@@ -84,21 +84,25 @@ describe('cleanDocumentSuggestionsJob', () => {
       await factories.createDocumentSuggestion({
         document: document,
         evaluation: evaluations[0]!,
+        workspace: workspace,
         createdAt: new Date(),
       }),
       await factories.createDocumentSuggestion({
         document: document,
         evaluation: evaluations[0]!,
+        workspace: workspace,
         createdAt: subDays(new Date(), DOCUMENT_SUGGESTION_EXPIRATION_DAYS + 1),
       }),
       await factories.createDocumentSuggestion({
         document: document,
         evaluation: evaluations[1]!,
+        workspace: workspace,
         createdAt: subDays(new Date(), DOCUMENT_SUGGESTION_EXPIRATION_DAYS + 9),
       }),
       await factories.createDocumentSuggestion({
         document: document,
         evaluation: evaluations[2]!,
+        workspace: workspace,
         createdAt: subDays(new Date(), 3),
       }),
     ]
