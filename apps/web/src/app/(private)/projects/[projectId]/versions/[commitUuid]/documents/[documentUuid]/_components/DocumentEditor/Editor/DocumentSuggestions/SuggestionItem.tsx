@@ -11,16 +11,20 @@ import {
   IProjectContextType,
   Text,
 } from '@latitude-data/web-ui'
+import DiffMatchPatch from 'diff-match-patch'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { DiffOptions } from 'node_modules/@latitude-data/web-ui/src/ds/molecules/DocumentTextEditor/types'
 import { useCallback, useMemo, useState } from 'react'
+
+const dmp = new DiffMatchPatch()
 
 export function SuggestionItem({
   suggestion,
   project,
   commit,
   document,
+  prompt,
   setDiff,
   setPrompt,
   apply,
@@ -32,6 +36,7 @@ export function SuggestionItem({
   project: IProjectContextType['project']
   commit: ICommitContextType['commit']
   document: DocumentVersion
+  prompt: string
   setDiff: (value?: DiffOptions) => void
   setPrompt: (prompt: string) => void
   apply: ReturnType<typeof useDocumentSuggestions>['applyDocumentSuggestion']
@@ -54,11 +59,15 @@ export function SuggestionItem({
   }, [project, commit, document, suggestion])
 
   const onApply = useCallback(() => {
+    // TODO: Delete '!' when migration is done
+    const patches = dmp.patch_make(suggestion.oldPrompt!, suggestion.newPrompt!)
+    const patchedPrompt = dmp.patch_apply(patches, prompt)[0]
+
     setDiff({
-      newValue: suggestion.prompt,
+      newValue: patchedPrompt,
       description: suggestion.summary,
-      onAccept: async () => {
-        const result = await apply({ suggestionId: suggestion.id })
+      onAccept: async (prompt) => {
+        const result = await apply({ suggestionId: suggestion.id, prompt })
         if (!result) return
 
         setDiff(undefined)
@@ -71,13 +80,14 @@ export function SuggestionItem({
               .documents.detail({ uuid: result.suggestion.documentUuid }).root,
           )
         } else {
-          setPrompt(result.suggestion.prompt)
+          setPrompt(prompt)
         }
       },
       onReject: () => setDiff(undefined),
     })
+
     close()
-  }, [project, suggestion, setDiff, setPrompt, apply, close])
+  }, [project, suggestion, prompt, setDiff, setPrompt, apply, close])
 
   const onDiscard = useCallback(async () => {
     await discard({ suggestionId: suggestion.id })

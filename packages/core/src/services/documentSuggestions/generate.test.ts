@@ -286,10 +286,12 @@ describe('generateDocumentSuggestion', () => {
 
     expect(suggestion).toEqual(
       expect.objectContaining({
+        workspaceId: workspace.id,
         commitId: commit.id,
         documentUuid: document.documentUuid,
         evaluationId: evaluation.id,
-        prompt: 'suggested prompt',
+        oldPrompt: document.content,
+        newPrompt: 'suggested prompt',
         summary: 'generated summary',
       }),
     )
@@ -346,10 +348,12 @@ describe('generateDocumentSuggestion', () => {
 
     expect(suggestion).toEqual(
       expect.objectContaining({
+        workspaceId: workspace.id,
         commitId: commit.id,
         documentUuid: document.documentUuid,
         evaluationId: evaluation.id,
-        prompt: 'suggested prompt',
+        oldPrompt: document.content,
+        newPrompt: 'suggested prompt',
         summary: 'generated summary',
       }),
     )

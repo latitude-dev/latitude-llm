@@ -411,6 +411,7 @@ export default function DocumentEditor({
                           project={project}
                           commit={commit}
                           document={document}
+                          prompt={value}
                           setDiff={setDiff}
                           setPrompt={onChange}
                         />

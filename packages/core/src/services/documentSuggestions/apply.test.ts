@@ -12,7 +12,10 @@ import {
 } from '../../browser'
 import { publisher } from '../../events/publisher'
 import { NotFoundError, Result } from '../../lib'
-import { DocumentSuggestionsRepository } from '../../repositories'
+import {
+  DocumentSuggestionsRepository,
+  DocumentVersionsRepository,
+} from '../../repositories'
 import * as factories from '../../tests/factories'
 import { mergeCommit } from '../commits/merge'
 import { applyDocumentSuggestion } from './apply'
@@ -78,6 +81,7 @@ describe('applyDocumentSuggestion', () => {
       document: document,
       evaluation: evaluation,
       workspace: workspace,
+      prompt: 'suggested prompt',
     })
 
     mocks = {
@@ -98,6 +102,7 @@ describe('applyDocumentSuggestion', () => {
     await expect(
       applyDocumentSuggestion({
         suggestion: suggestion,
+        commit: commit,
         workspace: workspace,
         project: project,
         user: user,
@@ -105,15 +110,15 @@ describe('applyDocumentSuggestion', () => {
     ).rejects.toThrowError(new Error(`failed!`))
 
     const repository = new DocumentSuggestionsRepository(workspace.id)
-    await expect(
-      repository.find(suggestion.id).then((r) => r.unwrap()),
-    ).resolves.toEqual(suggestion)
+    const actual = await repository.find(suggestion.id).then((r) => r.unwrap())
+    expect(actual).toEqual(suggestion)
     expect(mocks.publisher).not.toHaveBeenCalled()
   })
 
   it('applies document suggestion on draft commit', async () => {
     const result = await applyDocumentSuggestion({
       suggestion: suggestion,
+      commit: commit,
       workspace: workspace,
       project: project,
       user: user,
@@ -139,6 +144,7 @@ describe('applyDocumentSuggestion', () => {
 
     const result = await applyDocumentSuggestion({
       suggestion: suggestion,
+      commit: commit,
       workspace: workspace,
       project: project,
       user: user,
@@ -152,10 +158,66 @@ describe('applyDocumentSuggestion', () => {
         mergedAt: null,
       }),
     })
-    const repository = new DocumentSuggestionsRepository(workspace.id)
+    const suggestionsRepository = new DocumentSuggestionsRepository(
+      workspace.id,
+    )
     await expect(
-      repository.find(suggestion.id).then((r) => r.unwrap()),
+      suggestionsRepository.find(suggestion.id).then((r) => r.unwrap()),
     ).rejects.toThrowError(NotFoundError)
+    const documentsRepository = new DocumentVersionsRepository(workspace.id)
+    document = await documentsRepository
+      .getDocumentAtCommit({
+        projectId: project.id,
+        commitUuid: result.draft!.uuid,
+        documentUuid: result.suggestion.documentUuid,
+      })
+      .then((r) => r.unwrap())
+    expect(document.content).toEqual(suggestion.newPrompt)
+    expect(mocks.publisher).toHaveBeenLastCalledWith({
+      type: 'documentSuggestionApplied',
+      data: {
+        workspaceId: workspace.id,
+        userId: user.id,
+        suggestion: suggestion,
+      },
+    })
+  })
+
+  it('applies document suggestion with custom prompt', async () => {
+    commit = await mergeCommit(commit).then((r) => r.unwrap())
+
+    const result = await applyDocumentSuggestion({
+      suggestion: suggestion,
+      commit: commit,
+      prompt: 'custom prompt',
+      workspace: workspace,
+      project: project,
+      user: user,
+    }).then((r) => r.unwrap())
+
+    expect(result).toEqual({
+      suggestion,
+      draft: expect.objectContaining({
+        title: `Refined 'prompt'`,
+        description: 'Created by a suggestion.',
+        mergedAt: null,
+      }),
+    })
+    const suggestionsRepository = new DocumentSuggestionsRepository(
+      workspace.id,
+    )
+    await expect(
+      suggestionsRepository.find(suggestion.id).then((r) => r.unwrap()),
+    ).rejects.toThrowError(NotFoundError)
+    const documentsRepository = new DocumentVersionsRepository(workspace.id)
+    document = await documentsRepository
+      .getDocumentAtCommit({
+        projectId: project.id,
+        commitUuid: result.draft!.uuid,
+        documentUuid: result.suggestion.documentUuid,
+      })
+      .then((r) => r.unwrap())
+    expect(document.content).toEqual('custom prompt')
     expect(mocks.publisher).toHaveBeenLastCalledWith({
       type: 'documentSuggestionApplied',
       data: {

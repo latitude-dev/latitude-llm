@@ -3,9 +3,9 @@
 import { DocumentSuggestionsRepository } from '@latitude-data/core/repositories'
 import { discardDocumentSuggestion } from '@latitude-data/core/services/documentSuggestions/discard'
 import { z } from 'zod'
-import { withProject } from '../procedures'
+import { withDocument } from '../procedures'
 
-export const discardDocumentSuggestionAction = withProject
+export const discardDocumentSuggestionAction = withDocument
   .createServerAction()
   .input(
     z.object({

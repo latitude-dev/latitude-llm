@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm'
+import { and, eq } from 'drizzle-orm'
 import { DocumentSuggestion, User, Workspace } from '../../browser'
 import { database, Database } from '../../client'
 import { publisher } from '../../events/publisher'
@@ -20,7 +20,12 @@ export async function discardDocumentSuggestion(
   return Transaction.call(async (tx) => {
     await tx
       .delete(documentSuggestions)
-      .where(eq(documentSuggestions.id, suggestion.id))
+      .where(
+        and(
+          eq(documentSuggestions.workspaceId, workspace.id),
+          eq(documentSuggestions.id, suggestion.id),
+        ),
+      )
 
     publisher.publishLater({
       type: 'documentSuggestionDiscarded',
