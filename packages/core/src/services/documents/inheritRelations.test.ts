@@ -70,6 +70,7 @@ describe('inheritDocumentRelations', () => {
     suggestion = await factories.createDocumentSuggestion({
       document: fromVersion,
       evaluation: evaluation,
+      workspace: workspace,
     })
 
     await mergeCommit(fromCommit).then((r) => r.unwrap())

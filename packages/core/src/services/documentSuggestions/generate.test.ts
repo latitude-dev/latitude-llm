@@ -210,6 +210,7 @@ describe('generateDocumentSuggestion', () => {
     const anotherSuggestion = await factories.createDocumentSuggestion({
       document: document,
       evaluation: evaluation,
+      workspace: workspace,
     })
     mocks.publisher.mockClear()
 
@@ -322,6 +323,7 @@ describe('generateDocumentSuggestion', () => {
     await factories.createDocumentSuggestion({
       document: document,
       evaluation: evaluation,
+      workspace: workspace,
       prompt: 'another prompt',
       summary: 'another summary',
       createdAt: subDays(new Date(), DOCUMENT_SUGGESTION_EXPIRATION_DAYS + 1),

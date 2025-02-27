@@ -80,6 +80,7 @@ describe('sendSuggestionNotification', () => {
     suggestion = await factories.createDocumentSuggestion({
       document: document,
       evaluation: evaluation,
+      workspace: workspace,
     })
 
     const mockSend = vi.fn().mockResolvedValue(Result.nil())

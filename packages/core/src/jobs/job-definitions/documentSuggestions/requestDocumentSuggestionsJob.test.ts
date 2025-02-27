@@ -88,6 +88,7 @@ describe('requestDocumentSuggestionsJob', () => {
       await factories.createDocumentSuggestion({
         document: document,
         evaluation: evaluation,
+        workspace: workspace,
         createdAt: suggestionCreatedAt,
       })
     }
