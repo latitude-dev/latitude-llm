@@ -94,11 +94,7 @@ export function DocumentSuggestions({
     isLoading,
     isExecuting,
   } = useDocumentSuggestions(
-    {
-      projectId: project.id,
-      commitUuid: commit.uuid,
-      documentUuid: document.documentUuid,
-    },
+    { project, commit, document },
     { keepPreviousData: true }, // Stop refetch blink as we don't want a loading ui here
   )
   useDocumentSuggestionsSocket({ document, mutate, notify })
