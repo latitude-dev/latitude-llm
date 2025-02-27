@@ -26,7 +26,7 @@ export function SuggestionItem({
   apply,
   discard,
   close,
-  isExecuting,
+  isLoading,
 }: {
   suggestion: DocumentSuggestionWithDetails
   project: IProjectContextType['project']
@@ -39,7 +39,7 @@ export function SuggestionItem({
     typeof useDocumentSuggestions
   >['discardDocumentSuggestion']
   close: () => void
-  isExecuting: boolean
+  isLoading: boolean
 }) {
   const router = useRouter()
 
@@ -106,7 +106,7 @@ export function SuggestionItem({
           variant='link'
           size='none'
           onClick={onApply}
-          disabled={isExecuting}
+          disabled={isLoading}
         >
           View
         </Button>
@@ -115,7 +115,7 @@ export function SuggestionItem({
           size='none'
           className='text-destructive'
           onClick={() => setIsDiscarding(true)}
-          disabled={isExecuting}
+          disabled={isLoading}
         >
           Remove
         </Button>
@@ -131,7 +131,7 @@ export function SuggestionItem({
             label: 'Remove suggestion',
             description:
               'This will remove the suggestion. This action cannot be undone. We will try to generate a better suggestion next time!',
-            isConfirming: isExecuting,
+            isConfirming: isLoading,
           }}
         />
       </div>

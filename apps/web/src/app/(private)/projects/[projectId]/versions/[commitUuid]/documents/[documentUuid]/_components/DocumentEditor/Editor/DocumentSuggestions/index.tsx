@@ -89,19 +89,23 @@ export function DocumentSuggestions({
     mutate,
     applyDocumentSuggestion,
     discardDocumentSuggestion,
+    isLoading,
     isExecuting,
-  } = useDocumentSuggestions({
-    projectId: project.id,
-    commitUuid: commit.uuid,
-    documentUuid: document.documentUuid,
-  })
+  } = useDocumentSuggestions(
+    {
+      projectId: project.id,
+      commitUuid: commit.uuid,
+      documentUuid: document.documentUuid,
+    },
+    { keepPreviousData: true }, // Stop refetch blink as we don't want a loading ui here
+  )
   useDocumentSuggestionsSocket({ document, mutate, notify })
 
   if (!suggestions.length) return null
 
   return (
     <Popover.Root open={isOpen} onOpenChange={setIsOpen}>
-      <Popover.Trigger asChild>
+      <Popover.Trigger disabled={isLoading} asChild>
         <Button
           variant='shiny'
           size='small'
@@ -153,7 +157,7 @@ export function DocumentSuggestions({
               apply={applyDocumentSuggestion}
               discard={discardDocumentSuggestion}
               close={close}
-              isExecuting={isExecuting}
+              isLoading={isLoading || isExecuting}
             />
           ))}
         </ul>
