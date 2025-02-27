@@ -19,6 +19,10 @@ export enum Providers {
   Custom = 'custom',
 }
 
+export enum IntegrationType {
+  CustomMCP = 'custom_mcp',
+}
+
 export * from './models'
 export * from './ai'
 export * from './tools'
