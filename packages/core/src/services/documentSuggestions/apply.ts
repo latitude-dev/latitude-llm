@@ -32,7 +32,7 @@ export async function applyDocumentSuggestion(
   },
   db: Database = database,
 ) {
-  prompt = prompt ?? suggestion.newPrompt! // TODO: Delete '!' when migration is done
+  prompt = prompt ?? suggestion.newPrompt
 
   return Transaction.call(async (tx) => {
     const documentsRepository = new DocumentVersionsRepository(workspace.id, tx)

@@ -26,7 +26,6 @@ export async function createDocumentSuggestion({
       evaluationId: evaluation.id,
       oldPrompt: document.content,
       newPrompt: prompt,
-      prompt: prompt, // TODO: Delete when migration is done
       summary: summary,
       ...(createdAt && { createdAt }),
     })
