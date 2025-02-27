@@ -72,6 +72,14 @@ export const ROUTES = {
         return { root: `/settings/apikeys/${id}/destroy` }
       },
     },
+    integrations: {
+      new: {
+        root: '/settings/integrations/new',
+      },
+      destroy: (id: number) => {
+        return { root: `/settings/integrations/${id}/destroy` }
+      },
+    },
     users: {
       destroy: (userId: string) => {
         return { root: `/settings/users/${userId}/destroy` }
