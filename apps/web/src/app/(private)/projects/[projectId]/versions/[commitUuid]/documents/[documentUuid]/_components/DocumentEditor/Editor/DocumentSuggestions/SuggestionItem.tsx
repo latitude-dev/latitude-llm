@@ -17,6 +17,8 @@ import { useRouter } from 'next/navigation'
 import { DiffOptions } from 'node_modules/@latitude-data/web-ui/src/ds/molecules/DocumentTextEditor/types'
 import { useCallback, useMemo, useState } from 'react'
 
+const dmp = new DiffMatchPatch()
+
 export function SuggestionItem({
   suggestion,
   project,
@@ -56,13 +58,11 @@ export function SuggestionItem({
       .evaluations.detail(suggestion.evaluationId).root
   }, [project, commit, document, suggestion])
 
-  const patchedPrompt = useMemo(() => {
-    const dmp = new DiffMatchPatch()
-    const patches = dmp.patch_make(suggestion.oldPrompt!, suggestion.newPrompt!) // TODO: Delete '!' when migration is done
-    return dmp.patch_apply(patches, prompt)[0]
-  }, [prompt, suggestion])
-
   const onApply = useCallback(() => {
+    // TODO: Delete '!' when migration is done
+    const patches = dmp.patch_make(suggestion.oldPrompt!, suggestion.newPrompt!)
+    const patchedPrompt = dmp.patch_apply(patches, prompt)[0]
+
     setDiff({
       newValue: patchedPrompt,
       description: suggestion.summary,
@@ -85,8 +85,9 @@ export function SuggestionItem({
       },
       onReject: () => setDiff(undefined),
     })
+
     close()
-  }, [project, suggestion, setDiff, setPrompt, apply, close])
+  }, [project, suggestion, prompt, setDiff, setPrompt, apply, close])
 
   const onDiscard = useCallback(async () => {
     await discard({ suggestionId: suggestion.id })
