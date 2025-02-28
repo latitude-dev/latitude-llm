@@ -25,6 +25,7 @@ import { ExportLogsModal } from './ExportLogsModal'
 import { DocumentLogFilterOptions } from '@latitude-data/core/browser'
 import { LogsOverTime } from '../../../../../overview/_components/Overview/LogsOverTime'
 import useDocumentLogsDailyCount from '$/stores/documentLogsDailyCount'
+import { useFeatureFlag } from '$/hooks/useFeatureFlag'
 
 export function DocumentLogs({
   documentLogFilterOptions,
@@ -43,6 +44,8 @@ export function DocumentLogs({
   evaluationResults: Record<number, ResultWithEvaluation[]>
   isEvaluationResultsLoading: boolean
 }) {
+  const { data: featureFlag } = useFeatureFlag()
+  const hasNewDatasets = featureFlag === true
   const stickyRef = useRef<HTMLTableElement>(null)
   const sidebarWrapperRef = useRef<HTMLDivElement>(null)
   const { document } = useCurrentDocument()
@@ -70,9 +73,7 @@ export function DocumentLogs({
     () => documentLogs.map((r) => r.id),
     [documentLogs],
   )
-
   const [selectedLogsIds, setSelectedLogsIds] = useState<number[]>([])
-
   const selectableState = useSelectableRows({
     rowIds: documentLogIds,
   })
@@ -147,6 +148,30 @@ export function DocumentLogs({
               >
                 Export selected logs
               </Button>
+              <>
+                {hasNewDatasets ? (
+                  <>
+                    <Button
+                      disabled={selectableState.selectedCount === 0}
+                      fancy
+                      onClick={() =>
+                        setSelectedLogsIds(selectableState.getSelectedRowIds())
+                      }
+                    >
+                      Save logs to dataset
+                    </Button>
+                    <Button
+                      disabled={selectableState.selectedCount === 0}
+                      fancy
+                      onClick={() =>
+                        setSelectedLogsIds(selectableState.getSelectedRowIds())
+                      }
+                    >
+                      Download logs
+                    </Button>
+                  </>
+                ) : null}
+              </>
               <Button
                 fancy
                 variant='outline'
