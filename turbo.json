@@ -44,7 +44,8 @@
     "LATITUDE_CLOUD_PAYMENT_URL",
     "npm_package_name",
     "DISABLE_EMAIL_AUTHENTICATION",
-    "DD_TRACING_ENABLED"
+    "DD_TRACING_ENABLED",
+    "DEV_ROOT_PATH"
   ],
   "$schema": "https://turbo.build/schema.json",
   "globalDependencies": ["**/.env.*local"],

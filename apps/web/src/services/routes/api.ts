@@ -193,6 +193,12 @@ export const _API_ROUTES = {
       },
     }),
   },
+  datasetsV2: {
+    root: '/api/datasets-v2',
+  },
+  datasetsRows: {
+    root: '/api/dataset-rows',
+  },
   evaluationTemplates: {
     root: '/api/evaluationTemplates',
   },

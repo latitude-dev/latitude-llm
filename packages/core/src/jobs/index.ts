@@ -6,12 +6,16 @@ export { Worker } from 'bullmq'
 let queues: Awaited<ReturnType<typeof setupQueues>>
 
 export async function setupJobs(connection?: Redis) {
-  if (!queues) queues = await setupQueues(connection)
+  if (!queues) {
+    queues = await setupQueues(connection)
+  }
   return queues
 }
 
 export async function setupSchedules(connection?: Redis) {
-  if (!queues) queues = await setupQueues(connection)
+  if (!queues) {
+    queues = await setupQueues(connection)
+  }
 
   // Every day at 8 AM
   await queues.defaultQueue.jobs.scheduleRequestDocumentSuggestionsJob(
