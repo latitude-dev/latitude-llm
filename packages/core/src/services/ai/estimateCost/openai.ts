@@ -4,13 +4,6 @@ import { createModelSpec } from './helpers'
 export const OPENAI_MODELS = createModelSpec({
   defaultModel: 'gpt-4o',
   models: {
-    // gpt-4.5 family
-    'gpt-4.5-preview': { cost: { input: 75, output: 150 } },
-    'gpt-4.5-preview-2025-02-27': {
-      cost: { input: 75, output: 150 },
-      hidden: true,
-    },
-
     // gpt-4o mini family
     'gpt-4o-mini': { cost: { input: 0.15, output: 0.6 } },
     'gpt-4o-mini-audio-preview': {
@@ -31,6 +24,13 @@ export const OPENAI_MODELS = createModelSpec({
     },
     'gpt-4o-realtime-preview': {
       cost: { input: 5.0, output: 20.0 },
+      hidden: true,
+    },
+
+    // gpt-4.5 family
+    'gpt-4.5-preview': { cost: { input: 75, output: 150 } },
+    'gpt-4.5-preview-2025-02-27': {
+      cost: { input: 75, output: 150 },
       hidden: true,
     },
 
