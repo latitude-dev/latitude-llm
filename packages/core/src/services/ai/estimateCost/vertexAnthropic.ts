@@ -4,6 +4,7 @@ import { createModelSpec } from './helpers'
 export const VERTEX_ANTHROPIC_MODELS = createModelSpec({
   defaultModel: 'claude-3-5-haiku@20241022',
   models: {
+    'claude-3-7-sonnet@20250219': {},
     'claude-3-5-sonnet-v2@20241022': {},
     'claude-3-5-haiku@20241022': {},
     'claude-3-opus@20240229': {},
