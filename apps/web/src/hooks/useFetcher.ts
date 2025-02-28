@@ -10,6 +10,62 @@ type ISearchParams =
   | URLSearchParams
   | undefined
 
+type ConditionalResponse<
+  R extends unknown,
+  Raw extends boolean,
+> = Raw extends true ? Response | void : R | void
+
+export async function handleResponse<
+  Raw extends boolean = false,
+  I extends unknown = unknown,
+  R extends unknown = unknown,
+>({
+  response,
+  toast,
+  serializer,
+  navigate,
+  returnRaw = false as Raw,
+}: {
+  response: Response
+  returnRaw?: Raw
+  toast: ReturnType<typeof useToast>['toast']
+  navigate: ReturnType<typeof useNavigate>
+  serializer?: (item: I) => R
+}): Promise<ConditionalResponse<R, Raw>> {
+  if (response.ok) {
+    if (returnRaw === true) return response as ConditionalResponse<R, Raw>
+
+    const json = await response.json()
+    return serializer
+      ? (serializer(json) as ConditionalResponse<R, Raw>)
+      : (json as ConditionalResponse<R, Raw>)
+  }
+
+  if (response.status === 401 || response.status === 403) {
+    toast({
+      title: 'You are being redirected...',
+      description:
+        'You are not authorized to access this resource, redirecting your to the login page',
+    })
+
+    navigate.push(ROUTES.auth.login)
+  } else if (response.status >= 500) {
+    toast({
+      title: 'Server error',
+      description: 'Something went wrong on the server',
+      variant: 'destructive',
+    })
+  } else if (response.status !== 404) {
+    const error = await response.json()
+
+    toast({
+      title: 'Error',
+      description: error.message,
+      variant: 'destructive',
+    })
+  }
+}
+
 export default function useFetcher(
   route?: string,
   {
@@ -31,37 +87,12 @@ export default function useFetcher(
     const response = await fetch(buildRoute(route, searchParams), {
       credentials: 'include',
     })
-    if (!response.ok) {
-      if (response.status === 401 || response.status === 403) {
-        toast({
-          title: 'You are being redirected...',
-          description:
-            'You are not authorized to access this resource, redirecting your to the login page',
-        })
-
-        navigate.push(ROUTES.auth.login)
-      } else if (response.status >= 500) {
-        toast({
-          title: 'Server error',
-          description: 'Something went wrong on the server',
-          variant: 'destructive',
-        })
-      } else if (response.status !== 404) {
-        const error = await response.json()
-
-        toast({
-          title: 'Error',
-          description: error.message,
-          variant: 'destructive',
-        })
-      }
-
-      return fallback
-    }
-
-    return serializer
-      ? serializer(await response.json())
-      : await response.json()
+    return handleResponse({
+      response,
+      toast,
+      navigate,
+      serializer,
+    })
   }
 }
 

@@ -6,13 +6,13 @@ import {
   LogSources,
 } from '@latitude-data/core/browser'
 import { BadRequestError } from '@latitude-data/core/lib/errors'
-import { createDataset } from '@latitude-data/core/services/datasetsV2/create'
 import { env } from '@latitude-data/env'
 import slugify from '@sindresorhus/slugify'
 import { createSdk } from '$/app/(private)/_lib/createSdk'
 import { getCurrentUserOrError } from '$/services/auth/getCurrentUser'
 import { authProcedure } from '$/actions/procedures'
 import { z } from 'zod'
+import { createDatasetFromFile } from '@latitude-data/core/services/datasetsV2/createFromFile'
 
 export const generateDatasetAction = authProcedure
   .createServerAction()
@@ -69,7 +69,7 @@ export const generateDatasetAction = authProcedure
 
     const csv = (sdkResult?.response! as ChainStepResponse<'object'>).object.csv
     const name = input.name
-    const result = await createDataset({
+    const result = await createDatasetFromFile({
       author: user,
       workspace,
       data: {

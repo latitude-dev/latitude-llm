@@ -31,7 +31,7 @@ function SelectValueWithIcon({
   children: ReactNode
 }) {
   return (
-    <div className='w-full flex flex-row items-center gap-x-2 min-w-0'>
+    <div className='w-full flex flex-row items-center gap-x-2 min-w-0 truncate'>
       {icon}
       {children}
     </div>

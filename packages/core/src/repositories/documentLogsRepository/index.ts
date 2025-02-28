@@ -18,6 +18,7 @@ export class DocumentLogsRepository extends Repository<DocumentLog> {
   get scopeFilter() {
     return and(isNull(runErrors.id), eq(projects.workspaceId, this.workspaceId))
   }
+
   get scope() {
     return this.db
       .select(tt)

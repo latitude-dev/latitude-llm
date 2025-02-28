@@ -44,7 +44,7 @@ export type ModalProps = {
   description?: string
   children?: ReactNode
   footer?: ReactNode
-  size?: 'small' | 'regular' | 'large'
+  size?: 'small' | 'regular' | 'large' | 'xl'
   steps?: {
     total: number
     current: number
@@ -72,6 +72,7 @@ export function Modal({
           'max-w-modal-sm': size === 'small',
           'max-w-modal': size === 'regular',
           'max-w-modal-lg': size === 'large',
+          'max-w-modal-xl': size === 'xl',
         })}
       >
         <div className='flex flex-col relative max-h-full overflow-hidden'>

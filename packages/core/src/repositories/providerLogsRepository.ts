@@ -1,4 +1,4 @@
-import { and, asc, desc, eq, getTableColumns } from 'drizzle-orm'
+import { and, asc, desc, eq, getTableColumns, inArray } from 'drizzle-orm'
 
 import { ProviderLog } from '../browser'
 import { NotFoundError, Result } from '../lib'
@@ -76,6 +76,17 @@ export class ProviderLogsRepository extends Repository<ProviderLog> {
     }
 
     return Result.ok(result[0]!)
+  }
+
+  async findManyByDocumentLogUuid(documentLogUuids: string[]) {
+    return await this.scope
+      .where(
+        and(
+          this.scopeFilter,
+          inArray(providerLogs.documentLogUuid, documentLogUuids),
+        ),
+      )
+      .orderBy(desc(providerLogs.generatedAt))
   }
 
   async findByDocumentLogUuid(

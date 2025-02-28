@@ -130,6 +130,7 @@ export default {
         'modal-sm': '360px',
         modal: '580px',
         'modal-lg': '720px',
+        'modal-xl': '1200px',
         chat: '1024px',
       },
       transitionDelay: {
@@ -146,7 +147,7 @@ export default {
   plugins: [
     require('tailwindcss-animate'),
     require('@tailwindcss/typography'),
-    function ({ addComponents, theme }) {
+    function ({ addComponents }) {
       addComponents({
         '.prose': {
           '--tw-prose-text': 'hsl(var(--foreground))',

@@ -7,7 +7,7 @@ import {
   MAX_UPLOAD_SIZE_IN_MB,
 } from '@latitude-data/core/browser'
 import { DatasetsV2Repository as DatasetsRepository } from '@latitude-data/core/repositories'
-import { createDataset } from '@latitude-data/core/services/datasetsV2/create'
+import { createDatasetFromFile } from '@latitude-data/core/services/datasetsV2/createFromFile'
 import { z } from 'zod'
 
 import { authProcedure } from '../procedures'
@@ -65,7 +65,7 @@ export const createDatasetAction = authProcedure
         ? input.csvCustomDelimiter
         : DELIMITER_VALUES[input.csvDelimiter]
 
-    const data = await createDataset({
+    const data = await createDatasetFromFile({
       workspace: ctx.workspace,
       author: ctx.user,
       data: {

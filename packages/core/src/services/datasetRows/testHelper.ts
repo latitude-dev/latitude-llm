@@ -1,6 +1,6 @@
 import { promises as fs } from 'fs'
 import path from 'path'
-import os from 'os'
+import { TEST_DISK_LOCATION } from '../../tests/testDrive'
 
 const TEST_CSV_CONTENT = `name,surname,age,nationality
 Paco,Merlo,43,Spanish
@@ -20,9 +20,8 @@ export async function createTestCsvFile({
   name?: string
   fileContent?: string
 } = {}) {
-  const tempDir = os.tmpdir()
-  const filePath = path.join(tempDir, name)
-
+  await fs.mkdir(TEST_DISK_LOCATION, { recursive: true })
+  const filePath = path.join(TEST_DISK_LOCATION, name)
   try {
     await fs.access(filePath) // Check if file exists
   } catch {
@@ -32,5 +31,5 @@ export async function createTestCsvFile({
   const bytes = await fs.readFile(filePath)
   const file = new File([bytes], name, { type: 'text/csv' })
 
-  return { file }
+  return { file, fileKey: name }
 }

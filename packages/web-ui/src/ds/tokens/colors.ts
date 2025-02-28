@@ -3,6 +3,7 @@ export const colors = {
     transparent: 'bg-transparent',
     backgroundCode: 'bg-backgroundCode',
     mutedForeground: 'bg-muted-foreground',
+    accent: 'bg-accent',
     destructiveMutedForeground: 'bg-destructive-muted-foreground',
   },
   textColors: {
