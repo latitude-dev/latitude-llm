@@ -4,6 +4,13 @@ import { createModelSpec } from './helpers'
 export const OPENAI_MODELS = createModelSpec({
   defaultModel: 'gpt-4o',
   models: {
+    // gpt-4.5 family
+    'gpt-4.5-preview': { cost: { input: 75, output: 150 } },
+    'gpt-4.5-preview-2025-02-27': {
+      cost: { input: 75, output: 150 },
+      hidden: true,
+    },
+
     // gpt-4o mini family
     'gpt-4o-mini': { cost: { input: 0.15, output: 0.6 } },
     'gpt-4o-mini-audio-preview': { cost: { input: 0.15, output: 0.6 } },
@@ -54,6 +61,8 @@ export const OPENAI_MODELS = createModelSpec({
     'babbage-002': { cost: { input: 0.4, output: 0.4 }, hidden: true },
   },
   modelName: (model: string) => {
+    if (model.startsWith('gpt-4.5')) return 'gpt-4.5-preview'
+
     if (model.startsWith('o3-mini')) return 'o3-mini'
 
     if (model.startsWith('o1-preview')) return 'o1-preview'
