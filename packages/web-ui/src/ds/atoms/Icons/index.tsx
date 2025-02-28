@@ -81,6 +81,7 @@ import {
   WholeWord,
   AlertCircle,
   CircleArrowUp,
+  Blocks,
 } from 'lucide-react'
 
 import { cn } from '../../../lib/utils'
@@ -99,6 +100,7 @@ const Icons = {
   arrowLeft: ArrowLeft,
   arrowRight: ArrowRightIcon,
   barChart4: BarChart4,
+  blocks: Blocks,
   bot: Bot,
   calendar: CalendarIcon,
   check: CheckCircle2,

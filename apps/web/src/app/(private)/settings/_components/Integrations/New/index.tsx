@@ -24,13 +24,15 @@ type IntegrationTypeOption = {
   icon: IconName
 }
 
-const INTEGRATION_TYPE_VALUES: Record<IntegrationType, IntegrationTypeOption> =
-  {
-    [IntegrationType.CustomMCP]: {
-      label: 'Custom MCP Server',
-      icon: 'mcp',
-    },
-  }
+export const INTEGRATION_TYPE_VALUES: Record<
+  IntegrationType,
+  IntegrationTypeOption
+> = {
+  [IntegrationType.CustomMCP]: {
+    label: 'Custom MCP Server',
+    icon: 'mcp',
+  },
+}
 
 const INTEGRATION_TYPE_OPTIONS = Object.values(IntegrationType).map(
   (value) => ({

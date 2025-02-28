@@ -58,8 +58,9 @@ export type ToolDefinition = {
   parameters: JSONSchema7
 }
 
+export type ToolDefinitionsMap = Record<string, ToolDefinition>
 export type ToolsItem =
-  | Record<string, ToolDefinition> // - tool_name: <tool_definition>
+  | ToolDefinitionsMap // - tool_name: <tool_definition>
   | string // - latitude/* (no spaces)
 
 // Config supported by Vercel
@@ -73,15 +74,15 @@ export type VercelConfig = {
   azure?: AzureConfig
   google?: GoogleConfig
   disableAgentOptimization?: boolean
-  tools?: Record<string, ToolDefinition>
+  tools?: ToolDefinitionsMap
 }
 
 // Prompt config supported by Latitude
-export type PromptConfig = VercelConfig & {
+export type PromptConfig = Omit<VercelConfig, 'tools'> & {
   type?: 'agent' | undefined
   tools?:
-    | Record<string, ToolDefinition> // Old tools schema
-    | ToolsItem[] // New tools schema
+    | ToolDefinitionsMap // Old tools schema
+    | (ToolDefinitionsMap | string)[] // New tools schema
   latitudeTools?: LatitudeTool[] // deprecated
   agents?: string[]
 }
