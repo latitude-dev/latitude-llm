@@ -12,10 +12,10 @@ import {
   setCachedResponse,
 } from '../../../services/commits/promptCache'
 import { ai, Config } from '../../../services/ai'
-import { ChainStepResponse, PromptSource, StreamType } from '../../../constants'
+import { ChainStepResponse, StreamType } from '../../../constants'
 import { consumeStream } from '../ChainStreamConsumer/consumeStream'
 import { LanguageModelUsage } from 'ai'
-import { performPromptInjection } from './promptInjection'
+import { performAgentMessagesOptimization } from './agentOptimization'
 
 export type ExecuteStepArgs = {
   controller: ReadableStreamDefaultController
@@ -23,7 +23,6 @@ export type ExecuteStepArgs = {
   provider: ProviderApiKey
   conversation: Conversation
   source: LogSources
-  promptSource: PromptSource
   documentLogUuid: string
   schema?: JSONSchema7
   output?: 'object' | 'array' | 'no-schema'
@@ -37,13 +36,21 @@ export async function streamAIResponse({
   provider,
   conversation,
   source,
-  promptSource,
   documentLogUuid,
   schema,
   output,
   injectFakeAgentStartTool,
-  injectAgentFinishTool,
-}: ExecuteStepArgs): Promise<{
+}: {
+  controller: ReadableStreamDefaultController
+  workspace: Workspace
+  provider: ProviderApiKey
+  conversation: Conversation
+  source: LogSources
+  documentLogUuid: string
+  schema?: JSONSchema7
+  output?: 'object' | 'array' | 'no-schema'
+  injectFakeAgentStartTool?: boolean
+}): Promise<{
   response: ChainStepResponse<StreamType>
   tokenUsage: LanguageModelUsage
 }> {
@@ -54,16 +61,10 @@ export async function streamAIResponse({
     conversation,
   })
 
-  const injectionResult = await performPromptInjection({
-    workspace,
-    promptSource,
+  const optimizedAgentMessages = performAgentMessagesOptimization({
     messages: conversation.messages,
-    config: conversation.config as Config,
     injectFakeAgentStartTool,
-    injectAgentFinishTool,
-  })
-  if (injectionResult.error) throw injectionResult.error
-  const { messages, config } = injectionResult.unwrap()
+  }).unwrap()
 
   if (cachedResponse) {
     const providerLog = await saveOrPublishProviderLogs({
@@ -101,8 +102,8 @@ export async function streamAIResponse({
   const aiResult = await ai({
     // TODO: vitest will cry when checking the parameters passed to this function when the object mutes afterwards.
     // To fix this, we make a deep copy of the array so that it is immutable.
-    messages,
-    config,
+    messages: optimizedAgentMessages,
+    config: conversation.config as Config,
     provider,
     schema,
     output,

@@ -199,6 +199,7 @@ describe('respondToToolCalls', () => {
       source: LogSources.Playground,
       pausedChain: 'FAKE_CACHED_CHAIN',
       previousResponse: 'FAKE_PREVIOUS_RESPONSE',
+      globalConfig: expect.any(Object),
       responseMessages: [
         {
           role: 'tool',

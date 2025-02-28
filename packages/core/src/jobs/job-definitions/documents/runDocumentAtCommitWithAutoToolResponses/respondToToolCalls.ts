@@ -10,6 +10,9 @@ import { getCachedChain } from '../../../../services/chains/chainCache'
 import { generateToolResponseMessages } from './generateToolResponseMessages'
 import { AutogenerateToolResponseCopilotData } from './getCopilotData'
 import { resumePausedPrompt } from '../../../../services/documentLogs/addMessages/resumePausedPrompt'
+import { DocumentVersionsRepository } from '../../../../repositories'
+import { getDocumentMetadata } from '../../../../services/documents'
+import { PromptConfig } from '@latitude-data/constants'
 
 export async function respondToToolCalls({
   workspace,
@@ -56,12 +59,25 @@ export async function respondToToolCalls({
     return Result.error(responseMessagesResult.error)
   }
 
+  const docsScope = new DocumentVersionsRepository(workspace.id)
+  const allDocsResult = await docsScope.getDocumentsAtCommit(commit)
+  if (allDocsResult.error) {
+    return Result.error(allDocsResult.error)
+  }
+
+  const metadata = await getDocumentMetadata({
+    document,
+    getDocumentByPath: (path) =>
+      allDocsResult.value.find((d) => d.path === path),
+  })
+
   return resumePausedPrompt({
     workspace,
     commit,
     document,
     documentLogUuid,
     source,
+    globalConfig: metadata.config as PromptConfig,
     pausedChain: cachedData.chain,
     previousResponse: cachedData.previousResponse,
     responseMessages: responseMessagesResult.value as unknown as Message[],

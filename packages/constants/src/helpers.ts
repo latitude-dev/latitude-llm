@@ -61,10 +61,12 @@ export function createRelativePath(refPath: string, from?: string): string {
 
 export function promptConfigSchema({
   providerNames,
+  integrationNames,
   fullPath,
   agentToolsMap,
 }: {
   providerNames: string[]
+  integrationNames?: string[]
   fullPath?: string
   agentToolsMap?: AgentToolsMap
 }) {
@@ -123,6 +125,10 @@ export function promptConfigSchema({
       }
 
       return `There is no Latitude tool with the name '${toolName}'`
+    }
+
+    if (integrationNames && integrationNames.includes(toolSource)) {
+      return undefined
     }
 
     return `Unknown tool source: '${toolSource}'` // TODO: This will include integrations

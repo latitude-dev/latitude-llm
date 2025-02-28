@@ -13,6 +13,7 @@ export type ReadMetadataWorkerProps = Parameters<typeof readMetadata>[0] & {
   document?: DocumentVersion
   documents?: DocumentVersion[]
   providerNames?: string[]
+  integrationNames?: string[]
   agentToolsMap?: AgentToolsMap
 }
 
@@ -24,6 +25,7 @@ self.onmessage = async function (event: { data: ReadMetadataWorkerProps }) {
     promptlVersion,
     providerNames,
     agentToolsMap,
+    integrationNames,
     ...rest
   } = event.data
 
@@ -32,6 +34,7 @@ self.onmessage = async function (event: { data: ReadMetadataWorkerProps }) {
     document && providerNames
       ? promptConfigSchema({
           providerNames,
+          integrationNames,
           fullPath: document.path,
           agentToolsMap,
         })

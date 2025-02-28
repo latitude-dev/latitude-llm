@@ -17,6 +17,7 @@ import {
   ABSOLUTE_MAX_STEPS,
   DEFAULT_MAX_STEPS,
   MAX_STEPS_CONFIG_NAME,
+  PromptConfig,
 } from '@latitude-data/constants'
 
 function assertValidStepCount({
@@ -58,6 +59,7 @@ export type StepProps = {
   configOverrides?: ConfigOverrides
   removeSchema?: boolean
   stepCount?: number
+  previousConfig: PromptConfig
 }
 
 export async function runStep({
@@ -65,6 +67,7 @@ export async function runStep({
   workspace,
   source,
   chain,
+  previousConfig,
   promptlVersion,
   providersMap,
   errorableUuid,
@@ -78,8 +81,15 @@ export async function runStep({
   if (newMessages?.length) {
     const lastResponseMessage = newMessages[0]! as AssistantMessage
     const latitudeToolResponses =
-      await chainStreamManager.handleLatitudeToolCalls(lastResponseMessage)
-    newMessages.push(...latitudeToolResponses)
+      await chainStreamManager.handleBuiltInToolCalls({
+        message: lastResponseMessage,
+        config: previousConfig,
+      })
+    newMessages = [
+      lastResponseMessage,
+      ...latitudeToolResponses,
+      ...newMessages.slice(1),
+    ]
   }
 
   const step = await validateChain({
@@ -108,9 +118,7 @@ export async function runStep({
 
   const { response, clientToolCalls } =
     await chainStreamManager.getProviderResponse({
-      workspace,
       source,
-      documentLogUuid: errorableUuid,
       conversation: step.conversation,
       provider: step.provider,
       schema: step.schema,
@@ -152,6 +160,7 @@ export async function runStep({
     errorableUuid,
     stepCount: stepCount + 1,
     newMessages: buildMessagesFromResponse({ response }),
+    previousConfig: step.conversation.config as PromptConfig,
     configOverrides,
     removeSchema,
   })

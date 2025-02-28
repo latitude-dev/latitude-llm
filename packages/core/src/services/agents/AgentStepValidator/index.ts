@@ -16,7 +16,6 @@ import { azureConfig, googleConfig } from '../../ai/helpers'
 import { ChainError } from '../../../lib/chainStreamManager/ChainErrors'
 import { checkFreeProviderQuota } from '../../chains/checkFreeProviderQuota'
 import { CachedApiKeys } from '../../chains/run'
-import { injectLatitudeToolsConfig } from '../../latitudeTools'
 import {
   AGENT_RETURN_TOOL_NAME,
   LATITUDE_TOOLS_CONFIG_NAME,
@@ -88,17 +87,7 @@ const validateConfig = (
     )
   }
 
-  const injectResult = injectLatitudeToolsConfig(parseResult.data)
-  if (!injectResult.ok) {
-    return Result.error(
-      new ChainError({
-        message: injectResult.error!.message,
-        code: RunErrorCodes.DocumentConfigError,
-      }),
-    )
-  }
-
-  return Result.ok(injectResult.unwrap() as Config)
+  return Result.ok(parseResult.data as Config)
 }
 
 function isChainCompleted(newMessages?: Message[]) {

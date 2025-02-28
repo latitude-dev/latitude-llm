@@ -1,6 +1,6 @@
 'use server'
 
-import { pingCustomMCPServer } from '@latitude-data/core/services/integrations/pingCustomMCPServer'
+import { pingCustomMCPServer } from '@latitude-data/core/services/integrations/index'
 import { z } from 'zod'
 
 import { authProcedure } from '../procedures'

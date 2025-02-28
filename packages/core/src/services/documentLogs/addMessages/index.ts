@@ -12,6 +12,8 @@ import { Result } from '../../../lib'
 import { resumePausedPrompt } from './resumePausedPrompt'
 import { addChatMessage } from './addChatMessage'
 import { resumeAgent } from './resumeAgent'
+import { scanDocumentContent } from '../../documents'
+import { PromptConfig } from '@latitude-data/constants'
 
 async function retrieveData({
   workspace,
@@ -44,7 +46,15 @@ async function retrieveData({
   if (providerLogResult.error) return providerLogResult
   const providerLog = providerLogResult.value
 
-  return Result.ok({ commit, document, providerLog })
+  const metadataResult = await scanDocumentContent({
+    workspaceId: workspace.id,
+    document,
+    commit,
+  })
+  if (metadataResult.error) return metadataResult
+  const globalConfig = metadataResult.value.config as PromptConfig
+
+  return Result.ok({ commit, document, providerLog, globalConfig })
 }
 
 export async function addMessages({
@@ -67,7 +77,7 @@ export async function addMessages({
     documentLogUuid,
   })
   if (dataResult.error) return dataResult
-  const { commit, document, providerLog } = dataResult.unwrap()
+  const { commit, document, providerLog, globalConfig } = dataResult.unwrap()
 
   const chainCacheData = await findPausedChain({ workspace, documentLogUuid })
 
@@ -76,6 +86,7 @@ export async function addMessages({
       workspace,
       commit,
       document,
+      globalConfig,
       pausedChain: chainCacheData.pausedChain,
       previousResponse: chainCacheData.previousResponse,
       responseMessages: messages,
@@ -88,6 +99,7 @@ export async function addMessages({
     return resumeAgent({
       workspace,
       providerLog,
+      globalConfig,
       messages,
       source,
       promptSource: {
@@ -100,6 +112,7 @@ export async function addMessages({
   return addChatMessage({
     workspace,
     providerLog,
+    globalConfig,
     messages,
     source,
     promptSource: {
