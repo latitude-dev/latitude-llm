@@ -53,13 +53,19 @@ export const googleConfig = z.object({
 
 type GoogleConfig = z.infer<typeof googleConfig>
 
-export type ToolDefinition = {
+export type ToolDefinition = JSONSchema7 & {
   description: string
-  parameters: JSONSchema7
+  parameters: {
+    type: 'object'
+    properties: Record<string, JSONSchema7>
+    required?: string[]
+    additionalProperties?: boolean
+  }
 }
 
+export type ToolDefinitionsMap = Record<string, ToolDefinition>
 export type ToolsItem =
-  | Record<string, ToolDefinition> // - tool_name: <tool_definition>
+  | ToolDefinitionsMap // - tool_name: <tool_definition>
   | string // - latitude/* (no spaces)
 
 // Config supported by Vercel
@@ -73,15 +79,15 @@ export type VercelConfig = {
   azure?: AzureConfig
   google?: GoogleConfig
   disableAgentOptimization?: boolean
-  tools?: Record<string, ToolDefinition>
+  tools?: ToolDefinitionsMap
 }
 
 // Prompt config supported by Latitude
-export type PromptConfig = VercelConfig & {
+export type PromptConfig = Omit<VercelConfig, 'tools'> & {
   type?: 'agent' | undefined
   tools?:
-    | Record<string, ToolDefinition> // Old tools schema
-    | ToolsItem[] // New tools schema
+    | ToolDefinitionsMap // Old tools schema
+    | (ToolDefinitionsMap | string)[] // New tools schema
   latitudeTools?: LatitudeTool[] // deprecated
   agents?: string[]
 }

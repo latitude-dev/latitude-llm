@@ -22,9 +22,10 @@ import { Result, TypedResult } from '../../lib'
 import { ChainError } from '../../lib/chainStreamManager/ChainErrors'
 import { buildTools } from './buildTools'
 import { handleAICallAPIError } from './handleError'
-import { createProvider, PartialConfig } from './helpers'
+import { createProvider } from './helpers'
 import { Providers } from './providers/models'
 import { applyAllRules } from './providers/rules'
+import { VercelConfig } from '@latitude-data/constants'
 
 const DEFAULT_AI_SDK_PROVIDER = {
   streamText: originalStreamText,
@@ -90,7 +91,7 @@ export async function ai({
   aiSdkProvider,
 }: {
   provider: ProviderApiKey
-  config: PartialConfig
+  config: VercelConfig
   messages: Message[]
   prompt?: string
   schema?: JSONSchema7
@@ -130,7 +131,7 @@ export async function ai({
     }
 
     const { provider, token: apiKey, url } = apiProvider
-    const config = rule.config as PartialConfig
+    const config = rule.config as VercelConfig
     const messages = rule.messages
     const model = config.model
     const tools = config.tools

@@ -2,6 +2,7 @@ import {
   AGENT_RETURN_TOOL_NAME,
   FAKE_AGENT_START_TOOL_NAME,
   PromptConfig,
+  ToolDefinition,
 } from '@latitude-data/constants'
 import { LatitudeError } from '../../errors'
 import { Result, TypedResult } from '../../Result'
@@ -41,7 +42,7 @@ export function resolveAgentReturnTool({
       definition: {
         description: AGENT_RETURN_TOOL_DESCRIPTION,
         parameters: config.schema ?? DEFAULT_AGENT_RETURN_TOOL_SCHEMA,
-      },
+      } as ToolDefinition,
       sourceData: {
         source: ToolSource.AgentReturn,
       },

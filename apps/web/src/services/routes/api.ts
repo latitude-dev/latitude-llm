@@ -16,6 +16,11 @@ export const API_ROUTES = {
   },
   integrations: {
     root: '/api/integrations',
+    detail: (integrationName: string) => ({
+      listTools: {
+        root: `/api/integrations/${integrationName}/listTools`,
+      },
+    }),
   },
   claimedRewards: {
     root: '/api/claimedRewards',

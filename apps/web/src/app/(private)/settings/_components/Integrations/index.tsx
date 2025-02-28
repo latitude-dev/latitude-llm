@@ -4,6 +4,7 @@ import { type Integration } from '@latitude-data/core/browser'
 import {
   Button,
   DropdownMenu,
+  Icon,
   Table,
   TableBlankSlate,
   TableBody,
@@ -19,6 +20,7 @@ import { ROUTES } from '$/services/routes'
 import useIntegrations from '$/stores/integrations'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { INTEGRATION_TYPE_VALUES } from './New'
 
 export default function Integrations() {
   const { data: integrations, isLoading: isLoading } = useIntegrations()
@@ -73,43 +75,49 @@ const IntegrationsTable = ({
         </TableRow>
       </TableHeader>
       <TableBody>
-        {integrations.map((integration) => (
-          <TableRow key={integration.id} hoverable={false} verticalPadding>
-            <TableCell>
-              <Text.H5>{integration.name}</Text.H5>
-            </TableCell>
-            <TableCell>
-              <Text.H5 color='foregroundMuted'>{integration.type}</Text.H5>
-            </TableCell>
-            <TableCell>
-              <Text.H5 color='foregroundMuted'>
-                {relativeTime(
-                  integration.lastUsedAt ? integration.lastUsedAt : null,
-                )}
-              </Text.H5>
-            </TableCell>
-            <TableCell>
-              <DropdownMenu
-                options={[
-                  {
-                    label: 'Remove',
-                    onClick: () =>
-                      router.push(
-                        ROUTES.settings.integrations.destroy(integration.id)
-                          .root,
-                      ),
-                    type: 'destructive',
-                  },
-                ]}
-                side='bottom'
-                align='end'
-                triggerButtonProps={{
-                  className: 'border-none justify-end cursor-pointer',
-                }}
-              />
-            </TableCell>
-          </TableRow>
-        ))}
+        {integrations.map((integration) => {
+          const values = INTEGRATION_TYPE_VALUES[integration.type]
+          return (
+            <TableRow key={integration.id} hoverable={false} verticalPadding>
+              <TableCell>
+                <Text.H5>{integration.name}</Text.H5>
+              </TableCell>
+              <TableCell>
+                <div className='flex gap-2 items-center'>
+                  <Icon name={values.icon} color='foregroundMuted' />
+                  <Text.H5 color='foregroundMuted'>{values.label}</Text.H5>
+                </div>
+              </TableCell>
+              <TableCell>
+                <Text.H5 color='foregroundMuted'>
+                  {relativeTime(
+                    integration.lastUsedAt ? integration.lastUsedAt : null,
+                  )}
+                </Text.H5>
+              </TableCell>
+              <TableCell>
+                <DropdownMenu
+                  options={[
+                    {
+                      label: 'Remove',
+                      onClick: () =>
+                        router.push(
+                          ROUTES.settings.integrations.destroy(integration.id)
+                            .root,
+                        ),
+                      type: 'destructive',
+                    },
+                  ]}
+                  side='bottom'
+                  align='end'
+                  triggerButtonProps={{
+                    className: 'border-none justify-end cursor-pointer',
+                  }}
+                />
+              </TableCell>
+            </TableRow>
+          )
+        })}
       </TableBody>
     </Table>
   )

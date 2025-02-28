@@ -11,11 +11,12 @@ import {
   getCachedResponse,
   setCachedResponse,
 } from '../../../services/commits/promptCache'
-import { ai, Config } from '../../../services/ai'
+import { ai } from '../../../services/ai'
 import { ChainStepResponse, StreamType } from '../../../constants'
 import { consumeStream } from '../ChainStreamConsumer/consumeStream'
 import { LanguageModelUsage } from 'ai'
 import { performAgentMessagesOptimization } from './agentOptimization'
+import { VercelConfig } from '@latitude-data/constants'
 
 export type ExecuteStepArgs = {
   controller: ReadableStreamDefaultController
@@ -103,7 +104,7 @@ export async function streamAIResponse({
     // TODO: vitest will cry when checking the parameters passed to this function when the object mutes afterwards.
     // To fix this, we make a deep copy of the array so that it is immutable.
     messages: optimizedAgentMessages,
-    config: conversation.config as Config,
+    config: conversation.config as VercelConfig,
     provider,
     schema,
     output,

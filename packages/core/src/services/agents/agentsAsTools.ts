@@ -52,16 +52,14 @@ export async function getToolDefinitionFromDocument({
     params[param] = DEFAULT_PARAM_DEFINITION
   })
 
-  const parametersSchema: JSONSchema7 = {
-    type: 'object',
-    properties: params,
-    required: Object.keys(params),
-    additionalProperties: false,
-  }
-
   return {
     description: description ?? 'An AI agent',
-    parameters: parametersSchema,
+    parameters: {
+      type: 'object',
+      properties: params,
+      required: Object.keys(params),
+      additionalProperties: false,
+    },
   }
 }
 
