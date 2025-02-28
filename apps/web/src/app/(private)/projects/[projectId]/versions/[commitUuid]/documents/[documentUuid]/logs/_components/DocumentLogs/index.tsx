@@ -73,9 +73,7 @@ export function DocumentLogs({
     () => documentLogs.map((r) => r.id),
     [documentLogs],
   )
-
   const [selectedLogsIds, setSelectedLogsIds] = useState<number[]>([])
-
   const selectableState = useSelectableRows({
     rowIds: documentLogIds,
   })
@@ -150,6 +148,30 @@ export function DocumentLogs({
               >
                 Export selected logs
               </Button>
+              <>
+                {hasNewDatasets ? (
+                  <>
+                    <Button
+                      disabled={selectableState.selectedCount === 0}
+                      fancy
+                      onClick={() =>
+                        setSelectedLogsIds(selectableState.getSelectedRowIds())
+                      }
+                    >
+                      Save logs to dataset
+                    </Button>
+                    <Button
+                      disabled={selectableState.selectedCount === 0}
+                      fancy
+                      onClick={() =>
+                        setSelectedLogsIds(selectableState.getSelectedRowIds())
+                      }
+                    >
+                      Download logs
+                    </Button>
+                  </>
+                ) : null}
+              </>
               <Button
                 fancy
                 variant='outline'

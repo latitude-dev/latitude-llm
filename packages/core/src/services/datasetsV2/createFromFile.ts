@@ -6,16 +6,9 @@ import slugify from '@sindresorhus/slugify'
 import { User, Workspace } from '../../browser'
 import { database } from '../../client'
 import { publisher } from '../../events/publisher'
-import {
-  BadRequestError,
-  databaseErrorCodes,
-  Result,
-  Transaction,
-} from '../../lib'
+import { BadRequestError, Result } from '../../lib'
 import { diskFactory, DiskWrapper } from '../../lib/disk'
 import { syncReadCsv } from '../../lib/readCsv'
-import { datasetsV2 } from '../../schema'
-import { DatabaseError } from 'pg'
 import { buildColumn, HashAlgorithmFn } from './utils'
 import { createDataset } from './create'
 
