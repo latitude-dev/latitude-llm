@@ -1,14 +1,21 @@
 import { type InferInsertModel, type InferSelectModel } from 'drizzle-orm'
 
-import { EvaluationMetadataType, EvaluationResultableType } from '../constants'
+import {
+  EvaluationConfiguration,
+  EvaluationMetadataType,
+  EvaluationMetric,
+  EvaluationResultableType,
+  EvaluationResultMetadata,
+  EvaluationType,
+} from '../constants'
 import { apiKeys } from './models/apiKeys'
 import { claimedRewards } from './models/claimedRewards'
 import { commits } from './models/commits'
 import { connectedEvaluations } from './models/connectedEvaluations'
 // DEPRECATED: we need to run migration and create new records in datasetsV2 for all existing datasets
+import { datasetRows } from './models/datasetRows'
 import { datasets } from './models/datasets'
 import { datasetsV2 } from './models/datasetsV2'
-import { datasetRows } from './models/datasetRows'
 import { documentSuggestions } from './models/documentSuggestions'
 import { documentVersions } from './models/documentVersions'
 import { evaluationAdvancedTemplates } from './models/evaluationAdvancedTemplates'
@@ -18,8 +25,11 @@ import { evaluationConfigurationText } from './models/evaluationConfigurationTex
 import { evaluationMetadataManual } from './models/evaluationMetadataDefault'
 import { evaluationMetadataLlmAsJudgeAdvanced } from './models/evaluationMetadataLlmAsJudgeAdvanced'
 import { evaluationMetadataLlmAsJudgeSimple } from './models/evaluationMetadataLlmAsJudgeSimple'
+import { evaluationResultsV2 } from './models/evaluationResultsV2'
 import { evaluations } from './models/evaluations'
+import { evaluationsV2 } from './models/evaluationsV2'
 import { evaluationTemplateCategories } from './models/evaluationTemplateCategories'
+import { integrations } from './models/integrations'
 import { magicLinkTokens } from './models/magicLinkTokens'
 import { memberships } from './models/memberships'
 import { projects } from './models/projects'
@@ -33,7 +43,6 @@ import { subscriptions } from './models/subscriptions'
 import { traces } from './models/traces'
 import { users } from './models/users'
 import { workspaces } from './models/workspaces'
-import { integrations } from './models/integrations'
 
 export type {
   DocumentLog,
@@ -71,6 +80,24 @@ export type EvaluationTemplateCategory = InferSelectModel<
 export type Subscription = InferSelectModel<typeof subscriptions>
 export type Trace = InferSelectModel<typeof traces>
 export type Span = InferSelectModel<typeof spans>
+
+// prettier-ignore
+export type EvaluationV2<
+  T extends EvaluationType = EvaluationType,
+  M extends EvaluationMetric<T> = EvaluationMetric<T>,
+  C extends EvaluationConfiguration<M> = EvaluationConfiguration<M>,
+> = Omit<InferSelectModel<typeof evaluationsV2>, 'type' | 'metric' | 'configuration'> & {
+  type: T; metric: M; configuration: C
+}
+
+// prettier-ignore
+export type EvaluationResultV2<
+  T extends EvaluationType = EvaluationType,
+  M extends EvaluationMetric<T> = EvaluationMetric<T>,
+  R extends EvaluationResultMetadata<M> = EvaluationResultMetadata<M>,
+> = Omit<InferSelectModel<typeof evaluationResultsV2>, 'metadata'> & {
+  metadata: R
+}
 
 export type EvaluationMetadataLlmAsJudgeAdvanced = Omit<
   InferSelectModel<typeof evaluationMetadataLlmAsJudgeAdvanced>,
