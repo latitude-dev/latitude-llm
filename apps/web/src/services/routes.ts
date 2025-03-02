@@ -43,7 +43,12 @@ const BACKOFFICE_ROOT = '/backoffice'
 
 export const ROUTES = {
   root: '/',
-  api: _API_ROUTES,
+  api: {
+    ..._API_ROUTES,
+    mcpApplications: {
+      root: '/api/mcpApplications',
+    },
+  },
   traces: {
     root: '/traces',
   },
@@ -78,6 +83,14 @@ export const ROUTES = {
       },
       destroy: (id: number) => {
         return { root: `/settings/integrations/${id}/destroy` }
+      },
+    },
+    mcpApplications: {
+      new: {
+        root: '/settings/mcpApplications/new',
+      },
+      destroy: (id: number) => {
+        return { root: `/settings/mcpApplications/${id}/destroy` }
       },
     },
     users: {

@@ -26,6 +26,7 @@ import {
 } from '../../lib/chainStreamManager/ChainStreamConsumer/consumeStream.test'
 import * as ChainValidator from './ChainValidator'
 import { runChain } from './run'
+import { PromptConfig } from '@latitude-data/constants'
 
 let providersMap: Map<string, any>
 
@@ -114,6 +115,7 @@ describe('run chain error handling', () => {
       errorableType: ErrorableEntity.DocumentLog,
       workspace,
       chain: mockChain as Chain,
+      globalConfig: {} as PromptConfig,
       promptlVersion: 0,
       providersMap,
       source: LogSources.API,
@@ -155,6 +157,7 @@ describe('run chain error handling', () => {
       errorableType: ErrorableEntity.DocumentLog,
       workspace,
       chain: mockChain as Chain,
+      globalConfig: {} as PromptConfig,
       promptlVersion: 0,
       providersMap,
       source: LogSources.API,
@@ -186,6 +189,7 @@ describe('run chain error handling', () => {
       errorableType: ErrorableEntity.DocumentLog,
       workspace,
       chain,
+      globalConfig: {} as PromptConfig,
       promptlVersion: 0,
       providersMap,
       source: LogSources.API,
@@ -222,6 +226,7 @@ describe('run chain error handling', () => {
       errorableType: ErrorableEntity.DocumentLog,
       workspace,
       chain,
+      globalConfig: {} as PromptConfig,
       promptlVersion: 0,
       providersMap,
       source: LogSources.API,
@@ -259,6 +264,7 @@ describe('run chain error handling', () => {
       errorableType: ErrorableEntity.DocumentLog,
       workspace,
       chain,
+      globalConfig: {} as PromptConfig,
       promptlVersion: 0,
       providersMap,
       source: LogSources.API,
@@ -296,6 +302,7 @@ describe('run chain error handling', () => {
       errorableType: ErrorableEntity.DocumentLog,
       workspace,
       chain,
+      globalConfig: {} as PromptConfig,
       promptlVersion: 0,
       providersMap,
       source: LogSources.API,
@@ -339,6 +346,7 @@ describe('run chain error handling', () => {
       errorableType: ErrorableEntity.DocumentLog,
       workspace,
       chain,
+      globalConfig: {} as PromptConfig,
       promptlVersion: 0,
       providersMap,
       source: LogSources.API,
@@ -383,6 +391,7 @@ describe('run chain error handling', () => {
       errorableType: ErrorableEntity.DocumentLog,
       workspace,
       chain,
+      globalConfig: {} as PromptConfig,
       promptlVersion: 0,
       providersMap,
       source: LogSources.API,

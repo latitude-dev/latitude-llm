@@ -13,7 +13,6 @@ const nextConfig = {
   transpilePackages: INTERNAL_PACKAGES,
   serverExternalPackages: [
     '@latitude-data/sdk',
-    'promptl-ai',
     '@latitude-data/compiler',
     '@sentry/nextjs',
     'bullmq',
@@ -21,6 +20,7 @@ const nextConfig = {
     'nodemailer-mailgun-transport',
     '@napi-rs/canvas',
     'pdfjs-dist',
+    'promptl-ai',
   ],
   experimental: {
     // Dear developer,

@@ -41,12 +41,7 @@ export class RunDocumentChecker {
   }
 
   async call() {
-    const chainResult = await this.createChain()
-    if (chainResult.error) return chainResult
-
-    return Result.ok({
-      chain: chainResult.value,
-    })
+    return await this.createChain()
   }
 
   private async createChain() {
@@ -58,13 +53,14 @@ export class RunDocumentChecker {
           referenceFn: this.referenceFn,
         })
 
-        return Result.ok(
-          createLegacyChain({
+        return Result.ok({
+          chain: createLegacyChain({
             prompt: metadata.resolvedPrompt,
             parameters: this.parameters,
             includeSourceMap: true,
           }),
-        )
+          config: metadata.config,
+        })
       } else {
         const metadata = await scan({
           prompt: this.prompt,
@@ -72,14 +68,15 @@ export class RunDocumentChecker {
           referenceFn: this.referenceFn,
         })
 
-        return Result.ok(
-          new PromptlChain({
+        return Result.ok({
+          chain: new PromptlChain({
             prompt: metadata.resolvedPrompt,
             parameters: this.processParameters(this.parameters),
             adapter: Adapters.default,
             includeSourceMap: true,
           }),
-        )
+          config: metadata.config,
+        })
       }
     } catch (e) {
       const err = e as Error

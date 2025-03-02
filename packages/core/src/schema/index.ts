@@ -56,3 +56,6 @@ export * from './models/publishedDocuments'
 
 // Integrations
 export * from './models/integrations'
+
+// K8s Application Deployment
+export * from './models/mcpServers'

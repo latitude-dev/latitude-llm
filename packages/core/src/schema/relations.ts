@@ -27,6 +27,7 @@ import { traces } from './models/traces'
 import { users } from './models/users'
 import { workspaces } from './models/workspaces'
 import { integrations } from './models/integrations'
+import { mcpServers } from './models/mcpServers'
 
 /**
  * NOTE: All relations are declared in this file to
@@ -295,5 +296,9 @@ export const integrationsRelations = relations(integrations, ({ one }) => ({
   author: one(users, {
     fields: [integrations.authorId],
     references: [users.id],
+  }),
+  mcpServer: one(mcpServers, {
+    fields: [integrations.mcpServerId],
+    references: [mcpServers.id],
   }),
 }))

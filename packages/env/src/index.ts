@@ -152,6 +152,13 @@ export const env = createEnv({
     BULL_ADMIN_PASS: z.string(),
     WORKERS_HOST: z.string().optional(),
     WORKERS_PORT: z.coerce.number().optional(),
+
+    // MCP Server feature configurations
+    EKS_CA_DATA: z.string().optional(),
+    EKS_CLUSTER_NAME: z.string().optional(),
+    K8S_API_URL: z.string().optional(),
+    LATITUDE_MCP_HOST: z.string().optional(),
+    USE_EKS_CLUSTER: z.coerce.boolean().optional().default(false),
   },
   runtimeEnv: {
     ...process.env,

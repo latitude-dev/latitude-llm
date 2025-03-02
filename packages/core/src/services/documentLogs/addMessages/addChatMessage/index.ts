@@ -16,6 +16,7 @@ import { ChainError } from '../../../../lib/chainStreamManager/ChainErrors'
 import { checkFreeProviderQuota } from '../../../chains/checkFreeProviderQuota'
 import serializeProviderLog from '../../../providerLogs/serialize'
 import { ChainStreamManager } from '../../../../lib/chainStreamManager'
+import { PromptConfig } from '@latitude-data/constants'
 
 export type ChainResponse<T extends StreamType> = TypedResult<
   ChainStepResponse<T>,
@@ -31,12 +32,14 @@ export async function addChatMessage({
   workspace,
   providerLog,
   source,
+  globalConfig,
   messages: newMessages,
   promptSource,
 }: {
   workspace: Workspace
   providerLog: ProviderLog
   messages: Message[]
+  globalConfig: PromptConfig
   source: LogSources
   promptSource: PromptSource
 }) {
@@ -44,13 +47,6 @@ export async function addChatMessage({
     return Result.error(
       new NotFoundError(
         `Cannot add messages to a conversation that has no associated provider`,
-      ),
-    )
-  }
-  if (!providerLog.config) {
-    return Result.error(
-      new NotFoundError(
-        `Cannot add messages to a conversation that has no associated configuration`,
       ),
     )
   }
@@ -66,10 +62,7 @@ export async function addChatMessage({
 
   const previousMessages = buildConversation(serializeProviderLog(providerLog))
   const conversation = {
-    config: {
-      ...providerLog.config!,
-      provider: provider.name,
-    },
+    config: globalConfig,
     messages: [...previousMessages, ...newMessages],
   }
 
@@ -87,10 +80,8 @@ export async function addChatMessage({
     }).then((r) => r.unwrap())
 
     const { clientToolCalls } = await chainStreamManager.getProviderResponse({
-      workspace,
       provider,
       source,
-      documentLogUuid: providerLog.documentLogUuid!,
       conversation,
     })
 

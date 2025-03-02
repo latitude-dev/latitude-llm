@@ -94,7 +94,9 @@ export function usePlaygroundChat({
             continue
           }
 
-          setMessages(data.messages)
+          if (data.messages) {
+            setMessages(data.messages)
+          }
 
           if (data.type === ChainEventTypes.StepStarted) {
             accumulatedTextDelta = ''
