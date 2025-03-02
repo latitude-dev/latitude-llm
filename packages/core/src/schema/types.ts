@@ -1,13 +1,6 @@
 import { type InferInsertModel, type InferSelectModel } from 'drizzle-orm'
 
-import {
-  EvaluationConfiguration,
-  EvaluationMetadataType,
-  EvaluationMetric,
-  EvaluationResultableType,
-  EvaluationResultMetadata,
-  EvaluationType,
-} from '../constants'
+import { EvaluationMetadataType, EvaluationResultableType } from '../constants'
 import { apiKeys } from './models/apiKeys'
 import { claimedRewards } from './models/claimedRewards'
 import { commits } from './models/commits'
@@ -25,9 +18,7 @@ import { evaluationConfigurationText } from './models/evaluationConfigurationTex
 import { evaluationMetadataManual } from './models/evaluationMetadataDefault'
 import { evaluationMetadataLlmAsJudgeAdvanced } from './models/evaluationMetadataLlmAsJudgeAdvanced'
 import { evaluationMetadataLlmAsJudgeSimple } from './models/evaluationMetadataLlmAsJudgeSimple'
-import { evaluationResultsV2 } from './models/evaluationResultsV2'
 import { evaluations } from './models/evaluations'
-import { evaluationsV2 } from './models/evaluationsV2'
 import { evaluationTemplateCategories } from './models/evaluationTemplateCategories'
 import { integrations } from './models/integrations'
 import { magicLinkTokens } from './models/magicLinkTokens'
@@ -48,6 +39,8 @@ export type {
   DocumentLog,
   EvaluationResult,
   EvaluationResultDto,
+  EvaluationResultV2,
+  EvaluationV2,
 } from '@latitude-data/constants'
 
 // Model types are out of schema files to be able to share with NextJS webpack bundler
@@ -80,24 +73,6 @@ export type EvaluationTemplateCategory = InferSelectModel<
 export type Subscription = InferSelectModel<typeof subscriptions>
 export type Trace = InferSelectModel<typeof traces>
 export type Span = InferSelectModel<typeof spans>
-
-// prettier-ignore
-export type EvaluationV2<
-  T extends EvaluationType = EvaluationType,
-  M extends EvaluationMetric<T> = EvaluationMetric<T>,
-  C extends EvaluationConfiguration<M> = EvaluationConfiguration<M>,
-> = Omit<InferSelectModel<typeof evaluationsV2>, 'type' | 'metric' | 'configuration'> & {
-  type: T; metric: M; configuration: C
-}
-
-// prettier-ignore
-export type EvaluationResultV2<
-  T extends EvaluationType = EvaluationType,
-  M extends EvaluationMetric<T> = EvaluationMetric<T>,
-  R extends EvaluationResultMetadata<M> = EvaluationResultMetadata<M>,
-> = Omit<InferSelectModel<typeof evaluationResultsV2>, 'metadata'> & {
-  metadata: R
-}
 
 export type EvaluationMetadataLlmAsJudgeAdvanced = Omit<
   InferSelectModel<typeof evaluationMetadataLlmAsJudgeAdvanced>,

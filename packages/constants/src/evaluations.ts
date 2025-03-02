@@ -217,3 +217,44 @@ export type EvaluationResultMetadata<T extends EvaluationMetric = EvaluationMetr
   T extends HumanEvaluationMetric.Rating ? HumanEvaluationRatingResultMetadata :
   T extends HumanEvaluationMetric.Comparison ? HumanEvaluationComparisonResultMetadata :
   never;
+
+export type EvaluationV2<
+  T extends EvaluationType = EvaluationType,
+  M extends EvaluationMetric<T> = EvaluationMetric<T>,
+  C extends EvaluationConfiguration<M> = EvaluationConfiguration<M>,
+> = {
+  id: number
+  workspaceId: number
+  commitId: number
+  documentUuid: string
+  name: string
+  description: string
+  type: T
+  metric: M
+  condition: EvaluationCondition
+  threshold: number
+  configuration: C
+  live: boolean | null
+  enableSuggestions: boolean | null
+  autoApplySuggestions: boolean | null
+  createdAt: Date
+  updatedAt: Date
+  deletedAt: Date | null
+}
+
+export type EvaluationResultV2<
+  T extends EvaluationType = EvaluationType,
+  M extends EvaluationMetric<T> = EvaluationMetric<T>,
+  R extends EvaluationResultMetadata<M> = EvaluationResultMetadata<M>,
+> = {
+  id: number
+  workspaceId: number
+  evaluationId: number
+  experimentId: number | null
+  evaluatedLogId: number
+  score: number
+  metadata: R
+  usedForSuggestion: boolean | null
+  createdAt: Date
+  updatedAt: Date
+}
