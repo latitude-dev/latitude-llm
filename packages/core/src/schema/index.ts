@@ -28,6 +28,9 @@ export * from './models/datasetsV2'
 export * from './models/datasetRows'
 export * from './models/evaluations'
 
+export * from './models/evaluationsV2'
+export * from './models/evaluationResultsV2'
+
 export * from './models/evaluationMetadataLlmAsJudgeAdvanced'
 export * from './models/evaluationMetadataLlmAsJudgeSimple'
 export * from './models/evaluationMetadataDefault'

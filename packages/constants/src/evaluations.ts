@@ -258,3 +258,5 @@ export type EvaluationResultV2<
   createdAt: Date
   updatedAt: Date
 }
+
+export const EVALUATION_SCORE_SCALE = 100
