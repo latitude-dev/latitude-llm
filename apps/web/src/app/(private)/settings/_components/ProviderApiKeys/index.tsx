@@ -57,7 +57,7 @@ export default function ProviderApiKeys() {
             description='There are no providers yet. Create one to start working with your prompts.'
             link={
               <Link href={ROUTES.settings.providerApiKeys.new.root}>
-                <TableBlankSlate.Button>Create one</TableBlankSlate.Button>
+                <TableBlankSlate.Button>Create provider</TableBlankSlate.Button>
               </Link>
             }
           />

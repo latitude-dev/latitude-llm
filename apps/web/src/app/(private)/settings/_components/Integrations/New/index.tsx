@@ -30,6 +30,10 @@ const INTEGRATION_TYPE_VALUES: Record<IntegrationType, IntegrationTypeOption> =
       label: 'Custom MCP Server',
       icon: 'mcp',
     },
+    [IntegrationType.MCPServer]: {
+      label: 'MCP Server',
+      icon: 'mcp',
+    },
   }
 
 const INTEGRATION_TYPE_OPTIONS = Object.values(IntegrationType).map(
@@ -54,9 +58,7 @@ export default function NewIntegration() {
       const payload = buildIntegrationPayload({
         formData: new FormData(event.currentTarget),
       })
-      const [_, error] = await create({
-        ...payload,
-      })
+      const [_, error] = await create(payload)
 
       if (!error) onOpenChange(false)
     },

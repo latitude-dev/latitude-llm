@@ -43,7 +43,9 @@ export default function Integrations() {
             description='There are no integrations yet. Create one to start working with your prompts.'
             link={
               <Link href={ROUTES.settings.integrations.new.root}>
-                <TableBlankSlate.Button>Create one</TableBlankSlate.Button>
+                <TableBlankSlate.Button>
+                  Create integration
+                </TableBlankSlate.Button>
               </Link>
             }
           />

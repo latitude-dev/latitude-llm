@@ -14,7 +14,7 @@ export default function DestroyIntegration({
 }) {
   const { integrationId } = use(params)
   const navigate = useNavigate()
-  const { data, destroy } = useIntegrations()
+  const { data, destroy, isDestroying } = useIntegrations()
   const integration = data.find((p) => p.id === Number(integrationId))
 
   if (!integration) return null
@@ -22,6 +22,7 @@ export default function DestroyIntegration({
   return (
     <DestroyModal
       onOpenChange={(open) => !open && navigate.push(ROUTES.settings.root)}
+      isDestroying={isDestroying}
       title='Remove Integration'
       description={`Are you sure you want to remove ${integration?.name} from this workspace? Any prompts or evaluations using this integration will be affected.`}
       action={() => destroy({ id: integration.id })}

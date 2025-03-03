@@ -1,4 +1,10 @@
-import { Button, CloseTrigger, Modal, useToast } from '@latitude-data/web-ui'
+import {
+  AnimatedDots,
+  Button,
+  CloseTrigger,
+  Modal,
+  useToast,
+} from '@latitude-data/web-ui'
 import { useFormAction } from '$/hooks/useFormAction'
 import {
   inferServerActionError,
@@ -19,12 +25,14 @@ type Props<TServerAction extends TAnyZodSafeFunctionHandler> = {
   title: string
   description: string
   submitStr: string
+  isDestroying?: boolean
   model: { id: string | number }
 }
 export default function DestroyModal<
   TServerAction extends TAnyZodSafeFunctionHandler,
 >({
   action,
+  isDestroying,
   onSuccess,
   onOpenChange,
   title,
@@ -59,11 +67,16 @@ export default function DestroyModal<
           <CloseTrigger />
           <Button
             fancy
+            disabled={isDestroying}
             variant='destructive'
             form='destroyProjectForm'
             type='submit'
           >
-            {submitStr}
+            {isDestroying ? (
+              <AnimatedDots color='destructiveForeground' />
+            ) : (
+              submitStr
+            )}
           </Button>
         </>
       }

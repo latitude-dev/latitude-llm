@@ -39,6 +39,7 @@ export function useFormAction<
       const [payload, error] = result
 
       if (error) {
+        console.error(error)
         onError?.(error)
         setError(error)
       } else {

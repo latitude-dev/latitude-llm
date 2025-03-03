@@ -21,6 +21,7 @@ export enum Providers {
 
 export enum IntegrationType {
   CustomMCP = 'custom_mcp',
+  MCPServer = 'mcp_server',
 }
 
 export * from './models'
