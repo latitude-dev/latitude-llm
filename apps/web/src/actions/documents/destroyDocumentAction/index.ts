@@ -1,11 +1,11 @@
 'use server'
 
+import { withProject } from '$/actions/procedures'
 import {
   CommitsRepository,
   DocumentVersionsRepository,
 } from '@latitude-data/core/repositories'
 import { destroyDocument } from '@latitude-data/core/services/documents/destroyDocument'
-import { withProject } from '$/actions/procedures'
 import { z } from 'zod'
 
 export const destroyDocumentAction = withProject
@@ -14,11 +14,11 @@ export const destroyDocumentAction = withProject
     type: 'json',
   })
   .handler(async ({ input, ctx }) => {
-    const commitsScope = new CommitsRepository(ctx.project.workspaceId)
+    const commitsScope = new CommitsRepository(ctx.workspace.id)
     const commit = await commitsScope
       .getCommitByUuid({ uuid: input.commitUuid, projectId: ctx.project.id })
       .then((r) => r.unwrap())
-    const docsScope = new DocumentVersionsRepository(ctx.project.workspaceId)
+    const docsScope = new DocumentVersionsRepository(ctx.workspace.id)
     const document = await docsScope
       .getDocumentAtCommit({
         commitUuid: input.commitUuid,
@@ -26,7 +26,11 @@ export const destroyDocumentAction = withProject
         documentUuid: input.documentUuid,
       })
       .then((r) => r.unwrap())
-    await destroyDocument({ document, commit }).then((r) => r.unwrap())
+    await destroyDocument({
+      document,
+      commit,
+      workspace: ctx.workspace,
+    }).then((r) => r.unwrap())
 
     return document
   })

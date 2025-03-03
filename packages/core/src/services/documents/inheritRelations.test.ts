@@ -2,13 +2,15 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   DocumentSuggestion,
   DocumentVersion,
-  EvaluationMetadataType,
-  EvaluationResultableType,
+  EvaluationV2,
   Workspace,
 } from '../../browser'
 import { database } from '../../client'
 import { ConflictError } from '../../lib'
-import { DocumentSuggestionsRepository } from '../../repositories'
+import {
+  DocumentSuggestionsRepository,
+  EvaluationsV2Repository,
+} from '../../repositories'
 import { documentVersions } from '../../schema'
 import * as factories from '../../tests/factories'
 import { mergeCommit } from '../commits'
@@ -19,7 +21,11 @@ describe('inheritDocumentRelations', () => {
   let fromAnotherDocument: DocumentVersion
   let fromVersion: DocumentVersion
   let toVersion: DocumentVersion
-  let suggestion: DocumentSuggestion
+  let suggestions: DocumentSuggestion[]
+  let evaluations: EvaluationV2[]
+
+  let suggestionsRepository: DocumentSuggestionsRepository
+  let evaluationsRepository: EvaluationsV2Repository
 
   beforeEach(async () => {
     vi.clearAllMocks()
@@ -59,19 +65,29 @@ describe('inheritDocumentRelations', () => {
       })
     fromAnotherDocument = anotherDocument
 
-    const evaluation = await factories.createEvaluation({
-      workspace: workspace,
-      user: user,
-      metadataType: EvaluationMetadataType.LlmAsJudgeAdvanced,
-      resultType: EvaluationResultableType.Number,
-      resultConfiguration: { minValue: 0, maxValue: 100 },
-    })
+    suggestions = [
+      await factories.createDocumentSuggestion({
+        document: fromVersion,
+        evaluation: await factories.createEvaluation({ workspace, user }),
+        workspace: workspace,
+      }),
+      await factories.createDocumentSuggestion({
+        document: fromVersion,
+        evaluation: await factories.createEvaluation({ workspace, user }),
+        workspace: workspace,
+      }),
+    ]
 
-    suggestion = await factories.createDocumentSuggestion({
-      document: fromVersion,
-      evaluation: evaluation,
-      workspace: workspace,
-    })
+    evaluations = [
+      await factories.createEvaluationV2({
+        document: fromVersion,
+        workspace: workspace,
+      }),
+      await factories.createEvaluationV2({
+        document: fromVersion,
+        workspace: workspace,
+      }),
+    ]
 
     await mergeCommit(fromCommit).then((r) => r.unwrap())
 
@@ -92,19 +108,12 @@ describe('inheritDocumentRelations', () => {
       .returning()
 
     toVersion = newDocumentVersion[0]!
+
+    suggestionsRepository = new DocumentSuggestionsRepository(workspace.id)
+    evaluationsRepository = new EvaluationsV2Repository(workspace.id)
   })
 
   it('does not inherit relations between the same version', async () => {
-    const repository = new DocumentSuggestionsRepository(workspace.id)
-    expect(
-      await repository
-        .listByDocumentVersionWithDetails({
-          commitId: toVersion.commitId,
-          documentUuid: toVersion.documentUuid,
-        })
-        .then((r) => r.unwrap()),
-    ).toEqual([])
-
     await inheritDocumentRelations({
       fromVersion: toVersion,
       toVersion: toVersion,
@@ -112,8 +121,16 @@ describe('inheritDocumentRelations', () => {
     }).then((r) => r.unwrap())
 
     expect(
-      await repository
-        .listByDocumentVersionWithDetails({
+      await suggestionsRepository
+        .listByDocumentVersion({
+          commitId: toVersion.commitId,
+          documentUuid: toVersion.documentUuid,
+        })
+        .then((r) => r.unwrap()),
+    ).toEqual([])
+    expect(
+      await evaluationsRepository
+        .listByDocumentVersion({
           commitId: toVersion.commitId,
           documentUuid: toVersion.documentUuid,
         })
@@ -122,16 +139,6 @@ describe('inheritDocumentRelations', () => {
   })
 
   it('does not inherit relations between different documents', async () => {
-    const repository = new DocumentSuggestionsRepository(workspace.id)
-    expect(
-      await repository
-        .listByDocumentVersionWithDetails({
-          commitId: toVersion.commitId,
-          documentUuid: toVersion.documentUuid,
-        })
-        .then((r) => r.unwrap()),
-    ).toEqual([])
-
     await expect(
       inheritDocumentRelations({
         fromVersion: fromAnotherDocument,
@@ -143,8 +150,16 @@ describe('inheritDocumentRelations', () => {
     )
 
     expect(
-      await repository
-        .listByDocumentVersionWithDetails({
+      await suggestionsRepository
+        .listByDocumentVersion({
+          commitId: toVersion.commitId,
+          documentUuid: toVersion.documentUuid,
+        })
+        .then((r) => r.unwrap()),
+    ).toEqual([])
+    expect(
+      await evaluationsRepository
+        .listByDocumentVersion({
           commitId: toVersion.commitId,
           documentUuid: toVersion.documentUuid,
         })
@@ -152,16 +167,54 @@ describe('inheritDocumentRelations', () => {
     ).toEqual([])
   })
 
-  it('does inherit relations', async () => {
-    const repository = new DocumentSuggestionsRepository(workspace.id)
+  it('does inherit relations to a new version', async () => {
+    await inheritDocumentRelations({
+      fromVersion: fromVersion,
+      toVersion: toVersion,
+      workspace: workspace,
+    }).then((r) => r.unwrap())
+
     expect(
-      await repository
-        .listByDocumentVersionWithDetails({
+      await suggestionsRepository
+        .listByDocumentVersion({
           commitId: toVersion.commitId,
           documentUuid: toVersion.documentUuid,
         })
         .then((r) => r.unwrap()),
-    ).toEqual([])
+    ).toEqual(
+      expect.arrayContaining(
+        suggestions.map((suggestion) => ({
+          ...suggestion,
+          id: expect.any(Number),
+          commitId: toVersion.commitId,
+          updatedAt: toVersion.updatedAt,
+          deletedAt: undefined,
+        })),
+      ),
+    )
+    expect(
+      await evaluationsRepository
+        .listByDocumentVersion({
+          commitId: toVersion.commitId,
+          documentUuid: toVersion.documentUuid,
+        })
+        .then((r) => r.unwrap()),
+    ).toEqual(
+      expect.arrayContaining(
+        evaluations.map((evaluation) => ({
+          ...evaluation,
+          id: expect.any(Number),
+          versionId: expect.any(Number),
+          commitId: toVersion.commitId,
+          updatedAt: toVersion.updatedAt,
+          deletedAt: null,
+        })),
+      ),
+    )
+  })
+
+  it('does inherit relations to a deleted version', async () => {
+    toVersion.deletedAt = new Date()
 
     await inheritDocumentRelations({
       fromVersion: fromVersion,
@@ -170,18 +223,20 @@ describe('inheritDocumentRelations', () => {
     }).then((r) => r.unwrap())
 
     expect(
-      await repository
-        .listByDocumentVersionWithDetails({
+      await suggestionsRepository
+        .listByDocumentVersion({
           commitId: toVersion.commitId,
           documentUuid: toVersion.documentUuid,
         })
         .then((r) => r.unwrap()),
-    ).toEqual([
-      expect.objectContaining({
-        newPrompt: suggestion.newPrompt,
-        oldPrompt: suggestion.oldPrompt,
-        summary: suggestion.summary,
-      }),
-    ])
+    ).toEqual([])
+    expect(
+      await evaluationsRepository
+        .listByDocumentVersion({
+          commitId: toVersion.commitId,
+          documentUuid: toVersion.documentUuid,
+        })
+        .then((r) => r.unwrap()),
+    ).toEqual([])
   })
 })

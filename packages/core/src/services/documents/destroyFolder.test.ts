@@ -13,13 +13,13 @@ import { updateDocument } from './update'
 
 describe('removing folders', () => {
   it('throws error if folder does not exist', async () => {
-    const { project, user } = await factories.createProject()
+    const { workspace, project, user } = await factories.createProject()
     const { commit: draft } = await factories.createDraft({ project, user })
 
     const result = await destroyFolder({
       path: 'some-folder',
       commit: draft,
-      workspaceId: project.workspaceId,
+      workspace: workspace,
     })
     expect(result.error).toEqual(new NotFoundError('Folder does not exist'))
   })
@@ -43,7 +43,7 @@ describe('removing folders', () => {
     const result = await destroyFolder({
       path: 'some-folder',
       commit: mergedCommit,
-      workspaceId: project.workspaceId,
+      workspace: workspace,
     })
 
     expect(result.error).toEqual(new Error('Cannot modify a merged commit'))
@@ -117,7 +117,7 @@ describe('removing folders', () => {
     await destroyFolder({
       path: 'root-folder/some-folder',
       commit: draft,
-      workspaceId: project.workspaceId,
+      workspace: workspace,
     }).then((r) => r.unwrap())
 
     const documents = await database.query.documentVersions.findMany({
@@ -134,7 +134,7 @@ describe('removing folders', () => {
   })
 
   it('create soft deleted documents that were present in merged commits and were deleted in this draft commit', async (ctx) => {
-    const { project, user } = await factories.createProject({
+    const { workspace, project, user } = await factories.createProject({
       providers: [{ type: Providers.OpenAI, name: 'openai' }],
       documents: {
         'some-folder': {
@@ -154,7 +154,7 @@ describe('removing folders', () => {
     await destroyFolder({
       path: 'some-folder',
       commit: draft,
-      workspaceId: project.workspaceId,
+      workspace: workspace,
     }).then((r) => r.unwrap())
 
     const documents = await database.query.documentVersions.findMany({
@@ -170,7 +170,7 @@ describe('removing folders', () => {
   })
 
   it('existing documents in this commit draft are marked as deleted', async (ctx) => {
-    const { project, user, documents } = await factories.createProject({
+    const { workspace, project, user, documents } = await factories.createProject({
       providers: [{ type: Providers.OpenAI, name: 'openai' }],
       documents: {
         'some-folder': {
@@ -207,7 +207,7 @@ describe('removing folders', () => {
     await destroyFolder({
       path: 'some-folder',
       commit: draft,
-      workspaceId: project.workspaceId,
+      workspace: workspace,
     }).then((r) => r.unwrap())
 
     const draftDocuments = await database.query.documentVersions.findMany({
