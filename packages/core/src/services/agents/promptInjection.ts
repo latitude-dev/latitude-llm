@@ -73,7 +73,7 @@ export function injectFakeStartAutonomousWorkflowMessages(
     const isLast = index === messages.length - 1
     const isAgentReturnTool =
       message.role === MessageRole.assistant &&
-      message.toolCalls.some(
+      message.toolCalls?.some(
         (toolCall) => toolCall.name === AGENT_RETURN_TOOL_NAME,
       )
 
