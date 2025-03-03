@@ -64,16 +64,14 @@ export class DocumentSuggestionsRepository extends Repository<DocumentSuggestion
     commitId: number
     documentUuid: string
   }) {
-    const result = await this.scope
-      .where(
-        and(
-          this.scopeFilter,
-          eq(documentSuggestions.commitId, commitId),
-          eq(documentSuggestions.documentUuid, documentUuid),
-          this.expirationFilter,
-        ),
-      )
-      .orderBy(desc(documentSuggestions.createdAt))
+    const result = await this.scope.where(
+      and(
+        this.scopeFilter,
+        eq(documentSuggestions.commitId, commitId),
+        eq(documentSuggestions.documentUuid, documentUuid),
+        this.expirationFilter,
+      ),
+    )
 
     return Result.ok<DocumentSuggestion[]>(result)
   }

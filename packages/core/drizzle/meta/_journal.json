@@ -904,6 +904,13 @@
       "when": 1740922745834,
       "tag": "0129_rich_scalphunter",
       "breakpoints": true
+    },
+    {
+      "idx": 130,
+      "version": "7",
+      "when": 1740999072849,
+      "tag": "0130_normal_stellaris",
+      "breakpoints": true
     }
   ]
 }
