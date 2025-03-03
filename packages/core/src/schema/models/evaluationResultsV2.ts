@@ -1,8 +1,15 @@
-import { bigint, bigserial, boolean, index, jsonb } from 'drizzle-orm/pg-core'
+import {
+  bigint,
+  bigserial,
+  boolean,
+  index,
+  jsonb,
+  uuid,
+} from 'drizzle-orm/pg-core'
 import { EvaluationResultMetadata } from '../../constants'
 import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
-import { evaluationsV2 } from './evaluationsV2'
+import { commits } from './commits'
 import { providerLogs } from './providerLogs'
 import { workspaces } from './workspaces'
 
@@ -13,11 +20,12 @@ export const evaluationResultsV2 = latitudeSchema.table(
     workspaceId: bigint('workspace_id', { mode: 'number' })
       .notNull()
       .references(() => workspaces.id, { onDelete: 'cascade' }),
-    evaluationId: bigint('evaluation_id', { mode: 'number' })
+    commitId: bigint('commit_id', { mode: 'number' })
       .notNull()
-      .references(() => evaluationsV2.id, { onDelete: 'cascade' }),
+      .references(() => commits.id, { onDelete: 'restrict' }),
+    evaluationUuid: uuid('evaluation_uuid').notNull(),
     experimentId: bigint('experiment_id', { mode: 'number' }),
-    // .references(() => experiments.id, { onDelete: 'set null' }), // TODO: Add this when experiment table is created
+    // .references(() => experiments.id, { onDelete: 'restrict' }), // TODO: Add this when experiment table is created
     evaluatedLogId: bigint('evaluated_log_id', { mode: 'number' })
       .notNull()
       .references(() => providerLogs.id, { onDelete: 'cascade' }),
@@ -31,8 +39,11 @@ export const evaluationResultsV2 = latitudeSchema.table(
     workspaceIdIdx: index('evaluation_results_v2_workspace_id_idx').on(
       table.workspaceId,
     ),
-    evaluationIdIdx: index('evaluation_results_v2_evaluation_id_idx').on(
-      table.evaluationId,
+    commitIdIdx: index('evaluation_results_v2_commit_id_idx').on(
+      table.commitId,
+    ),
+    evaluationUuidIdx: index('evaluation_results_v2_evaluation_uuid_idx').on(
+      table.evaluationUuid,
     ),
     experimentIdIdx: index('evaluation_results_v2_experiment_id_idx').on(
       table.experimentId,

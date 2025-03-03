@@ -223,7 +223,8 @@ export type EvaluationV2<
   M extends EvaluationMetric<T> = EvaluationMetric<T>,
   C extends EvaluationConfiguration<M> = EvaluationConfiguration<M>,
 > = {
-  id: number
+  uuid: string
+  versionId: number
   workspaceId: number
   commitId: number
   documentUuid: string
@@ -249,7 +250,8 @@ export type EvaluationResultV2<
 > = {
   id: number
   workspaceId: number
-  evaluationId: number
+  commitId: number
+  evaluationUuid: string
   experimentId: number | null
   evaluatedLogId: number
   score: number

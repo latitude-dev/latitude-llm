@@ -7,6 +7,7 @@ import {
   jsonb,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
   varchar,
 } from 'drizzle-orm/pg-core'
@@ -21,14 +22,15 @@ import { timestamps } from '../schemaHelpers'
 import { documentVersions } from './documentVersions'
 import { workspaces } from './workspaces'
 
-export const evaluationsV2 = latitudeSchema.table(
-  'evaluations_v2',
+export const evaluationVersions = latitudeSchema.table(
+  'evaluation_versions',
   {
     id: bigserial('id', { mode: 'number' }).notNull().primaryKey(),
     workspaceId: bigint('workspace_id', { mode: 'number' })
       .notNull()
       .references(() => workspaces.id, { onDelete: 'cascade' }),
     commitId: bigint('commit_id', { mode: 'number' }).notNull(),
+    evaluationUuid: uuid('evaluation_uuid').notNull().defaultRandom(),
     documentUuid: uuid('document_uuid').notNull(),
     name: varchar('name', { length: 256 }).notNull(),
     description: text('description').notNull(),
@@ -51,7 +53,7 @@ export const evaluationsV2 = latitudeSchema.table(
     deletedAt: timestamp('deleted_at'),
   },
   (table) => ({
-    workspaceIdIdx: index('evaluations_v2_workspace_id_idx').on(
+    workspaceIdIdx: index('evaluation_versions_workspace_id_idx').on(
       table.workspaceId,
     ),
     documentVersionsFk: foreignKey({
@@ -60,10 +62,16 @@ export const evaluationsV2 = latitudeSchema.table(
         documentVersions.commitId,
         documentVersions.documentUuid,
       ],
-      name: 'evaluations_v2_document_versions_fk',
+      name: 'evaluation_versions_document_versions_fk',
     }).onDelete('cascade'),
-    commitIdIdx: index('evaluations_v2_commit_id_idx').on(table.commitId),
-    documentUuidIdx: index('evaluations_v2_document_uuid_idx').on(
+    commitIdIdx: index('evaluation_versions_commit_id_idx').on(table.commitId),
+    evaluationUuidIdx: index('evaluation_versions_evaluation_uuid_idx').on(
+      table.evaluationUuid,
+    ),
+    uniqueEvaluationUuidCommitId: uniqueIndex(
+      'evaluation_versions_unique_evaluation_uuid_commit_id',
+    ).on(table.evaluationUuid, table.commitId),
+    documentUuidIdx: index('evaluation_versions_document_uuid_idx').on(
       table.documentUuid,
     ),
   }),
