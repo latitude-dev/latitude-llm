@@ -69,7 +69,7 @@ export async function runEvaluation(
   }
 
   // Run the chain
-  const { workspace, chain, schema } = checkerResult.value
+  const { workspace, chain, schema, config } = checkerResult.value
   const providersMap = await buildProvidersMap({
     workspaceId: evaluation.workspaceId,
   })
@@ -83,6 +83,7 @@ export async function runEvaluation(
     errorableType: ErrorableEntity.EvaluationResult,
     workspace,
     chain,
+    globalConfig: config,
     promptlVersion: usePromptl ? 1 : 0,
     source: LogSources.Evaluation,
     providersMap,

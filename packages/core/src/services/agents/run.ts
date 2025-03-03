@@ -12,6 +12,7 @@ export function runAgent<T extends boolean, C extends SomeChain>({
   source,
   promptlVersion,
   chain,
+  globalConfig,
 
   persistErrors = true,
   generateUUID = generateUUIDIdentifier,
@@ -42,6 +43,7 @@ export function runAgent<T extends boolean, C extends SomeChain>({
       providersMap,
       source,
       promptlVersion,
+      globalConfig,
       chain,
       persistErrors: persistErrors as true,
       generateUUID,
@@ -93,10 +95,12 @@ export function runAgent<T extends boolean, C extends SomeChain>({
       workspace,
       source,
       conversation,
+      globalConfig,
       providersMap,
       errorableUuid,
       stepCount,
       newMessages,
+      previousConfig: conversation.config,
     })
   })
 

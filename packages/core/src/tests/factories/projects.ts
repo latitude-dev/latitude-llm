@@ -28,6 +28,8 @@ import {
 } from './providerApiKeys'
 import { createWorkspace, type ICreateWorkspace } from './workspaces'
 import { DocumentVersionsRepository } from '../../repositories'
+import { createIntegration } from '../../services/integrations'
+import { IntegrationType } from '@latitude-data/constants'
 
 export type IDocumentStructure = { [key: string]: string | IDocumentStructure }
 
@@ -61,6 +63,7 @@ export type ICreateProject = {
   deletedAt?: Date | null
   workspace?: Workspace | WorkspaceDto | ICreateWorkspace
   providers?: { type: Providers; name: string }[]
+  integrations?: string[]
   evaluations?: Omit<IEvaluationData, 'workspace' | 'user'>[]
   documents?: IDocumentStructure
   skipMerge?: boolean
@@ -80,6 +83,22 @@ export async function createProject(projectData: Partial<ICreateProject> = {}) {
     user = newWorkspace.userData
 
     await createApiKey({ workspace })
+  }
+
+  if (projectData.integrations?.length) {
+    await Promise.all(
+      projectData.integrations.map((name) =>
+        createIntegration({
+          workspace,
+          name,
+          type: IntegrationType.CustomMCP,
+          configuration: {
+            url: 'https://custom.mcp/sse',
+          },
+          author: user,
+        }),
+      ),
+    )
   }
 
   const randomName = faker.commerce.department()

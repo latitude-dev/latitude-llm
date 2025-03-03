@@ -1,14 +1,10 @@
-import { AgentToolsMap, ToolDefinition } from '@latitude-data/constants'
 import {
-  BadRequestError,
-  LatitudeError,
-  NotFoundError,
-  PromisedResult,
-  Result,
-  TypedResult,
-} from '../../lib'
+  AgentToolsMap,
+  resolveRelativePath,
+  ToolDefinition,
+} from '@latitude-data/constants'
+import { PromisedResult, Result } from '../../lib'
 import { DocumentVersionsRepository } from '../../repositories'
-import path from 'path'
 import { Commit, DocumentVersion, Workspace } from '../../browser'
 import { scan } from 'promptl-ai'
 import { readMetadata } from '@latitude-data/compiler'
@@ -20,55 +16,7 @@ const DEFAULT_PARAM_DEFINITION: JSONSchema7 = {
   type: 'string',
 }
 
-function resolvePath(from: string, target: string): string {
-  if (!from.startsWith('/')) from = '/' + from
-  const result = path.resolve(path.dirname(from), target)
-  return result.startsWith('/') ? result.slice(1) : result
-}
-
-function findAgentDocs({
-  agentPaths,
-  documents,
-}: {
-  agentPaths: string[]
-  documents: DocumentVersion[]
-}): TypedResult<DocumentVersion[], LatitudeError> {
-  const [agentDocs, notfoundPaths] = agentPaths.reduce(
-    ([agentDocs, notFoundPaths]: [DocumentVersion[], string[]], agentPath) => {
-      const doc = documents.find((doc) => doc.path === agentPath)
-      if (doc) {
-        agentDocs.push(doc)
-      } else {
-        notFoundPaths.push(agentPath)
-      }
-      return [agentDocs, notFoundPaths]
-    },
-    [[], []],
-  )
-
-  if (notfoundPaths.length) {
-    return Result.error(
-      new NotFoundError(`Documents not found: '${notfoundPaths.join("', '")}'`),
-    )
-  }
-
-  const notActuallyAgents = agentDocs.filter(
-    (doc) => doc.documentType !== 'agent',
-  )
-  if (notActuallyAgents.length) {
-    return Result.error(
-      new BadRequestError(
-        notActuallyAgents.length === 1
-          ? `Document '${notActuallyAgents[0]!.path}' is not an agent`
-          : `Documents are not agents: '${notActuallyAgents.map((doc) => doc.path).join("', '")}'`,
-      ),
-    )
-  }
-
-  return Result.ok(agentDocs)
-}
-
-async function getToolDefinitionFromDocument({
+export async function getToolDefinitionFromDocument({
   doc,
   allDocs,
 }: {
@@ -77,7 +25,7 @@ async function getToolDefinitionFromDocument({
 }): Promise<ToolDefinition> {
   const metadataFn = doc.promptlVersion === 1 ? scan : readMetadata
   const referenceFn = async (target: string, from?: string) => {
-    const fullPath = from ? resolvePath(from, target) : target
+    const fullPath = from ? resolveRelativePath(from, target) : target
     const refDoc = allDocs.find((doc) => doc.path === fullPath)
     return refDoc
       ? {
@@ -115,48 +63,6 @@ async function getToolDefinitionFromDocument({
     description: description ?? 'An AI agent',
     parameters: parametersSchema,
   }
-}
-
-export async function buildAgentsAsToolsDefinition({
-  workspace,
-  document,
-  commit,
-  agents,
-}: {
-  workspace: Workspace
-  document: DocumentVersion
-  commit: Commit
-  agents: string[]
-}): PromisedResult<Record<string, ToolDefinition>> {
-  if (!agents.length) return Result.ok({})
-
-  const docsScope = new DocumentVersionsRepository(workspace.id)
-  const docsResult = await docsScope.getDocumentsAtCommit(commit)
-  if (docsResult.error) return Result.error(docsResult.error)
-  const docs = docsResult.unwrap()
-  const configAgentPaths = agents.map((agentPath) =>
-    resolvePath(document.path, agentPath),
-  )
-
-  const agentDocsResult = findAgentDocs({
-    agentPaths: configAgentPaths,
-    documents: docs,
-  })
-  if (agentDocsResult.error) return agentDocsResult
-  const agentDocs = agentDocsResult.unwrap()
-
-  const toolDefinitions = await Promise.all(
-    agentDocs.map(async (doc) => {
-      return {
-        [getAgentToolName(doc.path)]: await getToolDefinitionFromDocument({
-          doc,
-          allDocs: docs,
-        }),
-      }
-    }),
-  ).then((definitions) => Object.assign({}, ...definitions))
-
-  return Result.ok(toolDefinitions)
 }
 
 export async function buildAgentsToolsMap(

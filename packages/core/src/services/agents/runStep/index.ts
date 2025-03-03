@@ -1,4 +1,4 @@
-import { AssistantMessage, Conversation } from '@latitude-data/compiler'
+import { AssistantMessage, Config, Conversation } from '@latitude-data/compiler'
 import {
   buildMessagesFromResponse,
   LogSources,
@@ -15,6 +15,7 @@ import {
   ABSOLUTE_MAX_STEPS,
   DEFAULT_MAX_STEPS,
   MAX_STEPS_CONFIG_NAME,
+  PromptConfig,
 } from '@latitude-data/constants'
 
 function assertValidStepCount({
@@ -47,6 +48,7 @@ export async function runAgentStep({
   conversation,
   providersMap,
   errorableUuid,
+  globalConfig,
   newMessages = undefined,
   stepCount,
 }: {
@@ -57,13 +59,22 @@ export async function runAgentStep({
   providersMap: CachedApiKeys
   errorableUuid: string
   newMessages: Message[] | undefined
+  globalConfig: PromptConfig
+  previousConfig: Config
   stepCount: number
 }) {
   if (newMessages?.length) {
     const lastResponseMessage = newMessages[0]! as AssistantMessage
     const latitudeToolResponses =
-      await chainStreamManager.handleLatitudeToolCalls(lastResponseMessage)
-    newMessages.push(...latitudeToolResponses)
+      await chainStreamManager.handleBuiltInToolCalls({
+        message: lastResponseMessage,
+        config: globalConfig,
+      })
+    newMessages = [
+      lastResponseMessage,
+      ...latitudeToolResponses,
+      ...newMessages.slice(1),
+    ]
   }
 
   const step = await validateAgentStep({
@@ -86,9 +97,7 @@ export async function runAgentStep({
 
   const { response, clientToolCalls } =
     await chainStreamManager.getProviderResponse({
-      workspace,
       source,
-      documentLogUuid: errorableUuid,
       conversation: step.conversation,
       provider: step.provider,
       schema: step.schema,
@@ -107,10 +116,12 @@ export async function runAgentStep({
     chainStreamManager,
     workspace,
     source,
+    globalConfig,
     conversation: step.conversation,
     errorableUuid,
     providersMap,
     stepCount: stepCount + 1,
     newMessages: buildMessagesFromResponse({ response }),
+    previousConfig: step.config,
   })
 }

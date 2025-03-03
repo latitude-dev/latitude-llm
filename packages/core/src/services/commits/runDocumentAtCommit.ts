@@ -1,3 +1,4 @@
+import { PromptConfig } from '@latitude-data/constants'
 import {
   ChainStepResponse,
   Commit,
@@ -134,6 +135,7 @@ export async function runDocumentAtCommit({
     errorableType,
     workspace,
     chain: checkerResult.value.chain,
+    globalConfig: checkerResult.value.config as PromptConfig,
     promptlVersion: document.promptlVersion,
     providersMap,
     source,
