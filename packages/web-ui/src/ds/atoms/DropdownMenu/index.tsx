@@ -55,6 +55,7 @@ export type MenuOption = {
   lookDisabled?: boolean
   shortcut?: string
   checked?: boolean | undefined
+  hidden?: boolean
 }
 function DropdownItem({
   iconProps,
@@ -149,9 +150,11 @@ export function DropdownMenu({
               <DropdownMenuSeparator />
             </>
           )}
-          {options.map((option, index) => (
-            <DropdownItem key={index} {...option} />
-          ))}
+          {options
+            .filter((option) => !option.hidden)
+            .map((option, index) => (
+              <DropdownItem key={index} {...option} />
+            ))}
         </DropdownMenuContent>
       </DropdownMenuPortal>
     </DropdownMenuRoot>
