@@ -6,9 +6,9 @@ import { claimedRewards } from './models/claimedRewards'
 import { commits } from './models/commits'
 import { connectedEvaluations } from './models/connectedEvaluations'
 // DEPRECATED: we need to run migration and create new records in datasetsV2 for all existing datasets
+import { datasetRows } from './models/datasetRows'
 import { datasets } from './models/datasets'
 import { datasetsV2 } from './models/datasetsV2'
-import { datasetRows } from './models/datasetRows'
 import { documentSuggestions } from './models/documentSuggestions'
 import { documentVersions } from './models/documentVersions'
 import { evaluationAdvancedTemplates } from './models/evaluationAdvancedTemplates'
@@ -20,6 +20,7 @@ import { evaluationMetadataLlmAsJudgeAdvanced } from './models/evaluationMetadat
 import { evaluationMetadataLlmAsJudgeSimple } from './models/evaluationMetadataLlmAsJudgeSimple'
 import { evaluations } from './models/evaluations'
 import { evaluationTemplateCategories } from './models/evaluationTemplateCategories'
+import { integrations } from './models/integrations'
 import { magicLinkTokens } from './models/magicLinkTokens'
 import { memberships } from './models/memberships'
 import { projects } from './models/projects'
@@ -33,12 +34,13 @@ import { subscriptions } from './models/subscriptions'
 import { traces } from './models/traces'
 import { users } from './models/users'
 import { workspaces } from './models/workspaces'
-import { integrations } from './models/integrations'
 
 export type {
   DocumentLog,
   EvaluationResult,
   EvaluationResultDto,
+  EvaluationResultV2,
+  EvaluationV2,
 } from '@latitude-data/constants'
 
 // Model types are out of schema files to be able to share with NextJS webpack bundler

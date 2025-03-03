@@ -897,6 +897,13 @@
       "when": 1740670313857,
       "tag": "0128_integrations_schema",
       "breakpoints": true
+    },
+    {
+      "idx": 129,
+      "version": "7",
+      "when": 1740922745834,
+      "tag": "0129_rich_scalphunter",
+      "breakpoints": true
     }
   ]
 }

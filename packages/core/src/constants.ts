@@ -34,6 +34,7 @@ export {
   StreamEventTypes,
   type LegacyChainEvent,
 } from '@latitude-data/constants'
+export * from '@latitude-data/constants/evaluations'
 
 export const LATITUDE_EVENT = 'latitudeEventsChannel'
 export const LATITUDE_DOCS_URL = 'https://docs.latitude.so'
