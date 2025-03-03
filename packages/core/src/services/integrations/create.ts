@@ -1,7 +1,7 @@
 import { IntegrationType } from '@latitude-data/constants'
 import type { User, Workspace } from '../../browser'
 import { database } from '../../client'
-import { ErrorResult, Result, Transaction } from '../../lib'
+import { BadRequestError, ErrorResult, Result, Transaction } from '../../lib'
 import { integrations } from '../../schema'
 import {
   CustomMCPConfiguration,
@@ -26,6 +26,12 @@ export async function createIntegration<p extends IntegrationType>(
   db = database,
 ) {
   const { workspace, name, type, configuration, author } = params
+
+  if (type === IntegrationType.Latitude) {
+    return Result.error(
+      new BadRequestError('Cannot create a Latitude integration'),
+    )
+  }
 
   // For MCPServer type, first deploy the server
   if (type === IntegrationType.MCPServer) {
@@ -67,7 +73,7 @@ export async function createIntegration<p extends IntegrationType>(
     }, db)
   }
 
-  return Transaction.call(async (tx) => {
+  return await Transaction.call(async (tx) => {
     const result = await tx
       .insert(integrations)
       .values({

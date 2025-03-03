@@ -6,19 +6,37 @@ import useFetcher from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'
+import { IntegrationType } from '@latitude-data/constants'
 
 const EMPTY_ARRAY: Integration[] = []
 
-export default function useIntegrations(opts?: SWRConfiguration) {
+export default function useIntegrations({
+  includeLatitudeTools,
+  ...opts
+}: SWRConfiguration & {
+  includeLatitudeTools?: boolean
+} = {}) {
   const { toast } = useToast()
   const fetcher = useFetcher(ROUTES.api.integrations.root, {
-    serializer: (rows) => rows.map(deserialize),
+    serializer: (rows: Integration[]) =>
+      rows
+        .map(deserialize)
+        .filter(
+          (item) =>
+            includeLatitudeTools || item.type !== IntegrationType.Latitude,
+        )
+        .sort((a, b) => a.id - b.id),
   })
   const {
     data = EMPTY_ARRAY,
     mutate,
     ...rest
-  } = useSWR<Integration[]>('api/integrations', fetcher, opts)
+  } = useSWR<Integration[]>(
+    ['integrations', includeLatitudeTools ?? false],
+    fetcher,
+    opts,
+  )
+
   const { execute: create } = useLatitudeAction(createIntegrationAction, {
     onSuccess: async ({ data: integration }) => {
       toast({
@@ -53,7 +71,7 @@ export default function useIntegrations(opts?: SWRConfiguration) {
   }
 }
 
-function deserialize(item: Integration) {
+function deserialize(item: Integration): Integration {
   return {
     ...item,
     createdAt: new Date(item.createdAt),

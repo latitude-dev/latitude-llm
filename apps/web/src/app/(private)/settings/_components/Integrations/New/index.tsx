@@ -24,25 +24,31 @@ type IntegrationTypeOption = {
   icon: IconName
 }
 
-const INTEGRATION_TYPE_VALUES: Record<IntegrationType, IntegrationTypeOption> =
-  {
-    [IntegrationType.CustomMCP]: {
-      label: 'Custom MCP Server',
-      icon: 'mcp',
-    },
-    [IntegrationType.MCPServer]: {
-      label: 'MCP Server',
-      icon: 'mcp',
-    },
-  }
+export const INTEGRATION_TYPE_VALUES: Record<
+  IntegrationType,
+  IntegrationTypeOption
+> = {
+  [IntegrationType.CustomMCP]: {
+    label: 'Custom MCP Server',
+    icon: 'mcp',
+  },
+  [IntegrationType.MCPServer]: {
+    label: 'MCP Server',
+    icon: 'mcp',
+  },
+  [IntegrationType.Latitude]: {
+    label: 'Latitude Built-in tools',
+    icon: 'logoMonochrome',
+  },
+}
 
-const INTEGRATION_TYPE_OPTIONS = Object.values(IntegrationType).map(
-  (value) => ({
+const INTEGRATION_TYPE_OPTIONS = Object.values(IntegrationType)
+  .filter((t) => t !== IntegrationType.Latitude) // Latitude is not selectable
+  .map((value) => ({
     value,
     label: INTEGRATION_TYPE_VALUES[value].label,
     icon: <Icon name={INTEGRATION_TYPE_VALUES[value].icon} />,
-  }),
-)
+  }))
 
 export default function NewIntegration() {
   const navigate = useNavigate()
@@ -93,7 +99,7 @@ export default function NewIntegration() {
             name='name'
             label='Name'
             description="This is the name you'll use in the prompt editor to refer to use this integration and model."
-            placeholder='My Integration'
+            placeholder='my_integration'
           />
           <Select
             required

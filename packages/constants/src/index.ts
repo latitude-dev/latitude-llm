@@ -20,6 +20,7 @@ export enum Providers {
 }
 
 export enum IntegrationType {
+  Latitude = 'latitude', // For internal use only
   CustomMCP = 'custom_mcp',
   MCPServer = 'mcp_server',
 }

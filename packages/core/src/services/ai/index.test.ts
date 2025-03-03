@@ -27,6 +27,7 @@ describe('ai function', () => {
   it('should throw an error if rules are violated', async () => {
     // @ts-expect-error
     const provider: ProviderApiKey = {
+      name: 'openai',
       provider: Providers.OpenAI,
       token: 'openai-api-key',
       url: 'https://api.openai.com',
@@ -34,6 +35,7 @@ describe('ai function', () => {
 
     const config = {
       model: 'test-model',
+      provider: provider.name,
     }
 
     const messages: Message[] = [
@@ -65,12 +67,14 @@ There are rule violations:
   it('should throw an error if Google provider is used without a user message', async () => {
     // @ts-expect-error
     const provider: ProviderApiKey = {
+      name: 'google',
       provider: Providers.Google,
       token: 'google-api-key',
       url: 'https://api.google.com',
     }
 
     const config = {
+      provider: provider.name,
       model: 'test-model',
     }
 
@@ -107,7 +111,7 @@ There are rule violations:
     await expect(
       ai({
         provider: PROVIDER_PAYLOAD,
-        config: { model: 'gpt-4o' },
+        config: { model: 'gpt-4o', provider: PROVIDER_PAYLOAD.name },
         messages: [],
         aiSdkProvider: {
           streamText: streamTextModk, // Inject the mocked function
@@ -130,7 +134,7 @@ There are rule violations:
     await expect(
       ai({
         provider: PROVIDER_PAYLOAD,
-        config: { model: 'gpt-4o' },
+        config: { model: 'gpt-4o', provider: PROVIDER_PAYLOAD.name },
         messages: [],
         aiSdkProvider: {
           streamText: streamTextModk,
