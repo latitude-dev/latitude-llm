@@ -170,21 +170,22 @@ describe('removing folders', () => {
   })
 
   it('existing documents in this commit draft are marked as deleted', async (ctx) => {
-    const { workspace, project, user, documents } = await factories.createProject({
-      providers: [{ type: Providers.OpenAI, name: 'openai' }],
-      documents: {
-        'some-folder': {
-          doc2: ctx.factories.helpers.createPrompt({
-            provider: 'openai',
-            content: 'Doc 2',
-          }),
-          doc1: ctx.factories.helpers.createPrompt({
-            provider: 'openai',
-            content: 'Doc 1',
-          }),
+    const { workspace, project, user, documents } =
+      await factories.createProject({
+        providers: [{ type: Providers.OpenAI, name: 'openai' }],
+        documents: {
+          'some-folder': {
+            doc2: ctx.factories.helpers.createPrompt({
+              provider: 'openai',
+              content: 'Doc 2',
+            }),
+            doc1: ctx.factories.helpers.createPrompt({
+              provider: 'openai',
+              content: 'Doc 1',
+            }),
+          },
         },
-      },
-    })
+      })
     const { commit: draft } = await factories.createDraft({ project, user })
     await Promise.all(
       documents.map((d) =>
