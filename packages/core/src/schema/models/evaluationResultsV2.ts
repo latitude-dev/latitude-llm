@@ -17,6 +17,7 @@ export const evaluationResultsV2 = latitudeSchema.table(
   'evaluation_results_v2',
   {
     id: bigserial('id', { mode: 'number' }).notNull().primaryKey(),
+    uuid: uuid('uuid').notNull().unique().defaultRandom(),
     workspaceId: bigint('workspace_id', { mode: 'number' })
       .notNull()
       .references(() => workspaces.id, { onDelete: 'cascade' }),
@@ -50,6 +51,9 @@ export const evaluationResultsV2 = latitudeSchema.table(
     ),
     evaluatedLogIdIdx: index('evaluation_results_v2_evaluated_log_id_idx').on(
       table.evaluatedLogId,
+    ),
+    createdAtIdx: index('evaluation_results_v2_created_at_idx').on(
+      table.createdAt,
     ),
   }),
 )

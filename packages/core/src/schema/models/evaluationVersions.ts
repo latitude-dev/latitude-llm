@@ -2,7 +2,6 @@ import {
   bigint,
   bigserial,
   boolean,
-  foreignKey,
   index,
   jsonb,
   text,
@@ -19,7 +18,7 @@ import {
 } from '../../constants'
 import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
-import { documentVersions } from './documentVersions'
+import { commits } from './commits'
 import { workspaces } from './workspaces'
 
 export const evaluationVersions = latitudeSchema.table(
@@ -29,7 +28,9 @@ export const evaluationVersions = latitudeSchema.table(
     workspaceId: bigint('workspace_id', { mode: 'number' })
       .notNull()
       .references(() => workspaces.id, { onDelete: 'cascade' }),
-    commitId: bigint('commit_id', { mode: 'number' }).notNull(),
+    commitId: bigint('commit_id', { mode: 'number' })
+      .notNull()
+      .references(() => commits.id, { onDelete: 'restrict' }),
     evaluationUuid: uuid('evaluation_uuid').notNull().defaultRandom(),
     documentUuid: uuid('document_uuid').notNull(),
     name: varchar('name', { length: 256 }).notNull(),
@@ -56,21 +57,13 @@ export const evaluationVersions = latitudeSchema.table(
     workspaceIdIdx: index('evaluation_versions_workspace_id_idx').on(
       table.workspaceId,
     ),
-    documentVersionsFk: foreignKey({
-      columns: [table.commitId, table.documentUuid],
-      foreignColumns: [
-        documentVersions.commitId,
-        documentVersions.documentUuid,
-      ],
-      name: 'evaluation_versions_document_versions_fk',
-    }).onDelete('cascade'),
+    uniqueCommitIdEvaluationUuid: uniqueIndex(
+      'evaluation_versions_unique_commit_id_evaluation_uuid',
+    ).on(table.commitId, table.evaluationUuid),
     commitIdIdx: index('evaluation_versions_commit_id_idx').on(table.commitId),
     evaluationUuidIdx: index('evaluation_versions_evaluation_uuid_idx').on(
       table.evaluationUuid,
     ),
-    uniqueEvaluationUuidCommitId: uniqueIndex(
-      'evaluation_versions_unique_evaluation_uuid_commit_id',
-    ).on(table.evaluationUuid, table.commitId),
     documentUuidIdx: index('evaluation_versions_document_uuid_idx').on(
       table.documentUuid,
     ),

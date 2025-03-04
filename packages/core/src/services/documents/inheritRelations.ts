@@ -16,6 +16,8 @@ async function inheritSuggestions(
   },
   db: Database = database,
 ) {
+  if (toVersion.deletedAt) return Result.nil()
+
   const repository = new DocumentSuggestionsRepository(workspace.id, db)
 
   const suggestions = await repository

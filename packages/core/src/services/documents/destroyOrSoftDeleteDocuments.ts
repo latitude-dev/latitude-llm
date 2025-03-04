@@ -2,10 +2,11 @@ import { omit } from 'lodash-es'
 
 import { and, eq, inArray, ne } from 'drizzle-orm'
 
-import { Commit, DocumentVersion } from '../../browser'
+import { Commit, DocumentVersion, Workspace } from '../../browser'
 import { database } from '../../client'
 import { Result, Transaction, TypedResult } from '../../lib'
-import { documentVersions } from '../../schema'
+import { EvaluationsV2Repository } from '../../repositories'
+import { documentVersions, evaluationVersions } from '../../schema'
 import { pingProjectUpdate } from '../projects'
 
 async function findUuidsInOtherCommits({
@@ -41,6 +42,18 @@ function getToBeSoftDeleted({
   return documents.filter((d) => existingUuids.includes(d.documentUuid))
 }
 
+async function hardDestroyEvaluations({
+  documentUuids,
+  tx,
+}: {
+  documentUuids: string[]
+  tx: typeof database
+}) {
+  return tx
+    .delete(evaluationVersions)
+    .where(inArray(evaluationVersions.documentUuid, documentUuids))
+}
+
 /**
  * Destroy documents that were NOT CREATED in other commits in the past
  * This is a hard delete so we don't leave leftovers in the database
@@ -58,21 +71,78 @@ async function hardDestroyDocuments({
     .filter((d) => !existingUuids.includes(d.documentUuid))
     .map((d) => d.documentUuid)
   if (uuids.length === 0) return
+
+  await hardDestroyEvaluations({ documentUuids: uuids, tx })
+
   return tx
     .delete(documentVersions)
     .where(inArray(documentVersions.documentUuid, uuids))
 }
 
+async function createEvaluationsAsSoftDeleted({
+  commitId,
+  documents,
+  workspace,
+  tx,
+}: {
+  commitId: number
+  documents: DocumentVersion[]
+  workspace: Workspace
+  tx: typeof database
+}) {
+  const repository = new EvaluationsV2Repository(workspace.id, tx)
+
+  await Promise.all(
+    documents.map(async (document) => {
+      const evaluations = await repository
+        .listByDocumentVersion({
+          commitId: document.commitId,
+          documentUuid: document.documentUuid,
+        })
+        .then((r) => r.unwrap())
+
+      if (!evaluations.length) return
+
+      await tx
+        .insert(evaluationVersions)
+        .values(
+          evaluations.map((evaluation) => ({
+            ...evaluation,
+            id: undefined,
+            commitId: commitId,
+            deletedAt: new Date(),
+          })),
+        )
+        .onConflictDoUpdate({
+          target: [
+            evaluationVersions.commitId,
+            evaluationVersions.evaluationUuid,
+          ],
+          set: { deletedAt: new Date() },
+        })
+    }),
+  )
+}
+
 async function createDocumentsAsSoftDeleted({
   toBeCreated,
   commitId,
+  workspace,
   tx,
 }: {
   toBeCreated: DocumentVersion[]
   commitId: number
+  workspace: Workspace
   tx: typeof database
 }) {
   if (!toBeCreated.length) return
+
+  await createEvaluationsAsSoftDeleted({
+    commitId: commitId,
+    documents: toBeCreated,
+    workspace: workspace,
+    tx: tx,
+  })
 
   return tx.insert(documentVersions).values(
     toBeCreated.map((d) => ({
@@ -83,7 +153,27 @@ async function createDocumentsAsSoftDeleted({
   )
 }
 
-async function updateDocumetsAsSoftDeleted({
+async function updateEvaluationsAsSoftDeleted({
+  commitId,
+  documentUuids,
+  tx,
+}: {
+  commitId: number
+  documentUuids: string[]
+  tx: typeof database
+}) {
+  return tx
+    .update(evaluationVersions)
+    .set({ deletedAt: new Date() })
+    .where(
+      and(
+        eq(evaluationVersions.commitId, commitId),
+        inArray(evaluationVersions.documentUuid, documentUuids),
+      ),
+    )
+}
+
+async function updateDocumentsAsSoftDeleted({
   toBeUpdated,
   commitId,
   tx,
@@ -94,6 +184,12 @@ async function updateDocumetsAsSoftDeleted({
 }) {
   const uuids = toBeUpdated.map((d) => d.documentUuid)
   if (!uuids.length) return
+
+  await updateEvaluationsAsSoftDeleted({
+    commitId: commitId,
+    documentUuids: uuids,
+    tx: tx,
+  })
 
   return tx
     .update(documentVersions)
@@ -127,10 +223,12 @@ async function invalidateDocumentsCacheInCommit(
 export async function destroyOrSoftDeleteDocuments({
   documents,
   commit,
+  workspace,
   trx = database,
 }: {
   documents: DocumentVersion[]
   commit: Commit
+  workspace: Workspace
   trx?: typeof database
 }): Promise<TypedResult<boolean, Error>> {
   return Transaction.call(async (tx) => {
@@ -146,11 +244,13 @@ export async function destroyOrSoftDeleteDocuments({
 
     await Promise.all([
       hardDestroyDocuments({ documents, existingUuids, tx }),
-      createDocumentsAsSoftDeleted({ toBeCreated, commitId, tx }),
-      updateDocumetsAsSoftDeleted({ toBeUpdated, commitId, tx }),
-      invalidateDocumentsCacheInCommit(commitId, tx),
-      pingProjectUpdate({ projectId: commit.projectId }, tx),
+      createDocumentsAsSoftDeleted({ toBeCreated, commitId, workspace, tx }),
+      updateDocumentsAsSoftDeleted({ toBeUpdated, commitId, tx }),
     ])
+
+    await invalidateDocumentsCacheInCommit(commitId, tx)
+
+    await pingProjectUpdate({ projectId: commit.projectId }, tx)
 
     return Result.ok(true)
   }, trx)

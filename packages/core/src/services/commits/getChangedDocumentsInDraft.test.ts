@@ -113,6 +113,7 @@ describe('publishDraftCommit', () => {
     await destroyDocument({
       document: documents['folder1/doc1']!,
       commit: draftCommit,
+      workspace: workspace,
     }).then((r) => r.unwrap())
 
     const changes = await getCommitChanges({

@@ -1,4 +1,4 @@
-import type { Commit } from '../../browser'
+import type { Commit, Workspace } from '../../browser'
 import { database, Database } from '../../client'
 import { NotFoundError, Result, Transaction } from '../../lib'
 import { assertCommitIsDraft } from '../../lib/assertCommitIsDraft'
@@ -8,19 +8,19 @@ import { destroyOrSoftDeleteDocuments } from './destroyOrSoftDeleteDocuments'
 export async function destroyFolder({
   path,
   commit,
-  workspaceId,
+  workspace,
   db = database,
 }: {
   path: string
   commit: Commit
-  workspaceId: number
+  workspace: Workspace
   db?: Database
 }) {
   return Transaction.call(async (tx) => {
     const assertResult = assertCommitIsDraft(commit)
     assertResult.unwrap()
 
-    const docsScope = new DocumentVersionsRepository(workspaceId, tx)
+    const docsScope = new DocumentVersionsRepository(workspace.id, tx)
     const allDocuments = (await docsScope.getDocumentsAtCommit(commit)).unwrap()
 
     const folderPath = path.endsWith('/') ? path : `${path}/`
@@ -33,6 +33,7 @@ export async function destroyFolder({
     return destroyOrSoftDeleteDocuments({
       documents,
       commit,
+      workspace,
       trx: tx,
     })
   }, db)

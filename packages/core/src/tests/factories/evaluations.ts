@@ -59,16 +59,16 @@ export async function createEvaluation({
   user,
   name = faker.company.catchPhrase(),
   description = faker.lorem.sentence(),
-  metadataType,
+  metadataType = EvaluationMetadataType.LlmAsJudgeAdvanced,
   metadata = {},
   resultType = EvaluationResultableType.Text,
   resultConfiguration = {},
 }: {
   workspace: Workspace
   user: User
-  metadataType: EvaluationMetadataType
   name?: string
   description?: string
+  metadataType?: EvaluationMetadataType
   metadata?: Record<string, unknown>
   resultType?: EvaluationResultableType
   resultConfiguration?: Record<string, unknown>

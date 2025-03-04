@@ -105,10 +105,18 @@ export async function updateDocumentVersion(
 }
 
 export async function destroyDocumentVersion(
-  { document, commit }: { document: DocumentVersion; commit: Commit },
+  {
+    document,
+    commit,
+    workspace,
+  }: {
+    document: DocumentVersion
+    commit: Commit
+    workspace: Workspace
+  },
   tx = database,
 ) {
-  await destroyDocument({ document, commit }).then((result) => result.unwrap())
+  await destroyDocument({ document, commit, workspace }).then((r) => r.unwrap())
 
   // Fetch destroyed document from db because destroyDocument does
   // not return it. Note, it can be undefined when hard deleted

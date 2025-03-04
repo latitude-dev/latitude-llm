@@ -193,6 +193,7 @@ describe('getConnectedDocumentsWithMetadata', () => {
     await destroyOrSoftDeleteDocuments({
       documents: [documents[0]!],
       commit: draft,
+      workspace: workspace,
     })
     await mergeCommit(draft)
 
