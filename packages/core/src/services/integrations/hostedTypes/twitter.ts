@@ -3,7 +3,7 @@ import { HostedIntegrationConfig } from './types'
 export default {
   description:
     'Interact with Twitter through your AI, enabling posting tweets and searching Twitter.',
-  command: '@enescinar/twitter-mcp',
+  command: 'npx -y @enescinar/twitter-mcp',
   env: {
     API_KEY: {
       label: 'API Key',

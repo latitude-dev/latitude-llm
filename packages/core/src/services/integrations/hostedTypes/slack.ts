@@ -2,7 +2,7 @@ import { HostedIntegrationConfig } from './types'
 
 export default {
   description: 'Slack channel management and messaging capabilities.',
-  command: '@modelcontextprotocol/server-slack',
+  command: 'npx -y @modelcontextprotocol/server-slack',
   env: {
     SLACK_BOT_TOKEN: {
       label: 'Slack Bot Token',
