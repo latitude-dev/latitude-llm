@@ -52,6 +52,18 @@ export const HOSTED_INTEGRATION_TYPE_OPTIONS: Record<
     label: 'X (Twitter)',
     icon: 'twitterX',
   },
+  [HostedIntegrationType.Airtable]: {
+    label: 'Airtable',
+    icon: 'airtable',
+  },
+  [HostedIntegrationType.Linear]: {
+    label: 'Linear',
+    icon: 'linear',
+  },
+  [HostedIntegrationType.YoutubeCaptions]: {
+    label: 'YouTube Captions',
+    icon: 'youtube',
+  },
 }
 
 export function integrationOptions(
