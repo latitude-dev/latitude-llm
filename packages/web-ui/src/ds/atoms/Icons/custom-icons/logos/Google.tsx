@@ -2,7 +2,7 @@ import { type LucideProps } from 'lucide-react'
 
 export default function Google(props: LucideProps) {
   return (
-    <svg width='48' height='48' viewBox='0 0 48 48' fill='none' {...props}>
+    <svg viewBox='0 0 48 48' fill='none' {...props}>
       <path
         d='M23.9996 19.6363V28.9309H36.916C36.3488 31.9199 34.6468 34.4509 32.0941 36.1527L39.8831 42.1964C44.4213 38.0075 47.0395 31.8547 47.0395 24.5456C47.0395 22.8438 46.8868 21.2073 46.6031 19.6366L23.9996 19.6363Z'
         fill='currentColor'

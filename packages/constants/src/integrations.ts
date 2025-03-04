@@ -7,7 +7,6 @@ export enum IntegrationType {
 export enum HostedIntegrationType {
   Stripe = 'stripe',
   Slack = 'slack',
-
   Github = 'github',
   Notion = 'notion',
   Twitter = 'twitter',
@@ -15,11 +14,13 @@ export enum HostedIntegrationType {
   Linear = 'linear',
   YoutubeCaptions = 'youtube_captions',
 
-  // Reddit = 'reddit', // uvx
-  // Telegram = 'telegram', // uvx
-  // GoogleWorkspace = 'google_workspace', // uvx
-  // Tinybird = 'tinybird', // uvx
-  // Perplexity = 'perplexity', // uvx
+  // uv integrations
+  Reddit = 'reddit',
+  Telegram = 'telegram',
+  Tinybird = 'tinybird',
+  Perplexity = 'perplexity',
+
+  // GoogleWorkspace = 'google_workspace', // env vars not supported (?)
 
   // Wordpress = 'wordpress', // Not on OpenTools
   // Discord = 'discord', // Not on OpenTools

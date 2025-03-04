@@ -10,6 +10,9 @@ export function HostedIntegrationConfiguration({
   type: HostedIntegrationType
 }) {
   const environmentValues = HOSTED_MCP_CONFIGS[type]
+  const envVars = environmentValues?.env
+    ? Object.entries(environmentValues.env)
+    : []
 
   return (
     <div className='flex flex-col gap-4'>
@@ -18,7 +21,7 @@ export function HostedIntegrationConfiguration({
           {environmentValues.description}
         </Text.H6>
       )}
-      {Object.entries(environmentValues?.env).map(([key, value], idx) => (
+      {envVars.map(([key, value], idx) => (
         <Input
           key={idx}
           required={value.required}

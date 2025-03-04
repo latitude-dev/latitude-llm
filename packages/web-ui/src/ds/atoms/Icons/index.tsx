@@ -106,6 +106,8 @@ import Jira from './custom-icons/logos/Jira'
 import TwitterX from './custom-icons/logos/TwitterX'
 import Linear from './custom-icons/logos/Linear'
 import Airtable from './custom-icons/logos/Airtable'
+import Tinybird from './custom-icons/logos/Tinybird'
+import Perplexity from './custom-icons/logos/Perplexity'
 
 const Icons = {
   addCircle: CirclePlus,
@@ -205,8 +207,8 @@ const Icons = {
   twitterX: TwitterX,
   linear: Linear,
   telegram: Telegram,
-  // tinybird: Tinybird,
-  // perplexity: Perplexity,
+  tinybird: Tinybird,
+  perplexity: Perplexity,
   googleWorkspace: Google,
   // supabase: Supabase,
   // hubspot: Hubspot,
