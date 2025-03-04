@@ -125,6 +125,9 @@ export const API_ROUTES = {
                   suggestions: {
                     root: `${documentRoot}/suggestions`,
                   },
+                  evaluationsV2: {
+                    root: `${documentRoot}/evaluations-v2`,
+                  },
                 }
               },
             },

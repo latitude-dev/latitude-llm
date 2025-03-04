@@ -5,6 +5,8 @@ import {
   EvaluationCondition,
   EvaluationConfiguration,
   EvaluationMetric,
+  EvaluationOptions,
+  EvaluationSettings,
   EvaluationType,
   EvaluationV2,
   RuleEvaluationMetric,
@@ -12,6 +14,7 @@ import {
 } from '../../browser'
 import { database } from '../../client'
 import { evaluationVersions } from '../../schema'
+import * as services from '../../services/evaluationsV2'
 
 type CreateEvaluationV2Args<
   T extends EvaluationType = EvaluationType,
@@ -21,89 +24,54 @@ type CreateEvaluationV2Args<
   document: DocumentVersion
   commit: Commit
   workspace: Workspace
-  name?: string
-  description?: string
-  type?: T
-  metric?: M
-  condition?: EvaluationCondition
-  threshold?: number
-  configuration?: C
-  live?: boolean
-  enableSuggestions?: boolean
-  autoApplySuggestions?: boolean
   createdAt?: Date
-}
+} & Partial<EvaluationSettings<T, M, C>> &
+  Partial<EvaluationOptions>
 
 // prettier-ignore
+// eslint-disable-next-line no-redeclare
 export async function createEvaluationV2(
   args: Omit<CreateEvaluationV2Args, 'type' | 'metric' | 'configuration'>,
 ): Promise<EvaluationV2<EvaluationType.Rule, RuleEvaluationMetric.ExactMatch>>
 
 // prettier-ignore
+// eslint-disable-next-line no-redeclare
 export async function createEvaluationV2<T extends EvaluationType, M extends EvaluationMetric<T>>(
   args: CreateEvaluationV2Args<T, M>
 ): Promise<EvaluationV2<T, M>>
 
-// prettier-ignore
-export async function createEvaluationV2<T extends EvaluationType, M extends EvaluationMetric<T>>(
-  args: CreateEvaluationV2Args<T, M>
-): Promise<EvaluationV2<T, M>> { 
-  // TODO: Use create service
-
-  const {
-    document,
-    commit,
-    workspace,
-    name = 'Evaluation',
-    description = 'Description',
-    type = EvaluationType.Rule,
-    metric = RuleEvaluationMetric.ExactMatch,
-    condition = EvaluationCondition.Greater,
-    threshold = 50,
-    configuration = { DatasetLabel: 'expected' },
-    live,
-    enableSuggestions,
-    autoApplySuggestions,
-    createdAt,
-  } = args
-
-  const result = await database
-    .insert(evaluationVersions)
-    .values({
-      workspaceId: workspace.id,
-      commitId: commit.id,
-      documentUuid: document.documentUuid,
-      name,
-      description,
-      type,
-      metric,
-      condition,
-      threshold,
-      configuration,
-      live,
-      enableSuggestions,
-      autoApplySuggestions,
-      ...(createdAt && { createdAt }),
+// eslint-disable-next-line no-redeclare
+export async function createEvaluationV2<
+  T extends EvaluationType,
+  M extends EvaluationMetric<T>,
+>(args: CreateEvaluationV2Args<T, M>): Promise<EvaluationV2<T, M>> {
+  const { evaluation } = await services
+    .createEvaluationV2({
+      document: args.document,
+      commit: args.commit,
+      settings: {
+        name: args.name ?? 'Evaluation',
+        description: args.description ?? 'Description',
+        type: args.type ?? EvaluationType.Rule,
+        metric: args.metric ?? RuleEvaluationMetric.ExactMatch,
+        condition: args.condition ?? EvaluationCondition.Greater,
+        threshold: args.threshold ?? 50,
+        configuration: args.configuration ?? { DatasetLabel: 'expected' },
+      },
+      options: {
+        live: args.live,
+        enableSuggestions: args.enableSuggestions,
+        autoApplySuggestions: args.autoApplySuggestions,
+      },
+      workspace: args.workspace,
     })
-    .returning()
+    .then((r) => r.unwrap())
 
-  const evaluation = result[0]!
-
-  return {
-    ...evaluation,
-    uuid: evaluation.evaluationUuid,
-    versionId: evaluation.id,
-  } as unknown as EvaluationV2<T, M>
-}
-
-export async function deleteEvaluationV2({
-  evaluation,
-}: {
-  evaluation: EvaluationV2
-}): Promise<void> {
-  // TODO: Use delete service
-
+  evaluation.createdAt = args.createdAt ?? evaluation.createdAt
   await database
-    .delete(evaluationVersions)
+    .update(evaluationVersions)
+    .set({ createdAt: evaluation.createdAt })
     .where(eq(evaluationVersions.id, evaluation.versionId))
+
+  return evaluation as EvaluationV2<T, M>
 }

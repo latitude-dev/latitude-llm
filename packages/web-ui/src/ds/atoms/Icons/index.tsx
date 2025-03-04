@@ -91,6 +91,8 @@ import {
   Brain,
   Clock,
   CircleIcon,
+  RegexIcon,
+  EqualIcon,
 } from 'lucide-react'
 
 import { cn } from '../../../lib/utils'
@@ -210,6 +212,8 @@ const Icons = {
   alertCircle: AlertCircle,
   circleArrowUp: CircleArrowUp,
   gridVertical: GridVertical,
+  equal: EqualIcon,
+  regex: RegexIcon,
   mcp: MCP,
   stripe: Stripe,
   slack: Slack,
