@@ -37,11 +37,13 @@ const SELECTABLE_TYPES: {
       <Icon name={INTEGRATION_TYPE_VALUES[IntegrationType.ExternalMCP].icon} />
     ),
   },
-  ...Object.values(HostedIntegrationType).map((value) => ({
-    value,
-    label: HOSTED_INTEGRATION_TYPE_OPTIONS[value].label,
-    icon: <Icon name={HOSTED_INTEGRATION_TYPE_OPTIONS[value].icon} />,
-  })),
+  ...Object.values(HostedIntegrationType)
+    .map((value) => ({
+      value,
+      label: HOSTED_INTEGRATION_TYPE_OPTIONS[value].label,
+      icon: <Icon name={HOSTED_INTEGRATION_TYPE_OPTIONS[value].icon} />,
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label)),
 ]
 
 export default function NewIntegration() {
