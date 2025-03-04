@@ -34,7 +34,7 @@ async function inheritSuggestions(
       ...suggestion,
       id: undefined,
       commitId: toVersion.commitId,
-      updatedAt: toVersion.updatedAt,
+      documentUuid: toVersion.documentUuid,
     })),
   )
 

@@ -149,8 +149,7 @@ describe('inheritDocumentRelations', () => {
           ...suggestion,
           id: expect.any(Number),
           commitId: toVersion.commitId,
-          updatedAt: toVersion.updatedAt,
-          deletedAt: undefined,
+          documentUuid: toVersion.documentUuid,
         })),
       ),
     )
