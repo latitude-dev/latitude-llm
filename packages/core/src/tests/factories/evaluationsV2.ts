@@ -1,3 +1,4 @@
+import { eq } from 'drizzle-orm'
 import {
   Commit,
   DocumentVersion,
@@ -30,6 +31,7 @@ type CreateEvaluationV2Args<
   live?: boolean
   enableSuggestions?: boolean
   autoApplySuggestions?: boolean
+  createdAt?: Date
 }
 
 // prettier-ignore
@@ -46,6 +48,8 @@ export async function createEvaluationV2<T extends EvaluationType, M extends Eva
 export async function createEvaluationV2<T extends EvaluationType, M extends EvaluationMetric<T>>(
   args: CreateEvaluationV2Args<T, M>
 ): Promise<EvaluationV2<T, M>> { 
+  // TODO: Use create service
+
   const {
     document,
     commit,
@@ -60,6 +64,7 @@ export async function createEvaluationV2<T extends EvaluationType, M extends Eva
     live,
     enableSuggestions,
     autoApplySuggestions,
+    createdAt,
   } = args
 
   const result = await database
@@ -78,6 +83,7 @@ export async function createEvaluationV2<T extends EvaluationType, M extends Eva
       live,
       enableSuggestions,
       autoApplySuggestions,
+      ...(createdAt && { createdAt }),
     })
     .returning()
 
@@ -88,4 +94,16 @@ export async function createEvaluationV2<T extends EvaluationType, M extends Eva
     uuid: evaluation.evaluationUuid,
     versionId: evaluation.id,
   } as unknown as EvaluationV2<T, M>
+}
+
+export async function deleteEvaluationV2({
+  evaluation,
+}: {
+  evaluation: EvaluationV2
+}): Promise<void> {
+  // TODO: Use delete service
+
+  await database
+    .delete(evaluationVersions)
+    .where(eq(evaluationVersions.id, evaluation.versionId))
 }

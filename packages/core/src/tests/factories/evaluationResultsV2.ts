@@ -24,6 +24,7 @@ type CreateEvaluationResultV2Args<
   score?: number
   metadata?: R
   usedForSuggestion?: boolean
+  createdAt?: Date
 }
 
 // prettier-ignore
@@ -40,6 +41,8 @@ export async function createEvaluationResultV2<T extends EvaluationType, M exten
 export async function createEvaluationResultV2<T extends EvaluationType, M extends EvaluationMetric<T>>(
   args: CreateEvaluationResultV2Args<T, M>
 ): Promise<EvaluationResultV2<T, M>> {
+  // TODO: Use create service
+
   const {
     evaluation,
     providerLog,
@@ -48,6 +51,7 @@ export async function createEvaluationResultV2<T extends EvaluationType, M exten
     score = 75,
     metadata = {},
     usedForSuggestion,
+    createdAt,
   } = args
 
   const result = await database
@@ -60,6 +64,7 @@ export async function createEvaluationResultV2<T extends EvaluationType, M exten
       score: score,
       metadata: metadata,
       usedForSuggestion: usedForSuggestion,
+      ...(createdAt && { createdAt }),
     })
     .returning()
 
