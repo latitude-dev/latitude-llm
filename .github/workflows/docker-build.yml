@@ -178,7 +178,7 @@ jobs:
 
   deploy-bluegreen:
     # TODO: uncomment and replace
-    needs: [run-migrations, build-and-push]
+    needs: [build-and-push]
     # needs: [run-migrations, lint, test, build-and-push]
     uses: ./.github/workflows/deploy-bluegreen.yml
     permissions:
