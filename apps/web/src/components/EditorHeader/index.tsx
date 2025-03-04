@@ -23,6 +23,7 @@ import {
 import Link from 'next/link'
 import { PromptConfiguration } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/DocumentEditor/Editor/PromptConfiguration'
 import { PromptIntegrations } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/DocumentEditor/Editor/PromptIntegrations'
+import useCurrentWorkspace from '$/stores/currentWorkspace'
 
 type PromptMetadata = { provider?: string; model?: string }
 export type IProviderByName = Record<string, ProviderApiKey>
@@ -50,6 +51,7 @@ export default function EditorHeader({
   freeRunsCount?: number
   showCopilotSetting?: boolean
 }) {
+  const { data: workspace } = useCurrentWorkspace()
   const { data: providerApiKeys, isLoading } = useProviderApiKeys({
     fallbackData: providers,
   })
@@ -239,13 +241,15 @@ export default function EditorHeader({
             onChangePrompt(updatePromptMetadata(prompt, config))
           }}
         />
-        <PromptIntegrations
-          disabled={disabledMetadataSelectors}
-          config={metadata?.config ?? {}}
-          setConfig={(config: Record<string, unknown>) => {
-            onChangePrompt(updatePromptMetadata(prompt, config))
-          }}
-        />
+        {workspace?.id === 1 && (
+          <PromptIntegrations
+            disabled={disabledMetadataSelectors}
+            config={metadata?.config ?? {}}
+            setConfig={(config: Record<string, unknown>) => {
+              onChangePrompt(updatePromptMetadata(prompt, config))
+            }}
+          />
+        )}
       </div>
       {isLatitudeProvider && (
         <div>

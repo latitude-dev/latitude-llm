@@ -51,7 +51,7 @@ export function PromptIntegrations({
         sideOffset={8}
         alignOffset={-16}
         maxHeight='normal'
-        style={{ width: 600, maxWidth: 600, padding: 0 }}
+        style={{ width: 500, maxWidth: 500, padding: 0 }}
         onOpenAutoFocus={(event) => {
           event.preventDefault() // fixes https://github.com/radix-ui/primitives/issues/2248
         }}

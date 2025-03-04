@@ -1,6 +1,11 @@
 import { SwitchToogle } from '@latitude-data/web-ui'
 import { ConfigElement, ConfigSection } from './_components/ConfigSection'
-import { PromptConfigurationProps, useConfigValue } from './utils'
+import {
+  PromptConfigurationProps,
+  useConfigValue,
+  useLatitudeToolsConfig,
+} from './utils'
+import { LatitudeTool } from '@latitude-data/constants'
 import { SubAgentSelector } from './_components/AgentSelector'
 import { useEffect } from 'react'
 
@@ -33,6 +38,8 @@ export function BehaviourSettings({
       setDisableAgentOptimization(undefined)
     }
   }, [agentValue])
+
+  const { tools, toggleTool } = useLatitudeToolsConfig({ config, setConfig })
 
   return (
     <ConfigSection title='Behaviour'>
@@ -73,6 +80,45 @@ Unlike regular prompts or predefined Chains, Agents can adapt dynamically, respo
           </ConfigElement>
         </div>
       )}
+      <ConfigElement
+        label='Run code'
+        icon='terminal'
+        summary='Enables the AI to run code to help generate the response.'
+        description={`Allows the model to execute their own generated scripts to solve problems or answer questions.
+          A new tool will be injected into the prompt, and handled in Latitude's backend when the AI requests it.`}
+      >
+        <SwitchToogle
+          disabled={disabled}
+          checked={tools.includes(LatitudeTool.RunCode)}
+          onCheckedChange={() => toggleTool(LatitudeTool.RunCode)}
+        />
+      </ConfigElement>
+      <ConfigElement
+        label='Web search'
+        icon='search'
+        summary='Enables the AI to search the web to help generate the response.'
+        description={`Allows the model to search the web for information to get real-time data.
+          A new tool will be injected into the prompt, and handled in Latitude's backend when the AI requests it.`}
+      >
+        <SwitchToogle
+          disabled={disabled}
+          checked={tools.includes(LatitudeTool.WebSearch)}
+          onCheckedChange={() => toggleTool(LatitudeTool.WebSearch)}
+        />
+      </ConfigElement>
+      <ConfigElement
+        label='Extract web content'
+        icon='globe'
+        summary='Enables the AI to read the contents from web pages.'
+        description={`Allows the model to extract content from web pages as Markdown.
+          A new tool will be injected into the prompt, and handled in Latitude's backend when the AI requests it.`}
+      >
+        <SwitchToogle
+          disabled={disabled}
+          checked={tools.includes(LatitudeTool.WebExtract)}
+          onCheckedChange={() => toggleTool(LatitudeTool.WebExtract)}
+        />
+      </ConfigElement>
       <ConfigElement
         label='Subagents'
         icon='bot'

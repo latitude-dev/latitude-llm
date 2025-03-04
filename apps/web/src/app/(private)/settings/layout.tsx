@@ -9,6 +9,7 @@ import ProviderApiKeys from './_components/ProviderApiKeys'
 import WorkspaceApiKeys from './_components/WorkspaceApiKeys'
 import WorkspaceName from './_components/WorkspaceName'
 import Integrations from './_components/Integrations'
+import { getCurrentUser } from '$/services/auth/getCurrentUser'
 
 export const metadata = buildMetatags({
   title: 'Settings',
@@ -19,6 +20,8 @@ export default async function SettingsLayout({
 }: Readonly<{
   children: ReactNode
 }>) {
+  const { workspace } = await getCurrentUser()
+
   return (
     <Container>
       <AppTabs />
@@ -28,7 +31,7 @@ export default async function SettingsLayout({
       <Memberships />
       <WorkspaceApiKeys />
       <ProviderApiKeys />
-      <Integrations />
+      {workspace.id === 1 && <Integrations />}
     </Container>
   )
 }

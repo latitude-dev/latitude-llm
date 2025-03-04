@@ -1,6 +1,6 @@
 'use client'
 
-import { FormEvent, ReactNode, useCallback, useMemo, useState } from 'react'
+import { FormEvent, ReactNode, useCallback, useState } from 'react'
 
 import {
   Button,
@@ -52,7 +52,7 @@ export default function NewIntegration() {
     (open: boolean) => !open && navigate.push(ROUTES.settings.root),
     [navigate],
   )
-  const { data: integrations, create } = useIntegrations()
+  const { create } = useIntegrations()
   const onSubmit = useCallback(
     async (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault()
@@ -60,6 +60,8 @@ export default function NewIntegration() {
       const payload = buildIntegrationPayload({
         formData: new FormData(event.currentTarget),
       })
+
+      console.log('payload', payload)
 
       const hostedType = payload.type as unknown as HostedIntegrationType
       if (Object.values(HostedIntegrationType).includes(hostedType)) {
@@ -79,23 +81,6 @@ export default function NewIntegration() {
   const [integrationType, setIntegrationType] = useState<
     IntegrationType | HostedIntegrationType | undefined
   >()
-  const [integrationName, setIntegrationName] = useState<string>('')
-  const nameErrors = useMemo<string[] | undefined>(() => {
-    const errors = []
-    if (integrationName.includes(' ')) {
-      errors.push('Name cannot contain spaces')
-    }
-    if (integrationName.includes('/')) {
-      errors.push('Name cannot contain slashes')
-    }
-    if (
-      integrationName === 'latitude' ||
-      integrations?.some((integration) => integration.name === integrationName)
-    ) {
-      errors.push('An integration with this name already exists')
-    }
-    return errors.length ? errors : undefined
-  }, [integrationName, integrations])
 
   return (
     <Modal
@@ -122,9 +107,6 @@ export default function NewIntegration() {
             label='Name'
             description="This is the name you'll use in the prompt editor to refer to use this integration and model."
             placeholder='my_integration'
-            onChange={(event) => setIntegrationName(event.target.value)}
-            value={integrationName}
-            errors={nameErrors}
           />
           <Select
             required

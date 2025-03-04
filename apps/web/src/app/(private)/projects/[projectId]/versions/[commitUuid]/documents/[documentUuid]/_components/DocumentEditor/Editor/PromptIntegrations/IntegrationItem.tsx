@@ -1,4 +1,4 @@
-import { integrationOptions } from '$/lib/integrationTypeOptions'
+import { INTEGRATION_TYPE_VALUES } from '$/lib/integrationTypeOptions'
 import { IntegrationDto } from '@latitude-data/core/browser'
 import { cn, Icon, Skeleton, Text } from '@latitude-data/web-ui'
 
@@ -25,7 +25,7 @@ export function IntegrationItem({
   isSelected: boolean
   onSelect: () => void
 }) {
-  const values = integrationOptions(integration) ?? {
+  const values = INTEGRATION_TYPE_VALUES[integration.type] ?? {
     icon: 'mcp',
     label: integration.type,
   }
