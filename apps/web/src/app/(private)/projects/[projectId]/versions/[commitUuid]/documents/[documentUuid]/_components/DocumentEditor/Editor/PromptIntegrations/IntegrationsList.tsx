@@ -1,4 +1,4 @@
-import { Integration } from '@latitude-data/core/browser'
+import { IntegrationDto } from '@latitude-data/core/browser'
 import { cn, Icon, Text } from '@latitude-data/web-ui'
 import { useState } from 'react'
 import { ActiveIntegrations } from './utils'
@@ -26,7 +26,7 @@ export function IntegrationsList({
   addIntegrationTool,
   removeIntegrationTool,
 }: {
-  integrations: Integration[]
+  integrations: IntegrationDto[]
   activeIntegrations: ActiveIntegrations
   addIntegrationTool: (integrationName: string, toolName: string) => void
   removeIntegrationTool: (
@@ -37,7 +37,7 @@ export function IntegrationsList({
   disabled?: boolean
 }) {
   const [selectedIntegration, setSelectedIntegration] =
-    useState<Integration | null>(null)
+    useState<IntegrationDto | null>(null)
 
   return (
     <div className='flex flex-row w-full max-h-full overflow-hidden'>

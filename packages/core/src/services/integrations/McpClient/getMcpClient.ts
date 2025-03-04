@@ -1,4 +1,4 @@
-import { Integration } from '../../../browser'
+import { IntegrationDto } from '../../../browser'
 import {
   LatitudeError,
   NotFoundError,
@@ -9,7 +9,7 @@ import { Client as McpClient } from '@modelcontextprotocol/sdk/client/index.js'
 import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js'
 
 export async function getMcpClient(
-  integration: Integration,
+  integration: IntegrationDto,
 ): PromisedResult<McpClient, LatitudeError> {
   let clientUrl = integration.configuration?.url
   if (!clientUrl) {

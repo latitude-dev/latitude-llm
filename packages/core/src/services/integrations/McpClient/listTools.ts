@@ -1,11 +1,11 @@
 import { McpTool } from '@latitude-data/constants'
-import { Integration } from '../../../browser'
+import { IntegrationDto } from '../../../browser'
 import { LatitudeError, PromisedResult, Result } from '../../../lib'
 import { getMcpClient } from './getMcpClient'
 import { touchIntegration } from '../touch'
 
 export async function listTools(
-  integration: Integration,
+  integration: IntegrationDto,
 ): PromisedResult<McpTool[], LatitudeError> {
   const clientResult = await getMcpClient(integration)
   if (clientResult.error) {

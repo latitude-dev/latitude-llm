@@ -1,30 +1,39 @@
 import { IntegrationType } from '@latitude-data/constants'
-import type { User, Workspace } from '../../browser'
+import type { IntegrationDto, User, Workspace } from '../../browser'
 import { database } from '../../client'
-import { BadRequestError, ErrorResult, Result, Transaction } from '../../lib'
+import {
+  BadRequestError,
+  ErrorResult,
+  PromisedResult,
+  Result,
+  Transaction,
+} from '../../lib'
 import { integrations } from '../../schema'
 import {
-  CustomMCPConfiguration,
-  InsertMCPServerConfiguration,
+  ExternalMcpIntegrationConfiguration,
+  HostedMcpIntegrationConfiguration,
+  HostedMcpIntegrationConfigurationForm,
 } from './helpers/schema'
 import { deployMcpServer } from '../mcpServers/deployService'
+import { HOSTED_MCP_CONFIGS } from './hostedTypes'
 
-type InsertConfigurationType<p extends IntegrationType> =
-  p extends IntegrationType.CustomMCP
-    ? CustomMCPConfiguration
-    : InsertMCPServerConfiguration
-type IntegrationCreateParams<p extends IntegrationType> = {
+type ConfigurationFormType<T extends IntegrationType> =
+  T extends IntegrationType.ExternalMCP
+    ? ExternalMcpIntegrationConfiguration
+    : HostedMcpIntegrationConfigurationForm
+
+type IntegrationCreateParams<T extends IntegrationType> = {
   workspace: Workspace
   name: string
-  type: p
-  configuration: InsertConfigurationType<p>
+  type: T
+  configuration: ConfigurationFormType<T>
   author: User
 }
 
 export async function createIntegration<p extends IntegrationType>(
   params: IntegrationCreateParams<p>,
   db = database,
-) {
+): PromisedResult<IntegrationDto> {
   const { workspace, name, type, configuration, author } = params
 
   if (type === IntegrationType.Latitude) {
@@ -34,14 +43,16 @@ export async function createIntegration<p extends IntegrationType>(
   }
 
   // For MCPServer type, first deploy the server
-  if (type === IntegrationType.MCPServer) {
-    const { environmentVariables = '', runCommand: command } =
-      (params.configuration as InsertMCPServerConfiguration) ?? {}
+  if (type === IntegrationType.HostedMCP) {
+    const { env = {}, type: hostedIntegrationType } =
+      (params.configuration as HostedMcpIntegrationConfigurationForm) ?? {}
+
+    const command = HOSTED_MCP_CONFIGS[hostedIntegrationType].command
 
     const deployResult = await deployMcpServer(
       {
         appName: name,
-        environmentVariables: parseEnvVars(environmentVariables),
+        environmentVariables: env,
         workspaceId: workspace.id,
         authorId: author.id,
         command,
@@ -63,13 +74,14 @@ export async function createIntegration<p extends IntegrationType>(
           type,
           configuration: {
             url: mcpServer.endpoint,
-          },
+            type: hostedIntegrationType,
+          } as HostedMcpIntegrationConfiguration,
           authorId: author.id,
           mcpServerId: mcpServer.id,
         })
         .returning()
 
-      return Result.ok(result[0]!)
+      return Result.ok(result[0]! as IntegrationDto)
     }, db)
   }
 
@@ -80,38 +92,11 @@ export async function createIntegration<p extends IntegrationType>(
         workspaceId: workspace.id,
         name,
         type,
-        configuration: configuration as CustomMCPConfiguration,
+        configuration: configuration as ExternalMcpIntegrationConfiguration,
         authorId: author.id,
       })
       .returning()
 
-    return Result.ok(result[0]!)
+    return Result.ok(result[0]! as IntegrationDto)
   }, db)
-}
-
-function parseEnvVars(envVarsInput: string) {
-  const _envVarsInput = envVarsInput.includes('\n')
-    ? envVarsInput.split('\n')
-    : envVarsInput.split(',')
-
-  const environmentVariables: Record<string, string> = {}
-
-  _envVarsInput
-    .map((v) => v.trim())
-    .filter(Boolean)
-    .forEach((envVar) => {
-      if (envVar.includes('=')) {
-        const [key, ...valueParts] = envVar.split('=')
-        const value = valueParts.join('=')
-        if (key && value) {
-          environmentVariables[key] = value
-        } else {
-          throw new Error(`Invalid environment variable format: ${envVar}`)
-        }
-      } else {
-        throw new Error(`Invalid environment variable format: ${envVar}`)
-      }
-    })
-
-  return environmentVariables
 }

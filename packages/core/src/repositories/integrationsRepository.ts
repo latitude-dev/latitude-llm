@@ -1,13 +1,13 @@
 import { eq, getTableColumns } from 'drizzle-orm'
 
-import { Integration } from '../browser'
-import { NotFoundError, Result } from '../lib'
+import { IntegrationDto } from '../browser'
+import { LatitudeError, NotFoundError, PromisedResult, Result } from '../lib'
 import { integrations } from '../schema'
 import Repository from './repositoryV2'
 
 const tt = getTableColumns(integrations)
 
-export class IntegrationsRepository extends Repository<Integration> {
+export class IntegrationsRepository extends Repository<IntegrationDto> {
   get scopeFilter() {
     return eq(integrations.workspaceId, this.workspaceId)
   }
@@ -20,13 +20,15 @@ export class IntegrationsRepository extends Repository<Integration> {
       .$dynamic()
   }
 
-  async findByName(name: string) {
+  async findByName(
+    name: string,
+  ): PromisedResult<IntegrationDto, LatitudeError> {
     const result = await this.scope.where(eq(integrations.name, name))
 
     if (!result.length) {
       return Result.error(new NotFoundError('Integration not found'))
     }
 
-    return Result.ok(result[0]!)
+    return Result.ok(result[0]! as IntegrationDto)
   }
 }

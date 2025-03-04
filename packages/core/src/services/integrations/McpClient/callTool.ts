@@ -1,4 +1,4 @@
-import { Integration } from '../../../browser'
+import { IntegrationDto } from '../../../browser'
 import { LatitudeError, PromisedResult, Result } from '../../../lib'
 import { getMcpClient } from './getMcpClient'
 import { touchIntegration } from '../touch'
@@ -29,7 +29,7 @@ export async function callIntegrationTool({
   toolName,
   args,
 }: {
-  integration: Integration
+  integration: IntegrationDto
   toolName: string
   args: Record<string, unknown>
 }): PromisedResult<unknown, LatitudeError> {

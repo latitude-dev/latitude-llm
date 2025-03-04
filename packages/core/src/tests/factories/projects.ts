@@ -91,7 +91,7 @@ export async function createProject(projectData: Partial<ICreateProject> = {}) {
         createIntegration({
           workspace,
           name,
-          type: IntegrationType.CustomMCP,
+          type: IntegrationType.ExternalMCP,
           configuration: {
             url: 'https://custom.mcp/sse',
           },

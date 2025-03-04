@@ -82,6 +82,7 @@ import {
   AlertCircle,
   CircleArrowUp,
   Blocks,
+  Slack,
 } from 'lucide-react'
 
 import { cn } from '../../../lib/utils'
@@ -152,8 +153,10 @@ const Icons = {
   puzzle: Puzzle,
   refresh: RefreshCcw,
   search: SearchIcon,
+  slack: Slack,
   squareArrowRight: SquareArrowRight,
   star: Star,
+  stripe: Slack, // TODO: Change to Stripe icon
   sun: Sun,
   sparkles: Sparkles,
   terminal: Terminal,

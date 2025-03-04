@@ -1,5 +1,5 @@
 import { PromptConfig, ToolsItem } from '@latitude-data/constants'
-import { Integration } from '@latitude-data/core/browser'
+import { IntegrationDto } from '@latitude-data/core/browser'
 import { omit } from 'lodash-es'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useDebouncedCallback } from 'use-debounce'
@@ -11,7 +11,7 @@ function readActiveIntegrations({
   integrations,
 }: {
   config: PromptConfig
-  integrations: Integration[]
+  integrations: IntegrationDto[]
 }) {
   const selectedIntegrations: ActiveIntegrations = {}
   if (config.tools && Array.isArray(config.tools)) {
@@ -141,7 +141,7 @@ export const useActiveIntegrations = ({
 }: {
   config: Record<string, unknown>
   setConfig: (config: Record<string, unknown>) => void
-  integrations: Integration[]
+  integrations: IntegrationDto[]
   disabled?: boolean
 }) => {
   const [localConfig, setLocalConfig] = useState<PromptConfig>(

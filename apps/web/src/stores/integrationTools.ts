@@ -1,4 +1,4 @@
-import type { Integration } from '@latitude-data/core/browser'
+import type { IntegrationDto } from '@latitude-data/core/browser'
 import useFetcher from '$/hooks/useFetcher'
 import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'
@@ -7,7 +7,7 @@ import { McpTool } from '@latitude-data/constants'
 const EMPTY_ARRAY: McpTool[] = []
 
 export default function useIntegrationTools(
-  integration?: Integration,
+  integration?: IntegrationDto,
   opts?: SWRConfiguration,
 ) {
   const fetcher = useFetcher(

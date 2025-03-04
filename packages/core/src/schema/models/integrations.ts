@@ -14,16 +14,16 @@ import { users } from './users'
 import { workspaces } from './workspaces'
 import { mcpServers } from './mcpServers'
 import { IntegrationType } from '@latitude-data/constants'
-import { CustomMCPConfiguration } from '../../services/integrations/helpers/schema'
+import { ExternalMcpIntegrationConfiguration } from '../../services/integrations/helpers/schema'
 
 export const integrationTypesEnum = latitudeSchema.enum('integration_types', [
-  IntegrationType.CustomMCP,
-  IntegrationType.MCPServer,
+  IntegrationType.ExternalMCP,
+  IntegrationType.HostedMCP,
 ])
 
 // Even though there are two integration types they both share the same
 // configuration schema
-export type IntegrationProviderConfig = CustomMCPConfiguration
+export type IntegrationProviderConfig = ExternalMcpIntegrationConfiguration
 
 export const integrations = latitudeSchema.table(
   'integrations',
