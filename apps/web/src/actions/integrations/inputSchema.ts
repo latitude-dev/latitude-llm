@@ -1,3 +1,5 @@
+'use server'
+
 import { IntegrationType } from '@latitude-data/constants'
 import {
   externalMcpIntegrationConfigurationSchema,
