@@ -19,12 +19,6 @@ export enum Providers {
   Custom = 'custom',
 }
 
-export enum IntegrationType {
-  Latitude = 'latitude', // For internal use only
-  CustomMCP = 'custom_mcp',
-  MCPServer = 'mcp_server',
-}
-
 export * from './models'
 export * from './ai'
 export * from './tools'
@@ -33,3 +27,4 @@ export * from './config'
 export * from './helpers'
 export * from './mcp'
 export * from './evaluations'
+export * from './integrations'

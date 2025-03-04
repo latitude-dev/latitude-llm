@@ -1,6 +1,6 @@
 import useIntegrationTools from '$/stores/integrationTools'
 import { McpTool } from '@latitude-data/constants'
-import { Integration } from '@latitude-data/core/browser'
+import { IntegrationDto } from '@latitude-data/core/browser'
 import {
   Badge,
   Button,
@@ -96,7 +96,7 @@ export function IntegrationToolsList({
   removeIntegrationTool,
 }: {
   disabled?: boolean
-  integration: Integration
+  integration: IntegrationDto
   activeTools: string[] | true | undefined
   addIntegrationTool: (integrationName: string, toolName: string) => void
   removeIntegrationTool: (

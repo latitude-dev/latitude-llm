@@ -1,5 +1,5 @@
-import { INTEGRATION_TYPE_VALUES } from '$/app/(private)/settings/_components/Integrations/New'
-import { Integration } from '@latitude-data/core/browser'
+import { INTEGRATION_TYPE_VALUES } from '$/lib/integrationTypeOptions'
+import { IntegrationDto } from '@latitude-data/core/browser'
 import { cn, Icon, Skeleton, Text } from '@latitude-data/web-ui'
 
 export function IntegrationItemPlaceholder() {
@@ -20,7 +20,7 @@ export function IntegrationItem({
   isSelected,
   onSelect,
 }: {
-  integration: Integration
+  integration: IntegrationDto
   isActive: boolean
   isSelected: boolean
   onSelect: () => void

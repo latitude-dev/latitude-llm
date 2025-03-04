@@ -5,7 +5,7 @@ import { PromisedResult } from '../../../Transaction'
 import { ToolResponsesArgs } from './types'
 import { callIntegrationTool } from '../../../../services/integrations/McpClient/callTool'
 import { IntegrationsRepository } from '../../../../repositories'
-import { Integration } from '../../../../browser'
+import { IntegrationDto } from '../../../../browser'
 
 export function getIntegrationToolCallResults({
   workspace,
@@ -22,7 +22,7 @@ export function getIntegrationToolCallResults({
   const integrationsScope = new IntegrationsRepository(workspace.id)
   const integrations: Record<
     string,
-    PromisedResult<Integration>
+    PromisedResult<IntegrationDto>
   > = Object.fromEntries(
     [...integrationNames].map((name) => [
       name,

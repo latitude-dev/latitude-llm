@@ -60,15 +60,15 @@ export function buildIntegrationPayload({
   return Array.from(formData.entries()).reduce((acc, [key, value]) => {
     if (key === 'type') {
       acc.type = value.toString() as
-        | IntegrationType.CustomMCP
-        | IntegrationType.MCPServer
+        | IntegrationType.ExternalMCP
+        | IntegrationType.HostedMCP
       return acc as IntegrationInputSchema
     }
 
     if (COMMON_INTEGRATION_INPUT_FIELDS_KEYS.includes(key)) {
       acc[key as CommonIntegrationInputKey] = value.toString() as
-        | IntegrationType.CustomMCP
-        | IntegrationType.MCPServer
+        | IntegrationType.ExternalMCP
+        | IntegrationType.HostedMCP
       return acc as IntegrationInputSchema
     }
 

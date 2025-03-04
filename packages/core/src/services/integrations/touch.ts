@@ -18,7 +18,7 @@ export function touchIntegration(
       .returning()
 
     if (!result.length) {
-      return Result.error(new NotFoundError('Integration not found'))
+      return Result.error(new NotFoundError('IntegrationDto not found'))
     }
     return Result.nil()
   }, db)

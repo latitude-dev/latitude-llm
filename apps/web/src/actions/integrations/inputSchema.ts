@@ -1,7 +1,7 @@
 import { IntegrationType } from '@latitude-data/constants'
 import {
-  customMcpConfigurationSchema,
-  insertMCPServerConfigurationSchema,
+  externalMcpIntegrationConfigurationSchema,
+  hostedMcpIntegrationConfigurationFormSchema,
 } from '@latitude-data/core/services/integrations/helpers/schema'
 import { z } from 'zod'
 
@@ -12,14 +12,14 @@ const baseSchema = z.object({
 
 const fullCustomMcpConfigurationSchema = z.object({
   name: z.string(),
-  type: z.literal(IntegrationType.CustomMCP),
-  configuration: customMcpConfigurationSchema,
+  type: z.literal(IntegrationType.ExternalMCP),
+  configuration: externalMcpIntegrationConfigurationSchema,
 })
 
 const fullMcpServerConfigurationSchema = z.object({
   name: z.string(),
-  type: z.literal(IntegrationType.MCPServer),
-  configuration: insertMCPServerConfigurationSchema,
+  type: z.literal(IntegrationType.HostedMCP),
+  configuration: hostedMcpIntegrationConfigurationFormSchema,
 })
 
 export const inputSchema = z.discriminatedUnion('type', [

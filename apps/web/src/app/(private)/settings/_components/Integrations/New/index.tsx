@@ -1,13 +1,12 @@
 'use client'
 
-import { FormEvent, useCallback, useState } from 'react'
+import { FormEvent, ReactNode, useCallback, useState } from 'react'
 
 import {
   Button,
   CloseTrigger,
   FormWrapper,
   Icon,
-  IconName,
   Input,
   Modal,
   Select,
@@ -16,39 +15,35 @@ import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
 import useIntegrations from '$/stores/integrations'
 import { IntegrationConfigurationForm } from '$/app/(private)/settings/_components/Integrations/New/_components/Configuration'
-import { IntegrationType } from '@latitude-data/constants'
-import { buildIntegrationPayload } from './buildIntegrationPayload'
-
-type IntegrationTypeOption = {
-  label: string
-  icon: IconName
-}
-
-export const INTEGRATION_TYPE_VALUES: Record<
+import {
+  HostedIntegrationType,
   IntegrationType,
-  IntegrationTypeOption
-> = {
-  [IntegrationType.CustomMCP]: {
-    label: 'Custom MCP Server',
-    icon: 'mcp',
-  },
-  [IntegrationType.MCPServer]: {
-    label: 'MCP Server',
-    icon: 'mcp',
-  },
-  [IntegrationType.Latitude]: {
-    label: 'Latitude Built-in tools',
-    icon: 'logoMonochrome',
-  },
-}
+} from '@latitude-data/constants'
+import { buildIntegrationPayload } from './buildIntegrationPayload'
+import {
+  HOSTED_INTEGRATION_TYPE_OPTIONS,
+  INTEGRATION_TYPE_VALUES,
+} from '$/lib/integrationTypeOptions'
+import { HostedMcpIntegrationConfigurationForm } from '@latitude-data/core/services/integrations/helpers/schema'
 
-const INTEGRATION_TYPE_OPTIONS = Object.values(IntegrationType)
-  .filter((t) => t !== IntegrationType.Latitude) // Latitude is not selectable
-  .map((value) => ({
+const SELECTABLE_TYPES: {
+  value: IntegrationType | HostedIntegrationType
+  label: string
+  icon: ReactNode
+}[] = [
+  {
+    value: IntegrationType.ExternalMCP,
+    label: INTEGRATION_TYPE_VALUES[IntegrationType.ExternalMCP].label,
+    icon: (
+      <Icon name={INTEGRATION_TYPE_VALUES[IntegrationType.ExternalMCP].icon} />
+    ),
+  },
+  ...Object.values(HostedIntegrationType).map((value) => ({
     value,
-    label: INTEGRATION_TYPE_VALUES[value].label,
-    icon: <Icon name={INTEGRATION_TYPE_VALUES[value].icon} />,
-  }))
+    label: HOSTED_INTEGRATION_TYPE_OPTIONS[value].label,
+    icon: <Icon name={HOSTED_INTEGRATION_TYPE_OPTIONS[value].icon} />,
+  })),
+]
 
 export default function NewIntegration() {
   const navigate = useNavigate()
@@ -64,6 +59,15 @@ export default function NewIntegration() {
       const payload = buildIntegrationPayload({
         formData: new FormData(event.currentTarget),
       })
+
+      console.log('payload', payload)
+
+      const hostedType = payload.type as unknown as HostedIntegrationType
+      if (Object.values(HostedIntegrationType).includes(hostedType)) {
+        ;(payload.configuration as HostedMcpIntegrationConfigurationForm).type =
+          hostedType
+        payload.type = IntegrationType.HostedMCP
+      }
       const [_, error] = await create(payload)
 
       if (!error) onOpenChange(false)
@@ -72,7 +76,7 @@ export default function NewIntegration() {
   )
 
   const [integrationType, setIntegrationType] = useState<
-    IntegrationType | undefined
+    IntegrationType | HostedIntegrationType | undefined
   >()
 
   return (
@@ -104,8 +108,8 @@ export default function NewIntegration() {
           <Select
             required
             name='type'
-            options={INTEGRATION_TYPE_OPTIONS}
-            onChange={(value) => setIntegrationType(value as IntegrationType)}
+            options={SELECTABLE_TYPES}
+            onChange={(value) => setIntegrationType(value)}
             label='Type'
           />
 

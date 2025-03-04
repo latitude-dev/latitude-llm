@@ -6,8 +6,8 @@ import { z } from 'zod'
 import { authProcedure } from '../procedures'
 import { IntegrationType } from '@latitude-data/constants'
 import {
-  customMcpConfigurationSchema,
-  insertMCPServerConfigurationSchema,
+  externalMcpIntegrationConfigurationSchema,
+  hostedMcpIntegrationConfigurationFormSchema,
 } from '@latitude-data/core/services/integrations/helpers/schema'
 
 export const createIntegrationAction = authProcedure
@@ -16,13 +16,13 @@ export const createIntegrationAction = authProcedure
     z.discriminatedUnion('type', [
       z.object({
         name: z.string(),
-        type: z.literal(IntegrationType.CustomMCP),
-        configuration: customMcpConfigurationSchema,
+        type: z.literal(IntegrationType.ExternalMCP),
+        configuration: externalMcpIntegrationConfigurationSchema,
       }),
       z.object({
         name: z.string(),
-        type: z.literal(IntegrationType.MCPServer),
-        configuration: insertMCPServerConfigurationSchema,
+        type: z.literal(IntegrationType.HostedMCP),
+        configuration: hostedMcpIntegrationConfigurationFormSchema,
       }),
     ]),
   )

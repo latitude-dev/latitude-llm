@@ -1,6 +1,6 @@
 'use client'
 
-import { type Integration } from '@latitude-data/core/browser'
+import { type IntegrationDto } from '@latitude-data/core/browser'
 import {
   Button,
   DropdownMenu,
@@ -20,7 +20,7 @@ import { ROUTES } from '$/services/routes'
 import useIntegrations from '$/stores/integrations'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { INTEGRATION_TYPE_VALUES } from './New'
+import { integrationOptions } from '$/lib/integrationTypeOptions'
 
 export default function Integrations() {
   const { data: integrations, isLoading: isLoading } = useIntegrations()
@@ -60,7 +60,7 @@ export default function Integrations() {
 const IntegrationsTable = ({
   integrations,
 }: {
-  integrations: Integration[]
+  integrations: IntegrationDto[]
 }) => {
   const router = useRouter()
 
@@ -76,7 +76,7 @@ const IntegrationsTable = ({
       </TableHeader>
       <TableBody>
         {integrations.map((integration) => {
-          const values = INTEGRATION_TYPE_VALUES[integration.type]
+          const values = integrationOptions(integration)
           return (
             <TableRow key={integration.id} hoverable={false} verticalPadding>
               <TableCell>

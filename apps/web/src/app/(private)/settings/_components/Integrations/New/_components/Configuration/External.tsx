@@ -7,7 +7,7 @@ import { useState } from 'react'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { pingCustomMcpAction } from '$/actions/integrations/pingCustomMcpServer'
 
-export function CustomMcpIntegration() {
+export function ExternalIntegrationConfiguration() {
   const [url, setUrl] = useState('')
   const [toolList, setToolList] = useState<McpTool[]>()
   const [error, setError] = useState<Error>()

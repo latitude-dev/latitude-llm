@@ -1,4 +1,4 @@
-import { Integration, Workspace } from '@latitude-data/core/browser'
+import { IntegrationDto, Workspace } from '@latitude-data/core/browser'
 import { authHandler } from '$/middlewares/authHandler'
 import { errorHandler } from '$/middlewares/errorHandler'
 import { NextRequest, NextResponse } from 'next/server'
@@ -18,7 +18,7 @@ export const GET = errorHandler(
       const integrationsScope = new IntegrationsRepository(workspace.id)
       const rows = await integrationsScope.findAll().then((r) => r.unwrap())
 
-      const latitudeIntegration: Integration = {
+      const latitudeIntegration: IntegrationDto = {
         id: -1,
         name: 'latitude',
         type: IntegrationType.Latitude,

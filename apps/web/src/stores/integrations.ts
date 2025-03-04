@@ -1,4 +1,4 @@
-import type { Integration } from '@latitude-data/core/browser'
+import type { IntegrationDto } from '@latitude-data/core/browser'
 import { useToast } from '@latitude-data/web-ui'
 import { createIntegrationAction } from '$/actions/integrations/create'
 import { destroyIntegrationAction } from '$/actions/integrations/destroy'
@@ -8,7 +8,7 @@ import { ROUTES } from '$/services/routes'
 import useSWR, { SWRConfiguration } from 'swr'
 import { IntegrationType } from '@latitude-data/constants'
 
-const EMPTY_ARRAY: Integration[] = []
+const EMPTY_ARRAY: IntegrationDto[] = []
 
 export default function useIntegrations({
   includeLatitudeTools,
@@ -18,7 +18,7 @@ export default function useIntegrations({
 } = {}) {
   const { toast } = useToast()
   const fetcher = useFetcher(ROUTES.api.integrations.root, {
-    serializer: (rows: Integration[]) =>
+    serializer: (rows: IntegrationDto[]) =>
       rows
         .map(deserialize)
         .filter(
@@ -31,7 +31,7 @@ export default function useIntegrations({
     data = EMPTY_ARRAY,
     mutate,
     ...rest
-  } = useSWR<Integration[]>(
+  } = useSWR<IntegrationDto[]>(
     ['integrations', includeLatitudeTools ?? false],
     fetcher,
     opts,
@@ -71,7 +71,7 @@ export default function useIntegrations({
   }
 }
 
-function deserialize(item: Integration): Integration {
+function deserialize(item: IntegrationDto): IntegrationDto {
   return {
     ...item,
     createdAt: new Date(item.createdAt),
