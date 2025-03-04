@@ -21,7 +21,7 @@ metadata:
     app: {{NAME}}
 spec:
   nodeSelector:
-    eks.amazonaws.com/nodegroup: latitude-managed-node-group
+    eks.amazonaws.com/nodegroup: {{NODE_GROUP_NAME}}
   replicas: {{REPLICAS}}
   selector:
     matchLabels:
