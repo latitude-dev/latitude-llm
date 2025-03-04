@@ -31,14 +31,14 @@ jobs:
     strategy:
       matrix:
         include:
-          # Public images on GitHub Container Registry (without Sentry)
-          - app: web
-            dockerfile: apps/web/docker/Dockerfile
-            private: false
-            registry: ghcr.io
-            owner: latitude-dev
-            repo_name: web
           # TODO: Uncomment
+          # Public images on GitHub Container Registry (without Sentry)
+          # - app: web
+          #   dockerfile: apps/web/docker/Dockerfile
+          #   private: false
+          #   registry: ghcr.io
+          #   owner: latitude-dev
+          #   repo_name: web
           # - app: gateway
           #   dockerfile: apps/gateway/docker/Dockerfile
           #   private: false
@@ -64,10 +64,10 @@ jobs:
           #   owner: latitude-dev
           #   repo_name: migrations
           # # Private images on AWS ECR (with Sentry)
-          # - app: web
-          #   dockerfile: apps/web/docker/Dockerfile
-          #   private: true
-          #   repo_name: latitude-llm-app-repo-43d71dc
+          - app: web
+            dockerfile: apps/web/docker/Dockerfile
+            private: true
+            repo_name: latitude-llm-app-repo-43d71dc
           # - app: gateway
           #   dockerfile: apps/gateway/docker/Dockerfile
           #   private: true
