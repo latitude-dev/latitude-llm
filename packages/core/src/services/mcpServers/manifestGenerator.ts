@@ -4,7 +4,7 @@ import { env } from '@latitude-data/env'
 import { createHash } from 'crypto'
 
 function buildCommand(command: string): string {
-  return `"sh", "-c", "npx -y @latitude-data/supergateway --stdio 'npx -y ${command}'"`
+  return `"sh", "-c", "npx -y @latitude-data/supergateway --stdio '${command}'"`
 }
 
 type K8sDeploymentParams = {

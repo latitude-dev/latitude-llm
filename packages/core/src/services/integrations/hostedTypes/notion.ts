@@ -3,7 +3,7 @@ import { HostedIntegrationConfig } from './types'
 export default {
   description:
     'Tools for the Notion API, enabling your AI to interact with Notion workspaces.',
-  command: '@suekou/mcp-notion-server',
+  command: 'npx -y @suekou/mcp-notion-server',
   env: {
     NOTION_API_TOKEN: {
       label: 'Notion API Token',
