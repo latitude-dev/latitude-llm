@@ -73,7 +73,6 @@ services:
     build:
       context: .
       dockerfile: apps/web/docker/Dockerfile
-
     profiles:
       - local
 
