@@ -3,7 +3,8 @@ import { npxCommand } from '../utils'
 
 export default {
   description: 'Slack channel management and messaging capabilities.',
-  command: npxCommand({ package: '@modelcontextprotocol/server-slack' }),
+  commandFn: () =>
+    npxCommand({ package: '@modelcontextprotocol/server-slack' }),
   env: {
     SLACK_BOT_TOKEN: {
       label: 'Slack Bot Token',

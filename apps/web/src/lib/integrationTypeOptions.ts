@@ -124,6 +124,10 @@ export const HOSTED_INTEGRATION_TYPE_OPTIONS: Record<
     label: 'Time',
     icon: 'clock',
   },
+  [HostedIntegrationType.Postgres]: {
+    label: 'PostgreSQL',
+    icon: 'postgres',
+  },
 }
 
 export function integrationOptions(
