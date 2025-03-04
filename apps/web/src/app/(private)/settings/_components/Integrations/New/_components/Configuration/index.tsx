@@ -13,7 +13,7 @@ export function IntegrationConfigurationForm({
   integrationType: IntegrationType | HostedIntegrationType
 }) {
   return (
-    <FormFieldGroup label='Integration Configuration' layout='vertical'>
+    <FormFieldGroup layout='vertical'>
       {integrationType === IntegrationType.ExternalMCP && (
         <ExternalIntegrationConfiguration />
       )}

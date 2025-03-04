@@ -1,6 +1,7 @@
 import { HostedIntegrationConfig } from './types'
 
 export default {
+  description: 'Slack channel management and messaging capabilities.',
   command: '@modelcontextprotocol/server-slack',
   env: {
     SLACK_BOT_TOKEN: {

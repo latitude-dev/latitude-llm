@@ -6,6 +6,7 @@ export type EnvVarConfig = {
 }
 
 export type HostedIntegrationConfig = {
+  description?: string
   command: string
   env: Record<string, EnvVarConfig>
 }

@@ -83,6 +83,7 @@ import {
   CircleArrowUp,
   Blocks,
   Slack,
+  Youtube,
 } from 'lucide-react'
 
 import { cn } from '../../../lib/utils'
@@ -93,6 +94,16 @@ import {
   GridVertical,
   MCP,
 } from './custom-icons'
+import Stripe from './custom-icons/logos/Stripe'
+import Reddit from './custom-icons/logos/Reddit'
+import Notion from './custom-icons/logos/Notion'
+import Wordpress from './custom-icons/logos/Wordpress'
+import Telegram from './custom-icons/logos/Telegram'
+import Google from './custom-icons/logos/Google'
+import Discord from './custom-icons/logos/Discord'
+import Intercom from './custom-icons/logos/Intercom'
+import Jira from './custom-icons/logos/Jira'
+import TwitterX from './custom-icons/logos/TwitterX'
 
 const Icons = {
   addCircle: CirclePlus,
@@ -130,7 +141,6 @@ const Icons = {
   folderClose: FolderClosed,
   folderOpen: FolderOpen,
   folderPlus: FolderPlus,
-  github: Github,
   globe: Globe,
   history: History,
   info: InfoIcon,
@@ -141,7 +151,6 @@ const Icons = {
   logo: LatitudeLogo,
   logoMonochrome: LatitudeLogoMonochrome,
   maximize: Maximize2,
-  mcp: MCP,
   minimize: Minimize2,
   modification: SquareDot,
   moon: Moon,
@@ -153,10 +162,8 @@ const Icons = {
   puzzle: Puzzle,
   refresh: RefreshCcw,
   search: SearchIcon,
-  slack: Slack,
   squareArrowRight: SquareArrowRight,
   star: Star,
-  stripe: Slack, // TODO: Change to Stripe icon
   sun: Sun,
   sparkles: Sparkles,
   terminal: Terminal,
@@ -164,7 +171,6 @@ const Icons = {
   thumbsDown: ThumbsDown,
   thumbsUp: ThumbsUp,
   trash: Trash,
-  twitter: Twitter,
   undo: Undo,
   wholeWord: WholeWord,
   rollText: ScrollTextIcon,
@@ -184,6 +190,30 @@ const Icons = {
   alertCircle: AlertCircle,
   circleArrowUp: CircleArrowUp,
   gridVertical: GridVertical,
+  mcp: MCP,
+  stripe: Stripe,
+  slack: Slack,
+  github: Github,
+  reddit: Reddit,
+  youtube: Youtube,
+  // airtable: Airtable,
+  notion: Notion,
+  wordpress: Wordpress,
+  twitter: Twitter,
+  twitterX: TwitterX,
+  // linear: Linear,
+  telegram: Telegram,
+  // tinybird: Tinybird,
+  // perplexity: Perplexity,
+  googleWorkspace: Google,
+  // supabase: Supabase,
+  // hubspot: Hubspot,
+  // attio: Attio,
+  discord: Discord,
+  // loops: Loops,
+  intercom: Intercom,
+  jira: Jira,
+  // ghost: Ghost,
 }
 
 export type IconName = keyof typeof Icons
