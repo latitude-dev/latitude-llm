@@ -5,6 +5,7 @@ import { SubscriptionPlan, SubscriptionPlans } from '../../plans'
 import {
   ClaimedRewardsRepository,
   EvaluationResultsRepository,
+  EvaluationResultsV2Repository,
   MembershipsRepository,
 } from '../../repositories'
 import { DocumentLogsRepository } from '../../repositories/documentLogsRepository'
@@ -20,6 +21,10 @@ export async function computeWorkspaceUsage(
 ): PromisedResult<WorkspaceUsage, Error> {
   const documentLogsScope = new DocumentLogsRepository(workspace.id, db)
   const evaluationResultsScope = new EvaluationResultsRepository(
+    workspace.id,
+    db,
+  )
+  const evaluationResultsV2Scope = new EvaluationResultsV2Repository(
     workspace.id,
     db,
   )
@@ -41,11 +46,16 @@ export async function computeWorkspaceUsage(
   const evaluationResultsCount =
     await evaluationResultsScope.totalCountSinceDate(latestRenewalDate)
 
+  const evaluationResultsV2Count = await evaluationResultsV2Scope
+    .countSinceDate(latestRenewalDate)
+    .then((r) => r.unwrap())
+
   const membersRepo = new MembershipsRepository(workspace.id, db)
   const members = await membersRepo.findAll().then((r) => r.unwrap())
 
   return Result.ok({
-    usage: evaluationResultsCount + documentLogsCount,
+    usage:
+      evaluationResultsCount + evaluationResultsV2Count + documentLogsCount,
     max: currentSubscriptionPlan.credits + extraRuns,
     members: members.length,
     maxMembers: currentSubscriptionPlan.users,
