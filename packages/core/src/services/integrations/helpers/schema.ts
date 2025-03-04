@@ -14,7 +14,7 @@ export type ExternalMcpIntegrationConfiguration = z.infer<
 
 export const hostedMcpIntegrationConfigurationFormSchema = z.object({
   type: z.nativeEnum(HostedIntegrationType),
-  env: z.record(z.string()),
+  env: z.record(z.string()).optional(),
 })
 
 export type HostedMcpIntegrationConfigurationForm = z.infer<
