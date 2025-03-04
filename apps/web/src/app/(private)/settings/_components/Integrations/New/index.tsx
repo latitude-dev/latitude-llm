@@ -24,7 +24,6 @@ import {
   HOSTED_INTEGRATION_TYPE_OPTIONS,
   INTEGRATION_TYPE_VALUES,
 } from '$/lib/integrationTypeOptions'
-import { HostedMcpIntegrationConfigurationForm } from '@latitude-data/core/services/integrations/helpers/schema'
 
 const SELECTABLE_TYPES: {
   value: IntegrationType | HostedIntegrationType
@@ -64,8 +63,10 @@ export default function NewIntegration() {
 
       const hostedType = payload.type as unknown as HostedIntegrationType
       if (Object.values(HostedIntegrationType).includes(hostedType)) {
-        ;(payload.configuration as HostedMcpIntegrationConfigurationForm).type =
-          hostedType
+        payload.configuration = {
+          ...(payload.configuration ?? {}),
+          type: hostedType,
+        }
         payload.type = IntegrationType.HostedMCP
       }
       const [_, error] = await create(payload)
