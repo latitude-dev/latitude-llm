@@ -1,7 +1,7 @@
-import { subMonths, subDays } from 'date-fns'
+import { subDays, subMonths } from 'date-fns'
 import { SubscriptionPlan } from '../../../plans'
 
-type RunnableType = 'documentLog' | 'evaluationResult'
+type RunnableType = 'documentLog' | 'evaluationResult' | 'evaluationResultV2'
 export type RunnableEntity<T extends RunnableType> = {
   type: T
   createdAt: Date
@@ -26,6 +26,7 @@ export type WorkspaceInfo = {
   name: string
   logs: RunnableEntity<'documentLog'>[]
   results: RunnableEntity<'evaluationResult'>[]
+  resultsV2: RunnableEntity<'evaluationResultV2'>[]
   subscription: SubscriptionInfo
   memberEmails: string[]
 }
@@ -79,6 +80,10 @@ export const generateWorkspaceFixtures = (
         { type: 'evaluationResult', createdAt: subDays(currentDate, 7) },
         { type: 'evaluationResult', createdAt: subDays(currentDate, 9) },
       ],
+      resultsV2: [
+        { type: 'evaluationResultV2', createdAt: subDays(currentDate, 7) },
+        { type: 'evaluationResultV2', createdAt: subDays(currentDate, 9) },
+      ],
       subscription: {
         createdAt: subscriptionCreatedAt,
         plan: SubscriptionPlan.TeamV1,
@@ -96,6 +101,11 @@ export const generateWorkspaceFixtures = (
         { type: 'evaluationResult', createdAt: subDays(currentDate, 10) },
         { type: 'evaluationResult', createdAt: subDays(currentDate, 50) },
         { type: 'evaluationResult', createdAt: subDays(currentDate, 80) },
+      ],
+      resultsV2: [
+        { type: 'evaluationResultV2', createdAt: subDays(currentDate, 10) },
+        { type: 'evaluationResultV2', createdAt: subDays(currentDate, 50) },
+        { type: 'evaluationResultV2', createdAt: subDays(currentDate, 80) },
       ],
       subscription: {
         createdAt: subscriptionCreatedAt,

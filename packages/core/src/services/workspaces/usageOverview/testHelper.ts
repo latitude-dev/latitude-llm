@@ -1,19 +1,24 @@
-import { EvaluationResultDto, Providers } from '@latitude-data/constants'
-import { orderBy } from 'lodash-es'
-import { format, addDays } from 'date-fns'
-import * as factories from '../../../tests/factories'
-import { createMembership } from '../../memberships/create'
-import { generateWorkspaceFixtures, type WorkspaceInfo } from './fixtures'
 import {
-  Workspace,
+  EvaluationResultDto,
+  EvaluationResultV2,
+  EvaluationV2,
+  Providers,
+} from '@latitude-data/constants'
+import { addDays, format } from 'date-fns'
+import { orderBy } from 'lodash-es'
+import {
   Commit,
+  DocumentLog,
   DocumentVersion,
   Evaluation,
-  DocumentLog,
-  ProviderLog,
   EvaluationDto,
+  ProviderLog,
+  Workspace,
 } from '../../../browser'
+import * as factories from '../../../tests/factories'
 import { connectEvaluations } from '../../evaluations'
+import { createMembership } from '../../memberships/create'
+import { generateWorkspaceFixtures, type WorkspaceInfo } from './fixtures'
 import { GetUsageOverview, GetUsageOverviewRow } from './getUsageOverview'
 
 async function createMember({
@@ -73,6 +78,29 @@ async function createResult({
     })
     .then((r) => r.evaluationResult)
 }
+
+async function createResultV2({
+  evaluation,
+  providerLog,
+  commit,
+  workspace,
+  info,
+}: {
+  evaluation: EvaluationV2
+  providerLog: ProviderLog
+  commit: Commit
+  workspace: Workspace
+  info: WorkspaceInfo['resultsV2'][0]
+}) {
+  return await factories.createEvaluationResultV2({
+    evaluation: evaluation,
+    providerLog: providerLog,
+    commit: commit,
+    workspace: workspace,
+    createdAt: info.createdAt,
+  })
+}
+
 async function createWorkspace(workspaceInfo: WorkspaceInfo) {
   const creator = await factories.createUser({
     email: `admin@${workspaceInfo.name}.com`,
@@ -116,6 +144,11 @@ async function createWorkspace(workspaceInfo: WorkspaceInfo) {
     documentUuid: document.documentUuid,
     evaluationUuids: [evaluation.uuid],
   })
+  const evaluationV2 = await factories.createEvaluationV2({
+    document: document,
+    commit: commit,
+    workspace: workspace,
+  })
 
   const documentLogs = await Promise.all(
     workspaceInfo.logs.map((info, index) =>
@@ -123,15 +156,29 @@ async function createWorkspace(workspaceInfo: WorkspaceInfo) {
     ),
   )
   let evaluationResults: EvaluationResultDto[] = []
+  let evaluationResultsV2: EvaluationResultV2[] = []
 
   const log = documentLogs[0]!
 
   if (log) {
     const { documentLog, providerLogs } = log
     const evaluatedProviderLog = providerLogs[0]!
+
     evaluationResults = await Promise.all(
       workspaceInfo.results.map((info) =>
         createResult({ evaluation, documentLog, evaluatedProviderLog, info }),
+      ),
+    )
+
+    evaluationResultsV2 = await Promise.all(
+      workspaceInfo.resultsV2.map((info) =>
+        createResultV2({
+          evaluation: evaluationV2,
+          providerLog: evaluatedProviderLog,
+          commit: commit,
+          workspace: workspace,
+          info: info,
+        }),
       ),
     )
   }
@@ -143,6 +190,7 @@ async function createWorkspace(workspaceInfo: WorkspaceInfo) {
     projectId: project.id,
     documentLogs,
     evaluationResults,
+    evaluationResultsV2,
     membersCount: workspaceInfo.memberEmails.length + 1,
     emails: orderBy([creator, ...remainderMembers], (u) => u.createdAt, 'desc')
       .map((u) => u.email)
@@ -178,6 +226,7 @@ async function createWorkspaces({
         fixture: w.originalInfo,
         logs: w.documentLogs,
         evaluationResults: w.evaluationResults,
+        evaluationResultsV2: w.evaluationResultsV2,
       },
     }
     return acc
