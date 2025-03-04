@@ -11,21 +11,23 @@ export enum HostedIntegrationType {
   Github = 'github',
   Notion = 'notion',
   Twitter = 'twitter',
-  // Reddit = 'reddit', // non-standard tool
-  // Youtube = 'youtube', // non-standard tool - also only to download captions
+  Airtable = 'airtable',
+  Linear = 'linear',
+  YoutubeCaptions = 'youtube_captions',
+
+  // Reddit = 'reddit', // uvx
+  // Telegram = 'telegram', // uvx
+  // GoogleWorkspace = 'google_workspace', // uvx
+  // Tinybird = 'tinybird', // uvx
+  // Perplexity = 'perplexity', // uvx
+
   // Wordpress = 'wordpress', // Not on OpenTools
-  // Telegram = 'telegram', // non-standard tool
-  // GoogleWorkspace = 'google_workspace', // Not on OpenTools
   // Discord = 'discord', // Not on OpenTools
   // Intercom = 'intercom', // Not on OpenTools
   // Jira = 'jira', // Not on OpenTools
-  // Airtable = 'airtable',
-  // Linear = 'linear',
-  // Tinybird = 'tinybird',
-  // Perplexity = 'perplexity',
-  // Supabase = 'supabase',
-  // Hubspot = 'hubspot',
-  // Attio = 'attio',
-  // Loops = 'loops',
-  // Ghost = 'ghost',
+  // Supabase = 'supabase', // Not on OpenTools
+  // Hubspot = 'hubspot', // Not on OpenTools
+  // Attio = 'attio', // Not on OpenTools
+  // Loops = 'loops', // Not on OpenTools
+  // Ghost = 'ghost', // Not on OpenTools
 }

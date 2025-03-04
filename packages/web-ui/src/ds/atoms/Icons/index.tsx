@@ -104,6 +104,8 @@ import Discord from './custom-icons/logos/Discord'
 import Intercom from './custom-icons/logos/Intercom'
 import Jira from './custom-icons/logos/Jira'
 import TwitterX from './custom-icons/logos/TwitterX'
+import Linear from './custom-icons/logos/Linear'
+import Airtable from './custom-icons/logos/Airtable'
 
 const Icons = {
   addCircle: CirclePlus,
@@ -196,12 +198,12 @@ const Icons = {
   github: Github,
   reddit: Reddit,
   youtube: Youtube,
-  // airtable: Airtable,
+  airtable: Airtable,
   notion: Notion,
   wordpress: Wordpress,
   twitter: Twitter,
   twitterX: TwitterX,
-  // linear: Linear,
+  linear: Linear,
   telegram: Telegram,
   // tinybird: Tinybird,
   // perplexity: Perplexity,
