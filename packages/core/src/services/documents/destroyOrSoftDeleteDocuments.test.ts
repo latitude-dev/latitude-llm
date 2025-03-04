@@ -5,6 +5,7 @@ import { database } from '../../client'
 import { Providers } from '../../constants'
 import { documentVersions, evaluationVersions } from '../../schema'
 import * as factories from '../../tests/factories'
+import { updateEvaluationV2 } from '../evaluationsV2'
 import { destroyOrSoftDeleteDocuments } from './destroyOrSoftDeleteDocuments'
 import { updateDocument } from './update'
 
@@ -98,14 +99,23 @@ describe('destroyOrSoftDeleteDocuments', () => {
       },
     })
     const document = allDocs[0]!
-    await factories.createEvaluationV2({ document, commit, workspace })
+    const evaluation = await factories.createEvaluationV2({
+      document: document,
+      commit: commit,
+      workspace: workspace,
+    })
     const { commit: draft } = await factories.createDraft({ project, user })
     const draftDocument = await updateDocument({
       commit: draft,
       document,
       content: 'Doc 1 (version 2)',
     }).then((r) => r.unwrap())
-    await factories.createEvaluationV2({ document, commit: draft, workspace })
+    await updateEvaluationV2({
+      evaluation: evaluation,
+      commit: draft,
+      settings: { name: 'New name' },
+      workspace: workspace,
+    }).then((r) => r.unwrap())
 
     // Fake cached content exists to prove the method invalidate cache
     await database

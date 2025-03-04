@@ -4,6 +4,7 @@ import { WorkspaceDto } from '../../browser'
 import { Providers } from '../../constants'
 import { deleteCommitDraft } from '../commits'
 import { connectEvaluations, destroyEvaluation } from '../evaluations'
+import { deleteEvaluationV2 } from '../evaluationsV2'
 import { computeWorkspaceUsage } from './usage'
 
 describe('computeWorkspaceUsage', () => {
@@ -542,7 +543,11 @@ describe('computeWorkspaceUsage', () => {
       workspace: workspace,
     })
     await destroyEvaluation({ evaluation })
-    await ctx.factories.deleteEvaluationV2({ evaluation: evaluationV2 })
+    await deleteEvaluationV2({
+      evaluation: evaluationV2,
+      commit: draft,
+      workspace: workspace,
+    }).then((r) => r.unwrap())
     await deleteCommitDraft(draft)
 
     const result = await computeWorkspaceUsage({
