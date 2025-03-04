@@ -2,8 +2,6 @@ import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { useAgentToolsMap } from '$/stores/agentToolsMap'
 import {
   createRelativePath,
-  LATITUDE_TOOLS_CONFIG_NAME,
-  LatitudeTool,
   resolveRelativePath,
 } from '@latitude-data/constants'
 import { useCurrentCommit, useCurrentProject } from '@latitude-data/web-ui'
@@ -52,24 +50,6 @@ export const useConfigValue = <T>({
   }
 
   return { value, setValue }
-}
-
-export const useLatitudeToolsConfig = ({
-  config,
-  setConfig,
-}: PromptConfigurationProps) => {
-  const tools = (config[LATITUDE_TOOLS_CONFIG_NAME] ?? []) as LatitudeTool[]
-  const toggleTool = (tool: LatitudeTool) => {
-    const newTools = tools.includes(tool)
-      ? tools.filter((t) => t !== tool)
-      : [...tools, tool]
-    setConfig({
-      ...config,
-      [LATITUDE_TOOLS_CONFIG_NAME]: newTools.length ? newTools : undefined,
-    })
-  }
-
-  return { tools, toggleTool }
 }
 
 function getSelectedRelativePath({
