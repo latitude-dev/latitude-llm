@@ -64,6 +64,22 @@ export const HOSTED_INTEGRATION_TYPE_OPTIONS: Record<
     label: 'YouTube Captions',
     icon: 'youtube',
   },
+  [HostedIntegrationType.Reddit]: {
+    label: 'Reddit',
+    icon: 'reddit',
+  },
+  [HostedIntegrationType.Telegram]: {
+    label: 'Telegram',
+    icon: 'telegram',
+  },
+  [HostedIntegrationType.Tinybird]: {
+    label: 'Tinybird',
+    icon: 'tinybird',
+  },
+  [HostedIntegrationType.Perplexity]: {
+    label: 'Perplexity',
+    icon: 'perplexity',
+  },
 }
 
 export function integrationOptions(

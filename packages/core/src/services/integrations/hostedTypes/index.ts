@@ -8,6 +8,10 @@ import TWITTER_MCP_CONFIG from './twitter'
 import AIRTABLE_MCP_CONFIG from './airtable'
 import LINEAR_MCP_CONFIG from './linear'
 import YOUTUBE_CAPTIONS_MCP_CONFIG from './youtubeCaptions'
+import REDDIT_MCP_CONFIG from './reddit'
+import TELEGRAM_MCP_CONFIG from './telegram'
+import TINYBIRD_MCP_CONFIG from './tinybird'
+import PERPLEXITY_MCP_CONFIG from './perplexity'
 
 export const HOSTED_MCP_CONFIGS: Record<
   HostedIntegrationType,
@@ -21,4 +25,8 @@ export const HOSTED_MCP_CONFIGS: Record<
   [HostedIntegrationType.Airtable]: AIRTABLE_MCP_CONFIG,
   [HostedIntegrationType.Linear]: LINEAR_MCP_CONFIG,
   [HostedIntegrationType.YoutubeCaptions]: YOUTUBE_CAPTIONS_MCP_CONFIG,
+  [HostedIntegrationType.Reddit]: REDDIT_MCP_CONFIG,
+  [HostedIntegrationType.Telegram]: TELEGRAM_MCP_CONFIG,
+  [HostedIntegrationType.Tinybird]: TINYBIRD_MCP_CONFIG,
+  [HostedIntegrationType.Perplexity]: PERPLEXITY_MCP_CONFIG,
 }
