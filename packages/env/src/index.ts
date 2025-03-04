@@ -82,6 +82,7 @@ if (environment === 'development' || environment === 'test') {
       BULL_ADMIN_PASS: 'admin',
       MCP_SCHEME: 'internet-facing',
       MCP_DOCKER_IMAGE: 'ghcr.io/latitude-dev/latitude-mcp:sha-dcf0fec',
+      MCP_NODE_GROUP_NAME: 'latitude-dev-node-group',
     },
     { path: pathToEnv },
   )
@@ -189,6 +190,7 @@ export const env = createEnv({
     BULL_ADMIN_PASS: z.string(),
 
     // MCP Server feature configurations
+    MCP_NODE_GROUP_NAME: z.string(),
     MCP_DOCKER_IMAGE: z.string(),
     MCP_SCHEME: z.string(),
     EKS_CA_DATA: z.string().optional(),
