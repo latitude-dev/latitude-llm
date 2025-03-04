@@ -1,5 +1,5 @@
-import { HostedIntegrationConfig } from './types'
-import { uvxCommand } from './utils'
+import { HostedIntegrationConfig } from '../types'
+import { uvxCommand } from '../utils'
 
 export default {
   description: `A bridge between the Telegram API and AI assistants, providing read-only access to Telegram data like dialogs and messages.`,

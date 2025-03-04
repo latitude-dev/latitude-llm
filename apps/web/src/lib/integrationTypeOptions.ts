@@ -80,6 +80,50 @@ export const HOSTED_INTEGRATION_TYPE_OPTIONS: Record<
     label: 'Perplexity',
     icon: 'perplexity',
   },
+  [HostedIntegrationType.AwsKbRetrieval]: {
+    label: 'AWS Knowledge Base Retrieval',
+    icon: 'awsBedrock',
+  },
+  [HostedIntegrationType.BraveSearch]: {
+    label: 'Brave Search',
+    icon: 'brave',
+  },
+  [HostedIntegrationType.EverArt]: {
+    label: 'EverArt',
+    icon: 'mcp',
+  },
+  [HostedIntegrationType.Fetch]: {
+    label: 'Fetch',
+    icon: 'globe',
+  },
+  [HostedIntegrationType.GitLab]: {
+    label: 'GitLab',
+    icon: 'gitlab',
+  },
+  [HostedIntegrationType.GoogleMaps]: {
+    label: 'Google Maps',
+    icon: 'mapPin',
+  },
+  [HostedIntegrationType.Memory]: {
+    label: 'Memory',
+    icon: 'database',
+  },
+  [HostedIntegrationType.Sentry]: {
+    label: 'Sentry',
+    icon: 'sentry',
+  },
+  [HostedIntegrationType.Puppeteer]: {
+    label: 'Puppeteer',
+    icon: 'appWindow',
+  },
+  [HostedIntegrationType.SequentialThinking]: {
+    label: 'Sequential Thinking',
+    icon: 'brain',
+  },
+  [HostedIntegrationType.Time]: {
+    label: 'Time',
+    icon: 'clock',
+  },
 }
 
 export function integrationOptions(

@@ -1,5 +1,5 @@
-import { HostedIntegrationConfig } from './types'
-import { npxCommand } from './utils'
+import { HostedIntegrationConfig } from '../types'
+import { npxCommand } from '../utils'
 
 export default {
   description:

@@ -84,6 +84,12 @@ import {
   Blocks,
   Slack,
   Youtube,
+  Gitlab,
+  MapPin,
+  Database,
+  AppWindow,
+  Brain,
+  Clock,
 } from 'lucide-react'
 
 import { cn } from '../../../lib/utils'
@@ -108,15 +114,20 @@ import Linear from './custom-icons/logos/Linear'
 import Airtable from './custom-icons/logos/Airtable'
 import Tinybird from './custom-icons/logos/Tinybird'
 import Perplexity from './custom-icons/logos/Perplexity'
+import AwsBedrock from './custom-icons/logos/AwsBedrock'
+import Brave from './custom-icons/logos/Brave'
+import Sentry from './custom-icons/logos/Sentry'
 
 const Icons = {
   addCircle: CirclePlus,
   addSquare: SquarePlus,
   alert: CircleAlert,
+  appWindow: AppWindow,
   arrowLeft: ArrowLeft,
   arrowRight: ArrowRightIcon,
   barChart4: BarChart4,
   blocks: Blocks,
+  brain: Brain,
   bot: Bot,
   calendar: CalendarIcon,
   check: CheckCircle2,
@@ -130,8 +141,10 @@ const Icons = {
   circleDollarSign: CircleDollarSign,
   circleHelp: CircleHelp,
   clipboard: Copy,
+  clock: Clock,
   code: Code,
   code2: Code2,
+  database: Database,
   deletion: SquareMinus,
   minus: MinusIcon,
   ellipsis: Ellipsis,
@@ -154,6 +167,7 @@ const Icons = {
   lock: Lock,
   logo: LatitudeLogo,
   logoMonochrome: LatitudeLogoMonochrome,
+  mapPin: MapPin,
   maximize: Maximize2,
   minimize: Minimize2,
   modification: SquareDot,
@@ -214,10 +228,14 @@ const Icons = {
   // hubspot: Hubspot,
   // attio: Attio,
   discord: Discord,
+  gitlab: Gitlab,
   // loops: Loops,
   intercom: Intercom,
   jira: Jira,
   // ghost: Ghost,
+  awsBedrock: AwsBedrock,
+  brave: Brave,
+  sentry: Sentry,
 }
 
 export type IconName = keyof typeof Icons

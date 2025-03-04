@@ -13,12 +13,27 @@ export enum HostedIntegrationType {
   Airtable = 'airtable',
   Linear = 'linear',
   YoutubeCaptions = 'youtube_captions',
-
-  // uv integrations
   Reddit = 'reddit',
   Telegram = 'telegram',
   Tinybird = 'tinybird',
   Perplexity = 'perplexity',
+
+  AwsKbRetrieval = 'aws_kb_retrieval',
+  BraveSearch = 'brave_search',
+  EverArt = 'ever_art',
+  Fetch = 'fetch',
+  GitLab = 'gitlab',
+  GoogleMaps = 'google_maps',
+  Memory = 'memory',
+  Sentry = 'sentry',
+  Puppeteer = 'puppeteer',
+  SequentialThinking = 'sequential_thinking',
+  Time = 'time',
+
+  // GoogleDrive = 'google_drive', // env vars not supported, requires auth file
+  // Postgres = 'postgres', // Uses a custom parameter in the command instead of env vars
+  // Redis = 'redis', // Uses a custom parameter in the command instead of env vars
+  // SQLite = 'sqlite', // Uses a custom parameter in the command instead of env vars
 
   // GoogleWorkspace = 'google_workspace', // env vars not supported (?)
 

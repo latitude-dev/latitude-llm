@@ -1,4 +1,4 @@
-import { HostedIntegrationConfig } from './types'
+import { HostedIntegrationConfig } from '../types'
 
 export default {
   description:

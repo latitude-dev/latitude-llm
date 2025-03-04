@@ -1,5 +1,5 @@
-import { HostedIntegrationConfig } from './types'
-import { uvxCommand } from './utils'
+import { HostedIntegrationConfig } from '../types'
+import { uvxCommand } from '../utils'
 
 export default {
   description:
