@@ -22,6 +22,10 @@ import useIntegrations from '$/stores/integrations'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { integrationOptions } from '$/lib/integrationTypeOptions'
+import { IntegrationType } from '@latitude-data/constants'
+import { useMcpServer } from '$/stores/mcpServer'
+import { useEffect } from 'react'
+import { McpServerStatus } from '../../integrations/[integrationId]/details/_components/McpServerStatus'
 
 export default function Integrations() {
   const { data: integrations, isLoading: isLoading } = useIntegrations()
@@ -75,6 +79,7 @@ const IntegrationsTable = ({
           <TableHead>Name</TableHead>
           <TableHead>Type</TableHead>
           <TableHead>Last Used</TableHead>
+          <TableHead>Status</TableHead>
           <TableHead />
         </TableRow>
       </TableHeader>
@@ -100,8 +105,25 @@ const IntegrationsTable = ({
                 </Text.H5>
               </TableCell>
               <TableCell>
+                {integration.type === IntegrationType.HostedMCP ? (
+                  <IntegrationMcpServerStatus integration={integration} />
+                ) : (
+                  '-'
+                )}
+              </TableCell>
+              <TableCell>
                 <DropdownMenu
                   options={[
+                    {
+                      label: 'Details',
+                      hidden: integration.type !== IntegrationType.HostedMCP,
+                      disabled: integration.type !== IntegrationType.HostedMCP,
+                      onClick: () =>
+                        router.push(
+                          ROUTES.settings.integrations.details(integration.id)
+                            .root,
+                        ),
+                    },
                     {
                       label: 'Remove',
                       onClick: () =>
@@ -125,4 +147,26 @@ const IntegrationsTable = ({
       </TableBody>
     </Table>
   )
+}
+
+function IntegrationMcpServerStatus({
+  integration,
+}: {
+  integration: IntegrationDto
+}) {
+  const { data: mcpServer, updateMcpServerStatus } = useMcpServer(
+    integration?.mcpServerId?.toString(),
+  )
+
+  useEffect(() => {
+    if (mcpServer) {
+      const interval = setInterval(() => {
+        updateMcpServerStatus({ mcpServerId: mcpServer.id })
+      }, 30000)
+
+      return () => clearInterval(interval)
+    }
+  }, [mcpServer?.id, updateMcpServerStatus])
+
+  return <McpServerStatus short mcpServer={mcpServer} />
 }
