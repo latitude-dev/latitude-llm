@@ -18,11 +18,6 @@ jobs:
     strategy:
       matrix:
         include:
-          - app: workers
-            task-family: LatitudeLLMWorkersTaskFamily
-            service: LatitudeLLMWorkers-8b32da0
-            cluster: LatitudeLLMCluster-883fb8c
-            repo_name: latitude-llm-workers-repo-184cb29
           - app: websockets
             task-family: LatitudeLLMWebsocketsTaskFamily
             service: LatitudeLLMWebsockets-3ba81ef
