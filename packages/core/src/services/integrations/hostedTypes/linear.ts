@@ -1,8 +1,9 @@
 import { HostedIntegrationConfig } from './types'
+import { npxCommand } from './utils'
 
 export default {
   description: `A set of tools for interacting with Linear's issue tracking system, enabling LLMs to create, update, search, and manage Linear issues.`,
-  command: 'npx -y linear-mcp-server',
+  command: npxCommand({ package: 'linear-mcp-server' }),
   env: {
     LINEAR_API_KEY: {
       label: 'Linear API Key',

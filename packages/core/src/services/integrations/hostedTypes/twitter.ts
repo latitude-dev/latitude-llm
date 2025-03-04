@@ -1,9 +1,10 @@
 import { HostedIntegrationConfig } from './types'
+import { npxCommand } from './utils'
 
 export default {
   description:
     'Interact with Twitter through your AI, enabling posting tweets and searching Twitter.',
-  command: 'npx -y @enescinar/twitter-mcp',
+  command: npxCommand({ package: '@enescinar/twitter-mcp' }),
   env: {
     API_KEY: {
       label: 'API Key',

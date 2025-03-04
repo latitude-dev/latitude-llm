@@ -1,9 +1,12 @@
 import { HostedIntegrationConfig } from './types'
+import { uvxCommand } from './utils'
 
 export default {
   description: `A bridge between the Telegram API and AI assistants, providing read-only access to Telegram data like dialogs and messages.`,
-  command:
-    'uvx --from git+https://github.com/sparfenyuk/mcp-telegram mcp-telegram',
+  command: uvxCommand({
+    name: 'mcp-telegram',
+    repository: 'https://github.com/sparfenyuk/mcp-telegram.git',
+  }),
   env: {
     TELEGRAM_API_ID: {
       label: 'Telegram API ID',

@@ -1,8 +1,9 @@
 import { HostedIntegrationConfig } from './types'
+import { npxCommand } from './utils'
 
 export default {
   description: 'Tools to interact with the Stripe API.',
-  command: 'npx -y @stripe/mcp --tools=all',
+  command: npxCommand({ package: '@stripe/mcp', args: '--tools=all' }),
   env: {
     STRIPE_SECRET_KEY: {
       label: 'Stripe API Key',

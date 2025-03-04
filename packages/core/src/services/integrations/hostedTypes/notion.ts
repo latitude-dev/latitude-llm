@@ -1,9 +1,10 @@
 import { HostedIntegrationConfig } from './types'
+import { npxCommand } from './utils'
 
 export default {
   description:
     'Tools for the Notion API, enabling your AI to interact with Notion workspaces.',
-  command: 'npx -y @suekou/mcp-notion-server',
+  command: npxCommand({ package: '@suekou/mcp-notion-server' }),
   env: {
     NOTION_API_TOKEN: {
       label: 'Notion API Token',
