@@ -7,24 +7,25 @@ export enum IntegrationType {
 export enum HostedIntegrationType {
   Stripe = 'stripe',
   Slack = 'slack',
-  // Github = 'github',
-  // Reddit = 'reddit',
-  // Youtube = 'youtube',
+
+  Github = 'github',
+  Notion = 'notion',
+  Twitter = 'twitter',
+  // Reddit = 'reddit', // non-standard tool
+  // Youtube = 'youtube', // non-standard tool - also only to download captions
+  // Wordpress = 'wordpress', // Not on OpenTools
+  // Telegram = 'telegram', // non-standard tool
+  // GoogleWorkspace = 'google_workspace', // Not on OpenTools
+  // Discord = 'discord', // Not on OpenTools
+  // Intercom = 'intercom', // Not on OpenTools
+  // Jira = 'jira', // Not on OpenTools
   // Airtable = 'airtable',
-  // Notion = 'notion',
-  // Wordpress = 'wordpress',
-  // X = 'twitter',
   // Linear = 'linear',
-  // Telegram = 'telegram',
   // Tinybird = 'tinybird',
   // Perplexity = 'perplexity',
-  // GoogleWorkspace = 'google_workspace',
   // Supabase = 'supabase',
   // Hubspot = 'hubspot',
   // Attio = 'attio',
-  // Discord = 'discord',
   // Loops = 'loops',
-  // Intercom = 'intercom',
-  // Jira = 'jira',
   // Ghost = 'ghost',
 }

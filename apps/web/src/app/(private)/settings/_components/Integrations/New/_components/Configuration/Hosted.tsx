@@ -1,5 +1,5 @@
 'use client'
-import { Input } from '@latitude-data/web-ui'
+import { Input, Text } from '@latitude-data/web-ui'
 import { buildConfigFieldName } from '../../buildIntegrationPayload'
 import { HostedIntegrationType } from '@latitude-data/constants'
 import { HOSTED_MCP_CONFIGS } from '@latitude-data/core/services/integrations/hostedTypes/index'
@@ -9,11 +9,16 @@ export function HostedIntegrationConfiguration({
 }: {
   type: HostedIntegrationType
 }) {
-  const environmentValues = HOSTED_MCP_CONFIGS[type].env
+  const environmentValues = HOSTED_MCP_CONFIGS[type]
 
   return (
     <div className='flex flex-col gap-4'>
-      {Object.entries(environmentValues).map(([key, value], idx) => (
+      {environmentValues?.description && (
+        <Text.H6 color='foregroundMuted'>
+          {environmentValues.description}
+        </Text.H6>
+      )}
+      {Object.entries(environmentValues?.env).map(([key, value], idx) => (
         <Input
           key={idx}
           required={value.required}

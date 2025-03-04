@@ -15,11 +15,11 @@ export const INTEGRATION_TYPE_VALUES: Record<
   IntegrationTypeOption
 > = {
   [IntegrationType.ExternalMCP]: {
-    label: 'External MCP Server',
+    label: 'Custom MCP Server',
     icon: 'mcp',
   },
   [IntegrationType.HostedMCP]: {
-    label: 'Custom MCP Server hosted by Latitude',
+    label: 'MCP Server hosted by Latitude',
     icon: 'mcp',
   },
   [IntegrationType.Latitude]: {
@@ -39,6 +39,18 @@ export const HOSTED_INTEGRATION_TYPE_OPTIONS: Record<
   [HostedIntegrationType.Stripe]: {
     label: 'Stripe',
     icon: 'stripe',
+  },
+  [HostedIntegrationType.Github]: {
+    label: 'GitHub',
+    icon: 'github',
+  },
+  [HostedIntegrationType.Notion]: {
+    label: 'Notion',
+    icon: 'notion',
+  },
+  [HostedIntegrationType.Twitter]: {
+    label: 'X (Twitter)',
+    icon: 'twitterX',
   },
 }
 
