@@ -23,16 +23,17 @@ jobs:
             codedeploy_app: LatitudeLLMCodeDeployApp
             codedeploy_group: LatitudeLLMDeploymentGroup
             repo_name: latitude-llm-app-repo-43d71dc
-          - app: gateway
-            task_family: LatitudeLLMGatewayTaskFamily
-            codedeploy_app: LatitudeLLMCodeDeployGateway
-            codedeploy_group: LatitudeLLMGatewayDeploymentGroup
-            repo_name: latitude-llm-gateway-repo-b859826
-          - app: workers
-            task_family: LatitudeLLMWorkersTaskFamily
-            codedeploy_app: LatitudeLLMWorkersCodeDeployApp
-            codedeploy_group: LatitudeLLMWorkersDeploymentGroup
-            repo_name: latitude-llm-workers-repo-184cb29
+            # TODO: uncomment
+          # - app: gateway
+          #   task_family: LatitudeLLMGatewayTaskFamily
+          #   codedeploy_app: LatitudeLLMCodeDeployGateway
+          #   codedeploy_group: LatitudeLLMGatewayDeploymentGroup
+          #   repo_name: latitude-llm-gateway-repo-b859826
+          # - app: workers
+          #   task_family: LatitudeLLMWorkersTaskFamily
+          #   codedeploy_app: LatitudeLLMWorkersCodeDeployApp
+          #   codedeploy_group: LatitudeLLMWorkersDeploymentGroup
+          #   repo_name: latitude-llm-workers-repo-184cb29
     concurrency:
       group: deploy-${{ matrix.app }}
       cancel-in-progress: false
