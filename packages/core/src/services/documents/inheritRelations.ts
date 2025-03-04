@@ -1,11 +1,8 @@
 import { DocumentVersion, Workspace } from '../../browser'
 import { database, Database } from '../../client'
 import { ConflictError, Result, Transaction } from '../../lib'
-import {
-  DocumentSuggestionsRepository,
-  EvaluationsV2Repository,
-} from '../../repositories'
-import { documentSuggestions, evaluationVersions } from '../../schema'
+import { DocumentSuggestionsRepository } from '../../repositories'
+import { documentSuggestions } from '../../schema'
 
 async function inheritSuggestions(
   {
@@ -44,42 +41,6 @@ async function inheritSuggestions(
   return Result.nil()
 }
 
-async function inheritEvaluations(
-  {
-    fromVersion,
-    toVersion,
-    workspace,
-  }: {
-    fromVersion: DocumentVersion
-    toVersion: DocumentVersion
-    workspace: Workspace
-  },
-  db: Database = database,
-) {
-  const repository = new EvaluationsV2Repository(workspace.id, db)
-
-  const evaluations = await repository
-    .listByDocumentVersion({
-      commitId: fromVersion.commitId,
-      documentUuid: fromVersion.documentUuid,
-    })
-    .then((r) => r.unwrap())
-
-  if (!evaluations.length) return Result.nil()
-
-  await db.insert(evaluationVersions).values(
-    evaluations.map((evaluation) => ({
-      ...evaluation,
-      id: undefined,
-      commitId: toVersion.commitId,
-      updatedAt: toVersion.updatedAt,
-      deletedAt: toVersion.deletedAt,
-    })),
-  )
-
-  return Result.nil()
-}
-
 export async function inheritDocumentRelations(
   {
     fromVersion,
@@ -108,9 +69,6 @@ export async function inheritDocumentRelations(
   return Transaction.call(async (tx) => {
     await Promise.all([
       inheritSuggestions({ fromVersion, toVersion, workspace }, tx).then((r) =>
-        r.unwrap(),
-      ),
-      inheritEvaluations({ fromVersion, toVersion, workspace }, tx).then((r) =>
         r.unwrap(),
       ),
     ])

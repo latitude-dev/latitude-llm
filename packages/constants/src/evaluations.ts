@@ -249,6 +249,7 @@ export type EvaluationResultV2<
   R extends EvaluationResultMetadata<M> = EvaluationResultMetadata<M>,
 > = {
   id: number
+  uuid: string
   workspaceId: number
   commitId: number
   evaluationUuid: string

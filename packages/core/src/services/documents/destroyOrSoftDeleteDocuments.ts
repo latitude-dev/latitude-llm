@@ -5,9 +5,9 @@ import { and, eq, inArray, ne } from 'drizzle-orm'
 import { Commit, DocumentVersion, Workspace } from '../../browser'
 import { database } from '../../client'
 import { Result, Transaction, TypedResult } from '../../lib'
+import { EvaluationsV2Repository } from '../../repositories'
 import { documentVersions, evaluationVersions } from '../../schema'
 import { pingProjectUpdate } from '../projects'
-import { inheritDocumentRelations } from './inheritRelations'
 
 async function findUuidsInOtherCommits({
   tx,
@@ -79,6 +79,51 @@ async function hardDestroyDocuments({
     .where(inArray(documentVersions.documentUuid, uuids))
 }
 
+async function createEvaluationsAsSoftDeleted({
+  commitId,
+  documents,
+  workspace,
+  tx,
+}: {
+  commitId: number
+  documents: DocumentVersion[]
+  workspace: Workspace
+  tx: typeof database
+}) {
+  const repository = new EvaluationsV2Repository(workspace.id, tx)
+
+  await Promise.all(
+    documents.map(async (document) => {
+      const evaluations = await repository
+        .listByDocumentVersion({
+          commitId: document.commitId,
+          documentUuid: document.documentUuid,
+        })
+        .then((r) => r.unwrap())
+
+      if (!evaluations.length) return
+
+      await tx
+        .insert(evaluationVersions)
+        .values(
+          evaluations.map((evaluation) => ({
+            ...evaluation,
+            id: undefined,
+            commitId: commitId,
+            deletedAt: new Date(),
+          })),
+        )
+        .onConflictDoUpdate({
+          target: [
+            evaluationVersions.commitId,
+            evaluationVersions.evaluationUuid,
+          ],
+          set: { deletedAt: new Date() },
+        })
+    }),
+  )
+}
+
 async function createDocumentsAsSoftDeleted({
   toBeCreated,
   commitId,
@@ -92,27 +137,19 @@ async function createDocumentsAsSoftDeleted({
 }) {
   if (!toBeCreated.length) return
 
-  const inserted = await tx
-    .insert(documentVersions)
-    .values(
-      toBeCreated.map((d) => ({
-        ...omit(d, ['id', 'updatedAt', 'createdAt']),
-        deletedAt: new Date(),
-        commitId,
-      })),
-    )
-    .returning()
+  await createEvaluationsAsSoftDeleted({
+    commitId: commitId,
+    documents: toBeCreated,
+    workspace: workspace,
+    tx: tx,
+  })
 
-  await Promise.all(
-    inserted.map(async (toVersion) => {
-      const fromVersion = toBeCreated.find(
-        (d) => d.documentUuid === toVersion.documentUuid,
-      )!
-      return await inheritDocumentRelations(
-        { fromVersion, toVersion, workspace },
-        tx,
-      ).then((r) => r.unwrap())
-    }),
+  return tx.insert(documentVersions).values(
+    toBeCreated.map((d) => ({
+      ...omit(d, ['id', 'updatedAt', 'createdAt']),
+      deletedAt: new Date(),
+      commitId,
+    })),
   )
 }
 
@@ -149,9 +186,9 @@ async function updateDocumentsAsSoftDeleted({
   if (!uuids.length) return
 
   await updateEvaluationsAsSoftDeleted({
-    commitId,
+    commitId: commitId,
     documentUuids: uuids,
-    tx,
+    tx: tx,
   })
 
   return tx

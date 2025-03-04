@@ -1,11 +1,11 @@
 import {
+  Commit,
   DocumentVersion,
   EvaluationCondition,
   EvaluationConfiguration,
   EvaluationMetric,
   EvaluationType,
   EvaluationV2,
-  RuleEvaluationExactMatchConfiguration,
   RuleEvaluationMetric,
   Workspace,
 } from '../../browser'
@@ -18,6 +18,7 @@ type CreateEvaluationV2Args<
   C extends EvaluationConfiguration<M> = EvaluationConfiguration<M>,
 > = {
   document: DocumentVersion
+  commit: Commit
   workspace: Workspace
   name?: string
   description?: string
@@ -34,20 +35,20 @@ type CreateEvaluationV2Args<
 // prettier-ignore
 export async function createEvaluationV2(
   args: Omit<CreateEvaluationV2Args, 'type' | 'metric' | 'configuration'>,
-): Promise<EvaluationV2<EvaluationType.Rule, RuleEvaluationMetric.ExactMatch, RuleEvaluationExactMatchConfiguration>>
+): Promise<EvaluationV2<EvaluationType.Rule, RuleEvaluationMetric.ExactMatch>>
 
 // prettier-ignore
-export async function createEvaluationV2<T extends EvaluationType, M extends EvaluationMetric<T>, C extends EvaluationConfiguration<M>>(
-  args: CreateEvaluationV2Args<T, M, C>
-): Promise<EvaluationV2<T, M, C>>
+export async function createEvaluationV2<T extends EvaluationType, M extends EvaluationMetric<T>>(
+  args: CreateEvaluationV2Args<T, M>
+): Promise<EvaluationV2<T, M>>
 
-export async function createEvaluationV2<
-  T extends EvaluationType,
-  M extends EvaluationMetric<T>,
-  C extends EvaluationConfiguration<M>,
->(args: CreateEvaluationV2Args<T, M, C>): Promise<EvaluationV2<T, M, C>> {
+// prettier-ignore
+export async function createEvaluationV2<T extends EvaluationType, M extends EvaluationMetric<T>>(
+  args: CreateEvaluationV2Args<T, M>
+): Promise<EvaluationV2<T, M>> { 
   const {
     document,
+    commit,
     workspace,
     name = 'Evaluation',
     description = 'Description',
@@ -65,7 +66,7 @@ export async function createEvaluationV2<
     .insert(evaluationVersions)
     .values({
       workspaceId: workspace.id,
-      commitId: document.commitId,
+      commitId: commit.id,
       documentUuid: document.documentUuid,
       name,
       description,
@@ -86,5 +87,5 @@ export async function createEvaluationV2<
     ...evaluation,
     uuid: evaluation.evaluationUuid,
     versionId: evaluation.id,
-  } as unknown as EvaluationV2<T, M, C>
+  } as unknown as EvaluationV2<T, M>
 }

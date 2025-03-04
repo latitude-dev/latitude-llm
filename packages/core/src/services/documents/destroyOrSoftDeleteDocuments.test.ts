@@ -25,6 +25,7 @@ describe('destroyOrSoftDeleteDocuments', () => {
       })
     await factories.createEvaluationV2({
       document: draftDocument,
+      commit: draft,
       workspace: workspace,
     })
 
@@ -50,6 +51,7 @@ describe('destroyOrSoftDeleteDocuments', () => {
       workspace,
       project,
       user,
+      commit,
       documents: allDocs,
     } = await factories.createProject({
       providers: [{ type: Providers.OpenAI, name: 'openai' }],
@@ -58,7 +60,7 @@ describe('destroyOrSoftDeleteDocuments', () => {
       },
     })
     const document = allDocs[0]!
-    await factories.createEvaluationV2({ document, workspace })
+    await factories.createEvaluationV2({ document, commit, workspace })
     const { commit: draft } = await factories.createDraft({ project, user })
 
     await destroyOrSoftDeleteDocuments({
@@ -87,6 +89,7 @@ describe('destroyOrSoftDeleteDocuments', () => {
       workspace,
       project,
       user,
+      commit,
       documents: allDocs,
     } = await factories.createProject({
       providers: [{ type: Providers.OpenAI, name: 'openai' }],
@@ -95,13 +98,14 @@ describe('destroyOrSoftDeleteDocuments', () => {
       },
     })
     const document = allDocs[0]!
-    await factories.createEvaluationV2({ document, workspace })
+    await factories.createEvaluationV2({ document, commit, workspace })
     const { commit: draft } = await factories.createDraft({ project, user })
     const draftDocument = await updateDocument({
       commit: draft,
       document,
       content: 'Doc 1 (version 2)',
     }).then((r) => r.unwrap())
+    await factories.createEvaluationV2({ document, commit: draft, workspace })
 
     // Fake cached content exists to prove the method invalidate cache
     await database
