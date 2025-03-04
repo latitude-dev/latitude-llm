@@ -2,6 +2,7 @@
 
 import { type IntegrationDto } from '@latitude-data/core/browser'
 import {
+  Badge,
   Button,
   DropdownMenu,
   Icon,
@@ -28,7 +29,10 @@ export default function Integrations() {
   return (
     <div className='flex flex-col gap-4'>
       <div className='flex flex-row items-center justify-between'>
-        <Text.H4B>Integrations</Text.H4B>
+        <div className='flex flex-row items-center gap-2'>
+          <Text.H4B>Integrations</Text.H4B>
+          <Badge variant='accent'>Beta</Badge>
+        </div>
         <Link href={ROUTES.settings.integrations.new.root}>
           <Button fancy variant='outline'>
             Create Integration
