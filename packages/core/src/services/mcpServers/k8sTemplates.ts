@@ -20,6 +20,8 @@ metadata:
   labels:
     app: {{NAME}}
 spec:
+  nodeSelector:
+    eks.amazonaws.com/nodegroup: latitude-managed-node-group
   replicas: {{REPLICAS}}
   selector:
     matchLabels:
