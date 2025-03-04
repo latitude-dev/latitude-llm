@@ -4,9 +4,6 @@ import { npxCommand } from '../utils'
 export default {
   description:
     'Integration for interacting with the EverArt API, enabling the generation of art.',
-  command: npxCommand({
-    package: '@modelcontextprotocol/server-everart',
-  }),
   env: {
     EVERART_API_KEY: {
       label: 'EverArt API Key',
@@ -15,4 +12,8 @@ export default {
       required: true,
     },
   },
+  commandFn: () =>
+    npxCommand({
+      package: '@modelcontextprotocol/server-everart',
+    }),
 } as HostedIntegrationConfig

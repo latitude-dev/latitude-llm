@@ -117,6 +117,7 @@ import Perplexity from './custom-icons/logos/Perplexity'
 import AwsBedrock from './custom-icons/logos/AwsBedrock'
 import Brave from './custom-icons/logos/Brave'
 import Sentry from './custom-icons/logos/Sentry'
+import Postgres from './custom-icons/Postgres'
 
 const Icons = {
   addCircle: CirclePlus,
@@ -177,6 +178,7 @@ const Icons = {
   pencil: Pencil,
   pin: Pin,
   pinOff: PinOff,
+  postgres: Postgres,
   puzzle: Puzzle,
   refresh: RefreshCcw,
   search: SearchIcon,

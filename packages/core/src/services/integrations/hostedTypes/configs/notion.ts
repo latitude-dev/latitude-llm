@@ -4,7 +4,7 @@ import { npxCommand } from '../utils'
 export default {
   description:
     'Tools for the Notion API, enabling your AI to interact with Notion workspaces.',
-  command: npxCommand({ package: '@suekou/mcp-notion-server' }),
+  commandFn: () => npxCommand({ package: '@suekou/mcp-notion-server' }),
   env: {
     NOTION_API_TOKEN: {
       label: 'Notion API Token',

@@ -47,7 +47,7 @@ export async function createIntegration<p extends IntegrationType>(
     const { env = {}, type: hostedIntegrationType } =
       (params.configuration as HostedMcpIntegrationConfigurationForm) ?? {}
 
-    const command = HOSTED_MCP_CONFIGS[hostedIntegrationType].command
+    const command = HOSTED_MCP_CONFIGS[hostedIntegrationType].commandFn(env)
 
     const deployResult = await deployMcpServer(
       {

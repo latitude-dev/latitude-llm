@@ -3,7 +3,7 @@ import { type LucideProps } from 'lucide-react'
 export default function Brave(props: LucideProps) {
   return (
     <svg viewBox='0 0 56 64' fill='none' {...props}>
-      <mask id='cutout'>
+      <mask id='brave_icon_cutout'>
         <rect width='100%' height='100%' fill='white' />
         <path
           fillRule='evenodd'
@@ -15,7 +15,7 @@ export default function Brave(props: LucideProps) {
       <path
         fillRule='evenodd'
         clipRule='evenodd'
-        mask='url(#cutout)'
+        mask='url(#brave_icon_cutout)'
         d='M53.292 15.321l1.5-3.676s-1.909-2.043-4.227-4.358c-2.317-2.315-7.225-.953-7.225-.953L37.751 0H18.12l-5.589 6.334s-4.908-1.362-7.225.953C2.988 9.602 1.08 11.645 1.08 11.645l1.5 3.676-1.91 5.447s5.614 21.236 6.272 23.83c1.295 5.106 2.181 7.08 5.862 9.668 3.68 2.587 10.36 7.08 11.45 7.762 1.091.68 2.455 1.84 3.682 1.84 1.227 0 2.59-1.16 3.68-1.84 1.091-.681 7.77-5.175 11.452-7.762 3.68-2.587 4.567-4.562 5.862-9.668.657-2.594 6.27-23.83 6.27-23.83l-1.908-5.447z'
         fill='currentColor'
       />

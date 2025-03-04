@@ -5,8 +5,10 @@ export type EnvVarConfig = {
   required: boolean
 }
 
-export type HostedIntegrationConfig = {
+export type HostedIntegrationConfig<
+  T extends Record<string, EnvVarConfig> = {},
+> = {
   description?: string
-  command: string
-  env: Record<string, EnvVarConfig>
+  env: T
+  commandFn: (env: { [K in keyof T]: string }) => string
 }

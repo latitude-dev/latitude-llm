@@ -4,7 +4,7 @@ import { npxCommand } from '../utils'
 export default {
   description:
     'Interact with Twitter through your AI, enabling posting tweets and searching Twitter.',
-  command: npxCommand({ package: '@enescinar/twitter-mcp' }),
+  commandFn: () => npxCommand({ package: '@enescinar/twitter-mcp' }),
   env: {
     API_KEY: {
       label: 'API Key',

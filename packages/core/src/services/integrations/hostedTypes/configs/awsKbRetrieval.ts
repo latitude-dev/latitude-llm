@@ -4,9 +4,6 @@ import { npxCommand } from '../utils'
 export default {
   description:
     'Integration for retrieving information from the AWS Knowledge Base using the Bedrock Agent Runtime.',
-  command: npxCommand({
-    package: '@modelcontextprotocol/server-aws-kb-retrieval',
-  }),
   env: {
     AWS_ACCESS_KEY_ID: {
       label: 'AWS Access Key ID',
@@ -27,4 +24,8 @@ export default {
       required: true,
     },
   },
+  commandFn: () =>
+    npxCommand({
+      package: '@modelcontextprotocol/server-aws-kb-retrieval',
+    }),
 } as HostedIntegrationConfig

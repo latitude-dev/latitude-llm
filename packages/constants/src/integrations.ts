@@ -17,7 +17,6 @@ export enum HostedIntegrationType {
   Telegram = 'telegram',
   Tinybird = 'tinybird',
   Perplexity = 'perplexity',
-
   AwsKbRetrieval = 'aws_kb_retrieval',
   BraveSearch = 'brave_search',
   EverArt = 'ever_art',
@@ -29,13 +28,10 @@ export enum HostedIntegrationType {
   Puppeteer = 'puppeteer',
   SequentialThinking = 'sequential_thinking',
   Time = 'time',
+  Postgres = 'postgres',
 
   // GoogleDrive = 'google_drive', // env vars not supported, requires auth file
-  // Postgres = 'postgres', // Uses a custom parameter in the command instead of env vars
-  // Redis = 'redis', // Uses a custom parameter in the command instead of env vars
-  // SQLite = 'sqlite', // Uses a custom parameter in the command instead of env vars
-
-  // GoogleWorkspace = 'google_workspace', // env vars not supported (?)
+  // GoogleWorkspace = 'google_workspace', // env vars not supported, requires auth file
 
   // Wordpress = 'wordpress', // Not on OpenTools
   // Discord = 'discord', // Not on OpenTools

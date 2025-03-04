@@ -23,10 +23,11 @@ import PUPPETEER_MCP_CONFIG from './configs/puppeteer'
 import SENTRY_MCP_CONFIG from './configs/sentry'
 import SEQUENTIAL_THINKING_MCP_CONFIG from './configs/sequentialThinking'
 import TIME_MCP_CONFIG from './configs/time'
+import POSTGRES_MCP_CONFIG from './configs/postgres'
 
 export const HOSTED_MCP_CONFIGS: Record<
   HostedIntegrationType,
-  HostedIntegrationConfig
+  HostedIntegrationConfig<any>
 > = {
   [HostedIntegrationType.Slack]: SLACK_MCP_CONFIG,
   [HostedIntegrationType.Stripe]: STRIPE_MCP_CONFIG,
@@ -51,4 +52,5 @@ export const HOSTED_MCP_CONFIGS: Record<
   [HostedIntegrationType.Sentry]: SENTRY_MCP_CONFIG,
   [HostedIntegrationType.SequentialThinking]: SEQUENTIAL_THINKING_MCP_CONFIG,
   [HostedIntegrationType.Time]: TIME_MCP_CONFIG,
+  [HostedIntegrationType.Postgres]: POSTGRES_MCP_CONFIG,
 }

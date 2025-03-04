@@ -4,7 +4,7 @@ import { npxCommand } from '../utils'
 export default {
   description:
     'Tools for the Notion API, enabling your AI to interact with Notion workspaces.',
-  command: npxCommand({ package: 'airtable-mcp-server' }),
+  commandFn: () => npxCommand({ package: 'airtable-mcp-server' }),
   env: {
     AIRTABLE_API_KEY: {
       label: 'Airtable API Token',

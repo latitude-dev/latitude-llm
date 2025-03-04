@@ -3,10 +3,11 @@ import { uvxCommand } from '../utils'
 
 export default {
   description: `A bridge between the Telegram API and AI assistants, providing read-only access to Telegram data like dialogs and messages.`,
-  command: uvxCommand({
-    name: 'mcp-tinybird',
-    repository: 'https://github.com/tinybirdco/mcp-tinybird.git',
-  }),
+  commandFn: () =>
+    uvxCommand({
+      name: 'mcp-tinybird',
+      repository: 'https://github.com/tinybirdco/mcp-tinybird.git',
+    }),
   env: {
     TB_API_URL: {
       label: 'Tinybird API URL',
