@@ -1,8 +1,18 @@
+import {
+  LogSources,
+  NON_LIVE_EVALUABLE_LOG_SOURCES,
+} from '@latitude-data/constants'
 import { findWorkspaceFromDocumentLog } from '../../data-access'
 import { setupJobs } from '../../jobs'
 import { NotFoundError } from '../../lib'
 import { EvaluationsRepository } from '../../repositories'
 import { DocumentLogCreatedEvent } from '../events'
+
+export function isLiveEvaluableSource(source: LogSources | null | undefined) {
+  if (!source) return true
+
+  return !NON_LIVE_EVALUABLE_LOG_SOURCES.includes(source)
+}
 
 export const runLiveEvaluationsJob = async ({
   data: event,
@@ -10,6 +20,8 @@ export const runLiveEvaluationsJob = async ({
   data: DocumentLogCreatedEvent
 }) => {
   const { data: documentLog } = event
+  if (!isLiveEvaluableSource(documentLog.source)) return
+
   const workspace = await findWorkspaceFromDocumentLog(documentLog)
   if (!workspace) {
     throw new NotFoundError('Workspace not found')

@@ -111,7 +111,10 @@ export const ROUTES = {
     preview: (id: string | number) => `/datasets/preview/${id}`,
   },
   datasetsV2: {
-    root: '/datasets-v2',
+    root: ({ modal }: { modal?: 'new' } = {}) => {
+      const root = '/datasets-v2'
+      return modal ? `${root}?modal=${modal}` : root
+    },
     generate: {
       root: `/datasets-v2/generate`,
     },

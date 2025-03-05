@@ -1,6 +1,10 @@
 import { useEffect } from 'react'
 
-import { Dataset, DocumentVersion } from '@latitude-data/core/browser'
+import {
+  Dataset,
+  DatasetV2,
+  DocumentVersion,
+} from '@latitude-data/core/browser'
 import { RunBatchParameters } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/evaluations/[evaluationId]/_components/Actions/CreateBatchEvaluationModal/useRunBatch'
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
 
@@ -21,7 +25,7 @@ export function useMappedParametersFromLocalStorage({
   document: DocumentVersion
   commitVersionUuid: string
   parametersList: string[]
-  selectedDataset: Dataset | null | undefined
+  selectedDataset: DatasetV2 | Dataset | null | undefined
   onDatasetReady: (_args: { mapped: RunBatchParameters }) => void
 }) {
   const {

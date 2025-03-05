@@ -1,7 +1,12 @@
 import { useMemo } from 'react'
 import { isNumber } from 'lodash-es'
 
-import { Dataset, DocumentVersion } from '@latitude-data/core/browser'
+import {
+  Dataset,
+  DatasetV2,
+  DatasetVersion,
+  DocumentVersion,
+} from '@latitude-data/core/browser'
 import {
   FormFieldGroup,
   Icon,
@@ -10,6 +15,7 @@ import {
   ReactStateDispatch,
   Select,
   SelectOption,
+  Skeleton,
   SwitchInput,
   Text,
 } from '@latitude-data/web-ui'
@@ -35,12 +41,14 @@ function LineRangeInputs({
   disabled,
   fromDefaultValue,
   toDefaultValue,
+  onChangeFromLine,
   onChangeToLine,
   max,
 }: {
   disabled: boolean
   fromDefaultValue: number | undefined
   toDefaultValue: number | undefined
+  onChangeFromLine: ReactStateDispatch<number | undefined>
   onChangeToLine: ReactStateDispatch<number | undefined>
   max: number | undefined
 }) {
@@ -53,16 +61,19 @@ function LineRangeInputs({
         label='From line'
         defaultValue={fromDefaultValue}
         placeholder='Starting line'
+        onChange={(e) => {
+          onChangeFromLine(Number(e.target.value))
+        }}
         min={1}
         max={toDefaultValue}
       />
       <Input
         disabled={disabled}
         type='number'
-        name='fromLine'
+        name='toLine'
         label='To line'
         placeholder='Ending line'
-        defaultValue={toDefaultValue}
+        value={toDefaultValue}
         onChange={(e) => {
           onChangeToLine(Number(e.target.value))
         }}
@@ -74,6 +85,7 @@ function LineRangeInputs({
 }
 
 export default function DatasetForm({
+  datasetVersion,
   document,
   onParametersChange,
   parameters,
@@ -82,6 +94,7 @@ export default function DatasetForm({
   wantAllLines,
   fromLine,
   toLine,
+  onChangeFromLine,
   onChangeToLine,
   datasets,
   isLoadingDatasets,
@@ -89,7 +102,9 @@ export default function DatasetForm({
   onToggleAllLines,
   onSelectDataset,
   errors,
+  maxLineCount,
 }: {
+  datasetVersion: DatasetVersion
   document: DocumentVersion
   onParametersChange: (param: string) => (header: string) => void
   parameters: RunBatchParameters
@@ -97,14 +112,16 @@ export default function DatasetForm({
   wantAllLines: boolean
   fromLine: number | undefined
   toLine: number | undefined
+  onChangeFromLine: ReactStateDispatch<number | undefined>
   onChangeToLine: ReactStateDispatch<number | undefined>
   headers: SelectOption<string>[]
-  selectedDataset: Dataset | null
-  datasets: Dataset[]
+  selectedDataset: Dataset | DatasetV2 | null
+  datasets: Dataset[] | DatasetV2[]
   isLoadingDatasets: boolean
   onSelectDataset: (value: number) => void
   onToggleAllLines: (checked: boolean) => void
   errors: Record<string, string[] | undefined> | undefined
+  maxLineCount: number | undefined
 }) {
   const filteredHeaders = useMemo(
     () => headers.filter((h) => h.value !== ''),
@@ -152,37 +169,49 @@ export default function DatasetForm({
       defaultValue={selectedDataset?.id}
     />
   )
+  const uploadRoute =
+    datasetVersion === DatasetVersion.V1
+      ? ROUTES.datasets.new.root
+      : ROUTES.datasetsV2.root({ modal: 'new' })
+  const generateRoute =
+    datasetVersion === DatasetVersion.V1
+      ? ROUTES.datasets.generate.root
+      : ROUTES.datasetsV2.generate.root
 
   return (
     <>
       <NumeredList>
         <NumeredList.Item title='Pick dataset'>
-          <div className='flex flex-row items-center gap-4'>
-            {!noDatasets && (
-              <div className='w-1/2'>{selectDatasetComponent}</div>
-            )}
-            <div className='flex flex-row items-center gap-2'>
-              {noDatasets && (
-                <>
-                  <Link
-                    className='flex flex-row items-center gap-1 hover:underline'
-                    href={ROUTES.datasets.new.root}
-                  >
-                    <Text.H5 color='primary'>Upload dataset</Text.H5>
-                    <Icon color='primary' name='externalLink' />
-                  </Link>
-                  <Text.H6M>or</Text.H6M>
-                </>
+          {isLoadingDatasets ? (
+            <Skeleton height='h2' className='w-1/2' />
+          ) : (
+            <div className='flex flex-row items-center gap-4'>
+              {!noDatasets && (
+                <div className='w-1/2'>{selectDatasetComponent}</div>
               )}
-              <Link
-                className='flex flex-row items-center gap-1 hover:underline'
-                href={`${ROUTES.datasets.generate.root}?${urlParameter.toString()}`}
-              >
-                <Text.H5 color='primary'>Generate dataset</Text.H5>
-                <Icon color='primary' name='externalLink' />
-              </Link>
+              <div className='flex flex-row items-center gap-2'>
+                {noDatasets && (
+                  <>
+                    <Link
+                      className='flex flex-row items-center gap-1 hover:underline'
+                      href={uploadRoute}
+                    >
+                      <Text.H5 color='primary'>Upload dataset</Text.H5>
+                      <Icon color='primary' name='externalLink' />
+                    </Link>
+                    <Text.H6M>or</Text.H6M>
+                  </>
+                )}
+                <Link
+                  className='flex flex-row items-center gap-1 hover:underline'
+                  href={`${generateRoute}?${urlParameter.toString()}`}
+                >
+                  <Text.H5 color='primary'>Generate dataset</Text.H5>
+                  <Icon color='primary' name='externalLink' />
+                </Link>
+              </div>
             </div>
-          </div>
+          )}
         </NumeredList.Item>
         <NumeredList.Item title='Select lines from dataset' width='w-1/2'>
           {selectedDataset ? (
@@ -191,8 +220,9 @@ export default function DatasetForm({
                 disabled={wantAllLines}
                 fromDefaultValue={fromLine}
                 toDefaultValue={toLine}
+                onChangeFromLine={onChangeFromLine}
                 onChangeToLine={onChangeToLine}
-                max={selectedDataset?.fileMetadata?.rowCount}
+                max={maxLineCount}
               />
               <SwitchInput
                 name='wantAllLines'

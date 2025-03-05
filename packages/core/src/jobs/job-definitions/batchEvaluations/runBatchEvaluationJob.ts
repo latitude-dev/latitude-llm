@@ -5,6 +5,8 @@ import { Job } from 'bullmq'
 import { setupJobs } from '../..'
 import {
   Dataset,
+  DatasetV2,
+  DatasetVersion,
   DocumentVersion,
   EvaluationDto,
   User,
@@ -16,12 +18,43 @@ import { CommitsRepository } from '../../../repositories'
 import { previewDataset } from '../../../services/datasets/preview'
 import { WebsocketClient } from '../../../websockets/workers'
 import { ProgressTracker } from '../../utils/progressTracker'
+import { getRowsFromRange } from '../../../services/datasetRows/getRowsFromRange'
 
-export type RunBatchEvaluationJobParams = {
+async function getDatasetRows<V extends DatasetVersion>({
+  dataset: ds,
+  datasetVersion,
+  fromLine: from,
+  toLine: to,
+}: {
+  dataset: V extends 'v1' ? Dataset : DatasetV2
+  datasetVersion: V
+  fromLine: number | undefined
+  toLine: number | undefined
+}) {
+  const fromLine = from ? Math.abs(from) : 1
+
+  // DEPRECATED: Used in old datasets
+  if (datasetVersion === 'v1') {
+    const dataset = ds as Dataset
+    const fileMetadata = dataset.fileMetadata
+    const result = await previewDataset({
+      dataset,
+      fromLine,
+      toLine: to || fileMetadata.rowCount,
+    }).then((r) => r.unwrap())
+
+    return { rows: result.rows }
+  }
+
+  return getRowsFromRange({ dataset: ds as DatasetV2, fromLine, toLine: to })
+}
+
+export type RunBatchEvaluationJobParams<V extends DatasetVersion> = {
   workspace: Workspace
   user: User
   evaluation: EvaluationDto
-  dataset: Dataset
+  dataset: V extends 'v1' ? Dataset : DatasetV2
+  datasetVersion: V
   document: DocumentVersion
   commitUuid: string
   projectId: number
@@ -32,13 +65,14 @@ export type RunBatchEvaluationJobParams = {
 }
 
 export const runBatchEvaluationJob = async (
-  job: Job<RunBatchEvaluationJobParams>,
+  job: Job<RunBatchEvaluationJobParams<DatasetVersion>>,
 ) => {
   const {
     workspace,
     user,
     evaluation,
     dataset,
+    datasetVersion,
     document,
     projectId,
     commitUuid,
@@ -51,7 +85,6 @@ export const runBatchEvaluationJob = async (
   const commit = await new CommitsRepository(workspace.id)
     .getCommitByUuid({ projectId, uuid: commitUuid })
     .then((r) => r.unwrap())
-  const fileMetadata = dataset.fileMetadata
 
   publisher.publishLater({
     type: 'batchEvaluationRun',
@@ -62,14 +95,12 @@ export const runBatchEvaluationJob = async (
     },
   })
 
-  // TODO: use streaming instead of this service in order to avoid loading the
-  // whole dataset in memory
-  const result = await previewDataset({
+  const result = await getDatasetRows({
     dataset,
+    datasetVersion,
     fromLine,
-    toLine: toLine || fileMetadata.rowCount,
-  }).then((r) => r.unwrap())
-
+    toLine,
+  })
   const { rows } = result
 
   const parameters = rows.map((row) => {

@@ -152,7 +152,7 @@ export function GenerateDatasetModal({
     <Modal
       open
       size='large'
-      onOpenChange={(open) => !open && navigate.push(ROUTES.datasetsV2.root)}
+      onOpenChange={(open) => !open && navigate.push(ROUTES.datasetsV2.root())}
       title='Generate new dataset'
       description='Generate a dataset of parameters using AI. Datasets can be used to run batch evaluations over prompts.'
       footer={

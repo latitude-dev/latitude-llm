@@ -7,8 +7,14 @@ import Link from 'next/link'
 import { ROUTES } from '$/services/routes'
 import { NewDatasetModal } from './NewDatasetModal'
 
-export function RootDatasetHeader({ isCloud }: { isCloud: boolean }) {
-  const newDataset = useToggleModal()
+export function RootDatasetHeader({
+  isCloud,
+  openNewDatasetModal,
+}: {
+  isCloud: boolean
+  openNewDatasetModal: boolean
+}) {
+  const newDataset = useToggleModal({ initialState: openNewDatasetModal })
   return (
     <div className='flex flex-row items-center gap-2'>
       {isCloud ? (

@@ -20,7 +20,7 @@ export function AppTabs() {
       ...MAIN_NAV_LINKS,
       {
         label: 'datasets (NEW)',
-        value: ROUTES.datasetsV2.root as string,
+        value: ROUTES.datasetsV2.root(),
       },
     ]
   }, [hasNewDatasets, isLoading])

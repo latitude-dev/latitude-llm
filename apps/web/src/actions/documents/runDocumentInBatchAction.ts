@@ -32,6 +32,7 @@ export const runDocumentInBatchAction = withDataset
                   prompt: ctx.document.content,
                 })
           const docParams = metadata.parameters
+          // @ts-expect-error - dataset V2 are not send here yet
           const headers = ctx.dataset.fileMetadata.headers
           const paramKeys = Object.keys(parameters)
           Array.from(docParams).forEach((key) => {
