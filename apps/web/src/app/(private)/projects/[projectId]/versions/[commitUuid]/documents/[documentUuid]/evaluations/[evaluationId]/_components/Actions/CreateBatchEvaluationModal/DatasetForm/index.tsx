@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { isNumber } from 'lodash-es'
 
-import { Dataset, DocumentVersion } from '@latitude-data/core/browser'
+import { Dataset, DatasetV2, DocumentVersion } from '@latitude-data/core/browser'
 import {
   FormFieldGroup,
   Icon,
@@ -89,6 +89,7 @@ export default function DatasetForm({
   onToggleAllLines,
   onSelectDataset,
   errors,
+  maxLineCount,
 }: {
   document: DocumentVersion
   onParametersChange: (param: string) => (header: string) => void
@@ -99,12 +100,13 @@ export default function DatasetForm({
   toLine: number | undefined
   onChangeToLine: ReactStateDispatch<number | undefined>
   headers: SelectOption<string>[]
-  selectedDataset: Dataset | null
-  datasets: Dataset[]
+  selectedDataset: Dataset | DatasetV2 | null
+  datasets: Dataset[] | DatasetV2[]
   isLoadingDatasets: boolean
   onSelectDataset: (value: number) => void
   onToggleAllLines: (checked: boolean) => void
   errors: Record<string, string[] | undefined> | undefined
+  maxLineCount?: number
 }) {
   const filteredHeaders = useMemo(
     () => headers.filter((h) => h.value !== ''),
@@ -192,7 +194,7 @@ export default function DatasetForm({
                 fromDefaultValue={fromLine}
                 toDefaultValue={toLine}
                 onChangeToLine={onChangeToLine}
-                max={selectedDataset?.fileMetadata?.rowCount}
+                max={maxLineCount}
               />
               <SwitchInput
                 name='wantAllLines'

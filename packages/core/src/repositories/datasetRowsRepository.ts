@@ -1,4 +1,4 @@
-import { eq, and, getTableColumns } from 'drizzle-orm'
+import { eq, and, getTableColumns, count } from 'drizzle-orm'
 
 import { DatasetRow, DEFAULT_PAGINATION_SIZE } from '../browser'
 import { datasetRows } from '../schema'
@@ -36,5 +36,14 @@ export class DatasetRowsRepository extends Repository<DatasetRow> {
       .where(and(this.scopeFilter, eq(datasetRows.datasetId, datasetId)))
       .limit(parseInt(pageSize))
       .offset(offset)
+  }
+
+  getCountByDataset(datasetId: number) {
+    return this.db
+      .select({
+        count: count(datasetRows.id),
+      })
+      .from(datasetRows)
+      .where(and(this.scopeFilter, eq(datasetRows.datasetId, datasetId)))
   }
 }

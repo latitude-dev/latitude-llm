@@ -264,4 +264,4 @@ export type EvaluationResultV2<
 
 export const EVALUATION_SCORE_SCALE = 100
 
-export const DEFAULT_EVALUATION_LABEL_NAME = 'expected_output'
+export const DEFAULT_DATASET_LABEL = 'expected_output'
