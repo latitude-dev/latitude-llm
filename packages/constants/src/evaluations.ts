@@ -1,3 +1,5 @@
+import { z } from 'zod'
+
 type BaseEvaluationConfiguration = {}
 type BaseEvaluationResultMetadata = {}
 
@@ -6,6 +8,8 @@ export enum EvaluationType {
   Llm = 'llm',
   Human = 'human',
 }
+
+export const EvaluationTypeSchema = z.nativeEnum(EvaluationType)
 
 /* RULE EVALUATIONS */
 
@@ -173,23 +177,31 @@ export type EvaluationMetric<T extends EvaluationType = EvaluationType> =
   T extends EvaluationType.Human ? HumanEvaluationMetric :
   never;
 
+export const EvaluationMetricSchema = z.union([
+  z.nativeEnum(RuleEvaluationMetric),
+  z.nativeEnum(LlmEvaluationMetric),
+  z.nativeEnum(HumanEvaluationMetric),
+])
+
 // prettier-ignore
-export type EvaluationConfiguration<T extends EvaluationMetric = EvaluationMetric> =
+export type EvaluationConfiguration<M extends EvaluationMetric = EvaluationMetric> =
   // Rule Evaluations
-  T extends RuleEvaluationMetric.ExactMatch ? RuleEvaluationExactMatchConfiguration :
-  T extends RuleEvaluationMetric.RegularExpression ? RuleEvaluationRegularExpressionConfiguration :
-  T extends RuleEvaluationMetric.LengthCount ? RuleEvaluationLengthCountConfiguration :
-  T extends RuleEvaluationMetric.LexicalOverlap ? RuleEvaluationLexicalOverlapConfiguration :
-  T extends RuleEvaluationMetric.SemanticSimilarity ? RuleEvaluationSemanticSimilarityConfiguration :
+  M extends RuleEvaluationMetric.ExactMatch ? RuleEvaluationExactMatchConfiguration :
+  M extends RuleEvaluationMetric.RegularExpression ? RuleEvaluationRegularExpressionConfiguration :
+  M extends RuleEvaluationMetric.LengthCount ? RuleEvaluationLengthCountConfiguration :
+  M extends RuleEvaluationMetric.LexicalOverlap ? RuleEvaluationLexicalOverlapConfiguration :
+  M extends RuleEvaluationMetric.SemanticSimilarity ? RuleEvaluationSemanticSimilarityConfiguration :
   // Llm Evaluations
-  T extends LlmEvaluationMetric.Binary ? LlmEvaluationBinaryConfiguration :
-  T extends LlmEvaluationMetric.Rating ? LlmEvaluationRatingConfiguration :
-  T extends LlmEvaluationMetric.Comparison ? LlmEvaluationComparisonConfiguration :
+  M extends LlmEvaluationMetric.Binary ? LlmEvaluationBinaryConfiguration :
+  M extends LlmEvaluationMetric.Rating ? LlmEvaluationRatingConfiguration :
+  M extends LlmEvaluationMetric.Comparison ? LlmEvaluationComparisonConfiguration :
   // Human Evaluations
-  T extends HumanEvaluationMetric.Binary ? HumanEvaluationBinaryConfiguration :
-  T extends HumanEvaluationMetric.Rating ? HumanEvaluationRatingConfiguration :
-  T extends HumanEvaluationMetric.Comparison ? HumanEvaluationComparisonConfiguration :
+  M extends HumanEvaluationMetric.Binary ? HumanEvaluationBinaryConfiguration :
+  M extends HumanEvaluationMetric.Rating ? HumanEvaluationRatingConfiguration :
+  M extends HumanEvaluationMetric.Comparison ? HumanEvaluationComparisonConfiguration :
   never;
+
+export const EvaluationConfigurationSchema = z.custom<EvaluationConfiguration>()
 
 export enum EvaluationCondition {
   Less = 'less',
@@ -200,23 +212,28 @@ export enum EvaluationCondition {
   GreaterEqual = 'greater_equal',
 }
 
+export const EvaluationConditionSchema = z.nativeEnum(EvaluationCondition)
+
 // prettier-ignore
-export type EvaluationResultMetadata<T extends EvaluationMetric = EvaluationMetric> =
+export type EvaluationResultMetadata<M extends EvaluationMetric = EvaluationMetric> =
   // Rule Evaluations
-  T extends RuleEvaluationMetric.ExactMatch ? RuleEvaluationExactMatchResultMetadata :
-  T extends RuleEvaluationMetric.RegularExpression ? RuleEvaluationRegularExpressionResultMetadata :
-  T extends RuleEvaluationMetric.LengthCount ? RuleEvaluationLengthCountResultMetadata :
-  T extends RuleEvaluationMetric.LexicalOverlap ? RuleEvaluationLexicalOverlapResultMetadata :
-  T extends RuleEvaluationMetric.SemanticSimilarity ? RuleEvaluationSemanticSimilarityResultMetadata :
+  M extends RuleEvaluationMetric.ExactMatch ? RuleEvaluationExactMatchResultMetadata :
+  M extends RuleEvaluationMetric.RegularExpression ? RuleEvaluationRegularExpressionResultMetadata :
+  M extends RuleEvaluationMetric.LengthCount ? RuleEvaluationLengthCountResultMetadata :
+  M extends RuleEvaluationMetric.LexicalOverlap ? RuleEvaluationLexicalOverlapResultMetadata :
+  M extends RuleEvaluationMetric.SemanticSimilarity ? RuleEvaluationSemanticSimilarityResultMetadata :
   // Llm Evaluations
-  T extends LlmEvaluationMetric.Binary ? LlmEvaluationBinaryResultMetadata :
-  T extends LlmEvaluationMetric.Rating ? LlmEvaluationRatingResultMetadata :
-  T extends LlmEvaluationMetric.Comparison ? LlmEvaluationComparisonResultMetadata :
+  M extends LlmEvaluationMetric.Binary ? LlmEvaluationBinaryResultMetadata :
+  M extends LlmEvaluationMetric.Rating ? LlmEvaluationRatingResultMetadata :
+  M extends LlmEvaluationMetric.Comparison ? LlmEvaluationComparisonResultMetadata :
   // Human Evaluations
-  T extends HumanEvaluationMetric.Binary ? HumanEvaluationBinaryResultMetadata :
-  T extends HumanEvaluationMetric.Rating ? HumanEvaluationRatingResultMetadata :
-  T extends HumanEvaluationMetric.Comparison ? HumanEvaluationComparisonResultMetadata :
+  M extends HumanEvaluationMetric.Binary ? HumanEvaluationBinaryResultMetadata :
+  M extends HumanEvaluationMetric.Rating ? HumanEvaluationRatingResultMetadata :
+  M extends HumanEvaluationMetric.Comparison ? HumanEvaluationComparisonResultMetadata :
   never;
+
+// prettier-ignore
+export const EvaluationResultMetadataSchema = z.custom<EvaluationResultMetadata>()
 
 export type EvaluationV2<
   T extends EvaluationType = EvaluationType,
@@ -261,6 +278,42 @@ export type EvaluationResultV2<
   createdAt: Date
   updatedAt: Date
 }
+
+export type EvaluationSettings<
+  T extends EvaluationType = EvaluationType,
+  M extends EvaluationMetric<T> = EvaluationMetric<T>,
+  C extends EvaluationConfiguration<M> = EvaluationConfiguration<M>,
+> = Pick<
+  EvaluationV2<T, M, C>,
+  | 'name'
+  | 'description'
+  | 'type'
+  | 'metric'
+  | 'condition'
+  | 'threshold'
+  | 'configuration'
+>
+
+export const EvaluationSettingsSchema = z.object({
+  name: z.string(),
+  description: z.string(),
+  type: EvaluationTypeSchema,
+  metric: EvaluationMetricSchema,
+  condition: EvaluationConditionSchema,
+  threshold: z.number(),
+  configuration: EvaluationConfigurationSchema,
+})
+
+export type EvaluationOptions = Pick<
+  EvaluationV2,
+  'live' | 'enableSuggestions' | 'autoApplySuggestions'
+>
+
+export const EvaluationOptionsSchema = z.object({
+  live: z.boolean().nullable(),
+  enableSuggestions: z.boolean().nullable(),
+  autoApplySuggestions: z.boolean().nullable(),
+})
 
 export const EVALUATION_SCORE_SCALE = 100
 

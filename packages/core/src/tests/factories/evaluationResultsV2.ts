@@ -37,10 +37,10 @@ export async function createEvaluationResultV2<T extends EvaluationType, M exten
   args: CreateEvaluationResultV2Args<T, M>
 ): Promise<EvaluationResultV2<T, M>>
 
-// prettier-ignore
-export async function createEvaluationResultV2<T extends EvaluationType, M extends EvaluationMetric<T>>(
-  args: CreateEvaluationResultV2Args<T, M>
-): Promise<EvaluationResultV2<T, M>> {
+export async function createEvaluationResultV2<
+  T extends EvaluationType,
+  M extends EvaluationMetric<T>,
+>(args: CreateEvaluationResultV2Args<T, M>): Promise<EvaluationResultV2<T, M>> {
   // TODO: Use create service
 
   const {

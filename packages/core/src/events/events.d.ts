@@ -10,6 +10,8 @@ import type {
   Evaluation,
   EvaluationDto,
   EvaluationResultDto,
+  EvaluationResultV2,
+  EvaluationV2,
   LogSources,
   MagicLinkToken,
   Membership,
@@ -66,6 +68,9 @@ export type Events =
   | 'copilotSuggestionApplied'
   | 'evaluationResultUpdated'
   | 'bulkCreateTracesAndSpans'
+  | 'evaluationV2Created'
+  | 'evaluationV2Ran'
+  | 'evaluationResultV2Created'
 
 export type LatitudeEventGeneric<
   U extends Events,
@@ -473,6 +478,32 @@ export type BulkCreateTracesAndSpansEvent = LatitudeEventGeneric<
   }
 >
 
+export type EvaluationV2CreatedEvent = LatitudeEventGeneric<
+  'evaluationV2Created',
+  {
+    workspaceId: number
+    evaluation: EvaluationV2
+  }
+>
+
+export type EvaluationV2RanEvent = LatitudeEventGeneric<
+  'evaluationV2Ran',
+  {
+    workspaceId: number
+    evaluation: EvaluationV2
+    commit: Commit
+    providerLog: ProviderLog
+  }
+>
+
+export type EvaluationResultV2CreatedEvent = LatitudeEventGeneric<
+  'evaluationResultV2Created',
+  {
+    workspaceId: number
+    result: EvaluationResultV2
+  }
+>
+
 export type LatitudeEvent =
   | MembershipCreatedEvent
   | UserCreatedEvent
@@ -513,6 +544,9 @@ export type LatitudeEvent =
   | CopilotSuggestionApplied
   | EvaluationResultUpdatedEvent
   | BulkCreateTracesAndSpansEvent
+  | EvaluationV2CreatedEvent
+  | EvaluationV2RanEvent
+  | EvaluationResultV2CreatedEvent
 
 export interface IEventsHandlers {
   magicLinkTokenCreated: EventHandler<MagicLinkTokenCreated>[]
@@ -554,4 +588,7 @@ export interface IEventsHandlers {
   copilotSuggestionApplied: EventHandler<CopilotSuggestionApplied>[]
   evaluationResultUpdated: EventHandler<EvaluationResultUpdatedEvent>[]
   bulkCreateTracesAndSpans: EventHandler<BulkCreateTracesAndSpansEvent>[]
+  evaluationV2Created: EventHandler<EvaluationV2CreatedEvent>[]
+  evaluationV2Ran: EventHandler<EvaluationV2RanEvent>[]
+  evaluationResultV2Created: EventHandler<EvaluationResultV2CreatedEvent>[]
 }
