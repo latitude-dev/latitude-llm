@@ -13,6 +13,8 @@ import {
   withDataset,
 } from '../evaluations/_helpers'
 
+// FIXME: Quick fix this to default to Dataset V1. I'll do the right changes
+// in another PR.
 export const runDocumentInBatchAction = withDataset
   .createServerAction()
   .input(async ({ ctx }) =>

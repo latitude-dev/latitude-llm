@@ -38,12 +38,16 @@ export class DatasetRowsRepository extends Repository<DatasetRow> {
       .offset(offset)
   }
 
-  getCountByDataset(datasetId: number) {
-    return this.db
+  async getCountByDataset(datasetId: number) {
+    const result = await this.db
       .select({
         count: count(datasetRows.id),
       })
       .from(datasetRows)
       .where(and(this.scopeFilter, eq(datasetRows.datasetId, datasetId)))
+
+    if (!result[0]) return 0
+
+    return result[0].count
   }
 }
