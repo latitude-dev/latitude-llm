@@ -925,6 +925,13 @@
       "when": 1741074174024,
       "tag": "0132_oval_raider",
       "breakpoints": true
+    },
+    {
+      "idx": 133,
+      "version": "7",
+      "when": 1741105430670,
+      "tag": "0133_illegal_shatterstar",
+      "breakpoints": true
     }
   ]
 }
