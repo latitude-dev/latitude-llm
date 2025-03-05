@@ -104,10 +104,6 @@ export const HOSTED_INTEGRATION_TYPE_OPTIONS: Record<
     label: 'Google Maps',
     icon: 'mapPin',
   },
-  [HostedIntegrationType.Memory]: {
-    label: 'Memory',
-    icon: 'database',
-  },
   [HostedIntegrationType.Sentry]: {
     label: 'Sentry',
     icon: 'sentry',
@@ -115,10 +111,6 @@ export const HOSTED_INTEGRATION_TYPE_OPTIONS: Record<
   [HostedIntegrationType.Puppeteer]: {
     label: 'Puppeteer',
     icon: 'appWindow',
-  },
-  [HostedIntegrationType.SequentialThinking]: {
-    label: 'Sequential Thinking',
-    icon: 'brain',
   },
   [HostedIntegrationType.Time]: {
     label: 'Time',

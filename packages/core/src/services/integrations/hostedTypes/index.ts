@@ -18,10 +18,8 @@ import EVER_ART_MCP_CONFIG from './configs/everart'
 import FETCH_MCP_CONFIG from './configs/fetch'
 import GITLAB_MCP_CONFIG from './configs/gitlab'
 import GOOGLE_MAPS_MCP_CONFIG from './configs/googleMaps'
-import MEMORY_MCP_CONFIG from './configs/memory'
 import PUPPETEER_MCP_CONFIG from './configs/puppeteer'
 import SENTRY_MCP_CONFIG from './configs/sentry'
-import SEQUENTIAL_THINKING_MCP_CONFIG from './configs/sequentialThinking'
 import TIME_MCP_CONFIG from './configs/time'
 
 export const HOSTED_MCP_CONFIGS: Record<
@@ -46,9 +44,7 @@ export const HOSTED_MCP_CONFIGS: Record<
   [HostedIntegrationType.Fetch]: FETCH_MCP_CONFIG,
   [HostedIntegrationType.GitLab]: GITLAB_MCP_CONFIG,
   [HostedIntegrationType.GoogleMaps]: GOOGLE_MAPS_MCP_CONFIG,
-  [HostedIntegrationType.Memory]: MEMORY_MCP_CONFIG,
   [HostedIntegrationType.Puppeteer]: PUPPETEER_MCP_CONFIG,
   [HostedIntegrationType.Sentry]: SENTRY_MCP_CONFIG,
-  [HostedIntegrationType.SequentialThinking]: SEQUENTIAL_THINKING_MCP_CONFIG,
   [HostedIntegrationType.Time]: TIME_MCP_CONFIG,
 }

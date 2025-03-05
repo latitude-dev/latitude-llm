@@ -24,10 +24,11 @@ export enum HostedIntegrationType {
   Fetch = 'fetch',
   GitLab = 'gitlab',
   GoogleMaps = 'google_maps',
-  Memory = 'memory',
   Sentry = 'sentry',
   Puppeteer = 'puppeteer',
-  SequentialThinking = 'sequential_thinking',
+
+  // Memory = 'memory', // short-lived file storage, useless
+  // SequentialThinking = 'sequential_thinking', // useless
   Time = 'time',
 
   // GoogleDrive = 'google_drive', // env vars not supported, requires auth file
