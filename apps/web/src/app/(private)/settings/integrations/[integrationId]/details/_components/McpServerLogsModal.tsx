@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   Modal,
@@ -12,8 +12,6 @@ import {
 import { ROUTES } from '$/services/routes'
 import useMcpLogs from '$/stores/mcpLogs'
 import useIntegrations from '$/stores/integrations'
-import { IntegrationType } from '@latitude-data/constants'
-import { useMcpServer } from '$/stores/mcpServer'
 import { McpServerStatus } from './McpServerStatus'
 
 interface McpServerLogsModalProps {
@@ -27,14 +25,6 @@ export function McpServerLogsModal({ integrationId }: McpServerLogsModalProps) {
   // Fetch integration data
   const { data: integrations } = useIntegrations()
   const integration = integrations.find((i) => i.id === integrationId)
-  const { data: mcpServer } = useMcpServer(integration?.mcpServerId?.toString())
-
-  // Redirect if integration not found or not an MCP server
-  useEffect(() => {
-    if (integration && integration.type !== IntegrationType.HostedMCP) {
-      router.push(ROUTES.settings.root)
-    }
-  }, [integration, router])
 
   // Get the MCP server ID from the integration
   const mcpServerId = integration?.mcpServerId?.toString() || null
@@ -54,6 +44,7 @@ export function McpServerLogsModal({ integrationId }: McpServerLogsModalProps) {
 
   return (
     <Modal
+      dismissible
       open={isOpen}
       onOpenChange={(open: boolean) => {
         if (!open) handleClose()
@@ -64,7 +55,7 @@ export function McpServerLogsModal({ integrationId }: McpServerLogsModalProps) {
       footer={<CloseTrigger />}
     >
       <div className='flex flex-col gap-4'>
-        <McpServerStatus mcpServer={mcpServer} />
+        <McpServerStatus mcpServerId={integration?.mcpServerId || undefined} />
         {isLoading && (
           <div className='flex justify-center items-center h-64'>
             <AnimatedDots />
