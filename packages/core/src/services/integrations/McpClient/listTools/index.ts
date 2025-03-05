@@ -1,8 +1,10 @@
 import { McpTool } from '@latitude-data/constants'
-import { IntegrationDto } from '../../../browser'
-import { LatitudeError, PromisedResult, Result } from '../../../lib'
-import { getMcpClient } from './getMcpClient'
-import { touchIntegration } from '../touch'
+import { IntegrationDto } from '../../../../browser'
+import { LatitudeError, PromisedResult, Result } from '../../../../lib'
+import { getMcpClient } from '../getMcpClient'
+import { touchIntegration } from '../../touch'
+import { fixToolSchema } from './fixToolSchema'
+import { JSONSchema7 } from 'json-schema'
 
 export async function listTools(
   integration: IntegrationDto,
@@ -21,7 +23,12 @@ export async function listTools(
       return Result.error(new LatitudeError(touchResult.error.message))
     }
 
-    return Result.ok(tools as McpTool[])
+    const fixedTools = tools.map((tool) => ({
+      ...tool,
+      inputSchema: fixToolSchema(tool.inputSchema as JSONSchema7),
+    }))
+
+    return Result.ok(fixedTools as McpTool[])
   } catch (err) {
     const error = err as Error
     return Result.error(
