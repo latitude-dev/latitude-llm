@@ -16,4 +16,5 @@ export default {
       required: true,
     },
   },
+  envSource: 'https://www.perplexity.ai/settings/api',
 } as HostedIntegrationConfig

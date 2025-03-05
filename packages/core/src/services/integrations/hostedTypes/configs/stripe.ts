@@ -11,4 +11,5 @@ export default {
       required: true,
     },
   },
+  envSource: 'https://dashboard.stripe.com/test/apikeys',
 } as HostedIntegrationConfig

@@ -21,4 +21,6 @@ export default {
       required: true,
     },
   },
+  envSource:
+    'https://www.tinybird.co/docs/get-started/administration/auth-tokens#create-a-token',
 } as HostedIntegrationConfig

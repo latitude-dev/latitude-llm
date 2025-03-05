@@ -15,4 +15,6 @@ export default {
       required: true,
     },
   },
+  envSource:
+    'https://console.cloud.google.com/projectselector2/google/maps-apis/credentials',
 } as HostedIntegrationConfig

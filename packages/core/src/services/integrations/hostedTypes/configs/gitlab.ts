@@ -21,4 +21,5 @@ export default {
       required: false,
     },
   },
+  envSource: 'https://docs.gitlab.com/user/profile/personal_access_tokens/',
 } as HostedIntegrationConfig

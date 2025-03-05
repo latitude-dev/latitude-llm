@@ -23,4 +23,6 @@ export default {
       required: true,
     },
   },
+  envSource:
+    'https://docs.x.com/resources/fundamentals/authentication/oauth-1-0a/api-key-and-secret#how-to-acquire-an-api-key-and-secret',
 } as HostedIntegrationConfig

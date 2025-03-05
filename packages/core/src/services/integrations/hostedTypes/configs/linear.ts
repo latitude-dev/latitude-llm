@@ -12,4 +12,5 @@ export default {
       required: true,
     },
   },
+  envSource: 'https://linear.app/settings/account/security',
 } as HostedIntegrationConfig

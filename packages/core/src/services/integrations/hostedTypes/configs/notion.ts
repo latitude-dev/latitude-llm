@@ -13,4 +13,5 @@ export default {
       required: true,
     },
   },
+  envSource: 'https://www.notion.so/profile/integrations',
 } as HostedIntegrationConfig
