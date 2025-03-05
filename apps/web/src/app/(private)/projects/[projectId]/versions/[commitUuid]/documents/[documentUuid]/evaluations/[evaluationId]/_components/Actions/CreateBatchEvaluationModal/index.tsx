@@ -49,6 +49,7 @@ export default function CreateBatchEvaluationModal({
       toLine: form.toLine,
       wantAllLines: form.wantAllLines,
       parameters: form.parameters,
+      datasetVersion: form.datasetVersion,
     })
   }, [
     evaluation.id,
@@ -87,7 +88,7 @@ export default function CreateBatchEvaluationModal({
         isLoadingDatasets={form.isLoadingDatasets}
         selectedDataset={form.selectedDataset}
         onSelectDataset={form.onSelectDataset}
-        onToggleAllLines={form.setAllRows}
+        onToggleAllLines={form.onToggleAllLines}
         wantAllLines={form.wantAllLines}
         fromLine={form.fromLine}
         toLine={form.toLine}
@@ -96,6 +97,7 @@ export default function CreateBatchEvaluationModal({
         parametersList={form.parametersList}
         onParametersChange={form.onParameterChange}
         parameters={form.parameters}
+        maxLineCount={form.maxLineCount}
       />
     </Modal>
   )

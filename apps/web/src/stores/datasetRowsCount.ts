@@ -7,6 +7,7 @@ import { compactObject } from '@latitude-data/core/lib/compactObject'
 export default function useDatasetRowsCount(
   {
     dataset,
+    onFetched,
   }: {
     dataset?: DatasetV2
     onFetched?: (count: number) => void
@@ -21,11 +22,14 @@ export default function useDatasetRowsCount(
       }) as Record<string, string>,
     },
   )
-  const { data = [], ...rest } = useSWR<number>(
+  const { data, ...rest } = useSWR<number>(
     ['datasetRowsCount', dataset?.id],
     fetcher,
     {
       ...opts,
+      onSuccess: (data) => {
+        onFetched?.(data)
+      }
     },
   )
 

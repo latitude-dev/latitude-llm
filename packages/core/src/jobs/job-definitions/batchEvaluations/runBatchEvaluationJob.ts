@@ -5,6 +5,8 @@ import { Job } from 'bullmq'
 import { setupJobs } from '../..'
 import {
   Dataset,
+  DatasetV2,
+  DatasetVersion,
   DocumentVersion,
   EvaluationDto,
   User,
@@ -12,16 +14,56 @@ import {
 } from '../../../browser'
 import { publisher } from '../../../events/publisher'
 import { queues } from '../../../queues'
-import { CommitsRepository } from '../../../repositories'
+import { CommitsRepository, DatasetRowsRepository } from '../../../repositories'
 import { previewDataset } from '../../../services/datasets/preview'
 import { WebsocketClient } from '../../../websockets/workers'
 import { ProgressTracker } from '../../utils/progressTracker'
 
-export type RunBatchEvaluationJobParams = {
+async function getDatasetRows<V extends DatasetVersion>({
+  dataset: ds,
+  datasetVersion,
+  fromLine: from,
+  toLine: to,
+}: {
+  dataset: V extends 'v1' ? Dataset : DatasetV2
+  datasetVersion: V
+  fromLine: number | undefined
+  toLine: number | undefined
+}) {
+  const fromLine = from || 1
+
+  // DEPRECATED: Used in old datasets
+  if (datasetVersion === 'v1') {
+    const dataset = ds as Dataset
+    const fileMetadata = dataset.fileMetadata
+    const result = await previewDataset({
+      dataset,
+      fromLine,
+      toLine: to || fileMetadata.rowCount,
+    }).then((r) => r.unwrap())
+
+    return { rows: result.rows }
+  }
+
+  // This is a service call to fetch dataset rows between start and end rows and return
+  // rows: string[][]
+  const repo = new DatasetRowsRepository(ds.workspaceId)
+  const rows = await repo.findByDatasetPaginated({
+    datasetId: ds.id,
+    fromLine,
+    toLine: to,
+  })
+  return { rows: [] }
+}
+
+export type RunBatchEvaluationJobParams<
+  V extends DatasetVersion = DatasetVersion.V1,
+> = {
   workspace: Workspace
   user: User
   evaluation: EvaluationDto
-  dataset: Dataset
+  dataset: V extends 'v1' ? Dataset : DatasetV2
+  datasetVersion: V
   document: DocumentVersion
   commitUuid: string
   projectId: number
@@ -39,6 +81,7 @@ export const runBatchEvaluationJob = async (
     user,
     evaluation,
     dataset,
+    datasetVersion,
     document,
     projectId,
     commitUuid,
@@ -51,7 +94,6 @@ export const runBatchEvaluationJob = async (
   const commit = await new CommitsRepository(workspace.id)
     .getCommitByUuid({ projectId, uuid: commitUuid })
     .then((r) => r.unwrap())
-  const fileMetadata = dataset.fileMetadata
 
   publisher.publishLater({
     type: 'batchEvaluationRun',
@@ -62,14 +104,13 @@ export const runBatchEvaluationJob = async (
     },
   })
 
-  // TODO: use streaming instead of this service in order to avoid loading the
-  // whole dataset in memory
-  const result = await previewDataset({
+  // TODO: Fetch dataset rows if dataset is V2
+  const result = await getDatasetRows({
     dataset,
+    datasetVersion,
     fromLine,
-    toLine: toLine || fileMetadata.rowCount,
-  }).then((r) => r.unwrap())
-
+    toLine,
+  })
   const { rows } = result
 
   const parameters = rows.map((row) => {

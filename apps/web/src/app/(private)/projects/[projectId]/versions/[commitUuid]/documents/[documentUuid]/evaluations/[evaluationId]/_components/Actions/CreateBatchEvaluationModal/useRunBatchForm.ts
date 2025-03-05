@@ -3,6 +3,7 @@ import { useCallback, useMemo, useState } from 'react'
 import {
   Dataset,
   DatasetV2,
+  DatasetVersion,
   DocumentVersion,
 } from '@latitude-data/core/browser'
 import type { ConversationMetadata } from 'promptl-ai'
@@ -40,6 +41,7 @@ function useVersionedDatasets({
 
   return {
     data: hasDatasetsV2 ? datasetsV2 : datasetsV1,
+    datasetVersion: hasDatasetsV2 ? DatasetVersion.V2 : DatasetVersion.V1,
     isLoading: isLoadingDatasetsV1 || isLoadingDatasetsV2,
   }
 }
@@ -85,7 +87,7 @@ export function useRunBatchForm({
     },
     [setHeaders, selectedDataset],
   )
-  const { data: datasets, isLoading: isLoadingDatasets } = useVersionedDatasets(
+  const { data: datasets, isLoading: isLoadingDatasets, datasetVersion } = useVersionedDatasets(
     {
       onFetched: (ds) => {
         const selected = ds.find((d) => d.id === document.datasetId)
@@ -143,20 +145,36 @@ export function useRunBatchForm({
       setParameters(mapped)
     },
   })
-  useDatasetRowsCount({
+  const { data: datasetRowsCount } = useDatasetRowsCount({
     dataset:
       selectedDataset && 'columns' in selectedDataset
         ? selectedDataset
         : undefined,
     onFetched: (count) => {
-      setToLine(count)
+      setToLine(() => count)
     },
   })
+
+  const maxLineCount = selectedDataset
+    ? 'fileMetadata' in selectedDataset
+      ? selectedDataset.fileMetadata.rowCount
+      : datasetRowsCount
+    : undefined
+  const onToggleAllLines = useCallback(
+    (wantAllLines: boolean) => {
+      if (wantAllLines) {
+        setToLine(() => maxLineCount)
+      }
+      setAllRows(wantAllLines)
+    },
+    [maxLineCount],
+  )
 
   return {
     datasets,
     isLoadingDatasets,
     selectedDataset,
+    datasetVersion,
     headers,
     wantAllLines,
     fromLine,
@@ -168,5 +186,7 @@ export function useRunBatchForm({
     setAllRows,
     setFromLine,
     setToLine,
+    maxLineCount,
+    onToggleAllLines,
   }
 }

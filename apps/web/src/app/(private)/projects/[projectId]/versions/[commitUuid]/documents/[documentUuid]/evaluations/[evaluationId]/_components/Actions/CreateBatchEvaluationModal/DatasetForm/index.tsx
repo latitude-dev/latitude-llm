@@ -59,10 +59,10 @@ function LineRangeInputs({
       <Input
         disabled={disabled}
         type='number'
-        name='fromLine'
+        name='toLine'
         label='To line'
         placeholder='Ending line'
-        defaultValue={toDefaultValue}
+        value={toDefaultValue}
         onChange={(e) => {
           onChangeToLine(Number(e.target.value))
         }}
