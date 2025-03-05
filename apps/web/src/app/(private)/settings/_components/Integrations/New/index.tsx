@@ -103,7 +103,7 @@ export default function NewIntegration() {
       open
       onOpenChange={onOpenChange}
       title='Create Integration'
-      description='Integrations allow you to add soure of tools to your prompts.'
+      description='Integrations allow your prompt to interact with external services.'
       footer={
         <>
           <CloseTrigger />
