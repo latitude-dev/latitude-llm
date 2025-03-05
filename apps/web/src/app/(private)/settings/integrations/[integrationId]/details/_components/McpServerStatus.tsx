@@ -1,19 +1,23 @@
 'use client'
 
 import { Text, DotIndicator } from '@latitude-data/web-ui'
-import { McpServer } from '@latitude-data/core/browser'
 import { capitalize } from 'lodash-es'
+import { useMcpServer } from '$/stores/mcpServer'
 
 interface McpServerStatusProps {
-  mcpServer: McpServer | undefined
+  mcpServerId?: number
   short?: boolean
 }
 
 export function McpServerStatus({
   short = false,
-  mcpServer,
+  mcpServerId,
 }: McpServerStatusProps) {
-  if (!mcpServer) return null
+  const { data: mcpServer } = useMcpServer(mcpServerId?.toString(), {
+    refreshInterval: (mcpServer) =>
+      mcpServer?.status === 'deployed' ? 1000 * 30 : 1000 * 10,
+    fallbackData: undefined,
+  })
 
   // Determine the status variant for the dot indicator
   const getStatusVariant = (
@@ -30,6 +34,8 @@ export function McpServerStatus({
         return 'warning'
     }
   }
+
+  if (!mcpServer) return null
 
   const statusVariant = getStatusVariant(mcpServer.status)
 
