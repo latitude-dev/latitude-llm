@@ -103,7 +103,7 @@ export async function runAgentStep({
       schema: step.schema,
       output: step.output,
       injectAgentFinishTool: true,
-      injectFakeAgentStartTool: !step.config.disableAgentOptimization,
+      advancedAgentOptimization: !step.config.disableAgentOptimization,
     })
 
   // Stop the chain if there are tool calls

@@ -5,7 +5,11 @@ import {
   ToolCall,
   ToolMessage,
 } from '@latitude-data/compiler'
-import { PromptConfig, StreamEventTypes } from '@latitude-data/constants'
+import {
+  PromptConfig,
+  StreamEventTypes,
+  VercelConfig,
+} from '@latitude-data/constants'
 import {
   ChainEvent,
   ChainEventTypes,
@@ -146,16 +150,18 @@ export class ChainStreamManager {
     source,
     schema,
     output,
-    injectFakeAgentStartTool,
+    advancedAgentOptimization,
     injectAgentFinishTool,
+    isFirstStep,
   }: {
     provider: ProviderApiKey
     conversation: Conversation
     source: LogSources
     schema?: JSONSchema7
     output?: 'object' | 'array' | 'no-schema'
-    injectFakeAgentStartTool?: boolean
+    advancedAgentOptimization?: boolean
     injectAgentFinishTool?: boolean
+    isFirstStep?: boolean
   }) {
     if (!this.controller) throw new Error('Stream not started')
 
@@ -182,7 +188,7 @@ export class ChainStreamManager {
     const resolvedConfig = {
       ...omit(conversation.config, 'tools', 'latitudeTools', 'agents'),
       ...(Object.keys(tools).length ? { tools } : {}),
-    }
+    } as VercelConfig
 
     this.sendEvent({
       type: ChainEventTypes.ProviderStarted,
@@ -201,7 +207,8 @@ export class ChainStreamManager {
       },
       schema,
       output,
-      injectFakeAgentStartTool,
+      advancedAgentOptimization,
+      isFirstStep,
     })
     this.addMessageFromResponse(response)
 

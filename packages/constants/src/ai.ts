@@ -80,6 +80,7 @@ export type VercelConfig = {
   google?: GoogleConfig
   disableAgentOptimization?: boolean
   tools?: ToolDefinitionsMap
+  toolChoice?: 'auto' | 'required' | 'none' | { type: 'tool'; toolName: string }
 }
 
 // Prompt config supported by Latitude

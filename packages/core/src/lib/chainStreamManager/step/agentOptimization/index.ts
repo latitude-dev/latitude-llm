@@ -1,18 +1,24 @@
 import { Message } from '@latitude-data/compiler'
-import { Result, TypedResult } from '../../../Result'
 import { injectFakeStartAutonomousWorkflowMessages } from '../../../../services/agents/promptInjection'
-import { LatitudeError } from '../../../errors'
+import { VercelConfig } from '@latitude-data/constants'
+
+const NO_TOOL = 'none' as const
 
 export function performAgentMessagesOptimization({
-  messages,
-  injectFakeAgentStartTool,
+  conversation,
+  isFirstStep,
 }: {
-  messages: Message[]
-  injectFakeAgentStartTool?: boolean
-}): TypedResult<Message[], LatitudeError> {
-  if (!injectFakeAgentStartTool) {
-    return Result.ok(messages)
+  conversation: { messages: Message[]; config: VercelConfig }
+  isFirstStep?: boolean
+}): { messages: Message[]; config: VercelConfig } {
+  const messages = injectFakeStartAutonomousWorkflowMessages(
+    conversation.messages,
+  )
+
+  const config = {
+    ...(isFirstStep ? { toolChoice: NO_TOOL } : {}),
+    ...conversation.config,
   }
 
-  return Result.ok(injectFakeStartAutonomousWorkflowMessages(messages))
+  return { messages, config }
 }

@@ -10,6 +10,7 @@ import {
 import {
   AGENT_RETURN_TOOL_NAME,
   FAKE_AGENT_START_TOOL_NAME,
+  VercelConfig,
 } from '@latitude-data/constants'
 
 describe('performAgentMessagesOptimization', () => {
@@ -88,13 +89,18 @@ describe('performAgentMessagesOptimization', () => {
         toolCalls: [],
       },
     ]
+    const config: VercelConfig = {
+      provider: 'openai',
+      model: 'latitude',
+    }
 
     const fakeMessagesIdx = [3, 8] // Where the fake messages should go
 
-    const optimizedMessages = performAgentMessagesOptimization({
-      messages,
-      injectFakeAgentStartTool: true,
-    }).unwrap()
+    const optimizedConversation = performAgentMessagesOptimization({
+      conversation: { messages, config },
+    })
+
+    const optimizedMessages = optimizedConversation.messages
 
     expect(optimizedMessages.length).toBe(
       messages.length + fakeMessagesIdx.length * 2,
@@ -127,5 +133,20 @@ describe('performAgentMessagesOptimization', () => {
       expect(fakeToolResponseMessage.content[0]!.result).toBeTypeOf('string')
       expect(fakeToolResponseMessage.content[0]!.isError).toBe(false)
     }
+  })
+
+  it('Restricts the first tool choice to none', () => {
+    const messages: Message[] = []
+    const config: VercelConfig = {
+      provider: 'openai',
+      model: 'latitude',
+    }
+
+    const optimizedConversation = performAgentMessagesOptimization({
+      conversation: { messages, config },
+      isFirstStep: true,
+    })
+
+    expect(optimizedConversation.config.toolChoice).toBe('none')
   })
 })

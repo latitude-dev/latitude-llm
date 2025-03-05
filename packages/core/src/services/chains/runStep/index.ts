@@ -123,9 +123,10 @@ export async function runStep({
       provider: step.provider,
       schema: step.schema,
       output: step.output,
-      injectFakeAgentStartTool:
+      advancedAgentOptimization:
         step.conversation.config.type === 'agent' &&
         !step.conversation.config.disableAgentOptimization,
+      isFirstStep: stepCount === 0,
     })
 
   const isPromptl = chain instanceof PromptlChain
