@@ -13,7 +13,7 @@ export default function useCurrentWorkspace() {
   const { toast } = useToast()
   const fetcher = useFetcher(ROUTES.api.workspaces.current)
 
-  const { mutate, data, ...rest } = useSWR<Workspace>(
+  const { mutate, data, ...rest } = useSWR<Workspace, Error>(
     'api/workspaces/current',
     fetcher,
   )

@@ -1,11 +1,11 @@
 import { beforeAll, expect, describe, it, vi } from 'vitest'
 import getTestDisk from '../../tests/testDrive'
-import { createDataset } from '../datasetsV2/create'
+import { createDatasetFromFile } from '../datasetsV2/createFromFile'
 import * as factories from '../../tests/factories'
 import { DatasetV2, User, Workspace } from '../../browser'
 import { createRowsFromUploadedDataset } from './createRowsFromUploadedDataset'
 import { DatasetV2CreatedEvent } from '../../events/events'
-import { DatasetRowsRepository } from '../../repositories'
+import { DatasetRowsRepository, DatasetsV2Repository } from '../../repositories'
 import { createTestCsvFile } from './testHelper'
 
 const testDrive = getTestDisk()
@@ -24,7 +24,7 @@ describe('createRowsFromUploadedDataset', () => {
 
     const { file } = await createTestCsvFile()
 
-    const createdDataset = await createDataset({
+    const createdDataset = await createDatasetFromFile({
       author,
       workspace,
       disk: testDrive,
@@ -131,6 +131,87 @@ describe('createRowsFromUploadedDataset', () => {
         [surname]: 'Merlo',
         [age]: '48',
         [nationality]: 'German',
+      },
+    ])
+  })
+
+  it('add rows to an existing dataset with rows', async () => {
+    const dataset = await factories
+      .createDatasetV2({
+        disk: testDrive,
+        workspace,
+        author,
+        fileContent: `
+        name,surname
+        Paco,Merlo
+        Frank,Merlo
+      `,
+      })
+      .then((r) => r.dataset)
+    const { fileKey: anotherFileKey } = await createTestCsvFile({
+      name: 'another.csv',
+      fileContent: `
+        age,name,surname
+        18,François,Merlo
+        29,Francesco,Merlo
+      `,
+    })
+    expect(true).toBe(true)
+    const event = {
+      type: 'datasetUploaded' as DatasetV2CreatedEvent['type'],
+      data: {
+        workspaceId: workspace.id,
+        datasetId: dataset.id,
+        userEmail: author.email,
+        csvDelimiter: ',',
+        fileKey: anotherFileKey,
+      },
+    }
+    await createRowsFromUploadedDataset({
+      event,
+      batchSize: 2,
+      disk: testDrive,
+    })
+    const repo = new DatasetRowsRepository(workspace.id)
+    const rows = await repo.findByDatasetPaginated({
+      datasetId: dataset.id,
+      page: '1',
+      pageSize: '100',
+    })
+    const rowData = rows.map((r) => r.rowData)
+
+    const datasetRepo = new DatasetsV2Repository(workspace.id)
+    const freshDataset = await datasetRepo
+      .find(dataset.id)
+      .then((r) => r.unwrap())
+    const columns = freshDataset.columns
+    const name = columns.find((c) => c.name === 'name')!.identifier
+    const surname = columns.find((c) => c.name === 'surname')!.identifier
+    const age = columns.find((c) => c.name === 'age')!.identifier
+
+    expect(columns).toEqual([
+      { identifier: expect.any(String), name: 'name', role: 'parameter' },
+      { identifier: expect.any(String), name: 'surname', role: 'parameter' },
+      { identifier: expect.any(String), name: 'age', role: 'parameter' },
+    ])
+    expect(rowData).toEqual([
+      {
+        [name]: 'Paco',
+        [surname]: 'Merlo',
+      },
+      {
+        [name]: 'Frank',
+        [surname]: 'Merlo',
+      },
+      {
+        [name]: 'François',
+        [surname]: 'Merlo',
+        [age]: '18',
+      },
+      {
+        [name]: 'Francesco',
+        [surname]: 'Merlo',
+        [age]: '29',
       },
     ])
   })

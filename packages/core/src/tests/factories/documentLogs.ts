@@ -26,6 +26,7 @@ export type IDocumentLogData = {
   customIdentifier?: string
   source?: LogSources
   createdAt?: Date
+  automaticProvidersGeneratedAt?: Date
   skipProviderLogs?: boolean
 }
 
@@ -34,11 +35,13 @@ async function generateProviderLogs({
   parameters,
   documentContent,
   documentLogUuid,
+  generatedAt,
 }: {
   workspace: Workspace
   parameters?: Record<string, unknown>
   documentContent: string
   documentLogUuid: string
+  generatedAt?: Date
 }) {
   const providerLogs: ProviderLog[] = []
   const chain = createChain({
@@ -70,7 +73,7 @@ async function generateProviderLogs({
     const log = await createProviderLog({
       workspace,
       uuid: uuid(),
-      generatedAt: new Date(),
+      generatedAt: generatedAt ?? new Date(),
       documentLogUuid,
       providerId: provider.id,
       providerType: provider.provider,
@@ -104,6 +107,7 @@ export async function createDocumentLog({
   source,
   createdAt,
   skipProviderLogs,
+  automaticProvidersGeneratedAt,
 }: IDocumentLogData) {
   const workspace = (await findWorkspaceFromCommit(commit))!
   const documentContent = await getResolvedContent({
@@ -120,6 +124,7 @@ export async function createDocumentLog({
       parameters,
       documentContent,
       documentLogUuid,
+      generatedAt: automaticProvidersGeneratedAt,
     })
   }
 

@@ -12,9 +12,14 @@ import { latitudeSchema } from '../db-schema'
 import { timestamps } from '../schemaHelpers'
 import { users } from './users'
 import { workspaces } from './workspaces'
+import { type DatasetColumnRole } from '../../constants'
 import { sql } from 'drizzle-orm'
 
-export type Column = { identifier: string; name: string }
+export type Column = {
+  identifier: string
+  name: string
+  role: DatasetColumnRole
+}
 
 // NOTE: Temporary table name to avoid conflicts with existing datasets table
 // in the future old datasets will be migrated to this table and then this table

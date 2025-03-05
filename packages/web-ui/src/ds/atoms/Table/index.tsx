@@ -38,12 +38,12 @@ const Table = forwardRef<HTMLTableElement, TableProps>(
     >
       <div
         className={cn('relative w-full flex-grow', overflow, {
-          'custom-scrollbar': overflow === 'overflow-auto',
+          'custom-scrollbar min-w-full': overflow === 'overflow-auto',
         })}
       >
         <table
           ref={ref}
-          className={cn('w-full caption-bottom text-sm', className)}
+          className={cn('w-max min-w-full caption-bottom text-sm', className)}
           {...props}
         />
       </div>
@@ -102,33 +102,50 @@ const TableRow = forwardRef<
   HTMLAttributes<HTMLTableRowElement> & {
     verticalPadding?: boolean
     hoverable?: boolean
+    borderBottom?: boolean
   }
->(({ className, verticalPadding, hoverable = true, ...props }, ref) => (
-  <tr
-    ref={ref}
-    className={cn(
-      'border-b transition-colors data-[state=selected]:bg-muted',
-      {
-        '[&>td]:py-4': verticalPadding,
-        'hover:bg-muted/50': hoverable,
-      },
+>(
+  (
+    {
       className,
-    )}
-    {...props}
-  />
-))
+      verticalPadding,
+      borderBottom = true,
+      hoverable = true,
+      ...props
+    },
+    ref,
+  ) => (
+    <tr
+      ref={ref}
+      className={cn(
+        'transition-colors data-[state=selected]:bg-muted',
+        {
+          '[&>td]:py-4': verticalPadding,
+          'hover:bg-muted/50': hoverable,
+          'border-b': borderBottom,
+        },
+        className,
+      )}
+      {...props}
+    />
+  ),
+)
 TableRow.displayName = 'TableRow'
 
 type THeadProps = ThHTMLAttributes<HTMLTableCellElement> & {
   tooltipMessage?: string
+  verticalBorder?: boolean
 }
 const TableHead = forwardRef<HTMLTableCellElement, THeadProps>(
-  ({ className, tooltipMessage, ...props }, ref) => (
+  ({ className, tooltipMessage, verticalBorder = false, ...props }, ref) => (
     <th
       ref={ref}
       className={cn(
         'h-10 px-4 text-left align-middle font-medium bg-secondary [&:has([role=checkbox])]:pr-0',
         className,
+        {
+          'border-r last:border-r-0': verticalBorder,
+        },
       )}
       {...props}
     >
@@ -161,14 +178,32 @@ TableHead.displayName = 'TableHead'
 
 type CommonCellProps = TdHTMLAttributes<HTMLTableCellElement> & {
   align?: 'left' | 'center' | 'right'
+  xSpace?: 'none' | 'normal'
+  verticalBorder?: boolean
 }
 
 const ServerSideTableCell = forwardRef<HTMLTableCellElement, CommonCellProps>(
-  ({ className, children, align = 'left', ...props }, ref) => (
+  (
+    {
+      className,
+      children,
+      align = 'left',
+      xSpace = 'normal',
+      verticalBorder = false,
+      ...props
+    },
+    ref,
+  ) => (
     <td
       ref={ref}
       className={cn(
         'px-4 align-middle [&:has([role=checkbox])]:pr-0',
+        'max-w-60',
+        {
+          'px-4': xSpace === 'normal',
+          'px-0': xSpace === 'none',
+          'border-r last:border-r-0': verticalBorder,
+        },
         className,
       )}
       {...props}
@@ -185,10 +220,10 @@ const ServerSideTableCell = forwardRef<HTMLTableCellElement, CommonCellProps>(
     </td>
   ),
 )
+
 ServerSideTableCell.displayName = 'ServerSideTableCell'
 
-type CellProps = TdHTMLAttributes<HTMLTableCellElement> & {
-  align?: 'left' | 'center' | 'right'
+type CellProps = CommonCellProps & {
   preventDefault?: boolean
 }
 const TableCell = forwardRef<HTMLTableCellElement, CellProps>(
@@ -197,7 +232,9 @@ const TableCell = forwardRef<HTMLTableCellElement, CellProps>(
       className,
       children,
       align = 'left',
+      xSpace = 'normal',
       preventDefault = false,
+      verticalBorder = false,
       onClick,
       ...props
     },
@@ -206,8 +243,14 @@ const TableCell = forwardRef<HTMLTableCellElement, CellProps>(
     <td
       ref={ref}
       className={cn(
-        'px-4 align-middle [&:has([role=checkbox])]:pr-0',
+        'align-middle [&:has([role=checkbox])]:pr-0',
+        'max-w-60',
         className,
+        {
+          'px-4': xSpace === 'normal',
+          'px-0': xSpace === 'none',
+          'border-r last:border-r-0': verticalBorder,
+        },
       )}
       {...props}
       onClick={(e) => {

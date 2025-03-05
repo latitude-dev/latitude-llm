@@ -90,6 +90,7 @@ import {
   AppWindow,
   Brain,
   Clock,
+  CircleIcon,
 } from 'lucide-react'
 
 import { cn } from '../../../lib/utils'
@@ -140,6 +141,7 @@ const Icons = {
   chevronsDownUp: ChevronsDownUpIcon,
   circleDollarSign: CircleDollarSign,
   circleHelp: CircleHelp,
+  circle: CircleIcon,
   clipboard: Copy,
   clock: Clock,
   code: Code,

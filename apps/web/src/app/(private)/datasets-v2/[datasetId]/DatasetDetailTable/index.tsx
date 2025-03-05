@@ -1,6 +1,10 @@
 'use client'
 
-import { DatasetRow, DatasetV2 } from '@latitude-data/core/browser'
+import {
+  DatasetColumnRole,
+  DatasetRow,
+  DatasetV2,
+} from '@latitude-data/core/browser'
 import {
   dateFormatter,
   Icon,
@@ -13,6 +17,7 @@ import {
   TableRow,
   TableWithHeader,
   Text,
+  Tooltip,
 } from '@latitude-data/web-ui'
 import { useSearchParams } from 'next/navigation'
 import { buildPagination } from '@latitude-data/core/lib/pagination/buildPagination'
@@ -20,6 +25,31 @@ import { ROUTES } from '$/services/routes'
 import { LinkableTablePaginationFooter } from '$/components/TablePaginationFooter'
 import useDatasetRows from '$/stores/datasetRows'
 import { useDatasetRowsSocket } from '$/app/(private)/datasets-v2/[datasetId]/DatasetDetailTable/useDatasetRowsSocket'
+import { useDatasetRole } from '$/hooks/useDatasetRoles'
+
+export function DatasetHeadText({
+  text,
+  role,
+}: {
+  text: string
+  role: DatasetColumnRole
+}) {
+  if (role !== 'label') return <Text.H5>{text}</Text.H5>
+
+  return (
+    <Tooltip
+      trigger={text}
+      triggerBadge={{
+        variant: 'accent',
+        children: 'Label',
+      }}
+    >
+      This column contains the expected output from the LLM response. Labels may
+      be manually assigned or curated from production logs. Labels can help you
+      evaluate an LLM based on ground-truth.
+    </Tooltip>
+  )
+}
 
 export function DatasetDetailTable({
   dataset,
@@ -28,6 +58,7 @@ export function DatasetDetailTable({
   dataset: DatasetV2
   rows: DatasetRow[]
 }) {
+  const { backgroundCssClasses } = useDatasetRole()
   const searchParams = useSearchParams()
   const page = searchParams.get('page') ?? '1'
   const pageSize = searchParams.get('pageSize') ?? '25'
@@ -83,23 +114,37 @@ export function DatasetDetailTable({
               <TableHeader>
                 <TableRow verticalPadding>
                   {dataset.columns.map((column) => (
-                    <TableHead key={column.identifier}>
-                      <Text.H5>{column.name}</Text.H5>
+                    <TableHead
+                      verticalBorder
+                      key={column.identifier}
+                      className={backgroundCssClasses[column.role]}
+                    >
+                      <DatasetHeadText text={column.name} role={column.role} />
                     </TableHead>
                   ))}
-                  <TableHead>Created at</TableHead>
-                  <TableHead />
+                  <TableHead className={backgroundCssClasses['metadata']}>
+                    Created at
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {rows.map((row) => (
                   <TableRow key={row.id} verticalPadding hoverable={false}>
-                    {row.cells.map((cell, index) => (
-                      <TableCell key={index}>
-                        <Text.H5>{cell}</Text.H5>
-                      </TableCell>
-                    ))}
-                    <TableCell>
+                    {row.cells.map((cell, index) => {
+                      const role = dataset.columns[index]!.role
+                      return (
+                        <TableCell
+                          verticalBorder
+                          key={index}
+                          className={backgroundCssClasses[role]}
+                        >
+                          <Text.H5 wordBreak='breakAll' ellipsis lineClamp={1}>
+                            {cell}
+                          </Text.H5>
+                        </TableCell>
+                      )
+                    })}
+                    <TableCell className={backgroundCssClasses['metadata']}>
                       <Text.H5 color='foregroundMuted'>
                         {dateFormatter.formatDate(row.createdAt)}
                       </Text.H5>

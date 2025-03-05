@@ -11,6 +11,8 @@ import * as TooltipPrimitive from '@radix-ui/react-tooltip'
 import { cn } from '../../../lib/utils'
 import Text from '../../atoms/Text'
 import { TextColor } from '../../tokens'
+import { Icon, IconProps } from '../Icons'
+import { BadgeProps, Badge } from '../Badge'
 
 const TooltipProvider = TooltipPrimitive.Provider
 
@@ -79,6 +81,8 @@ type Props = PropviderProps &
   ContentProps & {
     trigger: ReactNode
     children?: ReactNode
+    triggerIcon?: IconProps
+    triggerBadge?: BadgeProps
   }
 function Tooltip({
   children,
@@ -108,6 +112,8 @@ function Tooltip({
   updatePositionStrategy,
   maxWidth,
   asChild = false,
+  triggerIcon,
+  triggerBadge,
 }: Props) {
   const textColor = useTooltipTextContentColor(variant)
   const isChildrenString = typeof children === 'string'
@@ -119,7 +125,17 @@ function Tooltip({
       delayDuration={delayDuration}
       disableHoverableContent={disableHoverableContent}
     >
-      <TooltipTrigger asChild={asChild}>{trigger}</TooltipTrigger>
+      {!triggerIcon && !triggerBadge ? (
+        <TooltipTrigger asChild={asChild} className='flex items-center gap-x-2'>
+          {trigger}
+        </TooltipTrigger>
+      ) : (
+        <TooltipTrigger asChild={asChild} className='flex items-center gap-x-2'>
+          {trigger}
+          {triggerBadge ? <Badge {...triggerBadge} /> : null}
+          {triggerIcon ? <Icon {...triggerIcon} /> : null}
+        </TooltipTrigger>
+      )}
       <TooltipPrimitive.Portal>
         <TooltipContent
           maxWidth={maxWidth}

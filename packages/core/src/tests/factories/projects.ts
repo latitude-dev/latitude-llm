@@ -197,3 +197,7 @@ export async function createProject(projectData: Partial<ICreateProject> = {}) {
     evaluations,
   }
 }
+
+export type FactoryCreateProjectReturn = Awaited<
+  ReturnType<typeof createProject>
+>

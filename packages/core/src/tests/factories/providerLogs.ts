@@ -3,7 +3,7 @@ import { v4 as uuid } from 'uuid'
 
 import { LogSources, ProviderLog, Providers, Workspace } from '../../browser'
 import { createProviderLog as createProviderLogService } from '../../services/providerLogs'
-import type { ToolCall } from '@latitude-data/compiler'
+import type { ToolCall, Message } from '@latitude-data/compiler'
 
 export type IProviderLogData = {
   documentLogUuid: string
@@ -17,6 +17,8 @@ export type IProviderLogData = {
   generatedAt?: Date
   workspace: Workspace
   responseObject?: unknown
+  responseText?: string
+  messages?: Message[]
   toolCalls?: ToolCall[]
 }
 
@@ -32,8 +34,8 @@ export async function createProviderLog(
     providerType: data.providerType,
     model: data.model ?? faker.lorem.word(),
     config: { model: 'gpt-4o' },
-    messages: [],
-    responseText: faker.lorem.sentence(),
+    messages: data.messages ?? [],
+    responseText: data.responseText ?? faker.lorem.sentence(),
     responseObject: data.responseObject,
     toolCalls: [],
     usage: {

@@ -230,6 +230,9 @@ export const API_ROUTES = {
   },
   datasetsV2: {
     root: '/api/datasets-v2',
+    previewLogs: {
+      root: '/api/datasets-v2/preview-logs',
+    },
   },
   datasetsRows: {
     root: '/api/dataset-rows',
@@ -252,12 +255,16 @@ export const API_ROUTES = {
     evaluationResults: {
       root: `/api/documentLogs/evaluation-results`,
     },
+    // DEPRECATED: Is for all datasets
     generateCsv: {
       detail: ({ documentLogIds }: { documentLogIds: number[] }) => {
         return {
           root: `/api/documentLogs/generate-csv?ids=${documentLogIds.join(',')}`,
         }
       },
+    },
+    downloadLogs: {
+      root: `/api/documentLogs/download-logs`,
     },
   },
   evaluations: {

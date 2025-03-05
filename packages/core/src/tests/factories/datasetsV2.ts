@@ -2,9 +2,12 @@ import { faker } from '@faker-js/faker'
 
 import { User, Workspace } from '../../browser'
 import { DiskWrapper } from '../../lib/disk'
-import { createDataset as createDatasetFn } from '../../services/datasetsV2/create'
+import { createDatasetFromFile as createDatasetFromFileFn } from '../../services/datasetsV2/createFromFile'
 import { createWorkspace, ICreateWorkspace } from './workspaces'
 import { createTestCsvFile } from '../../services/datasetRows/testHelper'
+import { DatasetV2CreatedEvent } from '../../events/events'
+import { createRowsFromUploadedDataset } from '../../services/datasetRows/createRowsFromUploadedDataset'
+import { HashAlgorithmFn } from '../../services/datasetsV2/utils'
 
 function generateCsvContent(delimiter: string): string {
   const headers = ['id', 'name', 'email', 'age']
@@ -28,6 +31,7 @@ export type ICreateDatasetV2 = {
   author?: User
   csvDelimiter?: string
   fileContent?: string
+  hashAlgorithm?: HashAlgorithmFn
 }
 type Props = Partial<ICreateDatasetV2> & { disk: DiskWrapper }
 
@@ -54,10 +58,11 @@ export async function createDatasetV2(datasetData: Props) {
     datasetData.fileContent ?? generateCsvContent(csvDelimiter)
 
   const { file } = await createTestCsvFile({ fileContent, name })
-  const result = await createDatasetFn({
+  const result = await createDatasetFromFileFn({
     author: user,
     workspace,
     disk,
+    hashAlgorithm: datasetData.hashAlgorithm,
     data: {
       name,
       file,
@@ -66,6 +71,23 @@ export async function createDatasetV2(datasetData: Props) {
   })
 
   const data = result.unwrap()
+
+  const event = {
+    type: 'datasetUploaded' as DatasetV2CreatedEvent['type'],
+    data: {
+      workspaceId: workspace.id,
+      datasetId: data.dataset.id,
+      userEmail: user.email,
+      csvDelimiter: ',',
+      fileKey: data.fileKey,
+    },
+  }
+  await createRowsFromUploadedDataset({
+    event,
+    batchSize: 2,
+    disk,
+    hashAlgorithm: datasetData.hashAlgorithm,
+  })
 
   return { dataset: data.dataset, user, workspace }
 }

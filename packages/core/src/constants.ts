@@ -494,3 +494,12 @@ export type LatitudeToolDefinition = {
 export type LatitudeToolCall = ToolCall & {
   name: LatitudeToolInternalName
 }
+
+export const DATASET_COLUMN_ROLES = {
+  parameter: 'parameter',
+  label: 'label',
+  metadata: 'metadata',
+} as const
+
+export type DatasetColumnRole =
+  (typeof DATASET_COLUMN_ROLES)[keyof typeof DATASET_COLUMN_ROLES]

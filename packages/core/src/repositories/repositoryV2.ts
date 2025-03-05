@@ -45,13 +45,20 @@ export default abstract class Repository<T extends Record<string, unknown>> {
     return Result.ok(result[0]! as T)
   }
 
-  async findMany(ids: (string | number)[]) {
+  async findMany(
+    ids: (string | number)[],
+    {
+      ordering,
+    }: {
+      ordering?: SQL<unknown>[]
+    } = {},
+  ) {
     const result = await this.scope
       .where(
         and(this.scopeFilter, inArray(this.scope._.selectedFields.id, ids)),
       )
+      .orderBy(...(ordering ?? []))
       .limit(ids.length)
-
     return Result.ok(result as T[])
   }
 

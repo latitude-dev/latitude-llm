@@ -126,6 +126,7 @@ const TextAtom = forwardRef<HTMLElement, AllTextProps>(function Text(
           [font.family.mono]: monospace,
           [font.family.sans]: !monospace,
           'text-center': centered,
+          'line-clamp-1': lineClamp === 1,
           'line-clamp-3': lineClamp === 3,
           'leading-5': lineClamp && size === 'h6',
         },

@@ -25,6 +25,10 @@ import { ExportLogsModal } from './ExportLogsModal'
 import { DocumentLogFilterOptions } from '@latitude-data/core/browser'
 import { LogsOverTime } from '../../../../../overview/_components/Overview/LogsOverTime'
 import useDocumentLogsDailyCount from '$/stores/documentLogsDailyCount'
+import { useFeatureFlag } from '$/hooks/useFeatureFlag'
+import { useSelectedLogs } from './SaveLogsAsDatasetModal/useSelectedLogs'
+import { SaveLogsAsDatasetModal } from './SaveLogsAsDatasetModal'
+import { DownloadLogsButton } from './DownloadLogsButton'
 
 export function DocumentLogs({
   documentLogFilterOptions,
@@ -43,6 +47,8 @@ export function DocumentLogs({
   evaluationResults: Record<number, ResultWithEvaluation[]>
   isEvaluationResultsLoading: boolean
 }) {
+  const { data: featureFlag } = useFeatureFlag()
+  const hasNewDatasets = featureFlag === true
   const stickyRef = useRef<HTMLTableElement>(null)
   const sidebarWrapperRef = useRef<HTMLDivElement>(null)
   const { document } = useCurrentDocument()
@@ -70,12 +76,11 @@ export function DocumentLogs({
     () => documentLogs.map((r) => r.id),
     [documentLogs],
   )
-
   const [selectedLogsIds, setSelectedLogsIds] = useState<number[]>([])
-
   const selectableState = useSelectableRows({
     rowIds: documentLogIds,
   })
+  const previewLogsState = useSelectedLogs({ selectableState })
 
   if (
     !documentLogFilterOptions.logSources.length &&
@@ -147,6 +152,21 @@ export function DocumentLogs({
               >
                 Export selected logs
               </Button>
+              <>
+                {hasNewDatasets ? (
+                  <>
+                    <Button
+                      fancy
+                      variant='shiny'
+                      disabled={selectableState.selectedCount === 0}
+                      onClick={previewLogsState.onClickShowPreview}
+                    >
+                      Save logs to dataset
+                    </Button>
+                    <DownloadLogsButton selectableState={selectableState} />
+                  </>
+                ) : null}
+              </>
               <Button
                 fancy
                 variant='outline'
@@ -157,10 +177,12 @@ export function DocumentLogs({
             </div>
           </FloatingPanel>
         </div>
+        {/* DEPRECATED: This is for old datasets */}
         <ExportLogsModal
           selectedLogsIds={selectedLogsIds}
           close={() => setSelectedLogsIds([])}
         />
+        <SaveLogsAsDatasetModal {...previewLogsState} />
       </div>
     </div>
   )

@@ -7,10 +7,16 @@ import * as syncReadCsv from '../../lib/readCsv'
 import getTestDisk from '../../tests/testDrive'
 import { createTestCsvFile } from '../datasetRows/testHelper'
 import * as factories from '../../tests/factories'
-import { createDataset } from './create'
+import { createDatasetFromFile } from './createFromFile'
+import { hashAlgorithmArgs } from './utils'
 
 // @ts-expect-error - Mock
 vi.spyOn(publisher, 'publishLater').mockImplementation(() => {})
+
+const mocks = vi.hoisted(() => ({
+  nanoid: vi.fn(() => `test-id-${Math.random()}`),
+}))
+vi.mock('nanoid', () => ({ nanoid: mocks.nanoid }))
 
 describe('createDataset', () => {
   let workspace: Workspace
@@ -32,8 +38,10 @@ describe('createDataset', () => {
   })
 
   it('successfully creates a dataset', async () => {
-    const mockHashAlgorithm = vi.fn().mockReturnValue('random-id')
-    const result = await createDataset({
+    const mockHashAlgorithm = vi.fn(
+      ({ columnName }: hashAlgorithmArgs) => `${columnName}_identifier`,
+    )
+    const result = await createDatasetFromFile({
       author: user,
       workspace,
       disk,
@@ -46,15 +54,14 @@ describe('createDataset', () => {
     })
 
     expect(result.error).toBeUndefined()
-    expect(mockHashAlgorithm).toHaveBeenNthCalledWith(4, 7)
     expect(result.value?.dataset).toMatchObject({
       name: 'Test Dataset',
       tags: [],
       columns: [
-        { identifier: 'random-id', name: 'name' },
-        { identifier: 'random-id', name: 'surname' },
-        { identifier: 'random-id', name: 'age' },
-        { identifier: 'random-id', name: 'nationality' },
+        { identifier: 'name_identifier', name: 'name' },
+        { identifier: 'surname_identifier', name: 'surname' },
+        { identifier: 'age_identifier', name: 'age' },
+        { identifier: 'nationality_identifier', name: 'nationality' },
       ],
       author: {
         id: user.id,
@@ -74,6 +81,26 @@ describe('createDataset', () => {
     })
   })
 
+  it('expects nanoid to be called with the correct length', async () => {
+    vi.resetModules()
+    const mod = await import('./createFromFile')
+    const nanoidHashAlgorithm = await import('./utils').then(
+      (m) => m.nanoidHashAlgorithm,
+    )
+    await mod.createDatasetFromFile({
+      author: user,
+      workspace,
+      disk,
+      hashAlgorithm: nanoidHashAlgorithm,
+      data: {
+        name: 'Test Dataset',
+        file,
+        csvDelimiter: ',',
+      },
+    })
+    expect(mocks.nanoid).toHaveBeenNthCalledWith(4, 7)
+  })
+
   it('prevents duplicate dataset names', async () => {
     const { dataset: existingDs } = await factories.createDatasetV2({
       disk,
@@ -81,7 +108,7 @@ describe('createDataset', () => {
       author: user,
     })
 
-    const result = await createDataset({
+    const result = await createDatasetFromFile({
       author: user,
       workspace,
       disk,
@@ -104,7 +131,7 @@ describe('createDataset', () => {
       name: 'wrong-test-no-headers.csv',
     })
 
-    const result = await createDataset({
+    const result = await createDatasetFromFile({
       author: user,
       workspace,
       disk,
@@ -124,7 +151,7 @@ describe('createDataset', () => {
       fileContent: 'a,,c\n1,2,3',
       name: 'wrong-test-empty-headers.csv',
     })
-    const result = await createDataset({
+    const result = await createDatasetFromFile({
       author: user,
       workspace,
       disk,
@@ -164,7 +191,7 @@ describe('createDataset', () => {
         Result.error(new Error('Upload failed')),
       )
 
-      const result = await createDataset({
+      const result = await createDatasetFromFile({
         author: user,
         workspace,
         disk,
@@ -185,7 +212,7 @@ describe('createDataset', () => {
         Result.error(new Error('CSV parsing failed')),
       )
 
-      const result = await createDataset({
+      const result = await createDatasetFromFile({
         author: user,
         workspace,
         disk,
