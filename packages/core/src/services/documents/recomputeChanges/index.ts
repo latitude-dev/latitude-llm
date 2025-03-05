@@ -19,7 +19,10 @@ import {
 import { database } from '../../../client'
 import { hashContent, Result, Transaction, TypedResult } from '../../../lib'
 import { assertCommitIsDraft } from '../../../lib/assertCommitIsDraft'
-import { ProviderApiKeysRepository } from '../../../repositories'
+import {
+  IntegrationsRepository,
+  ProviderApiKeysRepository,
+} from '../../../repositories'
 import { documentVersions } from '../../../schema'
 import { buildAgentsToolsMap } from '../../agents/agentsAsTools'
 import { inheritDocumentRelations } from '../inheritRelations'
@@ -30,11 +33,13 @@ async function resolveDocumentChanges({
   originalDocuments,
   newDocuments,
   providers,
+  integrationNames,
   agentToolsMap,
 }: {
   originalDocuments: DocumentVersion[]
   newDocuments: DocumentVersion[]
   providers: ProviderApiKey[]
+  integrationNames: string[]
   agentToolsMap: AgentToolsMap
 }): Promise<{
   documents: DocumentVersion[]
@@ -63,6 +68,7 @@ async function resolveDocumentChanges({
         fullPath: d.path,
         providerNames: providers.map((p) => p.name),
         agentToolsMap,
+        integrationNames,
       })
 
       if (d.promptlVersion === 0) {
@@ -255,6 +261,11 @@ export async function recomputeChanges(
       },
       tx,
     )
+
+    const integrationsScope = new IntegrationsRepository(workspace.id, tx)
+    const integrations = await integrationsScope.findAll()
+    if (integrations.error) return Result.error(integrations.error)
+
     if (agentToolsMapResult.error)
       return Result.error(agentToolsMapResult.error)
 
@@ -264,6 +275,7 @@ export async function recomputeChanges(
         newDocuments: draftDocuments,
         providers: providersResult.value,
         agentToolsMap: agentToolsMapResult.value,
+        integrationNames: integrations.value.map((i) => i.name),
       })
 
     const newDraftDocuments = (
