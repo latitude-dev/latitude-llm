@@ -14,10 +14,11 @@ import {
 } from '../../../browser'
 import { publisher } from '../../../events/publisher'
 import { queues } from '../../../queues'
-import { CommitsRepository, DatasetRowsRepository } from '../../../repositories'
+import { CommitsRepository } from '../../../repositories'
 import { previewDataset } from '../../../services/datasets/preview'
 import { WebsocketClient } from '../../../websockets/workers'
 import { ProgressTracker } from '../../utils/progressTracker'
+import { getRowsFromRange } from '../../../services/datasetRows/getRowsFromRange'
 
 async function getDatasetRows<V extends DatasetVersion>({
   dataset: ds,
@@ -45,15 +46,7 @@ async function getDatasetRows<V extends DatasetVersion>({
     return { rows: result.rows }
   }
 
-  // This is a service call to fetch dataset rows between start and end rows and return
-  // rows: string[][]
-  const repo = new DatasetRowsRepository(ds.workspaceId)
-  const rows = await repo.findByDatasetPaginated({
-    datasetId: ds.id,
-    fromLine,
-    toLine: to,
-  })
-  return { rows: [] }
+  return getRowsFromRange({ dataset: ds as DatasetV2, fromLine, toLine: to })
 }
 
 export type RunBatchEvaluationJobParams<
@@ -104,7 +97,6 @@ export const runBatchEvaluationJob = async (
     },
   })
 
-  // TODO: Fetch dataset rows if dataset is V2
   const result = await getDatasetRows({
     dataset,
     datasetVersion,

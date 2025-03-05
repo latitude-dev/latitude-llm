@@ -87,17 +87,19 @@ export function useRunBatchForm({
     },
     [setHeaders, selectedDataset],
   )
-  const { data: datasets, isLoading: isLoadingDatasets, datasetVersion } = useVersionedDatasets(
-    {
-      onFetched: (ds) => {
-        const selected = ds.find((d) => d.id === document.datasetId)
-        if (!selected) return
+  const {
+    data: datasets,
+    isLoading: isLoadingDatasets,
+    datasetVersion,
+  } = useVersionedDatasets({
+    onFetched: (ds) => {
+      const selected = ds.find((d) => d.id === document.datasetId)
+      if (!selected) return
 
-        setSelectedDataset(selected)
-        buildHeaders(selected)
-      },
+      setSelectedDataset(selected)
+      buildHeaders(selected)
     },
-  )
+  })
   const [wantAllLines, setAllRows] = useState(true)
   const [fromLine, setFromLine] = useState<number | undefined>(undefined)
   const [toLine, setToLine] = useState<number | undefined>(undefined)
@@ -110,7 +112,10 @@ export function useRunBatchForm({
       const columns = buildColumnList(selectedDataset)
       setParameters((prev) => ({
         ...prev,
-        [param]: columns.indexOf?.(header),
+        [param]:
+          columns.indexOf?.(header) !== -1
+            ? columns.indexOf(header)
+            : undefined,
       }))
     },
     [selectedDataset],
