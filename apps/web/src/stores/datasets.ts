@@ -11,14 +11,16 @@ export default function useDatasets(
   {
     onCreateSuccess,
     onFetched,
+    enabled = true,
   }: {
+    enabled?: boolean
     onCreateSuccess?: (dataset: Dataset) => void
     onFetched?: (datasets: Dataset[]) => void
   } = {},
   opts?: SWRConfiguration,
 ) {
   const { toast } = useToast()
-  const fetcher = useFetcher(ROUTES.api.datasets.root, {
+  const fetcher = useFetcher(enabled ? ROUTES.api.datasets.root : undefined, {
     serializer: (rows) => rows.map(deserialize),
   })
   const {

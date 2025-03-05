@@ -236,6 +236,7 @@ export const API_ROUTES = {
   },
   datasetsRows: {
     root: '/api/dataset-rows',
+    count: '/api/dataset-rows/count',
   },
   evaluationTemplates: {
     root: '/api/evaluationTemplates',

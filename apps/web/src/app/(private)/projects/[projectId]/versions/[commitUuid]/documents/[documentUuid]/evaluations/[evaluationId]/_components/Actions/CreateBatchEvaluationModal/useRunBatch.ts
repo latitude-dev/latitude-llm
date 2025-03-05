@@ -1,6 +1,6 @@
 import { useCallback } from 'react'
 
-import { DocumentVersion } from '@latitude-data/core/browser'
+import { DatasetVersion, DocumentVersion } from '@latitude-data/core/browser'
 import { runBatchEvaluationAction } from '$/actions/evaluations/runBatch'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 
@@ -30,6 +30,7 @@ export function useRunBatch({
       parameters,
       fromLine,
       toLine,
+      datasetVersion,
     }: {
       datasetId: number | undefined
       fromLine: number | undefined
@@ -37,6 +38,7 @@ export function useRunBatch({
       wantAllLines: boolean
       evaluationIds: number[]
       parameters: RunBatchParameters
+      datasetVersion: DatasetVersion
     }) => {
       await run({
         projectId: Number(projectId),
@@ -44,6 +46,7 @@ export function useRunBatch({
         commitUuid,
         evaluationIds,
         datasetId: datasetId!,
+        datasetVersion,
         fromLine: wantAllLines ? undefined : fromLine,
         toLine: wantAllLines ? undefined : toLine,
         parameters,

@@ -15,16 +15,18 @@ export default function useDatasets(
     onFetched,
     page,
     pageSize,
+    enabled = true,
   }: {
     onCreateSuccess?: (dataset: DatasetV2) => void
     onFetched?: (datasets: DatasetV2[]) => void
     page?: string | null | undefined
     pageSize?: string | null
+    enabled?: boolean
   } = {},
   opts?: SWRConfiguration,
 ) {
   const { toast } = useToast()
-  const fetcher = useFetcher(ROUTES.api.datasetsV2.root, {
+  const fetcher = useFetcher(enabled ? ROUTES.api.datasetsV2.root : undefined, {
     serializer: (rows) => rows.map(deserialize),
     searchParams: compactObject({
       page: page ? String(page) : undefined,

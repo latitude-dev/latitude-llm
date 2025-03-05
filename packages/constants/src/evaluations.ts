@@ -264,4 +264,10 @@ export type EvaluationResultV2<
 
 export const EVALUATION_SCORE_SCALE = 100
 
-export const DEFAULT_EVALUATION_LABEL_NAME = 'expected_output'
+export const DEFAULT_DATASET_LABEL = 'expected_output'
+
+// PROVISIONAL until migration to v2
+export enum DatasetVersion {
+  V1 = 'v1',
+  V2 = 'v2',
+}
