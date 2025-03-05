@@ -60,6 +60,9 @@ export const evaluationVersions = latitudeSchema.table(
     uniqueCommitIdEvaluationUuid: uniqueIndex(
       'evaluation_versions_unique_commit_id_evaluation_uuid',
     ).on(table.commitId, table.evaluationUuid),
+    uniqueNameCommitIdDocumentUuidDeletedAt: uniqueIndex(
+      'evaluation_versions_unique_name_commit_id_document_uuid_deleted_at',
+    ).on(table.name, table.commitId, table.documentUuid, table.deletedAt),
     commitIdIdx: index('evaluation_versions_commit_id_idx').on(table.commitId),
     evaluationUuidIdx: index('evaluation_versions_evaluation_uuid_idx').on(
       table.evaluationUuid,
