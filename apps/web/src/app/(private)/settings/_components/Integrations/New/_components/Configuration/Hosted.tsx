@@ -1,8 +1,9 @@
 'use client'
-import { Input, Text } from '@latitude-data/web-ui'
+import { Button, Input, Text } from '@latitude-data/web-ui'
 import { buildConfigFieldName } from '../../buildIntegrationPayload'
 import { HostedIntegrationType } from '@latitude-data/constants'
 import { HOSTED_MCP_CONFIGS } from '@latitude-data/core/services/integrations/hostedTypes/index'
+import Link from 'next/link'
 
 export function HostedIntegrationConfiguration({
   type,
@@ -35,6 +36,18 @@ export function HostedIntegrationConfiguration({
           placeholder={value.placeholder}
         />
       ))}
+      {environmentValues?.envSource && (
+        <Link href={environmentValues.envSource} target='_blank'>
+          <Button
+            type='button'
+            variant='link'
+            className='p-0'
+            iconProps={{ name: 'externalLink', placement: 'right' }}
+          >
+            How to obtain these values
+          </Button>
+        </Link>
+      )}
     </div>
   )
 }

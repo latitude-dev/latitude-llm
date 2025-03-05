@@ -15,4 +15,5 @@ export default {
       required: true,
     },
   },
+  envSource: 'https://api-dashboard.search.brave.com/app/keys',
 } as HostedIntegrationConfig

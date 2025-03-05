@@ -27,4 +27,6 @@ export default {
       required: true,
     },
   },
+  envSource:
+    'https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html',
 } as HostedIntegrationConfig

@@ -18,4 +18,5 @@ export default {
       required: true,
     },
   },
+  envSource: 'https://api.slack.com/apps',
 } as HostedIntegrationConfig

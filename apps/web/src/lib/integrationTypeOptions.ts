@@ -123,7 +123,9 @@ export function integrationOptions(
 ): IntegrationTypeOption {
   if (
     integration.type === IntegrationType.HostedMCP &&
-    integration.configuration.type
+    Object.keys(HOSTED_INTEGRATION_TYPE_OPTIONS).includes(
+      integration.configuration.type,
+    )
   ) {
     return HOSTED_INTEGRATION_TYPE_OPTIONS[integration.configuration.type]
   }

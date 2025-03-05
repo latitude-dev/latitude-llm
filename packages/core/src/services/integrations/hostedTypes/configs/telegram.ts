@@ -21,4 +21,5 @@ export default {
       required: true,
     },
   },
+  envSource: 'https://my.telegram.org/apps',
 } as HostedIntegrationConfig

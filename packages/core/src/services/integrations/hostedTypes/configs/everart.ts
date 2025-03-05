@@ -15,4 +15,5 @@ export default {
       required: true,
     },
   },
+  envSource: 'https://www.everart.ai/api',
 } as HostedIntegrationConfig

@@ -9,8 +9,9 @@ export default {
     SENTRY_TOKEN: {
       label: 'Sentry Token',
       description: 'The token for the Sentry API',
-      placeholder: 'your-sentry-token',
+      placeholder: 'sntrys_token',
       required: true,
     },
   },
+  envSource: 'https://sentry.io/settings/auth-tokens/',
 } as HostedIntegrationConfig

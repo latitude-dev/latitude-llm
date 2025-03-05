@@ -37,19 +37,20 @@ export default function useIntegrations({
     opts,
   )
 
-  const { execute: create, error: createError } = useLatitudeAction(
-    createIntegrationAction,
-    {
-      onSuccess: async ({ data: integration }) => {
-        toast({
-          title: 'Success',
-          description: `${integration.name} created successfully`,
-        })
+  const {
+    execute: create,
+    error: createError,
+    isPending: isCreating,
+  } = useLatitudeAction(createIntegrationAction, {
+    onSuccess: async ({ data: integration }) => {
+      toast({
+        title: 'Success',
+        description: `${integration.name} created successfully`,
+      })
 
-        mutate([...data, integration])
-      },
+      mutate([...data, integration])
     },
-  )
+  })
 
   const { execute: destroy, isPending: isDestroying } = useLatitudeAction(
     destroyIntegrationAction,
@@ -68,6 +69,7 @@ export default function useIntegrations({
     data,
     create,
     createError,
+    isCreating,
     destroy,
     isDestroying,
     mutate,
