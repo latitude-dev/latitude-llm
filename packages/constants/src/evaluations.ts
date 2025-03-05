@@ -1,3 +1,5 @@
+import { z } from 'zod'
+
 type BaseEvaluationConfiguration = {}
 type BaseEvaluationResultMetadata = {}
 
@@ -6,6 +8,8 @@ export enum EvaluationType {
   Llm = 'llm',
   Human = 'human',
 }
+
+export const EvaluationTypeSchema = z.nativeEnum(EvaluationType)
 
 /* RULE EVALUATIONS */
 
@@ -173,6 +177,12 @@ export type EvaluationMetric<T extends EvaluationType = EvaluationType> =
   T extends EvaluationType.Human ? HumanEvaluationMetric :
   never;
 
+export const EvaluationMetricSchema = z.union([
+  z.nativeEnum(RuleEvaluationMetric),
+  z.nativeEnum(LlmEvaluationMetric),
+  z.nativeEnum(HumanEvaluationMetric),
+])
+
 // prettier-ignore
 export type EvaluationConfiguration<M extends EvaluationMetric = EvaluationMetric> =
   // Rule Evaluations
@@ -191,6 +201,8 @@ export type EvaluationConfiguration<M extends EvaluationMetric = EvaluationMetri
   M extends HumanEvaluationMetric.Comparison ? HumanEvaluationComparisonConfiguration :
   never;
 
+export const EvaluationConfigurationSchema = z.custom<EvaluationConfiguration>()
+
 export enum EvaluationCondition {
   Less = 'less',
   LessEqual = 'less_equal',
@@ -199,6 +211,8 @@ export enum EvaluationCondition {
   Greater = 'greater',
   GreaterEqual = 'greater_equal',
 }
+
+export const EvaluationConditionSchema = z.nativeEnum(EvaluationCondition)
 
 // prettier-ignore
 export type EvaluationResultMetadata<M extends EvaluationMetric = EvaluationMetric> =
@@ -217,6 +231,9 @@ export type EvaluationResultMetadata<M extends EvaluationMetric = EvaluationMetr
   M extends HumanEvaluationMetric.Rating ? HumanEvaluationRatingResultMetadata :
   M extends HumanEvaluationMetric.Comparison ? HumanEvaluationComparisonResultMetadata :
   never;
+
+// prettier-ignore
+export const EvaluationResultMetadataSchema = z.custom<EvaluationResultMetadata>()
 
 export type EvaluationV2<
   T extends EvaluationType = EvaluationType,
@@ -277,10 +294,26 @@ export type EvaluationSettings<
   | 'configuration'
 >
 
+export const EvaluationSettingsSchema = z.object({
+  name: z.string(),
+  description: z.string(),
+  type: EvaluationTypeSchema,
+  metric: EvaluationMetricSchema,
+  condition: EvaluationConditionSchema,
+  threshold: z.number(),
+  configuration: EvaluationConfigurationSchema,
+})
+
 export type EvaluationOptions = Pick<
   EvaluationV2,
   'live' | 'enableSuggestions' | 'autoApplySuggestions'
 >
+
+export const EvaluationOptionsSchema = z.object({
+  live: z.boolean().nullable(),
+  enableSuggestions: z.boolean().nullable(),
+  autoApplySuggestions: z.boolean().nullable(),
+})
 
 export const EVALUATION_SCORE_SCALE = 100
 
