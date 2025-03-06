@@ -1,6 +1,5 @@
-import { BreadcrumbItem, BreadcrumbSeparator } from '@latitude-data/web-ui'
 import { ROUTES } from '$/services/routes'
-import { EvaluationBreadcrumbItems } from '../Evaluations'
+import { BreadcrumbItem, BreadcrumbSeparator } from '@latitude-data/web-ui'
 import { ProjectBreadcrumbItems } from '../Projects'
 import { BreadcrumbSelector, BreadcrumbSelectorOption } from '../Selector'
 
@@ -9,10 +8,6 @@ export function RootBreadcrumbItems({ segments }: { segments: string[] }) {
     projects: {
       label: 'Projects',
       href: ROUTES.projects.root,
-    },
-    evaluations: {
-      label: 'Evaluations',
-      href: ROUTES.evaluations.root,
     },
     datasets: {
       label: 'Datasets',
@@ -31,21 +26,19 @@ export function RootBreadcrumbItems({ segments }: { segments: string[] }) {
   const rootSegment = segments[0] === 'dashboard' ? 'projects' : segments[0] // For some reason the root URL for projects is "dashboard" instead of "projects"
   const selectedOption = rootSegment ? options[rootSegment] : undefined
 
+  if (!selectedOption) return null
+
   return (
     <>
       <BreadcrumbSeparator />
       <BreadcrumbItem noShrink>
         <BreadcrumbSelector
-          label={selectedOption?.label || 'Unknown'}
+          label={selectedOption.label}
           options={Object.values(options)}
         />
       </BreadcrumbItem>
-
       {segments.length > 1 && rootSegment === 'projects' && (
         <ProjectBreadcrumbItems segments={segments.slice(1)} />
-      )}
-      {segments.length > 2 && rootSegment === 'evaluations' && (
-        <EvaluationBreadcrumbItems segments={segments.slice(2)} />
       )}
     </>
   )

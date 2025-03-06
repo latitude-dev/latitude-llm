@@ -4,6 +4,7 @@ import {
   EvaluationMetadataType,
   resultConfigurationSchema,
 } from '@latitude-data/core/browser'
+import { connectEvaluations } from '@latitude-data/core/services/evaluations/connect'
 import { createEvaluation } from '@latitude-data/core/services/evaluations/create'
 import { z } from 'zod'
 
@@ -36,11 +37,12 @@ export const createEvaluationAction = authProcedure
         simpleEvaluationMetadataSchema,
         defaultEvaluationMetadataSchema,
       ]),
+      documentUuid: z.string().optional(),
     }),
     { type: 'json' },
   )
   .handler(async ({ input, ctx }) => {
-    const result = await createEvaluation({
+    const evaluation = await createEvaluation({
       workspace: ctx.workspace,
       user: ctx.user,
       name: input.name,
@@ -49,7 +51,16 @@ export const createEvaluationAction = authProcedure
       metadata: input.metadata,
       resultType: input.resultConfiguration.type,
       resultConfiguration: input.resultConfiguration,
-    })
+    }).then((r) => r.unwrap())
 
-    return result.unwrap()
+    if (input.documentUuid) {
+      await connectEvaluations({
+        workspace: ctx.workspace,
+        documentUuid: input.documentUuid,
+        evaluationUuids: [evaluation.uuid],
+        user: ctx.user,
+      }).then((r) => r.unwrap())
+    }
+
+    return evaluation
   })

@@ -9,7 +9,6 @@ export enum DocumentRoutes {
 }
 
 export enum EvaluationRoutes {
-  dashboard = 'dashboard',
   editor = 'editor',
 }
 
@@ -121,15 +120,10 @@ export const ROUTES = {
     detail: (id: string | number) => `/datasets-v2/${id}`,
   },
   evaluations: {
-    root: '/evaluations',
-    destroy: (uuid: string) => `${ROUTES.evaluations.root}/${uuid}/destroy`,
     detail: ({ uuid }: { uuid: string }) => {
-      const root = `${ROUTES.evaluations.root}/${uuid}`
+      const root = `/evaluations/${uuid}`
       return {
         root,
-        [EvaluationRoutes.dashboard]: {
-          root: `${root}/dashboard`,
-        },
         [EvaluationRoutes.editor]: {
           root: `${root}/editor`,
           importLogs: {
@@ -180,9 +174,6 @@ export const ROUTES = {
                       root: evaluationsRoot,
                       dashboard: {
                         root: `${evaluationsRoot}/dashboard`,
-                        connect: {
-                          root: `${evaluationsRoot}/dashboard/connect`,
-                        },
                         generate: {
                           root: `${evaluationsRoot}/dashboard/generate`,
                         },
