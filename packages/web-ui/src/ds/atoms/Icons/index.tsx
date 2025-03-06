@@ -124,6 +124,7 @@ import Browserbase from './custom-icons/logos/Browserbase'
 import Neon from './custom-icons/logos/Neon'
 import Postgres from './custom-icons/logos/Postgres'
 import Redis from './custom-icons/logos/Redis'
+import Attio from './custom-icons/logos/Attio'
 
 const Icons = {
   addCircle: CirclePlus,
@@ -250,6 +251,7 @@ const Icons = {
   neon: Neon,
   postgres: Postgres,
   redis: Redis,
+  attio: Attio,
 }
 
 export type IconName = keyof typeof Icons

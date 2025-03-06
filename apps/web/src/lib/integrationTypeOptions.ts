@@ -136,6 +136,10 @@ export const HOSTED_INTEGRATION_TYPE_OPTIONS: Record<
     label: 'Jira',
     icon: 'jira',
   },
+  [HostedIntegrationType.Attio]: {
+    label: 'Attio',
+    icon: 'attio',
+  },
 }
 
 export function integrationOptions(
