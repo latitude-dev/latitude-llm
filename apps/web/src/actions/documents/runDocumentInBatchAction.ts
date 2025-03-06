@@ -1,17 +1,11 @@
 'use server'
 
-import { readMetadata } from '@latitude-data/compiler'
 import { publisher } from '@latitude-data/core/events/publisher'
 import { setupJobs } from '@latitude-data/core/jobs'
 import { CommitsRepository } from '@latitude-data/core/repositories'
-import { scan } from 'promptl-ai'
 import { z } from 'zod'
 
-import {
-  isValidParameter,
-  parameterErrorMessage,
-  withDataset,
-} from '../evaluations/_helpers'
+import { refineParameters, withDataset } from '../evaluations/_helpers'
 
 export const runDocumentInBatchAction = withDataset
   .createServerAction()
@@ -23,46 +17,7 @@ export const runDocumentInBatchAction = withDataset
         .record(z.number().optional())
         .optional()
         .superRefine(async (parameters = {}, refineCtx) => {
-          const metadata =
-            ctx.document.promptlVersion === 0
-              ? await readMetadata({
-                  prompt: ctx.document.content,
-                })
-              : await scan({
-                  prompt: ctx.document.content,
-                })
-          const docParams = metadata.parameters
-          // @ts-expect-error - dataset V2 are not send here yet
-          const headers = ctx.dataset.fileMetadata.headers
-          const paramKeys = Object.keys(parameters)
-          Array.from(docParams).forEach((key) => {
-            const existsInDocument = paramKeys.includes(key)
-
-            if (!existsInDocument) {
-              refineCtx.addIssue({
-                code: z.ZodIssueCode.custom,
-                path: ['parameters', key],
-                message: parameterErrorMessage({
-                  param: key,
-                  message: 'Is not a valid parameter in this document',
-                }),
-              })
-            }
-
-            const valueIndex = isValidParameter(parameters[key], headers)
-
-            if (!valueIndex) {
-              refineCtx.addIssue({
-                code: z.ZodIssueCode.custom,
-                path: ['parameters', key],
-                message: parameterErrorMessage({
-                  param: key,
-                  message:
-                    'Has not a valid header assigned in this dataset. If you want to keep empty this parameter choose "Leave empty in that parameter"',
-                }),
-              })
-            }
-          })
+          await refineParameters({ ctx, parameters, refineCtx })
         }),
     }),
   )

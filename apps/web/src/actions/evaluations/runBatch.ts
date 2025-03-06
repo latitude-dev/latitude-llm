@@ -1,19 +1,12 @@
 'use server'
 
-import { readMetadata } from '@latitude-data/compiler'
 import { publisher } from '@latitude-data/core/events/publisher'
 import { setupJobs } from '@latitude-data/core/jobs'
 import { EvaluationsRepository } from '@latitude-data/core/repositories'
-import { scan } from 'promptl-ai'
 import { nanoid } from 'nanoid'
 import { z } from 'zod'
 
-import {
-  isValidParameter,
-  parameterErrorMessage,
-  withDataset,
-} from './_helpers'
-import { DatasetVersion } from '@latitude-data/constants'
+import { refineParameters, withDataset } from './_helpers'
 
 export const runBatchEvaluationAction = withDataset
   .createServerAction()
@@ -26,48 +19,7 @@ export const runBatchEvaluationAction = withDataset
         .record(z.number().optional())
         .optional()
         .superRefine(async (parameters = {}, refineCtx) => {
-          const metadata =
-            ctx.document.promptlVersion === 0
-              ? await readMetadata({ prompt: ctx.document.content })
-              : await scan({ prompt: ctx.document.content })
-          const docParams = metadata.parameters
-          const version = ctx.datasetVersion
-          const headers =
-            version === DatasetVersion.V1 && 'fileMetadata' in ctx.dataset
-              ? ctx.dataset.fileMetadata.headers
-              : 'columns' in ctx.dataset
-                ? ctx.dataset.columns.map((c) => c.name)
-                : [] // Should not happen
-          const paramKeys = Object.keys(parameters)
-
-          Array.from(docParams).forEach((key) => {
-            const existsInDocument = paramKeys.includes(key)
-
-            if (!existsInDocument) {
-              refineCtx.addIssue({
-                code: z.ZodIssueCode.custom,
-                path: ['parameters', key],
-                message: parameterErrorMessage({
-                  param: key,
-                  message: 'Is not present in the parameters list',
-                }),
-              })
-            }
-
-            const valueIndex = isValidParameter(parameters[key], headers)
-
-            if (!valueIndex) {
-              refineCtx.addIssue({
-                code: z.ZodIssueCode.custom,
-                path: ['parameters', key],
-                message: parameterErrorMessage({
-                  param: key,
-                  message:
-                    'Has not a valid header assigned in this dataset. If you want to keep empty this parameter choose "Leave empty in that parameter"',
-                }),
-              })
-            }
-          })
+          await refineParameters({ ctx, parameters, refineCtx })
         }),
     }),
   )
@@ -95,7 +47,6 @@ export const runBatchEvaluationAction = withDataset
         user: ctx.user,
         evaluation,
         dataset: ctx.dataset,
-        datasetVersion: ctx.datasetVersion,
         document: ctx.document,
         projectId: ctx.project.id,
         commitUuid: ctx.currentCommitUuid,

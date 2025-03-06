@@ -20,21 +20,22 @@ import { WebsocketClient } from '../../../websockets/workers'
 import { ProgressTracker } from '../../utils/progressTracker'
 import { getRowsFromRange } from '../../../services/datasetRows/getRowsFromRange'
 
-async function getDatasetRows<V extends DatasetVersion>({
-  dataset: ds,
-  datasetVersion,
-  fromLine: from,
-  toLine: to,
-}: {
-  dataset: V extends 'v1' ? Dataset : DatasetV2
-  datasetVersion: V
+type GetDatasetsProps = {
+  dataset: Dataset | DatasetV2
   fromLine: number | undefined
   toLine: number | undefined
-}) {
+}
+
+async function getDatasetRows({
+  dataset: ds,
+  fromLine: from,
+  toLine: to,
+}: GetDatasetsProps) {
   const fromLine = from ? Math.abs(from) : 1
+  const datasetVersion = 'columns' in ds ? DatasetVersion.V2 : DatasetVersion.V1
 
   // DEPRECATED: Used in old datasets
-  if (datasetVersion === 'v1') {
+  if (datasetVersion === DatasetVersion.V1) {
     const dataset = ds as Dataset
     const fileMetadata = dataset.fileMetadata
     const result = await previewDataset({
@@ -49,12 +50,30 @@ async function getDatasetRows<V extends DatasetVersion>({
   return getRowsFromRange({ dataset: ds as DatasetV2, fromLine, toLine: to })
 }
 
-export type RunBatchEvaluationJobParams<V extends DatasetVersion> = {
+type GetParametersProps = GetDatasetsProps & {
+  parametersMap?: Record<string, number>
+}
+export async function getBatchParamaters({
+  parametersMap,
+  ...props
+}: GetParametersProps) {
+  if (!parametersMap) return []
+
+  const result = await getDatasetRows(props)
+  const { rows } = result
+
+  return rows.map((row) => {
+    return Object.fromEntries(
+      Object.entries(parametersMap!).map(([key, index]) => [key, row[index]!]),
+    )
+  })
+}
+
+export type RunBatchEvaluationJobParams = {
   workspace: Workspace
   user: User
   evaluation: EvaluationDto
-  dataset: V extends 'v1' ? Dataset : DatasetV2
-  datasetVersion: V
+  dataset: Dataset | DatasetV2
   document: DocumentVersion
   commitUuid: string
   projectId: number
@@ -65,14 +84,13 @@ export type RunBatchEvaluationJobParams<V extends DatasetVersion> = {
 }
 
 export const runBatchEvaluationJob = async (
-  job: Job<RunBatchEvaluationJobParams<DatasetVersion>>,
+  job: Job<RunBatchEvaluationJobParams>,
 ) => {
   const {
     workspace,
     user,
     evaluation,
     dataset,
-    datasetVersion,
     document,
     projectId,
     commitUuid,
@@ -95,18 +113,11 @@ export const runBatchEvaluationJob = async (
     },
   })
 
-  const result = await getDatasetRows({
+  const parameters = await getBatchParamaters({
     dataset,
-    datasetVersion,
+    parametersMap,
     fromLine,
     toLine,
-  })
-  const { rows } = result
-
-  const parameters = rows.map((row) => {
-    return Object.fromEntries(
-      Object.entries(parametersMap!).map(([key, index]) => [key, row[index]!]),
-    )
   })
 
   const progressTracker = new ProgressTracker(await queues(), batchId)

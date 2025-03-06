@@ -1,12 +1,22 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { readMetadata } from '@latitude-data/compiler'
-import { Dataset, DocumentVersion } from '@latitude-data/core/browser'
+import {
+  Dataset,
+  DatasetV2,
+  DocumentVersion,
+} from '@latitude-data/core/browser'
 import { scan, type ConversationMetadata } from 'promptl-ai'
 import { SelectOption } from '@latitude-data/web-ui'
-import useDatasets from '$/stores/datasets'
+import useDatasetRowsCount from '$/stores/datasetRowsCount'
 import { buildEmptyParameters } from '../../../evaluations/[evaluationId]/_components/Actions/CreateBatchEvaluationModal/useRunBatchForm'
 import { useMappedParametersFromLocalStorage } from './useMappedParametersFromLocalStorage'
 import { RunBatchParameters } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/evaluations/[evaluationId]/_components/Actions/CreateBatchEvaluationModal/useRunBatch'
+import {
+  buildColumnList,
+  getColumnIndex,
+  getDatasetCount,
+  useVersionedDatasets,
+} from '$/hooks/useVersionedDatasets'
 
 export function useRunDocumentInBatchForm({
   document,
@@ -20,7 +30,9 @@ export function useRunDocumentInBatchForm({
     () => Array.from(metadata?.parameters ?? []),
     [metadata?.parameters],
   )
-  const [selectedDataset, setSelectedDataset] = useState<Dataset | null>(null)
+  const [selectedDataset, setSelectedDataset] = useState<
+    Dataset | DatasetV2 | null
+  >(null)
   const [headers, setHeaders] = useState<SelectOption<string>[]>([])
   const [wantAllLines, setAllRows] = useState(true)
   const [fromLine, setFromLine] = useState<number | undefined>(undefined)
@@ -30,28 +42,30 @@ export function useRunDocumentInBatchForm({
   )
   const onParameterChange = useCallback(
     (param: string) => (header: string) => {
+      const columns = buildColumnList(selectedDataset)
       setParameters((prev: RunBatchParameters) => ({
         ...prev,
-        [param]: selectedDataset?.fileMetadata?.headers?.indexOf?.(header),
+        [param]: getColumnIndex(columns, header),
       }))
     },
     [selectedDataset],
   )
 
   const buildHeaders = useCallback(
-    (dataset: Dataset) => {
+    (dataset: Dataset | DatasetV2) => {
       setHeaders([
         { value: '-1', label: '-- Leave this parameter empty' },
-        ...dataset.fileMetadata.headers.map((header) => ({
-          value: header,
-          label: header,
-        })),
+        ...buildColumnList(dataset).map((value) => ({ value, label: value })),
       ])
     },
     [setHeaders, selectedDataset],
   )
 
-  const { data: datasets, isLoading: isLoadingDatasets } = useDatasets()
+  const {
+    data: datasets,
+    isLoading: isLoadingDatasets,
+    datasetVersion,
+  } = useVersionedDatasets()
   const onSelectDataset = useCallback(
     async (value: number) => {
       const ds = datasets.find((ds) => ds.id === Number(value))
@@ -60,7 +74,12 @@ export function useRunDocumentInBatchForm({
       setSelectedDataset(ds)
       setParameters(buildEmptyParameters(parametersList))
       setFromLine(1)
-      setToLine(ds.fileMetadata.rowCount)
+
+      // DEPRECATED: Legacy datasets
+      if ('fileMetadata' in ds) {
+        setToLine(ds.fileMetadata.rowCount)
+      }
+
       buildHeaders(ds)
     },
     [parametersList, datasets, buildHeaders],
@@ -103,10 +122,19 @@ export function useRunDocumentInBatchForm({
       setParameters(mapped)
     },
   })
+
+  const { data: datasetRowsCount } = useDatasetRowsCount({
+    dataset: selectedDataset,
+    onFetched: (count) => {
+      setToLine(() => count)
+    },
+  })
+  const maxLineCount = getDatasetCount(selectedDataset, datasetRowsCount)
   return {
     datasets,
     isLoadingDatasets,
     selectedDataset,
+    datasetVersion,
     headers,
     wantAllLines,
     fromLine,
@@ -118,7 +146,6 @@ export function useRunDocumentInBatchForm({
     setAllRows,
     setFromLine,
     setToLine,
-    // TODO: Make this also accept dataset V2
-    maxLineCount: selectedDataset?.fileMetadata?.rowCount,
+    maxLineCount,
   }
 }

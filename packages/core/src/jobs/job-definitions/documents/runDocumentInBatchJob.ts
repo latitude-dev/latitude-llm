@@ -2,7 +2,7 @@ import { Job } from 'bullmq'
 
 import { setupJobs } from '../..'
 import { Commit, Dataset, DocumentVersion, Workspace } from '../../../browser'
-import { previewDataset } from '../../../services/datasets/preview'
+import { getBatchParamaters } from '../batchEvaluations'
 
 export type RunDocumentInBatchJobProps = {
   commit: Commit
@@ -26,20 +26,11 @@ export const runDocumentInBatchJob = async (
     toLine,
     parametersMap,
   } = job.data
-  const fileMetadata = dataset.fileMetadata
-
-  const result = await previewDataset({
+  const parameters = await getBatchParamaters({
     dataset,
     fromLine,
-    toLine: toLine || fileMetadata.rowCount,
-  }).then((r) => r.unwrap())
-
-  const { rows } = result
-
-  const parameters = rows.map((row) => {
-    return Object.fromEntries(
-      Object.entries(parametersMap!).map(([key, index]) => [key, row[index]!]),
-    )
+    toLine,
+    parametersMap,
   })
 
   const jobs = await setupJobs()
