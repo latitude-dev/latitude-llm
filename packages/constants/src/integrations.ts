@@ -45,7 +45,7 @@ export enum HostedIntegrationType {
   // Wordpress = 'wordpress', // Not on OpenTools
   // Discord = 'discord', // Not on OpenTools
   // Intercom = 'intercom', // Not on OpenTools
-  // Jira = 'jira', // Not on OpenTools
+  Jira = 'jira', // Not on OpenTools
   // Supabase = 'supabase', // Not on OpenTools
   // Hubspot = 'hubspot', // Not on OpenTools
   // Attio = 'attio', // Not on OpenTools

@@ -132,6 +132,10 @@ export const HOSTED_INTEGRATION_TYPE_OPTIONS: Record<
     label: 'Redis',
     icon: 'redis',
   },
+  [HostedIntegrationType.Jira]: {
+    label: 'Jira',
+    icon: 'jira',
+  },
 }
 
 export function integrationOptions(
