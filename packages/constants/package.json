@@ -13,7 +13,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./errors": "./src/errors.ts",
-    "./evaluations": "./src/evaluations.ts"
+    "./evaluations": "./src/evaluations/index.ts"
   },
   "devDependencies": {
     "@latitude-data/eslint-config": "workspace:*",

@@ -6,16 +6,17 @@ import { Commit, DocumentVersion, Workspace } from '../../browser'
 import { database } from '../../client'
 import { Result, Transaction, TypedResult } from '../../lib'
 import { EvaluationsV2Repository } from '../../repositories'
-import { documentVersions, evaluationVersions } from '../../schema'
+import { documentVersions } from '../../schema'
+import { deleteEvaluationV2 } from '../evaluationsV2'
 import { pingProjectUpdate } from '../projects'
 
 async function findUuidsInOtherCommits({
   tx,
   documents,
-  commitId,
+  commit,
 }: {
   documents: DocumentVersion[]
-  commitId: number
+  commit: Commit
   tx: typeof database
 }) {
   const uuids = documents.map((d) => d.documentUuid)
@@ -25,7 +26,7 @@ async function findUuidsInOtherCommits({
     .where(
       and(
         inArray(documentVersions.documentUuid, uuids),
-        ne(documentVersions.commitId, commitId),
+        ne(documentVersions.commitId, commit.id),
       ),
     )
 
@@ -40,18 +41,6 @@ function getToBeSoftDeleted({
   existingUuids: string[]
 }) {
   return documents.filter((d) => existingUuids.includes(d.documentUuid))
-}
-
-async function hardDestroyEvaluations({
-  documentUuids,
-  tx,
-}: {
-  documentUuids: string[]
-  tx: typeof database
-}) {
-  return tx
-    .delete(evaluationVersions)
-    .where(inArray(evaluationVersions.documentUuid, documentUuids))
 }
 
 /**
@@ -72,124 +61,42 @@ async function hardDestroyDocuments({
     .map((d) => d.documentUuid)
   if (uuids.length === 0) return
 
-  await hardDestroyEvaluations({ documentUuids: uuids, tx })
-
   return tx
     .delete(documentVersions)
     .where(inArray(documentVersions.documentUuid, uuids))
 }
 
-async function createEvaluationsAsSoftDeleted({
-  commitId,
-  documents,
-  workspace,
-  tx,
-}: {
-  commitId: number
-  documents: DocumentVersion[]
-  workspace: Workspace
-  tx: typeof database
-}) {
-  const repository = new EvaluationsV2Repository(workspace.id, tx)
-
-  await Promise.all(
-    documents.map(async (document) => {
-      const evaluations = await repository
-        .listByDocumentVersion({
-          commitId: document.commitId,
-          documentUuid: document.documentUuid,
-        })
-        .then((r) => r.unwrap())
-
-      if (!evaluations.length) return
-
-      await tx
-        .insert(evaluationVersions)
-        .values(
-          evaluations.map((evaluation) => ({
-            ...evaluation,
-            id: undefined,
-            commitId: commitId,
-            deletedAt: new Date(),
-          })),
-        )
-        .onConflictDoUpdate({
-          target: [
-            evaluationVersions.commitId,
-            evaluationVersions.evaluationUuid,
-          ],
-          set: { deletedAt: new Date() },
-        })
-    }),
-  )
-}
-
 async function createDocumentsAsSoftDeleted({
   toBeCreated,
-  commitId,
-  workspace,
+  commit,
   tx,
 }: {
   toBeCreated: DocumentVersion[]
-  commitId: number
-  workspace: Workspace
+  commit: Commit
   tx: typeof database
 }) {
   if (!toBeCreated.length) return
-
-  await createEvaluationsAsSoftDeleted({
-    commitId: commitId,
-    documents: toBeCreated,
-    workspace: workspace,
-    tx: tx,
-  })
 
   return tx.insert(documentVersions).values(
     toBeCreated.map((d) => ({
       ...omit(d, ['id', 'updatedAt', 'createdAt']),
       deletedAt: new Date(),
-      commitId,
+      commitId: commit.id,
     })),
   )
 }
 
-async function updateEvaluationsAsSoftDeleted({
-  commitId,
-  documentUuids,
-  tx,
-}: {
-  commitId: number
-  documentUuids: string[]
-  tx: typeof database
-}) {
-  return tx
-    .update(evaluationVersions)
-    .set({ deletedAt: new Date() })
-    .where(
-      and(
-        eq(evaluationVersions.commitId, commitId),
-        inArray(evaluationVersions.documentUuid, documentUuids),
-      ),
-    )
-}
-
 async function updateDocumentsAsSoftDeleted({
   toBeUpdated,
-  commitId,
+  commit,
   tx,
 }: {
   toBeUpdated: DocumentVersion[]
-  commitId: number
+  commit: Commit
   tx: typeof database
 }) {
   const uuids = toBeUpdated.map((d) => d.documentUuid)
   if (!uuids.length) return
-
-  await updateEvaluationsAsSoftDeleted({
-    commitId: commitId,
-    documentUuids: uuids,
-    tx: tx,
-  })
 
   return tx
     .update(documentVersions)
@@ -197,7 +104,7 @@ async function updateDocumentsAsSoftDeleted({
     .where(
       and(
         inArray(documentVersions.documentUuid, uuids),
-        eq(documentVersions.commitId, commitId),
+        eq(documentVersions.commitId, commit.id),
       ),
     )
 }
@@ -232,23 +139,43 @@ export async function destroyOrSoftDeleteDocuments({
   trx?: typeof database
 }): Promise<TypedResult<boolean, Error>> {
   return Transaction.call(async (tx) => {
-    const commitId = commit.id
+    const repository = new EvaluationsV2Repository(workspace.id, tx)
+
+    await Promise.all(
+      documents.map(async (document) => {
+        const evaluations = await repository
+          .listAtCommitByDocument({
+            commitUuid: commit.uuid,
+            documentUuid: document.documentUuid,
+          })
+          .then((r) => r.unwrap())
+
+        await Promise.all(
+          evaluations.map((evaluation) =>
+            deleteEvaluationV2({ evaluation, commit, workspace }, tx).then(
+              (r) => r.unwrap(),
+            ),
+          ),
+        )
+      }),
+    )
+
     const existingUuids = await findUuidsInOtherCommits({
-      tx,
-      documents,
-      commitId,
+      tx: tx,
+      documents: documents,
+      commit: commit,
     })
     const toBeSoftDeleted = getToBeSoftDeleted({ documents, existingUuids })
-    const toBeCreated = toBeSoftDeleted.filter((d) => d.commitId !== commitId)
-    const toBeUpdated = toBeSoftDeleted.filter((d) => d.commitId === commitId)
+    const toBeCreated = toBeSoftDeleted.filter((d) => d.commitId !== commit.id)
+    const toBeUpdated = toBeSoftDeleted.filter((d) => d.commitId === commit.id)
 
     await Promise.all([
       hardDestroyDocuments({ documents, existingUuids, tx }),
-      createDocumentsAsSoftDeleted({ toBeCreated, commitId, workspace, tx }),
-      updateDocumentsAsSoftDeleted({ toBeUpdated, commitId, tx }),
+      createDocumentsAsSoftDeleted({ toBeCreated, commit, tx }),
+      updateDocumentsAsSoftDeleted({ toBeUpdated, commit, tx }),
     ])
 
-    await invalidateDocumentsCacheInCommit(commitId, tx)
+    await invalidateDocumentsCacheInCommit(commit.id, tx)
 
     await pingProjectUpdate({ projectId: commit.projectId }, tx)
 

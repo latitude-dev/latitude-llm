@@ -5,7 +5,6 @@
     "browser": true
   },
   "rules": {
-    "no-constant-condition": "off",
-    "no-redeclare": "off"
+    "no-constant-condition": "off"
   }
 }

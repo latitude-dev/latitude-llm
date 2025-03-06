@@ -6,7 +6,9 @@ import {
   UnauthorizedError,
 } from '@latitude-data/core/lib/errors'
 import {
+  CommitsRepository,
   DocumentVersionsRepository,
+  EvaluationsV2Repository,
   ProjectsRepository,
 } from '@latitude-data/core/repositories'
 import * as Sentry from '@sentry/nextjs'
@@ -81,19 +83,49 @@ export const withProject = createServerActionProcedure(authProcedure)
     return { ...ctx, project }
   })
 
-export const withDocument = createServerActionProcedure(withProject)
-  .input(z.object({ commitUuid: z.string(), documentUuid: z.string() }))
+export const withCommit = createServerActionProcedure(withProject)
+  .input(z.object({ commitUuid: z.string() }))
+  .handler(async ({ input, ctx }) => {
+    const repository = new CommitsRepository(ctx.workspace.id)
+    const commit = await repository
+      .getCommitByUuid({
+        projectId: ctx.project.id,
+        uuid: input.commitUuid,
+      })
+      .then((r) => r.unwrap())
+
+    return { ...ctx, commit }
+  })
+
+export const withDocument = createServerActionProcedure(withCommit)
+  .input(z.object({ documentUuid: z.string() }))
   .handler(async ({ input, ctx }) => {
     const repo = new DocumentVersionsRepository(ctx.workspace.id)
     const document = await repo
       .getDocumentAtCommit({
         projectId: ctx.project.id,
-        commitUuid: input.commitUuid,
+        commitUuid: ctx.commit.uuid,
         documentUuid: input.documentUuid,
       })
       .then((r) => r.unwrap())
 
     return { ...ctx, document, currentCommitUuid: input.commitUuid }
+  })
+
+export const withEvaluation = createServerActionProcedure(withDocument)
+  .input(z.object({ evaluationUuid: z.string() }))
+  .handler(async ({ input, ctx }) => {
+    const repository = new EvaluationsV2Repository(ctx.workspace.id)
+    const evaluation = await repository
+      .getAtCommitByDocument({
+        projectId: ctx.project.id,
+        commitUuid: ctx.commit.uuid,
+        documentUuid: ctx.document.documentUuid,
+        evaluationUuid: input.evaluationUuid,
+      })
+      .then((r) => r.unwrap())
+
+    return { ...ctx, evaluation }
   })
 
 export const withAdmin = createServerActionProcedure(authProcedure).handler(

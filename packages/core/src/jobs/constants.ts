@@ -64,6 +64,7 @@ export const QUEUES = {
       'notifyClientOfBulkCreateTracesAndSpans',
       'notifyToClientDocumentLogCreatedJob',
       'notifyClientOfDocumentSuggestionCreated',
+      'notifyClientOfEvaluationResultV2Created',
       'notifyToClientEvaluationResultCreatedJob',
       'runLiveEvaluationsJob',
       'sendInvitationToUserJob',

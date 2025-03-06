@@ -4,10 +4,11 @@
 // put in other place.
 
 import {
+  DatasetRow,
+  DocumentSuggestionWithDetails,
+  EvaluationResultV2,
   Span,
   Trace,
-  DocumentSuggestionWithDetails,
-  DatasetRow,
 } from '../browser'
 import {
   type DocumentLogWithMetadataAndError,
@@ -86,6 +87,11 @@ type DatasetRowsCreatedArgs =
   | { datasetId: number; error: Error; rows: null; finished: false }
   | { datasetId: number; error: null; rows: null; finished: true }
 
+type EvaluationResultV2CreatedArgs = {
+  workspaceId: number
+  result: EvaluationResultV2
+}
+
 export type WebServerToClientEvents = {
   documentBatchRunStatus: (args: DocumentBatchRunStatusArgs) => void
   evaluationStatus: (args: EvaluationStatusArgs) => void
@@ -94,6 +100,7 @@ export type WebServerToClientEvents = {
   joinWorkspace: (args: { workspaceId: number; userId: string }) => void
   documentLogCreated: (args: DocumentLogCreatedArgs) => void
   documentSuggestionCreated: (args: DocumentSuggestionCreatedArgs) => void
+  evaluationResultV2Created: (args: EvaluationResultV2CreatedArgs) => void
   tracesAndSpansCreated: (args: {
     workspaceId: number
     traces: Trace[]
@@ -129,6 +136,10 @@ export type WorkersClientToServerEvents = {
   documentSuggestionCreated: (args: {
     workspaceId: number
     data: DocumentSuggestionCreatedArgs
+  }) => void
+  evaluationResultV2Created: (args: {
+    workspaceId: number
+    data: EvaluationResultV2CreatedArgs
   }) => void
   tracesAndSpansCreated: (args: {
     workspaceId: number
