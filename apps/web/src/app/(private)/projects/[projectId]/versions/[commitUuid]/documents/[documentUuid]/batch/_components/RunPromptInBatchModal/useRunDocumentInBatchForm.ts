@@ -3,6 +3,7 @@ import { readMetadata } from '@latitude-data/compiler'
 import {
   Dataset,
   DatasetV2,
+  DatasetVersion,
   DocumentVersion,
 } from '@latitude-data/core/browser'
 import { scan, type ConversationMetadata } from 'promptl-ai'
@@ -35,7 +36,7 @@ export function useRunDocumentInBatchForm({
   >(null)
   const [headers, setHeaders] = useState<SelectOption<string>[]>([])
   const [wantAllLines, setAllRows] = useState(true)
-  const [fromLine, setFromLine] = useState<number | undefined>(undefined)
+  const [fromLine, setFromLine] = useState<number>(1)
   const [toLine, setToLine] = useState<number | undefined>(undefined)
   const [parameters, setParameters] = useState(() =>
     buildEmptyParameters(parametersList),
@@ -65,7 +66,21 @@ export function useRunDocumentInBatchForm({
     data: datasets,
     isLoading: isLoadingDatasets,
     datasetVersion,
-  } = useVersionedDatasets()
+  } = useVersionedDatasets({
+    onFetched: (ds, dsVersion) => {
+      const identifier =
+        dsVersion === DatasetVersion.V1 ? 'datasetId' : 'datasetV2Id'
+      const selected = ds.find((d) => d.id === document[identifier])
+      if (!selected) return
+
+      // DEPRECATED: Legacy datasets
+      if ('fileMetadata' in selected) {
+        setToLine(selected.fileMetadata.rowCount)
+      }
+      setSelectedDataset(selected)
+      buildHeaders(selected)
+    },
+  })
   const onSelectDataset = useCallback(
     async (value: number) => {
       const ds = datasets.find((ds) => ds.id === Number(value))

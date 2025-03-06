@@ -3,6 +3,7 @@ import { useCallback, useMemo, useState } from 'react'
 import {
   Dataset,
   DatasetV2,
+  DatasetVersion,
   DocumentVersion,
 } from '@latitude-data/core/browser'
 import type { ConversationMetadata } from 'promptl-ai'
@@ -54,8 +55,10 @@ export function useRunBatchForm({
     isLoading: isLoadingDatasets,
     datasetVersion,
   } = useVersionedDatasets({
-    onFetched: (ds) => {
-      const selected = ds.find((d) => d.id === document.datasetId)
+    onFetched: (ds, dsVersion) => {
+      const identifier =
+        dsVersion === DatasetVersion.V1 ? 'datasetId' : 'datasetV2Id'
+      const selected = ds.find((d) => d.id === document[identifier])
       if (!selected) return
 
       setSelectedDataset(selected)
@@ -63,7 +66,7 @@ export function useRunBatchForm({
     },
   })
   const [wantAllLines, setAllRows] = useState(true)
-  const [fromLine, setFromLine] = useState<number | undefined>(undefined)
+  const [fromLine, setFromLine] = useState<number>(1)
   const [toLine, setToLine] = useState<number | undefined>(undefined)
   const [parameters, setParameters] = useState(() =>
     buildEmptyParameters(parametersList),
@@ -100,6 +103,8 @@ export function useRunBatchForm({
   )
 
   const { commit } = useCurrentCommit()
+
+  // TODO: Remove after datasets 2 migration
   useMappedParametersFromLocalStorage({
     document,
     commitVersionUuid: commit.uuid,

@@ -30,12 +30,14 @@ export function useAgentToolsMap(
   const [agentToolsMap, setAgentToolsMap] = useState<AgentToolsMap>({})
 
   useEffect(() => {
+    if (isLoading || error) return
+
     setAgentToolsMap((prev) => {
       const newAgentToolMaps = buildAgentsToolMap(data)
 
       return isEqual(prev, newAgentToolMaps) ? prev : newAgentToolMaps
     })
-  }, [data])
+  }, [data, isLoading, error])
 
   return { data: agentToolsMap, isLoading, error }
 }

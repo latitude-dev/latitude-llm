@@ -13,7 +13,11 @@ import {
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
 import { StickyOffset, useStickyNested } from '$/hooks/useStickyNested'
 import { ROUTES } from '$/services/routes'
-import { ProviderLogDto, buildConversation } from '@latitude-data/core/browser'
+import {
+  DatasetVersion,
+  ProviderLogDto,
+  buildConversation,
+} from '@latitude-data/core/browser'
 import {
   DocumentLogWithMetadataAndError,
   ResultWithEvaluation,
@@ -37,6 +41,7 @@ import {
 import { DocumentLogEvaluations } from './Evaluations'
 import { DocumentLogMessages } from './Messages'
 import { DocumentLogMetadata } from './Metadata'
+import { useFeatureFlag } from '$/hooks/useFeatureFlag'
 
 function DocumentLogMetadataLoading() {
   return (
@@ -60,12 +65,19 @@ function UseDocumentLogInPlaygroundButton({
   const { project } = useCurrentProject()
   const documentUuid = documentLog.documentUuid
   const { document } = useCurrentDocument()
+  const { data: hasDatasetsV2, isLoading: isLoadingFeatureFlag } =
+    useFeatureFlag()
+  const datasetVersion =
+    hasDatasetsV2 && !isLoadingFeatureFlag
+      ? DatasetVersion.V2
+      : DatasetVersion.V1
   const {
     setSource,
     history: { setHistoryLog },
   } = useDocumentParameters({
     document,
     commitVersionUuid: commit.uuid,
+    datasetVersion,
   })
   const navigate = useRouter()
   const employLogAsDocumentParameters = useCallback(() => {

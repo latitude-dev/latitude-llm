@@ -66,12 +66,14 @@ function Warnings({ warnings }: { warnings: AppliedRules }) {
 export default function Preview({
   metadata,
   parameters,
+  parametersLoading,
   runPrompt,
   expandParameters,
   setExpandParameters,
 }: {
   metadata: ConversationMetadata | undefined
   parameters: Record<string, unknown>
+  parametersLoading: boolean
   runPrompt: () => void
 } & ActionsState) {
   const { data: providers } = useProviderApiKeys()
@@ -99,6 +101,7 @@ export default function Preview({
     if (!document) return
     if (!metadata) return
     if (metadata.errors.length > 0) return
+    if (parametersLoading) return
 
     const usePromptl = document.promptlVersion !== 0
     const chain = usePromptl
@@ -130,7 +133,7 @@ export default function Preview({
         setCompleted(true)
         setError(error)
       })
-  }, [metadata, parameters])
+  }, [metadata, parameters, parametersLoading])
 
   useEffect(() => {
     if (!conversation) return

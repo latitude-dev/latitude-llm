@@ -38,7 +38,6 @@ export default function useLatitudeAction<
       ((error: inferServerActionError<TServerAction>) => {
         if (error?.err?.code === 'INPUT_PARSE_ERROR') return
 
-        console.log(error)
         toast({
           title: 'Error',
           description: error?.err?.message || error?.message,

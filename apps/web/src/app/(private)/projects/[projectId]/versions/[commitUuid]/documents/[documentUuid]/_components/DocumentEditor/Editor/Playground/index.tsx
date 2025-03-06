@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
 import useDocumentLogWithMetadata from '$/stores/documentLogWithMetadata'
-import { DocumentVersion } from '@latitude-data/core/browser'
+import { DatasetVersion, DocumentVersion } from '@latitude-data/core/browser'
 import {
   AppLocalStorage,
   cn,
@@ -26,11 +26,13 @@ export default function Playground({
   prompt,
   setPrompt,
   metadata,
+  datasetVersion,
 }: {
   document: DocumentVersion
   prompt: string
   setPrompt: (prompt: string) => void
   metadata: ConversationMetadata
+  datasetVersion: DatasetVersion | undefined
 }) {
   const [mode, setMode] = useState<'preview' | 'chat'>('preview')
   const { commit } = useCurrentCommit()
@@ -42,11 +44,13 @@ export default function Playground({
   useEffect(() => {
     setForcedSize(collapsed ? COLLAPSED_SIZE : undefined)
   }, [collapsed])
-
-  const { parameters } = useDocumentParameters({
-    commitVersionUuid: commit.uuid,
-    document,
-  })
+  const { parameters, parametersLoading, source, setSource } =
+    useDocumentParameters({
+      isMountedOnRoot: true,
+      commitVersionUuid: commit.uuid,
+      document,
+      datasetVersion,
+    })
 
   const { value: expandParameters, setValue: setExpandParameters } =
     useLocalStorage({
@@ -86,11 +90,15 @@ export default function Playground({
           })}
         >
           <DocumentParams
+            metadata={metadata}
             commit={commit}
             document={document}
             prompt={prompt}
+            source={source}
+            setSource={setSource}
             setPrompt={setPrompt}
             onExpand={setExpandedParameters}
+            datasetVersion={datasetVersion}
           />
           <DocumentEvaluations
             documentLog={documentLog}
@@ -108,6 +116,7 @@ export default function Playground({
             <Preview
               metadata={metadata}
               parameters={parameters}
+              parametersLoading={parametersLoading}
               runPrompt={() => setMode('chat')}
               expandParameters={expandParameters}
               setExpandParameters={setExpandParameters}

@@ -2,6 +2,7 @@
 
 import { useCallback } from 'react'
 
+import useFetcher from '$/hooks/useFetcher'
 import { assignDatasetAction } from '$/actions/documents/assignDatasetAction'
 import { saveLinkedDatasetAction } from '$/actions/documents/saveLinkedDatasetAction'
 import { createDocumentVersionAction } from '$/actions/documents/create'
@@ -36,6 +37,27 @@ export default function useDocumentVersions(
 ) {
   const { toast } = useToast()
   const { onSuccessCreate } = opts
+  const enabled = !!projectId && !!commitUuid
+  const fetcher = useFetcher(
+    enabled
+      ? ROUTES.api.projects.detail(projectId).commits.detail(commitUuid).root
+      : undefined,
+    {
+      fallback: EMPTY_DATA,
+    },
+  )
+  const {
+    mutate,
+    data = EMPTY_DATA,
+    isValidating,
+    isLoading,
+    error: swrError,
+  } = useSWR<DocumentVersion[]>(
+    enabled ? ['documentVersions', projectId, commitUuid] : undefined,
+    fetcher,
+    opts,
+  )
+
   const router = useRouter()
   const { execute: executeCreateDocument } = useServerAction(
     createDocumentVersionAction,
@@ -60,28 +82,6 @@ export default function useDocumentVersions(
     useServerAction(destroyDocumentAction)
   const { execute: executeDestroyFolder, isPending: isDestroyingFolder } =
     useServerAction(destroyFolderAction)
-
-  const {
-    mutate,
-    data = EMPTY_DATA,
-    isValidating,
-    isLoading,
-    error: swrError,
-  } = useSWR<DocumentVersion[]>(
-    ['documentVersions', projectId, commitUuid],
-    useCallback(async () => {
-      if (!commitUuid || !projectId) return []
-
-      const response = await fetch(
-        ROUTES.api.projects.detail(projectId).commits.detail(commitUuid).root,
-        { credentials: 'include' },
-      )
-      if (!response.ok) return []
-
-      return response.json()
-    }, [projectId, commitUuid]),
-    opts,
-  )
 
   const createFile = useCallback(
     async ({ path }: { path: string }) => {

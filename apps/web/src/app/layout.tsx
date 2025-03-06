@@ -12,6 +12,7 @@ import {
   TooltipProvider,
 } from '@latitude-data/web-ui'
 import { fontMono, fontSans } from '$/helpers/fonts'
+import { SWRProvider } from '$/components/Providers/SWRProvider'
 
 export const metadata = buildMetatags({
   title: 'The Open-Source LLM Development Platform',
@@ -31,15 +32,17 @@ export default function RootLayout({
       </head>
       <body className={`${fontSans.variable} ${fontMono.variable} font-sans`}>
         <NextTopLoader showSpinner={false} />
-        <ThemeProvider
-          attribute='class'
-          defaultTheme='light'
-          themes={THEMES as unknown as string[]}
-          enableSystem
-          disableTransitionOnChange
-        >
-          <TooltipProvider>{children}</TooltipProvider>
-        </ThemeProvider>
+        <SWRProvider config={{ revalidateOnFocus: false }}>
+          <ThemeProvider
+            attribute='class'
+            defaultTheme='light'
+            themes={THEMES as unknown as string[]}
+            enableSystem
+            disableTransitionOnChange
+          >
+            <TooltipProvider>{children}</TooltipProvider>
+          </ThemeProvider>
+        </SWRProvider>
         <ToastProvider duration={5000} />
       </body>
     </html>

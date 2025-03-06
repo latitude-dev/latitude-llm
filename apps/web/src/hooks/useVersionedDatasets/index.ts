@@ -3,7 +3,9 @@ import useDatasets from '$/stores/datasets'
 import useDatasetsV2 from '$/stores/datasetsV2'
 import { useFeatureFlag } from '$/hooks/useFeatureFlag'
 
-export function buildColumnList(dataset: Dataset | DatasetV2 | null) {
+export function buildColumnList(
+  dataset: Dataset | DatasetV2 | null | undefined,
+) {
   if (!dataset) return []
 
   return 'fileMetadata' in dataset
@@ -33,27 +35,46 @@ export function getDatasetCount(
  */
 export function useVersionedDatasets({
   onFetched,
+  enabled = true,
 }: {
-  onFetched?: (datasets: (Dataset | DatasetV2)[]) => void
+  onFetched?: (
+    datasets: (Dataset | DatasetV2)[],
+    datasetVersion: DatasetVersion,
+  ) => void
+  enabled?: boolean
 } = {}) {
-  const { data: hasDatasetsV2, isLoading } = useFeatureFlag()
+  const { data: hasDatasetsV2, isLoading: isLoadingFeatureFlag } =
+    useFeatureFlag()
+  const datasetVersion =
+    hasDatasetsV2 && !isLoadingFeatureFlag
+      ? DatasetVersion.V2
+      : !isLoadingFeatureFlag
+        ? DatasetVersion.V1
+        : undefined
+
+  const isV1 = datasetVersion === DatasetVersion.V1
+
   const { data: datasetsV1, isLoading: isLoadingDatasetsV1 } = useDatasets({
-    enabled: !isLoading && !hasDatasetsV2,
+    enabled: enabled && isV1,
     onFetched: (datasets) => {
-      onFetched?.(datasets)
+      onFetched?.(datasets, DatasetVersion.V1)
     },
   })
+
   const { data: datasetsV2, isLoading: isLoadingDatasetsV2 } = useDatasetsV2({
-    enabled: !isLoading && hasDatasetsV2,
+    enabled: enabled && !isV1,
     onFetched: (datasets) => {
-      onFetched?.(datasets)
+      onFetched?.(datasets, DatasetVersion.V2)
     },
     pageSize: '100000', // Big enough page to avoid pagination
   })
 
+  const isLoading =
+    isLoadingFeatureFlag || isLoadingDatasetsV1 || isLoadingDatasetsV2
+
   return {
-    data: hasDatasetsV2 ? datasetsV2 : datasetsV1,
-    datasetVersion: hasDatasetsV2 ? DatasetVersion.V2 : DatasetVersion.V1,
-    isLoading: isLoading || isLoadingDatasetsV1 || isLoadingDatasetsV2,
+    data: isV1 ? datasetsV1 : datasetsV2,
+    datasetVersion: datasetVersion ?? DatasetVersion.V1,
+    isLoading,
   }
 }
