@@ -140,6 +140,14 @@ export const HOSTED_INTEGRATION_TYPE_OPTIONS: Record<
     label: 'Attio',
     icon: 'attio',
   },
+  [HostedIntegrationType.Ghost]: {
+    label: 'Ghost',
+    icon: 'ghost',
+  },
+  [HostedIntegrationType.Supabase]: {
+    label: 'Supabase',
+    icon: 'supabase',
+  },
 }
 
 export function integrationOptions(

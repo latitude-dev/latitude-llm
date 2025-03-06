@@ -27,6 +27,7 @@ import POSTGRES_MCP_CONFIG from './configs/postgres'
 import REDIS_MCP_CONFIG from './configs/redis'
 import JIRA_MCP_CONFIG from './configs/jira'
 import ATTIO_MCP_CONFIG from './configs/attio'
+import GHOST_MCP_CONFIG from './configs/ghost'
 
 export const HOSTED_MCP_CONFIGS: Record<
   HostedIntegrationType,
@@ -60,4 +61,5 @@ export const HOSTED_MCP_CONFIGS: Record<
   [HostedIntegrationType.Redis]: REDIS_MCP_CONFIG,
   [HostedIntegrationType.Jira]: JIRA_MCP_CONFIG,
   [HostedIntegrationType.Attio]: ATTIO_MCP_CONFIG,
+  [HostedIntegrationType.Ghost]: GHOST_MCP_CONFIG,
 }

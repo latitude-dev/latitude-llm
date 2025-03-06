@@ -34,6 +34,7 @@ export enum HostedIntegrationType {
   Redis = 'redis',
   Jira = 'jira',
   Attio = 'attio',
+  Ghost = 'ghost',
 
   // Require all auth file :point_down:
   // Gmail = 'google_drive',
@@ -45,7 +46,7 @@ export enum HostedIntegrationType {
   // Wordpress = 'wordpress', // Not on OpenTools
   // Discord = 'discord', // Not on OpenTools
   // Intercom = 'intercom', // Not on OpenTools
-  // Hubspot = 'hubspot', // Not on OpenTools
-  // Loops = 'loops', // Not on OpenTools
-  // Ghost = 'ghost', // Not on OpenTools
+
+  // Hubspot = 'hubspot', // Docker based
+  // Loops = 'loops', // Does not exist
 }
