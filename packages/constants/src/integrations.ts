@@ -29,9 +29,10 @@ export enum HostedIntegrationType {
   Time = 'time',
   browserbase = 'browserbase',
   Neon = 'neon',
-  Postgres = 'postgres', // Uses a custom parameter in the command instead of env vars
-  Redis = 'redis', // Uses a custom parameter in the command instead of env vars
-  Jira = 'jira', // Not on OpenTools
+  Postgres = 'postgres',
+  Supabase = 'supabase',
+  Redis = 'redis',
+  Jira = 'jira',
   Attio = 'attio',
 
   // Require all auth file :point_down:
@@ -44,7 +45,6 @@ export enum HostedIntegrationType {
   // Wordpress = 'wordpress', // Not on OpenTools
   // Discord = 'discord', // Not on OpenTools
   // Intercom = 'intercom', // Not on OpenTools
-  // Supabase = 'supabase', // Not on OpenTools
   // Hubspot = 'hubspot', // Not on OpenTools
   // Loops = 'loops', // Not on OpenTools
   // Ghost = 'ghost', // Not on OpenTools
