@@ -123,6 +123,7 @@ import Sentry from './custom-icons/logos/Sentry'
 import Browserbase from './custom-icons/logos/Browserbase'
 import Neon from './custom-icons/logos/Neon'
 import Postgres from './custom-icons/logos/Postgres'
+import Redis from './custom-icons/logos/Redis'
 
 const Icons = {
   addCircle: CirclePlus,
@@ -248,6 +249,7 @@ const Icons = {
   browserbase: Browserbase,
   neon: Neon,
   postgres: Postgres,
+  redis: Redis,
 }
 
 export type IconName = keyof typeof Icons

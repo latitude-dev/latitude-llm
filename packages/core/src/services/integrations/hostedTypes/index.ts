@@ -24,6 +24,7 @@ import TIME_MCP_CONFIG from './configs/time'
 import browserbase_MCP_CONFIG from './configs/browserbase'
 import NEON_MCP_CONFIG from './configs/neon'
 import POSTGRES_MCP_CONFIG from './configs/postgres'
+import REDIS_MCP_CONFIG from './configs/redis'
 
 export const HOSTED_MCP_CONFIGS: Record<
   HostedIntegrationType,
@@ -53,4 +54,5 @@ export const HOSTED_MCP_CONFIGS: Record<
   [HostedIntegrationType.browserbase]: browserbase_MCP_CONFIG,
   [HostedIntegrationType.Neon]: NEON_MCP_CONFIG,
   [HostedIntegrationType.Postgres]: POSTGRES_MCP_CONFIG,
+  [HostedIntegrationType.Redis]: REDIS_MCP_CONFIG,
 }

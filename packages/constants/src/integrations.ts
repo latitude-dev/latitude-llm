@@ -38,8 +38,7 @@ export enum HostedIntegrationType {
   // GoogleCalendar = 'google_drive', // env vars not supported, requires auth file
   // GoogleDrive = 'google_drive', // env vars not supported, requires auth file
   Postgres = 'postgres', // Uses a custom parameter in the command instead of env vars
-  // Redis = 'redis', // Uses a custom parameter in the command instead of env vars
-  // SQLite = 'sqlite', // Uses a custom parameter in the command instead of env vars
+  Redis = 'redis', // Uses a custom parameter in the command instead of env vars
 
   // GoogleWorkspace = 'google_workspace', // env vars not supported (?)
 

@@ -128,6 +128,10 @@ export const HOSTED_INTEGRATION_TYPE_OPTIONS: Record<
     label: 'PostgreSQL',
     icon: 'postgres',
   },
+  [HostedIntegrationType.Redis]: {
+    label: 'Redis',
+    icon: 'redis',
+  },
 }
 
 export function integrationOptions(
