@@ -25,22 +25,17 @@ export default function useMcpLogs(
     { fallback: { logs: '' } },
   )
 
-  const {
-    data = { logs: '' },
-    isLoading,
-    error,
-  } = useSWR<McpLogsResponse>(
+  const { data = { logs: '' }, ...rest } = useSWR<McpLogsResponse>(
     mcpServerId ? ['mcpLogs', mcpServerId, options] : null,
     fetcher,
     {
-      refreshInterval: 10000, // Default to 10 seconds
+      fallbackData: { logs: '' },
       ...swrConfig,
     },
   )
 
   return {
-    logs: data.logs,
-    isLoading,
-    error,
+    data,
+    ...rest,
   }
 }

@@ -116,6 +116,14 @@ export const HOSTED_INTEGRATION_TYPE_OPTIONS: Record<
     label: 'Time',
     icon: 'clock',
   },
+  [HostedIntegrationType.browserbase]: {
+    label: 'browserbase',
+    icon: 'browserbase',
+  },
+  [HostedIntegrationType.Neon]: {
+    label: 'Neon',
+    icon: 'neon',
+  },
 }
 
 export function integrationOptions(

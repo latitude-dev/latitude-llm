@@ -8,6 +8,7 @@ import {
   CodeBlock,
   AnimatedDots,
   CloseTrigger,
+  Button,
 } from '@latitude-data/web-ui'
 import { ROUTES } from '$/services/routes'
 import useMcpLogs from '$/stores/mcpLogs'
@@ -30,7 +31,13 @@ export function McpServerLogsModal({ integrationId }: McpServerLogsModalProps) {
   const mcpServerId = integration?.mcpServerId?.toString() || null
 
   // Use the mcpLogs hook to fetch logs
-  const { logs, isLoading, error } = useMcpLogs(mcpServerId)
+  const {
+    data,
+    isLoading,
+    isValidating,
+    error,
+    mutate: refresh,
+  } = useMcpLogs(mcpServerId)
 
   // Handle close
   const handleClose = () => {
@@ -52,7 +59,24 @@ export function McpServerLogsModal({ integrationId }: McpServerLogsModalProps) {
       title={integration.name}
       description='Here is the status of your integration and its latest logs.'
       size='large'
-      footer={<CloseTrigger />}
+      footer={
+        <>
+          <Button
+            fancy
+            variant='outline'
+            onClick={() => refresh()}
+            iconProps={{
+              name: 'refresh',
+              placement: 'left',
+              spin: isValidating,
+            }}
+            disabled={isLoading || isValidating}
+          >
+            Refresh logs
+          </Button>
+          <CloseTrigger />
+        </>
+      }
     >
       <div className='flex flex-col gap-4'>
         <McpServerStatus mcpServerId={integration?.mcpServerId || undefined} />
@@ -69,13 +93,13 @@ export function McpServerLogsModal({ integrationId }: McpServerLogsModalProps) {
                 An unknown error occurred
               </Text.H6>
             </div>
-          ) : logs.length === 0 ? (
-            <div className='text-center p-4'>
+          ) : data.logs.length === 0 ? (
+            <div className='text-center p-4 flex flex-col items-center gap-4'>
               <Text.H6 color='foregroundMuted'>No logs available</Text.H6>
             </div>
           ) : (
             <div className='h-full rounded-lg overflow-auto'>
-              <CodeBlock language='log'>{logs}</CodeBlock>
+              <CodeBlock language='log'>{data.logs}</CodeBlock>
             </div>
           ))}
       </div>

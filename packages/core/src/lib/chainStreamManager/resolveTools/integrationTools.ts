@@ -57,7 +57,7 @@ export async function resolveIntegrationTools({
         mcpTools.map((mcpTool) => [
           mcpTool.name,
           {
-            description: mcpTool.description ?? '',
+            description: mcpTool?.description?.slice(0, 1023) ?? '',
             parameters: mcpTool.inputSchema,
           },
         ]),

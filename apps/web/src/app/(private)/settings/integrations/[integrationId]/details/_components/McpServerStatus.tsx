@@ -40,12 +40,27 @@ export function McpServerStatus({
   const statusVariant = getStatusVariant(mcpServer.status)
 
   return (
-    <div className='flex items-center gap-2'>
-      <Text.H5 color='foregroundMuted'>
-        {short ? '' : 'MCP server status: '}
-        {capitalize(mcpServer.status)}{' '}
-      </Text.H5>
-      <DotIndicator pulse variant={statusVariant} />
+    <div className='flex flex-col gap-1'>
+      <div className='flex items-center gap-2'>
+        <Text.H5 color='foregroundMuted'>
+          {short ? '' : 'MCP server status: '}
+          {capitalize(mcpServer.status)}{' '}
+        </Text.H5>
+        <DotIndicator pulse variant={statusVariant} />
+      </div>
+
+      {!short && mcpServer.status === 'failed' && (
+        <Text.H6 color='foregroundMuted'>
+          Deployment failed. Check the logs for more details. We'll
+          automatically attempt to redeploy in a few seconds.
+        </Text.H6>
+      )}
+
+      {!short && mcpServer.status === 'deploying' && (
+        <Text.H6 color='foregroundMuted'>
+          Deployment in progress. This should complete in a few seconds.
+        </Text.H6>
+      )}
     </div>
   )
 }

@@ -55,7 +55,7 @@ export function ToolResultContent({
   if (isString) {
     return (
       <div
-        className={cn('flex flex-col gap-2 p-4', {
+        className={cn('flex flex-col gap-2 p-4 overflow-x-auto', {
           'bg-destructive-muted': toolResponse.isError,
         })}
       >
