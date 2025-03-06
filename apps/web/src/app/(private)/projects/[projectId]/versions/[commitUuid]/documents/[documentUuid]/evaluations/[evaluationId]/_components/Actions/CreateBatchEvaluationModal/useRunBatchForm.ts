@@ -1,12 +1,60 @@
 import { useCallback, useMemo, useState } from 'react'
 
-import { Dataset, DocumentVersion } from '@latitude-data/core/browser'
+import {
+  Dataset,
+  DatasetV2,
+  DatasetVersion,
+  DocumentVersion,
+} from '@latitude-data/core/browser'
 import type { ConversationMetadata } from 'promptl-ai'
 import { SelectOption, useCurrentCommit } from '@latitude-data/web-ui'
 import { useMappedParametersFromLocalStorage } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/batch/_components/RunPromptInBatchModal/useMappedParametersFromLocalStorage'
 import useDatasets from '$/stores/datasets'
+import useDatasetsV2 from '$/stores/datasetsV2'
 
 import { RunBatchParameters } from './useRunBatch'
+import { useFeatureFlag } from '$/hooks/useFeatureFlag'
+import useDatasetRowsCount from '$/stores/datasetRowsCount'
+
+/**
+ * FIXME: Remove this when datasets V2 are open for everyone
+ */
+function useVersionedDatasets({
+  onFetched,
+}: {
+  onFetched: (datasets: (Dataset | DatasetV2)[]) => void
+}) {
+  const { data: hasDatasetsV2, isLoading } = useFeatureFlag()
+  const { data: datasetsV1, isLoading: isLoadingDatasetsV1 } = useDatasets({
+    enabled: !isLoading && !hasDatasetsV2,
+    onFetched: (datasets) => {
+      onFetched(datasets)
+    },
+  })
+  const { data: datasetsV2, isLoading: isLoadingDatasetsV2 } = useDatasetsV2({
+    enabled: !isLoading && hasDatasetsV2,
+    onFetched: (datasets) => {
+      onFetched(datasets)
+    },
+    pageSize: '100000', // Big enough page to avoid pagination
+  })
+
+  return {
+    data: hasDatasetsV2 ? datasetsV2 : datasetsV1,
+    datasetVersion: hasDatasetsV2 ? DatasetVersion.V2 : DatasetVersion.V1,
+    isLoading: isLoading || isLoadingDatasetsV1 || isLoadingDatasetsV2,
+  }
+}
+
+function buildColumnList(dataset: Dataset | DatasetV2 | null) {
+  if (!dataset) return []
+
+  return 'fileMetadata' in dataset
+    ? dataset.fileMetadata.headers
+    : 'columns' in dataset
+      ? dataset.columns.map((c) => c.name)
+      : []
+}
 
 export function buildEmptyParameters(parameters: string[]) {
   return parameters.reduce((acc, key) => {
@@ -26,21 +74,24 @@ export function useRunBatchForm({
     () => Array.from(documentMetadata?.parameters ?? []),
     [documentMetadata?.parameters],
   )
-  const [selectedDataset, setSelectedDataset] = useState<Dataset | null>(null)
+  const [selectedDataset, setSelectedDataset] = useState<
+    Dataset | DatasetV2 | null
+  >(null)
   const [headers, setHeaders] = useState<SelectOption<string>[]>([])
   const buildHeaders = useCallback(
-    (dataset: Dataset) => {
+    (dataset: Dataset | DatasetV2) => {
       setHeaders([
         { value: '-1', label: '-- Leave this parameter empty' },
-        ...dataset.fileMetadata.headers.map((header) => ({
-          value: header,
-          label: header,
-        })),
+        ...buildColumnList(dataset).map((value) => ({ value, label: value })),
       ])
     },
     [setHeaders, selectedDataset],
   )
-  const { data: datasets, isLoading: isLoadingDatasets } = useDatasets({
+  const {
+    data: datasets,
+    isLoading: isLoadingDatasets,
+    datasetVersion,
+  } = useVersionedDatasets({
     onFetched: (ds) => {
       const selected = ds.find((d) => d.id === document.datasetId)
       if (!selected) return
@@ -58,9 +109,13 @@ export function useRunBatchForm({
 
   const onParameterChange = useCallback(
     (param: string) => (header: string) => {
+      const columns = buildColumnList(selectedDataset)
       setParameters((prev) => ({
         ...prev,
-        [param]: selectedDataset?.fileMetadata?.headers?.indexOf?.(header),
+        [param]:
+          columns.indexOf?.(header) !== -1
+            ? columns.indexOf(header)
+            : undefined,
       }))
     },
     [selectedDataset],
@@ -74,7 +129,12 @@ export function useRunBatchForm({
       setSelectedDataset(ds)
       setParameters(buildEmptyParameters(parametersList))
       setFromLine(1)
-      setToLine(ds.fileMetadata.rowCount)
+
+      // DEPRECATED: Legacy datasets
+      if ('fileMetadata' in ds) {
+        setToLine(ds.fileMetadata.rowCount)
+      }
+
       buildHeaders(ds)
     },
     [parametersList, datasets, buildHeaders],
@@ -90,10 +150,36 @@ export function useRunBatchForm({
       setParameters(mapped)
     },
   })
+  const { data: datasetRowsCount } = useDatasetRowsCount({
+    dataset:
+      selectedDataset && 'columns' in selectedDataset
+        ? selectedDataset
+        : undefined,
+    onFetched: (count) => {
+      setToLine(() => count)
+    },
+  })
+
+  const maxLineCount = selectedDataset
+    ? 'fileMetadata' in selectedDataset
+      ? selectedDataset.fileMetadata.rowCount
+      : datasetRowsCount
+    : undefined
+  const onToggleAllLines = useCallback(
+    (wantAllLines: boolean) => {
+      if (wantAllLines) {
+        setToLine(() => maxLineCount)
+      }
+      setAllRows(wantAllLines)
+    },
+    [maxLineCount],
+  )
+
   return {
     datasets,
     isLoadingDatasets,
     selectedDataset,
+    datasetVersion,
     headers,
     wantAllLines,
     fromLine,
@@ -105,5 +191,7 @@ export function useRunBatchForm({
     setAllRows,
     setFromLine,
     setToLine,
+    maxLineCount,
+    onToggleAllLines,
   }
 }

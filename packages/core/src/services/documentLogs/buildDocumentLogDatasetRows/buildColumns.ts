@@ -1,7 +1,7 @@
 import {
   DATASET_COLUMN_ROLES,
   DatasetV2,
-  DEFAULT_EVALUATION_LABEL_NAME,
+  DEFAULT_DATASET_LABEL,
 } from '../../../browser'
 import { DocumentLogWithMetadataAndError } from '../../../repositories'
 import { Column } from '../../../schema'
@@ -42,7 +42,7 @@ export function buildColumns({
   let datasetColumns = dataset?.columns ?? []
   const logParameterNames = getUniqueParameterNamesFromLogs(logs)
   const fixedColumns = [
-    { name: DEFAULT_EVALUATION_LABEL_NAME, role: DATASET_COLUMN_ROLES.label },
+    { name: DEFAULT_DATASET_LABEL, role: DATASET_COLUMN_ROLES.label },
     { name: 'document_log_id', role: DATASET_COLUMN_ROLES.metadata },
     { name: 'tokens', role: DATASET_COLUMN_ROLES.metadata },
   ]

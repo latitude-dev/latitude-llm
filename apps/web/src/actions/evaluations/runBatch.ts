@@ -13,6 +13,7 @@ import {
   parameterErrorMessage,
   withDataset,
 } from './_helpers'
+import { DatasetVersion } from '@latitude-data/constants'
 
 export const runBatchEvaluationAction = withDataset
   .createServerAction()
@@ -30,8 +31,15 @@ export const runBatchEvaluationAction = withDataset
               ? await readMetadata({ prompt: ctx.document.content })
               : await scan({ prompt: ctx.document.content })
           const docParams = metadata.parameters
-          const headers = ctx.dataset.fileMetadata.headers
+          const version = ctx.datasetVersion
+          const headers =
+            version === DatasetVersion.V1 && 'fileMetadata' in ctx.dataset
+              ? ctx.dataset.fileMetadata.headers
+              : 'columns' in ctx.dataset
+                ? ctx.dataset.columns.map((c) => c.name)
+                : [] // Should not happen
           const paramKeys = Object.keys(parameters)
+
           Array.from(docParams).forEach((key) => {
             const existsInDocument = paramKeys.includes(key)
 
@@ -41,7 +49,7 @@ export const runBatchEvaluationAction = withDataset
                 path: ['parameters', key],
                 message: parameterErrorMessage({
                   param: key,
-                  message: 'Is not a valid parameter in this document',
+                  message: 'Is not present in the parameters list',
                 }),
               })
             }
@@ -87,6 +95,7 @@ export const runBatchEvaluationAction = withDataset
         user: ctx.user,
         evaluation,
         dataset: ctx.dataset,
+        datasetVersion: ctx.datasetVersion,
         document: ctx.document,
         projectId: ctx.project.id,
         commitUuid: ctx.currentCommitUuid,

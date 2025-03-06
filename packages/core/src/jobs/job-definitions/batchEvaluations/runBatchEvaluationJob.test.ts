@@ -1,17 +1,23 @@
 import { randomUUID } from 'crypto'
 
 import { Job } from 'bullmq'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import * as jobsModule from '../../'
-import { WorkspaceDto } from '../../../browser'
-import { findWorkspaceFromDocument } from '../../../data-access'
-import { CommitsRepository } from '../../../repositories'
+import { Dataset, DatasetV2, DatasetVersion, Providers } from '../../../browser'
 import * as datasetsPreview from '../../../services/datasets/preview'
 import * as WebsocketClientModule from '../../../websockets/workers'
 import { ProgressTracker } from '../../utils/progressTracker'
-import { runBatchEvaluationJob } from './runBatchEvaluationJob'
+import {
+  runBatchEvaluationJob,
+  RunBatchEvaluationJobParams,
+} from './runBatchEvaluationJob'
+import * as factories from '../../../tests/factories'
+import { type FactoryCreateProjectReturn } from '../../../tests/factories'
+import getTestDisk from '../../../tests/testDrive'
+import { identityHashAlgorithm } from '../../../services/datasetsV2/utils'
 
+const testDrive = getTestDisk()
 const mocks = vi.hoisted(() => ({
   websockets: {
     emit: vi.fn(),
@@ -31,17 +37,6 @@ const mocks = vi.hoisted(() => ({
     },
   },
 }))
-
-// Mock dependencies
-vi.mock('../../../data-access', () => ({
-  findWorkspaceFromDocument: vi.fn(),
-}))
-
-const commitRepoSpy = vi.spyOn(CommitsRepository.prototype, 'getCommitByUuid')
-commitRepoSpy.mockResolvedValue({
-  // @ts-ignore - mock implementation
-  unwrap: () => ({ id: 'commit-1', uuid: 'commit-uuid-1', projectId: 1 }),
-})
 
 // Replace the mock for previewDataset with a spy
 const previewDatasetSpy = vi.spyOn(datasetsPreview, 'previewDataset')
@@ -88,151 +83,263 @@ const websocketClientSpy = vi.spyOn(
 // @ts-expect-error - mock implementation
 websocketClientSpy.mockResolvedValue(mocks.websockets)
 
+function buildFakeJob(
+  data: Partial<Job<RunBatchEvaluationJobParams<DatasetVersion>>>['data'],
+) {
+  return {
+    data: {
+      workspace: data!.workspace,
+      evaluation: { id: 1 },
+      document: data!.document,
+      commitUuid: data!.commitUuid,
+      projectId: data!.projectId,
+
+      // Configurable data
+      dataset: data!.dataset,
+      datasetVersion: data!.datasetVersion,
+      parametersMap: data!.parametersMap,
+      user: { id: 'user-1', email: 'user-1@example.com' },
+      fromLine: data!.fromLine,
+      toLine: data!.toLine,
+    },
+    attemptsMade: 0,
+  } as unknown as Job<RunBatchEvaluationJobParams<DatasetVersion>>
+}
+
+let setup: FactoryCreateProjectReturn
+let commonJobData: Job<RunBatchEvaluationJobParams<DatasetVersion>>['data']
 describe('runBatchEvaluationJob', () => {
-  let mockJob: Job
-
-  beforeEach(() => {
-    vi.clearAllMocks()
-
-    // @ts-ignore
-    mockJob = {
-      data: {
-        evaluation: { id: 1 },
-        dataset: { fileMetadata: { rowCount: 3 } },
-        document: { documentUuid: 'fake-document-uuid', commitId: 'commit-1' },
-        commitUuid: 'commit-uuid-1',
-        projectId: 1,
-        parametersMap: { param1: 0, param2: 1 },
-        workspace: { id: 'workspace-1' },
-        user: { id: 'user-1', email: 'user-1@example.com' },
-      } as unknown as Job,
-      attemptsMade: 0,
-    }
-
-    vi.mocked(findWorkspaceFromDocument).mockResolvedValue({
-      id: 'workspace-1',
-    } as unknown as WorkspaceDto)
-  })
-
-  it('should emit first run evalution message', async () => {
-    await runBatchEvaluationJob(mockJob)
-
-    expect(websocketClientSpy).toHaveBeenCalled()
-    expect(mocks.websockets.emit).toHaveBeenCalledWith('evaluationStatus', {
-      workspaceId: 'workspace-1',
-      data: {
-        batchId: expect.any(String),
-        evaluationId: 1,
-        documentUuid: 'fake-document-uuid',
-        enqueued: 0,
-        total: 3,
-        completed: 0,
+  beforeAll(async () => {
+    setup = await factories.createProject({
+      providers: [
+        {
+          name: 'openai',
+          type: Providers.OpenAI,
+        },
+      ],
+      documents: {
+        foo: factories.helpers.createPrompt({
+          provider: 'openai',
+          model: 'gpt-4o',
+        }),
       },
     })
+    // @ts-ignore
+    commonJobData = {
+      user: setup.user,
+      workspace: setup.workspace,
+      document: setup.documents[0]!,
+      projectId: setup.project.id,
+      commitUuid: setup.commit.uuid,
+    }
   })
 
-  it('should setup jobs', async () => {
-    await runBatchEvaluationJob(mockJob)
+  let mockJob: Job<RunBatchEvaluationJobParams<DatasetVersion>>
 
-    expect(setupJobsSpy).toHaveBeenCalled()
-  })
+  describe('with V2 dataset', () => {
+    let dataset: DatasetV2
 
-  it('find commit by uuid and project Id', async () => {
-    await runBatchEvaluationJob(mockJob)
+    beforeEach(async () => {
+      vi.clearAllMocks()
 
-    expect(commitRepoSpy).toHaveBeenCalledWith({
-      projectId: 1,
-      uuid: 'commit-uuid-1',
+      dataset = await factories
+        .createDatasetV2({
+          disk: testDrive,
+          workspace: setup.workspace,
+          author: setup.user,
+          hashAlgorithm: identityHashAlgorithm,
+          fileContent: `
+        age,name,surname
+        29,Paco,Merlo
+        48,Frank,Merlo
+        50,John,Doe
+      `,
+        })
+        .then((r) => r.dataset)
+
+      // @ts-ignore
+      commonJobData = {
+        ...commonJobData,
+        dataset,
+        datasetVersion: DatasetVersion.V2,
+        // Parameters and map
+        parametersMap: { name: 1, secondName: 2 },
+        fromLine: 0,
+        toLine: 3,
+      }
+    })
+
+    it('should setup jobs', async () => {
+      await runBatchEvaluationJob(buildFakeJob(commonJobData))
+
+      expect(setupJobsSpy).toHaveBeenCalled()
+    })
+
+    it('should use provided batchId', async () => {
+      const batchId = randomUUID()
+      const job = buildFakeJob(commonJobData)
+      job.data.batchId = batchId
+
+      await runBatchEvaluationJob(job)
+
+      expect(
+        vi.mocked(
+          mocks.queues.defaultQueue.jobs.enqueueRunDocumentForEvaluationJob,
+        ),
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          batchId,
+        }),
+      )
+    })
+
+    it('should emit first run evalution message', async () => {
+      await runBatchEvaluationJob(buildFakeJob(commonJobData))
+
+      expect(websocketClientSpy).toHaveBeenCalled()
+      expect(mocks.websockets.emit).toHaveBeenCalledWith('evaluationStatus', {
+        workspaceId: setup.workspace.id,
+        data: {
+          batchId: expect.any(String),
+          evaluationId: 1,
+          documentUuid: setup.documents[0]!.documentUuid,
+          enqueued: 0,
+          total: 3,
+          completed: 0,
+        },
+      })
+    })
+
+    it('should initialize progress on first attempt', async () => {
+      await runBatchEvaluationJob(buildFakeJob(commonJobData))
+
+      expect(progressTrackerSpy.initializeProgress).toHaveBeenCalledWith(3)
+    })
+
+    it('should not initialize progress on retry attempts', async () => {
+      const job = buildFakeJob(commonJobData)
+      job.attemptsMade = 1
+      await runBatchEvaluationJob(job)
+
+      expect(progressTrackerSpy.initializeProgress).not.toHaveBeenCalled()
+    })
+
+    it('should resume from last enqueued job on retry', async () => {
+      const job = buildFakeJob(commonJobData)
+      job.attemptsMade = 1
+      // @ts-ignore
+      progressTrackerSpy.getProgress.mockResolvedValueOnce({ enqueued: 2 })
+
+      await runBatchEvaluationJob(job)
+
+      expect(
+        vi.mocked(
+          mocks.queues.defaultQueue.jobs.enqueueRunDocumentForEvaluationJob,
+        ),
+      ).toHaveBeenCalledTimes(1)
+      expect(
+        vi.mocked(
+          mocks.queues.defaultQueue.jobs.enqueueRunDocumentForEvaluationJob,
+        ),
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          parameters: { name: '"John"', secondName: '"Doe"' },
+        }),
+      )
+    })
+
+    it('should process all rows and enqueue jobs', async () => {
+      const job = buildFakeJob(commonJobData)
+      await runBatchEvaluationJob(job)
+
+      const runDocumentForEvaluationMock =
+        mocks.queues.defaultQueue.jobs.enqueueRunDocumentForEvaluationJob
+      expect(runDocumentForEvaluationMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          batchId: expect.any(String),
+          evaluationId: 1,
+          workspaceId: setup.workspace.id,
+          documentUuid: setup.documents[0]!.documentUuid,
+          parameters: { name: '"Paco"', secondName: '"Merlo"' },
+        }),
+      )
+      expect(runDocumentForEvaluationMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          parameters: { name: '"Frank"', secondName: '"Merlo"' },
+        }),
+      )
+      expect(runDocumentForEvaluationMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          parameters: { name: '"John"', secondName: '"Doe"' },
+        }),
+      )
+    })
+
+    it('should use provided fromLine and toLine', async () => {
+      const job = buildFakeJob({
+        ...commonJobData,
+        fromLine: 2,
+        toLine: 3,
+      })
+
+      await runBatchEvaluationJob(job)
+
+      expect(
+        vi.mocked(
+          mocks.queues.defaultQueue.jobs.enqueueRunDocumentForEvaluationJob,
+        ),
+      ).toHaveBeenCalledTimes(2)
     })
   })
 
-  it('should process all rows and enqueue jobs', async () => {
-    await runBatchEvaluationJob(mockJob)
+  describe('with V1 dataset (DEPRECATED)', () => {
+    beforeEach(() => {
+      vi.clearAllMocks()
 
-    expect(
-      mocks.queues.defaultQueue.jobs.enqueueRunDocumentForEvaluationJob,
-    ).toHaveBeenCalledTimes(3)
-    expect(
-      mocks.queues.defaultQueue.jobs.enqueueRunDocumentForEvaluationJob,
-    ).toHaveBeenCalledWith(
-      expect.objectContaining({
-        workspaceId: 'workspace-1',
-        parameters: { param1: 'value1', param2: 'value2' },
-        evaluationId: 1,
-        batchId: expect.any(String),
-      }),
-    )
-  })
+      // @ts-ignore
+      mockJob = buildFakeJob({
+        ...commonJobData,
+        dataset: { fileMetadata: { rowCount: 3 } } as unknown as Dataset,
+        datasetVersion: DatasetVersion.V1,
+        parametersMap: { param1: 0, param2: 1 },
+      })
+    })
 
-  it('should use provided fromLine and toLine', async () => {
-    mockJob.data.fromLine = 1
-    mockJob.data.toLine = 3
+    it('should process all rows and enqueue jobs', async () => {
+      await runBatchEvaluationJob(mockJob)
 
-    await runBatchEvaluationJob(mockJob)
-
-    expect(previewDatasetSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        fromLine: 1,
-        toLine: 3,
-      }),
-    )
-    expect(
-      vi.mocked(
+      expect(
         mocks.queues.defaultQueue.jobs.enqueueRunDocumentForEvaluationJob,
-      ),
-    ).toHaveBeenCalledTimes(3)
-  })
-
-  it('should use provided batchId', async () => {
-    const batchId = randomUUID()
-    mockJob.data.batchId = batchId
-
-    await runBatchEvaluationJob(mockJob)
-
-    expect(
-      vi.mocked(
+      ).toHaveBeenCalledTimes(3)
+      expect(
         mocks.queues.defaultQueue.jobs.enqueueRunDocumentForEvaluationJob,
-      ),
-    ).toHaveBeenCalledWith(
-      expect.objectContaining({
-        batchId,
-      }),
-    )
-  })
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          workspaceId: setup.workspace.id,
+          parameters: { param1: 'value1', param2: 'value2' },
+          evaluationId: 1,
+          batchId: expect.any(String),
+        }),
+      )
+    })
 
-  it('should resume from last enqueued job on retry', async () => {
-    mockJob.attemptsMade = 1
-    // @ts-ignore
-    progressTrackerSpy.getProgress.mockResolvedValueOnce({ enqueued: 2 })
+    it('should use provided fromLine and toLine', async () => {
+      mockJob.data.fromLine = 1
+      mockJob.data.toLine = 3
 
-    await runBatchEvaluationJob(mockJob)
+      await runBatchEvaluationJob(mockJob)
 
-    expect(
-      vi.mocked(
-        mocks.queues.defaultQueue.jobs.enqueueRunDocumentForEvaluationJob,
-      ),
-    ).toHaveBeenCalledTimes(1)
-    expect(
-      vi.mocked(
-        mocks.queues.defaultQueue.jobs.enqueueRunDocumentForEvaluationJob,
-      ),
-    ).toHaveBeenCalledWith(
-      expect.objectContaining({
-        parameters: { param1: 'value5', param2: 'value6' },
-      }),
-    )
-  })
-
-  it('should initialize progress on first attempt', async () => {
-    await runBatchEvaluationJob(mockJob)
-
-    expect(progressTrackerSpy.initializeProgress).toHaveBeenCalledWith(3)
-  })
-
-  it('should not initialize progress on retry attempts', async () => {
-    mockJob.attemptsMade = 1
-    await runBatchEvaluationJob(mockJob)
-
-    expect(progressTrackerSpy.initializeProgress).not.toHaveBeenCalled()
+      expect(previewDatasetSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          fromLine: 1,
+          toLine: 3,
+        }),
+      )
+      expect(
+        vi.mocked(
+          mocks.queues.defaultQueue.jobs.enqueueRunDocumentForEvaluationJob,
+        ),
+      ).toHaveBeenCalledTimes(3)
+    })
   })
 })

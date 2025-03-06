@@ -1,15 +1,12 @@
 'use client'
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback } from 'react'
 
-import { readMetadata } from '@latitude-data/compiler'
-import { Dataset, DocumentVersion } from '@latitude-data/core/browser'
-import { scan, type ConversationMetadata } from 'promptl-ai'
+import { DatasetVersion, DocumentVersion } from '@latitude-data/core/browser'
 import {
   Button,
   CloseTrigger,
   Modal,
-  SelectOption,
   useCurrentCommit,
   useCurrentProject,
   useToast,
@@ -19,125 +16,10 @@ import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { useNavigate } from '$/hooks/useNavigate'
 import { ROUTES } from '$/services/routes'
-import useDatasets from '$/stores/datasets'
 
 import DatasetForm from '../../../evaluations/[evaluationId]/_components/Actions/CreateBatchEvaluationModal/DatasetForm'
 import { RunBatchParameters } from '../../../evaluations/[evaluationId]/_components/Actions/CreateBatchEvaluationModal/useRunBatch'
-import { buildEmptyParameters } from '../../../evaluations/[evaluationId]/_components/Actions/CreateBatchEvaluationModal/useRunBatchForm'
-import { useMappedParametersFromLocalStorage } from './useMappedParametersFromLocalStorage'
-
-function useRunDocumentInBatchForm({
-  document,
-  commitVersionUuid,
-}: {
-  document: DocumentVersion
-  commitVersionUuid: string
-}) {
-  const [metadata, setMetadata] = useState<ConversationMetadata | undefined>()
-  const parametersList = useMemo(
-    () => Array.from(metadata?.parameters ?? []),
-    [metadata?.parameters],
-  )
-  const [selectedDataset, setSelectedDataset] = useState<Dataset | null>(null)
-  const [headers, setHeaders] = useState<SelectOption<string>[]>([])
-  const [wantAllLines, setAllRows] = useState(true)
-  const [fromLine, setFromLine] = useState<number | undefined>(undefined)
-  const [toLine, setToLine] = useState<number | undefined>(undefined)
-  const [parameters, setParameters] = useState(() =>
-    buildEmptyParameters(parametersList),
-  )
-  const onParameterChange = useCallback(
-    (param: string) => (header: string) => {
-      setParameters((prev: RunBatchParameters) => ({
-        ...prev,
-        [param]: selectedDataset?.fileMetadata?.headers?.indexOf?.(header),
-      }))
-    },
-    [selectedDataset],
-  )
-
-  const buildHeaders = useCallback(
-    (dataset: Dataset) => {
-      setHeaders([
-        { value: '-1', label: '-- Leave this parameter empty' },
-        ...dataset.fileMetadata.headers.map((header) => ({
-          value: header,
-          label: header,
-        })),
-      ])
-    },
-    [setHeaders, selectedDataset],
-  )
-
-  const { data: datasets, isLoading: isLoadingDatasets } = useDatasets()
-  const onSelectDataset = useCallback(
-    async (value: number) => {
-      const ds = datasets.find((ds) => ds.id === Number(value))
-      if (!ds) return
-
-      setSelectedDataset(ds)
-      setParameters(buildEmptyParameters(parametersList))
-      setFromLine(1)
-      setToLine(ds.fileMetadata.rowCount)
-      buildHeaders(ds)
-    },
-    [parametersList, datasets, buildHeaders],
-  )
-
-  useEffect(() => {
-    const fn = async () => {
-      if (!document || !document.content) return
-
-      // TODO: Include referenceFn, otherwise it will fail if the prompt contains references
-      const metadata =
-        document.promptlVersion === 0
-          ? await readMetadata({
-              prompt: document.content,
-            })
-          : await scan({ prompt: document.content })
-
-      setMetadata(metadata as ConversationMetadata)
-
-      // Only choose the dataset if it's not already selected
-      const ds = selectedDataset
-        ? undefined
-        : datasets.find((ds) => ds.id === document.datasetId)
-
-      if (!ds) return
-
-      setSelectedDataset(ds)
-      buildHeaders(ds)
-    }
-
-    fn()
-  }, [document, selectedDataset, setSelectedDataset, buildHeaders, datasets])
-
-  useMappedParametersFromLocalStorage({
-    document,
-    commitVersionUuid,
-    parametersList,
-    selectedDataset,
-    onDatasetReady: ({ mapped }) => {
-      setParameters(mapped)
-    },
-  })
-  return {
-    datasets,
-    isLoadingDatasets,
-    selectedDataset,
-    headers,
-    wantAllLines,
-    fromLine,
-    toLine,
-    parameters,
-    parametersList,
-    onParameterChange,
-    onSelectDataset,
-    setAllRows,
-    setFromLine,
-    setToLine,
-  }
-}
+import { useRunDocumentInBatchForm } from './useRunDocumentInBatchFrom'
 
 function useRunDocumentInBatch({
   document,
@@ -173,6 +55,7 @@ function useRunDocumentInBatch({
       await run({
         commitUuid,
         datasetId: datasetId!,
+        datasetVersion: DatasetVersion.V1,
         documentUuid: document.documentUuid,
         fromLine: wantAllLines ? undefined : fromLine,
         parameters,
@@ -233,6 +116,7 @@ export default function RunPromptInBatchModal() {
   return (
     <Modal
       open
+      dismissible
       onOpenChange={() => navigate.back()}
       size='large'
       title='Select the dataset that contains the data to generate the logs'
@@ -254,6 +138,8 @@ export default function RunPromptInBatchModal() {
         document={document}
         errors={errors}
         datasets={form.datasets}
+        datasetVersion={DatasetVersion.V1}
+        maxLineCount={form.maxLineCount}
         isLoadingDatasets={form.isLoadingDatasets}
         selectedDataset={form.selectedDataset}
         onSelectDataset={form.onSelectDataset}
@@ -261,6 +147,7 @@ export default function RunPromptInBatchModal() {
         wantAllLines={form.wantAllLines}
         fromLine={form.fromLine}
         toLine={form.toLine}
+        onChangeFromLine={form.setFromLine}
         onChangeToLine={form.setToLine}
         headers={form.headers}
         parametersList={form.parametersList}

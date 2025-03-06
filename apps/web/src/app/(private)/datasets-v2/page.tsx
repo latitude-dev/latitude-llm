@@ -11,9 +11,10 @@ export default async function DatasetsRoot({
   searchParams: Promise<{
     pageSize: string
     page?: string
+    modal?: 'new'
   }>
 }) {
-  const { pageSize, page: pageString } = await searchParams
+  const { pageSize, page: pageString, modal } = await searchParams
   const page = pageString?.toString?.()
   const { workspace } = await getCurrentUser()
   const scope = new DatasetsV2Repository(workspace.id)
@@ -24,7 +25,12 @@ export default async function DatasetsRoot({
   return (
     <TableWithHeader
       title='Datasets'
-      actions={<RootDatasetHeader isCloud={env.LATITUDE_CLOUD} />}
+      actions={
+        <RootDatasetHeader
+          isCloud={env.LATITUDE_CLOUD}
+          openNewDatasetModal={modal === 'new'}
+        />
+      }
       table={<DatasetsTable datasets={datasets} />}
     />
   )

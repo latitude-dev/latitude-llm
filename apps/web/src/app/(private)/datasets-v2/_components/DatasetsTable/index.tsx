@@ -77,7 +77,7 @@ export function DatasetsTable({
           <LinkableTablePaginationFooter
             pagination={buildPagination({
               count: Infinity,
-              baseUrl: ROUTES.datasetsV2.root,
+              baseUrl: ROUTES.datasetsV2.root(),
               page: Number(page),
               pageSize: Number(pageSize),
             })}

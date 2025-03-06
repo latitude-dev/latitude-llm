@@ -8,6 +8,9 @@ import { createTestCsvFile } from '../../services/datasetRows/testHelper'
 import { DatasetV2CreatedEvent } from '../../events/events'
 import { createRowsFromUploadedDataset } from '../../services/datasetRows/createRowsFromUploadedDataset'
 import { HashAlgorithmFn } from '../../services/datasetsV2/utils'
+import getTestDisk from '../testDrive'
+
+const defaultTestDisk = getTestDisk()
 
 function generateCsvContent(delimiter: string): string {
   const headers = ['id', 'name', 'email', 'age']
@@ -25,18 +28,18 @@ function generateCsvContent(delimiter: string): string {
 }
 
 export type ICreateDatasetV2 = {
-  disk: DiskWrapper
   name?: string
   workspace?: Workspace | ICreateWorkspace
   author?: User
   csvDelimiter?: string
   fileContent?: string
+  disk?: DiskWrapper
   hashAlgorithm?: HashAlgorithmFn
 }
-type Props = Partial<ICreateDatasetV2> & { disk: DiskWrapper }
+type Props = Partial<ICreateDatasetV2>
 
 export async function createDatasetV2(datasetData: Props) {
-  const disk = datasetData.disk
+  const disk = datasetData.disk ?? defaultTestDisk
   let workspaceData = datasetData.workspace ?? {}
   let user: User
   let workspace: Workspace

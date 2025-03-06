@@ -7,6 +7,7 @@ export enum LogSources {
   AgentAsTool = 'agent_as_tool',
 }
 
+export const NON_LIVE_EVALUABLE_LOG_SOURCES = [LogSources.Evaluation]
 export enum Providers {
   OpenAI = 'openai',
   Anthropic = 'anthropic',
