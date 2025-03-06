@@ -19,7 +19,7 @@ import { ROUTES } from '$/services/routes'
 
 import DatasetForm from '../../../evaluations/[evaluationId]/_components/Actions/CreateBatchEvaluationModal/DatasetForm'
 import { RunBatchParameters } from '../../../evaluations/[evaluationId]/_components/Actions/CreateBatchEvaluationModal/useRunBatch'
-import { useRunDocumentInBatchForm } from './useRunDocumentInBatchFrom'
+import { useRunDocumentInBatchForm } from './useRunDocumentInBatchForm'
 
 function useRunDocumentInBatch({
   document,
@@ -42,11 +42,13 @@ function useRunDocumentInBatch({
     async ({
       wantAllLines,
       datasetId,
+      datasetVersion,
       parameters,
       fromLine,
       toLine,
     }: {
       datasetId: number | undefined
+      datasetVersion: DatasetVersion
       fromLine: number | undefined
       toLine: number | undefined
       wantAllLines: boolean
@@ -55,7 +57,7 @@ function useRunDocumentInBatch({
       await run({
         commitUuid,
         datasetId: datasetId!,
-        datasetVersion: DatasetVersion.V1,
+        datasetVersion,
         documentUuid: document.documentUuid,
         fromLine: wantAllLines ? undefined : fromLine,
         parameters,
@@ -106,6 +108,7 @@ export default function RunPromptInBatchModal() {
   const onRunBatch = () => {
     runBatch({
       datasetId: form.selectedDataset?.id,
+      datasetVersion: form.datasetVersion,
       fromLine: form.fromLine,
       toLine: form.toLine,
       wantAllLines: form.wantAllLines,
@@ -138,7 +141,7 @@ export default function RunPromptInBatchModal() {
         document={document}
         errors={errors}
         datasets={form.datasets}
-        datasetVersion={DatasetVersion.V1}
+        datasetVersion={form.datasetVersion}
         maxLineCount={form.maxLineCount}
         isLoadingDatasets={form.isLoadingDatasets}
         selectedDataset={form.selectedDataset}

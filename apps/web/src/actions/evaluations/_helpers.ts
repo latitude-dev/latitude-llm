@@ -5,8 +5,10 @@ import {
 import { z } from 'zod'
 import { createServerActionProcedure } from 'zsa'
 
+import { scan } from 'promptl-ai'
+import { readMetadata } from '@latitude-data/compiler'
 import { withDocument } from '../procedures'
-import { DatasetVersion } from '@latitude-data/constants'
+import { DatasetVersion, DocumentVersion } from '@latitude-data/constants'
 import { Dataset, DatasetV2 } from '@latitude-data/core/browser'
 
 export const withDataset = createServerActionProcedure(withDocument)
@@ -47,6 +49,10 @@ export function isValidParameter(
   return hasIndex !== undefined
 }
 
+type DocumentCtx = Omit<DocumentVersion, 'resolvedContent' | 'contentHash'> & {
+  resolvedContent: string | null
+  contentHash: string | null
+}
 export function parameterErrorMessage({
   param,
   message,
@@ -55,4 +61,61 @@ export function parameterErrorMessage({
   message: string
 }) {
   return `${param}: ${message}`
+}
+
+export async function refineParameters({
+  ctx,
+  parameters,
+  refineCtx,
+}: {
+  ctx: {
+    document: DocumentCtx
+    dataset: Dataset | DatasetV2
+    datasetVersion: DatasetVersion
+  }
+  parameters: Record<string, number | undefined>
+  refineCtx: z.RefinementCtx
+}) {
+  const metadata =
+    ctx.document.promptlVersion === 0
+      ? await readMetadata({ prompt: ctx.document.content })
+      : await scan({ prompt: ctx.document.content })
+  const docParams = metadata.parameters
+  const version = ctx.datasetVersion
+  const headers =
+    version === DatasetVersion.V1 && 'fileMetadata' in ctx.dataset
+      ? ctx.dataset.fileMetadata.headers
+      : 'columns' in ctx.dataset
+        ? ctx.dataset.columns.map((c) => c.name)
+        : [] // Should not happen
+  const paramKeys = Object.keys(parameters)
+
+  Array.from(docParams).forEach((key) => {
+    const existsInDocument = paramKeys.includes(key)
+
+    if (!existsInDocument) {
+      refineCtx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['parameters', key],
+        message: parameterErrorMessage({
+          param: key,
+          message: 'Is not present in the parameters list',
+        }),
+      })
+    }
+
+    const valueIndex = isValidParameter(parameters[key], headers)
+
+    if (!valueIndex) {
+      refineCtx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['parameters', key],
+        message: parameterErrorMessage({
+          param: key,
+          message:
+            'Has not a valid header assigned in this dataset. If you want to keep empty this parameter choose "Leave empty in that parameter"',
+        }),
+      })
+    }
+  })
 }

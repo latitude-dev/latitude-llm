@@ -4,7 +4,7 @@ import { Job } from 'bullmq'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import * as jobsModule from '../../'
-import { Dataset, DatasetV2, DatasetVersion, Providers } from '../../../browser'
+import { Dataset, DatasetV2, Providers } from '../../../browser'
 import * as datasetsPreview from '../../../services/datasets/preview'
 import * as WebsocketClientModule from '../../../websockets/workers'
 import { ProgressTracker } from '../../utils/progressTracker'
@@ -83,9 +83,7 @@ const websocketClientSpy = vi.spyOn(
 // @ts-expect-error - mock implementation
 websocketClientSpy.mockResolvedValue(mocks.websockets)
 
-function buildFakeJob(
-  data: Partial<Job<RunBatchEvaluationJobParams<DatasetVersion>>>['data'],
-) {
+function buildFakeJob(data: Partial<Job<RunBatchEvaluationJobParams>>['data']) {
   return {
     data: {
       workspace: data!.workspace,
@@ -96,18 +94,17 @@ function buildFakeJob(
 
       // Configurable data
       dataset: data!.dataset,
-      datasetVersion: data!.datasetVersion,
       parametersMap: data!.parametersMap,
       user: { id: 'user-1', email: 'user-1@example.com' },
       fromLine: data!.fromLine,
       toLine: data!.toLine,
     },
     attemptsMade: 0,
-  } as unknown as Job<RunBatchEvaluationJobParams<DatasetVersion>>
+  } as unknown as Job<RunBatchEvaluationJobParams>
 }
 
 let setup: FactoryCreateProjectReturn
-let commonJobData: Job<RunBatchEvaluationJobParams<DatasetVersion>>['data']
+let commonJobData: Job<RunBatchEvaluationJobParams>['data']
 describe('runBatchEvaluationJob', () => {
   beforeAll(async () => {
     setup = await factories.createProject({
@@ -134,7 +131,7 @@ describe('runBatchEvaluationJob', () => {
     }
   })
 
-  let mockJob: Job<RunBatchEvaluationJobParams<DatasetVersion>>
+  let mockJob: Job<RunBatchEvaluationJobParams>
 
   describe('with V2 dataset', () => {
     let dataset: DatasetV2
@@ -161,7 +158,6 @@ describe('runBatchEvaluationJob', () => {
       commonJobData = {
         ...commonJobData,
         dataset,
-        datasetVersion: DatasetVersion.V2,
         // Parameters and map
         parametersMap: { name: 1, secondName: 2 },
         fromLine: 0,
@@ -300,7 +296,6 @@ describe('runBatchEvaluationJob', () => {
       mockJob = buildFakeJob({
         ...commonJobData,
         dataset: { fileMetadata: { rowCount: 3 } } as unknown as Dataset,
-        datasetVersion: DatasetVersion.V1,
         parametersMap: { param1: 0, param2: 1 },
       })
     })
