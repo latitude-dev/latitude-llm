@@ -21,6 +21,8 @@ import GOOGLE_MAPS_MCP_CONFIG from './configs/googleMaps'
 import PUPPETEER_MCP_CONFIG from './configs/puppeteer'
 import SENTRY_MCP_CONFIG from './configs/sentry'
 import TIME_MCP_CONFIG from './configs/time'
+import browserbase_MCP_CONFIG from './configs/browserbase'
+import NEON_MCP_CONFIG from './configs/neon'
 
 export const HOSTED_MCP_CONFIGS: Record<
   HostedIntegrationType,
@@ -47,4 +49,6 @@ export const HOSTED_MCP_CONFIGS: Record<
   [HostedIntegrationType.Puppeteer]: PUPPETEER_MCP_CONFIG,
   [HostedIntegrationType.Sentry]: SENTRY_MCP_CONFIG,
   [HostedIntegrationType.Time]: TIME_MCP_CONFIG,
+  [HostedIntegrationType.browserbase]: browserbase_MCP_CONFIG,
+  [HostedIntegrationType.Neon]: NEON_MCP_CONFIG,
 }

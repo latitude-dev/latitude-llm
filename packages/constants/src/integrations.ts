@@ -31,6 +31,11 @@ export enum HostedIntegrationType {
   // SequentialThinking = 'sequential_thinking', // useless
   Time = 'time',
 
+  browserbase = 'browserbase',
+  Neon = 'neon',
+
+  // Gmail = 'google_drive', // env vars not supported, requires auth file
+  // GoogleCalendar = 'google_drive', // env vars not supported, requires auth file
   // GoogleDrive = 'google_drive', // env vars not supported, requires auth file
   // Postgres = 'postgres', // Uses a custom parameter in the command instead of env vars
   // Redis = 'redis', // Uses a custom parameter in the command instead of env vars
