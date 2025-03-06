@@ -122,6 +122,7 @@ import Brave from './custom-icons/logos/Brave'
 import Sentry from './custom-icons/logos/Sentry'
 import Browserbase from './custom-icons/logos/Browserbase'
 import Neon from './custom-icons/logos/Neon'
+import Postgres from './custom-icons/logos/Postgres'
 
 const Icons = {
   addCircle: CirclePlus,
@@ -246,6 +247,7 @@ const Icons = {
   sentry: Sentry,
   browserbase: Browserbase,
   neon: Neon,
+  postgres: Postgres,
 }
 
 export type IconName = keyof typeof Icons

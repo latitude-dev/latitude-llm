@@ -23,6 +23,7 @@ import SENTRY_MCP_CONFIG from './configs/sentry'
 import TIME_MCP_CONFIG from './configs/time'
 import browserbase_MCP_CONFIG from './configs/browserbase'
 import NEON_MCP_CONFIG from './configs/neon'
+import POSTGRES_MCP_CONFIG from './configs/postgres'
 
 export const HOSTED_MCP_CONFIGS: Record<
   HostedIntegrationType,
@@ -51,4 +52,5 @@ export const HOSTED_MCP_CONFIGS: Record<
   [HostedIntegrationType.Time]: TIME_MCP_CONFIG,
   [HostedIntegrationType.browserbase]: browserbase_MCP_CONFIG,
   [HostedIntegrationType.Neon]: NEON_MCP_CONFIG,
+  [HostedIntegrationType.Postgres]: POSTGRES_MCP_CONFIG,
 }
