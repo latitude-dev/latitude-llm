@@ -3,15 +3,15 @@ import { npxCommand } from '../utils'
 
 export default {
   description:
-    'This integration enables read only access to a Postgres database.',
+    'This integration enables read only access to a Postgres/Supabase database.',
   command: npxCommand({
     package: '@modelcontextprotocol/server-postgres',
-    args: '$POSTGRES_URL',
+    args: '$DATABASE_URL',
   }),
   env: {
-    POSTGRES_URL: {
-      label: 'Postgres URL',
-      description: 'The URL of your Postgres database',
+    DATABASE_URL: {
+      label: 'Postgres/Supabase URL',
+      description: 'The URL of your Postgres/Supabase database',
       placeholder: 'postgresql://user:password@host:port/database',
       required: true,
     },

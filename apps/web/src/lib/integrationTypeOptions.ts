@@ -128,6 +128,26 @@ export const HOSTED_INTEGRATION_TYPE_OPTIONS: Record<
     label: 'PostgreSQL',
     icon: 'postgres',
   },
+  [HostedIntegrationType.Redis]: {
+    label: 'Redis',
+    icon: 'redis',
+  },
+  [HostedIntegrationType.Jira]: {
+    label: 'Jira',
+    icon: 'jira',
+  },
+  [HostedIntegrationType.Attio]: {
+    label: 'Attio',
+    icon: 'attio',
+  },
+  [HostedIntegrationType.Ghost]: {
+    label: 'Ghost',
+    icon: 'ghost',
+  },
+  [HostedIntegrationType.Supabase]: {
+    label: 'Supabase',
+    icon: 'supabase',
+  },
 }
 
 export function integrationOptions(

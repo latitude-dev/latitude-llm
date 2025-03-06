@@ -26,30 +26,27 @@ export enum HostedIntegrationType {
   GoogleMaps = 'google_maps',
   Sentry = 'sentry',
   Puppeteer = 'puppeteer',
-
-  // Memory = 'memory', // short-lived file storage, useless
-  // SequentialThinking = 'sequential_thinking', // useless
   Time = 'time',
-
   browserbase = 'browserbase',
   Neon = 'neon',
+  Postgres = 'postgres',
+  Supabase = 'supabase',
+  Redis = 'redis',
+  Jira = 'jira',
+  Attio = 'attio',
+  Ghost = 'ghost',
 
-  // Gmail = 'google_drive', // env vars not supported, requires auth file
-  // GoogleCalendar = 'google_drive', // env vars not supported, requires auth file
-  // GoogleDrive = 'google_drive', // env vars not supported, requires auth file
-  Postgres = 'postgres', // Uses a custom parameter in the command instead of env vars
-  // Redis = 'redis', // Uses a custom parameter in the command instead of env vars
-  // SQLite = 'sqlite', // Uses a custom parameter in the command instead of env vars
-
+  // Require all auth file :point_down:
+  // Gmail = 'google_drive',
+  // GoogleCalendar = 'google_drive',
+  // GoogleDrive = 'google_drive',
   // GoogleWorkspace = 'google_workspace', // env vars not supported (?)
 
+  // TODO: implement these
   // Wordpress = 'wordpress', // Not on OpenTools
   // Discord = 'discord', // Not on OpenTools
   // Intercom = 'intercom', // Not on OpenTools
-  // Jira = 'jira', // Not on OpenTools
-  // Supabase = 'supabase', // Not on OpenTools
-  // Hubspot = 'hubspot', // Not on OpenTools
-  // Attio = 'attio', // Not on OpenTools
-  // Loops = 'loops', // Not on OpenTools
-  // Ghost = 'ghost', // Not on OpenTools
+
+  // Hubspot = 'hubspot', // Docker based
+  // Loops = 'loops', // Does not exist
 }

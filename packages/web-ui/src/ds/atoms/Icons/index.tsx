@@ -123,6 +123,10 @@ import Sentry from './custom-icons/logos/Sentry'
 import Browserbase from './custom-icons/logos/Browserbase'
 import Neon from './custom-icons/logos/Neon'
 import Postgres from './custom-icons/logos/Postgres'
+import Redis from './custom-icons/logos/Redis'
+import Attio from './custom-icons/logos/Attio'
+import Supabase from './custom-icons/logos/Supabase'
+import Ghost from './custom-icons/logos/Ghost'
 
 const Icons = {
   addCircle: CirclePlus,
@@ -233,21 +237,21 @@ const Icons = {
   tinybird: Tinybird,
   perplexity: Perplexity,
   googleWorkspace: Google,
-  // supabase: Supabase,
+  supabase: Supabase,
   // hubspot: Hubspot,
-  // attio: Attio,
+  attio: Attio,
   discord: Discord,
   gitlab: Gitlab,
-  // loops: Loops,
   intercom: Intercom,
   jira: Jira,
-  // ghost: Ghost,
+  ghost: Ghost,
   awsBedrock: AwsBedrock,
   brave: Brave,
   sentry: Sentry,
   browserbase: Browserbase,
   neon: Neon,
   postgres: Postgres,
+  redis: Redis,
 }
 
 export type IconName = keyof typeof Icons
