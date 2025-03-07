@@ -49,6 +49,7 @@ export async function resumeAgent({
   messages: userProvidedMessags,
   source,
   promptSource,
+  abortSignal,
 }: {
   workspace: Workspace
   providerLog: ProviderLog
@@ -56,6 +57,7 @@ export async function resumeAgent({
   messages: Message[]
   source: LogSources
   promptSource: PromptSource
+  abortSignal?: AbortSignal
 }) {
   const providersMap = await buildProvidersMap({
     workspaceId: workspace.id,
@@ -89,8 +91,9 @@ export async function resumeAgent({
       stepCount: 0,
       newMessages,
       previousConfig: providerLog.config as Config,
+      abortSignal,
     })
-  })
+  }, abortSignal)
 
   return Result.ok(streamResult)
 }

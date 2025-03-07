@@ -21,6 +21,7 @@ export const chatHandler: AppRouteHandler<ChatRoute> = async (c) => {
       // @ts-expect-error: messages types are different
       messages,
       source: __internal?.source ?? LogSources.API,
+      abortSignal: c.req.raw.signal,
     })
   ).unwrap()
 

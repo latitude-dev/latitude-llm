@@ -49,6 +49,7 @@ export const runHandler: AppRouteHandler<RunRoute> = async (c) => {
     parameters,
     customIdentifier,
     source: __internal?.source ?? LogSources.API,
+    abortSignal: c.req.raw.signal
   }).then((r) => r.unwrap())
 
   if (useSSE) {
