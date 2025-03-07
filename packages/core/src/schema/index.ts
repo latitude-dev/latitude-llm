@@ -54,11 +54,10 @@ export * from './models/evaluationResultableBooleans'
 export * from './models/traces'
 export * from './models/spans'
 
-// Public sharing
+// Public sharing & Triggers
 export * from './models/publishedDocuments'
+export * from './models/documentTriggers'
 
 // Integrations
 export * from './models/integrations'
-
-// Hosted MCP Servers
 export * from './models/mcpServers'

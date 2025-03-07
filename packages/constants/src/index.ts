@@ -5,6 +5,7 @@ export enum LogSources {
   User = 'user',
   SharedPrompt = 'shared_prompt',
   AgentAsTool = 'agent_as_tool',
+  EmailTrigger = 'email_trigger',
 }
 
 export enum Providers {
@@ -17,6 +18,10 @@ export enum Providers {
   GoogleVertex = 'google_vertex',
   AnthropicVertex = 'anthropic_vertex',
   Custom = 'custom',
+}
+
+export enum DocumentTriggerType {
+  Email = 'email',
 }
 
 export * from './models'
