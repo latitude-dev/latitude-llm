@@ -109,17 +109,17 @@ Messages can contain different types of content. By default, all plain text is c
 - **Tool Call**: `<content type="tool-call">` or `<tool-call>`. Represents a tool invocation with attributes like `id`, `name`, and `arguments` (optional). Only allowed inside assistant messages.
 
 <Note>
-  Not all providers and all models will support all content types. Check your provider's documentation for compatibility.
+  Not all providers and all models will support all content types. Your provider may support files but not all types of files. Check your provider's documentation for compatibility.
 </Note>
 
 ### Examples
 ```tsx
 <user>
   Take a look at this image:
-  <content-image>[image url]</content>
+  <content-image>[image url]</content-image>
 
   And this PDF:
-  <content-file mime="application/pdf">[file url]</content>
+  <content-file mime="application/pdf">[file url]</content-file>
 </user>
 
 <assistant>
