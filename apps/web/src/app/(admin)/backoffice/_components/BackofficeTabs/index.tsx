@@ -32,6 +32,10 @@ export function BackofficeTabs({ children }: { children: ReactNode }) {
               label: 'Usage overview',
               value: BackofficeRoutes.usageOverview,
             },
+            {
+              label: 'Triggers',
+              value: BackofficeRoutes.triggers,
+            },
           ]}
           selected={selected}
           onSelect={(value) => {
