@@ -180,6 +180,10 @@ export async function handleEmailTrigger(
     db,
   )
 
+  if (trigger.configuration.replyWithResponse === false) {
+    return Result.nil()
+  }
+
   const mailer = new DocumentTriggerMailer(
     {
       to: sender,
