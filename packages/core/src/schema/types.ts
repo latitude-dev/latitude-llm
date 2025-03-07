@@ -36,6 +36,8 @@ import { traces } from './models/traces'
 import { users } from './models/users'
 import { workspaces } from './models/workspaces'
 import { IntegrationConfiguration } from '../services/integrations/helpers/schema'
+import { documentTriggers } from './models/documentTriggers'
+import { DocumentTriggerWithConfiguration } from '../services/documentTriggers/helpers/schema'
 
 export type {
   DocumentLog,
@@ -249,3 +251,7 @@ export type DocumentSuggestionWithDetails = DocumentSuggestion & {
 export type Integration = InferSelectModel<typeof integrations>
 export type IntegrationDto = Omit<Integration, 'configuration' | 'type'> &
   IntegrationConfiguration
+
+type _DocumentTrigger = InferSelectModel<typeof documentTriggers>
+export type DocumentTrigger = Omit<_DocumentTrigger, 'configuration' | 'type'> &
+  DocumentTriggerWithConfiguration

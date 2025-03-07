@@ -5,6 +5,7 @@ export enum LogSources {
   User = 'user',
   SharedPrompt = 'shared_prompt',
   AgentAsTool = 'agent_as_tool',
+  EmailTrigger = 'email_trigger',
 }
 
 export const NON_LIVE_EVALUABLE_LOG_SOURCES = [LogSources.Evaluation]
@@ -18,6 +19,10 @@ export enum Providers {
   GoogleVertex = 'google_vertex',
   AnthropicVertex = 'anthropic_vertex',
   Custom = 'custom',
+}
+
+export enum DocumentTriggerType {
+  Email = 'email',
 }
 
 export * from './models'

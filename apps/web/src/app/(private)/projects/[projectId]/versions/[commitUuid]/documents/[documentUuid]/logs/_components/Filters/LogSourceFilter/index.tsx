@@ -12,6 +12,7 @@ const LogSourceLabel: { [key in LogSources]: string } = {
   [LogSources.User]: 'User',
   [LogSources.SharedPrompt]: 'Public prompts',
   [LogSources.AgentAsTool]: 'Sub agents',
+  [LogSources.EmailTrigger]: 'Email trigger',
 }
 
 function LogSourceCheckbox({
