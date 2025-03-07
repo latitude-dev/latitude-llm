@@ -60,6 +60,7 @@ export function FilePathSelector({
                   <Tooltip
                     align='center'
                     side='left'
+                    key={disambiguatedPath.path}
                     trigger={
                       <Button
                         key={disambiguatedPath.path}

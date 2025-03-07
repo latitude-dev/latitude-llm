@@ -92,7 +92,10 @@ export class ChainStreamManager {
    * Starts the chain stream
    * @returns The stream, and a promise that resolves to the messages when the chain is done
    */
-  start(cb?: () => Promise<void>): {
+  start(
+    cb?: () => Promise<void>,
+    abortSignal?: AbortSignal,
+  ): {
     stream: ReadableStream<ChainEvent>
     messages: Promise<Message[]>
     toolCalls: Promise<ToolCall[]>
@@ -119,6 +122,23 @@ export class ChainStreamManager {
       start: (controller) => {
         this.controller = controller
         this.sendEvent({ type: ChainEventTypes.ChainStarted })
+
+        if (abortSignal) {
+          if (abortSignal.aborted) {
+            controller.close()
+            this.endStream()
+            return
+          }
+
+          abortSignal.addEventListener(
+            'abort',
+            () => {
+              controller.close()
+              this.endStream()
+            },
+            { once: true },
+          )
+        }
 
         cb?.()
           .then(() => !this.finished && this.done())
@@ -148,6 +168,7 @@ export class ChainStreamManager {
     output,
     injectFakeAgentStartTool,
     injectAgentFinishTool,
+    abortSignal,
   }: {
     provider: ProviderApiKey
     conversation: Conversation
@@ -156,6 +177,7 @@ export class ChainStreamManager {
     output?: 'object' | 'array' | 'no-schema'
     injectFakeAgentStartTool?: boolean
     injectAgentFinishTool?: boolean
+    abortSignal?: AbortSignal
   }) {
     if (!this.controller) throw new Error('Stream not started')
 
@@ -202,6 +224,7 @@ export class ChainStreamManager {
       schema,
       output,
       injectFakeAgentStartTool,
+      abortSignal,
     })
     this.addMessageFromResponse(response)
 

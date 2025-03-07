@@ -2,8 +2,6 @@ import { NotFoundError } from '@latitude-data/core/lib/errors'
 import { QueryParams } from '@latitude-data/core/lib/pagination/buildPaginatedUrl'
 import { findManyByIdAndEvaluation } from '@latitude-data/core/services/evaluationResults/findManyByIdAndEvaluation'
 import { getFreeRuns } from '@latitude-data/core/services/freeRunsManager/index'
-import { addMessagesAction } from '$/actions/sdk/addMessagesAction'
-import { runDocumentAction } from '$/actions/sdk/runDocumentAction'
 import {
   findCommitCached,
   getDocumentByUuidCached,
@@ -64,8 +62,6 @@ export default async function DocumentPage({
   return (
     <>
       <DocumentEditor
-        runDocumentAction={runDocumentAction}
-        addMessagesAction={addMessagesAction}
         documents={documents}
         document={document}
         providerApiKeys={providerApiKeys.map(providerApiKeyPresenter)}

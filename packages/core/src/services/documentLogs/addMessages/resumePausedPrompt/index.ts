@@ -43,6 +43,7 @@ export async function resumePausedPrompt({
   responseMessages,
   previousResponse,
   source,
+  abortSignal,
 }: {
   workspace: Workspace
   commit: Commit
@@ -53,6 +54,7 @@ export async function resumePausedPrompt({
   responseMessages: Message[]
   previousResponse: ChainStepResponse<StreamType>
   source: LogSources
+  abortSignal?: AbortSignal
 }) {
   const resultResolvedContent = await getResolvedContent({
     workspaceId: workspace.id,
@@ -90,6 +92,7 @@ export async function resumePausedPrompt({
       ...buildMessagesFromResponse({ response: previousResponse }),
       ...responseMessages,
     ],
+    abortSignal,
   })
 
   return Result.ok({

@@ -21,6 +21,7 @@ export const chatHandler: AppRouteHandler<ChatRoute> = async (c) => {
       // @ts-expect-error: messages types are different
       messages,
       source: __internal?.source ?? LogSources.API,
+      abortSignal: c.req.raw.signal,
     })
   ).unwrap()
 
@@ -29,6 +30,15 @@ export const chatHandler: AppRouteHandler<ChatRoute> = async (c) => {
       c,
       async (stream) => {
         let id = 0
+        // Add explicit connection close handling
+        c.req.raw.signal.addEventListener(
+          'abort',
+          () => {
+            stream.close()
+          },
+          { once: true },
+        )
+
         for await (const event of streamToGenerator(result.stream)) {
           const data = event.data
 

@@ -49,6 +49,7 @@ export const runHandler: AppRouteHandler<RunRoute> = async (c) => {
     parameters,
     customIdentifier,
     source: __internal?.source ?? LogSources.API,
+    abortSignal: c.req.raw.signal,
   }).then((r) => r.unwrap())
 
   if (useSSE) {
@@ -56,6 +57,11 @@ export const runHandler: AppRouteHandler<RunRoute> = async (c) => {
       c,
       async (stream) => {
         let id = 0
+
+        c.req.raw.signal.addEventListener('abort', () => {
+          stream.close()
+        })
+
         for await (const event of streamToGenerator(result.stream)) {
           const data = event.data
 

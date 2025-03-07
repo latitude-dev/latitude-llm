@@ -37,8 +37,12 @@ export function nodeFetchResponseToReadableStream(
        */
       nodeStream.on('close', () => {
         // Optionally handle the case when the stream closes unexpectedly
-        if (!nodeStream.readableEnded) {
-          controller.close()
+        if (!nodeStream.readableEnded && !nodeStream.errored) {
+          try {
+            controller.close()
+          } catch (e) {
+            // controller might be closed already
+          }
         }
       })
 

@@ -53,6 +53,7 @@ type CommonArgs<T extends boolean = true, C extends SomeChain = LegacyChain> = {
 
   configOverrides?: ConfigOverrides
   removeSchema?: boolean
+  abortSignal?: AbortSignal
 }
 export type RunChainArgs<
   T extends boolean,
@@ -81,6 +82,7 @@ export function runChain<T extends boolean, C extends SomeChain>({
   configOverrides,
   removeSchema = false,
   promptSource,
+  abortSignal,
 }: RunChainArgs<T, C>) {
   const errorableUuid = generateUUID()
   const chainStartTime = Date.now()
@@ -112,6 +114,7 @@ export function runChain<T extends boolean, C extends SomeChain>({
         removeSchema,
         newMessages,
         previousConfig: globalConfig,
+        abortSignal,
       })
 
       resolveConversation(conversation)

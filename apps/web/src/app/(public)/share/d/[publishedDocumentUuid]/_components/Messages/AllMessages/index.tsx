@@ -8,9 +8,9 @@ import {
   Conversation,
   Message as ConversationMessage,
 } from '@latitude-data/compiler'
-import { StreamMessage } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/DocumentEditor/Editor/Playground/Chat'
 import { ExpandMessages } from '../ExpandMessages'
 import { useToolContentMap } from 'node_modules/@latitude-data/web-ui/src/lib/hooks/useToolContentMap'
+import { StreamMessage } from '$/app/(private)/projects/[projectId]/versions/[commitUuid]/documents/[documentUuid]/_components/DocumentEditor/Editor/Playground/components'
 
 export function AllMessages({
   messages,

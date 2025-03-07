@@ -84,6 +84,7 @@ export async function runDocumentAtCommit({
   commit,
   customIdentifier,
   source,
+  abortSignal,
 }: {
   workspace: Workspace
   commit: Commit
@@ -91,6 +92,7 @@ export async function runDocumentAtCommit({
   parameters: Record<string, unknown>
   customIdentifier?: string
   source: LogSources
+  abortSignal?: AbortSignal
 }) {
   const errorableType = ErrorableEntity.DocumentLog
   const errorableUuid = generateUUIDIdentifier()
@@ -131,6 +133,7 @@ export async function runDocumentAtCommit({
   }
 
   const runArgs = {
+    abortSignal,
     generateUUID: () => errorableUuid,
     errorableType,
     workspace,
