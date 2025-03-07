@@ -113,7 +113,7 @@ export async function createNewDocument(
         {
           workspace: workspace,
           user: user,
-          name: `[${path.split('/').at(-1)}] Accuracy`,
+          name: `Accuracy`,
           description: `Evaluates how well the given instructions are followed.`,
           metadataType: EvaluationMetadataType.LlmAsJudgeSimple,
           metadata: {

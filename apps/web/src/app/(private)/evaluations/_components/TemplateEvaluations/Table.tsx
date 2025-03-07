@@ -32,10 +32,14 @@ export const TemplateEvaluationsTableRow = ({
       onMouseLeave={() => setIsHovered(false)}
     >
       <TableCell>
-        <Text.H5 noWrap>{template.name}</Text.H5>
+        <Text.H5 noWrap ellipsis>
+          {template.name}
+        </Text.H5>
       </TableCell>
       <TableCell>
-        <Text.H5 noWrap>{template.category}</Text.H5>
+        <Text.H5 noWrap ellipsis>
+          {template.category}
+        </Text.H5>
       </TableCell>
       <TableCell>
         <div className='flex flex-row gap-1 justify-between items-center'>
@@ -49,8 +53,8 @@ export const TemplateEvaluationsTableRow = ({
           className={cn('flex-shrink-0', { 'opacity-0 disabled': !isHovered })}
           variant='ghost'
         >
-          <div className='flex flex-row gap-1 items-center'>
-            <Text.H5M noWrap color='accentForeground'>
+          <div className='flex flex-row gap-1 items-center truncate'>
+            <Text.H5M noWrap ellipsis color='accentForeground'>
               Use this template
             </Text.H5M>
             <Icon name='addCircle' color='accentForeground' />

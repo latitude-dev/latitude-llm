@@ -33,7 +33,7 @@ export const createEvaluationFromPromptAction = withDocument
     { type: 'json' },
   )
   .handler(async ({ input, ctx }) => {
-    const result = await createEvaluation({
+    const evaluation = await createEvaluation({
       workspace: ctx.workspace,
       name: input.name,
       description: 'AI-generated evaluation',
@@ -50,7 +50,7 @@ export const createEvaluationFromPromptAction = withDocument
       user: ctx.user,
       projectId: ctx.project.id,
       documentUuid: ctx.document.documentUuid,
-    })
+    }).then((r) => r.unwrap())
 
-    return result.unwrap()
+    return evaluation
   })
