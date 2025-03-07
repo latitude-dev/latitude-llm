@@ -12,6 +12,7 @@ const STYLES = {
     },
     size: {
       default: 'w-2 h-2',
+      md: 'w-2.5 h-2.5',
     },
   },
 }

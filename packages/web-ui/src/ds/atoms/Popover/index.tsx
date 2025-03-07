@@ -15,6 +15,7 @@ type Props = RadixPopover.PopoverContentProps & {
   size?: 'small' | 'medium' | 'large'
   scrollable?: boolean
   maxHeight?: 'normal' | 'none'
+  width?: number
 }
 const PopoverContent = forwardRef<HTMLDivElement, Props>(function Content(
   {
@@ -23,6 +24,7 @@ const PopoverContent = forwardRef<HTMLDivElement, Props>(function Content(
     size = 'small',
     className = '',
     maxHeight = 'normal',
+    width,
     ...rest
   },
   ref,
@@ -43,6 +45,10 @@ const PopoverContent = forwardRef<HTMLDivElement, Props>(function Content(
         'max-h-96': maxHeight === 'normal',
       },
     ),
+    style: {
+      ...rest.style,
+      ...(width ? { minWidth: width, maxWidth: width } : {}),
+    },
   }
   if (!inPortal) return <RadixPopover.Content {...props} />
 

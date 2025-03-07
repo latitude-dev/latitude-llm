@@ -2,7 +2,7 @@
 
 import { ReactNode, useContext } from 'react'
 
-import { Button, useCurrentCommit } from '@latitude-data/web-ui'
+import { Button } from '@latitude-data/web-ui'
 
 import { DocumentationContext } from '../DocumentationModal'
 import { ShareDocument } from './ShareDocument'
@@ -19,7 +19,6 @@ export default function DocumentTabs({
   children: ReactNode
 }) {
   const { toggleDocumentation } = useContext(DocumentationContext)
-  const { isHead } = useCurrentCommit()
   return (
     <>
       <div className='flex flex-row items-center justify-between pt-6 px-6'>
@@ -39,9 +38,6 @@ export default function DocumentTabs({
           <ShareDocument
             document={document}
             projectId={Number(params.projectId)}
-            commitUuid={params.commitUuid}
-            documentUuid={params.documentUuid}
-            canShare={isHead}
           />
         </div>
       </div>
