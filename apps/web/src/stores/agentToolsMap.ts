@@ -1,10 +1,20 @@
-import { HEAD_COMMIT } from '@latitude-data/core/browser'
+import { isEqual } from 'lodash-es'
+import { useEffect, useState } from 'react'
+import { type DocumentVersion, HEAD_COMMIT } from '@latitude-data/core/browser'
 import { SWRConfiguration } from 'swr'
 import useDocumentVersions from './documentVersions'
-import { useMemo } from 'react'
 import { getAgentToolName } from '@latitude-data/core/services/agents/helpers'
 import { AgentToolsMap } from '@latitude-data/constants'
 
+function buildAgentsToolMap(data: DocumentVersion[] = []) {
+  if (!data) return {}
+  return data.reduce((acc: AgentToolsMap, document) => {
+    if (document.documentType === 'agent') {
+      acc[getAgentToolName(document.path)] = document.path
+    }
+    return acc
+  }, {})
+}
 export function useAgentToolsMap(
   {
     commitUuid = HEAD_COMMIT,
@@ -17,14 +27,14 @@ export function useAgentToolsMap(
     opts,
   )
 
-  const agentToolsMap: AgentToolsMap = useMemo(() => {
-    if (!data) return {}
-    return data.reduce((acc: AgentToolsMap, document) => {
-      if (document.documentType === 'agent') {
-        acc[getAgentToolName(document.path)] = document.path
-      }
-      return acc
-    }, {})
+  const [agentToolsMap, setAgentToolsMap] = useState<AgentToolsMap>({})
+
+  useEffect(() => {
+    setAgentToolsMap((prev) => {
+      const newAgentToolMaps = buildAgentsToolMap(data)
+
+      return isEqual(prev, newAgentToolMaps) ? prev : newAgentToolMaps
+    })
   }, [data])
 
   return { data: agentToolsMap, isLoading, error }

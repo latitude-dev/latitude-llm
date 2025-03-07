@@ -24,6 +24,7 @@ import { useRouter } from 'next/navigation'
 import useSWR, { SWRConfiguration } from 'swr'
 import { useServerAction } from 'zsa-react'
 
+const EMPTY_DATA = [] as DocumentVersion[]
 export default function useDocumentVersions(
   {
     commitUuid = HEAD_COMMIT,
@@ -62,7 +63,7 @@ export default function useDocumentVersions(
 
   const {
     mutate,
-    data = [],
+    data = EMPTY_DATA,
     isValidating,
     isLoading,
     error: swrError,
