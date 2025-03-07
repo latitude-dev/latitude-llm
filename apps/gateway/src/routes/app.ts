@@ -6,13 +6,8 @@ import errorHandlerMiddleware from '$/middlewares/errorHandler'
 
 import createApp from '$/openApi/createApp'
 import configureOpenAPI from '$/openApi/configureOpenAPI'
-
-import v1Routes from '$/routes/v1'
-import v2Routes from '$/routes/v2'
-
-import documents from '$/routes/v3/documents'
-import conversations from '$/routes/v3/conversations'
-import telemetry from '$/routes/v3/otlp'
+import { configureApiRoutes } from './api'
+import { configureWebhookRoutes } from './webhook'
 
 const app = createApp()
 
@@ -28,14 +23,12 @@ configureOpenAPI(app)
 
 // Middlewares
 app.use(rateLimitMiddleware())
+configureWebhookRoutes(app)
+
 app.use(authMiddleware())
 
-app.route('/', v1Routes)
-app.route('/', v2Routes)
-
-app.route('/', documents)
-app.route('/', conversations)
-app.route('/', telemetry)
+// Routes
+configureApiRoutes(app)
 
 app.onError(errorHandlerMiddleware)
 
