@@ -95,17 +95,17 @@ export default function useDatasetRows(
 
 export const serializeRows =
   (columns: DatasetV2['columns']) =>
-    (data: ServerData): ClientData => {
-      const processedRows = data.rows.map((item) => {
-        const rest = omit(item, 'rowData') as Omit<DatasetRow, 'rowData'>
-        return {
-          ...rest,
-          cells: columns.map(
-            ({ identifier }) => item.rowData[identifier] ?? null,
-          ),
-          createdAt: new Date(item.createdAt),
-          updatedAt: new Date(item.updatedAt),
-        }
-      })
-      return { rows: processedRows, rowCount: data.count }
+  (data: ServerData): ClientData => {
+    const processedRows = data.rows.map((item) => {
+      const rest = omit(item, 'rowData') as Omit<DatasetRow, 'rowData'>
+      return {
+        ...rest,
+        cells: columns.map(
+          ({ identifier }) => item.rowData[identifier] ?? null,
+        ),
+        createdAt: new Date(item.createdAt),
+        updatedAt: new Date(item.updatedAt),
+      }
+    })
+    return { rows: processedRows, rowCount: data.count }
   }

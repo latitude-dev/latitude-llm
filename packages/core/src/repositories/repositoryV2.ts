@@ -40,7 +40,9 @@ export default abstract class Repository<T extends Record<string, unknown>> {
       .limit(1)
     if (!result[0]) {
       const table = this.scope._.tableName
-      return Result.error(new NotFoundError(`Record with id ${id} not found in ${table}`))
+      return Result.error(
+        new NotFoundError(`Record with id ${id} not found in ${table}`),
+      )
     }
 
     return Result.ok(result[0]! as T)
