@@ -20,6 +20,7 @@ export const GET = errorHandler(
     ) => {
       const searchParams = req.nextUrl.searchParams
       const datasetId = searchParams.get('datasetId')
+      const withCount = searchParams.get('withCount') === 'true'
       const datasetRepo = new DatasetsV2Repository(workspace.id)
       const result = await datasetRepo.find(Number(datasetId))
 
@@ -35,13 +36,25 @@ export const GET = errorHandler(
       const pageSize =
         searchParams.get('pageSize') ?? String(DEFAULT_PAGINATION_SIZE)
       const repo = new DatasetRowsRepository(workspace.id)
-      const rows = await repo.findByDatasetPaginated({
+
+      const rowsRequest = repo.findByDatasetPaginated({
         datasetId: dataset.id,
         page,
         pageSize: pageSize as string | undefined,
       })
 
-      return NextResponse.json(rows, { status: 200 })
+      if (!withCount) {
+        const rows = await rowsRequest
+        return NextResponse.json({ rows, count: 0 }, { status: 200 })
+      }
+
+      const countRequest = repo.getCountByDataset(dataset.id)
+      const [rows, count] = await Promise.all([rowsRequest, countRequest])
+
+      return NextResponse.json(
+        { rows, count: count[0]?.count ?? 0 },
+        { status: 200 },
+      )
     },
   ),
 )

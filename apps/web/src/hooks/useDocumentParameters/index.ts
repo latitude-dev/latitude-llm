@@ -265,6 +265,8 @@ export function useDocumentParameters({
 
   const setDataset = useCallback(
     async ({ datasetId, data }: { datasetId: number; data: LinkedDataset }) => {
+      console.log("DATASET_ID", datasetId)
+      console.log("LINKED_DATASET", data)
       await saveLinkedDataset({
         projectId,
         commitUuid,

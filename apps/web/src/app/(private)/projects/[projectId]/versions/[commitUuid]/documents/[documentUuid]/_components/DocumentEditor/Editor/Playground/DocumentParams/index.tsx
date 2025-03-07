@@ -40,6 +40,8 @@ export type Props = {
   onExpand?: OnExpandFn
 }
 type ContentProps = Props & {
+  source: InputSource
+  setSource: ReturnType<typeof useDocumentParameters>['setSource']
   datasetInfo: UseSelectDataset
   historyInfo: UseLogHistoryParams
 }
@@ -49,14 +51,11 @@ function ParamsTabs({
   commit,
   prompt,
   setPrompt,
+  setSource,
+  source,
   datasetInfo,
   historyInfo,
 }: ContentProps) {
-  const { source, setSource } = useDocumentParameters({
-    document,
-    commitVersionUuid: commit.uuid,
-  })
-
   return (
     <div className='w-full flex flex-col gap-4'>
       <TabSelector<InputSource>
@@ -88,17 +87,11 @@ function ParamsTabs({
 }
 
 function CollapsedContentHeader({
-  document,
-  commit,
+  source,
   datasetInfo,
   historyInfo,
 }: ContentProps) {
   const src = INPUT_SOURCE
-  const { source } = useDocumentParameters({
-    document,
-    commitVersionUuid: commit.uuid,
-  })
-
   if (source === src.manual) return null
   const isDataset =
     source === INPUT_SOURCE.dataset && datasetInfo.selectedDataset
@@ -133,18 +126,28 @@ function CollapsedContentHeader({
 }
 
 export default function DocumentParams({ onExpand, ...props }: Props) {
-  const datasetInfo = useSelectDataset({
+  const commit = props.commit
+  const { source, setSource } = useDocumentParameters({
     document: props.document,
-    commitVersionUuid: props.commit.uuid,
+    commitVersionUuid: commit.uuid,
   })
 
+  const datasetInfo = useSelectDataset({
+    document: props.document,
+    commitVersionUuid: commit.uuid,
+    source,
+  })
+
+  // TODO: Improve. Pass source and only fetch logs when in logs tab
   const historyInfo = useLogHistoryParams({
     document: props.document,
-    commitVersionUuid: props.commit.uuid,
+    commitVersionUuid: commit.uuid,
   })
 
   const contentProps = {
     ...props,
+    source,
+    setSource,
     datasetInfo,
     historyInfo,
   }

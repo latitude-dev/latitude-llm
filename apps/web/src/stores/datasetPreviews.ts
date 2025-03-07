@@ -5,6 +5,7 @@ import { ROUTES } from '$/services/routes'
 import { SWRConfiguration } from 'swr'
 import useSWRImmutable from 'swr/immutable'
 
+const EMPTY_PREVIEW = { headers: [], rows: [], rowCount: 0 }
 export default function useDatasetPreview(
   {
     dataset,
@@ -18,11 +19,11 @@ export default function useDatasetPreview(
   const fetcher = useFetcher(
     dataset ? ROUTES.api.datasets.detail(dataset.id).preview.root : undefined,
     {
-      fallback: { headers: [], rows: [], rowCount: 0 },
+      fallback: EMPTY_PREVIEW,
     },
   )
 
-  const { data = [], ...rest } = useSWRImmutable<CsvParsedData>(
+  const { data = EMPTY_PREVIEW, ...rest } = useSWRImmutable<CsvParsedData>(
     ['datasets_preview', dataset?.id],
     fetcher,
     {

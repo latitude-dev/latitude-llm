@@ -1,15 +1,22 @@
 import { useCallback, useMemo, useState } from 'react'
 
-import { Inputs, Dataset, DocumentVersion } from '@latitude-data/core/browser'
+import {
+  Inputs,
+  Dataset,
+  DocumentVersion,
+  DatasetV2,
+} from '@latitude-data/core/browser'
 import {
   SelectOption,
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui'
 import { useDocumentParameters } from '$/hooks/useDocumentParameters'
-import useDatasetPreview from '$/stores/datasetPreviews'
-import useDatasets from '$/stores/datasets'
 import useDocumentVersions from '$/stores/documentVersions'
+import {
+  useVersionDatasetRows,
+  useVersionedDatasets,
+} from '$/hooks/useVersionedDatasets'
 
 export type DatasetPreview = {
   headers: Record<number, string>
@@ -63,15 +70,19 @@ export function useSelectDataset({
   document: DocumentVersion
   commitVersionUuid: string
 }) {
-  const [selectedDataset, setSelectedDataset] = useState<Dataset | undefined>()
+  const [selectedDataset, setSelectedDataset] = useState<
+    Dataset | DatasetV2 | undefined
+  >()
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
   const { assignDataset } = useDocumentVersions()
-  const { data: datasets, isLoading: isLoadingDatasets } = useDatasets({
-    onFetched: (data) => {
-      setSelectedDataset(data.find((ds) => ds.id === document.datasetId))
+  const { data: datasets, isLoading: isLoadingDatasets } = useVersionedDatasets(
+    {
+      onFetched: (data) => {
+        setSelectedDataset(data.find((ds) => ds.id === document.datasetId))
+      },
     },
-  })
+  )
   const {
     dataset: { inputs, mappedInputs, rowIndex, setDataset },
   } = useDocumentParameters({
@@ -82,14 +93,16 @@ export function useSelectDataset({
     () => datasets.map((ds) => ({ value: ds.id, label: ds.name })),
     [datasets],
   )
-  const { data: csv, isLoading: isLoadingPreviewDataset } = useDatasetPreview({
-    dataset: selectedDataset,
-  })
+  const { data: rows, isLoading: isLoadingPreviewDataset } =
+    useVersionDatasetRows({
+      dataset: selectedDataset,
+      rowIndex,
+    })
 
   const datasetPreview = useMemo<DatasetPreview>(() => {
     if (!selectedDataset) return EMPTY_PREVIEW
 
-    const headers = csv?.headers ?? []
+    const headers = rows.headers
     const headersByIndex = headers.reduce(
       (acc, header, i) => {
         acc[i] = header
@@ -101,11 +114,11 @@ export function useSelectDataset({
     const preview = {
       headers: headersByIndex,
       headersOptions: options,
-      rows: csv?.rows ?? [],
-      rowCount: csv?.rowCount ?? 0,
+      rows: rows.rows,
+      rowCount: rows.rowCount,
     }
     return preview
-  }, [csv, selectedDataset])
+  }, [rows, selectedDataset])
 
   const onSelectDataset = useCallback(
     async (value: number) => {
@@ -191,7 +204,7 @@ export function useSelectDataset({
     onSelectDataset,
     onRowChange,
     selectedRowIndex: rowIndex,
-    totalRows: datasetPreview?.rowCount,
+    totalRows: datasetPreview.rowCount,
     onSelectHeader,
   }
 }
