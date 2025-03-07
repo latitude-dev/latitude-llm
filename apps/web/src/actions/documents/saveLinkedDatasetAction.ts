@@ -1,11 +1,15 @@
 'use server'
 
-import { DatasetsRepository } from '@latitude-data/core/repositories'
+import {
+  DatasetsRepository,
+  DatasetsV2Repository,
+} from '@latitude-data/core/repositories'
 import { z } from 'zod'
 
 import { withDocument } from '../procedures'
-import { ParameterType } from '@latitude-data/constants'
+import { DatasetVersion, ParameterType } from '@latitude-data/constants'
 import { saveLinkedDataset } from '@latitude-data/core/services/documents/saveLinkedDataset'
+import { withDataset } from '$/actions/evaluations/_helpers'
 
 const parameterTypeSchema = z.nativeEnum(ParameterType)
 const datasetInputMetadataSchema = z.object({
@@ -22,24 +26,22 @@ const inputsSchema = z.record(datasetInputSchema)
 
 const mappedInputsSchema = z.record(z.number())
 
-export const saveLinkedDatasetAction = withDocument
+export const saveLinkedDatasetAction = withDataset
   .createServerAction()
   .input(
     z.object({
       datasetId: z.number(),
-      rowIndex: z.number(),
+      datasetVersion: z.nativeEnum(DatasetVersion),
+      rowIndex: z.number().optional(),
       mappedInputs: mappedInputsSchema,
       inputs: inputsSchema,
     }),
   )
   .handler(async ({ input, ctx }) => {
-    const { datasetId } = input
-    const repo = new DatasetsRepository(ctx.workspace.id)
-    const dataset = await repo.find(datasetId).then((r) => r.unwrap())
-
     return await saveLinkedDataset({
       document: ctx.document,
-      dataset,
+      datasetVersion: ctx.datasetVersion,
+      dataset: ctx.dataset,
       data: {
         rowIndex: input.rowIndex,
         mappedInputs: input.mappedInputs,

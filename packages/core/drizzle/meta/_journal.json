@@ -932,6 +932,13 @@
       "when": 1741105430670,
       "tag": "0133_illegal_shatterstar",
       "breakpoints": true
+    },
+    {
+      "idx": 134,
+      "version": "7",
+      "when": 1741350182295,
+      "tag": "0134_hard_wasp",
+      "breakpoints": true
     }
   ]
 }

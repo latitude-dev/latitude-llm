@@ -4,6 +4,7 @@ import {
   LinkedDataset,
   DocumentVersion,
   PlaygroundInput,
+  DatasetV2,
 } from '@latitude-data/core/browser'
 import {
   Badge,
@@ -46,7 +47,7 @@ export function InputMapper({
   headersOptions: DatasetPreview['headersOptions']
   onSelectHeader: UseSelectDataset['onSelectHeader']
   isLoading: boolean
-  selectedDataset: Dataset | undefined
+  selectedDataset: Dataset | DatasetV2 | undefined
 }) {
   const {
     setSource,

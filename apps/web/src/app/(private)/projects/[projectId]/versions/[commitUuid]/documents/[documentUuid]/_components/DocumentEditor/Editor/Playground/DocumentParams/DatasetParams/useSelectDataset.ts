@@ -5,6 +5,8 @@ import {
   Dataset,
   DocumentVersion,
   DatasetV2,
+  InputSource,
+  INPUT_SOURCE,
 } from '@latitude-data/core/browser'
 import {
   SelectOption,
@@ -66,9 +68,11 @@ const EMPTY_PREVIEW = {
 export function useSelectDataset({
   document,
   commitVersionUuid,
+  source,
 }: {
   document: DocumentVersion
   commitVersionUuid: string
+  source: InputSource
 }) {
   const [selectedDataset, setSelectedDataset] = useState<
     Dataset | DatasetV2 | undefined
@@ -76,13 +80,17 @@ export function useSelectDataset({
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
   const { assignDataset } = useDocumentVersions()
-  const { data: datasets, isLoading: isLoadingDatasets } = useVersionedDatasets(
-    {
-      onFetched: (data) => {
-        setSelectedDataset(data.find((ds) => ds.id === document.datasetId))
-      },
+  const isEnabled = source === INPUT_SOURCE
+  const {
+    data: datasets,
+    isLoading: isLoadingDatasets,
+    datasetVersion,
+  } = useVersionedDatasets({
+    enabled: isEnabled,
+    onFetched: (data) => {
+      setSelectedDataset(data.find((ds) => ds.id === document.datasetId))
     },
-  )
+  })
   const {
     dataset: { inputs, mappedInputs, rowIndex, setDataset },
   } = useDocumentParameters({
@@ -97,6 +105,7 @@ export function useSelectDataset({
     useVersionDatasetRows({
       dataset: selectedDataset,
       rowIndex,
+      enabled: isEnabled,
     })
 
   const datasetPreview = useMemo<DatasetPreview>(() => {
@@ -125,16 +134,25 @@ export function useSelectDataset({
       const ds = datasets.find((ds) => ds.id === Number(value))
       if (!ds) return
 
+      console.log('DATASET_VERSION', datasetVersion)
       await assignDataset({
         projectId: project.id,
         documentUuid: document.documentUuid,
         commitUuid: commit.uuid,
         datasetId: ds.id,
+        datasetVersion,
       })
 
       setSelectedDataset(ds)
     },
-    [datasets, assignDataset, project.id, document.documentUuid, commit.uuid],
+    [
+      datasets,
+      datasetVersion,
+      assignDataset,
+      project.id,
+      document.documentUuid,
+      commit.uuid,
+    ],
   )
   const isLoading = isLoadingDatasets || isLoadingPreviewDataset
 
@@ -151,6 +169,7 @@ export function useSelectDataset({
       })
       setDataset({
         datasetId: selectedDataset.id,
+        datasetVersion,
         data: {
           rowIndex,
           inputs: newInputs,
@@ -158,7 +177,14 @@ export function useSelectDataset({
         },
       })
     },
-    [inputs, setDataset, datasetPreview.rows, selectedDataset, mappedInputs],
+    [
+      inputs,
+      setDataset,
+      datasetPreview.rows,
+      selectedDataset,
+      mappedInputs,
+      datasetVersion,
+    ],
   )
 
   const onSelectHeader = useCallback(
@@ -175,6 +201,7 @@ export function useSelectDataset({
       })
       setDataset({
         datasetId: selectedDataset.id,
+        datasetVersion,
         data: {
           inputs: newInputs,
           rowIndex: rowIndex ?? 0,
@@ -186,6 +213,7 @@ export function useSelectDataset({
       inputs,
       setDataset,
       rowIndex,
+      datasetVersion,
       mappedInputs,
       datasetPreview?.rows,
       selectedDataset?.id,

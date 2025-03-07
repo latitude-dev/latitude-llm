@@ -1,20 +1,27 @@
 import { eq } from 'drizzle-orm'
 
-import { Dataset, DocumentVersion, LinkedDataset } from '../../browser'
+import {
+  Dataset,
+  DatasetV2,
+  DatasetVersion,
+  DocumentVersion,
+  LinkedDataset,
+} from '../../browser'
 import { database } from '../../client'
 import { Result, Transaction, TypedResult } from '../../lib'
 import { documentVersions } from '../../schema'
 
-export async function saveLinkedDataset(
+export async function saveLinkedDataset<V extends DatasetVersion>(
   {
     document,
     dataset,
     data,
   }: {
     document: DocumentVersion
-    dataset: Dataset
+    datasetVersion: V
+    dataset: V extends DatasetVersion.V1 ? Dataset : DatasetV2
     data: {
-      rowIndex: number
+      rowIndex: number | undefined
       inputs: LinkedDataset['inputs']
       mappedInputs: LinkedDataset['mappedInputs']
     }

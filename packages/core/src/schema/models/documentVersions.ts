@@ -16,6 +16,7 @@ import { timestamps } from '../schemaHelpers'
 import { commits } from './commits'
 import { datasets } from './datasets'
 import { DocumentType, LinkedDataset } from '../../browser'
+import { datasetsV2 } from './datasetsV2'
 
 type LinkedDatasetByDatasetId = Record<number, LinkedDataset>
 
@@ -42,6 +43,10 @@ export const documentVersions = latitudeSchema.table(
       .default(DocumentType.Prompt),
     datasetId: bigint('dataset_id', { mode: 'number' }).references(
       () => datasets.id,
+      { onDelete: 'set null' },
+    ),
+    datasetV2Id: bigint('dataset_v2_id', { mode: 'number' }).references(
+      () => datasetsV2.id,
       { onDelete: 'set null' },
     ),
     linkedDataset: json('linked_dataset_by_dataset_id')
