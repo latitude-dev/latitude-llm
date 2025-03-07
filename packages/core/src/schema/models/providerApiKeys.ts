@@ -67,9 +67,5 @@ export const providerApiKeys = latitudeSchema.table(
       table.workspaceId,
       table.deletedAt,
     ),
-    // TODO: This constrain is not working for some reason
-    tokenUniquenessByProvider: unique()
-      .on(table.token, table.provider, table.workspaceId, table.deletedAt)
-      .nullsNotDistinct(),
   }),
 )
