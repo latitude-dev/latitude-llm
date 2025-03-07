@@ -4,7 +4,6 @@ import {
   EvaluationMetadataType,
   EvaluationResultableType,
 } from '@latitude-data/core/browser'
-import { connectEvaluations } from '@latitude-data/core/services/evaluations/connect'
 import { createEvaluation } from '@latitude-data/core/services/evaluations/create'
 import { z } from 'zod'
 
@@ -51,13 +50,6 @@ export const createEvaluationFromPromptAction = withDocument
       user: ctx.user,
       projectId: ctx.project.id,
       documentUuid: ctx.document.documentUuid,
-    }).then((r) => r.unwrap())
-
-    await connectEvaluations({
-      workspace: ctx.workspace,
-      documentUuid: ctx.document.documentUuid,
-      evaluationUuids: [evaluation.uuid],
-      user: ctx.user,
     }).then((r) => r.unwrap())
 
     return evaluation

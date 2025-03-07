@@ -21,7 +21,7 @@ import {
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui'
-import { useCallback, useState } from 'react'
+import { useState } from 'react'
 
 export default function ConnectedEvaluationsTable({
   evaluations,
@@ -37,12 +37,6 @@ export default function ConnectedEvaluationsTable({
 
   const [selectedEvaluation, setSelectedEvaluation] = useState<EvaluationDto>()
   const [openDestroyModal, setOpenDestroyModal] = useState(false)
-  const onDestroy = useCallback(() => {
-    if (!selectedEvaluation) return
-    destroy({ id: selectedEvaluation!.id })
-    setOpenDestroyModal(false)
-    setSelectedEvaluation(undefined)
-  }, [destroy])
 
   return (
     <>
@@ -72,8 +66,8 @@ export default function ConnectedEvaluationsTable({
               }
             >
               <TableCell>
-                <div className='flex items-center justify-between gap-2'>
-                  <Text.H5 noWrap>{evaluation.name}</Text.H5>
+                <div className='flex items-center justify-between gap-2 truncate'>
+                  <Text.H5 noWrap ellipsis>{evaluation.name}</Text.H5>
                   <div onClick={(e) => e.stopPropagation()}>
                     <ClickToCopyUuid uuid={evaluation.uuid} />
                   </div>
@@ -114,7 +108,11 @@ export default function ConnectedEvaluationsTable({
           open={openDestroyModal}
           title={`Remove ${selectedEvaluation.name} evaluation`}
           type='destructive'
-          onConfirm={onDestroy}
+          onConfirm={() => {
+            destroy({ id: selectedEvaluation.id })
+            setOpenDestroyModal(false)
+            setSelectedEvaluation(undefined)
+          }}
           onCancel={() => {
             setOpenDestroyModal(false)
             setSelectedEvaluation(undefined)
