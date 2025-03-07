@@ -7,6 +7,7 @@ import {
   DatasetV2,
   InputSource,
   INPUT_SOURCE,
+  DatasetVersion,
 } from '@latitude-data/core/browser'
 import {
   SelectOption,
@@ -37,6 +38,8 @@ function mappedToInputs({
   mappedInputs: Record<string, number>
   rowIndex: number
 }) {
+  // TODO: Fix this for datasets v2. It's always the first row because
+  // there is only one row in the dataset preview
   const rows = datasetPreview.rows
   const row = rows[rowIndex] ?? []
   const cleanRow = row.slice(1)
@@ -80,15 +83,17 @@ export function useSelectDataset({
   const { project } = useCurrentProject()
   const { commit } = useCurrentCommit()
   const { assignDataset } = useDocumentVersions()
-  const isEnabled = source === INPUT_SOURCE
+  const isEnabled = source === INPUT_SOURCE.dataset
   const {
     data: datasets,
     isLoading: isLoadingDatasets,
     datasetVersion,
   } = useVersionedDatasets({
     enabled: isEnabled,
-    onFetched: (data) => {
-      setSelectedDataset(data.find((ds) => ds.id === document.datasetId))
+    onFetched: (data, datasetVersion) => {
+      const isV1 = datasetVersion === DatasetVersion.V1
+      const documentAttr = isV1 ? 'datasetId' : 'datasetV2Id'
+      setSelectedDataset(data.find((ds) => ds.id === document[documentAttr]))
     },
   })
   const {
@@ -134,7 +139,6 @@ export function useSelectDataset({
       const ds = datasets.find((ds) => ds.id === Number(value))
       if (!ds) return
 
-      console.log('DATASET_VERSION', datasetVersion)
       await assignDataset({
         projectId: project.id,
         documentUuid: document.documentUuid,

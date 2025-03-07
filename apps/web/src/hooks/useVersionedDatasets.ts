@@ -41,20 +41,23 @@ export function useVersionedDatasets({
   onFetched,
   enabled = true,
 }: {
-  onFetched?: (datasets: (Dataset | DatasetV2)[]) => void
+  onFetched?: (
+    datasets: (Dataset | DatasetV2)[],
+    datasetVersion: DatasetVersion,
+  ) => void
   enabled?: boolean
 } = {}) {
   const { data: hasDatasetsV2, isLoading } = useFeatureFlag()
   const { data: datasetsV1, isLoading: isLoadingDatasetsV1 } = useDatasets({
     enabled: enabled && !isLoading && !hasDatasetsV2,
     onFetched: (datasets) => {
-      onFetched?.(datasets)
+      onFetched?.(datasets, DatasetVersion.V1)
     },
   })
   const { data: datasetsV2, isLoading: isLoadingDatasetsV2 } = useDatasetsV2({
     enabled: enabled && !isLoading && hasDatasetsV2,
     onFetched: (datasets) => {
-      onFetched?.(datasets)
+      onFetched?.(datasets, DatasetVersion.V2)
     },
     pageSize: '100000', // Big enough page to avoid pagination
   })
