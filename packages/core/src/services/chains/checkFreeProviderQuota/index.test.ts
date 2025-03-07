@@ -40,6 +40,7 @@ describe('checkFreeProviderQuota', () => {
     const result = await checkFreeProviderQuota({
       workspace,
       provider,
+      model: 'gpt-4o-mini',
     })
     expect(result).toEqual(Result.ok(true))
   })

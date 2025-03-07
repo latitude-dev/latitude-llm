@@ -77,6 +77,7 @@ export async function addChatMessage({
     await checkFreeProviderQuota({
       workspace,
       provider,
+      model: globalConfig.model,
     }).then((r) => r.unwrap())
 
     const { clientToolCalls } = await chainStreamManager.getProviderResponse({

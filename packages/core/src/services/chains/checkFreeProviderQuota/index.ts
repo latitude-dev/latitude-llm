@@ -19,7 +19,7 @@ export async function checkFreeProviderQuota({
 }: {
   workspace: Workspace
   provider: ProviderApiKey
-  model?: string
+  model: string
   defaultProviderApiKey?: string
 }) {
   if (provider.token !== defaultProviderApiKey) return Result.ok(true)
