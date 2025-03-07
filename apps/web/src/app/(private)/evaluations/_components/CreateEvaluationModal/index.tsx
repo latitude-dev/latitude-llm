@@ -1,7 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 
-import { useCurrentDocument } from '$/app/providers/DocumentProvider'
-import useEvaluations from '$/stores/evaluations'
 import {
   EvaluationMetadataType,
   EvaluationResultableType,
@@ -17,6 +15,10 @@ import {
   Text,
   TextArea,
 } from '@latitude-data/web-ui'
+import { ROUTES } from '$/services/routes'
+import useEvaluations from '$/stores/evaluations'
+import { useRouter } from 'next/navigation'
+
 import { useEvaluationConfiguration } from './useEvaluationConfiguration'
 
 export type CreateEvaluationData = {
@@ -45,7 +47,8 @@ export default function CreateEvaluationModal({
     handleRangeFromChange,
     handleRangeToChange,
   } = useEvaluationConfiguration(initialData?.configuration)
-  const { document } = useCurrentDocument()
+
+  const router = useRouter()
 
   useEffect(() => {
     if (!initialData) return
@@ -62,9 +65,18 @@ export default function CreateEvaluationModal({
   } = useEvaluations({
     onSuccessCreate: (newEvaluation) => {
       if (!newEvaluation) return // should never happen but it does
+
+      if (newEvaluation.metadataType === EvaluationMetadataType.Manual) {
+        router.push(
+          ROUTES.evaluations.detail({ uuid: newEvaluation.uuid }).root,
+        )
+      } else {
+        router.push(
+          ROUTES.evaluations.detail({ uuid: newEvaluation.uuid }).editor.root,
+        )
+      }
       onClose(null)
     },
-    params: { documentUuid: document?.documentUuid },
   })
 
   const onConfirm = useCallback(() => {

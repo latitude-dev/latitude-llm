@@ -1,16 +1,16 @@
 'use client'
 
+import { useMemo } from 'react'
 import { compact } from 'lodash-es'
-import { useCallback, useMemo } from 'react'
 
+import type { EvaluationDto } from '@latitude-data/core/browser'
+import { useToast } from '@latitude-data/web-ui'
 import { createEvaluationAction } from '$/actions/evaluations/create'
 import { destroyEvaluationAction } from '$/actions/evaluations/destroy'
 import { updateEvaluationContentAction } from '$/actions/evaluations/updateContent'
 import useFetcher from '$/hooks/useFetcher'
 import useLatitudeAction from '$/hooks/useLatitudeAction'
 import { ROUTES } from '$/services/routes'
-import type { EvaluationDto } from '@latitude-data/core/browser'
-import { useToast } from '@latitude-data/web-ui'
 import useSWR, { SWRConfiguration } from 'swr'
 
 export default function useEvaluations(
@@ -42,7 +42,7 @@ export default function useEvaluations(
     opts,
   )
 
-  const { execute: executeCreate, isPending: isCreating } = useLatitudeAction(
+  const { execute: create, isPending: isCreating } = useLatitudeAction(
     createEvaluationAction,
     {
       onSuccess: async ({ data: newEvaluation }) => {
@@ -55,14 +55,6 @@ export default function useEvaluations(
         })
       },
     },
-  )
-  const create = useCallback(
-    async (args: Parameters<typeof executeCreate>[0]) => {
-      const [result, error] = await executeCreate({ ...args, documentUuid })
-      if (error) return
-      return result
-    },
-    [documentUuid, executeCreate],
   )
 
   const { execute: update, isPending: isUpdating } = useLatitudeAction(

@@ -1,19 +1,15 @@
 import { ButtonHTMLAttributes, ReactNode } from 'react'
 
 import { cn } from '../../../lib/utils'
-import { Button, ButtonProps, Text } from '../../atoms'
+import { Button, Text } from '../../atoms'
 import { TitleWithActions } from '../TitleWithActions'
 
 export function ListingButton({
-  variant = 'outline',
   children,
   onClick,
-}: {
-  children: ReactNode
-  variant?: ButtonProps['variant']
-} & ButtonHTMLAttributes<HTMLButtonElement>) {
+}: { children: ReactNode } & ButtonHTMLAttributes<HTMLButtonElement>) {
   return (
-    <Button onClick={onClick} fancy variant={variant}>
+    <Button onClick={onClick} fancy variant='outline'>
       {children}
     </Button>
   )

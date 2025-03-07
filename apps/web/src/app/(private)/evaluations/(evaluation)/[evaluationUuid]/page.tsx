@@ -7,5 +7,5 @@ export default async function DocumentPage({
   params: Promise<{ evaluationUuid: string }>
 }) {
   const { evaluationUuid } = await params
-  redirect(ROUTES.evaluations.detail({ uuid: evaluationUuid }).editor.root)
+  redirect(ROUTES.evaluations.detail({ uuid: evaluationUuid }).dashboard.root)
 }

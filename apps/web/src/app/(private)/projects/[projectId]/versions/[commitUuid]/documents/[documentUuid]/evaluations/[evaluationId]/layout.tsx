@@ -1,18 +1,12 @@
 import { ReactNode } from 'react'
 
-import {
-  findCommitCached,
-  getProviderApiKeyByIdCached,
-  getProviderApiKeyByNameCached,
-} from '$/app/(private)/_data-access'
-import BreadcrumbLink from '$/components/BreadcrumbLink'
-import { ROUTES } from '$/services/routes'
 import { readMetadata } from '@latitude-data/compiler'
 import {
   EvaluationMetadataType,
   EvaluationResultableType,
 } from '@latitude-data/core/browser'
 import { env } from '@latitude-data/env'
+import { scan } from 'promptl-ai'
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -23,8 +17,14 @@ import {
   Text,
   Tooltip,
 } from '@latitude-data/web-ui'
+import {
+  findCommitCached,
+  getProviderApiKeyByIdCached,
+  getProviderApiKeyByNameCached,
+} from '$/app/(private)/_data-access'
+import BreadcrumbLink from '$/components/BreadcrumbLink'
+import { ROUTES } from '$/services/routes'
 import Link from 'next/link'
-import { scan } from 'promptl-ai'
 
 import { Actions } from './_components/Actions'
 import { MetricsSummary } from './_components/MetricsSummary'
@@ -85,6 +85,14 @@ export default async function ConnectedEvaluationLayout({
     )
   }
 
+  let evaluationRoute
+  if (evaluation.metadataType !== EvaluationMetadataType.Manual) {
+    evaluationRoute = ROUTES.evaluations.detail({ uuid: evaluation.uuid })
+      .editor.root
+  } else {
+    evaluationRoute = ROUTES.evaluations.detail({ uuid: evaluation.uuid }).root
+  }
+
   return (
     <div className='flex flex-grow min-h-0 flex-col w-full gap-6 p-6'>
       <TableWithHeader
@@ -111,30 +119,24 @@ export default async function ConnectedEvaluationLayout({
                 <Text.H4M color='foregroundMuted'>
                   {TYPE_TEXT[evaluation.resultType]}
                 </Text.H4M>
-
-                {evaluation.metadataType !== EvaluationMetadataType.Manual && (
-                  <Tooltip
-                    asChild
-                    trigger={
-                      <Link
-                        href={`${
-                          ROUTES.evaluations.detail({ uuid: evaluation.uuid })
-                            .editor.root
-                        }?back=${
-                          ROUTES.projects
-                            .detail({ id: Number(projectId) })
-                            .commits.detail({ uuid: commitUuid })
-                            .documents.detail({ uuid: documentUuid })
-                            .evaluations.detail(evaluation.id).root
-                        }`}
-                      >
-                        <Icon name='externalLink' color='foregroundMuted' />
-                      </Link>
-                    }
-                  >
-                    Go to evaluation
-                  </Tooltip>
-                )}
+                <Tooltip
+                  asChild
+                  trigger={
+                    <Link
+                      href={`${evaluationRoute}?back=${
+                        ROUTES.projects
+                          .detail({ id: Number(projectId) })
+                          .commits.detail({ uuid: commitUuid })
+                          .documents.detail({ uuid: documentUuid })
+                          .evaluations.detail(evaluation.id).root
+                      }`}
+                    >
+                      <Icon name='externalLink' color='foregroundMuted' />
+                    </Link>
+                  }
+                >
+                  Go to evaluation
+                </Tooltip>
               </div>
               <ClickToCopyUuid uuid={evaluation.uuid} />
             </BreadcrumbItem>

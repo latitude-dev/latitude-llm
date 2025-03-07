@@ -1,11 +1,10 @@
 import { ReactNode } from 'react'
 
-import {
-  getEvaluationsByDocumentUuidCached,
-  getEvaluationTemplatesCached,
-} from '$/app/(private)/_data-access'
+import { getEvaluationsByDocumentUuidCached } from '$/app/(private)/_data-access'
 import env from '$/env'
+import { TableWithHeader } from '@latitude-data/web-ui'
 
+import { Actions } from './_components/Actions'
 import EvaluationsLayoutClient from './_components/Layout'
 
 export default async function EvaluationsLayout({
@@ -19,16 +18,26 @@ export default async function EvaluationsLayout({
     documentUuid: string
   }>
 }) {
-  const { documentUuid } = await params
+  const { projectId, commitUuid, documentUuid } = await params
   const evaluations = await getEvaluationsByDocumentUuidCached(documentUuid)
-  const evaluationTemplates = await getEvaluationTemplatesCached()
   return (
     <div className='w-full p-6'>
       {children}
-      <EvaluationsLayoutClient
-        evaluations={evaluations}
-        templates={evaluationTemplates}
-        isGeneratorEnabled={!!env.LATITUDE_CLOUD}
+      <TableWithHeader
+        title='Evaluations'
+        actions={
+          <Actions
+            projectId={projectId}
+            commitUuid={commitUuid}
+            documentUuid={documentUuid}
+          />
+        }
+        table={
+          <EvaluationsLayoutClient
+            evaluations={evaluations}
+            isGeneratorEnabled={!!env.LATITUDE_CLOUD}
+          />
+        }
       />
     </div>
   )

@@ -1,5 +1,7 @@
 import { ReactNode } from 'react'
 
+import { EvaluationMetadataType } from '@latitude-data/core/browser'
+import { getFreeRuns } from '@latitude-data/core/services/freeRunsManager/index'
 import {
   getEvaluationByUuidCached,
   getProviderApiKeysCached,
@@ -7,8 +9,6 @@ import {
 import providerApiKeyPresenter from '$/presenters/providerApiKeyPresenter'
 import { getCurrentUser } from '$/services/auth/getCurrentUser'
 import { ROUTES } from '$/services/routes'
-import { EvaluationMetadataType } from '@latitude-data/core/browser'
-import { getFreeRuns } from '@latitude-data/core/services/freeRunsManager/index'
 import { redirect } from 'next/navigation'
 
 import EvaluationEditorLayout from './_components/EvaluationEditorLayout'
@@ -27,7 +27,7 @@ export default async function DocumentPage({
   const freeRunsCount = await getFreeRuns(workspace.id)
 
   if (evaluation.metadataType === EvaluationMetadataType.Manual) {
-    return redirect(ROUTES.dashboard.root)
+    return redirect(ROUTES.evaluations.detail({ uuid: evaluation.uuid }).root)
   }
 
   return (

@@ -3,28 +3,18 @@
 import { useCurrentDocument } from '$/app/providers/DocumentProvider'
 import { ROUTES } from '$/services/routes'
 import useEvaluations from '$/stores/evaluations'
-import {
-  EvaluationDto,
-  EvaluationResultableType,
-  EvaluationTemplateWithCategory,
-} from '@latitude-data/core/browser'
+import { EvaluationDto } from '@latitude-data/core/browser'
 import {
   BlankSlateStep,
   BlankSlateWithSteps,
   Button,
   cn,
   TableSkeleton,
-  TableWithHeader,
   useCurrentCommit,
   useCurrentProject,
 } from '@latitude-data/web-ui'
 import Link from 'next/link'
 
-import CreateEvaluationModal, {
-  CreateEvaluationData,
-} from '$/app/(private)/evaluations/_components/CreateEvaluationModal'
-import EvaluationTemplates from '$/app/(private)/evaluations/_components/TemplateEvaluations'
-import { useState } from 'react'
 import ConnectedEvaluationsTable from './ConnectedEvaluationsTable'
 
 function SuggestedEvaluations({
@@ -89,7 +79,7 @@ Don't rawdog your prompts!
   )
 }
 
-function EvaluationsTable({
+export default function EvaluationsLayoutClient({
   evaluations: fallbackData,
   isGeneratorEnabled,
 }: {
@@ -97,11 +87,7 @@ function EvaluationsTable({
   isGeneratorEnabled?: boolean
 }) {
   const { document } = useCurrentDocument()
-  const {
-    data: evaluations,
-    isLoading,
-    destroy,
-  } = useEvaluations({
+  const { data: evaluations, isLoading } = useEvaluations({
     fallbackData,
     params: { documentUuid: document.documentUuid },
   })
@@ -111,9 +97,7 @@ function EvaluationsTable({
   }
 
   if (evaluations.length) {
-    return (
-      <ConnectedEvaluationsTable evaluations={evaluations} destroy={destroy} />
-    )
+    return <ConnectedEvaluationsTable evaluations={evaluations} />
   }
 
   return (
@@ -136,85 +120,5 @@ function EvaluationsTable({
       </BlankSlateStep>
       <SuggestedEvaluations isGeneratorEnabled={isGeneratorEnabled} />
     </BlankSlateWithSteps>
-  )
-}
-
-export default function EvaluationsLayoutClient({
-  evaluations,
-  templates,
-  isGeneratorEnabled,
-}: {
-  evaluations: EvaluationDto[]
-  templates: EvaluationTemplateWithCategory[]
-  isGeneratorEnabled?: boolean
-}) {
-  const { project } = useCurrentProject()
-  const { commit } = useCurrentCommit()
-  const { document } = useCurrentDocument()
-  const [newEvaluationData, setNewEvaluationData] =
-    useState<CreateEvaluationData>()
-
-  return (
-    <div className='flex flex-col gap-4'>
-      <TableWithHeader
-        title='Evaluations'
-        actions={
-          <>
-            {isGeneratorEnabled && (
-              <Link
-                href={
-                  ROUTES.projects
-                    .detail({ id: project.id })
-                    .commits.detail({ uuid: commit.uuid })
-                    .documents.detail({ uuid: document.documentUuid })
-                    .evaluations.dashboard.generate.root
-                }
-              >
-                <TableWithHeader.Button>
-                  Generate evaluation
-                </TableWithHeader.Button>
-              </Link>
-            )}
-
-            <TableWithHeader.Button
-              variant='default'
-              onClick={() =>
-                setNewEvaluationData({
-                  title: 'New Evaluation',
-                  description: '',
-                  prompt: '',
-                  configuration: { type: EvaluationResultableType.Text },
-                })
-              }
-            >
-              Add evaluation
-            </TableWithHeader.Button>
-          </>
-        }
-        table={
-          <EvaluationsTable
-            evaluations={evaluations}
-            isGeneratorEnabled={isGeneratorEnabled}
-          />
-        }
-      />
-      {templates.length > 0 && (
-        <EvaluationTemplates
-          evaluationTemplates={templates}
-          onSelectTemplate={(template) =>
-            setNewEvaluationData({
-              title: template.name,
-              description: template.description,
-              prompt: template.prompt,
-              configuration: template.configuration,
-            })
-          }
-        />
-      )}
-      <CreateEvaluationModal
-        data={newEvaluationData}
-        onClose={() => setNewEvaluationData(undefined)}
-      />
-    </div>
   )
 }
