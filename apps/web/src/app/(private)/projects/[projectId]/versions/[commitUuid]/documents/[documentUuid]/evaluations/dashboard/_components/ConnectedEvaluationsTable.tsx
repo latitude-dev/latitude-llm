@@ -67,7 +67,9 @@ export default function ConnectedEvaluationsTable({
             >
               <TableCell>
                 <div className='flex items-center justify-between gap-2 truncate'>
-                  <Text.H5 noWrap ellipsis>{evaluation.name}</Text.H5>
+                  <Text.H5 noWrap ellipsis>
+                    {evaluation.name}
+                  </Text.H5>
                   <div onClick={(e) => e.stopPropagation()}>
                     <ClickToCopyUuid uuid={evaluation.uuid} />
                   </div>
