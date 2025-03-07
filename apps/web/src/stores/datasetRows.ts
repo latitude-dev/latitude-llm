@@ -6,38 +6,25 @@ import useSWR, { SWRConfiguration } from 'swr'
 import { compactObject } from '@latitude-data/core/lib/compactObject'
 import { DatasetRowData } from '@latitude-data/core/schema'
 
-type ServerData = {
-  rows: DatasetRow[]
-  count: number
-}
-type ClientDatasetRow = Omit<DatasetRow, 'rowData'> & {
+export type ClientDatasetRow = Omit<DatasetRow, 'rowData'> & {
   cells: DatasetRowData[keyof DatasetRowData][]
-}
-type ClientData = {
-  rows: ClientDatasetRow[]
-  rowCount: number
 }
 export function buildDatasetRowKey({
   datasetId,
-  withCount,
   page,
   pageSize,
 }: {
-  withCount: boolean
-  datasetId?: number
+  datasetId: number | undefined
   page?: string | null | undefined
   pageSize?: string | null
 }) {
   return compact([
     'datasetRows',
     datasetId,
-    withCount ? 'withCount' : 'withoutCount',
     page ? +page : undefined,
     pageSize ? +pageSize : undefined,
   ])
 }
-
-const EMPTY_DATA = { rows: [], count: 0 } as ClientData
 
 export default function useDatasetRows(
   {
@@ -45,13 +32,11 @@ export default function useDatasetRows(
     page,
     pageSize,
     onFetched,
-    withCount = false,
   }: {
     dataset?: DatasetV2
     page?: string | null | undefined
     pageSize?: string | null
-    withCount?: boolean
-    onFetched?: (datasets: ClientData) => void
+    onFetched?: (datasets: ClientDatasetRow[]) => void
   },
   opts?: SWRConfiguration,
 ) {
@@ -61,25 +46,25 @@ export default function useDatasetRows(
       serializer: dataset ? serializeRows(dataset.columns) : undefined,
       searchParams: compactObject({
         datasetId: dataset?.id,
-        withCount,
         page: page ? String(page) : undefined,
         pageSize: pageSize ? String(pageSize) : undefined,
       }) as Record<string, string>,
     },
   )
   const {
-    data = EMPTY_DATA,
+    data = [],
     mutate,
     ...rest
-  } = useSWR<ClientData>(
-    buildDatasetRowKey({ datasetId: dataset?.id, withCount, page, pageSize }),
+  } = useSWR<ClientDatasetRow[]>(
+    buildDatasetRowKey({ datasetId: dataset?.id, page, pageSize }),
     fetcher,
     {
       ...opts,
-      fallbackData:
-        opts?.fallbackData && dataset
+      fallbackData: opts?.fallbackData
+        ? dataset
           ? serializeRows(dataset.columns)(opts.fallbackData)
-          : undefined,
+          : undefined
+        : undefined,
       onSuccess: (data) => {
         onFetched?.(data)
       },
@@ -95,17 +80,16 @@ export default function useDatasetRows(
 
 export const serializeRows =
   (columns: DatasetV2['columns']) =>
-  (data: ServerData): ClientData => {
-    const processedRows = data.rows.map((item) => {
-      const rest = omit(item, 'rowData') as Omit<DatasetRow, 'rowData'>
-      return {
-        ...rest,
-        cells: columns.map(
-          ({ identifier }) => item.rowData[identifier] ?? null,
-        ),
-        createdAt: new Date(item.createdAt),
-        updatedAt: new Date(item.updatedAt),
-      }
-    })
-    return { rows: processedRows, rowCount: data.count }
+    (rows: DatasetRow[]): ClientDatasetRow[] => {
+      return rows.map((item) => {
+        const rest = omit(item, 'rowData') as Omit<DatasetRow, 'rowData'>
+        return {
+          ...rest,
+          cells: columns.map(
+            ({ identifier }) => item.rowData[identifier] ?? null,
+          ),
+          createdAt: new Date(item.createdAt),
+          updatedAt: new Date(item.updatedAt),
+        }
+      })
   }

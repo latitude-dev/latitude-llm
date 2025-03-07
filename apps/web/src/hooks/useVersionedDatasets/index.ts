@@ -2,10 +2,14 @@ import { Dataset, DatasetV2, DatasetVersion } from '@latitude-data/core/browser'
 import useDatasets from '$/stores/datasets'
 import useDatasetsV2 from '$/stores/datasetsV2'
 import { useFeatureFlag } from '$/hooks/useFeatureFlag'
-import { CsvParsedData } from '@latitude-data/core/lib/readCsv'
 import useDatasetPreview from '$/stores/datasetPreviews'
 import useDatasetRows from '$/stores/datasetRows'
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
+import useDatasetRowsCount from '$/stores/datasetRowsCount'
+import {
+  useDatasetRowWithPosition,
+  type WithPositionData,
+} from './useDatasetRowsWithPosition'
 
 export function buildColumnList(
   dataset: Dataset | DatasetV2 | null | undefined,
@@ -69,41 +73,106 @@ export function useVersionedDatasets({
   }
 }
 
-const EMPTY_ROWS = { headers: [], rows: [], rowCount: 0 }
+/**
+ * This hook is responsible of fetching the dataset rows and the
+ * total amount of dataset rows for a dataset (v2).
+ * This way we can paginate in document parameters all the rows
+ */
 export function useVersionDatasetRows({
   dataset,
   enabled = true,
-  rowIndex = 0, // 0-based index
+  selectedDatasetRowId,
 }: {
   dataset: Dataset | DatasetV2 | null | undefined
   enabled?: boolean
-  rowIndex?: number
+  selectedDatasetRowId?: string
 }) {
   const isV1 = dataset && 'fileMetadata' in dataset
   const isV2 = dataset && 'columns' in dataset
+
+  // DEPRECATED: Legacy dataset v1. Remove
   const { data: csv, isLoading: isLoadingCsv } = useDatasetPreview({
     dataset: enabled && isV1 ? dataset : undefined,
   })
+
   const headers = useMemo(() => buildColumnList(dataset), [dataset])
-  const [rowsData, setRowData] = useState<CsvParsedData>(EMPTY_ROWS)
-  const { isLoading: isLoadingDatasetRows } = useDatasetRows({
+  const { data: count, isLoading: isLoadingDatasetRowsCount } =
+    useDatasetRowsCount({
+      dataset: enabled && isV2 ? (dataset as DatasetV2) : undefined,
+    })
+
+  const [position, setPosition] = useState<WithPositionData | undefined>(
+    selectedDatasetRowId ? undefined : { position: 1, page: 1 },
+  )
+
+  const onFetchPosition = useCallback(
+    (data: WithPositionData) => {
+      setPosition(data)
+    },
+    [selectedDatasetRowId],
+  )
+
+  const { isLoading: isLoadingPosition } = useDatasetRowWithPosition({
     dataset: enabled && isV2 ? (dataset as DatasetV2) : undefined,
-    withCount: true,
-    page: String(rowIndex + 1),
-    pageSize: '1',
-    onFetched: (data) => {
-      setRowData({
-        headers,
-        rowCount: data.rowCount,
-        rows: data.rows.map((r) => r.cells.map((c) => String(c))),
-      })
+    datasetRowId: selectedDatasetRowId,
+    onFetched: onFetchPosition,
+  })
+
+  const { isLoading: isLoadingRow } = useDatasetRows({
+    dataset:
+      position === undefined
+        ? undefined
+        : enabled && isV2
+          ? (dataset as DatasetV2)
+          : undefined,
+    page: position === undefined ? undefined : String(position.position),
+    pageSize: '1', // Paginatinate one by one in document parameters
+    onFetched: (rows) => {
+      const row = rows[0]
+      if (!row) return
+
+      // Check history hook
+      // Map dataset row to parameter inputs. This is only V2
+      // set Selected datasetRow id
     },
   })
 
-  const data = isV1 ? csv : rowsData || EMPTY_ROWS
+  const updatePosition = useCallback(
+    (position: number) => {
+      if (isLoadingRow) return
+
+      setPosition((prev) =>
+        prev ? { ...prev, position } : { position, page: 1 },
+      )
+    },
+    [isLoadingRow],
+  )
+
+  const onNextPage = useCallback(
+    (position: number) => updatePosition(position + 1),
+    [updatePosition],
+  )
+
+  const onPrevPage = useCallback(
+    (position: number) => updatePosition(position - 1),
+    [updatePosition],
+  )
 
   return {
-    isLoading: isLoadingCsv || isLoadingDatasetRows,
-    data,
+    // REMOVE: Legacy dataset v1
+    legacyDataset: {
+      csv,
+      isLoadingCsv,
+    },
+    isLoading:
+      isLoadingCsv || // DEPRECATED: Legacy dataset v1. Remove
+      isLoadingRow ||
+      isLoadingDatasetRowsCount ||
+      isLoadingPosition,
+    headers,
+    position,
+    count: count ?? 0,
+    onNextPage,
+    onPrevPage,
   }
 }
