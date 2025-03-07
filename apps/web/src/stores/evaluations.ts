@@ -69,11 +69,13 @@ export default function useEvaluations(
     updateEvaluationContentAction,
     {
       onSuccess: ({ data: newEval }) => {
+        if (!newEval) return
+
         const prevEvaluations = data
 
         mutate(
           prevEvaluations.map((prevEval) =>
-            prevEval.uuid === newEval.uuid ? newEval : prevEval,
+            prevEval?.uuid === newEval.uuid ? newEval : prevEval,
           ),
         )
         onSuccessUpdate?.(newEval)
