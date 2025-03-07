@@ -11,11 +11,8 @@ import { ROUTES } from '$/services/routes'
 import {
   Commit,
   DocumentVersion,
-  EvaluationConfiguration,
-  EvaluationMetric,
   EvaluationOptions,
   EvaluationSettings,
-  EvaluationType,
   EvaluationV2,
   Project,
 } from '@latitude-data/core/browser'
@@ -77,15 +74,11 @@ export default function useEvaluationsV2(
     },
   })
   const createEvaluation = useCallback(
-    async <
-      T extends EvaluationType,
-      M extends EvaluationMetric<T>,
-      C extends EvaluationConfiguration<M> = EvaluationConfiguration<M>,
-    >({
+    async ({
       settings,
       options,
     }: {
-      settings: EvaluationSettings<T, M, C>
+      settings: EvaluationSettings
       options?: Partial<EvaluationOptions>
     }) => {
       const [result, error] = await executeCreateEvaluationV2({
@@ -123,17 +116,13 @@ export default function useEvaluationsV2(
     },
   })
   const updateEvaluation = useCallback(
-    async <
-      T extends EvaluationType,
-      M extends EvaluationMetric<T>,
-      C extends EvaluationConfiguration<M> = EvaluationConfiguration<M>,
-    >({
+    async ({
       evaluationUuid,
       settings,
       options,
     }: {
       evaluationUuid: string
-      settings?: Partial<Omit<EvaluationSettings<T, M, C>, 'type' | 'metric'>>
+      settings?: Partial<Omit<EvaluationSettings, 'type' | 'metric'>>
       options?: Partial<EvaluationOptions>
     }) => {
       const [result, error] = await executeUpdateEvaluationV2({

@@ -155,7 +155,8 @@ export class EvaluationsV2Repository extends Repository<EvaluationV2> {
           ne(evaluationVersions.commitId, commitId),
         ),
       )
+      .then((r) => r[0])
 
-    return Result.ok<boolean>(!!result[0]?.exists)
+    return Result.ok<boolean>(!!result?.exists)
   }
 }

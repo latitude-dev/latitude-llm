@@ -3,7 +3,6 @@ import {
   DocumentVersion,
   EVALUATION_SCORE_SCALE,
   EvaluationCondition,
-  EvaluationConfiguration,
   EvaluationMetric,
   EvaluationOptions,
   EvaluationSettings,
@@ -14,12 +13,11 @@ import {
 import { database, Database } from '../../client'
 import { BadRequestError, Result } from '../../lib'
 import { EvaluationsV2Repository } from '../../repositories'
-import { getEvaluationMetricSpecification } from './metrics'
+import { EVALUATION_SPECIFICATIONS } from './shared'
 
 export async function validateEvaluationV2<
   T extends EvaluationType,
   M extends EvaluationMetric<T>,
-  C extends EvaluationConfiguration<M> = EvaluationConfiguration<M>,
 >(
   {
     evaluation,
@@ -29,21 +27,19 @@ export async function validateEvaluationV2<
     options,
     workspace,
   }: {
-    evaluation?: EvaluationV2<T, M, C>
+    evaluation?: EvaluationV2<T, M>
     document?: DocumentVersion
     commit: Commit
-    settings: EvaluationSettings<T, M, C>
+    settings: EvaluationSettings<T, M>
     options: EvaluationOptions
     workspace: Workspace
   },
   db: Database = database,
 ) {
-  const specification = getEvaluationMetricSpecification<T, M, C>(
-    settings.type,
-    settings.metric,
-  )
+  const specification =
+    EVALUATION_SPECIFICATIONS[settings.type].metrics[settings.metric]
   if (!specification) {
-    return Result.error(new BadRequestError('Invalid metric'))
+    return Result.error(new BadRequestError('Invalid type or metric'))
   }
 
   if (!settings.name) {

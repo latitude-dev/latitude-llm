@@ -1,6 +1,5 @@
 import {
   Commit,
-  EvaluationConfiguration,
   EvaluationMetric,
   EvaluationOptions,
   EvaluationSettings,
@@ -18,7 +17,6 @@ import { validateEvaluationV2 } from './validate'
 export async function updateEvaluationV2<
   T extends EvaluationType,
   M extends EvaluationMetric<T>,
-  C extends EvaluationConfiguration<M> = EvaluationConfiguration<M>,
 >(
   {
     evaluation,
@@ -27,9 +25,9 @@ export async function updateEvaluationV2<
     options,
     workspace,
   }: {
-    evaluation: EvaluationV2<T, M, C>
+    evaluation: EvaluationV2<T, M>
     commit: Commit
-    settings?: Partial<Omit<EvaluationSettings<T, M, C>, 'type' | 'metric'>>
+    settings?: Partial<Omit<EvaluationSettings<T, M>, 'type' | 'metric'>>
     options?: Partial<EvaluationOptions>
     workspace: Workspace
   },
@@ -81,7 +79,7 @@ export async function updateEvaluationV2<
       ...result,
       uuid: result.evaluationUuid,
       versionId: result.id,
-    } as unknown as EvaluationV2<T, M, C>
+    } as unknown as EvaluationV2<T, M>
 
     await pingProjectUpdate({ projectId: commit.projectId }, tx).then((r) =>
       r.unwrap(),
