@@ -1,0 +1,43 @@
+import { DocumentVersion } from '@latitude-data/core/browser'
+import { Button, DotIndicator, Popover, Text } from '@latitude-data/web-ui'
+
+import { TriggerSettings } from './Settings'
+import useDocumentTriggers from '$/stores/documentTriggers'
+import useCurrentWorkspace from '$/stores/currentWorkspace'
+
+export function DocumentTriggersButton({
+  document,
+  projectId,
+}: {
+  document: DocumentVersion
+  projectId: number
+}) {
+  const { data: currentWorkspace } = useCurrentWorkspace()
+
+  const { data: triggers } = useDocumentTriggers({
+    documentUuid: document.documentUuid,
+    projectId,
+  })
+
+  // TODO: Temp feature flag
+  if (currentWorkspace?.id !== 1) return null
+
+  return (
+    <Popover.Root>
+      <Popover.Trigger>
+        <Button fancy variant='outline'>
+          <div className='flex flex-row items-center gap-2'>
+            <Text.H5>Triggers</Text.H5>
+            <DotIndicator
+              variant={triggers?.length ? 'success' : 'muted'}
+              pulse={triggers?.length > 0}
+            />
+          </div>
+        </Button>
+      </Popover.Trigger>
+      <Popover.Content maxHeight='none' width={500} align='end'>
+        <TriggerSettings document={document} projectId={projectId} />
+      </Popover.Content>
+    </Popover.Root>
+  )
+}

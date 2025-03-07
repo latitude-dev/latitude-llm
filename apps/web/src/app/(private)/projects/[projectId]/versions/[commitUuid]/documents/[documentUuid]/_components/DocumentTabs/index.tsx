@@ -2,12 +2,13 @@
 
 import { ReactNode, useContext } from 'react'
 
-import { Button, useCurrentCommit } from '@latitude-data/web-ui'
+import { Button } from '@latitude-data/web-ui'
 
 import { DocumentationContext } from '../DocumentationModal'
-import { ShareDocument } from './ShareDocument'
+import { DocumentTriggersButton } from './DocumentTriggers'
 import { DocumentTabSelector } from './tabs'
 import { DocumentVersion } from '@latitude-data/core/browser'
+import { PublishDocumentButton } from './PublishDocument'
 
 export default function DocumentTabs({
   params,
@@ -19,7 +20,6 @@ export default function DocumentTabs({
   children: ReactNode
 }) {
   const { toggleDocumentation } = useContext(DocumentationContext)
-  const { isHead } = useCurrentCommit()
   return (
     <>
       <div className='flex flex-row items-center justify-between pt-6 px-6'>
@@ -36,12 +36,13 @@ export default function DocumentTabs({
           >
             Deploy this prompt
           </Button>
-          <ShareDocument
+          <PublishDocumentButton
             document={document}
             projectId={Number(params.projectId)}
-            commitUuid={params.commitUuid}
-            documentUuid={params.documentUuid}
-            canShare={isHead}
+          />
+          <DocumentTriggersButton
+            document={document}
+            projectId={Number(params.projectId)}
           />
         </div>
       </div>

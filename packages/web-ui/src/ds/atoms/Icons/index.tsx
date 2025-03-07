@@ -93,6 +93,8 @@ import {
   CircleIcon,
   RegexIcon,
   EqualIcon,
+  AtSign,
+  CircleUser,
 } from 'lucide-react'
 
 import { cn } from '../../../lib/utils'
@@ -136,6 +138,7 @@ const Icons = {
   appWindow: AppWindow,
   arrowLeft: ArrowLeft,
   arrowRight: ArrowRightIcon,
+  atSign: AtSign,
   barChart4: BarChart4,
   blocks: Blocks,
   brain: Brain,
@@ -151,6 +154,7 @@ const Icons = {
   chevronsDownUp: ChevronsDownUpIcon,
   circleDollarSign: CircleDollarSign,
   circleHelp: CircleHelp,
+  circleUser: CircleUser,
   circle: CircleIcon,
   clipboard: Copy,
   clock: Clock,
